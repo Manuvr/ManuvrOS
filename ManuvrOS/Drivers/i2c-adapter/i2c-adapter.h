@@ -129,10 +129,14 @@ but adding support for other platforms ought to be easy.
       */
       int8_t begin(void);
 
-      /*
-      * Is this job finished? Errors or not.
+
+      /**
+      * Inlined. If this job is done processing. Errors or not.
+      *
+      * @return true if so. False otherwise.
       */
-      bool completed(void);
+      inline bool completed(void) {  return (xfer_state == I2C_XFER_STATE_COMPLETE);  }
+
 
       /*
       * Called from the ISR to advance this operation on the bus.
@@ -140,7 +144,7 @@ but adding support for other platforms ought to be easy.
       int8_t advance_operation(uint32_t status_reg);
 
       /* Call to mark something completed that may not be. */
-    void markComplete(void);
+      void markComplete(void);
       int8_t abort(void);
       int8_t abort(int8_t);
       
@@ -150,15 +154,21 @@ but adding support for other platforms ought to be easy.
       
 
     private:
+      bool      subaddr_sent = false;    // Have the subaddress been sent yet?
+      static ManuvrEvent event_queue_ready;
+      
+      int8_t init_dma();
       static const char* getErrorString(int8_t code);
       static const char* getOpcodeString(uint8_t code);
       static const char* getStateString(uint8_t code);
-      bool      subaddr_sent = false;    // Have the subaddress been sent yet?
-      bool need_to_send_subaddr(void);
-      int8_t init_dma();
-      
-      static ManuvrEvent event_queue_ready;
 
+
+      /**
+      * Decide if we need to send a subaddress.
+      *
+      * @return true if we do. False otherwise.
+      */
+      inline bool need_to_send_subaddr(void) {	return ((sub_addr >= 0x00) && !subaddr_sent);  }
   };
   
   

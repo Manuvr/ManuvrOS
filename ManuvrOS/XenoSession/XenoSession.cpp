@@ -91,17 +91,6 @@ void XenoSession::__class_initializer() {
 
 
 
-
-
-// TODO: Inlinable
-bool XenoSession::isEstablished() {
-  uint8_t ste = session_state & 0x0F;
-  return ((XENOSESSION_STATE_UNINITIALIZED != ste) && \
-          (XENOSESSION_STATE_DISCONNECTED != ste) && \
-          (XENOSESSION_STATE_HUNGUP != ste));
-}
-
-
 /**
 * Tell the session to relay the given message code.
 * We have a list of blacklisted codes that the session is not allowed to subscribe to.
@@ -612,11 +601,6 @@ void XenoSession::mark_session_sync(bool pending) {
   }
 }
 
-
-// TODO: Inline this guy.
-bool XenoSession::syncd() {
-  return (0 == ((session_state & 0xF0) | XENOSESSION_STATE_SYNC_SYNCD));
-}
 
 
 

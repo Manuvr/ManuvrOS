@@ -150,7 +150,8 @@
       virtual void        procDirectDebugInstruction(StringBuilder *input);
       virtual const char* getReceiverName() = 0;
       
-      /* This is being overridden from EventCallback. */
+      /* These are being overridden from EventCallback. */
+      virtual int8_t callback_proc(ManuvrEvent *);
       int8_t raiseEvent(ManuvrEvent* event);
   
       int8_t setVerbosity(int8_t);
@@ -195,9 +196,12 @@
       
       void clean_first_discard();
 
-      /* Overrides from EventReceiver */
-      int8_t notify(ManuvrEvent*);
-      int8_t callback_proc(ManuvrEvent *);
+      /* Overrides from EventReceiver
+           EventManager is special, and it will naturally have both methods from EventReceiver.
+           Just gracefully fall into those when needed.
+        int8_t notify(ManuvrEvent*);
+        int8_t callback_proc(ManuvrEvent *);
+      */
   
   
       static int8_t raiseEvent(uint16_t event_code, EventCallback* data);

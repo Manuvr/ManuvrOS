@@ -213,8 +213,6 @@ class XenoSession : public EventReceiver {
     int8_t untapMessageType(uint16_t code);   // Stop getting broadcasts about a given message type.
     int8_t untapAll();
     
-    bool syncd();         // Returns the answer to: "Is this session in sync?"
-    bool isEstablished(); // Returns the answer to: "Is this session established?"
     int8_t sendSyncPacket();
     
     // DEBUG FXNS
@@ -227,12 +225,28 @@ class XenoSession : public EventReceiver {
     /* Overrides from EventReceiver */
     int8_t notify(ManuvrEvent*);
     int8_t callback_proc(ManuvrEvent *);
+
+
+    // Returns the answer to: "Is this session in sync?"
+    inline bool syncd() {
+      return (0 == ((session_state & 0xF0) | XENOSESSION_STATE_SYNC_SYNCD));
+    }
+
+    // Returns the answer to: "Is this session established?"
+    inline bool isEstablished() {
+      uint8_t ste = session_state & 0x0F;
+      return ((XENOSESSION_STATE_UNINITIALIZED != ste) && \
+              (XENOSESSION_STATE_DISCONNECTED != ste) && \
+              (XENOSESSION_STATE_HUNGUP != ste));
+    }
+
     
     // Plase note the subtle abuse of type....
     static const uint8_t SYNC_PACKET_BYTES[4];
     
     static int contains_sync_pattern(uint8_t* buf, int len);
     static int locate_sync_break(uint8_t* buf, int len);
+
 
 
   protected:

@@ -321,29 +321,13 @@ int8_t EventManager::procIdleFlags(void) {
     if (profiler_enabled) profiler_mark_0 = micros();
     
     // LOUD REMINDER! The switch() block below is the EventManager reacting to Events. Not related to
-    //   Event processing. Technically, we should make this class extend EventReceiver and call its own
+    //   Event processing. Because this class extends EventReceiver, we should technically call its own
     //   notify(), but with no need to put itself in its own subscriber queue. That would be puritanical
     //   but silly.
     // Instead, we'll take advantage of the position by treating EventManager as if it were the head and
     //   tail of the subscriber queue.     ---J. Ian Lindsay 2014.11.05
     if (active_event->callback != (EventCallback*) this) {    // Don't react to our own internally-generated events.
       switch (active_event->event_code) {
-        case MANUVR_MSG_SYS_BOOT_COMPLETED:
-          /* We are about to broadcast boot_complete to all subscribers. This is the last 5 lines of execution
-               before the system enters it's nominal operating mode.  */
-          boot_completed = true;
-          break;
-        case MANUVR_MSG_SYS_LOG_VERBOSITY:
-          {
-            uint8_t temp_uint_8;
-            if (0 == active_event->getArgAs(&temp_uint_8)) {
-              setVerbosity(temp_uint_8);
-            }
-          }
-          break;
-        case MANUVR_MSG_SCHED_DUMP_META:   // TODO: Piggy-backing on the scheduler's event....
-          printDebug(&local_log);
-          break;
         case MANUVR_MSG_LEGEND_MESSAGES:     // Dump the message definitions.
           if (0 == active_event->args.size()) {   // Only if we are seeing a request.
             StringBuilder tmp_sb;
@@ -366,6 +350,8 @@ int8_t EventManager::procIdleFlags(void) {
           }
           break;
         default:
+          // See the notes above. We still have to behave like any other EventReceiver....
+          return_value += EventReceiver::notify(active_event);
           break;
       }
     }
@@ -511,15 +497,6 @@ int8_t EventManager::procIdleFlags(void) {
   return return_value;
 }
 
-
-// TODO: This stuff sucks. They are stubs mandated by inherritence of EventReceiver.
-    int8_t EventManager::notify(ManuvrEvent* active_event) {
-      return EventReceiver::notify(active_event);
-    }
-    
-    int8_t EventManager::callback_proc(ManuvrEvent *event) {
-      return event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
-    }
 
 
 

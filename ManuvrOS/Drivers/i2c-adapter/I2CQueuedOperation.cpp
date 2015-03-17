@@ -119,32 +119,6 @@ void I2CQueuedOperation::printDebug(StringBuilder* temp) {
 
 
 
-/****************************************************************************************************
-* Job state discovery functions.                                                                    *
-****************************************************************************************************/
-
-/*
-* Decide if we need to send a subaddress.
-* TODO: Inline this
-*/
-bool I2CQueuedOperation::need_to_send_subaddr(void) {
-	if ((sub_addr >= 0x00) && !subaddr_sent) {
-		return true;
-	}
-	return false;
-}
-
-
-/*
-* TODO: Inline this
-*/
-bool I2CQueuedOperation::completed(void) {
-  if (xfer_state == I2C_XFER_STATE_COMPLETE) {
-    return true;
-  }
-  return false;
-}
-
 
 /****************************************************************************************************
 * Job control functions. Calling these will affect control-flow during processing.                  *
