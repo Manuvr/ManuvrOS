@@ -124,9 +124,9 @@ class Argument {
 */
 class ManuvrMsg {
   public:
-    LinkedList<Argument*> args;                       // The optional list of arguments associated with this event.
-    uint16_t event_code = MANUVR_MSG_UNDEFINED;  // The identity of the event (or command).
-    
+    LinkedList<Argument*> args;     // The optional list of arguments associated with this event.
+    uint16_t event_code;            // The identity of the event (or command).
+
     
     ManuvrMsg(void);
     ManuvrMsg(uint16_t code);
@@ -280,11 +280,14 @@ class ManuvrMsg {
     
 
   protected:
-    const MessageTypeDef*  message_def = NULL;        // The definition for the message (once it is associated).
+    const MessageTypeDef*  message_def;             // The definition for the message (once it is associated).
+    
     int8_t getArgAs(uint8_t idx, void *dat, bool preserve);
 
 
   private:    
+    void __class_initializer();
+
     int8_t writePointerArgAs(uint32_t dat); 
     int8_t writePointerArgAs(uint8_t idx, void *trg_buf);
     

@@ -99,7 +99,7 @@ const char* StaticHub::getRTCStateString(uint32_t code) {
     case MANUVR_RTC_OSC_FAILURE:         return "RTC_OSC_FAILURE";
     case MANUVR_RTC_STARTUP_GOOD_UNSET:  return "RTC_STARTUP_GOOD_UNSET";
     case MANUVR_RTC_STARTUP_GOOD_SET:    return "RTC_STARTUP_GOOD_SET";
-    default:                                  return "RTC_STARTUP_UNDEFINED";
+    default:                             return "RTC_STARTUP_UNDEFINED";
   }
 }
 

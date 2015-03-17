@@ -44,8 +44,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 *  Called once on setup to bring the timer system into a known state.
 */
 Scheduler::Scheduler() {
+  __class_initializer();
   scheduler_ready = true;
-  //cost_of_micros = Scheduler::find_cost_of_micros();
 }
 
 
@@ -55,6 +55,24 @@ Scheduler::Scheduler() {
 Scheduler::~Scheduler() {
   destroyAllScheduleItems();
 }
+
+
+/**
+* This is here for compatibility with C++ standards that do not allow for definition and declaration
+*   in the header file. Takes no parameters, and returns nothing.
+*/
+void Scheduler::__class_initializer() {
+    next_pid             = 1;      // Next PID to assign.
+    currently_executing  = 0;      // Hold PID of currently-executing Schedule. 0 if none.
+    productive_loops     = 0;      // Number of calls to serviceScheduledEvents() that actually called a schedule.
+    total_loops          = 0;      // Number of calls to serviceScheduledEvents().
+    overhead             = 0;      // The time in microseconds required to service the last empty schedule loop.
+    scheduler_ready      = false;  // TODO: Convert to a uint8 and track states.
+    skipped_loops        = 0;
+    bistable_skip_detect = false;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
+}
+
+
 
 
 
@@ -546,16 +564,6 @@ int Scheduler::serviceScheduledEvents() {
 
 
 
-uint32_t Scheduler::find_cost_of_micros() {
-  uint32_t ret_val_0;
-  uint32_t ret_val = micros();
-  for (int i = 2; i < 1000; i++) {
-    ret_val_0 = micros();
-  }
-  return (ret_val_0 - ret_val);
-}
-
-
 void Scheduler::printProfiler(StringBuilder* output) {
   if (NULL == output) return;
   
@@ -611,7 +619,6 @@ void Scheduler::printDebug(StringBuilder *output) {
   output->concatf("--- Total loops:      %d\n--- Productive loops: %d\n", total_loops, productive_loops);
   output->concatf("--- Duty cycle:       %f%\n--- Overhead:         %d microseconds\n", ((double)((double) productive_loops / (double) total_loops) * 100), overhead);
   output->concatf("--- Next PID:         %d\n--- Total schedules:  %d\n--- Active schedules: %d\n\n", peekNextPID(), getTotalSchedules(), getActiveSchedules());
-  output->concatf("--- cost_of_micros:     %d\n\n", cost_of_micros);
   
   printProfiler(output);
 }

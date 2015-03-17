@@ -662,7 +662,7 @@ void printUsage() {
 void run_one_idle_loop(EventManager* em, Scheduler* sch) {
   int x = em->procIdleFlags();
   int y = sch->serviceScheduledEvents();
-  if (x) printf("\t procIdleFlags() returns %d\n", x);
+  if (x && (x < EVENT_MANAGER_MAX_EVENTS_PER_LOOP-1)) printf("\t procIdleFlags() returns %d\n", x);
   if (y) printf("\t serviceScheduledEvents() returns %d\n", y);
 }
 
@@ -711,6 +711,31 @@ int establishSession() {
 
 
 void event_battery() {
+  printf("===================================================================================================\n");
+  printf("|                                   Event System Battery                                          |\n");
+  printf("====<  Leak test  >================================================================================\n");
+  
+  ManuvrEvent *event = NULL;
+  
+  proc_until_finished();
+  for (int i = 0; i < 10000; i++) {
+    // launch an event and run it a whole mess of times.
+    event = EventManager::returnEvent(MANUVR_MSG_SYS_LOG_VERBOSITY);
+    event->addArg((uint8_t) 2);
+    EventManager::staticRaiseEvent(event);
+    proc_until_finished();
+  }
+  
+  for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < (EVENT_MANAGER_PREALLOC_COUNT*2); i++) {
+      // Puposely flood the queue several times...
+      event = EventManager::returnEvent(MANUVR_MSG_SYS_LOG_VERBOSITY);
+      event->addArg((uint8_t) 2);
+      EventManager::staticRaiseEvent(event);
+    }
+    proc_until_finished();
+  }
+  proc_until_finished();
 }
 
 

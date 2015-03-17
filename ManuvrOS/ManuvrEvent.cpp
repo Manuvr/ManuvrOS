@@ -5,13 +5,9 @@
 * Vanilla constructor.
 */
 ManuvrEvent::ManuvrEvent() : ManuvrMsg(0) {
-  mem_managed = false;
-  scheduled = false;
-  preallocated = false;
-  specific_target = NULL;
-  callback   = NULL;
-  flags      = 0x00;  // TODO: Optimistic about collapsing the bools into this. Or make gcc do it.
+  __class_initializer();
 }
+
 
 /**
 * Constructor that specifies the message code, and a callback.
@@ -20,13 +16,10 @@ ManuvrEvent::ManuvrEvent() : ManuvrMsg(0) {
 * @param cb    A pointer to the EventReceiver that should be notified about completion of this event.
 */
 ManuvrEvent::ManuvrEvent(uint16_t code, EventCallback* cb) : ManuvrMsg(code) {
-  mem_managed = false;
-  scheduled = false;
-  preallocated = false;
-  specific_target = NULL;
-  flags      = 0x00;  // TODO: Optimistic about collapsing the bools into this. Or make gcc do it.
+  __class_initializer();
   callback   = cb;
 }
+
 
 /**
 * Constructor that specifies the message code, but not a callback (which is set to NULL).
@@ -34,12 +27,7 @@ ManuvrEvent::ManuvrEvent(uint16_t code, EventCallback* cb) : ManuvrMsg(code) {
 * @param code  The message id code.
 */
 ManuvrEvent::ManuvrEvent(uint16_t code) : ManuvrMsg(code) {
-  mem_managed = false;
-  scheduled = false;
-  preallocated = false;
-  specific_target = NULL;
-  callback   = NULL;
-  flags      = 0x00;  // TODO: Optimistic about collapsing the bools into this. Or make gcc do it.
+  __class_initializer();
 }
 
 
@@ -47,8 +35,27 @@ ManuvrEvent::ManuvrEvent(uint16_t code) : ManuvrMsg(code) {
 * Destructor.
 */
 ManuvrEvent::~ManuvrEvent(void) {
-  wipe();
-  // TODO: Why not simply  clearArgs();  ?
+  clearArgs();
+}
+
+
+/**
+* This is here for compatibility with C++ standards that do not allow for definition and declaration
+*   in the header file. Takes no parameters, and returns nothing.
+*
+* The nature of this class makes this a better design, anyhow. Since the same object is often
+*   repurposed many times, doing any sort of init in the constructor should probably be avoided.
+*/
+void ManuvrEvent::__class_initializer() {
+  flags           = 0x00;  // TODO: Optimistic about collapsing the bools into this. Or make gcc do it.
+  callback        = NULL;
+  specific_target = NULL;
+  priority        = EVENT_PRIORITY_LOWEST;
+  
+  // These things have implications for memory management, which is why repurpose() doesn't touch them.
+  mem_managed  = false;
+  scheduled    = false;
+  preallocated = false;
 }
 
 
@@ -59,24 +66,13 @@ ManuvrEvent::~ManuvrEvent(void) {
 * @return 0 on success, or appropriate failure code.
 */
 int8_t ManuvrEvent::repurpose(uint16_t code) {
-  wipe();
-  event_code = code;
-  priority = EVENT_PRIORITY_LOWEST;
-  message_def = lookupMsgDefByCode(code);
-  return 0;
-}
-
-
-/**
-* This is called to clean the event prior to possible reuse.
-*/
-void ManuvrEvent::wipe(void) {
-  clearArgs();
-  flags      = 0x00;  // TODO: Optimistic about collapsing the bools into this. Or make gcc do it.
-  event_code = 0;
-  callback   = NULL;
+  flags           = 0x00;
+  callback        = NULL;
   specific_target = NULL;
+  priority        = EVENT_PRIORITY_LOWEST;
+  return ManuvrMsg::repurpose(code);
 }
+
 
 
 /**

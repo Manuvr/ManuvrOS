@@ -188,9 +188,9 @@ class XenoMessage {
 */
 class XenoSession : public EventReceiver {
   public:
-    bool    authed = false;                    // Have they authenticated (if required)?
-    uint8_t session_state      = XENOSESSION_STATE_UNINITIALIZED;   // What state is this session in?
-    uint8_t session_last_state = XENOSESSION_STATE_UNINITIALIZED;   // The prior state of the sesssion.
+    bool    authed;              // Have they authenticated (if required)?
+    uint8_t session_state;       // What state is this session in?
+    uint8_t session_last_state;  // The prior state of the sesssion.
     
 
     // These are temporarilly public until I properly re-org the boot notification.
@@ -252,14 +252,15 @@ class XenoSession : public EventReceiver {
     LinkedList<XenoMessage*> preallocated;        // Messages that we've allocated ahead of time.
     
     /* These variables track failure cases to inform sync-initiation. */
-    const uint8_t MAX_PARSE_FAILURES  = 3;   // How many failures-to-parse should we tolerate before SYNCing?
-    const uint8_t MAX_ACK_FAILURES    = 3;   // How many failures-to-ACK should we tolerate before SYNCing?
-    uint8_t sequential_parse_failures = 0;   // How many parse attempts have failed in-a-row?
-    uint8_t sequential_ack_failures   = 0;   // How many of our outbound packets have failed to ACK?
+    const uint8_t MAX_PARSE_FAILURES  = 3;  // How many failures-to-parse should we tolerate before SYNCing?
+    const uint8_t MAX_ACK_FAILURES    = 3;  // How many failures-to-ACK should we tolerate before SYNCing?
+    uint8_t sequential_parse_failures;      // How many parse attempts have failed in-a-row?
+    uint8_t sequential_ack_failures;        // How many of our outbound packets have failed to ACK?
 
-    uint8_t initial_sync_count = 24;
+    uint8_t initial_sync_count;
     
-    bool session_overflow_guard = true;
+    bool session_overflow_guard;
+    void __class_initializer();
     
     int8_t scan_buffer_for_sync();
     void mark_session_desync(uint8_t desync_source);

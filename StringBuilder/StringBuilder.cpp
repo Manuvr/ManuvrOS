@@ -20,10 +20,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 // Needed so we can share libs between the host and the microcontroller:
-#include <inttypes.h>
 
 #include "StringBuilder.h"
-#include <stdarg.h>
 
 #ifdef ARDUINO
   #include "Arduino.h"

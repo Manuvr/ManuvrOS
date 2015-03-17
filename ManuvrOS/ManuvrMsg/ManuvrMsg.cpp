@@ -151,7 +151,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
 */
 ManuvrMsg::ManuvrMsg(void) {
   event_code = MANUVR_MSG_UNDEFINED;
-  message_def = lookupMsgDefByCode(event_code);
+  __class_initializer();
 }
 
 
@@ -162,7 +162,7 @@ ManuvrMsg::ManuvrMsg(void) {
 */
 ManuvrMsg::ManuvrMsg(uint16_t code) {
   event_code = code;
-  message_def = lookupMsgDefByCode(code);
+  __class_initializer();
 }
 
 
@@ -176,6 +176,19 @@ ManuvrMsg::~ManuvrMsg(void) {
 
 
 /**
+* This is here for compatibility with C++ standards that do not allow for definition and declaration
+*   in the header file. Takes no parameters, and returns nothing.
+*
+* The nature of this class makes this a better design, anyhow. Since the same object is often
+*   repurposed many times, doing any sort of init in the constructor should probably be avoided.
+*/
+void ManuvrMsg::__class_initializer() {
+  clearArgs();
+  message_def = lookupMsgDefByCode(event_code);
+}
+
+
+/**
 * Call this member to repurpose this message for an unrelated task. This mechanism
 *   is designed to prevent malloc()/free() thrash where it can be avoided.
 * 
@@ -183,7 +196,7 @@ ManuvrMsg::~ManuvrMsg(void) {
 */
 int8_t ManuvrMsg::repurpose(uint16_t code) {
   event_code = code;
-  message_def = lookupMsgDefByCode(code);
+  __class_initializer();
   return 0;
 }
 

@@ -44,8 +44,7 @@ void oneshot_session_sync_send() {
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
 */
 XenoSession::XenoSession() {
-	authed = false;
-	initial_sync_count = 0;
+  __class_initializer();
 	StaticHub *sh = StaticHub::getInstance();
 	scheduler = sh->fetchScheduler();
 	sh->fetchEventManager()->subscribe((EventReceiver*) this);  // Subscribe to the EventManager.
@@ -54,14 +53,10 @@ XenoSession::XenoSession() {
 	  preallocated.insert(new XenoMessage());
 	}
 	msg_relay_list.clear();  // TODO: is this really necessary????
-	session_state = XENOSESSION_STATE_UNINITIALIZED;
 	
 	tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
 	tapMessageType(MANUVR_MSG_SESS_HANGUP);
-
 	tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
-	
-	//tapMessageType(MANUVR_MSG_REPLY_FROM_HOST);
 }
 
 
@@ -79,6 +74,20 @@ XenoSession::~XenoSession() {
 }
 
 
+/**
+* This is here for compatibility with C++ standards that do not allow for definition and declaration
+*   in the header file. Takes no parameters, and returns nothing.
+*/
+void XenoSession::__class_initializer() {
+	authed             = false;
+	initial_sync_count = 0;
+	session_state      = XENOSESSION_STATE_UNINITIALIZED;
+	session_last_state = XENOSESSION_STATE_UNINITIALIZED;
+	sequential_parse_failures = 0;
+	sequential_ack_failures   = 0;
+	initial_sync_count        = 24;
+	session_overflow_guard    = true;
+}
 
 
 

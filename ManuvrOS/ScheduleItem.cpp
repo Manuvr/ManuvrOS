@@ -44,12 +44,16 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ScheduleItem::ScheduleItem(uint32_t nu_pid, int16_t recurrence, uint32_t sch_period, bool ac, FunctionPointer sch_callback) {
   pid                 = nu_pid;
   thread_enabled      = true;
+  thread_fire         = false;
   thread_recurs       = recurrence;
   thread_period       = sch_period;
   thread_time_to_wait = sch_period;
   autoclear           = ac;
+  prof_data           = NULL;
+
   schedule_callback   = sch_callback;    // This constructor uses the legacy callback.
   event               = NULL;
+  callback_to_er      = NULL;
 }
 
 /**
@@ -67,12 +71,17 @@ ScheduleItem::ScheduleItem(uint32_t nu_pid, int16_t recurrence, uint32_t sch_per
 ScheduleItem::ScheduleItem(uint32_t nu_pid, int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver* sch_callback, ManuvrEvent* ev) {
   pid                 = nu_pid;
   thread_enabled      = true;
+  thread_fire         = false;
   thread_recurs       = recurrence;
   thread_period       = sch_period;
   thread_time_to_wait = sch_period;
   autoclear           = ac;
+  prof_data           = NULL;
+
   callback_to_er      = sch_callback;   // This constructor uses the EventReceiver callback...
+  schedule_callback   = NULL;
   event               = ev;             // ...and mandates an event.
+  
   event->scheduled    = true;           // Needed so we don't reap the event.
 }
 

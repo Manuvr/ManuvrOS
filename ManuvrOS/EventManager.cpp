@@ -5,157 +5,11 @@
   #include "demo/StaticHub.h"
 #endif
 
-/**
-* Call to set the log verbosity for this class. 7 is most verbose. -1 will disable logging altogether.
-*
-* @param   nu_verbosity  The desired verbosity of this class.
-* @return  -1 on failure, and 0 on no change, and 1 on success.
-*/
-int8_t EventReceiver::getVerbosity() {
-  return verbosity;
-}
-
-
-/**
-* Call to set the log verbosity for this class. 7 is most verbose. -1 will disable logging altogether.
-*
-* @param   nu_verbosity  The desired verbosity of this class.
-* @return  -1 on failure, and 0 on no change, and 1 on success.
-*/
-int8_t EventReceiver::setVerbosity(int8_t nu_verbosity) {
-  if (verbosity == nu_verbosity) return 0;
-	switch (nu_verbosity) { 
-    case LOG_DEBUG:   /* 7 - debug-level messages */
-    case LOG_INFO:    /* 6 - informational */
-      local_log.concatf("%s:\tVerbosity set to %d\n", getReceiverName(), nu_verbosity);
-      StaticHub::log(&local_log);
-    case LOG_NOTICE:  /* 5 - normal but significant condition */
-    case LOG_WARNING: /* 4 - warning conditions */
-    case LOG_ERR:     /* 3 - error conditions */
-    case LOG_CRIT:    /* 2 - critical conditions */
-    case LOG_ALERT:   /* 1 - action must be taken immediately */
-    case LOG_EMERG:   /* 0 - system is unusable */
-      verbosity = nu_verbosity;
-      return 1;
-    default:
-      if (verbosity > 4) {
-        local_log.concatf("Illegal verbosity value.\n", getReceiverName(), nu_verbosity);
-        StaticHub::log(&local_log);
-      }
-      return -1;
-  }
-}
-
-
-/**
-* Call to set the log verbosity for this class. 7 is most verbose. -1 will disable logging altogether.
-* This is an override to make code briefer in the notify() methods of classes that extend EventReceiver.
-* Warning: Lots of possible return paths.
-*
-* @param   active_event  An event bearing the code for "set verbosity".
-* @return  -1 on failure, and 0 on no change, and 1 on success.
-*/
-int8_t EventReceiver::setVerbosity(ManuvrEvent* active_event) {
-  if (NULL == active_event) return -1;
-  if (MANUVR_MSG_SYS_LOG_VERBOSITY != active_event->event_code) return -1;
-  switch (active_event->argCount()) {
-    case 0:
-      local_log.concatf("%s:\tVerbosity is %d\n", getReceiverName(), verbosity);
-      StaticHub::log(&local_log);
-      return 1;
-    case 1:
-      {
-        int8_t temp_int_8 = 0;
-        if (DIG_MSG_ERROR_NO_ERROR != active_event->getArgAs(&temp_int_8)) return -1;
-        return setVerbosity(temp_int_8);
-      }
-  }
-  return 0;
-}
-
-
-/**
-* This is a base-level debug function that takes direct input from a user.
-*
-* @param   input  A buffer containing the user's direct input.
-*/
-void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
-  StaticHub::log("EventReceiver::procDirectDebugInstruction():\t default handler.\n");
-}
-
-
-/**
-* This is a convenience method for posting an event when we want a callback. If there is not
-*   already a callback specified, add ourselves as the callback.
-*/
-int8_t EventReceiver::raiseEvent(ManuvrEvent* event) {
-  if (event != NULL) {
-    event->callback = (EventCallback*) this;
-    return EventManager::staticRaiseEvent(event);
-  }
-  else {
-    return -1;
-  }
-}
-
-
-
-/**
-* This is the function that is called to notify this class of an event.
-* This particular function is the base notify() method for all downstream
-*   inherritance of EventReceiver. Any events that ought to be responded to
-*   by all EventReceivers should be cased out here. If an extending class
-*   needs to override any of these events, all it needs to do is case off
-*   the event in its own notify() method.
-*
-* @param active_event is the event being broadcast.
-* @return the number of actions taken on this event, or -1 on failure.
-*/
-int8_t EventReceiver::notify(ManuvrEvent *active_event) {
-  switch (active_event->event_code) {
-    case MANUVR_MSG_SYS_LOG_VERBOSITY:
-      return setVerbosity(active_event);
-    case MANUVR_MSG_SYS_BOOT_COMPLETED:
-      scheduler = StaticHub::getInstance()->fetchScheduler();
-      if (NULL != scheduler) {
-        return bootComplete();
-      }
-  }
-  return 0;
-}
-
-
-/* Override for lazy programmers. */
-void EventReceiver::printDebug() {
-  printDebug(&local_log);
-  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
-}
-
-
-/**
-* There is a NULL-check performed upstream for the StringBuilder member. So no need 
-*   to do it again here.
-*/
-void EventReceiver::printDebug(StringBuilder *output) {
-  output->concatf("\n==< %s >===================================\n", getReceiverName()); 
-}
-
-
-/**
-*
-* @return 0 on no action, 1 on action, -1 on failure.
-*/
-int8_t EventReceiver::bootComplete() {
-  return 0;
-}
-
 
 /****************************************************************************************************
 * Static initializers                                                                               *
 ****************************************************************************************************/
 EventManager* EventManager::INSTANCE = NULL;
-
-
 
 
 /****************************************************************************************************
@@ -166,11 +20,22 @@ EventManager* EventManager::INSTANCE = NULL;
 * Vanilla constructor.
 */
 EventManager::EventManager() {
-	INSTANCE = this;
-	for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
-	  _preallocation_pool[i].returnToPrealloc(true);
-	  preallocated.insert(&_preallocation_pool[i]);
-	}
+  INSTANCE       = this;
+  setVerbosity((int8_t) 0);
+  scheduler      = NULL;
+  boot_completed = false;
+  
+  for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
+    /* We carved out a space in our allocation for a pool of events. Ideally, this would be enough
+        for most of the load, most of the time. If the preallocation ends up being insufficient to
+        meet demand, new Events will be created on the heap. But the events that we are dealing
+        with here are special. They should remain circulating (or in standby) for the lifetime of 
+        this class. */
+    _preallocation_pool[i].returnToPrealloc(true);
+    preallocated.insert(&_preallocation_pool[i]);
+  }
+  
+  profiler(true);
 }
 
 /**
@@ -193,7 +58,11 @@ EventManager::~EventManager() {
 * @return 0 on success and -1 on failure.
 */
 int8_t EventManager::subscribe(EventReceiver *client) {
+  if (NULL == client) return -1;
+
+  client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
   int8_t return_value = subscribers.insert(client);
+  // TODO: Should check boot_completed, and send a lone BOOT_COMPLETED event to the client so it knows to init.
   return ((return_value >= 0) ? 0 : -1);
 }
 
@@ -210,11 +79,16 @@ int8_t EventManager::subscribe(EventReceiver *client) {
 * @return 0 on success and -1 on failure.
 */
 int8_t EventManager::subscribe(EventReceiver *client, uint8_t priority) {
-  //int8_t return_value = subscribers.insert(client, priority);
-  local_log.concat(client->getReceiverName());
-  local_log.concat(" tried to add itself with a specd priority.\n");
-  StaticHub::log(&local_log);
-  int8_t return_value = subscribers.insert(client);
+  if (NULL == client) return -1;
+
+  client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
+  int8_t return_value = subscribers.insert(client, priority);
+  if (verbosity > 4) {
+    local_log.concat(client->getReceiverName());
+    local_log.concat(" tried to add itself with a specd priority.\n");
+    StaticHub::log(&local_log);
+  }
+  // TODO: Should check boot_completed, and send a lone BOOT_COMPLETED event to the client so it knows to init.
   return ((return_value >= 0) ? 0 : -1);
 }
 
@@ -226,12 +100,13 @@ int8_t EventManager::subscribe(EventReceiver *client, uint8_t priority) {
 * @return 0 on success and -1 on failure.
 */
 int8_t EventManager::unsubscribe(EventReceiver *client) {
+  if (NULL == client) return -1;
   return (subscribers.remove(client) ? 0 : -1);
 }
 
 
 EventReceiver* EventManager::getSubscriberByName(const char* search_str) {
-  EventReceiver* working = NULL;
+  EventReceiver* working;
   for (int i = 0; i < subscribers.size(); i++) {
     working = subscribers.get(i);
     if (!strcasecmp(working->getReceiverName(), search_str)) {
@@ -282,10 +157,8 @@ int8_t EventManager::raiseEvent(uint16_t code, EventCallback* cb) {
   else {
     if (INSTANCE->verbosity > 3) {
       StaticHub::log("An incoming event failed validate_insertion(). Trapping it...\n");
+      INSTANCE->insertion_denials++;
     }
-    //StringBuilder output;
-    //output.concatf("Insertion failed with code %d...\n", ret_val);
-    //StaticHub::log(&output);
     INSTANCE->reclaim_event(nu);
     return_value = -1;
   }
@@ -314,6 +187,7 @@ int8_t EventManager::staticRaiseEvent(ManuvrEvent* event) {
   else {
     if (INSTANCE->verbosity > 3) {
       StaticHub::log("Static: An incoming event failed validate_insertion(). Trapping it...\n");
+      INSTANCE->insertion_denials++;
     }
     INSTANCE->reclaim_event(event);
     return_value = -1;
@@ -383,7 +257,7 @@ int8_t EventManager::validate_insertion(ManuvrEvent* event) {
 */
 void EventManager::reclaim_event(ManuvrEvent* active_event) {
   if (NULL == active_event) {
-    StaticHub::log("EventManager::reclaim_event() was passed a NULL event. This would have crashed us.\n");
+    if (verbosity > 3) StaticHub::log("EventManager::reclaim_event() was passed a NULL event. This would have crashed us.\n");
     return;
   }
   bool reap_current_event = active_event->eventManagerShouldReap();
@@ -402,7 +276,7 @@ void EventManager::reclaim_event(ManuvrEvent* active_event) {
   else {                                      // If we are NOT to reap this event...
     if (active_event->returnToPrealloc()) {   // ...is it because we preallocated it?
       if (verbosity > 5) local_log.concat("EventManager::reclaim_event(): Returning the event to prealloc,\n");
-      active_event->wipe();                   // If so, wipe the Event...
+      active_event->clearArgs();              // If so, wipe the Event...
       preallocated.insert(active_event);      // ...and return it to the preallocate queue.
     }                                         // Otherwise, we let it drop and trust some other class is managing it.
     else {
@@ -455,6 +329,9 @@ int8_t EventManager::procIdleFlags(void) {
     if (active_event->callback != (EventCallback*) this) {    // Don't react to our own internally-generated events.
       switch (active_event->event_code) {
         case MANUVR_MSG_SYS_BOOT_COMPLETED:
+          /* We are about to broadcast boot_complete to all subscribers. This is the last 5 lines of execution
+               before the system enters it's nominal operating mode.  */
+          boot_completed = true;
           break;
         case MANUVR_MSG_SYS_LOG_VERBOSITY:
           {
@@ -552,7 +429,7 @@ int8_t EventManager::procIdleFlags(void) {
           case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
             if (active_event->returnToPrealloc()) {
               if (verbosity > 5) local_log.concat("EventManager::reclaim_event(): Returning the event to prealloc,\n");
-              active_event->wipe();                   // If so, wipe the Event...
+              active_event->clearArgs();              // If so, wipe the Event...
               preallocated.insert(active_event);      // ...and return it to the preallocate queue.
             }                                         // Otherwise, we let it drop and trust some other class is managing it.
             else {
@@ -652,12 +529,19 @@ int8_t EventManager::procIdleFlags(void) {
 * @param   enabled  If true, enables the profiler. If false, disables it.
 */
 void EventManager::profiler(bool enabled) {
-  profiler_enabled = enabled;
+  profiler_enabled   = enabled;
   max_idle_loop_time = 0;
   max_events_p_loop  = 0;
   total_loops        = 0;
   total_events       = 0;
   total_events_dead  = 0;
+
+  events_destroyed   = 0;  
+  prealloc_starved   = 0;  
+  burden_of_specific = 0;
+  idempotent_blocks  = 0; 
+  insertion_denials  = 0;   
+  max_queue_depth    = 0;   
   
   while (event_costs.hasNext()) delete event_costs.dequeue();
 }

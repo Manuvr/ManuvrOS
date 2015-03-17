@@ -57,16 +57,18 @@ typedef void (*FunctionPointer) ();
 /* Type for schedule items... */
 class ScheduleItem {
   public:
-    uint32_t pid;                          //!< The process ID of this item. Zero is invalid.
-    bool     thread_enabled      = false;  //!< Is the schedule running?
-    bool     thread_fire         = false;  //!< Is the schedule to be executed?
-    bool     autoclear           = false;  //!< If true, this schedule will be removed after its last execution.
-    uint32_t thread_time_to_wait = 0;      //!< How much longer until the schedule fires?
-    uint32_t thread_period       = 0;      //!< How often does this schedule execute?
-    int16_t  thread_recurs       = 0;      //!< See Note 2.
-    ManuvrEvent* event      = NULL;
+    uint32_t pid;                      // The process ID of this item. Zero is invalid.
+    bool     thread_enabled;           // Is the schedule running?
+    bool     thread_fire;              // Is the schedule to be executed?
+    bool     autoclear;                // If true, this schedule will be removed after its last execution.
+    uint32_t thread_time_to_wait;      // How much longer until the schedule fires?
+    uint32_t thread_period;            // How often does this schedule execute?
+    int16_t  thread_recurs;            // See Note 2.
+    ManuvrEvent* event;                // If we have an event to fire, point to it here.
+    FunctionPointer schedule_callback; // Pointers to the schedule service function.
 
-    TaskProfilerData* prof_data  = NULL;   //!< If this schedule is being profiled, the ref will be here.
+    TaskProfilerData* prof_data;       // If this schedule is being profiled, the ref will be here.
+    EventReceiver*  callback_to_er;    // Optional callback to an EventReceiver.
 
 
     ScheduleItem(uint32_t nu_pid, int16_t recurrence, uint32_t sch_period, bool ac, FunctionPointer sch_callback);
@@ -79,9 +81,6 @@ class ScheduleItem {
     
     void printDebug(StringBuilder*);
 
-    FunctionPointer schedule_callback = NULL;   //!< Pointers to the schedule service function.
-    EventReceiver*  callback_to_er    = NULL;   //!< Optional callback to an EventReceiver.
-    
 
   private:
 };
@@ -108,12 +107,12 @@ class Scheduler : public EventReceiver {
     /* Despite being public members, these values should not be written from outside the class.
        They are only public for the sake of convenience of reading them. Since they are profiling-related,
        no major class functionality (other than the profiler output) relies on them. */
-    uint32_t next_pid            = 1;  // Next PID to assign.
-    uint32_t currently_executing = 0;  // Hold PID of currently-executing Schedule. 0 if none.
-    uint32_t productive_loops    = 0;  // Number of calls to serviceScheduledEvents() that actually called a schedule.
-    uint32_t total_loops         = 0;  // Number of calls to serviceScheduledEvents().
-    uint32_t overhead            = 0;  // The time in microseconds required to service the last empty schedule loop.
-    bool     scheduler_ready     = false;  // TODO: Convert to a uint8 and track states.
+    uint32_t next_pid;            // Next PID to assign.
+    uint32_t currently_executing; // Hold PID of currently-executing Schedule. 0 if none.
+    uint32_t productive_loops;    // Number of calls to serviceScheduledEvents() that actually called a schedule.
+    uint32_t total_loops;         // Number of calls to serviceScheduledEvents().
+    uint32_t overhead;            // The time in microseconds required to service the last empty schedule loop.
+    bool     scheduler_ready;     // TODO: Convert to a uint8 and track states.
 
     int getTotalSchedules(void);   // How many total schedules are present?
     unsigned int getActiveSchedules(void);  // How many active schedules are present?
@@ -172,11 +171,11 @@ class Scheduler : public EventReceiver {
     PriorityQueue<ScheduleItem*> execution_queue;
     
     /* These members are concerned with reliability. */
-    uint16_t skipped_loops        = 0;
-    bool    bistable_skip_detect = false;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
+    uint16_t skipped_loops;
+    bool     bistable_skip_detect;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
     
-    uint32_t cost_of_micros = 0;
-
+    void __class_initializer();
+    
     bool alterSchedule(ScheduleItem *obj, uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
 
     void destroyAllScheduleItems(void);
@@ -189,8 +188,6 @@ class Scheduler : public EventReceiver {
     void destroyScheduleItem(ScheduleItem *r_node);
 
     bool delaySchedule(ScheduleItem *obj, uint32_t by_ms);
-    
-    static uint32_t find_cost_of_micros();
 };
 
 #endif
