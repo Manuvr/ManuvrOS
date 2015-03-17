@@ -1,7 +1,7 @@
 #include "i2c-adapter.h"
 
 #ifdef __MK20DX256__
-  #include <i2c_t3/i2c_t3.h>
+  #include <i2c_t3.h>
 #endif
 
 // Static initiallizer...

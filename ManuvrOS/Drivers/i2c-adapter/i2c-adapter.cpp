@@ -1,7 +1,7 @@
 #include "i2c-adapter.h"
 
 #ifdef __MK20DX256__
-  #include <i2c_t3/i2c_t3.h>
+  #include <i2c_t3.h>
 #elif defined(STM32F4XX)
   #include <stm32f4xx.h>
   #include <stm32f4xx_i2c.h>
