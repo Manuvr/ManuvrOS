@@ -52,8 +52,7 @@ XenoSession::XenoSession() {
 	while (preallocated.size() < XENOMESSAGE_PREALLOCATE_COUNT) {
 	  preallocated.insert(new XenoMessage());
 	}
-	msg_relay_list.clear();  // TODO: is this really necessary????
-	
+
 	tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
 	tapMessageType(MANUVR_MSG_SESS_HANGUP);
 	tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
@@ -79,14 +78,15 @@ XenoSession::~XenoSession() {
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void XenoSession::__class_initializer() {
-	authed             = false;
-	initial_sync_count = 0;
-	session_state      = XENOSESSION_STATE_UNINITIALIZED;
-	session_last_state = XENOSESSION_STATE_UNINITIALIZED;
+	authed                    = false;
+	session_state             = XENOSESSION_STATE_UNINITIALIZED;
+	session_last_state        = XENOSESSION_STATE_UNINITIALIZED;
 	sequential_parse_failures = 0;
 	sequential_ack_failures   = 0;
 	initial_sync_count        = 24;
 	session_overflow_guard    = true;
+	pid_sync_timer            = 0;
+	pid_ack_timeout           = 0;
 }
 
 
@@ -164,15 +164,6 @@ int8_t XenoSession::markMessageComplete(uint16_t target_id) {
 }
 
 
-/**
-* Mark the session with the given status.
-*
-* @param   uint8_t The code representing the desired new state of the session.
-*/
-void XenoSession::mark_session_state(uint8_t nu_state) {
-  session_last_state = session_state;
-  session_state = (session_state & 0xF0) | nu_state;
-}
 
 
 int8_t XenoSession::markSessionConnected(bool conn_state) {
@@ -250,8 +241,7 @@ uint16_t XenoSession::nextMessage(StringBuilder* buffer) {
     return 0;
   }
   
-  //if (syncd() && (0 == initial_sync_count)) {   // Don't pull from the queue if we are not syncd.
-  if (syncd()) {
+  if (syncd()) {   // Don't pull from the queue if we are not syncd.
     int q_size = outbound_messages.size();
     XenoMessage *working;
     for (int i = 0; i < q_size; i++) {
@@ -306,16 +296,6 @@ uint16_t XenoSession::nextMessage(StringBuilder* buffer) {
 * 
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-/**
-* There is a NULL-check performed upstream for the scheduler member. So no need 
-*   to do it again here.
-*
-* @return 0 on no action, 1 on action, -1 on failure.
-*/
-int8_t XenoSession::bootComplete() {
-  return 0;
-}
-
 
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
@@ -469,7 +449,7 @@ int XenoSession::purgeInbound() {
 ****************************************************************************************************/
 
 int8_t XenoSession::sendSyncPacket() {
-  
+  oneshot_session_sync_send();
   return 0;
 }
 
@@ -551,16 +531,15 @@ void XenoSession::mark_session_desync(uint8_t ds_src) {
         break;
     }
     
-    if (NULL == scheduler) {
+    if (pid_sync_timer) {
+      scheduler->enableSchedule(pid_sync_timer);
+    }
+    else if (NULL == scheduler) {
       //StaticHub::log("Tried to find the scheduler and could not. Session is not sending sync packets, despite being in a de-sync state.\n");
       scheduler = StaticHub::getInstance()->fetchScheduler();
       if ((NULL != scheduler) && (0 == pid_sync_timer)) {
         pid_sync_timer = scheduler->createSchedule(20,  -1, false, oneshot_session_sync_send);
       }
-    }
-    
-    if (pid_sync_timer) {
-      scheduler->enableSchedule(pid_sync_timer);
     }
   }
   

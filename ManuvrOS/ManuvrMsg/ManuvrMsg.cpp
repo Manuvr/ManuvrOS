@@ -90,6 +90,9 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SYS_PREALLOCATION    , 0x0000,               "SYS_PREALLOCATION"    , MSG_ARGS_NONE }, // Any classes that do preallocation should listen for this.
 
   {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , 0x0000,               "SYS_ISSUE_LOG_ITEM"   , MSG_ARGS_STR_BUILDER }, // Classes emit this to get their log data saved/sent.
+
+  {  MANUVR_MSG_USER_BUTTON_PRESS     , 0x0000,               "USER_BUTTON_PRESS",    MSG_ARGS_U8 },   // The user pushed a button with the given integer code.
+  {  MANUVR_MSG_USER_BUTTON_RELEASE   , 0x0000,               "USER_BUTTON_RELEASE",  MSG_ARGS_U8 },   // The user released a button with the given integer code.
   
   // USB VCP stuff...
   {  MANUVR_MSG_SYS_USB_CONNECT      , 0x0000,               "SYS_USB_CONNECT"      , MSG_ARGS_NONE }, // 

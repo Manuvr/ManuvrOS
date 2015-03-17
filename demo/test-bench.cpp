@@ -13,6 +13,10 @@
 #include <fstream>
 #include <iostream>
 
+#include <netinet/in.h>
+#include <fcntl.h>
+#include <termios.h>
+
 #include "FirmwareDefs.h"
 
 #include "demo/StaticHub.h"
@@ -28,6 +32,7 @@ char *trim(char *str);
 
 void run_one_idle_loop(EventManager* em, Scheduler* sch);
 
+void printBinString(unsigned char * str, int len);
 void troll(void);
 void printHelp(void);
 
@@ -36,21 +41,30 @@ void printHelp(void);
 * Globals and defines that make our life easier.                                                    *
 ****************************************************************************************************/
 const int BUFFER_LEN       = 8192;     // This is the maximum size of any given packet we can handle.
-
 const int INTERRUPT_PERIOD = 1;        // How many seconds between SIGALRM interrupts?
+
+
 
 int parent_pid  = 0;            // The PID of the root process (always).
 int looper_pid  = 0;            // This is the PID for the VM thread.
 
+int port_fd     = -1;           // This is out descriptor for a COM port connection.
+const char *tty = NULL;
+int baudrate    = 115200;
+bool serial_connected = false;
+struct termios termAttr;
+struct sigaction serial_handler;
 
-int maximum_field_print = 65;         // The maximum number of bytes we will print for sessions. Has no bearing on file output.
+XenoSession* session = NULL;
 
-bool run_looper = true;
+int maximum_field_print = 65;       // The maximum number of bytes we will print for sessions. Has no bearing on file output.
+
+
+bool run_looper          = true;  // We will be running the looper in its own thread.
 bool continue_listening  = true;
+char *program_name       = NULL;
+static StaticHub* sh     = NULL;
 
-char *program_name;
-
-static StaticHub* sh = NULL;
 
 
 // Log a message. Target is determined by the current_config.
@@ -65,7 +79,100 @@ void fp_log(const char *fxn_name, int severity, const char *str, ...) {
 
 
 
+/*
+* In a linux environment, we need a function outside of this class to catch signals.
+* This is called when the serial port has something to say. 
+*/
+void tty_signal_handler(int status) {
+	unsigned char *buf = (unsigned char *) alloca(256);
+	if (!serial_connected) {
+		fp_log(__PRETTY_FUNCTION__, LOG_WARNING, "We received data at a serial port and don't think we are connected. Dropping the data...");
+		return;
+	}
 
+	if (port_fd >= 0) {
+	  StaticHub *s = StaticHub::getInstance();
+	  if (s == NULL) {
+	    fp_log(__PRETTY_FUNCTION__, LOG_WARNING, "We received data at a serial port and don't have a class to accept it. Dropping the data...");
+	    return;
+	  }
+	  
+		bzero(buf, 256);
+		int n = read(port_fd, buf, 255);
+		int total_read = n;
+		while (n > 0) {
+			n = read(port_fd, buf, 255);
+			total_read += n;
+		}
+		
+		if (total_read > 0) {
+			// Do stuff regarding the data we just read...
+			if (NULL != session) {
+			  fp_log(__PRETTY_FUNCTION__, LOG_WARNING, "Feeding bytes into the local session...\n");
+			  printBinString(buf, total_read);
+			  session->bin_stream_rx(buf, total_read);
+			}
+		}
+	}
+	else {
+	  fp_log(__PRETTY_FUNCTION__, LOG_WARNING, "We received data at a serial port but our port descriptor is not valid...");
+	}
+}
+
+
+
+/**
+* Does what it claims to do on linux.
+* Returns false on error and true on success.
+*/
+bool write_serial_port(unsigned char* out, int out_len) {
+	if (port_fd == -1) {
+		fp_log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to port: (%s)\n", tty);
+		return false;
+	}
+	
+	if (serial_connected) {
+		write(port_fd, out, out_len);
+		return true;
+	}
+	return false;
+}
+
+
+/*
+* Setup the serial port.
+*/
+bool seriak_port_init() {
+	port_fd = open(tty, O_RDWR | O_NOCTTY | O_NDELAY);
+	if (port_fd == -1) {
+		fp_log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to open port: (%s)\n", tty);
+		return false;
+	}
+
+	serial_handler.sa_handler = tty_signal_handler;
+	serial_handler.sa_flags = 0;
+	serial_handler.sa_restorer = NULL; 
+	sigaction(SIGIO, &serial_handler, NULL);
+
+	int this_pid = getpid();
+	fcntl(port_fd, F_SETOWN, this_pid);	        // This process owns the port.
+	fcntl(port_fd, F_SETFL, O_NDELAY | O_ASYNC);  // Read returns immediately.
+
+	tcgetattr(port_fd, &termAttr);
+	cfsetspeed(&termAttr,baudrate);
+	termAttr.c_cflag &= ~PARENB;          // No parity
+	termAttr.c_cflag &= ~CSTOPB;          // 1 stop bit
+	termAttr.c_cflag &= ~CSIZE;           // Enable char size mask
+	termAttr.c_cflag |= CS8;              // 8-bit characters
+	termAttr.c_cflag |= (CLOCAL | CREAD);
+	termAttr.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+	termAttr.c_iflag &= ~(IXON | IXOFF | IXANY);
+	termAttr.c_oflag &= ~OPOST;
+	
+	serial_connected = (tcsetattr(port_fd, TCSANOW, &termAttr) == 0);
+
+	return serial_connected;
+}
 
 
 
@@ -128,22 +235,6 @@ int cmpBinString(unsigned char *unknown, unsigned char *known, int len) {
   return 1;
 }
 
-
-/*
-*  Writes the given bit string into a character buffer.
-*/
-char* printBitFieldToBuffer(unsigned char *str, int len, char *buffer) {
-  if (buffer != NULL) {
-    int i = 0;
-    if ((str != NULL) && (len > 0)) {
-      for (i = 0; i < len; i++) {
-        if (*(str + (i/8)) & (0x80 >> (i%8))) sprintf((buffer+i), "1");
-        else sprintf((buffer+i), "0");
-      }
-    }
-  }
-  return buffer;
-}
 
 
 /*
@@ -456,8 +547,6 @@ int recycle_test() {
 }
 
 
-
-
 int test_PriorityQueue(void) {
   statistical_mode_test();
   recycle_test();
@@ -468,21 +557,6 @@ int test_PriorityQueue(void) {
 /****************************************************************************************************
 * Functions that just print things.                                                                 *
 ****************************************************************************************************/
-
-/*
-*  An output function that prints the given number of integer values of a given binary string.
-*  Overloaded to print to a file rather than stdout.
-*/
-void printBinStringToFile(unsigned char * str, int len, FILE *fp) {
-  int i = 0;
-  unsigned int moo  = 0;
-  if ((str != NULL) && (len > 0)) {
-    for (i = 0; i < len; i++) {
-      moo  = *(str + i);
-      fprintf(fp, "%02x", moo);
-    }
-  }
-}
 
 
 /*
@@ -496,39 +570,6 @@ void printBinString(unsigned char * str, int len) {
     for (i = 0; i < temp_len; i++) {
       moo  = *(str + i);
       printf("%02x", moo);
-    }
-    if (len > temp_len) {
-      printf(" \033[01;33m(truncated %d bytes)\033[0m", len - temp_len);
-    }
-  }
-}
-
-
-/*
-*  An output function that prints the given number of integer values of a given binary string.
-*  Overloaded to print to a file rather than stdout.
-*/
-void printBinStringAsBinToFile(unsigned char *str, int len, FILE *fp) {
-  int i = 0;
-  if ((str != NULL) && (len > 0)) {
-    for (i = 0; i < len; i++) {
-      if (*(str + (i/8)) & (0x80 >> (i%8))) fprintf(fp, "1");
-      else fprintf(fp, "0");
-    }
-  }
-}
-
-
-/*
-*  An output function that prints the given number of integer values of a given binary string.
-*/
-void printBinStringAsBin(unsigned char *str, int len) {
-  int i = 0;
-  int temp_len = min(len, maximum_field_print);
-  if ((str != NULL) && (temp_len > 0)) {
-    for (i = 0; i < temp_len; i++) {
-      if (*(str + (i/8)) & (0x80 >> (i%8))) printf("1");
-      else printf("0");
     }
     if (len > temp_len) {
       printf(" \033[01;33m(truncated %d bytes)\033[0m", len - temp_len);
@@ -627,6 +668,7 @@ void printUsage() {
 	printf("Bus and channel selection:\n");
 	printf("==================================================================================\n");
 	printf("    --i2c-dev     Specify the i2c device to use.\n");
+	printf("    --tty-dev     Specify the tty device to use.\n");
 	printf("-i  --input       input pin (0-11)\n");
 	printf("-o  --output      output pin (0-7)\n");
 	printf("\n");
@@ -687,8 +729,6 @@ void proc_until_finished() {
 /****************************************************************************************************
 * The work-area...                                                                                  *
 ****************************************************************************************************/
-
-XenoSession* session = NULL;
 
 int establishSession() {
   if (NULL == session) {
@@ -871,6 +911,33 @@ void session_battery_1() {
   session = NULL;
 }
 
+
+void session_battery_2() {
+  StringBuilder transport_buffer_in;
+  StringBuilder output;
+  
+  printf("===================================================================================================\n");
+  printf("|                                   XenoSession unit tests                                        |\n");
+  printf("====<  Tied Together  >============================================================================\n");
+  
+  write_serial_port((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
+  write_serial_port((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
+  write_serial_port((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
+  write_serial_port((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
+  write_serial_port((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
+  write_serial_port((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
+
+  ManuvrEvent test_event_in(MANUVR_MSG_USER_BUTTON_PRESS);
+  test_event_in.addArg((uint8_t) 9);
+  
+  XenoMessage inbound_msg(&test_event_in);
+  printf("Verbosity message generated. Packet takes %d bytes.\n", inbound_msg.buffer.length());
+  write_serial_port(inbound_msg.buffer.string(), inbound_msg.buffer.length());
+  proc_until_finished();
+}
+
+
+
 /****************************************************************************************************
 * The main function.                                                                                *
 ****************************************************************************************************/
@@ -902,7 +969,6 @@ int main(int argc, char *argv[]) {
 
   EventManager* event_manager = sh->fetchEventManager();
   Scheduler*    scheduler     = sh->fetchScheduler();
-  
 
     ///* INTERNAL INTEGRITY-CHECKS
     //*  Now... at this point, with our config complete and a database at our disposal, we do some administrative checks...
@@ -937,11 +1003,19 @@ int main(int argc, char *argv[]) {
 	for (int i = 1; i < argc; i++) {
 		if ((strcasestr(argv[i], "--help")) || ((argv[i][0] == '-') && (argv[i][1] == 'h'))) {
 			printUsage();
-			exit(0);
+			exit(1);
 		}
 		else if ((strcasestr(argv[i], "--version")) || ((argv[i][0] == '-') && (argv[i][1] == 'v'))) {
 			printf("%s v%s\n\n", argv[0], VERSION_STRING);
-			exit(0);
+			exit(1);
+		}
+		else if (strcasestr(argv[i], "--tty-dev") && (i < argc-1)) {
+		  tty = argv[i+1];
+			if (!seriak_port_init()) {
+			  printf("Failed to open tty: %s\n", tty);
+			  exit(1);
+			}
+			i++;
 		}
 		else {
 			printf("Unhandled argument: %s\n", argv[i]);
@@ -997,7 +1071,7 @@ int main(int argc, char *argv[]) {
           char* tok = parsed.position(0);
         
           // Begin the cases...
-          if (strlen(tok) == 0)         printHelp();            // User entered nothing.
+          if (strlen(tok) == 0); //               printf("\n");            // User entered nothing.
           else if (strcasestr(tok, "QUIT"))    continue_listening = false;  // Exit
           else if (strcasestr(tok, "HELP"))    printHelp();            // Show help.
           else if (strcasestr(tok, "TROLL"))    troll();              // prOBleM?.
@@ -1007,6 +1081,7 @@ int main(int argc, char *argv[]) {
 
           else if (strcasestr(tok, "#XB"))    session_battery();
           else if (strcasestr(tok, "#XA"))    session_battery_1();
+          else if (strcasestr(tok, "#XC"))    session_battery_2();
           else if (strcasestr(tok, "#EB"))    event_battery();
           else if (strcasestr(tok, "#X"))     establishSession();
           else if (strcasestr(tok, "#TS")) {

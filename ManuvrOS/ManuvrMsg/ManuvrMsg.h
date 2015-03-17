@@ -261,6 +261,7 @@ class ManuvrMsg {
     static PriorityQueue<const MessageTypeDef*> message_defs_extended;  // Where runtime-loaded message defs go.
 
 
+
     /* Required argument forms */
     static const unsigned char MSG_ARGS_NONE[];
     static const unsigned char MSG_ARGS_U8[];

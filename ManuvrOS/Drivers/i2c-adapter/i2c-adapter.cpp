@@ -253,7 +253,7 @@ void I2CAdapter::gpioSetup() {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t I2CAdapter::bootComplete() {
-  //scheduler = StaticHub::getInstance()->fetchScheduler();
+  EventReceiver::bootComplete();
   #ifdef STM32F4XX
     I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, ENABLE);      //Enable EVT and ERR interrupts
   #endif

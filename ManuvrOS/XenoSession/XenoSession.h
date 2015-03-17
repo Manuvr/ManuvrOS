@@ -61,9 +61,7 @@ const uint8_t XENO_MSG_PROC_STATE_WRITING_REPLY          = 0x25;
 
 
 #define XENO_SESSION_MAX_QUEUE_PRINT    3    // This is only relevant for debug.
-
-
-#define XENOMESSAGE_PREALLOCATE_COUNT   5    // How many XenoMessages should the session preallocate?
+#define XENOMESSAGE_PREALLOCATE_COUNT   4    // How many XenoMessages should the session preallocate?
 
 /*
 * All multibyte values are stored "little-endian".
@@ -99,7 +97,7 @@ const uint8_t XENO_MSG_PROC_STATE_WRITING_REPLY          = 0x25;
 */
 class XenoMessage {
   public:
-    StringBuilder             buffer;       // Holds the intermediary form of the message that traverses the transport.
+    StringBuilder             buffer;  // Holds the intermediary form of the message that traverses the transport.
     uint8_t   proc_state      = 0;     // Where are we in the flow of this message? See XENO_MSG_PROC_STATES
     
     bool      expecting_ack   = true;  // Does this message expect an ACK?
@@ -192,12 +190,6 @@ class XenoSession : public EventReceiver {
     uint8_t session_state;       // What state is this session in?
     uint8_t session_last_state;  // The prior state of the sesssion.
     
-
-    // These are temporarilly public until I properly re-org the boot notification.
-    Scheduler *scheduler = NULL;
-    uint32_t pid_sync_timer  = 0;   // Holds the PID for sync generation.
-    uint32_t pid_ack_timeout = 0;   // Holds the PID for message ack timeout.
-    
     XenoSession();
     ~XenoSession();
     
@@ -248,9 +240,7 @@ class XenoSession : public EventReceiver {
     static int locate_sync_break(uint8_t* buf, int len);
 
 
-
   protected:
-    int8_t bootComplete();      // This is called from the base notify().
 
 
   private:
@@ -259,6 +249,9 @@ class XenoSession : public EventReceiver {
     *   the need for the transport to care about how much data we consumed versus left in its buffer. 
     */
     StringBuilder session_buffer;
+
+    uint32_t pid_sync_timer;    // Holds the PID for sync generation.
+    uint32_t pid_ack_timeout;   // Holds the PID for message ack timeout.
 
     LinkedList<MessageTypeDef*> msg_relay_list;   // Which message codes will we relay to the counterparty?
     LinkedList<XenoMessage*> outbound_messages;   // Messages that are bound for the counterparty.
@@ -280,7 +273,15 @@ class XenoSession : public EventReceiver {
     void mark_session_desync(uint8_t desync_source);
     void mark_session_sync(bool pending);
     
-    void mark_session_state(uint8_t);
+    /**
+    * Mark the session with the given status.
+    *
+    * @param   uint8_t The code representing the desired new state of the session.
+    */
+    inline void mark_session_state(uint8_t nu_state) {
+      session_last_state = session_state;
+      session_state = (session_state & 0xF0) | nu_state;
+    }
     
     int purgeInbound();
     int purgeOutbound();

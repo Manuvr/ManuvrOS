@@ -133,11 +133,13 @@
 
   
   /*
-  * The block comprised of [0x0600 - 0x1000) is being tentetively used for low-level hardware support drivers that
+  * The block comprised of [0x0500 - 0x1000) is being tentetively used for low-level hardware support drivers that
   *   are invarient across platforms. For example: Drivers for a certain kind of sensor. 
   * These will be deprecated soon... Do not code against them.
   */
-  #define MANUVR_MSG_SENSOR_INA219        0x0500 // The current sensor has something to say.
+
+  #define MANUVR_MSG_USER_BUTTON_PRESS    0x0500 // The user pushed a button with the given integer code.
+  #define MANUVR_MSG_USER_BUTTON_RELEASE  0x0501 // The user released a button with the given integer code.
   #define MANUVR_MSG_SENSOR_ISL29033      0x0510 // The light sensor has something to say.
   #define MANUVR_MSG_SENSOR_ISL29033_IRQ  0x0511 // The light sensor IRQ_PIN.
   #define MANUVR_MSG_SENSOR_LPS331        0x0520 // The baro sensor has something to say.
@@ -146,6 +148,7 @@
   #define MANUVR_MSG_SENSOR_SI7021        0x0530 // The humidity sensor has something to say.
   #define MANUVR_MSG_SENSOR_TMP006        0x0540 // The thermopile has something to say.
   #define MANUVR_MSG_SENSOR_TMP006_IRQ    0x0541 // The thermopile IRQ pin changed state.
+  #define MANUVR_MSG_SENSOR_INA219        0x0550 // The current sensor has something to say.
 
   
   

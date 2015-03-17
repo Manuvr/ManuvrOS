@@ -42,6 +42,7 @@ extern volatile I2CAdapter* i2c;
 uint32_t profiler_mark_0 = 0;
 uint32_t profiler_mark_1 = 0;
 
+
 unsigned long millis() {
   timeval curTime;
   gettimeofday(&curTime, NULL);
@@ -49,12 +50,19 @@ unsigned long millis() {
   return milli;
 }
 
-uint32_t last_micros_call = 1;
+
+unsigned long start_time_micros = 0;
 
 
+/* Returns the current timestamp in microseconds. */
 unsigned long micros() {
-  return last_micros_call++;
+  timeval curTime;
+  gettimeofday(&curTime, NULL);
+  return (curTime.tv_usec - start_time_micros);
 }
+
+
+
 
 /****************************************************************************************************
 * Scheduler callbacks. Please note that these are NOT part of StaticHub.                            *
@@ -302,6 +310,8 @@ StaticHub bootstrap and setup fxns. This code is only ever called to initiallize
 *   one-shot schedule and performs all of the cleanup for latent consequences of bootstrap().
 */
 int8_t StaticHub::bootComplete() {
+  //EventReceiver::bootComplete()  <--- Note that we aren't going to do this. We already know about the scheduler.
+  
 	// Now configure interrupts, lift interrupt masks, and let the madness begin.
 	off_class_interrupts(true);
 	return 1;
@@ -446,6 +456,7 @@ StaticHub* StaticHub::getInstance() {
 
 StaticHub::StaticHub() {
   StaticHub::INSTANCE = this;
+  start_time_micros = micros();
 }
 
 

@@ -373,7 +373,8 @@ void ManuvrableNeoPixel::printDebug(StringBuilder *output) {
 * @return non-zero if action was taken. Zero otherwise.
 */
 int8_t ManuvrableNeoPixel::bootComplete() {
-  // turn on the display
+  EventReceiver::bootComplete();
+
   begin();
   show(); // Initialize all pixels to 'off'
 
@@ -424,7 +425,7 @@ int8_t ManuvrableNeoPixel::notify(ManuvrEvent *active_event) {
       return_value++;
       break;
 
-    case VIAM_SONUS_MSG_USER_BUTTON_PRESS:
+    case MANUVR_MSG_USER_BUTTON_PRESS:
       if (active_event->argCount() > 0) {
         uint8_t button;
         if (0 == active_event->getArgAs(&button)) {
