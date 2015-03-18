@@ -630,25 +630,6 @@ void proc_until_finished() {
 * The work-area...                                                                                  *
 ****************************************************************************************************/
 
-int establishSession() {
-  if (NULL == session) {
-    session = new XenoSession();
-    //session->setVerbosity(7);
-    
-    session->markSessionConnected(true);
-    printf("Session freshly created.\n");
-    return 1;
-  }
-  else {
-    StringBuilder output;
-    session->printDebug(&output);
-    printf("%s", (char*)output.string());
-  }
-  
-  return 0;
-}
-
-
 
 
 
@@ -686,89 +667,81 @@ void event_battery() {
 
 
 void session_battery() {
-  StringBuilder transport_buffer;
-  
-  printf("===================================================================================================\n");
-  printf("|                                   XenoSession unit tests                                        |\n");
-  printf("====<  Leak test  >================================================================================\n");
-  establishSession();
-  proc_until_finished();
-  
-  EventManager::raiseEvent(MANUVR_MSG_LEGEND_MESSAGES, NULL);
-  proc_until_finished();
+//  StringBuilder transport_buffer;
+//  
+//  printf("===================================================================================================\n");
+//  printf("|                                   XenoSession unit tests                                        |\n");
+//  printf("====<  Leak test  >================================================================================\n");
+//  proc_until_finished();
+//  
+//  EventManager::raiseEvent(MANUVR_MSG_LEGEND_MESSAGES, NULL);
+//  proc_until_finished();
+//
+//  EventManager::raiseEvent(MANUVR_MSG_SESS_DUMP_DEBUG, NULL);
+//  proc_until_finished();
+//
+//  EventManager::raiseEvent(MANUVR_MSG_SELF_DESCRIBE, NULL);
+//  proc_until_finished();
+//  
+//  printf("nextMessage() returned %d as well as the following bytes:\n", session->nextMessage(&transport_buffer));
+//  transport_buffer.printDebug();
+//  printf("nextMessage() returned %d as well as the following bytes:\n", session->nextMessage(&transport_buffer));
+//  transport_buffer.printDebug();
+//
+//  EventManager::raiseEvent(XENOSESSION_STATE_DISCONNECTED, NULL);
+//  proc_until_finished();
+//
+//  printf("nextMessage() returned %d as well as the following bytes:\n", session->nextMessage(&transport_buffer));
+//  transport_buffer.printDebug();
+//
+//  EventManager::raiseEvent(MANUVR_MSG_SESS_DUMP_DEBUG, NULL);
+//  proc_until_finished();
+//
+//  
+//
+//  printf("====<  Sync test  >================================================================================\n");
+//  establishSession();
+//  proc_until_finished();
+//
+//  // Mark the session disconnected() to cause a desire for sync...
+//  session->markSessionConnected(false);
+//  proc_until_finished();
+//  
+//  session->markSessionConnected(true);
+//  proc_until_finished();
+//  
+//  EventManager::raiseEvent(MANUVR_MSG_SESS_DUMP_DEBUG, NULL);
+//  proc_until_finished();
+//
+//  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
+//  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
+//  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
+//  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES[0], 2);
+//  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES[2], 2);
+//  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES[0], 1);
+//  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES[1], 3);
+//
+//
+//  EventManager::raiseEvent(MANUVR_MSG_SESS_DUMP_DEBUG, NULL);
+//  proc_until_finished();
+//
+//  printf("Invalid test sequence sent (KMAP_INIT) bad checksum.\n");  {
+//    unsigned char test_xeno_mes[] = {0x08, 0x00, 0x00, 0x21, 0x03, 0xa0, 0x20, 0x0a};
+//    session->bin_stream_rx(test_xeno_mes, sizeof(test_xeno_mes));
+//    EventManager::raiseEvent(MANUVR_MSG_SESS_DUMP_DEBUG, NULL);  // Raise an event
+//    proc_until_finished();
+//  }
+//  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
+//  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
+//  proc_until_finished();
+//
+//  printf("Test sequence sent (KMAP_INIT).\n");  {
+//    unsigned char test_xeno_mes[] = {0x08, 0x00, 0x00, 0x22, 0x03, 0xa0, 0x20, 0x0a};
+//    session->bin_stream_rx(test_xeno_mes, sizeof(test_xeno_mes));
+//    EventManager::raiseEvent(MANUVR_MSG_SESS_DUMP_DEBUG, NULL);  // Raise an event
+//    proc_until_finished();
+//  }
 
-  EventManager::raiseEvent(MANUVR_MSG_SESS_DUMP_DEBUG, NULL);
-  proc_until_finished();
-
-  EventManager::raiseEvent(MANUVR_MSG_SELF_DESCRIBE, NULL);
-  proc_until_finished();
-  
-  printf("nextMessage() returned %d as well as the following bytes:\n", session->nextMessage(&transport_buffer));
-  transport_buffer.printDebug();
-  printf("nextMessage() returned %d as well as the following bytes:\n", session->nextMessage(&transport_buffer));
-  transport_buffer.printDebug();
-
-  EventManager::raiseEvent(XENOSESSION_STATE_DISCONNECTED, NULL);
-  proc_until_finished();
-
-  printf("nextMessage() returned %d as well as the following bytes:\n", session->nextMessage(&transport_buffer));
-  transport_buffer.printDebug();
-
-  EventManager::raiseEvent(MANUVR_MSG_SESS_DUMP_DEBUG, NULL);
-  proc_until_finished();
-
-  delete session;
-  session = NULL;
-
-  
-
-  printf("====<  Sync test  >================================================================================\n");
-  establishSession();
-  proc_until_finished();
-
-  // Mark the session disconnected() to cause a desire for sync...
-  session->markSessionConnected(false);
-  proc_until_finished();
-  
-  session->markSessionConnected(true);
-  proc_until_finished();
-  
-  EventManager::raiseEvent(MANUVR_MSG_SESS_DUMP_DEBUG, NULL);
-  proc_until_finished();
-
-  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
-  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
-  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
-  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES[0], 2);
-  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES[2], 2);
-  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES[0], 1);
-  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES[1], 3);
-
-
-  EventManager::raiseEvent(MANUVR_MSG_SESS_DUMP_DEBUG, NULL);
-  proc_until_finished();
-
-  printf("Invalid test sequence sent (KMAP_INIT) bad checksum.\n");  {
-    unsigned char test_xeno_mes[] = {0x08, 0x00, 0x00, 0x21, 0x03, 0xa0, 0x20, 0x0a};
-    session->bin_stream_rx(test_xeno_mes, sizeof(test_xeno_mes));
-    EventManager::raiseEvent(MANUVR_MSG_SESS_DUMP_DEBUG, NULL);  // Raise an event
-    proc_until_finished();
-  }
-  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
-  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
-  proc_until_finished();
-
-  printf("Test sequence sent (KMAP_INIT).\n");  {
-    unsigned char test_xeno_mes[] = {0x08, 0x00, 0x00, 0x22, 0x03, 0xa0, 0x20, 0x0a};
-    session->bin_stream_rx(test_xeno_mes, sizeof(test_xeno_mes));
-    EventManager::raiseEvent(MANUVR_MSG_SESS_DUMP_DEBUG, NULL);  // Raise an event
-    proc_until_finished();
-  }
-
-  
-  delete session;
-  session = NULL;
-  
 
   //printf("====<  Sensible dialog test  >=====================================================================\n");
   //printf("====<  Sketchy transport quality  >================================================================\n");
@@ -777,40 +750,36 @@ void session_battery() {
 
 
 void session_battery_1() {
-  StringBuilder transport_buffer_in;
-  StringBuilder output;
-  
-  printf("===================================================================================================\n");
-  printf("|                                   XenoSession unit tests                                        |\n");
-  printf("====<  Arg decomposition  >========================================================================\n");
-  establishSession();
-  proc_until_finished();
-  
-  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
-  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
-  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
-  proc_until_finished();
-
-  ManuvrEvent test_event_in(MANUVR_MSG_SYS_LOG_VERBOSITY);
-  test_event_in.addArg((uint8_t) 7);
-  
-  XenoMessage inbound_msg(&test_event_in);
-  printf("Verbosity message generated. Packet takes %d bytes.\n", inbound_msg.buffer.length());
-  session->bin_stream_rx(inbound_msg.buffer.string(), inbound_msg.buffer.length());
-  session->printDebug(&output);
-  printf("%s\n", (char*)output.string());
-  
-  proc_until_finished();
-  
-  EventManager::raiseEvent(MANUVR_MSG_SESS_DUMP_DEBUG, NULL);  // Raise an event
-  proc_until_finished();
-  
-  printf("nextMessage() returned %d as well as the following bytes:\n", session->nextMessage(&transport_buffer_in));
-  transport_buffer_in.printDebug();
-
-  
-  delete session;
-  session = NULL;
+//  StringBuilder transport_buffer_in;
+//  StringBuilder output;
+//  
+//  printf("===================================================================================================\n");
+//  printf("|                                   XenoSession unit tests                                        |\n");
+//  printf("====<  Arg decomposition  >========================================================================\n");
+//  proc_until_finished();
+//  
+//  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
+//  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
+//  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
+//  proc_until_finished();
+//
+//  ManuvrEvent test_event_in(MANUVR_MSG_SYS_LOG_VERBOSITY);
+//  test_event_in.addArg((uint8_t) 7);
+//  
+//  XenoMessage inbound_msg(&test_event_in);
+//  printf("Verbosity message generated. Packet takes %d bytes.\n", inbound_msg.buffer.length());
+//  session->bin_stream_rx(inbound_msg.buffer.string(), inbound_msg.buffer.length());
+//  session->printDebug(&output);
+//  printf("%s\n", (char*)output.string());
+//  
+//  proc_until_finished();
+//  
+//  EventManager::raiseEvent(MANUVR_MSG_SESS_DUMP_DEBUG, NULL);  // Raise an event
+//  proc_until_finished();
+//  
+//  printf("nextMessage() returned %d as well as the following bytes:\n", session->nextMessage(&transport_buffer_in));
+//  transport_buffer_in.printDebug();
+//
 }
 
 
@@ -825,14 +794,16 @@ void session_battery_2() {
   ManuvrEvent test_event_in(MANUVR_MSG_USER_BUTTON_PRESS);
   test_event_in.addArg((uint8_t) 9);
   
-  XenoMessage inbound_msg(&test_event_in);
-
   if (NULL != com_port) {
     com_port->establishSession();
+    com_port->getSession()->sendEvent(&test_event_in);
   }
   
-  printf("Verbosity message generated. Packet takes %d bytes.\n", inbound_msg.buffer.length());
-
+  proc_until_finished();
+  
+  ManuvrEvent *test_event = EventManager::returnEvent(MANUVR_MSG_XPORT_DEBUG);
+  test_event->addArg((uint8_t) 1);
+  EventManager::staticRaiseEvent(test_event);
   proc_until_finished();
 }
 
@@ -858,9 +829,8 @@ int main(int argc, char *argv[]) {
 
   printf("Booting StaticHub....\n");
   sh = StaticHub::getInstance();
-  proc_until_finished();
   
-  printf("\n\nSH pointer address: 0x%08x\n", (uint32_t)sh);
+  printf("\nSH pointer address: 0x%08x\n", (uint32_t)sh);
   StaticHub::watchdog_mark = 42;  // The period (in ms) of our clock punch. 
 
   EventManager* event_manager = sh->fetchEventManager();
@@ -937,6 +907,7 @@ int main(int argc, char *argv[]) {
     initSigHandlers();
     alarm(1);                // Set a periodic interrupt.
   
+  proc_until_finished();
 
   printf("\n");
   
@@ -972,7 +943,6 @@ int main(int argc, char *argv[]) {
           else if (strcasestr(tok, "#XA"))    session_battery_1();
           else if (strcasestr(tok, "#XC"))    session_battery_2();
           else if (strcasestr(tok, "#EB"))    event_battery();
-          else if (strcasestr(tok, "#X"))     establishSession();
           else if (strcasestr(tok, "#TS")) {
             TMP006* temp_sense = sh->fetchTMP006();
             temp_sense->readSensor();

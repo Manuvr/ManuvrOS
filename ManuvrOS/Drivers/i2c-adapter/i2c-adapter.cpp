@@ -190,11 +190,11 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
   if (sprintf(filename, "/dev/i2c-%d", dev_id) > 0) {
     dev = open(filename, O_RDWR);
     if (dev < 0) {
-      StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to open the i2c bus represented by %s.", filename);
+      StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to open the i2c bus represented by %s.\n", filename);
     }
   }
   else {
-    StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Somehow we failed to sprintf and build a filename to open i2c bus %d.", dev_id);
+    StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Somehow we failed to sprintf and build a filename to open i2c bus %d.\n", dev_id);
   }
 }
 
@@ -202,7 +202,7 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
 
 I2CAdapter::~I2CAdapter() {
     if (dev >= 0) {
-        StaticHub::log(__PRETTY_FUNCTION__, LOG_INFO, "Closing the open i2c bus...");
+        StaticHub::log(__PRETTY_FUNCTION__, LOG_INFO, "Closing the open i2c bus...\n");
         close(dev);
     }
     while (dev_list.hasNext()) {
@@ -680,7 +680,7 @@ void I2CAdapter::printDebug(StringBuilder *temp) {
   
 
   if (current_queue_item != NULL) {
-    temp->concat("Currently being serviced:");
+    temp->concat("Currently being serviced:\n");
     current_queue_item->printDebug(temp);
   }
   else {

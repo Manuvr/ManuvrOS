@@ -86,6 +86,7 @@ class ManuvrComPort : public ManuvrXport {
 
     int8_t reset();
     int8_t establishSession();
+    XenoSession* getSession();
     
     int8_t read_port();
     bool write_port(unsigned char* out, int out_len);
@@ -100,6 +101,9 @@ class ManuvrComPort : public ManuvrXport {
     uint16_t xport_id;
     uint8_t  xport_state;
     
+    uint32_t bytes_sent;
+    uint32_t bytes_received;
+    
     bool event_addresses_us(ManuvrEvent*);   // Given a transport event, returns true if we need to act.
       
 
@@ -113,10 +117,6 @@ class ManuvrComPort : public ManuvrXport {
     uint32_t pid_read_abort;       // Used to timeout a read operation.
     ManuvrEvent read_abort_event;  // Used to timeout a read operation.
     
-    #ifdef TEST_BENCH
-      struct termios termAttr;
-      struct sigaction serial_handler;
-    #endif
 
     void __class_initializer();
     

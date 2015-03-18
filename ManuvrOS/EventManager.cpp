@@ -62,7 +62,10 @@ int8_t EventManager::subscribe(EventReceiver *client) {
 
   client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
   int8_t return_value = subscribers.insert(client);
-  // TODO: Should check boot_completed, and send a lone BOOT_COMPLETED event to the client so it knows to init.
+  if (boot_completed) {
+    // This subscriber is joining us after bootup. Call its bootComplete() fxn to cause it to init.
+    client->notify(returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED));
+  }
   return ((return_value >= 0) ? 0 : -1);
 }
 
@@ -88,7 +91,10 @@ int8_t EventManager::subscribe(EventReceiver *client, uint8_t priority) {
     local_log.concat(" tried to add itself with a specd priority.\n");
     StaticHub::log(&local_log);
   }
-  // TODO: Should check boot_completed, and send a lone BOOT_COMPLETED event to the client so it knows to init.
+  if (boot_completed) {
+    // This subscriber is joining us after bootup. Call its bootComplete() fxn to cause it to init.
+    client->notify(returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED));
+  }
   return ((return_value >= 0) ? 0 : -1);
 }
 
