@@ -122,7 +122,7 @@ EventReceiver* EventManager::getSubscriberByName(const char* search_str) {
 ****************************************************************************************************/
 
 void EventManager::update_maximum_queue_depth() {
-  max_queue_depth = max((unsigned int) event_queue.size(), (unsigned int) max_queue_depth);
+  max_queue_depth = max(event_queue.size(), (int) max_queue_depth);
 }
 
 
@@ -519,7 +519,7 @@ void EventManager::profiler(bool enabled) {
   idempotent_blocks  = 0; 
   insertion_denials  = 0;   
   max_queue_depth    = 0;   
-  
+
   while (event_costs.hasNext()) delete event_costs.dequeue();
 }
 
@@ -538,7 +538,9 @@ void EventManager::printProfiler(StringBuilder* output) {
     
   if (profiler_enabled) {
     output->concat("-- Profiler dump:\n");
-    output->concatf("\tFraction of prealloc hits: %f\n\n", ((burden_of_specific - prealloc_starved) / total_events));
+    if (total_events) {
+      output->concatf("\tFraction of prealloc hits: %f\n\n", ((burden_of_specific - prealloc_starved) / total_events));
+    }
 
     output->concatf("\t max_idle_loop_time         %u\n", max_idle_loop_time);
     output->concatf("\t max_events_p_loop          %u\n", max_events_p_loop);

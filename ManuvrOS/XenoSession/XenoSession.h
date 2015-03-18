@@ -204,6 +204,8 @@ class XenoSession : public EventReceiver {
     int8_t tapMessageType(uint16_t code);     // Start getting broadcasts about a given message type.
     int8_t untapMessageType(uint16_t code);   // Stop getting broadcasts about a given message type.
     int8_t untapAll();
+
+    int8_t sendEvent(ManuvrEvent*);
     
     int8_t sendSyncPacket();
     

@@ -22,8 +22,10 @@
 #include "demo/StaticHub.h"
 #include "ManuvrOS/EventManager.h"
 #include "ManuvrOS/Scheduler.h"
+#include "ManuvrOS/Transports/ManuvrComPort/ManuvrComPort.h"
 #include "ManuvrOS/XenoSession/XenoSession.h"
 #include "ManuvrOS/Drivers/TMP006/TMP006.h"
+
 
 /****************************************************************************************************
 * Function prototypes.                                                                              *
@@ -48,14 +50,9 @@ const int INTERRUPT_PERIOD = 1;        // How many seconds between SIGALRM inter
 int parent_pid  = 0;            // The PID of the root process (always).
 int looper_pid  = 0;            // This is the PID for the VM thread.
 
-int port_fd     = -1;           // This is out descriptor for a COM port connection.
-const char *tty = NULL;
-int baudrate    = 115200;
-bool serial_connected = false;
-struct termios termAttr;
-struct sigaction serial_handler;
-
-XenoSession* session = NULL;
+XenoSession* session     = NULL;
+XenoSession* com_session = NULL;
+ManuvrComPort* com_port = NULL;
 
 int maximum_field_print = 65;       // The maximum number of bytes we will print for sessions. Has no bearing on file output.
 
@@ -75,103 +72,6 @@ void fp_log(const char *fxn_name, int severity, const char *str, ...) {
     va_start(marker, str);
     vprintf(str, marker);
     va_end(marker);
-}
-
-
-
-/*
-* In a linux environment, we need a function outside of this class to catch signals.
-* This is called when the serial port has something to say. 
-*/
-void tty_signal_handler(int status) {
-	unsigned char *buf = (unsigned char *) alloca(256);
-	if (!serial_connected) {
-		fp_log(__PRETTY_FUNCTION__, LOG_WARNING, "We received data at a serial port and don't think we are connected. Dropping the data...");
-		return;
-	}
-
-	if (port_fd >= 0) {
-	  StaticHub *s = StaticHub::getInstance();
-	  if (s == NULL) {
-	    fp_log(__PRETTY_FUNCTION__, LOG_WARNING, "We received data at a serial port and don't have a class to accept it. Dropping the data...");
-	    return;
-	  }
-	  
-		bzero(buf, 256);
-		int n = read(port_fd, buf, 255);
-		int total_read = n;
-		while (n > 0) {
-			n = read(port_fd, buf, 255);
-			total_read += n;
-		}
-		
-		if (total_read > 0) {
-			// Do stuff regarding the data we just read...
-			if (NULL != session) {
-			  fp_log(__PRETTY_FUNCTION__, LOG_WARNING, "Feeding bytes into the local session...\n");
-			  printBinString(buf, total_read);
-			  session->bin_stream_rx(buf, total_read);
-			}
-		}
-	}
-	else {
-	  fp_log(__PRETTY_FUNCTION__, LOG_WARNING, "We received data at a serial port but our port descriptor is not valid...");
-	}
-}
-
-
-
-/**
-* Does what it claims to do on linux.
-* Returns false on error and true on success.
-*/
-bool write_serial_port(unsigned char* out, int out_len) {
-	if (port_fd == -1) {
-		fp_log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to port: (%s)\n", tty);
-		return false;
-	}
-	
-	if (serial_connected) {
-		write(port_fd, out, out_len);
-		return true;
-	}
-	return false;
-}
-
-
-/*
-* Setup the serial port.
-*/
-bool seriak_port_init() {
-	port_fd = open(tty, O_RDWR | O_NOCTTY | O_NDELAY);
-	if (port_fd == -1) {
-		fp_log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to open port: (%s)\n", tty);
-		return false;
-	}
-
-	serial_handler.sa_handler = tty_signal_handler;
-	serial_handler.sa_flags = 0;
-	serial_handler.sa_restorer = NULL; 
-	sigaction(SIGIO, &serial_handler, NULL);
-
-	int this_pid = getpid();
-	fcntl(port_fd, F_SETOWN, this_pid);	        // This process owns the port.
-	fcntl(port_fd, F_SETFL, O_NDELAY | O_ASYNC);  // Read returns immediately.
-
-	tcgetattr(port_fd, &termAttr);
-	cfsetspeed(&termAttr,baudrate);
-	termAttr.c_cflag &= ~PARENB;          // No parity
-	termAttr.c_cflag &= ~CSTOPB;          // 1 stop bit
-	termAttr.c_cflag &= ~CSIZE;           // Enable char size mask
-	termAttr.c_cflag |= CS8;              // 8-bit characters
-	termAttr.c_cflag |= (CLOCAL | CREAD);
-	termAttr.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
-	termAttr.c_iflag &= ~(IXON | IXOFF | IXANY);
-	termAttr.c_oflag &= ~OPOST;
-	
-	serial_connected = (tcsetattr(port_fd, TCSANOW, &termAttr) == 0);
-
-	return serial_connected;
 }
 
 
@@ -481,7 +381,7 @@ int statistical_mode_test() {
       }
   }
   
-  double temp_double = 0;  
+  double temp_double = 0;
   double most_common = mode_bins.get();
   int stat_mode      = mode_bins.getPriority(most_common);
   printf("Most common:  %lf\n", most_common);
@@ -744,6 +644,8 @@ int establishSession() {
     session->printDebug(&output);
     printf("%s", (char*)output.string());
   }
+  
+  return 0;
 }
 
 
@@ -920,19 +822,17 @@ void session_battery_2() {
   printf("|                                   XenoSession unit tests                                        |\n");
   printf("====<  Tied Together  >============================================================================\n");
   
-  write_serial_port((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
-  write_serial_port((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
-  write_serial_port((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
-  write_serial_port((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
-  write_serial_port((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
-  write_serial_port((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
-
   ManuvrEvent test_event_in(MANUVR_MSG_USER_BUTTON_PRESS);
   test_event_in.addArg((uint8_t) 9);
   
   XenoMessage inbound_msg(&test_event_in);
+
+  if (NULL != com_port) {
+    com_port->establishSession();
+  }
+  
   printf("Verbosity message generated. Packet takes %d bytes.\n", inbound_msg.buffer.length());
-  write_serial_port(inbound_msg.buffer.string(), inbound_msg.buffer.length());
+
   proc_until_finished();
 }
 
@@ -946,11 +846,7 @@ void session_battery_2() {
 *  Takes one additional parameter at runtime that is not required: The path of the test vectors.
 */
 int main(int argc, char *argv[]) {
-  program_name            = argv[0];  // Our name.
-	char operation   = '.';     // No operation.
-	uint8_t volume       = 128;
-	uint8_t input_chan   = 255;
-	uint8_t output_chan  = 255;
+  program_name = argv[0];  // Our name.
 	
 	StringBuilder output;
 
@@ -969,6 +865,7 @@ int main(int argc, char *argv[]) {
 
   EventManager* event_manager = sh->fetchEventManager();
   Scheduler*    scheduler     = sh->fetchScheduler();
+  
 
     ///* INTERNAL INTEGRITY-CHECKS
     //*  Now... at this point, with our config complete and a database at our disposal, we do some administrative checks...
@@ -1010,11 +907,7 @@ int main(int argc, char *argv[]) {
 			exit(1);
 		}
 		else if (strcasestr(argv[i], "--tty-dev") && (i < argc-1)) {
-		  tty = argv[i+1];
-			if (!seriak_port_init()) {
-			  printf("Failed to open tty: %s\n", tty);
-			  exit(1);
-			}
+		  com_port = new ManuvrComPort(argv[i+1], 115200, O_RDWR | O_NOCTTY | O_NDELAY);
 			i++;
 		}
 		else {
@@ -1041,18 +934,14 @@ int main(int argc, char *argv[]) {
 //  }
 //  else {                // Are we the parent? Also executes if (pd_pid == -2).
 //  }
-  
     initSigHandlers();
     alarm(1);                // Set a periodic interrupt.
-
-  int i;
-  printf("\n");
-  char *test_root = NULL;
   
-  if (argv[1] != NULL) test_root = argv[1];
 
+  printf("\n");
+  
   char *input_text  = (char*)alloca(BUFFER_LEN);  // Buffer to hold user-input.
-  char *trimmed, *t_iterator;          // Temporary pointers for manipulating user-input.
+  char *trimmed;            // Temporary pointers for manipulating user-input.
   StringBuilder parsed;
 
   // The main loop. Run forever.

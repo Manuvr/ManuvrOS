@@ -210,7 +210,7 @@ volatile bool StaticHub::provide_random_int(uint32_t nu_rnd) {
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
 uint32_t StaticHub::randomInt(void) {
-	uint32_t return_value = 0;
+	uint32_t return_value = rand();
 	return return_value;
 }
 
@@ -526,7 +526,6 @@ int8_t StaticHub::callback_proc(ManuvrEvent *event) {
 int8_t StaticHub::notify(ManuvrEvent *active_event) {
   StringBuilder output;
   int8_t return_value = 0;
-  uint32_t temp_uint_32;
   
   switch (active_event->event_code) {
     case MANUVR_MSG_USER_DEBUG_INPUT:

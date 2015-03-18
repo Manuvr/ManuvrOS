@@ -104,18 +104,18 @@
     #define MANUVR_MSG_XPORT_RESET          0x0201 // Reset the transport.
     #define MANUVR_MSG_XPORT_CONNECT        0x0202 // Connect to a counterparty.
     #define MANUVR_MSG_XPORT_DISCONNECT     0x0203 // Disconnect from a counterparty.
-    #define MANUVR_MSG_TRANSPORT_ERROR      0x0204 // Timeouts, aborted connections, etc...
-    #define MANUVR_MSG_TRANSPORT_SESSION    0x0205 // Assign/retreive a XenoSession to/from this transport.  
+    #define MANUVR_MSG_XPORT_ERROR          0x0204 // Timeouts, aborted connections, etc...
+    #define MANUVR_MSG_XPORT_SESSION        0x0205 // Assign/retreive a XenoSession to/from this transport.  
     #define MANUVR_MSG_XPORT_QUEUE_RDY      0x0206 // This transport's operation queue needs attention.
     #define MANUVR_MSG_XPORT_CB_QUEUE_RDY   0x0207 // This transport's callback queue needs attention.
-    #define MANUVR_MSG_TRANSPORT_SEND       0x0208 // Send data using a transport.
-    #define MANUVR_MSG_TRANSPORT_RECEIVE    0x0209 // Data was received on a transport.
-    #define MANUVR_MSG_TRANSPORT_RESERVED_0 0x020A //
-    #define MANUVR_MSG_TRANSPORT_RESERVED_1 0x020B //
-    #define MANUVR_MSG_TRANSPORT_SET_PARAM  0x020C // Set the state of some feature of the transport.
-    #define MANUVR_MSG_TRANSPORT_GET_PARAM  0x020D // Read the transport's present settings.
-    #define MANUVR_MSG_TRANSPORT_IDENTITY   0x020E // Used to annouce transports to other software.
-    #define MANUVR_MSG_TRANSPORT_DEBUG      0x020F // Dump information about the transport for a human to read.
+    #define MANUVR_MSG_XPORT_SEND           0x0208 // Send data using a transport.
+    #define MANUVR_MSG_XPORT_RECEIVE        0x0209 // Data was received on a transport.
+    #define MANUVR_MSG_XPORT_RESERVED_0     0x020A //
+    #define MANUVR_MSG_XPORT_RESERVED_1     0x020B //
+    #define MANUVR_MSG_XPORT_SET_PARAM      0x020C // Set the state of some feature of the transport.
+    #define MANUVR_MSG_XPORT_GET_PARAM      0x020D // Read the transport's present settings.
+    #define MANUVR_MSG_XPORT_IDENTITY       0x020E // Used to annouce transports to other software.
+    #define MANUVR_MSG_XPORT_DEBUG          0x020F // Dump information about the transport for a human to read.
     // IRDa
     #define MANUVR_MSG_IRDA_ENABLE          0x0210 // Should IRDa be enabled?
     #define MANUVR_MSG_IRDA_CONFIG          0x0211 // IRDa configuration parameters are being passed.

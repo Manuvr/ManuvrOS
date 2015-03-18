@@ -454,6 +454,21 @@ int8_t XenoSession::sendSyncPacket() {
 }
 
 
+int8_t XenoSession::sendEvent(ManuvrEvent *active_event) {
+  XenoMessage* nu_outbound_msg = new XenoMessage(active_event);
+
+  nu_outbound_msg->expecting_ack = false;
+  nu_outbound_msg->proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
+
+  outbound_messages.insert(nu_outbound_msg);
+  ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_SESS_ORIGINATE_MSG);
+  raiseEvent(event);
+
+  return 0;
+}
+
+
+
 /**
 * This fxn is destructive to the session buffer. The point is to eliminate bytes from the
 *   buffer until we have the following 4-byte sequence at offset 0. In that case, we consume

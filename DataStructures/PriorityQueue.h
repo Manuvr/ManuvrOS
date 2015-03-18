@@ -301,7 +301,10 @@ template <class T> T PriorityQueue<T>::dequeue() {
     element_count--;
     return return_value;
   }
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wconversion-null"
   return NULL;
+  #pragma GCC diagnostic pop
 }
 
 
@@ -321,7 +324,10 @@ template <class T> T PriorityQueue<T>::recycle() {
 
     return return_value;
   }
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wconversion-null"
   return NULL;
+  #pragma GCC diagnostic pop
 }
 
 
@@ -394,7 +400,10 @@ template <class T> T PriorityQueue<T>::get() {
   if (current != NULL) {
     return current->data;
   }
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wconversion-null"
   return NULL;
+  #pragma GCC diagnostic pop
 }
 
 
@@ -408,7 +417,10 @@ template <class T> T PriorityQueue<T>::get(int pos) {
     i++;
     current = current->next;
   }
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wconversion-null"
   return NULL;
+  #pragma GCC diagnostic pop
 }
 
 

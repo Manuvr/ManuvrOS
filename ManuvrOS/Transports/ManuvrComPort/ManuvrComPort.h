@@ -51,6 +51,7 @@ Platforms that require it should be able to extend this driver for specific
 #else   //Assuming a linux environment. Cross your fingers....
   #include <fcntl.h>
   #include <termios.h>
+  #include <sys/signal.h>
 #endif
 
 class XenoSession;
@@ -61,6 +62,7 @@ class XenoSession;
 #define MANUVR_XPORT_STATE_CONNECTED      0b01000000
 #define MANUVR_XPORT_STATE_BUSY           0b00100000
 #define MANUVR_XPORT_STATE_HAS_SESSION    0b00010000
+#define MANUVR_XPORT_STATE_LISTENING      0b00001000
 
 
 class ManuvrComPort : public ManuvrXport {
@@ -78,11 +80,16 @@ class ManuvrComPort : public ManuvrXport {
 
     
     // TODO: Migrate to Xport class.
-    inline bool connected() {   return (xport_state & MANUVR_XPORT_STATE_CONNECTED);  }
+    inline bool initialized() { return (xport_state & MANUVR_XPORT_STATE_INITIALIZED);  }
+    inline bool connected() {   return (xport_state & MANUVR_XPORT_STATE_CONNECTED);    }
     inline bool hasSession() {  return (xport_state & MANUVR_XPORT_STATE_HAS_SESSION);  }
 
     int8_t reset();
+    int8_t establishSession();
     
+    int8_t read_port();
+    bool write_port(unsigned char* out, int out_len);
+
 
   protected:
     /*
@@ -94,10 +101,11 @@ class ManuvrComPort : public ManuvrXport {
     uint8_t  xport_state;
     
     bool event_addresses_us(ManuvrEvent*);   // Given a transport event, returns true if we need to act.
-    
+      
 
   private:
     const char* tty_name;
+    int port_number;
     int baud_rate;
     uint32_t options;
     
@@ -105,9 +113,20 @@ class ManuvrComPort : public ManuvrXport {
     uint32_t pid_read_abort;       // Used to timeout a read operation.
     ManuvrEvent read_abort_event;  // Used to timeout a read operation.
     
-    
+    #ifdef TEST_BENCH
+      struct termios termAttr;
+      struct sigaction serial_handler;
+    #endif
+
     void __class_initializer();
     
+    inline void set_xport_state(uint8_t bitmask) {
+      xport_state = (bitmask | xport_state);
+    }
+    
+    inline void unset_xport_state(uint8_t bitmask) {
+      xport_state = (~bitmask & xport_state);
+    }
     
 };
 

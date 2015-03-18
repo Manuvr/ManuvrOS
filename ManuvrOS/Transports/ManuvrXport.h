@@ -40,7 +40,6 @@ class ManuvrXport : public EventReceiver {
   public:
     //ManuvrXport();
     //virtual ~ManuvrXport() {};
-    
 
     ///* Overrides from EventReceiver */
     //virtual int8_t bootComplete()               = 0;
@@ -48,8 +47,9 @@ class ManuvrXport : public EventReceiver {
     //virtual void printDebug(StringBuilder *)    = 0;
     //virtual int8_t notify(ManuvrEvent*)         = 0;
     //virtual int8_t callback_proc(ManuvrEvent *) = 0;
-
     
+    static uint16_t TRANSPORT_ID_POOL;
+
   protected:
 
   private:
