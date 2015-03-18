@@ -95,22 +95,44 @@
   #define MANUVR_MSG_SD_INSERTED          0x0121 // An SD card was inserted.
 
   
-  // Codes for various styles of serial bus
-  #define MANUVR_MSG_I2C_QUEUE_READY      0x0200 // The i2c queue is ready for attention.
-  #define MANUVR_MSG_I2C_DUMP_DEBUG       0x020F // Debug dump for i2c.
-  // IRDa
-  #define MANUVR_MSG_IRDA_ENABLE          0x0210 // Should IRDa be enabled?
-  #define MANUVR_MSG_IRDA_CONFIG          0x0211 // IRDa configuration parameters are being passed.
-  // SPI
-  #define MANUVR_MSG_SPI_QUEUE_READY      0x0230 // There is a new job in the SPI bus queue.
-  #define MANUVR_MSG_SPI_CB_QUEUE_READY   0x0231 // There is something ready in the callback queue. 
-  // USB VCP stuff...
-  #define MANUVR_MSG_SYS_USB_CONNECT      0x0250 // Something was plugged into our USB port.
-  #define MANUVR_MSG_SYS_USB_DISCONNECT   0x0251 // Something was unplugged from our USB port.
-  #define MANUVR_MSG_SYS_USB_CONFIGURED   0x0252 // USB device configured and ready for use.
-  #define MANUVR_MSG_SYS_USB_SUSPEND      0x0253 // USB device suspended.
-  #define MANUVR_MSG_SYS_USB_RESUME       0x0254 // Resumed....
-  #define MANUVR_MSG_SYS_USB_RESET        0x0255 // USB system reset.
+  /* Codes for various styles of serial bus */
+    // Generic transport events. Sophisticated classes should be able to use these as an interface.
+    // All of these messages should ultimately carry a mandatory integer argument to ID the transport.
+    //   When that day comes, all Events that do not carry this argument will be construed to apply to
+    //   ALL transports in the system.
+    #define MANUVR_MSG_XPORT_INIT           0x0200 // Initialize the transport. 
+    #define MANUVR_MSG_XPORT_RESET          0x0201 // Reset the transport.
+    #define MANUVR_MSG_XPORT_CONNECT        0x0202 // Connect to a counterparty.
+    #define MANUVR_MSG_XPORT_DISCONNECT     0x0203 // Disconnect from a counterparty.
+    #define MANUVR_MSG_TRANSPORT_ERROR      0x0204 // Timeouts, aborted connections, etc...
+    #define MANUVR_MSG_TRANSPORT_SESSION    0x0205 // Assign/retreive a XenoSession to/from this transport.  
+    #define MANUVR_MSG_XPORT_QUEUE_RDY      0x0206 // This transport's operation queue needs attention.
+    #define MANUVR_MSG_XPORT_CB_QUEUE_RDY   0x0207 // This transport's callback queue needs attention.
+    #define MANUVR_MSG_TRANSPORT_SEND       0x0208 // Send data using a transport.
+    #define MANUVR_MSG_TRANSPORT_RECEIVE    0x0209 // Data was received on a transport.
+    #define MANUVR_MSG_TRANSPORT_RESERVED_0 0x020A //
+    #define MANUVR_MSG_TRANSPORT_RESERVED_1 0x020B //
+    #define MANUVR_MSG_TRANSPORT_SET_PARAM  0x020C // Set the state of some feature of the transport.
+    #define MANUVR_MSG_TRANSPORT_GET_PARAM  0x020D // Read the transport's present settings.
+    #define MANUVR_MSG_TRANSPORT_IDENTITY   0x020E // Used to annouce transports to other software.
+    #define MANUVR_MSG_TRANSPORT_DEBUG      0x020F // Dump information about the transport for a human to read.
+    // IRDa
+    #define MANUVR_MSG_IRDA_ENABLE          0x0210 // Should IRDa be enabled?
+    #define MANUVR_MSG_IRDA_CONFIG          0x0211 // IRDa configuration parameters are being passed.
+    // i2c
+    #define MANUVR_MSG_I2C_QUEUE_READY      0x0220 // The i2c queue is ready for attention.
+    #define MANUVR_MSG_I2C_DUMP_DEBUG       0x022F // Debug dump for i2c.
+    // SPI
+    #define MANUVR_MSG_SPI_QUEUE_READY      0x0230 // There is a new job in the SPI bus queue.
+    #define MANUVR_MSG_SPI_CB_QUEUE_READY   0x0231 // There is something ready in the callback queue. 
+    // USB VCP stuff...
+    #define MANUVR_MSG_SYS_USB_CONNECT      0x0250 // Something was plugged into our USB port.
+    #define MANUVR_MSG_SYS_USB_DISCONNECT   0x0251 // Something was unplugged from our USB port.
+    #define MANUVR_MSG_SYS_USB_CONFIGURED   0x0252 // USB device configured and ready for use.
+    #define MANUVR_MSG_SYS_USB_SUSPEND      0x0253 // USB device suspended.
+    #define MANUVR_MSG_SYS_USB_RESUME       0x0254 // Resumed....
+    #define MANUVR_MSG_SYS_USB_RESET        0x0255 // USB system reset.
+    
   
 
 

@@ -24,6 +24,11 @@ ChainForge is the optional utility module to cause triggerd and conditional
 */
 
 
+#ifndef __MANUVR_CHAIN_FORGE_H__
+#define __MANUVR_CHAIN_FORGE_H__
+
+#include "../EventManager.h"
+
 
 //
 //class ChainForge : public EventReceiver {
@@ -46,3 +51,4 @@ ChainForge is the optional utility module to cause triggerd and conditional
 //};
 
 
+#endif   // __MANUVR_CHAIN_FORGE_H__
