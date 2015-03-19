@@ -330,7 +330,7 @@ int8_t XenoSession::notify(ManuvrEvent *active_event) {
   int8_t return_value = 0;
   
   /* We don't want to resonate... Don't react to Events that have us as the callback. */
-  if (active_event->callback != (EventCallback*) this) {
+  if (active_event->callback != (EventReceiver*) this) {
     switch (active_event->event_code) {
       /* General system events */
       case MANUVR_MSG_INTERRUPTS_MASKED:
@@ -370,21 +370,23 @@ int8_t XenoSession::notify(ManuvrEvent *active_event) {
         break;
     }
   }
-
-  /* This is the block that allows the counterparty to intercept events of its choosing. */
-  if (msg_relay_list.contains(active_event->getMsgDef())) {
-    // If we are in this block, it means we need to serialize the event and send it.
-    XenoMessage* nu_outbound_msg = new XenoMessage(active_event);
-
-    nu_outbound_msg->expecting_ack = false;
-    nu_outbound_msg->proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
-    //TODO: Should at this point dump the serialized data into a BT data message or something.
-    // for now, we're just going to dump it to the console.
-    // TODOING: Hopefully this will fly.
-    // TODONE: It flew.
-    outbound_messages.insert(nu_outbound_msg);
-    ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_SESS_ORIGINATE_MSG);
-    raiseEvent(event);
+  
+  if ((XENO_SESSION_IGNORE_NON_EXPORTABLES) && (active_event->isExportable())) {
+    /* This is the block that allows the counterparty to intercept events of its choosing. */
+    if (msg_relay_list.contains(active_event->getMsgDef())) {
+      // If we are in this block, it means we need to serialize the event and send it.
+      XenoMessage* nu_outbound_msg = new XenoMessage(active_event);
+    
+      nu_outbound_msg->expecting_ack = false;
+      nu_outbound_msg->proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
+      //TODO: Should at this point dump the serialized data into a BT data message or something.
+      // for now, we're just going to dump it to the console.
+      // TODOING: Hopefully this will fly.
+      // TODONE: It flew.
+      outbound_messages.insert(nu_outbound_msg);
+      ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_SESS_ORIGINATE_MSG);
+      raiseEvent(event);
+    }
   }
   
   if (local_log.length() > 0) StaticHub::log(&local_log);

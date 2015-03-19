@@ -44,6 +44,8 @@ volatile I2CAdapter* i2c = NULL;
 
 
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
+  __class_initializer();
+  
   // This init() fxn was patterned after the STM32F4x7 library example.
   dev = dev_id;
   if (dev_id == 1) {
@@ -134,6 +136,8 @@ int8_t I2CAdapter::generateStop() {
 #elif defined(__MK20DX256__)
 
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
+  __class_initializer();
+  
   dev = dev_id;
   if (dev_id == 1) {
     Wire1.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400);
@@ -182,10 +186,58 @@ int8_t I2CAdapter::generateStop() {
 
 #elif defined(ARDUINO)    // Perhaps this is an arduino-style env?
 
+I2CAdapter::I2CAdapter(uint8_t dev_id) {
+  __class_initializer();
+  
+  dev = dev_id;
+  if (dev_id == 1) {
+    //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400);
+    bus_online = true;
+  }
+  
+  for (uint16_t i = 0; i < 128; i++) {
+  	  ping_map[i] = 0;
+  }
+  i2c = this;
+  current_queue_item = NULL;
+}
+
+
+I2CAdapter::~I2CAdapter() {
+    bus_online = false;
+    while (dev_list.hasNext()) {
+      dev_list.get()->disassignBusInstance();
+      dev_list.remove();
+    }
+    
+    /* TODO: The work_queue destructor will take care of its own cleanup, but
+       We should abort any open transfers prior to deleting this list. */
+}
+
+
+// TODO: Inline this.
+int8_t I2CAdapter::generateStart() {
+  if (verbosity > 6) StaticHub::log("I2CAdapter::generateStart()\n");
+  if (! bus_online) return -1;
+  //Wire1.sendTransmission(I2C_STOP);
+  //Wire1.finish(900);   // We allow for 900uS for timeout.
+  
+  return 0;
+}
+
+// TODO: Inline this.
+int8_t I2CAdapter::generateStop() {
+  if (verbosity > 6) StaticHub::log("I2CAdapter::generateStop()\n");
+  if (! bus_online) return -1;
+  return 0;
+}
+
 
 #else  // Assuming a linux system...
 
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
+  __class_initializer();
+  
   char *filename = (char *) alloca(24);
   if (sprintf(filename, "/dev/i2c-%d", dev_id) > 0) {
     dev = open(filename, O_RDWR);
@@ -227,7 +279,7 @@ int8_t I2CAdapter::generateStop() {
   return 0;
 }
 
-#endif  //STM32F4XX
+#endif  // Platform case-offs
 
 
 
@@ -242,9 +294,21 @@ void I2CAdapter::gpioSetup() {
 
 
 
-/**************************************************************************
-* Overrides from EventReceiver interface...                               *
-**************************************************************************/
+/****************************************************************************************************
+*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+* ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
+* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
+* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌          
+* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄ 
+* ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
+* ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
+* ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
+* ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
+* ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
+*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀ 
+* 
+* These are overrides from EventReceiver interface...
+****************************************************************************************************/
 
 /**
 * There is a NULL-check performed upstream for the scheduler member. So no need 

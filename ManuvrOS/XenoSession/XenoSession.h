@@ -59,6 +59,9 @@ const uint8_t XENO_MSG_PROC_STATE_AWAITING_WRITE         = 0x24;
 const uint8_t XENO_MSG_PROC_STATE_WRITING_REPLY          = 0x25;
 
 
+// Comment the define below to enable ALL messages to be exchanged via the XenoSession. The only possible
+// reason for this is debug.
+#define XENO_SESSION_IGNORE_NON_EXPORTABLES 1
 
 #define XENO_SESSION_MAX_QUEUE_PRINT    3    // This is only relevant for debug.
 #define XENOMESSAGE_PREALLOCATE_COUNT   4    // How many XenoMessages should the session preallocate?

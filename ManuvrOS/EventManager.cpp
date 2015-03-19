@@ -6,6 +6,7 @@
 #endif
 
 
+
 /****************************************************************************************************
 * Static initializers                                                                               *
 ****************************************************************************************************/
@@ -20,10 +21,11 @@ EventManager* EventManager::INSTANCE = NULL;
 * Vanilla constructor.
 */
 EventManager::EventManager() {
+  EventReceiver::__class_initializer();
   INSTANCE       = this;
-  setVerbosity((int8_t) 0);
-  scheduler      = NULL;
+  setVerbosity((int8_t) 0);  // TODO: Why does this crash ViamSonus?
   boot_completed = false;
+  profiler(true);
   
   for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
     /* We carved out a space in our allocation for a pool of events. Ideally, this would be enough
@@ -34,8 +36,6 @@ EventManager::EventManager() {
     _preallocation_pool[i].returnToPrealloc(true);
     preallocated.insert(&_preallocation_pool[i]);
   }
-  
-  profiler(true);
 }
 
 /**
@@ -64,7 +64,7 @@ int8_t EventManager::subscribe(EventReceiver *client) {
   int8_t return_value = subscribers.insert(client);
   if (boot_completed) {
     // This subscriber is joining us after bootup. Call its bootComplete() fxn to cause it to init.
-    client->notify(returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED));
+    //client->notify(returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED));
   }
   return ((return_value >= 0) ? 0 : -1);
 }
@@ -93,7 +93,7 @@ int8_t EventManager::subscribe(EventReceiver *client, uint8_t priority) {
   }
   if (boot_completed) {
     // This subscriber is joining us after bootup. Call its bootComplete() fxn to cause it to init.
-    client->notify(returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED));
+    //client->notify(returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED));
   }
   return ((return_value >= 0) ? 0 : -1);
 }
@@ -139,7 +139,7 @@ void EventManager::update_maximum_queue_depth() {
 * @param  cb    An optional callback pointer to be called when this event is finished.
 * @return -1 on failure, and 0 on success.
 */
-int8_t EventManager::raiseEvent(uint16_t code, EventCallback* cb) {
+int8_t EventManager::raiseEvent(uint16_t code, EventReceiver* cb) {
   int8_t return_value = 0;
   
   // We are creating a new Event. Try to snatch a prealloc'd one and fall back to malloc if needed.
@@ -217,11 +217,11 @@ ManuvrEvent* EventManager::returnEvent(uint16_t code) {
   ManuvrEvent* return_value = INSTANCE->preallocated.dequeue();
   if (return_value == NULL) {
     INSTANCE->prealloc_starved++;
-    return_value = new ManuvrEvent(code, (EventCallback*) INSTANCE);
+    return_value = new ManuvrEvent(code, (EventReceiver*) INSTANCE);
   }
   else {
     return_value->repurpose(code);
-    return_value->callback = (EventCallback*) INSTANCE;
+    return_value->callback = (EventReceiver*) INSTANCE;
   }
   return return_value;
 }
@@ -239,7 +239,9 @@ ManuvrEvent* EventManager::returnEvent(uint16_t code) {
 */
 int8_t EventManager::validate_insertion(ManuvrEvent* event) {
   if (NULL == event) return -1;                                   // No NULL events.
-  if (MANUVR_MSG_UNDEFINED == event->event_code) return -2;  // No undefined events.
+  if (MANUVR_MSG_UNDEFINED == event->event_code) {
+    return -2;  // No undefined events.
+  }
 
   // Those are the basic checks. Now for the advanced functionality...
   if (event->isIdempotent()) {
@@ -305,7 +307,7 @@ void EventManager::reclaim_event(ManuvrEvent* active_event) {
 *
 * @return the number of events processed, or a negative value on some failure.
 */
-int8_t EventManager::procIdleFlags(void) {
+int8_t EventManager::procIdleFlags() {
   uint32_t profiler_mark   = (profiler_enabled) ? micros() : 0;   // Profiling requests...
   uint32_t profiler_mark_0 = 0;   // Profiling requests...
   uint32_t profiler_mark_1 = 0;   // Profiling requests...
@@ -315,13 +317,16 @@ int8_t EventManager::procIdleFlags(void) {
   uint16_t msg_code_local  = 0;   
   
   ManuvrEvent *active_event = NULL;  // Our short-term focus.
-  uint8_t activity_count         = 0;     // Incremented whenever a subscriber reacts to an event.
+  uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
 
   /* As long as we have an open event and we aren't yet at our proc ceiling... */
   while (event_queue.hasNext() && (EVENT_MANAGER_MAX_EVENTS_PER_LOOP > return_value)) {
     active_event = event_queue.dequeue();       // Grab the Event and remove it in the same call.
     msg_code_local = active_event->event_code;  // This gets used after the life of the event.
+    boot_log.concatf("Entering procIdleFlags(): 0x%04x\n", msg_code_local);
     
+    active_event->printDebug(&boot_log);
+
     // Chat and measure.
     if (verbosity >= 5) local_log.concatf("Servicing: %s\n", active_event->getMsgTypeString());
     if (profiler_enabled) profiler_mark_0 = micros();
@@ -332,7 +337,8 @@ int8_t EventManager::procIdleFlags(void) {
     //   but silly.
     // Instead, we'll take advantage of the position by treating EventManager as if it were the head and
     //   tail of the subscriber queue.     ---J. Ian Lindsay 2014.11.05
-    if (active_event->callback != (EventCallback*) this) {    // Don't react to our own internally-generated events.
+    if (active_event->callback != (EventReceiver*) this) {    // Don't react to our own internally-generated events.
+      boot_log.concat("Non-ER callback... \n");
       switch (active_event->event_code) {
         case MANUVR_MSG_LEGEND_MESSAGES:     // Dump the message definitions.
           if (0 == active_event->args.size()) {   // Only if we are seeing a request.
@@ -353,6 +359,7 @@ int8_t EventManager::procIdleFlags(void) {
           }
           else {
             // We may be receiving a message definition message from another party.
+            // For now, we've decided to handle this in XenoSession.
           }
           break;
         default:
@@ -361,12 +368,14 @@ int8_t EventManager::procIdleFlags(void) {
           break;
       }
     }
+    boot_log.concat("starting notifications...\n");
     
     // Now we start notify()'ing subscribers.
     EventReceiver *subscriber;   // No need to assign.
     if (profiler_enabled) profiler_mark_1 = micros();
     
     if (NULL != active_event->specific_target) {
+      //boot_log.concatf("Specificly targeting %s\n", active_event->specific_target->getReceiverName());
         subscriber = active_event->specific_target;
         switch (subscriber->notify(active_event)) {
           case 0:   // The nominal case. No response.
@@ -382,6 +391,8 @@ int8_t EventManager::procIdleFlags(void) {
     else {
       for (int i = 0; i < subscribers.size(); i++) {
         subscriber = subscribers.get(i);
+        boot_log.concatf("Notifying %s\n", subscriber->getReceiverName());
+        
         switch (subscriber->notify(active_event)) {
           case 0:   // The nominal case. No response.
             break;
@@ -395,15 +406,19 @@ int8_t EventManager::procIdleFlags(void) {
       }
     }
     
+    boot_log.concat("Finished notifications...\n");
+    
     if (0 == activity_count) {
       if (verbosity >= 3) local_log.concatf("\tDead event... No subscriber acknowledges %s\n", active_event->getMsgTypeString());
       total_events_dead++;
     }
 
-    
+
     /* Clean up the Event. */
     if (NULL != active_event->callback) {
-      if ((EventCallback*) this != active_event->callback) {  // We don't want to invoke our own callback.
+      boot_log.concat("starting callback operation...\n");
+      
+      if ((EventReceiver*) this != active_event->callback) {  // We don't want to invoke our own callback.
         /* If the event has a valid callback, do the callback dance and take instruction
            from the return value. */
         //   if (verbosity >=7) output.concatf("specific_event_callback returns %d\n", active_event->callback->callback_proc(active_event));
@@ -412,28 +427,34 @@ int8_t EventManager::procIdleFlags(void) {
           case EVENT_CALLBACK_RETURN_UNDEFINED:   // The originating class doesn't care what we do with the event.
             if (verbosity > 5) local_log.concatf("EventManager found a possible mistake. Unexpected return case from callback_proc.\n");
           case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
+            boot_log.concat("Reap caused by abnormal conditions.\n");
             reclaim_event(active_event);
             break;
           case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
             if (verbosity > 5) local_log.concatf("EventManager is recycling event %s.\n", active_event->getMsgTypeString());
+            boot_log.concat("Recycling...\n");
             event_queue.insert(active_event);
             break;
           case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
             if (active_event->returnToPrealloc()) {
               if (verbosity > 5) local_log.concat("EventManager::reclaim_event(): Returning the event to prealloc,\n");
               active_event->clearArgs();              // If so, wipe the Event...
+              boot_log.concat("Returning to pre-allocation pool.\n");
               preallocated.insert(active_event);      // ...and return it to the preallocate queue.
             }                                         // Otherwise, we let it drop and trust some other class is managing it.
             else {
               if (verbosity > 5) local_log.concatf("Dropping event %s after running.\n", active_event->getMsgTypeString());
+              boot_log.concat("Dropping...\n");
             }
             break;
           default:
             if (verbosity > 5) local_log.concatf("Event %s has no cleanup case.\n", active_event->getMsgTypeString());
+            boot_log.concat("No cleanup case.\n");
             break;
         }
       }
       else {
+        boot_log.concat("ER callback...\n");
         reclaim_event(active_event);
       }
     }
@@ -441,6 +462,7 @@ int8_t EventManager::procIdleFlags(void) {
       /* If there is no callback, ask the event if it should be reaped. If its memory is
          being managed by some other class, this call will return false, and we just remove
          if from the event_queue and consider the matter closed. */
+      boot_log.concat("No callback...\n");
       reclaim_event(active_event);
     }
 
@@ -499,7 +521,13 @@ int8_t EventManager::procIdleFlags(void) {
     }
   }
 
-  if (local_log.length() > 0) StaticHub::log(&local_log);
+  if (local_log.length() > 0) {
+    if (boot_completed) StaticHub::log(&local_log);
+    else {
+      printf("%s", (char*) local_log.string());
+      local_log.clear();
+    }
+  }
   return return_value;
 }
 
@@ -599,6 +627,19 @@ void EventManager::clean_first_discard() {
   if (NULL == event) {
     delete event;
   }
+}
+
+
+/**
+* There is a NULL-check performed upstream for the scheduler member. So no need 
+*   to do it again here.
+*
+* @return 0 on no action, 1 on action, -1 on failure.
+*/
+int8_t EventManager::bootComplete() {
+  EventReceiver::bootComplete();
+  boot_completed = true;
+  return 1;
 }
 
 

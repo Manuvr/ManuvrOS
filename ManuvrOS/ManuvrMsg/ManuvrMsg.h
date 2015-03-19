@@ -50,8 +50,23 @@ typedef struct msg_defin_t {
 /*
 * These are flag definitions for Message types.
 */
-#define MSG_FLAG_IDEMPOTENT   0x01      // Indicates that only one of the given message should be enqueue.
-#define MSG_FLAG_EXPORTABLE   0x02      // Indicates that the message might be sent between systems.
+#define MSG_FLAG_IDEMPOTENT   0x0001      // Indicates that only one of the given message should be enqueue.
+#define MSG_FLAG_EXPORTABLE   0x0002      // Indicates that the message might be sent between systems.
+
+#define MSG_FLAG_RESERVED_D   0x0004      // Reserved flag.
+#define MSG_FLAG_RESERVED_C   0x0008      // Reserved flag.
+#define MSG_FLAG_RESERVED_B   0x0010      // Reserved flag.
+#define MSG_FLAG_RESERVED_A   0x0020      // Reserved flag.
+#define MSG_FLAG_RESERVED_9   0x0040      // Reserved flag.
+#define MSG_FLAG_RESERVED_8   0x0080      // Reserved flag.
+#define MSG_FLAG_RESERVED_7   0x0100      // Reserved flag.
+#define MSG_FLAG_RESERVED_6   0x0200      // Reserved flag.
+#define MSG_FLAG_RESERVED_5   0x0400      // Reserved flag.
+#define MSG_FLAG_RESERVED_4   0x0800      // Reserved flag.
+#define MSG_FLAG_RESERVED_3   0x1000      // Reserved flag.
+#define MSG_FLAG_RESERVED_2   0x2000      // Reserved flag.
+#define MSG_FLAG_RESERVED_1   0x4000      // Reserved flag.
+#define MSG_FLAG_RESERVED_0   0x8000      // Reserved flag.
 
 
 
@@ -137,8 +152,16 @@ class ManuvrMsg {
     int argCount();
     int argByteCount();
 
-    bool isExportable();
-    bool isIdempotent();
+    inline bool isExportable() {
+      if (NULL == message_def) message_def = lookupMsgDefByCode(event_code);
+      return (message_def->msg_type_flags & MSG_FLAG_EXPORTABLE);
+    }
+    
+    inline bool isIdempotent() {
+      if (NULL == message_def) message_def = lookupMsgDefByCode(event_code);
+      return (message_def->msg_type_flags & MSG_FLAG_IDEMPOTENT);
+    }
+
 
     int serialize(StringBuilder*);  // Returns the number of bytes resulting.
     uint8_t inflateArgumentsFromBuffer(unsigned char *str, int len);

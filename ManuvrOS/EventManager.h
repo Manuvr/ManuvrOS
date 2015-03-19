@@ -27,7 +27,15 @@
   #define EVENT_PRIORITY_HIGHEST            100
   #define EVENT_PRIORITY_LOWEST               0
   
+  
+  #ifdef TEST_BENCH
+    #define DEFAULT_CLASS_VERBOSITY    7
+  #else
+    #define DEFAULT_CLASS_VERBOSITY    4
+  #endif
+  
 
+  
   #ifdef __cplusplus
    extern "C" {
   #endif
@@ -55,32 +63,13 @@
   };
   
   
-  /*
-  * This is an interface class that will allow the consumer of an Event to call back to
-  *   the class that raised it. All EventReceivers are also EventCallbacks
-  // TODO: probably a needless distinction. Merge this class with EventReceiver.
-  */
-  class EventCallback {
-    public:
-      // Generally, this will be the Event that contains the callback reference.
-      virtual int8_t callback_proc(ManuvrEvent *) =0;
-      
-      /* This is just a convenience fxn. Might should inline it? Don't want to implement
-         in this class because of the benefits of retain the status as an interface. 
-      */
-      virtual int8_t raiseEvent(ManuvrEvent* event) =0;
-  
-  };
-  
-  
-  
   
   /*
   * This class defines an event that gets passed around between classes.
   */
   class ManuvrEvent : public ManuvrMsg {
     public:
-      EventCallback*   callback;         // This is an optional ref to the class that raised this event.
+      EventReceiver*   callback;         // This is an optional ref to the class that raised this event.
       EventReceiver*   specific_target;  // If the event is meant for a single class, put a pointer to it here.
   
       bool             mem_managed;      // Set to true to cause the EventManager to not free().
@@ -88,7 +77,7 @@
   
       int8_t           priority;
   
-      ManuvrEvent(uint16_t msg_code, EventCallback* cb);
+      ManuvrEvent(uint16_t msg_code, EventReceiver* cb);
       ManuvrEvent(uint16_t msg_code);
       ManuvrEvent();
       ~ManuvrEvent();
@@ -112,23 +101,15 @@
       void __class_initializer();
   };
   
-  
-  #ifdef TEST_BENCH
-    #define DEFAULT_CLASS_VERBOSITY    7
-  #else
-    #define DEFAULT_CLASS_VERBOSITY    4
-  #endif
-  
-  
+
   
   
   
   
   /**
   * This is an 'interface' class that will allow other classes to receive notice of Events.
-  * All EventReceivers must also implement EventCallback.
   */
-  class EventReceiver : public EventCallback {
+  class EventReceiver {
     public:
       virtual ~EventReceiver() {};
       
@@ -150,7 +131,7 @@
       virtual void        procDirectDebugInstruction(StringBuilder *input);
       virtual const char* getReceiverName() = 0;
       
-      /* These are being overridden from EventCallback. */
+      /* These are intended to be overridden. */
       virtual int8_t callback_proc(ManuvrEvent *);
       int8_t raiseEvent(ManuvrEvent* event);
   
@@ -163,7 +144,8 @@
       Scheduler* scheduler;
       int8_t verbosity;                   // How chatty is this class in the log?
 
-      virtual int8_t bootComplete();      // This is called from the base notify().
+      virtual int8_t bootComplete();        // This is called from the base notify().
+      virtual void   __class_initializer();
   
         
     private:
@@ -195,6 +177,7 @@
       void printDebug(StringBuilder *);
       
       void clean_first_discard();
+      
 
       /* Overrides from EventReceiver
            EventManager is special, and it will naturally have both methods from EventReceiver.
@@ -204,13 +187,15 @@
       */
   
   
-      static int8_t raiseEvent(uint16_t event_code, EventCallback* data);
+      static int8_t raiseEvent(uint16_t event_code, EventReceiver* data);
       static int8_t staticRaiseEvent(ManuvrEvent* event);
       
       // Factory method. Returns a preallocated Event.
       static ManuvrEvent* returnEvent(uint16_t event_code);
   
-  
+    protected:
+      int8_t bootComplete();
+
   
     private:
       ManuvrEvent _preallocation_pool[EVENT_MANAGER_PREALLOC_COUNT];

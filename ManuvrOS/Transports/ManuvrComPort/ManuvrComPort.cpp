@@ -137,7 +137,7 @@ void ManuvrComPort::__class_initializer() {
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
   read_abort_event.mem_managed     = true;
   read_abort_event.specific_target = (EventReceiver*) this;
-  read_abort_event.callback        = (EventCallback*) this;
+  read_abort_event.callback        = (EventReceiver*) this;
   read_abort_event.priority        = 5;
   //read_abort_event.addArg();  // Add our assigned transport ID to our pre-baked argument.
 
@@ -265,26 +265,36 @@ bool ManuvrComPort::event_addresses_us(ManuvrEvent *event) {
 int8_t ManuvrComPort::read_port() {
   if (connected()) {
     unsigned char *buf = (unsigned char *) alloca(512);
-    int n = read(port_number, buf, 255);
-    int total_read = n;
-    while (n > 0) {
-      n = read(port_number, buf, 255);
-      total_read += n;
-    }
-
-    if (total_read > 0) {
-      // Do stuff regarding the data we just read...
-      if (NULL != session) {
-        session->bin_stream_rx(buf, total_read);
+    #if defined (STM32F4XX)        // STM32F4
+  
+    #elif defined (__MK20DX128__)  // Teensy3
+    
+    #elif defined (__MK20DX256__)  // Teensy3.1
+    
+    #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
+      
+    #else   //Assuming a linux environment. Cross your fingers....
+      int n = read(port_number, buf, 255);
+      int total_read = n;
+      while (n > 0) {
+        n = read(port_number, buf, 255);
+        total_read += n;
       }
-      else {
-        ManuvrEvent *event = EventManager::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
-        event->addArg(port_number);
-        StringBuilder *nu_data = new StringBuilder(buf, total_read);
-        event->markArgForReap(event->addArg(nu_data), true);
-        EventManager::staticRaiseEvent(event);
+  
+      if (total_read > 0) {
+        // Do stuff regarding the data we just read...
+        if (NULL != session) {
+          session->bin_stream_rx(buf, total_read);
+        }
+        else {
+          ManuvrEvent *event = EventManager::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
+          event->addArg(port_number);
+          StringBuilder *nu_data = new StringBuilder(buf, total_read);
+          event->markArgForReap(event->addArg(nu_data), true);
+          EventManager::staticRaiseEvent(event);
+        }
       }
-    }
+    #endif
   }
   else if (verbosity > 1) local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
   
@@ -298,15 +308,25 @@ int8_t ManuvrComPort::read_port() {
 * Returns false on error and true on success.
 */
 bool ManuvrComPort::write_port(unsigned char* out, int out_len) {
-	if (port_number == -1) {
-		if (verbosity > 2) StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to port: (%s)\n", tty_name);
-		return false;
-	}
-	
-	if (connected()) {
-		return (out_len == (int) write(port_number, out, out_len));
-	}
-	return false;
+  if (port_number == -1) {
+    if (verbosity > 2) StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to port: (%s)\n", tty_name);
+    return false;
+  }
+  
+  if (connected()) {
+    #if defined (STM32F4XX)        // STM32F4
+  
+    #elif defined (__MK20DX128__)  // Teensy3
+    
+    #elif defined (__MK20DX256__)  // Teensy3.1
+    
+    #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
+      
+    #else   //Assuming a linux environment. Cross your fingers....
+      return (out_len == (int) write(port_number, out, out_len));
+    #endif
+  }
+  return false;
 }
 
 

@@ -50,6 +50,7 @@ const unsigned char ManuvrMsg::MSG_ARGS_POWER_MODE[] = {
   
 
 
+
 /*
 * These are the hard-coded message types that the program knows about.
 * This is where we decide what kind of arguments each message is capable of carrying.
@@ -61,6 +62,8 @@ const unsigned char ManuvrMsg::MSG_ARGS_POWER_MODE[] = {
 *   dynamically built.
 */
 const MessageTypeDef ManuvrMsg::message_defs[] = {
+
+
 /* Reserved codes */
   {  MANUVR_MSG_UNDEFINED            , 0x0000,               "<UNDEFINED>"          , MSG_ARGS_NONE }, // This should be the first entry for failure cases.
 
@@ -114,12 +117,15 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SCHED_DUMP_SCHEDULES , 0x0000,               "SCHED_DUMP_SCHEDULES" , MSG_ARGS_NONE }, // Tell the Scheduler to dump schedules.
   {  MANUVR_MSG_SCHED_WIPE_PROFILER  , 0x0000,               "SCHED_WIPE_PROFILER"  , MSG_ARGS_NONE }, // Tell the Scheduler to wipe its profiler data. Pass PIDs to be selective.
   {  MANUVR_MSG_SCHED_DEFERRED_EVENT , 0x0000,               "SCHED_DEFERRED_EVENT" , MSG_ARGS_NONE }, // Tell the Scheduler to broadcast the attached Event so many ms into the future.
+
+  /* Roving Networks Bluetooth radio codes */
   {  MANUVR_MSG_BT_CONNECTION_LOST   , 0x0000,               "BT_CONNECTION_LOST"   , MSG_ARGS_NONE }, // 
   {  MANUVR_MSG_BT_CONNECTION_GAINED , 0x0000,               "BT_CONNECTION_GAINED" , MSG_ARGS_NONE }, // 
   {  MANUVR_MSG_BT_QUEUE_READY       , MSG_FLAG_IDEMPOTENT,  "BT_QUEUE_READY"       , MSG_ARGS_NONE }, // There is action possible in the bluetooth queue.
   {  MANUVR_MSG_BT_RX_BUF_NOT_EMPTY  , 0x0000,               "BT_RX_BUF_NOT_EMPTY"  , MSG_ARGS_NONE }, // The host sent us data without indication of an end.
   {  MANUVR_MSG_BT_ENTERED_CMD_MODE  , 0x0000,               "BT_ENTERED_CMD_MODE"  , MSG_ARGS_NONE }, // The module entered command mode.
   {  MANUVR_MSG_BT_EXITED_CMD_MODE   , 0x0000,               "BT_EXITED_CMD_MODE"   , MSG_ARGS_NONE }, // The module exited command mode.
+
   {  MANUVR_MSG_I2C_QUEUE_READY      , MSG_FLAG_IDEMPOTENT,  "I2C_QUEUE_READY"      , MSG_ARGS_NONE }, // The i2c queue is ready for attention.
   {  MANUVR_MSG_I2C_DUMP_DEBUG       , 0x0000,               "I2C_DUMP_DEBUG"       , MSG_ARGS_NONE }, // Debug dump for i2c.
   {  MANUVR_MSG_SPI_QUEUE_READY      , MSG_FLAG_IDEMPOTENT,  "SPI_QUEUE_READY"      , MSG_ARGS_NONE }, // SPI queue for the CPLD is ready for attention.
@@ -601,21 +607,6 @@ int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
 
 
 
-bool ManuvrMsg::isExportable() {
-  if (NULL == message_def) {
-    message_def = lookupMsgDefByCode(event_code);
-  }
-  return (message_def->msg_type_flags & MSG_FLAG_EXPORTABLE);
-}
-
-bool ManuvrMsg::isIdempotent() {
-  if (NULL == message_def) {
-    message_def = lookupMsgDefByCode(event_code);
-  }
-  return (message_def->msg_type_flags & MSG_FLAG_IDEMPOTENT);
-}
-
-
 /**
 * Clears the Arguments attached to this Message and reaps their contents, if
 *   the need is indicated. Many subtle memory-related bugs can be caught here.
@@ -693,22 +684,24 @@ const char* ManuvrMsg::getMsgTypeString() {
 * @return a pointer to the human-readable label for this Message class. Never NULL. 
 */
 const char* ManuvrMsg::getMsgTypeString(uint16_t code) {
-  for (MessageTypeDef mes_type : ManuvrMsg::message_defs) {
-    if (mes_type.msg_type_code == code) {
-      return mes_type.debug_label;
+  int total_elements = sizeof(ManuvrMsg::message_defs) / sizeof(MessageTypeDef);
+  for (int i = 0; i < total_elements; i++) {
+    if (ManuvrMsg::message_defs[i].msg_type_code == code) {
+      return ManuvrMsg::message_defs[i].debug_label;
     }
   }
 
   // Didn't find it there. Search in the extended defs...
   const MessageTypeDef* temp_type_def;
-  int total_elements = ManuvrMsg::message_defs_extended.size();
-  for (int i = 1; i < total_elements; i++) {
+  total_elements = ManuvrMsg::message_defs_extended.size();
+  for (int i = 0; i < total_elements; i++) {
     temp_type_def = ManuvrMsg::message_defs_extended.get(i);
     if (temp_type_def->msg_type_code == code) {
       return temp_type_def->debug_label;
     }
   }
   // If we've come this far, we don't know what the caller is asking for. Return the default.
+  printf("code = 0x%04x. This should not be possible.\n", code);
   return "UNDEFINED";
 }
 
@@ -722,7 +715,7 @@ const char* ManuvrMsg::getMsgTypeString(uint16_t code) {
 */
 const MessageTypeDef* ManuvrMsg::lookupMsgDefByCode(uint16_t code) {
   int total_elements = sizeof(ManuvrMsg::message_defs) / sizeof(MessageTypeDef);
-  for (int i = 1; i < total_elements; i++) {
+  for (int i = 0; i < total_elements; i++) {
     if (ManuvrMsg::message_defs[i].msg_type_code == code) {
       return &ManuvrMsg::message_defs[i];
     }
@@ -731,13 +724,14 @@ const MessageTypeDef* ManuvrMsg::lookupMsgDefByCode(uint16_t code) {
   // Didn't find it there. Search in the extended defs...
   const MessageTypeDef* temp_type_def;
   total_elements = ManuvrMsg::message_defs_extended.size();
-  for (int i = 1; i < total_elements; i++) {
+  for (int i = 0; i < total_elements; i++) {
     temp_type_def = ManuvrMsg::message_defs_extended.get(i);
     if (temp_type_def->msg_type_code == code) {
       return temp_type_def;
     }
   }
   // If we've come this far, we don't know what the caller is asking for. Return the default.
+  printf("event->event_code = 0x%04x. This should not be possible.\n", code);
   return &ManuvrMsg::message_defs[0];
 }
 

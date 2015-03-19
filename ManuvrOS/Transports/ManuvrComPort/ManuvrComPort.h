@@ -58,12 +58,23 @@ class XenoSession;
 
 
 #define MANUVR_XPORT_STATE_UNINITIALIZED  0b00000000  // Not treated as a bit-mask. Just a nice label.
-#define MANUVR_XPORT_STATE_INITIALIZED    0b10000000
-#define MANUVR_XPORT_STATE_CONNECTED      0b01000000
-#define MANUVR_XPORT_STATE_BUSY           0b00100000
-#define MANUVR_XPORT_STATE_HAS_SESSION    0b00010000
-#define MANUVR_XPORT_STATE_LISTENING      0b00001000
+#define MANUVR_XPORT_STATE_INITIALIZED    0b10000000  // The com port was present and init'd corrently.
+#define MANUVR_XPORT_STATE_CONNECTED      0b01000000  // The com port is active and able to move data.
+#define MANUVR_XPORT_STATE_BUSY           0b00100000  // The com port is moving something.
+#define MANUVR_XPORT_STATE_HAS_SESSION    0b00010000  // See note below. 
+#define MANUVR_XPORT_STATE_LISTENING      0b00001000  // We are listening for connections.
 
+/*
+* Note about MANUVR_XPORT_STATE_HAS_SESSION:
+* This might get cut. it ought to be sufficient to check if the session member is NULL.
+*
+* The behavior of this class, (and classes that extend it) ought to be as follows:
+*   1) If a session is not present, the port simply moves data via the event system, hoping
+*        that something else in the system cares.
+*   2) If a session IS attached, the session should control all i/o on this port, as it holds
+*        the protocol spec. So outside requests for data to be sent should be given to the session,
+*        if not rejected entirely.
+*/
 
 class ManuvrComPort : public ManuvrXport {
   public:

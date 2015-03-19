@@ -15,7 +15,7 @@ ManuvrEvent::ManuvrEvent() : ManuvrMsg(0) {
 * @param code  The message id code.
 * @param cb    A pointer to the EventReceiver that should be notified about completion of this event.
 */
-ManuvrEvent::ManuvrEvent(uint16_t code, EventCallback* cb) : ManuvrMsg(code) {
+ManuvrEvent::ManuvrEvent(uint16_t code, EventReceiver* cb) : ManuvrMsg(code) {
   __class_initializer();
   callback   = cb;
 }
