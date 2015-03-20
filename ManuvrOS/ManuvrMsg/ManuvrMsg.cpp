@@ -68,34 +68,34 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_UNDEFINED            , 0x0000,               "<UNDEFINED>"          , MSG_ARGS_NONE }, // This should be the first entry for failure cases.
 
   // Protocol mechanisms for QoS, and fault-tolerence.
-  {  MANUVR_MSG_REPLY_PARSE_FAIL     , 0x0000,               "REPLY_PARSE_FAIL"     , MSG_ARGS_NONE }, //  This reply denotes that the packet failed to parse (despite passing checksum).
-  {  MANUVR_MSG_REPLY_RETRY          , 0x0000,               "REPLY_RETRY"          , MSG_ARGS_NONE }, //  This reply asks for a reply of the given Unique ID.
-  {  MANUVR_MSG_REPLY                , 0x0000,               "REPLY"                , MSG_ARGS_NONE }, //  This reply is for success-case.
+  {  MANUVR_MSG_REPLY_PARSE_FAIL     , MSG_FLAG_EXPORTABLE,               "REPLY_PARSE_FAIL"     , MSG_ARGS_NONE }, //  This reply denotes that the packet failed to parse (despite passing checksum).
+  {  MANUVR_MSG_REPLY_RETRY          , MSG_FLAG_EXPORTABLE,               "REPLY_RETRY"          , MSG_ARGS_NONE }, //  This reply asks for a reply of the given Unique ID.
+  {  MANUVR_MSG_REPLY                , MSG_FLAG_EXPORTABLE,               "REPLY"                , MSG_ARGS_NONE }, //  This reply is for success-case.
 
 /* System codes */                                               
-  {  MANUVR_MSG_SYS_BOOTLOADER       , 0x0000,               "SYS_BOOTLOADER"       , MSG_ARGS_NONE }, // Reboots into the STM32F4 bootloader.
-  {  MANUVR_MSG_SYS_REBOOT           , 0x0000,               "SYS_REBOOT"           , MSG_ARGS_NONE }, // Reboots into THIS program.
-  {  MANUVR_MSG_SYS_SHUTDOWN         , 0x0000,               "SYS_SHUTDOWN"         , MSG_ARGS_NONE }, // Raised when the system is pending complete shutdown.
+  {  MANUVR_MSG_SYS_BOOTLOADER       , MSG_FLAG_EXPORTABLE,               "SYS_BOOTLOADER"       , MSG_ARGS_NONE }, // Reboots into the STM32F4 bootloader.
+  {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,               "SYS_REBOOT"           , MSG_ARGS_NONE }, // Reboots into THIS program.
+  {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,               "SYS_SHUTDOWN"         , MSG_ARGS_NONE }, // Raised when the system is pending complete shutdown.
 
-  {  MANUVR_MSG_PROGRAM_START        , 0x0000,               "PROGRAM_START"        , MSG_ARGS_STR_BUILDER }, // Starting an application on the receiver. Needs a string. 
+  {  MANUVR_MSG_PROGRAM_START        , MSG_FLAG_EXPORTABLE,               "PROGRAM_START"        , MSG_ARGS_STR_BUILDER }, // Starting an application on the receiver. Needs a string. 
   
-  {  MANUVR_MSG_LEGEND_TYPES         , 0x0000,               "LEGEND_TYPES"         , MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
-  {  MANUVR_MSG_LEGEND_MESSAGES      , 0x0000,               "LEGEND_MESSAGES"      , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
+  {  MANUVR_MSG_LEGEND_TYPES         , MSG_FLAG_EXPORTABLE,               "LEGEND_TYPES"         , MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
+  {  MANUVR_MSG_LEGEND_MESSAGES      , MSG_FLAG_EXPORTABLE,               "LEGEND_MESSAGES"      , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
 
-  {  MANUVR_MSG_SYS_DATETIME_CHANGED , 0x0000,               "SYS_DATETIME_CHANGED" , MSG_ARGS_NONE }, // Raised when the system time changes.
-  {  MANUVR_MSG_SYS_SET_DATETIME     , 0x0000,               "SYS_SET_DATETIME"     , MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_SYS_REPORT_DATETIME  , 0x0000,               "SYS_REPORT_DATETIME"  , MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_SYS_DATETIME_CHANGED , MSG_FLAG_EXPORTABLE,               "SYS_DATETIME_CHANGED" , MSG_ARGS_NONE }, // Raised when the system time changes.
+  {  MANUVR_MSG_SYS_SET_DATETIME     , MSG_FLAG_EXPORTABLE,               "SYS_SET_DATETIME"     , MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_SYS_REPORT_DATETIME  , MSG_FLAG_EXPORTABLE,               "SYS_REPORT_DATETIME"  , MSG_ARGS_NONE }, //
 
-  {  MANUVR_MSG_SYS_POWER_MODE       , 0x0000,               "SYS_POWER_MODE"       , MSG_ARGS_POWER_MODE }, // 
-  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , 0x0000,               "SYS_LOG_VERBOSITY"    , MSG_ARGS_U8 },   // This tells client classes to adjust their log verbosity.
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , MSG_ARGS_POWER_MODE }, // 
+  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , MSG_ARGS_U8 },   // This tells client classes to adjust their log verbosity.
 
   {  MANUVR_MSG_SYS_BOOT_COMPLETED   , 0x0000,               "SYS_BOOT_COMPLETED"   , MSG_ARGS_NONE }, // Raised when bootstrap is finished.
   {  MANUVR_MSG_SYS_PREALLOCATION    , 0x0000,               "SYS_PREALLOCATION"    , MSG_ARGS_NONE }, // Any classes that do preallocation should listen for this.
 
-  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , 0x0000,               "SYS_ISSUE_LOG_ITEM"   , MSG_ARGS_STR_BUILDER }, // Classes emit this to get their log data saved/sent.
+  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , MSG_ARGS_STR_BUILDER }, // Classes emit this to get their log data saved/sent.
 
-  {  MANUVR_MSG_USER_BUTTON_PRESS     , 0x0000,               "USER_BUTTON_PRESS",    MSG_ARGS_U8 },   // The user pushed a button with the given integer code.
-  {  MANUVR_MSG_USER_BUTTON_RELEASE   , 0x0000,               "USER_BUTTON_RELEASE",  MSG_ARGS_U8 },   // The user released a button with the given integer code.
+  {  MANUVR_MSG_USER_BUTTON_PRESS    , MSG_FLAG_EXPORTABLE,               "USER_BUTTON_PRESS",    MSG_ARGS_U8 },   // The user pushed a button with the given integer code.
+  {  MANUVR_MSG_USER_BUTTON_RELEASE  , MSG_FLAG_EXPORTABLE,               "USER_BUTTON_RELEASE",  MSG_ARGS_U8 },   // The user released a button with the given integer code.
   
   // USB VCP stuff...
   {  MANUVR_MSG_SYS_USB_CONNECT      , 0x0000,               "SYS_USB_CONNECT"      , MSG_ARGS_NONE }, // 
@@ -106,7 +106,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SYS_USB_RESET        , 0x0000,               "SYS_USB_RESET"        , MSG_ARGS_NONE }, // 
 
   
-  {  MANUVR_MSG_USER_DEBUG_INPUT     , 0x0000,               "USER_DEBUG_INPUT"     , MSG_ARGS_STR_BUILDER }, // 
+  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , MSG_ARGS_STR_BUILDER }, // 
 
   {  MANUVR_MSG_SCHED_ENABLE_BY_PID  , 0x0000,               "SCHED_ENABLE_BY_PID"  , MSG_ARGS_NONE }, // The given PID is being enabled.
   {  MANUVR_MSG_SCHED_DISABLE_BY_PID , 0x0000,               "SCHED_DISABLE_BY_PID" , MSG_ARGS_NONE }, // The given PID is being disabled.
@@ -127,7 +127,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_BT_EXITED_CMD_MODE   , 0x0000,               "BT_EXITED_CMD_MODE"   , MSG_ARGS_NONE }, // The module exited command mode.
 
   {  MANUVR_MSG_I2C_QUEUE_READY      , MSG_FLAG_IDEMPOTENT,  "I2C_QUEUE_READY"      , MSG_ARGS_NONE }, // The i2c queue is ready for attention.
-  {  MANUVR_MSG_I2C_DUMP_DEBUG       , 0x0000,               "I2C_DUMP_DEBUG"       , MSG_ARGS_NONE }, // Debug dump for i2c.
+  {  MANUVR_MSG_I2C_DUMP_DEBUG       , MSG_FLAG_EXPORTABLE,  "I2C_DUMP_DEBUG"       , MSG_ARGS_NONE }, // Debug dump for i2c.
   {  MANUVR_MSG_SPI_QUEUE_READY      , MSG_FLAG_IDEMPOTENT,  "SPI_QUEUE_READY"      , MSG_ARGS_NONE }, // SPI queue for the CPLD is ready for attention.
   {  MANUVR_MSG_SPI_CB_QUEUE_READY   , MSG_FLAG_IDEMPOTENT,  "SPI_CALLBACK_READY"   , MSG_ARGS_NONE }, // One or more completed SPI jobs is waiting for callback service.
 
@@ -140,14 +140,14 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SENSOR_TMP006        , 0x0000,               "SENSOR_TMP006"        , MSG_ARGS_NONE }, // The thermopile has something to say.
   {  MANUVR_MSG_DIRTY_FRAME_BUF      , 0x0000,               "DIRTY_FRAME_BUF"      , MSG_ARGS_NONE }, // Something changed the framebuffer and we need to redraw.
                                               
-  {  MANUVR_MSG_SD_EJECTED           , 0x0000,               "SD_EJECTED"           , MSG_ARGS_NONE }, // The SD card was just ejected.
-  {  MANUVR_MSG_SD_INSERTED          , 0x0000,               "SD_INSERTED"          , MSG_ARGS_NONE }, // An SD card was inserted.
-  {  MANUVR_MSG_SESS_ESTABLISHED     , 0x0000,               "SESS_ESTABLISHED"     , MSG_ARGS_NONE }, // Session established.
-  {  MANUVR_MSG_SESS_HANGUP          , 0x0000,               "SESS_HANGUP"          , MSG_ARGS_NONE }, // Session hangup.
-  {  MANUVR_MSG_SESS_AUTH_CHALLENGE  , 0x0000,               "SESS_AUTH_CHALLENGE"  , MSG_ARGS_NONE }, // A code for challenge-response authentication.
-  {  MANUVR_MSG_SESS_SUBCRIBE        , 0x0000,               "SESS_SUBCRIBE"        , MSG_ARGS_NONE }, // Used to subscribe this session to other events.
-  {  MANUVR_MSG_SESS_UNSUBCRIBE      , 0x0000,               "SESS_UNSUBCRIBE"      , MSG_ARGS_NONE }, // Used to unsubscribe this session from other events.
-  {  MANUVR_MSG_SESS_DUMP_DEBUG      , 0x0000,               "SESS_DUMP_DEBUG"      , MSG_ARGS_NONE }, // 
+  {  MANUVR_MSG_SD_EJECTED           , MSG_FLAG_EXPORTABLE,  "SD_EJECTED"           , MSG_ARGS_NONE }, // The SD card was just ejected.
+  {  MANUVR_MSG_SD_INSERTED          , MSG_FLAG_EXPORTABLE,  "SD_INSERTED"          , MSG_ARGS_NONE }, // An SD card was inserted.
+  {  MANUVR_MSG_SESS_ESTABLISHED     , MSG_FLAG_EXPORTABLE,  "SESS_ESTABLISHED"     , MSG_ARGS_NONE }, // Session established.
+  {  MANUVR_MSG_SESS_HANGUP          , MSG_FLAG_EXPORTABLE,  "SESS_HANGUP"          , MSG_ARGS_NONE }, // Session hangup.
+  {  MANUVR_MSG_SESS_AUTH_CHALLENGE  , MSG_FLAG_EXPORTABLE,  "SESS_AUTH_CHALLENGE"  , MSG_ARGS_NONE }, // A code for challenge-response authentication.
+  {  MANUVR_MSG_SESS_SUBCRIBE        , MSG_FLAG_EXPORTABLE,  "SESS_SUBCRIBE"        , MSG_ARGS_NONE }, // Used to subscribe this session to other events.
+  {  MANUVR_MSG_SESS_UNSUBCRIBE      , MSG_FLAG_EXPORTABLE,  "SESS_UNSUBCRIBE"      , MSG_ARGS_NONE }, // Used to unsubscribe this session from other events.
+  {  MANUVR_MSG_SESS_DUMP_DEBUG      , MSG_FLAG_EXPORTABLE,  "SESS_DUMP_DEBUG"      , MSG_ARGS_NONE }, // 
   {  MANUVR_MSG_SESS_ORIGINATE_MSG   , 0x0000,               "SESS_ORIGINATE_MSG"   , MSG_ARGS_NONE }, // 
 };
 
@@ -701,7 +701,6 @@ const char* ManuvrMsg::getMsgTypeString(uint16_t code) {
     }
   }
   // If we've come this far, we don't know what the caller is asking for. Return the default.
-  printf("code = 0x%04x. This should not be possible.\n", code);
   return "UNDEFINED";
 }
 
@@ -731,7 +730,6 @@ const MessageTypeDef* ManuvrMsg::lookupMsgDefByCode(uint16_t code) {
     }
   }
   // If we've come this far, we don't know what the caller is asking for. Return the default.
-  printf("event->event_code = 0x%04x. This should not be possible.\n", code);
   return &ManuvrMsg::message_defs[0];
 }
 
@@ -846,22 +844,45 @@ int8_t ManuvrMsg::getMsgLegend(StringBuilder *output) {
   if (NULL == output) return 0;
   
   int total_elements = sizeof(message_defs) / sizeof(MessageTypeDef);
-  MessageTypeDef *temp_def = NULL;
+  const MessageTypeDef *temp_def = NULL;
   for (int i = 1; i < total_elements; i++) {
-    temp_def = (MessageTypeDef *) &(message_defs[i]);
-    output->concat((unsigned char*) temp_def, 4);
-    // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
-    output->concat((unsigned char*) temp_def->debug_label, strlen(temp_def->debug_label)+1);
-
-    // Now to capture the argument modes...
-    unsigned char* mode = (unsigned char*) temp_def->arg_modes;
-    int arg_mode_len = strlen((const char*) mode);
-    while (arg_mode_len > 0) {
-      output->concat((unsigned char*) mode, arg_mode_len+1);
-      mode += arg_mode_len + 1;
-      arg_mode_len = strlen((const char*) mode);
+    temp_def = (const MessageTypeDef *) &(message_defs[i]);
+    
+    if (isExportable(temp_def)) {
+      output->concat((unsigned char*) temp_def, 4);
+      // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
+      output->concat((unsigned char*) temp_def->debug_label, strlen(temp_def->debug_label)+1);
+  
+      // Now to capture the argument modes...
+      unsigned char* mode = (unsigned char*) temp_def->arg_modes;
+      int arg_mode_len = strlen((const char*) mode);
+      while (arg_mode_len > 0) {
+        output->concat((unsigned char*) mode, arg_mode_len+1);
+        mode += arg_mode_len + 1;
+        arg_mode_len = strlen((const char*) mode);
+      }
+      output->concat((unsigned char*) "\0", 1);   // This is the obligatory "NO ARGUMENT" mode.
     }
-    output->concat((unsigned char*) "\0", 1);   // This is the obligatory "NO ARGUMENT" mode.
+  }
+
+  total_elements = ManuvrMsg::message_defs_extended.size();
+  for (int i = 1; i < total_elements; i++) {
+    temp_def = ManuvrMsg::message_defs_extended.get(i);
+    if (isExportable(temp_def)) {
+      output->concat((unsigned char*) temp_def, 4);
+      // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
+      output->concat((unsigned char*) temp_def->debug_label, strlen(temp_def->debug_label)+1);
+  
+      // Now to capture the argument modes...
+      unsigned char* mode = (unsigned char*) temp_def->arg_modes;
+      int arg_mode_len = strlen((const char*) mode);
+      while (arg_mode_len > 0) {
+        output->concat((unsigned char*) mode, arg_mode_len+1);
+        mode += arg_mode_len + 1;
+        arg_mode_len = strlen((const char*) mode);
+      }
+      output->concat((unsigned char*) "\0", 1);   // This is the obligatory "NO ARGUMENT" mode.
+    }
   }
   return 1;
 }

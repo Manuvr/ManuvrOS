@@ -165,6 +165,9 @@ class Scheduler : public EventReceiver {
     int8_t notify(ManuvrEvent*);
     int8_t callback_proc(ManuvrEvent *);
 
+  protected:
+    int8_t bootComplete();
+    
     
   private:
     PriorityQueue<ScheduleItem*> schedules;

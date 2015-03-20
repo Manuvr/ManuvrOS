@@ -54,6 +54,9 @@ template <class T> class PriorityNode{
 template <class T> class PriorityQueue {
 
   public:
+    
+    int canary_value = 88;
+    
     PriorityQueue(void);
     ~PriorityQueue(void);
 

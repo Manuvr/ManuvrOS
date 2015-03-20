@@ -298,6 +298,22 @@ uint16_t XenoSession::nextMessage(StringBuilder* buffer) {
 ****************************************************************************************************/
 
 /**
+* There is a NULL-check performed upstream for the scheduler member. So no need 
+*   to do it again here.
+*
+* @return 0 on no action, 1 on action, -1 on failure.
+*/
+int8_t XenoSession::bootComplete() {
+  StaticHub *sh = StaticHub::getInstance();
+  if (NULL != sh) {
+    scheduler = sh->fetchScheduler();
+  }
+
+  return 1;
+}
+
+
+/**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
 *   has been serviced and we are now getting the chance to see the results. The argument 
 *   to this fxn will never be NULL.

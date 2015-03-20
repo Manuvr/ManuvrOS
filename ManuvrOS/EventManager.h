@@ -14,7 +14,7 @@
 
   
   #define EVENT_MANAGER_PREALLOC_COUNT      0x0A   // How large a preallocation buffer should we keep?
-  #define EVENT_MANAGER_MAX_EVENTS_PER_LOOP 0x08   // How many Events we proc before we allow the loop to end.
+  #define EVENT_MANAGER_MAX_EVENTS_PER_LOOP 0x03   // How many Events we proc before we allow the loop to end.
   
   
   #define EVENT_CALLBACK_RETURN_ERROR       -1 // Horrible things happened in the originating class. This should never happen.
@@ -42,6 +42,9 @@
   
   class ManuvrEvent;
   class EventReceiver;
+
+  extern StringBuilder crash_log;
+
   
   
   class TaskProfilerData {
@@ -96,9 +99,11 @@
     protected:
       uint8_t          flags;         // Optional flags that might be important for an event.
       bool             preallocated;  // Set to true to cause the EventManager to return this event to its prealloc.
+
+      void __class_initializer();
+
       
     private:
-      void __class_initializer();
   };
   
 
@@ -143,6 +148,7 @@
       StringBuilder local_log;
       Scheduler* scheduler;
       int8_t verbosity;                   // How chatty is this class in the log?
+      bool boot_completed;
 
       virtual int8_t bootComplete();        // This is called from the base notify().
       virtual void   __class_initializer();
@@ -159,6 +165,9 @@
   */
   class EventManager : public EventReceiver {
     public:
+      ManuvrEvent* current_event;
+      
+      
       EventManager(void);
       ~EventManager(void);
       
@@ -209,8 +218,6 @@
       void reclaim_event(ManuvrEvent*);
       void update_maximum_queue_depth();
   
-      bool   boot_completed;
-      
       bool profiler_enabled;          // Should we spend time profiling this component?
       uint32_t max_idle_loop_time;    // How many uS does it take to run an idle loop?
       uint8_t  max_events_p_loop;     // What is the most events we've handled in a single loop?

@@ -152,10 +152,12 @@ class ManuvrMsg {
     int argCount();
     int argByteCount();
 
+   
     inline bool isExportable() {
       if (NULL == message_def) message_def = lookupMsgDefByCode(event_code);
       return (message_def->msg_type_flags & MSG_FLAG_EXPORTABLE);
     }
+
     
     inline bool isIdempotent() {
       if (NULL == message_def) message_def = lookupMsgDefByCode(event_code);
@@ -283,6 +285,10 @@ class ManuvrMsg {
     static const MessageTypeDef message_defs[];
     static PriorityQueue<const MessageTypeDef*> message_defs_extended;  // Where runtime-loaded message defs go.
 
+    
+    static bool isExportable(const MessageTypeDef* message_def) {
+      return (message_def->msg_type_flags & MSG_FLAG_EXPORTABLE);
+    }
 
 
     /* Required argument forms */

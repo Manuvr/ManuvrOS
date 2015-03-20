@@ -246,7 +246,7 @@ class XenoSession : public EventReceiver {
 
 
   protected:
-
+    int8_t bootComplete();
 
   private:
     /*

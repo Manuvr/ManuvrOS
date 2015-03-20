@@ -386,6 +386,7 @@ void ManuvrComPort::printDebug(StringBuilder *temp) {
 */
 int8_t ManuvrComPort::bootComplete() {
   EventReceiver::bootComplete();
+  
   reset();
   return 1;
 }

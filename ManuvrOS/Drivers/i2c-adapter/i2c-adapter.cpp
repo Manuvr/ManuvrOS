@@ -45,6 +45,10 @@ volatile I2CAdapter* i2c = NULL;
 
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
   __class_initializer();
+  StaticHub *sh = StaticHub::getInstance();
+  if (NULL != sh) {
+    scheduler = sh->fetchScheduler();
+  }
   
   // This init() fxn was patterned after the STM32F4x7 library example.
   dev = dev_id;
@@ -318,6 +322,7 @@ void I2CAdapter::gpioSetup() {
 */
 int8_t I2CAdapter::bootComplete() {
   EventReceiver::bootComplete();
+
   #ifdef STM32F4XX
     I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, ENABLE);      //Enable EVT and ERR interrupts
   #endif
@@ -388,6 +393,8 @@ int8_t I2CAdapter::notify(ManuvrEvent *active_event) {
       return_value += EventReceiver::notify(active_event);
       break;
   }
+  
+  if (local_log.length() > 0) StaticHub::log(&local_log);
   return return_value;
 }
 

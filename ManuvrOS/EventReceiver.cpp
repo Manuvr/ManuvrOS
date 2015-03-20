@@ -14,6 +14,7 @@
 void EventReceiver::__class_initializer() {
   scheduler = NULL;
   verbosity = DEFAULT_CLASS_VERBOSITY;
+  boot_completed = false;
 }
 
 
@@ -125,7 +126,8 @@ void EventReceiver::printDebug() {
 *   to do it again here.
 */
 void EventReceiver::printDebug(StringBuilder *output) {
-  output->concatf("\n==< %s >===================================\n", getReceiverName()); 
+  output->concatf("\n==< %s >===================================\n", getReceiverName());
+  output->concatf("-- bootstrap_completed        %s\n", (boot_completed) ? "yes" : "no");
 }
 
 
@@ -156,7 +158,8 @@ int8_t EventReceiver::bootComplete() {
   if (NULL != sh) {
     scheduler = sh->fetchScheduler();
   }
-  return 0;
+  boot_completed = true;
+  return 1;
 }
 
 
@@ -205,10 +208,7 @@ int8_t EventReceiver::notify(ManuvrEvent *active_event) {
     case MANUVR_MSG_SYS_LOG_VERBOSITY:
       return setVerbosity(active_event);
     case MANUVR_MSG_SYS_BOOT_COMPLETED:
-      scheduler = StaticHub::getInstance()->fetchScheduler();
-      if (NULL != scheduler) {
-        return bootComplete();
-      }
+      return bootComplete();
   }
   return 0;
 }

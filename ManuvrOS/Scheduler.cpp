@@ -36,6 +36,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 
 
+extern StringBuilder crash_log;
+
 /****************************************************************************************************
 * Class-management functions...                                                                     *
 ****************************************************************************************************/
@@ -119,7 +121,7 @@ void Scheduler::clearProfilingData(uint32_t g_pid) {
 
 // Fire the given schedule on the next idle loop.
 bool Scheduler::fireSchedule(uint32_t g_pid) {
-  ScheduleItem *current = findNodeByPID(g_pid);
+  ScheduleItem *current = this->findNodeByPID(g_pid);
   if (NULL != current) {
     current->thread_fire = true;
     current->thread_time_to_wait = current->thread_period;
@@ -170,9 +172,10 @@ void Scheduler::destroyAllScheduleItems() {
 * Returns NULL if a node is not found that meets this criteria.
 */
 ScheduleItem* Scheduler::findNodeByPID(uint32_t g_pid) {
-  ScheduleItem *current;
+  ScheduleItem *current = NULL;
   for (int i = 0; i < schedules.size(); i++) {
     current = schedules.get(i);
+    //crash_log.concatf("Looking at position %d, and found PIDs.... \n", i, current->pid);
     if (current->pid == g_pid) {
       return current;
     }
@@ -393,9 +396,6 @@ bool Scheduler::delaySchedule(uint32_t g_pid) {
 
 
 
-extern StringBuilder boot_log;
-
-
 /**
 * Call this function to push the schedules forward.
 * We can be assured of exclusive access to the scheules queue as long as we
@@ -419,6 +419,7 @@ void Scheduler::advanceScheduler() {
     }
   }
   if (bistable_skip_detect) {
+    StringBuilder output;
     // Failsafe block
     if (skipped_loops > 5000) {
       // TODO: We are hung in a way that we probably cannot recover from. Reboot...
@@ -427,20 +428,20 @@ void Scheduler::advanceScheduler() {
 #endif
     }
     else if (skipped_loops == 2000) {
-      printf("Hung scheduler... boot log follows.\n%s\n", (char*) boot_log.string());
-      boot_log.clear();
+      printf("Hung scheduler... boot log follows...\n%s\n", (char*) crash_log.string());
+    }
+    else if (skipped_loops == 2500) {
+      StaticHub::getInstance()->printDebug(&output);
+      printDebug(&output);
+      printf("%s\n", (char*) output.string());
     }
     else if (skipped_loops == 3000) {
-      // TODO: We are hung in a way that we probably cannot recover from. Reboot...
-      
       /* Doing all this String manipulation in an ISR would normally be an awful idea.
          But we don't care here because we're hung anyhow, and we need to know why. */
-      StringBuilder output("Hung scheduler. About to reboot.\n\n");
       StaticHub::getInstance()->printDebug(&output);
       printDebug(&output);
       StaticHub::getInstance()->fetchEventManager()->printDebug(&output);
       printf("%s\n", (char*) output.string());
-      
     }
     skipped_loops++;
   }
@@ -631,6 +632,7 @@ const char* Scheduler::getReceiverName() {  return "Scheduler";  }
 void Scheduler::printDebug(StringBuilder *output) {
 	if (NULL == output) return;
 	EventReceiver::printDebug(output);
+  output->concatf("--- Cschedules location:  0x%08x .\n", &schedules);
   output->concatf("--- Total loops:      %d\n--- Productive loops: %d\n", total_loops, productive_loops);
   if (total_loops) output->concatf("--- Duty cycle:       %f%\n--- Overhead:         %d microseconds\n", ((double)((double) productive_loops / (double) total_loops) * 100), overhead);
   output->concatf("--- Next PID:         %d\n--- Total schedules:  %d\n--- Active schedules: %d\n\n", peekNextPID(), getTotalSchedules(), getActiveSchedules());
@@ -656,6 +658,20 @@ void Scheduler::printDebug(StringBuilder *output) {
 
 These are overrides from EventReceiver interface...
 ****************************************************************************************************/
+
+/**
+* There is a NULL-check performed upstream for the scheduler member. So no need 
+*   to do it again here.
+*
+* @return 0 on no action, 1 on action, -1 on failure.
+*/
+int8_t Scheduler::bootComplete() {
+  scheduler = this;
+  scheduler_ready = true;
+  return 1;
+}
+
+
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
 *   has been serviced and we are now getting the chance to see the results. The argument 
