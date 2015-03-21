@@ -165,7 +165,6 @@
     public:
       ManuvrEvent* current_event;
       
-      
       EventManager(void);
       ~EventManager(void);
       

@@ -12,6 +12,8 @@
 ****************************************************************************************************/
 EventManager* EventManager::INSTANCE = NULL;
 
+uint32_t test_value __attribute__((section(".ccm")));
+
 
 /****************************************************************************************************
 * Class management                                                                                  *
@@ -44,6 +46,7 @@ EventManager::EventManager() {
 */
 EventManager::~EventManager() {
 }
+
 
 
 /****************************************************************************************************
@@ -451,10 +454,11 @@ int8_t EventManager::procIdleFlags() {
       reclaim_event(active_event);
     }
 
+    total_events++;
+    
     // This is a stat-gathering block.
     if (profiler_enabled) {
       profiler_mark_3 = micros();
-      total_events++;
 
       MessageTypeDef* tmp_msg_def = (MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(msg_code_local);
       
@@ -497,22 +501,17 @@ int8_t EventManager::procIdleFlags() {
   
   if (profiler_enabled) {
     total_loops++;
-    if (return_value) {
-      max_events_p_loop = max(max_events_p_loop, (uint8_t) return_value);
+    if (return_value > 0) {
+      max_events_p_loop = max(max_events_p_loop, (uint32_t) return_value);
+    }
+    else if (0 == return_value) {
+      max_idle_loop_time = max(max_idle_loop_time, (max(profiler_mark, profiler_mark_3) - min(profiler_mark, profiler_mark_3)));
     }
     else {
-      max_idle_loop_time = max(max_idle_loop_time, (max(profiler_mark, profiler_mark_3) - min(profiler_mark, profiler_mark_3)));
+      // there was a problem. Do nothing.
     }
   }
 
-  if (local_log.length() > 0) {
-    if (boot_completed) StaticHub::log(&local_log);
-    else {
-      printf("%s", (char*) local_log.string());
-      local_log.clear();
-    }
-  }
-  
   if (local_log.length() > 0) StaticHub::log(&local_log);
   current_event = NULL;
   return return_value;
@@ -646,7 +645,8 @@ const char* EventManager::getReceiverName() {  return "EventManager";  }
 void EventManager::printDebug(StringBuilder* output) {
   if (NULL == output) return;
   EventReceiver::printDebug(output);
-
+  
+  output->concatf("-- INSTANCE location:         0x%08x\n", (uint32_t) INSTANCE);
   output->concatf("-- Queue depth:               %d\n", event_queue.size());
   output->concatf("-- Preallocation depth:       %d\n", preallocated.size());
   output->concatf("-- Total subscriber count:    %d\n", subscribers.size());

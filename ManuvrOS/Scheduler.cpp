@@ -622,7 +622,7 @@ const char* Scheduler::getReceiverName() {  return "Scheduler";  }
 void Scheduler::printDebug(StringBuilder *output) {
 	if (NULL == output) return;
 	EventReceiver::printDebug(output);
-  output->concatf("--- Cschedules location:  0x%08x .\n", &schedules);
+  output->concatf("--- Schedules location:  0x%08x\n", &schedules);
   output->concatf("--- Total loops:      %d\n--- Productive loops: %d\n", total_loops, productive_loops);
   if (total_loops) output->concatf("--- Duty cycle:       %f%\n--- Overhead:         %d microseconds\n", ((double)((double) productive_loops / (double) total_loops) * 100), overhead);
   output->concatf("--- Next PID:         %d\n--- Total schedules:  %d\n--- Active schedules: %d\n\n", peekNextPID(), getTotalSchedules(), getActiveSchedules());
@@ -658,6 +658,7 @@ These are overrides from EventReceiver interface...
 int8_t Scheduler::bootComplete() {
   scheduler = this;
   scheduler_ready = true;
+  boot_completed = true;
   return 1;
 }
 
