@@ -21,7 +21,7 @@ EventManager* EventManager::INSTANCE = NULL;
 * Vanilla constructor.
 */
 EventManager::EventManager() {
-  EventReceiver::__class_initializer();
+  __class_initializer();
   INSTANCE       = this;
   current_event = NULL;
   setVerbosity((int8_t) 0);  // TODO: Why does this crash ViamSonus?
@@ -186,7 +186,7 @@ int8_t EventManager::staticRaiseEvent(ManuvrEvent* event) {
   int8_t return_value = 0;
   if (0 == INSTANCE->validate_insertion(event)) {
     //INSTANCE->event_queue.insert(event, event->priority);
-    INSTANCE->event_queue.insert(event, 0);
+    INSTANCE->event_queue.insert(event);
     if (INSTANCE->profiler_enabled) {
     }
     // Check the queue depth.
@@ -317,7 +317,6 @@ int8_t EventManager::procIdleFlags() {
   uint32_t profiler_mark_3 = 0;   // Profiling requests...
   int8_t return_value      = 0;   // Number of Events we've processed this call.
   uint16_t msg_code_local  = 0;   
-//if (boot_completed) crash_log.concat("procIdleFlags()\n");
 
   ManuvrEvent *active_event = NULL;  // Our short-term focus.
   uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
@@ -332,8 +331,7 @@ int8_t EventManager::procIdleFlags() {
     // Chat and measure.
     if (verbosity >= 5) local_log.concatf("Servicing: %s\n", active_event->getMsgTypeString());
     if (profiler_enabled) profiler_mark_0 = micros();
-//if (boot_completed) crash_log.concat("Servicing: \n");
-//if (boot_completed) active_event->printDebug(&crash_log);
+
     // LOUD REMINDER! The switch() block below is the EventManager reacting to Events. Not related to
     //   Event processing. Because this class extends EventReceiver, we should technically call its own
     //   notify(), but with no need to put itself in its own subscriber queue. That would be puritanical
@@ -341,7 +339,7 @@ int8_t EventManager::procIdleFlags() {
     // Instead, we'll take advantage of the position by treating EventManager as if it were the head and
     //   tail of the subscriber queue.     ---J. Ian Lindsay 2014.11.05
     if (active_event->callback != (EventReceiver*) this) {    // Don't react to our own internally-generated events.
-//if (boot_completed) crash_log.concat("Beginning notify (EventReceiver)...\n");
+
       switch (active_event->event_code) {
         case MANUVR_MSG_LEGEND_MESSAGES:     // Dump the message definitions.
           if (0 == active_event->args.size()) {   // Only if we are seeing a request.
@@ -371,14 +369,12 @@ int8_t EventManager::procIdleFlags() {
           break;
       }
     }
-//if (boot_completed) crash_log.concat("Beginning notify...\n");
     
     // Now we start notify()'ing subscribers.
     EventReceiver *subscriber;   // No need to assign.
     if (profiler_enabled) profiler_mark_1 = micros();
     
     if (NULL != active_event->specific_target) {
-//if (boot_completed) crash_log.concatf("Specificly targeting %s\n", active_event->specific_target->getReceiverName());
         subscriber = active_event->specific_target;
         switch (subscriber->notify(active_event)) {
           case 0:   // The nominal case. No response.
@@ -394,7 +390,6 @@ int8_t EventManager::procIdleFlags() {
     else {
       for (int i = 0; i < subscribers.size(); i++) {
         subscriber = subscribers.get(i);
-//if (boot_completed) crash_log.concatf("Notify %s\n", subscriber->getReceiverName());
         
         switch (subscriber->notify(active_event)) {
           case 0:   // The nominal case. No response.
@@ -414,7 +409,6 @@ int8_t EventManager::procIdleFlags() {
       total_events_dead++;
     }
 
-//if (boot_completed) crash_log.concat("Beginning callback...\n");
     /* Clean up the Event. */
     if (NULL != active_event->callback) {
       if ((EventReceiver*) this != active_event->callback) {  // We don't want to invoke our own callback.
@@ -457,7 +451,6 @@ int8_t EventManager::procIdleFlags() {
          if from the event_queue and consider the matter closed. */
       reclaim_event(active_event);
     }
-//if (boot_completed) crash_log.concat("Beginning profiler cleanup...\n");
 
     // This is a stat-gathering block.
     if (profiler_enabled) {
@@ -521,7 +514,6 @@ int8_t EventManager::procIdleFlags() {
     }
   }
   
-if (boot_completed) crash_log.clear();
   if (local_log.length() > 0) StaticHub::log(&local_log);
   current_event = NULL;
   return return_value;

@@ -127,7 +127,7 @@ void EventReceiver::printDebug() {
 */
 void EventReceiver::printDebug(StringBuilder *output) {
   output->concatf("\n==< %s >===================================\n", getReceiverName());
-  output->concatf("-- bootstrap_completed        %s\n", (boot_completed) ? "yes" : "no");
+  output->concatf("--- bootstrap_completed        %s\n", (boot_completed) ? "yes" : "no");
 }
 
 

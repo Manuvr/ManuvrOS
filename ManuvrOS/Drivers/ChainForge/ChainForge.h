@@ -44,10 +44,10 @@ ChainForge is the optional utility module to cause triggerd and conditional
 //
 //
 //  protected:
+//    void __class_initializer();
 //    
 //
 //  private:
-//    void __class_initializer();
 //};
 
 

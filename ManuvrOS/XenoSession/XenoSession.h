@@ -212,14 +212,10 @@ class XenoSession : public EventReceiver {
     
     int8_t sendSyncPacket();
     
-    // DEBUG FXNS
+    /* Overrides from EventReceiver */
     void procDirectDebugInstruction(StringBuilder*);
-    // DEBUG FXNS
-
     const char* getReceiverName();
     void printDebug(StringBuilder*);
-    
-    /* Overrides from EventReceiver */
     int8_t notify(ManuvrEvent*);
     int8_t callback_proc(ManuvrEvent *);
 
@@ -272,7 +268,7 @@ class XenoSession : public EventReceiver {
     uint8_t initial_sync_count;
     
     bool session_overflow_guard;
-    void __class_initializer();
+
     
     int8_t scan_buffer_for_sync();
     void mark_session_desync(uint8_t desync_source);

@@ -72,10 +72,10 @@ class ManuvrXport : public EventReceiver {
 //
 //    
 //  protected:
+//    void __class_initializer();
 //    
 //
 //  private:
-//    void __class_initializer();
 //    
 //    
 //};

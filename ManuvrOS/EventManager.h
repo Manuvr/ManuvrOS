@@ -43,8 +43,6 @@
   class ManuvrEvent;
   class EventReceiver;
 
-  extern StringBuilder crash_log;
-
   
   
   class TaskProfilerData {

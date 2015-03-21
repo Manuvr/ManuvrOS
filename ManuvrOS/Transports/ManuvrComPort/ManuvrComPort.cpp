@@ -123,6 +123,7 @@ ManuvrComPort::~ManuvrComPort() {
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void ManuvrComPort::__class_initializer() {
+  __class_initializer();
   xport_id           = ManuvrXport::TRANSPORT_ID_POOL++;
   xport_state        = MANUVR_XPORT_STATE_UNINITIALIZED;
   pid_read_abort     = 0;

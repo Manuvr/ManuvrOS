@@ -116,7 +116,8 @@ class ManuvrComPort : public ManuvrXport {
     uint32_t bytes_received;
     
     bool event_addresses_us(ManuvrEvent*);   // Given a transport event, returns true if we need to act.
-      
+    void __class_initializer();
+
 
   private:
     const char* tty_name;
@@ -129,7 +130,6 @@ class ManuvrComPort : public ManuvrXport {
     ManuvrEvent read_abort_event;  // Used to timeout a read operation.
     
 
-    void __class_initializer();
     
     inline void set_xport_state(uint8_t bitmask) {
       xport_state = (bitmask | xport_state);

@@ -9,6 +9,7 @@
   #include "stm32f4xx_it.h"
   
 #elif defined(ARDUINO)
+  #include <Wire/Wire.h>
 #else
   // Unsupported platform? Try using the linux i2c library and cross fingers...
   #include <stdlib.h>
@@ -45,11 +46,12 @@ volatile I2CAdapter* i2c = NULL;
 
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
   __class_initializer();
-  StaticHub *sh = StaticHub::getInstance();
-  if (NULL != sh) {
-    scheduler = sh->fetchScheduler();
-  }
-  
+  current_queue_item = NULL;
+  bus_error          = false;
+  bus_online         = false;
+  ping_run           = false;
+  last_used_bus_addr = 0;
+
   // This init() fxn was patterned after the STM32F4x7 library example.
   dev = dev_id;
   if (dev_id == 1) {
@@ -102,8 +104,6 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
   for (uint16_t i = 0; i < 128; i++) {
   	  ping_map[i] = 0;
   }
-  //i2c = this;
-  current_queue_item = NULL;
 }
 
 
@@ -124,6 +124,7 @@ I2CAdapter::~I2CAdapter() {
 int8_t I2CAdapter::generateStart() {
   if (verbosity > 6) StaticHub::log("I2CAdapter::generateStart()\n");
   if (! bus_online) return -1;
+  I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, ENABLE);      //Enable EVT and ERR interrupts
   I2C_GenerateSTART(I2C1, ENABLE);   // Doing this will take us back to the ISR.
   return 0;
 }
@@ -141,7 +142,8 @@ int8_t I2CAdapter::generateStop() {
 
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
   __class_initializer();
-  
+  current_queue_item = NULL;
+
   dev = dev_id;
   if (dev_id == 1) {
     Wire1.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400);
@@ -152,7 +154,6 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
   	  ping_map[i] = 0;
   }
   i2c = this;
-  current_queue_item = NULL;
 }
 
 
@@ -192,7 +193,8 @@ int8_t I2CAdapter::generateStop() {
 
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
   __class_initializer();
-  
+  current_queue_item = NULL;
+
   dev = dev_id;
   if (dev_id == 1) {
     //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400);
@@ -203,7 +205,6 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
   	  ping_map[i] = 0;
   }
   i2c = this;
-  current_queue_item = NULL;
 }
 
 
@@ -241,7 +242,8 @@ int8_t I2CAdapter::generateStop() {
 
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
   __class_initializer();
-  
+  current_queue_item = NULL;
+
   char *filename = (char *) alloca(24);
   if (sprintf(filename, "/dev/i2c-%d", dev_id) > 0) {
     dev = open(filename, O_RDWR);
@@ -323,9 +325,6 @@ void I2CAdapter::gpioSetup() {
 int8_t I2CAdapter::bootComplete() {
   EventReceiver::bootComplete();
 
-  #ifdef STM32F4XX
-    I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, ENABLE);      //Enable EVT and ERR interrupts
-  #endif
   if (dev >= 0) bus_online = true;
   if (bus_online) {
     advance_work_queue();
@@ -368,7 +367,6 @@ int8_t I2CAdapter::notify(ManuvrEvent *active_event) {
   int8_t return_value = 0;
   
   switch (active_event->event_code) {
-    case MANUVR_MSG_SYS_PREALLOCATION:
     case MANUVR_MSG_INTERRUPTS_MASKED:
     case MANUVR_MSG_SYS_REBOOT:
     case MANUVR_MSG_SYS_BOOTLOADER:
@@ -555,15 +553,14 @@ bool I2CAdapter::insert_work_item(I2CQueuedOperation *nu) {
 * This function needs to be called to move the queue forward.
 */
 void I2CAdapter::advance_work_queue(void) {
-	StringBuilder temp;//("Queue advance...");
 	if (current_queue_item != NULL) {
 		if (current_queue_item->completed()) {
 			if (I2C_ERR_CODE_NO_ERROR == current_queue_item->err_code) {
 			  //temp.concatf("Destroying successful job 0x%08x.\n", current_queue_item->txn_id);
 			}
 			else {
-			  temp.concatf("Destroying failed job 0x%08x.\n", current_queue_item->txn_id);
-			  //current_queue_item->printDebug(&temp);
+			  if (verbosity > 3) local_log.concatf("Destroying failed job 0x%08x.\n", current_queue_item->txn_id);
+			  if (verbosity > 4) current_queue_item->printDebug(&local_log);
 			}
 
 			// Hand this completed operation off to the class that requested it. That class will
@@ -595,12 +592,12 @@ void I2CAdapter::advance_work_queue(void) {
 	}
 
 	if (current_queue_item != NULL) {
-	  
 		if (!current_queue_item->initiated) {
 			current_queue_item->begin();
 		}
 	}
-	if (temp.length() > 0) StaticHub::log(&temp);
+	
+	if (local_log.length() > 0) StaticHub::log(&local_log);
 }
 
 
@@ -728,7 +725,6 @@ void I2CAdapter::printDevs(StringBuilder *temp) {
 }
 
 
-#define I2CADAPTER_MAX_QUEUE_PRINT 3
 
 /**
 * Debug support function.
@@ -802,8 +798,8 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       break;
     case '2':
       #ifdef STM32F4XX
-      I2C_SoftwareResetCmd(I2C1, ENABLE);
-      I2C_SoftwareResetCmd(I2C1, DISABLE);
+        I2C_SoftwareResetCmd(I2C1, ENABLE);
+        I2C_SoftwareResetCmd(I2C1, DISABLE);
       #endif
       output.concat("i2c software reset.\n");
       break;

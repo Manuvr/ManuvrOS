@@ -46,7 +46,6 @@ void oneshot_session_sync_send() {
 XenoSession::XenoSession() {
   __class_initializer();
 	StaticHub *sh = StaticHub::getInstance();
-	scheduler = sh->fetchScheduler();
 	sh->fetchEventManager()->subscribe((EventReceiver*) this);  // Subscribe to the EventManager.
 
 	while (preallocated.size() < XENOMESSAGE_PREALLOCATE_COUNT) {
@@ -56,6 +55,18 @@ XenoSession::XenoSession() {
 	tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
 	tapMessageType(MANUVR_MSG_SESS_HANGUP);
 	tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
+
+	authed                    = false;
+	session_state             = XENOSESSION_STATE_UNINITIALIZED;
+	session_last_state        = XENOSESSION_STATE_UNINITIALIZED;
+	sequential_parse_failures = 0;
+	sequential_ack_failures   = 0;
+	initial_sync_count        = 24;
+	session_overflow_guard    = true;
+	pid_sync_timer            = 0;
+	pid_ack_timeout           = 0;
+	
+	bootComplete();
 }
 
 
@@ -70,23 +81,6 @@ XenoSession::~XenoSession() {
 	}
 	purgeInbound();  // Need to do careful checks in here for open comm loops.
 	purgeOutbound(); // Need to do careful checks in here for open comm loops.
-}
-
-
-/**
-* This is here for compatibility with C++ standards that do not allow for definition and declaration
-*   in the header file. Takes no parameters, and returns nothing.
-*/
-void XenoSession::__class_initializer() {
-	authed                    = false;
-	session_state             = XENOSESSION_STATE_UNINITIALIZED;
-	session_last_state        = XENOSESSION_STATE_UNINITIALIZED;
-	sequential_parse_failures = 0;
-	sequential_ack_failures   = 0;
-	initial_sync_count        = 24;
-	session_overflow_guard    = true;
-	pid_sync_timer            = 0;
-	pid_ack_timeout           = 0;
 }
 
 
@@ -304,10 +298,10 @@ uint16_t XenoSession::nextMessage(StringBuilder* buffer) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t XenoSession::bootComplete() {
-  StaticHub *sh = StaticHub::getInstance();
-  if (NULL != sh) {
-    scheduler = sh->fetchScheduler();
-  }
+  EventReceiver::bootComplete();
+  
+  pid_sync_timer = scheduler->createSchedule(20,  -1, false, oneshot_session_sync_send);
+  scheduler->disableSchedule(pid_sync_timer);
 
   return 1;
 }

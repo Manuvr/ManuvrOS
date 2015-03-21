@@ -36,7 +36,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 
 
-extern StringBuilder crash_log;
 
 /****************************************************************************************************
 * Class-management functions...                                                                     *
@@ -47,7 +46,14 @@ extern StringBuilder crash_log;
 */
 Scheduler::Scheduler() {
   __class_initializer();
-  scheduler_ready = true;
+  next_pid             = 1;      // Next PID to assign.
+  currently_executing  = 0;      // Hold PID of currently-executing Schedule. 0 if none.
+  productive_loops     = 0;      // Number of calls to serviceScheduledEvents() that actually called a schedule.
+  total_loops          = 0;      // Number of calls to serviceScheduledEvents().
+  overhead             = 0;      // The time in microseconds required to service the last empty schedule loop.
+  scheduler_ready      = false;  // TODO: Convert to a uint8 and track states.
+  skipped_loops        = 0;
+  bistable_skip_detect = false;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
 }
 
 
@@ -56,22 +62,6 @@ Scheduler::Scheduler() {
 */
 Scheduler::~Scheduler() {
   destroyAllScheduleItems();
-}
-
-
-/**
-* This is here for compatibility with C++ standards that do not allow for definition and declaration
-*   in the header file. Takes no parameters, and returns nothing.
-*/
-void Scheduler::__class_initializer() {
-    next_pid             = 1;      // Next PID to assign.
-    currently_executing  = 0;      // Hold PID of currently-executing Schedule. 0 if none.
-    productive_loops     = 0;      // Number of calls to serviceScheduledEvents() that actually called a schedule.
-    total_loops          = 0;      // Number of calls to serviceScheduledEvents().
-    overhead             = 0;      // The time in microseconds required to service the last empty schedule loop.
-    scheduler_ready      = false;  // TODO: Convert to a uint8 and track states.
-    skipped_loops        = 0;
-    bistable_skip_detect = false;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
 }
 
 
@@ -175,7 +165,6 @@ ScheduleItem* Scheduler::findNodeByPID(uint32_t g_pid) {
   ScheduleItem *current = NULL;
   for (int i = 0; i < schedules.size(); i++) {
     current = schedules.get(i);
-    //crash_log.concatf("Looking at position %d, and found PIDs.... \n", i, current->pid);
     if (current->pid == g_pid) {
       return current;
     }
@@ -428,18 +417,19 @@ void Scheduler::advanceScheduler() {
 #endif
     }
     else if (skipped_loops == 2000) {
-      printf("Hung scheduler... boot log follows...\n%s\n", (char*) crash_log.string());
+      printf("Hung scheduler...\n");
     }
     else if (skipped_loops == 2500) {
       StaticHub::getInstance()->printDebug(&output);
-      printDebug(&output);
       printf("%s\n", (char*) output.string());
     }
     else if (skipped_loops == 3000) {
+      printDebug(&output);
+      printf("%s\n", (char*) output.string());
+    }
+    else if (skipped_loops == 3500) {
       /* Doing all this String manipulation in an ISR would normally be an awful idea.
          But we don't care here because we're hung anyhow, and we need to know why. */
-      StaticHub::getInstance()->printDebug(&output);
-      printDebug(&output);
       StaticHub::getInstance()->fetchEventManager()->printDebug(&output);
       printf("%s\n", (char*) output.string());
     }

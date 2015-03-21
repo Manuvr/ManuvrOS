@@ -43,6 +43,8 @@ but adding support for other platforms ought to be easy.
   #include "ManuvrOS/EventManager.h"
   #include "ManuvrOS/Drivers/DeviceWithRegisters/DeviceRegister.h"
 
+  #define I2CADAPTER_MAX_QUEUE_PRINT 3
+
 
   #define I2C_OPERATION_READ  I2C_Direction_Receiver
   #define I2C_OPERATION_WRITE I2C_Direction_Transmitter
@@ -204,24 +206,21 @@ but adding support for other platforms ought to be easy.
       void printDevs(StringBuilder *, uint8_t dev_num);
       
       /* Overrides from EventReceiver */
+      void procDirectDebugInstruction(StringBuilder *);
       int8_t notify(ManuvrEvent*);
       int8_t callback_proc(ManuvrEvent *);
 
-
-      // DEBUG FXNS
-      void procDirectDebugInstruction(StringBuilder *);
-      // DEBUG FXNS
       
       // These are meant to be called from the bus jobs. They deal with specific bus functions
       //   that may or may not be present on a given platform.
       int8_t generateStart();    // Generate a start condition on the bus.
       int8_t generateStop();     // Generate a stahp condition on the bus.
       bool switch_device(uint8_t nu_addr);
-      
 
 
     protected:
       int8_t bootComplete();      // This is called from the base notify().
+
 
     private:
       bool ping_run = false;

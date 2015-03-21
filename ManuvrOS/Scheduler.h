@@ -167,7 +167,7 @@ class Scheduler : public EventReceiver {
 
   protected:
     int8_t bootComplete();
-    
+
     
   private:
     PriorityQueue<ScheduleItem*> schedules;
@@ -177,7 +177,6 @@ class Scheduler : public EventReceiver {
     uint16_t skipped_loops;
     bool     bistable_skip_detect;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
     
-    void __class_initializer();
     
     bool alterSchedule(ScheduleItem *obj, uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
 
