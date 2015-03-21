@@ -230,7 +230,7 @@ int8_t I2CQueuedOperation::init_dma() {
     DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;   // Receive
     DMA_ITConfig(DMA1_Stream0, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE | DMA_IT_DME, ENABLE);
     DMA_Init(DMA1_Stream0, &DMA_InitStructure);
-    if (verbosity > 5) local_log.concatf("init_dma():\ttxn_id: 0x%08x\tBuffer address: 0x%08x\n", txn_id, (uint32_t) buf);
+    //if (verbosity > 5) local_log.concatf("init_dma():\ttxn_id: 0x%08x\tBuffer address: 0x%08x\n", txn_id, (uint32_t) buf);
     I2C_DMALastTransferCmd(I2C1, ENABLE);
   }
   else if (opcode == I2C_OPERATION_WRITE) {
@@ -239,7 +239,7 @@ int8_t I2CQueuedOperation::init_dma() {
     DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;   // Transmit
     DMA_ITConfig(DMA1_Stream7, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE | DMA_IT_DME, ENABLE);
     DMA_Init(DMA1_Stream7, &DMA_InitStructure);
-    if (verbosity > 5) local_log.concatf("init_dma():\ttxn_id: 0x%08x\tBuffer address: 0x%08x\n", txn_id, (uint32_t) buf);
+    //if (verbosity > 5) local_log.concatf("init_dma():\ttxn_id: 0x%08x\tBuffer address: 0x%08x\n", txn_id, (uint32_t) buf);
     I2C_DMALastTransferCmd(I2C1, DISABLE);
   }
   else {
@@ -289,7 +289,7 @@ int8_t I2CQueuedOperation::init_dma() {
 
 #endif
 
-  if (local_log.length() > 0) StaticHub::log(&local_log);
+  //if (local_log.length() > 0) StaticHub::log(&local_log);
   return return_value;
 }
 

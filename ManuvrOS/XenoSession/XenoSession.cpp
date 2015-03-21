@@ -52,6 +52,7 @@ XenoSession::XenoSession() {
 	  preallocated.insert(new XenoMessage());
 	}
 
+	// These are messages that we to relay from the rest of the system.
 	tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
 	tapMessageType(MANUVR_MSG_SESS_HANGUP);
 	tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
@@ -161,7 +162,13 @@ int8_t XenoSession::markMessageComplete(uint16_t target_id) {
 
 
 int8_t XenoSession::markSessionConnected(bool conn_state) {
+  bool was_connected_before = isEstablished();
   mark_session_state(conn_state ? XENOSESSION_STATE_CONNECTED : XENOSESSION_STATE_DISCONNECTED);
+  if (!was_connected_before) {
+    // Barrage the counterparty with sync until they reply in-kind.
+    scheduler->enableSchedule(pid_sync_timer);
+    mark_session_desync(XENOSESSION_STATE_SYNC_INITIATOR);
+  }
   return 0;
 }
 
@@ -230,10 +237,10 @@ int8_t XenoSession::markSessionConnected(bool conn_state) {
 *            and the message unique_id if we return non-trivial data.
 */
 uint16_t XenoSession::nextMessage(StringBuilder* buffer) {
-  if (!isEstablished()) {
-    if (verbosity > 2) local_log.concat("XenoSession::nextMessage() returning 0 due to no initialization.\n");
-    return 0;
-  }
+//  if (!isEstablished()) {
+//    if (verbosity > 2) local_log.concat("XenoSession::nextMessage() returning 0 due to no initialization.\n");
+//    return 0;
+//  }
   
   if (syncd()) {   // Don't pull from the queue if we are not syncd.
     int q_size = outbound_messages.size();
@@ -260,10 +267,6 @@ uint16_t XenoSession::nextMessage(StringBuilder* buffer) {
   else {    // If we are not sync'd, send a sync packet.
     buffer->concat((unsigned char*) SYNC_PACKET_BYTES, 4);
     if (verbosity > 2) local_log.concat("XenoSession::nextMessage() returning sync packet.\n");
-    if (initial_sync_count) {
-      scheduler->fireSchedule(pid_sync_timer);
-      initial_sync_count--;
-    }
     return 1;
   }
   if (verbosity > 2) local_log.concat("XenoSession::nextMessage() returning 0.\n");
@@ -542,7 +545,6 @@ void XenoSession::mark_session_desync(uint8_t ds_src) {
     if (verbosity > 3) local_log.concatf("%s\t%s   We are already in the requested sync state. There is no point to entering it again. Doing nothing.\n", __PRETTY_FUNCTION__, getSessionSyncString());
   }
   else {
-  
     switch (ds_src) {
       case XENOSESSION_STATE_SYNC_INITIATED:    // CP-initiated sync 
         break;
@@ -558,16 +560,7 @@ void XenoSession::mark_session_desync(uint8_t ds_src) {
         break;
     }
     
-    if (pid_sync_timer) {
-      scheduler->enableSchedule(pid_sync_timer);
-    }
-    else if (NULL == scheduler) {
-      //StaticHub::log("Tried to find the scheduler and could not. Session is not sending sync packets, despite being in a de-sync state.\n");
-      scheduler = StaticHub::getInstance()->fetchScheduler();
-      if ((NULL != scheduler) && (0 == pid_sync_timer)) {
-        pid_sync_timer = scheduler->createSchedule(20,  -1, false, oneshot_session_sync_send);
-      }
-    }
+    scheduler->enableSchedule(pid_sync_timer);
   }
   
   if (local_log.length() > 0) StaticHub::log(&local_log);
@@ -586,6 +579,7 @@ void XenoSession::mark_session_sync(bool pending) {
   sequential_parse_failures = 0;
   sequential_ack_failures   = 0;
   session_last_state = session_state;               // Stack our session state.
+    
   if (pending) {
     // We *think* we might be done sync'ing...
     session_state = (session_state & 0x0F) | XENOSESSION_STATE_SYNC_PEND_EXIT;
@@ -595,16 +589,9 @@ void XenoSession::mark_session_sync(bool pending) {
     session_state = session_state & 0x0F;
   }
 
-  if (NULL == scheduler) {
-    scheduler = StaticHub::getInstance()->fetchScheduler();
-    if ((NULL != scheduler) && (0 == pid_sync_timer)) {
-      pid_sync_timer = scheduler->createSchedule(20,  -1, false, oneshot_session_sync_send);
-    }
-  }
-  
-  if (0 != pid_sync_timer) {
-    scheduler->enableSchedule(pid_sync_timer);
-  }
+  if (outbound_messages.size() > 0) EventManager::raiseEvent(MANUVR_MSG_SESS_ORIGINATE_MSG, NULL);
+
+  scheduler->disableSchedule(pid_sync_timer);
 }
 
 
@@ -648,7 +635,7 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
       if (scan_buffer_for_sync()) {   // We are getting sync back now.
         /* Since we are going to fall-through into the general parser case, we should reset
            the values that it will use to index and make decisions... */
-        mark_session_sync(true);   // Indicate that we are done with sync, but may still see such packets.
+        mark_session_sync(false);   // Indicate that we are done with sync, but may still see such packets.
         if (verbosity > 3) local_log.concatf("Session re-sync'd with %d bytes remaining in the buffer. Sync'd state is now pending.\n", len);
       }
       else {
@@ -935,6 +922,7 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
     case 'S':  // Send a mess of sync packets.
       initial_sync_count = 24;
       if (scheduler) {
+        scheduler->alterScheduleRecurrence(pid_sync_timer, (int16_t) initial_sync_count);
         scheduler->fireSchedule(pid_sync_timer);
       }
       break;

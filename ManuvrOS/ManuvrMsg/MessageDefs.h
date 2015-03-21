@@ -13,13 +13,13 @@
 */
   #define MANUVR_MSG_REPLY                0x0001 // This reply is for success-case.
   #define MANUVR_MSG_REPLY_RETRY          0x0002 // This reply asks for a reply of the given Unique ID.
-  #define MANUVR_MSG_REPLY_PARSE_FAIL     0x0003 // This reply denotes that the packet failed to parse (despite passing checksum).
+  #define MANUVR_MSG_REPLY_FAIL           0x0003 // This reply denotes that the packet failed to proc (despite passing parse).
   
   #define MANUVR_MSG_SESS_ESTABLISHED     0x0004 // Session established.
   #define MANUVR_MSG_SESS_HANGUP          0x0005 // Session hangup.
   #define MANUVR_MSG_SESS_AUTH_CHALLENGE  0x0006 // A code for challenge-response authentication.
 
-  #define MANUVR_MSG_SELF_DESCRIBE        0x0007 // No args? Asking for this data. One arg: Providing it.
+  #define MANUVR_MSG_SELF_DESCRIBE        0x0007 // No args? Asking for this data. Many args: Providing it.
   // Field order: 4 required null-terminated strings, two optional.
   // uint32:     MTU                (in terms of bytes)
   // String:     Protocol version   (IE: "0.0.1")

@@ -156,7 +156,7 @@ int8_t XenoMessage::retry() {
 * @return  nonzero if there was a problem.
 */
 int8_t XenoMessage::fail() {
-  ManuvrEvent temp_event(MANUVR_MSG_REPLY_PARSE_FAIL);
+  ManuvrEvent temp_event(MANUVR_MSG_REPLY_FAIL);
   provide_event(&temp_event, unique_id);
   proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
   return 0;
@@ -412,7 +412,7 @@ bool XenoMessage::isReply() {
   switch (event->event_code) {
     case MANUVR_MSG_REPLY:
     case MANUVR_MSG_REPLY_RETRY:
-    case MANUVR_MSG_REPLY_PARSE_FAIL:
+    case MANUVR_MSG_REPLY_FAIL:
       return true;
     default:
       return false;

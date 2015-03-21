@@ -185,8 +185,7 @@ int8_t EventManager::raiseEvent(uint16_t code, EventReceiver* cb) {
 int8_t EventManager::staticRaiseEvent(ManuvrEvent* event) {
   int8_t return_value = 0;
   if (0 == INSTANCE->validate_insertion(event)) {
-    //INSTANCE->event_queue.insert(event, event->priority);
-    INSTANCE->event_queue.insert(event);
+    INSTANCE->event_queue.insert(event, event->priority);
     if (INSTANCE->profiler_enabled) {
     }
     // Check the queue depth.
@@ -424,7 +423,7 @@ int8_t EventManager::procIdleFlags() {
             break;
           case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
             if (verbosity > 5) local_log.concatf("EventManager is recycling event %s.\n", active_event->getMsgTypeString());
-            event_queue.insert(active_event);
+            event_queue.insert(active_event, active_event->priority);
             break;
           case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
             if (active_event->returnToPrealloc()) {

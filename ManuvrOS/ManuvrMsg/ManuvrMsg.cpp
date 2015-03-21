@@ -68,7 +68,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_UNDEFINED            , 0x0000,               "<UNDEFINED>"          , MSG_ARGS_NONE }, // This should be the first entry for failure cases.
 
   // Protocol mechanisms for QoS, and fault-tolerence.
-  {  MANUVR_MSG_REPLY_PARSE_FAIL     , MSG_FLAG_EXPORTABLE,               "REPLY_PARSE_FAIL"     , MSG_ARGS_NONE }, //  This reply denotes that the packet failed to parse (despite passing checksum).
+  {  MANUVR_MSG_REPLY_FAIL           , MSG_FLAG_EXPORTABLE,               "REPLY_FAIL"           , MSG_ARGS_NONE }, //  This reply denotes that the packet failed to parse (despite passing checksum).
   {  MANUVR_MSG_REPLY_RETRY          , MSG_FLAG_EXPORTABLE,               "REPLY_RETRY"          , MSG_ARGS_NONE }, //  This reply asks for a reply of the given Unique ID.
   {  MANUVR_MSG_REPLY                , MSG_FLAG_EXPORTABLE,               "REPLY"                , MSG_ARGS_NONE }, //  This reply is for success-case.
 
