@@ -21,6 +21,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 Template for a priority queue implemented on top of a linked-list.
 Highest-priority nodes are stored closest to the beginning of the list.
+
+Some functions are #pragma'd to stop the compiler from complaining about NULL being
+  interpreted as a non-pointer. This is to enable the use of this template to carry
+  (doubles, floats, ints, etc) without polluting the log.
 */
 
 
@@ -54,9 +58,6 @@ template <class T> class PriorityNode{
 template <class T> class PriorityQueue {
 
   public:
-    
-    int canary_value = 88;
-    
     PriorityQueue(void);
     ~PriorityQueue(void);
 
@@ -294,6 +295,8 @@ template <class T> bool PriorityQueue<T>::decrementPriority(T test_data) {
 }
 
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion-null"
 template <class T> T PriorityQueue<T>::dequeue() {
   PriorityNode<T>* current = root;
   if (current != NULL) {
@@ -304,13 +307,13 @@ template <class T> T PriorityQueue<T>::dequeue() {
     element_count--;
     return return_value;
   }
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wconversion-null"
   return NULL;
-  #pragma GCC diagnostic pop
 }
+#pragma GCC diagnostic pop
 
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion-null"
 template <class T> T PriorityQueue<T>::recycle() {
   PriorityNode<T>* current = root;
   if (current != NULL) {
@@ -327,11 +330,9 @@ template <class T> T PriorityQueue<T>::recycle() {
 
     return return_value;
   }
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wconversion-null"
   return NULL;
-  #pragma GCC diagnostic pop
 }
+#pragma GCC diagnostic pop
 
 
 template <class T> int PriorityQueue<T>::clear(void) {
@@ -398,18 +399,20 @@ template <class T> bool PriorityQueue<T>::remove(T test_data) {
 }
 
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion-null"
 template <class T> T PriorityQueue<T>::get() {
   PriorityNode<T>* current = root;
   if (current != NULL) {
     return current->data;
   }
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wconversion-null"
   return NULL;
-  #pragma GCC diagnostic pop
 }
+#pragma GCC diagnostic pop
 
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion-null"
 template <class T> T PriorityQueue<T>::get(int pos) {
   int i = 0;
   PriorityNode<T>* current = root;
@@ -420,11 +423,9 @@ template <class T> T PriorityQueue<T>::get(int pos) {
     i++;
     current = current->next;
   }
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wconversion-null"
   return NULL;
-  #pragma GCC diagnostic pop
 }
+#pragma GCC diagnostic pop
 
 
 template <class T> bool PriorityQueue<T>::contains(T test_data) {
