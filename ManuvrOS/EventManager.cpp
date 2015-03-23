@@ -12,8 +12,6 @@
 ****************************************************************************************************/
 EventManager* EventManager::INSTANCE = NULL;
 
-uint32_t test_value __attribute__((section(".ccm")));
-
 
 /****************************************************************************************************
 * Class management                                                                                  *
@@ -97,7 +95,7 @@ int8_t EventManager::subscribe(EventReceiver *client, uint8_t priority) {
   }
   if (boot_completed) {
     // This subscriber is joining us after bootup. Call its bootComplete() fxn to cause it to init.
-    //client->notify(returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED));
+    //client.bootComplete();
   }
   return ((return_value >= 0) ? 0 : -1);
 }
