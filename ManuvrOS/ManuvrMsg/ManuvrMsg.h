@@ -13,8 +13,7 @@ This is the data structure that contains the identity of a given message and its
 The message codes defined by this file are dual-purposed across the EventAnd Host message classes to keep
   continuity between message types.
 */
-
-
+               
 #ifndef __MANUVR_MESSAGE_H__
 #define __MANUVR_MESSAGE_H__
 
@@ -25,6 +24,10 @@ The message codes defined by this file are dual-purposed across the EventAnd Hos
 #include "DataStructures/PriorityQueue.h"
 #include "DataStructures/LightLinkedList.h"
 #include "DataStructures/Vector3.h"
+#include "DataStructures/Vector3.h"
+
+#include "Drivers/LSM9DS0/Quaternion.h"   // TODO: Remove. Should be in DataStructures.
+
 
 #define DIG_MSG_ERROR_NO_ERROR        0
 #define DIG_MSG_ERROR_INVALID_ARG     -1
@@ -111,6 +114,7 @@ class Argument {
     Argument(Vector3ui16*);
     Argument(Vector3i16*);
     Argument(Vector3f*);
+    Argument(Vector4f*);
     
     Argument(const char* val);
     Argument(void*, uint16_t buf_len);
@@ -174,56 +178,142 @@ class ManuvrMsg {
     uint8_t getArgumentType();         // Return the type code for Argument 0.
     
     MessageTypeDef* getMsgDef();
-    
-    /* These accessors imply the first argument which is retained after the call. */
-    int8_t getArgAs(uint8_t *dat); 
-    int8_t getArgAs(uint16_t *dat);
-    int8_t getArgAs(uint32_t *dat);
-    int8_t getArgAs(int8_t *dat);  
-    int8_t getArgAs(int16_t *dat); 
-    int8_t getArgAs(int32_t *dat); 
-    int8_t getArgAs(float *dat);   
-    int8_t getArgAs(Vector3f **dat);
-    int8_t getArgAs(Vector3ui16 **dat);
-    int8_t getArgAs(Vector3i16 **dat);
-    int8_t getArgAs(const char **dat);
-    int8_t getArgAs(StringBuilder **dat);
-    int8_t getArgAs(StaticHub **dat);
-    int8_t getArgAs(Scheduler **dat);
-    int8_t getArgAs(ManuvrEvent **dat);
-    
-    
-    /* These accessors imply the first argument and reaps it if the return succeeds. */
-    int8_t consumeArgAs(uint8_t *dat);   
-    int8_t consumeArgAs(uint16_t *dat);
-    int8_t consumeArgAs(uint32_t *dat);
-    int8_t consumeArgAs(int8_t *dat);  
-    int8_t consumeArgAs(int16_t *dat); 
-    int8_t consumeArgAs(int32_t *dat); 
-    int8_t consumeArgAs(float *dat);   
-    int8_t consumeArgAs(const char **dat);
-    int8_t consumeArgAs(StringBuilder **dat);
-    int8_t consumeArgAs(StaticHub **dat);
-    int8_t consumeArgAs(Scheduler **dat);
-    int8_t consumeArgAs(ManuvrEvent **dat);
 
-    /* These accessors specify an argument position, and retain the argument after the call. */
-    int8_t getArgAs(uint8_t idx, uint8_t *dat);
-    int8_t getArgAs(uint8_t idx, uint16_t *dat);
-    int8_t getArgAs(uint8_t idx, uint32_t *dat);
-    int8_t getArgAs(uint8_t idx, int8_t *dat);
-    int8_t getArgAs(uint8_t idx, int16_t *dat);
-    int8_t getArgAs(uint8_t idx, int32_t *dat);
-    int8_t getArgAs(uint8_t idx, float *dat);
+
+
+
+/*
+* Overrides for Argument constructor access. Prevents outside classes from having to care about
+*   implementation details of Arguments. Might look ugly, but takes the CPU burden off of runtime
+*   and forces the compiler to deal with it.
+*/
+inline int addArg(uint8_t val) {             return args.insert(new Argument(val));   }
+inline int addArg(uint16_t val) {            return args.insert(new Argument(val));   }
+inline int addArg(uint32_t val) {            return args.insert(new Argument(val));   }
+inline int addArg(int8_t val) {              return args.insert(new Argument(val));   }
+inline int addArg(int16_t val) {             return args.insert(new Argument(val));   }
+inline int addArg(int32_t val) {             return args.insert(new Argument(val));   }
+inline int addArg(float val) {               return args.insert(new Argument(val));   }
+           
+inline int addArg(uint8_t *val) {            return args.insert(new Argument(val));   }
+inline int addArg(uint16_t *val) {           return args.insert(new Argument(val));   }
+inline int addArg(uint32_t *val) {           return args.insert(new Argument(val));   }
+inline int addArg(int8_t *val) {             return args.insert(new Argument(val));   }
+inline int addArg(int16_t *val) {            return args.insert(new Argument(val));   }
+inline int addArg(int32_t *val) {            return args.insert(new Argument(val));   }
+inline int addArg(float *val) {              return args.insert(new Argument(val));   }
+           
+inline int addArg(Vector3ui16 *val) {        return args.insert(new Argument(val));   }
+inline int addArg(Vector3i16 *val) {         return args.insert(new Argument(val));   }
+inline int addArg(Vector3f *val) {           return args.insert(new Argument(val));   }
+inline int addArg(Vector4f *val) {           return args.insert(new Argument(val));   }
+           
+inline int addArg(void *val, int len) {      return args.insert(new Argument(val, len));   }
+inline int addArg(const char *val) {         return args.insert(new Argument(val));   }
+inline int addArg(StringBuilder *val) {      return args.insert(new Argument(val));   }
+inline int addArg(StaticHub *val) {          return args.insert(new Argument(val));   }
+inline int addArg(Scheduler *val) {          return args.insert(new Argument(val));   }
+inline int addArg(ManuvrEvent *val) {        return args.insert(new Argument(val));   }
+
+
+    /*
+    * Overrides for Argument retreival. Pass in pointer to the type the argument should be retreived as.
+    * Returns an error code if the types don't match.
+    */
+    // These accessors treat the (void*) as 4 bytes of data storage.
+    inline int8_t consumeArgAs(int8_t *trg_buf) {       return getArgAs(0, (void*) trg_buf, false);  }
+    inline int8_t consumeArgAs(uint8_t *trg_buf) {      return getArgAs(0, (void*) trg_buf, false);  }
+    inline int8_t consumeArgAs(int16_t *trg_buf) {      return getArgAs(0, (void*) trg_buf, false);  }
+    inline int8_t consumeArgAs(uint16_t *trg_buf) {     return getArgAs(0, (void*) trg_buf, false);  }
+    inline int8_t consumeArgAs(int32_t *trg_buf) {      return getArgAs(0, (void*) trg_buf, false);  }
+    inline int8_t consumeArgAs(uint32_t *trg_buf) {     return getArgAs(0, (void*) trg_buf, false);  }
+    inline int8_t consumeArgAs(float *trg_buf) {        return getArgAs(0, (void*) trg_buf, false);  }
+    inline int8_t consumeArgAs(ManuvrEvent **trg_buf) {  return getArgAs(0, (void*) trg_buf, false);  }
     
-    int8_t getArgAs(uint8_t idx, Vector3f **dat);
-    int8_t getArgAs(uint8_t idx, Vector3ui16 **dat);
-    int8_t getArgAs(uint8_t idx, Vector3i16 **dat);
-    int8_t getArgAs(uint8_t idx, const char **dat);
-    int8_t getArgAs(uint8_t idx, StringBuilder **dat);
-    int8_t getArgAs(uint8_t idx, StaticHub **dat);
-    int8_t getArgAs(uint8_t idx, Scheduler **dat);
-    int8_t getArgAs(uint8_t idx, ManuvrEvent **dat);
+    inline int8_t getArgAs(int8_t *trg_buf) {           return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t *trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(int16_t *trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint16_t *trg_buf) {         return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(int32_t *trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint32_t *trg_buf) {         return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(float *trg_buf) {            return getArgAs(0, (void*) trg_buf, true);  }
+    
+    inline int8_t getArgAs(uint8_t idx, uint8_t  *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, uint16_t *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, uint32_t *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, int8_t   *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, int16_t  *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, int32_t  *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, float  *trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
+    
+    // These accessors treat the (void*) as a pointer. These functions are essentially type-casts.
+    inline int8_t getArgAs(Vector3f **trg_buf) {           return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(Vector3ui16 **trg_buf) {        return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(Vector3i16 **trg_buf) {         return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(const char **trg_buf) {         return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(StringBuilder **trg_buf) {      return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(StaticHub **trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(Scheduler **trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(ManuvrEvent **trg_buf) {   return getArgAs(0, (void*) trg_buf, true);  }
+    
+    inline int8_t getArgAs(uint8_t idx, Vector3f  **trg_buf) {          return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, Vector3ui16  **trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, Vector3i16  **trg_buf) {        return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, const char  **trg_buf) {        return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, StringBuilder  **trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, StaticHub  **trg_buf) {         return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, Scheduler  **trg_buf) {         return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, ManuvrEvent  **trg_buf) {  return getArgAs(idx, (void*) trg_buf, true);  }
+    
+//    /* These accessors imply the first argument which is retained after the call. */
+//    int8_t getArgAs(uint8_t *dat); 
+//    int8_t getArgAs(uint16_t *dat);
+//    int8_t getArgAs(uint32_t *dat);
+//    int8_t getArgAs(int8_t *dat);  
+//    int8_t getArgAs(int16_t *dat); 
+//    int8_t getArgAs(int32_t *dat); 
+//    int8_t getArgAs(float *dat);   
+//    int8_t getArgAs(Vector3f **dat);
+//    int8_t getArgAs(Vector3ui16 **dat);
+//    int8_t getArgAs(Vector3i16 **dat);
+//    int8_t getArgAs(const char **dat);
+//    int8_t getArgAs(StringBuilder **dat);
+//    int8_t getArgAs(StaticHub **dat);
+//    int8_t getArgAs(Scheduler **dat);
+//    int8_t getArgAs(ManuvrEvent **dat);
+//    
+//    
+//    /* These accessors imply the first argument and reaps it if the return succeeds. */
+//    int8_t consumeArgAs(uint8_t *dat);   
+//    int8_t consumeArgAs(uint16_t *dat);
+//    int8_t consumeArgAs(uint32_t *dat);
+//    int8_t consumeArgAs(int8_t *dat);  
+//    int8_t consumeArgAs(int16_t *dat); 
+//    int8_t consumeArgAs(int32_t *dat); 
+//    int8_t consumeArgAs(float *dat);   
+//    int8_t consumeArgAs(const char **dat);
+//    int8_t consumeArgAs(StringBuilder **dat);
+//    int8_t consumeArgAs(StaticHub **dat);
+//    int8_t consumeArgAs(Scheduler **dat);
+//    int8_t consumeArgAs(ManuvrEvent **dat);
+//
+//    /* These accessors specify an argument position, and retain the argument after the call. */
+//    int8_t getArgAs(uint8_t idx, uint8_t *dat);
+//    int8_t getArgAs(uint8_t idx, uint16_t *dat);
+//    int8_t getArgAs(uint8_t idx, uint32_t *dat);
+//    int8_t getArgAs(uint8_t idx, int8_t *dat);
+//    int8_t getArgAs(uint8_t idx, int16_t *dat);
+//    int8_t getArgAs(uint8_t idx, int32_t *dat);
+//    int8_t getArgAs(uint8_t idx, float *dat);
+//    
+//    int8_t getArgAs(uint8_t idx, Vector3f **dat);
+//    int8_t getArgAs(uint8_t idx, Vector3ui16 **dat);
+//    int8_t getArgAs(uint8_t idx, Vector3i16 **dat);
+//    int8_t getArgAs(uint8_t idx, const char **dat);
+//    int8_t getArgAs(uint8_t idx, StringBuilder **dat);
+//    int8_t getArgAs(uint8_t idx, StaticHub **dat);
+//    int8_t getArgAs(uint8_t idx, Scheduler **dat);
+//    int8_t getArgAs(uint8_t idx, ManuvrEvent **dat);
     
     /* 
     * Protip: Think on the stack...
@@ -232,33 +322,34 @@ class ManuvrMsg {
     int8_t markArgForReap(int idx, bool reap);
     
 	
-    /* These are pass-throughs to an appropriate Argument constructor. */
-    int addArg(uint8_t);
-    int addArg(uint16_t);
-    int addArg(uint32_t);
-    int addArg(int8_t);
-    int addArg(int16_t);                           
-    int addArg(int32_t);
-    int addArg(float);
-    
-    int addArg(uint8_t*);
-    int addArg(uint16_t*);
-    int addArg(uint32_t*);
-    int addArg(int8_t*);
-    int addArg(int16_t*);                           
-    int addArg(int32_t*);
-    int addArg(float*);
-    
-    int addArg(Vector3ui16*);
-    int addArg(Vector3i16*);
-    int addArg(Vector3f*);
-
-    int addArg(void*, int len);
-    int addArg(const char*);
-    int addArg(StringBuilder*);
-    int addArg(StaticHub*);
-    int addArg(Scheduler*);
-    int addArg(ManuvrEvent*);
+//    /* These are pass-throughs to an appropriate Argument constructor. */
+//    int addArg(uint8_t);
+//    int addArg(uint16_t);
+//    int addArg(uint32_t);
+//    int addArg(int8_t);
+//    int addArg(int16_t);                           
+//    int addArg(int32_t);
+//    int addArg(float);
+//    
+//    int addArg(uint8_t*);
+//    int addArg(uint16_t*);
+//    int addArg(uint32_t*);
+//    int addArg(int8_t*);
+//    int addArg(int16_t*);                           
+//    int addArg(int32_t*);
+//    int addArg(float*);
+//    
+//    int addArg(Vector3ui16*);
+//    int addArg(Vector3i16*);
+//    int addArg(Vector3f*);
+//    int addArg(Vector4f*);
+//
+//    int addArg(void*, int len);
+//    int addArg(const char*);
+//    int addArg(StringBuilder*);
+//    int addArg(StaticHub*);
+//    int addArg(Scheduler*);
+//    int addArg(ManuvrEvent*);
     //int addArg(double);
     //int addArg(void* nu, uint8_t type);
 

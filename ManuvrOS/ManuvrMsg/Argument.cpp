@@ -111,6 +111,13 @@ Argument::Argument(float* val) {
 	target_mem = (void*) val;
 }
 
+Argument::Argument(Vector4f* val) {
+	wipe();
+	len = 16;
+	type_code = VECT_4_FLOAT;
+	target_mem = (void*) val;
+}
+
 Argument::Argument(Vector3f* val) {
 	wipe();
 	len = 12;
@@ -280,6 +287,7 @@ int8_t Argument::serialize(StringBuilder *out) {
 	  case STR_BUILDER_FM:     // This is a pointer to some StringBuilder. Presumably this is on the heap.
 	    temp_str    = ((StringBuilder*) target_mem)->string();
       arg_bin_len = ((StringBuilder*) target_mem)->length();
+	  case VECT_4_FLOAT:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
 	  case VECT_3_FLOAT:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
 	  case VECT_3_UINT16: // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
 	  case VECT_3_INT16:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
@@ -353,6 +361,7 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
 	  case STR_BUILDER_FM:     // This is a pointer to some StringBuilder. Presumably this is on the heap.
       out->concat((StringBuilder*) target_mem);
 	    break;
+	  case VECT_4_FLOAT:
 	  case VECT_3_FLOAT:
 	  case VECT_3_UINT16:
 	  case VECT_3_INT16:

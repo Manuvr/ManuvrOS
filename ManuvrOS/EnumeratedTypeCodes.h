@@ -68,6 +68,7 @@ typedef struct typecode_def_t {
 *   the data so passed is not a pointer, and therefore makes sense as-is to other devices.
 *
 */
+#define VECT_4_FLOAT   0x16    // A float vector in 4-space.
 #define MAP_FM         0x15    // A full manus map (up to 17 positions).
 #define VECT_3_UINT16  0x14    // A vector of unsigned 16-bit integers in 3-space
 #define VECT_3_INT16   0x13    // A vector of 16-bit integers in 3-space
