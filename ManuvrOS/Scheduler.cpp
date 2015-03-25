@@ -513,12 +513,18 @@ int Scheduler::serviceScheduledEvents() {
         profile_start_time = micros();
       }
 
-      if (NULL != current->callback_to_er) {
-        //current->callback_to_er->notify(current->event);   // Pitch the schedule's event.
-        //if (NULL != current->event->callback) {
-        //  current->event->callback->callback_proc(current->event);
+      if (NULL != current->event) {  // This is an event-based schedule.
+        //if (NULL != current->event->specific_target) {
+        //  // TODO: Note: If we do this, we are outside of the profiler's scope.
+        //  current->event->specific_target->notify(current->event);   // Pitch the schedule's event.
+        //  
+        //  if (NULL != current->event->callback) {
+        //    current->event->callback->callback_proc(current->event);
+        //  }
         //}
-        EventManager::staticRaiseEvent(current->event);
+        //else {
+          EventManager::staticRaiseEvent(current->event);
+        //}
       }
       else if (NULL != current->schedule_callback) {
         ((void (*)(void)) current->schedule_callback)();   // Call the schedule's service function.

@@ -354,8 +354,8 @@ uint8_t ManuvrMsg::inflateArgumentsFromRawBuffer(unsigned char *buffer, int len)
         break;
       case VECT_4_FLOAT:
         nu_arg = new Argument(new Vector4f(parseFloatFromchars(buffer + 0), parseFloatFromchars(buffer + 4), parseFloatFromchars(buffer + 8), parseFloatFromchars(buffer + 12)));
-        len = len - 12;
-        buffer += 12;
+        len = len - 16;
+        buffer += 16;
         nu_arg->reap = true;
         break;
       case VECT_3_FLOAT:
@@ -417,89 +417,6 @@ int8_t ManuvrMsg::markArgForReap(int idx, bool reap) {
 * Prevents client classes from having to do casting and type manipulation.                          *
 * TODO: Would like to see these inlined. Not sure how without throwing the linker into a rage.      *
 ****************************************************************************************************/
-
-///*
-//* Overrides for Argument constructor access. Prevents outside classes from having to care about
-//*   implementation details of Arguments. Might look ugly, but takes the CPU burden off of runtime
-//*   and forces the compiler to deal with it.
-//*/
-//int ManuvrMsg::addArg(uint8_t val) {             return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(uint16_t val) {            return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(uint32_t val) {            return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(int8_t val) {              return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(int16_t val) {             return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(int32_t val) {             return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(float val) {               return args.insert(new Argument(val));   }
-//
-//int ManuvrMsg::addArg(uint8_t *val) {            return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(uint16_t *val) {           return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(uint32_t *val) {           return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(int8_t *val) {             return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(int16_t *val) {            return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(int32_t *val) {            return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(float *val) {              return args.insert(new Argument(val));   }
-//
-//int ManuvrMsg::addArg(Vector3ui16 *val) {        return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(Vector3i16 *val) {         return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(Vector3f *val) {           return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(Vector4f *val) {           return args.insert(new Argument(val));   }
-//
-//int ManuvrMsg::addArg(void *val, int len) {      return args.insert(new Argument(val, len));   }
-//int ManuvrMsg::addArg(const char *val) {         return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(StringBuilder *val) {      return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(StaticHub *val) {          return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(Scheduler *val) {          return args.insert(new Argument(val));   }
-//int ManuvrMsg::addArg(ManuvrEvent *val) {        return args.insert(new Argument(val));   }
-
-
-///*
-//* Overrides for Argument retreival. Pass in pointer to the type the argument should be retreived as.
-//* Returns an error code if the types don't match.
-//*/
-//// These accessors treat the (void*) as 4 bytes of data storage.
-//int8_t ManuvrMsg::consumeArgAs(int8_t *trg_buf) {       return getArgAs(0, (void*) trg_buf, false);  }
-//int8_t ManuvrMsg::consumeArgAs(uint8_t *trg_buf) {      return getArgAs(0, (void*) trg_buf, false);  }
-//int8_t ManuvrMsg::consumeArgAs(int16_t *trg_buf) {      return getArgAs(0, (void*) trg_buf, false);  }
-//int8_t ManuvrMsg::consumeArgAs(uint16_t *trg_buf) {     return getArgAs(0, (void*) trg_buf, false);  }
-//int8_t ManuvrMsg::consumeArgAs(int32_t *trg_buf) {      return getArgAs(0, (void*) trg_buf, false);  }
-//int8_t ManuvrMsg::consumeArgAs(uint32_t *trg_buf) {     return getArgAs(0, (void*) trg_buf, false);  }
-//int8_t ManuvrMsg::consumeArgAs(float *trg_buf) {        return getArgAs(0, (void*) trg_buf, false);  }
-//int8_t ManuvrMsg::consumeArgAs(ManuvrEvent **trg_buf) {  return getArgAs(0, (void*) trg_buf, false);  }
-//
-//int8_t ManuvrMsg::getArgAs(int8_t *trg_buf) {           return getArgAs(0, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(uint8_t *trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(int16_t *trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(uint16_t *trg_buf) {         return getArgAs(0, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(int32_t *trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(uint32_t *trg_buf) {         return getArgAs(0, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(float *trg_buf) {            return getArgAs(0, (void*) trg_buf, true);  }
-//
-//int8_t ManuvrMsg::getArgAs(uint8_t idx, uint8_t  *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(uint8_t idx, uint16_t *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(uint8_t idx, uint32_t *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(uint8_t idx, int8_t   *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(uint8_t idx, int16_t  *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(uint8_t idx, int32_t  *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(uint8_t idx, float  *trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
-//
-//// These accessors treat the (void*) as a pointer. These functions are essentially type-casts.
-//int8_t ManuvrMsg::getArgAs(Vector3f **trg_buf) {           return getArgAs(0, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(Vector3ui16 **trg_buf) {        return getArgAs(0, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(Vector3i16 **trg_buf) {         return getArgAs(0, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(const char **trg_buf) {         return getArgAs(0, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(StringBuilder **trg_buf) {      return getArgAs(0, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(StaticHub **trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(Scheduler **trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(ManuvrEvent **trg_buf) {   return getArgAs(0, (void*) trg_buf, true);  }
-//
-//int8_t ManuvrMsg::getArgAs(uint8_t idx, Vector3f  **trg_buf) {          return getArgAs(idx, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(uint8_t idx, Vector3ui16  **trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(uint8_t idx, Vector3i16  **trg_buf) {        return getArgAs(idx, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(uint8_t idx, const char  **trg_buf) {        return getArgAs(idx, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(uint8_t idx, StringBuilder  **trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(uint8_t idx, StaticHub  **trg_buf) {         return getArgAs(idx, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(uint8_t idx, Scheduler  **trg_buf) {         return getArgAs(idx, (void*) trg_buf, true);  }
-//int8_t ManuvrMsg::getArgAs(uint8_t idx, ManuvrEvent  **trg_buf) {  return getArgAs(idx, (void*) trg_buf, true);  }
 
 
 /**
