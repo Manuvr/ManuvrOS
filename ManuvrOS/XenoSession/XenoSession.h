@@ -101,14 +101,14 @@ const uint8_t XENO_MSG_PROC_STATE_WRITING_REPLY          = 0x25;
 class XenoMessage {
   public:
     StringBuilder             buffer;  // Holds the intermediary form of the message that traverses the transport.
-    uint8_t   proc_state      = 0;     // Where are we in the flow of this message? See XENO_MSG_PROC_STATES
+    uint8_t   proc_state;     // Where are we in the flow of this message? See XENO_MSG_PROC_STATES
     
-    bool      expecting_ack   = true;  // Does this message expect an ACK?
+    bool      expecting_ack;  // Does this message expect an ACK?
     
-    ManuvrEvent* event   = NULL;  // Associates this XenoMessage to an event.
+    ManuvrEvent* event;  // Associates this XenoMessage to an event.
 
-    uint32_t  bytes_received  = 0;     // How many bytes of this command have we received? Meaningless for the sender.
-    uint16_t  unique_id       = 0;     // 
+    uint32_t  bytes_received;     // How many bytes of this command have we received? Meaningless for the sender.
+    uint16_t  unique_id;     // 
 
     
     XenoMessage();                    // Typical use: building an inbound XemoMessage. 
@@ -140,18 +140,18 @@ class XenoMessage {
 
     
   private:
-    StringBuilder             argbuf;  // Holds the bytes-in-excess-of packet-minimum until they can be parsed.
-    uint32_t  time_created    = 0;     // Optional: What time did this message come into existance?
-    uint32_t  millis_at_begin = 0;     // This is the milliseconds reading when we sent.
-    uint8_t   retries         = 0;     // How many times have we retried this packet?
+    StringBuilder   argbuf;  // Holds the bytes-in-excess-of packet-minimum until they can be parsed.
+    uint32_t  time_created;     // Optional: What time did this message come into existance?
+    uint32_t  millis_at_begin;     // This is the milliseconds reading when we sent.
+    uint8_t   retries;     // How many times have we retried this packet?
 
-    uint32_t  bytes_total     = 0;     // How many bytes does this command occupy?
-    uint8_t   arg_count       = 0;
+    uint32_t  bytes_total;     // How many bytes does this command occupy?
+    uint8_t   arg_count;
 
-    uint8_t   checksum_i      = 0;     // The checksum of the data that we receive.
-    uint8_t   checksum_c      = CHECKSUM_PRELOAD_BYTE;     // The checksum of the data that we calculate.
+    uint8_t   checksum_i;     // The checksum of the data that we receive.
+    uint8_t   checksum_c;     // The checksum of the data that we calculate.
 
-    uint16_t  message_code    = 0;     // 
+    uint16_t  message_code;     // 
 
 };
 
@@ -260,8 +260,8 @@ class XenoSession : public EventReceiver {
     LinkedList<XenoMessage*> preallocated;        // Messages that we've allocated ahead of time.
     
     /* These variables track failure cases to inform sync-initiation. */
-    const uint8_t MAX_PARSE_FAILURES  = 3;  // How many failures-to-parse should we tolerate before SYNCing?
-    const uint8_t MAX_ACK_FAILURES    = 3;  // How many failures-to-ACK should we tolerate before SYNCing?
+    uint8_t MAX_PARSE_FAILURES;  // How many failures-to-parse should we tolerate before SYNCing?
+    uint8_t MAX_ACK_FAILURES;    // How many failures-to-ACK should we tolerate before SYNCing?
     uint8_t sequential_parse_failures;      // How many parse attempts have failed in-a-row?
     uint8_t sequential_ack_failures;        // How many of our outbound packets have failed to ACK?
 
@@ -291,7 +291,7 @@ class XenoSession : public EventReceiver {
     const char* getSessionSyncString();
     
     
-    static const uint32_t PROTOCOL_VERSION = 0x00000001;
+    static const uint32_t PROTOCOL_VERSION;
 };
 
 

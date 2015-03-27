@@ -99,27 +99,27 @@ but adding support for other platforms ought to be easy.
   */
   class I2CQueuedOperation {
     public:
-      bool      initiated     = false;     // Is this item fresh or is it waiting on a reply?
-      bool      reap_buffer   = false;     // If true, we will reap the buffer.
-
-      uint8_t   opcode;          // What is the nature of this work-queue item?
-      int       txn_id;          // How are we going to keep track of this item?
-      int8_t    err_code      = I2C_ERR_CODE_NO_ERROR;     // If we had an error, the code will be here.
-
-      uint8_t dev_addr        = 0;
-      int16_t sub_addr        = -1;
-
-      uint8_t xfer_state      = I2C_XFER_STATE_INITIATE;
-      uint8_t remaining_bytes = 0;
-      uint8_t len             = 0;
-      uint8_t *buf            = NULL;
-
-      I2CDevice  *requester = NULL;
-      I2CAdapter *device    = NULL;
-      
-      int8_t verbosity = 0;
-
       static int next_txn_id;
+
+      bool      initiated;     // Is this item fresh or is it waiting on a reply?
+      bool      reap_buffer;   // If true, we will reap the buffer.
+
+      uint8_t   opcode;        // What is the nature of this work-queue item?
+      int       txn_id;        // How are we going to keep track of this item?
+      int8_t    err_code;      // If we had an error, the code will be here.
+
+      uint8_t dev_addr;
+      int16_t sub_addr;
+
+      uint8_t xfer_state;
+      uint8_t remaining_bytes;
+      uint8_t len;
+      uint8_t *buf;
+
+      I2CDevice  *requester;
+      I2CAdapter *device;
+      
+      int8_t verbosity;
 
 
       I2CQueuedOperation(uint8_t nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len);
@@ -156,7 +156,7 @@ but adding support for other platforms ought to be easy.
       
 
     private:
-      bool      subaddr_sent = false;    // Have the subaddress been sent yet?
+      bool      subaddr_sent;    // Have the subaddress been sent yet?
       static ManuvrEvent event_queue_ready;
       
       int8_t init_dma();
@@ -179,9 +179,9 @@ but adding support for other platforms ought to be easy.
   */
   class I2CAdapter : public EventReceiver {
     public:
-      bool bus_error  = false;
-      bool bus_online = false;
-      int dev = -1;
+      bool bus_error;
+      bool bus_online;
+      int dev;
       
       I2CQueuedOperation* current_queue_item;
         
@@ -219,13 +219,14 @@ but adding support for other platforms ought to be easy.
 
 
     protected:
+      void __class_initializer();
       int8_t bootComplete();      // This is called from the base notify().
 
 
     private:
-      bool ping_run = false;
+      bool ping_run;
       int8_t ping_map[128];
-      int8_t last_used_bus_addr = 0;
+      int8_t last_used_bus_addr;
 
       LinkedList<I2CQueuedOperation*> work_queue;     // A work queue to keep transactions in order.
       LinkedList<I2CDevice*> dev_list;                // A list of active slaves on this bus.
@@ -310,7 +311,7 @@ but adding support for other platforms ought to be easy.
     protected:
       LinkedList<DeviceRegister*> reg_defs;     // Here is where registers will be enumerated.
       //uint8_t*  pooled_registers     = NULL;    // TODO: Make this happen!
-      bool      multi_access_support = false;   // TODO: Make this happen! Depends on pooled_registers.
+      bool      multi_access_support;     // TODO: Make this happen! Depends on pooled_registers.
 
 
       // Callback for requested operation completion.

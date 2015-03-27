@@ -32,31 +32,47 @@ XenoMessage is the class that is the interface between ManuvrEvents and
 
 
 XenoMessage::XenoMessage() {
-	event = NULL;
-	proc_state = XENO_MSG_PROC_STATE_RECEIVING;  // Implies we are receiving.
-	time_created = millis();
+  event               = NULL;
+  proc_state          = XENO_MSG_PROC_STATE_RECEIVING;  // Implies we are receiving.
+  expecting_ack       = true;  // Does this message expect an ACK?
+  event               = NULL;  // Associates this XenoMessage to an event.
+  bytes_received      = 0;     // How many bytes of this command have we received? Meaningless for the sender.
+  uint16_t  unique_id = 0;     //
+  
+  time_created    = 0;     // Optional: What time did this message come into existance?
+  millis_at_begin = 0;     // This is the milliseconds reading when we sent.
+  retries         = 0;     // How many times have we retried this packet?
+  
+  bytes_total     = 0;     // How many bytes does this command occupy?
+  arg_count       = 0;
+  
+  checksum_i      = 0;     // The checksum of the data that we receive.
+  checksum_c      = CHECKSUM_PRELOAD_BYTE;     // The checksum of the data that we calculate.
+  
+  message_code    = 0;     // 
+  time_created = millis();
 }
 
 
 XenoMessage::XenoMessage(ManuvrEvent* existing_event) {
-	// Should maybe set a flag in the event to indicate that we are now responsible
-	//   for memory upkeep? Don't want it to get jerked out from under us and cause a crash.
-	event = existing_event;
-	unique_id = (uint16_t) StaticHub::randomInt();
-	proc_state = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
-	serialize();   // We should do this immediately to preserve the message.
-	event = NULL;  // Don't risk the event getting ripped out from under us.
-	time_created = millis();
+  // Should maybe set a flag in the event to indicate that we are now responsible
+  //   for memory upkeep? Don't want it to get jerked out from under us and cause a crash.
+  event = existing_event;
+  unique_id = (uint16_t) StaticHub::randomInt();
+  proc_state = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
+  serialize();   // We should do this immediately to preserve the message.
+  event = NULL;  // Don't risk the event getting ripped out from under us.
+  time_created = millis();
 }
 
 
 XenoMessage::~XenoMessage() {
-	if (NULL != event) {
-		//Right now we aren't worried about this.
-		if (XENO_MSG_PROC_STATE_AWAITING_REAP == proc_state) {
-		  delete event;
-		}
-	}
+  if (NULL != event) {
+    //Right now we aren't worried about this.
+    if (XENO_MSG_PROC_STATE_AWAITING_REAP == proc_state) {
+      delete event;
+    }
+  }
 }
 
 
@@ -69,11 +85,11 @@ XenoMessage::~XenoMessage() {
 * @param   uint16_t          An explicitly-provided unique_id so that a dialog can be perpetuated.
 */
 void XenoMessage::provideEvent(ManuvrEvent *existing_event) {
-	event = existing_event;
-	unique_id = (uint16_t) StaticHub::randomInt();
-	proc_state = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
-	serialize();   // We should do this immediately to preserve the message.
-	event = NULL;  // Don't risk the event getting ripped out from under us.
+  event = existing_event;
+  unique_id = (uint16_t) StaticHub::randomInt();
+  proc_state = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
+  serialize();   // We should do this immediately to preserve the message.
+  event = NULL;  // Don't risk the event getting ripped out from under us.
 }
 
 
@@ -85,11 +101,11 @@ void XenoMessage::provideEvent(ManuvrEvent *existing_event) {
 * @param   uint16_t          An explicitly-provided unique_id so that a dialog can be perpetuated.
 */
 void XenoMessage::provide_event(ManuvrEvent *existing_event, uint16_t manual_id) {
-	event = existing_event;
-	unique_id = manual_id;
-	proc_state = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
-	serialize();   // We should do this immediately to preserve the message.
-	event = NULL;  // Don't risk the event getting ripped out from under us.
+  event = existing_event;
+  unique_id = manual_id;
+  proc_state = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
+  serialize();   // We should do this immediately to preserve the message.
+  event = NULL;  // Don't risk the event getting ripped out from under us.
 }
 
 
@@ -111,13 +127,13 @@ void XenoMessage::wipe() {
   checksum_c   = CHECKSUM_PRELOAD_BYTE;
   message_code = 0;
   
-	if (NULL != event) {
-		//Right now we aren't worried about this.
-		if (XENO_MSG_PROC_STATE_AWAITING_REAP == proc_state) {
-		  delete event;
-		}
-	}
-	proc_state = XENO_MSG_PROC_STATE_RECEIVING;  // Implies we are receiving.
+  if (NULL != event) {
+    //Right now we aren't worried about this.
+    if (XENO_MSG_PROC_STATE_AWAITING_REAP == proc_state) {
+      delete event;
+    }
+  }
+  proc_state = XENO_MSG_PROC_STATE_RECEIVING;  // Implies we are receiving.
 }
 
 
@@ -195,7 +211,7 @@ int XenoMessage::serialize() {
       
       unsigned char* full_xport_array = buffer.string();
       for (int i = 0; i < buffer.length(); i++) {
-      	  checksum_temp = (uint8_t) checksum_temp + *(full_xport_array + i);
+          checksum_temp = (uint8_t) checksum_temp + *(full_xport_array + i);
       }
       checksum_c = checksum_temp;
       
@@ -211,7 +227,7 @@ int XenoMessage::serialize() {
     }
   }
   else {
-  	  return_value = buffer.length();
+      return_value = buffer.length();
   }
   
   return return_value;

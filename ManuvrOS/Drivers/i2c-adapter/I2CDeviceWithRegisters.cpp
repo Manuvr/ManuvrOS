@@ -3,6 +3,7 @@
 
 
 I2CDeviceWithRegisters::I2CDeviceWithRegisters(void) : I2CDevice() {
+  multi_access_support = false;
 }
 
 

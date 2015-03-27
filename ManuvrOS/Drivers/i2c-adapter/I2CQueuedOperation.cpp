@@ -21,8 +21,13 @@ I2CQueuedOperation::I2CQueuedOperation(uint8_t nu_op, uint8_t dev_addr, int16_t 
   this->len             = len;
   this->txn_id          = I2CQueuedOperation::next_txn_id++;
   this->err_code        = I2C_ERR_CODE_NO_ERROR;
+  this->xfer_state      = I2C_XFER_STATE_INITIATE;
+  this->device          = NULL;
+  this->remaining_bytes = 0;
   this->requester       = NULL;
   this->reap_buffer     = false;
+  this->subaddr_sent    = false;
+  verbosity = 0;
 };
 
 

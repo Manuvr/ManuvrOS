@@ -629,7 +629,7 @@ void Scheduler::printDebug(StringBuilder *output) {
 	if (NULL == output) return;
 	EventReceiver::printDebug(output);
   output->concatf("--- Schedules location:  0x%08x\n", &schedules);
-  output->concatf("--- Total loops:      %d\n--- Productive loops: %d\n", total_loops, productive_loops);
+  output->concatf("--- Total loops:      %d\n--- Productive loops: %d\n", (unsigned long) total_loops, (unsigned long) productive_loops);
   if (total_loops) output->concatf("--- Duty cycle:       %f%\n--- Overhead:         %d microseconds\n", ((double)((double) productive_loops / (double) total_loops) * 100), overhead);
   output->concatf("--- Next PID:         %d\n--- Total schedules:  %d\n--- Active schedules: %d\n\n", peekNextPID(), getTotalSchedules(), getActiveSchedules());
   

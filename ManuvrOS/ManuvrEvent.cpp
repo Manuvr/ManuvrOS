@@ -132,7 +132,7 @@ void ManuvrEvent::printDebug(StringBuilder *output) {
   	  
   	  output->concatf("\t Preallocated          %s\n", (preallocated ? "yes" : "no"));
   	  output->concatf("\t Preallocated fxn      %s\n", (returnToPrealloc() ? "yes" : "no"));
-  	  output->concatf("\t Callback:             %s\n", (NULL == callback ? "NULL" : "SET"));
+  	  output->concatf("\t Callback:             %s\n", (NULL == callback ? "NULL" : specific_target->getReceiverName()));
   	  output->concatf("\t specific_target:      %s\n", (NULL == specific_target ? "NULL" : specific_target->getReceiverName()));
   	  output->concatf("\t Argument count:       %d\n", arg_count);
   	  output->concatf("\t Bitstream length:     %d\nBuffer:  ", temp_buf_len);

@@ -41,19 +41,26 @@ volatile I2CAdapter* i2c = NULL;
 /**************************************************************************
 * Constructors / Destructors                                              *
 **************************************************************************/
-#ifdef STM32F4XX
 
+void I2CAdapter::__class_initializer() {
+  EventReceiver::__class_initializer();
 
-I2CAdapter::I2CAdapter(uint8_t dev_id) {
-  __class_initializer();
   current_queue_item = NULL;
   bus_error          = false;
   bus_online         = false;
   ping_run           = false;
   last_used_bus_addr = 0;
+}
+
+
+#ifdef STM32F4XX
+
+
+I2CAdapter::I2CAdapter(uint8_t dev_id) {
+  __class_initializer();
+  dev = dev_id;
 
   // This init() fxn was patterned after the STM32F4x7 library example.
-  dev = dev_id;
   if (dev_id == 1) {
     //I2C_DeInit(I2C1);		//Deinit and reset the I2C to avoid it locking up
 
@@ -142,9 +149,8 @@ int8_t I2CAdapter::generateStop() {
 
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
   __class_initializer();
-  current_queue_item = NULL;
-
   dev = dev_id;
+
   if (dev_id == 1) {
     Wire1.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400);
     bus_online = true;
@@ -193,9 +199,8 @@ int8_t I2CAdapter::generateStop() {
 
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
   __class_initializer();
-  current_queue_item = NULL;
-
   dev = dev_id;
+  
   if (dev_id == 1) {
     //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400);
     bus_online = true;
@@ -242,7 +247,7 @@ int8_t I2CAdapter::generateStop() {
 
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
   __class_initializer();
-  current_queue_item = NULL;
+  dev = dev_id;
 
   char *filename = (char *) alloca(24);
   if (sprintf(filename, "/dev/i2c-%d", dev_id) > 0) {

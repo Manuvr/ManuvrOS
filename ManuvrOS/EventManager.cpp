@@ -549,10 +549,10 @@ void EventManager::profiler(bool enabled) {
 */
 void EventManager::printProfiler(StringBuilder* output) {
   if (NULL == output) return;
-  output->concatf("\t total_events               %u\n", total_events);
-  output->concatf("\t total_events_dead          %u\n\n", total_events_dead);
-  output->concatf("\t max_queue_depth            %u\n", max_queue_depth);
-  output->concatf("\t total_loops                %u\n", total_loops);
+  output->concatf("\t total_events               %u\n",   (unsigned long) total_events);
+  output->concatf("\t total_events_dead          %u\n\n", (unsigned long) total_events_dead);
+  output->concatf("\t max_queue_depth            %u\n",   (unsigned long) max_queue_depth);
+  output->concatf("\t total_loops                %u\n",   (unsigned long) total_loops);
     
   if (profiler_enabled) {
     output->concat("-- Profiler dump:\n");
@@ -560,8 +560,8 @@ void EventManager::printProfiler(StringBuilder* output) {
       output->concatf("\tFraction of prealloc hits: %f\n\n", ((burden_of_specific - prealloc_starved) / total_events));
     }
 
-    output->concatf("\t max_idle_loop_time         %u\n", max_idle_loop_time);
-    output->concatf("\t max_events_p_loop          %u\n", max_events_p_loop);
+    output->concatf("\t max_idle_loop_time         %u\n", (unsigned long) max_idle_loop_time);
+    output->concatf("\t max_events_p_loop          %u\n", (unsigned long) max_events_p_loop);
 
     TaskProfilerData *profiler_item;
     int stat_mode = event_costs.getPriority(0);
@@ -579,7 +579,7 @@ void EventManager::printProfiler(StringBuilder* output) {
         *(stat_line_buf + n) = (n > (stat_mode * scalar * 20)) ? ' ' : '*';
       }
       
-      output->concatf("\t%s (%d)\t%18s  %9d %9d %9d %9d %9d\n", stat_line_buf, stat_mode, ManuvrMsg::getMsgTypeString(profiler_item->msg_code), profiler_item->run_time_total, profiler_item->run_time_average, profiler_item->run_time_worst, profiler_item->run_time_best, profiler_item->run_time_last);
+      output->concatf("\t%s (%d)\t%18s  %9d %9d %9d %9d %9d\n", stat_line_buf, stat_mode, ManuvrMsg::getMsgTypeString(profiler_item->msg_code), (unsigned long) profiler_item->run_time_total, (unsigned long) profiler_item->run_time_average, (unsigned long) profiler_item->run_time_worst, (unsigned long) profiler_item->run_time_best, (unsigned long) profiler_item->run_time_last);
     }
     output->concat("\n");
   }
@@ -648,10 +648,10 @@ void EventManager::printDebug(StringBuilder* output) {
   output->concatf("-- Queue depth:               %d\n", event_queue.size());
   output->concatf("-- Preallocation depth:       %d\n", preallocated.size());
   output->concatf("-- Total subscriber count:    %d\n", subscribers.size());
-  output->concatf("-- Prealloc starves:          %u\n", prealloc_starved);
-  output->concatf("-- events_destroyed:          %u\n", events_destroyed);
-  output->concatf("-- burden_of_being_specific   %u\n", burden_of_specific);
-  output->concatf("-- idempotent_blocks          %u\n\n", idempotent_blocks);
+  output->concatf("-- Prealloc starves:          %u\n",   (unsigned long) prealloc_starved);
+  output->concatf("-- events_destroyed:          %u\n",   (unsigned long) events_destroyed);
+  output->concatf("-- burden_of_being_specific   %u\n",   (unsigned long) burden_of_specific);
+  output->concatf("-- idempotent_blocks          %u\n\n", (unsigned long) idempotent_blocks);
   
   if (subscribers.size() > 0) {
     output->concatf("-- Subscribers: (%d total):\n", subscribers.size());

@@ -32,6 +32,7 @@ XenoSession is the class that manages dialog with other systems via some
 
 /* This is what a sync packet looks like. Always. So common, we'll hard-code it. */
 const uint8_t XenoSession::SYNC_PACKET_BYTES[4] = {0x04, 0x00, 0x00, CHECKSUM_PRELOAD_BYTE};
+const uint32_t XenoSession::PROTOCOL_VERSION = 0x00000001;
 
 
 void oneshot_session_sync_send() {
@@ -45,29 +46,31 @@ void oneshot_session_sync_send() {
 */
 XenoSession::XenoSession() {
   __class_initializer();
-	StaticHub *sh = StaticHub::getInstance();
-	sh->fetchEventManager()->subscribe((EventReceiver*) this);  // Subscribe to the EventManager.
+  StaticHub *sh = StaticHub::getInstance();
+  sh->fetchEventManager()->subscribe((EventReceiver*) this);  // Subscribe to the EventManager.
 
-	while (preallocated.size() < XENOMESSAGE_PREALLOCATE_COUNT) {
-	  preallocated.insert(new XenoMessage());
-	}
+  while (preallocated.size() < XENOMESSAGE_PREALLOCATE_COUNT) {
+    preallocated.insert(new XenoMessage());
+  }
 
-	// These are messages that we to relay from the rest of the system.
-	tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
-	tapMessageType(MANUVR_MSG_SESS_HANGUP);
-	tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
+  // These are messages that we to relay from the rest of the system.
+  tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
+  tapMessageType(MANUVR_MSG_SESS_HANGUP);
+  tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
 
-	authed                    = false;
-	session_state             = XENOSESSION_STATE_UNINITIALIZED;
-	session_last_state        = XENOSESSION_STATE_UNINITIALIZED;
-	sequential_parse_failures = 0;
-	sequential_ack_failures   = 0;
-	initial_sync_count        = 24;
-	session_overflow_guard    = true;
-	pid_sync_timer            = 0;
-	pid_ack_timeout           = 0;
-	
-	bootComplete();
+  authed                    = false;
+  session_state             = XENOSESSION_STATE_UNINITIALIZED;
+  session_last_state        = XENOSESSION_STATE_UNINITIALIZED;
+  sequential_parse_failures = 0;
+  sequential_ack_failures   = 0;
+  initial_sync_count        = 24;
+  session_overflow_guard    = true;
+  pid_sync_timer            = 0;
+  pid_ack_timeout           = 0;
+  
+  MAX_PARSE_FAILURES  = 3;  // How many failures-to-parse should we tolerate before SYNCing?
+  MAX_ACK_FAILURES    = 3;  // How many failures-to-ACK should we tolerate before SYNCing?
+  bootComplete();
 }
 
 
@@ -75,13 +78,13 @@ XenoSession::XenoSession() {
 * Unlike many of the other EventReceivers, THIS one needs to be able to be torn down.
 */
 XenoSession::~XenoSession() {
-	StaticHub::getInstance()->fetchEventManager()->unsubscribe((EventReceiver*) this);  // Subscribe to the EventManager.
-	while (preallocated.size() > 0) {
-	  delete preallocated.get();
-	  preallocated.remove();
-	}
-	purgeInbound();  // Need to do careful checks in here for open comm loops.
-	purgeOutbound(); // Need to do careful checks in here for open comm loops.
+  StaticHub::getInstance()->fetchEventManager()->unsubscribe((EventReceiver*) this);  // Subscribe to the EventManager.
+  while (preallocated.size() > 0) {
+    delete preallocated.get();
+    preallocated.remove();
+  }
+  purgeInbound();  // Need to do careful checks in here for open comm loops.
+  purgeOutbound(); // Need to do careful checks in here for open comm loops.
 }
 
 
@@ -119,8 +122,8 @@ int8_t XenoSession::tapMessageType(uint16_t code) {
 * @return  nonzero if there was a problem.
 */
 int8_t XenoSession::untapMessageType(uint16_t code) {
-	msg_relay_list.remove((MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(code));
-	return 0;
+  msg_relay_list.remove((MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(code));
+  return 0;
 }
 
 
@@ -131,8 +134,8 @@ int8_t XenoSession::untapMessageType(uint16_t code) {
 * @return  nonzero if there was a problem.
 */
 int8_t XenoSession::untapAll() {
-	msg_relay_list.clear();
-	return 0;
+  msg_relay_list.clear();
+  return 0;
 }
 
 
@@ -419,19 +422,19 @@ int8_t XenoSession::notify(ManuvrEvent *active_event) {
 * @return  int The number of outbound messages that were purged. 
 */
 int XenoSession::purgeOutbound() {
-	int return_value = outbound_messages.size();
-	XenoMessage* temp;
-	while (outbound_messages.hasNext()) {
-		temp = outbound_messages.get();
-		if (verbosity > 6) {
-		  local_log.concat("\nDestroying outbound message:\n");
-		  temp->printDebug(&local_log);
-		  StaticHub::log(&local_log);
-		}
-		delete temp;
-		outbound_messages.remove();
-	}
-	return return_value;
+  int return_value = outbound_messages.size();
+  XenoMessage* temp;
+  while (outbound_messages.hasNext()) {
+    temp = outbound_messages.get();
+    if (verbosity > 6) {
+      local_log.concat("\nDestroying outbound message:\n");
+      temp->printDebug(&local_log);
+      StaticHub::log(&local_log);
+    }
+    delete temp;
+    outbound_messages.remove();
+  }
+  return return_value;
 }
 
 
@@ -441,20 +444,20 @@ int XenoSession::purgeOutbound() {
 * @return  int The number of inbound messages that were purged. 
 */
 int XenoSession::purgeInbound() {
-	int return_value = inbound_messages.size();
-	XenoMessage* temp;
-	while (inbound_messages.hasNext()) {
-		temp = inbound_messages.get();
-		if (verbosity > 6) {
-		  local_log.concat("\nDestroying inbound message:\n");
-		  temp->printDebug(&local_log);
-		  StaticHub::log(&local_log);
-		}
-		delete temp;
-		inbound_messages.remove();
-	}
-	session_buffer.clear();   // Also purge whatever hanging RX buffer we may have had.
-	return return_value;
+  int return_value = inbound_messages.size();
+  XenoMessage* temp;
+  while (inbound_messages.hasNext()) {
+    temp = inbound_messages.get();
+    if (verbosity > 6) {
+      local_log.concat("\nDestroying inbound message:\n");
+      temp->printDebug(&local_log);
+      StaticHub::log(&local_log);
+    }
+    delete temp;
+    inbound_messages.remove();
+  }
+  session_buffer.clear();   // Also purge whatever hanging RX buffer we may have had.
+  return return_value;
 }
 
 
@@ -828,52 +831,52 @@ const char* XenoSession::getReceiverName() {  return "XenoSession";  }
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void XenoSession::printDebug(StringBuilder *output) {
-	if (NULL == output) return;
-	EventReceiver::printDebug(output);
-	
-	output->concatf("--- Session state:   %s\n", getSessionStateString());
-	output->concatf("--- Sync state:      %s\n", getSessionSyncString());
+  if (NULL == output) return;
+  EventReceiver::printDebug(output);
+  
+  output->concatf("--- Session state:   %s\n", getSessionStateString());
+  output->concatf("--- Sync state:      %s\n", getSessionSyncString());
 
-	output->concatf("--- Sequential parse failures:  %d\n", sequential_parse_failures);
-	output->concatf("--- sequential_ack_failures:    %d\n", sequential_ack_failures);
-	
-	int ses_buf_len = session_buffer.length();
-	if (ses_buf_len > 0) {
-	  output->concatf("\n--- Session Buffer (%d bytes) --------------------------\n", ses_buf_len);
+  output->concatf("--- Sequential parse failures:  %d\n", sequential_parse_failures);
+  output->concatf("--- sequential_ack_failures:    %d\n", sequential_ack_failures);
+  
+  int ses_buf_len = session_buffer.length();
+  if (ses_buf_len > 0) {
+    output->concatf("\n--- Session Buffer (%d bytes) --------------------------\n", ses_buf_len);
     for (int i = 0; i < ses_buf_len; i++) {
       output->concatf("0x%02x ", *(session_buffer.string() + i));
     }
     output->concat("\n\n");
-	}
+  }
 
-	output->concat("\n--- Listening for the following event codes:\n");
-	int x = msg_relay_list.size();
-	for (int i = 0; i < x; i++) {
-	  output->concatf("\t%s\n", msg_relay_list.get(i)->debug_label);
-	}
-	
-	x = outbound_messages.size();
-	if (x > 0) {
-	  output->concatf("\n--- Outbound Queue %d total, showing top %d ------------\n", x, XENO_SESSION_MAX_QUEUE_PRINT);
-	  for (int i = 0; i < min(x, XENO_SESSION_MAX_QUEUE_PRINT); i++) {
-      	outbound_messages.get(i)->printDebug(output);
+  output->concat("\n--- Listening for the following event codes:\n");
+  int x = msg_relay_list.size();
+  for (int i = 0; i < x; i++) {
+    output->concatf("\t%s\n", msg_relay_list.get(i)->debug_label);
+  }
+  
+  x = outbound_messages.size();
+  if (x > 0) {
+    output->concatf("\n--- Outbound Queue %d total, showing top %d ------------\n", x, XENO_SESSION_MAX_QUEUE_PRINT);
+    for (int i = 0; i < min(x, XENO_SESSION_MAX_QUEUE_PRINT); i++) {
+        outbound_messages.get(i)->printDebug(output);
     }
   }
-	
-	x = inbound_messages.size();
-	if (x > 0) {
-	  output->concatf("\n--- Inbound Queue %d total, showing top %d -------------\n", x, XENO_SESSION_MAX_QUEUE_PRINT);
-	  for (int i = 0; i < min(x, XENO_SESSION_MAX_QUEUE_PRINT); i++) {
-	    inbound_messages.get(i)->printDebug(output);
-	  }
-	}
-	
-	if (preallocated.size()) {
-	  if (preallocated.get()->bytes_received > 0) {
-	    output->concat("\n--- XenoMessage in process  ----------------------------\n");
-	    preallocated.get()->printDebug(output);
-	  }
-	}
+  
+  x = inbound_messages.size();
+  if (x > 0) {
+    output->concatf("\n--- Inbound Queue %d total, showing top %d -------------\n", x, XENO_SESSION_MAX_QUEUE_PRINT);
+    for (int i = 0; i < min(x, XENO_SESSION_MAX_QUEUE_PRINT); i++) {
+      inbound_messages.get(i)->printDebug(output);
+    }
+  }
+  
+  if (preallocated.size()) {
+    if (preallocated.get()->bytes_received > 0) {
+      output->concat("\n--- XenoMessage in process  ----------------------------\n");
+      preallocated.get()->printDebug(output);
+    }
+  }
 }
 
 
