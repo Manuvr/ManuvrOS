@@ -289,9 +289,6 @@ class XenoSession : public EventReceiver {
    
     const char* getSessionStateString();
     const char* getSessionSyncString();
-    
-    
-    static const uint32_t PROTOCOL_VERSION;
 };
 
 

@@ -32,7 +32,6 @@ XenoSession is the class that manages dialog with other systems via some
 
 /* This is what a sync packet looks like. Always. So common, we'll hard-code it. */
 const uint8_t XenoSession::SYNC_PACKET_BYTES[4] = {0x04, 0x00, 0x00, CHECKSUM_PRELOAD_BYTE};
-const uint32_t XenoSession::PROTOCOL_VERSION = 0x00000001;
 
 
 void oneshot_session_sync_send() {
@@ -57,6 +56,7 @@ XenoSession::XenoSession() {
   tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
   tapMessageType(MANUVR_MSG_SESS_HANGUP);
   tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
+  tapMessageType(MANUVR_MSG_SELF_DESCRIBE);
 
   authed                    = false;
   session_state             = XENOSESSION_STATE_UNINITIALIZED;
@@ -171,6 +171,8 @@ int8_t XenoSession::markSessionConnected(bool conn_state) {
     // Barrage the counterparty with sync until they reply in-kind.
     scheduler->enableSchedule(pid_sync_timer);
     mark_session_desync(XENOSESSION_STATE_SYNC_INITIATOR);
+    
+    raiseEvent(EventManager::returnEvent(MANUVR_MSG_SESS_ESTABLISHED));
   }
   return 0;
 }
@@ -938,6 +940,14 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
         printDebug(&local_log);
       }
       break;
+    case 'q':  // Manual message queue purge.s
+      purgeOutbound();
+      purgeInbound();
+      break;
+    case 'w':  // Manual session poll.
+      EventManager::raiseEvent(MANUVR_MSG_SESS_ORIGINATE_MSG, NULL);
+      break;
+      
 
     default:
       local_log.concat("No case in XenoSession debug.\n\n");

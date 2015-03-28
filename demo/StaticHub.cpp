@@ -545,6 +545,12 @@ int8_t StaticHub::notify(ManuvrEvent *active_event) {
       output.concatf("RNG underrun.\n");
       break;
 
+      
+    case MANUVR_MSG_SESS_ESTABLISHED:
+      // When we see session establishment, we broadcast our
+      // legends, and self-describe.
+      
+      break;
 
     case MANUVR_MSG_SYS_ISSUE_LOG_ITEM:
       {

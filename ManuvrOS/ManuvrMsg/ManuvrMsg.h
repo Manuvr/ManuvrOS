@@ -394,7 +394,7 @@ inline int addArg(ManuvrEvent *val) {        return args.insert(new Argument(val
     static const unsigned char MSG_ARGS_BINBLOB[];
     static const unsigned char MSG_ARGS_POWER_MODE[];
     
-    
+    static const unsigned char MSG_ARGS_SELF_DESC[];
     
     
     

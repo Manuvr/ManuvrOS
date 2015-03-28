@@ -49,6 +49,11 @@ const unsigned char ManuvrMsg::MSG_ARGS_POWER_MODE[] = {
                             
   
 
+const unsigned char ManuvrMsg::MSG_ARGS_SELF_DESC[] = {
+  UINT32_FM, UINT32_FM, STR_BUILDER_FM, STR_BUILDER_FM, STR_BUILDER_FM, STR_BUILDER_FM, 0,    // 1 bytes: Statement about current power profile.
+  0};                      // 0 bytes: Request for present power profile.
+                            
+  
 
 
 /*
@@ -78,6 +83,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,               "SYS_SHUTDOWN"         , MSG_ARGS_NONE }, // Raised when the system is pending complete shutdown.
 
   {  MANUVR_MSG_PROGRAM_START        , MSG_FLAG_EXPORTABLE,               "PROGRAM_START"        , MSG_ARGS_STR_BUILDER }, // Starting an application on the receiver. Needs a string. 
+  {  MANUVR_MSG_SELF_DESCRIBE        , MSG_FLAG_EXPORTABLE,               "SELF_DESCRIBE"        , MSG_ARGS_SELF_DESC }, // Starting an application on the receiver. Needs a string. 
   
   {  MANUVR_MSG_LEGEND_TYPES         , MSG_FLAG_EXPORTABLE,               "LEGEND_TYPES"         , MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
   {  MANUVR_MSG_LEGEND_MESSAGES      , MSG_FLAG_EXPORTABLE,               "LEGEND_MESSAGES"      , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.

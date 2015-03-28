@@ -150,6 +150,9 @@ void EventReceiver::printDebug(StringBuilder *output) {
 
 
 /**
+* Events that have a calllback value that is not null will have this fxn called
+*   immediately following Event completion.
+* Your shadow can bite.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
