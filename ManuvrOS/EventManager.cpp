@@ -187,8 +187,7 @@ int8_t EventManager::staticRaiseEvent(ManuvrEvent* event) {
   int8_t return_value = 0;
   if (0 == INSTANCE->validate_insertion(event)) {
     INSTANCE->event_queue.insert(event, event->priority);
-    if (INSTANCE->profiler_enabled) {
-    }
+
     // Check the queue depth.
     INSTANCE->update_maximum_queue_depth();
   }
@@ -342,7 +341,7 @@ int8_t EventManager::procIdleFlags() {
 
       switch (active_event->event_code) {
         case MANUVR_MSG_LEGEND_MESSAGES:     // Dump the message definitions.
-          if (0 == active_event->args.size()) {   // Only if we are seeing a request.
+          if (0 == active_event->argCount()) {   // Only if we are seeing a request.
             StringBuilder tmp_sb;
             if (ManuvrMsg::getMsgLegend(&tmp_sb) ) {
               unsigned char *tmp_ptr;
@@ -480,9 +479,9 @@ int8_t EventManager::procIdleFlags() {
         event_costs.incrementPriority(profiler_item);
       }
       profiler_item->executions++;
-      profiler_item->run_time_last    = max(profiler_mark_2, profiler_mark_1) - min(profiler_mark_2, profiler_mark_1);
-      profiler_item->run_time_best    = min(profiler_item->run_time_best, profiler_item->run_time_last);
-      profiler_item->run_time_worst   = max(profiler_item->run_time_worst, profiler_item->run_time_last);
+      profiler_item->run_time_last    = max((unsigned long) profiler_mark_2, (unsigned long) profiler_mark_1) - min((unsigned long) profiler_mark_2, (unsigned long) profiler_mark_1);
+      profiler_item->run_time_best    = min((unsigned long) profiler_item->run_time_best, (unsigned long) profiler_item->run_time_last);
+      profiler_item->run_time_worst   = max((unsigned long) profiler_item->run_time_worst, (unsigned long) profiler_item->run_time_last);
       profiler_item->run_time_total  += profiler_item->run_time_last;
       profiler_item->run_time_average = profiler_item->run_time_total / ((profiler_item->executions) ? profiler_item->executions : 1);
 
@@ -500,10 +499,10 @@ int8_t EventManager::procIdleFlags() {
   if (profiler_enabled) {
     total_loops++;
     if (return_value > 0) {
-      max_events_p_loop = max(max_events_p_loop, (uint32_t) return_value);
+      max_events_p_loop = max((unsigned long) max_events_p_loop, (unsigned long) return_value);
     }
     else if (0 == return_value) {
-      max_idle_loop_time = max(max_idle_loop_time, (max(profiler_mark, profiler_mark_3) - min(profiler_mark, profiler_mark_3)));
+      max_idle_loop_time = max((unsigned long) max_idle_loop_time, (max((unsigned long) profiler_mark, (unsigned long) profiler_mark_3) - min((unsigned long) profiler_mark, (unsigned long) profiler_mark_3)));
     }
     else {
       // there was a problem. Do nothing.
