@@ -182,38 +182,38 @@ class ManuvrMsg {
 
 
 
-/*
-* Overrides for Argument constructor access. Prevents outside classes from having to care about
-*   implementation details of Arguments. Might look ugly, but takes the CPU burden off of runtime
-*   and forces the compiler to deal with it.
-*/
-inline int addArg(uint8_t val) {             return args.insert(new Argument(val));   }
-inline int addArg(uint16_t val) {            return args.insert(new Argument(val));   }
-inline int addArg(uint32_t val) {            return args.insert(new Argument(val));   }
-inline int addArg(int8_t val) {              return args.insert(new Argument(val));   }
-inline int addArg(int16_t val) {             return args.insert(new Argument(val));   }
-inline int addArg(int32_t val) {             return args.insert(new Argument(val));   }
-inline int addArg(float val) {               return args.insert(new Argument(val));   }
-           
-inline int addArg(uint8_t *val) {            return args.insert(new Argument(val));   }
-inline int addArg(uint16_t *val) {           return args.insert(new Argument(val));   }
-inline int addArg(uint32_t *val) {           return args.insert(new Argument(val));   }
-inline int addArg(int8_t *val) {             return args.insert(new Argument(val));   }
-inline int addArg(int16_t *val) {            return args.insert(new Argument(val));   }
-inline int addArg(int32_t *val) {            return args.insert(new Argument(val));   }
-inline int addArg(float *val) {              return args.insert(new Argument(val));   }
-           
-inline int addArg(Vector3ui16 *val) {        return args.insert(new Argument(val));   }
-inline int addArg(Vector3i16 *val) {         return args.insert(new Argument(val));   }
-inline int addArg(Vector3f *val) {           return args.insert(new Argument(val));   }
-inline int addArg(Vector4f *val) {           return args.insert(new Argument(val));   }
-           
-inline int addArg(void *val, int len) {      return args.insert(new Argument(val, len));   }
-inline int addArg(const char *val) {         return args.insert(new Argument(val));   }
-inline int addArg(StringBuilder *val) {      return args.insert(new Argument(val));   }
-inline int addArg(StaticHub *val) {          return args.insert(new Argument(val));   }
-inline int addArg(Scheduler *val) {          return args.insert(new Argument(val));   }
-inline int addArg(ManuvrEvent *val) {        return args.insert(new Argument(val));   }
+    /*
+    * Overrides for Argument constructor access. Prevents outside classes from having to care about
+    *   implementation details of Arguments. Might look ugly, but takes the CPU burden off of runtime
+    *   and forces the compiler to deal with it.
+    */
+    inline int addArg(uint8_t val) {             return args.insert(new Argument(val));   }
+    inline int addArg(uint16_t val) {            return args.insert(new Argument(val));   }
+    inline int addArg(uint32_t val) {            return args.insert(new Argument(val));   }
+    inline int addArg(int8_t val) {              return args.insert(new Argument(val));   }
+    inline int addArg(int16_t val) {             return args.insert(new Argument(val));   }
+    inline int addArg(int32_t val) {             return args.insert(new Argument(val));   }
+    inline int addArg(float val) {               return args.insert(new Argument(val));   }
+               
+    inline int addArg(uint8_t *val) {            return args.insert(new Argument(val));   }
+    inline int addArg(uint16_t *val) {           return args.insert(new Argument(val));   }
+    inline int addArg(uint32_t *val) {           return args.insert(new Argument(val));   }
+    inline int addArg(int8_t *val) {             return args.insert(new Argument(val));   }
+    inline int addArg(int16_t *val) {            return args.insert(new Argument(val));   }
+    inline int addArg(int32_t *val) {            return args.insert(new Argument(val));   }
+    inline int addArg(float *val) {              return args.insert(new Argument(val));   }
+               
+    inline int addArg(Vector3ui16 *val) {        return args.insert(new Argument(val));   }
+    inline int addArg(Vector3i16 *val) {         return args.insert(new Argument(val));   }
+    inline int addArg(Vector3f *val) {           return args.insert(new Argument(val));   }
+    inline int addArg(Vector4f *val) {           return args.insert(new Argument(val));   }
+               
+    inline int addArg(void *val, int len) {      return args.insert(new Argument(val, len));   }
+    inline int addArg(const char *val) {         return args.insert(new Argument(val));   }
+    inline int addArg(StringBuilder *val) {      return args.insert(new Argument(val));   }
+    inline int addArg(StaticHub *val) {          return args.insert(new Argument(val));   }
+    inline int addArg(Scheduler *val) {          return args.insert(new Argument(val));   }
+    inline int addArg(ManuvrEvent *val) {        return args.insert(new Argument(val));   }
 
 
     /*
@@ -265,103 +265,13 @@ inline int addArg(ManuvrEvent *val) {        return args.insert(new Argument(val
     inline int8_t getArgAs(uint8_t idx, Scheduler  **trg_buf) {         return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, ManuvrEvent  **trg_buf) {  return getArgAs(idx, (void*) trg_buf, true);  }
     
-//    /* These accessors imply the first argument which is retained after the call. */
-//    int8_t getArgAs(uint8_t *dat); 
-//    int8_t getArgAs(uint16_t *dat);
-//    int8_t getArgAs(uint32_t *dat);
-//    int8_t getArgAs(int8_t *dat);  
-//    int8_t getArgAs(int16_t *dat); 
-//    int8_t getArgAs(int32_t *dat); 
-//    int8_t getArgAs(float *dat);   
-//    int8_t getArgAs(Vector3f **dat);
-//    int8_t getArgAs(Vector3ui16 **dat);
-//    int8_t getArgAs(Vector3i16 **dat);
-//    int8_t getArgAs(const char **dat);
-//    int8_t getArgAs(StringBuilder **dat);
-//    int8_t getArgAs(StaticHub **dat);
-//    int8_t getArgAs(Scheduler **dat);
-//    int8_t getArgAs(ManuvrEvent **dat);
-//    
-//    
-//    /* These accessors imply the first argument and reaps it if the return succeeds. */
-//    int8_t consumeArgAs(uint8_t *dat);   
-//    int8_t consumeArgAs(uint16_t *dat);
-//    int8_t consumeArgAs(uint32_t *dat);
-//    int8_t consumeArgAs(int8_t *dat);  
-//    int8_t consumeArgAs(int16_t *dat); 
-//    int8_t consumeArgAs(int32_t *dat); 
-//    int8_t consumeArgAs(float *dat);   
-//    int8_t consumeArgAs(const char **dat);
-//    int8_t consumeArgAs(StringBuilder **dat);
-//    int8_t consumeArgAs(StaticHub **dat);
-//    int8_t consumeArgAs(Scheduler **dat);
-//    int8_t consumeArgAs(ManuvrEvent **dat);
-//
-//    /* These accessors specify an argument position, and retain the argument after the call. */
-//    int8_t getArgAs(uint8_t idx, uint8_t *dat);
-//    int8_t getArgAs(uint8_t idx, uint16_t *dat);
-//    int8_t getArgAs(uint8_t idx, uint32_t *dat);
-//    int8_t getArgAs(uint8_t idx, int8_t *dat);
-//    int8_t getArgAs(uint8_t idx, int16_t *dat);
-//    int8_t getArgAs(uint8_t idx, int32_t *dat);
-//    int8_t getArgAs(uint8_t idx, float *dat);
-//    
-//    int8_t getArgAs(uint8_t idx, Vector3f **dat);
-//    int8_t getArgAs(uint8_t idx, Vector3ui16 **dat);
-//    int8_t getArgAs(uint8_t idx, Vector3i16 **dat);
-//    int8_t getArgAs(uint8_t idx, const char **dat);
-//    int8_t getArgAs(uint8_t idx, StringBuilder **dat);
-//    int8_t getArgAs(uint8_t idx, StaticHub **dat);
-//    int8_t getArgAs(uint8_t idx, Scheduler **dat);
-//    int8_t getArgAs(uint8_t idx, ManuvrEvent **dat);
-    
     /* 
     * Protip: Think on the stack...
     * markForReap(addArg(new StringBuilder("Sample data to reap on destruction.")), true);
     */
     int8_t markArgForReap(int idx, bool reap);
     
-	
-//    /* These are pass-throughs to an appropriate Argument constructor. */
-//    int addArg(uint8_t);
-//    int addArg(uint16_t);
-//    int addArg(uint32_t);
-//    int addArg(int8_t);
-//    int addArg(int16_t);                           
-//    int addArg(int32_t);
-//    int addArg(float);
-//    
-//    int addArg(uint8_t*);
-//    int addArg(uint16_t*);
-//    int addArg(uint32_t*);
-//    int addArg(int8_t*);
-//    int addArg(int16_t*);                           
-//    int addArg(int32_t*);
-//    int addArg(float*);
-//    
-//    int addArg(Vector3ui16*);
-//    int addArg(Vector3i16*);
-//    int addArg(Vector3f*);
-//    int addArg(Vector4f*);
-//
-//    int addArg(void*, int len);
-//    int addArg(const char*);
-//    int addArg(StringBuilder*);
-//    int addArg(StaticHub*);
-//    int addArg(Scheduler*);
-//    int addArg(ManuvrEvent*);
-    //int addArg(double);
-    //int addArg(void* nu, uint8_t type);
-
-    //uint8_t  get_uint8(void);
-    //uint16_t get_uint16(void);
-    //uint32_t get_uint32(void);
-    //int8_t   get_int8(void);
-    //int16_t  get_int16(void);
-    //int32_t  get_int32(void);
-    //double   get_double(void);
-    //float    get_float(void);
-    
+	    
     void printDebug(StringBuilder *);
     
     const char* getMsgTypeString();

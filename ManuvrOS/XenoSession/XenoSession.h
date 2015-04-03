@@ -153,6 +153,7 @@ class XenoMessage {
 
     uint16_t  message_code;     // 
 
+    void __class_initializer();
 };
 
 

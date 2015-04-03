@@ -340,21 +340,41 @@ int8_t EventManager::procIdleFlags() {
     if (active_event->callback != (EventReceiver*) this) {    // Don't react to our own internally-generated events.
 
       switch (active_event->event_code) {
+        case MANUVR_MSG_SELF_DESCRIBE:
+          // uint32:     Protocol version   (IE: 0x00000001)         (required)
+          // uint32:     MTU                (in terms of bytes)      (required)
+          // String:     Firmware version   (IE: "1.5.4")            (required)
+          // String:     Hardware version   (IE: "4")                (required)
+          // String:     Device class       (User-defined)           (optional)
+          // String:     Extended detail    (User-defined)           (optional)
+          if (0 == active_event->args.size()) {
+            active_event->addArg((uint32_t) PROTOCOL_VERSION);
+            active_event->addArg((uint32_t) PROTOCOL_MTU);
+            active_event->addArg((const char*) VERSION_STRING);
+            active_event->addArg((const char*) HW_VERSION_STRING);
+            #ifdef IDENTITY_STRING
+              active_event->addArg((const char*) IDENTITY_STRING);
+            #endif
+            #ifdef EXTENDED_DETAIL_STRING
+              active_event->addArg((const char*) EXTENDED_DETAIL_STRING);
+            #endif
+            return_value++;
+            
+            active_event->printDebug(&local_log);
+          }
+          break;
+      
         case MANUVR_MSG_LEGEND_MESSAGES:     // Dump the message definitions.
           if (0 == active_event->argCount()) {   // Only if we are seeing a request.
-            StringBuilder tmp_sb;
-            if (ManuvrMsg::getMsgLegend(&tmp_sb) ) {
-              unsigned char *tmp_ptr;
-              int tmp_len = tmp_sb.str_heap_ref(&tmp_ptr);
-              // Normally, I dislike this style, but is illustrative...
-              active_event->markArgForReap(
-                active_event->addArg(
-                  (void*) tmp_ptr, tmp_len
-                ), true
-              );
+            StringBuilder *tmp_sb = new StringBuilder();
+            if (ManuvrMsg::getMsgLegend(tmp_sb) ) {
+              active_event->addArg(tmp_sb);
 
-              if (verbosity >= 7) local_log.concatf("EventManager\t Sent message definition map. Size %d.\n", tmp_sb.length());
+              if (verbosity >= 7) local_log.concatf("EventManager\t Sent message definition map. Size %d.\n", tmp_sb->length());
               activity_count++;
+            }
+            else {
+              if (verbosity > 1) local_log.concatf("There was a problem writing the message legend. This is bad. Size %d.\n", tmp_sb->length());
             }
           }
           else {

@@ -172,7 +172,11 @@ int8_t XenoSession::markSessionConnected(bool conn_state) {
     scheduler->enableSchedule(pid_sync_timer);
     mark_session_desync(XENOSESSION_STATE_SYNC_INITIATOR);
     
+    // When (if) the session syncs, various components in the firmware might
+    //   want a message put through.
     raiseEvent(EventManager::returnEvent(MANUVR_MSG_SESS_ESTABLISHED));
+    raiseEvent(EventManager::returnEvent(MANUVR_MSG_LEGEND_MESSAGES));
+    raiseEvent(EventManager::returnEvent(MANUVR_MSG_SELF_DESCRIBE));
   }
   return 0;
 }
@@ -388,14 +392,14 @@ int8_t XenoSession::notify(ManuvrEvent *active_event) {
         break;
     }
   }
-  
+
   if ((XENO_SESSION_IGNORE_NON_EXPORTABLES) && (active_event->isExportable())) {
     /* This is the block that allows the counterparty to intercept events of its choosing. */
     if (msg_relay_list.contains(active_event->getMsgDef())) {
       // If we are in this block, it means we need to serialize the event and send it.
       XenoMessage* nu_outbound_msg = new XenoMessage(active_event);
     
-      nu_outbound_msg->expecting_ack = false;
+      nu_outbound_msg->expecting_ack = false;   // Per protocol, we don't expect ACK for tapped messages.
       nu_outbound_msg->proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
       //TODO: Should at this point dump the serialized data into a BT data message or something.
       // for now, we're just going to dump it to the console.

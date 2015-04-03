@@ -165,6 +165,10 @@ class Scheduler : public EventReceiver {
     int8_t notify(ManuvrEvent*);
     int8_t callback_proc(ManuvrEvent *);
 
+    // DEBUG FXNS
+    void procDirectDebugInstruction(StringBuilder *);
+    // DEBUG FXNS
+
   protected:
     int8_t bootComplete();
 

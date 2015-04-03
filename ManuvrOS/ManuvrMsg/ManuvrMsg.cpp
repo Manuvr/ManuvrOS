@@ -50,7 +50,9 @@ const unsigned char ManuvrMsg::MSG_ARGS_POWER_MODE[] = {
   
 
 const unsigned char ManuvrMsg::MSG_ARGS_SELF_DESC[] = {
-  UINT32_FM, UINT32_FM, STR_BUILDER_FM, STR_BUILDER_FM, STR_BUILDER_FM, STR_BUILDER_FM, 0,    // 1 bytes: Statement about current power profile.
+  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, 0,    // 1 bytes: Statement about current power profile.
+  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, 0,            // 1 bytes: Statement about current power profile.
+  UINT32_FM, UINT32_FM, STR_FM, STR_FM, 0,                    // 1 bytes: Statement about current power profile.
   0};                      // 0 bytes: Request for present power profile.
                             
   
@@ -154,7 +156,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SESS_SUBCRIBE        , MSG_FLAG_EXPORTABLE,  "SESS_SUBCRIBE"        , MSG_ARGS_NONE }, // Used to subscribe this session to other events.
   {  MANUVR_MSG_SESS_UNSUBCRIBE      , MSG_FLAG_EXPORTABLE,  "SESS_UNSUBCRIBE"      , MSG_ARGS_NONE }, // Used to unsubscribe this session from other events.
   {  MANUVR_MSG_SESS_DUMP_DEBUG      , MSG_FLAG_EXPORTABLE,  "SESS_DUMP_DEBUG"      , MSG_ARGS_NONE }, // 
-  {  MANUVR_MSG_SESS_ORIGINATE_MSG   , 0x0000,               "SESS_ORIGINATE_MSG"   , MSG_ARGS_NONE }, // 
+  {  MANUVR_MSG_SESS_ORIGINATE_MSG   , MSG_FLAG_IDEMPOTENT,  "SESS_ORIGINATE_MSG"   , MSG_ARGS_NONE }, // 
 };
 
 

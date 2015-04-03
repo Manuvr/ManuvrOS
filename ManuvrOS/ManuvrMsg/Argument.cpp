@@ -356,11 +356,12 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
 	  case FLOAT_PTR_FM:
 	    out->concat((unsigned char*) *((unsigned char**)target_mem), 4);
 	    break;
-	  
+	    
 	  /* These are pointer types that require conversion. */
 	  case STR_BUILDER_FM:     // This is a pointer to some StringBuilder. Presumably this is on the heap.
       out->concat((StringBuilder*) target_mem);
 	    break;
+	  case STR_FM:
 	  case VECT_4_FLOAT:
 	  case VECT_3_FLOAT:
 	  case VECT_3_UINT16:

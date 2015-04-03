@@ -32,37 +32,23 @@ XenoMessage is the class that is the interface between ManuvrEvents and
 
 
 XenoMessage::XenoMessage() {
-  event               = NULL;
+  __class_initializer();
   proc_state          = XENO_MSG_PROC_STATE_RECEIVING;  // Implies we are receiving.
-  expecting_ack       = true;  // Does this message expect an ACK?
   event               = NULL;  // Associates this XenoMessage to an event.
-  bytes_received      = 0;     // How many bytes of this command have we received? Meaningless for the sender.
   uint16_t  unique_id = 0;     //
-  
-  time_created    = 0;     // Optional: What time did this message come into existance?
-  millis_at_begin = 0;     // This is the milliseconds reading when we sent.
-  retries         = 0;     // How many times have we retried this packet?
-  
-  bytes_total     = 0;     // How many bytes does this command occupy?
-  arg_count       = 0;
-  
-  checksum_i      = 0;     // The checksum of the data that we receive.
-  checksum_c      = CHECKSUM_PRELOAD_BYTE;     // The checksum of the data that we calculate.
-  
-  message_code    = 0;     // 
-  time_created = millis();
 }
 
 
 XenoMessage::XenoMessage(ManuvrEvent* existing_event) {
+  __class_initializer();
   // Should maybe set a flag in the event to indicate that we are now responsible
   //   for memory upkeep? Don't want it to get jerked out from under us and cause a crash.
   event = existing_event;
   unique_id = (uint16_t) StaticHub::randomInt();
   proc_state = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
+  message_code        = existing_event->event_code;     // 
   serialize();   // We should do this immediately to preserve the message.
   event = NULL;  // Don't risk the event getting ripped out from under us.
-  time_created = millis();
 }
 
 
@@ -74,6 +60,21 @@ XenoMessage::~XenoMessage() {
     }
   }
 }
+
+
+void XenoMessage::__class_initializer() {
+  bytes_total     = 0;     // How many bytes does this command occupy?
+  arg_count       = 0;
+  checksum_i      = 0;     // The checksum of the data that we receive.
+  checksum_c      = CHECKSUM_PRELOAD_BYTE;     // The checksum of the data that we calculate.
+  expecting_ack   = true;  // Does this message expect an ACK?
+  bytes_received  = 0;     // How many bytes of this command have we received? Meaningless for the sender.
+  retries         = 0;     // How many times have we retried this packet?
+  time_created = millis(); // Optional: What time did this message come into existance?
+  millis_at_begin = 0;     // This is the milliseconds reading when we sent.
+  message_code        = 0;     // 
+}
+
 
 
 /**
@@ -455,6 +456,7 @@ void XenoMessage::printDebug(StringBuilder *output) {
   output->concatf("\ttime_created      0x%08x\n", time_created);
   output->concatf("\tretries           %d\n", retries);
 
+  output->concatf("\t Buffer length: %d\n", buffer.length());
   output->concatf("\t Argbuf length: %d\n", argbuf.length());
   output->concat("\n\n");
 }

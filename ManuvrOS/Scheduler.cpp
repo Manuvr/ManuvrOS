@@ -225,13 +225,11 @@ uint32_t Scheduler::createSchedule(uint32_t sch_period, int16_t recurrence, bool
 uint32_t Scheduler::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, EventReceiver* sch_callback, ManuvrEvent* event) {
   uint32_t return_value  = 0;
   if (sch_period > 1) {
-    if (sch_callback != NULL) {
-      ScheduleItem *nu_sched = new ScheduleItem(get_valid_new_pid(), recurrence, sch_period, ac, sch_callback, event);
-      if (nu_sched != NULL) {  // Did we actually malloc() successfully?
-        return_value  = nu_sched->pid;
-        schedules.insert(nu_sched);
-        nu_sched->enableProfiling(return_value);
-      }
+    ScheduleItem *nu_sched = new ScheduleItem(get_valid_new_pid(), recurrence, sch_period, ac, sch_callback, event);
+    if (nu_sched != NULL) {  // Did we actually malloc() successfully?
+      return_value  = nu_sched->pid;
+      schedules.insert(nu_sched);
+      nu_sched->enableProfiling(return_value);
     }
   }
   return return_value;
@@ -701,7 +699,6 @@ int8_t Scheduler::callback_proc(ManuvrEvent *event) {
 
 
 int8_t Scheduler::notify(ManuvrEvent *active_event) {
-  StringBuilder    *log_item = NULL;  // Sometimes we want to log.
   uint32_t temp_uint32 = 0;
   int8_t return_value = 0;
   switch (active_event->event_code) {
@@ -744,37 +741,34 @@ int8_t Scheduler::notify(ManuvrEvent *active_event) {
       }
       break;
     case MANUVR_MSG_SCHED_PROFILER_DUMP:
-      log_item = new StringBuilder();
       if (active_event->args.size() > 0) {
         while (0 == active_event->consumeArgAs(&temp_uint32)) {
-          printProfiler(log_item);
+          printProfiler(&local_log);
           return_value++;
         }
       }
       else {
-        printProfiler(log_item);
+        printProfiler(&local_log);
         return_value++;
       }
       break;
     case MANUVR_MSG_SCHED_DUMP_META:
-      log_item = new StringBuilder();
-      printDebug(log_item);
+      printDebug(&local_log);
       return_value++;
       break;
     case MANUVR_MSG_SCHED_DUMP_SCHEDULES:
-      log_item = new StringBuilder();
       if (active_event->args.size() > 0) {
         ScheduleItem *nu_sched;
         while (0 == active_event->consumeArgAs(&temp_uint32)) {
           nu_sched  = findNodeByPID(temp_uint32);
-          if (NULL != nu_sched) nu_sched->printDebug(log_item);
+          if (NULL != nu_sched) nu_sched->printDebug(&local_log);
         }
       }
       else {
         ScheduleItem *nu_sched;
         for (int i = 0; i < schedules.size(); i++) {
           nu_sched  = schedules.get(i);
-          if (NULL != nu_sched) nu_sched->printDebug(log_item);
+          if (NULL != nu_sched) nu_sched->printDebug(&local_log);
           return_value++;
         }
       }
@@ -797,10 +791,45 @@ int8_t Scheduler::notify(ManuvrEvent *active_event) {
       break;
   }
   
-  if (NULL != log_item) {
-    StaticHub::log(log_item);   // Raise an event with a message. No need to clean it up.
-  }
+  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
   return return_value;
+}
+
+
+
+
+void Scheduler::procDirectDebugInstruction(StringBuilder *input) {
+  char* str = input->position(0);
+
+  uint8_t temp_byte = 0;
+  if (*(str) != 0) {
+    temp_byte = atoi((char*) str+1);
+  }
+
+  switch (*(str)) {
+    case 'i':
+      printDebug(&local_log);
+      break;
+    case 'S':
+      if (temp_byte) {
+        ScheduleItem *nu_sched;
+        nu_sched  = findNodeByPID(temp_byte);
+        if (NULL != nu_sched) nu_sched->printDebug(&local_log);
+      }
+      else {
+        ScheduleItem *nu_sched;
+        for (int i = 0; i < schedules.size(); i++) {
+          nu_sched  = schedules.get(i);
+          if (NULL != nu_sched) nu_sched->printDebug(&local_log);
+        }
+      }
+      break;
+    default:
+      local_log.concatf("No case in Scheduler debug.\n\n");
+      break;
+  }
+  
+  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
 }
 
 
