@@ -359,8 +359,6 @@ int8_t EventManager::procIdleFlags() {
               active_event->addArg((const char*) EXTENDED_DETAIL_STRING);
             #endif
             return_value++;
-            
-            active_event->printDebug(&local_log);
           }
           break;
       
