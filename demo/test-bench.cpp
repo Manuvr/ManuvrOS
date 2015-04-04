@@ -750,25 +750,41 @@ void session_battery() {
 
 
 void session_battery_1() {
-//  StringBuilder transport_buffer_in;
-//  StringBuilder output;
-//  
-//  printf("===================================================================================================\n");
-//  printf("|                                   XenoSession unit tests                                        |\n");
-//  printf("====<  Arg decomposition  >========================================================================\n");
-//  proc_until_finished();
-//  
-//  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
-//  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
-//  session->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
-//  proc_until_finished();
-//
-//  ManuvrEvent test_event_in(MANUVR_MSG_SYS_LOG_VERBOSITY);
-//  test_event_in.addArg((uint8_t) 7);
-//  
-//  XenoMessage inbound_msg(&test_event_in);
-//  printf("Verbosity message generated. Packet takes %d bytes.\n", inbound_msg.buffer.length());
-//  session->bin_stream_rx(inbound_msg.buffer.string(), inbound_msg.buffer.length());
+  StringBuilder transport_buffer_in;
+  StringBuilder output;
+  XenoSession *sess = new XenoSession();
+  
+  printf("===================================================================================================\n");
+  printf("|                                   XenoSession unit tests                                        |\n");
+  printf("====<  Arg decomposition  >========================================================================\n");
+  proc_until_finished();
+  
+  sess->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
+  sess->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
+  sess->bin_stream_rx((unsigned char*) &XenoSession::SYNC_PACKET_BYTES, 4);   // Pushes a sync packet into the Session.
+  proc_until_finished();
+
+  ManuvrEvent *test_event = EventManager::returnEvent(MANUVR_MSG_SELF_DESCRIBE);
+  EventManager* em = sh->fetchEventManager();
+  em->subscribe(sess);
+  proc_until_finished();
+
+  test_event->callback = sess;
+  EventManager::staticRaiseEvent(test_event);
+  proc_until_finished();
+
+
+  //printf("Self-describe message generated. Packet takes %d bytes.\n", inbound_msg.buffer.length());
+  //sess->bin_stream_rx(inbound_msg.buffer.string(), inbound_msg.buffer.length());
+  proc_until_finished();
+
+  sess->printDebug(&output);
+  proc_until_finished();
+
+  em->unsubscribe(sess);
+  proc_until_finished();
+
+  delete sess;
 //  session->printDebug(&output);
 //  printf("%s\n", (char*)output.string());
 //  

@@ -11,7 +11,7 @@
 FIRMWARE_NAME      = ManuvrOS
 OUTPUT_PATH        = build/
 
-OPTIMIZATION       = -Os
+OPTIMIZATION       = -O0 -g
 C_STANDARD         = gnu99
 CPP_STANDARD       = gnu++11
 

@@ -35,7 +35,7 @@ This is one of the files that the application author is required to provide. Thi
 #define VERSION_STRING            "0.0.0"                // We should be able to communicate version so broken behavior can be isolated.
 #define HW_VERSION_STRING         "-1"                   // Because we are strictly-software, we report as such.
 #define IDENTITY_STRING           "ManuvrOS-Testbench"   // Might also be a hash....
-#define EXTENDED_DETAIL_STRING    "RasPiBuild"           // Optional. User-defined.
+//#define EXTENDED_DETAIL_STRING    "RasPiBuild"           // Optional. User-defined.
 #define PROTOCOL_VERSION          0x00000001             // The protocol version we are using.
 
 
