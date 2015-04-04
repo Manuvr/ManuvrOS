@@ -25,8 +25,7 @@ The message codes defined by this file are dual-purposed across the EventAnd Hos
 #include "DataStructures/LightLinkedList.h"
 #include "DataStructures/Vector3.h"
 #include "DataStructures/Vector3.h"
-
-#include "Drivers/LSM9DS0/Quaternion.h"   // TODO: Remove. Should be in DataStructures.
+#include "DataStructures/Quaternion.h"
 
 
 #define DIG_MSG_ERROR_NO_ERROR        0
