@@ -728,8 +728,16 @@ void ManuvrMsg::printDebug(StringBuilder *temp) {
     temp->concatf("\t Arguments:      %d\n", ac);
     for (int i = 0; i < ac; i++) {
       working_arg = args.get(i);
-      temp->concatf("\t\t %d\t%d\t(%s)\t%s\n", i, working_arg->len, (working_arg->reap ? "reap" : "no reap"), getArgTypeString(i));
+      temp->concatf("\t\t %d\t(%s)\t%s ", i, (working_arg->reap ? "reap" : "no reap"), getArgTypeString(i));
+      uint8_t* buf = (uint8_t*) working_arg->target_mem;
+      for (uint8_t n = 0; n < working_arg->len; n++) {
+        temp->concatf("0x%02x ", (uint8_t) *(buf + n));
+      }
+      temp->concat("\n");
     }
+  }
+  else {
+    temp->concat("\t No arguments.\n");
   }
 }
 

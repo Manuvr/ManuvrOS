@@ -385,34 +385,3 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
 
 
 
-
-/**************************************************************************
-* Static utility functions...                                             *
-**************************************************************************/
-/**
-* The host sends binary data big-endian. This will convert 8 bytes to a double.
-* It is the responsibility of the caller to check that these bytes actually exist in the buffer.
-*/
-//double Argument::parseDoubleFromchars(unsigned char *input) {
-//    unsigned long long temp_long_long = 0;
-//    for (int n = 0; n < 8; n++) temp_long_long += ((long long)*(input + n) * 256);
-//    double temp_double = (double) temp_long_long;
-//    return temp_double;
-//}
-
-
-char* Argument::printBinStringToBuffer(unsigned char *str, int len, char *buffer) {
-	if (buffer != NULL) {
-	int i = 0;
-		unsigned int moo	= 0;
-		if ((str != NULL) && (len > 0)) {
-			for (i = 0; i < len; i++) {
-				moo	= *(str + i);
-				sprintf((buffer+(i*2)), "%02x", moo);
-			}
-		}
-	}
-	return buffer;
-}
-
-
