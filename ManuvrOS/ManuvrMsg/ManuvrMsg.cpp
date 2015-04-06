@@ -22,12 +22,15 @@ const unsigned char ManuvrMsg::MSG_ARGS_U32[] = {UINT32_FM, 0, 0};
 const unsigned char ManuvrMsg::MSG_ARGS_STR_BUILDER[] = {STR_BUILDER_FM, 0, 0}; 
 
 // Generics for messages that have Two types.
-const unsigned char ManuvrMsg::MSG_ARGS_U8_U8[]   = {UINT8_FM, UINT8_FM,  0, UINT8_FM, 0, 0};
-const unsigned char ManuvrMsg::MSG_ARGS_U8_U32[]  = {UINT8_FM, UINT32_FM, 0, UINT8_FM, 0, 0};
+const unsigned char ManuvrMsg::MSG_ARGS_U8_U8[]    = {UINT8_FM, UINT8_FM,  0, UINT8_FM, 0, 0};
+const unsigned char ManuvrMsg::MSG_ARGS_U8_U32[]   = {UINT8_FM, UINT32_FM, 0, UINT8_FM, 0, 0};
+const unsigned char ManuvrMsg::MSG_ARGS_U8_FLOAT[] = {UINT8_FM, FLOAT_FM,  0, UINT8_FM, 0, 0};
+
+
 
 // Generics for messages that have three types.
 const unsigned char ManuvrMsg::MSG_ARGS_U8_U32_I16[]  = {
-  UINT8_FM, 0,
+  UINT8_FM, 0,           
   UINT8_FM, UINT32_FM, 0, 
   UINT8_FM, UINT32_FM, INT16_FM, 0, 
   0};

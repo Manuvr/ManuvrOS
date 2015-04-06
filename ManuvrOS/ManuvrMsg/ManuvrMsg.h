@@ -299,6 +299,7 @@ class ManuvrMsg {
     static const unsigned char MSG_ARGS_STR_BUILDER[];
     static const unsigned char MSG_ARGS_U8_U8[];
     static const unsigned char MSG_ARGS_U8_U32[];
+    static const unsigned char MSG_ARGS_U8_FLOAT[];
     static const unsigned char MSG_ARGS_U8_U32_I16[];
     static const unsigned char MSG_ARGS_BINBLOB[];
     static const unsigned char MSG_ARGS_POWER_MODE[];
