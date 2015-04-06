@@ -134,11 +134,11 @@ void ManuvrEvent::printDebug(StringBuilder *output) {
   	  output->concatf("\t Callback:             %s\n", (NULL == callback ? "NULL" : callback->getReceiverName()));
   	  output->concatf("\t specific_target:      %s\n", (NULL == specific_target ? "NULL" : specific_target->getReceiverName()));
   	  output->concatf("\t Argument count (ser): %d\n", arg_count);
-  	  output->concatf("\t Bitstream length:     %d\nBuffer:  ", temp_buf_len);
+  	  output->concatf("\t Bitstream length:     %d\n\t Buffer:  ", temp_buf_len);
   	  for (int i = 0; i < temp_buf_len; i++) {
   	    output->concatf("0x%02x ", *(temp_buf + i));
   	  }
-  	  output->concat("\n");
+  	  output->concat("\n\n");
   }
   else {
     output->concatf("Failed to serialize message. Count was (%d).\n", arg_count);

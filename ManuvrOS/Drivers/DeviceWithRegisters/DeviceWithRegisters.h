@@ -21,6 +21,9 @@
   
       unsigned int regValue(uint8_t idx);
       bool reg_valid(uint8_t idx);
+      
+      void mark_it_zero(uint8_t);   // Zeroes the register without marking it dirty or unread.
+      void mark_it_zero();          // Zeroes all registers.
 
       /* An implementation must override these with functions appropriate for its bus/transport. */      
       virtual int8_t writeRegister(DeviceRegister *reg) = 0;

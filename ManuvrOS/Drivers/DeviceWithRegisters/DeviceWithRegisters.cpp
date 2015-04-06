@@ -43,6 +43,41 @@ bool DeviceWithRegisters::reg_valid(uint8_t idx) {
 }
 
 
+/**
+* Zeroes the register without marking it dirty or unread.
+*
+* @return true if the register's contents are valid. IE, there are no pending writes.
+*/
+void DeviceWithRegisters::mark_it_zero(uint8_t idx) {
+  switch (reg_defs[idx].len) {
+    case 4:
+      *((uint32_t*) reg_defs[idx].val) = (uint32_t) 0;
+      break;
+    case 2:
+      *((uint16_t*) reg_defs[idx].val) = (uint16_t) 0;
+      break;
+    case 1:
+    default:
+      *((uint8_t*)  reg_defs[idx].val) = (uint8_t) 0;
+      break;
+  }
+  reg_defs[idx].dirty  = false;
+  reg_defs[idx].unread = false;
+}
+
+
+/**
+* Zeroes all registers.
+*
+* @return true if the register's contents are valid. IE, there are no pending writes.
+*/
+void DeviceWithRegisters::mark_it_zero() {
+  for (uint8_t i = 0; i < reg_count; i++) {
+    mark_it_zero(i);
+  }
+}
+
+
 
 void DeviceWithRegisters::dumpDevRegs(StringBuilder* output) {
   if (NULL == output) return;
