@@ -422,11 +422,6 @@ void StringBuilder::concat(char *nu) {
 *   until it is manipulated somehow. So be very careful if you cast to (const char*).
 */
 void StringBuilder::concat(const char *nu) {
-  /* TODO: There is no need to copy a flash-resident string.
-  this->concat((unsigned char *) nu, strlen(nu));
-     TODID: Done. Use it for awhile before deleting this block.
-  */
-  
   if (nu != NULL) {
     int len = strlen(nu);
     if (len > 0) {

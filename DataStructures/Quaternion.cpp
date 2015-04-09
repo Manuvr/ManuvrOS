@@ -26,3 +26,14 @@ void Quaternion::toString(StringBuilder *output) {
   
 }
 
+
+/**
+* TODO: Is this output order correct?
+*/
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdouble-promotion"
+void Quaternion::printDebug(StringBuilder *output) {
+  output->concatf("(%f, %f, %f, %f) (x,y,z,w)", x, y, z, w);
+}
+#pragma GCC diagnostic pop
+

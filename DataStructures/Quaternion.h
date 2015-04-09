@@ -14,6 +14,7 @@ class Quaternion {
     Quaternion();
     Quaternion(float x, float y, float z, float w);
     void toString(StringBuilder *);
+    void printDebug(StringBuilder *);
 };
 
 typedef Quaternion Vector4f;
