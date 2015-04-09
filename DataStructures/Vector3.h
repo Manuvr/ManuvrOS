@@ -145,8 +145,18 @@ public:
 	{	return (T)sqrt(*this * *this);   }
 
 	// normalizes this vector
-	void normalize()
-	{	*this/=length();	}
+	float normalize(){
+	  float stacked_len = length();
+    	if (stacked_len) {
+    	  *this/=stacked_len;
+    	}
+    	return stacked_len;
+  }
+
+	// Normalize against the supllied length, for code that caches this information.
+  void normalize(float len){
+    	if (len) *this/=len;
+  }
 
 	// returns the normalized version of this vector
 	Vector3<T> normalized() const
