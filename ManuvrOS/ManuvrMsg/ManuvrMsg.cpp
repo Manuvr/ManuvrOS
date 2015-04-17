@@ -53,10 +53,10 @@ const unsigned char ManuvrMsg::MSG_ARGS_POWER_MODE[] = {
   
 
 const unsigned char ManuvrMsg::MSG_ARGS_SELF_DESC[] = {
-  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, 0,    // 1 bytes: Statement about current power profile.
-  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, 0,            // 1 bytes: Statement about current power profile.
-  UINT32_FM, UINT32_FM, STR_FM, STR_FM, 0,                    // 1 bytes: Statement about current power profile.
-  0};                      // 0 bytes: Request for present power profile.
+  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, 0,    // Both optional fields.
+  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, 0,            // Optional extra field.
+  UINT32_FM, UINT32_FM, STR_FM, STR_FM, 0,                    // Minimum-required.
+  0};                      // 0 bytes: Request for self-description.
                             
   
 

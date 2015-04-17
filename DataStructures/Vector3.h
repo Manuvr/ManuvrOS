@@ -147,9 +147,15 @@ public:
 	// normalizes this vector
 	float normalize(){
 	  float stacked_len = length();
-    	if (stacked_len) {
-    	  *this/=stacked_len;
-    	}
+    if (stacked_len) {
+      if (stacked_len != 1.0f) {  
+        // Only do more math if anything will change. May already be normalized.
+        // Multiplying 3 times is typically worth saving two divisions. 
+        // I picked up this trick from Sebastian Madgwick's AHRS code.
+        stacked_len = 1.0f/stacked_len;
+        *this *=stacked_len;
+      }
+    }
     	return stacked_len;
   }
 
