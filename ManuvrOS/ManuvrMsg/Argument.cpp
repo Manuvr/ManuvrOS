@@ -280,7 +280,10 @@ int8_t Argument::serialize(StringBuilder *out) {
 	  case UINT32_PTR_FM:
 	  case FLOAT_PTR_FM:
 	    arg_bin_len = 4;
-	    *((uint32_t*) sp_index) = *((uint32_t*) target_mem);
+	    //*((uint32_t*) sp_index) = *((uint32_t*) target_mem);
+      for (int i = 0; i < 4; i++) { 
+        *((uint8_t*) sp_index + i) = *((uint8_t*) target_mem + i);
+	    }
 	    break;
 	  
 	  /* These are pointer types that require conversion. */

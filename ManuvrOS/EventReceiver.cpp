@@ -88,6 +88,22 @@ int8_t EventReceiver::setVerbosity(ManuvrEvent* active_event) {
 }
 
 
+/*
+* Returns the number of bytes freed.
+*/
+int EventReceiver::purgeLogs() {
+  int return_value = 0;
+  if (local_log.length() > 0) {
+    if (verbosity > 4) {
+      StaticHub::log(&local_log);
+    }
+    local_log.clear();
+  }
+  return return_value;
+}
+
+
+
 /**
 * This is a base-level debug function that takes direct input from a user.
 *
@@ -208,6 +224,8 @@ int8_t EventReceiver::callback_proc(ManuvrEvent *event) {
 */
 int8_t EventReceiver::notify(ManuvrEvent *active_event) {
   switch (active_event->event_code) {
+    case MANUVR_MSG_SYS_RELEASE_CRUFT:   // System is telling us to GC if we can.
+      return purgeLogs();
     case MANUVR_MSG_SYS_LOG_VERBOSITY:
       return setVerbosity(active_event);
     case MANUVR_MSG_SYS_BOOT_COMPLETED:

@@ -87,6 +87,8 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,               "SYS_REBOOT"           , MSG_ARGS_NONE }, // Reboots into THIS program.
   {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,               "SYS_SHUTDOWN"         , MSG_ARGS_NONE }, // Raised when the system is pending complete shutdown.
 
+  {  MANUVR_MSG_SYS_RELEASE_CRUFT    , MSG_FLAG_IDEMPOTENT,               "SYS_RELEASE_CRUFT"    , MSG_ARGS_NONE }, // 
+
   {  MANUVR_MSG_PROGRAM_START        , MSG_FLAG_EXPORTABLE,               "PROGRAM_START"        , MSG_ARGS_STR_BUILDER }, // Starting an application on the receiver. Needs a string. 
   {  MANUVR_MSG_SELF_DESCRIBE        , MSG_FLAG_EXPORTABLE,               "SELF_DESCRIBE"        , MSG_ARGS_SELF_DESC }, // Starting an application on the receiver. Needs a string. 
   

@@ -3,7 +3,7 @@ Quaternion::Quaternion() {
   x = 0.0f;
   y = 0.0f;
   z = 0.0f;
-  w = 0.0f;
+  w = 1.0f;
 }
 
 Quaternion::Quaternion(float n_x, float n_y, float n_z, float n_w) {

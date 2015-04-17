@@ -140,6 +140,7 @@
   
       int8_t setVerbosity(int8_t);
       int8_t getVerbosity();
+      int purgeLogs();
       
       
     protected:
