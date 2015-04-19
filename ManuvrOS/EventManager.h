@@ -185,6 +185,7 @@
       
       void clean_first_discard();
       
+      bool containsPreformedEvent(ManuvrEvent*);
 
       /* Overrides from EventReceiver
            EventManager is special, and it will naturally have both methods from EventReceiver.

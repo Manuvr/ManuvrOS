@@ -244,6 +244,12 @@ int8_t EventManager::validate_insertion(ManuvrEvent* event) {
     return -2;  // No undefined events.
   }
 
+  if (event_queue.contains(event)) {
+    // Bail out with error, because this event (which is status-bearing) cannot be in the
+    //   queue more than once.
+    return -3;
+  }
+  
   // Those are the basic checks. Now for the advanced functionality...
   if (event->isIdempotent()) {
     for (int i = 0; i < event_queue.size(); i++) {
@@ -256,6 +262,12 @@ int8_t EventManager::validate_insertion(ManuvrEvent* event) {
   }
   return 0;
 }
+
+
+bool EventManager::containsPreformedEvent(ManuvrEvent* event) {
+  return event_queue.contains(event);
+}
+
 
 
 /**
