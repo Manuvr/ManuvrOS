@@ -140,6 +140,8 @@ int8_t I2CAdapter::generateStart() {
 int8_t I2CAdapter::generateStop() {
   if (verbosity > 6) StaticHub::log("I2CAdapter::generateStop()\n");
   if (! bus_online) return -1;
+  DMA_ITConfig(DMA1_Stream0, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE | DMA_IT_DME, DISABLE);
+  I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, DISABLE);
   I2C_GenerateSTOP(I2C1, ENABLE);
   return 0;
 }
@@ -749,6 +751,7 @@ void I2CAdapter::printDebug(StringBuilder *temp) {
   
   EventReceiver::printDebug(temp);
   temp->concatf("--- bus_online             %s\n", (bus_online ? "yes" : "no"));
+  printPingMap(temp);
   
 
   if (current_queue_item != NULL) {
@@ -774,8 +777,6 @@ void I2CAdapter::printDebug(StringBuilder *temp) {
 
 
 void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
-  StringBuilder output;
-  
   char* str = input->position(0);
   
   char c = *(str);
@@ -788,33 +789,33 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
     // i2c debugging cases....
     case 'i':
       if (temp_byte < dev_list.size()) {
-        dev_list.get(temp_byte)->printDebug(&output);
+        dev_list.get(temp_byte)->printDebug(&local_log);
       }
       else if (temp_byte == 255) {
-        printDevs(&output);
+        printDevs(&local_log);
       }
       else {
-        printDebug(&output);
+        printDebug(&local_log);
       }
       break;
     case '1':
       gpioSetup();
-      output.concat("i2c GPIO reset.\n");
+      local_log.concat("i2c GPIO reset.\n");
       break;
     case '2':
       #ifdef STM32F4XX
         I2C_SoftwareResetCmd(I2C1, ENABLE);
         I2C_SoftwareResetCmd(I2C1, DISABLE);
       #endif
-      output.concat("i2c software reset.\n");
+      local_log.concat("i2c software reset.\n");
       break;
     case '3':
       purge_queued_work();
-      output.concat("i2c queue purged.\n");
+      local_log.concat("i2c queue purged.\n");
       break;
     case '4':
       purge_stalled_job();
-      output.concatf("Attempting to purge a stalled jorbe...\n");
+      local_log.concatf("Attempting to purge a stalled jorbe...\n");
       break;
 #ifdef STM32F4XX
     case 'b':
@@ -824,7 +825,7 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       
     case 'K':
       if (temp_byte) {
-        output.concatf("ping i2c slave 0x%02x.\n", temp_byte);
+        local_log.concatf("ping i2c slave 0x%02x.\n", temp_byte);
         ping_slave_addr(temp_byte);
       }
       else {
@@ -834,7 +835,7 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       }
       break;
     case ']':
-      output.concatf("Advanced i2c work queue.\n");
+      local_log.concatf("Advanced i2c work queue.\n");
       EventManager::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, NULL);   // Raise an event
       break;
 
@@ -842,6 +843,6 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
   
-  if (output.length() > 0) {    StaticHub::log(&output);  }
+  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
 }
 

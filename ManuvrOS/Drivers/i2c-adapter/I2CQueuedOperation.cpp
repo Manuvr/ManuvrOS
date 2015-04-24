@@ -319,6 +319,8 @@ int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
         if (opcode == I2C_OPERATION_PING) {
           markComplete();
           device->generateStop();
+          if (output.length() > 0) StaticHub::log(&output);
+          return 0;
         }
         // We are ready to send the address...
         // If we need to send a subaddress, we will need to be in transmit mode. Even if our end-goal is to read.
@@ -337,7 +339,6 @@ int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
       }
       break;
     case I2C_XFER_STATE_SUBADDR:   // We need to send a subaddress.
-      //output.concatf("\tI2C_XFER_STATE_SUBADDR\n");
       if (0x00000002 & status_reg) {  // If the dev addr was sent...
         I2C_SendData(I2C1, (uint8_t) (sub_addr & 0x00FF));   // ...send subaddress.
         subaddr_sent = true;  // We've sent this already. Don't do it again.
@@ -347,16 +348,14 @@ int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
       }
       break;
     case I2C_XFER_STATE_BODY:      // We need to start the body of our transfer.
-      //output.concatf("\tI2C_XFER_STATE_BODY\n");
+      xfer_state = I2C_XFER_STATE_DMA_WAIT;
       if (opcode == I2C_OPERATION_WRITE) {
         DMA_Cmd(DMA1_Stream7, ENABLE);
-        //I2C_DMACmd(I2C1, ENABLE);
-        xfer_state = I2C_XFER_STATE_DMA_WAIT;
+        I2C_DMACmd(I2C1, ENABLE);
       }
       else if (opcode == I2C_OPERATION_READ) {
         DMA_Cmd(DMA1_Stream0, ENABLE);
-        //I2C_DMACmd(I2C1, ENABLE);
-        xfer_state = I2C_XFER_STATE_DMA_WAIT;
+        I2C_DMACmd(I2C1, ENABLE);
       }
       else if (opcode == I2C_OPERATION_PING) {
         markComplete();

@@ -88,13 +88,13 @@ bool I2CDeviceWithRegisters::defineRegister(uint16_t _addr, uint32_t val, bool d
 
 DeviceRegister* I2CDeviceWithRegisters::getRegisterByBaseAddress(int b_addr) {
   int i = 0;
-  DeviceRegister *nu = NULL;
-  while (reg_defs.get(i) != NULL) {
-    nu = reg_defs.get(i);
+  DeviceRegister *nu = reg_defs.get(0);
+  while (nu != NULL) {
     if (nu->addr == b_addr) {
       return nu;
     }
     i++;
+    nu = reg_defs.get(i);
   }
   return NULL;
 }
