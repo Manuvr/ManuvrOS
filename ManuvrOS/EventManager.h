@@ -25,13 +25,14 @@
   
   
   #define EVENT_PRIORITY_HIGHEST            100
+  #define EVENT_PRIORITY_DEFAULT              2
   #define EVENT_PRIORITY_LOWEST               0
   
   
   #ifdef TEST_BENCH
     #define DEFAULT_CLASS_VERBOSITY    7
   #else
-    #define DEFAULT_CLASS_VERBOSITY    4
+    #define DEFAULT_CLASS_VERBOSITY    3
   #endif
   
 

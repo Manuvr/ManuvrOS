@@ -282,7 +282,7 @@ class ManuvrMsg {
     
     static int8_t getMsgLegend(StringBuilder *output);
     
-    static const MessageTypeDef message_defs[];
+    static const MessageTypeDef message_defs[]; // __attribute__ ((section(".ccm")));
     static PriorityQueue<const MessageTypeDef*> message_defs_extended;  // Where runtime-loaded message defs go.
 
     

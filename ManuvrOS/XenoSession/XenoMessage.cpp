@@ -35,7 +35,7 @@ XenoMessage::XenoMessage() {
   __class_initializer();
   proc_state          = XENO_MSG_PROC_STATE_RECEIVING;  // Implies we are receiving.
   event               = NULL;  // Associates this XenoMessage to an event.
-  uint16_t  unique_id = 0;     //
+  unique_id           = 0;     //
 }
 
 

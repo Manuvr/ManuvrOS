@@ -131,6 +131,11 @@ EventReceiver* EventManager::getSubscriberByName(const char* search_str) {
 
 void EventManager::update_maximum_queue_depth() {
   max_queue_depth = max(event_queue.size(), (int) max_queue_depth);
+  if (event_queue.size() > 30) {
+    // Something is terrible wrong....
+    printDebug(&local_log);
+    StaticHub::log(&local_log);
+  }
 }
 
 
@@ -578,6 +583,7 @@ void EventManager::profiler(bool enabled) {
 */
 void EventManager::printProfiler(StringBuilder* output) {
   if (NULL == output) return;
+  uint32_t total_ms_occupied = 0;
   output->concatf("\t total_events               %u\n",   (unsigned long) total_events);
   output->concatf("\t total_events_dead          %u\n\n", (unsigned long) total_events_dead);
   output->concatf("\t max_queue_depth            %u\n",   (unsigned long) max_queue_depth);
@@ -594,23 +600,17 @@ void EventManager::printProfiler(StringBuilder* output) {
 
     TaskProfilerData *profiler_item;
     int stat_mode = event_costs.getPriority(0);
-    float scalar = (stat_mode != 0) ? (20.0 / stat_mode) : 1.0;
     int x = event_costs.size();
-    char* stat_line_buf = (char*) alloca(21);
-    *(stat_line_buf + 20) = '\0';
-    
-    output->concat("\t                     Execd               Event         total us   average     worst    best    last\n");
+
+    output->concat("\n\t Execd               Event       total us   average     worst    best      last\n");
     for (int i = 0; i < x; i++) {
       profiler_item = event_costs.get(i);
       stat_mode     = event_costs.getPriority(i);
       
-      for (int n = 0; n < 20; n++) {
-        *(stat_line_buf + n) = (n > (stat_mode * scalar * 20)) ? ' ' : '*';
-      }
-      
-      output->concatf("\t%s (%d)\t%18s  %9d %9d %9d %9d %9d\n", stat_line_buf, stat_mode, ManuvrMsg::getMsgTypeString(profiler_item->msg_code), (unsigned long) profiler_item->run_time_total, (unsigned long) profiler_item->run_time_average, (unsigned long) profiler_item->run_time_worst, (unsigned long) profiler_item->run_time_best, (unsigned long) profiler_item->run_time_last);
+      output->concatf("\t (%d)\t%18s  %9d %9d %9d %9d %9d\n", stat_mode, ManuvrMsg::getMsgTypeString(profiler_item->msg_code), (unsigned long) profiler_item->run_time_total, (unsigned long) profiler_item->run_time_average, (unsigned long) profiler_item->run_time_worst, (unsigned long) profiler_item->run_time_best, (unsigned long) profiler_item->run_time_last);
+      total_ms_occupied += profiler_item->run_time_total/1000;
     }
-    output->concat("\n");
+    output->concatf("\n\t CPU use by clock: %f\n\n", (total_ms_occupied / millis())*100.0D);
   }
   else {
     output->concat("-- EventManager profiler is not enabled.\n\n");
@@ -674,6 +674,7 @@ void EventManager::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
   
   output->concatf("-- INSTANCE location:         0x%08x\n", (uint32_t) INSTANCE);
+  output->concatf("-- location of message_defs   0x%08x\n", (uint32_t) &ManuvrMsg::message_defs);
   output->concatf("-- Queue depth:               %d\n", event_queue.size());
   output->concatf("-- Preallocation depth:       %d\n", preallocated.size());
   output->concatf("-- Total subscriber count:    %d\n", subscribers.size());

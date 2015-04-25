@@ -50,7 +50,7 @@ void ManuvrEvent::__class_initializer() {
   flags           = 0x00;  // TODO: Optimistic about collapsing the bools into this. Or make gcc do it.
   callback        = NULL;
   specific_target = NULL;
-  priority        = EVENT_PRIORITY_LOWEST;
+  priority        = EVENT_PRIORITY_DEFAULT;
   
   // These things have implications for memory management, which is why repurpose() doesn't touch them.
   mem_managed  = false;

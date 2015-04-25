@@ -93,11 +93,13 @@ int8_t EventReceiver::setVerbosity(ManuvrEvent* active_event) {
 */
 int EventReceiver::purgeLogs() {
   int return_value = 0;
-  if (local_log.length() > 0) {
+  int lll = local_log.length();
+  if (lll > 0) {
     if (verbosity > 4) {
       StaticHub::log(&local_log);
     }
     local_log.clear();
+    printf("%s GCd %d bytes. Investigate this.\n", getReceiverName(), lll);
   }
   return return_value;
 }
