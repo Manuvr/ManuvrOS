@@ -185,15 +185,13 @@
       void printDebug(StringBuilder *);
       
       void clean_first_discard();
+      float cpu_usage();
       
       bool containsPreformedEvent(ManuvrEvent*);
 
       /* Overrides from EventReceiver
-           EventManager is special, and it will naturally have both methods from EventReceiver.
-           Just gracefully fall into those when needed.
-        int8_t notify(ManuvrEvent*);
-        int8_t callback_proc(ManuvrEvent *);
-      */
+         EventManager is special, and it will naturally have both methods from EventReceiver.
+         Just gracefully fall into those when needed. */
   
   
       static int8_t raiseEvent(uint16_t event_code, EventReceiver* data);
@@ -201,7 +199,8 @@
       
       // Factory method. Returns a preallocated Event.
       static ManuvrEvent* returnEvent(uint16_t event_code);
-  
+
+
     protected:
       int8_t bootComplete();
 
@@ -214,13 +213,8 @@
       PriorityQueue<EventReceiver*>    subscribers;   // Our subscription manifest.
       
       // Profiling and logging variables...
-      int8_t validate_insertion(ManuvrEvent*);
-      void reclaim_event(ManuvrEvent*);
-      void update_maximum_queue_depth();
-  
-      bool profiler_enabled;          // Should we spend time profiling this component?
+      uint32_t micros_occupied;       // How many micros have we spent procing events?
       uint32_t max_idle_loop_time;    // How many uS does it take to run an idle loop?
-      uint8_t  max_events_p_loop;     // What is the most events we've handled in a single loop?
       uint32_t total_loops;           // How many times have we looped?
       uint32_t total_events;          // How many events have we proc'd?
       uint32_t total_events_dead;     // How many events have we proc'd that went unacknowledged?
@@ -233,6 +227,14 @@
       uint32_t max_queue_depth;       // What is the deepest point the queue has reached?
       
       PriorityQueue<TaskProfilerData*> event_costs;     // Message code is the priority. Calculates average cost in uS.
+
+      uint8_t  max_events_p_loop;     // What is the most events we've handled in a single loop?
+      bool profiler_enabled;          // Should we spend time profiling this component?
+
+
+      int8_t validate_insertion(ManuvrEvent*);
+      void reclaim_event(ManuvrEvent*);
+      inline void update_maximum_queue_depth() {   max_queue_depth = (event_queue.size() > (int) max_queue_depth) ? event_queue.size() : max_queue_depth;   };
       
       
       static EventManager* INSTANCE;

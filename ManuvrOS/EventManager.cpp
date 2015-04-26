@@ -27,6 +27,7 @@ EventManager::EventManager() {
   setVerbosity((int8_t) 0);  // TODO: Why does this crash ViamSonus?
   boot_completed = false;
   profiler(true);
+  micros_occupied = 0;
   
   for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
     /* We carved out a space in our allocation for a pool of events. Ideally, this would be enough
@@ -128,15 +129,6 @@ EventReceiver* EventManager::getSubscriberByName(const char* search_str) {
 /****************************************************************************************************
 * Static member functions for posting events.                                                       *
 ****************************************************************************************************/
-
-void EventManager::update_maximum_queue_depth() {
-  max_queue_depth = max(event_queue.size(), (int) max_queue_depth);
-  if (event_queue.size() > 30) {
-    // Something is terrible wrong....
-    printDebug(&local_log);
-    StaticHub::log(&local_log);
-  }
-}
 
 
 /**
@@ -326,7 +318,7 @@ void EventManager::reclaim_event(ManuvrEvent* active_event) {
 * @return the number of events processed, or a negative value on some failure.
 */
 int8_t EventManager::procIdleFlags() {
-  uint32_t profiler_mark   = (profiler_enabled) ? micros() : 0;   // Profiling requests...
+  uint32_t profiler_mark   = micros();
   uint32_t profiler_mark_0 = 0;   // Profiling requests...
   uint32_t profiler_mark_1 = 0;   // Profiling requests...
   uint32_t profiler_mark_2 = 0;   // Profiling requests...
@@ -531,17 +523,18 @@ int8_t EventManager::procIdleFlags() {
     return_value++;   // We just serviced an Event.
   }
   
-  if (profiler_enabled) {
-    total_loops++;
-    if (return_value > 0) {
-      max_events_p_loop = max((unsigned long) max_events_p_loop, (unsigned long) return_value);
-    }
-    else if (0 == return_value) {
-      max_idle_loop_time = max((unsigned long) max_idle_loop_time, (max((unsigned long) profiler_mark, (unsigned long) profiler_mark_3) - min((unsigned long) profiler_mark, (unsigned long) profiler_mark_3)));
-    }
-    else {
-      // there was a problem. Do nothing.
-    }
+  total_loops++;
+  profiler_mark_3 = micros();
+  uint32_t runtime_this_loop = max((uint32_t) profiler_mark_3, (uint32_t) profiler_mark) - min((uint32_t) profiler_mark_3, (uint32_t) profiler_mark);
+  if (return_value > 0) {
+    micros_occupied += runtime_this_loop;
+    max_events_p_loop = max((uint32_t) max_events_p_loop, (uint32_t) return_value);
+  }
+  else if (0 == return_value) {
+    max_idle_loop_time = max((uint32_t) max_idle_loop_time, (max((uint32_t) profiler_mark, (uint32_t) profiler_mark_3) - min((uint32_t) profiler_mark, (uint32_t) profiler_mark_3)));
+  }
+  else {
+    // there was a problem. Do nothing.
   }
 
   if (local_log.length() > 0) StaticHub::log(&local_log);
@@ -583,11 +576,12 @@ void EventManager::profiler(bool enabled) {
 */
 void EventManager::printProfiler(StringBuilder* output) {
   if (NULL == output) return;
-  uint32_t total_ms_occupied = 0;
   output->concatf("\t total_events               %u\n",   (unsigned long) total_events);
   output->concatf("\t total_events_dead          %u\n\n", (unsigned long) total_events_dead);
   output->concatf("\t max_queue_depth            %u\n",   (unsigned long) max_queue_depth);
   output->concatf("\t total_loops                %u\n",   (unsigned long) total_loops);
+  output->concatf("\t max_idle_loop_time         %u\n", (unsigned long) max_idle_loop_time);
+  output->concatf("\t max_events_p_loop          %u\n", (unsigned long) max_events_p_loop);
     
   if (profiler_enabled) {
     output->concat("-- Profiler dump:\n");
@@ -595,26 +589,27 @@ void EventManager::printProfiler(StringBuilder* output) {
       output->concatf("\tFraction of prealloc hits: %f\n\n", ((burden_of_specific - prealloc_starved) / total_events));
     }
 
-    output->concatf("\t max_idle_loop_time         %u\n", (unsigned long) max_idle_loop_time);
-    output->concatf("\t max_events_p_loop          %u\n", (unsigned long) max_events_p_loop);
-
     TaskProfilerData *profiler_item;
     int stat_mode = event_costs.getPriority(0);
     int x = event_costs.size();
 
-    output->concat("\n\t Execd               Event       total us   average     worst    best      last\n");
+    output->concat("\n\t Execd       \t Event       total us   average     worst    best      last\n");
     for (int i = 0; i < x; i++) {
       profiler_item = event_costs.get(i);
       stat_mode     = event_costs.getPriority(i);
       
-      output->concatf("\t (%d)\t%18s  %9d %9d %9d %9d %9d\n", stat_mode, ManuvrMsg::getMsgTypeString(profiler_item->msg_code), (unsigned long) profiler_item->run_time_total, (unsigned long) profiler_item->run_time_average, (unsigned long) profiler_item->run_time_worst, (unsigned long) profiler_item->run_time_best, (unsigned long) profiler_item->run_time_last);
-      total_ms_occupied += profiler_item->run_time_total/1000;
+      output->concatf("\t (%10d)\t%18s  %9d %9d %9d %9d %9d\n", stat_mode, ManuvrMsg::getMsgTypeString(profiler_item->msg_code), (unsigned long) profiler_item->run_time_total, (unsigned long) profiler_item->run_time_average, (unsigned long) profiler_item->run_time_worst, (unsigned long) profiler_item->run_time_best, (unsigned long) profiler_item->run_time_last);
     }
-    output->concatf("\n\t CPU use by clock: %f\n\n", (total_ms_occupied / millis())*100.0D);
+    output->concatf("\n\t CPU use by clock: %f\n\n", (double)cpu_usage());
   }
   else {
     output->concat("-- EventManager profiler is not enabled.\n\n");
   }
+}
+
+
+float EventManager::cpu_usage() {
+  return (micros_occupied / (float)(millis()*10));
 }
 
 
@@ -673,7 +668,6 @@ void EventManager::printDebug(StringBuilder* output) {
   if (NULL == output) return;
   EventReceiver::printDebug(output);
   
-  output->concatf("-- INSTANCE location:         0x%08x\n", (uint32_t) INSTANCE);
   output->concatf("-- location of message_defs   0x%08x\n", (uint32_t) &ManuvrMsg::message_defs);
   output->concatf("-- Queue depth:               %d\n", event_queue.size());
   output->concatf("-- Preallocation depth:       %d\n", preallocated.size());
