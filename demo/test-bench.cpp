@@ -446,6 +446,30 @@ int recycle_test() {
   return 0;
 }
 
+Vector3<float> test_vect_0(-0.4f, -0.1f, 0.4f);
+
+int vector3_float_test(float x, float y, float z) {
+  Vector3<float> test;
+  Vector3<float> *test1 = &test_vect_0;
+  printf("--- (test) (%.4f, %.4f, %.4f)\n", (double)(test.x), (double)(test.y), (double)(test.z));
+
+  
+  
+  test(1.0f, 0.5f, 0.24f);
+  printf("--- (test) (%.4f, %.4f, %.4f)\n", (double)(test.x), (double)(test.y), (double)(test.z));
+  
+  test(test_vect_0.x, test_vect_0.y, test_vect_0.z);
+  printf("--- (test) (%.4f, %.4f, %.4f)\n", (double)(test.x), (double)(test.y), (double)(test.z));
+
+  test(test1->x, test1->y, test1->z);
+  printf("--- (test) (%.4f, %.4f, %.4f)\n", (double)(test.x), (double)(test.y), (double)(test.z));
+
+  test(x, y, z);
+  printf("--- (test) (%.4f, %.4f, %.4f)\n", (double)(test.x), (double)(test.y), (double)(test.z));
+  return 0;
+}
+
+
 
 int test_PriorityQueue(void) {
   statistical_mode_test();
@@ -953,7 +977,7 @@ int main(int argc, char *argv[]) {
           else if (strcasestr(tok, "TROLL"))    troll();              // prOBleM?.
           else if (strcasestr(tok, "#PQ"))    test_PriorityQueue();  
           else if (strcasestr(tok, "#SB"))    test_StringBuilder();
-
+          else if (strcasestr(tok, "#V3"))    vector3_float_test(0.7f, 0.8f, 0.01f);
 
           else if (strcasestr(tok, "#XB"))    session_battery();
           else if (strcasestr(tok, "#XA"))    session_battery_1();

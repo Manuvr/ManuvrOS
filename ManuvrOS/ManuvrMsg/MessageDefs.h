@@ -54,6 +54,7 @@
   #define MANUVR_MSG_SYS_LOG_VERBOSITY    0x0027 // This tells client classes to adjust their log verbosity.
   #define MANUVR_MSG_SYS_ADVERTISE_SRVC   0x0028 // A system service might feel the need to advertise it's arrival.
   #define MANUVR_MSG_SYS_RETRACT_SRVC     0x0029 // A system service sends this to tell others to stop using it.
+  #define MANUVR_MSG_SYS_FAULT_REPORT     0x002A // Something in the system soft-errored.
   
   #define MANUVR_MSG_SYS_RELEASE_CRUFT    0x002F // The system is asking EventReceivers to GC if we can.
 

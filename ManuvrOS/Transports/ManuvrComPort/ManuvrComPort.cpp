@@ -136,7 +136,7 @@ void ManuvrComPort::__class_initializer() {
     
   // Build some pre-formed Events.
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
-  read_abort_event.mem_managed     = true;
+  read_abort_event.isManaged(true);
   read_abort_event.specific_target = (EventReceiver*) this;
   read_abort_event.callback        = (EventReceiver*) this;
   read_abort_event.priority        = 5;

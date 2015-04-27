@@ -7,10 +7,10 @@ Quaternion::Quaternion() {
 }
 
 Quaternion::Quaternion(float n_x, float n_y, float n_z, float n_w) {
-  w = n_w;
   x = n_x;
   y = n_y;
   z = n_z;
+  w = n_w;
 }
 
 
@@ -33,7 +33,7 @@ void Quaternion::toString(StringBuilder *output) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdouble-promotion"
 void Quaternion::printDebug(StringBuilder *output) {
-  output->concatf("(%f, %f, %f, %f) (x,y,z,w)", x, y, z, w);
+  output->concatf("(%.5f, %.5f, %.5f, %.5f) (x,y,z,w)", x, y, z, w);
 }
 #pragma GCC diagnostic pop
 
