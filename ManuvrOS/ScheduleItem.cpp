@@ -82,7 +82,7 @@ ScheduleItem::ScheduleItem(uint32_t nu_pid, int16_t recurrence, uint32_t sch_per
   schedule_callback   = NULL;
   event               = ev;             // ...and mandates an event.
   
-  event->scheduled    = true;           // Needed so we don't reap the event.
+  event->isScheduled(true);             // Needed so we don't reap the event.
 }
 
 
@@ -92,7 +92,7 @@ ScheduleItem::ScheduleItem(uint32_t nu_pid, int16_t recurrence, uint32_t sch_per
 ScheduleItem::~ScheduleItem() {
   clearProfilingData();
   if (NULL != event) {                    // If there was an Event tied to this schedule, we need to see if we ought to free it.
-    if (!event->mem_managed) {            // But only if its mem is managed elsewhere....
+    if (!event->isManaged()) {            // But only if its mem is managed elsewhere....
       if (!event->returnToPrealloc()) {   // ...and only if it wasn't in the preallocation pool.
         // TODO: Seems sketchy... Needs to be re-thought. But should work for now.
         // Might crash if the event is fired, and this schedule is reaped prior to event execution.
