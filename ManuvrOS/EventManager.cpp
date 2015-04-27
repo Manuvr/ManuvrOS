@@ -38,7 +38,7 @@ EventManager::EventManager() {
   INSTANCE           = this;
   current_event      = NULL;
   requested_preforms = 0;
-  micros_occupied    = 0;
+  micros_occupied    = 1;
   setVerbosity((int8_t) 0);  // TODO: Why does this crash ViamSonus?
   profiler(true);
   
@@ -323,6 +323,7 @@ void EventManager::reclaim_event(ManuvrEvent* active_event) {
 
   if (reap_current_event) {                   // If we are to reap this event...
     if (verbosity > 5) local_log.concat("EventManager::reclaim_event(): About to reap,\n");
+    active_event->clearArgs();
     delete active_event;                      // ...free() it...
     events_destroyed++;
     //discarded.insert(active_event);
@@ -369,7 +370,7 @@ int8_t EventManager::procIdleFlags() {
 
   ManuvrEvent *active_event = NULL;  // Our short-term focus.
   uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
-
+  
   /* As long as we have an open event and we aren't yet at our proc ceiling... */
   while (event_queue.hasNext() && ((int8_t) EVENT_MANAGER_MAX_EVENTS_PER_LOOP > return_value)) {
     active_event = event_queue.dequeue();       // Grab the Event and remove it in the same call.
@@ -485,17 +486,15 @@ int8_t EventManager::procIdleFlags() {
         switch (active_event->callback->callback_proc(active_event)) {
           case EVENT_CALLBACK_RETURN_ERROR:       // Something went wrong. Should never occur.
           case EVENT_CALLBACK_RETURN_UNDEFINED:   // The originating class doesn't care what we do with the event.
-            if (verbosity > 5) local_log.concatf("EventManager found a possible mistake. Unexpected return case from callback_proc.\n");
+            if (verbosity > 2) local_log.concat("EventManager found a possible mistake. Unexpected return case from callback_proc.\n");
+          case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
+            if (verbosity > 5) local_log.concatf("Dropping event %s after running.\n", active_event->getMsgTypeString());
           case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
             reclaim_event(active_event);
             break;
           case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
             if (verbosity > 5) local_log.concatf("EventManager is recycling event %s.\n", active_event->getMsgTypeString());
-            event_queue.insert(active_event, active_event->priority);
-            break;
-          case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
-            if (verbosity > 5) local_log.concatf("Dropping event %s after running.\n", active_event->getMsgTypeString());
-            reclaim_event(active_event);
+            staticRaiseEvent(active_event);
             break;
           default:
             if (verbosity > 0) local_log.concatf("Event %s has no cleanup case.\n", active_event->getMsgTypeString());
@@ -646,7 +645,7 @@ void EventManager::printProfiler(StringBuilder* output) {
 float EventManager::cpu_usage() {
   uint32_t _mils = millis();
   if (_mils) {
-    return (micros_occupied / (float)(_mils*10.0f));
+    return (micros_occupied / (float)(_mils*10));
   }
   return 1.0f;
 }
