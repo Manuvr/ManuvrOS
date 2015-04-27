@@ -35,12 +35,16 @@ EventManager* EventManager::INSTANCE = NULL;
 */
 EventManager::EventManager() {
   __class_initializer();
-  INSTANCE       = this;
-  current_event = NULL;
+  INSTANCE           = this;
+  current_event      = NULL;
   setVerbosity((int8_t) 0);  // TODO: Why does this crash ViamSonus?
-  boot_completed = false;
   profiler(true);
-  micros_occupied = 0;
+
+  max_queue_depth    = 0;   
+  total_loops        = 0;
+  total_events       = 0;
+  total_events_dead  = 0;
+  micros_occupied    = 0;
   
   for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
     /* We carved out a space in our allocation for a pool of events. Ideally, this would be enough
@@ -168,8 +172,6 @@ int8_t EventManager::raiseEvent(uint16_t code, EventReceiver* cb) {
   int ret_val = INSTANCE->validate_insertion(nu);
   if (0 == ret_val) {
     INSTANCE->event_queue.insert(nu);
-    if (INSTANCE->profiler_enabled) {
-    }
     INSTANCE->update_maximum_queue_depth();   // Check the queue depth 
   }
   else {
@@ -382,7 +384,7 @@ int8_t EventManager::procIdleFlags() {
             #ifdef EXTENDED_DETAIL_STRING
               active_event->addArg((const char*) EXTENDED_DETAIL_STRING);
             #endif
-            return_value++;
+            activity_count++;
           }
           break;
       
@@ -406,7 +408,7 @@ int8_t EventManager::procIdleFlags() {
           break;
         default:
           // See the notes above. We still have to behave like any other EventReceiver....
-          return_value += EventReceiver::notify(active_event);
+          activity_count += EventReceiver::notify(active_event);
           break;
       }
     }
@@ -465,7 +467,9 @@ int8_t EventManager::procIdleFlags() {
             break;
           case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
             if (verbosity > 5) local_log.concatf("EventManager is recycling event %s.\n", active_event->getMsgTypeString());
-            staticRaiseEvent(active_event);
+            if (0 == validate_insertion(active_event)) {
+              event_queue.insert(active_event, active_event->priority);
+            }
             break;
           case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
             if (verbosity > 5) local_log.concatf("Dropping event %s after running.\n", active_event->getMsgTypeString());
@@ -564,16 +568,12 @@ void EventManager::profiler(bool enabled) {
   profiler_enabled   = enabled;
   max_idle_loop_time = 0;
   max_events_p_loop  = 0;
-  total_loops        = 0;
-  total_events       = 0;
-  total_events_dead  = 0;
 
   events_destroyed   = 0;  
   prealloc_starved   = 0;  
   burden_of_specific = 0;
   idempotent_blocks  = 0; 
   insertion_denials  = 0;   
-  max_queue_depth    = 0;   
 
   while (event_costs.hasNext()) delete event_costs.dequeue();
 }
@@ -603,7 +603,7 @@ void EventManager::printProfiler(StringBuilder* output) {
     int stat_mode = event_costs.getPriority(0);
     int x = event_costs.size();
 
-    output->concat("\n\t Execd \t\t Event \t  total us   average     worst    best      last\n");
+    output->concat("\n\t\t Execd \t\t Event \t\t total us   average     worst    best      last\n");
     for (int i = 0; i < x; i++) {
       profiler_item = event_costs.get(i);
       stat_mode     = event_costs.getPriority(i);
