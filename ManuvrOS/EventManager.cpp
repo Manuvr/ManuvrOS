@@ -35,12 +35,12 @@ EventManager* EventManager::INSTANCE = NULL;
 */
 EventManager::EventManager() {
   __class_initializer();
-  INSTANCE           = this;
-  current_event      = NULL;
-  requested_preforms = 0;
-  micros_occupied    = 1;
+  INSTANCE       = this;
+  current_event = NULL;
   setVerbosity((int8_t) 0);  // TODO: Why does this crash ViamSonus?
+  boot_completed = false;
   profiler(true);
+  micros_occupied = 0;
   
   for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
     /* We carved out a space in our allocation for a pool of events. Ideally, this would be enough
@@ -238,30 +238,6 @@ ManuvrEvent* EventManager::returnEvent(uint16_t code) {
 }
 
 
-/**
-* Factory method. Returns a preallocated Event configured as a preformed element.
-* After we return the event, we lose track of it. So if the caller doesn't ever
-*   call raiseEvent(), the Event we return will become a memory leak.
-* The event we retun will have a callback field populated with a ref to EventManager.
-*   So if a caller needs their own reference in that slot, caller will need to do it.
-*
-* @param  code  The desired identity code of the event.
-* @return A pointer to the prepared event. Will not return NULL unless we are out of memory.
-*/
-ManuvrEvent* EventManager::returnPreformEvent(uint16_t code) {
-  // Note that we will draw from the same preallocation pool as the events with
-  //   transient purposes....
-  // We are going to leave the preallocated field set to 'true' so that we can do 
-  //   intelligent GC later on. Just need to make sure that the reclaim() fxn values
-  //   the state of the 'mem_managed' flag more highly than it does 'preallocated'.
-  //        ---J. Ian Lindsay   Sun Apr 26 16:32:00 MST 2015
-  ManuvrEvent* return_value = EventManager::returnEvent(code);
-  return_value->isManaged(true);
-  INSTANCE->requested_preforms++;
-  return return_value;
-}
-
-
 
 
 /**
@@ -323,24 +299,19 @@ void EventManager::reclaim_event(ManuvrEvent* active_event) {
 
   if (reap_current_event) {                   // If we are to reap this event...
     if (verbosity > 5) local_log.concat("EventManager::reclaim_event(): About to reap,\n");
-    active_event->clearArgs();
     delete active_event;                      // ...free() it...
     events_destroyed++;
     //discarded.insert(active_event);
     burden_of_specific++;                     // ...and note the incident.
   }
-  else {                                        // If we are NOT to reap this event...
-    if (active_event->isManaged()) {            // ...is it because it is managed elsewhere?
-      // We let it drop and trust some other class is managing it.
-      if (verbosity > 5) local_log.concat("EventManager::reclaim_event(): Doing nothing. Hope its managed elsewhere.\n");
-    }
-    else if (active_event->returnToPrealloc()) {   // ...is it because we preallocated it?
+  else {                                      // If we are NOT to reap this event...
+    if (active_event->returnToPrealloc()) {   // ...is it because we preallocated it?
       if (verbosity > 5) local_log.concat("EventManager::reclaim_event(): Returning the event to prealloc,\n");
       active_event->clearArgs();              // If so, wipe the Event...
       preallocated.insert(active_event);      // ...and return it to the preallocate queue.
-    }
-    else {                                    // Otherwise, we assume it is locked by another class.
-      if (verbosity > 5) local_log.concat("EventManager::reclaim_event(): Doing nothing. Maybe the event is locked by the scheduler.\n");
+    }                                         // Otherwise, we let it drop and trust some other class is managing it.
+    else {
+      if (verbosity > 5) local_log.concat("EventManager::reclaim_event(): Doing nothing. Hope its managed elsewhere.\n");
     }
   }
   
@@ -370,7 +341,7 @@ int8_t EventManager::procIdleFlags() {
 
   ManuvrEvent *active_event = NULL;  // Our short-term focus.
   uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
-  
+
   /* As long as we have an open event and we aren't yet at our proc ceiling... */
   while (event_queue.hasNext() && ((int8_t) EVENT_MANAGER_MAX_EVENTS_PER_LOOP > return_value)) {
     active_event = event_queue.dequeue();       // Grab the Event and remove it in the same call.
@@ -486,18 +457,26 @@ int8_t EventManager::procIdleFlags() {
         switch (active_event->callback->callback_proc(active_event)) {
           case EVENT_CALLBACK_RETURN_ERROR:       // Something went wrong. Should never occur.
           case EVENT_CALLBACK_RETURN_UNDEFINED:   // The originating class doesn't care what we do with the event.
-            if (verbosity > 2) local_log.concat("EventManager found a possible mistake. Unexpected return case from callback_proc.\n");
-          case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
-            if (verbosity > 5) local_log.concatf("Dropping event %s after running.\n", active_event->getMsgTypeString());
+            if (verbosity > 5) local_log.concatf("EventManager found a possible mistake. Unexpected return case from callback_proc.\n");
           case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
             reclaim_event(active_event);
             break;
           case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
             if (verbosity > 5) local_log.concatf("EventManager is recycling event %s.\n", active_event->getMsgTypeString());
-            staticRaiseEvent(active_event);
+            event_queue.insert(active_event, active_event->priority);
+            break;
+          case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
+            if (active_event->returnToPrealloc()) {
+              if (verbosity > 5) local_log.concat("EventManager::reclaim_event(): Returning the event to prealloc,\n");
+              active_event->clearArgs();              // If so, wipe the Event...
+              preallocated.insert(active_event);      // ...and return it to the preallocate queue.
+            }                                         // Otherwise, we let it drop and trust some other class is managing it.
+            else {
+              if (verbosity > 5) local_log.concatf("Dropping event %s after running.\n", active_event->getMsgTypeString());
+            }
             break;
           default:
-            if (verbosity > 0) local_log.concatf("Event %s has no cleanup case.\n", active_event->getMsgTypeString());
+            if (verbosity > 5) local_log.concatf("Event %s has no cleanup case.\n", active_event->getMsgTypeString());
             break;
         }
       }
@@ -627,7 +606,7 @@ void EventManager::printProfiler(StringBuilder* output) {
     int stat_mode = event_costs.getPriority(0);
     int x = event_costs.size();
 
-    output->concat("\n\t Execd       \t Event \t\t total us   average     worst    best      last\n");
+    output->concat("\n\t Execd       \t Event       total us   average     worst    best      last\n");
     for (int i = 0; i < x; i++) {
       profiler_item = event_costs.get(i);
       stat_mode     = event_costs.getPriority(i);
@@ -643,11 +622,7 @@ void EventManager::printProfiler(StringBuilder* output) {
 
 
 float EventManager::cpu_usage() {
-  uint32_t _mils = millis();
-  if (_mils) {
-    return (micros_occupied / (float)(_mils*10));
-  }
-  return 1.0f;
+  return (micros_occupied / (float)(millis()*10));
 }
 
 
@@ -709,7 +684,6 @@ void EventManager::printDebug(StringBuilder* output) {
   output->concatf("-- location of message_defs   0x%08x\n", (uint32_t) &ManuvrMsg::message_defs);
   output->concatf("-- Queue depth:               %d\n", event_queue.size());
   output->concatf("-- Preallocation depth:       %d\n", preallocated.size());
-  output->concatf("-- Preform requests:          %d\n", requested_preforms);
   output->concatf("-- Total subscriber count:    %d\n", subscribers.size());
   output->concatf("-- Prealloc starves:          %u\n",   (unsigned long) prealloc_starved);
   output->concatf("-- events_destroyed:          %u\n",   (unsigned long) events_destroyed);

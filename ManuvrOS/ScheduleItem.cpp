@@ -82,7 +82,7 @@ ScheduleItem::ScheduleItem(uint32_t nu_pid, int16_t recurrence, uint32_t sch_per
   schedule_callback   = NULL;
   event               = ev;             // ...and mandates an event.
   
-  event->isScheduled(true);             // Needed so we don't reap the event.
+  event->isScheduled(true);           // Needed so we don't reap the event.
 }
 
 

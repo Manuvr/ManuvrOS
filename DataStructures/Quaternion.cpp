@@ -33,7 +33,7 @@ void Quaternion::toString(StringBuilder *output) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdouble-promotion"
 void Quaternion::printDebug(StringBuilder *output) {
-  output->concatf("(%.5f, %.5f, %.5f, %.5f) (x,y,z,w)", x, y, z, w);
+  output->concatf("(%2.5f, %2.5f, %2.5f, %2.5f) (x,y,z,w)", x, y, z, w);
 }
 #pragma GCC diagnostic pop
 

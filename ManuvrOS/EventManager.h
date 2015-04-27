@@ -13,8 +13,8 @@
   #endif
 
   
-  #define EVENT_MANAGER_PREALLOC_COUNT        20   // How large a preallocation buffer should we keep?
-  #define EVENT_MANAGER_MAX_EVENTS_PER_LOOP    3   // How many Events we proc before we allow the loop to end.
+  #define EVENT_MANAGER_PREALLOC_COUNT      0x0A   // How large a preallocation buffer should we keep?
+  #define EVENT_MANAGER_MAX_EVENTS_PER_LOOP 0x03   // How many Events we proc before we allow the loop to end.
   
   
   #define EVENT_CALLBACK_RETURN_ERROR       -1 // Horrible things happened in the originating class. This should never happen.
@@ -74,6 +74,9 @@
       EventReceiver*   callback;         // This is an optional ref to the class that raised this event.
       EventReceiver*   specific_target;  // If the event is meant for a single class, put a pointer to it here.
   
+      bool             mem_managed;      // Set to true to cause the EventManager to not free().
+      bool             scheduled;        // Set to true to cause the EventManager to not free().
+  
       int8_t           priority;
   
       ManuvrEvent(uint16_t msg_code, EventReceiver* cb);
@@ -83,47 +86,26 @@
       
       int8_t repurpose(uint16_t code);
   
-      bool isManaged(bool);
-      bool isScheduled(bool);
+      bool eventManagerShouldReap();
+  
+      bool returnToPrealloc();
       bool returnToPrealloc(bool);
-
-
-      /**
-      * If the memory isn't managed explicitly by some other class, this will tell the EventManager to delete
-      *   the completed event.
-      * Preallocation implies no reap.
-      *
-      * @return true if the EventManager ought to free() this Event. False otherwise.
-      */
-      inline bool eventManagerShouldReap() { 
-        return !(mem_managed | preallocated | scheduled); 
-      }
-      
-      /* If some other class is managing this memory, this should return 'true'. */
+      bool isScheduled(bool);
+      bool isManaged(bool);
+  
+      void printDebug();
+      void printDebug(StringBuilder *);
+  
+        /* If some other class is managing this memory, this should return 'true'. */
       inline bool isManaged() {         return mem_managed;   }
       
       /* If the scheduler has a lock on this event, this should return 'true'. */
       inline bool isScheduled() {       return scheduled;     }
 
-      /**
-      * Was this event preallocated?
-      * Preallocation implies no reap.
-      *
-      * @return true if the EventManager ought to return this event to its preallocation queue.
-      */
-      inline bool returnToPrealloc() {  return preallocated;  }
-      
-      
 
-      void printDebug();
-      void printDebug(StringBuilder *);
-  
-  
     protected:
       uint8_t          flags;         // Optional flags that might be important for an event.
       bool             preallocated;  // Set to true to cause the EventManager to return this event to its prealloc.
-      bool             mem_managed;      // Set to true to cause the EventManager to not free().
-      bool             scheduled;        // Set to true to cause the EventManager to not free().
 
       void __class_initializer();
 
@@ -218,16 +200,13 @@
       /* Overrides from EventReceiver
          EventManager is special, and it will naturally have both methods from EventReceiver.
          Just gracefully fall into those when needed. */
-  
+
   
       static int8_t raiseEvent(uint16_t event_code, EventReceiver* data);
       static int8_t staticRaiseEvent(ManuvrEvent* event);
       
-      /* Factory method. Returns a preallocated Event for a one-off use. */
+      /* Factory method. Returns a preallocated Event. */
       static ManuvrEvent* returnEvent(uint16_t event_code);
-      
-      /* Factory method. Returns a preallocated Event for a class to build a preform. */
-      static ManuvrEvent* returnPreformEvent(uint16_t event_code);
 
 
     protected:
@@ -254,8 +233,7 @@
       uint32_t idempotent_blocks;     // How many times has the idempotent flag prevented a raiseEvent()?
       uint32_t insertion_denials;     // How many times have we rejected events?
       uint32_t max_queue_depth;       // What is the deepest point the queue has reached?
-      uint32_t requested_preforms;    // How many preformed events have other classes asked for?
-
+      
       PriorityQueue<TaskProfilerData*> event_costs;     // Message code is the priority. Calculates average cost in uS.
 
       uint8_t  max_events_p_loop;     // What is the most events we've handled in a single loop?

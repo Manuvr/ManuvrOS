@@ -74,6 +74,18 @@ int8_t ManuvrEvent::repurpose(uint16_t code) {
 }
 
 
+
+/**
+* Was this event preallocated?
+* Preallocation implies no reap.
+*
+* @return true if the EventManager ought to return this event to its preallocation queue.
+*/
+bool ManuvrEvent::returnToPrealloc() {
+  return preallocated;
+}
+
+
 /**
 * Was this event preallocated?
 * Preallocation implies no reap.
@@ -83,40 +95,35 @@ int8_t ManuvrEvent::repurpose(uint16_t code) {
 */
 bool ManuvrEvent::returnToPrealloc(bool nu_val) {
   preallocated = nu_val;
-  //if (preallocated) mem_managed = true;
+  if (preallocated) mem_managed = true;
   return preallocated;
 }
 
 
 /**
-* Was this event preallocated?
-* Off-class management implies no reap, and no preallocation return.
+* If the memory isn't managed explicitly by some other class, this will tell the EventManager to delete
+*   the completed event.
+* Preallocation implies no reap.
 *
-* @param  nu_val Pass true to cause this event to be marked as part of a preallocation pool.
-* @return true if the EventManager ought to return this event to its preallocation queue.
+* @return true if the EventManager ought to free() this Event. False otherwise.
 */
-bool ManuvrEvent::isManaged(bool nu) {
-  mem_managed = nu;
-  return mem_managed;   
+bool ManuvrEvent::eventManagerShouldReap() {
+  if (mem_managed | preallocated | scheduled) {
+    return false;
+  }
+  return true;
 }
 
 
-
-/**
-* Is this event locked by virtual of being scheduled?
-* Scheduler lock implies no reap.
-*
-* @param  nu_val Pass true to cause this event to be marked as part of a preallocation pool.
-* @return true if the EventManager ought to return this event to its preallocation queue.
-*/
 bool ManuvrEvent::isScheduled(bool nu) {
   scheduled = nu;
   return scheduled;   
 }
 
-
-
-
+bool ManuvrEvent::isManaged(bool nu) {
+  mem_managed = nu;
+  return mem_managed;   
+}
 
 
 
