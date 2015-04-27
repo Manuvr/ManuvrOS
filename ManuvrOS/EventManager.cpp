@@ -305,7 +305,9 @@ void EventManager::reclaim_event(ManuvrEvent* active_event) {
     burden_of_specific++;                     // ...and note the incident.
   }
   else {                                      // If we are NOT to reap this event...
-    if (active_event->returnToPrealloc()) {   // ...is it because we preallocated it?
+    if (active_event->isManaged()) {
+    }
+    else if (active_event->returnToPrealloc()) {   // ...is it because we preallocated it?
       if (verbosity > 5) local_log.concat("EventManager::reclaim_event(): Returning the event to prealloc,\n");
       active_event->clearArgs();              // If so, wipe the Event...
       preallocated.insert(active_event);      // ...and return it to the preallocate queue.
@@ -457,26 +459,21 @@ int8_t EventManager::procIdleFlags() {
         switch (active_event->callback->callback_proc(active_event)) {
           case EVENT_CALLBACK_RETURN_ERROR:       // Something went wrong. Should never occur.
           case EVENT_CALLBACK_RETURN_UNDEFINED:   // The originating class doesn't care what we do with the event.
-            if (verbosity > 5) local_log.concatf("EventManager found a possible mistake. Unexpected return case from callback_proc.\n");
+            if (verbosity > 1) local_log.concatf("EventManager found a possible mistake. Unexpected return case from callback_proc.\n");
           case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
             reclaim_event(active_event);
             break;
           case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
             if (verbosity > 5) local_log.concatf("EventManager is recycling event %s.\n", active_event->getMsgTypeString());
-            event_queue.insert(active_event, active_event->priority);
+            staticRaiseEvent(active_event);
             break;
           case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
-            if (active_event->returnToPrealloc()) {
-              if (verbosity > 5) local_log.concat("EventManager::reclaim_event(): Returning the event to prealloc,\n");
-              active_event->clearArgs();              // If so, wipe the Event...
-              preallocated.insert(active_event);      // ...and return it to the preallocate queue.
-            }                                         // Otherwise, we let it drop and trust some other class is managing it.
-            else {
-              if (verbosity > 5) local_log.concatf("Dropping event %s after running.\n", active_event->getMsgTypeString());
-            }
+            if (verbosity > 5) local_log.concatf("Dropping event %s after running.\n", active_event->getMsgTypeString());
+            reclaim_event(active_event);
             break;
           default:
-            if (verbosity > 5) local_log.concatf("Event %s has no cleanup case.\n", active_event->getMsgTypeString());
+            if (verbosity > 0) local_log.concatf("Event %s has no cleanup case.\n", active_event->getMsgTypeString());
+            reclaim_event(active_event);
             break;
         }
       }
@@ -606,7 +603,7 @@ void EventManager::printProfiler(StringBuilder* output) {
     int stat_mode = event_costs.getPriority(0);
     int x = event_costs.size();
 
-    output->concat("\n\t Execd       \t Event       total us   average     worst    best      last\n");
+    output->concat("\n\t Execd \t\t Event \t  total us   average     worst    best      last\n");
     for (int i = 0; i < x; i++) {
       profiler_item = event_costs.get(i);
       stat_mode     = event_costs.getPriority(i);

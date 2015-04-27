@@ -69,7 +69,7 @@ int8_t ManuvrEvent::repurpose(uint16_t code) {
   flags           = 0x00;
   callback        = NULL;
   specific_target = NULL;
-  priority        = EVENT_PRIORITY_LOWEST;
+  priority        = EVENT_PRIORITY_DEFAULT;
   return ManuvrMsg::repurpose(code);
 }
 
@@ -95,7 +95,7 @@ bool ManuvrEvent::returnToPrealloc() {
 */
 bool ManuvrEvent::returnToPrealloc(bool nu_val) {
   preallocated = nu_val;
-  if (preallocated) mem_managed = true;
+  //if (preallocated) mem_managed = true;
   return preallocated;
 }
 
@@ -108,7 +108,7 @@ bool ManuvrEvent::returnToPrealloc(bool nu_val) {
 * @return true if the EventManager ought to free() this Event. False otherwise.
 */
 bool ManuvrEvent::eventManagerShouldReap() {
-  if (mem_managed | preallocated | scheduled) {
+  if (mem_managed || preallocated || scheduled) {
     return false;
   }
   return true;

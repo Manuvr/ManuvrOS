@@ -74,9 +74,6 @@
       EventReceiver*   callback;         // This is an optional ref to the class that raised this event.
       EventReceiver*   specific_target;  // If the event is meant for a single class, put a pointer to it here.
   
-      bool             mem_managed;      // Set to true to cause the EventManager to not free().
-      bool             scheduled;        // Set to true to cause the EventManager to not free().
-  
       int8_t           priority;
   
       ManuvrEvent(uint16_t msg_code, EventReceiver* cb);
@@ -104,6 +101,9 @@
 
 
     protected:
+      bool             mem_managed;      // Set to true to cause the EventManager to not free().
+      bool             scheduled;        // Set to true to cause the EventManager to not free().
+  
       uint8_t          flags;         // Optional flags that might be important for an event.
       bool             preallocated;  // Set to true to cause the EventManager to return this event to its prealloc.
 
