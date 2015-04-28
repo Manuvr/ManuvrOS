@@ -63,6 +63,7 @@ template <class T> class PriorityQueue {
 
     int insert(T, int priority);  // Returns the ID of the data, or -1 on failure. Makes only a reference to the payload.
     int insert(T);                // Same as above, but assumes lowest priority.
+    int insertIfAbsent(T);        // Same as above, but only if the queue doesn't already have the argument.
     
     int size(void);               // Returns the number of elements in this list.
 
@@ -71,7 +72,6 @@ template <class T> class PriorityQueue {
     bool remove(int position);    // Removes the element at the given position of the list. Return true on success.
     bool remove(T);               // Removes any elements with this data.
     int clear(void);              // Purges the whole queue. Returns the number of things purged or -1 on failure.
-
 
     T get(void);                  // Returns the data from the first element.
     T get(int position);          // Returns the data from the element at the given position.
@@ -135,6 +135,17 @@ template <class T> PriorityQueue<T>::~PriorityQueue() {
 */
 template <class T> int PriorityQueue<T>::insert(T d) {
   return insert(d, 0);
+}
+
+
+/**
+* Inserts the given dataum into the queue.
+*
+* @param  d   The data to copy and insert.
+* @return the position in the list that the data was inserted, or -1 on failure.
+*/
+template <class T> int PriorityQueue<T>::insertIfAbsent(T d) {
+  return (contains(d)) ? false : insert(d, 0);
 }
 
 

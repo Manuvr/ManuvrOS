@@ -109,6 +109,7 @@ Argument::Argument(float* val) {
 	len = sizeof(val);
 	type_code = FLOAT_PTR_FM;
 	target_mem = (void*) val;
+	reap       = false;
 }
 
 Argument::Argument(Vector4f* val) {
