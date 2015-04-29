@@ -54,6 +54,7 @@ Scheduler::Scheduler() {
   scheduler_ready      = false;  // TODO: Convert to a uint8 and track states.
   skipped_loops        = 0;
   bistable_skip_detect = false;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
+  clicks_in_isr = 0;
 }
 
 
@@ -389,22 +390,24 @@ bool Scheduler::delaySchedule(uint32_t g_pid) {
 *   are in an ISR.
 */
 void Scheduler::advanceScheduler() {
-  int x = schedules.size();
-  ScheduleItem *current;
+  clicks_in_isr++;
   
-  for (int i = 0; i < x; i++) {
-    current = schedules.recycle();
-    if (current->thread_enabled) {
-      if (current->thread_time_to_wait > 0) {
-        current->thread_time_to_wait--;
-      }
-      else {
-        current->thread_fire = true;
-        current->thread_time_to_wait = current->thread_period;
-        execution_queue.insert(current);
-      }
-    }
-  }
+  //int x = schedules.size();
+  //ScheduleItem *current;
+  //
+  //for (int i = 0; i < x; i++) {
+  //  current = schedules.recycle();
+  //  if (current->thread_enabled) {
+  //    if (current->thread_time_to_wait > 0) {
+  //      current->thread_time_to_wait--;
+  //    }
+  //    else {
+  //      current->thread_fire = true;
+  //      current->thread_time_to_wait = current->thread_period;
+  //      execution_queue.insert(current);
+  //    }
+  //  }
+  //}
   if (bistable_skip_detect) {
     StringBuilder output;
     // Failsafe block
@@ -496,11 +499,44 @@ bool Scheduler::removeSchedule(uint32_t g_pid) {
 int Scheduler::serviceScheduledEvents() {
   if (!scheduler_ready) return -1;
   int return_value = 0;
+  uint32_t origin_time = micros();
+
+
+  uint32_t temp_clicks = clicks_in_isr;
+  clicks_in_isr = 0;
+  if (0 == temp_clicks) {
+    return return_value;
+  }
+  
+  int x = schedules.size();
+  ScheduleItem *current;
+  
+  for (int i = 0; i < x; i++) {
+    current = schedules.recycle();
+    if (current->thread_enabled) {
+      if (current->thread_time_to_wait > temp_clicks) {
+        current->thread_time_to_wait -= temp_clicks;
+      }
+      else {
+        current->thread_fire = true;
+        uint32_t adjusted_ttw = (temp_clicks - current->thread_time_to_wait);
+        if (adjusted_ttw <= current->thread_period) {
+          current->thread_time_to_wait = current->thread_period - adjusted_ttw;
+        }
+        else {
+          // TODO: Possible error-case? Too many clicks passed. We have schedule jitter...
+          // For now, we'll just throw away the difference.
+          current->thread_time_to_wait = current->thread_period;
+        }
+        execution_queue.insert(current);
+      }
+    }
+  }
   
   uint32_t profile_start_time = 0;
   uint32_t profile_stop_time  = 0;
-  uint32_t origin_time        = micros();
-  ScheduleItem *current = execution_queue.dequeue();
+
+  current = execution_queue.dequeue();
   while (NULL != current) {
     if (current->thread_fire) {
       currently_executing = current->pid;

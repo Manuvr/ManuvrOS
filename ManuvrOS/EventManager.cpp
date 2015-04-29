@@ -6,6 +6,8 @@
 #endif
 
 
+volatile uint32_t hidden_irq_gremlin = 0;
+
 
 /****************************************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -40,12 +42,14 @@ EventManager::EventManager() {
   setVerbosity((int8_t) 0);  // TODO: Why does this crash ViamSonus?
   profiler(true);
 
-  max_queue_depth    = 0;   
-  total_loops        = 0;
-  total_events       = 0;
-  total_events_dead  = 0;
-  micros_occupied    = 0;
-  
+  max_queue_depth     = 0;   
+  total_loops         = 0;
+  total_events        = 0;
+  total_events_dead   = 0;
+  micros_occupied     = 0;
+  max_events_per_loop = 3;
+  profiler_runtime    = 100;
+
   for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
     /* We carved out a space in our allocation for a pool of events. Ideally, this would be enough
         for most of the load, most of the time. If the preallocation ends up being insufficient to
@@ -347,7 +351,7 @@ int8_t EventManager::procIdleFlags() {
   uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
 
   /* As long as we have an open event and we aren't yet at our proc ceiling... */
-  while (event_queue.hasNext() && ((int8_t) EVENT_MANAGER_MAX_EVENTS_PER_LOOP > return_value)) {
+  while (event_queue.hasNext() && ((int8_t) max_events_per_loop > return_value)) {
     active_event = event_queue.dequeue();       // Grab the Event and remove it in the same call.
     msg_code_local = active_event->event_code;  // This gets used after the life of the event.
     
@@ -496,6 +500,7 @@ int8_t EventManager::procIdleFlags() {
     
     // This is a stat-gathering block.
     if (profiler_enabled) {
+      
       profiler_mark_3 = micros();
 
       MessageTypeDef* tmp_msg_def = (MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(msg_code_local);
@@ -507,7 +512,7 @@ int8_t EventManager::procIdleFlags() {
         if (event_costs.get(i)->msg_code == msg_code_local) {
           profiler_item = event_costs.get(i);
         }
-        i++;
+        i++;                       
       }
       if (NULL == profiler_item) {
         // If we don't yet have a profiler item for this message type...
@@ -532,6 +537,20 @@ int8_t EventManager::procIdleFlags() {
         if (verbosity >= 6) local_log.concatf("\tTook %ld uS to notify.\n", profiler_item->run_time_last);
       }
       profiler_mark_2 = 0;  // Reset for next iteration.
+      profiler_runtime = micros() - profiler_mark_3;
+    }
+    else {
+      uint32_t delay_micros = micros();
+      
+      hidden_irq_gremlin = 0;
+      while ((micros() - delay_micros) < profiler_runtime) {}
+      if (hidden_irq_gremlin) {
+        if (verbosity >= 4) local_log.concatf("I 0x%08x %u\n", hidden_irq_gremlin, (unsigned long) (micros() - delay_micros));
+      }
+      
+      if (event_queue.size() > 30) {
+        local_log.concatf("Depth %10d \t %s\n", event_queue.size(), ManuvrMsg::getMsgTypeString(msg_code_local));
+      }
     }
 
     return_value++;   // We just serviced an Event.
@@ -542,7 +561,7 @@ int8_t EventManager::procIdleFlags() {
   uint32_t runtime_this_loop = max((uint32_t) profiler_mark_3, (uint32_t) profiler_mark) - min((uint32_t) profiler_mark_3, (uint32_t) profiler_mark);
   if (return_value > 0) {
     micros_occupied += runtime_this_loop;
-    max_events_p_loop = max((uint32_t) max_events_p_loop, (uint32_t) return_value);
+    max_events_p_loop = max((uint32_t) max_events_p_loop, 0x0000007F & (uint32_t) return_value);
   }
   else if (0 == return_value) {
     max_idle_loop_time = max((uint32_t) max_idle_loop_time, (max((uint32_t) profiler_mark, (uint32_t) profiler_mark_3) - min((uint32_t) profiler_mark, (uint32_t) profiler_mark_3)));
@@ -569,8 +588,9 @@ void EventManager::profiler(bool enabled) {
   max_idle_loop_time = 0;
   max_events_p_loop  = 0;
 
+  max_idle_loop_time = 0;
   events_destroyed   = 0;  
-  prealloc_starved   = 0;  
+  prealloc_starved   = 0;
   burden_of_specific = 0;
   idempotent_blocks  = 0; 
   insertion_denials  = 0;   
@@ -686,6 +706,8 @@ void EventManager::printDebug(StringBuilder* output) {
   output->concatf("-- events_destroyed:          %u\n",   (unsigned long) events_destroyed);
   output->concatf("-- burden_of_being_specific   %u\n",   (unsigned long) burden_of_specific);
   output->concatf("-- idempotent_blocks          %u\n\n", (unsigned long) idempotent_blocks);
+  
+  output->concatf("-- profiler_runtime           %u\n\n", (unsigned long) profiler_runtime);
   
   if (subscribers.size() > 0) {
     output->concatf("-- Subscribers: (%d total):\n", subscribers.size());

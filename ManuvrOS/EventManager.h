@@ -13,9 +13,8 @@
   #endif
 
   
-  #define EVENT_MANAGER_PREALLOC_COUNT      0x0A   // How large a preallocation buffer should we keep?
-  #define EVENT_MANAGER_MAX_EVENTS_PER_LOOP 0x03   // How many Events we proc before we allow the loop to end.
-  
+  #define EVENT_MANAGER_PREALLOC_COUNT      8   // How large a preallocation buffer should we keep?
+
   
   #define EVENT_CALLBACK_RETURN_ERROR       -1 // Horrible things happened in the originating class. This should never happen.
   #define EVENT_CALLBACK_RETURN_UNDEFINED   0  // Illegal return code. EventManager will reap events whose callbacks return this.
@@ -101,10 +100,9 @@
 
 
     protected:
+      uint8_t          flags;         // Optional flags that might be important for an event.
       bool             mem_managed;      // Set to true to cause the EventManager to not free().
       bool             scheduled;        // Set to true to cause the EventManager to not free().
-  
-      uint8_t          flags;         // Optional flags that might be important for an event.
       bool             preallocated;  // Set to true to cause the EventManager to return this event to its prealloc.
 
       void __class_initializer();
@@ -196,6 +194,14 @@
       float cpu_usage();
       
       bool containsPreformedEvent(ManuvrEvent*);
+      
+      
+      inline void maxEventsPerLoop(int8_t nu) { max_events_per_loop = nu;   }
+      inline int8_t maxEventsPerLoop() {        return max_events_per_loop; }
+      
+      inline uint32_t paddingDelay(uint32_t nu) { profiler_runtime = nu; return profiler_runtime;  }
+      inline uint32_t paddingDelay() {            return profiler_runtime; }
+      
 
       /* Overrides from EventReceiver
          EventManager is special, and it will naturally have both methods from EventReceiver.
@@ -227,6 +233,8 @@
       uint32_t total_events;          // How many events have we proc'd?
       uint32_t total_events_dead;     // How many events have we proc'd that went unacknowledged?
       
+      uint32_t profiler_runtime;
+      
       uint32_t events_destroyed;      // How many events have we destroyed?
       uint32_t prealloc_starved;      // How many times did we starve the prealloc queue?
       uint32_t burden_of_specific;    // How many events have we reaped?
@@ -237,6 +245,7 @@
       PriorityQueue<TaskProfilerData*> event_costs;     // Message code is the priority. Calculates average cost in uS.
 
       uint8_t  max_events_p_loop;     // What is the most events we've handled in a single loop?
+      int8_t max_events_per_loop;
       bool profiler_enabled;          // Should we spend time profiling this component?
 
 

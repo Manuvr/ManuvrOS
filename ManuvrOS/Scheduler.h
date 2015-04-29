@@ -58,17 +58,18 @@ typedef void (*FunctionPointer) ();
 class ScheduleItem {
   public:
     uint32_t pid;                      // The process ID of this item. Zero is invalid.
-    bool     thread_enabled;           // Is the schedule running?
-    bool     thread_fire;              // Is the schedule to be executed?
-    bool     autoclear;                // If true, this schedule will be removed after its last execution.
     uint32_t thread_time_to_wait;      // How much longer until the schedule fires?
     uint32_t thread_period;            // How often does this schedule execute?
-    int16_t  thread_recurs;            // See Note 2.
-    ManuvrEvent* event;                // If we have an event to fire, point to it here.
     FunctionPointer schedule_callback; // Pointers to the schedule service function.
+    ManuvrEvent* event;                // If we have an event to fire, point to it here.
 
     TaskProfilerData* prof_data;       // If this schedule is being profiled, the ref will be here.
     EventReceiver*  callback_to_er;    // Optional callback to an EventReceiver.
+    int16_t  thread_recurs;            // See Note 2.
+
+    bool     thread_enabled;           // Is the schedule running?
+    bool     thread_fire;              // Is the schedule to be executed?
+    bool     autoclear;                // If true, this schedule will be removed after its last execution.
 
 
     ScheduleItem(uint32_t nu_pid, int16_t recurrence, uint32_t sch_period, bool ac, FunctionPointer sch_callback);
@@ -176,6 +177,7 @@ class Scheduler : public EventReceiver {
   private:
     PriorityQueue<ScheduleItem*> schedules;
     PriorityQueue<ScheduleItem*> execution_queue;
+    uint32_t clicks_in_isr;
     
     /* These members are concerned with reliability. */
     uint16_t skipped_loops;
