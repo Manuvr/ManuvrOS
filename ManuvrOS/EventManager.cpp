@@ -40,15 +40,15 @@ EventManager::EventManager() {
   INSTANCE           = this;
   current_event      = NULL;
   setVerbosity((int8_t) 0);  // TODO: Why does this crash ViamSonus?
-  profiler(true);
+  profiler(false);
 
   max_queue_depth     = 0;   
   total_loops         = 0;
   total_events        = 0;
   total_events_dead   = 0;
   micros_occupied     = 0;
-  max_events_per_loop = 3;
-  profiler_runtime    = 100;
+  max_events_per_loop = 1;
+  profiler_runtime    = 60;
 
   for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
     /* We carved out a space in our allocation for a pool of events. Ideally, this would be enough
