@@ -179,8 +179,10 @@ int8_t EventManager::raiseEvent(uint16_t code, EventReceiver* cb) {
     INSTANCE->update_maximum_queue_depth();   // Check the queue depth 
   }
   else {
-    if (INSTANCE->verbosity > 3) {
-      StaticHub::log("An incoming event failed validate_insertion(). Trapping it...\n");
+    if (INSTANCE->verbosity > 4) {
+      StringBuilder output("EventManager::raiseEvent():   An incoming event failed validate_insertion(). Trapping it...\n");
+      output.concat(ManuvrMsg::getMsgTypeString(code));
+      StaticHub::log(&output);
       INSTANCE->insertion_denials++;
     }
     INSTANCE->reclaim_event(nu);
@@ -208,8 +210,12 @@ int8_t EventManager::staticRaiseEvent(ManuvrEvent* event) {
     INSTANCE->update_maximum_queue_depth();
   }
   else {
-    if (INSTANCE->verbosity > 3) {
-      StaticHub::log("Static: An incoming event failed validate_insertion(). Trapping it...\n");
+    if (INSTANCE->verbosity > 4) {
+      //local_log.concatf("Static: An incoming event 0x%04x failed validate_insertion(). Trapping it...\n", code);
+      //StaticHub::log(&local_log);
+      StringBuilder output("EventManager::staticRaiseEvent():   An incoming event failed validate_insertion(). Trapping it...\n");
+      event->printDebug(&output);;
+      StaticHub::log(&output);
       INSTANCE->insertion_denials++;
     }
     INSTANCE->reclaim_event(event);

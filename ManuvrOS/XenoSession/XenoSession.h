@@ -62,6 +62,7 @@ const uint8_t XENO_MSG_PROC_STATE_WRITING_REPLY          = 0x25;
 // Comment the define below to enable ALL messages to be exchanged via the XenoSession. The only possible
 // reason for this is debug.
 #define XENO_SESSION_IGNORE_NON_EXPORTABLES 1
+#define PREALLOCATED_XENOMESSAGES           5
 
 #define XENO_SESSION_MAX_QUEUE_PRINT    3    // This is only relevant for debug.
 #define XENOMESSAGE_PREALLOCATE_COUNT   4    // How many XenoMessages should the session preallocate?
@@ -133,12 +134,12 @@ class XenoMessage {
     void provide_event(ManuvrEvent*, uint16_t);  // Call to make this XenoMessage outbound.
     
     bool isReply();      // Returns true if this message is a reply to another message.
-    
+
     void printDebug(StringBuilder*);
 
     static const char* getMessageStateString(uint8_t code);
 
-    
+
   private:
     StringBuilder   argbuf;  // Holds the bytes-in-excess-of packet-minimum until they can be parsed.
     uint32_t  time_created;     // Optional: What time did this message come into existance?
@@ -241,9 +242,13 @@ class XenoSession : public EventReceiver {
     static int contains_sync_pattern(uint8_t* buf, int len);
     static int locate_sync_break(uint8_t* buf, int len);
 
+    XenoMessage* fetchPreallocation();
+    void reclaimPreallocation(XenoMessage*);
+
 
   protected:
     int8_t bootComplete();
+
 
   private:
     /*
@@ -251,6 +256,7 @@ class XenoSession : public EventReceiver {
     *   the need for the transport to care about how much data we consumed versus left in its buffer. 
     */
     StringBuilder session_buffer;
+    ManuvrEvent sync_event;
 
     uint32_t pid_sync_timer;    // Holds the PID for sync generation.
     uint32_t pid_ack_timeout;   // Holds the PID for message ack timeout.
@@ -258,7 +264,9 @@ class XenoSession : public EventReceiver {
     LinkedList<MessageTypeDef*> msg_relay_list;   // Which message codes will we relay to the counterparty?
     LinkedList<XenoMessage*> outbound_messages;   // Messages that are bound for the counterparty.
     LinkedList<XenoMessage*> inbound_messages;    // Messages that came from the counterparty.
-    LinkedList<XenoMessage*> preallocated;        // Messages that we've allocated ahead of time.
+    PriorityQueue<XenoMessage*> preallocated;     // Messages that we've allocated ahead of time.
+    
+    XenoMessage* current_rx_message;
     
     /* These variables track failure cases to inform sync-initiation. */
     uint8_t MAX_PARSE_FAILURES;  // How many failures-to-parse should we tolerate before SYNCing?
@@ -290,6 +298,13 @@ class XenoSession : public EventReceiver {
    
     const char* getSessionStateString();
     const char* getSessionSyncString();
+
+    /* Preallocation machinary. */ 
+    // Prealloc starvation counters...
+    uint32_t _heap_instantiations;
+    uint32_t _heap_freeds;
+    
+    XenoMessage __prealloc_pool[PREALLOCATED_XENOMESSAGES];
 };
 
 
