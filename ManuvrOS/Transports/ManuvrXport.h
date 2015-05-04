@@ -34,6 +34,7 @@ Platforms that require it should be able to extend this driver for specific
 #define __MANUVR_XPORT_H__
 
 #include "../EventManager.h"
+#include "StringBuilder/StringBuilder.h"
 
 
 class ManuvrXport : public EventReceiver {
@@ -48,9 +49,13 @@ class ManuvrXport : public EventReceiver {
     //virtual int8_t notify(ManuvrEvent*)         = 0;
     //virtual int8_t callback_proc(ManuvrEvent *) = 0;
     
+    
+    virtual int8_t sendBuffer(StringBuilder*) = 0;
+    
     static uint16_t TRANSPORT_ID_POOL;
 
   protected:
+    
 
   private:
     
@@ -58,27 +63,6 @@ class ManuvrXport : public EventReceiver {
 };
 
 
-
-//class ManuvrXportManager : public EventReceiver {
-//  public:
-//    ManuvrXportManager();
-//    ~ManuvrXportManager();
-//    
-//    /* Overrides from EventReceiver */
-//    const char* getReceiverName();
-//    void printDebug(StringBuilder *);
-//    int8_t notify(ManuvrEvent*);
-//    int8_t callback_proc(ManuvrEvent *);
-//
-//    
-//  protected:
-//    void __class_initializer();
-//    
-//
-//  private:
-//    
-//    
-//};
 
 #endif   // __MANUVR_XPORT_H__
 

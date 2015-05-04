@@ -30,16 +30,21 @@ XenoSession is the class that manages dialog with other systems via some
   #include "demo/StaticHub.h"
 #endif
 
+
+
+/****************************************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \    
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |   
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/    
+*
+* Static members and initializers should be located here. Initializers first, functions second.
+****************************************************************************************************/
+
 /* This is what a sync packet looks like. Always. So common, we'll hard-code it. */
 const uint8_t XenoSession::SYNC_PACKET_BYTES[4] = {0x04, 0x00, 0x00, CHECKSUM_PRELOAD_BYTE};
-
-
-void oneshot_session_sync_send() {
-}
-
-
-
-
 
 
 
@@ -77,17 +82,24 @@ XenoMessage* XenoSession::fetchPreallocation() {
 * @param Measurement* obj is the pointer to the object to be reclaimed.
 */
 void XenoSession::reclaimPreallocation(XenoMessage* obj) {
-  unsigned int obj_addr = ((uint32_t) obj);
-  unsigned int pre_min  = ((uint32_t) __prealloc_pool);
-  unsigned int pre_max  = pre_min + (sizeof(XenoMessage) * PREALLOCATED_XENOMESSAGES);
+  uint32_t obj_addr = ((uint32_t) obj);
+  uint32_t pre_min  = ((uint32_t) __prealloc_pool);
+  uint32_t pre_max  = pre_min + (sizeof(XenoMessage) * PREALLOCATED_XENOMESSAGES);
   
   if ((obj_addr < pre_max) && (obj_addr >= pre_min)) {
     // If we are in this block, it means obj was preallocated. wipe and reclaim it.
+    if (verbosity > 3) {
+      local_log.concatf("reclaiming message via prealloca return. address was 0x%08x.\n", obj_addr);
+      StaticHub::log(&local_log);
+    }
     obj->wipe();
     preallocated.insert(obj);
   }
   else {
-    StaticHub::log("reclaiming message via delete.\n");
+    if (verbosity > 3) {
+      local_log.concatf("reclaiming message via delete. address was 0x%08x.\n", obj_addr);
+      StaticHub::log(&local_log);
+    }
     // We were created because our prealloc was starved. we are therefore a transient heap object.
     _heap_freeds++;
     delete obj;
@@ -154,7 +166,10 @@ XenoSession::XenoSession(ManuvrXport* _xport) {
 * Unlike many of the other EventReceivers, THIS one needs to be able to be torn down.
 */
 XenoSession::~XenoSession() {
-  StaticHub::getInstance()->fetchEventManager()->unsubscribe((EventReceiver*) this);  // Subscribe to the EventManager.
+  scheduler->disableSchedule(pid_sync_timer);
+  scheduler->removeSchedule(pid_sync_timer);
+
+  StaticHub::getInstance()->fetchEventManager()->unsubscribe((EventReceiver*) this);  // Unsubscribe
   
   purgeInbound();  // Need to do careful checks in here for open comm loops.
   purgeOutbound(); // Need to do careful checks in here for open comm loops.
@@ -263,58 +278,6 @@ int8_t XenoSession::markSessionConnected(bool conn_state) {
 * Returns 0 on nothing done.
 * Returns -1 on failure.
 *
-* @param   unsigned char** The location of the buffer.
-* @param   uint32_t*       The length of the buffer.
-* @return  uint16_t        0 if we have nothing for the transport, 1 if we return a sync packet, 
-*            and the message unique_id if we return non-trivial data.
-*/
-//uint16_t XenoSession::nextMessage(unsigned char **buffer, uint32_t *b_len) {
-//  if (!isEstablished()) {
-//    if (verbosity > 2) StaticHub::log("XenoSession::nextMessage() returning 0 due to no initialization.\n");
-//    return 0;
-//  }
-//  
-//  if (syncd()) {   // Don't pull from the queue if we are not syncd. 
-//    int q_size = outbound_messages.size();
-//    XenoMessage *working;
-//    for (int i = 0; i < q_size; i++) {
-//      working = outbound_messages.get(i);
-//      if (NULL != working) {
-//        if (XENO_MSG_PROC_STATE_AWAITING_SEND == working->proc_state) {
-//          *(buffer) = working->buffer.string();
-//          uint32_t temp_32 = working->buffer.length();
-//          *(b_len)  = temp_32;
-//          if (working->expecting_ack) {
-//            working->proc_state = XENO_MSG_PROC_STATE_AWAITING_REPLY;
-//          }
-//          else {
-//            working->proc_state = XENO_MSG_PROC_STATE_AWAITING_REAP;
-//          }
-//          //local_log.concatf("XenoSession:nextMessage():\t %d / %d (%d)\n", temp_32, *b_len, *(b_len));
-//          //StaticHub::log(&local_log);
-//          return working->unique_id;
-//        }
-//      }
-//    }
-//  }
-//  else {    // If we are not sync'd, send a sync packet.
-//    *buffer = SYNC_PACKET_RAW;
-//    *b_len = 4;
-//    if (verbosity > 2) StaticHub::log("XenoSession::nextMessage() returning sync packet.\n");
-//    return 1;
-//  }
-//  if (verbosity > 2) StaticHub::log("XenoSession::nextMessage() returning 0.\n");
-//  return 0;
-//}
-
-
-/**
-* The transport calls this fxn to get data to send.
-*
-* Returns 1 on message written.
-* Returns 0 on nothing done.
-* Returns -1 on failure.
-*
 * @param   StringBuilder*  The location of the buffer.
 * @return  uint16_t        0 if we have nothing for the transport, 1 if we return a sync packet, 
 *            and the message unique_id if we return non-trivial data.
@@ -386,15 +349,11 @@ uint16_t XenoSession::nextMessage(StringBuilder* buffer) {
 int8_t XenoSession::bootComplete() {
   EventReceiver::bootComplete();
   
-  StringBuilder* sync_packet = new StringBuilder((unsigned char*) SYNC_PACKET_BYTES, 4);
   sync_event.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG);
-  sync_event.markArgForReap(sync_event.addArg(sync_packet), false);  // TODO: We will clean up the buffer.
-  sync_event.markArgForReap(sync_event.addArg(sync_packet), false);  // TODO: We will clean up the buffer.
   sync_event.isManaged(true);
-  sync_event.specific_target = (EventReceiver*) owner;
-  sync_event.callback        = (EventReceiver*) this;
+  sync_event.specific_target = (EventReceiver*) this;
 
-  pid_sync_timer = scheduler->createSchedule(20,  -1, false, (EventReceiver*) this, &sync_event);
+  pid_sync_timer = scheduler->createSchedule(30,  -1, false, (EventReceiver*) this, &sync_event);
   scheduler->disableSchedule(pid_sync_timer);
 
   return 1;
@@ -420,14 +379,6 @@ int8_t XenoSession::callback_proc(ManuvrEvent *event) {
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
   int8_t return_value = event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
   
-  
-  if (event == &sync_event) {
-    if (!syncd()) {
-    }
-    return return_value;
-  }
-  
-  
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
 
@@ -442,58 +393,50 @@ int8_t XenoSession::callback_proc(ManuvrEvent *event) {
 int8_t XenoSession::notify(ManuvrEvent *active_event) {
   int8_t return_value = 0;
   
-  /* We don't want to resonate... Don't react to Events that have us as the callback. */
-  if (active_event->callback != (EventReceiver*) this) {
-    switch (active_event->event_code) {
-      /* General system events */
-      case MANUVR_MSG_INTERRUPTS_MASKED:
-        break;
-      case MANUVR_MSG_BT_CONNECTION_LOST:
-        session_state = XENOSESSION_STATE_DISCONNECTED;
-        //msg_relay_list.clear();
-        purgeInbound();
-        purgeOutbound();
-        if (verbosity > 3) local_log.concat("Session is now in state XENOSESSION_STATE_DISCONNECTED.\n");
-        return_value++;
-        break;
+  switch (active_event->event_code) {
+    /* General system events */
+    case MANUVR_MSG_INTERRUPTS_MASKED:
+      break;
+    case MANUVR_MSG_BT_CONNECTION_LOST:
+      session_state = XENOSESSION_STATE_DISCONNECTED;
+      //msg_relay_list.clear();
+      purgeInbound();
+      purgeOutbound();
+      if (verbosity > 3) local_log.concat("Session is now in state XENOSESSION_STATE_DISCONNECTED.\n");
+      return_value++;
+      break;
 
-  
-      /* Things that only this class is likely to care about. */
-      case MANUVR_MSG_SESS_HANGUP:
-        if (verbosity > 5) local_log.concatf("Purged (%d) XenoMessages from outbound and (%d) from inbound.\n", purgeOutbound(), purgeInbound());
-        return_value++;
-        break;
-      case MANUVR_MSG_SESS_DUMP_DEBUG:
-        printDebug(&local_log);
-        return_value++;
-        break;
-      default:
-        return_value += EventReceiver::notify(active_event);
-        break;
-    }
+
+    /* Things that only this class is likely to care about. */
+    case MANUVR_MSG_SESS_HANGUP:
+      if (verbosity > 5) local_log.concatf("Purged (%d) XenoMessages from outbound and (%d) from inbound.\n", purgeOutbound(), purgeInbound());
+      return_value++;
+      break;
+      
+    case MANUVR_MSG_SESS_ORIGINATE_MSG:
+      sendSyncPacket();
+      return_value++;
+      break;
+      
+    case MANUVR_MSG_SESS_DUMP_DEBUG:
+      printDebug(&local_log);
+      return_value++;
+      break;
+
+    default:
+      return_value += EventReceiver::notify(active_event);
+      break;
   }
 
-  if ((XENO_SESSION_IGNORE_NON_EXPORTABLES) && (active_event->isExportable())) {
-    /* This is the block that allows the counterparty to intercept events of its choosing. */
-    if (msg_relay_list.contains(active_event->getMsgDef())) {
-      // If we are in this block, it means we need to serialize the event and send it.
-      XenoMessage* nu_outbound_msg = fetchPreallocation();
-      uint16_t nu_unique_id = (uint16_t) StaticHub::randomInt();
-      nu_outbound_msg->provide_event(active_event, nu_unique_id);
-
-      nu_outbound_msg->expecting_ack = false;   // Per protocol, we don't expect ACK for tapped messages.
-      nu_outbound_msg->proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
-
-      // Should at this point dump the serialized data into a BT data message or something.
-      //outbound_messages.insert(nu_outbound_msg);
-      // We are about to pass a message across the transport.
-      ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_XPORT_SEND);
-      StringBuilder* buffer_copy = new StringBuilder();
-      buffer_copy->concatHandoff(&(nu_outbound_msg->buffer));
-      event->markArgForReap(event->addArg(buffer_copy), true);  // TODO: We will clean up the buffer.
-      raiseEvent(event);
-      reclaimPreallocation(nu_outbound_msg);
-      return_value++;
+  /* We don't want to resonate... Don't react to Events that have us as the callback. */
+  if (active_event->callback != (EventReceiver*) this) {
+    if ((XENO_SESSION_IGNORE_NON_EXPORTABLES) && (active_event->isExportable())) {
+      /* This is the block that allows the counterparty to intercept events of its choosing. */
+      if (msg_relay_list.contains(active_event->getMsgDef())) {
+        // If we are in this block, it means we need to serialize the event and send it.
+        sendEvent(active_event);
+        return_value++;
+      }
     }
   }
   
@@ -559,28 +502,29 @@ int XenoSession::purgeInbound() {
 ****************************************************************************************************/
 
 int8_t XenoSession::sendSyncPacket() {
-  sync_event.clearArgs();
-  StringBuilder* sync_packet = new StringBuilder((unsigned char*) SYNC_PACKET_BYTES, 4);
-  sync_event.markArgForReap((sync_event.addArg(sync_packet)), false);  // TODO: We will clean up the buffer.
-  raiseEvent(&sync_event);
+  StringBuilder sync_packet((unsigned char*) SYNC_PACKET_BYTES, 4);
+  owner->sendBuffer(&sync_packet);
+  
+  ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_XPORT_SEND);
+  event->specific_target = owner;  //   event to be the transport that instantiated us.
+  raiseEvent(event);
   return 0;
 }
 
 
 int8_t XenoSession::sendEvent(ManuvrEvent *active_event) {
-  XenoMessage* nu_outbound_msg = fetchPreallocation();
-  uint16_t nu_unique_id = (uint16_t) StaticHub::randomInt();
-  nu_outbound_msg->provide_event(active_event, nu_unique_id);
+  XenoMessage nu_outbound_msg(active_event);
+  nu_outbound_msg.expecting_ack = false;   // Per protocol, we don't expect ACK for tapped messages.
+  nu_outbound_msg.proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
 
-  nu_outbound_msg->expecting_ack = false;
-  nu_outbound_msg->proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
-
+  owner->sendBuffer(&(nu_outbound_msg.buffer));
   //outbound_messages.insert(nu_outbound_msg);
-  ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_XPORT_SEND); 
-  event->markArgForReap(event->addArg(&(nu_outbound_msg->buffer)), false);  // TODO: We will clean up the buffer.
-  raiseEvent(event);
-  reclaimPreallocation(nu_outbound_msg);
 
+  // We are about to pass a message across the transport.
+  ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_XPORT_SEND);
+  event->callback        = this;  // We want the callback and the only receiver of this
+  event->specific_target = owner;  //   event to be the transport that instantiated us.
+  raiseEvent(event);
   return 0;
 }
 
@@ -772,7 +716,7 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
 
 
 
-  XenoMessage* working = (NULL != current_rx_message) ? current_rx_message : fetchPreallocation();
+  XenoMessage* working = (NULL != current_rx_message) ? current_rx_message : new XenoMessage();
   current_rx_message = working;  // TODO: ugly hack for now to maintain compatibility elsewhere.
   
   int consumed = working->feedBuffer(&session_buffer);
@@ -930,6 +874,8 @@ void XenoSession::printDebug(StringBuilder *output) {
 
   output->concatf("--- Sequential parse failures:  %d\n", sequential_parse_failures);
   output->concatf("--- sequential_ack_failures:    %d\n--- \n", sequential_ack_failures);
+  output->concatf("--- __prealloc_pool addres:     0x%08x\n", (uint32_t) __prealloc_pool);
+  output->concatf("--- prealloc depth:             %d\n", preallocated.size());
   output->concatf("--- _heap_instantiations:       %u\n", (unsigned long) _heap_instantiations);
   output->concatf("--- _heap_frees:                %u\n", (unsigned long) _heap_freeds);
   

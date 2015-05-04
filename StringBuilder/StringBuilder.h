@@ -161,6 +161,8 @@ class StringBuilder {
 
 #ifdef TEST_BENCH
 		void printDebug();
+#else
+		void printDebug(StringBuilder*);
 #endif
 
 		
