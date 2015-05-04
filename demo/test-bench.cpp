@@ -628,7 +628,7 @@ void printUsage() {
 void run_one_idle_loop(EventManager* em, Scheduler* sch) {
   int x = em->procIdleFlags();
   int y = sch->serviceScheduledEvents();
-  if (x && (x < EVENT_MANAGER_MAX_EVENTS_PER_LOOP-1)) printf("\t procIdleFlags() returns %d\n", x);
+  if (x) printf("\t procIdleFlags() returns %d\n", x);
   if (y) printf("\t serviceScheduledEvents() returns %d\n", y);
 }
 
@@ -776,7 +776,7 @@ void session_battery() {
 void session_battery_1() {
   StringBuilder transport_buffer_in;
   StringBuilder output;
-  XenoSession *sess = new XenoSession();
+  XenoSession *sess = new XenoSession(NULL);
   
   printf("===================================================================================================\n");
   printf("|                                   XenoSession unit tests                                        |\n");

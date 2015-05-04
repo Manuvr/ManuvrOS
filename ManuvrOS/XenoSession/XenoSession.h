@@ -29,6 +29,7 @@ XenoSession is the class that manages dialog with other systems via some
 
 #include "../EventManager.h"
 #include "../EnumeratedTypeCodes.h"
+#include "../Transports/ManuvrXport.h"
 
 #define CHECKSUM_PRELOAD_BYTE 0x55    // Calculation of new checksums should start with this byte,
 
@@ -195,7 +196,7 @@ class XenoSession : public EventReceiver {
     uint8_t session_state;       // What state is this session in?
     uint8_t session_last_state;  // The prior state of the sesssion.
     
-    XenoSession();
+    XenoSession(ManuvrXport*);
     ~XenoSession();
     
     /* Functions indended to be called by the transport. */
@@ -267,6 +268,7 @@ class XenoSession : public EventReceiver {
     PriorityQueue<XenoMessage*> preallocated;     // Messages that we've allocated ahead of time.
     
     XenoMessage* current_rx_message;
+    ManuvrXport* owner;
     
     /* These variables track failure cases to inform sync-initiation. */
     uint8_t MAX_PARSE_FAILURES;  // How many failures-to-parse should we tolerate before SYNCing?

@@ -158,7 +158,7 @@ void ManuvrComPort::__class_initializer() {
 */
 int8_t ManuvrComPort::establishSession() {
   if (NULL == session) {
-    session = new XenoSession();
+    session = new XenoSession(this);
     session->markSessionConnected(true);
     set_xport_state(MANUVR_XPORT_STATE_HAS_SESSION);
     return 1;

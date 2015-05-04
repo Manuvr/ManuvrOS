@@ -111,7 +111,7 @@ void XenoSession::reclaimPreallocation(XenoMessage* obj) {
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
 */
-XenoSession::XenoSession() {
+XenoSession::XenoSession(ManuvrXport* _xport) {
   __class_initializer();
   StaticHub *sh = StaticHub::getInstance();
   sh->fetchEventManager()->subscribe((EventReceiver*) this);  // Subscribe to the EventManager.
@@ -128,6 +128,8 @@ XenoSession::XenoSession() {
   tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
   tapMessageType(MANUVR_MSG_SELF_DESCRIBE);
 
+  owner = _xport;
+  
   authed                    = false;
   session_state             = XENOSESSION_STATE_UNINITIALIZED;
   session_last_state        = XENOSESSION_STATE_UNINITIALIZED;
@@ -138,6 +140,9 @@ XenoSession::XenoSession() {
   pid_sync_timer            = 0;
   pid_ack_timeout           = 0;
   current_rx_message        = NULL;
+  
+  _heap_instantiations = 0;
+  _heap_freeds = 0;
   
   MAX_PARSE_FAILURES  = 3;  // How many failures-to-parse should we tolerate before SYNCing?
   MAX_ACK_FAILURES    = 3;  // How many failures-to-ACK should we tolerate before SYNCing?
@@ -386,7 +391,7 @@ int8_t XenoSession::bootComplete() {
   sync_event.markArgForReap(sync_event.addArg(sync_packet), false);  // TODO: We will clean up the buffer.
   sync_event.markArgForReap(sync_event.addArg(sync_packet), false);  // TODO: We will clean up the buffer.
   sync_event.isManaged(true);
-  sync_event.specific_target = (EventReceiver*) RN42HID::getInstance();
+  sync_event.specific_target = (EventReceiver*) owner;
   sync_event.callback        = (EventReceiver*) this;
 
   pid_sync_timer = scheduler->createSchedule(20,  -1, false, (EventReceiver*) this, &sync_event);
@@ -924,7 +929,9 @@ void XenoSession::printDebug(StringBuilder *output) {
   output->concatf("--- Sync state:      %s\n", getSessionSyncString());
 
   output->concatf("--- Sequential parse failures:  %d\n", sequential_parse_failures);
-  output->concatf("--- sequential_ack_failures:    %d\n", sequential_ack_failures);
+  output->concatf("--- sequential_ack_failures:    %d\n--- \n", sequential_ack_failures);
+  output->concatf("--- _heap_instantiations:       %u\n", (unsigned long) _heap_instantiations);
+  output->concatf("--- _heap_frees:                %u\n", (unsigned long) _heap_freeds);
   
   int ses_buf_len = session_buffer.length();
   if (ses_buf_len > 0) {
