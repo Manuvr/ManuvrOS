@@ -672,6 +672,15 @@ void Scheduler::printDebug(StringBuilder *output) {
 
 
 
+void Scheduler::printSchedule(uint32_t g_pid, StringBuilder* output) {
+  if (NULL == output) return;
+
+  ScheduleItem *nu_sched;
+  nu_sched  = findNodeByPID(g_pid);
+  if (NULL != nu_sched) nu_sched->printDebug(output);
+}
+
+
 
 /****************************************************************************************************
  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 

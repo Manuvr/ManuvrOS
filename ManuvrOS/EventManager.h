@@ -73,7 +73,7 @@
       EventReceiver*   callback;         // This is an optional ref to the class that raised this event.
       EventReceiver*   specific_target;  // If the event is meant for a single class, put a pointer to it here.
   
-      int8_t           priority;
+      int32_t          priority;
   
       ManuvrEvent(uint16_t msg_code, EventReceiver* cb);
       ManuvrEvent(uint16_t msg_code);
@@ -151,8 +151,8 @@
       
       
     protected:
-      StringBuilder local_log;
       Scheduler* scheduler;
+      StringBuilder local_log;
       int8_t verbosity;                   // How chatty is this class in the log?
       bool boot_completed;
 

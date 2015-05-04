@@ -161,6 +161,7 @@ class Scheduler : public EventReceiver {
 
     void printDebug(StringBuilder*);
     void printProfiler(StringBuilder*);
+    void printSchedule(uint32_t g_pid, StringBuilder*);
     
     /* Overrides from EventReceiver */
     int8_t notify(ManuvrEvent*);

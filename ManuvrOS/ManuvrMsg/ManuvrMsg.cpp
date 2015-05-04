@@ -738,7 +738,7 @@ void ManuvrMsg::printDebug(StringBuilder *temp) {
       working_arg = args.get(i);
       temp->concatf("\t\t %d\t(%s)\t%s ", i, (working_arg->reap ? "reap" : "no reap"), getArgTypeString(i));
       uint8_t* buf = (uint8_t*) working_arg->target_mem;
-      for (uint8_t n = 0; n < working_arg->len; n++) {
+      for (uint8_t n = 0; n < min(working_arg->len, 16); n++) {
         temp->concatf("0x%02x ", (uint8_t) *(buf + n));
       }
       temp->concat("\n");

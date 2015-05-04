@@ -79,10 +79,6 @@ class ManuvrEvent;
 /* This is how we define arguments to messages. */
 class Argument {
   public:
-    uint8_t  type_code;
-    uint16_t len;         // This is sometimes not used. It is for data types that are not fixed-length.
-    bool    reap;
-    
     /*
     * Hackery surrounding this member:
     * There is no point to storing a pointer to a heap ref to hold data that is not
@@ -92,6 +88,10 @@ class Argument {
     *   not to mark the pointer for reap.
     */
     void*   target_mem;
+
+    uint16_t len;         // This is sometimes not used. It is for data types that are not fixed-length.
+    uint8_t  type_code;
+    bool    reap;
     
     Argument();
     Argument(uint8_t);
