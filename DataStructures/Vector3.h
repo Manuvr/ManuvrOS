@@ -160,6 +160,13 @@ public:
   }
 
 	// Normalize against the supllied length, for code that caches this information.
+  void set(T _x, T _y, T _z) {
+    	x = _x;
+    	y = _y;
+    	z = _z;
+  }
+
+	// Normalize against the supllied length, for code that caches this information.
   void normalize(float len){
     	if (len) *this/=len;
   }
