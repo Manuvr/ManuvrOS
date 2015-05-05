@@ -44,6 +44,8 @@
   class EventReceiver;
 
   
+  extern unsigned long micros();
+  
   
   class TaskProfilerData {
     public:
@@ -171,6 +173,7 @@
   */
   class EventManager : public EventReceiver {
     public:
+      uint32_t micros_occupied;       // How many micros have we spent procing events?
       ManuvrEvent* current_event;
       
       EventManager(void);
@@ -220,14 +223,13 @@
 
   
     private:
-      ManuvrEvent _preallocation_pool[EVENT_MANAGER_PREALLOC_COUNT];
       PriorityQueue<ManuvrEvent*> preallocated;
       PriorityQueue<ManuvrEvent*> discarded;
       PriorityQueue<ManuvrEvent*> event_queue;   // Events that have been raised.
       PriorityQueue<EventReceiver*>    subscribers;   // Our subscription manifest.
+      PriorityQueue<TaskProfilerData*> event_costs;     // Message code is the priority. Calculates average cost in uS.
       
       // Profiling and logging variables...
-      uint32_t micros_occupied;       // How many micros have we spent procing events?
       uint32_t max_idle_loop_time;    // How many uS does it take to run an idle loop?
       uint32_t total_loops;           // How many times have we looped?
       uint32_t total_events;          // How many events have we proc'd?
@@ -242,7 +244,7 @@
       uint32_t insertion_denials;     // How many times have we rejected events?
       uint32_t max_queue_depth;       // What is the deepest point the queue has reached?
       
-      PriorityQueue<TaskProfilerData*> event_costs;     // Message code is the priority. Calculates average cost in uS.
+      ManuvrEvent _preallocation_pool[EVENT_MANAGER_PREALLOC_COUNT];
 
       uint8_t  max_events_p_loop;     // What is the most events we've handled in a single loop?
       int8_t max_events_per_loop;
@@ -252,6 +254,9 @@
       int8_t validate_insertion(ManuvrEvent*);
       void reclaim_event(ManuvrEvent*);
       inline void update_maximum_queue_depth() {   max_queue_depth = (event_queue.size() > (int) max_queue_depth) ? event_queue.size() : max_queue_depth;   };
+      
+      /*  */
+      inline bool should_run_another_event(int8_t loops, uint32_t begin) {     return (max_events_per_loop ? ((int8_t) max_events_per_loop > loops) : ((micros() - begin) < 1200));   };
       
       
       static EventManager* INSTANCE;

@@ -179,6 +179,8 @@ class Scheduler : public EventReceiver {
     PriorityQueue<ScheduleItem*> schedules;
     PriorityQueue<ScheduleItem*> execution_queue;
     uint32_t clicks_in_isr;
+    uint32_t total_skipped_loops;
+    uint32_t lagged_schedules;
     
     /* These members are concerned with reliability. */
     uint16_t skipped_loops;

@@ -333,6 +333,7 @@ void EventManager::reclaim_event(ManuvrEvent* active_event) {
 }
 
 
+
 /**
 * Process any open events.
 *
@@ -357,7 +358,7 @@ int8_t EventManager::procIdleFlags() {
   uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
 
   /* As long as we have an open event and we aren't yet at our proc ceiling... */
-  while (event_queue.hasNext() && ((int8_t) max_events_per_loop > return_value)) {
+  while (event_queue.hasNext() && should_run_another_event(return_value, profiler_mark)) {
     active_event = event_queue.dequeue();       // Grab the Event and remove it in the same call.
     msg_code_local = active_event->event_code;  // This gets used after the life of the event.
     

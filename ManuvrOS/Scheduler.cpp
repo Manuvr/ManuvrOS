@@ -53,6 +53,8 @@ Scheduler::Scheduler() {
   overhead             = 0;      // The time in microseconds required to service the last empty schedule loop.
   scheduler_ready      = false;  // TODO: Convert to a uint8 and track states.
   skipped_loops        = 0;
+  total_skipped_loops  = 0;
+  lagged_schedules     = 0;
   bistable_skip_detect = false;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
   clicks_in_isr = 0;
 }
@@ -409,7 +411,6 @@ void Scheduler::advanceScheduler() {
   //  }
   //}
   if (bistable_skip_detect) {
-    StringBuilder output;
     // Failsafe block
     if (skipped_loops > 5000) {
       // TODO: We are hung in a way that we probably cannot recover from. Reboot...
@@ -420,18 +421,21 @@ void Scheduler::advanceScheduler() {
     else if (skipped_loops == 2000) {
       printf("Hung scheduler...\n");
     }
-    else if (skipped_loops == 2500) {
-      StaticHub::getInstance()->printDebug(&output);
+    else if (skipped_loops == 2040) {
+      /* Doing all this String manipulation in an ISR would normally be an awful idea.
+         But we don't care here because we're hung anyhow, and we need to know why. */
+      StringBuilder output;
+      StaticHub::getInstance()->fetchEventManager()->printDebug(&output);
       printf("%s\n", (char*) output.string());
     }
-    else if (skipped_loops == 3000) {
+    else if (skipped_loops == 2200) {
+      StringBuilder output;
       printDebug(&output);
       printf("%s\n", (char*) output.string());
     }
     else if (skipped_loops == 3500) {
-      /* Doing all this String manipulation in an ISR would normally be an awful idea.
-         But we don't care here because we're hung anyhow, and we need to know why. */
-      StaticHub::getInstance()->fetchEventManager()->printDebug(&output);
+      StringBuilder output;
+      StaticHub::getInstance()->printDebug(&output);
       printf("%s\n", (char*) output.string());
     }
     skipped_loops++;
@@ -527,6 +531,7 @@ int Scheduler::serviceScheduledEvents() {
           // TODO: Possible error-case? Too many clicks passed. We have schedule jitter...
           // For now, we'll just throw away the difference.
           current->thread_time_to_wait = current->thread_period;
+          lagged_schedules++;
         }
         execution_queue.insert(current);
       }
@@ -603,6 +608,7 @@ int Scheduler::serviceScheduledEvents() {
   
   // We just ran a loop. Punch the bistable swtich and clear the skip count.
   bistable_skip_detect = false;
+  total_skipped_loops += skipped_loops;
   skipped_loops        = 0;
   
   return return_value;
@@ -663,9 +669,9 @@ void Scheduler::printDebug(StringBuilder *output) {
 	if (NULL == output) return;
 	EventReceiver::printDebug(output);
   output->concatf("--- Schedules location:  0x%08x\n", &schedules);
-  output->concatf("--- Total loops:      %d\n--- Productive loops: %d\n", (unsigned long) total_loops, (unsigned long) productive_loops);
-  if (total_loops) output->concatf("--- Duty cycle:       %f%\n--- Overhead:         %d microseconds\n", ((double)((double) productive_loops / (double) total_loops) * 100), overhead);
-  output->concatf("--- Next PID:         %d\n--- Total schedules:  %d\n--- Active schedules: %d\n\n", peekNextPID(), getTotalSchedules(), getActiveSchedules());
+  output->concatf("--- Total loops:      %u\n--- Productive loops: %u\n---Skipped loops: %u\n---Lagged schedules %u\n", (unsigned long) total_loops, (unsigned long) productive_loops, (unsigned long) total_skipped_loops, (unsigned long) lagged_schedules);
+  if (total_loops) output->concatf("--- Duty cycle:       %2.4f%\n--- Overhead:         %d microseconds\n", ((double)((double) productive_loops / (double) total_loops) * 100), overhead);
+  output->concatf("--- Next PID:         %u\n--- Total schedules:  %d\n--- Active schedules: %d\n\n", peekNextPID(), getTotalSchedules(), getActiveSchedules());
   
   printProfiler(output);
 }
