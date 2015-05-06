@@ -188,7 +188,52 @@ char* StringBuilder::position(int pos) {
 int StringBuilder::position_as_int(int pos) {
   const char* temp = (const char*) position(pos);
   if (temp != NULL) {
-    return atoi(temp);
+    int len = strlen(temp);
+    if ((len > 2) && (*(temp) == '0') && (*(temp + 1) == 'x')) {
+      // Possibly dealing with a hex representation. Try to convert....
+      unsigned int result = 0;
+      len -= 2;
+      temp += 2;
+      // Only so big an int we can handle...
+      int max_bytes = (len > 8) ? 8 : len;
+      for (int i = 0; i < max_bytes; i++) {
+        switch (*(temp + i)) {
+          case '0':
+          case '1':
+          case '2':
+          case '3':
+          case '4':
+          case '5':
+          case '6':
+          case '7':
+          case '8':
+          case '9':
+            result = (result << 4) + (*(temp + i) - 0x30);
+            break;
+          case 'a':
+          case 'b':
+          case 'c':
+          case 'd':
+          case 'e':
+          case 'f':
+            result = (result << 4) + 10 + (*(temp + i) - 0x61);
+            break;
+          case 'A':
+          case 'B':
+          case 'C':
+          case 'D':
+          case 'E':
+          case 'F':
+            result = (result << 4) + 10 + (*(temp + i) - 0x41);
+            break;
+          default: return result;
+        }
+      }
+      return result;
+    }
+    else {
+      return atoi(temp);
+    }
   }
   return 0;
 }
