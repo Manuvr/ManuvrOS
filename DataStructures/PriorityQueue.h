@@ -64,6 +64,7 @@ template <class T> class PriorityQueue {
     int insert(T, int priority);  // Returns the ID of the data, or -1 on failure. Makes only a reference to the payload.
     int insert(T);                // Same as above, but assumes lowest priority.
     int insertIfAbsent(T);        // Same as above, but only if the queue doesn't already have the argument.
+    int insertIfAbsent(T, int);   // Same as above, but also specifies the priority if successful.
     
     int size(void);               // Returns the number of elements in this list.
 
@@ -85,7 +86,10 @@ template <class T> class PriorityQueue {
     bool incrementPriority(T);    // Finds the given T and increments its priority by one.
     bool decrementPriority(T);    // Finds the given T and decrements its priority by one.
 
+    // TODO: Move back to private after EventManager is debugged.
+    int count(void);                 // Counts the elements in the list without reliance on stored value. Slower...
 
+    
   private:
     PriorityNode<T> *root;        // The root of the queue. Is also the highest-priority.
     int element_count;
@@ -105,7 +109,6 @@ template <class T> class PriorityQueue {
     PriorityNode<T>* get_node_by_element(T);    // Return a priority node by the element it contains.
     int insert(PriorityNode<T>*);    // Returns the ID of the data, or -1 on failure.
     void enforce_priorities(void);   // Need to call this after changing a priority to ensure position reflects priority.
-    int count(void);                 // Counts the elements in the list without reliance on stored value. Slower...
 };
 
 
@@ -146,6 +149,17 @@ template <class T> int PriorityQueue<T>::insert(T d) {
 */
 template <class T> int PriorityQueue<T>::insertIfAbsent(T d) {
   return (contains(d)) ? false : insert(d, 0);
+}
+
+
+/**
+* Inserts the given dataum into the queue.
+*
+* @param  d   The data to copy and insert.
+* @return the position in the list that the data was inserted, or -1 on failure.
+*/
+template <class T> int PriorityQueue<T>::insertIfAbsent(T d, int nu_pri) {
+  return (contains(d)) ? false : insert(d, nu_pri);
 }
 
 

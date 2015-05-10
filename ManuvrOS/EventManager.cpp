@@ -6,8 +6,6 @@
 #endif
 
 
-volatile uint32_t hidden_irq_gremlin = 0;
-
 
 /****************************************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -20,7 +18,7 @@ volatile uint32_t hidden_irq_gremlin = 0;
 * Static members and initializers should be located here. Initializers first, functions second.
 ****************************************************************************************************/
 EventManager* EventManager::INSTANCE = NULL;
-
+PriorityQueue<ManuvrEvent*> EventManager::isr_event_queue;
 
 
 /****************************************************************************************************
@@ -48,7 +46,7 @@ EventManager::EventManager() {
   total_events_dead   = 0;
   micros_occupied     = 0;
   max_events_per_loop = 1;
-  profiler_runtime    = 220;
+  profiler_runtime    = 0;
 
   for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
     /* We carved out a space in our allocation for a pool of events. Ideally, this would be enough
@@ -225,6 +223,14 @@ int8_t EventManager::staticRaiseEvent(ManuvrEvent* event) {
 }
 
 
+int8_t EventManager::isrRaiseEvent(ManuvrEvent* event) {
+  isr_event_queue.insert(event, event->priority);
+  return 0;
+}
+
+
+
+
 /**
 * Factory method. Returns a preallocated Event.
 * After we return the event, we lose track of it. So if the caller doesn't ever
@@ -357,6 +363,15 @@ int8_t EventManager::procIdleFlags() {
   ManuvrEvent *active_event = NULL;  // Our short-term focus.
   uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
 
+  while (isr_event_queue.size() > 0) {
+    active_event = isr_event_queue.dequeue();
+    if (0 == validate_insertion(active_event)) {
+      event_queue.insert(active_event, active_event->priority);
+    }
+    else reclaim_event(active_event);
+  }
+  active_event = NULL;   // Pedantic...
+  
   /* As long as we have an open event and we aren't yet at our proc ceiling... */
   while (event_queue.hasNext() && should_run_another_event(return_value, profiler_mark)) {
     active_event = event_queue.dequeue();       // Grab the Event and remove it in the same call.
@@ -481,6 +496,7 @@ int8_t EventManager::procIdleFlags() {
             if (0 == validate_insertion(active_event)) {
               event_queue.insert(active_event, active_event->priority);
             }
+            else reclaim_event(active_event);
             break;
           case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
             if (verbosity > 5) local_log.concatf("Dropping event %s after running.\n", active_event->getMsgTypeString());
@@ -504,6 +520,11 @@ int8_t EventManager::procIdleFlags() {
     }
 
     total_events++;
+    
+    if (event_queue.size() < 0) {
+      StaticHub::log("event_queue size went negative!?! Correcting...\n");
+      event_queue.count();
+    }
     
     // This is a stat-gathering block.
     if (profiler_enabled) {
@@ -549,11 +570,7 @@ int8_t EventManager::procIdleFlags() {
     else {
       uint32_t delay_micros = micros();
       
-      hidden_irq_gremlin = 0;
       while ((micros() - delay_micros) < profiler_runtime) {}
-      if (hidden_irq_gremlin) {
-        if (verbosity >= 4) local_log.concatf("I 0x%08x %u\n", hidden_irq_gremlin, (unsigned long) (micros() - delay_micros));
-      }
       
       if (event_queue.size() > 30) {
         local_log.concatf("Depth %10d \t %s\n", event_queue.size(), ManuvrMsg::getMsgTypeString(msg_code_local));

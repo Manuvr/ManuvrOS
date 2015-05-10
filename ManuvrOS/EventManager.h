@@ -213,6 +213,7 @@
   
       static int8_t raiseEvent(uint16_t event_code, EventReceiver* data);
       static int8_t staticRaiseEvent(ManuvrEvent* event);
+      static int8_t isrRaiseEvent(ManuvrEvent* event);
       
       /* Factory method. Returns a preallocated Event. */
       static ManuvrEvent* returnEvent(uint16_t event_code);
@@ -260,6 +261,7 @@
       
       
       static EventManager* INSTANCE;
+      static PriorityQueue<ManuvrEvent*> isr_event_queue;   // Events that have been raised from ISRs.
   };
   
   
