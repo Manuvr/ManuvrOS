@@ -46,7 +46,6 @@ EventManager::EventManager() {
   total_events_dead   = 0;
   micros_occupied     = 0;
   max_events_per_loop = 1;
-  profiler_runtime    = 0;
 
   for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
     /* We carved out a space in our allocation for a pool of events. Ideally, this would be enough
@@ -565,16 +564,10 @@ int8_t EventManager::procIdleFlags() {
         if (verbosity >= 6) local_log.concatf("\tTook %ld uS to notify.\n", profiler_item->run_time_last);
       }
       profiler_mark_2 = 0;  // Reset for next iteration.
-      profiler_runtime = micros() - profiler_mark_3;
     }
-    else {
-      uint32_t delay_micros = micros();
-      
-      while ((micros() - delay_micros) < profiler_runtime) {}
-      
-      if (event_queue.size() > 30) {
-        local_log.concatf("Depth %10d \t %s\n", event_queue.size(), ManuvrMsg::getMsgTypeString(msg_code_local));
-      }
+
+    if (event_queue.size() > 30) {
+      local_log.concatf("Depth %10d \t %s\n", event_queue.size(), ManuvrMsg::getMsgTypeString(msg_code_local));
     }
 
     return_value++;   // We just serviced an Event.
@@ -730,8 +723,6 @@ void EventManager::printDebug(StringBuilder* output) {
   output->concatf("-- events_destroyed:          %u\n",   (unsigned long) events_destroyed);
   output->concatf("-- burden_of_being_specific   %u\n",   (unsigned long) burden_of_specific);
   output->concatf("-- idempotent_blocks          %u\n\n", (unsigned long) idempotent_blocks);
-  
-  output->concatf("-- profiler_runtime           %u\n\n", (unsigned long) profiler_runtime);
   
   if (subscribers.size() > 0) {
     output->concatf("-- Subscribers: (%d total):\n", subscribers.size());

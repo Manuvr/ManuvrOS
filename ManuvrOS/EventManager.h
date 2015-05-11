@@ -155,6 +155,7 @@
     protected:
       Scheduler* scheduler;
       StringBuilder local_log;
+      uint16_t class_state;         // TODO: Roll verbosity and flags into this. 
       int8_t verbosity;                   // How chatty is this class in the log?
       bool boot_completed;
 
@@ -202,9 +203,6 @@
       inline void maxEventsPerLoop(int8_t nu) { max_events_per_loop = nu;   }
       inline int8_t maxEventsPerLoop() {        return max_events_per_loop; }
       
-      inline uint32_t paddingDelay(uint32_t nu) { profiler_runtime = nu; return profiler_runtime;  }
-      inline uint32_t paddingDelay() {            return profiler_runtime; }
-      
 
       /* Overrides from EventReceiver
          EventManager is special, and it will naturally have both methods from EventReceiver.
@@ -235,8 +233,6 @@
       uint32_t total_loops;           // How many times have we looped?
       uint32_t total_events;          // How many events have we proc'd?
       uint32_t total_events_dead;     // How many events have we proc'd that went unacknowledged?
-      
-      uint32_t profiler_runtime;
       
       uint32_t events_destroyed;      // How many events have we destroyed?
       uint32_t prealloc_starved;      // How many times did we starve the prealloc queue?
