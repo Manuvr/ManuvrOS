@@ -202,6 +202,7 @@
       
       inline void maxEventsPerLoop(int8_t nu) { max_events_per_loop = nu;   }
       inline int8_t maxEventsPerLoop() {        return max_events_per_loop; }
+      inline int queueSize() {                  return INSTANCE->event_queue.size();   }
       
 
       /* Overrides from EventReceiver
