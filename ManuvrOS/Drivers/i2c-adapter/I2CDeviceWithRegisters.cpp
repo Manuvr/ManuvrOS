@@ -230,7 +230,18 @@ void I2CDeviceWithRegisters::printDebug(StringBuilder* temp) {
     temp->concat("---<  Device registers  >---\n");
     for (int i = 0; i < reg_defs.size(); i++) {
       temp_reg = reg_defs.get(i);
-      temp->concatf("\tReg 0x%02x   contains 0x%02x %s %s %s\n", temp_reg->addr, *(temp_reg->val), (temp_reg->dirty ? "\tdirty":"\tclean"), (temp_reg->unread ? "\tunread":"\tknown"), (temp_reg->writable ? "\twritable":"\treadonly"));
+      switch (temp_reg->len) {
+        case 1:
+          temp->concatf("\tReg 0x%02x   contains 0x%02x        %s %s %s\n", temp_reg->addr, *(temp_reg->val), (temp_reg->dirty ? "\tdirty":"\tclean"), (temp_reg->unread ? "\tunread":"\tknown"), (temp_reg->writable ? "\twritable":"\treadonly"));
+          break;
+        case 2:
+          temp->concatf("\tReg 0x%02x   contains 0x%04x      %s %s %s\n", temp_reg->addr, *(temp_reg->val), (temp_reg->dirty ? "\tdirty":"\tclean"), (temp_reg->unread ? "\tunread":"\tknown"), (temp_reg->writable ? "\twritable":"\treadonly"));
+          break;
+        case 4:
+        default:
+          temp->concatf("\tReg 0x%02x   contains 0x%08x  %s %s %s\n", temp_reg->addr, *(temp_reg->val), (temp_reg->dirty ? "\tdirty":"\tclean"), (temp_reg->unread ? "\tunread":"\tknown"), (temp_reg->writable ? "\twritable":"\treadonly"));
+          break;
+      }
     }
   }
 }

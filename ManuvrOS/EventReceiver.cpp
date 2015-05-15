@@ -112,7 +112,18 @@ int EventReceiver::purgeLogs() {
 * @param   input  A buffer containing the user's direct input.
 */
 void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
-  StaticHub::log("EventReceiver::procDirectDebugInstruction():\t default handler.\n");
+  char* str = input->position(0);
+  
+  switch (*(str)) {
+    case 'i':    // Print debug
+      printDebug(&local_log);
+      break;
+    default:
+      local_log.concatf("%s: No case in procDirectDebugInstruction().\n", getReceiverName());
+      break;
+  }
+  
+  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
 }
 
 

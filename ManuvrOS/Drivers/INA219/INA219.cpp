@@ -34,11 +34,17 @@ INA219::INA219(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
   this->defineDatum("Instantaneous Power",   SensorWrapper::COMMON_UNITS_WATTS, FLOAT_FM);
   this->s_id = "e1671797c52e15f763380b45e841ec32";
   this->name = "INA219";
-  batt_min_v         = 0;  // We will be unable to init() with these values.
-  batt_max_v         = 0;  // We will be unable to init() with these values.
-  batt_capacity      = 0;  // We will be unable to init() with these values.
-  shunt_value        = 0;  // We will be unable to init() with these values.
-  max_voltage_delta  = 0;  // We will be unable to init() with these values.
+  //batt_min_v         = 0;  // We will be unable to init() with these values.
+  //batt_max_v         = 0;  // We will be unable to init() with these values.
+  //batt_capacity      = 0;  // We will be unable to init() with these values.
+  //shunt_value        = 0;  // We will be unable to init() with these values.
+  //max_voltage_delta  = 0;  // We will be unable to init() with these values.
+
+  batt_min_v         = 3.7f;  // We will be unable to init() with these values.
+  batt_max_v         = 4.3f;  // We will be unable to init() with these values.
+  batt_capacity      = 2000.0f;  // We will be unable to init() with these values.
+  shunt_value        = 0.01f;  // We will be unable to init() with these values.
+  max_voltage_delta  = batt_max_v;  // We will be unable to init() with these values.
   batt_chemistry     = INA219_BATTERY_CHEM_UNDEF;
   
   init_complete = false;
@@ -80,6 +86,7 @@ int8_t INA219::init() {
   //batt_max_v;
   //batt_capacity;
   //shunt_value;
+  writeIndirect(INA219_REG_CALIBRATION, 0xDC);
   if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
     sensor_active = true;
     return SensorWrapper::SENSOR_ERROR_NO_ERROR;
@@ -163,7 +170,7 @@ void INA219::operationCompleteCallback(I2CQueuedOperation* completed) {
       case INA219_REG_CURRENT:
       case INA219_REG_POWER:
         if (process_read_data()) {
-          EventManager::raiseEvent(MANUVR_MSG_SENSOR_INA219, NULL);   // Raise an event
+          //EventManager::raiseEvent(MANUVR_MSG_SENSOR_INA219, NULL);   // Raise an event
         }
         break;
       case INA219_REG_CONFIGURATION:
@@ -171,6 +178,9 @@ void INA219::operationCompleteCallback(I2CQueuedOperation* completed) {
         break;
       case INA219_REG_CALIBRATION:
         temp_reg->unread = false;
+        if (!init_complete) {
+          init_complete = true;
+        }
         break;
       default:
         temp_reg->unread = false;
@@ -204,10 +214,10 @@ void INA219::printDebug(StringBuilder* temp) {
 */
 bool INA219::process_read_data(void) {
 	if (regUpdated(INA219_REG_POWER) && regUpdated(INA219_REG_CURRENT) && regUpdated(INA219_REG_BUS_VOLTAGE) && regUpdated(INA219_REG_SHUNT_VOLTAGE)) {
-		//float local_shunt   = (float) ((int16_t) regValue(INA219_REG_SHUNT_VOLTAGE)) * 0.01;   // So many mV. 
-		float local_bus     = (float) ((((int16_t) regValue(INA219_REG_BUS_VOLTAGE)) >> 3) * 0.004);   // So many mV.
-		float local_current = (float) regValue(INA219_REG_CURRENT);     // Much electrons.
-		float local_power   = (float) regValue(INA219_REG_POWER);       // Such joules.
+		float local_shunt   = (float) (((int16_t) regValue(INA219_REG_SHUNT_VOLTAGE)) * 0.004f);   // So many mV. 
+		float local_bus     = (float) ((((int16_t) regValue(INA219_REG_BUS_VOLTAGE)) >> 3) * 0.004f);   // So many mV.
+		float local_current = (float) (((int16_t) regValue(INA219_REG_CURRENT)) / 10.0f);     // Much electrons.
+		float local_power   = (float) (((int16_t) regValue(INA219_REG_POWER)) / 2.0f);       // Such joules.
 
 
 		updateDatum(0, local_current);
@@ -218,6 +228,10 @@ bool INA219::process_read_data(void) {
 		markRegRead(INA219_REG_CURRENT);
 		markRegRead(INA219_REG_BUS_VOLTAGE);
 		markRegRead(INA219_REG_SHUNT_VOLTAGE);
+
+          StringBuilder output;
+          output.concatf("%.3f\t %.3f\t %.3f\t %.3f\n", local_shunt, local_bus, local_current, local_power);
+          StaticHub::log(&output);
 		return true;
 	}
 	return false;

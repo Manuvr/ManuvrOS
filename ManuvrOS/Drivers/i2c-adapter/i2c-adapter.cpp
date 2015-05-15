@@ -97,7 +97,7 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
 
    
     // configure I2C1 
-    I2C_InitStruct.I2C_ClockSpeed = 100000;          // 400kHz
+    I2C_InitStruct.I2C_ClockSpeed = 400000;          // 400kHz
     I2C_InitStruct.I2C_Mode = I2C_Mode_I2C;          // I2C mode
     I2C_InitStruct.I2C_DutyCycle = I2C_DutyCycle_2;  // 50% duty cycle --> standard
     I2C_InitStruct.I2C_OwnAddress1 = 0x00;           // own address, not relevant in master mode
@@ -840,6 +840,7 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       break;
 
     default:
+      EventReceiver::procDirectDebugInstruction(input);
       break;
   }
   

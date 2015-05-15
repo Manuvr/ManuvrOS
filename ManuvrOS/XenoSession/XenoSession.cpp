@@ -987,7 +987,7 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
       
 
     default:
-      local_log.concat("No case in XenoSession debug.\n\n");
+      EventReceiver::procDirectDebugInstruction(input);
       break;
   }
   
