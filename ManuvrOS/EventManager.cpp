@@ -382,7 +382,7 @@ int8_t EventManager::procIdleFlags() {
     active_event = isr_event_queue.dequeue();
 
     if (0 == validate_insertion(active_event)) {
-      event_queue.insert(active_event, active_event->priority);
+      event_queue.insertIfAbsent(active_event, active_event->priority);
     }
     else reclaim_event(active_event);
   }
