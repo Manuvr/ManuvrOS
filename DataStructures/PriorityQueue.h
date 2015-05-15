@@ -133,7 +133,7 @@ template <class T> PriorityQueue<T>::~PriorityQueue() {
 /**
 * Inserts the given dataum into the queue.
 *
-* @param  d   The data to copy and insert.
+* @param  d   The data to insert.
 * @return the position in the list that the data was inserted, or -1 on failure.
 */
 template <class T> int PriorityQueue<T>::insert(T d) {
@@ -144,22 +144,65 @@ template <class T> int PriorityQueue<T>::insert(T d) {
 /**
 * Inserts the given dataum into the queue.
 *
-* @param  d   The data to copy and insert.
+* @param  d       The data to insert.
+* @param  nu_pri  The priority of the node.
 * @return the position in the list that the data was inserted, or -1 on failure.
 */
-template <class T> int PriorityQueue<T>::insertIfAbsent(T d) {
-  return (contains(d)) ? false : insert(d, 0);
+template <class T> int PriorityQueue<T>::insertIfAbsent(T d, int nu_pri) {
+  // Note that we are going to replicate alot of code here for speed reasons.
+  // We could just as well have done with....
+  // return (contains(d)) ? false : insert(d, 0);
+  
+  if (NULL == root) {
+    // If root is null, we just insert and call it done. That way we
+    // don't have to worry about it later.
+    return insert(d, nu_pri);
+  }
+  
+  int return_value = -1;
+  PriorityNode<T>* insert_pointer = NULL;
+  PriorityNode<T>* current = root;
+  while (current != NULL) {
+    if (current->data == d) {
+      return -1;
+    }
+    if (current->priority >= nu_pri) {
+      insert_pointer = current;
+      return_value++;
+    }
+    current = current->next;
+  }
+  
+  PriorityNode<T> *nu = (PriorityNode<T>*) malloc(sizeof(PriorityNode<T>));
+  if (nu == NULL) {
+    return -1;      // Failed to allocate memory.
+  }
+  nu->reap     = false;
+  nu->data     = d;
+  nu->priority = nu_pri;
+
+  if (NULL == insert_pointer) {
+    nu->next = root;
+    root = nu;
+    return_value = 0;
+  }
+  else {
+    nu->next = insert_pointer->next;
+    insert_pointer->next = nu;
+  }
+  element_count++;
+  return return_value;
 }
 
 
 /**
 * Inserts the given dataum into the queue.
 *
-* @param  d   The data to copy and insert.
+* @param  d   The data to insert.
 * @return the position in the list that the data was inserted, or -1 on failure.
 */
-template <class T> int PriorityQueue<T>::insertIfAbsent(T d, int nu_pri) {
-  return (contains(d)) ? false : insert(d, nu_pri);
+template <class T> int PriorityQueue<T>::insertIfAbsent(T d) {
+  return insertIfAbsent(d, 0);
 }
 
 
@@ -183,6 +226,7 @@ template <class T> int PriorityQueue<T>::insert(T d, int nu_pri) {
 }
 
 
+// TODO: This doesn't return something sensible...
 template <class T> int PriorityQueue<T>::insert(PriorityNode<T>* nu) {
   if (nu == NULL) {
     return -1;
