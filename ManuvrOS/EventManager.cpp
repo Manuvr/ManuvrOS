@@ -223,8 +223,19 @@ int8_t EventManager::staticRaiseEvent(ManuvrEvent* event) {
 
 
 int8_t EventManager::isrRaiseEvent(ManuvrEvent* event) {
-  isr_event_queue.insert(event, event->priority);
-  return 0;
+  int return_value = -1;
+#ifdef STM32F4XX
+  asm volatile ("cpsie i");
+#elif defined(ARDUINO)
+  cli();
+#endif
+  return_value = isr_event_queue.insertIfAbsent(event, event->priority);
+#ifdef STM32F4XX
+  asm volatile ("cpsid i");
+#elif defined(ARDUINO)
+  sei();
+#endif
+  return return_value;
 }
 
 
@@ -362,13 +373,25 @@ int8_t EventManager::procIdleFlags() {
   ManuvrEvent *active_event = NULL;  // Our short-term focus.
   uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
 
+  #ifdef STM32F4XX
+    asm volatile ("cpsie i");
+  #elif defined(ARDUINO)
+    cli();
+  #endif
   while (isr_event_queue.size() > 0) {
     active_event = isr_event_queue.dequeue();
+
     if (0 == validate_insertion(active_event)) {
       event_queue.insert(active_event, active_event->priority);
     }
     else reclaim_event(active_event);
   }
+  #ifdef STM32F4XX
+    asm volatile ("cpsid i");
+  #elif defined(ARDUINO)
+    sei();
+  #endif
+    
   active_event = NULL;   // Pedantic...
   
   /* As long as we have an open event and we aren't yet at our proc ceiling... */
