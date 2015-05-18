@@ -86,8 +86,8 @@ int8_t INA219::init() {
   //batt_max_v;
   //batt_capacity;
   //shunt_value;
-  uint15_t cal_value = 0;
-  uint15_t cfg_value = INA219_CONFIG_BVOLTAGERANGE_32V |
+  uint16_t cal_value = 0;
+  uint16_t cfg_value = INA219_CONFIG_BVOLTAGERANGE_32V |
                     INA219_CONFIG_GAIN_8_320MV |
                     INA219_CONFIG_BADCRES_12BIT |
                     INA219_CONFIG_SADCRES_12BIT_1S_532US |
