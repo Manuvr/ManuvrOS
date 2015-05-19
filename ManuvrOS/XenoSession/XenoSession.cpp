@@ -175,6 +175,8 @@ XenoSession::~XenoSession() {
   purgeOutbound(); // Need to do careful checks in here for open comm loops.
 
   while (preallocated.dequeue() != NULL);
+  
+  EventManager::raiseEvent(MANUVR_MSG_SESS_HANGUP, NULL);
 }
 
 
