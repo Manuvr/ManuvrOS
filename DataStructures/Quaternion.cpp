@@ -15,6 +15,14 @@ Quaternion::Quaternion(float n_x, float n_y, float n_z, float n_w) {
 
 
 
+void Quaternion::set(float n_x, float n_y, float n_z, float n_w) {
+  x = n_x;
+  y = n_y;
+  z = n_z;
+  w = n_w;
+}
+
+
 /**
 * TODO: Is this output order correct?
 */

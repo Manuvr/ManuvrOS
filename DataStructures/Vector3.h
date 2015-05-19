@@ -59,9 +59,19 @@ public:
 	// setting ctor
 	Vector3<T>(const T x0, const T y0, const T z0): x(x0), y(y0), z(z0) {}
 
+	// setting ctor
+	Vector3<T>(const Vector3<T>* existing): x(existing->x), y(existing->y), z(existing->z) {}
+
 	// function call operator
 	void operator ()(const T x0, const T y0, const T z0)
 	{	x= x0; y= y0; z= z0;  }
+
+	// setting fxn
+	void set(Vector3<T>* existing) {
+	  x = (existing->x);
+	  y = (existing->y);
+	  z = (existing->z);
+	}
 
 	// test for equality
 	bool operator==(const Vector3<T> &v)
