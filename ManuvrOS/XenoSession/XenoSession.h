@@ -201,8 +201,6 @@ class XenoSession : public EventReceiver {
     
     /* Functions indended to be called by the transport. */
     int8_t   bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
-    //uint16_t nextMessage(unsigned char **buffer, uint32_t *b_len);  // Used to extract data from the session.
-    uint16_t nextMessage(StringBuilder *buffer);  // Used to extract data from the session.
     int8_t   markMessageComplete(uint16_t id);
     int8_t   markSessionConnected(bool);                            // The transport can inform us of its connection state.
 

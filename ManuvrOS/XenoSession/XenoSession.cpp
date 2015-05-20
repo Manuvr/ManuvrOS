@@ -257,72 +257,13 @@ int8_t XenoSession::markMessageComplete(uint16_t target_id) {
 
 
 int8_t XenoSession::markSessionConnected(bool conn_state) {
-  bool was_connected_before = isEstablished();
   mark_session_state(conn_state ? XENOSESSION_STATE_CONNECTED : XENOSESSION_STATE_DISCONNECTED);
-  if (!was_connected_before) {
-    // Barrage the counterparty with sync until they reply in-kind.
-    mark_session_desync(XENOSESSION_STATE_SYNC_INITIATOR);
-    
-    // When (if) the session syncs, various components in the firmware might
-    //   want a message put through.
-    raiseEvent(EventManager::returnEvent(MANUVR_MSG_SESS_ESTABLISHED));
-    raiseEvent(EventManager::returnEvent(MANUVR_MSG_LEGEND_MESSAGES));
-    raiseEvent(EventManager::returnEvent(MANUVR_MSG_SELF_DESCRIBE));
-  }
+
+  // Barrage the counterparty with sync until they reply in-kind.
+  
+  mark_session_desync(XENOSESSION_STATE_SYNC_INITIATOR);
   return 0;
 }
-
-
-/**
-* The transport calls this fxn to get data to send.
-*
-* Returns 1 on message written.
-* Returns 0 on nothing done.
-* Returns -1 on failure.
-*
-* @param   StringBuilder*  The location of the buffer.
-* @return  uint16_t        0 if we have nothing for the transport, 1 if we return a sync packet, 
-*            and the message unique_id if we return non-trivial data.
-*/
-uint16_t XenoSession::nextMessage(StringBuilder* buffer) {
-//  if (!isEstablished()) {
-//    if (verbosity > 2) local_log.concat("XenoSession::nextMessage() returning 0 due to no initialization.\n");
-//    return 0;
-//  }
-  
-  if (syncd()) {   // Don't pull from the queue if we are not syncd.
-    int q_size = outbound_messages.size();
-    XenoMessage *working;
-    for (int i = 0; i < q_size; i++) {
-      working = outbound_messages.get(i);
-      if (NULL != working) {
-        if (XENO_MSG_PROC_STATE_AWAITING_SEND == working->proc_state) {
-          buffer->concat(&working->buffer);
-          if (working->expecting_ack) {
-            working->proc_state = XENO_MSG_PROC_STATE_AWAITING_REPLY;
-          }
-          else {
-            working->proc_state = XENO_MSG_PROC_STATE_AWAITING_REAP;
-            markMessageComplete(working->unique_id);  // TODO: bad.... dangerous...
-          }
-          //local_log.concatf("XenoSession:nextMessage():\t %d / %d (%d)\n", temp_32, *b_len, *(b_len));
-          //StaticHub::log(&local_log);
-          return working->unique_id;
-        }
-      }
-    }
-  }
-  else {    // If we are not sync'd, send a sync packet.
-    sendSyncPacket();
-    if (verbosity > 2) local_log.concat("XenoSession::nextMessage() returning sync packet.\n");
-    return 1;
-  }
-  if (verbosity > 2) local_log.concat("XenoSession::nextMessage() returning 0.\n");
-  
-  if (local_log.length() > 0) StaticHub::log(&local_log);
-  return 0;
-}
-
 
 
 
@@ -607,9 +548,8 @@ void XenoSession::mark_session_desync(uint8_t ds_src) {
         if (verbosity > 3) local_log.concat("We were called.\n");
         break;
     }
-    
-    scheduler->enableSchedule(pid_sync_timer);
   }
+  scheduler->enableSchedule(pid_sync_timer);
   
   if (local_log.length() > 0) StaticHub::log(&local_log);
 }
@@ -635,6 +575,14 @@ void XenoSession::mark_session_sync(bool pending) {
   else {
     // We are definately done sync'ing.
     session_state = session_state & 0x0F;
+  }
+
+  if (!isEstablished()) {
+    // When (if) the session syncs, various components in the firmware might
+    //   want a message put through.
+    raiseEvent(EventManager::returnEvent(MANUVR_MSG_SESS_ESTABLISHED));
+    raiseEvent(EventManager::returnEvent(MANUVR_MSG_LEGEND_MESSAGES));
+    raiseEvent(EventManager::returnEvent(MANUVR_MSG_SELF_DESCRIBE));
   }
 
   scheduler->disableSchedule(pid_sync_timer);

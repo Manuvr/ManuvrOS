@@ -48,15 +48,13 @@ INA219::INA219(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
   batt_chemistry     = INA219_BATTERY_CHEM_UNDEF;
   
   init_complete = false;
-  reg_configuration = 0x0399;
-  reg_calibration   = 0; 
 
   defineRegister(INA219_REG_CONFIGURATION, (uint16_t) 0, false, false, true);
   defineRegister(INA219_REG_SHUNT_VOLTAGE, (uint16_t) 0, false, false, false);
   defineRegister(INA219_REG_BUS_VOLTAGE,   (uint16_t) 0, false, false, false);
   defineRegister(INA219_REG_POWER,         (uint16_t) 0, false, false, false);
   defineRegister(INA219_REG_CURRENT,       (uint16_t) 0, false, false, false);
-  defineRegister(INA219_REG_CALIBRATION,   (uint16_t) 0, false, false, false);
+  defineRegister(INA219_REG_CALIBRATION,   (uint16_t) 0, false, false, true);
 }
 
 
@@ -96,13 +94,13 @@ int8_t INA219::init() {
   
   writeIndirect(INA219_REG_CALIBRATION, cal_value, true);
   writeIndirect(INA219_REG_CONFIGURATION, cfg_value);
-  if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
+  //if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
     sensor_active = true;
     return SensorWrapper::SENSOR_ERROR_NO_ERROR;
-  }
-  else {
-    return SensorWrapper::SENSOR_ERROR_BUS_ERROR;
-  }
+  //}
+  //else {
+  //  return SensorWrapper::SENSOR_ERROR_BUS_ERROR;
+  //}
 }
 
 
@@ -188,6 +186,7 @@ void INA219::operationCompleteCallback(I2CQueuedOperation* completed) {
       case INA219_REG_CALIBRATION:
         temp_reg->unread = false;
         if (!init_complete) {
+          syncRegisters();
           init_complete = true;
         }
         break;
@@ -223,8 +222,8 @@ void INA219::printDebug(StringBuilder* temp) {
 */
 bool INA219::process_read_data(void) {
 	if (regUpdated(INA219_REG_POWER) && regUpdated(INA219_REG_CURRENT) && regUpdated(INA219_REG_BUS_VOLTAGE) && regUpdated(INA219_REG_SHUNT_VOLTAGE)) {
-		float local_shunt   = (float) (((int16_t) regValue(INA219_REG_SHUNT_VOLTAGE)) * 0.004f);   // So many mV. 
-		float local_bus     = (float) ((((int16_t) regValue(INA219_REG_BUS_VOLTAGE)) >> 3) * 0.004f);   // So many mV.
+		float local_shunt   = (float) ((((int16_t) regValue(INA219_REG_SHUNT_VOLTAGE)) >> 3) * 0.004f);   // So many mV. 
+		float local_bus     = (float) ((((int16_t) regValue(INA219_REG_BUS_VOLTAGE))   >> 3) * 0.004f);   // So many mV.
 		float local_current = (float) (((int16_t) regValue(INA219_REG_CURRENT)) / 10.0f);     // Much electrons.
 		float local_power   = (float) (((int16_t) regValue(INA219_REG_POWER)) / 2.0f);       // Such joules.
 

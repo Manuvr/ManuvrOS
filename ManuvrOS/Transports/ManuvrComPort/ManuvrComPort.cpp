@@ -429,20 +429,6 @@ int8_t ManuvrComPort::notify(ManuvrEvent *active_event) {
   
   switch (active_event->event_code) {
     case MANUVR_MSG_SESS_ORIGINATE_MSG:
-      if (NULL != session) {
-        if (connected()) {
-          StringBuilder outbound_msg;
-          uint16_t xenomsg_id = session->nextMessage(&outbound_msg);
-          if (xenomsg_id) {
-            if (write_port(outbound_msg.string(), outbound_msg.length()) ) {
-              if (verbosity > 2) local_log.concatf("There was a problem writing to %s.\n", tty_name);
-            }
-            return_value++;
-          }
-          else if (verbosity > 6) local_log.concat("Ignoring a broadcast that wasn't meant for us.\n");
-        }
-        else if (verbosity > 3) local_log.concat("Session is chatting, but we don't appear to have a connection.\n");
-      }
       break;
 
     case MANUVR_MSG_XPORT_INIT:
@@ -453,7 +439,30 @@ int8_t ManuvrComPort::notify(ManuvrEvent *active_event) {
     case MANUVR_MSG_XPORT_SESSION:
     case MANUVR_MSG_XPORT_QUEUE_RDY:
     case MANUVR_MSG_XPORT_CB_QUEUE_RDY:
+      break;
+
     case MANUVR_MSG_XPORT_SEND:
+      if (NULL != session) {
+        if (connected()) {
+          StringBuilder* temp_sb;
+          if (0 == active_event->getArgAs(&temp_sb)) {
+            if (verbosity > 3) local_log.concatf("We about to print %d bytes to the com port.\n", temp_sb->length());
+            write_port(temp_sb->string(), temp_sb->length());
+          }
+          
+          //uint16_t xenomsg_id = session->nextMessage(&outbound_msg);
+          //if (xenomsg_id) {
+          //  if (write_port(outbound_msg.string(), outbound_msg.length()) ) {
+          //    if (verbosity > 2) local_log.concatf("There was a problem writing to %s.\n", tty_name);
+          //  }
+          //  return_value++;
+          //}
+          else if (verbosity > 6) local_log.concat("Ignoring a broadcast that wasn't meant for us.\n");
+        }
+        else if (verbosity > 3) local_log.concat("Session is chatting, but we don't appear to have a connection.\n");
+      }
+      return_value++;
+      break;
       
     case MANUVR_MSG_XPORT_RECEIVE:
     case MANUVR_MSG_XPORT_RESERVED_0:
