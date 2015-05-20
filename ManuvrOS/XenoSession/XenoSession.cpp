@@ -257,11 +257,15 @@ int8_t XenoSession::markMessageComplete(uint16_t target_id) {
 
 
 int8_t XenoSession::markSessionConnected(bool conn_state) {
-  mark_session_state(conn_state ? XENOSESSION_STATE_CONNECTED : XENOSESSION_STATE_DISCONNECTED);
-
-  // Barrage the counterparty with sync until they reply in-kind.
-  
-  mark_session_desync(XENOSESSION_STATE_SYNC_INITIATOR);
+  if (conn_state) {
+    mark_session_state(XENOSESSION_STATE_CONNECTED);
+    // Barrage the counterparty with sync until they reply in-kind.
+    mark_session_desync(XENOSESSION_STATE_SYNC_INITIATOR);
+  }
+  else {
+    mark_session_state(XENOSESSION_STATE_DISCONNECTED);
+    
+  }
   return 0;
 }
 
@@ -375,10 +379,13 @@ int8_t XenoSession::notify(ManuvrEvent *active_event) {
   if (active_event->callback != (EventReceiver*) this) {
     if ((XENO_SESSION_IGNORE_NON_EXPORTABLES) && (active_event->isExportable())) {
       /* This is the block that allows the counterparty to intercept events of its choosing. */
-      if (msg_relay_list.contains(active_event->getMsgDef())) {
-        // If we are in this block, it means we need to serialize the event and send it.
-        sendEvent(active_event);
-        return_value++;
+      
+      if (syncd()) { 
+        if (msg_relay_list.contains(active_event->getMsgDef())) {
+          // If we are in this block, it means we need to serialize the event and send it.
+          sendEvent(active_event);
+          return_value++;
+        }
       }
     }
   }

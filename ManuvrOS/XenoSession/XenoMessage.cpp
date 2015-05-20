@@ -248,12 +248,12 @@ int8_t XenoMessage::inflateArgs() {
       return_value = 0;
     }
     else {
-      StaticHub::log("XenoMessage::inflateArgs():\t inflate fxn returned failure...\n");
+      //StaticHub::log("XenoMessage::inflateArgs():\t inflate fxn returned failure...\n");
     }
   }
   else {
     return_value = -1;
-    StaticHub::log("XenoMessage::inflateArgs():\t argbuf was zero-length.\n");
+    //StaticHub::log("XenoMessage::inflateArgs():\t argbuf was zero-length.\n");
   }
   return return_value;
 }
@@ -273,23 +273,23 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
   int buf_len  = sb_buf->length();
   uint8_t* buf = (uint8_t*) sb_buf->string();
 
-  output.concatf("\n\nXenoMessage::feedBuffer(): Received %d bytes.\n", buf_len);
+  //output.concatf("\n\nXenoMessage::feedBuffer(): Received %d bytes.\n", buf_len);
 
   switch (proc_state) {
     case XENO_MSG_PROC_STATE_UNINITIALIZED:
-      output.concatf("XENO_MSG_PROC_STATE_UNINITIALIZED is getting bytes. Slopppy...\n");
+      //output.concatf("XENO_MSG_PROC_STATE_UNINITIALIZED is getting bytes. Slopppy...\n");
       proc_state = XENO_MSG_PROC_STATE_RECEIVING;
     case XENO_MSG_PROC_STATE_RECEIVING:
       break;
 
     case XENO_MSG_PROC_STATE_AWAITING_REPLY:
       proc_state = XENO_MSG_PROC_STATE_RECEIVING_REPLY;
-      output.concat("First bytes to a reply are arriving...\n");
+      //output.concat("First bytes to a reply are arriving...\n");
       break;
     case XENO_MSG_PROC_STATE_RECEIVING_REPLY:
       break;
     default:
-      output.concatf("XenoMessage::feedBuffer() rejecting bytes because it is not in the right state. Is %s\n", XenoMessage::getMessageStateString(proc_state));
+      //output.concatf("XenoMessage::feedBuffer() rejecting bytes because it is not in the right state. Is %s\n", XenoMessage::getMessageStateString(proc_state));
       StaticHub::log(&output);
       return -2;
   }
@@ -298,7 +298,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
   if (0 == bytes_received) {      // If we haven't been fed any bytes yet...
     if (buf_len < 4) {
       // Not enough to act on, since we have none buffered ourselves...
-      output.concat("Rejecting bytes because there aren't enough of them yet.\n");
+      //output.concat("Rejecting bytes because there aren't enough of them yet.\n");
       StaticHub::log(&output);
       return 0;
     }
@@ -306,7 +306,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
       if (0 == XenoSession::contains_sync_pattern(buf, 4)) {
         // Get the offset of the last instance in this sync-stream relative to (buf+0) (we already know there is at least one).
         int x = XenoSession::locate_sync_break(buf+4, buf_len-4) + 4;
-        output.concatf("About to cull %d bytes of sync stream from the buffer..\n", x);
+        //output.concatf("About to cull %d bytes of sync stream from the buffer..\n", x);
         proc_state = XENO_MSG_PROC_STATE_SYNC_PACKET;  // Mark ourselves as a sync packet.
         bytes_received = 4;
         /* Cull the Session's buffer down to the offset of the next message (if there is any left). */
@@ -337,7 +337,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
     // Do we have a whole minimum packet yet?
     if (buf_len < 4) {
       // Not enough to act on.
-      output.concat("Rejecting bytes because there aren't enough of them yet to make a complete packet.\n");
+      //output.concat("Rejecting bytes because there aren't enough of them yet to make a complete packet.\n");
       if (return_value == buf_len)  sb_buf->clear();
       else if (return_value > 0)    sb_buf->cull(return_value);
       StaticHub::log(&output);

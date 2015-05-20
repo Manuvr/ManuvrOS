@@ -416,6 +416,9 @@ int8_t ManuvrComPort::callback_proc(ManuvrEvent *event) {
   
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
+    case MANUVR_MSG_XPORT_SEND:
+      event->clearArgs();
+      break;
     default:
       break;
   }
