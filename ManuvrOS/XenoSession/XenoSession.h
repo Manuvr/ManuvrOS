@@ -228,10 +228,7 @@ class XenoSession : public EventReceiver {
 
     // Returns the answer to: "Is this session established?"
     inline bool isEstablished() {
-      uint8_t ste = session_state & 0x0F;
-      return ((XENOSESSION_STATE_UNINITIALIZED != ste) && \
-              (XENOSESSION_STATE_DISCONNECTED != ste) && \
-              (XENOSESSION_STATE_HUNGUP != ste));
+      return (XENOSESSION_STATE_ESTABLISHED == (session_state & 0x0F));
     }
 
     

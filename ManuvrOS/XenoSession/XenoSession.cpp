@@ -587,6 +587,7 @@ void XenoSession::mark_session_sync(bool pending) {
   if (!isEstablished()) {
     // When (if) the session syncs, various components in the firmware might
     //   want a message put through.
+    mark_session_state(XENOSESSION_STATE_ESTABLISHED);
     raiseEvent(EventManager::returnEvent(MANUVR_MSG_SESS_ESTABLISHED));
     raiseEvent(EventManager::returnEvent(MANUVR_MSG_LEGEND_MESSAGES));
     raiseEvent(EventManager::returnEvent(MANUVR_MSG_SELF_DESCRIBE));

@@ -45,7 +45,7 @@ EventManager::EventManager() {
   total_events        = 0;
   total_events_dead   = 0;
   micros_occupied     = 0;
-  max_events_per_loop = 1;
+  max_events_per_loop = 2;
 
   for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
     /* We carved out a space in our allocation for a pool of events. Ideally, this would be enough
