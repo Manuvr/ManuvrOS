@@ -62,7 +62,7 @@ using namespace std;
 #define INA219_CONFIG_SADCRES_10BIT_1S_148US   (0x0008)  // 1 x 10-bit shunt sample
 #define INA219_CONFIG_SADCRES_11BIT_1S_276US   (0x0010)  // 1 x 11-bit shunt sample
 #define INA219_CONFIG_SADCRES_12BIT_1S_532US   (0x0018)  // 1 x 12-bit shunt sample
-#define INA219_CONFIG_SADCRES_12BIT_2S_1060US  (0x0048)	 // 2 x 12-bit shunt samples averaged together
+#define INA219_CONFIG_SADCRES_12BIT_2S_1060US  (0x0048)  // 2 x 12-bit shunt samples averaged together
 #define INA219_CONFIG_SADCRES_12BIT_4S_2130US  (0x0050)  // 4 x 12-bit shunt samples averaged together
 #define INA219_CONFIG_SADCRES_12BIT_8S_4260US  (0x0058)  // 8 x 12-bit shunt samples averaged together
 #define INA219_CONFIG_SADCRES_12BIT_16S_8510US (0x0060)  // 16 x 12-bit shunt samples averaged together
@@ -104,8 +104,8 @@ using namespace std;
 *   amount to physical constants, they shouldn't ever consume prescious RAM. Keep them isolated to flash.
 */
 typedef struct v_cap_point {
-	float percent_of_max_voltage;     // The percentage of the battery's stated maximum voltage.
-	float capacity_derate;            // The percentage by which to multiply the battery's stated capacity (if you want AH remaining).
+  float percent_of_max_voltage;     // The percentage of the battery's stated maximum voltage.
+  float capacity_derate;            // The percentage by which to multiply the battery's stated capacity (if you want AH remaining).
 } V_Cap_Point;
 
 

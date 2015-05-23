@@ -170,7 +170,7 @@ volatile void StaticHub::log(StringBuilder *str) {
 
 
 void StaticHub::disableLogCallback(){
-	__scheduler.disableSchedule(pid_log_moderator);
+  __scheduler.disableSchedule(pid_log_moderator);
 }
 
 
@@ -210,8 +210,8 @@ volatile bool StaticHub::provide_random_int(uint32_t nu_rnd) {
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
 uint32_t StaticHub::randomInt(void) {
-	uint32_t return_value = rand();
-	return return_value;
+  uint32_t return_value = rand();
+  return return_value;
 }
 
 
@@ -230,8 +230,8 @@ bool StaticHub::setTimeAndDate(char* nu_date_time) {
 * Returns an integer representing the current datetime.
 */
 uint32_t StaticHub::currentTimestamp(void) {
-	uint32_t return_value = 0;
-	return return_value;
+  uint32_t return_value = 0;
+  return return_value;
 }
 
 /*
@@ -246,8 +246,8 @@ void StaticHub::currentTimestamp(StringBuilder* target) {
 * 2004-02-12T15:19:21+00:00
 */
 void StaticHub::currentDateTime(StringBuilder* target) {
-	if (target != NULL) {
-	}
+  if (target != NULL) {
+  }
 }
 
 
@@ -264,13 +264,13 @@ void StaticHub::currentDateTime(StringBuilder* target) {
 *       Events ought to still work, however.
 */
 void StaticHub::maskable_interrupts(bool enable) {
-	if (enable) {
-		StaticHub::log("All interrupts enabled\n");
-	}
-	else {
-		StaticHub::log("All interrupts masked\n");
-		EventManager::raiseEvent(MANUVR_MSG_INTERRUPTS_MASKED, NULL);
-	}
+  if (enable) {
+    StaticHub::log("All interrupts enabled\n");
+  }
+  else {
+    StaticHub::log("All interrupts masked\n");
+    EventManager::raiseEvent(MANUVR_MSG_INTERRUPTS_MASKED, NULL);
+  }
 }
 
 
@@ -312,9 +312,9 @@ StaticHub bootstrap and setup fxns. This code is only ever called to initiallize
 int8_t StaticHub::bootComplete() {
   //EventReceiver::bootComplete()  <--- Note that we aren't going to do this. We already know about the scheduler.
   
-	// Now configure interrupts, lift interrupt masks, and let the madness begin.
-	off_class_interrupts(true);
-	return 1;
+  // Now configure interrupts, lift interrupt masks, and let the madness begin.
+  off_class_interrupts(true);
+  return 1;
 }
 
 
@@ -428,8 +428,8 @@ int8_t StaticHub::bootstrap() {
 
   //host_link->init();
   
-	//light_sensor->init();
-	//power_sensor->init();
+  //light_sensor->init();
+  //power_sensor->init();
 
   EventManager::raiseEvent(MANUVR_MSG_SYS_BOOT_COMPLETED, this);  // Bootstrap complete
   return 0;
@@ -443,14 +443,14 @@ int8_t StaticHub::bootstrap() {
 *   recursion.
 */
 StaticHub* StaticHub::getInstance() {
-	if (StaticHub::INSTANCE == NULL) {
-	  // TODO: remove last traces of this pattern.
-	  // This should never happen, but if it does, it will crash us for sure.
-		StaticHub::INSTANCE = new StaticHub();
-		((StaticHub*) StaticHub::INSTANCE)->bootstrap();
-	}
-	// And that is how the singleton do...
-	return (StaticHub*) StaticHub::INSTANCE;
+  if (StaticHub::INSTANCE == NULL) {
+    // TODO: remove last traces of this pattern.
+    // This should never happen, but if it does, it will crash us for sure.
+    StaticHub::INSTANCE = new StaticHub();
+    ((StaticHub*) StaticHub::INSTANCE)->bootstrap();
+  }
+  // And that is how the singleton do...
+  return (StaticHub*) StaticHub::INSTANCE;
 }
 
 
@@ -611,13 +611,13 @@ TODO: Keep them as short as possible.
 * Called from the SysTick handler once per ms.
 */
 volatile void StaticHub::advanceScheduler(void) {
-	if (0 == (millis_since_reset++ % watchdog_mark)) {
-	  /* If it's time to punch the watchdog, do so. Doing it in the ISR will prevent a
-	       long-running operation from causing a reset. This way, the only thing that will
-	       cause a watchdog reset is if this ISR fails to fire. */
-	}
-	// TODO: advanceScheduler() can be made *much* faster with a bit of re-work in the Scheduler class.
-	if (NULL != INSTANCE) ((StaticHub*) INSTANCE)->__scheduler.advanceScheduler();
+  if (0 == (millis_since_reset++ % watchdog_mark)) {
+    /* If it's time to punch the watchdog, do so. Doing it in the ISR will prevent a
+         long-running operation from causing a reset. This way, the only thing that will
+         cause a watchdog reset is if this ISR fails to fire. */
+  }
+  // TODO: advanceScheduler() can be made *much* faster with a bit of re-work in the Scheduler class.
+  if (NULL != INSTANCE) ((StaticHub*) INSTANCE)->__scheduler.advanceScheduler();
 }
 
 
@@ -627,15 +627,15 @@ volatile void StaticHub::advanceScheduler(void) {
 * a new-line character on the wire.
 */
 void StaticHub::feedUSBBuffer(uint8_t *buf, int len, bool terminal) {
-	usb_rx_buffer.concat(buf, len);
-	
-	if (terminal) {
-		// If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
-		// run in idle time.
+  usb_rx_buffer.concat(buf, len);
+  
+  if (terminal) {
+    // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
+    // run in idle time.
     ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
     event->specific_target = (EventReceiver*) this;
     raiseEvent(event);
-	}
+  }
 }
 
 
@@ -670,43 +670,43 @@ const char* StaticHub::getReceiverName() {  return "StaticHub";  }
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void StaticHub::printDebug(StringBuilder* output) {
-	if (NULL == output) return;
+  if (NULL == output) return;
   uint32_t initial_sp = getStackPointer();
-	uint32_t final_sp = getStackPointer();
-	
-	EventReceiver::printDebug(output);
-	output->concatf("--- %s v%s    Build date: %s %s\n\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
-	output->concatf("---\n--- stack grows %s\n", (final_sp > initial_sp) ? "up" : "down");
-	output->concatf("--- getStackPointer()   0x%08x\n---\n", getStackPointer());
+  uint32_t final_sp = getStackPointer();
+  
+  EventReceiver::printDebug(output);
+  output->concatf("--- %s v%s    Build date: %s %s\n\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
+  output->concatf("---\n--- stack grows %s\n", (final_sp > initial_sp) ? "up" : "down");
+  output->concatf("--- getStackPointer()   0x%08x\n---\n", getStackPointer());
 
-	output->concatf("--- millis()            0x%08x\n", millis());
-	output->concatf("--- micros()            0x%08x\n", micros());
-	currentDateTime(output);
-	output->concatf("\nrtc_startup_state %s\n", getRTCStateString(rtc_startup_state));
+  output->concatf("--- millis()            0x%08x\n", millis());
+  output->concatf("--- micros()            0x%08x\n", micros());
+  currentDateTime(output);
+  output->concatf("\nrtc_startup_state %s\n", getRTCStateString(rtc_startup_state));
 }
 
 
 
 void StaticHub::print_type_sizes(void) {
-	StringBuilder temp("---< Type sizes >-----------------------------\n");
-	temp.concatf("Elemental structures:\n");
-	temp.concatf("\tStringBuilder         %d\n", sizeof(StringBuilder));
-	temp.concatf("\tLinkedList<void*>     %d\n", sizeof(LinkedList<void*>));
-	temp.concatf("\tPriorityQueue<void*>   %d\n", sizeof(PriorityQueue<void*>));
+  StringBuilder temp("---< Type sizes >-----------------------------\n");
+  temp.concatf("Elemental structures:\n");
+  temp.concatf("\tStringBuilder         %d\n", sizeof(StringBuilder));
+  temp.concatf("\tLinkedList<void*>     %d\n", sizeof(LinkedList<void*>));
+  temp.concatf("\tPriorityQueue<void*>   %d\n", sizeof(PriorityQueue<void*>));
 
-	temp.concatf(" Core singletons:\n");
-	temp.concatf("\t StaticHub             %d\n", sizeof(StaticHub));
-	temp.concatf("\t Scheduler             %d\n", sizeof(Scheduler));
-	temp.concatf("\t EventManager          %d\n", sizeof(EventManager));
+  temp.concatf(" Core singletons:\n");
+  temp.concatf("\t StaticHub             %d\n", sizeof(StaticHub));
+  temp.concatf("\t Scheduler             %d\n", sizeof(Scheduler));
+  temp.concatf("\t EventManager          %d\n", sizeof(EventManager));
 
-	temp.concatf(" Messaging components:\n");
-	temp.concatf("\t ManuvrEvent      %d\n", sizeof(ManuvrEvent));
-	temp.concatf("\t ManuvrMsg        %d\n", sizeof(ManuvrMsg));
-	temp.concatf("\t Argument              %d\n", sizeof(Argument));
-	temp.concatf("\t SchedulerItem         %d\n", sizeof(ScheduleItem));
-	temp.concatf("\t TaskProfilerData      %d\n", sizeof(TaskProfilerData));
+  temp.concatf(" Messaging components:\n");
+  temp.concatf("\t ManuvrEvent      %d\n", sizeof(ManuvrEvent));
+  temp.concatf("\t ManuvrMsg        %d\n", sizeof(ManuvrMsg));
+  temp.concatf("\t Argument              %d\n", sizeof(Argument));
+  temp.concatf("\t SchedulerItem         %d\n", sizeof(ScheduleItem));
+  temp.concatf("\t TaskProfilerData      %d\n", sizeof(TaskProfilerData));
 
-	StaticHub::log(&temp);
+  StaticHub::log(&temp);
 }
 
 
@@ -874,7 +874,7 @@ void StaticHub::procDirectDebugInstruction(StringBuilder *input) {
       }
       break;
 
-	
+  
     case 'v':           // Set log verbosity.
       parse_mule.concat(str);
       output.concatf("parse_mule split (%s) into %d positions. \n", str, parse_mule.split(" "));
@@ -893,11 +893,11 @@ void StaticHub::procDirectDebugInstruction(StringBuilder *input) {
       }
       raiseEvent(event);
       break;
-	  
+    
     case 'z':
       input->cull(1);
       ((I2CAdapter*) i2c)->procDirectDebugInstruction(input);
-	    break;
+      break;
 
     default:
       break;

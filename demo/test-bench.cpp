@@ -588,38 +588,38 @@ void printHelp() {
 * The help function. We use printf() because we are certain there is a user at the other end of STDOUT.
 */
 void printUsage() {
-	printf("==================================================================================\n");
-	printf("Bus and channel selection:\n");
-	printf("==================================================================================\n");
-	printf("    --i2c-dev     Specify the i2c device to use.\n");
-	printf("    --tty-dev     Specify the tty device to use.\n");
-	printf("-i  --input       input pin (0-11)\n");
-	printf("-o  --output      output pin (0-7)\n");
-	printf("\n");
+  printf("==================================================================================\n");
+  printf("Bus and channel selection:\n");
+  printf("==================================================================================\n");
+  printf("    --i2c-dev     Specify the i2c device to use.\n");
+  printf("    --tty-dev     Specify the tty device to use.\n");
+  printf("-i  --input       input pin (0-11)\n");
+  printf("-o  --output      output pin (0-7)\n");
+  printf("\n");
 
-	printf("==================================================================================\n");
-	printf("Options that operate on channels:\n");
-	printf("==================================================================================\n");
-	printf("-r  --route       Route the given input to the given output.\n");
-	printf("-u  --unroute     Unroute the given input from the given output(s). If no output\n");
-	printf("                   is specified, we will unroute the given input from all outputs.\n");
-	printf("-v  --volume      Specify the value of the linear potentiometer (0-255).\n");
-	printf("                   If no output is specified, we will adjust all outputs.\n");
-	printf("-m  --mute        Mutes a specified output channel. If no output channel is\n");
-	printf("                   specified, we will mute all outputs. Note that muting an output\n");
-	printf("                   has no effect on the route.\n");
-	printf("\n");
+  printf("==================================================================================\n");
+  printf("Options that operate on channels:\n");
+  printf("==================================================================================\n");
+  printf("-r  --route       Route the given input to the given output.\n");
+  printf("-u  --unroute     Unroute the given input from the given output(s). If no output\n");
+  printf("                   is specified, we will unroute the given input from all outputs.\n");
+  printf("-v  --volume      Specify the value of the linear potentiometer (0-255).\n");
+  printf("                   If no output is specified, we will adjust all outputs.\n");
+  printf("-m  --mute        Mutes a specified output channel. If no output channel is\n");
+  printf("                   specified, we will mute all outputs. Note that muting an output\n");
+  printf("                   has no effect on the route.\n");
+  printf("\n");
 
-	printf("==================================================================================\n");
-	printf("Meta:\n");
-	printf("==================================================================================\n");
-	printf("-v  --version     Print the version and exit.\n");
-	printf("-h  --help        Print this output and exit.\n");
-	printf("-s  --status      Read and print the present condition of the PCB.\n");
-	printf("    --reset       Reset the PCB back to it's power-on state.\n");
-	printf("    --enable      Enable a PCB that was previously disabled.\n");
-	printf("    --disable     Disable the PCB. Mutes all outputs.\n");
-	printf("\n\n");
+  printf("==================================================================================\n");
+  printf("Meta:\n");
+  printf("==================================================================================\n");
+  printf("-v  --version     Print the version and exit.\n");
+  printf("-h  --help        Print this output and exit.\n");
+  printf("-s  --status      Read and print the present condition of the PCB.\n");
+  printf("    --reset       Reset the PCB back to it's power-on state.\n");
+  printf("    --enable      Enable a PCB that was previously disabled.\n");
+  printf("    --disable     Disable the PCB. Mutes all outputs.\n");
+  printf("\n\n");
 }
 
 
@@ -858,8 +858,8 @@ void session_battery_2() {
 */
 int main(int argc, char *argv[]) {
   program_name = argv[0];  // Our name.
-	
-	StringBuilder output;
+  
+  StringBuilder output;
 
   
   printf("\n");
@@ -906,26 +906,26 @@ int main(int argc, char *argv[]) {
 
 
   // Parse through all the command line arguments and flags...
-	// Please note that the order matters. Put all the most-general matches at the bottom of the loop.
-	for (int i = 1; i < argc; i++) {
-		if ((strcasestr(argv[i], "--help")) || ((argv[i][0] == '-') && (argv[i][1] == 'h'))) {
-			printUsage();
-			exit(1);
-		}
-		else if ((strcasestr(argv[i], "--version")) || ((argv[i][0] == '-') && (argv[i][1] == 'v'))) {
-			printf("%s v%s\n\n", argv[0], VERSION_STRING);
-			exit(1);
-		}
-		else if (strcasestr(argv[i], "--tty-dev") && (i < argc-1)) {
-		  com_port = new ManuvrComPort(argv[i+1], 115200, O_RDWR | O_NOCTTY | O_NDELAY);
-			i++;
-		}
-		else {
-			printf("Unhandled argument: %s\n", argv[i]);
-			printUsage();
-			exit(1);
-		}
-	}
+  // Please note that the order matters. Put all the most-general matches at the bottom of the loop.
+  for (int i = 1; i < argc; i++) {
+    if ((strcasestr(argv[i], "--help")) || ((argv[i][0] == '-') && (argv[i][1] == 'h'))) {
+      printUsage();
+      exit(1);
+    }
+    else if ((strcasestr(argv[i], "--version")) || ((argv[i][0] == '-') && (argv[i][1] == 'v'))) {
+      printf("%s v%s\n\n", argv[0], VERSION_STRING);
+      exit(1);
+    }
+    else if (strcasestr(argv[i], "--tty-dev") && (i < argc-1)) {
+      com_port = new ManuvrComPort(argv[i+1], 115200, O_RDWR | O_NOCTTY | O_NDELAY);
+      i++;
+    }
+    else {
+      printf("Unhandled argument: %s\n", argv[i]);
+      printUsage();
+      exit(1);
+    }
+  }
 
 
 //  // Now to bifurcate...

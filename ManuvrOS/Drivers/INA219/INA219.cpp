@@ -77,7 +77,7 @@ int8_t INA219::init() {
   }
   
   if ((batt_min_v > 0) && (batt_max_v > 0) && (batt_capacity > 0) && (shunt_value > 0) && (max_voltage_delta > 0)) {
-  	  // If we have all this, we should be safe to init(). If the user lied to us, we will not go to space today. 
+      // If we have all this, we should be safe to init(). If the user lied to us, we will not go to space today. 
   }
   
   //batt_min_v;
@@ -124,14 +124,14 @@ int8_t INA219::setParameter(uint16_t reg, int len, uint8_t *data) {
       break;
     case INA219_REG_BATTERY_CHEM:
       {
-      	  uint8_t nu = *(data);
-      	  if (nu <= 5) {
-      	  	  batt_chemistry = nu;
-      	  	  return SensorWrapper::SENSOR_ERROR_NO_ERROR;
-      	  }
-      	  else {
-      	  	  return SensorWrapper::SENSOR_ERROR_INVALID_PARAM;
-      	  }
+          uint8_t nu = *(data);
+          if (nu <= 5) {
+              batt_chemistry = nu;
+              return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+          }
+          else {
+              return SensorWrapper::SENSOR_ERROR_INVALID_PARAM;
+          }
       }
       break;
     default:
@@ -221,28 +221,28 @@ void INA219::printDebug(StringBuilder* temp) {
 * Returns true if it did its job. Returns false if we are still missing some data.
 */
 bool INA219::process_read_data(void) {
-	if (regUpdated(INA219_REG_POWER) && regUpdated(INA219_REG_CURRENT) && regUpdated(INA219_REG_BUS_VOLTAGE) && regUpdated(INA219_REG_SHUNT_VOLTAGE)) {
-		float local_shunt   = (float) ((((int16_t) regValue(INA219_REG_SHUNT_VOLTAGE)) >> 3) * 0.004f);   // So many mV. 
-		float local_bus     = (float) ((((int16_t) regValue(INA219_REG_BUS_VOLTAGE))   >> 3) * 0.004f);   // So many mV.
-		float local_current = (float) (((int16_t) regValue(INA219_REG_CURRENT)) / 10.0f);     // Much electrons.
-		float local_power   = (float) (((int16_t) regValue(INA219_REG_POWER)) / 2.0f);       // Such joules.
+  if (regUpdated(INA219_REG_POWER) && regUpdated(INA219_REG_CURRENT) && regUpdated(INA219_REG_BUS_VOLTAGE) && regUpdated(INA219_REG_SHUNT_VOLTAGE)) {
+    float local_shunt   = (float) ((((int16_t) regValue(INA219_REG_SHUNT_VOLTAGE)) >> 3) * 0.004f);   // So many mV. 
+    float local_bus     = (float) ((((int16_t) regValue(INA219_REG_BUS_VOLTAGE))   >> 3) * 0.004f);   // So many mV.
+    float local_current = (float) (((int16_t) regValue(INA219_REG_CURRENT)) / 10.0f);     // Much electrons.
+    float local_power   = (float) (((int16_t) regValue(INA219_REG_POWER)) / 2.0f);       // Such joules.
 
 
-		updateDatum(0, local_current);
-		updateDatum(1, local_bus);
-		updateDatum(2, local_power);
-		
-		markRegRead(INA219_REG_POWER);
-		markRegRead(INA219_REG_CURRENT);
-		markRegRead(INA219_REG_BUS_VOLTAGE);
-		markRegRead(INA219_REG_SHUNT_VOLTAGE);
+    updateDatum(0, local_current);
+    updateDatum(1, local_bus);
+    updateDatum(2, local_power);
+    
+    markRegRead(INA219_REG_POWER);
+    markRegRead(INA219_REG_CURRENT);
+    markRegRead(INA219_REG_BUS_VOLTAGE);
+    markRegRead(INA219_REG_SHUNT_VOLTAGE);
 
           StringBuilder output;
           output.concatf("%.3f\t %.3f\t %.3f\t %.3f\n", (double) local_shunt, (double) local_bus, (double) local_current, (double) local_power);
           StaticHub::log(&output);
-		return true;
-	}
-	return false;
+    return true;
+  }
+  return false;
 }
 
 
@@ -288,18 +288,18 @@ bool INA219::process_read_data(void) {
 * The only benefit to leaving battery mode off is CPU.
 */
 int8_t INA219::setBatteryMode(bool nu_mode) {
-	if (batt_min_v != 0) {
-		if (batt_max_v != 0) {
-			if (batt_capacity != 0) {
-				if (battery_monitor) {
-				}
-				else {
-					battery_monitor = true;
-				}
-				return SensorWrapper::SENSOR_ERROR_NO_ERROR;
-			}
-		}
-	}
-	return SensorWrapper::SENSOR_ERROR_MISSING_CONF;
+  if (batt_min_v != 0) {
+    if (batt_max_v != 0) {
+      if (batt_capacity != 0) {
+        if (battery_monitor) {
+        }
+        else {
+          battery_monitor = true;
+        }
+        return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+      }
+    }
+  }
+  return SensorWrapper::SENSOR_ERROR_MISSING_CONF;
 }
 
