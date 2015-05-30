@@ -332,6 +332,11 @@ bool ManuvrComPort::write_port(unsigned char* out, int out_len) {
 
 
 
+int8_t ManuvrComPort::sendBuffer(StringBuilder* buf) {
+  write_port(buf->string(), buf->length());
+  return 0;
+}
+
 
 
 /****************************************************************************************************

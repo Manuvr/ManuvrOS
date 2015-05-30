@@ -100,6 +100,7 @@ class ManuvrComPort : public ManuvrXport {
     XenoSession* getSession();
     
     int8_t read_port();
+    virtual int8_t sendBuffer(StringBuilder*);
     bool write_port(unsigned char* out, int out_len);
 
 
