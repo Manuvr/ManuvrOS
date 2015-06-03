@@ -1,4 +1,6 @@
 #include "Quaternion.h"
+#include <math.h>
+
 Quaternion::Quaternion() {
   x = 0.0f;
   y = 0.0f;
@@ -22,6 +24,35 @@ void Quaternion::set(float n_x, float n_y, float n_z, float n_w) {
   w = n_w;
 }
 
+
+/*
+* Assumes that +z is away from Earth.
+*/
+void Quaternion::setDown(float n_x, float n_y, float n_z) {
+  float angle = acos(n_z);
+
+  // Calculate the cross-product against (0, 0, 1)...
+  float cp_x = n_y;
+  float cp_y = 0 - n_x;
+  float cp_z = 0;
+  
+  // Normalize the cross-product...
+  float len = sqrt(cp_x*cp_x + cp_y*cp_y + cp_z+cp_z);
+  if (0 != len) {
+    if (len != 1.0f) {
+      float inv_len = 1.0f/len;
+      cp_x *= inv_len;
+      cp_y *= inv_len;
+      cp_z *= inv_len;
+    }
+  }
+
+  float sin_theta = sin(angle / 2.0);
+  w = cos(angle / 2.0);
+  x = cp_x * sin_theta;
+  y = cp_y * sin_theta;
+  z = cp_z * sin_theta;
+}
 
 /**
 * TODO: Is this output order correct?
