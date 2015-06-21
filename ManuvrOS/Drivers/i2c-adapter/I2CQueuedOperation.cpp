@@ -1,7 +1,7 @@
 #include "i2c-adapter.h"
 
 #if defined(__MK20DX256__) | defined(__MK20DX128__)
-  #include <i2c_t3.h>
+  #include <i2c_t3/i2c_t3.h>
 #endif
 
 // Static initiallizer...
@@ -162,7 +162,7 @@ int8_t I2CQueuedOperation::begin(void) {
     return -1;
   }
   
-  if (!requester->operationCallahead(this)) {
+  if ((NULL != requester) && !requester->operationCallahead(this)) {
     abort(I2C_ERR_CODE_CLASS_ABORT);
     return -1;
   }

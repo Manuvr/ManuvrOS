@@ -170,7 +170,7 @@
   #define MANUVR_MSG_USER_BUTTON_RELEASE  0x0501 // The user released a button with the given integer code.
   #define MANUVR_MSG_SENSOR_ISL29033      0x0510 // The light sensor has something to say.
   #define MANUVR_MSG_SENSOR_ISL29033_IRQ  0x0511 // The light sensor IRQ_PIN.
-  #define MANUVR_MSG_SENSOR_LIGHT_LEVEL   0x0512 // Unitless light level.
+  #define MANUVR_MSG_AMBIENT_LIGHT_LEVEL  0x0512 // Unitless light level.
   #define MANUVR_MSG_SENSOR_LPS331        0x0520 // The baro sensor has something to say.
   #define MANUVR_MSG_SENSOR_LPS331_IRQ_0  0x0521 // The baro sensor IRQ_0 pin.
   #define MANUVR_MSG_SENSOR_LPS331_IRQ_1  0x0522 // The baro sensor IRQ_1 pin.

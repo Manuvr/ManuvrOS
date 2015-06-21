@@ -467,7 +467,7 @@ int8_t ManuvrableNeoPixel::notify(ManuvrEvent *active_event) {
       }
       break;
 
-    case MANUVR_MSG_SENSOR_LIGHT_LEVEL:
+    case MANUVR_MSG_AMBIENT_LIGHT_LEVEL:
       if (active_event->argCount() > 0) {
         uint8_t brightness;
         if (0 == active_event->getArgAs(&brightness)) {

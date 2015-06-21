@@ -1,7 +1,7 @@
 #include "i2c-adapter.h"
 
 #if defined(__MK20DX256__) | defined(__MK20DX128__)
-  #include <i2c_t3.h>
+  #include <i2c_t3/i2c_t3.h>
 #elif defined(STM32F4XX)
   #include <stm32f4xx.h>
   #include <stm32f4xx_i2c.h>
@@ -158,7 +158,7 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
     bus_online = true;
   }
   #if defined(__MK20DX256__)
-  else if (dev_id == 0) {
+  else if (dev_id == 1) {
     Wire1.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400);
     bus_online = true;
   }
