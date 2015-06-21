@@ -37,6 +37,12 @@ void I2CDevice::operationCompleteCallback(I2CQueuedOperation* completed) {
 	if (temp.length() > 0) StaticHub::log(&temp);
 }
 
+/* If your device needs something to happen immediately prior to bus I/O... */
+bool I2CDevice::operationCallahead(I2CQueuedOperation* op) {
+  // Default behavior is to return true, to tell the bus "Go Ahead".
+  return true;
+}
+
 
 bool I2CDevice::assignBusInstance(volatile I2CAdapter *bus) { // Trivial override.
   return assignBusInstance((I2CAdapter *)bus);

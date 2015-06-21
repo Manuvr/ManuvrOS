@@ -339,3 +339,11 @@ void I2CDeviceWithRegisters::operationCompleteCallback(I2CQueuedOperation* compl
 	if (temp.length() > 0) {    StaticHub::log(&temp);  }
 }
 
+
+/* If your device needs something to happen immediately prior to bus I/O... */
+bool I2CDeviceWithRegisters::operationCallahead(I2CQueuedOperation* op) {
+  // Default behavior is to return true, to tell the bus "Go Ahead".
+  return true;
+}
+
+

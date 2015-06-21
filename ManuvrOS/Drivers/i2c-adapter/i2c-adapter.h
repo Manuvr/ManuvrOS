@@ -61,16 +61,16 @@ but adding support for other platforms ought to be easy.
   #define I2C_XFER_STATE_COMPLETE  0x07   // The stop signal was sent.
   
   
-  #define I2C_ERR_CODE_NO_ERROR  0
-  #define I2C_ERR_CODE_NO_CASE   -1
-  #define I2C_ERR_CODE_NO_REASON -2
-  #define I2C_ERR_CODE_BUS_FAULT -3
-  #define I2C_ERR_CODE_DEF_CASE  -4
-  #define I2C_ERR_CODE_ADDR_2TX  -5   // We were told to send an i2c address twice in a row.
-  #define I2C_ERR_CODE_BAD_OP    -6
-  #define I2C_ERR_CODE_NO_DEVICE -7   // A transfer was aborted because there was no pointer to the device.
-  #define I2C_ERR_CODE_TIMEOUT   -8
-  
+  #define I2C_ERR_CODE_NO_ERROR    0
+  #define I2C_ERR_CODE_NO_CASE     -1
+  #define I2C_ERR_CODE_NO_REASON   -2
+  #define I2C_ERR_CODE_BUS_FAULT   -3
+  #define I2C_ERR_CODE_DEF_CASE    -4
+  #define I2C_ERR_CODE_ADDR_2TX    -5   // We were told to send an i2c address twice in a row.
+  #define I2C_ERR_CODE_BAD_OP      -6
+  #define I2C_ERR_CODE_NO_DEVICE   -7   // A transfer was aborted because there was no pointer to the device.
+  #define I2C_ERR_CODE_TIMEOUT     -8
+  #define I2C_ERR_CODE_CLASS_ABORT -9
 
   #define I2C_ERR_SLAVE_BUS_FAULT    -3   // The bus failed us.
   #define I2C_ERR_SLAVE_NOT_FOUND   -10   // When a slave device we expected to find is not found.
@@ -264,6 +264,9 @@ but adding support for other platforms ought to be easy.
       // Callback for requested operation completion.
       virtual void operationCompleteCallback(I2CQueuedOperation*);
       
+      /* If your device needs something to happen immediately prior to bus I/O... */
+      virtual bool operationCallahead(I2CQueuedOperation*);
+      
       bool assignBusInstance(I2CAdapter *);              // Needs to be called by the i2c class during insertion.
       bool assignBusInstance(volatile I2CAdapter *bus);  // Trivial override.
 
@@ -316,6 +319,8 @@ but adding support for other platforms ought to be easy.
 
       // Callback for requested operation completion.
       virtual void operationCompleteCallback(I2CQueuedOperation*);
+      /* If your device needs something to happen immediately prior to bus I/O... */
+      virtual bool operationCallahead(I2CQueuedOperation*);
 
       bool defineRegister(uint16_t _addr, uint8_t  val, bool dirty, bool unread, bool writable);
       bool defineRegister(uint16_t _addr, uint16_t val, bool dirty, bool unread, bool writable);

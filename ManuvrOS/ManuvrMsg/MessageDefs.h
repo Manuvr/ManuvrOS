@@ -147,6 +147,9 @@
   #define MANUVR_MSG_DIRTY_FRAME_BUF      0x0311 // Something changed the framebuffer and we need to redraw.
   #define MANUVR_MSG_FRAME_BUF_CONTENT    0x0312 // Request (no args), or set (>0 args) the contents of a framebuffer.
   
+  // Event codes for neopixels 
+  #define MANUVR_MSG_NEOPIXEL_REFRESH     0x0330 // Cause any neopixel classes to refresh their strands.
+  
   /* GPIO codes. This is an example of a hardware driver that is platform-dependent. Each supported platform needs
        its own driver that supports this event if this event is to be honored on that platform. */
   #define MANUVR_MSG_DIGITAL_READ         0x0400 // Read the given GPIO pin, however that is referenced on a given platformn.
@@ -167,6 +170,7 @@
   #define MANUVR_MSG_USER_BUTTON_RELEASE  0x0501 // The user released a button with the given integer code.
   #define MANUVR_MSG_SENSOR_ISL29033      0x0510 // The light sensor has something to say.
   #define MANUVR_MSG_SENSOR_ISL29033_IRQ  0x0511 // The light sensor IRQ_PIN.
+  #define MANUVR_MSG_SENSOR_LIGHT_LEVEL   0x0512 // Unitless light level.
   #define MANUVR_MSG_SENSOR_LPS331        0x0520 // The baro sensor has something to say.
   #define MANUVR_MSG_SENSOR_LPS331_IRQ_0  0x0521 // The baro sensor IRQ_0 pin.
   #define MANUVR_MSG_SENSOR_LPS331_IRQ_1  0x0522 // The baro sensor IRQ_1 pin.

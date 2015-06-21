@@ -23,8 +23,8 @@
 #  ===========================================================================*/
 
 
-#ifndef __LDS8160_LED_DRIVER_H__
-#define __LDS8160_LED_DRIVER_H__
+#ifndef __MGC3130_H__
+#define __MGC3130_H__
 
 #include <inttypes.h>
 #include <stdint.h>
@@ -67,6 +67,7 @@ class MGC3130 : public I2CDevice, public EventReceiver {
     
     /* Overrides from I2CDevice... */
     void operationCompleteCallback(I2CQueuedOperation*);
+    bool operationCallahead(I2CQueuedOperation* op);
 
     /* Overrides from EventReceiver */
     int8_t notify(ManuvrEvent*);
@@ -112,14 +113,17 @@ class MGC3130 : public I2CDevice, public EventReceiver {
     uint8_t _irq_pin_1;   // Pin number being used by optional IRQ pin.
     uint8_t _irq_pin_2;   // Pin number being used by optional IRQ pin.
     uint8_t _irq_pin_3;   // Pin number being used by optional IRQ pin.
+    
+    uint32_t pid_mgc3130_service;
 
     uint8_t last_event;
 
+    uint8_t power_mode;
     uint8_t service_flags;
     uint8_t class_state;
-
-    uint8_t getEvent(void);
-
+    
+    uint8_t read_buffer[52];
+    uint8_t write_buffer[20];
 
 
 #ifdef BOARD_IRQS_AND_PINS_DISTINCT

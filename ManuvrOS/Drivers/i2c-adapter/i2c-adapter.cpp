@@ -1,6 +1,6 @@
 #include "i2c-adapter.h"
 
-#ifdef __MK20DX256__
+#if defined(__MK20DX256__) | defined(__MK20DX128__)
   #include <i2c_t3.h>
 #elif defined(STM32F4XX)
   #include <stm32f4xx.h>
@@ -147,15 +147,23 @@ int8_t I2CAdapter::generateStop() {
 }
 
 
-#elif defined(__MK20DX256__)
+#elif defined(__MK20DX256__) | defined(__MK20DX128__)
 
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
   __class_initializer();
   dev = dev_id;
 
-  if (dev_id == 1) {
+  if (dev_id == 0) {
+    Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_INT, I2C_RATE_400);
+    bus_online = true;
+  }
+  #if defined(__MK20DX256__)
+  else if (dev_id == 0) {
     Wire1.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400);
     bus_online = true;
+  }
+  #endif
+  else {
   }
   
   for (uint16_t i = 0; i < 128; i++) {

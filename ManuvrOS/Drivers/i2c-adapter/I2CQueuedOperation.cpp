@@ -1,6 +1,6 @@
 #include "i2c-adapter.h"
 
-#ifdef __MK20DX256__
+#if defined(__MK20DX256__) | defined(__MK20DX128__)
   #include <i2c_t3.h>
 #endif
 
@@ -55,6 +55,7 @@ const char* I2CQueuedOperation::getErrorString(int8_t code) {
     case I2C_ERR_CODE_ADDR_2TX:     return "ADDR_2TX";
     case I2C_ERR_CODE_BAD_OP:       return "Bad operation code";
     case I2C_ERR_CODE_TIMEOUT:      return "TIMEOUT";
+    case I2C_ERR_CODE_CLASS_ABORT:  return "CLASS_ABORT";
     default:                        return "<UNKNOWN>";
   }
 }
@@ -160,6 +161,12 @@ int8_t I2CQueuedOperation::begin(void) {
     abort(I2C_ERR_CODE_NO_DEVICE);
     return -1;
   }
+  
+  if (!requester->operationCallahead(this)) {
+    abort(I2C_ERR_CODE_CLASS_ABORT);
+    return -1;
+  }
+  
   initiated = true;
   xfer_state = I2C_XFER_STATE_ADDR;
   init_dma();
@@ -195,6 +202,41 @@ int8_t I2CQueuedOperation::init_dma() {
   }
   
   switch (Wire1.status()) {
+    case I2C_WAITING:
+      markComplete();
+      break;
+    case I2C_ADDR_NAK:
+      abort(I2C_ERR_SLAVE_NOT_FOUND);
+      break;
+    case I2C_DATA_NAK:
+      abort();
+      break;
+    case I2C_ARB_LOST:
+      abort();
+      break;
+    case I2C_TIMEOUT:
+      abort(I2C_ERR_CODE_TIMEOUT);
+      break;
+  }
+
+#elif defined(__MK20DX128__)
+  Wire.beginTransmission(dev_addr);
+  if (need_to_send_subaddr()) Wire.write((uint8_t) (sub_addr & 0x00FF));
+
+  if (opcode == I2C_OPERATION_READ) {
+    Wire.endTransmission(I2C_NOSTOP);
+    Wire.requestFrom(dev_addr, len, I2C_STOP, 900);
+    int i = 0;
+    while(Wire.available()) {
+      *(buf + i++) = (uint8_t) Wire.readByte();
+    }
+  }
+  else if (opcode == I2C_OPERATION_WRITE) {
+    for(int i = 0; i < len; i++) Wire.write(*(buf+i));
+    Wire.endTransmission(I2C_STOP, 900);   // 900us timeout
+  }
+  
+  switch (Wire.status()) {
     case I2C_WAITING:
       markComplete();
       break;

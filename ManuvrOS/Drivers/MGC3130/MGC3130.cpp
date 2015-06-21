@@ -32,7 +32,7 @@ This class is a driver for Microchip's MGC3130 e-field gesture sensor. It is mea
 
 #include "StaticHub/StaticHub.h"
 #include "MGC3130.h"
-#include <StringBuilder.h>
+#include <StringBuilder/StringBuilder.h>
 
 
 /*
@@ -194,46 +194,44 @@ void MGC3130::init() {
 
 
 void MGC3130::enableApproachDetect(bool en) {
-  Wire.beginTransmission((uint8_t)_i2caddr);
-  Wire.write(0x10);
-  Wire.write(0x00);
-  Wire.write(0x00);
-  Wire.write(0xA2);
-  Wire.write(0x97);
-  Wire.write(0x00);
-  Wire.write(0x00);
-  Wire.write(0x00);
-  Wire.write(en ? 0x01 : 0x00);
-  Wire.write(0x00);
-  Wire.write(0x00);
-  Wire.write(0x00);
-  Wire.write(0x10);
-  Wire.write(0x00);
-  Wire.write(0x00);
-  Wire.write(0x00);
-  Wire.endTransmission();
+  write_buffer[0] = 0x10;
+  write_buffer[1] = 0x00;
+  write_buffer[2] = 0x00;
+  write_buffer[3] = 0xA2;
+  write_buffer[4] = 0x97;
+  write_buffer[5] = 0x00;
+  write_buffer[6] = 0x00;
+  write_buffer[7] = 0x00;
+  write_buffer[8] = (en ? 0x01 : 0x00);
+  write_buffer[9] = 0x00;
+  write_buffer[10] = 0x00;
+  write_buffer[11] = 0x00;
+  write_buffer[12] = 0x10;
+  write_buffer[13] = 0x00;
+  write_buffer[14] = 0x00;
+  write_buffer[15] = 0x00;
+  writeX(-1, 16, (uint8_t*) write_buffer);
 }
 
 
 void MGC3130::enableAirwheel(bool en) {
-  Wire.beginTransmission((uint8_t)_i2caddr);
-  Wire.write(0x10);
-  Wire.write(0x00);
-  Wire.write(0x00);
-  Wire.write(0xA2);
-  Wire.write(0x90);
-  Wire.write(0x00);
-  Wire.write(0x00);
-  Wire.write(0x00);
-  Wire.write(en ? 0x20 : 0x00);
-  Wire.write(0x00);
-  Wire.write(0x00);
-  Wire.write(0x00);
-  Wire.write(0x20);
-  Wire.write(0x00);
-  Wire.write(0x00);
-  Wire.write(0x00);
-  Wire.endTransmission();
+  write_buffer[0] = 0x10;
+  write_buffer[1] = 0x00;
+  write_buffer[2] = 0x00;
+  write_buffer[3] = 0xA2;
+  write_buffer[4] = 0x90;
+  write_buffer[5] = 0x00;
+  write_buffer[6] = 0x00;
+  write_buffer[7] = 0x00;
+  write_buffer[8] = (en ? 0x20 : 0x00);
+  write_buffer[9] = 0x00;
+  write_buffer[10] = 0x00;
+  write_buffer[11] = 0x00;
+  write_buffer[12] = 0x20;
+  write_buffer[13] = 0x00;
+  write_buffer[14] = 0x00;
+  write_buffer[15] = 0x00;
+  writeX(-1, 16, (uint8_t*) write_buffer);
 }
 
 
@@ -267,19 +265,11 @@ int8_t MGC3130::setIRQPin(uint8_t _mask, int pin) {
 
 int8_t MGC3130::service() {
   int8_t return_value = 0;
-  if (digitalRead(_ts_pin)) {
-    //service_flags &= ~((uint8_t) MGC3130_ISR_MARKER_TS);
-    digitalWrite(_ts_pin, LOW);
-    pinMode(_ts_pin, OUTPUT);
 
-    if (getEvent()) {
-    return_value++;
-    }
-
-      digitalWrite(_ts_pin, 1);
-      pinMode(_ts_pin, INPUT);
-  }
-
+  // Pick some safe number. We might limit this depending on what the sensor has to say.
+  uint8_t bytes_expected = 32;
+  readX(-1, (uint8_t) bytes_expected, (uint8_t*)read_buffer);    // request bytes from slave device at 0x42
+/*
   if (service_flags) {
   if (service_flags & MGC3130_ISR_MARKER_G0) {
     service_flags &= ~((uint8_t) MGC3130_ISR_MARKER_G0);
@@ -304,159 +294,7 @@ int8_t MGC3130::service() {
   else {
     service_flags = 0;;
   }
-  }  
-  return return_value;
-}
-
-
-/**
-* 
-*/
-uint8_t MGC3130::getEvent(void) {
-  byte data;
-  int c = 0;
-  events_received++;
-  uint32_t temp_value = 0;   // Used to aggregate fields that span several bytes.
-  uint16_t data_set = 0;
-  uint8_t return_value = 0;
-  
-  bool pos_valid = false;
-  bool wheel_valid = false;
-  
-  // Pick some safe number. We might limit this depending on what the sensor has to say.
-  uint8_t bytes_expected = 32;  
-  Wire.requestFrom((uint8_t)_i2caddr, (uint8_t) bytes_expected);    // request 26 bytes from slave device at 0x42
-
-  while(Wire.available() && (0 < bytes_expected)) {     
-    #if defined(_BOARD_FUBARINO_MINI_)    // Fubarino
-    data = Wire.receive(); // receive a byte as character
-  #else
-    data = Wire.read(); // receive a byte as character
-  #endif
-
-  bytes_expected--;
-    switch (c++) {
-      case 0:   // Length of the transfer by the sensor's reckoning.
-        //if (bytes_expected < (data-1)) {
-          bytes_expected = data - 1;  // Minus 1 because: we have already read one.
-        //}
-        break;
-      case 1:   // Flags.
-    last_event = (B00000001 << (data-1)) | B00100000;
-        break;
-      case 2:   // Sequence number
-        break;
-      case 3:   // Unique ID
-    // data ought to always be 0x91 at this point.
-        break;
-      case 4:   // Data output config mask is a 16-bit value.
-        data_set = data;
-        break;
-      case 5:   // Data output config mask is a 16-bit value.
-        data_set += data << 8;
-        break;
-      case 6:   // Timestamp (by the sensor's clock). Mostly useless unless we are paranoid about sample drop.
-        break;
-      case 7:   // System info. Tells us what data is valid.
-        pos_valid   = (data & 0x01);  // Position
-    wheel_valid = (data & 0x02);  // Air wheel
-        break;
-      
-      /* Below this point, we enter the "variable-length" area. God speed.... */
-      case 8:   //  DSP info
-      case 9: 
-        break;
-
-      case 10:  // GestureInfo in the next 4 bytes.
-    temp_value = data;
-        break;
-      case 11: 
-    temp_value += data << 8;
-        break;
-      case 12:  break;   // These bits are reserved.
-      case 13:
-    temp_value += data << 24;
-    if (0 == (temp_value & 0x80000000)) {   // Gesture recog completed?
-      if (temp_value & 0x000060FC) {   // Swipe data
-      last_swipe |= ((temp_value >> 2) & 0x000000FF) | 0b10000000;
-      if (temp_value & 0x00010000) {
-        last_swipe |= 0b01000000;   // Classify as an edge-swipe.
-      }
-      return_value++;
-      }
-    }
-    temp_value = 0;
-        break;
-
-      case 14:  // TouchInfo in the next 4 bytes.
-    temp_value = data;
-        break;
-      case 15:
-    temp_value += data << 8;
-    if (temp_value & 0x0000001F) {
-      last_touch = (temp_value & 0x0000001F) | 0x20;;
-      return_value++;
-    }
-    else {
-      last_touch = 0;
-    }
-    
-    if (temp_value & 0x000003E0) {
-      last_tap = ((temp_value & 0x000003E0) >> 5) | 0x40;
-      return_value++;
-    }
-    if (temp_value & 0x00007C00) {
-      last_double_tap = ((temp_value & 0x00007C00) >> 10) | 0x80;
-      return_value++;
-    }
-        break;
-      case 16:
-    touch_counter = data;
-    temp_value = 0;
-    break;
-      case 17:  break;   // These bits are reserved. 
-
-    case 18:  // AirWheelInfo 
-    if (wheel_valid) {
-      wheel_position = (data%32)+1;
-      return_value++;
-    }
-        break;
-      case 19:  // AirWheelInfo, but the MSB is reserved.
-        break;
-
-      case 20:  // Position. This is a vector of 3 uint16's, but we store as 32-bit.
-        if (pos_valid) _pos_x = data;
-        break;
-      case 21:
-        if (pos_valid) _pos_x += data << 8;
-        break;
-      case 22: 
-        if (pos_valid) _pos_y = data;
-        break;
-      case 23: 
-        if (pos_valid) _pos_y += data << 8;
-        break;
-      case 24: 
-        if (pos_valid) _pos_z = data;
-        break;
-      case 25:
-        if (pos_valid) _pos_z += data << 8;
-        break;
-
-      case 26:   // NoisePower 
-      case 27: 
-      case 28: 
-      case 29: 
-        break;
-        
-      default:
-        // There may be up to 40 more bytes after this, but we aren't dealing with them.
-        break;
-    }
-  }
-  
-  if (pos_valid) return_value++;
+  }  */
   return return_value;
 }
 
@@ -559,13 +397,13 @@ void mgc3130_isr_check() {
   if (mgc3130->isDirty()) {
     StringBuilder output;
 
-    if (mgc3130->isPositionDirty()) output.concatf("Position 0x%04x,0x%04x,0x%04x\r\n", hover._pos_x, hover._pos_y, hover._pos_z);
-    if (mgc3130->wheel_position)    output.concatf("AirWheel %d\r\n", hover.wheel_position);
-    if (mgc3130->last_swipe)        output.concatf("Swipe %d\r\n", hover.last_swipe);
-    if (mgc3130->last_tap)          output.concatf("Tap %d\r\n", hover.last_tap);
-    if (mgc3130->last_double_tap)   output.concatf("Double tap %d\r\n", hover.last_double_tap);
-    if (mgc3130->isTouchDirty())    output.concatf("Touch %d\r\n", hover.last_touch);
-    if (mgc3130->special)           output.concatf("Special condition %d\r\n", hover.special);
+    if (mgc3130->isPositionDirty()) output.concatf("Position 0x%04x,0x%04x,0x%04x\r\n", mgc3130->_pos_x, mgc3130->_pos_y, mgc3130->_pos_z);
+    if (mgc3130->wheel_position)    output.concatf("AirWheel %d\r\n", mgc3130->wheel_position);
+    if (mgc3130->last_swipe)        output.concatf("Swipe %d\r\n", mgc3130->last_swipe);
+    if (mgc3130->last_tap)          output.concatf("Tap %d\r\n", mgc3130->last_tap);
+    if (mgc3130->last_double_tap)   output.concatf("Double tap %d\r\n", mgc3130->last_double_tap);
+    if (mgc3130->isTouchDirty())    output.concatf("Touch %d\r\n", mgc3130->last_touch);
+    if (mgc3130->special)           output.concatf("Special condition %d\r\n", mgc3130->special);
 
     mgc3130->markClean();
     Serial.print((char*)output.string());
@@ -576,12 +414,166 @@ void mgc3130_isr_check() {
 
 
 /****************************************************************************************************
-* These are overrides from I2CDeviceWithRegisters.                                                  *
+* These are overrides from I2CDevice.                                                               *
 ****************************************************************************************************/
 
 void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
+  digitalWrite(_ts_pin, 1);
+  pinMode(_ts_pin, INPUT);
+
+  byte data;
+  int c = 0;
+  events_received++;
+  uint32_t temp_value = 0;   // Used to aggregate fields that span several bytes.
+  uint16_t data_set = 0;
+  uint8_t return_value = 0;
+  
+  bool pos_valid = false;
+  bool wheel_valid = false;
+  uint8_t byte_index = 0;
+  
+  int bytes_expected = completed->len;
+  
+  while(0 < bytes_expected) {
+    data = *(read_buffer + byte_index++);
+    bytes_expected--;
+    switch (c++) {
+      case 0:   // Length of the transfer by the sensor's reckoning.
+        //if (bytes_expected < (data-1)) {
+          bytes_expected = data - 1;  // Minus 1 because: we have already read one.
+        //}
+        break;
+      case 1:   // Flags.
+    last_event = (B00000001 << (data-1)) | B00100000;
+        break;
+      case 2:   // Sequence number
+        break;
+      case 3:   // Unique ID
+    // data ought to always be 0x91 at this point.
+        break;
+      case 4:   // Data output config mask is a 16-bit value.
+        data_set = data;
+        break;
+      case 5:   // Data output config mask is a 16-bit value.
+        data_set += data << 8;
+        break;
+      case 6:   // Timestamp (by the sensor's clock). Mostly useless unless we are paranoid about sample drop.
+        break;
+      case 7:   // System info. Tells us what data is valid.
+        pos_valid   = (data & 0x01);  // Position
+    wheel_valid = (data & 0x02);  // Air wheel
+        break;
+      
+      /* Below this point, we enter the "variable-length" area. God speed.... */
+      case 8:   //  DSP info
+      case 9: 
+        break;
+
+      case 10:  // GestureInfo in the next 4 bytes.
+	temp_value = data;
+        break;
+      case 11: 
+	temp_value += data << 8;
+        break;
+      case 12:  break;   // These bits are reserved.
+      case 13:
+	temp_value += data << 24;
+	if (0 == (temp_value & 0x80000000)) {   // Gesture recog completed?
+	  if (temp_value & 0x000060FC) {   // Swipe data
+	    last_swipe |= ((temp_value >> 2) & 0x000000FF) | 0b10000000;
+	    if (temp_value & 0x00010000) {
+	      last_swipe |= 0b01000000;   // Classify as an edge-swipe.
+	    }
+	    return_value++;
+	  }
+	}
+	temp_value = 0;
+        break;
+
+      case 14:  // TouchInfo in the next 4 bytes.
+	temp_value = data;
+        break;
+      case 15:
+	temp_value += data << 8;
+	if (temp_value & 0x0000001F) {
+	  last_touch = (temp_value & 0x0000001F) | 0x20;;
+	  return_value++;
+	}
+	else {
+	  last_touch = 0;
+	}
+    
+	if (temp_value & 0x000003E0) {
+	  last_tap = ((temp_value & 0x000003E0) >> 5) | 0x40;
+	  return_value++;
+	}
+	if (temp_value & 0x00007C00) {
+	  last_double_tap = ((temp_value & 0x00007C00) >> 10) | 0x80;
+	  return_value++;
+	}
+        break;
+
+      case 16:
+	touch_counter = data;
+	temp_value = 0;
+	break;
+	
+      case 17:  break;   // These bits are reserved. 
+
+    case 18:  // AirWheelInfo 
+    if (wheel_valid) {
+      wheel_position = (data%32)+1;
+      return_value++;
+    }
+        break;
+      case 19:  // AirWheelInfo, but the MSB is reserved.
+        break;
+
+      case 20:  // Position. This is a vector of 3 uint16's, but we store as 32-bit.
+        if (pos_valid) _pos_x = data;
+        break;
+      case 21:
+        if (pos_valid) _pos_x += data << 8;
+        break;
+      case 22: 
+        if (pos_valid) _pos_y = data;
+        break;
+      case 23: 
+        if (pos_valid) _pos_y += data << 8;
+        break;
+      case 24: 
+        if (pos_valid) _pos_z = data;
+        break;
+      case 25:
+        if (pos_valid) _pos_z += data << 8;
+        break;
+
+      case 26:   // NoisePower 
+      case 27: 
+      case 28: 
+      case 29: 
+        break;
+        
+      default:
+        // There may be up to 40 more bytes after this, but we aren't dealing with them.
+        break;
+    }
+  }
+  
+  if (pos_valid) return_value++;
 }
 
+
+/* If your device needs something to happen immediately prior to bus I/O... */
+bool MGC3130::operationCallahead(I2CQueuedOperation* op) {
+  if (digitalRead(_ts_pin)) {
+    //service_flags &= ~((uint8_t) MGC3130_ISR_MARKER_TS);
+    digitalWrite(_ts_pin, LOW);
+    pinMode(_ts_pin, OUTPUT);
+    return true;
+  }
+  return false;
+}
 
 
 /**
@@ -617,8 +609,8 @@ const char* MGC3130::getReceiverName() {  return "MGC3130";  }
 int8_t MGC3130::bootComplete() {
   EventReceiver::bootComplete();   // Call up to get scheduler ref and class init.
   
-  pid_channel_0 = scheduler->createSchedule(10,  0, false, mgc3130_isr_check);
-  scheduler->disableSchedule(pid_channel_0);
+  pid_mgc3130_service = scheduler->createSchedule(10,  0, false, mgc3130_isr_check);
+  scheduler->disableSchedule(pid_mgc3130_service);
   
   digitalWrite(_reset_pin, 1);
 
@@ -700,6 +692,9 @@ void MGC3130::procDirectDebugInstruction(StringBuilder *input) {
   /* These are debug case-offs that are typically used to test functionality, and are then
      struck from the build. */
   switch (*(str)) {
+    case 'i':
+      printDebug(&local_log);
+      break;
     default:
       EventReceiver::procDirectDebugInstruction(input);
       break;
@@ -707,4 +702,5 @@ void MGC3130::procDirectDebugInstruction(StringBuilder *input) {
   
   if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
 }
+
 

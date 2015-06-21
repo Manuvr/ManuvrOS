@@ -164,6 +164,8 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SESS_DUMP_DEBUG      , MSG_FLAG_EXPORTABLE,  "SESS_DUMP_DEBUG"      , MSG_ARGS_NONE }, // 
   {  MANUVR_MSG_SESS_ORIGINATE_MSG   , MSG_FLAG_IDEMPOTENT,  "SESS_ORIGINATE_MSG"   , MSG_ARGS_NONE }, // 
 
+  {  MANUVR_MSG_NEOPIXEL_REFRESH     , MSG_FLAG_IDEMPOTENT,  "NEOPIXEL_REFRESH"     , MSG_ARGS_NONE }, // Cause any neopixel classes to refresh their strands.
+  {  MANUVR_MSG_SENSOR_LIGHT_LEVEL   , MSG_FLAG_IDEMPOTENT,  "LIGHT_LEVEL"          , MSG_ARGS_U16  }, // Unitless light-level report.
   {  MANUVR_MSG_XPORT_SEND           , MSG_FLAG_IDEMPOTENT,  "XPORT_SEND"           , MSG_ARGS_STR_BUILDER }, // 
 };
 
