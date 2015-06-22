@@ -69,8 +69,6 @@ class MGC3130 : public I2CDevice, public EventReceiver {
     int32_t _pos_z;
     int32_t wheel_position;
 
-    uint32_t events_received;
-
     MGC3130(int ts, int mclr, uint8_t addr = 0x42);
     void init();
 
@@ -119,6 +117,7 @@ class MGC3130 : public I2CDevice, public EventReceiver {
     uint8_t _irq_pin_3;   // Pin number being used by optional IRQ pin.
     
     uint8_t last_event;
+    uint8_t last_seq_num;
 
     uint8_t power_mode;
     
