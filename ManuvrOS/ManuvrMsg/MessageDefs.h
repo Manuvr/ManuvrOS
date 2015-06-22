@@ -191,6 +191,7 @@
   #define MANUVR_MSG_SENSOR_TMP006_IRQ    0x0541 // The thermopile IRQ pin changed state.
   #define MANUVR_MSG_SENSOR_INA219        0x0550 // The current sensor has something to say.
   #define MANUVR_MSG_SENSOR_MGC3130       0x0556 // MGC3130 is declaring it has new data.
+  #define MANUVR_MSG_SENSOR_MGC3130_INIT  0x0557 // MGC3130 is (re)initializing itself.
 
   
   

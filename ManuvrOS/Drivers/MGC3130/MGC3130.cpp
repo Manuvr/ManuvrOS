@@ -36,12 +36,13 @@ This class is a driver for Microchip's MGC3130 e-field gesture sensor. It is mea
 
 
 
+ManuvrEvent _isr_read_event(MANUVR_MSG_SENSOR_MGC3130);
 
 /*
 * This is an ISR to initiate the read of the MGC3130.
 */
 void mgc3130_isr_check() {
-  EventManager::raiseEvent(MANUVR_MSG_SENSOR_MGC3130, ((EventReceiver*) MGC3130::INSTANCE));
+  EventManager::staticRaiseEvent(&_isr_read_event);
 }
 
 
@@ -53,39 +54,21 @@ void mgc3130_isr_check() {
 volatile MGC3130* MGC3130::INSTANCE = NULL;
 
 
-
-void hover_ts_irq() {
-  ((MGC3130*) MGC3130::INSTANCE)->set_isr_mark(MGC3130_ISR_MARKER_TS);
-}
-
-
 void gest_0() {
-  ((MGC3130*) MGC3130::INSTANCE)->set_isr_mark(MGC3130_ISR_MARKER_G0);
 }
 
 
 void gest_1() {
-  ((MGC3130*) MGC3130::INSTANCE)->set_isr_mark(MGC3130_ISR_MARKER_G1);
 }
 
 
 void gest_2() {
-  ((MGC3130*) MGC3130::INSTANCE)->set_isr_mark(MGC3130_ISR_MARKER_G2);
 }
 
 
 void gest_3() {
-  ((MGC3130*) MGC3130::INSTANCE)->set_isr_mark(MGC3130_ISR_MARKER_G3);
 }
 
-
-
-void MGC3130::set_isr_mark(uint8_t mask) {
-  if (MGC3130_ISR_MARKER_TS == mask) {
-  pinMode(_ts_pin, OUTPUT);
-  digitalWrite(_ts_pin, 0);
-  }
-}
 
 
 
@@ -93,17 +76,20 @@ MGC3130::MGC3130(int ts, int rst, uint8_t addr) {
   _dev_addr  = addr;
   _ts_pin    = (uint8_t) ts;
   _reset_pin = (uint8_t) rst;
+  
+  _isr_read_event.specific_target = this;
+  _isr_read_event.callback        = this;
+  _isr_read_event.priority        = 3;
+  _isr_read_event.isManaged(true);
 
   // TODO: Formallize this for build targets other than Arduino. Use the abstracted Manuvr
   //       GPIO class instead.
-  pinMode(_ts_pin, INPUT_PULLUP);     //Used by TS line on MGC3130
   digitalWrite(_ts_pin, 0);
-  
-  attachInterrupt(_ts_pin, mgc3130_isr_check, FALLING);
+  pinMode(_ts_pin, INPUT_PULLUP);     //Used by TS line on MGC3130
 
   digitalWrite(_reset_pin, 0);
   pinMode(_reset_pin, OUTPUT);   //Used by reset line on MGC3130
-
+  attachInterrupt(_ts_pin, mgc3130_isr_check, FALLING);
 
   _irq_pin_0 = 0;
   _irq_pin_1 = 0;
@@ -152,19 +138,8 @@ int MGC3130::get_irq_num_by_pin(int _pin) {
 
 
 void MGC3130::init() {
-
-  #if defined(BOARD_IRQS_AND_PINS_DISTINCT)
-  int fubar_irq_number = get_irq_num_by_pin(_ts_pin);
-  if (fubar_irq_number >= 0) {
-    // TODO: Looks like I left interrupt support broken.
-    //attachInterrupt(fubar_irq_number, hover_ts_irq, FALLING);
-  }
-  #else
-  //attachInterrupt(_ts_pin, hover_ts_irq, FALLING);
-  #endif
-  
   if (_irq_pin_0) {
-  pinMode(_irq_pin_0, INPUT);
+  pinMode(_irq_pin_0, INPUT_PULLUP);
   #if defined(BOARD_IRQS_AND_PINS_DISTINCT)
     int fubar_irq_number = get_irq_num_by_pin(_irq_pin_0);
     if (fubar_irq_number >= 0) {
@@ -176,7 +151,7 @@ void MGC3130::init() {
   }
   
   if (_irq_pin_1) {
-  pinMode(_irq_pin_1, INPUT);
+  pinMode(_irq_pin_1, INPUT_PULLUP);
   #if defined(BOARD_IRQS_AND_PINS_DISTINCT)
     int fubar_irq_number = get_irq_num_by_pin(_irq_pin_1);
     if (fubar_irq_number >= 0) {
@@ -188,7 +163,7 @@ void MGC3130::init() {
   }
   
   if (_irq_pin_2) {
-  pinMode(_irq_pin_2, INPUT);
+  pinMode(_irq_pin_2, INPUT_PULLUP);
   #if defined(BOARD_IRQS_AND_PINS_DISTINCT)
     int fubar_irq_number = get_irq_num_by_pin(_irq_pin_2);
     if (fubar_irq_number >= 0) {
@@ -200,7 +175,7 @@ void MGC3130::init() {
   }
   
   if (_irq_pin_3) {
-  pinMode(_irq_pin_3, INPUT);
+  pinMode(_irq_pin_3, INPUT_PULLUP);
   #if defined(BOARD_IRQS_AND_PINS_DISTINCT)
     int fubar_irq_number = get_irq_num_by_pin(_irq_pin_3);
     if (fubar_irq_number >= 0) {
@@ -323,8 +298,10 @@ const char* MGC3130::getTouchTapString(uint8_t eventByte) {
 
 void MGC3130::printDebug(StringBuilder* output) {
   if (NULL == output) return;
-  output->concatf("--- MGC3130  (0x%02x)\n----------------------------------\n", _dev_addr);
+  EventReceiver::printDebug(output);
+  I2CDevice::printDebug(output);
   output->concatf("\t TS Pin:     %d \n\t MCLR Pin:   %d\n", _ts_pin, _reset_pin);
+  output->concatf("\t Touch count %d \n\t Flags:      0x%02\n", touch_counter, flags);
 
   if (wheel_position)    output->concatf("\t Airwheel: 0x%08x\n", wheel_position);
   if (isPositionDirty()) output->concatf("\t Position: (0x%04x, 0x%04x, 0x%04x)\n", _pos_x, _pos_y, _pos_z);
@@ -478,6 +455,7 @@ void MGC3130::dispatchGestureEvents() {
 
 void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
   pinMode(_ts_pin, INPUT_PULLUP);
+  are_we_holding_ts(false);
   attachInterrupt(_ts_pin, mgc3130_isr_check, FALLING);
 
   if (completed->err_code != I2C_ERR_CODE_NO_ERROR) {
@@ -487,9 +465,14 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
       completed->printDebug(&output);
       StaticHub::log(&output);
     }
+    EventManager::staticRaiseEvent(&_isr_read_event);
     return;
   }
 
+  if (completed->opcode != I2C_OPERATION_READ) {
+    return;
+  }
+  
   byte data;
   int c = 0;
   events_received++;
@@ -629,7 +612,6 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
     }
   }
   
-  if (pos_valid) return_value++;
   dispatchGestureEvents();
 }
 
@@ -640,6 +622,7 @@ bool MGC3130::operationCallahead(I2CQueuedOperation* op) {
     detachInterrupt(_ts_pin);
     
     pinMode(_ts_pin, OUTPUT);
+    are_we_holding_ts(true);
     return true;
   }
   return false;
@@ -678,11 +661,9 @@ const char* MGC3130::getReceiverName() {  return "MGC3130";  }
 */
 int8_t MGC3130::bootComplete() {
   EventReceiver::bootComplete();   // Call up to get scheduler ref and class init.
-  
   init();
-  digitalWrite(_reset_pin, 1);
-  
-  //enableApproachDetect(true);
+  ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_SENSOR_MGC3130_INIT);
+  scheduler->createSchedule(400, 0, true, this, event);
   return 1;
 }
 
@@ -709,6 +690,8 @@ int8_t MGC3130::callback_proc(ManuvrEvent *event) {
   
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
+    case MANUVR_MSG_SENSOR_MGC3130:
+      break;
     default:
       break;
   }
@@ -734,10 +717,20 @@ int8_t MGC3130::notify(ManuvrEvent *active_event) {
         }
       }
       break;
-      
+
+    case MANUVR_MSG_SENSOR_MGC3130_INIT:
+      is_class_ready(true);
+      digitalWrite(_reset_pin, 1);
+      //enableAirwheel(true);
+      if (digitalRead(_ts_pin)) {
+        return_value++;
+        break;
+      }
+      // Note: No break.
+
     case MANUVR_MSG_SENSOR_MGC3130:
       // Pick some safe number. We might limit this depending on what the sensor has to say.
-      readX(-1, (uint8_t) 31, (uint8_t*)read_buffer);    // request bytes from slave device at 0x42
+      readX(-1, (uint8_t) 32, (uint8_t*)read_buffer);    // request bytes from slave device at 0x42
       return_value++;
       break;
       
@@ -764,6 +757,10 @@ void MGC3130::procDirectDebugInstruction(StringBuilder *input) {
   /* These are debug case-offs that are typically used to test functionality, and are then
      struck from the build. */
   switch (*(str)) {
+    case 'r':
+      is_class_ready(false);
+      EventManager::raiseEvent(MANUVR_MSG_SENSOR_MGC3130_INIT, NULL);
+      break;
     case 'i':
       printDebug(&local_log);
       break;

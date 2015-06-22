@@ -40,6 +40,7 @@
 /* These are the bit-masks for our internal state-machines. */
 #define MGC3130_GESTURE_ASSERTION_AW   0x01
 #define MGC3130_GESTURE_ASSERTION_POS  0x02
+#define MGC3130_FLAGS_CLASS_READY      0x40   // Set if the class is initialized.
 #define MGC3130_GESTURE_TS_HELD_BY_US  0x80   // Set if this class is holding the TS line.
 
 
@@ -109,6 +110,7 @@ class MGC3130 : public I2CDevice, public EventReceiver {
 
   private:
     uint32_t last_nuance_sent;
+    uint32_t pid_read_timer;
     uint8_t _ts_pin;      // Pin number being used by the TS pin.
     uint8_t _reset_pin;   // Pin number being used by the MCLR pin.
     uint8_t _irq_pin_0;   // Pin number being used by optional IRQ pin.
@@ -150,6 +152,13 @@ class MGC3130 : public I2CDevice, public EventReceiver {
       flags = (en) ? (flags | MGC3130_GESTURE_TS_HELD_BY_US) : (flags & ~(MGC3130_GESTURE_TS_HELD_BY_US));
     }
 
+    /*
+    * Accessor for TS hold tracking.
+    */
+    inline bool is_class_ready() {         return (flags & MGC3130_FLAGS_CLASS_READY);  } 
+    inline void is_class_ready(bool en) {
+      flags = (en) ? (flags | MGC3130_FLAGS_CLASS_READY) : (flags & ~(MGC3130_FLAGS_CLASS_READY));
+    }
 
 
 #ifdef BOARD_IRQS_AND_PINS_DISTINCT
