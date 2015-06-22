@@ -37,8 +37,17 @@
 #define MGC3130_ISR_MARKER_G2 0x20
 #define MGC3130_ISR_MARKER_G3 0x10
 
+/* These are the bit-masks for our internal state-machines. */
+#define MGC3130_GESTURE_ASSERTION_AW   0x01
+#define MGC3130_GESTURE_ASSERTION_POS  0x02
+#define MGC3130_GESTURE_TS_HELD_BY_US  0x80   // Set if this class is holding the TS line.
+
+
+#define MGC3130_MINIMUM_NUANCE_PERIOD  80     // How many milliseconds need to pass between repitions.
+
+
 #if defined(_BOARD_FUBARINO_MINI_)
-#define BOARD_IRQS_AND_PINS_DISTINCT 1
+  #define BOARD_IRQS_AND_PINS_DISTINCT 1
 #endif
 
 
@@ -89,10 +98,7 @@ class MGC3130 : public I2CDevice, public EventReceiver {
     inline bool isPositionDirty() { return ((_pos_x + _pos_y + _pos_z) != -3); };
     inline bool isTouchDirty() {    return (last_touch_noted != last_touch);   };
 
-    bool isDirty();
-    void markClean();
-
-    void printBrief(StringBuilder* output);
+    void dispatchGestureEvents();
 
     volatile static MGC3130* INSTANCE;
 
@@ -102,6 +108,7 @@ class MGC3130 : public I2CDevice, public EventReceiver {
 
 
   private:
+    uint32_t last_nuance_sent;
     uint8_t _ts_pin;      // Pin number being used by the TS pin.
     uint8_t _reset_pin;   // Pin number being used by the MCLR pin.
     uint8_t _irq_pin_0;   // Pin number being used by optional IRQ pin.
@@ -109,16 +116,40 @@ class MGC3130 : public I2CDevice, public EventReceiver {
     uint8_t _irq_pin_2;   // Pin number being used by optional IRQ pin.
     uint8_t _irq_pin_3;   // Pin number being used by optional IRQ pin.
     
-    uint32_t pid_mgc3130_service;
-
     uint8_t last_event;
 
     uint8_t power_mode;
-    uint8_t service_flags;
-    uint8_t class_state;
     
-    uint8_t read_buffer[52];
+    uint8_t flags;
+
+    uint8_t read_buffer[40];
     uint8_t write_buffer[20];
+
+
+    /*
+    * Accessor for assertion-gating state-machine. (AirWheel)
+    */
+    inline bool airwheel_asserted() {         return (flags & MGC3130_GESTURE_ASSERTION_AW);  } 
+    inline void airwheel_asserted(bool en) {
+      flags = (en) ? (flags | MGC3130_GESTURE_ASSERTION_AW) : (flags & ~(MGC3130_GESTURE_ASSERTION_AW));
+    }
+
+    /*
+    * Accessor for assertion-gating state-machine. (Position)
+    */
+    inline bool position_asserted() {         return (flags & MGC3130_GESTURE_ASSERTION_POS);  } 
+    inline void position_asserted(bool en) {
+      flags = (en) ? (flags | MGC3130_GESTURE_ASSERTION_POS) : (flags & ~(MGC3130_GESTURE_ASSERTION_POS));
+    }
+
+    /*
+    * Accessor for TS hold tracking.
+    */
+    inline bool are_we_holding_ts() {         return (flags & MGC3130_GESTURE_TS_HELD_BY_US);  } 
+    inline void are_we_holding_ts(bool en) {
+      flags = (en) ? (flags | MGC3130_GESTURE_TS_HELD_BY_US) : (flags & ~(MGC3130_GESTURE_TS_HELD_BY_US));
+    }
+
 
 
 #ifdef BOARD_IRQS_AND_PINS_DISTINCT

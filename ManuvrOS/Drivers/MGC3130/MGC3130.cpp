@@ -38,15 +38,11 @@ This class is a driver for Microchip's MGC3130 e-field gesture sensor. It is mea
 
 
 /*
-* TODO: Migrate this into an Event.
-* This is a timer callback to initiate the read of the MGC3130. This will only be used
-*   if interrupt support is not enabled at boot.
+* This is an ISR to initiate the read of the MGC3130.
 */
 void mgc3130_isr_check() {
   EventManager::raiseEvent(MANUVR_MSG_SENSOR_MGC3130, ((EventReceiver*) MGC3130::INSTANCE));
 }
-
-
 
 
 
@@ -85,7 +81,6 @@ void gest_3() {
 
 
 void MGC3130::set_isr_mark(uint8_t mask) {
-  service_flags |= mask;
   if (MGC3130_ISR_MARKER_TS == mask) {
   pinMode(_ts_pin, OUTPUT);
   digitalWrite(_ts_pin, 0);
@@ -98,9 +93,6 @@ MGC3130::MGC3130(int ts, int rst, uint8_t addr) {
   _dev_addr  = addr;
   _ts_pin    = (uint8_t) ts;
   _reset_pin = (uint8_t) rst;
-
-  service_flags = 0x00;
-  class_state = 0x00;
 
   // TODO: Formallize this for build targets other than Arduino. Use the abstracted Manuvr
   //       GPIO class instead.
@@ -118,11 +110,22 @@ MGC3130::MGC3130(int ts, int rst, uint8_t addr) {
   _irq_pin_2 = 0;
   _irq_pin_3 = 0;
   
-  markClean();
+  flags            = 0;
+  _pos_x           = -1;
+  _pos_y           = -1;
+  _pos_z           = -1;
+  wheel_position   = 0;
+  last_tap         = 0;
+  last_double_tap  = 0;
+  last_swipe       = 0;
+  special          = 0;
+  last_event       = 0;
+  last_touch       = 0;
+  touch_counter    = 0;
   last_touch_noted = last_touch;
-  
-  events_received = 0;
-  last_event = 0;
+  events_received  = 0;
+  events_received  = 0;
+  last_nuance_sent = millis();
   INSTANCE = this;
 }
 
@@ -281,89 +284,190 @@ int8_t MGC3130::setIRQPin(uint8_t _mask, int pin) {
 }
 
 
-
-bool MGC3130::isDirty() {
-  if (isPositionDirty())   return true;
-  if (0 < wheel_position)  return true;
-  if (0 < last_touch)      return true;
-  if (0 < last_tap)        return true;
-  if (0 < last_swipe)      return true;
-  return isTouchDirty();
-}
-
-void MGC3130::markClean() {
-  last_touch_noted = last_touch;
-  last_tap        =  0;
-  last_double_tap =  0;
-  last_swipe      =  0;
-  last_event      =  0;
-  touch_counter   =  0;
-  _pos_x          = -1;
-  _pos_y          = -1;
-  _pos_z          = -1;
-  wheel_position  =  0;
-  special         =  0;
-}
-
-
-void MGC3130::printBrief(StringBuilder* output) {
-  if (wheel_position)    output->concatf("Airwheel: %d\n", wheel_position);
-  if (isPositionDirty()) output->concatf("Position: (0x%04x, 0x%04x, 0x%04x)\n", _pos_x, _pos_y, _pos_z);
-  if (last_swipe)        output->concatf("Swipe %d\r\n", last_swipe);
-  if (last_tap)          output->concatf("Tap %d\r\n", last_tap);
-  if (last_double_tap)   output->concatf("Double tap %d\r\n", last_double_tap);
-  if (isTouchDirty())    output->concatf("Touch %d\r\n", last_touch);
-  if (special)           output->concatf("Special condition %d\r\n", special);
-}
-
-
 const char* MGC3130::getSwipeString(uint8_t eventByte) {
   switch (eventByte) {
-  case B10000010:  return "Right Swipe";
-  case B10000100:  return "Left Swipe";
-  case B10001000:  return "Up Swipe";
-  case B10010000:  return "Down Swipe";
-  case B11000010:  return "Right Swipe (Edge)";
-  case B11000100:  return "Left Swipe (Edge)";
-  case B11001000:  return "Up Swipe (Edge)";
-  case B11010000:  return "Down Swipe (Edge)";
-  } 
-  
-  return "<NONE>";
+    case B10000010:  return "Right Swipe";
+    case B10000100:  return "Left Swipe";
+    case B10001000:  return "Up Swipe";
+    case B10010000:  return "Down Swipe";
+    case B11000010:  return "Right Swipe (Edge)";
+    case B11000100:  return "Left Swipe (Edge)";
+    case B11001000:  return "Up Swipe (Edge)";
+    case B11010000:  return "Down Swipe (Edge)";
+    default:         return "<NONE>"; 
+  }
 }
 
 
 const char* MGC3130::getTouchTapString(uint8_t eventByte) {
   switch (eventByte) {
-  case B00100001:  return "Touch South";
-  case B00100010:  return "Touch West";
-  case B00100100:  return "Touch North";
-  case B00101000:  return "Touch East";
-  case B00110000:  return "Touch Center";
-  case B01000001:  return "Tap South";
-  case B01000010:  return "Tap West";
-  case B01000100:  return "Tap North";
-  case B01001000:  return "Tap East";
-  case B01010000:  return "Tap Center";
-  case B10000001:  return "DblTap South";
-  case B10000010:  return "DblTap West";
-  case B10000100:  return "DblTap North";
-  case B10001000:  return "DblTap East";
-  case B10010000:  return "DblTap Center";
+    case B00100001:  return "Touch South";
+    case B00100010:  return "Touch West";
+    case B00100100:  return "Touch North";
+    case B00101000:  return "Touch East";
+    case B00110000:  return "Touch Center";
+    case B01000001:  return "Tap South";
+    case B01000010:  return "Tap West";
+    case B01000100:  return "Tap North";
+    case B01001000:  return "Tap East";
+    case B01010000:  return "Tap Center";
+    case B10000001:  return "DblTap South";
+    case B10000010:  return "DblTap West";
+    case B10000100:  return "DblTap North";
+    case B10001000:  return "DblTap East";
+    case B10010000:  return "DblTap Center";
+    default:         return "<NONE>";
   } 
-  return "<NONE>";
 }
 
 
 void MGC3130::printDebug(StringBuilder* output) {
   if (NULL == output) return;
-  output->concatf("--- MGC3130  (0x%02x)\n----------------------------------\n-- Last position: (0x%04x, 0x%04x, 0x%04x)\n", _dev_addr, _pos_x, _pos_y, _pos_z);
-  output->concatf("-- Last swipe:    %s\n-- Last tap:      %s\n", getSwipeString(last_swipe), getTouchTapString(last_tap));
-  output->concatf("-- Last dbl_tap:  %s\n\n-- Last touch:    %s\n", getTouchTapString(last_double_tap), getTouchTapString(last_touch));
-  output->concatf("-- Airwheel:      0x%08x\n\n", wheel_position);
-  output->concatf("-- TS Pin:     %d\n-- MCLR Pin:   %d\n", _ts_pin, _reset_pin);
+  output->concatf("--- MGC3130  (0x%02x)\n----------------------------------\n", _dev_addr);
+  output->concatf("\t TS Pin:     %d \n\t MCLR Pin:   %d\n", _ts_pin, _reset_pin);
+
+  if (wheel_position)    output->concatf("\t Airwheel: 0x%08x\n", wheel_position);
+  if (isPositionDirty()) output->concatf("\t Position: (0x%04x, 0x%04x, 0x%04x)\n", _pos_x, _pos_y, _pos_z);
+  if (last_swipe)        output->concatf("\t Swipe     %s\n", getSwipeString(last_swipe));
+  if (last_tap)          output->concatf("\t Tap       %s\n", getTouchTapString(last_tap));
+  if (last_double_tap)   output->concatf("\t dbltap    %s\n", getTouchTapString(last_double_tap));
+  if (isTouchDirty())    output->concatf("\t Touch     %s\n", getTouchTapString(last_touch));
+  if (special)           output->concatf("\t Special condition %d\n", special);
 }
 
+
+
+/*
+* This is the point at which our in-class data becomes abstract gesture codes.
+* Ultimately, whatever strategy this evolves into will need to be extensible to
+*   Digitabulum as well as many other kinds of gesture systems. I have no idea
+*   if what I am doing is a good idea. Into the void....
+*
+* TODO: Some of this will have be fleshed out later once the strategy is more formallized.
+*
+* We are going to send two kinds of gesture events: One-shots, and assertions.
+* A one-shot is a gesture that is recognized once, and that is all that matters.
+*   examples of this in the MGC3130's case would be swipes and taps.
+* An assertion is a gesture that locks in place and must then be disasserted later.
+*   In the time intervening, aftertouch and ancillary data may be sent referencing
+*   the locked gesture. In the MGC3130's case, this would be position and airwheel.
+*
+* In any case, the gestures are references by an integer position in a legend, which
+*   we have hard-coded in this class, because there is no capability to define a gesture
+*   independently of the MGC3130 firmware (which we wont touch). It may be the case that
+*   later, we remove this restriction to implement one-shots such as glyphs by-way-of 
+*   position. But this will have to come later.
+*                              ---J. Ian Lindsay   Mon Jun 22 01:44:06 MST 2015
+*/
+
+
+/*
+* For now, the hard-coded gesture map against which we will reference will be the mapping
+*   of 32-bit pointer addresses for the strings that represent the gesture, for convenience 
+*   sake. This mapping will therefore change from build-to-build.
+* The exception is position (ID = 1) and AirWheel (ID = 2).
+*/
+
+void MGC3130::dispatchGestureEvents() {
+  ManuvrEvent* event = NULL;
+  
+  if (isPositionDirty()) {
+    // We don't want to spam the EventManager. We need to rate-limit.
+    if ((millis() - MGC3130_MINIMUM_NUANCE_PERIOD) > last_nuance_sent) {
+      if (!position_asserted()) {
+        // If we haven't asserted the position gesture yet, do so now.
+        event = EventManager::returnEvent(MANUVR_MSG_GESTURE_RECOGNIZED);
+        event->addArg((uint32_t) 1);
+        raiseEvent(event);
+        position_asserted(true);
+      }
+      last_nuance_sent = millis();
+      event = EventManager::returnEvent(MANUVR_MSG_GESTURE_NUANCE);
+      event->addArg((uint32_t) 1);
+      event->addArg((uint16_t) _pos_x);
+      event->addArg((uint16_t) _pos_y);
+      event->addArg((uint16_t) _pos_z);
+      raiseEvent(event);
+      _pos_x = -1;
+      _pos_y = -1;
+      _pos_z = -1;
+    }
+  }
+  else if (position_asserted()) {
+    // We need to disassert the position gesture.
+    event = EventManager::returnEvent(MANUVR_MSG_GESTURE_DISASSERT);
+    event->addArg((uint32_t) 1);
+    raiseEvent(event);
+    position_asserted(false);
+  }
+  
+  if (0 < wheel_position) {
+    // We don't want to spam the EventManager. We need to rate-limit.
+    if ((millis() - MGC3130_MINIMUM_NUANCE_PERIOD) > last_nuance_sent) {
+      if (!airwheel_asserted()) {
+        // If we haven't asserted the airwheel gesture yet, do so now.
+        event = EventManager::returnEvent(MANUVR_MSG_GESTURE_RECOGNIZED);
+        event->addArg((uint32_t) 2);
+        raiseEvent(event);
+        airwheel_asserted(true);
+      }
+      last_nuance_sent = millis();
+      event = EventManager::returnEvent(MANUVR_MSG_GESTURE_NUANCE);
+      event->addArg((uint32_t) 2);
+      event->addArg((int32_t) wheel_position);
+      raiseEvent(event);
+      wheel_position = 0;
+    }
+  }
+  else if (airwheel_asserted()) {
+    // We need to disassert the airwheel gesture.
+    event = EventManager::returnEvent(MANUVR_MSG_GESTURE_DISASSERT);
+    event->addArg((uint32_t) 2);
+    raiseEvent(event);
+    airwheel_asserted(false);
+  }
+  
+  if (0 < last_tap) {
+    event = EventManager::returnEvent(MANUVR_MSG_GESTURE_ONE_SHOT);
+    event->addArg((uint32_t) getTouchTapString(last_tap));
+    raiseEvent(event);
+    last_tap = 0;
+  }
+  if (last_double_tap) {
+    event = EventManager::returnEvent(MANUVR_MSG_GESTURE_ONE_SHOT);
+    event->addArg((uint32_t) getTouchTapString(last_double_tap));
+    raiseEvent(event);
+    last_double_tap = 0;
+  }
+  if (0 < last_swipe) {
+    event = EventManager::returnEvent(MANUVR_MSG_GESTURE_ONE_SHOT);
+    event->addArg((uint32_t) getTouchTapString(last_swipe));
+    raiseEvent(event);
+    last_swipe = 0;
+  }
+  if (isTouchDirty()) {
+    event = EventManager::returnEvent(MANUVR_MSG_GESTURE_ONE_SHOT);
+    event->addArg((uint32_t) getTouchTapString(last_touch));
+    raiseEvent(event);
+    last_touch_noted = last_touch;
+  }
+  if (special) {
+    // TODO: Not sure how to deal with this yet...
+    if (verbosity > 3) {
+      local_log.concatf("MGC3130 special code 0x08\n", special);
+      StaticHub::log(&local_log);
+    }
+    special = 0;
+  }
+  if (last_event) {
+    // TODO: Not sure how to deal with this yet...
+    if (verbosity > 3) {
+      local_log.concatf("MGC3130 last_event 0x08\n", last_event);
+      StaticHub::log(&local_log);
+    }
+    last_event = 0;
+  }
+}
 
 
 
@@ -409,12 +513,12 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
         //}
         break;
       case 1:   // Flags.
-    last_event = (B00000001 << (data-1)) | B00100000;
+        last_event = (B00000001 << (data-1)) | B00100000;
         break;
       case 2:   // Sequence number
         break;
       case 3:   // Unique ID
-    // data ought to always be 0x91 at this point.
+        // data ought to always be 0x91 at this point.
         break;
       case 4:   // Data output config mask is a 16-bit value.
         data_set = data;
@@ -426,7 +530,7 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
         break;
       case 7:   // System info. Tells us what data is valid.
         pos_valid   = (data & 0x01);  // Position
-    wheel_valid = (data & 0x02);  // Air wheel
+        wheel_valid = (data & 0x02);  // Air wheel
         break;
       
       /* Below this point, we enter the "variable-length" area. God speed.... */
@@ -435,61 +539,61 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
         break;
 
       case 10:  // GestureInfo in the next 4 bytes.
-	temp_value = data;
+        temp_value = data;
         break;
       case 11: 
-	temp_value += data << 8;
+        temp_value += data << 8;
         break;
       case 12:  break;   // These bits are reserved.
       case 13:
-	temp_value += data << 24;
-	if (0 == (temp_value & 0x80000000)) {   // Gesture recog completed?
-	  if (temp_value & 0x000060FC) {   // Swipe data
-	    last_swipe |= ((temp_value >> 2) & 0x000000FF) | 0b10000000;
-	    if (temp_value & 0x00010000) {
-	      last_swipe |= 0b01000000;   // Classify as an edge-swipe.
-	    }
-	    return_value++;
-	  }
-	}
-	temp_value = 0;
+        temp_value += data << 24;
+        if (0 == (temp_value & 0x80000000)) {   // Gesture recog completed?
+          if (temp_value & 0x000060FC) {   // Swipe data
+            last_swipe |= ((temp_value >> 2) & 0x000000FF) | 0b10000000;
+            if (temp_value & 0x00010000) {
+              last_swipe |= 0b01000000;   // Classify as an edge-swipe.
+            }
+            return_value++;
+          }
+        }
+        temp_value = 0;
         break;
 
       case 14:  // TouchInfo in the next 4 bytes.
-	temp_value = data;
+        temp_value = data;
         break;
       case 15:
-	temp_value += data << 8;
-	if (temp_value & 0x0000001F) {
-	  last_touch = (temp_value & 0x0000001F) | 0x20;;
-	  return_value++;
-	}
-	else {
-	  last_touch = 0;
-	}
-    
-	if (temp_value & 0x000003E0) {
-	  last_tap = ((temp_value & 0x000003E0) >> 5) | 0x40;
-	  return_value++;
-	}
-	if (temp_value & 0x00007C00) {
-	  last_double_tap = ((temp_value & 0x00007C00) >> 10) | 0x80;
-	  return_value++;
-	}
+        temp_value += data << 8;
+        if (temp_value & 0x0000001F) {
+          last_touch = (temp_value & 0x0000001F) | 0x20;;
+          return_value++;
+        }
+        else {
+          last_touch = 0;
+        }
+          
+        if (temp_value & 0x000003E0) {
+          last_tap = ((temp_value & 0x000003E0) >> 5) | 0x40;
+          return_value++;
+        }
+        if (temp_value & 0x00007C00) {
+          last_double_tap = ((temp_value & 0x00007C00) >> 10) | 0x80;
+          return_value++;
+        }
         break;
 
       case 16:
-	touch_counter = data;
-	temp_value = 0;
-	break;
-	
+        touch_counter = data;
+        temp_value = 0;
+        break;
+  
       case 17:  break;   // These bits are reserved. 
 
-    case 18:  // AirWheelInfo 
-    if (wheel_valid) {
-      wheel_position = (data%32)+1;
-      return_value++;
-    }
+      case 18:  // AirWheelInfo 
+        if (wheel_valid) {
+          wheel_position = (data%32)+1;
+          return_value++;
+        }
         break;
       case 19:  // AirWheelInfo, but the MSB is reserved.
         break;
@@ -525,9 +629,8 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
     }
   }
   
-  //if (pos_valid) return_value++;
-  if (pos_valid) local_log.concatf("Position: (0x%04x, 0x%04x, 0x%04x)\n", _pos_x, _pos_y, _pos_z);
-  if (local_log.length() > 0) StaticHub::log(&local_log);
+  if (pos_valid) return_value++;
+  dispatchGestureEvents();
 }
 
 
@@ -576,15 +679,10 @@ const char* MGC3130::getReceiverName() {  return "MGC3130";  }
 int8_t MGC3130::bootComplete() {
   EventReceiver::bootComplete();   // Call up to get scheduler ref and class init.
   
-  //pid_mgc3130_service = scheduler->createSchedule(80,  -1, false, mgc3130_isr_check);
-  //scheduler->delaySchedule(pid_mgc3130_service, 1000);
   init();
-
   digitalWrite(_reset_pin, 1);
   
   //enableApproachDetect(true);
-  class_state = 0x01;
-
   return 1;
 }
 
@@ -640,6 +738,7 @@ int8_t MGC3130::notify(ManuvrEvent *active_event) {
     case MANUVR_MSG_SENSOR_MGC3130:
       // Pick some safe number. We might limit this depending on what the sensor has to say.
       readX(-1, (uint8_t) 31, (uint8_t*)read_buffer);    // request bytes from slave device at 0x42
+      return_value++;
       break;
       
     default:
