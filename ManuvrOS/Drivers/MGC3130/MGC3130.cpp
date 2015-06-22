@@ -304,7 +304,7 @@ void MGC3130::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
   I2CDevice::printDebug(output);
   output->concatf("\t TS Pin:      %d \n\t MCLR Pin:   %d\n", _ts_pin, _reset_pin);
-  output->concatf("\t Touch count  %d \n\t Flags:      0x%02\n", touch_counter, flags);
+  output->concatf("\t Touch count  %d \n\t Flags:      0x%02x\n", touch_counter, flags);
   output->concatf("\t last_seq_num %d \n", last_seq_num);
 
   if (wheel_position)    output->concatf("\t Airwheel: 0x%08x\n", wheel_position);
@@ -500,8 +500,10 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
             break;
           case 3:   // Unique ID
             // data ought to always be 0x91 at this point.
-            //local_log.concatf("UniqueID: 0x%02\n", data);
-            //StaticHub::log(&local_log);
+            //if (0x91 != data) {
+            //  local_log.concatf("UniqueID: 0x%02x\n", data);
+            //  StaticHub::log(&local_log);
+            //}
             break;
           case 4:   // Data output config mask is a 16-bit value.
             data_set = data;
@@ -617,10 +619,9 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
   }
   else{
     if (verbosity > 3) {
-      StringBuilder output;
-      output.concat("An i2c operation requested by the MGC3130 came back failed.\n");
-      completed->printDebug(&output);
-      StaticHub::log(&output);
+      local_log.concat("An i2c operation requested by the MGC3130 came back failed.\n");
+      completed->printDebug(&local_log);
+      StaticHub::log(&local_log);
     }
   }
 }
@@ -672,7 +673,7 @@ int8_t MGC3130::bootComplete() {
   EventReceiver::bootComplete();   // Call up to get scheduler ref and class init.
   init();
   ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_SENSOR_MGC3130_INIT);
-  scheduler->createSchedule(400, 0, true, this, event);
+  scheduler->createSchedule(1200, 0, true, this, event);
   return 1;
 }
 
