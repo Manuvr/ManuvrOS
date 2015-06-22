@@ -555,6 +555,10 @@ bool I2CAdapter::insert_work_item(I2CQueuedOperation *nu) {
 		current_queue_item = nu;
 		if ((dev >= 0) && (bus_online)) {
 		  nu->begin();
+		  if (verbosity > 6) {
+		    nu->printDebug(&local_log);
+		    StaticHub::log(&local_log);
+		  }
 		}
 		else {
 		  EventManager::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, NULL);   // Raise an event

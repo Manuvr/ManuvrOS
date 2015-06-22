@@ -45,9 +45,9 @@ ISL23345::ISL23345(uint8_t i2caddr) : I2CDeviceWithRegisters() {
 
   defineRegister(ISL23345_REG_ACR,  (uint8_t) 0x40, false, false, true);
   defineRegister(ISL23345_REG_WR0,  (uint8_t) 0x80, false, false, true);
-  defineRegister(ISL23345_REG_WR0,  (uint8_t) 0x80, false, false, true);
-  defineRegister(ISL23345_REG_WR0,  (uint8_t) 0x80, false, false, true);
-  defineRegister(ISL23345_REG_WR0,  (uint8_t) 0x80, false, false, true);
+  defineRegister(ISL23345_REG_WR1,  (uint8_t) 0x80, false, false, true);
+  defineRegister(ISL23345_REG_WR2,  (uint8_t) 0x80, false, false, true);
+  defineRegister(ISL23345_REG_WR3,  (uint8_t) 0x80, false, false, true);
 }
 
 /*

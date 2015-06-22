@@ -130,7 +130,7 @@ int8_t ADG2128::readback(uint8_t row) {
   uint16_t readback_addr[12] = {0x3400, 0x3b00, 0x7400, 0x7b00, 0x3500, 0x3D00, 0x7500, 0x7D00, 0x3600, 0x3E00, 0x7600, 0x7E00};
   uint16_t val = 0;
   if (!read16(readback_addr[row])) {
-    StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Bus error while reading readback address %d.", row);
+    StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Bus error while reading readback address %d.\d", row);
     return ADG2128_ERROR_ABSENT;
   }
   return ADG2128_ERROR_NO_ERROR;
@@ -152,7 +152,10 @@ uint8_t ADG2128::getValue(uint8_t row) {
 
 void ADG2128::operationCompleteCallback(I2CQueuedOperation* completed) {
   if (completed->err_code != I2C_ERR_CODE_NO_ERROR) {
-    StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "An i2c operation requested by the ADG2128 came back failed.\n");
+    StringBuilder output;
+    output.concat("An i2c operation requested by the ADG2128 came back failed.\n");
+    completed->printDebug(&output);
+    StaticHub::log(&output);
     return;
   }
   switch (completed->opcode) {

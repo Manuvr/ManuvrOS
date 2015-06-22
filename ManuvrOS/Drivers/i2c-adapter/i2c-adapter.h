@@ -71,6 +71,7 @@ but adding support for other platforms ought to be easy.
   #define I2C_ERR_CODE_NO_DEVICE   -7   // A transfer was aborted because there was no pointer to the device.
   #define I2C_ERR_CODE_TIMEOUT     -8
   #define I2C_ERR_CODE_CLASS_ABORT -9
+  #define I2C_ERR_CODE_BUS_BUSY    -10
 
   #define I2C_ERR_SLAVE_BUS_FAULT    -3   // The bus failed us.
   #define I2C_ERR_SLAVE_NOT_FOUND   -10   // When a slave device we expected to find is not found.
@@ -170,7 +171,7 @@ but adding support for other platforms ought to be easy.
       *
       * @return true if we do. False otherwise.
       */
-      inline bool need_to_send_subaddr(void) {	return ((sub_addr >= 0x00) && !subaddr_sent);  }
+      inline bool need_to_send_subaddr(void) {	return ((sub_addr != -1) && !subaddr_sent);  }
   };
   
   
@@ -279,16 +280,16 @@ but adding support for other platforms ought to be easy.
     protected:
       // Writes <byte_count> bytes from <buf> to the sub-address <sub_addr> of i2c device <dev_addr>.
       // Returns true if the job was accepted. False on error.
-      bool writeX(uint8_t sub_addr, uint16_t byte_count, uint8_t *buf);
-      bool readX(uint8_t sub_addr, uint8_t len, uint8_t *buf);
+      bool writeX(int sub_addr, uint16_t byte_count, uint8_t *buf);
+      bool readX(int sub_addr, uint8_t len, uint8_t *buf);
 
       bool write8(uint8_t dat);
-      bool write8(uint8_t sub_addr, uint8_t dat);
-      bool write16(uint8_t sub_addr, uint16_t dat);
+      bool write8(int sub_addr, uint8_t dat);
+      bool write16(int sub_addr, uint16_t dat);
 
       // Convenience functions for reading bytes from a given i2c address/sub-address...
       bool read8(void);
-      bool read8(uint8_t sub_addr);
+      bool read8(int sub_addr);
       bool read16(int sub_addr);
       bool read16(void);
 

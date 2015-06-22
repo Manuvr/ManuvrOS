@@ -98,6 +98,18 @@
   #define MANUVR_MSG_SD_INSERTED          0x0121 // An SD card was inserted.
 
   
+  /* Codes for gesture representation and notice  */
+  #define MANUVR_MSG_GESTURE_LEGEND       0x0140 // This message contains information about supported gestures.
+  #define MANUVR_MSG_GESTURE_DEFINITION   0x0141 // A gesture is being described. This is one element, where the legend is many.
+  #define MANUVR_MSG_GESTURE_OBLITERATE   0x0142 // We are dropping our support for the given gesture.
+  #define MANUVR_MSG_GESTURE_LINK         0x0143 // The two referenced gestures are being logically linked together.
+  #define MANUVR_MSG_GESTURE_UNLINK       0x0144 // The two referenced gestures are being logically disconnected.
+  #define MANUVR_MSG_GESTURE_RECOGNIZED   0x014A // A gesture was recognized.
+  #define MANUVR_MSG_GESTURE_NUANCE       0x014B // A gesture-in-progress is being nuanced by some aftertouch.
+  #define MANUVR_MSG_GESTURE_DISASSERT    0x014C // A gesture-in-progress was disasserted.
+  #define MANUVR_MSG_GESTURE_ONE_SHOT     0x014D // A gesture was recognized, and disasserted.
+
+  
   /* Codes for various styles of serial bus */
     // Generic transport events. Sophisticated classes should be able to use these as an interface.
     // All of these messages should ultimately carry a mandatory integer argument to ID the transport.
@@ -178,6 +190,7 @@
   #define MANUVR_MSG_SENSOR_TMP006        0x0540 // The thermopile has something to say.
   #define MANUVR_MSG_SENSOR_TMP006_IRQ    0x0541 // The thermopile IRQ pin changed state.
   #define MANUVR_MSG_SENSOR_INA219        0x0550 // The current sensor has something to say.
+  #define MANUVR_MSG_SENSOR_MGC3130       0x0556 // MGC3130 is declaring it has new data.
 
   
   

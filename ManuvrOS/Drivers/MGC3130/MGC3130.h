@@ -77,13 +77,10 @@ class MGC3130 : public I2CDevice, public EventReceiver {
     void printDebug(StringBuilder*);
 
 
-    int8_t service();
     const char* getTouchTapString(uint8_t eventByte);
     const char* getSwipeString(uint8_t eventByte);
 
     int8_t setIRQPin(uint8_t, int);
-
-    // bool featureEnabled(uint8_t mask);
 
     void enableApproachDetect(bool);
     void enableAirwheel(bool);
@@ -105,8 +102,6 @@ class MGC3130 : public I2CDevice, public EventReceiver {
 
 
   private:
-    uint8_t _i2caddr;     // i2c address.
-
     uint8_t _ts_pin;      // Pin number being used by the TS pin.
     uint8_t _reset_pin;   // Pin number being used by the MCLR pin.
     uint8_t _irq_pin_0;   // Pin number being used by optional IRQ pin.
@@ -134,4 +129,4 @@ class MGC3130 : public I2CDevice, public EventReceiver {
 
 
 
-#endif
+#endif  // __MGC3130_H__

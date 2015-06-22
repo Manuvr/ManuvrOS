@@ -56,6 +56,7 @@ const char* I2CQueuedOperation::getErrorString(int8_t code) {
     case I2C_ERR_CODE_BAD_OP:       return "Bad operation code";
     case I2C_ERR_CODE_TIMEOUT:      return "TIMEOUT";
     case I2C_ERR_CODE_CLASS_ABORT:  return "CLASS_ABORT";
+    case I2C_ERR_CODE_BUS_BUSY:     return "ARBITRATION_LOST";
     default:                        return "<UNKNOWN>";
   }
 }
@@ -212,7 +213,7 @@ int8_t I2CQueuedOperation::init_dma() {
       abort();
       break;
     case I2C_ARB_LOST:
-      abort();
+      abort(I2C_ERR_CODE_BUS_BUSY);
       break;
     case I2C_TIMEOUT:
       abort(I2C_ERR_CODE_TIMEOUT);
@@ -247,7 +248,7 @@ int8_t I2CQueuedOperation::init_dma() {
       abort();
       break;
     case I2C_ARB_LOST:
-      abort();
+      abort(I2C_ERR_CODE_BUS_BUSY);
       break;
     case I2C_TIMEOUT:
       abort(I2C_ERR_CODE_TIMEOUT);
