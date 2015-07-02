@@ -67,7 +67,7 @@ int8_t ISL23345::init(void) {
 	int8_t return_value = ISL23345_ERROR_NO_ERROR;
 
 	if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
-		return_value = ISL23345_ERROR_ABSENT;
+		//return_value = ISL23345_ERROR_ABSENT;
 	}
 	return return_value;
 }
