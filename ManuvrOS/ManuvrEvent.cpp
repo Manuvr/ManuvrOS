@@ -126,6 +126,11 @@ bool ManuvrEvent::isManaged(bool nu) {
 }
 
 
+bool ManuvrEvent::abort() {
+  return EventManager::abortEvent(this);
+}
+
+
 
 /**
 * Debug support method. This fxn is only present in debug builds. 

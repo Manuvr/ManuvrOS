@@ -536,7 +536,7 @@ int8_t XenoSession::scan_buffer_for_sync() {
 */
 void XenoSession::mark_session_desync(uint8_t ds_src) {
   session_last_state = session_state;               // Stack our session state.
-  session_state = (session_state & 0x0F) | ds_src;
+  session_state = getState() | ds_src;
   if (session_state & ds_src) {
     if (verbosity > 3) local_log.concatf("%s\t%s   We are already in the requested sync state. There is no point to entering it again. Doing nothing.\n", __PRETTY_FUNCTION__, getSessionSyncString());
   }
@@ -577,11 +577,11 @@ void XenoSession::mark_session_sync(bool pending) {
     
   if (pending) {
     // We *think* we might be done sync'ing...
-    session_state = (session_state & 0x0F) | XENOSESSION_STATE_SYNC_PEND_EXIT;
+    session_state = getState() | XENOSESSION_STATE_SYNC_PEND_EXIT;
   }
   else {
     // We are definately done sync'ing.
-    session_state = session_state & 0x0F;
+    session_state = getState();
   }
 
   if (!isEstablished()) {
@@ -652,7 +652,7 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
   }
 
 
-  switch (session_state & 0x0F) {   // Consider the bottom four bits of the session state.
+  switch (getState()) {   // Consider the bottom four bits of the session state.
     case XENOSESSION_STATE_UNINITIALIZED:
       break;
     case XENOSESSION_STATE_CONNECTED:
@@ -701,7 +701,7 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
     case XENO_MSG_PROC_STATE_SYNC_PACKET:  // This message is a sync packet. 
       current_rx_message = NULL;
       working->wipe();
-      if (0 == (session_state & 0x0F)) {
+      if (0 == getState()) {
         // If we aren't dealing with sync at the moment, and the counterparty sent a sync packet...
         if (verbosity > 4) local_log.concat("Counterparty wants to sync,,, changing session state...\n");
         mark_session_desync(XENOSESSION_STATE_SYNC_INITIATED);
@@ -881,7 +881,7 @@ void XenoSession::printDebug(StringBuilder *output) {
 * Logging support fxn.
 */
 const char* XenoSession::getSessionStateString() {
-  switch (session_state & 0x0F) {
+  switch (getState()) {
     case XENOSESSION_STATE_UNINITIALIZED:    return "UNINITIALIZED";
     case XENOSESSION_STATE_CONNECTED:        return "CONNECTED";
     case XENOSESSION_STATE_PENDING_SETUP:    return "PENDING_SETUP";

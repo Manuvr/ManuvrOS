@@ -220,6 +220,10 @@ class XenoSession : public EventReceiver {
     int8_t notify(ManuvrEvent*);
     int8_t callback_proc(ManuvrEvent *);
 
+    // Returns and isolates the state bits.
+    inline uint8_t getState() {
+      return (session_state & 0x0F);
+    };
 
     // Returns the answer to: "Is this session in sync?"
     inline bool syncd() {

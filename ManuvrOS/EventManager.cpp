@@ -219,6 +219,37 @@ int8_t EventManager::staticRaiseEvent(ManuvrEvent* event) {
 }
 
 
+/**
+* Used to add a pre-formed event to the idle queue. Use this when a sophisticated event
+*   needs to be formed elsewhere and passed in. EventManager will only insert it into the
+*   queue in this case.
+*
+* @param   event  The event to be removed from the idle queue.
+* @return  true if the given event was aborted, false otherwise.
+*/
+bool EventManager::abortEvent(ManuvrEvent* event) {
+  int8_t return_value = 0;
+  if (0 == INSTANCE->validate_insertion(event)) {
+    INSTANCE->event_queue.remove(event);
+
+    // Check the queue depth.
+    INSTANCE->update_maximum_queue_depth();
+  }
+  else {
+    if (INSTANCE->verbosity > 4) {
+      //local_log.concatf("Static: An incoming event 0x%04x failed validate_insertion(). Trapping it...\n", code);
+      StringBuilder output("EventManager::staticRaiseEvent():\tAn event failed validate_insertion().\n");
+      event->printDebug(&output);
+      StaticHub::log(&output);
+      INSTANCE->insertion_denials++;
+    }
+    INSTANCE->reclaim_event(event);
+    return_value = -1;
+  }
+  return return_value;
+}
+
+
 int8_t EventManager::isrRaiseEvent(ManuvrEvent* event) {
   int return_value = -1;
 #ifdef STM32F4XX

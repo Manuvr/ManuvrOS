@@ -99,6 +99,9 @@
       
       /* If the scheduler has a lock on this event, this should return 'true'. */
       inline bool isScheduled() {       return scheduled;     }
+      
+      /* If this event is scheduled, aborts it. Returns true if the schedule was aborted. */
+      bool abort();
 
 
     protected:
@@ -212,6 +215,7 @@
   
       static int8_t raiseEvent(uint16_t event_code, EventReceiver* data);
       static int8_t staticRaiseEvent(ManuvrEvent* event);
+      static bool   abortEvent(ManuvrEvent* event);
       static int8_t isrRaiseEvent(ManuvrEvent* event);
       
       /* Factory method. Returns a preallocated Event. */
