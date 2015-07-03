@@ -109,11 +109,6 @@ int8_t EventManager::subscribe(EventReceiver *client, uint8_t priority) {
 
   client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
   int8_t return_value = subscribers.insert(client, priority);
-  if (verbosity > 4) {
-    local_log.concat(client->getReceiverName());
-    local_log.concat(" tried to add itself with a specd priority.\n");
-    StaticHub::log(&local_log);
-  }
   if (boot_completed) {
     // This subscriber is joining us after bootup. Call its bootComplete() fxn to cause it to init.
     //client.bootComplete();
@@ -179,7 +174,7 @@ int8_t EventManager::raiseEvent(uint16_t code, EventReceiver* cb) {
   }
   else {
     if (INSTANCE->verbosity > 4) {
-      StringBuilder output("EventManager::raiseEvent():   An incoming event failed validate_insertion(). Trapping it...\n");
+      StringBuilder output("EventManager::raiseEvent():\t An event failed validate_insertion().\n");
       output.concat(ManuvrMsg::getMsgTypeString(code));
       StaticHub::log(&output);
       INSTANCE->insertion_denials++;
@@ -212,7 +207,7 @@ int8_t EventManager::staticRaiseEvent(ManuvrEvent* event) {
     if (INSTANCE->verbosity > 4) {
       //local_log.concatf("Static: An incoming event 0x%04x failed validate_insertion(). Trapping it...\n", code);
       //StaticHub::log(&local_log);
-      StringBuilder output("EventManager::staticRaiseEvent():   An incoming event failed validate_insertion(). Trapping it...\n");
+      StringBuilder output("EventManager::staticRaiseEvent():\tAn event failed validate_insertion().\n");
       event->printDebug(&output);;
       StaticHub::log(&output);
       INSTANCE->insertion_denials++;
@@ -527,7 +522,7 @@ int8_t EventManager::procIdleFlags() {
             reclaim_event(active_event);
             break;
           default:
-            if (verbosity > 0) local_log.concatf("Event %s has no cleanup case.\n", active_event->getMsgTypeString());
+            //if (verbosity > 0) local_log.concatf("Event %s has no cleanup case.\n", active_event->getMsgTypeString());
             reclaim_event(active_event);
             break;
         }
@@ -546,7 +541,7 @@ int8_t EventManager::procIdleFlags() {
     total_events++;
     
     if (event_queue.size() < 0) {
-      StaticHub::log("event_queue size went negative!?! Correcting...\n");
+      //StaticHub::log("event_queue size went negative!?! Correcting...\n");
       event_queue.count();
     }
     
@@ -648,12 +643,12 @@ void EventManager::profiler(bool enabled) {
 */
 void EventManager::printProfiler(StringBuilder* output) {
   if (NULL == output) return;
-  output->concatf("\t total_events               %u\n",   (unsigned long) total_events);
-  output->concatf("\t total_events_dead          %u\n\n", (unsigned long) total_events_dead);
-  output->concatf("\t max_queue_depth            %u\n",   (unsigned long) max_queue_depth);
-  output->concatf("\t total_loops                %u\n",   (unsigned long) total_loops);
-  output->concatf("\t max_idle_loop_time         %u\n", (unsigned long) max_idle_loop_time);
-  output->concatf("\t max_events_p_loop          %u\n", (unsigned long) max_events_p_loop);
+  output->concatf("\t total_events       \t%u\n",   (unsigned long) total_events);
+  output->concatf("\t total_events_dead  \t%u\n\n", (unsigned long) total_events_dead);
+  output->concatf("\t max_queue_depth    \t%u\n",   (unsigned long) max_queue_depth);
+  output->concatf("\t total_loops        \t%u\n",   (unsigned long) total_loops);
+  output->concatf("\t max_idle_loop_time \t%u\n", (unsigned long) max_idle_loop_time);
+  output->concatf("\t max_events_p_loop  \t%u\n", (unsigned long) max_events_p_loop);
     
   if (profiler_enabled) {
     output->concat("-- Profiler dump:\n");
@@ -675,7 +670,7 @@ void EventManager::printProfiler(StringBuilder* output) {
     output->concatf("\n\t CPU use by clock: %f\n\n", (double)cpu_usage());
   }
   else {
-    output->concat("-- EventManager profiler is not enabled.\n\n");
+    output->concat("-- EventManager profiler not enabled.\n\n");
   }
 }
 
@@ -740,14 +735,13 @@ void EventManager::printDebug(StringBuilder* output) {
   if (NULL == output) return;
   EventReceiver::printDebug(output);
   
-  output->concatf("-- location of message_defs   0x%08x\n", (uint32_t) &ManuvrMsg::message_defs);
-  output->concatf("-- Queue depth:               %d\n", event_queue.size());
-  output->concatf("-- Preallocation depth:       %d\n", preallocated.size());
-  output->concatf("-- Total subscriber count:    %d\n", subscribers.size());
-  output->concatf("-- Prealloc starves:          %u\n",   (unsigned long) prealloc_starved);
-  output->concatf("-- events_destroyed:          %u\n",   (unsigned long) events_destroyed);
-  output->concatf("-- burden_of_being_specific   %u\n",   (unsigned long) burden_of_specific);
-  output->concatf("-- idempotent_blocks          %u\n\n", (unsigned long) idempotent_blocks);
+  output->concatf("-- Queue depth:              %d\n", event_queue.size());
+  output->concatf("-- Preallocation depth:      %d\n", preallocated.size());
+  output->concatf("-- Total subscriber count:   %d\n", subscribers.size());
+  output->concatf("-- Prealloc starves:         %u\n",   (unsigned long) prealloc_starved);
+  output->concatf("-- events_destroyed:         %u\n",   (unsigned long) events_destroyed);
+  output->concatf("-- burden_of_being_specific  %u\n",   (unsigned long) burden_of_specific);
+  output->concatf("-- idempotent_blocks         %u\n\n", (unsigned long) idempotent_blocks);
   
   if (subscribers.size() > 0) {
     output->concatf("-- Subscribers: (%d total):\n", subscribers.size());
