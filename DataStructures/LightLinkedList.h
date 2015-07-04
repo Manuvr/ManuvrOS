@@ -30,11 +30,11 @@ Template for a linked list.
 
 #include <inttypes.h>
 
-#ifdef ARDUINO
-  #include "Arduino.h"
-#else
+//#ifdef ARDUINO
+//  #include "Arduino.h"
+//#else
   #include <stdlib.h>
-#endif
+//#endif
 
 
 using namespace std;

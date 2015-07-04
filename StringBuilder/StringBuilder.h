@@ -26,14 +26,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <inttypes.h>
 #include <stdarg.h>
 
-#ifdef ARDUINO
-  #include "Arduino.h"
-#else
-  #include <stdio.h>
-  #include <stdlib.h>
-#endif
-
-
+//#ifdef ARDUINO
+//  #include "Arduino.h"
+//#else
+//  #include <stdio.h>
+//  #include <stdlib.h>
+//#endif
 
 /*
 *	This is a linked-list that is castable as a string.
@@ -136,9 +134,7 @@ class StringBuilder {
 		void concat(double nu);
 		void concat(float nu);
 		void concat(bool nu);
-#ifdef ARDUINO
-		void concat(String nu);
-#endif
+
 		void cull(int offset, int length);       // Use to throw away all but the specified range of this string.
 		void cull(int length);                   // Use to discard the first X characters from the string.
 

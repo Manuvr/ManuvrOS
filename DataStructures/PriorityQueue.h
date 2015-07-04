@@ -33,11 +33,11 @@ Some functions are #pragma'd to stop the compiler from complaining about NULL be
 
 #include <inttypes.h>
 
-#ifdef ARDUINO
-  #include "Arduino.h"
-#else
+//#ifdef ARDUINO
+//  #include "Arduino.h"
+//#else
   #include <stdlib.h>
-#endif
+//#endif
 
 
 using namespace std;
@@ -364,7 +364,9 @@ template <class T> bool PriorityQueue<T>::decrementPriority(T test_data) {
 }
 
 
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic push
+#endif
 #pragma GCC diagnostic ignored "-Wconversion-null"
 template <class T> T PriorityQueue<T>::dequeue() {
   PriorityNode<T>* current = root;
@@ -378,10 +380,14 @@ template <class T> T PriorityQueue<T>::dequeue() {
   }
   return NULL;
 }
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic pop
+#endif
 
 
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic push
+#endif
 #pragma GCC diagnostic ignored "-Wconversion-null"
 template <class T> T PriorityQueue<T>::recycle() {
   PriorityNode<T>* current = root;
@@ -401,7 +407,9 @@ template <class T> T PriorityQueue<T>::recycle() {
   }
   return NULL;
 }
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic pop
+#endif
 
 
 template <class T> int PriorityQueue<T>::clear(void) {
@@ -467,8 +475,9 @@ template <class T> bool PriorityQueue<T>::remove(T test_data) {
   return return_value;
 }
 
-
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic push
+#endif
 #pragma GCC diagnostic ignored "-Wconversion-null"
 template <class T> T PriorityQueue<T>::get() {
   PriorityNode<T>* current = root;
@@ -477,10 +486,14 @@ template <class T> T PriorityQueue<T>::get() {
   }
   return NULL;
 }
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic pop
+#endif
 
 
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic push
+#endif
 #pragma GCC diagnostic ignored "-Wconversion-null"
 template <class T> T PriorityQueue<T>::get(int pos) {
   int i = 0;
@@ -494,7 +507,9 @@ template <class T> T PriorityQueue<T>::get(int pos) {
   }
   return NULL;
 }
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic pop
+#endif
 
 
 template <class T> bool PriorityQueue<T>::contains(T test_data) {

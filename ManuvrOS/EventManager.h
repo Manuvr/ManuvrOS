@@ -8,9 +8,9 @@
   #include "DataStructures/PriorityQueue.h"
   #include "DataStructures/LightLinkedList.h"
   
-  #ifdef ARDUINO
-    #include "Arduino.h"
-  #endif
+  //#ifdef ARDUINO
+  //  #include "Arduino.h"
+  //#endif
 
   
   #define EVENT_MANAGER_PREALLOC_COUNT      8   // How large a preallocation buffer should we keep?

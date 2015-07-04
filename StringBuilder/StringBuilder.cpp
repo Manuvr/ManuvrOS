@@ -23,23 +23,29 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "StringBuilder.h"
 
-#ifdef ARDUINO
-  #include "Arduino.h"
-#else
+//#ifdef ARDUINO
+//  #include "Arduino.h"
+//#else
   #include <stdio.h>
   #include <stdlib.h>
   #include <string.h>
-  #include <cctype>
-#endif
+  #include <ctype.h>
+//#endif
 
 
-#ifndef max
+#ifdef ARDUINO
+  #include "Arduino.h"
+#else
+  #ifndef max
     #define max( a, b ) ( ((a) > (b)) ? (a) : (b) )
+  #endif
+  
+  #ifndef min
+    #define min( a, b ) ( ((a) < (b)) ? (a) : (b) )
+  #endif
 #endif
 
-#ifndef min
-    #define min( a, b ) ( ((a) < (b)) ? (a) : (b) )
-#endif
+
 
 /****************************************************************************************************
 * Class management....                                                                              *
@@ -555,18 +561,18 @@ int StringBuilder::concatf(const char *format, ...) {
 
 
 
-#ifdef ARDUINO
-/**
-* Override to cleanly support Strings.
-*/
-void StringBuilder::concat(String str) {
-  int len = str.length()+1;
-  char *out  = (char *) alloca(len);
-  memset(out, 0, len);
-  str.toCharArray(out, (str.length()+1));
-  this->concat((unsigned char *) out, strlen(out));
-}
-#endif
+//#ifdef ARDUINO
+///**
+//* Override to cleanly support Strings.
+//*/
+//void StringBuilder::concat(String str) {
+//  int len = str.length()+1;
+//  char *out  = (char *) alloca(len);
+//  memset(out, 0, len);
+//  str.toCharArray(out, (str.length()+1));
+//  this->concat((unsigned char *) out, strlen(out));
+//}
+//#endif
 
 
 /*

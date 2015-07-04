@@ -33,18 +33,17 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <inttypes.h>
 
-#ifdef ARDUINO
-  #include "Arduino.h"
-  #include "FirmwareDefs.h"
-#elif defined(STM32F4XX)
-  #include "FirmwareDefs.h"
-#else
-  #include <string.h>
-  #include <alloca.h>
-  #include <time.h>
-  #include <alloca.h>
-#endif
+//#ifdef ARDUINO
+//  #include "Arduino.h"
+//#elif defined(STM32F4XX)
+//#else
+//  #include <string.h>
+//  #include <alloca.h>
+//  #include <time.h>
+//  #include <alloca.h>
+//#endif
 
+#include "FirmwareDefs.h"
 #include "StringBuilder/StringBuilder.h"
 #include "ManuvrOS/EventManager.h"
 

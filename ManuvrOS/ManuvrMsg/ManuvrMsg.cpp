@@ -596,7 +596,7 @@ const char* ManuvrMsg::getMsgTypeString(uint16_t code) {
     }
   }
   // If we've come this far, we don't know what the caller is asking for. Return the default.
-  return "UNDEFINED";
+  return ManuvrMsg::message_defs[0].debug_label;
 }
 
 
@@ -692,7 +692,8 @@ void ManuvrMsg::printDebug(StringBuilder *temp) {
       working_arg = args.get(i);
       temp->concatf("\t\t %d\t(%s)\t%s ", i, (working_arg->reap ? "reap" : "no reap"), getArgTypeString(i));
       uint8_t* buf = (uint8_t*) working_arg->target_mem;
-      for (uint8_t n = 0; n < min(working_arg->len, 16); n++) {
+      uint16_t l_ender = (working_arg->len < 16 ? working_arg->len : 16);
+      for (uint8_t n = 0; n < l_ender; n++) {
         temp->concatf("0x%02x ", (uint8_t) *(buf + n));
       }
       temp->concat("\n");
