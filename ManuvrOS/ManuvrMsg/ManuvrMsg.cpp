@@ -19,38 +19,22 @@ const unsigned char ManuvrMsg::MSG_ARGS_NONE[] = {0};      // Generic argument d
 const unsigned char ManuvrMsg::MSG_ARGS_U8[]  = {UINT8_FM,  0, 0}; 
 const unsigned char ManuvrMsg::MSG_ARGS_U16[] = {UINT16_FM, 0, 0}; 
 const unsigned char ManuvrMsg::MSG_ARGS_U32[] = {UINT32_FM, 0, 0}; 
+
 const unsigned char ManuvrMsg::MSG_ARGS_STR_BUILDER[] = {STR_BUILDER_FM, 0, 0}; 
-
-// Generics for messages that have Two types.
-const unsigned char ManuvrMsg::MSG_ARGS_U8_U8[]    = {UINT8_FM, UINT8_FM,  0, UINT8_FM, 0, 0};
-const unsigned char ManuvrMsg::MSG_ARGS_U8_U32[]   = {UINT8_FM, UINT32_FM, 0, UINT8_FM, 0, 0};
-const unsigned char ManuvrMsg::MSG_ARGS_U8_FLOAT[] = {UINT8_FM, FLOAT_FM,  0, UINT8_FM, 0, 0};
-
-
-
-// Generics for messages that have three types.
-const unsigned char ManuvrMsg::MSG_ARGS_U8_U32_I16[]  = {
-  UINT8_FM, 0,           
-  UINT8_FM, UINT32_FM, 0, 
-  UINT8_FM, UINT32_FM, INT16_FM, 0, 
-  0};
 
 /* 
 * This is the argument form for messages that either...
 *   a) Need a free-form type that we don't support natively
 *   b) Are special-cases (COUNTERPARTY_REPLY) that will have their args cast after validation.
 */
-const unsigned char ManuvrMsg::MSG_ARGS_BINBLOB[] = {
-  BINARY_FM, 0, 
-  0}; 
+const unsigned char ManuvrMsg::MSG_ARGS_BINBLOB[] = {  BINARY_FM, 0, 0};
 
 
-                                     
-const unsigned char ManuvrMsg::MSG_ARGS_POWER_MODE[] = {
-  UINT8_FM, 0,             // 1 bytes: Statement about current power profile.
-  0};                      // 0 bytes: Request for present power profile.
-                            
-  
+// Generics for messages that have Two types.
+const unsigned char ManuvrMsg::MSG_ARGS_U8_U8[]    = {UINT8_FM, UINT8_FM,  0, UINT8_FM, 0, 0};
+const unsigned char ManuvrMsg::MSG_ARGS_U8_U32[]   = {UINT8_FM, UINT32_FM, 0, UINT8_FM, 0, 0};
+const unsigned char ManuvrMsg::MSG_ARGS_U8_FLOAT[] = {UINT8_FM, FLOAT_FM,  0, UINT8_FM, 0, 0};
+
 
 const unsigned char ManuvrMsg::MSG_ARGS_SELF_DESC[] = {
   UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, 0,    // Both optional fields.
@@ -99,7 +83,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SYS_SET_DATETIME     , MSG_FLAG_EXPORTABLE,               "SYS_SET_DATETIME"     , MSG_ARGS_NONE }, //
   {  MANUVR_MSG_SYS_REPORT_DATETIME  , MSG_FLAG_EXPORTABLE,               "SYS_REPORT_DATETIME"  , MSG_ARGS_NONE }, //
 
-  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , MSG_ARGS_POWER_MODE }, // 
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , MSG_ARGS_U8 }, // 
   {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , MSG_ARGS_U8 },   // This tells client classes to adjust their log verbosity.
 
   {  MANUVR_MSG_SYS_BOOT_COMPLETED   , 0x0000,               "SYS_BOOT_COMPLETED"   , MSG_ARGS_NONE }, // Raised when bootstrap is finished.
@@ -108,17 +92,8 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SYS_FAULT_REPORT     , 0x0000,                            "SYS_FAULT"            , MSG_ARGS_U32 }, // 
   {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , MSG_ARGS_STR_BUILDER }, // Classes emit this to get their log data saved/sent.
 
-  {  MANUVR_MSG_USER_BUTTON_PRESS    , MSG_FLAG_EXPORTABLE,               "USER_BUTTON_PRESS",    MSG_ARGS_U8 },   // The user pushed a button with the given integer code.
-  {  MANUVR_MSG_USER_BUTTON_RELEASE  , MSG_FLAG_EXPORTABLE,               "USER_BUTTON_RELEASE",  MSG_ARGS_U8 },   // The user released a button with the given integer code.
-  
-  // USB VCP stuff...
-  {  MANUVR_MSG_SYS_USB_CONNECT      , 0x0000,               "SYS_USB_CONNECT"      , MSG_ARGS_NONE }, // 
-  {  MANUVR_MSG_SYS_USB_DISCONNECT   , 0x0000,               "SYS_USB_DISCONNECT"   , MSG_ARGS_NONE }, // 
-  {  MANUVR_MSG_SYS_USB_CONFIGURED   , 0x0000,               "SYS_USB_CONFIGURED"   , MSG_ARGS_NONE }, // 
-  {  MANUVR_MSG_SYS_USB_SUSPEND      , 0x0000,               "SYS_USB_SUSPEND"      , MSG_ARGS_NONE }, // 
-  {  MANUVR_MSG_SYS_USB_RESUME       , 0x0000,               "SYS_USB_RESUME"       , MSG_ARGS_NONE }, // 
-  {  MANUVR_MSG_SYS_USB_RESET        , 0x0000,               "SYS_USB_RESET"        , MSG_ARGS_NONE }, // 
-
+  //{  MANUVR_MSG_USER_BUTTON_PRESS    , MSG_FLAG_EXPORTABLE,               "USER_BUTTON_PRESS",    MSG_ARGS_U8 },   // The user pushed a button with the given integer code.
+  //{  MANUVR_MSG_USER_BUTTON_RELEASE  , MSG_FLAG_EXPORTABLE,               "USER_BUTTON_RELEASE",  MSG_ARGS_U8 },   // The user released a button with the given integer code.
   
   {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , MSG_ARGS_STR_BUILDER }, // 
 
@@ -132,30 +107,13 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SCHED_WIPE_PROFILER  , 0x0000,               "SCHED_WIPE_PROFILER"  , MSG_ARGS_NONE }, // Tell the Scheduler to wipe its profiler data. Pass PIDs to be selective.
   {  MANUVR_MSG_SCHED_DEFERRED_EVENT , 0x0000,               "SCHED_DEFERRED_EVENT" , MSG_ARGS_NONE }, // Tell the Scheduler to broadcast the attached Event so many ms into the future.
 
-  /* Roving Networks Bluetooth radio codes */
-  {  MANUVR_MSG_BT_CONNECTION_LOST   , 0x0000,               "BT_CONNECTION_LOST"   , MSG_ARGS_NONE }, // 
-  {  MANUVR_MSG_BT_CONNECTION_GAINED , 0x0000,               "BT_CONNECTION_GAINED" , MSG_ARGS_NONE }, // 
-  {  MANUVR_MSG_BT_QUEUE_READY       , MSG_FLAG_IDEMPOTENT,  "BT_QUEUE_READY"       , MSG_ARGS_NONE }, // There is action possible in the bluetooth queue.
-  {  MANUVR_MSG_BT_RX_BUF_NOT_EMPTY  , 0x0000,               "BT_RX_BUF_NOT_EMPTY"  , MSG_ARGS_NONE }, // The host sent us data without indication of an end.
-  {  MANUVR_MSG_BT_ENTERED_CMD_MODE  , 0x0000,               "BT_ENTERED_CMD_MODE"  , MSG_ARGS_NONE }, // The module entered command mode.
-  {  MANUVR_MSG_BT_EXITED_CMD_MODE   , 0x0000,               "BT_EXITED_CMD_MODE"   , MSG_ARGS_NONE }, // The module exited command mode.
-
   {  MANUVR_MSG_I2C_QUEUE_READY      , MSG_FLAG_IDEMPOTENT,  "I2C_QUEUE_READY"      , MSG_ARGS_NONE }, // The i2c queue is ready for attention.
   {  MANUVR_MSG_I2C_DUMP_DEBUG       , MSG_FLAG_EXPORTABLE,  "I2C_DUMP_DEBUG"       , MSG_ARGS_NONE }, // Debug dump for i2c.
-  {  MANUVR_MSG_SPI_QUEUE_READY      , MSG_FLAG_IDEMPOTENT,  "SPI_QUEUE_READY"      , MSG_ARGS_NONE }, // SPI queue for the CPLD is ready for attention.
-  {  MANUVR_MSG_SPI_CB_QUEUE_READY   , MSG_FLAG_IDEMPOTENT,  "SPI_CALLBACK_READY"   , MSG_ARGS_NONE }, // One or more completed SPI jobs is waiting for callback service.
 
   {  MANUVR_MSG_RNG_BUFFER_EMPTY     , 0x0000,               "RNG_BUFFER_EMPTY"     , MSG_ARGS_NONE }, // The RNG couldn't keep up with our entropy demands.
   {  MANUVR_MSG_INTERRUPTS_MASKED    , 0x0000,               "INTERRUPTS_MASKED"    , MSG_ARGS_NONE }, // Anything that depends on interrupts is now broken.
-  {  MANUVR_MSG_SENSOR_INA219        , 0x0000,               "SENSOR_INA219"        , MSG_ARGS_NONE }, // The current sensor has something to say.
-  {  MANUVR_MSG_SENSOR_ISL29033      , 0x0000,               "SENSOR_ISL29033"      , MSG_ARGS_NONE }, // The light sensor has something to say.
-  {  MANUVR_MSG_SENSOR_LPS331        , 0x0000,               "SENSOR_LPS331"        , MSG_ARGS_NONE }, // The baro sensor has something to say.
-  {  MANUVR_MSG_SENSOR_SI7021        , 0x0000,               "SENSOR_SI7021"        , MSG_ARGS_NONE }, // The humidity sensor has something to say.
-  {  MANUVR_MSG_SENSOR_TMP006        , 0x0000,               "SENSOR_TMP006"        , MSG_ARGS_NONE }, // The thermopile has something to say.
-  {  MANUVR_MSG_DIRTY_FRAME_BUF      , 0x0000,               "DIRTY_FRAME_BUF"      , MSG_ARGS_NONE }, // Something changed the framebuffer and we need to redraw.
+  //{  MANUVR_MSG_DIRTY_FRAME_BUF      , 0x0000,               "DIRTY_FRAME_BUF"      , MSG_ARGS_NONE }, // Something changed the framebuffer and we need to redraw.
                                               
-  {  MANUVR_MSG_SD_EJECTED           , MSG_FLAG_EXPORTABLE,  "SD_EJECTED"           , MSG_ARGS_NONE }, // The SD card was just ejected.
-  {  MANUVR_MSG_SD_INSERTED          , MSG_FLAG_EXPORTABLE,  "SD_INSERTED"          , MSG_ARGS_NONE }, // An SD card was inserted.
   {  MANUVR_MSG_SESS_ESTABLISHED     , MSG_FLAG_EXPORTABLE,  "SESS_ESTABLISHED"     , MSG_ARGS_NONE }, // Session established.
   {  MANUVR_MSG_SESS_HANGUP          , MSG_FLAG_EXPORTABLE,  "SESS_HANGUP"          , MSG_ARGS_NONE }, // Session hangup.
   {  MANUVR_MSG_SESS_AUTH_CHALLENGE  , MSG_FLAG_EXPORTABLE,  "SESS_AUTH_CHALLENGE"  , MSG_ARGS_NONE }, // A code for challenge-response authentication.
@@ -164,8 +122,8 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SESS_DUMP_DEBUG      , MSG_FLAG_EXPORTABLE,  "SESS_DUMP_DEBUG"      , MSG_ARGS_NONE }, // 
   {  MANUVR_MSG_SESS_ORIGINATE_MSG   , MSG_FLAG_IDEMPOTENT,  "SESS_ORIGINATE_MSG"   , MSG_ARGS_NONE }, // 
 
-  {  MANUVR_MSG_NEOPIXEL_REFRESH     , MSG_FLAG_IDEMPOTENT,  "NEOPIXEL_REFRESH"     , MSG_ARGS_NONE }, // Cause any neopixel classes to refresh their strands.
-  {  MANUVR_MSG_AMBIENT_LIGHT_LEVEL  , MSG_FLAG_IDEMPOTENT,  "LIGHT_LEVEL"          , MSG_ARGS_U16  }, // Unitless light-level report.
+  //{  MANUVR_MSG_NEOPIXEL_REFRESH     , MSG_FLAG_IDEMPOTENT,  "NEOPIXEL_REFRESH"     , MSG_ARGS_NONE }, // Cause any neopixel classes to refresh their strands.
+  //{  MANUVR_MSG_AMBIENT_LIGHT_LEVEL  , MSG_FLAG_IDEMPOTENT,  "LIGHT_LEVEL"          , MSG_ARGS_U16  }, // Unitless light-level report.
   {  MANUVR_MSG_XPORT_SEND           , MSG_FLAG_IDEMPOTENT,  "XPORT_SEND"           , MSG_ARGS_STR_BUILDER }, // 
 };
 

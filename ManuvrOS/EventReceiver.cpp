@@ -99,7 +99,7 @@ int EventReceiver::purgeLogs() {
       StaticHub::log(&local_log);
     }
     local_log.clear();
-    printf("%s GCd %d bytes. Investigate this.\n", getReceiverName(), lll);
+    printf("%s GCd %d bytes.\n", getReceiverName(), lll);  // TODO: This never happens.
   }
   return return_value;
 }
@@ -156,8 +156,7 @@ void EventReceiver::printDebug() {
 */
 void EventReceiver::printDebug(StringBuilder *output) {
   output->concatf("\n==< %s >===================================\n", getReceiverName());
-  output->concatf("--- bootstrap_completed        %s\n", (boot_completed) ? "yes" : "no");
-  output->concatf("--- scheduler present?         %s\n", (NULL != scheduler) ? "yes" : "no");
+  output->concatf("--- bootstrap_completed \t %s\n--- scheduler present?  \t %s\n", (boot_completed) ? "yes" : "no", (NULL != scheduler) ? "yes" : "no");
 }
 
 

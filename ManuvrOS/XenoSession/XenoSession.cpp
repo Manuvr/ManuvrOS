@@ -89,7 +89,7 @@ void XenoSession::reclaimPreallocation(XenoMessage* obj) {
   if ((obj_addr < pre_max) && (obj_addr >= pre_min)) {
     // If we are in this block, it means obj was preallocated. wipe and reclaim it.
     if (verbosity > 3) {
-      local_log.concatf("reclaiming message via prealloca return. address was 0x%08x.\n", obj_addr);
+      local_log.concatf("reclaim via prealloc. addr: 0x%08x\n", obj_addr);
       StaticHub::log(&local_log);
     }
     obj->wipe();
@@ -97,7 +97,7 @@ void XenoSession::reclaimPreallocation(XenoMessage* obj) {
   }
   else {
     if (verbosity > 3) {
-      local_log.concatf("reclaiming message via delete. address was 0x%08x.\n", obj_addr);
+      local_log.concatf("reclaim via delete. addr: 0x%08x\n", obj_addr);
       StaticHub::log(&local_log);
     }
     // We were created because our prealloc was starved. we are therefore a transient heap object.
@@ -195,7 +195,7 @@ int8_t XenoSession::tapMessageType(uint16_t code) {
     case MANUVR_MSG_SESS_ORIGINATE_MSG:
     case MANUVR_MSG_SESS_DUMP_DEBUG:
 //    case MANUVR_MSG_SESS_HANGUP:
-      if (verbosity > 3) StaticHub::log("XenoSession::tapMessageType() tried to tap a blacklisted code.\n");
+      if (verbosity > 3) StaticHub::log("tapMessageType() tried to tap a blacklisted code.\n");
       return -1;
   }
 
@@ -356,7 +356,11 @@ int8_t XenoSession::notify(ManuvrEvent *active_event) {
 
     /* Things that only this class is likely to care about. */
     case MANUVR_MSG_SESS_HANGUP:
-      if (verbosity > 5) local_log.concatf("Purged (%d) XenoMessages from outbound and (%d) from inbound.\n", purgeOutbound(), purgeInbound());
+      {
+        int out_purge = purgeOutbound();
+        int in_purge  = purgeInbound();
+        if (verbosity > 5) local_log.concatf("Purged (%d) msgs from outbound and (%d) from inbound.\n", out_purge, in_purge);
+      }
       return_value++;
       break;
       
@@ -412,7 +416,7 @@ int XenoSession::purgeOutbound() {
   while (outbound_messages.hasNext()) {
     temp = outbound_messages.get();
     if (verbosity > 6) {
-      local_log.concat("\nDestroying outbound message:\n");
+      local_log.concat("\nDestroying outbound msg:\n");
       temp->printDebug(&local_log);
       StaticHub::log(&local_log);
     }
@@ -434,7 +438,7 @@ int XenoSession::purgeInbound() {
   while (inbound_messages.hasNext()) {
     temp = inbound_messages.get();
     if (verbosity > 6) {
-      local_log.concat("\nDestroying inbound message:\n");
+      local_log.concat("\nDestroying inbound msg:\n");
       temp->printDebug(&local_log);
       StaticHub::log(&local_log);
     }
@@ -552,7 +556,6 @@ void XenoSession::mark_session_desync(uint8_t ds_src) {
         break;
       case XENOSESSION_STATE_SYNC_CASTING:      // 
       default:
-        if (verbosity > 3) local_log.concat("We were called.\n");
         break;
     }
   }

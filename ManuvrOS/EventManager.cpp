@@ -174,7 +174,7 @@ int8_t EventManager::raiseEvent(uint16_t code, EventReceiver* cb) {
   }
   else {
     if (INSTANCE->verbosity > 4) {
-      StringBuilder output("EventManager::raiseEvent():\t An event failed validate_insertion().\n");
+      StringBuilder output("EventManager::raiseEvent():\tvalidate_insertion() failed:\n");
       output.concat(ManuvrMsg::getMsgTypeString(code));
       StaticHub::log(&output);
       INSTANCE->insertion_denials++;
@@ -207,7 +207,7 @@ int8_t EventManager::staticRaiseEvent(ManuvrEvent* event) {
     if (INSTANCE->verbosity > 4) {
       //local_log.concatf("Static: An incoming event 0x%04x failed validate_insertion(). Trapping it...\n", code);
       //StaticHub::log(&local_log);
-      StringBuilder output("EventManager::staticRaiseEvent():\tAn event failed validate_insertion().\n");
+      StringBuilder output("EventManager::staticRaiseEvent():\tvalidate_insertion() failed:\n");
       event->printDebug(&output);;
       StaticHub::log(&output);
       INSTANCE->insertion_denials++;
@@ -228,28 +228,20 @@ int8_t EventManager::staticRaiseEvent(ManuvrEvent* event) {
 * @return  true if the given event was aborted, false otherwise.
 */
 bool EventManager::abortEvent(ManuvrEvent* event) {
-  int8_t return_value = 0;
-  if (0 == INSTANCE->validate_insertion(event)) {
-    INSTANCE->event_queue.remove(event);
-
-    // Check the queue depth.
-    INSTANCE->update_maximum_queue_depth();
-  }
-  else {
-    if (INSTANCE->verbosity > 4) {
-      //local_log.concatf("Static: An incoming event 0x%04x failed validate_insertion(). Trapping it...\n", code);
-      StringBuilder output("EventManager::staticRaiseEvent():\tAn event failed validate_insertion().\n");
-      event->printDebug(&output);
-      StaticHub::log(&output);
-      INSTANCE->insertion_denials++;
+  if (!INSTANCE->event_queue.remove(event)) {
+    // Didn't find it? Check  the isr_queue...
+    if (!INSTANCE->isr_event_queue.remove(event)) {
+      return false;
     }
-    INSTANCE->reclaim_event(event);
-    return_value = -1;
   }
-  return return_value;
+  return true;
 }
 
 
+// TODO: It would be bettter to put a semaphore on the evvent_queue and set it in the idel loop.
+//       That way, we could check for it here, and have the (probable) possibility of not incurring
+//       the cost for merging these two queues if we don't have to.
+//             ---J. Ian Lindsay   Fri Jul 03 16:54:14 MST 2015
 int8_t EventManager::isrRaiseEvent(ManuvrEvent* event) {
   int return_value = -1;
 #ifdef STM32F4XX
@@ -344,33 +336,29 @@ bool EventManager::containsPreformedEvent(ManuvrEvent* event) {
 */
 void EventManager::reclaim_event(ManuvrEvent* active_event) {
   if (NULL == active_event) {
-    if (verbosity > 3) StaticHub::log("EventManager::reclaim_event() was passed a NULL event. This would have crashed us.\n");
     return;
   }
   bool reap_current_event = active_event->eventManagerShouldReap();
-  if (verbosity > 5) {
-    local_log.concatf("We will%s be reaping %s.\n", (reap_current_event ? "":" not"), active_event->getMsgTypeString());
-    StaticHub::log(&local_log);
-  }
+  //if (verbosity > 5) {
+  //  local_log.concatf("We will%s be reaping %s.\n", (reap_current_event ? "":" not"), active_event->getMsgTypeString());
+  //  StaticHub::log(&local_log);
+  //}
 
   if (reap_current_event) {                   // If we are to reap this event...
-    if (verbosity > 5) local_log.concat("EventManager::reclaim_event(): About to reap,\n");
     delete active_event;                      // ...free() it...
     events_destroyed++;
-    //discarded.insert(active_event);
     burden_of_specific++;                     // ...and note the incident.
   }
   else {                                      // If we are NOT to reap this event...
     if (active_event->isManaged()) {
     }
     else if (active_event->returnToPrealloc()) {   // ...is it because we preallocated it?
-      if (verbosity > 5) local_log.concat("EventManager::reclaim_event(): Returning the event to prealloc,\n");
       active_event->clearArgs();              // If so, wipe the Event...
       preallocated.insert(active_event);      // ...and return it to the preallocate queue.
     }                                         // Otherwise, we let it drop and trust some other class is managing it.
-    else {
-      if (verbosity > 5) local_log.concat("EventManager::reclaim_event(): Doing nothing. Hope its managed elsewhere.\n");
-    }
+    //else {
+    //  if (verbosity > 6) local_log.concat("EventManager::reclaim_event(): Doing nothing. Hope its managed elsewhere.\n");
+    //}
   }
   
   if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
@@ -524,54 +512,62 @@ int8_t EventManager::procIdleFlags() {
     }
     
     if (0 == activity_count) {
-      if (verbosity >= 3) local_log.concatf("\tDead event... No subscriber acknowledges %s\n", active_event->getMsgTypeString());
+      if (verbosity >= 3) local_log.concatf("\tDead event: %s\n", active_event->getMsgTypeString());
       total_events_dead++;
     }
 
-    /* Clean up the Event. */
+    /* Should we clean up the Event? */
+    bool clean_up_active_event = true;  // Defaults to 'yes'.
     if (NULL != active_event->callback) {
       if ((EventReceiver*) this != active_event->callback) {  // We don't want to invoke our own callback.
         /* If the event has a valid callback, do the callback dance and take instruction
            from the return value. */
         //   if (verbosity >=7) output.concatf("specific_event_callback returns %d\n", active_event->callback->callback_proc(active_event));
         switch (active_event->callback->callback_proc(active_event)) {
-          case EVENT_CALLBACK_RETURN_ERROR:       // Something went wrong. Should never occur.
-          case EVENT_CALLBACK_RETURN_UNDEFINED:   // The originating class doesn't care what we do with the event.
-            if (verbosity > 1) local_log.concatf("EventManager found a possible mistake. Unexpected return case from callback_proc.\n");
-          case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
-            reclaim_event(active_event);
-            break;
           case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
             if (verbosity > 5) local_log.concatf("EventManager is recycling event %s.\n", active_event->getMsgTypeString());
             if (0 == validate_insertion(active_event)) {
               event_queue.insert(active_event, active_event->priority);
+              // This is the one case where we do NOT want the event reclaimed.
+              clean_up_active_event = false;
             }
-            else reclaim_event(active_event);
             break;
+          case EVENT_CALLBACK_RETURN_ERROR:       // Something went wrong. Should never occur.
+          case EVENT_CALLBACK_RETURN_UNDEFINED:   // The originating class doesn't care what we do with the event.
+            //if (verbosity > 1) local_log.concatf("EventManager found a possible mistake. Unexpected return case from callback_proc.\n");
+            // NOTE: No break;
           case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
             if (verbosity > 5) local_log.concatf("Dropping event %s after running.\n", active_event->getMsgTypeString());
-            reclaim_event(active_event);
-            break;
+            // NOTE: No break;
+          case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
+            // NOTE: No break;
           default:
             //if (verbosity > 0) local_log.concatf("Event %s has no cleanup case.\n", active_event->getMsgTypeString());
-            reclaim_event(active_event);
             break;
         }
       }
       else {
-        reclaim_event(active_event);
+        //reclaim_event(active_event);
       }
     }
     else {
-      /* If there is no callback, ask the event if it should be reaped. If its memory is
-         being managed by some other class, this call will return false, and we just remove
-         if from the event_queue and consider the matter closed. */
+      /* If there is no callback specified for the Event, we rely on the flags in the Event itself to
+         decide if it should be reaped. If its memory is being managed by some other class, the reclaim_event()
+         fxn will simply remove it from the event_queue and consider the matter closed. */
+    }
+    
+    // All of the logic above ultimately informs this choice.
+    if (clean_up_active_event) {
       reclaim_event(active_event);
     }
 
     total_events++;
     
     if (event_queue.size() < 0) {
+      /* Historical note: This was a past debug check. The root-cause was found and fixed. It is
+           being retained for now, despite the fact that it hasn't been observed for many months.
+         ---J. Ian Lindsay   Fri Jul 03 16:44:26 MST 2015
+      */
       //StaticHub::log("event_queue size went negative!?! Correcting...\n");
       event_queue.count();
     }
@@ -684,7 +680,7 @@ void EventManager::printProfiler(StringBuilder* output) {
   if (profiler_enabled) {
     output->concat("-- Profiler dump:\n");
     if (total_events) {
-      output->concatf("\tFraction of prealloc hits: %f\n\n", ((burden_of_specific - prealloc_starved) / total_events));
+      output->concatf("\tprealloc hit fraction: %f\%\n\n", (1-((burden_of_specific - prealloc_starved) / total_events)) * 100);
     }
 
     TaskProfilerData *profiler_item;
@@ -701,7 +697,7 @@ void EventManager::printProfiler(StringBuilder* output) {
     output->concatf("\n\t CPU use by clock: %f\n\n", (double)cpu_usage());
   }
   else {
-    output->concat("-- EventManager profiler not enabled.\n\n");
+    output->concat("-- EventManager profiler disabled.\n\n");
   }
 }
 

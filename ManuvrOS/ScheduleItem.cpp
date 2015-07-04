@@ -160,13 +160,13 @@ void ScheduleItem::printDebug(StringBuilder* output) {
   if (NULL == output) return;
   output->concatf("\t [%10u] Schedule \n\t --------------------------------\n", pid);
                   
-  output->concatf("\t Enabled          %s\n", (thread_enabled ? "YES":"NO"));
-  output->concatf("\t Time-till-fire   %u\n", thread_time_to_wait);
-  output->concatf("\t Period           %u\n", thread_period);
-  output->concatf("\t Recurs?          %s\n", thread_recurs);
-  output->concatf("\t Exec pending:    %s\n", (thread_fire ? "YES":"NO")); 
-  output->concatf("\t Autoclear        %s\n", (autoclear ? "YES":"NO"));
-  output->concatf("\t Profiling?       %s\n", ((prof_data != NULL && prof_data->profiling_active) ? "YES":"NO"));
+  output->concatf("\t Enabled       \t%s\n", (thread_enabled ? "YES":"NO"));
+  output->concatf("\t Time-till-fire\t%u\n", thread_time_to_wait);
+  output->concatf("\t Period        \t%u\n", thread_period);
+  output->concatf("\t Recurs?       \t%s\n", thread_recurs);
+  output->concatf("\t Exec pending: \t%s\n", (thread_fire ? "YES":"NO")); 
+  output->concatf("\t Autoclear     \t%s\n", (autoclear ? "YES":"NO"));
+  output->concatf("\t Profiling?    \t%s\n", ((prof_data != NULL && prof_data->profiling_active) ? "YES":"NO"));
 
   if (NULL != callback_to_er) {
     output->concatf("\t EventReceiver:   %s\n", (char*)callback_to_er->getReceiverName());

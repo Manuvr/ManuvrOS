@@ -876,7 +876,7 @@ void Scheduler::procDirectDebugInstruction(StringBuilder *input) {
       }
       break;
     default:
-      local_log.concatf("No case in Scheduler debug.\n\n");
+      EventReceiver::procDirectDebugInstruction(input);
       break;
   }
   
