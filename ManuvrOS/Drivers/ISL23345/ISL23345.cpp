@@ -161,7 +161,6 @@ uint16_t ISL23345::getRange(void) {    return 0x00FF;       }  // Trivial. Retur
 
 void ISL23345::operationCompleteCallback(I2CQueuedOperation* completed) {
   I2CDeviceWithRegisters::operationCompleteCallback(completed);
-  int i = 0;
   
   if (completed->err_code != I2C_ERR_CODE_NO_ERROR) {
     return;

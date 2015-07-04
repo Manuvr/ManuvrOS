@@ -415,9 +415,6 @@ int8_t ManuvrableNeoPixel::callback_proc(ManuvrEvent *event) {
 
 int8_t ManuvrableNeoPixel::notify(ManuvrEvent *active_event) {
   int8_t return_value = 0;
-  uint8_t temp_uint8_0;
-  uint8_t temp_uint8_1;
-  StringBuilder *temp_sb;
   
   switch (active_event->event_code) {
     case MANUVR_MSG_NEOPIXEL_REFRESH:
