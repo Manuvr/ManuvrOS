@@ -754,6 +754,7 @@ int8_t MGC3130::notify(ManuvrEvent *active_event) {
 
 
 void MGC3130::procDirectDebugInstruction(StringBuilder *input) {
+#ifdef __MANUVR_CONSOLE_SUPPORT
   char* str = input->position(0);
   ManuvrEvent *event = NULL;  // Pitching events is a common thing in this fxn...
 
@@ -769,14 +770,13 @@ void MGC3130::procDirectDebugInstruction(StringBuilder *input) {
       is_class_ready(false);
       EventManager::raiseEvent(MANUVR_MSG_SENSOR_MGC3130_INIT, NULL);
       break;
-    case 'i':
-      printDebug(&local_log);
-      break;
+
     default:
       EventReceiver::procDirectDebugInstruction(input);
       break;
   }
   
+#endif
   if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
 }
 

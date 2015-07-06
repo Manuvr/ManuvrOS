@@ -174,7 +174,7 @@ int8_t EventManager::raiseEvent(uint16_t code, EventReceiver* cb) {
   }
   else {
     if (INSTANCE->verbosity > 4) {
-      StringBuilder output("EventManager::raiseEvent():\tvalidate_insertion() failed:\n");
+      StringBuilder output("raiseEvent():\tvalidate_insertion() failed:\n");
       output.concat(ManuvrMsg::getMsgTypeString(code));
       StaticHub::log(&output);
       INSTANCE->insertion_denials++;
@@ -207,7 +207,7 @@ int8_t EventManager::staticRaiseEvent(ManuvrEvent* event) {
     if (INSTANCE->verbosity > 4) {
       //local_log.concatf("Static: An incoming event 0x%04x failed validate_insertion(). Trapping it...\n", code);
       //StaticHub::log(&local_log);
-      StringBuilder output("EventManager::staticRaiseEvent():\tvalidate_insertion() failed:\n");
+      StringBuilder output("staticRaiseEvent():\tvalidate_insertion() failed:\n");
       event->printDebug(&output);;
       StaticHub::log(&output);
       INSTANCE->insertion_denials++;
@@ -457,12 +457,10 @@ int8_t EventManager::procIdleFlags() {
             StringBuilder *tmp_sb = new StringBuilder();
             if (ManuvrMsg::getMsgLegend(tmp_sb) ) {
               active_event->addArg(tmp_sb);
-
-              if (verbosity >= 7) local_log.concatf("EventManager\t Sent message definition map. Size %d.\n", tmp_sb->length());
               activity_count++;
             }
             else {
-              if (verbosity > 1) local_log.concatf("There was a problem writing the message legend. This is bad. Size %d.\n", tmp_sb->length());
+              //if (verbosity > 1) local_log.concatf("There was a problem writing the message legend. This is bad. Size %d.\n", tmp_sb->length());
             }
           }
           else {
@@ -525,7 +523,7 @@ int8_t EventManager::procIdleFlags() {
         //   if (verbosity >=7) output.concatf("specific_event_callback returns %d\n", active_event->callback->callback_proc(active_event));
         switch (active_event->callback->callback_proc(active_event)) {
           case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
-            if (verbosity > 5) local_log.concatf("EventManager is recycling event %s.\n", active_event->getMsgTypeString());
+            if (verbosity > 5) local_log.concatf("Recycling %s.\n", active_event->getMsgTypeString());
             if (0 == validate_insertion(active_event)) {
               event_queue.insert(active_event, active_event->priority);
               // This is the one case where we do NOT want the event reclaimed.
@@ -537,7 +535,7 @@ int8_t EventManager::procIdleFlags() {
             //if (verbosity > 1) local_log.concatf("EventManager found a possible mistake. Unexpected return case from callback_proc.\n");
             // NOTE: No break;
           case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
-            if (verbosity > 5) local_log.concatf("Dropping event %s after running.\n", active_event->getMsgTypeString());
+            if (verbosity > 5) local_log.concatf("Dropping %s after running.\n", active_event->getMsgTypeString());
             // NOTE: No break;
           case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
             // NOTE: No break;
@@ -678,7 +676,7 @@ void EventManager::printProfiler(StringBuilder* output) {
   output->concatf("\t max_events_p_loop  \t%u\n", (unsigned long) max_events_p_loop);
     
   if (profiler_enabled) {
-    output->concat("-- Profiler dump:\n");
+    output->concat("-- Profiler:\n");
     if (total_events) {
       output->concatf("\tprealloc hit fraction: %f\%\n\n", (1-((burden_of_specific - prealloc_starved) / total_events)) * 100);
     }
@@ -766,7 +764,7 @@ void EventManager::printDebug(StringBuilder* output) {
   output->concatf("-- Preallocation depth:      %d\n", preallocated.size());
   output->concatf("-- Total subscriber count:   %d\n", subscribers.size());
   output->concatf("-- Prealloc starves:         %u\n",   (unsigned long) prealloc_starved);
-  output->concatf("-- events_destroyed:         %u\n",   (unsigned long) events_destroyed);
+  //output->concatf("-- events_destroyed:         %u\n",   (unsigned long) events_destroyed);
   output->concatf("-- burden_of_being_specific  %u\n",   (unsigned long) burden_of_specific);
   output->concatf("-- idempotent_blocks         %u\n\n", (unsigned long) idempotent_blocks);
   
@@ -783,7 +781,7 @@ void EventManager::printDebug(StringBuilder* output) {
   }
 
   if (discarded.size() > 0) {
-    output->concatf("\nDiscard queue Listing (%d total):\n", discarded.size());
+    output->concatf("\nDiscard queue (%d total):\n", discarded.size());
     for (int i = 0; i < discarded.size(); i++) {
       discarded.get(i)->printDebug(output);
     }

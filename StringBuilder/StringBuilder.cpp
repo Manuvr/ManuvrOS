@@ -23,28 +23,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "StringBuilder.h"
 
-//#ifdef ARDUINO
-//  #include "Arduino.h"
-//#else
+#ifdef ARDUINO
+  #include "Arduino.h"
+#else
   #include <stdio.h>
   #include <stdlib.h>
   #include <string.h>
   #include <ctype.h>
-//#endif
-
-
-#ifdef ARDUINO
-  #include "Arduino.h"
-#else
-  #ifndef max
-    #define max( a, b ) ( ((a) > (b)) ? (a) : (b) )
-  #endif
-  
-  #ifndef min
-    #define min( a, b ) ( ((a) < (b)) ? (a) : (b) )
-  #endif
 #endif
-
 
 
 /****************************************************************************************************
@@ -686,9 +672,9 @@ void StringBuilder::destroyStrLL(StrLL *r_node) {
 * Will compare ONLY the first len bytes, or the length of out present string. Whichever is less.
 */
 int StringBuilder::cmpBinString(unsigned char *unknown, int len) {
-  int i = 0;
   this->collapseIntoBuffer();
-  for (i = 0; i < min(len, this->col_length); i++) {
+  int minimum = (len > this->col_length) ? this->col_length : len;
+  for (int i = 0; i < minimum; i++) {
     if (*(unknown+i) != *(this->str+i)) return 0;
   }
   return 1;

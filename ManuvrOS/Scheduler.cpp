@@ -850,6 +850,7 @@ int8_t Scheduler::notify(ManuvrEvent *active_event) {
 
 
 void Scheduler::procDirectDebugInstruction(StringBuilder *input) {
+#ifdef __MANUVR_CONSOLE_SUPPORT
   char* str = input->position(0);
 
   uint8_t temp_byte = 0;
@@ -881,6 +882,7 @@ void Scheduler::procDirectDebugInstruction(StringBuilder *input) {
   }
   
   if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
+#endif
 }
 
 

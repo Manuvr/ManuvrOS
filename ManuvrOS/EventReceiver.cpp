@@ -99,7 +99,8 @@ int EventReceiver::purgeLogs() {
       StaticHub::log(&local_log);
     }
     local_log.clear();
-    printf("%s GCd %d bytes.\n", getReceiverName(), lll);  // TODO: This never happens.
+    local_log.concatf("%s GCd %d bytes.\n", getReceiverName(), lll);  // TODO: This never happens.
+    StaticHub::log(&local_log);
   }
   return return_value;
 }
@@ -112,6 +113,7 @@ int EventReceiver::purgeLogs() {
 * @param   input  A buffer containing the user's direct input.
 */
 void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
+#ifdef __MANUVR_CONSOLE_SUPPORT
   char* str = input->position(0);
   
   switch (*(str)) {
@@ -124,6 +126,7 @@ void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
   }
   
   if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
+#endif
 }
 
 

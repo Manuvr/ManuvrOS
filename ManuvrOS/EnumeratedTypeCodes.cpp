@@ -110,8 +110,8 @@ int getTotalSizeByTypeString(char *str) {
 const char* getTypeCodeString(uint8_t typecode) {
   switch (typecode) {
     // TODO: Fill this out.
-    case NOTYPE_FM:             return "NOTYPE_FM";
-    case RSRVD_FM:              return "RSRVD_FM";
+    case NOTYPE_FM:             return "NOTYPE";
+    case RSRVD_FM:              return "RSRVD";
     case VECT_4_FLOAT:          return "VECT_4_FLOAT";
     case VECT_3_FLOAT:          return "VECT_3_FLOAT";
     case VECT_3_INT16:          return "VECT_3_INT16";
@@ -129,7 +129,7 @@ const char* getTypeCodeString(uint8_t typecode) {
     case BINARY_FM:             return "BINARY";
     case STR_BUILDER_FM:        return "STR_BUILDER";
     case MAP_FM:                return "MAP";
-    default:                    return "<NOT YET CODED FOR>";
+    default:                    return "<UNSUPPORTED>";
   }
 }
 

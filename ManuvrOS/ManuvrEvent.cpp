@@ -156,8 +156,8 @@ void ManuvrEvent::printDebug(StringBuilder *output) {
   	  }
   	  output->concat("\n\n");
   }
-  else {
-    output->concatf("Failed to serialize message. Count was (%d).\n", arg_count);
-  }
+  //else {
+  //  output->concatf("Failed to serialize message. Count was (%d).\n", arg_count);
+  //}
 }
 
