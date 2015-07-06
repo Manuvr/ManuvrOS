@@ -49,18 +49,17 @@ typedef struct typecode_def_t {
 #define INT16_PTR_FM      0xA4 // 16-bit integer
 #define INT8_PTR_FM       0xA5 // 8-bit integer
 #define FLOAT_PTR_FM      0xA6 // A float
+#define CHAIN PTR_FM      0xAD // A pointer to a Chain.
+#define EVENT_PTR_FM      0xAE // A pointer to an Event.
 #define STR_BUILDER_FM    0xAF // A pointer to a StringBuilder.
 
 /**
 * Type codes for pointers to system services and other types that will make no
 * sense whatever to a foriegn system.
 */
-#define EVENT_PTR_FM            0xAE // A pointer to an Event.
 
-#define SYS_SVC_MANIFEST        0xE0 // A pointer to a system service structure. Implementation-dependent.
-
-#define SYS_SVC_SCHEDULER_FM    0xE1 // A pointer to the Scheduler.
-#define SYS_SVC_STATICHUB_FM    0xE3 // A pointer to a StaticHub.
+#define SYS_EVENTRECEIVER_FM    0xE0 // A pointer to an EventReceiver.
+#define SYS_MANUVR_XPORT_FM     0xE1 // A pointer to a transport.
 
 
 /**

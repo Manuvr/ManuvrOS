@@ -193,10 +193,10 @@ Argument::Argument(ManuvrEvent* val) {
 /*
 * This is a system service pointer. Do not reap it.
 */
-Argument::Argument(Scheduler* val) {
+Argument::Argument(ManuvrXport* val) {
 	wipe();
 	len = sizeof(val);
-	type_code = SYS_SVC_SCHEDULER_FM;
+	type_code = SYS_MANUVR_XPORT_FM;
 	target_mem = (void*) val;
 	reap       = false;
 }
@@ -204,10 +204,10 @@ Argument::Argument(Scheduler* val) {
 /*
 * This is a system service pointer. Do not reap it.
 */
-Argument::Argument(StaticHub* val) {
+Argument::Argument(EventReceiver* val) {
 	wipe();
 	len = sizeof(val);
-	type_code = SYS_SVC_STATICHUB_FM;
+	type_code = SYS_EVENTRECEIVER_FM;
 	target_mem = (void*) val;
 	reap       = false;
 }
@@ -305,8 +305,8 @@ int8_t Argument::serialize(StringBuilder *out) {
 	  case RSRVD_FM:              // Reserved code is meaningless to us. How did this happen?
 	  case NOTYPE_FM:             // No type isn't valid ANYWHERE in this system. How did this happen?
 	  case EVENT_PTR_FM:          // Host isn't necessarilly running an Event system like ours (if any).
-	  case SYS_SVC_STATICHUB_FM:  // Host can't use our internal system services.
-	  case SYS_SVC_SCHEDULER_FM:  // Host can't use our internal system services.
+	  case SYS_EVENTRECEIVER_FM:  // Host can't use our internal system services.
+	  case SYS_MANUVR_XPORT_FM:   // Host can't use our internal system services.
 	  default:
 	    return DIG_MSG_ERROR_INVALID_TYPE;
 	}
@@ -378,8 +378,8 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
 	  case RSRVD_FM:              // Reserved code is meaningless to us. How did this happen?
 	  case NOTYPE_FM:             // No type isn't valid ANYWHERE in this system. How did this happen?
 	  case EVENT_PTR_FM:          // Host isn't necessarilly running an Event system like ours (if any).
-	  case SYS_SVC_STATICHUB_FM:  // Host can't use our internal system services.
-	  case SYS_SVC_SCHEDULER_FM:  // Host can't use our internal system services.
+	  case SYS_EVENTRECEIVER_FM:  // Host can't use our internal system services.
+	  case SYS_MANUVR_XPORT_FM:   // Host can't use our internal system services.
 	  default:
 	    return DIG_MSG_ERROR_INVALID_TYPE;
 	}

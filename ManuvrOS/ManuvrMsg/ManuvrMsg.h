@@ -24,7 +24,6 @@ The message codes defined by this file are dual-purposed across the EventAnd Hos
 #include "DataStructures/PriorityQueue.h"
 #include "DataStructures/LightLinkedList.h"
 #include "DataStructures/Vector3.h"
-#include "DataStructures/Vector3.h"
 #include "DataStructures/Quaternion.h"
 
 
@@ -72,8 +71,8 @@ typedef struct msg_defin_t {
 
 
 
-class StaticHub;
-class Scheduler;
+class ManuvrXport;
+class EventReceiver;
 class ManuvrEvent;
 
 /* This is how we define arguments to messages. */
@@ -118,8 +117,8 @@ class Argument {
     Argument(const char* val);
     Argument(void*, uint16_t buf_len);
     Argument(StringBuilder *);
-    Argument(StaticHub *);
-    Argument(Scheduler *);
+    Argument(EventReceiver *);
+    Argument(ManuvrXport *);
     Argument(ManuvrEvent *);
     
     ~Argument();
@@ -210,8 +209,8 @@ class ManuvrMsg {
     inline int addArg(void *val, int len) {      return args.insert(new Argument(val, len));   }
     inline int addArg(const char *val) {         return args.insert(new Argument(val));   }
     inline int addArg(StringBuilder *val) {      return args.insert(new Argument(val));   }
-    inline int addArg(StaticHub *val) {          return args.insert(new Argument(val));   }
-    inline int addArg(Scheduler *val) {          return args.insert(new Argument(val));   }
+    inline int addArg(EventReceiver *val) {      return args.insert(new Argument(val));   }
+    inline int addArg(ManuvrXport *val) {        return args.insert(new Argument(val));   }
     inline int addArg(ManuvrEvent *val) {        return args.insert(new Argument(val));   }
 
 
@@ -246,23 +245,23 @@ class ManuvrMsg {
     inline int8_t getArgAs(uint8_t idx, float  *trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
     
     // These accessors treat the (void*) as a pointer. These functions are essentially type-casts.
-    inline int8_t getArgAs(Vector3f **trg_buf) {           return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(Vector3ui16 **trg_buf) {        return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(Vector3i16 **trg_buf) {         return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(const char **trg_buf) {         return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(StringBuilder **trg_buf) {      return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(StaticHub **trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(Scheduler **trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(ManuvrEvent **trg_buf) {   return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(Vector3f **trg_buf) {                 return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(Vector3ui16 **trg_buf) {              return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(Vector3i16 **trg_buf) {               return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(const char **trg_buf) {               return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(StringBuilder **trg_buf) {            return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(EventReceiver **trg_buf) {            return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(ManuvrXport **trg_buf) {              return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(ManuvrEvent **trg_buf) {              return getArgAs(0, (void*) trg_buf, true);  }
     
     inline int8_t getArgAs(uint8_t idx, Vector3f  **trg_buf) {          return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, Vector3ui16  **trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, Vector3i16  **trg_buf) {        return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, const char  **trg_buf) {        return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, StringBuilder  **trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, StaticHub  **trg_buf) {         return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, Scheduler  **trg_buf) {         return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, ManuvrEvent  **trg_buf) {  return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, EventReceiver  **trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, ManuvrXport  **trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, ManuvrEvent  **trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
     
     /* 
     * Protip: Think on the stack...

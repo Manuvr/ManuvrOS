@@ -41,9 +41,8 @@ const TypeCodeDef type_codes[] = {
   {INT8_PTR_FM      , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_EXPORT_IMPLIES_CONV), 1},
   {FLOAT_PTR_FM     , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_EXPORT_IMPLIES_CONV), 4},
   {STR_BUILDER_FM   , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_EXPORT_IMPLIES_CONV), 1},
-  {SYS_SVC_MANIFEST      , 0, 0},
-  {SYS_SVC_STATICHUB_FM  , 0, 0},
-  {SYS_SVC_SCHEDULER_FM  , 0, 0},
+  {SYS_EVENTRECEIVER_FM  , 0, 0},
+  {SYS_MANUVR_XPORT_FM   , 0, 0},
   {EVENT_PTR_FM          , 0, 0},
 };
 
@@ -117,6 +116,8 @@ const char* getTypeCodeString(uint8_t typecode) {
     case VECT_3_INT16:          return "VECT_3_INT16";
     case VECT_3_UINT16:         return "VECT_3_UINT16";
 
+    case SYS_MANUVR_XPORT_FM:   return "MANUVR_XPORT";
+    case SYS_EVENTRECEIVER_FM:  return "SYS_EVENTRECEIVER_FM";
     case INT8_FM:               return "INT8";
     case UINT8_FM:              return "UINT8";
     case INT16_FM:              return "INT16";
@@ -127,7 +128,7 @@ const char* getTypeCodeString(uint8_t typecode) {
     case BOOLEAN_FM:            return "BOOLEAN";
     case STR_FM:                return "STR";
     case BINARY_FM:             return "BINARY";
-    case STR_BUILDER_FM:        return "STR_BUILDER";
+    case STR_BUILDER_FM:        return "STR_BLDR";
     case MAP_FM:                return "MAP";
     default:                    return "<UNSUPPORTED>";
   }

@@ -41,6 +41,7 @@
   #endif
   
   class ManuvrEvent;
+  class Scheduler;
   class EventReceiver;
 
   
