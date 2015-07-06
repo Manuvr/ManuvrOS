@@ -153,23 +153,26 @@ void ManuvrComPort::__class_initializer() {
 
 
 
-/*
-* Call this method to establish a session with the counterparty.
-*/
-int8_t ManuvrComPort::establishSession() {
-  if (NULL == session) {
-    session = new XenoSession(this);
-    session->markSessionConnected(true);
-    set_xport_state(MANUVR_XPORT_STATE_HAS_SESSION);
-    return 1;
+
+int8_t ManuvrComPort::provide_session(XenoSession* ses) {
+  if ((NULL != session) && (ses != session)) {
+    // If we are about to clobber an existing session, we need to free it
+    // first.
+    StaticHub::getInstance()->fetchEventManager()->unsubscribe(session);
+    delete session;
+    session = NULL;
   }
+  session = ses;
+  //session->setVerbosity(verbosity);
+  set_xport_state(MANUVR_XPORT_STATE_HAS_SESSION);
   return 0;
 }
 
 
 
+
+
 XenoSession* ManuvrComPort::getSession() {
-  if (NULL == session) establishSession();
   return session;
 }
 

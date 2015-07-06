@@ -117,7 +117,7 @@ const char* getTypeCodeString(uint8_t typecode) {
     case VECT_3_UINT16:         return "VECT_3_UINT16";
 
     case SYS_MANUVR_XPORT_FM:   return "MANUVR_XPORT";
-    case SYS_EVENTRECEIVER_FM:  return "SYS_EVENTRECEIVER_FM";
+    case SYS_EVENTRECEIVER_FM:  return "EVENTRECEIVER";
     case INT8_FM:               return "INT8";
     case UINT8_FM:              return "UINT8";
     case INT16_FM:              return "INT16";

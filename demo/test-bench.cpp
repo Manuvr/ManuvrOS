@@ -835,7 +835,7 @@ void session_battery_2() {
   test_event_in.addArg((uint8_t) 9);
   
   if (NULL != com_port) {
-    com_port->establishSession();
+    com_port->connected(true);
     com_port->getSession()->sendEvent(&test_event_in);
   }
   

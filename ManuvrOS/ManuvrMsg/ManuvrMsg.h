@@ -304,7 +304,9 @@ class ManuvrMsg {
 
     static const unsigned char MSG_ARGS_SELF_DESC[];
     
-    
+    static const unsigned char MSG_ARGS_EVENTRECEIVER[]; 
+    static const unsigned char MSG_ARGS_XPORT[]; 
+
     
     
 

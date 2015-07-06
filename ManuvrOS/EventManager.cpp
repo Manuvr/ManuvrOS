@@ -452,6 +452,21 @@ int8_t EventManager::procIdleFlags() {
           }
           break;
       
+        case MANUVR_MSG_SYS_ADVERTISE_SRVC:  // Some service is annoucing its arrival.
+        case MANUVR_MSG_SYS_RETRACT_SRVC:    // Some service is annoucing its departure.
+          if (0 < active_event->argCount()) {
+            EventReceiver* er_ptr; 
+            if (0 == active_event->getArgAs(&er_ptr)) {
+              if (MANUVR_MSG_SYS_ADVERTISE_SRVC == active_event->event_code) {
+                subscribe((EventReceiver*) er_ptr);
+              }
+              else {
+                unsubscribe((EventReceiver*) er_ptr);
+              }
+            }
+          }
+          break;
+      
         case MANUVR_MSG_LEGEND_MESSAGES:     // Dump the message definitions.
           if (0 == active_event->argCount()) {   // Only if we are seeing a request.
             StringBuilder *tmp_sb = new StringBuilder();

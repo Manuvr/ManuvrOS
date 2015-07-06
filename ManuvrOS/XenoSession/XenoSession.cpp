@@ -125,8 +125,6 @@ void XenoSession::reclaimPreallocation(XenoMessage* obj) {
 */
 XenoSession::XenoSession(ManuvrXport* _xport) {
   __class_initializer();
-  StaticHub *sh = StaticHub::getInstance();
-  sh->fetchEventManager()->subscribe((EventReceiver*) this);  // Subscribe to the EventManager.
 
   /* Populate all the static preallocation slots for messages. */
   for (uint16_t i = 0; i < XENOMESSAGE_PREALLOCATE_COUNT; i++) {
@@ -337,6 +335,12 @@ int8_t XenoSession::callback_proc(ManuvrEvent *event) {
 }
 
 
+/*
+* This is the override from EventReceiver, but there is a bit of a twist this time. 
+* Following the normal processing of the incoming event, this class compares it against
+*   a list of events that it has been instructed to relay to the counterparty. If the event
+*   meets the relay criteria, we serialize it and send it to the transport that we are bound to.
+*/
 int8_t XenoSession::notify(ManuvrEvent *active_event) {
   int8_t return_value = 0;
   

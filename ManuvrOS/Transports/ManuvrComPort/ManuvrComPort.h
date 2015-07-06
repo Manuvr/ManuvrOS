@@ -92,11 +92,9 @@ class ManuvrComPort : public ManuvrXport {
     
     // TODO: Migrate to Xport class.
     inline bool initialized() { return (xport_state & MANUVR_XPORT_STATE_INITIALIZED);  }
-    inline bool connected() {   return (xport_state & MANUVR_XPORT_STATE_CONNECTED);    }
-    inline bool hasSession() {  return (xport_state & MANUVR_XPORT_STATE_HAS_SESSION);  }
 
+    
     int8_t reset();
-    int8_t establishSession();
     XenoSession* getSession();
     
     int8_t read_port();
@@ -118,6 +116,9 @@ class ManuvrComPort : public ManuvrXport {
     
     bool event_addresses_us(ManuvrEvent*);   // Given a transport event, returns true if we need to act.
     void __class_initializer();
+
+    /* Members that deal with sessions. */
+    int8_t provide_session(XenoSession*);   // Called whenever we instantiate a session.
 
 
   private:

@@ -22,6 +22,9 @@ const unsigned char ManuvrMsg::MSG_ARGS_U32[] = {UINT32_FM, 0, 0};
 
 const unsigned char ManuvrMsg::MSG_ARGS_STR_BUILDER[] = {STR_BUILDER_FM, 0, 0}; 
 
+const unsigned char ManuvrMsg::MSG_ARGS_EVENTRECEIVER[] = {SYS_EVENTRECEIVER_FM, 0, 0}; 
+const unsigned char ManuvrMsg::MSG_ARGS_XPORT[]         = {SYS_MANUVR_XPORT_FM, 0, 0}; 
+
 /* 
 * This is the argument form for messages that either...
 *   a) Need a free-form type that we don't support natively
@@ -70,6 +73,9 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SYS_BOOTLOADER       , MSG_FLAG_EXPORTABLE,               "SYS_BOOTLOADER"       , MSG_ARGS_NONE }, // Reboots into the STM32F4 bootloader.
   {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,               "SYS_REBOOT"           , MSG_ARGS_NONE }, // Reboots into THIS program.
   {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,               "SYS_SHUTDOWN"         , MSG_ARGS_NONE }, // Raised when the system is pending complete shutdown.
+
+  {  MANUVR_MSG_SYS_ADVERTISE_SRVC   , 0x0000,                            "ADVERTISE_SRVC"       , MSG_ARGS_EVENTRECEIVER }, // A system service might feel the need to advertise it's arrival.
+  {  MANUVR_MSG_SYS_RETRACT_SRVC     , 0x0000,                            "RETRACT_SRVC"         , MSG_ARGS_EVENTRECEIVER }, // A system service sends this to tell others to stop using it.
 
   {  MANUVR_MSG_SYS_RELEASE_CRUFT    , MSG_FLAG_IDEMPOTENT,               "SYS_RELEASE_CRUFT"    , MSG_ARGS_NONE }, // 
 
@@ -269,11 +275,15 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
 }
 
 
-/*
+/**
 * This function is for the exclusive purpose of inflating an argument from a place where a
 *   pointer doesn't make sense. This means that an argument mode that contains a non-exportable 
 *   pointer type will not produce the expected result. It might even asplode.
-* Returns the number of Arguments extracted from the buffer.
+*
+*
+* @param   a buffer containing the byte-stream containing the data.
+* @param   int length of the buffer
+* @return  the number of Arguments extracted from the buffer.
 */
 uint8_t ManuvrMsg::inflateArgumentsFromRawBuffer(unsigned char *buffer, int len) {
   int return_value = 0;
@@ -434,8 +444,8 @@ int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf, bool preserve) {
       case STR_BUILDER_FM:       // This is a pointer to some StringBuilder. Presumably this is on the heap.
       case STR_FM:               // This is a pointer to a string constant. Presumably this is stored in flash.
       case EVENT_PTR_FM:         // This is a pointer to ManuvrEvent.
-      case SYS_EVENTRECEIVER_FM: // This is a pointer to a system service.
-      case SYS_MANUVR_XPORT_FM:  // This is a pointer to a system service.
+      case SYS_EVENTRECEIVER_FM: // This is a pointer to an EventReceiver.
+      case SYS_MANUVR_XPORT_FM:  // This is a pointer to a transport.
         return_value = DIG_MSG_ERROR_NO_ERROR;
         *((uint32_t*) trg_buf) = (uint32_t) arg->target_mem;
         break;
