@@ -95,6 +95,7 @@ ManuvrComPort::ManuvrComPort(const char* tty_nom, int b_rate) {
   __class_initializer();
   tty_name   = tty_nom;
   baud_rate  = b_rate;
+  options    = 0;
 }
 
 
@@ -374,14 +375,13 @@ void ManuvrComPort::printDebug(StringBuilder *temp) {
   if (temp == NULL) return;
   
   EventReceiver::printDebug(temp);
-  temp->concatf("--- xport_state            0x%02x\n", xport_state);
-  temp->concatf("--- xport_id               0x%04x\n", xport_id);
-  temp->concatf("--- bytes sent             %u\n", bytes_sent);
-  temp->concatf("--- bytes received         %u\n\n", bytes_received);
-  
-  temp->concatf("--- tty_name               %s\n", tty_name);
-  temp->concatf("--- connected              %s\n", (connected() ? "yes" : "no"));
-  temp->concatf("--- has session            %s\n\n", (hasSession() ? "yes" : "no"));
+  temp->concatf("--- xport_state    \t 0x%02x\n", xport_state);
+  temp->concatf("--- xport_id       \t 0x%04x\n", xport_id);
+  temp->concatf("--- bytes sent     \t %u\n", bytes_sent);
+  temp->concatf("--- bytes received \t %u\n\n", bytes_received);
+  temp->concatf("--- tty_name       \t %s\n", tty_name);
+  temp->concatf("--- connected      \t %s\n", (connected() ? "yes" : "no"));
+  temp->concatf("--- has session    \t %s\n\n", (hasSession() ? "yes" : "no"));
 
 }
 

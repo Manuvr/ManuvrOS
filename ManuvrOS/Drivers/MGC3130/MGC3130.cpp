@@ -46,7 +46,7 @@ void mgc3130_isr_check() {
   if (_isr_ts_pin) { 
     detachInterrupt(_isr_ts_pin);
   }
-  EventManager::isrRaiseEvent(&_isr_read_event);
+  //EventManager::isrRaiseEvent(&_isr_read_event);
 }
 
 

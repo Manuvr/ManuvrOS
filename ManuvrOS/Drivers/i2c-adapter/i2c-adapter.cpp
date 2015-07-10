@@ -25,7 +25,7 @@
   #include <ctype.h>
 #endif
 
-  
+
 using namespace std;
 
 #ifdef __cplusplus
@@ -164,6 +164,58 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
   }
   #endif
   else {
+  }
+  
+  for (uint16_t i = 0; i < 128; i++) {
+  	  ping_map[i] = 0;
+  }
+  i2c = this;
+}
+
+
+I2CAdapter::~I2CAdapter() {
+    bus_online = false;
+    while (dev_list.hasNext()) {
+      dev_list.get()->disassignBusInstance();
+      dev_list.remove();
+    }
+    
+    /* TODO: The work_queue destructor will take care of its own cleanup, but
+       We should abort any open transfers prior to deleting this list. */
+}
+
+
+// TODO: Inline this.
+int8_t I2CAdapter::generateStart() {
+  if (verbosity > 6) StaticHub::log("I2CAdapter::generateStart()\n");
+  if (! bus_online) return -1;
+  //Wire1.sendTransmission(I2C_STOP);
+  //Wire1.finish(900);   // We allow for 900uS for timeout.
+  
+  return 0;
+}
+
+// TODO: Inline this.
+int8_t I2CAdapter::generateStop() {
+  if (verbosity > 6) StaticHub::log("I2CAdapter::generateStop()\n");
+  if (! bus_online) return -1;
+  return 0;
+}
+
+
+#elif defined(_BOARD_FUBARINO_MINI_)    // Perhaps this is an arduino-style env?
+
+
+I2CAdapter::I2CAdapter(uint8_t dev_id) {
+  __class_initializer();
+  dev = dev_id;
+
+  if (dev_id == 0) {
+    Wire.begin();
+    bus_online = true;
+  }
+  else {
+    // Unsupported.
   }
   
   for (uint16_t i = 0; i < 128; i++) {
