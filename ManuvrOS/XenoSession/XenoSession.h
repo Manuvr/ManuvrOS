@@ -225,6 +225,11 @@ class XenoSession : public EventReceiver {
       return (session_state & 0x0F);
     };
 
+    // Returns and isolates the sync bits.
+    inline uint8_t getSync() {
+      return (session_state & 0xF0);
+    };
+
     // Returns the answer to: "Is this session in sync?"
     inline bool syncd() {
       return (0 == ((session_state & 0xF0) | XENOSESSION_STATE_SYNC_SYNCD));

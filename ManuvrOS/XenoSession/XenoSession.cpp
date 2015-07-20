@@ -65,8 +65,6 @@ XenoMessage* XenoSession::fetchPreallocation() {
 
 
 /**
-* Reclaims the given Measurement so its memory can be re-used.
-*
 * At present, our criteria for preallocation is if the pointer address passed in
 *   falls within the range of our __prealloc array. I see nothing "non-portable"
 *   about this, it doesn't require a flag or class member, and it is fast to check.
@@ -460,12 +458,14 @@ int XenoSession::purgeInbound() {
 ****************************************************************************************************/
 
 int8_t XenoSession::sendSyncPacket() {
-  StringBuilder sync_packet((unsigned char*) SYNC_PACKET_BYTES, 4);
-  owner->sendBuffer(&sync_packet);
-  
-  ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_XPORT_SEND);
-  event->specific_target = owner;  //   event to be the transport that instantiated us.
-  raiseEvent(event);
+  if (owner->connected()) {
+    StringBuilder sync_packet((unsigned char*) SYNC_PACKET_BYTES, 4);
+    owner->sendBuffer(&sync_packet);
+    
+    ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_XPORT_SEND);
+    event->specific_target = owner;  //   event to be the transport that instantiated us.
+    raiseEvent(event);
+  }
   return 0;
 }
 
@@ -633,8 +633,8 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
     local_log.concat("\n\n");
   }
 
-  switch (session_state & 0xF0) {   // Consider the top four bits of the session state.
-    case 0:       // The nominal case. Session is in-sync. Do nothing.
+  switch (getSync()) {   // Consider the top four bits of the session state.
+    case XENOSESSION_STATE_SYNC_SYNCD:       // The nominal case. Session is in-sync. Do nothing.
     case XENOSESSION_STATE_SYNC_PEND_EXIT:   // We have exchanged sync packets with the counterparty.
       break;
     case XENOSESSION_STATE_SYNC_INITIATED:   // The counterparty noticed the problem.
@@ -905,7 +905,7 @@ const char* XenoSession::getSessionStateString() {
 * Logging support fxn.
 */
 const char* XenoSession::getSessionSyncString() {
-  switch (session_state & 0xF0) {
+  switch (getSync()) {
     case XENOSESSION_STATE_SYNC_SYNCD:       return "SYNCD";
     case XENOSESSION_STATE_SYNC_CASTING:     return "CASTING";
     case XENOSESSION_STATE_SYNC_PEND_EXIT:   return "PENDING EXIT";
