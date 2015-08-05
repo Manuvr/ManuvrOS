@@ -231,7 +231,7 @@ int8_t XenoSession::untapAll() {
 * Mark a given message as complete and ready for reap.
 *
 * @param   uint16_t The message unique_id to mark completed.
-* @return  nonzero if there was a problem.
+* @return  0 if nothing done, negative if there was a problem.
 */
 int8_t XenoSession::markMessageComplete(uint16_t target_id) {
   XenoMessage *working_xeno;
@@ -241,7 +241,12 @@ int8_t XenoSession::markMessageComplete(uint16_t target_id) {
       switch (working_xeno->proc_state) {
         case XENO_MSG_PROC_STATE_AWAITING_REAP:
           outbound_messages.remove(working_xeno);
-          delete working_xeno;
+          if (working_xeno->pid_ack_timeout) {
+            // If the message had a timeout (waiting for ACK), we should clean up the schedule.
+            scheduler->disableSchedule(working_xeno->pid_ack_timeout);
+            scheduler->removeSchedule(working_xeno->pid_ack_timeout);
+          }
+          reclaimPreallocation(working_xeno);
           return 1;
       }
     }
@@ -354,7 +359,6 @@ int8_t XenoSession::notify(ManuvrEvent *active_event) {
       if (verbosity > 3) local_log.concat("Session is now in state XENOSESSION_STATE_DISCONNECTED.\n");
       return_value++;
       break;
-
 
     /* Things that only this class is likely to care about. */
     case MANUVR_MSG_SESS_HANGUP:
@@ -470,13 +474,45 @@ int8_t XenoSession::sendSyncPacket() {
 }
 
 
+/**
+* We may decide to send a no-argument packet that demands acknowledgement so that we can...
+*  1. Unambiguously recover from a desync state without resorting to timers.
+*  2. Periodically ping the counterparty to ensure that we have not disconnected.
+*
+* The keep-alive system is not handled in the transport because it is part of the protocol.
+* A transport might have its own link-layer-appropriate keep-alive mechanism, which can be
+*   used in-place of the KA at this (Session) layer. In such case, the Transport class would 
+*   carry configuration flags/members that co-ordinate with this class so that the Session
+*   doesn't feel the need to use case (2) given above.
+*               ---J. Ian Lindsay   Tue Aug 04 23:12:55 MST 2015
+*/
+int8_t XenoSession::sendKeepAlive() {
+  if (owner->connected()) {
+    ManuvrEvent* ka_event = EventManager::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE);
+    sendEvent(ka_event);
+
+    ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_XPORT_SEND);
+    event->specific_target = owner;  //   event to be the transport that instantiated us.
+    raiseEvent(event);
+  }
+  return 0;
+}
+
+
+/**
+* Passing an Event into this fxn will cause the Event to be serialized and sent to our counter-party.
+* This is the point at which choices are made about what happens to the event's life-cycle.
+*/
 int8_t XenoSession::sendEvent(ManuvrEvent *active_event) {
   XenoMessage nu_outbound_msg(active_event);
-  nu_outbound_msg.expecting_ack = false;   // Per protocol, we don't expect ACK for tapped messages.
+  nu_outbound_msg.expecting_ack = active_event.demandsACK();
   nu_outbound_msg.proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
 
   owner->sendBuffer(&(nu_outbound_msg.buffer));
   //outbound_messages.insert(nu_outbound_msg);
+  
+  if () {
+  }
 
   // We are about to pass a message across the transport.
   ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_XPORT_SEND);

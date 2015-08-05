@@ -103,6 +103,7 @@ const uint8_t XENO_MSG_PROC_STATE_WRITING_REPLY          = 0x25;
 class XenoMessage {
   public:
     StringBuilder             buffer;  // Holds the intermediary form of the message that traverses the transport.
+    uint32_t pid_ack_timeout;   // Holds the PID for message ack timeout.
     uint8_t   proc_state;     // Where are we in the flow of this message? See XENO_MSG_PROC_STATES
     
     bool      expecting_ack;  // Does this message expect an ACK?
@@ -264,7 +265,6 @@ class XenoSession : public EventReceiver {
     ManuvrEvent sync_event;
 
     uint32_t pid_sync_timer;    // Holds the PID for sync generation.
-    uint32_t pid_ack_timeout;   // Holds the PID for message ack timeout.
 
     LinkedList<MessageTypeDef*> msg_relay_list;   // Which message codes will we relay to the counterparty?
     LinkedList<XenoMessage*> outbound_messages;   // Messages that are bound for the counterparty.

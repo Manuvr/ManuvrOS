@@ -69,6 +69,8 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_REPLY_RETRY          , MSG_FLAG_EXPORTABLE,               "REPLY_RETRY"          , MSG_ARGS_NONE }, //  This reply asks for a reply of the given Unique ID.
   {  MANUVR_MSG_REPLY                , MSG_FLAG_EXPORTABLE,               "REPLY"                , MSG_ARGS_NONE }, //  This reply is for success-case.
 
+  {  MANUVR_MSG_SYNC_KEEPALIVE, MSG_FLAG_EXPORTABLE | MSG_FLAG_DEMAND_ACK, "KA"                  , MSG_ARGS_NONE }, //  A keep-alive message to be ack'd.
+
 /* System codes */                                               
   {  MANUVR_MSG_SYS_BOOTLOADER       , MSG_FLAG_EXPORTABLE,               "SYS_BOOTLOADER"       , MSG_ARGS_NONE }, // Reboots into the STM32F4 bootloader.
   {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,               "SYS_REBOOT"           , MSG_ARGS_NONE }, // Reboots into THIS program.

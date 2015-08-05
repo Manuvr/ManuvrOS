@@ -53,8 +53,8 @@ typedef struct msg_defin_t {
 */
 #define MSG_FLAG_IDEMPOTENT   0x0001      // Indicates that only one of the given message should be enqueue.
 #define MSG_FLAG_EXPORTABLE   0x0002      // Indicates that the message might be sent between systems.
+#define MSG_FLAG_DEMAND_ACK   0x0004      // Demands that a message be acknowledged if sent outbound.
 
-#define MSG_FLAG_RESERVED_D   0x0004      // Reserved flag.
 #define MSG_FLAG_RESERVED_C   0x0008      // Reserved flag.
 #define MSG_FLAG_RESERVED_B   0x0010      // Reserved flag.
 #define MSG_FLAG_RESERVED_A   0x0020      // Reserved flag.
@@ -158,6 +158,12 @@ class ManuvrMsg {
     inline bool isExportable() {
       if (NULL == message_def) message_def = lookupMsgDefByCode(event_code);
       return (message_def->msg_type_flags & MSG_FLAG_EXPORTABLE);
+    }
+
+    
+    inline bool demandsACK() {
+      if (NULL == message_def) message_def = lookupMsgDefByCode(event_code);
+      return (message_def->msg_type_flags & MSG_FLAG_DEMAND_ACK);
     }
 
     
@@ -288,6 +294,7 @@ class ManuvrMsg {
     static bool isExportable(const MessageTypeDef* message_def) {
       return (message_def->msg_type_flags & MSG_FLAG_EXPORTABLE);
     }
+
 
 
     /* Required argument forms */

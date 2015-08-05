@@ -28,6 +28,8 @@
   // String:     Device class       (User-defined)
   // String:     Extended detail    (User-defined)
   
+  #define MANUVR_MSG_SYNC_KEEPALIVE       0x0008 // No args.
+
   #define MANUVR_MSG_LEGEND_TYPES         0x000A // No args? Asking for this legend. One arg: Legend provided. 
   #define MANUVR_MSG_LEGEND_MESSAGES      0x000B // No args? Asking for this legend. One arg: Legend provided.
   
