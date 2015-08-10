@@ -431,20 +431,20 @@ int8_t EventManager::procIdleFlags() {
 
       switch (active_event->event_code) {
         case MANUVR_MSG_SELF_DESCRIBE:
-          // uint32:     Protocol version   (IE: 0x00000001)         (required)
-          // uint32:     MTU                (in terms of bytes)      (required)
-          // String:     Firmware version   (IE: "1.5.4")            (required)
-          // String:     Hardware version   (IE: "4")                (required)
-          // String:     Device class       (User-defined)           (optional)
-          // String:     Extended detail    (User-defined)           (optional)
+          // Field order: 1 uint32, 4 required null-terminated strings, 1 optional.
+          // uint32:     MTU                (in terms of bytes)
+          // String:     Protocol version   (IE: "0.0.1")
+          // String:     Identity           (IE: "Digitabulum") Generally the name of the Manuvrable.
+          // String:     Firmware version   (IE: "1.5.4")
+          // String:     Hardware version   (IE: "4")
+          // String:     Extended detail    (User-defined)
           if (0 == active_event->args.size()) {
-            active_event->addArg((uint32_t) PROTOCOL_VERSION);
-            active_event->addArg((uint32_t) PROTOCOL_MTU);
+            // We are being asked to self-describe.
+            active_event->addArg((uint32_t)    PROTOCOL_MTU);
+            active_event->addArg((const char*) PROTOCOL_VERSION);
+            active_event->addArg((const char*) IDENTITY_STRING);
             active_event->addArg((const char*) VERSION_STRING);
             active_event->addArg((const char*) HW_VERSION_STRING);
-            #ifdef IDENTITY_STRING
-              active_event->addArg((const char*) IDENTITY_STRING);
-            #endif
             #ifdef EXTENDED_DETAIL_STRING
               active_event->addArg((const char*) EXTENDED_DETAIL_STRING);
             #endif

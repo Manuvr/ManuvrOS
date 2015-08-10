@@ -40,9 +40,8 @@ const unsigned char ManuvrMsg::MSG_ARGS_U8_FLOAT[] = {UINT8_FM, FLOAT_FM,  0, UI
 
 
 const unsigned char ManuvrMsg::MSG_ARGS_SELF_DESC[] = {
-  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, 0,    // Both optional fields.
-  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, 0,            // Optional extra field.
-  UINT32_FM, UINT32_FM, STR_FM, STR_FM, 0,                    // Minimum-required.
+  UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, STR_FM, STR_FM, 0,    // Optional extra field.
+  UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, STR_FM, 0,            // Minimum-required.
   0};                      // 0 bytes: Request for self-description.
                             
   

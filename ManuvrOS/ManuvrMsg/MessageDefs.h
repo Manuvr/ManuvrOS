@@ -20,14 +20,14 @@
   #define MANUVR_MSG_SESS_AUTH_CHALLENGE  0x0006 // A code for challenge-response authentication.
 
   #define MANUVR_MSG_SELF_DESCRIBE        0x0007 // No args? Asking for this data. Many args: Providing it.
-  // Field order: 4 required null-terminated strings, two optional.
+  // Field order: 1 uint32, 4 required null-terminated strings, 1 optional.
   // uint32:     MTU                (in terms of bytes)
   // String:     Protocol version   (IE: "0.0.1")
+  // String:     Identity           (IE: "Digitabulum") Generally the name of the Manuvrable.
   // String:     Firmware version   (IE: "1.5.4")
   // String:     Hardware version   (IE: "4")
-  // String:     Device class       (User-defined)
   // String:     Extended detail    (User-defined)
-  
+
   #define MANUVR_MSG_SYNC_KEEPALIVE       0x0008 // No args.
 
   #define MANUVR_MSG_LEGEND_TYPES         0x000A // No args? Asking for this legend. One arg: Legend provided. 
