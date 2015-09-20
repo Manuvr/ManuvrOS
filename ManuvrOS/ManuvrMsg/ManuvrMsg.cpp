@@ -15,7 +15,7 @@ PriorityQueue<const MessageTypeDef*> ManuvrMsg::message_defs_extended;
 
 const unsigned char ManuvrMsg::MSG_ARGS_NONE[] = {0};      // Generic argument def for a message with no args.
   
-// Generics for messages that have one arg of a single type arg, or no args.
+// Generics for messages that have one arg of a single type, or no args.
 const unsigned char ManuvrMsg::MSG_ARGS_U8[]  = {UINT8_FM,  0, 0}; 
 const unsigned char ManuvrMsg::MSG_ARGS_U16[] = {UINT16_FM, 0, 0}; 
 const unsigned char ManuvrMsg::MSG_ARGS_U32[] = {UINT32_FM, 0, 0}; 
@@ -28,7 +28,7 @@ const unsigned char ManuvrMsg::MSG_ARGS_XPORT[]         = {SYS_MANUVR_XPORT_FM, 
 /* 
 * This is the argument form for messages that either...
 *   a) Need a free-form type that we don't support natively
-*   b) Are special-cases (COUNTERPARTY_REPLY) that will have their args cast after validation.
+*   b) Are special-cases (REPLY) that will have their args cast after validation.
 */
 const unsigned char ManuvrMsg::MSG_ARGS_BINBLOB[] = {  BINARY_FM, 0, 0};
 
@@ -40,11 +40,18 @@ const unsigned char ManuvrMsg::MSG_ARGS_U8_FLOAT[] = {UINT8_FM, FLOAT_FM,  0, UI
 
 
 const unsigned char ManuvrMsg::MSG_ARGS_SELF_DESC[] = {
-  UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, STR_FM, STR_FM, 0,    // Optional extra field.
-  UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, STR_FM, 0,            // Minimum-required.
-  0};                      // 0 bytes: Request for self-description.
+  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, UINT32_FM, STR_FM, 0, // All fields.
+  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, UINT32_FM, 0,         // Missing Extended Detail.
+  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, 0,                    // Missing Serial Number and Extended Detail.
+  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, 0,                            // Minimum-required.
+  0};                                                                         // 0 bytes: Request for self-description.
                             
-  
+/*
+* This code is used for forwarding messages between Manuvrables.
+* Implementation of this code is not required, but the ability to understand it is.
+*/
+const unsigned char ManuvrMsg::MSG_ARGS_MSG_FORWARD[] = {  STR_FM, BINARY_FM, 0, 0};
+
 
 
 /*
@@ -58,17 +65,26 @@ const unsigned char ManuvrMsg::MSG_ARGS_SELF_DESC[] = {
 *   dynamically built.
 */
 const MessageTypeDef ManuvrMsg::message_defs[] = {
-
-
 /* Reserved codes */
-  {  MANUVR_MSG_UNDEFINED            , 0x0000,               "<UNDEFINED>"          , MSG_ARGS_NONE }, // This should be the first entry for failure cases.
+  {  MANUVR_MSG_UNDEFINED            , 0x0000,               "<UNDEF>"          , MSG_ARGS_NONE }, // This should be the first entry for failure cases.
 
-  // Protocol mechanisms for QoS, and fault-tolerence.
+  // Protocol basics.
   {  MANUVR_MSG_REPLY_FAIL           , MSG_FLAG_EXPORTABLE,               "REPLY_FAIL"           , MSG_ARGS_NONE }, //  This reply denotes that the packet failed to parse (despite passing checksum).
   {  MANUVR_MSG_REPLY_RETRY          , MSG_FLAG_EXPORTABLE,               "REPLY_RETRY"          , MSG_ARGS_NONE }, //  This reply asks for a reply of the given Unique ID.
   {  MANUVR_MSG_REPLY                , MSG_FLAG_EXPORTABLE,               "REPLY"                , MSG_ARGS_NONE }, //  This reply is for success-case.
 
-  {  MANUVR_MSG_SYNC_KEEPALIVE, MSG_FLAG_EXPORTABLE | MSG_FLAG_DEMAND_ACK, "KA"                  , MSG_ARGS_NONE }, //  A keep-alive message to be ack'd.
+  {  MANUVR_MSG_SESS_ESTABLISHED     , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_ESTABLISHED"     , MSG_ARGS_NONE }, // Session established.
+  {  MANUVR_MSG_SESS_HANGUP          , MSG_FLAG_EXPORTABLE,                        "SESS_HANGUP"          , MSG_ARGS_NONE }, // Session hangup.
+  {  MANUVR_MSG_SESS_AUTH_CHALLENGE  , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_AUTH_CHALLENGE"  , MSG_ARGS_NONE }, // A code for challenge-response authentication.
+  {  MANUVR_MSG_SELF_DESCRIBE        , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SELF_DESCRIBE"        , MSG_ARGS_SELF_DESC }, // Starting an application on the receiver. Needs a string. 
+                                                                                    
+  {  MANUVR_MSG_SYNC_KEEPALIVE       , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "KA"                  , MSG_ARGS_NONE }, //  A keep-alive message to be ack'd.
+
+  {  MANUVR_MSG_LEGEND_TYPES         , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_TYPES"         , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
+  {  MANUVR_MSG_LEGEND_MESSAGES      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_MESSAGES"      , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
+  {  MANUVR_MSG_LEGEND_SEMANTIC      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_SEMANTIC"      , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
+
+  {  MANUVR_MSG_MSG_FORWARD          , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "MSG_FORWARD"          , MSG_ARGS_MSG_FORWARD }, // No args? Asking for this legend. One arg: Legend provided.
 
 /* System codes */                                               
   {  MANUVR_MSG_SYS_BOOTLOADER       , MSG_FLAG_EXPORTABLE,               "SYS_BOOTLOADER"       , MSG_ARGS_NONE }, // Reboots into the STM32F4 bootloader.
@@ -81,11 +97,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SYS_RELEASE_CRUFT    , MSG_FLAG_IDEMPOTENT,               "SYS_RELEASE_CRUFT"    , MSG_ARGS_NONE }, // 
 
   {  MANUVR_MSG_PROGRAM_START        , MSG_FLAG_EXPORTABLE,               "PROGRAM_START"        , MSG_ARGS_STR_BUILDER }, // Starting an application on the receiver. Needs a string. 
-  {  MANUVR_MSG_SELF_DESCRIBE        , MSG_FLAG_EXPORTABLE,               "SELF_DESCRIBE"        , MSG_ARGS_SELF_DESC }, // Starting an application on the receiver. Needs a string. 
   
-  {  MANUVR_MSG_LEGEND_TYPES         , MSG_FLAG_EXPORTABLE,               "LEGEND_TYPES"         , MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
-  {  MANUVR_MSG_LEGEND_MESSAGES      , MSG_FLAG_EXPORTABLE,               "LEGEND_MESSAGES"      , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
-
   {  MANUVR_MSG_SYS_DATETIME_CHANGED , MSG_FLAG_EXPORTABLE,               "SYS_DATETIME_CHANGED" , MSG_ARGS_NONE }, // Raised when the system time changes.
   {  MANUVR_MSG_SYS_SET_DATETIME     , MSG_FLAG_EXPORTABLE,               "SYS_SET_DATETIME"     , MSG_ARGS_NONE }, //
   {  MANUVR_MSG_SYS_REPORT_DATETIME  , MSG_FLAG_EXPORTABLE,               "SYS_REPORT_DATETIME"  , MSG_ARGS_NONE }, //
@@ -117,9 +129,6 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_RNG_BUFFER_EMPTY     , 0x0000,               "RNG_BUFFER_EMPTY"     , MSG_ARGS_NONE }, // The RNG couldn't keep up with our entropy demands.
   {  MANUVR_MSG_INTERRUPTS_MASKED    , 0x0000,               "INTERRUPTS_MASKED"    , MSG_ARGS_NONE }, // Anything that depends on interrupts is now broken.
                                               
-  {  MANUVR_MSG_SESS_ESTABLISHED     , MSG_FLAG_EXPORTABLE,  "SESS_ESTABLISHED"     , MSG_ARGS_NONE }, // Session established.
-  {  MANUVR_MSG_SESS_HANGUP          , MSG_FLAG_EXPORTABLE,  "SESS_HANGUP"          , MSG_ARGS_NONE }, // Session hangup.
-  {  MANUVR_MSG_SESS_AUTH_CHALLENGE  , MSG_FLAG_EXPORTABLE,  "SESS_AUTH_CHALLENGE"  , MSG_ARGS_NONE }, // A code for challenge-response authentication.
   {  MANUVR_MSG_SESS_SUBCRIBE        , MSG_FLAG_EXPORTABLE,  "SESS_SUBCRIBE"        , MSG_ARGS_NONE }, // Used to subscribe this session to other events.
   {  MANUVR_MSG_SESS_UNSUBCRIBE      , MSG_FLAG_EXPORTABLE,  "SESS_UNSUBCRIBE"      , MSG_ARGS_NONE }, // Used to unsubscribe this session from other events.
   {  MANUVR_MSG_SESS_DUMP_DEBUG      , MSG_FLAG_EXPORTABLE,  "SESS_DUMP_DEBUG"      , MSG_ARGS_NONE }, // 

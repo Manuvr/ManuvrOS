@@ -29,10 +29,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <sys/time.h>
 #include <unistd.h>
 
-#include "ManuvrOS/Drivers/TMP006/TMP006.h"
-#include "ManuvrOS/Drivers/INA219/INA219.h"
-#include "ManuvrOS/Drivers/ISL29033/ISL29033.h"
-
 #include "ManuvrOS/XenoSession/XenoSession.h" // This is only here to get type sizes.
 
 
@@ -394,42 +390,20 @@ int8_t StaticHub::bootstrap() {
   i2c = new I2CAdapter(1);
   event_manager.subscribe((EventReceiver*) i2c);
 
-  thermopile = new TMP006();
-  light_sensor = new ISL29033();
-  power_sensor = new INA219();
-
-  ((I2CAdapter*) i2c)->addSlaveDevice(thermopile);
-  ((I2CAdapter*) i2c)->addSlaveDevice(light_sensor);
-  ((I2CAdapter*) i2c)->addSlaveDevice(power_sensor);
-
-  
   init_RNG();      // Fire up the RNG...
-
 
   initSchedules();   // We know we will need some schedules...
 
   //((EventManager*)event_manager)->subscribe((EventReceiver*) light_sensor);
   //((EventManager*)event_manager)->subscribe((EventReceiver*) baro_sensor);
-  
-  //mic    = new StereoMicrophone();        // The microphones...
-  //sdcard = new SDCard();                  // Instantiate SD Card context.
-  
-  //((EventManager*)event_manager)->subscribe((EventReceiver*) sdcard);
-  
+    
 // Instantiate Pref Manager
-// Instantiate IRDa peripheral
 
   // Instantiate Cryptographic system
 
-// Instantiate semantic tree
 // Instantiations complete. Run init() fxn's...
 
-  //display->init();
-
   //host_link->init();
-  
-  //light_sensor->init();
-  //power_sensor->init();
 
   EventManager::raiseEvent(MANUVR_MSG_SYS_BOOT_COMPLETED, this);  // Bootstrap complete
   return 0;
@@ -468,11 +442,6 @@ StaticHub::StaticHub() {
 
 Scheduler*    StaticHub::fetchScheduler(void) {     return &__scheduler;     }
 EventManager* StaticHub::fetchEventManager(void) {  return &event_manager;   }
-
-// Sensor accessor fxns...
-ISL29033*     StaticHub::fetchISL29033(void) {      return light_sensor;    }
-INA219*       StaticHub::fetchINA219(void) {        return power_sensor;    }
-TMP006*       StaticHub::fetchTMP006(void) {        return thermopile;       }
 
 
 /****************************************************************************************************

@@ -44,6 +44,7 @@ typedef struct msg_defin_t {
     uint16_t              msg_type_flags; // Optional flags to describe nuances of this message type.
     const char*           debug_label;    // This is a pointer to a const that represents this message code as a string.
     const unsigned char*  arg_modes;      // For messages that have arguments, this defines their possible types.
+    //const unsigned char*  arg_semantics;  // For messages that have arguments, this defines their semantics.
 } MessageTypeDef;
 
 
@@ -54,8 +55,8 @@ typedef struct msg_defin_t {
 #define MSG_FLAG_IDEMPOTENT   0x0001      // Indicates that only one of the given message should be enqueue.
 #define MSG_FLAG_EXPORTABLE   0x0002      // Indicates that the message might be sent between systems.
 #define MSG_FLAG_DEMAND_ACK   0x0004      // Demands that a message be acknowledged if sent outbound.
+#define MSG_FLAG_AUTH_ONLY    0x0008      // This flag indicates that only an authenticated session can use this message.
 
-#define MSG_FLAG_RESERVED_C   0x0008      // Reserved flag.
 #define MSG_FLAG_RESERVED_B   0x0010      // Reserved flag.
 #define MSG_FLAG_RESERVED_A   0x0020      // Reserved flag.
 #define MSG_FLAG_RESERVED_9   0x0040      // Reserved flag.
@@ -310,6 +311,7 @@ class ManuvrMsg {
     static const unsigned char MSG_ARGS_POWER_MODE[];
 
     static const unsigned char MSG_ARGS_SELF_DESC[];
+    static const unsigned char MSG_ARGS_MSG_FORWARD[];
     
     static const unsigned char MSG_ARGS_EVENTRECEIVER[]; 
     static const unsigned char MSG_ARGS_XPORT[]; 

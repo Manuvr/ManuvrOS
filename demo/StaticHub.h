@@ -57,11 +57,6 @@ This is the testbench version of StaticHub.
  extern "C" {
 #endif 
 
-// Forward-decalre some things we are going to support....
-class TMP006;
-class INA219;
-class ISL29033;
-
 
 /*
 * These are just lables. We don't really ever care about the *actual* integers being defined here. Only
@@ -142,9 +137,6 @@ class StaticHub : public EventReceiver {
     // Services...
     EventManager* fetchEventManager(void);
     Scheduler* fetchScheduler(void);
-    INA219* fetchINA219(void);
-    ISL29033* fetchISL29033(void);
-    TMP006* fetchTMP006(void);
 
     // Volatile statics that serve as ISRs...
     volatile static void advanceScheduler(void);
@@ -185,10 +177,6 @@ class StaticHub : public EventReceiver {
     // Global system resource handles...
     EventManager event_manager;            // This is our asynchronous message queue. 
     Scheduler __scheduler;
-
-    TMP006   *thermopile = NULL;
-    INA219   *power_sensor = NULL;
-    ISL29033 *light_sensor = NULL;
 
 
     // These fxns do string conversion for integer type-codes, and are only useful for logging.

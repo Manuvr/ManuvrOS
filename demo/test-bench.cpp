@@ -24,7 +24,6 @@
 #include "ManuvrOS/Scheduler.h"
 #include "ManuvrOS/Transports/ManuvrComPort/ManuvrComPort.h"
 #include "ManuvrOS/XenoSession/XenoSession.h"
-#include "ManuvrOS/Drivers/TMP006/TMP006.h"
 
 
 /****************************************************************************************************
@@ -983,11 +982,6 @@ int main(int argc, char *argv[]) {
           else if (strcasestr(tok, "#XA"))    session_battery_1();
           else if (strcasestr(tok, "#XC"))    session_battery_2();
           else if (strcasestr(tok, "#EB"))    event_battery();
-          else if (strcasestr(tok, "#TS")) {
-            TMP006* temp_sense = sh->fetchTMP006();
-            temp_sense->readSensor();
-            temp_sense->printDebug(&output);
-          }
           else if (strcasestr(tok, "#B")) {
             printf("Running for a bit...\n");
             for (int i = 0; i < 100; i++) {
