@@ -22,6 +22,7 @@ const TypeCodeDef type_codes[] = {
   {INT64_FM         , (TYPE_CODE_FLAG_EXPORTABLE), 8},
   {DOUBLE_FM        , (TYPE_CODE_FLAG_EXPORTABLE), 8},
 
+  {URL_FM           , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH), 1},
   {STR_FM           , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH), 1},
   {BINARY_FM        , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH), 1},
   {AUDIO_FM         , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH), 1},
@@ -127,6 +128,7 @@ const char* getTypeCodeString(uint8_t typecode) {
     case FLOAT_FM:              return "FLOAT";
     case BOOLEAN_FM:            return "BOOLEAN";
     case STR_FM:                return "STR";
+    case URL_FM:                return "URL";
     case BINARY_FM:             return "BINARY";
     case STR_BUILDER_FM:        return "STR_BLDR";
     case MAP_FM:                return "MAP";

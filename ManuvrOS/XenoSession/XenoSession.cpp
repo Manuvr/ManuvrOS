@@ -241,10 +241,10 @@ int8_t XenoSession::markMessageComplete(uint16_t target_id) {
       switch (working_xeno->proc_state) {
         case XENO_MSG_PROC_STATE_AWAITING_REAP:
           outbound_messages.remove(working_xeno);
-          if (working_xeno->pid_ack_timeout) {
+          if (pid_ack_timeout) {
             // If the message had a timeout (waiting for ACK), we should clean up the schedule.
-            scheduler->disableSchedule(working_xeno->pid_ack_timeout);
-            scheduler->removeSchedule(working_xeno->pid_ack_timeout);
+            scheduler->disableSchedule(pid_ack_timeout);
+            scheduler->removeSchedule(pid_ack_timeout);
           }
           reclaimPreallocation(working_xeno);
           return 1;
@@ -505,15 +505,12 @@ int8_t XenoSession::sendKeepAlive() {
 */
 int8_t XenoSession::sendEvent(ManuvrEvent *active_event) {
   XenoMessage nu_outbound_msg(active_event);
-  nu_outbound_msg.expecting_ack = active_event.demandsACK();
+  nu_outbound_msg.expecting_ack = active_event->demandsACK();
   nu_outbound_msg.proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
 
   owner->sendBuffer(&(nu_outbound_msg.buffer));
   //outbound_messages.insert(nu_outbound_msg);
   
-  if () {
-  }
-
   // We are about to pass a message across the transport.
   ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_XPORT_SEND);
   event->callback        = this;  // We want the callback and the only receiver of this

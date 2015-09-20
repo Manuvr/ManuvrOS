@@ -289,6 +289,7 @@ int8_t Argument::serialize(StringBuilder *out) {
 	  
 	  /* These are pointer types that require conversion. */
 	  case STR_BUILDER_FM:     // This is a pointer to some StringBuilder. Presumably this is on the heap.
+	  case URL_FM:             // This is a pointer to some StringBuilder. Presumably this is on the heap.
 	    temp_str    = ((StringBuilder*) target_mem)->string();
       arg_bin_len = ((StringBuilder*) target_mem)->length();
 	  case VECT_4_FLOAT:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
@@ -363,6 +364,7 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
 	    
 	  /* These are pointer types that require conversion. */
 	  case STR_BUILDER_FM:     // This is a pointer to some StringBuilder. Presumably this is on the heap.
+	  case URL_FM:             // This is a pointer to some StringBuilder. Presumably this is on the heap.
       out->concat((StringBuilder*) target_mem);
 	    break;
 	  case STR_FM:
