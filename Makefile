@@ -79,15 +79,21 @@ SRCS   = $(CPP_SRCS)
 
 
 
-##########################################################################
+###########################################################################
 # Rules for building the firmware follow...
+#
+# 'make' will build a sample firmware for the original Raspberry Pi. The 
+#    idea is to be able to quickly iterate on a design idea with the aid of
+#    valgrind and gdb.
+#
+# 'make testbench' will build a crude debug tool. It is mostly useless.
 ###########################################################################
 
 .PHONY: all
 
 
-all:
-	g++ -static -o manuvr demo/test-bench.cpp demo/StaticHub.cpp $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) $(INCLUDES) -Idemo/ -DTEST_BENCH -D_GNU_SOURCE
+all: clean
+	$(CPP) -static -g -o manuvr raspiMain.cpp StaticHub/StaticHub.cpp ManuvrOS/Drivers/ManuvrableGPIO/*.cpp $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) $(INCLUDES) -Idemo/ -DTEST_BENCH -D_GNU_SOURCE -O0 -fstack-usage
 
 
 testbench:

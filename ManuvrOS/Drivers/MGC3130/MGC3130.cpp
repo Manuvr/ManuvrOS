@@ -732,7 +732,7 @@ int8_t MGC3130::notify(ManuvrEvent *active_event) {
       is_class_ready(true);
       digitalWrite(_reset_pin, 1);
       enableAirwheel(false);
-      attachInterrupt(_ts_pin, mgc3130_isr_check, LOW);
+      attachInterrupt(_ts_pin, mgc3130_isr_check, FALLING);
       return_value++;
       break;
 
