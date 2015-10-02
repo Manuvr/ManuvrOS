@@ -660,7 +660,7 @@ const MessageTypeDef* ManuvrMsg::lookupMsgDefByLabel(char* label) {
   int total_elements = sizeof(ManuvrMsg::message_defs) / sizeof(MessageTypeDef);
   for (int i = 1; i < total_elements; i++) {
     // TODO: Yuck... have to import string.h for JUST THIS. Re-implement inline....
-    if (strcasestr(label, ManuvrMsg::message_defs[i].debug_label)) {
+    if (strstr(label, ManuvrMsg::message_defs[i].debug_label)) {
       return &ManuvrMsg::message_defs[i];
     }
   }
@@ -670,7 +670,7 @@ const MessageTypeDef* ManuvrMsg::lookupMsgDefByLabel(char* label) {
   total_elements = ManuvrMsg::message_defs_extended.size();
   for (int i = 1; i < total_elements; i++) {
     temp_type_def = ManuvrMsg::message_defs_extended.get(i);
-    if (strcasestr(label, temp_type_def->debug_label)) {
+    if (strstr(label, temp_type_def->debug_label)) {
       return temp_type_def;
     }
   }
