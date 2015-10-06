@@ -56,9 +56,9 @@ typedef struct msg_defin_t {
 #define MSG_FLAG_EXPORTABLE   0x0002      // Indicates that the message might be sent between systems.
 #define MSG_FLAG_DEMAND_ACK   0x0004      // Demands that a message be acknowledged if sent outbound.
 #define MSG_FLAG_AUTH_ONLY    0x0008      // This flag indicates that only an authenticated session can use this message.
+#define MSG_FLAG_EMITS        0x0010      // Indicates that this device might emit this message.
+#define MSG_FLAG_LISTENS      0x0020      // Indicates that this device can accept this message.
 
-#define MSG_FLAG_RESERVED_B   0x0010      // Reserved flag.
-#define MSG_FLAG_RESERVED_A   0x0020      // Reserved flag.
 #define MSG_FLAG_RESERVED_9   0x0040      // Reserved flag.
 #define MSG_FLAG_RESERVED_8   0x0080      // Reserved flag.
 #define MSG_FLAG_RESERVED_7   0x0100      // Reserved flag.
@@ -69,7 +69,6 @@ typedef struct msg_defin_t {
 #define MSG_FLAG_RESERVED_2   0x2000      // Reserved flag.
 #define MSG_FLAG_RESERVED_1   0x4000      // Reserved flag.
 #define MSG_FLAG_RESERVED_0   0x8000      // Reserved flag.
-
 
 
 class ManuvrXport;

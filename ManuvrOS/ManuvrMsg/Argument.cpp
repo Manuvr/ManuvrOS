@@ -185,7 +185,7 @@ Argument::Argument(void* val, uint16_t buf_len) {
 Argument::Argument(ManuvrEvent* val) {
 	wipe();
 	len = sizeof(val);
-	type_code = EVENT_PTR_FM;
+	type_code = SYS_MANUVR_EVENT_PTR_FM;
 	target_mem = (void*) val;
 	reap       = false;
 }
@@ -305,7 +305,6 @@ int8_t Argument::serialize(StringBuilder *out) {
 	  /* These are pointer types that will not make sense to the host. They should be dropped. */
 	  case RSRVD_FM:              // Reserved code is meaningless to us. How did this happen?
 	  case NOTYPE_FM:             // No type isn't valid ANYWHERE in this system. How did this happen?
-	  case EVENT_PTR_FM:          // Host isn't necessarilly running an Event system like ours (if any).
 	  case SYS_EVENTRECEIVER_FM:  // Host can't use our internal system services.
 	  case SYS_MANUVR_XPORT_FM:   // Host can't use our internal system services.
 	  default:
@@ -379,7 +378,6 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
 	  /* These are pointer types that will not make sense to the host. They should be dropped. */
 	  case RSRVD_FM:              // Reserved code is meaningless to us. How did this happen?
 	  case NOTYPE_FM:             // No type isn't valid ANYWHERE in this system. How did this happen?
-	  case EVENT_PTR_FM:          // Host isn't necessarilly running an Event system like ours (if any).
 	  case SYS_EVENTRECEIVER_FM:  // Host can't use our internal system services.
 	  case SYS_MANUVR_XPORT_FM:   // Host can't use our internal system services.
 	  default:

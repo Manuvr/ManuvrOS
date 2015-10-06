@@ -451,11 +451,11 @@ int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf, bool preserve) {
       case VECT_3_UINT16:
       case VECT_3_INT16:
 
-      case STR_BUILDER_FM:       // This is a pointer to some StringBuilder. Presumably this is on the heap.
-      case STR_FM:               // This is a pointer to a string constant. Presumably this is stored in flash.
-      case EVENT_PTR_FM:         // This is a pointer to ManuvrEvent.
-      case SYS_EVENTRECEIVER_FM: // This is a pointer to an EventReceiver.
-      case SYS_MANUVR_XPORT_FM:  // This is a pointer to a transport.
+      case STR_BUILDER_FM:          // This is a pointer to some StringBuilder. Presumably this is on the heap.
+      case STR_FM:                  // This is a pointer to a string constant. Presumably this is stored in flash.
+      case SYS_MANUVR_EVENT_PTR_FM: // This is a pointer to ManuvrEvent.
+      case SYS_EVENTRECEIVER_FM:    // This is a pointer to an EventReceiver.
+      case SYS_MANUVR_XPORT_FM:     // This is a pointer to a transport.
         return_value = DIG_MSG_ERROR_NO_ERROR;
         *((uint32_t*) trg_buf) = (uint32_t) arg->target_mem;
         break;

@@ -8,11 +8,12 @@
 /**
 * This is the structure with which we define types. These types are used by a variety of
 *   systems in this program, and need to be consistent. Sometimes, we might be talking to
-*   another system using these types. That foriegn system might be typeless. Just sumthin
-*   to keep aware of....
+*   another system that lacks support for some of these types.
+* 
+* This structrue conveys the type, it's size, and any special attributes of the type. 
 */
 typedef struct typecode_def_t {
-    uint8_t            type_code;   // This field identifies the message class.
+    uint8_t            type_code;   // This field identifies the type.
     uint8_t            type_flags;  // Flags that give us metadata about a type.
     uint16_t           fixed_len;   // If this type has a fixed length, it will be set here. 0 if no fixed length.
 } TypeCodeDef;
@@ -22,11 +23,14 @@ typedef struct typecode_def_t {
 *   parsing and packing for other systems, as well as inform client classes about nuances
 *   of a specific type.
 */
-#define TYPE_CODE_FLAG_EXPORTABLE          0b00000001
-#define TYPE_CODE_FLAG_EXPORT_IMPLIES_CONV 0b00000010
-#define TYPE_CODE_FLAG_FITS_IN_POINTER     0b00000100
-#define TYPE_CODE_FLAG_VARIABLE_LENGTH     0b00001000
-#define TYPE_CODE_FLAG_RESERVED_TYPE       0b10000000
+#define TYPE_CODE_FLAG_EXPORTABLE          0b00000001   // This type is exportable to other systems, and we might receive it.
+#define TYPE_CODE_FLAG_IS_POINTER          0b00000010   // Is this type a pointer type?
+#define TYPE_CODE_FLAG_VARIABLE_LENGTH     0b00000100   // Some types do not have a fixed-length.
+#define TYPE_CODE_FLAG_IS_NULL_DELIMITED   0b00001000   // Various string types are variable-length, yet self-delimiting.
+#define TYPE_CODE_FLAG_RESERVED_3          0b00010000   // Reserved for future use.
+#define TYPE_CODE_FLAG_RESERVED_2          0b00100000   // Reserved for future use.
+#define TYPE_CODE_FLAG_RESERVED_1          0b01000000   // Reserved for future use.
+#define TYPE_CODE_FLAG_RESERVED_0          0b10000000   // Reserved for future use.
 
 
 
@@ -34,7 +38,7 @@ typedef struct typecode_def_t {
 /**
 * Special cases.
 */
-#define RSRVD_FM       0xFF    // This type code is reserved because it might be used for other things by other libraries.
+#define RSRVD_FM       0xFF    // This type is reserved because it might be used for other things by other libraries.
 #define NOTYPE_FM      0x00    // This is usually an indication of a failure to init.
 
 /**
@@ -50,26 +54,29 @@ typedef struct typecode_def_t {
 #define INT8_PTR_FM       0xA5 // 8-bit integer
 #define FLOAT_PTR_FM      0xA6 // A float
 #define CHAIN PTR_FM      0xAD // A pointer to a Chain.
-#define EVENT_PTR_FM      0xAE // A pointer to an Event.
 #define STR_BUILDER_FM    0xAF // A pointer to a StringBuilder.
 
 /**
 * Type codes for pointers to system services and other types that will make no
-* sense whatever to a foriegn system.
+*   sense whatever to a foriegn system. These are the non-exportable types that are
+*   used for internal message interchange.
 */
 
 #define SYS_EVENTRECEIVER_FM    0xE0 // A pointer to an EventReceiver.
 #define SYS_MANUVR_XPORT_FM     0xE1 // A pointer to a transport.
+#define SYS_MANUVR_EVENT_PTR_FM 0xE2 // A pointer to an Event.
 
 
 /**
 * These types are big enough to warrant a malloc() to pass them around internally, but
-*   the data so passed is not a pointer, and therefore makes sense as-is to other devices.
-*
+*   the data so passed is not itself a pointer, and therefore makes sense as-is to other 
+*   devices.
 */
+#define RELAYED_MSG_FM 0x19    // A serialized message that is being stored or relayed.
+#define CHAIN_FM       0x18    // An event chain.
 #define URL_FM         0x17    // An alias of string that carries the semantic 'URL'.
 #define VECT_4_FLOAT   0x16    // A float vector in 4-space.
-#define MAP_FM         0x15    // A full manus map (up to 17 positions).
+#define JSON_FM        0x15    // A JSON object. Export to other systems implies string conversion.
 #define VECT_3_UINT16  0x14    // A vector of unsigned 16-bit integers in 3-space
 #define VECT_3_INT16   0x13    // A vector of 16-bit integers in 3-space
 #define VECT_3_FLOAT   0x12    // A vector of floats in 3-space
