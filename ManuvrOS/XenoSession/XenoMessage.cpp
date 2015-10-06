@@ -24,11 +24,7 @@ XenoMessage is the class that is the interface between ManuvrEvents and
 */
 
 #include "XenoSession.h"
-#ifndef TEST_BENCH
-  #include "StaticHub/StaticHub.h"
-#else
-  #include "demo/StaticHub.h"
-#endif
+#include "StaticHub/StaticHub.h"
 
 
 XenoMessage::XenoMessage() {

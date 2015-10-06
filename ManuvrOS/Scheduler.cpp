@@ -29,11 +29,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "Scheduler.h"
-#ifndef TEST_BENCH
-  #include "StaticHub/StaticHub.h"
-#else
-  #include "demo/StaticHub.h"
-#endif
+#include "StaticHub/StaticHub.h"
 
 
 

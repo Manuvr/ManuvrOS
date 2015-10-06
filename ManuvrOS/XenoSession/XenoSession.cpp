@@ -24,11 +24,7 @@ XenoSession is the class that manages dialog with other systems via some
 */
 
 #include "XenoSession.h"
-#ifndef TEST_BENCH
-  #include "StaticHub/StaticHub.h"
-#else
-  #include "demo/StaticHub.h"
-#endif
+#include "StaticHub/StaticHub.h"
 
 
 

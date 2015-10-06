@@ -371,8 +371,7 @@ but adding support for other platforms ought to be easy.
                                        ((DIRECTION) == I2C_Direction_Receiver))
 #endif
 
-#ifdef TEST_BENCH
-  #include "demo/StaticHub.h"
+#if defined(RASPI)
   #include <stdlib.h>
   #include <unistd.h>
   #include <linux/i2c-dev.h>
@@ -384,10 +383,9 @@ but adding support for other platforms ought to be easy.
   #include <fcntl.h>
   #include <inttypes.h>
   #include <ctype.h>
+#endif
 
-#else
-  #include "StaticHub/StaticHub.h"
-#endif
- 
-#endif
+#include "StaticHub/StaticHub.h"
+
+#endif  //I2C_ABSTRACTION_LAYER_ADAPTER
 

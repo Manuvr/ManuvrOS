@@ -33,12 +33,12 @@ using namespace std;
 #include <string.h>
 #include "StringBuilder/StringBuilder.h"
 
+#include "StaticHub/StaticHub.h"
+
 #ifdef ARDUINO
   #include "Arduino.h"
 #elif defined(STM32F4XX)
   #include "FirmwareDefs.h"
-#else
-  #include "demo/StaticHub.h"
 #endif
 
 

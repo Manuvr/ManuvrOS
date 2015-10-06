@@ -1,11 +1,6 @@
 #include "EventManager.h"
 
-// TODO: This nonsense is temporary. Needs to be handled in StaticHub itself.
-#ifndef TEST_BENCH
-  #include "StaticHub/StaticHub.h"
-#else
-  #include "demo/StaticHub.h"
-#endif
+#include "StaticHub/StaticHub.h"
 
 
 

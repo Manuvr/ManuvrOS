@@ -1,11 +1,7 @@
 #include "FirmwareDefs.h"
 #include "EventManager.h"
 
-#ifndef TEST_BENCH
-  #include "StaticHub/StaticHub.h"
-#else
-  #include "demo/StaticHub.h"
-#endif
+#include "StaticHub/StaticHub.h"
 
 
 
