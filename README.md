@@ -9,6 +9,8 @@
 
 A cross-platform real-time, event-driven "Operating System" for asynchronous applications. It was intended to make it easier to write asynchronous, cross-platform IoT applications.
 
+![ManuvrOS](doc/3d-logo.png)
+
 
 ----------------------
 ####What is in this repository:
@@ -27,7 +29,7 @@ A cross-platform real-time, event-driven "Operating System" for asynchronous app
 
 ----------------------
 ####If you intend on using ManuvrOS in an Arduino-esque environment...
-You will need to copy (or link) the following directories into your IDE's library directory:
+You will need to copy the following directories into your IDE's library directory:
 -   ManuvrOS
 -   DataStructures
 -   StringBuilder
