@@ -1,19 +1,17 @@
 /*
-
-
-
-Some documentation is called for... 
-This class forms the foundation of our major messaging component: ManuvrEvent
-
-This is the data structure that contains the identity of a given message and its arguments. The idea here
-  is to allow for a smooth transition between XenoMessages and ManuvrEvents. The counterparty ought to be 
-  able to subscribe itself to any class of message and be thereby notified about what is happening in the
-  system.
-
-The message codes defined by this file are dual-purposed across the EventAnd Host message classes to keep
-  continuity between message types.
+* 
+* 
+* 
+* This class forms the foundation of internal events. It contains the identity of a given message and   
+*   its arguments. The idea here is to encapsulate notions of "method" and "argument", regardless of
+*   the nature of its execution parameters.
+* 
+* 
+* 
+* 
+* 
 */
-               
+
 #ifndef __MANUVR_MESSAGE_H__
 #define __MANUVR_MESSAGE_H__
 
@@ -85,6 +83,10 @@ class Argument {
     *   this slot with things like int32, we will instead cast the value itself to a
     *   void* and store it in the pointer slot. When we do this, we need to be sure 
     *   not to mark the pointer for reap.
+    *
+    * Glorious, glorious hackery. Keeping it. But do need to account for (and extend to)
+    *   64-bit pointers.
+    *        ---J. Ian Lindsay   Mon Oct 05 22:55:41 MST 2015
     */
     void*   target_mem;
 
@@ -127,7 +129,6 @@ class Argument {
     int8_t serialize_raw(StringBuilder*);
 	
 	
-    //static double   parseDoubleFromchars(unsigned char *input);
     static char*    printBinStringToBuffer(unsigned char *str, int len, char *buffer);
     
 

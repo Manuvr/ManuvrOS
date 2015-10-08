@@ -48,7 +48,6 @@ template <class T> class PriorityNode{
     PriorityNode<T> *next;
     T data;
     int priority;
-    bool reap;
 };
 
 
@@ -86,9 +85,6 @@ template <class T> class PriorityQueue {
     bool incrementPriority(T);    // Finds the given T and increments its priority by one.
     bool decrementPriority(T);    // Finds the given T and decrements its priority by one.
 
-    // TODO: Move back to private after EventManager is debugged.
-    int count(void);                 // Counts the elements in the list without reliance on stored value. Slower...
-
     
   private:
     PriorityNode<T> *root;        // The root of the queue. Is also the highest-priority.
@@ -108,6 +104,7 @@ template <class T> class PriorityQueue {
 
     PriorityNode<T>* get_node_by_element(T);    // Return a priority node by the element it contains.
     int insert(PriorityNode<T>*);    // Returns the ID of the data, or -1 on failure.
+    int count(void);                 // Counts the elements in the list without reliance on stored value. Slower...
     void enforce_priorities(void);   // Need to call this after changing a priority to ensure position reflects priority.
 };
 
@@ -177,7 +174,6 @@ template <class T> int PriorityQueue<T>::insertIfAbsent(T d, int nu_pri) {
   if (nu == NULL) {
     return -1;      // Failed to allocate memory.
   }
-  nu->reap     = false;
   nu->data     = d;
   nu->priority = nu_pri;
 
@@ -216,7 +212,6 @@ template <class T> int PriorityQueue<T>::insert(T d, int nu_pri) {
   if (nu == NULL) {
     return return_value;      // Failed to allocate memory.
   }
-  nu->reap     = false;
   nu->data     = d;
   nu->priority = nu_pri;
 
@@ -432,11 +427,6 @@ template <class T> bool PriorityQueue<T>::remove(int pos) {
       }
       else {
         root = current->next;
-      }
-      if (current->data != NULL) {
-        if (current->reap) {
-          free(current->data);
-        }
       }
       free(current);
       element_count--;

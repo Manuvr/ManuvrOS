@@ -572,15 +572,6 @@ int8_t EventManager::procIdleFlags() {
 
     total_events++;
     
-    if (event_queue.size() < 0) {
-      /* Historical note: This was a past debug check. The root-cause was found and fixed. It is
-           being retained for now, despite the fact that it hasn't been observed for many months.
-         ---J. Ian Lindsay   Fri Jul 03 16:44:26 MST 2015
-      */
-      //StaticHub::log("event_queue size went negative!?! Correcting...\n");
-      event_queue.count();
-    }
-    
     // This is a stat-gathering block.
     if (profiler_enabled) {
       
