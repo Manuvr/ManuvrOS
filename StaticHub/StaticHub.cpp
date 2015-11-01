@@ -295,7 +295,15 @@ void StaticHub::init_RNG(void) volatile {
 void StaticHub::gpioSetup() volatile {
 }
 
-  
+
+int test_callback(ManuvrEvent *active_event) {
+  StringBuilder *log_item;
+  if (0 == active_event->getArgAs(&log_item)) {
+    StaticHub::log(log_item);
+  }
+  return 1;
+}
+
 
 /*
 * The primary init function. Calling this will bring the entire system online if everything is
@@ -316,6 +324,9 @@ int8_t StaticHub::bootstrap() {
   initSchedules();   // We know we will need some schedules...
 
   // Instantiations complete. Run init() fxn's...
+  
+  event_manager.on(MANUVR_MSG_SYS_ISSUE_LOG_ITEM, test_callback, 0);
+
 
   EventManager::raiseEvent(MANUVR_MSG_SYS_BOOT_COMPLETED, this);  // Bootstrap complete
   return 0;
@@ -394,6 +405,9 @@ int8_t StaticHub::callback_proc(ManuvrEvent *event) {
   switch (event->event_code) {
     case MANUVR_MSG_SYS_BOOT_COMPLETED:
       StaticHub::log("Boot complete.\n");
+event = EventManager::returnEvent(MANUVR_MSG_SYS_ISSUE_LOG_ITEM);
+event->addArg(new StringBuilder("This is a test log. If this is visable, it means that the Events work."));
+raiseEvent(event);
       break;
     default:
       break;
@@ -431,27 +445,6 @@ int8_t StaticHub::notify(ManuvrEvent *active_event) {
       
       break;
 
-    case MANUVR_MSG_SYS_ISSUE_LOG_ITEM:
-      {
-        StringBuilder *log_item;
-        if (0 == active_event->getArgAs(&log_item)) {
-          log_buffer.concatHandoff(log_item);
-        }
-        __scheduler.enableSchedule(pid_log_moderator);
-      }
-      break;
-      
-    // TODO: Wrap into SELF_DESCRIBE
-    //case MANUVR_MSG_VERSION_FIRMWARE:
-    //  if (0 == active_event->args.size()) {
-    //    StringBuilder *str_ver = new StringBuilder(IDENTITY_STRING);
-    //    str_ver->concat(VERSION_STRING);
-    //    active_event->addArg(str_ver);
-    //    return_value++;
-    //  }
-    //  break;
-      
-      
     default:
       return_value += EventReceiver::notify(active_event);
       break;

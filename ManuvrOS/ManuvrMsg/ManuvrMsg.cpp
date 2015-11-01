@@ -92,7 +92,6 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,               "SYS_REBOOT"           , MSG_ARGS_NONE }, // Reboots into THIS program.
   {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,               "SYS_SHUTDOWN"         , MSG_ARGS_NONE }, // Raised when the system is pending complete shutdown.
 
-
   {  MANUVR_MSG_SYS_RELEASE_CRUFT    , MSG_FLAG_IDEMPOTENT,               "SYS_RELEASE_CRUFT"    , MSG_ARGS_NONE }, // 
 
   {  MANUVR_MSG_PROGRAM_START        , MSG_FLAG_EXPORTABLE,               "PROGRAM_START"        , MSG_ARGS_STR_BUILDER }, // Starting an application on the receiver. Needs a string. 
@@ -101,16 +100,10 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SYS_SET_DATETIME     , MSG_FLAG_EXPORTABLE,               "SYS_SET_DATETIME"     , MSG_ARGS_NONE }, //
   {  MANUVR_MSG_SYS_REPORT_DATETIME  , MSG_FLAG_EXPORTABLE,               "SYS_REPORT_DATETIME"  , MSG_ARGS_NONE }, //
 
-  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , MSG_ARGS_U8 }, // 
-  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , MSG_ARGS_U8 },   // This tells client classes to adjust their log verbosity.
 
   {  MANUVR_MSG_SYS_PREALLOCATION    , 0x0000,               "SYS_PREALLOCATION"    , MSG_ARGS_NONE }, // Any classes that do preallocation should listen for this.
-
-  {  MANUVR_MSG_SYS_FAULT_REPORT     , 0x0000,                            "SYS_FAULT"            , MSG_ARGS_U32 }, // 
-  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , MSG_ARGS_STR_BUILDER }, // Classes emit this to get their log data saved/sent.
+  {  MANUVR_MSG_SYS_FAULT_REPORT     , 0x0000,               "SYS_FAULT"            , MSG_ARGS_U32 }, // 
   
-  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , MSG_ARGS_STR_BUILDER }, // 
-
   {  MANUVR_MSG_I2C_QUEUE_READY      , MSG_FLAG_IDEMPOTENT,  "I2C_QUEUE_READY"      , MSG_ARGS_NONE }, // The i2c queue is ready for attention.
   {  MANUVR_MSG_I2C_DUMP_DEBUG       , MSG_FLAG_EXPORTABLE,  "I2C_DUMP_DEBUG"       , MSG_ARGS_NONE }, // Debug dump for i2c.
 
@@ -122,7 +115,24 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SESS_DUMP_DEBUG      , MSG_FLAG_EXPORTABLE,  "SESS_DUMP_DEBUG"      , MSG_ARGS_NONE }, // 
   {  MANUVR_MSG_SESS_ORIGINATE_MSG   , MSG_FLAG_IDEMPOTENT,  "SESS_ORIGINATE_MSG"   , MSG_ARGS_NONE }, // 
 
-  {  MANUVR_MSG_XPORT_SEND           , MSG_FLAG_IDEMPOTENT,  "XPORT_SEND"           , MSG_ARGS_STR_BUILDER }, // 
+  {  MANUVR_MSG_XPORT_SEND           , MSG_FLAG_IDEMPOTENT,  "XPORT_SEND"           , MSG_ARGS_STR_BUILDER }, //
+
+  /* 
+    For messages that have arguments, we have the option of defining inline lables for each parameter.
+    This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
+    compile time.
+  */
+  #if defined (__ENABLE_MSG_SEMANTICS)
+  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , MSG_ARGS_STR_BUILDER, "Command\0\0" }, // 
+  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , MSG_ARGS_STR_BUILDER, "Body\0\0" }, // Classes emit this to get their log data saved/sent.
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , MSG_ARGS_U8, "Power Mode\0\0" }, // 
+  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , MSG_ARGS_U8, "Level\0\0"      },   // This tells client classes to adjust their log verbosity.
+  #else
+  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , MSG_ARGS_STR_BUILDER, NULL }, // 
+  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , MSG_ARGS_STR_BUILDER, NULL }, // Classes emit this to get their log data saved/sent.
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , MSG_ARGS_U8, NULL }, // 
+  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , MSG_ARGS_U8, NULL },   // This tells client classes to adjust their log verbosity.
+  #endif
 };
 
 
