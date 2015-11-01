@@ -18,6 +18,35 @@
 EventManager* EventManager::INSTANCE = NULL;
 PriorityQueue<ManuvrEvent*> EventManager::isr_event_queue;
 
+const unsigned char MSG_ARGS_EVENTRECEIVER[] = {SYS_EVENTRECEIVER_FM, 0, 0}; 
+const unsigned char MSG_ARGS_NO_ARGS[] = {0}; 
+
+const MessageTypeDef message_defs[] = {
+  {  MANUVR_MSG_SYS_BOOT_COMPLETED   , 0x0000,               "BOOT_COMPLETED"   , MSG_ARGS_NO_ARGS }, // Raised when bootstrap is finished.
+
+  {  MANUVR_MSG_SYS_ADVERTISE_SRVC   , 0x0000,               "ADVERTISE_SRVC"       , MSG_ARGS_EVENTRECEIVER }, // A system service might feel the need to advertise it's arrival.
+  {  MANUVR_MSG_SYS_RETRACT_SRVC     , 0x0000,               "RETRACT_SRVC"         , MSG_ARGS_EVENTRECEIVER }, // A system service sends this to tell others to stop using it.
+
+  {  MANUVR_MSG_SCHED_ENABLE_BY_PID  , 0x0000,               "SCHED_ENABLE_BY_PID"  , MSG_ARGS_NO_ARGS }, // The given PID is being enabled.
+  {  MANUVR_MSG_SCHED_DISABLE_BY_PID , 0x0000,               "SCHED_DISABLE_BY_PID" , MSG_ARGS_NO_ARGS }, // The given PID is being disabled.
+  {  MANUVR_MSG_SCHED_PROFILER_START , 0x0000,               "SCHED_PROFILER_START" , MSG_ARGS_NO_ARGS }, // We want to profile the given PID.
+  {  MANUVR_MSG_SCHED_PROFILER_STOP  , 0x0000,               "SCHED_PROFILER_STOP"  , MSG_ARGS_NO_ARGS }, // We want to stop profiling the given PID.
+  {  MANUVR_MSG_SCHED_PROFILER_DUMP  , 0x0000,               "SCHED_PROFILER_DUMP"  , MSG_ARGS_NO_ARGS }, // Dump the profiler data for all PIDs (no args) or given PIDs.
+  {  MANUVR_MSG_SCHED_DUMP_META      , 0x0000,               "SCHED_DUMP_META"      , MSG_ARGS_NO_ARGS }, // Tell the Scheduler to dump its meta metrics.
+  {  MANUVR_MSG_SCHED_DUMP_SCHEDULES , 0x0000,               "SCHED_DUMP_SCHEDULES" , MSG_ARGS_NO_ARGS }, // Tell the Scheduler to dump schedules.
+  {  MANUVR_MSG_SCHED_WIPE_PROFILER  , 0x0000,               "SCHED_WIPE_PROFILER"  , MSG_ARGS_NO_ARGS }, // Tell the Scheduler to wipe its profiler data. Pass PIDs to be selective.
+  {  MANUVR_MSG_SCHED_DEFERRED_EVENT , 0x0000,               "SCHED_DEFERRED_EVENT" , MSG_ARGS_NO_ARGS }, // Tell the Scheduler to broadcast the attached Event so many ms into the future.
+
+  /* 
+    For messages that have arguments, we have the option of defining inline lables for each parameter.
+    This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
+    compile time.
+  */
+  #if defined (__ENABLE_MSG_SEMANTICS)
+  #else
+  #endif
+};
+
 
 /****************************************************************************************************
 *   ___ _              ___      _ _              _      _       
@@ -38,7 +67,7 @@ EventManager::EventManager() {
   setVerbosity((int8_t) 0);  // TODO: Why does this crash ViamSonus?
   profiler(false);
 
-  max_queue_depth     = 0;   
+  max_queue_depth     = 0;
   total_loops         = 0;
   total_events        = 0;
   total_events_dead   = 0;
@@ -54,6 +83,8 @@ EventManager::EventManager() {
     _preallocation_pool[i].returnToPrealloc(true);
     preallocated.insert(&_preallocation_pool[i]);
   }
+
+  ManuvrMsg::registerMessages(message_defs, sizeof(message_defs) / sizeof(MessageTypeDef));
 }
 
 /**
@@ -362,6 +393,42 @@ void EventManager::reclaim_event(ManuvrEvent* active_event) {
 
 
 
+
+// This is the splice into v2's style of event handling (callaheads).
+int8_t EventManager::procCallAheads(ManuvrEvent *active_event) {
+  int8_t return_value = 0;
+  PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[active_event->event_code];
+  if (NULL != ca_queue) {
+    listenerFxnPtr current_fxn;
+    for (int i = 0; i < ca_queue->size(); i++) {
+      current_fxn = ca_queue->recycle();  // TODO: This is ugly for many reasons.
+      if (current_fxn(active_event)) {
+        return_value++;
+      }
+    }
+  }
+  return return_value;
+}
+
+// This is the splice into v2's style of event handling (callbacks).
+int8_t EventManager::procCallBacks(ManuvrEvent *active_event) {
+  int8_t return_value = 0;
+  PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[active_event->event_code];
+  if (NULL != cb_queue) {
+    listenerFxnPtr current_fxn;
+    for (int i = 0; i < cb_queue->size(); i++) {
+      current_fxn = cb_queue->recycle();  // TODO: This is ugly for many reasons.
+      if (current_fxn(active_event)) {
+        return_value++;
+      }
+    }
+  }
+  return return_value;
+}
+
+
+
+
 /**
 * Process any open events.
 *
@@ -486,6 +553,8 @@ int8_t EventManager::procIdleFlags() {
       }
     }
     
+    procCallAheads(active_event);
+    
     // Now we start notify()'ing subscribers.
     EventReceiver *subscriber;   // No need to assign.
     if (profiler_enabled) profiler_mark_1 = micros();
@@ -519,6 +588,8 @@ int8_t EventManager::procIdleFlags() {
         }
       }
     }
+    
+    procCallBacks(active_event);
     
     if (0 == activity_count) {
       if (verbosity >= 3) local_log.concatf("\tDead event: %s\n", active_event->getMsgTypeString());
@@ -640,6 +711,26 @@ int8_t EventManager::procIdleFlags() {
 }
 
 
+int8_t EventManager::registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFxnPtr cb, uint32_t options) {
+  if (ca != NULL) {
+    PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[msgCode];
+    if (NULL == ca_queue) {
+      ca_queue = new PriorityQueue<listenerFxnPtr>();
+      ca_listeners[msgCode] = ca_queue;
+    }
+    ca_queue->insert(ca);
+  }
+  
+  if (cb != NULL) {
+    PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[msgCode];
+    if (NULL == cb_queue) {
+      cb_queue = new PriorityQueue<listenerFxnPtr>();
+      cb_listeners[msgCode] = cb_queue;
+    }
+    cb_queue->insert(cb);
+  }
+  return options%255;
+}
 
 
 /**

@@ -59,7 +59,6 @@ else
   TARGET_WIDTH =
 endif
                       
-
 CFLAGS += $(CPP_FLAGS)
 
 
@@ -75,9 +74,10 @@ CPP_SRCS  = $(MANUVROS_SRCS)
 CPP_SRCS += $(I2C_DRIVERS) $(SENSOR_SRCS) $(COM_DRIVERS)
 
 SRCS   = $(CPP_SRCS)
-                    
+             
+MANuVR_OPTIONS = -D__ENABLE_MSG_SEMANTICS
 
-
+CFLAGS += $(MANuVR_OPTIONS)
 
 ###########################################################################
 # Rules for building the firmware follow...
@@ -93,10 +93,10 @@ SRCS   = $(CPP_SRCS)
 
 
 all: clean
-	$(CPP) -static -g -o manuvr raspiMain.cpp StaticHub/StaticHub.cpp ManuvrOS/Drivers/ManuvrableGPIO/*.cpp $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) $(INCLUDES) -Idemo/ -DTEST_BENCH -D_GNU_SOURCE -O0 -fstack-usage
+	$(CPP) -static -g -o manuvr raspiMain.cpp StaticHub/StaticHub.cpp ManuvrOS/Drivers/ManuvrableGPIO/*.cpp $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) $(INCLUDES) -Idemo/ -DTEST_BENCH -D_GNU_SOURCE -O0
 
 raspi: clean
-	$(CPP) -static -g -o manuvr raspiMain.cpp StaticHub/StaticHub.cpp ManuvrOS/Drivers/ManuvrableGPIO/*.cpp $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) $(INCLUDES) -DRASPI -D_GNU_SOURCE -O0 -fstack-usage
+	$(CPP) -static -g -o manuvr raspiMain.cpp StaticHub/StaticHub.cpp ManuvrOS/Drivers/ManuvrableGPIO/*.cpp $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) $(INCLUDES) -DRASPI -D_GNU_SOURCE -O0
 
 testbench:
 	$(CPP) -static -g -o testbench demo/test-bench.cpp demo/StaticHub.cpp $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) $(INCLUDES) -Idemo/ -DTEST_BENCH -D_GNU_SOURCE -O0 -fstack-usage

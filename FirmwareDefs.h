@@ -14,17 +14,6 @@ This is an example file for building mock firmware on a Raspberry Pi.
 #ifndef __FIRMWARE_DEFS_H
 #define __FIRMWARE_DEFS_H
 
-/*
-* Macros we will use in scattered places...
-*/
-#ifndef max
-    #define max( a, b ) ( ((a) > (b)) ? (a) : (b) )
-#endif
-
-#ifndef min
-    #define min( a, b ) ( ((a) < (b)) ? (a) : (b) )
-#endif
-
 
 /*
 * These flags are meant to be sent during session setup. We need to 

@@ -1,6 +1,13 @@
-/****************************************************************************************************
-* These are message codes that might be raised from (potentially) anywhere in the program.          *
-****************************************************************************************************/
+/*
+* These are message codes that might be raised from (potentially) anywhere in the program.
+*
+* We reserve all codes up to 0x1000 for ManuvrOS itself.
+* This might seem like a large range, (and it is), but the idea is to contain all notions of
+*   type, units, and basic functionality common with all devices running ManuvrOS (or some derivative).
+*
+*/
+
+
 /* 
 * Reserved codes. These must be fully-supported, and never changed.
 * We reserve the first 32 integers for protocol-level functions.
@@ -9,7 +16,7 @@
   
 /*
 * Protocol-support codes. In order to have a device that can negotiate with other devices,
-*   these codes must be fully-implemented.  
+*   these codes must be supported.  
 */
   #define MANUVR_MSG_REPLY                0x0001 // This reply is for success-case.
   #define MANUVR_MSG_REPLY_RETRY          0x0002 // This reply asks for a reply of the given Unique ID.
@@ -37,16 +44,12 @@
   #define MANUVR_MSG_MSG_FORWARD          0x000D // Used to relay nested messages across Manuvrables.
 
 
+  
 /*
-* System codes. These deal with messages within and around the core ManuvrOS functionality.
-* We reserve all codes up to 0x1000 for ManuvrOS itself.
+* These codes are nice-to-haves that, while not required, should see a good deal of
+*   use across drivers and projects.
 *
-* This might seem like a large range, (and it is), but the idea is to contain all notions of
-*   type, units, and basic functionality common with all devices running ManuvrOS (or some derivative).
 *
-* Anything after (and including) 0x1000 is a user-defined code that a given project or company can stake-out
-*   for it's own use. Should conflicts arise, it means we are having adoption, and the protocol can be
-*   incremented in version and a better strategy devised.
 */
   #define MANUVR_MSG_SYS_BOOT_COMPLETED   0x0020 // Raised when bootstrap is finished. This ought to be the first event to proc.
   #define MANUVR_MSG_SYS_BOOTLOADER       0x0021 // Reboots into the bootloader.

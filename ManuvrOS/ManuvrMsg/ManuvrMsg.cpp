@@ -22,7 +22,6 @@ const unsigned char ManuvrMsg::MSG_ARGS_U32[] = {UINT32_FM, 0, 0};
 
 const unsigned char ManuvrMsg::MSG_ARGS_STR_BUILDER[] = {STR_BUILDER_FM, 0, 0}; 
 
-const unsigned char ManuvrMsg::MSG_ARGS_EVENTRECEIVER[] = {SYS_EVENTRECEIVER_FM, 0, 0}; 
 const unsigned char ManuvrMsg::MSG_ARGS_XPORT[]         = {SYS_MANUVR_XPORT_FM, 0, 0}; 
 
 /* 
@@ -86,13 +85,13 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
 
   {  MANUVR_MSG_MSG_FORWARD          , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "MSG_FORWARD"          , MSG_ARGS_MSG_FORWARD }, // No args? Asking for this legend. One arg: Legend provided.
 
+  
+  
 /* System codes */                                               
   {  MANUVR_MSG_SYS_BOOTLOADER       , MSG_FLAG_EXPORTABLE,               "SYS_BOOTLOADER"       , MSG_ARGS_NONE }, // Reboots into the STM32F4 bootloader.
   {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,               "SYS_REBOOT"           , MSG_ARGS_NONE }, // Reboots into THIS program.
   {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,               "SYS_SHUTDOWN"         , MSG_ARGS_NONE }, // Raised when the system is pending complete shutdown.
 
-  {  MANUVR_MSG_SYS_ADVERTISE_SRVC   , 0x0000,                            "ADVERTISE_SRVC"       , MSG_ARGS_EVENTRECEIVER }, // A system service might feel the need to advertise it's arrival.
-  {  MANUVR_MSG_SYS_RETRACT_SRVC     , 0x0000,                            "RETRACT_SRVC"         , MSG_ARGS_EVENTRECEIVER }, // A system service sends this to tell others to stop using it.
 
   {  MANUVR_MSG_SYS_RELEASE_CRUFT    , MSG_FLAG_IDEMPOTENT,               "SYS_RELEASE_CRUFT"    , MSG_ARGS_NONE }, // 
 
@@ -105,23 +104,12 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , MSG_ARGS_U8 }, // 
   {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , MSG_ARGS_U8 },   // This tells client classes to adjust their log verbosity.
 
-  {  MANUVR_MSG_SYS_BOOT_COMPLETED   , 0x0000,               "SYS_BOOT_COMPLETED"   , MSG_ARGS_NONE }, // Raised when bootstrap is finished.
   {  MANUVR_MSG_SYS_PREALLOCATION    , 0x0000,               "SYS_PREALLOCATION"    , MSG_ARGS_NONE }, // Any classes that do preallocation should listen for this.
 
   {  MANUVR_MSG_SYS_FAULT_REPORT     , 0x0000,                            "SYS_FAULT"            , MSG_ARGS_U32 }, // 
   {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , MSG_ARGS_STR_BUILDER }, // Classes emit this to get their log data saved/sent.
   
   {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , MSG_ARGS_STR_BUILDER }, // 
-
-  {  MANUVR_MSG_SCHED_ENABLE_BY_PID  , 0x0000,               "SCHED_ENABLE_BY_PID"  , MSG_ARGS_NONE }, // The given PID is being enabled.
-  {  MANUVR_MSG_SCHED_DISABLE_BY_PID , 0x0000,               "SCHED_DISABLE_BY_PID" , MSG_ARGS_NONE }, // The given PID is being disabled.
-  {  MANUVR_MSG_SCHED_PROFILER_START , 0x0000,               "SCHED_PROFILER_START" , MSG_ARGS_NONE }, // We want to profile the given PID.
-  {  MANUVR_MSG_SCHED_PROFILER_STOP  , 0x0000,               "SCHED_PROFILER_STOP"  , MSG_ARGS_NONE }, // We want to stop profiling the given PID.
-  {  MANUVR_MSG_SCHED_PROFILER_DUMP  , 0x0000,               "SCHED_PROFILER_DUMP"  , MSG_ARGS_NONE }, // Dump the profiler data for all PIDs (no args) or given PIDs.
-  {  MANUVR_MSG_SCHED_DUMP_META      , 0x0000,               "SCHED_DUMP_META"      , MSG_ARGS_NONE }, // Tell the Scheduler to dump its meta metrics.
-  {  MANUVR_MSG_SCHED_DUMP_SCHEDULES , 0x0000,               "SCHED_DUMP_SCHEDULES" , MSG_ARGS_NONE }, // Tell the Scheduler to dump schedules.
-  {  MANUVR_MSG_SCHED_WIPE_PROFILER  , 0x0000,               "SCHED_WIPE_PROFILER"  , MSG_ARGS_NONE }, // Tell the Scheduler to wipe its profiler data. Pass PIDs to be selective.
-  {  MANUVR_MSG_SCHED_DEFERRED_EVENT , 0x0000,               "SCHED_DEFERRED_EVENT" , MSG_ARGS_NONE }, // Tell the Scheduler to broadcast the attached Event so many ms into the future.
 
   {  MANUVR_MSG_I2C_QUEUE_READY      , MSG_FLAG_IDEMPOTENT,  "I2C_QUEUE_READY"      , MSG_ARGS_NONE }, // The i2c queue is ready for attention.
   {  MANUVR_MSG_I2C_DUMP_DEBUG       , MSG_FLAG_EXPORTABLE,  "I2C_DUMP_DEBUG"       , MSG_ARGS_NONE }, // Debug dump for i2c.
@@ -852,4 +840,36 @@ char* ManuvrMsg::is_valid_argument_buffer(int len) {
   
   return return_value;
 }
+
+
+
+int8_t ManuvrMsg::registerMessages(const MessageTypeDef defs[], int mes_count) {
+  for (int i = 0; i < mes_count; i++) {
+    ManuvrMsg::message_defs_extended.insert(&defs[i]);
+  }
+  return 0;
+}
+
+
+int8_t ManuvrMsg::registerMessage(MessageTypeDef* nu_def) {
+  return message_defs_extended.insert(nu_def);
+}
+
+
+int8_t ManuvrMsg::registerMessage(uint16_t tc, uint16_t tf, const char* lab, const unsigned char* forms, const char* sem) {
+  MessageTypeDef *nu_def = (MessageTypeDef*) malloc(sizeof(MessageTypeDef));
+  if (nu_def) {
+    nu_def->msg_type_code  = tc;
+    nu_def->msg_type_flags = tf;
+    nu_def->debug_label    = lab;
+    nu_def->arg_modes      = forms;
+    nu_def->arg_semantics  = sem;
+    return registerMessage(nu_def);
+  }
+  else {
+    // Misfortune.
+  }
+  return -1;
+}
+
 

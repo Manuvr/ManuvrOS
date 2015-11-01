@@ -238,6 +238,15 @@ int main(int argc, char *argv[]) {
       com_port = new ManuvrComPort(argv[i+1], 115200, O_RDWR | O_NOCTTY | O_NDELAY);
       i++;
     }
+    else if (strcasestr(argv[i], "--ws-connect") && (i < argc-1)) {
+      // Connect to another manuvrable at the given address.
+    }
+    else if (strcasestr(argv[i], "--ws-listen") && (i < argc-1)) {
+      // Adding a websocket server at the given IPv4 address.
+    }
+    else if (strcasestr(argv[i], "--ws-port") && (i < argc-1)) {
+      // Port modifier for websocket connections.
+    }
     else {
       printf("Unhandled argument: %s\n", argv[i]);
       printUsage();
@@ -254,12 +263,12 @@ int main(int argc, char *argv[]) {
   // The main loop. Run forever.
   while (continue_listening) {
     int x = em->procIdleFlags();
-    int y = sch->serviceScheduledEvents();
     if (x) printf("\t procIdleFlags() returns %d\n", x);
+    int y = sch->serviceScheduledEvents();
     if (y) printf("\t serviceScheduledEvents() returns %d\n", y);
   }
   
-  kill(looper_pid, SIGQUIT);
+  //kill(looper_pid, SIGQUIT);
 
   printf("\n\n");
   return 0;

@@ -42,7 +42,7 @@ typedef struct msg_defin_t {
     uint16_t              msg_type_flags; // Optional flags to describe nuances of this message type.
     const char*           debug_label;    // This is a pointer to a const that represents this message code as a string.
     const unsigned char*  arg_modes;      // For messages that have arguments, this defines their possible types.
-    //const unsigned char*  arg_semantics;  // For messages that have arguments, this defines their semantics.
+    const char*           arg_semantics;  // For messages that have arguments, this defines their semantics.
 } MessageTypeDef;
 
 
@@ -287,9 +287,13 @@ class ManuvrMsg {
     static const char* getMsgTypeString(uint16_t msg_code);
     
     static int8_t getMsgLegend(StringBuilder *output);
+
+    static int8_t registerMessage(MessageTypeDef*);
+    static int8_t registerMessage(uint16_t, uint16_t, const char*, const unsigned char*, const char*);
+    
+    static int8_t registerMessages(const MessageTypeDef[], int len);
     
     static const MessageTypeDef message_defs[];
-    static PriorityQueue<const MessageTypeDef*> message_defs_extended;  // Where runtime-loaded message defs go.
 
     
     static bool isExportable(const MessageTypeDef* message_def) {
@@ -333,6 +337,7 @@ class ManuvrMsg {
     
     char* is_valid_argument_buffer(int len);
 
+    static PriorityQueue<const MessageTypeDef*> message_defs_extended;  // Where runtime-loaded message defs go.
 };
 
 

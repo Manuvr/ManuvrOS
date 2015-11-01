@@ -2,6 +2,7 @@
   #define __MANUVR_MSG_MANAGER_H__
   
   #include <inttypes.h>
+  #include <map>
   #include "EnumeratedTypeCodes.h"
   
   #include "ManuvrMsg/ManuvrMsg.h"
@@ -39,6 +40,8 @@
   #ifdef __cplusplus
    extern "C" {
   #endif
+  
+  typedef int (*listenerFxnPtr) (ManuvrEvent*);
   
   class ManuvrEvent;
   class Scheduler;
@@ -190,6 +193,19 @@
       
       EventReceiver* getSubscriberByName(const char*);
       
+      /*
+      * Calling this will register a message in the EventManager, along with a call-ahead,
+      *   a callback, and options. Only the first parameter is strictly required, but
+      *   at least one of the function parameters should be non-null.
+      */
+      int8_t registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFxnPtr cb, uint32_t options);
+      inline int8_t before(uint16_t msgCode, listenerFxnPtr ca, uint32_t options) {
+        return registerCallbacks(msgCode, ca, NULL, options);
+      };
+      inline int8_t on(uint16_t msgCode, listenerFxnPtr cb, uint32_t options) {
+        return registerCallbacks(msgCode, NULL, cb, options);
+      };
+      
       int8_t procIdleFlags(void);
       
       void profiler(bool enabled);
@@ -233,6 +249,11 @@
       PriorityQueue<ManuvrEvent*> event_queue;   // Events that have been raised.
       PriorityQueue<EventReceiver*>    subscribers;   // Our subscription manifest.
       PriorityQueue<TaskProfilerData*> event_costs;     // Message code is the priority. Calculates average cost in uS.
+      
+      map<uint16_t, PriorityQueue<listenerFxnPtr>*> ca_listeners;
+      map<uint16_t, PriorityQueue<listenerFxnPtr>*> cb_listeners;
+      int8_t procCallAheads(ManuvrEvent *active_event);
+      int8_t procCallBacks(ManuvrEvent *active_event);
       
       // Profiling and logging variables...
       uint32_t max_idle_loop_time;    // How many uS does it take to run an idle loop?

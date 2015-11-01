@@ -288,11 +288,9 @@ void StaticHub::init_RNG(void) volatile {
 /*
 * This fxn should be called once on boot to setup the CPU pins that are not claimed
 *   by other classes. GPIO pins at the command of this-or-that class should be setup 
-*   in the class that deals with them. An example of this would be the CPLD pins (GPIO
-*   case) or the i2c pins (AF case).
+*   in the class that deals with them. 
 * Pending peripheral-level init of pins, we should just enable everything and let 
 *   individual classes work out their own requirements.
-* Since we are using a 100-pin QFP part, we don't have ports higher than E.
 */
 void StaticHub::gpioSetup() volatile {
 }
@@ -317,9 +315,6 @@ int8_t StaticHub::bootstrap() {
 
   initSchedules();   // We know we will need some schedules...
 
-  //((EventManager*)event_manager)->subscribe((EventReceiver*) light_sensor);
-  //((EventManager*)event_manager)->subscribe((EventReceiver*) baro_sensor);
-    
   // Instantiations complete. Run init() fxn's...
 
   EventManager::raiseEvent(MANUVR_MSG_SYS_BOOT_COMPLETED, this);  // Bootstrap complete
