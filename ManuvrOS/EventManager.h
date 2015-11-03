@@ -206,6 +206,7 @@
         return registerCallbacks(msgCode, NULL, cb, options);
       };
       
+      
       int8_t procIdleFlags(void);
       
       void profiler(bool enabled);

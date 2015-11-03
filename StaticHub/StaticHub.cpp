@@ -261,6 +261,16 @@ int8_t StaticHub::bootComplete() {
 }
 
 
+int random_to_log(ManuvrEvent *active_event) {
+  StringBuilder log_item("New random: ");
+  log_item.concat((uint32_t) StaticHub::randomInt());
+  StaticHub::log(&log_item);
+  return 1;
+}
+
+
+
+
 /*
 * When the system comes to life, we will want to setup some periodic schedules.
 * Even for schedules that are meant to be one-shots, we will try to avoid a malloc()/free()
@@ -274,6 +284,7 @@ void StaticHub::initSchedules(void) {
   // This schedule marches the data into the USB VCP at a throttled rate.
   pid_log_moderator = __scheduler.createSchedule(2,  -1, false, stdout_funnel);
   __scheduler.delaySchedule(pid_log_moderator, 1000);
+  
 }
 
 

@@ -19,8 +19,7 @@
 #include "FirmwareDefs.h"
 
 #include "StaticHub/StaticHub.h"
-#include "ManuvrOS/EventManager.h"
-#include "ManuvrOS/Scheduler.h"
+#include "ManuvrOS/Kernel.h"
 #include "ManuvrOS/Transports/ManuvrComPort/ManuvrComPort.h"
 
 
@@ -257,19 +256,15 @@ int main(int argc, char *argv[]) {
   initSigHandlers();
   alarm(INTERRUPT_PERIOD);                // Set a periodic interrupt.
 
-  EventManager* em  = sh->fetchEventManager();
-  Scheduler*    sch = sh->fetchScheduler();
-
+  ManuvrKernel kernel0;
+  //kernel0.run();
+ 
   // The main loop. Run forever.
   while (continue_listening) {
-    int x = em->procIdleFlags();
-    if (x) printf("\t procIdleFlags() returns %d\n", x);
-    int y = sch->serviceScheduledEvents();
-    if (y) printf("\t serviceScheduledEvents() returns %d\n", y);
+    int x = kernel0.step();
+    if (x > 0) printf("\t kernel0.step() returns %d\n", x);
   }
   
-  //kill(looper_pid, SIGQUIT);
-
   printf("\n\n");
   return 0;
 }
