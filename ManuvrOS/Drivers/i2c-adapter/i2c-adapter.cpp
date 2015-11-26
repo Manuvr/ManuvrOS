@@ -49,12 +49,17 @@ void I2CAdapter::__class_initializer() {
   bus_error          = false;
   bus_online         = false;
   ping_run           = false;
+  full_ping_running  = false;
   last_used_bus_addr = 0;
+
+  for (uint16_t i = 0; i < 128; i++) ping_map[i] = 0;   // Zero the ping map.
+
+  // Set a globalized refernece so we can hit the proper adapter from an ISR.
+  i2c = this;
 }
 
 
 #ifdef STM32F4XX
-
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
   __class_initializer();
   dev = dev_id;
@@ -106,102 +111,6 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
     I2C_Init(I2C1, &I2C_InitStruct);                 // init I2C1
     I2C_Cmd(I2C1, ENABLE);       // enable I2C1
   }
-  
-  for (uint16_t i = 0; i < 128; i++) {
-  	  ping_map[i] = 0;
-  }
-}
-
-
-I2CAdapter::~I2CAdapter() {
-    I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, DISABLE);   // Shelve the interrupts.
-    I2C_DeInit(I2C1);   // De-init
-    while (dev_list.hasNext()) {
-      dev_list.get()->disassignBusInstance();
-      dev_list.remove();
-    }
-    
-    /* TODO: The work_queue destructor will take care of its own cleanup, but
-       We should abort any open transfers prior to deleting this list. */
-}
-
-
-// TODO: Inline this.
-int8_t I2CAdapter::generateStart() {
-  if (verbosity > 6) StaticHub::log("I2CAdapter::generateStart()\n");
-  if (! bus_online) return -1;
-  I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, ENABLE);      //Enable EVT and ERR interrupts
-  I2C_GenerateSTART(I2C1, ENABLE);   // Doing this will take us back to the ISR.
-  return 0;
-}
-
-// TODO: Inline this.
-int8_t I2CAdapter::generateStop() {
-  if (verbosity > 6) StaticHub::log("I2CAdapter::generateStop()\n");
-  if (! bus_online) return -1;
-  DMA_ITConfig(DMA1_Stream0, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE | DMA_IT_DME, DISABLE);
-  I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, DISABLE);
-  I2C_GenerateSTOP(I2C1, ENABLE);
-  return 0;
-}
-
-#elif defined(STM32F7XX) // STM32F7?
-
-I2CAdapter::I2CAdapter(uint8_t dev_id) {
-  __class_initializer();
-  dev = dev_id;
-
-  // This init() fxn was patterned after the STM32F4x7 library example.
-  if (dev_id == 1) {
-    //I2C_DeInit(I2C1);		//Deinit and reset the I2C to avoid it locking up
-
-    GPIO_InitTypeDef GPIO_InitStruct;
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);    // enable APB1 peripheral clock for I2C1
-
-    RCC_APB1PeriphResetCmd(RCC_APB1Periph_I2C1, ENABLE);
-    RCC_APB1PeriphResetCmd(RCC_APB1Periph_I2C1, DISABLE);
-    I2C_DeInit(I2C1);
-
-    /* Reset I2Cx IP */
-    
-    /* Release reset signal of I2Cx IP */
-    //RCC_APB1PeriphResetCmd(RCC_APB1Periph_I2C1, DISABLE);
-    
-    /* setup SCL and SDA pins
-     * You can connect the I2C1 functions to two different
-     * pins:
-     * 1. SCL on PB6
-     * 2. SDA on PB7
-     */
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7; // we are going to use PB6 and PB7
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;           // set pins to alternate function
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;      // set GPIO speed
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;         // set output to open drain --> the line has to be only pulled low, not driven high
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;       // enable pull up resistors
-    GPIO_Init(GPIOB, &GPIO_InitStruct);                 // init GPIOB
-    
-    // Connect I2C1 pins to AF
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_I2C1);    // SCL
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_I2C1);    // SDA
-    
-    I2C_InitTypeDef I2C_InitStruct;
-
-   
-    // configure I2C1 
-    I2C_InitStruct.I2C_ClockSpeed = 400000;          // 400kHz
-    I2C_InitStruct.I2C_Mode = I2C_Mode_I2C;          // I2C mode
-    I2C_InitStruct.I2C_DutyCycle = I2C_DutyCycle_2;  // 50% duty cycle --> standard
-    I2C_InitStruct.I2C_OwnAddress1 = 0x00;           // own address, not relevant in master mode
-    //I2C_InitStruct.I2C_Ack = I2C_Ack_Disable;         // disable acknowledge when reading (can be changed later on)
-    I2C_InitStruct.I2C_Ack = I2C_Ack_Enable;
-    I2C_InitStruct.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit; // set address length to 7 bit addresses
-    I2C_Init(I2C1, &I2C_InitStruct);                 // init I2C1
-    I2C_Cmd(I2C1, ENABLE);       // enable I2C1
-  }
-  
-  for (uint16_t i = 0; i < 128; i++) {
-  	  ping_map[i] = 0;
-  }
 }
 
 
@@ -238,29 +147,28 @@ int8_t I2CAdapter::generateStop() {
 }
 
 
-#elif defined(__MK20DX256__) | defined(__MK20DX128__)  // Teensyduino? 3.x?
+#elif defined(__MK20DX256__) | defined(__MK20DX128__)
+
 
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
   __class_initializer();
   dev = dev_id;
 
   if (dev_id == 0) {
-    Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_INT, I2C_RATE_400);
+    Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR);
+    Wire.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
     bus_online = true;
   }
   #if defined(__MK20DX256__)
   else if (dev_id == 1) {
-    Wire1.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400);
+    Wire1.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR);
+    Wire1.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
     bus_online = true;
   }
   #endif
   else {
+    // Unsupported
   }
-  
-  for (uint16_t i = 0; i < 128; i++) {
-  	  ping_map[i] = 0;
-  }
-  i2c = this;
 }
 
 
@@ -276,17 +184,16 @@ I2CAdapter::~I2CAdapter() {
 }
 
 
-// TODO: Inline this.
+
 int8_t I2CAdapter::generateStart() {
   if (verbosity > 6) StaticHub::log("I2CAdapter::generateStart()\n");
   if (! bus_online) return -1;
   //Wire1.sendTransmission(I2C_STOP);
   //Wire1.finish(900);   // We allow for 900uS for timeout.
-  
   return 0;
 }
 
-// TODO: Inline this.
+
 int8_t I2CAdapter::generateStop() {
   if (verbosity > 6) StaticHub::log("I2CAdapter::generateStop()\n");
   if (! bus_online) return -1;
@@ -294,7 +201,99 @@ int8_t I2CAdapter::generateStop() {
 }
 
 
-#elif defined(_BOARD_FUBARINO_MINI_)    // Perhaps this is an arduino-style env on a Fubarino?
+
+int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
+  // TODO: This is awful. Need to ultimately have a direct ref to the class that *is* the adapter.
+  if (0 == dev) {
+    Wire.beginTransmission((uint8_t) (op->dev_addr & 0x00FF));
+    if (op->need_to_send_subaddr()) {
+      Wire.write((uint8_t) (op->sub_addr & 0x00FF));
+      op->advance_operation(1);
+    }
+    
+    if (op->opcode == I2C_OPERATION_READ) {
+      Wire.endTransmission(I2C_NOSTOP);
+      Wire.requestFrom(op->dev_addr, op->len, I2C_STOP, 10000);
+      int i = 0;
+      while(Wire.available()) {
+        *(op->buf + i++) = (uint8_t) Wire.readByte();
+      }
+    }
+    else if (op->opcode == I2C_OPERATION_WRITE) {
+      for(int i = 0; i < op->len; i++) Wire.write(*(op->buf+i));
+      Wire.endTransmission(I2C_STOP, 10000);   // 10ms timeout
+    }
+    else if (op->opcode == I2C_OPERATION_PING) {
+      Wire.endTransmission(I2C_STOP, 10000);   // 10ms timeout
+    }
+
+    switch (Wire.status()) {
+      case I2C_WAITING:
+        op->markComplete();
+        break;
+      case I2C_ADDR_NAK:
+        op->abort(I2C_ERR_SLAVE_NOT_FOUND);
+        break;
+      case I2C_DATA_NAK:
+        op->abort(I2C_ERR_SLAVE_INVALID);
+        break;
+      case I2C_ARB_LOST:
+        op->abort(I2C_ERR_CODE_BUS_BUSY);
+        break;
+      case I2C_TIMEOUT:
+        op->abort(I2C_ERR_CODE_TIMEOUT);
+        break;
+    }
+  }
+#if defined(__MK20DX256__)
+  else if (1 == dev) {
+    Wire1.beginTransmission((uint8_t) (op->dev_addr & 0x00FF));
+    if (op->need_to_send_subaddr()) {
+      Wire1.write((uint8_t) (op->sub_addr & 0x00FF));
+      op->advance_operation(1);
+    }
+    
+    if (op->opcode == I2C_OPERATION_READ) {
+      Wire1.endTransmission(I2C_NOSTOP);
+      Wire1.requestFrom(op->dev_addr, op->len, I2C_STOP, 10000);
+      int i = 0;
+      while(Wire1.available()) {
+        *(op->buf + i++) = (uint8_t) Wire1.readByte();
+      }
+    }
+    else if (op->opcode == I2C_OPERATION_WRITE) {
+      for(int i = 0; i < op->len; i++) Wire1.write(*(op->buf+i));
+      Wire1.endTransmission(I2C_STOP, 10000);   // 10ms timeout
+    }
+    else if (op->opcode == I2C_OPERATION_PING) {
+      Wire1.endTransmission(I2C_STOP, 10000);   // 10ms timeout
+    }
+    
+    switch (Wire1.status()) {
+      case I2C_WAITING:
+        op->markComplete();
+        break;
+      case I2C_ADDR_NAK:
+        op->abort(I2C_ERR_SLAVE_NOT_FOUND);
+        break;
+      case I2C_DATA_NAK:
+        op->abort(I2C_ERR_SLAVE_INVALID);
+        break;
+      case I2C_ARB_LOST:
+        op->abort(I2C_ERR_CODE_BUS_BUSY);
+        break;
+      case I2C_TIMEOUT:
+        op->abort(I2C_ERR_CODE_TIMEOUT);
+        break;
+    }
+  }
+#endif
+  else {
+  }
+}
+
+
+#elif defined(_BOARD_FUBARINO_MINI_)    // Perhaps this is an arduino-style env?
 
 
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
@@ -308,11 +307,6 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
   else {
     // Unsupported.
   }
-  
-  for (uint16_t i = 0; i < 128; i++) {
-  	  ping_map[i] = 0;
-  }
-  i2c = this;
 }
 
 
@@ -358,11 +352,6 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
     //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400);
     bus_online = true;
   }
-  
-  for (uint16_t i = 0; i < 128; i++) {
-  	  ping_map[i] = 0;
-  }
-  i2c = this;
 }
 
 
@@ -642,7 +631,7 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
 
   
 #elif defined(MPCMZ)
-
+// PIC32 MZ i2c support is broken at the time of this writing.
 
 #else   // Assuming a linux environment.
   bool return_value = false;
@@ -738,6 +727,16 @@ void I2CAdapter::advance_work_queue(void) {
 				}
 				else {
 					ping_map[current_queue_item->dev_addr % 128] = -1;
+				}
+				
+				if (full_ping_running) {
+				  if ((current_queue_item->dev_addr & 0x00FF) < 127) {
+				    ping_slave_addr(current_queue_item->dev_addr + 1);
+				  }
+				  else {
+				    if (verbosity > 3) local_log.concat("Concluded i2c ping sweep.");
+				    full_ping_running = false;
+				  }
 				}
 			}
 	
@@ -838,6 +837,8 @@ void I2CAdapter::printPingMap(StringBuilder *temp) {
       return;
     }
     temp->concat("\n\n\tPing Map\n\t      0 1 2 3 4 5 6 7 8 9 A B C D E F\n");
+    // TODO: This is needlessly-extravagent of memory. Do it this way instead...
+    //char str_buf[];
     for (uint8_t i = 0; i < 128; i+=16) {
       temp->concatf("\t0x%02x: %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s\n",
         i,
@@ -858,6 +859,7 @@ void I2CAdapter::printPingMap(StringBuilder *temp) {
         ((ping_map[i + 0x0E] == 0) ? " " : ((ping_map[i + 0x0E] < 0) ? "-" : "*")),
         ((ping_map[i + 0x0F] == 0) ? " " : ((ping_map[i + 0x0F] < 0) ? "-" : "*"))
       );
+      //temp->concat(str_buf);
     }
   }
   temp->concat("\n");
@@ -983,10 +985,9 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
         local_log.concatf("ping i2c slave 0x%02x.\n", temp_byte);
         ping_slave_addr(temp_byte);
       }
-      else {
-        for (int i = 1; i < 128; i++) {
-          ping_slave_addr(i);
-        }
+      else if (!full_ping_running) {
+        full_ping_running = true;
+        ping_slave_addr(1);
       }
       break;
     case ']':

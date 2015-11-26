@@ -252,7 +252,6 @@ void I2CDeviceWithRegisters::printDebug(StringBuilder* temp) {
 *   register values into alignment with "what really is" in the device.
 */
 int8_t I2CDeviceWithRegisters::syncRegisters(void) {
-	StringBuilder output("syncRegisters():\t");
 	DeviceRegister *temp = NULL;
 	int8_t return_value = I2C_ERR_CODE_NO_ERROR;
 	uint8_t count = reg_defs.size();
@@ -264,15 +263,14 @@ int8_t I2CDeviceWithRegisters::syncRegisters(void) {
 			return I2C_ERR_SLAVE_UNDEFD_REG;
 		}
 		
-		//output.concatf("0x%02x ", temp->addr);
 		return_value = readRegister(temp);
 		if (return_value != I2C_ERR_CODE_NO_ERROR) {
-			//output.concatf("Failed to read from register %d\n", temp->addr);
-			StaticHub::log(__PRETTY_FUNCTION__, 2, "Failed to read from register %d\n", temp->addr);
+			StringBuilder output;
+			output.concatf("Failed to read from register %d\n", temp->addr);
+			StaticHub::log(&output);
 		}
 	}
-	output.concat("\n");
-	StaticHub::log(&output);
+
 	return return_value;
 }
 

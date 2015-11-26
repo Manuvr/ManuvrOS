@@ -29,7 +29,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <inttypes.h>
 #include <stdint.h>
 #include "ManuvrOS/EventManager.h"
-#include "Drivers/i2c-adapter/i2c-adapter.h"
+#include "ManuvrOS/Drivers/i2c-adapter/i2c-adapter.h"
 
 
 
@@ -88,12 +88,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 class ADP8866 : public I2CDeviceWithRegisters, public EventReceiver {
   public:
-    ADP8866(uint8_t addr = ADP8866_I2CADDR);
+    ADP8866(uint8_t reset_pin, uint8_t irq_pin, uint8_t addr = ADP8866_I2CADDR);
     ~ADP8866(void);
 
     int8_t init(void);
-    
-   
+
+
     /* Overrides from I2CDeviceWithRegisters... */
     void operationCompleteCallback(I2CQueuedOperation*);
     const char* getReceiverName();
@@ -107,8 +107,9 @@ class ADP8866 : public I2CDeviceWithRegisters, public EventReceiver {
     /* Direct channel manipulation. */
     void enable_channel(uint8_t, bool);
     bool channel_enabled(uint8_t);
-    
+
     /* Dimmer breakouts. */
+    void set_brightness(uint8_t, uint8_t);
     void set_brightness(uint8_t);
     void toggle_brightness(void);
     
@@ -125,15 +126,8 @@ class ADP8866 : public I2CDeviceWithRegisters, public EventReceiver {
     uint8_t power_mode        = 0;
     uint8_t class_mode        = 0;
     uint8_t stored_dimmer_val = 0;
-    
-
-    uint32_t pid_intensity    = 0;
-    uint32_t pid_channel_0    = 0;
-    uint32_t pid_channel_1    = 0;
-    uint32_t pid_channel_2    = 0;
-    uint32_t pid_channel_3    = 0;
-    uint32_t pid_channel_4    = 0;
-    uint32_t pid_channel_5    = 0;
+    uint8_t reset_pin         = 0;
+    uint8_t irq_pin           = 0;
     
     void reset();
     void set_power_mode(uint8_t);

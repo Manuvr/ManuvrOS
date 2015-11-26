@@ -26,86 +26,71 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "StaticHub/StaticHub.h"
 #include "ADP8866.h"
 
-/****************************************************************************************************
-* These are callbacks from the scheduler. They are specific to this class.                          *
-****************************************************************************************************/
-void lds8160_intensity(void) {
-  ADP8866* ld = StaticHub::getInstance()->fetchLEDDriver();
-  if (NULL != ld) {
-    ld->toggle_brightness();
-  }
-}
-
-void lds8160_chan_0(void) {
-  ADP8866* ld = StaticHub::getInstance()->fetchLEDDriver();
-  if (NULL != ld) {
-    ld->enable_channel(0, !ld->channel_enabled(0));
-  }
-}
-
-void lds8160_chan_1(void) {
-  ADP8866* ld = StaticHub::getInstance()->fetchLEDDriver();
-  if (NULL != ld) {
-    ld->enable_channel(1, !ld->channel_enabled(1));
-  }
-}
-
-void lds8160_chan_2(void) {
-  ADP8866* ld = StaticHub::getInstance()->fetchLEDDriver();
-  if (NULL != ld) {
-    ld->enable_channel(2, !ld->channel_enabled(2));
-  }
-}
-
-void lds8160_chan_3(void) {
-  ADP8866* ld = StaticHub::getInstance()->fetchLEDDriver();
-  if (NULL != ld) {
-    ld->enable_channel(3, !ld->channel_enabled(3));
-  }
-}
-
-void lds8160_chan_4(void) {
-  ADP8866* ld = StaticHub::getInstance()->fetchLEDDriver();
-  if (NULL != ld) {
-    ld->enable_channel(4, !ld->channel_enabled(4));
-  }
-}
-
-void lds8160_chan_5(void) {
-  ADP8866* ld = StaticHub::getInstance()->fetchLEDDriver();
-  if (NULL != ld) {
-    ld->enable_channel(5, !ld->channel_enabled(5));
-  }
-}
-
-
 
 /*
 * Constructor. Takes i2c address as argument.
 */
-ADP8866::ADP8866(uint8_t addr) : I2CDeviceWithRegisters() {
+ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : I2CDeviceWithRegisters() {
   __class_initializer();
   _dev_addr = addr;
   
+  reset_pin = _reset_pin;
+  irq_pin   = _irq_pin;
+  pinMode(_irq_pin, INPUT_PULLUP); 
+  pinMode(_reset_pin, OUTPUT);
+  
+  digitalWrite(_reset_pin, 0);
+  
   init_complete = false;
-  defineRegister(ADP8866_BANK_A_CURRENT,     (uint8_t) 0x90, true,  false, true);
-  defineRegister(ADP8866_BANK_B_CURRENT,     (uint8_t) 0x90, true,  false, true);
-  defineRegister(ADP8866_BANK_C_CURRENT,     (uint8_t) 0x90, true,  false, true);
-  defineRegister(ADP8866_CHANNEL_ENABLE,     (uint8_t) 0x3F, true, false, true);
-  defineRegister(ADP8866_GLOBAL_PWM_DIM,     (uint8_t) 0xA0, true, false, true);
-  defineRegister(ADP8866_BANK_A_PWM_DUTY,    (uint8_t) 0xDC, true,  false, true);
-  defineRegister(ADP8866_BANK_B_PWM_DUTY,    (uint8_t) 0xDC, true,  false, true);
-  defineRegister(ADP8866_BANK_C_PWM_DUTY,    (uint8_t) 0xDC, true,  false, true);
-  defineRegister(ADP8866_TEST_MODE,          (uint8_t) 0x00, false, false, false);
-  defineRegister(ADP8866_LED_SHORT_GND,      (uint8_t) 0x00, false, false, false);
-  defineRegister(ADP8866_LED_FAULT,          (uint8_t) 0x00, false, false, false);
-  defineRegister(ADP8866_CONFIG_REG,         (uint8_t) 0x00, false, false, true);
-  defineRegister(ADP8866_SOFTWARE_RESET,     (uint8_t) 0x00, false, false, true);
-  defineRegister(ADP8866_TEMPERATURE_OFFSET, (uint8_t) 0x00, false, false, false);
-  defineRegister(ADP8866_LED_SHUTDOWN_TEMP,  (uint8_t) 0x00, false, false, false);
-  defineRegister(ADP8866_TABLE_ENABLE_BP,    (uint8_t) 0x00, false, false, false);
-  defineRegister(ADP8866_SI_DIODE_DV_DT,     (uint8_t) 0x00, false, false, false);
+  defineRegister(ADP8866_MANU_DEV_ID ,     (uint8_t) 0x00, false,  true, false);
+  defineRegister(ADP8866_MDCR        ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_INT_STAT    ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_INT_EN      ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISCOFF_SEL_1,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISCOFF_SEL_2,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_GAIN_SEL    ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_LVL_SEL_1   ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_LVL_SEL_2   ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_PWR_SEL_1   ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_PWR_SEL_2   ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_CFGR        ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_BLSEL       ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_BLFR        ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_BLMX        ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISCC1       ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISCC2       ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISCT1       ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISCT2       ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_OFFTIMER6   ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_OFFTIMER7   ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_OFFTIMER8   ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_OFFTIMER9   ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISCF        ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC1        ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC2        ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC3        ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC4        ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC5        ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC6        ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC7        ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC8        ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC9        ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_HB_SEL      ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC6_HB     ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC7_HB     ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC8_HB     ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC9_HB     ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_OFFTIMER6_HB,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_OFFTIMER7_HB,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_OFFTIMER8_HB,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_OFFTIMER9_HB,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISCT_HB     ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_DELAY6      ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_DELAY7      ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_DELAY8      ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_DELAY9      ,     (uint8_t) 0x00, false,  false, true);
 }
+
 
 /*
 * Destructor.
@@ -115,23 +100,58 @@ ADP8866::~ADP8866(void) {
 
 
 int8_t ADP8866::init() {
-  if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
-    writeIndirect(ADP8866_BANK_A_CURRENT,  0x90, true);
-    writeIndirect(ADP8866_BANK_B_CURRENT,  0x90, true);
-    writeIndirect(ADP8866_BANK_C_CURRENT,  0x90, true);
-    writeIndirect(ADP8866_CHANNEL_ENABLE,  0x3F, true);
-    writeIndirect(ADP8866_GLOBAL_PWM_DIM,  0xB4, true);
-    writeIndirect(ADP8866_BANK_A_PWM_DUTY, 0xDC, true);
-    writeIndirect(ADP8866_BANK_B_PWM_DUTY, 0xDC, true);
-    writeIndirect(ADP8866_BANK_C_PWM_DUTY, 0xDC);
-    //writeIndirect(ADP8866_CONFIG_REG, 0x04);
+//  if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
+    // Turn on charge pump. Limit it to 1.5x with autoscale.
+    writeIndirect(ADP8866_MDCR,  0b01110101, true);
+
+    // Maximum current of ~16mA.
+    // All LED outputs are set with the level bits.
+    writeIndirect(ADP8866_LVL_SEL_1,  0b01000100, true);
+    writeIndirect(ADP8866_LVL_SEL_2,  0xFF, true); 
+                              
+    writeIndirect(ADP8866_GAIN_SEL, 0b00000100, true);
+    
+    // All LEDs are being driven by the charge pump.
+    writeIndirect(ADP8866_PWR_SEL_1,  0x00, true);
+    writeIndirect(ADP8866_PWR_SEL_2,  0x00, true);
+                                            
+    // All LED's independently sinkd. Backlight cubic transition.
+    writeIndirect(ADP8866_CFGR,  0b00010100, true);
+    writeIndirect(ADP8866_BLSEL, 0b11111111, true);
+    
+    // Backlight fade rates...
+    writeIndirect(ADP8866_BLFR, 0b01100110, true);
+    
+    // No backlight current.
+    writeIndirect(ADP8866_BLMX, 0b00000000, true);
+    
+    // Sink control. All on. Cubic transfer fxn.
+    writeIndirect(ADP8866_ISCC1, 0b00000111, true);
+    writeIndirect(ADP8866_ISCC2, 0b11111111, true);
+    
+    // SON/SOFF delays...
+    writeIndirect(ADP8866_ISCT1, 0b11110000, true);
+    writeIndirect(ADP8866_ISCT2, 0b00000000, true);
+    
+    
+    // TODO: When the driver inits, we shouldn't have any LEDs on until the user sets
+    //   some mandatory constraint so ve doesn't fry vis LEDs.
+    writeIndirect(ADP8866_ISC1, 0x10, true);
+    writeIndirect(ADP8866_ISC2, 0x10, true);
+    writeIndirect(ADP8866_ISC3, 0x10, true);
+    writeIndirect(ADP8866_ISC4, 0x10, true);
+    writeIndirect(ADP8866_ISC5, 0x10, true);
+    writeIndirect(ADP8866_ISC6, 0x10, true);
+    writeIndirect(ADP8866_ISC7, 0x10, true);
+    writeIndirect(ADP8866_ISC8, 0x10, true);
+    writeIndirect(ADP8866_ISC9, 0x10);
     init_complete = true;
-  }
-  else {
-    StaticHub::log("ADP8866::init():\tFailed to sync registers. Init fails.\n");
-    init_complete = false;
-    return -1;
-  }
+//  }
+//  else {
+//    StaticHub::log("ADP8866::init():\tFailed to sync registers. Init fails.\n");
+//    init_complete = false;
+//    return -1;
+//  }
   return 0;
 }
 
@@ -143,16 +163,112 @@ int8_t ADP8866::init() {
 void ADP8866::operationCompleteCallback(I2CQueuedOperation* completed) {
   I2CDeviceWithRegisters::operationCompleteCallback(completed);
   
-  int i = 0;
-  DeviceRegister *temp_reg = reg_defs.get(i++);
-  while (temp_reg != NULL) {
-    switch (temp_reg->addr) {
+  DeviceRegister *temp_reg = getRegisterByBaseAddress(completed->sub_addr);
+  switch (completed->sub_addr) {
+      case ADP8866_MANU_DEV_ID:
+        if (0x53 == *(temp_reg->val)) {
+          temp_reg->unread = false;
+          // Must be 0b01010011. If so, we init...
+          init();
+        }
+        break;
+      case ADP8866_MDCR:
+        break;
+      case ADP8866_INT_STAT:
+        break;
+      case ADP8866_INT_EN:
+        break;
+      case ADP8866_ISCOFF_SEL_1:
+        break;
+      case ADP8866_ISCOFF_SEL_2:
+        break;
+      case ADP8866_GAIN_SEL:
+        break;
+      case ADP8866_LVL_SEL_1:
+        break;
+      case ADP8866_LVL_SEL_2:
+        break;
+      case ADP8866_PWR_SEL_1:
+        break;
+      case ADP8866_PWR_SEL_2:
+        break;
+      case ADP8866_CFGR:
+        break;
+      case ADP8866_BLSEL:
+        break;
+      case ADP8866_BLFR:
+        break;
+      case ADP8866_BLMX:
+        break;
+      case ADP8866_ISCC1:
+        break;
+      case ADP8866_ISCC2:
+        break;
+      case ADP8866_ISCT1:
+        break;
+      case ADP8866_ISCT2:
+        break;
+      case ADP8866_OFFTIMER6:
+        break;
+      case ADP8866_OFFTIMER7:
+        break;
+      case ADP8866_OFFTIMER8:
+        break;
+      case ADP8866_OFFTIMER9:
+        break;
+      case ADP8866_ISCF:
+        break;
+      case ADP8866_ISC1:
+        break;
+      case ADP8866_ISC2:
+        break;
+      case ADP8866_ISC3:
+        break;
+      case ADP8866_ISC4:
+        break;
+      case ADP8866_ISC5:
+        break;
+      case ADP8866_ISC6:
+        break;
+      case ADP8866_ISC7:
+        break;
+      case ADP8866_ISC8:
+        break;
+      case ADP8866_ISC9:
+        break;
+      case ADP8866_HB_SEL:
+        break;
+      case ADP8866_ISC6_HB:
+        break;
+      case ADP8866_ISC7_HB:
+        break;
+      case ADP8866_ISC8_HB:
+        break;
+      case ADP8866_ISC9_HB:
+        break;
+      case ADP8866_OFFTIMER6_HB:
+        break;
+      case ADP8866_OFFTIMER7_HB:
+        break;
+      case ADP8866_OFFTIMER8_HB:
+        break;
+      case ADP8866_OFFTIMER9_HB:
+        break;
+      case ADP8866_ISCT_HB:
+        break;
+      case ADP8866_DELAY6:
+        break;
+      case ADP8866_DELAY7:
+        break;
+      case ADP8866_DELAY8:
+        break;
+      case ADP8866_DELAY9:
+        break;
       default:
         temp_reg->unread = false;
         break;
-    }
-    temp_reg = reg_defs.get(i++);
   }
+  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
 }
 
 
@@ -173,26 +289,7 @@ void ADP8866::printDebug(StringBuilder* temp) {
   EventReceiver::printDebug(temp);
   I2CDeviceWithRegisters::printDebug(temp);
   temp->concatf("\tinit_complete:      %s\n", init_complete ? "yes" :"no");
-  
-  temp->concatf("\n\tpid_intensity: \t0x%08x\n", pid_intensity);
-  temp->concatf("\tpid_channel_0:   \t0x%08x\n", pid_channel_0);
-  temp->concatf("\tpid_channel_1:   \t0x%08x\n", pid_channel_1);
-  temp->concatf("\tpid_channel_2:   \t0x%08x\n", pid_channel_2);
-  temp->concatf("\tpid_channel_3:   \t0x%08x\n", pid_channel_3);
-  temp->concatf("\tpid_channel_4:   \t0x%08x\n", pid_channel_4);
-  temp->concatf("\tpid_channel_5:   \t0x%08x\n\n", pid_channel_5);
-
   temp->concatf("\tpower_mode:        %d\n", power_mode);
-  temp->concatf("\tGlobal dimming:    %f%\n", 100*(regValue(ADP8866_GLOBAL_PWM_DIM)/255));
-
-  uint8_t enable_mask = regValue(ADP8866_CHANNEL_ENABLE);
-  temp->concat("\n\t           mA    Duty  Enabled\n");
-  temp->concatf("\tChan_0:   %d \t 0x%02x \t %s\n", regValue(ADP8866_BANK_A_CURRENT), regValue(ADP8866_BANK_A_PWM_DUTY), ((enable_mask & ADP8866_CHAN_MASK_0) ? "yes" : "no"));
-  temp->concatf("\tChan_1:   %d \t 0x%02x \t %s\n", regValue(ADP8866_BANK_A_CURRENT), regValue(ADP8866_BANK_A_PWM_DUTY), ((enable_mask & ADP8866_CHAN_MASK_1) ? "yes" : "no"));
-  temp->concatf("\tChan_2:   %d \t 0x%02x \t %s\n", regValue(ADP8866_BANK_B_CURRENT), regValue(ADP8866_BANK_B_PWM_DUTY), ((enable_mask & ADP8866_CHAN_MASK_2) ? "yes" : "no"));
-  temp->concatf("\tChan_3:   %d \t 0x%02x \t %s\n", regValue(ADP8866_BANK_B_CURRENT), regValue(ADP8866_BANK_B_PWM_DUTY), ((enable_mask & ADP8866_CHAN_MASK_3) ? "yes" : "no"));
-  temp->concatf("\tChan_4:   %d \t 0x%02x \t %s\n", regValue(ADP8866_BANK_C_CURRENT), regValue(ADP8866_BANK_C_PWM_DUTY), ((enable_mask & ADP8866_CHAN_MASK_4) ? "yes" : "no"));
-  temp->concatf("\tChan_5:   %d \t 0x%02x \t %s\n", regValue(ADP8866_BANK_C_CURRENT), regValue(ADP8866_BANK_C_PWM_DUTY), ((enable_mask & ADP8866_CHAN_MASK_5) ? "yes" : "no"));
 }
 
 
@@ -220,27 +317,9 @@ void ADP8866::printDebug(StringBuilder* temp) {
 */
 int8_t ADP8866::bootComplete() {
   EventReceiver::bootComplete();
-  
-  pid_channel_0 = scheduler->createSchedule(100,  0, false, lds8160_chan_0);
-  pid_channel_1 = scheduler->createSchedule(100,  0, false, lds8160_chan_1);
-  pid_channel_2 = scheduler->createSchedule(100,  0, false, lds8160_chan_2);
-  pid_channel_3 = scheduler->createSchedule(100,  0, false, lds8160_chan_3);
-  pid_channel_4 = scheduler->createSchedule(100,  0, false, lds8160_chan_4);
-  pid_channel_5 = scheduler->createSchedule(100,  0, false, lds8160_chan_5);
-  pid_intensity = scheduler->createSchedule(1500, 0, false, lds8160_intensity);
-  scheduler->disableSchedule(pid_channel_0);
-  scheduler->disableSchedule(pid_channel_1);
-  scheduler->disableSchedule(pid_channel_2);
-  scheduler->disableSchedule(pid_channel_3);
-  scheduler->disableSchedule(pid_channel_4);
-  scheduler->disableSchedule(pid_channel_5);
-  scheduler->disableSchedule(pid_intensity);
-  
-  //enable_channel(0, false);
-  //enable_channel(1, false);
-  //enable_channel(2, false);
-  //enable_channel(3, false);
-  //enable_channel(4, false);
+  digitalWrite(reset_pin, 1);   // Release the reset pin.
+
+  readRegister((uint8_t) ADP8866_MANU_DEV_ID);
   //writeDirtyRegisters();  // If i2c is broken, this will hang the boot process...
   return 1;
 }
@@ -280,184 +359,7 @@ int8_t ADP8866::notify(ManuvrEvent *active_event) {
   int8_t return_value = 0;
   
   switch (active_event->event_code) {
-
     case MANUVR_MSG_SYS_POWER_MODE:
-      if (active_event->args.size() == 1) {
-        uint8_t nu_power_mode;
-        if (DIG_MSG_ERROR_NO_ERROR == active_event->getArgAs(&nu_power_mode)) {
-          if (power_mode != nu_power_mode) {
-            set_power_mode(nu_power_mode);
-            return_value++;
-          }
-        }
-      }
-      break;
-      
-    case DIGITABULUM_MSG_LED_MODE:
-      if (active_event->args.size() >= 1) {
-        if ((EventReceiver*) this != active_event->callback) {   // Only do this if we are not the callback.
-          uint8_t  nu_mode;
-          if (DIG_MSG_ERROR_NO_ERROR == active_event->getArgAs(&nu_mode)) {
-            set_led_mode(nu_mode);
-            return_value++;
-          }
-        }
-      }
-      else {
-        active_event->addArg((uint8_t) class_mode);
-        /* If the callback is NULL, make us the callback, as our class is the responsible party for
-           this kind of message.  Follow your shadow. */
-        if (NULL == active_event->callback) active_event->callback = (EventReceiver*) this;
-        return_value++;
-      }
-      break;
-
-    case DIGITABULUM_MSG_LED_PULSE:
-      if (active_event->args.size() >= 3) {
-        if ((EventReceiver*) this != active_event->callback) {   // Only do this if we are not the callback.
-          uint8_t old_val = regValue(ADP8866_CHANNEL_ENABLE);
-          uint8_t new_val = old_val;
-          uint8_t chan;
-          int16_t  pulse_count;
-          uint32_t pulse_period;
-          active_event->getArgAs(0, &pulse_period);
-          active_event->getArgAs(1, &pulse_count);
-          local_log.concatf("ADP8866: pulse_period/count\t %d / %d.  LEDs:  ", pulse_period, pulse_count);
-
-          for (uint8_t i = 2; i < active_event->args.size(); i++) {
-            active_event->getArgAs(i, &chan);
-            local_log.concatf("%d ", chan);
-            switch (chan) {
-              case 0:
-                scheduler->alterScheduleRecurrence(pid_channel_0, pulse_count);
-                scheduler->alterSchedulePeriod(pid_channel_0, pulse_period);
-                scheduler->delaySchedule(pid_channel_0, pulse_period);
-                new_val = (ADP8866_CHAN_MASK_0 | new_val);
-                break;
-              case 1:
-                scheduler->alterScheduleRecurrence(pid_channel_1, pulse_count);
-                scheduler->alterSchedulePeriod(pid_channel_1, pulse_period);
-                scheduler->delaySchedule(pid_channel_1, pulse_period);
-                new_val = (ADP8866_CHAN_MASK_1 | new_val);
-                break;
-              case 2:
-                scheduler->alterScheduleRecurrence(pid_channel_2, pulse_count);
-                scheduler->alterSchedulePeriod(pid_channel_2, pulse_period);
-                scheduler->delaySchedule(pid_channel_2, pulse_period);
-                new_val = (ADP8866_CHAN_MASK_2 | new_val);
-                break;
-              case 3:
-                scheduler->alterScheduleRecurrence(pid_channel_3, pulse_count);
-                scheduler->alterSchedulePeriod(pid_channel_3, pulse_period);
-                scheduler->delaySchedule(pid_channel_3, pulse_period);
-                new_val = (ADP8866_CHAN_MASK_3 | new_val);
-                break;
-              case 4:
-                scheduler->alterScheduleRecurrence(pid_channel_4, pulse_count);
-                scheduler->alterSchedulePeriod(pid_channel_4, pulse_period);
-                scheduler->delaySchedule(pid_channel_4, pulse_period);
-                new_val = (ADP8866_CHAN_MASK_4 | new_val);
-                break;
-              case 5:
-                scheduler->alterScheduleRecurrence(pid_channel_5, pulse_count);
-                scheduler->alterSchedulePeriod(pid_channel_5, pulse_period);
-                scheduler->delaySchedule(pid_channel_5, pulse_period);
-                new_val = (ADP8866_CHAN_MASK_5 | new_val);
-                break;
-            }
-          }
-          if (new_val != old_val) {
-            writeIndirect(ADP8866_CHANNEL_ENABLE, new_val);
-          }
-          /* If the callback is NULL, make us the callback, as our class is the responsible party for
-             this kind of message.  Follow your shadow. */
-          if (NULL == active_event->callback) active_event->callback = (EventReceiver*) this;
-          return_value++;
-        }
-      }
-      break;
-    case DIGITABULUM_MSG_LED_DIGIT_LEVEL:   // Pertains to the global dimmer.
-      switch (active_event->args.size()) {
-        case 0:        // No args? Asking for dimmer value.
-          active_event->addArg((uint8_t) regValue(ADP8866_GLOBAL_PWM_DIM));
-          /* If the callback is NULL, make us the callback, as our class is the responsible party for
-             this kind of message.  Follow your shadow. */
-          if (NULL == active_event->callback) active_event->callback = (EventReceiver*) this;
-          return_value++;
-          break;
-        case 3:        // Three args? Setting the global dimmer value, oscillation period, and oscillation count.
-          if (NULL != scheduler) {
-            uint8_t  pulse_count;
-            active_event->getArgAs(2, &pulse_count);
-            scheduler->alterScheduleRecurrence(pid_intensity, pulse_count);
-          }
-          // NO BREAK
-        case 2:        // Two args? Setting the global dimmer value and an oscillation period.
-          if (NULL != scheduler) {
-            uint32_t pulse_period;
-            active_event->getArgAs(1, &pulse_period);
-            scheduler->alterSchedulePeriod(pid_intensity, pulse_period);
-            scheduler->enableSchedule(pid_intensity);
-          }
-          // NO BREAK
-        case 1:        // One arg? Setting the global dimmer value.
-          if ((EventReceiver*) this != active_event->callback) {   // Only do this if we are not the callback.
-            uint8_t brightness;
-            if (DIG_MSG_ERROR_NO_ERROR == active_event->getArgAs(&brightness)) {
-              set_brightness(brightness);
-              /* If the callback is NULL, make us the callback, as our class is the responsible party for
-                 this kind of message.  Follow your shadow. */
-              if (NULL == active_event->callback) active_event->callback = (EventReceiver*) this;
-              return_value++;
-            }
-          }
-          break;
-        default:
-          local_log.concatf("ADP8866: Too many arguments.\n");
-          break;
-      }
-      break;
-    case DIGITABULUM_MSG_LED_DIGIT_ON:
-    case DIGITABULUM_MSG_LED_DIGIT_OFF:
-      switch (active_event->args.size()) {
-        case 0:        // No args? Return all values.
-          // TODO: need to check for initialization first. Will be a concealed bug from the counterparty perspective.
-          active_event->addArg((uint8_t) channel_enabled(0));
-          active_event->addArg((uint8_t) channel_enabled(1));
-          active_event->addArg((uint8_t) channel_enabled(2));
-          active_event->addArg((uint8_t) channel_enabled(3));
-          active_event->addArg((uint8_t) channel_enabled(4));
-          active_event->addArg((uint8_t) channel_enabled(5));
-          /* If the callback is NULL, make us the callback, as our class is the responsible party for
-             this kind of message.  Follow your shadow. */
-          if (NULL == active_event->callback) active_event->callback = (EventReceiver*) this;
-          return_value++;
-          break;                        
-        case 1:
-        case 2:
-        case 3:
-        case 4:
-        case 5:
-        case 6:
-          if ((EventReceiver*) this != active_event->callback) {   // Only do this if we are not the callback.
-            uint8_t old_val = regValue(ADP8866_CHANNEL_ENABLE);
-            uint8_t new_val = old_val;
-            uint8_t chan;
-            bool en = (active_event->event_code == DIGITABULUM_MSG_LED_DIGIT_ON);
-            for (uint8_t i = 0; i < active_event->args.size(); i++) {
-              active_event->getArgAs(i, &chan);
-              new_val = en ? ((1 << chan) | new_val) : (((uint8_t) ~(1 << chan)) & new_val);
-            }
-            if (new_val != old_val) {
-              writeIndirect(ADP8866_CHANNEL_ENABLE, new_val);
-            }
-            return_value++;
-          }
-          break;
-        default:
-          local_log.concatf("ADP8866: Too many arguments.\n");
-          break;
-      }
       break;
       
     default:
@@ -481,88 +383,28 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
   }
 
   switch (*(str)) {
-    case 'k':    // LED Driver testing: Global dimmer
-      local_log.concatf("parse_mule split (%s) into %d positions.\n", str, input->split(","));
-      input->drop_position(0);
-
-      event = EventManager::returnEvent(DIGITABULUM_MSG_LED_DIGIT_LEVEL);
-      event->specific_target = this;
-      
-      switch (input->count()) {
-        case 1:
-          event->addArg((uint8_t)  input->position_as_int(0));
-          break;
-        case 2:
-          event->addArg((uint8_t)  input->position_as_int(0));
-          event->addArg((uint32_t) input->position_as_int(1));
-          break;
-        case 3:
-          event->addArg((uint8_t)  input->position_as_int(0));
-          event->addArg((uint32_t) input->position_as_int(1));
-          event->addArg((int16_t)  input->position_as_int(2));
-          break;
-        default:
-          break;
-      }
-      EventManager::staticRaiseEvent(event);
+    case 'r':
+      reset();
       break;
-
-    case 'j':    // LED Driver testing: Direct LED manipulation.
-      local_log.concatf("parse_mule split (%s) into %d positions.\n", str, input->split(","));
-      input->drop_position(0);
-      
-      event = EventManager::returnEvent(temp_byte ? DIGITABULUM_MSG_LED_DIGIT_ON : DIGITABULUM_MSG_LED_DIGIT_OFF);
-      event->specific_target = this;
-
-      switch (input->count()) {
-        case 6:
-        case 5:
-        case 4:
-        case 3:
-        case 2:
-        case 1:
-          for (uint8_t i = 0; i < input->count(); i++) {
-            event->addArg((uint8_t) input->position_as_int(i));
-          }
-          break;
-        default:
-          break;
-      }
-      EventManager::staticRaiseEvent(event);
+    case 'g':
+      syncRegisters();
       break;
-
-    case ';':    // LED Driver testing: Modal behavior
-      event = EventManager::returnEvent(DIGITABULUM_MSG_LED_MODE);
-      event->specific_target = this;
-      event->addArg((uint8_t) temp_byte);
-      EventManager::staticRaiseEvent(event);
+    case 'l':
+    case 'L':
+      enable_channel(temp_byte, (*(str) == 'L'));
       break;
-      
-      
-    case 'h':    // LED Driver testing: LED Pulse
-      local_log.concatf("parse_mule split (%s) into %d positions.\n", str, input->split(","));
-      input->drop_position(0);
-      
-      switch (input->count()) {
-        case 3:
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-        case 8:
-          event = EventManager::returnEvent(DIGITABULUM_MSG_LED_PULSE);
-          event->addArg((uint32_t) input->position_as_int(0));   // Pulse period
-          event->addArg((int16_t) input->position_as_int(1));    // Pulse count
-          for (uint8_t i = 1; i < input->count(); i++) {
-            event->addArg((uint8_t) input->position_as_int(i));
-          }
-          EventManager::staticRaiseEvent(event);
-          break;
-        default:
-          break;
-      }
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+      set_brightness(*(str) - 0x30, temp_byte);
       break;
-
     default:
       EventReceiver::procDirectDebugInstruction(input);
       break;
@@ -584,51 +426,10 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
 *     them as indirectly as possible. This is the type of class this function is meant for. 
 */
 void ADP8866::set_led_mode(uint8_t num) {
-  quell_all_timers();
-  switch (num) {
-    case 1:
-      scheduler->alterScheduleRecurrence(pid_channel_0, -1);
-      scheduler->alterScheduleRecurrence(pid_channel_1, -1);
-      scheduler->alterScheduleRecurrence(pid_channel_2, -1);
-      scheduler->alterScheduleRecurrence(pid_channel_3, -1);
-      scheduler->alterScheduleRecurrence(pid_channel_4, -1);
-      
-      scheduler->alterSchedulePeriod(pid_channel_0, 500);
-      scheduler->alterSchedulePeriod(pid_channel_1, 500);
-      scheduler->alterSchedulePeriod(pid_channel_2, 500);
-      scheduler->alterSchedulePeriod(pid_channel_3, 500);
-      scheduler->alterSchedulePeriod(pid_channel_4, 500);
-      
-      scheduler->delaySchedule(pid_channel_3, 500);
-      scheduler->delaySchedule(pid_channel_1, 600);
-      scheduler->delaySchedule(pid_channel_0, 700);
-      scheduler->delaySchedule(pid_channel_2, 800);
-      scheduler->delaySchedule(pid_channel_4, 900);
-      scheduler->disableSchedule(pid_channel_5);
-    
-      writeIndirect(ADP8866_CHANNEL_ENABLE, 0b00111001, true);
-    case 2:
-      set_brightness(0x00);  // Might be fragile hack.
-      stored_dimmer_val = 190;
-      scheduler->alterScheduleRecurrence(pid_intensity, -1);
-      scheduler->alterScheduleRecurrence(pid_intensity, 3500);
-      scheduler->enableSchedule(pid_intensity);
-
-    case 0:
-      class_mode = num;
-      break;
-  }
 }
 
 
 void ADP8866::quell_all_timers() {
-  scheduler->disableSchedule(pid_channel_0);
-  scheduler->disableSchedule(pid_channel_1);
-  scheduler->disableSchedule(pid_channel_2);
-  scheduler->disableSchedule(pid_channel_3);
-  scheduler->disableSchedule(pid_channel_4);
-  scheduler->disableSchedule(pid_channel_5);
-  scheduler->disableSchedule(pid_intensity);
 }
 
 
@@ -637,18 +438,29 @@ void ADP8866::quell_all_timers() {
 * Stores the previous value.
 */
 void ADP8866::set_brightness(uint8_t nu_brightness) {
-  stored_dimmer_val = regValue(ADP8866_GLOBAL_PWM_DIM);
-  writeIndirect(ADP8866_GLOBAL_PWM_DIM, nu_brightness);
 }
+
+void ADP8866::set_brightness(uint8_t chan, uint8_t nu_brightness) {
+  if (chan > 9) {
+    // Not that many channels....
+    return;
+  }
+  // This is what happens when you javascript for too long...
+  uint8_t reg_addr      = (chan > 8) ? ADP8866_BLMX : ADP8866_ISC1+chan;
+  uint8_t present_state = (uint8_t)regValue(reg_addr);
+  nu_brightness = nu_brightness & 0x7F;  // Only these bits matter.
+  if (present_state != nu_brightness) {
+    writeIndirect(reg_addr, nu_brightness);
+  }
+}
+
 
 /*
 * Set the global brightness for LEDs managed by this chip.
 * Exchanges the current value and the previously-stored value.
 */
 void ADP8866::toggle_brightness(void) {
-  uint8_t old_val = regValue(ADP8866_GLOBAL_PWM_DIM);
-  writeIndirect(ADP8866_GLOBAL_PWM_DIM, stored_dimmer_val);
-  stored_dimmer_val = old_val;
+  //writeIndirect(ADP8866_GLOBAL_PWM_DIM, stored_dimmer_val);
 }
 
 /*
@@ -656,10 +468,20 @@ void ADP8866::toggle_brightness(void) {
 *   chip, will do that as well.
 */
 void ADP8866::enable_channel(uint8_t chan, bool en) {
-  uint8_t old_val = regValue(ADP8866_CHANNEL_ENABLE);
-  uint8_t new_val = en ? ((1 << chan) | old_val) : (((uint8_t) ~(1 << chan)) & old_val);
-  if (new_val != old_val) {
-    writeIndirect(ADP8866_CHANNEL_ENABLE, new_val);
+  if (chan > 8) {  // TODO: Should be 9, and treat the backlight channel as channel 9.
+    // Not that many channels....
+    return;
+  }
+  // This is what happens when you javascript for too long...
+  uint8_t reg_addr      = (chan > 7) ? ADP8866_ISCC1 : ADP8866_ISCC2;
+  uint8_t present_state = (uint8_t)regValue(reg_addr);
+  uint8_t bitmask       = (chan > 7) ? 4 : (1 << chan);
+  uint8_t desired_state = (en ? bitmask : 0);
+  
+  if ((present_state & bitmask) ^ desired_state) {
+    // If the present state and the desired state differ, Set the register equal to the
+    //   present state masked with the desired state.
+    writeIndirect(reg_addr, desired_state ? (present_state | desired_state) : (present_state & desired_state));
   }
 }
 
@@ -667,14 +489,16 @@ void ADP8866::enable_channel(uint8_t chan, bool en) {
 * Returns the boolean answer to the question: Is the given channel enabled?
 */
 bool ADP8866::channel_enabled(uint8_t chan) {
-  return (regValue(ADP8866_CHANNEL_ENABLE) & (1 << chan));
+  //return (regValue(ADP8866_CHANNEL_ENABLE) & (1 << chan));
+  return false;
 }
 
 /*
 * Perform a software reset.
 */
 void ADP8866::reset() {
-  writeIndirect(ADP8866_SOFTWARE_RESET, 0x80);
+  //digitalWrite(reset_pin, 0);
+  digitalWrite(reset_pin, !digitalRead(reset_pin));
 }
 
 /*
@@ -685,20 +509,20 @@ void ADP8866::set_power_mode(uint8_t nu_power_mode) {
   power_mode = nu_power_mode;
   switch (power_mode) {
     case 0:
-      writeIndirect(ADP8866_BANK_A_CURRENT, 0x8E, true);
-      writeIndirect(ADP8866_BANK_B_CURRENT, 0x8E, true);
-      writeIndirect(ADP8866_BANK_C_CURRENT, 0x8E, true);
-      writeIndirect(ADP8866_SOFTWARE_RESET, 0x00);
+      //writeIndirect(ADP8866_BANK_A_CURRENT, 0x8E, true);
+      //writeIndirect(ADP8866_BANK_B_CURRENT, 0x8E, true);
+      //writeIndirect(ADP8866_BANK_C_CURRENT, 0x8E, true);
+      //writeIndirect(ADP8866_SOFTWARE_RESET, 0x00);
       break;
     case 1:
-      writeIndirect(ADP8866_BANK_A_CURRENT, 0x50, true);
-      writeIndirect(ADP8866_BANK_B_CURRENT, 0x50, true);
-      writeIndirect(ADP8866_BANK_C_CURRENT, 0x50, true);
-      writeIndirect(ADP8866_SOFTWARE_RESET, 0x00);
+      //writeIndirect(ADP8866_BANK_A_CURRENT, 0x50, true);
+      //writeIndirect(ADP8866_BANK_B_CURRENT, 0x50, true);
+      //writeIndirect(ADP8866_BANK_C_CURRENT, 0x50, true);
+      //writeIndirect(ADP8866_SOFTWARE_RESET, 0x00);
       break;
     case 2:   // Enter standby.
       quell_all_timers();
-      writeIndirect(ADP8866_SOFTWARE_RESET, 0x40);
+      //writeIndirect(ADP8866_SOFTWARE_RESET, 0x40);
       break;
     default:
       break;

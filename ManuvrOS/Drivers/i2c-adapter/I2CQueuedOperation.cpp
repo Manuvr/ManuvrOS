@@ -185,76 +185,8 @@ int8_t I2CQueuedOperation::begin(void) {
 int8_t I2CQueuedOperation::init_dma() {
   int return_value = 0;
 
-#if defined(__MK20DX256__)
-  Wire1.beginTransmission(dev_addr);
-  if (need_to_send_subaddr()) Wire1.write((uint8_t) (sub_addr & 0x00FF));
-
-  if (opcode == I2C_OPERATION_READ) {
-    Wire1.endTransmission(I2C_NOSTOP);
-    Wire1.requestFrom(dev_addr, len, I2C_STOP, 900);
-    int i = 0;
-    while(Wire1.available()) {
-      *(buf + i++) = (uint8_t) Wire1.readByte();
-    }
-  }
-  else if (opcode == I2C_OPERATION_WRITE) {
-    for(int i = 0; i < len; i++) Wire1.write(*(buf+i));
-    Wire1.endTransmission(I2C_STOP, 900);   // 900us timeout
-  }
-  
-  switch (Wire1.status()) {
-    case I2C_WAITING:
-      markComplete();
-      break;
-    case I2C_ADDR_NAK:
-      abort(I2C_ERR_SLAVE_NOT_FOUND);
-      break;
-    case I2C_DATA_NAK:
-      abort();
-      break;
-    case I2C_ARB_LOST:
-      abort(I2C_ERR_CODE_BUS_BUSY);
-      break;
-    case I2C_TIMEOUT:
-      abort(I2C_ERR_CODE_TIMEOUT);
-      break;
-  }
-
-#elif defined(__MK20DX128__)
-  Wire.beginTransmission(dev_addr);
-  if (need_to_send_subaddr()) Wire.write((uint8_t) (sub_addr & 0x00FF));
-
-  if (opcode == I2C_OPERATION_READ) {
-    Wire.endTransmission(I2C_NOSTOP);
-    Wire.requestFrom(dev_addr, len, I2C_STOP, 900);
-    int i = 0;
-    while(Wire.available()) {
-      *(buf + i++) = (uint8_t) Wire.readByte();
-    }
-  }
-  else if (opcode == I2C_OPERATION_WRITE) {
-    for(int i = 0; i < len; i++) Wire.write(*(buf+i));
-    Wire.endTransmission(I2C_STOP, 900);   // 900us timeout
-  }
-  
-  switch (Wire.status()) {
-    case I2C_WAITING:
-      markComplete();
-      break;
-    case I2C_ADDR_NAK:
-      abort(I2C_ERR_SLAVE_NOT_FOUND);
-      break;
-    case I2C_DATA_NAK:
-      abort();
-      break;
-    case I2C_ARB_LOST:
-      abort(I2C_ERR_CODE_BUS_BUSY);
-      break;
-    case I2C_TIMEOUT:
-      abort(I2C_ERR_CODE_TIMEOUT);
-      break;
-  }
-
+#if defined(__MK20DX256__) | defined(__MK20DX128__)
+  device->dispatchOperation(this);
 #elif defined(ARDUINO)
 
 #elif defined(STM32F4XX)
@@ -295,8 +227,6 @@ int8_t I2CQueuedOperation::init_dma() {
   else {
     return -1;
   }
-  
-
   
 
 #else   // Linux land...
@@ -443,6 +373,13 @@ int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
     output.concatf("---> %s\n", getStateString(xfer_state));
   }
 
+#elif defined(__MK20DX256__) | defined(__MK20DX128__)
+  switch (status_reg) {
+    case 1:
+      subaddr_sent = true;
+      break;
+  }
+  
 #endif
   if (output.length() > 0) StaticHub::log(&output);
   return 0;

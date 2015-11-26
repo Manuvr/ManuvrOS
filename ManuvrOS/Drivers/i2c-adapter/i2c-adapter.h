@@ -74,14 +74,14 @@ but adding support for other platforms ought to be easy.
   #define I2C_ERR_CODE_BUS_BUSY    -10
 
   #define I2C_ERR_SLAVE_BUS_FAULT    -3   // The bus failed us.
-  #define I2C_ERR_SLAVE_NOT_FOUND   -10   // When a slave device we expected to find is not found.
-  #define I2C_ERR_SLAVE_EXISTS      -11   // When we try to add a slave device that has already been added.
-  #define I2C_ERR_SLAVE_COLLISION   -12   // When we try to add a slave device that has an address already used by another slave.
-  #define I2C_ERR_SLAVE_INSERTION   -13   // Generic error for slave insertion. Usually implies out of memory.
-  #define I2C_ERR_SLAVE_ASSIGN_CLOB -14   // Assigning a bus adapter to this slave would clobber an existing assignment.
-  #define I2C_ERR_SLAVE_INVALID     -15   // Something makes this slave not appropriate for the requested operation.
-  #define I2C_ERR_SLAVE_UNDEFD_REG  -16   // The requested register was not defined.
-  #define I2C_ERR_SLAVE_REG_IS_RO   -17   // We tried to write to a register defined as read-only.
+  #define I2C_ERR_SLAVE_NOT_FOUND   -11   // When a slave device we expected to find is not found.
+  #define I2C_ERR_SLAVE_EXISTS      -12   // When we try to add a slave device that has already been added.
+  #define I2C_ERR_SLAVE_COLLISION   -13   // When we try to add a slave device that has an address already used by another slave.
+  #define I2C_ERR_SLAVE_INSERTION   -14   // Generic error for slave insertion. Usually implies out of memory.
+  #define I2C_ERR_SLAVE_ASSIGN_CLOB -15   // Assigning a bus adapter to this slave would clobber an existing assignment.
+  #define I2C_ERR_SLAVE_INVALID     -16   // Something makes this slave not appropriate for the requested operation.
+  #define I2C_ERR_SLAVE_UNDEFD_REG  -17   // The requested register was not defined.
+  #define I2C_ERR_SLAVE_REG_IS_RO   -18   // We tried to write to a register defined as read-only.
   
   
   
@@ -140,6 +140,12 @@ but adding support for other platforms ought to be easy.
       */
       inline bool completed(void) {  return (xfer_state == I2C_XFER_STATE_COMPLETE);  }
 
+      /**
+      * Decide if we need to send a subaddress.
+      *
+      * @return true if we do. False otherwise.
+      */
+      inline bool need_to_send_subaddr(void) {	return ((sub_addr != -1) && !subaddr_sent);  }
 
       /*
       * Called from the ISR to advance this operation on the bus.
@@ -165,13 +171,6 @@ but adding support for other platforms ought to be easy.
       static const char* getOpcodeString(uint8_t code);
       static const char* getStateString(uint8_t code);
 
-
-      /**
-      * Decide if we need to send a subaddress.
-      *
-      * @return true if we do. False otherwise.
-      */
-      inline bool need_to_send_subaddr(void) {	return ((sub_addr != -1) && !subaddr_sent);  }
   };
   
   
@@ -216,6 +215,7 @@ but adding support for other platforms ought to be easy.
       //   that may or may not be present on a given platform.
       int8_t generateStart();    // Generate a start condition on the bus.
       int8_t generateStop();     // Generate a stahp condition on the bus.
+      int8_t dispatchOperation(I2CQueuedOperation*);   // Start the given operation on the bus.
       bool switch_device(uint8_t nu_addr);
 
 
@@ -226,6 +226,7 @@ but adding support for other platforms ought to be easy.
 
     private:
       bool ping_run;
+      bool full_ping_running;
       int8_t ping_map[128];
       int8_t last_used_bus_addr;
 
