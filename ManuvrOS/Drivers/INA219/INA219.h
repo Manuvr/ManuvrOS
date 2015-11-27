@@ -199,8 +199,6 @@ class INA219 : public I2CDeviceWithRegisters, public SensorWrapper {
     void operationCompleteCallback(I2CQueuedOperation*);
     void printDebug(StringBuilder*);
 
-    static constexpr const V_Cap_Point* batt_capacity_curves[6] = {chem_index_0, chem_index_1, chem_index_2, chem_index_3, chem_index_4, chem_index_5};  // Ten points on the curve ought to be enough for reliable interpolation.
-
     
 
   private:

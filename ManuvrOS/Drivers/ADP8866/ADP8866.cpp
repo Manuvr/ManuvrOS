@@ -26,6 +26,25 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "StaticHub/StaticHub.h"
 #include "ADP8866.h"
 
+/*
+* TODO: This is a table of constants relating channel current to a register value.
+*/
+
+
+/**
+* This is here for compatibility with C++ standards that do not allow for definition and declaration
+*   in the header file. Takes no parameters, and returns nothing.
+*/
+void ADP8866::__class_initializer() {
+  EventReceiver::__class_initializer();
+  reset_pin         = 0;
+  irq_pin           = 0;
+  stored_dimmer_val = 0;
+  class_mode        = 0;
+  power_mode        = 0;
+  init_complete     = false;
+}
+
 
 /*
 * Constructor. Takes i2c address as argument.
@@ -42,53 +61,53 @@ ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : I2CDevice
   digitalWrite(_reset_pin, 0);
   
   init_complete = false;
-  defineRegister(ADP8866_MANU_DEV_ID ,     (uint8_t) 0x00, false,  true, false);
-  defineRegister(ADP8866_MDCR        ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_INT_STAT    ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_INT_EN      ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISCOFF_SEL_1,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISCOFF_SEL_2,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_GAIN_SEL    ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_LVL_SEL_1   ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_LVL_SEL_2   ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_PWR_SEL_1   ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_PWR_SEL_2   ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_CFGR        ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_BLSEL       ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_BLFR        ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_BLMX        ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISCC1       ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISCC2       ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISCT1       ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISCT2       ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_OFFTIMER6   ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_OFFTIMER7   ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_OFFTIMER8   ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_OFFTIMER9   ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISCF        ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISC1        ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISC2        ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISC3        ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISC4        ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISC5        ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISC6        ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISC7        ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISC8        ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISC9        ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_HB_SEL      ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISC6_HB     ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISC7_HB     ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISC8_HB     ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISC9_HB     ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_OFFTIMER6_HB,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_OFFTIMER7_HB,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_OFFTIMER8_HB,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_OFFTIMER9_HB,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_ISCT_HB     ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_DELAY6      ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_DELAY7      ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_DELAY8      ,     (uint8_t) 0x00, false,  false, true);
-  defineRegister(ADP8866_DELAY9      ,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_MANU_DEV_ID,  (uint8_t) 0x00, false,  true, false);
+  defineRegister(ADP8866_MDCR,         (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_INT_STAT,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_INT_EN,       (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISCOFF_SEL_1, (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISCOFF_SEL_2, (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_GAIN_SEL,     (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_LVL_SEL_1,    (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_LVL_SEL_2,    (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_PWR_SEL_1,    (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_PWR_SEL_2,    (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_CFGR,         (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_BLSEL,        (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_BLFR,         (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_BLMX,         (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISCC1,        (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISCC2,        (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISCT1,        (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISCT2,        (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_OFFTIMER6,    (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_OFFTIMER7,    (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_OFFTIMER8,    (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_OFFTIMER9,    (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISCF,         (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC1,         (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC2,         (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC3,         (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC4,         (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC5,         (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC6,         (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC7,         (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC8,         (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC9,         (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_HB_SEL,       (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC6_HB,      (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC7_HB,      (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC8_HB,      (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISC9_HB,      (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_OFFTIMER6_HB, (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_OFFTIMER7_HB, (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_OFFTIMER8_HB, (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_OFFTIMER9_HB, (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_ISCT_HB,      (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_DELAY6,       (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_DELAY7,       (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_DELAY8,       (uint8_t) 0x00, false,  false, true);
+  defineRegister(ADP8866_DELAY9,       (uint8_t) 0x00, false,  false, true);
 }
 
 
@@ -100,58 +119,51 @@ ADP8866::~ADP8866(void) {
 
 
 int8_t ADP8866::init() {
-//  if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
-    // Turn on charge pump. Limit it to 1.5x with autoscale.
-    writeIndirect(ADP8866_MDCR,  0b01110101, true);
+  // Turn on charge pump. Limit it to 1.5x with autoscale.
+  writeIndirect(ADP8866_MDCR,  0b01110101, true);
 
-    // Maximum current of ~16mA.
-    // All LED outputs are set with the level bits.
-    writeIndirect(ADP8866_LVL_SEL_1,  0b01000100, true);
-    writeIndirect(ADP8866_LVL_SEL_2,  0xFF, true); 
-                              
-    writeIndirect(ADP8866_GAIN_SEL, 0b00000100, true);
-    
-    // All LEDs are being driven by the charge pump.
-    writeIndirect(ADP8866_PWR_SEL_1,  0x00, true);
-    writeIndirect(ADP8866_PWR_SEL_2,  0x00, true);
-                                            
-    // All LED's independently sinkd. Backlight cubic transition.
-    writeIndirect(ADP8866_CFGR,  0b00010100, true);
-    writeIndirect(ADP8866_BLSEL, 0b11111111, true);
-    
-    // Backlight fade rates...
-    writeIndirect(ADP8866_BLFR, 0b01100110, true);
-    
-    // No backlight current.
-    writeIndirect(ADP8866_BLMX, 0b00000000, true);
-    
-    // Sink control. All on. Cubic transfer fxn.
-    writeIndirect(ADP8866_ISCC1, 0b00000111, true);
-    writeIndirect(ADP8866_ISCC2, 0b11111111, true);
-    
-    // SON/SOFF delays...
-    writeIndirect(ADP8866_ISCT1, 0b11110000, true);
-    writeIndirect(ADP8866_ISCT2, 0b00000000, true);
-    
-    
-    // TODO: When the driver inits, we shouldn't have any LEDs on until the user sets
-    //   some mandatory constraint so ve doesn't fry vis LEDs.
-    writeIndirect(ADP8866_ISC1, 0x10, true);
-    writeIndirect(ADP8866_ISC2, 0x10, true);
-    writeIndirect(ADP8866_ISC3, 0x10, true);
-    writeIndirect(ADP8866_ISC4, 0x10, true);
-    writeIndirect(ADP8866_ISC5, 0x10, true);
-    writeIndirect(ADP8866_ISC6, 0x10, true);
-    writeIndirect(ADP8866_ISC7, 0x10, true);
-    writeIndirect(ADP8866_ISC8, 0x10, true);
-    writeIndirect(ADP8866_ISC9, 0x10);
-    init_complete = true;
-//  }
-//  else {
-//    StaticHub::log("ADP8866::init():\tFailed to sync registers. Init fails.\n");
-//    init_complete = false;
-//    return -1;
-//  }
+  // Maximum current of ~16mA.
+  // All LED outputs are set with the level bits.
+  writeIndirect(ADP8866_LVL_SEL_1,  0b01000100, true);
+  writeIndirect(ADP8866_LVL_SEL_2,  0xFF, true); 
+                            
+  writeIndirect(ADP8866_GAIN_SEL, 0b00000100, true);
+  
+  // All LEDs are being driven by the charge pump.
+  writeIndirect(ADP8866_PWR_SEL_1,  0x00, true);
+  writeIndirect(ADP8866_PWR_SEL_2,  0x00, true);
+                                          
+  // All LED's independently sinkd. Backlight cubic transition.
+  writeIndirect(ADP8866_CFGR,  0b00010100, true);
+  writeIndirect(ADP8866_BLSEL, 0b11111111, true);
+  
+  // Backlight fade rates...
+  writeIndirect(ADP8866_BLFR, 0b01100110, true);
+  
+  // No backlight current.
+  writeIndirect(ADP8866_BLMX, 0b00000000, true);
+  
+  // Sink control. All on. Cubic transfer fxn.
+  writeIndirect(ADP8866_ISCC1, 0b00000111, true);
+  writeIndirect(ADP8866_ISCC2, 0b11111111, true);
+  
+  // SON/SOFF delays...
+  writeIndirect(ADP8866_ISCT1, 0b11110000, true);
+  writeIndirect(ADP8866_ISCT2, 0b00000000, true);
+  
+  
+  // TODO: When the driver inits, we shouldn't have any LEDs on until the user sets
+  //   some mandatory constraint so ve doesn't fry vis LEDs.
+  writeIndirect(ADP8866_ISC1, 0x10, true);
+  writeIndirect(ADP8866_ISC2, 0x10, true);
+  writeIndirect(ADP8866_ISC3, 0x10, true);
+  writeIndirect(ADP8866_ISC4, 0x10, true);
+  writeIndirect(ADP8866_ISC5, 0x10, true);
+  writeIndirect(ADP8866_ISC6, 0x10, true);
+  writeIndirect(ADP8866_ISC7, 0x10, true);
+  writeIndirect(ADP8866_ISC8, 0x10, true);
+  writeIndirect(ADP8866_ISC9, 0x10);
+  init_complete = true;
   return 0;
 }
 

@@ -43,6 +43,35 @@ const char* SensorWrapper::COMMON_UNITS_U_TESLA  = "uT";
 const char* SensorWrapper::COMMON_UNITS_WATTS    = "W";
 
 
+    // Sensors can automatically report their values when something in the sensor changes...
+const uint8_t SensorWrapper::SENSOR_REPORTING_OFF         = 0;
+const uint8_t SensorWrapper::SENSOR_REPORTING_NEW_VALUE   = 1;
+const uint8_t SensorWrapper::SENSOR_REPORTING_EVERY_READ  = 2;
+
+    // These are possible error codes...
+const int8_t SensorWrapper::SENSOR_ERROR_NO_ERROR         = 0;    // There was no error.
+const int8_t SensorWrapper::SENSOR_ERROR_ABSENT           = -1;   // We failed to talk to the sensor.
+const int8_t SensorWrapper::SENSOR_ERROR_OUT_OF_MEMORY    = -2;   // Couldn't allocate memory for some sensor-related task.
+const int8_t SensorWrapper::SENSOR_ERROR_WRONG_IDENTITY   = -3;   // Some sensors come with ID markers in them. If we get one wrong, this happens.
+const int8_t SensorWrapper::SENSOR_ERROR_NOT_LOCAL        = -4;   // If we try to read or change parameters of a sensor that isn't attached to us.
+const int8_t SensorWrapper::SENSOR_ERROR_INVALID_PARAM_ID = -5;   // If we try to read or change a sensor parameter that isn't supported.
+const int8_t SensorWrapper::SENSOR_ERROR_INVALID_PARAM    = -6;   // If we try to set a sensor parameter to something invalid for an extant register.
+const int8_t SensorWrapper::SENSOR_ERROR_NOT_CALIBRATED   = -7;   // If we try to read a sensor that is uncalibrated. Not all sensors require this.
+const int8_t SensorWrapper::SENSOR_ERROR_INVALID_DATUM    = -8;   // If we try to do an operation on a datum that doesn't exist for this sensor.
+const int8_t SensorWrapper::SENSOR_ERROR_UNHANDLED_TYPE   = -9;   // Issued when we ask for a string conversion that we don't support.
+const int8_t SensorWrapper::SENSOR_ERROR_NULL_POINTER     = -10;  // What happens when we try to do I/O on a null pointer.
+const int8_t SensorWrapper::SENSOR_ERROR_BUS_ERROR        = -11;  // If there was some generic bus error that we otherwise can't pinpoint.
+const int8_t SensorWrapper::SENSOR_ERROR_BUS_ABSENT       = -12;  // If the requested bus is not accessible.
+const int8_t SensorWrapper::SENSOR_ERROR_NOT_WRITABLE     = -13;  // If we try to write to a read-only register.
+const int8_t SensorWrapper::SENSOR_ERROR_REG_NOT_DEFINED  = -14;  // If we try to do I/O on a non-existent register.
+const int8_t SensorWrapper::SENSOR_ERROR_DATA_EXHAUSTED   = -15;  // If we try to poll sensor data faster than the sensor can produce it.
+const int8_t SensorWrapper::SENSOR_ERROR_BAD_TYPE_CONVERT = -16;  // If we ask the class to convert types in a way that isn't possible.
+const int8_t SensorWrapper::SENSOR_ERROR_MISSING_CONF     = -17;  // If we ask the sensor class to perform an operation on parameters that it doesn't have.
+const int8_t SensorWrapper::SENSOR_ERROR_NOT_INITIALIZED  = -18;  // 
+const int8_t SensorWrapper::SENSOR_ERROR_UNDEFINED_ERR    = -128; // If we try to set a sensor parameter to something invalid for an extant register.
+
+const char* SensorWrapper::SENSOR_DATUM_NOT_FOUND = "Sensor datum not found";
+
 
 #ifdef ARDUINO
     #include "Arduino.h"

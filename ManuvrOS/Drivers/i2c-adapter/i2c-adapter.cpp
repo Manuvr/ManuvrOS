@@ -290,6 +290,7 @@ int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
 #endif
   else {
   }
+  return 0;
 }
 
 

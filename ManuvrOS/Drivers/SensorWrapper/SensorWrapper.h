@@ -153,33 +153,33 @@ class SensorWrapper {
     static long millis();
 #endif
     // Sensors can automatically report their values when something in the sensor changes...
-    static constexpr const uint8_t SENSOR_REPORTING_OFF         = 0;
-    static constexpr const uint8_t SENSOR_REPORTING_NEW_VALUE   = 1;
-    static constexpr const uint8_t SENSOR_REPORTING_EVERY_READ  = 2;
+    static const uint8_t SENSOR_REPORTING_OFF;
+    static const uint8_t SENSOR_REPORTING_NEW_VALUE;
+    static const uint8_t SENSOR_REPORTING_EVERY_READ;
 
     // These are possible error codes...
-    static constexpr const int8_t SENSOR_ERROR_NO_ERROR         = 0;    // There was no error.
-    static constexpr const int8_t SENSOR_ERROR_ABSENT           = -1;   // We failed to talk to the sensor.
-    static constexpr const int8_t SENSOR_ERROR_OUT_OF_MEMORY    = -2;   // Couldn't allocate memory for some sensor-related task.
-    static constexpr const int8_t SENSOR_ERROR_WRONG_IDENTITY   = -3;   // Some sensors come with ID markers in them. If we get one wrong, this happens.
-    static constexpr const int8_t SENSOR_ERROR_NOT_LOCAL        = -4;   // If we try to read or change parameters of a sensor that isn't attached to us.
-    static constexpr const int8_t SENSOR_ERROR_INVALID_PARAM_ID = -5;   // If we try to read or change a sensor parameter that isn't supported.
-    static constexpr const int8_t SENSOR_ERROR_INVALID_PARAM    = -6;   // If we try to set a sensor parameter to something invalid for an extant register.
-    static constexpr const int8_t SENSOR_ERROR_NOT_CALIBRATED   = -7;   // If we try to read a sensor that is uncalibrated. Not all sensors require this.
-    static constexpr const int8_t SENSOR_ERROR_INVALID_DATUM    = -8;   // If we try to do an operation on a datum that doesn't exist for this sensor.
-    static constexpr const int8_t SENSOR_ERROR_UNHANDLED_TYPE   = -9;   // Issued when we ask for a string conversion that we don't support.
-    static constexpr const int8_t SENSOR_ERROR_NULL_POINTER     = -10;  // What happens when we try to do I/O on a null pointer.
-    static constexpr const int8_t SENSOR_ERROR_BUS_ERROR        = -11;  // If there was some generic bus error that we otherwise can't pinpoint.
-    static constexpr const int8_t SENSOR_ERROR_BUS_ABSENT       = -12;  // If the requested bus is not accessible.
-    static constexpr const int8_t SENSOR_ERROR_NOT_WRITABLE     = -13;  // If we try to write to a read-only register.
-    static constexpr const int8_t SENSOR_ERROR_REG_NOT_DEFINED  = -14;  // If we try to do I/O on a non-existent register.
-    static constexpr const int8_t SENSOR_ERROR_DATA_EXHAUSTED   = -15;  // If we try to poll sensor data faster than the sensor can produce it.
-    static constexpr const int8_t SENSOR_ERROR_BAD_TYPE_CONVERT = -16;  // If we ask the class to convert types in a way that isn't possible.
-    static constexpr const int8_t SENSOR_ERROR_MISSING_CONF     = -17;  // If we ask the sensor class to perform an operation on parameters that it doesn't have.
-    static constexpr const int8_t SENSOR_ERROR_NOT_INITIALIZED  = -18;  // 
-    static constexpr const int8_t SENSOR_ERROR_UNDEFINED_ERR    = -128; // If we try to set a sensor parameter to something invalid for an extant register.
+    static const int8_t SENSOR_ERROR_NO_ERROR;         // There was no error.
+    static const int8_t SENSOR_ERROR_ABSENT;           // We failed to talk to the sensor.
+    static const int8_t SENSOR_ERROR_OUT_OF_MEMORY;    // Couldn't allocate memory for some sensor-related task.
+    static const int8_t SENSOR_ERROR_WRONG_IDENTITY;   // Some sensors come with ID markers in them. If we get one wrong, this happens.
+    static const int8_t SENSOR_ERROR_NOT_LOCAL;        // If we try to read or change parameters of a sensor that isn't attached to us.
+    static const int8_t SENSOR_ERROR_INVALID_PARAM_ID; // If we try to read or change a sensor parameter that isn't supported.
+    static const int8_t SENSOR_ERROR_INVALID_PARAM;    // If we try to set a sensor parameter to something invalid for an extant register.
+    static const int8_t SENSOR_ERROR_NOT_CALIBRATED;   // If we try to read a sensor that is uncalibrated. Not all sensors require this.
+    static const int8_t SENSOR_ERROR_INVALID_DATUM;    // If we try to do an operation on a datum that doesn't exist for this sensor.
+    static const int8_t SENSOR_ERROR_UNHANDLED_TYPE;   // Issued when we ask for a string conversion that we don't support.
+    static const int8_t SENSOR_ERROR_NULL_POINTER;     // What happens when we try to do I/O on a null pointer.
+    static const int8_t SENSOR_ERROR_BUS_ERROR;        // If there was some generic bus error that we otherwise can't pinpoint.
+    static const int8_t SENSOR_ERROR_BUS_ABSENT;       // If the requested bus is not accessible.
+    static const int8_t SENSOR_ERROR_NOT_WRITABLE;     // If we try to write to a read-only register.
+    static const int8_t SENSOR_ERROR_REG_NOT_DEFINED;  // If we try to do I/O on a non-existent register.
+    static const int8_t SENSOR_ERROR_DATA_EXHAUSTED;   // If we try to poll sensor data faster than the sensor can produce it.
+    static const int8_t SENSOR_ERROR_BAD_TYPE_CONVERT; // If we ask the class to convert types in a way that isn't possible.
+    static const int8_t SENSOR_ERROR_MISSING_CONF;     // If we ask the sensor class to perform an operation on parameters that it doesn't have.
+    static const int8_t SENSOR_ERROR_NOT_INITIALIZED;  // 
+    static const int8_t SENSOR_ERROR_UNDEFINED_ERR;    // If we try to set a sensor parameter to something invalid for an extant register.
 
-    static constexpr const char* SENSOR_DATUM_NOT_FOUND = "Sensor datum not found";
+    static const char* SENSOR_DATUM_NOT_FOUND;
 
 
   protected:
