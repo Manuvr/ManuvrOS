@@ -33,24 +33,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <inttypes.h>
 
-//#ifdef ARDUINO
-//  #include "Arduino.h"
-//#elif defined(STM32F4XX)
-//#else
-//  #include <string.h>
-//  #include <alloca.h>
-//  #include <time.h>
-//  #include <alloca.h>
-//#endif
-
 #include "FirmwareDefs.h"
 #include "StringBuilder/StringBuilder.h"
+#include <ManuvrOS/Platform/Platform.h>
 #include "ManuvrOS/EventManager.h"
 
-// We need to def a few types... First, let's def a function pointer to avoid
-// cluttering things up with unreadable casts...
-
-typedef void (*FunctionPointer) ();
 
 
 /* Type for schedule items... */

@@ -143,7 +143,7 @@
     #define MANUVR_MSG_IRDA_CONFIG          0x0211 // IRDa configuration parameters are being passed.
     // i2c
     #define MANUVR_MSG_I2C_QUEUE_READY      0x0220 // The i2c queue is ready for attention.
-    #define MANUVR_MSG_I2C_DUMP_DEBUG       0x022F // Debug dump for i2c.
+
     // SPI
     #define MANUVR_MSG_SPI_QUEUE_READY      0x0230 // There is a new job in the SPI bus queue.
     #define MANUVR_MSG_SPI_CB_QUEUE_READY   0x0231 // There is something ready in the callback queue. 

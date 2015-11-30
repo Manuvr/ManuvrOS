@@ -26,12 +26,14 @@ I2CDevice::~I2CDevice(void) {
 void I2CDevice::operationCompleteCallback(I2CQueuedOperation* completed) {
 	StringBuilder temp;
 	if (completed != NULL) {
+	  #ifdef __MANUVR_DEBUG
 		if (completed->opcode == I2C_OPERATION_READ) {
 			temp.concatf("Default callback (I2CDevice)\tReceived %d bytes from i2c slave.\n", (completed->len - completed->remaining_bytes));
 		}
 		else {
 			temp.concatf("Default callback (I2CDevice)\tSent %d/%d bytes to i2c slave.\n", (completed->len - completed->remaining_bytes), completed->len);
 		}
+		#endif
 		completed->printDebug(&temp);
 	}
 	if (temp.length() > 0) StaticHub::log(&temp);
@@ -75,7 +77,9 @@ bool I2CDevice::disassignBusInstance(void) {
 */
 bool I2CDevice::write16(int sub_addr, uint16_t dat) {
     if (_bus == NULL) {
+      #ifdef __MANUVR_DEBUG
       StaticHub::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      #endif
       return false;
     }
     uint8_t* temp = (uint8_t*) malloc(2);
@@ -89,7 +93,9 @@ bool I2CDevice::write16(int sub_addr, uint16_t dat) {
 
 bool I2CDevice::write8(uint8_t dat) {
     if (_bus == NULL) {
+      #ifdef __MANUVR_DEBUG
       StaticHub::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      #endif
       return false;
     }
     uint8_t* temp = (uint8_t*) malloc(1);
@@ -102,7 +108,9 @@ bool I2CDevice::write8(uint8_t dat) {
 
 bool I2CDevice::write8(int sub_addr, uint8_t dat) {
     if (_bus == NULL) {
+      #ifdef __MANUVR_DEBUG
       StaticHub::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      #endif
       return false;
     }
     uint8_t* temp = (uint8_t*) malloc(1);
@@ -116,7 +124,9 @@ bool I2CDevice::write8(int sub_addr, uint8_t dat) {
 
 bool I2CDevice::writeX(int sub_addr, uint16_t byte_count, uint8_t *buf) {
     if (_bus == NULL) {
+      #ifdef __MANUVR_DEBUG
       StaticHub::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      #endif
       return false;
     }
     I2CQueuedOperation* nu = new I2CQueuedOperation(I2C_OPERATION_WRITE, _dev_addr, (int16_t) sub_addr, buf, byte_count);
@@ -131,7 +141,9 @@ bool I2CDevice::writeX(int sub_addr, uint16_t byte_count, uint8_t *buf) {
 
 bool I2CDevice::readX(int sub_addr, uint8_t len, uint8_t *buf) {
     if (_bus == NULL) {
+      #ifdef __MANUVR_DEBUG
       StaticHub::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      #endif
       return false;
     }
     I2CQueuedOperation* nu = new I2CQueuedOperation(I2C_OPERATION_READ, _dev_addr, (int16_t) sub_addr, buf, len);
@@ -144,7 +156,9 @@ bool I2CDevice::readX(int sub_addr, uint8_t len, uint8_t *buf) {
 
 bool I2CDevice::read8(int sub_addr) {
     if (_bus == NULL) {
+      #ifdef __MANUVR_DEBUG
       StaticHub::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      #endif
       return false;
     }
     uint8_t* temp = (uint8_t*) malloc(1);
@@ -157,7 +171,9 @@ bool I2CDevice::read8(int sub_addr) {
 
 bool I2CDevice::read8(void) {
     if (_bus == NULL) {
+      #ifdef __MANUVR_DEBUG
       StaticHub::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      #endif
       return false;
     }
     uint8_t* temp = (uint8_t*) malloc(1);
@@ -173,7 +189,9 @@ bool I2CDevice::read8(void) {
 */
 bool I2CDevice::read16(int sub_addr) {
     if (_bus == NULL) {
+      #ifdef __MANUVR_DEBUG
       StaticHub::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      #endif
       return false;
     }
     uint8_t* temp = (uint8_t*) malloc(2);
@@ -190,7 +208,9 @@ bool I2CDevice::read16(int sub_addr) {
 */
 bool I2CDevice::read16(void) {
     if (_bus == NULL) {
+      #ifdef __MANUVR_DEBUG
       StaticHub::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      #endif
       return false;
     }
     uint8_t* temp = (uint8_t*) malloc(2);

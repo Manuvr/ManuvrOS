@@ -35,6 +35,39 @@ This class is a driver for Microchip's MGC3130 e-field gesture sensor. It is mea
 #include <StringBuilder/StringBuilder.h>
 
 
+const MessageTypeDef mgc3130_message_defs[] = {
+  {  MANUVR_MSG_SENSOR_MGC3130            , MSG_FLAG_IDEMPOTENT,  "MGC3130",                   ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_SENSOR_MGC3130_INIT       , MSG_FLAG_IDEMPOTENT,  "MGC3130_INIT",              ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+
+  /* 
+    For messages that have arguments, we have the option of defining inline lables for each parameter.
+    This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
+    compile time.
+  */
+  #if defined (__ENABLE_MSG_SEMANTICS)
+  {  MANUVR_MSG_GESTURE_LEGEND            , MSG_FLAG_EXPORTABLE,  "GESTURE_LEGEND",            ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_GESTURE_DEFINITION        , MSG_FLAG_EXPORTABLE,  "GESTURE_DEFINITION",        ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_GESTURE_OBLITERATE        , MSG_FLAG_EXPORTABLE,  "GESTURE_OBLITERATE",        ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_GESTURE_LINK              , MSG_FLAG_EXPORTABLE,  "GESTURE_LINK",              ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_GESTURE_UNLINK            , MSG_FLAG_EXPORTABLE,  "GESTURE_UNLINK",            ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_GESTURE_RECOGNIZED        , MSG_FLAG_EXPORTABLE,  "GESTURE_RECOGNIZED",        ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_GESTURE_NUANCE            , MSG_FLAG_EXPORTABLE,  "GESTURE_NUANCE",            ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_GESTURE_DISASSERT         , MSG_FLAG_EXPORTABLE,  "GESTURE_DISASSERT",         ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_GESTURE_ONE_SHOT          , MSG_FLAG_EXPORTABLE,  "GESTURE_ONE_SHOT",          ManuvrMsg::MSG_ARGS_NONE }, //
+  #else
+  {  MANUVR_MSG_GESTURE_LEGEND            , MSG_FLAG_EXPORTABLE,  "GESTURE_LEGEND",            ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_GESTURE_DEFINITION        , MSG_FLAG_EXPORTABLE,  "GESTURE_DEFINITION",        ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_GESTURE_OBLITERATE        , MSG_FLAG_EXPORTABLE,  "GESTURE_OBLITERATE",        ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_GESTURE_LINK              , MSG_FLAG_EXPORTABLE,  "GESTURE_LINK",              ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_GESTURE_UNLINK            , MSG_FLAG_EXPORTABLE,  "GESTURE_UNLINK",            ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_GESTURE_RECOGNIZED        , MSG_FLAG_EXPORTABLE,  "GESTURE_RECOGNIZED",        ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_GESTURE_NUANCE            , MSG_FLAG_EXPORTABLE,  "GESTURE_NUANCE",            ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_GESTURE_DISASSERT         , MSG_FLAG_EXPORTABLE,  "GESTURE_DISASSERT",         ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_GESTURE_ONE_SHOT          , MSG_FLAG_EXPORTABLE,  "GESTURE_ONE_SHOT",          ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  #endif
+};
+
+
 ManuvrEvent _isr_read_event(MANUVR_MSG_SENSOR_MGC3130);
 volatile int _isr_ts_pin = 0;
 
@@ -116,6 +149,9 @@ MGC3130::MGC3130(int ts, int rst, uint8_t addr) {
   last_seq_num     = 0; 
   last_nuance_sent = millis();
   INSTANCE = this;
+
+  // Inform the EventManager of the codes we will be using...
+  ManuvrMsg::registerMessages(mgc3130_message_defs, sizeof(mgc3130_message_defs) / sizeof(MessageTypeDef));
 }
 
 
@@ -438,18 +474,22 @@ void MGC3130::dispatchGestureEvents() {
   }
   if (special) {
     // TODO: Not sure how to deal with this yet...
+    #ifdef __MANUVR_DEBUG
     if (verbosity > 3) {
       local_log.concatf("MGC3130 special code 0x08\n", special);
       StaticHub::log(&local_log);
     }
+    #endif
     special = 0;
   }
   if (last_event) {
     // TODO: Not sure how to deal with this yet...
+    #ifdef __MANUVR_DEBUG
     if (verbosity > 3) {
       local_log.concatf("MGC3130 last_event 0x08\n", last_event);
       StaticHub::log(&local_log);
     }
+    #endif
     last_event = 0;
   }
 }
@@ -618,11 +658,13 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
     }
   }
   else{
+    #ifdef __MANUVR_DEBUG
     if (verbosity > 3) {
       local_log.concat("An i2c operation requested by the MGC3130 came back failed.\n");
       completed->printDebug(&local_log);
       StaticHub::log(&local_log);
     }
+    #endif
   }
 }
 
@@ -756,21 +798,10 @@ int8_t MGC3130::notify(ManuvrEvent *active_event) {
 void MGC3130::procDirectDebugInstruction(StringBuilder *input) {
 #ifdef __MANUVR_CONSOLE_SUPPORT
   char* str = input->position(0);
-  ManuvrEvent *event = NULL;  // Pitching events is a common thing in this fxn...
-
-  uint8_t temp_byte = 0;
-  if (*(str) != 0) {
-    temp_byte = atoi((char*) str+1);
-  }
 
   /* These are debug case-offs that are typically used to test functionality, and are then
      struck from the build. */
   switch (*(str)) {
-    case 'r':
-      is_class_ready(false);
-      EventManager::raiseEvent(MANUVR_MSG_SENSOR_MGC3130_INIT, NULL);
-      break;
-
     default:
       EventReceiver::procDirectDebugInstruction(input);
       break;

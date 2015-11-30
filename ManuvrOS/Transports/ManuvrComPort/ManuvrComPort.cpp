@@ -177,7 +177,9 @@ XenoSession* ManuvrComPort::getSession() {
 
 int8_t ManuvrComPort::reset() {
   uint8_t xport_state_modifier = MANUVR_XPORT_STATE_CONNECTED | MANUVR_XPORT_STATE_LISTENING | MANUVR_XPORT_STATE_INITIALIZED;
+  #ifdef __MANUVR_DEBUG
   if (verbosity > 4) local_log.concatf("Resetting port %s...\n", tty_name);
+  #endif
   bytes_sent         = 0;
   bytes_received     = 0;
 
@@ -193,12 +195,16 @@ int8_t ManuvrComPort::reset() {
   
   port_number = open(tty_name, options);
   if (port_number == -1) {
+    #ifdef __MANUVR_DEBUG
     if (verbosity > 1) local_log.concatf("Unable to open port: (%s)\n", tty_name);
+    #endif
     unset_xport_state(xport_state_modifier);
     StaticHub::log(&local_log);
     return -1;
   }
+  #ifdef __MANUVR_DEBUG
   if (verbosity > 4) local_log.concatf("Opened port (%s) at %d\n", tty_name, baud_rate);
+  #endif
   set_xport_state(MANUVR_XPORT_STATE_INITIALIZED);
 
   serial_handler.sa_handler = tty_signal_handler;
@@ -223,11 +229,15 @@ int8_t ManuvrComPort::reset() {
   
   if (tcsetattr(port_number, TCSANOW, &termAttr) == 0) {
     set_xport_state(xport_state_modifier);
+    #ifdef __MANUVR_DEBUG
     if (verbosity > 6) local_log.concatf("Port opened, and handler bound.\n");
+    #endif
   }
   else {
     unset_xport_state(xport_state_modifier);
+    #ifdef __MANUVR_DEBUG
     if (verbosity > 1) local_log.concatf("Failed to tcsetattr...\n");
+    #endif
   }
   #endif
   
@@ -297,7 +307,11 @@ int8_t ManuvrComPort::read_port() {
       }
     #endif
   }
-  else if (verbosity > 1) local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
+  else {
+    #ifdef __MANUVR_DEBUG
+    if (verbosity > 1) local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
+    #endif
+  }
   
   if (local_log.length() > 0) StaticHub::log(&local_log);
   return 0;
@@ -310,7 +324,9 @@ int8_t ManuvrComPort::read_port() {
 */
 bool ManuvrComPort::write_port(unsigned char* out, int out_len) {
   if (port_number == -1) {
+    #ifdef __MANUVR_DEBUG
     if (verbosity > 2) StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to port: (%s)\n", tty_name);
+    #endif
     return false;
   }
   
@@ -453,7 +469,9 @@ int8_t ManuvrComPort::notify(ManuvrEvent *active_event) {
         if (connected()) {
           StringBuilder* temp_sb;
           if (0 == active_event->getArgAs(&temp_sb)) {
+            #ifdef __MANUVR_DEBUG
             if (verbosity > 3) local_log.concatf("We about to print %d bytes to the com port.\n", temp_sb->length());
+            #endif
             write_port(temp_sb->string(), temp_sb->length());
           }
           
@@ -464,9 +482,15 @@ int8_t ManuvrComPort::notify(ManuvrEvent *active_event) {
           //  }
           //  return_value++;
           //}
+          #ifdef __MANUVR_DEBUG
           else if (verbosity > 6) local_log.concat("Ignoring a broadcast that wasn't meant for us.\n");
+          #endif
         }
-        else if (verbosity > 3) local_log.concat("Session is chatting, but we don't appear to have a connection.\n");
+        else {
+          #ifdef __MANUVR_DEBUG
+          if (verbosity > 3) local_log.concat("Session is chatting, but we don't appear to have a connection.\n");
+          #endif
+        }
       }
       return_value++;
       break;
@@ -479,7 +503,9 @@ int8_t ManuvrComPort::notify(ManuvrEvent *active_event) {
     
     case MANUVR_MSG_XPORT_IDENTITY:
       if (event_addresses_us(active_event) ) {
+        #ifdef __MANUVR_DEBUG
         if (verbosity > 3) local_log.concat("The com port class received an event that was addressed to it, that is not handled yet.\n");
+        #endif
         active_event->printDebug(&local_log);
         return_value++;
       }

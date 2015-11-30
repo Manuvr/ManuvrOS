@@ -26,6 +26,33 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "StaticHub/StaticHub.h"
 #include "ADP8866.h"
 
+#define MANUVR_MSG_ADP8866_IRQ          0x9034  // Some random message code. Nonexportable.
+#define MANUVR_MSG_ADP8866_CHAN_ENABLED 0x9035  // Enable the given channel, or return its status.
+#define MANUVR_MSG_ADP8866_CHAN_LEVEL   0x9036  // Set or return the LED level for the given channel.
+#define MANUVR_MSG_ADP8866_ASSIGN_BL    0x9037  // Takes up to 9 integers as arguments. Assigns those channels to the backlight.
+
+
+
+const MessageTypeDef adp8866_message_defs[] = {
+  {  MANUVR_MSG_ADP8866_IRQ, 0x0000,  "ADP8866_IRQ",  ManuvrMsg::MSG_ARGS_NONE, NULL },  // 
+
+  /* 
+    For messages that have arguments, we have the option of defining inline lables for each parameter.
+    This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
+    compile time.
+  */
+  #if defined (__ENABLE_MSG_SEMANTICS)
+  {  MANUVR_MSG_ADP8866_CHAN_ENABLED , MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN",    ManuvrMsg::MSG_ARGS_NONE, NULL }, // 
+  {  MANUVR_MSG_ADP8866_CHAN_LEVEL,    MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN",    ManuvrMsg::MSG_ARGS_NONE, NULL }, // 
+  {  MANUVR_MSG_ADP8866_ASSIGN_BL,     MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN",    ManuvrMsg::MSG_ARGS_NONE, NULL }  // 
+  #else
+  {  MANUVR_MSG_ADP8866_CHAN_ENABLED , MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN",    ManuvrMsg::MSG_ARGS_NONE, NULL }, // 
+  {  MANUVR_MSG_ADP8866_CHAN_LEVEL,    MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN",    ManuvrMsg::MSG_ARGS_NONE, NULL }, // 
+  {  MANUVR_MSG_ADP8866_ASSIGN_BL,     MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN",    ManuvrMsg::MSG_ARGS_NONE, NULL }  // 
+  #endif
+};
+
+
 /*
 * TODO: This is a table of constants relating channel current to a register value.
 */
@@ -43,6 +70,9 @@ void ADP8866::__class_initializer() {
   class_mode        = 0;
   power_mode        = 0;
   init_complete     = false;
+  
+  int mes_count = sizeof(adp8866_message_defs) / sizeof(MessageTypeDef);
+  ManuvrMsg::registerMessages(adp8866_message_defs, mes_count);
 }
 
 
@@ -387,7 +417,6 @@ int8_t ADP8866::notify(ManuvrEvent *active_event) {
 
 void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
-  ManuvrEvent *event = NULL;  // Pitching events is a common thing in this fxn...
 
   uint8_t temp_byte = 0;
   if (*(str) != 0) {

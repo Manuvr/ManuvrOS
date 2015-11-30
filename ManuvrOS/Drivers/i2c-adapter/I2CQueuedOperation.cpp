@@ -281,7 +281,9 @@ int8_t I2CQueuedOperation::init_dma() {
 int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
   StringBuilder output;
 #ifdef STM32F4XX
+  #ifdef __MANUVR_DEBUG
   if (verbosity > 6) output.concatf("I2CQueuedOperation::advance_operation(0x%08x): \t %s\t", status_reg, getStateString(xfer_state));
+  #endif
   switch (xfer_state) {
     case I2C_XFER_STATE_START:     // We need to send a START condition.
         xfer_state = I2C_XFER_STATE_ADDR; // Need to send slave ADDR following a RESTART.
@@ -356,21 +358,27 @@ int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
       break;
     case I2C_XFER_STATE_COMPLETE:  // This operation is comcluded.
       if (verbosity > 5) {
+        #ifdef __MANUVR_DEBUG
         output.concatf("\t--- Interrupt following job (0x%08x)\n", status_reg);
+        #endif
         printDebug(&output);
       }
       //markComplete();
       //EventManager::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, NULL);   // Raise an event
       break;
     default:
+      #ifdef __MANUVR_DEBUG
       if (verbosity > 1) output.concatf("\t--- Something is bad wrong. Our xfer_state is %s\n", getStateString(xfer_state));
+      #endif
       abort(I2C_ERR_CODE_DEF_CASE);
       break;
   }
   
   if (verbosity > 4) {
     if (verbosity > 6) printDebug(&output);
+    #ifdef __MANUVR_DEBUG
     output.concatf("---> %s\n", getStateString(xfer_state));
+    #endif
   }
 
 #elif defined(__MK20DX256__) | defined(__MK20DX128__)

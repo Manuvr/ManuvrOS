@@ -85,6 +85,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define ADP8866_I2CADDR            0x27
 
 
+#define ADP8866_INT_STATUS_ICS_OFF 0x40
+#define ADP8866_INT_STATUS_BL_OFF  0x20
+#define ADP8866_INT_STATUS_SHORT   0x10
+#define ADP8866_INT_STATUS_OT      0x08
+#define ADP8866_INT_STATUS_OV      0x04
+
+
 /*
 * Used to aggregate channel information into a single place. Makes drive code more readable.
 */
@@ -139,6 +146,8 @@ class ADP8866 : public I2CDeviceWithRegisters, public EventReceiver {
     uint8_t stored_dimmer_val;
     uint8_t reset_pin;
     uint8_t irq_pin;
+    
+    
     
     // The chip only has 9 outputs, but we make a synthetic tenth chasnnel
     //   to represent the backlight.

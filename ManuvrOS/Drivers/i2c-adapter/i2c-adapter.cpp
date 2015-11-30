@@ -56,6 +56,14 @@ void I2CAdapter::__class_initializer() {
 
   // Set a globalized refernece so we can hit the proper adapter from an ISR.
   i2c = this;
+  
+  // We need some internal events to allow communication back from the ISR.
+  const MessageTypeDef i2c_message_defs[] = {
+    { MANUVR_MSG_I2C_QUEUE_READY, MSG_FLAG_IDEMPOTENT,  "I2C_QUEUE_READY", ManuvrMsg::MSG_ARGS_NONE }  // The i2c queue is ready for attention.
+  };
+  
+  int mes_count = sizeof(i2c_message_defs) / sizeof(MessageTypeDef);
+  ManuvrMsg::registerMessages(i2c_message_defs, mes_count);
 }
 
 
@@ -129,7 +137,9 @@ I2CAdapter::~I2CAdapter() {
 
 // TODO: Inline this.
 int8_t I2CAdapter::generateStart() {
+  #ifdef __MANUVR_DEBUG
   if (verbosity > 6) StaticHub::log("I2CAdapter::generateStart()\n");
+  #endif
   if (! bus_online) return -1;
   I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, ENABLE);      //Enable EVT and ERR interrupts
   I2C_GenerateSTART(I2C1, ENABLE);   // Doing this will take us back to the ISR.
@@ -138,7 +148,9 @@ int8_t I2CAdapter::generateStart() {
 
 // TODO: Inline this.
 int8_t I2CAdapter::generateStop() {
+  #ifdef __MANUVR_DEBUG
   if (verbosity > 6) StaticHub::log("I2CAdapter::generateStop()\n");
+  #endif
   if (! bus_online) return -1;
   DMA_ITConfig(DMA1_Stream0, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE | DMA_IT_DME, DISABLE);
   I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, DISABLE);
@@ -186,7 +198,9 @@ I2CAdapter::~I2CAdapter() {
 
 
 int8_t I2CAdapter::generateStart() {
+  #ifdef __MANUVR_DEBUG
   if (verbosity > 6) StaticHub::log("I2CAdapter::generateStart()\n");
+  #endif
   if (! bus_online) return -1;
   //Wire1.sendTransmission(I2C_STOP);
   //Wire1.finish(900);   // We allow for 900uS for timeout.
@@ -195,7 +209,9 @@ int8_t I2CAdapter::generateStart() {
 
 
 int8_t I2CAdapter::generateStop() {
+  #ifdef __MANUVR_DEBUG
   if (verbosity > 6) StaticHub::log("I2CAdapter::generateStop()\n");
+  #endif
   if (! bus_online) return -1;
   return 0;
 }
@@ -323,9 +339,10 @@ I2CAdapter::~I2CAdapter() {
 }
 
 
-// TODO: Inline this.
 int8_t I2CAdapter::generateStart() {
+  #ifdef __MANUVR_DEBUG
   if (verbosity > 6) StaticHub::log("I2CAdapter::generateStart()\n");
+  #endif
   if (! bus_online) return -1;
   //Wire1.sendTransmission(I2C_STOP);
   //Wire1.finish(900);   // We allow for 900uS for timeout.
@@ -335,7 +352,9 @@ int8_t I2CAdapter::generateStart() {
 
 // TODO: Inline this.
 int8_t I2CAdapter::generateStop() {
+  #ifdef __MANUVR_DEBUG
   if (verbosity > 6) StaticHub::log("I2CAdapter::generateStop()\n");
+  #endif
   if (! bus_online) return -1;
   return 0;
 }
@@ -370,7 +389,9 @@ I2CAdapter::~I2CAdapter() {
 
 // TODO: Inline this.
 int8_t I2CAdapter::generateStart() {
+  #ifdef __MANUVR_DEBUG
   if (verbosity > 6) StaticHub::log("I2CAdapter::generateStart()\n");
+  #endif
   if (! bus_online) return -1;
   //Wire1.sendTransmission(I2C_STOP);
   //Wire1.finish(900);   // We allow for 900uS for timeout.
@@ -380,7 +401,9 @@ int8_t I2CAdapter::generateStart() {
 
 // TODO: Inline this.
 int8_t I2CAdapter::generateStop() {
+  #ifdef __MANUVR_DEBUG
   if (verbosity > 6) StaticHub::log("I2CAdapter::generateStop()\n");
+  #endif
   if (! bus_online) return -1;
   return 0;
 }
@@ -396,11 +419,15 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
   if (sprintf(filename, "/dev/i2c-%d", dev_id) > 0) {
     dev = open(filename, O_RDWR);
     if (dev < 0) {
+      #ifdef __MANUVR_DEBUG
       StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to open the i2c bus represented by %s.\n", filename);
+      #endif
     }
   }
   else {
+    #ifdef __MANUVR_DEBUG
     StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Somehow we failed to sprintf and build a filename to open i2c bus %d.\n", dev_id);
+    #endif
   }
 }
 
@@ -408,8 +435,10 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
 
 I2CAdapter::~I2CAdapter() {
     if (dev >= 0) {
-        StaticHub::log(__PRETTY_FUNCTION__, LOG_INFO, "Closing the open i2c bus...\n");
-        close(dev);
+      #ifdef __MANUVR_DEBUG
+      StaticHub::log(__PRETTY_FUNCTION__, LOG_INFO, "Closing the open i2c bus...\n");
+      #endif
+      close(dev);
     }
     while (dev_list.hasNext()) {
       dev_list.get()->disassignBusInstance();
@@ -437,14 +466,11 @@ int8_t I2CAdapter::generateStop() {
 
 
 
-
-
 /**
 * Setup GPIO pins and their bindings to on-chip peripherals, if required.
 */
 void I2CAdapter::gpioSetup() {
 }
-
 
 
 
@@ -525,16 +551,6 @@ int8_t I2CAdapter::notify(ManuvrEvent *active_event) {
       advance_work_queue();
       return_value++;
       break;
-    case MANUVR_MSG_I2C_DUMP_DEBUG:
-      {
-        StringBuilder temp;
-        printDebug(&temp);
-        printPingMap(&temp);
-        StaticHub::log(&temp);
-        return_value++;
-      }
-      return_value++;
-      break;
     default:
       return_value += EventReceiver::notify(active_event);
       break;
@@ -556,29 +572,39 @@ int8_t I2CAdapter::notify(ManuvrEvent *active_event) {
 int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
 	int8_t return_value = I2C_ERR_CODE_NO_ERROR;
 	if (slave == NULL) {
+	  #ifdef __MANUVR_DEBUG
 		StaticHub::log("Slave is invalid.");
+		#endif
 		return_value = I2C_ERR_SLAVE_INVALID;
 	}
 	if (dev_list.contains(slave)) {    // Check for pointer eqivillence.
+	  #ifdef __MANUVR_DEBUG
 		StaticHub::log("Slave device exists.");
+		#endif
 		return_value = I2C_ERR_SLAVE_EXISTS;
 	}
 	else if (get_slave_dev_by_addr(slave->_dev_addr) == I2C_ERR_SLAVE_NOT_FOUND) {
 		if (slave->assignBusInstance(this)) {
 			int slave_index = dev_list.insert(slave);
 			if (slave_index == -1) {
+			  #ifdef __MANUVR_DEBUG
 				StaticHub::log("Failed to insert somehow. Disassigning...");
+				#endif
 				slave->disassignBusInstance();
 				return_value = I2C_ERR_SLAVE_INSERTION;
 			}
 		}
 		else {
+		  #ifdef __MANUVR_DEBUG
 			StaticHub::log("Op would clobber bus instance.");
+			#endif
 			return_value = I2C_ERR_SLAVE_ASSIGN_CLOB;
 		}
 	}
 	else {
+	  #ifdef __MANUVR_DEBUG
 		StaticHub::log("Op would cause address collision with another slave device.");
+		#endif
 		return_value = I2C_ERR_SLAVE_COLLISION;
 	}
 	return return_value;
@@ -641,13 +667,17 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
     if (dev < 0) {
       // If the bus is either uninitiallized or not idle, decline
       // to switch the device. Return false;
+      #ifdef __MANUVR_DEBUG
       StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "i2c bus is not online, so won't switch device. Failing....");
+      #endif
       return return_value;
     }
     else {
       while (bus_error && (timeout > 0)) { timeout--; }
       if (bus_error) {
+        #ifdef __MANUVR_DEBUG
         StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "i2c bus was held for too long. Failing....");
+        #endif
         return return_value;
       }
       
@@ -656,7 +686,9 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
         return_value = true;
       }
       else {
+        #ifdef __MANUVR_DEBUG
         StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to acquire bus access and/or talk to slave at %d.", nu_addr);
+        #endif
         bus_error = true;
       }
     }
@@ -711,7 +743,9 @@ void I2CAdapter::advance_work_queue(void) {
 			  //temp.concatf("Destroying successful job 0x%08x.\n", current_queue_item->txn_id);
 			}
 			else {
+			  #ifdef __MANUVR_DEBUG
 			  if (verbosity > 3) local_log.concatf("Destroying failed job 0x%08x.\n", current_queue_item->txn_id);
+			  #endif
 			  if (verbosity > 4) current_queue_item->printDebug(&local_log);
 			}
 
@@ -735,7 +769,9 @@ void I2CAdapter::advance_work_queue(void) {
 				    ping_slave_addr(current_queue_item->dev_addr + 1);
 				  }
 				  else {
+				    #ifdef __MANUVR_DEBUG
 				    if (verbosity > 3) local_log.concat("Concluded i2c ping sweep.");
+				    #endif
 				    full_ping_running = false;
 				  }
 				}
@@ -911,7 +947,6 @@ void I2CAdapter::printDebug(StringBuilder *temp) {
   temp->concatf("--- bus_online             %s\n", (bus_online ? "yes" : "no"));
   printPingMap(temp);
   
-
   if (current_queue_item != NULL) {
     temp->concat("Currently being serviced:\n");
     current_queue_item->printDebug(temp);
@@ -951,6 +986,9 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       }
       else if (temp_byte == 255) {
         printDevs(&local_log);
+      }
+      else if (temp_byte == 253) {
+        printPingMap(&local_log);
       }
       else {
         printDebug(&local_log);

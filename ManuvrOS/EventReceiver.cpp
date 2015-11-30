@@ -38,8 +38,10 @@ int8_t EventReceiver::setVerbosity(int8_t nu_verbosity) {
 	switch (nu_verbosity) { 
     case LOG_DEBUG:   /* 7 - debug-level messages */
     case LOG_INFO:    /* 6 - informational */
+      #ifdef __MANUVR_DEBUG
       local_log.concatf("%s:\tVerbosity set to %d\n", getReceiverName(), nu_verbosity);
       StaticHub::log(&local_log);
+      #endif
     case LOG_NOTICE:  /* 5 - normal but significant condition */
     case LOG_WARNING: /* 4 - warning conditions */
     case LOG_ERR:     /* 3 - error conditions */
@@ -49,10 +51,12 @@ int8_t EventReceiver::setVerbosity(int8_t nu_verbosity) {
       verbosity = nu_verbosity;
       return 1;
     default:
+      #ifdef __MANUVR_DEBUG
       if (verbosity > 4) {
         local_log.concatf("Illegal verbosity value.\n", getReceiverName(), nu_verbosity);
         StaticHub::log(&local_log);
       }
+      #endif
       return -1;
   }
 }
@@ -71,8 +75,10 @@ int8_t EventReceiver::setVerbosity(ManuvrEvent* active_event) {
   if (MANUVR_MSG_SYS_LOG_VERBOSITY != active_event->event_code) return -1;
   switch (active_event->argCount()) {
     case 0:
+      #ifdef __MANUVR_DEBUG
       local_log.concatf("%s:\tVerbosity is %d\n", getReceiverName(), verbosity);
       StaticHub::log(&local_log);
+      #endif
       return 1;
     case 1:
       {
@@ -96,8 +102,10 @@ int EventReceiver::purgeLogs() {
       StaticHub::log(&local_log);
     }
     local_log.clear();
+    #ifdef __MANUVR_DEBUG
     local_log.concatf("%s GCd %d bytes.\n", getReceiverName(), lll);  // TODO: This never happens.
     StaticHub::log(&local_log);
+    #endif
   }
   return return_value;
 }
@@ -118,7 +126,9 @@ void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
       printDebug(&local_log);
       break;
     default:
+      #ifdef __MANUVR_DEBUG
       local_log.concatf("%s: No case in procDirectDebugInstruction().\n", getReceiverName());
+      #endif
       break;
   }
   
