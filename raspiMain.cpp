@@ -18,8 +18,8 @@
 
 #include "FirmwareDefs.h"
 
-#include "StaticHub/StaticHub.h"
-#include "ManuvrOS/Kernel.h"
+#include <ManuvrOS/Kernel.h>
+#include <ManuvrOS/Platform/Platform.h>
 #include "ManuvrOS/Transports/ManuvrComPort/ManuvrComPort.h"
 
 
@@ -44,7 +44,7 @@ int maximum_field_print = 65;       // The maximum number of bytes we will print
 bool run_looper          = true;  // We will be running the looper in its own thread.
 bool continue_listening  = true;
 char *program_name       = NULL;
-static StaticHub* sh     = NULL;
+static Kernel* kernel    = NULL;
 
 
 // Log a message. Target is determined by the current_config.
@@ -89,7 +89,7 @@ void sig_handler(int signo) {
            continue_listening    = false;
            break;
         case SIGALRM:
-           sh->advanceScheduler();
+           kernel->advanceScheduler();
            if (continue_listening) alarm(INTERRUPT_PERIOD);    // Fire again later...
            break;
         case SIGUSR1:      // Cause a configuration reload.
@@ -216,11 +216,11 @@ int main(int argc, char *argv[]) {
   printf("|                                       Manuvr Test Apparatus                                     |\n");
   printf("===================================================================================================\n");
 
-  printf("Booting StaticHub....\n");
-  sh = StaticHub::getInstance();
+  printf("Booting Manuvr Kernel....\n");
+  kernel = Kernel::getInstance();
   
-  printf("\nSH pointer address: 0x%08x\n", (uint32_t)sh);
-  StaticHub::watchdog_mark = 42;  // The period (in ms) of our clock punch. 
+  printf("\nSH pointer address: 0x%08x\n", (uint32_t)kernel);
+  //watchdog_mark = 42;  // The period (in ms) of our clock punch. 
 
   // Parse through all the command line arguments and flags...
   // Please note that the order matters. Put all the most-general matches at the bottom of the loop.
@@ -256,12 +256,12 @@ int main(int argc, char *argv[]) {
   initSigHandlers();
   alarm(INTERRUPT_PERIOD);                // Set a periodic interrupt.
 
-  ManuvrKernel kernel0;
+  Kernel kernel0;
   //kernel0.run();
  
   // The main loop. Run forever.
   while (continue_listening) {
-    int x = kernel0.step();
+    int x = kernel0.procIdleFlags();
     if (x > 0) printf("\t kernel0.step() returns %d\n", x);
   }
   

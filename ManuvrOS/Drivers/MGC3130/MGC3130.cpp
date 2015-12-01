@@ -30,9 +30,10 @@ This class is a driver for Microchip's MGC3130 e-field gesture sensor. It is mea
 
 */
 
-#include "StaticHub/StaticHub.h"
+#include <ManuvrOS/Kernel.h>
 #include "MGC3130.h"
 #include <StringBuilder/StringBuilder.h>
+#include <ManuvrOS/Platform/Platform.h>
 
 
 const MessageTypeDef mgc3130_message_defs[] = {
@@ -79,7 +80,7 @@ void mgc3130_isr_check() {
   if (_isr_ts_pin) { 
     detachInterrupt(_isr_ts_pin);
   }
-  //EventManager::isrRaiseEvent(&_isr_read_event);
+  //Kernel::isrRaiseEvent(&_isr_read_event);
 }
 
 
@@ -150,7 +151,7 @@ MGC3130::MGC3130(int ts, int rst, uint8_t addr) {
   last_nuance_sent = millis();
   INSTANCE = this;
 
-  // Inform the EventManager of the codes we will be using...
+  // Inform the Kernel of the codes we will be using...
   ManuvrMsg::registerMessages(mgc3130_message_defs, sizeof(mgc3130_message_defs) / sizeof(MessageTypeDef));
 }
 
@@ -389,17 +390,17 @@ void MGC3130::dispatchGestureEvents() {
   ManuvrEvent* event = NULL;
   
   if (isPositionDirty()) {
-    // We don't want to spam the EventManager. We need to rate-limit.
+    // We don't want to spam the Kernel. We need to rate-limit.
     if ((millis() - MGC3130_MINIMUM_NUANCE_PERIOD) > last_nuance_sent) {
       if (!position_asserted()) {
         // If we haven't asserted the position gesture yet, do so now.
-        event = EventManager::returnEvent(MANUVR_MSG_GESTURE_RECOGNIZED);
+        event = Kernel::returnEvent(MANUVR_MSG_GESTURE_RECOGNIZED);
         event->addArg((uint32_t) 1);
         raiseEvent(event);
         position_asserted(true);
       }
       last_nuance_sent = millis();
-      event = EventManager::returnEvent(MANUVR_MSG_GESTURE_NUANCE);
+      event = Kernel::returnEvent(MANUVR_MSG_GESTURE_NUANCE);
       event->addArg((uint32_t) 1);
       event->addArg((uint16_t) _pos_x);
       event->addArg((uint16_t) _pos_y);
@@ -412,7 +413,7 @@ void MGC3130::dispatchGestureEvents() {
   }
   else if (position_asserted()) {
     // We need to disassert the position gesture.
-    event = EventManager::returnEvent(MANUVR_MSG_GESTURE_DISASSERT);
+    event = Kernel::returnEvent(MANUVR_MSG_GESTURE_DISASSERT);
     event->addArg((uint32_t) 1);
     raiseEvent(event);
     position_asserted(false);
@@ -422,17 +423,17 @@ void MGC3130::dispatchGestureEvents() {
   }
   
   if (0 < wheel_position) {
-    // We don't want to spam the EventManager. We need to rate-limit.
+    // We don't want to spam the Kernel. We need to rate-limit.
     if ((millis() - MGC3130_MINIMUM_NUANCE_PERIOD) > last_nuance_sent) {
       if (!airwheel_asserted()) {
         // If we haven't asserted the airwheel gesture yet, do so now.
-        event = EventManager::returnEvent(MANUVR_MSG_GESTURE_RECOGNIZED);
+        event = Kernel::returnEvent(MANUVR_MSG_GESTURE_RECOGNIZED);
         event->addArg((uint32_t) 2);
         raiseEvent(event);
         airwheel_asserted(true);
       }
       last_nuance_sent = millis();
-      event = EventManager::returnEvent(MANUVR_MSG_GESTURE_NUANCE);
+      event = Kernel::returnEvent(MANUVR_MSG_GESTURE_NUANCE);
       event->addArg((uint32_t) 2);
       event->addArg((int32_t) wheel_position);
       raiseEvent(event);
@@ -441,7 +442,7 @@ void MGC3130::dispatchGestureEvents() {
   }
   else if (airwheel_asserted()) {
     // We need to disassert the airwheel gesture.
-    event = EventManager::returnEvent(MANUVR_MSG_GESTURE_DISASSERT);
+    event = Kernel::returnEvent(MANUVR_MSG_GESTURE_DISASSERT);
     event->addArg((uint32_t) 2);
     raiseEvent(event);
     airwheel_asserted(false);
@@ -449,25 +450,25 @@ void MGC3130::dispatchGestureEvents() {
   }
   
   if (0 < last_tap) {
-    event = EventManager::returnEvent(MANUVR_MSG_GESTURE_ONE_SHOT);
+    event = Kernel::returnEvent(MANUVR_MSG_GESTURE_ONE_SHOT);
     event->addArg((uint32_t) getTouchTapString(last_tap));
     raiseEvent(event);
     last_tap = 0;
   }
   if (0 < last_double_tap) {
-    event = EventManager::returnEvent(MANUVR_MSG_GESTURE_ONE_SHOT);
+    event = Kernel::returnEvent(MANUVR_MSG_GESTURE_ONE_SHOT);
     event->addArg((uint32_t) getTouchTapString(last_double_tap));
     raiseEvent(event);
     last_double_tap = 0;
   }
   if (0 < last_swipe) {
-    event = EventManager::returnEvent(MANUVR_MSG_GESTURE_ONE_SHOT);
+    event = Kernel::returnEvent(MANUVR_MSG_GESTURE_ONE_SHOT);
     event->addArg((uint32_t) getTouchTapString(last_swipe));
     raiseEvent(event);
     last_swipe = 0;
   }
   if (isTouchDirty()) {
-    event = EventManager::returnEvent(MANUVR_MSG_GESTURE_ONE_SHOT);
+    event = Kernel::returnEvent(MANUVR_MSG_GESTURE_ONE_SHOT);
     event->addArg((uint32_t) getTouchTapString(last_touch));
     raiseEvent(event);
     last_touch_noted = last_touch;
@@ -477,7 +478,7 @@ void MGC3130::dispatchGestureEvents() {
     #ifdef __MANUVR_DEBUG
     if (verbosity > 3) {
       local_log.concatf("MGC3130 special code 0x08\n", special);
-      StaticHub::log(&local_log);
+      Kernel::log(&local_log);
     }
     #endif
     special = 0;
@@ -487,7 +488,7 @@ void MGC3130::dispatchGestureEvents() {
     #ifdef __MANUVR_DEBUG
     if (verbosity > 3) {
       local_log.concatf("MGC3130 last_event 0x08\n", last_event);
-      StaticHub::log(&local_log);
+      Kernel::log(&local_log);
     }
     #endif
     last_event = 0;
@@ -542,7 +543,7 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
             // data ought to always be 0x91 at this point.
             //if (0x91 != data) {
             //  local_log.concatf("UniqueID: 0x%02x\n", data);
-            //  StaticHub::log(&local_log);
+            //  Kernel::log(&local_log);
             //}
             break;
           case 4:   // Data output config mask is a 16-bit value.
@@ -662,7 +663,7 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
     if (verbosity > 3) {
       local_log.concat("An i2c operation requested by the MGC3130 came back failed.\n");
       completed->printDebug(&local_log);
-      StaticHub::log(&local_log);
+      Kernel::log(&local_log);
     }
     #endif
   }
@@ -706,16 +707,15 @@ const char* MGC3130::getReceiverName() {  return "MGC3130";  }
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
 /**
-* There is a NULL-check performed upstream for the scheduler member. So no need 
-*   to do it again here.
+* Boot done finished-up.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t MGC3130::bootComplete() {
-  EventReceiver::bootComplete();   // Call up to get scheduler ref and class init.
+  EventReceiver::bootComplete();
   init();
-  ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_SENSOR_MGC3130_INIT);
-  scheduler->createSchedule(1200, 0, true, this, event);
+  ManuvrEvent* event = Kernel::returnEvent(MANUVR_MSG_SENSOR_MGC3130_INIT);
+  __kernel->createSchedule(1200, 0, true, this, event);
   return 1;
 }
 
@@ -728,7 +728,7 @@ int8_t MGC3130::bootComplete() {
 *
 * Depending on class implementations, we might choose to handle the completed Event differently. We 
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
-*   ourselves and return DROP. By default, we will return REAP to instruct the EventManager
+*   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
 *   was crafted to not be in the heap in its own allocation, we will return DROP instead.
 *
@@ -789,7 +789,7 @@ int8_t MGC3130::notify(ManuvrEvent *active_event) {
       break;
   }
       
-  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
   return return_value;
 }
 
@@ -808,7 +808,7 @@ void MGC3130::procDirectDebugInstruction(StringBuilder *input) {
   }
   
 #endif
-  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 
 

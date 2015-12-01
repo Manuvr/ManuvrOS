@@ -28,7 +28,7 @@
 #ifndef MANUVRABLE_NEOPIXEL_H
   #define MANUVRABLE_NEOPIXEL_H
 
-  #include "StaticHub/StaticHub.h"
+  #include "ManuvrOS/Kernel.h"
 
   // 'type' flags for LED pixels (third parameter to constructor):
   #define NEO_GRB     0x01 // Wired for GRB data order

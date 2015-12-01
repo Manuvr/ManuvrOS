@@ -1,6 +1,4 @@
-#include "EventManager.h"
-
-#include "StaticHub/StaticHub.h"
+#include <ManuvrOS/Kernel.h>
 
 
 

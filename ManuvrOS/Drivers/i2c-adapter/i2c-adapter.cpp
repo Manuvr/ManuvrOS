@@ -138,7 +138,7 @@ I2CAdapter::~I2CAdapter() {
 // TODO: Inline this.
 int8_t I2CAdapter::generateStart() {
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 6) StaticHub::log("I2CAdapter::generateStart()\n");
+  if (verbosity > 6) Kernel::log("I2CAdapter::generateStart()\n");
   #endif
   if (! bus_online) return -1;
   I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, ENABLE);      //Enable EVT and ERR interrupts
@@ -149,7 +149,7 @@ int8_t I2CAdapter::generateStart() {
 // TODO: Inline this.
 int8_t I2CAdapter::generateStop() {
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 6) StaticHub::log("I2CAdapter::generateStop()\n");
+  if (verbosity > 6) Kernel::log("I2CAdapter::generateStop()\n");
   #endif
   if (! bus_online) return -1;
   DMA_ITConfig(DMA1_Stream0, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE | DMA_IT_DME, DISABLE);
@@ -199,7 +199,7 @@ I2CAdapter::~I2CAdapter() {
 
 int8_t I2CAdapter::generateStart() {
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 6) StaticHub::log("I2CAdapter::generateStart()\n");
+  if (verbosity > 6) Kernel::log("I2CAdapter::generateStart()\n");
   #endif
   if (! bus_online) return -1;
   //Wire1.sendTransmission(I2C_STOP);
@@ -210,7 +210,7 @@ int8_t I2CAdapter::generateStart() {
 
 int8_t I2CAdapter::generateStop() {
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 6) StaticHub::log("I2CAdapter::generateStop()\n");
+  if (verbosity > 6) Kernel::log("I2CAdapter::generateStop()\n");
   #endif
   if (! bus_online) return -1;
   return 0;
@@ -341,7 +341,7 @@ I2CAdapter::~I2CAdapter() {
 
 int8_t I2CAdapter::generateStart() {
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 6) StaticHub::log("I2CAdapter::generateStart()\n");
+  if (verbosity > 6) Kernel::log("I2CAdapter::generateStart()\n");
   #endif
   if (! bus_online) return -1;
   //Wire1.sendTransmission(I2C_STOP);
@@ -353,7 +353,7 @@ int8_t I2CAdapter::generateStart() {
 // TODO: Inline this.
 int8_t I2CAdapter::generateStop() {
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 6) StaticHub::log("I2CAdapter::generateStop()\n");
+  if (verbosity > 6) Kernel::log("I2CAdapter::generateStop()\n");
   #endif
   if (! bus_online) return -1;
   return 0;
@@ -390,7 +390,7 @@ I2CAdapter::~I2CAdapter() {
 // TODO: Inline this.
 int8_t I2CAdapter::generateStart() {
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 6) StaticHub::log("I2CAdapter::generateStart()\n");
+  if (verbosity > 6) Kernel::log("I2CAdapter::generateStart()\n");
   #endif
   if (! bus_online) return -1;
   //Wire1.sendTransmission(I2C_STOP);
@@ -402,7 +402,7 @@ int8_t I2CAdapter::generateStart() {
 // TODO: Inline this.
 int8_t I2CAdapter::generateStop() {
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 6) StaticHub::log("I2CAdapter::generateStop()\n");
+  if (verbosity > 6) Kernel::log("I2CAdapter::generateStop()\n");
   #endif
   if (! bus_online) return -1;
   return 0;
@@ -420,13 +420,13 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
     dev = open(filename, O_RDWR);
     if (dev < 0) {
       #ifdef __MANUVR_DEBUG
-      StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to open the i2c bus represented by %s.\n", filename);
+      Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to open the i2c bus represented by %s.\n", filename);
       #endif
     }
   }
   else {
     #ifdef __MANUVR_DEBUG
-    StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Somehow we failed to sprintf and build a filename to open i2c bus %d.\n", dev_id);
+    Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Somehow we failed to sprintf and build a filename to open i2c bus %d.\n", dev_id);
     #endif
   }
 }
@@ -436,7 +436,7 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
 I2CAdapter::~I2CAdapter() {
     if (dev >= 0) {
       #ifdef __MANUVR_DEBUG
-      StaticHub::log(__PRETTY_FUNCTION__, LOG_INFO, "Closing the open i2c bus...\n");
+      Kernel::log(__PRETTY_FUNCTION__, LOG_INFO, "Closing the open i2c bus...\n");
       #endif
       close(dev);
     }
@@ -514,7 +514,7 @@ int8_t I2CAdapter::bootComplete() {
 *
 * Depending on class implementations, we might choose to handle the completed Event differently. We 
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
-*   ourselves and return DROP. By default, we will return REAP to instruct the EventManager
+*   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
 *   was crafted to not be in the heap in its own allocation, we will return DROP instead.
 *
@@ -556,7 +556,7 @@ int8_t I2CAdapter::notify(ManuvrEvent *active_event) {
       break;
   }
   
-  if (local_log.length() > 0) StaticHub::log(&local_log);
+  if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
 }
 
@@ -573,13 +573,13 @@ int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
 	int8_t return_value = I2C_ERR_CODE_NO_ERROR;
 	if (slave == NULL) {
 	  #ifdef __MANUVR_DEBUG
-		StaticHub::log("Slave is invalid.");
+		Kernel::log("Slave is invalid.");
 		#endif
 		return_value = I2C_ERR_SLAVE_INVALID;
 	}
 	if (dev_list.contains(slave)) {    // Check for pointer eqivillence.
 	  #ifdef __MANUVR_DEBUG
-		StaticHub::log("Slave device exists.");
+		Kernel::log("Slave device exists.");
 		#endif
 		return_value = I2C_ERR_SLAVE_EXISTS;
 	}
@@ -588,7 +588,7 @@ int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
 			int slave_index = dev_list.insert(slave);
 			if (slave_index == -1) {
 			  #ifdef __MANUVR_DEBUG
-				StaticHub::log("Failed to insert somehow. Disassigning...");
+				Kernel::log("Failed to insert somehow. Disassigning...");
 				#endif
 				slave->disassignBusInstance();
 				return_value = I2C_ERR_SLAVE_INSERTION;
@@ -596,14 +596,14 @@ int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
 		}
 		else {
 		  #ifdef __MANUVR_DEBUG
-			StaticHub::log("Op would clobber bus instance.");
+			Kernel::log("Op would clobber bus instance.");
 			#endif
 			return_value = I2C_ERR_SLAVE_ASSIGN_CLOB;
 		}
 	}
 	else {
 	  #ifdef __MANUVR_DEBUG
-		StaticHub::log("Op would cause address collision with another slave device.");
+		Kernel::log("Op would cause address collision with another slave device.");
 		#endif
 		return_value = I2C_ERR_SLAVE_COLLISION;
 	}
@@ -668,7 +668,7 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
       // If the bus is either uninitiallized or not idle, decline
       // to switch the device. Return false;
       #ifdef __MANUVR_DEBUG
-      StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "i2c bus is not online, so won't switch device. Failing....");
+      Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "i2c bus is not online, so won't switch device. Failing....");
       #endif
       return return_value;
     }
@@ -676,7 +676,7 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
       while (bus_error && (timeout > 0)) { timeout--; }
       if (bus_error) {
         #ifdef __MANUVR_DEBUG
-        StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "i2c bus was held for too long. Failing....");
+        Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "i2c bus was held for too long. Failing....");
         #endif
         return return_value;
       }
@@ -687,7 +687,7 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
       }
       else {
         #ifdef __MANUVR_DEBUG
-        StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to acquire bus access and/or talk to slave at %d.", nu_addr);
+        Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to acquire bus access and/or talk to slave at %d.", nu_addr);
         #endif
         bus_error = true;
       }
@@ -711,22 +711,22 @@ bool I2CAdapter::insert_work_item(I2CQueuedOperation *nu) {
   nu->device = this;
 	if (current_queue_item != NULL) {
 		// Something is already going on with the bus. Queue...
-		//StaticHub::log(__PRETTY_FUNCTION__, 5, "Deferring i2c bus operation...");
+		//Kernel::log(__PRETTY_FUNCTION__, 5, "Deferring i2c bus operation...");
 		work_queue.insert(nu);
 	}
 	else {
 		// Bus is idle. Put this work item in the active slot and start the bus operations...
-		//StaticHub::log(__PRETTY_FUNCTION__, 5, "Starting i2c operation now...");
+		//Kernel::log(__PRETTY_FUNCTION__, 5, "Starting i2c operation now...");
 		current_queue_item = nu;
 		if ((dev >= 0) && (bus_online)) {
 		  nu->begin();
 		  if (verbosity > 6) {
 		    nu->printDebug(&local_log);
-		    StaticHub::log(&local_log);
+		    Kernel::log(&local_log);
 		  }
 		}
 		else {
-		  EventManager::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, NULL);   // Raise an event
+		  Kernel::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, NULL);   // Raise an event
 		}
 	}
 	return true;
@@ -795,7 +795,7 @@ void I2CAdapter::advance_work_queue(void) {
 		}
 	}
 	
-	if (local_log.length() > 0) StaticHub::log(&local_log);
+	if (local_log.length() > 0) Kernel::log(&local_log);
 }
 
 
@@ -1031,7 +1031,7 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       break;
     case ']':
       local_log.concatf("Advanced i2c work queue.\n");
-      EventManager::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, NULL);   // Raise an event
+      Kernel::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, NULL);   // Raise an event
       break;
 
     default:
@@ -1039,6 +1039,6 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
   
-  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 

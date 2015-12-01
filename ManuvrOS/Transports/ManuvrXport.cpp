@@ -53,7 +53,7 @@ void ManuvrXport::isDebugConsole(bool en) {
 */ 
 int8_t ManuvrXport::reapXenoSession(XenoSession* ses) {
   if (NULL != ses) {
-    ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_SYS_RETRACT_SRVC);
+    ManuvrEvent* event = Kernel::returnEvent(MANUVR_MSG_SYS_RETRACT_SRVC);
     event->addArg((EventReceiver*) ses);
     raiseEvent(event);
 
@@ -90,7 +90,7 @@ void ManuvrXport::connected(bool en) {
       // This will warn us later to notify others of our removal, if necessary.
       _xport_flags |= MANUVR_XPORT_FLAG_HAS_SESSION;
     
-      ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
+      ManuvrEvent* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
       event->addArg((EventReceiver*) ses);
       raiseEvent(event);
     }

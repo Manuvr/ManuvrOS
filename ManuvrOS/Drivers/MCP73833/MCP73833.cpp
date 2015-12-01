@@ -31,9 +31,9 @@ This class was coded with the assumption that there would only be one such
   chip in a given system.
 */
 
-#include "StaticHub/StaticHub.h"
 #include "MCP73833.h"
 #include <StringBuilder/StringBuilder.h>
+#include <ManuvrOS/Platform/Platform.h>
 
 
 volatile MCP73833* MCP73833::INSTANCE = NULL;
@@ -55,7 +55,7 @@ stat1 stat2   Condition
 */
 void mcp73833_stat1_isr() {
   MCP73833::INSTANCE->_stat1_change_time = millis();
-  StaticHub::log(digitalRead(MCP73833::INSTANCE->_stat1_pin) ? "stat1 is now high" : "stat1 is now low");
+  Kernel::log(digitalRead(MCP73833::INSTANCE->_stat1_pin) ? "stat1 is now high" : "stat1 is now low");
 }
 
 /*
@@ -63,7 +63,7 @@ void mcp73833_stat1_isr() {
 */
 void mcp73833_stat2_isr() {
   MCP73833::INSTANCE->_stat2_change_time = millis();
-  StaticHub::log(digitalRead(MCP73833::INSTANCE->_stat2_pin) ? "stat2 is now high" : "stat2 is now low");
+  Kernel::log(digitalRead(MCP73833::INSTANCE->_stat2_pin) ? "stat2 is now high" : "stat2 is now low");
 }
 
 

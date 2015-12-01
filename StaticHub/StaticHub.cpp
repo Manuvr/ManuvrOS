@@ -69,17 +69,17 @@ unsigned long micros() {
 *   until I figure out how to sink a hook into the DMA interrupt to take its place.
 */
 void stdout_funnel() {
-  if (StaticHub::log_buffer.count()) {
-    if (!StaticHub::getInstance()->getVerbosity()) {
-      StaticHub::log_buffer.clear();
+  if (Kernel::log_buffer.count()) {
+    if (!Kernel::getInstance()->getVerbosity()) {
+      Kernel::log_buffer.clear();
     }
     else {
-      printf("%s", StaticHub::log_buffer.position(0));
-      StaticHub::log_buffer.drop_position(0);
+      printf("%s", Kernel::log_buffer.position(0));
+      Kernel::log_buffer.drop_position(0);
     }
   }
   else {
-    StaticHub::getInstance()->disableLogCallback();
+    Kernel::getInstance()->disableLogCallback();
   }
 }
 
@@ -88,41 +88,41 @@ void stdout_funnel() {
 /****************************************************************************************************
 * Static initializers                                                                               *
 ****************************************************************************************************/
-volatile StaticHub* StaticHub::INSTANCE = NULL;
-volatile uint32_t StaticHub::next_random_int[STATICHUB_RNG_CARRY_CAPACITY];
-volatile uint32_t StaticHub::millis_since_reset = 1;   // Start at one because WWDG.
-volatile uint8_t  StaticHub::watchdog_mark = 42;
+volatile StaticHub* Kernel::INSTANCE = NULL;
+volatile uint32_t Kernel::next_random_int[STATICHUB_RNG_CARRY_CAPACITY];
+volatile uint32_t Kernel::millis_since_reset = 1;   // Start at one because WWDG.
+volatile uint8_t  Kernel::watchdog_mark = 42;
 
 
 
 /****************************************************************************************************
 * Logging members...                                                                                *
 ****************************************************************************************************/
-StringBuilder StaticHub::log_buffer;
+StringBuilder Kernel::log_buffer;
 
 /*
 * Logger pass-through functions. Please mind the variadics...
 */
-volatile void StaticHub::log(int severity, const char *str) {
+volatile void Kernel::log(int severity, const char *str) {
   if (!INSTANCE->verbosity) return;
   //if (log_buffer.count() == 0) ((StaticHub*) INSTANCE)->__scheduler.enableSchedule(INSTANCE->pid_log_moderator);
   //log_buffer.concat(str);
   if (str) printf("%s", str);
 }
 
-volatile void StaticHub::log(char *str) {
+volatile void Kernel::log(char *str) {
   if (!INSTANCE->verbosity) return;
   if (str) printf("%s", str);
 }
 
-volatile void StaticHub::log(const char *str) {
+volatile void Kernel::log(const char *str) {
   if (!INSTANCE->verbosity) return;
   //if (log_buffer.count() == 0) ((StaticHub*) INSTANCE)->__scheduler.enableSchedule(INSTANCE->pid_log_moderator);
   //log_buffer.concat(str);
   if (str) printf("%s", str);
 }
 
-volatile void StaticHub::log(const char *fxn_name, int severity, const char *str, ...) {
+volatile void Kernel::log(const char *fxn_name, int severity, const char *str, ...) {
   if (!INSTANCE->verbosity) return;
   //log_buffer.concat("%d  %s:\t", severity, fxn_name);
   if (log_buffer.count() == 0) {
@@ -142,7 +142,7 @@ volatile void StaticHub::log(const char *fxn_name, int severity, const char *str
   log_buffer.clear();
 }
 
-volatile void StaticHub::log(StringBuilder *str) {
+volatile void Kernel::log(StringBuilder *str) {
   if (!INSTANCE->verbosity) return;
   if (log_buffer.count() == 0) ((StaticHub*) INSTANCE)->__scheduler.enableSchedule(INSTANCE->pid_log_moderator);
   log_buffer.concatHandoff(str);
@@ -151,7 +151,7 @@ volatile void StaticHub::log(StringBuilder *str) {
 }
 
 
-void StaticHub::disableLogCallback(){
+void Kernel::disableLogCallback(){
   __scheduler.disableSchedule(pid_log_moderator);
 }
 
@@ -166,7 +166,7 @@ void StaticHub::disableLogCallback(){
 *
 * @return the stack pointer at call time.
 */
-volatile uint32_t StaticHub::getStackPointer(void) {
+volatile uint32_t Kernel::getStackPointer(void) {
   uint32_t test;
   test = (uint32_t) &test;  // Store the pointer.
   return test;
@@ -179,7 +179,7 @@ volatile uint32_t StaticHub::getStackPointer(void) {
 * @param    nu_rnd The supplied random number.
 * @return   True if the RNG should continue supplying us, false if it should take a break until we need more.
 */
-volatile bool StaticHub::provide_random_int(uint32_t nu_rnd) {
+volatile bool Kernel::provide_random_int(uint32_t nu_rnd) {
   return false;
 }
 
@@ -191,7 +191,7 @@ volatile bool StaticHub::provide_random_int(uint32_t nu_rnd) {
 *
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
-uint32_t StaticHub::randomInt(void) {
+uint32_t Kernel::randomInt(void) {
   uint32_t return_value = rand();
   return return_value;
 }
@@ -203,7 +203,7 @@ uint32_t StaticHub::randomInt(void) {
 *   time or timezone.
 * Returns false if the date failed to set. True if it did.
 */
-bool StaticHub::setTimeAndDate(char* nu_date_time) {
+bool Kernel::setTimeAndDate(char* nu_date_time) {
   return false;
 }
 
@@ -211,7 +211,7 @@ bool StaticHub::setTimeAndDate(char* nu_date_time) {
 /*
 * Returns an integer representing the current datetime.
 */
-uint32_t StaticHub::currentTimestamp(void) {
+uint32_t Kernel::currentTimestamp(void) {
   uint32_t return_value = 0;
   return return_value;
 }
@@ -219,7 +219,7 @@ uint32_t StaticHub::currentTimestamp(void) {
 /*
 * Same, but writes a string representation to the argument.
 */
-void StaticHub::currentTimestamp(StringBuilder* target) {
+void Kernel::currentTimestamp(StringBuilder* target) {
 }
 
 /*
@@ -227,7 +227,7 @@ void StaticHub::currentTimestamp(StringBuilder* target) {
 * Returns ISO 8601 datetime string.
 * 2004-02-12T15:19:21+00:00
 */
-void StaticHub::currentDateTime(StringBuilder* target) {
+void Kernel::currentDateTime(StringBuilder* target) {
   if (target != NULL) {
   }
 }
@@ -255,7 +255,7 @@ StaticHub bootstrap and setup fxns. This code is only ever called to initiallize
 * Some peripherals and operations need a bit of time to complete. This function is called from a
 *   one-shot schedule and performs all of the cleanup for latent consequences of bootstrap().
 */
-int8_t StaticHub::bootComplete() {
+int8_t Kernel::bootComplete() {
   //EventReceiver::bootComplete()  <--- Note that we aren't going to do this. We already know about the scheduler.
   return 1;
 }
@@ -263,8 +263,8 @@ int8_t StaticHub::bootComplete() {
 
 int random_to_log(ManuvrEvent *active_event) {
   StringBuilder log_item("New random: ");
-  log_item.concat((uint32_t) StaticHub::randomInt());
-  StaticHub::log(&log_item);
+  log_item.concat((uint32_t) Kernel::randomInt());
+  Kernel::log(&log_item);
   return 1;
 }
 
@@ -277,7 +277,7 @@ int random_to_log(ManuvrEvent *active_event) {
 *   cycle if it's going to be a regular event. Just pre-build some schedules that we know
 *   we will need and let them sit dormant until needed.
 */
-void StaticHub::initSchedules(void) {
+void Kernel::initSchedules(void) {
   pid_profiler_report = __scheduler.createSchedule(10000,  -1, false, &__scheduler, new ManuvrEvent(MANUVR_MSG_SCHED_DUMP_META));
   __scheduler.disableSchedule(pid_profiler_report);
 
@@ -291,7 +291,7 @@ void StaticHub::initSchedules(void) {
 /*
 * Init the RNG. Short and sweet.
 */
-void StaticHub::init_RNG(void) volatile {
+void Kernel::init_RNG(void) volatile {
   srand(time(NULL));          // Seed the PRNG...
 }
 
@@ -303,14 +303,14 @@ void StaticHub::init_RNG(void) volatile {
 * Pending peripheral-level init of pins, we should just enable everything and let 
 *   individual classes work out their own requirements.
 */
-void StaticHub::gpioSetup() volatile {
+void Kernel::gpioSetup() volatile {
 }
 
 
 int test_callback(ManuvrEvent *active_event) {
   StringBuilder *log_item;
   if (0 == active_event->getArgAs(&log_item)) {
-    StaticHub::log(log_item);
+    Kernel::log(log_item);
   }
   return 1;
 }
@@ -320,7 +320,7 @@ int test_callback(ManuvrEvent *active_event) {
 * The primary init function. Calling this will bring the entire system online if everything is
 *   working nominally.
 */
-int8_t StaticHub::bootstrap() {
+int8_t Kernel::bootstrap() {
   log_buffer.concatf("\n\%s v%s    Build date: %s %s\nBootstrap completed.\n\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
   
   event_manager.subscribe((EventReceiver*) &__scheduler);    // Subscribe the Scheduler.
@@ -339,7 +339,7 @@ int8_t StaticHub::bootstrap() {
   event_manager.on(MANUVR_MSG_SYS_ISSUE_LOG_ITEM, test_callback, 0);
 
 
-  EventManager::raiseEvent(MANUVR_MSG_SYS_BOOT_COMPLETED, this);  // Bootstrap complete
+  Kernel::raiseEvent(MANUVR_MSG_SYS_BOOT_COMPLETED, this);  // Bootstrap complete
   return 0;
 }
 
@@ -350,20 +350,20 @@ int8_t StaticHub::bootstrap() {
 *   passed into their constructors, rather than forcing them to call this and risking an infinite 
 *   recursion.
 */
-StaticHub* StaticHub::getInstance() {
-  if (StaticHub::INSTANCE == NULL) {
+StaticHub* Kernel::getInstance() {
+  if (Kernel::INSTANCE == NULL) {
     // TODO: remove last traces of this pattern.
     // This should never happen, but if it does, it will crash us for sure.
-    StaticHub::INSTANCE = new StaticHub();
-    ((StaticHub*) StaticHub::INSTANCE)->bootstrap();
+    Kernel::INSTANCE = new StaticHub();
+    ((StaticHub*) Kernel::INSTANCE)->bootstrap();
   }
   // And that is how the singleton do...
-  return (StaticHub*) StaticHub::INSTANCE;
+  return (StaticHub*) Kernel::INSTANCE;
 }
 
 
-StaticHub::StaticHub() {
-  StaticHub::INSTANCE = this;
+Kernel::StaticHub() {
+  Kernel::INSTANCE = this;
   start_time_micros = micros();
 }
 
@@ -374,8 +374,8 @@ StaticHub::StaticHub() {
 * Resource fetch functions...                                                                       *
 ****************************************************************************************************/
 
-Scheduler*    StaticHub::fetchScheduler(void) {     return &__scheduler;     }
-EventManager* StaticHub::fetchEventManager(void) {  return &event_manager;   }
+Scheduler*    Kernel::fetchScheduler(void) {     return &__scheduler;     }
+EventManager* Kernel::fetchEventManager(void) {  return &event_manager;   }
 
 
 /****************************************************************************************************
@@ -407,7 +407,7 @@ These are overrides from EventReceiver interface...
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t StaticHub::callback_proc(ManuvrEvent *event) {
+int8_t Kernel::callback_proc(ManuvrEvent *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
   int8_t return_value = event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -415,8 +415,8 @@ int8_t StaticHub::callback_proc(ManuvrEvent *event) {
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     case MANUVR_MSG_SYS_BOOT_COMPLETED:
-      StaticHub::log("Boot complete.\n");
-event = EventManager::returnEvent(MANUVR_MSG_SYS_ISSUE_LOG_ITEM);
+      Kernel::log("Boot complete.\n");
+event = Kernel::returnEvent(MANUVR_MSG_SYS_ISSUE_LOG_ITEM);
 event->addArg(new StringBuilder("This is a test log. If this is visable, it means that the Events work."));
 raiseEvent(event);
       break;
@@ -429,7 +429,7 @@ raiseEvent(event);
 
 
 
-int8_t StaticHub::notify(ManuvrEvent *active_event) {
+int8_t Kernel::notify(ManuvrEvent *active_event) {
   StringBuilder output;
   int8_t return_value = 0;
   
@@ -460,7 +460,7 @@ int8_t StaticHub::notify(ManuvrEvent *active_event) {
       return_value += EventReceiver::notify(active_event);
       break;
   }
-  if (output.length() > 0) {    StaticHub::log(&output);  }
+  if (output.length() > 0) {    Kernel::log(&output);  }
   return return_value;
 }
 
@@ -493,7 +493,7 @@ TODO: Keep them as short as possible.
 /*
 * Called from the SysTick handler once per ms.
 */
-volatile void StaticHub::advanceScheduler(void) {
+volatile void Kernel::advanceScheduler(void) {
   if (0 == (millis_since_reset++ % watchdog_mark)) {
     /* If it's time to punch the watchdog, do so. Doing it in the ISR will prevent a
          long-running operation from causing a reset. This way, the only thing that will
@@ -526,7 +526,7 @@ Code in here only exists for as long as it takes to debug something. Don't write
 *
 * @return a pointer to a string constant.
 */
-const char* StaticHub::getReceiverName() {  return "StaticHub";  }
+const char* Kernel::getReceiverName() {  return "StaticHub";  }
 
 
 /**
@@ -534,7 +534,7 @@ const char* StaticHub::getReceiverName() {  return "StaticHub";  }
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
-void StaticHub::printDebug(StringBuilder* output) {
+void Kernel::printDebug(StringBuilder* output) {
   if (NULL == output) return;
   uint32_t initial_sp = getStackPointer();
   uint32_t final_sp = getStackPointer();
@@ -551,7 +551,7 @@ void StaticHub::printDebug(StringBuilder* output) {
 
 
 
-void StaticHub::print_type_sizes(void) {
+void Kernel::print_type_sizes(void) {
   StringBuilder temp("---< Type sizes >-----------------------------\n");
   temp.concatf("Elemental structures:\n");
   temp.concatf("\tStringBuilder         %d\n", sizeof(StringBuilder));
@@ -570,13 +570,13 @@ void StaticHub::print_type_sizes(void) {
   temp.concatf("\t SchedulerItem         %d\n", sizeof(ScheduleItem));
   temp.concatf("\t TaskProfilerData      %d\n", sizeof(TaskProfilerData));
 
-  StaticHub::log(&temp);
+  Kernel::log(&temp);
 }
 
 
 
 
-void StaticHub::procDirectDebugInstruction(StringBuilder *input) {
+void Kernel::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
   char c = *(str);
   uint8_t temp_byte = 0;        // Many commands here take a single integer argument.
@@ -591,13 +591,13 @@ void StaticHub::procDirectDebugInstruction(StringBuilder *input) {
   switch (c) {
     case 'B':
       if (temp_byte == 128) {
-        EventManager::raiseEvent(MANUVR_MSG_SYS_BOOTLOADER, NULL);
+        Kernel::raiseEvent(MANUVR_MSG_SYS_BOOTLOADER, NULL);
       }
       output.concatf("Will only jump to bootloader if the number '128' follows the command.\n");
       break;
     case 'b':
       if (temp_byte == 128) {
-        EventManager::raiseEvent(MANUVR_MSG_SYS_REBOOT, NULL);
+        Kernel::raiseEvent(MANUVR_MSG_SYS_REBOOT, NULL);
       }
       output.concatf("Will only reboot if the number '128' follows the command.\n");
       break;
@@ -618,7 +618,7 @@ void StaticHub::procDirectDebugInstruction(StringBuilder *input) {
       { // TODO: I don't think the RNG is ever being turned off. Save some power....
         temp_byte = (temp_byte == 0) ? STATICHUB_RNG_CARRY_CAPACITY : temp_byte;
         for (uint8_t i = 0; i < temp_byte; i++) {
-          uint32_t x = StaticHub::randomInt();
+          uint32_t x = Kernel::randomInt();
           if (x) {
             output.concatf("Random number: 0x%08x\n", x);
           }
@@ -634,12 +634,12 @@ void StaticHub::procDirectDebugInstruction(StringBuilder *input) {
     case 'u':
       switch (temp_byte) {
         case 1:
-          EventManager::raiseEvent(MANUVR_MSG_SELF_DESCRIBE, NULL);
+          Kernel::raiseEvent(MANUVR_MSG_SELF_DESCRIBE, NULL);
           break;
         case 2:
           break;
         case 3:
-          EventManager::raiseEvent(MANUVR_MSG_LEGEND_MESSAGES, NULL);
+          Kernel::raiseEvent(MANUVR_MSG_LEGEND_MESSAGES, NULL);
           break;
         default:
           output.concatf("Need a number to ID the dev.\n");
@@ -652,7 +652,7 @@ void StaticHub::procDirectDebugInstruction(StringBuilder *input) {
         case 255:
           break;
         default:
-          event = EventManager::returnEvent(MANUVR_MSG_SYS_POWER_MODE);
+          event = Kernel::returnEvent(MANUVR_MSG_SYS_POWER_MODE);
           event->addArg((uint8_t) temp_byte);
           raiseEvent(event);
           output.concatf("Power mode is now %d.\n", temp_byte);
@@ -723,7 +723,7 @@ void StaticHub::procDirectDebugInstruction(StringBuilder *input) {
         //ManuvrEvent *deferred = new ManuvrEvent(MANUVR_MSG_SCHED_DUMP_META);
         //event = new ManuvrEvent(MANUVR_MSG_SCHED_DEFERRED_EVENT);
         //event->addArg(deferred);
-        //EventManager::raiseEvent(event);   // Raise an event with a message. No need to clean it up.
+        //Kernel::raiseEvent(event);   // Raise an event with a message. No need to clean it up.
       }
       else {
         if (__scheduler.scheduleEnabled(pid_profiler_report)) {
@@ -768,7 +768,7 @@ void StaticHub::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
 
-  if (output.length() > 0) {    StaticHub::log(&output);  }
+  if (output.length() > 0) {    Kernel::log(&output);  }
   last_user_input.clear();
 }
 

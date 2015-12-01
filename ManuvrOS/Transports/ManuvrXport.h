@@ -55,7 +55,7 @@ For debuggability, the transport has a special mode for acting as a debug
 #ifndef __MANUVR_XPORT_H__
 #define __MANUVR_XPORT_H__
 
-#include "../EventManager.h"
+#include "../Kernel.h"
 #include "StringBuilder/StringBuilder.h"
 
 #define MANUVR_XPORT_FLAG_ALWAYS_CONNECTED 0x00000001

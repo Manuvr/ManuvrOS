@@ -65,7 +65,7 @@
   
   #define MANUVR_MSG_SYS_RELEASE_CRUFT    0x002F // The system is asking EventReceivers to GC if we can.
 
-  // StaticHub and small scattered functionality
+  // Kernel and small scattered functionality
   #define MANUVR_MSG_RNG_BUFFER_EMPTY     0x0030 // The RNG couldn't keep up with our entropy demands.
   #define MANUVR_MSG_USER_DEBUG_INPUT     0x0031 // The user is issuing a direct debug command.
   #define MANUVR_MSG_INTERRUPTS_MASKED    0x0032 // Anything that depends on interrupts is now broken.

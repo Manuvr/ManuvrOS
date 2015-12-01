@@ -24,7 +24,7 @@ XenoSession is the class that manages dialog with other systems via some
 */
 
 #include "XenoSession.h"
-#include "StaticHub/StaticHub.h"
+#include <ManuvrOS/Kernel.h>
 
 
 
@@ -85,7 +85,7 @@ void XenoSession::reclaimPreallocation(XenoMessage* obj) {
     #ifdef __MANUVR_DEBUG
     if (verbosity > 3) {
       local_log.concatf("reclaim via prealloc. addr: 0x%08x\n", obj_addr);
-      StaticHub::log(&local_log);
+      Kernel::log(&local_log);
     }
     #endif
     obj->wipe();
@@ -95,7 +95,7 @@ void XenoSession::reclaimPreallocation(XenoMessage* obj) {
     #ifdef __MANUVR_DEBUG
     if (verbosity > 3) {
       local_log.concatf("reclaim via delete. addr: 0x%08x\n", obj_addr);
-      StaticHub::log(&local_log);
+      Kernel::log(&local_log);
     }
     #endif
     // We were created because our prealloc was starved. we are therefore a transient heap object.
@@ -162,17 +162,16 @@ XenoSession::XenoSession(ManuvrXport* _xport) {
 * Unlike many of the other EventReceivers, THIS one needs to be able to be torn down.
 */
 XenoSession::~XenoSession() {
-  scheduler->disableSchedule(pid_sync_timer);
-  scheduler->removeSchedule(pid_sync_timer);
-
-  StaticHub::getInstance()->fetchEventManager()->unsubscribe((EventReceiver*) this);  // Unsubscribe
+  __kernel->disableSchedule(pid_sync_timer);
+  __kernel->removeSchedule(pid_sync_timer);
+  __kernel->unsubscribe((EventReceiver*) this);  // Unsubscribe
   
   purgeInbound();  // Need to do careful checks in here for open comm loops.
   purgeOutbound(); // Need to do careful checks in here for open comm loops.
 
   while (preallocated.dequeue() != NULL);
   
-  EventManager::raiseEvent(MANUVR_MSG_SESS_HANGUP, NULL);
+  Kernel::raiseEvent(MANUVR_MSG_SESS_HANGUP, NULL);
 }
 
 
@@ -192,7 +191,7 @@ int8_t XenoSession::tapMessageType(uint16_t code) {
     case MANUVR_MSG_SESS_DUMP_DEBUG:
 //    case MANUVR_MSG_SESS_HANGUP:
       #ifdef __MANUVR_DEBUG
-      if (verbosity > 3) StaticHub::log("tapMessageType() tried to tap a blacklisted code.\n");
+      if (verbosity > 3) Kernel::log("tapMessageType() tried to tap a blacklisted code.\n");
       #endif
       return -1;
   }
@@ -245,8 +244,8 @@ int8_t XenoSession::markMessageComplete(uint16_t target_id) {
           outbound_messages.remove(working_xeno);
           if (pid_ack_timeout) {
             // If the message had a timeout (waiting for ACK), we should clean up the schedule.
-            scheduler->disableSchedule(pid_ack_timeout);
-            scheduler->removeSchedule(pid_ack_timeout);
+            __kernel->disableSchedule(pid_ack_timeout);
+            __kernel->removeSchedule(pid_ack_timeout);
           }
           reclaimPreallocation(working_xeno);
           return 1;
@@ -291,8 +290,7 @@ int8_t XenoSession::markSessionConnected(bool conn_state) {
 ****************************************************************************************************/
 
 /**
-* There is a NULL-check performed upstream for the scheduler member. So no need 
-*   to do it again here.
+* Boot done finished-up.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
@@ -303,8 +301,8 @@ int8_t XenoSession::bootComplete() {
   sync_event.isManaged(true);
   sync_event.specific_target = (EventReceiver*) this;
 
-  pid_sync_timer = scheduler->createSchedule(30,  -1, false, (EventReceiver*) this, &sync_event);
-  scheduler->disableSchedule(pid_sync_timer);
+  pid_sync_timer = __kernel->createSchedule(30,  -1, false, (EventReceiver*) this, &sync_event);
+  __kernel->disableSchedule(pid_sync_timer);
 
   return 1;
 }
@@ -317,7 +315,7 @@ int8_t XenoSession::bootComplete() {
 *
 * Depending on class implementations, we might choose to handle the completed Event differently. We 
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
-*   ourselves and return DROP. By default, we will return REAP to instruct the EventManager
+*   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
 *   was crafted to not be in the heap in its own allocation, we will return DROP instead.
 *
@@ -406,7 +404,7 @@ int8_t XenoSession::notify(ManuvrEvent *active_event) {
     }
   }
   
-  if (local_log.length() > 0) StaticHub::log(&local_log);
+  if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
 }
 
@@ -431,7 +429,7 @@ int XenoSession::purgeOutbound() {
     if (verbosity > 6) {
       local_log.concat("\nDestroying outbound msg:\n");
       temp->printDebug(&local_log);
-      StaticHub::log(&local_log);
+      Kernel::log(&local_log);
     }
     #endif
     delete temp;
@@ -455,7 +453,7 @@ int XenoSession::purgeInbound() {
     if (verbosity > 6) {
       local_log.concat("\nDestroying inbound msg:\n");
       temp->printDebug(&local_log);
-      StaticHub::log(&local_log);
+      Kernel::log(&local_log);
     }
     #endif
     delete temp;
@@ -476,7 +474,7 @@ int8_t XenoSession::sendSyncPacket() {
     StringBuilder sync_packet((unsigned char*) SYNC_PACKET_BYTES, 4);
     owner->sendBuffer(&sync_packet);
     
-    ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_XPORT_SEND);
+    ManuvrEvent* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
     event->specific_target = owner;  //   event to be the transport that instantiated us.
     raiseEvent(event);
   }
@@ -498,10 +496,10 @@ int8_t XenoSession::sendSyncPacket() {
 */
 int8_t XenoSession::sendKeepAlive() {
   if (owner->connected()) {
-    ManuvrEvent* ka_event = EventManager::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE);
+    ManuvrEvent* ka_event = Kernel::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE);
     sendEvent(ka_event);
 
-    ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_XPORT_SEND);
+    ManuvrEvent* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
     event->specific_target = owner;  //   event to be the transport that instantiated us.
     raiseEvent(event);
   }
@@ -522,7 +520,7 @@ int8_t XenoSession::sendEvent(ManuvrEvent *active_event) {
   //outbound_messages.insert(nu_outbound_msg);
   
   // We are about to pass a message across the transport.
-  ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_XPORT_SEND);
+  ManuvrEvent* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
   event->callback        = this;  // We want the callback and the only receiver of this
   event->specific_target = owner;  //   event to be the transport that instantiated us.
   raiseEvent(event);
@@ -608,9 +606,9 @@ void XenoSession::mark_session_desync(uint8_t ds_src) {
         break;
     }
   }
-  scheduler->enableSchedule(pid_sync_timer);
+  __kernel->enableSchedule(pid_sync_timer);
   
-  if (local_log.length() > 0) StaticHub::log(&local_log);
+  if (local_log.length() > 0) Kernel::log(&local_log);
 }
 
 
@@ -640,12 +638,12 @@ void XenoSession::mark_session_sync(bool pending) {
     // When (if) the session syncs, various components in the firmware might
     //   want a message put through.
     mark_session_state(XENOSESSION_STATE_ESTABLISHED);
-    raiseEvent(EventManager::returnEvent(MANUVR_MSG_SESS_ESTABLISHED));
-    raiseEvent(EventManager::returnEvent(MANUVR_MSG_LEGEND_MESSAGES));
-    raiseEvent(EventManager::returnEvent(MANUVR_MSG_SELF_DESCRIBE));
+    raiseEvent(Kernel::returnEvent(MANUVR_MSG_SESS_ESTABLISHED));
+    raiseEvent(Kernel::returnEvent(MANUVR_MSG_LEGEND_MESSAGES));
+    raiseEvent(Kernel::returnEvent(MANUVR_MSG_SELF_DESCRIBE));
   }
 
-  scheduler->disableSchedule(pid_sync_timer);
+  __kernel->disableSchedule(pid_sync_timer);
 }
 
 
@@ -699,7 +697,7 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
       else {
         #ifdef __MANUVR_DEBUG
         if (verbosity > 2) local_log.concat("Session still out of sync.\n");
-        StaticHub::log(&local_log);
+        Kernel::log(&local_log);
         #endif
         return return_value;
       }
@@ -815,7 +813,7 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
     #endif
   }
   
-  if (local_log.length() > 0) StaticHub::log(&local_log);
+  if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
 }
 
@@ -1001,10 +999,8 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
   switch (*(str)) {
     case 'S':  // Send a mess of sync packets.
       initial_sync_count = 24;
-      if (scheduler) {
-        scheduler->alterScheduleRecurrence(pid_sync_timer, (int16_t) initial_sync_count);
-        scheduler->fireSchedule(pid_sync_timer);
-      }
+      __kernel->alterScheduleRecurrence(pid_sync_timer, (int16_t) initial_sync_count);
+      __kernel->fireSchedule(pid_sync_timer);
       break;
     case 'i':  // Send a mess of sync packets.
       if (1 == temp_byte) {
@@ -1020,7 +1016,7 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
       purgeInbound();
       break;
     case 'w':  // Manual session poll.
-      EventManager::raiseEvent(MANUVR_MSG_SESS_ORIGINATE_MSG, NULL);
+      Kernel::raiseEvent(MANUVR_MSG_SESS_ORIGINATE_MSG, NULL);
       break;
       
 
@@ -1029,7 +1025,7 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
   
-  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 
 

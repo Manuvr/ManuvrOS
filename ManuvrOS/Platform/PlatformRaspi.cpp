@@ -32,8 +32,7 @@ This file is meant to contain a set of common functions that are typically platf
 
 #include "Platform.h"
 
-#include <wiring.h>
-#include <Time/Time.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 
@@ -121,6 +120,25 @@ void currentDateTime(StringBuilder* target) {
 }
 
 
+/*
+* Not provided elsewhere on a linux platform.
+*/
+uint32_t millis() {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000L);
+}
+
+
+/*
+* Not provided elsewhere on a linux platform.
+*/
+uint32_t micros() {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (ts.tv_sec * 1000000L + ts.tv_nsec / 1000L);
+}
+
 
 /****************************************************************************************************
 * GPIO and change-notice                                                                            *
@@ -144,6 +162,27 @@ void gpioSetup() {
 /****************************************************************************************************
 * Misc                                                                                              *
 ****************************************************************************************************/
+volatile void jumpToBootloader() {
+  // TODO: Restart the program.
+}
+
+volatile void reboot() {
+  // TODO: Actually reboot the system.
+}
+
+// Ze interrupts! Zhey do nuhsing!
+// TODO: Perhaps raise the nice value?
+void globalIRQEnable() {    }
+void globalIRQDisable() {   }
+
+/*
+* Call this with a boolean to enable or disable maskable interrupts globally.
+* NOTE: This includes USB and SysTick. So no host communication, and no scheduler.
+*       Events ought to still work, however.
+*/
+void maskableInterrupts(bool enable) {
+}
+
 
 void platformInit() {
   start_time_micros = micros();

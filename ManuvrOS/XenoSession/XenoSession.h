@@ -27,7 +27,7 @@ XenoSession is the class that manages dialog with other systems via some
 #ifndef __XENOSESSION_COMM_LAYER_H__
 #define __XENOSESSION_COMM_LAYER_H__
 
-#include "../EventManager.h"
+#include "../Kernel.h"
 #include "../EnumeratedTypeCodes.h"
 #include "../Transports/ManuvrXport.h"
 

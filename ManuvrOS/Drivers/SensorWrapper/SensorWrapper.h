@@ -33,7 +33,7 @@ using namespace std;
 #include <string.h>
 #include "StringBuilder/StringBuilder.h"
 
-#include "StaticHub/StaticHub.h"
+#include <ManuvrOS/Kernel.h>
 
 #ifdef ARDUINO
   #include "Arduino.h"

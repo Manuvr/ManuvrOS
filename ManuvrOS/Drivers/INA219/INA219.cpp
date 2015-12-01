@@ -178,7 +178,7 @@ void INA219::operationCompleteCallback(I2CQueuedOperation* completed) {
       case INA219_REG_CURRENT:
       case INA219_REG_POWER:
         if (process_read_data()) {
-          //EventManager::raiseEvent(MANUVR_MSG_SENSOR_INA219, NULL);   // Raise an event
+          //Kernel::raiseEvent(MANUVR_MSG_SENSOR_INA219, NULL);   // Raise an event
         }
         break;
       case INA219_REG_CONFIGURATION:
@@ -241,7 +241,7 @@ bool INA219::process_read_data(void) {
     #ifdef __MANUVR_DEBUG
       StringBuilder output;
       output.concatf("%.3f\t %.3f\t %.3f\t %.3f\n", (double) local_shunt, (double) local_bus, (double) local_current, (double) local_power);
-      StaticHub::log(&output);
+      Kernel::log(&output);
     #endif
     return true;
   }

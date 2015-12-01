@@ -30,14 +30,14 @@ CPP            = $(shell which g++)
 ###########################################################################
 # Source files, includes, and linker directives...
 ###########################################################################
-INCLUDES    = -iquote. -iquote -I.
+INCLUDES    = -I.
 
 
 # Libraries to link
 LIBS =  -lstdc++ -lm
-                                                                                              
+
 # Wrap the include paths into the flags...
-CFLAGS = $(OPTIMIZATION) -Wall
+CFLAGS = $(OPTIMIZATION) -Wall $(INCLUDES)
 CFLAGS += -fsingle-precision-constant -Wdouble-promotion
 
 
@@ -65,19 +65,22 @@ CFLAGS += $(CPP_FLAGS)
 ###########################################################################
 # Source file definitions...
 ###########################################################################
-MANUVROS_SRCS = StringBuilder/*.cpp DataStructures/*.cpp ManuvrOS/*.cpp ManuvrOS/XenoSession/*.cpp ManuvrOS/ManuvrMsg/*.cpp
-SENSOR_SRCS   = ManuvrOS/Drivers/SensorWrapper/*.cpp 
-I2C_DRIVERS   = ManuvrOS/Drivers/i2c-adapter/*.cpp ManuvrOS/Drivers/DeviceWithRegisters/DeviceRegister.cpp ManuvrOS/Drivers/DeviceWithRegisters/DeviceWithRegisters.cpp
-COM_DRIVERS   = ManuvrOS/Transports/*.cpp ManuvrOS/Transports/ManuvrComPort/*.cpp
+MANUVROS_SRCS  = StringBuilder/*.cpp DataStructures/*.cpp ManuvrOS/*.cpp ManuvrOS/XenoSession/*.cpp ManuvrOS/ManuvrMsg/*.cpp
+
+SENSOR_SRCS    = ManuvrOS/Platform/Platform.cpp ManuvrOS/Drivers/SensorWrapper/*.cpp 
+I2C_DRIVERS    = ManuvrOS/Drivers/i2c-adapter/*.cpp ManuvrOS/Drivers/DeviceWithRegisters/DeviceRegister.cpp ManuvrOS/Drivers/DeviceWithRegisters/DeviceWithRegisters.cpp
+COM_DRIVERS    = ManuvrOS/Transports/*.cpp ManuvrOS/Transports/ManuvrComPort/*.cpp
+
+RASPI_DRIVERS  = ManuvrOS/Drivers/ManuvrableGPIO/*.cpp ManuvrOS/Platform/PlatformRaspi.cpp 
 
 CPP_SRCS  = $(MANUVROS_SRCS)
 CPP_SRCS += $(I2C_DRIVERS) $(SENSOR_SRCS) $(COM_DRIVERS)
 
 SRCS   = $(CPP_SRCS)
              
-MANuVR_OPTIONS = -D__ENABLE_MSG_SEMANTICS
+MANuVR_OPTIONS = -D__ENABLE_MSG_SEMANTICS -D__MANUVR_DEBUG -D__MANUVR_CONSOLE_SUPPORT
 
-CFLAGS += $(MANuVR_OPTIONS)
+CFLAGS += $(MANuVR_OPTIONS) 
 
 ###########################################################################
 # Rules for building the firmware follow...
@@ -93,13 +96,13 @@ CFLAGS += $(MANuVR_OPTIONS)
 
 
 all: clean
-	$(CPP) -static -g -o manuvr raspiMain.cpp StaticHub/StaticHub.cpp ManuvrOS/Drivers/ManuvrableGPIO/*.cpp $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) $(INCLUDES) -Idemo/ -DTEST_BENCH -D_GNU_SOURCE -O0
+	$(CPP) -static -g -o manuvr raspiMain.cpp $(SRCS) $(RASPI_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) -Idemo/ -DTEST_BENCH -D_GNU_SOURCE -O0
 
 raspi: clean
-	$(CPP) -static -g -o manuvr raspiMain.cpp StaticHub/StaticHub.cpp ManuvrOS/Drivers/ManuvrableGPIO/*.cpp $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) $(INCLUDES) -DRASPI -D_GNU_SOURCE -O0
+	$(CPP) -static -g -o manuvr raspiMain.cpp $(SRCS) $(RASPI_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) -DRASPI -D_GNU_SOURCE -O0
 
 testbench:
-	$(CPP) -static -g -o testbench demo/test-bench.cpp demo/StaticHub.cpp $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) $(INCLUDES) -Idemo/ -DTEST_BENCH -D_GNU_SOURCE -O0 -fstack-usage
+	$(CPP) -static -g -o testbench demo/test-bench.cpp $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) -Idemo/ -DTEST_BENCH -D_GNU_SOURCE -O0 -fstack-usage
 # valgrind --tool=callgrind ./testbench
 # gprof2dot --format=callgrind --output=out.dot callgrind.out.16562
 # dot  -Tpng out.dot -o graph.png
@@ -117,7 +120,7 @@ docs:
 	doxygen Doxyfile
 
 stats:
-	find ./src -type f \( -name \*.cpp -o -name \*.h \) -exec wc -l {} +
+	find ./ManuvrOS ./DataStructures ./StringBuilder -type f \( -name \*.cpp -o -name \*.h \) -exec wc -l {} +
 
 checkin: fullclean
 	git push

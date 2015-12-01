@@ -28,7 +28,7 @@
 
 #include <inttypes.h>
 #include <stdint.h>
-#include "ManuvrOS/EventManager.h"
+#include "ManuvrOS/Kernel.h"
 #include "ManuvrOS/Drivers/i2c-adapter/i2c-adapter.h"
 
 #define MGC3130_ISR_MARKER_TS 0x01

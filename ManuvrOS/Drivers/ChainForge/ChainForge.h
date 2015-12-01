@@ -27,7 +27,7 @@ ChainForge is the optional utility module to cause triggerd and conditional
 #ifndef __MANUVR_CHAIN_FORGE_H__
 #define __MANUVR_CHAIN_FORGE_H__
 
-#include "../EventManager.h"
+#include "../Kernel.h"
 
 
 //

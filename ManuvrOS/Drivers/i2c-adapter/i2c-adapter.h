@@ -40,7 +40,7 @@ but adding support for other platforms ought to be easy.
   #include <stdarg.h>
   #include "DataStructures/LightLinkedList.h"
   #include "StringBuilder/StringBuilder.h"
-  #include "ManuvrOS/EventManager.h"
+  #include <ManuvrOS/Kernel.h>
   #include "ManuvrOS/Drivers/DeviceWithRegisters/DeviceRegister.h"
 
   #define I2CADAPTER_MAX_QUEUE_PRINT 3
@@ -386,7 +386,7 @@ but adding support for other platforms ought to be easy.
   #include <ctype.h>
 #endif
 
-#include "StaticHub/StaticHub.h"
+#include <ManuvrOS/Kernel.h>
 
 #endif  //I2C_ABSTRACTION_LAYER_ADAPTER
 

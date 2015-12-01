@@ -44,16 +44,8 @@ This file is meant to contain a set of common functions that are typically platf
 #include <string.h>
 #include <stdio.h>
 
-#include "StringBuilder/StringBuilder.h"
-
-#define LOG_EMERG   0    /* system is unusable */
-#define LOG_ALERT   1    /* action must be taken immediately */
-#define LOG_CRIT    2    /* critical conditions */
-#define LOG_ERR     3    /* error conditions */
-#define LOG_WARNING 4    /* warning conditions */
-#define LOG_NOTICE  5    /* normal but significant condition */
-#define LOG_INFO    6    /* informational */
-#define LOG_DEBUG   7    /* debug-level messages */
+#include <ManuvrOS/CommonConstants.h>
+#include <StringBuilder/StringBuilder.h>
 
 /*
 * These are just lables. We don't really ever care about the *actual* integers being defined here. Only
@@ -72,8 +64,12 @@ This file is meant to contain a set of common functions that are typically platf
 
 class ManuvrEvent;
 
-// Function-pointer definitions
-typedef void (*FunctionPointer) ();
+#ifdef ARDUINO
+  #include <Arduino.h>
+#else
+  uint32_t millis();
+  uint32_t micros();
+#endif
 
 
 typedef struct __platform_gpio_def {

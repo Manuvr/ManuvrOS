@@ -34,7 +34,7 @@ Platforms that require it should be able to extend this driver for specific
 #include "FirmwareDefs.h"
 #include "ManuvrOS/XenoSession/XenoSession.h"
 
-#include "StaticHub/StaticHub.h"
+#include "ManuvrOS/Kernel.h"
 
 
 #if defined (STM32F4XX)        // STM32F4
@@ -103,12 +103,11 @@ void ManuvrSocket::__class_initializer() {
   read_abort_event.priority        = 5;
   //read_abort_event.addArg();  // Add our assigned transport ID to our pre-baked argument.
 
-  StaticHub *sh = StaticHub::getInstance();
-  scheduler = sh->fetchScheduler();
-  sh->fetchEventManager()->subscribe((EventReceiver*) this);  // Subscribe to the EventManager.
+  __kernel = Kernel::getInstance();
+  __kernel->subscribe((EventReceiver*) this);  // Subscribe to the Kernel.
   
-  pid_read_abort = scheduler->createSchedule(30, 0, false, this, &read_abort_event);
-  scheduler->disableSchedule(pid_read_abort);
+  pid_read_abort = __kernel->createSchedule(30, 0, false, this, &read_abort_event);
+  __kernel->disableSchedule(pid_read_abort);
 }
 
 
@@ -119,7 +118,7 @@ int8_t ManuvrSocket::provide_session(XenoSession* ses) {
   if ((NULL != session) && (ses != session)) {
     // If we are about to clobber an existing session, we need to free it
     // first.
-    StaticHub::getInstance()->fetchEventManager()->unsubscribe(session);
+    __kernel->unsubscribe(session);
     delete session;
     session = NULL;
   }
@@ -163,18 +162,18 @@ int8_t ManuvrSocket::read_port() {
           session->bin_stream_rx(buf, total_read);
         }
         else {
-          ManuvrEvent *event = EventManager::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
+          ManuvrEvent *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
           event->addArg(port_number);
           StringBuilder *nu_data = new StringBuilder(buf, total_read);
           event->markArgForReap(event->addArg(nu_data), true);
-          EventManager::staticRaiseEvent(event);
+          Kernel::staticRaiseEvent(event);
         }
       }
     #endif
   }
   else if (verbosity > 1) local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
   
-  if (local_log.length() > 0) StaticHub::log(&local_log);
+  if (local_log.length() > 0) Kernel::log(&local_log);
   return 0;
 }
 
@@ -185,7 +184,7 @@ int8_t ManuvrSocket::read_port() {
 */
 bool ManuvrSocket::write_port(unsigned char* out, int out_len) {
   if (port_number == -1) {
-    if (verbosity > 2) StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to port: (%s)\n", tty_name);
+    if (verbosity > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to port: (%s)\n", tty_name);
     return false;
   }
   
@@ -272,7 +271,7 @@ int8_t ManuvrSocket::bootComplete() {
 *
 * Depending on class implementations, we might choose to handle the completed Event differently. We 
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
-*   ourselves and return DROP. By default, we will return REAP to instruct the EventManager
+*   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
 *   was crafted to not be in the heap in its own allocation, we will return DROP instead.
 *
@@ -364,7 +363,7 @@ int8_t ManuvrSocket::notify(ManuvrEvent *active_event) {
       break;
   }
   
-  if (local_log.length() > 0) StaticHub::log(&local_log);
+  if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
 }
 

@@ -28,9 +28,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "Scheduler.h"
-#include "StaticHub/StaticHub.h"
-
+#include "Kernel.h"
 
 
 /****************************************************************************************************
@@ -408,11 +406,10 @@ void Scheduler::advanceScheduler() {
   //}
   if (bistable_skip_detect) {
     // Failsafe block
+#ifdef STM32F4XX
     if (skipped_loops > 5000) {
       // TODO: We are hung in a way that we probably cannot recover from. Reboot...
-#ifdef STM32F4XX
       jumpToBootloader();
-#endif
     }
     else if (skipped_loops == 2000) {
       printf("Hung scheduler...\n");
@@ -421,7 +418,7 @@ void Scheduler::advanceScheduler() {
       /* Doing all this String manipulation in an ISR would normally be an awful idea.
          But we don't care here because we're hung anyhow, and we need to know why. */
       StringBuilder output;
-      StaticHub::getInstance()->fetchEventManager()->printDebug(&output);
+      Kernel::getInstance()->fetchKernel()->printDebug(&output);
       printf("%s\n", (char*) output.string());
     }
     else if (skipped_loops == 2200) {
@@ -431,10 +428,11 @@ void Scheduler::advanceScheduler() {
     }
     else if (skipped_loops == 3500) {
       StringBuilder output;
-      StaticHub::getInstance()->printDebug(&output);
+      Kernel::getInstance()->printDebug(&output);
       printf("%s\n", (char*) output.string());
     }
     skipped_loops++;
+#endif
   }
   else {
     bistable_skip_detect = true;
@@ -558,7 +556,7 @@ int Scheduler::serviceScheduledEvents() {
         //  }
         //}
         //else {
-          EventManager::staticRaiseEvent(current->event);
+          Kernel::staticRaiseEvent(current->event);
         //}
       }
       else if (NULL != current->schedule_callback) {
@@ -707,7 +705,6 @@ These are overrides from EventReceiver interface...
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t Scheduler::bootComplete() {
-  scheduler = this;
   scheduler_ready = true;
   boot_completed = true;
   return 1;
@@ -721,7 +718,7 @@ int8_t Scheduler::bootComplete() {
 *
 * Depending on class implementations, we might choose to handle the completed Event differently. We 
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
-*   ourselves and return DROP. By default, we will return REAP to instruct the EventManager
+*   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
 *   was crafted to not be in the heap in its own allocation, we will return DROP instead.
 *
@@ -838,7 +835,7 @@ int8_t Scheduler::notify(ManuvrEvent *active_event) {
       break;
   }
   
-  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
   return return_value;
 }
 
@@ -877,7 +874,7 @@ void Scheduler::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
   
-  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 #endif
 }
 

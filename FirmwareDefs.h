@@ -54,12 +54,6 @@ extern "C" {
 
 // Function prototypes
 int main(int argc, char *argv[]);
-volatile void jumpToBootloader(void);
-volatile void reboot(void);
-
-unsigned long millis(void);
-unsigned long micros(void);
-
 
 #ifdef __cplusplus
 }

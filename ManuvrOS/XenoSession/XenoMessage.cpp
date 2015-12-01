@@ -24,8 +24,8 @@ XenoMessage is the class that is the interface between ManuvrEvents and
 */
 
 #include "XenoSession.h"
-#include "StaticHub/StaticHub.h"
-#include "ManuvrOS/Platform/Platform.h"
+#include <ManuvrOS/Kernel.h>
+#include <ManuvrOS/Platform/Platform.h>
 
 
 XenoMessage::XenoMessage() {
@@ -245,12 +245,12 @@ int8_t XenoMessage::inflateArgs() {
       return_value = 0;
     }
     else {
-      //StaticHub::log("XenoMessage::inflateArgs():\t inflate fxn returned failure...\n");
+      //Kernel::log("XenoMessage::inflateArgs():\t inflate fxn returned failure...\n");
     }
   }
   else {
     return_value = -1;
-    //StaticHub::log("XenoMessage::inflateArgs():\t argbuf was zero-length.\n");
+    //Kernel::log("XenoMessage::inflateArgs():\t argbuf was zero-length.\n");
   }
   return return_value;
 }
@@ -287,7 +287,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
       break;
     default:
       //output.concatf("XenoMessage::feedBuffer() rejecting bytes because it is not in the right state. Is %s\n", XenoMessage::getMessageStateString(proc_state));
-      StaticHub::log(&output);
+      Kernel::log(&output);
       return -2;
   }
   
@@ -296,7 +296,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
     if (buf_len < 4) {
       // Not enough to act on, since we have none buffered ourselves...
       //output.concat("Rejecting bytes because there aren't enough of them yet.\n");
-      StaticHub::log(&output);
+      Kernel::log(&output);
       return 0;
     }
     else {  // We have at least enough for a sync-check...
@@ -310,7 +310,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
         if (x == buf_len)  sb_buf->clear();
         else               sb_buf->cull(x);
         
-        StaticHub::log(&output);
+        Kernel::log(&output);
         return x;
       }
       else {
@@ -337,7 +337,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
       //output.concat("Rejecting bytes because there aren't enough of them yet to make a complete packet.\n");
       if (return_value == buf_len)  sb_buf->clear();
       else if (return_value > 0)    sb_buf->cull(return_value);
-      StaticHub::log(&output);
+      Kernel::log(&output);
       return return_value;
     }
     else {
@@ -384,7 +384,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
         output.concat("XenoMessage::feedBuffer(): Ooops. Clobbered an event pointer. Expect leaks...\n");
         #endif
       }
-      event = EventManager::returnEvent(message_code);
+      event = Kernel::returnEvent(message_code);
       switch (proc_state) {
         case XENO_MSG_PROC_STATE_RECEIVING:
           proc_state = XENO_MSG_PROC_STATE_AWAITING_UNSERIALIZE;
@@ -401,7 +401,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
         default:
           #ifdef __MANUVR_DEBUG
           output.concatf("XenoMessage::feedBuffer() Message received, and is ok, but not sure about state.... Is %s\n", XenoMessage::getMessageStateString(proc_state));
-          StaticHub::log(&output);
+          Kernel::log(&output);
           #endif
           return -2;
       }
@@ -419,7 +419,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
   if (return_value == buf_len)  sb_buf->clear();
   else if (return_value > 0)    sb_buf->cull(return_value);
   
-  if (output.length() > 0) StaticHub::log(&output);
+  if (output.length() > 0) Kernel::log(&output);
   return return_value;
 }
 

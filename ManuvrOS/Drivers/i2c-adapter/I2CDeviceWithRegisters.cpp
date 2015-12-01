@@ -172,7 +172,7 @@ int8_t I2CDeviceWithRegisters::writeRegister(uint8_t base_addr) {
 
   else if (!writeX(nu->addr, nu->len, nu->val)) {
     #ifdef __MANUVR_DEBUG
-    StaticHub::log(__PRETTY_FUNCTION__, 1, "Bus error while writing device.");
+    Kernel::log(__PRETTY_FUNCTION__, 1, "Bus error while writing device.");
     #endif
     return I2C_ERR_CODE_BUS_FAULT;
   }
@@ -188,7 +188,7 @@ int8_t I2CDeviceWithRegisters::writeRegister(DeviceRegister *reg) {
   }
   else if (!writeX(reg->addr, reg->len, reg->val)) {
     #ifdef __MANUVR_DEBUG
-    StaticHub::log(__PRETTY_FUNCTION__, 1, "Bus error while writing device.");
+    Kernel::log(__PRETTY_FUNCTION__, 1, "Bus error while writing device.");
     #endif
     return I2C_ERR_CODE_BUS_FAULT;
   }
@@ -207,7 +207,7 @@ int8_t I2CDeviceWithRegisters::readRegister(uint8_t base_addr) {
   }
   if (!readX(reg->addr, reg->len, reg->val)) {
     #ifdef __MANUVR_DEBUG
-    StaticHub::log(__PRETTY_FUNCTION__, 1, "Bus error while reading device.");
+    Kernel::log(__PRETTY_FUNCTION__, 1, "Bus error while reading device.");
     #endif
     return I2C_ERR_CODE_BUS_FAULT;
   }
@@ -220,7 +220,7 @@ int8_t I2CDeviceWithRegisters::readRegister(DeviceRegister *reg) {
   }
   if (!readX(reg->addr, reg->len, reg->val)) {
     #ifdef __MANUVR_DEBUG
-    StaticHub::log(__PRETTY_FUNCTION__, 1, "Bus error while reading device.");
+    Kernel::log(__PRETTY_FUNCTION__, 1, "Bus error while reading device.");
     #endif
     return I2C_ERR_CODE_BUS_FAULT;
   }
@@ -276,7 +276,7 @@ int8_t I2CDeviceWithRegisters::syncRegisters(void) {
 		  #ifdef __MANUVR_DEBUG
 			StringBuilder output;
 			output.concatf("Failed to read from register %d\n", temp->addr);
-			StaticHub::log(&output);
+			Kernel::log(&output);
 			#endif
 		}
 	}
@@ -298,14 +298,14 @@ int8_t I2CDeviceWithRegisters::writeDirtyRegisters(void) {
 				return_value = writeRegister(temp);
 				if (return_value != I2C_ERR_CODE_NO_ERROR) {
 				  #ifdef __MANUVR_DEBUG
-					StaticHub::log(__PRETTY_FUNCTION__, 2, "Failed to write dirty register %d with code(%d). The dropped data was (%d). Aborting...", temp->addr, return_value, temp->val);
+					Kernel::log(__PRETTY_FUNCTION__, 2, "Failed to write dirty register %d with code(%d). The dropped data was (%d). Aborting...", temp->addr, return_value, temp->val);
 					#endif
 					return return_value;
 				}
 			}
 			else {
 			  #ifdef __MANUVR_DEBUG
-				StaticHub::log(__PRETTY_FUNCTION__, 3, "Uh oh... register %d was marked dirty but it isn't writable. Marking clean with no write...", temp->addr);
+				Kernel::log(__PRETTY_FUNCTION__, 3, "Uh oh... register %d was marked dirty but it isn't writable. Marking clean with no write...", temp->addr);
 				#endif
 			}
 			//temp->dirty = false;  This ought to be set in the callback.  ---J. Ian Lindsay   Mon Dec 15 13:07:33 MST 2014
@@ -352,7 +352,7 @@ void I2CDeviceWithRegisters::operationCompleteCallback(I2CQueuedOperation* compl
 		}
 	}
 
-	if (temp.length() > 0) {    StaticHub::log(&temp);  }
+	if (temp.length() > 0) {    Kernel::log(&temp);  }
 }
 
 
