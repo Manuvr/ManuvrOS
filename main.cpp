@@ -31,13 +31,14 @@ char *program_name      = NULL;
 * The main function.                                                                                *
 ****************************************************************************************************/
 
-/**
-*  Takes one additional parameter at runtime that is not required: The path of the test vectors.
-*/
 int main(int argc, char *argv[]) {
   program_name = argv[0];  // Our name.
 
   Kernel kernel;
+
+  #if defined(__MANUVR_DEBUG)
+    kernel.print_type_sizes();
+  #endif
 
   // Parse through all the command line arguments and flags...
   // Please note that the order matters. Put all the most-general matches at the bottom of the loop.
@@ -59,7 +60,10 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // At this point, we should instantiate whatever specific functionality we
+  //   want this Manuvrable to have. 
   
+  // Once we've loaded up all the goodies we want, we finalize everything thusly...
   printf("%s: Booting Manuvr Kernel....\n", program_name);
   kernel.bootstrap();
 
@@ -69,6 +73,7 @@ int main(int argc, char *argv[]) {
     kernel.procIdleFlags();
     kernel.serviceScheduledEvents();
 
+    // Move the kernel log to stdout.
     if (Kernel::log_buffer.count()) {
       if (!kernel.getVerbosity()) {
         Kernel::log_buffer.clear();

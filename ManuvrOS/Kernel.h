@@ -226,17 +226,14 @@ class Scheduler : public EventReceiver {
       volatile static void log(char *str);                                           // Pass-through to the logger class, whatever that happens to be.
       volatile static void log(StringBuilder *str);
 
+      int8_t bootstrap(void);
+
       /*
       TODO: These functions were the last things removed from StaticHub. 
-      They need to justify their existence.
       */
-      static StringBuilder log_buffer;
       void feedUSBBuffer(uint8_t *buf, int len, bool terminal);
-      static Kernel* getInstance(void);
-      int8_t bootstrap(void);
-      StringBuilder usb_rx_buffer;    // Was private in StaticHub
-      StringBuilder last_user_input;  // Was private in StaticHub
-      
+
+
 
       /*
       TODO: This particular pile of garbage is temporary pass-through for the Scheduler.
@@ -292,6 +289,9 @@ class Scheduler : public EventReceiver {
       
       void profiler(bool enabled);
       
+      #if defined(__MANUVR_DEBUG)
+        void print_type_sizes();      // Prints the memory-costs of various classes.
+      #endif
       void printProfiler(StringBuilder *);
       const char* getReceiverName();
       
@@ -303,12 +303,11 @@ class Scheduler : public EventReceiver {
       
       float cpu_usage();
       
-      bool containsPreformedEvent(ManuvrEvent*);
-      
       
       inline void maxEventsPerLoop(int8_t nu) { max_events_per_loop = nu;   }
       inline int8_t maxEventsPerLoop() {        return max_events_per_loop; }
       inline int queueSize() {                  return INSTANCE->event_queue.size();   }
+      inline bool containsPreformedEvent(ManuvrEvent* event) {   return event_queue.contains(event);  };
       
 
       /* Overrides from EventReceiver
@@ -318,11 +317,14 @@ class Scheduler : public EventReceiver {
       int8_t callback_proc(ManuvrEvent *);
       void procDirectDebugInstruction(StringBuilder *);
 
-  
-      static int8_t raiseEvent(uint16_t event_code, EventReceiver* data);
-      static int8_t staticRaiseEvent(ManuvrEvent* event);
-      static bool   abortEvent(ManuvrEvent* event);
-      static int8_t isrRaiseEvent(ManuvrEvent* event);
+
+      static StringBuilder log_buffer;
+
+      static Kernel* getInstance(void);
+      static int8_t  raiseEvent(uint16_t event_code, EventReceiver* data);
+      static int8_t  staticRaiseEvent(ManuvrEvent* event);
+      static bool    abortEvent(ManuvrEvent* event);
+      static int8_t  isrRaiseEvent(ManuvrEvent* event);
       
       /* Factory method. Returns a preallocated Event. */
       static ManuvrEvent* returnEvent(uint16_t event_code);
@@ -370,7 +372,6 @@ class Scheduler : public EventReceiver {
       
       /*  */
       inline bool should_run_another_event(int8_t loops, uint32_t begin) {     return (max_events_per_loop ? ((int8_t) max_events_per_loop > loops) : ((micros() - begin) < 1200));   };
-      
       
       static Kernel* INSTANCE;
       static PriorityQueue<ManuvrEvent*> isr_event_queue;   // Events that have been raised from ISRs.
