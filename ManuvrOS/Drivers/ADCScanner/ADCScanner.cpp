@@ -169,7 +169,7 @@ int8_t ADCScanner::notify(ManuvrEvent *active_event) {
       return_value += EventReceiver::notify(active_event);
       break;
   }
-  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
   return return_value;
 }
 

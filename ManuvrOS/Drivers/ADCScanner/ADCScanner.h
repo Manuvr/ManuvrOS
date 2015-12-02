@@ -1,7 +1,7 @@
 #ifndef ADC_SCANNER_H
   #define ADC_SCANNER_H_H
   
-  #include "StaticHub/StaticHub.h"
+  #include <ManuvrOS/Kernel.h>
   
   class ADCScanner : public EventReceiver {
     public:

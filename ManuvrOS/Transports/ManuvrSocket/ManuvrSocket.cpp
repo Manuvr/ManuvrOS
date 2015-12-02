@@ -34,7 +34,7 @@ Platforms that require it should be able to extend this driver for specific
 #include "FirmwareDefs.h"
 #include "ManuvrOS/XenoSession/XenoSession.h"
 
-#include "ManuvrOS/Kernel.h"
+#include <ManuvrOS/Kernel.h>
 
 
 #if defined (STM32F4XX)        // STM32F4

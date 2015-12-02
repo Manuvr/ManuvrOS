@@ -22,7 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "AudioRouter.h"
 
-#include "StaticHub/StaticHub.h"
+#include <ManuvrOS/Kernel.h>
 
 #include <string.h>
 
@@ -93,17 +93,17 @@ AudioRouter::~AudioRouter() {
 int8_t AudioRouter::init(void) {
   int8_t result = dp_lo->init();
   if (result != 0) {
-    StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to init() dp_lo (0x%02x) with cause (%d).", i2c_addr_dp_lo, result);
+    Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to init() dp_lo (0x%02x) with cause (%d).", i2c_addr_dp_lo, result);
     return AUDIO_ROUTER_ERROR_BUS;
   }
   result = dp_hi->init();
   if (result != 0) {
-    StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to init() dp_hi (0x%02x) with cause (%d).", i2c_addr_dp_hi, result);
+    Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to init() dp_hi (0x%02x) with cause (%d).", i2c_addr_dp_hi, result);
     return AUDIO_ROUTER_ERROR_BUS;
   }
   result = cp_switch->init();
   if (result != 0) {
-    StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to init() cp_switch (0x%02x) with cause (%d).", i2c_addr_cp_switch, result);
+    Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to init() cp_switch (0x%02x) with cause (%d).", i2c_addr_cp_switch, result);
     return AUDIO_ROUTER_ERROR_BUS;
   }
   
@@ -260,12 +260,12 @@ int8_t AudioRouter::setVolume(uint8_t col, uint8_t vol) {
 int8_t AudioRouter::enable(void) {
   int8_t result = dp_lo->enable();
   if (result != 0) {
-    StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "enable() failed to enable dp_lo. Cause: (%d).\n", result);
+    Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "enable() failed to enable dp_lo. Cause: (%d).\n", result);
     return result;
   }
   result = dp_hi->enable();
   if (result != 0) {
-    StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "enable() failed to enable dp_hi. Cause: (%d).\n", result);
+    Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "enable() failed to enable dp_hi. Cause: (%d).\n", result);
     return result;
   }
   return AudioRouter::AUDIO_ROUTER_ERROR_NO_ERROR;
@@ -275,17 +275,17 @@ int8_t AudioRouter::enable(void) {
 int8_t AudioRouter::disable(void) {
   int8_t result = dp_lo->disable();
   if (result != 0) {
-    StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "disable() failed to disable dp_lo. Cause: (%d).\n", result);
+    Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "disable() failed to disable dp_lo. Cause: (%d).\n", result);
     return result;
   }
   result = dp_hi->disable();
   if (result != 0) {
-    StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "disable() failed to disable dp_hi. Cause: (%d).\n", result);
+    Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "disable() failed to disable dp_hi. Cause: (%d).\n", result);
     return result;
   }
   result = cp_switch->reset();
   if (result != 0) {
-    StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "disable() failed to reset cp_switch. Cause: (%d).\n", result);
+    Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "disable() failed to reset cp_switch. Cause: (%d).\n", result);
     return result;
   }
   return AudioRouter::AUDIO_ROUTER_ERROR_NO_ERROR;
@@ -322,7 +322,7 @@ void AudioRouter::dumpOutputChannel(uint8_t chan, StringBuilder* output) {
 
 void AudioRouter::dumpInputChannel(CPInputChannel *chan, StringBuilder* output) {
   if (chan == NULL) {
-    StaticHub::log("dumpInputChannel() was passed an out-of-bounds id.\n");
+    Kernel::log("dumpInputChannel() was passed an out-of-bounds id.\n");
     return;
   }
 
@@ -353,7 +353,7 @@ int8_t AudioRouter::status(StringBuilder* output) {
   dp_hi->printDebug(output);
   cp_switch->printDebug(output);
   
-  StaticHub::log(output);
+  Kernel::log(output);
   
   return AudioRouter::AUDIO_ROUTER_ERROR_NO_ERROR;
 }
@@ -386,7 +386,7 @@ int8_t AudioRouter::status(StringBuilder* output) {
 int8_t AudioRouter::bootComplete() {
   EventReceiver::bootComplete();
   if (init() != AUDIO_ROUTER_ERROR_NO_ERROR) {
-    StaticHub::log("Tried to init AudioRouter and failed.\n");
+    Kernel::log("Tried to init AudioRouter and failed.\n");
   }
   return 0;
 }
@@ -549,7 +549,7 @@ int8_t AudioRouter::notify(ManuvrEvent *active_event) {
       return_value += EventReceiver::notify(active_event);
       break;
   }
-  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
   return return_value;
 }
 
@@ -627,5 +627,5 @@ void AudioRouter::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
   
-  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }

@@ -36,7 +36,7 @@ This class was coded with the assumption that there would only be one such
 
 #include <inttypes.h>
 #include <stdint.h>
-#include "ManuvrOS/Kernel.h"
+#include <ManuvrOS/Kernel.h>
 
 #if defined(_BOARD_FUBARINO_MINI_)
   #define BOARD_IRQS_AND_PINS_DISTINCT 1

@@ -26,7 +26,7 @@ void light_check() {
     StringBuilder local_log;
     //if (verbosity > 5) {
     //  local_log.concatf("Lux bin is now %u\n", current_lux_bin);
-    //  StaticHub::log(&local_log);
+    //  Kernel::log(&local_log);
     //}
   }
 }
@@ -122,7 +122,7 @@ int8_t LightSensor::notify(ManuvrEvent *active_event) {
       return_value += EventReceiver::notify(active_event);
       break;
   }
-  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
   return return_value;
 }
 
