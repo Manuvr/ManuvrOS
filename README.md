@@ -18,8 +18,6 @@ A cross-platform real-time, event-driven "Operating System" for asynchronous app
 
     make docs
 
-**./demo**:  Demonstration of ManuvrOS built as an application framework under linux. 
-
 **./StringBuilder**:  The StringBuilder library.
 
 **./DataStructures**:  Various templates for data structures.
@@ -33,8 +31,6 @@ You will need to copy the following directories into your IDE's library director
 -   ManuvrOS
 -   DataStructures
 -   StringBuilder
-
-Each library has an examples directory that ought to be visible from the IDE when properly installed.
 
 Additionally, to overcome the Arduino library-within-library limitation, please follow [these instructions](http://www.joshianlindsay.com/index.php?id=147) to make your IDE treat gcc a little better:
 
@@ -54,7 +50,7 @@ You can build the demo application with
     
 or
 
-    make testbench
+    make debug
 
 ...for the same thing with debug symbols.
 
@@ -67,12 +63,8 @@ Bitcoin accelerates feature requests and bug fixes. :-)
 
 ----------------------
 ####High-level TODO list
--   Link against libuv for "big" builds so we can handle threading on android, windows, linux, etc. without having to hurt ourselves.
 -   Clean up the unit tests that exist, and merge in some that aren't in the testbench yet.
--   Make the testbench do something interesting.
--   Investigate usage as an application framework under RTOS.
 -   Verify that ManuvrOS works correctly when built as 64-bit.
--   Add callgrind support to the Makefile.
 -   Write an autoconf script to choose target and features, detect env, etc...
 
 
