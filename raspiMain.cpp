@@ -43,15 +43,20 @@ int main(int argc, char *argv[]) {
   // Please note that the order matters. Put all the most-general matches at the bottom of the loop.
   for (int i = 1; i < argc; i++) {
     if ((strcasestr(argv[i], "--version")) || ((argv[i][0] == '-') && (argv[i][1] == 'v'))) {
+      // Print the version and quit.
       printf("%s v%s\n\n", argv[0], VERSION_STRING);
+      exit(0);
     }
     if ((strcasestr(argv[i], "--info")) || ((argv[i][0] == '-') && (argv[i][1] == 'i'))) {
       // Cause the kernel to write a self-report to its own log.
       kernel.printDebug();
     }
-    // TODO: Need to craft an example...
-    // This is how you can stack post-boot-operations into the kernel. They will execute
-    //   following the BOOT_COMPLETE message.
+    if ((strcasestr(argv[i], "--quit")) || ((argv[i][0] == '-') && (argv[i][1] == 'q'))) {
+      // Execute up-to-and-including boot. Then immediately shutdown.
+      // This is how you can stack post-boot-operations into the kernel. They will execute
+      //   following the BOOT_COMPLETE message.
+      Kernel::raiseEvent(MANUVR_MSG_SYS_SHUTDOWN, NULL);
+    }
   }
  
   printf("%s: Booting Manuvr Kernel....\n", program_name);

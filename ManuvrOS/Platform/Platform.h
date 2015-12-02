@@ -102,14 +102,28 @@ const char* getRTCStateString(uint32_t code);
 */
 
 /*
-* Misc
+* Interrupt-masking
 */
-volatile uint32_t getStackPointer();   // Returns the value of the stack pointer.
-volatile void jumpToBootloader();
-volatile void reboot();
 void globalIRQEnable();
 void globalIRQDisable();
 void maskableInterrupts(bool);
+
+/*
+* Process control
+*/
+volatile void jumpToBootloader();
+volatile void seppuku();
+
+/*
+* Underlying system control.
+*/
+volatile void reboot();
+volatile void shutdown();
+
+/*
+* Misc
+*/
+volatile uint32_t getStackPointer();   // Returns the value of the stack pointer.
 
 /*
 * Randomness
@@ -133,6 +147,7 @@ void setPinFxn(uint8_t pin, FunctionPointer fxn);
 */
 void platformPreInit();
 void platformInit();
+
 
 
 #ifdef __cplusplus

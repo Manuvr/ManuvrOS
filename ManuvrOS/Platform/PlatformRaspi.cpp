@@ -297,19 +297,21 @@ void gpioSetup() {
 /****************************************************************************************************
 * Misc                                                                                              *
 ****************************************************************************************************/
-volatile void jumpToBootloader() {
-  // Whatever the kernel cared to clean up, it better have done so by this point,
-  //   as no other platforms return from this function.
-  if (Kernel::log_buffer.length() > 0) {
-    printf("\n\njumpToBootloader(): About to exit(). Remaining log follows...\n%s", Kernel::log_buffer.string());
-  }
-  printf("\n\n");
-  exit(0);
+/**
+* Sometimes we question the size of the stack.
+*
+* @return the stack pointer at call time.
+*/
+volatile uint32_t getStackPointer() {
+  uint32_t test;  // Important to not do assignment here.
+  test = (uint32_t) &test;  // Store the pointer.
+  return test;
 }
 
-volatile void reboot() {
-  // TODO: Actually reboot the system.
-}
+
+/****************************************************************************************************
+* Interrupt-masking                                                                                 *
+****************************************************************************************************/
 
 // Ze interrupts! Zhey do nuhsing!
 // TODO: Perhaps raise the nice value?
@@ -326,15 +328,45 @@ void globalIRQDisable() {
 }
 
 
-/**
-* Sometimes we question the size of the stack.
-*
-* @return the stack pointer at call time.
+
+/****************************************************************************************************
+* Process control                                                                                   *
+****************************************************************************************************/
+
+/*
+* Terminate this running process, along with any children it may have forked() off.
 */
-volatile uint32_t getStackPointer() {
-  uint32_t test;  // Important to not do assignment here.
-  test = (uint32_t) &test;  // Store the pointer.
-  return test;
+volatile void seppuku() {
+  // Whatever the kernel cared to clean up, it better have done so by this point,
+  //   as no other platforms return from this function.
+  if (Kernel::log_buffer.length() > 0) {
+    printf("\n\njumpToBootloader(): About to exit(). Remaining log follows...\n%s", Kernel::log_buffer.string());
+  }
+  printf("\n\n");
+  exit(0);
+}
+
+
+/*
+* On linux, we take this to mean: scheule a program restart with the OS,
+*   and then terminate this one.
+*/
+volatile void jumpToBootloader() {
+  // TODO: Schedule a program restart.
+  seppuku();
+}
+
+
+/****************************************************************************************************
+* Underlying system control.                                                                        *
+****************************************************************************************************/
+
+volatile void shutdown() {
+  // TODO: Actually shutdown the system.
+}
+
+volatile void reboot() {
+  // TODO: Actually reboot the system.
 }
 
 

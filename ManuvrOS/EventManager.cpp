@@ -281,6 +281,9 @@ int8_t Kernel::notify(ManuvrEvent *active_event) {
     case MANUVR_MSG_SYS_REBOOT:
       reboot();
       break;
+    case MANUVR_MSG_SYS_SHUTDOWN:
+      seppuku();  // TODO: We need to distinguish between this and SYSTEM shutdown for linux.
+      break;
     case MANUVR_MSG_SYS_BOOTLOADER:
       jumpToBootloader();
       break;
