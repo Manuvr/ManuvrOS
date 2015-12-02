@@ -71,14 +71,18 @@ SENSOR_SRCS    = ManuvrOS/Platform/Platform.cpp ManuvrOS/Drivers/SensorWrapper/*
 I2C_DRIVERS    = ManuvrOS/Drivers/i2c-adapter/*.cpp ManuvrOS/Drivers/DeviceWithRegisters/DeviceRegister.cpp ManuvrOS/Drivers/DeviceWithRegisters/DeviceWithRegisters.cpp
 COM_DRIVERS    = ManuvrOS/Transports/*.cpp ManuvrOS/Transports/ManuvrComPort/*.cpp
 
-RASPI_DRIVERS  = ManuvrOS/Drivers/ManuvrableGPIO/*.cpp ManuvrOS/Platform/PlatformRaspi.cpp 
+# Because this Makefile technically supports two platforms.
+# TODO: Make a single linux platform driver, and case-off Raspi stuff within it.
+RASPI_DRIVERS   = ManuvrOS/Drivers/ManuvrableGPIO/*.cpp ManuvrOS/Platform/PlatformRaspi.cpp
+GENERIC_DRIVERS = ManuvrOS/Platform/PlatformUnsupported.cpp
+
 
 CPP_SRCS  = $(MANUVROS_SRCS)
 CPP_SRCS += $(I2C_DRIVERS) $(SENSOR_SRCS) $(COM_DRIVERS)
 
 SRCS   = $(CPP_SRCS)
              
-MANuVR_OPTIONS = -D__ENABLE_MSG_SEMANTICS -D__MANUVR_DEBUG -D__MANUVR_CONSOLE_SUPPORT
+MANuVR_OPTIONS = -D__MANUVR_DEBUG
 
 CFLAGS += $(MANuVR_OPTIONS) 
 
@@ -96,14 +100,15 @@ CFLAGS += $(MANuVR_OPTIONS)
 
 
 all: clean
-	$(CPP) -static -g -o manuvr raspiMain.cpp $(SRCS) $(RASPI_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) -Idemo/ -DTEST_BENCH -D_GNU_SOURCE -O0
+	$(CPP) -static -g -o manuvr main.cpp $(SRCS) $(GENERIC_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) -D_GNU_SOURCE -O2
 
 raspi: clean
-	$(CPP) -static -g -o manuvr raspiMain.cpp $(SRCS) $(RASPI_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) -DRASPI -D_GNU_SOURCE -O0
+	$(CPP) -static -g -o manuvr main.cpp $(SRCS) $(RASPI_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) -DRASPI -D_GNU_SOURCE -O2
 
-testbench:
-	$(CPP) -static -g -o testbench demo/test-bench.cpp $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) -Idemo/ -DTEST_BENCH -D_GNU_SOURCE -O0 -fstack-usage
-# valgrind --tool=callgrind ./testbench
+debug:
+	$(CPP) -static -g -o manuvr main.cpp $(SRCS) $(GENERIC_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) -D__MANUVR_DEBUG -D_GNU_SOURCE -O0 -fstack-usage
+# Options configured such that you can then...
+# valgrind --tool=callgrind ./manuvr
 # gprof2dot --format=callgrind --output=out.dot callgrind.out.16562
 # dot  -Tpng out.dot -o graph.png
 

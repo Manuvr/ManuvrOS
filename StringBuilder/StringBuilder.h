@@ -155,7 +155,7 @@ class StringBuilder {
 
 		int cmpBinString(unsigned char *unknown, int len);
 
-#ifdef TEST_BENCH
+#ifdef __MANUVR_DEBUG
 		void printDebug();
 #else
 		void printDebug(StringBuilder*);

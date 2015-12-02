@@ -22,10 +22,14 @@
   #define EVENT_PRIORITY_LOWEST               0
 
 
-  #ifdef TEST_BENCH
-    #define DEFAULT_CLASS_VERBOSITY    7
+  #if defined(__MANUVR_CONSOLE_SUPPORT) || defined(__MANUVR_DEBUG)
+    #ifdef __MANUVR_DEBUG
+      #define DEFAULT_CLASS_VERBOSITY    7
+    #else
+      #define DEFAULT_CLASS_VERBOSITY    4
+    #endif
   #else
-    #define DEFAULT_CLASS_VERBOSITY    3
+    #define DEFAULT_CLASS_VERBOSITY      0
   #endif
 
 

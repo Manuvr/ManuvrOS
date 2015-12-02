@@ -2,7 +2,28 @@
 
 #if defined(__MK20DX256__) | defined(__MK20DX128__)
   #include <i2c_t3/i2c_t3.h>
+#elif defined(STM32F4XX)
+  #include <stm32f4xx.h>
+  #include <stm32f4xx_i2c.h>
+  #include <stm32f4xx_gpio.h>
+  #include "stm32f4xx_it.h"
+#elif defined(ARDUINO)
+  #include <Wire/Wire.h>
+#else
+  // Unsupported platform? Try using the linux i2c library and cross fingers...
+  #include <stdlib.h>
+  #include <unistd.h>
+  #include <linux/i2c-dev.h>
+  #include <sys/types.h>
+  #include <sys/ioctl.h>
+  #include <sys/stat.h>
+  #include <fstream>
+  #include <iostream>
+  #include <fcntl.h>
+  #include <inttypes.h>
+  #include <ctype.h>
 #endif
+
 
 // Static initiallizer...
 int I2CQueuedOperation::next_txn_id = 0;

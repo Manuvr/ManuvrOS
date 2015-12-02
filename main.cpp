@@ -58,7 +58,8 @@ int main(int argc, char *argv[]) {
       Kernel::raiseEvent(MANUVR_MSG_SYS_SHUTDOWN, NULL);
     }
   }
- 
+
+  
   printf("%s: Booting Manuvr Kernel....\n", program_name);
   kernel.bootstrap();
 
