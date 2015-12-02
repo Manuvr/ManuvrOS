@@ -298,7 +298,13 @@ void gpioSetup() {
 * Misc                                                                                              *
 ****************************************************************************************************/
 volatile void jumpToBootloader() {
-  exit(1);
+  // Whatever the kernel cared to clean up, it better have done so by this point,
+  //   as no other platforms return from this function.
+  if (Kernel::log_buffer.length() > 0) {
+    printf("\n\njumpToBootloader(): About to exit(). Remaining log follows...\n%s", Kernel::log_buffer.string());
+  }
+  printf("\n\n");
+  exit(0);
 }
 
 volatile void reboot() {
@@ -320,16 +326,6 @@ void globalIRQDisable() {
 }
 
 
-void platformInit() {
-  start_time_micros = micros();
-  init_RNG();
-  initPlatformRTC();
-  __kernel = (volatile Kernel*) Kernel::getInstance();
-  initSigHandlers();
-  set_linux_interval_timer();
-}
-
-
 /**
 * Sometimes we question the size of the stack.
 *
@@ -340,6 +336,36 @@ volatile uint32_t getStackPointer() {
   test = (uint32_t) &test;  // Store the pointer.
   return test;
 }
+
+
+
+/****************************************************************************************************
+* Platform initialization.                                                                          *
+****************************************************************************************************/
+
+/*
+* Init that needs to happen prior to kernel bootstrap().
+* This is the final function called by the kernel constructor.
+*/
+void platformPreInit() {
+  __kernel = (volatile Kernel*) Kernel::getInstance();
+  gpioSetup();
+}
+
+
+/*
+* Called as a result of kernels bootstrap() fxn. 
+*/
+void platformInit() {
+  start_time_micros = micros();
+  init_RNG();
+  initPlatformRTC();
+  __kernel = (volatile Kernel*) Kernel::getInstance();
+  initSigHandlers();
+  set_linux_interval_timer();
+}
+
+
 
 #ifdef __cplusplus
  }

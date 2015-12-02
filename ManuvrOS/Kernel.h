@@ -7,6 +7,7 @@
   #include "EnumeratedTypeCodes.h"
   #include <ManuvrOS/CommonConstants.h>
   
+  #include "FirmwareDefs.h"
   #include "ManuvrEvent.h"
   #include "EventManager.h"
   #include "DataStructures/PriorityQueue.h"
@@ -15,6 +16,18 @@
   #include <map>
 
   #include <ManuvrOS/MsgProfiler.h>
+
+  #define EVENT_PRIORITY_HIGHEST            100
+  #define EVENT_PRIORITY_DEFAULT              2
+  #define EVENT_PRIORITY_LOWEST               0
+
+
+  #ifdef TEST_BENCH
+    #define DEFAULT_CLASS_VERBOSITY    7
+  #else
+    #define DEFAULT_CLASS_VERBOSITY    3
+  #endif
+
 
   #ifdef __cplusplus
    extern "C" {
@@ -277,7 +290,12 @@ class Scheduler : public EventReceiver {
       
       void printProfiler(StringBuilder *);
       const char* getReceiverName();
-      void printDebug(StringBuilder *);
+      
+      // Logging messages, as well as an override to log locally.
+      void printDebug(StringBuilder*);
+      inline void printDebug() {
+        printDebug(&local_log);
+      };
       
       float cpu_usage();
       

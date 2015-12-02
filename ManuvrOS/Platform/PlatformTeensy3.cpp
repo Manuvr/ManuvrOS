@@ -244,11 +244,28 @@ volatile uint32_t getStackPointer() {
 
 
 
+/****************************************************************************************************
+* Platform initialization.                                                                          *
+****************************************************************************************************/
+
+/*
+* Init that needs to happen prior to kernel bootstrap().
+* This is the final function called by the kernel constructor.
+*/
+void platformPreInit() {
+  gpioSetup();
+}
+
+
+/*
+* Called as a result of kernels bootstrap() fxn. 
+*/
 void platformInit() {
   start_time_micros = micros();
-  gpioSetup();
   init_RNG();
 }
+
+
 
 #ifdef __cplusplus
  }

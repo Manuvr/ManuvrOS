@@ -83,12 +83,8 @@ Kernel* Kernel::getInstance() {
 */
 Kernel::Kernel() {
   __class_initializer();
-  INSTANCE           = this;
-  __kernel           = this;
-  current_event      = NULL;
-  subscribe(this);   // We subscribe ourselves to events.
-  setVerbosity((int8_t) 1);  // TODO: Why does this crash ViamSonus?
-  profiler(false);
+  INSTANCE           = this;  // For singleton reference. TODO: Will not parallelize.
+  __kernel           = this;  // We extend EventReceiver. So we populate this.
 
   max_queue_depth     = 0;
   total_loops         = 0;
@@ -96,6 +92,8 @@ Kernel::Kernel() {
   total_events_dead   = 0;
   micros_occupied     = 0;
   max_events_per_loop = 2;
+
+  current_event      = NULL;
 
   for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
     /* We carved out a space in our allocation for a pool of events. Ideally, this would be enough
@@ -107,7 +105,14 @@ Kernel::Kernel() {
     preallocated.insert(&_preallocation_pool[i]);
   }
 
+  subscribe(this);           // We subscribe ourselves to events.
+  setVerbosity((int8_t) 1);  // TODO: Do this to move verbosity from 0 to some default level.
+  profiler(false);           // Turn off the profiler.
+
   ManuvrMsg::registerMessages(message_defs, sizeof(message_defs) / sizeof(MessageTypeDef));
+  subscribe((EventReceiver*) &__scheduler);    // Subscribe the Scheduler.
+
+  platformPreInit();    // Start the pre-bootstrap platform-specific machinery.
 }
 
 /**
@@ -178,28 +183,10 @@ volatile void Kernel::log(StringBuilder *str) {
 
 
 int8_t Kernel::bootstrap() {
-  subscribe((EventReceiver*) &__scheduler);    // Subscribe the Scheduler.
-  
-//  mcp73833 = new MCP73833(9, 10);
-  
-  // Setup the first i2c adapter and Subscribe it to Kernel.
-//  i2c     = new I2CAdapter(0);
-//  mgc3130 = new MGC3130(16, 17);
-
-//  ina219      = new INA219(0x4A);
-//  adp8866     = new ADP8866(7, 8, 0x27);
-
-//  event_manager.subscribe((EventReceiver*) i2c);
-//  event_manager.subscribe((EventReceiver*) adp8866);
-
-//  ((I2CAdapter*) i2c)->addSlaveDevice(ina219);
-//  ((I2CAdapter*) i2c)->addSlaveDevice(adp8866);
-  
   platformInit();    // Start the platform-specific machinery.
-  
-//  mgc3130->init();
 
-  //ManuvrEvent *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
+  ManuvrEvent *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
+  boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
   raiseEvent(MANUVR_MSG_SYS_BOOT_COMPLETED, NULL);
   return 0;
 }

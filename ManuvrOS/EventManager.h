@@ -9,26 +9,11 @@
   #include "DataStructures/LightLinkedList.h"
   #include <StringBuilder/StringBuilder.h>
 
-  #define EVENT_MANAGER_PREALLOC_COUNT      4   // How large a preallocation buffer should we keep?
-
-  
   #define EVENT_CALLBACK_RETURN_ERROR       -1 // Horrible things happened in the originating class. This should never happen.
   #define EVENT_CALLBACK_RETURN_UNDEFINED   0  // Illegal return code. Kernel will reap events whose callbacks return this.
   #define EVENT_CALLBACK_RETURN_REAP        1  // The callback fxn has specifically told us to reap this event.
   #define EVENT_CALLBACK_RETURN_RECYCLE     2  // The callback class is asking that this event be recycled into the event queue.
   #define EVENT_CALLBACK_RETURN_DROP        3  // The callback class is telling Kernel that it should dequeue
-  
-  
-  #define EVENT_PRIORITY_HIGHEST            100
-  #define EVENT_PRIORITY_DEFAULT              2
-  #define EVENT_PRIORITY_LOWEST               0
-  
-  
-  #ifdef TEST_BENCH
-    #define DEFAULT_CLASS_VERBOSITY    7
-  #else
-    #define DEFAULT_CLASS_VERBOSITY    3
-  #endif
   
   
   #ifdef __cplusplus

@@ -3,29 +3,24 @@ File:   FirmwareDefs.h
 Author: J. Ian Lindsay
 Date:   2015.03.01
 
-This is one of the files that the application author is required to provide. This is where definition of
-  (application or device)-specific event codes ought to go. We also define some fields that will be used
-  during communication with other devices, so some things here are mandatory.
 
-This is an example file for building mock firmware on a Raspberry Pi.
+This is one of the files that the application author is required to provide. 
+This is where definition of (application or device)-specific parameters ought to go.
 
+This is an example file for building firmware on linux. Anticipated target is a Raspi.
+  but that shouldn't matter too much. These settings are only typically relevant for
+  reasons of memory-constraint, threading model (if any), or specific features that
+  this hardware can support.
 */
 
 #ifndef __FIRMWARE_DEFS_H
 #define __FIRMWARE_DEFS_H
 
+/****************************************************************************************************
+* Required fields...                                                                                *
+****************************************************************************************************/
 
 /*
-* These flags are meant to be sent during session setup. We need to 
-*/
-#define DEVICE_FLAG_AUTHORITATIVE_TIME          0x00000001  // Devices that can provide accurate time.
-#define DEVICE_FLAG_INTERNET_ACCESS             0x00000002  // Can this firmware potentially provide net access?
-#define DEVICE_FLAG_MESSAGE_RELAY               0x00000004  // Can we act as a message relay?
-
-
-/*
-* These are required fields.
-*
 * PROTOCOL_MTU is required for constraining communication length due to memory restrictions at
 *   one-or-both sides. Since the protocol currently supports up to (2^24)-1 bytes in a single transaction,
 *   a microcontroller would want to limit its counter-party's use of precious RAM. PROTOCOL_MTU, therefore,
@@ -39,24 +34,16 @@ This is an example file for building mock firmware on a Raspberry Pi.
 #define PROTOCOL_VERSION          0x00000001    // The protocol version we are using.
 
 
+/****************************************************************************************************
+* Optional fields...                                                                                *
+****************************************************************************************************/
+
 #define EXTENDED_DETAIL_STRING    "RasPiBuild"  // Optional. User-defined.
 
 
-
-/* Codes that are specific to the Raspi build. */
-
-
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-// Function prototypes
-int main(int argc, char *argv[]);
-
-#ifdef __cplusplus
-}
-#endif
+/*
+* Kernel options.
+*/
+#define EVENT_MANAGER_PREALLOC_COUNT       32   // How large a preallocation buffer should we keep?
 
 #endif

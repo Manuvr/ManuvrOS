@@ -131,6 +131,7 @@ void setPinFxn(uint8_t pin, FunctionPointer fxn);
 /*
 * Call this once on system init to configure the basics of the platform.
 */
+void platformPreInit();
 void platformInit();
 
 

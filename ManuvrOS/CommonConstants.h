@@ -22,4 +22,11 @@ There ought to be no inclusion in this file. It is the bottom.
   typedef void (*FunctionPointer) ();
 
 
+
+  /*
+  * These are flag definitions for the device self-description message.
+  */
+  #define DEVICE_FLAG_AUTHORITATIVE_TIME          0x00000001  // Devices that can provide accurate time.
+  #define DEVICE_FLAG_INTERNET_ACCESS             0x00000002  // Can this firmware potentially provide net access?
+  #define DEVICE_FLAG_MESSAGE_RELAY               0x00000004  // Can we act as a message relay?
 #endif
