@@ -57,10 +57,6 @@ This file is meant to contain a set of common functions that are typically platf
 #define MANUVR_RTC_STARTUP_GOOD_UNSET     0x23196402
 #define MANUVR_RTC_STARTUP_GOOD_SET       0x23196403
 
-/*
-* These are constants where we care about the number.
-*/
-#define PLATFORM_RNG_CARRY_CAPACITY           10     // How many random numbers should be cached? 
 
 class ManuvrEvent;
 

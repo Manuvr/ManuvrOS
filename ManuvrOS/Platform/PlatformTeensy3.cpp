@@ -215,22 +215,6 @@ void setPinFxn(uint8_t pin, FunctionPointer fxn) {
 /****************************************************************************************************
 * Misc                                                                                              *
 ****************************************************************************************************/
-
-volatile void jumpToBootloader() {
-  cli();  
-  _reboot_Teensyduino_();
-}
-
-volatile void reboot() {
-  cli();
-  *((uint32_t *)0xE000ED0C) = 0x5FA0004;
-}
-
-void globalIRQEnable() {     sei();    }
-void globalIRQDisable() {    cli();    }
-
-
-
 /**
 * Sometimes we question the size of the stack.
 *
@@ -240,6 +224,63 @@ volatile uint32_t getStackPointer() {
   uint32_t test;  // Important to not do assignment here.
   test = (uint32_t) &test;  // Store the pointer.
   return test;
+}
+
+
+/****************************************************************************************************
+* Interrupt-masking                                                                                 *
+****************************************************************************************************/
+
+void globalIRQEnable() {     sei();    }
+void globalIRQDisable() {    cli();    }
+
+
+
+/****************************************************************************************************
+* Process control                                                                                   *
+****************************************************************************************************/
+
+/*
+* Terminate this running process, along with any children it may have forked() off.
+* Never returns.
+*/
+volatile void seppuku() {
+  // This means "Halt" on a base-metal build.
+  cli();
+  while(true);
+}
+
+
+/*
+* Jump to the bootloader.
+* Never returns.
+*/
+volatile void jumpToBootloader() {
+  cli();
+  _reboot_Teensyduino_();
+}
+
+
+/****************************************************************************************************
+* Underlying system control.                                                                        *
+****************************************************************************************************/
+
+/*
+* This means "Halt" on a base-metal build.
+* Never returns.
+*/
+volatile void shutdown() {
+  cli();
+  while(true);
+}
+
+/*
+* Causes immediate reboot.
+* Never returns.
+*/
+volatile void reboot() {
+  cli();
+  *((uint32_t *)0xE000ED0C) = 0x5FA0004;
 }
 
 

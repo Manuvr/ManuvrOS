@@ -16,9 +16,6 @@ This is an example file for building firmware on linux. Anticipated target is a 
 #ifndef __FIRMWARE_DEFS_H
 #define __FIRMWARE_DEFS_H
 
-/****************************************************************************************************
-* Required fields...                                                                                *
-****************************************************************************************************/
 
 /*
 * PROTOCOL_MTU is required for constraining communication length due to memory restrictions at
@@ -27,11 +24,39 @@ This is an example file for building firmware on linux. Anticipated target is a 
 *   determines the effective maximum packet size for this device, and by extension, the sessions in which
 *   it participates.
 */
-#define PROTOCOL_MTU              16777215      // See MTU notes above....
-#define VERSION_STRING            "0.0.1"       // We should be able to communicate version so broken behavior can be isolated.
-#define HW_VERSION_STRING         "1"           // We are strictly-software, but we will report as hardware.
+
+
+/****************************************************************************************************
+* Required fields...                                                                                *
+****************************************************************************************************/
+
+/*
+* Particulars of this platform.
+*/
+#define PLATFORM_RNG_CARRY_CAPACITY       10    // How many random numbers should be cached? Must be > 0. 
+#define PROTOCOL_MTU                16777215    // See MTU notes above....
+
+/*
+* Particulars of this Manuvrable.
+*/
+// This is the string that identifies this Manuvrable to other Manuvrables. In MHB's case, this
+//   will select the mEngine.
 #define IDENTITY_STRING           "MHBDebug"    // This will select Manuvr's debug engine in MHB.
-#define PROTOCOL_VERSION          0x00000001    // The protocol version we are using.
+
+// This would be the version of the Manuvrable's firmware (this program).
+#define VERSION_STRING               "0.0.1"
+
+// Hardware is versioned. Manuvrables that are strictly-software should say -1 here.
+#define HW_VERSION_STRING               "-1"
+
+// The version of Manuvr's protocol we are using.
+#define PROTOCOL_VERSION                   1
+
+
+/*
+* Kernel options.
+*/
+#define EVENT_MANAGER_PREALLOC_COUNT      32    // How large a preallocation buffer should we keep?
 
 
 /****************************************************************************************************
@@ -40,10 +65,5 @@ This is an example file for building firmware on linux. Anticipated target is a 
 
 #define EXTENDED_DETAIL_STRING    "RasPiBuild"  // Optional. User-defined.
 
-
-/*
-* Kernel options.
-*/
-#define EVENT_MANAGER_PREALLOC_COUNT       32   // How large a preallocation buffer should we keep?
 
 #endif
