@@ -50,7 +50,8 @@ Scheduler::Scheduler() {
   total_skipped_loops  = 0;
   lagged_schedules     = 0;
   bistable_skip_detect = false;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
-  clicks_in_isr = 0;
+  clicks_in_isr        = 0;
+  _ms_elapsed          = 0;
 }
 
 
@@ -381,12 +382,59 @@ bool Scheduler::delaySchedule(uint32_t g_pid) {
 
 
 /**
+* Call this function to push the schedules forward by a given number of ms.
+* We can be assured of exclusive access to the scheules queue as long as we
+*   are in an ISR.
+*/
+void Scheduler::advanceScheduler(unsigned int ms_elapsed) {
+  clicks_in_isr++;
+  _ms_elapsed += (uint32_t) ms_elapsed;
+  
+  
+  if (bistable_skip_detect) {
+    // Failsafe block
+#ifdef STM32F4XX
+    if (skipped_loops > 5000) {
+      // TODO: We are hung in a way that we probably cannot recover from. Reboot...
+      jumpToBootloader();
+    }
+    else if (skipped_loops == 2000) {
+      printf("Hung scheduler...\n");
+    }
+    else if (skipped_loops == 2040) {
+      /* Doing all this String manipulation in an ISR would normally be an awful idea.
+         But we don't care here because we're hung anyhow, and we need to know why. */
+      StringBuilder output;
+      Kernel::getInstance()->fetchKernel()->printDebug(&output);
+      printf("%s\n", (char*) output.string());
+    }
+    else if (skipped_loops == 2200) {
+      StringBuilder output;
+      printDebug(&output);
+      printf("%s\n", (char*) output.string());
+    }
+    else if (skipped_loops == 3500) {
+      StringBuilder output;
+      Kernel::getInstance()->printDebug(&output);
+      printf("%s\n", (char*) output.string());
+    }
+    skipped_loops++;
+#endif
+  }
+  else {
+    bistable_skip_detect = true;
+  }
+}
+
+
+/**
 * Call this function to push the schedules forward.
 * We can be assured of exclusive access to the scheules queue as long as we
 *   are in an ISR.
 */
 void Scheduler::advanceScheduler() {
   clicks_in_isr++;
+  _ms_elapsed++;
   
   //int x = schedules.size();
   //ScheduleItem *current;
@@ -512,12 +560,12 @@ int Scheduler::serviceScheduledEvents() {
   for (int i = 0; i < x; i++) {
     current = schedules.recycle();
     if (current->thread_enabled) {
-      if (current->thread_time_to_wait > temp_clicks) {
-        current->thread_time_to_wait -= temp_clicks;
+      if (current->thread_time_to_wait > _ms_elapsed) {
+        current->thread_time_to_wait -= _ms_elapsed;
       }
       else {
         current->thread_fire = true;
-        uint32_t adjusted_ttw = (temp_clicks - current->thread_time_to_wait);
+        uint32_t adjusted_ttw = (_ms_elapsed - current->thread_time_to_wait);
         if (adjusted_ttw <= current->thread_period) {
           current->thread_time_to_wait = current->thread_period - adjusted_ttw;
         }
@@ -605,6 +653,7 @@ int Scheduler::serviceScheduledEvents() {
   total_skipped_loops += skipped_loops;
   skipped_loops        = 0;
   
+  _ms_elapsed = 0;
   return return_value;
 }
 

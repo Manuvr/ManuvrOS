@@ -5,7 +5,6 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <dirent.h>
-#include <sys/signal.h>
 #include <time.h>
 
 #include <sys/socket.h>
@@ -32,8 +31,6 @@ void printBinString(unsigned char * str, int len);
 /****************************************************************************************************
 * Globals and defines that make our life easier.                                                    *
 ****************************************************************************************************/
-const int INTERRUPT_PERIOD = 1;        // How many seconds between SIGALRM interrupts?
-
 int parent_pid  = 0;            // The PID of the root process (always).
 int looper_pid  = 0;            // This is the PID for the VM thread.
 
@@ -44,7 +41,6 @@ int maximum_field_print = 65;       // The maximum number of bytes we will print
 bool run_looper          = true;  // We will be running the looper in its own thread.
 bool continue_listening  = true;
 char *program_name       = NULL;
-static Kernel* kernel    = NULL;
 
 
 // Log a message. Target is determined by the current_config.
@@ -62,92 +58,7 @@ void fp_log(const char *fxn_name, int severity, const char *str, ...) {
 /****************************************************************************************************
 * Signal catching code.                                                                             *
 ****************************************************************************************************/
-void sig_handler(int signo) {
-    switch (signo) {
-        case SIGINT:
-          fp_log(__PRETTY_FUNCTION__, LOG_NOTICE, "Received a SIGINT signal. Closing up shop...");
-          continue_listening    = false;
-          break;
-        case SIGKILL:
-          fp_log(__PRETTY_FUNCTION__, LOG_NOTICE, "Received a SIGKILL signal. Something bad must have happened. Exiting hard....");
-          exit(1);
-          break;
-        case SIGTERM:
-          fp_log(__PRETTY_FUNCTION__, LOG_NOTICE, "Received a SIGTERM signal. Closing up shop...");
-          continue_listening    = false;
-          break;
-        case SIGQUIT:
-          fp_log(__PRETTY_FUNCTION__, LOG_NOTICE, "Received a SIGQUIT signal. Closing up shop...");
-          continue_listening    = false;
-          break;
-        case SIGHUP:
-          fp_log(__PRETTY_FUNCTION__, LOG_NOTICE, "Received a SIGHUP signal. Closing up shop...");
-          continue_listening    = false;
-          break;
-        case SIGSTOP:
-           fp_log(__PRETTY_FUNCTION__, LOG_NOTICE, "Received a SIGSTOP signal. Closing up shop...");
-           continue_listening    = false;
-           break;
-        case SIGALRM:
-           kernel->advanceScheduler();
-           if (continue_listening) alarm(INTERRUPT_PERIOD);    // Fire again later...
-           break;
-        case SIGUSR1:      // Cause a configuration reload.
-          break;
-        case SIGUSR2:    // Cause a database reload.
-          break;
-        default:
-          fp_log(__PRETTY_FUNCTION__, LOG_NOTICE, "Unhandled signal: %d", signo);
-          break;
-    }
 
-    // Echo whatever signals we receive to the child proc (if we are the parent).
-    if ((looper_pid > 0) && (signo != SIGALRM) && (signo != SIGUSR2)) {
-        kill(looper_pid, signo);
-    }
-}
-
-
-
-// The parent process should call this function to set the callback address to its signal handlers.
-//     Returns 1 on success, 0 on failure.
-int initSigHandlers(){
-    int return_value    = 1;
-    // Try to open a binding to listen for signals from the OS...
-    if (signal(SIGINT, sig_handler) == SIG_ERR) {
-        fp_log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to bind SIGINT to the signal system. Failing...");
-        return_value = 0;
-    }
-    if (signal(SIGQUIT, sig_handler) == SIG_ERR) {
-        fp_log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to bind SIGQUIT to the signal system. Failing...");
-        return_value = 0;
-    }
-    if (signal(SIGHUP, sig_handler) == SIG_ERR) {
-        fp_log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to bind SIGHUP to the signal system. Failing...");
-        return_value = 0;
-    }
-    if (signal(SIGTERM, sig_handler) == SIG_ERR) {
-        fp_log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to bind SIGTERM to the signal system. Failing...");
-        return_value = 0;
-    }
-    if (signal(SIGUSR1, sig_handler) == SIG_ERR) {
-        fp_log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to bind SIGUSR1 to the signal system. Failing...");
-        return_value = 0;
-    }
-    if (signal(SIGUSR2, sig_handler) == SIG_ERR) {
-        fp_log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to bind SIGUSR2 to the signal system. Failing...");
-        return_value = 0;
-    }
-    if (signal(SIGALRM, sig_handler) == SIG_ERR) {
-        fp_log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to bind SIGALRM to the signal system. Failing...");
-        return_value = 0;
-    }
-    if (signal(SIGCHLD, SIG_IGN) == SIG_ERR) {
-        fp_log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to bind SIGCHLD to the signal system. Failing...");
-        return_value = 0;
-    }
-    return return_value;
-}
 
 
 /****************************************************************************************************
@@ -217,11 +128,9 @@ int main(int argc, char *argv[]) {
   printf("===================================================================================================\n");
 
   printf("Booting Manuvr Kernel....\n");
-  kernel = Kernel::getInstance();
+  Kernel kernel;
+  kernel.bootstrap();
   
-  printf("\nSH pointer address: 0x%08x\n", (uint32_t)kernel);
-  //watchdog_mark = 42;  // The period (in ms) of our clock punch. 
-
   // Parse through all the command line arguments and flags...
   // Please note that the order matters. Put all the most-general matches at the bottom of the loop.
   for (int i = 1; i < argc; i++) {
@@ -252,19 +161,27 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
   }
-
-  initSigHandlers();
-  alarm(INTERRUPT_PERIOD);                // Set a periodic interrupt.
-
-  Kernel kernel0;
-  //kernel0.run();
  
+  
   // The main loop. Run forever.
   while (continue_listening) {
-    int x = kernel0.procIdleFlags();
-    if (x > 0) printf("\t kernel0.step() returns %d\n", x);
+    int x = 0;
+    x = kernel.procIdleFlags();
+    if (x > 0) printf("\t kernel0.procIdleFlags() returns %d\n", x);
+    x = kernel.serviceScheduledEvents();
+    if (x > 0) printf("\t kernel0.serviceScheduledEvents() returns %d\n", x);
+    if (Kernel::log_buffer.count()) {
+      if (!kernel.getVerbosity()) {
+        Kernel::log_buffer.clear();
+      }
+      else {
+        printf("%s", Kernel::log_buffer.position(0));
+        Kernel::log_buffer.drop_position(0);
+      }
+    }
   }
   
   printf("\n\n");
   return 0;
 }
+

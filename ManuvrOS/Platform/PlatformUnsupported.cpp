@@ -105,7 +105,7 @@ uint32_t currentTimestamp(void) {
 /*
 * Same, but writes a string representation to the argument.
 */
-void currentTimestamp(StringBuilder* target) {
+void currentTimeAsString(StringBuilder* target) {
 }
 
 /*

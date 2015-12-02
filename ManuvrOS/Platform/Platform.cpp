@@ -48,3 +48,17 @@ const char* getRTCStateString(uint32_t code) {
   }
 }
 
+
+/*
+* Platform-abstracted function to enable or suspend interrupts. Whatever
+*   that might mean on a given platform.
+*/
+void maskableInterrupts(bool enable) {
+  if (enable) {
+    globalIRQEnable();
+  }
+  else {
+    globalIRQDisable();
+  }
+}
+

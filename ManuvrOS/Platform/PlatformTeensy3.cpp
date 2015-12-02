@@ -38,6 +38,16 @@ This file is meant to contain a set of common functions that are typically platf
 
 #define PLATFORM_GPIO_PIN_COUNT   33
 
+#ifdef __cplusplus
+ extern "C" {
+#endif
+
+
+/****************************************************************************************************
+* The code under this block is special on this platform, and will not be available elsewhere.       *
+****************************************************************************************************/
+time_t getTeensy3Time() {   return Teensy3Clock.get();   }
+
 
 
 /****************************************************************************************************
@@ -95,8 +105,6 @@ void init_RNG() {
 * Time and date                                                                                     *
 ****************************************************************************************************/
 uint32_t rtc_startup_state = MANUVR_RTC_STARTUP_UNINITED;
-
-time_t getTeensy3Time() {   return Teensy3Clock.get();   }
 
 
 /*
@@ -221,20 +229,6 @@ volatile void reboot() {
 void globalIRQEnable() {     sei();    }
 void globalIRQDisable() {    cli();    }
 
-/*
-* Call this with a boolean to enable or disable maskable interrupts globally.
-* NOTE: This includes USB and SysTick. So no host communication, and no scheduler.
-*       Events ought to still work, however.
-*/
-void maskableInterrupts(bool enable) {
-  if (enable) {
-    sei();
-  }
-  else {
-    cli();
-  }
-}
-
 
 
 /**
@@ -255,4 +249,8 @@ void platformInit() {
   gpioSetup();
   init_RNG();
 }
+
+#ifdef __cplusplus
+ }
+#endif
 

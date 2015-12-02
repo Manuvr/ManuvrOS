@@ -21,9 +21,9 @@
   #endif
 
   typedef int (*listenerFxnPtr) (ManuvrEvent*);
-  
+
   extern uint32_t micros();  // TODO: Only needed for a single inline fxn. Retain?
-  
+
 /* Type for schedule items... */
 class ScheduleItem {
   public:
@@ -125,7 +125,8 @@ class Scheduler : public EventReceiver {
     bool willRunAgain(uint32_t g_pid);                  // Returns true if the indicated schedule will fire again.
 
     int serviceScheduledEvents(void);        // Execute any schedules that have come due.
-    void advanceScheduler(void);              // Push all enabled schedules forward by one tick.
+    void advanceScheduler(void);             // Push all enabled schedules forward by one tick.
+    void advanceScheduler(unsigned int);     // Push all enabled schedules forward by one tick.
     
     const char* getReceiverName();
 
@@ -151,11 +152,11 @@ class Scheduler : public EventReceiver {
     uint32_t clicks_in_isr;
     uint32_t total_skipped_loops;
     uint32_t lagged_schedules;
-    
+
     /* These members are concerned with reliability. */
     uint16_t skipped_loops;
     bool     bistable_skip_detect;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
-    
+    uint32_t _ms_elapsed;
     
     bool alterSchedule(ScheduleItem *obj, uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
 
@@ -250,6 +251,9 @@ class Scheduler : public EventReceiver {
       };
       inline void advanceScheduler() { 
         __scheduler.advanceScheduler();
+      }
+      inline void advanceScheduler(unsigned int ms_elapsed) { 
+        __scheduler.advanceScheduler(ms_elapsed);
       }
 
       

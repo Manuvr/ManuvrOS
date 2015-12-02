@@ -31,9 +31,138 @@ This file is meant to contain a set of common functions that are typically platf
 */
 
 #include "Platform.h"
+#include <ManuvrOS/Kernel.h>
 
 #include <sys/time.h>
 #include <unistd.h>
+#include <signal.h>
+
+#ifdef __cplusplus
+ extern "C" {
+#endif
+
+
+/****************************************************************************************************
+* The code under this block is special on this platform, and will not be available elsewhere.       *
+****************************************************************************************************/
+volatile Kernel* __kernel = NULL;
+
+struct itimerval _interval              = {0};
+struct sigaction _signal_action_SIGALRM = {0};
+
+#define MANUVR_PLATFORM_TIMER_PERIOD_MS 10 
+
+
+bool set_linux_interval_timer() {
+  _interval.it_value.tv_sec      = 0;
+  _interval.it_value.tv_usec     = MANUVR_PLATFORM_TIMER_PERIOD_MS * 1000;
+  _interval.it_interval.tv_sec   = 0;
+  _interval.it_interval.tv_usec  = MANUVR_PLATFORM_TIMER_PERIOD_MS * 1000;
+  
+  int err = setitimer(ITIMER_VIRTUAL, &_interval, NULL);
+  if (err) {
+    Kernel::log("Failed to enable interval timer.");
+  }
+  return (0 == err);
+}
+
+bool unset_linux_interval_timer() {
+  // TODO: We ultimately need to be retaining the values in the struct, as well as
+  //   the current system time to calculate the delta in case we get re-enabled.
+  _interval.it_value.tv_sec      = 0;
+  _interval.it_value.tv_usec     = 0;
+  _interval.it_interval.tv_sec   = 0;
+  _interval.it_interval.tv_usec  = 0;
+  return true;
+}
+
+
+void sig_handler(int signo) {
+  switch (signo) {
+    case SIGINT:
+      Kernel::log("Received a SIGINT signal. Closing up shop...");
+      jumpToBootloader();
+      break;
+    case SIGKILL:
+      Kernel::log("Received a SIGKILL signal. Something bad must have happened. Exiting hard....");
+      jumpToBootloader();
+      break;
+    case SIGTERM:
+      Kernel::log("Received a SIGTERM signal. Closing up shop...");
+      jumpToBootloader();
+      break;
+    case SIGQUIT:
+      Kernel::log("Received a SIGQUIT signal. Closing up shop...");
+      jumpToBootloader();
+      break;
+    case SIGHUP:
+      printf("Received a SIGHUP signal. Closing up shop...");
+      jumpToBootloader();
+      break;
+    case SIGSTOP:
+      Kernel::log("Received a SIGSTOP signal. Closing up shop...");
+      jumpToBootloader();
+      break;
+    case SIGUSR1:
+      break;
+    case SIGUSR2:
+      break;
+    default:
+      Kernel::log(__PRETTY_FUNCTION__, LOG_NOTICE, "Unhandled signal: %d", signo);
+      break;
+  }
+
+  // Echo whatever signals we receive to the child proc (if we are the parent).
+  //if ((looper_pid > 0) && (signo != SIGALRM) && (signo != SIGUSR2)) {
+  //  kill(looper_pid, signo);
+  //}
+}
+
+
+void linux_timer_handler(int sig_num) {
+  ((Kernel*)__kernel)->advanceScheduler(MANUVR_PLATFORM_TIMER_PERIOD_MS);
+}
+
+
+// The parent process should call this function to set the callback address to its signal handlers.
+//     Returns 1 on success, 0 on failure.
+// TODO: Convert all other signals over to sigaction().
+int initSigHandlers() {
+  int return_value    = 1;
+  // Try to open a binding to listen for signals from the OS...
+  if (signal(SIGINT, sig_handler) == SIG_ERR) {
+    Kernel::log("Failed to bind SIGINT to the signal system. Failing...");
+    return_value = 0;
+  }
+  if (signal(SIGQUIT, sig_handler) == SIG_ERR) {
+    Kernel::log("Failed to bind SIGQUIT to the signal system. Failing...");
+    return_value = 0;
+  }
+  if (signal(SIGHUP, sig_handler) == SIG_ERR) {
+    Kernel::log("Failed to bind SIGHUP to the signal system. Failing...");
+    return_value = 0;
+  }
+  if (signal(SIGTERM, sig_handler) == SIG_ERR) {
+    Kernel::log("Failed to bind SIGTERM to the signal system. Failing...");
+    return_value = 0;
+  }
+  if (signal(SIGUSR1, sig_handler) == SIG_ERR) {
+    Kernel::log("Failed to bind SIGUSR1 to the signal system. Failing...");
+    return_value = 0;
+  }
+  if (signal(SIGUSR2, sig_handler) == SIG_ERR) {
+    Kernel::log("Failed to bind SIGUSR2 to the signal system. Failing...");
+    return_value = 0;
+  }
+  
+  _signal_action_SIGALRM.sa_handler   = &linux_timer_handler;
+  if (sigaction(SIGVTALRM, &_signal_action_SIGALRM, NULL)) {
+    Kernel::log("Failed to bind to SIGVTALRM.");
+    return_value = 0;
+  }
+
+  return return_value;
+}
 
 
 
@@ -84,6 +213,17 @@ void init_RNG() {
 /****************************************************************************************************
 * Time and date                                                                                     *
 ****************************************************************************************************/
+uint32_t rtc_startup_state = MANUVR_RTC_STARTUP_UNINITED;
+
+
+/*
+*
+*/
+bool initPlatformRTC() {
+  rtc_startup_state = MANUVR_RTC_STARTUP_GOOD_UNSET;
+  return true;
+}
+
 /*
 * Given an RFC2822 datetime string, decompose it and set the time and date.
 * We would prefer RFC2822, but we should try and cope with things like missing
@@ -103,11 +243,6 @@ uint32_t currentTimestamp(void) {
   return return_value;
 }
 
-/*
-* Same, but writes a string representation to the argument.
-*/
-void currentTimestamp(StringBuilder* target) {
-}
 
 /*
 * Writes a human-readable datetime to the argument.
@@ -163,7 +298,7 @@ void gpioSetup() {
 * Misc                                                                                              *
 ****************************************************************************************************/
 volatile void jumpToBootloader() {
-  // TODO: Restart the program.
+  exit(1);
 }
 
 volatile void reboot() {
@@ -172,21 +307,26 @@ volatile void reboot() {
 
 // Ze interrupts! Zhey do nuhsing!
 // TODO: Perhaps raise the nice value?
-void globalIRQEnable() {    }
-void globalIRQDisable() {   }
+// At minimum, turn off the periodic timer, since this is what would happen on
+//   other platforms.
+void globalIRQEnable() {  
+  // TODO: Need to stack the time remaining. 
+  //set_linux_interval_timer();
+}
 
-/*
-* Call this with a boolean to enable or disable maskable interrupts globally.
-* NOTE: This includes USB and SysTick. So no host communication, and no scheduler.
-*       Events ought to still work, however.
-*/
-void maskableInterrupts(bool enable) {
+void globalIRQDisable() { 
+  // TODO: Need to unstack the time remaining and fire any schedules.
+  //unset_linux_interval_timer();
 }
 
 
 void platformInit() {
   start_time_micros = micros();
   init_RNG();
+  initPlatformRTC();
+  __kernel = (volatile Kernel*) Kernel::getInstance();
+  initSigHandlers();
+  set_linux_interval_timer();
 }
 
 
@@ -200,4 +340,8 @@ volatile uint32_t getStackPointer() {
   test = (uint32_t) &test;  // Store the pointer.
   return test;
 }
+
+#ifdef __cplusplus
+ }
+#endif
 

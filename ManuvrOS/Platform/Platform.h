@@ -64,6 +64,12 @@ This file is meant to contain a set of common functions that are typically platf
 
 class ManuvrEvent;
 
+
+#ifdef __cplusplus
+ extern "C" {
+#endif 
+
+
 #ifdef ARDUINO
   #include <Arduino.h>
 #else
@@ -79,11 +85,6 @@ typedef struct __platform_gpio_def {
   uint8_t         flags;
   uint16_t        mode;  // Strictly more than needed. Padding structure...
 } PlatformGPIODef;
-
-
-#ifdef __cplusplus
- extern "C" {
-#endif 
 
 /*
 * Time and date

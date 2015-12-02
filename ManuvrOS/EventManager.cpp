@@ -204,7 +204,27 @@ int8_t Kernel::bootstrap() {
   return 0;
 }
 
-
+//void Kernel::print_type_sizes(void) {
+//  StringBuilder temp("---< Type sizes >-----------------------------\n");
+//  temp.concatf("Elemental structures:\n");
+//  temp.concatf("\tStringBuilder         %d\n", sizeof(StringBuilder));
+//  temp.concatf("\tLinkedList<void*>     %d\n", sizeof(LinkedList<void*>));
+//  temp.concatf("\tPriorityQueue<void*>   %d\n", sizeof(PriorityQueue<void*>));
+//
+//  temp.concatf(" Core singletons:\n");
+//  temp.concatf("\t StaticHub             %d\n", sizeof(StaticHub));
+//  temp.concatf("\t Scheduler             %d\n", sizeof(Scheduler));
+//  temp.concatf("\t EventManager          %d\n", sizeof(EventManager));
+//
+//  temp.concatf(" Messaging components:\n");
+//  temp.concatf("\t ManuvrEvent      %d\n", sizeof(ManuvrEvent));
+//  temp.concatf("\t ManuvrMsg        %d\n", sizeof(ManuvrMsg));
+//  temp.concatf("\t Argument              %d\n", sizeof(Argument));
+//  temp.concatf("\t SchedulerItem         %d\n", sizeof(ScheduleItem));
+//  temp.concatf("\t TaskProfilerData      %d\n", sizeof(TaskProfilerData));
+//
+//  Kernel::log(&temp);
+//}
 
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
