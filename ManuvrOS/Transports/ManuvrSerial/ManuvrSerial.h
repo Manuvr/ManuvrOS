@@ -68,18 +68,22 @@ class ManuvrSerial : public ManuvrXport {
     int8_t callback_proc(ManuvrEvent *);
 
     
-    int8_t read_port();
+    int8_t connect();
+    int8_t listen();
     int8_t reset();
 
-    virtual int8_t sendBuffer(StringBuilder*);
-    bool write_port(unsigned char* out, int out_len);
-
+    // TODO: This scope-promotion is not an accident. Need global handlers for ISR.
+    //   Sloppy sloppy sloppy....
+    //      ---J. Ian Lindsay   Thu Dec 03 04:46:27 MST 2015
+    int8_t read_port();
+    
+    
 
   protected:
     void __class_initializer();
 
-    /* Members that deal with sessions. */
-    int8_t provide_session(XenoSession*);   // Called whenever we instantiate a session.
+
+    bool write_port(unsigned char* out, int out_len);
 
 
   private:

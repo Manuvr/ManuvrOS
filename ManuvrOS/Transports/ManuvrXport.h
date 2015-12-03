@@ -100,13 +100,6 @@ class ManuvrXport : public EventReceiver {
     ManuvrXport();
     virtual ~ManuvrXport() {};
 
-
-    /*
-    * These are overrides that need to be supported by any class extending this one.
-    */ 
-    virtual int8_t sendBuffer(StringBuilder*) = 0;
-
-
     /* Members that deal with sessions. */
     // TODO: Is this transport used for non-session purposes? IE, GPS? 
     inline bool hasSession() {         return (_xport_flags & MANUVR_XPORT_FLAG_HAS_SESSION);  };
@@ -119,12 +112,20 @@ class ManuvrXport : public EventReceiver {
     inline bool alwaysConnected() {         return (_xport_flags & MANUVR_XPORT_FLAG_ALWAYS_CONNECTED);  } 
     void alwaysConnected(bool en);
 
+
     /*
-    * Low-level state and control.
+    * High-level data functions.
     */
-    virtual int8_t reset() = 0;
-    inline bool initialized() { return (xport_state & MANUVR_XPORT_STATE_INITIALIZED);  };
-    void initialized(bool en);
+    int8_t sendBuffer(StringBuilder* buf);
+
+
+    /*
+    * State imperatives.
+    */
+    virtual int8_t connect() = 0;
+    virtual int8_t listen()  = 0;
+    virtual int8_t reset()   = 0;
+
 
     /*
     * State accessors.
@@ -134,6 +135,10 @@ class ManuvrXport : public EventReceiver {
     void connected(bool);
     inline bool listening() {   return (_xport_flags & MANUVR_XPORT_STATE_LISTENING);  };
     void listening(bool);
+    
+    /* Any required setup finished without problems? */
+    inline bool initialized() { return (xport_state & MANUVR_XPORT_STATE_INITIALIZED);  };
+    void initialized(bool en);
 
     /* Is this transport used for non-session purposes? IE, GPS? */
     inline bool nonSessionUsage() {         return (_xport_flags & MANUVR_XPORT_FLAG_NON_SESSION);  };
@@ -160,6 +165,7 @@ class ManuvrXport : public EventReceiver {
 
 
 
+
   protected:
     XenoSession *session;
     
@@ -179,14 +185,14 @@ class ManuvrXport : public EventReceiver {
     int      _pid;
 
 
-    virtual int8_t reapXenoSession(XenoSession*);      // Cleans up XenoSessions that were instantiated by this class.
-    
     // TODO: This is preventing us from encapsulating more deeply.
     //   The reason it isn't done is because there are instance-specific nuances in behavior that have
-    //   to be delt with. A GPS device driver might be confused if we load a session. Until this behavior
-    //   can be generalized, we rely on the extending class to handle undefined combinations as it chooses.
+    //   to be delt with. A GPS device driver might be confused if we load a session. How about session hand-off
+    //   to other transport instances? Until this behavior can be generalized, we rely on the extending class to
+    //   handle undefined combinations as it chooses.
     //       ---J. Ian Lindsay   Thu Dec 03 03:37:41 MST 2015
-    virtual int8_t provide_session(XenoSession*) = 0;  // Called whenever we instantiate a session.
+    virtual int8_t reapXenoSession(XenoSession*);   // Cleans up XenoSessions that were instantiated by this class.
+    virtual int8_t provide_session(XenoSession*);   // Called whenever we instantiate a session.
 
     bool event_addresses_us(ManuvrEvent*);   // Given a transport event, returns true if we need to act.
 
@@ -194,7 +200,12 @@ class ManuvrXport : public EventReceiver {
     inline void set_xport_state(uint8_t bitmask) {    xport_state = (bitmask | xport_state);    }
     inline void unset_xport_state(uint8_t bitmask) {  xport_state = (~bitmask & xport_state);   }
     
-    
+    // Mandatory override.
+    virtual bool   write_port(unsigned char* out, int out_len) = 0;
+    virtual int8_t read_port() = 0;
+
+
+
   private:
     uint32_t _xport_flags;
 };

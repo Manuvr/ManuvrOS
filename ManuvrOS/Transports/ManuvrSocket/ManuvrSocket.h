@@ -18,15 +18,9 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
-This driver is designed to give Manuvr platform-abstracted COM ports. By
-  this is meant generic asynchronous serial ports. On Arduino, this means
-  the Serial (or HardwareSerial) class. On linux, it means /dev/tty<x>.
-
-Platforms that require it should be able to extend this driver for specific 
-  kinds of hardware support. For an example of this, I would refer you to
-  the STM32F4 case-offs I understand that this might seem "upside down"
-  WRT how drivers are more typically implemented, and it may change later on.
-  But for now, it seems like a good idea.  
+This driver is designed to give Manuvr platform-abstracted socket connection.
+This is basically only for linux.
+  
 */
 
 
@@ -64,20 +58,16 @@ class ManuvrTCP : public ManuvrXport {
     int8_t callback_proc(ManuvrEvent *);
 
 
-    int8_t read_port();
+    int8_t connect();
+    int8_t listen();
     int8_t reset();
-    
-    int8_t listen(bool);
 
-    virtual int8_t sendBuffer(StringBuilder*);
     bool write_port(unsigned char* out, int out_len);
+    int8_t read_port();
 
 
   protected:
     void __class_initializer();
-
-    /* Members that deal with sessions. */
-    int8_t provide_session(XenoSession*);   // Called whenever we instantiate a session.
 
 
   private:

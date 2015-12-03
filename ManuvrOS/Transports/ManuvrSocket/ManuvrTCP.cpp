@@ -18,15 +18,9 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
-This driver is designed to give Manuvr platform-abstracted COM ports. By
-  this is meant generic asynchronous serial ports. On Arduino, this means
-  the Serial (or HardwareSerial) class. On linux, it means /dev/tty<x>.
-
-Platforms that require it should be able to extend this driver for specific 
-  kinds of hardware support. For an example of this, I would refer you to
-  the STM32F4 case-offs I understand that this might seem "upside down"
-  WRT how drivers are more typically implemented, and it may change later on.
-  But for now, it seems like a good idea.  
+This driver is designed to give Manuvr platform-abstracted TCP socket connection.
+This is basically only for linux.
+  
 */
 
 
@@ -140,34 +134,27 @@ void ManuvrTCP::__class_initializer() {
 
 
 
-int8_t ManuvrTCP::provide_session(XenoSession* ses) {
-  if ((NULL != session) && (ses != session)) {
-    // If we are about to clobber an existing session, we need to free it
-    // first.
-    __kernel->unsubscribe(session);
-    delete session;
-    session = NULL;
-  }
-  session = ses;
-  //session->setVerbosity(verbosity);
-  set_xport_state(MANUVR_XPORT_STATE_HAS_SESSION);
-  return 0;
-}
-
-
-
-
 /****************************************************************************************************
 * Port I/O fxns                                                                                     *
 ****************************************************************************************************/
 
-int8_t ManuvrTCP::listen(bool should_listen) {
+int8_t ManuvrTCP::connect() {
+  // We're a serial port. If we are initialized, we are always connected.
+  return 0;
+}
+
+
+int8_t ManuvrTCP::listen() {
   // We're being told to start listening on whatever address was provided to the constructor.
+  // 
+  if (_sock) {
+  }
   serv_addr.sin_family      = AF_INET;
   serv_addr.sin_addr.s_addr = 0;//conf.getConfigIpAddress();    // This should be read from the config.
   serv_addr.sin_port        = htons(_port_number);
   
   _sock = socket(AF_INET, SOCK_STREAM, 0);        // Open the socket...
+  
   
   return 0;
 }
@@ -182,9 +169,7 @@ int8_t ManuvrTCP::reset() {
 int8_t ManuvrTCP::read_port() {
   if (connected()) {
     unsigned char *buf = (unsigned char *) alloca(512);
-    #if defined (STM32F4XX)        // STM32F4
-
-    #else   //Assuming a linux environment. Cross your fingers....
+    
       int n = read(_sock, buf, 255);
       int total_read = n;
       while (n > 0) {
@@ -205,7 +190,7 @@ int8_t ManuvrTCP::read_port() {
           Kernel::staticRaiseEvent(event);
         }
       }
-    #endif
+    
   }
   else if (verbosity > 1) local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
   
@@ -225,20 +210,9 @@ bool ManuvrTCP::write_port(unsigned char* out, int out_len) {
   }
   
   if (connected()) {
-    #if defined (STM32F4XX)        // STM32F4
-  
-    #else   //Assuming a linux environment. Cross your fingers....
-      return (out_len == (int) write(_sock, out, out_len));
-    #endif
+    return (out_len == (int) write(_sock, out, out_len));
   }
   return false;
-}
-
-
-
-int8_t ManuvrTCP::sendBuffer(StringBuilder* buf) {
-  write_port(buf->string(), buf->length());
-  return 0;
 }
 
 
@@ -275,7 +249,7 @@ void ManuvrTCP::printDebug(StringBuilder *temp) {
   if (temp == NULL) return;
 
   ManuvrXport::printDebug(temp);
-  temp->concatf("-- _addr           %s\n",     _addr);
+  temp->concatf("-- _addr           %s:%d\n",  _addr, _port_number);
   temp->concatf("-- _options        0x%08x\n", _options);
   temp->concatf("-- _sock           0x%08x\n", _sock);
 }
@@ -357,7 +331,7 @@ int8_t ManuvrTCP::notify(ManuvrEvent *active_event) {
         if (connected()) {
           StringBuilder* temp_sb;
           if (0 == active_event->getArgAs(&temp_sb)) {
-            if (verbosity > 3) local_log.concatf("We about to print %d bytes to the com port.\n", temp_sb->length());
+            if (verbosity > 3) local_log.concatf("We about to print %d bytes to the socket.\n", temp_sb->length());
             write_port(temp_sb->string(), temp_sb->length());
           }
           
@@ -383,7 +357,7 @@ int8_t ManuvrTCP::notify(ManuvrEvent *active_event) {
     
     case MANUVR_MSG_XPORT_IDENTITY:
       if (event_addresses_us(active_event) ) {
-        if (verbosity > 3) local_log.concat("The com port class received an event that was addressed to it, that is not handled yet.\n");
+        if (verbosity > 3) local_log.concat("The TCP class received an event that was addressed to it, that is not handled yet.\n");
         active_event->printDebug(&local_log);
         return_value++;
       }
@@ -404,7 +378,4 @@ int8_t ManuvrTCP::notify(ManuvrEvent *active_event) {
   if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
 }
-
-
-
 

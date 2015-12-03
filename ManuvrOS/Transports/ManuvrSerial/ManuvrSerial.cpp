@@ -144,28 +144,9 @@ void ManuvrSerial::__class_initializer() {
 
 
 
-int8_t ManuvrSerial::provide_session(XenoSession* ses) {
-  if ((NULL != session) && (ses != session)) {
-    // If we are about to clobber an existing session, we need to free it
-    // first.
-    __kernel->unsubscribe(session);
-    delete session;
-    session = NULL;
-  }
-  session = ses;
-  //session->setVerbosity(verbosity);
-  set_xport_state(MANUVR_XPORT_STATE_HAS_SESSION);
-  return 0;
-}
-
-
-int8_t ManuvrSerial::reset() {
-  // TODO:  Differentiate.   ---J. Ian Lindsay   Thu Dec 03 03:48:26 MST 2015
-  init();
-  return 0;
-}
-
-
+/****************************************************************************************************
+* Port I/O fxns                                                                                     *
+****************************************************************************************************/
 
 int8_t ManuvrSerial::init() {
   uint8_t xport_state_modifier = MANUVR_XPORT_STATE_CONNECTED | MANUVR_XPORT_STATE_LISTENING | MANUVR_XPORT_STATE_INITIALIZED;
@@ -246,9 +227,25 @@ int8_t ManuvrSerial::init() {
 
 
 
-/****************************************************************************************************
-* Port I/O fxns                                                                                     *
-****************************************************************************************************/
+int8_t ManuvrSerial::connect() {
+  // We're a serial port. If we are initialized, we are always connected.
+  return 0;
+}
+
+
+int8_t ManuvrSerial::listen() {
+  // We're a serial port. If we are initialized, we are always listening.
+  return 0;
+}
+
+
+int8_t ManuvrSerial::reset() {
+  // TODO:  Differentiate.   ---J. Ian Lindsay   Thu Dec 03 03:48:26 MST 2015
+  init();
+  return 0;
+}
+
+
 
 int8_t ManuvrSerial::read_port() {
   if (connected()) {
@@ -325,13 +322,6 @@ bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
 
 
 
-int8_t ManuvrSerial::sendBuffer(StringBuilder* buf) {
-  write_port(buf->string(), buf->length());
-  return 0;
-}
-
-
-
 /****************************************************************************************************
 *  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
 * ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
@@ -371,8 +361,6 @@ void ManuvrSerial::printDebug(StringBuilder *temp) {
 }
 
 
-
-
 /**
 * There is a NULL-check performed upstream for the scheduler member. So no need 
 *   to do it again here.
@@ -389,8 +377,6 @@ int8_t ManuvrSerial::bootComplete() {
   reset();
   return 1;
 }
-
-
 
 
 /**
@@ -423,6 +409,7 @@ int8_t ManuvrSerial::callback_proc(ManuvrEvent *event) {
   
   return return_value;
 }
+
 
 
 int8_t ManuvrSerial::notify(ManuvrEvent *active_event) {
@@ -504,7 +491,4 @@ int8_t ManuvrSerial::notify(ManuvrEvent *active_event) {
   if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
 }
-
-
-
 

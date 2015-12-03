@@ -52,6 +52,19 @@ void ManuvrXport::isDebugConsole(bool en) {
 
 
 
+int8_t ManuvrXport::sendBuffer(StringBuilder* buf) {
+  if (connected()) {
+    write_port(buf->string(), buf->length());
+  }
+  else {
+    Kernel::log("Tried to write to a transport that was not connected.");
+  }
+  return 0;
+}
+
+
+
+
 /**
 * This is used to cleanup XenoSessions that were instantiated by this class.
 * Typically, this would be called from  the session being passed in as the argument.
@@ -76,6 +89,27 @@ int8_t ManuvrXport::reapXenoSession(XenoSession* ses) {
   
   return -1;
 }
+
+
+int8_t ManuvrXport::provide_session(XenoSession* ses) {
+  if ((NULL != session) && (ses != session)) {
+    // If we are about to clobber an existing session, we need to free it
+    // first.
+    __kernel->unsubscribe(session);
+
+    // TODO: Might should warn someone at the other side? 
+    //   Maybe we let XenoSession deal with it? At least we
+    //   won't have a memory leak, lol.
+    //     ---J. Ian Lindsay   Thu Dec 03 04:38:52 MST 2015
+    delete session;
+    session = NULL;
+  }
+  session = ses;
+  //session->setVerbosity(verbosity);
+  set_xport_state(MANUVR_XPORT_STATE_HAS_SESSION);
+  return 0;
+}
+
 
 
 /*
