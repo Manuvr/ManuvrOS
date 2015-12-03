@@ -49,7 +49,10 @@ Platforms that require it should be able to extend this driver for specific
 #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
   
-#else   //Assuming a linux environment. Cross your fingers....
+#else
+  //Assuming a linux environment. Cross your fingers....
+  // TODO: Need a #define for LINUX32/64 that is set upstream so we don't have to cross our fingers.
+  //       ---J. Ian Lindsay   Thu Dec 03 03:33:35 MST 2015
   #include <cstdio>
   #include <stdlib.h>
   #include <unistd.h>
@@ -58,9 +61,12 @@ Platforms that require it should be able to extend this driver for specific
   #include <fstream>
   #include <iostream>
 
+
+  // TODO: This limits us to supporting a single instance. Same issue as in i2cAdapter.
+  //   A strategy for this needs to be formed.
+  //       ---J. Ian Lindsay   Thu Dec 03 03:31:04 MST 2015
   struct termios termAttr;
   struct sigaction serial_handler;
-  
   volatile ManuvrSerial *active_tty = NULL;  // TODO: We need to be able to service many ports...
   
   /*
@@ -87,22 +93,22 @@ Platforms that require it should be able to extend this driver for specific
 /**
 * Constructor.
 */
-ManuvrSerial::ManuvrSerial(char* tty_nom, int b_rate) {
+ManuvrSerial::ManuvrSerial(char* tty_path, int b_rate) {
   __class_initializer();
-  _addr    = tty_nom;
-  baud_rate   = b_rate;
-  _options    = 0;
+  _addr     = tty_path;
+  _baud_rate = b_rate;
+  _options  = 0;
 }
 
 
 /**
 * Constructor.
 */
-ManuvrSerial::ManuvrSerial(char* tty_nom, int b_rate, uint32_t opts) {
+ManuvrSerial::ManuvrSerial(char* tty_path, int b_rate, uint32_t opts) {
   __class_initializer();
-  _addr    = tty_nom;
-  baud_rate   = b_rate;
-  _options    = opts;
+  _addr     = tty_path;
+  _baud_rate = b_rate;
+  _options  = opts;
 }
 
 
@@ -120,10 +126,10 @@ ManuvrSerial::~ManuvrSerial() {
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void ManuvrSerial::__class_initializer() {
-  __class_initializer();
   pid_read_abort     = 0;
   _options           = 0;
   _sock              = 0;
+  _pid               = 0;
     
   // Build some pre-formed Events.
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
@@ -153,9 +159,15 @@ int8_t ManuvrSerial::provide_session(XenoSession* ses) {
 }
 
 
-
-
 int8_t ManuvrSerial::reset() {
+  // TODO:  Differentiate.   ---J. Ian Lindsay   Thu Dec 03 03:48:26 MST 2015
+  init();
+  return 0;
+}
+
+
+
+int8_t ManuvrSerial::init() {
   uint8_t xport_state_modifier = MANUVR_XPORT_STATE_CONNECTED | MANUVR_XPORT_STATE_LISTENING | MANUVR_XPORT_STATE_INITIALIZED;
   #ifdef __MANUVR_DEBUG
   if (verbosity > 4) local_log.concatf("Resetting port %s...\n", _addr);
@@ -172,19 +184,22 @@ int8_t ManuvrSerial::reset() {
   #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
     
   #else   //Assuming a linux environment. Cross your fingers....
+  if (_sock) {
+    close(_sock);
+  }
   
   _sock = open(_addr, _options);
   if (_sock == -1) {
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 1) local_log.concatf("Unable to open port: (%s)\n", _addr);
+      if (verbosity > 1) local_log.concatf("Unable to open port: (%s)\n", _addr);
+      Kernel::log(&local_log);
     #endif
     unset_xport_state(xport_state_modifier);
-    Kernel::log(&local_log);
     return -1;
   }
-  #ifdef __MANUVR_DEBUG
-  if (verbosity > 4) local_log.concatf("Opened port (%s) at %d\n", _addr, baud_rate);
-  #endif
+    #ifdef __MANUVR_DEBUG
+  if (verbosity > 4) local_log.concatf("Opened port (%s) at %d\n", _addr, _baud_rate);
+    #endif
   set_xport_state(MANUVR_XPORT_STATE_INITIALIZED);
 
   serial_handler.sa_handler = tty_signal_handler;
@@ -192,12 +207,14 @@ int8_t ManuvrSerial::reset() {
   serial_handler.sa_restorer = NULL; 
   sigaction(SIGIO, &serial_handler, NULL);
 
-  int this_pid = getpid();
-  fcntl(_sock, F_SETOWN, this_pid);          // This process owns the port.
+  _pid  = getpid();
+  fcntl(_sock, F_SETOWN, _pid);               // This process owns the port.
   fcntl(_sock, F_SETFL, O_NDELAY | O_ASYNC);  // Read returns immediately.
 
   tcgetattr(_sock, &termAttr);
-  cfsetspeed(&termAttr, baud_rate);
+  cfsetspeed(&termAttr, _baud_rate);
+  // TODO: These choices should come from _options. Find a good API to emulate.
+  //    ---J. Ian Lindsay   Thu Dec 03 03:43:12 MST 2015
   termAttr.c_cflag &= ~PARENB;          // No parity
   termAttr.c_cflag &= ~CSTOPB;          // 1 stop bit
   termAttr.c_cflag &= ~CSIZE;           // Enable char size mask
@@ -209,17 +226,19 @@ int8_t ManuvrSerial::reset() {
   
   if (tcsetattr(_sock, TCSANOW, &termAttr) == 0) {
     set_xport_state(xport_state_modifier);
+    initialized(false);
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 6) local_log.concatf("Port opened, and handler bound.\n");
-    #endif
+      if (verbosity > 6) local_log.concatf("Port opened, and handler bound.\n");
+    #endif //__MANUVR_DEBUG
   }
   else {
     unset_xport_state(xport_state_modifier);
+    initialized(false);
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 1) local_log.concatf("Failed to tcsetattr...\n");
+      if (verbosity > 1) local_log.concatf("Failed to tcsetattr...\n");
     #endif
   }
-  #endif
+  #endif //LINUX
   
   if (local_log.length() > 0) Kernel::log(&local_log);
   return 0;
@@ -233,7 +252,7 @@ int8_t ManuvrSerial::reset() {
 
 int8_t ManuvrSerial::read_port() {
   if (connected()) {
-    unsigned char *buf = (unsigned char *) alloca(512);
+    unsigned char *buf = (unsigned char *) alloca(512);  // TODO: Arbitrary. ---J. Ian Lindsay   Thu Dec 03 03:49:08 MST 2015
     #if defined (STM32F4XX)        // STM32F4
   
     #elif defined (__MK20DX128__)  // Teensy3
@@ -348,6 +367,7 @@ void ManuvrSerial::printDebug(StringBuilder *temp) {
   temp->concatf("-- _addr           %s\n",     _addr);
   temp->concatf("-- _options        0x%08x\n", _options);
   temp->concatf("-- _sock           0x%08x\n", _sock);
+  temp->concatf("-- Baud            %d\n",     _baud_rate);
 }
 
 

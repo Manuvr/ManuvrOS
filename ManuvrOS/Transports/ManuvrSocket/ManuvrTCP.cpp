@@ -129,13 +129,11 @@ void ManuvrTCP::__class_initializer() {
     Do you trust your compiler to be smart all the time?
   */
   
+  // Zero the socket parameter structures. 
   for (uint16_t i = 0; i < sizeof(cli_addr);  i++) {
     *((uint8_t *) &serv_addr + i) = 0;
     *((uint8_t *) &cli_addr  + i) = 0;
   }
-
-  pid_read_abort = __kernel->createSchedule(30, 0, false, this, &read_abort_event);
-  __kernel->disableSchedule(pid_read_abort);
 }
 
 
@@ -154,14 +152,6 @@ int8_t ManuvrTCP::provide_session(XenoSession* ses) {
   //session->setVerbosity(verbosity);
   set_xport_state(MANUVR_XPORT_STATE_HAS_SESSION);
   return 0;
-}
-
-
-
-
-
-XenoSession* ManuvrTCP::getSession() {
-  return session;
 }
 
 
@@ -292,12 +282,14 @@ void ManuvrTCP::printDebug(StringBuilder *temp) {
 
 
 /**
-* There is a NULL-check performed upstream for the scheduler member. So no need 
-*   to do it again here.
+* TODO: Until I do something smarter...
+* We are obliged to call the ManuvrXport's version of bootComplete(), which in turn
+*   will call the EventReceiver version of that fxn.
+* ---J. Ian Lindsay   Thu Dec 03 03:25:48 MST 2015
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t ManuvrTCP::bootComplete() {
+int8_t ManuvrTCP::bootComplete() {   // ?? TODO ??
   EventReceiver::bootComplete();
   
   // We will suffer a 300ms latency if the platform's networking stack doesn't flush

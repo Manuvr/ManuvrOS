@@ -35,20 +35,16 @@ Platforms that require it should be able to extend this driver for specific
 
 #include "../ManuvrXport.h"
 
-
-#if defined (MANUVR_SUPPORT_TCPSOCKET)
-  //Assuming a linux environment. Cross your fingers....
-  #include <cstdio>
-  #include <stdlib.h>
-  #include <unistd.h>
-  #include <fcntl.h>
-  #include <termios.h>
-  #include <sys/signal.h>
-  #include <fstream>
-  #include <iostream>
-  #include <sys/socket.h>
-  #include <netinet/in.h>
-#endif
+#include <cstdio>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <sys/signal.h>
+#include <fstream>
+#include <iostream>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 
 // TODO: Might generalize UDP and websocket support into this. For now, we only deal in TCP.
@@ -68,11 +64,6 @@ class ManuvrTCP : public ManuvrXport {
     int8_t callback_proc(ManuvrEvent *);
 
 
-    // TODO: Migrate to Xport class.
-    inline bool initialized() { return (xport_state & MANUVR_XPORT_STATE_INITIALIZED);  }
-
-    XenoSession* getSession();
-
     int8_t read_port();
     int8_t reset();
     
@@ -83,17 +74,6 @@ class ManuvrTCP : public ManuvrXport {
 
 
   protected:
-    /*
-    * The session member is not part of the Xport class because not all Xports have sessions,
-    *   and some that DO might have many sessions at once.
-    */
-    XenoSession *session;
-    uint16_t xport_id;
-    uint8_t  xport_state;
-    
-    uint32_t bytes_sent;
-    uint32_t bytes_received;
-    
     void __class_initializer();
 
     /* Members that deal with sessions. */
@@ -105,10 +85,10 @@ class ManuvrTCP : public ManuvrXport {
     int      _sock;
     uint32_t _options;
 
+    int      _port_number;
+
     struct sockaddr_in serv_addr;
     struct sockaddr_in cli_addr;
-
-    int      _port_number;
 };
 
 #endif   // __MANUVR_SOCKET_H__

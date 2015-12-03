@@ -58,13 +58,20 @@ For debuggability, the transport has a special mode for acting as a debug
 #include "../Kernel.h"
 #include "StringBuilder/StringBuilder.h"
 
+
+
+/*
+* These are option flags for any transport. 
+*/
 #define MANUVR_XPORT_FLAG_ALWAYS_CONNECTED 0x00000001
 #define MANUVR_XPORT_FLAG_NON_SESSION      0x00000002
 #define MANUVR_XPORT_FLAG_DEBUG_CONSOLE    0x00000004
 #define MANUVR_XPORT_FLAG_CONNECTED        0x00000008
 #define MANUVR_XPORT_FLAG_HAS_SESSION      0x00000010
 
-#define MANUVR_XPORT_STATE_UNINITIALIZED   0b00000000  // Not treated as a bit-mask. Just a nice label.
+/*
+* States that a transport might be in. 
+*/
 #define MANUVR_XPORT_STATE_INITIALIZED     0b10000000  // The xport was present and init'd corrently.
 #define MANUVR_XPORT_STATE_CONNECTED       0b01000000  // The xport is active and able to move data.
 #define MANUVR_XPORT_STATE_BUSY            0b00100000  // The xport is moving something.
@@ -100,21 +107,11 @@ class ManuvrXport : public EventReceiver {
     virtual int8_t sendBuffer(StringBuilder*) = 0;
 
 
-    virtual int8_t reapXenoSession(XenoSession*);   // Cleans up XenoSessions that were instantiated by this class.
-    
-
     /* Members that deal with sessions. */
     // TODO: Is this transport used for non-session purposes? IE, GPS? 
-    inline bool hasSession() {         return (_xport_flags & MANUVR_XPORT_FLAG_HAS_SESSION);  }
-    inline XenoSession* getSession() { return session;  }
+    inline bool hasSession() {         return (_xport_flags & MANUVR_XPORT_FLAG_HAS_SESSION);  };
+    inline XenoSession* getSession() { return session;  };
 
-    /*
-    * Is this transport used for non-session purposes? IE, GPS? 
-    */
-    inline bool nonSessionUsage() {         return (_xport_flags & MANUVR_XPORT_FLAG_NON_SESSION);  } 
-    inline void nonSessionUsage(bool en) {
-      _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_NON_SESSION) : (_xport_flags & ~(MANUVR_XPORT_FLAG_NON_SESSION));
-    }
 
     /*
     * Accessors for session behavior regarding connect/disconnect.
@@ -126,28 +123,43 @@ class ManuvrXport : public EventReceiver {
     * Low-level state and control.
     */
     virtual int8_t reset() = 0;
-    inline bool initialized() { return (xport_state & MANUVR_XPORT_STATE_INITIALIZED);  }
-    inline bool connected() {   return (_xport_flags & (MANUVR_XPORT_FLAG_CONNECTED | MANUVR_XPORT_FLAG_ALWAYS_CONNECTED));  }
-    void connected(bool);
-
+    inline bool initialized() { return (xport_state & MANUVR_XPORT_STATE_INITIALIZED);  };
+    void initialized(bool en);
 
     /*
-    * Is this transport being used as a debug console? If so, we will hangup a session if
-    *   it exists.
+    * State accessors.
     */
-    inline bool isDebugConsole() {         return (_xport_flags & MANUVR_XPORT_FLAG_DEBUG_CONSOLE);  } 
+    /* Connection/Listen states */
+    inline bool connected() {   return (_xport_flags & (MANUVR_XPORT_FLAG_CONNECTED | MANUVR_XPORT_FLAG_ALWAYS_CONNECTED));  }
+    void connected(bool);
+    inline bool listening() {   return (_xport_flags & MANUVR_XPORT_STATE_LISTENING);  };
+    void listening(bool);
+
+    /* Is this transport used for non-session purposes? IE, GPS? */
+    inline bool nonSessionUsage() {         return (_xport_flags & MANUVR_XPORT_FLAG_NON_SESSION);  };
+    inline void nonSessionUsage(bool en) {
+      _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_NON_SESSION) : (_xport_flags & ~(MANUVR_XPORT_FLAG_NON_SESSION));
+    };
+
+    /* Is this transport being used as a debug console? If so, we will hangup a session if it exists.    */
+    inline bool isDebugConsole() {         return (_xport_flags & MANUVR_XPORT_FLAG_DEBUG_CONSOLE);  };
     void isDebugConsole(bool en);
 
     
-    /* We will selectively-override this function in EventReceiver. */
+    /* We will override these functions in EventReceiver. */
     // TODO: I'm not sure I've evaluated the full impact of this sort of 
-    //    choice.  Calltimes? vtable size? alignment? Dig.
-    virtual void printDebug(StringBuilder *);
-    
+    //    choice.  Calltimes? vtable size? alignment? Fragility? Dig.
+    virtual void   printDebug(StringBuilder *);
+    //virtual int8_t bootComplete();
+    //virtual int8_t notify(ManuvrEvent*);
+    //virtual int8_t callback_proc(ManuvrEvent *);
+
+    // We can have up-to 65535 transport instances concurrently. This well-exceeds
+    //   the configured limits of most linux installations, so it should be enough. 
     static uint16_t TRANSPORT_ID_POOL;
 
-    
-    
+
+
   protected:
     XenoSession *session;
     
@@ -157,7 +169,6 @@ class ManuvrXport : public EventReceiver {
     uint32_t pid_read_abort;       // Used to timeout a read operation.
     bool read_timeout_defer;       // Used to timeout a read operation.
 
-    uint32_t _xport_flags;
     uint32_t _xport_mtu;      // The largest packet size we handle.
     
     uint32_t bytes_sent;
@@ -165,24 +176,27 @@ class ManuvrXport : public EventReceiver {
     
     uint16_t xport_id;
     uint8_t  xport_state;
-    
-   
+    int      _pid;
 
-    virtual int8_t provide_session(XenoSession*) = 0;   // Called whenever we instantiate a session.
+
+    virtual int8_t reapXenoSession(XenoSession*);      // Cleans up XenoSessions that were instantiated by this class.
+    
+    // TODO: This is preventing us from encapsulating more deeply.
+    //   The reason it isn't done is because there are instance-specific nuances in behavior that have
+    //   to be delt with. A GPS device driver might be confused if we load a session. Until this behavior
+    //   can be generalized, we rely on the extending class to handle undefined combinations as it chooses.
+    //       ---J. Ian Lindsay   Thu Dec 03 03:37:41 MST 2015
+    virtual int8_t provide_session(XenoSession*) = 0;  // Called whenever we instantiate a session.
 
     bool event_addresses_us(ManuvrEvent*);   // Given a transport event, returns true if we need to act.
 
-    inline void set_xport_state(uint8_t bitmask) {
-      xport_state = (bitmask | xport_state);
-    }
-    
-    inline void unset_xport_state(uint8_t bitmask) {
-      xport_state = (~bitmask & xport_state);
-    }
+    // TODO: Should be private. provide_session() / reset() are the blockers.
+    inline void set_xport_state(uint8_t bitmask) {    xport_state = (bitmask | xport_state);    }
+    inline void unset_xport_state(uint8_t bitmask) {  xport_state = (~bitmask & xport_state);   }
     
     
   private:
-    
+    uint32_t _xport_flags;
 };
 
 

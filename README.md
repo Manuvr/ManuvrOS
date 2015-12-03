@@ -66,6 +66,7 @@ Bitcoin accelerates feature requests and bug fixes. :-)
 -   Clean up the unit tests that exist, and merge in some that aren't in the testbench yet.
 -   Verify that ManuvrOS works correctly when built as 64-bit.
 -   Write an autoconf script to choose target and features, detect env, etc...
+-   Incorporate assertions into preprocessor logic to case-off DEBUG? Investigate.
 
 
 ----------------------

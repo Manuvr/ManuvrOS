@@ -30,23 +30,21 @@ Platforms that require it should be able to extend this driver for specific
 */
 
 
-#ifndef __MANUVR_COM_PORT_H__
-#define __MANUVR_COM_PORT_H__
+#ifndef __MANUVR_SERIAL_PORT_H__
+#define __MANUVR_SERIAL_PORT_H__
 
 #include "../ManuvrXport.h"
 
 
-#if defined (STM32F4XX)        // STM32F4
+#if defined (STM32F7XX)        // STM32F7
 
+#elif defined (STM32F4XX)      // STM32F4
 
 #elif defined (__MK20DX128__)  // Teensy3
 
-
 #elif defined (__MK20DX256__)  // Teensy3.1
 
-
 #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
-
 
 #else
   //Assuming a linux environment. Cross your fingers....
@@ -58,8 +56,8 @@ Platforms that require it should be able to extend this driver for specific
 
 class ManuvrSerial : public ManuvrXport {
   public:
-    ManuvrSerial(char* tty_nom, int b_rate);
-    ManuvrSerial(char* tty_nom, int b_rate, uint32_t opts);
+    ManuvrSerial(char* tty_path, int b_rate);
+    ManuvrSerial(char* tty_path, int b_rate, uint32_t opts);
     ~ManuvrSerial();
 
     /* Overrides from EventReceiver */
@@ -89,14 +87,10 @@ class ManuvrSerial : public ManuvrXport {
     int    _sock;
     uint32_t _options;
 
-    int baud_rate;
-
-    bool read_timeout_defer;       // Used to timeout a read operation.
-    uint32_t pid_read_abort;       // Used to timeout a read operation.
-    ManuvrEvent read_abort_event;  // Used to timeout a read operation.
+    int _baud_rate;
     
-
+    int8_t init();
 };
 
-#endif   // __MANUVR_COM_PORT_H__
+#endif   // __MANUVR_SERIAL_PORT_H__
 

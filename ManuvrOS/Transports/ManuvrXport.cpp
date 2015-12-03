@@ -15,10 +15,11 @@ ManuvrXport::ManuvrXport() {
   // No need to burden a client class with this.
   EventReceiver::__class_initializer();
 
+  xport_id           = ManuvrXport::TRANSPORT_ID_POOL++;
   _xport_flags       = 0;
   _xport_mtu         = PROTOCOL_MTU;
-  xport_id           = ManuvrXport::TRANSPORT_ID_POOL++;
-  xport_state        = MANUVR_XPORT_STATE_UNINITIALIZED;
+  _pid               = 0;
+  xport_state        = 0;
   bytes_sent         = 0;
   bytes_received     = 0;
   session            = NULL;
@@ -113,6 +114,39 @@ void ManuvrXport::connected(bool en) {
 }
 
 
+/*
+* Mark this transport connected or disconnected.
+* This method is virtual, and may be over-ridden if the specific transport has 
+*   something more sophisticated in mind.
+*/
+void ManuvrXport::listening(bool en) {
+  if (listening() == en) {
+    // If we are already in the state specified, do nothing.
+    return;
+  }
+  // TODO: Not strictly true. Unset connected? listening?
+  // ---J. Ian Lindsay   Thu Dec 03 04:00:00 MST 2015
+  _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_STATE_LISTENING) : (_xport_flags & ~(MANUVR_XPORT_STATE_LISTENING));
+}
+
+
+
+/*
+* Mark this transport connected or disconnected.
+* This method is virtual, and may be over-ridden if the specific transport has 
+*   something more sophisticated in mind.
+*/
+void ManuvrXport::initialized(bool en) {
+  if (initialized() == en) {
+    // If we are already in the state specified, do nothing.
+    return;
+  }
+  // TODO: Not strictly true. Unset connected? listening?
+  // ---J. Ian Lindsay   Thu Dec 03 04:00:00 MST 2015
+  _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_STATE_INITIALIZED) : (_xport_flags & ~(MANUVR_XPORT_STATE_INITIALIZED));
+}
+
+
 
 // Given a transport event, returns true if we need to act.
 bool ManuvrXport::event_addresses_us(ManuvrEvent *event) {
@@ -139,6 +173,23 @@ bool ManuvrXport::event_addresses_us(ManuvrEvent *event) {
 
 
 
+/****************************************************************************************************
+*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+* ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
+* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
+* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌          
+* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄ 
+* ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
+* ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
+* ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
+* ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
+* ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
+*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀ 
+* 
+* These are overrides from EventReceiver interface...
+****************************************************************************************************/
+
+
 /**
 * Debug support method. This fxn is only present in debug builds. 
 *
@@ -154,4 +205,23 @@ void ManuvrXport::printDebug(StringBuilder *temp) {
   temp->concatf("-- has session     %s\n--\n", (hasSession() ? "yes" : "no"));
 }
 
+
+
+
+///**
+//* There is a NULL-check performed upstream for the scheduler member. So no need 
+//*   to do it again here.
+//*
+//* @return 0 on no action, 1 on action, -1 on failure.
+//*/
+//int8_t ManuvrXport::bootComplete() {
+//}
+//
+//
+//int8_t ManuvrXport::notify(ManuvrEvent*) {
+//}
+//
+//
+//int8_t ManuvrXport::callback_proc(ManuvrEvent *) {
+//}
 
