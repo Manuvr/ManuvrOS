@@ -65,24 +65,31 @@ CFLAGS += $(CPP_FLAGS)
 ###########################################################################
 # Source file definitions...
 ###########################################################################
-MANUVROS_SRCS  = StringBuilder/*.cpp DataStructures/*.cpp ManuvrOS/*.cpp ManuvrOS/XenoSession/*.cpp ManuvrOS/ManuvrMsg/*.cpp
+MANUVROS_SRCS   = StringBuilder/*.cpp DataStructures/*.cpp ManuvrOS/*.cpp ManuvrOS/XenoSession/*.cpp ManuvrOS/ManuvrMsg/*.cpp
 
-SENSOR_SRCS    = ManuvrOS/Platform/Platform.cpp ManuvrOS/Drivers/SensorWrapper/*.cpp 
-I2C_DRIVERS    = ManuvrOS/Drivers/i2c-adapter/*.cpp ManuvrOS/Drivers/DeviceWithRegisters/DeviceRegister.cpp ManuvrOS/Drivers/DeviceWithRegisters/DeviceWithRegisters.cpp
-COM_DRIVERS    = ManuvrOS/Transports/*.cpp ManuvrOS/Transports/ManuvrComPort/*.cpp
+SENSOR_SRCS     = ManuvrOS/Platform/Platform.cpp ManuvrOS/Drivers/SensorWrapper/*.cpp 
+I2C_DRIVERS     = ManuvrOS/Drivers/i2c-adapter/*.cpp ManuvrOS/Drivers/DeviceWithRegisters/DeviceRegister.cpp ManuvrOS/Drivers/DeviceWithRegisters/DeviceWithRegisters.cpp
+
+COM_DRIVERS     = ManuvrOS/Transports/*.cpp
+COM_DRIVERS    += ManuvrOS/Transports/ManuvrSocket/ManuvrTCP.cpp
+COM_DRIVERS    += ManuvrOS/Transports/ManuvrSerial/ManuvrSerial.cpp
 
 # Because this Makefile technically supports two platforms.
 # TODO: Make a single linux platform driver, and case-off Raspi stuff within it.
 RASPI_DRIVERS   = ManuvrOS/Drivers/ManuvrableGPIO/*.cpp ManuvrOS/Platform/PlatformRaspi.cpp
+
+
 GENERIC_DRIVERS = ManuvrOS/Platform/PlatformUnsupported.cpp
 
 
-CPP_SRCS  = $(MANUVROS_SRCS)
+CPP_SRCS  = $(MANUVROS_SRCS) 
 CPP_SRCS += $(I2C_DRIVERS) $(SENSOR_SRCS) $(COM_DRIVERS)
 
 SRCS   = $(CPP_SRCS)
              
-MANuVR_OPTIONS = -D__MANUVR_DEBUG
+# TODO: I badly need to learn to write autoconf scripts....
+#   I've at least tried to modularize to make the invariable transition less-painful...
+MANuVR_OPTIONS = -D__MANUVR_DEBUG -DMANUVR_SUPPORT_TCPSOCKET
 
 CFLAGS += $(MANuVR_OPTIONS) 
 

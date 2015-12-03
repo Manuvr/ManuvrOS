@@ -1,5 +1,5 @@
 /*
-File:   ManuvrComPort.h
+File:   ManuvrSerial.h
 Author: J. Ian Lindsay
 Date:   2015.03.17
 
@@ -48,40 +48,20 @@ Platforms that require it should be able to extend this driver for specific
 #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
   
-#else   //Assuming a linux environment. Cross your fingers....
+#else
+  //Assuming a linux environment. Cross your fingers....
   #include <fcntl.h>
   #include <termios.h>
   #include <sys/signal.h>
 #endif
 
-class XenoSession;
 
-
-#define MANUVR_XPORT_STATE_UNINITIALIZED  0b00000000  // Not treated as a bit-mask. Just a nice label.
-#define MANUVR_XPORT_STATE_INITIALIZED    0b10000000  // The com port was present and init'd corrently.
-#define MANUVR_XPORT_STATE_CONNECTED      0b01000000  // The com port is active and able to move data.
-#define MANUVR_XPORT_STATE_BUSY           0b00100000  // The com port is moving something.
-#define MANUVR_XPORT_STATE_HAS_SESSION    0b00010000  // See note below. 
-#define MANUVR_XPORT_STATE_LISTENING      0b00001000  // We are listening for connections.
-
-/*
-* Note about MANUVR_XPORT_STATE_HAS_SESSION:
-* This might get cut. it ought to be sufficient to check if the session member is NULL.
-*
-* The behavior of this class, (and classes that extend it) ought to be as follows:
-*   1) If a session is not present, the port simply moves data via the event system, hoping
-*        that something else in the system cares.
-*   2) If a session IS attached, the session should control all i/o on this port, as it holds
-*        the protocol spec. So outside requests for data to be sent should be given to the session,
-*        if not rejected entirely.
-*/
-
-class ManuvrComPort : public ManuvrXport {
+class ManuvrSerial : public ManuvrXport {
   public:
-    ManuvrComPort(const char* tty_nom, int b_rate);
-    ManuvrComPort(const char* tty_nom, int b_rate, uint32_t opts);
-    ~ManuvrComPort();
-    
+    ManuvrSerial(const char* tty_nom, int b_rate);
+    ManuvrSerial(const char* tty_nom, int b_rate, uint32_t opts);
+    ~ManuvrSerial();
+
     /* Overrides from EventReceiver */
     int8_t bootComplete();
     const char* getReceiverName();
@@ -90,31 +70,14 @@ class ManuvrComPort : public ManuvrXport {
     int8_t callback_proc(ManuvrEvent *);
 
     
-    // TODO: Migrate to Xport class.
-    inline bool initialized() { return (xport_state & MANUVR_XPORT_STATE_INITIALIZED);  }
-
-    
-    int8_t reset();
-    XenoSession* getSession();
-    
     int8_t read_port();
+    int8_t reset();
+
     virtual int8_t sendBuffer(StringBuilder*);
     bool write_port(unsigned char* out, int out_len);
 
 
   protected:
-    /*
-    * The session member is not part of the Xport class because not all Xports have sessions,
-    *   and some that DO might have many sessions at once.
-    */
-    XenoSession *session;
-    uint16_t xport_id;
-    uint8_t  xport_state;
-    
-    uint32_t bytes_sent;
-    uint32_t bytes_received;
-    
-    bool event_addresses_us(ManuvrEvent*);   // Given a transport event, returns true if we need to act.
     void __class_initializer();
 
     /* Members that deal with sessions. */
@@ -132,15 +95,6 @@ class ManuvrComPort : public ManuvrXport {
     ManuvrEvent read_abort_event;  // Used to timeout a read operation.
     
 
-    
-    inline void set_xport_state(uint8_t bitmask) {
-      xport_state = (bitmask | xport_state);
-    }
-    
-    inline void unset_xport_state(uint8_t bitmask) {
-      xport_state = (~bitmask & xport_state);
-    }
-    
 };
 
 #endif   // __MANUVR_COM_PORT_H__

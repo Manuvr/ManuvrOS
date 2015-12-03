@@ -19,6 +19,8 @@
 
 #include <ManuvrOS/Kernel.h>
 
+// Transports...
+#include <ManuvrOS/Transports/ManuvrSocket/ManuvrSocket.h>
 
 
 /****************************************************************************************************
@@ -59,9 +61,16 @@ int main(int argc, char *argv[]) {
       Kernel::raiseEvent(MANUVR_MSG_SYS_SHUTDOWN, NULL);
     }
   }
+  
+  
+  // We need at least ONE transport to be useful...
+  ManuvrTCP tcp_srv();
 
   // At this point, we should instantiate whatever specific functionality we
-  //   want this Manuvrable to have. 
+  //   want this Manuvrable to have.
+  #if defined(RASPI) || defined(RASPI2)
+  
+  #endif
   
   // Once we've loaded up all the goodies we want, we finalize everything thusly...
   printf("%s: Booting Manuvr Kernel....\n", program_name);

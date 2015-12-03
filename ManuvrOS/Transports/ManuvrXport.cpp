@@ -101,3 +101,26 @@ void ManuvrXport::connected(bool en) {
   }
 }
 
+
+
+// Given a transport event, returns true if we need to act.
+bool ManuvrXport::event_addresses_us(ManuvrEvent *event) {
+  uint16_t temp_uint16;
+  
+  if (event->argCount()) {
+    if (0 == event->getArgAs(&temp_uint16)) {
+      if (temp_uint16 == xport_id) {
+        // The first argument is our ID.
+        return true;
+      }
+    }
+    // Either not the correct arg form, or not our ID.
+    return false;
+  }
+  
+  // No arguments implies no first argument.
+  // No first argument implies event is addressed to 'all transports'.
+  // 'all transports' implies 'true'. We need to care.
+  return true;
+}
+
