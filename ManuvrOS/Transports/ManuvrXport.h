@@ -139,12 +139,23 @@ class ManuvrXport : public EventReceiver {
     void isDebugConsole(bool en);
 
     
+    /* We will selectively-override this function in EventReceiver. */
+    // TODO: I'm not sure I've evaluated the full impact of this sort of 
+    //    choice.  Calltimes? vtable size? alignment? Dig.
+    virtual void printDebug(StringBuilder *);
+    
     static uint16_t TRANSPORT_ID_POOL;
 
     
     
   protected:
     XenoSession *session;
+    
+    // Can also be used to poll the other side. Implementation is completely at the discretion
+    //   any extending class. But generally, this feature is necessary.
+    ManuvrEvent read_abort_event;  // Used to timeout a read operation.
+    uint32_t pid_read_abort;       // Used to timeout a read operation.
+    bool read_timeout_defer;       // Used to timeout a read operation.
 
     uint32_t _xport_flags;
     uint32_t _xport_mtu;      // The largest packet size we handle.
@@ -154,6 +165,8 @@ class ManuvrXport : public EventReceiver {
     
     uint16_t xport_id;
     uint8_t  xport_state;
+    
+   
 
     virtual int8_t provide_session(XenoSession*) = 0;   // Called whenever we instantiate a session.
 

@@ -87,22 +87,22 @@ Platforms that require it should be able to extend this driver for specific
 /**
 * Constructor.
 */
-ManuvrSerial::ManuvrSerial(const char* tty_nom, int b_rate) {
+ManuvrSerial::ManuvrSerial(char* tty_nom, int b_rate) {
   __class_initializer();
-  tty_name   = tty_nom;
-  baud_rate  = b_rate;
-  options    = 0;
+  _addr    = tty_nom;
+  baud_rate   = b_rate;
+  _options    = 0;
 }
 
 
 /**
 * Constructor.
 */
-ManuvrSerial::ManuvrSerial(const char* tty_nom, int b_rate, uint32_t opts) {
+ManuvrSerial::ManuvrSerial(char* tty_nom, int b_rate, uint32_t opts) {
   __class_initializer();
-  tty_name   = tty_nom;
-  baud_rate  = b_rate;
-  options    = opts;
+  _addr    = tty_nom;
+  baud_rate   = b_rate;
+  _options    = opts;
 }
 
 
@@ -121,15 +121,9 @@ ManuvrSerial::~ManuvrSerial() {
 */
 void ManuvrSerial::__class_initializer() {
   __class_initializer();
-  xport_id           = ManuvrXport::TRANSPORT_ID_POOL++;
-  xport_state        = MANUVR_XPORT_STATE_UNINITIALIZED;
   pid_read_abort     = 0;
-  options            = 0;
-  port_number        = 0;
-  bytes_sent         = 0;
-  bytes_received     = 0;
-  read_timeout_defer = false;
-  session            = NULL;
+  _options           = 0;
+  _sock              = 0;
     
   // Build some pre-formed Events.
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
@@ -137,13 +131,7 @@ void ManuvrSerial::__class_initializer() {
   read_abort_event.specific_target = (EventReceiver*) this;
   read_abort_event.callback        = (EventReceiver*) this;
   read_abort_event.priority        = 5;
-  //read_abort_event.addArg();  // Add our assigned transport ID to our pre-baked argument.
-
-  __kernel = Kernel::getInstance();
-  __kernel->subscribe((EventReceiver*) this);  // Subscribe to the Kernel.
-  
-  pid_read_abort = __kernel->createSchedule(30, 0, false, this, &read_abort_event);
-  __kernel->disableSchedule(pid_read_abort);
+  read_abort_event.addArg(xport_id);  // Add our assigned transport ID to our pre-baked argument.
 }
 
 
@@ -170,7 +158,7 @@ int8_t ManuvrSerial::provide_session(XenoSession* ses) {
 int8_t ManuvrSerial::reset() {
   uint8_t xport_state_modifier = MANUVR_XPORT_STATE_CONNECTED | MANUVR_XPORT_STATE_LISTENING | MANUVR_XPORT_STATE_INITIALIZED;
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 4) local_log.concatf("Resetting port %s...\n", tty_name);
+  if (verbosity > 4) local_log.concatf("Resetting port %s...\n", _addr);
   #endif
   bytes_sent         = 0;
   bytes_received     = 0;
@@ -185,17 +173,17 @@ int8_t ManuvrSerial::reset() {
     
   #else   //Assuming a linux environment. Cross your fingers....
   
-  port_number = open(tty_name, options);
-  if (port_number == -1) {
+  _sock = open(_addr, _options);
+  if (_sock == -1) {
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 1) local_log.concatf("Unable to open port: (%s)\n", tty_name);
+    if (verbosity > 1) local_log.concatf("Unable to open port: (%s)\n", _addr);
     #endif
     unset_xport_state(xport_state_modifier);
     Kernel::log(&local_log);
     return -1;
   }
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 4) local_log.concatf("Opened port (%s) at %d\n", tty_name, baud_rate);
+  if (verbosity > 4) local_log.concatf("Opened port (%s) at %d\n", _addr, baud_rate);
   #endif
   set_xport_state(MANUVR_XPORT_STATE_INITIALIZED);
 
@@ -205,10 +193,10 @@ int8_t ManuvrSerial::reset() {
   sigaction(SIGIO, &serial_handler, NULL);
 
   int this_pid = getpid();
-  fcntl(port_number, F_SETOWN, this_pid);          // This process owns the port.
-  fcntl(port_number, F_SETFL, O_NDELAY | O_ASYNC);  // Read returns immediately.
+  fcntl(_sock, F_SETOWN, this_pid);          // This process owns the port.
+  fcntl(_sock, F_SETFL, O_NDELAY | O_ASYNC);  // Read returns immediately.
 
-  tcgetattr(port_number, &termAttr);
+  tcgetattr(_sock, &termAttr);
   cfsetspeed(&termAttr, baud_rate);
   termAttr.c_cflag &= ~PARENB;          // No parity
   termAttr.c_cflag &= ~CSTOPB;          // 1 stop bit
@@ -219,7 +207,7 @@ int8_t ManuvrSerial::reset() {
   termAttr.c_iflag &= ~(IXON | IXOFF | IXANY);
   termAttr.c_oflag &= ~OPOST;
   
-  if (tcsetattr(port_number, TCSANOW, &termAttr) == 0) {
+  if (tcsetattr(_sock, TCSANOW, &termAttr) == 0) {
     set_xport_state(xport_state_modifier);
     #ifdef __MANUVR_DEBUG
     if (verbosity > 6) local_log.concatf("Port opened, and handler bound.\n");
@@ -255,10 +243,10 @@ int8_t ManuvrSerial::read_port() {
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
       
     #else   //Assuming a linux environment. Cross your fingers....
-      int n = read(port_number, buf, 255);
+      int n = read(_sock, buf, 255);
       int total_read = n;
       while (n > 0) {
-        n = read(port_number, buf, 255);
+        n = read(_sock, buf, 255);
         total_read += n;
       }
   
@@ -269,7 +257,7 @@ int8_t ManuvrSerial::read_port() {
         }
         else {
           ManuvrEvent *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
-          event->addArg(port_number);
+          event->addArg(_sock);
           StringBuilder *nu_data = new StringBuilder(buf, total_read);
           event->markArgForReap(event->addArg(nu_data), true);
           Kernel::staticRaiseEvent(event);
@@ -293,9 +281,9 @@ int8_t ManuvrSerial::read_port() {
 * Returns false on error and true on success.
 */
 bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
-  if (port_number == -1) {
+  if (_sock == -1) {
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to port: (%s)\n", tty_name);
+    if (verbosity > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to port: (%s)\n", _addr);
     #endif
     return false;
   }
@@ -310,7 +298,7 @@ bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
       
     #else   //Assuming a linux environment. Cross your fingers....
-      return (out_len == (int) write(port_number, out, out_len));
+      return (out_len == (int) write(_sock, out, out_len));
     #endif
   }
   return false;
@@ -355,17 +343,13 @@ const char* ManuvrSerial::getReceiverName() {  return "ManuvrSerial";  }
 */
 void ManuvrSerial::printDebug(StringBuilder *temp) {
   if (temp == NULL) return;
-  
-  EventReceiver::printDebug(temp);
-  temp->concatf("--- xport_state    \t 0x%02x\n", xport_state);
-  temp->concatf("--- xport_id       \t 0x%04x\n", xport_id);
-  temp->concatf("--- bytes sent     \t %u\n", bytes_sent);
-  temp->concatf("--- bytes received \t %u\n\n", bytes_received);
-  temp->concatf("--- tty_name       \t %s\n", tty_name);
-  temp->concatf("--- connected      \t %s\n", (connected() ? "yes" : "no"));
-  temp->concatf("--- has session    \t %s\n\n", (hasSession() ? "yes" : "no"));
 
+  ManuvrXport::printDebug(temp);
+  temp->concatf("-- _addr           %s\n",     _addr);
+  temp->concatf("-- _options        0x%08x\n", _options);
+  temp->concatf("-- _sock           0x%08x\n", _sock);
 }
+
 
 
 
@@ -378,6 +362,10 @@ void ManuvrSerial::printDebug(StringBuilder *temp) {
 int8_t ManuvrSerial::bootComplete() {
   EventReceiver::bootComplete();
   
+  // Tolerate 30ms of latency on the line before flushing the buffer.
+  pid_read_abort = __kernel->createSchedule(30, 0, false, this, &read_abort_event);
+  __kernel->disableSchedule(pid_read_abort);
+
   reset();
   return 1;
 }
@@ -448,7 +436,7 @@ int8_t ManuvrSerial::notify(ManuvrEvent *active_event) {
           //uint16_t xenomsg_id = session->nextMessage(&outbound_msg);
           //if (xenomsg_id) {
           //  if (write_port(outbound_msg.string(), outbound_msg.length()) ) {
-          //    if (verbosity > 2) local_log.concatf("There was a problem writing to %s.\n", tty_name);
+          //    if (verbosity > 2) local_log.concatf("There was a problem writing to %s.\n", _addr);
           //  }
           //  return_value++;
           //}

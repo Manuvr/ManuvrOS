@@ -38,7 +38,7 @@ Platforms that require it should be able to extend this driver for specific
 
 #if defined (STM32F4XX)        // STM32F4
 
-  
+
 #elif defined (__MK20DX128__)  // Teensy3
 
 
@@ -47,7 +47,7 @@ Platforms that require it should be able to extend this driver for specific
 
 #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
-  
+
 #else
   //Assuming a linux environment. Cross your fingers....
   #include <fcntl.h>
@@ -58,8 +58,8 @@ Platforms that require it should be able to extend this driver for specific
 
 class ManuvrSerial : public ManuvrXport {
   public:
-    ManuvrSerial(const char* tty_nom, int b_rate);
-    ManuvrSerial(const char* tty_nom, int b_rate, uint32_t opts);
+    ManuvrSerial(char* tty_nom, int b_rate);
+    ManuvrSerial(char* tty_nom, int b_rate, uint32_t opts);
     ~ManuvrSerial();
 
     /* Overrides from EventReceiver */
@@ -85,11 +85,12 @@ class ManuvrSerial : public ManuvrXport {
 
 
   private:
-    const char* tty_name;
-    int port_number;
+    char*  _addr;
+    int    _sock;
+    uint32_t _options;
+
     int baud_rate;
-    uint32_t options;
-    
+
     bool read_timeout_defer;       // Used to timeout a read operation.
     uint32_t pid_read_abort;       // Used to timeout a read operation.
     ManuvrEvent read_abort_event;  // Used to timeout a read operation.

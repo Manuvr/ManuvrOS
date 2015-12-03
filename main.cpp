@@ -20,6 +20,7 @@
 #include <ManuvrOS/Kernel.h>
 
 // Transports...
+#include <ManuvrOS/Transports/ManuvrSerial/ManuvrSerial.h>
 #include <ManuvrOS/Transports/ManuvrSocket/ManuvrSocket.h>
 
 
@@ -64,7 +65,12 @@ int main(int argc, char *argv[]) {
   
   
   // We need at least ONE transport to be useful...
+  #if defined (MANUVR_SUPPORT_TCPSOCKET)
   ManuvrTCP tcp_srv();
+  #endif
+  
+  #if defined (MANUVR_SUPPORT_SERIAL)
+  #endif
 
   // At this point, we should instantiate whatever specific functionality we
   //   want this Manuvrable to have.

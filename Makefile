@@ -89,7 +89,9 @@ SRCS   = $(CPP_SRCS)
              
 # TODO: I badly need to learn to write autoconf scripts....
 #   I've at least tried to modularize to make the invariable transition less-painful...
-MANuVR_OPTIONS = -D__MANUVR_DEBUG -DMANUVR_SUPPORT_TCPSOCKET
+MANuVR_OPTIONS  = -DMANUVR_SUPPORT_SERIAL
+MANuVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
+MANuVR_OPTIONS += -D__MANUVR_DEBUG
 
 CFLAGS += $(MANuVR_OPTIONS) 
 

@@ -37,19 +37,6 @@ Platforms that require it should be able to extend this driver for specific
 #include <ManuvrOS/Kernel.h>
 
 
-#if defined (MANUVR_SUPPORT_TCPSOCKET)
-  //Assuming a linux environment. Cross your fingers....
-  #include <cstdio>
-  #include <stdlib.h>
-  #include <unistd.h>
-  #include <fcntl.h>
-  #include <sys/signal.h>
-  #include <fstream>
-  #include <iostream>
-  #include <sys/socket.h>
-  #include <netinet/in.h>
-#endif
-
 
 
 /****************************************************************************************************
@@ -64,10 +51,25 @@ Platforms that require it should be able to extend this driver for specific
 /**
 * Constructor.
 */
-ManuvrTCP::ManuvrTCP() {
+ManuvrTCP::ManuvrTCP(char* addr, int port) : ManuvrXport() {
   __class_initializer();
-  options    = 0;
+  _port_number = port;
+  _addr        = addr;
+
+  // These will vary across UDP/WS/TCP.
+  _options     = 0;
 }
+
+
+ManuvrTCP::ManuvrTCP(char* addr, int port, uint32_t opts) : ManuvrXport() {
+  __class_initializer();
+  _port_number = port;
+  _addr        = addr;
+
+  // These will vary across UDP/WS/TCP.
+  _options     = opts;
+}
+
 
 
 /**
@@ -83,28 +85,55 @@ ManuvrTCP::~ManuvrTCP() {
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void ManuvrTCP::__class_initializer() {
-  __class_initializer();
-  xport_id           = ManuvrXport::TRANSPORT_ID_POOL++;
-  xport_state        = MANUVR_XPORT_STATE_UNINITIALIZED;
-  pid_read_abort     = 0;
-  options            = 0;
-  port_number        = 0;
-  bytes_sent         = 0;
-  bytes_received     = 0;
-  read_timeout_defer = false;
-  session            = NULL;
-    
+  _options           = 0;
+  _port_number       = 0;
+  _sock              = 0;
+
+
   // Build some pre-formed Events.
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
   read_abort_event.isManaged(true);
   read_abort_event.specific_target = (EventReceiver*) this;
   read_abort_event.callback        = (EventReceiver*) this;
   read_abort_event.priority        = 5;
-  //read_abort_event.addArg();  // Add our assigned transport ID to our pre-baked argument.
+  read_abort_event.addArg(xport_id);  // Add our assigned transport ID to our pre-baked argument.
 
-  __kernel = Kernel::getInstance();
-  __kernel->subscribe((EventReceiver*) this);  // Subscribe to the Kernel.
+  /*
+  TODO: Wrap this up into the efficiency blog...
+    Note: this post assumes that either...
+        (your style/C++-standard does not allow declaration and definition in your header)
+        AND
+        (you have an initialization sequence you manually code in either your constructor,
+          or (as I've done in this fxn) an off-board fxn.)
+      If the above evaluates to "true" in your case, the post below applies to you.
+
+    // Suppose I have these members...
+    struct sockaddr_in serv_addr = {0};
+    struct sockaddr_in cli_addr  = {0};
+    
+    // Tells the compiler to do this on every instantiation:
+    for (int i = 0; i < sizeof(serv_addr); i++) {  (void*)(&serv_addr + i) = 0; } // Zero the struct.
+    for (int i = 0; i < sizeof(cli_addr);  i++) {  (void*)(&cli_addr  + i) = 0; } // Zero the struct.
+    
+    // But consider the benefit if I....
+    struct sockaddr_in serv_addr;
+    struct sockaddr_in cli_addr;
+
+    for (int i = 0; i < sizeof(cli_addr);  i++) {
+      // TODO: Cast to an aligned-type for more gains.
+      *((uint8_t *) &serv_addr + i) = 0;
+      *((uint8_t *) &cli_addr  + i) = 0;
+    }
+        
+    If your compiler is smart, it will optimize this for you.
+    Do you trust your compiler to be smart all the time?
+  */
   
+  for (uint16_t i = 0; i < sizeof(cli_addr);  i++) {
+    *((uint8_t *) &serv_addr + i) = 0;
+    *((uint8_t *) &cli_addr  + i) = 0;
+  }
+
   pid_read_abort = __kernel->createSchedule(30, 0, false, this, &read_abort_event);
   __kernel->disableSchedule(pid_read_abort);
 }
@@ -142,6 +171,18 @@ XenoSession* ManuvrTCP::getSession() {
 * Port I/O fxns                                                                                     *
 ****************************************************************************************************/
 
+int8_t ManuvrTCP::listen(bool should_listen) {
+  // We're being told to start listening on whatever address was provided to the constructor.
+  serv_addr.sin_family      = AF_INET;
+  serv_addr.sin_addr.s_addr = 0;//conf.getConfigIpAddress();    // This should be read from the config.
+  serv_addr.sin_port        = htons(_port_number);
+  
+  _sock = socket(AF_INET, SOCK_STREAM, 0);        // Open the socket...
+  
+  return 0;
+}
+
+
 int8_t ManuvrTCP::reset() {
   return 0;
 }
@@ -154,10 +195,10 @@ int8_t ManuvrTCP::read_port() {
     #if defined (STM32F4XX)        // STM32F4
 
     #else   //Assuming a linux environment. Cross your fingers....
-      int n = read(port_number, buf, 255);
+      int n = read(_sock, buf, 255);
       int total_read = n;
       while (n > 0) {
-        n = read(port_number, buf, 255);
+        n = read(_sock, buf, 255);
         total_read += n;
       }
   
@@ -168,7 +209,7 @@ int8_t ManuvrTCP::read_port() {
         }
         else {
           ManuvrEvent *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
-          event->addArg(port_number);
+          event->addArg(_sock);
           StringBuilder *nu_data = new StringBuilder(buf, total_read);
           event->markArgForReap(event->addArg(nu_data), true);
           Kernel::staticRaiseEvent(event);
@@ -188,8 +229,8 @@ int8_t ManuvrTCP::read_port() {
 * Returns false on error and true on success.
 */
 bool ManuvrTCP::write_port(unsigned char* out, int out_len) {
-  if (port_number == -1) {
-    if (verbosity > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to port: (%s)\n", tty_name);
+  if (_sock == -1) {
+    if (verbosity > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to socket at: (%s:%d)\n", _addr, _port_number);
     return false;
   }
   
@@ -197,7 +238,7 @@ bool ManuvrTCP::write_port(unsigned char* out, int out_len) {
     #if defined (STM32F4XX)        // STM32F4
   
     #else   //Assuming a linux environment. Cross your fingers....
-      return (out_len == (int) write(port_number, out, out_len));
+      return (out_len == (int) write(_sock, out, out_len));
     #endif
   }
   return false;
@@ -242,16 +283,11 @@ const char* ManuvrTCP::getReceiverName() {  return "ManuvrTCP";  }
 */
 void ManuvrTCP::printDebug(StringBuilder *temp) {
   if (temp == NULL) return;
-  
-  EventReceiver::printDebug(temp);
-  temp->concatf("--- xport_state    \t 0x%02x\n", xport_state);
-  temp->concatf("--- xport_id       \t 0x%04x\n", xport_id);
-  temp->concatf("--- bytes sent     \t %u\n", bytes_sent);
-  temp->concatf("--- bytes received \t %u\n\n", bytes_received);
-  temp->concatf("--- tty_name       \t %s\n", tty_name);
-  temp->concatf("--- connected      \t %s\n", (connected() ? "yes" : "no"));
-  temp->concatf("--- has session    \t %s\n\n", (hasSession() ? "yes" : "no"));
 
+  ManuvrXport::printDebug(temp);
+  temp->concatf("-- _addr           %s\n",     _addr);
+  temp->concatf("-- _options        0x%08x\n", _options);
+  temp->concatf("-- _sock           0x%08x\n", _sock);
 }
 
 
@@ -264,6 +300,11 @@ void ManuvrTCP::printDebug(StringBuilder *temp) {
 int8_t ManuvrTCP::bootComplete() {
   EventReceiver::bootComplete();
   
+  // We will suffer a 300ms latency if the platform's networking stack doesn't flush
+  //   its buffer in time.
+  pid_read_abort = __kernel->createSchedule(300, 0, false, this, &read_abort_event);
+  __kernel->disableSchedule(pid_read_abort);
+
   reset();
   return 1;
 }

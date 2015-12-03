@@ -36,17 +36,28 @@ Platforms that require it should be able to extend this driver for specific
 #include "../ManuvrXport.h"
 
 
-#if defined (MANUVR_SUPPORT_WEBSOCKET)
+#if defined (MANUVR_SUPPORT_TCPSOCKET)
   //Assuming a linux environment. Cross your fingers....
+  #include <cstdio>
+  #include <stdlib.h>
+  #include <unistd.h>
   #include <fcntl.h>
   #include <termios.h>
   #include <sys/signal.h>
+  #include <fstream>
+  #include <iostream>
+  #include <sys/socket.h>
+  #include <netinet/in.h>
 #endif
 
 
+// TODO: Might generalize UDP and websocket support into this. For now, we only deal in TCP.
+// If generalization takes place, we should probably have a pure interface class "ManuvrSocket"
+//   that handles all the common-gound.
 class ManuvrTCP : public ManuvrXport {
   public:
-    ManuvrTCP();
+    ManuvrTCP(char* addr, int port);
+    ManuvrTCP(char* addr, int port, uint32_t opts);
     ~ManuvrTCP();
     
     /* Overrides from EventReceiver */
@@ -64,6 +75,8 @@ class ManuvrTCP : public ManuvrXport {
 
     int8_t read_port();
     int8_t reset();
+    
+    int8_t listen(bool);
 
     virtual int8_t sendBuffer(StringBuilder*);
     bool write_port(unsigned char* out, int out_len);
@@ -88,15 +101,14 @@ class ManuvrTCP : public ManuvrXport {
 
 
   private:
-    const char* tty_name;
-    int port_number;
-    int baud_rate;
-    uint32_t options;
-    
-    bool read_timeout_defer;       // Used to timeout a read operation.
-    uint32_t pid_read_abort;       // Used to timeout a read operation.
-    ManuvrEvent read_abort_event;  // Used to timeout a read operation.
-    
+    char*    _addr;
+    int      _sock;
+    uint32_t _options;
+
+    struct sockaddr_in serv_addr;
+    struct sockaddr_in cli_addr;
+
+    int      _port_number;
 };
 
 #endif   // __MANUVR_SOCKET_H__

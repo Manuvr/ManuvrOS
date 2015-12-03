@@ -12,8 +12,19 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
 
 
 ManuvrXport::ManuvrXport() {
-  _xport_flags = 0;
-  _xport_mtu   = PROTOCOL_MTU;
+  // No need to burden a client class with this.
+  EventReceiver::__class_initializer();
+
+  _xport_flags       = 0;
+  _xport_mtu         = PROTOCOL_MTU;
+  xport_id           = ManuvrXport::TRANSPORT_ID_POOL++;
+  xport_state        = MANUVR_XPORT_STATE_UNINITIALIZED;
+  bytes_sent         = 0;
+  bytes_received     = 0;
+  session            = NULL;
+
+  read_timeout_defer = false;
+  pid_read_abort     = 0;
 }
 
 
@@ -123,4 +134,24 @@ bool ManuvrXport::event_addresses_us(ManuvrEvent *event) {
   // 'all transports' implies 'true'. We need to care.
   return true;
 }
+
+
+
+
+
+/**
+* Debug support method. This fxn is only present in debug builds. 
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
+void ManuvrXport::printDebug(StringBuilder *temp) {
+  EventReceiver::printDebug(temp);
+  temp->concatf("Transport\n=======\n-- xport_state    0x%02x\n", xport_state);
+  temp->concatf("-- xport_id        0x%04x\n", xport_id);
+  temp->concatf("-- bytes sent      %u\n", bytes_sent);
+  temp->concatf("-- bytes received  %u\n\n", bytes_received);
+  temp->concatf("-- connected       %s\n", (connected() ? "yes" : "no"));
+  temp->concatf("-- has session     %s\n--\n", (hasSession() ? "yes" : "no"));
+}
+
 

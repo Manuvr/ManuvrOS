@@ -163,7 +163,7 @@ void EventReceiver::printDebug() {
 */
 void EventReceiver::printDebug(StringBuilder *output) {
   output->concatf("\n==< %s >===================================\n", getReceiverName());
-  output->concatf("--- bootstrap_completed \t %s\n--- kernel present? \t\t %s\n", (boot_completed) ? "yes" : "no", (NULL != __kernel) ? "yes" : "no");
+  output->concatf("-- bootstrap_completed \t %s\n-- kernel present? \t\t %s\n", (boot_completed) ? "yes" : "no", (NULL != __kernel) ? "yes" : "no");
 }
 
 
