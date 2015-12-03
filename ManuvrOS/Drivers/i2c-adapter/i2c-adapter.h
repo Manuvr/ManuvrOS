@@ -386,7 +386,5 @@ but adding support for other platforms ought to be easy.
   #include <ctype.h>
 #endif
 
-#include <ManuvrOS/Kernel.h>
-
 #endif  //I2C_ABSTRACTION_LAYER_ADAPTER
 

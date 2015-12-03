@@ -19,6 +19,9 @@
 
 #include <ManuvrOS/Kernel.h>
 
+// Drivers particular to this Manuvrable...
+#include <ManuvrOS/Drivers/i2c-adapter/i2c-adapter.h>
+
 // Transports...
 #include <ManuvrOS/Transports/ManuvrSerial/ManuvrSerial.h>
 #include <ManuvrOS/Transports/ManuvrSocket/ManuvrSocket.h>
@@ -35,13 +38,40 @@ char *program_name      = NULL;
 ****************************************************************************************************/
 
 int main(int argc, char *argv[]) {
-  program_name = argv[0];  // Our name.
+  program_name = argv[0];  // Name of running binary.
 
   Kernel kernel;
 
   #if defined(__MANUVR_DEBUG)
     kernel.print_type_sizes();
   #endif
+
+
+  /* 
+  * At this point, we should instantiate whatever specific functionality we
+  *   want this Manuvrable to have.
+  */
+  
+  
+  // We need at least ONE transport to be useful...
+  #if defined (MANUVR_SUPPORT_TCPSOCKET)
+    ManuvrTCP tcp_srv((const char*) "127.0.0.1", 2319);
+    kernel.subscribe(&tcp_srv);
+  #endif
+  
+  #if defined (MANUVR_SUPPORT_SERIAL)
+    ManuvrSerial ser((const char*) "/dev/ttyACM0", 115200);
+    kernel.subscribe(&ser);
+  #endif
+
+       
+  #if defined(RASPI) || defined(RASPI2)
+    // If we are running on a RasPi, let's try to fire up the i2c that is almost
+    //   certainly present.
+    I2CAdapter i2c(1);
+    kernel.subscribe(&i2c);
+  #endif
+
 
   // Parse through all the command line arguments and flags...
   // Please note that the order matters. Put all the most-general matches at the bottom of the loop.
@@ -63,20 +93,6 @@ int main(int argc, char *argv[]) {
     }
   }
   
-  
-  // We need at least ONE transport to be useful...
-  #if defined (MANUVR_SUPPORT_TCPSOCKET)
-  ManuvrTCP tcp_srv();
-  #endif
-  
-  #if defined (MANUVR_SUPPORT_SERIAL)
-  #endif
-
-  // At this point, we should instantiate whatever specific functionality we
-  //   want this Manuvrable to have.
-  #if defined(RASPI) || defined(RASPI2)
-  
-  #endif
   
   // Once we've loaded up all the goodies we want, we finalize everything thusly...
   printf("%s: Booting Manuvr Kernel....\n", program_name);
