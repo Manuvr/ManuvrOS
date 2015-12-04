@@ -63,6 +63,7 @@ class ManuvrTCP : public ManuvrXport {
     int8_t reset();
 
     bool write_port(unsigned char* out, int out_len);
+    bool write_port(int sock, unsigned char* out, int out_len);
     int8_t read_port();
 
 
@@ -73,6 +74,7 @@ class ManuvrTCP : public ManuvrXport {
   private:
     char*    _addr;
     int      _sock;
+    int      cli_sock;
     uint32_t _options;
 
     int      _port_number;

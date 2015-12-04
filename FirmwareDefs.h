@@ -34,7 +34,7 @@ This is an example file for building firmware on linux. Anticipated target is a 
 * Particulars of this platform.
 */
 #define PLATFORM_RNG_CARRY_CAPACITY       10    // How many random numbers should be cached? Must be > 0. 
-#define PROTOCOL_MTU                16777215    // See MTU notes above....
+#define PROTOCOL_MTU                  655536    // See MTU notes above....
 
 /*
 * Particulars of this Manuvrable.

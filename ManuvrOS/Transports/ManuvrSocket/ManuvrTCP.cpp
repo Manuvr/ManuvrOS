@@ -30,7 +30,7 @@ This is basically only for linux.
 
 #include <ManuvrOS/Kernel.h>
 
-
+#include <arpa/inet.h>
 
 
 /****************************************************************************************************
@@ -138,29 +138,153 @@ void ManuvrTCP::__class_initializer() {
 * Port I/O fxns                                                                                     *
 ****************************************************************************************************/
 
+
+// Original pejorated demo code. Is it useful to have a traffic mirror mode 
+//   for other Manuvrables?
+//
+//void HandleClient(int sock) {
+//  char buffer[255];
+//  int received = -1;
+//  /* Receive message */
+//  if ((received = recv(sock, buffer, 255, 0)) < 0) {
+//    Kernel::log("Failed to receive initial bytes from client");
+//  }
+//  /* Send bytes and check for more incoming data in loop */
+//  while (received > 0) {
+//    /* Send back received data */
+//    if (send(sock, buffer, received, 0) != received) {
+//      Kernel::log("Failed to send bytes to client");
+//    }
+//    /* Check for more data */
+//    if ((received = recv(sock, buffer, 255, 0)) < 0) {
+//      Kernel::log("Failed to receive additional bytes from client");
+//    }
+//  }
+//  close(sock);
+//}
+           
+
+volatile ManuvrTCP *active_socket = NULL;  // TODO: We need to be able to service many ports...
+
+
+void HandleClient(int sock, XenoSession* session) {
+  unsigned char *buf = (unsigned char *) alloca(512);  // TODO: Arbitrary. ---J. Ian Lindsay   Thu Dec 03 03:49:08 MST 2015
+
+  int received = -1;
+  /* Receive message */
+  if ((received = recv(sock, buf, 255, 0)) < 0) {
+    Kernel::log("Failed to receive initial bytes from client");
+  }
+  
+  StringBuilder output;
+  
+  /* Send bytes and check for more incoming data in loop */
+  while (received > 0) {
+    output.concatf("Sending %d bytes into session.\n", received);
+    
+    // Do stuff regarding the data we just read...
+    if (NULL != session) {
+      session->bin_stream_rx(buf, received);
+    }
+    else {
+      ManuvrEvent *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
+      event->addArg(sock);
+      StringBuilder *nu_data = new StringBuilder(buf, received);
+      event->markArgForReap(event->addArg(nu_data), true);
+      Kernel::staticRaiseEvent(event);
+    }
+    Kernel::getInstance()->printDebug(&output);
+    Kernel::log(&output);
+
+    /* Check for more data */
+    if ((received = recv(sock, buf, 255, 0)) < 0) {
+      Kernel::log("Failed to receive additional bytes from client");
+    }
+  }
+  close(sock);
+}
+           
+
+
 int8_t ManuvrTCP::connect() {
-  // We're a serial port. If we are initialized, we are always connected.
+  // We're being told to act as a client.
   return 0;
 }
-
+         
 
 int8_t ManuvrTCP::listen() {
   // We're being told to start listening on whatever address was provided to the constructor.
-  // 
+  // That means we are a server.
   if (_sock) {
+    Kernel::log("A TCP socket was told to listen when it already was. Doing nothing.");
+    return -1;
   }
+  
+  in_addr_t temp_addr = inet_network(_addr);
+  
   serv_addr.sin_family      = AF_INET;
-  serv_addr.sin_addr.s_addr = 0;//conf.getConfigIpAddress();    // This should be read from the config.
+  serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  //serv_addr.sin_addr.s_addr = temp_addr;
   serv_addr.sin_port        = htons(_port_number);
   
   _sock = socket(AF_INET, SOCK_STREAM, 0);        // Open the socket...
+
+  /* Bind the server socket */
+  if (bind(_sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr))) {
+    Kernel::log("Failed to bind the server socket.\n");
+    return -1;
+  }
+  /* Listen on the server socket */
+  if (::listen(_sock, 4) < 0) {
+    Kernel::log("Failed to listen on server socket\n");
+    return -1;
+  }
   
+  listening(true);
+
+  int child_pid = fork();
   
+  if (child_pid) {
+    StringBuilder output("Forked into PID ");
+    output.concat(child_pid);
+    output.concat("\n");
+    Kernel::log(&output);
+    
+    while (1) {
+      unsigned int clientlen = sizeof(cli_addr);
+
+      /* Wait for client connection */
+      if ((cli_sock = accept(_sock, (struct sockaddr *) &cli_addr, &clientlen)) < 0) {
+        output.concat("Failed to accept client connection.\n");
+      }
+      else {
+        output.concat("Client connected: ");
+        output.concat((char*) inet_ntoa(cli_addr.sin_addr));
+        output.concat("\n");
+      }
+      Kernel::log(&output);
+      
+      if (!session) {
+        session = new XenoSession(this);
+        __kernel->subscribe(session);
+      }
+      
+      HandleClient(cli_sock, session);
+      
+      for (uint16_t i = 0; i < sizeof(cli_addr);  i++) {
+        *((uint8_t *) &cli_addr  + i) = 0;
+      }
+    }
+  }
+  else {
+    Kernel::log("TCP Now listening.\n");
+  }
   return 0;
 }
 
 
 int8_t ManuvrTCP::reset() {
+  listen();
   return 0;
 }
 
@@ -209,8 +333,33 @@ bool ManuvrTCP::write_port(unsigned char* out, int out_len) {
     return false;
   }
   
-  if (connected()) {
-    return (out_len == (int) write(_sock, out, out_len));
+  if (connected() | listening()) {
+    int bytes_written = (out_len == (int) send(_sock, out, out_len, 0));
+    
+    if (bytes_written != out_len) {
+      Kernel::log("Failed to send bytes to client");
+    }
+  }
+  return false;
+}
+
+
+/**
+* Does what it claims to do on linux.
+* Returns false on error and true on success.
+*/
+bool ManuvrTCP::write_port(int sock, unsigned char* out, int out_len) {
+  if (sock == -1) {
+    if (verbosity > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to socket at: (%s:%d)\n", _addr, _port_number);
+    return false;
+  }
+  
+  if (connected() | listening()) {
+    int bytes_written = (out_len == (int) send(cli_sock, out, out_len, 0));
+    Kernel::log("Send bytes back\n");
+    if (bytes_written != out_len) {
+      Kernel::log("Failed to send bytes to client");
+    }
   }
   return false;
 }
