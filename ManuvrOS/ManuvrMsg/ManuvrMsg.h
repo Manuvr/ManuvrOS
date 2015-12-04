@@ -1,19 +1,17 @@
 /*
-
-
-
-Some documentation is called for... 
-This class forms the foundation of our major messaging component: ManuvrEvent
-
-This is the data structure that contains the identity of a given message and its arguments. The idea here
-  is to allow for a smooth transition between XenoMessages and ManuvrEvents. The counterparty ought to be 
-  able to subscribe itself to any class of message and be thereby notified about what is happening in the
-  system.
-
-The message codes defined by this file are dual-purposed across the EventAnd Host message classes to keep
-  continuity between message types.
+* 
+* 
+* 
+* This class forms the foundation of internal events. It contains the identity of a given message and   
+*   its arguments. The idea here is to encapsulate notions of "method" and "argument", regardless of
+*   the nature of its execution parameters.
+* 
+* 
+* 
+* 
+* 
 */
-               
+
 #ifndef __MANUVR_MESSAGE_H__
 #define __MANUVR_MESSAGE_H__
 
@@ -44,7 +42,7 @@ typedef struct msg_defin_t {
     uint16_t              msg_type_flags; // Optional flags to describe nuances of this message type.
     const char*           debug_label;    // This is a pointer to a const that represents this message code as a string.
     const unsigned char*  arg_modes;      // For messages that have arguments, this defines their possible types.
-    //const unsigned char*  arg_semantics;  // For messages that have arguments, this defines their semantics.
+    const char*           arg_semantics;  // For messages that have arguments, this defines their semantics.
 } MessageTypeDef;
 
 
@@ -56,9 +54,9 @@ typedef struct msg_defin_t {
 #define MSG_FLAG_EXPORTABLE   0x0002      // Indicates that the message might be sent between systems.
 #define MSG_FLAG_DEMAND_ACK   0x0004      // Demands that a message be acknowledged if sent outbound.
 #define MSG_FLAG_AUTH_ONLY    0x0008      // This flag indicates that only an authenticated session can use this message.
+#define MSG_FLAG_EMITS        0x0010      // Indicates that this device might emit this message.
+#define MSG_FLAG_LISTENS      0x0020      // Indicates that this device can accept this message.
 
-#define MSG_FLAG_RESERVED_B   0x0010      // Reserved flag.
-#define MSG_FLAG_RESERVED_A   0x0020      // Reserved flag.
 #define MSG_FLAG_RESERVED_9   0x0040      // Reserved flag.
 #define MSG_FLAG_RESERVED_8   0x0080      // Reserved flag.
 #define MSG_FLAG_RESERVED_7   0x0100      // Reserved flag.
@@ -69,7 +67,6 @@ typedef struct msg_defin_t {
 #define MSG_FLAG_RESERVED_2   0x2000      // Reserved flag.
 #define MSG_FLAG_RESERVED_1   0x4000      // Reserved flag.
 #define MSG_FLAG_RESERVED_0   0x8000      // Reserved flag.
-
 
 
 class ManuvrXport;
@@ -86,6 +83,10 @@ class Argument {
     *   this slot with things like int32, we will instead cast the value itself to a
     *   void* and store it in the pointer slot. When we do this, we need to be sure 
     *   not to mark the pointer for reap.
+    *
+    * Glorious, glorious hackery. Keeping it. But do need to account for (and extend to)
+    *   64-bit pointers.
+    *        ---J. Ian Lindsay   Mon Oct 05 22:55:41 MST 2015
     */
     void*   target_mem;
 
@@ -128,7 +129,6 @@ class Argument {
     int8_t serialize_raw(StringBuilder*);
 	
 	
-    //static double   parseDoubleFromchars(unsigned char *input);
     static char*    printBinStringToBuffer(unsigned char *str, int len, char *buffer);
     
 
@@ -287,9 +287,13 @@ class ManuvrMsg {
     static const char* getMsgTypeString(uint16_t msg_code);
     
     static int8_t getMsgLegend(StringBuilder *output);
+
+    static int8_t registerMessage(MessageTypeDef*);
+    static int8_t registerMessage(uint16_t, uint16_t, const char*, const unsigned char*, const char*);
+    
+    static int8_t registerMessages(const MessageTypeDef[], int len);
     
     static const MessageTypeDef message_defs[];
-    static PriorityQueue<const MessageTypeDef*> message_defs_extended;  // Where runtime-loaded message defs go.
 
     
     static bool isExportable(const MessageTypeDef* message_def) {
@@ -333,6 +337,7 @@ class ManuvrMsg {
     
     char* is_valid_argument_buffer(int len);
 
+    static PriorityQueue<const MessageTypeDef*> message_defs_extended;  // Where runtime-loaded message defs go.
 };
 
 

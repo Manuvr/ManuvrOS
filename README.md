@@ -9,14 +9,14 @@
 
 A cross-platform real-time, event-driven "Operating System" for asynchronous applications. It was intended to make it easier to write asynchronous, cross-platform IoT applications.
 
+![ManuvrOS](doc/3d-logo.png)
+
 
 ----------------------
 ####What is in this repository:
 **./doc**:  Documentation related to this project. The code base is being converted to doxygen. It can be [viewed online](http://manuvr.io:8080/), but will not be guaranteed to be what you have in front of you. The doc can be built with the command...
 
     make docs
-
-**./demo**:  Demonstration of ManuvrOS built as an application framework under linux. 
 
 **./StringBuilder**:  The StringBuilder library.
 
@@ -27,12 +27,10 @@ A cross-platform real-time, event-driven "Operating System" for asynchronous app
 
 ----------------------
 ####If you intend on using ManuvrOS in an Arduino-esque environment...
-You will need to copy (or link) the following directories into your IDE's library directory:
+You will need to copy the following directories into your IDE's library directory:
 -   ManuvrOS
 -   DataStructures
 -   StringBuilder
-
-Each library has an examples directory that ought to be visible from the IDE when properly installed.
 
 Additionally, to overcome the Arduino library-within-library limitation, please follow [these instructions](http://www.joshianlindsay.com/index.php?id=147) to make your IDE treat gcc a little better:
 
@@ -52,7 +50,7 @@ You can build the demo application with
     
 or
 
-    make testbench
+    make debug
 
 ...for the same thing with debug symbols.
 
@@ -65,13 +63,10 @@ Bitcoin accelerates feature requests and bug fixes. :-)
 
 ----------------------
 ####High-level TODO list
--   Link against libuv for "big" builds so we can handle threading on android, windows, linux, etc. without having to hurt ourselves.
 -   Clean up the unit tests that exist, and merge in some that aren't in the testbench yet.
--   Make the testbench do something interesting.
--   Investigate usage as an application framework under RTOS.
 -   Verify that ManuvrOS works correctly when built as 64-bit.
--   Add callgrind support to the Makefile.
 -   Write an autoconf script to choose target and features, detect env, etc...
+-   Incorporate assertions into preprocessor logic to case-off DEBUG? Investigate.
 
 
 ----------------------

@@ -788,7 +788,7 @@ void StringBuilder::null_term_check() {
 
 
 
-#ifdef TEST_BENCH
+#ifdef __MANUVR_DEBUG
 void StringBuilder::printDebug() {
   unsigned char* temp = this->string();
   int temp_len  = this->length();

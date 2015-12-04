@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "INA219.h"
 
+const V_Cap_Point* batt_capacity_curves[6] = {chem_index_0, chem_index_1, chem_index_2, chem_index_3, chem_index_4, chem_index_5};  // Ten points on the curve ought to be enough for reliable interpolation.
 
 /*
 * Constructor. Takes i2c address as argument.
@@ -177,7 +178,7 @@ void INA219::operationCompleteCallback(I2CQueuedOperation* completed) {
       case INA219_REG_CURRENT:
       case INA219_REG_POWER:
         if (process_read_data()) {
-          //EventManager::raiseEvent(MANUVR_MSG_SENSOR_INA219, NULL);   // Raise an event
+          //Kernel::raiseEvent(MANUVR_MSG_SENSOR_INA219, NULL);   // Raise an event
         }
         break;
       case INA219_REG_CONFIGURATION:
@@ -237,9 +238,11 @@ bool INA219::process_read_data(void) {
     markRegRead(INA219_REG_BUS_VOLTAGE);
     markRegRead(INA219_REG_SHUNT_VOLTAGE);
 
-          StringBuilder output;
-          output.concatf("%.3f\t %.3f\t %.3f\t %.3f\n", (double) local_shunt, (double) local_bus, (double) local_current, (double) local_power);
-          StaticHub::log(&output);
+    #ifdef __MANUVR_DEBUG
+      StringBuilder output;
+      output.concatf("%.3f\t %.3f\t %.3f\t %.3f\n", (double) local_shunt, (double) local_bus, (double) local_current, (double) local_power);
+      Kernel::log(&output);
+    #endif
     return true;
   }
   return false;

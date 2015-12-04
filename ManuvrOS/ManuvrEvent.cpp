@@ -1,4 +1,4 @@
-#include "EventManager.h" 
+#include "Kernel.h" 
 
 
 /**
@@ -79,7 +79,7 @@ int8_t ManuvrEvent::repurpose(uint16_t code) {
 * Was this event preallocated?
 * Preallocation implies no reap.
 *
-* @return true if the EventManager ought to return this event to its preallocation queue.
+* @return true if the Kernel ought to return this event to its preallocation queue.
 */
 bool ManuvrEvent::returnToPrealloc() {
   return preallocated;
@@ -91,7 +91,7 @@ bool ManuvrEvent::returnToPrealloc() {
 * Preallocation implies no reap.
 *
 * @param  nu_val Pass true to cause this event to be marked as part of a preallocation pool.
-* @return true if the EventManager ought to return this event to its preallocation queue.
+* @return true if the Kernel ought to return this event to its preallocation queue.
 */
 bool ManuvrEvent::returnToPrealloc(bool nu_val) {
   preallocated = nu_val;
@@ -101,11 +101,11 @@ bool ManuvrEvent::returnToPrealloc(bool nu_val) {
 
 
 /**
-* If the memory isn't managed explicitly by some other class, this will tell the EventManager to delete
+* If the memory isn't managed explicitly by some other class, this will tell the Kernel to delete
 *   the completed event.
 * Preallocation implies no reap.
 *
-* @return true if the EventManager ought to free() this Event. False otherwise.
+* @return true if the Kernel ought to free() this Event. False otherwise.
 */
 bool ManuvrEvent::eventManagerShouldReap() {
   if (mem_managed || preallocated || scheduled) {
@@ -127,7 +127,7 @@ bool ManuvrEvent::isManaged(bool nu) {
 
 
 bool ManuvrEvent::abort() {
-  return EventManager::abortEvent(this);
+  return Kernel::abortEvent(this);
 }
 
 

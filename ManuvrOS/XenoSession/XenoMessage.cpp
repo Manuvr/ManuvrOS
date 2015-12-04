@@ -24,7 +24,8 @@ XenoMessage is the class that is the interface between ManuvrEvents and
 */
 
 #include "XenoSession.h"
-#include "StaticHub/StaticHub.h"
+#include <ManuvrOS/Kernel.h>
+#include <ManuvrOS/Platform/Platform.h>
 
 
 XenoMessage::XenoMessage() {
@@ -40,7 +41,7 @@ XenoMessage::XenoMessage(ManuvrEvent* existing_event) {
   // Should maybe set a flag in the event to indicate that we are now responsible
   //   for memory upkeep? Don't want it to get jerked out from under us and cause a crash.
   event = existing_event;
-  unique_id = (uint16_t) StaticHub::randomInt();
+  unique_id = (uint16_t) randomInt();
   proc_state = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
   message_code        = existing_event->event_code;     // 
   serialize();   // We should do this immediately to preserve the message.
@@ -83,7 +84,7 @@ void XenoMessage::__class_initializer() {
 */
 void XenoMessage::provideEvent(ManuvrEvent *existing_event) {
   event = existing_event;
-  unique_id = (uint16_t) StaticHub::randomInt();
+  unique_id = (uint16_t) randomInt();
   proc_state = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
   serialize();   // We should do this immediately to preserve the message.
   event = NULL;  // Don't risk the event getting ripped out from under us.
@@ -244,12 +245,12 @@ int8_t XenoMessage::inflateArgs() {
       return_value = 0;
     }
     else {
-      //StaticHub::log("XenoMessage::inflateArgs():\t inflate fxn returned failure...\n");
+      //Kernel::log("XenoMessage::inflateArgs():\t inflate fxn returned failure...\n");
     }
   }
   else {
     return_value = -1;
-    //StaticHub::log("XenoMessage::inflateArgs():\t argbuf was zero-length.\n");
+    //Kernel::log("XenoMessage::inflateArgs():\t argbuf was zero-length.\n");
   }
   return return_value;
 }
@@ -286,7 +287,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
       break;
     default:
       //output.concatf("XenoMessage::feedBuffer() rejecting bytes because it is not in the right state. Is %s\n", XenoMessage::getMessageStateString(proc_state));
-      StaticHub::log(&output);
+      Kernel::log(&output);
       return -2;
   }
   
@@ -295,7 +296,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
     if (buf_len < 4) {
       // Not enough to act on, since we have none buffered ourselves...
       //output.concat("Rejecting bytes because there aren't enough of them yet.\n");
-      StaticHub::log(&output);
+      Kernel::log(&output);
       return 0;
     }
     else {  // We have at least enough for a sync-check...
@@ -309,7 +310,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
         if (x == buf_len)  sb_buf->clear();
         else               sb_buf->cull(x);
         
-        StaticHub::log(&output);
+        Kernel::log(&output);
         return x;
       }
       else {
@@ -336,7 +337,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
       //output.concat("Rejecting bytes because there aren't enough of them yet to make a complete packet.\n");
       if (return_value == buf_len)  sb_buf->clear();
       else if (return_value > 0)    sb_buf->cull(return_value);
-      StaticHub::log(&output);
+      Kernel::log(&output);
       return return_value;
     }
     else {
@@ -379,28 +380,38 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
     if (checksum_c == checksum_i) {
       // Checksum passes. Build the event.
       if (event != NULL) {
+        #ifdef __MANUVR_DEBUG
         output.concat("XenoMessage::feedBuffer(): Ooops. Clobbered an event pointer. Expect leaks...\n");
+        #endif
       }
-      event = EventManager::returnEvent(message_code);
+      event = Kernel::returnEvent(message_code);
       switch (proc_state) {
         case XENO_MSG_PROC_STATE_RECEIVING:
           proc_state = XENO_MSG_PROC_STATE_AWAITING_UNSERIALIZE;
+          #ifdef __MANUVR_DEBUG
           output.concat("XenoMessage::feedBuffer() Ready to unserialize...\n");
+          #endif
           break;
         case XENO_MSG_PROC_STATE_RECEIVING_REPLY:
           proc_state = XENO_MSG_PROC_STATE_REPLY_RECEIVED;
+          #ifdef __MANUVR_DEBUG
           output.concat("XenoMessage::feedBuffer() Received reply!\n");
+          #endif
           break;
         default:
+          #ifdef __MANUVR_DEBUG
           output.concatf("XenoMessage::feedBuffer() Message received, and is ok, but not sure about state.... Is %s\n", XenoMessage::getMessageStateString(proc_state));
-          StaticHub::log(&output);
+          Kernel::log(&output);
+          #endif
           return -2;
       }
     }
     else {
       // TODO: We might send a retry request at this point...
       proc_state = XENO_MSG_PROC_STATE_AWAITING_REAP;
+      #ifdef __MANUVR_DEBUG
       output.concatf("XenoMessage::feedBuffer() Message failed to checksum. Got 0x%02x. Expected 0x%02x. \n", checksum_c, checksum_i);
+      #endif
     }
   }
   
@@ -408,7 +419,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
   if (return_value == buf_len)  sb_buf->clear();
   else if (return_value > 0)    sb_buf->cull(return_value);
   
-  if (output.length() > 0) StaticHub::log(&output);
+  if (output.length() > 0) Kernel::log(&output);
   return return_value;
 }
 

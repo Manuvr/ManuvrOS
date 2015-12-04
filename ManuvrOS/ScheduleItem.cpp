@@ -28,7 +28,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "Scheduler.h"
+#include "Kernel.h"
 
 
 
@@ -59,7 +59,7 @@ ScheduleItem::ScheduleItem(uint32_t nu_pid, int16_t recurrence, uint32_t sch_per
 /**
 * Constructor. Takes an EventReceiver* as a callback.
 * We need to deal with memory management of the Event. For a recurring schedule, we can't allow the
-*   EventManager to reap the event. So it is very important to mark the event appropriately.
+*   Kernel to reap the event. So it is very important to mark the event appropriately.
 *
 * @param nu_pid       This schedule's unique PID. This must be passed in from outside for now.
 * @param recurrence   How many times should this schedule run?

@@ -22,7 +22,6 @@ const unsigned char ManuvrMsg::MSG_ARGS_U32[] = {UINT32_FM, 0, 0};
 
 const unsigned char ManuvrMsg::MSG_ARGS_STR_BUILDER[] = {STR_BUILDER_FM, 0, 0}; 
 
-const unsigned char ManuvrMsg::MSG_ARGS_EVENTRECEIVER[] = {SYS_EVENTRECEIVER_FM, 0, 0}; 
 const unsigned char ManuvrMsg::MSG_ARGS_XPORT[]         = {SYS_MANUVR_XPORT_FM, 0, 0}; 
 
 /* 
@@ -86,46 +85,16 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
 
   {  MANUVR_MSG_MSG_FORWARD          , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "MSG_FORWARD"          , MSG_ARGS_MSG_FORWARD }, // No args? Asking for this legend. One arg: Legend provided.
 
-/* System codes */                                               
-  {  MANUVR_MSG_SYS_BOOTLOADER       , MSG_FLAG_EXPORTABLE,               "SYS_BOOTLOADER"       , MSG_ARGS_NONE }, // Reboots into the STM32F4 bootloader.
-  {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,               "SYS_REBOOT"           , MSG_ARGS_NONE }, // Reboots into THIS program.
-  {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,               "SYS_SHUTDOWN"         , MSG_ARGS_NONE }, // Raised when the system is pending complete shutdown.
-
-  {  MANUVR_MSG_SYS_ADVERTISE_SRVC   , 0x0000,                            "ADVERTISE_SRVC"       , MSG_ARGS_EVENTRECEIVER }, // A system service might feel the need to advertise it's arrival.
-  {  MANUVR_MSG_SYS_RETRACT_SRVC     , 0x0000,                            "RETRACT_SRVC"         , MSG_ARGS_EVENTRECEIVER }, // A system service sends this to tell others to stop using it.
-
-  {  MANUVR_MSG_SYS_RELEASE_CRUFT    , MSG_FLAG_IDEMPOTENT,               "SYS_RELEASE_CRUFT"    , MSG_ARGS_NONE }, // 
-
-  {  MANUVR_MSG_PROGRAM_START        , MSG_FLAG_EXPORTABLE,               "PROGRAM_START"        , MSG_ARGS_STR_BUILDER }, // Starting an application on the receiver. Needs a string. 
   
+  
+/* System codes */                                               
   {  MANUVR_MSG_SYS_DATETIME_CHANGED , MSG_FLAG_EXPORTABLE,               "SYS_DATETIME_CHANGED" , MSG_ARGS_NONE }, // Raised when the system time changes.
   {  MANUVR_MSG_SYS_SET_DATETIME     , MSG_FLAG_EXPORTABLE,               "SYS_SET_DATETIME"     , MSG_ARGS_NONE }, //
   {  MANUVR_MSG_SYS_REPORT_DATETIME  , MSG_FLAG_EXPORTABLE,               "SYS_REPORT_DATETIME"  , MSG_ARGS_NONE }, //
 
-  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , MSG_ARGS_U8 }, // 
-  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , MSG_ARGS_U8 },   // This tells client classes to adjust their log verbosity.
-
-  {  MANUVR_MSG_SYS_BOOT_COMPLETED   , 0x0000,               "SYS_BOOT_COMPLETED"   , MSG_ARGS_NONE }, // Raised when bootstrap is finished.
   {  MANUVR_MSG_SYS_PREALLOCATION    , 0x0000,               "SYS_PREALLOCATION"    , MSG_ARGS_NONE }, // Any classes that do preallocation should listen for this.
-
-  {  MANUVR_MSG_SYS_FAULT_REPORT     , 0x0000,                            "SYS_FAULT"            , MSG_ARGS_U32 }, // 
-  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , MSG_ARGS_STR_BUILDER }, // Classes emit this to get their log data saved/sent.
+  {  MANUVR_MSG_SYS_FAULT_REPORT     , 0x0000,               "SYS_FAULT"            , MSG_ARGS_U32 }, // 
   
-  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , MSG_ARGS_STR_BUILDER }, // 
-
-  {  MANUVR_MSG_SCHED_ENABLE_BY_PID  , 0x0000,               "SCHED_ENABLE_BY_PID"  , MSG_ARGS_NONE }, // The given PID is being enabled.
-  {  MANUVR_MSG_SCHED_DISABLE_BY_PID , 0x0000,               "SCHED_DISABLE_BY_PID" , MSG_ARGS_NONE }, // The given PID is being disabled.
-  {  MANUVR_MSG_SCHED_PROFILER_START , 0x0000,               "SCHED_PROFILER_START" , MSG_ARGS_NONE }, // We want to profile the given PID.
-  {  MANUVR_MSG_SCHED_PROFILER_STOP  , 0x0000,               "SCHED_PROFILER_STOP"  , MSG_ARGS_NONE }, // We want to stop profiling the given PID.
-  {  MANUVR_MSG_SCHED_PROFILER_DUMP  , 0x0000,               "SCHED_PROFILER_DUMP"  , MSG_ARGS_NONE }, // Dump the profiler data for all PIDs (no args) or given PIDs.
-  {  MANUVR_MSG_SCHED_DUMP_META      , 0x0000,               "SCHED_DUMP_META"      , MSG_ARGS_NONE }, // Tell the Scheduler to dump its meta metrics.
-  {  MANUVR_MSG_SCHED_DUMP_SCHEDULES , 0x0000,               "SCHED_DUMP_SCHEDULES" , MSG_ARGS_NONE }, // Tell the Scheduler to dump schedules.
-  {  MANUVR_MSG_SCHED_WIPE_PROFILER  , 0x0000,               "SCHED_WIPE_PROFILER"  , MSG_ARGS_NONE }, // Tell the Scheduler to wipe its profiler data. Pass PIDs to be selective.
-  {  MANUVR_MSG_SCHED_DEFERRED_EVENT , 0x0000,               "SCHED_DEFERRED_EVENT" , MSG_ARGS_NONE }, // Tell the Scheduler to broadcast the attached Event so many ms into the future.
-
-  {  MANUVR_MSG_I2C_QUEUE_READY      , MSG_FLAG_IDEMPOTENT,  "I2C_QUEUE_READY"      , MSG_ARGS_NONE }, // The i2c queue is ready for attention.
-  {  MANUVR_MSG_I2C_DUMP_DEBUG       , MSG_FLAG_EXPORTABLE,  "I2C_DUMP_DEBUG"       , MSG_ARGS_NONE }, // Debug dump for i2c.
-
   {  MANUVR_MSG_RNG_BUFFER_EMPTY     , 0x0000,               "RNG_BUFFER_EMPTY"     , MSG_ARGS_NONE }, // The RNG couldn't keep up with our entropy demands.
   {  MANUVR_MSG_INTERRUPTS_MASKED    , 0x0000,               "INTERRUPTS_MASKED"    , MSG_ARGS_NONE }, // Anything that depends on interrupts is now broken.
                                               
@@ -134,7 +103,24 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SESS_DUMP_DEBUG      , MSG_FLAG_EXPORTABLE,  "SESS_DUMP_DEBUG"      , MSG_ARGS_NONE }, // 
   {  MANUVR_MSG_SESS_ORIGINATE_MSG   , MSG_FLAG_IDEMPOTENT,  "SESS_ORIGINATE_MSG"   , MSG_ARGS_NONE }, // 
 
-  {  MANUVR_MSG_XPORT_SEND           , MSG_FLAG_IDEMPOTENT,  "XPORT_SEND"           , MSG_ARGS_STR_BUILDER }, // 
+  {  MANUVR_MSG_XPORT_SEND           , MSG_FLAG_IDEMPOTENT,  "XPORT_SEND"           , MSG_ARGS_STR_BUILDER }, //
+
+  /* 
+    For messages that have arguments, we have the option of defining inline lables for each parameter.
+    This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
+    compile time.
+  */
+  #if defined (__ENABLE_MSG_SEMANTICS)
+  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , MSG_ARGS_STR_BUILDER, "Command\0\0" }, // 
+  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , MSG_ARGS_STR_BUILDER, "Body\0\0" }, // Classes emit this to get their log data saved/sent.
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , MSG_ARGS_U8, "Power Mode\0\0" }, // 
+  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , MSG_ARGS_U8, "Level\0\0"      },   // This tells client classes to adjust their log verbosity.
+  #else
+  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , MSG_ARGS_STR_BUILDER, NULL }, // 
+  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , MSG_ARGS_STR_BUILDER, NULL }, // Classes emit this to get their log data saved/sent.
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , MSG_ARGS_U8, NULL }, // 
+  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , MSG_ARGS_U8, NULL },   // This tells client classes to adjust their log verbosity.
+  #endif
 };
 
 
@@ -451,11 +437,11 @@ int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf, bool preserve) {
       case VECT_3_UINT16:
       case VECT_3_INT16:
 
-      case STR_BUILDER_FM:       // This is a pointer to some StringBuilder. Presumably this is on the heap.
-      case STR_FM:               // This is a pointer to a string constant. Presumably this is stored in flash.
-      case EVENT_PTR_FM:         // This is a pointer to ManuvrEvent.
-      case SYS_EVENTRECEIVER_FM: // This is a pointer to an EventReceiver.
-      case SYS_MANUVR_XPORT_FM:  // This is a pointer to a transport.
+      case STR_BUILDER_FM:          // This is a pointer to some StringBuilder. Presumably this is on the heap.
+      case STR_FM:                  // This is a pointer to a string constant. Presumably this is stored in flash.
+      case SYS_MANUVR_EVENT_PTR_FM: // This is a pointer to ManuvrEvent.
+      case SYS_EVENTRECEIVER_FM:    // This is a pointer to an EventReceiver.
+      case SYS_MANUVR_XPORT_FM:     // This is a pointer to a transport.
         return_value = DIG_MSG_ERROR_NO_ERROR;
         *((uint32_t*) trg_buf) = (uint32_t) arg->target_mem;
         break;
@@ -852,4 +838,36 @@ char* ManuvrMsg::is_valid_argument_buffer(int len) {
   
   return return_value;
 }
+
+
+
+int8_t ManuvrMsg::registerMessages(const MessageTypeDef defs[], int mes_count) {
+  for (int i = 0; i < mes_count; i++) {
+    ManuvrMsg::message_defs_extended.insert(&defs[i]);
+  }
+  return 0;
+}
+
+
+int8_t ManuvrMsg::registerMessage(MessageTypeDef* nu_def) {
+  return message_defs_extended.insert(nu_def);
+}
+
+
+int8_t ManuvrMsg::registerMessage(uint16_t tc, uint16_t tf, const char* lab, const unsigned char* forms, const char* sem) {
+  MessageTypeDef *nu_def = (MessageTypeDef*) malloc(sizeof(MessageTypeDef));
+  if (nu_def) {
+    nu_def->msg_type_code  = tc;
+    nu_def->msg_type_flags = tf;
+    nu_def->debug_label    = lab;
+    nu_def->arg_modes      = forms;
+    nu_def->arg_semantics  = sem;
+    return registerMessage(nu_def);
+  }
+  else {
+    // Misfortune.
+  }
+  return -1;
+}
+
 

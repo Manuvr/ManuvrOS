@@ -1,5 +1,5 @@
 /*
-File:   ManuvrComPort.cpp
+File:   ManuvrSerial.cpp
 Author: J. Ian Lindsay
 Date:   2015.03.17
 
@@ -30,11 +30,11 @@ Platforms that require it should be able to extend this driver for specific
 */
 
 
-#include "ManuvrComPort.h"
+#include "ManuvrSerial.h"
 #include "FirmwareDefs.h"
 #include "ManuvrOS/XenoSession/XenoSession.h"
 
-#include "StaticHub/StaticHub.h"
+#include <ManuvrOS/Kernel.h>
 
 
 #if defined (STM32F4XX)        // STM32F4
@@ -49,7 +49,10 @@ Platforms that require it should be able to extend this driver for specific
 #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
   
-#else   //Assuming a linux environment. Cross your fingers....
+#else
+  //Assuming a linux environment. Cross your fingers....
+  // TODO: Need a #define for LINUX32/64 that is set upstream so we don't have to cross our fingers.
+  //       ---J. Ian Lindsay   Thu Dec 03 03:33:35 MST 2015
   #include <cstdio>
   #include <stdlib.h>
   #include <unistd.h>
@@ -58,17 +61,20 @@ Platforms that require it should be able to extend this driver for specific
   #include <fstream>
   #include <iostream>
 
+
+  // TODO: This limits us to supporting a single instance. Same issue as in i2cAdapter.
+  //   A strategy for this needs to be formed.
+  //       ---J. Ian Lindsay   Thu Dec 03 03:31:04 MST 2015
   struct termios termAttr;
   struct sigaction serial_handler;
-  
-  volatile ManuvrComPort *active_tty = NULL;  // TODO: We need to be able to service many ports...
+  volatile ManuvrSerial *active_tty = NULL;  // TODO: We need to be able to service many ports...
   
   /*
   * In a linux environment, we need a function outside of this class to catch signals.
   * This is called when the serial port has something to say. 
   */
   void tty_signal_handler(int status) {
-    if (NULL != active_tty) ((ManuvrComPort*) active_tty)->read_port();
+    if (NULL != active_tty) ((ManuvrSerial*) active_tty)->read_port();
   }
 
 #endif
@@ -87,22 +93,22 @@ Platforms that require it should be able to extend this driver for specific
 /**
 * Constructor.
 */
-ManuvrComPort::ManuvrComPort(const char* tty_nom, int b_rate) {
+ManuvrSerial::ManuvrSerial(char* tty_path, int b_rate) {
   __class_initializer();
-  tty_name   = tty_nom;
-  baud_rate  = b_rate;
-  options    = 0;
+  _addr     = tty_path;
+  _baud_rate = b_rate;
+  _options  = 0;
 }
 
 
 /**
 * Constructor.
 */
-ManuvrComPort::ManuvrComPort(const char* tty_nom, int b_rate, uint32_t opts) {
+ManuvrSerial::ManuvrSerial(char* tty_path, int b_rate, uint32_t opts) {
   __class_initializer();
-  tty_name   = tty_nom;
-  baud_rate  = b_rate;
-  options    = opts;
+  _addr     = tty_path;
+  _baud_rate = b_rate;
+  _options  = opts;
 }
 
 
@@ -110,7 +116,7 @@ ManuvrComPort::ManuvrComPort(const char* tty_nom, int b_rate, uint32_t opts) {
 /**
 * Destructor
 */
-ManuvrComPort::~ManuvrComPort() {
+ManuvrSerial::~ManuvrSerial() {
 }
 
 
@@ -119,17 +125,11 @@ ManuvrComPort::~ManuvrComPort() {
 * This is here for compatibility with C++ standards that do not allow for definition and declaration
 *   in the header file. Takes no parameters, and returns nothing.
 */
-void ManuvrComPort::__class_initializer() {
-  __class_initializer();
-  xport_id           = ManuvrXport::TRANSPORT_ID_POOL++;
-  xport_state        = MANUVR_XPORT_STATE_UNINITIALIZED;
+void ManuvrSerial::__class_initializer() {
   pid_read_abort     = 0;
-  options            = 0;
-  port_number        = 0;
-  bytes_sent         = 0;
-  bytes_received     = 0;
-  read_timeout_defer = false;
-  session            = NULL;
+  _options           = 0;
+  _sock              = 0;
+  _pid               = 0;
     
   // Build some pre-formed Events.
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
@@ -137,47 +137,22 @@ void ManuvrComPort::__class_initializer() {
   read_abort_event.specific_target = (EventReceiver*) this;
   read_abort_event.callback        = (EventReceiver*) this;
   read_abort_event.priority        = 5;
-  //read_abort_event.addArg();  // Add our assigned transport ID to our pre-baked argument.
-
-  StaticHub *sh = StaticHub::getInstance();
-  scheduler = sh->fetchScheduler();
-  sh->fetchEventManager()->subscribe((EventReceiver*) this);  // Subscribe to the EventManager.
-  
-  pid_read_abort = scheduler->createSchedule(30, 0, false, this, &read_abort_event);
-  scheduler->disableSchedule(pid_read_abort);
+  read_abort_event.addArg(xport_id);  // Add our assigned transport ID to our pre-baked argument.
 }
 
 
 
 
 
-int8_t ManuvrComPort::provide_session(XenoSession* ses) {
-  if ((NULL != session) && (ses != session)) {
-    // If we are about to clobber an existing session, we need to free it
-    // first.
-    StaticHub::getInstance()->fetchEventManager()->unsubscribe(session);
-    delete session;
-    session = NULL;
-  }
-  session = ses;
-  //session->setVerbosity(verbosity);
-  set_xport_state(MANUVR_XPORT_STATE_HAS_SESSION);
-  return 0;
-}
+/****************************************************************************************************
+* Port I/O fxns                                                                                     *
+****************************************************************************************************/
 
-
-
-
-
-XenoSession* ManuvrComPort::getSession() {
-  return session;
-}
-
-
-
-int8_t ManuvrComPort::reset() {
+int8_t ManuvrSerial::init() {
   uint8_t xport_state_modifier = MANUVR_XPORT_STATE_CONNECTED | MANUVR_XPORT_STATE_LISTENING | MANUVR_XPORT_STATE_INITIALIZED;
-  if (verbosity > 4) local_log.concatf("Resetting port %s...\n", tty_name);
+  #ifdef __MANUVR_DEBUG
+  if (verbosity > 4) local_log.concatf("Resetting port %s...\n", _addr);
+  #endif
   bytes_sent         = 0;
   bytes_received     = 0;
 
@@ -190,15 +165,22 @@ int8_t ManuvrComPort::reset() {
   #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
     
   #else   //Assuming a linux environment. Cross your fingers....
+  if (_sock) {
+    close(_sock);
+  }
   
-  port_number = open(tty_name, options);
-  if (port_number == -1) {
-    if (verbosity > 1) local_log.concatf("Unable to open port: (%s)\n", tty_name);
+  _sock = open(_addr, _options);
+  if (_sock == -1) {
+    #ifdef __MANUVR_DEBUG
+      if (verbosity > 1) local_log.concatf("Unable to open port: (%s)\n", _addr);
+      Kernel::log(&local_log);
+    #endif
     unset_xport_state(xport_state_modifier);
-    StaticHub::log(&local_log);
     return -1;
   }
-  if (verbosity > 4) local_log.concatf("Opened port (%s) at %d\n", tty_name, baud_rate);
+    #ifdef __MANUVR_DEBUG
+  if (verbosity > 4) local_log.concatf("Opened port (%s) at %d\n", _addr, _baud_rate);
+    #endif
   set_xport_state(MANUVR_XPORT_STATE_INITIALIZED);
 
   serial_handler.sa_handler = tty_signal_handler;
@@ -206,12 +188,14 @@ int8_t ManuvrComPort::reset() {
   serial_handler.sa_restorer = NULL; 
   sigaction(SIGIO, &serial_handler, NULL);
 
-  int this_pid = getpid();
-  fcntl(port_number, F_SETOWN, this_pid);          // This process owns the port.
-  fcntl(port_number, F_SETFL, O_NDELAY | O_ASYNC);  // Read returns immediately.
+  _pid  = getpid();
+  fcntl(_sock, F_SETOWN, _pid);               // This process owns the port.
+  fcntl(_sock, F_SETFL, O_NDELAY | O_ASYNC);  // Read returns immediately.
 
-  tcgetattr(port_number, &termAttr);
-  cfsetspeed(&termAttr, baud_rate);
+  tcgetattr(_sock, &termAttr);
+  cfsetspeed(&termAttr, _baud_rate);
+  // TODO: These choices should come from _options. Find a good API to emulate.
+  //    ---J. Ian Lindsay   Thu Dec 03 03:43:12 MST 2015
   termAttr.c_cflag &= ~PARENB;          // No parity
   termAttr.c_cflag &= ~CSTOPB;          // 1 stop bit
   termAttr.c_cflag &= ~CSIZE;           // Enable char size mask
@@ -221,51 +205,51 @@ int8_t ManuvrComPort::reset() {
   termAttr.c_iflag &= ~(IXON | IXOFF | IXANY);
   termAttr.c_oflag &= ~OPOST;
   
-  if (tcsetattr(port_number, TCSANOW, &termAttr) == 0) {
+  if (tcsetattr(_sock, TCSANOW, &termAttr) == 0) {
     set_xport_state(xport_state_modifier);
-    if (verbosity > 6) local_log.concatf("Port opened, and handler bound.\n");
+    initialized(false);
+    #ifdef __MANUVR_DEBUG
+      if (verbosity > 6) local_log.concatf("Port opened, and handler bound.\n");
+    #endif //__MANUVR_DEBUG
   }
   else {
     unset_xport_state(xport_state_modifier);
-    if (verbosity > 1) local_log.concatf("Failed to tcsetattr...\n");
+    initialized(false);
+    #ifdef __MANUVR_DEBUG
+      if (verbosity > 1) local_log.concatf("Failed to tcsetattr...\n");
+    #endif
   }
-  #endif
+  #endif //LINUX
   
-  if (local_log.length() > 0) StaticHub::log(&local_log);
+  if (local_log.length() > 0) Kernel::log(&local_log);
   return 0;
 }
 
 
-// Given a transport event, returns true if we need to act.
-bool ManuvrComPort::event_addresses_us(ManuvrEvent *event) {
-  uint16_t temp_uint16;
-  
-  if (event->argCount()) {
-    if (0 == event->getArgAs(&temp_uint16)) {
-      if (temp_uint16 == xport_id) {
-        // The first argument is our ID.
-        return true;
-      }
-    }
-    // Either not the correct arg form, or not our ID.
-    return false;
-  }
-  
-  // No arguments implies no first argument.
-  // No first argument implies event is addressed to 'all transports'.
-  // 'all transports' implies 'true'. We need to care.
-  return true;
+
+int8_t ManuvrSerial::connect() {
+  // We're a serial port. If we are initialized, we are always connected.
+  return 0;
+}
+
+
+int8_t ManuvrSerial::listen() {
+  // We're a serial port. If we are initialized, we are always listening.
+  return 0;
+}
+
+
+int8_t ManuvrSerial::reset() {
+  // TODO:  Differentiate.   ---J. Ian Lindsay   Thu Dec 03 03:48:26 MST 2015
+  init();
+  return 0;
 }
 
 
 
-/****************************************************************************************************
-* Port I/O fxns                                                                                     *
-****************************************************************************************************/
-
-int8_t ManuvrComPort::read_port() {
+int8_t ManuvrSerial::read_port() {
   if (connected()) {
-    unsigned char *buf = (unsigned char *) alloca(512);
+    unsigned char *buf = (unsigned char *) alloca(512);  // TODO: Arbitrary. ---J. Ian Lindsay   Thu Dec 03 03:49:08 MST 2015
     #if defined (STM32F4XX)        // STM32F4
   
     #elif defined (__MK20DX128__)  // Teensy3
@@ -275,10 +259,10 @@ int8_t ManuvrComPort::read_port() {
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
       
     #else   //Assuming a linux environment. Cross your fingers....
-      int n = read(port_number, buf, 255);
+      int n = read(_sock, buf, 255);
       int total_read = n;
       while (n > 0) {
-        n = read(port_number, buf, 255);
+        n = read(_sock, buf, 255);
         total_read += n;
       }
   
@@ -288,18 +272,22 @@ int8_t ManuvrComPort::read_port() {
           session->bin_stream_rx(buf, total_read);
         }
         else {
-          ManuvrEvent *event = EventManager::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
-          event->addArg(port_number);
+          ManuvrEvent *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
+          event->addArg(_sock);
           StringBuilder *nu_data = new StringBuilder(buf, total_read);
           event->markArgForReap(event->addArg(nu_data), true);
-          EventManager::staticRaiseEvent(event);
+          Kernel::staticRaiseEvent(event);
         }
       }
     #endif
   }
-  else if (verbosity > 1) local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
+  else {
+    #ifdef __MANUVR_DEBUG
+    if (verbosity > 1) local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
+    #endif
+  }
   
-  if (local_log.length() > 0) StaticHub::log(&local_log);
+  if (local_log.length() > 0) Kernel::log(&local_log);
   return 0;
 }
 
@@ -308,9 +296,11 @@ int8_t ManuvrComPort::read_port() {
 * Does what it claims to do on linux.
 * Returns false on error and true on success.
 */
-bool ManuvrComPort::write_port(unsigned char* out, int out_len) {
-  if (port_number == -1) {
-    if (verbosity > 2) StaticHub::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to port: (%s)\n", tty_name);
+bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
+  if (_sock == -1) {
+    #ifdef __MANUVR_DEBUG
+    if (verbosity > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to port: (%s)\n", _addr);
+    #endif
     return false;
   }
   
@@ -324,17 +314,10 @@ bool ManuvrComPort::write_port(unsigned char* out, int out_len) {
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
       
     #else   //Assuming a linux environment. Cross your fingers....
-      return (out_len == (int) write(port_number, out, out_len));
+      return (out_len == (int) write(_sock, out, out_len));
     #endif
   }
   return false;
-}
-
-
-
-int8_t ManuvrComPort::sendBuffer(StringBuilder* buf) {
-  write_port(buf->string(), buf->length());
-  return 0;
 }
 
 
@@ -359,7 +342,7 @@ int8_t ManuvrComPort::sendBuffer(StringBuilder* buf) {
 *
 * @return a pointer to a string constant.
 */
-const char* ManuvrComPort::getReceiverName() {  return "ManuvrComPort";  }
+const char* ManuvrSerial::getReceiverName() {  return "ManuvrSerial";  }
 
 
 /**
@@ -367,20 +350,15 @@ const char* ManuvrComPort::getReceiverName() {  return "ManuvrComPort";  }
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
-void ManuvrComPort::printDebug(StringBuilder *temp) {
+void ManuvrSerial::printDebug(StringBuilder *temp) {
   if (temp == NULL) return;
-  
-  EventReceiver::printDebug(temp);
-  temp->concatf("--- xport_state    \t 0x%02x\n", xport_state);
-  temp->concatf("--- xport_id       \t 0x%04x\n", xport_id);
-  temp->concatf("--- bytes sent     \t %u\n", bytes_sent);
-  temp->concatf("--- bytes received \t %u\n\n", bytes_received);
-  temp->concatf("--- tty_name       \t %s\n", tty_name);
-  temp->concatf("--- connected      \t %s\n", (connected() ? "yes" : "no"));
-  temp->concatf("--- has session    \t %s\n\n", (hasSession() ? "yes" : "no"));
 
+  ManuvrXport::printDebug(temp);
+  temp->concatf("-- _addr           %s\n",     _addr);
+  temp->concatf("-- _options        0x%08x\n", _options);
+  temp->concatf("-- _sock           0x%08x\n", _sock);
+  temp->concatf("-- Baud            %d\n",     _baud_rate);
 }
-
 
 
 /**
@@ -389,14 +367,16 @@ void ManuvrComPort::printDebug(StringBuilder *temp) {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t ManuvrComPort::bootComplete() {
+int8_t ManuvrSerial::bootComplete() {
   EventReceiver::bootComplete();
   
+  // Tolerate 30ms of latency on the line before flushing the buffer.
+  pid_read_abort = __kernel->createSchedule(30, 0, false, this, &read_abort_event);
+  __kernel->disableSchedule(pid_read_abort);
+
   reset();
   return 1;
 }
-
-
 
 
 /**
@@ -406,14 +386,14 @@ int8_t ManuvrComPort::bootComplete() {
 *
 * Depending on class implementations, we might choose to handle the completed Event differently. We 
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
-*   ourselves and return DROP. By default, we will return REAP to instruct the EventManager
+*   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
 *   was crafted to not be in the heap in its own allocation, we will return DROP instead.
 *
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t ManuvrComPort::callback_proc(ManuvrEvent *event) {
+int8_t ManuvrSerial::callback_proc(ManuvrEvent *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
   int8_t return_value = event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -431,7 +411,8 @@ int8_t ManuvrComPort::callback_proc(ManuvrEvent *event) {
 }
 
 
-int8_t ManuvrComPort::notify(ManuvrEvent *active_event) {
+
+int8_t ManuvrSerial::notify(ManuvrEvent *active_event) {
   int8_t return_value = 0;
   
   switch (active_event->event_code) {
@@ -453,20 +434,28 @@ int8_t ManuvrComPort::notify(ManuvrEvent *active_event) {
         if (connected()) {
           StringBuilder* temp_sb;
           if (0 == active_event->getArgAs(&temp_sb)) {
+            #ifdef __MANUVR_DEBUG
             if (verbosity > 3) local_log.concatf("We about to print %d bytes to the com port.\n", temp_sb->length());
+            #endif
             write_port(temp_sb->string(), temp_sb->length());
           }
           
           //uint16_t xenomsg_id = session->nextMessage(&outbound_msg);
           //if (xenomsg_id) {
           //  if (write_port(outbound_msg.string(), outbound_msg.length()) ) {
-          //    if (verbosity > 2) local_log.concatf("There was a problem writing to %s.\n", tty_name);
+          //    if (verbosity > 2) local_log.concatf("There was a problem writing to %s.\n", _addr);
           //  }
           //  return_value++;
           //}
+          #ifdef __MANUVR_DEBUG
           else if (verbosity > 6) local_log.concat("Ignoring a broadcast that wasn't meant for us.\n");
+          #endif
         }
-        else if (verbosity > 3) local_log.concat("Session is chatting, but we don't appear to have a connection.\n");
+        else {
+          #ifdef __MANUVR_DEBUG
+          if (verbosity > 3) local_log.concat("Session is chatting, but we don't appear to have a connection.\n");
+          #endif
+        }
       }
       return_value++;
       break;
@@ -479,7 +468,9 @@ int8_t ManuvrComPort::notify(ManuvrEvent *active_event) {
     
     case MANUVR_MSG_XPORT_IDENTITY:
       if (event_addresses_us(active_event) ) {
+        #ifdef __MANUVR_DEBUG
         if (verbosity > 3) local_log.concat("The com port class received an event that was addressed to it, that is not handled yet.\n");
+        #endif
         active_event->printDebug(&local_log);
         return_value++;
       }
@@ -497,10 +488,7 @@ int8_t ManuvrComPort::notify(ManuvrEvent *active_event) {
       break;
   }
   
-  if (local_log.length() > 0) StaticHub::log(&local_log);
+  if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
 }
-
-
-
 

@@ -27,28 +27,28 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifndef MANUVRABLE_GPIO_H
   #define MANUVRABLE_GPIO_H
 
-  #include "StaticHub/StaticHub.h"
+  #include <ManuvrOS/Kernel.h>
 
 
-class ManuvrableGPIO : public EventReceiver {
-
-  public:
-    ManuvrableGPIO();
-    ~ManuvrableGPIO();
-
-
-    /* Overrides from EventReceiver */
-    void printDebug(StringBuilder*);
-    const char* getReceiverName();
-    int8_t notify(ManuvrEvent*);
-    int8_t callback_proc(ManuvrEvent *);
+  class ManuvrableGPIO : public EventReceiver {
+  
+    public:
+      ManuvrableGPIO();
+      ~ManuvrableGPIO();
 
 
-  protected:
-    int8_t bootComplete();
-
-
-  private:
-};
+      /* Overrides from EventReceiver */
+      void printDebug(StringBuilder*);
+      const char* getReceiverName();
+      int8_t notify(ManuvrEvent*);
+      int8_t callback_proc(ManuvrEvent *);
+  
+  
+    protected:
+      int8_t bootComplete();
+  
+  
+    private:
+  };
 
 #endif // MANUVRABLE_GPIO_H

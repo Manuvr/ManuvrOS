@@ -3,77 +3,78 @@ File:   FirmwareDefs.h
 Author: J. Ian Lindsay
 Date:   2015.03.01
 
-This is one of the files that the application author is required to provide. This is where definition of
-  (application or device)-specific event codes ought to go. We also define some fields that will be used
-  during communication with other devices, so some things here are mandatory.
 
-This is an example file for building mock firmware on a Raspberry Pi.
+This is one of the files that the application author is required to provide. 
+This is where definition of (application or device)-specific parameters ought to go.
 
+This is an example file for building firmware on linux. Anticipated target is a Raspi.
+  but that shouldn't matter too much. These settings are only typically relevant for
+  reasons of memory-constraint, threading model (if any), or specific features that
+  this hardware can support.
 */
 
 #ifndef __FIRMWARE_DEFS_H
 #define __FIRMWARE_DEFS_H
 
-/*
-* Macros we will use in scattered places...
-*/
-#ifndef max
-    #define max( a, b ) ( ((a) > (b)) ? (a) : (b) )
-#endif
-
-#ifndef min
-    #define min( a, b ) ( ((a) < (b)) ? (a) : (b) )
-#endif
-
 
 /*
-* These flags are meant to be sent during session setup. We need to 
-*/
-#define DEVICE_FLAG_AUTHORITATIVE_TIME          0x00000001  // Devices that can provide accurate time.
-#define DEVICE_FLAG_INTERNET_ACCESS             0x00000002  // Can this firmware potentially provide net access?
-#define DEVICE_FLAG_MESSAGE_RELAY               0x00000004  // Can we act as a message relay?
-
-
-/*
-* These are required fields.
-*
 * PROTOCOL_MTU is required for constraining communication length due to memory restrictions at
 *   one-or-both sides. Since the protocol currently supports up to (2^24)-1 bytes in a single transaction,
 *   a microcontroller would want to limit its counter-party's use of precious RAM. PROTOCOL_MTU, therefore,
 *   determines the effective maximum packet size for this device, and by extension, the sessions in which
 *   it participates.
 */
-#define PROTOCOL_MTU              16777215      // See MTU notes above....
-#define VERSION_STRING            "0.0.1"       // We should be able to communicate version so broken behavior can be isolated.
-#define HW_VERSION_STRING         "1"           // We are strictly-software, but we will report as hardware.
-#define IDENTITY_STRING           "MHBDebug"    // This will select Manuvr's debug engine in MHB.
-#define PROTOCOL_VERSION          0x00000001    // The protocol version we are using.
 
+
+/****************************************************************************************************
+* Required fields...                                                                                *
+****************************************************************************************************/
+
+/*
+* Particulars of this platform.
+*/
+#define PLATFORM_RNG_CARRY_CAPACITY       10    // How many random numbers should be cached? Must be > 0. 
+#define PROTOCOL_MTU                  655536    // See MTU notes above....
+
+/*
+* Particulars of this Manuvrable.
+*/
+// This is the string that identifies this Manuvrable to other Manuvrables. In MHB's case, this
+//   will select the mEngine.
+#define IDENTITY_STRING           "MHBDebug"    // This will select Manuvr's debug engine in MHB.
+
+// This would be the version of the Manuvrable's firmware (this program).
+#define VERSION_STRING               "0.0.1"
+
+// Hardware is versioned. Manuvrables that are strictly-software should say -1 here.
+#define HW_VERSION_STRING               "-1"
+
+// The version of Manuvr's protocol we are using.
+#define PROTOCOL_VERSION                   1
+
+
+/*
+* Kernel options.
+*/
+#define EVENT_MANAGER_PREALLOC_COUNT      32    // How large a preallocation buffer should we keep?
+
+
+/****************************************************************************************************
+* Optional fields...                                                                                *
+****************************************************************************************************/
 
 #define EXTENDED_DETAIL_STRING    "RasPiBuild"  // Optional. User-defined.
 
+// We have console support on linux. On a bare-metal build, this would mean that we've designated
+//   a serial port (or some other transport) as a target for plaintext interaction. This is 
+//   typically only useful for debugging firmware.
+// If you don't want console support, comment the line below.
+// NOTE: If your Makefile passes the __MANUVR_DEBUG option, this will be enabled regardless.
+#define __MANUVR_CONSOLE_SUPPORT
 
-
-/* Codes that are specific to the Raspi build. */
-
-
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-// Function prototypes
-int main(int argc, char *argv[]);
-volatile void jumpToBootloader(void);
-volatile void reboot(void);
-
-unsigned long millis(void);
-unsigned long micros(void);
-
-
-#ifdef __cplusplus
-}
-#endif
+// If another Manuverable asks, we will send them semantic definitions for our messages.
+// Comment the line below if your platform is too-small to support these, or you don't intend
+//   your Manuvrable to be used by a human directly.
+#define __ENABLE_MSG_SEMANTICS
 
 #endif

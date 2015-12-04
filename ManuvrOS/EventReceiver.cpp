@@ -1,7 +1,4 @@
-#include "EventManager.h"
-
-#include "StaticHub/StaticHub.h"
-
+#include <ManuvrOS/Kernel.h>
 
 
 /**
@@ -9,7 +6,7 @@
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void EventReceiver::__class_initializer() {
-  scheduler = NULL;
+  __kernel  = NULL;
   verbosity = DEFAULT_CLASS_VERBOSITY;
   boot_completed = false;
 }
@@ -38,8 +35,10 @@ int8_t EventReceiver::setVerbosity(int8_t nu_verbosity) {
 	switch (nu_verbosity) { 
     case LOG_DEBUG:   /* 7 - debug-level messages */
     case LOG_INFO:    /* 6 - informational */
+      #ifdef __MANUVR_DEBUG
       local_log.concatf("%s:\tVerbosity set to %d\n", getReceiverName(), nu_verbosity);
-      StaticHub::log(&local_log);
+      Kernel::log(&local_log);
+      #endif
     case LOG_NOTICE:  /* 5 - normal but significant condition */
     case LOG_WARNING: /* 4 - warning conditions */
     case LOG_ERR:     /* 3 - error conditions */
@@ -49,10 +48,12 @@ int8_t EventReceiver::setVerbosity(int8_t nu_verbosity) {
       verbosity = nu_verbosity;
       return 1;
     default:
+      #ifdef __MANUVR_DEBUG
       if (verbosity > 4) {
         local_log.concatf("Illegal verbosity value.\n", getReceiverName(), nu_verbosity);
-        StaticHub::log(&local_log);
+        Kernel::log(&local_log);
       }
+      #endif
       return -1;
   }
 }
@@ -71,8 +72,10 @@ int8_t EventReceiver::setVerbosity(ManuvrEvent* active_event) {
   if (MANUVR_MSG_SYS_LOG_VERBOSITY != active_event->event_code) return -1;
   switch (active_event->argCount()) {
     case 0:
+      #ifdef __MANUVR_DEBUG
       local_log.concatf("%s:\tVerbosity is %d\n", getReceiverName(), verbosity);
-      StaticHub::log(&local_log);
+      Kernel::log(&local_log);
+      #endif
       return 1;
     case 1:
       {
@@ -93,11 +96,13 @@ int EventReceiver::purgeLogs() {
   int lll = local_log.length();
   if (lll > 0) {
     if (verbosity > 4) {
-      StaticHub::log(&local_log);
+      Kernel::log(&local_log);
     }
     local_log.clear();
+    #ifdef __MANUVR_DEBUG
     local_log.concatf("%s GCd %d bytes.\n", getReceiverName(), lll);  // TODO: This never happens.
-    StaticHub::log(&local_log);
+    Kernel::log(&local_log);
+    #endif
   }
   return return_value;
 }
@@ -118,11 +123,13 @@ void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
       printDebug(&local_log);
       break;
     default:
+      #ifdef __MANUVR_DEBUG
       local_log.concatf("%s: No case in procDirectDebugInstruction().\n", getReceiverName());
+      #endif
       break;
   }
   
-  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 #endif
 }
 
@@ -134,7 +141,7 @@ void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
 int8_t EventReceiver::raiseEvent(ManuvrEvent* event) {
   if (event != NULL) {
     event->callback = (EventReceiver*) this;
-    return EventManager::staticRaiseEvent(event);
+    return Kernel::staticRaiseEvent(event);
   }
   else {
     return -1;
@@ -146,7 +153,7 @@ int8_t EventReceiver::raiseEvent(ManuvrEvent* event) {
 /* Override for lazy programmers. */
 void EventReceiver::printDebug() {
   printDebug(&local_log);
-  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 
 
@@ -156,7 +163,7 @@ void EventReceiver::printDebug() {
 */
 void EventReceiver::printDebug(StringBuilder *output) {
   output->concatf("\n==< %s >===================================\n", getReceiverName());
-  output->concatf("--- bootstrap_completed \t %s\n--- scheduler present?  \t %s\n", (boot_completed) ? "yes" : "no", (NULL != scheduler) ? "yes" : "no");
+  output->concatf("-- bootstrap_completed \t %s\n-- kernel present? \t\t %s\n", (boot_completed) ? "yes" : "no", (NULL != __kernel) ? "yes" : "no");
 }
 
 
@@ -186,10 +193,7 @@ void EventReceiver::printDebug(StringBuilder *output) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t EventReceiver::bootComplete() {
-  StaticHub *sh = StaticHub::getInstance();
-  if (NULL != sh) {
-    scheduler = sh->fetchScheduler();
-  }
+  __kernel = Kernel::getInstance();
   boot_completed = true;
   return 1;
 }
@@ -202,7 +206,7 @@ int8_t EventReceiver::bootComplete() {
 *
 * Depending on class implementations, we might choose to handle the completed Event differently. We 
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
-*   ourselves and return DROP. By default, we will return REAP to instruct the EventManager
+*   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
 *   was crafted to not be in the heap in its own allocation, we will return DROP instead.
 *

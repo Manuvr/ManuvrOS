@@ -118,7 +118,7 @@ void TMP006::operationCompleteCallback(I2CQueuedOperation* completed) {
       case TMP006_REG_VOBJ:
       case TMP006_REG_TAMB:
         if (SENSOR_ERROR_NO_ERROR == check_data()) {
-          EventManager::raiseEvent(MANUVR_MSG_SENSOR_TMP006, NULL);
+          Kernel::raiseEvent(MANUVR_MSG_SENSOR_TMP006, NULL);
         }
         break;
         

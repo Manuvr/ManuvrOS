@@ -1,8 +1,6 @@
 #include "FirmwareDefs.h"
-#include "EventManager.h"
-
-#include "StaticHub/StaticHub.h"
-
+#include <ManuvrOS/Kernel.h>
+#include <ManuvrOS/Platform/Platform.h>
 
 
 /****************************************************************************************************
@@ -15,8 +13,60 @@
 *
 * Static members and initializers should be located here. Initializers first, functions second.
 ****************************************************************************************************/
-EventManager* EventManager::INSTANCE = NULL;
-PriorityQueue<ManuvrEvent*> EventManager::isr_event_queue;
+Kernel* Kernel::INSTANCE = NULL;
+PriorityQueue<ManuvrEvent*> Kernel::isr_event_queue;
+
+const unsigned char MSG_ARGS_EVENTRECEIVER[] = {SYS_EVENTRECEIVER_FM, 0, 0}; 
+const unsigned char MSG_ARGS_NO_ARGS[] = {0}; 
+
+const MessageTypeDef message_defs[] = {
+  {  MANUVR_MSG_SYS_BOOT_COMPLETED   , 0x0000,               "BOOT_COMPLETED"   , MSG_ARGS_NO_ARGS }, // Raised when bootstrap is finished.
+
+  {  MANUVR_MSG_SYS_ADVERTISE_SRVC   , 0x0000,               "ADVERTISE_SRVC"       , MSG_ARGS_EVENTRECEIVER }, // A system service might feel the need to advertise it's arrival.
+  {  MANUVR_MSG_SYS_RETRACT_SRVC     , 0x0000,               "RETRACT_SRVC"         , MSG_ARGS_EVENTRECEIVER }, // A system service sends this to tell others to stop using it.
+
+  {  MANUVR_MSG_SYS_BOOTLOADER       , MSG_FLAG_EXPORTABLE,  "SYS_BOOTLOADER"       , MSG_ARGS_NO_ARGS }, // Reboots into the STM32F4 bootloader.
+  {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,  "SYS_REBOOT"           , MSG_ARGS_NO_ARGS }, // Reboots into THIS program.
+  {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN"         , MSG_ARGS_NO_ARGS }, // Raised when the system is pending complete shutdown.
+
+  {  MANUVR_MSG_SCHED_ENABLE_BY_PID  , 0x0000,               "SCHED_ENABLE_BY_PID"  , MSG_ARGS_NO_ARGS }, // The given PID is being enabled.
+  {  MANUVR_MSG_SCHED_DISABLE_BY_PID , 0x0000,               "SCHED_DISABLE_BY_PID" , MSG_ARGS_NO_ARGS }, // The given PID is being disabled.
+  {  MANUVR_MSG_SCHED_PROFILER_START , 0x0000,               "SCHED_PROFILER_START" , MSG_ARGS_NO_ARGS }, // We want to profile the given PID.
+  {  MANUVR_MSG_SCHED_PROFILER_STOP  , 0x0000,               "SCHED_PROFILER_STOP"  , MSG_ARGS_NO_ARGS }, // We want to stop profiling the given PID.
+  {  MANUVR_MSG_SCHED_PROFILER_DUMP  , 0x0000,               "SCHED_PROFILER_DUMP"  , MSG_ARGS_NO_ARGS }, // Dump the profiler data for all PIDs (no args) or given PIDs.
+  {  MANUVR_MSG_SCHED_DUMP_META      , 0x0000,               "SCHED_DUMP_META"      , MSG_ARGS_NO_ARGS }, // Tell the Scheduler to dump its meta metrics.
+  {  MANUVR_MSG_SCHED_DUMP_SCHEDULES , 0x0000,               "SCHED_DUMP_SCHEDULES" , MSG_ARGS_NO_ARGS }, // Tell the Scheduler to dump schedules.
+  {  MANUVR_MSG_SCHED_WIPE_PROFILER  , 0x0000,               "SCHED_WIPE_PROFILER"  , MSG_ARGS_NO_ARGS }, // Tell the Scheduler to wipe its profiler data. Pass PIDs to be selective.
+  {  MANUVR_MSG_SCHED_DEFERRED_EVENT , 0x0000,               "SCHED_DEFERRED_EVENT" , MSG_ARGS_NO_ARGS }, // Tell the Scheduler to broadcast the attached Event so many ms into the future.
+                                   
+  /* 
+    For messages that have arguments, we have the option of defining inline lables for each parameter.
+    This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
+    compile time.
+  */
+  #if defined (__ENABLE_MSG_SEMANTICS)
+  #else
+  #endif
+};
+
+
+/*
+* All external access to Kernel's non-static members should obtain it's reference via this fxn...
+*   Note that services that are dependant on us during the bootstrap phase should have a reference
+*   passed into their constructors, rather than forcing them to call this and risking an infinite 
+*   recursion.
+*/
+Kernel* Kernel::getInstance() {
+  if (INSTANCE == NULL) {
+    // This is a valid means of instantiating the kernel. Typically, user code
+    //   would have the Kernel on the stack, but if they want to live in the heap, 
+    //   that's fine by us. Oblige...
+    Kernel::INSTANCE = new Kernel();
+  }
+  // And that is how the singleton do...
+  return (Kernel*) Kernel::INSTANCE;
+}
+
 
 
 /****************************************************************************************************
@@ -31,19 +81,19 @@ PriorityQueue<ManuvrEvent*> EventManager::isr_event_queue;
 /**
 * Vanilla constructor.
 */
-EventManager::EventManager() {
+Kernel::Kernel() {
   __class_initializer();
-  INSTANCE           = this;
-  current_event      = NULL;
-  setVerbosity((int8_t) 0);  // TODO: Why does this crash ViamSonus?
-  profiler(false);
+  INSTANCE           = this;  // For singleton reference. TODO: Will not parallelize.
+  __kernel           = this;  // We extend EventReceiver. So we populate this.
 
-  max_queue_depth     = 0;   
+  max_queue_depth     = 0;
   total_loops         = 0;
   total_events        = 0;
   total_events_dead   = 0;
   micros_occupied     = 0;
   max_events_per_loop = 2;
+
+  current_event      = NULL;
 
   for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
     /* We carved out a space in our allocation for a pool of events. Ideally, this would be enough
@@ -54,13 +104,114 @@ EventManager::EventManager() {
     _preallocation_pool[i].returnToPrealloc(true);
     preallocated.insert(&_preallocation_pool[i]);
   }
+
+  subscribe(this);           // We subscribe ourselves to events.
+  setVerbosity((int8_t) 1);  // TODO: Do this to move verbosity from 0 to some default level.
+  profiler(false);           // Turn off the profiler.
+
+  ManuvrMsg::registerMessages(message_defs, sizeof(message_defs) / sizeof(MessageTypeDef));
+  subscribe((EventReceiver*) &__scheduler);    // Subscribe the Scheduler.
+
+  platformPreInit();    // Start the pre-bootstrap platform-specific machinery.
 }
 
 /**
 * Destructor. Should probably never be called.
 */
-EventManager::~EventManager() {
+Kernel::~Kernel() {
 }
+
+
+
+/****************************************************************************************************
+* Logging members...                                                                                *
+****************************************************************************************************/
+StringBuilder Kernel::log_buffer;
+
+/*
+* Logger pass-through functions. Please mind the variadics...
+*/
+volatile void Kernel::log(int severity, const char *str) {
+  if (!INSTANCE->verbosity) return;
+  log_buffer.concat(str);
+}
+
+volatile void Kernel::log(char *str) {
+  if (!INSTANCE->verbosity) return;
+  log_buffer.concat(str);
+}
+
+volatile void Kernel::log(const char *str) {
+  if (!INSTANCE->verbosity) return;
+  log_buffer.concat(str);
+}
+
+volatile void Kernel::log(const char *fxn_name, int severity, const char *str, ...) {
+  if (!INSTANCE->verbosity) return;
+  log_buffer.concatf("%d  %s:\t", severity, fxn_name);
+  va_list marker;
+  
+  va_start(marker, str);
+  log_buffer.concatf(str, marker);
+  va_end(marker);
+}
+
+volatile void Kernel::log(StringBuilder *str) {
+  if (!INSTANCE->verbosity) return;
+  log_buffer.concatHandoff(str);
+}
+
+
+
+
+/****************************************************************************************************
+* Kernel operation...                                                                               *
+****************************************************************************************************/
+int8_t Kernel::bootstrap() {
+  platformInit();    // Start the platform-specific machinery.
+
+  ManuvrEvent *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
+  boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
+  raiseEvent(MANUVR_MSG_SYS_BOOT_COMPLETED, NULL);
+  return 0;
+}
+
+
+/****************************************************************************************************
+* Big pile of ugly..........                                                                        *
+* Big pile of ugly..........                    These are the things left over                      *
+* Big pile of ugly..........                    from StaticHub. They need to                        *
+* Big pile of ugly..........                    justify their existance or DIAF.                    *
+* Big pile of ugly..........                                                                        *
+* Big pile of ugly..........                       ---J. Ian Lindsay   Tue Dec 01 01:28:09 MST 2015 *
+* Big pile of ugly..........                                                                        *
+****************************************************************************************************/
+
+StringBuilder usb_rx_buffer;    // Was private in StaticHub
+StringBuilder last_user_input;  // Was private in StaticHub
+
+
+/*
+* This is called from the USB peripheral. It is called when the short static
+* character array that forms the USB rx buffer is either filled up, or we see
+* a new-line character on the wire.
+*/
+void Kernel::feedUSBBuffer(uint8_t *buf, int len, bool terminal) {
+  usb_rx_buffer.concat(buf, len);
+
+  if (terminal) {
+    // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
+    // run in idle time.
+    ManuvrEvent* event = returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
+    //TODO: Crashes after eating StaticHub. event->specific_target = (EventReceiver*) this;
+    Kernel::staticRaiseEvent(event);
+  }
+}
+
+/****************************************************************************************************
+* End of big pile of ugly                                                                           *
+****************************************************************************************************/
+
 
 
 
@@ -76,14 +227,14 @@ EventManager::~EventManager() {
 * @param  client  The class that will be listening for Events.
 * @return 0 on success and -1 on failure.
 */
-int8_t EventManager::subscribe(EventReceiver *client) {
+int8_t Kernel::subscribe(EventReceiver *client) {
   if (NULL == client) return -1;
 
   client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
   int8_t return_value = subscribers.insert(client);
   if (boot_completed) {
     // This subscriber is joining us after bootup. Call its bootComplete() fxn to cause it to init.
-    //client->notify(returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED));
+    client->notify(returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED));
   }
   return ((return_value >= 0) ? 0 : -1);
 }
@@ -100,7 +251,7 @@ int8_t EventManager::subscribe(EventReceiver *client) {
 * @param  priority  The priority of the client in the Event queue.
 * @return 0 on success and -1 on failure.
 */
-int8_t EventManager::subscribe(EventReceiver *client, uint8_t priority) {
+int8_t Kernel::subscribe(EventReceiver *client, uint8_t priority) {
   if (NULL == client) return -1;
 
   client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
@@ -119,13 +270,13 @@ int8_t EventManager::subscribe(EventReceiver *client, uint8_t priority) {
 * @param  client    The class that will no longer be listening for Events.
 * @return 0 on success and -1 on failure.
 */
-int8_t EventManager::unsubscribe(EventReceiver *client) {
+int8_t Kernel::unsubscribe(EventReceiver *client) {
   if (NULL == client) return -1;
   return (subscribers.remove(client) ? 0 : -1);
 }
 
 
-EventReceiver* EventManager::getSubscriberByName(const char* search_str) {
+EventReceiver* Kernel::getSubscriberByName(const char* search_str) {
   EventReceiver* working;
   for (int i = 0; i < subscribers.size(); i++) {
     working = subscribers.get(i);
@@ -149,7 +300,7 @@ EventReceiver* EventManager::getSubscriberByName(const char* search_str) {
 * @param  cb    An optional callback pointer to be called when this event is finished.
 * @return -1 on failure, and 0 on success.
 */
-int8_t EventManager::raiseEvent(uint16_t code, EventReceiver* cb) {
+int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* cb) {
   int8_t return_value = 0;
   
   // We are creating a new Event. Try to snatch a prealloc'd one and fall back to malloc if needed.
@@ -170,9 +321,11 @@ int8_t EventManager::raiseEvent(uint16_t code, EventReceiver* cb) {
   }
   else {
     if (INSTANCE->verbosity > 4) {
+      #ifdef __MANUVR_DEBUG
       StringBuilder output("raiseEvent():\tvalidate_insertion() failed:\n");
       output.concat(ManuvrMsg::getMsgTypeString(code));
-      StaticHub::log(&output);
+      Kernel::log(&output);
+      #endif
       INSTANCE->insertion_denials++;
     }
     INSTANCE->reclaim_event(nu);
@@ -185,13 +338,13 @@ int8_t EventManager::raiseEvent(uint16_t code, EventReceiver* cb) {
 
 /**
 * Used to add a pre-formed event to the idle queue. Use this when a sophisticated event
-*   needs to be formed elsewhere and passed in. EventManager will only insert it into the
+*   needs to be formed elsewhere and passed in. Kernel will only insert it into the
 *   queue in this case.
 *
 * @param   event  The event to be inserted into the idle queue.
 * @return  -1 on failure, and 0 on success.
 */
-int8_t EventManager::staticRaiseEvent(ManuvrEvent* event) {
+int8_t Kernel::staticRaiseEvent(ManuvrEvent* event) {
   int8_t return_value = 0;
   if (0 == INSTANCE->validate_insertion(event)) {
     INSTANCE->event_queue.insert(event, event->priority);
@@ -201,11 +354,11 @@ int8_t EventManager::staticRaiseEvent(ManuvrEvent* event) {
   }
   else {
     if (INSTANCE->verbosity > 4) {
-      //local_log.concatf("Static: An incoming event 0x%04x failed validate_insertion(). Trapping it...\n", code);
-      //StaticHub::log(&local_log);
+      #ifdef __MANUVR_DEBUG
       StringBuilder output("staticRaiseEvent():\tvalidate_insertion() failed:\n");
       event->printDebug(&output);;
-      StaticHub::log(&output);
+      Kernel::log(&output);
+      #endif
       INSTANCE->insertion_denials++;
     }
     INSTANCE->reclaim_event(event);
@@ -217,13 +370,13 @@ int8_t EventManager::staticRaiseEvent(ManuvrEvent* event) {
 
 /**
 * Used to add a pre-formed event to the idle queue. Use this when a sophisticated event
-*   needs to be formed elsewhere and passed in. EventManager will only insert it into the
+*   needs to be formed elsewhere and passed in. Kernel will only insert it into the
 *   queue in this case.
 *
 * @param   event  The event to be removed from the idle queue.
 * @return  true if the given event was aborted, false otherwise.
 */
-bool EventManager::abortEvent(ManuvrEvent* event) {
+bool Kernel::abortEvent(ManuvrEvent* event) {
   if (!INSTANCE->event_queue.remove(event)) {
     // Didn't find it? Check  the isr_queue...
     if (!INSTANCE->isr_event_queue.remove(event)) {
@@ -234,23 +387,15 @@ bool EventManager::abortEvent(ManuvrEvent* event) {
 }
 
 
-// TODO: It would be bettter to put a semaphore on the evvent_queue and set it in the idel loop.
+// TODO: It would be bettter to put a semaphore on the event_queue and set it in the idle loop.
 //       That way, we could check for it here, and have the (probable) possibility of not incurring
 //       the cost for merging these two queues if we don't have to.
 //             ---J. Ian Lindsay   Fri Jul 03 16:54:14 MST 2015
-int8_t EventManager::isrRaiseEvent(ManuvrEvent* event) {
+int8_t Kernel::isrRaiseEvent(ManuvrEvent* event) {
   int return_value = -1;
-#ifdef STM32F4XX
-  asm volatile ("cpsie i");
-#elif defined(ARDUINO)
-  cli();
-#endif
+  maskableInterrupts(false);
   return_value = isr_event_queue.insertIfAbsent(event, event->priority);
-#ifdef STM32F4XX
-  asm volatile ("cpsid i");
-#elif defined(ARDUINO)
-  sei();
-#endif
+  maskableInterrupts(true);
   return return_value;
 }
 
@@ -261,13 +406,13 @@ int8_t EventManager::isrRaiseEvent(ManuvrEvent* event) {
 * Factory method. Returns a preallocated Event.
 * After we return the event, we lose track of it. So if the caller doesn't ever
 *   call raiseEvent(), the Event we return will become a memory leak.
-* The event we retun will have a callback field populated with a ref to EventManager.
+* The event we retun will have a callback field populated with a ref to Kernel.
 *   So if a caller needs their own reference in that slot, caller will need to do it.
 *
 * @param  code  The desired identity code of the event.
 * @return A pointer to the prepared event. Will not return NULL unless we are out of memory.
 */
-ManuvrEvent* EventManager::returnEvent(uint16_t code) {
+ManuvrEvent* Kernel::returnEvent(uint16_t code) {
   // We are creating a new Event. Try to snatch a prealloc'd one and fall back to malloc if needed.
   ManuvrEvent* return_value = INSTANCE->preallocated.dequeue();
   if (return_value == NULL) {
@@ -292,7 +437,7 @@ ManuvrEvent* EventManager::returnEvent(uint16_t code) {
 * @param event The inbound event that we need to evaluate.
 * @return 0 if the event is good-to-go. Otherwise, an appropriate failure code.
 */
-int8_t EventManager::validate_insertion(ManuvrEvent* event) {
+int8_t Kernel::validate_insertion(ManuvrEvent* event) {
   if (NULL == event) return -1;                                   // No NULL events.
   if (MANUVR_MSG_UNDEFINED == event->event_code) {
     return -2;  // No undefined events.
@@ -318,10 +463,6 @@ int8_t EventManager::validate_insertion(ManuvrEvent* event) {
 }
 
 
-bool EventManager::containsPreformedEvent(ManuvrEvent* event) {
-  return event_queue.contains(event);
-}
-
 
 
 /**
@@ -330,14 +471,14 @@ bool EventManager::containsPreformedEvent(ManuvrEvent* event) {
 *
 * @param active_event The event that has reached the end of its life-cycle.
 */
-void EventManager::reclaim_event(ManuvrEvent* active_event) {
+void Kernel::reclaim_event(ManuvrEvent* active_event) {
   if (NULL == active_event) {
     return;
   }
   bool reap_current_event = active_event->eventManagerShouldReap();
   //if (verbosity > 5) {
   //  local_log.concatf("We will%s be reaping %s.\n", (reap_current_event ? "":" not"), active_event->getMsgTypeString());
-  //  StaticHub::log(&local_log);
+  //  Kernel::log(&local_log);
   //}
 
   if (reap_current_event) {                   // If we are to reap this event...
@@ -353,12 +494,48 @@ void EventManager::reclaim_event(ManuvrEvent* active_event) {
       preallocated.insert(active_event);      // ...and return it to the preallocate queue.
     }                                         // Otherwise, we let it drop and trust some other class is managing it.
     //else {
-    //  if (verbosity > 6) local_log.concat("EventManager::reclaim_event(): Doing nothing. Hope its managed elsewhere.\n");
+    //  if (verbosity > 6) local_log.concat("Kernel::reclaim_event(): Doing nothing. Hope its managed elsewhere.\n");
     //}
   }
   
-  if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
+
+
+
+
+// This is the splice into v2's style of event handling (callaheads).
+int8_t Kernel::procCallAheads(ManuvrEvent *active_event) {
+  int8_t return_value = 0;
+  PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[active_event->event_code];
+  if (NULL != ca_queue) {
+    listenerFxnPtr current_fxn;
+    for (int i = 0; i < ca_queue->size(); i++) {
+      current_fxn = ca_queue->recycle();  // TODO: This is ugly for many reasons.
+      if (current_fxn(active_event)) {
+        return_value++;
+      }
+    }
+  }
+  return return_value;
+}
+
+// This is the splice into v2's style of event handling (callbacks).
+int8_t Kernel::procCallBacks(ManuvrEvent *active_event) {
+  int8_t return_value = 0;
+  PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[active_event->event_code];
+  if (NULL != cb_queue) {
+    listenerFxnPtr current_fxn;
+    for (int i = 0; i < cb_queue->size(); i++) {
+      current_fxn = cb_queue->recycle();  // TODO: This is ugly for many reasons.
+      if (current_fxn(active_event)) {
+        return_value++;
+      }
+    }
+  }
+  return return_value;
+}
+
 
 
 
@@ -373,7 +550,7 @@ void EventManager::reclaim_event(ManuvrEvent* active_event) {
 *
 * @return the number of events processed, or a negative value on some failure.
 */
-int8_t EventManager::procIdleFlags() {
+int8_t Kernel::procIdleFlags() {
   uint32_t profiler_mark   = micros();
   uint32_t profiler_mark_0 = 0;   // Profiling requests...
   uint32_t profiler_mark_1 = 0;   // Profiling requests...
@@ -385,11 +562,7 @@ int8_t EventManager::procIdleFlags() {
   ManuvrEvent *active_event = NULL;  // Our short-term focus.
   uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
 
-  #ifdef STM32F4XX
-    asm volatile ("cpsie i");
-  #elif defined(ARDUINO)
-    cli();
-  #endif
+  globalIRQDisable();
   while (isr_event_queue.size() > 0) {
     active_event = isr_event_queue.dequeue();
 
@@ -398,11 +571,7 @@ int8_t EventManager::procIdleFlags() {
     }
     else reclaim_event(active_event);
   }
-  #ifdef STM32F4XX
-    asm volatile ("cpsid i");
-  #elif defined(ARDUINO)
-    sei();
-  #endif
+  globalIRQEnable();
     
   active_event = NULL;   // Pedantic...
   
@@ -414,94 +583,29 @@ int8_t EventManager::procIdleFlags() {
     current_event = active_event;
     
     // Chat and measure.
+    #ifdef __MANUVR_DEBUG
     if (verbosity >= 5) local_log.concatf("Servicing: %s\n", active_event->getMsgTypeString());
+    #endif
     if (profiler_enabled) profiler_mark_0 = micros();
 
-    // LOUD REMINDER! The switch() block below is the EventManager reacting to Events. Not related to
-    //   Event processing. Because this class extends EventReceiver, we should technically call its own
-    //   notify(), but with no need to put itself in its own subscriber queue. That would be puritanical
-    //   but silly.
-    // Instead, we'll take advantage of the position by treating EventManager as if it were the head and
-    //   tail of the subscriber queue.     ---J. Ian Lindsay 2014.11.05
-    if (active_event->callback != (EventReceiver*) this) {    // Don't react to our own internally-generated events.
-
-      switch (active_event->event_code) {
-        case MANUVR_MSG_SELF_DESCRIBE:
-          // Field order: 1 uint32, 4 required null-terminated strings, 1 optional.
-          // uint32:     MTU                (in terms of bytes)
-          // String:     Protocol version   (IE: "0.0.1")
-          // String:     Identity           (IE: "Digitabulum") Generally the name of the Manuvrable.
-          // String:     Firmware version   (IE: "1.5.4")
-          // String:     Hardware version   (IE: "4")
-          // String:     Extended detail    (User-defined)
-          if (0 == active_event->args.size()) {
-            // We are being asked to self-describe.
-            active_event->addArg((uint32_t)    PROTOCOL_MTU);
-            active_event->addArg((const char*) PROTOCOL_VERSION);
-            active_event->addArg((const char*) IDENTITY_STRING);
-            active_event->addArg((const char*) VERSION_STRING);
-            active_event->addArg((const char*) HW_VERSION_STRING);
-            #ifdef EXTENDED_DETAIL_STRING
-              active_event->addArg((const char*) EXTENDED_DETAIL_STRING);
-            #endif
-            activity_count++;
-          }
-          break;
-      
-        case MANUVR_MSG_SYS_ADVERTISE_SRVC:  // Some service is annoucing its arrival.
-        case MANUVR_MSG_SYS_RETRACT_SRVC:    // Some service is annoucing its departure.
-          if (0 < active_event->argCount()) {
-            EventReceiver* er_ptr; 
-            if (0 == active_event->getArgAs(&er_ptr)) {
-              if (MANUVR_MSG_SYS_ADVERTISE_SRVC == active_event->event_code) {
-                subscribe((EventReceiver*) er_ptr);
-              }
-              else {
-                unsubscribe((EventReceiver*) er_ptr);
-              }
-            }
-          }
-          break;
-      
-        case MANUVR_MSG_LEGEND_MESSAGES:     // Dump the message definitions.
-          if (0 == active_event->argCount()) {   // Only if we are seeing a request.
-            StringBuilder *tmp_sb = new StringBuilder();
-            if (ManuvrMsg::getMsgLegend(tmp_sb) ) {
-              active_event->addArg(tmp_sb);
-              activity_count++;
-            }
-            else {
-              //if (verbosity > 1) local_log.concatf("There was a problem writing the message legend. This is bad. Size %d.\n", tmp_sb->length());
-            }
-          }
-          else {
-            // We may be receiving a message definition message from another party.
-            // For now, we've decided to handle this in XenoSession.
-          }
-          break;
-        default:
-          // See the notes above. We still have to behave like any other EventReceiver....
-          activity_count += EventReceiver::notify(active_event);
-          break;
-      }
-    }
+    procCallAheads(active_event);
     
     // Now we start notify()'ing subscribers.
     EventReceiver *subscriber;   // No need to assign.
     if (profiler_enabled) profiler_mark_1 = micros();
     
     if (NULL != active_event->specific_target) {
-        subscriber = active_event->specific_target;
-        switch (subscriber->notify(active_event)) {
-          case 0:   // The nominal case. No response.
-            break;
-          case -1:  // The subscriber choked. Figure out why. Technically, this is action. Case fall-through...
-            subscriber->printDebug(&local_log);
-          default:   // The subscriber acted.
-            activity_count++;
-            if (profiler_enabled) profiler_mark_2 = micros();
-            break;
-        }
+      subscriber = active_event->specific_target;
+      switch (subscriber->notify(active_event)) {
+        case 0:   // The nominal case. No response.
+          break;
+        case -1:  // The subscriber choked. Figure out why. Technically, this is action. Case fall-through...
+          subscriber->printDebug(&local_log);
+        default:   // The subscriber acted.
+          activity_count++;
+          if (profiler_enabled) profiler_mark_2 = micros();
+          break;
+      }
     }
     else {
       for (int i = 0; i < subscribers.size(); i++) {
@@ -520,8 +624,12 @@ int8_t EventManager::procIdleFlags() {
       }
     }
     
+    procCallBacks(active_event);
+    
     if (0 == activity_count) {
+      #ifdef __MANUVR_DEBUG
       if (verbosity >= 3) local_log.concatf("\tDead event: %s\n", active_event->getMsgTypeString());
+      #endif
       total_events_dead++;
     }
 
@@ -534,7 +642,9 @@ int8_t EventManager::procIdleFlags() {
         //   if (verbosity >=7) output.concatf("specific_event_callback returns %d\n", active_event->callback->callback_proc(active_event));
         switch (active_event->callback->callback_proc(active_event)) {
           case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
+            #ifdef __MANUVR_DEBUG
             if (verbosity > 5) local_log.concatf("Recycling %s.\n", active_event->getMsgTypeString());
+            #endif
             if (0 == validate_insertion(active_event)) {
               event_queue.insert(active_event, active_event->priority);
               // This is the one case where we do NOT want the event reclaimed.
@@ -543,10 +653,12 @@ int8_t EventManager::procIdleFlags() {
             break;
           case EVENT_CALLBACK_RETURN_ERROR:       // Something went wrong. Should never occur.
           case EVENT_CALLBACK_RETURN_UNDEFINED:   // The originating class doesn't care what we do with the event.
-            //if (verbosity > 1) local_log.concatf("EventManager found a possible mistake. Unexpected return case from callback_proc.\n");
+            //if (verbosity > 1) local_log.concatf("Kernel found a possible mistake. Unexpected return case from callback_proc.\n");
             // NOTE: No break;
           case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
+            #ifdef __MANUVR_DEBUG
             if (verbosity > 5) local_log.concatf("Dropping %s after running.\n", active_event->getMsgTypeString());
+            #endif
             // NOTE: No break;
           case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
             // NOTE: No break;
@@ -571,15 +683,6 @@ int8_t EventManager::procIdleFlags() {
     }
 
     total_events++;
-    
-    if (event_queue.size() < 0) {
-      /* Historical note: This was a past debug check. The root-cause was found and fixed. It is
-           being retained for now, despite the fact that it hasn't been observed for many months.
-         ---J. Ian Lindsay   Fri Jul 03 16:44:26 MST 2015
-      */
-      //StaticHub::log("event_queue size went negative!?! Correcting...\n");
-      event_queue.count();
-    }
     
     // This is a stat-gathering block.
     if (profiler_enabled) {
@@ -614,16 +717,19 @@ int8_t EventManager::procIdleFlags() {
       profiler_item->run_time_total  += profiler_item->run_time_last;
       profiler_item->run_time_average = profiler_item->run_time_total / ((profiler_item->executions) ? profiler_item->executions : 1);
 
-      
+      #ifdef __MANUVR_DEBUG
       if (verbosity >= 6) local_log.concatf("%s finished.\n\tTotal time: %ld uS\n", tmp_msg_def->debug_label, (profiler_mark_3 - profiler_mark_0));
       if (profiler_mark_2) {
         if (verbosity >= 6) local_log.concatf("\tTook %ld uS to notify.\n", profiler_item->run_time_last);
       }
+      #endif
       profiler_mark_2 = 0;  // Reset for next iteration.
     }
 
     if (event_queue.size() > 30) {
+      #ifdef __MANUVR_DEBUG
       local_log.concatf("Depth %10d \t %s\n", event_queue.size(), ManuvrMsg::getMsgTypeString(msg_code_local));
+      #endif
     }
 
     return_value++;   // We just serviced an Event.
@@ -643,12 +749,32 @@ int8_t EventManager::procIdleFlags() {
     // there was a problem. Do nothing.
   }
 
-  if (local_log.length() > 0) StaticHub::log(&local_log);
+  if (local_log.length() > 0) Kernel::log(&local_log);
   current_event = NULL;
   return return_value;
 }
 
 
+int8_t Kernel::registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFxnPtr cb, uint32_t options) {
+  if (ca != NULL) {
+    PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[msgCode];
+    if (NULL == ca_queue) {
+      ca_queue = new PriorityQueue<listenerFxnPtr>();
+      ca_listeners[msgCode] = ca_queue;
+    }
+    ca_queue->insert(ca);
+  }
+  
+  if (cb != NULL) {
+    PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[msgCode];
+    if (NULL == cb_queue) {
+      cb_queue = new PriorityQueue<listenerFxnPtr>();
+      cb_listeners[msgCode] = cb_queue;
+    }
+    cb_queue->insert(cb);
+  }
+  return options%255;
+}
 
 
 /**
@@ -656,7 +782,7 @@ int8_t EventManager::procIdleFlags() {
 *
 * @param   enabled  If true, enables the profiler. If false, disables it.
 */
-void EventManager::profiler(bool enabled) {
+void Kernel::profiler(bool enabled) {
   profiler_enabled   = enabled;
   max_idle_loop_time = 0;
   max_events_p_loop  = 0;
@@ -672,12 +798,61 @@ void EventManager::profiler(bool enabled) {
 }
 
 
+float Kernel::cpu_usage() {
+  return (micros_occupied / (float)(millis()*10));
+}
+
+
+
+/****************************************************************************************************
+*  ▄▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄   ▄         ▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+* ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░▌       ▐░▌▐░░░░░░░░░░░▌
+* ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀ 
+* ▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌          
+* ▐░▌       ▐░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░▌       ▐░▌▐░▌ ▄▄▄▄▄▄▄▄ 
+* ▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░▌       ▐░▌▐░▌▐░░░░░░░░▌
+* ▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌▐░▌ ▀▀▀▀▀▀█░▌
+* ▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌       ▐░▌
+* ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌
+* ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
+*  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀ 
+****************************************************************************************************/
+
+#if defined(__MANUVR_DEBUG)
+/**
+* Print the type sizes to the kernel log.
+*
+* @param   StringBuilder*  The buffer that this fxn will write output into.
+*/
+void Kernel::print_type_sizes() {
+  StringBuilder temp("---< Type sizes >-----------------------------\n");
+  temp.concatf("Elemental data structures:\n");
+  temp.concatf("\t StringBuilder         %d\n", sizeof(StringBuilder));
+  temp.concatf("\t LinkedList<void*>     %d\n", sizeof(LinkedList<void*>));
+  temp.concatf("\t PriorityQueue<void*>  %d\n", sizeof(PriorityQueue<void*>));
+
+  temp.concatf(" Core singletons:\n");
+  temp.concatf("\t Kernel                %d\n", sizeof(Kernel));
+  temp.concatf("\t   Scheduler           %d\n", sizeof(Scheduler));
+
+  temp.concatf(" Messaging components:\n");
+  temp.concatf("\t ManuvrEvent           %d\n", sizeof(ManuvrEvent));
+  temp.concatf("\t ManuvrMsg             %d\n", sizeof(ManuvrMsg));
+  temp.concatf("\t Argument              %d\n", sizeof(Argument));
+  temp.concatf("\t SchedulerItem         %d\n", sizeof(ScheduleItem));
+  temp.concatf("\t TaskProfilerData      %d\n", sizeof(TaskProfilerData));
+
+  Kernel::log(&temp);
+}
+#endif
+
+
 /**
 * Print the profiler to the provided buffer.
 *
 * @param   StringBuilder*  The buffer that this fxn will write output into.
 */
-void EventManager::printProfiler(StringBuilder* output) {
+void Kernel::printProfiler(StringBuilder* output) {
   if (NULL == output) return;
   output->concatf("\t total_events       \t%u\n",   (unsigned long) total_events);
   output->concatf("\t total_events_dead  \t%u\n\n", (unsigned long) total_events_dead);
@@ -706,51 +881,8 @@ void EventManager::printProfiler(StringBuilder* output) {
     output->concatf("\n\t CPU use by clock: %f\n\n", (double)cpu_usage());
   }
   else {
-    output->concat("-- EventManager profiler disabled.\n\n");
+    output->concat("-- Kernel profiler disabled.\n\n");
   }
-}
-
-
-float EventManager::cpu_usage() {
-  return (micros_occupied / (float)(millis()*10));
-}
-
-
-
-
-/****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄   ▄         ▄  ▄▄▄▄▄▄▄▄▄▄▄ 
-* ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░▌       ▐░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀ 
-* ▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌          
-* ▐░▌       ▐░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░▌       ▐░▌▐░▌ ▄▄▄▄▄▄▄▄ 
-* ▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░▌       ▐░▌▐░▌▐░░░░░░░░▌
-* ▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌▐░▌ ▀▀▀▀▀▀█░▌
-* ▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌       ▐░▌
-* ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌
-* ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀ 
-****************************************************************************************************/
-
-/* Debug */
-void EventManager::clean_first_discard() {
-  ManuvrEvent* event = discarded.dequeue();
-  if (NULL == event) {
-    delete event;
-  }
-}
-
-
-/**
-* There is a NULL-check performed upstream for the scheduler member. So no need 
-*   to do it again here.
-*
-* @return 0 on no action, 1 on action, -1 on failure.
-*/
-int8_t EventManager::bootComplete() {
-  EventReceiver::bootComplete();
-  boot_completed = true;
-  return 1;
 }
 
 
@@ -759,7 +891,7 @@ int8_t EventManager::bootComplete() {
 *
 * @return a pointer to a string constant.
 */
-const char* EventManager::getReceiverName() {  return "EventManager";  }
+const char* Kernel::getReceiverName() {  return "Kernel";  }
 
 
 /**
@@ -767,10 +899,21 @@ const char* EventManager::getReceiverName() {  return "EventManager";  }
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
-void EventManager::printDebug(StringBuilder* output) {
+void Kernel::printDebug(StringBuilder* output) {
   if (NULL == output) return;
+  uint32_t initial_sp = getStackPointer();
+  uint32_t final_sp = getStackPointer();
+
   EventReceiver::printDebug(output);
   
+  currentDateTime(output);
+  output->concatf("\n-- %s v%s    Build date: %s %s\n--\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
+  if (verbosity > 5) output->concatf("-- boot_completed:           %s\n", (boot_completed) ? "yes" : "no");
+  if (verbosity > 6) output->concatf("-- getStackPointer()         0x%08x\n", getStackPointer());
+  if (verbosity > 6) output->concatf("-- stack grows %s\n--\n", (final_sp > initial_sp) ? "up" : "down");
+  if (verbosity > 6) output->concatf("-- millis()                  0x%08x\n", millis());
+  if (verbosity > 6) output->concatf("-- micros()                  0x%08x\n", micros());
+
   output->concatf("-- Queue depth:              %d\n", event_queue.size());
   output->concatf("-- Preallocation depth:      %d\n", preallocated.size());
   output->concatf("-- Total subscriber count:   %d\n", subscribers.size());
@@ -791,15 +934,286 @@ void EventManager::printDebug(StringBuilder* output) {
     current_event->printDebug(output);
   }
 
-  if (discarded.size() > 0) {
-    output->concatf("\nDiscard queue (%d total):\n", discarded.size());
-    for (int i = 0; i < discarded.size(); i++) {
-      discarded.get(i)->printDebug(output);
-    }
-    output->concat("\n");
-  }
-
   printProfiler(output);
+}
+
+
+
+/****************************************************************************************************
+*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+* ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
+* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
+* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌          
+* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄ 
+* ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
+* ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
+* ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
+* ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
+* ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
+*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀ 
+* 
+* These are overrides from EventReceiver interface...
+****************************************************************************************************/
+
+/**
+* Boot done finished-up. 
+*
+* @return 0 on no action, 1 on action, -1 on failure.
+*/
+int8_t Kernel::bootComplete() {
+  EventReceiver::bootComplete();
+  boot_completed = true;
+  maskableInterrupts(true);  // Now configure interrupts, lift interrupt masks, and let the madness begin.
+  return 1;
+}
+
+
+/**
+* If we find ourselves in this fxn, it means an event that this class built (the argument)
+*   has been serviced and we are now getting the chance to see the results. The argument 
+*   to this fxn will never be NULL.
+*
+* Depending on class implementations, we might choose to handle the completed Event differently. We 
+*   might add values to event's Argument chain and return RECYCLE. We may also free() the event
+*   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
+*   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
+*   was crafted to not be in the heap in its own allocation, we will return DROP instead.
+*
+* @param  event  The event for which service has been completed.
+* @return A callback return code.
+*/
+int8_t Kernel::callback_proc(ManuvrEvent *event) {
+  /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
+     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
+  int8_t return_value = event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
+  
+  /* Some class-specific set of conditionals below this line. */
+  switch (event->event_code) {
+    case MANUVR_MSG_SYS_BOOT_COMPLETED:
+      Kernel::log("Boot complete.\n");
+      boot_completed = true;
+      break;
+    default:
+      break;
+  }
+  return return_value;
+}
+
+
+
+int8_t Kernel::notify(ManuvrEvent *active_event) {
+  int8_t return_value = 0;
+  
+  switch (active_event->event_code) {
+    case MANUVR_MSG_USER_DEBUG_INPUT:
+      last_user_input.concatHandoff(&usb_rx_buffer);
+      procDirectDebugInstruction(&last_user_input);
+      return_value++;
+      break;
+
+    case MANUVR_MSG_SELF_DESCRIBE:
+      // Field order: 1 uint32, 4 required null-terminated strings, 1 optional.
+      // uint32:     MTU                (in terms of bytes)
+      // String:     Protocol version   (IE: "0.0.1")
+      // String:     Identity           (IE: "Digitabulum") Generally the name of the Manuvrable.
+      // String:     Firmware version   (IE: "1.5.4")
+      // String:     Hardware version   (IE: "4")
+      // String:     Extended detail    (User-defined)
+      if (0 == active_event->args.size()) {
+        // We are being asked to self-describe.
+        active_event->addArg((uint32_t)    PROTOCOL_MTU);
+        active_event->addArg((const char*) PROTOCOL_VERSION);
+        active_event->addArg((const char*) IDENTITY_STRING);
+        active_event->addArg((const char*) VERSION_STRING);
+        active_event->addArg((const char*) HW_VERSION_STRING);
+        #ifdef EXTENDED_DETAIL_STRING
+          active_event->addArg((const char*) EXTENDED_DETAIL_STRING);
+        #endif
+        return_value++;
+      }
+      break;
+      
+    case MANUVR_MSG_SYS_REBOOT:
+      reboot();
+      break;
+    case MANUVR_MSG_SYS_SHUTDOWN:
+      seppuku();  // TODO: We need to distinguish between this and SYSTEM shutdown for linux.
+      break;
+    case MANUVR_MSG_SYS_BOOTLOADER:
+      jumpToBootloader();
+      break;
+      
+    case MANUVR_MSG_SYS_ADVERTISE_SRVC:  // Some service is annoucing its arrival.
+    case MANUVR_MSG_SYS_RETRACT_SRVC:    // Some service is annoucing its departure.
+      if (0 < active_event->argCount()) {
+        EventReceiver* er_ptr; 
+        if (0 == active_event->getArgAs(&er_ptr)) {
+          if (MANUVR_MSG_SYS_ADVERTISE_SRVC == active_event->event_code) {
+            subscribe((EventReceiver*) er_ptr);
+          }
+          else {
+            unsubscribe((EventReceiver*) er_ptr);
+          }
+        }
+      }
+      break;
+      
+    case MANUVR_MSG_LEGEND_MESSAGES:     // Dump the message definitions.
+      if (0 == active_event->argCount()) {   // Only if we are seeing a request.
+        StringBuilder *tmp_sb = new StringBuilder();
+        if (ManuvrMsg::getMsgLegend(tmp_sb) ) {
+          active_event->addArg(tmp_sb);
+          return_value++;
+        }
+        else {
+          //if (verbosity > 1) local_log.concatf("There was a problem writing the message legend. This is bad. Size %d.\n", tmp_sb->length());
+        }
+      }
+      else {
+        // We may be receiving a message definition message from another party.
+        // For now, we've decided to handle this in XenoSession.
+      }
+      break;
+
+    case MANUVR_MSG_SYS_ISSUE_LOG_ITEM:
+      {
+        StringBuilder *log_item;
+        if (0 == active_event->getArgAs(&log_item)) {
+          log_buffer.concatHandoff(log_item);
+        }
+      }
+      break;
+      
+    default:
+      return_value += EventReceiver::notify(active_event);
+      break;
+  }
+  return return_value;
+}                             
+
+
+
+void Kernel::procDirectDebugInstruction(StringBuilder* input) {
+  #ifdef __MANUVR_CONSOLE_SUPPORT
+  char *str = (char *) input->string();
+  char c = *(str);
+  uint8_t temp_byte = 0;        // Many commands here take a single integer argument.
+  if (*(str) != 0) {
+    temp_byte = atoi((char*) str+1);
+  }
+  ManuvrEvent *event = NULL;  // Pitching events is a common thing in this fxn...
+  
+  StringBuilder parse_mule;
+  
+  switch (c) {
+    case 'B':
+      if (temp_byte == 128) {
+        Kernel::raiseEvent(MANUVR_MSG_SYS_BOOTLOADER, NULL);
+        break;
+      }
+      local_log.concatf("Will only jump to bootloader if the number '128' follows the command.\n");
+      break;
+    case 'b':
+      if (temp_byte == 128) {
+        Kernel::raiseEvent(MANUVR_MSG_SYS_REBOOT, NULL);
+        break;
+      }
+      local_log.concatf("Will only reboot if the number '128' follows the command.\n");
+      break;
+
+    case '6':        // Read so many random integers...
+      { // TODO: I don't think the RNG is ever being turned off. Save some power....
+        temp_byte = (temp_byte == 0) ? PLATFORM_RNG_CARRY_CAPACITY : temp_byte;
+        for (uint8_t i = 0; i < temp_byte; i++) {
+          uint32_t x = randomInt();
+          if (x) {
+            local_log.concatf("Random number: 0x%08x\n", x);
+          }
+          else {
+            local_log.concatf("Restarting RNG\n");
+            init_RNG();
+          }
+        }
+      }
+      break;
+
+    #ifdef __MANUVR_CONSOLE_SUPPORT
+    case 'u':
+      switch (temp_byte) {
+        case 1:
+          Kernel::raiseEvent(MANUVR_MSG_SELF_DESCRIBE, NULL);
+          break;
+        case 3:
+          Kernel::raiseEvent(MANUVR_MSG_LEGEND_MESSAGES, NULL);
+          break;
+        default:
+          break;
+      }
+      break;
+
+    case 'y':    // Power mode.
+      if (255 != temp_byte) {
+        event = Kernel::returnEvent(MANUVR_MSG_SYS_POWER_MODE);
+        event->addArg((uint8_t) temp_byte);
+        EventReceiver::raiseEvent(event);
+        local_log.concatf("Power mode is now %d.\n", temp_byte);
+      }
+      else {
+      }
+      break;
+
+    case 'i':   // Debug prints.
+      if (1 == temp_byte) {
+        local_log.concat("Kernel profiling enabled.\n");
+        profiler(true);
+      }
+      else if (2 == temp_byte) {
+        printDebug(&local_log);
+      }
+      #if defined(__MANUVR_DEBUG)
+      else if (3 == temp_byte) {
+        local_log.concat("Kernel profiling disabled.\n");
+        profiler(false);
+      }
+      #endif //__MANUVR_DEBUG
+      else if (6 == temp_byte) {
+        local_log.concat("Kernel profiling disabled.\n");
+        profiler(false);
+      }
+      else {
+        printDebug(&local_log);
+      }
+      break;
+
+
+    case 'v':           // Set log verbosity.
+      parse_mule.concat(str);
+      parse_mule.drop_position(0);
+      
+      event = new ManuvrEvent(MANUVR_MSG_SYS_LOG_VERBOSITY);
+      switch (parse_mule.count()) {
+        case 2:
+          event->specific_target = getSubscriberByName((const char*) (parse_mule.position_trimmed(1)));
+          local_log.concatf("Directing verbosity change to %s.\n", (NULL == event->specific_target) ? "NULL" : event->specific_target->getReceiverName());
+        case 1:
+          event->addArg((uint8_t) parse_mule.position_as_int(0));
+          break;
+        default:
+          break;
+      }
+      EventReceiver::raiseEvent(event);
+      break;
+    #endif  //__MANUVR_CONSOLE_SUPPORT
+
+    default:
+      // TODO: Cycle through the subscribers and check their names against the input.
+      //   If a match is found, pass the command into that class for handling.
+      break;
+  }
+  #endif  //__MANUVR_CONSOLE_SUPPORT
+  
+  if (local_log.length() > 0) Kernel::log(&local_log);
+  last_user_input.clear();
 }
 
 

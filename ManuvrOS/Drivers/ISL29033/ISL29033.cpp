@@ -197,7 +197,7 @@ void ISL29033::operationCompleteCallback(I2CQueuedOperation* completed) {
           case ISL29033_REG_DATA_LSB:
           case ISL29033_REG_DATA_MSB:
             if (calculateLux()) {
-              EventManager::raiseEvent(MANUVR_MSG_SENSOR_ISL29033, NULL);   // Raise an event
+              Kernel::raiseEvent(MANUVR_MSG_SENSOR_ISL29033, NULL);   // Raise an event
             }
             break;
           case ISL29033_REG_INT_LT_LSB:
@@ -231,14 +231,14 @@ void ISL29033::operationCompleteCallback(I2CQueuedOperation* completed) {
         }
         break;
       case I2C_OPERATION_PING:
-        StaticHub::log("Ping received.");
+        Kernel::log("Ping received.");
         break;
       default:
         break;
     }
   }
   else {
-    StaticHub::log("SENSOR_ERROR_WRONG_IDENTITY");
+    Kernel::log("SENSOR_ERROR_WRONG_IDENTITY");
   }
 }
 

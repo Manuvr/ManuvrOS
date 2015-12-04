@@ -12,8 +12,20 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
 
 
 ManuvrXport::ManuvrXport() {
-  _xport_flags = 0;
-  _xport_mtu   = PROTOCOL_MTU;
+  // No need to burden a client class with this.
+  EventReceiver::__class_initializer();
+
+  xport_id           = ManuvrXport::TRANSPORT_ID_POOL++;
+  _xport_flags       = 0;
+  _xport_mtu         = PROTOCOL_MTU;
+  _pid               = 0;
+  xport_state        = 0;
+  bytes_sent         = 0;
+  bytes_received     = 0;
+  session            = NULL;
+
+  read_timeout_defer = false;
+  pid_read_abort     = 0;
 }
 
 
@@ -40,6 +52,19 @@ void ManuvrXport::isDebugConsole(bool en) {
 
 
 
+int8_t ManuvrXport::sendBuffer(StringBuilder* buf) {
+  if (connected()) {
+    write_port(buf->string(), buf->length());
+  }
+  else {
+    Kernel::log("Tried to write to a transport that was not connected.");
+  }
+  return 0;
+}
+
+
+
+
 /**
 * This is used to cleanup XenoSessions that were instantiated by this class.
 * Typically, this would be called from  the session being passed in as the argument.
@@ -53,7 +78,7 @@ void ManuvrXport::isDebugConsole(bool en) {
 */ 
 int8_t ManuvrXport::reapXenoSession(XenoSession* ses) {
   if (NULL != ses) {
-    ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_SYS_RETRACT_SRVC);
+    ManuvrEvent* event = Kernel::returnEvent(MANUVR_MSG_SYS_RETRACT_SRVC);
     event->addArg((EventReceiver*) ses);
     raiseEvent(event);
 
@@ -64,6 +89,27 @@ int8_t ManuvrXport::reapXenoSession(XenoSession* ses) {
   
   return -1;
 }
+
+
+int8_t ManuvrXport::provide_session(XenoSession* ses) {
+  if ((NULL != session) && (ses != session)) {
+    // If we are about to clobber an existing session, we need to free it
+    // first.
+    __kernel->unsubscribe(session);
+
+    // TODO: Might should warn someone at the other side? 
+    //   Maybe we let XenoSession deal with it? At least we
+    //   won't have a memory leak, lol.
+    //     ---J. Ian Lindsay   Thu Dec 03 04:38:52 MST 2015
+    delete session;
+    session = NULL;
+  }
+  session = ses;
+  //session->setVerbosity(verbosity);
+  set_xport_state(MANUVR_XPORT_STATE_HAS_SESSION);
+  return 0;
+}
+
 
 
 /*
@@ -90,7 +136,7 @@ void ManuvrXport::connected(bool en) {
       // This will warn us later to notify others of our removal, if necessary.
       _xport_flags |= MANUVR_XPORT_FLAG_HAS_SESSION;
     
-      ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
+      ManuvrEvent* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
       event->addArg((EventReceiver*) ses);
       raiseEvent(event);
     }
@@ -100,4 +146,116 @@ void ManuvrXport::connected(bool en) {
     }
   }
 }
+
+
+/*
+* Mark this transport connected or disconnected.
+* This method is virtual, and may be over-ridden if the specific transport has 
+*   something more sophisticated in mind.
+*/
+void ManuvrXport::listening(bool en) {
+  if (listening() == en) {
+    // If we are already in the state specified, do nothing.
+    return;
+  }
+  // TODO: Not strictly true. Unset connected? listening?
+  // ---J. Ian Lindsay   Thu Dec 03 04:00:00 MST 2015
+  _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_STATE_LISTENING) : (_xport_flags & ~(MANUVR_XPORT_STATE_LISTENING));
+}
+
+
+
+/*
+* Mark this transport connected or disconnected.
+* This method is virtual, and may be over-ridden if the specific transport has 
+*   something more sophisticated in mind.
+*/
+void ManuvrXport::initialized(bool en) {
+  if (initialized() == en) {
+    // If we are already in the state specified, do nothing.
+    return;
+  }
+  // TODO: Not strictly true. Unset connected? listening?
+  // ---J. Ian Lindsay   Thu Dec 03 04:00:00 MST 2015
+  _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_STATE_INITIALIZED) : (_xport_flags & ~(MANUVR_XPORT_STATE_INITIALIZED));
+}
+
+
+
+// Given a transport event, returns true if we need to act.
+bool ManuvrXport::event_addresses_us(ManuvrEvent *event) {
+  uint16_t temp_uint16;
+  
+  if (event->argCount()) {
+    if (0 == event->getArgAs(&temp_uint16)) {
+      if (temp_uint16 == xport_id) {
+        // The first argument is our ID.
+        return true;
+      }
+    }
+    // Either not the correct arg form, or not our ID.
+    return false;
+  }
+  
+  // No arguments implies no first argument.
+  // No first argument implies event is addressed to 'all transports'.
+  // 'all transports' implies 'true'. We need to care.
+  return true;
+}
+
+
+
+
+
+/****************************************************************************************************
+*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+* ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
+* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
+* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌          
+* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄ 
+* ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
+* ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
+* ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
+* ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
+* ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
+*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀ 
+* 
+* These are overrides from EventReceiver interface...
+****************************************************************************************************/
+
+
+/**
+* Debug support method. This fxn is only present in debug builds. 
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
+void ManuvrXport::printDebug(StringBuilder *temp) {
+  EventReceiver::printDebug(temp);
+  temp->concatf("Transport\n=======\n-- xport_state    0x%02x\n", xport_state);
+  temp->concatf("-- xport_id        0x%04x\n", xport_id);
+  temp->concatf("-- bytes sent      %u\n", bytes_sent);
+  temp->concatf("-- bytes received  %u\n\n", bytes_received);
+  temp->concatf("-- connected       %s\n", (connected() ? "yes" : "no"));
+  temp->concatf("-- has session     %s\n--\n", (hasSession() ? "yes" : "no"));
+}
+
+
+
+
+///**
+//* There is a NULL-check performed upstream for the scheduler member. So no need 
+//*   to do it again here.
+//*
+//* @return 0 on no action, 1 on action, -1 on failure.
+//*/
+//int8_t ManuvrXport::bootComplete() {
+//}
+//
+//
+//int8_t ManuvrXport::notify(ManuvrEvent*) {
+//}
+//
+//
+//int8_t ManuvrXport::callback_proc(ManuvrEvent *) {
+//}
 

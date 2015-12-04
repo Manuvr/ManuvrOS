@@ -2,7 +2,28 @@
 
 #if defined(__MK20DX256__) | defined(__MK20DX128__)
   #include <i2c_t3/i2c_t3.h>
+#elif defined(STM32F4XX)
+  #include <stm32f4xx.h>
+  #include <stm32f4xx_i2c.h>
+  #include <stm32f4xx_gpio.h>
+  #include "stm32f4xx_it.h"
+#elif defined(ARDUINO)
+  #include <Wire/Wire.h>
+#else
+  // Unsupported platform? Try using the linux i2c library and cross fingers...
+  #include <stdlib.h>
+  #include <unistd.h>
+  #include <linux/i2c-dev.h>
+  #include <sys/types.h>
+  #include <sys/ioctl.h>
+  #include <sys/stat.h>
+  #include <fstream>
+  #include <iostream>
+  #include <fcntl.h>
+  #include <inttypes.h>
+  #include <ctype.h>
 #endif
+
 
 // Static initiallizer...
 int I2CQueuedOperation::next_txn_id = 0;
@@ -91,7 +112,7 @@ const char* I2CQueuedOperation::getStateString(uint8_t code) {
 void I2CQueuedOperation::printDebug(void) {
 	StringBuilder temp;
 	this->printDebug(&temp);
-	StaticHub::log(&temp);
+	Kernel::log(&temp);
 }
 
 
@@ -146,9 +167,9 @@ int8_t I2CQueuedOperation::abort(int8_t er) {
 void I2CQueuedOperation::markComplete(void) {
 	xfer_state = I2C_XFER_STATE_COMPLETE;
   initiated = true;  // Just so we don't accidentally get hung up thinking we need to start it.
-	ManuvrEvent* q_rdy = EventManager::returnEvent(MANUVR_MSG_I2C_QUEUE_READY);
+	ManuvrEvent* q_rdy = Kernel::returnEvent(MANUVR_MSG_I2C_QUEUE_READY);
 	q_rdy->specific_target = device;
-  EventManager::isrRaiseEvent(q_rdy);   // Raise an event
+  Kernel::isrRaiseEvent(q_rdy);   // Raise an event
 }
 
 
@@ -185,76 +206,8 @@ int8_t I2CQueuedOperation::begin(void) {
 int8_t I2CQueuedOperation::init_dma() {
   int return_value = 0;
 
-#if defined(__MK20DX256__)
-  Wire1.beginTransmission(dev_addr);
-  if (need_to_send_subaddr()) Wire1.write((uint8_t) (sub_addr & 0x00FF));
-
-  if (opcode == I2C_OPERATION_READ) {
-    Wire1.endTransmission(I2C_NOSTOP);
-    Wire1.requestFrom(dev_addr, len, I2C_STOP, 900);
-    int i = 0;
-    while(Wire1.available()) {
-      *(buf + i++) = (uint8_t) Wire1.readByte();
-    }
-  }
-  else if (opcode == I2C_OPERATION_WRITE) {
-    for(int i = 0; i < len; i++) Wire1.write(*(buf+i));
-    Wire1.endTransmission(I2C_STOP, 900);   // 900us timeout
-  }
-  
-  switch (Wire1.status()) {
-    case I2C_WAITING:
-      markComplete();
-      break;
-    case I2C_ADDR_NAK:
-      abort(I2C_ERR_SLAVE_NOT_FOUND);
-      break;
-    case I2C_DATA_NAK:
-      abort();
-      break;
-    case I2C_ARB_LOST:
-      abort(I2C_ERR_CODE_BUS_BUSY);
-      break;
-    case I2C_TIMEOUT:
-      abort(I2C_ERR_CODE_TIMEOUT);
-      break;
-  }
-
-#elif defined(__MK20DX128__)
-  Wire.beginTransmission(dev_addr);
-  if (need_to_send_subaddr()) Wire.write((uint8_t) (sub_addr & 0x00FF));
-
-  if (opcode == I2C_OPERATION_READ) {
-    Wire.endTransmission(I2C_NOSTOP);
-    Wire.requestFrom(dev_addr, len, I2C_STOP, 900);
-    int i = 0;
-    while(Wire.available()) {
-      *(buf + i++) = (uint8_t) Wire.readByte();
-    }
-  }
-  else if (opcode == I2C_OPERATION_WRITE) {
-    for(int i = 0; i < len; i++) Wire.write(*(buf+i));
-    Wire.endTransmission(I2C_STOP, 900);   // 900us timeout
-  }
-  
-  switch (Wire.status()) {
-    case I2C_WAITING:
-      markComplete();
-      break;
-    case I2C_ADDR_NAK:
-      abort(I2C_ERR_SLAVE_NOT_FOUND);
-      break;
-    case I2C_DATA_NAK:
-      abort();
-      break;
-    case I2C_ARB_LOST:
-      abort(I2C_ERR_CODE_BUS_BUSY);
-      break;
-    case I2C_TIMEOUT:
-      abort(I2C_ERR_CODE_TIMEOUT);
-      break;
-  }
-
+#if defined(__MK20DX256__) | defined(__MK20DX128__)
+  device->dispatchOperation(this);
 #elif defined(ARDUINO)
 
 #elif defined(STM32F4XX)
@@ -297,8 +250,6 @@ int8_t I2CQueuedOperation::init_dma() {
   }
   
 
-  
-
 #else   // Linux land...
   if (!device->switch_device(dev_addr)) return -1;
  
@@ -339,7 +290,7 @@ int8_t I2CQueuedOperation::init_dma() {
 
 #endif
 
-  //if (local_log.length() > 0) StaticHub::log(&local_log);
+  //if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
 }
 
@@ -351,7 +302,9 @@ int8_t I2CQueuedOperation::init_dma() {
 int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
   StringBuilder output;
 #ifdef STM32F4XX
+  #ifdef __MANUVR_DEBUG
   if (verbosity > 6) output.concatf("I2CQueuedOperation::advance_operation(0x%08x): \t %s\t", status_reg, getStateString(xfer_state));
+  #endif
   switch (xfer_state) {
     case I2C_XFER_STATE_START:     // We need to send a START condition.
         xfer_state = I2C_XFER_STATE_ADDR; // Need to send slave ADDR following a RESTART.
@@ -364,7 +317,7 @@ int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
         if (opcode == I2C_OPERATION_PING) {
           markComplete();
           device->generateStop();
-          if (output.length() > 0) StaticHub::log(&output);
+          if (output.length() > 0) Kernel::log(&output);
           return 0;
         }
         // We are ready to send the address...
@@ -426,25 +379,38 @@ int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
       break;
     case I2C_XFER_STATE_COMPLETE:  // This operation is comcluded.
       if (verbosity > 5) {
+        #ifdef __MANUVR_DEBUG
         output.concatf("\t--- Interrupt following job (0x%08x)\n", status_reg);
+        #endif
         printDebug(&output);
       }
       //markComplete();
-      //EventManager::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, NULL);   // Raise an event
+      //Kernel::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, NULL);   // Raise an event
       break;
     default:
+      #ifdef __MANUVR_DEBUG
       if (verbosity > 1) output.concatf("\t--- Something is bad wrong. Our xfer_state is %s\n", getStateString(xfer_state));
+      #endif
       abort(I2C_ERR_CODE_DEF_CASE);
       break;
   }
   
   if (verbosity > 4) {
     if (verbosity > 6) printDebug(&output);
+    #ifdef __MANUVR_DEBUG
     output.concatf("---> %s\n", getStateString(xfer_state));
+    #endif
   }
 
+#elif defined(__MK20DX256__) | defined(__MK20DX128__)
+  switch (status_reg) {
+    case 1:
+      subaddr_sent = true;
+      break;
+  }
+  
 #endif
-  if (output.length() > 0) StaticHub::log(&output);
+  if (output.length() > 0) Kernel::log(&output);
   return 0;
 }
 
