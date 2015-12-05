@@ -210,7 +210,7 @@ int8_t ManuvrTCP::connect() {
   // We're being told to act as a client.
   return 0;
 }
-         
+
 
 int8_t ManuvrTCP::listen() {
   // We're being told to start listening on whatever address was provided to the constructor.
@@ -244,7 +244,7 @@ int8_t ManuvrTCP::listen() {
 
   int child_pid = fork();
   
-  if (child_pid) {
+  if (0 == child_pid) {
     StringBuilder output("Forked into PID ");
     output.concat(child_pid);
     output.concat("\n");
