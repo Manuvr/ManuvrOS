@@ -127,6 +127,9 @@ int8_t gpioDefine(uint8_t pin, int mode);
 void unsetPinIRQ(uint8_t pin);
 void setPinEvent(uint8_t pin, ManuvrEvent* isr_event);
 void setPinFxn(uint8_t pin, FunctionPointer fxn);
+int8_t setPin(uint8_t pin, bool high);
+int8_t readPin(uint8_t pin);
+
 
 /*
 * Call this once on system init to configure the basics of the platform.
