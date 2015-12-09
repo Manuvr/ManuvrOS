@@ -125,10 +125,12 @@ void init_RNG();                             // Fire up the random number genera
 void gpioSetup();        // We call this once on bootstrap. Sets up GPIO not covered by other classes.
 int8_t gpioDefine(uint8_t pin, int mode);
 void unsetPinIRQ(uint8_t pin);
-void setPinEvent(uint8_t pin, ManuvrEvent* isr_event);
-void setPinFxn(uint8_t pin, FunctionPointer fxn);
+int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrEvent* isr_event);
+int8_t setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn);
 int8_t setPin(uint8_t pin, bool high);
 int8_t readPin(uint8_t pin);
+int8_t setPinAnalog(uint8_t pin, int);
+int    readPinAnalog(uint8_t pin);
 
 
 /*

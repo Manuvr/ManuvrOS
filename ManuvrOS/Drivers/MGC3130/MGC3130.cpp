@@ -123,10 +123,10 @@ MGC3130::MGC3130(int ts, int rst, uint8_t addr) {
 
   // TODO: Formallize this for build targets other than Arduino. Use the abstracted Manuvr
   //       GPIO class instead.
-  digitalWrite(_ts_pin, 0);
+  setPin(_ts_pin, 0);
   pinMode(_ts_pin, INPUT_PULLUP);     //Used by TS line on MGC3130
 
-  digitalWrite(_reset_pin, 0);
+  setPin(_reset_pin, 0);
   pinMode(_reset_pin, OUTPUT);   //Used by reset line on MGC3130
 
   _irq_pin_0 = 0;
@@ -672,7 +672,7 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
 
 /* If your device needs something to happen immediately prior to bus I/O... */
 bool MGC3130::operationCallahead(I2CQueuedOperation* op) {
-  if (!digitalRead(_ts_pin)) {   // Only initiate a read if there is something there.
+  if (!readPin(_ts_pin)) {   // Only initiate a read if there is something there.
     detachInterrupt(_ts_pin);
     pinMode(_ts_pin, OUTPUT);
     are_we_holding_ts(true);
@@ -772,7 +772,7 @@ int8_t MGC3130::notify(ManuvrEvent *active_event) {
 
     case MANUVR_MSG_SENSOR_MGC3130_INIT:
       is_class_ready(true);
-      digitalWrite(_reset_pin, 1);
+      setPin(_reset_pin, 1);
       enableAirwheel(false);
       attachInterrupt(_ts_pin, mgc3130_isr_check, FALLING);
       return_value++;

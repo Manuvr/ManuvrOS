@@ -89,7 +89,7 @@ ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : I2CDevice
   pinMode(_irq_pin, INPUT_PULLUP); 
   pinMode(_reset_pin, OUTPUT);
   
-  digitalWrite(_reset_pin, 0);
+  setPin(_reset_pin, false);
   
   init_complete = false;
   defineRegister(ADP8866_MANU_DEV_ID,  (uint8_t) 0x00, false,  true, false);
@@ -360,7 +360,7 @@ void ADP8866::printDebug(StringBuilder* temp) {
 */
 int8_t ADP8866::bootComplete() {
   EventReceiver::bootComplete();
-  digitalWrite(reset_pin, 1);   // Release the reset pin.
+  setPin(reset_pin, true);   // Release the reset pin.
 
   readRegister((uint8_t) ADP8866_MANU_DEV_ID);
   //writeDirtyRegisters();  // If i2c is broken, this will hang the boot process...
@@ -539,8 +539,8 @@ bool ADP8866::channel_enabled(uint8_t chan) {
 * Perform a software reset.
 */
 void ADP8866::reset() {
-  //digitalWrite(reset_pin, 0);
-  digitalWrite(reset_pin, !digitalRead(reset_pin));
+  //setPin(reset_pin, false);
+  setPin(reset_pin, !readPin(reset_pin));
 }
 
 /*

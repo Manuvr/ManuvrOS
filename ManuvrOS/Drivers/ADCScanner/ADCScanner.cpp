@@ -57,7 +57,7 @@ int8_t ADCScanner::scan() {
   uint16_t current_sample = 0;
   for (int i = 0; i < 16; i++) {
     if (-1 != adc_list[i]) {
-      current_sample = analogRead(adc_list[i]);
+      current_sample = readPinAnalog(adc_list[i]);
       if (threshold[i] < current_sample) {
         return_value++;
       }

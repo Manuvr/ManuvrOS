@@ -57,7 +57,7 @@ ManuvrableNeoPixel::~ManuvrableNeoPixel() {
 
 void ManuvrableNeoPixel::begin(void) {
   pinMode(pin, OUTPUT);
-  digitalWrite(pin, LOW);
+  setPin(pin, LOW);
 }
 
 void ManuvrableNeoPixel::show(void) {
@@ -131,7 +131,7 @@ void ManuvrableNeoPixel::setPin(uint8_t p) {
   pinMode(pin, INPUT);
   pin = p;
   pinMode(p, OUTPUT);
-  digitalWrite(p, LOW);
+  setPin(p, LOW);
 }
 
 

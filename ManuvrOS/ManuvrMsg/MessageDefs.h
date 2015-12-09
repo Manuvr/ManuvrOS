@@ -176,6 +176,7 @@
   #define MANUVR_MSG_ANALOG_READ          0x0402 // Read the given GPIO pin, however that is referenced on a given platformn.
   #define MANUVR_MSG_ANALOG_WRITE         0x0403 // Write the given GPIO pin, however that is referenced on a given platformn.
   
+  #define MANUVR_MSG_GPIO_LEGEND          0x040F // If our GPIO is sopisticated enough to describe...
   #define MANUVR_MSG_EVENT_ON_INTERRUPT   0x0410 // Fire the given event on the given interrupt condition.
 
   

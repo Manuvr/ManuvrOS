@@ -15,7 +15,7 @@ LightSensor::~LightSensor() {
 
 
 void light_check() {
-  uint16_t current_lux_read = analogRead(A0);
+  uint16_t current_lux_read = readPinAnalog(A0);
   uint8_t current_lux_bin = current_lux_read >> 2;
   if (max(current_lux_bin, last_lux_bin) - min(current_lux_bin, last_lux_bin) > 3) {
     last_lux_bin = current_lux_bin;
