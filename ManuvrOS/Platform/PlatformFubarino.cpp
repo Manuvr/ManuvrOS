@@ -126,6 +126,15 @@ void currentDateTime(StringBuilder* target) {
 * GPIO and change-notice                                                                            *
 ****************************************************************************************************/
 /*
+* This structure allows us to keep track of which pins are at our discretion to read/write/set ISRs on.
+*/
+volatile PlatformGPIODef gpio_pins[PLATFORM_GPIO_PIN_COUNT];
+
+void pin_isr_pitch_event() {
+}
+
+
+/*
 * This fxn should be called once on boot to setup the CPU pins that are not claimed
 *   by other classes. GPIO pins at the command of this-or-that class should be setup 
 *   in the class that deals with them. 
@@ -133,7 +142,58 @@ void currentDateTime(StringBuilder* target) {
 *   individual classes work out their own requirements.
 */
 void gpioSetup() {
+  // Null-out all the pin definitions in preparation for assignment.
+  for (uint8_t i = 0; i < PLATFORM_GPIO_PIN_COUNT; i++) {
+    gpio_pins[i].event = 0;      // No event assigned.
+    gpio_pins[i].fxn   = 0;      // No function pointer.
+    gpio_pins[i].mode  = INPUT;  // All pins begin as inputs.
+    gpio_pins[i].pin   = i;      // The pin number.
+  }
 }
+
+
+int8_t gpioDefine(uint8_t pin, uint8_t mode) {
+  pinMode(pin, mode);
+  return 0;
+}
+
+
+void unsetPinIRQ(uint8_t pin) {
+  detatchInterrupt(pin);
+}
+
+
+void setPinEvent(uint8_t pin, uint8_t condition, ManuvrEvent* isr_event) {
+}
+
+
+/*
+* Pass the function pointer
+*/
+void setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn) {
+  attachInterrupt(pin, condition, fxn);
+}
+
+
+int8_t setPin(uint8_t pin, bool val) {
+  return digitalWrite(pin, val);
+}
+
+
+int8_t readPin(uint8_t pin) {
+  return readPin(pin);
+}
+
+
+int8_t setPinAnalog(uint8_t pin, int val) {
+  analogWrite(pin, val);
+  return 0;
+}
+
+int readPinAnalog(uint8_t pin) {
+  return analogRead(pin);
+}
+
 
 
 /****************************************************************************************************

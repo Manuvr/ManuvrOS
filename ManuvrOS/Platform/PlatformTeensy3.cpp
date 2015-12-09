@@ -220,10 +220,11 @@ int8_t readPin(uint8_t pin) {
 
 int8_t setPinAnalog(uint8_t pin, int val) {
   analogWrite(pin, val);
+  return 0;
 }
 
 int readPinAnalog(uint8_t pin) {
-  analogRead(pin);
+  return analogRead(pin);
 }
 
 
