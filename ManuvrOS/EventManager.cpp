@@ -990,7 +990,7 @@ int8_t Kernel::callback_proc(ManuvrEvent *event) {
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     case MANUVR_MSG_SYS_BOOT_COMPLETED:
-      Kernel::log("Boot complete.\n");
+      if (verbosity > 4) Kernel::log("Boot complete.\n");
       boot_completed = true;
       break;
     default:
