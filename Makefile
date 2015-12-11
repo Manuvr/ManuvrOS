@@ -90,7 +90,9 @@ SRCS   = $(CPP_SRCS)
 # TODO: I badly need to learn to write autoconf scripts....
 #   I've at least tried to modularize to make the invariable transition less-painful...
 MANuVR_OPTIONS  = -DMANUVR_SUPPORT_SERIAL
-#MANuVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
+#MANuVR_OPTIONS += -DMANUVR_FREERTOS
+MANuVR_OPTIONS += -DMANUVR_LINUX_IPC
+MANuVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
 MANuVR_OPTIONS += -D__MANUVR_DEBUG
 
 CFLAGS += $(MANuVR_OPTIONS) 
@@ -101,8 +103,6 @@ CFLAGS += $(MANuVR_OPTIONS)
 # 'make raspi' will build a sample firmware for the original Raspberry Pi.  
 #    The idea is to be able to quickly iterate on a design idea with the
 #    aid of valgrind and gdb.
-#
-# 'make testbench' will build a crude debug tool. It is mostly useless.
 ###########################################################################
 
 .PHONY: all
