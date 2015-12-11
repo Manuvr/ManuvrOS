@@ -24,9 +24,22 @@ There ought to be no inclusion in this file. It is the bottom.
 
 
   /*
+  * These are just lables. We don't really ever care about the *actual* integers being defined here. Only
+  *   their consistency.
+  */
+  #define MANUVR_RTC_STARTUP_UNINITED       0x00000000
+  #define MANUVR_RTC_STARTUP_UNKNOWN        0x23196400
+  #define MANUVR_RTC_OSC_FAILURE            0x23196401
+  #define MANUVR_RTC_STARTUP_GOOD_UNSET     0x23196402
+  #define MANUVR_RTC_STARTUP_GOOD_SET       0x23196403
+
+
+
+  /*
   * These are flag definitions for the device self-description message.
   */
   #define DEVICE_FLAG_AUTHORITATIVE_TIME          0x00000001  // Devices that can provide accurate time.
   #define DEVICE_FLAG_INTERNET_ACCESS             0x00000002  // Can this firmware potentially provide net access?
   #define DEVICE_FLAG_MESSAGE_RELAY               0x00000004  // Can we act as a message relay?
+  #define DEVICE_FLAG_MESSAGE_SEMANTICS           0x00000008  // Will this firmware supply message semantics?
 #endif

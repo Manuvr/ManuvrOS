@@ -47,16 +47,6 @@ This file is meant to contain a set of common functions that are typically platf
 #include <ManuvrOS/CommonConstants.h>
 #include <StringBuilder/StringBuilder.h>
 
-/*
-* These are just lables. We don't really ever care about the *actual* integers being defined here. Only
-*   their consistency.
-*/
-#define MANUVR_RTC_STARTUP_UNINITED       0x00000000
-#define MANUVR_RTC_STARTUP_UNKNOWN        0x23196400
-#define MANUVR_RTC_OSC_FAILURE            0x23196401
-#define MANUVR_RTC_STARTUP_GOOD_UNSET     0x23196402
-#define MANUVR_RTC_STARTUP_GOOD_SET       0x23196403
-
 
 class ManuvrEvent;
 
@@ -137,6 +127,9 @@ int8_t gpioDefine(uint8_t pin, int mode);
 void unsetPinIRQ(uint8_t pin);
 void setPinEvent(uint8_t pin, ManuvrEvent* isr_event);
 void setPinFxn(uint8_t pin, FunctionPointer fxn);
+int8_t setPin(uint8_t pin, bool high);
+int8_t readPin(uint8_t pin);
+
 
 /*
 * Call this once on system init to configure the basics of the platform.

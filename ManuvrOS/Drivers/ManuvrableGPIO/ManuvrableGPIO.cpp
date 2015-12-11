@@ -26,7 +26,35 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "ManuvrableGPIO.h"
 
 
+const MessageTypeDef gpio_message_defs[] = {
+  /* 
+    For messages that have arguments, we have the option of defining inline lables for each parameter.
+    This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
+    compile time.
+  */
+  #if defined (__ENABLE_MSG_SEMANTICS)
+  {  MANUVR_MSG_GPIO_LEGEND       , MSG_FLAG_EXPORTABLE,  "GPIO_LEGEND",         ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_DIGITAL_READ      , MSG_FLAG_EXPORTABLE,  "DIGITAL_READ",        ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_DIGITAL_WRITE     , MSG_FLAG_EXPORTABLE,  "DIGITAL_WRITE",       ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_ANALOG_READ       , MSG_FLAG_EXPORTABLE,  "ANALOG_READ",         ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_ANALOG_WRITE      , MSG_FLAG_EXPORTABLE,  "ANALOG_WRITE",        ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_EVENT_ON_INTERRUPT, MSG_FLAG_EXPORTABLE,  "EVENT_ON_INTERRUPT",  ManuvrMsg::MSG_ARGS_NONE }, //
+  #else
+  {  MANUVR_MSG_GPIO_LEGEND       , MSG_FLAG_EXPORTABLE,  "GPIO_LEGEND",         ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_DIGITAL_READ      , MSG_FLAG_EXPORTABLE,  "DIGITAL_READ",        ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_DIGITAL_WRITE     , MSG_FLAG_EXPORTABLE,  "DIGITAL_WRITE",       ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_ANALOG_READ       , MSG_FLAG_EXPORTABLE,  "ANALOG_READ",         ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_ANALOG_WRITE      , MSG_FLAG_EXPORTABLE,  "ANALOG_WRITE",        ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_EVENT_ON_INTERRUPT, MSG_FLAG_EXPORTABLE,  "EVENT_ON_INTERRUPT",  ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  #endif
+};
+
+
+
 ManuvrableGPIO::ManuvrableGPIO() {
+
+  // Inform the Kernel of the codes we will be using...
+  ManuvrMsg::registerMessages(gpio_message_defs, sizeof(gpio_message_defs) / sizeof(MessageTypeDef));
 }
 
 ManuvrableGPIO::~ManuvrableGPIO() {
@@ -118,6 +146,33 @@ int8_t ManuvrableGPIO::notify(ManuvrEvent *active_event) {
   int8_t return_value = 0;
   
   switch (active_event->event_code) {
+    case MANUVR_MSG_DIGITAL_READ:
+      //int8_t readPin(uint8_t pin);
+      return_value++;
+      break;
+
+    case MANUVR_MSG_DIGITAL_WRITE:
+      //int8_t setPin(uint8_t pin, bool high);
+      return_value++;
+      break;
+
+    case MANUVR_MSG_ANALOG_READ:
+      return_value++;
+      break;
+
+    case MANUVR_MSG_ANALOG_WRITE:
+      return_value++;
+      break;
+
+    case MANUVR_MSG_EVENT_ON_INTERRUPT:
+      //int8_t setPinEvent(uint8_t pin, ManuvrEvent* isr_event);
+      return_value++;
+      break;
+
+    case MANUVR_MSG_GPIO_LEGEND:
+      return_value++;
+      break;
+
     default:
       return_value += EventReceiver::notify(active_event);
       break;
