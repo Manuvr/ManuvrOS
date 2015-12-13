@@ -1137,7 +1137,6 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       }
       break;
 
-    #ifdef __MANUVR_CONSOLE_SUPPORT
     case 'u':
       switch (temp_byte) {
         case 1:
@@ -1203,7 +1202,6 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       }
       EventReceiver::raiseEvent(event);
       break;
-    #endif  //__MANUVR_CONSOLE_SUPPORT
 
     default:
       // TODO: Cycle through the subscribers and check their names against the input.

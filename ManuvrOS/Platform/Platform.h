@@ -51,17 +51,18 @@ This file is meant to contain a set of common functions that are typically platf
 class ManuvrEvent;
 
 
-#ifdef __cplusplus
- extern "C" {
-#endif 
-
-
 #ifdef ARDUINO
   #include <Arduino.h>
 #else
   uint32_t millis();
   uint32_t micros();
 #endif
+
+
+#ifdef __cplusplus
+ extern "C" {
+#endif 
+
 
 
 typedef struct __platform_gpio_def {
