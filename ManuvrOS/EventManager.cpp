@@ -38,7 +38,17 @@ const MessageTypeDef message_defs[] = {
   {  MANUVR_MSG_SCHED_DUMP_SCHEDULES , 0x0000,               "SCHED_DUMP_SCHEDULES" , MSG_ARGS_NO_ARGS }, // Tell the Scheduler to dump schedules.
   {  MANUVR_MSG_SCHED_WIPE_PROFILER  , 0x0000,               "SCHED_WIPE_PROFILER"  , MSG_ARGS_NO_ARGS }, // Tell the Scheduler to wipe its profiler data. Pass PIDs to be selective.
   {  MANUVR_MSG_SCHED_DEFERRED_EVENT , 0x0000,               "SCHED_DEFERRED_EVENT" , MSG_ARGS_NO_ARGS }, // Tell the Scheduler to broadcast the attached Event so many ms into the future.
-                                   
+
+  #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
+    // These are messages that are only present under some sort of threading model. They are meant
+    //   to faciliate task hand-off, IPC, and concurrency protection.
+    #if defined (__MANUVR_FREERTOS)
+    #endif
+
+    #if defined (__MANUVR_LINUX)
+    #endif
+  #endif
+
   /* 
     For messages that have arguments, we have the option of defining inline lables for each parameter.
     This is advantageous for debugging and writing front-ends. We case-off here to make this choice at

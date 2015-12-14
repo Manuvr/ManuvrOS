@@ -8,15 +8,12 @@
 # Used for internal functionality macros. Feel free to rename. Need to
 #   replace this with an autoconf script which I haven't yet learned how to
 #   write.
-FIRMWARE_NAME      = ManuvrOS
-OUTPUT_PATH        = build/
 
 OPTIMIZATION       = -O0 -g
 C_STANDARD         = gnu99
 CPP_STANDARD       = gnu++11
 
 
-###########################################################################
 # Environmental awareness...
 ###########################################################################
 SHELL          = /bin/sh
@@ -25,6 +22,8 @@ WHERE_I_AM     = $(shell pwd)
 HOME_DIRECTORY = /home/$(WHO_I_AM)
 
 CPP            = $(shell which g++)
+
+OUTPUT_PATH    = build/
 
 
 ###########################################################################
@@ -90,10 +89,13 @@ SRCS   = $(CPP_SRCS)
 # TODO: I badly need to learn to write autoconf scripts....
 #   I've at least tried to modularize to make the invariable transition less-painful...
 MANuVR_OPTIONS  = -DMANUVR_SUPPORT_SERIAL
-#MANuVR_OPTIONS += -DMANUVR_FREERTOS
-MANuVR_OPTIONS += -DMANUVR_LINUX_IPC
 MANuVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
 MANuVR_OPTIONS += -D__MANUVR_DEBUG
+
+# Options that build for certain threading models (if any).
+#MANuVR_OPTIONS += -D__MANUVR_FREERTOS
+MANuVR_OPTIONS += -D__MANUVR_LINUX
+
 
 CFLAGS += $(MANuVR_OPTIONS) 
 
