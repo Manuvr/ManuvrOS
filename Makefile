@@ -88,16 +88,16 @@ SRCS   = $(CPP_SRCS)
              
 # TODO: I badly need to learn to write autoconf scripts....
 #   I've at least tried to modularize to make the invariable transition less-painful...
-MANuVR_OPTIONS  = -DMANUVR_SUPPORT_SERIAL
-MANuVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
-MANuVR_OPTIONS += -D__MANUVR_DEBUG
+MANUVR_OPTIONS  = -DMANUVR_SUPPORT_SERIAL
+MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
+MANUVR_OPTIONS += -D__MANUVR_DEBUG
 
 # Options that build for certain threading models (if any).
-#MANuVR_OPTIONS += -D__MANUVR_FREERTOS
-MANuVR_OPTIONS += -D__MANUVR_LINUX
+#MANUVR_OPTIONS += -D__MANUVR_FREERTOS
+MANUVR_OPTIONS += -D__MANUVR_LINUX
 
 
-CFLAGS += $(MANuVR_OPTIONS) 
+CFLAGS += $(MANUVR_OPTIONS) 
 
 ###########################################################################
 # Rules for building the firmware follow...
@@ -123,6 +123,9 @@ debug:
 # gprof2dot --format=callgrind --output=out.dot callgrind.out.16562
 # dot  -Tpng out.dot -o graph.png
 
+manuvrtests:
+	mkdir $(OUTPUT_PATH)
+	$(CPP) -o $(OUTPUT_PATH)/dstest tests/TestDataStructures.cpp DataStructures/*.cpp -I. -lstdc++ -lc -lm
 
 clean:
 	rm -f *.o *.su *~ testbench manuvr
