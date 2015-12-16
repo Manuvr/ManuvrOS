@@ -1,7 +1,7 @@
 #ifndef __OFFBOARD_REGISTER_DEV_H__
   #define __OFFBOARD_REGISTER_DEV_H__ 1
 
-  #include "StringBuilder/StringBuilder.h"
+  #include "DataStructures/StringBuilder.h"
   #include "DeviceRegister.h"
 
   /*

@@ -45,7 +45,7 @@ This file is meant to contain a set of common functions that are typically platf
 #include <stdio.h>
 
 #include <ManuvrOS/CommonConstants.h>
-#include <StringBuilder/StringBuilder.h>
+#include <DataStructures/StringBuilder.h>
 
 
 class ManuvrEvent;
@@ -54,8 +54,10 @@ class ManuvrEvent;
 #ifdef ARDUINO
   #include <Arduino.h>
 #else
-  uint32_t millis();
-  uint32_t micros();
+  extern "C" {
+    uint32_t millis();
+    uint32_t micros();
+  }
 #endif
 
 

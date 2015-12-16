@@ -39,7 +39,7 @@ but adding support for other platforms ought to be easy.
   #include <stdint.h>
   #include <stdarg.h>
   #include "DataStructures/LightLinkedList.h"
-  #include "StringBuilder/StringBuilder.h"
+  #include "DataStructures/StringBuilder.h"
   #include <ManuvrOS/Kernel.h>
   #include "ManuvrOS/Drivers/DeviceWithRegisters/DeviceRegister.h"
 

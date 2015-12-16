@@ -56,7 +56,7 @@ For debuggability, the transport has a special mode for acting as a debug
 #define __MANUVR_XPORT_H__
 
 #include "../Kernel.h"
-#include "StringBuilder/StringBuilder.h"
+#include "DataStructures/StringBuilder.h"
 
 
 

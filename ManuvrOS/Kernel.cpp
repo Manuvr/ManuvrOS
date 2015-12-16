@@ -572,7 +572,9 @@ int8_t Kernel::procIdleFlags() {
   ManuvrEvent *active_event = NULL;  // Our short-term focus.
   uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
 
-  //globalIRQDisable();
+  #ifndef __MANUVR_FREERTOS
+  globalIRQDisable();
+  #endif
   while (isr_event_queue.size() > 0) {
     active_event = isr_event_queue.dequeue();
 
@@ -581,7 +583,9 @@ int8_t Kernel::procIdleFlags() {
     }
     else reclaim_event(active_event);
   }
-  //globalIRQEnable();
+  #ifndef __MANUVR_FREERTOS
+  globalIRQEnable();
+  #endif
     
   active_event = NULL;   // Pedantic...
   

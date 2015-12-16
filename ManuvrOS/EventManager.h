@@ -7,7 +7,7 @@
   
   #include "DataStructures/PriorityQueue.h"
   #include "DataStructures/LightLinkedList.h"
-  #include <StringBuilder/StringBuilder.h>
+  #include <DataStructures/StringBuilder.h>
 
   #define EVENT_CALLBACK_RETURN_ERROR       -1 // Horrible things happened in the originating class. This should never happen.
   #define EVENT_CALLBACK_RETURN_UNDEFINED   0  // Illegal return code. Kernel will reap events whose callbacks return this.

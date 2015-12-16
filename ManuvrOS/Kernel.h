@@ -12,7 +12,7 @@
   #include "EventManager.h"
   #include "DataStructures/PriorityQueue.h"
   #include "DataStructures/LightLinkedList.h"
-  #include <StringBuilder/StringBuilder.h>
+  #include <DataStructures/StringBuilder.h>
   #include <map>
 
   #include <ManuvrOS/MsgProfiler.h>

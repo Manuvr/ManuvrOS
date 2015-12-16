@@ -9,7 +9,7 @@ The common message-profiling container.
 #ifndef __MANUVR_MSG_PROFILER_H__
   #define __MANUVR_MSG_PROFILER_H__
 
-  #include <StringBuilder/StringBuilder.h>
+  #include <DataStructures/StringBuilder.h>
 
   class TaskProfilerData {
     public:

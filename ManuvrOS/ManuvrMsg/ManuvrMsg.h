@@ -18,7 +18,7 @@
 #include "../EnumeratedTypeCodes.h"
 #include "MessageDefs.h"    // This include file contains all of the message codes.
 
-#include "StringBuilder/StringBuilder.h"
+#include "DataStructures/StringBuilder.h"
 #include "DataStructures/PriorityQueue.h"
 #include "DataStructures/LightLinkedList.h"
 #include "DataStructures/Vector3.h"

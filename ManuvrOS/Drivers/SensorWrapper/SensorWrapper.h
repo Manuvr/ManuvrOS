@@ -31,7 +31,7 @@ using namespace std;
 
 #include <inttypes.h>
 #include <string.h>
-#include "StringBuilder/StringBuilder.h"
+#include "DataStructures/StringBuilder.h"
 
 #include <ManuvrOS/Kernel.h>
 

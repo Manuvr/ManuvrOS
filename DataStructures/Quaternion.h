@@ -1,7 +1,7 @@
 #ifndef QUATERNION_H
 #define QUATERNION_H
 
-#include "StringBuilder/StringBuilder.h"
+#include "DataStructures/StringBuilder.h"
 
 
 class Quaternion {

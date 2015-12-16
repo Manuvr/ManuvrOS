@@ -64,7 +64,7 @@ CFLAGS += $(CPP_FLAGS)
 ###########################################################################
 # Source file definitions...
 ###########################################################################
-MANUVROS_SRCS   = StringBuilder/*.cpp DataStructures/*.cpp ManuvrOS/*.cpp ManuvrOS/XenoSession/*.cpp ManuvrOS/ManuvrMsg/*.cpp
+MANUVROS_SRCS   = DataStructures/*.cpp ManuvrOS/*.cpp ManuvrOS/XenoSession/*.cpp ManuvrOS/ManuvrMsg/*.cpp
 
 SENSOR_SRCS     = ManuvrOS/Platform/Platform.cpp ManuvrOS/Drivers/SensorWrapper/*.cpp 
 I2C_DRIVERS     = ManuvrOS/Drivers/i2c-adapter/*.cpp ManuvrOS/Drivers/DeviceWithRegisters/DeviceRegister.cpp ManuvrOS/Drivers/DeviceWithRegisters/DeviceWithRegisters.cpp
