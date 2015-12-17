@@ -82,10 +82,19 @@
   // Codes specific to session-management and control  
   #define MANUVR_MSG_SESS_SUBCRIBE        0x0060 // Used to subscribe this session to other events.
   #define MANUVR_MSG_SESS_UNSUBCRIBE      0x0061 // Used to unsubscribe this session from other events.
-
   #define MANUVR_MSG_SESS_DUMP_DEBUG      0x0062 // Cause the XenoSession to dump its debug data.
   #define MANUVR_MSG_SESS_ORIGINATE_MSG   0x0063 // The session has something to say, and the transport ought to service it.
   
+  // Codes that are only meaningful with firmware running with a threading model.
+  //   These will be common to FreeRTOS and Linux.
+  #define MANUVR_MSG_CREATED_THREAD_ID    0x0070 // Pitched into the kernel when PIDs are spawned.
+  #define MANUVR_MSG_DESTROYED_THREAD_ID  0x0071 // Pitched into the kernel when PIDs are torn down.
+  #define MANUVR_MSG_UNBLOCK_THREAD       0x0072 // Tells the kernel to explicitly unblock a thread.
+  
+  // Codes that are only meaningful with firmware running Linux.
+  
+  // Codes that are only meaningful with firmware running FreeRTOS.  
+
   
   // Scheduler
   #define MANUVR_MSG_SCHED_ENABLE_BY_PID  0x0100 // The given PID is being enabled.

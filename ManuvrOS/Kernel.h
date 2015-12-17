@@ -16,6 +16,10 @@
   #include <map>
 
   #include <ManuvrOS/MsgProfiler.h>
+  
+  #if defined (__MANUVR_FREERTOS)
+  #include <FreeRTOS_ARM.h>
+  #endif
 
   #define EVENT_PRIORITY_HIGHEST            100
   #define EVENT_PRIORITY_DEFAULT              2
@@ -234,7 +238,6 @@ class Scheduler : public EventReceiver {
       void feedUSBBuffer(uint8_t *buf, int len, bool terminal);
 
 
-
       /*
       TODO: This particular pile of garbage is temporary pass-through for the Scheduler.
         It should be removed once the Kernel has completed its metamorphosis.
@@ -326,6 +329,15 @@ class Scheduler : public EventReceiver {
       static bool    abortEvent(ManuvrEvent* event);
       static int8_t  isrRaiseEvent(ManuvrEvent* event);
       
+      #if defined (__MANUVR_FREERTOS)
+        static uint32_t logger_pid;
+        static uint32_t kernel_pid;
+        
+        void provideKernelPID(TaskHandle_t pid){   kernel_pid = (uint32_t) pid; }
+        void provideLoggerPID(TaskHandle_t pid){   logger_pid = (uint32_t) pid; }
+        static void unblockThread(uint32_t pid){   vTaskResume((TaskHandle_t) pid); }
+      #endif
+
       /* Factory method. Returns a preallocated Event. */
       static ManuvrEvent* returnEvent(uint16_t event_code);
 

@@ -42,6 +42,9 @@ const MessageTypeDef message_defs[] = {
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
     // These are messages that are only present under some sort of threading model. They are meant
     //   to faciliate task hand-off, IPC, and concurrency protection.
+    {  MANUVR_MSG_CREATED_THREAD_ID,    0x0000,              "CREATED_THREAD_ID",     ManuvrMsg::MSG_ARGS_U32 }, 
+    {  MANUVR_MSG_DESTROYED_THREAD_ID,  0x0000,              "DESTROYED_THREAD_ID",   ManuvrMsg::MSG_ARGS_U32 }, 
+    {  MANUVR_MSG_UNBLOCK_THREAD,       0x0000,              "UNBLOCK_THREAD",        ManuvrMsg::MSG_ARGS_U32 }, 
     #if defined (__MANUVR_FREERTOS)
     #endif
 
@@ -138,22 +141,36 @@ Kernel::~Kernel() {
 ****************************************************************************************************/
 StringBuilder Kernel::log_buffer;
 
+#if defined (__MANUVR_FREERTOS)
+  uint32_t Kernel::logger_pid = 0;
+  uint32_t Kernel::kernel_pid = 0;
+#endif
+
 /*
 * Logger pass-through functions. Please mind the variadics...
 */
 volatile void Kernel::log(int severity, const char *str) {
   if (!INSTANCE->verbosity) return;
   log_buffer.concat(str);
+  #if defined (__MANUVR_FREERTOS)
+    unblockThread(logger_pid);
+  #endif
 }
 
 volatile void Kernel::log(char *str) {
   if (!INSTANCE->verbosity) return;
   log_buffer.concat(str);
+  #if defined (__MANUVR_FREERTOS)
+    unblockThread(logger_pid);
+  #endif
 }
 
 volatile void Kernel::log(const char *str) {
   if (!INSTANCE->verbosity) return;
   log_buffer.concat(str);
+  #if defined (__MANUVR_FREERTOS)
+    unblockThread(logger_pid);
+  #endif
 }
 
 volatile void Kernel::log(const char *fxn_name, int severity, const char *str, ...) {
@@ -164,11 +181,17 @@ volatile void Kernel::log(const char *fxn_name, int severity, const char *str, .
   va_start(marker, str);
   log_buffer.concatf(str, marker);
   va_end(marker);
+  #if defined (__MANUVR_FREERTOS)
+    unblockThread(logger_pid);
+  #endif
 }
 
 volatile void Kernel::log(StringBuilder *str) {
   if (!INSTANCE->verbosity) return;
   log_buffer.concatHandoff(str);
+  #if defined (__MANUVR_FREERTOS)
+    unblockThread(logger_pid);
+  #endif
 }
 
 
@@ -324,10 +347,12 @@ int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* cb) {
     nu->callback = cb;
   }
 
-  int ret_val = INSTANCE->validate_insertion(nu);
-  if (0 == ret_val) {
+  if (0 == INSTANCE->validate_insertion(nu)) {
     INSTANCE->event_queue.insert(nu);
-    INSTANCE->update_maximum_queue_depth();   // Check the queue depth 
+    INSTANCE->update_maximum_queue_depth();   // Check the queue depth
+    #if defined (__MANUVR_FREERTOS)
+      unblockThread(kernel_pid);
+    #endif
   }
   else {
     if (INSTANCE->verbosity > 4) {
@@ -358,9 +383,10 @@ int8_t Kernel::staticRaiseEvent(ManuvrEvent* event) {
   int8_t return_value = 0;
   if (0 == INSTANCE->validate_insertion(event)) {
     INSTANCE->event_queue.insert(event, event->priority);
-
-    // Check the queue depth.
-    INSTANCE->update_maximum_queue_depth();
+    INSTANCE->update_maximum_queue_depth();   // Check the queue depth
+    #if defined (__MANUVR_FREERTOS)
+      unblockThread(kernel_pid);
+    #endif
   }
   else {
     if (INSTANCE->verbosity > 4) {
@@ -406,6 +432,9 @@ int8_t Kernel::isrRaiseEvent(ManuvrEvent* event) {
   maskableInterrupts(false);
   return_value = isr_event_queue.insertIfAbsent(event, event->priority);
   maskableInterrupts(true);
+  #if defined (__MANUVR_FREERTOS)
+    unblockThread(kernel_pid);
+  #endif
   return return_value;
 }
 
@@ -572,9 +601,7 @@ int8_t Kernel::procIdleFlags() {
   ManuvrEvent *active_event = NULL;  // Our short-term focus.
   uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
 
-  #ifndef __MANUVR_FREERTOS
   globalIRQDisable();
-  #endif
   while (isr_event_queue.size() > 0) {
     active_event = isr_event_queue.dequeue();
 
@@ -583,9 +610,7 @@ int8_t Kernel::procIdleFlags() {
     }
     else reclaim_event(active_event);
   }
-  #ifndef __MANUVR_FREERTOS
   globalIRQEnable();
-  #endif
     
   active_event = NULL;   // Pedantic...
   
@@ -1097,7 +1122,18 @@ int8_t Kernel::notify(ManuvrEvent *active_event) {
         }
       }
       break;
-      
+
+    #if defined (__MANUVR_FREERTOS)
+    case MANUVR_MSG_CREATED_THREAD_ID:
+      break;
+
+    case MANUVR_MSG_DESTROYED_THREAD_ID:
+      break;
+
+    case MANUVR_MSG_UNBLOCK_THREAD:
+      break;
+    #endif
+    
     default:
       return_value += EventReceiver::notify(active_event);
       break;

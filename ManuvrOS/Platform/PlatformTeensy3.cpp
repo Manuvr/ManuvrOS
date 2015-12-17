@@ -42,6 +42,10 @@ This file is meant to contain a set of common functions that are typically platf
  extern "C" {
 #endif
 
+#if defined (__MANUVR_FREERTOS)
+  #include <FreeRTOS_ARM.h>
+#endif
+
 
 /****************************************************************************************************
 * The code under this block is special on this platform, and will not be available elsewhere.       *
@@ -255,9 +259,13 @@ volatile uint32_t getStackPointer() {
 * Interrupt-masking                                                                                 *
 ****************************************************************************************************/
 
-void globalIRQEnable() {     sei();    }
-void globalIRQDisable() {    cli();    }
-
+#if defined (__MANUVR_FREERTOS)
+  void globalIRQEnable() {     taskENABLE_INTERRUPTS();    }
+  void globalIRQDisable() {    taskDISABLE_INTERRUPTS();   }
+#else
+  void globalIRQEnable() {     sei();    }
+  void globalIRQDisable() {    cli();    }
+#endif
 
 
 /****************************************************************************************************
