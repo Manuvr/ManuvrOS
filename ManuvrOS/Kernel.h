@@ -9,7 +9,7 @@
   
   #include "FirmwareDefs.h"
   #include "ManuvrEvent.h"
-  #include "EventManager.h"
+  #include "EventReceiver.h"
   #include "DataStructures/PriorityQueue.h"
   #include "DataStructures/LightLinkedList.h"
   #include <DataStructures/StringBuilder.h>
@@ -235,7 +235,7 @@ class Scheduler : public EventReceiver {
       /*
       TODO: These functions were the last things removed from StaticHub. 
       */
-      void feedUSBBuffer(uint8_t *buf, int len, bool terminal);
+      void accumulateConsoleInput(uint8_t *buf, int len, bool terminal);
 
 
       /*

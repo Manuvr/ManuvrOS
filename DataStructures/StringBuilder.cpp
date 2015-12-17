@@ -600,6 +600,16 @@ void StringBuilder::cull(int x) {
 }
 
 
+/**
+* Trims whitespace from the ends of the string and replaces it.
+*/
+void StringBuilder::trim() {
+  // TODO: How have I not needed this yet? Add it...
+  //    ---J. Ian Lindsay   Thu Dec 17 03:22:01 MST 2015
+}
+
+
+
 StrLL* StringBuilder::stackStrOntoList(StrLL *current, StrLL *nu) {
   if (current != NULL) {
     if (current->next == NULL) current->next = nu;

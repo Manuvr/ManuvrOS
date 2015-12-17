@@ -138,6 +138,8 @@ class StringBuilder {
 		void cull(int offset, int length);       // Use to throw away all but the specified range of this string.
 		void cull(int length);                   // Use to discard the first X characters from the string.
 
+		void trim(void);                         // Trim whitespace off the ends of the string. 
+
 		void clear(void);                        // Clears the string and frees the memory that was used to hold it.
 		
 		/* The functions below are meant to aid basic tokenization. They all consider the collapsed

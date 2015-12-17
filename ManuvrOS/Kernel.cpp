@@ -220,7 +220,6 @@ int8_t Kernel::bootstrap() {
 * Big pile of ugly..........                                                                        *
 ****************************************************************************************************/
 
-StringBuilder usb_rx_buffer;    // Was private in StaticHub
 StringBuilder last_user_input;  // Was private in StaticHub
 
 
@@ -229,14 +228,14 @@ StringBuilder last_user_input;  // Was private in StaticHub
 * character array that forms the USB rx buffer is either filled up, or we see
 * a new-line character on the wire.
 */
-void Kernel::feedUSBBuffer(uint8_t *buf, int len, bool terminal) {
-  usb_rx_buffer.concat(buf, len);
+void Kernel::accumulateConsoleInput(uint8_t *buf, int len, bool terminal) {
+  last_user_input.concat(buf, len);
 
   if (terminal) {
     // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
     // run in idle time.
     ManuvrEvent* event = returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
-    //TODO: Crashes after eating StaticHub. event->specific_target = (EventReceiver*) this;
+    event->specific_target = (EventReceiver*) this;
     Kernel::staticRaiseEvent(event);
   }
 }
@@ -1046,7 +1045,6 @@ int8_t Kernel::notify(ManuvrEvent *active_event) {
   
   switch (active_event->event_code) {
     case MANUVR_MSG_USER_DEBUG_INPUT:
-      last_user_input.concatHandoff(&usb_rx_buffer);
       procDirectDebugInstruction(&last_user_input);
       return_value++;
       break;
@@ -1227,6 +1225,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
         }
         break;
   
+      #if defined(__MANUVR_DEBUG)
       case 'i':   // Debug prints.
         if (1 == temp_byte) {
           local_log.concat("Kernel profiling enabled.\n");
@@ -1235,16 +1234,15 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
         else if (2 == temp_byte) {
           printDebug(&local_log);
         }
-        #if defined(__MANUVR_DEBUG)
         else if (3 == temp_byte) {
           local_log.concat("Kernel profiling disabled.\n");
           profiler(false);
         }
-        #endif //__MANUVR_DEBUG
         else {
           printDebug(&local_log);
         }
         break;
+      #endif //__MANUVR_DEBUG
   
       case 'v':           // Set log verbosity.
         parse_mule.concat(str);
