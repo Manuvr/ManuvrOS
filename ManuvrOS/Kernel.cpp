@@ -910,12 +910,12 @@ void Kernel::printProfiler(StringBuilder* output) {
     int stat_mode = event_costs.getPriority(0);
     int x = event_costs.size();
 
-    output->concat("\n\t\t Execd \t\t Event \t\t total us   average     worst    best      last\n");
+    TaskProfilerData::printDebugHeader(output);
     for (int i = 0; i < x; i++) {
       profiler_item = event_costs.get(i);
       stat_mode     = event_costs.getPriority(i);
-      
-      output->concatf("\t (%10d)\t%18s  %9d %9d %9d %9d %9d\n", stat_mode, ManuvrMsg::getMsgTypeString(profiler_item->msg_code), (unsigned long) profiler_item->run_time_total, (unsigned long) profiler_item->run_time_average, (unsigned long) profiler_item->run_time_worst, (unsigned long) profiler_item->run_time_best, (unsigned long) profiler_item->run_time_last);
+      output->concatf("\t (%10d)\t", stat_mode);
+      profiler_item->printDebug(output);
     }
     output->concatf("\n\t CPU use by clock: %f\n\n", (double)cpu_usage());
   }
@@ -947,6 +947,7 @@ void Kernel::printDebug(StringBuilder* output) {
   
   currentDateTime(output);
   output->concatf("\n-- %s v%s    Build date: %s %s\n--\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
+  output->concatf("-- our_mem_addr:             0x%08x\n", (uint32_t) this);
   if (verbosity > 5) output->concatf("-- boot_completed:           %s\n", (boot_completed) ? "yes" : "no");
   if (verbosity > 6) output->concatf("-- getStackPointer()         0x%08x\n", getStackPointer());
   if (verbosity > 6) output->concatf("-- stack grows %s\n--\n", (final_sp > initial_sp) ? "up" : "down");
@@ -1142,121 +1143,135 @@ int8_t Kernel::notify(ManuvrEvent *active_event) {
 }                             
 
 
-
+/**
+* Because this is the root of all console commands into the system, we treat
+*   things a bit differently here.
+* Console commands start with the index of the subscriber they are addressed
+*   to. The following string will be passed into the EventReceiver.
+*/
 void Kernel::procDirectDebugInstruction(StringBuilder* input) {
   #ifdef __MANUVR_CONSOLE_SUPPORT
   char *str = (char *) input->string();
   char c = *(str);
-  uint8_t temp_byte = 0;        // Many commands here take a single integer argument.
+  uint8_t subscriber_idx = 0;
+  uint8_t temp_byte = 0;
+
   if (*(str) != 0) {
+    // This is always safe because the null terminator shows up as zero, and
+    //   we already know that the string is not zero-length.
+    subscriber_idx = atoi((char*) str);
     temp_byte = atoi((char*) str+1);
   }
   ManuvrEvent *event = NULL;  // Pitching events is a common thing in this fxn...
   
   StringBuilder parse_mule;
   
-  switch (c) {
-    case 'B':
-      if (temp_byte == 128) {
-        Kernel::raiseEvent(MANUVR_MSG_SYS_BOOTLOADER, NULL);
+  EventReceiver* subscriber = subscribers.get(subscriber_idx);
+  if ((NULL == subscriber) || ((EventReceiver*)this == subscriber)) {
+    // If there was no subscriber specified, or WE were specified 
+    //   (for some reason), we process the command ourselves.
+  
+    switch (c) {
+      case 'B':
+        if (temp_byte == 128) {
+          Kernel::raiseEvent(MANUVR_MSG_SYS_BOOTLOADER, NULL);
+          break;
+        }
+        local_log.concatf("Will only jump to bootloader if the number '128' follows the command.\n");
         break;
-      }
-      local_log.concatf("Will only jump to bootloader if the number '128' follows the command.\n");
-      break;
-    case 'b':
-      if (temp_byte == 128) {
-        Kernel::raiseEvent(MANUVR_MSG_SYS_REBOOT, NULL);
+      case 'b':
+        if (temp_byte == 128) {
+          Kernel::raiseEvent(MANUVR_MSG_SYS_REBOOT, NULL);
+          break;
+        }
+        local_log.concatf("Will only reboot if the number '128' follows the command.\n");
         break;
-      }
-      local_log.concatf("Will only reboot if the number '128' follows the command.\n");
-      break;
-
-    case '6':        // Read so many random integers...
-      { // TODO: I don't think the RNG is ever being turned off. Save some power....
-        temp_byte = (temp_byte == 0) ? PLATFORM_RNG_CARRY_CAPACITY : temp_byte;
-        for (uint8_t i = 0; i < temp_byte; i++) {
-          uint32_t x = randomInt();
-          if (x) {
-            local_log.concatf("Random number: 0x%08x\n", x);
-          }
-          else {
-            local_log.concatf("Restarting RNG\n");
-            init_RNG();
+  
+      case 'r':        // Read so many random integers...
+        { // TODO: I don't think the RNG is ever being turned off. Save some power....
+          temp_byte = (temp_byte == 0) ? PLATFORM_RNG_CARRY_CAPACITY : temp_byte;
+          for (uint8_t i = 0; i < temp_byte; i++) {
+            uint32_t x = randomInt();
+            if (x) {
+              local_log.concatf("Random number: 0x%08x\n", x);
+            }
+            else {
+              local_log.concatf("Restarting RNG\n");
+              init_RNG();
+            }
           }
         }
-      }
-      break;
+        break;
+  
+      case 'u':
+        switch (temp_byte) {
+          case 1:
+            Kernel::raiseEvent(MANUVR_MSG_SELF_DESCRIBE, NULL);
+            break;
+          case 3:
+            Kernel::raiseEvent(MANUVR_MSG_LEGEND_MESSAGES, NULL);
+            break;
+          default:
+            break;
+        }
+        break;
+  
+      case 'y':    // Power mode.
+        if (255 != temp_byte) {
+          event = Kernel::returnEvent(MANUVR_MSG_SYS_POWER_MODE);
+          event->addArg((uint8_t) temp_byte);
+          EventReceiver::raiseEvent(event);
+          local_log.concatf("Power mode is now %d.\n", temp_byte);
+        }
+        else {
+        }
+        break;
+  
+      case 'i':   // Debug prints.
+        if (1 == temp_byte) {
+          local_log.concat("Kernel profiling enabled.\n");
+          profiler(true);
+        }
+        else if (2 == temp_byte) {
+          printDebug(&local_log);
+        }
+        #if defined(__MANUVR_DEBUG)
+        else if (3 == temp_byte) {
+          local_log.concat("Kernel profiling disabled.\n");
+          profiler(false);
+        }
+        #endif //__MANUVR_DEBUG
+        else {
+          printDebug(&local_log);
+        }
+        break;
+  
+      case 'v':           // Set log verbosity.
+        parse_mule.concat(str);
+        parse_mule.drop_position(0);
 
-    case 'u':
-      switch (temp_byte) {
-        case 1:
-          Kernel::raiseEvent(MANUVR_MSG_SELF_DESCRIBE, NULL);
-          break;
-        case 3:
-          Kernel::raiseEvent(MANUVR_MSG_LEGEND_MESSAGES, NULL);
-          break;
-        default:
-          break;
-      }
-      break;
-
-    case 'y':    // Power mode.
-      if (255 != temp_byte) {
-        event = Kernel::returnEvent(MANUVR_MSG_SYS_POWER_MODE);
-        event->addArg((uint8_t) temp_byte);
+        event = new ManuvrEvent(MANUVR_MSG_SYS_LOG_VERBOSITY);
+        switch (parse_mule.count()) {
+          case 2:
+            event->specific_target = getSubscriberByName((const char*) (parse_mule.position_trimmed(1)));
+            local_log.concatf("Directing verbosity change to %s.\n", (NULL == event->specific_target) ? "NULL" : event->specific_target->getReceiverName());
+          case 1:
+            event->addArg((uint8_t) parse_mule.position_as_int(0));
+            break;
+          default:
+            break;
+        }
         EventReceiver::raiseEvent(event);
-        local_log.concatf("Power mode is now %d.\n", temp_byte);
-      }
-      else {
-      }
-      break;
-
-    case 'i':   // Debug prints.
-      if (1 == temp_byte) {
-        local_log.concat("Kernel profiling enabled.\n");
-        profiler(true);
-      }
-      else if (2 == temp_byte) {
-        printDebug(&local_log);
-      }
-      #if defined(__MANUVR_DEBUG)
-      else if (3 == temp_byte) {
-        local_log.concat("Kernel profiling disabled.\n");
-        profiler(false);
-      }
-      #endif //__MANUVR_DEBUG
-      else if (6 == temp_byte) {
-        local_log.concat("Kernel profiling disabled.\n");
-        profiler(false);
-      }
-      else {
-        printDebug(&local_log);
-      }
-      break;
-
-
-    case 'v':           // Set log verbosity.
-      parse_mule.concat(str);
-      parse_mule.drop_position(0);
-      
-      event = new ManuvrEvent(MANUVR_MSG_SYS_LOG_VERBOSITY);
-      switch (parse_mule.count()) {
-        case 2:
-          event->specific_target = getSubscriberByName((const char*) (parse_mule.position_trimmed(1)));
-          local_log.concatf("Directing verbosity change to %s.\n", (NULL == event->specific_target) ? "NULL" : event->specific_target->getReceiverName());
-        case 1:
-          event->addArg((uint8_t) parse_mule.position_as_int(0));
-          break;
-        default:
-          break;
-      }
-      EventReceiver::raiseEvent(event);
-      break;
-
-    default:
-      // TODO: Cycle through the subscribers and check their names against the input.
-      //   If a match is found, pass the command into that class for handling.
-      break;
+        break;
+  
+      default:
+        EventReceiver::procDirectDebugInstruction(input);
+        break;
+    }   
+  }
+  else {
+    input->cull(1); // Shuck the identifier byte.
+    subscriber->procDirectDebugInstruction(input);
   }
   #endif  //__MANUVR_CONSOLE_SUPPORT
   

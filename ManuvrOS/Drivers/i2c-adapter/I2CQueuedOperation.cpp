@@ -78,6 +78,7 @@ const char* I2CQueuedOperation::getErrorString(int8_t code) {
     case I2C_ERR_CODE_TIMEOUT:      return "TIMEOUT";
     case I2C_ERR_CODE_CLASS_ABORT:  return "CLASS_ABORT";
     case I2C_ERR_CODE_BUS_BUSY:     return "ARBITRATION_LOST";
+    case I2C_ERR_SLAVE_NOT_FOUND:   return "SLAVE_NOT_FOUND";
     default:                        return "<UNKNOWN>";
   }
 }
