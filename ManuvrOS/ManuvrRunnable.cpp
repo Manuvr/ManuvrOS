@@ -6,7 +6,8 @@ Date:   2015.12.18
 This class began life as the merger of ScheduleItem and ManuvrEvent.
 */
 
-#include "Kernel.h" 
+#include "Kernel.h"
+#include "ManuvrRunnable.h"
 
 
 /**
@@ -40,6 +41,58 @@ ManuvrRunnable::ManuvrRunnable(uint16_t code) : ManuvrMsg(code) {
 
 
 /**
+* Constructor. Takes a void fxn(void) as a callback (Legacy).
+*
+* @param nu_pid       This schedule's unique PID. This must be passed in from outside for now.
+* @param recurrence   How many times should this schedule run?
+* @param sch_period   How often should this schedule run (in milliseconds).
+* @param ac           Should the scheduler autoclear this schedule when it finishes running?
+* @param sch_callback A FunctionPointer to the callback. Useful for some general things.
+*/
+ManuvrRunnable::ManuvrRunnable(uint32_t nu_pid, int16_t recurrence, uint32_t sch_period, bool ac, FunctionPointer sch_callback) {
+  __class_initializer();
+  pid                 = nu_pid;
+  thread_enabled      = true;
+  thread_fire         = false;
+  thread_recurs       = recurrence;
+  thread_period       = sch_period;
+  thread_time_to_wait = sch_period;
+  autoclear           = ac;
+
+  schedule_callback   = sch_callback;    // This constructor uses the legacy callback.
+}
+
+/**
+* Constructor. Takes an EventReceiver* as a callback.
+* We need to deal with memory management of the Event. For a recurring schedule, we can't allow the
+*   Kernel to reap the event. So it is very important to mark the event appropriately.
+*
+* @param nu_pid       This schedule's unique PID. This must be passed in from outside for now.
+* @param recurrence   How many times should this schedule run?
+* @param sch_period   How often should this schedule run (in milliseconds).
+* @param ac           Should the scheduler autoclear this schedule when it finishes running?
+* @param sch_callback A FunctionPointer to the callback. Useful for some general things.
+* @param ev           A pointer to an Event that we will periodically raise.
+*/
+ManuvrRunnable::ManuvrRunnable(uint32_t nu_pid, int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver* sch_callback) {
+  __class_initializer();
+  pid                 = nu_pid;
+  thread_enabled      = true;
+  thread_fire         = false;
+  thread_recurs       = recurrence;
+  thread_period       = sch_period;
+  thread_time_to_wait = sch_period;
+  autoclear           = ac;
+
+  callback            = sch_callback;   // This constructor uses the EventReceiver callback...
+  schedule_callback   = NULL;
+
+  isScheduled(true);           // Needed so we don't reap the event.
+}
+
+
+
+/**
 * Destructor.
 */
 ManuvrRunnable::~ManuvrRunnable(void) {
@@ -56,18 +109,17 @@ ManuvrRunnable::~ManuvrRunnable(void) {
 *   repurposed many times, doing any sort of init in the constructor should probably be avoided.
 */
 void ManuvrRunnable::__class_initializer() {
-  ManuvrMsg::__class_initializer();
   flags           = 0x00;  // TODO: Optimistic about collapsing the bools into this. Or make gcc do it.
   callback        = NULL;
   specific_target = NULL;
   priority        = EVENT_PRIORITY_DEFAULT;
   
   // These things have implications for memory management, which is why repurpose() doesn't touch them.
-  mem_managed  = false;
-  scheduled    = false;
-  preallocated = false;
+  mem_managed     = false;
+  scheduled       = false;
+  preallocated    = false;
 
-  prof_data           = NULL;
+  prof_data       = NULL;
 }
 
 
@@ -139,7 +191,8 @@ bool ManuvrRunnable::isManaged(bool nu) {
 
 
 bool ManuvrRunnable::abort() {
-  return Kernel::abortEvent(this);
+  //TODO: Needs the Kernel refactor complete first....
+  //return Kernel::abortEvent(this);
 }
 
 
@@ -188,58 +241,6 @@ void ManuvrRunnable::printDebug(StringBuilder *output) {
 }
 
 
-
-
-
-/**
-* Constructor. Takes a void fxn(void) as a callback (Legacy).
-*
-* @param nu_pid       This schedule's unique PID. This must be passed in from outside for now.
-* @param recurrence   How many times should this schedule run?
-* @param sch_period   How often should this schedule run (in milliseconds).
-* @param ac           Should the scheduler autoclear this schedule when it finishes running?
-* @param sch_callback A FunctionPointer to the callback. Useful for some general things.
-*/
-ManuvrRunnable::ManuvrRunnable(uint32_t nu_pid, int16_t recurrence, uint32_t sch_period, bool ac, FunctionPointer sch_callback) {
-  __class_initializer();
-  pid                 = nu_pid;
-  thread_enabled      = true;
-  thread_fire         = false;
-  thread_recurs       = recurrence;
-  thread_period       = sch_period;
-  thread_time_to_wait = sch_period;
-  autoclear           = ac;
-
-  _callback           = sch_callback;    // This constructor uses the legacy callback.
-}
-
-/**
-* Constructor. Takes an EventReceiver* as a callback.
-* We need to deal with memory management of the Event. For a recurring schedule, we can't allow the
-*   Kernel to reap the event. So it is very important to mark the event appropriately.
-*
-* @param nu_pid       This schedule's unique PID. This must be passed in from outside for now.
-* @param recurrence   How many times should this schedule run?
-* @param sch_period   How often should this schedule run (in milliseconds).
-* @param ac           Should the scheduler autoclear this schedule when it finishes running?
-* @param sch_callback A FunctionPointer to the callback. Useful for some general things.
-* @param ev           A pointer to an Event that we will periodically raise.
-*/
-ManuvrRunnable::ManuvrRunnable(uint32_t nu_pid, int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver* sch_callback) {
-  __class_initializer();
-  pid                 = nu_pid;
-  thread_enabled      = true;
-  thread_fire         = false;
-  thread_recurs       = recurrence;
-  thread_period       = sch_period;
-  thread_time_to_wait = sch_period;
-  autoclear           = ac;
-
-  callback            = sch_callback;   // This constructor uses the EventReceiver callback...
-  schedule_callback   = NULL;
-
-  isScheduled(true);           // Needed so we don't reap the event.
-}
 
 
 

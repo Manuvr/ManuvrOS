@@ -1,5 +1,5 @@
-#ifndef __MANUVR_EVENT_H__
-  #define __MANUVR_EVENT_H__
+#ifndef __MANUVR_RUNNABLE_H__
+  #define __MANUVR_RUNNABLE_H__
   
   #include "ManuvrMsg/ManuvrMsg.h"
   
@@ -24,12 +24,12 @@
       int16_t  thread_recurs;            // See Note 2.
       // End ScheduleItem
 
-      ManuvrEvent(uint32_t nu_pid, int16_t recurrence, uint32_t sch_period, bool ac, FunctionPointer sch_callback);
-      ManuvrEvent(uint32_t nu_pid, int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver*  sch_callback);
-      ManuvrEvent(uint16_t msg_code, EventReceiver* cb);
-      ManuvrEvent(uint16_t msg_code);
-      ManuvrEvent();
-      ~ManuvrEvent();
+      ManuvrRunnable(uint32_t nu_pid, int16_t recurrence, uint32_t sch_period, bool ac, FunctionPointer sch_callback);
+      ManuvrRunnable(uint32_t nu_pid, int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver*  sch_callback);
+      ManuvrRunnable(uint16_t msg_code, EventReceiver* cb);
+      ManuvrRunnable(uint16_t msg_code);
+      ManuvrRunnable();
+      ~ManuvrRunnable();
 
       int8_t repurpose(uint16_t code);
 
@@ -80,4 +80,4 @@
     private:
   };
 
-#endif
+#endif  //__MANUVR_RUNNABLE_H__
