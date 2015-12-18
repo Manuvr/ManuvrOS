@@ -14,7 +14,7 @@
 * Static members and initializers should be located here. Initializers first, functions second.
 ****************************************************************************************************/
 Kernel* Kernel::INSTANCE = NULL;
-PriorityQueue<ManuvrEvent*> Kernel::isr_event_queue;
+PriorityQueue<ManuvrRunnable*> Kernel::isr_event_queue;
 
 const unsigned char MSG_ARGS_EVENTRECEIVER[] = {SYS_EVENTRECEIVER_FM, 0, 0}; 
 const unsigned char MSG_ARGS_NO_ARGS[] = {0}; 
@@ -34,10 +34,10 @@ const MessageTypeDef message_defs[] = {
   {  MANUVR_MSG_SCHED_PROFILER_START , 0x0000,               "SCHED_PROFILER_START" , MSG_ARGS_NO_ARGS }, // We want to profile the given PID.
   {  MANUVR_MSG_SCHED_PROFILER_STOP  , 0x0000,               "SCHED_PROFILER_STOP"  , MSG_ARGS_NO_ARGS }, // We want to stop profiling the given PID.
   {  MANUVR_MSG_SCHED_PROFILER_DUMP  , 0x0000,               "SCHED_PROFILER_DUMP"  , MSG_ARGS_NO_ARGS }, // Dump the profiler data for all PIDs (no args) or given PIDs.
-  {  MANUVR_MSG_SCHED_DUMP_META      , 0x0000,               "SCHED_DUMP_META"      , MSG_ARGS_NO_ARGS }, // Tell the Scheduler to dump its meta metrics.
-  {  MANUVR_MSG_SCHED_DUMP_SCHEDULES , 0x0000,               "SCHED_DUMP_SCHEDULES" , MSG_ARGS_NO_ARGS }, // Tell the Scheduler to dump schedules.
-  {  MANUVR_MSG_SCHED_WIPE_PROFILER  , 0x0000,               "SCHED_WIPE_PROFILER"  , MSG_ARGS_NO_ARGS }, // Tell the Scheduler to wipe its profiler data. Pass PIDs to be selective.
-  {  MANUVR_MSG_SCHED_DEFERRED_EVENT , 0x0000,               "SCHED_DEFERRED_EVENT" , MSG_ARGS_NO_ARGS }, // Tell the Scheduler to broadcast the attached Event so many ms into the future.
+  {  MANUVR_MSG_SCHED_DUMP_META      , 0x0000,               "SCHED_DUMP_META"      , MSG_ARGS_NO_ARGS }, // Tell the Kernel to dump its meta metrics.
+  {  MANUVR_MSG_SCHED_DUMP_SCHEDULES , 0x0000,               "SCHED_DUMP_SCHEDULES" , MSG_ARGS_NO_ARGS }, // Tell the Kernel to dump schedules.
+  {  MANUVR_MSG_SCHED_WIPE_PROFILER  , 0x0000,               "SCHED_WIPE_PROFILER"  , MSG_ARGS_NO_ARGS }, // Tell the Kernel to wipe its profiler data. Pass PIDs to be selective.
+  {  MANUVR_MSG_SCHED_DEFERRED_EVENT , 0x0000,               "SCHED_DEFERRED_EVENT" , MSG_ARGS_NO_ARGS }, // Tell the Kernel to broadcast the attached Event so many ms into the future.
 
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
     // These are messages that are only present under some sort of threading model. They are meant
@@ -108,6 +108,24 @@ Kernel::Kernel() {
 
   current_event      = NULL;
 
+  // TODO: Pulled in from Scheduler.
+  next_pid             = 1;      // Next PID to assign.
+  currently_executing  = 0;      // Hold PID of currently-executing Schedule. 0 if none.
+  productive_loops     = 0;      // Number of calls to serviceScheduledEvents() that actually called a schedule.
+  total_loops          = 0;      // Number of calls to serviceScheduledEvents().
+  overhead             = 0;      // The time in microseconds required to service the last empty schedule loop.
+  scheduler_ready      = false;  // TODO: Convert to a uint8 and track states.
+  skipped_loops        = 0;
+  total_skipped_loops  = 0;
+  lagged_schedules     = 0;
+  bistable_skip_detect = false;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
+  clicks_in_isr        = 0;
+  _ms_elapsed          = 0;
+  // TODO: Pulled in from Scheduler.
+  
+  
+  
+  
   for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
     /* We carved out a space in our allocation for a pool of events. Ideally, this would be enough
         for most of the load, most of the time. If the preallocation ends up being insufficient to
@@ -123,7 +141,6 @@ Kernel::Kernel() {
   profiler(false);           // Turn off the profiler.
 
   ManuvrMsg::registerMessages(message_defs, sizeof(message_defs) / sizeof(MessageTypeDef));
-  subscribe((EventReceiver*) &__scheduler);    // Subscribe the Scheduler.
 
   platformPreInit();    // Start the pre-bootstrap platform-specific machinery.
 }
@@ -132,6 +149,7 @@ Kernel::Kernel() {
 * Destructor. Should probably never be called.
 */
 Kernel::~Kernel() {
+  destroyAllScheduleItems();
 }
 
 
@@ -203,30 +221,16 @@ volatile void Kernel::log(StringBuilder *str) {
 int8_t Kernel::bootstrap() {
   platformInit();    // Start the platform-specific machinery.
 
-  ManuvrEvent *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
+  ManuvrRunnable *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
   boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
   raiseEvent(MANUVR_MSG_SYS_BOOT_COMPLETED, NULL);
   return 0;
 }
 
 
-/****************************************************************************************************
-* Big pile of ugly..........                                                                        *
-* Big pile of ugly..........                    These are the things left over                      *
-* Big pile of ugly..........                    from StaticHub. They need to                        *
-* Big pile of ugly..........                    justify their existance or DIAF.                    *
-* Big pile of ugly..........                                                                        *
-* Big pile of ugly..........                       ---J. Ian Lindsay   Tue Dec 01 01:28:09 MST 2015 *
-* Big pile of ugly..........                                                                        *
-****************************************************************************************************/
-
-StringBuilder last_user_input;  // Was private in StaticHub
-
-
 /*
-* This is called from the USB peripheral. It is called when the short static
-* character array that forms the USB rx buffer is either filled up, or we see
-* a new-line character on the wire.
+* This is the means by which we feed raw string input from a console into the 
+*   kernel's user input slot.
 */
 void Kernel::accumulateConsoleInput(uint8_t *buf, int len, bool terminal) {
   last_user_input.concat(buf, len);
@@ -234,16 +238,11 @@ void Kernel::accumulateConsoleInput(uint8_t *buf, int len, bool terminal) {
   if (terminal) {
     // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
     // run in idle time.
-    ManuvrEvent* event = returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
+    ManuvrRunnable* event = returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
     event->specific_target = (EventReceiver*) this;
     Kernel::staticRaiseEvent(event);
   }
 }
-
-/****************************************************************************************************
-* End of big pile of ugly                                                                           *
-****************************************************************************************************/
-
 
 
 
@@ -336,10 +335,10 @@ int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* cb) {
   int8_t return_value = 0;
   
   // We are creating a new Event. Try to snatch a prealloc'd one and fall back to malloc if needed.
-  ManuvrEvent* nu = INSTANCE->preallocated.dequeue();
+  ManuvrRunnable* nu = INSTANCE->preallocated.dequeue();
   if (nu == NULL) {
     INSTANCE->prealloc_starved++;
-    nu = new ManuvrEvent(code, cb);
+    nu = new ManuvrRunnable(code, cb);
   }
   else {
     nu->repurpose(code);
@@ -378,7 +377,7 @@ int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* cb) {
 * @param   event  The event to be inserted into the idle queue.
 * @return  -1 on failure, and 0 on success.
 */
-int8_t Kernel::staticRaiseEvent(ManuvrEvent* event) {
+int8_t Kernel::staticRaiseEvent(ManuvrRunnable* event) {
   int8_t return_value = 0;
   if (0 == INSTANCE->validate_insertion(event)) {
     INSTANCE->event_queue.insert(event, event->priority);
@@ -411,7 +410,7 @@ int8_t Kernel::staticRaiseEvent(ManuvrEvent* event) {
 * @param   event  The event to be removed from the idle queue.
 * @return  true if the given event was aborted, false otherwise.
 */
-bool Kernel::abortEvent(ManuvrEvent* event) {
+bool Kernel::abortEvent(ManuvrRunnable* event) {
   if (!INSTANCE->event_queue.remove(event)) {
     // Didn't find it? Check  the isr_queue...
     if (!INSTANCE->isr_event_queue.remove(event)) {
@@ -426,7 +425,7 @@ bool Kernel::abortEvent(ManuvrEvent* event) {
 //       That way, we could check for it here, and have the (probable) possibility of not incurring
 //       the cost for merging these two queues if we don't have to.
 //             ---J. Ian Lindsay   Fri Jul 03 16:54:14 MST 2015
-int8_t Kernel::isrRaiseEvent(ManuvrEvent* event) {
+int8_t Kernel::isrRaiseEvent(ManuvrRunnable* event) {
   int return_value = -1;
   maskableInterrupts(false);
   return_value = isr_event_queue.insertIfAbsent(event, event->priority);
@@ -450,12 +449,12 @@ int8_t Kernel::isrRaiseEvent(ManuvrEvent* event) {
 * @param  code  The desired identity code of the event.
 * @return A pointer to the prepared event. Will not return NULL unless we are out of memory.
 */
-ManuvrEvent* Kernel::returnEvent(uint16_t code) {
+ManuvrRunnable* Kernel::returnEvent(uint16_t code) {
   // We are creating a new Event. Try to snatch a prealloc'd one and fall back to malloc if needed.
-  ManuvrEvent* return_value = INSTANCE->preallocated.dequeue();
+  ManuvrRunnable* return_value = INSTANCE->preallocated.dequeue();
   if (return_value == NULL) {
     INSTANCE->prealloc_starved++;
-    return_value = new ManuvrEvent(code, (EventReceiver*) INSTANCE);
+    return_value = new ManuvrRunnable(code, (EventReceiver*) INSTANCE);
   }
   else {
     return_value->repurpose(code);
@@ -475,7 +474,7 @@ ManuvrEvent* Kernel::returnEvent(uint16_t code) {
 * @param event The inbound event that we need to evaluate.
 * @return 0 if the event is good-to-go. Otherwise, an appropriate failure code.
 */
-int8_t Kernel::validate_insertion(ManuvrEvent* event) {
+int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
   if (NULL == event) return -1;                                   // No NULL events.
   if (MANUVR_MSG_UNDEFINED == event->event_code) {
     return -2;  // No undefined events.
@@ -509,7 +508,7 @@ int8_t Kernel::validate_insertion(ManuvrEvent* event) {
 *
 * @param active_event The event that has reached the end of its life-cycle.
 */
-void Kernel::reclaim_event(ManuvrEvent* active_event) {
+void Kernel::reclaim_event(ManuvrRunnable* active_event) {
   if (NULL == active_event) {
     return;
   }
@@ -543,7 +542,7 @@ void Kernel::reclaim_event(ManuvrEvent* active_event) {
 
 
 // This is the splice into v2's style of event handling (callaheads).
-int8_t Kernel::procCallAheads(ManuvrEvent *active_event) {
+int8_t Kernel::procCallAheads(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
   PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[active_event->event_code];
   if (NULL != ca_queue) {
@@ -559,7 +558,7 @@ int8_t Kernel::procCallAheads(ManuvrEvent *active_event) {
 }
 
 // This is the splice into v2's style of event handling (callbacks).
-int8_t Kernel::procCallBacks(ManuvrEvent *active_event) {
+int8_t Kernel::procCallBacks(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
   PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[active_event->event_code];
   if (NULL != cb_queue) {
@@ -583,8 +582,8 @@ int8_t Kernel::procCallBacks(ManuvrEvent *active_event) {
 * Definition of "well-defined behavior" for this fxn....
 * - This fxn is essentially the notify() fxn that is ALWAYS first to proc.
 * - This fxn should somehow self-limit the number of Events that it procs for any single
-*     call. We don't want to cause bad re-entrancy problem in the Scheduler by spending
-*     all of our time here (although we might re-work the Scheduler to make this acceptable).
+*     call. We don't want to cause bad re-entrancy problem in the Kernel by spending
+*     all of our time here (although we might re-work the Kernel to make this acceptable).
 *
 * @return the number of events processed, or a negative value on some failure.
 */
@@ -597,7 +596,7 @@ int8_t Kernel::procIdleFlags() {
   int8_t return_value      = 0;   // Number of Events we've processed this call.
   uint16_t msg_code_local  = 0;   
 
-  ManuvrEvent *active_event = NULL;  // Our short-term focus.
+  ManuvrRunnable *active_event = NULL;  // Our short-term focus.
   uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
 
   globalIRQDisable();
@@ -871,13 +870,13 @@ void Kernel::print_type_sizes() {
 
   temp.concatf(" Core singletons:\n");
   temp.concatf("\t Kernel                %d\n", sizeof(Kernel));
-  temp.concatf("\t   Scheduler           %d\n", sizeof(Scheduler));
+  temp.concatf("\t   Kernel           %d\n", sizeof(Kernel));
 
   temp.concatf(" Messaging components:\n");
-  temp.concatf("\t ManuvrEvent           %d\n", sizeof(ManuvrEvent));
+  temp.concatf("\t ManuvrRunnable           %d\n", sizeof(ManuvrRunnable));
   temp.concatf("\t ManuvrMsg             %d\n", sizeof(ManuvrMsg));
   temp.concatf("\t Argument              %d\n", sizeof(Argument));
-  temp.concatf("\t SchedulerItem         %d\n", sizeof(ScheduleItem));
+  temp.concatf("\t KernelItem         %d\n", sizeof(ManuvrRunnable));
   temp.concatf("\t TaskProfilerData      %d\n", sizeof(TaskProfilerData));
 
   Kernel::log(&temp);
@@ -920,6 +919,38 @@ void Kernel::printProfiler(StringBuilder* output) {
   }
   else {
     output->concat("-- Kernel profiler disabled.\n\n");
+  }
+
+
+  bool header_unprinted = true;
+  if (schedules.size() > 0) {
+    ManuvrRunnable *current;
+
+    StringBuilder active_str;
+    StringBuilder secondary_str;
+    for (int i = 0; i < schedules.size(); i++) {
+      current = schedules.get(i);
+      if (current->isProfiling()) {
+        TaskProfilerData *prof_data = current->prof_data;
+        if (header_unprinted) {
+          header_unprinted = false;
+          output->concat("\t PID         Execd      total us   average    worst      best       last\n\t -----------------------------------------------------------------------------\n");
+        }
+        if (current->threadEnabled()) {
+          active_str.concatf("\t %10u  %9d  %9d  %9d  %9d  %9d  %9d\n", current->pid, prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last);
+        }
+        else {
+          secondary_str.concatf("\t %10u  %9d  %9d  %9d  %9d  %9d  %9d  (INACTIVE)\n", current->pid, prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last);
+        }
+        
+        output->concatHandoff(&active_str);
+        output->concatHandoff(&secondary_str);
+      }
+    }
+  }
+  
+  if (header_unprinted) {
+    output->concat("Nothing being profiled.\n");
   }
 }
 
@@ -973,6 +1004,11 @@ void Kernel::printDebug(StringBuilder* output) {
     current_event->printDebug(output);
   }
 
+  output->concatf("--- Schedules location:  0x%08x\n", &schedules);
+  output->concatf("--- Total loops:      %u\n--- Productive loops: %u\n---Skipped loops: %u\n---Lagged schedules %u\n", (unsigned long) total_loops, (unsigned long) productive_loops, (unsigned long) total_skipped_loops, (unsigned long) lagged_schedules);
+  if (total_loops) output->concatf("--- Duty cycle:       %2.4f%\n--- Overhead:         %d microseconds\n", ((double)((double) productive_loops / (double) total_loops) * 100), overhead);
+  output->concatf("--- Total schedules:  %d\n--- Active schedules: %d\n\n", getTotalSchedules(), getActiveSchedules());
+
   printProfiler(output);
 }
 
@@ -1002,6 +1038,7 @@ void Kernel::printDebug(StringBuilder* output) {
 int8_t Kernel::bootComplete() {
   EventReceiver::bootComplete();
   boot_completed = true;
+  scheduler_ready = true;
   maskableInterrupts(true);  // Now configure interrupts, lift interrupt masks, and let the madness begin.
   return 1;
 }
@@ -1021,7 +1058,7 @@ int8_t Kernel::bootComplete() {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t Kernel::callback_proc(ManuvrEvent *event) {
+int8_t Kernel::callback_proc(ManuvrRunnable *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
   int8_t return_value = event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -1040,7 +1077,8 @@ int8_t Kernel::callback_proc(ManuvrEvent *event) {
 
 
 
-int8_t Kernel::notify(ManuvrEvent *active_event) {
+int8_t Kernel::notify(ManuvrRunnable *active_event) {
+  uint32_t temp_uint32 = 0;
   int8_t return_value = 0;
   
   switch (active_event->event_code) {
@@ -1133,6 +1171,77 @@ int8_t Kernel::notify(ManuvrEvent *active_event) {
       break;
     #endif
     
+    case MANUVR_MSG_SCHED_ENABLE_BY_PID:
+      while (0 == active_event->consumeArgAs(&temp_uint32)) {
+        if (enableSchedule(temp_uint32)) {
+          return_value++;
+        }
+      }
+      break;
+    case MANUVR_MSG_SCHED_DISABLE_BY_PID:
+      while (0 == active_event->consumeArgAs(&temp_uint32)) {
+        if (disableSchedule(temp_uint32)) {
+          return_value++;
+        }
+      }
+      break;
+    case MANUVR_MSG_SCHED_PROFILER_START:
+      while (0 == active_event->consumeArgAs(&temp_uint32)) {
+        beginProfiling(temp_uint32);
+        return_value++;
+      }
+      break;
+    case MANUVR_MSG_SCHED_PROFILER_STOP:
+      while (0 == active_event->consumeArgAs(&temp_uint32)) {
+        stopProfiling(temp_uint32);
+        return_value++;
+      }
+      break;
+    case MANUVR_MSG_SCHED_PROFILER_DUMP:
+      if (active_event->args.size() > 0) {
+        while (0 == active_event->consumeArgAs(&temp_uint32)) {
+          printProfiler(&local_log);
+          return_value++;
+        }
+      }
+      else {
+        printProfiler(&local_log);
+        return_value++;
+      }
+      break;
+    case MANUVR_MSG_SCHED_DUMP_META:
+      printDebug(&local_log);
+      return_value++;
+      break;
+    case MANUVR_MSG_SCHED_DUMP_SCHEDULES:
+      if (active_event->args.size() > 0) {
+        ManuvrRunnable *nu_sched;
+        while (0 == active_event->consumeArgAs(&temp_uint32)) {
+          nu_sched  = findNodeByPID(temp_uint32);
+          if (NULL != nu_sched) nu_sched->printDebug(&local_log);
+        }
+      }
+      else {
+        ManuvrRunnable *nu_sched;
+        for (int i = 0; i < schedules.size(); i++) {
+          nu_sched  = schedules.get(i);
+          if (NULL != nu_sched) nu_sched->printDebug(&local_log);
+          return_value++;
+        }
+      }
+      return_value++;
+      break;
+    case MANUVR_MSG_SCHED_DEFERRED_EVENT:
+      {
+        //uint32_t period = 1000;
+        //int16_t recurrence = 1;
+        ////sch_callback
+        //if (createSchedule(period, recurrence, true, FunctionPointer sch_callback)) {
+        //  return_value++;
+        //}
+      }
+      break;
+
     default:
       return_value += EventReceiver::notify(active_event);
       break;
@@ -1160,7 +1269,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
     subscriber_idx = atoi((char*) str);
     temp_byte = atoi((char*) str+1);
   }
-  ManuvrEvent *event = NULL;  // Pitching events is a common thing in this fxn...
+  ManuvrRunnable *event = NULL;  // Pitching events is a common thing in this fxn...
   
   StringBuilder parse_mule;
   
@@ -1248,7 +1357,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
         parse_mule.concat(str);
         parse_mule.drop_position(0);
 
-        event = new ManuvrEvent(MANUVR_MSG_SYS_LOG_VERBOSITY);
+        event = new ManuvrRunnable(MANUVR_MSG_SYS_LOG_VERBOSITY);
         switch (parse_mule.count()) {
           case 2:
             event->specific_target = getSubscriberByName((const char*) (parse_mule.position_trimmed(1)));
@@ -1262,6 +1371,21 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
         EventReceiver::raiseEvent(event);
         break;
   
+      case 'S':
+        if (temp_byte) {
+          ManuvrRunnable *nu_sched;
+          nu_sched  = findNodeByPID(temp_byte);
+          if (NULL != nu_sched) nu_sched->printDebug(&local_log);
+        }
+        else {
+          ManuvrRunnable *nu_sched;
+          for (int i = 0; i < schedules.size(); i++) {
+            nu_sched  = schedules.get(i);
+            if (NULL != nu_sched) nu_sched->printDebug(&local_log);
+          }
+        }
+        break;
+
       default:
         EventReceiver::procDirectDebugInstruction(input);
         break;
@@ -1275,6 +1399,650 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
   
   if (local_log.length() > 0) Kernel::log(&local_log);
   last_user_input.clear();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+File:   Kernel.cpp
+Author: J. Ian Lindsay
+Date:   2013.07.10
+
+This class is meant to be a real-time task scheduler for small microcontrollers. It
+should be driven by a periodic interrupt of some sort, but it may also be effectively
+used with a reliable polling scheme (at the possible cost of timing accuracy).
+
+A simple profiler is included which will allow the user of this class to determine
+run-times and possibly even adjust task duty cycles accordingly.
+
+Copyright (C) 2013 J. Ian Lindsay
+All rights reserved.
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+
+/****************************************************************************************************
+* Class-management functions...                                                                     *
+****************************************************************************************************/
+
+/**
+*  Given the schedule PID, begin profiling.
+*/
+void Kernel::beginProfiling(uint32_t g_pid) {
+  ManuvrRunnable *current = findNodeByPID(g_pid);
+  current->enableProfiling(true);
+}
+
+
+/**
+*  Given the schedule PID, stop profiling.
+* Stops profiling without destroying the collected data.
+* Note: If profiling is ever re-started on this schedule, the profiling data
+*  that this function preserves will be wiped.
+*/
+void Kernel::stopProfiling(uint32_t g_pid) {
+  ManuvrRunnable *current = findNodeByPID(g_pid);
+  current->enableProfiling(false);
+}
+
+
+/**
+*  Given the schedule PID, reset the profiling data.
+*  Typically, we'd do this when the profiler is being turned on.
+*/
+void Kernel::clearProfilingData(uint32_t g_pid) {
+  ManuvrRunnable *current = findNodeByPID(g_pid);
+  if (NULL != current) current->clearProfilingData();
+}
+
+
+
+
+/****************************************************************************************************
+* Linked-list helper functions...                                                                   *
+****************************************************************************************************/
+
+// Fire the given schedule on the next idle loop.
+bool Kernel::fireSchedule(uint32_t g_pid) {
+  ManuvrRunnable *current = this->findNodeByPID(g_pid);
+  if (NULL != current) {
+    current->fireNow(true);
+    current->thread_time_to_wait = current->thread_period;
+    execution_queue.insert(current);
+    return true;
+  }
+  return false;
+}
+
+
+/**
+* Returns the number of schedules presently defined.
+*/
+int Kernel::getTotalSchedules() {
+  return schedules.size();
+}
+
+
+/**
+* Returns the number of schedules presently active.
+*/
+unsigned int Kernel::getActiveSchedules() {
+  unsigned int return_value = 0;
+  ManuvrRunnable *current;
+  for (int i = 0; i < schedules.size(); i++) {
+    current = schedules.get(i);
+    if (current->threadEnabled()) {
+      return_value++;
+    }
+  }
+  return return_value;
+}
+
+
+
+/**
+* Destroy everything in the list. Should only be called by the destructor, but no harm
+*  in calling it for other reasons. Will stop and wipe all schedules. 
+*/
+void Kernel::destroyAllScheduleItems() {
+  execution_queue.clear();
+  while (schedules.hasNext()) {  delete schedules.dequeue();   }
+}
+
+
+/**
+* Traverses the linked list and returns a pointer to the node that has the given PID.
+* Returns NULL if a node is not found that meets this criteria.
+*/
+ManuvrRunnable* Kernel::findNodeByPID(uint32_t g_pid) {
+  ManuvrRunnable *current = NULL;
+  for (int i = 0; i < schedules.size(); i++) {
+    current = schedules.get(i);
+    if (current->pid == g_pid) {
+      return current;
+    }
+  }
+  return NULL;
+}
+
+
+/**
+*  When we assign a new PID, call this function to get one. Since we don't want
+*    to collide with one that already exists, or get the zero value. 
+*/
+uint32_t Kernel::get_valid_new_pid() {
+    uint32_t return_value = next_pid++;
+    if (return_value == 0) {
+        return_value = get_valid_new_pid();  // Recurse...
+    }
+    // Takes too long, but represents a potential bug.
+    //else if (this->findNodeByPID(return_value) == NULL) {
+    //	return_value = this->get_valid_new_pid();  // Recurse...
+    //}
+
+	return return_value;
+}
+
+
+
+/**
+*  Call this function to create a new schedule with the given period, a given number of repititions, and with a given function call.
+*
+*  Will automatically set the schedule active, provided the input conditions are met.
+*  Returns the newly-created PID on success, or 0 on failure.
+*/
+uint32_t Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FunctionPointer sch_callback) {
+  uint32_t return_value  = 0;
+  if (sch_period > 1) {
+    if (sch_callback != NULL) {
+      ManuvrRunnable *nu_sched = new ManuvrRunnable(get_valid_new_pid(), recurrence, sch_period, ac, sch_callback);
+      if (nu_sched != NULL) {  // Did we actually malloc() successfully?
+        return_value  = nu_sched->pid;
+        schedules.insert(nu_sched);
+        nu_sched->enableProfiling(return_value);
+      }
+    }
+  }
+  return return_value;
+}
+
+
+/**
+*  Call this function to create a new schedule with the given period, a given number of repititions, and with a given function call.
+*
+*  Will automatically set the schedule active, provided the input conditions are met.
+*  Returns the newly-created PID on success, or 0 on failure.
+*/
+uint32_t Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, EventReceiver* sch_callback, ManuvrRunnable* event) {
+  uint32_t return_value  = 0;
+  if (sch_period > 1) {
+    // TODO: This is broken until more condensation happens.
+    //ManuvrRunnable *nu_sched = new ManuvrRunnable(get_valid_new_pid(), recurrence, sch_period, ac, sch_callback, event);
+    ManuvrRunnable *nu_sched = new ManuvrRunnable(get_valid_new_pid(), recurrence, sch_period, ac, sch_callback);
+    if (nu_sched != NULL) {  // Did we actually malloc() successfully?
+      return_value  = nu_sched->pid;
+      schedules.insert(nu_sched);
+      nu_sched->enableProfiling(return_value);
+    }
+  }
+  return return_value;
+}
+
+
+/**
+* Call this function to alter a given schedule. Set with the given period, a given number of times, with a given function call.
+*  Returns true on success or false if the given PID is not found, or there is a problem with the parameters.
+*
+* Will not set the schedule active, but will clear any pending executions for this schedule, as well as reset the timer for it.
+*/
+bool Kernel::alterSchedule(ManuvrRunnable *obj, uint32_t sch_period, int16_t recurrence, bool ac, FunctionPointer sch_callback) {
+  bool return_value  = false;
+  if (sch_period > 1) {
+    if (sch_callback != NULL) {
+      if (obj != NULL) {
+        obj->fireNow(false);
+        obj->autoClear(ac);
+        obj->thread_recurs       = recurrence;
+        obj->thread_period       = sch_period;
+        obj->thread_time_to_wait = sch_period;
+        obj->schedule_callback   = sch_callback;
+        return_value  = true;
+      }
+    }
+  }
+  return return_value;
+}
+
+bool Kernel::alterSchedule(uint32_t g_pid, uint32_t sch_period, int16_t recurrence, bool ac, FunctionPointer sch_callback) {
+  return alterSchedule(findNodeByPID(g_pid), sch_period, recurrence, ac, sch_callback);
+}
+
+bool Kernel::alterSchedule(uint32_t schedule_index, bool ac) {
+  bool return_value  = false;
+  ManuvrRunnable *nu_sched  = findNodeByPID(schedule_index);
+  if (nu_sched != NULL) {
+    nu_sched->autoClear(ac);
+    return_value  = true;
+  }
+  return return_value;
+}
+
+bool Kernel::alterSchedule(uint32_t schedule_index, FunctionPointer sch_callback) {
+  bool return_value  = false;
+  if (sch_callback != NULL) {
+    ManuvrRunnable *nu_sched  = findNodeByPID(schedule_index);
+    if (nu_sched != NULL) {
+      nu_sched->schedule_callback   = sch_callback;
+      return_value  = true;
+    }
+  }
+  return return_value;
+}
+
+bool Kernel::alterSchedulePeriod(uint32_t schedule_index, uint32_t sch_period) {
+  bool return_value  = false;
+  if (sch_period > 1) {
+    ManuvrRunnable *nu_sched  = findNodeByPID(schedule_index);
+    if (nu_sched != NULL) {
+      nu_sched->fireNow(false);
+      nu_sched->thread_period       = sch_period;
+      nu_sched->thread_time_to_wait = sch_period;
+      return_value  = true;
+    }
+  }
+  return return_value;
+}
+
+bool Kernel::alterScheduleRecurrence(uint32_t schedule_index, int16_t recurrence) {
+  bool return_value  = false;
+  ManuvrRunnable *nu_sched  = findNodeByPID(schedule_index);
+  if (nu_sched != NULL) {
+    nu_sched->fireNow(false);
+    nu_sched->thread_recurs       = recurrence;
+    return_value  = true;
+  }
+  return return_value;
+}
+
+
+/**
+* Returns true if...
+* A) The schedule exists
+*    AND
+* B) The schedule is enabled, and has at least one more runtime before it *might* be auto-reaped.
+*/
+bool Kernel::willRunAgain(uint32_t g_pid) {
+  ManuvrRunnable *nu_sched  = findNodeByPID(g_pid);
+  if (nu_sched != NULL) {
+    if (nu_sched->threadEnabled()) {
+      if ((nu_sched->thread_recurs == -1) || (nu_sched->thread_recurs > 0)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+
+bool Kernel::scheduleEnabled(uint32_t g_pid) {
+  ManuvrRunnable *nu_sched  = findNodeByPID(g_pid);
+  if (nu_sched != NULL) {
+    return nu_sched->threadEnabled();
+  }
+  return false;
+}
+
+
+/**
+* Enable a previously disabled schedule.
+*  Returns true on success and false on failure.
+*/
+bool Kernel::enableSchedule(uint32_t g_pid) {
+  ManuvrRunnable *nu_sched  = findNodeByPID(g_pid);
+  if (nu_sched != NULL) {
+    nu_sched->threadEnabled(true);
+    return true;
+  }
+  return false;
+}
+
+
+bool Kernel::delaySchedule(ManuvrRunnable *obj, uint32_t by_ms) {
+  if (obj != NULL) {
+    obj->thread_time_to_wait = by_ms;
+    obj->threadEnabled(true);
+    return true;
+  }
+  return false;
+}
+
+/**
+* Causes a given schedule's TTW (time-to-wait) to be set to the value we provide (this time only).
+* If the schedule wasn't enabled before, it will be when we return.
+*/
+bool Kernel::delaySchedule(uint32_t g_pid, uint32_t by_ms) {
+  ManuvrRunnable *nu_sched  = findNodeByPID(g_pid);
+  return delaySchedule(nu_sched, by_ms);
+}
+
+/**
+* Causes a given schedule's TTW (time-to-wait) to be reset to its period.
+* If the schedule wasn't enabled before, it will be when we return.
+*/
+bool Kernel::delaySchedule(uint32_t g_pid) {
+  ManuvrRunnable *nu_sched = findNodeByPID(g_pid);
+  return delaySchedule(nu_sched, nu_sched->thread_period);
+}
+
+
+
+/**
+* Call this function to push the schedules forward by a given number of ms.
+* We can be assured of exclusive access to the scheules queue as long as we
+*   are in an ISR.
+*/
+void Kernel::advanceScheduler(unsigned int ms_elapsed) {
+  clicks_in_isr++;
+  _ms_elapsed += (uint32_t) ms_elapsed;
+  
+  
+  if (bistable_skip_detect) {
+    // Failsafe block
+#ifdef STM32F4XX
+    if (skipped_loops > 5000) {
+      // TODO: We are hung in a way that we probably cannot recover from. Reboot...
+      jumpToBootloader();
+    }
+    else if (skipped_loops == 2000) {
+      printf("Hung scheduler...\n");
+    }
+    else if (skipped_loops == 2040) {
+      /* Doing all this String manipulation in an ISR would normally be an awful idea.
+         But we don't care here because we're hung anyhow, and we need to know why. */
+      StringBuilder output;
+      Kernel::getInstance()->fetchKernel()->printDebug(&output);
+      printf("%s\n", (char*) output.string());
+    }
+    else if (skipped_loops == 2200) {
+      StringBuilder output;
+      printDebug(&output);
+      printf("%s\n", (char*) output.string());
+    }
+    else if (skipped_loops == 3500) {
+      StringBuilder output;
+      Kernel::getInstance()->printDebug(&output);
+      printf("%s\n", (char*) output.string());
+    }
+    skipped_loops++;
+#endif
+  }
+  else {
+    bistable_skip_detect = true;
+  }
+}
+
+
+/**
+* Call this function to push the schedules forward.
+* We can be assured of exclusive access to the scheules queue as long as we
+*   are in an ISR.
+*/
+void Kernel::advanceScheduler() {
+  clicks_in_isr++;
+  _ms_elapsed++;
+  
+  //int x = schedules.size();
+  //ManuvrRunnable *current;
+  //
+  //for (int i = 0; i < x; i++) {
+  //  current = schedules.recycle();
+  //  if (current->threadEnabled()) {
+  //    if (current->thread_time_to_wait > 0) {
+  //      current->thread_time_to_wait--;
+  //    }
+  //    else {
+  //      current->fireNow(true);
+  //      current->thread_time_to_wait = current->thread_period;
+  //      execution_queue.insert(current);
+  //    }
+  //  }
+  //}
+  if (bistable_skip_detect) {
+    // Failsafe block
+#ifdef STM32F4XX
+    if (skipped_loops > 5000) {
+      // TODO: We are hung in a way that we probably cannot recover from. Reboot...
+      jumpToBootloader();
+    }
+    else if (skipped_loops == 2000) {
+      printf("Hung scheduler...\n");
+    }
+    else if (skipped_loops == 2040) {
+      /* Doing all this String manipulation in an ISR would normally be an awful idea.
+         But we don't care here because we're hung anyhow, and we need to know why. */
+      StringBuilder output;
+      Kernel::getInstance()->fetchKernel()->printDebug(&output);
+      printf("%s\n", (char*) output.string());
+    }
+    else if (skipped_loops == 2200) {
+      StringBuilder output;
+      printDebug(&output);
+      printf("%s\n", (char*) output.string());
+    }
+    else if (skipped_loops == 3500) {
+      StringBuilder output;
+      Kernel::getInstance()->printDebug(&output);
+      printf("%s\n", (char*) output.string());
+    }
+    skipped_loops++;
+#endif
+  }
+  else {
+    bistable_skip_detect = true;
+  }
+}
+
+
+/**
+* Call to disable a given schedule.
+*  Will reset the time_to_wait so that if the schedule is re-enabled, it doesn't fire sooner than expected.
+*  Returns true on success and false on failure.
+*/
+bool Kernel::disableSchedule(uint32_t g_pid) {
+  ManuvrRunnable *nu_sched  = findNodeByPID(g_pid);
+  if (nu_sched != NULL) {
+      nu_sched->threadEnabled(false);
+      nu_sched->fireNow(false);
+      nu_sched->thread_time_to_wait = nu_sched->thread_period;
+      return true;
+  }
+  return false;
+}
+
+
+/**
+* Will remove the indicated schedule and wipe its profiling data.
+* In case this gets called from the schedule's service function (IE,
+*   if the schedule tries to delete itself), let it expire this run
+*   rather than ripping the rug out from under ourselves.
+*
+* @param  A pointer to the schedule item to be removed. 
+* @return true on success and false on failure.
+*/
+bool Kernel::removeSchedule(ManuvrRunnable *obj) {
+  if (obj != NULL) {
+    if (obj->pid != this->currently_executing) {
+      schedules.remove(obj);
+      execution_queue.remove(obj);
+      delete obj;
+    }
+    else { 
+      obj->autoClear(true);
+      obj->thread_recurs = 0;
+    }
+    return true;
+  }
+  return false;
+}
+
+bool Kernel::removeSchedule(uint32_t g_pid) {
+  ManuvrRunnable *obj  = findNodeByPID(g_pid);
+  return removeSchedule(obj);
+}
+
+
+/**
+* This is the function that is called from the main loop to offload big
+*  tasks into idle CPU time. If many scheduled items have fired, function
+*  will churn through all of them. The presumption is that they are 
+*  latency-sensitive.
+*/
+int Kernel::serviceScheduledEvents() {
+  if (!scheduler_ready) return -1;
+  int return_value = 0;
+  uint32_t origin_time = micros();
+
+
+  uint32_t temp_clicks = clicks_in_isr;
+  clicks_in_isr = 0;
+  if (0 == temp_clicks) {
+    return return_value;
+  }
+  
+  int x = schedules.size();
+  ManuvrRunnable *current;
+  
+  for (int i = 0; i < x; i++) {
+    current = schedules.recycle();
+    if (current->threadEnabled()) {
+      if (current->thread_time_to_wait > _ms_elapsed) {
+        current->thread_time_to_wait -= _ms_elapsed;
+      }
+      else {
+        current->fireNow(true);
+        uint32_t adjusted_ttw = (_ms_elapsed - current->thread_time_to_wait);
+        if (adjusted_ttw <= current->thread_period) {
+          current->thread_time_to_wait = current->thread_period - adjusted_ttw;
+        }
+        else {
+          // TODO: Possible error-case? Too many clicks passed. We have schedule jitter...
+          // For now, we'll just throw away the difference.
+          current->thread_time_to_wait = current->thread_period;
+          lagged_schedules++;
+        }
+        execution_queue.insert(current);
+      }
+    }
+  }
+  
+  uint32_t profile_start_time = 0;
+  uint32_t profile_stop_time  = 0;
+
+  current = execution_queue.dequeue();
+  while (NULL != current) {
+    if (current->shouldFire()) {
+      currently_executing = current->pid;
+      TaskProfilerData *prof_data = NULL;
+
+      if (current->isProfiling()) {
+        prof_data = current->prof_data;
+        profile_start_time = micros();
+      }
+
+      if (NULL != current) {  // This is an event-based schedule.
+        //if (NULL != current->event->specific_target) {
+        //  // TODO: Note: If we do this, we are outside of the profiler's scope.
+        //  current->event->specific_target->notify(current->event);   // Pitch the schedule's event.
+        //  
+        //  if (NULL != current->event->callback) {
+        //    current->event->callback->callback_proc(current->event);
+        //  }
+        //}
+        //else {
+          Kernel::staticRaiseEvent(current);
+        //}
+      }
+      else if (NULL != current->schedule_callback) {
+        ((void (*)(void)) current->schedule_callback)();   // Call the schedule's service function.
+      }
+      
+      if (NULL != prof_data) {
+        profile_stop_time = micros();
+        prof_data->run_time_last    = max(profile_start_time, profile_stop_time) - min(profile_start_time, profile_stop_time);  // Rollover invarient.
+        prof_data->run_time_best    = min(prof_data->run_time_best,  prof_data->run_time_last);
+        prof_data->run_time_worst   = max(prof_data->run_time_worst, prof_data->run_time_last);
+        prof_data->run_time_total  += prof_data->run_time_last;
+        prof_data->run_time_average = prof_data->run_time_total / ((prof_data->executions) ? prof_data->executions : 1);
+        prof_data->executions++;
+      }            
+      current->fireNow(false);
+      currently_executing = 0;
+         
+      switch (current->thread_recurs) {
+        case -1:           // Do nothing. Schedule runs indefinitely.
+          break;
+        case 0:            // Disable (and remove?) the schedule.
+          if (current->autoClear()) {
+            removeSchedule(current);
+          }
+          else {
+            current->threadEnabled(false);  // Disable the schedule...
+            current->fireNow(false);          // ...mark it as serviced.
+            current->thread_time_to_wait = current->thread_period;  // ...and reset the timer.
+          }
+          break;
+        default:           // Decrement the run count.
+          current->thread_recurs--;
+          break;
+      }
+      return_value++;
+    }
+    current = execution_queue.dequeue();
+  }
+  overhead = micros() - origin_time;
+  total_loops++;
+  if (return_value > 0) productive_loops++;
+  
+  // We just ran a loop. Punch the bistable swtich and clear the skip count.
+  bistable_skip_detect = false;
+  total_skipped_loops += skipped_loops;
+  skipped_loops        = 0;
+  
+  _ms_elapsed = 0;
+  return return_value;
+}
+
+
+void Kernel::printSchedule(uint32_t g_pid, StringBuilder* output) {
+  if (NULL == output) return;
+
+  ManuvrRunnable *nu_sched;
+  nu_sched  = findNodeByPID(g_pid);
+  if (NULL != nu_sched) nu_sched->printDebug(output);
 }
 
 

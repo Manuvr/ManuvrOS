@@ -22,7 +22,7 @@
   
  
   class Kernel;
-  class ManuvrEvent;
+  class ManuvrRunnable;
 
   
   /**
@@ -37,7 +37,7 @@
       *   zero for no action taken, and non-zero if the event needs to be re-evaluated
       *   before being passed on to the next subscriber.
       */
-      virtual int8_t notify(ManuvrEvent*);
+      virtual int8_t notify(ManuvrRunnable*);
       
       /*
       * These have no reason to be here other than to enforce some discipline while
@@ -55,8 +55,8 @@
       virtual const char* getReceiverName() = 0;
       
       /* These are intended to be overridden. */
-      virtual int8_t callback_proc(ManuvrEvent *);
-      int8_t raiseEvent(ManuvrEvent* event);
+      virtual int8_t callback_proc(ManuvrRunnable *);
+      int8_t raiseEvent(ManuvrRunnable* event);
   
       int8_t setVerbosity(int8_t);
       int8_t getVerbosity();
@@ -75,7 +75,7 @@
   
         
     private:
-      int8_t setVerbosity(ManuvrEvent*);  // Private because it should be set with an Event.
+      int8_t setVerbosity(ManuvrRunnable*);  // Private because it should be set with an Event.
   };
   
   

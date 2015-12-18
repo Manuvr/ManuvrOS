@@ -69,7 +69,7 @@ const MessageTypeDef mgc3130_message_defs[] = {
 };
 
 
-ManuvrEvent _isr_read_event(MANUVR_MSG_SENSOR_MGC3130);
+ManuvrRunnable _isr_read_event(MANUVR_MSG_SENSOR_MGC3130);
 volatile int _isr_ts_pin = 0;
 
 
@@ -387,7 +387,7 @@ void MGC3130::printDebug(StringBuilder* output) {
 */
 
 void MGC3130::dispatchGestureEvents() {
-  ManuvrEvent* event = NULL;
+  ManuvrRunnable* event = NULL;
   
   if (isPositionDirty()) {
     // We don't want to spam the Kernel. We need to rate-limit.
@@ -714,7 +714,7 @@ const char* MGC3130::getReceiverName() {  return "MGC3130";  }
 int8_t MGC3130::bootComplete() {
   EventReceiver::bootComplete();
   init();
-  ManuvrEvent* event = Kernel::returnEvent(MANUVR_MSG_SENSOR_MGC3130_INIT);
+  ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SENSOR_MGC3130_INIT);
   __kernel->createSchedule(1200, 0, true, this, event);
   return 1;
 }
@@ -735,7 +735,7 @@ int8_t MGC3130::bootComplete() {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t MGC3130::callback_proc(ManuvrEvent *event) {
+int8_t MGC3130::callback_proc(ManuvrRunnable *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
   int8_t return_value = event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -753,7 +753,7 @@ int8_t MGC3130::callback_proc(ManuvrEvent *event) {
 
 
 
-int8_t MGC3130::notify(ManuvrEvent *active_event) {
+int8_t MGC3130::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
   
   switch (active_event->event_code) {

@@ -48,7 +48,7 @@ This file is meant to contain a set of common functions that are typically platf
 #include <DataStructures/StringBuilder.h>
 
 
-class ManuvrEvent;
+class ManuvrRunnable;
 
 
 #ifdef ARDUINO
@@ -68,7 +68,7 @@ class ManuvrEvent;
 
 
 typedef struct __platform_gpio_def {
-  ManuvrEvent*    event;
+  ManuvrRunnable*    event;
   FunctionPointer fxn;
   uint8_t         pin;
   uint8_t         flags;
@@ -128,7 +128,7 @@ void init_RNG();                             // Fire up the random number genera
 void gpioSetup();        // We call this once on bootstrap. Sets up GPIO not covered by other classes.
 int8_t gpioDefine(uint8_t pin, int mode);
 void unsetPinIRQ(uint8_t pin);
-int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrEvent* isr_event);
+int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrRunnable* isr_event);
 int8_t setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn);
 int8_t setPin(uint8_t pin, bool high);
 int8_t readPin(uint8_t pin);

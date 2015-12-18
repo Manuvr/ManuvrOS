@@ -78,7 +78,7 @@ int8_t ManuvrXport::sendBuffer(StringBuilder* buf) {
 */ 
 int8_t ManuvrXport::reapXenoSession(XenoSession* ses) {
   if (NULL != ses) {
-    ManuvrEvent* event = Kernel::returnEvent(MANUVR_MSG_SYS_RETRACT_SRVC);
+    ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_RETRACT_SRVC);
     event->addArg((EventReceiver*) ses);
     raiseEvent(event);
 
@@ -136,7 +136,7 @@ void ManuvrXport::connected(bool en) {
       // This will warn us later to notify others of our removal, if necessary.
       _xport_flags |= MANUVR_XPORT_FLAG_HAS_SESSION;
     
-      ManuvrEvent* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
+      ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
       event->addArg((EventReceiver*) ses);
       raiseEvent(event);
     }
@@ -183,7 +183,7 @@ void ManuvrXport::initialized(bool en) {
 
 
 // Given a transport event, returns true if we need to act.
-bool ManuvrXport::event_addresses_us(ManuvrEvent *event) {
+bool ManuvrXport::event_addresses_us(ManuvrRunnable *event) {
   uint16_t temp_uint16;
   
   if (event->argCount()) {
@@ -252,10 +252,10 @@ void ManuvrXport::printDebug(StringBuilder *temp) {
 //}
 //
 //
-//int8_t ManuvrXport::notify(ManuvrEvent*) {
+//int8_t ManuvrXport::notify(ManuvrRunnable*) {
 //}
 //
 //
-//int8_t ManuvrXport::callback_proc(ManuvrEvent *) {
+//int8_t ManuvrXport::callback_proc(ManuvrRunnable *) {
 //}
 

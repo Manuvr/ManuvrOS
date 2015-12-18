@@ -179,10 +179,10 @@ Argument::Argument(void* val, uint16_t buf_len) {
 }
 
 /*
-* We typically want ManuvrEvent references to be left alone at the end of
+* We typically want ManuvrRunnable references to be left alone at the end of
 *   the Argument's life cycle. We will specify otherwise when appropriate. 
 */
-Argument::Argument(ManuvrEvent* val) {
+Argument::Argument(ManuvrRunnable* val) {
 	wipe();
 	len = sizeof(val);
 	type_code = SYS_MANUVR_EVENT_PTR_FM;

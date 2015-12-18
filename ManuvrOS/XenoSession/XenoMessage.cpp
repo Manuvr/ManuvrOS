@@ -18,7 +18,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
-XenoMessage is the class that is the interface between ManuvrEvents and
+XenoMessage is the class that is the interface between ManuvrRunnables and
   XenoSessions. 
      ---J. Ian Lindsay
 */
@@ -36,7 +36,7 @@ XenoMessage::XenoMessage() {
 }
 
 
-XenoMessage::XenoMessage(ManuvrEvent* existing_event) {
+XenoMessage::XenoMessage(ManuvrRunnable* existing_event) {
   __class_initializer();
   // Should maybe set a flag in the event to indicate that we are now responsible
   //   for memory upkeep? Don't want it to get jerked out from under us and cause a crash.
@@ -79,10 +79,10 @@ void XenoMessage::__class_initializer() {
 * Calling this converts this XenoMessage into an outbound, and has the same general effect as
 *   calling the constructor with an Event argument.
 *
-* @param   ManuvrEvent* The Event that is to be communicated.
+* @param   ManuvrRunnable* The Event that is to be communicated.
 * @param   uint16_t          An explicitly-provided unique_id so that a dialog can be perpetuated.
 */
-void XenoMessage::provideEvent(ManuvrEvent *existing_event) {
+void XenoMessage::provideEvent(ManuvrRunnable *existing_event) {
   event = existing_event;
   unique_id = (uint16_t) randomInt();
   proc_state = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
@@ -92,13 +92,13 @@ void XenoMessage::provideEvent(ManuvrEvent *existing_event) {
 
 
 /**
-* An override for provide_event(ManuvrEvent*) that allows us to supply unique_id explicitly.
+* An override for provide_event(ManuvrRunnable*) that allows us to supply unique_id explicitly.
 * TODO: For safety's sake, the Event is not retained. This has caused us some grief. Re-evaluate...
 *
-* @param   ManuvrEvent* The Event that is to be communicated.
+* @param   ManuvrRunnable* The Event that is to be communicated.
 * @param   uint16_t          An explicitly-provided unique_id so that a dialog can be perpetuated.
 */
-void XenoMessage::provide_event(ManuvrEvent *existing_event, uint16_t manual_id) {
+void XenoMessage::provide_event(ManuvrRunnable *existing_event, uint16_t manual_id) {
   event = existing_event;
   unique_id = manual_id;
   proc_state = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
@@ -142,7 +142,7 @@ void XenoMessage::wipe() {
 * @return  nonzero if there was a problem.
 */
 int8_t XenoMessage::ack() {
-  ManuvrEvent temp_event(MANUVR_MSG_REPLY);
+  ManuvrRunnable temp_event(MANUVR_MSG_REPLY);
   provide_event(&temp_event, unique_id);
   proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
   return 0;
@@ -155,7 +155,7 @@ int8_t XenoMessage::ack() {
 * @return  nonzero if there was a problem.
 */
 int8_t XenoMessage::retry() {
-  ManuvrEvent temp_event(MANUVR_MSG_REPLY_RETRY);
+  ManuvrRunnable temp_event(MANUVR_MSG_REPLY_RETRY);
   provide_event(&temp_event, unique_id);
   proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
   retries++;
@@ -170,7 +170,7 @@ int8_t XenoMessage::retry() {
 * @return  nonzero if there was a problem.
 */
 int8_t XenoMessage::fail() {
-  ManuvrEvent temp_event(MANUVR_MSG_REPLY_FAIL);
+  ManuvrRunnable temp_event(MANUVR_MSG_REPLY_FAIL);
   provide_event(&temp_event, unique_id);
   proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
   return 0;

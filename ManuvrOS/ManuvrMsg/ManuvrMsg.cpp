@@ -439,7 +439,7 @@ int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf, bool preserve) {
 
       case STR_BUILDER_FM:          // This is a pointer to some StringBuilder. Presumably this is on the heap.
       case STR_FM:                  // This is a pointer to a string constant. Presumably this is stored in flash.
-      case SYS_MANUVR_EVENT_PTR_FM: // This is a pointer to ManuvrEvent.
+      case SYS_MANUVR_EVENT_PTR_FM: // This is a pointer to ManuvrRunnable.
       case SYS_EVENTRECEIVER_FM:    // This is a pointer to an EventReceiver.
       case SYS_MANUVR_XPORT_FM:     // This is a pointer to a transport.
         return_value = DIG_MSG_ERROR_NO_ERROR;

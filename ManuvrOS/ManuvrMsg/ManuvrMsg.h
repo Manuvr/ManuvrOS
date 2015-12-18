@@ -71,7 +71,7 @@ typedef struct msg_defin_t {
 
 class ManuvrXport;
 class EventReceiver;
-class ManuvrEvent;
+class ManuvrRunnable;
 
 /* This is how we define arguments to messages. */
 class Argument {
@@ -121,7 +121,7 @@ class Argument {
     Argument(StringBuilder *);
     Argument(EventReceiver *);
     Argument(ManuvrXport *);
-    Argument(ManuvrEvent *);
+    Argument(ManuvrRunnable *);
     
     ~Argument();
     
@@ -218,7 +218,7 @@ class ManuvrMsg {
     inline int addArg(StringBuilder *val) {      return args.insert(new Argument(val));   }
     inline int addArg(EventReceiver *val) {      return args.insert(new Argument(val));   }
     inline int addArg(ManuvrXport *val) {        return args.insert(new Argument(val));   }
-    inline int addArg(ManuvrEvent *val) {        return args.insert(new Argument(val));   }
+    inline int addArg(ManuvrRunnable *val) {        return args.insert(new Argument(val));   }
 
 
     /*
@@ -233,7 +233,7 @@ class ManuvrMsg {
     inline int8_t consumeArgAs(int32_t *trg_buf) {      return getArgAs(0, (void*) trg_buf, false);  }
     inline int8_t consumeArgAs(uint32_t *trg_buf) {     return getArgAs(0, (void*) trg_buf, false);  }
     inline int8_t consumeArgAs(float *trg_buf) {        return getArgAs(0, (void*) trg_buf, false);  }
-    inline int8_t consumeArgAs(ManuvrEvent **trg_buf) {  return getArgAs(0, (void*) trg_buf, false);  }
+    inline int8_t consumeArgAs(ManuvrRunnable **trg_buf) {  return getArgAs(0, (void*) trg_buf, false);  }
     
     inline int8_t getArgAs(int8_t *trg_buf) {           return getArgAs(0, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t *trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
@@ -259,7 +259,7 @@ class ManuvrMsg {
     inline int8_t getArgAs(StringBuilder **trg_buf) {            return getArgAs(0, (void*) trg_buf, true);  }
     inline int8_t getArgAs(EventReceiver **trg_buf) {            return getArgAs(0, (void*) trg_buf, true);  }
     inline int8_t getArgAs(ManuvrXport **trg_buf) {              return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(ManuvrEvent **trg_buf) {              return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(ManuvrRunnable **trg_buf) {              return getArgAs(0, (void*) trg_buf, true);  }
     
     inline int8_t getArgAs(uint8_t idx, Vector3f  **trg_buf) {          return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, Vector3ui16  **trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
@@ -268,7 +268,7 @@ class ManuvrMsg {
     inline int8_t getArgAs(uint8_t idx, StringBuilder  **trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, EventReceiver  **trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, ManuvrXport  **trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, ManuvrEvent  **trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, ManuvrRunnable  **trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
     
     /* 
     * Protip: Think on the stack...

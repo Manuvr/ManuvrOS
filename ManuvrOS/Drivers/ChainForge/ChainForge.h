@@ -39,8 +39,8 @@ ChainForge is the optional utility module to cause triggerd and conditional
 //    /* Overrides from EventReceiver */
 //    const char* getReceiverName();
 //    void printDebug(StringBuilder *);
-//    int8_t notify(ManuvrEvent*);
-//    int8_t callback_proc(ManuvrEvent *);
+//    int8_t notify(ManuvrRunnable*);
+//    int8_t callback_proc(ManuvrRunnable *);
 //
 //
 //  protected:

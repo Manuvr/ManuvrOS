@@ -163,7 +163,7 @@ void unsetPinIRQ(uint8_t pin) {
 }
 
 
-void setPinEvent(uint8_t pin, uint8_t condition, ManuvrEvent* isr_event) {
+void setPinEvent(uint8_t pin, uint8_t condition, ManuvrRunnable* isr_event) {
 }
 
 

@@ -194,7 +194,7 @@ void HandleClient(int sock, XenoSession* session) {
       session->bin_stream_rx(buf, received);
     }
     else {
-      ManuvrEvent *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
+      ManuvrRunnable *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
       event->addArg(sock);
       StringBuilder *nu_data = new StringBuilder(buf, received);
       event->markArgForReap(event->addArg(nu_data), true);
@@ -316,7 +316,7 @@ int8_t ManuvrTCP::read_port() {
           session->bin_stream_rx(buf, total_read);
         }
         else {
-          ManuvrEvent *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
+          ManuvrRunnable *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
           event->addArg(_sock);
           StringBuilder *nu_data = new StringBuilder(buf, total_read);
           event->markArgForReap(event->addArg(nu_data), true);
@@ -448,7 +448,7 @@ int8_t ManuvrTCP::bootComplete() {   // ?? TODO ??
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t ManuvrTCP::callback_proc(ManuvrEvent *event) {
+int8_t ManuvrTCP::callback_proc(ManuvrRunnable *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
   int8_t return_value = event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -467,7 +467,7 @@ int8_t ManuvrTCP::callback_proc(ManuvrEvent *event) {
 
 
 
-int8_t ManuvrTCP::notify(ManuvrEvent *active_event) {
+int8_t ManuvrTCP::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
   
   switch (active_event->event_code) {

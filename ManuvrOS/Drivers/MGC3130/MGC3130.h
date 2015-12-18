@@ -78,8 +78,8 @@ class MGC3130 : public I2CDevice, public EventReceiver {
     bool operationCallahead(I2CQueuedOperation* op);
 
     /* Overrides from EventReceiver */
-    int8_t notify(ManuvrEvent*);
-    int8_t callback_proc(ManuvrEvent *);
+    int8_t notify(ManuvrRunnable*);
+    int8_t callback_proc(ManuvrRunnable *);
     void procDirectDebugInstruction(StringBuilder *);
     const char* getReceiverName();
     void printDebug(StringBuilder*);

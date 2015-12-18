@@ -156,8 +156,8 @@ class ManuvrXport : public EventReceiver {
     //    choice.  Calltimes? vtable size? alignment? Fragility? Dig.
     virtual void   printDebug(StringBuilder *);
     //virtual int8_t bootComplete();
-    //virtual int8_t notify(ManuvrEvent*);
-    //virtual int8_t callback_proc(ManuvrEvent *);
+    //virtual int8_t notify(ManuvrRunnable*);
+    //virtual int8_t callback_proc(ManuvrRunnable *);
 
     // We can have up-to 65535 transport instances concurrently. This well-exceeds
     //   the configured limits of most linux installations, so it should be enough. 
@@ -171,7 +171,7 @@ class ManuvrXport : public EventReceiver {
     
     // Can also be used to poll the other side. Implementation is completely at the discretion
     //   any extending class. But generally, this feature is necessary.
-    ManuvrEvent read_abort_event;  // Used to timeout a read operation.
+    ManuvrRunnable read_abort_event;  // Used to timeout a read operation.
     uint32_t pid_read_abort;       // Used to timeout a read operation.
     bool read_timeout_defer;       // Used to timeout a read operation.
 
@@ -194,7 +194,7 @@ class ManuvrXport : public EventReceiver {
     virtual int8_t reapXenoSession(XenoSession*);   // Cleans up XenoSessions that were instantiated by this class.
     virtual int8_t provide_session(XenoSession*);   // Called whenever we instantiate a session.
 
-    bool event_addresses_us(ManuvrEvent*);   // Given a transport event, returns true if we need to act.
+    bool event_addresses_us(ManuvrRunnable*);   // Given a transport event, returns true if we need to act.
 
     // TODO: Should be private. provide_session() / reset() are the blockers.
     inline void set_xport_state(uint8_t bitmask) {    xport_state = (bitmask | xport_state);    }

@@ -96,7 +96,7 @@ const uint8_t XENO_MSG_PROC_STATE_WRITING_REPLY          = 0x25;
 
 
 /**
-* This class is a special extension of ManuvrEvent that is intended for communication with
+* This class is a special extension of ManuvrRunnable that is intended for communication with
 *   outside devices. The idea is that the outside device ought to be able to build an event that
 *   is, in essence, a copy of ours.
 */
@@ -107,14 +107,14 @@ class XenoMessage {
     
     bool      expecting_ack;  // Does this message expect an ACK?
     
-    ManuvrEvent* event;  // Associates this XenoMessage to an event.
+    ManuvrRunnable* event;  // Associates this XenoMessage to an event.
 
     uint32_t  bytes_received;     // How many bytes of this command have we received? Meaningless for the sender.
     uint16_t  unique_id;     // 
 
     
     XenoMessage();                    // Typical use: building an inbound XemoMessage. 
-    XenoMessage(ManuvrEvent*);   // Create a new XenoMessage with the given event as source data.
+    XenoMessage(ManuvrRunnable*);   // Create a new XenoMessage with the given event as source data.
 
     ~XenoMessage();
     
@@ -131,8 +131,8 @@ class XenoMessage {
     
     
     int feedBuffer(StringBuilder *buf);  // This is used to build an event from data that arrives in chunks.
-    void provideEvent(ManuvrEvent*);  // Call to make this XenoMessage outbound.
-    void provide_event(ManuvrEvent*, uint16_t);  // Call to make this XenoMessage outbound.
+    void provideEvent(ManuvrRunnable*);  // Call to make this XenoMessage outbound.
+    void provide_event(ManuvrRunnable*, uint16_t);  // Call to make this XenoMessage outbound.
     
     bool isReply();      // Returns true if this message is a reply to another message.
 
@@ -209,7 +209,7 @@ class XenoSession : public EventReceiver {
     int8_t untapMessageType(uint16_t code);   // Stop getting broadcasts about a given message type.
     int8_t untapAll();
 
-    int8_t sendEvent(ManuvrEvent*);
+    int8_t sendEvent(ManuvrRunnable*);
     
     int8_t sendSyncPacket();
     int8_t sendKeepAlive();
@@ -218,8 +218,8 @@ class XenoSession : public EventReceiver {
     void procDirectDebugInstruction(StringBuilder*);
     const char* getReceiverName();
     void printDebug(StringBuilder*);
-    int8_t notify(ManuvrEvent*);
-    int8_t callback_proc(ManuvrEvent *);
+    int8_t notify(ManuvrRunnable*);
+    int8_t callback_proc(ManuvrRunnable *);
 
     // Returns and isolates the state bits.
     inline uint8_t getState() {
@@ -262,7 +262,7 @@ class XenoSession : public EventReceiver {
     *   the need for the transport to care about how much data we consumed versus left in its buffer. 
     */
     StringBuilder session_buffer;
-    ManuvrEvent sync_event;
+    ManuvrRunnable sync_event;
 
     uint32_t pid_sync_timer;    // Holds the PID for sync generation.
     uint32_t pid_ack_timeout;   // Holds the PID for message ack timeout.

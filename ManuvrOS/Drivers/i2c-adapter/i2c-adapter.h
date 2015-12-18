@@ -164,7 +164,7 @@ but adding support for other platforms ought to be easy.
 
     private:
       bool      subaddr_sent;    // Have the subaddress been sent yet?
-      static ManuvrEvent event_queue_ready;
+      static ManuvrRunnable event_queue_ready;
       
       int8_t init_dma();
       static const char* getErrorString(int8_t code);
@@ -207,8 +207,8 @@ but adding support for other platforms ought to be easy.
       
       /* Overrides from EventReceiver */
       void procDirectDebugInstruction(StringBuilder *);
-      int8_t notify(ManuvrEvent*);
-      int8_t callback_proc(ManuvrEvent *);
+      int8_t notify(ManuvrRunnable*);
+      int8_t callback_proc(ManuvrRunnable *);
 
       
       // These are meant to be called from the bus jobs. They deal with specific bus functions

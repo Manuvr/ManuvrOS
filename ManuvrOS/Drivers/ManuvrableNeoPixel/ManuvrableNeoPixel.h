@@ -68,8 +68,8 @@ class ManuvrableNeoPixel : public EventReceiver {
     int8_t bootComplete();
     void printDebug(StringBuilder*);
     const char* getReceiverName();
-    int8_t notify(ManuvrEvent*);
-    int8_t callback_proc(ManuvrEvent *);
+    int8_t notify(ManuvrRunnable*);
+    int8_t callback_proc(ManuvrRunnable *);
 
 
   private:

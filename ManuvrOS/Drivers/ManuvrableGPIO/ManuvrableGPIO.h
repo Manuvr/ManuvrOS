@@ -41,8 +41,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
       /* Overrides from EventReceiver */
       void printDebug(StringBuilder*);
       const char* getReceiverName();
-      int8_t notify(ManuvrEvent*);
-      int8_t callback_proc(ManuvrEvent *);
+      int8_t notify(ManuvrRunnable*);
+      int8_t callback_proc(ManuvrRunnable *);
   
   
     protected:

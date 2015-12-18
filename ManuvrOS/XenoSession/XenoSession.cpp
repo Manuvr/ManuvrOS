@@ -322,7 +322,7 @@ int8_t XenoSession::bootComplete() {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t XenoSession::callback_proc(ManuvrEvent *event) {
+int8_t XenoSession::callback_proc(ManuvrRunnable *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
   int8_t return_value = event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -344,7 +344,7 @@ int8_t XenoSession::callback_proc(ManuvrEvent *event) {
 *   a list of events that it has been instructed to relay to the counterparty. If the event
 *   meets the relay criteria, we serialize it and send it to the transport that we are bound to.
 */
-int8_t XenoSession::notify(ManuvrEvent *active_event) {
+int8_t XenoSession::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
   
   switch (active_event->event_code) {
@@ -474,7 +474,7 @@ int8_t XenoSession::sendSyncPacket() {
     StringBuilder sync_packet((unsigned char*) SYNC_PACKET_BYTES, 4);
     owner->sendBuffer(&sync_packet);
     
-    ManuvrEvent* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
+    ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
     event->specific_target = owner;  //   event to be the transport that instantiated us.
     raiseEvent(event);
   }
@@ -496,10 +496,10 @@ int8_t XenoSession::sendSyncPacket() {
 */
 int8_t XenoSession::sendKeepAlive() {
   if (owner->connected()) {
-    ManuvrEvent* ka_event = Kernel::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE);
+    ManuvrRunnable* ka_event = Kernel::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE);
     sendEvent(ka_event);
 
-    ManuvrEvent* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
+    ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
     event->specific_target = owner;  //   event to be the transport that instantiated us.
     raiseEvent(event);
   }
@@ -511,7 +511,7 @@ int8_t XenoSession::sendKeepAlive() {
 * Passing an Event into this fxn will cause the Event to be serialized and sent to our counter-party.
 * This is the point at which choices are made about what happens to the event's life-cycle.
 */
-int8_t XenoSession::sendEvent(ManuvrEvent *active_event) {
+int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
   XenoMessage nu_outbound_msg(active_event);
   nu_outbound_msg.expecting_ack = active_event->demandsACK();
   nu_outbound_msg.proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
@@ -520,7 +520,7 @@ int8_t XenoSession::sendEvent(ManuvrEvent *active_event) {
   //outbound_messages.insert(nu_outbound_msg);
   
   // We are about to pass a message across the transport.
-  ManuvrEvent* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
+  ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
   event->callback        = this;  // We want the callback and the only receiver of this
   event->specific_target = owner;  //   event to be the transport that instantiated us.
   raiseEvent(event);

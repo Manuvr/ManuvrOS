@@ -3,10 +3,10 @@ File:   ManuvrRunnable.cpp
 Author: J. Ian Lindsay
 Date:   2015.12.18
 
-This class began life as the merger of ScheduleItem and ManuvrEvent.
+This class began life as the merger of ScheduleItem and ManuvrRunnable.
 */
 
-#include "mKernel.h"
+#include "Kernel.h"
 #include "ManuvrRunnable.h"
 
 
@@ -191,7 +191,7 @@ bool ManuvrRunnable::isManaged(bool nu) {
 
 
 bool ManuvrRunnable::abort() {
-  return mKernel::abortEvent(this);
+  return Kernel::abortEvent(this);
 }
 
 
