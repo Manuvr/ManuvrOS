@@ -79,6 +79,12 @@ class ManuvrTCP : public ManuvrXport {
     uint32_t _options;
 
     int      _port_number;
+    
+    // Related to threading and pipes. This is linux-specific. 
+    int __pipe_ids[2];
+    StringBuilder __io_buffer;
+    int __parent_pid;
+    int __blocking_pid;
 
     struct sockaddr_in serv_addr;
     struct sockaddr_in cli_addr;

@@ -19,7 +19,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 This driver is designed to give Manuvr platform-abstracted TCP socket connection.
-This is basically only for linux.
+This is basically only for linux for now.
   
 */
 
@@ -31,6 +31,11 @@ This is basically only for linux.
 #include <ManuvrOS/Kernel.h>
 
 #include <arpa/inet.h>
+
+
+
+#define READ_PIPE  0
+#define WRITE_PIPE 1
 
 
 /****************************************************************************************************
@@ -82,6 +87,8 @@ void ManuvrTCP::__class_initializer() {
   _options           = 0;
   _port_number       = 0;
   _sock              = 0;
+  __pipe_ids[READ_PIPE]  = -1;
+  __pipe_ids[WRITE_PIPE] = -1;
 
 
   // Build some pre-formed Events.
@@ -245,6 +252,8 @@ int8_t ManuvrTCP::listen() {
   int child_pid = fork();
   
   if (0 == child_pid) {
+    // We are the child. We are listening for connections, and it is expected that we will block
+    //   while we wait for connections. We can't allow the main thread to bind to SIGIO.
     StringBuilder output("Forked into PID ");
     output.concat(child_pid);
     output.concat("\n");
