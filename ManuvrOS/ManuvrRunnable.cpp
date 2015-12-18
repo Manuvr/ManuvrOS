@@ -6,7 +6,7 @@ Date:   2015.12.18
 This class began life as the merger of ScheduleItem and ManuvrEvent.
 */
 
-#include "Kernel.h"
+#include "mKernel.h"
 #include "ManuvrRunnable.h"
 
 
@@ -191,8 +191,7 @@ bool ManuvrRunnable::isManaged(bool nu) {
 
 
 bool ManuvrRunnable::abort() {
-  //TODO: Needs the Kernel refactor complete first....
-  //return Kernel::abortEvent(this);
+  return mKernel::abortEvent(this);
 }
 
 

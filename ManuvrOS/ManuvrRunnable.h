@@ -2,6 +2,7 @@
   #define __MANUVR_RUNNABLE_H__
   
   #include "ManuvrMsg/ManuvrMsg.h"
+  #include <ManuvrOS/MsgProfiler.h>
   
   class EventReceiver;
 
@@ -18,6 +19,7 @@
       int32_t         priority;
 
       // The things below were pulled in from ScheduleItem.
+      TaskProfilerData* prof_data;       // If this schedule is being profiled, the ref will be here.
       uint32_t pid;                      // The process ID of this item. Zero is invalid.
       uint32_t thread_time_to_wait;      // How much longer until the schedule fires?
       uint32_t thread_period;            // How often does this schedule execute?
@@ -48,7 +50,16 @@
       
       /* If the scheduler has a lock on this event, this should return 'true'. */
       inline bool isScheduled() {       return scheduled;     }
-      
+
+      //TODO: /* These are accessors to concurrency-sensitive members. */
+      /* These are accessors to formerly-public members of ScheduleItem. */
+      inline void fireNow(bool nu) {    thread_fire = nu;     }
+      inline bool shouldFire() {        return thread_fire;   }
+      inline void autoClear(bool nu) {  autoclear = nu;       }
+      inline bool autoClear() {         return autoclear;     }
+      inline void threadEnabled(bool nu) {  thread_enabled = nu;       }
+      inline bool threadEnabled() {         return thread_enabled;     }
+
       /**
       * Asks if this schedule is being profiled...
       *  Returns true if so, and false if not.
@@ -63,8 +74,6 @@
 
 
     protected:
-      TaskProfilerData* prof_data;       // If this schedule is being profiled, the ref will be here.
-
       uint8_t  flags;            // Optional flags that might be important for an event.
       bool     mem_managed;      // Set to true to cause the Kernel to not free().
       bool     scheduled;        // Set to true to cause the Kernel to not free().
