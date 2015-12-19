@@ -46,13 +46,18 @@
 
       void printDebug();
       void printDebug(StringBuilder *);
-  
+      void printProfilerData(StringBuilder *);
+
         /* If some other class is managing this memory, this should return 'true'. */
       inline bool isManaged() {         return mem_managed;   }
       
       /* If the scheduler has a lock on this event, this should return 'true'. */
       inline bool isScheduled() {       return scheduled;     }
 
+      /* Functions for pinging the profiler data. */
+      void noteExecutionTime(uint32_t start, uint32_t stop);
+
+      
       //TODO: /* These are accessors to concurrency-sensitive members. */
       /* These are accessors to formerly-public members of ScheduleItem. */
       inline void fireNow(bool nu) {    thread_fire = nu;     }

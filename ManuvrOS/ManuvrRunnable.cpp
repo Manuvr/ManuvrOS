@@ -240,7 +240,9 @@ void ManuvrRunnable::printDebug(StringBuilder *output) {
 }
 
 
-
+void ManuvrRunnable::printProfilerData(StringBuilder *output) {
+  output->concatf("\t 0x%08x  %9d  %9d  %9d  %9d  %9d  %9d %s\n", (uint32_t) this, prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last, (threadEnabled() ? "" : "(INACTIVE)"));
+}
 
 
 /****************************************************************************************************
@@ -278,6 +280,18 @@ void ManuvrRunnable::clearProfilingData() {
   }
 }
 
+
+void ManuvrRunnable::noteExecutionTime(uint32_t profile_start_time, uint32_t profile_stop_time) {
+  if (NULL != prof_data) {
+    profile_stop_time = micros();
+    prof_data->run_time_last    = max(profile_start_time, profile_stop_time) - min(profile_start_time, profile_stop_time);  // Rollover invarient.
+    prof_data->run_time_best    = min(prof_data->run_time_best,  prof_data->run_time_last);
+    prof_data->run_time_worst   = max(prof_data->run_time_worst, prof_data->run_time_last);
+    prof_data->run_time_total  += prof_data->run_time_last;
+    prof_data->run_time_average = prof_data->run_time_total / ((prof_data->executions) ? prof_data->executions : 1);
+    prof_data->executions++;
+  }            
+}
 
 
 /****************************************************************************************************

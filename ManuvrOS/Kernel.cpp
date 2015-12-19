@@ -114,7 +114,6 @@ Kernel::Kernel() {
   productive_loops     = 0;      // Number of calls to serviceScheduledEvents() that actually called a schedule.
   total_loops          = 0;      // Number of calls to serviceScheduledEvents().
   overhead             = 0;      // The time in microseconds required to service the last empty schedule loop.
-  scheduler_ready      = false;  // TODO: Convert to a uint8 and track states.
   skipped_loops        = 0;
   total_skipped_loops  = 0;
   lagged_schedules     = 0;
@@ -926,35 +925,16 @@ void Kernel::printProfiler(StringBuilder* output) {
   }
 
 
-  bool header_unprinted = true;
   if (schedules.size() > 0) {
     ManuvrRunnable *current;
+    output->concat("\t PID         Execd      total us   average    worst      best       last\n\t -----------------------------------------------------------------------------\n");
 
-    StringBuilder active_str;
-    StringBuilder secondary_str;
     for (int i = 0; i < schedules.size(); i++) {
       current = schedules.get(i);
       if (current->isProfiling()) {
-        TaskProfilerData *prof_data = current->prof_data;
-        if (header_unprinted) {
-          header_unprinted = false;
-          output->concat("\t PID         Execd      total us   average    worst      best       last\n\t -----------------------------------------------------------------------------\n");
-        }
-        if (current->threadEnabled()) {
-          active_str.concatf("\t %10u  %9d  %9d  %9d  %9d  %9d  %9d\n", current->pid, prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last);
-        }
-        else {
-          secondary_str.concatf("\t %10u  %9d  %9d  %9d  %9d  %9d  %9d  (INACTIVE)\n", current->pid, prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last);
-        }
-        
-        output->concatHandoff(&active_str);
-        output->concatHandoff(&secondary_str);
+        current->printProfilerData(output);
       }
     }
-  }
-  
-  if (header_unprinted) {
-    output->concat("Nothing being profiled.\n");
   }
 }
 
@@ -1042,7 +1022,6 @@ void Kernel::printDebug(StringBuilder* output) {
 int8_t Kernel::bootComplete() {
   EventReceiver::bootComplete();
   boot_completed = true;
-  scheduler_ready = true;
   maskableInterrupts(true);  // Now configure interrupts, lift interrupt masks, and let the madness begin.
   return 1;
 }
@@ -1907,7 +1886,7 @@ bool Kernel::disableSchedule(uint32_t g_pid) {
 */
 bool Kernel::removeSchedule(ManuvrRunnable *obj) {
   if (obj != NULL) {
-    if (obj->pid != this->currently_executing) {
+    if ((uint32_t) obj != this->currently_executing) {
       schedules.remove(obj);
       execution_queue.remove(obj);
       delete obj;
@@ -1934,7 +1913,7 @@ bool Kernel::removeSchedule(uint32_t g_pid) {
 *  latency-sensitive.
 */
 int Kernel::serviceScheduledEvents() {
-  if (!scheduler_ready) return -1;
+  if (!boot_completed) return -1;
   int return_value = 0;
   uint32_t origin_time = micros();
 
@@ -1972,18 +1951,13 @@ int Kernel::serviceScheduledEvents() {
   }
   
   uint32_t profile_start_time = 0;
-  uint32_t profile_stop_time  = 0;
 
   current = execution_queue.dequeue();
   while (NULL != current) {
     if (current->shouldFire()) {
-      currently_executing = current->pid;
-      TaskProfilerData *prof_data = NULL;
+      currently_executing = (uint32_t) current;
 
-      if (current->isProfiling()) {
-        prof_data = current->prof_data;
-        profile_start_time = micros();
-      }
+      profile_start_time = micros();
 
       if (NULL != current) {  // This is an event-based schedule.
         //if (NULL != current->event->specific_target) {
@@ -2001,16 +1975,9 @@ int Kernel::serviceScheduledEvents() {
       else if (NULL != current->schedule_callback) {
         ((void (*)(void)) current->schedule_callback)();   // Call the schedule's service function.
       }
-      
-      if (NULL != prof_data) {
-        profile_stop_time = micros();
-        prof_data->run_time_last    = max(profile_start_time, profile_stop_time) - min(profile_start_time, profile_stop_time);  // Rollover invarient.
-        prof_data->run_time_best    = min(prof_data->run_time_best,  prof_data->run_time_last);
-        prof_data->run_time_worst   = max(prof_data->run_time_worst, prof_data->run_time_last);
-        prof_data->run_time_total  += prof_data->run_time_last;
-        prof_data->run_time_average = prof_data->run_time_total / ((prof_data->executions) ? prof_data->executions : 1);
-        prof_data->executions++;
-      }            
+            
+      current->noteExecutionTime(profile_start_time, micros());
+
       current->fireNow(false);
       currently_executing = 0;
          
