@@ -228,6 +228,11 @@ int8_t Kernel::bootstrap() {
 }
 
 
+/****************************************************************************************************
+* The code below is related to accepting and parsing user input. It is only relevant if console     *
+*   support is enabled.                                                                             *
+****************************************************************************************************/
+
 /*
 * This is the means by which we feed raw string input from a console into the 
 *   kernel's user input slot.
@@ -320,9 +325,36 @@ EventReceiver* Kernel::getSubscriberByName(const char* search_str) {
 
 
 /****************************************************************************************************
-* Static member functions for posting events.                                                       *
+* Code related to event definition and management...                                                *
 ****************************************************************************************************/
 
+int8_t Kernel::registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFxnPtr cb, uint32_t options) {
+  if (ca != NULL) {
+    PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[msgCode];
+    if (NULL == ca_queue) {
+      ca_queue = new PriorityQueue<listenerFxnPtr>();
+      ca_listeners[msgCode] = ca_queue;
+    }
+    ca_queue->insert(ca);
+  }
+  
+  if (cb != NULL) {
+    PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[msgCode];
+    if (NULL == cb_queue) {
+      cb_queue = new PriorityQueue<listenerFxnPtr>();
+      cb_listeners[msgCode] = cb_queue;
+    }
+    cb_queue->insert(cb);
+  }
+  return options%255;
+}
+
+
+
+
+/****************************************************************************************************
+* Static member functions for posting events.                                                       *
+****************************************************************************************************/
 
 /**
 * Used to add an event to the idle queue. Use this for simple events that don't need args.
@@ -609,9 +641,9 @@ int8_t Kernel::procIdleFlags() {
     else reclaim_event(active_event);
   }
   globalIRQEnable();
-    
+
   active_event = NULL;   // Pedantic...
-  
+
   /* As long as we have an open event and we aren't yet at our proc ceiling... */
   while (event_queue.hasNext() && should_run_another_event(return_value, profiler_mark)) {
     active_event = event_queue.dequeue();       // Grab the Event and remove it in the same call.
@@ -791,29 +823,6 @@ int8_t Kernel::procIdleFlags() {
   return return_value;
 }
 
-
-int8_t Kernel::registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFxnPtr cb, uint32_t options) {
-  if (ca != NULL) {
-    PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[msgCode];
-    if (NULL == ca_queue) {
-      ca_queue = new PriorityQueue<listenerFxnPtr>();
-      ca_listeners[msgCode] = ca_queue;
-    }
-    ca_queue->insert(ca);
-  }
-  
-  if (cb != NULL) {
-    PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[msgCode];
-    if (NULL == cb_queue) {
-      cb_queue = new PriorityQueue<listenerFxnPtr>();
-      cb_listeners[msgCode] = cb_queue;
-    }
-    cb_queue->insert(cb);
-  }
-  return options%255;
-}
-
-
 /**
 * Turns the profiler on or off. Clears its collected stats regardless.
 *
@@ -832,11 +841,6 @@ void Kernel::profiler(bool enabled) {
   insertion_denials  = 0;   
 
   while (event_costs.hasNext()) delete event_costs.dequeue();
-}
-
-
-float Kernel::cpu_usage() {
-  return (micros_occupied / (float)(millis()*10));
 }
 
 
@@ -1446,8 +1450,16 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 /****************************************************************************************************
-* Class-management functions...                                                                     *
+* Functions for profiling and performance measurement...                                            *
 ****************************************************************************************************/
+
+
+// TODO: This never worked terribly well. Need to tap the timer
+//   and profile to do it correctly. Still better than nothing.
+float Kernel::cpu_usage() {
+  return (micros_occupied / (float)(millis()*10));
+}
+
 
 /**
 *  Given the schedule PID, begin profiling.
@@ -2034,15 +2046,6 @@ int Kernel::serviceScheduledEvents() {
   
   _ms_elapsed = 0;
   return return_value;
-}
-
-
-void Kernel::printSchedule(uint32_t g_pid, StringBuilder* output) {
-  if (NULL == output) return;
-
-  ManuvrRunnable *nu_sched;
-  nu_sched  = findNodeByPID(g_pid);
-  if (NULL != nu_sched) nu_sched->printDebug(output);
 }
 
 

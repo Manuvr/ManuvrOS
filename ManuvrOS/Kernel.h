@@ -65,17 +65,6 @@
   */
   class Kernel : public EventReceiver {
     public:
-      /* Despite being public members, these values should not be written from outside the class.
-         They are only public for the sake of convenience of reading them. Since they are profiling-related,
-         no major class functionality (other than the profiler output) relies on them. */
-      uint32_t next_pid;            // Next PID to assign.
-      uint32_t currently_executing; // Hold PID of currently-executing Schedule. 0 if none.
-      uint32_t productive_loops;    // Number of calls to serviceScheduledEvents() that actually called a schedule.
-      uint32_t overhead;            // The time in microseconds required to service the last empty schedule loop.
-      bool     scheduler_ready;     // TODO: Convert to a uint8 and track states.
-
-      uint32_t micros_occupied;       // How many micros have we spent procing events?
-      ManuvrRunnable* current_event;
       
       Kernel(void);
       ~Kernel(void);
@@ -85,13 +74,6 @@
       int8_t unsubscribe(EventReceiver *client);                  // A class calls this to unsubscribe.
       
       EventReceiver* getSubscriberByName(const char*);
-
-      /* These functions deal with logging.*/
-      volatile static void log(const char *fxn_name, int severity, const char *str, ...);  // Pass-through to the logger class, whatever that happens to be.
-      volatile static void log(int severity, const char *str);                             // Pass-through to the logger class, whatever that happens to be.
-      volatile static void log(const char *str);                                           // Pass-through to the logger class, whatever that happens to be.
-      volatile static void log(char *str);                                           // Pass-through to the logger class, whatever that happens to be.
-      volatile static void log(StringBuilder *str);
 
       int8_t bootstrap(void);
 
@@ -113,13 +95,15 @@
       bool enableSchedule(uint32_t g_pid);   // Re-enable a previously-disabled schedule.
       bool disableSchedule(uint32_t g_pid);  // Turn a schedule off without removing it.
       bool removeSchedule(uint32_t g_pid);   // Clears all data relating to the given schedule.
-      bool fireSchedule(uint32_t g_pid);                  // Fire the given schedule on the next idle loop.
+      bool fireSchedule(uint32_t g_pid);     // Fire the given schedule on the next idle loop.
       bool alterScheduleRecurrence(uint32_t schedule_index, int16_t recurrence);
       bool alterSchedulePeriod(uint32_t schedule_index, uint32_t sch_period);
 
       void advanceScheduler(void);             // Push all enabled schedules forward by one tick.
       void advanceScheduler(unsigned int);     // Push all enabled schedules forward by one tick.
+
       int serviceScheduledEvents(void);        // Execute any schedules that have come due.
+      int8_t procIdleFlags(void);
 
       
       /*
@@ -136,8 +120,6 @@
       };
       
 
-      int8_t procIdleFlags(void);
-      
       void profiler(bool enabled);
       
       #if defined(__MANUVR_DEBUG)
@@ -150,6 +132,7 @@
         printDebug(&local_log);
       };
       
+      // Profiling support..
       float cpu_usage();
       
       
@@ -168,34 +151,26 @@
       void procDirectDebugInstruction(StringBuilder *);
 
       // TODO: These members were ingested from the Scheduler.
-      int getTotalSchedules(void);   // How many total schedules are present?
-      unsigned int getActiveSchedules(void);  // How many active schedules are present?
-      
-      bool scheduleBeingProfiled(uint32_t g_pid);
-      void beginProfiling(uint32_t g_pid);
-      void stopProfiling(uint32_t g_pid);
-      void clearProfilingData(uint32_t g_pid);        // Clears profiling data associated with the given schedule.
-      
-      // Alters an existing schedule (if PID is found),
-      bool alterSchedule(uint32_t schedule_index, uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
-      bool alterSchedule(uint32_t schedule_index, bool auto_clear);
-      bool alterSchedule(uint32_t schedule_index, FunctionPointer sch_callback);
-  
   
       bool scheduleEnabled(uint32_t g_pid);   // Is the given schedule presently enabled?
   
       bool delaySchedule(uint32_t g_pid, uint32_t by_ms);  // Set the schedule's TTW to the given value this execution only.
       bool delaySchedule(uint32_t g_pid);                  // Reset the given schedule to its period and enable it.
-      
+
   
       bool willRunAgain(uint32_t g_pid);                  // Returns true if the indicated schedule will fire again.
   
       void printProfiler(StringBuilder*);
-      void printSchedule(uint32_t g_pid, StringBuilder*);
-      // TODO: These members were ingested from the Scheduler.
 
 
       static StringBuilder log_buffer;
+
+      /* These functions deal with logging.*/
+      volatile static void log(const char *fxn_name, int severity, const char *str, ...);  // Pass-through to the logger class, whatever that happens to be.
+      volatile static void log(int severity, const char *str);                             // Pass-through to the logger class, whatever that happens to be.
+      volatile static void log(const char *str);                                           // Pass-through to the logger class, whatever that happens to be.
+      volatile static void log(char *str);                                           // Pass-through to the logger class, whatever that happens to be.
+      volatile static void log(StringBuilder *str);
 
       static Kernel* getInstance(void);
       static int8_t  raiseEvent(uint16_t event_code, EventReceiver* data);
@@ -221,8 +196,8 @@
 
   
     private:
-      PriorityQueue<ManuvrRunnable*> schedules;
-      PriorityQueue<ManuvrRunnable*> execution_queue;
+      PriorityQueue<ManuvrRunnable*> schedules;        // These are events waiting to be run.
+      PriorityQueue<ManuvrRunnable*> execution_queue;  // 
       uint32_t clicks_in_isr;
       uint32_t total_skipped_loops;
       uint32_t lagged_schedules;
@@ -241,9 +216,6 @@
       std::map<uint16_t, PriorityQueue<listenerFxnPtr>*> cb_listeners;
       
       StringBuilder last_user_input;
-      
-      int8_t procCallAheads(ManuvrRunnable *active_event);
-      int8_t procCallBacks(ManuvrRunnable *active_event);
       
       // Profiling and logging variables...
       uint32_t max_idle_loop_time;    // How many uS does it take to run an idle loop?
@@ -264,8 +236,35 @@
       int8_t max_events_per_loop;
       bool profiler_enabled;          // Should we spend time profiling this component?
 
+      /* Despite being public members, these values should not be written from outside the class.
+         They are only public for the sake of convenience of reading them. Since they are profiling-related,
+         no major class functionality (other than the profiler output) relies on them. */
+      uint32_t next_pid;            // Next PID to assign.
+      uint32_t currently_executing; // Hold PID of currently-executing Schedule. 0 if none.
+      uint32_t productive_loops;    // Number of calls to serviceScheduledEvents() that actually called a schedule.
+      uint32_t overhead;            // The time in microseconds required to service the last empty schedule loop.
+      bool     scheduler_ready;     // TODO: Convert to a uint8 and track states.
+
+      uint32_t micros_occupied;       // How many micros have we spent procing events?
+      ManuvrRunnable* current_event;
+
+      int8_t procCallAheads(ManuvrRunnable *active_event);
+      int8_t procCallBacks(ManuvrRunnable *active_event);
+      
       // TODO: These members were ingested from the Scheduler.
+      
+      bool scheduleBeingProfiled(uint32_t g_pid);
+      void beginProfiling(uint32_t g_pid);
+      void stopProfiling(uint32_t g_pid);
+      void clearProfilingData(uint32_t g_pid);        // Clears profiling data associated with the given schedule.
+
+      // Alters an existing schedule (if PID is found),
+      bool alterSchedule(uint32_t schedule_index, uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
+      bool alterSchedule(uint32_t schedule_index, bool auto_clear);
+      bool alterSchedule(uint32_t schedule_index, FunctionPointer sch_callback);
       bool alterSchedule(ManuvrRunnable *obj, uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
+      int getTotalSchedules(void);   // How many total schedules are present?
+      unsigned int getActiveSchedules(void);  // How many active schedules are present?
       void destroyAllScheduleItems(void);
       bool removeSchedule(ManuvrRunnable *obj);
       uint32_t get_valid_new_pid(void);    

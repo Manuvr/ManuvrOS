@@ -37,6 +37,8 @@
 
       bool eventManagerShouldReap();
 
+      int8_t execute();
+      
       bool returnToPrealloc();
       bool returnToPrealloc(bool);
       bool isScheduled(bool);
