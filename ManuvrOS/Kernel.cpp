@@ -991,7 +991,7 @@ void Kernel::printDebug(StringBuilder* output) {
   output->concatf("--- Schedules location:  0x%08x\n", &schedules);
   output->concatf("--- Total loops:      %u\n--- Productive loops: %u\n---Skipped loops: %u\n---Lagged schedules %u\n", (unsigned long) total_loops, (unsigned long) productive_loops, (unsigned long) total_skipped_loops, (unsigned long) lagged_schedules);
   if (total_loops) output->concatf("--- Duty cycle:       %2.4f%\n--- Overhead:         %d microseconds\n", ((double)((double) productive_loops / (double) total_loops) * 100), overhead);
-  output->concatf("--- Total schedules:  %d\n--- Active schedules: %d\n\n", getTotalSchedules(), getActiveSchedules());
+  output->concatf("--- Total schedules:  %d\n--- Active schedules: %d\n\n", schedules.size(), getActiveSchedules());
 
   printProfiler(output);
 }
@@ -1170,13 +1170,13 @@ int8_t Kernel::notify(ManuvrRunnable *active_event) {
       break;
     case MANUVR_MSG_SCHED_PROFILER_START:
       while (0 == active_event->consumeArgAs(&temp_uint32)) {
-        beginProfiling(temp_uint32);
+        //beginProfiling(temp_uint32);
         return_value++;
       }
       break;
     case MANUVR_MSG_SCHED_PROFILER_STOP:
       while (0 == active_event->consumeArgAs(&temp_uint32)) {
-        stopProfiling(temp_uint32);
+        //stopProfiling(temp_uint32);
         return_value++;
       }
       break;
@@ -1441,27 +1441,6 @@ float Kernel::cpu_usage() {
 
 
 /**
-*  Given the schedule PID, begin profiling.
-*/
-void Kernel::beginProfiling(uint32_t g_pid) {
-  ManuvrRunnable *current = findNodeByPID(g_pid);
-  current->enableProfiling(true);
-}
-
-
-/**
-*  Given the schedule PID, stop profiling.
-* Stops profiling without destroying the collected data.
-* Note: If profiling is ever re-started on this schedule, the profiling data
-*  that this function preserves will be wiped.
-*/
-void Kernel::stopProfiling(uint32_t g_pid) {
-  ManuvrRunnable *current = findNodeByPID(g_pid);
-  current->enableProfiling(false);
-}
-
-
-/**
 *  Given the schedule PID, reset the profiling data.
 *  Typically, we'd do this when the profiler is being turned on.
 */
@@ -1487,14 +1466,6 @@ bool Kernel::fireSchedule(uint32_t g_pid) {
     return true;
   }
   return false;
-}
-
-
-/**
-* Returns the number of schedules presently defined.
-*/
-int Kernel::getTotalSchedules() {
-  return schedules.size();
 }
 
 

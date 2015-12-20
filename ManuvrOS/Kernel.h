@@ -253,8 +253,6 @@
       // TODO: These members were ingested from the Scheduler.
       
       bool scheduleBeingProfiled(uint32_t g_pid);
-      void beginProfiling(uint32_t g_pid);
-      void stopProfiling(uint32_t g_pid);
       void clearProfilingData(uint32_t g_pid);        // Clears profiling data associated with the given schedule.
 
       // Alters an existing schedule (if PID is found),
@@ -262,7 +260,7 @@
       bool alterSchedule(uint32_t schedule_index, bool auto_clear);
       bool alterSchedule(uint32_t schedule_index, FunctionPointer sch_callback);
       bool alterSchedule(ManuvrRunnable *obj, uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
-      int getTotalSchedules(void);   // How many total schedules are present?
+
       unsigned int getActiveSchedules(void);  // How many active schedules are present?
       void destroyAllScheduleItems(void);
       bool removeSchedule(ManuvrRunnable *obj);
