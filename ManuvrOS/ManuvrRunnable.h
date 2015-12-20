@@ -19,15 +19,13 @@
       int32_t         priority;
 
       // The things below were pulled in from ScheduleItem.
-      TaskProfilerData* prof_data;       // If this schedule is being profiled, the ref will be here.
-      uint32_t pid;                      // The process ID of this item. Zero is invalid.
       uint32_t thread_time_to_wait;      // How much longer until the schedule fires?
       uint32_t thread_period;            // How often does this schedule execute?
       int16_t  thread_recurs;            // See Note 2.
       // End ScheduleItem
 
-      ManuvrRunnable(uint32_t nu_pid, int16_t recurrence, uint32_t sch_period, bool ac, FunctionPointer sch_callback);
-      ManuvrRunnable(uint32_t nu_pid, int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver*  sch_callback);
+      ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, FunctionPointer sch_callback);
+      ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver*  sch_callback);
       ManuvrRunnable(uint16_t msg_code, EventReceiver* cb);
       ManuvrRunnable(uint16_t msg_code);
       ManuvrRunnable();
@@ -94,6 +92,7 @@
 
       
     private:
+      TaskProfilerData* prof_data;       // If this schedule is being profiled, the ref will be here.
   };
 
 #endif  //__MANUVR_RUNNABLE_H__

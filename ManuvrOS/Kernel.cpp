@@ -1533,29 +1533,11 @@ ManuvrRunnable* Kernel::findNodeByPID(uint32_t g_pid) {
   ManuvrRunnable *current = NULL;
   for (int i = 0; i < schedules.size(); i++) {
     current = schedules.get(i);
-    if (current->pid == g_pid) {
+    if ((uint32_t)current == g_pid) {
       return current;
     }
   }
   return NULL;
-}
-
-
-/**
-*  When we assign a new PID, call this function to get one. Since we don't want
-*    to collide with one that already exists, or get the zero value. 
-*/
-uint32_t Kernel::get_valid_new_pid() {
-    uint32_t return_value = next_pid++;
-    if (return_value == 0) {
-        return_value = get_valid_new_pid();  // Recurse...
-    }
-    // Takes too long, but represents a potential bug.
-    //else if (this->findNodeByPID(return_value) == NULL) {
-    //	return_value = this->get_valid_new_pid();  // Recurse...
-    //}
-
-	return return_value;
 }
 
 
@@ -1570,9 +1552,9 @@ uint32_t Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac
   uint32_t return_value  = 0;
   if (sch_period > 1) {
     if (sch_callback != NULL) {
-      ManuvrRunnable *nu_sched = new ManuvrRunnable(get_valid_new_pid(), recurrence, sch_period, ac, sch_callback);
+      ManuvrRunnable *nu_sched = new ManuvrRunnable(recurrence, sch_period, ac, sch_callback);
       if (nu_sched != NULL) {  // Did we actually malloc() successfully?
-        return_value  = nu_sched->pid;
+        return_value  = (uint32_t) nu_sched;
         schedules.insert(nu_sched);
         nu_sched->enableProfiling(return_value);
       }
@@ -1592,10 +1574,10 @@ uint32_t Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac
   uint32_t return_value  = 0;
   if (sch_period > 1) {
     // TODO: This is broken until more condensation happens.
-    //ManuvrRunnable *nu_sched = new ManuvrRunnable(get_valid_new_pid(), recurrence, sch_period, ac, sch_callback, event);
-    ManuvrRunnable *nu_sched = new ManuvrRunnable(get_valid_new_pid(), recurrence, sch_period, ac, sch_callback);
+    //ManuvrRunnable *nu_sched = new ManuvrRunnable(recurrence, sch_period, ac, sch_callback, event);
+    ManuvrRunnable *nu_sched = new ManuvrRunnable(recurrence, sch_period, ac, sch_callback);
     if (nu_sched != NULL) {  // Did we actually malloc() successfully?
-      return_value  = nu_sched->pid;
+      return_value  = (uint32_t) nu_sched;
       schedules.insert(nu_sched);
       nu_sched->enableProfiling(return_value);
     }

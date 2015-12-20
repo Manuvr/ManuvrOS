@@ -49,9 +49,8 @@ ManuvrRunnable::ManuvrRunnable(uint16_t code) : ManuvrMsg(code) {
 * @param ac           Should the scheduler autoclear this schedule when it finishes running?
 * @param sch_callback A FunctionPointer to the callback. Useful for some general things.
 */
-ManuvrRunnable::ManuvrRunnable(uint32_t nu_pid, int16_t recurrence, uint32_t sch_period, bool ac, FunctionPointer sch_callback) {
+ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, FunctionPointer sch_callback) {
   __class_initializer();
-  pid                 = nu_pid;
   thread_enabled      = true;
   thread_fire         = false;
   thread_recurs       = recurrence;
@@ -74,9 +73,8 @@ ManuvrRunnable::ManuvrRunnable(uint32_t nu_pid, int16_t recurrence, uint32_t sch
 * @param sch_callback A FunctionPointer to the callback. Useful for some general things.
 * @param ev           A pointer to an Event that we will periodically raise.
 */
-ManuvrRunnable::ManuvrRunnable(uint32_t nu_pid, int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver* sch_callback) {
+ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver* sch_callback) {
   __class_initializer();
-  pid                 = nu_pid;
   thread_enabled      = true;
   thread_fire         = false;
   thread_recurs       = recurrence;
@@ -224,7 +222,7 @@ void ManuvrRunnable::printDebug(StringBuilder *output) {
   //  output->concatf("Failed to serialize message. Count was (%d).\n", arg_count);
   //}
 
-  output->concatf("\t [%10u] Schedule \n\t --------------------------------\n", pid);
+  output->concatf("\t [0x%08x] Schedule \n\t --------------------------------\n", (uint32_t) this);
 
   output->concatf("\t Enabled       \t%s\n", (thread_enabled ? "YES":"NO"));
   output->concatf("\t Time-till-fire\t%u\n", thread_time_to_wait);
