@@ -236,14 +236,6 @@
       int8_t max_events_per_loop;
       bool profiler_enabled;          // Should we spend time profiling this component?
 
-      /* Despite being public members, these values should not be written from outside the class.
-         They are only public for the sake of convenience of reading them. Since they are profiling-related,
-         no major class functionality (other than the profiler output) relies on them. */
-      uint32_t next_pid;            // Next PID to assign.
-      uint32_t currently_executing; // Hold PID of currently-executing Schedule. 0 if none.
-      uint32_t productive_loops;    // Number of calls to serviceScheduledEvents() that actually called a schedule.
-      uint32_t overhead;            // The time in microseconds required to service the last empty schedule loop.
-
       uint32_t micros_occupied;       // How many micros have we spent procing events?
       ManuvrRunnable* current_event;
 
@@ -262,7 +254,6 @@
       bool alterSchedule(ManuvrRunnable *obj, uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
 
       unsigned int getActiveSchedules(void);  // How many active schedules are present?
-      void destroyAllScheduleItems(void);
       bool removeSchedule(ManuvrRunnable *obj);
       uint32_t get_valid_new_pid(void);    
       ManuvrRunnable* findNodeByPID(uint32_t g_pid);

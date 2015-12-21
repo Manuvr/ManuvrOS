@@ -100,7 +100,6 @@ Kernel::Kernel() {
   __kernel           = this;  // We extend EventReceiver. So we populate this.
 
   max_queue_depth     = 0;
-  total_loops         = 0;
   total_events        = 0;
   total_events_dead   = 0;
   micros_occupied     = 0;
@@ -109,11 +108,6 @@ Kernel::Kernel() {
   current_event      = NULL;
 
   // TODO: Pulled in from Scheduler.
-  next_pid             = 1;      // Next PID to assign.
-  currently_executing  = 0;      // Hold PID of currently-executing Schedule. 0 if none.
-  productive_loops     = 0;      // Number of calls to serviceScheduledEvents() that actually called a schedule.
-  total_loops          = 0;      // Number of calls to serviceScheduledEvents().
-  overhead             = 0;      // The time in microseconds required to service the last empty schedule loop.
   skipped_loops        = 0;
   total_skipped_loops  = 0;
   lagged_schedules     = 0;
@@ -148,7 +142,8 @@ Kernel::Kernel() {
 * Destructor. Should probably never be called.
 */
 Kernel::~Kernel() {
-  destroyAllScheduleItems();
+  execution_queue.clear();
+  while (schedules.hasNext()) {  delete schedules.dequeue();   }
 }
 
 
@@ -654,7 +649,8 @@ int8_t Kernel::procIdleFlags() {
     #ifdef __MANUVR_DEBUG
     if (verbosity >= 5) local_log.concatf("Servicing: %s\n", active_event->getMsgTypeString());
     #endif
-    if (profiler_enabled) profiler_mark_0 = micros();
+    
+    profiler_mark_0 = micros();
 
     procCallAheads(active_event);
     
@@ -662,7 +658,11 @@ int8_t Kernel::procIdleFlags() {
     EventReceiver *subscriber;   // No need to assign.
     if (profiler_enabled) profiler_mark_1 = micros();
     
-    if (NULL != active_event->specific_target) {
+    if (NULL != active_event->schedule_callback) {
+      // TODO: This is hold-over from the scheduler. Need to modernize it.
+      ((void (*)(void)) active_event->schedule_callback)();   // Call the schedule's service function.
+    }
+    else if (NULL != active_event->specific_target) {
       subscriber = active_event->specific_target;
       switch (subscriber->notify(active_event)) {
         case 0:   // The nominal case. No response.
@@ -693,6 +693,8 @@ int8_t Kernel::procIdleFlags() {
     }
     
     procCallBacks(active_event);
+    
+    active_event->noteExecutionTime(profiler_mark_0, micros());
     
     if (0 == activity_count) {
       #ifdef __MANUVR_DEBUG
@@ -989,8 +991,7 @@ void Kernel::printDebug(StringBuilder* output) {
   }
 
   output->concatf("--- Schedules location:  0x%08x\n", &schedules);
-  output->concatf("--- Total loops:      %u\n--- Productive loops: %u\n---Skipped loops: %u\n---Lagged schedules %u\n", (unsigned long) total_loops, (unsigned long) productive_loops, (unsigned long) total_skipped_loops, (unsigned long) lagged_schedules);
-  if (total_loops) output->concatf("--- Duty cycle:       %2.4f%\n--- Overhead:         %d microseconds\n", ((double)((double) productive_loops / (double) total_loops) * 100), overhead);
+  output->concatf("--- Skipped loops: %u\n--- Lagged schedules %u\n", (unsigned long) total_skipped_loops, (unsigned long) lagged_schedules);
   output->concatf("--- Total schedules:  %d\n--- Active schedules: %d\n\n", schedules.size(), getActiveSchedules());
 
   printProfiler(output);
@@ -1487,16 +1488,6 @@ unsigned int Kernel::getActiveSchedules() {
 
 
 /**
-* Destroy everything in the list. Should only be called by the destructor, but no harm
-*  in calling it for other reasons. Will stop and wipe all schedules. 
-*/
-void Kernel::destroyAllScheduleItems() {
-  execution_queue.clear();
-  while (schedules.hasNext()) {  delete schedules.dequeue();   }
-}
-
-
-/**
 * Traverses the linked list and returns a pointer to the node that has the given PID.
 * Returns NULL if a node is not found that meets this criteria.
 */
@@ -1759,22 +1750,6 @@ void Kernel::advanceScheduler() {
   clicks_in_isr++;
   _ms_elapsed++;
   
-  //int x = schedules.size();
-  //ManuvrRunnable *current;
-  //
-  //for (int i = 0; i < x; i++) {
-  //  current = schedules.recycle();
-  //  if (current->threadEnabled()) {
-  //    if (current->thread_time_to_wait > 0) {
-  //      current->thread_time_to_wait--;
-  //    }
-  //    else {
-  //      current->fireNow(true);
-  //      current->thread_time_to_wait = current->thread_period;
-  //      execution_queue.insert(current);
-  //    }
-  //  }
-  //}
   if (bistable_skip_detect) {
     // Failsafe block
 #ifdef STM32F4XX
@@ -1839,7 +1814,7 @@ bool Kernel::disableSchedule(uint32_t g_pid) {
 */
 bool Kernel::removeSchedule(ManuvrRunnable *obj) {
   if (obj != NULL) {
-    if ((uint32_t) obj != this->currently_executing) {
+    if (obj != current_event) {
       schedules.remove(obj);
       execution_queue.remove(obj);
       delete obj;
@@ -1868,8 +1843,6 @@ bool Kernel::removeSchedule(uint32_t g_pid) {
 int Kernel::serviceScheduledEvents() {
   if (!boot_completed) return -1;
   int return_value = 0;
-  uint32_t origin_time = micros();
-
 
   uint32_t temp_clicks = clicks_in_isr;
   clicks_in_isr = 0;
@@ -1883,11 +1856,10 @@ int Kernel::serviceScheduledEvents() {
   for (int i = 0; i < x; i++) {
     current = schedules.recycle();
     if (current->threadEnabled()) {
-      if (current->thread_time_to_wait > _ms_elapsed) {
+      if ((current->thread_time_to_wait > _ms_elapsed) && (!current->shouldFire())){
         current->thread_time_to_wait -= _ms_elapsed;
       }
       else {
-        current->fireNow(true);
         uint32_t adjusted_ttw = (_ms_elapsed - current->thread_time_to_wait);
         if (adjusted_ttw <= current->thread_period) {
           current->thread_time_to_wait = current->thread_period - adjusted_ttw;
@@ -1898,66 +1870,38 @@ int Kernel::serviceScheduledEvents() {
           current->thread_time_to_wait = current->thread_period;
           lagged_schedules++;
         }
-        execution_queue.insert(current);
+        current->fireNow(false);          // ...mark it as serviced.
+        Kernel::staticRaiseEvent(current);
       }
     }
   }
   
-  uint32_t profile_start_time = 0;
-
-  current = execution_queue.dequeue();
-  while (NULL != current) {
-    if (current->shouldFire()) {
-      currently_executing = (uint32_t) current;
-
-      profile_start_time = micros();
-
-      if (NULL != current) {  // This is an event-based schedule.
-        //if (NULL != current->event->specific_target) {
-        //  // TODO: Note: If we do this, we are outside of the profiler's scope.
-        //  current->event->specific_target->notify(current->event);   // Pitch the schedule's event.
-        //  
-        //  if (NULL != current->event->callback) {
-        //    current->event->callback->callback_proc(current->event);
-        //  }
-        //}
-        //else {
-          Kernel::staticRaiseEvent(current);
-        //}
-      }
-      else if (NULL != current->schedule_callback) {
-        ((void (*)(void)) current->schedule_callback)();   // Call the schedule's service function.
-      }
-            
-      current->noteExecutionTime(profile_start_time, micros());
-
-      current->fireNow(false);
-      currently_executing = 0;
-         
-      switch (current->thread_recurs) {
-        case -1:           // Do nothing. Schedule runs indefinitely.
-          break;
-        case 0:            // Disable (and remove?) the schedule.
-          if (current->autoClear()) {
-            removeSchedule(current);
-          }
-          else {
-            current->threadEnabled(false);  // Disable the schedule...
-            current->fireNow(false);          // ...mark it as serviced.
-            current->thread_time_to_wait = current->thread_period;  // ...and reset the timer.
-          }
-          break;
-        default:           // Decrement the run count.
-          current->thread_recurs--;
-          break;
-      }
-      return_value++;
-    }
-    current = execution_queue.dequeue();
-  }
-  overhead = micros() - origin_time;
-  total_loops++;
-  if (return_value > 0) productive_loops++;
+  //current = execution_queue.dequeue();
+  //while (NULL != current) {
+  //  if (current->shouldFire()) {
+  //    profile_start_time = micros();
+  //
+  //    switch (current->thread_recurs) {
+  //      case -1:           // Do nothing. Schedule runs indefinitely.
+  //        break;
+  //      case 0:            // Disable (and remove?) the schedule.
+  //        if (current->autoClear()) {
+  //          removeSchedule(current);
+  //        }
+  //        else {
+  //          current->threadEnabled(false);  // Disable the schedule...
+  //          
+  //          current->thread_time_to_wait = current->thread_period;  // ...and reset the timer.
+  //        }
+  //        break;
+  //      default:           // Decrement the run count.
+  //        current->thread_recurs--;
+  //        break;
+  //    }
+  //    return_value++;
+  //  }
+  //  current = execution_queue.dequeue();
+  //}
   
   // We just ran a loop. Punch the bistable swtich and clear the skip count.
   bistable_skip_detect = false;
