@@ -99,8 +99,9 @@
       bool alterScheduleRecurrence(uint32_t schedule_index, int16_t recurrence);
       bool alterSchedulePeriod(uint32_t schedule_index, uint32_t sch_period);
 
-      void advanceScheduler(void);             // Push all enabled schedules forward by one tick.
       void advanceScheduler(unsigned int);     // Push all enabled schedules forward by one tick.
+      inline void advanceScheduler() {   advanceScheduler(MANUVR_PLATFORM_TIMER_PERIOD_MS);  };
+      
 
       int serviceScheduledEvents(void);        // Execute any schedules that have come due.
       int8_t procIdleFlags(void);
@@ -128,13 +129,11 @@
 
       // Logging messages, as well as an override to log locally.
       void printDebug(StringBuilder*);
-      inline void printDebug() {
-        printDebug(&local_log);
-      };
+      inline void printDebug() {        printDebug(&local_log);      };
       
       // Profiling support..
       float cpu_usage();
-      
+      void printProfiler(StringBuilder*);
       
       inline void maxEventsPerLoop(int8_t nu) { max_events_per_loop = nu;   }
       inline int8_t maxEventsPerLoop() {        return max_events_per_loop; }
@@ -151,17 +150,13 @@
       void procDirectDebugInstruction(StringBuilder *);
 
       // TODO: These members were ingested from the Scheduler.
-  
       bool scheduleEnabled(uint32_t g_pid);   // Is the given schedule presently enabled?
   
       bool delaySchedule(uint32_t g_pid, uint32_t by_ms);  // Set the schedule's TTW to the given value this execution only.
       bool delaySchedule(uint32_t g_pid);                  // Reset the given schedule to its period and enable it.
-
   
       bool willRunAgain(uint32_t g_pid);                  // Returns true if the indicated schedule will fire again.
   
-      void printProfiler(StringBuilder*);
-
 
       static StringBuilder log_buffer;
 
@@ -196,23 +191,17 @@
 
   
     private:
-      PriorityQueue<ManuvrRunnable*> schedules;        // These are events waiting to be run.
-      uint32_t clicks_in_isr;
-      uint32_t total_skipped_loops;
-      uint32_t lagged_schedules;
-      /* These members are concerned with reliability. */
-      uint16_t skipped_loops;
-      bool     bistable_skip_detect;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
-      uint32_t _ms_elapsed;
-
-
+      PriorityQueue<ManuvrRunnable*>   schedules;     // These are events waiting to be run.
       PriorityQueue<ManuvrRunnable*>   preallocated;  // This is the listing of pre-allocated events.
       PriorityQueue<ManuvrRunnable*>   event_queue;   // Events that have been raised.
       PriorityQueue<EventReceiver*>    subscribers;   // Our subscription manifest.
       PriorityQueue<TaskProfilerData*> event_costs;   // Message code is the priority. Calculates average cost in uS.
-      
-      std::map<uint16_t, PriorityQueue<listenerFxnPtr>*> ca_listeners;
-      std::map<uint16_t, PriorityQueue<listenerFxnPtr>*> cb_listeners;
+
+      std::map<uint16_t, PriorityQueue<listenerFxnPtr>*> ca_listeners;  // Call-ahead listeners.
+      std::map<uint16_t, PriorityQueue<listenerFxnPtr>*> cb_listeners;  // Call-back listeners.
+
+      uint32_t lagged_schedules;
+      uint32_t _ms_elapsed;
       
       StringBuilder last_user_input;
       
@@ -234,6 +223,7 @@
       uint8_t  max_events_p_loop;     // What is the most events we've handled in a single loop?
       int8_t max_events_per_loop;
       bool profiler_enabled;          // Should we spend time profiling this component?
+      bool     bistable_skip_detect;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
 
       uint32_t micros_occupied;       // How many micros have we spent procing events?
       ManuvrRunnable* current_event;
@@ -242,7 +232,6 @@
       int8_t procCallBacks(ManuvrRunnable *active_event);
       
       // TODO: These members were ingested from the Scheduler.
-      
       bool scheduleBeingProfiled(uint32_t g_pid);
       void clearProfilingData(uint32_t g_pid);        // Clears profiling data associated with the given schedule.
 

@@ -111,11 +111,8 @@ Kernel::Kernel() {
   current_event      = NULL;
 
   // TODO: Pulled in from Scheduler.
-  skipped_loops        = 0;
-  total_skipped_loops  = 0;
   lagged_schedules     = 0;
   bistable_skip_detect = false;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
-  clicks_in_isr        = 0;
   _ms_elapsed          = 0;
   // TODO: Pulled in from Scheduler.
   
@@ -993,7 +990,7 @@ void Kernel::printDebug(StringBuilder* output) {
   }
 
   output->concatf("--- Schedules location:  0x%08x\n", &schedules);
-  output->concatf("--- Skipped loops: %u\n--- Lagged schedules %u\n", (unsigned long) total_skipped_loops, (unsigned long) lagged_schedules);
+  output->concatf("--- Lagged schedules %u\n", (unsigned long) lagged_schedules);
   output->concatf("--- Total schedules:  %d\n--- Active schedules: %d\n\n", schedules.size(), getActiveSchedules());
 
   printProfiler(output);
@@ -1702,84 +1699,10 @@ bool Kernel::delaySchedule(uint32_t g_pid) {
 *   are in an ISR.
 */
 void Kernel::advanceScheduler(unsigned int ms_elapsed) {
-  clicks_in_isr++;
   _ms_elapsed += (uint32_t) ms_elapsed;
   
-  
   if (bistable_skip_detect) {
     // Failsafe block
-#ifdef STM32F4XX
-    if (skipped_loops > 5000) {
-      // TODO: We are hung in a way that we probably cannot recover from. Reboot...
-      jumpToBootloader();
-    }
-    else if (skipped_loops == 2000) {
-      printf("Hung scheduler...\n");
-    }
-    else if (skipped_loops == 2040) {
-      /* Doing all this String manipulation in an ISR would normally be an awful idea.
-         But we don't care here because we're hung anyhow, and we need to know why. */
-      StringBuilder output;
-      Kernel::getInstance()->fetchKernel()->printDebug(&output);
-      printf("%s\n", (char*) output.string());
-    }
-    else if (skipped_loops == 2200) {
-      StringBuilder output;
-      printDebug(&output);
-      printf("%s\n", (char*) output.string());
-    }
-    else if (skipped_loops == 3500) {
-      StringBuilder output;
-      Kernel::getInstance()->printDebug(&output);
-      printf("%s\n", (char*) output.string());
-    }
-    skipped_loops++;
-#endif
-  }
-  else {
-    bistable_skip_detect = true;
-  }
-}
-
-
-/**
-* Call this function to push the schedules forward.
-* We can be assured of exclusive access to the scheules queue as long as we
-*   are in an ISR.
-*/
-void Kernel::advanceScheduler() {
-  clicks_in_isr++;
-  _ms_elapsed++;
-  
-  if (bistable_skip_detect) {
-    // Failsafe block
-#ifdef STM32F4XX
-    if (skipped_loops > 5000) {
-      // TODO: We are hung in a way that we probably cannot recover from. Reboot...
-      jumpToBootloader();
-    }
-    else if (skipped_loops == 2000) {
-      printf("Hung scheduler...\n");
-    }
-    else if (skipped_loops == 2040) {
-      /* Doing all this String manipulation in an ISR would normally be an awful idea.
-         But we don't care here because we're hung anyhow, and we need to know why. */
-      StringBuilder output;
-      Kernel::getInstance()->fetchKernel()->printDebug(&output);
-      printf("%s\n", (char*) output.string());
-    }
-    else if (skipped_loops == 2200) {
-      StringBuilder output;
-      printDebug(&output);
-      printf("%s\n", (char*) output.string());
-    }
-    else if (skipped_loops == 3500) {
-      StringBuilder output;
-      Kernel::getInstance()->printDebug(&output);
-      printf("%s\n", (char*) output.string());
-    }
-    skipped_loops++;
-#endif
   }
   else {
     bistable_skip_detect = true;
@@ -1844,12 +1767,6 @@ bool Kernel::removeSchedule(uint32_t g_pid) {
 int Kernel::serviceScheduledEvents() {
   if (!boot_completed) return -1;
   int return_value = 0;
-
-  uint32_t temp_clicks = clicks_in_isr;
-  clicks_in_isr = 0;
-  if (0 == temp_clicks) {
-    return return_value;
-  }
   
   int x = schedules.size();
   ManuvrRunnable *current;
@@ -1904,8 +1821,6 @@ int Kernel::serviceScheduledEvents() {
   
   // We just ran a loop. Punch the bistable swtich and clear the skip count.
   bistable_skip_detect = false;
-  total_skipped_loops += skipped_loops;
-  skipped_loops        = 0;
   
   _ms_elapsed = 0;
   return return_value;

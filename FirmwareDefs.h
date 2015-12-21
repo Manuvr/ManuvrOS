@@ -57,6 +57,7 @@ This is an example file for building firmware on linux. Anticipated target is a 
 * Kernel options.
 */
 #define EVENT_MANAGER_PREALLOC_COUNT      32    // How large a preallocation buffer should we keep?
+#define MANUVR_PLATFORM_TIMER_PERIOD_MS   10    // What is the granularity of our scheduler?
 
 
 /****************************************************************************************************

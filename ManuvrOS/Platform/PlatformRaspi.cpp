@@ -50,8 +50,6 @@ volatile Kernel* __kernel = NULL;
 struct itimerval _interval              = {0};
 struct sigaction _signal_action_SIGALRM = {0};
 
-#define MANUVR_PLATFORM_TIMER_PERIOD_MS 10 
-
 
 bool set_linux_interval_timer() {
   _interval.it_value.tv_sec      = 0;
