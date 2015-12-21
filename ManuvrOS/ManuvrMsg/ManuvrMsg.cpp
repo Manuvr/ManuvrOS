@@ -95,15 +95,12 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SYS_PREALLOCATION    , 0x0000,               "SYS_PREALLOCATION"    , MSG_ARGS_NONE }, // Any classes that do preallocation should listen for this.
   {  MANUVR_MSG_SYS_FAULT_REPORT     , 0x0000,               "SYS_FAULT"            , MSG_ARGS_U32 }, // 
   
-  {  MANUVR_MSG_RNG_BUFFER_EMPTY     , 0x0000,               "RNG_BUFFER_EMPTY"     , MSG_ARGS_NONE }, // The RNG couldn't keep up with our entropy demands.
   {  MANUVR_MSG_INTERRUPTS_MASKED    , 0x0000,               "INTERRUPTS_MASKED"    , MSG_ARGS_NONE }, // Anything that depends on interrupts is now broken.
                                               
   {  MANUVR_MSG_SESS_SUBCRIBE        , MSG_FLAG_EXPORTABLE,  "SESS_SUBCRIBE"        , MSG_ARGS_NONE }, // Used to subscribe this session to other events.
   {  MANUVR_MSG_SESS_UNSUBCRIBE      , MSG_FLAG_EXPORTABLE,  "SESS_UNSUBCRIBE"      , MSG_ARGS_NONE }, // Used to unsubscribe this session from other events.
   {  MANUVR_MSG_SESS_DUMP_DEBUG      , MSG_FLAG_EXPORTABLE,  "SESS_DUMP_DEBUG"      , MSG_ARGS_NONE }, // 
   {  MANUVR_MSG_SESS_ORIGINATE_MSG   , MSG_FLAG_IDEMPOTENT,  "SESS_ORIGINATE_MSG"   , MSG_ARGS_NONE }, // 
-
-  {  MANUVR_MSG_XPORT_SEND           , MSG_FLAG_IDEMPOTENT,  "XPORT_SEND"           , MSG_ARGS_STR_BUILDER }, //
 
   /* 
     For messages that have arguments, we have the option of defining inline lables for each parameter.

@@ -29,8 +29,8 @@ const MessageTypeDef message_defs[] = {
   {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,  "SYS_REBOOT"           , MSG_ARGS_NO_ARGS }, // Reboots into THIS program.
   {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN"         , MSG_ARGS_NO_ARGS }, // Raised when the system is pending complete shutdown.
 
-  {  MANUVR_MSG_SCHED_ENABLE_BY_PID  , 0x0000,               "SCHED_ENABLE_BY_PID"  , MSG_ARGS_NO_ARGS }, // The given PID is being enabled.
-  {  MANUVR_MSG_SCHED_DISABLE_BY_PID , 0x0000,               "SCHED_DISABLE_BY_PID" , MSG_ARGS_NO_ARGS }, // The given PID is being disabled.
+  {  MANUVR_MSG_SCHED_ENABLE_BY_PID  , 0x0000,               "SCHED_ENABLE"         , MSG_ARGS_NO_ARGS }, // The given PID is being enabled.
+  {  MANUVR_MSG_SCHED_DISABLE_BY_PID , 0x0000,               "SCHED_DISABLE"        , MSG_ARGS_NO_ARGS }, // The given PID is being disabled.
   {  MANUVR_MSG_SCHED_PROFILER_START , 0x0000,               "SCHED_PROFILER_START" , MSG_ARGS_NO_ARGS }, // We want to profile the given PID.
   {  MANUVR_MSG_SCHED_PROFILER_STOP  , 0x0000,               "SCHED_PROFILER_STOP"  , MSG_ARGS_NO_ARGS }, // We want to stop profiling the given PID.
   {  MANUVR_MSG_SCHED_PROFILER_DUMP  , 0x0000,               "SCHED_PROFILER_DUMP"  , MSG_ARGS_NO_ARGS }, // Dump the profiler data for all PIDs (no args) or given PIDs.
@@ -38,6 +38,9 @@ const MessageTypeDef message_defs[] = {
   {  MANUVR_MSG_SCHED_DUMP_SCHEDULES , 0x0000,               "SCHED_DUMP_SCHEDULES" , MSG_ARGS_NO_ARGS }, // Tell the Kernel to dump schedules.
   {  MANUVR_MSG_SCHED_WIPE_PROFILER  , 0x0000,               "SCHED_WIPE_PROFILER"  , MSG_ARGS_NO_ARGS }, // Tell the Kernel to wipe its profiler data. Pass PIDs to be selective.
   {  MANUVR_MSG_SCHED_DEFERRED_EVENT , 0x0000,               "SCHED_DEFERRED_EVENT" , MSG_ARGS_NO_ARGS }, // Tell the Kernel to broadcast the attached Event so many ms into the future.
+
+  {  MANUVR_MSG_XPORT_SEND           , MSG_FLAG_IDEMPOTENT,  "XPORT_SEND"           , ManuvrMsg::MSG_ARGS_STR_BUILDER }, //
+  {  MANUVR_MSG_RNG_BUFFER_EMPTY     , 0x0000,               "RNG_BUFFER_EMPTY"     , MSG_ARGS_NO_ARGS }, // The RNG couldn't keep up with our entropy demands.
 
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
     // These are messages that are only present under some sort of threading model. They are meant
@@ -142,7 +145,6 @@ Kernel::Kernel() {
 * Destructor. Should probably never be called.
 */
 Kernel::~Kernel() {
-  execution_queue.clear();
   while (schedules.hasNext()) {  delete schedules.dequeue();   }
 }
 
@@ -1463,7 +1465,6 @@ bool Kernel::fireSchedule(uint32_t g_pid) {
   if (NULL != current) {
     current->fireNow(true);
     current->thread_time_to_wait = current->thread_period;
-    execution_queue.insert(current);
     return true;
   }
   return false;
@@ -1816,7 +1817,7 @@ bool Kernel::removeSchedule(ManuvrRunnable *obj) {
   if (obj != NULL) {
     if (obj != current_event) {
       schedules.remove(obj);
-      execution_queue.remove(obj);
+      event_queue.remove(obj);
       delete obj;
     }
     else { 
@@ -1876,7 +1877,6 @@ int Kernel::serviceScheduledEvents() {
     }
   }
   
-  //current = execution_queue.dequeue();
   //while (NULL != current) {
   //  if (current->shouldFire()) {
   //    profile_start_time = micros();
@@ -1900,7 +1900,6 @@ int Kernel::serviceScheduledEvents() {
   //    }
   //    return_value++;
   //  }
-  //  current = execution_queue.dequeue();
   //}
   
   // We just ran a loop. Punch the bistable swtich and clear the skip count.

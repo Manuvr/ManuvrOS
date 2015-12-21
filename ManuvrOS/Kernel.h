@@ -197,7 +197,6 @@
   
     private:
       PriorityQueue<ManuvrRunnable*> schedules;        // These are events waiting to be run.
-      PriorityQueue<ManuvrRunnable*> execution_queue;  // 
       uint32_t clicks_in_isr;
       uint32_t total_skipped_loops;
       uint32_t lagged_schedules;
@@ -207,7 +206,7 @@
       uint32_t _ms_elapsed;
 
 
-      PriorityQueue<ManuvrRunnable*>   preallocated;
+      PriorityQueue<ManuvrRunnable*>   preallocated;  // This is the listing of pre-allocated events.
       PriorityQueue<ManuvrRunnable*>   event_queue;   // Events that have been raised.
       PriorityQueue<EventReceiver*>    subscribers;   // Our subscription manifest.
       PriorityQueue<TaskProfilerData*> event_costs;   // Message code is the priority. Calculates average cost in uS.
