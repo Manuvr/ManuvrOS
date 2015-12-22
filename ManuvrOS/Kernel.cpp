@@ -1825,6 +1825,3 @@ int Kernel::serviceScheduledEvents() {
   _ms_elapsed = 0;
   return return_value;
 }
-
-
-

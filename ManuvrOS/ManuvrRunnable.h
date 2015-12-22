@@ -78,21 +78,18 @@
       void clearProfilingData();           // Clears profiling data associated with the given schedule.
 
 
-    protected:
-      uint8_t  flags;            // Optional flags that might be important for an event.
-      bool     mem_managed;      // Set to true to cause the Kernel to not free().
-      bool     scheduled;        // Set to true to cause the Kernel to not free().
-      bool     preallocated;     // Set to true to cause the Kernel to return this event to its prealloc.
-      
-      bool     thread_enabled;   // Is the schedule running?
-      bool     thread_fire;      // Is the schedule to be executed?
-      bool     autoclear;        // If true, this schedule will be removed after its last execution.
+    private:
+      TaskProfilerData* prof_data;  // If this schedule is being profiled, the ref will be here.
+      uint8_t  flags;               // Optional flags that might be important for an event.
+      bool     mem_managed;         // Set to true to cause the Kernel to not free().
+      bool     scheduled;           // Set to true to cause the Kernel to not free().
+      bool     preallocated;        // Set to true to cause the Kernel to return this event to its prealloc.
+
+      bool     thread_enabled;      // Is the schedule running?
+      bool     thread_fire;         // Is the schedule to be executed?
+      bool     autoclear;           // If true, this schedule will be removed after its last execution.
 
       void __class_initializer();
-
-      
-    private:
-      TaskProfilerData* prof_data;       // If this schedule is being profiled, the ref will be here.
   };
 
 #endif  //__MANUVR_RUNNABLE_H__

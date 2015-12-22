@@ -43,7 +43,6 @@ ManuvrRunnable::ManuvrRunnable(uint16_t code) : ManuvrMsg(code) {
 /**
 * Constructor. Takes a void fxn(void) as a callback (Legacy).
 *
-* @param nu_pid       This schedule's unique PID. This must be passed in from outside for now.
 * @param recurrence   How many times should this schedule run?
 * @param sch_period   How often should this schedule run (in milliseconds).
 * @param ac           Should the scheduler autoclear this schedule when it finishes running?
@@ -66,7 +65,6 @@ ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac,
 * We need to deal with memory management of the Event. For a recurring schedule, we can't allow the
 *   Kernel to reap the event. So it is very important to mark the event appropriately.
 *
-* @param nu_pid       This schedule's unique PID. This must be passed in from outside for now.
 * @param recurrence   How many times should this schedule run?
 * @param sch_period   How often should this schedule run (in milliseconds).
 * @param ac           Should the scheduler autoclear this schedule when it finishes running?
