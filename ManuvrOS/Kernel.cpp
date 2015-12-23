@@ -1161,20 +1161,6 @@ int8_t Kernel::notify(ManuvrRunnable *active_event) {
       break;
     #endif
     
-    case MANUVR_MSG_SCHED_ENABLE_BY_PID:
-      while (0 == active_event->consumeArgAs(&temp_uint32)) {
-        if (enableSchedule(temp_uint32)) {
-          return_value++;
-        }
-      }
-      break;
-    case MANUVR_MSG_SCHED_DISABLE_BY_PID:
-      while (0 == active_event->consumeArgAs(&temp_uint32)) {
-        if (disableSchedule(temp_uint32)) {
-          return_value++;
-        }
-      }
-      break;
     case MANUVR_MSG_SCHED_PROFILER_START:
       while (0 == active_event->consumeArgAs(&temp_uint32)) {
         //beginProfiling(temp_uint32);
@@ -1207,8 +1193,8 @@ int8_t Kernel::notify(ManuvrRunnable *active_event) {
       if (active_event->args.size() > 0) {
         ManuvrRunnable *nu_sched;
         while (0 == active_event->consumeArgAs(&temp_uint32)) {
-          nu_sched  = findNodeByPID(temp_uint32);
-          if (NULL != nu_sched) nu_sched->printDebug(&local_log);
+          //nu_sched  = findNodeByPID(temp_uint32);
+          //if (NULL != nu_sched) nu_sched->printDebug(&local_log);
         }
       }
       else {
@@ -1220,16 +1206,6 @@ int8_t Kernel::notify(ManuvrRunnable *active_event) {
         }
       }
       return_value++;
-      break;
-    case MANUVR_MSG_SCHED_DEFERRED_EVENT:
-      {
-        //uint32_t period = 1000;
-        //int16_t recurrence = 1;
-        ////sch_callback
-        //if (createSchedule(period, recurrence, true, FunctionPointer sch_callback)) {
-        //  return_value++;
-        //}
-      }
       break;
 
     default:
@@ -1364,8 +1340,8 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       case 'S':
         if (temp_byte) {
           ManuvrRunnable *nu_sched;
-          nu_sched  = findNodeByPID(temp_byte);
-          if (NULL != nu_sched) nu_sched->printDebug(&local_log);
+          //nu_sched  = findNodeByPID(temp_byte);
+          //if (NULL != nu_sched) nu_sched->printDebug(&local_log);
         }
         else {
           ManuvrRunnable *nu_sched;
@@ -1424,8 +1400,7 @@ float Kernel::cpu_usage() {
 ****************************************************************************************************/
 
 // Fire the given schedule on the next idle loop.
-bool Kernel::fireSchedule(uint32_t g_pid) {
-  ManuvrRunnable *current = this->findNodeByPID(g_pid);
+bool Kernel::fireSchedule(ManuvrRunnable *current) {
   if (NULL != current) {
     current->fireNow(true);
     current->thread_time_to_wait = current->thread_period;
@@ -1448,23 +1423,6 @@ unsigned int Kernel::getActiveSchedules() {
     }
   }
   return return_value;
-}
-
-
-
-/**
-* Traverses the linked list and returns a pointer to the node that has the given PID.
-* Returns NULL if a node is not found that meets this criteria.
-*/
-ManuvrRunnable* Kernel::findNodeByPID(uint32_t g_pid) {
-  ManuvrRunnable *current = NULL;
-  for (int i = 0; i < schedules.size(); i++) {
-    current = schedules.get(i);
-    if ((uint32_t)current == g_pid) {
-      return current;
-    }
-  }
-  return NULL;
 }
 
 
@@ -1537,13 +1495,8 @@ bool Kernel::alterSchedule(ManuvrRunnable *obj, uint32_t sch_period, int16_t rec
   return return_value;
 }
 
-bool Kernel::alterSchedule(uint32_t g_pid, uint32_t sch_period, int16_t recurrence, bool ac, FunctionPointer sch_callback) {
-  return alterSchedule(findNodeByPID(g_pid), sch_period, recurrence, ac, sch_callback);
-}
-
-bool Kernel::alterSchedule(uint32_t schedule_index, bool ac) {
+bool Kernel::alterSchedule(ManuvrRunnable *nu_sched, bool ac) {
   bool return_value  = false;
-  ManuvrRunnable *nu_sched  = findNodeByPID(schedule_index);
   if (nu_sched != NULL) {
     nu_sched->autoClear(ac);
     return_value  = true;
@@ -1551,10 +1504,9 @@ bool Kernel::alterSchedule(uint32_t schedule_index, bool ac) {
   return return_value;
 }
 
-bool Kernel::alterSchedule(uint32_t schedule_index, FunctionPointer sch_callback) {
+bool Kernel::alterSchedule(ManuvrRunnable *nu_sched, FunctionPointer sch_callback) {
   bool return_value  = false;
   if (sch_callback != NULL) {
-    ManuvrRunnable *nu_sched  = findNodeByPID(schedule_index);
     if (nu_sched != NULL) {
       nu_sched->schedule_callback   = sch_callback;
       return_value  = true;
@@ -1563,10 +1515,9 @@ bool Kernel::alterSchedule(uint32_t schedule_index, FunctionPointer sch_callback
   return return_value;
 }
 
-bool Kernel::alterSchedulePeriod(uint32_t schedule_index, uint32_t sch_period) {
+bool Kernel::alterSchedulePeriod(ManuvrRunnable *nu_sched, uint32_t sch_period) {
   bool return_value  = false;
   if (sch_period > 1) {
-    ManuvrRunnable *nu_sched  = findNodeByPID(schedule_index);
     if (nu_sched != NULL) {
       nu_sched->fireNow(false);
       nu_sched->thread_period       = sch_period;
@@ -1577,9 +1528,8 @@ bool Kernel::alterSchedulePeriod(uint32_t schedule_index, uint32_t sch_period) {
   return return_value;
 }
 
-bool Kernel::alterScheduleRecurrence(uint32_t schedule_index, int16_t recurrence) {
+bool Kernel::alterScheduleRecurrence(ManuvrRunnable *nu_sched, int16_t recurrence) {
   bool return_value  = false;
-  ManuvrRunnable *nu_sched  = findNodeByPID(schedule_index);
   if (nu_sched != NULL) {
     nu_sched->fireNow(false);
     nu_sched->thread_recurs       = recurrence;
@@ -1595,8 +1545,7 @@ bool Kernel::alterScheduleRecurrence(uint32_t schedule_index, int16_t recurrence
 *    AND
 * B) The schedule is enabled, and has at least one more runtime before it *might* be auto-reaped.
 */
-bool Kernel::willRunAgain(uint32_t g_pid) {
-  ManuvrRunnable *nu_sched  = findNodeByPID(g_pid);
+bool Kernel::willRunAgain(ManuvrRunnable *nu_sched) {
   if (nu_sched != NULL) {
     if (nu_sched->threadEnabled()) {
       if ((nu_sched->thread_recurs == -1) || (nu_sched->thread_recurs > 0)) {
@@ -1608,21 +1557,12 @@ bool Kernel::willRunAgain(uint32_t g_pid) {
 }
 
 
-bool Kernel::scheduleEnabled(uint32_t g_pid) {
-  ManuvrRunnable *nu_sched  = findNodeByPID(g_pid);
-  if (nu_sched != NULL) {
-    return nu_sched->threadEnabled();
-  }
-  return false;
-}
-
 
 /**
 * Enable a previously disabled schedule.
 *  Returns true on success and false on failure.
 */
-bool Kernel::enableSchedule(uint32_t g_pid) {
-  ManuvrRunnable *nu_sched  = findNodeByPID(g_pid);
+bool Kernel::enableSchedule(ManuvrRunnable *nu_sched) {
   if (nu_sched != NULL) {
     nu_sched->threadEnabled(true);
     return true;
@@ -1631,6 +1571,10 @@ bool Kernel::enableSchedule(uint32_t g_pid) {
 }
 
 
+/**
+* Causes a given schedule's TTW (time-to-wait) to be set to the value we provide (this time only).
+* If the schedule wasn't enabled before, it will be when we return.
+*/
 bool Kernel::delaySchedule(ManuvrRunnable *obj, uint32_t by_ms) {
   if (obj != NULL) {
     obj->thread_time_to_wait = by_ms;
@@ -1641,20 +1585,10 @@ bool Kernel::delaySchedule(ManuvrRunnable *obj, uint32_t by_ms) {
 }
 
 /**
-* Causes a given schedule's TTW (time-to-wait) to be set to the value we provide (this time only).
-* If the schedule wasn't enabled before, it will be when we return.
-*/
-bool Kernel::delaySchedule(uint32_t g_pid, uint32_t by_ms) {
-  ManuvrRunnable *nu_sched  = findNodeByPID(g_pid);
-  return delaySchedule(nu_sched, by_ms);
-}
-
-/**
 * Causes a given schedule's TTW (time-to-wait) to be reset to its period.
 * If the schedule wasn't enabled before, it will be when we return.
 */
-bool Kernel::delaySchedule(uint32_t g_pid) {
-  ManuvrRunnable *nu_sched = findNodeByPID(g_pid);
+bool Kernel::delaySchedule(ManuvrRunnable *nu_sched) {
   return delaySchedule(nu_sched, nu_sched->thread_period);
 }
 

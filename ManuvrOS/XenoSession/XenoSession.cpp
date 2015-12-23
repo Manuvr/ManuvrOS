@@ -243,8 +243,8 @@ int8_t XenoSession::markMessageComplete(uint16_t target_id) {
           outbound_messages.remove(working_xeno);
           if (pid_ack_timeout) {
             // If the message had a timeout (waiting for ACK), we should clean up the schedule.
-            __kernel->disableSchedule(pid_ack_timeout);
-            __kernel->removeSchedule(pid_ack_timeout);
+            //__kernel->disableSchedule(pid_ack_timeout);
+            //__kernel->removeSchedule(pid_ack_timeout);
           }
           reclaimPreallocation(working_xeno);
           return 1;

@@ -92,12 +92,12 @@
       uint32_t createSchedule(uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
       uint32_t createSchedule(uint32_t sch_period, int16_t recurrence, bool auto_clear, EventReceiver*  sch_callback, ManuvrRunnable*);
       
-      bool enableSchedule(uint32_t g_pid);   // Re-enable a previously-disabled schedule.
+      bool enableSchedule(ManuvrRunnable*);  // Re-enable a previously-disabled schedule.
       bool disableSchedule(ManuvrRunnable*); // Turn a schedule off without removing it.
       bool removeSchedule(ManuvrRunnable*);  // Clears all data relating to the given schedule.
-      bool fireSchedule(uint32_t g_pid);     // Fire the given schedule on the next idle loop.
-      bool alterScheduleRecurrence(uint32_t schedule_index, int16_t recurrence);
-      bool alterSchedulePeriod(uint32_t schedule_index, uint32_t sch_period);
+      bool fireSchedule(ManuvrRunnable*);    // Fire the given schedule on the next idle loop.
+      bool alterScheduleRecurrence(ManuvrRunnable*, int16_t recurrence);
+      bool alterSchedulePeriod(ManuvrRunnable*, uint32_t sch_period);
 
       void advanceScheduler(unsigned int);     // Push all enabled schedules forward by one tick.
       inline void advanceScheduler() {   advanceScheduler(MANUVR_PLATFORM_TIMER_PERIOD_MS);  };
@@ -149,13 +149,10 @@
       void procDirectDebugInstruction(StringBuilder *);
 
       // TODO: These members were ingested from the Scheduler.
-      bool scheduleEnabled(uint32_t g_pid);   // Is the given schedule presently enabled?
+      bool delaySchedule(ManuvrRunnable*, uint32_t by_ms); // Set the schedule's TTW to the given value this execution only.
+      bool delaySchedule(ManuvrRunnable*);                 // Reset the given schedule to its period and enable it.
   
-      bool delaySchedule(ManuvrRunnable *obj, uint32_t by_ms);
-      bool delaySchedule(uint32_t g_pid, uint32_t by_ms);  // Set the schedule's TTW to the given value this execution only.
-      bool delaySchedule(uint32_t g_pid);                  // Reset the given schedule to its period and enable it.
-  
-      bool willRunAgain(uint32_t g_pid);                  // Returns true if the indicated schedule will fire again.
+      bool willRunAgain(ManuvrRunnable*);                  // Returns true if the indicated schedule will fire again.
   
 
       static StringBuilder log_buffer;
@@ -232,15 +229,13 @@
       int8_t procCallBacks(ManuvrRunnable *active_event);
 
       // Alters an existing schedule (if PID is found),
-      bool alterSchedule(uint32_t schedule_index, uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
-      bool alterSchedule(uint32_t schedule_index, bool auto_clear);
-      bool alterSchedule(uint32_t schedule_index, FunctionPointer sch_callback);
-      bool alterSchedule(ManuvrRunnable *obj, uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
+      bool alterSchedule(ManuvrRunnable*, bool auto_clear);
+      bool alterSchedule(ManuvrRunnable*, FunctionPointer sch_callback);
+      bool alterSchedule(ManuvrRunnable*, uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
 
       unsigned int getActiveSchedules(void);  // How many active schedules are present?
       
       uint32_t get_valid_new_pid(void);    
-      ManuvrRunnable* findNodeByPID(uint32_t g_pid);
       void destroyScheduleItem(ManuvrRunnable *r_node);
       // TODO: These members were ingested from the Scheduler.
 
