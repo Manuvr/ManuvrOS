@@ -97,17 +97,17 @@
 
   
   // Scheduler
-  #define MANUVR_MSG_SCHED_ENABLE_BY_PID  0x0100 // The given PID is being enabled.
-  #define MANUVR_MSG_SCHED_DISABLE_BY_PID 0x0101 // The given PID is being disabled.
-  #define MANUVR_MSG_SCHED_PROFILER_START 0x0102 // We want to profile the given PID.
-  #define MANUVR_MSG_SCHED_PROFILER_STOP  0x0103 // We want to stop profiling the given PID.
-  #define MANUVR_MSG_SCHED_PROFILER_DUMP  0x0104 // Dump the profiler data for all PIDs (no args) or given PIDs.
-  #define MANUVR_MSG_SCHED_DUMP_META      0x0105 // Tell the Scheduler to dump its meta metrics.
-  #define MANUVR_MSG_SCHED_DUMP_SCHEDULES 0x0106 // Tell the Scheduler to dump schedules.
-  #define MANUVR_MSG_SCHED_WIPE_PROFILER  0x0107 // Tell the Scheduler to wipe its profiler data. Pass PIDs to be selective.
-  #define MANUVR_MSG_SCHED_DEFERRED_EVENT 0x0108 // Tell the Scheduler to broadcast the attached Event so many ms into the future.
-  #define MANUVR_MSG_SCHED_DEFINE         0x0109 // Define a new Schedule. Implies a return code. Careful...
-  #define MANUVR_MSG_SCHED_DELETE         0x010A // Deletes an existing.
+  #define MANUVR_MSG_DEFERRED_FXN         0x0100 // Message to allow for deferred fxn calls without an EventReceiver.
+//  #define MANUVR_MSG_SCHED_DISABLE_BY_PID 0x0101 // The given PID is being disabled.
+//  #define MANUVR_MSG_SCHED_PROFILER_START 0x0102 // We want to profile the given PID.
+//  #define MANUVR_MSG_SCHED_PROFILER_STOP  0x0103 // We want to stop profiling the given PID.
+//  #define MANUVR_MSG_SCHED_PROFILER_DUMP  0x0104 // Dump the profiler data for all PIDs (no args) or given PIDs.
+//  #define MANUVR_MSG_SCHED_DUMP_META      0x0105 // Tell the Scheduler to dump its meta metrics.
+//  #define MANUVR_MSG_SCHED_DUMP_SCHEDULES 0x0106 // Tell the Scheduler to dump schedules.
+//  #define MANUVR_MSG_SCHED_WIPE_PROFILER  0x0107 // Tell the Scheduler to wipe its profiler data. Pass PIDs to be selective.
+//  #define MANUVR_MSG_SCHED_DEFERRED_EVENT 0x0108 // Tell the Scheduler to broadcast the attached Event so many ms into the future.
+//  #define MANUVR_MSG_SCHED_DEFINE         0x0109 // Define a new Schedule. Implies a return code. Careful...
+//  #define MANUVR_MSG_SCHED_DELETE         0x010A // Deletes an existing.
   
   // SD Card and file i/o
   #define MANUVR_MSG_SD_EJECTED           0x0120 // The SD card was just ejected.

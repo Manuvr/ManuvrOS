@@ -36,11 +36,11 @@
 char *program_name  = NULL;
 int __main_pid      = 0;
 int __shell_pid     = 0;
-Kernel kernel;  // Instance a kernel.
+Kernel* kernel      = NULL;
 
 void kernelDebugDump() {
   StringBuilder output;
-  kernel.printDebug(&output);
+  kernel->printDebug(&output);
   Kernel::log(&output);
 }
 
@@ -81,7 +81,7 @@ void userInputLoop() {
         if      (strcasestr(user_input.position(0), "QUIT"))  running = false;  // Exit
         else if (strcasestr(user_input.position(0), "HELP"))  printHelp();      // Show help.
         else {
-          // This test is detined for input into the running kernel. Send it back
+          // This test is detined for input into the running kernel-> Send it back
           //   up the pipe.
           write(pipe_ids[WRITE_PIPE], user_input.string(), user_input.length());
           user_input.clear();
@@ -199,12 +199,14 @@ void spawnUIThread() {
 int main(int argc, char *argv[]) {
   program_name = argv[0];  // Name of running binary.
   __main_pid = getpid();
+  
+  kernel = new Kernel();  // Instance a kernel.
 
   #if defined(__MANUVR_DEBUG)
     // We want to see this data if we are a debug build.
-    kernel.print_type_sizes();
-    kernel.profiler(true);
-    kernel.createSchedule(10000, -1, false, kernelDebugDump);
+    kernel->print_type_sizes();
+    kernel->profiler(true);
+    kernel->createSchedule(10000, -1, false, kernelDebugDump);
   #endif
 
 
@@ -217,12 +219,12 @@ int main(int argc, char *argv[]) {
   // We need at least ONE transport to be useful...
   #if defined (MANUVR_SUPPORT_TCPSOCKET)
     ManuvrTCP tcp_srv((const char*) "127.0.0.1", 0xb00b);
-    kernel.subscribe(&tcp_srv);
+    kernel->subscribe(&tcp_srv);
   #endif
   
   #if defined (MANUVR_SUPPORT_SERIAL)
     ManuvrSerial ser((const char*) "/dev/ttyACM0", 115200);
-    kernel.subscribe(&ser);
+    kernel->subscribe(&ser);
   #endif
 
        
@@ -230,7 +232,7 @@ int main(int argc, char *argv[]) {
     // If we are running on a RasPi, let's try to fire up the i2c that is almost
     //   certainly present.
     I2CAdapter i2c(1);
-    kernel.subscribe(&i2c);
+    kernel->subscribe(&i2c);
   #endif
 
 
@@ -244,7 +246,7 @@ int main(int argc, char *argv[]) {
     }
     if ((strcasestr(argv[i], "--info")) || ((argv[i][0] == '-') && (argv[i][1] == 'i'))) {
       // Cause the kernel to write a self-report to its own log.
-      kernel.printDebug();
+      kernel->printDebug();
     }
     if ((strcasestr(argv[i], "--console")) || ((argv[i][0] == '-') && (argv[i][1] == 'c'))) {
       // The user wants a local stdio "Shell".
@@ -252,7 +254,7 @@ int main(int argc, char *argv[]) {
     }
     if ((strcasestr(argv[i], "--quit")) || ((argv[i][0] == '-') && (argv[i][1] == 'q'))) {
       // Execute up-to-and-including boot. Then immediately shutdown.
-      // This is how you can stack post-boot-operations into the kernel. They will execute
+      // This is how you can stack post-boot-operations into the kernel-> They will execute
       //   following the BOOT_COMPLETE message.
       Kernel::raiseEvent(MANUVR_MSG_SYS_SHUTDOWN, NULL);
     }
@@ -261,16 +263,16 @@ int main(int argc, char *argv[]) {
   
   // Once we've loaded up all the goodies we want, we finalize everything thusly...
   printf("%s: Booting Manuvr Kernel....\n", program_name);
-  kernel.bootstrap();
+  kernel->bootstrap();
 
   // The main loop. Run forever.
   // TODO: It would be nice to be able to ask the kernel if we should continue running.
   while (true) { 
-    kernel.procIdleFlags();
+    kernel->procIdleFlags();
 
     // Move the kernel log to stdout.
     if (Kernel::log_buffer.count()) {
-      if (!kernel.getVerbosity()) {
+      if (!kernel->getVerbosity()) {
         Kernel::log_buffer.clear();
       }
       else {
@@ -279,11 +281,11 @@ int main(int argc, char *argv[]) {
       }
     }
     
-    // If anything came in from the user, pass it into the kernel...
+    // If anything came in from the user, pass it into the kernel->..
     if (user_input.length()) {
       bool terminal = (user_input.split("\n") > 0);
       if (terminal) {
-        kernel.accumulateConsoleInput((uint8_t*) user_input.position(0), strlen(user_input.position(0)), true);
+        kernel->accumulateConsoleInput((uint8_t*) user_input.position(0), strlen(user_input.position(0)), true);
         user_input.drop_position(0);
       }
     }

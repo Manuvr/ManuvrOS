@@ -36,15 +36,7 @@ const MessageTypeDef message_defs[] = {
   {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,  "SYS_REBOOT"           , MSG_ARGS_NO_ARGS }, // Reboots into THIS program.
   {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN"         , MSG_ARGS_NO_ARGS }, // Raised when the system is pending complete shutdown.
 
-  {  MANUVR_MSG_SCHED_ENABLE_BY_PID  , 0x0000,               "SCHED_ENABLE"         , MSG_ARGS_NO_ARGS }, // The given PID is being enabled.
-  {  MANUVR_MSG_SCHED_DISABLE_BY_PID , 0x0000,               "SCHED_DISABLE"        , MSG_ARGS_NO_ARGS }, // The given PID is being disabled.
-  {  MANUVR_MSG_SCHED_PROFILER_START , 0x0000,               "SCHED_PROFILER_START" , MSG_ARGS_NO_ARGS }, // We want to profile the given PID.
-  {  MANUVR_MSG_SCHED_PROFILER_STOP  , 0x0000,               "SCHED_PROFILER_STOP"  , MSG_ARGS_NO_ARGS }, // We want to stop profiling the given PID.
-  {  MANUVR_MSG_SCHED_PROFILER_DUMP  , 0x0000,               "SCHED_PROFILER_DUMP"  , MSG_ARGS_NO_ARGS }, // Dump the profiler data for all PIDs (no args) or given PIDs.
-  {  MANUVR_MSG_SCHED_DUMP_META      , 0x0000,               "SCHED_DUMP_META"      , MSG_ARGS_NO_ARGS }, // Tell the Kernel to dump its meta metrics.
-  {  MANUVR_MSG_SCHED_DUMP_SCHEDULES , 0x0000,               "SCHED_DUMP_SCHEDULES" , MSG_ARGS_NO_ARGS }, // Tell the Kernel to dump schedules.
-  {  MANUVR_MSG_SCHED_WIPE_PROFILER  , 0x0000,               "SCHED_WIPE_PROFILER"  , MSG_ARGS_NO_ARGS }, // Tell the Kernel to wipe its profiler data. Pass PIDs to be selective.
-  {  MANUVR_MSG_SCHED_DEFERRED_EVENT , 0x0000,               "SCHED_DEFERRED_EVENT" , MSG_ARGS_NO_ARGS }, // Tell the Kernel to broadcast the attached Event so many ms into the future.
+  {  MANUVR_MSG_DEFERRED_FXN         , 0x0000,               "DEFERRED_FXN",          MSG_ARGS_NO_ARGS }, // Message to allow for deferred fxn calls without an EventReceiver.
 
   {  MANUVR_MSG_XPORT_SEND           , MSG_FLAG_IDEMPOTENT,  "XPORT_SEND"           , ManuvrMsg::MSG_ARGS_STR_BUILDER }, //
   {  MANUVR_MSG_RNG_BUFFER_EMPTY     , 0x0000,               "RNG_BUFFER_EMPTY"     , MSG_ARGS_NO_ARGS }, // The RNG couldn't keep up with our entropy demands.
@@ -131,8 +123,8 @@ Kernel::Kernel() {
   }
 
   subscribe(this);           // We subscribe ourselves to events.
-  setVerbosity((int8_t) 1);  // TODO: Do this to move verbosity from 0 to some default level.
   profiler(false);           // Turn off the profiler.
+  setVerbosity((int8_t) DEFAULT_CLASS_VERBOSITY);
 
   ManuvrMsg::registerMessages(message_defs, sizeof(message_defs) / sizeof(MessageTypeDef));
 
@@ -499,7 +491,7 @@ ManuvrRunnable* Kernel::returnEvent(uint16_t code) {
 * @return 0 if the event is good-to-go. Otherwise, an appropriate failure code.
 */
 int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
-  if (NULL == event) return -1;                                   // No NULL events.
+  if (NULL == event) return -1;                                // No NULL events.
   if (MANUVR_MSG_UNDEFINED == event->event_code) {
     return -2;  // No undefined events.
   }
@@ -535,11 +527,20 @@ void Kernel::reclaim_event(ManuvrRunnable* active_event) {
   if (NULL == active_event) {
     return;
   }
+  
+  if (schedules.contains(active_event)) {
+    // This Runnable is still in the scheduler queue. Do not reclaim it.
+    return;
+  }
+  
   bool reap_current_event = active_event->eventManagerShouldReap();
-  //if (verbosity > 5) {
-  //  local_log.concatf("We will%s be reaping %s.\n", (reap_current_event ? "":" not"), active_event->getMsgTypeString());
-  //  Kernel::log(&local_log);
-  //}
+  
+  #ifdef __MANUVR_DEBUG
+  if (verbosity > 5) {
+    local_log.concatf("We will%s be reaping %s.\n", (reap_current_event ? "":" not"), active_event->getMsgTypeString());
+    Kernel::log(&local_log);
+  }
+  #endif // __MANUVR_DEBUG
 
   if (reap_current_event) {                   // If we are to reap this event...
     delete active_event;                      // ...free() it...
@@ -553,12 +554,15 @@ void Kernel::reclaim_event(ManuvrRunnable* active_event) {
       active_event->clearArgs();              // If so, wipe the Event...
       preallocated.insert(active_event);      // ...and return it to the preallocate queue.
     }                                         // Otherwise, we let it drop and trust some other class is managing it.
-    //else {
-    //  if (verbosity > 6) local_log.concat("Kernel::reclaim_event(): Doing nothing. Hope its managed elsewhere.\n");
-    //}
+    #ifdef __MANUVR_DEBUG
+    else {
+      if (verbosity > 6) {
+        local_log.concat("Kernel::reclaim_event(): Doing nothing. Hope its managed elsewhere.\n");
+        Kernel::log(&local_log);
+      }
+    }
+    #endif // __MANUVR_DEBUG
   }
-  
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 
 
@@ -997,7 +1001,7 @@ void Kernel::printDebug(StringBuilder* output) {
   output->concatf("--- Lagged schedules %u\n", (unsigned long) lagged_schedules);
   output->concatf("--- Total schedules:  %d\n--- Active schedules: %d\n\n", schedules.size(), countActiveSchedules());
 
-  printProfiler(output);
+  //printProfiler(output);
 }
 
 
@@ -1158,52 +1162,6 @@ int8_t Kernel::notify(ManuvrRunnable *active_event) {
       break;
     #endif
     
-    case MANUVR_MSG_SCHED_PROFILER_START:
-      while (0 == active_event->consumeArgAs(&temp_uint32)) {
-        //beginProfiling(temp_uint32);
-        return_value++;
-      }
-      break;
-    case MANUVR_MSG_SCHED_PROFILER_STOP:
-      while (0 == active_event->consumeArgAs(&temp_uint32)) {
-        //stopProfiling(temp_uint32);
-        return_value++;
-      }
-      break;
-    case MANUVR_MSG_SCHED_PROFILER_DUMP:
-      if (active_event->args.size() > 0) {
-        while (0 == active_event->consumeArgAs(&temp_uint32)) {
-          printProfiler(&local_log);
-          return_value++;
-        }
-      }
-      else {
-        printProfiler(&local_log);
-        return_value++;
-      }
-      break;
-    case MANUVR_MSG_SCHED_DUMP_META:
-      printDebug(&local_log);
-      return_value++;
-      break;
-    case MANUVR_MSG_SCHED_DUMP_SCHEDULES:
-      if (active_event->args.size() > 0) {
-        while (0 == active_event->consumeArgAs(&temp_uint32)) {
-          //nu_sched  = findNodeByPID(temp_uint32);
-          //if (NULL != nu_sched) nu_sched->printDebug(&local_log);
-        }
-      }
-      else {
-        ManuvrRunnable *nu_sched;
-        for (int i = 0; i < schedules.size(); i++) {
-          nu_sched  = schedules.get(i);
-          if (NULL != nu_sched) nu_sched->printDebug(&local_log);
-          return_value++;
-        }
-      }
-      return_value++;
-      break;
-
     default:
       return_value += EventReceiver::notify(active_event);
       break;

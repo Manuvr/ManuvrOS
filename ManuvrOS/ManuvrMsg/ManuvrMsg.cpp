@@ -564,7 +564,6 @@ MessageTypeDef* ManuvrMsg::getMsgDef() {
 
 /**
 * Debug support fxn.
-* TODO: Debug stuff. Need to be able to case-off stuff like this in the pre-processor.
 *
 * @return a pointer to the human-readable label for this Message class. Never NULL. 
 */
@@ -591,9 +590,9 @@ const char* ManuvrMsg::getMsgTypeString(uint16_t code) {
 
   // Didn't find it there. Search in the extended defs...
   const MessageTypeDef* temp_type_def;
-  total_elements = ManuvrMsg::message_defs_extended.size();
+  total_elements = message_defs_extended.size();
   for (int i = 0; i < total_elements; i++) {
-    temp_type_def = ManuvrMsg::message_defs_extended.get(i);
+    temp_type_def = message_defs_extended.get(i);
     if (temp_type_def->msg_type_code == code) {
       return temp_type_def->debug_label;
     }
@@ -617,12 +616,11 @@ const MessageTypeDef* ManuvrMsg::lookupMsgDefByCode(uint16_t code) {
       return &ManuvrMsg::message_defs[i];
     }
   }
-
   // Didn't find it there. Search in the extended defs...
   const MessageTypeDef* temp_type_def;
-  total_elements = ManuvrMsg::message_defs_extended.size();
+  total_elements = message_defs_extended.size();
   for (int i = 0; i < total_elements; i++) {
-    temp_type_def = ManuvrMsg::message_defs_extended.get(i);
+    temp_type_def = message_defs_extended.get(i);
     if (temp_type_def->msg_type_code == code) {
       return temp_type_def;
     }
@@ -650,9 +648,9 @@ const MessageTypeDef* ManuvrMsg::lookupMsgDefByLabel(char* label) {
 
   // Didn't find it there. Search in the extended defs...
   const MessageTypeDef* temp_type_def;
-  total_elements = ManuvrMsg::message_defs_extended.size();
+  total_elements = message_defs_extended.size();
   for (int i = 1; i < total_elements; i++) {
-    temp_type_def = ManuvrMsg::message_defs_extended.get(i);
+    temp_type_def = message_defs_extended.get(i);
     if (strstr(label, temp_type_def->debug_label)) {
       return temp_type_def;
     }
@@ -772,9 +770,9 @@ int8_t ManuvrMsg::getMsgLegend(StringBuilder *output) {
     }
   }
 
-  total_elements = ManuvrMsg::message_defs_extended.size();
+  total_elements = message_defs_extended.size();
   for (int i = 1; i < total_elements; i++) {
-    temp_def = ManuvrMsg::message_defs_extended.get(i);
+    temp_def = message_defs_extended.get(i);
     if (isExportable(temp_def)) {
       output->concat((unsigned char*) temp_def, 4);
       // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
@@ -840,7 +838,7 @@ char* ManuvrMsg::is_valid_argument_buffer(int len) {
 
 int8_t ManuvrMsg::registerMessages(const MessageTypeDef defs[], int mes_count) {
   for (int i = 0; i < mes_count; i++) {
-    ManuvrMsg::message_defs_extended.insert(&defs[i]);
+    message_defs_extended.insert(&defs[i]);
   }
   return 0;
 }

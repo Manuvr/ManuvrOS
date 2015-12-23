@@ -48,7 +48,7 @@ ManuvrRunnable::ManuvrRunnable(uint16_t code) : ManuvrMsg(code) {
 * @param ac           Should the scheduler autoclear this schedule when it finishes running?
 * @param sch_callback A FunctionPointer to the callback. Useful for some general things.
 */
-ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, FunctionPointer sch_callback) {
+ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, FunctionPointer sch_callback) : ManuvrMsg(MANUVR_MSG_DEFERRED_FXN) {
   __class_initializer();
   thread_enabled      = true;
   thread_fire         = false;
@@ -217,7 +217,7 @@ void ManuvrRunnable::printDebug(StringBuilder *output) {
   output->concatf("\t Enabled       \t%s\n", (thread_enabled ? "YES":"NO"));
   output->concatf("\t Time-till-fire\t%u\n", thread_time_to_wait);
   output->concatf("\t Period        \t%u\n", thread_period);
-  output->concatf("\t Recurs?       \t%s\n", thread_recurs);
+  output->concatf("\t Recurs?       \t%d\n", thread_recurs);
   output->concatf("\t Exec pending: \t%s\n", (thread_fire ? "YES":"NO")); 
   output->concatf("\t Autoclear     \t%s\n", (autoclear ? "YES":"NO"));
   output->concatf("\t Profiling?    \t%s\n", (profilingEnabled() ? "YES":"NO"));
