@@ -145,7 +145,6 @@ XenoSession::XenoSession(ManuvrXport* _xport) {
   sequential_ack_failures   = 0;
   initial_sync_count        = 24;
   session_overflow_guard    = true;
-  pid_sync_timer            = 0;
   pid_ack_timeout           = 0;
   current_rx_message        = NULL;
   
@@ -162,8 +161,8 @@ XenoSession::XenoSession(ManuvrXport* _xport) {
 * Unlike many of the other EventReceivers, THIS one needs to be able to be torn down.
 */
 XenoSession::~XenoSession() {
-  __kernel->disableSchedule(pid_sync_timer);
-  __kernel->removeSchedule(pid_sync_timer);
+  __kernel->disableSchedule(&sync_event);
+  __kernel->removeSchedule(&sync_event);
   __kernel->unsubscribe((EventReceiver*) this);  // Unsubscribe
   
   purgeInbound();  // Need to do careful checks in here for open comm loops.
@@ -302,7 +301,7 @@ int8_t XenoSession::bootComplete() {
   sync_event.specific_target = (EventReceiver*) this;
 
   pid_sync_timer = __kernel->createSchedule(30,  -1, false, (EventReceiver*) this, &sync_event);
-  __kernel->disableSchedule(pid_sync_timer);
+  __kernel->disableSchedule(&sync_event);
 
   return 1;
 }
@@ -606,7 +605,7 @@ void XenoSession::mark_session_desync(uint8_t ds_src) {
         break;
     }
   }
-  __kernel->enableSchedule(pid_sync_timer);
+  __kernel->enableSchedule(&sync_event);
   
   if (local_log.length() > 0) Kernel::log(&local_log);
 }
@@ -643,7 +642,7 @@ void XenoSession::mark_session_sync(bool pending) {
     raiseEvent(Kernel::returnEvent(MANUVR_MSG_SELF_DESCRIBE));
   }
 
-  __kernel->disableSchedule(pid_sync_timer);
+  __kernel->disableSchedule(&sync_event);
 }
 
 
@@ -999,8 +998,8 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
   switch (*(str)) {
     case 'S':  // Send a mess of sync packets.
       initial_sync_count = 24;
-      __kernel->alterScheduleRecurrence(pid_sync_timer, (int16_t) initial_sync_count);
-      __kernel->fireSchedule(pid_sync_timer);
+      __kernel->alterScheduleRecurrence(&sync_event, (int16_t) initial_sync_count);
+      sync_event.fireNow(true);
       break;
     case 'i':  // Send a mess of sync packets.
       if (1 == temp_byte) {

@@ -1,3 +1,10 @@
+/*
+File:   Kernel.cpp
+Author: J. Ian Lindsay
+Date:   2013.07.10
+*/
+
+
 #include "FirmwareDefs.h"
 #include <ManuvrOS/Kernel.h>
 #include <ManuvrOS/Platform/Platform.h>
@@ -1397,35 +1404,6 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
 
 
 
-/*
-File:   Kernel.cpp
-Author: J. Ian Lindsay
-Date:   2013.07.10
-
-This class is meant to be a real-time task scheduler for small microcontrollers. It
-should be driven by a periodic interrupt of some sort, but it may also be effectively
-used with a reliable polling scheme (at the possible cost of timing accuracy).
-
-A simple profiler is included which will allow the user of this class to determine
-run-times and possibly even adjust task duty cycles accordingly.
-
-Copyright (C) 2013 J. Ian Lindsay
-All rights reserved.
-
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
 
 
 /****************************************************************************************************
@@ -1438,17 +1416,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 float Kernel::cpu_usage() {
   return (micros_occupied / (float)(millis()*10));
 }
-
-
-/**
-*  Given the schedule PID, reset the profiling data.
-*  Typically, we'd do this when the profiler is being turned on.
-*/
-void Kernel::clearProfilingData(uint32_t g_pid) {
-  ManuvrRunnable *current = findNodeByPID(g_pid);
-  if (NULL != current) current->clearProfilingData();
-}
-
 
 
 
@@ -1715,8 +1682,7 @@ void Kernel::advanceScheduler(unsigned int ms_elapsed) {
 *  Will reset the time_to_wait so that if the schedule is re-enabled, it doesn't fire sooner than expected.
 *  Returns true on success and false on failure.
 */
-bool Kernel::disableSchedule(uint32_t g_pid) {
-  ManuvrRunnable *nu_sched  = findNodeByPID(g_pid);
+bool Kernel::disableSchedule(ManuvrRunnable *nu_sched) {
   if (nu_sched != NULL) {
       nu_sched->threadEnabled(false);
       nu_sched->fireNow(false);
@@ -1740,8 +1706,6 @@ bool Kernel::removeSchedule(ManuvrRunnable *obj) {
   if (obj != NULL) {
     if (obj != current_event) {
       schedules.remove(obj);
-      event_queue.remove(obj);
-      delete obj;
     }
     else { 
       obj->autoClear(true);
@@ -1750,11 +1714,6 @@ bool Kernel::removeSchedule(ManuvrRunnable *obj) {
     return true;
   }
   return false;
-}
-
-bool Kernel::removeSchedule(uint32_t g_pid) {
-  ManuvrRunnable *obj  = findNodeByPID(g_pid);
-  return removeSchedule(obj);
 }
 
 
@@ -1794,32 +1753,7 @@ int Kernel::serviceScheduledEvents() {
     }
   }
   
-  //while (NULL != current) {
-  //  if (current->shouldFire()) {
-  //    profile_start_time = micros();
-  //
-  //    switch (current->thread_recurs) {
-  //      case -1:           // Do nothing. Schedule runs indefinitely.
-  //        break;
-  //      case 0:            // Disable (and remove?) the schedule.
-  //        if (current->autoClear()) {
-  //          removeSchedule(current);
-  //        }
-  //        else {
-  //          current->threadEnabled(false);  // Disable the schedule...
-  //          
-  //          current->thread_time_to_wait = current->thread_period;  // ...and reset the timer.
-  //        }
-  //        break;
-  //      default:           // Decrement the run count.
-  //        current->thread_recurs--;
-  //        break;
-  //    }
-  //    return_value++;
-  //  }
-  //}
-  
-  // We just ran a loop. Punch the bistable swtich and clear the skip count.
+  // We just ran a loop. Punch the bistable swtich.
   bistable_skip_detect = false;
   
   _ms_elapsed = 0;

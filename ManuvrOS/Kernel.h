@@ -93,8 +93,8 @@
       uint32_t createSchedule(uint32_t sch_period, int16_t recurrence, bool auto_clear, EventReceiver*  sch_callback, ManuvrRunnable*);
       
       bool enableSchedule(uint32_t g_pid);   // Re-enable a previously-disabled schedule.
-      bool disableSchedule(uint32_t g_pid);  // Turn a schedule off without removing it.
-      bool removeSchedule(uint32_t g_pid);   // Clears all data relating to the given schedule.
+      bool disableSchedule(ManuvrRunnable*); // Turn a schedule off without removing it.
+      bool removeSchedule(ManuvrRunnable*);  // Clears all data relating to the given schedule.
       bool fireSchedule(uint32_t g_pid);     // Fire the given schedule on the next idle loop.
       bool alterScheduleRecurrence(uint32_t schedule_index, int16_t recurrence);
       bool alterSchedulePeriod(uint32_t schedule_index, uint32_t sch_period);
@@ -142,7 +142,6 @@
       
 
       /* Overrides from EventReceiver
-         Kernel is special, and it will naturally have both methods from EventReceiver.
          Just gracefully fall into those when needed. */
       const char* getReceiverName();
       int8_t notify(ManuvrRunnable*);
@@ -152,6 +151,7 @@
       // TODO: These members were ingested from the Scheduler.
       bool scheduleEnabled(uint32_t g_pid);   // Is the given schedule presently enabled?
   
+      bool delaySchedule(ManuvrRunnable *obj, uint32_t by_ms);
       bool delaySchedule(uint32_t g_pid, uint32_t by_ms);  // Set the schedule's TTW to the given value this execution only.
       bool delaySchedule(uint32_t g_pid);                  // Reset the given schedule to its period and enable it.
   
@@ -230,10 +230,6 @@
 
       int8_t procCallAheads(ManuvrRunnable *active_event);
       int8_t procCallBacks(ManuvrRunnable *active_event);
-      
-      // TODO: These members were ingested from the Scheduler.
-      bool scheduleBeingProfiled(uint32_t g_pid);
-      void clearProfilingData(uint32_t g_pid);        // Clears profiling data associated with the given schedule.
 
       // Alters an existing schedule (if PID is found),
       bool alterSchedule(uint32_t schedule_index, uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
@@ -242,11 +238,10 @@
       bool alterSchedule(ManuvrRunnable *obj, uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
 
       unsigned int getActiveSchedules(void);  // How many active schedules are present?
-      bool removeSchedule(ManuvrRunnable *obj);
+      
       uint32_t get_valid_new_pid(void);    
       ManuvrRunnable* findNodeByPID(uint32_t g_pid);
       void destroyScheduleItem(ManuvrRunnable *r_node);
-      bool delaySchedule(ManuvrRunnable *obj, uint32_t by_ms);
       // TODO: These members were ingested from the Scheduler.
 
       int8_t validate_insertion(ManuvrRunnable*);
