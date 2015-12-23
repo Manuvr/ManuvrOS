@@ -41,6 +41,19 @@ const MessageTypeDef message_defs[] = {
   {  MANUVR_MSG_XPORT_SEND           , MSG_FLAG_IDEMPOTENT,  "XPORT_SEND"           , ManuvrMsg::MSG_ARGS_STR_BUILDER }, //
   {  MANUVR_MSG_RNG_BUFFER_EMPTY     , 0x0000,               "RNG_BUFFER_EMPTY"     , MSG_ARGS_NO_ARGS }, // The RNG couldn't keep up with our entropy demands.
 
+  {  MANUVR_MSG_SYS_FAULT_REPORT     , 0x0000,               "SYS_FAULT"            , ManuvrMsg::MSG_ARGS_U32 }, // 
+
+  {  MANUVR_MSG_SYS_DATETIME_CHANGED , MSG_FLAG_EXPORTABLE,  "SYS_DATETIME_CHANGED" , ManuvrMsg::MSG_ARGS_NONE }, // Raised when the system time changes.
+  {  MANUVR_MSG_SYS_SET_DATETIME     , MSG_FLAG_EXPORTABLE,  "SYS_SET_DATETIME"     , ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_SYS_REPORT_DATETIME  , MSG_FLAG_EXPORTABLE,  "SYS_REPORT_DATETIME"  , ManuvrMsg::MSG_ARGS_NONE }, //
+
+  {  MANUVR_MSG_INTERRUPTS_MASKED    , 0x0000,               "INTERRUPTS_MASKED"    , ManuvrMsg::MSG_ARGS_NONE }, // Anything that depends on interrupts is now broken.
+
+  {  MANUVR_MSG_SESS_SUBCRIBE        , MSG_FLAG_EXPORTABLE,  "SESS_SUBCRIBE"        , ManuvrMsg::MSG_ARGS_NONE }, // Used to subscribe this session to other events.
+  {  MANUVR_MSG_SESS_UNSUBCRIBE      , MSG_FLAG_EXPORTABLE,  "SESS_UNSUBCRIBE"      , ManuvrMsg::MSG_ARGS_NONE }, // Used to unsubscribe this session from other events.
+  {  MANUVR_MSG_SESS_DUMP_DEBUG      , MSG_FLAG_EXPORTABLE,  "SESS_DUMP_DEBUG"      , ManuvrMsg::MSG_ARGS_NONE }, // 
+  {  MANUVR_MSG_SESS_ORIGINATE_MSG   , MSG_FLAG_IDEMPOTENT,  "SESS_ORIGINATE_MSG"   , ManuvrMsg::MSG_ARGS_NONE }, // 
+
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
     // These are messages that are only present under some sort of threading model. They are meant
     //   to faciliate task hand-off, IPC, and concurrency protection.
@@ -60,7 +73,15 @@ const MessageTypeDef message_defs[] = {
     compile time.
   */
   #if defined (__ENABLE_MSG_SEMANTICS)
+  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_STR_BUILDER, "Command\0\0" }, // 
+  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_STR_BUILDER, "Body\0\0" }, // Classes emit this to get their log data saved/sent.
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_U8, "Power Mode\0\0" }, // 
+  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_U8, "Level\0\0"      },   // This tells client classes to adjust their log verbosity.
   #else
+  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_STR_BUILDER, NULL }, // 
+  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_STR_BUILDER, NULL }, // Classes emit this to get their log data saved/sent.
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_U8, NULL }, // 
+  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_U8, NULL },   // This tells client classes to adjust their log verbosity.
   #endif
 };
 
@@ -662,6 +683,8 @@ int8_t Kernel::procIdleFlags() {
     if (NULL != active_event->schedule_callback) {
       // TODO: This is hold-over from the scheduler. Need to modernize it.
       ((void (*)(void)) active_event->schedule_callback)();   // Call the schedule's service function.
+      if (profiler_enabled) profiler_mark_2 = micros();
+      activity_count++;
     }
     else if (NULL != active_event->specific_target) {
       subscriber = active_event->specific_target;
@@ -757,7 +780,6 @@ int8_t Kernel::procIdleFlags() {
     
     // This is a stat-gathering block.
     if (profiler_enabled) {
-      
       profiler_mark_3 = micros();
 
       MessageTypeDef* tmp_msg_def = (MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(msg_code_local);
@@ -903,17 +925,17 @@ void Kernel::print_type_sizes() {
 */
 void Kernel::printProfiler(StringBuilder* output) {
   if (NULL == output) return;
-  output->concatf("\t total_events       \t%u\n",   (unsigned long) total_events);
-  output->concatf("\t total_events_dead  \t%u\n\n", (unsigned long) total_events_dead);
-  output->concatf("\t max_queue_depth    \t%u\n",   (unsigned long) max_queue_depth);
-  output->concatf("\t total_loops        \t%u\n",   (unsigned long) total_loops);
+  output->concatf("\t total_events       \t%u\n", (unsigned long) total_events);
+  output->concatf("\t total_events_dead  \t%u\n", (unsigned long) total_events_dead);
+  output->concatf("\t max_queue_depth    \t%u\n", (unsigned long) max_queue_depth);
+  output->concatf("\t total_loops        \t%u\n", (unsigned long) total_loops);
   output->concatf("\t max_idle_loop_time \t%u\n", (unsigned long) max_idle_loop_time);
   output->concatf("\t max_events_p_loop  \t%u\n", (unsigned long) max_events_p_loop);
     
   if (profiler_enabled) {
     output->concat("-- Profiler:\n");
     if (total_events) {
-      output->concatf("\tprealloc hit fraction: %f\%\n\n", (1-((burden_of_specific - prealloc_starved) / total_events)) * 100);
+      output->concatf("\tprealloc hit fraction: %f\%\n\n", (double)(1-((burden_of_specific - prealloc_starved) / total_events)) * 100);
     }
 
     TaskProfilerData *profiler_item;
@@ -921,7 +943,7 @@ void Kernel::printProfiler(StringBuilder* output) {
     int x = event_costs.size();
 
     TaskProfilerData::printDebugHeader(output);
-    for (int i = 0; i < x; i++) {
+    for (int i = 0; i < event_costs.size(); i++) {
       profiler_item = event_costs.get(i);
       stat_mode     = event_costs.getPriority(i);
       output->concatf("\t (%10d)\t", stat_mode);
@@ -1001,7 +1023,7 @@ void Kernel::printDebug(StringBuilder* output) {
   output->concatf("--- Lagged schedules %u\n", (unsigned long) lagged_schedules);
   output->concatf("--- Total schedules:  %d\n--- Active schedules: %d\n\n", schedules.size(), countActiveSchedules());
 
-  //printProfiler(output);
+  printProfiler(output);
 }
 
 

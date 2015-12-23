@@ -229,7 +229,7 @@ void ManuvrRunnable::printDebug(StringBuilder *output) {
 
 
 void ManuvrRunnable::printProfilerData(StringBuilder *output) {
-  output->concatf("\t 0x%08x  %9d  %9d  %9d  %9d  %9d  %9d %s\n", (uint32_t) this, prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last, (threadEnabled() ? "" : "(INACTIVE)"));
+  if (NULL != prof_data) output->concatf("\t 0x%08x  %9u  %9u  %9u  %9u  %9u  %9u %s\n", (uint32_t) this, prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last, (threadEnabled() ? " " : "(INACTIVE)"));
 }
 
 

@@ -206,7 +206,7 @@ int main(int argc, char *argv[]) {
     // We want to see this data if we are a debug build.
     kernel->print_type_sizes();
     kernel->profiler(true);
-    kernel->createSchedule(10000, -1, false, kernelDebugDump);
+    kernel->createSchedule(1000, -1, false, kernelDebugDump);
   #endif
 
 
