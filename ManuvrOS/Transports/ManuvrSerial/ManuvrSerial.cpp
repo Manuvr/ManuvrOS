@@ -372,7 +372,7 @@ int8_t ManuvrSerial::bootComplete() {
   
   // Tolerate 30ms of latency on the line before flushing the buffer.
   pid_read_abort = __kernel->createSchedule(30, 0, false, this, &read_abort_event);
-  __kernel->disableSchedule(&read_abort_event);
+  read_abort_event.enableSchedule(false);
 
   reset();
   return 1;

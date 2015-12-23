@@ -161,7 +161,7 @@ XenoSession::XenoSession(ManuvrXport* _xport) {
 * Unlike many of the other EventReceivers, THIS one needs to be able to be torn down.
 */
 XenoSession::~XenoSession() {
-  __kernel->disableSchedule(&sync_event);
+  sync_event.enableSchedule(false);
   __kernel->removeSchedule(&sync_event);
   __kernel->unsubscribe((EventReceiver*) this);  // Unsubscribe
   
@@ -301,7 +301,7 @@ int8_t XenoSession::bootComplete() {
   sync_event.specific_target = (EventReceiver*) this;
 
   pid_sync_timer = __kernel->createSchedule(30,  -1, false, (EventReceiver*) this, &sync_event);
-  __kernel->disableSchedule(&sync_event);
+  sync_event.enableSchedule(false);
 
   return 1;
 }
@@ -605,7 +605,7 @@ void XenoSession::mark_session_desync(uint8_t ds_src) {
         break;
     }
   }
-  __kernel->enableSchedule(&sync_event);
+  sync_event.enableSchedule(true);
   
   if (local_log.length() > 0) Kernel::log(&local_log);
 }
@@ -642,7 +642,7 @@ void XenoSession::mark_session_sync(bool pending) {
     raiseEvent(Kernel::returnEvent(MANUVR_MSG_SELF_DESCRIBE));
   }
 
-  __kernel->disableSchedule(&sync_event);
+  sync_event.enableSchedule(false);
 }
 
 
@@ -998,7 +998,7 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
   switch (*(str)) {
     case 'S':  // Send a mess of sync packets.
       initial_sync_count = 24;
-      __kernel->alterScheduleRecurrence(&sync_event, (int16_t) initial_sync_count);
+      sync_event.alterScheduleRecurrence((int16_t) initial_sync_count);
       sync_event.fireNow(true);
       break;
     case 'i':  // Send a mess of sync packets.

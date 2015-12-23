@@ -1393,17 +1393,6 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
 * Linked-list helper functions...                                                                   *
 ****************************************************************************************************/
 
-// Fire the given schedule on the next idle loop.
-bool Kernel::fireSchedule(ManuvrRunnable *current) {
-  if (NULL != current) {
-    current->fireNow(true);
-    current->thread_time_to_wait = current->thread_period;
-    return true;
-  }
-  return false;
-}
-
-
 /**
 * Returns the number of schedules presently active.
 */
@@ -1465,128 +1454,6 @@ uint32_t Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac
 }
 
 
-/**
-* Call this function to alter a given schedule. Set with the given period, a given number of times, with a given function call.
-*  Returns true on success or false if the given PID is not found, or there is a problem with the parameters.
-*
-* Will not set the schedule active, but will clear any pending executions for this schedule, as well as reset the timer for it.
-*/
-bool Kernel::alterSchedule(ManuvrRunnable *obj, uint32_t sch_period, int16_t recurrence, bool ac, FunctionPointer sch_callback) {
-  bool return_value  = false;
-  if (sch_period > 1) {
-    if (sch_callback != NULL) {
-      if (obj != NULL) {
-        obj->fireNow(false);
-        obj->autoClear(ac);
-        obj->thread_recurs       = recurrence;
-        obj->thread_period       = sch_period;
-        obj->thread_time_to_wait = sch_period;
-        obj->schedule_callback   = sch_callback;
-        return_value  = true;
-      }
-    }
-  }
-  return return_value;
-}
-
-bool Kernel::alterSchedule(ManuvrRunnable *nu_sched, bool ac) {
-  bool return_value  = false;
-  if (nu_sched != NULL) {
-    nu_sched->autoClear(ac);
-    return_value  = true;
-  }
-  return return_value;
-}
-
-bool Kernel::alterSchedule(ManuvrRunnable *nu_sched, FunctionPointer sch_callback) {
-  bool return_value  = false;
-  if (sch_callback != NULL) {
-    if (nu_sched != NULL) {
-      nu_sched->schedule_callback   = sch_callback;
-      return_value  = true;
-    }
-  }
-  return return_value;
-}
-
-bool Kernel::alterSchedulePeriod(ManuvrRunnable *nu_sched, uint32_t sch_period) {
-  bool return_value  = false;
-  if (sch_period > 1) {
-    if (nu_sched != NULL) {
-      nu_sched->fireNow(false);
-      nu_sched->thread_period       = sch_period;
-      nu_sched->thread_time_to_wait = sch_period;
-      return_value  = true;
-    }
-  }
-  return return_value;
-}
-
-bool Kernel::alterScheduleRecurrence(ManuvrRunnable *nu_sched, int16_t recurrence) {
-  bool return_value  = false;
-  if (nu_sched != NULL) {
-    nu_sched->fireNow(false);
-    nu_sched->thread_recurs       = recurrence;
-    return_value  = true;
-  }
-  return return_value;
-}
-
-
-/**
-* Returns true if...
-* A) The schedule exists
-*    AND
-* B) The schedule is enabled, and has at least one more runtime before it *might* be auto-reaped.
-*/
-bool Kernel::willRunAgain(ManuvrRunnable *nu_sched) {
-  if (nu_sched != NULL) {
-    if (nu_sched->threadEnabled()) {
-      if ((nu_sched->thread_recurs == -1) || (nu_sched->thread_recurs > 0)) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-
-
-/**
-* Enable a previously disabled schedule.
-*  Returns true on success and false on failure.
-*/
-bool Kernel::enableSchedule(ManuvrRunnable *nu_sched) {
-  if (nu_sched != NULL) {
-    nu_sched->threadEnabled(true);
-    return true;
-  }
-  return false;
-}
-
-
-/**
-* Causes a given schedule's TTW (time-to-wait) to be set to the value we provide (this time only).
-* If the schedule wasn't enabled before, it will be when we return.
-*/
-bool Kernel::delaySchedule(ManuvrRunnable *obj, uint32_t by_ms) {
-  if (obj != NULL) {
-    obj->thread_time_to_wait = by_ms;
-    obj->threadEnabled(true);
-    return true;
-  }
-  return false;
-}
-
-/**
-* Causes a given schedule's TTW (time-to-wait) to be reset to its period.
-* If the schedule wasn't enabled before, it will be when we return.
-*/
-bool Kernel::delaySchedule(ManuvrRunnable *nu_sched) {
-  return delaySchedule(nu_sched, nu_sched->thread_period);
-}
-
-
 
 /**
 * Call this function to push the schedules forward by a given number of ms.
@@ -1602,22 +1469,6 @@ void Kernel::advanceScheduler(unsigned int ms_elapsed) {
   else {
     bistable_skip_detect = true;
   }
-}
-
-
-/**
-* Call to disable a given schedule.
-*  Will reset the time_to_wait so that if the schedule is re-enabled, it doesn't fire sooner than expected.
-*  Returns true on success and false on failure.
-*/
-bool Kernel::disableSchedule(ManuvrRunnable *nu_sched) {
-  if (nu_sched != NULL) {
-      nu_sched->threadEnabled(false);
-      nu_sched->fireNow(false);
-      nu_sched->thread_time_to_wait = nu_sched->thread_period;
-      return true;
-  }
-  return false;
 }
 
 

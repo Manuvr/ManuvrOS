@@ -102,18 +102,8 @@
        */    
       uint32_t createSchedule(uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
       uint32_t createSchedule(uint32_t sch_period, int16_t recurrence, bool auto_clear, EventReceiver*  sch_callback, ManuvrRunnable*);
-      
-      bool enableSchedule(ManuvrRunnable*);  // Re-enable a previously-disabled schedule.
-      bool disableSchedule(ManuvrRunnable*); // Turn a schedule off without removing it.
       bool removeSchedule(ManuvrRunnable*);  // Clears all data relating to the given schedule.
-      bool fireSchedule(ManuvrRunnable*);    // Fire the given schedule on the next idle loop.
-      bool alterScheduleRecurrence(ManuvrRunnable*, int16_t recurrence);
-      bool alterSchedulePeriod(ManuvrRunnable*, uint32_t sch_period);
 
-      bool delaySchedule(ManuvrRunnable*, uint32_t by_ms); // Set the schedule's TTW to the given value this execution only.
-      bool delaySchedule(ManuvrRunnable*);                 // Reset the given schedule to its period and enable it.
-  
-      bool willRunAgain(ManuvrRunnable*);                  // Returns true if the indicated schedule will fire again.
 
       /*
       * These are the core functions of the kernel that must be called from outside.
@@ -226,11 +216,6 @@
 
       int8_t procCallAheads(ManuvrRunnable *active_event);
       int8_t procCallBacks(ManuvrRunnable *active_event);
-
-      // Alters an existing schedule (if PID is found),
-      bool alterSchedule(ManuvrRunnable*, bool auto_clear);
-      bool alterSchedule(ManuvrRunnable*, FunctionPointer sch_callback);
-      bool alterSchedule(ManuvrRunnable*, uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
 
       unsigned int getActiveSchedules(void);  // How many active schedules are present?
       

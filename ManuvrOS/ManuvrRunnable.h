@@ -16,7 +16,7 @@
       EventReceiver*  specific_target;   // If the event is meant for a single class, put a pointer to it here.
       FunctionPointer schedule_callback; // Pointers to the schedule service function.
 
-      int32_t         priority;
+      int32_t         priority;          // Set the default priority for this Runnable
 
       // The things below were pulled in from ScheduleItem.
       uint32_t thread_time_to_wait;      // How much longer until the schedule fires?
@@ -25,8 +25,8 @@
       // End ScheduleItem
 
       ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, FunctionPointer sch_callback);
-      ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver*  sch_callback);
-      ManuvrRunnable(uint16_t msg_code, EventReceiver* cb);
+      ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver*  originator);
+      ManuvrRunnable(uint16_t msg_code, EventReceiver* originator);
       ManuvrRunnable(uint16_t msg_code);
       ManuvrRunnable();
       ~ManuvrRunnable();
@@ -58,12 +58,23 @@
       
       //TODO: /* These are accessors to concurrency-sensitive members. */
       /* These are accessors to formerly-public members of ScheduleItem. */
-      inline void fireNow(bool nu) {    thread_fire = nu;     }
-      inline bool shouldFire() {        return thread_fire;   }
-      inline void autoClear(bool nu) {  autoclear = nu;       }
-      inline bool autoClear() {         return autoclear;     }
-      inline void threadEnabled(bool nu) {  thread_enabled = nu;       }
-      inline bool threadEnabled() {         return thread_enabled;     }
+      bool alterScheduleRecurrence(int16_t recurrence);
+      bool alterSchedulePeriod(uint32_t nu_period);
+      bool alterSchedule(FunctionPointer sch_callback);
+      bool alterSchedule(uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
+      bool enableSchedule(bool enable);      // Re-enable a previously-disabled schedule.
+      bool removeSchedule();                 // Clears all data relating to the given schedule.
+      bool willRunAgain();                   // Returns true if the indicated schedule will fire again.
+      void fireNow(bool nu);
+      inline void fireNow() {               fireNow(true);           }
+      bool delaySchedule(uint32_t by_ms);    // Set the schedule's TTW to the given value this execution only.
+      inline bool delaySchedule() {         return delaySchedule(thread_period);  }  // Reset the given schedule to its period and enable it.
+      
+      inline bool shouldFire() {            return thread_fire;      }
+      inline void autoClear(bool nu) {      autoclear = nu;          }
+      inline bool autoClear() {             return autoclear;        }
+      inline void threadEnabled(bool nu) {  thread_enabled = nu;     }
+      inline bool threadEnabled() {         return thread_enabled;   }
 
       /**
       * Asks if this schedule is being profiled...

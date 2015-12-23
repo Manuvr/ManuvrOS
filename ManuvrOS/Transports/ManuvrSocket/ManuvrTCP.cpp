@@ -427,7 +427,7 @@ int8_t ManuvrTCP::bootComplete() {   // ?? TODO ??
   // We will suffer a 300ms latency if the platform's networking stack doesn't flush
   //   its buffer in time.
   pid_read_abort = __kernel->createSchedule(300, 0, false, this, &read_abort_event);
-  __kernel->disableSchedule(&read_abort_event);
+  read_abort_event.enableSchedule(false);
 
   reset();
   return 1;

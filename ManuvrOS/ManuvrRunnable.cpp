@@ -242,9 +242,8 @@ void ManuvrRunnable::printProfilerData(StringBuilder *output) {
 
 
 /****************************************************************************************************
-* Functions dealing with profiling data.                                                            *
+* Functions dealing with profiling this particular Runnable.                                        *
 ****************************************************************************************************/
-
 
 /**
 * Any schedule that has a TaskProfilerData object in the appropriate slot will be profiled.
@@ -288,6 +287,100 @@ void ManuvrRunnable::noteExecutionTime(uint32_t profile_start_time, uint32_t pro
     prof_data->executions++;
   }            
 }
+
+
+/****************************************************************************************************
+* Pertaining to deferred execution and scheduling....                                               *
+****************************************************************************************************/
+
+void ManuvrRunnable::fireNow(bool nu) {
+  thread_fire = nu;   
+  thread_time_to_wait = thread_period;  
+}
+
+
+
+bool ManuvrRunnable::alterSchedulePeriod(uint32_t nu_period) {
+  bool return_value  = false;
+  if (nu_period > 1) {
+    thread_period       = nu_period;
+    thread_time_to_wait = nu_period;
+    return_value  = true;
+  }
+  return return_value;
+}
+
+bool ManuvrRunnable::alterScheduleRecurrence(int16_t recurrence) {
+  fireNow(false);
+  thread_recurs = recurrence;
+  return true;
+}
+
+
+/**
+* Call this function to alter a given schedule. Set with the given period, a given number of times, with a given function call.
+*  Returns true on success or false if the given PID is not found, or there is a problem with the parameters.
+*
+* Will not set the schedule active, but will clear any pending executions for this schedule, as well as reset the timer for it.
+*/
+bool ManuvrRunnable::alterSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FunctionPointer sch_callback) {
+  bool return_value  = false;
+  if (sch_period > 1) {
+    if (sch_callback != NULL) {
+      fireNow(false);
+      autoClear(ac);
+      thread_recurs       = recurrence;
+      thread_period       = sch_period;
+      thread_time_to_wait = sch_period;
+      schedule_callback   = sch_callback;
+      return_value  = true;
+    }
+  }
+  return return_value;
+}
+
+
+/**
+* Returns true if...
+* A) The schedule exists
+*    AND
+* B) The schedule is enabled, and has at least one more runtime before it *might* be auto-reaped.
+*/
+bool ManuvrRunnable::willRunAgain() {
+  if (threadEnabled()) {
+    if ((thread_recurs == -1) || (thread_recurs > 0)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+
+/**
+* Call to (en/dis)able a given schedule.
+*  Will reset the time_to_wait so that if the schedule is re-enabled, it doesn't fire sooner than expected.
+*  Returns true on success and false on failure.
+*/
+bool ManuvrRunnable::enableSchedule(bool en) {
+  threadEnabled(en);
+  fireNow(en);
+  if (en) {
+    thread_time_to_wait = thread_period;
+  }
+  return true;
+}
+
+
+/**
+* Causes a given schedule's TTW (time-to-wait) to be set to the value we provide (this time only).
+* If the schedule wasn't enabled before, it will be when we return.
+*/
+bool ManuvrRunnable::delaySchedule(uint32_t by_ms) {
+  thread_time_to_wait = by_ms;
+  threadEnabled(true);
+  return true;
+}
+
 
 
 /****************************************************************************************************
