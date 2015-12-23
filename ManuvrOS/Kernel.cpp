@@ -925,18 +925,19 @@ void Kernel::print_type_sizes() {
 */
 void Kernel::printProfiler(StringBuilder* output) {
   if (NULL == output) return;
-  output->concatf("\t total_events       \t%u\n", (unsigned long) total_events);
-  output->concatf("\t total_events_dead  \t%u\n", (unsigned long) total_events_dead);
-  output->concatf("\t max_queue_depth    \t%u\n", (unsigned long) max_queue_depth);
-  output->concatf("\t total_loops        \t%u\n", (unsigned long) total_loops);
-  output->concatf("\t max_idle_loop_time \t%u\n", (unsigned long) max_idle_loop_time);
-  output->concatf("\t max_events_p_loop  \t%u\n", (unsigned long) max_events_p_loop);
+  output->concatf("-- total_events       \t%u\n", (unsigned long) total_events);
+  output->concatf("-- total_events_dead  \t%u\n", (unsigned long) total_events_dead);
+  output->concatf("-- max_queue_depth    \t%u\n", (unsigned long) max_queue_depth);
+  output->concatf("-- total_loops        \t%u\n", (unsigned long) total_loops);
+  output->concatf("-- max_idle_loop_time \t%u\n", (unsigned long) max_idle_loop_time);
+  output->concatf("-- max_events_p_loop  \t%u\n", (unsigned long) max_events_p_loop);
     
   if (profiler_enabled) {
     output->concat("-- Profiler:\n");
     if (total_events) {
-      output->concatf("\tprealloc hit fraction: %f\%\n\n", (double)(1-((burden_of_specific - prealloc_starved) / total_events)) * 100);
+      output->concatf("   prealloc hit fraction: \t%f\%\n", (double)(1-((burden_of_specific - prealloc_starved) / total_events)) * 100);
     }
+    output->concatf("   CPU use by clock: %f\n", (double)cpu_usage());
 
     TaskProfilerData *profiler_item;
     int stat_mode = event_costs.getPriority(0);
@@ -949,7 +950,6 @@ void Kernel::printProfiler(StringBuilder* output) {
       output->concatf("\t (%10d)\t", stat_mode);
       profiler_item->printDebug(output);
     }
-    output->concatf("\n\t CPU use by clock: %f\n\n", (double)cpu_usage());
   }
   else {
     output->concat("-- Kernel profiler disabled.\n\n");
@@ -958,7 +958,7 @@ void Kernel::printProfiler(StringBuilder* output) {
 
   if (schedules.size() > 0) {
     ManuvrRunnable *current;
-    output->concat("\t PID         Execd      total us   average    worst      best       last\n\t -----------------------------------------------------------------------------\n");
+    output->concat("\n\t PID         Execd      total us   average    worst      best       last\n\t -----------------------------------------------------------------------------\n");
 
     for (int i = 0; i < schedules.size(); i++) {
       current = schedules.get(i);
@@ -991,7 +991,7 @@ void Kernel::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
   
   currentDateTime(output);
-  output->concatf("\n-- %s v%s    Build date: %s %s\n--\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
+  output->concatf("-- %s v%s    Build date: %s %s\n--\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
   output->concatf("-- our_mem_addr:             0x%08x\n", (uint32_t) this);
   if (verbosity > 5) output->concatf("-- boot_completed:           %s\n", (boot_completed) ? "yes" : "no");
   if (verbosity > 6) output->concatf("-- getStackPointer()         0x%08x\n", getStackPointer());
@@ -1002,11 +1002,14 @@ void Kernel::printDebug(StringBuilder* output) {
   output->concatf("-- Queue depth:              %d\n", event_queue.size());
   output->concatf("-- Preallocation depth:      %d\n", preallocated.size());
   output->concatf("-- Total subscriber count:   %d\n", subscribers.size());
-  output->concatf("-- Prealloc starves:         %u\n",   (unsigned long) prealloc_starved);
-  //output->concatf("-- events_destroyed:         %u\n",   (unsigned long) events_destroyed);
-  output->concatf("-- burden_of_being_specific  %u\n",   (unsigned long) burden_of_specific);
-  output->concatf("-- idempotent_blocks         %u\n\n", (unsigned long) idempotent_blocks);
+  output->concatf("-- Prealloc starves:         %u\n", (unsigned long) prealloc_starved);
+  output->concatf("-- events_destroyed:         %u\n", (unsigned long) events_destroyed);
+  output->concatf("-- burden_of_being_specific  %u\n", (unsigned long) burden_of_specific);
+  output->concatf("-- idempotent_blocks         %u\n", (unsigned long) idempotent_blocks);
   
+  output->concatf("-- Lagged schedules %u\n", (unsigned long) lagged_schedules);
+  output->concatf("-- Total schedules:  %d\n-- Active schedules: %d\n\n", schedules.size(), countActiveSchedules());
+
   if (subscribers.size() > 0) {
     output->concatf("-- Subscribers: (%d total):\n", subscribers.size());
     for (int i = 0; i < subscribers.size(); i++) {
@@ -1014,14 +1017,11 @@ void Kernel::printDebug(StringBuilder* output) {
     }
     output->concat("\n");
   }
-  
+
   if (NULL != current_event) {
+    output->concat("-- Current Runnable:\n");
     current_event->printDebug(output);
   }
-
-  output->concatf("--- Schedules location:  0x%08x\n", &schedules);
-  output->concatf("--- Lagged schedules %u\n", (unsigned long) lagged_schedules);
-  output->concatf("--- Total schedules:  %d\n--- Active schedules: %d\n\n", schedules.size(), countActiveSchedules());
 
   printProfiler(output);
 }
@@ -1342,12 +1342,6 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
   if (local_log.length() > 0) Kernel::log(&local_log);
   last_user_input.clear();
 }
-
-
-
-
-
-
 
 
 
