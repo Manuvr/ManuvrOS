@@ -48,9 +48,6 @@
 
         /* If some other class is managing this memory, this should return 'true'. */
       inline bool isManaged() {         return mem_managed;   }
-      
-      /* If the scheduler has a lock on this event, this should return 'true'. */
-      inline bool isScheduled() {       return scheduled;     }
 
       /* Functions for pinging the profiler data. */
       void noteExecutionTime(uint32_t start, uint32_t stop);
@@ -80,12 +77,12 @@
       * Asks if this schedule is being profiled...
       *  Returns true if so, and false if not.
       */
-      inline bool isProfiling() {       return (prof_data != NULL); };
+      inline bool profilingEnabled() {       return (prof_data != NULL); };
 
       /* If this event is scheduled, aborts it. Returns true if the schedule was aborted. */
       bool abort();
 
-      void enableProfiling(bool enabled);
+      void profilingEnabled(bool enabled);
       void clearProfilingData();           // Clears profiling data associated with the given schedule.
 
 

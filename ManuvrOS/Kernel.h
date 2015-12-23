@@ -100,9 +100,10 @@
        * auto_clear      When recurrence reaches 0, should the schedule be reaped?
        * sch_callback    The service function. Must be a pointer to a (void fxn(void)).
        */    
-      uint32_t createSchedule(uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
-      uint32_t createSchedule(uint32_t sch_period, int16_t recurrence, bool auto_clear, EventReceiver*  sch_callback, ManuvrRunnable*);
+      ManuvrRunnable* createSchedule(uint32_t period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
+      ManuvrRunnable* createSchedule(uint32_t period, int16_t recurrence, bool auto_clear, EventReceiver*  sch_callback);
       bool removeSchedule(ManuvrRunnable*);  // Clears all data relating to the given schedule.
+      bool addSchedule(ManuvrRunnable*);
 
 
       /*
@@ -113,7 +114,6 @@
       void advanceScheduler(unsigned int);     // Push all scheduled Runnables forward by one tick.
       inline void advanceScheduler() {   advanceScheduler(MANUVR_PLATFORM_TIMER_PERIOD_MS);  };
 
-      
       // Logging messages, as well as an override to log locally.
       void printDebug(StringBuilder*);
       inline void printDebug() {        printDebug(&local_log);      };
@@ -124,14 +124,14 @@
       /* Takes user input in the form of direct strings. */
       void accumulateConsoleInput(uint8_t *buf, int len, bool terminal);
 
-      // Profiling support..
+      /* Profiling support.. */
       float cpu_usage();
       void profiler(bool enabled);
       void printProfiler(StringBuilder*);
       
-      inline void maxEventsPerLoop(int8_t nu) { max_events_per_loop = nu;   }
+      inline void maxEventsPerLoop(int8_t nu) { max_events_per_loop = (nu > 0) ? nu : 1; }
       inline int8_t maxEventsPerLoop() {        return max_events_per_loop; }
-      inline int queueSize() {                  return INSTANCE->event_queue.size();   }
+      inline int queueSize() {                  return INSTANCE->event_queue.size();     }
       inline bool containsPreformedEvent(ManuvrRunnable* event) {   return event_queue.contains(event);  };
       
 
@@ -177,21 +177,23 @@
 
   
     private:
-      PriorityQueue<ManuvrRunnable*>   schedules;     // These are events waiting to be run.
-      PriorityQueue<ManuvrRunnable*>   preallocated;  // This is the listing of pre-allocated events.
-      PriorityQueue<ManuvrRunnable*>   event_queue;   // Events that have been raised.
-      PriorityQueue<EventReceiver*>    subscribers;   // Our subscription manifest.
+      ManuvrRunnable* current_event;
+      PriorityQueue<ManuvrRunnable*>   event_queue;   // Runnables that are pending execution.
+      PriorityQueue<ManuvrRunnable*>   schedules;     // These are Runnables scheduled to be run.
+      PriorityQueue<ManuvrRunnable*>   preallocated;  // This is the listing of pre-allocated Runnables.
       PriorityQueue<TaskProfilerData*> event_costs;   // Message code is the priority. Calculates average cost in uS.
 
+      PriorityQueue<EventReceiver*>    subscribers;   // Our manifest of EventReceivers we service.
       std::map<uint16_t, PriorityQueue<listenerFxnPtr>*> ca_listeners;  // Call-ahead listeners.
       std::map<uint16_t, PriorityQueue<listenerFxnPtr>*> cb_listeners;  // Call-back listeners.
 
-      uint32_t lagged_schedules;
-      uint32_t _ms_elapsed;
-      
       StringBuilder last_user_input;
+
+      uint32_t _ms_elapsed;           // How much time has passed since we serviced our schedules?
       
       // Profiling and logging variables...
+      uint32_t lagged_schedules;      // How many schedules were skipped? Ideally this is zero.
+      uint32_t micros_occupied;       // How many micros have we spent procing Runnables?
       uint32_t max_idle_loop_time;    // How many uS does it take to run an idle loop?
       uint32_t total_loops;           // How many times have we looped?
       uint32_t total_events;          // How many events have we proc'd?
@@ -207,21 +209,16 @@
       ManuvrRunnable _preallocation_pool[EVENT_MANAGER_PREALLOC_COUNT];
 
       uint8_t  max_events_p_loop;     // What is the most events we've handled in a single loop?
-      int8_t max_events_per_loop;
-      bool profiler_enabled;          // Should we spend time profiling this component?
+      int8_t   max_events_per_loop;
+      bool     profiler_enabled;      // Should we spend time profiling this component?
       bool     bistable_skip_detect;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
 
-      uint32_t micros_occupied;       // How many micros have we spent procing events?
-      ManuvrRunnable* current_event;
 
       int8_t procCallAheads(ManuvrRunnable *active_event);
       int8_t procCallBacks(ManuvrRunnable *active_event);
 
-      unsigned int getActiveSchedules(void);  // How many active schedules are present?
-      
-      void destroyScheduleItem(ManuvrRunnable *r_node);
-      // TODO: These members were ingested from the Scheduler.
-      int serviceScheduledEvents(void);        // Prep for exec any schedules that have come due.
+      unsigned int countActiveSchedules(void);  // How many active schedules are present?
+      int serviceScheduledEvents(void);         // Prep any schedules that have come due for exec.
 
       int8_t validate_insertion(ManuvrRunnable*);
       void reclaim_event(ManuvrRunnable*);

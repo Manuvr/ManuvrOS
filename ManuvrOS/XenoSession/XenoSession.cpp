@@ -299,9 +299,12 @@ int8_t XenoSession::bootComplete() {
   sync_event.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG);
   sync_event.isManaged(true);
   sync_event.specific_target = (EventReceiver*) this;
-
-  pid_sync_timer = __kernel->createSchedule(30,  -1, false, (EventReceiver*) this, &sync_event);
+  sync_event.alterScheduleRecurrence(-1);
+  sync_event.alterSchedulePeriod(30);
+  sync_event.autoClear(false);
   sync_event.enableSchedule(false);
+
+  __kernel->addSchedule(&sync_event);
 
   return 1;
 }

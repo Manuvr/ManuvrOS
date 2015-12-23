@@ -109,21 +109,15 @@ Kernel::Kernel() {
   INSTANCE           = this;  // For singleton reference. TODO: Will not parallelize.
   __kernel           = this;  // We extend EventReceiver. So we populate this.
 
-  max_queue_depth     = 0;
-  total_events        = 0;
-  total_events_dead   = 0;
-  micros_occupied     = 0;
-  max_events_per_loop = 2;
-
-  current_event      = NULL;
-
-  // TODO: Pulled in from Scheduler.
+  current_event        = NULL;
+  max_queue_depth      = 0;
+  total_events         = 0;
+  total_events_dead    = 0;
+  micros_occupied      = 0;
+  max_events_per_loop  = 2;
   lagged_schedules     = 0;
   bistable_skip_detect = false;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
   _ms_elapsed          = 0;
-  // TODO: Pulled in from Scheduler.
-  
-  
   
   
   for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
@@ -470,7 +464,6 @@ int8_t Kernel::isrRaiseEvent(ManuvrRunnable* event) {
 
 
 
-
 /**
 * Factory method. Returns a preallocated Event.
 * After we return the event, we lose track of it. So if the caller doesn't ever
@@ -494,7 +487,6 @@ ManuvrRunnable* Kernel::returnEvent(uint16_t code) {
   }
   return return_value;
 }
-
 
 
 
@@ -530,7 +522,6 @@ int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
   }
   return 0;
 }
-
 
 
 
@@ -572,7 +563,6 @@ void Kernel::reclaim_event(ManuvrRunnable* active_event) {
 
 
 
-
 // This is the splice into v2's style of event handling (callaheads).
 int8_t Kernel::procCallAheads(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
@@ -604,7 +594,6 @@ int8_t Kernel::procCallBacks(ManuvrRunnable *active_event) {
   }
   return return_value;
 }
-
 
 
 
@@ -889,13 +878,11 @@ void Kernel::print_type_sizes() {
 
   temp.concatf(" Core singletons:\n");
   temp.concatf("\t Kernel                %d\n", sizeof(Kernel));
-  temp.concatf("\t   Kernel           %d\n", sizeof(Kernel));
 
   temp.concatf(" Messaging components:\n");
-  temp.concatf("\t ManuvrRunnable           %d\n", sizeof(ManuvrRunnable));
+  temp.concatf("\t ManuvrRunnable        %d\n", sizeof(ManuvrRunnable));
   temp.concatf("\t ManuvrMsg             %d\n", sizeof(ManuvrMsg));
   temp.concatf("\t Argument              %d\n", sizeof(Argument));
-  temp.concatf("\t KernelItem         %d\n", sizeof(ManuvrRunnable));
   temp.concatf("\t TaskProfilerData      %d\n", sizeof(TaskProfilerData));
 
   Kernel::log(&temp);
@@ -947,7 +934,7 @@ void Kernel::printProfiler(StringBuilder* output) {
 
     for (int i = 0; i < schedules.size(); i++) {
       current = schedules.get(i);
-      if (current->isProfiling()) {
+      if (current->profilingEnabled()) {
         current->printProfilerData(output);
       }
     }
@@ -1006,7 +993,7 @@ void Kernel::printDebug(StringBuilder* output) {
 
   output->concatf("--- Schedules location:  0x%08x\n", &schedules);
   output->concatf("--- Lagged schedules %u\n", (unsigned long) lagged_schedules);
-  output->concatf("--- Total schedules:  %d\n--- Active schedules: %d\n\n", schedules.size(), getActiveSchedules());
+  output->concatf("--- Total schedules:  %d\n--- Active schedules: %d\n\n", schedules.size(), countActiveSchedules());
 
   printProfiler(output);
 }
@@ -1383,20 +1370,14 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
 
 
 
-
-
-
-
-
-
 /****************************************************************************************************
-* Linked-list helper functions...                                                                   *
+* These are functions that help us manage scheduled Runnables...                                    *
 ****************************************************************************************************/
 
 /**
 * Returns the number of schedules presently active.
 */
-unsigned int Kernel::getActiveSchedules() {
+unsigned int Kernel::countActiveSchedules() {
   unsigned int return_value = 0;
   ManuvrRunnable *current;
   for (int i = 0; i < schedules.size(); i++) {
@@ -1416,15 +1397,13 @@ unsigned int Kernel::getActiveSchedules() {
 *  Will automatically set the schedule active, provided the input conditions are met.
 *  Returns the newly-created PID on success, or 0 on failure.
 */
-uint32_t Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FunctionPointer sch_callback) {
-  uint32_t return_value  = 0;
+ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FunctionPointer sch_callback) {
+  ManuvrRunnable* return_value = NULL;
   if (sch_period > 1) {
     if (sch_callback != NULL) {
-      ManuvrRunnable *nu_sched = new ManuvrRunnable(recurrence, sch_period, ac, sch_callback);
-      if (nu_sched != NULL) {  // Did we actually malloc() successfully?
-        return_value  = (uint32_t) nu_sched;
-        schedules.insert(nu_sched);
-        nu_sched->enableProfiling(return_value);
+      return_value = new ManuvrRunnable(recurrence, sch_period, ac, sch_callback);
+      if (return_value != NULL) {  // Did we actually malloc() successfully?
+        schedules.insert(return_value);
       }
     }
   }
@@ -1438,16 +1417,12 @@ uint32_t Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac
 *  Will automatically set the schedule active, provided the input conditions are met.
 *  Returns the newly-created PID on success, or 0 on failure.
 */
-uint32_t Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, EventReceiver* ori, ManuvrRunnable* event) {
-  uint32_t return_value  = 0;
+ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, EventReceiver* ori) {
+  ManuvrRunnable* return_value = NULL;
   if (sch_period > 1) {
-    // TODO: This is broken until more condensation happens.
-    //ManuvrRunnable *nu_sched = new ManuvrRunnable(recurrence, sch_period, ac, sch_callback, event);
-    ManuvrRunnable *nu_sched = new ManuvrRunnable(recurrence, sch_period, ac, ori);
-    if (nu_sched != NULL) {  // Did we actually malloc() successfully?
-      return_value  = (uint32_t) nu_sched;
-      schedules.insert(nu_sched);
-      nu_sched->enableProfiling(return_value);
+    return_value = new ManuvrRunnable(recurrence, sch_period, ac, ori);
+    if (return_value != NULL) {  // Did we actually malloc() successfully?
+      schedules.insert(return_value);
     }
   }
   return return_value;
@@ -1494,6 +1469,17 @@ bool Kernel::removeSchedule(ManuvrRunnable *obj) {
   }
   return false;
 }
+
+bool Kernel::addSchedule(ManuvrRunnable *obj) {
+  if (obj != NULL) {
+    if (!schedules.contains(obj)) {
+      schedules.insert(obj);
+    }
+    return true;
+  }
+  return false;
+}
+
 
 
 /**

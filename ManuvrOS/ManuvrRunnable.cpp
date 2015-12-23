@@ -82,8 +82,6 @@ ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac,
 
   originator          = ori;   // This constructor uses the EventReceiver callback...
   schedule_callback   = NULL;
-
-  isScheduled(true);           // Needed so we don't reap the event.
 }
 
 
@@ -108,14 +106,13 @@ void ManuvrRunnable::__class_initializer() {
   flags           = 0x00;  // TODO: Optimistic about collapsing the bools into this. Or make gcc do it.
   originator      = NULL;
   specific_target = NULL;
+  prof_data       = NULL;
   priority        = EVENT_PRIORITY_DEFAULT;
   
   // These things have implications for memory management, which is why repurpose() doesn't touch them.
   mem_managed     = false;
   scheduled       = false;
   preallocated    = false;
-
-  prof_data       = NULL;
 }
 
 
@@ -175,11 +172,6 @@ bool ManuvrRunnable::eventManagerShouldReap() {
 }
 
 
-bool ManuvrRunnable::isScheduled(bool nu) {
-  scheduled = nu;
-  return scheduled;   
-}
-
 bool ManuvrRunnable::isManaged(bool nu) {
   mem_managed = nu;
   return mem_managed;   
@@ -228,7 +220,7 @@ void ManuvrRunnable::printDebug(StringBuilder *output) {
   output->concatf("\t Recurs?       \t%s\n", thread_recurs);
   output->concatf("\t Exec pending: \t%s\n", (thread_fire ? "YES":"NO")); 
   output->concatf("\t Autoclear     \t%s\n", (autoclear ? "YES":"NO"));
-  output->concatf("\t Profiling?    \t%s\n", (isProfiling() ? "YES":"NO"));
+  output->concatf("\t Profiling?    \t%s\n", (profilingEnabled() ? "YES":"NO"));
 
   if (NULL != schedule_callback) {
     output->concat("\t Legacy callback\n");
@@ -247,10 +239,10 @@ void ManuvrRunnable::printProfilerData(StringBuilder *output) {
 
 /**
 * Any schedule that has a TaskProfilerData object in the appropriate slot will be profiled.
-*  So to begin profiling a schedule, simply malloc() the appropriate struct into place and initialize it.
+*  So to begin profiling a schedule, simply instance the appropriate struct into place.
 */
-void ManuvrRunnable::enableProfiling(bool enabled) {
-  if (prof_data == NULL) {
+void ManuvrRunnable::profilingEnabled(bool enabled) {
+  if (NULL == prof_data) {
     // Profiler data does not exist. If enabled == false, do nothing.
     if (enabled) {
       prof_data = new TaskProfilerData();
@@ -268,7 +260,7 @@ void ManuvrRunnable::enableProfiling(bool enabled) {
 * Destroys whatever profiling data might be stored in this Runnable.
 */
 void ManuvrRunnable::clearProfilingData() {
-  if (prof_data != NULL) {
+  if (NULL != prof_data) {
     prof_data->profiling_active = false;
     delete prof_data;
     prof_data = NULL;
