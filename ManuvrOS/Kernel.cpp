@@ -821,6 +821,22 @@ int8_t Kernel::procIdleFlags() {
   return return_value;
 }
 
+
+
+/****************************************************************************************************
+*  ▄▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄   ▄         ▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+* ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░▌       ▐░▌▐░░░░░░░░░░░▌
+* ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀ 
+* ▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌          
+* ▐░▌       ▐░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░▌       ▐░▌▐░▌ ▄▄▄▄▄▄▄▄ 
+* ▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░▌       ▐░▌▐░▌▐░░░░░░░░▌
+* ▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌▐░▌ ▀▀▀▀▀▀█░▌
+* ▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌       ▐░▌
+* ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌
+* ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
+*  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀ 
+****************************************************************************************************/
+
 /**
 * Turns the profiler on or off. Clears its collected stats regardless.
 *
@@ -848,20 +864,6 @@ float Kernel::cpu_usage() {
   return (micros_occupied / (float)(millis()*10));
 }
 
-
-/****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄   ▄         ▄  ▄▄▄▄▄▄▄▄▄▄▄ 
-* ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░▌       ▐░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀ 
-* ▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌          
-* ▐░▌       ▐░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░▌       ▐░▌▐░▌ ▄▄▄▄▄▄▄▄ 
-* ▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░▌       ▐░▌▐░▌▐░░░░░░░░▌
-* ▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌▐░▌ ▀▀▀▀▀▀█░▌
-* ▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌       ▐░▌
-* ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌
-* ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀ 
-****************************************************************************************************/
 
 #if defined(__MANUVR_DEBUG)
 /**
@@ -1403,6 +1405,7 @@ ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, 
     if (sch_callback != NULL) {
       return_value = new ManuvrRunnable(recurrence, sch_period, ac, sch_callback);
       if (return_value != NULL) {  // Did we actually malloc() successfully?
+        return_value->isScheduled(true);
         schedules.insert(return_value);
       }
     }
@@ -1422,6 +1425,7 @@ ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, 
   if (sch_period > 1) {
     return_value = new ManuvrRunnable(recurrence, sch_period, ac, ori);
     if (return_value != NULL) {  // Did we actually malloc() successfully?
+      return_value->isScheduled(true);
       schedules.insert(return_value);
     }
   }
@@ -1459,6 +1463,7 @@ void Kernel::advanceScheduler(unsigned int ms_elapsed) {
 bool Kernel::removeSchedule(ManuvrRunnable *obj) {
   if (obj != NULL) {
     if (obj != current_event) {
+      obj->isScheduled(false);
       schedules.remove(obj);
     }
     else { 
@@ -1473,6 +1478,7 @@ bool Kernel::removeSchedule(ManuvrRunnable *obj) {
 bool Kernel::addSchedule(ManuvrRunnable *obj) {
   if (obj != NULL) {
     if (!schedules.contains(obj)) {
+      obj->isScheduled(true);
       schedules.insert(obj);
     }
     return true;

@@ -39,8 +39,9 @@
       
       bool returnToPrealloc();
       bool returnToPrealloc(bool);
-      bool isScheduled(bool);
       bool isManaged(bool);
+      inline void isScheduled(bool nu) {  scheduled = nu;   };
+      inline bool isScheduled() {         return scheduled; };
 
       void printDebug();
       void printDebug(StringBuilder *);
