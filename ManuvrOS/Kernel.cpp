@@ -628,6 +628,8 @@ int8_t Kernel::procIdleFlags() {
   int8_t return_value      = 0;   // Number of Events we've processed this call.
   uint16_t msg_code_local  = 0;   
 
+  serviceScheduledEvents();
+  
   ManuvrRunnable *active_event = NULL;  // Our short-term focus.
   uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
 

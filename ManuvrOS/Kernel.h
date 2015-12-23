@@ -69,18 +69,29 @@
       Kernel(void);
       ~Kernel(void);
       
+      /*
+      * Functions for adding to, removing from, and retrieving modules from the kernel. 
+      */
+      EventReceiver* getSubscriberByName(const char*);
       int8_t subscribe(EventReceiver *client);                    // A class calls this to subscribe to events.
       int8_t subscribe(EventReceiver *client, uint8_t priority);  // A class calls this to subscribe to events.
       int8_t unsubscribe(EventReceiver *client);                  // A class calls this to unsubscribe.
       
-      EventReceiver* getSubscriberByName(const char*);
+      /*
+      * Calling this will register a message in the Kernel, along with a call-ahead,
+      *   a callback, and options. Only the first parameter is strictly required, but
+      *   at least one of the function parameters should be non-null.
+      */
+      int8_t registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFxnPtr cb, uint32_t options);
+      inline int8_t before(uint16_t msgCode, listenerFxnPtr ca, uint32_t options) {
+        return registerCallbacks(msgCode, ca, NULL, options);
+      };
+      inline int8_t on(uint16_t msgCode, listenerFxnPtr cb, uint32_t options) {
+        return registerCallbacks(msgCode, NULL, cb, options);
+      };
 
-      int8_t bootstrap(void);
 
-      /* Takes user input in the form of direct strings. */
-      void accumulateConsoleInput(uint8_t *buf, int len, bool terminal);
-
-
+      // TODO: These members were ingested from the Scheduler.
       /* Add a new schedule. Returns the PID. If zero is returned, function failed.
        * 
        * Parameters:
@@ -99,40 +110,33 @@
       bool alterScheduleRecurrence(ManuvrRunnable*, int16_t recurrence);
       bool alterSchedulePeriod(ManuvrRunnable*, uint32_t sch_period);
 
-      void advanceScheduler(unsigned int);     // Push all enabled schedules forward by one tick.
-      inline void advanceScheduler() {   advanceScheduler(MANUVR_PLATFORM_TIMER_PERIOD_MS);  };
-      
+      bool delaySchedule(ManuvrRunnable*, uint32_t by_ms); // Set the schedule's TTW to the given value this execution only.
+      bool delaySchedule(ManuvrRunnable*);                 // Reset the given schedule to its period and enable it.
+  
+      bool willRunAgain(ManuvrRunnable*);                  // Returns true if the indicated schedule will fire again.
 
-      int serviceScheduledEvents(void);        // Execute any schedules that have come due.
-      int8_t procIdleFlags(void);
-
-      
       /*
-      * Calling this will register a message in the Kernel, along with a call-ahead,
-      *   a callback, and options. Only the first parameter is strictly required, but
-      *   at least one of the function parameters should be non-null.
+      * These are the core functions of the kernel that must be called from outside.
       */
-      int8_t registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFxnPtr cb, uint32_t options);
-      inline int8_t before(uint16_t msgCode, listenerFxnPtr ca, uint32_t options) {
-        return registerCallbacks(msgCode, ca, NULL, options);
-      };
-      inline int8_t on(uint16_t msgCode, listenerFxnPtr cb, uint32_t options) {
-        return registerCallbacks(msgCode, NULL, cb, options);
-      };
-      
+      int8_t bootstrap(void);                  // Bootstrap the kernel.
+      int8_t procIdleFlags(void);              // Execute pending Runnables.
+      void advanceScheduler(unsigned int);     // Push all scheduled Runnables forward by one tick.
+      inline void advanceScheduler() {   advanceScheduler(MANUVR_PLATFORM_TIMER_PERIOD_MS);  };
 
-      void profiler(bool enabled);
       
+      // Logging messages, as well as an override to log locally.
+      void printDebug(StringBuilder*);
+      inline void printDebug() {        printDebug(&local_log);      };
       #if defined(__MANUVR_DEBUG)
         void print_type_sizes();      // Prints the memory-costs of various classes.
       #endif
 
-      // Logging messages, as well as an override to log locally.
-      void printDebug(StringBuilder*);
-      inline void printDebug() {        printDebug(&local_log);      };
-      
+      /* Takes user input in the form of direct strings. */
+      void accumulateConsoleInput(uint8_t *buf, int len, bool terminal);
+
       // Profiling support..
       float cpu_usage();
+      void profiler(bool enabled);
       void printProfiler(StringBuilder*);
       
       inline void maxEventsPerLoop(int8_t nu) { max_events_per_loop = nu;   }
@@ -148,12 +152,7 @@
       int8_t callback_proc(ManuvrRunnable *);
       void procDirectDebugInstruction(StringBuilder *);
 
-      // TODO: These members were ingested from the Scheduler.
-      bool delaySchedule(ManuvrRunnable*, uint32_t by_ms); // Set the schedule's TTW to the given value this execution only.
-      bool delaySchedule(ManuvrRunnable*);                 // Reset the given schedule to its period and enable it.
-  
-      bool willRunAgain(ManuvrRunnable*);                  // Returns true if the indicated schedule will fire again.
-  
+
 
       static StringBuilder log_buffer;
 
@@ -235,9 +234,9 @@
 
       unsigned int getActiveSchedules(void);  // How many active schedules are present?
       
-      uint32_t get_valid_new_pid(void);    
       void destroyScheduleItem(ManuvrRunnable *r_node);
       // TODO: These members were ingested from the Scheduler.
+      int serviceScheduledEvents(void);        // Prep for exec any schedules that have come due.
 
       int8_t validate_insertion(ManuvrRunnable*);
       void reclaim_event(ManuvrRunnable*);

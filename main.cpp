@@ -267,7 +267,6 @@ int main(int argc, char *argv[]) {
   // TODO: It would be nice to be able to ask the kernel if we should continue running.
   while (true) { 
     kernel.procIdleFlags();
-    kernel.serviceScheduledEvents();
 
     // Move the kernel log to stdout.
     if (Kernel::log_buffer.count()) {
