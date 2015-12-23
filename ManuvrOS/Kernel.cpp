@@ -360,21 +360,21 @@ int8_t Kernel::registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFx
 * Used to add an event to the idle queue. Use this for simple events that don't need args.
 *
 * @param  code  The identity code of the event to be raised.
-* @param  cb    An optional callback pointer to be called when this event is finished.
+* @param  ori   An optional originator pointer to be called when this event is finished.
 * @return -1 on failure, and 0 on success.
 */
-int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* cb) {
+int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* ori) {
   int8_t return_value = 0;
   
   // We are creating a new Event. Try to snatch a prealloc'd one and fall back to malloc if needed.
   ManuvrRunnable* nu = INSTANCE->preallocated.dequeue();
   if (nu == NULL) {
     INSTANCE->prealloc_starved++;
-    nu = new ManuvrRunnable(code, cb);
+    nu = new ManuvrRunnable(code, ori);
   }
   else {
     nu->repurpose(code);
-    nu->callback = cb;
+    nu->originator = ori;
   }
 
   if (0 == INSTANCE->validate_insertion(nu)) {
@@ -475,7 +475,7 @@ int8_t Kernel::isrRaiseEvent(ManuvrRunnable* event) {
 * Factory method. Returns a preallocated Event.
 * After we return the event, we lose track of it. So if the caller doesn't ever
 *   call raiseEvent(), the Event we return will become a memory leak.
-* The event we retun will have a callback field populated with a ref to Kernel.
+* The event we retun will have an originator field populated with a ref to Kernel.
 *   So if a caller needs their own reference in that slot, caller will need to do it.
 *
 * @param  code  The desired identity code of the event.
@@ -490,7 +490,7 @@ ManuvrRunnable* Kernel::returnEvent(uint16_t code) {
   }
   else {
     return_value->repurpose(code);
-    return_value->callback = (EventReceiver*) INSTANCE;
+    return_value->originator = (EventReceiver*) INSTANCE;
   }
   return return_value;
 }
@@ -713,12 +713,12 @@ int8_t Kernel::procIdleFlags() {
 
     /* Should we clean up the Event? */
     bool clean_up_active_event = true;  // Defaults to 'yes'.
-    if (NULL != active_event->callback) {
-      if ((EventReceiver*) this != active_event->callback) {  // We don't want to invoke our own callback.
-        /* If the event has a valid callback, do the callback dance and take instruction
+    if (NULL != active_event->originator) {
+      if ((EventReceiver*) this != active_event->originator) {  // We don't want to invoke our own originator callback.
+        /* If the event has a valid originator, do the callback dance and take instruction
            from the return value. */
-        //   if (verbosity >=7) output.concatf("specific_event_callback returns %d\n", active_event->callback->callback_proc(active_event));
-        switch (active_event->callback->callback_proc(active_event)) {
+        //   if (verbosity >=7) output.concatf("specific_event_callback returns %d\n", active_event->originator->callback_proc(active_event));
+        switch (active_event->originator->callback_proc(active_event)) {
           case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
             #ifdef __MANUVR_DEBUG
             if (verbosity > 5) local_log.concatf("Recycling %s.\n", active_event->getMsgTypeString());
@@ -750,7 +750,7 @@ int8_t Kernel::procIdleFlags() {
       }
     }
     else {
-      /* If there is no callback specified for the Event, we rely on the flags in the Event itself to
+      /* If there is no originator specified for the Event, we rely on the flags in the Event itself to
          decide if it should be reaped. If its memory is being managed by some other class, the reclaim_event()
          fxn will simply remove it from the event_queue and consider the matter closed. */
     }
@@ -852,6 +852,12 @@ void Kernel::profiler(bool enabled) {
   while (event_costs.hasNext()) delete event_costs.dequeue();
 }
 
+
+// TODO: This never worked terribly well. Need to tap the timer
+//   and profile to do it correctly. Still better than nothing.
+float Kernel::cpu_usage() {
+  return (micros_occupied / (float)(millis()*10));
+}
 
 
 /****************************************************************************************************
@@ -1193,7 +1199,6 @@ int8_t Kernel::notify(ManuvrRunnable *active_event) {
       break;
     case MANUVR_MSG_SCHED_DUMP_SCHEDULES:
       if (active_event->args.size() > 0) {
-        ManuvrRunnable *nu_sched;
         while (0 == active_event->consumeArgAs(&temp_uint32)) {
           //nu_sched  = findNodeByPID(temp_uint32);
           //if (NULL != nu_sched) nu_sched->printDebug(&local_log);
@@ -1385,19 +1390,6 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
 
 
 /****************************************************************************************************
-* Functions for profiling and performance measurement...                                            *
-****************************************************************************************************/
-
-
-// TODO: This never worked terribly well. Need to tap the timer
-//   and profile to do it correctly. Still better than nothing.
-float Kernel::cpu_usage() {
-  return (micros_occupied / (float)(millis()*10));
-}
-
-
-
-/****************************************************************************************************
 * Linked-list helper functions...                                                                   *
 ****************************************************************************************************/
 
@@ -1457,12 +1449,12 @@ uint32_t Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac
 *  Will automatically set the schedule active, provided the input conditions are met.
 *  Returns the newly-created PID on success, or 0 on failure.
 */
-uint32_t Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, EventReceiver* sch_callback, ManuvrRunnable* event) {
+uint32_t Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, EventReceiver* ori, ManuvrRunnable* event) {
   uint32_t return_value  = 0;
   if (sch_period > 1) {
     // TODO: This is broken until more condensation happens.
     //ManuvrRunnable *nu_sched = new ManuvrRunnable(recurrence, sch_period, ac, sch_callback, event);
-    ManuvrRunnable *nu_sched = new ManuvrRunnable(recurrence, sch_period, ac, sch_callback);
+    ManuvrRunnable *nu_sched = new ManuvrRunnable(recurrence, sch_period, ac, ori);
     if (nu_sched != NULL) {  // Did we actually malloc() successfully?
       return_value  = (uint32_t) nu_sched;
       schedules.insert(nu_sched);

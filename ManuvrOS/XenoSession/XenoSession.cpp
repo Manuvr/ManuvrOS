@@ -388,8 +388,8 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
       break;
   }
 
-  /* We don't want to resonate... Don't react to Events that have us as the callback. */
-  if (active_event->callback != (EventReceiver*) this) {
+  /* We don't want to resonate... Don't react to Events that have us as the originator. */
+  if (active_event->originator != (EventReceiver*) this) {
     if ((XENO_SESSION_IGNORE_NON_EXPORTABLES) && (active_event->isExportable())) {
       /* This is the block that allows the counterparty to intercept events of its choosing. */
       
@@ -520,7 +520,7 @@ int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
   
   // We are about to pass a message across the transport.
   ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
-  event->callback        = this;  // We want the callback and the only receiver of this
+  event->originator      = this;   // We want the callback and the only receiver of this
   event->specific_target = owner;  //   event to be the transport that instantiated us.
   raiseEvent(event);
   return 0;

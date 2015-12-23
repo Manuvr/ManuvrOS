@@ -95,7 +95,7 @@ void ManuvrTCP::__class_initializer() {
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
   read_abort_event.isManaged(true);
   read_abort_event.specific_target = (EventReceiver*) this;
-  read_abort_event.callback        = (EventReceiver*) this;
+  read_abort_event.originator      = (EventReceiver*) this;
   read_abort_event.priority        = 5;
   read_abort_event.addArg(xport_id);  // Add our assigned transport ID to our pre-baked argument.
 

@@ -12,7 +12,7 @@
   */
   class ManuvrRunnable : public ManuvrMsg {
     public:
-      EventReceiver*  callback;          // This is an optional ref to the class that raised this event.
+      EventReceiver*  originator;        // This is an optional ref to the class that raised this event.
       EventReceiver*  specific_target;   // If the event is meant for a single class, put a pointer to it here.
       FunctionPointer schedule_callback; // Pointers to the schedule service function.
 

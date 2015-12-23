@@ -136,11 +136,11 @@ void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
 
 /**
 * This is a convenience method for posting an event when we want a callback. If there is not
-*   already a callback specified, add ourselves as the callback.
+*   already an originator specified, add ourselves as the originator.
 */
 int8_t EventReceiver::raiseEvent(ManuvrRunnable* event) {
   if (event != NULL) {
-    event->callback = (EventReceiver*) this;
+    event->originator = (EventReceiver*) this;
     return Kernel::staticRaiseEvent(event);
   }
   else {

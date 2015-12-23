@@ -26,7 +26,7 @@ ManuvrRunnable::ManuvrRunnable() : ManuvrMsg(0) {
 */
 ManuvrRunnable::ManuvrRunnable(uint16_t code, EventReceiver* cb) : ManuvrMsg(code) {
   __class_initializer();
-  callback   = cb;
+  originator = cb;
 }
 
 
@@ -61,7 +61,7 @@ ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac,
 }
 
 /**
-* Constructor. Takes an EventReceiver* as a callback.
+* Constructor. Takes an EventReceiver* as an originator.
 * We need to deal with memory management of the Event. For a recurring schedule, we can't allow the
 *   Kernel to reap the event. So it is very important to mark the event appropriately.
 *
@@ -71,7 +71,7 @@ ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac,
 * @param sch_callback A FunctionPointer to the callback. Useful for some general things.
 * @param ev           A pointer to an Event that we will periodically raise.
 */
-ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver* sch_callback) {
+ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver* ori) {
   __class_initializer();
   thread_enabled      = true;
   thread_fire         = false;
@@ -80,7 +80,7 @@ ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac,
   thread_time_to_wait = sch_period;
   autoclear           = ac;
 
-  callback            = sch_callback;   // This constructor uses the EventReceiver callback...
+  originator          = ori;   // This constructor uses the EventReceiver callback...
   schedule_callback   = NULL;
 
   isScheduled(true);           // Needed so we don't reap the event.
@@ -106,7 +106,7 @@ ManuvrRunnable::~ManuvrRunnable(void) {
 */
 void ManuvrRunnable::__class_initializer() {
   flags           = 0x00;  // TODO: Optimistic about collapsing the bools into this. Or make gcc do it.
-  callback        = NULL;
+  originator      = NULL;
   specific_target = NULL;
   priority        = EVENT_PRIORITY_DEFAULT;
   
@@ -127,7 +127,7 @@ void ManuvrRunnable::__class_initializer() {
 */
 int8_t ManuvrRunnable::repurpose(uint16_t code) {
   flags           = 0x00;
-  callback        = NULL;
+  originator      = NULL;
   specific_target = NULL;
   priority        = EVENT_PRIORITY_DEFAULT;
   return ManuvrMsg::repurpose(code);
@@ -207,7 +207,7 @@ void ManuvrRunnable::printDebug(StringBuilder *output) {
   	  int temp_buf_len        = msg_serial.length();
   	  
   	  output->concatf("\t Preallocated          %s\n", (preallocated ? "yes" : "no"));
-  	  output->concatf("\t Callback:             %s\n", (NULL == callback ? "NULL" : callback->getReceiverName()));
+  	  output->concatf("\t Originator:           %s\n", (NULL == originator ? "NULL" : originator->getReceiverName()));
   	  output->concatf("\t specific_target:      %s\n", (NULL == specific_target ? "NULL" : specific_target->getReceiverName()));
   	  output->concatf("\t Argument count (ser): %d\n", arg_count);
   	  output->concatf("\t Bitstream length:     %d\n\t Buffer:  ", temp_buf_len);
