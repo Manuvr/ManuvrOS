@@ -131,8 +131,8 @@
       
       inline void maxEventsPerLoop(int8_t nu) { max_events_per_loop = (nu > 0) ? nu : 1; }
       inline int8_t maxEventsPerLoop() {        return max_events_per_loop; }
-      inline int queueSize() {                  return INSTANCE->event_queue.size();     }
-      inline bool containsPreformedEvent(ManuvrRunnable* event) {   return event_queue.contains(event);  };
+      inline int queueSize() {                  return INSTANCE->exec_queue.size();     }
+      inline bool containsPreformedEvent(ManuvrRunnable* event) {   return exec_queue.contains(event);  };
       
 
       /* Overrides from EventReceiver
@@ -141,7 +141,6 @@
       int8_t notify(ManuvrRunnable*);
       int8_t callback_proc(ManuvrRunnable *);
       void procDirectDebugInstruction(StringBuilder *);
-
 
 
       static StringBuilder log_buffer;
@@ -178,7 +177,7 @@
   
     private:
       ManuvrRunnable* current_event;
-      PriorityQueue<ManuvrRunnable*>   event_queue;   // Runnables that are pending execution.
+      PriorityQueue<ManuvrRunnable*>   exec_queue;    // Runnables that are pending execution.
       PriorityQueue<ManuvrRunnable*>   schedules;     // These are Runnables scheduled to be run.
       PriorityQueue<ManuvrRunnable*>   preallocated;  // This is the listing of pre-allocated Runnables.
       PriorityQueue<TaskProfilerData*> event_costs;   // Message code is the priority. Calculates average cost in uS.
@@ -211,24 +210,24 @@
       uint8_t  max_events_p_loop;     // What is the most events we've handled in a single loop?
       int8_t   max_events_per_loop;
       bool     profiler_enabled;      // Should we spend time profiling this component?
-      bool     bistable_skip_detect;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
+      bool     bistable_skip_detect;  // Set in advanceScheduler(), cleared in serviceSchedules().
 
 
       int8_t procCallAheads(ManuvrRunnable *active_event);
       int8_t procCallBacks(ManuvrRunnable *active_event);
 
       unsigned int countActiveSchedules(void);  // How many active schedules are present?
-      int serviceScheduledEvents(void);         // Prep any schedules that have come due for exec.
+      int serviceSchedules(void);         // Prep any schedules that have come due for exec.
 
       int8_t validate_insertion(ManuvrRunnable*);
       void reclaim_event(ManuvrRunnable*);
-      inline void update_maximum_queue_depth() {   max_queue_depth = (event_queue.size() > (int) max_queue_depth) ? event_queue.size() : max_queue_depth;   };
+      inline void update_maximum_queue_depth() {   max_queue_depth = (exec_queue.size() > (int) max_queue_depth) ? exec_queue.size() : max_queue_depth;   };
       
       /*  */
       inline bool should_run_another_event(int8_t loops, uint32_t begin) {     return (max_events_per_loop ? ((int8_t) max_events_per_loop > loops) : ((micros() - begin) < 1200));   };
       
       static Kernel* INSTANCE;
-      static PriorityQueue<ManuvrRunnable*> isr_event_queue;   // Events that have been raised from ISRs.
+      static PriorityQueue<ManuvrRunnable*> isr_exec_queue;   // Events that have been raised from ISRs.
   };
 
   

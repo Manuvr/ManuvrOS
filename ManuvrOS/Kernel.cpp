@@ -21,7 +21,7 @@ Date:   2013.07.10
 * Static members and initializers should be located here. Initializers first, functions second.
 ****************************************************************************************************/
 Kernel* Kernel::INSTANCE = NULL;
-PriorityQueue<ManuvrRunnable*> Kernel::isr_event_queue;
+PriorityQueue<ManuvrRunnable*> Kernel::isr_exec_queue;
 
 const unsigned char MSG_ARGS_EVENTRECEIVER[] = {SYS_EVENTRECEIVER_FM, 0, 0}; 
 const unsigned char MSG_ARGS_NO_ARGS[] = {0}; 
@@ -129,7 +129,7 @@ Kernel::Kernel() {
   micros_occupied      = 0;
   max_events_per_loop  = 2;
   lagged_schedules     = 0;
-  bistable_skip_detect = false;  // Set in advanceScheduler(), cleared in serviceScheduledEvents().
+  bistable_skip_detect = false;  // Set in advanceScheduler(), cleared in serviceSchedules().
   _ms_elapsed          = 0;
   
   
@@ -385,7 +385,7 @@ int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* ori) {
   }
 
   if (0 == INSTANCE->validate_insertion(nu)) {
-    INSTANCE->event_queue.insert(nu);
+    INSTANCE->exec_queue.insert(nu);
     INSTANCE->update_maximum_queue_depth();   // Check the queue depth
     #if defined (__MANUVR_FREERTOS)
       unblockThread(kernel_pid);
@@ -419,7 +419,7 @@ int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* ori) {
 int8_t Kernel::staticRaiseEvent(ManuvrRunnable* event) {
   int8_t return_value = 0;
   if (0 == INSTANCE->validate_insertion(event)) {
-    INSTANCE->event_queue.insert(event, event->priority);
+    INSTANCE->exec_queue.insert(event, event->priority);
     INSTANCE->update_maximum_queue_depth();   // Check the queue depth
     #if defined (__MANUVR_FREERTOS)
       unblockThread(kernel_pid);
@@ -450,9 +450,9 @@ int8_t Kernel::staticRaiseEvent(ManuvrRunnable* event) {
 * @return  true if the given event was aborted, false otherwise.
 */
 bool Kernel::abortEvent(ManuvrRunnable* event) {
-  if (!INSTANCE->event_queue.remove(event)) {
+  if (!INSTANCE->exec_queue.remove(event)) {
     // Didn't find it? Check  the isr_queue...
-    if (!INSTANCE->isr_event_queue.remove(event)) {
+    if (!INSTANCE->isr_exec_queue.remove(event)) {
       return false;
     }
   }
@@ -460,14 +460,14 @@ bool Kernel::abortEvent(ManuvrRunnable* event) {
 }
 
 
-// TODO: It would be bettter to put a semaphore on the event_queue and set it in the idle loop.
+// TODO: It would be bettter to put a semaphore on the exec_queue and set it in the idle loop.
 //       That way, we could check for it here, and have the (probable) possibility of not incurring
 //       the cost for merging these two queues if we don't have to.
 //             ---J. Ian Lindsay   Fri Jul 03 16:54:14 MST 2015
 int8_t Kernel::isrRaiseEvent(ManuvrRunnable* event) {
   int return_value = -1;
   maskableInterrupts(false);
-  return_value = isr_event_queue.insertIfAbsent(event, event->priority);
+  return_value = isr_exec_queue.insertIfAbsent(event, event->priority);
   maskableInterrupts(true);
   #if defined (__MANUVR_FREERTOS)
     unblockThread(kernel_pid);
@@ -505,7 +505,7 @@ ManuvrRunnable* Kernel::returnEvent(uint16_t code) {
 
 /**
 * This is the code that checks an incoming event for validity prior to inserting it
-*   into the event_queue. Checks for grammatical validity and idempotency should go
+*   into the exec_queue. Checks for grammatical validity and idempotency should go
 *   here.
 *
 * @param event The inbound event that we need to evaluate.
@@ -517,7 +517,7 @@ int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
     return -2;  // No undefined events.
   }
 
-  if (event_queue.contains(event)) {
+  if (exec_queue.contains(event)) {
     // Bail out with error, because this event (which is status-bearing) cannot be in the
     //   queue more than once.
     return -3;
@@ -525,9 +525,9 @@ int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
   
   // Those are the basic checks. Now for the advanced functionality...
   if (event->isIdempotent()) {
-    for (int i = 0; i < event_queue.size(); i++) {
+    for (int i = 0; i < exec_queue.size(); i++) {
       // No duplicate idempotent events allowed...
-      if (event_queue.get(i)->event_code == event->event_code) {
+      if (exec_queue.get(i)->event_code == event->event_code) {
         idempotent_blocks++;
         return -3;
       }
@@ -542,38 +542,38 @@ int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
 * This is where events go to die. This function should inspect the Event and send it
 *   to the appropriate place.
 *
-* @param active_event The event that has reached the end of its life-cycle.
+* @param active_runnable The event that has reached the end of its life-cycle.
 */
-void Kernel::reclaim_event(ManuvrRunnable* active_event) {
-  if (NULL == active_event) {
+void Kernel::reclaim_event(ManuvrRunnable* active_runnable) {
+  if (NULL == active_runnable) {
     return;
   }
   
-  if (schedules.contains(active_event)) {
+  if (schedules.contains(active_runnable)) {
     // This Runnable is still in the scheduler queue. Do not reclaim it.
     return;
   }
   
-  bool reap_current_event = active_event->eventManagerShouldReap();
+  bool reap_current_event = active_runnable->kernelShouldReap();
   
   #ifdef __MANUVR_DEBUG
   if (verbosity > 5) {
-    local_log.concatf("We will%s be reaping %s.\n", (reap_current_event ? "":" not"), active_event->getMsgTypeString());
+    local_log.concatf("We will%s be reaping %s.\n", (reap_current_event ? "":" not"), active_runnable->getMsgTypeString());
     Kernel::log(&local_log);
   }
   #endif // __MANUVR_DEBUG
 
   if (reap_current_event) {                   // If we are to reap this event...
-    delete active_event;                      // ...free() it...
+    delete active_runnable;                      // ...free() it...
     events_destroyed++;
     burden_of_specific++;                     // ...and note the incident.
   }
   else {                                      // If we are NOT to reap this event...
-    if (active_event->isManaged()) {
+    if (active_runnable->isManaged()) {
     }
-    else if (active_event->returnToPrealloc()) {   // ...is it because we preallocated it?
-      active_event->clearArgs();              // If so, wipe the Event...
-      preallocated.insert(active_event);      // ...and return it to the preallocate queue.
+    else if (active_runnable->returnToPrealloc()) {   // ...is it because we preallocated it?
+      active_runnable->clearArgs();              // If so, wipe the Event...
+      preallocated.insert(active_runnable);      // ...and return it to the preallocate queue.
     }                                         // Otherwise, we let it drop and trust some other class is managing it.
     #ifdef __MANUVR_DEBUG
     else {
@@ -589,14 +589,14 @@ void Kernel::reclaim_event(ManuvrRunnable* active_event) {
 
 
 // This is the splice into v2's style of event handling (callaheads).
-int8_t Kernel::procCallAheads(ManuvrRunnable *active_event) {
+int8_t Kernel::procCallAheads(ManuvrRunnable *active_runnable) {
   int8_t return_value = 0;
-  PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[active_event->event_code];
+  PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[active_runnable->event_code];
   if (NULL != ca_queue) {
     listenerFxnPtr current_fxn;
     for (int i = 0; i < ca_queue->size(); i++) {
       current_fxn = ca_queue->recycle();  // TODO: This is ugly for many reasons.
-      if (current_fxn(active_event)) {
+      if (current_fxn(active_runnable)) {
         return_value++;
       }
     }
@@ -605,14 +605,14 @@ int8_t Kernel::procCallAheads(ManuvrRunnable *active_event) {
 }
 
 // This is the splice into v2's style of event handling (callbacks).
-int8_t Kernel::procCallBacks(ManuvrRunnable *active_event) {
+int8_t Kernel::procCallBacks(ManuvrRunnable *active_runnable) {
   int8_t return_value = 0;
-  PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[active_event->event_code];
+  PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[active_runnable->event_code];
   if (NULL != cb_queue) {
     listenerFxnPtr current_fxn;
     for (int i = 0; i < cb_queue->size(); i++) {
       current_fxn = cb_queue->recycle();  // TODO: This is ugly for many reasons.
-      if (current_fxn(active_event)) {
+      if (current_fxn(active_runnable)) {
         return_value++;
       }
     }
@@ -642,53 +642,53 @@ int8_t Kernel::procIdleFlags() {
   int8_t return_value      = 0;   // Number of Events we've processed this call.
   uint16_t msg_code_local  = 0;   
 
-  serviceScheduledEvents();
+  serviceSchedules();
   
-  ManuvrRunnable *active_event = NULL;  // Our short-term focus.
+  ManuvrRunnable *active_runnable = NULL;  // Our short-term focus.
   uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
 
   globalIRQDisable();
-  while (isr_event_queue.size() > 0) {
-    active_event = isr_event_queue.dequeue();
+  while (isr_exec_queue.size() > 0) {
+    active_runnable = isr_exec_queue.dequeue();
 
-    if (0 == validate_insertion(active_event)) {
-      event_queue.insertIfAbsent(active_event, active_event->priority);
+    if (0 == validate_insertion(active_runnable)) {
+      exec_queue.insertIfAbsent(active_runnable, active_runnable->priority);
     }
-    else reclaim_event(active_event);
+    else reclaim_event(active_runnable);
   }
   globalIRQEnable();
 
-  active_event = NULL;   // Pedantic...
+  active_runnable = NULL;   // Pedantic...
 
   /* As long as we have an open event and we aren't yet at our proc ceiling... */
-  while (event_queue.hasNext() && should_run_another_event(return_value, profiler_mark)) {
-    active_event = event_queue.dequeue();       // Grab the Event and remove it in the same call.
-    msg_code_local = active_event->event_code;  // This gets used after the life of the event.
+  while (exec_queue.hasNext() && should_run_another_event(return_value, profiler_mark)) {
+    active_runnable = exec_queue.dequeue();       // Grab the Event and remove it in the same call.
+    msg_code_local = active_runnable->event_code;  // This gets used after the life of the event.
     
-    current_event = active_event;
+    current_event = active_runnable;
     
     // Chat and measure.
     #ifdef __MANUVR_DEBUG
-    if (verbosity >= 5) local_log.concatf("Servicing: %s\n", active_event->getMsgTypeString());
+    if (verbosity >= 5) local_log.concatf("Servicing: %s\n", active_runnable->getMsgTypeString());
     #endif
     
     profiler_mark_0 = micros();
 
-    procCallAheads(active_event);
+    procCallAheads(active_runnable);
     
     // Now we start notify()'ing subscribers.
     EventReceiver *subscriber;   // No need to assign.
     if (profiler_enabled) profiler_mark_1 = micros();
     
-    if (NULL != active_event->schedule_callback) {
+    if (NULL != active_runnable->schedule_callback) {
       // TODO: This is hold-over from the scheduler. Need to modernize it.
-      ((void (*)(void)) active_event->schedule_callback)();   // Call the schedule's service function.
+      ((void (*)(void)) active_runnable->schedule_callback)();   // Call the schedule's service function.
       if (profiler_enabled) profiler_mark_2 = micros();
       activity_count++;
     }
-    else if (NULL != active_event->specific_target) {
-      subscriber = active_event->specific_target;
-      switch (subscriber->notify(active_event)) {
+    else if (NULL != active_runnable->specific_target) {
+      subscriber = active_runnable->specific_target;
+      switch (subscriber->notify(active_runnable)) {
         case 0:   // The nominal case. No response.
           break;
         case -1:  // The subscriber choked. Figure out why. Technically, this is action. Case fall-through...
@@ -703,7 +703,7 @@ int8_t Kernel::procIdleFlags() {
       for (int i = 0; i < subscribers.size(); i++) {
         subscriber = subscribers.get(i);
         
-        switch (subscriber->notify(active_event)) {
+        switch (subscriber->notify(active_runnable)) {
           case 0:   // The nominal case. No response.
             break;
           case -1:  // The subscriber choked. Figure out why. Technically, this is action. Case fall-through...
@@ -716,33 +716,33 @@ int8_t Kernel::procIdleFlags() {
       }
     }
     
-    procCallBacks(active_event);
+    procCallBacks(active_runnable);
     
-    active_event->noteExecutionTime(profiler_mark_0, micros());
+    active_runnable->noteExecutionTime(profiler_mark_0, micros());
     
     if (0 == activity_count) {
       #ifdef __MANUVR_DEBUG
-      if (verbosity >= 3) local_log.concatf("\tDead event: %s\n", active_event->getMsgTypeString());
+      if (verbosity >= 3) local_log.concatf("\tDead event: %s\n", active_runnable->getMsgTypeString());
       #endif
       total_events_dead++;
     }
 
     /* Should we clean up the Event? */
-    bool clean_up_active_event = true;  // Defaults to 'yes'.
-    if (NULL != active_event->originator) {
-      if ((EventReceiver*) this != active_event->originator) {  // We don't want to invoke our own originator callback.
+    bool clean_up_active_runnable = true;  // Defaults to 'yes'.
+    if (NULL != active_runnable->originator) {
+      if ((EventReceiver*) this != active_runnable->originator) {  // We don't want to invoke our own originator callback.
         /* If the event has a valid originator, do the callback dance and take instruction
            from the return value. */
-        //   if (verbosity >=7) output.concatf("specific_event_callback returns %d\n", active_event->originator->callback_proc(active_event));
-        switch (active_event->originator->callback_proc(active_event)) {
+        //   if (verbosity >=7) output.concatf("specific_event_callback returns %d\n", active_runnable->originator->callback_proc(active_runnable));
+        switch (active_runnable->originator->callback_proc(active_runnable)) {
           case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
             #ifdef __MANUVR_DEBUG
-            if (verbosity > 5) local_log.concatf("Recycling %s.\n", active_event->getMsgTypeString());
+            if (verbosity > 5) local_log.concatf("Recycling %s.\n", active_runnable->getMsgTypeString());
             #endif
-            if (0 == validate_insertion(active_event)) {
-              event_queue.insert(active_event, active_event->priority);
+            if (0 == validate_insertion(active_runnable)) {
+              exec_queue.insert(active_runnable, active_runnable->priority);
               // This is the one case where we do NOT want the event reclaimed.
-              clean_up_active_event = false;
+              clean_up_active_runnable = false;
             }
             break;
           case EVENT_CALLBACK_RETURN_ERROR:       // Something went wrong. Should never occur.
@@ -751,29 +751,29 @@ int8_t Kernel::procIdleFlags() {
             // NOTE: No break;
           case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
             #ifdef __MANUVR_DEBUG
-            if (verbosity > 5) local_log.concatf("Dropping %s after running.\n", active_event->getMsgTypeString());
+            if (verbosity > 5) local_log.concatf("Dropping %s after running.\n", active_runnable->getMsgTypeString());
             #endif
             // NOTE: No break;
           case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
             // NOTE: No break;
           default:
-            //if (verbosity > 0) local_log.concatf("Event %s has no cleanup case.\n", active_event->getMsgTypeString());
+            //if (verbosity > 0) local_log.concatf("Event %s has no cleanup case.\n", active_runnable->getMsgTypeString());
             break;
         }
       }
       else {
-        //reclaim_event(active_event);
+        //reclaim_event(active_runnable);
       }
     }
     else {
       /* If there is no originator specified for the Event, we rely on the flags in the Event itself to
          decide if it should be reaped. If its memory is being managed by some other class, the reclaim_event()
-         fxn will simply remove it from the event_queue and consider the matter closed. */
+         fxn will simply remove it from the exec_queue and consider the matter closed. */
     }
     
     // All of the logic above ultimately informs this choice.
-    if (clean_up_active_event) {
-      reclaim_event(active_event);
+    if (clean_up_active_runnable) {
+      reclaim_event(active_runnable);
     }
 
     total_events++;
@@ -819,9 +819,9 @@ int8_t Kernel::procIdleFlags() {
       profiler_mark_2 = 0;  // Reset for next iteration.
     }
 
-    if (event_queue.size() > 30) {
+    if (exec_queue.size() > 30) {
       #ifdef __MANUVR_DEBUG
-      local_log.concatf("Depth %10d \t %s\n", event_queue.size(), ManuvrMsg::getMsgTypeString(msg_code_local));
+      local_log.concatf("Depth %10d \t %s\n", exec_queue.size(), ManuvrMsg::getMsgTypeString(msg_code_local));
       #endif
     }
 
@@ -944,7 +944,7 @@ void Kernel::printProfiler(StringBuilder* output) {
     int x = event_costs.size();
 
     TaskProfilerData::printDebugHeader(output);
-    for (int i = 0; i < event_costs.size(); i++) {
+    for (int i = 0; i < x; i++) {
       profiler_item = event_costs.get(i);
       stat_mode     = event_costs.getPriority(i);
       output->concatf("\t (%10d)\t", stat_mode);
@@ -999,7 +999,7 @@ void Kernel::printDebug(StringBuilder* output) {
   if (verbosity > 6) output->concatf("-- millis()                  0x%08x\n", millis());
   if (verbosity > 6) output->concatf("-- micros()                  0x%08x\n", micros());
 
-  output->concatf("-- Queue depth:              %d\n", event_queue.size());
+  output->concatf("-- Queue depth:              %d\n", exec_queue.size());
   output->concatf("-- Preallocation depth:      %d\n", preallocated.size());
   output->concatf("-- Total subscriber count:   %d\n", subscribers.size());
   output->concatf("-- Prealloc starves:         %u\n", (unsigned long) prealloc_starved);
@@ -1074,7 +1074,7 @@ int8_t Kernel::bootComplete() {
 int8_t Kernel::callback_proc(ManuvrRunnable *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
-  int8_t return_value = event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
+  int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
   
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
@@ -1090,11 +1090,10 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
 
 
 
-int8_t Kernel::notify(ManuvrRunnable *active_event) {
-  uint32_t temp_uint32 = 0;
+int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
   int8_t return_value = 0;
   
-  switch (active_event->event_code) {
+  switch (active_runnable->event_code) {
     case MANUVR_MSG_USER_DEBUG_INPUT:
       procDirectDebugInstruction(&last_user_input);
       return_value++;
@@ -1108,15 +1107,15 @@ int8_t Kernel::notify(ManuvrRunnable *active_event) {
       // String:     Firmware version   (IE: "1.5.4")
       // String:     Hardware version   (IE: "4")
       // String:     Extended detail    (User-defined)
-      if (0 == active_event->args.size()) {
+      if (0 == active_runnable->args.size()) {
         // We are being asked to self-describe.
-        active_event->addArg((uint32_t)    PROTOCOL_MTU);
-        active_event->addArg((const char*) PROTOCOL_VERSION);
-        active_event->addArg((const char*) IDENTITY_STRING);
-        active_event->addArg((const char*) VERSION_STRING);
-        active_event->addArg((const char*) HW_VERSION_STRING);
+        active_runnable->addArg((uint32_t)    PROTOCOL_MTU);
+        active_runnable->addArg((const char*) PROTOCOL_VERSION);
+        active_runnable->addArg((const char*) IDENTITY_STRING);
+        active_runnable->addArg((const char*) VERSION_STRING);
+        active_runnable->addArg((const char*) HW_VERSION_STRING);
         #ifdef EXTENDED_DETAIL_STRING
-          active_event->addArg((const char*) EXTENDED_DETAIL_STRING);
+          active_runnable->addArg((const char*) EXTENDED_DETAIL_STRING);
         #endif
         return_value++;
       }
@@ -1134,10 +1133,10 @@ int8_t Kernel::notify(ManuvrRunnable *active_event) {
       
     case MANUVR_MSG_SYS_ADVERTISE_SRVC:  // Some service is annoucing its arrival.
     case MANUVR_MSG_SYS_RETRACT_SRVC:    // Some service is annoucing its departure.
-      if (0 < active_event->argCount()) {
+      if (0 < active_runnable->argCount()) {
         EventReceiver* er_ptr; 
-        if (0 == active_event->getArgAs(&er_ptr)) {
-          if (MANUVR_MSG_SYS_ADVERTISE_SRVC == active_event->event_code) {
+        if (0 == active_runnable->getArgAs(&er_ptr)) {
+          if (MANUVR_MSG_SYS_ADVERTISE_SRVC == active_runnable->event_code) {
             subscribe((EventReceiver*) er_ptr);
           }
           else {
@@ -1148,10 +1147,10 @@ int8_t Kernel::notify(ManuvrRunnable *active_event) {
       break;
       
     case MANUVR_MSG_LEGEND_MESSAGES:     // Dump the message definitions.
-      if (0 == active_event->argCount()) {   // Only if we are seeing a request.
+      if (0 == active_runnable->argCount()) {   // Only if we are seeing a request.
         StringBuilder *tmp_sb = new StringBuilder();
         if (ManuvrMsg::getMsgLegend(tmp_sb) ) {
-          active_event->addArg(tmp_sb);
+          active_runnable->addArg(tmp_sb);
           return_value++;
         }
         else {
@@ -1167,7 +1166,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_event) {
     case MANUVR_MSG_SYS_ISSUE_LOG_ITEM:
       {
         StringBuilder *log_item;
-        if (0 == active_event->getArgAs(&log_item)) {
+        if (0 == active_runnable->getArgAs(&log_item)) {
           log_buffer.concatHandoff(log_item);
         }
       }
@@ -1185,7 +1184,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_event) {
     #endif
     
     default:
-      return_value += EventReceiver::notify(active_event);
+      return_value += EventReceiver::notify(active_runnable);
       break;
   }
   return return_value;
@@ -1313,21 +1312,6 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
         EventReceiver::raiseEvent(event);
         break;
   
-      case 'S':
-        if (temp_byte) {
-          ManuvrRunnable *nu_sched;
-          //nu_sched  = findNodeByPID(temp_byte);
-          //if (NULL != nu_sched) nu_sched->printDebug(&local_log);
-        }
-        else {
-          ManuvrRunnable *nu_sched;
-          for (int i = 0; i < schedules.size(); i++) {
-            nu_sched  = schedules.get(i);
-            if (NULL != nu_sched) nu_sched->printDebug(&local_log);
-          }
-        }
-        break;
-
       default:
         EventReceiver::procDirectDebugInstruction(input);
         break;
@@ -1468,7 +1452,7 @@ bool Kernel::addSchedule(ManuvrRunnable *obj) {
 *  will churn through all of them. The presumption is that they are 
 *  latency-sensitive.
 */
-int Kernel::serviceScheduledEvents() {
+int Kernel::serviceSchedules() {
   if (!boot_completed) return -1;
   int return_value = 0;
   

@@ -8,12 +8,12 @@
 
 
   /*
-  * This class defines an event that gets passed around between classes.
+  * This class defines a Runnable that gets passed around between classes.
   */
   class ManuvrRunnable : public ManuvrMsg {
     public:
-      EventReceiver*  originator;        // This is an optional ref to the class that raised this event.
-      EventReceiver*  specific_target;   // If the event is meant for a single class, put a pointer to it here.
+      EventReceiver*  originator;        // This is an optional ref to the class that raised this runnable.
+      EventReceiver*  specific_target;   // If the runnable is meant for a single class, put a pointer to it here.
       FunctionPointer schedule_callback; // Pointers to the schedule service function.
 
       int32_t         priority;          // Set the default priority for this Runnable
@@ -33,7 +33,7 @@
 
       int8_t repurpose(uint16_t code);
 
-      bool eventManagerShouldReap();
+      bool kernelShouldReap();
 
       int8_t execute();
       
@@ -80,7 +80,7 @@
       */
       inline bool profilingEnabled() {       return (prof_data != NULL); };
 
-      /* If this event is scheduled, aborts it. Returns true if the schedule was aborted. */
+      /* If this runnable is scheduled, aborts it. Returns true if the schedule was aborted. */
       bool abort();
 
       void profilingEnabled(bool enabled);
@@ -89,10 +89,10 @@
 
     private:
       TaskProfilerData* prof_data;  // If this schedule is being profiled, the ref will be here.
-      uint8_t  flags;               // Optional flags that might be important for an event.
+      uint8_t  flags;               // Optional flags that might be important for a runnable.
       bool     mem_managed;         // Set to true to cause the Kernel to not free().
       bool     scheduled;           // Set to true to cause the Kernel to not free().
-      bool     preallocated;        // Set to true to cause the Kernel to return this event to its prealloc.
+      bool     preallocated;        // Set to true to cause the Kernel to return this runnable to its prealloc.
 
       bool     thread_enabled;      // Is the schedule running?
       bool     thread_fire;         // Is the schedule to be executed?

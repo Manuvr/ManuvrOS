@@ -164,7 +164,7 @@ bool ManuvrRunnable::returnToPrealloc(bool nu_val) {
 *
 * @return true if the Kernel ought to free() this Event. False otherwise.
 */
-bool ManuvrRunnable::eventManagerShouldReap() {
+bool ManuvrRunnable::kernelShouldReap() {
   if (mem_managed || preallocated || scheduled) {
     return false;
   }
