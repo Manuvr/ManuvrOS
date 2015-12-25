@@ -117,7 +117,7 @@ MGC3130::MGC3130(int ts, int rst, uint8_t addr) {
   _reset_pin = (uint8_t) rst;
   
   _isr_read_event.specific_target = this;
-  _isr_read_event.callback        = this;
+  _isr_read_event.originator      = this;
   _isr_read_event.priority        = 3;
   _isr_read_event.isManaged(true);
 
@@ -714,8 +714,15 @@ const char* MGC3130::getReceiverName() {  return "MGC3130";  }
 int8_t MGC3130::bootComplete() {
   EventReceiver::bootComplete();
   init();
-  ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SENSOR_MGC3130_INIT);
-  __kernel->createSchedule(1200, 0, true, this, event);
+  ManuvrRunnable* init_runnable = Kernel::returnEvent(MANUVR_MSG_SENSOR_MGC3130_INIT);
+  
+  init_runnable->specific_target = (EventReceiver*) this;
+  init_runnable->alterScheduleRecurrence(0);
+  init_runnable->alterSchedulePeriod(1200);
+  init_runnable->autoClear(true);
+  init_runnable->enableSchedule(true);
+
+  __kernel->addSchedule(init_runnable);
   return 1;
 }
 
