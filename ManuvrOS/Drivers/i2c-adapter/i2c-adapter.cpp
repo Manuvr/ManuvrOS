@@ -36,6 +36,10 @@ volatile I2CAdapter* i2c = NULL;
 }
 #endif
 
+  // We need some internal events to allow communication back from the ISR.
+const MessageTypeDef i2c_message_defs[] = {
+  { MANUVR_MSG_I2C_QUEUE_READY, MSG_FLAG_IDEMPOTENT,  "I2C_QUEUE_READY", ManuvrMsg::MSG_ARGS_NONE }  // The i2c queue is ready for attention.
+};
 
 
 /**************************************************************************
@@ -56,12 +60,7 @@ void I2CAdapter::__class_initializer() {
 
   // Set a globalized refernece so we can hit the proper adapter from an ISR.
   i2c = this;
-  
-  // We need some internal events to allow communication back from the ISR.
-  const MessageTypeDef i2c_message_defs[] = {
-    { MANUVR_MSG_I2C_QUEUE_READY, MSG_FLAG_IDEMPOTENT,  "I2C_QUEUE_READY", ManuvrMsg::MSG_ARGS_NONE }  // The i2c queue is ready for attention.
-  };
-  
+    
   int mes_count = sizeof(i2c_message_defs) / sizeof(MessageTypeDef);
   ManuvrMsg::registerMessages(i2c_message_defs, mes_count);
 }
@@ -416,6 +415,7 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
   dev = dev_id;
 
   char *filename = (char *) alloca(24);
+  *filename = 0;
   if (sprintf(filename, "/dev/i2c-%d", dev_id) > 0) {
     dev = open(filename, O_RDWR);
     if (dev < 0) {

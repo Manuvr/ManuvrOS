@@ -40,9 +40,8 @@ Platforms that require it should be able to extend this driver for specific
 
 #elif defined (STM32F4XX)      // STM32F4
 
-#elif defined (__MK20DX128__)  // Teensy3
-
-#elif defined (__MK20DX256__)  // Teensy3.1
+#elif defined(__MK20DX256__) | defined(__MK20DX128__)  // Teensy3.0/3.1
+  Serial* ports[3] = {NULL, NULL, NULL};
 
 #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
