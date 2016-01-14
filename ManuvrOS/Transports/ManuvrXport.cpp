@@ -18,14 +18,17 @@ ManuvrXport::ManuvrXport() {
   xport_id           = ManuvrXport::TRANSPORT_ID_POOL++;
   _xport_flags       = 0;
   _xport_mtu         = PROTOCOL_MTU;
-  _pid               = 0;
   xport_state        = 0;
   bytes_sent         = 0;
   bytes_received     = 0;
   session            = NULL;
-
+  
   read_timeout_defer = false;
   pid_read_abort     = 0;
+
+  #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+    _thread_id       = 0;
+  #endif
 }
 
 

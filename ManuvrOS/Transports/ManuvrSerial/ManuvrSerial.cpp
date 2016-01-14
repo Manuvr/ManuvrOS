@@ -35,21 +35,19 @@ Platforms that require it should be able to extend this driver for specific
 #include "ManuvrOS/XenoSession/XenoSession.h"
 
 #include <ManuvrOS/Kernel.h>
+#include <ManuvrOS/Platform/Platform.h>
 
 
 #if defined (STM32F4XX)        // STM32F4
 
   
-#elif defined (__MK20DX128__)  // Teensy3
-
-
-#elif defined (__MK20DX256__)  // Teensy3.1
-
+#elif defined(__MK20DX256__) | defined(__MK20DX128__)  // Teensy3.0/3.1
+  Serial* ports[3] = {NULL, NULL, NULL};
 
 #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
   
-#else
+#elif defined(__MANUVR_LINUX)
   //Assuming a linux environment. Cross your fingers....
   // TODO: Need a #define for LINUX32/64 that is set upstream so we don't have to cross our fingers.
   //       ---J. Ian Lindsay   Thu Dec 03 03:33:35 MST 2015
@@ -60,23 +58,16 @@ Platforms that require it should be able to extend this driver for specific
   #include <sys/signal.h>
   #include <fstream>
   #include <iostream>
-
-
-  // TODO: This limits us to supporting a single instance. Same issue as in i2cAdapter.
-  //   A strategy for this needs to be formed.
-  //       ---J. Ian Lindsay   Thu Dec 03 03:31:04 MST 2015
-  struct termios termAttr;
-  struct sigaction serial_handler;
-  volatile ManuvrSerial *active_tty = NULL;  // TODO: We need to be able to service many ports...
   
   /*
-  * In a linux environment, we need a function outside of this class to catch signals.
-  * This is called when the serial port has something to say. 
+  * In a linux environment, we have threads. Use them to read serial ports.
   */
-  void tty_signal_handler(int status) {
-    if (NULL != active_tty) ((ManuvrSerial*) active_tty)->read_port();
+  void* tty_read_handler(void* active_tty) {
+    if (NULL != active_tty) ((ManuvrSerial*)active_tty)->read_port();
   }
 
+#else
+  // Unsupported platform
 #endif
 
 
@@ -129,8 +120,7 @@ void ManuvrSerial::__class_initializer() {
   pid_read_abort     = 0;
   _options           = 0;
   _sock              = 0;
-  _pid               = 0;
-    
+
   // Build some pre-formed Events.
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
   read_abort_event.isManaged(true);
@@ -164,7 +154,7 @@ int8_t ManuvrSerial::init() {
   
   #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
     
-  #else   //Assuming a linux environment. Cross your fingers....
+  #elif defined (__MANUVR_LINUX) // Linux environment
   if (_sock) {
     close(_sock);
   }
@@ -183,15 +173,6 @@ int8_t ManuvrSerial::init() {
     #endif
   set_xport_state(MANUVR_XPORT_STATE_INITIALIZED);
 
-  serial_handler.sa_handler = tty_signal_handler;
-  serial_handler.sa_flags = 0;
-  serial_handler.sa_restorer = NULL; 
-  sigaction(SIGIO, &serial_handler, NULL);
-
-  _pid  = getpid();
-  fcntl(_sock, F_SETOWN, _pid);               // This process owns the port.
-  fcntl(_sock, F_SETFL, O_NDELAY | O_ASYNC);  // Read returns immediately.
-
   tcgetattr(_sock, &termAttr);
   cfsetspeed(&termAttr, _baud_rate);
   // TODO: These choices should come from _options. Find a good API to emulate.
@@ -207,7 +188,12 @@ int8_t ManuvrSerial::init() {
   
   if (tcsetattr(_sock, TCSANOW, &termAttr) == 0) {
     set_xport_state(xport_state_modifier);
-    initialized(false);
+    
+    createThread(&_thread_id, NULL, tty_read_handler, (void*) this);
+    
+    initialized(true);
+    connected(true);
+    listening(true);
     #ifdef __MANUVR_DEBUG
       if (verbosity > 6) local_log.concatf("Port opened, and handler bound.\n");
     #endif //__MANUVR_DEBUG
@@ -258,25 +244,27 @@ int8_t ManuvrSerial::read_port() {
     
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
       
-    #else   //Assuming a linux environment. Cross your fingers....
-      int n = read(_sock, buf, 255);
-      int total_read = n;
-      while (n > 0) {
-        n = read(_sock, buf, 255);
-        total_read += n;
-      }
-  
-      if (total_read > 0) {
-        // Do stuff regarding the data we just read...
-        if (NULL != session) {
-          session->bin_stream_rx(buf, total_read);
+    #elif defined (__MANUVR_LINUX) // Linux with pthreads...
+      while (connected()) {
+        int n = read(_sock, buf, 255);
+        int total_read = n;
+        while (n > 0) {
+          n = read(_sock, buf, 255);
+          total_read += n;
         }
-        else {
-          ManuvrRunnable *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
-          event->addArg(_sock);
-          StringBuilder *nu_data = new StringBuilder(buf, total_read);
-          event->markArgForReap(event->addArg(nu_data), true);
-          Kernel::staticRaiseEvent(event);
+        
+        if (total_read > 0) {
+          // Do stuff regarding the data we just read...
+          if (NULL != session) {
+            session->bin_stream_rx(buf, total_read);
+          }
+          else {
+            ManuvrRunnable *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
+            event->addArg(_sock);
+            StringBuilder *nu_data = new StringBuilder(buf, total_read);
+            event->markArgForReap(event->addArg(nu_data), true);
+            Kernel::staticRaiseEvent(event);
+          }
         }
       }
     #endif

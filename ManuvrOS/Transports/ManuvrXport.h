@@ -58,7 +58,9 @@ For debuggability, the transport has a special mode for acting as a debug
 #include "../Kernel.h"
 #include "DataStructures/StringBuilder.h"
 
-
+#if defined(__MANUVR_LINUX)
+  #include <pthread.h>
+#endif
 
 /*
 * These are option flags for any transport. 
@@ -182,8 +184,11 @@ class ManuvrXport : public EventReceiver {
     
     uint16_t xport_id;
     uint8_t  xport_state;
-    int      _pid;
 
+    #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+      // Threaded platforms have a concept of threads...
+      unsigned long _thread_id;
+    #endif
 
     // TODO: This is preventing us from encapsulating more deeply.
     //   The reason it isn't done is because there are instance-specific nuances in behavior that have

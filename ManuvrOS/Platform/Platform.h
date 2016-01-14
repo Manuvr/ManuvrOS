@@ -47,6 +47,13 @@ This file is meant to contain a set of common functions that are typically platf
 #include <ManuvrOS/CommonConstants.h>
 #include <DataStructures/StringBuilder.h>
 
+// Conditional inclusion for different threading models...
+#if defined(__MANUVR_LINUX)
+  #include <pthread.h>
+#elif defined(__MANUVR_FREERTOS)
+  
+#endif
+
 
 class ManuvrRunnable;
 
@@ -108,6 +115,12 @@ volatile void seppuku();
 */
 volatile void reboot();
 volatile void shutdown();
+
+/*
+* Threading
+*/
+int createThread(unsigned long*, void*, ThreadFxnPtr, void*);
+
 
 /*
 * Misc

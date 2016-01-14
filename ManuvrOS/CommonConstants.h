@@ -20,6 +20,7 @@ There ought to be no inclusion in this file. It is the bottom.
 
   // Function-pointer definitions
   typedef void (*FunctionPointer) ();
+  typedef void *(*ThreadFxnPtr)    (void*);
 
 
 

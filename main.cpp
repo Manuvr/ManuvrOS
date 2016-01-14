@@ -223,7 +223,7 @@ int main(int argc, char *argv[]) {
   #endif
   
   #if defined (MANUVR_SUPPORT_SERIAL)
-    ManuvrSerial ser((const char*) "/dev/ttyACM0", 115200);
+    ManuvrSerial ser((const char*) "/dev/ttyUSB0", 9600);
     kernel->subscribe(&ser);
   #endif
 
