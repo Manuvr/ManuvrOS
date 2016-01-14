@@ -224,6 +224,7 @@ int main(int argc, char *argv[]) {
   
   #if defined (MANUVR_SUPPORT_SERIAL)
     ManuvrSerial ser((const char*) "/dev/ttyUSB0", 9600);
+    ser.nonSessionUsage(true);
     kernel->subscribe(&ser);
   #endif
 

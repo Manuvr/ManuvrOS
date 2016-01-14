@@ -247,23 +247,25 @@ int8_t ManuvrSerial::read_port() {
     #elif defined (__MANUVR_LINUX) // Linux with pthreads...
       while (connected()) {
         int n = read(_sock, buf, 255);
-        int total_read = n;
         while (n > 0) {
           n = read(_sock, buf, 255);
-          total_read += n;
-        }
-        
-        if (total_read > 0) {
-          // Do stuff regarding the data we just read...
-          if (NULL != session) {
-            session->bin_stream_rx(buf, total_read);
-          }
-          else {
-            ManuvrRunnable *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
-            event->addArg(_sock);
-            StringBuilder *nu_data = new StringBuilder(buf, total_read);
-            event->markArgForReap(event->addArg(nu_data), true);
-            Kernel::staticRaiseEvent(event);
+          bytes_received += n;
+          
+          if (n > 0) {
+            // Do stuff regarding the data we just read...
+            //if (NULL != session) {
+            //  session->bin_stream_rx(buf, n);
+            //}
+            //else {
+            //  ManuvrRunnable *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
+            //  event->addArg(_sock);
+              StringBuilder *nu_data = new StringBuilder(buf, n);
+              
+              
+              Kernel::log(nu_data);
+            //  event->markArgForReap(event->addArg(nu_data), true);
+            //  Kernel::staticRaiseEvent(event);
+            //}
           }
         }
       }
@@ -300,9 +302,9 @@ bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
     #elif defined (__MK20DX256__)  // Teensy3.1
     
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
-      
-    #else   //Assuming a linux environment. Cross your fingers....
+    #elif defined (__MANUVR_LINUX) // Linux  
       return (out_len == (int) write(_sock, out, out_len));
+    #else   // Unsupported.
     #endif
   }
   return false;
