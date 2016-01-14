@@ -62,3 +62,35 @@ void maskableInterrupts(bool enable) {
   }
 }
 
+
+/****************************************************************************************************
+* Threading                                                                                         *
+****************************************************************************************************/
+/**
+* On linux, we support pthreads. On microcontrollers, we support FreeRTOS.
+* This is the wrapper to create a new thread.
+*
+* @return The thread's return value.
+*/
+int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn, void* _args) {
+  #if defined(__MANUVR_LINUX)
+  return pthread_create(_thread_id, (const pthread_attr_t*) _something, _fxn, _args);
+  #endif
+  return -1;
+}
+
+/**
+* Wrapper for causing threads to sleep. This is NOT intended to be used as a delay
+*   mechanism, although that use-case will work. It is more for the sake of not
+*   burning CPU needlessly in polling-loops where it might be better-used elsewhere.
+*
+* If you are interested in delaying without suspending the entire thread, you should
+*   probably use interrupts instead. 
+*/
+void sleep_millis(unsigned long millis) {
+  #if defined(__MANUVR_LINUX)
+    struct timespec t = {0, millis* 1000000L}; 
+    nanosleep(&t, &t);
+  #endif
+}
+

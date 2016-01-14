@@ -50,6 +50,8 @@ This file is meant to contain a set of common functions that are typically platf
 // Conditional inclusion for different threading models...
 #if defined(__MANUVR_LINUX)
   #include <pthread.h>
+  #include <signal.h>
+  #include <sys/time.h>
 #elif defined(__MANUVR_FREERTOS)
   
 #endif
@@ -120,7 +122,7 @@ volatile void shutdown();
 * Threading
 */
 int createThread(unsigned long*, void*, ThreadFxnPtr, void*);
-
+void sleep_millis(unsigned long millis);
 
 /*
 * Misc

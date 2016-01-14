@@ -81,7 +81,6 @@ class ManuvrTCP : public ManuvrXport {
     int      _port_number;
     
     // Related to threading and pipes. This is linux-specific. 
-    int __pipe_ids[2];
     StringBuilder __io_buffer;
     int __parent_pid;
     int __blocking_pid;

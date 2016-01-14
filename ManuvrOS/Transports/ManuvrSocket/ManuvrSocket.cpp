@@ -35,11 +35,11 @@ Platforms that require it should be able to extend this driver for specific
 #include "ManuvrOS/XenoSession/XenoSession.h"
 
 #include <ManuvrOS/Kernel.h>
-
+#include <ManuvrOS/Platform/Platform.h>
 
 #if defined (STM32F4XX)        // STM32F4
 
-#else   //Assuming a linux environment. Cross your fingers....
+#elif defined (STM32F4XX)      // Linux environment
   #include <cstdio>
   #include <stdlib.h>
   #include <unistd.h>
@@ -48,7 +48,7 @@ Platforms that require it should be able to extend this driver for specific
   #include <fstream>
   #include <iostream>
   #include <sys/socket.h>
-
+#else   //Unsupportedness
 #endif
 
 

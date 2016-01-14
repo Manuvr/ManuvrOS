@@ -63,7 +63,10 @@ Platforms that require it should be able to extend this driver for specific
   * In a linux environment, we have threads. Use them to read serial ports.
   */
   void* tty_read_handler(void* active_tty) {
-    if (NULL != active_tty) ((ManuvrSerial*)active_tty)->read_port();
+    if (NULL != active_tty) {
+      ((ManuvrSerial*)active_tty)->read_port();
+    }
+    return NULL;
   }
 
 #else
@@ -245,29 +248,31 @@ int8_t ManuvrSerial::read_port() {
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
       
     #elif defined (__MANUVR_LINUX) // Linux with pthreads...
+      int n;
+      sigset_t set;
+      sigemptyset(&set);
+      sigaddset(&set, SIGVTALRM);
+      pthread_sigmask(SIG_BLOCK, &set, NULL);
+
       while (connected()) {
-        int n = read(_sock, buf, 255);
-        while (n > 0) {
-          n = read(_sock, buf, 255);
+        n = read(_sock, buf, 255);
+        if (n > 0) {
           bytes_received += n;
           
-          if (n > 0) {
-            // Do stuff regarding the data we just read...
-            //if (NULL != session) {
-            //  session->bin_stream_rx(buf, n);
-            //}
-            //else {
-            //  ManuvrRunnable *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
-            //  event->addArg(_sock);
-              StringBuilder *nu_data = new StringBuilder(buf, n);
-              
-              
-              Kernel::log(nu_data);
-            //  event->markArgForReap(event->addArg(nu_data), true);
-            //  Kernel::staticRaiseEvent(event);
-            //}
+          //Do stuff regarding the data we just read...
+          if (NULL != session) {
+            session->bin_stream_rx(buf, n);
+          }
+          else {
+            //ManuvrRunnable *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
+            //event->addArg(_sock);
+            StringBuilder *nu_data = new StringBuilder(buf, n);
+            Kernel::log(nu_data);
+            //event->markArgForReap(event->addArg(nu_data), true);
+            //Kernel::staticRaiseEvent(event);
           }
         }
+        sleep_millis(50);
       }
     #endif
   }

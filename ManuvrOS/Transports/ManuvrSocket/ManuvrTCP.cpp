@@ -33,11 +33,6 @@ This is basically only for linux for now.
 #include <arpa/inet.h>
 
 
-
-#define READ_PIPE  0
-#define WRITE_PIPE 1
-
-
 /****************************************************************************************************
 * Static initializers                                                                               *
 ****************************************************************************************************/
@@ -87,8 +82,6 @@ void ManuvrTCP::__class_initializer() {
   _options           = 0;
   _port_number       = 0;
   _sock              = 0;
-  __pipe_ids[READ_PIPE]  = -1;
-  __pipe_ids[WRITE_PIPE] = -1;
 
 
   // Build some pre-formed Events.
@@ -170,9 +163,6 @@ void ManuvrTCP::__class_initializer() {
 //  close(sock);
 //}
            
-
-volatile ManuvrTCP *active_socket = NULL;  // TODO: We need to be able to service many ports...
-
 
 void HandleClient(int sock, XenoSession* session) {
   unsigned char *buf = (unsigned char *) alloca(512);  // TODO: Arbitrary. ---J. Ian Lindsay   Thu Dec 03 03:49:08 MST 2015

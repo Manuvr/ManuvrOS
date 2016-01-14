@@ -256,23 +256,6 @@ volatile uint32_t getStackPointer() {
 
 
 /****************************************************************************************************
-* Threading                                                                                         *
-****************************************************************************************************/
-/**
-* On ARM, we support FreeRTOS. This is the wrapper to create a new thread.
-*
-* @return The thread's return value.
-*/
-int createThread(unsigned long* _thread_id, void* _something, void* _fxn, void* _args) {
-  #if defined(__MANUVR_FREERTOS)
-  return 0;   //TODO: Implement.
-  #else
-  return -1;
-  #endif
-}
-
-
-/****************************************************************************************************
 * Interrupt-masking                                                                                 *
 ****************************************************************************************************/
 

@@ -33,9 +33,7 @@ This file is meant to contain a set of common functions that are typically platf
 #include "Platform.h"
 #include <ManuvrOS/Kernel.h>
 
-#include <sys/time.h>
 #include <unistd.h>
-#include <signal.h>
 
 
 #ifdef __cplusplus
@@ -305,21 +303,6 @@ volatile uint32_t getStackPointer() {
   uint32_t test;  // Important to not do assignment here.
   test = (uint32_t) &test;  // Store the pointer.
   return test;
-}
-
-/****************************************************************************************************
-* Threading                                                                                         *
-****************************************************************************************************/
-/**
-* On linux, we support pthreads. This is the wrapper to create a new thread.
-*
-* @return The thread's return value.
-*/
-int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn, void* _args) {
-  #if defined(__MANUVR_LINUX)
-  return pthread_create(_thread_id, (const pthread_attr_t*) _something, _fxn, _args);
-  #endif
-  return -1;
 }
 
 
