@@ -301,7 +301,7 @@ volatile void jumpToBootloader() {
 * This means "Halt" on a base-metal build.
 * Never returns.
 */
-volatile void shutdown() {
+volatile void hardwareShutdown() {
   cli();
   while(true);
 }

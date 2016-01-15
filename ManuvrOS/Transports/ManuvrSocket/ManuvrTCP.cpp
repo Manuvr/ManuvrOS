@@ -30,7 +30,59 @@ This is basically only for linux for now.
 
 #include <ManuvrOS/Kernel.h>
 
-#include <arpa/inet.h>
+#if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
+  #include <arpa/inet.h>
+
+  // Threaded platforms will need this to compensate for a loss of ISR.
+  extern void* xport_read_handler(void* active_xport);
+  
+  
+  /*
+  * Since listening for connections on this transport involves blocking, we have a
+  *   thread dedicated to the task...
+  */
+  void* socket_listener_loop(void* active_xport) {
+    if (NULL != active_xport) {
+      ManuvrTCP* listening_inst = (ManuvrTCP*) active_xport;
+      StringBuilder output;
+      int      cli_sock;
+      struct sockaddr_in cli_addr;
+      while (listening_inst->listening()) {
+        unsigned int clientlen = sizeof(cli_addr);
+  
+        /* Wait for client connection */
+        if ((cli_sock = accept(listening_inst->getSockID(), (struct sockaddr *) &cli_addr, &clientlen)) < 0) {
+          output.concat("Failed to accept client connection.\n");
+        }
+        else {
+          ManuvrTCP* nu_connection = new ManuvrTCP(listening_inst, cli_sock, &cli_addr);
+
+          output.concat("Client connected: ");
+          output.concat((char*) inet_ntoa(cli_addr.sin_addr));
+          output.concat("\n");
+        }
+        Kernel::log(&output);
+        
+        for (uint16_t i = 0; i < sizeof(cli_addr);  i++) {
+          // Zero the sockaddr structure for next use. The new transport 
+          //   instance should have copied it by now.
+          *((uint8_t *) &cli_addr  + i) = 0;
+        }
+      }
+      // Close the listener...
+      // TODO: Is this all we need to do?   ---J. Ian Lindsay   Fri Jan 15 11:32:12 PST 2016
+      close(listening_inst->getSockID());
+    }
+    else {
+      Kernel::log("Tried to listen with a NULL transport.");
+    }
+    
+    return NULL;
+  }
+  
+#else
+  // No special globals needed for this platform.
+#endif
 
 
 /****************************************************************************************************
@@ -64,6 +116,31 @@ ManuvrTCP::ManuvrTCP(char* addr, int port, uint32_t opts) : ManuvrXport() {
   _options     = opts;
 }
 
+
+/**
+* This constructor is called by a listening instance of ManuvrTCP.
+*/
+ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in* nu_sockaddr) : ManuvrXport() {
+  __class_initializer();
+  _sock          = sock;
+  _addr          = listening_instance->_addr;
+  _port_number   = listening_instance->_port_number;
+  _options       = listening_instance->_options;
+
+  listening_instance->_connections.insert(this);  // TODO: This is starting to itch...
+  
+  // Setup a session 
+  // TODO: if needed...
+  session = new XenoSession(this);
+  __kernel->subscribe(session);
+
+  for (uint16_t i = 0; i < sizeof(_sockaddr);  i++) {
+    // Copy the sockaddr struct into this instance.
+    *((uint8_t *) &_sockaddr + i) = *(((uint8_t*)nu_sockaddr) + i);
+  }
+
+  createThread(&_thread_id, NULL, xport_read_handler, (void*) this);
+}
 
 
 /**
@@ -124,9 +201,8 @@ void ManuvrTCP::__class_initializer() {
   */
   
   // Zero the socket parameter structures. 
-  for (uint16_t i = 0; i < sizeof(cli_addr);  i++) {
-    *((uint8_t *) &serv_addr + i) = 0;
-    *((uint8_t *) &cli_addr  + i) = 0;
+  for (uint16_t i = 0; i < sizeof(_sockaddr);  i++) {
+    *((uint8_t *) &_sockaddr + i) = 0;
   }
 }
 
@@ -137,71 +213,6 @@ void ManuvrTCP::__class_initializer() {
 /****************************************************************************************************
 * Port I/O fxns                                                                                     *
 ****************************************************************************************************/
-
-
-// Original pejorated demo code. Is it useful to have a traffic mirror mode 
-//   for other Manuvrables?
-//
-//void HandleClient(int sock) {
-//  char buffer[255];
-//  int received = -1;
-//  /* Receive message */
-//  if ((received = recv(sock, buffer, 255, 0)) < 0) {
-//    Kernel::log("Failed to receive initial bytes from client");
-//  }
-//  /* Send bytes and check for more incoming data in loop */
-//  while (received > 0) {
-//    /* Send back received data */
-//    if (send(sock, buffer, received, 0) != received) {
-//      Kernel::log("Failed to send bytes to client");
-//    }
-//    /* Check for more data */
-//    if ((received = recv(sock, buffer, 255, 0)) < 0) {
-//      Kernel::log("Failed to receive additional bytes from client");
-//    }
-//  }
-//  close(sock);
-//}
-           
-
-void HandleClient(int sock, XenoSession* session) {
-  unsigned char *buf = (unsigned char *) alloca(512);  // TODO: Arbitrary. ---J. Ian Lindsay   Thu Dec 03 03:49:08 MST 2015
-
-  int received = -1;
-  /* Receive message */
-  if ((received = recv(sock, buf, 255, 0)) < 0) {
-    Kernel::log("Failed to receive initial bytes from client");
-  }
-  
-  StringBuilder output;
-  
-  /* Send bytes and check for more incoming data in loop */
-  while (received > 0) {
-    output.concatf("Sending %d bytes into session.\n", received);
-    
-    // Do stuff regarding the data we just read...
-    if (NULL != session) {
-      session->bin_stream_rx(buf, received);
-    }
-    else {
-      ManuvrRunnable *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
-      event->addArg(sock);
-      StringBuilder *nu_data = new StringBuilder(buf, received);
-      event->markArgForReap(event->addArg(nu_data), true);
-      Kernel::staticRaiseEvent(event);
-    }
-    Kernel::getInstance()->printDebug(&output);
-    Kernel::log(&output);
-
-    /* Check for more data */
-    if ((received = recv(sock, buf, 255, 0)) < 0) {
-      Kernel::log("Failed to receive additional bytes from client");
-    }
-  }
-  close(sock);
-}
-           
-
 
 int8_t ManuvrTCP::connect() {
   // We're being told to act as a client.
@@ -219,15 +230,15 @@ int8_t ManuvrTCP::listen() {
   
   in_addr_t temp_addr = inet_network(_addr);
   
-  serv_addr.sin_family      = AF_INET;
-  serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  //serv_addr.sin_addr.s_addr = temp_addr;
-  serv_addr.sin_port        = htons(_port_number);
+  _sockaddr.sin_family      = AF_INET;
+  _sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+  //_sockaddr.sin_addr.s_addr = temp_addr;
+  _sockaddr.sin_port        = htons(_port_number);
   
   _sock = socket(AF_INET, SOCK_STREAM, 0);        // Open the socket...
 
   /* Bind the server socket */
-  if (bind(_sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr))) {
+  if (bind(_sock, (struct sockaddr *) &_sockaddr, sizeof(_sockaddr))) {
     Kernel::log("Failed to bind the server socket.\n");
     return -1;
   }
@@ -237,47 +248,11 @@ int8_t ManuvrTCP::listen() {
     return -1;
   }
   
+  initialized(true);
   listening(true);
-
-  int child_pid = fork();
+  createThread(&_thread_id, NULL, socket_listener_loop, (void*) this);
   
-  if (0 == child_pid) {
-    // We are the child. We are listening for connections, and it is expected that we will block
-    //   while we wait for connections. We can't allow the main thread to bind to SIGIO.
-    StringBuilder output("Forked into PID ");
-    output.concat(child_pid);
-    output.concat("\n");
-    Kernel::log(&output);
-    
-    while (1) {
-      unsigned int clientlen = sizeof(cli_addr);
-
-      /* Wait for client connection */
-      if ((cli_sock = accept(_sock, (struct sockaddr *) &cli_addr, &clientlen)) < 0) {
-        output.concat("Failed to accept client connection.\n");
-      }
-      else {
-        output.concat("Client connected: ");
-        output.concat((char*) inet_ntoa(cli_addr.sin_addr));
-        output.concat("\n");
-      }
-      Kernel::log(&output);
-      
-      if (!session) {
-        session = new XenoSession(this);
-        __kernel->subscribe(session);
-      }
-      
-      HandleClient(cli_sock, session);
-      
-      for (uint16_t i = 0; i < sizeof(cli_addr);  i++) {
-        *((uint8_t *) &cli_addr  + i) = 0;
-      }
-    }
-  }
-  else {
-    Kernel::log("TCP Now listening.\n");
-  }
+  Kernel::log("TCP Now listening.\n");
   return 0;
 }
 
@@ -292,28 +267,30 @@ int8_t ManuvrTCP::reset() {
 int8_t ManuvrTCP::read_port() {
   if (connected()) {
     unsigned char *buf = (unsigned char *) alloca(512);
+    int n;
     
-      int n = read(_sock, buf, 255);
-      int total_read = n;
-      while (n > 0) {
-        n = read(_sock, buf, 255);
-        total_read += n;
-      }
-  
-      if (total_read > 0) {
+    while (connected()) {
+      n = read(_sock, buf, 255);
+      if (n > 0) {
+        bytes_received += n;
+
         // Do stuff regarding the data we just read...
         if (NULL != session) {
-          session->bin_stream_rx(buf, total_read);
+          session->bin_stream_rx(buf, bytes_received);
         }
         else {
           ManuvrRunnable *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
           event->addArg(_sock);
-          StringBuilder *nu_data = new StringBuilder(buf, total_read);
+          StringBuilder *nu_data = new StringBuilder(buf, bytes_received);
           event->markArgForReap(event->addArg(nu_data), true);
           Kernel::staticRaiseEvent(event);
         }
       }
-    
+      else {
+        // Don't thrash the CPU for no reason...
+        sleep_millis(20);
+      }
+    }
   }
   else if (verbosity > 1) local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
   
@@ -354,7 +331,7 @@ bool ManuvrTCP::write_port(int sock, unsigned char* out, int out_len) {
   }
   
   if (connected() | listening()) {
-    int bytes_written = (out_len == (int) send(cli_sock, out, out_len, 0));
+    int bytes_written = (out_len == (int) send(_sock, out, out_len, 0));
     Kernel::log("Send bytes back\n");
     if (bytes_written != out_len) {
       Kernel::log("Failed to send bytes to client");

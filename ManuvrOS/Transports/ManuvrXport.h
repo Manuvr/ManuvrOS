@@ -18,16 +18,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
-This driver is designed to give Manuvr platform-abstracted COM ports. By
-  this is meant generic asynchronous serial ports. On Arduino, this means
-  the Serial (or HardwareSerial) class. On linux, it means /dev/tty<x>.
-  It might also be a network socket.
-  
-Platforms that require it should be able to extend this driver for specific 
-  kinds of hardware support. For an example of this, I would refer you to
-  the RN42HID driver. I understand that this might seem "upside down"
-  WRT how drivers are more typically implemented, and it may change later on.
-  But for now, it seems like a good idea.  
+This driver is designed to give Manuvr platform-abstracted transports.
 
 XenoSessions are optionally established by this class, and broadcast to the
   rest of the system (MANUVR_MSG_SESS_ESTABLISHED). By the time that has
@@ -43,10 +34,6 @@ For non-session applications of this class, session-creation and management
   can be disabled. This would be appropriate in cases such as GPS, modems,
   and generally, anything that isn't manuvrable.
 
-Note that this class does not require a XenoSession pointer. If applicable
-  to a given transport, that should be handled in the class extending this 
-  one.
-
 For debuggability, the transport has a special mode for acting as a debug 
   console. 
 */
@@ -58,10 +45,7 @@ For debuggability, the transport has a special mode for acting as a debug
 #include "../Kernel.h"
 #include "DataStructures/StringBuilder.h"
 
-#if defined(__MANUVR_LINUX)
-  #include <pthread.h>
-#endif
-
+#include <ManuvrOS/Platform/Platform.h>
 
 /*
 * Notes about how transport flags are organized:

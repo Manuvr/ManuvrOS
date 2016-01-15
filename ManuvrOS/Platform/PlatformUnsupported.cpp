@@ -361,7 +361,7 @@ volatile void jumpToBootloader() {
 * Underlying system control.                                                                        *
 ****************************************************************************************************/
 
-volatile void shutdown() {
+volatile void hardwareShutdown() {
   // TODO: Actually shutdown the system.
 }
 

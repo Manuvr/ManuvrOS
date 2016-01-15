@@ -42,7 +42,7 @@ Platforms that require it should be able to extend this driver for specific
 
   
 #elif defined(__MK20DX256__) | defined(__MK20DX128__)  // Teensy3.0/3.1
-  Serial* ports[3] = {NULL, NULL, NULL};
+  Serial* ports[4] = {NULL, NULL, NULL, NULL};
 
 #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
@@ -72,18 +72,18 @@ Platforms that require it should be able to extend this driver for specific
 /**
 * Constructor.
 */
-ManuvrSerial::ManuvrSerial(char* tty_path, int b_rate) {
+ManuvrSerial::ManuvrSerial(char* tty_path, int b_rate) : ManuvrXport() {
   __class_initializer();
-  _addr     = tty_path;
+  _addr      = tty_path;
   _baud_rate = b_rate;
-  _options  = 0;
+  _options   = 0;
 }
 
 
 /**
 * Constructor.
 */
-ManuvrSerial::ManuvrSerial(char* tty_path, int b_rate, uint32_t opts) {
+ManuvrSerial::ManuvrSerial(char* tty_path, int b_rate, uint32_t opts) : ManuvrXport() {
   __class_initializer();
   _addr     = tty_path;
   _baud_rate = b_rate;
@@ -256,7 +256,9 @@ int8_t ManuvrSerial::read_port() {
             //Kernel::staticRaiseEvent(event);
           }
         }
-        sleep_millis(50);
+        else {
+          sleep_millis(50);
+        }
       }
     #endif
   }

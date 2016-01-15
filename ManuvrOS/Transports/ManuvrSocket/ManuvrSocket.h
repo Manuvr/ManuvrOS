@@ -19,7 +19,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 This driver is designed to give Manuvr platform-abstracted socket connection.
-This is basically only for linux.
+This is basically only for linux until it is needed in a smaller space.
   
 */
 
@@ -29,16 +29,20 @@ This is basically only for linux.
 
 #include "../ManuvrXport.h"
 
-#include <cstdio>
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <termios.h>
-#include <sys/signal.h>
-#include <fstream>
-#include <iostream>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#if defined(__MANUVR_LINUX)
+  #include <cstdio>
+  #include <stdlib.h>
+  #include <unistd.h>
+  #include <fcntl.h>
+  #include <termios.h>
+  #include <sys/signal.h>
+  #include <fstream>
+  #include <iostream>
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+#else
+  // No supportage.
+#endif
 
 
 
@@ -49,6 +53,7 @@ class ManuvrTCP : public ManuvrXport {
   public:
     ManuvrTCP(char* addr, int port);
     ManuvrTCP(char* addr, int port, uint32_t opts);
+    ManuvrTCP(ManuvrTCP* listening_instance, int nu_sock, struct sockaddr_in* nu_sockaddr);
     ~ManuvrTCP();
     
     /* Overrides from EventReceiver */
@@ -67,6 +72,7 @@ class ManuvrTCP : public ManuvrXport {
     bool write_port(int sock, unsigned char* out, int out_len);
     int8_t read_port();
 
+    inline int getSockID() {  return _sock; };
 
   protected:
     void __class_initializer();
@@ -75,7 +81,6 @@ class ManuvrTCP : public ManuvrXport {
   private:
     char*    _addr;
     int      _sock;
-    int      cli_sock;
     uint32_t _options;
 
     int      _port_number;
@@ -85,8 +90,9 @@ class ManuvrTCP : public ManuvrXport {
     int __parent_pid;
     int __blocking_pid;
 
-    struct sockaddr_in serv_addr;
-    struct sockaddr_in cli_addr;
+    struct sockaddr_in _sockaddr;
+
+    LinkedList<ManuvrTCP*> _connections;   // A list of client connections.
 };
 
 #endif   // __MANUVR_SOCKET_H__

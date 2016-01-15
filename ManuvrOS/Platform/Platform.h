@@ -116,7 +116,7 @@ volatile void seppuku();
 * Underlying system control.
 */
 volatile void reboot();
-volatile void shutdown();
+volatile void hardwareShutdown();
 
 /*
 * Threading
