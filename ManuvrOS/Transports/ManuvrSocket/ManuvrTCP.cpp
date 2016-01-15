@@ -56,6 +56,10 @@ This is basically only for linux for now.
         }
         else {
           ManuvrTCP* nu_connection = new ManuvrTCP(listening_inst, cli_sock, &cli_addr);
+          
+          ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
+          event->addArg((EventReceiver*) nu_connection);
+          Kernel::staticRaiseEvent(event);
 
           output.concat("Client connected: ");
           output.concat((char*) inet_ntoa(cli_addr.sin_addr));
@@ -128,17 +132,16 @@ ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in
   _options       = listening_instance->_options;
 
   listening_instance->_connections.insert(this);  // TODO: This is starting to itch...
-  
-  // Setup a session 
-  // TODO: if needed...
-  session = new XenoSession(this);
-  __kernel->subscribe(session);
 
   for (uint16_t i = 0; i < sizeof(_sockaddr);  i++) {
     // Copy the sockaddr struct into this instance.
     *((uint8_t *) &_sockaddr + i) = *(((uint8_t*)nu_sockaddr) + i);
   }
-
+  
+  // Inherrit the listener's configuration...
+  nonSessionUsage(listening_instance->nonSessionUsage());
+  
+  connected(true);  // TODO: Possibly not true....
   createThread(&_thread_id, NULL, xport_read_handler, (void*) this);
 }
 
@@ -147,6 +150,7 @@ ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in
 * Destructor
 */
 ManuvrTCP::~ManuvrTCP() {
+  __kernel->unsubscribe(this);
 }
 
 
@@ -252,7 +256,9 @@ int8_t ManuvrTCP::listen() {
   listening(true);
   createThread(&_thread_id, NULL, socket_listener_loop, (void*) this);
   
-  Kernel::log("TCP Now listening.\n");
+  local_log.concatf("TCP Now listening at %s:%d.\n", _addr, _port_number);
+
+  if (local_log.length() > 0) Kernel::log(&local_log);
   return 0;
 }
 
@@ -268,6 +274,7 @@ int8_t ManuvrTCP::read_port() {
   if (connected()) {
     unsigned char *buf = (unsigned char *) alloca(512);
     int n;
+    StringBuilder nu_data;
     
     while (connected()) {
       n = read(_sock, buf, 255);
@@ -279,11 +286,13 @@ int8_t ManuvrTCP::read_port() {
           session->bin_stream_rx(buf, bytes_received);
         }
         else {
-          ManuvrRunnable *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
-          event->addArg(_sock);
-          StringBuilder *nu_data = new StringBuilder(buf, bytes_received);
-          event->markArgForReap(event->addArg(nu_data), true);
-          Kernel::staticRaiseEvent(event);
+          //ManuvrRunnable *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
+          //event->addArg(_sock);
+          //StringBuilder *nu_data = new StringBuilder(buf, bytes_received);
+          //event->markArgForReap(event->addArg(nu_data), true);
+          //Kernel::staticRaiseEvent(event);
+          nu_data.concat(buf, n);
+          Kernel::log(&nu_data);
         }
       }
       else {

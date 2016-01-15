@@ -96,6 +96,7 @@ ManuvrSerial::ManuvrSerial(char* tty_path, int b_rate, uint32_t opts) : ManuvrXp
 * Destructor
 */
 ManuvrSerial::~ManuvrSerial() {
+  __kernel->unsubscribe(this);
 }
 
 
@@ -124,6 +125,8 @@ void ManuvrSerial::__class_initializer() {
 /****************************************************************************************************
 * Port I/O fxns                                                                                     *
 ****************************************************************************************************/
+
+
 
 int8_t ManuvrSerial::init() {
   uint32_t xport_state_modifier = MANUVR_XPORT_FLAG_CONNECTED | MANUVR_XPORT_FLAG_LISTENING | MANUVR_XPORT_FLAG_INITIALIZED;
@@ -250,8 +253,9 @@ int8_t ManuvrSerial::read_port() {
           else {
             //ManuvrRunnable *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
             //event->addArg(_sock);
-            StringBuilder *nu_data = new StringBuilder(buf, n);
-            Kernel::log(nu_data);
+            //StringBuilder *nu_data = new StringBuilder(buf, n);
+            StringBuilder nu_data(buf, n);
+            Kernel::log(&nu_data);
             //event->markArgForReap(event->addArg(nu_data), true);
             //Kernel::staticRaiseEvent(event);
           }

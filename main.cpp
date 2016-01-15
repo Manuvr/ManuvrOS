@@ -219,6 +219,7 @@ int main(int argc, char *argv[]) {
   // We need at least ONE transport to be useful...
   #if defined (MANUVR_SUPPORT_TCPSOCKET)
     ManuvrTCP tcp_srv((const char*) "127.0.0.1", 0xb00b);
+    tcp_srv.nonSessionUsage(true);
     kernel->subscribe(&tcp_srv);
   #endif
   
