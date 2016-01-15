@@ -62,26 +62,27 @@ For debuggability, the transport has a special mode for acting as a debug
   #include <pthread.h>
 #endif
 
-/*
-* These are option flags for any transport. 
-*/
-#define MANUVR_XPORT_FLAG_ALWAYS_CONNECTED 0x00000001
-#define MANUVR_XPORT_FLAG_NON_SESSION      0x00000002
-#define MANUVR_XPORT_FLAG_DEBUG_CONSOLE    0x00000004
-#define MANUVR_XPORT_FLAG_CONNECTED        0x00000008
-#define MANUVR_XPORT_FLAG_HAS_SESSION      0x00000010
 
 /*
-* States that a transport might be in. 
+* Notes about how transport flags are organized:
+* This class is virtual, but contains the private member _xport_flags. All extending transport
+*   classes are expected to store their own custom flags in this member via protected accessor.
+*   The high 16-bits of the flags member is used for states and options common to all transports.
 */
-#define MANUVR_XPORT_STATE_INITIALIZED     0b10000000  // The xport was present and init'd corrently.
-#define MANUVR_XPORT_STATE_CONNECTED       0b01000000  // The xport is active and able to move data.
-#define MANUVR_XPORT_STATE_BUSY            0b00100000  // The xport is moving something.
-#define MANUVR_XPORT_STATE_HAS_SESSION     0b00010000  // See note below. 
-#define MANUVR_XPORT_STATE_LISTENING       0b00001000  // We are listening for connections.
+
+/* State and option flags that apply to any transport...  */
+#define MANUVR_XPORT_FLAG_INITIALIZED      0x80000000  // The xport was present and init'd corrently.
+#define MANUVR_XPORT_FLAG_CONNECTED        0x40000000  // The xport is active and able to move data.
+#define MANUVR_XPORT_FLAG_BUSY             0x20000000  // The xport is moving something.
+#define MANUVR_XPORT_FLAG_HAS_SESSION      0x10000000  // See note below. 
+#define MANUVR_XPORT_FLAG_LISTENING        0x08000000  // We are listening for connections.
+#define MANUVR_XPORT_FLAG_IS_BRIDGED       0x04000000  // This transport instance is bridged to another.
+#define MANUVR_XPORT_FLAG_NON_SESSION      0x02000000
+#define MANUVR_XPORT_FLAG_DEBUG_CONSOLE    0x01000000
+#define MANUVR_XPORT_FLAG_ALWAYS_CONNECTED 0x00800000
 
 /*
-* Note about MANUVR_XPORT_STATE_HAS_SESSION:
+* Note about MANUVR_XPORT_FLAG_HAS_SESSION:
 * This might get cut. it ought to be sufficient to check if the session member is NULL.
 *
 * The behavior of this class, (and classes that extend it) ought to be as follows:
@@ -106,6 +107,10 @@ class ManuvrXport : public EventReceiver {
     // TODO: Is this transport used for non-session purposes? IE, GPS? 
     inline bool hasSession() {         return (_xport_flags & MANUVR_XPORT_FLAG_HAS_SESSION);  };
     inline XenoSession* getSession() { return session;  };
+
+    /* Transport bridging... */
+    inline bool isBridge() {           return (_xport_flags & MANUVR_XPORT_FLAG_IS_BRIDGED);  };
+    int8_t bridge(ManuvrXport*);
 
 
     /*
@@ -135,11 +140,11 @@ class ManuvrXport : public EventReceiver {
     /* Connection/Listen states */
     inline bool connected() {   return (_xport_flags & (MANUVR_XPORT_FLAG_CONNECTED | MANUVR_XPORT_FLAG_ALWAYS_CONNECTED));  }
     void connected(bool);
-    inline bool listening() {   return (_xport_flags & MANUVR_XPORT_STATE_LISTENING);  };
+    inline bool listening() {   return (_xport_flags & MANUVR_XPORT_FLAG_LISTENING);   };
     void listening(bool);
     
     /* Any required setup finished without problems? */
-    inline bool initialized() { return (xport_state & MANUVR_XPORT_STATE_INITIALIZED);  };
+    inline bool initialized() { return (_xport_flags & MANUVR_XPORT_FLAG_INITIALIZED); };
     void initialized(bool en);
 
     /* Is this transport used for non-session purposes? IE, GPS? */
@@ -174,7 +179,7 @@ class ManuvrXport : public EventReceiver {
     // Can also be used to poll the other side. Implementation is completely at the discretion
     //   any extending class. But generally, this feature is necessary.
     ManuvrRunnable read_abort_event;  // Used to timeout a read operation.
-    uint32_t pid_read_abort;       // Used to timeout a read operation.
+    //uint32_t pid_read_abort;       // Used to timeout a read operation.
     bool read_timeout_defer;       // Used to timeout a read operation.
 
     uint32_t _xport_mtu;      // The largest packet size we handle.
@@ -183,7 +188,6 @@ class ManuvrXport : public EventReceiver {
     uint32_t bytes_received;
     
     uint16_t xport_id;
-    uint8_t  xport_state;
 
     #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
       // Threaded platforms have a concept of threads...
@@ -202,8 +206,8 @@ class ManuvrXport : public EventReceiver {
     bool event_addresses_us(ManuvrRunnable*);   // Given a transport event, returns true if we need to act.
 
     // TODO: Should be private. provide_session() / reset() are the blockers.
-    inline void set_xport_state(uint8_t bitmask) {    xport_state = (bitmask | xport_state);    }
-    inline void unset_xport_state(uint8_t bitmask) {  xport_state = (~bitmask & xport_state);   }
+    inline void set_xport_state(uint32_t bitmask) {    _xport_flags = (bitmask  | _xport_flags);   }
+    inline void unset_xport_state(uint32_t bitmask) {  _xport_flags = (~bitmask & _xport_flags);   }
     
     // Mandatory override.
     virtual bool   write_port(unsigned char* out, int out_len) = 0;

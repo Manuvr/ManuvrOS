@@ -120,7 +120,6 @@ ManuvrSerial::~ManuvrSerial() {
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void ManuvrSerial::__class_initializer() {
-  pid_read_abort     = 0;
   _options           = 0;
   _sock              = 0;
 
@@ -142,7 +141,7 @@ void ManuvrSerial::__class_initializer() {
 ****************************************************************************************************/
 
 int8_t ManuvrSerial::init() {
-  uint8_t xport_state_modifier = MANUVR_XPORT_STATE_CONNECTED | MANUVR_XPORT_STATE_LISTENING | MANUVR_XPORT_STATE_INITIALIZED;
+  uint32_t xport_state_modifier = MANUVR_XPORT_FLAG_CONNECTED | MANUVR_XPORT_FLAG_LISTENING | MANUVR_XPORT_FLAG_INITIALIZED;
   #ifdef __MANUVR_DEBUG
   if (verbosity > 4) local_log.concatf("Resetting port %s...\n", _addr);
   #endif
@@ -174,7 +173,7 @@ int8_t ManuvrSerial::init() {
     #ifdef __MANUVR_DEBUG
   if (verbosity > 4) local_log.concatf("Opened port (%s) at %d\n", _addr, _baud_rate);
     #endif
-  set_xport_state(MANUVR_XPORT_STATE_INITIALIZED);
+  set_xport_state(MANUVR_XPORT_FLAG_INITIALIZED);
 
   tcgetattr(_sock, &termAttr);
   cfsetspeed(&termAttr, _baud_rate);

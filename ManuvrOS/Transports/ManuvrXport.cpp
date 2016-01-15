@@ -18,19 +18,48 @@ ManuvrXport::ManuvrXport() {
   xport_id           = ManuvrXport::TRANSPORT_ID_POOL++;
   _xport_flags       = 0;
   _xport_mtu         = PROTOCOL_MTU;
-  xport_state        = 0;
   bytes_sent         = 0;
   bytes_received     = 0;
   session            = NULL;
   
   read_timeout_defer = false;
-  pid_read_abort     = 0;
 
   #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
     _thread_id       = 0;
   #endif
 }
 
+
+
+/**
+* Calling this function with another transport as an argument will cause them to be bound into a
+*   bridge.
+* Both transports must be non-session, and have no other transports bridged.
+*/
+int8_t ManuvrXport::bridge(ManuvrXport* _xport) {
+  int8_t return_value = -1;
+  if (NULL != _xport) {
+    if (_xport != this) {
+      if (!hasSession() && !_xport->hasSession()) {
+        // TODO: At this point, we can create the bridge.
+        nonSessionUsage(true);
+        _xport->nonSessionUsage(true);
+        _xport_flags = _xport_flags | MANUVR_XPORT_FLAG_IS_BRIDGED;
+        return_value = 0;
+      }
+      else {
+        Kernel::log("Cannot bridge. One or both transports have sessions.");
+      }
+    }
+    else {
+      Kernel::log("Cannot bridge to self.");
+    }
+  }
+  else {
+    Kernel::log("Cannot bridge to a NULL transport.");
+  }
+  return return_value;
+}
 
 
 
@@ -109,7 +138,7 @@ int8_t ManuvrXport::provide_session(XenoSession* ses) {
   }
   session = ses;
   //session->setVerbosity(verbosity);
-  set_xport_state(MANUVR_XPORT_STATE_HAS_SESSION);
+  set_xport_state(MANUVR_XPORT_FLAG_HAS_SESSION);
   return 0;
 }
 
@@ -163,7 +192,7 @@ void ManuvrXport::listening(bool en) {
   }
   // TODO: Not strictly true. Unset connected? listening?
   // ---J. Ian Lindsay   Thu Dec 03 04:00:00 MST 2015
-  _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_STATE_LISTENING) : (_xport_flags & ~(MANUVR_XPORT_STATE_LISTENING));
+  _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_LISTENING) : (_xport_flags & ~(MANUVR_XPORT_FLAG_LISTENING));
 }
 
 
@@ -180,7 +209,7 @@ void ManuvrXport::initialized(bool en) {
   }
   // TODO: Not strictly true. Unset connected? listening?
   // ---J. Ian Lindsay   Thu Dec 03 04:00:00 MST 2015
-  _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_STATE_INITIALIZED) : (_xport_flags & ~(MANUVR_XPORT_STATE_INITIALIZED));
+  _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_INITIALIZED) : (_xport_flags & ~(MANUVR_XPORT_FLAG_INITIALIZED));
 }
 
 
@@ -234,7 +263,7 @@ bool ManuvrXport::event_addresses_us(ManuvrRunnable *event) {
 */
 void ManuvrXport::printDebug(StringBuilder *temp) {
   EventReceiver::printDebug(temp);
-  temp->concatf("Transport\n=======\n-- xport_state    0x%02x\n", xport_state);
+  temp->concatf("Transport\n=======\n-- _xport_flags   0x%08x\n", _xport_flags);
   temp->concatf("-- xport_id        0x%04x\n", xport_id);
   temp->concatf("-- bytes sent      %u\n", bytes_sent);
   temp->concatf("-- bytes received  %u\n\n", bytes_received);

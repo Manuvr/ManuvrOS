@@ -86,7 +86,7 @@ ManuvrSocket::~ManuvrSocket() {
 void ManuvrSocket::__class_initializer() {
   __class_initializer();
   xport_id           = ManuvrXport::TRANSPORT_ID_POOL++;
-  xport_state        = MANUVR_XPORT_STATE_UNINITIALIZED;
+  xport_state        = MANUVR_XPORT_FLAG_UNINITIALIZED;
   pid_read_abort     = 0;
   options            = 0;
   port_number        = 0;
@@ -108,32 +108,6 @@ void ManuvrSocket::__class_initializer() {
   
   pid_read_abort = __kernel->createSchedule(30, 0, false, this, &read_abort_event);
   __kernel->disableSchedule(pid_read_abort);
-}
-
-
-
-
-
-int8_t ManuvrSocket::provide_session(XenoSession* ses) {
-  if ((NULL != session) && (ses != session)) {
-    // If we are about to clobber an existing session, we need to free it
-    // first.
-    __kernel->unsubscribe(session);
-    delete session;
-    session = NULL;
-  }
-  session = ses;
-  //session->setVerbosity(verbosity);
-  set_xport_state(MANUVR_XPORT_STATE_HAS_SESSION);
-  return 0;
-}
-
-
-
-
-
-XenoSession* ManuvrSocket::getSession() {
-  return session;
 }
 
 
