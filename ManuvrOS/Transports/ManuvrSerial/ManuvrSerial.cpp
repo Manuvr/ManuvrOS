@@ -47,30 +47,15 @@ Platforms that require it should be able to extend this driver for specific
 #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
   
-#elif defined(__MANUVR_LINUX)
-  //Assuming a linux environment. Cross your fingers....
-  // TODO: Need a #define for LINUX32/64 that is set upstream so we don't have to cross our fingers.
-  //       ---J. Ian Lindsay   Thu Dec 03 03:33:35 MST 2015
+#elif defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
   #include <cstdio>
   #include <stdlib.h>
   #include <unistd.h>
-  #include <fcntl.h>
-  #include <sys/signal.h>
-  #include <fstream>
-  #include <iostream>
-  
-  /*
-  * In a linux environment, we have threads. Use them to read serial ports.
-  */
-  void* tty_read_handler(void* active_tty) {
-    if (NULL != active_tty) {
-      ((ManuvrSerial*)active_tty)->read_port();
-    }
-    return NULL;
-  }
 
+  // Threaded platforms will need this to compensate for a loss of ISR.
+  extern void* xport_read_handler(void* active_xport);
 #else
-  // Unsupported platform
+  // No special globals needed for this platform.
 #endif
 
 
@@ -191,7 +176,7 @@ int8_t ManuvrSerial::init() {
   if (tcsetattr(_sock, TCSANOW, &termAttr) == 0) {
     set_xport_state(xport_state_modifier);
     
-    createThread(&_thread_id, NULL, tty_read_handler, (void*) this);
+    createThread(&_thread_id, NULL, xport_read_handler, (void*) this);
     
     initialized(true);
     connected(true);

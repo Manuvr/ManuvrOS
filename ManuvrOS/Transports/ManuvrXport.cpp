@@ -3,6 +3,23 @@
 #include "ManuvrOS/XenoSession/XenoSession.h"
 
 
+#if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)  
+  /*
+  * In a threaded environment, we use threads to read ports.
+  */
+  void* xport_read_handler(void* active_xport) {
+    if (NULL != active_xport) {
+      ((ManuvrXport*)active_xport)->read_port();
+    }
+    return NULL;
+  }
+
+#else
+  // Threads are unsupported here.
+#endif
+
+
+
 
 /****************************************************************************************************
 * Static initializers                                                                               *

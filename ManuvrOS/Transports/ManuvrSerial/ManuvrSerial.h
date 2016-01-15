@@ -44,11 +44,14 @@ Platforms that require it should be able to extend this driver for specific
 
 #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
-#else
-  //Assuming a linux environment. Cross your fingers....
+#elif defined(__MANUVR_LINUX)
   #include <fcntl.h>
-  #include <termios.h>
   #include <sys/signal.h>
+  #include <fstream>
+  #include <iostream>
+  #include <termios.h>
+#else
+  // Unsupported platform.
 #endif
 
 
@@ -70,18 +73,13 @@ class ManuvrSerial : public ManuvrXport {
     int8_t listen();
     int8_t reset();
 
-    // TODO: This scope-promotion is not an accident. Need global handlers for ISR.
-    //   Sloppy sloppy sloppy....
-    //      ---J. Ian Lindsay   Thu Dec 03 04:46:27 MST 2015
     int8_t read_port();
+    bool   write_port(unsigned char* out, int out_len);
     
     
 
   protected:
     void __class_initializer();
-
-
-    bool write_port(unsigned char* out, int out_len);
 
 
   private:

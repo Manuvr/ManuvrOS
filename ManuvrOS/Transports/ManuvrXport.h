@@ -157,6 +157,10 @@ class ManuvrXport : public EventReceiver {
     inline bool isDebugConsole() {         return (_xport_flags & MANUVR_XPORT_FLAG_DEBUG_CONSOLE);  };
     void isDebugConsole(bool en);
 
+    // Mandatory override.
+    virtual bool   write_port(unsigned char* out, int out_len) = 0;
+    virtual int8_t read_port() = 0;
+
     
     /* We will override these functions in EventReceiver. */
     // TODO: I'm not sure I've evaluated the full impact of this sort of 
@@ -208,10 +212,6 @@ class ManuvrXport : public EventReceiver {
     // TODO: Should be private. provide_session() / reset() are the blockers.
     inline void set_xport_state(uint32_t bitmask) {    _xport_flags = (bitmask  | _xport_flags);   }
     inline void unset_xport_state(uint32_t bitmask) {  _xport_flags = (~bitmask & _xport_flags);   }
-    
-    // Mandatory override.
-    virtual bool   write_port(unsigned char* out, int out_len) = 0;
-    virtual int8_t read_port() = 0;
 
 
 
