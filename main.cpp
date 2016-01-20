@@ -59,10 +59,10 @@ void printHelp() {
 ****************************************************************************************************/
 #define U_INPUT_BUFF_SIZE   255    // How big a buffer for user-input?
 
-int pipe_ids[2] = {-1, -1};
+long unsigned int _thread_id = 0;;
 StringBuilder user_input;
 
-void userInputLoop() {
+void* spawnUIThread(void*) {
   bool running = true;
   char *input_text	= (char*) alloca(U_INPUT_BUFF_SIZE);	// Buffer to hold user-input.
   StringBuilder user_input;
@@ -83,8 +83,11 @@ void userInputLoop() {
         else {
           // This test is detined for input into the running kernel-> Send it back
           //   up the pipe.
-          write(pipe_ids[WRITE_PIPE], user_input.string(), user_input.length());
-          user_input.clear();
+          bool terminal = (user_input.split("\n") > 0);
+          if (terminal) {
+            kernel->accumulateConsoleInput((uint8_t*) user_input.position(0), strlen(user_input.position(0)), true);
+            user_input.drop_position(0);
+          }
         }
       }
       else {
@@ -97,98 +100,9 @@ void userInputLoop() {
       printHelp();
     }
   }
-  close(pipe_ids[WRITE_PIPE]);
+  return NULL;
 }
 
-
-/*
-* Returns the number of bytes read.
-*/ 
-int pipe_read(int fd, StringBuilder* sb) {
-  unsigned char* buffer = (unsigned char*) alloca(255);
-  int return_value = 0;
-  int x = read(fd, buffer, 255);
-  while (x > 0) {
-    return_value += x;
-    sb->concat(buffer, x);
-    x = read(fd, buffer, 255);
-  }
-  return return_value;
-}
-
-
-void child_sig_handler(int signo) {
-  switch (signo) {
-    case SIGQUIT:
-      exit(0);
-      break;
-    case SIGIO:
-      printf("Child received a SIGIO signal.\n");
-      break;
-    default:
-      printf("Child process got an unhandled signal: %d\n", signo);
-      break;
-  }
-}
-
-
-void parent_sig_handler(int signo) {
-  switch (signo) {
-    case SIGIO:
-      pipe_read(pipe_ids[READ_PIPE], &user_input);
-      break;
-    default:
-      printf("Parent process got an unhandled signal: %d\n", signo);
-      break;
-  }
-}
-
-
-void spawnUIThread() {
-  if (-1 == pipe(pipe_ids)) {
-    printf("Horrible failure. We can't pipe?!? Table-flip...\n");
-    exit(1);
-  }
-  else {
-    printf("Parent had these fds after pipe(): %d, %d\n", pipe_ids[0], pipe_ids[1]);
-    __shell_pid = fork();
-    if (-1 == __shell_pid) {
-      printf("Apparently we can't fork() on this platform. Table-flip...\n");
-      exit(1);
-    }
-    else if (0 == __shell_pid) {
-      // We are the child process.
-      close(pipe_ids[READ_PIPE]);
-      if (signal(SIGQUIT, child_sig_handler) == SIG_ERR) {
-        printf("Child process failed to bind SIGQUIT. Table-flip...\n");
-        exit(1);
-      }
-      if (signal(SIGIO, child_sig_handler) == SIG_ERR) {
-        printf("Child process failed to bind SIGIO. Table-flip...\n");
-        exit(1);
-      }
-      userInputLoop();
-      // When we return from userInputLoop(), we should either exit the program,
-      //   or continue on with no console thread if daemonize is desired.
-      kill(__main_pid, SIGQUIT);
-      exit(0);
-    }
-    else {
-      // We are the parent process. We want to make I/O on our read-end
-      //   non-blocking with a signal so we know to come read whatever
-      //   the user has typed.
-      close(pipe_ids[WRITE_PIPE]);
-      if (signal(SIGIO, parent_sig_handler) == SIG_ERR) {
-        printf("Parent process failed to bind SIGIO. Table-flip...\n");
-        exit(1);
-      }
-      fcntl(pipe_ids[READ_PIPE], F_SETOWN, getpid()); 
-      fcntl(pipe_ids[READ_PIPE], F_SETFL, O_NONBLOCK|O_ASYNC);
-      
-      close(0);  // Close parent's stdin so the child receives it.
-    }
-  }
-}
 
 
 
@@ -252,7 +166,7 @@ int main(int argc, char *argv[]) {
     }
     if ((strcasestr(argv[i], "--console")) || ((argv[i][0] == '-') && (argv[i][1] == 'c'))) {
       // The user wants a local stdio "Shell".
-      spawnUIThread();
+      createThread(&_thread_id, NULL, spawnUIThread, NULL);
     }
     if ((strcasestr(argv[i], "--quit")) || ((argv[i][0] == '-') && (argv[i][1] == 'q'))) {
       // Execute up-to-and-including boot. Then immediately shutdown.
@@ -280,15 +194,6 @@ int main(int argc, char *argv[]) {
       else {
         printf("%s", Kernel::log_buffer.position(0));
         Kernel::log_buffer.drop_position(0);
-      }
-    }
-    
-    // If anything came in from the user, pass it into the kernel->..
-    if (user_input.length()) {
-      bool terminal = (user_input.split("\n") > 0);
-      if (terminal) {
-        kernel->accumulateConsoleInput((uint8_t*) user_input.position(0), strlen(user_input.position(0)), true);
-        user_input.drop_position(0);
       }
     }
   }
