@@ -57,8 +57,8 @@ Platforms that require it should be able to extend this driver for specific
 
 class ManuvrSerial : public ManuvrXport {
   public:
-    ManuvrSerial(char* tty_path, int b_rate);
-    ManuvrSerial(char* tty_path, int b_rate, uint32_t opts);
+    ManuvrSerial(const char* tty_path, int b_rate);
+    ManuvrSerial(const char* tty_path, int b_rate, uint32_t opts);
     ~ManuvrSerial();
 
     /* Overrides from EventReceiver */
@@ -83,9 +83,9 @@ class ManuvrSerial : public ManuvrXport {
 
 
   private:
-    char*  _addr;
-    int    _sock;
-    uint32_t _options;
+    const char* _addr;
+    int         _sock;
+    uint32_t    _options;
 
     int _baud_rate;
     

@@ -72,7 +72,7 @@ Platforms that require it should be able to extend this driver for specific
 /**
 * Constructor.
 */
-ManuvrSerial::ManuvrSerial(char* tty_path, int b_rate) : ManuvrXport() {
+ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate) : ManuvrXport() {
   __class_initializer();
   _addr      = tty_path;
   _baud_rate = b_rate;
@@ -83,7 +83,7 @@ ManuvrSerial::ManuvrSerial(char* tty_path, int b_rate) : ManuvrXport() {
 /**
 * Constructor.
 */
-ManuvrSerial::ManuvrSerial(char* tty_path, int b_rate, uint32_t opts) : ManuvrXport() {
+ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate, uint32_t opts) : ManuvrXport() {
   __class_initializer();
   _addr     = tty_path;
   _baud_rate = b_rate;

@@ -74,7 +74,11 @@ void maskableInterrupts(bool enable) {
 */
 int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn, void* _args) {
   #if defined(__MANUVR_LINUX)
-  return pthread_create(_thread_id, (const pthread_attr_t*) _something, _fxn, _args);
+    return pthread_create(_thread_id, (const pthread_attr_t*) _something, _fxn, _args);
+  #elif defined(__MANUVR_FREERTOS)
+    // TODO: Make the task parameters 1-to-1 with pthreads.
+    xTaskCreate(debugDumpTaskFxn, "NewThread", 2000, (void*)kernel, 1, _thread_id);
+    return *_thread_id;
   #endif
   return -1;
 }
@@ -89,7 +93,7 @@ int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn,
 */
 void sleep_millis(unsigned long millis) {
   #if defined(__MANUVR_LINUX)
-    struct timespec t = {0, millis* 1000000L}; 
+    struct timespec t = {(long) (millis / 1000), (long) ((millis % 1000) * 1000000UL)}; 
     nanosleep(&t, &t);
   #endif
 }

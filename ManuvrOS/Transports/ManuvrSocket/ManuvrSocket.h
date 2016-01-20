@@ -51,8 +51,8 @@ This is basically only for linux until it is needed in a smaller space.
 //   that handles all the common-gound.
 class ManuvrTCP : public ManuvrXport {
   public:
-    ManuvrTCP(char* addr, int port);
-    ManuvrTCP(char* addr, int port, uint32_t opts);
+    ManuvrTCP(const char* addr, int port);
+    ManuvrTCP(const char* addr, int port, uint32_t opts);
     ManuvrTCP(ManuvrTCP* listening_instance, int nu_sock, struct sockaddr_in* nu_sockaddr);
     ~ManuvrTCP();
     
@@ -79,11 +79,11 @@ class ManuvrTCP : public ManuvrXport {
 
 
   private:
-    char*    _addr;
-    int      _sock;
-    uint32_t _options;
+    const char* _addr;
+    int         _sock;
+    uint32_t    _options;
 
-    int      _port_number;
+    int         _port_number;
     
     // Related to threading and pipes. This is linux-specific. 
     StringBuilder __io_buffer;

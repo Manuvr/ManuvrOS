@@ -208,6 +208,21 @@ void init_RNG() {
 
 
 /****************************************************************************************************
+* Data persistence                                                                                  *
+****************************************************************************************************/
+// Returns true if this platform can store data locally.
+bool persistCapable() {
+  return false;
+}
+
+
+// Returns the number of bytes availible to store data.
+unsigned long persistFree() {
+  return -1L;
+}
+
+
+/****************************************************************************************************
 * Time and date                                                                                     *
 ****************************************************************************************************/
 uint32_t rtc_startup_state = MANUVR_RTC_STARTUP_UNINITED;

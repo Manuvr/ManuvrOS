@@ -130,6 +130,15 @@ void sleep_millis(unsigned long millis);
 volatile uint32_t getStackPointer();   // Returns the value of the stack pointer.
 
 /*
+* Data-persistence functions. This is the API used by anything that wants to write
+*   formless data to a place on the device to be recalled on a different runtime.
+*/
+//int8_t persistData(const char* store_name, uint8_t* data, int length);
+bool persistCapable();        // Returns true if this platform can store data locally.
+unsigned long persistFree();  // Returns the number of bytes availible to store data.
+
+
+/*
 * Randomness
 */
 uint32_t randomInt();                        // Fetches one of the stored randoms and blocks until one is available.

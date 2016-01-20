@@ -101,7 +101,7 @@ This is basically only for linux for now.
 /**
 * Constructor.
 */
-ManuvrTCP::ManuvrTCP(char* addr, int port) : ManuvrXport() {
+ManuvrTCP::ManuvrTCP(const char* addr, int port) : ManuvrXport() {
   __class_initializer();
   _port_number = port;
   _addr        = addr;
@@ -111,7 +111,7 @@ ManuvrTCP::ManuvrTCP(char* addr, int port) : ManuvrXport() {
 }
 
 
-ManuvrTCP::ManuvrTCP(char* addr, int port, uint32_t opts) : ManuvrXport() {
+ManuvrTCP::ManuvrTCP(const char* addr, int port, uint32_t opts) : ManuvrXport() {
   __class_initializer();
   _port_number = port;
   _addr        = addr;
@@ -232,7 +232,7 @@ int8_t ManuvrTCP::listen() {
     return -1;
   }
   
-  in_addr_t temp_addr = inet_network(_addr);
+  //in_addr_t temp_addr = inet_network(_addr);
   
   _sockaddr.sin_family      = AF_INET;
   _sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
