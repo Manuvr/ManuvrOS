@@ -50,7 +50,7 @@ This is an example file for building firmware on linux. Anticipated target is a 
 #define HW_VERSION_STRING               "-1"
 
 // The version of Manuvr's protocol we are using.
-#define PROTOCOL_VERSION                   1
+#define PROTOCOL_VERSION             "0.0.1"
 
 
 /*

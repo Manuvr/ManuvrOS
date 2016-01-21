@@ -166,7 +166,6 @@ class XenoMessage {
 *   possible dialog, and bias the conversation in a given direction.
 */
 #define XENOSESSION_STATE_UNINITIALIZED   0x00  // Nothing has happened. Freshly-instantiated session.
-#define XENOSESSION_STATE_CONNECTED       0x01  // Transport has told us we are connected.
 #define XENOSESSION_STATE_PENDING_SETUP   0x04  // We are in the setup phase of the session.
 #define XENOSESSION_STATE_PENDING_AUTH    0x08  // Waiting on authentication.
 #define XENOSESSION_STATE_ESTABLISHED     0x0A  // Session is in the nominal state.
@@ -199,9 +198,7 @@ class XenoSession : public EventReceiver {
     ~XenoSession();
     
     /* Functions indended to be called by the transport. */
-    int8_t   bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
     int8_t   markMessageComplete(uint16_t id);
-    int8_t   markSessionConnected(bool);                            // The transport can inform us of its connection state.
 
     /* Functions that are indirectly called by counterparty requests for subscription. */
     int8_t tapMessageType(uint16_t code);     // Start getting broadcasts about a given message type.
@@ -263,7 +260,6 @@ class XenoSession : public EventReceiver {
     StringBuilder session_buffer;
     ManuvrRunnable sync_event;
 
-    uint32_t pid_sync_timer;    // Holds the PID for sync generation.
     uint32_t pid_ack_timeout;   // Holds the PID for message ack timeout.
 
     LinkedList<MessageTypeDef*> msg_relay_list;   // Which message codes will we relay to the counterparty?
@@ -284,10 +280,10 @@ class XenoSession : public EventReceiver {
     
     bool session_overflow_guard;
 
-    
+    int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
     int8_t scan_buffer_for_sync();
-    void mark_session_desync(uint8_t desync_source);
-    void mark_session_sync(bool pending);
+    void   mark_session_desync(uint8_t desync_source);
+    void   mark_session_sync(bool pending);
     
     /**
     * Mark the session with the given status.

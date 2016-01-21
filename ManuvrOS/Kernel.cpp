@@ -525,9 +525,11 @@ int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
   
   // Those are the basic checks. Now for the advanced functionality...
   if (event->isIdempotent()) {
+    ManuvrRunnable* working;
     for (int i = 0; i < exec_queue.size(); i++) {
       // No duplicate idempotent events allowed...
-      if (exec_queue.get(i)->event_code == event->event_code) {
+      working = exec_queue.get(i);
+      if ((working) && (working->event_code == event->event_code)) {
         idempotent_blocks++;
         return -3;
       }

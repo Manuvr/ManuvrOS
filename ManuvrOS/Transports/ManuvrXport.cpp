@@ -180,14 +180,14 @@ void ManuvrXport::connected(bool en) {
       // This will put it into the Event system so that auth and such can be handled cleanly.
       // Once the session sets up, it will broadcast itself as having done so.
       XenoSession* ses = new XenoSession(this);
-      ses->markSessionConnected(true);
-      
+
       // This will warn us later to notify others of our removal, if necessary.
       _xport_flags |= MANUVR_XPORT_FLAG_HAS_SESSION;
     
       ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
       event->addArg((EventReceiver*) ses);
       raiseEvent(event);
+      ses->sendSyncPacket();
     }
     else {
       // This is a disconnection event. We might want to cleanup all of our sessions
@@ -232,28 +232,6 @@ void ManuvrXport::initialized(bool en) {
 
 
 
-// Given a transport event, returns true if we need to act.
-bool ManuvrXport::event_addresses_us(ManuvrRunnable *event) {
-  uint16_t temp_uint16;
-  
-  if (event->argCount()) {
-    if (0 == event->getArgAs(&temp_uint16)) {
-      if (temp_uint16 == xport_id) {
-        // The first argument is our ID.
-        return true;
-      }
-    }
-    // Either not the correct arg form, or not our ID.
-    return false;
-  }
-  
-  // No arguments implies no first argument.
-  // No first argument implies event is addressed to 'all transports'.
-  // 'all transports' implies 'true'. We need to care.
-  return true;
-}
-
-
 
 
 
@@ -292,22 +270,81 @@ void ManuvrXport::printDebug(StringBuilder *temp) {
 }
 
 
+int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
+  int8_t return_value = 0;
+  
+  switch (active_event->event_code) {
+    case MANUVR_MSG_SESS_ORIGINATE_MSG:
+      break;
+
+    case MANUVR_MSG_XPORT_INIT:
+    case MANUVR_MSG_XPORT_RESET:
+    case MANUVR_MSG_XPORT_CONNECT:
+    case MANUVR_MSG_XPORT_DISCONNECT:
+    case MANUVR_MSG_XPORT_ERROR:
+    case MANUVR_MSG_XPORT_SESSION:
+    case MANUVR_MSG_XPORT_QUEUE_RDY:
+    case MANUVR_MSG_XPORT_CB_QUEUE_RDY:
+      break;
+
+    case MANUVR_MSG_XPORT_SEND:
+      if (NULL != session) {
+        if (connected()) {
+          StringBuilder* temp_sb;
+          if (0 == active_event->getArgAs(&temp_sb)) {
+            #ifdef __MANUVR_DEBUG
+            if (verbosity > 3) local_log.concatf("We about to print %d bytes to the transport.\n", temp_sb->length());
+            #endif
+            write_port(temp_sb->string(), temp_sb->length());
+          }
+          
+          //uint16_t xenomsg_id = session->nextMessage(&outbound_msg);
+          //if (xenomsg_id) {
+          //  if (write_port(outbound_msg.string(), outbound_msg.length()) ) {
+          //    if (verbosity > 2) local_log.concatf("There was a problem writing to %s.\n", _addr);
+          //  }
+          //  return_value++;
+          //}
+          #ifdef __MANUVR_DEBUG
+          else if (verbosity > 6) local_log.concat("Ignoring a broadcast that wasn't a StringBuilder.\n");
+          #endif
+        }
+        else {
+          #ifdef __MANUVR_DEBUG
+          if (verbosity > 3) local_log.concat("Session is chatting, but we don't appear to have a connection.\n");
+          #endif
+        }
+      }
+      return_value++;
+      break;
+      
+    case MANUVR_MSG_XPORT_RECEIVE:
+    case MANUVR_MSG_XPORT_RESERVED_0:
+    case MANUVR_MSG_XPORT_RESERVED_1:
+    case MANUVR_MSG_XPORT_SET_PARAM:
+    case MANUVR_MSG_XPORT_GET_PARAM:
+    
+    case MANUVR_MSG_XPORT_IDENTITY:
+      #ifdef __MANUVR_DEBUG
+      if (verbosity > 3) local_log.concatf("TransportID %d received an event that was addressed to it, but is not yet handled.\n", xport_id);
+      #endif
+
+    case MANUVR_MSG_XPORT_DEBUG:
+      printDebug(&local_log);
+      return_value++;
+      break;
+
+    default:
+      return_value += EventReceiver::notify(active_event);
+      break;
+  }
+  
+  if (local_log.length() > 0) Kernel::log(&local_log);
+  return return_value;
+}
 
 
-///**
-//* There is a NULL-check performed upstream for the scheduler member. So no need 
-//*   to do it again here.
-//*
-//* @return 0 on no action, 1 on action, -1 on failure.
-//*/
 //int8_t ManuvrXport::bootComplete() {
 //}
-//
-//
-//int8_t ManuvrXport::notify(ManuvrRunnable*) {
-//}
-//
-//
 //int8_t ManuvrXport::callback_proc(ManuvrRunnable *) {
 //}
-

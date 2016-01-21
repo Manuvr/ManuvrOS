@@ -257,21 +257,6 @@ int8_t XenoSession::markMessageComplete(uint16_t target_id) {
 
 
 
-int8_t XenoSession::markSessionConnected(bool conn_state) {
-  if (conn_state) {
-    mark_session_state(XENOSESSION_STATE_CONNECTED);
-    // Barrage the counterparty with sync until they reply in-kind.
-    mark_session_desync(XENOSESSION_STATE_SYNC_INITIATOR);
-  }
-  else {
-    mark_session_state(XENOSESSION_STATE_DISCONNECTED);
-    
-  }
-  return 0;
-}
-
-
-
 /****************************************************************************************************
 *  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
 * ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
@@ -378,6 +363,16 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
       
     case MANUVR_MSG_SESS_ORIGINATE_MSG:
       sendSyncPacket();
+      return_value++;
+      break;
+      
+    case MANUVR_MSG_XPORT_RECEIVE:
+      {
+        StringBuilder* buf;
+        if (0 == active_event->getArgAs(&buf)) {
+          bin_stream_rx(buf->string(), buf->length());
+        }
+      }
       return_value++;
       break;
       
@@ -715,8 +710,6 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
   switch (getState()) {   // Consider the bottom four bits of the session state.
     case XENOSESSION_STATE_UNINITIALIZED:
       break;
-    case XENOSESSION_STATE_CONNECTED:
-      break;
     case XENOSESSION_STATE_PENDING_SETUP:
       break;
     case XENOSESSION_STATE_PENDING_AUTH:
@@ -963,7 +956,6 @@ void XenoSession::printDebug(StringBuilder *output) {
 const char* XenoSession::getSessionStateString() {
   switch (getState()) {
     case XENOSESSION_STATE_UNINITIALIZED:    return "UNINITIALIZED";
-    case XENOSESSION_STATE_CONNECTED:        return "CONNECTED";
     case XENOSESSION_STATE_PENDING_SETUP:    return "PENDING_SETUP";
     case XENOSESSION_STATE_PENDING_AUTH:     return "PENDING_AUTH";
     case XENOSESSION_STATE_ESTABLISHED:      return "ESTABLISHED";
@@ -1002,7 +994,7 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
     case 'S':  // Send a mess of sync packets.
       initial_sync_count = 24;
       sync_event.alterScheduleRecurrence((int16_t) initial_sync_count);
-      sync_event.fireNow(true);
+      sync_event.enableSchedule(true);
       break;
     case 'i':  // Send a mess of sync packets.
       if (1 == temp_byte) {
@@ -1013,7 +1005,7 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
         printDebug(&local_log);
       }
       break;
-    case 'q':  // Manual message queue purge.s
+    case 'q':  // Manual message queue purge.
       purgeOutbound();
       purgeInbound();
       break;

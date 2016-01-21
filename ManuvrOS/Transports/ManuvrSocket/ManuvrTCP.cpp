@@ -43,6 +43,17 @@ This is basically only for linux for now.
   */
   void* socket_listener_loop(void* active_xport) {
     if (NULL != active_xport) {
+      sigset_t set;
+      sigemptyset(&set);
+      //sigaddset(&set, SIGIO);
+      sigaddset(&set, SIGQUIT);
+      sigaddset(&set, SIGHUP);
+      sigaddset(&set, SIGTERM);
+      sigaddset(&set, SIGVTALRM);
+      sigaddset(&set, SIGINT);
+      int s = pthread_sigmask(SIG_BLOCK, &set, NULL);
+      printf("Sigmask returns %d.\n", s);
+
       ManuvrTCP* listening_inst = (ManuvrTCP*) active_xport;
       StringBuilder output;
       int      cli_sock;
@@ -141,6 +152,7 @@ ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in
   // Inherrit the listener's configuration...
   nonSessionUsage(listening_instance->nonSessionUsage());
   
+  bootComplete();
   connected(true);  // TODO: Possibly not true....
 }
 
@@ -248,6 +260,7 @@ int8_t ManuvrTCP::connect() {
 
   initialized(true);
   connected(true);
+  
   return 0;
 }
 
@@ -282,7 +295,7 @@ int8_t ManuvrTCP::listen() {
   
   initialized(true);
   createThread(&_thread_id, NULL, socket_listener_loop, (void*) this);
-  
+
   listening(true);
   local_log.concatf("TCP Now listening at %s:%d.\n", _addr, _port_number);
 
@@ -292,6 +305,7 @@ int8_t ManuvrTCP::listen() {
 
 
 int8_t ManuvrTCP::reset() {
+  initialized(true);
   return 0;
 }
 
@@ -310,17 +324,17 @@ int8_t ManuvrTCP::read_port() {
       if (n > 0) {
         bytes_received += n;
 
+        printf("Rx'd %d bytes\n", n);
+        event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
+        nu_data = new StringBuilder(buf, n);
+        event->markArgForReap(event->addArg(nu_data), true);
+
         // Do stuff regarding the data we just read...
         if (NULL != session) {
-          session->bin_stream_rx(buf, n);
+          session->notify(event);
         }
         else {
-          event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
-          //event->addArg(_sock);
-          nu_data = new StringBuilder(buf, n);
-          event->markArgForReap(event->addArg(nu_data), true);
           raiseEvent(event);
-          Kernel::log(nu_data);
         }
       }
       else {
@@ -483,65 +497,13 @@ int8_t ManuvrTCP::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
   
   switch (active_event->event_code) {
-    case MANUVR_MSG_SESS_ORIGINATE_MSG:
-      break;
-
-    case MANUVR_MSG_XPORT_INIT:
-    case MANUVR_MSG_XPORT_RESET:
-    case MANUVR_MSG_XPORT_CONNECT:
-    case MANUVR_MSG_XPORT_DISCONNECT:
-    case MANUVR_MSG_XPORT_ERROR:
-    case MANUVR_MSG_XPORT_SESSION:
-    case MANUVR_MSG_XPORT_QUEUE_RDY:
-    case MANUVR_MSG_XPORT_CB_QUEUE_RDY:
-      break;
-
-    case MANUVR_MSG_XPORT_SEND:
-      if (NULL != session) {
-        if (connected()) {
-          StringBuilder* temp_sb;
-          if (0 == active_event->getArgAs(&temp_sb)) {
-            if (verbosity > 3) local_log.concatf("We about to print %d bytes to the socket.\n", temp_sb->length());
-            write_port(temp_sb->string(), temp_sb->length());
-          }
-          
-          //uint16_t xenomsg_id = session->nextMessage(&outbound_msg);
-          //if (xenomsg_id) {
-          //  if (write_port(outbound_msg.string(), outbound_msg.length()) ) {
-          //    if (verbosity > 2) local_log.concatf("There was a problem writing to %s.\n", tty_name);
-          //  }
-          //  return_value++;
-          //}
-          else if (verbosity > 6) local_log.concat("Ignoring a broadcast that wasn't meant for us.\n");
-        }
-        else if (verbosity > 3) local_log.concat("Session is chatting, but we don't appear to have a connection.\n");
-      }
-      return_value++;
-      break;
-      
-    case MANUVR_MSG_XPORT_RECEIVE:
-    case MANUVR_MSG_XPORT_RESERVED_0:
-    case MANUVR_MSG_XPORT_RESERVED_1:
-    case MANUVR_MSG_XPORT_SET_PARAM:
-    case MANUVR_MSG_XPORT_GET_PARAM:
-    
-    case MANUVR_MSG_XPORT_IDENTITY:
-      if (event_addresses_us(active_event) ) {
-        if (verbosity > 3) local_log.concat("The TCP class received an event that was addressed to it, that is not handled yet.\n");
-        active_event->printDebug(&local_log);
-        return_value++;
-      }
-      break;
-
     case MANUVR_MSG_XPORT_DEBUG:
-      if (event_addresses_us(active_event) ) {
-        printDebug(&local_log);
-        return_value++;
-      }
+      printDebug(&local_log);
+      return_value++;
       break;
 
     default:
-      return_value += EventReceiver::notify(active_event);
+      return_value += ManuvrXport::notify(active_event);
       break;
   }
   

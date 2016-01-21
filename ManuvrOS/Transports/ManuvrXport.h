@@ -89,8 +89,8 @@ class ManuvrXport : public EventReceiver {
 
     /* Members that deal with sessions. */
     // TODO: Is this transport used for non-session purposes? IE, GPS? 
-    inline bool hasSession() {         return (_xport_flags & MANUVR_XPORT_FLAG_HAS_SESSION);  };
-    inline XenoSession* getSession() { return session;  };
+    inline bool hasSession() {           return (_xport_flags & MANUVR_XPORT_FLAG_HAS_SESSION);  };
+    inline EventReceiver* getSession() { return session;  };
 
     /* Transport bridging... */
     inline bool isBridge() {           return (_xport_flags & MANUVR_XPORT_FLAG_IS_BRIDGED);  };
@@ -151,7 +151,7 @@ class ManuvrXport : public EventReceiver {
     //    choice.  Calltimes? vtable size? alignment? Fragility? Dig.
     virtual void   printDebug(StringBuilder *);
     //virtual int8_t bootComplete();
-    //virtual int8_t notify(ManuvrRunnable*);
+    virtual int8_t notify(ManuvrRunnable*);
     //virtual int8_t callback_proc(ManuvrRunnable *);
 
     // We can have up-to 65535 transport instances concurrently. This well-exceeds
@@ -162,7 +162,7 @@ class ManuvrXport : public EventReceiver {
 
 
   protected:
-    XenoSession *session;
+    EventReceiver *session;
     
     // Can also be used to poll the other side. Implementation is completely at the discretion
     //   any extending class. But generally, this feature is necessary.
@@ -190,8 +190,6 @@ class ManuvrXport : public EventReceiver {
     //       ---J. Ian Lindsay   Thu Dec 03 03:37:41 MST 2015
     virtual int8_t reapXenoSession(XenoSession*);   // Cleans up XenoSessions that were instantiated by this class.
     virtual int8_t provide_session(XenoSession*);   // Called whenever we instantiate a session.
-
-    bool event_addresses_us(ManuvrRunnable*);   // Given a transport event, returns true if we need to act.
 
     // TODO: Should be private. provide_session() / reset() are the blockers.
     inline void set_xport_state(uint32_t bitmask) {    _xport_flags = (bitmask  | _xport_flags);   }

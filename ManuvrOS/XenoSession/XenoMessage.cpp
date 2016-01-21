@@ -69,7 +69,7 @@ void XenoMessage::__class_initializer() {
   retries         = 0;     // How many times have we retried this packet?
   time_created = millis(); // Optional: What time did this message come into existance?
   millis_at_begin = 0;     // This is the milliseconds reading when we sent.
-  message_code        = 0;     // 
+  message_code    = 0;     // 
 }
 
 

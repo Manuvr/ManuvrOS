@@ -223,7 +223,11 @@ int8_t ManuvrSerial::reset() {
 
 int8_t ManuvrSerial::read_port() {
   if (connected()) {
-    unsigned char *buf = (unsigned char *) alloca(512);  // TODO: Arbitrary. ---J. Ian Lindsay   Thu Dec 03 03:49:08 MST 2015
+    unsigned char *buf = (unsigned char *) alloca(256);
+    int n;
+    ManuvrRunnable *event    = NULL;
+    StringBuilder  *nu_data  = NULL;
+
     #if defined (STM32F4XX)        // STM32F4
   
     #elif defined (__MK20DX128__)  // Teensy3
@@ -233,29 +237,21 @@ int8_t ManuvrSerial::read_port() {
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
       
     #elif defined (__MANUVR_LINUX) // Linux with pthreads...
-      int n;
-      sigset_t set;
-      sigemptyset(&set);
-      sigaddset(&set, SIGVTALRM);
-      pthread_sigmask(SIG_BLOCK, &set, NULL);
-
       while (connected()) {
         n = read(_sock, buf, 255);
         if (n > 0) {
           bytes_received += n;
           
+          event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
+          nu_data = new StringBuilder(buf, n);
+          event->markArgForReap(event->addArg(nu_data), true);
+
           //Do stuff regarding the data we just read...
           if (NULL != session) {
-            session->bin_stream_rx(buf, n);
+            session->notify(event);
           }
           else {
-            //ManuvrRunnable *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
-            //event->addArg(_sock);
-            //StringBuilder *nu_data = new StringBuilder(buf, n);
-            StringBuilder nu_data(buf, n);
-            Kernel::log(&nu_data);
-            //event->markArgForReap(event->addArg(nu_data), true);
-            //Kernel::staticRaiseEvent(event);
+            raiseEvent(event);
           }
         }
         else {
@@ -404,77 +400,15 @@ int8_t ManuvrSerial::callback_proc(ManuvrRunnable *event) {
 
 int8_t ManuvrSerial::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
-  
+
   switch (active_event->event_code) {
-    case MANUVR_MSG_SESS_ORIGINATE_MSG:
-      break;
-
-    case MANUVR_MSG_XPORT_INIT:
-    case MANUVR_MSG_XPORT_RESET:
-    case MANUVR_MSG_XPORT_CONNECT:
-    case MANUVR_MSG_XPORT_DISCONNECT:
-    case MANUVR_MSG_XPORT_ERROR:
-    case MANUVR_MSG_XPORT_SESSION:
-    case MANUVR_MSG_XPORT_QUEUE_RDY:
-    case MANUVR_MSG_XPORT_CB_QUEUE_RDY:
-      break;
-
-    case MANUVR_MSG_XPORT_SEND:
-      if (NULL != session) {
-        if (connected()) {
-          StringBuilder* temp_sb;
-          if (0 == active_event->getArgAs(&temp_sb)) {
-            #ifdef __MANUVR_DEBUG
-            if (verbosity > 3) local_log.concatf("We about to print %d bytes to the com port.\n", temp_sb->length());
-            #endif
-            write_port(temp_sb->string(), temp_sb->length());
-          }
-          
-          //uint16_t xenomsg_id = session->nextMessage(&outbound_msg);
-          //if (xenomsg_id) {
-          //  if (write_port(outbound_msg.string(), outbound_msg.length()) ) {
-          //    if (verbosity > 2) local_log.concatf("There was a problem writing to %s.\n", _addr);
-          //  }
-          //  return_value++;
-          //}
-          #ifdef __MANUVR_DEBUG
-          else if (verbosity > 6) local_log.concat("Ignoring a broadcast that wasn't meant for us.\n");
-          #endif
-        }
-        else {
-          #ifdef __MANUVR_DEBUG
-          if (verbosity > 3) local_log.concat("Session is chatting, but we don't appear to have a connection.\n");
-          #endif
-        }
-      }
-      return_value++;
-      break;
-      
-    case MANUVR_MSG_XPORT_RECEIVE:
-    case MANUVR_MSG_XPORT_RESERVED_0:
-    case MANUVR_MSG_XPORT_RESERVED_1:
-    case MANUVR_MSG_XPORT_SET_PARAM:
-    case MANUVR_MSG_XPORT_GET_PARAM:
-    
-    case MANUVR_MSG_XPORT_IDENTITY:
-      if (event_addresses_us(active_event) ) {
-        #ifdef __MANUVR_DEBUG
-        if (verbosity > 3) local_log.concat("The com port class received an event that was addressed to it, that is not handled yet.\n");
-        #endif
-        active_event->printDebug(&local_log);
-        return_value++;
-      }
-      break;
-
     case MANUVR_MSG_XPORT_DEBUG:
-      if (event_addresses_us(active_event) ) {
-        printDebug(&local_log);
-        return_value++;
-      }
+      printDebug(&local_log);
+      return_value++;
       break;
 
     default:
-      return_value += EventReceiver::notify(active_event);
+      return_value += ManuvrXport::notify(active_event);
       break;
   }
   
