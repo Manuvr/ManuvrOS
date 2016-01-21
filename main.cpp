@@ -61,9 +61,10 @@ void printHelp() {
 
 long unsigned int _thread_id = 0;;
 StringBuilder user_input;
+bool running = true;
+
 
 void* spawnUIThread(void*) {
-  bool running = true;
   char *input_text	= (char*) alloca(U_INPUT_BUFF_SIZE);	// Buffer to hold user-input.
   StringBuilder user_input;
   
@@ -100,6 +101,7 @@ void* spawnUIThread(void*) {
       printHelp();
     }
   }
+  
   return NULL;
 }
 
@@ -120,7 +122,7 @@ int main(int argc, char *argv[]) {
     // We want to see this data if we are a debug build.
     kernel->print_type_sizes();
     kernel->profiler(true);
-    kernel->createSchedule(1000, -1, false, kernelDebugDump);
+    //kernel->createSchedule(1000, -1, false, kernelDebugDump);
   #endif
 
 
@@ -132,15 +134,15 @@ int main(int argc, char *argv[]) {
   
   // We need at least ONE transport to be useful...
   #if defined (MANUVR_SUPPORT_TCPSOCKET)
-    ManuvrTCP tcp_srv((const char*) "127.0.0.1", 0xb00b);
-    tcp_srv.nonSessionUsage(true);
+    ManuvrTCP tcp_srv((const char*) "127.0.0.1", 2319);
+    ManuvrTCP tcp_cli((const char*) "127.0.0.1", 2319);
+    //tcp_srv.nonSessionUsage(true);
     kernel->subscribe(&tcp_srv);
+    kernel->subscribe(&tcp_cli);
   #endif
   
   #if defined (MANUVR_SUPPORT_SERIAL)
-    ManuvrSerial ser((const char*) "/dev/ttyUSB0", 9600);
-    ser.nonSessionUsage(true);
-    kernel->subscribe(&ser);
+    ManuvrSerial* ser = NULL;
   #endif
 
        
@@ -168,6 +170,17 @@ int main(int argc, char *argv[]) {
       // The user wants a local stdio "Shell".
       createThread(&_thread_id, NULL, spawnUIThread, NULL);
     }
+    if ((strcasestr(argv[i], "--serial")) && (argc > (i-2))) {
+      // The user wants us to listen to the given serial port.
+      #if defined (MANUVR_SUPPORT_SERIAL)
+        ser = new ManuvrSerial((const char*) argv[++i], 9600);
+        ser->nonSessionUsage(true);   // TODO: Hack to test. Remove and make dynmaic.
+        kernel->subscribe(ser);
+      #else
+        printf("%s was compiled without serial port support. Exiting...\n", argv[0]);
+        exit(1);
+      #endif
+    }
     if ((strcasestr(argv[i], "--quit")) || ((argv[i][0] == '-') && (argv[i][1] == 'q'))) {
       // Execute up-to-and-including boot. Then immediately shutdown.
       // This is how you can stack post-boot-operations into the kernel-> They will execute
@@ -181,9 +194,18 @@ int main(int argc, char *argv[]) {
   printf("%s: Booting Manuvr Kernel....\n", program_name);
   kernel->bootstrap();
 
+  // TODO: Horrible hackishness to test TCP...
+  #if defined (MANUVR_SUPPORT_TCPSOCKET)
+    tcp_srv.listen();
+    while (!tcp_srv.listening()) {}
+    //tcp_cli.connect();
+  #endif
+  // TODO: End horrible hackishness.
+  
+  
   // The main loop. Run forever.
   // TODO: It would be nice to be able to ask the kernel if we should continue running.
-  while (true) { 
+  while (running) { 
     kernel->procIdleFlags();
 
     // Move the kernel log to stdout.

@@ -179,8 +179,6 @@ int8_t ManuvrSerial::init() {
   if (tcsetattr(_sock, TCSANOW, &termAttr) == 0) {
     set_xport_state(xport_state_modifier);
     
-    createThread(&_thread_id, NULL, xport_read_handler, (void*) this);
-    
     initialized(true);
     connected(true);
     listening(true);
@@ -298,9 +296,12 @@ bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
     
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
     #elif defined (__MANUVR_LINUX) // Linux  
-      return (out_len == (int) write(_sock, out, out_len));
+      int bytes_written = (int) write(_sock, out, out_len);
     #else   // Unsupported.
     #endif
+    
+    bytes_sent += bytes_written;
+    return true;
   }
   return false;
 }

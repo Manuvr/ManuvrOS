@@ -194,6 +194,7 @@ void ManuvrXport::connected(bool en) {
       // that are outstanding.
     }
   }
+  createThread(&_thread_id, NULL, xport_read_handler, (void*) this);
 }
 
 
@@ -283,9 +284,11 @@ void ManuvrXport::printDebug(StringBuilder *temp) {
   temp->concatf("Transport\n=======\n-- _xport_flags   0x%08x\n", _xport_flags);
   temp->concatf("-- xport_id        0x%04x\n", xport_id);
   temp->concatf("-- bytes sent      %u\n", bytes_sent);
-  temp->concatf("-- bytes received  %u\n\n", bytes_received);
+  temp->concatf("-- bytes received  %u\n--\n", bytes_received);
+  temp->concatf("-- initialized     %s\n", (initialized() ? "yes" : "no"));
   temp->concatf("-- connected       %s\n", (connected() ? "yes" : "no"));
-  temp->concatf("-- has session     %s\n--\n", (hasSession() ? "yes" : "no"));
+  temp->concatf("-- listening       %s\n", (listening() ? "yes" : "no"));
+  temp->concatf("-- has session     %s\n", (hasSession() ? "yes" : "no"));
 }
 
 

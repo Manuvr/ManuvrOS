@@ -83,6 +83,12 @@ int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn,
   return -1;
 }
 
+
+int deleteThread(unsigned long _thread_id) {
+  return -1;
+}
+
+
 /**
 * Wrapper for causing threads to sleep. This is NOT intended to be used as a delay
 *   mechanism, although that use-case will work. It is more for the sake of not

@@ -142,7 +142,6 @@ ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in
   nonSessionUsage(listening_instance->nonSessionUsage());
   
   connected(true);  // TODO: Possibly not true....
-  createThread(&_thread_id, NULL, xport_read_handler, (void*) this);
 }
 
 
@@ -220,6 +219,35 @@ void ManuvrTCP::__class_initializer() {
 
 int8_t ManuvrTCP::connect() {
   // We're being told to act as a client.
+  if (listening()) {
+    Kernel::log("A TCP socket was told to connect while it is listening. Doing nothing.");
+    return -1;
+  }
+
+  if (connected()) {
+    Kernel::log("A TCP socket was told to connect while it already was. Doing nothing.");
+    return -1;
+  }
+
+  //in_addr_t temp_addr = inet_network(_addr);
+  
+  _sockaddr.sin_family      = AF_INET;
+  _sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+  //_sockaddr.sin_addr.s_addr = temp_addr;
+  _sockaddr.sin_port        = htons(_port_number);
+
+  _sock = socket(AF_INET, SOCK_STREAM, 0);        // Open the socket...
+  
+  /* Bind the server socket */
+  if (::connect(_sock, (struct sockaddr *) &_sockaddr, sizeof(_sockaddr))) {
+    StringBuilder log;
+    log.concatf("Failed to connect to %s:%d.\n", _addr, _port_number);
+    Kernel::log(&log);
+    return -1;
+  }
+
+  initialized(true);
+  connected(true);
   return 0;
 }
 
@@ -253,9 +281,9 @@ int8_t ManuvrTCP::listen() {
   }
   
   initialized(true);
-  listening(true);
   createThread(&_thread_id, NULL, socket_listener_loop, (void*) this);
   
+  listening(true);
   local_log.concatf("TCP Now listening at %s:%d.\n", _addr, _port_number);
 
   if (local_log.length() > 0) Kernel::log(&local_log);
@@ -264,7 +292,6 @@ int8_t ManuvrTCP::listen() {
 
 
 int8_t ManuvrTCP::reset() {
-  listen();
   return 0;
 }
 
@@ -272,27 +299,28 @@ int8_t ManuvrTCP::reset() {
 
 int8_t ManuvrTCP::read_port() {
   if (connected()) {
-    unsigned char *buf = (unsigned char *) alloca(512);
+    unsigned char *buf = (unsigned char *) alloca(256);
     int n;
-    StringBuilder nu_data;
-    
+    ManuvrRunnable *event    = NULL;
+    StringBuilder  *nu_data  = NULL;
+
     while (connected()) {
+      printf("Buffer is 0x%08x from socket %d\n", (unsigned long) buf, _sock);
       n = read(_sock, buf, 255);
       if (n > 0) {
         bytes_received += n;
 
         // Do stuff regarding the data we just read...
         if (NULL != session) {
-          session->bin_stream_rx(buf, bytes_received);
+          session->bin_stream_rx(buf, n);
         }
         else {
-          //ManuvrRunnable *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
+          event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
           //event->addArg(_sock);
-          //StringBuilder *nu_data = new StringBuilder(buf, bytes_received);
-          //event->markArgForReap(event->addArg(nu_data), true);
-          //Kernel::staticRaiseEvent(event);
-          nu_data.concat(buf, n);
-          Kernel::log(&nu_data);
+          nu_data = new StringBuilder(buf, n);
+          event->markArgForReap(event->addArg(nu_data), true);
+          raiseEvent(event);
+          Kernel::log(nu_data);
         }
       }
       else {
@@ -301,7 +329,9 @@ int8_t ManuvrTCP::read_port() {
       }
     }
   }
-  else if (verbosity > 1) local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
+  else if (verbosity > 1) {
+    local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
+  }
   
   if (local_log.length() > 0) Kernel::log(&local_log);
   return 0;
@@ -318,12 +348,13 @@ bool ManuvrTCP::write_port(unsigned char* out, int out_len) {
     return false;
   }
   
-  if (connected() | listening()) {
-    int bytes_written = (out_len == (int) send(_sock, out, out_len, 0));
-    
-    if (bytes_written != out_len) {
-      Kernel::log("Failed to send bytes to client");
+  if (connected()) {
+    int bytes_written = (int) write(_sock, out, out_len);
+    bytes_sent += bytes_written;
+    if (bytes_written == out_len) {
+      return true;
     }
+    Kernel::log("Failed to send bytes to client");
   }
   return false;
 }
@@ -339,12 +370,13 @@ bool ManuvrTCP::write_port(int sock, unsigned char* out, int out_len) {
     return false;
   }
   
-  if (connected() | listening()) {
-    int bytes_written = (out_len == (int) send(_sock, out, out_len, 0));
-    Kernel::log("Send bytes back\n");
-    if (bytes_written != out_len) {
-      Kernel::log("Failed to send bytes to client");
+  if (connected()) {
+    int bytes_written = (int) write(_sock, out, out_len);
+    bytes_sent += bytes_written;
+    if (bytes_written == out_len) {
+      return true;
     }
+    Kernel::log("Failed to send bytes to client");
   }
   return false;
 }

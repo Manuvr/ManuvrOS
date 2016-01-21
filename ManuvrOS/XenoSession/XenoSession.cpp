@@ -476,9 +476,9 @@ int8_t XenoSession::sendSyncPacket() {
     StringBuilder sync_packet((unsigned char*) SYNC_PACKET_BYTES, 4);
     owner->sendBuffer(&sync_packet);
     
-    ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
-    event->specific_target = owner;  //   event to be the transport that instantiated us.
-    raiseEvent(event);
+    //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
+    //event->specific_target = owner;  //   event to be the transport that instantiated us.
+    //raiseEvent(event);
   }
   return 0;
 }
@@ -501,9 +501,9 @@ int8_t XenoSession::sendKeepAlive() {
     ManuvrRunnable* ka_event = Kernel::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE);
     sendEvent(ka_event);
 
-    ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
-    event->specific_target = owner;  //   event to be the transport that instantiated us.
-    raiseEvent(event);
+    //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
+    //event->specific_target = owner;  //   event to be the transport that instantiated us.
+    //raiseEvent(event);
   }
   return 0;
 }
@@ -522,10 +522,10 @@ int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
   //outbound_messages.insert(nu_outbound_msg);
   
   // We are about to pass a message across the transport.
-  ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
-  event->originator      = this;   // We want the callback and the only receiver of this
-  event->specific_target = owner;  //   event to be the transport that instantiated us.
-  raiseEvent(event);
+  //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
+  //event->originator      = this;   // We want the callback and the only receiver of this
+  //event->specific_target = owner;  //   event to be the transport that instantiated us.
+  //raiseEvent(event);
   return 0;
 }
 

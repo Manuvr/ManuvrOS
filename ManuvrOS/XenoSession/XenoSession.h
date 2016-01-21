@@ -33,7 +33,6 @@ XenoSession is the class that manages dialog with other systems via some
 
 #define CHECKSUM_PRELOAD_BYTE 0x55    // Calculation of new checksums should start with this byte,
 
-#define XENO_MSG_MAXIMUM_PACKET_SIZE  10000
 
 /*
 * These are the stages that a XenoMessage passes through.
@@ -102,18 +101,18 @@ const uint8_t XENO_MSG_PROC_STATE_WRITING_REPLY          = 0x25;
 */
 class XenoMessage {
   public:
-    StringBuilder             buffer;  // Holds the intermediary form of the message that traverses the transport.
-    uint8_t   proc_state;     // Where are we in the flow of this message? See XENO_MSG_PROC_STATES
+    StringBuilder   buffer;        // Holds the intermediary form of the message that traverses the transport.
+    uint8_t         proc_state;    // Where are we in the flow of this message? See XENO_MSG_PROC_STATES
     
-    bool      expecting_ack;  // Does this message expect an ACK?
+    bool            expecting_ack; // Does this message expect an ACK?
     
-    ManuvrRunnable* event;  // Associates this XenoMessage to an event.
+    ManuvrRunnable* event;         // Associates this XenoMessage to an event.
 
-    uint32_t  bytes_received;     // How many bytes of this command have we received? Meaningless for the sender.
-    uint16_t  unique_id;     // 
+    uint32_t  bytes_received;      // How many bytes of this command have we received? Meaningless for the sender.
+    uint16_t  unique_id;     //
 
     
-    XenoMessage();                    // Typical use: building an inbound XemoMessage. 
+    XenoMessage();                  // Typical use: building an inbound XemoMessage. 
     XenoMessage(ManuvrRunnable*);   // Create a new XenoMessage with the given event as source data.
 
     ~XenoMessage();
