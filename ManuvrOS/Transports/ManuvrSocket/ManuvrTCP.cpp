@@ -52,7 +52,6 @@ This is basically only for linux for now.
       sigaddset(&set, SIGVTALRM);
       sigaddset(&set, SIGINT);
       int s = pthread_sigmask(SIG_BLOCK, &set, NULL);
-      printf("Sigmask returns %d.\n", s);
 
       ManuvrTCP* listening_inst = (ManuvrTCP*) active_xport;
       StringBuilder output;
@@ -319,12 +318,10 @@ int8_t ManuvrTCP::read_port() {
     StringBuilder  *nu_data  = NULL;
 
     while (connected()) {
-      printf("Buffer is 0x%08x from socket %d\n", (unsigned long) buf, _sock);
       n = read(_sock, buf, 255);
       if (n > 0) {
         bytes_received += n;
 
-        printf("Rx'd %d bytes\n", n);
         event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
         nu_data = new StringBuilder(buf, n);
         event->markArgForReap(event->addArg(nu_data), true);

@@ -42,19 +42,27 @@ XenoSession is the class that manages dialog with other systems via some
 /* This is what a sync packet looks like. Always. So common, we'll hard-code it. */
 const uint8_t XenoSession::SYNC_PACKET_BYTES[4] = {0x04, 0x00, 0x00, CHECKSUM_PRELOAD_BYTE};
 
+uint32_t XenoSession::_heap_instantiations = 0;
+uint32_t XenoSession::_heap_freeds         = 0;
 
+XenoMessage XenoSession::__prealloc_pool[XENOMESSAGE_PREALLOCATE_COUNT];
 
 XenoMessage* XenoSession::fetchPreallocation() {
   XenoMessage* return_value;
 
-  if (0 == preallocated.size()) {
-    // We have exhausted our preallocated pool. Note it.
-    return_value = new XenoMessage();
-    _heap_instantiations++;
+  int i = 0;
+  while (i < XENOMESSAGE_PREALLOCATE_COUNT) {
+    if (XENO_MSG_PROC_STATE_UNINITIALIZED == __prealloc_pool[i].proc_state) {
+      __prealloc_pool[i].proc_state = XENO_MSG_PROC_STATE_CLAIMED;
+      return &__prealloc_pool[i];
+    }
+    i++;
   }
-  else {
-    return_value = preallocated.dequeue();
-  }
+
+  // We have exhausted our preallocated pool. Note it.
+  return_value            = new XenoMessage();
+  return_value->proc_state = XENO_MSG_PROC_STATE_CLAIMED;
+  _heap_instantiations++;
   return return_value;
 }
 
@@ -62,7 +70,7 @@ XenoMessage* XenoSession::fetchPreallocation() {
 
 /**
 * At present, our criteria for preallocation is if the pointer address passed in
-*   falls within the range of our __prealloc array. I see nothing "non-portable"
+*   falls within the range of our __prealloc_pool array. I see nothing "non-portable"
 *   about this, it doesn't require a flag or class member, and it is fast to check.
 * However, this strategy only works for types that are never used in DMA or code
 *   execution on the STM32F4. It may work for other architectures (PIC32, x86?).
@@ -73,30 +81,27 @@ XenoMessage* XenoSession::fetchPreallocation() {
 *   up until we hit the boundaries of the STM32 CCM.
 *                                 ---J. Ian Lindsay   Mon Apr 13 10:51:54 MST 2015
 * 
-* @param Measurement* obj is the pointer to the object to be reclaimed.
+* @param XenoMessage* obj is the pointer to the object to be reclaimed.
 */
 void XenoSession::reclaimPreallocation(XenoMessage* obj) {
   uint32_t obj_addr = ((uint32_t) obj);
   uint32_t pre_min  = ((uint32_t) __prealloc_pool);
-  uint32_t pre_max  = pre_min + (sizeof(XenoMessage) * PREALLOCATED_XENOMESSAGES);
+  uint32_t pre_max  = pre_min + (sizeof(XenoMessage) * XENOMESSAGE_PREALLOCATE_COUNT);
   
   if ((obj_addr < pre_max) && (obj_addr >= pre_min)) {
     // If we are in this block, it means obj was preallocated. wipe and reclaim it.
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 3) {
+      StringBuilder local_log;
       local_log.concatf("reclaim via prealloc. addr: 0x%08x\n", obj_addr);
       Kernel::log(&local_log);
-    }
     #endif
     obj->wipe();
-    preallocated.insert(obj);
   }
   else {
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 3) {
+      StringBuilder local_log;
       local_log.concatf("reclaim via delete. addr: 0x%08x\n", obj_addr);
       Kernel::log(&local_log);
-    }
     #endif
     // We were created because our prealloc was starved. we are therefore a transient heap object.
     _heap_freeds++;
@@ -124,12 +129,6 @@ void XenoSession::reclaimPreallocation(XenoMessage* obj) {
 XenoSession::XenoSession(ManuvrXport* _xport) {
   __class_initializer();
 
-  /* Populate all the static preallocation slots for messages. */
-  for (uint16_t i = 0; i < XENOMESSAGE_PREALLOCATE_COUNT; i++) {
-    __prealloc_pool[i].wipe();
-    preallocated.insert(&__prealloc_pool[i]);
-  }
-
   // These are messages that we to relay from the rest of the system.
   tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
   tapMessageType(MANUVR_MSG_SESS_HANGUP);
@@ -148,9 +147,6 @@ XenoSession::XenoSession(ManuvrXport* _xport) {
   pid_ack_timeout           = 0;
   current_rx_message        = NULL;
   
-  _heap_instantiations = 0;
-  _heap_freeds = 0;
-  
   MAX_PARSE_FAILURES  = 3;  // How many failures-to-parse should we tolerate before SYNCing?
   MAX_ACK_FAILURES    = 3;  // How many failures-to-ACK should we tolerate before SYNCing?
   bootComplete();    // Because we are instantiated well after boot, we call this on construction.
@@ -168,8 +164,6 @@ XenoSession::~XenoSession() {
   purgeInbound();  // Need to do careful checks in here for open comm loops.
   purgeOutbound(); // Need to do careful checks in here for open comm loops.
 
-  while (preallocated.dequeue() != NULL);
-  
   Kernel::raiseEvent(MANUVR_MSG_SESS_HANGUP, NULL);
 }
 
@@ -906,7 +900,6 @@ void XenoSession::printDebug(StringBuilder *output) {
   output->concatf("--- Sequential parse failures:  %d\n", sequential_parse_failures);
   output->concatf("--- sequential_ack_failures:    %d\n--- \n", sequential_ack_failures);
   output->concatf("--- __prealloc_pool addres:     0x%08x\n", (uint32_t) __prealloc_pool);
-  output->concatf("--- prealloc depth:             %d\n", preallocated.size());
   output->concatf("--- _heap_instantiations:       %u\n", (unsigned long) _heap_instantiations);
   output->concatf("--- _heap_frees:                %u\n", (unsigned long) _heap_freeds);
   
@@ -941,10 +934,10 @@ void XenoSession::printDebug(StringBuilder *output) {
     }
   }
   
-  if (preallocated.size()) {
-    if (preallocated.get()->bytes_received > 0) {
+  if (current_rx_message) {
+    if (current_rx_message->bytes_received > 0) {
       output->concat("\n--- XenoMessage in process  ----------------------------\n");
-      preallocated.get()->printDebug(output);
+      current_rx_message->printDebug(output);
     }
   }
 }

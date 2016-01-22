@@ -39,6 +39,7 @@ XenoSession is the class that manages dialog with other systems via some
 * Each stage is traversed in sequence.
 */
 const uint8_t XENO_MSG_PROC_STATE_UNINITIALIZED          = 0x00;    // This message is formless.
+const uint8_t XENO_MSG_PROC_STATE_CLAIMED                = 0x01;    // A session has cliamed the message.
 const uint8_t XENO_MSG_PROC_STATE_SYNC_PACKET            = 0xEE;    // We parsed the stream and found a sync packet.
 const uint8_t XENO_MSG_PROC_STATE_AWAITING_REAP          = 0xFF;    // We should be torn down.
 
@@ -62,10 +63,9 @@ const uint8_t XENO_MSG_PROC_STATE_WRITING_REPLY          = 0x25;
 // Comment the define below to enable ALL messages to be exchanged via the XenoSession. The only possible
 // reason for this is debug.
 #define XENO_SESSION_IGNORE_NON_EXPORTABLES 1
-#define PREALLOCATED_XENOMESSAGES           5
 
-#define XENO_SESSION_MAX_QUEUE_PRINT    3    // This is only relevant for debug.
-#define XENOMESSAGE_PREALLOCATE_COUNT   4    // How many XenoMessages should the session preallocate?
+#define XENO_SESSION_MAX_QUEUE_PRINT        3    // This is only relevant for debug.
+#define XENOMESSAGE_PREALLOCATE_COUNT       4    // How many XenoMessages should the session preallocate?
 
 /*
 * All multibyte values are stored "little-endian".
@@ -127,7 +127,6 @@ class XenoMessage {
     int8_t retry();    // Asks the counterparty for a retransmission of this packet. Assumes good unique-id.
     int8_t fail();     // Informs the counterparty that the indicated message failed a high-level validity check.
     //reply(XenoMessage*); 
-    
     
     int feedBuffer(StringBuilder *buf);  // This is used to build an event from data that arrives in chunks.
     void provideEvent(ManuvrRunnable*);  // Call to make this XenoMessage outbound.
@@ -244,8 +243,8 @@ class XenoSession : public EventReceiver {
     static int contains_sync_pattern(uint8_t* buf, int len);
     static int locate_sync_break(uint8_t* buf, int len);
 
-    XenoMessage* fetchPreallocation();
-    void reclaimPreallocation(XenoMessage*);
+    static XenoMessage* fetchPreallocation();
+    static void reclaimPreallocation(XenoMessage*);
 
 
   protected:
@@ -265,8 +264,7 @@ class XenoSession : public EventReceiver {
     LinkedList<MessageTypeDef*> msg_relay_list;   // Which message codes will we relay to the counterparty?
     LinkedList<XenoMessage*> outbound_messages;   // Messages that are bound for the counterparty.
     LinkedList<XenoMessage*> inbound_messages;    // Messages that came from the counterparty.
-    PriorityQueue<XenoMessage*> preallocated;     // Messages that we've allocated ahead of time.
-    
+
     XenoMessage* current_rx_message;
     ManuvrXport* owner;
     
@@ -303,10 +301,10 @@ class XenoSession : public EventReceiver {
 
     /* Preallocation machinary. */ 
     // Prealloc starvation counters...
-    uint32_t _heap_instantiations;
-    uint32_t _heap_freeds;
+    static uint32_t _heap_instantiations;
+    static uint32_t _heap_freeds;
     
-    XenoMessage __prealloc_pool[PREALLOCATED_XENOMESSAGES];
+    static XenoMessage __prealloc_pool[XENOMESSAGE_PREALLOCATE_COUNT];
 };
 
 

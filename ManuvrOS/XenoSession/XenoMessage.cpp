@@ -30,7 +30,7 @@ XenoMessage is the class that is the interface between ManuvrRunnables and
 
 XenoMessage::XenoMessage() {
   __class_initializer();
-  proc_state          = XENO_MSG_PROC_STATE_RECEIVING;  // Implies we are receiving.
+  proc_state          = XENO_MSG_PROC_STATE_UNINITIALIZED;
   event               = NULL;  // Associates this XenoMessage to an event.
   unique_id           = 0;     //
 }
@@ -60,7 +60,7 @@ XenoMessage::~XenoMessage() {
 
 
 void XenoMessage::__class_initializer() {
-  bytes_total     = 0;     // How many bytes does this command occupy?
+  bytes_total     = 0;     // How many bytes does this message occupy?
   arg_count       = 0;
   checksum_i      = 0;     // The checksum of the data that we receive.
   checksum_c      = CHECKSUM_PRELOAD_BYTE;     // The checksum of the data that we calculate.
@@ -131,7 +131,7 @@ void XenoMessage::wipe() {
       delete event;
     }
   }
-  proc_state = XENO_MSG_PROC_STATE_RECEIVING;  // Implies we are receiving.
+  proc_state = XENO_MSG_PROC_STATE_UNINITIALIZED;
 }
 
 
@@ -274,6 +274,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
 
   switch (proc_state) {
     case XENO_MSG_PROC_STATE_UNINITIALIZED:
+    case XENO_MSG_PROC_STATE_CLAIMED:
       //output.concatf("XENO_MSG_PROC_STATE_UNINITIALIZED is getting bytes. Slopppy...\n");
       proc_state = XENO_MSG_PROC_STATE_RECEIVING;
     case XENO_MSG_PROC_STATE_RECEIVING:

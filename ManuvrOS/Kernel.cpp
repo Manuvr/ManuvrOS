@@ -684,7 +684,10 @@ int8_t Kernel::procIdleFlags() {
     
     if (NULL != active_runnable->schedule_callback) {
       // TODO: This is hold-over from the scheduler. Need to modernize it.
-      ((void (*)(void)) active_runnable->schedule_callback)();   // Call the schedule's service function.
+      StringBuilder temp_log;
+      active_runnable->printDebug(&temp_log);
+      printf("\n\n%s\n", temp_log.string());
+      ((FunctionPointer) active_runnable->schedule_callback)();   // Call the schedule's service function.
       if (profiler_enabled) profiler_mark_2 = micros();
       activity_count++;
     }
@@ -1184,7 +1187,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
     case MANUVR_MSG_UNBLOCK_THREAD:
       break;
     #endif
-    
+
     default:
       return_value += EventReceiver::notify(active_runnable);
       break;

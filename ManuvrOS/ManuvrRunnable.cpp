@@ -81,7 +81,6 @@ ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac,
   autoclear           = ac;
 
   originator          = ori;   // This constructor uses the EventReceiver callback...
-  schedule_callback   = NULL;
 }
 
 
@@ -103,11 +102,12 @@ ManuvrRunnable::~ManuvrRunnable(void) {
 *   repurposed many times, doing any sort of init in the constructor should probably be avoided.
 */
 void ManuvrRunnable::__class_initializer() {
-  flags           = 0x00;  // TODO: Optimistic about collapsing the bools into this. Or make gcc do it.
-  originator      = NULL;
-  specific_target = NULL;
-  prof_data       = NULL;
-  priority        = EVENT_PRIORITY_DEFAULT;
+  flags              = 0x00;  // TODO: Optimistic about collapsing the bools into this. Or make gcc do it.
+  originator         = NULL;
+  specific_target    = NULL;
+  prof_data          = NULL;
+  schedule_callback  = NULL;
+  priority           = EVENT_PRIORITY_DEFAULT;
   
   // These things have implications for memory management, which is why repurpose() doesn't touch them.
   mem_managed     = false;
@@ -123,10 +123,11 @@ void ManuvrRunnable::__class_initializer() {
 * @return 0 on success, or appropriate failure code.
 */
 int8_t ManuvrRunnable::repurpose(uint16_t code) {
-  flags           = 0x00;
-  originator      = NULL;
-  specific_target = NULL;
-  priority        = EVENT_PRIORITY_DEFAULT;
+  flags               = 0x00;
+  originator          = NULL;
+  specific_target     = NULL;
+  schedule_callback   = NULL;
+  priority            = EVENT_PRIORITY_DEFAULT;
   return ManuvrMsg::repurpose(code);
 }
 
