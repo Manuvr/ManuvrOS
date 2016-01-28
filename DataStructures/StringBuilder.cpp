@@ -315,7 +315,7 @@ bool StringBuilder::drop_position(unsigned int pos) {
 *   taking the data we now have with it.
 */
 void StringBuilder::concatHandoff(StringBuilder *nu) {
-  if (NULL != nu) {
+  if ((NULL != nu) && (nu->length() > 0)) {
     nu->promote_collapsed_into_ll();   // Promote the previously-collapsed string.
 
     if (NULL != nu->root) {

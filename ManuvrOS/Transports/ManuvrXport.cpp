@@ -155,6 +155,8 @@ int8_t ManuvrXport::provide_session(XenoSession* ses) {
   }
   session = ses;
   //session->setVerbosity(verbosity);
+  
+  // This will warn us later to notify others of our removal, if necessary.
   set_xport_state(MANUVR_XPORT_FLAG_HAS_SESSION);
   return 0;
 }
@@ -180,10 +182,8 @@ void ManuvrXport::connected(bool en) {
       // This will put it into the Event system so that auth and such can be handled cleanly.
       // Once the session sets up, it will broadcast itself as having done so.
       XenoSession* ses = new XenoSession(this);
+      provide_session(ses);
 
-      // This will warn us later to notify others of our removal, if necessary.
-      _xport_flags |= MANUVR_XPORT_FLAG_HAS_SESSION;
-    
       ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
       event->addArg((EventReceiver*) ses);
       raiseEvent(event);
@@ -277,16 +277,6 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
     case MANUVR_MSG_SESS_ORIGINATE_MSG:
       break;
 
-    case MANUVR_MSG_XPORT_INIT:
-    case MANUVR_MSG_XPORT_RESET:
-    case MANUVR_MSG_XPORT_CONNECT:
-    case MANUVR_MSG_XPORT_DISCONNECT:
-    case MANUVR_MSG_XPORT_ERROR:
-    case MANUVR_MSG_XPORT_SESSION:
-    case MANUVR_MSG_XPORT_QUEUE_RDY:
-    case MANUVR_MSG_XPORT_CB_QUEUE_RDY:
-      break;
-
     case MANUVR_MSG_XPORT_SEND:
       if (NULL != session) {
         if (connected()) {
@@ -323,11 +313,23 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
     case MANUVR_MSG_XPORT_RESERVED_1:
     case MANUVR_MSG_XPORT_SET_PARAM:
     case MANUVR_MSG_XPORT_GET_PARAM:
+    case MANUVR_MSG_XPORT_INIT:
+    case MANUVR_MSG_XPORT_RESET:
+    case MANUVR_MSG_XPORT_CONNECT:
+    case MANUVR_MSG_XPORT_DISCONNECT:
+    case MANUVR_MSG_XPORT_ERROR:
+    case MANUVR_MSG_XPORT_SESSION:
+    case MANUVR_MSG_XPORT_QUEUE_RDY:
+    case MANUVR_MSG_XPORT_CB_QUEUE_RDY:
     
     case MANUVR_MSG_XPORT_IDENTITY:
       #ifdef __MANUVR_DEBUG
-      if (verbosity > 3) local_log.concatf("TransportID %d received an event that was addressed to it, but is not yet handled.\n", xport_id);
+      if (verbosity > 3) {
+        local_log.concatf("TransportID %d received an event that was addressed to it, but is not yet handled.\n", xport_id);
+        active_event->printDebug(&local_log);
+      }
       #endif
+      break;
 
     case MANUVR_MSG_XPORT_DEBUG:
       printDebug(&local_log);

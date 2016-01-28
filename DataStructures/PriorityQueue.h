@@ -39,6 +39,10 @@ Some functions are #pragma'd to stop the compiler from complaining about NULL be
   #include <stdlib.h>
 //#endif
 
+#ifdef __MANUVR_LINUX
+  #include <pthread.h>
+#endif
+
 
 using namespace std;
 
@@ -89,6 +93,10 @@ template <class T> class PriorityQueue {
   private:
     PriorityNode<T> *root;        // The root of the queue. Is also the highest-priority.
     int element_count;
+    #ifdef __MANUVR_LINUX
+      // If we are on linux, we control for concurrency with a mutex...
+      pthread_mutex_t _mutex;
+    #endif
     
     /*
     * Returns the last element in the list. 
@@ -115,6 +123,9 @@ template <class T> class PriorityQueue {
 template <class T> PriorityQueue<T>::PriorityQueue() {
   root = NULL;
   element_count = 0;
+  #ifdef __MANUVR_LINUX
+    _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+  #endif
 }
 
 /**
@@ -124,6 +135,9 @@ template <class T> PriorityQueue<T>::~PriorityQueue() {
   while (root != NULL) {
     dequeue();
   }
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_destroy(&_mutex);
+  #endif
 }
 
 
@@ -155,12 +169,18 @@ template <class T> int PriorityQueue<T>::insertIfAbsent(T d, int nu_pri) {
     // don't have to worry about it later.
     return insert(d, nu_pri);
   }
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_lock(&_mutex);
+  #endif
   
   int return_value = -1;
   PriorityNode<T>* insert_pointer = NULL;
   PriorityNode<T>* current = root;
   while (current != NULL) {
     if (current->data == d) {
+      #ifdef __MANUVR_LINUX
+        pthread_mutex_lock(&_mutex);
+      #endif
       return -1;
     }
     if (current->priority >= nu_pri) {
@@ -172,21 +192,27 @@ template <class T> int PriorityQueue<T>::insertIfAbsent(T d, int nu_pri) {
   
   PriorityNode<T> *nu = (PriorityNode<T>*) malloc(sizeof(PriorityNode<T>));
   if (nu == NULL) {
-    return -1;      // Failed to allocate memory.
-  }
-  nu->data     = d;
-  nu->priority = nu_pri;
-
-  if (NULL == insert_pointer) {
-    nu->next = root;
-    root = nu;
-    return_value = 0;
+    return_value = -1;      // Failed to allocate memory.
   }
   else {
-    nu->next = insert_pointer->next;
-    insert_pointer->next = nu;
+    nu->data     = d;
+    nu->priority = nu_pri;
+    
+    if (NULL == insert_pointer) {
+      nu->next = root;
+      root = nu;
+      return_value = 0;
+    }
+    else {
+      nu->next = insert_pointer->next;
+      insert_pointer->next = nu;
+    }
+    element_count++;
   }
-  element_count++;
+
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_unlock(&_mutex);
+  #endif
   return return_value;
 }
 
@@ -212,11 +238,17 @@ template <class T> int PriorityQueue<T>::insert(T d, int nu_pri) {
   if (nu == NULL) {
     return return_value;      // Failed to allocate memory.
   }
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_lock(&_mutex);
+  #endif
   nu->data     = d;
   nu->priority = nu_pri;
 
   return_value = insert(nu);
   element_count++;
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_unlock(&_mutex);
+  #endif
   return 1;
 }
 
@@ -227,6 +259,9 @@ template <class T> int PriorityQueue<T>::insert(PriorityNode<T>* nu) {
     return -1;
   }
 
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_lock(&_mutex);
+  #endif
   PriorityNode<T> *current = getLastWithPriority(nu->priority);
 
   if (current == NULL) {
@@ -237,6 +272,9 @@ template <class T> int PriorityQueue<T>::insert(PriorityNode<T>* nu) {
     nu->next      = current->next;
     current->next = nu;
   }
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_unlock(&_mutex);
+  #endif
   return 1;
 }
 
@@ -305,6 +343,9 @@ template <class T> PriorityNode<T>* PriorityQueue<T>::getLastWithPriority(int nu
 
 
 template <class T> void PriorityQueue<T>::enforce_priorities(void) {
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_lock(&_mutex);
+  #endif
   PriorityNode<T>* current  = root;
   PriorityNode<T>* prior    = NULL;
   while (current != NULL) {
@@ -335,6 +376,9 @@ template <class T> void PriorityQueue<T>::enforce_priorities(void) {
     prior = current;
     current = current->next;
   }
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_unlock(&_mutex);
+  #endif
 }
 
 
@@ -364,16 +408,22 @@ template <class T> bool PriorityQueue<T>::decrementPriority(T test_data) {
 #endif
 #pragma GCC diagnostic ignored "-Wconversion-null"
 template <class T> T PriorityQueue<T>::dequeue() {
+  T return_value = NULL;
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_lock(&_mutex);
+  #endif
   PriorityNode<T>* current = root;
   if (current != NULL) {
     // This is safe because we only store references. Not the actual data.
-    T return_value = current->data;
+    return_value = current->data;
     root = current->next;
     free(current);
     element_count--;
-    return return_value;
   }
-  return NULL;
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_unlock(&_mutex);
+  #endif
+  return return_value;
 }
 #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic pop
@@ -385,9 +435,13 @@ template <class T> T PriorityQueue<T>::dequeue() {
 #endif
 #pragma GCC diagnostic ignored "-Wconversion-null"
 template <class T> T PriorityQueue<T>::recycle() {
+  T return_value = NULL;
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_lock(&_mutex);
+  #endif
   PriorityNode<T>* current = root;
   if (current != NULL) {
-    T return_value = current->data;
+    return_value = current->data;
 
     if (element_count > 1) {
       root = current->next;
@@ -397,10 +451,11 @@ template <class T> T PriorityQueue<T>::recycle() {
       current->priority = temp->priority;  // Demote to the rear of the queue.
       temp->next = current;
     }
-
-    return return_value;
   }
-  return NULL;
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_unlock(&_mutex);
+  #endif
+  return return_value;
 }
 #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic pop

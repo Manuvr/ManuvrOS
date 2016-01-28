@@ -630,8 +630,8 @@ void XenoSession::mark_session_sync(bool pending) {
     //   want a message put through.
     mark_session_state(XENOSESSION_STATE_ESTABLISHED);
     raiseEvent(Kernel::returnEvent(MANUVR_MSG_SESS_ESTABLISHED));
-    raiseEvent(Kernel::returnEvent(MANUVR_MSG_LEGEND_MESSAGES));
     raiseEvent(Kernel::returnEvent(MANUVR_MSG_SELF_DESCRIBE));
+    //raiseEvent(Kernel::returnEvent(MANUVR_MSG_LEGEND_MESSAGES));
   }
 
   sync_event.enableSchedule(false);
@@ -687,9 +687,9 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
       }
       else {
         #ifdef __MANUVR_DEBUG
-        if (verbosity > 2) local_log.concat("Session still out of sync.\n");
-        Kernel::log(&local_log);
+          if (verbosity > 2) local_log.concat("Session still out of sync.\n");
         #endif
+        if (local_log.length() > 0) Kernel::log(&local_log);
         return return_value;
       }
       break;

@@ -1115,10 +1115,12 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
       if (0 == active_runnable->args.size()) {
         // We are being asked to self-describe.
         active_runnable->addArg((uint32_t)    PROTOCOL_MTU);
+        active_runnable->addArg((uint32_t)    0);                  // Device flags.
         active_runnable->addArg((const char*) PROTOCOL_VERSION);
         active_runnable->addArg((const char*) IDENTITY_STRING);
         active_runnable->addArg((const char*) VERSION_STRING);
         active_runnable->addArg((const char*) HW_VERSION_STRING);
+        active_runnable->addArg((uint32_t)    0);                  // Optional serial number.
         #ifdef EXTENDED_DETAIL_STRING
           active_runnable->addArg((const char*) EXTENDED_DETAIL_STRING);
         #endif

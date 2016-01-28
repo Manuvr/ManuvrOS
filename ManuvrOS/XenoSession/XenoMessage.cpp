@@ -245,12 +245,12 @@ int8_t XenoMessage::inflateArgs() {
       return_value = 0;
     }
     else {
-      //Kernel::log("XenoMessage::inflateArgs():\t inflate fxn returned failure...\n");
+      Kernel::log("XenoMessage::inflateArgs():\t inflate fxn returned failure...\n");
     }
   }
   else {
     return_value = -1;
-    //Kernel::log("XenoMessage::inflateArgs():\t argbuf was zero-length.\n");
+    Kernel::log("XenoMessage::inflateArgs():\t argbuf was zero-length.\n");
   }
   return return_value;
 }
@@ -287,8 +287,10 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
     case XENO_MSG_PROC_STATE_RECEIVING_REPLY:
       break;
     default:
-      //output.concatf("XenoMessage::feedBuffer() rejecting bytes because it is not in the right state. Is %s\n", XenoMessage::getMessageStateString(proc_state));
-      Kernel::log(&output);
+      #ifdef __MANUVR_DEBUG
+        output.concatf("XenoMessage::feedBuffer() rejecting bytes because it is not in the right state. Is %s\n", XenoMessage::getMessageStateString(proc_state));
+      #endif
+      if (output.length() > 0) Kernel::log(&output);
       return -2;
   }
   
@@ -296,22 +298,26 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
   if (0 == bytes_received) {      // If we haven't been fed any bytes yet...
     if (buf_len < 4) {
       // Not enough to act on, since we have none buffered ourselves...
-      //output.concat("Rejecting bytes because there aren't enough of them yet.\n");
-      Kernel::log(&output);
+      #ifdef __MANUVR_DEBUG
+        output.concat("Rejecting bytes because there aren't enough of them yet.\n");
+      #endif
+      if (output.length() > 0) Kernel::log(&output);
       return 0;
     }
     else {  // We have at least enough for a sync-check...
       if (0 == XenoSession::contains_sync_pattern(buf, 4)) {
         // Get the offset of the last instance in this sync-stream relative to (buf+0) (we already know there is at least one).
         int x = XenoSession::locate_sync_break(buf+4, buf_len-4) + 4;
-        //output.concatf("About to cull %d bytes of sync stream from the buffer..\n", x);
+        #ifdef __MANUVR_DEBUG
+          output.concatf("About to cull %d bytes of sync stream from the buffer..\n", x);
+        #endif
         proc_state = XENO_MSG_PROC_STATE_SYNC_PACKET;  // Mark ourselves as a sync packet.
         bytes_received = 4;
         /* Cull the Session's buffer down to the offset of the next message (if there is any left). */
         if (x == buf_len)  sb_buf->clear();
         else               sb_buf->cull(x);
         
-        Kernel::log(&output);
+        if (output.length() > 0) Kernel::log(&output);
         return x;
       }
       else {
@@ -335,10 +341,12 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
     // Do we have a whole minimum packet yet?
     if (buf_len < 4) {
       // Not enough to act on.
-      //output.concat("Rejecting bytes because there aren't enough of them yet to make a complete packet.\n");
+      #ifdef __MANUVR_DEBUG
+        output.concat("Rejecting bytes because there aren't enough of them yet to make a complete packet.\n");
+      #endif
       if (return_value == buf_len)  sb_buf->clear();
       else if (return_value > 0)    sb_buf->cull(return_value);
-      Kernel::log(&output);
+      if (output.length() > 0) Kernel::log(&output);
       return return_value;
     }
     else {
@@ -390,20 +398,20 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
         case XENO_MSG_PROC_STATE_RECEIVING:
           proc_state = XENO_MSG_PROC_STATE_AWAITING_UNSERIALIZE;
           #ifdef __MANUVR_DEBUG
-          output.concat("XenoMessage::feedBuffer() Ready to unserialize...\n");
+            output.concat("XenoMessage::feedBuffer() Ready to unserialize...\n");
           #endif
           break;
         case XENO_MSG_PROC_STATE_RECEIVING_REPLY:
           proc_state = XENO_MSG_PROC_STATE_REPLY_RECEIVED;
           #ifdef __MANUVR_DEBUG
-          output.concat("XenoMessage::feedBuffer() Received reply!\n");
+            output.concat("XenoMessage::feedBuffer() Received reply!\n");
           #endif
           break;
         default:
           #ifdef __MANUVR_DEBUG
-          output.concatf("XenoMessage::feedBuffer() Message received, and is ok, but not sure about state.... Is %s\n", XenoMessage::getMessageStateString(proc_state));
-          Kernel::log(&output);
+            output.concatf("XenoMessage::feedBuffer() Message received, and is ok, but not sure about state.... Is %s\n", XenoMessage::getMessageStateString(proc_state));
           #endif
+          if (output.length() > 0) Kernel::log(&output);
           return -2;
       }
     }
@@ -411,7 +419,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
       // TODO: We might send a retry request at this point...
       proc_state = XENO_MSG_PROC_STATE_AWAITING_REAP;
       #ifdef __MANUVR_DEBUG
-      output.concatf("XenoMessage::feedBuffer() Message failed to checksum. Got 0x%02x. Expected 0x%02x. \n", checksum_c, checksum_i);
+        output.concatf("XenoMessage::feedBuffer() Message failed to checksum. Got 0x%02x. Expected 0x%02x. \n", checksum_c, checksum_i);
       #endif
     }
   }
