@@ -179,7 +179,7 @@ template <class T> int PriorityQueue<T>::insertIfAbsent(T d, int nu_pri) {
   while (current != NULL) {
     if (current->data == d) {
       #ifdef __MANUVR_LINUX
-        pthread_mutex_lock(&_mutex);
+        pthread_mutex_unlock(&_mutex);
       #endif
       return -1;
     }

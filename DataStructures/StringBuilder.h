@@ -26,12 +26,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <inttypes.h>
 #include <stdarg.h>
 
-//#ifdef ARDUINO
-//  #include "Arduino.h"
-//#else
-//  #include <stdio.h>
-//  #include <stdlib.h>
-//#endif
+#ifdef __MANUVR_LINUX
+  #include <pthread.h>
+#endif
+
 
 /*
 *	This is a linked-list that is castable as a string.
@@ -58,33 +56,6 @@ typedef struct str_ll_t {
 *   then collapsed. Needless to say, this shuffling act might cause the class to more-than
 *   double its memory usage while the string is being reorganized. So be aware of your memory
 *   usage.
-*
-* Note(0) regarding heap_ref():
-* Sometimes, it may be desirable to return an instance of this class from a function. In that
-*   case, the function doing the return should....
-*      return str_builder.heap_ref();
-*   This will cause the class to make a copy of itself on the heap. To avoid doubling the RAM usage,
-*   the data-carrying elements are NOT copied, but the references are marked in the original instance
-*   in such a way as to NOT be free()'d when the destructor is called. Therefore, the responsibility
-*   of cleaning up the memory allocated by the class falls on the caller. It should be free()'d like so...
-*      StringBuilder* obj = someFxn();   // someFxn() returns the result of heap_ref()...
-*      // Do some things with the returned string....
-*      obj.clear();       // Frees the allocated memory taken up by the strings.
-*      free(obj);         // Frees the allocated memory taken up by the class itself.
-* This is always safe to do, assuming that obj is not NULL. If the class contained a zero-length string,
-*   the worst thing that will happen is wasted cycles. The class will do its own sanity-checks in the 
-*   clear() function. 
-*
-* Note(1) regarding str_heap_ref():
-* Like heap_ref(), str_heap_ref() will return a heap-allocated reference to the str member of this class
-*   after collapsing it. This is done when the caller is expecting a simple (char*). This will not work
-*   very well with unsigned character strings because no length can be returned. So the caller needs to
-*   be sure that the StringBuilder wasn't built with unsigned character strings.
-* If the caller is expecting (unsigned char*), it should do this instead...
-*      int str_len = 0;
-*      unsigned char* str = someFxn(&str_len);   // someFxn() returns the result of str_heap_ref()...
-*                                                // str_len will contain the length of the string.
-*      free(str);       // It is still on us to free the allocated memory taken up by the strings.
 */
 class StringBuilder {
 	StrLL *root;         // The root of the linked-list.
@@ -98,11 +69,6 @@ class StringBuilder {
 		StringBuilder(unsigned char *initial, int len);
 		StringBuilder(const char *);
 		~StringBuilder(void);
-		
-		StringBuilder* heap_ref(void);           // See Note0.
-		char* str_heap_ref(void);                // See Note1.
-		unsigned char* str_heap_ref(int len);    // See Note1.
-		int str_heap_ref(unsigned char** callers_pntr);    // See Note2.
 
 		int length(void);
 		unsigned char* string(void);
@@ -165,6 +131,11 @@ class StringBuilder {
 
 		
 	private:
+    #ifdef __MANUVR_LINUX
+      // If we are on linux, we control for concurrency with a mutex...
+      pthread_mutex_t _mutex;
+    #endif
+
 		int totalStrLen(StrLL *node);
 		StrLL* stackStrOntoList(StrLL *current, StrLL *nu);
 		StrLL* stackStrOntoList(StrLL *nu);

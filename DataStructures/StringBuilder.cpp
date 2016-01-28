@@ -45,6 +45,9 @@ StringBuilder::StringBuilder() {
   this->str    = NULL;
   this->col_length = 0;
   this->preserve_ll = false;
+  #ifdef __MANUVR_LINUX
+    _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+  #endif
 }
 
 StringBuilder::StringBuilder(char *initial) {
@@ -53,6 +56,9 @@ StringBuilder::StringBuilder(char *initial) {
   this->col_length = 0;
   this->preserve_ll = false;
   this->concat(initial);
+  #ifdef __MANUVR_LINUX
+    _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+  #endif
 }
 
 StringBuilder::StringBuilder(unsigned char *initial, int len) {
@@ -61,6 +67,9 @@ StringBuilder::StringBuilder(unsigned char *initial, int len) {
   this->col_length = 0;
   this->preserve_ll = false;
   this->concat(initial, len);
+  #ifdef __MANUVR_LINUX
+    _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+  #endif
 }
 
 
@@ -70,6 +79,9 @@ StringBuilder::StringBuilder(const char *initial) {
   this->col_length = 0;
   this->preserve_ll = false;
   this->concat(initial);
+  #ifdef __MANUVR_LINUX
+    _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+  #endif
 }
 
 
@@ -86,6 +98,9 @@ StringBuilder::~StringBuilder() {
       this->str = NULL;
     }
   }
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_destroy(&_mutex);
+  #endif
 }
 
 
@@ -430,6 +445,9 @@ int StringBuilder::totalStrLen(StrLL *node) {
 
 void StringBuilder::concat(unsigned char *nu, int len) {
   if ((nu != NULL) && (len > 0)) {
+    #ifdef __MANUVR_LINUX
+      pthread_mutex_lock(&_mutex);
+    #endif
     StrLL *nu_element = (StrLL *) malloc(sizeof(StrLL));
     if (nu_element != NULL) {
       nu_element->reap = true;
@@ -442,6 +460,9 @@ void StringBuilder::concat(unsigned char *nu, int len) {
         this->stackStrOntoList(nu_element);
       }
     }
+    #ifdef __MANUVR_LINUX
+      pthread_mutex_unlock(&_mutex);
+    #endif
   }
 }
 
@@ -462,6 +483,9 @@ void StringBuilder::concat(const char *nu) {
   if (nu != NULL) {
     int len = strlen(nu);
     if (len > 0) {
+      #ifdef __MANUVR_LINUX
+        pthread_mutex_lock(&_mutex);
+      #endif
       StrLL *nu_element = (StrLL *) malloc(sizeof(StrLL));
       if (nu_element != NULL) {
         nu_element->reap = false;
@@ -470,6 +494,9 @@ void StringBuilder::concat(const char *nu) {
         nu_element->str  = (unsigned char *) nu;
         this->stackStrOntoList(nu_element);
       }
+      #ifdef __MANUVR_LINUX
+        pthread_mutex_unlock(&_mutex);
+      #endif
     }
   }
 }
@@ -566,6 +593,9 @@ int StringBuilder::concatf(const char *format, ...) {
 *   of the given range.
 */
 void StringBuilder::cull(int offset, int length) {
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_lock(&_mutex);
+  #endif
   if (this->length() >= (length-offset)) {   // Does the given range exist?
     int remaining_length = length-offset;
     unsigned char* temp = (unsigned char*) malloc(remaining_length+1);  // + 1 for null-terminator.
@@ -578,6 +608,9 @@ void StringBuilder::cull(int offset, int length) {
       this->col_length = length;
     }
   }
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_unlock(&_mutex);
+  #endif
 }
 
 
@@ -585,6 +618,9 @@ void StringBuilder::cull(int offset, int length) {
 * Given a character count (x), will throw away the first x characters and adjust the object appropriately.
 */
 void StringBuilder::cull(int x) {
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_lock(&_mutex);
+  #endif
   if (this->length() >= x) {   // Does the given range exist?
     int remaining_length = this->length()-x;
     unsigned char* temp = (unsigned char*) malloc(remaining_length+1);  // + 1 for null-terminator.
@@ -597,6 +633,9 @@ void StringBuilder::cull(int x) {
       this->col_length = remaining_length;
     }
   }
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_unlock(&_mutex);
+  #endif
 }
 
 
@@ -637,6 +676,9 @@ StrLL* StringBuilder::stackStrOntoList(StrLL *nu) {
 * Updates the length.
 */
 void StringBuilder::collapseIntoBuffer() {
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_lock(&_mutex);
+  #endif
   StrLL *current = promote_collapsed_into_ll();   // Promote the previously-collapsed string.
   if (current != NULL) {
     this->col_length = this->totalStrLen(this->root);
@@ -656,6 +698,9 @@ void StringBuilder::collapseIntoBuffer() {
     }
     this->destroyStrLL(this->root);
   }
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_unlock(&_mutex);
+  #endif
 }
 
 
@@ -663,6 +708,9 @@ void StringBuilder::collapseIntoBuffer() {
 * Clean up after ourselves. Assumes that everything has been malloc'd into existance.
 */
 void StringBuilder::destroyStrLL(StrLL *r_node) {
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_lock(&_mutex);
+  #endif
   if (r_node != NULL) {
     if (r_node->next != NULL) {
       destroyStrLL(r_node->next);
@@ -672,6 +720,9 @@ void StringBuilder::destroyStrLL(StrLL *r_node) {
     free(r_node);
     if (r_node == this->root) this->root = NULL;
   }
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_unlock(&_mutex);
+  #endif
 }
 
 
@@ -735,46 +786,6 @@ int StringBuilder::split(const char *delims) {
 * A future commit will see these disappear into the trash can they should have been consigned to.   *
 *    ---J. Ian Lindsay   Fri Nov 28 17:57:45 MST 2014                                               *
 ****************************************************************************************************/
-
-/**
-* Calling this will make a copy of this object on the heap, and return the pointer.
-* The goal is to let this object expire on the stack on which it was likely created.
-*/
-StringBuilder* StringBuilder::heap_ref() {
-  StringBuilder* return_value = (StringBuilder*) malloc(sizeof(StringBuilder));
-  memcpy(return_value, this, sizeof(StringBuilder));
-  // It is important that this be done AFTER the copy, or we will see leaks.
-  this->preserve_ll = true;
-  return return_value;
-}
-
-
-/**
-* Returns the length.
-*/
-int StringBuilder::str_heap_ref(unsigned char** callers_pntr) {
-  this->collapseIntoBuffer();
-  *(callers_pntr) = this->str;
-  return this->col_length;
-}
-
-
-unsigned char* StringBuilder::str_heap_ref(int len) {
-  this->collapseIntoBuffer();
-  unsigned char* return_value = this->str;
-  this->preserve_ll = true;
-  len = this->col_length;
-  return return_value;                
-}
-
-
-char* StringBuilder::str_heap_ref() {
-  this->collapseIntoBuffer();
-  char* return_value = (char*) this->str;
-  this->preserve_ll = true;
-  return return_value;
-}
-
 
 /**
 * If we are going to do something that requires a null-terminated string, make
