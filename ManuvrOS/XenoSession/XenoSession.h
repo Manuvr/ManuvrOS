@@ -65,7 +65,7 @@ const uint8_t XENO_MSG_PROC_STATE_WRITING_REPLY          = 0x25;
 #define XENO_SESSION_IGNORE_NON_EXPORTABLES 1
 
 #define XENO_SESSION_MAX_QUEUE_PRINT        3    // This is only relevant for debug.
-#define XENOMESSAGE_PREALLOCATE_COUNT       4    // How many XenoMessages should the session preallocate?
+#define XENOMESSAGE_PREALLOCATE_COUNT       4    // How many XenoMessages should be preallocated?
 
 /*
 * All multibyte values are stored "little-endian".

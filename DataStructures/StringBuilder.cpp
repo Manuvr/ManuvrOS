@@ -158,6 +158,9 @@ unsigned char* StringBuilder::string() {
 
 
 void StringBuilder::clear(void) {
+  #ifdef __MANUVR_LINUX
+    //pthread_mutex_lock(&_mutex);
+  #endif
   if (this->root != NULL) destroyStrLL(this->root);
   if (this->str != NULL) {
     free(this->str);
@@ -165,6 +168,9 @@ void StringBuilder::clear(void) {
   this->root   = NULL;
   this->str    = NULL;
   this->col_length = 0;
+  #ifdef __MANUVR_LINUX
+    //pthread_mutex_unlock(&_mutex);
+  #endif
 }
 
 
@@ -330,6 +336,10 @@ bool StringBuilder::drop_position(unsigned int pos) {
 *   taking the data we now have with it.
 */
 void StringBuilder::concatHandoff(StringBuilder *nu) {
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_lock(&_mutex);
+    pthread_mutex_lock(&nu->_mutex);
+  #endif
   if ((NULL != nu) && (nu->length() > 0)) {
     nu->promote_collapsed_into_ll();   // Promote the previously-collapsed string.
 
@@ -338,6 +348,10 @@ void StringBuilder::concatHandoff(StringBuilder *nu) {
       nu->root = NULL;  // Inform the origin instance...
     }
   }
+  #ifdef __MANUVR_LINUX
+    pthread_mutex_unlock(&nu->_mutex);
+    pthread_mutex_unlock(&_mutex);
+  #endif
 }
 
 
@@ -356,6 +370,10 @@ void StringBuilder::concatHandoff(StringBuilder *nu) {
 */
 void StringBuilder::prependHandoff(StringBuilder *nu) {
   if (NULL != nu) {
+    #ifdef __MANUVR_LINUX
+      //pthread_mutex_lock(&_mutex);
+      //pthread_mutex_lock(&nu->_mutex);
+    #endif
     this->root = promote_collapsed_into_ll();   // Promote the previously-collapsed string.
     
     // Promote the donor instance's previously-collapsed string so we don't have to worry about it.
@@ -369,6 +387,10 @@ void StringBuilder::prependHandoff(StringBuilder *nu) {
       this->root = nu->root;       // ...replace our idea of the root. 
       nu->root = NULL;             // Inform the origin instance so it doesn't free what we just took.
     }
+    #ifdef __MANUVR_LINUX
+      //pthread_mutex_unlock(&nu->_mutex);
+      //pthread_mutex_unlock(&_mutex);
+    #endif
   }
 }
 
@@ -446,7 +468,7 @@ int StringBuilder::totalStrLen(StrLL *node) {
 void StringBuilder::concat(unsigned char *nu, int len) {
   if ((nu != NULL) && (len > 0)) {
     #ifdef __MANUVR_LINUX
-      pthread_mutex_lock(&_mutex);
+      //pthread_mutex_lock(&_mutex);
     #endif
     StrLL *nu_element = (StrLL *) malloc(sizeof(StrLL));
     if (nu_element != NULL) {
@@ -461,7 +483,7 @@ void StringBuilder::concat(unsigned char *nu, int len) {
       }
     }
     #ifdef __MANUVR_LINUX
-      pthread_mutex_unlock(&_mutex);
+      //pthread_mutex_unlock(&_mutex);
     #endif
   }
 }
@@ -484,7 +506,7 @@ void StringBuilder::concat(const char *nu) {
     int len = strlen(nu);
     if (len > 0) {
       #ifdef __MANUVR_LINUX
-        pthread_mutex_lock(&_mutex);
+        //pthread_mutex_lock(&_mutex);
       #endif
       StrLL *nu_element = (StrLL *) malloc(sizeof(StrLL));
       if (nu_element != NULL) {
@@ -495,7 +517,7 @@ void StringBuilder::concat(const char *nu) {
         this->stackStrOntoList(nu_element);
       }
       #ifdef __MANUVR_LINUX
-        pthread_mutex_unlock(&_mutex);
+        //pthread_mutex_unlock(&_mutex);
       #endif
     }
   }
@@ -552,8 +574,8 @@ void StringBuilder::concat(StringBuilder *nu) {
   }
 }
 
-/*
-* Variadic
+/**
+* Variadic. No mutex required because all working memory is confined to stack.
 */
 int StringBuilder::concatf(const char *format, ...) {
   int len = strlen(format);
@@ -561,7 +583,7 @@ int StringBuilder::concatf(const char *format, ...) {
   for (unsigned short i = 0; i < len; i++) {  if (*(format+i) == '%') f_codes++; }
   va_list args;
   // Allocate (hopefully) more space than we will need....
-  int est_len = strlen(format) + 64 + (f_codes * 15);
+  int est_len = len + 64 + (f_codes * 15);
   char *temp = (char *) alloca(est_len);
   memset(temp, 0, est_len);
   va_start(args, format);
@@ -594,7 +616,7 @@ int StringBuilder::concatf(const char *format, ...) {
 */
 void StringBuilder::cull(int offset, int length) {
   #ifdef __MANUVR_LINUX
-    pthread_mutex_lock(&_mutex);
+    //pthread_mutex_lock(&_mutex);
   #endif
   if (this->length() >= (length-offset)) {   // Does the given range exist?
     int remaining_length = length-offset;
@@ -609,7 +631,7 @@ void StringBuilder::cull(int offset, int length) {
     }
   }
   #ifdef __MANUVR_LINUX
-    pthread_mutex_unlock(&_mutex);
+    //pthread_mutex_unlock(&_mutex);
   #endif
 }
 
@@ -619,7 +641,7 @@ void StringBuilder::cull(int offset, int length) {
 */
 void StringBuilder::cull(int x) {
   #ifdef __MANUVR_LINUX
-    pthread_mutex_lock(&_mutex);
+    //pthread_mutex_lock(&_mutex);
   #endif
   if (this->length() >= x) {   // Does the given range exist?
     int remaining_length = this->length()-x;
@@ -634,7 +656,7 @@ void StringBuilder::cull(int x) {
     }
   }
   #ifdef __MANUVR_LINUX
-    pthread_mutex_unlock(&_mutex);
+    //pthread_mutex_unlock(&_mutex);
   #endif
 }
 
@@ -661,11 +683,21 @@ StrLL* StringBuilder::stackStrOntoList(StrLL *current, StrLL *nu) {
 * Non-recursive override to make additions less cumbersome.
 */
 StrLL* StringBuilder::stackStrOntoList(StrLL *nu) {
+  StrLL* return_value = NULL;
+  #ifdef __MANUVR_LINUX
+    //pthread_mutex_lock(&_mutex);
+  #endif
   if (this->root == NULL) {
     this->root  = nu;
-    return this->root;
+    return_value = this->root;
   }
-  else return this->stackStrOntoList(this->root, nu);
+  else {
+    return_value = this->stackStrOntoList(this->root, nu);
+  }
+  #ifdef __MANUVR_LINUX
+    //pthread_mutex_unlock(&_mutex);
+  #endif
+  return return_value;
 }
 
 
@@ -677,7 +709,7 @@ StrLL* StringBuilder::stackStrOntoList(StrLL *nu) {
 */
 void StringBuilder::collapseIntoBuffer() {
   #ifdef __MANUVR_LINUX
-    pthread_mutex_lock(&_mutex);
+    //pthread_mutex_lock(&_mutex);
   #endif
   StrLL *current = promote_collapsed_into_ll();   // Promote the previously-collapsed string.
   if (current != NULL) {
@@ -699,7 +731,7 @@ void StringBuilder::collapseIntoBuffer() {
     this->destroyStrLL(this->root);
   }
   #ifdef __MANUVR_LINUX
-    pthread_mutex_unlock(&_mutex);
+    //pthread_mutex_unlock(&_mutex);
   #endif
 }
 
@@ -709,7 +741,7 @@ void StringBuilder::collapseIntoBuffer() {
 */
 void StringBuilder::destroyStrLL(StrLL *r_node) {
   #ifdef __MANUVR_LINUX
-    pthread_mutex_lock(&_mutex);
+    //pthread_mutex_lock(&_mutex);
   #endif
   if (r_node != NULL) {
     if (r_node->next != NULL) {
@@ -721,7 +753,7 @@ void StringBuilder::destroyStrLL(StrLL *r_node) {
     if (r_node == this->root) this->root = NULL;
   }
   #ifdef __MANUVR_LINUX
-    pthread_mutex_unlock(&_mutex);
+    //pthread_mutex_unlock(&_mutex);
   #endif
 }
 
