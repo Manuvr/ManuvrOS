@@ -241,7 +241,7 @@ int XenoMessage::serialize() {
 int8_t XenoMessage::inflateArgs() {
   int8_t return_value = -1;
   if (argbuf.length() > 0) {
-    if (event->inflateArgumentsFromRawBuffer(argbuf.string(), argbuf.length()) > 0) {
+    if (event->inflateArgumentsFromBuffer(argbuf.string(), argbuf.length()) > 0) {
       return_value = 0;
     }
     else {

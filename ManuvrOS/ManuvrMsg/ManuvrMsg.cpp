@@ -178,68 +178,6 @@ int ManuvrMsg::argByteCount() {
 }
 
 
-/**
-* This fxn is called when we have a slew of bytes from which we need to build Arguments.
-* Because it came from outside our walls, this function should never encounter pointer types.
-*
-* @param  buffer   The pointer to the data.
-* @param  len      How long is that buffer?
-* @return the number of Arguments extracted and instantiated from the buffer.
-*/
-uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
-  int return_value = 0;
-  Argument *nu_arg = NULL;
-  while ((buffer != NULL) & (len > 1)) {
-    //uint8_t arg_len = *(buffer + 1);
-    switch (*buffer) {
-      case INT8_FM:
-        nu_arg = new Argument((int8_t) *(buffer+2));
-        len = len - 3;
-        buffer += 3;
-        break;
-      case UINT8_FM:
-        nu_arg = new Argument((uint8_t) *(buffer+2));
-        len = len - 3;
-        buffer += 3;
-        break;
-      case INT16_FM:
-        nu_arg = new Argument((int16_t) parseUint16Fromchars(buffer+2));
-        len = len - 4;
-        buffer += 4;
-        break;
-      case UINT16_FM:
-        nu_arg = new Argument(parseUint16Fromchars(buffer+2));
-        len = len - 4;
-        buffer += 4;
-        break;
-      case INT32_FM:
-        nu_arg = new Argument((int32_t) parseUint32Fromchars(buffer+2));
-        len = len - 6;
-        buffer += 6;
-        break;
-      case UINT32_FM:
-        nu_arg = new Argument(parseUint32Fromchars(buffer+2));
-        len = len - 6;
-        buffer += 6;
-        break;
-      case FLOAT_FM:
-        nu_arg = new Argument((float) parseUint32Fromchars(buffer+2));
-        len = len - 6;
-        buffer += 6;
-        break;
-      default:
-        break;
-    }
-
-    if (nu_arg != NULL) {
-      args.insert(nu_arg);
-      nu_arg = NULL;
-      return_value++;
-    }
-  }
-  return return_value;
-}
-
 
 /**
 * This function is for the exclusive purpose of inflating an argument from a place where a
@@ -249,17 +187,32 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
 *
 * @param   a buffer containing the byte-stream containing the data.
 * @param   int length of the buffer
-* @return  the number of Arguments extracted from the buffer.
+* @return  the number of Arguments extracted and instantiated from the buffer.
 */
-uint8_t ManuvrMsg::inflateArgumentsFromRawBuffer(unsigned char *buffer, int len) {
+uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
   int return_value = 0;
-  if (NULL == buffer) return 0;
-  if (0 == len)       return 0;
-  
-  char* arg_mode  = is_valid_argument_buffer(len);
-  
-  if (NULL == arg_mode) return 0;
+  if ((NULL == buffer) || (0 == len)) {
+    return 0;
+  }
 
+  char* arg_mode = NULL;
+  LinkedList<char*> possible_forms;
+  switch (collect_valid_grammatical_forms(len, &possible_forms)) {
+    case 0:
+      // No valid forms. This is a problem.
+      return 0;
+      break;
+    case 1:
+      // Only one possibility.
+      break;
+    default:
+      // There are a few possible forms. We need to isolate which is correct.
+      break;
+  }
+  
+  
+  
+  
   Argument *nu_arg = NULL;
   while ((NULL != arg_mode) & (len > 0)) {
     switch ((unsigned char) *arg_mode) {
@@ -766,12 +719,53 @@ int8_t ManuvrMsg::getMsgLegend(StringBuilder *output) {
 }
 
 
-/*
-* Returns an index to the only possible argument sequence for a given length.
+/**
+* Isolate all of the possible grammatical forms for an argument buffer of the given length.
+* Returns 0 if...
+*   a) there is no valid argument sequence with the given length
+*   b) there is no record of the message type represented by this object.
+*
+* @param  len  The length of the argument buffer.
+* @return The number of possibly-valid grammatical forms the given length buffer.
+*/
+int ManuvrMsg::collect_valid_grammatical_forms(int len, LinkedList<char*>* return_modes) {
+  if (NULL == message_def) getMsgDef();
+  if (NULL == message_def) return 0;     // Case (b)
+  
+  int return_value = 0;
+  char* mode = (char*) message_def->arg_modes;
+  int arg_mode_len = strlen((const char*) mode);
+  int temp = 0;
+  while (arg_mode_len > 0) {
+    temp = getMinimumSizeByTypeString(mode);
+    if (len == temp) {
+      return_modes->insert(mode);
+      return_value++;
+    }
+    else if (len > temp) {
+      if (containsVariableLengthArgument(mode)) {
+        return_modes->insert(mode);
+        return_value++;
+      }
+    }
+
+    mode += arg_mode_len + 1;
+    arg_mode_len = strlen((const char*) mode);
+  }
+  
+  return return_value;
+}
+
+
+/**
+* Returns a pointer to the only possible argument sequence for a given length.
 * Returns NULL if...
 *   a) there is no valid argument sequence with the given length
 *   b) there is more than one valid sequence
 *   c) there is no record of the message type represented by this object.
+*
+* @param  len  The length of the input buffer.
+* @return A pointer to the type-code sequence, or NULL on failure.
 */
 char* ManuvrMsg::is_valid_argument_buffer(int len) {
   if (NULL == message_def) getMsgDef();
@@ -782,9 +776,12 @@ char* ManuvrMsg::is_valid_argument_buffer(int len) {
   int arg_mode_len = strlen((const char*) mode);
   int temp = 0;
   while (arg_mode_len > 0) {
-    temp = getTotalSizeByTypeString(mode);
+    temp = getMinimumSizeByTypeString(mode);
     if (len == temp) {
       if (NULL != return_value) {
+        // This is case (b) above. If this happens, it means the grammatical forms
+        //   for this argument were poorly chosen. There is nothing we can do to help
+        //   this at runtime. Failure...
         return NULL;
       }
       else {
@@ -800,6 +797,7 @@ char* ManuvrMsg::is_valid_argument_buffer(int len) {
         return_value = mode;
       }
     }
+    
     mode += arg_mode_len + 1;
     arg_mode_len = strlen((const char*) mode);
   }

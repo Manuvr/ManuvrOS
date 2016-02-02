@@ -905,18 +905,18 @@ float Kernel::cpu_usage() {
 void Kernel::print_type_sizes() {
   StringBuilder temp("---< Type sizes >-----------------------------\n");
   temp.concatf("Elemental data structures:\n");
-  temp.concatf("\t StringBuilder         %d\n", sizeof(StringBuilder));
-  temp.concatf("\t LinkedList<void*>     %d\n", sizeof(LinkedList<void*>));
-  temp.concatf("\t PriorityQueue<void*>  %d\n", sizeof(PriorityQueue<void*>));
+  temp.concatf("\t StringBuilder         %zu\n", sizeof(StringBuilder));
+  temp.concatf("\t LinkedList<void*>     %zu\n", sizeof(LinkedList<void*>));
+  temp.concatf("\t PriorityQueue<void*>  %zu\n", sizeof(PriorityQueue<void*>));
 
   temp.concatf(" Core singletons:\n");
-  temp.concatf("\t Kernel                %d\n", sizeof(Kernel));
+  temp.concatf("\t Kernel                %zu\n", sizeof(Kernel));
 
   temp.concatf(" Messaging components:\n");
-  temp.concatf("\t ManuvrRunnable        %d\n", sizeof(ManuvrRunnable));
-  temp.concatf("\t ManuvrMsg             %d\n", sizeof(ManuvrMsg));
-  temp.concatf("\t Argument              %d\n", sizeof(Argument));
-  temp.concatf("\t TaskProfilerData      %d\n", sizeof(TaskProfilerData));
+  temp.concatf("\t ManuvrRunnable        %zu\n", sizeof(ManuvrRunnable));
+  temp.concatf("\t ManuvrMsg             %zu\n", sizeof(ManuvrMsg));
+  temp.concatf("\t Argument              %zu\n", sizeof(Argument));
+  temp.concatf("\t TaskProfilerData      %zu\n", sizeof(TaskProfilerData));
 
   Kernel::log(&temp);
 }

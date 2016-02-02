@@ -99,7 +99,7 @@ int getTypemapSizeAndPointer(const unsigned char **pointer) {
 * @param  char* The form of the message. NULL-terminated. 
 * @return The minimum size required to carry the expressed form.
 */
-int getTotalSizeByTypeString(char *str) {
+int getMinimumSizeByTypeString(char *str) {
   int return_value = 0;
   if (str != NULL) {
     while (*(str)) {
@@ -109,6 +109,25 @@ int getTotalSizeByTypeString(char *str) {
   return return_value;
 }
 
+
+/**
+* @return true if this message contains variable-length arguments.
+*/
+bool containsVariableLengthArgument(char* mode) {
+  int i = 0;
+  while (mode[i] != 0) {
+    for (unsigned int n = 0; n < sizeof(type_codes); n++) {
+      if (type_codes[n].type_code == mode[i]) {
+        // Does the type code match?
+        if (type_codes[n].type_flags & TYPE_CODE_FLAG_VARIABLE_LENGTH) {
+          // Is it variable length?
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
 
 
 /**

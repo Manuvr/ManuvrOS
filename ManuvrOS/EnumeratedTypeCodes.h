@@ -118,7 +118,10 @@ inline uint16_t parseUint16Fromchars(unsigned char *input) {  return ((uint16_t)
 
 int sizeOfArg(uint8_t typecode);
 int getTypemapSizeAndPointer(const unsigned char **pointer);
-int getTotalSizeByTypeString(char *str);
+int getMinimumSizeByTypeString(char *str);
+
+bool containsVariableLengthArgument(char* mode);
+
 
 const char* getTypeCodeString(uint8_t typecode);
 

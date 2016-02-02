@@ -92,7 +92,7 @@ class Argument {
 
     uint16_t len;         // This is sometimes not used. It is for data types that are not fixed-length.
     uint8_t  type_code;
-    bool    reap;
+    bool     reap;
     
     Argument();
     Argument(uint8_t);
@@ -176,7 +176,6 @@ class ManuvrMsg {
 
     int serialize(StringBuilder*);  // Returns the number of bytes resulting.
     uint8_t inflateArgumentsFromBuffer(unsigned char *str, int len);
-    uint8_t inflateArgumentsFromRawBuffer(unsigned char *str, int len);
     int8_t clearArgs();     // Clear all of the arguments attached to this message, reaping them if necessary.
     
     uint8_t getArgumentType(uint8_t);  // Given a position, return the type code for the Argument.
@@ -336,6 +335,7 @@ class ManuvrMsg {
     int8_t writePointerArgAs(uint8_t idx, void *trg_buf);
     
     char* is_valid_argument_buffer(int len);
+    int   collect_valid_grammatical_forms(int, LinkedList<char*>*);
 
     static PriorityQueue<const MessageTypeDef*> message_defs_extended;  // Where runtime-loaded message defs go.
 };
