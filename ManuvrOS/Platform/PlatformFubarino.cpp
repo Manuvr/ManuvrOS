@@ -83,6 +83,32 @@ void init_RNG() {
 
 
 /****************************************************************************************************
+* Identity and serial number                                                                        *
+****************************************************************************************************/
+/**
+* We sometimes need to know the length of the platform's unique identifier (if any). If this platform
+*   is not serialized, this function will return zero.
+*
+* @return   The length of the serial number on this platform, in terms of bytes.
+*/
+int platformSerialNumberSize() {
+  return 0;
+}
+
+
+/**
+* Writes the serial number to the indicated buffer.
+*
+* @param    A pointer to the target buffer.
+* @return   The number of bytes written.
+*/
+int getSerialNumber(uint8_t *buf) {
+  return 0;
+}
+
+
+
+/****************************************************************************************************
 * Time and date                                                                                     *
 ****************************************************************************************************/
 /*

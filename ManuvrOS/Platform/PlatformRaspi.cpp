@@ -208,6 +208,49 @@ void init_RNG() {
 
 
 /****************************************************************************************************
+* Identity and serial number                                                                        *
+****************************************************************************************************/
+/**
+* We sometimes need to know the length of the platform's unique identifier (if any). If this platform
+*   is not serialized, this function will return zero.
+*
+* @return   The length of the serial number on this platform, in terms of bytes.
+*/
+int platformSerialNumberSize() {
+  return 0;
+}
+
+
+/**
+* Writes the serial number to the indicated buffer.
+* Thanks, Narishma!
+* https://www.raspberrypi.org/forums/viewtopic.php?f=31&t=18936
+*
+* @param    A pointer to the target buffer.
+* @return   The number of bytes written.
+*/
+int getSerialNumber(uint8_t *buf) {
+  FILE *f = fopen("/proc/cpuinfo", "r");
+  if (!f) return 0;
+  
+  char line[256]; 
+  int serial = 0;
+  while (fgets(line, 256, f)) {
+    if (strncmp(line, "Serial", 6) == 0) {
+      char serial_string[16 + 1];
+      serial = atoi(strcpy(serial_string, strchr(line, ':') + 2));
+      fclose(f);
+      return serial;
+    }
+  }
+
+  fclose(f);
+  return 0;
+}
+
+
+
+/****************************************************************************************************
 * Data persistence                                                                                  *
 ****************************************************************************************************/
 // Returns true if this platform can store data locally.

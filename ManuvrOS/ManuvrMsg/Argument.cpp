@@ -146,11 +146,21 @@ Argument::Argument(Vector3ui16* val) {
 Argument::Argument(const char* val) {
 	wipe();
 	len = strlen(val)+1;  // +1 because: NULL terminator.
-	type_code = STR_FM;
+	type_code  = STR_FM;
 	target_mem = (void*) val;
 	reap       = false;
 }
 
+/*
+* This is a character pointer. Reap.
+*/
+Argument::Argument(char* val) {
+	wipe();
+	len = strlen(val)+1;  // +1 because: NULL terminator.
+	type_code  = STR_FM;
+	target_mem = (void*) val;
+	reap       = true;
+}
 
 
 /*

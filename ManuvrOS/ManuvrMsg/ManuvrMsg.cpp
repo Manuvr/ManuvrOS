@@ -177,7 +177,7 @@ int ManuvrMsg::argByteCount() {
   return return_value;
 }
 
-
+#include<stdio.h>
 
 /**
 * This function is for the exclusive purpose of inflating an argument from a place where a
@@ -197,16 +197,27 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
 
   char* arg_mode = NULL;
   LinkedList<char*> possible_forms;
+  int r = 0;
   switch (collect_valid_grammatical_forms(len, &possible_forms)) {
     case 0:
       // No valid forms. This is a problem.
+      printf("No valid argument forms...\n");
       return 0;
       break;
     case 1:
       // Only one possibility.
+      arg_mode = possible_forms.get(r++); 
+      printf("%s\n", arg_mode);
       break;
     default:
       // There are a few possible forms. We need to isolate which is correct.
+      while (possible_forms.size() > 0) {
+        arg_mode = possible_forms.get(r++);
+        for (int q = 0; q < strlen(arg_mode); q++) {
+          printf("%u ", (uint8_t) *(arg_mode+q));
+        }
+        printf("\n");
+      }
       break;
   }
   
@@ -275,6 +286,14 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
         buffer += 6;
         nu_arg->reap = true;
         break;
+
+      // Variable-length types...
+      case STR_FM:
+        nu_arg = new Argument(strdup((const char*) buffer));
+        buffer = buffer + nu_arg->len;
+        len    = len - nu_arg->len;
+        break;
+
       default:
         // Abort parse. We encountered a type we can't deal with.
         args.clear();

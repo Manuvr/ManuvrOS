@@ -117,6 +117,7 @@ class Argument {
     Argument(Vector4f*);
     
     Argument(const char* val);
+    Argument(char* val);
     Argument(void*, uint16_t buf_len);
     Argument(StringBuilder *);
     Argument(EventReceiver *);

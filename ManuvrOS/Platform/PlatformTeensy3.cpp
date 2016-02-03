@@ -106,6 +106,39 @@ void init_RNG() {
 
 
 /****************************************************************************************************
+* Identity and serial number                                                                        *
+****************************************************************************************************/
+/**
+* We sometimes need to know the length of the platform's unique identifier (if any). If this platform
+*   is not serialized, this function will return zero.
+*
+* @return   The length of the serial number on this platform, in terms of bytes.
+*/
+int platformSerialNumberSize() {
+  return 16;
+}
+
+
+/**
+* Writes the serial number to the indicated buffer.
+* Note that for the Teensy3.x we use the Freescale unique ID. NOT the
+*   independent serial number installed by PJRC. See this thread:
+*   https://forum.pjrc.com/threads/25522-Serial-Number-of-Teensy-3-1
+*
+* @param    A pointer to the target buffer.
+* @return   The number of bytes written.
+*/
+int getSerialNumber(uint8_t *buf) {
+  *((uint32*) buf + 0)  = *((uint32*) 0x40048054);
+  *((uint32*) buf + 4)  = *((uint32*) 0x40048058);
+  *((uint32*) buf + 8)  = *((uint32*) 0x4004805C);
+  *((uint32*) buf + 12) = *((uint32*) 0x40048060);
+  return 16;
+}
+
+
+
+/****************************************************************************************************
 * Time and date                                                                                     *
 ****************************************************************************************************/
 uint32_t rtc_startup_state = MANUVR_RTC_STARTUP_UNINITED;

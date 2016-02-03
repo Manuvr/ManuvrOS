@@ -130,9 +130,9 @@ XenoSession::XenoSession(ManuvrXport* _xport) {
   __class_initializer();
 
   // These are messages that we to relay from the rest of the system.
-  tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
-  tapMessageType(MANUVR_MSG_SESS_HANGUP);
-  tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
+  //tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
+  //tapMessageType(MANUVR_MSG_SESS_HANGUP);
+  //tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
   tapMessageType(MANUVR_MSG_SELF_DESCRIBE);
 
   owner = _xport;

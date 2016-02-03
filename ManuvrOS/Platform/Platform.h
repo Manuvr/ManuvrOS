@@ -148,6 +148,18 @@ void init_RNG();                             // Fire up the random number genera
 
 
 /*
+* Identity and serial number.
+* Do be careful exposing this stuff, as any outside knowledge of chip
+*   serial numbers may compromise crypto that directly-relies on them.
+* For crypto, it would be best to never use an invariant number like this directly,
+*   and instead use it as a PRNG seed or some other such approach. Please see the
+*   security documentation for a deeper discussion of the issues at hand.
+*/
+int platformSerialNumberSize();   // Returns the length of the serial number on this platform.
+int getSerialNumber(uint8_t*);    // Writes the serial number to the indicated buffer. 
+
+
+/*
 * GPIO and change-notice.
 */
 void gpioSetup();        // We call this once on bootstrap. Sets up GPIO not covered by other classes.
