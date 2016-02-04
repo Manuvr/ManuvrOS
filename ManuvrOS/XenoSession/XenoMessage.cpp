@@ -30,9 +30,9 @@ XenoMessage is the class that is the interface between ManuvrRunnables and
 
 XenoMessage::XenoMessage() {
   __class_initializer();
-  proc_state          = XENO_MSG_PROC_STATE_UNINITIALIZED;
-  event               = NULL;  // Associates this XenoMessage to an event.
-  unique_id           = 0;     //
+  proc_state = XENO_MSG_PROC_STATE_UNINITIALIZED;
+  event      = NULL;  // Associates this XenoMessage to an event.
+  unique_id  = 0;     //
 }
 
 
@@ -40,10 +40,10 @@ XenoMessage::XenoMessage(ManuvrRunnable* existing_event) {
   __class_initializer();
   // Should maybe set a flag in the event to indicate that we are now responsible
   //   for memory upkeep? Don't want it to get jerked out from under us and cause a crash.
-  event = existing_event;
-  unique_id = (uint16_t) randomInt();
-  proc_state = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
-  message_code        = existing_event->event_code;     // 
+  event        = existing_event;
+  unique_id    = (uint16_t) randomInt();
+  proc_state   = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
+  message_code = existing_event->event_code;       // 
   serialize();   // We should do this immediately to preserve the message.
   event = NULL;  // Don't risk the event getting ripped out from under us.
 }
@@ -132,6 +132,7 @@ void XenoMessage::wipe() {
     }
   }
   proc_state = XENO_MSG_PROC_STATE_UNINITIALIZED;
+  time_created = millis();
 }
 
 
@@ -461,19 +462,21 @@ bool XenoMessage::isReply() {
 void XenoMessage::printDebug(StringBuilder *output) {
   if (NULL == output) return;
 
-  if (NULL != event) output->concatf("\tMessage type      %s\n", event->getMsgTypeString());
-  output->concatf("\tMessage state     %s\n", getMessageStateString(proc_state));
-  output->concatf("\tunique_id         0x%04x\n", unique_id);
-  output->concatf("\tchecksum_i        0x%02x\n", checksum_i);
-  output->concatf("\tchecksum_c        0x%02x\n", checksum_c);
-  output->concatf("\targ_count         %d\n", arg_count);
-  output->concatf("\tbytes_total       %d\n", bytes_total);
-  output->concatf("\tbytes_received    %d\n", bytes_received);
-  output->concatf("\ttime_created      0x%08x\n", time_created);
-  output->concatf("\tretries           %d\n", retries);
+  if (NULL != event) {
+    output->concatf("\t Message type    %s\n", event->getMsgTypeString());
+  }
+  output->concatf("\t Message state   %s\n", getMessageStateString(proc_state));
+  output->concatf("\t unique_id       0x%04x\n", unique_id);
+  output->concatf("\t checksum_i      0x%02x\n", checksum_i);
+  output->concatf("\t checksum_c      0x%02x\n", checksum_c);
+  output->concatf("\t arg_count       %d\n", arg_count);
+  output->concatf("\t bytes_total     %d\n", bytes_total);
+  output->concatf("\t bytes_received  %d\n", bytes_received);
+  output->concatf("\t time_created    0x%08x\n", time_created);
+  output->concatf("\t retries         %d\n", retries);
 
-  output->concatf("\t Buffer length: %d\n", buffer.length());
-  output->concatf("\t Argbuf length: %d\n", argbuf.length());
+  output->concatf("\t Buffer length:  %d\n", buffer.length());
+  output->concatf("\t Argbuf length:  %d\n", argbuf.length());
   output->concat("\n\n");
 }
 

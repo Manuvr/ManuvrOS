@@ -235,16 +235,10 @@ class XenoSession : public EventReceiver {
     inline bool isEstablished() {
       return (XENOSESSION_STATE_ESTABLISHED == (session_state & 0x0F));
     }
-
-    
-    // Plase note the subtle abuse of type....
-    static const uint8_t SYNC_PACKET_BYTES[4];
     
     static int contains_sync_pattern(uint8_t* buf, int len);
     static int locate_sync_break(uint8_t* buf, int len);
 
-    static XenoMessage* fetchPreallocation();
-    static void reclaimPreallocation(XenoMessage*);
 
 
   protected:
@@ -299,12 +293,19 @@ class XenoSession : public EventReceiver {
     const char* getSessionStateString();
     const char* getSessionSyncString();
 
+    
+    // Plase note the subtle abuse of type....
+    static const uint8_t SYNC_PACKET_BYTES[4];
+    
     /* Preallocation machinary. */ 
     // Prealloc starvation counters...
     static uint32_t _heap_instantiations;
     static uint32_t _heap_freeds;
     
     static XenoMessage __prealloc_pool[XENOMESSAGE_PREALLOCATE_COUNT];
+
+    static XenoMessage* fetchPreallocation();
+    static void reclaimPreallocation(XenoMessage*);
 };
 
 

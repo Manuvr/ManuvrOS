@@ -67,7 +67,6 @@ XenoMessage* XenoSession::fetchPreallocation() {
 }
 
 
-
 /**
 * At present, our criteria for preallocation is if the pointer address passed in
 *   falls within the range of our __prealloc_pool array. I see nothing "non-portable"
@@ -110,7 +109,50 @@ void XenoSession::reclaimPreallocation(XenoMessage* obj) {
 }
 
 
+/**
+* Scan a buffer for the protocol's sync pattern.
+*
+* @param buf  The buffer to search through.
+* @param len  How far should we go?
+* @return The offset of the sync pattern, or -1 if the buffer contained no such pattern.
+*/
+int XenoSession::contains_sync_pattern(uint8_t* buf, int len) {
+  int i = 0;
+  while (i < len-3) {
+    if (*(buf + i + 0) == XenoSession::SYNC_PACKET_BYTES[0]) {
+      if (*(buf + i + 1) == XenoSession::SYNC_PACKET_BYTES[1]) {
+        if (*(buf + i + 2) == XenoSession::SYNC_PACKET_BYTES[2]) {
+          if (*(buf + i + 3) == XenoSession::SYNC_PACKET_BYTES[3]) {
+            return i;
+          }
+        }
+      }
+    }
+    i++;
+  }
+  return -1;
+}
 
+
+/**
+* Scan a buffer for the protocol's sync pattern, returning the offset of the
+*   first byte that breaks the pattern. 
+*
+* @param buf  The buffer to search through.
+* @param len  How far should we go?
+* @return The offset of the first byte that is NOT sync-stream.
+*/
+int XenoSession::locate_sync_break(uint8_t* buf, int len) {
+  int i = 0;
+  while (i < len-3) {
+    if (*(buf + i + 0) != XenoSession::SYNC_PACKET_BYTES[0]) return i;
+    if (*(buf + i + 1) != XenoSession::SYNC_PACKET_BYTES[1]) return i;
+    if (*(buf + i + 2) != XenoSession::SYNC_PACKET_BYTES[2]) return i;
+    if (*(buf + i + 3) != XenoSession::SYNC_PACKET_BYTES[3]) return i;
+    i += 4;
+  }
+  return i;
+}
 
 
 
@@ -130,9 +172,9 @@ XenoSession::XenoSession(ManuvrXport* _xport) {
   __class_initializer();
 
   // These are messages that we to relay from the rest of the system.
-  //tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
-  //tapMessageType(MANUVR_MSG_SESS_HANGUP);
-  //tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
+  tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
+  tapMessageType(MANUVR_MSG_SESS_HANGUP);
+  tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
   tapMessageType(MANUVR_MSG_SELF_DESCRIBE);
 
   owner = _xport;
@@ -808,61 +850,6 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
 
 
 
-
-
-/****************************************************************************************************
-* Statics...
-****************************************************************************************************/
-
-
-/**
-* Scan a buffer for the protocol's sync pattern.
-*
-* @param buf  The buffer to search through.
-* @param len  How far should we go?
-* @return The offset of the sync pattern, or -1 if the buffer contained no such pattern.
-*/
-int XenoSession::contains_sync_pattern(uint8_t* buf, int len) {
-  int i = 0;
-  while (i < len-3) {
-    if (*(buf + i + 0) == XenoSession::SYNC_PACKET_BYTES[0]) {
-      if (*(buf + i + 1) == XenoSession::SYNC_PACKET_BYTES[1]) {
-        if (*(buf + i + 2) == XenoSession::SYNC_PACKET_BYTES[2]) {
-          if (*(buf + i + 3) == XenoSession::SYNC_PACKET_BYTES[3]) {
-            return i;
-          }
-        }
-      }
-    }
-    i++;
-  }
-  return -1;
-}
-
-
-/**
-* Scan a buffer for the protocol's sync pattern, returning the offset of the
-*   first byte that breaks the pattern. 
-*
-* @param buf  The buffer to search through.
-* @param len  How far should we go?
-* @return The offset of the first byte that is NOT sync-stream.
-*/
-int XenoSession::locate_sync_break(uint8_t* buf, int len) {
-  int i = 0;
-  while (i < len-3) {
-    if (*(buf + i + 0) != XenoSession::SYNC_PACKET_BYTES[0]) return i;
-    if (*(buf + i + 1) != XenoSession::SYNC_PACKET_BYTES[1]) return i;
-    if (*(buf + i + 2) != XenoSession::SYNC_PACKET_BYTES[2]) return i;
-    if (*(buf + i + 3) != XenoSession::SYNC_PACKET_BYTES[3]) return i;
-    i += 4;
-  }
-  return i;
-}
-
-
-
-
 /****************************************************************************************************
 *  ▄▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄   ▄         ▄  ▄▄▄▄▄▄▄▄▄▄▄ 
 * ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░▌       ▐░▌▐░░░░░░░░░░░▌
@@ -894,25 +881,23 @@ void XenoSession::printDebug(StringBuilder *output) {
   if (NULL == output) return;
   EventReceiver::printDebug(output);
   
-  output->concatf("--- Session state:   %s\n", getSessionStateString());
-  output->concatf("--- Sync state:      %s\n", getSessionSyncString());
-
-  output->concatf("--- Sequential parse failures:  %d\n", sequential_parse_failures);
-  output->concatf("--- sequential_ack_failures:    %d\n--- \n", sequential_ack_failures);
-  output->concatf("--- __prealloc_pool addres:     0x%08x\n", (uint32_t) __prealloc_pool);
-  output->concatf("--- _heap_instantiations:       %u\n", (unsigned long) _heap_instantiations);
-  output->concatf("--- _heap_frees:                %u\n", (unsigned long) _heap_freeds);
+  output->concatf("-- Session state        %s\n", getSessionStateString());
+  output->concatf("-- Sync state           %s\n", getSessionSyncString());
+  output->concatf("-- seq parse failures   %d\n", sequential_parse_failures);
+  output->concatf("-- seq_ack_failures     %d\n--\n", sequential_ack_failures);
+  output->concatf("-- _heap_instantiations %u\n", (unsigned long) _heap_instantiations);
+  output->concatf("-- _heap_frees          %u\n", (unsigned long) _heap_freeds);
   
   int ses_buf_len = session_buffer.length();
   if (ses_buf_len > 0) {
-    output->concatf("\n--- Session Buffer (%d bytes) --------------------------\n", ses_buf_len);
+    output->concatf("\n-- Session Buffer (%d bytes) --------------------------\n", ses_buf_len);
     for (int i = 0; i < ses_buf_len; i++) {
       output->concatf("0x%02x ", *(session_buffer.string() + i));
     }
     output->concat("\n\n");
   }
 
-  output->concat("\n--- Listening for the following event codes:\n");
+  output->concat("\n-- Listening for the following event codes:\n");
   int x = msg_relay_list.size();
   for (int i = 0; i < x; i++) {
     output->concatf("\t%s\n", msg_relay_list.get(i)->debug_label);
@@ -920,7 +905,7 @@ void XenoSession::printDebug(StringBuilder *output) {
   
   x = outbound_messages.size();
   if (x > 0) {
-    output->concatf("\n--- Outbound Queue %d total, showing top %d ------------\n", x, XENO_SESSION_MAX_QUEUE_PRINT);
+    output->concatf("\n-- Outbound Queue %d total, showing top %d ------------\n", x, XENO_SESSION_MAX_QUEUE_PRINT);
     for (int i = 0; i < min(x, XENO_SESSION_MAX_QUEUE_PRINT); i++) {
         outbound_messages.get(i)->printDebug(output);
     }
@@ -928,7 +913,7 @@ void XenoSession::printDebug(StringBuilder *output) {
   
   x = inbound_messages.size();
   if (x > 0) {
-    output->concatf("\n--- Inbound Queue %d total, showing top %d -------------\n", x, XENO_SESSION_MAX_QUEUE_PRINT);
+    output->concatf("\n-- Inbound Queue %d total, showing top %d -------------\n", x, XENO_SESSION_MAX_QUEUE_PRINT);
     for (int i = 0; i < min(x, XENO_SESSION_MAX_QUEUE_PRINT); i++) {
       inbound_messages.get(i)->printDebug(output);
     }
@@ -936,7 +921,7 @@ void XenoSession::printDebug(StringBuilder *output) {
   
   if (current_rx_message) {
     if (current_rx_message->bytes_received > 0) {
-      output->concat("\n--- XenoMessage in process  ----------------------------\n");
+      output->concat("\n-- XenoMessage in process  ----------------------------\n");
       current_rx_message->printDebug(output);
     }
   }
