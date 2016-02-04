@@ -213,7 +213,7 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
       // There are a few possible forms. We need to isolate which is correct.
       while (possible_forms.size() > 0) {
         arg_mode = possible_forms.get(r++);
-        for (int q = 0; q < strlen(arg_mode); q++) {
+        for (unsigned int q = 0; q < strlen(arg_mode); q++) {
           printf("%u ", (uint8_t) *(arg_mode+q));
         }
         printf("\n");

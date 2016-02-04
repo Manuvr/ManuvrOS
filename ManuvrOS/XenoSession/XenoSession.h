@@ -158,29 +158,40 @@ class XenoMessage {
 
 
 
+#define XENOSESSION_INITIAL_SYNC_COUNT    24      // How many sync packets to send before giving up.
 
 
 /*
 * These are defines for the low-4 bits of the session_state. They confine the space of our
 *   possible dialog, and bias the conversation in a given direction.
 */
-#define XENOSESSION_STATE_UNINITIALIZED   0x00  // Nothing has happened. Freshly-instantiated session.
-#define XENOSESSION_STATE_PENDING_SETUP   0x04  // We are in the setup phase of the session.
-#define XENOSESSION_STATE_PENDING_AUTH    0x08  // Waiting on authentication.
-#define XENOSESSION_STATE_ESTABLISHED     0x0A  // Session is in the nominal state.
-#define XENOSESSION_STATE_PENDING_HANGUP  0x0C  // Session hangup is imminent.
-#define XENOSESSION_STATE_HUNGUP          0x0E  // Session is hungup.
-#define XENOSESSION_STATE_DISCONNECTED    0x0F  // Transport informs us that our session is pointless.
+#define XENOSESSION_STATE_UNINITIALIZED   0x0000  // Nothing has happened. Freshly-instantiated session.
+#define XENOSESSION_STATE_PENDING_SETUP   0x0004  // We are in the setup phase of the session.
+#define XENOSESSION_STATE_PENDING_AUTH    0x0008  // Waiting on authentication.
+#define XENOSESSION_STATE_ESTABLISHED     0x000A  // Session is in the nominal state.
+#define XENOSESSION_STATE_PENDING_HANGUP  0x000C  // Session hangup is imminent.
+#define XENOSESSION_STATE_HUNGUP          0x000E  // Session is hungup.
+#define XENOSESSION_STATE_DISCONNECTED    0x000F  // Transport informs us that our session is pointless.
 
 /*
 * These are bitflags in the same space as the above-def'd constants. They all pertain to
 * the sync state of the session.
 */
-#define XENOSESSION_STATE_SYNC_INITIATED  0x80  // The counterparty noticed a problem.
-#define XENOSESSION_STATE_SYNC_INITIATOR  0x40  // We noticed a problem.
-#define XENOSESSION_STATE_SYNC_PEND_EXIT  0x20  // We think we have just recovered from a sync.
-#define XENOSESSION_STATE_SYNC_CASTING    0x10  // If set, we are broadcasting sync packets.
-#define XENOSESSION_STATE_SYNC_SYNCD      0x00  // Pedantry... Just helps document.
+#define XENOSESSION_STATE_SYNC_INITIATED  0x0080  // The counterparty noticed a problem.
+#define XENOSESSION_STATE_SYNC_INITIATOR  0x0040  // We noticed a problem.
+#define XENOSESSION_STATE_SYNC_PEND_EXIT  0x0020  // We think we have just recovered from a sync.
+#define XENOSESSION_STATE_SYNC_CASTING    0x0010  // If set, we are broadcasting sync packets.
+#define XENOSESSION_STATE_SYNC_SYNCD      0x0000  // Pedantry... Just helps document.
+
+/*
+* These are bitflags in the same space as the above-def'd constants. They all pertain to
+* the sync state of the session.
+*/
+#define XENOSESSION_STATE_AUTH_REQUIRED   0x0100  // Set if this session requires authentication.
+#define XENOSESSION_STATE_AUTHD           0x0200  // Set if this session has been authenticated.
+#define XENOSESSION_STATE_OVERFLOW_GUARD  0x0400  // Set to protect the session buffer from overflow.
+
+
 
 /**
 * This class represents an open comm session with a foreign device. That comm session might
@@ -189,10 +200,6 @@ class XenoMessage {
 */
 class XenoSession : public EventReceiver {
   public:
-    bool    authed;              // Have they authenticated (if required)?
-    uint8_t session_state;       // What state is this session in?
-    uint8_t session_last_state;  // The prior state of the sesssion.
-    
     XenoSession(ManuvrXport*);
     ~XenoSession();
     
@@ -218,22 +225,22 @@ class XenoSession : public EventReceiver {
 
     // Returns and isolates the state bits.
     inline uint8_t getState() {
-      return (session_state & 0x0F);
+      return (session_state & 0xFF0F);
     };
 
     // Returns and isolates the sync bits.
     inline uint8_t getSync() {
-      return (session_state & 0xF0);
+      return (session_state & 0x00F0);
     };
 
     // Returns the answer to: "Is this session in sync?"
     inline bool syncd() {
-      return (0 == ((session_state & 0xF0) | XENOSESSION_STATE_SYNC_SYNCD));
+      return (0 == ((session_state & 0x00F0) | XENOSESSION_STATE_SYNC_SYNCD));
     }
 
     // Returns the answer to: "Is this session established?"
     inline bool isEstablished() {
-      return (XENOSESSION_STATE_ESTABLISHED == (session_state & 0x0F));
+      return (XENOSESSION_STATE_ESTABLISHED == (session_state & 0xFF0F));
     }
     
     static int contains_sync_pattern(uint8_t* buf, int len);
@@ -246,6 +253,12 @@ class XenoSession : public EventReceiver {
 
 
   private:
+    ManuvrXport* owner;           // A reference to the transport that owns this session.
+    XenoMessage* working;         // If we are in the middle of receiving a message.
+
+    uint16_t session_state;       // What state is this session in?
+    uint16_t session_last_state;  // The prior state of the sesssion.
+    
     /*
     * A buffer for holding inbound stream until enough has arrived to parse. This eliminates
     *   the need for the transport to care about how much data we consumed versus left in its buffer. 
@@ -253,24 +266,15 @@ class XenoSession : public EventReceiver {
     StringBuilder session_buffer;
     ManuvrRunnable sync_event;
 
-    uint32_t pid_ack_timeout;   // Holds the PID for message ack timeout.
-
     LinkedList<MessageTypeDef*> msg_relay_list;   // Which message codes will we relay to the counterparty?
     LinkedList<XenoMessage*> outbound_messages;   // Messages that are bound for the counterparty.
     LinkedList<XenoMessage*> inbound_messages;    // Messages that came from the counterparty.
-
-    XenoMessage* current_rx_message;
-    ManuvrXport* owner;
     
     /* These variables track failure cases to inform sync-initiation. */
-    uint8_t MAX_PARSE_FAILURES;  // How many failures-to-parse should we tolerate before SYNCing?
-    uint8_t MAX_ACK_FAILURES;    // How many failures-to-ACK should we tolerate before SYNCing?
-    uint8_t sequential_parse_failures;      // How many parse attempts have failed in-a-row?
-    uint8_t sequential_ack_failures;        // How many of our outbound packets have failed to ACK?
-
-    uint8_t initial_sync_count;
-    
-    bool session_overflow_guard;
+    uint8_t MAX_PARSE_FAILURES;         // How many failures-to-parse should we tolerate before SYNCing?
+    uint8_t MAX_ACK_FAILURES;           // How many failures-to-ACK should we tolerate before SYNCing?
+    uint8_t sequential_parse_failures;  // How many parse attempts have failed in-a-row?
+    uint8_t sequential_ack_failures;    // How many of our outbound packets have failed to ACK?
 
     int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
     int8_t scan_buffer_for_sync();
@@ -284,7 +288,7 @@ class XenoSession : public EventReceiver {
     */
     inline void mark_session_state(uint8_t nu_state) {
       session_last_state = session_state;
-      session_state = (session_state & 0xF0) | nu_state;
+      session_state      = (session_state & 0x00F0) | nu_state;
     }
     
     int purgeInbound();

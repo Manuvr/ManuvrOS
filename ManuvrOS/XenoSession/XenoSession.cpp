@@ -42,6 +42,7 @@ XenoSession is the class that manages dialog with other systems via some
 /* This is what a sync packet looks like. Always. So common, we'll hard-code it. */
 const uint8_t XenoSession::SYNC_PACKET_BYTES[4] = {0x04, 0x00, 0x00, CHECKSUM_PRELOAD_BYTE};
 
+// TODO: This is probably useless except in debug builds.
 uint32_t XenoSession::_heap_instantiations = 0;
 uint32_t XenoSession::_heap_freeds         = 0;
 
@@ -167,11 +168,13 @@ int XenoSession::locate_sync_break(uint8_t* buf, int len) {
 
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
+*
+* @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
 XenoSession::XenoSession(ManuvrXport* _xport) {
   __class_initializer();
 
-  // These are messages that we to relay from the rest of the system.
+  // These are messages that we want to relay from the rest of the system.
   tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
   tapMessageType(MANUVR_MSG_SESS_HANGUP);
   tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
@@ -179,15 +182,11 @@ XenoSession::XenoSession(ManuvrXport* _xport) {
 
   owner = _xport;
   
-  authed                    = false;
   session_state             = XENOSESSION_STATE_UNINITIALIZED;
   session_last_state        = XENOSESSION_STATE_UNINITIALIZED;
   sequential_parse_failures = 0;
   sequential_ack_failures   = 0;
-  initial_sync_count        = 24;
-  session_overflow_guard    = true;
-  pid_ack_timeout           = 0;
-  current_rx_message        = NULL;
+  working                   = NULL;
   
   MAX_PARSE_FAILURES  = 3;  // How many failures-to-parse should we tolerate before SYNCing?
   MAX_ACK_FAILURES    = 3;  // How many failures-to-ACK should we tolerate before SYNCing?
@@ -277,11 +276,6 @@ int8_t XenoSession::markMessageComplete(uint16_t target_id) {
       switch (working_xeno->proc_state) {
         case XENO_MSG_PROC_STATE_AWAITING_REAP:
           outbound_messages.remove(working_xeno);
-          if (pid_ack_timeout) {
-            // If the message had a timeout (waiting for ACK), we should clean up the schedule.
-            //__kernel->disableSchedule(pid_ack_timeout);
-            //__kernel->removeSchedule(pid_ack_timeout);
-          }
           reclaimPreallocation(working_xeno);
           return 1;
       }
@@ -764,9 +758,10 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
   }
 
 
-
-  XenoMessage* working = (NULL != current_rx_message) ? current_rx_message : new XenoMessage();
-  current_rx_message = working;  // TODO: ugly hack for now to maintain compatibility elsewhere.
+  if (NULL == working) {
+    working = fetchPreallocation();
+    working->wipe();
+  }
   
   int consumed = working->feedBuffer(&session_buffer);
   #ifdef __MANUVR_DEBUG
@@ -787,8 +782,8 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
       }
       working->proc_state = XENO_MSG_PROC_STATE_AWAITING_PROC;
     case XENO_MSG_PROC_STATE_AWAITING_PROC:  // This message is fully-formed.
-      current_rx_message = NULL;
       inbound_messages.insert(working);   // ...and drop it into the inbound message queue.
+      working = NULL;
       if (XENOSESSION_STATE_SYNC_PEND_EXIT & session_state) {   // If we were pending sync, and got this result, we are almost certainly syncd.
         #ifdef __MANUVR_DEBUG
         if (verbosity > 5) local_log.concat("Session became syncd for sure...\n");
@@ -798,7 +793,6 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
       raiseEvent(working->event);
       break;
     case XENO_MSG_PROC_STATE_SYNC_PACKET:  // This message is a sync packet. 
-      current_rx_message = NULL;
       working->wipe();
       if (0 == getState()) {
         // If we aren't dealing with sync at the moment, and the counterparty sent a sync packet...
@@ -825,10 +819,10 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
         }
         working->wipe();
       }
-      current_rx_message = NULL;
+      reclaimPreallocation(working);
+      working = NULL;
       break;
     case XENO_MSG_PROC_STATE_RECEIVING: // 
-      current_rx_message = working;
       break;
     default:
       #ifdef __MANUVR_DEBUG
@@ -919,10 +913,10 @@ void XenoSession::printDebug(StringBuilder *output) {
     }
   }
   
-  if (current_rx_message) {
-    if (current_rx_message->bytes_received > 0) {
+  if (working) {
+    if (working->bytes_received > 0) {
       output->concat("\n-- XenoMessage in process  ----------------------------\n");
-      current_rx_message->printDebug(output);
+      working->printDebug(output);
     }
   }
 }
@@ -970,8 +964,7 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
 
   switch (*(str)) {
     case 'S':  // Send a mess of sync packets.
-      initial_sync_count = 24;
-      sync_event.alterScheduleRecurrence((int16_t) initial_sync_count);
+      sync_event.alterScheduleRecurrence(XENOSESSION_INITIAL_SYNC_COUNT);
       sync_event.enableSchedule(true);
       break;
     case 'i':  // Send a mess of sync packets.
