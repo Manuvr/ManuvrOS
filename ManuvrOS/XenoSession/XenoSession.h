@@ -101,16 +101,8 @@ const uint8_t XENO_MSG_PROC_STATE_WRITING_REPLY          = 0x25;
 */
 class XenoMessage {
   public:
-    StringBuilder   buffer;        // Holds the intermediary form of the message that traverses the transport.
-    uint8_t         proc_state;    // Where are we in the flow of this message? See XENO_MSG_PROC_STATES
-    
-    bool            expecting_ack; // Does this message expect an ACK?
-    
+
     ManuvrRunnable* event;         // Associates this XenoMessage to an event.
-
-    uint32_t  bytes_received;      // How many bytes of this command have we received? Meaningless for the sender.
-    uint16_t  unique_id;     //
-
     
     XenoMessage();                  // Typical use: building an inbound XemoMessage. 
     XenoMessage(ManuvrRunnable*);   // Create a new XenoMessage with the given event as source data.
@@ -126,32 +118,53 @@ class XenoMessage {
     int8_t ack();      // Ack this message.
     int8_t retry();    // Asks the counterparty for a retransmission of this packet. Assumes good unique-id.
     int8_t fail();     // Informs the counterparty that the indicated message failed a high-level validity check.
-    //reply(XenoMessage*); 
     
     int feedBuffer(StringBuilder *buf);  // This is used to build an event from data that arrives in chunks.
     void provideEvent(ManuvrRunnable*);  // Call to make this XenoMessage outbound.
     void provide_event(ManuvrRunnable*, uint16_t);  // Call to make this XenoMessage outbound.
     
     bool isReply();      // Returns true if this message is a reply to another message.
+    bool expectsACK();   // Returns true if this message demands an ACK.
 
     void printDebug(StringBuilder*);
+    
+    inline int8_t getBuffer(StringBuilder** _buf) {
+      *(_buf) = &buffer;
+      return 0;
+    };
+
+    inline uint8_t getState() { return proc_state; };
+    inline uint8_t uniqueId() { return unique_id;  };
+    
+    /*
+    * Functions used for manipulating this message's state-machine...
+    */
+    void claim(XenoSession*);
+
 
     static const char* getMessageStateString(uint8_t code);
 
 
   private:
-    StringBuilder   argbuf;  // Holds the bytes-in-excess-of packet-minimum until they can be parsed.
-    uint32_t  time_created;     // Optional: What time did this message come into existance?
-    uint32_t  millis_at_begin;     // This is the milliseconds reading when we sent.
-    uint8_t   retries;     // How many times have we retried this packet?
+    XenoSession*    session;   // A reference to the session that we are associated with.
+    StringBuilder   buffer;    // Holds the intermediary form of the message that traverses the transport.
+    StringBuilder   argbuf;    // Holds the bytes-in-excess-of packet-minimum until they can be parsed.
+    uint32_t  time_created;    // Optional: What time did this message come into existance?
+    uint32_t  millis_at_begin; // This is the milliseconds reading when we sent.
+    uint8_t   retries;         // How many times have we retried this packet?
 
-    uint32_t  bytes_total;     // How many bytes does this command occupy?
+    uint8_t         proc_state;    // Where are we in the flow of this message? See XENO_MSG_PROC_STATES
+    uint32_t  bytes_received;      // How many bytes of this command have we received? Meaningless for the sender.
+
     uint8_t   arg_count;
 
-    uint8_t   checksum_i;     // The checksum of the data that we receive.
-    uint8_t   checksum_c;     // The checksum of the data that we calculate.
+    uint32_t  bytes_total;     // How many bytes does this message occupy on the wire?
 
-    uint16_t  message_code;     // 
+    uint8_t   checksum_i;      // The checksum of the data that we receive.
+    uint8_t   checksum_c;      // The checksum of the data that we calculate.
+
+    uint16_t  unique_id;       // An identifier for this message.
+    uint16_t  message_code;    // The integer code for this message class.
 
     void __class_initializer();
 };
@@ -308,7 +321,7 @@ class XenoSession : public EventReceiver {
     
     static XenoMessage __prealloc_pool[XENOMESSAGE_PREALLOCATE_COUNT];
 
-    static XenoMessage* fetchPreallocation();
+    static XenoMessage* fetchPreallocation(XenoSession*);
     static void reclaimPreallocation(XenoMessage*);
 };
 

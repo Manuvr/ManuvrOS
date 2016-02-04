@@ -40,12 +40,7 @@ XenoMessage::XenoMessage(ManuvrRunnable* existing_event) {
   __class_initializer();
   // Should maybe set a flag in the event to indicate that we are now responsible
   //   for memory upkeep? Don't want it to get jerked out from under us and cause a crash.
-  event        = existing_event;
-  unique_id    = (uint16_t) randomInt();
-  proc_state   = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
-  message_code = existing_event->event_code;       // 
-  serialize();   // We should do this immediately to preserve the message.
-  event = NULL;  // Don't risk the event getting ripped out from under us.
+  provideEvent(existing_event);
 }
 
 
@@ -64,7 +59,6 @@ void XenoMessage::__class_initializer() {
   arg_count       = 0;
   checksum_i      = 0;     // The checksum of the data that we receive.
   checksum_c      = CHECKSUM_PRELOAD_BYTE;     // The checksum of the data that we calculate.
-  expecting_ack   = true;  // Does this message expect an ACK?
   bytes_received  = 0;     // How many bytes of this command have we received? Meaningless for the sender.
   retries         = 0;     // How many times have we retried this packet?
   time_created = millis(); // Optional: What time did this message come into existance?
@@ -86,8 +80,10 @@ void XenoMessage::provideEvent(ManuvrRunnable *existing_event) {
   event = existing_event;
   unique_id = (uint16_t) randomInt();
   proc_state = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
+  message_code = event->event_code;                // 
   serialize();   // We should do this immediately to preserve the message.
   event = NULL;  // Don't risk the event getting ripped out from under us.
+  proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;  // Implies we are sending.
 }
 
 
@@ -115,9 +111,8 @@ void XenoMessage::wipe() {
   argbuf.clear();
   buffer.clear();
   proc_state     = 0;
-  expecting_ack = false;
   bytes_received = 0;
-  unique_id    = 0;
+  unique_id      = 0;
 
   bytes_total  = 0;
   arg_count    = 0;
@@ -342,9 +337,6 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
     // Do we have a whole minimum packet yet?
     if (buf_len < 4) {
       // Not enough to act on.
-      #ifdef __MANUVR_DEBUG
-        output.concat("Rejecting bytes because there aren't enough of them yet to make a complete packet.\n");
-      #endif
       if (return_value == buf_len)  sb_buf->clear();
       else if (return_value > 0)    sb_buf->cull(return_value);
       if (output.length() > 0) Kernel::log(&output);
@@ -357,6 +349,10 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
       message_code = parseUint16Fromchars(buf);
       bytes_received += 4;
       return_value   += 4;
+      
+      // TODO: Now that we have a message code, we can go get a message def, and possible arg
+      //   forms in anticipation of the parse being accurate and the message valid. Not sure if
+      //   that is a good idea at this point.    ---J. Ian Lindsay   Thu Feb 04 12:01:54 PST 2016
 
       /* Adjust buffer for down-stream code. */
       buf += 2;
@@ -394,26 +390,43 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
         output.concat("XenoMessage::feedBuffer(): Ooops. Clobbered an event pointer. Expect leaks...\n");
         #endif
       }
+
       event = Kernel::returnEvent(message_code);
-      switch (proc_state) {
-        case XENO_MSG_PROC_STATE_RECEIVING:
-          proc_state = XENO_MSG_PROC_STATE_AWAITING_UNSERIALIZE;
-          #ifdef __MANUVR_DEBUG
-            output.concat("XenoMessage::feedBuffer() Ready to unserialize...\n");
-          #endif
-          break;
-        case XENO_MSG_PROC_STATE_RECEIVING_REPLY:
-          proc_state = XENO_MSG_PROC_STATE_REPLY_RECEIVED;
-          #ifdef __MANUVR_DEBUG
-            output.concat("XenoMessage::feedBuffer() Received reply!\n");
-          #endif
-          break;
-        default:
-          #ifdef __MANUVR_DEBUG
-            output.concatf("XenoMessage::feedBuffer() Message received, and is ok, but not sure about state.... Is %s\n", XenoMessage::getMessageStateString(proc_state));
-          #endif
-          if (output.length() > 0) Kernel::log(&output);
-          return -2;
+      
+      if (event->event_code) {
+        // The event code was found. Do something about it.
+        switch (proc_state) {
+          case XENO_MSG_PROC_STATE_RECEIVING:
+            proc_state = XENO_MSG_PROC_STATE_AWAITING_UNSERIALIZE;
+            #ifdef __MANUVR_DEBUG
+              output.concat("XenoMessage::feedBuffer() Ready to unserialize...\n");
+            #endif
+            break;
+          case XENO_MSG_PROC_STATE_RECEIVING_REPLY:
+            proc_state = XENO_MSG_PROC_STATE_REPLY_RECEIVED;
+            #ifdef __MANUVR_DEBUG
+              output.concat("XenoMessage::feedBuffer() Received reply!\n");
+            #endif
+            break;
+          default:
+            #ifdef __MANUVR_DEBUG
+              output.concatf("XenoMessage::feedBuffer() Message received, and is ok, but not sure about state.... Is %s\n", XenoMessage::getMessageStateString(proc_state));
+            #endif
+            if (output.length() > 0) Kernel::log(&output);
+            return -2;
+        }
+      }
+      else {
+        /* By convention, 0x0000 is the message code for "Undefined event". In this case it means that
+             we understood what our counterparty said, but ve used a phrase or idiom that we don't 
+             understand. We might at this point choose to do any of the following:
+           a) Check against an independently-tracked message legend in a session somewhere.
+           b) Ask the counterparty for a message legend if we don't have one yet.
+           c) NACK the message with a fail condition so he quits using that idiom.
+        */
+        #ifdef __MANUVR_DEBUG
+          output.concatf("XenoMessage::feedBuffer(): Couldn't find a message definition for the code 0x%04x.\n", message_code);
+        #endif
       }
     }
     else {
@@ -452,6 +465,33 @@ bool XenoMessage::isReply() {
       return false;
   }
 }
+
+
+/**
+* Does this message type demand an ACK?
+*
+* @return  true if this message demands an ACK.
+*/
+bool XenoMessage::expectsACK() {
+  if (NULL != event) {
+    return event->demandsACK();
+  }
+  return false;
+}
+
+
+
+
+/**
+* Called by a session object to claim the message.
+*
+* @param   XenoSession* The session that is claiming us.
+*/
+void XenoMessage::claim(XenoSession* _ses) {
+  proc_state = XENO_MSG_PROC_STATE_CLAIMED;
+  session = _ses;
+}
+
 
 
 /**

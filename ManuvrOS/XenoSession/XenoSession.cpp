@@ -48,21 +48,21 @@ uint32_t XenoSession::_heap_freeds         = 0;
 
 XenoMessage XenoSession::__prealloc_pool[XENOMESSAGE_PREALLOCATE_COUNT];
 
-XenoMessage* XenoSession::fetchPreallocation() {
+XenoMessage* XenoSession::fetchPreallocation(XenoSession* _ses) {
   XenoMessage* return_value;
 
   int i = 0;
   while (i < XENOMESSAGE_PREALLOCATE_COUNT) {
-    if (XENO_MSG_PROC_STATE_UNINITIALIZED == __prealloc_pool[i].proc_state) {
-      __prealloc_pool[i].proc_state = XENO_MSG_PROC_STATE_CLAIMED;
+    if (XENO_MSG_PROC_STATE_UNINITIALIZED == __prealloc_pool[i].getState()) {
+      __prealloc_pool[i].claim(_ses);
       return &__prealloc_pool[i];
     }
     i++;
   }
 
   // We have exhausted our preallocated pool. Note it.
-  return_value            = new XenoMessage();
-  return_value->proc_state = XENO_MSG_PROC_STATE_CLAIMED;
+  return_value = new XenoMessage();
+  return_value->claim(_ses);
   _heap_instantiations++;
   return return_value;
 }
@@ -272,8 +272,8 @@ int8_t XenoSession::markMessageComplete(uint16_t target_id) {
   XenoMessage *working_xeno;
   for (int i = 0; i < outbound_messages.size(); i++) {
     working_xeno = outbound_messages.get(i);
-    if (target_id == working_xeno->unique_id) {
-      switch (working_xeno->proc_state) {
+    if (target_id == working_xeno->uniqueId()) {
+      switch (working_xeno->getState()) {
         case XENO_MSG_PROC_STATE_AWAITING_REAP:
           outbound_messages.remove(working_xeno);
           reclaimPreallocation(working_xeno);
@@ -539,11 +539,14 @@ int8_t XenoSession::sendKeepAlive() {
 * This is the point at which choices are made about what happens to the event's life-cycle.
 */
 int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
-  XenoMessage nu_outbound_msg(active_event);
-  nu_outbound_msg.expecting_ack = active_event->demandsACK();
-  nu_outbound_msg.proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
+  XenoMessage* nu_outbound_msg = fetchPreallocation(this);
+  nu_outbound_msg->provideEvent(active_event);
 
-  owner->sendBuffer(&(nu_outbound_msg.buffer));
+  StringBuilder* buf;
+  nu_outbound_msg->getBuffer(&buf);
+  if (buf->length() > 0) {
+    owner->sendBuffer(buf);
+  }
   //outbound_messages.insert(nu_outbound_msg);
   
   // We are about to pass a message across the transport.
@@ -759,7 +762,7 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
 
 
   if (NULL == working) {
-    working = fetchPreallocation();
+    working = fetchPreallocation(this);
     working->wipe();
   }
   
@@ -768,7 +771,7 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
   if (verbosity > 5) local_log.concatf("Feeding the working_message buffer. Consumed %d of %d bytes.\n", consumed, len);
   #endif
 
-  switch (working->proc_state) {
+  switch (working->getState()) {
     case XENO_MSG_PROC_STATE_AWAITING_UNSERIALIZE: //
       #ifdef __MANUVR_DEBUG
       if (verbosity > 3) local_log.concat("About to inflate arguments.\n");
@@ -776,11 +779,15 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
       if (working->inflateArgs()) {
         // If we had a problem inflating....
         #ifdef __MANUVR_DEBUG
-        if (verbosity > 3) local_log.concat("There was a failure taking arguments apart.\n");
+        if (verbosity > 3) {
+          local_log.concat("There was a failure taking arguments apart.\n");
+          working->printDebug(&local_log);
+        }
         #endif
-        working->proc_state = XENO_MSG_PROC_STATE_AWAITING_REAP;
+        reclaimPreallocation(working);
+        working = NULL;
       }
-      working->proc_state = XENO_MSG_PROC_STATE_AWAITING_PROC;
+      break;
     case XENO_MSG_PROC_STATE_AWAITING_PROC:  // This message is fully-formed.
       inbound_messages.insert(working);   // ...and drop it into the inbound message queue.
       working = NULL;
@@ -826,7 +833,7 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
       break;
     default:
       #ifdef __MANUVR_DEBUG
-      if (verbosity > 1) local_log.concatf("ILLEGAL proc_state: 0x%02x\n", working->proc_state);
+      if (verbosity > 1) local_log.concatf("ILLEGAL proc_state: 0x%02x\n", working->getState());
       #endif
       break;
   }
@@ -914,7 +921,7 @@ void XenoSession::printDebug(StringBuilder *output) {
   }
   
   if (working) {
-    if (working->bytes_received > 0) {
+    if (NULL != working) {
       output->concat("\n-- XenoMessage in process  ----------------------------\n");
       working->printDebug(output);
     }
