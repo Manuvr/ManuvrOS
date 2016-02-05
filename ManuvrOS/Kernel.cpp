@@ -917,6 +917,10 @@ void Kernel::print_type_sizes() {
   temp.concatf("\t ManuvrMsg             %zu\n", sizeof(ManuvrMsg));
   temp.concatf("\t Argument              %zu\n", sizeof(Argument));
   temp.concatf("\t TaskProfilerData      %zu\n", sizeof(TaskProfilerData));
+  
+  //temp.concatf(" XenoComm:\n");
+  //temp.concatf("\t XenoSession           %zu\n", sizeof(XenoSession));
+  //temp.concatf("\t XenoMessage           %zu\n", sizeof(XenoMessage));
 
   Kernel::log(&temp);
 }

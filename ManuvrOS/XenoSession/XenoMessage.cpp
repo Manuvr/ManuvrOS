@@ -28,13 +28,151 @@ XenoMessage is the class that is the interface between ManuvrRunnables and
 #include <ManuvrOS/Platform/Platform.h>
 
 
+
+/****************************************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \    
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |   
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/    
+*
+* Static members and initializers should be located here. Initializers first, functions second.
+****************************************************************************************************/
+
+/* This is what a sync packet looks like. Always. So common, we'll hard-code it. */
+const uint8_t XenoMessage::SYNC_PACKET_BYTES[4] = {0x04, 0x00, 0x00, CHECKSUM_PRELOAD_BYTE};
+
+// TODO: This is probably useless except in debug builds.
+uint32_t XenoMessage::_heap_instantiations = 0;
+uint32_t XenoMessage::_heap_freeds         = 0;
+
+XenoMessage XenoMessage::__prealloc_pool[XENOMESSAGE_PREALLOCATE_COUNT];
+
+XenoMessage* XenoMessage::fetchPreallocation(XenoSession* _ses) {
+  XenoMessage* return_value;
+
+  int i = 0;
+  while (i < XENOMESSAGE_PREALLOCATE_COUNT) {
+    if (XENO_MSG_PROC_STATE_UNINITIALIZED == __prealloc_pool[i].getState()) {
+      __prealloc_pool[i].claim(_ses);
+      return &__prealloc_pool[i];
+    }
+    i++;
+  }
+
+  // We have exhausted our preallocated pool. Note it.
+  return_value = new XenoMessage();
+  return_value->claim(_ses);
+  _heap_instantiations++;
+  return return_value;
+}
+
+
+/**
+* At present, our criteria for preallocation is if the pointer address passed in
+*   falls within the range of our __prealloc_pool array. I see nothing "non-portable"
+*   about this, it doesn't require a flag or class member, and it is fast to check.
+* However, this strategy only works for types that are never used in DMA or code
+*   execution on the STM32F4. It may work for other architectures (PIC32, x86?).
+*   I also feel like it ought to be somewhat slower than a flag or member, but not
+*   by such an amount that the memory savings are not worth the CPU trade-off.
+* Consider writing all new cyclical queues with preallocated members to use this
+*   strategy. Also, consider converting the most time-critical types to this strategy
+*   up until we hit the boundaries of the STM32 CCM.
+*                                 ---J. Ian Lindsay   Mon Apr 13 10:51:54 MST 2015
+* 
+* @param XenoMessage* obj is the pointer to the object to be reclaimed.
+*/
+void XenoMessage::reclaimPreallocation(XenoMessage* obj) {
+  uint32_t obj_addr = ((uint32_t) obj);
+  uint32_t pre_min  = ((uint32_t) __prealloc_pool);
+  uint32_t pre_max  = pre_min + (sizeof(XenoMessage) * XENOMESSAGE_PREALLOCATE_COUNT);
+  
+  if ((obj_addr < pre_max) && (obj_addr >= pre_min)) {
+    // If we are in this block, it means obj was preallocated. wipe and reclaim it.
+    #ifdef __MANUVR_DEBUG
+      StringBuilder local_log;
+      local_log.concatf("reclaim via prealloc. addr: 0x%08x\n", obj_addr);
+      Kernel::log(&local_log);
+    #endif
+    obj->wipe();
+  }
+  else {
+    #ifdef __MANUVR_DEBUG
+      StringBuilder local_log;
+      local_log.concatf("reclaim via delete. addr: 0x%08x\n", obj_addr);
+      Kernel::log(&local_log);
+    #endif
+    // We were created because our prealloc was starved. we are therefore a transient heap object.
+    _heap_freeds++;
+    delete obj;
+  }
+}
+
+
+/**
+* Scan a buffer for the protocol's sync pattern.
+*
+* @param buf  The buffer to search through.
+* @param len  How far should we go?
+* @return The offset of the sync pattern, or -1 if the buffer contained no such pattern.
+*/
+int XenoMessage::contains_sync_pattern(uint8_t* buf, int len) {
+  int i = 0;
+  while (i < len-3) {
+    if (*(buf + i + 0) == XenoMessage::SYNC_PACKET_BYTES[0]) {
+      if (*(buf + i + 1) == XenoMessage::SYNC_PACKET_BYTES[1]) {
+        if (*(buf + i + 2) == XenoMessage::SYNC_PACKET_BYTES[2]) {
+          if (*(buf + i + 3) == XenoMessage::SYNC_PACKET_BYTES[3]) {
+            return i;
+          }
+        }
+      }
+    }
+    i++;
+  }
+  return -1;
+}
+
+
+/**
+* Scan a buffer for the protocol's sync pattern, returning the offset of the
+*   first byte that breaks the pattern. 
+*
+* @param buf  The buffer to search through.
+* @param len  How far should we go?
+* @return The offset of the first byte that is NOT sync-stream.
+*/
+int XenoMessage::locate_sync_break(uint8_t* buf, int len) {
+  int i = 0;
+  while (i < len-3) {
+    if (*(buf + i + 0) != XenoMessage::SYNC_PACKET_BYTES[0]) return i;
+    if (*(buf + i + 1) != XenoMessage::SYNC_PACKET_BYTES[1]) return i;
+    if (*(buf + i + 2) != XenoMessage::SYNC_PACKET_BYTES[2]) return i;
+    if (*(buf + i + 3) != XenoMessage::SYNC_PACKET_BYTES[3]) return i;
+    i += 4;
+  }
+  return i;
+}
+
+
+/****************************************************************************************************
+*   ___ _              ___      _ _              _      _       
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___ 
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+****************************************************************************************************/
+
 XenoMessage::XenoMessage() {
-  __class_initializer();
+  wipe();
 }
 
 
 XenoMessage::XenoMessage(ManuvrRunnable* existing_event) {
-  __class_initializer();
+  wipe();
   // Should maybe set a flag in the event to indicate that we are now responsible
   //   for memory upkeep? Don't want it to get jerked out from under us and cause a crash.
   provideEvent(existing_event);
@@ -49,80 +187,48 @@ XenoMessage::~XenoMessage() {
 }
 
 
-void XenoMessage::__class_initializer() {
-  proc_state      = XENO_MSG_PROC_STATE_UNINITIALIZED;
-  session         = NULL;
-  event           = NULL;
-  unique_id       = 0;     //
-  bytes_total     = 0;     // How many bytes does this message occupy?
-  arg_count       = 0;
-  checksum_i      = 0;     // The checksum of the data that we receive.
-  checksum_c      = CHECKSUM_PRELOAD_BYTE;     // The checksum of the data that we calculate.
-  bytes_received  = 0;     // How many bytes of this command have we received? Meaningless for the sender.
-  retries         = 0;     // How many times have we retried this packet?
-  time_created = millis(); // Optional: What time did this message come into existance?
-  millis_at_begin = 0;     // This is the milliseconds reading when we sent.
-  message_code    = 0;     // 
-}
-
-
 /**
 * Sometimes we might want to re-use this allocated object rather than free it.
 * Do not change the unique_id. One common use-case for this fxn is to reply to a message.
 */
 void XenoMessage::wipe() {
-  argbuf.clear();
   buffer.clear();
-  proc_state     = 0;
-  bytes_received = 0;
-  unique_id      = 0;
+  session         = NULL;
+  proc_state      = XENO_MSG_PROC_STATE_UNINITIALIZED;
+  checksum_c      = CHECKSUM_PRELOAD_BYTE;     // The checksum of the data that we calculate.
+  retries         = 0;     // How many times have we retried this packet?
+  bytes_received  = 0;     // How many bytes of this command have we received? Meaningless for the sender.
+  arg_count       = 0;
 
-  bytes_total  = 0;
-  arg_count    = 0;
-  checksum_i   = 0;
-  checksum_c   = CHECKSUM_PRELOAD_BYTE;
-  message_code = 0;
+  unique_id       = 0;
+  bytes_total     = 0;     // How many bytes does this message occupy?
+  checksum_i      = 0;     // The checksum of the data that we receive.
+  message_code    = 0;     //
   
   if (NULL != event) {
     // TODO: Now we are worried about this.
     event = NULL;
   }
-  proc_state = XENO_MSG_PROC_STATE_UNINITIALIZED;
-  time_created = millis();
-}
 
+  millis_at_begin = 0;     // This is the milliseconds reading when we sent.
+  time_created    = millis();
+}
 
 
 /**
 * Calling this fxn will cause this Message to be populated with the given Event and unique_id.
 * Calling this converts this XenoMessage into an outbound, and has the same general effect as
 *   calling the constructor with an Event argument.
-*
-* @param   ManuvrRunnable* The Event that is to be communicated.
-* @param   uint16_t          An explicitly-provided unique_id so that a dialog can be perpetuated.
-*/
-void XenoMessage::provideEvent(ManuvrRunnable *existing_event) {
-  event = existing_event;
-  unique_id = (uint16_t) randomInt();
-  proc_state = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
-  message_code = event->event_code;                // 
-  serialize();   // We should do this immediately to preserve the message.
-  event = NULL;  // Don't risk the event getting ripped out from under us.
-  proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;  // Implies we are sending.
-}
-
-
-/**
-* An override for provide_event(ManuvrRunnable*) that allows us to supply unique_id explicitly.
 * TODO: For safety's sake, the Event is not retained. This has caused us some grief. Re-evaluate...
 *
 * @param   ManuvrRunnable* The Event that is to be communicated.
 * @param   uint16_t          An explicitly-provided unique_id so that a dialog can be perpetuated.
 */
-void XenoMessage::provide_event(ManuvrRunnable *existing_event, uint16_t manual_id) {
+void XenoMessage::provideEvent(ManuvrRunnable *existing_event, uint16_t manual_id) {
   event = existing_event;
   unique_id = manual_id;
-  proc_state = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
+  message_code = event->event_code;                // 
+  proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;  // Implies we are sending.
   serialize();   // We should do this immediately to preserve the message.
   event = NULL;  // Don't risk the event getting ripped out from under us.
 }
@@ -136,7 +242,7 @@ void XenoMessage::provide_event(ManuvrRunnable *existing_event, uint16_t manual_
 */
 int8_t XenoMessage::ack() {
   ManuvrRunnable temp_event(MANUVR_MSG_REPLY);
-  provide_event(&temp_event, unique_id);
+  provideEvent(&temp_event, unique_id);
   proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
   return 0;
 }
@@ -149,7 +255,7 @@ int8_t XenoMessage::ack() {
 */
 int8_t XenoMessage::retry() {
   ManuvrRunnable temp_event(MANUVR_MSG_REPLY_RETRY);
-  provide_event(&temp_event, unique_id);
+  provideEvent(&temp_event, unique_id);
   proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
   retries++;
   return 0;
@@ -164,7 +270,7 @@ int8_t XenoMessage::retry() {
 */
 int8_t XenoMessage::fail() {
   ManuvrRunnable temp_event(MANUVR_MSG_REPLY_FAIL);
-  provide_event(&temp_event, unique_id);
+  provideEvent(&temp_event, unique_id);
   proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
   return 0;
 }
@@ -227,36 +333,12 @@ int XenoMessage::serialize() {
 
 
 /**
-* 
-*
-* @return  0 on success. Non-zero on failure.
-*/
-int8_t XenoMessage::inflateArgs() {
-  int8_t return_value = -1;
-  if (argbuf.length() > 0) {
-    if (event->inflateArgumentsFromBuffer(argbuf.string(), argbuf.length()) > 0) {
-      return_value = 0;
-    }
-    else {
-      Kernel::log("XenoMessage::inflateArgs():\t inflate fxn returned failure...\n");
-    }
-  }
-  else {
-    return_value = -1;
-    Kernel::log("XenoMessage::inflateArgs():\t argbuf was zero-length.\n");
-  }
-  return return_value;
-}
-
-
-
-/**
 * This function should be called by the session to feed bytes to a message.
 *
 * @return  The number of bytes consumed, or a negative value on failure.
 */
 int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
-  if (NULL == sb_buf) return -3;
+  if (NULL == sb_buf) return 0;
 
   StringBuilder output;
   int return_value = 0;
@@ -266,25 +348,19 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
   /* Ok... by this point, we know we are eligible to receive data. So stop worrying about that. */
   if (0 == bytes_received) {      // If we haven't been fed any bytes yet...
     if (buf_len < 4) {
-      // Not enough to act on, since we have none buffered ourselves...
-      #ifdef __MANUVR_DEBUG
-        output.concat("Rejecting bytes because there aren't enough of them yet.\n");
-      #endif
-      if (output.length() > 0) Kernel::log(&output);
+      // Not enough to act on, since we have none buffered ourselves.
+      // Return 0 to indicate we've taken no bytes, and have not errored.
       return 0;
     }
     else {  // We have at least enough for a sync-check...
-      if (0 == XenoSession::contains_sync_pattern(buf, 4)) {
+      if (0 == XenoMessage::contains_sync_pattern(buf, 4)) {
         // Get the offset of the last instance in this sync-stream relative to (buf+0) (we already know there is at least one).
-        int x = XenoSession::locate_sync_break(buf+4, buf_len-4) + 4;
+        int x = XenoMessage::locate_sync_break(buf+4, buf_len-4) + 4;
         #ifdef __MANUVR_DEBUG
           output.concatf("About to cull %d bytes of sync stream from the buffer..\n", x);
         #endif
         proc_state = XENO_MSG_PROC_STATE_SYNC_PACKET;  // Mark ourselves as a sync packet.
         bytes_received = 4;
-        /* Cull the Session's buffer down to the offset of the next message (if there is any left). */
-        if (x == buf_len)  sb_buf->clear();
-        else               sb_buf->cull(x);
         
         if (output.length() > 0) Kernel::log(&output);
         return x;
@@ -310,8 +386,6 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
     // Do we have a whole minimum packet yet?
     if (buf_len < 4) {
       // Not enough to act on.
-      if (return_value == buf_len)  sb_buf->clear();
-      else if (return_value > 0)    sb_buf->cull(return_value);
       if (output.length() > 0) Kernel::log(&output);
       return return_value;
     }
@@ -334,20 +408,16 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
   }
 
 
-  /* Do we have a whole minimum packet yet? */
-  if (bytes_received >= 8) {
-    /* Yup. Depending on how much is incoming versus what we have, take everything, or just enough. */
-    int x = (bytes_total <= (bytes_received + buf_len)) ? (bytes_total - bytes_received) : buf_len;
-    argbuf.concat(buf, x);
-    bytes_received += x;
-    return_value   += x;
-    buf_len        -= x;
-    buf            += x;
-  }
-  
+  /* Do we have the whole packet yet? */
+  int bytes_remaining = bytesRemaining();
+  if ((bytes_received >= 8) && (buf_len >= bytes_remaining)) { 
+    /* We might be done... */
+    StringBuilder argbuf(buf, bytes_remaining);
+    bytes_received += bytes_remaining;
+    return_value   += bytes_remaining;
+    buf_len        -= bytes_remaining;
+    buf            += bytes_remaining;
 
-  /* We might be done.... */
-  if (bytes_received == bytes_total) {
     // Test the checksum...
     checksum_c = (checksum_c + (unique_id >> 8)    + (unique_id    & 0x00FF) ) % 256;
     checksum_c = (checksum_c + (message_code >> 8) + (message_code & 0x00FF) ) % 256;
@@ -355,7 +425,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
     uint8_t temp_len = argbuf.length();
     
     for (int i = 0; i < temp_len; i++) checksum_c = (checksum_c + *(temp+i) ) % 256;
-    
+
     if (checksum_c == checksum_i) {
       // Checksum passes. Build the event.
       if (event != NULL) {
@@ -365,28 +435,17 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
       }
 
       event = Kernel::returnEvent(message_code);
-      
+
       if (event->event_code) {
+        proc_state = XENO_MSG_PROC_STATE_AWAITING_PROC;
         // The event code was found. Do something about it.
-        switch (proc_state) {
-          case XENO_MSG_PROC_STATE_RECEIVING:
-            proc_state = XENO_MSG_PROC_STATE_AWAITING_UNSERIALIZE;
-            #ifdef __MANUVR_DEBUG
-              output.concat("XenoMessage::feedBuffer() Ready to unserialize...\n");
-            #endif
-            break;
-          case XENO_MSG_PROC_STATE_RECEIVING_REPLY:
-            proc_state = XENO_MSG_PROC_STATE_REPLY_RECEIVED;
-            #ifdef __MANUVR_DEBUG
-              output.concat("XenoMessage::feedBuffer() Received reply!\n");
-            #endif
-            break;
-          default:
-            #ifdef __MANUVR_DEBUG
-              output.concatf("XenoMessage::feedBuffer() Message received, and is ok, but not sure about state.... Is %s\n", XenoMessage::getMessageStateString(proc_state));
-            #endif
-            if (output.length() > 0) Kernel::log(&output);
-            return -2;
+        if (temp_len > 0) {
+          if (event->inflateArgumentsFromBuffer(temp, temp_len) <= 0) {
+            output.concat("XenoMessage::inflateArgs():\t inflate fxn returned failure...\n");
+          }
+        }
+        else {
+          output.concat("XenoMessage::inflateArgs():\t argbuf was zero-length.\n");
         }
       }
       else {
@@ -397,6 +456,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
            b) Ask the counterparty for a message legend if we don't have one yet.
            c) NACK the message with a fail condition so he quits using that idiom.
         */
+        proc_state = XENO_MSG_PROC_STATE_AWAITING_REAP | XENO_MSG_PROC_STATE_ERROR;
         #ifdef __MANUVR_DEBUG
           output.concatf("XenoMessage::feedBuffer(): Couldn't find a message definition for the code 0x%04x.\n", message_code);
         #endif
@@ -404,16 +464,12 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
     }
     else {
       // TODO: We might send a retry request at this point...
-      proc_state = XENO_MSG_PROC_STATE_AWAITING_REAP;
+      proc_state = XENO_MSG_PROC_STATE_AWAITING_REAP | XENO_MSG_PROC_STATE_ERROR;
       #ifdef __MANUVR_DEBUG
         output.concatf("XenoMessage::feedBuffer() Message failed to checksum. Got 0x%02x. Expected 0x%02x. \n", checksum_c, checksum_i);
       #endif
     }
   }
-  
-  /* Any bytes we've claimed, we cull. */
-  if (return_value == buf_len)  sb_buf->clear();
-  else if (return_value > 0)    sb_buf->cull(return_value);
   
   if (output.length() > 0) Kernel::log(&output);
   return return_value;
@@ -461,7 +517,7 @@ bool XenoMessage::expectsACK() {
 * @param   XenoSession* The session that is claiming us.
 */
 void XenoMessage::claim(XenoSession* _ses) {
-  proc_state = XENO_MSG_PROC_STATE_CLAIMED;
+  proc_state = XENO_MSG_PROC_STATE_RECEIVING;
   session = _ses;
 }
 
@@ -475,10 +531,11 @@ void XenoMessage::claim(XenoSession* _ses) {
 void XenoMessage::printDebug(StringBuilder *output) {
   if (NULL == output) return;
 
+  output->concatf("\t Message ID      0x%08x\n", (uint32_t) this);
   if (NULL != event) {
     output->concatf("\t Message type    %s\n", event->getMsgTypeString());
   }
-  output->concatf("\t Message state   %s\n", getMessageStateString(proc_state));
+  output->concatf("\t Message state   %s\n", getMessageStateString());
   output->concatf("\t unique_id       0x%04x\n", unique_id);
   output->concatf("\t checksum_i      0x%02x\n", checksum_i);
   output->concatf("\t checksum_c      0x%02x\n", checksum_c);
@@ -486,11 +543,7 @@ void XenoMessage::printDebug(StringBuilder *output) {
   output->concatf("\t bytes_total     %d\n", bytes_total);
   output->concatf("\t bytes_received  %d\n", bytes_received);
   output->concatf("\t time_created    0x%08x\n", time_created);
-  output->concatf("\t retries         %d\n", retries);
-
-  output->concatf("\t Buffer length:  %d\n", buffer.length());
-  output->concatf("\t Argbuf length:  %d\n", argbuf.length());
-  output->concat("\n\n");
+  output->concatf("\t retries         %d\n\n", retries);
 }
 
 
@@ -498,23 +551,18 @@ void XenoMessage::printDebug(StringBuilder *output) {
 * @param   uint8_t The integer code that represents message state.
 * @return  A pointer to a human-readable string indicating the message state.
 */
-const char* XenoMessage::getMessageStateString(uint8_t code) {
-  switch (code) {
+const char* XenoMessage::getMessageStateString() {
+  switch (proc_state) {
     case XENO_MSG_PROC_STATE_UNINITIALIZED:         return "UNINITIALIZED";
+    case XENO_MSG_PROC_STATE_RECEIVING:             return "RECEIVING";
+    case XENO_MSG_PROC_STATE_AWAITING_PROC:         return "AWAITING_PROC";
+    case XENO_MSG_PROC_STATE_PROCESSING_RUNNABLE:   return "PROCESSING";
+    case XENO_MSG_PROC_STATE_AWAITING_SEND:         return "AWAITING_SEND";
+    case XENO_MSG_PROC_STATE_AWAITING_REPLY:        return "AWAITING_REPLY";
     case XENO_MSG_PROC_STATE_SYNC_PACKET:           return "SYNC_PACKET";
     case XENO_MSG_PROC_STATE_AWAITING_REAP:         return "AWAITING_REAP";
-    case XENO_MSG_PROC_STATE_SERIALIZING:           return "SERIALIZING";
-    case XENO_MSG_PROC_STATE_AWAITING_SEND:         return "AWAITING_SEND";
-    case XENO_MSG_PROC_STATE_SENDING_COMMAND:       return "SENDING_COMMAND";
-    case XENO_MSG_PROC_STATE_AWAITING_REPLY:        return "AWAITING_REPLY";
-    case XENO_MSG_PROC_STATE_RECEIVING_REPLY:       return "RECEIVING_REPLY";
-    case XENO_MSG_PROC_STATE_REPLY_RECEIVED:        return "REPLY_RECEIVED";
-    case XENO_MSG_PROC_STATE_RECEIVING:             return "STATE_RECEIVING";
-    case XENO_MSG_PROC_STATE_AWAITING_UNSERIALIZE:  return "AWAITING_UNSERIALIZE";
-    case XENO_MSG_PROC_STATE_AWAITING_PROC:         return "AWAITING_PROC";
-    case XENO_MSG_PROC_STATE_PROCESSING_COMMAND:    return "PROCESSING_COMMAND";
-    case XENO_MSG_PROC_STATE_AWAITING_WRITE:        return "AWAITING_WRITE";
-    case XENO_MSG_PROC_STATE_WRITING_REPLY:         return "WRITING_REPLY";
+    case (XENO_MSG_PROC_STATE_AWAITING_REAP | XENO_MSG_PROC_STATE_ERROR):
+      return "SERIALIZING";
     default:                                        return "<UNKNOWN>";
   }
 }

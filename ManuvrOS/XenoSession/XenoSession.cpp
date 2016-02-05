@@ -29,135 +29,6 @@ XenoSession is the class that manages dialog with other systems via some
 
 
 /****************************************************************************************************
-*      _______.___________.    ___   .___________. __    ______     _______.
-*     /       |           |   /   \  |           ||  |  /      |   /       |
-*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
-*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \    
-* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |   
-* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/    
-*
-* Static members and initializers should be located here. Initializers first, functions second.
-****************************************************************************************************/
-
-/* This is what a sync packet looks like. Always. So common, we'll hard-code it. */
-const uint8_t XenoSession::SYNC_PACKET_BYTES[4] = {0x04, 0x00, 0x00, CHECKSUM_PRELOAD_BYTE};
-
-// TODO: This is probably useless except in debug builds.
-uint32_t XenoSession::_heap_instantiations = 0;
-uint32_t XenoSession::_heap_freeds         = 0;
-
-XenoMessage XenoSession::__prealloc_pool[XENOMESSAGE_PREALLOCATE_COUNT];
-
-XenoMessage* XenoSession::fetchPreallocation(XenoSession* _ses) {
-  XenoMessage* return_value;
-
-  int i = 0;
-  while (i < XENOMESSAGE_PREALLOCATE_COUNT) {
-    if (XENO_MSG_PROC_STATE_UNINITIALIZED == __prealloc_pool[i].getState()) {
-      __prealloc_pool[i].claim(_ses);
-      return &__prealloc_pool[i];
-    }
-    i++;
-  }
-
-  // We have exhausted our preallocated pool. Note it.
-  return_value = new XenoMessage();
-  return_value->claim(_ses);
-  _heap_instantiations++;
-  return return_value;
-}
-
-
-/**
-* At present, our criteria for preallocation is if the pointer address passed in
-*   falls within the range of our __prealloc_pool array. I see nothing "non-portable"
-*   about this, it doesn't require a flag or class member, and it is fast to check.
-* However, this strategy only works for types that are never used in DMA or code
-*   execution on the STM32F4. It may work for other architectures (PIC32, x86?).
-*   I also feel like it ought to be somewhat slower than a flag or member, but not
-*   by such an amount that the memory savings are not worth the CPU trade-off.
-* Consider writing all new cyclical queues with preallocated members to use this
-*   strategy. Also, consider converting the most time-critical types to this strategy
-*   up until we hit the boundaries of the STM32 CCM.
-*                                 ---J. Ian Lindsay   Mon Apr 13 10:51:54 MST 2015
-* 
-* @param XenoMessage* obj is the pointer to the object to be reclaimed.
-*/
-void XenoSession::reclaimPreallocation(XenoMessage* obj) {
-  uint32_t obj_addr = ((uint32_t) obj);
-  uint32_t pre_min  = ((uint32_t) __prealloc_pool);
-  uint32_t pre_max  = pre_min + (sizeof(XenoMessage) * XENOMESSAGE_PREALLOCATE_COUNT);
-  
-  if ((obj_addr < pre_max) && (obj_addr >= pre_min)) {
-    // If we are in this block, it means obj was preallocated. wipe and reclaim it.
-    #ifdef __MANUVR_DEBUG
-      StringBuilder local_log;
-      local_log.concatf("reclaim via prealloc. addr: 0x%08x\n", obj_addr);
-      Kernel::log(&local_log);
-    #endif
-    obj->wipe();
-  }
-  else {
-    #ifdef __MANUVR_DEBUG
-      StringBuilder local_log;
-      local_log.concatf("reclaim via delete. addr: 0x%08x\n", obj_addr);
-      Kernel::log(&local_log);
-    #endif
-    // We were created because our prealloc was starved. we are therefore a transient heap object.
-    _heap_freeds++;
-    delete obj;
-  }
-}
-
-
-/**
-* Scan a buffer for the protocol's sync pattern.
-*
-* @param buf  The buffer to search through.
-* @param len  How far should we go?
-* @return The offset of the sync pattern, or -1 if the buffer contained no such pattern.
-*/
-int XenoSession::contains_sync_pattern(uint8_t* buf, int len) {
-  int i = 0;
-  while (i < len-3) {
-    if (*(buf + i + 0) == XenoSession::SYNC_PACKET_BYTES[0]) {
-      if (*(buf + i + 1) == XenoSession::SYNC_PACKET_BYTES[1]) {
-        if (*(buf + i + 2) == XenoSession::SYNC_PACKET_BYTES[2]) {
-          if (*(buf + i + 3) == XenoSession::SYNC_PACKET_BYTES[3]) {
-            return i;
-          }
-        }
-      }
-    }
-    i++;
-  }
-  return -1;
-}
-
-
-/**
-* Scan a buffer for the protocol's sync pattern, returning the offset of the
-*   first byte that breaks the pattern. 
-*
-* @param buf  The buffer to search through.
-* @param len  How far should we go?
-* @return The offset of the first byte that is NOT sync-stream.
-*/
-int XenoSession::locate_sync_break(uint8_t* buf, int len) {
-  int i = 0;
-  while (i < len-3) {
-    if (*(buf + i + 0) != XenoSession::SYNC_PACKET_BYTES[0]) return i;
-    if (*(buf + i + 1) != XenoSession::SYNC_PACKET_BYTES[1]) return i;
-    if (*(buf + i + 2) != XenoSession::SYNC_PACKET_BYTES[2]) return i;
-    if (*(buf + i + 3) != XenoSession::SYNC_PACKET_BYTES[3]) return i;
-    i += 4;
-  }
-  return i;
-}
-
-
-
-/****************************************************************************************************
 *   ___ _              ___      _ _              _      _       
 *  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___ 
 * | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
@@ -276,7 +147,7 @@ int8_t XenoSession::markMessageComplete(uint16_t target_id) {
       switch (working_xeno->getState()) {
         case XENO_MSG_PROC_STATE_AWAITING_REAP:
           outbound_messages.remove(working_xeno);
-          reclaimPreallocation(working_xeno);
+          XenoMessage::reclaimPreallocation(working_xeno);
           return 1;
       }
     }
@@ -498,7 +369,7 @@ int XenoSession::purgeInbound() {
 
 int8_t XenoSession::sendSyncPacket() {
   if (owner->connected()) {
-    StringBuilder sync_packet((unsigned char*) SYNC_PACKET_BYTES, 4);
+    StringBuilder sync_packet((unsigned char*) XenoMessage::SYNC_PACKET_BYTES, 4);
     owner->sendBuffer(&sync_packet);
     
     //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
@@ -539,7 +410,7 @@ int8_t XenoSession::sendKeepAlive() {
 * This is the point at which choices are made about what happens to the event's life-cycle.
 */
 int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
-  XenoMessage* nu_outbound_msg = fetchPreallocation(this);
+  XenoMessage* nu_outbound_msg = XenoMessage::fetchPreallocation(this);
   nu_outbound_msg->provideEvent(active_event);
 
   StringBuilder* buf;
@@ -760,88 +631,75 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
       break;
   }
 
-
   if (NULL == working) {
-    working = fetchPreallocation(this);
-    working->wipe();
+    working = XenoMessage::fetchPreallocation(this);
   }
   
-  int consumed = working->feedBuffer(&session_buffer);
-  #ifdef __MANUVR_DEBUG
-  if (verbosity > 5) local_log.concatf("Feeding the working_message buffer. Consumed %d of %d bytes.\n", consumed, len);
-  #endif
-
-  switch (working->getState()) {
-    case XENO_MSG_PROC_STATE_AWAITING_UNSERIALIZE: //
-      #ifdef __MANUVR_DEBUG
-      if (verbosity > 3) local_log.concat("About to inflate arguments.\n");
-      #endif
-      if (working->inflateArgs()) {
-        // If we had a problem inflating....
-        #ifdef __MANUVR_DEBUG
+  // If the working message is not in a RECEIVING state, it means something has gone sideways.
+  if ((XENO_MSG_PROC_STATE_RECEIVING | XENO_MSG_PROC_STATE_UNINITIALIZED) & working->getState()) {
+    int consumed = working->feedBuffer(&session_buffer);
+    #ifdef __MANUVR_DEBUG
+    if (verbosity > 5) local_log.concatf("Feeding working 0x%08x. Consumed %d of %d bytes.\n", (uint32_t) working, consumed, len);
+    #endif
+    
+    if (consumed > 0) {
+      // Be sure to cull any bytes in the session buffer that were claimed.
+      session_buffer.cull(consumed);
+    }
+    
+    switch (working->getState()) {
+      case XENO_MSG_PROC_STATE_AWAITING_PROC:
+        // If the message is completed, we can move forward with proc'ing it...
+        inbound_messages.insert(working);   // ...and drop it into the inbound message queue.
+        working = NULL;
+        if (XENOSESSION_STATE_SYNC_PEND_EXIT & session_state) { 
+          // If we were pending sync, and got this result, we are almost certainly syncd.
+          mark_session_sync(false);   // Mark it so.
+        }
+        break;
+      case XENO_MSG_PROC_STATE_SYNC_PACKET:
+        // T'was a sync packet. Consider our own state and react appropriately.
+        XenoMessage::reclaimPreallocation(working);
+        working = NULL;
+        if (0 == getState()) {
+          // If we aren't dealing with sync at the moment, and the counterparty sent a sync packet...
+          #ifdef __MANUVR_DEBUG
+            if (verbosity > 4) local_log.concat("Counterparty wants to sync,,, changing session state...\n");
+          #endif
+          mark_session_desync(XENOSESSION_STATE_SYNC_INITIATED);
+        }
+        break;
+      case (XENO_MSG_PROC_STATE_ERROR | XENO_MSG_PROC_STATE_AWAITING_REAP):
+        // There was some sort of problem...
         if (verbosity > 3) {
-          local_log.concat("There was a failure taking arguments apart.\n");
+          local_log.concat("XenoMessage 0x%08x reports an error:\n");
           working->printDebug(&local_log);
         }
-        #endif
-        reclaimPreallocation(working);
-        working = NULL;
-      }
-      break;
-    case XENO_MSG_PROC_STATE_AWAITING_PROC:  // This message is fully-formed.
-      inbound_messages.insert(working);   // ...and drop it into the inbound message queue.
-      working = NULL;
-      if (XENOSESSION_STATE_SYNC_PEND_EXIT & session_state) {   // If we were pending sync, and got this result, we are almost certainly syncd.
-        #ifdef __MANUVR_DEBUG
-        if (verbosity > 5) local_log.concat("Session became syncd for sure...\n");
-        #endif
-        mark_session_sync(false);   // Mark it so.
-      }
-      raiseEvent(working->event);
-      break;
-    case XENO_MSG_PROC_STATE_SYNC_PACKET:  // This message is a sync packet. 
-      working->wipe();
-      if (0 == getState()) {
-        // If we aren't dealing with sync at the moment, and the counterparty sent a sync packet...
-        #ifdef __MANUVR_DEBUG
-        if (verbosity > 4) local_log.concat("Counterparty wants to sync,,, changing session state...\n");
-        #endif
-        mark_session_desync(XENOSESSION_STATE_SYNC_INITIATED);
-      }
-      break;
-    case XENO_MSG_PROC_STATE_AWAITING_REAP: // Something must have gone wrong.
-      #ifdef __MANUVR_DEBUG
-      if (verbosity > 2) local_log.concat("About to reap a XenoMessage.\n");
-      #endif
-      {
-        working->printDebug(&local_log);
         if (MAX_PARSE_FAILURES == ++sequential_parse_failures) {
           mark_session_desync(XENOSESSION_STATE_SYNC_INITIATOR);   // We will complain.
           #ifdef __MANUVR_DEBUG
-          if (verbosity > 2) local_log.concat("\nThis was the session's last straw. Session marked itself as desync'd.\n");
+            if (verbosity > 2) local_log.concat("\nThis was the session's last straw. Session marked itself as desync'd.\n");
           #endif
         }
         else {
           // Send a retransmit request.
         }
-        working->wipe();
-      }
-      reclaimPreallocation(working);
-      working = NULL;
-      break;
-    case XENO_MSG_PROC_STATE_RECEIVING: // 
-      break;
-    default:
-      #ifdef __MANUVR_DEBUG
-      if (verbosity > 1) local_log.concatf("ILLEGAL proc_state: 0x%02x\n", working->getState());
-      #endif
-      break;
+        // NOTE: No break.
+      case XENO_MSG_PROC_STATE_AWAITING_REAP:
+        XenoMessage::reclaimPreallocation(working);
+        working = NULL;
+        break;
+    }
   }
+  else {
+    if (verbosity > 3) local_log.concatf("XenoMessage 0x%08x is in the wrong state to accept bytes: %s\n", (uint32_t) working, working->getMessageStateString());
+  }
+  
   
   if (statcked_sess_str != getSessionStateString()) {
     // The session changed state. Print it.
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 3) local_log.concatf("XenoSession state change:\t %s ---> %s\n", statcked_sess_str, getSessionStateString());
+      if (verbosity > 3) local_log.concatf("XenoSession state change:\t %s ---> %s\n", statcked_sess_str, getSessionStateString());
     #endif
   }
   
@@ -886,8 +744,8 @@ void XenoSession::printDebug(StringBuilder *output) {
   output->concatf("-- Sync state           %s\n", getSessionSyncString());
   output->concatf("-- seq parse failures   %d\n", sequential_parse_failures);
   output->concatf("-- seq_ack_failures     %d\n--\n", sequential_ack_failures);
-  output->concatf("-- _heap_instantiations %u\n", (unsigned long) _heap_instantiations);
-  output->concatf("-- _heap_frees          %u\n", (unsigned long) _heap_freeds);
+  output->concatf("-- _heap_instantiations %u\n", (unsigned long) XenoMessage::_heap_instantiations);
+  output->concatf("-- _heap_frees          %u\n", (unsigned long) XenoMessage::_heap_freeds);
   
   int ses_buf_len = session_buffer.length();
   if (ses_buf_len > 0) {
@@ -920,11 +778,9 @@ void XenoSession::printDebug(StringBuilder *output) {
     }
   }
   
-  if (working) {
-    if (NULL != working) {
-      output->concat("\n-- XenoMessage in process  ----------------------------\n");
-      working->printDebug(output);
-    }
+  if (NULL != working) {
+    output->concat("\n-- XenoMessage in process  ----------------------------\n");
+    working->printDebug(output);
   }
 }
 

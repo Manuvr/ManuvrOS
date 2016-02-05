@@ -643,7 +643,10 @@ void StringBuilder::cull(int x) {
   #ifdef __MANUVR_LINUX
     //pthread_mutex_lock(&_mutex);
   #endif
-  if (this->length() >= x) {   // Does the given range exist?
+  if (x == this->length()) {
+    clear();
+  }
+  else if (this->length() > x) {   // Does the given range exist?
     int remaining_length = this->length()-x;
     unsigned char* temp = (unsigned char*) malloc(remaining_length+1);  // + 1 for null-terminator.
     if (temp != NULL) {

@@ -38,26 +38,21 @@ XenoSession is the class that manages dialog with other systems via some
 * These are the stages that a XenoMessage passes through.
 * Each stage is traversed in sequence.
 */
-const uint8_t XENO_MSG_PROC_STATE_UNINITIALIZED          = 0x00;    // This message is formless.
-const uint8_t XENO_MSG_PROC_STATE_CLAIMED                = 0x01;    // A session has cliamed the message.
-const uint8_t XENO_MSG_PROC_STATE_SYNC_PACKET            = 0xEE;    // We parsed the stream and found a sync packet.
-const uint8_t XENO_MSG_PROC_STATE_AWAITING_REAP          = 0xFF;    // We should be torn down.
-
-// States that pertain to XenoMessages generated locally (outbound)...
-const uint8_t XENO_MSG_PROC_STATE_SERIALIZING            = 0x10;  
-const uint8_t XENO_MSG_PROC_STATE_AWAITING_SEND          = 0x11;
-const uint8_t XENO_MSG_PROC_STATE_SENDING_COMMAND        = 0x12;
-const uint8_t XENO_MSG_PROC_STATE_AWAITING_REPLY         = 0x13;
-const uint8_t XENO_MSG_PROC_STATE_RECEIVING_REPLY        = 0x14;
-const uint8_t XENO_MSG_PROC_STATE_REPLY_RECEIVED         = 0x15;
+#define XENO_MSG_PROC_STATE_UNINITIALIZED        0x00    // This message is formless.
 
 // States that pertain to XenoMessages generated remotely (inbound)...
-const uint8_t XENO_MSG_PROC_STATE_RECEIVING              = 0x20;
-const uint8_t XENO_MSG_PROC_STATE_AWAITING_UNSERIALIZE   = 0x21;
-const uint8_t XENO_MSG_PROC_STATE_AWAITING_PROC          = 0x22;
-const uint8_t XENO_MSG_PROC_STATE_PROCESSING_COMMAND     = 0x23;
-const uint8_t XENO_MSG_PROC_STATE_AWAITING_WRITE         = 0x24;
-const uint8_t XENO_MSG_PROC_STATE_WRITING_REPLY          = 0x25;
+#define XENO_MSG_PROC_STATE_RECEIVING            0x01
+#define XENO_MSG_PROC_STATE_AWAITING_PROC        0x02
+#define XENO_MSG_PROC_STATE_PROCESSING_RUNNABLE  0x04
+
+// States that pertain to XenoMessages generated locally (outbound)...
+#define XENO_MSG_PROC_STATE_AWAITING_SEND        0x08
+#define XENO_MSG_PROC_STATE_AWAITING_REPLY       0x10
+
+// Terminal states.
+#define XENO_MSG_PROC_STATE_SYNC_PACKET          0x20    // We parsed the stream and found a sync packet.
+#define XENO_MSG_PROC_STATE_ERROR                0x40    // The error bit.
+#define XENO_MSG_PROC_STATE_AWAITING_REAP        0x80    // We should be torn down.
 
 
 // Comment the define below to enable ALL messages to be exchanged via the XenoSession. The only possible
@@ -112,16 +107,18 @@ class XenoMessage {
     int serialize();      // Returns the number of bytes resulting.
     int8_t dispatch();    // If incoming, sends event. If outgoing, sends bitstream to transport.
     void wipe();          // Call this to put this object into a fresh state (avoid a free/malloc).
-    int8_t inflateArgs(); // 
-    
+
     /* Message flow control. */
     int8_t ack();      // Ack this message.
     int8_t retry();    // Asks the counterparty for a retransmission of this packet. Assumes good unique-id.
     int8_t fail();     // Informs the counterparty that the indicated message failed a high-level validity check.
     
     int feedBuffer(StringBuilder *buf);  // This is used to build an event from data that arrives in chunks.
-    void provideEvent(ManuvrRunnable*);  // Call to make this XenoMessage outbound.
-    void provide_event(ManuvrRunnable*, uint16_t);  // Call to make this XenoMessage outbound.
+    
+    void provideEvent(ManuvrRunnable*, uint16_t);  // Call to make this XenoMessage outbound.
+    inline void provideEvent(ManuvrRunnable* runnable) {    // Override to support laziness.
+      provideEvent(runnable, (uint16_t) randomInt());
+    };
     
     bool isReply();      // Returns true if this message is a reply to another message.
     bool expectsACK();   // Returns true if this message demands an ACK.
@@ -139,25 +136,37 @@ class XenoMessage {
       return ((bytes_received == bytes_total) && (0 != message_code) && (checksum_c == checksum_i));
     };
 
+    inline int bytesRemaining() {    return (bytes_total - bytes_received);  };
+    
     /*
     * Functions used for manipulating this message's state-machine...
     */
     void claim(XenoSession*);
 
+    const char* getMessageStateString();
 
-    static const char* getMessageStateString(uint8_t code);
+    
+    static const uint8_t SYNC_PACKET_BYTES[4];    // Plase note the subtle abuse of type....
+
+    static int contains_sync_pattern(uint8_t* buf, int len);
+    static int locate_sync_break(uint8_t* buf, int len);
+
+    /* Preallocation machinary. */ 
+    static uint32_t _heap_instantiations;   // Prealloc starvation counter...
+    static uint32_t _heap_freeds;           // Prealloc starvation counter...
+    static XenoMessage* fetchPreallocation(XenoSession*);
+    static void reclaimPreallocation(XenoMessage*);
 
 
   private:
     XenoSession*    session;   // A reference to the session that we are associated with.
     StringBuilder   buffer;    // Holds the intermediary form of the message that traverses the transport.
-    StringBuilder   argbuf;    // Holds the bytes-in-excess-of packet-minimum until they can be parsed.
     uint32_t  time_created;    // Optional: What time did this message come into existance?
     uint32_t  millis_at_begin; // This is the milliseconds reading when we sent.
     uint8_t   retries;         // How many times have we retried this packet?
 
-    uint8_t         proc_state;    // Where are we in the flow of this message? See XENO_MSG_PROC_STATES
-    uint32_t  bytes_received;      // How many bytes of this command have we received? Meaningless for the sender.
+    uint8_t   proc_state;      // Where are we in the flow of this message? See XENO_MSG_PROC_STATES
+    uint32_t  bytes_received;  // How many bytes of this command have we received? Meaningless for the sender.
 
     uint8_t   arg_count;
 
@@ -169,7 +178,8 @@ class XenoMessage {
     uint16_t  unique_id;       // An identifier for this message.
     uint16_t  message_code;    // The integer code for this message class.
 
-    void __class_initializer();
+    
+    static XenoMessage __prealloc_pool[XENOMESSAGE_PREALLOCATE_COUNT];
 };
 
 
@@ -259,9 +269,6 @@ class XenoSession : public EventReceiver {
       return (XENOSESSION_STATE_ESTABLISHED == (session_state & 0xFF0F));
     }
     
-    static int contains_sync_pattern(uint8_t* buf, int len);
-    static int locate_sync_break(uint8_t* buf, int len);
-
 
 
   protected:
@@ -313,19 +320,6 @@ class XenoSession : public EventReceiver {
     const char* getSessionStateString();
     const char* getSessionSyncString();
 
-    
-    // Plase note the subtle abuse of type....
-    static const uint8_t SYNC_PACKET_BYTES[4];
-    
-    /* Preallocation machinary. */ 
-    // Prealloc starvation counters...
-    static uint32_t _heap_instantiations;
-    static uint32_t _heap_freeds;
-    
-    static XenoMessage __prealloc_pool[XENOMESSAGE_PREALLOCATE_COUNT];
-
-    static XenoMessage* fetchPreallocation(XenoSession*);
-    static void reclaimPreallocation(XenoMessage*);
 };
 
 
