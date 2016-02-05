@@ -192,7 +192,6 @@ XenoMessage::~XenoMessage() {
 * Do not change the unique_id. One common use-case for this fxn is to reply to a message.
 */
 void XenoMessage::wipe() {
-  buffer.clear();
   session         = NULL;
   proc_state      = XENO_MSG_PROC_STATE_UNINITIALIZED;
   checksum_c      = CHECKSUM_PRELOAD_BYTE;     // The checksum of the data that we calculate.
@@ -229,8 +228,6 @@ void XenoMessage::provideEvent(ManuvrRunnable *existing_event, uint16_t manual_i
   unique_id = manual_id;
   message_code = event->event_code;                // 
   proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;  // Implies we are sending.
-  serialize();   // We should do this immediately to preserve the message.
-  event = NULL;  // Don't risk the event getting ripped out from under us.
 }
 
 
@@ -284,50 +281,44 @@ int8_t XenoMessage::fail() {
 * @return  The total size of the string that is meant for the transport,
 *            or -1 if something went wrong.
 */
-int XenoMessage::serialize() {
-  int return_value = -1;
+int XenoMessage::serialize(StringBuilder* buffer) {
   if (NULL == event) {
-  }
-  else if (0 == buffer.length()) {
-    int arg_count  = event->serialize(&buffer);
-    if (arg_count >= 0) {
-      bytes_total = (uint32_t) buffer.length() + 8;   // +8 because: checksum byte
-      unsigned char* prepend_array = (unsigned char*) alloca(8);
-
-      *(prepend_array + 4) = (uint8_t) (unique_id & 0xFF);
-      *(prepend_array + 5) = (uint8_t) (unique_id >> 8);
-      *(prepend_array + 6) = (uint8_t) (event->event_code & 0xFF);
-      *(prepend_array + 7) = (uint8_t) (event->event_code >> 8);
-      
-      // Calculate and append checksum.
-      uint8_t checksum_temp = CHECKSUM_PRELOAD_BYTE;
-      checksum_temp = (uint8_t) checksum_temp + *(prepend_array + 4);
-      checksum_temp = (uint8_t) checksum_temp + *(prepend_array + 5);
-      checksum_temp = (uint8_t) checksum_temp + *(prepend_array + 6);
-      checksum_temp = (uint8_t) checksum_temp + *(prepend_array + 7);
-      
-      unsigned char* full_xport_array = buffer.string();
-      for (int i = 0; i < buffer.length(); i++) {
-          checksum_temp = (uint8_t) checksum_temp + *(full_xport_array + i);
-      }
-      checksum_c = checksum_temp;
-      
-      *(prepend_array + 0) = (uint8_t) (bytes_total & 0xFF);
-      *(prepend_array + 1) = (uint8_t) (bytes_total >> 8);
-      *(prepend_array + 2) = (uint8_t) (bytes_total >> 16);
-      *(prepend_array + 3) = (uint8_t) checksum_temp;
-
-      buffer.prepend(prepend_array, 8);
-      
-      proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
-      return_value = bytes_total & 0x00FFFFFF;
-    }
-  }
-  else {
-      return_value = buffer.length();
+    return 0;
   }
   
-  return return_value;
+  proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
+  int arg_count  = event->serialize(buffer);
+  if (arg_count >= 0) {
+    bytes_total = (uint32_t) buffer->length() + 8;   // +8 because: checksum byte
+    unsigned char* prepend_array = (unsigned char*) alloca(8);
+
+    *(prepend_array + 4) = (uint8_t) (unique_id & 0xFF);
+    *(prepend_array + 5) = (uint8_t) (unique_id >> 8);
+    *(prepend_array + 6) = (uint8_t) (event->event_code & 0xFF);
+    *(prepend_array + 7) = (uint8_t) (event->event_code >> 8);
+    
+    // Calculate and append checksum.
+    uint8_t checksum_temp = CHECKSUM_PRELOAD_BYTE;
+    checksum_temp = (uint8_t) checksum_temp + *(prepend_array + 4);
+    checksum_temp = (uint8_t) checksum_temp + *(prepend_array + 5);
+    checksum_temp = (uint8_t) checksum_temp + *(prepend_array + 6);
+    checksum_temp = (uint8_t) checksum_temp + *(prepend_array + 7);
+    
+    unsigned char* full_xport_array = buffer->string();
+    for (int i = 0; i < buffer->length(); i++) {
+      checksum_temp = (uint8_t) checksum_temp + *(full_xport_array + i);
+    }
+    checksum_c = checksum_temp;
+    
+    *(prepend_array + 0) = (uint8_t) (bytes_total & 0xFF);
+    *(prepend_array + 1) = (uint8_t) (bytes_total >> 8);
+    *(prepend_array + 2) = (uint8_t) (bytes_total >> 16);
+    *(prepend_array + 3) = (uint8_t) checksum_temp;
+
+    buffer->prepend(prepend_array, 8);
+  }
+
+  return buffer->length();
 }
 
 
@@ -430,7 +421,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
       // Checksum passes. Build the event.
       if (event != NULL) {
         #ifdef __MANUVR_DEBUG
-        output.concat("XenoMessage::feedBuffer(): Ooops. Clobbered an event pointer. Expect leaks...\n");
+        output.concat("XenoMessage::feedBuffer(): Ooops. Clobbered a runnable pointer. Expect leaks...\n");
         #endif
       }
 

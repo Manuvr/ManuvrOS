@@ -49,7 +49,6 @@ XenoSession::XenoSession(ManuvrXport* _xport) {
   tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
   tapMessageType(MANUVR_MSG_SESS_HANGUP);
   tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
-  tapMessageType(MANUVR_MSG_SELF_DESCRIBE);
 
   owner = _xport;
   
@@ -217,7 +216,9 @@ int8_t XenoSession::callback_proc(ManuvrRunnable *event) {
   
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
-
+    case MANUVR_MSG_SELF_DESCRIBE:
+      sendEvent(event);
+      break;
     default:
       break;
   }
@@ -266,7 +267,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
       sendSyncPacket();
       return_value++;
       break;
-      
+
     case MANUVR_MSG_XPORT_RECEIVE:
       {
         StringBuilder* buf;
@@ -413,9 +414,8 @@ int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
   XenoMessage* nu_outbound_msg = XenoMessage::fetchPreallocation(this);
   nu_outbound_msg->provideEvent(active_event);
 
-  StringBuilder* buf;
-  nu_outbound_msg->getBuffer(&buf);
-  if (buf->length() > 0) {
+  StringBuilder* buf = new StringBuilder();
+  if (nu_outbound_msg->serialize(buf) > 0) {
     owner->sendBuffer(buf);
   }
   //outbound_messages.insert(nu_outbound_msg);
@@ -535,16 +535,16 @@ void XenoSession::mark_session_sync(bool pending) {
     session_state = getState();
   }
 
+  sync_event.enableSchedule(false);
+
   if (!isEstablished()) {
     // When (if) the session syncs, various components in the firmware might
     //   want a message put through.
     mark_session_state(XENOSESSION_STATE_ESTABLISHED);
-    raiseEvent(Kernel::returnEvent(MANUVR_MSG_SESS_ESTABLISHED));
+    sendEvent(Kernel::returnEvent(MANUVR_MSG_SESS_ESTABLISHED));
     raiseEvent(Kernel::returnEvent(MANUVR_MSG_SELF_DESCRIBE));
-    //raiseEvent(Kernel::returnEvent(MANUVR_MSG_LEGEND_MESSAGES));
+    //sendEvent(Kernel::returnEvent(MANUVR_MSG_LEGEND_MESSAGES));
   }
-
-  sync_event.enableSchedule(false);
 }
 
 

@@ -97,23 +97,22 @@ XenoSession is the class that manages dialog with other systems via some
 class XenoMessage {
   public:
 
-    ManuvrRunnable* event;         // Associates this XenoMessage to an event.
+    ManuvrRunnable* event;          // Associates this XenoMessage to an event.
     
     XenoMessage();                  // Typical use: building an inbound XemoMessage. 
     XenoMessage(ManuvrRunnable*);   // Create a new XenoMessage with the given event as source data.
 
     ~XenoMessage();
     
-    int serialize();      // Returns the number of bytes resulting.
-    int8_t dispatch();    // If incoming, sends event. If outgoing, sends bitstream to transport.
-    void wipe();          // Call this to put this object into a fresh state (avoid a free/malloc).
+    void wipe();                    // Call this to put this object into a fresh state (avoid a free/malloc).
 
     /* Message flow control. */
     int8_t ack();      // Ack this message.
     int8_t retry();    // Asks the counterparty for a retransmission of this packet. Assumes good unique-id.
     int8_t fail();     // Informs the counterparty that the indicated message failed a high-level validity check.
     
-    int feedBuffer(StringBuilder *buf);  // This is used to build an event from data that arrives in chunks.
+    int feedBuffer(StringBuilder*);  // This is used to build an event from data that arrives in chunks.
+    int serialize(StringBuilder*);   // Returns the number of bytes resulting.
     
     void provideEvent(ManuvrRunnable*, uint16_t);  // Call to make this XenoMessage outbound.
     inline void provideEvent(ManuvrRunnable* runnable) {    // Override to support laziness.
@@ -125,11 +124,6 @@ class XenoMessage {
 
     void printDebug(StringBuilder*);
     
-    inline int8_t getBuffer(StringBuilder** _buf) {
-      *(_buf) = &buffer;
-      return 0;
-    };
-
     inline uint8_t getState() { return proc_state; };
     inline uint8_t uniqueId() { return unique_id;  };
     inline bool rxComplete() { 
@@ -160,7 +154,6 @@ class XenoMessage {
 
   private:
     XenoSession*    session;   // A reference to the session that we are associated with.
-    StringBuilder   buffer;    // Holds the intermediary form of the message that traverses the transport.
     uint32_t  time_created;    // Optional: What time did this message come into existance?
     uint32_t  millis_at_begin; // This is the milliseconds reading when we sent.
     uint8_t   retries;         // How many times have we retried this packet?
