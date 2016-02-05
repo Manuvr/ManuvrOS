@@ -135,7 +135,10 @@ class XenoMessage {
 
     inline uint8_t getState() { return proc_state; };
     inline uint8_t uniqueId() { return unique_id;  };
-    
+    inline bool rxComplete() { 
+      return ((bytes_received == bytes_total) && (0 != message_code) && (checksum_c == checksum_i));
+    };
+
     /*
     * Functions used for manipulating this message's state-machine...
     */

@@ -30,9 +30,6 @@ XenoMessage is the class that is the interface between ManuvrRunnables and
 
 XenoMessage::XenoMessage() {
   __class_initializer();
-  proc_state = XENO_MSG_PROC_STATE_UNINITIALIZED;
-  event      = NULL;  // Associates this XenoMessage to an event.
-  unique_id  = 0;     //
 }
 
 
@@ -46,15 +43,17 @@ XenoMessage::XenoMessage(ManuvrRunnable* existing_event) {
 
 XenoMessage::~XenoMessage() {
   if (NULL != event) {
-    //Right now we aren't worried about this.
-    if (XENO_MSG_PROC_STATE_AWAITING_REAP == proc_state) {
-      delete event;
-    }
+    // TODO: Now we are worried about this.
+    event = NULL;
   }
 }
 
 
 void XenoMessage::__class_initializer() {
+  proc_state      = XENO_MSG_PROC_STATE_UNINITIALIZED;
+  session         = NULL;
+  event           = NULL;
+  unique_id       = 0;     //
   bytes_total     = 0;     // How many bytes does this message occupy?
   arg_count       = 0;
   checksum_i      = 0;     // The checksum of the data that we receive.
@@ -64,6 +63,32 @@ void XenoMessage::__class_initializer() {
   time_created = millis(); // Optional: What time did this message come into existance?
   millis_at_begin = 0;     // This is the milliseconds reading when we sent.
   message_code    = 0;     // 
+}
+
+
+/**
+* Sometimes we might want to re-use this allocated object rather than free it.
+* Do not change the unique_id. One common use-case for this fxn is to reply to a message.
+*/
+void XenoMessage::wipe() {
+  argbuf.clear();
+  buffer.clear();
+  proc_state     = 0;
+  bytes_received = 0;
+  unique_id      = 0;
+
+  bytes_total  = 0;
+  arg_count    = 0;
+  checksum_i   = 0;
+  checksum_c   = CHECKSUM_PRELOAD_BYTE;
+  message_code = 0;
+  
+  if (NULL != event) {
+    // TODO: Now we are worried about this.
+    event = NULL;
+  }
+  proc_state = XENO_MSG_PROC_STATE_UNINITIALIZED;
+  time_created = millis();
 }
 
 
@@ -100,34 +125,6 @@ void XenoMessage::provide_event(ManuvrRunnable *existing_event, uint16_t manual_
   proc_state = XENO_MSG_PROC_STATE_SERIALIZING;  // Implies we are sending.
   serialize();   // We should do this immediately to preserve the message.
   event = NULL;  // Don't risk the event getting ripped out from under us.
-}
-
-
-/**
-* Sometimes we might want to re-use this allocated object rather than free it.
-* Do not change the unique_id. One common use-case for this fxn is to reply to a message.
-*/
-void XenoMessage::wipe() {
-  argbuf.clear();
-  buffer.clear();
-  proc_state     = 0;
-  bytes_received = 0;
-  unique_id      = 0;
-
-  bytes_total  = 0;
-  arg_count    = 0;
-  checksum_i   = 0;
-  checksum_c   = CHECKSUM_PRELOAD_BYTE;
-  message_code = 0;
-  
-  if (NULL != event) {
-    //Right now we aren't worried about this.
-    if (XENO_MSG_PROC_STATE_AWAITING_REAP == proc_state) {
-      delete event;
-    }
-  }
-  proc_state = XENO_MSG_PROC_STATE_UNINITIALIZED;
-  time_created = millis();
 }
 
 
@@ -266,30 +263,6 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
   int buf_len  = sb_buf->length();
   uint8_t* buf = (uint8_t*) sb_buf->string();
 
-  //output.concatf("\n\nXenoMessage::feedBuffer(): Received %d bytes.\n", buf_len);
-
-  switch (proc_state) {
-    case XENO_MSG_PROC_STATE_UNINITIALIZED:
-    case XENO_MSG_PROC_STATE_CLAIMED:
-      //output.concatf("XENO_MSG_PROC_STATE_UNINITIALIZED is getting bytes. Slopppy...\n");
-      proc_state = XENO_MSG_PROC_STATE_RECEIVING;
-    case XENO_MSG_PROC_STATE_RECEIVING:
-      break;
-
-    case XENO_MSG_PROC_STATE_AWAITING_REPLY:
-      proc_state = XENO_MSG_PROC_STATE_RECEIVING_REPLY;
-      //output.concat("First bytes to a reply are arriving...\n");
-      break;
-    case XENO_MSG_PROC_STATE_RECEIVING_REPLY:
-      break;
-    default:
-      #ifdef __MANUVR_DEBUG
-        output.concatf("XenoMessage::feedBuffer() rejecting bytes because it is not in the right state. Is %s\n", XenoMessage::getMessageStateString(proc_state));
-      #endif
-      if (output.length() > 0) Kernel::log(&output);
-      return -2;
-  }
-  
   /* Ok... by this point, we know we are eligible to receive data. So stop worrying about that. */
   if (0 == bytes_received) {      // If we haven't been fed any bytes yet...
     if (buf_len < 4) {
