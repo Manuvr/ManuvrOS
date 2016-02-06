@@ -47,18 +47,19 @@ const uint8_t XenoMessage::SYNC_PACKET_BYTES[4] = {0x04, 0x00, 0x00, CHECKSUM_PR
 uint32_t XenoMessage::_heap_instantiations = 0;
 uint32_t XenoMessage::_heap_freeds         = 0;
 
+uint16_t _ring_buf_idx = 0; 
+
 XenoMessage XenoMessage::__prealloc_pool[XENOMESSAGE_PREALLOCATE_COUNT];
 
 XenoMessage* XenoMessage::fetchPreallocation(XenoSession* _ses) {
   XenoMessage* return_value;
 
-  int i = 0;
-  while (i < XENOMESSAGE_PREALLOCATE_COUNT) {
-    if (XENO_MSG_PROC_STATE_UNINITIALIZED == __prealloc_pool[i].getState()) {
-      __prealloc_pool[i].claim(_ses);
-      return &__prealloc_pool[i];
+  for (int i = 0; i < XENOMESSAGE_PREALLOCATE_COUNT; i++) {
+    if (XENO_MSG_PROC_STATE_UNINITIALIZED == __prealloc_pool[_ring_buf_idx % XENOMESSAGE_PREALLOCATE_COUNT].getState()) {
+      __prealloc_pool[_ring_buf_idx % XENOMESSAGE_PREALLOCATE_COUNT].claim(_ses);
+      return &__prealloc_pool[_ring_buf_idx++ % XENOMESSAGE_PREALLOCATE_COUNT];
     }
-    i++;
+    _ring_buf_idx++;
   }
 
   // We have exhausted our preallocated pool. Note it.

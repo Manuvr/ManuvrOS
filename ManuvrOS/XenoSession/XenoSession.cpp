@@ -414,9 +414,9 @@ int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
   XenoMessage* nu_outbound_msg = XenoMessage::fetchPreallocation(this);
   nu_outbound_msg->provideEvent(active_event);
 
-  StringBuilder* buf = new StringBuilder();
-  if (nu_outbound_msg->serialize(buf) > 0) {
-    owner->sendBuffer(buf);
+  StringBuilder buf;
+  if (nu_outbound_msg->serialize(&buf) > 0) {
+    owner->sendBuffer(&buf);
   }
   //outbound_messages.insert(nu_outbound_msg);
   
@@ -541,12 +541,61 @@ void XenoSession::mark_session_sync(bool pending) {
     // When (if) the session syncs, various components in the firmware might
     //   want a message put through.
     mark_session_state(XENOSESSION_STATE_ESTABLISHED);
-    sendEvent(Kernel::returnEvent(MANUVR_MSG_SESS_ESTABLISHED));
+    //sendEvent(Kernel::returnEvent(MANUVR_MSG_SESS_ESTABLISHED));
+    sendEvent(Kernel::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE));
     raiseEvent(Kernel::returnEvent(MANUVR_MSG_SELF_DESCRIBE));
     //sendEvent(Kernel::returnEvent(MANUVR_MSG_LEGEND_MESSAGES));
   }
 }
 
+
+// At this point, we can take it for granted that this message contains a valid event.
+int8_t XenoSession::take_message() {
+  XenoMessage* nu_xm = working;
+  working = NULL;                   // ...make space for the next message.
+  inbound_messages.insert(nu_xm);   // ...drop the new message into the inbound message queue.
+  
+  if (nu_xm->expectsACK()) {
+    local_log.concat("EXPECTS ACK\n");
+
+    switch (nu_xm->event->event_code) {
+      case MANUVR_MSG_SYNC_KEEPALIVE:
+        if (XENOSESSION_STATE_SYNC_PEND_EXIT & session_state) { 
+          // If we were pending sync, and got this result, we are almost certainly syncd.
+          mark_session_sync(false);   // Mark it so.
+        }
+        //nu_xm->ack();  // KA we ACK immediately.
+        {
+          local_log.concat("SERIALIZING FOR TRANSPORT\n");
+          XenoMessage* nu_outbound_msg = XenoMessage::fetchPreallocation(this);
+          nu_outbound_msg->provideEvent(Kernel::returnEvent(MANUVR_MSG_REPLY), nu_xm->uniqueId());
+
+          StringBuilder buf;
+          if (nu_outbound_msg->serialize(&buf) > 0) {
+            owner->sendBuffer(&buf);
+                local_log.concat("SENDING VIA TRANSPORT: ");
+                unsigned char* str = buf.string();
+                for (int i = 0; i < buf.length(); i++) {
+                  local_log.concatf("0x%02x ", *(str + i));
+                }
+                local_log.concat("\n\n");
+          }
+        }
+        break;
+
+      default:
+        // TODO: Need to send into the kernel for execution?
+        //nu_xm->ack();
+        break;
+    }
+  }
+  else {
+    local_log.concat("EXPECTS NO ACK\n");
+  }
+  
+  if (local_log.length() > 0) Kernel::log(&local_log);
+  return 0;
+}
 
 
 
@@ -650,12 +699,7 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
     switch (working->getState()) {
       case XENO_MSG_PROC_STATE_AWAITING_PROC:
         // If the message is completed, we can move forward with proc'ing it...
-        inbound_messages.insert(working);   // ...and drop it into the inbound message queue.
-        working = NULL;
-        if (XENOSESSION_STATE_SYNC_PEND_EXIT & session_state) { 
-          // If we were pending sync, and got this result, we are almost certainly syncd.
-          mark_session_sync(false);   // Mark it so.
-        }
+        take_message();
         break;
       case XENO_MSG_PROC_STATE_SYNC_PACKET:
         // T'was a sync packet. Consider our own state and react appropriately.

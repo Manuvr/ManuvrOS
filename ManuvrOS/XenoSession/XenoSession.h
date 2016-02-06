@@ -60,7 +60,7 @@ XenoSession is the class that manages dialog with other systems via some
 #define XENO_SESSION_IGNORE_NON_EXPORTABLES 1
 
 #define XENO_SESSION_MAX_QUEUE_PRINT        3    // This is only relevant for debug.
-#define XENOMESSAGE_PREALLOCATE_COUNT       4    // How many XenoMessages should be preallocated?
+#define XENOMESSAGE_PREALLOCATE_COUNT       8    // How many XenoMessages should be preallocated?
 
 /*
 * All multibyte values are stored "little-endian".
@@ -96,7 +96,6 @@ XenoSession is the class that manages dialog with other systems via some
 */
 class XenoMessage {
   public:
-
     ManuvrRunnable* event;          // Associates this XenoMessage to an event.
     
     XenoMessage();                  // Typical use: building an inbound XemoMessage. 
@@ -124,8 +123,8 @@ class XenoMessage {
 
     void printDebug(StringBuilder*);
     
-    inline uint8_t getState() { return proc_state; };
-    inline uint8_t uniqueId() { return unique_id;  };
+    inline uint8_t getState() {  return proc_state; };
+    inline uint16_t uniqueId() { return unique_id;  };
     inline bool rxComplete() { 
       return ((bytes_received == bytes_total) && (0 != message_code) && (checksum_c == checksum_i));
     };
@@ -156,20 +155,20 @@ class XenoMessage {
     XenoSession*    session;   // A reference to the session that we are associated with.
     uint32_t  time_created;    // Optional: What time did this message come into existance?
     uint32_t  millis_at_begin; // This is the milliseconds reading when we sent.
-    uint8_t   retries;         // How many times have we retried this packet?
 
-    uint8_t   proc_state;      // Where are we in the flow of this message? See XENO_MSG_PROC_STATES
     uint32_t  bytes_received;  // How many bytes of this command have we received? Meaningless for the sender.
-
-    uint8_t   arg_count;
-
     uint32_t  bytes_total;     // How many bytes does this message occupy on the wire?
-
-    uint8_t   checksum_i;      // The checksum of the data that we receive.
-    uint8_t   checksum_c;      // The checksum of the data that we calculate.
 
     uint16_t  unique_id;       // An identifier for this message.
     uint16_t  message_code;    // The integer code for this message class.
+
+    uint8_t   retries;         // How many times have we retried this packet?
+
+    uint8_t   proc_state;      // Where are we in the flow of this message? See XENO_MSG_PROC_STATES
+    uint8_t   arg_count;
+
+    uint8_t   checksum_i;      // The checksum of the data that we receive.
+    uint8_t   checksum_c;      // The checksum of the data that we calculate.
 
     
     static XenoMessage __prealloc_pool[XENOMESSAGE_PREALLOCATE_COUNT];
@@ -296,6 +295,8 @@ class XenoSession : public EventReceiver {
     int8_t scan_buffer_for_sync();
     void   mark_session_desync(uint8_t desync_source);
     void   mark_session_sync(bool pending);
+    
+    int8_t take_message();
     
     /**
     * Mark the session with the given status.
