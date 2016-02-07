@@ -217,7 +217,7 @@ int8_t XenoSession::callback_proc(ManuvrRunnable *event) {
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     case MANUVR_MSG_SELF_DESCRIBE:
-      sendEvent(event);
+      //sendEvent(event);
       break;
     default:
       break;
@@ -556,8 +556,6 @@ int8_t XenoSession::take_message() {
   inbound_messages.insert(nu_xm);   // ...drop the new message into the inbound message queue.
   
   if (nu_xm->expectsACK()) {
-    local_log.concat("EXPECTS ACK\n");
-
     switch (nu_xm->event->event_code) {
       case MANUVR_MSG_SYNC_KEEPALIVE:
         if (XENOSESSION_STATE_SYNC_PEND_EXIT & session_state) { 
@@ -566,7 +564,6 @@ int8_t XenoSession::take_message() {
         }
         //nu_xm->ack();  // KA we ACK immediately.
         {
-          local_log.concat("SERIALIZING FOR TRANSPORT\n");
           XenoMessage* nu_outbound_msg = XenoMessage::fetchPreallocation(this);
           nu_outbound_msg->provideEvent(Kernel::returnEvent(MANUVR_MSG_REPLY), nu_xm->uniqueId());
 
@@ -588,9 +585,6 @@ int8_t XenoSession::take_message() {
         //nu_xm->ack();
         break;
     }
-  }
-  else {
-    local_log.concat("EXPECTS NO ACK\n");
   }
   
   if (local_log.length() > 0) Kernel::log(&local_log);
