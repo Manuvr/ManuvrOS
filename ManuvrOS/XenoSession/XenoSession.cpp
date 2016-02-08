@@ -418,7 +418,10 @@ int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
   if (nu_outbound_msg->serialize(&buf) > 0) {
     owner->sendBuffer(&buf);
   }
-  //outbound_messages.insert(nu_outbound_msg);
+  
+  if (nu_outbound_msg->expectsACK()) {
+    outbound_messages.insert(nu_outbound_msg);
+  }
   
   // We are about to pass a message across the transport.
   //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
@@ -529,32 +532,51 @@ void XenoSession::mark_session_sync(bool pending) {
   if (pending) {
     // We *think* we might be done sync'ing...
     session_state = getState() | XENOSESSION_STATE_SYNC_PEND_EXIT;
+    sendEvent(Kernel::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE));
   }
   else {
     // We are definately done sync'ing.
     session_state = getState();
+    
+    if (!isEstablished()) {
+      // When (if) the session syncs, various components in the firmware might
+      //   want a message put through.
+      mark_session_state(XENOSESSION_STATE_ESTABLISHED);
+      //sendEvent(Kernel::returnEvent(MANUVR_MSG_SESS_ESTABLISHED));
+      raiseEvent(Kernel::returnEvent(MANUVR_MSG_SELF_DESCRIBE));
+      //sendEvent(Kernel::returnEvent(MANUVR_MSG_LEGEND_MESSAGES));
+    }
   }
 
   sync_event.enableSchedule(false);
-
-  if (!isEstablished()) {
-    // When (if) the session syncs, various components in the firmware might
-    //   want a message put through.
-    mark_session_state(XENOSESSION_STATE_ESTABLISHED);
-    //sendEvent(Kernel::returnEvent(MANUVR_MSG_SESS_ESTABLISHED));
-    sendEvent(Kernel::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE));
-    raiseEvent(Kernel::returnEvent(MANUVR_MSG_SELF_DESCRIBE));
-    //sendEvent(Kernel::returnEvent(MANUVR_MSG_LEGEND_MESSAGES));
-  }
 }
 
 
 // At this point, we can take it for granted that this message contains a valid event.
+// This is only for processing inbound messages.
 int8_t XenoSession::take_message() {
   XenoMessage* nu_xm = working;
   working = NULL;                   // ...make space for the next message.
   inbound_messages.insert(nu_xm);   // ...drop the new message into the inbound message queue.
   
+  switch (nu_xm->event->event_code) {
+    case MANUVR_MSG_REPLY:
+      if (nu_xm->event->argCount() == 0) {
+        for (int i = 0; i < outbound_messages.size(); i++) {
+          if (outbound_messages.get(i)->uniqueId() == nu_xm->uniqueId()) {
+            XenoMessage::reclaimPreallocation(nu_xm);
+            XenoMessage* replied_to = outbound_messages.remove(i);
+            // TODO: Leak alert! The event member! Remember?
+            XenoMessage::reclaimPreallocation(nu_xm); // TODO: No. Bad.
+            return 0;                                 // TODO: No. Bad.
+          }
+        }
+      }
+      break;
+    default:
+      break;
+  }
+
   if (nu_xm->expectsACK()) {
     switch (nu_xm->event->event_code) {
       case MANUVR_MSG_SYNC_KEEPALIVE:
@@ -633,7 +655,7 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
       if (scan_buffer_for_sync()) {   // We are getting sync back now.
         /* Since we are going to fall-through into the general parser case, we should reset
            the values that it will use to index and make decisions... */
-        mark_session_sync(false);   // Indicate that we are done with sync, but may still see such packets.
+        mark_session_sync(true);   // Indicate that we are done with sync, but may still see such packets.
         #ifdef __MANUVR_DEBUG
         if (verbosity > 3) local_log.concatf("Session re-sync'd with %d bytes remaining in the buffer. Sync'd state is now pending.\n", len);
         #endif
@@ -714,10 +736,10 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
           working->printDebug(&local_log);
         }
         if (MAX_PARSE_FAILURES == ++sequential_parse_failures) {
-          mark_session_desync(XENOSESSION_STATE_SYNC_INITIATOR);   // We will complain.
           #ifdef __MANUVR_DEBUG
             if (verbosity > 2) local_log.concat("\nThis was the session's last straw. Session marked itself as desync'd.\n");
           #endif
+          mark_session_desync(XENOSESSION_STATE_SYNC_INITIATOR);   // We will complain.
         }
         else {
           // Send a retransmit request.

@@ -63,9 +63,9 @@ template <class T> class LinkedList {
 		
 		int size(void);                  // Returns the number of elements in this list.
 
-		bool remove(void);               // Removes the first element of the list. Return true on success.
+		T remove(void);                  // Removes the first element of the list. Return true on success.
 		bool remove(T);                  // Removes any elements with this data.
-		bool remove(int position);       // Removes the element at the given position of the list. Return true on success.
+		T remove(int position);          // Removes the element at the given position of the list. Return true on success.
 		
 		int clear(void);                 // Returns the number of elements purged from the list.
 
@@ -228,17 +228,18 @@ template <class T> Node<T>* LinkedList<T>::getLast() {
 /**
 * Removes the element at the head of the list. 
 *
-* @return true if something was removed. False otherwise.
+* @return the thing removed, if anything. NULL otherwise.
 */
-template <class T> bool LinkedList<T>::remove() {
+template <class T> T LinkedList<T>::remove() {
+  T return_value = NULL;
 	Node<T>* current = root;
 	if (current != NULL) {
+	  return_value = current->data;
 		root = current->next;
 		free(current);
 		element_count--;
-		return true;
 	}
-	return false;
+	return return_value;
 }
 
 
@@ -246,10 +247,11 @@ template <class T> bool LinkedList<T>::remove() {
 * Removes the element at the given position within the list. 
 *
 * @param  pos The position to remove.
-* @return true if something was removed. False otherwise.
+* @return the thing removed, if anything. NULL otherwise.
 */
-template <class T> bool LinkedList<T>::remove(int pos) {
+template <class T> T LinkedList<T>::remove(int pos) {
 	int i = 0;
+  T return_value   = NULL;
 	Node<T>* prior   = NULL;
 	Node<T>* current = root;
 	while (current != NULL) {
@@ -260,20 +262,21 @@ template <class T> bool LinkedList<T>::remove(int pos) {
 			else {
 				root = current->next;
 			}
-			if (current->data != NULL) {
+			return_value = current->data;
+			if (current->data != NULL) {  // TODO: Strike this. Never use it.
 				if (current->reap) {
 					free(current->data);
 				}
 			}
 			free(current);
 			element_count--;
-			return true;
+			return return_value;
 		}
 		i++;
 		prior = current;
 		current = current->next;
 	}
-	return false;
+	return return_value;
 }
 
 
