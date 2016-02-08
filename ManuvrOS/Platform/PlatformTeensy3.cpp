@@ -129,10 +129,10 @@ int platformSerialNumberSize() {
 * @return   The number of bytes written.
 */
 int getSerialNumber(uint8_t *buf) {
-  *((uint32*) buf + 0)  = *((uint32*) 0x40048054);
-  *((uint32*) buf + 4)  = *((uint32*) 0x40048058);
-  *((uint32*) buf + 8)  = *((uint32*) 0x4004805C);
-  *((uint32*) buf + 12) = *((uint32*) 0x40048060);
+  *((uint32_t*) buf + 0)  = *((uint32_t*) 0x40048054);
+  *((uint32_t*) buf + 4)  = *((uint32_t*) 0x40048058);
+  *((uint32_t*) buf + 8)  = *((uint32_t*) 0x4004805C);
+  *((uint32_t*) buf + 12) = *((uint32_t*) 0x40048060);
   return 16;
 }
 

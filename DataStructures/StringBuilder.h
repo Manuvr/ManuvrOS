@@ -26,8 +26,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <inttypes.h>
 #include <stdarg.h>
 
-#ifdef __MANUVR_LINUX
+#if defined(__MANUVR_LINUX)
   #include <pthread.h>
+#elif defined(__MANUVR_FREERTOS)
+  #include <FreeRTOS_ARM.h>
 #endif
 
 
@@ -131,9 +133,11 @@ class StringBuilder {
 
 		
 	private:
-    #ifdef __MANUVR_LINUX
+    #if defined(__MANUVR_LINUX)
       // If we are on linux, we control for concurrency with a mutex...
       pthread_mutex_t _mutex;
+    #elif defined(__MANUVR_FREERTOS)
+      SemaphoreHandle_t _mutex;
     #endif
 
 		int totalStrLen(StrLL *node);

@@ -31,7 +31,7 @@ This file is meant to contain a set of common functions that are typically platf
 */
 
 #include "Platform.h"
-
+#include <ManuvrOS/Kernel.h>
 
 
 
@@ -77,7 +77,7 @@ int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn,
     return pthread_create(_thread_id, (const pthread_attr_t*) _something, _fxn, _args);
   #elif defined(__MANUVR_FREERTOS)
     // TODO: Make the task parameters 1-to-1 with pthreads.
-    xTaskCreate(debugDumpTaskFxn, "NewThread", 2000, (void*)kernel, 1, _thread_id);
+    //xTaskCreate((TaskFunction_t) _fxn, "nThread", 2000, (void*)Kernel::getInstance(), 1, (TaskHandle_t) &_thread_id);
     return *_thread_id;
   #endif
   return -1;
