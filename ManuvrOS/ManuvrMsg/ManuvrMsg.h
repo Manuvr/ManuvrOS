@@ -287,6 +287,10 @@ class ManuvrMsg {
     static const char* getMsgTypeString(uint16_t msg_code);
     
     static int8_t getMsgLegend(StringBuilder *output);
+    
+    #if defined (__ENABLE_MSG_SEMANTICS)
+    static int8_t getMsgSemantics(MessageTypeDef*, StringBuilder *output);
+    #endif
 
     static int8_t registerMessage(MessageTypeDef*);
     static int8_t registerMessage(uint16_t, uint16_t, const char*, const unsigned char*, const char*);

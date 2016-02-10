@@ -95,7 +95,7 @@ int8_t XenoSession::tapMessageType(uint16_t code) {
     case MANUVR_MSG_SESS_DUMP_DEBUG:
 //    case MANUVR_MSG_SESS_HANGUP:
       #ifdef __MANUVR_DEBUG
-      if (verbosity > 3) Kernel::log("tapMessageType() tried to tap a blacklisted code.\n");
+      if (verbosity > 3) local_log.concatf("0x%08x tapMessageType() tried to tap a blacklisted code (%d).\n", (uint32_t) this, code);
       #endif
       return -1;
   }
@@ -246,7 +246,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
       purgeInbound();
       purgeOutbound();
       #ifdef __MANUVR_DEBUG
-      if (verbosity > 3) local_log.concat("Session is now in state XENOSESSION_STATE_DISCONNECTED.\n");
+      if (verbosity > 3) local_log.concatf("0x%08x Session is now in state %s.\n", (uint32_t) this, getSessionStateString());
       #endif
       return_value++;
       break;
@@ -257,7 +257,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
         int out_purge = purgeOutbound();
         int in_purge  = purgeInbound();
         #ifdef __MANUVR_DEBUG
-        if (verbosity > 5) local_log.concatf("Purged (%d) msgs from outbound and (%d) from inbound.\n", out_purge, in_purge);
+        if (verbosity > 5) local_log.concatf("0x%08x Purged (%d) msgs from outbound and (%d) from inbound.\n", (uint32_t) this, out_purge, in_purge);
         #endif
       }
       return_value++;
@@ -326,7 +326,7 @@ int XenoSession::purgeOutbound() {
     temp = outbound_messages.get();
     #ifdef __MANUVR_DEBUG
     if (verbosity > 6) {
-      local_log.concat("\nDestroying outbound msg:\n");
+      local_log.concatf("\nSession 0x%08x Destroying outbound msg:\n", (uint32_t) this);
       temp->printDebug(&local_log);
       Kernel::log(&local_log);
     }
@@ -350,7 +350,7 @@ int XenoSession::purgeInbound() {
     temp = inbound_messages.get();
     #ifdef __MANUVR_DEBUG
     if (verbosity > 6) {
-      local_log.concat("\nDestroying inbound msg:\n");
+      local_log.concatf("\nSession 0x%08x Destroying inbound msg:\n", (uint32_t) this);
       temp->printDebug(&local_log);
       Kernel::log(&local_log);
     }
@@ -492,7 +492,7 @@ void XenoSession::mark_session_desync(uint8_t ds_src) {
   session_state = getState() | ds_src;
   if (session_state & ds_src) {
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 3) local_log.concatf("%s\t%s   We are already in the requested sync state. There is no point to entering it again. Doing nothing.\n", __PRETTY_FUNCTION__, getSessionSyncString());
+    if (verbosity > 3) local_log.concatf("Session 0x%08x is already in the requested sync state (%s). Doing nothing.\n", (uint32_t) this, getSessionSyncString());
     #endif
   }
   else {
@@ -557,7 +557,6 @@ void XenoSession::mark_session_sync(bool pending) {
 int8_t XenoSession::take_message() {
   XenoMessage* nu_xm = working;
   working = NULL;                   // ...make space for the next message.
-  inbound_messages.insert(nu_xm);   // ...drop the new message into the inbound message queue.
   
   switch (nu_xm->event->event_code) {
     case MANUVR_MSG_REPLY:
@@ -567,13 +566,34 @@ int8_t XenoSession::take_message() {
             XenoMessage::reclaimPreallocation(nu_xm);
             XenoMessage* replied_to = outbound_messages.remove(i);
             // TODO: Leak alert! The event member! Remember?
-            XenoMessage::reclaimPreallocation(nu_xm); // TODO: No. Bad.
+            XenoMessage::reclaimPreallocation(replied_to); // TODO: No. Bad.
             return 0;                                 // TODO: No. Bad.
           }
         }
       }
       break;
+      
+    case MANUVR_MSG_SYNC_KEEPALIVE:
+      if (XENOSESSION_STATE_SYNC_PEND_EXIT & session_state) { 
+        // If we were pending sync, and got this result, we are almost certainly syncd.
+        mark_session_sync(false);   // Mark it so.
+      }
+      //nu_xm->ack();  // KA we ACK immediately.
+      {
+        XenoMessage* nu_outbound_msg = XenoMessage::fetchPreallocation(this);
+        nu_outbound_msg->provideEvent(Kernel::returnEvent(MANUVR_MSG_REPLY), nu_xm->uniqueId());
+
+        StringBuilder buf;
+        if (nu_outbound_msg->serialize(&buf) > 0) {
+          owner->sendBuffer(&buf);
+        }
+      }
+      break;
+
     default:
+      if (nu_xm->expectsACK()) {
+        inbound_messages.insert(nu_xm);   // ...drop the new message into the inbound message queue.
+      }
       break;
   }
 
@@ -592,12 +612,6 @@ int8_t XenoSession::take_message() {
           StringBuilder buf;
           if (nu_outbound_msg->serialize(&buf) > 0) {
             owner->sendBuffer(&buf);
-                local_log.concat("SENDING VIA TRANSPORT: ");
-                unsigned char* str = buf.string();
-                for (int i = 0; i < buf.length(); i++) {
-                  local_log.concatf("0x%02x ", *(str + i));
-                }
-                local_log.concat("\n\n");
           }
         }
         break;
@@ -636,7 +650,7 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
 
   #ifdef __MANUVR_DEBUG
   if (verbosity > 6) {
-    local_log.concat("Bytes received into session buffer: \n\t");
+    local_log.concatf("Bytes received into session 0x%08x buffer: \n\t", (uint32_t) this);
     for (int i = 0; i < len; i++) {
       local_log.concatf("0x%02x ", *(buf + i));
     }
@@ -657,7 +671,7 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
            the values that it will use to index and make decisions... */
         mark_session_sync(true);   // Indicate that we are done with sync, but may still see such packets.
         #ifdef __MANUVR_DEBUG
-        if (verbosity > 3) local_log.concatf("Session re-sync'd with %d bytes remaining in the buffer. Sync'd state is now pending.\n", len);
+        if (verbosity > 3) local_log.concatf("Session 0x%08x re-sync'd with %d bytes remaining in the buffer. Sync'd state is now pending.\n", (uint32_t) this, len);
         #endif
       }
       else {
@@ -691,7 +705,7 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
       break;
     default:
       #ifdef __MANUVR_DEBUG
-      if (verbosity > 1) local_log.concatf("ILLEGAL session_state: 0x%02x (bottom 4)\n", session_state);
+      //if (verbosity > 1) local_log.concatf("ILLEGAL session_state: 0x%02x (bottom 4)\n", session_state);
       #endif
       break;
   }
@@ -704,7 +718,7 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
   if ((XENO_MSG_PROC_STATE_RECEIVING | XENO_MSG_PROC_STATE_UNINITIALIZED) & working->getState()) {
     int consumed = working->feedBuffer(&session_buffer);
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 5) local_log.concatf("Feeding working 0x%08x. Consumed %d of %d bytes.\n", (uint32_t) working, consumed, len);
+    if (verbosity > 5) local_log.concatf("Feeding message 0x%08x. Consumed %d of %d bytes.\n", (uint32_t) working, consumed, len);
     #endif
     
     if (consumed > 0) {
@@ -732,7 +746,7 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
       case (XENO_MSG_PROC_STATE_ERROR | XENO_MSG_PROC_STATE_AWAITING_REAP):
         // There was some sort of problem...
         if (verbosity > 3) {
-          local_log.concat("XenoMessage 0x%08x reports an error:\n");
+          local_log.concatf("XenoMessage 0x%08x reports an error:\n", (uint32_t) this);
           working->printDebug(&local_log);
         }
         if (MAX_PARSE_FAILURES == ++sequential_parse_failures) {
@@ -800,6 +814,7 @@ void XenoSession::printDebug(StringBuilder *output) {
   if (NULL == output) return;
   EventReceiver::printDebug(output);
   
+  output->concatf("-- Session ID           0x%08x\n", (uint32_t) this);
   output->concatf("-- Session state        %s\n", getSessionStateString());
   output->concatf("-- Sync state           %s\n", getSessionSyncString());
   output->concatf("-- seq parse failures   %d\n", sequential_parse_failures);

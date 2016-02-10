@@ -675,7 +675,7 @@ int ManuvrMsg::serialize(StringBuilder *output) {
 }
 
 
-/*
+/**
 * This is usually called because some other system is needing to know our message map.
 * Format is binary with a variable length.
 * Broken out into a format that a greedy parser can cope with:
@@ -688,7 +688,9 @@ int ManuvrMsg::serialize(StringBuilder *output) {
 *   take care to bake our null-terminators into the output so that the parser on the
 *   other side can take the condition "a zero-length string" to signify the end of a message
 *   definition, and can move on to the next entry.
-* Returns 0 on failure. 1 on success.
+*
+* @param  output  The buffer to write results to.
+* @return 0 on failure. 1 on success.
 */
 int8_t ManuvrMsg::getMsgLegend(StringBuilder *output) {
   if (NULL == output) return 0;
@@ -736,6 +738,82 @@ int8_t ManuvrMsg::getMsgLegend(StringBuilder *output) {
   }
   return 1;
 }
+
+
+
+/**
+* This is called when a counterparty wants annotations to our message map.
+* Format is binary with a variable length.
+* Broken out into a format that a greedy parser can cope with:
+*   |--------------|  /---------------\ |-----|
+*   | Message Code |  | Several NTSs  | |  0  |
+*   |--------------|  \---------------/ |-----|
+*           2                 y            1     <---- Bytes
+*
+* Since the counterparty can't know how big any given definition might be, we need to
+*   take care to bake our null-terminators into the output so that the parser on the
+*   other side can take the condition "a zero-length string" to signify the end of a message
+*   definition, and can move on to the next entry.
+*
+* Because these definitions might be much larger than their corrosponding MESSAGE_LEGEND entries,
+*   it is expected that they will be sent piece-wise to the counterparty so that neither side is
+*   expected to hold the entire definition set at once in a single message.
+*
+* @param  output  The buffer to write results to.
+* @return 0 on failure. 1 on success.
+*/
+#if defined (__ENABLE_MSG_SEMANTICS)
+int8_t ManuvrMsg::getMsgSemantics(MessageTypeDef* def, StringBuilder* output) {
+  // TODO: def parameter is being ignored for now.
+  int8_t return_value = 1;
+  if ((NULL != def) && (NULL != output)) {
+   
+    int total_elements = sizeof(message_defs) / sizeof(MessageTypeDef);
+    const MessageTypeDef *temp_def = NULL;
+    for (int i = 1; i < total_elements; i++) {
+      temp_def = (const MessageTypeDef *) &(message_defs[i]);
+      
+      if (isExportable(temp_def)) {
+        int _set_size = strlen(temp_def->arg_semantics)+1;
+        output->concat((unsigned char*) temp_def, 2);
+    
+        // Now to capture the argument modes...
+        // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
+        unsigned char* mode = (unsigned char*) temp_def->arg_semantics;
+        int arg_mode_len = strlen((const char*) mode);
+        while (arg_mode_len > 0) {
+          output->concat((unsigned char*) mode, arg_mode_len+1);
+          mode += arg_mode_len + 1;
+          arg_mode_len = strlen((const char*) mode);
+        }
+        output->concat((unsigned char*) "\0", 1);   // This is the obligatory "NO ARGUMENT" mode.
+      }
+    }
+  
+    total_elements = message_defs_extended.size();
+    for (int i = 1; i < total_elements; i++) {
+      temp_def = message_defs_extended.get(i);
+      if (isExportable(temp_def)) {
+        int _set_size = strlen(temp_def->arg_semantics)+1;
+        output->concat((unsigned char*) temp_def, 2);
+
+        // Now to capture the argument modes...
+        // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
+        unsigned char* mode = (unsigned char*) temp_def->arg_semantics;
+        int arg_mode_len = strlen((const char*) mode);
+        while (arg_mode_len > 0) {
+          output->concat((unsigned char*) mode, arg_mode_len+1);
+          mode += arg_mode_len + 1;
+          arg_mode_len = strlen((const char*) mode);
+        }
+        output->concat((unsigned char*) "\0", 1);   // This is the obligatory "NO ARGUMENT" mode.
+      }
+    }
+  }
+  return return_value;
+}
+#endif
+
 
 
 /**

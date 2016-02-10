@@ -34,7 +34,7 @@
   // String:     Identity           (IE: "Digitabulum") Generally the name of the Manuvrable.
   // String:     Firmware version   (IE: "1.5.4")
   // String:     Hardware version   (IE: "4")
-  // uint32:     Serial number      (This field is for devices that want to report a serial number)
+  // String:     Serial number      (This field is for devices that want to report a serial number)
   // String:     Extended detail    (User-defined)
 
   #define MANUVR_MSG_SYNC_KEEPALIVE       0x0008 // No args.

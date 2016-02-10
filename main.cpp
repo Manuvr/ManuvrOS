@@ -132,10 +132,10 @@ int main(int argc, char *argv[]) {
   // We need at least ONE transport to be useful...
   #if defined (MANUVR_SUPPORT_TCPSOCKET)
     ManuvrTCP tcp_srv((const char*) "127.0.0.1", 2319);
-    //ManuvrTCP tcp_cli((const char*) "127.0.0.1", 2319);
+    ManuvrTCP tcp_cli((const char*) "127.0.0.1", 2319);
     //tcp_srv.nonSessionUsage(true);
     kernel->subscribe(&tcp_srv);
-    //kernel->subscribe(&tcp_cli);
+    kernel->subscribe(&tcp_cli);
   #endif
   
   #if defined (MANUVR_SUPPORT_SERIAL)
@@ -195,7 +195,7 @@ int main(int argc, char *argv[]) {
   #if defined (MANUVR_SUPPORT_TCPSOCKET)
     tcp_srv.listen();
     while (!tcp_srv.listening()) {}
-    //tcp_cli.connect();
+    tcp_cli.connect();
   #endif
   // TODO: End horrible hackishness.
   
