@@ -762,7 +762,7 @@ int8_t ManuvrMsg::getMsgLegend(StringBuilder *output) {
 * @param  output  The buffer to write results to.
 * @return 0 on failure. 1 on success.
 */
-#if defined (__ENABLE_MSG_SEMANTICS)
+//#if defined (__ENABLE_MSG_SEMANTICS)
 int8_t ManuvrMsg::getMsgSemantics(MessageTypeDef* def, StringBuilder* output) {
   // TODO: def parameter is being ignored for now.
   int8_t return_value = 1;
@@ -812,7 +812,7 @@ int8_t ManuvrMsg::getMsgSemantics(MessageTypeDef* def, StringBuilder* output) {
   }
   return return_value;
 }
-#endif
+//#endif
 
 
 
