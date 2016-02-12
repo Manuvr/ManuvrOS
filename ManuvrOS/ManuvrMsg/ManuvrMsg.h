@@ -288,9 +288,9 @@ class ManuvrMsg {
     
     static int8_t getMsgLegend(StringBuilder *output);
     
-    //#if defined (__ENABLE_MSG_SEMANTICS)
+    #if defined (__ENABLE_MSG_SEMANTICS)
     static int8_t getMsgSemantics(MessageTypeDef*, StringBuilder *output);
-    //#endif
+    #endif
 
     static int8_t registerMessage(MessageTypeDef*);
     static int8_t registerMessage(uint16_t, uint16_t, const char*, const unsigned char*, const char*);
@@ -304,27 +304,18 @@ class ManuvrMsg {
       return (message_def->msg_type_flags & MSG_FLAG_EXPORTABLE);
     }
 
-
-
     /* Required argument forms */
     static const unsigned char MSG_ARGS_NONE[];
     static const unsigned char MSG_ARGS_U8[];
     static const unsigned char MSG_ARGS_U16[];
     static const unsigned char MSG_ARGS_U32[];
     static const unsigned char MSG_ARGS_STR_BUILDER[];
-    static const unsigned char MSG_ARGS_U8_U8[];
-    static const unsigned char MSG_ARGS_U8_U32[];
-    static const unsigned char MSG_ARGS_U8_FLOAT[];
     static const unsigned char MSG_ARGS_BINBLOB[];
-    static const unsigned char MSG_ARGS_POWER_MODE[];
 
     static const unsigned char MSG_ARGS_SELF_DESC[];
     static const unsigned char MSG_ARGS_MSG_FORWARD[];
     
-    static const unsigned char MSG_ARGS_EVENTRECEIVER[]; 
     static const unsigned char MSG_ARGS_XPORT[]; 
-
-    
     
 
   protected:

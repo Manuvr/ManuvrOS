@@ -16,40 +16,30 @@ PriorityQueue<const MessageTypeDef*> ManuvrMsg::message_defs_extended;
 const unsigned char ManuvrMsg::MSG_ARGS_NONE[] = {0};      // Generic argument def for a message with no args.
   
 // Generics for messages that have one arg of a single type, or no args.
-const unsigned char ManuvrMsg::MSG_ARGS_U8[]  = {UINT8_FM,  0, 0}; 
-const unsigned char ManuvrMsg::MSG_ARGS_U16[] = {UINT16_FM, 0, 0}; 
-const unsigned char ManuvrMsg::MSG_ARGS_U32[] = {UINT32_FM, 0, 0}; 
+const unsigned char ManuvrMsg::MSG_ARGS_U8[]  = {UINT8_FM,  0}; 
+const unsigned char ManuvrMsg::MSG_ARGS_U16[] = {UINT16_FM, 0}; 
+const unsigned char ManuvrMsg::MSG_ARGS_U32[] = {UINT32_FM, 0}; 
 
-const unsigned char ManuvrMsg::MSG_ARGS_STR_BUILDER[] = {STR_BUILDER_FM, 0, 0}; 
+const unsigned char ManuvrMsg::MSG_ARGS_STR_BUILDER[] = {STR_BUILDER_FM, 0}; 
 
-const unsigned char ManuvrMsg::MSG_ARGS_XPORT[]         = {SYS_MANUVR_XPORT_FM, 0, 0}; 
+const unsigned char ManuvrMsg::MSG_ARGS_XPORT[]       = {SYS_MANUVR_XPORT_FM, 0}; 
 
 /* 
 * This is the argument form for messages that either...
 *   a) Need a free-form type that we don't support natively
 *   b) Are special-cases (REPLY) that will have their args cast after validation.
 */
-const unsigned char ManuvrMsg::MSG_ARGS_BINBLOB[] = {  BINARY_FM, 0, 0};
-
-
-// Generics for messages that have Two types.
-const unsigned char ManuvrMsg::MSG_ARGS_U8_U8[]    = {UINT8_FM, UINT8_FM,  0, UINT8_FM, 0, 0};
-const unsigned char ManuvrMsg::MSG_ARGS_U8_U32[]   = {UINT8_FM, UINT32_FM, 0, UINT8_FM, 0, 0};
-const unsigned char ManuvrMsg::MSG_ARGS_U8_FLOAT[] = {UINT8_FM, FLOAT_FM,  0, UINT8_FM, 0, 0};
-
+const unsigned char ManuvrMsg::MSG_ARGS_BINBLOB[] = {  BINARY_FM, 0};
 
 const unsigned char ManuvrMsg::MSG_ARGS_SELF_DESC[] = {
-  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, UINT32_FM, STR_FM, 0, // All fields.
-  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, UINT32_FM, 0,         // Missing Extended Detail.
-  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, 0,                    // Missing Serial Number and Extended Detail.
-  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, 0,                            // Minimum-required.
-  0};                                                                         // 0 bytes: Request for self-description.
+  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, STR_FM, STR_FM, 0, // All fields.
+};                                                                         // 0 bytes: Request for self-description.
                             
 /*
 * This code is used for forwarding messages between Manuvrables.
 * Implementation of this code is not required, but the ability to understand it is.
 */
-const unsigned char ManuvrMsg::MSG_ARGS_MSG_FORWARD[] = {  STR_FM, BINARY_FM, 0, 0};
+const unsigned char ManuvrMsg::MSG_ARGS_MSG_FORWARD[] = {  STR_FM, BINARY_FM, 0};
 
 
 
@@ -762,7 +752,7 @@ int8_t ManuvrMsg::getMsgLegend(StringBuilder *output) {
 * @param  output  The buffer to write results to.
 * @return 0 on failure. 1 on success.
 */
-//#if defined (__ENABLE_MSG_SEMANTICS)
+#if defined (__ENABLE_MSG_SEMANTICS)
 int8_t ManuvrMsg::getMsgSemantics(MessageTypeDef* def, StringBuilder* output) {
   // TODO: def parameter is being ignored for now.
   int8_t return_value = 1;
@@ -812,7 +802,7 @@ int8_t ManuvrMsg::getMsgSemantics(MessageTypeDef* def, StringBuilder* output) {
   }
   return return_value;
 }
-//#endif
+#endif
 
 
 
