@@ -178,7 +178,7 @@ volatile void Kernel::log(int severity, const char *str) {
   if (!INSTANCE->verbosity) return;
   log_buffer.concat(str);
   #if defined (__MANUVR_FREERTOS)
-    //if (logger_pid) unblockThread(logger_pid);
+    if (logger_pid) vTaskResume((TaskHandle_t) logger_pid);
   #endif
 }
 
@@ -186,7 +186,7 @@ volatile void Kernel::log(char *str) {
   if (!INSTANCE->verbosity) return;
   log_buffer.concat(str);
   #if defined (__MANUVR_FREERTOS)
-    //if (logger_pid) unblockThread(logger_pid);
+    if (logger_pid) vTaskResume((TaskHandle_t) logger_pid);
   #endif
 }
 
@@ -194,7 +194,7 @@ volatile void Kernel::log(const char *str) {
   if (!INSTANCE->verbosity) return;
   log_buffer.concat(str);
   #if defined (__MANUVR_FREERTOS)
-    //if (logger_pid) unblockThread(logger_pid);
+    if (logger_pid) vTaskResume((TaskHandle_t) logger_pid);
   #endif
 }
 
@@ -207,7 +207,7 @@ volatile void Kernel::log(const char *fxn_name, int severity, const char *str, .
   log_buffer.concatf(str, marker);
   va_end(marker);
   #if defined (__MANUVR_FREERTOS)
-    //if (logger_pid) unblockThread(logger_pid);
+    if (logger_pid) vTaskResume((TaskHandle_t) logger_pid);
   #endif
 }
 
@@ -215,7 +215,7 @@ volatile void Kernel::log(StringBuilder *str) {
   if (!INSTANCE->verbosity) return;
   log_buffer.concatHandoff(str);
   #if defined (__MANUVR_FREERTOS)
-    //if (logger_pid) unblockThread(logger_pid);
+    if (logger_pid) vTaskResume((TaskHandle_t) logger_pid);
   #endif
 }
 
@@ -792,8 +792,6 @@ int8_t Kernel::procIdleFlags() {
     if (profiler_enabled) {
       profiler_mark_3 = micros();
 
-      MessageTypeDef* tmp_msg_def = (MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(msg_code_local);
-      
       TaskProfilerData* profiler_item = NULL;
       int cost_size = event_costs.size();
       int i = 0;
@@ -821,10 +819,11 @@ int8_t Kernel::procIdleFlags() {
       profiler_item->run_time_average = profiler_item->run_time_total / ((profiler_item->executions) ? profiler_item->executions : 1);
 
       #ifdef __MANUVR_DEBUG
-      if (verbosity >= 6) local_log.concatf("%s finished.\n\tTotal time: %ld uS\n", tmp_msg_def->debug_label, (profiler_mark_3 - profiler_mark_0));
-      if (profiler_mark_2) {
-        if (verbosity >= 6) local_log.concatf("\tTook %ld uS to notify.\n", profiler_item->run_time_last);
-      }
+        MessageTypeDef* tmp_msg_def = (MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(msg_code_local);
+        if (verbosity >= 6) local_log.concatf("%s finished.\n\tTotal time: %ld uS\n", tmp_msg_def->debug_label, (profiler_mark_3 - profiler_mark_0));
+        if (profiler_mark_2) {
+          if (verbosity >= 6) local_log.concatf("\tTook %ld uS to notify.\n", profiler_item->run_time_last);
+        }
       #endif
       profiler_mark_2 = 0;  // Reset for next iteration.
     }

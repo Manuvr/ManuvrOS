@@ -48,7 +48,7 @@ StringBuilder::StringBuilder() {
   #if defined(__MANUVR_LINUX)
     _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
   #elif defined(__MANUVR_FREERTOS)
-    _mutex = xSemaphoreCreateRecursiveMutex();
+    //_mutex = xSemaphoreCreateRecursiveMutex();
   #endif
 }
 
@@ -61,7 +61,7 @@ StringBuilder::StringBuilder(char *initial) {
   #if defined(__MANUVR_LINUX)
     _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
   #elif defined(__MANUVR_FREERTOS)
-    _mutex = xSemaphoreCreateRecursiveMutex();
+    //_mutex = xSemaphoreCreateRecursiveMutex();
   #endif
 }
 
@@ -74,7 +74,7 @@ StringBuilder::StringBuilder(unsigned char *initial, int len) {
   #if defined(__MANUVR_LINUX)
     _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
   #elif defined(__MANUVR_FREERTOS)
-    _mutex = xSemaphoreCreateRecursiveMutex();
+    //_mutex = xSemaphoreCreateRecursiveMutex();
   #endif
 }
 
@@ -88,7 +88,7 @@ StringBuilder::StringBuilder(const char *initial) {
   #if defined(__MANUVR_LINUX)
     _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
   #elif defined(__MANUVR_FREERTOS)
-    _mutex = xSemaphoreCreateRecursiveMutex();
+    //_mutex = xSemaphoreCreateRecursiveMutex();
   #endif
 }
 
@@ -109,7 +109,7 @@ StringBuilder::~StringBuilder() {
   #if defined(__MANUVR_LINUX)
     pthread_mutex_destroy(&_mutex);
   #elif defined(__MANUVR_FREERTOS)
-    vSemaphoreDelete(&_mutex);
+    //vSemaphoreDelete(&_mutex);
   #endif
 }
 
@@ -352,8 +352,8 @@ void StringBuilder::concatHandoff(StringBuilder *nu) {
     pthread_mutex_lock(&_mutex);
     pthread_mutex_lock(&nu->_mutex);
   #elif defined(__MANUVR_FREERTOS)
-    xSemaphoreTakeRecursive(&_mutex, 0);
-    xSemaphoreTakeRecursive(&nu->_mutex, 0);
+    //xSemaphoreTakeRecursive(&_mutex, 0);
+    //xSemaphoreTakeRecursive(&nu->_mutex, 0);
   #endif
   if ((NULL != nu) && (nu->length() > 0)) {
     nu->promote_collapsed_into_ll();   // Promote the previously-collapsed string.
@@ -367,8 +367,8 @@ void StringBuilder::concatHandoff(StringBuilder *nu) {
     pthread_mutex_unlock(&nu->_mutex);
     pthread_mutex_unlock(&_mutex);
   #elif defined(__MANUVR_FREERTOS)
-    xSemaphoreGiveRecursive(&nu->_mutex);
-    xSemaphoreGiveRecursive(&_mutex);
+    //xSemaphoreGiveRecursive(&nu->_mutex);
+    //xSemaphoreGiveRecursive(&_mutex);
   #endif
 }
 

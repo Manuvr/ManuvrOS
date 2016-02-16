@@ -101,7 +101,7 @@ extern uint32_t SystemCoreClock;
 #define configENABLE_BACKWARD_COMPATIBILITY 0
 #endif  // WHG
 
-#define configUSE_PREEMPTION			1
+#define configUSE_PREEMPTION			0
 #if 1  // WHG
 #define configUSE_IDLE_HOOK				1
 #define configUSE_TICK_HOOK				1
