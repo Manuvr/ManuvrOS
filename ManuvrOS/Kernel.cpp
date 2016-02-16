@@ -178,7 +178,7 @@ volatile void Kernel::log(int severity, const char *str) {
   if (!INSTANCE->verbosity) return;
   log_buffer.concat(str);
   #if defined (__MANUVR_FREERTOS)
-    unblockThread(logger_pid);
+    //if (logger_pid) unblockThread(logger_pid);
   #endif
 }
 
@@ -186,7 +186,7 @@ volatile void Kernel::log(char *str) {
   if (!INSTANCE->verbosity) return;
   log_buffer.concat(str);
   #if defined (__MANUVR_FREERTOS)
-    unblockThread(logger_pid);
+    //if (logger_pid) unblockThread(logger_pid);
   #endif
 }
 
@@ -194,7 +194,7 @@ volatile void Kernel::log(const char *str) {
   if (!INSTANCE->verbosity) return;
   log_buffer.concat(str);
   #if defined (__MANUVR_FREERTOS)
-    unblockThread(logger_pid);
+    //if (logger_pid) unblockThread(logger_pid);
   #endif
 }
 
@@ -207,7 +207,7 @@ volatile void Kernel::log(const char *fxn_name, int severity, const char *str, .
   log_buffer.concatf(str, marker);
   va_end(marker);
   #if defined (__MANUVR_FREERTOS)
-    unblockThread(logger_pid);
+    //if (logger_pid) unblockThread(logger_pid);
   #endif
 }
 
@@ -215,7 +215,7 @@ volatile void Kernel::log(StringBuilder *str) {
   if (!INSTANCE->verbosity) return;
   log_buffer.concatHandoff(str);
   #if defined (__MANUVR_FREERTOS)
-    unblockThread(logger_pid);
+    //if (logger_pid) unblockThread(logger_pid);
   #endif
 }
 
@@ -228,9 +228,14 @@ volatile void Kernel::log(StringBuilder *str) {
 int8_t Kernel::bootstrap() {
   platformInit();    // Start the platform-specific machinery.
 
+  #if defined (__MANUVR_FREERTOS)
+    vTaskStartScheduler();
+  #endif
+
   ManuvrRunnable *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
   boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
-  raiseEvent(MANUVR_MSG_SYS_BOOT_COMPLETED, NULL);
+  Kernel::staticRaiseEvent(boot_completed_ev);
+
   return 0;
 }
 
@@ -388,7 +393,7 @@ int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* ori) {
     INSTANCE->exec_queue.insert(nu);
     INSTANCE->update_maximum_queue_depth();   // Check the queue depth
     #if defined (__MANUVR_FREERTOS)
-      unblockThread(kernel_pid);
+      //if (kernel_pid) unblockThread(kernel_pid);
     #endif
   }
   else {
@@ -422,7 +427,7 @@ int8_t Kernel::staticRaiseEvent(ManuvrRunnable* event) {
     INSTANCE->exec_queue.insert(event, event->priority);
     INSTANCE->update_maximum_queue_depth();   // Check the queue depth
     #if defined (__MANUVR_FREERTOS)
-      unblockThread(kernel_pid);
+      //if (kernel_pid) unblockThread(kernel_pid);
     #endif
   }
   else {
@@ -470,7 +475,7 @@ int8_t Kernel::isrRaiseEvent(ManuvrRunnable* event) {
   return_value = isr_exec_queue.insertIfAbsent(event, event->priority);
   maskableInterrupts(true);
   #if defined (__MANUVR_FREERTOS)
-    unblockThread(kernel_pid);
+    //if (kernel_pid) unblockThread(kernel_pid);
   #endif
   return return_value;
 }

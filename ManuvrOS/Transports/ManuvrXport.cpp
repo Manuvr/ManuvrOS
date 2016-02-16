@@ -194,7 +194,9 @@ void ManuvrXport::connected(bool en) {
       // that are outstanding.
     }
   }
+  #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
   createThread(&_thread_id, NULL, xport_read_handler, (void*) this);
+  #endif
 }
 
 

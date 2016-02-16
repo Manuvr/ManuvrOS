@@ -78,7 +78,7 @@ int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn,
   #elif defined(__MANUVR_FREERTOS)
     // TODO: Make the task parameters 1-to-1 with pthreads.
     //xTaskCreate((TaskFunction_t) _fxn, "nThread", 2000, (void*)Kernel::getInstance(), 1, (TaskHandle_t) &_thread_id);
-    return *_thread_id;
+    return (uint32_t) _thread_id;
   #endif
   return -1;
 }
@@ -101,6 +101,8 @@ void sleep_millis(unsigned long millis) {
   #if defined(__MANUVR_LINUX)
     struct timespec t = {(long) (millis / 1000), (long) ((millis % 1000) * 1000000UL)}; 
     nanosleep(&t, &t);
+  #elif defined(__MANUVR_FREERTOS)
+    vTaskDelay(millis / portTICK_PERIOD_MS);
   #endif
 }
 
