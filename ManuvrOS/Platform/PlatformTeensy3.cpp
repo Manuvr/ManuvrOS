@@ -151,11 +151,12 @@ bool initPlatformRTC() {
   setSyncProvider(getTeensy3Time);
   if (timeStatus() != timeSet) {
     rtc_startup_state = MANUVR_RTC_STARTUP_GOOD_UNSET;
+    return false;
   }
   else {
     rtc_startup_state = MANUVR_RTC_STARTUP_GOOD_SET;
+    return true;
   }
-  return true;
 }
 
 /*

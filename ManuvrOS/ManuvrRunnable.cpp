@@ -113,7 +113,15 @@ void ManuvrRunnable::__class_initializer() {
   mem_managed     = false;
   scheduled       = false;
   preallocated    = false;
+
+  thread_enabled      = false;
+  thread_fire         = false;
+  thread_recurs       = 0;
+  thread_period       = 0;
+  thread_time_to_wait = 0;
+  autoclear           = false;
 }
+
 
 
 /**

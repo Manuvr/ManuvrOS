@@ -228,13 +228,13 @@ volatile void Kernel::log(StringBuilder *str) {
 int8_t Kernel::bootstrap() {
   platformInit();    // Start the platform-specific machinery.
 
-  #if defined (__MANUVR_FREERTOS)
-    vTaskStartScheduler();
-  #endif
-
   ManuvrRunnable *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
   boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
   Kernel::staticRaiseEvent(boot_completed_ev);
+
+  #if defined (__MANUVR_FREERTOS)
+    vTaskStartScheduler();
+  #endif
 
   return 0;
 }
@@ -1020,6 +1020,7 @@ void Kernel::printDebug(StringBuilder* output) {
   output->concatf("-- burden_of_being_specific  %u\n", (unsigned long) burden_of_specific);
   output->concatf("-- idempotent_blocks         %u\n", (unsigned long) idempotent_blocks);
   
+  output->concatf("-- _ms_elapsed      %u\n", (unsigned long) _ms_elapsed);
   output->concatf("-- Lagged schedules %u\n", (unsigned long) lagged_schedules);
   output->concatf("-- Total schedules:  %d\n-- Active schedules: %d\n\n", schedules.size(), countActiveSchedules());
 

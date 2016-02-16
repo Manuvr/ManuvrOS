@@ -102,15 +102,9 @@ extern uint32_t SystemCoreClock;
 #endif  // WHG
 
 #define configUSE_PREEMPTION			0
-#if 1  // WHG
 #define configUSE_IDLE_HOOK				1
 #define configUSE_TICK_HOOK				1
 #define configCPU_CLOCK_HZ				( F_CPU )
-#else  // WHG
-#define configUSE_IDLE_HOOK				0
-#define configUSE_TICK_HOOK				0
-#define configCPU_CLOCK_HZ				( SystemCoreClock )
-#endif  // WHG
 #define configTICK_RATE_HZ				( ( TickType_t ) 1000 )
 #define configMAX_PRIORITIES			( 5 )
 #define configMINIMAL_STACK_SIZE		( ( unsigned short ) 130 )
@@ -126,7 +120,7 @@ extern uint32_t SystemCoreClock;
 #define configUSE_MALLOC_FAILED_HOOK	1
 #define configUSE_APPLICATION_TASK_TAG	0
 #define configUSE_COUNTING_SEMAPHORES	1
-#define configUSE_QUEUE_SETS					1
+#define configUSE_QUEUE_SETS			1
 #define configGENERATE_RUN_TIME_STATS	0
 
 /* Co-routine definitions. */
