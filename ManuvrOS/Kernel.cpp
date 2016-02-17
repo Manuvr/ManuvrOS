@@ -233,7 +233,7 @@ int8_t Kernel::bootstrap() {
   Kernel::staticRaiseEvent(boot_completed_ev);
 
   #if defined (__MANUVR_FREERTOS)
-    vTaskStartScheduler();
+    //vTaskStartScheduler();
   #endif
 
   return 0;
@@ -425,7 +425,7 @@ int8_t Kernel::staticRaiseEvent(ManuvrRunnable* event) {
   int8_t return_value = 0;
   if (0 == INSTANCE->validate_insertion(event)) {
     INSTANCE->exec_queue.insert(event, event->priority);
-    INSTANCE->update_maximum_queue_depth();   // Check the queue depth
+    //INSTANCE->update_maximum_queue_depth();   // Check the queue depth
     #if defined (__MANUVR_FREERTOS)
       //if (kernel_pid) unblockThread(kernel_pid);
     #endif

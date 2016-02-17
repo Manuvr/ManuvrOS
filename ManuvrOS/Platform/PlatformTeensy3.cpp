@@ -255,7 +255,7 @@ int8_t setPin(uint8_t pin, bool val) {
 
 
 int8_t readPin(uint8_t pin) {
-  return readPin(pin);
+  return digitalRead(pin);
 }
 
 
