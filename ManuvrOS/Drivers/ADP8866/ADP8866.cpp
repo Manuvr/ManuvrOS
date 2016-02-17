@@ -446,6 +446,11 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
     case '8':
     case '9':
       set_brightness(*(str) - 0x30, temp_byte);
+      {
+        StringBuilder output;
+        output.concatf("ADP8866: set_brightness(%u, %u)\n", *(str) - 0x30, temp_byte);
+        Kernel::log(&output);
+      }
       break;
     default:
       EventReceiver::procDirectDebugInstruction(input);

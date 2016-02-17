@@ -1223,7 +1223,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
   if (*(str) != 0) {
     // This is always safe because the null terminator shows up as zero, and
     //   we already know that the string is not zero-length.
-    subscriber_idx = atoi((char*) str);
+    subscriber_idx = (((uint8_t)*str)-0x30);
     temp_byte = atoi((char*) str+1);
   }
   ManuvrRunnable *event = NULL;  // Pitching events is a common thing in this fxn...
