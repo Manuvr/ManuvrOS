@@ -98,7 +98,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 typedef struct adp8866_led_chan {
   float          max_current;
   uint8_t        present;
-  uint8_t        fault_code;
+  uint8_t        flags;
+  uint16_t       reserved;     // Reserved for later use.
 } ADPLEDChannel;
 
 
@@ -128,10 +129,17 @@ class ADP8866 : public I2CDeviceWithRegisters, public EventReceiver {
     /* Dimmer breakouts. */
     void set_brightness(uint8_t, uint8_t);
     void set_brightness(uint8_t);
+    void pulse_channel(uint8_t, uint8_t);
+
     void toggle_brightness(void);
     
     void quell_all_timers();
     void set_led_mode(uint8_t num);
+    
+    void _isr_fxn(void);
+
+    
+    static ADP8866* INSTANCE;
 
 
   protected:
@@ -149,8 +157,8 @@ class ADP8866 : public I2CDeviceWithRegisters, public EventReceiver {
     
     
     
-    // The chip only has 9 outputs, but we make a synthetic tenth chasnnel
-    //   to represent the backlight.
+    // The chip only has 9 outputs, but we make a synthetic tenth
+    //   channel to represent the backlight.
     ADPLEDChannel channels[10];
     
     void reset();

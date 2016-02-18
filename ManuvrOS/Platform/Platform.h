@@ -162,9 +162,9 @@ int getSerialNumber(uint8_t*);    // Writes the serial number to the indicated b
 /*
 * GPIO and change-notice.
 */
-void gpioSetup();        // We call this once on bootstrap. Sets up GPIO not covered by other classes.
+void   gpioSetup();        // We call this once on bootstrap. Sets up GPIO not covered by other classes.
 int8_t gpioDefine(uint8_t pin, int mode);
-void unsetPinIRQ(uint8_t pin);
+void   unsetPinIRQ(uint8_t pin);
 int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrRunnable* isr_event);
 int8_t setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn);
 int8_t setPin(uint8_t pin, bool high);

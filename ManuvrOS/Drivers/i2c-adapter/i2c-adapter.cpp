@@ -746,7 +746,7 @@ void I2CAdapter::advance_work_queue(void) {
 			  #ifdef __MANUVR_DEBUG
 			  if (verbosity > 3) local_log.concatf("Destroying failed job 0x%08x.\n", current_queue_item->txn_id);
 			  #endif
-			  if (verbosity > 4) current_queue_item->printDebug(&local_log);
+			  if (verbosity > 6) current_queue_item->printDebug(&local_log);
 			}
 
 			// Hand this completed operation off to the class that requested it. That class will

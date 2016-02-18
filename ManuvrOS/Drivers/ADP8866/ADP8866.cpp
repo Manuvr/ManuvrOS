@@ -43,15 +43,31 @@ const MessageTypeDef adp8866_message_defs[] = {
     compile time.
   */
   #if defined (__ENABLE_MSG_SEMANTICS)
-  {  MANUVR_MSG_ADP8866_CHAN_ENABLED , MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN",    ManuvrMsg::MSG_ARGS_NONE, NULL }, // 
-  {  MANUVR_MSG_ADP8866_CHAN_LEVEL,    MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN",    ManuvrMsg::MSG_ARGS_NONE, NULL }, // 
-  {  MANUVR_MSG_ADP8866_ASSIGN_BL,     MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN",    ManuvrMsg::MSG_ARGS_NONE, NULL }  // 
+  {  MANUVR_MSG_ADP8866_CHAN_ENABLED, MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_ENABLED", ManuvrMsg::MSG_ARGS_NONE, NULL }, // 
+  {  MANUVR_MSG_ADP8866_CHAN_LEVEL,   MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_LEVEL",   ManuvrMsg::MSG_ARGS_NONE, NULL }, // 
+  {  MANUVR_MSG_ADP8866_ASSIGN_BL,    MSG_FLAG_EXPORTABLE,  "ADP8866_ASSIGN_BL",    ManuvrMsg::MSG_ARGS_NONE, NULL }  // 
   #else
-  {  MANUVR_MSG_ADP8866_CHAN_ENABLED , MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN",    ManuvrMsg::MSG_ARGS_NONE, NULL }, // 
-  {  MANUVR_MSG_ADP8866_CHAN_LEVEL,    MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN",    ManuvrMsg::MSG_ARGS_NONE, NULL }, // 
-  {  MANUVR_MSG_ADP8866_ASSIGN_BL,     MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN",    ManuvrMsg::MSG_ARGS_NONE, NULL }  // 
+  {  MANUVR_MSG_ADP8866_CHAN_ENABLED, MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_ENABLED", ManuvrMsg::MSG_ARGS_NONE, NULL }, // 
+  {  MANUVR_MSG_ADP8866_CHAN_LEVEL,   MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_LEVEL",   ManuvrMsg::MSG_ARGS_NONE, NULL }, // 
+  {  MANUVR_MSG_ADP8866_ASSIGN_BL,    MSG_FLAG_EXPORTABLE,  "ADP8866_ASSIGN_BL",    ManuvrMsg::MSG_ARGS_NONE, NULL }  // 
   #endif
 };
+
+ADP8866* ADP8866::INSTANCE = NULL;
+
+/*
+* This is the ISR for the interrupt pin (if provided).
+*/
+void ADP8866_ISR(void) {
+  if (NULL != ADP8866::INSTANCE) {
+    ADP8866::INSTANCE->_isr_fxn();
+  }
+}
+
+// TODO: Bleh... I really dislike htis indirection...
+void ADP8866::_isr_fxn(void) {
+  readRegister((uint8_t) ADP8866_INT_STAT);
+}
 
 
 /*
@@ -72,6 +88,8 @@ void ADP8866::__class_initializer() {
   power_mode        = 0;
   init_complete     = false;
   
+  ADP8866::INSTANCE = this;
+
   int mes_count = sizeof(adp8866_message_defs) / sizeof(MessageTypeDef);
   ManuvrMsg::registerMessages(adp8866_message_defs, mes_count);
 }
@@ -88,6 +106,10 @@ ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : I2CDevice
   irq_pin   = _irq_pin;
   pinMode(_irq_pin, INPUT_PULLUP); 
   pinMode(_reset_pin, OUTPUT);
+  
+  if (irq_pin > 0) {
+    attachInterrupt(irq_pin, ADP8866_ISR, FALLING);
+  }
   
   setPin(_reset_pin, false);
   
@@ -182,18 +204,22 @@ int8_t ADP8866::init() {
   writeIndirect(ADP8866_ISCT1, 0b11110000, true);
   writeIndirect(ADP8866_ISCT2, 0b00000000, true);
   
+  // Enabled interrupts: Over-volt, short-circuit, thermal shutdown
+  writeIndirect(ADP8866_INT_EN, 0x1C, true);
   
   // TODO: When the driver inits, we shouldn't have any LEDs on until the user sets
   //   some mandatory constraint so ve doesn't fry vis LEDs.
-  writeIndirect(ADP8866_ISC1, 0x10, true);
-  writeIndirect(ADP8866_ISC2, 0x10, true);
-  writeIndirect(ADP8866_ISC3, 0x10, true);
-  writeIndirect(ADP8866_ISC4, 0x10, true);
-  writeIndirect(ADP8866_ISC5, 0x10, true);
-  writeIndirect(ADP8866_ISC6, 0x10, true);
-  writeIndirect(ADP8866_ISC7, 0x10, true);
-  writeIndirect(ADP8866_ISC8, 0x10, true);
-  writeIndirect(ADP8866_ISC9, 0x10);
+  writeIndirect(ADP8866_ISC1, 0x05, true);
+  writeIndirect(ADP8866_ISC2, 0x05, true);
+  writeIndirect(ADP8866_ISC3, 0x05, true);
+  writeIndirect(ADP8866_ISC4, 0x05, true);
+  writeIndirect(ADP8866_ISC5, 0x15, true);
+  writeIndirect(ADP8866_ISC6, 0x05, true);
+  writeIndirect(ADP8866_ISC7, 0x05, true);
+  writeIndirect(ADP8866_ISC8, 0x05, true);
+  writeIndirect(ADP8866_ISC9, 0x05, true);
+  
+  writeIndirect(ADP8866_ISCT_HB, 0x0A);
   init_complete = true;
   return 0;
 }
@@ -217,7 +243,31 @@ void ADP8866::operationCompleteCallback(I2CQueuedOperation* completed) {
         break;
       case ADP8866_MDCR:
         break;
-      case ADP8866_INT_STAT:
+      case ADP8866_INT_STAT:      // Interrupt status.
+        if (I2C_OPERATION_READ == completed->opcode) {
+          uint8_t value = *((uint8_t*) completed->buf);
+          if (value & 0x04) {
+            Kernel::log("ADP8866 experienced an over-voltage fault.\n");
+          }
+          if (value & 0x08) {
+            Kernel::log("ADP8866 experienced a thermal shutdown.\n");
+          }
+          if (value & 0x10) {
+            Kernel::log("ADP8866 experienced a short-circuit fault.\n");
+          }
+          if (value & 0x1C) {
+            // If we experienced a fault, we may as well shut off the device.
+            writeIndirect(ADP8866_MDCR, (uint8_t)regValue(ADP8866_MDCR) & 0b01011010);
+          }
+          if (value & 0x20) {
+            // Backlight off
+          }
+          if (value & 0x40) {
+            // Independent sink off
+          }
+          // Whatever the interrupt was, clear it.
+          writeIndirect((uint8_t) ADP8866_INT_STAT, value);
+        }
         break;
       case ADP8866_INT_EN:
         break;
@@ -241,8 +291,6 @@ void ADP8866::operationCompleteCallback(I2CQueuedOperation* completed) {
         break;
       case ADP8866_BLFR:
         break;
-      case ADP8866_BLMX:
-        break;
       case ADP8866_ISCC1:
         break;
       case ADP8866_ISCC2:
@@ -261,23 +309,19 @@ void ADP8866::operationCompleteCallback(I2CQueuedOperation* completed) {
         break;
       case ADP8866_ISCF:
         break;
+      case ADP8866_BLMX:
+        channels[9].present = *((uint8_t*) completed->buf);
+        break;
       case ADP8866_ISC1:
-        break;
       case ADP8866_ISC2:
-        break;
       case ADP8866_ISC3:
-        break;
       case ADP8866_ISC4:
-        break;
       case ADP8866_ISC5:
-        break;
       case ADP8866_ISC6:
-        break;
       case ADP8866_ISC7:
-        break;
       case ADP8866_ISC8:
-        break;
       case ADP8866_ISC9:
+        channels[(completed->sub_addr & 0x00FF) - ADP8866_ISC1].present = *((uint8_t*) completed->buf);
         break;
       case ADP8866_HB_SEL:
         break;
@@ -362,8 +406,9 @@ int8_t ADP8866::bootComplete() {
   EventReceiver::bootComplete();
   setPin(reset_pin, true);   // Release the reset pin.
 
+  // If this read comes back the way we think it should,
+  //   we will init() the chip.
   readRegister((uint8_t) ADP8866_MANU_DEV_ID);
-  //writeDirtyRegisters();  // If i2c is broken, this will hang the boot process...
   return 1;
 }
 
@@ -431,6 +476,9 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
     case 'g':
       syncRegisters();
       break;
+    case 'p':
+      pulse_channel(*(str) - 0x30, temp_byte);
+      break;
     case 'l':
     case 'L':
       enable_channel(temp_byte, (*(str) == 'L'));
@@ -487,6 +535,19 @@ void ADP8866::quell_all_timers() {
 void ADP8866::set_brightness(uint8_t nu_brightness) {
 }
 
+void ADP8866::pulse_channel(uint8_t chan, uint8_t nu_brightness) {
+  if ((chan > 9) || (chan < 6)) {
+    // Channel outside of the valid range...
+    return;
+  }
+
+  writeIndirect(ADP8866_HB_SEL, 0x01 << (chan - 6), true);
+  writeIndirect(ADP8866_ISC6_HB      + (chan - 6), 0x20, true);
+  writeIndirect(ADP8866_OFFTIMER6    + (chan - 6), 0x20, true);
+  writeIndirect(ADP8866_OFFTIMER6_HB + (chan - 6), 0x20);
+}
+
+
 void ADP8866::set_brightness(uint8_t chan, uint8_t nu_brightness) {
   if (chan > 9) {
     // Not that many channels....
@@ -523,12 +584,12 @@ void ADP8866::enable_channel(uint8_t chan, bool en) {
   uint8_t reg_addr      = (chan > 7) ? ADP8866_ISCC1 : ADP8866_ISCC2;
   uint8_t present_state = (uint8_t)regValue(reg_addr);
   uint8_t bitmask       = (chan > 7) ? 4 : (1 << chan);
-  uint8_t desired_state = (en ? bitmask : 0);
+  uint8_t desired_state = (en ? (present_state | bitmask) : (present_state & ~bitmask));
   
-  if ((present_state & bitmask) ^ desired_state) {
+  if (present_state != desired_state) {
     // If the present state and the desired state differ, Set the register equal to the
     //   present state masked with the desired state.
-    writeIndirect(reg_addr, desired_state ? (present_state | desired_state) : (present_state & desired_state));
+    writeIndirect(reg_addr, desired_state);
   }
 }
 
