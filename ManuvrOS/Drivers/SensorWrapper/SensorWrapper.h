@@ -33,7 +33,7 @@ using namespace std;
 #include <string.h>
 #include "DataStructures/StringBuilder.h"
 
-#include <ManuvrOS/Kernel.h>
+#include <Kernel.h>
 
 #ifdef ARDUINO
   #include "Arduino.h"
@@ -49,7 +49,7 @@ using namespace std;
 *   can offload the burden of type sizes, alignment and endianness onto   *
 *   the compiler for whatever system is running this code.                *
 **************************************************************************/
-#include "ManuvrOS/EnumeratedTypeCodes.h"
+#include "EnumeratedTypeCodes.h"
 
 /* Examples of JSON data returned by this class...
 * A map (definition):
@@ -64,7 +64,7 @@ using namespace std;
 * Again, note that there is no mention of sensors anywhere. 
 */
 
-#include "ManuvrOS/Drivers/DeviceWithRegisters/DeviceRegister.h"
+#include "Drivers/DeviceWithRegisters/DeviceRegister.h"
 
 
 

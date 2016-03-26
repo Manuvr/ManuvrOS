@@ -28,8 +28,8 @@
 
 #include <inttypes.h>
 #include <stdint.h>
-#include <ManuvrOS/Kernel.h>
-#include "ManuvrOS/Drivers/i2c-adapter/i2c-adapter.h"
+#include <Kernel.h>
+#include "Drivers/i2c-adapter/i2c-adapter.h"
 
 #define MGC3130_ISR_MARKER_TS 0x01
 #define MGC3130_ISR_MARKER_G0 0x80

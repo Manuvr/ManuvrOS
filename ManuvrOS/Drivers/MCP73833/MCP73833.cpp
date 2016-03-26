@@ -33,7 +33,7 @@ This class was coded with the assumption that there would only be one such
 
 #include "MCP73833.h"
 #include <DataStructures/StringBuilder.h>
-#include <ManuvrOS/Platform/Platform.h>
+#include <Platform/Platform.h>
 
 
 volatile MCP73833* MCP73833::INSTANCE = NULL;

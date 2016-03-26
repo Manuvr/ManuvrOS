@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <inttypes.h>
 #include "DataStructures/StringBuilder.h"
-#include "ManuvrOS/Drivers/i2c-adapter/i2c-adapter.h"
+#include "Drivers/i2c-adapter/i2c-adapter.h"
 
 
 /*

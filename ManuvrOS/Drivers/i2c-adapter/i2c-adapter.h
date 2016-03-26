@@ -40,8 +40,8 @@ but adding support for other platforms ought to be easy.
   #include <stdarg.h>
   #include "DataStructures/LightLinkedList.h"
   #include "DataStructures/StringBuilder.h"
-  #include <ManuvrOS/Kernel.h>
-  #include "ManuvrOS/Drivers/DeviceWithRegisters/DeviceRegister.h"
+  #include <Kernel.h>
+  #include "Drivers/DeviceWithRegisters/DeviceRegister.h"
 
   #define I2CADAPTER_MAX_QUEUE_PRINT 3
 

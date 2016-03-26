@@ -22,7 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "AudioRouter.h"
 
-#include <ManuvrOS/Kernel.h>
+#include <Kernel.h>
 
 #include <string.h>
 

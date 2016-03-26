@@ -23,9 +23,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
 
-#include <ManuvrOS/Kernel.h>
+#include <Kernel.h>
 #include "ADP8866.h"
-#include <ManuvrOS/Platform/Platform.h>
+#include <Platform/Platform.h>
 
 #define MANUVR_MSG_ADP8866_IRQ          0x9034  // Some random message code. Nonexportable.
 #define MANUVR_MSG_ADP8866_CHAN_ENABLED 0x9035  // Enable the given channel, or return its status.

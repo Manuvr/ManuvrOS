@@ -31,7 +31,7 @@ This file is meant to contain a set of common functions that are typically platf
 */
 
 #include "Platform.h"
-#include <ManuvrOS/Kernel.h>
+#include <Kernel.h>
 
 #include <unistd.h>
 

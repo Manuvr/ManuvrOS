@@ -32,10 +32,10 @@ Platforms that require it should be able to extend this driver for specific
 
 #include "ManuvrSocket.h"
 #include "FirmwareDefs.h"
-#include "ManuvrOS/XenoSession/XenoSession.h"
+#include "XenoSession/XenoSession.h"
 
-#include <ManuvrOS/Kernel.h>
-#include <ManuvrOS/Platform/Platform.h>
+#include <Kernel.h>
+#include <Platform/Platform.h>
 
 #if defined (STM32F4XX)        // STM32F4
 

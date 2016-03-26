@@ -17,14 +17,14 @@
 
 #include "FirmwareDefs.h"
 
-#include <ManuvrOS/Kernel.h>
+#include <Kernel.h>
 
 // Drivers particular to this Manuvrable...
-#include <ManuvrOS/Drivers/i2c-adapter/i2c-adapter.h>
+#include <Drivers/i2c-adapter/i2c-adapter.h>
 
 // Transports...
-#include <ManuvrOS/Transports/ManuvrSerial/ManuvrSerial.h>
-#include <ManuvrOS/Transports/ManuvrSocket/ManuvrSocket.h>
+#include <Transports/ManuvrSerial/ManuvrSerial.h>
+#include <Transports/ManuvrSocket/ManuvrSocket.h>
 
 
 /****************************************************************************************************

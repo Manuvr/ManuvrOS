@@ -343,7 +343,7 @@ bool StringBuilder::drop_position(unsigned int pos) {
 /**
 * This fxn is meant to hand off accumulated string data to us from the StringBuilder
 *   that is passed in as the parameter. This is very fast, but doesn't actually copy
-*   any data. So to eliminate the chance of dangling pointers and other 
+*   any data. So to eliminate the chance of dangling pointers and other
 *   difficult-to-trace bugs, we modify the donor SB to prevent its destruction from
 *   taking the data we now have with it.
 */
@@ -376,13 +376,13 @@ void StringBuilder::concatHandoff(StringBuilder *nu) {
 /*
 * Thank you N. Gortari for the most excellent tip:
 *   Intention:       if (obj == NULL)  // Null-checking is a common thing to do...
-*   The risk:        if (obj = NULL)   // Compiler allows this. Assignment always evals to 'true'. 
+*   The risk:        if (obj = NULL)   // Compiler allows this. Assignment always evals to 'true'.
 *   The mitigation:  if (NULL == obj)  // Equality is commutitive.
 *
 *     "(NULL == obj)" and "(obj == NULL)" mean exaclty the same thing, and are equally valid.
 *
 * Levarge assignment operator's non-commutivity, so if you derp and do this...
-*           if (NULL = obj) 
+*           if (NULL = obj)
 * ...the mechanics of the language will prevent compilation, and thus, not allow you
 *       to overlook it on accident.
 */
@@ -394,16 +394,16 @@ void StringBuilder::prependHandoff(StringBuilder *nu) {
     #elif defined(__MANUVR_FREERTOS)
     #endif
     this->root = promote_collapsed_into_ll();   // Promote the previously-collapsed string.
-    
+
     // Promote the donor instance's previously-collapsed string so we don't have to worry about it.
     StrLL *current = nu->promote_collapsed_into_ll();
-    
+
     if (NULL != nu->root) {
       // Scan to the end of the donated LL...
       while (NULL != current->next) {   current = current->next;  }
-      
+
       current->next = this->root;  // ...and tack our existing list to the end of it.
-      this->root = nu->root;       // ...replace our idea of the root. 
+      this->root = nu->root;       // ...replace our idea of the root.
       nu->root = NULL;             // Inform the origin instance so it doesn't free what we just took.
     }
     #if defined(__MANUVR_LINUX)
@@ -443,7 +443,7 @@ StrLL* StringBuilder::promote_collapsed_into_ll(void) {
 void StringBuilder::prepend(unsigned char *nu, int len) {
   if ((NULL != nu) && (len > 0)) {
     this->root = promote_collapsed_into_ll();   // Promote the previously-collapsed string.
-    
+
     StrLL *nu_element = (StrLL *) malloc(sizeof(StrLL));
     if (NULL == nu_element) return;   // O no.
     nu_element->reap = true;
@@ -498,7 +498,7 @@ void StringBuilder::concat(unsigned char *nu, int len) {
       nu_element->len  = len;
       nu_element->str  = (unsigned char *) malloc(len+1);
       if (nu_element->str != NULL) {
-        *(nu_element->str + len) = '\0';   
+        *(nu_element->str + len) = '\0';
         memcpy(nu_element->str, nu, len);
         this->stackStrOntoList(nu_element);
       }
@@ -565,7 +565,7 @@ void StringBuilder::concat(int nu) {
   sprintf(temp, "%d", nu);
   this->concat(temp);
 }
-void StringBuilder::concat(unsigned int nu) { 
+void StringBuilder::concat(unsigned int nu) {
   char * temp = (char *) alloca(12);
   memset(temp, 0x00, 12);
   sprintf(temp, "%u", nu);
@@ -815,7 +815,7 @@ int StringBuilder::cmpBinString(unsigned char *unknown, int len) {
 int StringBuilder::implode(const char *delim) {
   if (delim != NULL) {
     if (str != NULL) {
-      
+
     }
   }
   return 0;
@@ -883,7 +883,7 @@ void StringBuilder::printDebug() {
   unsigned char* temp = this->string();
   int temp_len  = this->length();
   printf("\nStringBuilder\t Total bytes: %d\n", temp_len);
-  
+
   if ((temp != NULL) && (temp_len > 0)) {
     for (int i = 0; i < temp_len; i++) {
       printf("%02x ", *(temp + i));
@@ -897,7 +897,7 @@ void StringBuilder::printDebug(StringBuilder* output) {
   unsigned char* temp = this->string();
   int temp_len  = this->length();
   output->concatf("\nStringBuilder\t Total bytes: %d\n", temp_len);
-  
+
   if ((temp != NULL) && (temp_len > 0)) {
     for (int i = 0; i < temp_len; i++) {
       output->concatf("%02x ", *(temp + i));

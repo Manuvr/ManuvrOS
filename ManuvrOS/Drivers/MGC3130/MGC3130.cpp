@@ -30,10 +30,10 @@ This class is a driver for Microchip's MGC3130 e-field gesture sensor. It is mea
 
 */
 
-#include <ManuvrOS/Kernel.h>
+#include <Kernel.h>
 #include "MGC3130.h"
 #include <DataStructures/StringBuilder.h>
-#include <ManuvrOS/Platform/Platform.h>
+#include <Platform/Platform.h>
 
 
 const MessageTypeDef mgc3130_message_defs[] = {

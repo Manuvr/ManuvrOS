@@ -27,8 +27,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifndef MANUVRABLE_GPIO_H
   #define MANUVRABLE_GPIO_H
 
-  #include <ManuvrOS/Kernel.h>
-  #include <ManuvrOS/Platform/Platform.h>
+  #include <Kernel.h>
+  #include <Platform/Platform.h>
 
 
   class ManuvrableGPIO : public EventReceiver {

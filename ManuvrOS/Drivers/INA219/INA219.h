@@ -26,8 +26,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 using namespace std;
 
-#include "ManuvrOS/Drivers/i2c-adapter/i2c-adapter.h"
-#include "ManuvrOS/Drivers/SensorWrapper/SensorWrapper.h"
+#include "Drivers/i2c-adapter/i2c-adapter.h"
+#include "Drivers/SensorWrapper/SensorWrapper.h"
 
 
 /* Sensor registers that exist in hardware */

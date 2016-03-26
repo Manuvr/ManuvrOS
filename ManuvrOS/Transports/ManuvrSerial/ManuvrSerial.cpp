@@ -22,31 +22,31 @@ This driver is designed to give Manuvr platform-abstracted COM ports. By
   this is meant generic asynchronous serial ports. On Arduino, this means
   the Serial (or HardwareSerial) class. On linux, it means /dev/tty<x>.
 
-Platforms that require it should be able to extend this driver for specific 
+Platforms that require it should be able to extend this driver for specific
   kinds of hardware support. For an example of this, I would refer you to
   the STM32F4 case-offs I understand that this might seem "upside down"
   WRT how drivers are more typically implemented, and it may change later on.
-  But for now, it seems like a good idea.  
+  But for now, it seems like a good idea.
 */
 
 
 #include "ManuvrSerial.h"
 #include "FirmwareDefs.h"
-#include "ManuvrOS/XenoSession/XenoSession.h"
+#include "XenoSession/XenoSession.h"
 
-#include <ManuvrOS/Kernel.h>
-#include <ManuvrOS/Platform/Platform.h>
+#include <Kernel.h>
+#include <Platform/Platform.h>
 
 
 #if defined (STM32F4XX)        // STM32F4
 
-  
+
 #elif defined(__MK20DX256__) | defined(__MK20DX128__)  // Teensy3.0/3.1
   Serial* ports[4] = {NULL, NULL, NULL, NULL};
 
 #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
-  
+
 #elif defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
   #include <cstdio>
   #include <stdlib.h>
@@ -139,16 +139,16 @@ int8_t ManuvrSerial::init() {
   #if defined (STM32F4XX)        // STM32F4
 
   #elif defined (__MK20DX128__)  // Teensy3
-  
+
   #elif defined (__MK20DX256__)  // Teensy3.1
-  
+
   #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
-    
+
   #elif defined (__MANUVR_LINUX) // Linux environment
   if (_sock) {
     close(_sock);
   }
-  
+
   _sock = open(_addr, _options);
   if (_sock == -1) {
     #ifdef __MANUVR_DEBUG
@@ -175,10 +175,10 @@ int8_t ManuvrSerial::init() {
   termAttr.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
   termAttr.c_iflag &= ~(IXON | IXOFF | IXANY);
   termAttr.c_oflag &= ~OPOST;
-  
+
   if (tcsetattr(_sock, TCSANOW, &termAttr) == 0) {
     set_xport_state(xport_state_modifier);
-    
+
     initialized(true);
     connected(true);
     listening(true);
@@ -194,7 +194,7 @@ int8_t ManuvrSerial::init() {
     #endif
   }
   #endif //LINUX
-  
+
   if (local_log.length() > 0) Kernel::log(&local_log);
   return 0;
 }
@@ -229,19 +229,19 @@ int8_t ManuvrSerial::read_port() {
     StringBuilder  *nu_data  = NULL;
 
     #if defined (STM32F4XX)        // STM32F4
-  
+
     #elif defined (__MK20DX128__)  // Teensy3
-    
+
     #elif defined (__MK20DX256__)  // Teensy3.1
-    
+
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
-      
+
     #elif defined (__MANUVR_LINUX) // Linux with pthreads...
       while (connected()) {
         n = read(_sock, buf, 255);
         if (n > 0) {
           bytes_received += n;
-          
+
           event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
           nu_data = new StringBuilder(buf, n);
           event->markArgForReap(event->addArg(nu_data), true);
@@ -265,7 +265,7 @@ int8_t ManuvrSerial::read_port() {
     if (verbosity > 1) local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
     #endif
   }
-  
+
   if (local_log.length() > 0) Kernel::log(&local_log);
   return 0;
 }
@@ -282,20 +282,22 @@ bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
     #endif
     return false;
   }
-  
+
   if (connected()) {
     #if defined (STM32F4XX)        // STM32F4
-  
+
+    #elif defined (STM32F746xx)  // STM32F7. TODO: Make more-general to this family.
+      int bytes_written = out_len;
     #elif defined (__MK20DX128__)  // Teensy3
-    
+
     #elif defined (__MK20DX256__)  // Teensy3.1
-    
+
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
-    #elif defined (__MANUVR_LINUX) // Linux  
+    #elif defined (__MANUVR_LINUX) // Linux
       int bytes_written = (int) write(_sock, out, out_len);
     #else   // Unsupported.
     #endif
-    
+
     bytes_sent += bytes_written;
     return true;
   }
@@ -305,18 +307,18 @@ bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
 
 
 /****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌          
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄ 
+* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
+* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
+* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
 * ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
 * ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
 * ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
 * ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀ 
-* 
+*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+*
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
 /**
@@ -328,7 +330,7 @@ const char* ManuvrSerial::getReceiverName() {  return "ManuvrSerial";  }
 
 
 /**
-* Debug support method. This fxn is only present in debug builds. 
+* Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
@@ -344,14 +346,14 @@ void ManuvrSerial::printDebug(StringBuilder *temp) {
 
 
 /**
-* There is a NULL-check performed upstream for the scheduler member. So no need 
+* There is a NULL-check performed upstream for the scheduler member. So no need
 *   to do it again here.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t ManuvrSerial::bootComplete() {
   EventReceiver::bootComplete();
-  
+
   // Tolerate 30ms of latency on the line before flushing the buffer.
   read_abort_event.alterScheduleRecurrence(0);
   read_abort_event.alterSchedulePeriod(30);
@@ -367,10 +369,10 @@ int8_t ManuvrSerial::bootComplete() {
 
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
-*   has been serviced and we are now getting the chance to see the results. The argument 
+*   has been serviced and we are now getting the chance to see the results. The argument
 *   to this fxn will never be NULL.
 *
-* Depending on class implementations, we might choose to handle the completed Event differently. We 
+* Depending on class implementations, we might choose to handle the completed Event differently. We
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
 *   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
@@ -381,9 +383,9 @@ int8_t ManuvrSerial::bootComplete() {
 */
 int8_t ManuvrSerial::callback_proc(ManuvrRunnable *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
-     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
+     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
-  
+
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     case MANUVR_MSG_XPORT_SEND:
@@ -392,7 +394,7 @@ int8_t ManuvrSerial::callback_proc(ManuvrRunnable *event) {
     default:
       break;
   }
-  
+
   return return_value;
 }
 
@@ -411,8 +413,7 @@ int8_t ManuvrSerial::notify(ManuvrRunnable *active_event) {
       return_value += ManuvrXport::notify(active_event);
       break;
   }
-  
+
   if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
 }
-

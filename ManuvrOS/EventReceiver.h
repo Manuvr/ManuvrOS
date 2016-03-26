@@ -3,7 +3,7 @@
   
   #include <inttypes.h>
   #include "EnumeratedTypeCodes.h"
-  #include <ManuvrOS/CommonConstants.h>
+  #include <CommonConstants.h>
   
   #include "DataStructures/PriorityQueue.h"
   #include "DataStructures/LightLinkedList.h"

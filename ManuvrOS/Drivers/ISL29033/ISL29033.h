@@ -23,8 +23,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifndef __ISL29033_DRIVER_H__
 #define __ISL29033_DRIVER_H__
 
-#include "ManuvrOS/Drivers/SensorWrapper/SensorWrapper.h"
-#include "ManuvrOS/Drivers/i2c-adapter/i2c-adapter.h"
+#include "Drivers/SensorWrapper/SensorWrapper.h"
+#include "Drivers/i2c-adapter/i2c-adapter.h"
 
 /* Hardware-defined registers */
 #define ISL29033_REG_COMMAND_1        0x00

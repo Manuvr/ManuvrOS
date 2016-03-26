@@ -24,7 +24,7 @@ XenoSession is the class that manages dialog with other systems via some
 */
 
 #include "XenoSession.h"
-#include <ManuvrOS/Kernel.h>
+#include <Kernel.h>
 
 
 

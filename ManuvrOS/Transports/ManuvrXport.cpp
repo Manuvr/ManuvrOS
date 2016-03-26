@@ -1,6 +1,6 @@
 #include "ManuvrXport.h"
 #include "FirmwareDefs.h"
-#include "ManuvrOS/XenoSession/XenoSession.h"
+#include "XenoSession/XenoSession.h"
 
 
 #if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)  

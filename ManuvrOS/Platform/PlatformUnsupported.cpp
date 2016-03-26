@@ -33,7 +33,7 @@ This file forms the catch-all for linux platforms that have no support.
 */
 
 #include "Platform.h"
-#include <ManuvrOS/Kernel.h>
+#include <Kernel.h>
 
 #include <sys/time.h>
 #include <unistd.h>

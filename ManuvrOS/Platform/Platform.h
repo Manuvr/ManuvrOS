@@ -44,7 +44,7 @@ This file is meant to contain a set of common functions that are typically platf
 #include <string.h>
 #include <stdio.h>
 
-#include <ManuvrOS/CommonConstants.h>
+#include <CommonConstants.h>
 #include <DataStructures/StringBuilder.h>
 
 // Conditional inclusion for different threading models...
@@ -53,7 +53,7 @@ This file is meant to contain a set of common functions that are typically platf
   #include <signal.h>
   #include <sys/time.h>
 #elif defined(__MANUVR_FREERTOS)
-  
+
 #endif
 
 
@@ -72,7 +72,7 @@ class ManuvrRunnable;
 
 #ifdef __cplusplus
  extern "C" {
-#endif 
+#endif
 
 
 
@@ -156,7 +156,7 @@ void init_RNG();                             // Fire up the random number genera
 *   security documentation for a deeper discussion of the issues at hand.
 */
 int platformSerialNumberSize();   // Returns the length of the serial number on this platform.
-int getSerialNumber(uint8_t*);    // Writes the serial number to the indicated buffer. 
+int getSerialNumber(uint8_t*);    // Writes the serial number to the indicated buffer.
 
 
 /*
@@ -183,7 +183,6 @@ void platformInit();
 
 #ifdef __cplusplus
 }
-#endif 
-
 #endif
 
+#endif

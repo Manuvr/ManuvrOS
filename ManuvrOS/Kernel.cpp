@@ -6,8 +6,8 @@ Date:   2013.07.10
 
 
 #include "FirmwareDefs.h"
-#include <ManuvrOS/Kernel.h>
-#include <ManuvrOS/Platform/Platform.h>
+#include <Kernel.h>
+#include <Platform/Platform.h>
 
 
 /****************************************************************************************************

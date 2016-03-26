@@ -45,7 +45,7 @@ For debuggability, the transport has a special mode for acting as a debug
 #include "../Kernel.h"
 #include "DataStructures/StringBuilder.h"
 
-#include <ManuvrOS/Platform/Platform.h>
+#include <Platform/Platform.h>
 
 /*
 * Notes about how transport flags are organized:

@@ -1,7 +1,7 @@
 #ifndef ADC_SCANNER_H
   #define ADC_SCANNER_H_H
   
-  #include <ManuvrOS/Kernel.h>
+  #include <Kernel.h>
   
   class ADCScanner : public EventReceiver {
     public:

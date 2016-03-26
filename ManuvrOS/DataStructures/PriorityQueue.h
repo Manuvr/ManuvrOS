@@ -45,7 +45,7 @@ Some functions are #pragma'd to stop the compiler from complaining about NULL be
   #include <FreeRTOS_ARM.h>
 #endif
 
-#include <ManuvrOS/Platform/Platform.h>
+#include "Platform/Platform.h"
 using namespace std;
 
 /* This is the class that holds a datum in the list. */
@@ -70,7 +70,7 @@ template <class T> class PriorityQueue {
     int insert(T);                // Same as above, but assumes lowest priority.
     int insertIfAbsent(T);        // Same as above, but only if the queue doesn't already have the argument.
     int insertIfAbsent(T, int);   // Same as above, but also specifies the priority if successful.
-    
+
     int size(void);               // Returns the number of elements in this list.
 
     T dequeue(void);              // Removes the first element of the list. Return the node's data on success, or NULL on empty queue.
@@ -91,7 +91,7 @@ template <class T> class PriorityQueue {
     bool incrementPriority(T);    // Finds the given T and increments its priority by one.
     bool decrementPriority(T);    // Finds the given T and decrements its priority by one.
 
-    
+
   private:
     PriorityNode<T> *root;        // The root of the queue. Is also the highest-priority.
     int element_count;
@@ -99,18 +99,18 @@ template <class T> class PriorityQueue {
       // If we are on linux, we control for concurrency with a mutex...
       pthread_mutex_t _mutex;
     #elif defined(__MANUVR_FREERTOS)
-//      SemaphoreHandle_t _mutex;     
+//      SemaphoreHandle_t _mutex;
     #endif
-    
+
     /*
-    * Returns the last element in the list. 
+    * Returns the last element in the list.
     * Returns the WHOLE element, not just the data it holds.
     */
     PriorityNode<T>* getLast(void);
-    
-    /* 
+
+    /*
     * Returns the last element in the list with the given priority, or the highest priority
-    *   item in the list if the argument is greater than all nodes. 
+    *   item in the list if the argument is greater than all nodes.
     */
     PriorityNode<T>* getLastWithPriority(int);
 
@@ -171,7 +171,7 @@ template <class T> int PriorityQueue<T>::insertIfAbsent(T d, int nu_pri) {
   // Note that we are going to replicate alot of code here for speed reasons.
   // We could just as well have done with....
   // return (contains(d)) ? false : insert(d, 0);
-  
+
   if (NULL == root) {
     // If root is null, we just insert and call it done. That way we
     // don't have to worry about it later.
@@ -185,7 +185,7 @@ template <class T> int PriorityQueue<T>::insertIfAbsent(T d, int nu_pri) {
 //      while(true);
 //    };
   #endif
-  
+
   int return_value = -1;
   PriorityNode<T>* insert_pointer = NULL;
   PriorityNode<T>* current = root;
@@ -204,7 +204,7 @@ template <class T> int PriorityQueue<T>::insertIfAbsent(T d, int nu_pri) {
     }
     current = current->next;
   }
-  
+
   PriorityNode<T> *nu = (PriorityNode<T>*) malloc(sizeof(PriorityNode<T>));
   if (nu == NULL) {
     return_value = -1;      // Failed to allocate memory.
@@ -212,7 +212,7 @@ template <class T> int PriorityQueue<T>::insertIfAbsent(T d, int nu_pri) {
   else {
     nu->data     = d;
     nu->priority = nu_pri;
-    
+
     if (NULL == insert_pointer) {
       nu->next = root;
       root = nu;
@@ -391,7 +391,7 @@ template <class T> void PriorityQueue<T>::enforce_priorities(void) {
           root = current->next;         // Swap them.
           current->next = root->next;
           root->next = current;
-          
+
           current = root;               // Restart the test.
         }
       }
@@ -403,12 +403,12 @@ template <class T> void PriorityQueue<T>::enforce_priorities(void) {
         // current and re-insert it.
         prior->next = current->next;   // Effectively removes current.
         insert(current);
-        
+
         // Restart the test.
         current = root;
       }
     }
-    
+
     prior = current;
     current = current->next;
   }

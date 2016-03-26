@@ -9,33 +9,33 @@ I have adapted it for ManuvrOS.
 
 */
 
-/*************************************************** 
+/***************************************************
   This is a library for the TMP006 Temp Sensor
 
-  Designed specifically to work with the Adafruit TMP006 Breakout 
+  Designed specifically to work with the Adafruit TMP006 Breakout
   ----> https://www.adafruit.com/products/1296
 
-  These displays use I2C to communicate, 2 pins are required to  
+  These displays use I2C to communicate, 2 pins are required to
   interface
-  Adafruit invests time and resources providing this open source code, 
-  please support Adafruit and open-source hardware by purchasing 
+  Adafruit invests time and resources providing this open source code,
+  please support Adafruit and open-source hardware by purchasing
   products from Adafruit!
 
-  Written by Limor Fried/Ladyada for Adafruit Industries.  
+  Written by Limor Fried/Ladyada for Adafruit Industries.
   BSD license, all text above must be included in any redistribution
  ****************************************************/
- 
+
 
 #ifndef TMP006_H
 #define TMP006_H
 
-#include "ManuvrOS/Drivers/SensorWrapper/SensorWrapper.h"
+#include "Drivers/SensorWrapper/SensorWrapper.h"
 #include "math.h"
 #include "DataStructures/StringBuilder.h"
-#include "ManuvrOS/Drivers/i2c-adapter/i2c-adapter.h"
+#include "Drivers/i2c-adapter/i2c-adapter.h"
 
- 
- 
+
+
 #define TMP006_B0 -0.0000294
 #define TMP006_B1 -0.00000057
 #define TMP006_B2 0.00000000463
@@ -84,12 +84,12 @@ class TMP006 : public I2CDeviceWithRegisters, public SensorWrapper {
     void operationCompleteCallback(I2CQueuedOperation*);
     void printDebug(StringBuilder*);
 
-    
+
   private:
     /* Class-specific */
     int8_t check_identity(void);
     int8_t check_data(void);        // If all the data required is fresh, updates derived data.
-    
+
 };
 
 #endif

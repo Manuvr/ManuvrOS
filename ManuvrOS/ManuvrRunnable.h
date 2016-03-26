@@ -2,7 +2,7 @@
   #define __MANUVR_RUNNABLE_H__
   
   #include "ManuvrMsg/ManuvrMsg.h"
-  #include <ManuvrOS/MsgProfiler.h>
+  #include <MsgProfiler.h>
   
   class EventReceiver;
 

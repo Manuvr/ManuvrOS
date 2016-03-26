@@ -1,7 +1,7 @@
 #ifndef ANALOG_LIGHT_SENSOR_H
   #define ANALOG_LIGHT_SENSOR_H
   
-  #include <ManuvrOS/Kernel.h>
+  #include <Kernel.h>
   
   class LightSensor : public EventReceiver {
     public:

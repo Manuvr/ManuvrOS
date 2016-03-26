@@ -24,8 +24,8 @@ XenoMessage is the class that is the interface between ManuvrRunnables and
 */
 
 #include "XenoSession.h"
-#include <ManuvrOS/Kernel.h>
-#include <ManuvrOS/Platform/Platform.h>
+#include <Kernel.h>
+#include <Platform/Platform.h>
 
 
 
