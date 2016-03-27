@@ -1,11 +1,10 @@
 vpath %.cpp src
 
 # Includes
-INCLUDES  = -I../Core/cmsis -I../Core/stm32 -I../../../Drivers/CMSIS/Device/ST/STM32F7xx/Include
-INCLUDES += -Isrc -I../src/drivers -I../../../Inc -I../../../Drivers/STM32F7xx_HAL_Driver/Inc
-INCLUDES += -I../../../Drivers/CMSIS/Include -I../FreeRTOS/Source/CMSIS_RTOS -I../FreeRTOS/Source/include
-INCLUDES += -I../FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/
-INCLUDES += -I../ -iquote.
+INCLUDES = -I../ -iquote.
+
+# Libraries
+#LIBS   = -lm
 
 # Sources
 SRCS   = Platform.cpp
@@ -15,7 +14,8 @@ SRCS   = Platform.cpp
 #SRCS  += PlatformTeensy3.cpp
 
 ifeq ($(STM32F746xx),)
-  SRCS  += STM32F7.cpp
+	SRCS  += STM32F7/STM32F7.cpp
+	LIBS  += -lstdperiph
 #else ifneq ($(strip $(STM32F746xx)),)
 #else ifneq ($(strip $(STM32F746xx)),)
 else ifeq ($(STM32F4XX),)
@@ -30,4 +30,4 @@ endif
 
 
 all:
-	$(CC) $(CPP_FLAGS) $(INCLUDES) -nostdlib $(SRCS) -o Platform.o
+	$(CC) $(CPP_FLAGS) $(INCLUDES) -L$(OUTPUT_PATH) $(LIBS) -nostdlib $(SRCS) -o Platform.o

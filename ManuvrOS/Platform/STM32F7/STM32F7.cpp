@@ -30,10 +30,8 @@ This file is meant to contain a set of common functions that are typically platf
     * Access a true RNG (if it exists)
 */
 
-#include "Platform.h"
+#include "Platform/Platform.h"
 
-#include <wiring.h>
-#include <Time/Time.h>
 #include <unistd.h>
 
 #define PLATFORM_GPIO_PIN_COUNT   33
@@ -46,15 +44,44 @@ This file is meant to contain a set of common functions that are typically platf
 /****************************************************************************************************
 * The code under this block is special on this platform, and will not be available elsewhere.       *
 ****************************************************************************************************/
+#include "stm32f7xx_hal.h"
 
-
-
-/****************************************************************************************************
-* Watchdog                                                                                          *
-****************************************************************************************************/
 volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
 volatile uint8_t  watchdog_mark      = 42;
 unsigned long     start_time_micros  = 0;
+
+
+/*
+* Trivial, since the period of systick is 1ms, and we are already
+*   keeping track of how many times it has rolled over. Simply return
+*   that value.
+* Returns the number of milliseconds since reset.
+*/
+unsigned long millis(void) {  return millis_since_reset;  }
+
+/**
+* Written by Magnus Lundin.
+* https://github.com/mlu/arduino-stm32/blob/master/hardware/cores/stm32/wiring.c
+*
+* @return  unsigned long  The number of microseconds since reset.
+*/
+unsigned long micros(void) {
+  long v0 = SysTick->VAL;      // Glitch free clock
+  long c0 = millis_since_reset;
+  long v1 = SysTick->VAL;
+  long c1 = millis_since_reset;
+  if (v1 < v0) {             // Downcounting, no systick rollover
+    //return c0*8000-v1/(MCK/8000000UL);
+    return (unsigned long) millis_since_reset/1000000;
+  }
+  else { // systick rollover, use last count value
+    //return c1*8000-v1/(MCK/8000000UL);
+    return (unsigned long) millis_since_reset/1000000;
+  }
+  return 0;
+}
+
+
 
 
 /****************************************************************************************************
@@ -70,7 +97,8 @@ volatile uint32_t next_random_int[PLATFORM_RNG_CARRY_CAPACITY];
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
 uint32_t randomInt() {
-  uint32_t return_value = rand();
+  while (!(RNG->SR & (RNG_SR_DRDY)));
+  uint32_t return_value = RNG->DR;
   return return_value;
 }
 
@@ -95,7 +123,8 @@ volatile bool provide_random_int(uint32_t nu_rnd) {
 */
 void init_RNG() {
   for (uint8_t i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) next_random_int[i] = 0;
-  srand(Teensy3Clock.get());          // Seed the PRNG...
+  __HAL_RCC_RNG_CLK_ENABLE();
+  RNG->CR |= RNG_CR_RNGEN;
 }
 
 
@@ -110,13 +139,6 @@ uint32_t rtc_startup_state = MANUVR_RTC_STARTUP_UNINITED;
 *
 */
 bool initPlatformRTC() {
-  setSyncProvider(getTeensy3Time);
-  if (timeStatus() != timeSet) {
-    rtc_startup_state = MANUVR_RTC_STARTUP_GOOD_UNSET;
-  }
-  else {
-    rtc_startup_state = MANUVR_RTC_STARTUP_GOOD_SET;
-  }
   return true;
 }
 
@@ -147,8 +169,6 @@ uint32_t epochTime(void) {
 */
 void currentDateTime(StringBuilder* target) {
   if (target != NULL) {
-    target->concatf("%04d-%02d-%02dT", year(), month(), day());
-    target->concatf("%02d:%02d:%02d+00:00", hour(), minute(), second());
   }
 }
 
@@ -169,9 +189,9 @@ void pin_isr_pitch_event() {
 
 /*
 * This fxn should be called once on boot to setup the CPU pins that are not claimed
-*   by other classes. GPIO pins at the command of this-or-that class should be setup 
-*   in the class that deals with them. 
-* Pending peripheral-level init of pins, we should just enable everything and let 
+*   by other classes. GPIO pins at the command of this-or-that class should be setup
+*   in the class that deals with them.
+* Pending peripheral-level init of pins, we should just enable everything and let
 *   individual classes work out their own requirements.
 */
 void gpioSetup() {
@@ -179,14 +199,12 @@ void gpioSetup() {
   for (uint8_t i = 0; i < PLATFORM_GPIO_PIN_COUNT; i++) {
     gpio_pins[i].event = 0;      // No event assigned.
     gpio_pins[i].fxn   = 0;      // No function pointer.
-    gpio_pins[i].mode  = INPUT;  // All pins begin as inputs.
+    gpio_pins[i].mode  = 1;  // All pins begin as inputs.
     gpio_pins[i].pin   = i;      // The pin number.
   }
 }
 
-
-int8_t gpioDefine(uint8_t pin, uint8_t mode) {
-  pinMode(pin, mode);
+int8_t gpioDefine(uint8_t pin, int mode) {
   return 0;
 }
 
@@ -195,14 +213,15 @@ void unsetPinIRQ(uint8_t pin) {
 }
 
 
-void setPinEvent(uint8_t pin, ManuvrRunnable* isr_event) {
+int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrRunnable* isr_event) {
+  return 0;
 }
-
 
 /*
 * Pass the function pointer
 */
-void setPinFxn(uint8_t pin, FunctionPointer fxn) {
+int8_t setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn) {
+  return 0;
 }
 
 
@@ -298,7 +317,7 @@ void platformPreInit() {
 
 
 /*
-* Called as a result of kernels bootstrap() fxn. 
+* Called as a result of kernels bootstrap() fxn.
 */
 void platformInit() {
   start_time_micros = micros();
@@ -310,4 +329,3 @@ void platformInit() {
 #ifdef __cplusplus
  }
 #endif
-

@@ -64,8 +64,8 @@ class ManuvrRunnable;
   #include <Arduino.h>
 #else
   extern "C" {
-    uint32_t millis();
-    uint32_t micros();
+    unsigned long millis();
+    unsigned long micros();
   }
 #endif
 
