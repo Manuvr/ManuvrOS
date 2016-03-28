@@ -169,9 +169,9 @@ void pin_isr_pitch_event() {
 
 /*
 * This fxn should be called once on boot to setup the CPU pins that are not claimed
-*   by other classes. GPIO pins at the command of this-or-that class should be setup 
-*   in the class that deals with them. 
-* Pending peripheral-level init of pins, we should just enable everything and let 
+*   by other classes. GPIO pins at the command of this-or-that class should be setup
+*   in the class that deals with them.
+* Pending peripheral-level init of pins, we should just enable everything and let
 *   individual classes work out their own requirements.
 */
 void gpioSetup() {
@@ -256,7 +256,14 @@ volatile void seppuku() {
 */
 volatile void jumpToBootloader() {
   globalIRQDisable();
-  //_reboot_Teensyduino_();
+  __set_MSP(0x20001000);      // Set the main stack pointer to default value for the F417...
+
+  // Per clive1's post, set some sort of key value just below the initial stack pointer.
+  // We don't really care if we clobber something, because this fxn will reboot us. But
+  // when the reset handler is executed, it will look for this value. If it finds it, it
+  // will branch to the Bootloader code.
+  *((unsigned long *)0x2000FFF0) = 0xb00710ad;
+  NVIC_SystemReset();
 }
 
 
@@ -279,7 +286,19 @@ volatile void hardwareShutdown() {
 */
 volatile void reboot() {
   globalIRQDisable();
-  *((uint32_t *)0xE000ED0C) = 0x5FA0004;
+  RCC_DeInit();                   // Switch to HSI, no PLL
+  SysTick->CTRL = 0;
+  SysTick->LOAD = 0;
+  SysTick->VAL  = 0;
+
+  __set_MSP(0x20001000);      // Set the main stack pointer to default value for the F417...
+
+  // Per clive1's post, set some sort of key value just below the initial stack pointer.
+  // We don't really care if we clobber something, because this fxn will reboot us. But
+  // when the reset handler is executed, it will look for this value. If it finds it, it
+  // will branch to the Bootloader code.
+  *((unsigned long *)0x2000FFF0) = 0xb00710ad;
+  NVIC_SystemReset();
 }
 
 
@@ -298,7 +317,7 @@ void platformPreInit() {
 
 
 /*
-* Called as a result of kernels bootstrap() fxn. 
+* Called as a result of kernels bootstrap() fxn.
 */
 void platformInit() {
   start_time_micros = micros();
@@ -310,4 +329,3 @@ void platformInit() {
 #ifdef __cplusplus
  }
 #endif
-

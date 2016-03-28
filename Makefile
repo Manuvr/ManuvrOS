@@ -21,19 +21,21 @@ WHO_I_AM       = $(shell whoami)
 WHERE_I_AM     = $(shell pwd)
 HOME_DIRECTORY = /home/$(WHO_I_AM)
 
-CPP            = $(shell which g++)
+export CPP         = $(shell which g++)
+export CC          = $(shell which gcc)
 
-OUTPUT_PATH    = build/
+export OUTPUT_PATH = $(WHERE_I_AM)/build/
 
 
 ###########################################################################
 # Source files, includes, and linker directives...
 ###########################################################################
-INCLUDES    = -I.
+INCLUDES    = -I$(WHERE_I_AM)/.
+INCLUDES   += -I$(WHERE_I_AM)/ManuvrOS
 
 
 # Libraries to link
-LIBS =  -lstdc++ -lm
+LIBS = -L$(OUTPUT_PATH) -lstdc++ -lm -lmanuvr
 
 # Wrap the include paths into the flags...
 CFLAGS = $(OPTIMIZATION) -Wall $(INCLUDES)
@@ -53,43 +55,24 @@ CFLAGS += -fsingle-precision-constant -Wdouble-promotion
 ###########################################################################
 LBITS = $(shell getconf LONG_BIT)
 ifeq ($(LBITS),64)
-  TARGET_WIDTH = -m32
+  CFLAGS += -m32
 else
   TARGET_WIDTH =
 endif
                       
-CFLAGS += $(CPP_FLAGS)
-
 
 ###########################################################################
 # Source file definitions...
 ###########################################################################
-MANUVROS_SRCS   = DataStructures/*.cpp ManuvrOS/*.cpp ManuvrOS/XenoSession/*.cpp ManuvrOS/ManuvrMsg/*.cpp
 
-SENSOR_SRCS     = ManuvrOS/Platform/Platform.cpp ManuvrOS/Drivers/SensorWrapper/*.cpp 
-I2C_DRIVERS     = ManuvrOS/Drivers/i2c-adapter/*.cpp ManuvrOS/Drivers/DeviceWithRegisters/DeviceRegister.cpp ManuvrOS/Drivers/DeviceWithRegisters/DeviceWithRegisters.cpp
-
-COM_DRIVERS     = ManuvrOS/Transports/*.cpp
-COM_DRIVERS    += ManuvrOS/Transports/ManuvrSocket/ManuvrTCP.cpp
-COM_DRIVERS    += ManuvrOS/Transports/ManuvrSerial/ManuvrSerial.cpp
-
-# Because this Makefile technically supports two platforms.
-# TODO: Make a single linux platform driver, and case-off Raspi stuff within it.
-RASPI_DRIVERS   = ManuvrOS/Drivers/ManuvrableGPIO/*.cpp ManuvrOS/Platform/PlatformRaspi.cpp
-
-
-GENERIC_DRIVERS = ManuvrOS/Platform/PlatformUnsupported.cpp
-
-
-CPP_SRCS  = $(MANUVROS_SRCS) 
-CPP_SRCS += $(I2C_DRIVERS) $(SENSOR_SRCS) $(COM_DRIVERS)
+CPP_SRCS  = main.cpp
 
 SRCS   = $(CPP_SRCS)
              
 # TODO: I badly need to learn to write autoconf scripts....
 #   I've at least tried to modularize to make the invariable transition less-painful...
 MANUVR_OPTIONS  = -DMANUVR_SUPPORT_SERIAL
-MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
+#MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
 MANUVR_OPTIONS += -D__MANUVR_DEBUG
 
 # Options that build for certain threading models (if any).
@@ -99,6 +82,11 @@ MANUVR_OPTIONS += -D__MANUVR_LINUX
 LIBS += -lpthread
 
 CFLAGS += $(MANUVR_OPTIONS) 
+
+
+export CFLAGS
+export CPP_FLAGS = $(CFLAGS)
+
 
 ###########################################################################
 # Rules for building the firmware follow...
@@ -111,14 +99,19 @@ CFLAGS += $(MANUVR_OPTIONS)
 .PHONY: all
 
 
-all: clean
-	$(CPP) -static -g -o manuvr main.cpp $(SRCS) $(GENERIC_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) -D_GNU_SOURCE -O2
+all: clean libs
+	export __MANUVR_LINUX
+	make -C ManuvrOS/
+	$(CPP) -static -g -o manuvr $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
 
-raspi: clean
-	$(CPP) -static -g -o manuvr main.cpp $(SRCS) $(RASPI_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) -DRASPI -D_GNU_SOURCE -O2
+raspi: clean libs
+	export RASPI
+	export __MANUVR_LINUX
+	make -C ManuvrOS/
+	$(CPP) -static -g -o manuvr $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -DRASPI -D_GNU_SOURCE -O2
 
 debug:
-	$(CPP) -static -g -o manuvr main.cpp $(SRCS) $(GENERIC_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(TARGET_WIDTH) $(LIBS) -D__MANUVR_DEBUG -D_GNU_SOURCE -O0 -fstack-usage
+	$(CPP) -static -g -o manuvr main.cpp $(SRCS) $(GENERIC_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D__MANUVR_DEBUG -D_GNU_SOURCE -O0 -fstack-usage
 # Options configured such that you can then...
 # valgrind --tool=callgrind ./manuvr
 # gprof2dot --format=callgrind --output=out.dot callgrind.out.16562
@@ -128,7 +121,14 @@ manuvrtests:
 	mkdir $(OUTPUT_PATH)
 	$(CPP) -o $(OUTPUT_PATH)/dstest tests/TestDataStructures.cpp DataStructures/*.cpp -I. -lstdc++ -lc -lm
 
+builddir:
+	mkdir -p $(OUTPUT_PATH)
+
+libs: builddir
+
+	
 clean:
+	make clean -C ManuvrOS/
 	rm -f *.o *.su *~ testbench manuvr
 	rm -rf $(OUTPUT_PATH)
 
@@ -141,10 +141,4 @@ docs:
 
 stats:
 	find ./ManuvrOS ./DataStructures ./StringBuilder -type f \( -name \*.cpp -o -name \*.h \) -exec wc -l {} +
-
-checkin: fullclean
-	git push
-
-checkout:
-	git pull
 

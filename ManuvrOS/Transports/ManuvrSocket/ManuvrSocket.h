@@ -20,14 +20,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 This driver is designed to give Manuvr platform-abstracted socket connection.
 This is basically only for linux until it is needed in a smaller space.
-  
+
 */
 
 
 #ifndef __MANUVR_SOCKET_H__
 #define __MANUVR_SOCKET_H__
 
-#include "../ManuvrXport.h"
+#include "Transports/ManuvrXport.h"
 
 #if defined(__MANUVR_LINUX)
   #include <cstdio>
@@ -55,7 +55,7 @@ class ManuvrTCP : public ManuvrXport {
     ManuvrTCP(const char* addr, int port, uint32_t opts);
     ManuvrTCP(ManuvrTCP* listening_instance, int nu_sock, struct sockaddr_in* nu_sockaddr);
     ~ManuvrTCP();
-    
+
     /* Overrides from EventReceiver */
     int8_t bootComplete();
     const char* getReceiverName();
@@ -84,16 +84,17 @@ class ManuvrTCP : public ManuvrXport {
     uint32_t    _options;
 
     int         _port_number;
-    
-    // Related to threading and pipes. This is linux-specific. 
+
+    // Related to threading and pipes. This is linux-specific.
     StringBuilder __io_buffer;
     int __parent_pid;
     int __blocking_pid;
 
-    struct sockaddr_in _sockaddr;
+    #if defined(__MANUVR_LINUX)
+      struct sockaddr_in _sockaddr;
+    #endif
 
     LinkedList<ManuvrTCP*> _connections;   // A list of client connections.
 };
 
 #endif   // __MANUVR_SOCKET_H__
-

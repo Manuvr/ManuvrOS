@@ -55,7 +55,7 @@ bool set_linux_interval_timer() {
   _interval.it_value.tv_usec     = MANUVR_PLATFORM_TIMER_PERIOD_MS * 1000;
   _interval.it_interval.tv_sec   = 0;
   _interval.it_interval.tv_usec  = MANUVR_PLATFORM_TIMER_PERIOD_MS * 1000;
-  
+
   int err = setitimer(ITIMER_VIRTUAL, &_interval, NULL);
   if (err) {
     Kernel::log("Failed to enable interval timer.");
@@ -151,7 +151,7 @@ int initSigHandlers() {
     Kernel::log("Failed to bind SIGUSR2 to the signal system. Failing...");
     return_value = 0;
   }
-  
+
   _signal_action_SIGALRM.sa_handler   = &linux_timer_handler;
   if (sigaction(SIGVTALRM, &_signal_action_SIGALRM, NULL)) {
     Kernel::log("Failed to bind to SIGVTALRM.");
@@ -232,8 +232,8 @@ int platformSerialNumberSize() {
 int getSerialNumber(uint8_t *buf) {
   FILE *f = fopen("/proc/cpuinfo", "r");
   if (!f) return 0;
-  
-  char line[256]; 
+
+  char line[256];
   int serial = 0;
   while (fgets(line, 256, f)) {
     if (strncmp(line, "Serial", 6) == 0) {
@@ -313,7 +313,7 @@ void currentDateTime(StringBuilder* target) {
 /*
 * Not provided elsewhere on a linux platform.
 */
-uint32_t millis() {
+unsigned long millis() {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000L);
@@ -323,7 +323,7 @@ uint32_t millis() {
 /*
 * Not provided elsewhere on a linux platform.
 */
-uint32_t micros() {
+unsigned long micros() {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return (ts.tv_sec * 1000000L + ts.tv_nsec / 1000L);
@@ -335,9 +335,9 @@ uint32_t micros() {
 ****************************************************************************************************/
 /*
 * This fxn should be called once on boot to setup the CPU pins that are not claimed
-*   by other classes. GPIO pins at the command of this-or-that class should be setup 
-*   in the class that deals with them. 
-* Pending peripheral-level init of pins, we should just enable everything and let 
+*   by other classes. GPIO pins at the command of this-or-that class should be setup
+*   in the class that deals with them.
+* Pending peripheral-level init of pins, we should just enable everything and let
 *   individual classes work out their own requirements.
 */
 void gpioSetup() {
@@ -372,12 +372,12 @@ volatile uint32_t getStackPointer() {
 // TODO: Perhaps raise the nice value?
 // At minimum, turn off the periodic timer, since this is what would happen on
 //   other platforms.
-void globalIRQEnable() {  
-  // TODO: Need to stack the time remaining. 
+void globalIRQEnable() {
+  // TODO: Need to stack the time remaining.
   //set_linux_interval_timer();
 }
 
-void globalIRQDisable() { 
+void globalIRQDisable() {
   // TODO: Need to unstack the time remaining and fire any schedules.
   //unset_linux_interval_timer();
 }
@@ -441,7 +441,7 @@ void platformPreInit() {
 
 
 /*
-* Called as a result of kernels bootstrap() fxn. 
+* Called as a result of kernels bootstrap() fxn.
 */
 void platformInit() {
   start_time_micros = micros();
@@ -457,4 +457,3 @@ void platformInit() {
 #ifdef __cplusplus
  }
 #endif
-

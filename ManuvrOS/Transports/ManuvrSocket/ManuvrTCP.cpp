@@ -20,9 +20,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 This driver is designed to give Manuvr platform-abstracted TCP socket connection.
 This is basically only for linux for now.
-  
+
 */
 
+#ifdef __MANUVR_LINUX
 
 #include "ManuvrSocket.h"
 #include "FirmwareDefs.h"
@@ -35,8 +36,8 @@ This is basically only for linux for now.
 
   // Threaded platforms will need this to compensate for a loss of ISR.
   extern void* xport_read_handler(void* active_xport);
-  
-  
+
+
   /*
   * Since listening for connections on this transport involves blocking, we have a
   *   thread dedicated to the task...
@@ -59,14 +60,14 @@ This is basically only for linux for now.
       struct sockaddr_in cli_addr;
       while (listening_inst->listening()) {
         unsigned int clientlen = sizeof(cli_addr);
-  
+
         /* Wait for client connection */
         if ((cli_sock = accept(listening_inst->getSockID(), (struct sockaddr *) &cli_addr, &clientlen)) < 0) {
           output.concat("Failed to accept client connection.\n");
         }
         else {
           ManuvrTCP* nu_connection = new ManuvrTCP(listening_inst, cli_sock, &cli_addr);
-          
+
           ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
           event->addArg((EventReceiver*) nu_connection);
           Kernel::staticRaiseEvent(event);
@@ -76,9 +77,9 @@ This is basically only for linux for now.
           output.concat("\n");
         }
         Kernel::log(&output);
-        
+
         for (uint16_t i = 0; i < sizeof(cli_addr);  i++) {
-          // Zero the sockaddr structure for next use. The new transport 
+          // Zero the sockaddr structure for next use. The new transport
           //   instance should have copied it by now.
           *((uint8_t *) &cli_addr  + i) = 0;
         }
@@ -90,10 +91,10 @@ This is basically only for linux for now.
     else {
       Kernel::log("Tried to listen with a NULL transport.");
     }
-    
+
     return NULL;
   }
-  
+
 #else
   // No special globals needed for this platform.
 #endif
@@ -147,10 +148,10 @@ ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in
     // Copy the sockaddr struct into this instance.
     *((uint8_t *) &_sockaddr + i) = *(((uint8_t*)nu_sockaddr) + i);
   }
-  
+
   // Inherrit the listener's configuration...
   nonSessionUsage(listening_instance->nonSessionUsage());
-  
+
   bootComplete();
   connected(true);  // TODO: Possibly not true....
 }
@@ -195,11 +196,11 @@ void ManuvrTCP::__class_initializer() {
     // Suppose I have these members...
     struct sockaddr_in serv_addr = {0};
     struct sockaddr_in cli_addr  = {0};
-    
+
     // Tells the compiler to do this on every instantiation:
     for (int i = 0; i < sizeof(serv_addr); i++) {  (void*)(&serv_addr + i) = 0; } // Zero the struct.
     for (int i = 0; i < sizeof(cli_addr);  i++) {  (void*)(&cli_addr  + i) = 0; } // Zero the struct.
-    
+
     // But consider the benefit if I....
     struct sockaddr_in serv_addr;
     struct sockaddr_in cli_addr;
@@ -209,12 +210,12 @@ void ManuvrTCP::__class_initializer() {
       *((uint8_t *) &serv_addr + i) = 0;
       *((uint8_t *) &cli_addr  + i) = 0;
     }
-        
+
     If your compiler is smart, it will optimize this for you.
     Do you trust your compiler to be smart all the time?
   */
-  
-  // Zero the socket parameter structures. 
+
+  // Zero the socket parameter structures.
   for (uint16_t i = 0; i < sizeof(_sockaddr);  i++) {
     *((uint8_t *) &_sockaddr + i) = 0;
   }
@@ -241,14 +242,14 @@ int8_t ManuvrTCP::connect() {
   }
 
   //in_addr_t temp_addr = inet_network(_addr);
-  
+
   _sockaddr.sin_family      = AF_INET;
   _sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
   //_sockaddr.sin_addr.s_addr = temp_addr;
   _sockaddr.sin_port        = htons(_port_number);
 
   _sock = socket(AF_INET, SOCK_STREAM, 0);        // Open the socket...
-  
+
   /* Bind the server socket */
   if (::connect(_sock, (struct sockaddr *) &_sockaddr, sizeof(_sockaddr))) {
     StringBuilder log;
@@ -259,7 +260,7 @@ int8_t ManuvrTCP::connect() {
 
   initialized(true);
   connected(true);
-  
+
   return 0;
 }
 
@@ -271,14 +272,14 @@ int8_t ManuvrTCP::listen() {
     Kernel::log("A TCP socket was told to listen when it already was. Doing nothing.");
     return -1;
   }
-  
+
   //in_addr_t temp_addr = inet_network(_addr);
-  
+
   _sockaddr.sin_family      = AF_INET;
   _sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
   //_sockaddr.sin_addr.s_addr = temp_addr;
   _sockaddr.sin_port        = htons(_port_number);
-  
+
   _sock = socket(AF_INET, SOCK_STREAM, 0);        // Open the socket...
 
   /* Bind the server socket */
@@ -291,7 +292,7 @@ int8_t ManuvrTCP::listen() {
     Kernel::log("Failed to listen on server socket\n");
     return -1;
   }
-  
+
   initialized(true);
   createThread(&_thread_id, NULL, socket_listener_loop, (void*) this);
 
@@ -343,7 +344,7 @@ int8_t ManuvrTCP::read_port() {
   else if (verbosity > 1) {
     local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
   }
-  
+
   if (local_log.length() > 0) Kernel::log(&local_log);
   return 0;
 }
@@ -358,7 +359,7 @@ bool ManuvrTCP::write_port(unsigned char* out, int out_len) {
     if (verbosity > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to socket at: (%s:%d)\n", _addr, _port_number);
     return false;
   }
-  
+
   if (connected()) {
     int bytes_written = (int) write(_sock, out, out_len);
     bytes_sent += bytes_written;
@@ -380,7 +381,7 @@ bool ManuvrTCP::write_port(int sock, unsigned char* out, int out_len) {
     if (verbosity > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to socket at: (%s:%d)\n", _addr, _port_number);
     return false;
   }
-  
+
   if (connected()) {
     int bytes_written = (int) write(_sock, out, out_len);
     bytes_sent += bytes_written;
@@ -395,18 +396,18 @@ bool ManuvrTCP::write_port(int sock, unsigned char* out, int out_len) {
 
 
 /****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌          
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄ 
+* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
+* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
+* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
 * ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
 * ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
 * ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
 * ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀ 
-* 
+*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+*
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
 /**
@@ -418,7 +419,7 @@ const char* ManuvrTCP::getReceiverName() {  return "ManuvrTCP";  }
 
 
 /**
-* Debug support method. This fxn is only present in debug builds. 
+* Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
@@ -442,7 +443,7 @@ void ManuvrTCP::printDebug(StringBuilder *temp) {
 */
 int8_t ManuvrTCP::bootComplete() {   // ?? TODO ??
   EventReceiver::bootComplete();
-  
+
   // We will suffer a 300ms latency if the platform's networking stack doesn't flush
   //   its buffer in time.
   read_abort_event.alterScheduleRecurrence(0);
@@ -459,10 +460,10 @@ int8_t ManuvrTCP::bootComplete() {   // ?? TODO ??
 
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
-*   has been serviced and we are now getting the chance to see the results. The argument 
+*   has been serviced and we are now getting the chance to see the results. The argument
 *   to this fxn will never be NULL.
 *
-* Depending on class implementations, we might choose to handle the completed Event differently. We 
+* Depending on class implementations, we might choose to handle the completed Event differently. We
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
 *   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
@@ -473,9 +474,9 @@ int8_t ManuvrTCP::bootComplete() {   // ?? TODO ??
 */
 int8_t ManuvrTCP::callback_proc(ManuvrRunnable *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
-     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
+     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
-  
+
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     case MANUVR_MSG_XPORT_SEND:
@@ -484,7 +485,7 @@ int8_t ManuvrTCP::callback_proc(ManuvrRunnable *event) {
     default:
       break;
   }
-  
+
   return return_value;
 }
 
@@ -492,7 +493,7 @@ int8_t ManuvrTCP::callback_proc(ManuvrRunnable *event) {
 
 int8_t ManuvrTCP::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
-  
+
   switch (active_event->event_code) {
     case MANUVR_MSG_XPORT_DEBUG:
       printDebug(&local_log);
@@ -503,8 +504,10 @@ int8_t ManuvrTCP::notify(ManuvrRunnable *active_event) {
       return_value += ManuvrXport::notify(active_event);
       break;
   }
-  
+
   if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
 }
 
+
+#endif

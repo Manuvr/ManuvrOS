@@ -22,11 +22,11 @@ This driver is designed to give Manuvr platform-abstracted COM ports. By
   this is meant generic asynchronous serial ports. On Arduino, this means
   the Serial (or HardwareSerial) class. On linux, it means /dev/tty<x>.
 
-Platforms that require it should be able to extend this driver for specific 
+Platforms that require it should be able to extend this driver for specific
   kinds of hardware support. For an example of this, I would refer you to
   the STM32F4 case-offs I understand that this might seem "upside down"
   WRT how drivers are more typically implemented, and it may change later on.
-  But for now, it seems like a good idea.  
+  But for now, it seems like a good idea.
 */
 
 
@@ -39,7 +39,7 @@ Platforms that require it should be able to extend this driver for specific
 
 #if defined (STM32F4XX)        // STM32F4
 
-#elif defined (STM32F4XX)      // Linux environment
+#elif defined (__MANUVR_LINUX)      // Linux environment
   #include <cstdio>
   #include <stdlib.h>
   #include <unistd.h>
@@ -48,9 +48,6 @@ Platforms that require it should be able to extend this driver for specific
   #include <fstream>
   #include <iostream>
   #include <sys/socket.h>
-#else   //Unsupportedness
-#endif
-
 
 
 /****************************************************************************************************
@@ -94,7 +91,7 @@ void ManuvrSocket::__class_initializer() {
   bytes_received     = 0;
   read_timeout_defer = false;
   session            = NULL;
-    
+
   // Build some pre-formed Events.
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
   read_abort_event.isManaged(true);
@@ -105,7 +102,7 @@ void ManuvrSocket::__class_initializer() {
 
   __kernel = Kernel::getInstance();
   __kernel->subscribe((EventReceiver*) this);  // Subscribe to the Kernel.
-  
+
   pid_read_abort = __kernel->createSchedule(30, 0, false, this, &read_abort_event);
   __kernel->disableSchedule(pid_read_abort);
 }
@@ -129,7 +126,7 @@ int8_t ManuvrSocket::read_port() {
         n = read(port_number, buf, 255);
         total_read += n;
       }
-  
+
       if (total_read > 0) {
         // Do stuff regarding the data we just read...
         if (NULL != session) {
@@ -146,7 +143,7 @@ int8_t ManuvrSocket::read_port() {
     #endif
   }
   else if (verbosity > 1) local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
-  
+
   if (local_log.length() > 0) Kernel::log(&local_log);
   return 0;
 }
@@ -161,10 +158,10 @@ bool ManuvrSocket::write_port(unsigned char* out, int out_len) {
     if (verbosity > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to port: (%s)\n", tty_name);
     return false;
   }
-  
+
   if (connected()) {
     #if defined (STM32F4XX)        // STM32F4
-  
+
     #else   //Assuming a linux environment. Cross your fingers....
       return (out_len == (int) write(port_number, out, out_len));
     #endif
@@ -182,18 +179,18 @@ int8_t ManuvrSocket::sendBuffer(StringBuilder* buf) {
 
 
 /****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌          
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄ 
+* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
+* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
+* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
 * ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
 * ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
 * ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
 * ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀ 
-* 
+*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+*
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
 /**
@@ -205,13 +202,13 @@ const char* ManuvrSocket::getReceiverName() {  return "ManuvrSocket";  }
 
 
 /**
-* Debug support method. This fxn is only present in debug builds. 
+* Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void ManuvrSocket::printDebug(StringBuilder *temp) {
   if (temp == NULL) return;
-  
+
   EventReceiver::printDebug(temp);
   temp->concatf("--- xport_state    \t 0x%02x\n", xport_state);
   temp->concatf("--- xport_id       \t 0x%04x\n", xport_id);
@@ -225,14 +222,14 @@ void ManuvrSocket::printDebug(StringBuilder *temp) {
 
 
 /**
-* There is a NULL-check performed upstream for the scheduler member. So no need 
+* There is a NULL-check performed upstream for the scheduler member. So no need
 *   to do it again here.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t ManuvrSocket::bootComplete() {
   EventReceiver::bootComplete();
-  
+
   reset();
   return 1;
 }
@@ -240,10 +237,10 @@ int8_t ManuvrSocket::bootComplete() {
 
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
-*   has been serviced and we are now getting the chance to see the results. The argument 
+*   has been serviced and we are now getting the chance to see the results. The argument
 *   to this fxn will never be NULL.
 *
-* Depending on class implementations, we might choose to handle the completed Event differently. We 
+* Depending on class implementations, we might choose to handle the completed Event differently. We
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
 *   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
@@ -254,9 +251,9 @@ int8_t ManuvrSocket::bootComplete() {
 */
 int8_t ManuvrSocket::callback_proc(ManuvrEvent *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
-     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
+     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
-  
+
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     case MANUVR_MSG_XPORT_SEND:
@@ -265,7 +262,7 @@ int8_t ManuvrSocket::callback_proc(ManuvrEvent *event) {
     default:
       break;
   }
-  
+
   return return_value;
 }
 
@@ -273,7 +270,7 @@ int8_t ManuvrSocket::callback_proc(ManuvrEvent *event) {
 
 int8_t ManuvrSocket::notify(ManuvrEvent *active_event) {
   int8_t return_value = 0;
-  
+
   switch (active_event->event_code) {
     case MANUVR_MSG_XPORT_DEBUG:
       printDebug(&local_log);
@@ -284,11 +281,11 @@ int8_t ManuvrSocket::notify(ManuvrEvent *active_event) {
       return_value += ManuvrXport::notify(active_event);
       break;
   }
-  
+
   if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
 }
 
 
-
-
+#else   //Unsupportedness
+#endif  // __LINUX

@@ -10,10 +10,10 @@ CPP_STANDARD       = gnu++11
 ###########################################################################
 # Source files, includes, and linker directives...
 ###########################################################################
-INCLUDE    = -I. -iquote.
+INCLUDES    = -I. -iquote.
 
 # Libraries to link
-LIBS =  -lstdc++ -lm
+LIBS =  -lm
 
 CPP_SRCS   = DataStructures/StringBuilder.cpp
 CPP_SRCS  += DataStructures/Quaternion.cpp
@@ -30,8 +30,9 @@ CPP_SRCS  += Transports/ManuvrSerial/ManuvrSerial.cpp
 # TODO: Case-off for socket/TCP/Pipe support...
 #CPP_SRCS  += Transports/ManuvrPipe/ManuvrPipe.cpp
 #CPP_SRCS  += Transports/ManuvrTelehash/ManuvrTelehash.cpp
-#CPP_SRCS  += Transports/ManuvrSocket/ManuvrSocket.cpp
-#CPP_SRCS  += Transports/ManuvrSocket/ManuvrTCP.cpp
+CPP_SRCS  += Transports/ManuvrSocket/ManuvrTCP.cpp
+
+
 CPP_SRCS  += ManuvrMsg/Argument.cpp
 CPP_SRCS  += ManuvrMsg/ManuvrMsg.cpp
 
@@ -73,22 +74,30 @@ CPP_SRCS  += Drivers/ManuvrableGPIO/ManuvrableGPIO.cpp
 
 
 OBJS  = $(CPP_SRCS:.cpp=.o)
-OBJS += Platform/Platform.o
 LIBNAME = libmanuvr.a
 
 
-all: $(LIBNAME)
+all: setenvars $(LIBNAME)
+
 
 %.o : %.cpp
-	$(CC) $(INCLUDE) $(CPP_FLAGS) -nostdlib -c $< -o $@
+	$(CPP) $(INCLUDES) $(CPP_FLAGS) -std=$(CPP_STANDARD) -nostdlib -c $< -o $@
 
 $(LIBNAME): $(OBJS)
 	$(MAKE) -C Platform/
-	$(AR) -r $(OUTPUT_PATH)/$@ $(OBJS)
+	$(AR) -rvs $(OUTPUT_PATH)/$@ $(OBJS) Platform/*.o
 
 clean:
+	$(MAKE) clean -C Platform/
 	rm -f $(OBJS)
 	rm -f $(OUTPUT_PATH)/$(LIBNAME)
+
+
+setenvars:
+	@echo '======================================================'
+	@echo ''
+	@echo '======================================================'
+
 
 fullclean: clean
 	rm -rf doc/doxygen

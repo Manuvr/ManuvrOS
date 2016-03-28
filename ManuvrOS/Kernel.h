@@ -45,7 +45,7 @@
 
   typedef int (*listenerFxnPtr) (ManuvrRunnable*);
 
-  extern uint32_t micros();  // TODO: Only needed for a single inline fxn. Retain?
+  extern unsigned long micros();  // TODO: Only needed for a single inline fxn. Retain?
 
 
 

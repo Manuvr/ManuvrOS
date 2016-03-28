@@ -45,6 +45,12 @@ This file is meant to contain a set of common functions that are typically platf
 * The code under this block is special on this platform, and will not be available elsewhere.       *
 ****************************************************************************************************/
 #include "stm32f7xx_hal.h"
+#include "stm32f7xx_hal_rcc.h"
+
+//#if defined(ENABLE_USB_VCP)
+  #include "tm_stm32_usb_device.h"
+  #include "tm_stm32_usb_device_cdc.h"
+//#endif
 
 volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
 volatile uint8_t  watchdog_mark      = 42;
@@ -275,7 +281,14 @@ volatile void seppuku() {
 */
 volatile void jumpToBootloader() {
   globalIRQDisable();
-  //_reboot_Teensyduino_();
+  __set_MSP(0x20001000);      // Set the main stack pointer to default value for the F417...
+
+  // Per clive1's post, set some sort of key value just below the initial stack pointer.
+  // We don't really care if we clobber something, because this fxn will reboot us. But
+  // when the reset handler is executed, it will look for this value. If it finds it, it
+  // will branch to the Bootloader code.
+  *((unsigned long *)0x2000FFF0) = 0xb00710ad;
+  NVIC_SystemReset();
 }
 
 
@@ -298,7 +311,19 @@ volatile void hardwareShutdown() {
 */
 volatile void reboot() {
   globalIRQDisable();
-  *((uint32_t *)0xE000ED0C) = 0x5FA0004;
+  //HAL_RCC_DeInit();                   // Switch to HSI, no PLL
+  SysTick->CTRL = 0;
+  SysTick->LOAD = 0;
+  SysTick->VAL  = 0;
+
+  __set_MSP(0x20001000);      // Set the main stack pointer to default value for the F417...
+
+  // Per clive1's post, set some sort of key value just below the initial stack pointer.
+  // We don't really care if we clobber something, because this fxn will reboot us. But
+  // when the reset handler is executed, it will look for this value. If it finds it, it
+  // will branch to the Bootloader code.
+  *((unsigned long *)0x2000FFF0) = 0xb00710ad;
+  NVIC_SystemReset();
 }
 
 
@@ -322,6 +347,11 @@ void platformPreInit() {
 void platformInit() {
   start_time_micros = micros();
   init_RNG();
+  #if defined(ENABLE_USB_VCP)
+    TM_USB_Init();    /* Init USB peripheral */
+    //TM_USBD_CDC_Init(TM_USB_FS);
+    //TM_USBD_Start(TM_USB_FS);
+  #endif
 }
 
 
