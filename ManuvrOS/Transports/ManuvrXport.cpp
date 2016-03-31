@@ -3,7 +3,7 @@
 #include "XenoSession/XenoSession.h"
 
 
-#if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)  
+#if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
   /*
   * In a threaded environment, we use threads to read ports.
   */
@@ -38,7 +38,7 @@ ManuvrXport::ManuvrXport() {
   bytes_sent         = 0;
   bytes_received     = 0;
   session            = NULL;
-  
+
   read_timeout_defer = false;
 
   #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
@@ -85,7 +85,7 @@ int8_t ManuvrXport::bridge(ManuvrXport* _xport) {
 * This should be set to true in the case of a simple serial port if there is no
 *   means of signalling to the software that a connection-related event has occured.
 *   If a XenoSession is to be created by this transport, calling this will cause a
-*   session to be created immediately with a configuration that periodically emits 
+*   session to be created immediately with a configuration that periodically emits
 *   sync packets for the sake of emulating the event.
 */
 void ManuvrXport::alwaysConnected(bool en) {
@@ -95,7 +95,7 @@ void ManuvrXport::alwaysConnected(bool en) {
 
 void ManuvrXport::isDebugConsole(bool en) {
   _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_DEBUG_CONSOLE) : (_xport_flags & ~(MANUVR_XPORT_FLAG_DEBUG_CONSOLE));
-  
+
   if (en) nonSessionUsage(true);    // If we are being used as a console, this most definately applies.
 }
 
@@ -124,7 +124,7 @@ int8_t ManuvrXport::sendBuffer(StringBuilder* buf) {
 *
 * @param  The XenoSession to be reaped.
 * @return zero on sucess. Non-zero on failure.
-*/ 
+*/
 int8_t ManuvrXport::reapXenoSession(XenoSession* ses) {
   if (NULL != ses) {
     ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_RETRACT_SRVC);
@@ -135,7 +135,7 @@ int8_t ManuvrXport::reapXenoSession(XenoSession* ses) {
     delete ses;  // TODO: should do this on the event callback.
     return 0;
   }
-  
+
   return -1;
 }
 
@@ -146,7 +146,7 @@ int8_t ManuvrXport::provide_session(XenoSession* ses) {
     // first.
     __kernel->unsubscribe(session);
 
-    // TODO: Might should warn someone at the other side? 
+    // TODO: Might should warn someone at the other side?
     //   Maybe we let XenoSession deal with it? At least we
     //   won't have a memory leak, lol.
     //     ---J. Ian Lindsay   Thu Dec 03 04:38:52 MST 2015
@@ -155,7 +155,7 @@ int8_t ManuvrXport::provide_session(XenoSession* ses) {
   }
   session = ses;
   //session->setVerbosity(verbosity);
-  
+
   // This will warn us later to notify others of our removal, if necessary.
   set_xport_state(MANUVR_XPORT_FLAG_HAS_SESSION);
   return 0;
@@ -165,7 +165,7 @@ int8_t ManuvrXport::provide_session(XenoSession* ses) {
 
 /*
 * Mark this transport connected or disconnected.
-* This method is virtual, and may be over-ridden if the specific transport has 
+* This method is virtual, and may be over-ridden if the specific transport has
 *   something more sophisticated in mind.
 */
 void ManuvrXport::connected(bool en) {
@@ -174,7 +174,7 @@ void ManuvrXport::connected(bool en) {
     // This will also be true if alwaysConnected().
     return;
   }
-  
+
   _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_CONNECTED) : (_xport_flags & ~(MANUVR_XPORT_FLAG_CONNECTED));
   if (!nonSessionUsage()) {
     if (en) {
@@ -202,7 +202,7 @@ void ManuvrXport::connected(bool en) {
 
 /*
 * Mark this transport connected or disconnected.
-* This method is virtual, and may be over-ridden if the specific transport has 
+* This method is virtual, and may be over-ridden if the specific transport has
 *   something more sophisticated in mind.
 */
 void ManuvrXport::listening(bool en) {
@@ -219,7 +219,7 @@ void ManuvrXport::listening(bool en) {
 
 /*
 * Mark this transport connected or disconnected.
-* This method is virtual, and may be over-ridden if the specific transport has 
+* This method is virtual, and may be over-ridden if the specific transport has
 *   something more sophisticated in mind.
 */
 void ManuvrXport::initialized(bool en) {
@@ -238,24 +238,24 @@ void ManuvrXport::initialized(bool en) {
 
 
 /****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌          
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄ 
+* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
+* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
+* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
 * ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
 * ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
 * ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
 * ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀ 
-* 
+*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+*
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
 
 
 /**
-* Debug support method. This fxn is only present in debug builds. 
+* Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
@@ -274,7 +274,7 @@ void ManuvrXport::printDebug(StringBuilder *temp) {
 
 int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
-  
+
   switch (active_event->event_code) {
     case MANUVR_MSG_SESS_ORIGINATE_MSG:
       break;
@@ -289,7 +289,7 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
             #endif
             write_port(temp_sb->string(), temp_sb->length());
           }
-          
+
           //uint16_t xenomsg_id = session->nextMessage(&outbound_msg);
           //if (xenomsg_id) {
           //  if (write_port(outbound_msg.string(), outbound_msg.length()) ) {
@@ -309,7 +309,7 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
       }
       return_value++;
       break;
-      
+
     case MANUVR_MSG_XPORT_RECEIVE:
     case MANUVR_MSG_XPORT_RESERVED_0:
     case MANUVR_MSG_XPORT_RESERVED_1:
@@ -323,7 +323,7 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
     case MANUVR_MSG_XPORT_SESSION:
     case MANUVR_MSG_XPORT_QUEUE_RDY:
     case MANUVR_MSG_XPORT_CB_QUEUE_RDY:
-    
+
     case MANUVR_MSG_XPORT_IDENTITY:
       #ifdef __MANUVR_DEBUG
       if (verbosity > 3) {
@@ -342,7 +342,7 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
       return_value += EventReceiver::notify(active_event);
       break;
   }
-  
+
   if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
 }

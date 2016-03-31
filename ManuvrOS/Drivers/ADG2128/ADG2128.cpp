@@ -3,26 +3,25 @@ File:   ADG2128.cpp
 Author: J. Ian Lindsay
 Date:   2014.03.10
 
+Copyright 2016 Manuvr, Inc
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 */
 
 #include "ADG2128.h"
 
-const int8_t ADG2128::ADG2128_ERROR_NO_ERROR         = 0; 
+const int8_t ADG2128::ADG2128_ERROR_NO_ERROR         = 0;
 const int8_t ADG2128::ADG2128_ERROR_ABSENT           = -1;
 const int8_t ADG2128::ADG2128_ERROR_BUS              = -2;
 const int8_t ADG2128::ADG2128_ERROR_BAD_COLUMN       = -3;   // Column was out-of-bounds.
@@ -48,8 +47,8 @@ ADG2128::~ADG2128(void) {
 }
 
 
-/* 
-* 
+/*
+*
 */
 int8_t ADG2128::init(void) {
   for (int i = 0; i < 12; i++) {
@@ -64,7 +63,7 @@ int8_t ADG2128::init(void) {
 }
 
 
-    
+
 int8_t ADG2128::setRoute(uint8_t col, uint8_t row) {
   if (col > 7)  return ADG2128_ERROR_BAD_COLUMN;
   if (row > 11) return ADG2128_ERROR_BAD_ROW;
@@ -214,6 +213,3 @@ void ADG2128::printDebug(StringBuilder* output) {
   }
   output->concat("\n");
 }
-
-
-

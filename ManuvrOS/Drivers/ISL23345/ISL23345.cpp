@@ -3,20 +3,19 @@ File:   ISL23345.cpp
 Author: J. Ian Lindsay
 Date:   2014.03.10
 
+Copyright 2016 Manuvr, Inc
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 */
 
@@ -27,9 +26,9 @@ const int8_t ISL23345::ISL23345_ERROR_PEGGED_MIN       = 1;    // There was no e
 const int8_t ISL23345::ISL23345_ERROR_NO_ERROR         = 0;    // There was no error.
 const int8_t ISL23345::ISL23345_ERROR_ABSENT           = -1;   // The ISL23345 appears to not be connected to the bus.
 const int8_t ISL23345::ISL23345_ERROR_BUS              = -2;   // Something went wrong with the i2c bus.
-const int8_t ISL23345::ISL23345_ERROR_ALREADY_AT_MAX   = -3;   // A caller tried to increase the value of the wiper beyond its maximum.  
+const int8_t ISL23345::ISL23345_ERROR_ALREADY_AT_MAX   = -3;   // A caller tried to increase the value of the wiper beyond its maximum.
 const int8_t ISL23345::ISL23345_ERROR_ALREADY_AT_MIN   = -4;   // A caller tried to decrease the value of the wiper below its minimum.
-const int8_t ISL23345::ISL23345_ERROR_INVALID_POT      = -5;   // The ISL23345 only has 4 potentiometers. 
+const int8_t ISL23345::ISL23345_ERROR_INVALID_POT      = -5;   // The ISL23345 only has 4 potentiometers.
 
 
 
@@ -38,7 +37,7 @@ const int8_t ISL23345::ISL23345_ERROR_INVALID_POT      = -5;   // The ISL23345 o
 */
 ISL23345::ISL23345(uint8_t i2caddr) : I2CDeviceWithRegisters() {
 	_dev_addr = i2caddr;
-	
+
 	dev_enabled = false;
 	dev_init    = false;
 	preserve_state_on_destroy = false;
@@ -61,7 +60,7 @@ ISL23345::~ISL23345(void) {
 
 
 /*
-* Call to read the device and cause this class's state to reflect that of the device. 
+* Call to read the device and cause this class's state to reflect that of the device.
 */
 int8_t ISL23345::init(void) {
 	int8_t return_value = ISL23345_ERROR_NO_ERROR;
@@ -161,13 +160,13 @@ uint16_t ISL23345::getRange(void) {    return 0x00FF;       }  // Trivial. Retur
 
 void ISL23345::operationCompleteCallback(I2CQueuedOperation* completed) {
   I2CDeviceWithRegisters::operationCompleteCallback(completed);
-  
+
   if (completed->err_code != I2C_ERR_CODE_NO_ERROR) {
     return;
   }
-  
+
   dev_init = true;
-  
+
   switch (completed->sub_addr) {
     case ISL23345_REG_ACR:
       if (regValue(ISL23345_REG_ACR) == 0x00) dev_enabled = false;
@@ -200,12 +199,9 @@ void ISL23345::printDebug(StringBuilder* output) {
 		output->concat("\t Not initialized\n");
 		return;
 	}
-	
+
 	for (int i = 0; i < 4; i++) {
 		output->concatf("\t POT %d: 0x%02x\n", i, values[i]);
 	}
 	output->concatf("\n");
 }
-
-
-

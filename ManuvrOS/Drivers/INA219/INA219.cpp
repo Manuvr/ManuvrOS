@@ -3,20 +3,19 @@ File:   INA219.cpp
 Author: J. Ian Lindsay
 Date:   2014.05.27
 
+Copyright 2016 Manuvr, Inc
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 */
 
@@ -47,7 +46,7 @@ INA219::INA219(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
   shunt_value        = 0.01f;  // We will be unable to init() with these values.
   max_voltage_delta  = batt_max_v;  // We will be unable to init() with these values.
   batt_chemistry     = INA219_BATTERY_CHEM_UNDEF;
-  
+
   init_complete = false;
 
   defineRegister(INA219_REG_CONFIGURATION, (uint16_t) 0, false, false, true);
@@ -76,11 +75,11 @@ int8_t INA219::init() {
   else {
     max_voltage_delta = 0;
   }
-  
+
   if ((batt_min_v > 0) && (batt_max_v > 0) && (batt_capacity > 0) && (shunt_value > 0) && (max_voltage_delta > 0)) {
-      // If we have all this, we should be safe to init(). If the user lied to us, we will not go to space today. 
+      // If we have all this, we should be safe to init(). If the user lied to us, we will not go to space today.
   }
-  
+
   //batt_min_v;
   //batt_max_v;
   //batt_capacity;
@@ -92,7 +91,7 @@ int8_t INA219::init() {
                     INA219_CONFIG_SADCRES_12BIT_1S_532US |
                     INA219_CONFIG_MODE_SANDBVOLT_CONTINUOUS;
   cal_value = 6;
-  
+
   writeIndirect(INA219_REG_CALIBRATION, cal_value, true);
   writeIndirect(INA219_REG_CONFIGURATION, cfg_value);
   //if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
@@ -108,7 +107,7 @@ int8_t INA219::init() {
 int8_t INA219::setParameter(uint16_t reg, int len, uint8_t *data) {
   switch (reg) {
     case INA219_REG_CLASS_MODE:
-      { uint8_t nu = *(data); 
+      { uint8_t nu = *(data);
         if (nu & INA219_MODE_BATTERY) {
         }
         if (nu & INA219_MODE_INTEGRATION) {
@@ -119,7 +118,7 @@ int8_t INA219::setParameter(uint16_t reg, int len, uint8_t *data) {
     case INA219_REG_BATTERY_SIZE:
       break;
     case INA219_REG_BATTERY_MIN_V:
-      
+
       break;
     case INA219_REG_BATTERY_MAX_V:
       break;
@@ -146,7 +145,7 @@ int8_t INA219::getParameter(uint16_t reg, int len, uint8_t*) {
   return SensorWrapper::SENSOR_ERROR_INVALID_PARAM_ID;
 }
 
-                               
+
 int8_t INA219::readSensor(void) {
   if (sensor_active && init_complete) {
     if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) INA219_REG_SHUNT_VOLTAGE)) {
@@ -201,7 +200,7 @@ void INA219::operationCompleteCallback(I2CQueuedOperation* completed) {
 
 
 /**
-* Debug support method. This fxn is only present in debug builds. 
+* Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
@@ -223,7 +222,7 @@ void INA219::printDebug(StringBuilder* temp) {
 */
 bool INA219::process_read_data(void) {
   if (regUpdated(INA219_REG_POWER) && regUpdated(INA219_REG_CURRENT) && regUpdated(INA219_REG_BUS_VOLTAGE) && regUpdated(INA219_REG_SHUNT_VOLTAGE)) {
-    float local_shunt   = (float) ((((int16_t) regValue(INA219_REG_SHUNT_VOLTAGE)) >> 3) * 0.004f);   // So many mV. 
+    float local_shunt   = (float) ((((int16_t) regValue(INA219_REG_SHUNT_VOLTAGE)) >> 3) * 0.004f);   // So many mV.
     float local_bus     = (float) ((((int16_t) regValue(INA219_REG_BUS_VOLTAGE))   >> 3) * 0.004f);   // So many mV.
     float local_current = (float) (((int16_t) regValue(INA219_REG_CURRENT)) / 10.0f);     // Much electrons.
     float local_power   = (float) (((int16_t) regValue(INA219_REG_POWER)) / 2.0f);       // Such joules.
@@ -232,7 +231,7 @@ bool INA219::process_read_data(void) {
     updateDatum(0, local_current);
     updateDatum(1, local_bus);
     updateDatum(2, local_power);
-    
+
     markRegRead(INA219_REG_POWER);
     markRegRead(INA219_REG_CURRENT);
     markRegRead(INA219_REG_BUS_VOLTAGE);
@@ -305,4 +304,3 @@ int8_t INA219::setBatteryMode(bool nu_mode) {
   }
   return SensorWrapper::SENSOR_ERROR_MISSING_CONF;
 }
-

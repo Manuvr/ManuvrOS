@@ -3,19 +3,19 @@ File:   XenoSession.cpp
 Author: J. Ian Lindsay
 Date:   2014.11.20
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+Copyright 2016 Manuvr, Inc
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 
 XenoSession is the class that manages dialog with other systems via some
@@ -29,8 +29,8 @@ XenoSession is the class that manages dialog with other systems via some
 
 
 /****************************************************************************************************
-*   ___ _              ___      _ _              _      _       
-*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___ 
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
 * | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
 *  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
 *                                          |_|
@@ -51,13 +51,13 @@ XenoSession::XenoSession(ManuvrXport* _xport) {
   tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
 
   owner = _xport;
-  
+
   session_state             = XENOSESSION_STATE_UNINITIALIZED;
   session_last_state        = XENOSESSION_STATE_UNINITIALIZED;
   sequential_parse_failures = 0;
   sequential_ack_failures   = 0;
   working                   = NULL;
-  
+
   MAX_PARSE_FAILURES  = 3;  // How many failures-to-parse should we tolerate before SYNCing?
   MAX_ACK_FAILURES    = 3;  // How many failures-to-ACK should we tolerate before SYNCing?
   bootComplete();    // Because we are instantiated well after boot, we call this on construction.
@@ -71,7 +71,7 @@ XenoSession::~XenoSession() {
   sync_event.enableSchedule(false);
   __kernel->removeSchedule(&sync_event);
   __kernel->unsubscribe((EventReceiver*) this);  // Unsubscribe
-  
+
   purgeInbound();  // Need to do careful checks in here for open comm loops.
   purgeOutbound(); // Need to do careful checks in here for open comm loops.
 
@@ -158,18 +158,18 @@ int8_t XenoSession::markMessageComplete(uint16_t target_id) {
 
 
 /****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌          
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄ 
+* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
+* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
+* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
 * ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
 * ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
 * ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
 * ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀ 
-* 
+*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+*
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
 
@@ -180,7 +180,7 @@ int8_t XenoSession::markMessageComplete(uint16_t target_id) {
 */
 int8_t XenoSession::bootComplete() {
   EventReceiver::bootComplete();
-  
+
   sync_event.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG);
   sync_event.isManaged(true);
   sync_event.specific_target = (EventReceiver*) this;
@@ -197,10 +197,10 @@ int8_t XenoSession::bootComplete() {
 
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
-*   has been serviced and we are now getting the chance to see the results. The argument 
+*   has been serviced and we are now getting the chance to see the results. The argument
 *   to this fxn will never be NULL.
 *
-* Depending on class implementations, we might choose to handle the completed Event differently. We 
+* Depending on class implementations, we might choose to handle the completed Event differently. We
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
 *   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
@@ -211,9 +211,9 @@ int8_t XenoSession::bootComplete() {
 */
 int8_t XenoSession::callback_proc(ManuvrRunnable *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
-     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
+     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
-  
+
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     case MANUVR_MSG_SELF_DESCRIBE:
@@ -222,20 +222,20 @@ int8_t XenoSession::callback_proc(ManuvrRunnable *event) {
     default:
       break;
   }
-  
+
   return return_value;
 }
 
 
 /*
-* This is the override from EventReceiver, but there is a bit of a twist this time. 
+* This is the override from EventReceiver, but there is a bit of a twist this time.
 * Following the normal processing of the incoming event, this class compares it against
 *   a list of events that it has been instructed to relay to the counterparty. If the event
 *   meets the relay criteria, we serialize it and send it to the transport that we are bound to.
 */
 int8_t XenoSession::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
-  
+
   switch (active_event->event_code) {
     /* General system events */
     case MANUVR_MSG_INTERRUPTS_MASKED:
@@ -262,7 +262,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
       }
       return_value++;
       break;
-      
+
     case MANUVR_MSG_SESS_ORIGINATE_MSG:
       sendSyncPacket();
       return_value++;
@@ -277,7 +277,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
       }
       return_value++;
       break;
-      
+
     case MANUVR_MSG_SESS_DUMP_DEBUG:
       printDebug(&local_log);
       return_value++;
@@ -292,8 +292,8 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
   if (active_event->originator != (EventReceiver*) this) {
     if ((XENO_SESSION_IGNORE_NON_EXPORTABLES) && (active_event->isExportable())) {
       /* This is the block that allows the counterparty to intercept events of its choosing. */
-      
-      if (syncd()) { 
+
+      if (syncd()) {
         if (msg_relay_list.contains(active_event->getMsgDef())) {
           // If we are in this block, it means we need to serialize the event and send it.
           sendEvent(active_event);
@@ -302,7 +302,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
       }
     }
   }
-  
+
   if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
 }
@@ -317,7 +317,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
 /**
 * Empties the outbound message queue (those bytes designated for the transport).
 *
-* @return  int The number of outbound messages that were purged. 
+* @return  int The number of outbound messages that were purged.
 */
 int XenoSession::purgeOutbound() {
   int return_value = outbound_messages.size();
@@ -341,7 +341,7 @@ int XenoSession::purgeOutbound() {
 /**
 * Empties the inbound message queue (those bytes from the transport that we need to proc).
 *
-* @return  int The number of inbound messages that were purged. 
+* @return  int The number of inbound messages that were purged.
 */
 int XenoSession::purgeInbound() {
   int return_value = inbound_messages.size();
@@ -372,7 +372,7 @@ int8_t XenoSession::sendSyncPacket() {
   if (owner->connected()) {
     StringBuilder sync_packet((unsigned char*) XenoMessage::SYNC_PACKET_BYTES, 4);
     owner->sendBuffer(&sync_packet);
-    
+
     //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
     //event->specific_target = owner;  //   event to be the transport that instantiated us.
     //raiseEvent(event);
@@ -388,7 +388,7 @@ int8_t XenoSession::sendSyncPacket() {
 *
 * The keep-alive system is not handled in the transport because it is part of the protocol.
 * A transport might have its own link-layer-appropriate keep-alive mechanism, which can be
-*   used in-place of the KA at this (Session) layer. In such case, the Transport class would 
+*   used in-place of the KA at this (Session) layer. In such case, the Transport class would
 *   carry configuration flags/members that co-ordinate with this class so that the Session
 *   doesn't feel the need to use case (2) given above.
 *               ---J. Ian Lindsay   Tue Aug 04 23:12:55 MST 2015
@@ -418,11 +418,11 @@ int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
   if (nu_outbound_msg->serialize(&buf) > 0) {
     owner->sendBuffer(&buf);
   }
-  
+
   if (nu_outbound_msg->expectsACK()) {
     outbound_messages.insert(nu_outbound_msg);
   }
-  
+
   // We are about to pass a message across the transport.
   //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
   //event->originator      = this;   // We want the callback and the only receiver of this
@@ -440,7 +440,7 @@ int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
 * If no sync packets were found in the buffer, we should return zero after having fully-consumed
 *   the buffer.
 *
-* @return  int8_t 0 if we did not find a sync packet. 1 if we did. -1 on meltdown. 
+* @return  int8_t 0 if we did not find a sync packet. 1 if we did. -1 on meltdown.
 */
 int8_t XenoSession::scan_buffer_for_sync() {
   int8_t return_value = 0;
@@ -461,7 +461,7 @@ int8_t XenoSession::scan_buffer_for_sync() {
       offset++;
     }
   }
-  
+
   if (return_value) {
     /* We found a sync! Now to cull the sync data from the session buffer. We COULD
     *  only cull the modulus of the offset and let the parser handle the sync packets,
@@ -481,11 +481,11 @@ int8_t XenoSession::scan_buffer_for_sync() {
 /**
 * Calling this fxn puts the session into sync mode. This will throw the session into a tizzy
 *   so be careful to call it only as a last resort.
-* 
+*
 * Calling this fxn has the following side-effects:
 *   - Starts the schedule to send sync packets, which will continue until the session is marked sync'd.
 *
-* @param   uint8_t The sync state code that represents where in the sync-state-machine we should be. 
+* @param   uint8_t The sync state code that represents where in the sync-state-machine we should be.
 */
 void XenoSession::mark_session_desync(uint8_t ds_src) {
   session_last_state = session_state;               // Stack our session state.
@@ -497,21 +497,21 @@ void XenoSession::mark_session_desync(uint8_t ds_src) {
   }
   else {
     switch (ds_src) {
-      case XENOSESSION_STATE_SYNC_INITIATED:    // CP-initiated sync 
+      case XENOSESSION_STATE_SYNC_INITIATED:    // CP-initiated sync
         break;
       case XENOSESSION_STATE_SYNC_INITIATOR:    // We initiated sync
         break;
       case XENOSESSION_STATE_SYNC_PEND_EXIT:    // Sync has been recognized and we are rdy for a real packet.
         break;
-      case XENOSESSION_STATE_SYNC_SYNCD:        // Nominal state. Session is in sync. 
+      case XENOSESSION_STATE_SYNC_SYNCD:        // Nominal state. Session is in sync.
         break;
-      case XENOSESSION_STATE_SYNC_CASTING:      // 
+      case XENOSESSION_STATE_SYNC_CASTING:      //
       default:
         break;
     }
   }
   sync_event.enableSchedule(true);
-  
+
   if (local_log.length() > 0) Kernel::log(&local_log);
 }
 
@@ -522,13 +522,13 @@ void XenoSession::mark_session_desync(uint8_t ds_src) {
 *   the session_state to whatever it was before the desync, and if there are messages in the queues,
 *   fires an event to cause the transport to resume pulling from this class.
 *
-* @param   bool Is the sync state machine pending exit (true), or fully-exited (false)? 
+* @param   bool Is the sync state machine pending exit (true), or fully-exited (false)?
 */
 void XenoSession::mark_session_sync(bool pending) {
   sequential_parse_failures = 0;
   sequential_ack_failures   = 0;
   session_last_state = session_state;               // Stack our session state.
-    
+
   if (pending) {
     // We *think* we might be done sync'ing...
     session_state = getState() | XENOSESSION_STATE_SYNC_PEND_EXIT;
@@ -537,7 +537,7 @@ void XenoSession::mark_session_sync(bool pending) {
   else {
     // We are definately done sync'ing.
     session_state = getState();
-    
+
     if (!isEstablished()) {
       // When (if) the session syncs, various components in the firmware might
       //   want a message put through.
@@ -557,7 +557,7 @@ void XenoSession::mark_session_sync(bool pending) {
 int8_t XenoSession::take_message() {
   XenoMessage* nu_xm = working;
   working = NULL;                   // ...make space for the next message.
-  
+
   switch (nu_xm->event->event_code) {
     case MANUVR_MSG_REPLY:
       if (nu_xm->event->argCount() == 0) {
@@ -572,9 +572,9 @@ int8_t XenoSession::take_message() {
         }
       }
       break;
-      
+
     case MANUVR_MSG_SYNC_KEEPALIVE:
-      if (XENOSESSION_STATE_SYNC_PEND_EXIT & session_state) { 
+      if (XENOSESSION_STATE_SYNC_PEND_EXIT & session_state) {
         // If we were pending sync, and got this result, we are almost certainly syncd.
         mark_session_sync(false);   // Mark it so.
       }
@@ -600,7 +600,7 @@ int8_t XenoSession::take_message() {
   if (nu_xm->expectsACK()) {
     switch (nu_xm->event->event_code) {
       case MANUVR_MSG_SYNC_KEEPALIVE:
-        if (XENOSESSION_STATE_SYNC_PEND_EXIT & session_state) { 
+        if (XENOSESSION_STATE_SYNC_PEND_EXIT & session_state) {
           // If we were pending sync, and got this result, we are almost certainly syncd.
           mark_session_sync(false);   // Mark it so.
         }
@@ -622,7 +622,7 @@ int8_t XenoSession::take_message() {
         break;
     }
   }
-  
+
   if (local_log.length() > 0) Kernel::log(&local_log);
   return 0;
 }
@@ -637,9 +637,9 @@ int8_t XenoSession::take_message() {
 * When we take bytes from the transport, and can't use them all right away,
 *   we store them to prepend to the next group of bytes that come through.
 *
-* @param    
-* @param    
-* @return  int8_t  // TODO!!! 
+* @param
+* @param
+* @return  int8_t  // TODO!!!
 */
 int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
   int8_t return_value = 0;
@@ -713,19 +713,19 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
   if (NULL == working) {
     working = XenoMessage::fetchPreallocation(this);
   }
-  
+
   // If the working message is not in a RECEIVING state, it means something has gone sideways.
   if ((XENO_MSG_PROC_STATE_RECEIVING | XENO_MSG_PROC_STATE_UNINITIALIZED) & working->getState()) {
     int consumed = working->feedBuffer(&session_buffer);
     #ifdef __MANUVR_DEBUG
     if (verbosity > 5) local_log.concatf("Feeding message 0x%08x. Consumed %d of %d bytes.\n", (uint32_t) working, consumed, len);
     #endif
-    
+
     if (consumed > 0) {
       // Be sure to cull any bytes in the session buffer that were claimed.
       session_buffer.cull(consumed);
     }
-    
+
     switch (working->getState()) {
       case XENO_MSG_PROC_STATE_AWAITING_PROC:
         // If the message is completed, we can move forward with proc'ing it...
@@ -768,15 +768,15 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
   else {
     if (verbosity > 3) local_log.concatf("XenoMessage 0x%08x is in the wrong state to accept bytes: %s\n", (uint32_t) working, working->getMessageStateString());
   }
-  
-  
+
+
   if (statcked_sess_str != getSessionStateString()) {
     // The session changed state. Print it.
     #ifdef __MANUVR_DEBUG
       if (verbosity > 3) local_log.concatf("XenoSession state change:\t %s ---> %s\n", statcked_sess_str, getSessionStateString());
     #endif
   }
-  
+
   if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
 }
@@ -784,17 +784,17 @@ int8_t XenoSession::bin_stream_rx(unsigned char *buf, int len) {
 
 
 /****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄   ▄         ▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+*  ▄▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄   ▄         ▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░▌       ▐░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀ 
-* ▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌          
-* ▐░▌       ▐░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░▌       ▐░▌▐░▌ ▄▄▄▄▄▄▄▄ 
+* ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀
+* ▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌
+* ▐░▌       ▐░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░▌       ▐░▌▐░▌ ▄▄▄▄▄▄▄▄
 * ▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░▌       ▐░▌▐░▌▐░░░░░░░░▌
 * ▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌▐░▌ ▀▀▀▀▀▀█░▌
 * ▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌       ▐░▌
 * ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌
 * ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀ 
+*  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀
 ****************************************************************************************************/
 
 /**
@@ -806,14 +806,14 @@ const char* XenoSession::getReceiverName() {  return "XenoSession";  }
 
 
 /**
-* Debug support method. This fxn is only present in debug builds. 
+* Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void XenoSession::printDebug(StringBuilder *output) {
   if (NULL == output) return;
   EventReceiver::printDebug(output);
-  
+
   output->concatf("-- Session ID           0x%08x\n", (uint32_t) this);
   output->concatf("-- Session state        %s\n", getSessionStateString());
   output->concatf("-- Sync state           %s\n", getSessionSyncString());
@@ -821,7 +821,7 @@ void XenoSession::printDebug(StringBuilder *output) {
   output->concatf("-- seq_ack_failures     %d\n--\n", sequential_ack_failures);
   output->concatf("-- _heap_instantiations %u\n", (unsigned long) XenoMessage::_heap_instantiations);
   output->concatf("-- _heap_frees          %u\n", (unsigned long) XenoMessage::_heap_freeds);
-  
+
   int ses_buf_len = session_buffer.length();
   if (ses_buf_len > 0) {
     output->concatf("\n-- Session Buffer (%d bytes) --------------------------\n", ses_buf_len);
@@ -836,7 +836,7 @@ void XenoSession::printDebug(StringBuilder *output) {
   for (int i = 0; i < x; i++) {
     output->concatf("\t%s\n", msg_relay_list.get(i)->debug_label);
   }
-  
+
   x = outbound_messages.size();
   if (x > 0) {
     output->concatf("\n-- Outbound Queue %d total, showing top %d ------------\n", x, XENO_SESSION_MAX_QUEUE_PRINT);
@@ -844,7 +844,7 @@ void XenoSession::printDebug(StringBuilder *output) {
         outbound_messages.get(i)->printDebug(output);
     }
   }
-  
+
   x = inbound_messages.size();
   if (x > 0) {
     output->concatf("\n-- Inbound Queue %d total, showing top %d -------------\n", x, XENO_SESSION_MAX_QUEUE_PRINT);
@@ -852,7 +852,7 @@ void XenoSession::printDebug(StringBuilder *output) {
       inbound_messages.get(i)->printDebug(output);
     }
   }
-  
+
   if (NULL != working) {
     output->concat("\n-- XenoMessage in process  ----------------------------\n");
     working->printDebug(output);
@@ -893,9 +893,9 @@ const char* XenoSession::getSessionSyncString() {
 
 void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
   uint8_t temp_byte = 0;
-  
+
   char* str = input->position(0);
-  
+
   if (*(str) != 0) {
     temp_byte = atoi((char*) str+1);
   }
@@ -921,14 +921,12 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
     case 'w':  // Manual session poll.
       Kernel::raiseEvent(MANUVR_MSG_SESS_ORIGINATE_MSG, NULL);
       break;
-      
+
 
     default:
       EventReceiver::procDirectDebugInstruction(input);
       break;
   }
-  
+
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-
-

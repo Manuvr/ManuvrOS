@@ -3,22 +3,21 @@ File:   ADG2128.h
 Author: J. Ian Lindsay
 Date:   2014.03.10
 
+Copyright 2016 Manuvr, Inc
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
-*/                                     
+*/
 
 #ifndef ADG2128_CROSSPOINT_H
 #define ADG2128_CROSSPOINT_H
@@ -29,8 +28,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 /*
-* This class represents an Analog Devices ADG2128 8x12 analog cross-point switch. This switch is controlled via i2c. 
-* The 8-pin group are the columns, and the 12-pin group are rows. 
+* This class represents an Analog Devices ADG2128 8x12 analog cross-point switch. This switch is controlled via i2c.
+* The 8-pin group are the columns, and the 12-pin group are rows.
 */
 
 class ADG2128 : public I2CDevice {
@@ -40,11 +39,11 @@ class ADG2128 : public I2CDevice {
 
     int8_t init(void);                            // Perform bus-related init tasks.
     void preserveOnDestroy(bool);
-                                 
+
     int8_t setRoute(uint8_t col, uint8_t row);    // Sets a route between two pins. Returns error code.
     int8_t unsetRoute(uint8_t col, uint8_t row);  // Unsets a route between two pins. Returns error code.
     int8_t reset(void);                           // Resets the entire device.
-                           
+
     uint8_t getValue(uint8_t row);
 
     /* Overrides from I2CDevice... */
@@ -58,7 +57,7 @@ class ADG2128 : public I2CDevice {
     static const int8_t ADG2128_ERROR_BAD_COLUMN;  // Column was out-of-bounds.
     static const int8_t ADG2128_ERROR_BAD_ROW;     // Row was out-of-bounds.
 
-    
+
   private:
     bool    dev_init;
     bool preserve_state_on_destroy;

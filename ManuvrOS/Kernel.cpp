@@ -2,6 +2,20 @@
 File:   Kernel.cpp
 Author: J. Ian Lindsay
 Date:   2013.07.10
+
+Copyright 2016 Manuvr, Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 */
 
 
@@ -14,17 +28,17 @@ Date:   2013.07.10
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
 *    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
-*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \    
-* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |   
-* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/    
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
 *
 * Static members and initializers should be located here. Initializers first, functions second.
 ****************************************************************************************************/
 Kernel* Kernel::INSTANCE = NULL;
 PriorityQueue<ManuvrRunnable*> Kernel::isr_exec_queue;
 
-const unsigned char MSG_ARGS_EVENTRECEIVER[] = {SYS_EVENTRECEIVER_FM, 0, 0}; 
-const unsigned char MSG_ARGS_NO_ARGS[] = {0}; 
+const unsigned char MSG_ARGS_EVENTRECEIVER[] = {SYS_EVENTRECEIVER_FM, 0, 0};
+const unsigned char MSG_ARGS_NO_ARGS[] = {0};
 
 const MessageTypeDef message_defs[] = {
   {  MANUVR_MSG_SYS_BOOT_COMPLETED   , 0x0000,               "BOOT_COMPLETED"   , MSG_ARGS_NO_ARGS }, // Raised when bootstrap is finished.
@@ -41,7 +55,7 @@ const MessageTypeDef message_defs[] = {
   {  MANUVR_MSG_XPORT_SEND           , MSG_FLAG_IDEMPOTENT,  "XPORT_SEND"           , ManuvrMsg::MSG_ARGS_STR_BUILDER }, //
   {  MANUVR_MSG_RNG_BUFFER_EMPTY     , 0x0000,               "RNG_BUFFER_EMPTY"     , MSG_ARGS_NO_ARGS }, // The RNG couldn't keep up with our entropy demands.
 
-  {  MANUVR_MSG_SYS_FAULT_REPORT     , 0x0000,               "SYS_FAULT"            , ManuvrMsg::MSG_ARGS_U32 }, // 
+  {  MANUVR_MSG_SYS_FAULT_REPORT     , 0x0000,               "SYS_FAULT"            , ManuvrMsg::MSG_ARGS_U32 }, //
 
   {  MANUVR_MSG_SYS_DATETIME_CHANGED , MSG_FLAG_EXPORTABLE,  "SYS_DATETIME_CHANGED" , ManuvrMsg::MSG_ARGS_NONE }, // Raised when the system time changes.
   {  MANUVR_MSG_SYS_SET_DATETIME     , MSG_FLAG_EXPORTABLE,  "SYS_SET_DATETIME"     , ManuvrMsg::MSG_ARGS_NONE }, //
@@ -51,15 +65,15 @@ const MessageTypeDef message_defs[] = {
 
   {  MANUVR_MSG_SESS_SUBCRIBE        , MSG_FLAG_EXPORTABLE,  "SESS_SUBCRIBE"        , ManuvrMsg::MSG_ARGS_NONE }, // Used to subscribe this session to other events.
   {  MANUVR_MSG_SESS_UNSUBCRIBE      , MSG_FLAG_EXPORTABLE,  "SESS_UNSUBCRIBE"      , ManuvrMsg::MSG_ARGS_NONE }, // Used to unsubscribe this session from other events.
-  {  MANUVR_MSG_SESS_DUMP_DEBUG      , MSG_FLAG_EXPORTABLE,  "SESS_DUMP_DEBUG"      , ManuvrMsg::MSG_ARGS_NONE }, // 
-  {  MANUVR_MSG_SESS_ORIGINATE_MSG   , MSG_FLAG_IDEMPOTENT,  "SESS_ORIGINATE_MSG"   , ManuvrMsg::MSG_ARGS_NONE }, // 
+  {  MANUVR_MSG_SESS_DUMP_DEBUG      , MSG_FLAG_EXPORTABLE,  "SESS_DUMP_DEBUG"      , ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_SESS_ORIGINATE_MSG   , MSG_FLAG_IDEMPOTENT,  "SESS_ORIGINATE_MSG"   , ManuvrMsg::MSG_ARGS_NONE }, //
 
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
     // These are messages that are only present under some sort of threading model. They are meant
     //   to faciliate task hand-off, IPC, and concurrency protection.
-    {  MANUVR_MSG_CREATED_THREAD_ID,    0x0000,              "CREATED_THREAD_ID",     ManuvrMsg::MSG_ARGS_U32 }, 
-    {  MANUVR_MSG_DESTROYED_THREAD_ID,  0x0000,              "DESTROYED_THREAD_ID",   ManuvrMsg::MSG_ARGS_U32 }, 
-    {  MANUVR_MSG_UNBLOCK_THREAD,       0x0000,              "UNBLOCK_THREAD",        ManuvrMsg::MSG_ARGS_U32 }, 
+    {  MANUVR_MSG_CREATED_THREAD_ID,    0x0000,              "CREATED_THREAD_ID",     ManuvrMsg::MSG_ARGS_U32 },
+    {  MANUVR_MSG_DESTROYED_THREAD_ID,  0x0000,              "DESTROYED_THREAD_ID",   ManuvrMsg::MSG_ARGS_U32 },
+    {  MANUVR_MSG_UNBLOCK_THREAD,       0x0000,              "UNBLOCK_THREAD",        ManuvrMsg::MSG_ARGS_U32 },
     #if defined (__MANUVR_FREERTOS)
     #endif
 
@@ -67,20 +81,20 @@ const MessageTypeDef message_defs[] = {
     #endif
   #endif
 
-  /* 
+  /*
     For messages that have arguments, we have the option of defining inline lables for each parameter.
     This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
     compile time.
   */
   #if defined (__ENABLE_MSG_SEMANTICS)
-  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_STR_BUILDER, "Command\0\0" }, // 
+  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_STR_BUILDER, "Command\0\0" }, //
   {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_STR_BUILDER, "Body\0\0" }, // Classes emit this to get their log data saved/sent.
-  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_U8, "Power Mode\0\0" }, // 
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_U8, "Power Mode\0\0" }, //
   {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_U8, "Level\0\0"      },   // This tells client classes to adjust their log verbosity.
   #else
-  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_STR_BUILDER, NULL }, // 
+  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_STR_BUILDER, NULL }, //
   {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_STR_BUILDER, NULL }, // Classes emit this to get their log data saved/sent.
-  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_U8, NULL }, // 
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_U8, NULL }, //
   {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_U8, NULL },   // This tells client classes to adjust their log verbosity.
   #endif
 };
@@ -89,13 +103,13 @@ const MessageTypeDef message_defs[] = {
 /*
 * All external access to Kernel's non-static members should obtain it's reference via this fxn...
 *   Note that services that are dependant on us during the bootstrap phase should have a reference
-*   passed into their constructors, rather than forcing them to call this and risking an infinite 
+*   passed into their constructors, rather than forcing them to call this and risking an infinite
 *   recursion.
 */
 Kernel* Kernel::getInstance() {
   if (INSTANCE == NULL) {
     // This is a valid means of instantiating the kernel. Typically, user code
-    //   would have the Kernel on the stack, but if they want to live in the heap, 
+    //   would have the Kernel on the stack, but if they want to live in the heap,
     //   that's fine by us. Oblige...
     Kernel::INSTANCE = new Kernel();
   }
@@ -106,8 +120,8 @@ Kernel* Kernel::getInstance() {
 
 
 /****************************************************************************************************
-*   ___ _              ___      _ _              _      _       
-*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___ 
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
 * | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
 *  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
 *                                          |_|
@@ -131,13 +145,13 @@ Kernel::Kernel() {
   lagged_schedules     = 0;
   bistable_skip_detect = false;  // Set in advanceScheduler(), cleared in serviceSchedules().
   _ms_elapsed          = 0;
-  
-  
+
+
   for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
     /* We carved out a space in our allocation for a pool of events. Ideally, this would be enough
         for most of the load, most of the time. If the preallocation ends up being insufficient to
         meet demand, new Events will be created on the heap. But the events that we are dealing
-        with here are special. They should remain circulating (or in standby) for the lifetime of 
+        with here are special. They should remain circulating (or in standby) for the lifetime of
         this class. */
     _preallocation_pool[i].returnToPrealloc(true);
     preallocated.insert(&_preallocation_pool[i]);
@@ -202,7 +216,7 @@ volatile void Kernel::log(const char *fxn_name, int severity, const char *str, .
   if (!INSTANCE->verbosity) return;
   log_buffer.concatf("%d  %s:\t", severity, fxn_name);
   va_list marker;
-  
+
   va_start(marker, str);
   log_buffer.concatf(str, marker);
   va_end(marker);
@@ -246,7 +260,7 @@ int8_t Kernel::bootstrap() {
 ****************************************************************************************************/
 
 /*
-* This is the means by which we feed raw string input from a console into the 
+* This is the means by which we feed raw string input from a console into the
 *   kernel's user input slot.
 */
 void Kernel::accumulateConsoleInput(uint8_t *buf, int len, bool terminal) {
@@ -349,7 +363,7 @@ int8_t Kernel::registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFx
     }
     ca_queue->insert(ca);
   }
-  
+
   if (cb != NULL) {
     PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[msgCode];
     if (NULL == cb_queue) {
@@ -377,7 +391,7 @@ int8_t Kernel::registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFx
 */
 int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* ori) {
   int8_t return_value = 0;
-  
+
   // We are creating a new Event. Try to snatch a prealloc'd one and fall back to malloc if needed.
   ManuvrRunnable* nu = INSTANCE->preallocated.dequeue();
   if (nu == NULL) {
@@ -527,7 +541,7 @@ int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
     //   queue more than once.
     return -3;
   }
-  
+
   // Those are the basic checks. Now for the advanced functionality...
   if (event->isIdempotent()) {
     ManuvrRunnable* working;
@@ -555,14 +569,14 @@ void Kernel::reclaim_event(ManuvrRunnable* active_runnable) {
   if (NULL == active_runnable) {
     return;
   }
-  
+
   if (schedules.contains(active_runnable)) {
     // This Runnable is still in the scheduler queue. Do not reclaim it.
     return;
   }
-  
+
   bool reap_current_event = active_runnable->kernelShouldReap();
-  
+
   #ifdef __MANUVR_DEBUG
   if (verbosity > 5) {
     local_log.concatf("We will%s be reaping %s.\n", (reap_current_event ? "":" not"), active_runnable->getMsgTypeString());
@@ -647,10 +661,10 @@ int8_t Kernel::procIdleFlags() {
   uint32_t profiler_mark_2 = 0;   // Profiling requests...
   uint32_t profiler_mark_3 = 0;   // Profiling requests...
   int8_t return_value      = 0;   // Number of Events we've processed this call.
-  uint16_t msg_code_local  = 0;   
+  uint16_t msg_code_local  = 0;
 
   serviceSchedules();
-  
+
   ManuvrRunnable *active_runnable = NULL;  // Our short-term focus.
   uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
 
@@ -671,22 +685,22 @@ int8_t Kernel::procIdleFlags() {
   while (exec_queue.hasNext() && should_run_another_event(return_value, profiler_mark)) {
     active_runnable = exec_queue.dequeue();       // Grab the Event and remove it in the same call.
     msg_code_local = active_runnable->event_code;  // This gets used after the life of the event.
-    
+
     current_event = active_runnable;
-    
+
     // Chat and measure.
     #ifdef __MANUVR_DEBUG
     if (verbosity >= 5) local_log.concatf("Servicing: %s\n", active_runnable->getMsgTypeString());
     #endif
-    
+
     profiler_mark_0 = micros();
 
     procCallAheads(active_runnable);
-    
+
     // Now we start notify()'ing subscribers.
     EventReceiver *subscriber;   // No need to assign.
     if (profiler_enabled) profiler_mark_1 = micros();
-    
+
     if (NULL != active_runnable->schedule_callback) {
       // TODO: This is hold-over from the scheduler. Need to modernize it.
       StringBuilder temp_log;
@@ -712,7 +726,7 @@ int8_t Kernel::procIdleFlags() {
     else {
       for (int i = 0; i < subscribers.size(); i++) {
         subscriber = subscribers.get(i);
-        
+
         switch (subscriber->notify(active_runnable)) {
           case 0:   // The nominal case. No response.
             break;
@@ -725,11 +739,11 @@ int8_t Kernel::procIdleFlags() {
         }
       }
     }
-    
+
     procCallBacks(active_runnable);
-    
+
     active_runnable->noteExecutionTime(profiler_mark_0, micros());
-    
+
     if (0 == activity_count) {
       #ifdef __MANUVR_DEBUG
       if (verbosity >= 3) local_log.concatf("\tDead event: %s\n", active_runnable->getMsgTypeString());
@@ -780,14 +794,14 @@ int8_t Kernel::procIdleFlags() {
          decide if it should be reaped. If its memory is being managed by some other class, the reclaim_event()
          fxn will simply remove it from the exec_queue and consider the matter closed. */
     }
-    
+
     // All of the logic above ultimately informs this choice.
     if (clean_up_active_runnable) {
       reclaim_event(active_runnable);
     }
 
     total_events++;
-    
+
     // This is a stat-gathering block.
     if (profiler_enabled) {
       profiler_mark_3 = micros();
@@ -799,7 +813,7 @@ int8_t Kernel::procIdleFlags() {
         if (event_costs.get(i)->msg_code == msg_code_local) {
           profiler_item = event_costs.get(i);
         }
-        i++;                       
+        i++;
       }
       if (NULL == profiler_item) {
         // If we don't yet have a profiler item for this message type...
@@ -836,7 +850,7 @@ int8_t Kernel::procIdleFlags() {
 
     return_value++;   // We just serviced an Event.
   }
-  
+
   total_loops++;
   profiler_mark_3 = micros();
   uint32_t runtime_this_loop = max((uint32_t) profiler_mark_3, (uint32_t) profiler_mark) - min((uint32_t) profiler_mark_3, (uint32_t) profiler_mark);
@@ -859,17 +873,17 @@ int8_t Kernel::procIdleFlags() {
 
 
 /****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄   ▄         ▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+*  ▄▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄   ▄         ▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░▌       ▐░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀ 
-* ▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌          
-* ▐░▌       ▐░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░▌       ▐░▌▐░▌ ▄▄▄▄▄▄▄▄ 
+* ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀
+* ▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌
+* ▐░▌       ▐░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░▌       ▐░▌▐░▌ ▄▄▄▄▄▄▄▄
 * ▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░▌       ▐░▌▐░▌▐░░░░░░░░▌
 * ▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌▐░▌ ▀▀▀▀▀▀█░▌
 * ▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌       ▐░▌
 * ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌
 * ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀ 
+*  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀
 ****************************************************************************************************/
 
 /**
@@ -883,11 +897,11 @@ void Kernel::profiler(bool enabled) {
   max_events_p_loop  = 0;
 
   max_idle_loop_time = 0;
-  events_destroyed   = 0;  
+  events_destroyed   = 0;
   prealloc_starved   = 0;
   burden_of_specific = 0;
-  idempotent_blocks  = 0; 
-  insertion_denials  = 0;   
+  idempotent_blocks  = 0;
+  insertion_denials  = 0;
 
   while (event_costs.hasNext()) delete event_costs.dequeue();
 }
@@ -921,7 +935,7 @@ void Kernel::print_type_sizes() {
   temp.concatf("\t ManuvrMsg             %zu\n", sizeof(ManuvrMsg));
   temp.concatf("\t Argument              %zu\n", sizeof(Argument));
   temp.concatf("\t TaskProfilerData      %zu\n", sizeof(TaskProfilerData));
-  
+
   //temp.concatf(" XenoComm:\n");
   //temp.concatf("\t XenoSession           %zu\n", sizeof(XenoSession));
   //temp.concatf("\t XenoMessage           %zu\n", sizeof(XenoMessage));
@@ -944,7 +958,7 @@ void Kernel::printProfiler(StringBuilder* output) {
   output->concatf("-- total_loops        \t%u\n", (unsigned long) total_loops);
   output->concatf("-- max_idle_loop_time \t%u\n", (unsigned long) max_idle_loop_time);
   output->concatf("-- max_events_p_loop  \t%u\n", (unsigned long) max_events_p_loop);
-    
+
   if (profiler_enabled) {
     output->concat("-- Profiler:\n");
     if (total_events) {
@@ -992,7 +1006,7 @@ const char* Kernel::getReceiverName() {  return "Kernel";  }
 
 
 /**
-* Debug support method. This fxn is only present in debug builds. 
+* Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
@@ -1002,7 +1016,7 @@ void Kernel::printDebug(StringBuilder* output) {
   uint32_t final_sp = getStackPointer();
 
   EventReceiver::printDebug(output);
-  
+
   currentDateTime(output);
   output->concatf("-- %s v%s    Build date: %s %s\n--\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
   output->concatf("-- our_mem_addr:             0x%08x\n", (uint32_t) this);
@@ -1019,7 +1033,7 @@ void Kernel::printDebug(StringBuilder* output) {
   output->concatf("-- events_destroyed:         %u\n", (unsigned long) events_destroyed);
   output->concatf("-- burden_of_being_specific  %u\n", (unsigned long) burden_of_specific);
   output->concatf("-- idempotent_blocks         %u\n", (unsigned long) idempotent_blocks);
-  
+
   output->concatf("-- _ms_elapsed      %u\n", (unsigned long) _ms_elapsed);
   output->concatf("-- Lagged schedules %u\n", (unsigned long) lagged_schedules);
   output->concatf("-- Total schedules:  %d\n-- Active schedules: %d\n\n", schedules.size(), countActiveSchedules());
@@ -1043,23 +1057,23 @@ void Kernel::printDebug(StringBuilder* output) {
 
 
 /****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌          
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄ 
+* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
+* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
+* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
 * ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
 * ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
 * ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
 * ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀ 
-* 
+*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+*
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
 
 /**
-* Boot done finished-up. 
+* Boot done finished-up.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
@@ -1073,10 +1087,10 @@ int8_t Kernel::bootComplete() {
 
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
-*   has been serviced and we are now getting the chance to see the results. The argument 
+*   has been serviced and we are now getting the chance to see the results. The argument
 *   to this fxn will never be NULL.
 *
-* Depending on class implementations, we might choose to handle the completed Event differently. We 
+* Depending on class implementations, we might choose to handle the completed Event differently. We
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
 *   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
@@ -1087,9 +1101,9 @@ int8_t Kernel::bootComplete() {
 */
 int8_t Kernel::callback_proc(ManuvrRunnable *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
-     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
+     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
-  
+
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     case MANUVR_MSG_SYS_BOOT_COMPLETED:
@@ -1106,7 +1120,7 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
 
 int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
   int8_t return_value = 0;
-  
+
   switch (active_runnable->event_code) {
     case MANUVR_MSG_USER_DEBUG_INPUT:
       procDirectDebugInstruction(&last_user_input);
@@ -1136,7 +1150,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
         return_value++;
       }
       break;
-      
+
     case MANUVR_MSG_SYS_REBOOT:
       reboot();
       break;
@@ -1146,11 +1160,11 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
     case MANUVR_MSG_SYS_BOOTLOADER:
       jumpToBootloader();
       break;
-      
+
     case MANUVR_MSG_SYS_ADVERTISE_SRVC:  // Some service is annoucing its arrival.
     case MANUVR_MSG_SYS_RETRACT_SRVC:    // Some service is annoucing its departure.
       if (0 < active_runnable->argCount()) {
-        EventReceiver* er_ptr; 
+        EventReceiver* er_ptr;
         if (0 == active_runnable->getArgAs(&er_ptr)) {
           if (MANUVR_MSG_SYS_ADVERTISE_SRVC == active_runnable->event_code) {
             subscribe((EventReceiver*) er_ptr);
@@ -1161,7 +1175,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
         }
       }
       break;
-      
+
     case MANUVR_MSG_LEGEND_MESSAGES:     // Dump the message definitions.
       if (0 == active_runnable->argCount()) {   // Only if we are seeing a request.
         StringBuilder *tmp_sb = new StringBuilder();
@@ -1204,7 +1218,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
       break;
   }
   return return_value;
-}                             
+}
 
 
 /**
@@ -1227,14 +1241,14 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
     temp_byte = atoi((char*) str+1);
   }
   ManuvrRunnable *event = NULL;  // Pitching events is a common thing in this fxn...
-  
+
   StringBuilder parse_mule;
-  
+
   EventReceiver* subscriber = subscribers.get(subscriber_idx);
   if ((NULL == subscriber) || ((EventReceiver*)this == subscriber)) {
-    // If there was no subscriber specified, or WE were specified 
+    // If there was no subscriber specified, or WE were specified
     //   (for some reason), we process the command ourselves.
-  
+
     switch (c) {
       case 'B':
         if (temp_byte == 128) {
@@ -1250,7 +1264,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
         }
         local_log.concatf("Will only reboot if the number '128' follows the command.\n");
         break;
-  
+
       case 'r':        // Read so many random integers...
         { // TODO: I don't think the RNG is ever being turned off. Save some power....
           temp_byte = (temp_byte == 0) ? PLATFORM_RNG_CARRY_CAPACITY : temp_byte;
@@ -1266,7 +1280,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
           }
         }
         break;
-  
+
       case 'u':
         switch (temp_byte) {
           case 1:
@@ -1279,7 +1293,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
             break;
         }
         break;
-  
+
       case 'y':    // Power mode.
         if (255 != temp_byte) {
           event = Kernel::returnEvent(MANUVR_MSG_SYS_POWER_MODE);
@@ -1290,7 +1304,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
         else {
         }
         break;
-  
+
       #if defined(__MANUVR_DEBUG)
       case 'i':   // Debug prints.
         if (1 == temp_byte) {
@@ -1309,7 +1323,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
         }
         break;
       #endif //__MANUVR_DEBUG
-  
+
       case 'v':           // Set log verbosity.
         parse_mule.concat(str);
         parse_mule.drop_position(0);
@@ -1327,18 +1341,18 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
         }
         EventReceiver::raiseEvent(event);
         break;
-  
+
       default:
         EventReceiver::procDirectDebugInstruction(input);
         break;
-    }   
+    }
   }
   else {
     input->cull(1); // Shuck the identifier byte.
     subscriber->procDirectDebugInstruction(input);
   }
   #endif  //__MANUVR_CONSOLE_SUPPORT
-  
+
   if (local_log.length() > 0) Kernel::log(&local_log);
   last_user_input.clear();
 }
@@ -1415,7 +1429,7 @@ ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, 
 */
 void Kernel::advanceScheduler(unsigned int ms_elapsed) {
   _ms_elapsed += (uint32_t) ms_elapsed;
-  
+
   if (bistable_skip_detect) {
     // Failsafe block
   }
@@ -1431,7 +1445,7 @@ void Kernel::advanceScheduler(unsigned int ms_elapsed) {
 *   if the schedule tries to delete itself), let it expire this run
 *   rather than ripping the rug out from under ourselves.
 *
-* @param  A pointer to the schedule item to be removed. 
+* @param  A pointer to the schedule item to be removed.
 * @return true on success and false on failure.
 */
 bool Kernel::removeSchedule(ManuvrRunnable *obj) {
@@ -1440,7 +1454,7 @@ bool Kernel::removeSchedule(ManuvrRunnable *obj) {
       obj->isScheduled(false);
       schedules.remove(obj);
     }
-    else { 
+    else {
       obj->autoClear(true);
       obj->thread_recurs = 0;
     }
@@ -1465,16 +1479,16 @@ bool Kernel::addSchedule(ManuvrRunnable *obj) {
 /**
 * This is the function that is called from the main loop to offload big
 *  tasks into idle CPU time. If many scheduled items have fired, function
-*  will churn through all of them. The presumption is that they are 
+*  will churn through all of them. The presumption is that they are
 *  latency-sensitive.
 */
 int Kernel::serviceSchedules() {
   if (!boot_completed) return -1;
   int return_value = 0;
-  
+
   int x = schedules.size();
   ManuvrRunnable *current;
-  
+
   for (int i = 0; i < x; i++) {
     current = schedules.recycle();
     if (current->threadEnabled()) {
@@ -1497,10 +1511,10 @@ int Kernel::serviceSchedules() {
       }
     }
   }
-  
+
   // We just ran a loop. Punch the bistable swtich.
   bistable_skip_detect = false;
-  
+
   _ms_elapsed = 0;
   return return_value;
 }

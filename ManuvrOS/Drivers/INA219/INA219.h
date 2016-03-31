@@ -3,21 +3,19 @@ File:   INA219.h
 Author: J. Ian Lindsay
 Date:   2014.05.27
 
+Copyright 2016 Manuvr, Inc
 
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 */
 
@@ -118,64 +116,64 @@ typedef struct v_cap_point {
 
 // TODO: Fill these in with some empirical data...
 const V_Cap_Point chem_index_0[] = {{1.000, 1.00},
-                                    {0.975, 0.90}, 
-                                    {0.950, 0.80}, 
-                                    {0.925, 0.70}, 
-                                    {0.900, 0.50}, 
-                                    {0.875, 0.35}, 
-                                    {0.850, 0.20}, 
-                                    {0.825, 0.10}, 
-                                    {0.800, 0.05}, 
+                                    {0.975, 0.90},
+                                    {0.950, 0.80},
+                                    {0.925, 0.70},
+                                    {0.900, 0.50},
+                                    {0.875, 0.35},
+                                    {0.850, 0.20},
+                                    {0.825, 0.10},
+                                    {0.800, 0.05},
                                     {0.775, 0.00}};
-const V_Cap_Point chem_index_1[] = {{1.000, 1.00}, 
-                                    {0.975, 0.90}, 
-                                    {0.950, 0.80}, 
-                                    {0.925, 0.70}, 
-                                    {0.900, 0.50}, 
-                                    {0.875, 0.35}, 
-                                    {0.850, 0.20}, 
-                                    {0.825, 0.10}, 
-                                    {0.800, 0.05}, 
+const V_Cap_Point chem_index_1[] = {{1.000, 1.00},
+                                    {0.975, 0.90},
+                                    {0.950, 0.80},
+                                    {0.925, 0.70},
+                                    {0.900, 0.50},
+                                    {0.875, 0.35},
+                                    {0.850, 0.20},
+                                    {0.825, 0.10},
+                                    {0.800, 0.05},
                                     {0.775, 0.00}};
-const V_Cap_Point chem_index_2[] = {{1.000, 1.00}, 
-                                    {0.975, 0.90}, 
-                                    {0.950, 0.80}, 
-                                    {0.925, 0.70}, 
-                                    {0.900, 0.50}, 
-                                    {0.875, 0.35}, 
-                                    {0.850, 0.20}, 
-                                    {0.825, 0.10}, 
-                                    {0.800, 0.05}, 
+const V_Cap_Point chem_index_2[] = {{1.000, 1.00},
+                                    {0.975, 0.90},
+                                    {0.950, 0.80},
+                                    {0.925, 0.70},
+                                    {0.900, 0.50},
+                                    {0.875, 0.35},
+                                    {0.850, 0.20},
+                                    {0.825, 0.10},
+                                    {0.800, 0.05},
                                     {0.775, 0.00}};
-const V_Cap_Point chem_index_3[] = {{1.000, 1.00}, 
-                                    {0.975, 0.90}, 
-                                    {0.950, 0.80}, 
-                                    {0.925, 0.70}, 
-                                    {0.900, 0.50}, 
-                                    {0.875, 0.35}, 
-                                    {0.850, 0.20}, 
-                                    {0.825, 0.10}, 
-                                    {0.800, 0.05}, 
+const V_Cap_Point chem_index_3[] = {{1.000, 1.00},
+                                    {0.975, 0.90},
+                                    {0.950, 0.80},
+                                    {0.925, 0.70},
+                                    {0.900, 0.50},
+                                    {0.875, 0.35},
+                                    {0.850, 0.20},
+                                    {0.825, 0.10},
+                                    {0.800, 0.05},
                                     {0.775, 0.00}};
-const V_Cap_Point chem_index_4[] = {{1.000, 1.00}, 
-                                    {0.975, 0.90}, 
-                                    {0.950, 0.80}, 
-                                    {0.925, 0.70}, 
-                                    {0.900, 0.50}, 
-                                    {0.875, 0.35}, 
-                                    {0.850, 0.20}, 
-                                    {0.825, 0.10}, 
-                                    {0.800, 0.05}, 
+const V_Cap_Point chem_index_4[] = {{1.000, 1.00},
+                                    {0.975, 0.90},
+                                    {0.950, 0.80},
+                                    {0.925, 0.70},
+                                    {0.900, 0.50},
+                                    {0.875, 0.35},
+                                    {0.850, 0.20},
+                                    {0.825, 0.10},
+                                    {0.800, 0.05},
                                     {0.775, 0.00}};
-const V_Cap_Point chem_index_5[] = {{1.000, 1.00}, 
-                                    {0.975, 0.90}, 
-                                    {0.950, 0.80}, 
-                                    {0.925, 0.70}, 
-                                    {0.900, 0.50}, 
-                                    {0.875, 0.35}, 
-                                    {0.850, 0.20}, 
-                                    {0.825, 0.10}, 
-                                    {0.800, 0.05}, 
+const V_Cap_Point chem_index_5[] = {{1.000, 1.00},
+                                    {0.975, 0.90},
+                                    {0.950, 0.80},
+                                    {0.925, 0.70},
+                                    {0.900, 0.50},
+                                    {0.875, 0.35},
+                                    {0.850, 0.20},
+                                    {0.825, 0.10},
+                                    {0.800, 0.05},
                                     {0.775, 0.00}};
 
 
@@ -186,20 +184,20 @@ class INA219 : public I2CDeviceWithRegisters, public SensorWrapper {
   public:
     INA219(uint8_t addr = INA219_I2CADDR);
     ~INA219(void);
-    
-    
+
+
     /* Overrides from SensorWrapper */
     int8_t init(void);
     int8_t readSensor(void);
 
     int8_t setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
     int8_t getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
-    
+
     /* Overrides from I2CDevice... */
     void operationCompleteCallback(I2CQueuedOperation*);
     void printDebug(StringBuilder*);
 
-    
+
 
   private:
     bool init_complete;
@@ -210,10 +208,10 @@ class INA219 : public I2CDeviceWithRegisters, public SensorWrapper {
     uint16_t batt_capacity;     // How many mAh can this battery hold?
     uint8_t  batt_chemistry;    // What sort of capacity/voltage curve should we have?
     bool     battery_monitor;   // Is battery monitoring enabled?
-    
+
     float shunt_value;          // How big is the shunt resistor (in ohms)?
     uint8_t max_voltage_delta;  // How much voltage might drop across the shunt? Assume short-circuit is possible. Must be either 16 or 32.
-    
+
     /* Contents of registers that really exist in the hardware. */
     uint16_t reg_configuration;
     uint16_t reg_calibration;
@@ -222,7 +220,7 @@ class INA219 : public I2CDeviceWithRegisters, public SensorWrapper {
     float readShuntVoltage(void);
     float readCurrent(void);
     int8_t setBatteryMode(bool nu_mode);   // Pass true to set the battery mode on. False to turn it off.
-    
+
     bool process_read_data(void);   // Takes the read data, updates SensorWrapper class, zeros registers.
 };
 

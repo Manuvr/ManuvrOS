@@ -3,39 +3,39 @@ File:   ManuvrXport.h
 Author: J. Ian Lindsay
 Date:   2015.03.17
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+Copyright 2016 Manuvr, Inc
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 
 This driver is designed to give Manuvr platform-abstracted transports.
 
 XenoSessions are optionally established by this class, and broadcast to the
   rest of the system (MANUVR_MSG_SESS_ESTABLISHED). By the time that has
-  happened, the session ought to have become sync'd, self-identified, 
+  happened, the session ought to have become sync'd, self-identified,
   authenticated, etc. Therefore, session configuration must be done on a
   per-transport basis. This means that authentication (for instance) is
   transport-wide.
-  
+
 If sessions are enabled for a transport, the highest-level of the protocol
   touched by this class ought to be dealing with sync.
-  
+
 For non-session applications of this class, session-creation and management
   can be disabled. This would be appropriate in cases such as GPS, modems,
   and generally, anything that isn't manuvrable.
 
-For debuggability, the transport has a special mode for acting as a debug 
-  console. 
+For debuggability, the transport has a special mode for acting as a debug
+  console.
 */
 
 
@@ -58,7 +58,7 @@ For debuggability, the transport has a special mode for acting as a debug
 #define MANUVR_XPORT_FLAG_INITIALIZED      0x80000000  // The xport was present and init'd corrently.
 #define MANUVR_XPORT_FLAG_CONNECTED        0x40000000  // The xport is active and able to move data.
 #define MANUVR_XPORT_FLAG_BUSY             0x20000000  // The xport is moving something.
-#define MANUVR_XPORT_FLAG_HAS_SESSION      0x10000000  // See note below. 
+#define MANUVR_XPORT_FLAG_HAS_SESSION      0x10000000  // See note below.
 #define MANUVR_XPORT_FLAG_LISTENING        0x08000000  // We are listening for connections.
 #define MANUVR_XPORT_FLAG_IS_BRIDGED       0x04000000  // This transport instance is bridged to another.
 #define MANUVR_XPORT_FLAG_NON_SESSION      0x02000000
@@ -88,7 +88,7 @@ class ManuvrXport : public EventReceiver {
     virtual ~ManuvrXport() {};
 
     /* Members that deal with sessions. */
-    // TODO: Is this transport used for non-session purposes? IE, GPS? 
+    // TODO: Is this transport used for non-session purposes? IE, GPS?
     inline bool hasSession() {           return (_xport_flags & MANUVR_XPORT_FLAG_HAS_SESSION);  };
     inline EventReceiver* getSession() { return session;  };
 
@@ -100,7 +100,7 @@ class ManuvrXport : public EventReceiver {
     /*
     * Accessors for session behavior regarding connect/disconnect.
     */
-    inline bool alwaysConnected() {         return (_xport_flags & MANUVR_XPORT_FLAG_ALWAYS_CONNECTED);  } 
+    inline bool alwaysConnected() {         return (_xport_flags & MANUVR_XPORT_FLAG_ALWAYS_CONNECTED);  }
     void alwaysConnected(bool en);
 
 
@@ -126,7 +126,7 @@ class ManuvrXport : public EventReceiver {
     void connected(bool);
     inline bool listening() {   return (_xport_flags & MANUVR_XPORT_FLAG_LISTENING);   };
     void listening(bool);
-    
+
     /* Any required setup finished without problems? */
     inline bool initialized() { return (_xport_flags & MANUVR_XPORT_FLAG_INITIALIZED); };
     void initialized(bool en);
@@ -145,9 +145,9 @@ class ManuvrXport : public EventReceiver {
     virtual bool   write_port(unsigned char* out, int out_len) = 0;
     virtual int8_t read_port() = 0;
 
-    
+
     /* We will override these functions in EventReceiver. */
-    // TODO: I'm not sure I've evaluated the full impact of this sort of 
+    // TODO: I'm not sure I've evaluated the full impact of this sort of
     //    choice.  Calltimes? vtable size? alignment? Fragility? Dig.
     virtual void   printDebug(StringBuilder *);
     //virtual int8_t bootComplete();
@@ -155,7 +155,7 @@ class ManuvrXport : public EventReceiver {
     //virtual int8_t callback_proc(ManuvrRunnable *);
 
     // We can have up-to 65535 transport instances concurrently. This well-exceeds
-    //   the configured limits of most linux installations, so it should be enough. 
+    //   the configured limits of most linux installations, so it should be enough.
     static uint16_t TRANSPORT_ID_POOL;
 
 
@@ -163,7 +163,7 @@ class ManuvrXport : public EventReceiver {
 
   protected:
     EventReceiver *session;
-    
+
     // Can also be used to poll the other side. Implementation is completely at the discretion
     //   any extending class. But generally, this feature is necessary.
     ManuvrRunnable read_abort_event;  // Used to timeout a read operation.
@@ -171,10 +171,10 @@ class ManuvrXport : public EventReceiver {
     bool read_timeout_defer;       // Used to timeout a read operation.
 
     uint32_t _xport_mtu;      // The largest packet size we handle.
-    
+
     uint32_t bytes_sent;
     uint32_t bytes_received;
-    
+
     uint16_t xport_id;
 
     #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
@@ -205,4 +205,3 @@ class ManuvrXport : public EventReceiver {
 // TODO: Might we need a transport manager of some sort, for cases like TCP socket listenrs, etc...?
 
 #endif   // __MANUVR_XPORT_H__
-

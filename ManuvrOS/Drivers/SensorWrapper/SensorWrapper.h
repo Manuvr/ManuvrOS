@@ -3,20 +3,19 @@ File:   SensorWrapper.h
 Author: J. Ian Lindsay
 Date:   2013.11.28
 
+Copyright 2016 Manuvr, Inc
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 
 This class is a generic interface to a sensor. That sensor might measure many things.
@@ -61,7 +60,7 @@ using namespace std;
 * Now suppose that sensor automatically reports some of its values on changes...
 * {"9b5d0e9bd2f593a89343328dcdb47b52":{"value":{"vid_1":"698"},"time":1386118856}}
 *
-* Again, note that there is no mention of sensors anywhere. 
+* Again, note that there is no mention of sensors anywhere.
 */
 
 #include "Drivers/DeviceWithRegisters/DeviceRegister.h"
@@ -114,9 +113,9 @@ class SensorWrapper {
 
     SensorWrapper(void);
     ~SensorWrapper(void);
-    
+
     void setSensorId(const char *);
-    
+
     long lastUpdate(void);                                 // Datetime stamp from the last update.
     bool isDirty(uint8_t);                                 // Is the given particular datum dirty?
     bool isDirty(void);                                    // Is ANYTHING in this sensor dirty?
@@ -137,13 +136,13 @@ class SensorWrapper {
     virtual int8_t getParameter(uint16_t reg, int len, uint8_t*) =0; // Used to read operational parameters from the sensor.
     /* A quick note about how setParameter() should be implemented....
     The idea behind this was to work like common i2c sensors in that sensor classes have
-    software "registers" that are written to to control operational aspects of the represented sensor. 
+    software "registers" that are written to to control operational aspects of the represented sensor.
     Sensor classes are free to implement whatever registers they like (up to 16-bit's worth), but
     convention of the sensor should probably take priority. IE... if you are writing a class for a
     sensor that has a control register at 0x40, you should probably case off that value to cause minimal
     confusion later. See some of the provided sensor classes for examples.
     */
-    
+
 
     // Static functions...
     static void issue_json_map(StringBuilder*, SensorWrapper*);              // Returns a pointer to a buffer containing the JSON def of the given sensor.
@@ -176,7 +175,7 @@ class SensorWrapper {
     static const int8_t SENSOR_ERROR_DATA_EXHAUSTED;   // If we try to poll sensor data faster than the sensor can produce it.
     static const int8_t SENSOR_ERROR_BAD_TYPE_CONVERT; // If we ask the class to convert types in a way that isn't possible.
     static const int8_t SENSOR_ERROR_MISSING_CONF;     // If we ask the sensor class to perform an operation on parameters that it doesn't have.
-    static const int8_t SENSOR_ERROR_NOT_INITIALIZED;  // 
+    static const int8_t SENSOR_ERROR_NOT_INITIALIZED;  //
     static const int8_t SENSOR_ERROR_UNDEFINED_ERR;    // If we try to set a sensor parameter to something invalid for an extant register.
 
     static const char* SENSOR_DATUM_NOT_FOUND;
@@ -210,7 +209,7 @@ class SensorWrapper {
     inline int8_t readDatumRaw(uint8_t dat, char** val) {          return readDatumRaw(dat, (void*) &val); }
     inline int8_t readDatumRaw(uint8_t dat, unsigned char** val) { return readDatumRaw(dat, (void*) &val); }
     int8_t readDatumRaw(uint8_t, void*);   // This is the actual implementation.
-    
+
     // Some constants for units...
     static const char* COMMON_UNITS_DEGREES;
     static const char* COMMON_UNITS_DEG_SEC;
@@ -235,10 +234,9 @@ class SensorWrapper {
     void insert_datum(SensorDatum*);
     void clear_data(SensorDatum*);
     int8_t writeDatumDataToSB(SensorDatum*, StringBuilder*);
-    
+
     int8_t mark_dirty(void);      // Marks this sensor dirty.
     int8_t mark_dirty(uint8_t);   // Marks a specific datum in this sensor as dirty.
 };
 
 #endif
-

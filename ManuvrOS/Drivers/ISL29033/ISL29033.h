@@ -3,20 +3,19 @@ File:   ISL29033.h
 Author: J. Ian Lindsay
 Date:   2014.05.27
 
+Copyright 2016 Manuvr, Inc
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 */
 
@@ -65,9 +64,9 @@ class ISL29033 : public I2CDeviceWithRegisters, public SensorWrapper {
   public:
     ISL29033(uint8_t addr = ISL29033_I2CADDR);
     ~ISL29033();
-    
+
     void gpioSetup();
-    
+
     /* Overrides from SensorWrapper */
     int8_t init(void);
     int8_t readSensor(void);
@@ -81,7 +80,7 @@ class ISL29033 : public I2CDeviceWithRegisters, public SensorWrapper {
 
     static const float res_range_precalc[4][4];   // First index is res, second index is range.
 
-    
+
 
   private:
     bool     autorange;          // Set this flag to allow this class to automatically adjust the dynamic range of the sensor.
@@ -91,12 +90,12 @@ class ISL29033 : public I2CDeviceWithRegisters, public SensorWrapper {
     uint8_t  irq_persist;
     uint16_t threshold_lo;
     uint16_t threshold_hi;
-    
+
     int8_t setResRange(void);
     int8_t setThresholds(void);
     int8_t setCommandReg(void);
     uint8_t getCommandReg(void);
-    
+
     bool calculateLux(void);
 };
 

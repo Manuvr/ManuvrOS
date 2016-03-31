@@ -3,23 +3,19 @@ File:   Platform.cpp
 Author: J. Ian Lindsay
 Date:   2015.11.01
 
+Copyright 2016 Manuvr, Inc
 
-Copyright (C) 2014 J. Ian Lindsay
-All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 
 This file is meant to contain a set of common functions that are typically platform-dependent.
@@ -207,9 +203,9 @@ void pin_isr_pitch_event() {
 
 /*
 * This fxn should be called once on boot to setup the CPU pins that are not claimed
-*   by other classes. GPIO pins at the command of this-or-that class should be setup 
-*   in the class that deals with them. 
-* Pending peripheral-level init of pins, we should just enable everything and let 
+*   by other classes. GPIO pins at the command of this-or-that class should be setup
+*   in the class that deals with them.
+* Pending peripheral-level init of pins, we should just enable everything and let
 *   individual classes work out their own requirements.
 */
 void gpioSetup() {
@@ -365,7 +361,7 @@ void platformPreInit() {
 
 
 /*
-* Called as a result of kernels bootstrap() fxn. 
+* Called as a result of kernels bootstrap() fxn.
 */
 void platformInit() {
   start_time_micros = micros();
@@ -377,4 +373,3 @@ void platformInit() {
 #ifdef __cplusplus
  }
 #endif
-

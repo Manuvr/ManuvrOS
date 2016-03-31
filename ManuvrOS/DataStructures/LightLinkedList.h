@@ -3,20 +3,19 @@ File:   LightLinkedList.h
 Author: J. Ian Lindsay
 Date:   2014.03.28
 
+Copyright 2016 Manuvr, Inc
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 
 Template for a linked list.
@@ -57,16 +56,16 @@ template <class T> class LinkedList {
 		LinkedList(void);
 		~LinkedList(void);
 
-		int insert(T);                   // Returns the ID of the data, or -1 on failure. Makes only a reference to the payload. 
+		int insert(T);                   // Returns the ID of the data, or -1 on failure. Makes only a reference to the payload.
 		int insertWithCopy(T);           // Returns the ID of the data, or -1 on failure. Makes a copy of the data.
 		int insertWithCopy(T, size_t);   // Returns the ID of the data, or -1 on failure. Makes a copy of the data, with size specified.
-		
+
 		int size(void);                  // Returns the number of elements in this list.
 
 		T remove(void);                  // Removes the first element of the list. Return true on success.
 		bool remove(T);                  // Removes any elements with this data.
 		T remove(int position);          // Removes the element at the given position of the list. Return true on success.
-		
+
 		int clear(void);                 // Returns the number of elements purged from the list.
 
 		//bool move(int old_position, int new_position);
@@ -226,7 +225,7 @@ template <class T> Node<T>* LinkedList<T>::getLast() {
 
 
 /**
-* Removes the element at the head of the list. 
+* Removes the element at the head of the list.
 *
 * @return the thing removed, if anything. NULL otherwise.
 */
@@ -244,7 +243,7 @@ template <class T> T LinkedList<T>::remove() {
 
 
 /**
-* Removes the element at the given position within the list. 
+* Removes the element at the given position within the list.
 *
 * @param  pos The position to remove.
 * @return the thing removed, if anything. NULL otherwise.
@@ -281,7 +280,7 @@ template <class T> T LinkedList<T>::remove(int pos) {
 
 
 /**
-* Removes the element with the given data. 
+* Removes the element with the given data.
 *
 * @param  test_data  The data to remove.
 * @return true if something was removed. False otherwise.
@@ -313,7 +312,7 @@ template <class T> bool LinkedList<T>::remove(T test_data) {
 
 
 /**
-* Get the first piece of data. 
+* Get the first piece of data.
 *
 * @return The data from the element at the head of the list, or NULL on empty list.
 */
@@ -327,7 +326,7 @@ template <class T> T LinkedList<T>::get() {
 
 
 /**
-* Get the piece of data at the given position in the list. 
+* Get the piece of data at the given position in the list.
 *
 * @param  pos The position to fetch.
 * @return The data from the requested element, or NULL if the list isn't that large.

@@ -3,6 +3,21 @@ File:   ManuvrRunnable.cpp
 Author: J. Ian Lindsay
 Date:   2015.12.18
 
+Copyright 2016 Manuvr, Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+
 This class began life as the merger of ScheduleItem and ManuvrRunnable.
 */
 
@@ -108,7 +123,7 @@ void ManuvrRunnable::__class_initializer() {
   prof_data          = NULL;
   schedule_callback  = NULL;
   priority           = EVENT_PRIORITY_DEFAULT;
-  
+
   // These things have implications for memory management, which is why repurpose() doesn't touch them.
   mem_managed     = false;
   scheduled       = false;
@@ -183,7 +198,7 @@ bool ManuvrRunnable::kernelShouldReap() {
 
 bool ManuvrRunnable::isManaged(bool nu) {
   mem_managed = nu;
-  return mem_managed;   
+  return mem_managed;
 }
 
 
@@ -194,7 +209,7 @@ bool ManuvrRunnable::abort() {
 
 
 /**
-* Debug support method. This fxn is only present in debug builds. 
+* Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
@@ -206,7 +221,7 @@ void ManuvrRunnable::printDebug(StringBuilder *output) {
   if (0 <= arg_count) {
   	  unsigned char* temp_buf = msg_serial.string();
   	  int temp_buf_len        = msg_serial.length();
-  	  
+
   	  output->concatf("\t Preallocated          %s\n", (preallocated ? "yes" : "no"));
   	  output->concatf("\t Originator:           %s\n", (NULL == originator ? "NULL" : originator->getReceiverName()));
   	  output->concatf("\t specific_target:      %s\n", (NULL == specific_target ? "NULL" : specific_target->getReceiverName()));
@@ -227,7 +242,7 @@ void ManuvrRunnable::printDebug(StringBuilder *output) {
   output->concatf("\t Time-till-fire\t%u\n", thread_time_to_wait);
   output->concatf("\t Period        \t%u\n", thread_period);
   output->concatf("\t Recurs?       \t%d\n", thread_recurs);
-  output->concatf("\t Exec pending: \t%s\n", (thread_fire ? "YES":"NO")); 
+  output->concatf("\t Exec pending: \t%s\n", (thread_fire ? "YES":"NO"));
   output->concatf("\t Autoclear     \t%s\n", (autoclear ? "YES":"NO"));
   output->concatf("\t Profiling?    \t%s\n", (profilingEnabled() ? "YES":"NO"));
 
@@ -286,7 +301,7 @@ void ManuvrRunnable::noteExecutionTime(uint32_t profile_start_time, uint32_t pro
     prof_data->run_time_total  += prof_data->run_time_last;
     prof_data->run_time_average = prof_data->run_time_total / ((prof_data->executions) ? prof_data->executions : 1);
     prof_data->executions++;
-  }            
+  }
 }
 
 
@@ -295,8 +310,8 @@ void ManuvrRunnable::noteExecutionTime(uint32_t profile_start_time, uint32_t pro
 ****************************************************************************************************/
 
 void ManuvrRunnable::fireNow(bool nu) {
-  thread_fire = nu;   
-  thread_time_to_wait = thread_period;  
+  thread_fire = nu;
+  thread_time_to_wait = thread_period;
 }
 
 
@@ -387,5 +402,3 @@ bool ManuvrRunnable::delaySchedule(uint32_t by_ms) {
 /****************************************************************************************************
 * Actually execute this runnable.                                                                   *
 ****************************************************************************************************/
-
-

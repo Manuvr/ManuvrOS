@@ -3,23 +3,23 @@ File:   XenoMessage.cpp
 Author: J. Ian Lindsay
 Date:   2014.11.20
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+Copyright 2016 Manuvr, Inc
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 
 XenoMessage is the class that is the interface between ManuvrRunnables and
-  XenoSessions. 
+  XenoSessions.
      ---J. Ian Lindsay
 */
 
@@ -33,9 +33,9 @@ XenoMessage is the class that is the interface between ManuvrRunnables and
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
 *    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
-*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \    
-* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |   
-* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/    
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
 *
 * Static members and initializers should be located here. Initializers first, functions second.
 ****************************************************************************************************/
@@ -47,7 +47,7 @@ const uint8_t XenoMessage::SYNC_PACKET_BYTES[4] = {0x04, 0x00, 0x00, CHECKSUM_PR
 uint32_t XenoMessage::_heap_instantiations = 0;
 uint32_t XenoMessage::_heap_freeds         = 0;
 
-uint16_t _ring_buf_idx = 0; 
+uint16_t _ring_buf_idx = 0;
 
 XenoMessage XenoMessage::__prealloc_pool[XENOMESSAGE_PREALLOCATE_COUNT];
 
@@ -82,14 +82,14 @@ XenoMessage* XenoMessage::fetchPreallocation(XenoSession* _ses) {
 *   strategy. Also, consider converting the most time-critical types to this strategy
 *   up until we hit the boundaries of the STM32 CCM.
 *                                 ---J. Ian Lindsay   Mon Apr 13 10:51:54 MST 2015
-* 
+*
 * @param XenoMessage* obj is the pointer to the object to be reclaimed.
 */
 void XenoMessage::reclaimPreallocation(XenoMessage* obj) {
   uint32_t obj_addr = ((uint32_t) obj);
   uint32_t pre_min  = ((uint32_t) __prealloc_pool);
   uint32_t pre_max  = pre_min + (sizeof(XenoMessage) * XENOMESSAGE_PREALLOCATE_COUNT);
-  
+
   if ((obj_addr < pre_max) && (obj_addr >= pre_min)) {
     // If we are in this block, it means obj was preallocated. wipe and reclaim it.
     #ifdef __MANUVR_DEBUG
@@ -139,7 +139,7 @@ int XenoMessage::contains_sync_pattern(uint8_t* buf, int len) {
 
 /**
 * Scan a buffer for the protocol's sync pattern, returning the offset of the
-*   first byte that breaks the pattern. 
+*   first byte that breaks the pattern.
 *
 * @param buf  The buffer to search through.
 * @param len  How far should we go?
@@ -159,8 +159,8 @@ int XenoMessage::locate_sync_break(uint8_t* buf, int len) {
 
 
 /****************************************************************************************************
-*   ___ _              ___      _ _              _      _       
-*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___ 
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
 * | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
 *  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
 *                                          |_|
@@ -204,7 +204,7 @@ void XenoMessage::wipe() {
   bytes_total     = 0;     // How many bytes does this message occupy?
   checksum_i      = 0;     // The checksum of the data that we receive.
   message_code    = 0;     //
-  
+
   if (NULL != event) {
     // TODO: Now we are worried about this.
     event = NULL;
@@ -227,7 +227,7 @@ void XenoMessage::wipe() {
 void XenoMessage::provideEvent(ManuvrRunnable *existing_event, uint16_t manual_id) {
   event = existing_event;
   unique_id = manual_id;
-  message_code = event->event_code;                // 
+  message_code = event->event_code;                //
   proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;  // Implies we are sending.
 }
 
@@ -247,7 +247,7 @@ int8_t XenoMessage::ack() {
 
 
 /**
-* Calling this sends a message to the counterparty asking them to retransmit the same message. 
+* Calling this sends a message to the counterparty asking them to retransmit the same message.
 *
 * @return  nonzero if there was a problem.
 */
@@ -286,7 +286,7 @@ int XenoMessage::serialize(StringBuilder* buffer) {
   if (NULL == event) {
     return 0;
   }
-  
+
   proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
   int arg_count  = event->serialize(buffer);
   if (arg_count >= 0) {
@@ -297,20 +297,20 @@ int XenoMessage::serialize(StringBuilder* buffer) {
     *(prepend_array + 5) = (uint8_t) (unique_id >> 8);
     *(prepend_array + 6) = (uint8_t) (event->event_code & 0xFF);
     *(prepend_array + 7) = (uint8_t) (event->event_code >> 8);
-    
+
     // Calculate and append checksum.
     uint8_t checksum_temp = CHECKSUM_PRELOAD_BYTE;
     checksum_temp = (uint8_t) checksum_temp + *(prepend_array + 4);
     checksum_temp = (uint8_t) checksum_temp + *(prepend_array + 5);
     checksum_temp = (uint8_t) checksum_temp + *(prepend_array + 6);
     checksum_temp = (uint8_t) checksum_temp + *(prepend_array + 7);
-    
+
     unsigned char* full_xport_array = buffer->string();
     for (int i = 0; i < buffer->length(); i++) {
       checksum_temp = (uint8_t) checksum_temp + *(full_xport_array + i);
     }
     checksum_c = checksum_temp;
-    
+
     *(prepend_array + 0) = (uint8_t) (bytes_total & 0xFF);
     *(prepend_array + 1) = (uint8_t) (bytes_total >> 8);
     *(prepend_array + 2) = (uint8_t) (bytes_total >> 16);
@@ -353,7 +353,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
         #endif
         proc_state = XENO_MSG_PROC_STATE_SYNC_PACKET;  // Mark ourselves as a sync packet.
         bytes_received = 4;
-        
+
         if (output.length() > 0) Kernel::log(&output);
         return x;
       }
@@ -366,12 +366,12 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
         return_value   += 4;
       }
     }
-    
+
     /* Adjust buffer for down-stream code. */
     buf_len -= 4;
     buf     += 4;
   }
-  
+
 
   /* Partial-packet case... */
   if (4 == bytes_received) {
@@ -382,13 +382,13 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
       return return_value;
     }
     else {
-      // Take the bytes remaining 
+      // Take the bytes remaining
       unique_id = parseUint16Fromchars(buf);
       buf += 2;
       message_code = parseUint16Fromchars(buf);
       bytes_received += 4;
       return_value   += 4;
-      
+
       // TODO: Now that we have a message code, we can go get a message def, and possible arg
       //   forms in anticipation of the parse being accurate and the message valid. Not sure if
       //   that is a good idea at this point.    ---J. Ian Lindsay   Thu Feb 04 12:01:54 PST 2016
@@ -402,7 +402,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
 
   /* Do we have the whole packet yet? */
   int bytes_remaining = bytesRemaining();
-  if ((bytes_received >= 8) && (buf_len >= bytes_remaining)) { 
+  if ((bytes_received >= 8) && (buf_len >= bytes_remaining)) {
     /* We might be done... */
     StringBuilder argbuf(buf, bytes_remaining);
     bytes_received += bytes_remaining;
@@ -415,7 +415,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
     checksum_c = (checksum_c + (message_code >> 8) + (message_code & 0x00FF) ) % 256;
     uint8_t* temp    = argbuf.string();
     uint8_t temp_len = argbuf.length();
-    
+
     for (int i = 0; i < temp_len; i++) checksum_c = (checksum_c + *(temp+i) ) % 256;
 
     if (checksum_c == checksum_i) {
@@ -442,7 +442,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
       }
       else {
         /* By convention, 0x0000 is the message code for "Undefined event". In this case it means that
-             we understood what our counterparty said, but ve used a phrase or idiom that we don't 
+             we understood what our counterparty said, but ve used a phrase or idiom that we don't
              understand. We might at this point choose to do any of the following:
            a) Check against an independently-tracked message legend in a session somewhere.
            b) Ask the counterparty for a message legend if we don't have one yet.
@@ -462,7 +462,7 @@ int XenoMessage::feedBuffer(StringBuilder *sb_buf) {
       #endif
     }
   }
-  
+
   if (output.length() > 0) Kernel::log(&output);
   return return_value;
 }
@@ -516,7 +516,7 @@ void XenoMessage::claim(XenoSession* _ses) {
 
 
 /**
-* Debug support method. This fxn is only present in debug builds. 
+* Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
@@ -558,4 +558,3 @@ const char* XenoMessage::getMessageStateString() {
     default:                                        return "<UNKNOWN>";
   }
 }
-

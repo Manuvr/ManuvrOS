@@ -3,19 +3,19 @@ File:   StringBuilder.h
 Author: J. Ian Lindsay
 Date:   2011.06.18
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+Copyright 2016 Manuvr, Inc
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 */
 
@@ -64,7 +64,7 @@ class StringBuilder {
 	int col_length;      // The length of the collapsed string.
 	unsigned char *str;  // The collapsed string.
 	bool preserve_ll;    // If true, do not reap the linked list in the destructor.
-	
+
 	public:
 		StringBuilder(void);
 		StringBuilder(char *initial);
@@ -87,11 +87,11 @@ class StringBuilder {
 		void concat(int nu);
 		void concat(unsigned int nu);
 
-		/* These fxns allow for memory-tight hand-off of StrLL chains. Useful for merging 
+		/* These fxns allow for memory-tight hand-off of StrLL chains. Useful for merging
 		   StringBuilder instances. */
 		void concatHandoff(StringBuilder *nu);
 		void prependHandoff(StringBuilder *nu);
-		
+
 		// TODO: Badly need a variadic concat...
 		// TODID: Got ir dun
 		int concatf(const char *nu, ...);
@@ -106,10 +106,10 @@ class StringBuilder {
 		void cull(int offset, int length);       // Use to throw away all but the specified range of this string.
 		void cull(int length);                   // Use to discard the first X characters from the string.
 
-		void trim(void);                         // Trim whitespace off the ends of the string. 
+		void trim(void);                         // Trim whitespace off the ends of the string.
 
 		void clear(void);                        // Clears the string and frees the memory that was used to hold it.
-		
+
 		/* The functions below are meant to aid basic tokenization. They all consider the collapsed
 		   root string (if present) to be index zero. This detail is concealed from client classes. */
 		int split(const char*);                  // Split the string into tokens by the given string.
@@ -131,7 +131,7 @@ class StringBuilder {
 		void printDebug(StringBuilder*);
 #endif
 
-		
+
 	private:
     #if defined(__MANUVR_LINUX)
       // If we are on linux, we control for concurrency with a mutex...

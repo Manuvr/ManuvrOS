@@ -1,27 +1,30 @@
-/*  ===========================================================================
-#  This is the library for Hover.
-#
-#  Hover is a development kit that lets you control your hardware projects in a whole new way.
-#  Wave goodbye to physical buttons. Hover detects hand movements in the air for touch-less interaction.
-#  It also features five touch-sensitive regions for even more options.
-#  Hover uses I2C and 2 digital pins. It is compatible with Arduino, Raspberry Pi and more.
-#
-#  Hover can be purchased here: http://www.justhover.com
-#
-#  Written by Emran Mahbub and Jonathan Li for Gearseven Studios.
-#  Enhancement and extention by J. Ian Lindsay.
-#  BSD license, all text above must be included in any redistribution
-#  ===========================================================================
-#
-#  INSTALLATION
-#  The 3 library files (Hover.cpp, Hover.h and keywords.txt) in the Hover folder should be placed in your Arduino Library folder.
-#  Run the HoverDemo.ino file from your Arduino IDE.
-#
-#  SUPPORT
-#  For questions and comments, email us at support@gearseven.com
-#  v2.1
-#  ===========================================================================*/
+/*
+File:   MGC3130.h
+Author: J. Ian Lindsay
+Date:   2015.06.01
 
+Copyright 2016 Manuvr, Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+
+This class is a driver for Microchip's MGC3130 e-field gesture sensor. It is meant
+  to be used in ManuvrOS. This driver was derived from my prior derivation of the
+  Arduino Hover library. Nothing remains of the original library. My original fork
+  can be found here:
+  https://github.com/jspark311/hover_arduino
+
+*/
 
 #ifndef __MGC3130_H__
 #define __MGC3130_H__
@@ -72,7 +75,7 @@ class MGC3130 : public I2CDevice, public EventReceiver {
     MGC3130(int ts, int mclr, uint8_t addr = 0x42);
     void init();
 
-    
+
     /* Overrides from I2CDevice... */
     void operationCompleteCallback(I2CQueuedOperation*);
     bool operationCallahead(I2CQueuedOperation* op);
@@ -115,12 +118,12 @@ class MGC3130 : public I2CDevice, public EventReceiver {
     uint8_t _irq_pin_1;   // Pin number being used by optional IRQ pin.
     uint8_t _irq_pin_2;   // Pin number being used by optional IRQ pin.
     uint8_t _irq_pin_3;   // Pin number being used by optional IRQ pin.
-    
+
     uint8_t last_event;
     uint8_t last_seq_num;
 
     uint8_t power_mode;
-    
+
     uint8_t flags;
 
     uint8_t read_buffer[40];
@@ -130,7 +133,7 @@ class MGC3130 : public I2CDevice, public EventReceiver {
     /*
     * Accessor for assertion-gating state-machine. (AirWheel)
     */
-    inline bool airwheel_asserted() {         return (flags & MGC3130_GESTURE_ASSERTION_AW);  } 
+    inline bool airwheel_asserted() {         return (flags & MGC3130_GESTURE_ASSERTION_AW);  }
     inline void airwheel_asserted(bool en) {
       flags = (en) ? (flags | MGC3130_GESTURE_ASSERTION_AW) : (flags & ~(MGC3130_GESTURE_ASSERTION_AW));
     }
@@ -138,7 +141,7 @@ class MGC3130 : public I2CDevice, public EventReceiver {
     /*
     * Accessor for assertion-gating state-machine. (Position)
     */
-    inline bool position_asserted() {         return (flags & MGC3130_GESTURE_ASSERTION_POS);  } 
+    inline bool position_asserted() {         return (flags & MGC3130_GESTURE_ASSERTION_POS);  }
     inline void position_asserted(bool en) {
       flags = (en) ? (flags | MGC3130_GESTURE_ASSERTION_POS) : (flags & ~(MGC3130_GESTURE_ASSERTION_POS));
     }
@@ -146,7 +149,7 @@ class MGC3130 : public I2CDevice, public EventReceiver {
     /*
     * Accessor for TS hold tracking.
     */
-    inline bool are_we_holding_ts() {         return (flags & MGC3130_GESTURE_TS_HELD_BY_US);  } 
+    inline bool are_we_holding_ts() {         return (flags & MGC3130_GESTURE_TS_HELD_BY_US);  }
     inline void are_we_holding_ts(bool en) {
       flags = (en) ? (flags | MGC3130_GESTURE_TS_HELD_BY_US) : (flags & ~(MGC3130_GESTURE_TS_HELD_BY_US));
     }
@@ -154,7 +157,7 @@ class MGC3130 : public I2CDevice, public EventReceiver {
     /*
     * Accessor for TS hold tracking.
     */
-    inline bool is_class_ready() {         return (flags & MGC3130_FLAGS_CLASS_READY);  } 
+    inline bool is_class_ready() {         return (flags & MGC3130_FLAGS_CLASS_READY);  }
     inline void is_class_ready(bool en) {
       flags = (en) ? (flags | MGC3130_FLAGS_CLASS_READY) : (flags & ~(MGC3130_FLAGS_CLASS_READY));
     }

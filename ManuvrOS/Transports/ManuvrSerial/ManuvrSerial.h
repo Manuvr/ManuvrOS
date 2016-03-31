@@ -3,30 +3,30 @@ File:   ManuvrSerial.h
 Author: J. Ian Lindsay
 Date:   2015.03.17
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+Copyright 2016 Manuvr, Inc
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 
 This driver is designed to give Manuvr platform-abstracted COM ports. By
   this is meant generic asynchronous serial ports. On Arduino, this means
   the Serial (or HardwareSerial) class. On linux, it means /dev/tty<x>.
 
-Platforms that require it should be able to extend this driver for specific 
+Platforms that require it should be able to extend this driver for specific
   kinds of hardware support. For an example of this, I would refer you to
   the STM32F4 case-offs I understand that this might seem "upside down"
   WRT how drivers are more typically implemented, and it may change later on.
-  But for now, it seems like a good idea.  
+  But for now, it seems like a good idea.
 */
 
 
@@ -68,15 +68,15 @@ class ManuvrSerial : public ManuvrXport {
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);
 
-    
+
     int8_t connect();
     int8_t listen();
     int8_t reset();
 
     int8_t read_port();
     bool   write_port(unsigned char* out, int out_len);
-    
-    
+
+
 
   protected:
     void __class_initializer();
@@ -88,13 +88,12 @@ class ManuvrSerial : public ManuvrXport {
     uint32_t    _options;
 
     int _baud_rate;
-    
+
     #if defined(__MANUVR_LINUX)
       struct termios termAttr;
     #endif
-    
+
     int8_t init();
 };
 
 #endif   // __MANUVR_SERIAL_PORT_H__
-

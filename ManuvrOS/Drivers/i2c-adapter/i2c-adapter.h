@@ -3,24 +3,23 @@ File:   i2c-adapter.h
 Author: J. Ian Lindsay
 Date:   2014.03.10
 
+Copyright 2016 Manuvr, Inc
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 
 This class is supposed to be an i2c abstraction layer. The goal is to have
-an object of this class that can be instantiated and used to communicate 
+an object of this class that can be instantiated and used to communicate
 with i2c devices (as a bus master) regardless of the platform.
 
 Prime targets for this layer are the linux operating system and the Teensy3,
@@ -34,7 +33,7 @@ but adding support for other platforms ought to be easy.
   #define I2C_ABSTRACTION_LAYER_ADAPTER 1
 
   using namespace std;
-  
+
   #include <inttypes.h>
   #include <stdint.h>
   #include <stdarg.h>
@@ -49,8 +48,8 @@ but adding support for other platforms ought to be easy.
   #define I2C_OPERATION_READ  I2C_Direction_Receiver
   #define I2C_OPERATION_WRITE I2C_Direction_Transmitter
   #define I2C_OPERATION_PING  0x04
-  
-  
+
+
   #define I2C_XFER_STATE_INITIATE  0x00
   #define I2C_XFER_STATE_START     0x01
   #define I2C_XFER_STATE_ADDR      0x02
@@ -59,8 +58,8 @@ but adding support for other platforms ought to be easy.
   #define I2C_XFER_STATE_DMA_WAIT  0x05
   #define I2C_XFER_STATE_STOP      0x06
   #define I2C_XFER_STATE_COMPLETE  0x07   // The stop signal was sent.
-  
-  
+
+
   #define I2C_ERR_CODE_NO_ERROR    0
   #define I2C_ERR_CODE_NO_CASE     -1
   #define I2C_ERR_CODE_NO_REASON   -2
@@ -82,9 +81,9 @@ but adding support for other platforms ought to be easy.
   #define I2C_ERR_SLAVE_INVALID     -16   // Something makes this slave not appropriate for the requested operation.
   #define I2C_ERR_SLAVE_UNDEFD_REG  -17   // The requested register was not defined.
   #define I2C_ERR_SLAVE_REG_IS_RO   -18   // We tried to write to a register defined as read-only.
-  
-  
-  
+
+
+
   #define I2C_BUS_STATE_NO_INIT  0x00
   #define I2C_BUS_STATE_ERROR    0x01
   #define I2C_BUS_STATE_READY    0x02
@@ -93,8 +92,8 @@ but adding support for other platforms ought to be easy.
   // Forward declaration. Definition order in this file is very important.
   class I2CDevice;
   class I2CAdapter;
-  
-  
+
+
   /*
   * This class represents an atomic operation on the i2c bus.
   */
@@ -119,14 +118,14 @@ but adding support for other platforms ought to be easy.
 
       I2CDevice  *requester;
       I2CAdapter *device;
-      
+
       int8_t verbosity;
 
 
       I2CQueuedOperation(uint8_t nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len);
       ~I2CQueuedOperation(void);
 
-      
+
       /*
       * This queue item can begin executing. This is where any bus access should be initiated.
       */
@@ -156,24 +155,24 @@ but adding support for other platforms ought to be easy.
       void markComplete(void);
       int8_t abort(void);
       int8_t abort(int8_t);
-      
+
       /* Debug aides */
       void printDebug(void);
       void printDebug(StringBuilder*);
-      
+
 
     private:
       bool      subaddr_sent;    // Have the subaddress been sent yet?
       static ManuvrRunnable event_queue_ready;
-      
+
       int8_t init_dma();
       static const char* getErrorString(int8_t code);
       static const char* getOpcodeString(uint8_t code);
       static const char* getStateString(uint8_t code);
 
   };
-  
-  
+
+
   /*
   * This is the class that represents the actual i2c peripheral (master).
   */
@@ -182,9 +181,9 @@ but adding support for other platforms ought to be easy.
       bool bus_error;
       bool bus_online;
       int dev;
-      
+
       I2CQueuedOperation* current_queue_item;
-        
+
       I2CAdapter(uint8_t dev_id = 1);         // Constructor takes a bus ID as an argument.
       ~I2CAdapter(void);           // Destructor
 
@@ -204,13 +203,13 @@ but adding support for other platforms ought to be easy.
       void printDebug(StringBuilder *);
       void printDevs(StringBuilder *);
       void printDevs(StringBuilder *, uint8_t dev_num);
-      
+
       /* Overrides from EventReceiver */
       void procDirectDebugInstruction(StringBuilder *);
       int8_t notify(ManuvrRunnable*);
       int8_t callback_proc(ManuvrRunnable *);
 
-      
+
       // These are meant to be called from the bus jobs. They deal with specific bus functions
       //   that may or may not be present on a given platform.
       int8_t generateStart();    // Generate a start condition on the bus.
@@ -234,24 +233,24 @@ but adding support for other platforms ought to be easy.
       LinkedList<I2CDevice*> dev_list;                // A list of active slaves on this bus.
 
       void gpioSetup();
-      
+
       void advance_work_queue(void);                  // Called from the ISR via Event. Advances the bus.
-      
+
       int get_slave_dev_by_addr(uint8_t search_addr);
       void purge_queued_work_by_dev(I2CDevice *dev);
       void purge_queued_work();
       void purge_stalled_job();
   };
 
-  
-  
-  
+
+
+
   /*
   * This class represents a slave device on the bus. It should be extended by any class
   *   representing an i2c device, and should implement the given virtuals.
   *
   * Since the platform we are coding for uses an interrupt-driven i2c implementation,
-  *   we will need to have callbacks. 
+  *   we will need to have callbacks.
   */
   class I2CDevice {
     public:
@@ -262,22 +261,22 @@ but adding support for other platforms ought to be easy.
       */
       I2CDevice(void);
       ~I2CDevice(void);
-      
+
       // Callback for requested operation completion.
       virtual void operationCompleteCallback(I2CQueuedOperation*);
-      
+
       /* If your device needs something to happen immediately prior to bus I/O... */
       virtual bool operationCallahead(I2CQueuedOperation*);
-      
+
       bool assignBusInstance(I2CAdapter *);              // Needs to be called by the i2c class during insertion.
       bool assignBusInstance(volatile I2CAdapter *bus);  // Trivial override.
 
       bool disassignBusInstance(void);                   // This is to be called from the adapter's unassignment function.
-      
+
       /* Debug aides */
       virtual void printDebug(StringBuilder*);
 
-      
+
     protected:
       // Writes <byte_count> bytes from <buf> to the sub-address <sub_addr> of i2c device <dev_addr>.
       // Returns true if the job was accepted. False on error.
@@ -298,8 +297,8 @@ but adding support for other platforms ought to be easy.
     private:
       I2CAdapter* _bus;
   };
-  
-  
+
+
   /*
   * This class is an extension of I2CDevice for the special (most common) case where the
   *   device being represented has an internal register set. This extended class just takes
@@ -311,7 +310,7 @@ but adding support for other platforms ought to be easy.
       ~I2CDeviceWithRegisters(void);
 
       bool sync(void);
-      
+
 
     protected:
       LinkedList<DeviceRegister*> reg_defs;     // Here is where registers will be enumerated.
@@ -327,22 +326,22 @@ but adding support for other platforms ought to be easy.
       bool defineRegister(uint16_t _addr, uint8_t  val, bool dirty, bool unread, bool writable);
       bool defineRegister(uint16_t _addr, uint16_t val, bool dirty, bool unread, bool writable);
       bool defineRegister(uint16_t _addr, uint32_t val, bool dirty, bool unread, bool writable);
-      
+
       DeviceRegister* getRegisterByBaseAddress(int b_addr);
-      
+
       unsigned int regValue(uint8_t base_addr);
-      
+
       bool regUpdated(uint8_t base_addr);
       void markRegRead(uint8_t base_addr);
-      
+
       int8_t writeIndirect(uint8_t base_addr, uint8_t val);
       int8_t writeIndirect(uint8_t base_addr, uint8_t val, bool defer);
 
       int8_t writeDirtyRegisters(void);   // Automatically writes all registers marked as dirty.
-  
+
       // Sync the given list of registers. And an override that syncs all registers.
-      int8_t syncRegisters(void); 
-  
+      int8_t syncRegisters(void);
+
       /* Low-level stuff. These are the ONLY fxns in this ENTIRE class that should care */
       /*   about ACTUAL register addresses. Everything else ought to be using the index */
       /*   for the desired register in reg_defs[].                                      */
@@ -350,20 +349,20 @@ but adding support for other platforms ought to be easy.
       int8_t readRegister(uint8_t base_addr);
       int8_t readRegisters(uint8_t count, ...);
       /* This is the end of the low-level functions.                                    */
-      
+
       /* Debug stuff... */
       virtual void printDebug(StringBuilder* temp);
-      
-      
+
+
     private:
       uint8_t reg_count;
 
       int8_t writeRegister(DeviceRegister *reg);
       int8_t readRegister(DeviceRegister *reg);
-  };  
-  
+  };
 
-  
+
+
 #ifndef STM32F4XX
   // To maintain uniformity with ST's code in an non-ST env...
   #define  I2C_Direction_Transmitter      ((uint8_t)0x00)
@@ -387,4 +386,3 @@ but adding support for other platforms ought to be easy.
 #endif
 
 #endif  //I2C_ABSTRACTION_LAYER_ADAPTER
-

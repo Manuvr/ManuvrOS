@@ -3,20 +3,20 @@ File:   SensorWrapper.cpp
 Author: J. Ian Lindsay
 Date:   2013.11.28
 
+Copyright 2016 Manuvr, Inc
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
 */
 
 
@@ -67,7 +67,7 @@ const int8_t SensorWrapper::SENSOR_ERROR_REG_NOT_DEFINED  = -14;  // If we try t
 const int8_t SensorWrapper::SENSOR_ERROR_DATA_EXHAUSTED   = -15;  // If we try to poll sensor data faster than the sensor can produce it.
 const int8_t SensorWrapper::SENSOR_ERROR_BAD_TYPE_CONVERT = -16;  // If we ask the class to convert types in a way that isn't possible.
 const int8_t SensorWrapper::SENSOR_ERROR_MISSING_CONF     = -17;  // If we ask the sensor class to perform an operation on parameters that it doesn't have.
-const int8_t SensorWrapper::SENSOR_ERROR_NOT_INITIALIZED  = -18;  // 
+const int8_t SensorWrapper::SENSOR_ERROR_NOT_INITIALIZED  = -18;  //
 const int8_t SensorWrapper::SENSOR_ERROR_UNDEFINED_ERR    = -128; // If we try to set a sensor parameter to something invalid for an extant register.
 
 const char* SensorWrapper::SENSOR_DATUM_NOT_FOUND = "Sensor datum not found";
@@ -434,7 +434,7 @@ bool SensorWrapper::defineDatum(int vid, const char* desc, const char* units, ui
         insert_datum(nu);
         return true;
     }
-    
+
   }
   return false;
 }
@@ -469,7 +469,7 @@ void SensorWrapper::insert_datum(SensorDatum* nu) {
     }
     current->next = nu;
   }
-  
+
   if (nu->v_id == -1) {
     nu->v_id = data_count;
   }
@@ -539,4 +539,3 @@ void SensorWrapper::issue_json_value(StringBuilder* provided_buffer, SensorWrapp
   }
   provided_buffer->concatf("},\"updated_at\":%d}}", (unsigned int)sw->updated_at);
 }
-

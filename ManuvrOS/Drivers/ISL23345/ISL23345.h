@@ -3,20 +3,19 @@ File:   ISL23345.h
 Author: J. Ian Lindsay
 Date:   2014.03.10
 
+Copyright 2016 Manuvr, Inc
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 
 This is the class that represents an ISL23345 digital potentiometer.
@@ -46,17 +45,17 @@ class ISL23345 : public I2CDeviceWithRegisters {
   public:
     ISL23345(uint8_t i2c_addr);
     ~ISL23345(void);
-    
+
     int8_t init(void);                            // Perform bus-related init tasks.
     void preserveOnDestroy(bool);
-    
+
     int8_t setValue(uint8_t pot, uint8_t val);    // Sets the value of the given pot.
     uint8_t getValue(uint8_t pot);
     int8_t reset(void);                           // Sets all volumes levels to zero.
     int8_t reset(uint8_t);                        // Sets all volumes levels to given.
-    
+
     int8_t disable(void);
-    int8_t enable(void);                       
+    int8_t enable(void);
     bool enabled(void);
 
     uint16_t getRange(void);                      // Discover the range of this pot.
@@ -72,11 +71,11 @@ class ISL23345 : public I2CDeviceWithRegisters {
     static const int8_t ISL23345_ERROR_NO_ERROR;          // There was no error.
     static const int8_t ISL23345_ERROR_ABSENT;            // The ISL23345 appears to not be connected to the bus.
     static const int8_t ISL23345_ERROR_BUS;               // Something went wrong with the i2c bus.
-    static const int8_t ISL23345_ERROR_ALREADY_AT_MAX;    // A caller tried to increase the value of the wiper beyond its maximum.  
+    static const int8_t ISL23345_ERROR_ALREADY_AT_MAX;    // A caller tried to increase the value of the wiper beyond its maximum.
     static const int8_t ISL23345_ERROR_ALREADY_AT_MIN;    // A caller tried to decrease the value of the wiper below its minimum.
-    static const int8_t ISL23345_ERROR_INVALID_POT;       // The ISL23345 only has 4 potentiometers. 
+    static const int8_t ISL23345_ERROR_INVALID_POT;       // The ISL23345 only has 4 potentiometers.
 
-    
+
   private:
     bool    dev_init;
     bool    dev_enabled;

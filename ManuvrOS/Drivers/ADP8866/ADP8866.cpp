@@ -3,23 +3,19 @@ File:   ADP8866.cpp
 Author: J. Ian Lindsay
 Date:   2014.05.27
 
+Copyright 2016 Manuvr, Inc
 
-Copyright (C) 2014 J. Ian Lindsay
-All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 */
 
@@ -35,21 +31,21 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 const MessageTypeDef adp8866_message_defs[] = {
-  {  MANUVR_MSG_ADP8866_IRQ, 0x0000,  "ADP8866_IRQ",  ManuvrMsg::MSG_ARGS_NONE, NULL },  // 
+  {  MANUVR_MSG_ADP8866_IRQ, 0x0000,  "ADP8866_IRQ",  ManuvrMsg::MSG_ARGS_NONE, NULL },  //
 
-  /* 
+  /*
     For messages that have arguments, we have the option of defining inline lables for each parameter.
     This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
     compile time.
   */
   #if defined (__ENABLE_MSG_SEMANTICS)
-  {  MANUVR_MSG_ADP8866_CHAN_ENABLED, MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_ENABLED", ManuvrMsg::MSG_ARGS_NONE, NULL }, // 
-  {  MANUVR_MSG_ADP8866_CHAN_LEVEL,   MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_LEVEL",   ManuvrMsg::MSG_ARGS_NONE, NULL }, // 
-  {  MANUVR_MSG_ADP8866_ASSIGN_BL,    MSG_FLAG_EXPORTABLE,  "ADP8866_ASSIGN_BL",    ManuvrMsg::MSG_ARGS_NONE, NULL }  // 
+  {  MANUVR_MSG_ADP8866_CHAN_ENABLED, MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_ENABLED", ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_ADP8866_CHAN_LEVEL,   MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_LEVEL",   ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_ADP8866_ASSIGN_BL,    MSG_FLAG_EXPORTABLE,  "ADP8866_ASSIGN_BL",    ManuvrMsg::MSG_ARGS_NONE, NULL }  //
   #else
-  {  MANUVR_MSG_ADP8866_CHAN_ENABLED, MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_ENABLED", ManuvrMsg::MSG_ARGS_NONE, NULL }, // 
-  {  MANUVR_MSG_ADP8866_CHAN_LEVEL,   MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_LEVEL",   ManuvrMsg::MSG_ARGS_NONE, NULL }, // 
-  {  MANUVR_MSG_ADP8866_ASSIGN_BL,    MSG_FLAG_EXPORTABLE,  "ADP8866_ASSIGN_BL",    ManuvrMsg::MSG_ARGS_NONE, NULL }  // 
+  {  MANUVR_MSG_ADP8866_CHAN_ENABLED, MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_ENABLED", ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_ADP8866_CHAN_LEVEL,   MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_LEVEL",   ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_ADP8866_ASSIGN_BL,    MSG_FLAG_EXPORTABLE,  "ADP8866_ASSIGN_BL",    ManuvrMsg::MSG_ARGS_NONE, NULL }  //
   #endif
 };
 
@@ -87,7 +83,7 @@ void ADP8866::__class_initializer() {
   class_mode        = 0;
   power_mode        = 0;
   init_complete     = false;
-  
+
   ADP8866::INSTANCE = this;
 
   int mes_count = sizeof(adp8866_message_defs) / sizeof(MessageTypeDef);
@@ -101,18 +97,18 @@ void ADP8866::__class_initializer() {
 ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : I2CDeviceWithRegisters() {
   __class_initializer();
   _dev_addr = addr;
-  
+
   reset_pin = _reset_pin;
   irq_pin   = _irq_pin;
-  pinMode(_irq_pin, INPUT_PULLUP); 
+  pinMode(_irq_pin, INPUT_PULLUP);
   pinMode(_reset_pin, OUTPUT);
-  
+
   if (irq_pin > 0) {
     attachInterrupt(irq_pin, ADP8866_ISR, FALLING);
   }
-  
+
   setPin(_reset_pin, false);
-  
+
   init_complete = false;
   defineRegister(ADP8866_MANU_DEV_ID,  (uint8_t) 0x00, false,  true, false);
   defineRegister(ADP8866_MDCR,         (uint8_t) 0x00, false,  false, true);
@@ -178,35 +174,35 @@ int8_t ADP8866::init() {
   // Maximum current of ~16mA.
   // All LED outputs are set with the level bits.
   writeIndirect(ADP8866_LVL_SEL_1,  0b01000100, true);
-  writeIndirect(ADP8866_LVL_SEL_2,  0xFF, true); 
-                            
+  writeIndirect(ADP8866_LVL_SEL_2,  0xFF, true);
+
   writeIndirect(ADP8866_GAIN_SEL, 0b00000100, true);
-  
+
   // All LEDs are being driven by the charge pump.
   writeIndirect(ADP8866_PWR_SEL_1,  0x00, true);
   writeIndirect(ADP8866_PWR_SEL_2,  0x00, true);
-                                          
+
   // All LED's independently sinkd. Backlight cubic transition.
   writeIndirect(ADP8866_CFGR,  0b00010100, true);
   writeIndirect(ADP8866_BLSEL, 0b11111111, true);
-  
+
   // Backlight fade rates...
   writeIndirect(ADP8866_BLFR, 0b01100110, true);
-  
+
   // No backlight current.
   writeIndirect(ADP8866_BLMX, 0b00000000, true);
-  
+
   // Sink control. All on. Cubic transfer fxn.
   writeIndirect(ADP8866_ISCC1, 0b00000111, true);
   writeIndirect(ADP8866_ISCC2, 0b11111111, true);
-  
+
   // SON/SOFF delays...
   writeIndirect(ADP8866_ISCT1, 0b11110000, true);
   writeIndirect(ADP8866_ISCT2, 0b00000000, true);
-  
+
   // Enabled interrupts: Over-volt, short-circuit, thermal shutdown
   writeIndirect(ADP8866_INT_EN, 0x1C, true);
-  
+
   // TODO: When the driver inits, we shouldn't have any LEDs on until the user sets
   //   some mandatory constraint so ve doesn't fry vis LEDs.
   writeIndirect(ADP8866_ISC1, 0x05, true);
@@ -218,7 +214,7 @@ int8_t ADP8866::init() {
   writeIndirect(ADP8866_ISC7, 0x05, true);
   writeIndirect(ADP8866_ISC8, 0x05, true);
   writeIndirect(ADP8866_ISC9, 0x05, true);
-  
+
   writeIndirect(ADP8866_ISCT_HB, 0x0A);
   init_complete = true;
   return 0;
@@ -231,7 +227,7 @@ int8_t ADP8866::init() {
 
 void ADP8866::operationCompleteCallback(I2CQueuedOperation* completed) {
   I2CDeviceWithRegisters::operationCompleteCallback(completed);
-  
+
   DeviceRegister *temp_reg = getRegisterByBaseAddress(completed->sub_addr);
   switch (completed->sub_addr) {
       case ADP8866_MANU_DEV_ID:
@@ -382,22 +378,22 @@ void ADP8866::printDebug(StringBuilder* temp) {
 
 
 /****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌          
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄ 
+* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
+* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
+* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
 * ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
 * ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
 * ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
 * ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀ 
-* 
+*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+*
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
 /**
-* There is a NULL-check performed upstream for the scheduler member. So no need 
+* There is a NULL-check performed upstream for the scheduler member. So no need
 *   to do it again here.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
@@ -415,10 +411,10 @@ int8_t ADP8866::bootComplete() {
 
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
-*   has been serviced and we are now getting the chance to see the results. The argument 
+*   has been serviced and we are now getting the chance to see the results. The argument
 *   to this fxn will never be NULL.
 *
-* Depending on class implementations, we might choose to handle the completed Event differently. We 
+* Depending on class implementations, we might choose to handle the completed Event differently. We
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
 *   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
@@ -429,15 +425,15 @@ int8_t ADP8866::bootComplete() {
 */
 int8_t ADP8866::callback_proc(ManuvrRunnable *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
-     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
+     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
-  
+
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     default:
       break;
   }
-  
+
   return return_value;
 }
 
@@ -445,16 +441,16 @@ int8_t ADP8866::callback_proc(ManuvrRunnable *event) {
 
 int8_t ADP8866::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
-  
+
   switch (active_event->event_code) {
     case MANUVR_MSG_SYS_POWER_MODE:
       break;
-      
+
     default:
       return_value += EventReceiver::notify(active_event);
       break;
   }
-      
+
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
   return return_value;
 }
@@ -504,7 +500,7 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
       EventReceiver::procDirectDebugInstruction(input);
       break;
   }
-  
+
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 
@@ -518,7 +514,7 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
 * Example:
 *   Some classes might wish to take direct control over the LEDs to do something fancy.
 *   Other classes might not care about micromanaging LED behavior, but would like to use
-*     them as indirectly as possible. This is the type of class this function is meant for. 
+*     them as indirectly as possible. This is the type of class this function is meant for.
 */
 void ADP8866::set_led_mode(uint8_t num) {
 }
@@ -585,7 +581,7 @@ void ADP8866::enable_channel(uint8_t chan, bool en) {
   uint8_t present_state = (uint8_t)regValue(reg_addr);
   uint8_t bitmask       = (chan > 7) ? 4 : (1 << chan);
   uint8_t desired_state = (en ? (present_state | bitmask) : (present_state & ~bitmask));
-  
+
   if (present_state != desired_state) {
     // If the present state and the desired state differ, Set the register equal to the
     //   present state masked with the desired state.
@@ -637,7 +633,3 @@ void ADP8866::set_power_mode(uint8_t nu_power_mode) {
   }
   Kernel::log("ADP8866 Power mode set. \n");
 }
-
-
-
-
