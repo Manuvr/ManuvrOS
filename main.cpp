@@ -1,3 +1,25 @@
+/*
+File:   main.cpp
+Author: J. Ian Lindsay
+Date:   2016.03.11
+
+Copyright 2016 Manuvr, Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+*/
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -64,14 +86,14 @@ bool running = true;
 void* spawnUIThread(void*) {
   char *input_text	= (char*) alloca(U_INPUT_BUFF_SIZE);	// Buffer to hold user-input.
   StringBuilder user_input;
-  
+
   while (running) {
     printf("%c[36m%s> %c[39m", 0x1B, program_name, 0x1B);
     bzero(input_text, U_INPUT_BUFF_SIZE);
     if (fgets(input_text, U_INPUT_BUFF_SIZE, stdin) != NULL) {
       user_input.concat(input_text);
       user_input.trim();
-      
+
       //while(*t_iterator++ = toupper(*t_iterator));        // Convert to uniform case...
       int arg_count = user_input.split(" \n");
       if (arg_count > 0) {  // We should have at least ONE argument. Right???
@@ -98,7 +120,7 @@ void* spawnUIThread(void*) {
       printHelp();
     }
   }
-  
+
   return NULL;
 }
 
@@ -112,7 +134,7 @@ void* spawnUIThread(void*) {
 int main(int argc, char *argv[]) {
   program_name = argv[0];  // Name of running binary.
   __main_pid = getpid();
-  
+
   kernel = new Kernel();  // Instance a kernel.
 
   #if defined(__MANUVR_DEBUG)
@@ -123,7 +145,7 @@ int main(int argc, char *argv[]) {
   #endif
 
 
-  /* 
+  /*
   * At this point, we should instantiate whatever specific functionality we
   *   want this Manuvrable to have.
   */
@@ -137,12 +159,12 @@ int main(int argc, char *argv[]) {
     kernel->subscribe(&tcp_srv);
     kernel->subscribe(&tcp_cli);
   #endif
-  
+
   #if defined (MANUVR_SUPPORT_SERIAL)
     ManuvrSerial* ser = NULL;
   #endif
 
-       
+
   #if defined(RASPI) || defined(RASPI2)
     // If we are running on a RasPi, let's try to fire up the i2c that is almost
     //   certainly present.
@@ -185,8 +207,8 @@ int main(int argc, char *argv[]) {
       Kernel::raiseEvent(MANUVR_MSG_SYS_SHUTDOWN, NULL);
     }
   }
-  
-  
+
+
   // Once we've loaded up all the goodies we want, we finalize everything thusly...
   printf("%s: Booting Manuvr Kernel....\n", program_name);
   kernel->bootstrap();
@@ -198,11 +220,11 @@ int main(int argc, char *argv[]) {
     tcp_cli.connect();
   #endif
   // TODO: End horrible hackishness.
-  
-  
+
+
   // The main loop. Run forever.
   // TODO: It would be nice to be able to ask the kernel if we should continue running.
-  while (running) { 
+  while (running) {
     kernel->procIdleFlags();
 
     // Move the kernel log to stdout.
@@ -216,7 +238,7 @@ int main(int argc, char *argv[]) {
       }
     }
   }
-  
+
   // Pass a termination signal to the child proc (if we have one).
   if (__shell_pid > 0)  {
     kill(__shell_pid, SIGQUIT);
@@ -225,4 +247,3 @@ int main(int argc, char *argv[]) {
   printf("\n\n");
   exit(0);
 }
-

@@ -1,3 +1,25 @@
+/*
+File:   ManuvrMsg.cpp
+Author: J. Ian Lindsay
+Date:   2014.03.10
+
+Copyright 2016 Manuvr, Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+*/
+
+
 #include "ManuvrMsg.h"
 #include "FirmwareDefs.h"
 #include <string.h>
@@ -14,17 +36,17 @@ extern inline uint16_t parseUint16Fromchars(unsigned char *input);
 PriorityQueue<const MessageTypeDef*> ManuvrMsg::message_defs_extended;
 
 const unsigned char ManuvrMsg::MSG_ARGS_NONE[] = {0};      // Generic argument def for a message with no args.
-  
+
 // Generics for messages that have one arg of a single type, or no args.
-const unsigned char ManuvrMsg::MSG_ARGS_U8[]  = {UINT8_FM,  0}; 
-const unsigned char ManuvrMsg::MSG_ARGS_U16[] = {UINT16_FM, 0}; 
-const unsigned char ManuvrMsg::MSG_ARGS_U32[] = {UINT32_FM, 0}; 
+const unsigned char ManuvrMsg::MSG_ARGS_U8[]  = {UINT8_FM,  0};
+const unsigned char ManuvrMsg::MSG_ARGS_U16[] = {UINT16_FM, 0};
+const unsigned char ManuvrMsg::MSG_ARGS_U32[] = {UINT32_FM, 0};
 
-const unsigned char ManuvrMsg::MSG_ARGS_STR_BUILDER[] = {STR_BUILDER_FM, 0}; 
+const unsigned char ManuvrMsg::MSG_ARGS_STR_BUILDER[] = {STR_BUILDER_FM, 0};
 
-const unsigned char ManuvrMsg::MSG_ARGS_XPORT[]       = {SYS_MANUVR_XPORT_FM, 0}; 
+const unsigned char ManuvrMsg::MSG_ARGS_XPORT[]       = {SYS_MANUVR_XPORT_FM, 0};
 
-/* 
+/*
 * This is the argument form for messages that either...
 *   a) Need a free-form type that we don't support natively
 *   b) Are special-cases (REPLY) that will have their args cast after validation.
@@ -34,7 +56,7 @@ const unsigned char ManuvrMsg::MSG_ARGS_BINBLOB[] = {  BINARY_FM, 0};
 const unsigned char ManuvrMsg::MSG_ARGS_SELF_DESC[] = {
   UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, STR_FM, STR_FM, 0, // All fields.
 };                                                                         // 0 bytes: Request for self-description.
-                            
+
 /*
 * This code is used for forwarding messages between Manuvrables.
 * Implementation of this code is not required, but the ability to understand it is.
@@ -47,10 +69,10 @@ const unsigned char ManuvrMsg::MSG_ARGS_MSG_FORWARD[] = {  STR_FM, BINARY_FM, 0}
 * These are the hard-coded message types that the program knows about.
 * This is where we decide what kind of arguments each message is capable of carrying.
 *
-* Until someone does something smarter, there is no enforcemnt of types in this definition. Only 
+* Until someone does something smarter, there is no enforcemnt of types in this definition. Only
 *   cardinality. Trying to get the type as something incompatible should return an error, but this
 *   leaves type definition as a negotiable-matter between the code that wrote the message, and the
-*   code reading it. We can also add a type string, as I had in BridgeBox, but this can also be 
+*   code reading it. We can also add a type string, as I had in BridgeBox, but this can also be
 *   dynamically built.
 */
 const MessageTypeDef ManuvrMsg::message_defs[] = {
@@ -65,8 +87,8 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SESS_ESTABLISHED     , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_ESTABLISHED"     , MSG_ARGS_NONE }, // Session established.
   {  MANUVR_MSG_SESS_HANGUP          , MSG_FLAG_EXPORTABLE,                        "SESS_HANGUP"          , MSG_ARGS_NONE }, // Session hangup.
   {  MANUVR_MSG_SESS_AUTH_CHALLENGE  , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_AUTH_CHALLENGE"  , MSG_ARGS_NONE }, // A code for challenge-response authentication.
-  {  MANUVR_MSG_SELF_DESCRIBE        , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SELF_DESCRIBE"        , MSG_ARGS_SELF_DESC }, // Starting an application on the receiver. Needs a string. 
-                                                                                    
+  {  MANUVR_MSG_SELF_DESCRIBE        , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SELF_DESCRIBE"        , MSG_ARGS_SELF_DESC }, // Starting an application on the receiver. Needs a string.
+
   {  MANUVR_MSG_SYNC_KEEPALIVE       , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "KA"                  , MSG_ARGS_NONE }, //  A keep-alive message to be ack'd.
 
   {  MANUVR_MSG_LEGEND_TYPES         , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_TYPES"         , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
@@ -75,7 +97,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
 
   {  MANUVR_MSG_MSG_FORWARD          , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "MSG_FORWARD"          , MSG_ARGS_MSG_FORWARD }, // No args? Asking for this legend. One arg: Legend provided.
 
-  /* 
+  /*
     For messages that have arguments, we have the option of defining inline lables for each parameter.
     This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
     compile time.
@@ -132,7 +154,7 @@ void ManuvrMsg::__class_initializer() {
 /**
 * Call this member to repurpose this message for an unrelated task. This mechanism
 *   is designed to prevent malloc()/free() thrash where it can be avoided.
-* 
+*
 * @param code   The new identity code for the message.
 */
 int8_t ManuvrMsg::repurpose(uint16_t code) {
@@ -171,7 +193,7 @@ int ManuvrMsg::argByteCount() {
 
 /**
 * This function is for the exclusive purpose of inflating an argument from a place where a
-*   pointer doesn't make sense. This means that an argument mode that contains a non-exportable 
+*   pointer doesn't make sense. This means that an argument mode that contains a non-exportable
 *   pointer type will not produce the expected result. It might even asplode.
 *
 *
@@ -196,7 +218,7 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
       break;
     case 1:
       // Only one possibility.
-      arg_mode = possible_forms.get(r++); 
+      arg_mode = possible_forms.get(r++);
       printf("%s\n", arg_mode);
       break;
     default:
@@ -210,10 +232,10 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
       }
       break;
   }
-  
-  
-  
-  
+
+
+
+
   Argument *nu_arg = NULL;
   while ((NULL != arg_mode) & (len > 0)) {
     switch ((unsigned char) *arg_mode) {
@@ -356,7 +378,7 @@ int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf, bool preserve) {
       case UINT32_FM:   // This frightens the compiler. Its fears are unfounded.
       case FLOAT_FM:    // This frightens the compiler. Its fears are unfounded.
 
-      
+
       case UINT32_PTR_FM:  // These are *pointers* to the indicated types. They
       case UINT16_PTR_FM:  //   therefore take the whole 4 bytes of memory allocated
       case UINT8_PTR_FM:   //   and can be returned as such.
@@ -388,17 +410,17 @@ int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf, bool preserve) {
       delete arg;
     }
   }
-  
+
   return return_value;
 }
 
 
-//int8_t ManuvrMsg::writePointerArgAs(uint8_t *dat); 
+//int8_t ManuvrMsg::writePointerArgAs(uint8_t *dat);
 //int8_t ManuvrMsg::writePointerArgAs(uint16_t *dat);
 int8_t ManuvrMsg::writePointerArgAs(uint32_t dat) {   return writePointerArgAs(0, &dat);   }
-//int8_t ManuvrMsg::writePointerArgAs(int8_t *dat);  
-//int8_t ManuvrMsg::writePointerArgAs(int16_t *dat); 
-//int8_t ManuvrMsg::writePointerArgAs(int32_t *dat); 
+//int8_t ManuvrMsg::writePointerArgAs(int8_t *dat);
+//int8_t ManuvrMsg::writePointerArgAs(int16_t *dat);
+//int8_t ManuvrMsg::writePointerArgAs(int32_t *dat);
 //int8_t ManuvrMsg::writePointerArgAs(float *dat);
 
 
@@ -434,7 +456,7 @@ int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
         break;
     }
   }
-  
+
   return return_value;
 }
 
@@ -500,7 +522,7 @@ MessageTypeDef* ManuvrMsg::getMsgDef() {
 /**
 * Debug support fxn.
 *
-* @return a pointer to the human-readable label for this Message class. Never NULL. 
+* @return a pointer to the human-readable label for this Message class. Never NULL.
 */
 const char* ManuvrMsg::getMsgTypeString() {
   MessageTypeDef* mes_type = getMsgDef();
@@ -513,7 +535,7 @@ const char* ManuvrMsg::getMsgTypeString() {
 * TODO: Debug stuff. Need to be able to case-off stuff like this in the pre-processor.
 *
 * @param  code  The message identity code in question.
-* @return a pointer to the human-readable label for this Message class. Never NULL. 
+* @return a pointer to the human-readable label for this Message class. Never NULL.
 */
 const char* ManuvrMsg::getMsgTypeString(uint16_t code) {
   int total_elements = sizeof(ManuvrMsg::message_defs) / sizeof(MessageTypeDef);
@@ -606,14 +628,14 @@ const char* ManuvrMsg::getArgTypeString(uint8_t idx) {
 
 
 /**
-* Debug support method. This fxn is only present in debug builds. 
+* Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void ManuvrMsg::printDebug(StringBuilder *temp) {
-  if (NULL == temp) return; 
+  if (NULL == temp) return;
   const MessageTypeDef* type_obj = getMsgDef();
-  
+
   if (&ManuvrMsg::message_defs[0] == type_obj) {
     temp->concatf("\t Message type:   <UNDEFINED (Code 0x%04x)>\n", event_code);
   }
@@ -684,17 +706,17 @@ int ManuvrMsg::serialize(StringBuilder *output) {
 */
 int8_t ManuvrMsg::getMsgLegend(StringBuilder *output) {
   if (NULL == output) return 0;
-  
+
   int total_elements = sizeof(message_defs) / sizeof(MessageTypeDef);
   const MessageTypeDef *temp_def = NULL;
   for (int i = 1; i < total_elements; i++) {
     temp_def = (const MessageTypeDef *) &(message_defs[i]);
-    
+
     if (isExportable(temp_def)) {
       output->concat((unsigned char*) temp_def, 4);
       // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
       output->concat((unsigned char*) temp_def->debug_label, strlen(temp_def->debug_label)+1);
-  
+
       // Now to capture the argument modes...
       unsigned char* mode = (unsigned char*) temp_def->arg_modes;
       int arg_mode_len = strlen((const char*) mode);
@@ -714,7 +736,7 @@ int8_t ManuvrMsg::getMsgLegend(StringBuilder *output) {
       output->concat((unsigned char*) temp_def, 4);
       // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
       output->concat((unsigned char*) temp_def->debug_label, strlen(temp_def->debug_label)+1);
-  
+
       // Now to capture the argument modes...
       unsigned char* mode = (unsigned char*) temp_def->arg_modes;
       int arg_mode_len = strlen((const char*) mode);
@@ -757,16 +779,16 @@ int8_t ManuvrMsg::getMsgSemantics(MessageTypeDef* def, StringBuilder* output) {
   // TODO: def parameter is being ignored for now.
   int8_t return_value = 1;
   if ((NULL != def) && (NULL != output)) {
-   
+
     int total_elements = sizeof(message_defs) / sizeof(MessageTypeDef);
     const MessageTypeDef *temp_def = NULL;
     for (int i = 1; i < total_elements; i++) {
       temp_def = (const MessageTypeDef *) &(message_defs[i]);
-      
+
       if (isExportable(temp_def)) {
         int _set_size = strlen(temp_def->arg_semantics)+1;
         output->concat((unsigned char*) temp_def, 2);
-    
+
         // Now to capture the argument modes...
         // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
         unsigned char* mode = (unsigned char*) temp_def->arg_semantics;
@@ -779,7 +801,7 @@ int8_t ManuvrMsg::getMsgSemantics(MessageTypeDef* def, StringBuilder* output) {
         output->concat((unsigned char*) "\0", 1);   // This is the obligatory "NO ARGUMENT" mode.
       }
     }
-  
+
     total_elements = message_defs_extended.size();
     for (int i = 1; i < total_elements; i++) {
       temp_def = message_defs_extended.get(i);
@@ -818,7 +840,7 @@ int8_t ManuvrMsg::getMsgSemantics(MessageTypeDef* def, StringBuilder* output) {
 int ManuvrMsg::collect_valid_grammatical_forms(int len, LinkedList<char*>* return_modes) {
   if (NULL == message_def) getMsgDef();
   if (NULL == message_def) return 0;     // Case (b)
-  
+
   int return_value = 0;
   char* mode = (char*) message_def->arg_modes;
   int arg_mode_len = strlen((const char*) mode);
@@ -839,7 +861,7 @@ int ManuvrMsg::collect_valid_grammatical_forms(int len, LinkedList<char*>* retur
     mode += arg_mode_len + 1;
     arg_mode_len = strlen((const char*) mode);
   }
-  
+
   return return_value;
 }
 
@@ -857,7 +879,7 @@ int ManuvrMsg::collect_valid_grammatical_forms(int len, LinkedList<char*>* retur
 char* ManuvrMsg::is_valid_argument_buffer(int len) {
   if (NULL == message_def) getMsgDef();
   if (NULL == message_def) return NULL;
-  
+
   char* return_value = NULL;
   char* mode = (char*) message_def->arg_modes;
   int arg_mode_len = strlen((const char*) mode);
@@ -884,11 +906,11 @@ char* ManuvrMsg::is_valid_argument_buffer(int len) {
         return_value = mode;
       }
     }
-    
+
     mode += arg_mode_len + 1;
     arg_mode_len = strlen((const char*) mode);
   }
-  
+
   return return_value;
 }
 
@@ -922,5 +944,3 @@ int8_t ManuvrMsg::registerMessage(uint16_t tc, uint16_t tf, const char* lab, con
   }
   return -1;
 }
-
-

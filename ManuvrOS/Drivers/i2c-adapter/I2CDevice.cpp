@@ -1,3 +1,25 @@
+/*
+File:   I2CDevice.cpp
+Author: J. Ian Lindsay
+Date:   2014.03.10
+
+Copyright 2016 Manuvr, Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+*/
+
+
 #include "i2c-adapter.h"
 
 /*
@@ -229,7 +251,7 @@ bool I2CDevice::read16(void) {
 ****************************************************************************************************/
 
 /**
-* Debug support method. This fxn is only present in debug builds. 
+* Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
@@ -238,4 +260,3 @@ void I2CDevice::printDebug(StringBuilder* temp) {
     temp->concatf("\n+++ I2CDevice  0x%02x ++++ Bus %sassigned +++++++++++++++++++++++++++\n", _dev_addr, (_bus == NULL ? "un" : ""));
   }
 }
-

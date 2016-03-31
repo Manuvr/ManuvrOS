@@ -1,3 +1,44 @@
+/*
+File:   ManuvrXport.cpp
+Author: J. Ian Lindsay
+Date:   2015.03.17
+
+Copyright 2016 Manuvr, Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+
+This driver is designed to give Manuvr platform-abstracted transports.
+
+XenoSessions are optionally established by this class, and broadcast to the
+  rest of the system (MANUVR_MSG_SESS_ESTABLISHED). By the time that has
+  happened, the session ought to have become sync'd, self-identified,
+  authenticated, etc. Therefore, session configuration must be done on a
+  per-transport basis. This means that authentication (for instance) is
+  transport-wide.
+
+If sessions are enabled for a transport, the highest-level of the protocol
+  touched by this class ought to be dealing with sync.
+
+For non-session applications of this class, session-creation and management
+  can be disabled. This would be appropriate in cases such as GPS, modems,
+  and generally, anything that isn't manuvrable.
+
+For debuggability, the transport has a special mode for acting as a debug
+  console.
+*/
+
+
 #include "ManuvrXport.h"
 #include "FirmwareDefs.h"
 #include "XenoSession/XenoSession.h"

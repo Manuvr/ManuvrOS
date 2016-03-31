@@ -1,15 +1,37 @@
 /*
-* 
-* 
-* 
-* This class forms the foundation of internal events. It contains the identity of a given message and   
+File:   ManuvrMsg.h
+Author: J. Ian Lindsay
+Date:   2014.03.10
+
+Copyright 2016 Manuvr, Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+*/
+
+
+/*
+*
+*
+*
+* This class forms the foundation of internal events. It contains the identity of a given message and
 *   its arguments. The idea here is to encapsulate notions of "method" and "argument", regardless of
 *   the nature of its execution parameters.
-* 
-* 
-* 
-* 
-* 
+*
+*
+*
+*
+*
 */
 
 #ifndef __MANUVR_MESSAGE_H__
@@ -81,7 +103,7 @@ class Argument {
     * There is no point to storing a pointer to a heap ref to hold data that is not
     *   bigger than the pointer itself. So rather than malloc()/free() and populate
     *   this slot with things like int32, we will instead cast the value itself to a
-    *   void* and store it in the pointer slot. When we do this, we need to be sure 
+    *   void* and store it in the pointer slot. When we do this, we need to be sure
     *   not to mark the pointer for reap.
     *
     * Glorious, glorious hackery. Keeping it. But do need to account for (and extend to)
@@ -93,7 +115,7 @@ class Argument {
     uint16_t len;         // This is sometimes not used. It is for data types that are not fixed-length.
     uint8_t  type_code;
     bool     reap;
-    
+
     Argument();
     Argument(uint8_t);
     Argument(uint16_t);
@@ -102,7 +124,7 @@ class Argument {
     Argument(int16_t);
     Argument(int32_t);
     Argument(float);
-    
+
     Argument(uint8_t*);  // The only possible reason to do this is because the target
     Argument(uint16_t*); // of the pointer is not intended to be reaped.
     Argument(uint32_t*);
@@ -110,12 +132,12 @@ class Argument {
     Argument(int16_t*);
     Argument(int32_t*);
     Argument(float*);
-    
+
     Argument(Vector3ui16*);
     Argument(Vector3i16*);
     Argument(Vector3f*);
     Argument(Vector4f*);
-    
+
     Argument(const char* val);
     Argument(char* val);
     Argument(void*, uint16_t buf_len);
@@ -123,15 +145,15 @@ class Argument {
     Argument(EventReceiver *);
     Argument(ManuvrXport *);
     Argument(ManuvrRunnable *);
-    
+
     ~Argument();
-    
+
     int8_t serialize(StringBuilder*);
     int8_t serialize_raw(StringBuilder*);
-	
-	
+
+
     static char*    printBinStringToBuffer(unsigned char *str, int len, char *buffer);
-    
+
 
   private:
     void wipe();
@@ -146,29 +168,29 @@ class ManuvrMsg {
     LinkedList<Argument*> args;     // The optional list of arguments associated with this event.
     uint16_t event_code;            // The identity of the event (or command).
 
-    
+
     ManuvrMsg(void);
     ManuvrMsg(uint16_t code);
     virtual ~ManuvrMsg(void);
-    
+
     virtual int8_t repurpose(uint16_t code);
-    
+
     int argCount();
     int argByteCount();
 
-   
+
     inline bool isExportable() {
       if (NULL == message_def) message_def = lookupMsgDefByCode(event_code);
       return (message_def->msg_type_flags & MSG_FLAG_EXPORTABLE);
     }
 
-    
+
     inline bool demandsACK() {
       if (NULL == message_def) message_def = lookupMsgDefByCode(event_code);
       return (message_def->msg_type_flags & MSG_FLAG_DEMAND_ACK);
     }
 
-    
+
     inline bool isIdempotent() {
       if (NULL == message_def) message_def = lookupMsgDefByCode(event_code);
       return (message_def->msg_type_flags & MSG_FLAG_IDEMPOTENT);
@@ -178,10 +200,10 @@ class ManuvrMsg {
     int serialize(StringBuilder*);  // Returns the number of bytes resulting.
     uint8_t inflateArgumentsFromBuffer(unsigned char *str, int len);
     int8_t clearArgs();     // Clear all of the arguments attached to this message, reaping them if necessary.
-    
+
     uint8_t getArgumentType(uint8_t);  // Given a position, return the type code for the Argument.
     uint8_t getArgumentType();         // Return the type code for Argument 0.
-    
+
     MessageTypeDef* getMsgDef();
 
 
@@ -199,7 +221,7 @@ class ManuvrMsg {
     inline int addArg(int16_t val) {             return args.insert(new Argument(val));   }
     inline int addArg(int32_t val) {             return args.insert(new Argument(val));   }
     inline int addArg(float val) {               return args.insert(new Argument(val));   }
-               
+
     inline int addArg(uint8_t *val) {            return args.insert(new Argument(val));   }
     inline int addArg(uint16_t *val) {           return args.insert(new Argument(val));   }
     inline int addArg(uint32_t *val) {           return args.insert(new Argument(val));   }
@@ -207,12 +229,12 @@ class ManuvrMsg {
     inline int addArg(int16_t *val) {            return args.insert(new Argument(val));   }
     inline int addArg(int32_t *val) {            return args.insert(new Argument(val));   }
     inline int addArg(float *val) {              return args.insert(new Argument(val));   }
-               
+
     inline int addArg(Vector3ui16 *val) {        return args.insert(new Argument(val));   }
     inline int addArg(Vector3i16 *val) {         return args.insert(new Argument(val));   }
     inline int addArg(Vector3f *val) {           return args.insert(new Argument(val));   }
     inline int addArg(Vector4f *val) {           return args.insert(new Argument(val));   }
-               
+
     inline int addArg(void *val, int len) {      return args.insert(new Argument(val, len));   }
     inline int addArg(const char *val) {         return args.insert(new Argument(val));   }
     inline int addArg(StringBuilder *val) {      return args.insert(new Argument(val));   }
@@ -234,7 +256,7 @@ class ManuvrMsg {
     inline int8_t consumeArgAs(uint32_t *trg_buf) {     return getArgAs(0, (void*) trg_buf, false);  }
     inline int8_t consumeArgAs(float *trg_buf) {        return getArgAs(0, (void*) trg_buf, false);  }
     inline int8_t consumeArgAs(ManuvrRunnable **trg_buf) {  return getArgAs(0, (void*) trg_buf, false);  }
-    
+
     inline int8_t getArgAs(int8_t *trg_buf) {           return getArgAs(0, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t *trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
     inline int8_t getArgAs(int16_t *trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
@@ -242,7 +264,7 @@ class ManuvrMsg {
     inline int8_t getArgAs(int32_t *trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint32_t *trg_buf) {         return getArgAs(0, (void*) trg_buf, true);  }
     inline int8_t getArgAs(float *trg_buf) {            return getArgAs(0, (void*) trg_buf, true);  }
-    
+
     inline int8_t getArgAs(uint8_t idx, uint8_t  *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, uint16_t *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, uint32_t *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
@@ -250,7 +272,7 @@ class ManuvrMsg {
     inline int8_t getArgAs(uint8_t idx, int16_t  *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, int32_t  *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, float  *trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
-    
+
     // These accessors treat the (void*) as a pointer. These functions are essentially type-casts.
     inline int8_t getArgAs(Vector3f **trg_buf) {                 return getArgAs(0, (void*) trg_buf, true);  }
     inline int8_t getArgAs(Vector3ui16 **trg_buf) {              return getArgAs(0, (void*) trg_buf, true);  }
@@ -260,7 +282,7 @@ class ManuvrMsg {
     inline int8_t getArgAs(EventReceiver **trg_buf) {            return getArgAs(0, (void*) trg_buf, true);  }
     inline int8_t getArgAs(ManuvrXport **trg_buf) {              return getArgAs(0, (void*) trg_buf, true);  }
     inline int8_t getArgAs(ManuvrRunnable **trg_buf) {           return getArgAs(0, (void*) trg_buf, true);  }
-    
+
     inline int8_t getArgAs(uint8_t idx, Vector3f  **trg_buf) {          return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, Vector3ui16  **trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, Vector3i16  **trg_buf) {        return getArgAs(idx, (void*) trg_buf, true);  }
@@ -269,37 +291,37 @@ class ManuvrMsg {
     inline int8_t getArgAs(uint8_t idx, EventReceiver  **trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, ManuvrXport  **trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, ManuvrRunnable  **trg_buf) {    return getArgAs(idx, (void*) trg_buf, true);  }
-    
-    /* 
+
+    /*
     * Protip: Think on the stack...
     * markForReap(addArg(new StringBuilder("Sample data to reap on destruction.")), true);
     */
     int8_t markArgForReap(int idx, bool reap);
-    
-	    
+
+
     void printDebug(StringBuilder *);
-    
+
     const char* getMsgTypeString();
     const char* getArgTypeString(uint8_t idx);
 
     static const MessageTypeDef* lookupMsgDefByCode(uint16_t msg_code);
     static const MessageTypeDef* lookupMsgDefByLabel(char* label);
     static const char* getMsgTypeString(uint16_t msg_code);
-    
+
     static int8_t getMsgLegend(StringBuilder *output);
-    
+
     #if defined (__ENABLE_MSG_SEMANTICS)
     static int8_t getMsgSemantics(MessageTypeDef*, StringBuilder *output);
     #endif
 
     static int8_t registerMessage(MessageTypeDef*);
     static int8_t registerMessage(uint16_t, uint16_t, const char*, const unsigned char*, const char*);
-    
+
     static int8_t registerMessages(const MessageTypeDef[], int len);
-    
+
     static const MessageTypeDef message_defs[];
 
-    
+
     static bool isExportable(const MessageTypeDef* message_def) {
       return (message_def->msg_type_flags & MSG_FLAG_EXPORTABLE);
     }
@@ -314,22 +336,22 @@ class ManuvrMsg {
 
     static const unsigned char MSG_ARGS_SELF_DESC[];
     static const unsigned char MSG_ARGS_MSG_FORWARD[];
-    
-    static const unsigned char MSG_ARGS_XPORT[]; 
-    
+
+    static const unsigned char MSG_ARGS_XPORT[];
+
 
   protected:
     const MessageTypeDef*  message_def;             // The definition for the message (once it is associated).
-    
+
     int8_t getArgAs(uint8_t idx, void *dat, bool preserve);
 
 
-  private:    
+  private:
     void __class_initializer();
 
-    int8_t writePointerArgAs(uint32_t dat); 
+    int8_t writePointerArgAs(uint32_t dat);
     int8_t writePointerArgAs(uint8_t idx, void *trg_buf);
-    
+
     char* is_valid_argument_buffer(int len);
     int   collect_valid_grammatical_forms(int, LinkedList<char*>*);
 

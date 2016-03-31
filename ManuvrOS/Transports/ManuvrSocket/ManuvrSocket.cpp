@@ -18,7 +18,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-This driver is designed to give Manuvr platform-abstracted COM ports. By
+This driver is designed to give Manuvr platform-abstracted sockets. By
   this is meant generic asynchronous serial ports. On Arduino, this means
   the Serial (or HardwareSerial) class. On linux, it means /dev/tty<x>.
 

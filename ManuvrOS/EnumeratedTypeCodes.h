@@ -1,3 +1,25 @@
+/*
+File:   EnumeratedTypeCodes.h
+Author: J. Ian Lindsay
+Date:   2014.03.10
+
+Copyright 2016 Manuvr, Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+*/
+
+
 #ifndef __ENUMERATED_TYPE_CODES_H__
 #define __ENUMERATED_TYPE_CODES_H__
 
@@ -9,8 +31,8 @@
 * This is the structure with which we define types. These types are used by a variety of
 *   systems in this program, and need to be consistent. Sometimes, we might be talking to
 *   another system that lacks support for some of these types.
-* 
-* This structrue conveys the type, it's size, and any special attributes of the type. 
+*
+* This structrue conveys the type, it's size, and any special attributes of the type.
 */
 typedef struct typecode_def_t {
     uint8_t            type_code;   // This field identifies the type.
@@ -69,7 +91,7 @@ typedef struct typecode_def_t {
 
 /**
 * These types are big enough to warrant a malloc() to pass them around internally, but
-*   the data so passed is not itself a pointer, and therefore makes sense as-is to other 
+*   the data so passed is not itself a pointer, and therefore makes sense as-is to other
 *   devices.
 */
 #define RELAYED_MSG_FM 0x19    // A serialized message that is being stored or relayed.
@@ -93,7 +115,7 @@ typedef struct typecode_def_t {
 
 /**
 * These are small enough to be cast into a pointer's space. They are therefore
-*   "pass-by-value" for classes that interchange them. 
+*   "pass-by-value" for classes that interchange them.
 * Cheap because: no malloc()/free() cycle.
 */
 #define BOOLEAN_FM     0x0B   // A boolean

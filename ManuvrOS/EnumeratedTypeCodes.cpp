@@ -1,3 +1,25 @@
+/*
+File:   EnumeratedTypeCodes.cpp
+Author: J. Ian Lindsay
+Date:   2014.03.10
+
+Copyright 2016 Manuvr, Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+*/
+
+
 #include "EnumeratedTypeCodes.h"
 
 /**
@@ -29,11 +51,11 @@ const TypeCodeDef type_codes[] = {
   {VECT_3_FLOAT     , (TYPE_CODE_FLAG_EXPORTABLE), 12},
   {VECT_4_FLOAT     , (TYPE_CODE_FLAG_EXPORTABLE), 16},
 
-  // String types. Note that if VARIABLE_LENGTH is set, the TypeCodeDef.fixed_len field 
-  //   will be interpreted as a minimum length. 
+  // String types. Note that if VARIABLE_LENGTH is set, the TypeCodeDef.fixed_len field
+  //   will be interpreted as a minimum length.
   {URL_FM           , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH | TYPE_CODE_FLAG_IS_NULL_DELIMITED), 1},
   {STR_FM           , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH | TYPE_CODE_FLAG_IS_NULL_DELIMITED), 1},
-  
+
   // Big types.
   {BINARY_FM        , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH), 1},
   {AUDIO_FM         , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH), 1},
@@ -60,7 +82,7 @@ const TypeCodeDef type_codes[] = {
 
 
 /**
-* Given type code, find size in bytes. Returns 1 for variable-length arguments, 
+* Given type code, find size in bytes. Returns 1 for variable-length arguments,
 *   since this is their minimum size.
 *
 * @param  uint8_t the type code being asked about.
@@ -83,7 +105,7 @@ int sizeOfArg(uint8_t typecode) {
 * We cast the type-map into an unsigned char buffer because there is no need to
 *   parse it, but it DOES need to be sent to another machine occasionally.
 *
-* @param  const unsigned char** A receptical for the type legend. 
+* @param  const unsigned char** A receptical for the type legend.
 * @return The size of the type legend, in bytes.
 */
 int getTypemapSizeAndPointer(const unsigned char **pointer) {
@@ -96,7 +118,7 @@ int getTypemapSizeAndPointer(const unsigned char **pointer) {
 * Given a string of type codes, return the size required to carry it.
 * Note: Variable length types will be assumed to have a length of 1.
 *
-* @param  char* The form of the message. NULL-terminated. 
+* @param  char* The form of the message. NULL-terminated.
 * @return The minimum size required to carry the expressed form.
 */
 int getMinimumSizeByTypeString(char *str) {
@@ -133,7 +155,7 @@ bool containsVariableLengthArgument(char* mode) {
 /**
 * Given a type code, return the string representation for debug.
 *
-* @param  uint8_t the type code being asked about. 
+* @param  uint8_t the type code being asked about.
 * @return The string representation. Never NULL.
 */
 const char* getTypeCodeString(uint8_t typecode) {
@@ -164,5 +186,3 @@ const char* getTypeCodeString(uint8_t typecode) {
     default:                    return "<UNSUPPORTED>";
   }
 }
-
-

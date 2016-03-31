@@ -1,3 +1,25 @@
+/*
+File:   I2CDeviceWithRegisters.cpp
+Author: J. Ian Lindsay
+Date:   2014.03.10
+
+Copyright 2016 Manuvr, Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+*/
+
+
 #include "i2c-adapter.h"
 
 
@@ -19,7 +41,7 @@ I2CDeviceWithRegisters::~I2CDeviceWithRegisters(void) {
     //}
     delete temp;      // Delete the register definition.
   }
-  
+
   //if (NULL != pooled_registers) {   // If we DO have pooled registers...
   //  free(pooled_registers);         // ..free them at this point.
   //  pooled_registers = NULL;
@@ -48,7 +70,7 @@ bool I2CDeviceWithRegisters::defineRegister(uint16_t _addr, uint8_t val, bool di
   nu->dirty    = dirty;
   nu->unread   = unread;
   nu->writable = writable;
-  
+
   reg_defs.insert(nu);
   return true;
 }
@@ -63,7 +85,7 @@ bool I2CDeviceWithRegisters::defineRegister(uint16_t _addr, uint16_t val, bool d
   nu->dirty    = dirty;
   nu->unread   = unread;
   nu->writable = writable;
-  
+
   reg_defs.insert(nu);
   return true;
 }
@@ -80,7 +102,7 @@ bool I2CDeviceWithRegisters::defineRegister(uint16_t _addr, uint32_t val, bool d
   nu->dirty    = dirty;
   nu->unread   = unread;
   nu->writable = writable;
-  
+
   reg_defs.insert(nu);
   return true;
 }
@@ -111,11 +133,11 @@ unsigned int I2CDeviceWithRegisters::regValue(uint8_t base_addr) {
   else {
     unsigned int return_value = 0;
     for (uint8_t x = 0; x < reg->len; x++) {
-      return_value = (return_value << 8) + *(reg->val + x); 
+      return_value = (return_value << 8) + *(reg->val + x);
     }
-    
+
     // Use the register's length to truncate the value...
-    unsigned int cull_val = (1 == reg->len) ? 0xFF : ((2 == reg->len) ? 0xFFFF : 0xFFFFFFFF); 
+    unsigned int cull_val = (1 == reg->len) ? 0xFF : ((2 == reg->len) ? 0xFFFF : 0xFFFFFFFF);
     return (return_value & cull_val);
   }
 }
@@ -155,7 +177,7 @@ int8_t I2CDeviceWithRegisters::writeIndirect(uint8_t base_addr, uint8_t val, boo
   DeviceRegister *nu = getRegisterByBaseAddress(base_addr);
   if (nu == NULL)    return I2C_ERR_SLAVE_UNDEFD_REG;
   if (!nu->writable) return I2C_ERR_SLAVE_REG_IS_RO;
-  
+
   *(nu->val) = val;
   nu->dirty = true;
   if (!defer) {
@@ -264,13 +286,13 @@ int8_t I2CDeviceWithRegisters::syncRegisters(void) {
 	int8_t return_value = I2C_ERR_CODE_NO_ERROR;
 	uint8_t count = reg_defs.size();
 	for (int i = 0; i < count; i++) {
-	  
+
 		temp = reg_defs.get(i);
 		if (temp == NULL) {
 			// Safety-check that an out-of-bounds reg wasn't in the list...
 			return I2C_ERR_SLAVE_UNDEFD_REG;
 		}
-		
+
 		return_value = readRegister(temp);
 		if (return_value != I2C_ERR_CODE_NO_ERROR) {
 		  #ifdef __MANUVR_DEBUG
@@ -361,5 +383,3 @@ bool I2CDeviceWithRegisters::operationCallahead(I2CQueuedOperation* op) {
   // Default behavior is to return true, to tell the bus "Go Ahead".
   return true;
 }
-
-

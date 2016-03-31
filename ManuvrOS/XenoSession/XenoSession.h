@@ -1,5 +1,5 @@
 /*
-File:   XenoSession.h
+File:   XenoMessage.h
 Author: J. Ian Lindsay
 Date:   2014.11.20
 

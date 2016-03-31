@@ -1,3 +1,25 @@
+/*
+File:   I2CQueuedOperation.cpp
+Author: J. Ian Lindsay
+Date:   2014.03.10
+
+Copyright 2016 Manuvr, Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+*/
+
+
 #include "i2c-adapter.h"
 
 #if defined(__MK20DX256__) | defined(__MK20DX128__)
@@ -60,7 +82,7 @@ I2CQueuedOperation::~I2CQueuedOperation(void) {
 	}
 }
 
-      
+
 /****************************************************************************************************
 * These functions are for logging support.                                                          *
 ****************************************************************************************************/
@@ -118,7 +140,7 @@ void I2CQueuedOperation::printDebug(void) {
 
 
 /**
-* Debug support method. This fxn is only present in debug builds. 
+* Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
@@ -144,7 +166,7 @@ void I2CQueuedOperation::printDebug(StringBuilder* temp) {
     temp->concat("\n");
   }
 }
-      
+
 
 
 
@@ -163,7 +185,7 @@ int8_t I2CQueuedOperation::abort(int8_t er) {
 
 
 /*
-* 
+*
 */
 void I2CQueuedOperation::markComplete(void) {
 	xfer_state = I2C_XFER_STATE_COMPLETE;
@@ -184,12 +206,12 @@ int8_t I2CQueuedOperation::begin(void) {
     abort(I2C_ERR_CODE_NO_DEVICE);
     return -1;
   }
-  
+
   if ((NULL != requester) && !requester->operationCallahead(this)) {
     abort(I2C_ERR_CODE_CLASS_ABORT);
     return -1;
   }
-  
+
   initiated = true;
   xfer_state = I2C_XFER_STATE_ADDR;
   init_dma();
@@ -249,14 +271,14 @@ int8_t I2CQueuedOperation::init_dma() {
   else {
     return -1;
   }
-  
+
 
 #else   // Linux land...
   if (!device->switch_device(dev_addr)) return -1;
- 
+
   if (opcode == I2C_OPERATION_READ) {
     uint8_t sa = (uint8_t) (sub_addr & 0x00FF);
-    
+
     if (write(device->dev, &sa, 1) == 1) {
       return_value = read(device->dev, buf, len);
       if (return_value == len) {
@@ -269,13 +291,13 @@ int8_t I2CQueuedOperation::init_dma() {
       return -1;
     }
   }
-  
+
   else if (opcode == I2C_OPERATION_WRITE) {
     uint8_t buffer[len + 1];
     buffer[0] = (uint8_t) (sub_addr & 0x00FF);
-    
+
     for (int i = 0; i < len; i++) buffer[i + 1] = *(buf + i);
-    
+
     if (write(device->dev, &buffer, len+1) == len+1) {
       markComplete();
     }
@@ -311,7 +333,7 @@ int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
         xfer_state = I2C_XFER_STATE_ADDR; // Need to send slave ADDR following a RESTART.
         device->generateStart();
         break;
-      
+
     case I2C_XFER_STATE_ADDR:      // We need to send the 7-bit address.
       if (0x00000001 & status_reg) {
         // If we see a ping at this point, it means the ping succeeded. Mark it finished.
@@ -325,7 +347,7 @@ int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
         // If we need to send a subaddress, we will need to be in transmit mode. Even if our end-goal is to read.
         uint8_t temp_dir_code = ((opcode == I2C_OPERATION_WRITE || need_to_send_subaddr()) ? I2C_OPERATION_WRITE : I2C_OPERATION_READ);
         I2C_Send7bitAddress(I2C1, (dev_addr << 1), temp_dir_code);
-        if (need_to_send_subaddr()) {                   
+        if (need_to_send_subaddr()) {
           xfer_state = I2C_XFER_STATE_SUBADDR;
         }
         else {
@@ -395,7 +417,7 @@ int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
       abort(I2C_ERR_CODE_DEF_CASE);
       break;
   }
-  
+
   if (verbosity > 4) {
     if (verbosity > 6) printDebug(&output);
     #ifdef __MANUVR_DEBUG
@@ -409,9 +431,8 @@ int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
       subaddr_sent = true;
       break;
   }
-  
+
 #endif
   if (output.length() > 0) Kernel::log(&output);
   return 0;
 }
-

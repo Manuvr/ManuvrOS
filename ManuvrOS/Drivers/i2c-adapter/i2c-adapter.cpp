@@ -1,3 +1,34 @@
+/*
+File:   i2c-adapter.cpp
+Author: J. Ian Lindsay
+Date:   2014.03.10
+
+Copyright 2016 Manuvr, Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+
+This class is supposed to be an i2c abstraction layer. The goal is to have
+an object of this class that can be instantiated and used to communicate
+with i2c devices (as a bus master) regardless of the platform.
+
+This file is the tortured result of growing pains since the beginning of
+  ManuvrOS. It has been refactored fifty-eleven times, suffered the brunt
+  of all porting efforts, and has reached the point where it must be split
+  apart into a more-portable platform-abstraction strategy.
+*/
+
+
 #include "i2c-adapter.h"
 
 #if defined(__MK20DX256__) | defined(__MK20DX128__)
@@ -7,7 +38,7 @@
   #include <stm32f4xx_i2c.h>
   #include <stm32f4xx_gpio.h>
   #include "stm32f4xx_it.h"
-  
+
 #elif defined(ARDUINO)
   #include <Wire/Wire.h>
 #else
@@ -60,7 +91,7 @@ void I2CAdapter::__class_initializer() {
 
   // Set a globalized refernece so we can hit the proper adapter from an ISR.
   i2c = this;
-    
+
   int mes_count = sizeof(i2c_message_defs) / sizeof(MessageTypeDef);
   ManuvrMsg::registerMessages(i2c_message_defs, mes_count);
 }
@@ -83,10 +114,10 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
     I2C_DeInit(I2C1);
 
     /* Reset I2Cx IP */
-    
+
     /* Release reset signal of I2Cx IP */
     //RCC_APB1PeriphResetCmd(RCC_APB1Periph_I2C1, DISABLE);
-    
+
     /* setup SCL and SDA pins
      * You can connect the I2C1 functions to two different
      * pins:
@@ -99,15 +130,15 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
     GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;         // set output to open drain --> the line has to be only pulled low, not driven high
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;       // enable pull up resistors
     GPIO_Init(GPIOB, &GPIO_InitStruct);                 // init GPIOB
-    
+
     // Connect I2C1 pins to AF
     GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_I2C1);    // SCL
     GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_I2C1);    // SDA
-    
+
     I2C_InitTypeDef I2C_InitStruct;
 
-   
-    // configure I2C1 
+
+    // configure I2C1
     I2C_InitStruct.I2C_ClockSpeed = 400000;          // 400kHz
     I2C_InitStruct.I2C_Mode = I2C_Mode_I2C;          // I2C mode
     I2C_InitStruct.I2C_DutyCycle = I2C_DutyCycle_2;  // 50% duty cycle --> standard
@@ -128,7 +159,7 @@ I2CAdapter::~I2CAdapter() {
       dev_list.get()->disassignBusInstance();
       dev_list.remove();
     }
-    
+
     /* TODO: The work_queue destructor will take care of its own cleanup, but
        We should abort any open transfers prior to deleting this list. */
 }
@@ -189,7 +220,7 @@ I2CAdapter::~I2CAdapter() {
       dev_list.get()->disassignBusInstance();
       dev_list.remove();
     }
-    
+
     /* TODO: The work_queue destructor will take care of its own cleanup, but
        We should abort any open transfers prior to deleting this list. */
 }
@@ -225,7 +256,7 @@ int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
       Wire.write((uint8_t) (op->sub_addr & 0x00FF));
       op->advance_operation(1);
     }
-    
+
     if (op->opcode == I2C_OPERATION_READ) {
       Wire.endTransmission(I2C_NOSTOP);
       Wire.requestFrom(op->dev_addr, op->len, I2C_STOP, 10000);
@@ -267,7 +298,7 @@ int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
       Wire1.write((uint8_t) (op->sub_addr & 0x00FF));
       op->advance_operation(1);
     }
-    
+
     if (op->opcode == I2C_OPERATION_READ) {
       Wire1.endTransmission(I2C_NOSTOP);
       Wire1.requestFrom(op->dev_addr, op->len, I2C_STOP, 10000);
@@ -283,7 +314,7 @@ int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
     else if (op->opcode == I2C_OPERATION_PING) {
       Wire1.endTransmission(I2C_STOP, 10000);   // 10ms timeout
     }
-    
+
     switch (Wire1.status()) {
       case I2C_WAITING:
         op->markComplete();
@@ -332,7 +363,7 @@ I2CAdapter::~I2CAdapter() {
       dev_list.get()->disassignBusInstance();
       dev_list.remove();
     }
-    
+
     /* TODO: The work_queue destructor will take care of its own cleanup, but
        We should abort any open transfers prior to deleting this list. */
 }
@@ -345,7 +376,7 @@ int8_t I2CAdapter::generateStart() {
   if (! bus_online) return -1;
   //Wire1.sendTransmission(I2C_STOP);
   //Wire1.finish(900);   // We allow for 900uS for timeout.
-  
+
   return 0;
 }
 
@@ -366,7 +397,7 @@ int8_t I2CAdapter::generateStop() {
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
   __class_initializer();
   dev = dev_id;
-  
+
   if (dev_id == 1) {
     //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400);
     bus_online = true;
@@ -380,7 +411,7 @@ I2CAdapter::~I2CAdapter() {
       dev_list.get()->disassignBusInstance();
       dev_list.remove();
     }
-    
+
     /* TODO: The work_queue destructor will take care of its own cleanup, but
        We should abort any open transfers prior to deleting this list. */
 }
@@ -394,7 +425,7 @@ int8_t I2CAdapter::generateStart() {
   if (! bus_online) return -1;
   //Wire1.sendTransmission(I2C_STOP);
   //Wire1.finish(900);   // We allow for 900uS for timeout.
-  
+
   return 0;
 }
 
@@ -444,7 +475,7 @@ I2CAdapter::~I2CAdapter() {
       dev_list.get()->disassignBusInstance();
       dev_list.remove();
     }
-    
+
     /* TODO: The work_queue destructor will take care of its own cleanup, but
        We should abort any open transfers prior to deleting this list. */
 }
@@ -475,23 +506,23 @@ void I2CAdapter::gpioSetup() {
 
 
 /****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌          
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄ 
+* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
+* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
+* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
 * ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
 * ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
 * ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
 * ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀ 
-* 
+*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+*
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
 
 /**
-* There is a NULL-check performed upstream for the scheduler member. So no need 
+* There is a NULL-check performed upstream for the scheduler member. So no need
 *   to do it again here.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
@@ -509,10 +540,10 @@ int8_t I2CAdapter::bootComplete() {
 
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
-*   has been serviced and we are now getting the chance to see the results. The argument 
+*   has been serviced and we are now getting the chance to see the results. The argument
 *   to this fxn will never be NULL.
 *
-* Depending on class implementations, we might choose to handle the completed Event differently. We 
+* Depending on class implementations, we might choose to handle the completed Event differently. We
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
 *   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
@@ -523,15 +554,15 @@ int8_t I2CAdapter::bootComplete() {
 */
 int8_t I2CAdapter::callback_proc(ManuvrRunnable *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
-     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
+     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
-  
+
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     default:
       break;
   }
-  
+
   return return_value;
 }
 
@@ -539,13 +570,13 @@ int8_t I2CAdapter::callback_proc(ManuvrRunnable *event) {
 
 int8_t I2CAdapter::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
-  
+
   switch (active_event->event_code) {
     case MANUVR_MSG_INTERRUPTS_MASKED:
     case MANUVR_MSG_SYS_REBOOT:
     case MANUVR_MSG_SYS_BOOTLOADER:
       break;
-      
+
     /* Things that only this class is likely to care about. */
     case MANUVR_MSG_I2C_QUEUE_READY:
       advance_work_queue();
@@ -555,7 +586,7 @@ int8_t I2CAdapter::notify(ManuvrRunnable *active_event) {
       return_value += EventReceiver::notify(active_event);
       break;
   }
-  
+
   if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
 }
@@ -628,7 +659,7 @@ int8_t I2CAdapter::removeSlaveDevice(I2CDevice* slave) {
 /*
 * Searches this busses list of bound devices for the given address.
 * Returns the posistion in the list, only because it is non-negative. This
-*   is only called to prevent address collision. Not fetch a device handle. 
+*   is only called to prevent address collision. Not fetch a device handle.
 */
 int I2CAdapter::get_slave_dev_by_addr(uint8_t search_addr) {
 	for (int i = 0; i < dev_list.size(); i++) {
@@ -648,7 +679,7 @@ int I2CAdapter::get_slave_dev_by_addr(uint8_t search_addr) {
 * Private function that will switch the addressed i2c device via ioctl. This
 *   function is meaningless on anything but a linux system, in which case it
 *   will always return true;
-* On a linux system, this will only return true if the ioctl call succeeded. 
+* On a linux system, this will only return true if the ioctl call succeeded.
 */
 bool I2CAdapter::switch_device(uint8_t nu_addr) {
 #ifdef ARDUINO
@@ -656,7 +687,7 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
 #elif defined(STM32F4XX)
   bool return_value = true;
 
-  
+
 #elif defined(MPCMZ)
 // PIC32 MZ i2c support is broken at the time of this writing.
 
@@ -680,7 +711,7 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
         #endif
         return return_value;
       }
-      
+
       if (ioctl(dev, I2C_SLAVE, nu_addr) >= 0) {
         last_used_bus_addr = nu_addr;
         return_value = true;
@@ -763,7 +794,7 @@ void I2CAdapter::advance_work_queue(void) {
 				else {
 					ping_map[current_queue_item->dev_addr % 128] = -1;
 				}
-				
+
 				if (full_ping_running) {
 				  if ((current_queue_item->dev_addr & 0x00FF) < 127) {
 				    ping_slave_addr(current_queue_item->dev_addr + 1);
@@ -776,7 +807,7 @@ void I2CAdapter::advance_work_queue(void) {
 				  }
 				}
 			}
-	
+
 			delete current_queue_item;
 			current_queue_item = work_queue.get();
 			if (current_queue_item != NULL) work_queue.remove();
@@ -794,7 +825,7 @@ void I2CAdapter::advance_work_queue(void) {
 			current_queue_item->begin();
 		}
 	}
-	
+
 	if (local_log.length() > 0) Kernel::log(&local_log);
 }
 
@@ -806,7 +837,7 @@ void I2CAdapter::advance_work_queue(void) {
 */
 void I2CAdapter::purge_queued_work_by_dev(I2CDevice *dev) {
   I2CQueuedOperation* current = NULL;
-  
+
   if (work_queue.size() > 0) {
     for (int i = 0; i < work_queue.size(); i++) {
       current = work_queue.get(i);
@@ -849,7 +880,7 @@ void I2CAdapter::purge_stalled_job() {
 #ifdef STM32F4XX
     I2C_GenerateSTOP(I2C1, ENABLE);   // This may not be sufficient...
 #endif
-  }  
+  }
 }
 
 
@@ -917,7 +948,7 @@ void I2CAdapter::printDevs(StringBuilder *temp, uint8_t dev_num) {
 
 void I2CAdapter::printDevs(StringBuilder *temp) {
   if (temp == NULL) return;
-  
+
   EventReceiver::printDebug(temp);
   for (int i = 0; i < dev_list.size(); i++) {
     dev_list.get(i)->printDebug(temp);
@@ -936,17 +967,17 @@ const char* I2CAdapter::getReceiverName() {  return "I2CAdapter";  }
 
 
 /**
-* Debug support method. This fxn is only present in debug builds. 
+* Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void I2CAdapter::printDebug(StringBuilder *temp) {
   if (temp == NULL) return;
-  
+
   EventReceiver::printDebug(temp);
   temp->concatf("--- bus_online             %s\n", (bus_online ? "yes" : "no"));
   printPingMap(temp);
-  
+
   if (current_queue_item != NULL) {
     temp->concat("Currently being serviced:\n");
     current_queue_item->printDebug(temp);
@@ -971,7 +1002,7 @@ void I2CAdapter::printDebug(StringBuilder *temp) {
 
 void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
-  
+
   char c = *(str);
   uint8_t temp_byte = 0;        // Many commands here take a single integer argument.
   if (*(str) != 0) {
@@ -1018,7 +1049,7 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       I2C1_EV_IRQHandler();
       break;
 #endif
-      
+
     case 'K':
       if (temp_byte) {
         local_log.concatf("ping i2c slave 0x%02x.\n", temp_byte);
@@ -1038,7 +1069,6 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       EventReceiver::procDirectDebugInstruction(input);
       break;
   }
-  
+
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-

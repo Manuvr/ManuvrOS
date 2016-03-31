@@ -22,8 +22,10 @@ This class is supposed to be an i2c abstraction layer. The goal is to have
 an object of this class that can be instantiated and used to communicate
 with i2c devices (as a bus master) regardless of the platform.
 
-Prime targets for this layer are the linux operating system and the Teensy3,
-but adding support for other platforms ought to be easy.
+This file is the tortured result of growing pains since the beginning of
+  ManuvrOS. It has been refactored fifty-eleven times, suffered the brunt
+  of all porting efforts, and has reached the point where it must be split
+  apart into a more-portable platform-abstraction strategy.
 */
 
 
