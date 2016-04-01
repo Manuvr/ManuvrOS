@@ -6,15 +6,25 @@
 
 # Make the lib directory...
 mkdir lib
+cd lib
 
 # JSON support via ArduinoJson...
 git clone https://github.com/bblanchon/ArduinoJson.git lib/ArduinoJson
 
 # FreeRTOS...
-https://github.com/greiman/FreeRTOS-Arduino lib/FreeRTOS_Arduino
+git clone https://github.com/greiman/FreeRTOS-Arduino lib/FreeRTOS_Arduino
+
+# CoAP, if desired.
+git clone https://github.com/obgm/libcoap.git
+
+# Telehash
+git clone https://github.com/telehash/telehash-c.git
 
 # Arduino libraries...
 
 # Teensy loader...
 
 # Teensyduino libraries...
+
+# Return...
+cd ..

@@ -1,7 +1,7 @@
 /*
-File:   ManuvrableGPIO.h
+File:   ExampleDriver.cpp
 Author: J. Ian Lindsay
-Date:   2015.09.21
+Date:   2016.03.31
 
 Copyright 2016 Manuvr, Inc
 
@@ -17,47 +17,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-
-The idea here is not to provide any manner of abstraction for GPIO. Our
-  only goal is to expose GPIO functionality to outside systems.
 */
 
-#include "ManuvrableGPIO.h"
 
-
-const MessageTypeDef gpio_message_defs[] = {
-  /*
-    For messages that have arguments, we have the option of defining inline lables for each parameter.
-    This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
-    compile time.
-  */
-  #if defined (__ENABLE_MSG_SEMANTICS)
-  {  MANUVR_MSG_GPIO_LEGEND       , MSG_FLAG_EXPORTABLE,  "GPIO_LEGEND",         ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_DIGITAL_READ      , MSG_FLAG_EXPORTABLE,  "DIGITAL_READ",        ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_DIGITAL_WRITE     , MSG_FLAG_EXPORTABLE,  "DIGITAL_WRITE",       ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_ANALOG_READ       , MSG_FLAG_EXPORTABLE,  "ANALOG_READ",         ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_ANALOG_WRITE      , MSG_FLAG_EXPORTABLE,  "ANALOG_WRITE",        ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_EVENT_ON_INTERRUPT, MSG_FLAG_EXPORTABLE,  "EVENT_ON_INTERRUPT",  ManuvrMsg::MSG_ARGS_NONE }, //
-  #else
-  {  MANUVR_MSG_GPIO_LEGEND       , MSG_FLAG_EXPORTABLE,  "GPIO_LEGEND",         ManuvrMsg::MSG_ARGS_NONE, NULL }, //
-  {  MANUVR_MSG_DIGITAL_READ      , MSG_FLAG_EXPORTABLE,  "DIGITAL_READ",        ManuvrMsg::MSG_ARGS_NONE, NULL }, //
-  {  MANUVR_MSG_DIGITAL_WRITE     , MSG_FLAG_EXPORTABLE,  "DIGITAL_WRITE",       ManuvrMsg::MSG_ARGS_NONE, NULL }, //
-  {  MANUVR_MSG_ANALOG_READ       , MSG_FLAG_EXPORTABLE,  "ANALOG_READ",         ManuvrMsg::MSG_ARGS_NONE, NULL }, //
-  {  MANUVR_MSG_ANALOG_WRITE      , MSG_FLAG_EXPORTABLE,  "ANALOG_WRITE",        ManuvrMsg::MSG_ARGS_NONE, NULL }, //
-  {  MANUVR_MSG_EVENT_ON_INTERRUPT, MSG_FLAG_EXPORTABLE,  "EVENT_ON_INTERRUPT",  ManuvrMsg::MSG_ARGS_NONE, NULL }, //
-  #endif
-};
+#include "ExampleDriver.h"
+#include <DataStructures/StringBuilder.h>
 
 
 
-ManuvrableGPIO::ManuvrableGPIO() {
+// If your driver represents a statically-allocated unit, you can do something
+//   like this...
+//volatile ExampleDriver* ExampleDriver::INSTANCE = NULL;
 
-  // Inform the Kernel of the codes we will be using...
-  ManuvrMsg::registerMessages(gpio_message_defs, sizeof(gpio_message_defs) / sizeof(MessageTypeDef));
+
+ExampleDriver::ExampleDriver() {
+  //INSTANCE = this;
 }
 
-ManuvrableGPIO::~ManuvrableGPIO() {
+
+ExampleDriver::~ExampleDriver() {
 }
+
 
 
 
@@ -82,33 +62,32 @@ ManuvrableGPIO::~ManuvrableGPIO() {
 *
 * @return a pointer to a string constant.
 */
-const char* ManuvrableGPIO::getReceiverName() {  return "ManuvrableGPIO";  }
+const char* ExampleDriver::getReceiverName() {  return "ExampleDriver";  }
 
 
 /**
-* Debug support method. This fxn is only present in debug builds.
+* Debug support function.
 *
-* @param   StringBuilder* The buffer into which this fxn should write its output.
+* @param A pointer to a StringBuffer object to receive the output.
 */
-void ManuvrableGPIO::printDebug(StringBuilder *output) {
-  if (output == NULL) return;
-
+void ExampleDriver::printDebug(StringBuilder* output) {
+  if (NULL == output) return;
   EventReceiver::printDebug(output);
-  output->concat("\n");
 }
 
 
 
 /**
-* Some peripherals and operations need a bit of time to complete. This function is called from a
-*   one-shot schedule and performs all of the cleanup for latent consequences of bootstrap().
+* There is a NULL-check performed upstream for the scheduler member. So no need
+*   to do it again here.
 *
-* @return non-zero if action was taken. Zero otherwise.
+* @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t ManuvrableGPIO::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t ExampleDriver::bootComplete() {
+  EventReceiver::bootComplete();   // Call up to get scheduler ref and class init.
   return 0;
 }
+
 
 
 /**
@@ -118,14 +97,14 @@ int8_t ManuvrableGPIO::bootComplete() {
 *
 * Depending on class implementations, we might choose to handle the completed Event differently. We
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
-*   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
+*   ourselves and return DROP. By default, we will return REAP to instruct the EventManager
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
 *   was crafted to not be in the heap in its own allocation, we will return DROP instead.
 *
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t ManuvrableGPIO::callback_proc(ManuvrRunnable *event) {
+int8_t ExampleDriver::callback_proc(ManuvrRunnable *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -140,41 +119,39 @@ int8_t ManuvrableGPIO::callback_proc(ManuvrRunnable *event) {
 }
 
 
-int8_t ManuvrableGPIO::notify(ManuvrRunnable *active_event) {
+
+int8_t ExampleDriver::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
 
   switch (active_event->event_code) {
-    case MANUVR_MSG_DIGITAL_READ:
-      //int8_t readPin(uint8_t pin);
-      return_value++;
-      break;
-
-    case MANUVR_MSG_DIGITAL_WRITE:
-      //int8_t setPin(uint8_t pin, bool high);
-      return_value++;
-      break;
-
-    case MANUVR_MSG_ANALOG_READ:
-      return_value++;
-      break;
-
-    case MANUVR_MSG_ANALOG_WRITE:
-      return_value++;
-      break;
-
-    case MANUVR_MSG_EVENT_ON_INTERRUPT:
-      //int8_t setPinEvent(uint8_t pin, ManuvrRunnable* isr_event);
-      return_value++;
-      break;
-
-    case MANUVR_MSG_GPIO_LEGEND:
-      return_value++;
-      break;
-
     default:
       return_value += EventReceiver::notify(active_event);
       break;
   }
+
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
   return return_value;
+}
+
+
+
+void ExampleDriver::procDirectDebugInstruction(StringBuilder *input) {
+#ifdef __MANUVR_CONSOLE_SUPPORT
+  char* str = input->position(0);
+
+  uint8_t temp_byte = 0;
+  if (*(str) != 0) {
+    temp_byte = atoi((char*) str+1);
+  }
+
+  /* These are debug case-offs that are typically used to test functionality, and are then
+     struck from the build. */
+  switch (*(str)) {
+    default:
+      EventReceiver::procDirectDebugInstruction(input);
+      break;
+  }
+
+#endif
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }

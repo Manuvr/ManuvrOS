@@ -29,8 +29,8 @@ all: setenvars
 
 setenvars:
 ifeq ($(STM32F746xx),)
-LIBS  += -lstdperiph
-SRCS  += STM32F7.cpp
+#LIBS  += -lstdperiph
+#SRCS  += STM32F7.cpp
 #else ifeq ($STM32F4XX,)
   #SRCS  += STM32F4.cpp
 endif
@@ -38,8 +38,8 @@ endif
   #SRCS  += PlatformTeensy3.cpp
 ifeq ($(__MANUVR_LINUX),)
 ifeq ($(RASPI),)
-#LIBS   += -lpthread
-#SRCS  += PlatformRaspi.cpp
+LIBS   += -lpthread
+SRCS  += PlatformRaspi.cpp
 else
 #LIBS   += -lpthread
 #SRCS  += PlatformUnsupported.cpp

@@ -60,6 +60,8 @@ CPP_SRCS  += ManuvrMsg/ManuvrMsg.cpp
 # TODO: Full of fail. Arduino abstraction, GPIO, runnable, scheduler, et al...
 #CPP_SRCS  += Drivers/ManuvrableNeoPixel/ManuvrableNeoPixel.cpp
 
+CPP_SRCS  += Drivers/ExampleDriver/ExampleDriver.cpp
+CPP_SRCS  += Drivers/ManuvrCoAP/ManuvrCoAP.cpp
 CPP_SRCS  += Drivers/ISL23345/ISL23345.cpp
 CPP_SRCS  += Drivers/Bluetooth/RN4020/RN4020.cpp
 CPP_SRCS  += Drivers/ADG2128/ADG2128.cpp

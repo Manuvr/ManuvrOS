@@ -32,13 +32,15 @@ export OUTPUT_PATH = $(WHERE_I_AM)/build/
 ###########################################################################
 INCLUDES    = -I$(WHERE_I_AM)/.
 INCLUDES   += -I$(WHERE_I_AM)/ManuvrOS
+INCLUDES   += -I$(WHERE_I_AM)/lib/libcoap
+INCLUDES   += -I$(WHERE_I_AM)/lib/libcoap/include/coap
 
 
 # Libraries to link
-LIBS = -L$(OUTPUT_PATH) -lstdc++ -lm -lmanuvr
+LIBS = -L$(OUTPUT_PATH) -L$(WHERE_I_AM)/lib -lstdc++ -lm -lmanuvr
 
 # Wrap the include paths into the flags...
-CFLAGS = $(OPTIMIZATION) -Wall $(INCLUDES)
+CFLAGS  = $(OPTIMIZATION) -Wall $(INCLUDES)
 CFLAGS += -fsingle-precision-constant -Wdouble-promotion
 
 
@@ -59,7 +61,7 @@ ifeq ($(LBITS),64)
 else
   TARGET_WIDTH =
 endif
-                      
+
 
 ###########################################################################
 # Source file definitions...
@@ -68,7 +70,7 @@ endif
 CPP_SRCS  = main.cpp
 
 SRCS   = $(CPP_SRCS)
-             
+
 # TODO: I badly need to learn to write autoconf scripts....
 #   I've at least tried to modularize to make the invariable transition less-painful...
 MANUVR_OPTIONS  = -DMANUVR_SUPPORT_SERIAL
@@ -78,10 +80,14 @@ MANUVR_OPTIONS += -D__MANUVR_DEBUG
 # Options that build for certain threading models (if any).
 #MANUVR_OPTIONS += -D__MANUVR_FREERTOS
 MANUVR_OPTIONS += -D__MANUVR_LINUX
+MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
 
-LIBS += -lpthread
+LIBS += -lpthread -lcoap-1
 
-CFLAGS += $(MANUVR_OPTIONS) 
+CFLAGS += $(MANUVR_OPTIONS)
+
+# TODO: This is for the benefit of CoAP...
+CFLAGS += -DWITH_POSIX -D_GNU_SOURCE -DHAVE_CONFIG_H
 
 
 export CFLAGS
@@ -91,7 +97,7 @@ export CPP_FLAGS = $(CFLAGS)
 ###########################################################################
 # Rules for building the firmware follow...
 #
-# 'make raspi' will build a sample firmware for the original Raspberry Pi.  
+# 'make raspi' will build a sample firmware for the original Raspberry Pi.
 #    The idea is to be able to quickly iterate on a design idea with the
 #    aid of valgrind and gdb.
 ###########################################################################
@@ -126,7 +132,7 @@ builddir:
 
 libs: builddir
 
-	
+
 clean:
 	make clean -C ManuvrOS/
 	rm -f *.o *.su *~ testbench manuvr
@@ -141,4 +147,3 @@ docs:
 
 stats:
 	find ./ManuvrOS ./DataStructures ./StringBuilder -type f \( -name \*.cpp -o -name \*.h \) -exec wc -l {} +
-

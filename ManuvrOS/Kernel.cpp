@@ -1019,7 +1019,7 @@ void Kernel::printDebug(StringBuilder* output) {
 
   currentDateTime(output);
   output->concatf("-- %s v%s    Build date: %s %s\n--\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
-  output->concatf("-- our_mem_addr:             0x%08x\n", (uint32_t) this);
+  //output->concatf("-- our_mem_addr:             0x%08x\n", (uint32_t) this);
   if (verbosity > 5) output->concatf("-- boot_completed:           %s\n", (boot_completed) ? "yes" : "no");
   if (verbosity > 6) output->concatf("-- getStackPointer()         0x%08x\n", getStackPointer());
   if (verbosity > 6) output->concatf("-- stack grows %s\n--\n", (final_sp > initial_sp) ? "up" : "down");

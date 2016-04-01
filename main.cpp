@@ -47,6 +47,7 @@ limitations under the License.
 // Transports...
 #include <Transports/ManuvrSerial/ManuvrSerial.h>
 #include <Transports/ManuvrSocket/ManuvrSocket.h>
+#include <Drivers/ManuvrCoAP/ManuvrCoAP.h>
 
 
 /****************************************************************************************************
@@ -158,6 +159,16 @@ int main(int argc, char *argv[]) {
     //tcp_srv.nonSessionUsage(true);
     kernel->subscribe(&tcp_srv);
     kernel->subscribe(&tcp_cli);
+  #endif
+
+  #if defined (MANUVR_SUPPORT_UDP)
+    ManuvrUDP udp_srv((const char*) "127.0.0.1", 6053);
+    kernel->subscribe(&udp_srv);
+  #endif
+
+  #if defined (MANUVR_SUPPORT_COAP)
+    ManuvrCoAP coap_srv((const char*) "127.0.0.1", "6053");
+    kernel->subscribe(&coap_srv);
   #endif
 
   #if defined (MANUVR_SUPPORT_SERIAL)

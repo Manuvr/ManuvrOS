@@ -891,7 +891,9 @@ void StringBuilder::printDebug() {
   }
 }
 
-#else
+#endif
+
+// TODO: Make this a static.
 void StringBuilder::printDebug(StringBuilder* output) {
   unsigned char* temp = this->string();
   int temp_len  = this->length();
@@ -904,4 +906,3 @@ void StringBuilder::printDebug(StringBuilder* output) {
     output->concat("\n\n");
   }
 }
-#endif

@@ -236,7 +236,7 @@ void ManuvrRunnable::printDebug(StringBuilder *output) {
   //  output->concatf("Failed to serialize message. Count was (%d).\n", arg_count);
   //}
 
-  output->concatf("\t [0x%08x] Schedule \n\t --------------------------------\n", (uint32_t) this);
+  output->concatf("\t [0x%08x] Schedule \n\t --------------------------------\n", ((unsigned long)this % 0xFFFFFFFF));
 
   output->concatf("\t Enabled       \t%s\n", (thread_enabled ? "YES":"NO"));
   output->concatf("\t Time-till-fire\t%u\n", thread_time_to_wait);
@@ -253,7 +253,7 @@ void ManuvrRunnable::printDebug(StringBuilder *output) {
 
 
 void ManuvrRunnable::printProfilerData(StringBuilder *output) {
-  if (NULL != prof_data) output->concatf("\t 0x%08x  %9u  %9u  %9u  %9u  %9u  %9u %s\n", (uint32_t) this, prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last, (threadEnabled() ? " " : "(INACTIVE)"));
+  if (NULL != prof_data) output->concatf("\t 0x%08x  %9u  %9u  %9u  %9u  %9u  %9u %s\n", ((unsigned long)this % 0xFFFFFFFF), prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last, (threadEnabled() ? " " : "(INACTIVE)"));
 }
 
 

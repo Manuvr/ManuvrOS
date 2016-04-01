@@ -127,9 +127,8 @@ class StringBuilder {
 
 #ifdef __MANUVR_DEBUG
 		void printDebug();
-#else
-		void printDebug(StringBuilder*);
 #endif
+		void printDebug(StringBuilder*);
 
 
 	private:
