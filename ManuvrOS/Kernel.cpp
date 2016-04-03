@@ -264,14 +264,16 @@ int8_t Kernel::bootstrap() {
 *   kernel's user input slot.
 */
 void Kernel::accumulateConsoleInput(uint8_t *buf, int len, bool terminal) {
-  last_user_input.concat(buf, len);
+  if (len > 0) {
+    last_user_input.concat(buf, len);
 
-  if (terminal) {
-    // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
-    // run in idle time.
-    ManuvrRunnable* event = returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
-    event->specific_target = (EventReceiver*) this;
-    Kernel::staticRaiseEvent(event);
+    if (terminal) {
+      // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
+      // run in idle time.
+      ManuvrRunnable* event = returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
+      event->specific_target = (EventReceiver*) this;
+      Kernel::staticRaiseEvent(event);
+    }
   }
 }
 

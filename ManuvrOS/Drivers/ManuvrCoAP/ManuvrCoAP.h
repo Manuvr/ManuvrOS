@@ -56,13 +56,6 @@ This class implements CoAP over UDP.
   // No supportage.
 #endif
 
-#include "coap_config.h"
-#include "include/coap/resource.h"
-#include "include/coap/net.h"
-#include "include/coap/coap_io.h"
-#include "include/coap/address.h"
-#include "include/coap/coap.h"
-
 
 
 class ManuvrCoAP : public EventReceiver {
@@ -83,7 +76,7 @@ class ManuvrCoAP : public EventReceiver {
 
 
   private:
-    coap_context_t* _ctx;
+    void* _ctx;
     ManuvrRunnable read_abort_event;  // Used to timeout a read operation.
 
     const char* _addr;

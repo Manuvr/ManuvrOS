@@ -18,6 +18,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 */
+/*
+* Thanks for the nifty tip, Olaf Bergmann. :-)
+*/
+#ifdef __GNUC__
+  #define UNUSED_PARAM __attribute__ ((unused))
+#else /* not a GCC */
+  #define UNUSED_PARAM
+#endif /* GCC */
 
 
 #ifndef __MANUVR_KERNEL_H__

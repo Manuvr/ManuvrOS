@@ -86,37 +86,9 @@ const MessageTypeDef coap_message_defs[] = {
  extern "C" {
 #endif
 
-/*
-* Thanks for the nifty tip, Olaf Bergmann. :-)
-*/
-#ifdef __GNUC__
-#define UNUSED_PARAM __attribute__ ((unused))
-#else /* not a GCC */
-#define UNUSED_PARAM
-#endif /* GCC */
 
 
-static void _get_index_callback(coap_context_t *ctx UNUSED_PARAM,
-              struct coap_resource_t *resource UNUSED_PARAM,
-              const coap_endpoint_t *local_interface UNUSED_PARAM,
-              coap_address_t *peer UNUSED_PARAM,
-              coap_pdu_t *request UNUSED_PARAM,
-              str *token UNUSED_PARAM,
-              coap_pdu_t *response) {
-  unsigned char buf[3];
 
-  response->hdr->code = COAP_RESPONSE_CODE(205);
-
-  coap_add_option(response,
-                  COAP_OPTION_CONTENT_TYPE,
-                  coap_encode_var_bytes(buf, COAP_MEDIATYPE_TEXT_PLAIN), buf);
-
-  coap_add_option(response,
-                  COAP_OPTION_MAXAGE,
-                  coap_encode_var_bytes(buf, 0x2ffff), buf);
-
-  coap_add_data(response, strlen(EXTENDED_DETAIL_STRING), (unsigned char *)EXTENDED_DETAIL_STRING);
-}
 
 #ifdef __cplusplus
  }
@@ -134,7 +106,6 @@ ManuvrCoAP::ManuvrCoAP(const char* addr, const char* port) {
 ManuvrCoAP::~ManuvrCoAP() {
   __kernel->unsubscribe(this);
   if (NULL != _ctx) {
-    coap_free_context(_ctx);
   }
 }
 
@@ -173,14 +144,6 @@ void ManuvrCoAP::__class_initializer() {
 
 // TODO: This is the point at which we ask the Kernel for all exportable messages and map them into CoAP.
 int8_t ManuvrCoAP::init_resources() {
-  coap_resource_t* _tmp_r;
-
-  _tmp_r = coap_resource_init(NULL, 0, 0);
-  coap_register_handler(_tmp_r, COAP_REQUEST_GET, _get_index_callback);
-
-  coap_add_attr(_tmp_r, (unsigned char *)"ct", 2, (unsigned char *)"0", 1, 0);
-  coap_add_attr(_tmp_r, (unsigned char *)"title", 5, (unsigned char *)"\"General Info\"", 14, 0);
-  coap_add_resource(_ctx, _tmp_r);
 
   return 0;
 }

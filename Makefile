@@ -32,8 +32,7 @@ export OUTPUT_PATH = $(WHERE_I_AM)/build/
 ###########################################################################
 INCLUDES    = -I$(WHERE_I_AM)/.
 INCLUDES   += -I$(WHERE_I_AM)/ManuvrOS
-INCLUDES   += -I$(WHERE_I_AM)/lib/libcoap
-INCLUDES   += -I$(WHERE_I_AM)/lib/libcoap/include/coap
+INCLUDES   += -I$(WHERE_I_AM)/lib
 
 
 # Libraries to link
@@ -82,12 +81,9 @@ MANUVR_OPTIONS += -D__MANUVR_DEBUG
 MANUVR_OPTIONS += -D__MANUVR_LINUX
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
 
-LIBS += -lpthread -lcoap-1
+LIBS += -lpthread 
 
 CFLAGS += $(MANUVR_OPTIONS)
-
-# TODO: This is for the benefit of CoAP...
-CFLAGS += -DWITH_POSIX -D_GNU_SOURCE -DHAVE_CONFIG_H
 
 
 export CFLAGS
@@ -131,7 +127,7 @@ builddir:
 	mkdir -p $(OUTPUT_PATH)
 
 libs: builddir
-
+#	make -C lib/
 
 clean:
 	make clean -C ManuvrOS/
