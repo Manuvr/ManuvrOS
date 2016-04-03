@@ -101,3 +101,23 @@ void sleep_millis(unsigned long millis) {
     vTaskDelay(millis / portTICK_PERIOD_MS);
   #endif
 }
+
+
+
+// TODO: I know this is horrid. I'm sick of screwing with the build system today...
+
+#if defined(RASPI)
+  #include "PlatformRaspi.cpp"
+#elif defined(__MK20DX256__) | defined(__MK20DX128__)
+  #include "PlatformTeensy3.cpp"
+#elif defined(STM32F4XX)
+
+#elif defined(STM32F7XX) | defined(STM32F746xx)
+  #include "STM32F7.cpp"
+#elif defined(ARDUINO)
+
+#elif defined(__MANUVR_LINUX)
+  #include "PlatformUnsupported.cpp"
+#else
+  // Unsupportage.
+#endif

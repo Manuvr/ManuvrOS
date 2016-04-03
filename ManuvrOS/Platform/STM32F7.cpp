@@ -345,8 +345,8 @@ void platformInit() {
   init_RNG();
   #if defined(ENABLE_USB_VCP)
     TM_USB_Init();    /* Init USB peripheral */
-    //TM_USBD_CDC_Init(TM_USB_FS);
-    //TM_USBD_Start(TM_USB_FS);
+    TM_USBD_CDC_Init(TM_USB_FS);
+    TM_USBD_Start(TM_USB_FS);
   #endif
 }
 

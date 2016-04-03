@@ -295,7 +295,7 @@ void currentDateTime(StringBuilder* target) {
 /*
 * Not provided elsewhere on a linux platform.
 */
-uint32_t millis() {
+unsigned long millis() {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000L);
@@ -305,7 +305,7 @@ uint32_t millis() {
 /*
 * Not provided elsewhere on a linux platform.
 */
-uint32_t micros() {
+unsigned long micros() {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return (ts.tv_sec * 1000000L + ts.tv_nsec / 1000L);
