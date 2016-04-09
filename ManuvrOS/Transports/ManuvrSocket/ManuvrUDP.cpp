@@ -45,7 +45,7 @@ const MessageTypeDef udp_message_defs[] = {
   * Since listening for connections on this transport involves blocking, we have a
   *   thread dedicated to the task...
   */
-  void* socket_listener_loop(void* active_xport) {
+  void* _udp_socket_listener_loop(void* active_xport) {
     if (NULL != active_xport) {
       sigset_t set;
       sigemptyset(&set);
@@ -210,7 +210,7 @@ int8_t ManuvrUDP::listen() {
   }
 
   //initialized(true);
-  createThread(&_thread_id, NULL, socket_listener_loop, (void*) this);
+  createThread(&_thread_id, NULL, _udp_socket_listener_loop, (void*) this);
 
   listening(true);
   local_log.concatf("UDP Now listening at %s:%d.\n", _addr, _port_number);

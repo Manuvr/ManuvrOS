@@ -17,6 +17,8 @@ LIBS =  -lm
 
 CPP_SRCS   = DataStructures/StringBuilder.cpp
 CPP_SRCS  += DataStructures/Quaternion.cpp
+CPP_SRCS  += DataStructures/InertialMeasurement.cpp
+
 CPP_SRCS  += ManuvrRunnable.cpp
 CPP_SRCS  += EnumeratedTypeCodes.cpp
 CPP_SRCS  += Kernel.cpp

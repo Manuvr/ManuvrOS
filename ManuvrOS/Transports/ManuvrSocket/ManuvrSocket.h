@@ -102,7 +102,7 @@ class ManuvrTCP : public ManuvrXport {
 #endif  // MANUVR_SUPPORT_TCPSOCKET
 
 
-#if defined(MANUVR_SUPPORT_UDPSOCKET)
+#if defined(MANUVR_SUPPORT_UDP)
 
 #define MANUVR_MSG_UDP_RX  0xF544
 #define MANUVR_MSG_UDP_TX  0xF545
@@ -171,6 +171,6 @@ class ManuvrUDP : public EventReceiver {
 };
 
 
-#endif  // MANUVR_SUPPORT_UDPSOCKET
+#endif  // MANUVR_SUPPORT_UDP
 
 #endif   // __MANUVR_SOCKET_H__
