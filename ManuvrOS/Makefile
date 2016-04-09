@@ -79,6 +79,8 @@ CPP_SRCS  += Drivers/DeviceWithRegisters/DeviceWithRegisters.cpp
 CPP_SRCS  += Drivers/DeviceWithRegisters/DeviceRegister.cpp
 CPP_SRCS  += Drivers/ManuvrableGPIO/ManuvrableGPIO.cpp
 
+# Power-management ICs and modules...
+#CPP_SRCS  += Drivers/PMIC/LDS8160/LDS8160.cpp
 
 
 OBJS  = $(CPP_SRCS:.cpp=.o)
