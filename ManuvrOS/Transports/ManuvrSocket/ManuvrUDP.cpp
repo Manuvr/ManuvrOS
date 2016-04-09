@@ -22,6 +22,7 @@ This class implements a crude UDP connector.
 
 */
 
+#if defined(MANUVR_SUPPORT_UDP)
 
 #include "ManuvrSocket.h"
 #include <DataStructures/StringBuilder.h>
@@ -38,6 +39,7 @@ const MessageTypeDef udp_message_defs[] = {
 
 
 
+volatile ManuvrUDP* ManuvrUDP::INSTANCE = NULL;
 
 #if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
 
@@ -61,7 +63,6 @@ const MessageTypeDef udp_message_defs[] = {
       ManuvrRunnable* event = NULL;
       StringBuilder output;
       int      cli_sock;
-      int n = 0;
       struct sockaddr_in cli_addr;
       while (listening_inst->listening()) {
         unsigned int clientlen = sizeof(cli_addr);
@@ -69,7 +70,7 @@ const MessageTypeDef udp_message_defs[] = {
         unsigned char buf[1024];
 
         // Read data from UDP port. Blocks...
-        n = recvfrom(listening_inst->getSockID(), buf, 1024, 0, (struct sockaddr *) &cli_addr, &clientlen);
+        int n = recvfrom(listening_inst->getSockID(), buf, 1024, 0, (struct sockaddr *) &cli_addr, &clientlen);
         if (-1 == n) {
           output.concat("Failed to read UDP packet.\n");
         }
@@ -78,7 +79,7 @@ const MessageTypeDef udp_message_defs[] = {
           event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
           StringBuilder* nu_data = new StringBuilder(buf, n);
           event->markArgForReap(event->addArg(nu_data), true);
-          listening_inst->bytes_received += n;
+          listening_inst->count_rx_bytes(n);
           output.concatf("UDP read %d bytes from client ", n);
           output.concat((char*) inet_ntoa(cli_addr.sin_addr));
           output.concat("\n");
@@ -116,24 +117,19 @@ const MessageTypeDef udp_message_defs[] = {
 
 
 
-volatile ManuvrUDP* ManuvrUDP::INSTANCE = NULL;
 
-
-ManuvrUDP::ManuvrUDP(const char* addr, int port) {
+/**
+* Constructor.
+*/
+ManuvrUDP::ManuvrUDP(const char* addr, int port) : ManuvrSocket(addr, port, 0) {
   __class_initializer();
-  _port_number = port;
-  _addr        = addr;
 }
 
 
-ManuvrUDP::ManuvrUDP(const char* addr, int port, uint32_t opts) {
+ManuvrUDP::ManuvrUDP(const char* addr, int port, uint32_t opts) : ManuvrSocket(addr, port, opts) {
   __class_initializer();
-  _port_number = port;
-  _addr        = addr;
-
-  // These will vary across UDP/WS/TCP.
-  _options     = opts;
 }
+
 
 
 ManuvrUDP::~ManuvrUDP() {
@@ -148,32 +144,12 @@ ManuvrUDP::~ManuvrUDP() {
 void ManuvrUDP::__class_initializer() {
   EventReceiver::__class_initializer();
 
-  _options           = 0;
-  _port_number       = 0;
-  _sock              = -1;
-  _xport_flags       = 0;
-  bytes_sent         = 0;
-  bytes_received     = 0;
-
   // TODO: Singleton due-to-feature thrust. Need to ditch the singleton...
   if (NULL == INSTANCE) {
     INSTANCE = this;
     // TODO: ...as well as decide on a strategy for THIS:
     // Inform the Kernel of the codes we will be using...
     ManuvrMsg::registerMessages(udp_message_defs, sizeof(udp_message_defs) / sizeof(MessageTypeDef));
-  }
-
-  // Build some pre-formed Events.
-  read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
-  read_abort_event.isManaged(true);
-  read_abort_event.specific_target = (EventReceiver*) this;
-  read_abort_event.originator      = (EventReceiver*) this;
-  read_abort_event.priority        = 5;
-  //read_abort_event.addArg(xport_id);  // Add our assigned transport ID to our pre-baked argument.
-
-  // Zero the socket parameter structures.
-  for (uint16_t i = 0; i < sizeof(_sockaddr);  i++) {
-    *((uint8_t *) &_sockaddr + i) = 0;
   }
 }
 
@@ -224,6 +200,20 @@ int8_t ManuvrUDP::listen() {
 // TODO: Nonsense in UDP land. generalize? Special-case? So many (?)...
 int8_t ManuvrUDP::read_port() {
   return 0;
+}
+
+
+int8_t ManuvrUDP::reset() {
+  initialized(true);
+  return 0;
+}
+
+int8_t ManuvrUDP::connect() {
+  return 0;
+}
+
+bool ManuvrUDP::write_port(unsigned char* out, int out_len) {
+  return false;
 }
 
 
@@ -296,12 +286,8 @@ const char* ManuvrUDP::getReceiverName() {  return "ManuvrUDP";  }
 * @param A pointer to a StringBuffer object to receive the output.
 */
 void ManuvrUDP::printDebug(StringBuilder* output) {
-  if (NULL == output) return;
-  EventReceiver::printDebug(output);
-  output->concatf("Transport\n=======\n-- _xport_flags   0x%08x\n", _xport_flags);
-  output->concatf("-- bytes sent      %u\n", bytes_sent);
-  output->concatf("-- bytes received  %u\n--\n", bytes_received);
-  output->concatf("-- listening       %s\n", (listening() ? "yes" : "no"));
+  ManuvrXport::printDebug(output);
+
   output->concatf("-- _addr           %s:%d\n",  _addr, _port_number);
   output->concatf("-- _options        0x%08x\n", _options);
   output->concatf("-- _sock           0x%08x\n", _sock);
@@ -405,3 +391,6 @@ void ManuvrUDP::procDirectDebugInstruction(StringBuilder *input) {
 #endif
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
+
+
+#endif  // UDP support

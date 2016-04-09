@@ -184,7 +184,6 @@ class ManuvrXport : public EventReceiver {
     bool read_timeout_defer;       // Used to timeout a read operation.
 
     uint32_t _xport_mtu;      // The largest packet size we handle.
-
     uint32_t bytes_sent;
     uint32_t bytes_received;
 

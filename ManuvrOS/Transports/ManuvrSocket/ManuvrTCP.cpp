@@ -112,30 +112,21 @@ This is basically only for linux for now.
 /**
 * Constructor.
 */
-ManuvrTCP::ManuvrTCP(const char* addr, int port) : ManuvrSocket(addr, port) {
+ManuvrTCP::ManuvrTCP(const char* addr, int port) : ManuvrSocket(addr, port, 0) {
   __class_initializer();
-  _port_number = port;
-  _addr        = addr;
-
-  // These will vary across UDP/WS/TCP.
-  _options     = 0;
 }
 
 
 ManuvrTCP::ManuvrTCP(const char* addr, int port, uint32_t opts) : ManuvrSocket(addr, port, opts) {
   __class_initializer();
-  _port_number = port;
-  _addr        = addr;
-
-  // These will vary across UDP/WS/TCP.
-  _options     = opts;
 }
 
 
 /**
 * This constructor is called by a listening instance of ManuvrTCP.
 */
-ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in* nu_sockaddr) : ManuvrSocket(listening_instance->_addr, listening_instance->_port_number) {
+// TODO: This is very ugly.... Might need a better way of fractioning into new threads...
+ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in* nu_sockaddr) : ManuvrSocket(listening_instance->_addr, listening_instance->_port_number, 0) {
   __class_initializer();
   _sock          = sock;
   _options       = listening_instance->_options;
@@ -169,12 +160,7 @@ ManuvrTCP::~ManuvrTCP() {
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void ManuvrTCP::__class_initializer() {
-  _sock              = 0;
-
-  // Zero the socket parameter structures.
-  for (uint16_t i = 0; i < sizeof(_sockaddr);  i++) {
-    *((uint8_t *) &_sockaddr + i) = 0;
-  }
+  EventReceiver::__class_initializer();
 }
 
 

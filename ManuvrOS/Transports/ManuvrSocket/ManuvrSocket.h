@@ -50,20 +50,25 @@ This is basically only for linux until it is needed in a smaller space.
 
 class ManuvrSocket : public ManuvrXport {
   public:
-    ManuvrSocket(const char* addr, int port);
     ManuvrSocket(const char* addr, int port, uint32_t opts);
     ~ManuvrSocket();
+
+    inline int getSockID() {  return _sock; };
+
 
   protected:
     const char* _addr;
     int         _port_number;
     uint32_t    _options;
+    int         _sock;
+
+    #if defined(__MANUVR_LINUX)
+      struct sockaddr_in _sockaddr;
+    #endif
 
   private:
     void __class_initializer();
 };
-
-#endif // General socket support
 
 
 
@@ -95,22 +100,15 @@ class ManuvrTCP : public ManuvrSocket {
     bool write_port(int sock, unsigned char* out, int out_len);
     int8_t read_port();
 
-    inline int getSockID() {  return _sock; };
 
   protected:
 
 
   private:
-    int         _sock;
-
     // Related to threading and pipes. This is linux-specific.
     StringBuilder __io_buffer;
     int __parent_pid;
     int __blocking_pid;
-
-    #if defined(__MANUVR_LINUX)
-      struct sockaddr_in _sockaddr;
-    #endif
 
     LinkedList<ManuvrTCP*> _connections;   // A list of client connections.
 
@@ -125,25 +123,24 @@ class ManuvrTCP : public ManuvrSocket {
 #define MANUVR_MSG_UDP_RX  0xF544
 #define MANUVR_MSG_UDP_TX  0xF545
 
-class ManuvrUDP : public EventReceiver {
+class ManuvrUDP : public ManuvrSocket {
   public:
-    // TODO: Expediency. Triage.... Make private.
-    uint32_t bytes_sent;
-    uint32_t bytes_received;
-
     ManuvrUDP(const char* addr, int port);
     ManuvrUDP(const char* addr, int port, uint32_t opts);
     ~ManuvrUDP();
 
+    int8_t connect();
     int8_t listen();
-    inline bool listening() {       return (_xport_flags & MANUVR_XPORT_FLAG_LISTENING);   };
-    inline void listening(bool) {   _xport_flags |= MANUVR_XPORT_FLAG_LISTENING;   };
+    int8_t reset();
+    int8_t read_port();
+    bool write_port(unsigned char* out, int out_len);
 
     bool write_datagram(unsigned char* out, int out_len, const char* addr, int port, uint32_t opts);
     inline bool write_datagram(unsigned char* out, int out_len, const char* addr, int port) {
       return write_datagram(out, out_len, addr, port, 0);
     };
-    int8_t read_port();
+
+    inline void count_rx_bytes(int x) {   bytes_received += x;  };
 
     /* Overrides from EventReceiver */
     int8_t notify(ManuvrRunnable*);
@@ -152,44 +149,29 @@ class ManuvrUDP : public EventReceiver {
     const char* getReceiverName();
     void printDebug(StringBuilder*);
 
-    inline int getSockID() {  return _sock; };
-
 
     // UDP is connectionless. We should only have a single instance of this class.
     volatile static ManuvrUDP* INSTANCE;
 
 
   protected:
-    void __class_initializer();
     int8_t bootComplete();
 
 
   private:
-    ManuvrRunnable read_abort_event;  // Used to timeout a read operation.
-    uint32_t _xport_flags;
-
-    const char* _addr;
-    int         _sock;
     int         _client_sock;
-    uint32_t    _options;
-
-    int         _port_number;
 
     // Related to threading and pipes. This is linux-specific.
     StringBuilder __io_buffer;
     int __parent_pid;
     int __blocking_pid;
 
-    #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
-      // Threaded platforms have a concept of threads...
-      unsigned long _thread_id;
-      #if defined(__MANUVR_LINUX)
-        struct sockaddr_in _sockaddr;
-      #endif
-    #endif
+    void __class_initializer();
 };
 
 
 #endif  // MANUVR_SUPPORT_UDP
+
+#endif // General socket support
 
 #endif   // __MANUVR_SOCKET_H__

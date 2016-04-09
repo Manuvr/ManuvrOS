@@ -30,6 +30,8 @@ Platforms that require it should be able to extend this driver for specific
 */
 
 
+#if defined(MANUVR_SUPPORT_TCPSOCKET) || defined(MANUVR_SUPPORT_UDP)
+
 #include "ManuvrSocket.h"
 #include "FirmwareDefs.h"
 #include "XenoSession/XenoSession.h"
@@ -62,16 +64,6 @@ Platforms that require it should be able to extend this driver for specific
 /**
 * Constructor.
 */
-ManuvrSocket::ManuvrSocket(const char* addr, int port) : ManuvrXport() {
-  __class_initializer();
-  _port_number = port;
-  _addr        = addr;
-
-  // These will vary across UDP/WS/TCP.
-  _options     = 0;
-}
-
-
 ManuvrSocket::ManuvrSocket(const char* addr, int port, uint32_t opts) : ManuvrXport() {
   __class_initializer();
   _port_number = port;
@@ -99,6 +91,14 @@ void ManuvrSocket::__class_initializer() {
   _options           = 0;
   _port_number       = 0;
 
+  #if defined(__MANUVR_LINUX)
+    _sock              = 0;
+    // Zero the socket parameter structures.
+    for (uint16_t i = 0; i < sizeof(_sockaddr);  i++) {
+      *((uint8_t *) &_sockaddr + i) = 0;
+    }
+  #endif
+
   // Build some pre-formed Events.
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
   read_abort_event.isManaged(true);
@@ -110,3 +110,6 @@ void ManuvrSocket::__class_initializer() {
 
 #else   //Unsupportedness
 #endif  // __LINUX
+
+
+#endif  // Socket support?
