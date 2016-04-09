@@ -19,3 +19,358 @@ limitations under the License.
 
 
 */
+
+
+#include "ManuvrSession.h"
+
+
+/**
+* When a connectable class gets a connection, we get instantiated to handle the protocol...
+*
+* @param   ManuvrXport* All sessions must have one (and only one) transport.
+*/
+ManuvrSession::ManuvrSession(ManuvrXport* _xport) : XenoSession(_xport) {
+  __class_initializer();
+
+  // These are messages that we want to relay from the rest of the system.
+  tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
+  tapMessageType(MANUVR_MSG_SESS_HANGUP);
+  tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
+
+  bootComplete();    // Because we are instantiated well after boot, we call this on construction.
+}
+
+
+/**
+* Unlike many of the other EventReceivers, THIS one needs to be able to be torn down.
+*/
+ManuvrSession::~ManuvrSession() {
+  sync_event.enableSchedule(false);
+  __kernel->removeSchedule(&sync_event);
+}
+
+
+/****************************************************************************************************
+* Functions for managing and reacting to sync states.                                               *
+****************************************************************************************************/
+
+int8_t ManuvrSession::sendSyncPacket() {
+  if (owner->connected()) {
+    StringBuilder sync_packet((unsigned char*) XenoMessage::SYNC_PACKET_BYTES, 4);
+    owner->sendBuffer(&sync_packet);
+
+    //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
+    //event->specific_target = owner;  //   event to be the transport that instantiated us.
+    //raiseEvent(event);
+  }
+  return 0;
+}
+
+
+/**
+* This fxn is destructive to the session buffer. The point is to eliminate bytes from the
+*   buffer until we have the following 4-byte sequence at offset 0. In that case, we consume
+*   all the sync data from the buffer and return non-zero.
+* If no sync packets were found in the buffer, we should return zero after having fully-consumed
+*   the buffer.
+*
+* @return  int8_t 0 if we did not find a sync packet. 1 if we did. -1 on meltdown.
+*/
+int8_t ManuvrSession::scan_buffer_for_sync() {
+  int8_t return_value = 0;
+  int len = session_buffer.length();
+  int last_sync_offset = 0;
+  int offset = 0;
+  uint32_t sync_value = 0x04 + (CHECKSUM_PRELOAD_BYTE << 24);
+  unsigned char *buf = session_buffer.string();
+  while (len >= offset+4) {
+    if (parseUint32Fromchars(buf + offset) == sync_value) {
+      // If we have those 4 bytes in sequence, we have found a sync packet.
+      return_value = 1;
+      last_sync_offset = offset;
+      offset += 4;
+      // Notice that we continue the loop. If we found one sync packet, we will likely find more.
+    }
+    else {
+      offset++;
+    }
+  }
+
+  if (return_value) {
+    /* We found a sync! Now to cull the sync data from the session buffer. We COULD
+    *  only cull the modulus of the offset and let the parser handle the sync packets,
+    *  but that would just waste resources. We might as well eliminate all the junk now. */
+    session_buffer.cull(last_sync_offset + 4);
+  }
+  else if (len > 7) {
+    /* We did not find a sync packet, but we have more in the buffer than we need to find it.
+    *  Cull all but the last 3 bytes. The next time we get data from the transport, we will
+    *  concat to the buffer and run this check again. */
+    session_buffer.cull(len - 3);
+  }
+  return return_value;
+}
+
+
+/**
+* Calling this fxn puts the session into sync mode. This will throw the session into a tizzy
+*   so be careful to call it only as a last resort.
+*
+* Calling this fxn has the following side-effects:
+*   - Starts the schedule to send sync packets, which will continue until the session is marked sync'd.
+*
+* @param   uint8_t The sync state code that represents where in the sync-state-machine we should be.
+*/
+void ManuvrSession::mark_session_desync(uint8_t ds_src) {
+  session_last_state = session_state;               // Stack our session state.
+  session_state = getState() | ds_src;
+  if (session_state & ds_src) {
+    #ifdef __MANUVR_DEBUG
+    if (verbosity > 3) local_log.concatf("Session 0x%08x is already in the requested sync state (%s). Doing nothing.\n", (uint32_t) this, getSessionSyncString());
+    #endif
+  }
+  else {
+    switch (ds_src) {
+      case XENOSESSION_STATE_SYNC_INITIATED:    // CP-initiated sync
+        break;
+      case XENOSESSION_STATE_SYNC_INITIATOR:    // We initiated sync
+        break;
+      case XENOSESSION_STATE_SYNC_PEND_EXIT:    // Sync has been recognized and we are rdy for a real packet.
+        break;
+      case XENOSESSION_STATE_SYNC_SYNCD:        // Nominal state. Session is in sync.
+        break;
+      case XENOSESSION_STATE_SYNC_CASTING:      //
+      default:
+        break;
+    }
+  }
+  sync_event.enableSchedule(true);
+
+  if (local_log.length() > 0) Kernel::log(&local_log);
+}
+
+
+
+/**
+* Calling this fxn puts the session back into a sync'd state. Resets the tracking data, restores
+*   the session_state to whatever it was before the desync, and if there are messages in the queues,
+*   fires an event to cause the transport to resume pulling from this class.
+*
+* @param   bool Is the sync state machine pending exit (true), or fully-exited (false)?
+*/
+void ManuvrSession::mark_session_sync(bool pending) {
+  sequential_parse_failures = 0;
+  sequential_ack_failures   = 0;
+  session_last_state = session_state;               // Stack our session state.
+
+  if (pending) {
+    // We *think* we might be done sync'ing...
+    session_state = getState() | XENOSESSION_STATE_SYNC_PEND_EXIT;
+    sendEvent(Kernel::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE));
+  }
+  else {
+    // We are definately done sync'ing.
+    session_state = getState();
+
+    if (!isEstablished()) {
+      // When (if) the session syncs, various components in the firmware might
+      //   want a message put through.
+      mark_session_state(XENOSESSION_STATE_ESTABLISHED);
+      //sendEvent(Kernel::returnEvent(MANUVR_MSG_SESS_ESTABLISHED));
+      raiseEvent(Kernel::returnEvent(MANUVR_MSG_SELF_DESCRIBE));
+      //sendEvent(Kernel::returnEvent(MANUVR_MSG_LEGEND_MESSAGES));
+    }
+  }
+
+  sync_event.enableSchedule(false);
+}
+
+
+
+/****************************************************************************************************
+* Functions for interacting with the transport driver.                                              *
+****************************************************************************************************/
+
+/**
+* When we take bytes from the transport, and can't use them all right away,
+*   we store them to prepend to the next group of bytes that come through.
+*
+* @param
+* @param
+* @return  int8_t  // TODO!!!
+*/
+int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
+  int8_t return_value = 0;
+
+  session_buffer.concat(buf, len);
+
+  const char* statcked_sess_str = getSessionStateString();
+
+  #ifdef __MANUVR_DEBUG
+  if (verbosity > 6) {
+    local_log.concatf("Bytes received into session 0x%08x buffer: \n\t", (uint32_t) this);
+    for (int i = 0; i < len; i++) {
+      local_log.concatf("0x%02x ", *(buf + i));
+    }
+    local_log.concat("\n\n");
+  }
+  #endif
+
+  switch (getSync()) {   // Consider the top four bits of the session state.
+    case XENOSESSION_STATE_SYNC_SYNCD:       // The nominal case. Session is in-sync. Do nothing.
+    case XENOSESSION_STATE_SYNC_PEND_EXIT:   // We have exchanged sync packets with the counterparty.
+      break;
+    case XENOSESSION_STATE_SYNC_INITIATED:   // The counterparty noticed the problem.
+    case XENOSESSION_STATE_SYNC_INITIATOR:   // We noticed a problem. We wait for a sync packet...
+      /* At this point, we shouldn't be adding to the inbound queue. We should simply add
+         to the session buffer and scan it for sync packets. */
+      if (scan_buffer_for_sync()) {   // We are getting sync back now.
+        /* Since we are going to fall-through into the general parser case, we should reset
+           the values that it will use to index and make decisions... */
+        mark_session_sync(true);   // Indicate that we are done with sync, but may still see such packets.
+        #ifdef __MANUVR_DEBUG
+        if (verbosity > 3) local_log.concatf("Session 0x%08x re-sync'd with %d bytes remaining in the buffer. Sync'd state is now pending.\n", (uint32_t) this, len);
+        #endif
+      }
+      else {
+        #ifdef __MANUVR_DEBUG
+          if (verbosity > 2) local_log.concat("Session still out of sync.\n");
+        #endif
+        if (local_log.length() > 0) Kernel::log(&local_log);
+        return return_value;
+      }
+      break;
+    default:
+      #ifdef __MANUVR_DEBUG
+      if (verbosity > 1) local_log.concatf("ILLEGAL session_state: 0x%02x (top 4)\n", session_state);
+      #endif
+      break;
+  }
+
+
+  switch (getState()) {   // Consider the bottom four bits of the session state.
+    case XENOSESSION_STATE_UNINITIALIZED:
+      break;
+    case XENOSESSION_STATE_PENDING_SETUP:
+      break;
+    case XENOSESSION_STATE_PENDING_AUTH:
+      break;
+    case XENOSESSION_STATE_ESTABLISHED:
+      break;
+    case XENOSESSION_STATE_PENDING_HANGUP:
+      break;
+    case XENOSESSION_STATE_HUNGUP:
+      break;
+    default:
+      #ifdef __MANUVR_DEBUG
+      //if (verbosity > 1) local_log.concatf("ILLEGAL session_state: 0x%02x (bottom 4)\n", session_state);
+      #endif
+      break;
+  }
+
+  if (NULL == working) {
+    working = XenoMessage::fetchPreallocation(this);
+  }
+
+  // If the working message is not in a RECEIVING state, it means something has gone sideways.
+  if ((XENO_MSG_PROC_STATE_RECEIVING | XENO_MSG_PROC_STATE_UNINITIALIZED) & working->getState()) {
+    int consumed = working->feedBuffer(&session_buffer);
+    #ifdef __MANUVR_DEBUG
+    if (verbosity > 5) local_log.concatf("Feeding message 0x%08x. Consumed %d of %d bytes.\n", (uint32_t) working, consumed, len);
+    #endif
+
+    if (consumed > 0) {
+      // Be sure to cull any bytes in the session buffer that were claimed.
+      session_buffer.cull(consumed);
+    }
+
+    switch (working->getState()) {
+      case XENO_MSG_PROC_STATE_AWAITING_PROC:
+        // If the message is completed, we can move forward with proc'ing it...
+        take_message();
+        break;
+      case XENO_MSG_PROC_STATE_SYNC_PACKET:
+        // T'was a sync packet. Consider our own state and react appropriately.
+        XenoMessage::reclaimPreallocation(working);
+        working = NULL;
+        if (0 == getState()) {
+          // If we aren't dealing with sync at the moment, and the counterparty sent a sync packet...
+          #ifdef __MANUVR_DEBUG
+            if (verbosity > 4) local_log.concat("Counterparty wants to sync,,, changing session state...\n");
+          #endif
+          mark_session_desync(XENOSESSION_STATE_SYNC_INITIATED);
+        }
+        break;
+      case (XENO_MSG_PROC_STATE_ERROR | XENO_MSG_PROC_STATE_AWAITING_REAP):
+        // There was some sort of problem...
+        if (verbosity > 3) {
+          local_log.concatf("XenoMessage 0x%08x reports an error:\n", (uint32_t) this);
+          working->printDebug(&local_log);
+        }
+        if (MAX_PARSE_FAILURES == ++sequential_parse_failures) {
+          #ifdef __MANUVR_DEBUG
+            if (verbosity > 2) local_log.concat("\nThis was the session's last straw. Session marked itself as desync'd.\n");
+          #endif
+          mark_session_desync(XENOSESSION_STATE_SYNC_INITIATOR);   // We will complain.
+        }
+        else {
+          // Send a retransmit request.
+        }
+        // NOTE: No break.
+      case XENO_MSG_PROC_STATE_AWAITING_REAP:
+        XenoMessage::reclaimPreallocation(working);
+        working = NULL;
+        break;
+    }
+  }
+  else {
+    if (verbosity > 3) local_log.concatf("XenoMessage 0x%08x is in the wrong state to accept bytes: %s\n", (uint32_t) working, working->getMessageStateString());
+  }
+
+
+  if (statcked_sess_str != getSessionStateString()) {
+    // The session changed state. Print it.
+    #ifdef __MANUVR_DEBUG
+      if (verbosity > 3) local_log.concatf("XenoSession state change:\t %s ---> %s\n", statcked_sess_str, getSessionStateString());
+    #endif
+  }
+
+  if (local_log.length() > 0) Kernel::log(&local_log);
+  return return_value;
+}
+
+
+
+
+/**
+* Debug support function.
+*
+* @return a pointer to a string constant.
+*/
+const char* ManuvrSession::getReceiverName() {  return "XenoSession";  }
+
+
+/**
+* Debug support method. This fxn is only present in debug builds.
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
+void ManuvrSession::printDebug(StringBuilder *output) {
+  output->concatf("-- Sync state           %s\n", getSessionSyncString());
+  XenoSession::printDebug(output);
+}
+
+
+/**
+* Logging support fxn.
+*/
+const char* ManuvrSession::getSessionSyncString() {
+  switch (getSync()) {
+    case XENOSESSION_STATE_SYNC_SYNCD:       return "SYNCD";
+    case XENOSESSION_STATE_SYNC_CASTING:     return "CASTING";
+    case XENOSESSION_STATE_SYNC_PEND_EXIT:   return "PENDING EXIT";
+    case XENOSESSION_STATE_SYNC_INITIATOR:   return "SYNCING (our choice)";
+    case XENOSESSION_STATE_SYNC_INITIATED:   return "SYNCING (counterparty choice)";
+    default:                                 return "<UNHANDLED SYNC CODE>";
+  }
+}

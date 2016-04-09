@@ -26,10 +26,16 @@ CPP_SRCS  += EnumeratedTypeCodes.cpp
 CPP_SRCS  += Kernel.cpp
 CPP_SRCS  += EventReceiver.cpp
 CPP_SRCS  += TaskProfilerData.cpp
-CPP_SRCS  += XenoSession/XenoMessage.cpp
-CPP_SRCS  += XenoSession/XenoSession.cpp
 CPP_SRCS  += ManuvrMsg/Argument.cpp
 CPP_SRCS  += ManuvrMsg/ManuvrMsg.cpp
+
+# Concepts of "session" according to various standards...
+CPP_SRCS  += XenoSession/XenoMessage.cpp
+CPP_SRCS  += XenoSession/XenoSession.cpp
+CPP_SRCS  += XenoSession/Manuvr/ManuvrSession.cpp
+CPP_SRCS  += XenoSession/CoAP/CoAPSession.cpp
+CPP_SRCS  += XenoSession/MQTT/MQTTSession.cpp
+
 
 # TODO: Case-off for socket/TCP/Pipe support...
 #CPP_SRCS  += Transports/ManuvrPipe/ManuvrPipe.cpp

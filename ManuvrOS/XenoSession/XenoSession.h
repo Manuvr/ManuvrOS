@@ -32,8 +32,6 @@ XenoSession is the class that manages dialog with other systems via some
 #include "../EnumeratedTypeCodes.h"
 #include "../Transports/ManuvrXport.h"
 
-#define CHECKSUM_PRELOAD_BYTE 0x55    // Calculation of new checksums should start with this byte,
-
 
 /*
 * These are the stages that a XenoMessage passes through.
@@ -63,30 +61,6 @@ XenoSession is the class that manages dialog with other systems via some
 #define XENO_SESSION_MAX_QUEUE_PRINT        3    // This is only relevant for debug.
 #define XENOMESSAGE_PREALLOCATE_COUNT       8    // How many XenoMessages should be preallocated?
 
-/*
-* All multibyte values are stored "little-endian".
-* Checksum = 0x55 (Preload) + Every other byte after it. Then truncate to uint8.
-*
-* |<-------------------HEADER------------------------>|
-* |--------------------------------------------------|  /---------------\
-* | Total Length | Checksum | Unique ID | Message ID |  | Optional data |
-* |--------------------------------------------------|  \---------------/
-*       3             1           2           2            <---- Bytes
-*
-* Minimum packet size is the sync packet (4 bytes). Sync packet is
-*   always the same (for a given CHECKSUM_PRELOAD):
-*        0x04 0x00 0x00 0x55
-*                        |----- Checksum preload
-*
-* Sync packets are the way in which we establish initial order for our dialog. We need to sync
-*   initially on connection and if something goes sideways in the course of a normal dialog.
-*
-* Receiving an unsolicited sync packet should be an indication that the counterparty either
-*   can't understand us, or the transport dropped a message and they timed it out. When we see
-*   a sync packet on the wire, we should allow the currently-active transaction to complete and
-*   then send back a sync stream of our own. When the counterparty notices this, communication
-*   can resume.
-*/
 
 
 
@@ -177,7 +151,6 @@ class XenoMessage {
 
 
 
-#define XENOSESSION_INITIAL_SYNC_COUNT    24      // How many sync packets to send before giving up.
 
 
 /*
@@ -232,13 +205,12 @@ class XenoSession : public EventReceiver {
 
     int8_t sendEvent(ManuvrRunnable*);
 
-    int8_t sendSyncPacket();
     int8_t sendKeepAlive();
 
     /* Overrides from EventReceiver */
     void procDirectDebugInstruction(StringBuilder*);
-    const char* getReceiverName();
-    void printDebug(StringBuilder*);
+    virtual const char* getReceiverName() =0;
+    virtual void printDebug(StringBuilder*);
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);
 
@@ -246,16 +218,6 @@ class XenoSession : public EventReceiver {
     inline uint8_t getState() {
       return (session_state & 0xFF0F);
     };
-
-    // Returns and isolates the sync bits.
-    inline uint8_t getSync() {
-      return (session_state & 0x00F0);
-    };
-
-    // Returns the answer to: "Is this session in sync?"
-    inline bool syncd() {
-      return (0 == ((session_state & 0x00F0) | XENOSESSION_STATE_SYNC_SYNCD));
-    }
 
     // Returns the answer to: "Is this session established?"
     inline bool isEstablished() {
@@ -266,21 +228,21 @@ class XenoSession : public EventReceiver {
 
   protected:
     int8_t bootComplete();
+    virtual int8_t bin_stream_rx(unsigned char* buf, int len) =0;            // Used to feed data to the session.
 
+    // TODO: These two should be private.
+    uint16_t session_state;       // What state is this session in?
+    uint16_t session_last_state;  // The prior state of the sesssion.
 
   private:
     ManuvrXport* owner;           // A reference to the transport that owns this session.
     XenoMessage* working;         // If we are in the middle of receiving a message.
-
-    uint16_t session_state;       // What state is this session in?
-    uint16_t session_last_state;  // The prior state of the sesssion.
 
     /*
     * A buffer for holding inbound stream until enough has arrived to parse. This eliminates
     *   the need for the transport to care about how much data we consumed versus left in its buffer.
     */
     StringBuilder session_buffer;
-    ManuvrRunnable sync_event;
 
     LinkedList<MessageTypeDef*> msg_relay_list;   // Which message codes will we relay to the counterparty?
     LinkedList<XenoMessage*> outbound_messages;   // Messages that are bound for the counterparty.
@@ -291,11 +253,6 @@ class XenoSession : public EventReceiver {
     uint8_t MAX_ACK_FAILURES;           // How many failures-to-ACK should we tolerate before SYNCing?
     uint8_t sequential_parse_failures;  // How many parse attempts have failed in-a-row?
     uint8_t sequential_ack_failures;    // How many of our outbound packets have failed to ACK?
-
-    int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
-    int8_t scan_buffer_for_sync();
-    void   mark_session_desync(uint8_t desync_source);
-    void   mark_session_sync(bool pending);
 
     int8_t take_message();
 
@@ -313,8 +270,6 @@ class XenoSession : public EventReceiver {
     int purgeOutbound();
 
     const char* getSessionStateString();
-    const char* getSessionSyncString();
-
 };
 
 
