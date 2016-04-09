@@ -4,7 +4,7 @@ Author: J. Ian Lindsay
 Date:   2015.03.01
 
 
-This is one of the files that the application author is required to provide. 
+This is one of the files that the application author is required to provide.
 This is where definition of (application or device)-specific parameters ought to go.
 
 This is an example file for building firmware on linux. Anticipated target is a Raspi.
@@ -33,7 +33,7 @@ This is an example file for building firmware on linux. Anticipated target is a 
 /*
 * Particulars of this platform.
 */
-#define PLATFORM_RNG_CARRY_CAPACITY       10    // How many random numbers should be cached? Must be > 0. 
+#define PLATFORM_RNG_CARRY_CAPACITY       10    // How many random numbers should be cached? Must be > 0.
 #define PROTOCOL_MTU                  655536    // See MTU notes above....
 
 /*
@@ -64,10 +64,21 @@ This is an example file for building firmware on linux. Anticipated target is a 
 * Optional fields...                                                                                *
 ****************************************************************************************************/
 
+  /**************************************************************************************************
+  * Threading options                                                                               *
+  * Manuvr was designed to not be reliant on a threading model. However, many designes and          *
+  *   environments mandate threading. Set options related to these features below.                  *
+  * In anticipation of support for RIOT and Zephyr,                                                 *
+  **************************************************************************************************/
+  //#define MANUVR_THREAD_MODEL     "__THREADING_PTHREADS"
+  //#define MANUVR_THREAD_MODEL     "__THREADING_FREERTOS"
+  //#define MANUVR_THREAD_MODEL     "__THREADING_ZEPHYR"
+
+
 #define EXTENDED_DETAIL_STRING    "RasPiBuild"  // Optional. User-defined.
 
 // We have console support on linux. On a bare-metal build, this would mean that we've designated
-//   a serial port (or some other transport) as a target for plaintext interaction. This is 
+//   a serial port (or some other transport) as a target for plaintext interaction. This is
 //   typically only useful for debugging firmware.
 // If you don't want console support, comment the line below.
 // NOTE: If your Makefile passes the __MANUVR_DEBUG option, this will be enabled regardless.

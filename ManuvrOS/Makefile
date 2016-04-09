@@ -33,6 +33,7 @@ CPP_SRCS  += Transports/ManuvrSerial/ManuvrSerial.cpp
 # TODO: Case-off for socket/TCP/Pipe support...
 #CPP_SRCS  += Transports/ManuvrPipe/ManuvrPipe.cpp
 #CPP_SRCS  += Transports/ManuvrTelehash/ManuvrTelehash.cpp
+CPP_SRCS  += Transports/ManuvrSocket/ManuvrSocket.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrTCP.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrUDP.cpp
 

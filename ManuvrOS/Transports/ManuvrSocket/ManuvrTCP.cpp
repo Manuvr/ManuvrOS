@@ -23,7 +23,7 @@ This is basically only for linux for now.
 
 */
 
-#ifdef __MANUVR_LINUX
+#ifdef MANUVR_SUPPORT_TCPSOCKET
 
 #include "ManuvrSocket.h"
 #include "FirmwareDefs.h"
@@ -112,7 +112,7 @@ This is basically only for linux for now.
 /**
 * Constructor.
 */
-ManuvrTCP::ManuvrTCP(const char* addr, int port) : ManuvrXport() {
+ManuvrTCP::ManuvrTCP(const char* addr, int port) : ManuvrSocket(addr, port) {
   __class_initializer();
   _port_number = port;
   _addr        = addr;
@@ -122,7 +122,7 @@ ManuvrTCP::ManuvrTCP(const char* addr, int port) : ManuvrXport() {
 }
 
 
-ManuvrTCP::ManuvrTCP(const char* addr, int port, uint32_t opts) : ManuvrXport() {
+ManuvrTCP::ManuvrTCP(const char* addr, int port, uint32_t opts) : ManuvrSocket(addr, port, opts) {
   __class_initializer();
   _port_number = port;
   _addr        = addr;
@@ -135,11 +135,9 @@ ManuvrTCP::ManuvrTCP(const char* addr, int port, uint32_t opts) : ManuvrXport() 
 /**
 * This constructor is called by a listening instance of ManuvrTCP.
 */
-ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in* nu_sockaddr) : ManuvrXport() {
+ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in* nu_sockaddr) : ManuvrSocket(listening_instance->_addr, listening_instance->_port_number) {
   __class_initializer();
   _sock          = sock;
-  _addr          = listening_instance->_addr;
-  _port_number   = listening_instance->_port_number;
   _options       = listening_instance->_options;
 
   listening_instance->_connections.insert(this);  // TODO: This is starting to itch...
@@ -171,18 +169,7 @@ ManuvrTCP::~ManuvrTCP() {
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void ManuvrTCP::__class_initializer() {
-  _options           = 0;
-  _port_number       = 0;
   _sock              = 0;
-
-
-  // Build some pre-formed Events.
-  read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
-  read_abort_event.isManaged(true);
-  read_abort_event.specific_target = (EventReceiver*) this;
-  read_abort_event.originator      = (EventReceiver*) this;
-  read_abort_event.priority        = 5;
-  read_abort_event.addArg(xport_id);  // Add our assigned transport ID to our pre-baked argument.
 
   // Zero the socket parameter structures.
   for (uint16_t i = 0; i < sizeof(_sockaddr);  i++) {
@@ -213,8 +200,7 @@ int8_t ManuvrTCP::connect() {
   //in_addr_t temp_addr = inet_network(_addr);
 
   _sockaddr.sin_family      = AF_INET;
-  _sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-  //_sockaddr.sin_addr.s_addr = temp_addr;
+  _sockaddr.sin_addr.s_addr = inet_addr(_addr);
   _sockaddr.sin_port        = htons(_port_number);
 
   _sock = socket(AF_INET, SOCK_STREAM, 0);        // Open the socket...
@@ -479,4 +465,4 @@ int8_t ManuvrTCP::notify(ManuvrRunnable *active_event) {
 }
 
 
-#endif
+#endif  //MANUVR_SUPPORT_TCPSOCKET

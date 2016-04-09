@@ -190,7 +190,7 @@ int8_t ManuvrUDP::listen() {
     return -1;
   }
 
-  //in_addr_t temp_addr = inet_network(_addr);
+  in_addr_t temp_addr = inet_network(_addr);
 
   _sockaddr.sin_family      = AF_INET;
   _sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -231,24 +231,36 @@ int8_t ManuvrUDP::read_port() {
 * Does what it claims to do on linux.
 * Returns false on error and true on success.
 */
-bool ManuvrUDP::write_datagram(unsigned char* out, int out_len, const char* addr, int port, uint32_t opts) {
+bool ManuvrUDP::write_datagram(unsigned char* out, int out_len, const char* _addr, int port, uint32_t opts) {
   struct sockaddr_in _tmp_sockaddr;
-  size_t SOCK_IN_SIZE = sizeof(_tmp_sockaddr);  // TODO: Everywhere.
-  memset((uint8_t*) &_tmp_sockaddr, 0, SOCK_IN_SIZE);
+  bool return_value = false;
 
-  int _tmp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-  if (-1 == _tmp_sock) {
-    Kernel::log("Failed to write a UDP datagram.\n");
-    return false;
+  _tmp_sockaddr.sin_family      = AF_INET;
+  _tmp_sockaddr.sin_port        = htons(port);
+  _tmp_sockaddr.sin_addr.s_addr = inet_addr(_addr);
+  memset(_tmp_sockaddr.sin_zero, '\0', sizeof(_tmp_sockaddr.sin_zero));
+
+  if (-1 != _client_sock) {
+    int result = sendto(_client_sock, out, out_len, 0, (const sockaddr*) &_tmp_sockaddr, sizeof(_tmp_sockaddr));
+    if (-1 < result) {
+      bytes_sent += result;
+
+      // TODO: We must receive from the socket before we ccan send again...
+      char buffer[1024];
+      buffer[0] = '\0';
+      int _rec_bytes = recvfrom(_client_sock, buffer, 1024, 0, NULL, NULL);
+      Kernel::log(buffer);
+      return_value = true;
+    }
+    else {
+      Kernel::log("Failed to write a UDP datagram because of sentto().\n");
+    }
+  }
+  else {
+    Kernel::log("Failed to write a UDP datagram. No client socket.\n");
   }
 
-  int result = sendto(_tmp_sock, out, out_len, 0, (const sockaddr*) &_tmp_sockaddr, SOCK_IN_SIZE);
-  if (-1 == result) {
-    Kernel::log("Failed to write a UDP datagram because of sentto().\n");
-    bytes_sent += result;
-  }
-
-  return false;
+  return return_value;
 }
 
 
@@ -314,6 +326,8 @@ int8_t ManuvrUDP::bootComplete() {
   read_abort_event.enableSchedule(false);
   //__kernel->addSchedule(&read_abort_event);
 
+  _client_sock = socket(PF_INET, SOCK_DGRAM, 0);
+
   listen();
   return 1;
 }
@@ -377,8 +391,11 @@ void ManuvrUDP::procDirectDebugInstruction(StringBuilder *input) {
   /* These are debug case-offs that are typically used to test functionality, and are then
      struck from the build. */
   switch (*(str)) {
+    case 'w':
+      write_datagram((unsigned char*) "Horrid hack", strlen("Horrid hack"), "127.0.0.1", 6001);
+      break;
     case 'W':
-      //write_port((unsigned char*) str, strlen((const char*)str));
+      write_datagram((unsigned char*) str, strlen((const char*)str), "127.0.0.1", 6001);
       break;
     default:
       EventReceiver::procDirectDebugInstruction(input);

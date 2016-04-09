@@ -46,12 +46,33 @@ This is basically only for linux until it is needed in a smaller space.
 #endif
 
 
+#if defined(MANUVR_SUPPORT_TCPSOCKET) | defined(MANUVR_SUPPORT_UDP)
+
+class ManuvrSocket : public ManuvrXport {
+  public:
+    ManuvrSocket(const char* addr, int port);
+    ManuvrSocket(const char* addr, int port, uint32_t opts);
+    ~ManuvrSocket();
+
+  protected:
+    const char* _addr;
+    int         _port_number;
+    uint32_t    _options;
+
+  private:
+    void __class_initializer();
+};
+
+#endif // General socket support
+
+
+
 #if defined(MANUVR_SUPPORT_TCPSOCKET)
 
 // TODO: Might generalize UDP and websocket support into this. For now, we only deal in TCP.
 // If generalization takes place, we should probably have a pure interface class "ManuvrSocket"
 //   that handles all the common-gound.
-class ManuvrTCP : public ManuvrXport {
+class ManuvrTCP : public ManuvrSocket {
   public:
     ManuvrTCP(const char* addr, int port);
     ManuvrTCP(const char* addr, int port, uint32_t opts);
@@ -77,15 +98,10 @@ class ManuvrTCP : public ManuvrXport {
     inline int getSockID() {  return _sock; };
 
   protected:
-    void __class_initializer();
 
 
   private:
-    const char* _addr;
     int         _sock;
-    uint32_t    _options;
-
-    int         _port_number;
 
     // Related to threading and pipes. This is linux-specific.
     StringBuilder __io_buffer;
@@ -97,6 +113,8 @@ class ManuvrTCP : public ManuvrXport {
     #endif
 
     LinkedList<ManuvrTCP*> _connections;   // A list of client connections.
+
+    void __class_initializer();
 };
 
 #endif  // MANUVR_SUPPORT_TCPSOCKET
@@ -152,6 +170,7 @@ class ManuvrUDP : public EventReceiver {
 
     const char* _addr;
     int         _sock;
+    int         _client_sock;
     uint32_t    _options;
 
     int         _port_number;

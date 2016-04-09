@@ -61,9 +61,22 @@ For debuggability, the transport has a special mode for acting as a debug
 #define MANUVR_XPORT_FLAG_HAS_SESSION      0x10000000  // See note below.
 #define MANUVR_XPORT_FLAG_LISTENING        0x08000000  // We are listening for connections.
 #define MANUVR_XPORT_FLAG_IS_BRIDGED       0x04000000  // This transport instance is bridged to another.
-#define MANUVR_XPORT_FLAG_NON_SESSION      0x02000000
-#define MANUVR_XPORT_FLAG_DEBUG_CONSOLE    0x01000000
+#define MANUVR_XPORT_FLAG_NON_SESSION      0x02000000  // Used to feed a transport into (suppose) a GPS parser.
+#define MANUVR_XPORT_FLAG_DEBUG_CONSOLE    0x01000000  // A human is on the other side.
 #define MANUVR_XPORT_FLAG_ALWAYS_CONNECTED 0x00800000
+#define MANUVR_XPORT_FLAG_CONNECTIONLESS   0x00400000  // This transport is "connectionless". See Note0 below.
+#define MANUVR_XPORT_FLAG_HAS_MULTICAST    0x00200000  // This transport supports multicast.
+
+/**
+* Note0:
+* Until recently, Manuvr only supported stream-oriented transports. This was a conscious
+*   design choice. More elaboration on this is beyond the scope of code commentary, but
+*   suffice it to say that there will likely be some upheaval in the transport abstraction
+*   as it is generallized to encompass datagrams, small MTU radio links, and so-forth.
+* More explanation to come once code is committed.
+*      ---J. Ian Lindsay 2016.04.08
+*/
+
 
 /*
 * Note about MANUVR_XPORT_FLAG_HAS_SESSION:
