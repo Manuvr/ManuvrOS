@@ -15,6 +15,7 @@ INCLUDES    = -I. -iquote.
 # Libraries to link
 LIBS =  -lm
 
+# Datastructures...
 CPP_SRCS   = DataStructures/StringBuilder.cpp
 CPP_SRCS  += DataStructures/Quaternion.cpp
 CPP_SRCS  += DataStructures/InertialMeasurement.cpp
@@ -71,6 +72,7 @@ CPP_SRCS  += Drivers/ADG2128/ADG2128.cpp
 CPP_SRCS  += Drivers/INA219/INA219.cpp
 CPP_SRCS  += Drivers/TMP006/TMP006.cpp
 CPP_SRCS  += Drivers/ISL29033/ISL29033.cpp
+CPP_SRCS  += Drivers/Sensors/LPS331/LPS331.cpp
 #CPP_SRCS  += Drivers/LSMD9S1/LSMD9S1.cpp
 CPP_SRCS  += Drivers/SensorWrapper/SensorWrapper.cpp
 CPP_SRCS  += Drivers/DeviceWithRegisters/DeviceWithRegisters.cpp
