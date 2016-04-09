@@ -144,6 +144,8 @@ ManuvrUDP::~ManuvrUDP() {
 void ManuvrUDP::__class_initializer() {
   EventReceiver::__class_initializer();
 
+  set_xport_state(MANUVR_XPORT_FLAG_HAS_MULTICAST | MANUVR_XPORT_FLAG_CONNECTIONLESS);
+
   // TODO: Singleton due-to-feature thrust. Need to ditch the singleton...
   if (NULL == INSTANCE) {
     INSTANCE = this;
@@ -354,12 +356,17 @@ int8_t ManuvrUDP::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
 
   switch (active_event->event_code) {
+    case MANUVR_MSG_XPORT_DEBUG:
+      printDebug(&local_log);
+      return_value++;
+      break;
+
     default:
-      return_value += EventReceiver::notify(active_event);
+      return_value += ManuvrXport::notify(active_event);
       break;
   }
 
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
 }
 

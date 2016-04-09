@@ -15,11 +15,12 @@ INCLUDES    = -I. -iquote.
 # Libraries to link
 LIBS =  -lm
 
-# Datastructures...
+# Datastructures
 CPP_SRCS   = DataStructures/StringBuilder.cpp
 CPP_SRCS  += DataStructures/Quaternion.cpp
 CPP_SRCS  += DataStructures/InertialMeasurement.cpp
 
+# Manuvr core
 CPP_SRCS  += ManuvrRunnable.cpp
 CPP_SRCS  += EnumeratedTypeCodes.cpp
 CPP_SRCS  += Kernel.cpp
@@ -27,19 +28,26 @@ CPP_SRCS  += EventReceiver.cpp
 CPP_SRCS  += TaskProfilerData.cpp
 CPP_SRCS  += XenoSession/XenoMessage.cpp
 CPP_SRCS  += XenoSession/XenoSession.cpp
-CPP_SRCS  += Transports/ManuvrXport.cpp
-CPP_SRCS  += Transports/ManuvrSerial/ManuvrSerial.cpp
+CPP_SRCS  += ManuvrMsg/Argument.cpp
+CPP_SRCS  += ManuvrMsg/ManuvrMsg.cpp
 
 # TODO: Case-off for socket/TCP/Pipe support...
 #CPP_SRCS  += Transports/ManuvrPipe/ManuvrPipe.cpp
 #CPP_SRCS  += Transports/ManuvrTelehash/ManuvrTelehash.cpp
+
+# Transports
+CPP_SRCS  += Transports/ManuvrXport.cpp
+CPP_SRCS  += Transports/ManuvrSerial/ManuvrSerial.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrSocket.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrTCP.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrUDP.cpp
 
+# i2c apparatus...
+CPP_SRCS  += Drivers/i2c-adapter/I2CDevice.cpp
+CPP_SRCS  += Drivers/i2c-adapter/i2c-adapter.cpp
+CPP_SRCS  += Drivers/i2c-adapter/I2CDeviceWithRegisters.cpp
+CPP_SRCS  += Drivers/i2c-adapter/I2CQueuedOperation.cpp
 
-CPP_SRCS  += ManuvrMsg/Argument.cpp
-CPP_SRCS  += ManuvrMsg/ManuvrMsg.cpp
 
 # TODO: Bring up to speed WRT Runnable.
 #CPP_SRCS  += Drivers/LightSensor/LightSensor.cpp
@@ -49,12 +57,6 @@ CPP_SRCS  += ManuvrMsg/ManuvrMsg.cpp
 #CPP_SRCS  += Drivers/MGC3130/MGC3130.cpp
 #CPP_SRCS  += Drivers/MCP73833/MCP73833.cpp
 #CPP_SRCS  += Drivers/ADP8866/ADP8866.cpp
-
-# TODO: No STM32F7 support yet. Make no-platform fail the build.
-#CPP_SRCS  += Drivers/i2c-adapter/I2CDevice.cpp
-#CPP_SRCS  += Drivers/i2c-adapter/i2c-adapter.cpp
-#CPP_SRCS  += Drivers/i2c-adapter/I2CDeviceWithRegisters.cpp
-#CPP_SRCS  += Drivers/i2c-adapter/I2CQueuedOperation.cpp
 
 # TODO: Only for Teensyduino libs...
 #CPP_SRCS  += Drivers/ManuvrAudio/ManuvrAudio.cpp

@@ -85,7 +85,6 @@ class ManuvrTCP : public ManuvrSocket {
     ~ManuvrTCP();
 
     /* Overrides from EventReceiver */
-    int8_t bootComplete();
     const char* getReceiverName();
     void printDebug(StringBuilder *);
     int8_t notify(ManuvrRunnable*);
@@ -102,14 +101,10 @@ class ManuvrTCP : public ManuvrSocket {
 
 
   protected:
+    int8_t bootComplete();
 
 
   private:
-    // Related to threading and pipes. This is linux-specific.
-    StringBuilder __io_buffer;
-    int __parent_pid;
-    int __blocking_pid;
-
     LinkedList<ManuvrTCP*> _connections;   // A list of client connections.
 
     void __class_initializer();
@@ -162,10 +157,6 @@ class ManuvrUDP : public ManuvrSocket {
     int         _client_sock;
 
     // Related to threading and pipes. This is linux-specific.
-    StringBuilder __io_buffer;
-    int __parent_pid;
-    int __blocking_pid;
-
     void __class_initializer();
 };
 

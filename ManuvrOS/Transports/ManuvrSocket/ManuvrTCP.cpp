@@ -161,6 +161,8 @@ ManuvrTCP::~ManuvrTCP() {
 */
 void ManuvrTCP::__class_initializer() {
   EventReceiver::__class_initializer();
+
+  set_xport_state(MANUVR_XPORT_FLAG_HAS_MULTICAST);
 }
 
 
