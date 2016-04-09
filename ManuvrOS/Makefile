@@ -31,6 +31,7 @@ CPP_SRCS  += Transports/ManuvrSerial/ManuvrSerial.cpp
 #CPP_SRCS  += Transports/ManuvrPipe/ManuvrPipe.cpp
 #CPP_SRCS  += Transports/ManuvrTelehash/ManuvrTelehash.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrTCP.cpp
+CPP_SRCS  += Transports/ManuvrSocket/ManuvrUDP.cpp
 
 
 CPP_SRCS  += ManuvrMsg/Argument.cpp

@@ -28,8 +28,6 @@ This class implements a crude UDP connector.
 
 #include "Transports/ManuvrXport.h"
 
-#define MANUVR_MSG_UDP_RX  0xF544
-#define MANUVR_MSG_UDP_TX  0xF545
 
 #if defined(__MANUVR_LINUX)
   #include <inttypes.h>
@@ -41,77 +39,8 @@ This class implements a crude UDP connector.
   #include <sys/signal.h>
   #include <fstream>
   #include <iostream>
-  #include <sys/socket.h>
-  #include <netinet/in.h>
-  #include <arpa/inet.h>
 #else
   // No supportage.
 #endif
-
-
-
-class ManuvrUDP : public EventReceiver {
-  public:
-    // TODO: Expediency. Triage.... Make private.
-    uint32_t bytes_sent;
-    uint32_t bytes_received;
-
-    ManuvrUDP(const char* addr, int port);
-    ManuvrUDP(const char* addr, int port, uint32_t opts);
-    ~ManuvrUDP();
-
-    int8_t listen();
-    inline bool listening() {       return (_xport_flags & MANUVR_XPORT_FLAG_LISTENING);   };
-    inline void listening(bool) {   _xport_flags |= MANUVR_XPORT_FLAG_LISTENING;   };
-
-    bool write_datagram(unsigned char* out, int out_len, const char* addr, int port, uint32_t opts);
-    inline bool write_datagram(unsigned char* out, int out_len, const char* addr, int port) {
-      return write_datagram(out, out_len, addr, port, 0);
-    };
-    int8_t read_port();
-
-    /* Overrides from EventReceiver */
-    int8_t notify(ManuvrRunnable*);
-    int8_t callback_proc(ManuvrRunnable *);
-    void procDirectDebugInstruction(StringBuilder *);
-    const char* getReceiverName();
-    void printDebug(StringBuilder*);
-
-    inline int getSockID() {  return _sock; };
-
-
-    // UDP is connectionless. We should only have a single instance of this class.
-    volatile static ManuvrUDP* INSTANCE;
-
-
-  protected:
-    void __class_initializer();
-    int8_t bootComplete();
-
-
-  private:
-    ManuvrRunnable read_abort_event;  // Used to timeout a read operation.
-    uint32_t _xport_flags;
-
-    const char* _addr;
-    int         _sock;
-    uint32_t    _options;
-
-    int         _port_number;
-
-    // Related to threading and pipes. This is linux-specific.
-    StringBuilder __io_buffer;
-    int __parent_pid;
-    int __blocking_pid;
-
-    #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
-      // Threaded platforms have a concept of threads...
-      unsigned long _thread_id;
-      #if defined(__MANUVR_LINUX)
-        struct sockaddr_in _sockaddr;
-      #endif
-    #endif
-};
-
 
 #endif

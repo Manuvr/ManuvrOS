@@ -73,15 +73,16 @@ SRCS   = $(CPP_SRCS)
 # TODO: I badly need to learn to write autoconf scripts....
 #   I've at least tried to modularize to make the invariable transition less-painful...
 MANUVR_OPTIONS  = -DMANUVR_SUPPORT_SERIAL
-#MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
 MANUVR_OPTIONS += -D__MANUVR_DEBUG
 
 # Options that build for certain threading models (if any).
 #MANUVR_OPTIONS += -D__MANUVR_FREERTOS
 MANUVR_OPTIONS += -D__MANUVR_LINUX
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
+MANUVR_OPTIONS += -DMANUVR_SUPPORT_UDPSOCKET
+MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
 
-LIBS += -lpthread 
+LIBS += -lpthread
 
 CFLAGS += $(MANUVR_OPTIONS)
 

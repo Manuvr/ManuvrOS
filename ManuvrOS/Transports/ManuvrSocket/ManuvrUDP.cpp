@@ -23,7 +23,7 @@ This class implements a crude UDP connector.
 */
 
 
-#include "ManuvrUDP.h"
+#include "ManuvrSocket.h"
 #include <DataStructures/StringBuilder.h>
 
 const MessageTypeDef udp_message_defs[] = {
