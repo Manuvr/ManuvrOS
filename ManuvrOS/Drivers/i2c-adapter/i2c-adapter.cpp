@@ -41,7 +41,7 @@ This file is the tortured result of growing pains since the beginning of
 
 #elif defined(ARDUINO)
   #include <Wire/Wire.h>
-#else
+#elif defined(__MANUVR_LINUX)
   // Unsupported platform? Try using the linux i2c library and cross fingers...
   #include <stdlib.h>
   #include <unistd.h>
@@ -54,18 +54,29 @@ This file is the tortured result of growing pains since the beginning of
   #include <fcntl.h>
   #include <inttypes.h>
   #include <ctype.h>
+#elif defined(STM32F7XX) | defined(STM32F746xx)
+  // TODO: This is bad, and I know it. Need support ahead of a better abstraction strategy.
+  #ifdef __cplusplus
+    extern "C" {
+  #endif
+
+  #include "stm32f7xx_hal.h"
+
+  extern I2C_HandleTypeDef hi2c1;
+  #ifdef __cplusplus
+  }
+  #endif
+#else
+  // Unsupported. Much ugly case-off should not be in this file.
+  // TODO: Migrate case-off code to platform directory.
 #endif
 
 
 using namespace std;
 
-#ifdef __cplusplus
 extern "C" {
-#endif
-volatile I2CAdapter* i2c = NULL;
-#ifdef __cplusplus
+  volatile I2CAdapter* i2c = NULL;
 }
-#endif
 
   // We need some internal events to allow communication back from the ISR.
 const MessageTypeDef i2c_message_defs[] = {
@@ -189,25 +200,15 @@ int8_t I2CAdapter::generateStop() {
 }
 
 
-#elif defined(__MK20DX256__) | defined(__MK20DX128__)
-
+#elif defined(STM32F7XX) | defined(STM32F746xx)
 
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
   __class_initializer();
   dev = dev_id;
 
-  if (dev_id == 0) {
-    Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR);
-    Wire.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
-    bus_online = true;
+  if (dev_id == 1) {
+    bus_online = false;
   }
-  #if defined(__MK20DX256__)
-  else if (dev_id == 1) {
-    Wire1.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR);
-    Wire1.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
-    bus_online = true;
-  }
-  #endif
   else {
     // Unsupported
   }
@@ -232,8 +233,6 @@ int8_t I2CAdapter::generateStart() {
   if (verbosity > 6) Kernel::log("I2CAdapter::generateStart()\n");
   #endif
   if (! bus_online) return -1;
-  //Wire1.sendTransmission(I2C_STOP);
-  //Wire1.finish(900);   // We allow for 900uS for timeout.
   return 0;
 }
 
@@ -249,48 +248,114 @@ int8_t I2CAdapter::generateStop() {
 
 
 int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
-  // TODO: This is awful. Need to ultimately have a direct ref to the class that *is* the adapter.
-  if (0 == dev) {
-    Wire.beginTransmission((uint8_t) (op->dev_addr & 0x00FF));
-    if (op->need_to_send_subaddr()) {
-      Wire.write((uint8_t) (op->sub_addr & 0x00FF));
-      op->advance_operation(1);
-    }
+  op->abort(I2C_ERR_CODE_TIMEOUT);
+  return 0;
+}
 
-    if (op->opcode == I2C_OPERATION_READ) {
-      Wire.endTransmission(I2C_NOSTOP);
-      Wire.requestFrom(op->dev_addr, op->len, I2C_STOP, 10000);
-      int i = 0;
-      while(Wire.available()) {
-        *(op->buf + i++) = (uint8_t) Wire.readByte();
-      }
-    }
-    else if (op->opcode == I2C_OPERATION_WRITE) {
-      for(int i = 0; i < op->len; i++) Wire.write(*(op->buf+i));
-      Wire.endTransmission(I2C_STOP, 10000);   // 10ms timeout
-    }
-    else if (op->opcode == I2C_OPERATION_PING) {
-      Wire.endTransmission(I2C_STOP, 10000);   // 10ms timeout
-    }
 
-    switch (Wire.status()) {
-      case I2C_WAITING:
-        op->markComplete();
-        break;
-      case I2C_ADDR_NAK:
-        op->abort(I2C_ERR_SLAVE_NOT_FOUND);
-        break;
-      case I2C_DATA_NAK:
-        op->abort(I2C_ERR_SLAVE_INVALID);
-        break;
-      case I2C_ARB_LOST:
-        op->abort(I2C_ERR_CODE_BUS_BUSY);
-        break;
-      case I2C_TIMEOUT:
-        op->abort(I2C_ERR_CODE_TIMEOUT);
-        break;
+
+#elif defined(__MK20DX256__) | defined(__MK20DX128__)
+
+
+  I2CAdapter::I2CAdapter(uint8_t dev_id) {
+    __class_initializer();
+    dev = dev_id;
+
+    if (dev_id == 0) {
+      Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR);
+      Wire.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
+      bus_online = true;
+    }
+    #if defined(__MK20DX256__)
+    else if (dev_id == 1) {
+      Wire1.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR);
+      Wire1.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
+      bus_online = true;
+    }
+    #endif
+    else {
+      // Unsupported
     }
   }
+
+
+  I2CAdapter::~I2CAdapter() {
+      bus_online = false;
+      while (dev_list.hasNext()) {
+        dev_list.get()->disassignBusInstance();
+        dev_list.remove();
+      }
+
+      /* TODO: The work_queue destructor will take care of its own cleanup, but
+         We should abort any open transfers prior to deleting this list. */
+  }
+
+
+
+  int8_t I2CAdapter::generateStart() {
+    #ifdef __MANUVR_DEBUG
+    if (verbosity > 6) Kernel::log("I2CAdapter::generateStart()\n");
+    #endif
+    if (! bus_online) return -1;
+    //Wire1.sendTransmission(I2C_STOP);
+    //Wire1.finish(900);   // We allow for 900uS for timeout.
+    return 0;
+  }
+
+
+  int8_t I2CAdapter::generateStop() {
+    #ifdef __MANUVR_DEBUG
+    if (verbosity > 6) Kernel::log("I2CAdapter::generateStop()\n");
+    #endif
+    if (! bus_online) return -1;
+    return 0;
+  }
+
+
+
+  int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
+    // TODO: This is awful. Need to ultimately have a direct ref to the class that *is* the adapter.
+    if (0 == dev) {
+      Wire.beginTransmission((uint8_t) (op->dev_addr & 0x00FF));
+      if (op->need_to_send_subaddr()) {
+        Wire.write((uint8_t) (op->sub_addr & 0x00FF));
+        op->advance_operation(1);
+      }
+
+      if (op->opcode == I2C_OPERATION_READ) {
+        Wire.endTransmission(I2C_NOSTOP);
+        Wire.requestFrom(op->dev_addr, op->len, I2C_STOP, 10000);
+        int i = 0;
+        while(Wire.available()) {
+          *(op->buf + i++) = (uint8_t) Wire.readByte();
+        }
+      }
+      else if (op->opcode == I2C_OPERATION_WRITE) {
+        for(int i = 0; i < op->len; i++) Wire.write(*(op->buf+i));
+        Wire.endTransmission(I2C_STOP, 10000);   // 10ms timeout
+      }
+      else if (op->opcode == I2C_OPERATION_PING) {
+        Wire.endTransmission(I2C_STOP, 10000);   // 10ms timeout
+      }
+
+      switch (Wire.status()) {
+        case I2C_WAITING:
+          op->markComplete();
+          break;
+        case I2C_ADDR_NAK:
+          op->abort(I2C_ERR_SLAVE_NOT_FOUND);
+          break;
+        case I2C_DATA_NAK:
+          op->abort(I2C_ERR_SLAVE_INVALID);
+          break;
+        case I2C_ARB_LOST:
+          op->abort(I2C_ERR_CODE_BUS_BUSY);
+          break;
+        case I2C_TIMEOUT:
+          op->abort(I2C_ERR_CODE_TIMEOUT);
+          break;
+      }
+    }
 #if defined(__MK20DX256__)
   else if (1 == dev) {
     Wire1.beginTransmission((uint8_t) (op->dev_addr & 0x00FF));
@@ -439,7 +504,7 @@ int8_t I2CAdapter::generateStop() {
 }
 
 
-#else  // Assuming a linux system...
+#elif defined(__MANUVR_LINUX)  // Assuming a linux system...
 
 I2CAdapter::I2CAdapter(uint8_t dev_id) {
   __class_initializer();
@@ -493,6 +558,8 @@ int8_t I2CAdapter::generateStop() {
   return 0;
 }
 
+#else
+  // No support.
 #endif  // Platform case-offs
 
 
@@ -691,7 +758,7 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
 #elif defined(MPCMZ)
 // PIC32 MZ i2c support is broken at the time of this writing.
 
-#else   // Assuming a linux environment.
+#elif defined(__MANUVR_LINUX)   // Assuming a linux environment.
   bool return_value = false;
   unsigned short timeout = 10000;
   if (nu_addr != last_used_bus_addr) {
@@ -727,6 +794,9 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
   else {
       return_value = true;
   }
+#else
+  // No support
+  bool return_value = false;
 #endif
   return return_value;
 }

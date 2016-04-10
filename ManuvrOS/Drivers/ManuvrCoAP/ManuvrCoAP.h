@@ -26,6 +26,8 @@ This class implements CoAP over UDP.
 #ifndef __MANUVR_COAP_H__
 #define __MANUVR_COAP_H__
 
+#if defined(__MANUVR_COAP)
+
 #include "Kernel.h"
 
 #if defined(__MANUVR_LINUX)
@@ -100,5 +102,5 @@ class ManuvrCoAP : public EventReceiver {
     int8_t init_resources();
 };
 
-
-#endif
+#endif // __MANUVR_COAP
+#endif // __MANUVR_COAP_H__

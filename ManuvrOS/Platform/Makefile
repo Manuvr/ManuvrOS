@@ -21,7 +21,7 @@ all:
 	@echo $(SRCS)
 	@echo $(LIBS)
 	@echo '======================================================'
-	$(CPP) -r $(INCLUDES) $(LOCAL_FLAGS) $(CPP_FLAGS) $(LIBS) $(SRCS) -o Platform.o
+	$(CXX) -r $(INCLUDES) $(LOCAL_FLAGS) $(CPP_FLAGS) $(LIBS) $(SRCS) -o Platform.o
 
 
 clean:

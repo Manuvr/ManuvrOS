@@ -100,11 +100,11 @@ ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : I2CDevice
 
   reset_pin = _reset_pin;
   irq_pin   = _irq_pin;
-  pinMode(_irq_pin, INPUT_PULLUP);
-  pinMode(_reset_pin, OUTPUT);
+  gpioDefine(_irq_pin, INPUT_PULLUP);
+  gpioDefine(_reset_pin, OUTPUT);
 
   if (irq_pin > 0) {
-    attachInterrupt(irq_pin, ADP8866_ISR, FALLING);
+    setPinFxn(irq_pin, FALLING, ADP8866_ISR);
   }
 
   setPin(_reset_pin, false);

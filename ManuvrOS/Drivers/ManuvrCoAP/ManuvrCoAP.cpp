@@ -22,6 +22,7 @@ This class implements CoAP over UDP.
 
 */
 
+#if defined(__MANUVR_COAP)
 
 #include "ManuvrCoAP.h"
 #include <DataStructures/StringBuilder.h>
@@ -292,3 +293,5 @@ void ManuvrCoAP::procDirectDebugInstruction(StringBuilder *input) {
 #endif
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
+
+#endif // __MANUVR_COAP

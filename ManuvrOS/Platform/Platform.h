@@ -59,6 +59,15 @@ class ManuvrRunnable;
 #ifdef ARDUINO
   #include <Arduino.h>
 #else
+  // We adopt Arduino GPIO access conventions.
+  #define HIGH         1
+  #define LOW          0
+  #define INPUT        0
+  #define OUTPUT       1
+  #define INPUT_PULLUP 2
+  #define CHANGE       4
+  #define FALLING      2
+  #define RISING       3
   extern "C" {
     unsigned long millis();
     unsigned long micros();

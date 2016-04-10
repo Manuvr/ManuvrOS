@@ -62,7 +62,7 @@ CPP_SRCS  += Drivers/i2c-adapter/I2CQueuedOperation.cpp
 # TODO: Use GPio abstractions!
 #CPP_SRCS  += Drivers/MGC3130/MGC3130.cpp
 #CPP_SRCS  += Drivers/MCP73833/MCP73833.cpp
-#CPP_SRCS  += Drivers/ADP8866/ADP8866.cpp
+CPP_SRCS  += Drivers/ADP8866/ADP8866.cpp
 
 # TODO: Only for Teensyduino libs...
 #CPP_SRCS  += Drivers/ManuvrAudio/ManuvrAudio.cpp
@@ -100,7 +100,7 @@ all: setenvars $(LIBNAME)
 
 
 %.o : %.cpp
-	$(CPP) $(INCLUDES) $(CPP_FLAGS) -std=$(CPP_STANDARD) -nostdlib -c $< -o $@
+	$(CXX) $(INCLUDES) $(CPP_FLAGS) -std=$(CPP_STANDARD) -nostdlib -c $< -o $@
 
 $(LIBNAME): $(OBJS)
 	$(MAKE) -C Platform/

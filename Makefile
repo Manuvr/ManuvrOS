@@ -21,7 +21,7 @@ WHO_I_AM       = $(shell whoami)
 WHERE_I_AM     = $(shell pwd)
 HOME_DIRECTORY = /home/$(WHO_I_AM)
 
-export CPP         = $(shell which g++)
+export CXX         = $(shell which g++)
 export CC          = $(shell which gcc)
 
 export OUTPUT_PATH = $(WHERE_I_AM)/build/
@@ -143,4 +143,4 @@ docs:
 	doxygen Doxyfile
 
 stats:
-	find ./ManuvrOS ./DataStructures ./StringBuilder -type f \( -name \*.cpp -o -name \*.h \) -exec wc -l {} +
+	find ./ManuvrOS -type f \( -name \*.cpp -o -name \*.h \) -exec wc -l {} +

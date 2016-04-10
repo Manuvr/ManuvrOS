@@ -169,6 +169,7 @@ class XenoMessage {
 * These are bitflags in the same space as the above-def'd constants. They all pertain to
 * the sync state of the session.
 */
+// TODO: Split these out into ManuvrSession and cut the mutual-usage of the same flags variable.
 #define XENOSESSION_STATE_SYNC_INITIATED  0x0080  // The counterparty noticed a problem.
 #define XENOSESSION_STATE_SYNC_INITIATOR  0x0040  // We noticed a problem.
 #define XENOSESSION_STATE_SYNC_PEND_EXIT  0x0020  // We think we have just recovered from a sync.
@@ -179,6 +180,7 @@ class XenoMessage {
 * These are bitflags in the same space as the above-def'd constants. They all pertain to
 * the sync state of the session.
 */
+// TODO: Cut the mutual-usage of the same flags variable.
 #define XENOSESSION_STATE_AUTH_REQUIRED   0x0100  // Set if this session requires authentication.
 #define XENOSESSION_STATE_AUTHD           0x0200  // Set if this session has been authenticated.
 #define XENOSESSION_STATE_OVERFLOW_GUARD  0x0400  // Set to protect the session buffer from overflow.

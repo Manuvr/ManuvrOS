@@ -373,7 +373,7 @@ This file is the tortured result of growing pains since the beginning of
                                        ((DIRECTION) == I2C_Direction_Receiver))
 #endif
 
-#if defined(RASPI)
+#if defined(__MANUVR_LINUX)
   #include <stdlib.h>
   #include <unistd.h>
   #include <linux/i2c-dev.h>

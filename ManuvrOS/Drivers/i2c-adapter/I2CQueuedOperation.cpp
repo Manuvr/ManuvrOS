@@ -31,8 +31,7 @@ limitations under the License.
   #include "stm32f4xx_it.h"
 #elif defined(ARDUINO)
   #include <Wire/Wire.h>
-#else
-  // Unsupported platform? Try using the linux i2c library and cross fingers...
+#elif defined(__MANUVR_LINUX)
   #include <stdlib.h>
   #include <unistd.h>
   #include <linux/i2c-dev.h>
@@ -44,6 +43,10 @@ limitations under the License.
   #include <fcntl.h>
   #include <inttypes.h>
   #include <ctype.h>
+#elif defined(STM32F7XX) | defined(STM32F746xx)
+  #include "stm32f7xx_hal.h"
+#else
+  // Unsupported platform
 #endif
 
 
@@ -272,8 +275,9 @@ int8_t I2CQueuedOperation::init_dma() {
     return -1;
   }
 
+#elif defined(STM32F7XX) | defined(STM32F746xx)
 
-#else   // Linux land...
+#elif defined(__MANUVR_LINUX)   // Linux land...
   if (!device->switch_device(dev_addr)) return -1;
 
   if (opcode == I2C_OPERATION_READ) {
@@ -311,6 +315,8 @@ int8_t I2CQueuedOperation::init_dma() {
     return -1;
   }
 
+#else
+  // No support
 #endif
 
   //if (local_log.length() > 0) Kernel::log(&local_log);
