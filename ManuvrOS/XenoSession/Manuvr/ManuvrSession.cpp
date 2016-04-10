@@ -411,6 +411,11 @@ int8_t ManuvrSession::bootComplete() {
 
   __kernel->addSchedule(&sync_event);
 
+  if (!owner->alwaysConnected() && owner->connected()) {
+    // If we've been instanced because of a connetion, start the sync process...
+    // But only if we can take the transport at its word...
+    sendSyncPacket();
+  }
   return 1;
 }
 
@@ -524,4 +529,45 @@ int8_t ManuvrSession::notify(ManuvrRunnable *active_event) {
 
   if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
+}
+
+
+void ManuvrSession::procDirectDebugInstruction(StringBuilder *input) {
+  uint8_t temp_byte = 0;
+
+  char* str = input->position(0);
+
+  if (*(str) != 0) {
+    temp_byte = atoi((char*) str+1);
+  }
+
+  switch (*(str)) {
+    case 'S':  // Send a mess of sync packets.
+      sync_event.alterScheduleRecurrence(XENOSESSION_INITIAL_SYNC_COUNT);
+      sync_event.enableSchedule(true);
+      break;
+    case 'i':  // Send a mess of sync packets.
+      if (1 == temp_byte) {
+      }
+      else if (2 == temp_byte) {
+      }
+      else {
+        printDebug(&local_log);
+      }
+      break;
+    case 'q':  // Manual message queue purge.
+      purgeOutbound();
+      purgeInbound();
+      break;
+    case 'w':  // Manual session poll.
+      Kernel::raiseEvent(MANUVR_MSG_SESS_ORIGINATE_MSG, NULL);
+      break;
+
+
+    default:
+      EventReceiver::procDirectDebugInstruction(input);
+      break;
+  }
+
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }

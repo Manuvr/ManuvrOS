@@ -234,7 +234,7 @@ class XenoSession : public EventReceiver {
     uint16_t session_state;       // What state is this session in?
     uint16_t session_last_state;  // The prior state of the sesssion.
 
-  //private:
+  //private: TODO: Until session mitosis has completed telophase.
     ManuvrXport* owner;           // A reference to the transport that owns this session.
     XenoMessage* working;         // If we are in the middle of receiving a message.
 

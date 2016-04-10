@@ -231,7 +231,6 @@ void ManuvrXport::connected(bool en) {
       ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
       event->addArg((EventReceiver*) ses);
       raiseEvent(event);
-      //ses->sendSyncPacket();
     }
     else {
       // This is a disconnection event. We might want to cleanup all of our sessions
