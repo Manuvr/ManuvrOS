@@ -42,6 +42,7 @@ For debuggability, the transport has a special mode for acting as a debug
 #include "ManuvrXport.h"
 #include "FirmwareDefs.h"
 #include "XenoSession/XenoSession.h"
+#include "XenoSession/Manuvr/ManuvrSession.h"
 
 
 #if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
@@ -222,13 +223,15 @@ void ManuvrXport::connected(bool en) {
       // We are expected to instantiate a XenoSession, and broadcast its existance.
       // This will put it into the Event system so that auth and such can be handled cleanly.
       // Once the session sets up, it will broadcast itself as having done so.
-      XenoSession* ses = new XenoSession(this);
+      // TODO: Session discovery should happen at this point.
+      //XenoSession* ses = new XenoSession(this);
+      XenoSession* ses = (XenoSession*) new ManuvrSession(this);
       provide_session(ses);
 
       ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
       event->addArg((EventReceiver*) ses);
       raiseEvent(event);
-      ses->sendSyncPacket();
+      //ses->sendSyncPacket();
     }
     else {
       // This is a disconnection event. We might want to cleanup all of our sessions

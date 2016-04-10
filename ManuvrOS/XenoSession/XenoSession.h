@@ -208,11 +208,11 @@ class XenoSession : public EventReceiver {
     int8_t sendKeepAlive();
 
     /* Overrides from EventReceiver */
-    void procDirectDebugInstruction(StringBuilder*);
+    virtual void procDirectDebugInstruction(StringBuilder*);
     virtual const char* getReceiverName() =0;
     virtual void printDebug(StringBuilder*);
-    int8_t notify(ManuvrRunnable*);
-    int8_t callback_proc(ManuvrRunnable *);
+    virtual int8_t notify(ManuvrRunnable*);
+    virtual int8_t callback_proc(ManuvrRunnable *);
 
     // Returns and isolates the state bits.
     inline uint8_t getState() {
@@ -227,14 +227,14 @@ class XenoSession : public EventReceiver {
 
 
   protected:
-    int8_t bootComplete();
+    virtual int8_t bootComplete() =0;
     virtual int8_t bin_stream_rx(unsigned char* buf, int len) =0;            // Used to feed data to the session.
 
     // TODO: These two should be private.
     uint16_t session_state;       // What state is this session in?
     uint16_t session_last_state;  // The prior state of the sesssion.
 
-  private:
+  //private:
     ManuvrXport* owner;           // A reference to the transport that owns this session.
     XenoMessage* working;         // If we are in the middle of receiving a message.
 

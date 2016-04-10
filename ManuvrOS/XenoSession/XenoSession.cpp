@@ -167,28 +167,6 @@ int8_t XenoSession::markMessageComplete(uint16_t target_id) {
 ****************************************************************************************************/
 
 /**
-* Boot done finished-up.
-*
-* @return 0 on no action, 1 on action, -1 on failure.
-*/
-int8_t XenoSession::bootComplete() {
-  EventReceiver::bootComplete();
-
-  sync_event.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG);
-  sync_event.isManaged(true);
-  sync_event.specific_target = (EventReceiver*) this;
-  sync_event.alterScheduleRecurrence(-1);
-  sync_event.alterSchedulePeriod(30);
-  sync_event.autoClear(false);
-  sync_event.enableSchedule(false);
-
-  __kernel->addSchedule(&sync_event);
-
-  return 1;
-}
-
-
-/**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
 *   has been serviced and we are now getting the chance to see the results. The argument
 *   to this fxn will never be NULL.
@@ -209,9 +187,6 @@ int8_t XenoSession::callback_proc(ManuvrRunnable *event) {
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
-    case MANUVR_MSG_SELF_DESCRIBE:
-      //sendEvent(event);
-      break;
     default:
       break;
   }
@@ -231,8 +206,6 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
 
   switch (active_event->event_code) {
     /* General system events */
-    case MANUVR_MSG_INTERRUPTS_MASKED:
-      break;
     case MANUVR_MSG_BT_CONNECTION_LOST:
       session_state = XENOSESSION_STATE_DISCONNECTED;
       //msg_relay_list.clear();
@@ -253,11 +226,6 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
         if (verbosity > 5) local_log.concatf("0x%08x Purged (%d) msgs from outbound and (%d) from inbound.\n", (uint32_t) this, out_purge, in_purge);
         #endif
       }
-      return_value++;
-      break;
-
-    case MANUVR_MSG_SESS_ORIGINATE_MSG:
-      sendSyncPacket();
       return_value++;
       break;
 
@@ -285,13 +253,10 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
   if (active_event->originator != (EventReceiver*) this) {
     if ((XENO_SESSION_IGNORE_NON_EXPORTABLES) && (active_event->isExportable())) {
       /* This is the block that allows the counterparty to intercept events of its choosing. */
-
-      if (syncd()) {
-        if (msg_relay_list.contains(active_event->getMsgDef())) {
-          // If we are in this block, it means we need to serialize the event and send it.
-          sendEvent(active_event);
-          return_value++;
-        }
+      if (msg_relay_list.contains(active_event->getMsgDef())) {
+        // If we are in this block, it means we need to serialize the event and send it.
+        sendEvent(active_event);
+        return_value++;
       }
     }
   }
@@ -417,34 +382,9 @@ int8_t XenoSession::take_message() {
 
   switch (nu_xm->event->event_code) {
     case MANUVR_MSG_REPLY:
-      if (nu_xm->event->argCount() == 0) {
-        for (int i = 0; i < outbound_messages.size(); i++) {
-          if (outbound_messages.get(i)->uniqueId() == nu_xm->uniqueId()) {
-            XenoMessage::reclaimPreallocation(nu_xm);
-            XenoMessage* replied_to = outbound_messages.remove(i);
-            // TODO: Leak alert! The event member! Remember?
-            XenoMessage::reclaimPreallocation(replied_to); // TODO: No. Bad.
-            return 0;                                 // TODO: No. Bad.
-          }
-        }
-      }
       break;
 
     case MANUVR_MSG_SYNC_KEEPALIVE:
-      if (XENOSESSION_STATE_SYNC_PEND_EXIT & session_state) {
-        // If we were pending sync, and got this result, we are almost certainly syncd.
-        mark_session_sync(false);   // Mark it so.
-      }
-      //nu_xm->ack();  // KA we ACK immediately.
-      {
-        XenoMessage* nu_outbound_msg = XenoMessage::fetchPreallocation(this);
-        nu_outbound_msg->provideEvent(Kernel::returnEvent(MANUVR_MSG_REPLY), nu_xm->uniqueId());
-
-        StringBuilder buf;
-        if (nu_outbound_msg->serialize(&buf) > 0) {
-          owner->sendBuffer(&buf);
-        }
-      }
       break;
 
     default:
@@ -452,32 +392,6 @@ int8_t XenoSession::take_message() {
         inbound_messages.insert(nu_xm);   // ...drop the new message into the inbound message queue.
       }
       break;
-  }
-
-  if (nu_xm->expectsACK()) {
-    switch (nu_xm->event->event_code) {
-      case MANUVR_MSG_SYNC_KEEPALIVE:
-        if (XENOSESSION_STATE_SYNC_PEND_EXIT & session_state) {
-          // If we were pending sync, and got this result, we are almost certainly syncd.
-          mark_session_sync(false);   // Mark it so.
-        }
-        //nu_xm->ack();  // KA we ACK immediately.
-        {
-          XenoMessage* nu_outbound_msg = XenoMessage::fetchPreallocation(this);
-          nu_outbound_msg->provideEvent(Kernel::returnEvent(MANUVR_MSG_REPLY), nu_xm->uniqueId());
-
-          StringBuilder buf;
-          if (nu_outbound_msg->serialize(&buf) > 0) {
-            owner->sendBuffer(&buf);
-          }
-        }
-        break;
-
-      default:
-        // TODO: Need to send into the kernel for execution?
-        //nu_xm->ack();
-        break;
-    }
   }
 
   if (local_log.length() > 0) Kernel::log(&local_log);
@@ -583,8 +497,8 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
 
   switch (*(str)) {
     case 'S':  // Send a mess of sync packets.
-      sync_event.alterScheduleRecurrence(XENOSESSION_INITIAL_SYNC_COUNT);
-      sync_event.enableSchedule(true);
+      //sync_event.alterScheduleRecurrence(XENOSESSION_INITIAL_SYNC_COUNT);
+      //sync_event.enableSchedule(true);
       break;
     case 'i':  // Send a mess of sync packets.
       if (1 == temp_byte) {

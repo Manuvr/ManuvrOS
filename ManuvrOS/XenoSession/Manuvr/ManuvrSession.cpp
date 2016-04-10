@@ -374,3 +374,154 @@ const char* ManuvrSession::getSessionSyncString() {
     default:                                 return "<UNHANDLED SYNC CODE>";
   }
 }
+
+
+
+/****************************************************************************************************
+*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
+* ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
+* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
+* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
+* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
+* ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
+* ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
+* ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
+* ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
+* ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
+*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+*
+* These are overrides from EventReceiver interface...
+****************************************************************************************************/
+
+/**
+* Boot done finished-up.
+*
+* @return 0 on no action, 1 on action, -1 on failure.
+*/
+int8_t ManuvrSession::bootComplete() {
+  EventReceiver::bootComplete();
+
+  sync_event.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG);
+  sync_event.isManaged(true);
+  sync_event.specific_target = (EventReceiver*) this;
+  sync_event.alterScheduleRecurrence(-1);
+  sync_event.alterSchedulePeriod(30);
+  sync_event.autoClear(false);
+  sync_event.enableSchedule(false);
+
+  __kernel->addSchedule(&sync_event);
+
+  return 1;
+}
+
+
+
+/**
+* If we find ourselves in this fxn, it means an event that this class built (the argument)
+*   has been serviced and we are now getting the chance to see the results. The argument
+*   to this fxn will never be NULL.
+*
+* Depending on class implementations, we might choose to handle the completed Event differently. We
+*   might add values to event's Argument chain and return RECYCLE. We may also free() the event
+*   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
+*   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
+*   was crafted to not be in the heap in its own allocation, we will return DROP instead.
+*
+* @param  event  The event for which service has been completed.
+* @return A callback return code.
+*/
+int8_t ManuvrSession::callback_proc(ManuvrRunnable *event) {
+  /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
+     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
+  int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
+
+  /* Some class-specific set of conditionals below this line. */
+  switch (event->event_code) {
+    case MANUVR_MSG_SELF_DESCRIBE:
+      //sendEvent(event);
+      break;
+    default:
+      break;
+  }
+
+  return return_value;
+}
+
+
+/*
+* This is the override from EventReceiver, but there is a bit of a twist this time.
+* Following the normal processing of the incoming event, this class compares it against
+*   a list of events that it has been instructed to relay to the counterparty. If the event
+*   meets the relay criteria, we serialize it and send it to the transport that we are bound to.
+*/
+int8_t ManuvrSession::notify(ManuvrRunnable *active_event) {
+  int8_t return_value = 0;
+
+  switch (active_event->event_code) {
+    /* General system events */
+    case MANUVR_MSG_BT_CONNECTION_LOST:
+      session_state = XENOSESSION_STATE_DISCONNECTED;
+      //msg_relay_list.clear();
+      purgeInbound();
+      purgeOutbound();
+      #ifdef __MANUVR_DEBUG
+      if (verbosity > 3) local_log.concatf("0x%08x Session is now in state %s.\n", (uint32_t) this, getSessionStateString());
+      #endif
+      return_value++;
+      break;
+
+    /* Things that only this class is likely to care about. */
+    case MANUVR_MSG_SESS_HANGUP:
+      {
+        int out_purge = purgeOutbound();
+        int in_purge  = purgeInbound();
+        #ifdef __MANUVR_DEBUG
+        if (verbosity > 5) local_log.concatf("0x%08x Purged (%d) msgs from outbound and (%d) from inbound.\n", (uint32_t) this, out_purge, in_purge);
+        #endif
+      }
+      return_value++;
+      break;
+
+    case MANUVR_MSG_SESS_ORIGINATE_MSG:
+      sendSyncPacket();
+      return_value++;
+      break;
+
+    case MANUVR_MSG_XPORT_RECEIVE:
+      {
+        StringBuilder* buf;
+        if (0 == active_event->getArgAs(&buf)) {
+          bin_stream_rx(buf->string(), buf->length());
+        }
+      }
+      return_value++;
+      break;
+
+    case MANUVR_MSG_SESS_DUMP_DEBUG:
+      printDebug(&local_log);
+      return_value++;
+      break;
+
+    default:
+      return_value += XenoSession::notify(active_event);
+      break;
+  }
+
+  /* We don't want to resonate... Don't react to Events that have us as the originator. */
+  if (active_event->originator != (EventReceiver*) this) {
+    if ((XENO_SESSION_IGNORE_NON_EXPORTABLES) && (active_event->isExportable())) {
+      /* This is the block that allows the counterparty to intercept events of its choosing. */
+
+      if (syncd()) {
+        if (msg_relay_list.contains(active_event->getMsgDef())) {
+          // If we are in this block, it means we need to serialize the event and send it.
+          sendEvent(active_event);
+          return_value++;
+        }
+      }
+    }
+  }
+
+  if (local_log.length() > 0) Kernel::log(&local_log);
+  return return_value;
+}
