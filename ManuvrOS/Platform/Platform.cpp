@@ -111,11 +111,13 @@ void sleep_millis(unsigned long millis) {
 #elif defined(__MK20DX256__) | defined(__MK20DX128__)
   #include "PlatformTeensy3.cpp"
 #elif defined(STM32F4XX)
-
+  #include "STM32F4.cpp"
 #elif defined(STM32F7XX) | defined(STM32F746xx)
   #include "STM32F7.cpp"
 #elif defined(ARDUINO)
-
+  #include "Arduino.cpp"
+#elif defined(__MANUVR_PHOTON)
+  #include "ParticlePhoton.cpp"
 #elif defined(__MANUVR_LINUX)
   #include "PlatformUnsupported.cpp"
 #else
