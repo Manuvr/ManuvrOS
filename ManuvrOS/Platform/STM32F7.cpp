@@ -32,9 +32,6 @@ This file is meant to contain a set of common functions that are typically platf
 
 #define PLATFORM_GPIO_PIN_COUNT   33
 
-#ifdef __cplusplus
- extern "C" {
-#endif
 
 
 /****************************************************************************************************
@@ -130,6 +127,18 @@ void init_RNG() {
 }
 
 
+/****************************************************************************************************
+* Identity and serial number                                                                        *
+****************************************************************************************************/
+int platformSerialNumberSize() { return 12; }
+
+int getSerialNumber(uint8_t* buf) {
+  *((uint32_t*)buf + 0) = *((uint32_t*) 0x1FF0F420);
+  *((uint32_t*)buf + 4) = *((uint32_t*) 0x1FF0F424);
+  *((uint32_t*)buf + 8) = *((uint32_t*) 0x1FF0F428);
+  return 12;
+}
+
 
 /****************************************************************************************************
 * Time and date                                                                                     *
@@ -204,9 +213,31 @@ void gpioSetup() {
     gpio_pins[i].mode  = 1;  // All pins begin as inputs.
     gpio_pins[i].pin   = i;      // The pin number.
   }
+
+  /* GPIO Ports Clock Enable */
+  __GPIOE_CLK_ENABLE();
+  __GPIOB_CLK_ENABLE();
+  __GPIOG_CLK_ENABLE();
+  __GPIOD_CLK_ENABLE();
+  __GPIOC_CLK_ENABLE();
+  __GPIOA_CLK_ENABLE();
+  __GPIOI_CLK_ENABLE();
+  __GPIOH_CLK_ENABLE();
+  __GPIOF_CLK_ENABLE();
 }
 
+
+
+
 int8_t gpioDefine(uint8_t pin, int mode) {
+  GPIO_InitTypeDef GPIO_InitStruct;
+
+  GPIO_InitStruct.Pin    = GPIO_PIN_3|GPIO_PIN_2|GPIO_PIN_1|GPIO_PIN_0;
+  GPIO_InitStruct.Mode   = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull   = GPIO_NOPULL;
+  GPIO_InitStruct.Speed  = GPIO_SPEED_LOW;
+
+  //HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
   return 0;
 }
 
@@ -232,19 +263,6 @@ int8_t setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn) {
 ****************************************************************************************************/
 
 
-/****************************************************************************************************
-* Misc                                                                                              *
-****************************************************************************************************/
-/**
-* Sometimes we question the size of the stack.
-*
-* @return the stack pointer at call time.
-*/
-volatile uint32_t getStackPointer() {
-  uint32_t test;  // Important to not do assignment here.
-  test = (uint32_t) &test;  // Store the pointer.
-  return test;
-}
 
 
 /****************************************************************************************************
@@ -349,9 +367,3 @@ void platformInit() {
     TM_USBD_Start(TM_USB_FS);
   #endif
 }
-
-
-
-#ifdef __cplusplus
- }
-#endif

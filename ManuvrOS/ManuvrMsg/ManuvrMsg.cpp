@@ -786,7 +786,7 @@ int8_t ManuvrMsg::getMsgSemantics(MessageTypeDef* def, StringBuilder* output) {
       temp_def = (const MessageTypeDef *) &(message_defs[i]);
 
       if (isExportable(temp_def)) {
-        int _set_size = strlen(temp_def->arg_semantics)+1;
+        //int _set_size = strlen(temp_def->arg_semantics)+1;
         output->concat((unsigned char*) temp_def, 2);
 
         // Now to capture the argument modes...
@@ -806,7 +806,7 @@ int8_t ManuvrMsg::getMsgSemantics(MessageTypeDef* def, StringBuilder* output) {
     for (int i = 1; i < total_elements; i++) {
       temp_def = message_defs_extended.get(i);
       if (isExportable(temp_def)) {
-        int _set_size = strlen(temp_def->arg_semantics)+1;
+        //int _set_size = strlen(temp_def->arg_semantics)+1;
         output->concat((unsigned char*) temp_def, 2);
 
         // Now to capture the argument modes...

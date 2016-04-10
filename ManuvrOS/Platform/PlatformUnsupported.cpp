@@ -35,9 +35,6 @@ This file forms the catch-all for linux platforms that have no support.
 #include <unistd.h>
 #include <signal.h>
 
-#ifdef __cplusplus
- extern "C" {
-#endif
 
 
 /****************************************************************************************************
@@ -331,20 +328,6 @@ void gpioSetup() {
 ****************************************************************************************************/
 
 
-/****************************************************************************************************
-* Misc                                                                                              *
-****************************************************************************************************/
-/**
-* Sometimes we question the size of the stack.
-*
-* @return the stack pointer at call time.
-*/
-volatile uint32_t getStackPointer() {
-  uint32_t test;  // Important to not do assignment here.
-  test = (uint32_t) &test;  // Store the pointer.
-  return test;
-}
-
 
 /****************************************************************************************************
 * Interrupt-masking                                                                                 *
@@ -433,9 +416,3 @@ void platformInit() {
   initSigHandlers();
   set_linux_interval_timer();
 }
-
-
-
-#ifdef __cplusplus
- }
-#endif

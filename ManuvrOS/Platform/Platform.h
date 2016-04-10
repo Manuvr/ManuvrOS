@@ -56,8 +56,25 @@ This file is meant to contain a set of common functions that are typically platf
 class ManuvrRunnable;
 
 
-#ifdef ARDUINO
+#if defined (ARDUINO)
   #include <Arduino.h>
+#elif defined(STM32F7XX) | defined(STM32F746xx)
+  #include "stm32f7xx_hal.h"
+  #include "stm32f7xx_hal_gpio.h"
+  #include "stm32f7xx_hal_gpio_ex.h"
+
+  #define HIGH         1
+  #define LOW          0
+  #define INPUT        GPIO_MODE_INPUT
+  #define OUTPUT       1
+  #define INPUT_PULLUP 2
+  #define CHANGE       GPIO_MODE_IT_RISING_FALLING
+  #define FALLING      GPIO_MODE_IT_FALLING
+  #define RISING       GPIO_MODE_IT_RISING
+  extern "C" {
+    unsigned long millis();
+    unsigned long micros();
+  }
 #else
   // We adopt Arduino GPIO access conventions.
   #define HIGH         1
@@ -160,7 +177,7 @@ void init_RNG();                             // Fire up the random number genera
 *   and instead use it as a PRNG seed or some other such approach. Please see the
 *   security documentation for a deeper discussion of the issues at hand.
 */
-int platformSerialNumberSize();   // Returns the length of the serial number on this platform.
+int platformSerialNumberSize();   // Returns the length of the serial number on this platform (in bytes).
 int getSerialNumber(uint8_t*);    // Writes the serial number to the indicated buffer.
 
 

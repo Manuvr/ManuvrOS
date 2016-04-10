@@ -137,21 +137,6 @@ int8_t ExampleDriver::notify(ManuvrRunnable *active_event) {
 
 void ExampleDriver::procDirectDebugInstruction(StringBuilder *input) {
 #ifdef __MANUVR_CONSOLE_SUPPORT
-  char* str = input->position(0);
-
-  uint8_t temp_byte = 0;
-  if (*(str) != 0) {
-    temp_byte = atoi((char*) str+1);
-  }
-
-  /* These are debug case-offs that are typically used to test functionality, and are then
-     struck from the build. */
-  switch (*(str)) {
-    default:
-      EventReceiver::procDirectDebugInstruction(input);
-      break;
-  }
-
 #endif
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }

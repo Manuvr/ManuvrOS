@@ -29,9 +29,7 @@ Fallback to Arduino support...
 
 #define PLATFORM_GPIO_PIN_COUNT   33
 
-#ifdef __cplusplus
- extern "C" {
-#endif
+
 
 #if defined (__MANUVR_FREERTOS)
   #include <FreeRTOS_ARM.h>
@@ -259,21 +257,6 @@ int readPinAnalog(uint8_t pin) {
 
 
 /****************************************************************************************************
-* Misc                                                                                              *
-****************************************************************************************************/
-/**
-* Sometimes we question the size of the stack.
-*
-* @return the stack pointer at call time.
-*/
-volatile uint32_t getStackPointer() {
-  uint32_t test;  // Important to not do assignment here.
-  test = (uint32_t) &test;  // Store the pointer.
-  return test;
-}
-
-
-/****************************************************************************************************
 * Interrupt-masking                                                                                 *
 ****************************************************************************************************/
 
@@ -353,9 +336,3 @@ void platformInit() {
   start_time_micros = micros();
   init_RNG();
 }
-
-
-
-#ifdef __cplusplus
- }
-#endif

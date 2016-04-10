@@ -29,6 +29,7 @@ This file is meant to contain a set of common functions that are typically platf
 #include "Platform.h"
 #include <Kernel.h>
 
+extern "C" {
 
 
 /****************************************************************************************************
@@ -56,6 +57,21 @@ void maskableInterrupts(bool enable) {
   else {
     globalIRQDisable();
   }
+}
+
+
+/****************************************************************************************************
+* Misc                                                                                              *
+****************************************************************************************************/
+/**
+* Sometimes we question the size of the stack.
+*
+* @return the stack pointer at call time.
+*/
+volatile uint32_t getStackPointer() {
+  uint32_t test;  // Important to not do assignment here.
+  test = (uint32_t) &test;  // Store the pointer.
+  return test;
 }
 
 
@@ -123,3 +139,6 @@ void sleep_millis(unsigned long millis) {
 #else
   // Unsupportage.
 #endif
+
+
+}
