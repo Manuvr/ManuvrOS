@@ -74,7 +74,7 @@ volatile int _isr_ts_pin = 0;
 */
 void mgc3130_isr_check() {
   if (_isr_ts_pin) {
-    detachInterrupt(_isr_ts_pin);
+    unsetPinIRQ(_isr_ts_pin);
   }
   //Kernel::isrRaiseEvent(&_isr_read_event);
 }
@@ -120,10 +120,10 @@ MGC3130::MGC3130(int ts, int rst, uint8_t addr) {
   // TODO: Formallize this for build targets other than Arduino. Use the abstracted Manuvr
   //       GPIO class instead.
   setPin(_ts_pin, 0);
-  pinMode(_ts_pin, INPUT_PULLUP);     //Used by TS line on MGC3130
+  gpioDefine(_ts_pin, INPUT_PULLUP);     //Used by TS line on MGC3130
 
   setPin(_reset_pin, 0);
-  pinMode(_reset_pin, OUTPUT);   //Used by reset line on MGC3130
+  gpioDefine(_reset_pin, OUTPUT);   //Used by reset line on MGC3130
 
   _irq_pin_0 = 0;
   _irq_pin_1 = 0;
@@ -175,50 +175,50 @@ int MGC3130::get_irq_num_by_pin(int _pin) {
 
 void MGC3130::init() {
   if (_irq_pin_0) {
-  pinMode(_irq_pin_0, INPUT_PULLUP);
+  gpioDefine(_irq_pin_0, INPUT_PULLUP);
   #if defined(BOARD_IRQS_AND_PINS_DISTINCT)
     int fubar_irq_number = get_irq_num_by_pin(_irq_pin_0);
     if (fubar_irq_number >= 0) {
-    attachInterrupt(fubar_irq_number, gest_0, FALLING);
+    setPinFxn(fubar_irq_number, FALLING, gest_0);
     }
   #else
-    attachInterrupt(_irq_pin_0, gest_0, FALLING);
+    setPinFxn(_irq_pin_0, FALLING, gest_0);
   #endif
   }
 
   if (_irq_pin_1) {
-  pinMode(_irq_pin_1, INPUT_PULLUP);
+  gpioDefine(_irq_pin_1, INPUT_PULLUP);
   #if defined(BOARD_IRQS_AND_PINS_DISTINCT)
     int fubar_irq_number = get_irq_num_by_pin(_irq_pin_1);
     if (fubar_irq_number >= 0) {
-    attachInterrupt(fubar_irq_number, gest_1, FALLING);
+    setPinFxn(fubar_irq_number, FALLING, gest_1);
     }
   #else
-    attachInterrupt(_irq_pin_1, gest_1, FALLING);
+    setPinFxn(_irq_pin_1, FALLING, gest_1);
   #endif
   }
 
   if (_irq_pin_2) {
-  pinMode(_irq_pin_2, INPUT_PULLUP);
+  gpioDefine(_irq_pin_2, INPUT_PULLUP);
   #if defined(BOARD_IRQS_AND_PINS_DISTINCT)
     int fubar_irq_number = get_irq_num_by_pin(_irq_pin_2);
     if (fubar_irq_number >= 0) {
-    attachInterrupt(fubar_irq_number, gest_2, FALLING);
+    setPinFxn(fubar_irq_number, FALLING, gest_2);
     }
   #else
-    attachInterrupt(_irq_pin_2, gest_2, FALLING);
+    setPinFxn(_irq_pin_2, FALLING, gest_2);
   #endif
   }
 
   if (_irq_pin_3) {
-  pinMode(_irq_pin_3, INPUT_PULLUP);
+  gpioDefine(_irq_pin_3, INPUT_PULLUP);
   #if defined(BOARD_IRQS_AND_PINS_DISTINCT)
     int fubar_irq_number = get_irq_num_by_pin(_irq_pin_3);
     if (fubar_irq_number >= 0) {
-    attachInterrupt(fubar_irq_number, gest_3, FALLING);
+    setPinFxn(fubar_irq_number, FALLING, gest_3);
     }
   #else
-    attachInterrupt(_irq_pin_3, gest_3, FALLING);
+    setPinFxn(_irq_pin_3, FALLING, gest_3);
   #endif
   }
 
@@ -297,37 +297,37 @@ int8_t MGC3130::setIRQPin(uint8_t _mask, int pin) {
 
 const char* MGC3130::getSwipeString(uint8_t eventByte) {
   switch (eventByte) {
-    case B10000010:  return "Right Swipe";
-    case B10000100:  return "Left Swipe";
-    case B10001000:  return "Up Swipe";
-    case B10010000:  return "Down Swipe";
-    case B11000010:  return "Right Swipe (Edge)";
-    case B11000100:  return "Left Swipe (Edge)";
-    case B11001000:  return "Up Swipe (Edge)";
-    case B11010000:  return "Down Swipe (Edge)";
-    default:         return "<NONE>";
+    case 0x82:  return "Right Swipe";
+    case 0x84:  return "Left Swipe";
+    case 0x88:  return "Up Swipe";
+    case 0x90:  return "Down Swipe";
+    case 0xC2:  return "Right Swipe (Edge)";
+    case 0xC4:  return "Left Swipe (Edge)";
+    case 0xC8:  return "Up Swipe (Edge)";
+    case 0xD0:  return "Down Swipe (Edge)";
+    default:    return "<NONE>";
   }
 }
 
 
 const char* MGC3130::getTouchTapString(uint8_t eventByte) {
   switch (eventByte) {
-    case B00100001:  return "Touch South";
-    case B00100010:  return "Touch West";
-    case B00100100:  return "Touch North";
-    case B00101000:  return "Touch East";
-    case B00110000:  return "Touch Center";
-    case B01000001:  return "Tap South";
-    case B01000010:  return "Tap West";
-    case B01000100:  return "Tap North";
-    case B01001000:  return "Tap East";
-    case B01010000:  return "Tap Center";
-    case B10000001:  return "DblTap South";
-    case B10000010:  return "DblTap West";
-    case B10000100:  return "DblTap North";
-    case B10001000:  return "DblTap East";
-    case B10010000:  return "DblTap Center";
-    default:         return "<NONE>";
+    case 0x21:  return "Touch South";
+    case 0x22:  return "Touch West";
+    case 0x24:  return "Touch North";
+    case 0x28:  return "Touch East";
+    case 0x30:  return "Touch Center";
+    case 0x41:  return "Tap South";
+    case 0x42:  return "Tap West";
+    case 0x44:  return "Tap North";
+    case 0x48:  return "Tap East";
+    case 0x50:  return "Tap Center";
+    case 0x81:  return "DblTap South";
+    case 0x82:  return "DblTap West";
+    case 0x84:  return "DblTap North";
+    case 0x88:  return "DblTap East";
+    case 0x90:  return "DblTap Center";
+    default:    return "<NONE>";
   }
 }
 
@@ -499,13 +499,13 @@ void MGC3130::dispatchGestureEvents() {
 ****************************************************************************************************/
 
 void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
-  pinMode(_ts_pin, INPUT_PULLUP);
+  gpioDefine(_ts_pin, INPUT_PULLUP);
   are_we_holding_ts(false);
-  attachInterrupt(_ts_pin, mgc3130_isr_check, FALLING);
+  setPinFxn(_ts_pin, FALLING, mgc3130_isr_check);
 
   if (completed->err_code == I2C_ERR_CODE_NO_ERROR) {
     if (completed->opcode == I2C_OPERATION_READ) {
-      byte data;
+      uint8_t data;
       int c = 0;
       uint32_t temp_value = 0;   // Used to aggregate fields that span several bytes.
       uint16_t data_set = 0;
@@ -527,7 +527,7 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
             //}
             break;
           case 1:   // Flags.
-            last_event = (B00000001 << (data-1)) | B00100000;
+            last_event = (0x01 << (data-1)) | 0x20;
             break;
           case 2:   // Sequence number
             if (data == last_seq_num) {
@@ -669,8 +669,8 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
 /* If your device needs something to happen immediately prior to bus I/O... */
 bool MGC3130::operationCallahead(I2CQueuedOperation* op) {
   if (!readPin(_ts_pin)) {   // Only initiate a read if there is something there.
-    detachInterrupt(_ts_pin);
-    pinMode(_ts_pin, OUTPUT);
+    unsetPinIRQ(_ts_pin);
+    gpioDefine(_ts_pin, OUTPUT);
     are_we_holding_ts(true);
     return true;
   }
@@ -777,7 +777,7 @@ int8_t MGC3130::notify(ManuvrRunnable *active_event) {
       is_class_ready(true);
       setPin(_reset_pin, 1);
       enableAirwheel(false);
-      attachInterrupt(_ts_pin, mgc3130_isr_check, FALLING);
+      setPinFxn(_ts_pin, FALLING, mgc3130_isr_check);
       return_value++;
       break;
 

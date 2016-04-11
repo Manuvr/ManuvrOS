@@ -52,88 +52,91 @@ limitations under the License.
   #define MANUVR_ER_FLAG_RESERVED_0         0x4000  // Reserved
   #define MANUVR_ER_FLAG_THREADED           0x8000  // This ER is maintaining its own thread.
 
-  #ifdef __cplusplus
-   extern "C" {
-  #endif
-
-
   class Kernel;
   class ManuvrRunnable;
 
 
-  /**
-  * This is an 'interface' class that will allow other classes to receive notice of Events.
-  */
-  class EventReceiver {
-    public:
-      virtual ~EventReceiver() {};
+  extern "C" {
+    /**
+    * This is an 'interface' class that will allow other classes to receive notice of Events.
+    */
+    class EventReceiver {
+      public:
+        virtual ~EventReceiver() {};
 
-      /*
-      * This is the fxn by which subscribers are notified of events. This fxn should return
-      *   zero for no action taken, and non-zero if the event needs to be re-evaluated
-      *   before being passed on to the next subscriber.
-      */
-      virtual int8_t notify(ManuvrRunnable*);
+        /*
+        * This is the fxn by which subscribers are notified of events. This fxn should return
+        *   zero for no action taken, and non-zero if the event needs to be re-evaluated
+        *   before being passed on to the next subscriber.
+        */
+        virtual int8_t notify(ManuvrRunnable*);
 
-      /*
-      * These have no reason to be here other than to enforce some discipline while
-      *   writing things. Eventually, they ought to be cased off by the preprocessor
-      *   so that production builds don't get cluttered by debugging junk that won't
-      *   see use.
-      */
-      void                printDebug();
-      virtual void        printDebug(StringBuilder*);
-      virtual void        procDirectDebugInstruction(StringBuilder *input);
+        /*
+        * These have no reason to be here other than to enforce some discipline while
+        *   writing things. Eventually, they ought to be cased off by the preprocessor
+        *   so that production builds don't get cluttered by debugging junk that won't
+        *   see use.
+        */
+        void                printDebug();
+        virtual void        printDebug(StringBuilder*);
+        virtual void        procDirectDebugInstruction(StringBuilder *input);
 
-      // TODO: Why in God's name did I do it this way vs a static CONST? Was it because
-      //   I didn't know how to link such that it never took up RAM? If so, I can fix that now...
-      //        ---J. Ian Lindsay   Thu Dec 03 03:20:26 MST 2015
-      virtual const char* getReceiverName() = 0;
+        // TODO: Why in God's name did I do it this way vs a static CONST? Was it because
+        //   I didn't know how to link such that it never took up RAM? If so, I can fix that now...
+        //        ---J. Ian Lindsay   Thu Dec 03 03:20:26 MST 2015
+        virtual const char* getReceiverName() = 0;
 
-      /* These are intended to be overridden. */
-      virtual int8_t callback_proc(ManuvrRunnable *);
-      int8_t raiseEvent(ManuvrRunnable* event);
+        /* These are intended to be overridden. */
+        virtual int8_t callback_proc(ManuvrRunnable *);
+        int8_t raiseEvent(ManuvrRunnable* event);
 
-      int purgeLogs();
+        int purgeLogs();
 
-      /**
-      * Call to set the log verbosity for this class. 7 is most verbose. -1 will disable logging altogether.
-      *
-      * @param   nu_verbosity  The desired verbosity of this class.
-      * @return  -1 on failure, and 0 on no change, and 1 on success.
-      */
-      inline int8_t getVerbosity() {   return (_class_state & MANUVR_ER_FLAG_VERBOSITY_MASK);       };
-      inline bool   booted() {         return (0 != (_class_state & MANUVR_ER_FLAG_BOOT_COMPLETE)); };
-      int8_t setVerbosity(int8_t);
+        /**
+        * Call to set the log verbosity for this class. 7 is most verbose. 0 will disable logging altogether.
+        *
+        * @param   nu_verbosity  The desired verbosity of this class.
+        * @return  -1 on failure, and 0 on no change, and 1 on success.
+        */
+        int8_t setVerbosity(int8_t);
 
+        /**
+        * What is this ER's present verbosity level?
+        *
+        * @return  An integer [0-7]. Larger values reflect chattier classes.
+        */
+        inline int8_t getVerbosity() {   return (_class_state & MANUVR_ER_FLAG_VERBOSITY_MASK);       };
 
-    protected:
-      Kernel* __kernel;
-      StringBuilder local_log;
-
-      virtual int8_t bootComplete();        // This is called from the base notify().
-      virtual void   __class_initializer();
-
-      inline void _mark_boot_complete() {   _class_state |= MANUVR_ER_FLAG_BOOT_COMPLETE;  };
-
-
-    private:
-      #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
-        // In threaded environments, we allow resources to enable their own threading
-        //   if needed.
-        int _thread_id;
-      #endif
-
-      uint16_t _class_state;
-
-      int8_t setVerbosity(ManuvrRunnable*);  // Private because it should be set with an Event.
-
-  };
+        /**
+        * Has the class been boot-strapped?
+        *
+        * @return  true if the class has been booted.
+        */
+        inline bool   booted() {         return (0 != (_class_state & MANUVR_ER_FLAG_BOOT_COMPLETE)); };
 
 
-  #ifdef __cplusplus
+      protected:
+        Kernel* __kernel;
+        StringBuilder local_log;
+
+        virtual int8_t bootComplete();        // This is called from the base notify().
+        virtual void   __class_initializer();
+
+        inline void _mark_boot_complete() {   _class_state |= MANUVR_ER_FLAG_BOOT_COMPLETE;  };
+
+
+      private:
+        #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+          // In threaded environments, we allow resources to enable their own threading
+          //   if needed.
+          int _thread_id;
+        #endif
+
+        uint16_t _class_state;
+
+        int8_t setVerbosity(ManuvrRunnable*);  // Private because it should be set with an Event.
+    };
   }
-  #endif
 
   #include "Kernel.h"
 

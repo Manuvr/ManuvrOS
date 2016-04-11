@@ -60,8 +60,8 @@ CPP_SRCS  += Drivers/i2c-adapter/I2CQueuedOperation.cpp
 #CPP_SRCS  += Drivers/AudioRouter/AudioRouter.cpp
 
 # TODO: Use GPio abstractions!
-#CPP_SRCS  += Drivers/MGC3130/MGC3130.cpp
-#CPP_SRCS  += Drivers/MCP73833/MCP73833.cpp
+CPP_SRCS  += Drivers/MGC3130/MGC3130.cpp
+CPP_SRCS  += Drivers/MCP73833/MCP73833.cpp
 CPP_SRCS  += Drivers/ADP8866/ADP8866.cpp
 
 # TODO: Only for Teensyduino libs...
