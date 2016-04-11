@@ -189,7 +189,7 @@ StringBuilder Kernel::log_buffer;
 * Logger pass-through functions. Please mind the variadics...
 */
 volatile void Kernel::log(int severity, const char *str) {
-  if (!INSTANCE->verbosity) return;
+  if (!INSTANCE->getVerbosity()) return;
   log_buffer.concat(str);
   #if defined (__MANUVR_FREERTOS)
     if (logger_pid) vTaskResume((TaskHandle_t) logger_pid);
@@ -197,7 +197,7 @@ volatile void Kernel::log(int severity, const char *str) {
 }
 
 volatile void Kernel::log(char *str) {
-  if (!INSTANCE->verbosity) return;
+  if (!INSTANCE->getVerbosity()) return;
   log_buffer.concat(str);
   #if defined (__MANUVR_FREERTOS)
     if (logger_pid) vTaskResume((TaskHandle_t) logger_pid);
@@ -205,7 +205,7 @@ volatile void Kernel::log(char *str) {
 }
 
 volatile void Kernel::log(const char *str) {
-  if (!INSTANCE->verbosity) return;
+  if (!INSTANCE->getVerbosity()) return;
   log_buffer.concat(str);
   #if defined (__MANUVR_FREERTOS)
     if (logger_pid) vTaskResume((TaskHandle_t) logger_pid);
@@ -213,7 +213,7 @@ volatile void Kernel::log(const char *str) {
 }
 
 volatile void Kernel::log(const char *fxn_name, int severity, const char *str, ...) {
-  if (!INSTANCE->verbosity) return;
+  if (!INSTANCE->getVerbosity()) return;
   log_buffer.concatf("%d  %s:\t", severity, fxn_name);
   va_list marker;
 
@@ -226,7 +226,7 @@ volatile void Kernel::log(const char *fxn_name, int severity, const char *str, .
 }
 
 volatile void Kernel::log(StringBuilder *str) {
-  if (!INSTANCE->verbosity) return;
+  if (!INSTANCE->getVerbosity()) return;
   log_buffer.concatHandoff(str);
   #if defined (__MANUVR_FREERTOS)
     if (logger_pid) vTaskResume((TaskHandle_t) logger_pid);
@@ -296,7 +296,7 @@ int8_t Kernel::subscribe(EventReceiver *client) {
 
   client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
   int8_t return_value = subscribers.insert(client);
-  if (boot_completed) {
+  if (booted()) {
     // This subscriber is joining us after bootup. Call its bootComplete() fxn to cause it to init.
     client->notify(returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED));
   }
@@ -320,7 +320,7 @@ int8_t Kernel::subscribe(EventReceiver *client, uint8_t priority) {
 
   client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
   int8_t return_value = subscribers.insert(client, priority);
-  if (boot_completed) {
+  if (booted()) {
     // This subscriber is joining us after bootup. Call its bootComplete() fxn to cause it to init.
     //client.bootComplete();
   }
@@ -413,7 +413,7 @@ int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* ori) {
     #endif
   }
   else {
-    if (INSTANCE->verbosity > 4) {
+    if (INSTANCE->getVerbosity() > 4) {
       #ifdef __MANUVR_DEBUG
       StringBuilder output("raiseEvent():\tvalidate_insertion() failed:\n");
       output.concat(ManuvrMsg::getMsgTypeString(code));
@@ -447,7 +447,7 @@ int8_t Kernel::staticRaiseEvent(ManuvrRunnable* event) {
     #endif
   }
   else {
-    if (INSTANCE->verbosity > 4) {
+    if (INSTANCE->getVerbosity() > 4) {
       #ifdef __MANUVR_DEBUG
       StringBuilder output("staticRaiseEvent():\tvalidate_insertion() failed:\n");
       event->printDebug(&output);;
@@ -580,7 +580,7 @@ void Kernel::reclaim_event(ManuvrRunnable* active_runnable) {
   bool reap_current_event = active_runnable->kernelShouldReap();
 
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 5) {
+  if (getVerbosity() > 5) {
     local_log.concatf("We will%s be reaping %s.\n", (reap_current_event ? "":" not"), active_runnable->getMsgTypeString());
     Kernel::log(&local_log);
   }
@@ -600,7 +600,7 @@ void Kernel::reclaim_event(ManuvrRunnable* active_runnable) {
     }                                         // Otherwise, we let it drop and trust some other class is managing it.
     #ifdef __MANUVR_DEBUG
     else {
-      if (verbosity > 6) {
+      if (getVerbosity() > 6) {
         local_log.concat("Kernel::reclaim_event(): Doing nothing. Hope its managed elsewhere.\n");
         Kernel::log(&local_log);
       }
@@ -692,7 +692,7 @@ int8_t Kernel::procIdleFlags() {
 
     // Chat and measure.
     #ifdef __MANUVR_DEBUG
-    if (verbosity >= 5) local_log.concatf("Servicing: %s\n", active_runnable->getMsgTypeString());
+    if (getVerbosity() >= 5) local_log.concatf("Servicing: %s\n", active_runnable->getMsgTypeString());
     #endif
 
     profiler_mark_0 = micros();
@@ -748,7 +748,7 @@ int8_t Kernel::procIdleFlags() {
 
     if (0 == activity_count) {
       #ifdef __MANUVR_DEBUG
-      if (verbosity >= 3) local_log.concatf("\tDead event: %s\n", active_runnable->getMsgTypeString());
+      if (getVerbosity() >= 3) local_log.concatf("\tDead event: %s\n", active_runnable->getMsgTypeString());
       #endif
       total_events_dead++;
     }
@@ -763,7 +763,7 @@ int8_t Kernel::procIdleFlags() {
         switch (active_runnable->originator->callback_proc(active_runnable)) {
           case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
             #ifdef __MANUVR_DEBUG
-            if (verbosity > 5) local_log.concatf("Recycling %s.\n", active_runnable->getMsgTypeString());
+            if (getVerbosity() > 5) local_log.concatf("Recycling %s.\n", active_runnable->getMsgTypeString());
             #endif
             if (0 == validate_insertion(active_runnable)) {
               exec_queue.insert(active_runnable, active_runnable->priority);
@@ -777,7 +777,7 @@ int8_t Kernel::procIdleFlags() {
             // NOTE: No break;
           case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
             #ifdef __MANUVR_DEBUG
-            if (verbosity > 5) local_log.concatf("Dropping %s after running.\n", active_runnable->getMsgTypeString());
+            if (getVerbosity() > 5) local_log.concatf("Dropping %s after running.\n", active_runnable->getMsgTypeString());
             #endif
             // NOTE: No break;
           case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
@@ -836,9 +836,9 @@ int8_t Kernel::procIdleFlags() {
 
       #ifdef __MANUVR_DEBUG
         MessageTypeDef* tmp_msg_def = (MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(msg_code_local);
-        if (verbosity >= 6) local_log.concatf("%s finished.\n\tTotal time: %ld uS\n", tmp_msg_def->debug_label, (profiler_mark_3 - profiler_mark_0));
+        if (getVerbosity() >= 6) local_log.concatf("%s finished.\n\tTotal time: %ld uS\n", tmp_msg_def->debug_label, (profiler_mark_3 - profiler_mark_0));
         if (profiler_mark_2) {
-          if (verbosity >= 6) local_log.concatf("\tTook %ld uS to notify.\n", profiler_item->run_time_last);
+          if (getVerbosity() >= 6) local_log.concatf("\tTook %ld uS to notify.\n", profiler_item->run_time_last);
         }
       #endif
       profiler_mark_2 = 0;  // Reset for next iteration.
@@ -1022,11 +1022,11 @@ void Kernel::printDebug(StringBuilder* output) {
   currentDateTime(output);
   output->concatf("-- %s v%s    Build date: %s %s\n--\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
   //output->concatf("-- our_mem_addr:             0x%08x\n", (uint32_t) this);
-  if (verbosity > 5) output->concatf("-- boot_completed:           %s\n", (boot_completed) ? "yes" : "no");
-  if (verbosity > 6) output->concatf("-- getStackPointer()         0x%08x\n", getStackPointer());
-  if (verbosity > 6) output->concatf("-- stack grows %s\n--\n", (final_sp > initial_sp) ? "up" : "down");
-  if (verbosity > 6) output->concatf("-- millis()                  0x%08x\n", millis());
-  if (verbosity > 6) output->concatf("-- micros()                  0x%08x\n", micros());
+  if (getVerbosity() > 5) output->concatf("-- boot_completed:           %s\n", booted() ? "yes" : "no");
+  if (getVerbosity() > 6) output->concatf("-- getStackPointer()         0x%08x\n", getStackPointer());
+  if (getVerbosity() > 6) output->concatf("-- stack grows %s\n--\n", (final_sp > initial_sp) ? "up" : "down");
+  if (getVerbosity() > 6) output->concatf("-- millis()                  0x%08x\n", millis());
+  if (getVerbosity() > 6) output->concatf("-- micros()                  0x%08x\n", micros());
 
   output->concatf("-- Queue depth:              %d\n", exec_queue.size());
   output->concatf("-- Preallocation depth:      %d\n", preallocated.size());
@@ -1081,7 +1081,7 @@ void Kernel::printDebug(StringBuilder* output) {
 */
 int8_t Kernel::bootComplete() {
   EventReceiver::bootComplete();
-  boot_completed = true;
+  _mark_boot_complete();
   maskableInterrupts(true);  // Now configure interrupts, lift interrupt masks, and let the madness begin.
   return 1;
 }
@@ -1109,8 +1109,8 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     case MANUVR_MSG_SYS_BOOT_COMPLETED:
-      if (verbosity > 4) Kernel::log("Boot complete.\n");
-      boot_completed = true;
+      if (getVerbosity() > 4) Kernel::log("Boot complete.\n");
+      _mark_boot_complete();
       break;
     default:
       break;
@@ -1485,7 +1485,7 @@ bool Kernel::addSchedule(ManuvrRunnable *obj) {
 *  latency-sensitive.
 */
 int Kernel::serviceSchedules() {
-  if (!boot_completed) return -1;
+  if (!booted()) return -1;
   int return_value = 0;
 
   int x = schedules.size();

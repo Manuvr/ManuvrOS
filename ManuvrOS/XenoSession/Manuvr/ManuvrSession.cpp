@@ -126,7 +126,7 @@ void ManuvrSession::mark_session_desync(uint8_t ds_src) {
   session_state = getState() | ds_src;
   if (session_state & ds_src) {
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 3) local_log.concatf("Session 0x%08x is already in the requested sync state (%s). Doing nothing.\n", (uint32_t) this, getSessionSyncString());
+    if (getVerbosity() > 3) local_log.concatf("Session 0x%08x is already in the requested sync state (%s). Doing nothing.\n", (uint32_t) this, getSessionSyncString());
     #endif
   }
   else {
@@ -207,7 +207,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
   const char* statcked_sess_str = getSessionStateString();
 
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 6) {
+  if (getVerbosity() > 6) {
     local_log.concatf("Bytes received into session 0x%08x buffer: \n\t", (uint32_t) this);
     for (int i = 0; i < len; i++) {
       local_log.concatf("0x%02x ", *(buf + i));
@@ -229,12 +229,12 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
            the values that it will use to index and make decisions... */
         mark_session_sync(true);   // Indicate that we are done with sync, but may still see such packets.
         #ifdef __MANUVR_DEBUG
-        if (verbosity > 3) local_log.concatf("Session 0x%08x re-sync'd with %d bytes remaining in the buffer. Sync'd state is now pending.\n", (uint32_t) this, len);
+        if (getVerbosity() > 3) local_log.concatf("Session 0x%08x re-sync'd with %d bytes remaining in the buffer. Sync'd state is now pending.\n", (uint32_t) this, len);
         #endif
       }
       else {
         #ifdef __MANUVR_DEBUG
-          if (verbosity > 2) local_log.concat("Session still out of sync.\n");
+          if (getVerbosity() > 2) local_log.concat("Session still out of sync.\n");
         #endif
         if (local_log.length() > 0) Kernel::log(&local_log);
         return return_value;
@@ -242,7 +242,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
       break;
     default:
       #ifdef __MANUVR_DEBUG
-      if (verbosity > 1) local_log.concatf("ILLEGAL session_state: 0x%02x (top 4)\n", session_state);
+      if (getVerbosity() > 1) local_log.concatf("ILLEGAL session_state: 0x%02x (top 4)\n", session_state);
       #endif
       break;
   }
@@ -263,7 +263,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
       break;
     default:
       #ifdef __MANUVR_DEBUG
-      //if (verbosity > 1) local_log.concatf("ILLEGAL session_state: 0x%02x (bottom 4)\n", session_state);
+      //if (getVerbosity() > 1) local_log.concatf("ILLEGAL session_state: 0x%02x (bottom 4)\n", session_state);
       #endif
       break;
   }
@@ -276,7 +276,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
   if ((XENO_MSG_PROC_STATE_RECEIVING | XENO_MSG_PROC_STATE_UNINITIALIZED) & working->getState()) {
     int consumed = working->feedBuffer(&session_buffer);
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 5) local_log.concatf("Feeding message 0x%08x. Consumed %d of %d bytes.\n", (uint32_t) working, consumed, len);
+    if (getVerbosity() > 5) local_log.concatf("Feeding message 0x%08x. Consumed %d of %d bytes.\n", (uint32_t) working, consumed, len);
     #endif
 
     if (consumed > 0) {
@@ -296,20 +296,20 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
         if (0 == getState()) {
           // If we aren't dealing with sync at the moment, and the counterparty sent a sync packet...
           #ifdef __MANUVR_DEBUG
-            if (verbosity > 4) local_log.concat("Counterparty wants to sync,,, changing session state...\n");
+            if (getVerbosity() > 4) local_log.concat("Counterparty wants to sync,,, changing session state...\n");
           #endif
           mark_session_desync(XENOSESSION_STATE_SYNC_INITIATED);
         }
         break;
       case (XENO_MSG_PROC_STATE_ERROR | XENO_MSG_PROC_STATE_AWAITING_REAP):
         // There was some sort of problem...
-        if (verbosity > 3) {
+        if (getVerbosity() > 3) {
           local_log.concatf("XenoMessage 0x%08x reports an error:\n", (uint32_t) this);
           working->printDebug(&local_log);
         }
         if (MAX_PARSE_FAILURES == ++sequential_parse_failures) {
           #ifdef __MANUVR_DEBUG
-            if (verbosity > 2) local_log.concat("\nThis was the session's last straw. Session marked itself as desync'd.\n");
+            if (getVerbosity() > 2) local_log.concat("\nThis was the session's last straw. Session marked itself as desync'd.\n");
           #endif
           mark_session_desync(XENOSESSION_STATE_SYNC_INITIATOR);   // We will complain.
         }
@@ -324,14 +324,14 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
     }
   }
   else {
-    if (verbosity > 3) local_log.concatf("XenoMessage 0x%08x is in the wrong state to accept bytes: %s\n", (uint32_t) working, working->getMessageStateString());
+    if (getVerbosity() > 3) local_log.concatf("XenoMessage 0x%08x is in the wrong state to accept bytes: %s\n", (uint32_t) working, working->getMessageStateString());
   }
 
 
   if (statcked_sess_str != getSessionStateString()) {
     // The session changed state. Print it.
     #ifdef __MANUVR_DEBUG
-      if (verbosity > 3) local_log.concatf("XenoSession state change:\t %s ---> %s\n", statcked_sess_str, getSessionStateString());
+      if (getVerbosity() > 3) local_log.concatf("XenoSession state change:\t %s ---> %s\n", statcked_sess_str, getSessionStateString());
     #endif
   }
 
@@ -470,7 +470,7 @@ int8_t ManuvrSession::notify(ManuvrRunnable *active_event) {
       purgeInbound();
       purgeOutbound();
       #ifdef __MANUVR_DEBUG
-      if (verbosity > 3) local_log.concatf("0x%08x Session is now in state %s.\n", (uint32_t) this, getSessionStateString());
+      if (getVerbosity() > 3) local_log.concatf("0x%08x Session is now in state %s.\n", (uint32_t) this, getSessionStateString());
       #endif
       return_value++;
       break;
@@ -481,7 +481,7 @@ int8_t ManuvrSession::notify(ManuvrRunnable *active_event) {
         int out_purge = purgeOutbound();
         int in_purge  = purgeInbound();
         #ifdef __MANUVR_DEBUG
-        if (verbosity > 5) local_log.concatf("0x%08x Purged (%d) msgs from outbound and (%d) from inbound.\n", (uint32_t) this, out_purge, in_purge);
+        if (getVerbosity() > 5) local_log.concatf("0x%08x Purged (%d) msgs from outbound and (%d) from inbound.\n", (uint32_t) this, out_purge, in_purge);
         #endif
       }
       return_value++;

@@ -284,7 +284,7 @@ int8_t ManuvrTCP::read_port() {
       }
     }
   }
-  else if (verbosity > 1) {
+  else if (getVerbosity() > 1) {
     local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
   }
 
@@ -299,7 +299,7 @@ int8_t ManuvrTCP::read_port() {
 */
 bool ManuvrTCP::write_port(unsigned char* out, int out_len) {
   if (_sock == -1) {
-    if (verbosity > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to socket at: (%s:%d)\n", _addr, _port_number);
+    if (getVerbosity() > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to socket at: (%s:%d)\n", _addr, _port_number);
     return false;
   }
 
@@ -321,7 +321,7 @@ bool ManuvrTCP::write_port(unsigned char* out, int out_len) {
 */
 bool ManuvrTCP::write_port(int sock, unsigned char* out, int out_len) {
   if (sock == -1) {
-    if (verbosity > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to socket at: (%s:%d)\n", _addr, _port_number);
+    if (getVerbosity() > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to socket at: (%s:%d)\n", _addr, _port_number);
     return false;
   }
 

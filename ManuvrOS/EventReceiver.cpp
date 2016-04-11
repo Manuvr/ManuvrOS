@@ -29,20 +29,10 @@ limitations under the License.
 */
 void EventReceiver::__class_initializer() {
   __kernel  = NULL;
-  verbosity = DEFAULT_CLASS_VERBOSITY;
-  boot_completed = false;
-}
-
-
-
-/**
-* Call to set the log verbosity for this class. 7 is most verbose. -1 will disable logging altogether.
-*
-* @param   nu_verbosity  The desired verbosity of this class.
-* @return  -1 on failure, and 0 on no change, and 1 on success.
-*/
-int8_t EventReceiver::getVerbosity() {
-  return verbosity;
+  _class_state = 0 | (DEFAULT_CLASS_VERBOSITY & MANUVR_ER_FLAG_VERBOSITY_MASK);
+  #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+    _thread_id = -1;
+  #endif
 }
 
 
@@ -53,7 +43,7 @@ int8_t EventReceiver::getVerbosity() {
 * @return  -1 on failure, and 0 on no change, and 1 on success.
 */
 int8_t EventReceiver::setVerbosity(int8_t nu_verbosity) {
-  if (verbosity == nu_verbosity) return 0;
+  if (getVerbosity() == nu_verbosity) return 0;
 	switch (nu_verbosity) {
     case LOG_DEBUG:   /* 7 - debug-level messages */
     case LOG_INFO:    /* 6 - informational */
@@ -67,11 +57,11 @@ int8_t EventReceiver::setVerbosity(int8_t nu_verbosity) {
     case LOG_CRIT:    /* 2 - critical conditions */
     case LOG_ALERT:   /* 1 - action must be taken immediately */
     case LOG_EMERG:   /* 0 - system is unusable */
-      verbosity = nu_verbosity;
+      _class_state = (nu_verbosity & MANUVR_ER_FLAG_VERBOSITY_MASK) | (_class_state & ~MANUVR_ER_FLAG_VERBOSITY_MASK);
       return 1;
     default:
       #ifdef __MANUVR_DEBUG
-      if (verbosity > 4) {
+      if (getVerbosity() > 4) {
         local_log.concatf("Illegal verbosity value.\n", getReceiverName(), nu_verbosity);
         Kernel::log(&local_log);
       }
@@ -95,7 +85,7 @@ int8_t EventReceiver::setVerbosity(ManuvrRunnable* active_event) {
   switch (active_event->argCount()) {
     case 0:
       #ifdef __MANUVR_DEBUG
-      local_log.concatf("%s:\tVerbosity is %d\n", getReceiverName(), verbosity);
+      local_log.concatf("%s:\tVerbosity is %d\n", getReceiverName(), getVerbosity());
       Kernel::log(&local_log);
       #endif
       return 1;
@@ -117,7 +107,7 @@ int EventReceiver::purgeLogs() {
   int return_value = 0;
   int lll = local_log.length();
   if (lll > 0) {
-    if (verbosity > 4) {
+    if (getVerbosity() > 4) {
       Kernel::log(&local_log);
     }
     local_log.clear();
@@ -185,7 +175,7 @@ void EventReceiver::printDebug() {
 */
 void EventReceiver::printDebug(StringBuilder *output) {
   output->concatf("\n==< %s >===================================\n", getReceiverName());
-  output->concatf("-- bootstrap_completed \t\t%s\n", (boot_completed) ? "yes" : "no", (NULL != __kernel) ? "yes" : "no");
+  output->concatf("-- bootstrap_completed \t\t%s\n", booted() ? "yes" : "no", (NULL != __kernel) ? "yes" : "no");
 }
 
 
@@ -216,7 +206,7 @@ void EventReceiver::printDebug(StringBuilder *output) {
 */
 int8_t EventReceiver::bootComplete() {
   __kernel = Kernel::getInstance();
-  boot_completed = true;
+  _mark_boot_complete();
   return 1;
 }
 

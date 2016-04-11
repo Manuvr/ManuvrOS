@@ -78,7 +78,6 @@ CPP_SRCS  += Drivers/ManuvrCoAP/ManuvrCoAP.cpp
 CPP_SRCS  += Drivers/ISL23345/ISL23345.cpp
 CPP_SRCS  += Drivers/Bluetooth/RN4020/RN4020.cpp
 CPP_SRCS  += Drivers/ADG2128/ADG2128.cpp
-CPP_SRCS  += Drivers/INA219/INA219.cpp
 CPP_SRCS  += Drivers/TMP006/TMP006.cpp
 CPP_SRCS  += Drivers/ISL29033/ISL29033.cpp
 CPP_SRCS  += Drivers/Sensors/LPS331/LPS331.cpp
@@ -89,6 +88,7 @@ CPP_SRCS  += Drivers/DeviceWithRegisters/DeviceRegister.cpp
 CPP_SRCS  += Drivers/ManuvrableGPIO/ManuvrableGPIO.cpp
 
 # Power-management ICs and modules...
+CPP_SRCS  += Drivers/INA219/INA219.cpp
 #CPP_SRCS  += Drivers/PMIC/LDS8160/LDS8160.cpp
 
 

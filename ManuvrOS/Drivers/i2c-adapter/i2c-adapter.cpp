@@ -179,7 +179,7 @@ I2CAdapter::~I2CAdapter() {
 // TODO: Inline this.
 int8_t I2CAdapter::generateStart() {
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 6) Kernel::log("I2CAdapter::generateStart()\n");
+  if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
   #endif
   if (! bus_online) return -1;
   I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, ENABLE);      //Enable EVT and ERR interrupts
@@ -190,7 +190,7 @@ int8_t I2CAdapter::generateStart() {
 // TODO: Inline this.
 int8_t I2CAdapter::generateStop() {
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 6) Kernel::log("I2CAdapter::generateStop()\n");
+  if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
   #endif
   if (! bus_online) return -1;
   DMA_ITConfig(DMA1_Stream0, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE | DMA_IT_DME, DISABLE);
@@ -230,7 +230,7 @@ I2CAdapter::~I2CAdapter() {
 
 int8_t I2CAdapter::generateStart() {
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 6) Kernel::log("I2CAdapter::generateStart()\n");
+  if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
   #endif
   if (! bus_online) return -1;
   return 0;
@@ -239,7 +239,7 @@ int8_t I2CAdapter::generateStart() {
 
 int8_t I2CAdapter::generateStop() {
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 6) Kernel::log("I2CAdapter::generateStop()\n");
+  if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
   #endif
   if (! bus_online) return -1;
   return 0;
@@ -294,7 +294,7 @@ int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
 
   int8_t I2CAdapter::generateStart() {
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 6) Kernel::log("I2CAdapter::generateStart()\n");
+    if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
     #endif
     if (! bus_online) return -1;
     //Wire1.sendTransmission(I2C_STOP);
@@ -305,7 +305,7 @@ int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
 
   int8_t I2CAdapter::generateStop() {
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 6) Kernel::log("I2CAdapter::generateStop()\n");
+    if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
     #endif
     if (! bus_online) return -1;
     return 0;
@@ -436,7 +436,7 @@ I2CAdapter::~I2CAdapter() {
 
 int8_t I2CAdapter::generateStart() {
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 6) Kernel::log("I2CAdapter::generateStart()\n");
+  if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
   #endif
   if (! bus_online) return -1;
   //Wire1.sendTransmission(I2C_STOP);
@@ -448,7 +448,7 @@ int8_t I2CAdapter::generateStart() {
 // TODO: Inline this.
 int8_t I2CAdapter::generateStop() {
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 6) Kernel::log("I2CAdapter::generateStop()\n");
+  if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
   #endif
   if (! bus_online) return -1;
   return 0;
@@ -485,7 +485,7 @@ I2CAdapter::~I2CAdapter() {
 // TODO: Inline this.
 int8_t I2CAdapter::generateStart() {
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 6) Kernel::log("I2CAdapter::generateStart()\n");
+  if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
   #endif
   if (! bus_online) return -1;
   //Wire1.sendTransmission(I2C_STOP);
@@ -497,7 +497,7 @@ int8_t I2CAdapter::generateStart() {
 // TODO: Inline this.
 int8_t I2CAdapter::generateStop() {
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 6) Kernel::log("I2CAdapter::generateStop()\n");
+  if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
   #endif
   if (! bus_online) return -1;
   return 0;
@@ -808,7 +808,7 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
 * It may or may not be started immediately.
 */
 bool I2CAdapter::insert_work_item(I2CQueuedOperation *nu) {
-  nu->verbosity = verbosity;
+  nu->verbosity = getVerbosity();
   nu->device = this;
 	if (current_queue_item != NULL) {
 		// Something is already going on with the bus. Queue...
@@ -821,7 +821,7 @@ bool I2CAdapter::insert_work_item(I2CQueuedOperation *nu) {
 		current_queue_item = nu;
 		if ((dev >= 0) && (bus_online)) {
 		  nu->begin();
-		  if (verbosity > 6) {
+		  if (getVerbosity() > 6) {
 		    nu->printDebug(&local_log);
 		    Kernel::log(&local_log);
 		  }
@@ -845,9 +845,9 @@ void I2CAdapter::advance_work_queue(void) {
 			}
 			else {
 			  #ifdef __MANUVR_DEBUG
-			  if (verbosity > 3) local_log.concatf("Destroying failed job 0x%08x.\n", current_queue_item->txn_id);
+			  if (getVerbosity() > 3) local_log.concatf("Destroying failed job 0x%08x.\n", current_queue_item->txn_id);
 			  #endif
-			  if (verbosity > 6) current_queue_item->printDebug(&local_log);
+			  if (getVerbosity() > 6) current_queue_item->printDebug(&local_log);
 			}
 
 			// Hand this completed operation off to the class that requested it. That class will
@@ -871,7 +871,7 @@ void I2CAdapter::advance_work_queue(void) {
 				  }
 				  else {
 				    #ifdef __MANUVR_DEBUG
-				    if (verbosity > 3) local_log.concat("Concluded i2c ping sweep.");
+				    if (getVerbosity() > 3) local_log.concat("Concluded i2c ping sweep.");
 				    #endif
 				    full_ping_running = false;
 				  }
@@ -978,24 +978,24 @@ void I2CAdapter::printPingMap(StringBuilder *temp) {
     // TODO: This is needlessly-extravagent of memory. Do it this way instead...
     //char str_buf[];
     for (uint8_t i = 0; i < 128; i+=16) {
-      temp->concatf("\t0x%02x: %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s\n",
+      temp->concatf("\t0x%02x: %c %c %c %c %c %c %c %c %c %c %c %c %c %c %c %c\n",
         i,
-        ((ping_map[i + 0x00] == 0) ? " " : ((ping_map[i + 0x00] < 0) ? "-" : "*")),
-        ((ping_map[i + 0x01] == 0) ? " " : ((ping_map[i + 0x01] < 0) ? "-" : "*")),
-        ((ping_map[i + 0x02] == 0) ? " " : ((ping_map[i + 0x02] < 0) ? "-" : "*")),
-        ((ping_map[i + 0x03] == 0) ? " " : ((ping_map[i + 0x03] < 0) ? "-" : "*")),
-        ((ping_map[i + 0x04] == 0) ? " " : ((ping_map[i + 0x04] < 0) ? "-" : "*")),
-        ((ping_map[i + 0x05] == 0) ? " " : ((ping_map[i + 0x05] < 0) ? "-" : "*")),
-        ((ping_map[i + 0x06] == 0) ? " " : ((ping_map[i + 0x06] < 0) ? "-" : "*")),
-        ((ping_map[i + 0x07] == 0) ? " " : ((ping_map[i + 0x07] < 0) ? "-" : "*")),
-        ((ping_map[i + 0x08] == 0) ? " " : ((ping_map[i + 0x08] < 0) ? "-" : "*")),
-        ((ping_map[i + 0x09] == 0) ? " " : ((ping_map[i + 0x09] < 0) ? "-" : "*")),
-        ((ping_map[i + 0x0A] == 0) ? " " : ((ping_map[i + 0x0A] < 0) ? "-" : "*")),
-        ((ping_map[i + 0x0B] == 0) ? " " : ((ping_map[i + 0x0B] < 0) ? "-" : "*")),
-        ((ping_map[i + 0x0C] == 0) ? " " : ((ping_map[i + 0x0C] < 0) ? "-" : "*")),
-        ((ping_map[i + 0x0D] == 0) ? " " : ((ping_map[i + 0x0D] < 0) ? "-" : "*")),
-        ((ping_map[i + 0x0E] == 0) ? " " : ((ping_map[i + 0x0E] < 0) ? "-" : "*")),
-        ((ping_map[i + 0x0F] == 0) ? " " : ((ping_map[i + 0x0F] < 0) ? "-" : "*"))
+        ((ping_map[i + 0x00] == 0) ? ' ' : ((ping_map[i + 0x00] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x01] == 0) ? ' ' : ((ping_map[i + 0x01] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x02] == 0) ? ' ' : ((ping_map[i + 0x02] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x03] == 0) ? ' ' : ((ping_map[i + 0x03] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x04] == 0) ? ' ' : ((ping_map[i + 0x04] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x05] == 0) ? ' ' : ((ping_map[i + 0x05] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x06] == 0) ? ' ' : ((ping_map[i + 0x06] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x07] == 0) ? ' ' : ((ping_map[i + 0x07] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x08] == 0) ? ' ' : ((ping_map[i + 0x08] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x09] == 0) ? ' ' : ((ping_map[i + 0x09] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x0A] == 0) ? ' ' : ((ping_map[i + 0x0A] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x0B] == 0) ? ' ' : ((ping_map[i + 0x0B] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x0C] == 0) ? ' ' : ((ping_map[i + 0x0C] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x0D] == 0) ? ' ' : ((ping_map[i + 0x0D] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x0E] == 0) ? ' ' : ((ping_map[i + 0x0E] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x0F] == 0) ? ' ' : ((ping_map[i + 0x0F] < 0) ? '-' : '*'))
       );
       //temp->concat(str_buf);
     }

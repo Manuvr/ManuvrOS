@@ -196,7 +196,7 @@ int8_t ManuvrXport::provide_session(XenoSession* ses) {
     session = NULL;
   }
   session = ses;
-  //session->setVerbosity(verbosity);
+  //session->setVerbosity(getVerbosity());
 
   // This will warn us later to notify others of our removal, if necessary.
   set_xport_state(MANUVR_XPORT_FLAG_HAS_SESSION);
@@ -328,7 +328,7 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
           StringBuilder* temp_sb;
           if (0 == active_event->getArgAs(&temp_sb)) {
             #ifdef __MANUVR_DEBUG
-            if (verbosity > 3) local_log.concatf("We about to print %d bytes to the transport.\n", temp_sb->length());
+            if (getVerbosity() > 3) local_log.concatf("We about to print %d bytes to the transport.\n", temp_sb->length());
             #endif
             write_port(temp_sb->string(), temp_sb->length());
           }
@@ -336,17 +336,17 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
           //uint16_t xenomsg_id = session->nextMessage(&outbound_msg);
           //if (xenomsg_id) {
           //  if (write_port(outbound_msg.string(), outbound_msg.length()) ) {
-          //    if (verbosity > 2) local_log.concatf("There was a problem writing to %s.\n", _addr);
+          //    if (getVerbosity() > 2) local_log.concatf("There was a problem writing to %s.\n", _addr);
           //  }
           //  return_value++;
           //}
           #ifdef __MANUVR_DEBUG
-          else if (verbosity > 6) local_log.concat("Ignoring a broadcast that wasn't a StringBuilder.\n");
+          else if (getVerbosity() > 6) local_log.concat("Ignoring a broadcast that wasn't a StringBuilder.\n");
           #endif
         }
         else {
           #ifdef __MANUVR_DEBUG
-          if (verbosity > 3) local_log.concat("Session is chatting, but we don't appear to have a connection.\n");
+          if (getVerbosity() > 3) local_log.concat("Session is chatting, but we don't appear to have a connection.\n");
           #endif
         }
       }
@@ -369,7 +369,7 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
 
     case MANUVR_MSG_XPORT_IDENTITY:
       #ifdef __MANUVR_DEBUG
-      if (verbosity > 3) {
+      if (getVerbosity() > 3) {
         local_log.concatf("TransportID %d received an event that was addressed to it, but is not yet handled.\n", xport_id);
         active_event->printDebug(&local_log);
       }

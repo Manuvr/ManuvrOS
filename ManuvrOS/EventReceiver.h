@@ -37,6 +37,20 @@ limitations under the License.
   #define EVENT_CALLBACK_RETURN_RECYCLE     2  // The callback class is asking that this event be recycled into the event queue.
   #define EVENT_CALLBACK_RETURN_DROP        3  // The callback class is telling Kernel that it should dequeue
 
+  #define MANUVR_ER_FLAG_VERBOSITY_MASK     0x0007  // The bottom 3 bits are for the verbosity value.
+  #define MANUVR_ER_FLAG_BOOT_COMPLETE      0x0008  // Has the class been bootstrapped?
+  #define MANUVR_ER_FLAG_EVENT_PENDING      0x0010  // Set when the ER has an event waiting for service.
+  #define MANUVR_ER_FLAG_HIDDEN_FROM_DISCOV 0x0020  // Setting this indicates that the ER should not expose itself to discovery.
+  #define MANUVR_ER_FLAG_RESERVED_8         0x0040  // Reserved
+  #define MANUVR_ER_FLAG_RESERVED_7         0x0080  // Reserved
+  #define MANUVR_ER_FLAG_RESERVED_6         0x0100  // Reserved
+  #define MANUVR_ER_FLAG_RESERVED_5         0x0200  // Reserved
+  #define MANUVR_ER_FLAG_RESERVED_4         0x0400  // Reserved
+  #define MANUVR_ER_FLAG_RESERVED_3         0x0800  // Reserved
+  #define MANUVR_ER_FLAG_RESERVED_2         0x1000  // Reserved
+  #define MANUVR_ER_FLAG_RESERVED_1         0x2000  // Reserved
+  #define MANUVR_ER_FLAG_RESERVED_0         0x4000  // Reserved
+  #define MANUVR_ER_FLAG_THREADED           0x8000  // This ER is maintaining its own thread.
 
   #ifdef __cplusplus
    extern "C" {
@@ -80,24 +94,40 @@ limitations under the License.
       virtual int8_t callback_proc(ManuvrRunnable *);
       int8_t raiseEvent(ManuvrRunnable* event);
 
-      int8_t setVerbosity(int8_t);
-      int8_t getVerbosity();
       int purgeLogs();
+
+      /**
+      * Call to set the log verbosity for this class. 7 is most verbose. -1 will disable logging altogether.
+      *
+      * @param   nu_verbosity  The desired verbosity of this class.
+      * @return  -1 on failure, and 0 on no change, and 1 on success.
+      */
+      inline int8_t getVerbosity() {   return (_class_state & MANUVR_ER_FLAG_VERBOSITY_MASK);       };
+      inline bool   booted() {         return (0 != (_class_state & MANUVR_ER_FLAG_BOOT_COMPLETE)); };
+      int8_t setVerbosity(int8_t);
 
 
     protected:
       Kernel* __kernel;
       StringBuilder local_log;
-      uint16_t class_state;         // TODO: Roll verbosity and flags into this.
-      int8_t verbosity;                   // How chatty is this class in the log?
-      bool boot_completed;
 
       virtual int8_t bootComplete();        // This is called from the base notify().
       virtual void   __class_initializer();
 
+      inline void _mark_boot_complete() {   _class_state |= MANUVR_ER_FLAG_BOOT_COMPLETE;  };
+
 
     private:
+      #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+        // In threaded environments, we allow resources to enable their own threading
+        //   if needed.
+        int _thread_id;
+      #endif
+
+      uint16_t _class_state;
+
       int8_t setVerbosity(ManuvrRunnable*);  // Private because it should be set with an Event.
+
   };
 
 

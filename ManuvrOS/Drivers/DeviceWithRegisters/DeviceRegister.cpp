@@ -79,7 +79,6 @@ void DeviceRegister::set(unsigned int nu_val) {
       *((uint32_t*) val) = (uint32_t) nu_val & 0xFFFFFFFF;
       break;
     default:
-      // TODO: Log
       return;
   }
   dirty    = true;

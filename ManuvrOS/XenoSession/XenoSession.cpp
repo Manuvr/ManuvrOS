@@ -88,7 +88,7 @@ int8_t XenoSession::tapMessageType(uint16_t code) {
     case MANUVR_MSG_SESS_DUMP_DEBUG:
 //    case MANUVR_MSG_SESS_HANGUP:
       #ifdef __MANUVR_DEBUG
-      if (verbosity > 3) local_log.concatf("0x%08x tapMessageType() tried to tap a blacklisted code (%d).\n", (uint32_t) this, code);
+      if (getVerbosity() > 3) local_log.concatf("0x%08x tapMessageType() tried to tap a blacklisted code (%d).\n", (uint32_t) this, code);
       #endif
       return -1;
   }
@@ -212,7 +212,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
       purgeInbound();
       purgeOutbound();
       #ifdef __MANUVR_DEBUG
-      if (verbosity > 3) local_log.concatf("0x%08x Session is now in state %s.\n", (uint32_t) this, getSessionStateString());
+      if (getVerbosity() > 3) local_log.concatf("0x%08x Session is now in state %s.\n", (uint32_t) this, getSessionStateString());
       #endif
       return_value++;
       break;
@@ -223,7 +223,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
         int out_purge = purgeOutbound();
         int in_purge  = purgeInbound();
         #ifdef __MANUVR_DEBUG
-        if (verbosity > 5) local_log.concatf("0x%08x Purged (%d) msgs from outbound and (%d) from inbound.\n", (uint32_t) this, out_purge, in_purge);
+        if (getVerbosity() > 5) local_log.concatf("0x%08x Purged (%d) msgs from outbound and (%d) from inbound.\n", (uint32_t) this, out_purge, in_purge);
         #endif
       }
       return_value++;
@@ -283,7 +283,7 @@ int XenoSession::purgeOutbound() {
   while (outbound_messages.hasNext()) {
     temp = outbound_messages.get();
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 6) {
+    if (getVerbosity() > 6) {
       local_log.concatf("\nSession 0x%08x Destroying outbound msg:\n", (uint32_t) this);
       temp->printDebug(&local_log);
       Kernel::log(&local_log);
@@ -307,7 +307,7 @@ int XenoSession::purgeInbound() {
   while (inbound_messages.hasNext()) {
     temp = inbound_messages.get();
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 6) {
+    if (getVerbosity() > 6) {
       local_log.concatf("\nSession 0x%08x Destroying inbound msg:\n", (uint32_t) this);
       temp->printDebug(&local_log);
       Kernel::log(&local_log);

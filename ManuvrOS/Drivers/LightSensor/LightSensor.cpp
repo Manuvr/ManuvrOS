@@ -50,7 +50,7 @@ void light_check() {
     event->addArg((uint8_t) current_lux_bin);
     EventManager::staticRaiseEvent(event);
     StringBuilder local_log;
-    //if (verbosity > 5) {
+    //if (getVerbosity() > 5) {
     //  local_log.concatf("Lux bin is now %u\n", current_lux_bin);
     //  Kernel::log(&local_log);
     //}

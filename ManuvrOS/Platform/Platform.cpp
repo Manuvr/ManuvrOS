@@ -89,8 +89,8 @@ int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn,
     return pthread_create(_thread_id, (const pthread_attr_t*) _something, _fxn, _args);
   #elif defined(__MANUVR_FREERTOS)
     // TODO: Make the task parameters 1-to-1 with pthreads.
-    //xTaskCreate((TaskFunction_t) _fxn, "nThread", 2000, (void*)Kernel::getInstance(), 1, (TaskHandle_t) &_thread_id);
-    return (uint32_t) _thread_id;
+    xTaskCreate((TaskFunction_t) _fxn, "_t", 2000, (void*)Kernel::getInstance(), 1, (TaskHandle_t) &_thread_id);
+    return 0;
   #endif
   return -1;
 }

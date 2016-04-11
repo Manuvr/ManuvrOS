@@ -130,7 +130,7 @@ void ManuvrSerial::__class_initializer() {
 int8_t ManuvrSerial::init() {
   uint32_t xport_state_modifier = MANUVR_XPORT_FLAG_CONNECTED | MANUVR_XPORT_FLAG_LISTENING | MANUVR_XPORT_FLAG_INITIALIZED;
   #ifdef __MANUVR_DEBUG
-  if (verbosity > 4) local_log.concatf("Resetting port %s...\n", _addr);
+  if (getVerbosity() > 4) local_log.concatf("Resetting port %s...\n", _addr);
   #endif
   bytes_sent         = 0;
   bytes_received     = 0;
@@ -151,14 +151,14 @@ int8_t ManuvrSerial::init() {
   _sock = open(_addr, _options);
   if (_sock == -1) {
     #ifdef __MANUVR_DEBUG
-      if (verbosity > 1) local_log.concatf("Unable to open port: (%s)\n", _addr);
+      if (getVerbosity() > 1) local_log.concatf("Unable to open port: (%s)\n", _addr);
       Kernel::log(&local_log);
     #endif
     unset_xport_state(xport_state_modifier);
     return -1;
   }
     #ifdef __MANUVR_DEBUG
-  if (verbosity > 4) local_log.concatf("Opened port (%s) at %d\n", _addr, _baud_rate);
+  if (getVerbosity() > 4) local_log.concatf("Opened port (%s) at %d\n", _addr, _baud_rate);
     #endif
   set_xport_state(MANUVR_XPORT_FLAG_INITIALIZED);
 
@@ -182,14 +182,14 @@ int8_t ManuvrSerial::init() {
     connected(true);
     listening(true);
     #ifdef __MANUVR_DEBUG
-      if (verbosity > 6) local_log.concatf("Port opened, and handler bound.\n");
+      if (getVerbosity() > 6) local_log.concatf("Port opened, and handler bound.\n");
     #endif //__MANUVR_DEBUG
   }
   else {
     unset_xport_state(xport_state_modifier);
     initialized(false);
     #ifdef __MANUVR_DEBUG
-      if (verbosity > 1) local_log.concatf("Failed to tcsetattr...\n");
+      if (getVerbosity() > 1) local_log.concatf("Failed to tcsetattr...\n");
     #endif
   }
   #endif //LINUX
@@ -261,7 +261,7 @@ int8_t ManuvrSerial::read_port() {
   }
   else {
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 1) local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
+    if (getVerbosity() > 1) local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
     #endif
   }
 
@@ -277,7 +277,7 @@ int8_t ManuvrSerial::read_port() {
 bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
   if (_sock == -1) {
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to port: (%s)\n", _addr);
+    if (getVerbosity() > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to port: (%s)\n", _addr);
     #endif
     return false;
   }
