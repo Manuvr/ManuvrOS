@@ -78,7 +78,8 @@ MANUVR_OPTIONS += -D__MANUVR_DEBUG
 # Options that build for certain threading models (if any).
 #MANUVR_OPTIONS += -D__MANUVR_FREERTOS
 MANUVR_OPTIONS += -D__MANUVR_LINUX
-MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
+#MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
+MANUVR_OPTIONS += -DMANUVR_SUPPORT_MQTT
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_UDP
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
 
@@ -105,16 +106,16 @@ export CPP_FLAGS = $(CFLAGS)
 all: clean libs
 	export __MANUVR_LINUX
 	make -C ManuvrOS/
-	$(CPP) -static -g -o manuvr $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
+	$(CXX) -static -g -o manuvr $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
 
 raspi: clean libs
 	export RASPI
 	export __MANUVR_LINUX
 	make -C ManuvrOS/
-	$(CPP) -static -g -o manuvr $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -DRASPI -D_GNU_SOURCE -O2
+	$(CXX) -static -g -o manuvr $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -DRASPI -D_GNU_SOURCE -O2
 
 debug:
-	$(CPP) -static -g -o manuvr main.cpp $(SRCS) $(GENERIC_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D__MANUVR_DEBUG -D_GNU_SOURCE -O0 -fstack-usage
+	$(CXX) -static -g -o manuvr main.cpp $(SRCS) $(GENERIC_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D__MANUVR_DEBUG -D_GNU_SOURCE -O0 -fstack-usage
 # Options configured such that you can then...
 # valgrind --tool=callgrind ./manuvr
 # gprof2dot --format=callgrind --output=out.dot callgrind.out.16562
@@ -122,13 +123,13 @@ debug:
 
 manuvrtests:
 	mkdir $(OUTPUT_PATH)
-	$(CPP) -o $(OUTPUT_PATH)/dstest tests/TestDataStructures.cpp DataStructures/*.cpp -I. -lstdc++ -lc -lm
+	$(CXX) -o $(OUTPUT_PATH)/dstest tests/TestDataStructures.cpp DataStructures/*.cpp -I. -lstdc++ -lc -lm
 
 builddir:
 	mkdir -p $(OUTPUT_PATH)
 
 libs: builddir
-#	make -C lib/
+	make -C lib/
 
 clean:
 	make clean -C ManuvrOS/

@@ -19,3 +19,32 @@ limitations under the License.
 
 
 */
+
+#ifndef __XENOSESSION_MQTT_H__
+#define __XENOSESSION_MQTT_H__
+
+#include "../XenoSession.h"
+
+class MQTTSession : public XenoSession {
+  public:
+    MQTTSession(ManuvrXport*);
+    ~MQTTSession();
+
+    /* Overrides from EventReceiver */
+    void procDirectDebugInstruction(StringBuilder*);
+    const char* getReceiverName();
+    void printDebug(StringBuilder*);
+    int8_t notify(ManuvrRunnable*);
+    int8_t callback_proc(ManuvrRunnable *);
+
+
+  protected:
+    int8_t bootComplete();
+    int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
+
+
+  private:
+    int8_t scan_buffer_for_sync();
+};
+
+#endif //__XENOSESSION_MQTT_H__

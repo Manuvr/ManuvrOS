@@ -1,4 +1,4 @@
-CPP_STANDARD       = gnu++11
+CXX_STANDARD       = gnu++11
 
 # Includes
 INCLUDES = -I../ -iquote.
@@ -7,7 +7,7 @@ INCLUDES = -I../ -iquote.
 LIBS   =
 
 # Driver-specific flags.
-LOCAL_FLAGS  =  -std=$(CPP_STANDARD) -nostdlib
+LOCAL_FLAGS  =  -std=$(CXX_STANDARD) -nostdlib
 
 # Sources
 SRCS   = Platform.cpp

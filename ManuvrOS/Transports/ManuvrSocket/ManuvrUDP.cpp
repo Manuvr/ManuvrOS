@@ -168,11 +168,9 @@ int8_t ManuvrUDP::listen() {
     return -1;
   }
 
-  in_addr_t temp_addr = inet_network(_addr);
-
   _sockaddr.sin_family      = AF_INET;
-  _sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-  //_sockaddr.sin_addr.s_addr = temp_addr;
+  //_sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+  _sockaddr.sin_addr.s_addr = inet_addr(_addr);
   _sockaddr.sin_port        = htons(_port_number);
 
   _sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);    // Open the socket...

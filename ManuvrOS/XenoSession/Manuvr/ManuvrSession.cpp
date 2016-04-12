@@ -414,7 +414,7 @@ int8_t ManuvrSession::bootComplete() {
   if (!owner->alwaysConnected() && owner->connected()) {
     // If we've been instanced because of a connetion, start the sync process...
     // But only if we can take the transport at its word...
-    sendSyncPacket();
+    //sendSyncPacket();
   }
   return 1;
 }

@@ -227,7 +227,7 @@ int main(int argc, char *argv[]) {
   // TODO: Horrible hackishness to test TCP...
   #if defined (MANUVR_SUPPORT_TCPSOCKET)
     tcp_srv.listen();
-    while (!tcp_srv.listening()) {}
+    //while (!tcp_srv.listening()) {}
     tcp_cli.connect();
   #endif
   // TODO: End horrible hackishness.

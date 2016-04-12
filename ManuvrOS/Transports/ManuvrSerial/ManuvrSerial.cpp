@@ -342,6 +342,7 @@ void ManuvrSerial::printDebug(StringBuilder *temp) {
   temp->concatf("-- _options        0x%08x\n", _options);
   temp->concatf("-- _sock           0x%08x\n", _sock);
   temp->concatf("-- Baud            %d\n",     _baud_rate);
+  temp->concatf("-- Class size      %d\n",     sizeof(ManuvrSerial));
 }
 
 
