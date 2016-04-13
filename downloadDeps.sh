@@ -15,10 +15,13 @@ git clone https://github.com/bblanchon/ArduinoJson.git lib/ArduinoJson
 git clone https://github.com/greiman/FreeRTOS-Arduino lib/FreeRTOS_Arduino
 
 # CoAP, if desired.
-git clone https://github.com/obgm/libcoap.git
+git clone https://github.com/eclipse/wakaama.git lib/wakaama
+
+# MQTT, if desired.
+git clone https://github.com/eclipse/paho.mqtt.embedded-c.git lib/paho.mqtt.embedded-c
 
 # Telehash
-git clone https://github.com/telehash/telehash-c.git
+git clone https://github.com/telehash/telehash-c.git lib/
 
 # Arduino libraries...
 
