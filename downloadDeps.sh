@@ -8,16 +8,16 @@
 mkdir lib
 
 # JSON support via ArduinoJson...
-git clone https://github.com/bblanchon/ArduinoJson.git ArduinoJson
+git clone https://github.com/bblanchon/ArduinoJson.git lib/ArduinoJson
 
 # FreeRTOS...
-git clone https://github.com/greiman/FreeRTOS-Arduino FreeRTOS_Arduino
+git clone https://github.com/greiman/FreeRTOS-Arduino lib/FreeRTOS_Arduino
 
 # CoAP, if desired.
-git clone https://github.com/eclipse/wakaama.git wakaama
+git clone https://github.com/eclipse/wakaama.git lib/wakaama
 
 # MQTT, if desired.
-git clone https://github.com/eclipse/paho.mqtt.embedded-c.git paho.mqtt.embedded-c
+git clone https://github.com/eclipse/paho.mqtt.embedded-c.git lib/paho.mqtt.embedded-c
 
 # Telehash
 git clone https://github.com/telehash/telehash-c.git lib/telehash-c
