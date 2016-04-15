@@ -122,7 +122,7 @@ void sleep_millis(unsigned long millis) {
 
 // TODO: I know this is horrid. I'm sick of screwing with the build system today...
 
-#if defined(RASPI)
+#if defined(RASPI) | defined(RASPI2)
   #include "PlatformRaspi.cpp"
 #elif defined(__MK20DX256__) | defined(__MK20DX128__)
   #include "PlatformTeensy3.cpp"

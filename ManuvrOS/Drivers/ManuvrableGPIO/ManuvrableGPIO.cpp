@@ -142,23 +142,43 @@ int8_t ManuvrableGPIO::callback_proc(ManuvrRunnable *event) {
 
 int8_t ManuvrableGPIO::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
+  uint8_t pin   = 0;
+  uint16_t _val = 0;
 
   switch (active_event->event_code) {
     case MANUVR_MSG_DIGITAL_READ:
-      //int8_t readPin(uint8_t pin);
+      if (0 != active_event->getArgAs(0, &pin)) {
+        if (0 != active_event->getArgAs(1, &_val)) {
+          active_event->addArg(readPin(pin));
+        }
+      }
       return_value++;
       break;
 
     case MANUVR_MSG_DIGITAL_WRITE:
-      //int8_t setPin(uint8_t pin, bool high);
+      if (0 != active_event->getArgAs(0, &pin)) {
+        if (0 != active_event->getArgAs(1, &_val)) {
+          setPin(pin, (0 < _val));
+        }
+      }
       return_value++;
       break;
 
     case MANUVR_MSG_ANALOG_READ:
+      if (0 != active_event->getArgAs(0, &pin)) {
+        if (0 != active_event->getArgAs(1, &_val)) {
+          active_event->addArg(readPinAnalog(pin));
+        }
+      }
       return_value++;
       break;
 
     case MANUVR_MSG_ANALOG_WRITE:
+      if (0 != active_event->getArgAs(0, &pin)) {
+        if (0 != active_event->getArgAs(1, &_val)) {
+          setPinAnalog(pin, _val);
+        }
+      }
       return_value++;
       break;
 

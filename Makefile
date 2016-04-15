@@ -78,6 +78,7 @@ MANUVR_OPTIONS += -D__MANUVR_DEBUG
 # Options that build for certain threading models (if any).
 #MANUVR_OPTIONS += -D__MANUVR_FREERTOS
 MANUVR_OPTIONS += -D__MANUVR_LINUX
+MANUVR_OPTIONS += -DRASPI
 #MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_MQTT
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_UDP
@@ -129,7 +130,7 @@ builddir:
 	mkdir -p $(OUTPUT_PATH)
 
 libs: builddir
-	make -C lib/
+#	make -C lib/
 
 clean:
 	make clean -C ManuvrOS/
