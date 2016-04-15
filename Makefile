@@ -130,7 +130,7 @@ builddir:
 	mkdir -p $(OUTPUT_PATH)
 
 libs: builddir
-#	make -C lib/
+	make -C lib/
 
 clean:
 	make clean -C ManuvrOS/
