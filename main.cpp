@@ -43,6 +43,7 @@ limitations under the License.
 
 // Drivers particular to this Manuvrable...
 #include <Drivers/i2c-adapter/i2c-adapter.h>
+#include <Drivers/ManuvrableGPIO/ManuvrableGPIO.h>
 
 // Transports...
 #include <Transports/ManuvrSerial/ManuvrSerial.h>
@@ -181,6 +182,9 @@ int main(int argc, char *argv[]) {
     //   certainly present.
     I2CAdapter i2c(1);
     kernel->subscribe(&i2c);
+
+    ManuvrableGPIO gpio;
+    kernel->subscribe(&gpio);
   #endif
 
 

@@ -408,7 +408,7 @@ bool setTimeAndDate(char* nu_date_time) {
 * Returns an integer representing the current datetime.
 */
 uint32_t currentTimestamp(void) {
-  uint32_t return_value = 0;
+  uint32_t return_value = (uint32_t) time(0);
   return return_value;
 }
 
@@ -417,9 +417,17 @@ uint32_t currentTimestamp(void) {
 * Writes a human-readable datetime to the argument.
 * Returns ISO 8601 datetime string.
 * 2004-02-12T15:19:21+00:00
+*
+* date -u --iso-8601=s
 */
 void currentDateTime(StringBuilder* target) {
   if (target != NULL) {
+    time_t t = time(0);
+    struct tm  tstruct;
+    char       buf[64];
+    tstruct = *localtime(&t);
+    strftime(buf, sizeof(buf), "%Y-%m-%d.%X", &tstruct);
+    target->concat(buf);
   }
 }
 
