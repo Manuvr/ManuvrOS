@@ -56,16 +56,13 @@ This file is the tortured result of growing pains since the beginning of
   #include <ctype.h>
 #elif defined(STM32F7XX) | defined(STM32F746xx)
   // TODO: This is bad, and I know it. Need support ahead of a better abstraction strategy.
-  #ifdef __cplusplus
-    extern "C" {
-  #endif
+  extern "C" {
+    #include "stm32f7xx_hal.h"
+    #include <stm32f7xx_hal_gpio.h>
 
-  #include "stm32f7xx_hal.h"
-
-  extern I2C_HandleTypeDef hi2c1;
-  #ifdef __cplusplus
+    I2C_HandleTypeDef hi2c1;
   }
-  #endif
+
 #else
   // Unsupported. Much ugly case-off should not be in this file.
   // TODO: Migrate case-off code to platform directory.
@@ -207,7 +204,30 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
   dev = dev_id;
 
   if (dev_id == 1) {
-    bus_online = false;
+    GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Pin = GPIO_PIN_7|GPIO_PIN_6;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    __HAL_RCC_I2C1_CLK_ENABLE();
+
+    hi2c1.Instance = I2C1;
+    hi2c1.Init.Timing = 0x00202E44;
+    hi2c1.Init.OwnAddress1 = 0;
+    hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+    hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+    hi2c1.Init.OwnAddress2 = 0;
+    hi2c1.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+    hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+    hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+    HAL_I2C_Init(&hi2c1);
+
+    HAL_I2CEx_AnalogFilter_Config(&hi2c1, I2C_ANALOGFILTER_ENABLE);
+
+    bus_online = true;
   }
   else {
     // Unsupported
@@ -216,14 +236,16 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
 
 
 I2CAdapter::~I2CAdapter() {
-    bus_online = false;
-    while (dev_list.hasNext()) {
-      dev_list.get()->disassignBusInstance();
-      dev_list.remove();
-    }
+  bus_online = false;
+  while (dev_list.hasNext()) {
+    dev_list.get()->disassignBusInstance();
+    dev_list.remove();
+  }
 
-    /* TODO: The work_queue destructor will take care of its own cleanup, but
+  /* TODO: The work_queue destructor will take care of its own cleanup, but
        We should abort any open transfers prior to deleting this list. */
+  __HAL_RCC_I2C1_CLK_DISABLE();
+  HAL_GPIO_DeInit(GPIOB, GPIO_PIN_7|GPIO_PIN_6);
 }
 
 
