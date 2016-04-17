@@ -250,11 +250,31 @@ int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrRunnable* isr_event) {
   return 0;
 }
 
+
 /*
 * Pass the function pointer
 */
 int8_t setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn) {
   return 0;
+}
+
+
+int8_t setPin(uint8_t pin, bool val) {
+  return 0;
+}
+
+
+int8_t readPin(uint8_t pin) {
+  return 0;
+}
+
+
+int8_t setPinAnalog(uint8_t pin, int val) {
+  return 0;
+}
+
+int readPinAnalog(uint8_t pin) {
+  return -1;
 }
 
 

@@ -167,7 +167,7 @@ int8_t ManuvrableGPIO::notify(ManuvrRunnable *active_event) {
     case MANUVR_MSG_ANALOG_READ:
       if (0 != active_event->getArgAs(0, &pin)) {
         if (0 != active_event->getArgAs(1, &_val)) {
-          active_event->addArg(readPinAnalog(pin));
+          active_event->addArg((int32_t)readPinAnalog(pin));
         }
       }
       return_value++;
