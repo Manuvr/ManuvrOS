@@ -49,8 +49,8 @@ limitations under the License.
 *   can resume.
 */
 
-#ifndef __XENOSESSION_MANUVR_H__
-#define __XENOSESSION_MANUVR_H__
+#ifndef __MANUVRSESSION_MANUVR_H__
+#define __MANUVRSESSION_MANUVR_H__
 
 
 #define CHECKSUM_PRELOAD_BYTE 0x55    // Calculation of new checksums should start with this byte,
@@ -190,4 +190,4 @@ class ManuvrSession : public XenoSession {
 };
 
 
-#endif //__XENOSESSION_MANUVR_H__
+#endif //__MANUVRSESSION_MANUVR_H__
