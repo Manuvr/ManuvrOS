@@ -56,7 +56,7 @@ ManuvrSession::~ManuvrSession() {
 
 int8_t ManuvrSession::sendSyncPacket() {
   if (owner->connected()) {
-    StringBuilder sync_packet((unsigned char*) XenoMessage::SYNC_PACKET_BYTES, 4);
+    StringBuilder sync_packet((unsigned char*) XenoManuvrMessage::SYNC_PACKET_BYTES, 4);
     owner->sendBuffer(&sync_packet);
 
     //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
@@ -269,7 +269,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
   }
 
   if (NULL == working) {
-    working = XenoMessage::fetchPreallocation(this);
+    working = XenoManuvrMessage::fetchPreallocation(this);
   }
 
   // If the working message is not in a RECEIVING state, it means something has gone sideways.
@@ -291,7 +291,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
         break;
       case XENO_MSG_PROC_STATE_SYNC_PACKET:
         // T'was a sync packet. Consider our own state and react appropriately.
-        XenoMessage::reclaimPreallocation(working);
+        XenoManuvrMessage::reclaimPreallocation(working);
         working = NULL;
         if (0 == getPhase()) {
           // If we aren't dealing with sync at the moment, and the counterparty sent a sync packet...
@@ -304,7 +304,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
       case (XENO_MSG_PROC_STATE_ERROR | XENO_MSG_PROC_STATE_AWAITING_REAP):
         // There was some sort of problem...
         if (getVerbosity() > 3) {
-          local_log.concatf("XenoMessage 0x%08x reports an error:\n", (uint32_t) this);
+          local_log.concatf("XenoManuvrMessage 0x%08x reports an error:\n", (uint32_t) this);
           working->printDebug(&local_log);
         }
         if (MAX_PARSE_FAILURES == ++sequential_parse_failures) {
@@ -318,13 +318,13 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
         }
         // NOTE: No break.
       case XENO_MSG_PROC_STATE_AWAITING_REAP:
-        XenoMessage::reclaimPreallocation(working);
+        XenoManuvrMessage::reclaimPreallocation(working);
         working = NULL;
         break;
     }
   }
   else {
-    if (getVerbosity() > 3) local_log.concatf("XenoMessage 0x%08x is in the wrong state to accept bytes: %s\n", (uint32_t) working, working->getMessageStateString());
+    if (getVerbosity() > 3) local_log.concatf("XenoManuvrMessage 0x%08x is in the wrong state to accept bytes: %s\n", (uint32_t) working, working->getMessageStateString());
   }
 
 
@@ -356,8 +356,12 @@ const char* ManuvrSession::getReceiverName() {  return "XenoSession";  }
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void ManuvrSession::printDebug(StringBuilder *output) {
-  output->concatf("-- Sync state           %s\n", getSessionSyncString());
   XenoSession::printDebug(output);
+  output->concatf("-- Sync state           %s\n", getSessionSyncString());
+  output->concatf("-- _heap_instantiations %u\n", (unsigned long) XenoManuvrMessage::_heap_instantiations);
+  output->concatf("-- _heap_frees          %u\n", (unsigned long) XenoManuvrMessage::_heap_freeds);
+  output->concatf("-- seq parse failures   %d\n", sequential_parse_failures);
+  output->concatf("-- seq_ack_failures     %d\n", sequential_ack_failures);
 }
 
 

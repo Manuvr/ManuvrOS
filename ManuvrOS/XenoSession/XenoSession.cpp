@@ -27,10 +27,6 @@ XenoSession is the class that manages dialog with other systems via some
 #include <Kernel.h>
 
 
-// TODO: This is temporary until the session is fully-abstracted.
-#include "Manuvr/ManuvrSession.h"
-
-
 
 /****************************************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -169,7 +165,8 @@ int8_t XenoSession::markMessageComplete(uint16_t target_id) {
       switch (working_xeno->getState()) {
         case XENO_MSG_PROC_STATE_AWAITING_REAP:
           outbound_messages.remove(working_xeno);
-          XenoMessage::reclaimPreallocation(working_xeno);
+          // TODO: How to cope with this?
+          //XenoMessage::reclaimPreallocation(working_xeno);
           return 1;
       }
     }
@@ -382,17 +379,17 @@ int8_t XenoSession::sendKeepAlive() {
 * This is the point at which choices are made about what happens to the event's life-cycle.
 */
 int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
-  XenoMessage* nu_outbound_msg = XenoMessage::fetchPreallocation(this);
-  nu_outbound_msg->provideEvent(active_event);
+  //XenoMessage* nu_outbound_msg = XenoMessage::fetchPreallocation(this);
+  //nu_outbound_msg->provideEvent(active_event);
 
-  StringBuilder buf;
-  if (nu_outbound_msg->serialize(&buf) > 0) {
-    owner->sendBuffer(&buf);
-  }
+  //StringBuilder buf;
+  //if (nu_outbound_msg->serialize(&buf) > 0) {
+  //  owner->sendBuffer(&buf);
+  //}
 
-  if (nu_outbound_msg->expectsACK()) {
-    outbound_messages.insert(nu_outbound_msg);
-  }
+  //if (nu_outbound_msg->expectsACK()) {
+  //  outbound_messages.insert(nu_outbound_msg);
+  //}
 
   // We are about to pass a message across the transport.
   //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
@@ -418,9 +415,6 @@ int8_t XenoSession::take_message() {
       break;
 
     default:
-      if (nu_xm->expectsACK()) {
-        inbound_messages.insert(nu_xm);   // ...drop the new message into the inbound message queue.
-      }
       break;
   }
 
@@ -455,11 +449,7 @@ void XenoSession::printDebug(StringBuilder *output) {
   EventReceiver::printDebug(output);
 
   output->concatf("-- Session ID           0x%08x\n", (uint32_t) this);
-  output->concatf("-- Session state        %s\n", getSessionStateString(getPhase()));
-  output->concatf("-- seq parse failures   %d\n", sequential_parse_failures);
-  output->concatf("-- seq_ack_failures     %d\n--\n", sequential_ack_failures);
-  output->concatf("-- _heap_instantiations %u\n", (unsigned long) XenoMessage::_heap_instantiations);
-  output->concatf("-- _heap_frees          %u\n", (unsigned long) XenoMessage::_heap_freeds);
+  output->concatf("-- Session state        %s\n--\n", getSessionStateString(getPhase()));
 
   int ses_buf_len = session_buffer.length();
   if (ses_buf_len > 0) {

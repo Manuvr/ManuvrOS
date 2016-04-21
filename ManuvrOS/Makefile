@@ -33,6 +33,7 @@ CPP_SRCS  += ManuvrMsg/ManuvrMsg.cpp
 CPP_SRCS  += XenoSession/XenoMessage.cpp
 CPP_SRCS  += XenoSession/XenoSession.cpp
 CPP_SRCS  += XenoSession/Manuvr/ManuvrSession.cpp
+CPP_SRCS  += XenoSession/Manuvr/XenoManuvrMessage.cpp
 CPP_SRCS  += XenoSession/CoAP/CoAPSession.cpp
 CPP_SRCS  += XenoSession/MQTT/MQTTSession.cpp
 
