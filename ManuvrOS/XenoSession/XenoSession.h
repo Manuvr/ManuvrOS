@@ -62,12 +62,23 @@ XenoSession is the class that manages dialog with other systems via some
 #define XENOMESSAGE_PREALLOCATE_COUNT       8    // How many XenoMessages should be preallocated?
 
 
+/**
+* These are the enumerations of the protocols we intend to support.
+*/
+enum Protos {
+  RAW       = 0,
+  MANUVR    = 1,
+  MQTT      = 2,
+  COAP      = 3,
+  OSC       = 4,
+  CONSOLE   = 0xFF   // A user with a text console and keyboard.
+};
 
 
 /**
 * This class is a special extension of ManuvrRunnable that is intended for communication with
-*   outside devices. The idea is that the outside device ought to be able to build an event that
-*   is, in essence, a copy of ours.
+*   outside devices. This is the abstraction between our internal Runnables and the messaging
+*   system of our counterparty.
 */
 class XenoMessage {
   public:
@@ -217,15 +228,14 @@ class XenoSession : public EventReceiver {
     virtual int8_t callback_proc(ManuvrRunnable *);
 
     // Returns and isolates the state bits.
-    inline uint8_t getState() {
-      return (session_state & 0xFF0F);
-    };
+    inline uint8_t getPhase() {      return (session_state & 0xFFF0);    };
 
     // Returns the answer to: "Is this session established?"
     inline bool isEstablished() {
-      return (XENOSESSION_STATE_ESTABLISHED == (session_state & 0xFF0F));
+      return (XENOSESSION_STATE_ESTABLISHED == (session_state & 0xFFF0));
     }
 
+    static const char* getSessionStateString(uint16_t state_code);
 
 
   protected:
@@ -236,7 +246,6 @@ class XenoSession : public EventReceiver {
     uint16_t session_state;       // What state is this session in?
     uint16_t session_last_state;  // The prior state of the sesssion.
 
-  //private: TODO: Until session mitosis has completed telophase.
     ManuvrXport* owner;           // A reference to the transport that owns this session.
     XenoMessage* working;         // If we are in the middle of receiving a message.
 
@@ -247,8 +256,6 @@ class XenoSession : public EventReceiver {
     StringBuilder session_buffer;
 
     LinkedList<MessageTypeDef*> msg_relay_list;   // Which message codes will we relay to the counterparty?
-    LinkedList<XenoMessage*> outbound_messages;   // Messages that are bound for the counterparty.
-    LinkedList<XenoMessage*> inbound_messages;    // Messages that came from the counterparty.
 
     /* These variables track failure cases to inform sync-initiation. */
     uint8_t MAX_PARSE_FAILURES;         // How many failures-to-parse should we tolerate before SYNCing?
@@ -265,13 +272,17 @@ class XenoSession : public EventReceiver {
     */
     inline void mark_session_state(uint8_t nu_state) {
       session_last_state = session_state;
-      session_state      = (session_state & 0x00F0) | nu_state;
+      session_state      = (session_state & 0x000F) | nu_state;
     }
 
     int purgeInbound();
     int purgeOutbound();
 
-    const char* getSessionStateString();
+
+  private: // TODO: Migrate members here as session mitosis completes telophase.
+    LinkedList<XenoMessage*> outbound_messages;   // Messages that are bound for the counterparty.
+    LinkedList<XenoMessage*> inbound_messages;    // Messages that came from the counterparty.
+
 };
 
 

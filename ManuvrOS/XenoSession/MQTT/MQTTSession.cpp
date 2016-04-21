@@ -24,7 +24,7 @@ limitations under the License.
 #if defined (MANUVR_SUPPORT_MQTT)
 
 #include "MQTTSession.h"
-
+#include <paho.mqtt.embedded-c/MQTTPacket.h>
 
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
@@ -80,6 +80,10 @@ const char* MQTTSession::getReceiverName() {  return "XenoSession";  }
 void MQTTSession::printDebug(StringBuilder *output) {
   XenoSession::printDebug(output);
 }
+
+
+
+
 
 
 

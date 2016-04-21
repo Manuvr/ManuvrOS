@@ -20,22 +20,12 @@ limitations under the License.
 */
 
 
-#ifndef __MANUVR_COAP_H__
-#define __MANUVR_COAP_H__
+#ifndef __MANUVR_EXAMPLE_DRIVER_H__
+#define __MANUVR_EXAMPLE_DRIVER_H__
 
 #include "Kernel.h"
 
 #if defined(__MANUVR_LINUX)
-  #include <cstdio>
-  #include <stdlib.h>
-  #include <unistd.h>
-  #include <fcntl.h>
-  #include <termios.h>
-  #include <sys/signal.h>
-  #include <fstream>
-  #include <iostream>
-  #include <sys/socket.h>
-  #include <netinet/in.h>
 #else
   // No supportage.
 #endif
@@ -65,4 +55,4 @@ class ExampleDriver : public EventReceiver {
 };
 
 
-#endif
+#endif  // __MANUVR_EXAMPLE_DRIVER_H__

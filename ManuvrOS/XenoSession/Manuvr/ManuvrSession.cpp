@@ -123,7 +123,7 @@ int8_t ManuvrSession::scan_buffer_for_sync() {
 */
 void ManuvrSession::mark_session_desync(uint8_t ds_src) {
   session_last_state = session_state;               // Stack our session state.
-  session_state = getState() | ds_src;
+  session_state = getPhase() | ds_src;
   if (session_state & ds_src) {
     #ifdef __MANUVR_DEBUG
     if (getVerbosity() > 3) local_log.concatf("Session 0x%08x is already in the requested sync state (%s). Doing nothing.\n", (uint32_t) this, getSessionSyncString());
@@ -165,12 +165,12 @@ void ManuvrSession::mark_session_sync(bool pending) {
 
   if (pending) {
     // We *think* we might be done sync'ing...
-    session_state = getState() | XENOSESSION_STATE_SYNC_PEND_EXIT;
+    session_state = getSync() | XENOSESSION_STATE_SYNC_PEND_EXIT;
     sendEvent(Kernel::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE));
   }
   else {
     // We are definately done sync'ing.
-    session_state = getState();
+    session_state = getPhase();
 
     if (!isEstablished()) {
       // When (if) the session syncs, various components in the firmware might
@@ -204,7 +204,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
 
   session_buffer.concat(buf, len);
 
-  const char* statcked_sess_str = getSessionStateString();
+  uint16_t statcked_sess_state = getPhase();
 
   #ifdef __MANUVR_DEBUG
   if (getVerbosity() > 6) {
@@ -248,7 +248,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
   }
 
 
-  switch (getState()) {   // Consider the bottom four bits of the session state.
+  switch (getPhase()) {   // Consider the bottom four bits of the session state.
     case XENOSESSION_STATE_UNINITIALIZED:
       break;
     case XENOSESSION_STATE_PENDING_SETUP:
@@ -293,7 +293,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
         // T'was a sync packet. Consider our own state and react appropriately.
         XenoMessage::reclaimPreallocation(working);
         working = NULL;
-        if (0 == getState()) {
+        if (0 == getPhase()) {
           // If we aren't dealing with sync at the moment, and the counterparty sent a sync packet...
           #ifdef __MANUVR_DEBUG
             if (getVerbosity() > 4) local_log.concat("Counterparty wants to sync,,, changing session state...\n");
@@ -328,10 +328,10 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
   }
 
 
-  if (statcked_sess_str != getSessionStateString()) {
+  if (statcked_sess_state != getPhase()) {
     // The session changed state. Print it.
     #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 3) local_log.concatf("XenoSession state change:\t %s ---> %s\n", statcked_sess_str, getSessionStateString());
+      if (getVerbosity() > 3) local_log.concatf("XenoSession state change:\t %s ---> %s\n", getSessionStateString(statcked_sess_state), getSessionStateString(getPhase()));
     #endif
   }
 
@@ -470,7 +470,7 @@ int8_t ManuvrSession::notify(ManuvrRunnable *active_event) {
       purgeInbound();
       purgeOutbound();
       #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 3) local_log.concatf("0x%08x Session is now in state %s.\n", (uint32_t) this, getSessionStateString());
+      if (getVerbosity() > 3) local_log.concatf("0x%08x Session is now in state %s.\n", (uint32_t) this, getSessionStateString(getPhase()));
       #endif
       return_value++;
       break;
@@ -554,10 +554,6 @@ void ManuvrSession::procDirectDebugInstruction(StringBuilder *input) {
       else {
         printDebug(&local_log);
       }
-      break;
-    case 'q':  // Manual message queue purge.
-      purgeOutbound();
-      purgeInbound();
       break;
     case 'w':  // Manual session poll.
       Kernel::raiseEvent(MANUVR_MSG_SESS_ORIGINATE_MSG, NULL);

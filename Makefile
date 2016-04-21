@@ -34,6 +34,7 @@ INCLUDES    = -I$(WHERE_I_AM)/.
 INCLUDES   += -I$(WHERE_I_AM)/ManuvrOS
 INCLUDES   += -I$(WHERE_I_AM)/lib
 
+INCLUDES   += -I$(WHERE_I_AM)/lib/paho.mqtt.embedded-c/
 
 # Libraries to link
 LIBS = -L$(OUTPUT_PATH) -L$(WHERE_I_AM)/lib -lstdc++ -lm -lmanuvr

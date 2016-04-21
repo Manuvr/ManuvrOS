@@ -30,6 +30,36 @@ XenoSession is the class that manages dialog with other systems via some
 // TODO: This is temporary until the session is fully-abstracted.
 #include "Manuvr/ManuvrSession.h"
 
+
+
+/****************************************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here. Initializers first, functions second.
+****************************************************************************************************/
+
+/**
+* Logging support fxn.
+*/
+const char* XenoSession::getSessionStateString(uint16_t state_code) {
+  switch (state_code & 0x000F) {
+    case XENOSESSION_STATE_UNINITIALIZED:    return "UNINITIALIZED";
+    case XENOSESSION_STATE_PENDING_SETUP:    return "PENDING_SETUP";
+    case XENOSESSION_STATE_PENDING_AUTH:     return "PENDING_AUTH";
+    case XENOSESSION_STATE_ESTABLISHED:      return "ESTABLISHED";
+    case XENOSESSION_STATE_PENDING_HANGUP:   return "HANGUP IN PROGRESS";
+    case XENOSESSION_STATE_HUNGUP:           return "HUNGUP";
+    case XENOSESSION_STATE_DISCONNECTED:     return "DISCONNECTED";
+    default:                                 return "<UNKNOWN SESSION STATE>";
+  }
+}
+
+
 /****************************************************************************************************
 *   ___ _              ___      _ _              _      _
 *  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
@@ -212,7 +242,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
       purgeInbound();
       purgeOutbound();
       #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 3) local_log.concatf("0x%08x Session is now in state %s.\n", (uint32_t) this, getSessionStateString());
+      if (getVerbosity() > 3) local_log.concatf("0x%08x Session is now in state %s.\n", (uint32_t) this, getSessionStateString(getPhase()));
       #endif
       return_value++;
       break;
@@ -425,7 +455,7 @@ void XenoSession::printDebug(StringBuilder *output) {
   EventReceiver::printDebug(output);
 
   output->concatf("-- Session ID           0x%08x\n", (uint32_t) this);
-  output->concatf("-- Session state        %s\n", getSessionStateString());
+  output->concatf("-- Session state        %s\n", getSessionStateString(getPhase()));
   output->concatf("-- seq parse failures   %d\n", sequential_parse_failures);
   output->concatf("-- seq_ack_failures     %d\n--\n", sequential_ack_failures);
   output->concatf("-- _heap_instantiations %u\n", (unsigned long) XenoMessage::_heap_instantiations);
@@ -469,23 +499,6 @@ void XenoSession::printDebug(StringBuilder *output) {
 }
 
 
-/**
-* Logging support fxn.
-*/
-const char* XenoSession::getSessionStateString() {
-  switch (getState()) {
-    case XENOSESSION_STATE_UNINITIALIZED:    return "UNINITIALIZED";
-    case XENOSESSION_STATE_PENDING_SETUP:    return "PENDING_SETUP";
-    case XENOSESSION_STATE_PENDING_AUTH:     return "PENDING_AUTH";
-    case XENOSESSION_STATE_ESTABLISHED:      return "ESTABLISHED";
-    case XENOSESSION_STATE_PENDING_HANGUP:   return "HANGUP IN PROGRESS";
-    case XENOSESSION_STATE_HUNGUP:           return "HUNGUP";
-    case XENOSESSION_STATE_DISCONNECTED:     return "DISCONNECTED";
-    default:                                 return "<UNKNOWN SESSION STATE>";
-  }
-}
-
-
 void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
   uint8_t temp_byte = 0;
 
@@ -513,10 +526,6 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
       purgeOutbound();
       purgeInbound();
       break;
-    case 'w':  // Manual session poll.
-      Kernel::raiseEvent(MANUVR_MSG_SESS_ORIGINATE_MSG, NULL);
-      break;
-
 
     default:
       EventReceiver::procDirectDebugInstruction(input);
