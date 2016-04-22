@@ -24,7 +24,31 @@ limitations under the License.
 #if defined (MANUVR_SUPPORT_MQTT)
 
 #include "MQTTSession.h"
-#include <paho.mqtt.embedded-c/MQTTPacket.h>
+
+
+
+/****************************************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here. Initializers first, functions second.
+****************************************************************************************************/
+
+
+
+
+/****************************************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+****************************************************************************************************/
 
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
@@ -33,6 +57,12 @@ limitations under the License.
 */
 MQTTSession::MQTTSession(ManuvrXport* _xport) : XenoSession(_xport) {
   __class_initializer();
+
+  for (int i = 0; i < MAX_MESSAGE_HANDLERS; ++i) {
+    messageHandlers[i].topicFilter = 0;
+  }
+
+
   bootComplete();    // Because we are instantiated well after boot, we call this on construction.
 }
 
@@ -41,6 +71,8 @@ MQTTSession::MQTTSession(ManuvrXport* _xport) : XenoSession(_xport) {
 * Unlike many of the other EventReceivers, THIS one needs to be able to be torn down.
 */
 MQTTSession::~MQTTSession() {
+  _ping_timer.enableSchedule(false);
+  __kernel->removeSchedule(&_ping_timer);
 }
 
 
@@ -64,25 +96,19 @@ int8_t MQTTSession::bin_stream_rx(unsigned char *buf, int len) {
 
 
 
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* MQTTSession::getReceiverName() {  return "XenoSession";  }
 
+int8_t MQTTSession::sendKeepAlive() {
+  if (isEstablished()) {
+    unsigned char* buf  = (unsigned char*) alloca(16);
+    size_t buf_size     = 0;
 
-/**
-* Debug support method. This fxn is only present in debug builds.
-*
-* @param   StringBuilder* The buffer into which this fxn should write its output.
-*/
-void MQTTSession::printDebug(StringBuilder *output) {
-  XenoSession::printDebug(output);
+    int len = MQTTSerialize_pingreq(buf, buf_size);
+    if (len > 0) {
+      return (0 == sendPacket(buf, len));
+    }
+  }
+  return -1;
 }
-
-
-
 
 
 
@@ -109,14 +135,23 @@ void MQTTSession::printDebug(StringBuilder *output) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t MQTTSession::bootComplete() {
-  EventReceiver::bootComplete();
+  XenoSession::bootComplete();
+
+  _ping_timer.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG);
+  _ping_timer.isManaged(true);
+  _ping_timer.specific_target = (EventReceiver*) this;
+  _ping_timer.alterScheduleRecurrence(-1);
+  _ping_timer.alterSchedulePeriod(30);
+  _ping_timer.autoClear(false);
+  _ping_timer.enableSchedule(false);
+
+  __kernel->addSchedule(&_ping_timer);
 
   if (!owner->alwaysConnected() && owner->connected()) {
     // Are we connected right now?
   }
   return 1;
 }
-
 
 
 /**
@@ -140,6 +175,10 @@ int8_t MQTTSession::callback_proc(ManuvrRunnable *event) {
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
+    case MANUVR_MSG_SESS_ORIGINATE_MSG:
+      // Sending a KA
+      sendKeepAlive();
+      break;
     case MANUVR_MSG_SELF_DESCRIBE:
       //sendEvent(event);
       break;
@@ -201,11 +240,31 @@ void MQTTSession::procDirectDebugInstruction(StringBuilder *input) {
       break;
 
     default:
-      EventReceiver::procDirectDebugInstruction(input);
+      XenoSession::procDirectDebugInstruction(input);
       break;
   }
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
+
+
+
+/**
+* Debug support function.
+*
+* @return a pointer to a string constant.
+*/
+const char* MQTTSession::getReceiverName() {  return "MQTTSession";  }
+
+
+/**
+* Debug support method. This fxn is only present in debug builds.
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
+void MQTTSession::printDebug(StringBuilder *output) {
+  XenoSession::printDebug(output);
+}
+
 
 #endif

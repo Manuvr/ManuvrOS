@@ -3,10 +3,11 @@ C_STANDARD = c99
 
 # Oh man.... this will be very messy.
 
-INCLUDES    = -iquote. -I./paho.mqtt.embedded-c/MQTTPacket/src
+INCLUDES    = -iquote. -I./paho.mqtt.embedded-c/MQTTPacket
 INCLUDES   += -I./wakaama -I./wakaama/core
 
 SOURCES_MQTT_C  = paho.mqtt.embedded-c/MQTTPacket/src/MQTTConnectServer.c
+SOURCES_MQTT_C  = paho.mqtt.embedded-c/MQTTPacket/src/MQTTConnectClient.c
 SOURCES_MQTT_C += paho.mqtt.embedded-c/MQTTPacket/src/MQTTDeserializePublish.c
 SOURCES_MQTT_C += paho.mqtt.embedded-c/MQTTPacket/src/MQTTFormat.c
 SOURCES_MQTT_C += paho.mqtt.embedded-c/MQTTPacket/src/MQTTPacket.c

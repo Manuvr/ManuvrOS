@@ -50,6 +50,8 @@ limitations under the License.
 #include <Transports/ManuvrSocket/ManuvrSocket.h>
 #include <Drivers/ManuvrCoAP/ManuvrCoAP.h>
 
+#include <XenoSession/MQTT/MQTTSession.h>
+
 
 /****************************************************************************************************
 * Globals and defines that make our life easier.                                                    *
@@ -155,11 +157,15 @@ int main(int argc, char *argv[]) {
 
   // We need at least ONE transport to be useful...
   #if defined (MANUVR_SUPPORT_TCPSOCKET)
-    ManuvrTCP tcp_srv((const char*) "127.0.0.1", 2319);
     ManuvrTCP tcp_cli((const char*) "127.0.0.1", 2319);
-    //tcp_srv.nonSessionUsage(true);
-    kernel->subscribe(&tcp_srv);
     kernel->subscribe(&tcp_cli);
+
+    #if defined(MANUVR_SUPPORT_MQTT)
+    #else
+      ManuvrTCP tcp_srv((const char*) "127.0.0.1", 2319);
+      //tcp_srv.nonSessionUsage(true);
+      kernel->subscribe(&tcp_srv);
+    #endif
   #endif
 
   #if defined (MANUVR_SUPPORT_UDP)
@@ -230,8 +236,12 @@ int main(int argc, char *argv[]) {
 
   // TODO: Horrible hackishness to test TCP...
   #if defined (MANUVR_SUPPORT_TCPSOCKET)
-    tcp_srv.listen();
-    //while (!tcp_srv.listening()) {}
+    #if defined(MANUVR_SUPPORT_MQTT)
+      MQTTSession mqtt(&tcp_cli);
+    #else
+      tcp_srv.listen();
+    #endif
+
     tcp_cli.connect();
   #endif
   // TODO: End horrible hackishness.

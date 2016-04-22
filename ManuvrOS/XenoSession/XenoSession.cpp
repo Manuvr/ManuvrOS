@@ -154,6 +154,15 @@ int8_t XenoSession::untapAll() {
 
 
 
+int8_t XenoSession::sendPacket(unsigned char *buf, int len) {
+  if (isConnected()) {
+    if (owner->write_port(buf, len)) {
+      return 0;
+    }
+  }
+  return -1;
+}
+
 
 /****************************************************************************************************
 *  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
@@ -170,6 +179,17 @@ int8_t XenoSession::untapAll() {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
+
+/**
+* Boot done finished-up.
+*
+* @return 0 on no action, 1 on action, -1 on failure.
+*/
+int8_t XenoSession::bootComplete() {
+  EventReceiver::bootComplete();
+  return 1;
+}
+
 
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)

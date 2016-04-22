@@ -52,7 +52,8 @@ struct MessageData {
 struct MessageHandlers {
     const char* topicFilter;
     void (*fp) (MessageData*);
-} messageHandlers[MAX_MESSAGE_HANDLERS];      // Message handlers are indexed by subscription topic
+};
+
 
 
 class MQTTSession : public XenoSession {
@@ -74,23 +75,25 @@ class MQTTSession : public XenoSession {
 
 
   private:
+    MessageHandlers messageHandlers[MAX_MESSAGE_HANDLERS];      // Message handlers are indexed by subscription topic
+
     unsigned int _next_packetid;
     unsigned int command_timeout_ms;
-    size_t buf_size, readbuf_size;
-    unsigned char *buf;
+    size_t readbuf_size;
+
     unsigned char *readbuf;
     unsigned int keepAliveInterval;
     char ping_outstanding;
-    int isconnected;
 
     void (*defaultMessageHandler) (MessageData*);
 
-    // TODO: Implement as Runnable
-    //Timer ping_timer;
+    ManuvrRunnable _ping_timer;    // Periodic KA ping.
 
     inline int getNextPacketId() {
       return _next_packetid = (_next_packetid == MAX_PACKET_ID) ? 1 : _next_packetid + 1;
     };
+
+    int8_t sendKeepAlive();
 
 };
 

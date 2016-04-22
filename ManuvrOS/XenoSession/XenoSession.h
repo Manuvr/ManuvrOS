@@ -142,13 +142,13 @@ class XenoMessage {
 *   possible dialog, and bias the conversation in a given direction.
 */
 #define XENOSESSION_STATE_UNINITIALIZED   0x0000  // Nothing has happened. Freshly-instantiated session.
-#define XENOSESSION_STATE_PENDING_CONNP   0x0002  // We are not connected.
-#define XENOSESSION_STATE_PENDING_SETUP   0x0004  // We are in the setup phase of the session.
-#define XENOSESSION_STATE_PENDING_AUTH    0x0008  // Waiting on authentication.
-#define XENOSESSION_STATE_ESTABLISHED     0x000A  // Session is in the nominal state.
-#define XENOSESSION_STATE_PENDING_HANGUP  0x000C  // Session hangup is imminent.
-#define XENOSESSION_STATE_HUNGUP          0x000E  // Session is hungup.
-#define XENOSESSION_STATE_DISCONNECTED    0x000F  // Transport informs us that our session is pointless.
+#define XENOSESSION_STATE_PENDING_CONN    0x0001  // We are not connected.
+#define XENOSESSION_STATE_PENDING_SETUP   0x0002  // We are in the setup phase of the session.
+#define XENOSESSION_STATE_PENDING_AUTH    0x0004  // Waiting on authentication.
+#define XENOSESSION_STATE_ESTABLISHED     0x0008  // Session is in the nominal state.
+#define XENOSESSION_STATE_PENDING_HANGUP  0x0010  // Session hangup is imminent.
+#define XENOSESSION_STATE_HUNGUP          0x0020  // Session is hungup.
+#define XENOSESSION_STATE_DISCONNECTED    0x0040  // Transport informs us that our session is pointless.
 
 /*
 * These are bitflags in the same space as the above-def'd constants.
@@ -181,7 +181,8 @@ class XenoSession : public EventReceiver {
     inline uint8_t getPhase() {      return (session_state & 0xFFF0);    };
 
     /* Returns the answer to: "Is this session established?" */
-    inline bool isEstablished() {    return (XENOSESSION_STATE_ESTABLISHED == getPhase());   }
+    inline bool isEstablished() {    return (0 != (XENOSESSION_STATE_ESTABLISHED  & getPhase()));   }
+    inline bool isConnected() {      return (0 == (XENOSESSION_STATE_PENDING_CONN & getPhase()));   }
 
     /* Overrides from EventReceiver */
     virtual void procDirectDebugInstruction(StringBuilder*);
@@ -198,7 +199,7 @@ class XenoSession : public EventReceiver {
     ManuvrXport* owner;           // A reference to the transport that owns this session.
     XenoMessage* working;         // If we are in the middle of receiving a message.
 
-    virtual int8_t bootComplete() =0;
+    virtual int8_t bootComplete();
     virtual int8_t bin_stream_rx(unsigned char* buf, int len) =0;            // Used to feed data to the session.
 
     /**
@@ -211,6 +212,7 @@ class XenoSession : public EventReceiver {
       session_state      = (session_state & 0x000F) | nu_state;
     }
 
+    int8_t sendPacket(unsigned char *buf, int len);
     int purgeInbound();
     int purgeOutbound();
 
