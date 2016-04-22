@@ -133,7 +133,7 @@ void ManuvrSession::mark_session_desync(uint8_t ds_src) {
     #endif
   }
   else {
-    _stacked_sync_state = getState();           // Stack our sync state.
+    _stacked_sync_state = _sync_state;           // Stack our sync state.
     _sync_state = ds_src;
     switch (_sync_state) {
       case XENOSESSION_STATE_SYNC_PEND_EXIT:    // Sync has been recognized and we are rdy for a real packet.
