@@ -528,7 +528,7 @@ void XenoManuvrMessage::printDebug(StringBuilder *output) {
   if (NULL != event) {
     output->concatf("\t Message type    %s\n", event->getMsgTypeString());
   }
-  output->concatf("\t Message state   %s\n", getMessageStateString());
+  output->concatf("\t Message state   %s\n", XenoMessage::getMessageStateString(proc_state));
   output->concatf("\t unique_id       0x%04x\n", unique_id);
   output->concatf("\t checksum_i      0x%02x\n", checksum_i);
   output->concatf("\t checksum_c      0x%02x\n", checksum_c);
@@ -537,25 +537,4 @@ void XenoManuvrMessage::printDebug(StringBuilder *output) {
   output->concatf("\t bytes_received  %d\n", bytes_received);
   output->concatf("\t time_created    0x%08x\n", time_created);
   output->concatf("\t retries         %d\n\n", retries);
-}
-
-
-/**
-* @param   uint8_t The integer code that represents message state.
-* @return  A pointer to a human-readable string indicating the message state.
-*/
-const char* XenoManuvrMessage::getMessageStateString() {
-  switch (proc_state) {
-    case XENO_MSG_PROC_STATE_UNINITIALIZED:         return "UNINITIALIZED";
-    case XENO_MSG_PROC_STATE_RECEIVING:             return "RECEIVING";
-    case XENO_MSG_PROC_STATE_AWAITING_PROC:         return "AWAITING_PROC";
-    case XENO_MSG_PROC_STATE_PROCESSING_RUNNABLE:   return "PROCESSING";
-    case XENO_MSG_PROC_STATE_AWAITING_SEND:         return "AWAITING_SEND";
-    case XENO_MSG_PROC_STATE_AWAITING_REPLY:        return "AWAITING_REPLY";
-    case XENO_MSG_PROC_STATE_SYNC_PACKET:           return "SYNC_PACKET";
-    case XENO_MSG_PROC_STATE_AWAITING_REAP:         return "AWAITING_REAP";
-    case (XENO_MSG_PROC_STATE_AWAITING_REAP | XENO_MSG_PROC_STATE_ERROR):
-      return "SERIALIZING";
-    default:                                        return "<UNKNOWN>";
-  }
 }

@@ -152,29 +152,6 @@ int8_t XenoSession::untapAll() {
 }
 
 
-/**
-* Mark a given message as complete and ready for reap.
-*
-* @param   uint16_t The message unique_id to mark completed.
-* @return  0 if nothing done, negative if there was a problem.
-*/
-int8_t XenoSession::markMessageComplete(uint16_t target_id) {
-  XenoMessage *working_xeno;
-  for (int i = 0; i < _outbound_messages.size(); i++) {
-    working_xeno = _outbound_messages.get(i);
-    if (target_id == working_xeno->uniqueId()) {
-      switch (working_xeno->getState()) {
-        case XENO_MSG_PROC_STATE_AWAITING_REAP:
-          _outbound_messages.remove(working_xeno);
-          // TODO: How to cope with this?
-          //XenoMessage::reclaimPreallocation(working_xeno);
-          return 1;
-      }
-    }
-  }
-  return 0;
-}
-
 
 
 

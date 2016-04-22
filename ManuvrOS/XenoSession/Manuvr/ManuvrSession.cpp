@@ -137,6 +137,7 @@ void ManuvrSession::mark_session_desync(uint8_t ds_src) {
     _sync_state = ds_src;
     switch (_sync_state) {
       case XENOSESSION_STATE_SYNC_PEND_EXIT:    // Sync has been recognized and we are rdy for a real packet.
+        sendKeepAlive();
       case XENOSESSION_STATE_SYNC_SYNCD:        // Nominal state. Session is in sync.
         break;
       case XENOSESSION_STATE_SYNC_INITIATED:    // CP-initiated sync
@@ -327,7 +328,10 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
     }
   }
   else {
-    if (getVerbosity() > 3) local_log.concatf("XenoManuvrMessage 0x%08x is in the wrong state to accept bytes: %s\n", (uint32_t) working, working->getMessageStateString());
+    if (getVerbosity() > 3) {
+      local_log.concatf("XenoManuvrMessage 0x%08x is in the wrong state to accept bytes.\n", (uint32_t) working);
+      if (getVerbosity() > 5) working->printDebug(&local_log);
+    }
   }
 
 

@@ -100,9 +100,6 @@ class XenoMessage {
       provideEvent(runnable, (uint16_t) randomInt());
     };
 
-    bool isReply();      // Returns true if this message is a reply to another message.
-    bool expectsACK();   // Returns true if this message demands an ACK.
-
     void printDebug(StringBuilder*);
 
     inline uint8_t getState() {  return proc_state; };
@@ -115,9 +112,7 @@ class XenoMessage {
     */
     void claim(XenoSession*);
 
-    const char* getMessageStateString();
-
-
+    static const char* getMessageStateString(uint8_t);
     static int contains_sync_pattern(uint8_t* buf, int len);
     static int locate_sync_break(uint8_t* buf, int len);
 
@@ -175,15 +170,18 @@ class XenoSession : public EventReceiver {
     XenoSession(ManuvrXport*);
     ~XenoSession();
 
-    /* Functions indended to be called by the transport. */
-    int8_t   markMessageComplete(uint16_t id);
-
     /* Functions that are indirectly called by counterparty requests for subscription. */
     int8_t tapMessageType(uint16_t code);     // Start getting broadcasts about a given message type.
     int8_t untapMessageType(uint16_t code);   // Stop getting broadcasts about a given message type.
     int8_t untapAll();
 
     int8_t sendEvent(ManuvrRunnable*);
+
+    /* Returns and isolates the lifecycle phase bits. */
+    inline uint8_t getPhase() {      return (session_state & 0xFFF0);    };
+
+    /* Returns the answer to: "Is this session established?" */
+    inline bool isEstablished() {    return (XENOSESSION_STATE_ESTABLISHED == getPhase());   }
 
     /* Overrides from EventReceiver */
     virtual void procDirectDebugInstruction(StringBuilder*);
@@ -192,11 +190,6 @@ class XenoSession : public EventReceiver {
     virtual int8_t notify(ManuvrRunnable*);
     virtual int8_t callback_proc(ManuvrRunnable *);
 
-    /* Returns and isolates the lifecycle phase bits. */
-    inline uint8_t getPhase() {      return (session_state & 0xFFF0);    };
-
-    /* Returns the answer to: "Is this session established?" */
-    inline bool isEstablished() {    return (XENOSESSION_STATE_ESTABLISHED == getPhase());   }
 
     static const char* sessionPhaseString(uint16_t state_code);
 

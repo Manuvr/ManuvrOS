@@ -65,7 +65,6 @@ limitations under the License.
 * These are bitflags in the same space as the above-def'd constants. They all pertain to
 * the sync state of the session.
 */
-// TODO: Split these out into ManuvrSession and cut the mutual-usage of the same flags variable.
 #define XENOSESSION_STATE_SYNC_INITIATED  0x0080  // The counterparty noticed a problem.
 #define XENOSESSION_STATE_SYNC_INITIATOR  0x0040  // We noticed a problem.
 #define XENOSESSION_STATE_SYNC_PEND_EXIT  0x0020  // We think we have just recovered from a sync.
@@ -166,13 +165,6 @@ class ManuvrSession : public XenoSession {
     ManuvrSession(ManuvrXport*);
     ~ManuvrSession();
 
-    int8_t sendSyncPacket();
-
-    /* Returns the answer to: "Is this session in sync?"   */
-    inline bool syncd() {     return (_sync_state == XENOSESSION_STATE_SYNC_SYNCD);   }
-
-    int8_t sendKeepAlive();
-
     /* Overrides from EventReceiver */
     void procDirectDebugInstruction(StringBuilder*);
     const char* getReceiverName();
@@ -184,6 +176,7 @@ class ManuvrSession : public XenoSession {
   protected:
     int8_t bootComplete();
     int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
+
 
   private:
     ManuvrRunnable sync_event;
@@ -202,6 +195,11 @@ class ManuvrSession : public XenoSession {
     uint8_t _stacked_sync_state;        // Is our stream sync'd?
     uint8_t _sync_state;                // Is our stream sync'd?
 
+    /* Returns the answer to: "Is this session in sync?"   */
+    inline bool syncd() {     return (_sync_state == XENOSESSION_STATE_SYNC_SYNCD);   }
+
+    int8_t sendKeepAlive();
+    int8_t sendSyncPacket();
     int8_t scan_buffer_for_sync();
     void   mark_session_desync(uint8_t desync_source);
     void   mark_session_sync(bool pending);

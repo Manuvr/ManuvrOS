@@ -28,6 +28,30 @@ XenoMessage is the class that is the interface between ManuvrRunnables and
 #include <Platform/Platform.h>
 
 
+
+/**
+* @param   uint8_t The integer code that represents message state.
+* @return  A pointer to a human-readable string indicating the message state.
+*/
+const char* XenoMessage::getMessageStateString(uint8_t _s_code) {
+  switch (_s_code) {
+    case XENO_MSG_PROC_STATE_UNINITIALIZED:         return "UNINITIALIZED";
+    case XENO_MSG_PROC_STATE_RECEIVING:             return "RECEIVING";
+    case XENO_MSG_PROC_STATE_AWAITING_PROC:         return "AWAITING_PROC";
+    case XENO_MSG_PROC_STATE_PROCESSING_RUNNABLE:   return "PROCESSING";
+    case XENO_MSG_PROC_STATE_AWAITING_SEND:         return "AWAITING_SEND";
+    case XENO_MSG_PROC_STATE_AWAITING_REPLY:        return "AWAITING_REPLY";
+    case XENO_MSG_PROC_STATE_SYNC_PACKET:           return "SYNC_PACKET";
+    case XENO_MSG_PROC_STATE_AWAITING_REAP:         return "AWAITING_REAP";
+    case (XENO_MSG_PROC_STATE_AWAITING_REAP | XENO_MSG_PROC_STATE_ERROR):
+      return "SERIALIZING";
+    default:                                        return "<UNKNOWN>";
+  }
+}
+
+
+
+
 /****************************************************************************************************
 *   ___ _              ___      _ _              _      _
 *  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
@@ -138,8 +162,6 @@ int8_t XenoMessage::fail() {
 }
 
 
-
-
 /**
 * Called by a session object to claim the message.
 *
@@ -164,31 +186,10 @@ void XenoMessage::printDebug(StringBuilder *output) {
   if (NULL != event) {
     output->concatf("\t Message type    %s\n", event->getMsgTypeString());
   }
-  output->concatf("\t Message state   %s\n", getMessageStateString());
+  output->concatf("\t Message state   %s\n", getMessageStateString(proc_state));
   output->concatf("\t unique_id       0x%04x\n", unique_id);
   output->concatf("\t bytes_total     %d\n", bytes_total);
   output->concatf("\t bytes_received  %d\n", bytes_received);
   output->concatf("\t time_created    0x%08x\n", time_created);
   output->concatf("\t retries         %d\n\n", retries);
-}
-
-
-/**
-* @param   uint8_t The integer code that represents message state.
-* @return  A pointer to a human-readable string indicating the message state.
-*/
-const char* XenoMessage::getMessageStateString() {
-  switch (proc_state) {
-    case XENO_MSG_PROC_STATE_UNINITIALIZED:         return "UNINITIALIZED";
-    case XENO_MSG_PROC_STATE_RECEIVING:             return "RECEIVING";
-    case XENO_MSG_PROC_STATE_AWAITING_PROC:         return "AWAITING_PROC";
-    case XENO_MSG_PROC_STATE_PROCESSING_RUNNABLE:   return "PROCESSING";
-    case XENO_MSG_PROC_STATE_AWAITING_SEND:         return "AWAITING_SEND";
-    case XENO_MSG_PROC_STATE_AWAITING_REPLY:        return "AWAITING_REPLY";
-    case XENO_MSG_PROC_STATE_SYNC_PACKET:           return "SYNC_PACKET";
-    case XENO_MSG_PROC_STATE_AWAITING_REAP:         return "AWAITING_REAP";
-    case (XENO_MSG_PROC_STATE_AWAITING_REAP | XENO_MSG_PROC_STATE_ERROR):
-      return "SERIALIZING";
-    default:                                        return "<UNKNOWN>";
-  }
 }
