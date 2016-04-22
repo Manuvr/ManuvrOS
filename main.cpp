@@ -154,18 +154,19 @@ int main(int argc, char *argv[]) {
   *   want this Manuvrable to have.
   */
 
-
   // We need at least ONE transport to be useful...
   #if defined (MANUVR_SUPPORT_TCPSOCKET)
-    ManuvrTCP tcp_cli((const char*) "127.0.0.1", 1883);
-    kernel->subscribe(&tcp_cli);
-
     #if defined(MANUVR_SUPPORT_MQTT)
+      ManuvrTCP tcp_cli((const char*) "127.0.0.1", 1883);
+      MQTTSession mqtt(&tcp_cli);
+      kernel->subscribe(&mqtt);
     #else
       ManuvrTCP tcp_srv((const char*) "127.0.0.1", 2319);
+      ManuvrTCP tcp_cli((const char*) "127.0.0.1", 2319);
       //tcp_srv.nonSessionUsage(true);
       kernel->subscribe(&tcp_srv);
     #endif
+    kernel->subscribe(&tcp_cli);
   #endif
 
   #if defined (MANUVR_SUPPORT_UDP)
@@ -236,14 +237,11 @@ int main(int argc, char *argv[]) {
 
   // TODO: Horrible hackishness to test TCP...
   #if defined (MANUVR_SUPPORT_TCPSOCKET)
-    tcp_cli.connect();
-
     #if defined(MANUVR_SUPPORT_MQTT)
-      MQTTSession mqtt(&tcp_cli);
-      kernel->subscribe(&mqtt);
     #else
       tcp_srv.listen();
     #endif
+    tcp_cli.connect();
   #endif
   // TODO: End horrible hackishness.
 

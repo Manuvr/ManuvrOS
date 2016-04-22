@@ -692,7 +692,7 @@ int8_t Kernel::procIdleFlags() {
 
     // Chat and measure.
     #ifdef __MANUVR_DEBUG
-    if (getVerbosity() >= 5) local_log.concatf("Servicing: %s\n", active_runnable->getMsgTypeString());
+    if (getVerbosity() > 6) local_log.concatf("Servicing: %s\n", active_runnable->getMsgTypeString());
     #endif
 
     profiler_mark_0 = micros();
@@ -763,7 +763,7 @@ int8_t Kernel::procIdleFlags() {
         switch (active_runnable->originator->callback_proc(active_runnable)) {
           case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
             #ifdef __MANUVR_DEBUG
-            if (getVerbosity() > 5) local_log.concatf("Recycling %s.\n", active_runnable->getMsgTypeString());
+            if (getVerbosity() > 6) local_log.concatf("Recycling %s.\n", active_runnable->getMsgTypeString());
             #endif
             if (0 == validate_insertion(active_runnable)) {
               exec_queue.insert(active_runnable, active_runnable->priority);
@@ -777,7 +777,7 @@ int8_t Kernel::procIdleFlags() {
             // NOTE: No break;
           case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
             #ifdef __MANUVR_DEBUG
-            if (getVerbosity() > 5) local_log.concatf("Dropping %s after running.\n", active_runnable->getMsgTypeString());
+            if (getVerbosity() > 6) local_log.concatf("Dropping %s after running.\n", active_runnable->getMsgTypeString());
             #endif
             // NOTE: No break;
           case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
@@ -836,9 +836,9 @@ int8_t Kernel::procIdleFlags() {
 
       #ifdef __MANUVR_DEBUG
         MessageTypeDef* tmp_msg_def = (MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(msg_code_local);
-        if (getVerbosity() >= 6) local_log.concatf("%s finished.\n\tTotal time: %ld uS\n", tmp_msg_def->debug_label, (profiler_mark_3 - profiler_mark_0));
-        if (profiler_mark_2) {
-          if (getVerbosity() >= 6) local_log.concatf("\tTook %ld uS to notify.\n", profiler_item->run_time_last);
+        if (getVerbosity() >= 6) {
+          if (profiler_mark_2) local_log.concatf("%s finished.\tTotal time: %5ld uS\tTook %5ld uS to notify.\n", tmp_msg_def->debug_label, (profiler_mark_3 - profiler_mark_0), profiler_item->run_time_last);
+          else                 local_log.concatf("%s finished.\tTotal time: %5ld uS\n", tmp_msg_def->debug_label, (profiler_mark_3 - profiler_mark_0));
         }
       #endif
       profiler_mark_2 = 0;  // Reset for next iteration.
@@ -938,10 +938,6 @@ void Kernel::print_type_sizes() {
   temp.concatf("\t Argument              %zu\n", sizeof(Argument));
   temp.concatf("\t TaskProfilerData      %zu\n", sizeof(TaskProfilerData));
 
-  //temp.concatf(" XenoComm:\n");
-  //temp.concatf("\t XenoSession           %zu\n", sizeof(XenoSession));
-  //temp.concatf("\t XenoMessage           %zu\n", sizeof(XenoMessage));
-
   Kernel::log(&temp);
 }
 #endif
@@ -1019,24 +1015,30 @@ void Kernel::printDebug(StringBuilder* output) {
 
   EventReceiver::printDebug(output);
 
-  currentDateTime(output);
   output->concatf("-- %s v%s    Build date: %s %s\n--\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
   //output->concatf("-- our_mem_addr:             0x%08x\n", (uint32_t) this);
-  if (getVerbosity() > 5) output->concatf("-- boot_completed:           %s\n", booted() ? "yes" : "no");
-  if (getVerbosity() > 6) output->concatf("-- getStackPointer()         0x%08x\n", getStackPointer());
-  if (getVerbosity() > 6) output->concatf("-- stack grows %s\n--\n", (final_sp > initial_sp) ? "up" : "down");
-  if (getVerbosity() > 6) output->concatf("-- millis()                  0x%08x\n", millis());
-  if (getVerbosity() > 6) output->concatf("-- micros()                  0x%08x\n", micros());
+  if (getVerbosity() > 5) {
+    output->concat("-- Current datetime          ");
+    currentDateTime(output);
+    output->concatf("\n-- millis()                  0x%08x\n", millis());
+    output->concatf("-- micros()                  0x%08x\n", micros());
+    output->concatf("-- _ms_elapsed               %u\n", (unsigned long) _ms_elapsed);
+  }
 
-  output->concatf("-- Queue depth:              %d\n", exec_queue.size());
-  output->concatf("-- Preallocation depth:      %d\n", preallocated.size());
-  output->concatf("-- Total subscriber count:   %d\n", subscribers.size());
-  output->concatf("-- Prealloc starves:         %u\n", (unsigned long) prealloc_starved);
-  output->concatf("-- events_destroyed:         %u\n", (unsigned long) events_destroyed);
-  output->concatf("-- burden_of_being_specific  %u\n", (unsigned long) burden_of_specific);
-  output->concatf("-- idempotent_blocks         %u\n", (unsigned long) idempotent_blocks);
+  if (getVerbosity() > 6) {
+    output->concatf("-- getStackPointer()         0x%08x\n", getStackPointer());
+    output->concatf("-- stack grows %s\n--\n", (final_sp > initial_sp) ? "up" : "down");
+  }
 
-  output->concatf("-- _ms_elapsed      %u\n", (unsigned long) _ms_elapsed);
+  if (getVerbosity() > 4) {
+    output->concatf("-- Queue depth:              %d\n", exec_queue.size());
+    output->concatf("-- Preallocation depth:      %d\n", preallocated.size());
+    output->concatf("-- Prealloc starves:         %u\n", (unsigned long) prealloc_starved);
+    output->concatf("-- events_destroyed:         %u\n", (unsigned long) events_destroyed);
+    output->concatf("-- burden_of_being_specific  %u\n", (unsigned long) burden_of_specific);
+    output->concatf("-- idempotent_blocks         %u\n", (unsigned long) idempotent_blocks);
+  }
+
   output->concatf("-- Lagged schedules %u\n", (unsigned long) lagged_schedules);
   output->concatf("-- Total schedules:  %d\n-- Active schedules: %d\n\n", schedules.size(), countActiveSchedules());
 
@@ -1328,6 +1330,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
 
       case 'v':           // Set log verbosity.
         parse_mule.concat(str);
+        parse_mule.split(" ");
         parse_mule.drop_position(0);
 
         event = new ManuvrRunnable(MANUVR_MSG_SYS_LOG_VERBOSITY);

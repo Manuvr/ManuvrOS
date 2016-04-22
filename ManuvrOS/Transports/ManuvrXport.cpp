@@ -183,8 +183,7 @@ int8_t ManuvrXport::reapXenoSession(XenoSession* ses) {
 
 int8_t ManuvrXport::provide_session(XenoSession* ses) {
   if ((NULL != session) && (ses != session)) {
-    // If we are about to clobber an existing session, we need to free it
-    // first.
+    // If we are about to clobber an existing session, we need to free it first.
     __kernel->unsubscribe(session);
 
     // TODO: Might should warn someone at the other side?
@@ -223,12 +222,12 @@ void ManuvrXport::connected(bool en) {
         // Once the session sets up, it will broadcast itself as having done so.
         // TODO: Session discovery should happen at this point.
         //XenoSession* ses = new XenoSession(this);
-//        XenoSession* ses = (XenoSession*) new ManuvrSession(this);
-//        provide_session(ses);
-//
-//        ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
-//        event->addArg((EventReceiver*) ses);
-//        raiseEvent(event);
+        XenoSession* ses = (XenoSession*) new ManuvrSession(this);
+        provide_session(ses);
+
+        ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
+        event->addArg((EventReceiver*) ses);
+        raiseEvent(event);
       }
       else {
         // If there is a session already here, we'll mark it connected.
@@ -355,6 +354,8 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
       break;
 
     case MANUVR_MSG_XPORT_RECEIVE:
+      break;
+
     case MANUVR_MSG_XPORT_RESERVED_0:
     case MANUVR_MSG_XPORT_RESERVED_1:
     case MANUVR_MSG_XPORT_SET_PARAM:
