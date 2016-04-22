@@ -32,10 +32,8 @@ limitations under the License.
 ManuvrSession::ManuvrSession(ManuvrXport* _xport) : XenoSession(_xport) {
   __class_initializer();
 
-  sequential_parse_failures = 0;
-  sequential_ack_failures   = 0;
-  MAX_PARSE_FAILURES  = 3;  // How many failures-to-parse should we tolerate before SYNCing?
-  MAX_ACK_FAILURES    = 3;  // How many failures-to-ACK should we tolerate before SYNCing?
+  sequential_parse_failures = MANUVR_MAX_PARSE_FAILURES;
+  sequential_ack_failures   = MANUVR_MAX_ACK_FAILURES;
 
   // These are messages that we want to relay from the rest of the system.
   tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
@@ -164,8 +162,8 @@ void ManuvrSession::mark_session_desync(uint8_t ds_src) {
 * @param   bool Is the sync state machine pending exit (true), or fully-exited (false)?
 */
 void ManuvrSession::mark_session_sync(bool pending) {
-  sequential_parse_failures = 0;
-  sequential_ack_failures   = 0;
+  sequential_parse_failures = MANUVR_MAX_PARSE_FAILURES;
+  sequential_ack_failures   = MANUVR_MAX_ACK_FAILURES;
   _stacked_sync_state = _sync_state;               // Stack our session state.
 
   if (pending) {
@@ -311,7 +309,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
           local_log.concatf("XenoManuvrMessage 0x%08x reports an error:\n", (uint32_t) this);
           working->printDebug(&local_log);
         }
-        if (MAX_PARSE_FAILURES == ++sequential_parse_failures) {
+        if (0 == sequential_parse_failures--) {
           #ifdef __MANUVR_DEBUG
             if (getVerbosity() > 2) local_log.concat("\nThis was the session's last straw. Session marked itself as desync'd.\n");
           #endif
@@ -379,7 +377,7 @@ int8_t ManuvrSession::sendKeepAlive() {
 *
 * @return a pointer to a string constant.
 */
-const char* ManuvrSession::getReceiverName() {  return "XenoSession";  }
+const char* ManuvrSession::getReceiverName() {  return "ManuvrSession";  }
 
 
 /**

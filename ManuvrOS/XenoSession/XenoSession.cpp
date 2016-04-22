@@ -427,13 +427,7 @@ void XenoSession::printDebug(StringBuilder *output) {
 
 
 void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
-  uint8_t temp_byte = 0;
-
   char* str = input->position(0);
-
-  if (*(str) != 0) {
-    temp_byte = atoi((char*) str+1);
-  }
 
   switch (*(str)) {
     case 'q':  // Manual message queue purge.

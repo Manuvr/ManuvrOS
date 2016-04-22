@@ -52,14 +52,17 @@ limitations under the License.
 #ifndef __MANUVRSESSION_MANUVR_H__
 #define __MANUVRSESSION_MANUVR_H__
 
-
-#define CHECKSUM_PRELOAD_BYTE 0x55    // Calculation of new checksums should start with this byte,
-#define XENOSESSION_INITIAL_SYNC_COUNT    24      // How many sync packets to send before giving up.
-
-#define XENOMSG_M_PREALLOC_COUNT       8    // How many XenoMessages should be preallocated?
-
-
 #include "../XenoSession.h"
+
+
+#define CHECKSUM_PRELOAD_BYTE          0x55  // Calculation of new checksums should start with this byte,
+#define XENOSESSION_INITIAL_SYNC_COUNT   24  // How many sync packets to send before giving up.
+
+#define XENOMSG_M_PREALLOC_COUNT          8  // How many XenoMessages should be preallocated?
+
+#define MANUVR_MAX_PARSE_FAILURES         3  // How many failures-to-parse should we tolerate before SYNCing?
+#define MANUVR_MAX_ACK_FAILURES           3  // How many failures-to-ACK should we tolerate before SYNCing?
+
 
 /*
 * These are bitflags in the same space as the above-def'd constants. They all pertain to
@@ -186,8 +189,6 @@ class ManuvrSession : public XenoSession {
     StringBuilder session_buffer;
 
     /* These variables track failure cases to inform sync-initiation. */
-    uint8_t MAX_PARSE_FAILURES;         // How many failures-to-parse should we tolerate before SYNCing?
-    uint8_t MAX_ACK_FAILURES;           // How many failures-to-ACK should we tolerate before SYNCing?
     uint8_t sequential_parse_failures;  // How many parse attempts have failed in-a-row?
     uint8_t sequential_ack_failures;    // How many of our outbound packets have failed to ACK?
     uint8_t _stacked_sync_state;        // Is our stream sync'd?
