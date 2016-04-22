@@ -42,7 +42,7 @@ For debuggability, the transport has a special mode for acting as a debug
 #include "ManuvrXport.h"
 #include "FirmwareDefs.h"
 #include "XenoSession/XenoSession.h"
-
+#include "XenoSession/Manuvr/ManuvrSession.h"
 
 #if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
   /*
@@ -98,7 +98,7 @@ int8_t ManuvrXport::bridge(ManuvrXport* _xport) {
   int8_t return_value = -1;
   if (NULL != _xport) {
     if (_xport != this) {
-      if (!hasSession() && !_xport->hasSession()) {
+      if (!getSession() && !_xport->getSession()) {
         // TODO: At this point, we can create the bridge.
         nonSessionUsage(true);
         _xport->nonSessionUsage(true);
@@ -197,8 +197,6 @@ int8_t ManuvrXport::provide_session(XenoSession* ses) {
   session = ses;
   //session->setVerbosity(getVerbosity());
 
-  // This will warn us later to notify others of our removal, if necessary.
-  set_xport_state(MANUVR_XPORT_FLAG_HAS_SESSION);
   return 0;
 }
 
@@ -225,24 +223,22 @@ void ManuvrXport::connected(bool en) {
         // Once the session sets up, it will broadcast itself as having done so.
         // TODO: Session discovery should happen at this point.
         //XenoSession* ses = new XenoSession(this);
-        XenoSession* ses = (XenoSession*) new ManuvrSession(this);
-        provide_session(ses);
-
-        ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
-        event->addArg((EventReceiver*) ses);
-        raiseEvent(event);
-
-        ses->connection_callback(true);
+//        XenoSession* ses = (XenoSession*) new ManuvrSession(this);
+//        provide_session(ses);
+//
+//        ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
+//        event->addArg((EventReceiver*) ses);
+//        raiseEvent(event);
       }
       else {
         // If there is a session already here, we'll mark it connected.
-        session->connection_callback(true);
       }
+      if (session) session->connection_callback(true);
     }
     else {
       // This is a disconnection event. We might want to cleanup all of our sessions
       // that are outstanding.
-      session->connection_callback(false);
+      if (session) session->connection_callback(false);
     }
   }
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
@@ -304,7 +300,6 @@ void ManuvrXport::initialized(bool en) {
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
 
-
 /**
 * Debug support method. This fxn is only present in debug builds.
 *
@@ -312,14 +307,15 @@ void ManuvrXport::initialized(bool en) {
 */
 void ManuvrXport::printDebug(StringBuilder *temp) {
   EventReceiver::printDebug(temp);
-  temp->concatf("Transport\n=======\n-- _xport_flags   0x%08x\n", _xport_flags);
+  temp->concatf("--\n-- %s-oriented transport\n--\n", (streamOriented() ? "stream" : "message"));
+  temp->concatf("-- _xport_flags    0x%08x\n", _xport_flags);
   temp->concatf("-- xport_id        0x%04x\n", xport_id);
   temp->concatf("-- bytes sent      %u\n", bytes_sent);
   temp->concatf("-- bytes received  %u\n--\n", bytes_received);
   temp->concatf("-- initialized     %s\n", (initialized() ? "yes" : "no"));
   temp->concatf("-- connected       %s\n", (connected() ? "yes" : "no"));
   temp->concatf("-- listening       %s\n", (listening() ? "yes" : "no"));
-  temp->concatf("-- has session     %s\n", (hasSession() ? "yes" : "no"));
+  temp->concatf("-- Has session     %s\n--\n", (getSession() ? "yes" : "no"));
 }
 
 
@@ -327,9 +323,6 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
 
   switch (active_event->event_code) {
-    case MANUVR_MSG_SESS_ORIGINATE_MSG:
-      break;
-
     case MANUVR_MSG_XPORT_SEND:
       if (NULL != session) {
         if (connected()) {

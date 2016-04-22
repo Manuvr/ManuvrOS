@@ -23,11 +23,10 @@ This is basically only for linux for now.
 
 */
 
-#ifdef MANUVR_SUPPORT_TCPSOCKET
+#if defined(MANUVR_SUPPORT_TCPSOCKET)
 
 #include "ManuvrSocket.h"
 #include "FirmwareDefs.h"
-#include <XenoSession/XenoSession.h>
 
 #include <Kernel.h>
 
@@ -113,12 +112,12 @@ This is basically only for linux for now.
 * Constructor.
 */
 ManuvrTCP::ManuvrTCP(const char* addr, int port) : ManuvrSocket(addr, port, 0) {
-  __class_initializer();
+  set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED | MANUVR_XPORT_FLAG_HAS_MULTICAST);
 }
 
 
 ManuvrTCP::ManuvrTCP(const char* addr, int port, uint32_t opts) : ManuvrSocket(addr, port, opts) {
-  __class_initializer();
+  set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED | MANUVR_XPORT_FLAG_HAS_MULTICAST);
 }
 
 
@@ -127,7 +126,7 @@ ManuvrTCP::ManuvrTCP(const char* addr, int port, uint32_t opts) : ManuvrSocket(a
 */
 // TODO: This is very ugly.... Might need a better way of fractioning into new threads...
 ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in* nu_sockaddr) : ManuvrSocket(listening_instance->_addr, listening_instance->_port_number, 0) {
-  __class_initializer();
+  set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED | MANUVR_XPORT_FLAG_HAS_MULTICAST);
   _sock          = sock;
   _options       = listening_instance->_options;
 
@@ -152,21 +151,6 @@ ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in
 ManuvrTCP::~ManuvrTCP() {
   __kernel->unsubscribe(this);
 }
-
-
-
-/**
-* This is here for compatibility with C++ standards that do not allow for definition and declaration
-*   in the header file. Takes no parameters, and returns nothing.
-*/
-void ManuvrTCP::__class_initializer() {
-  EventReceiver::__class_initializer();
-
-  set_xport_state(MANUVR_XPORT_FLAG_HAS_MULTICAST);
-}
-
-
-
 
 
 /****************************************************************************************************
@@ -389,10 +373,13 @@ int8_t ManuvrTCP::bootComplete() {   // ?? TODO ??
 
   // We will suffer a 300ms latency if the platform's networking stack doesn't flush
   //   its buffer in time.
+  read_abort_event.repurpose(MANUVR_MSG_XPORT_RECEIVE);
+  read_abort_event.isManaged(true);
+  read_abort_event.specific_target = (EventReceiver*) this;
+  read_abort_event.originator      = (EventReceiver*) this;
   read_abort_event.alterScheduleRecurrence(0);
   read_abort_event.alterSchedulePeriod(300);
   read_abort_event.autoClear(false);
-  read_abort_event.enableSchedule(false);
   read_abort_event.enableSchedule(false);
   __kernel->addSchedule(&read_abort_event);
 

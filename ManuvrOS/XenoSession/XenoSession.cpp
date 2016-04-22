@@ -43,8 +43,9 @@ XenoSession is the class that manages dialog with other systems via some
 * Logging support fxn.
 */
 const char* XenoSession::sessionPhaseString(uint16_t state_code) {
-  switch (state_code & 0x000F) {
+  switch (state_code & 0x00FF) {
     case XENOSESSION_STATE_UNINITIALIZED:    return "UNINITIALIZED";
+    case XENOSESSION_STATE_PENDING_CONN:     return "PENDING_CONN";
     case XENOSESSION_STATE_PENDING_SETUP:    return "PENDING_SETUP";
     case XENOSESSION_STATE_PENDING_AUTH:     return "PENDING_AUTH";
     case XENOSESSION_STATE_ESTABLISHED:      return "ESTABLISHED";
@@ -74,9 +75,21 @@ XenoSession::XenoSession(ManuvrXport* _xport) {
   __class_initializer();
 
   owner = _xport;
+  owner->nonSessionUsage(false);
+
+  working                   = NULL;
   session_state             = XENOSESSION_STATE_UNINITIALIZED;
   session_last_state        = XENOSESSION_STATE_UNINITIALIZED;
-  working                   = NULL;
+
+  mark_session_state(XENOSESSION_STATE_PENDING_CONN);
+
+  if (!owner->alwaysConnected() && owner->connected()) {
+    // Are we connected right now?
+    mark_session_state(XENOSESSION_STATE_PENDING_SETUP);
+  }
+  else {
+    mark_session_state(XENOSESSION_STATE_PENDING_CONN);
+  }
 }
 
 
@@ -368,8 +381,8 @@ int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
 }
 
 
-int8_t XenoSession::connection_callback(bool connected) {
-  mark_session_state(connected ? XENOSESSION_STATE_ESTABLISHED : XENOSESSION_STATE_DISCONNECTED);
+int8_t XenoSession::connection_callback(bool _con) {
+  mark_session_state(_con ? XENOSESSION_STATE_ESTABLISHED : XENOSESSION_STATE_DISCONNECTED);
   return 0;
 }
 

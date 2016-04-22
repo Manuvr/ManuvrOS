@@ -28,6 +28,7 @@ This is basically only for linux until it is needed in a smaller space.
 #define __MANUVR_SOCKET_H__
 
 #include "Transports/ManuvrXport.h"
+#include <XenoSession/XenoSession.h>
 
 #if defined(__MANUVR_LINUX)
   #include <cstdio>
@@ -106,8 +107,6 @@ class ManuvrTCP : public ManuvrSocket {
 
   private:
     LinkedList<ManuvrTCP*> _connections;   // A list of client connections.
-
-    void __class_initializer();
 };
 
 #endif  // MANUVR_SUPPORT_TCPSOCKET
@@ -155,9 +154,6 @@ class ManuvrUDP : public ManuvrSocket {
 
   private:
     int         _client_sock;
-
-    // Related to threading and pipes. This is linux-specific.
-    void __class_initializer();
 };
 
 

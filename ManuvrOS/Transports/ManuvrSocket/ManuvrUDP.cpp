@@ -122,28 +122,6 @@ volatile ManuvrUDP* ManuvrUDP::INSTANCE = NULL;
 * Constructor.
 */
 ManuvrUDP::ManuvrUDP(const char* addr, int port) : ManuvrSocket(addr, port, 0) {
-  __class_initializer();
-}
-
-
-ManuvrUDP::ManuvrUDP(const char* addr, int port, uint32_t opts) : ManuvrSocket(addr, port, opts) {
-  __class_initializer();
-}
-
-
-
-ManuvrUDP::~ManuvrUDP() {
-  __kernel->unsubscribe(this);
-}
-
-
-/**
-* This is here for compatibility with C++ standards that do not allow for definition and declaration
-*   in the header file. Takes no parameters, and returns nothing.
-*/
-void ManuvrUDP::__class_initializer() {
-  EventReceiver::__class_initializer();
-
   set_xport_state(MANUVR_XPORT_FLAG_HAS_MULTICAST | MANUVR_XPORT_FLAG_CONNECTIONLESS);
 
   // TODO: Singleton due-to-feature thrust. Need to ditch the singleton...
@@ -153,6 +131,25 @@ void ManuvrUDP::__class_initializer() {
     // Inform the Kernel of the codes we will be using...
     ManuvrMsg::registerMessages(udp_message_defs, sizeof(udp_message_defs) / sizeof(MessageTypeDef));
   }
+}
+
+
+ManuvrUDP::ManuvrUDP(const char* addr, int port, uint32_t opts) : ManuvrSocket(addr, port, opts) {
+  set_xport_state(MANUVR_XPORT_FLAG_HAS_MULTICAST | MANUVR_XPORT_FLAG_CONNECTIONLESS);
+
+  // TODO: Singleton due-to-feature thrust. Need to ditch the singleton...
+  if (NULL == INSTANCE) {
+    INSTANCE = this;
+    // TODO: ...as well as decide on a strategy for THIS:
+    // Inform the Kernel of the codes we will be using...
+    ManuvrMsg::registerMessages(udp_message_defs, sizeof(udp_message_defs) / sizeof(MessageTypeDef));
+  }
+}
+
+
+
+ManuvrUDP::~ManuvrUDP() {
+  __kernel->unsubscribe(this);
 }
 
 

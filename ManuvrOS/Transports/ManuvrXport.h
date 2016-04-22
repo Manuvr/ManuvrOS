@@ -58,7 +58,7 @@ For debuggability, the transport has a special mode for acting as a debug
 #define MANUVR_XPORT_FLAG_INITIALIZED      0x80000000  // The xport was present and init'd corrently.
 #define MANUVR_XPORT_FLAG_CONNECTED        0x40000000  // The xport is active and able to move data.
 #define MANUVR_XPORT_FLAG_BUSY             0x20000000  // The xport is moving something.
-#define MANUVR_XPORT_FLAG_HAS_SESSION      0x10000000  // See note below.
+#define MANUVR_XPORT_FLAG_STREAM_ORIENTED  0x10000000  // See note below.
 #define MANUVR_XPORT_FLAG_LISTENING        0x08000000  // We are listening for connections.
 #define MANUVR_XPORT_FLAG_IS_BRIDGED       0x04000000  // This transport instance is bridged to another.
 #define MANUVR_XPORT_FLAG_NON_SESSION      0x02000000  // Used to feed a transport into (suppose) a GPS parser.
@@ -79,8 +79,8 @@ For debuggability, the transport has a special mode for acting as a debug
 
 
 /*
-* Note about MANUVR_XPORT_FLAG_HAS_SESSION:
-* This might get cut. it ought to be sufficient to check if the session member is NULL.
+* Note about MANUVR_XPORT_FLAG_STREAM_ORIENTED:
+* This might get cut.
 *
 * The behavior of this class, (and classes that extend it) ought to be as follows:
 *   1) If a session is not present, the port simply moves data via the event system, hoping
@@ -100,21 +100,7 @@ class ManuvrXport : public EventReceiver {
     ManuvrXport();
     virtual ~ManuvrXport() {};
 
-    /* Members that deal with sessions. */
-    // TODO: Is this transport used for non-session purposes? IE, GPS?
-    inline bool hasSession() {           return (_xport_flags & MANUVR_XPORT_FLAG_HAS_SESSION);  };
-    inline EventReceiver* getSession() { return session;  };
-
-    /* Transport bridging... */
-    inline bool isBridge() {           return (_xport_flags & MANUVR_XPORT_FLAG_IS_BRIDGED);  };
-    int8_t bridge(ManuvrXport*);
-
-
-    /*
-    * Accessors for session behavior regarding connect/disconnect.
-    */
-    inline bool alwaysConnected() {         return (_xport_flags & MANUVR_XPORT_FLAG_ALWAYS_CONNECTED);  }
-    void alwaysConnected(bool en);
+    inline XenoSession* getSession() {   return session;   };
 
 
     /*
@@ -145,9 +131,20 @@ class ManuvrXport : public EventReceiver {
     inline bool listening() {   return (_xport_flags & MANUVR_XPORT_FLAG_LISTENING);   };
     void listening(bool);
 
+    /* Can the transport be relied upon to provide connection status? */
+    inline bool alwaysConnected() {         return (_xport_flags & MANUVR_XPORT_FLAG_ALWAYS_CONNECTED);  }
+    void alwaysConnected(bool en);
+
+    /* Members that deal with sessions. */
+    inline bool streamOriented() {          return (_xport_flags & MANUVR_XPORT_FLAG_STREAM_ORIENTED);  };
+
     /* Any required setup finished without problems? */
     inline bool initialized() { return (_xport_flags & MANUVR_XPORT_FLAG_INITIALIZED); };
     void initialized(bool en);
+
+    /* Transport bridging... */
+    inline bool isBridge() {                return (_xport_flags & MANUVR_XPORT_FLAG_IS_BRIDGED);  };
+    int8_t bridge(ManuvrXport*);
 
     /* Is this transport used for non-session purposes? IE, GPS? */
     inline bool nonSessionUsage() {         return (_xport_flags & MANUVR_XPORT_FLAG_NON_SESSION);  };
@@ -174,7 +171,8 @@ class ManuvrXport : public EventReceiver {
 
 
   protected:
-    EventReceiver *session;
+    //EventReceiver *session;
+    XenoSession* session;
 
     // Can also be used to poll the other side. Implementation is completely at the discretion
     //   any extending class. But generally, this feature is necessary.
@@ -199,8 +197,8 @@ class ManuvrXport : public EventReceiver {
     //   to other transport instances? Until this behavior can be generalized, we rely on the extending class to
     //   handle undefined combinations as it chooses.
     //       ---J. Ian Lindsay   Thu Dec 03 03:37:41 MST 2015
-    virtual int8_t reapXenoSession(XenoSession*);   // Cleans up XenoSessions that were instantiated by this class.
-    virtual int8_t provide_session(XenoSession*);   // Called whenever we instantiate a session.
+    int8_t reapXenoSession(XenoSession*);   // Cleans up XenoSessions that were instantiated by this class.
+    int8_t provide_session(XenoSession*);   // Called whenever we instantiate a session.
 
     // TODO: Should be private. provide_session() / reset() are the blockers.
     inline void set_xport_state(uint32_t bitmask) {    _xport_flags = (bitmask  | _xport_flags);   }

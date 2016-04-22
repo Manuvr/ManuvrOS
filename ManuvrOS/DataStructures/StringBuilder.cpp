@@ -897,7 +897,6 @@ void StringBuilder::printDebug() {
 void StringBuilder::printDebug(StringBuilder* output) {
   unsigned char* temp = this->string();
   int temp_len  = this->length();
-  output->concatf("\nStringBuilder\t Total bytes: %d\n", temp_len);
 
   if ((temp != NULL) && (temp_len > 0)) {
     for (int i = 0; i < temp_len; i++) {

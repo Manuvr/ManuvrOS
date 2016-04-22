@@ -30,11 +30,10 @@ Platforms that require it should be able to extend this driver for specific
 */
 
 
-#if defined(MANUVR_SUPPORT_TCPSOCKET) || defined(MANUVR_SUPPORT_UDP)
+#if defined(MANUVR_SUPPORT_TCPSOCKET) | defined(MANUVR_SUPPORT_UDP)
 
 #include "ManuvrSocket.h"
 #include "FirmwareDefs.h"
-#include "XenoSession/XenoSession.h"
 
 #include <Kernel.h>
 #include <Platform/Platform.h>
@@ -88,6 +87,7 @@ ManuvrSocket::~ManuvrSocket() {
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void ManuvrSocket::__class_initializer() {
+  EventReceiver::__class_initializer();
   _options           = 0;
   _port_number       = 0;
 

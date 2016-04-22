@@ -236,13 +236,14 @@ int main(int argc, char *argv[]) {
 
   // TODO: Horrible hackishness to test TCP...
   #if defined (MANUVR_SUPPORT_TCPSOCKET)
+    tcp_cli.connect();
+
     #if defined(MANUVR_SUPPORT_MQTT)
       MQTTSession mqtt(&tcp_cli);
+      kernel->subscribe(&mqtt);
     #else
       tcp_srv.listen();
     #endif
-
-    tcp_cli.connect();
   #endif
   // TODO: End horrible hackishness.
 

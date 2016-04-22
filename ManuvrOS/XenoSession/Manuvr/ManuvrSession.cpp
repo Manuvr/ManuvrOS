@@ -20,6 +20,7 @@ limitations under the License.
 
 */
 
+#if defined(MANUVR_OVER_THE_WIRE)
 
 #include "ManuvrSession.h"
 
@@ -30,17 +31,17 @@ limitations under the License.
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
 ManuvrSession::ManuvrSession(ManuvrXport* _xport) : XenoSession(_xport) {
-  __class_initializer();
-
-  sequential_parse_failures = MANUVR_MAX_PARSE_FAILURES;
-  sequential_ack_failures   = MANUVR_MAX_ACK_FAILURES;
+  _seq_parse_failures = MANUVR_MAX_PARSE_FAILURES;
+  _seq_ack_failures   = MANUVR_MAX_ACK_FAILURES;
 
   // These are messages that we want to relay from the rest of the system.
   tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
   tapMessageType(MANUVR_MSG_SESS_HANGUP);
   tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
 
-  bootComplete();    // Because we are instantiated well after boot, we call this on construction.
+  if (_xport->booted()) {
+    bootComplete();   // Because we are instantiated well after boot, we call this on construction.
+  }
 }
 
 
@@ -162,8 +163,8 @@ void ManuvrSession::mark_session_desync(uint8_t ds_src) {
 * @param   bool Is the sync state machine pending exit (true), or fully-exited (false)?
 */
 void ManuvrSession::mark_session_sync(bool pending) {
-  sequential_parse_failures = MANUVR_MAX_PARSE_FAILURES;
-  sequential_ack_failures   = MANUVR_MAX_ACK_FAILURES;
+  _seq_parse_failures = MANUVR_MAX_PARSE_FAILURES;
+  _seq_ack_failures   = MANUVR_MAX_ACK_FAILURES;
   _stacked_sync_state = _sync_state;               // Stack our session state.
 
   if (pending) {
@@ -309,7 +310,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
           local_log.concatf("XenoManuvrMessage 0x%08x reports an error:\n", (uint32_t) this);
           working->printDebug(&local_log);
         }
-        if (0 == sequential_parse_failures--) {
+        if (0 == _seq_parse_failures--) {
           #ifdef __MANUVR_DEBUG
             if (getVerbosity() > 2) local_log.concat("\nThis was the session's last straw. Session marked itself as desync'd.\n");
           #endif
@@ -390,13 +391,13 @@ void ManuvrSession::printDebug(StringBuilder *output) {
   output->concatf("-- Sync state           %s\n", getSessionSyncString());
   output->concatf("-- _heap_instantiations %u\n", (unsigned long) XenoManuvrMessage::_heap_instantiations);
   output->concatf("-- _heap_frees          %u\n", (unsigned long) XenoManuvrMessage::_heap_freeds);
-  output->concatf("-- seq parse failures   %d\n", sequential_parse_failures);
-  output->concatf("-- seq_ack_failures     %d\n", sequential_ack_failures);
+  output->concatf("-- seq parse failures   %d\n", MANUVR_MAX_PARSE_FAILURES - _seq_parse_failures);
+  output->concatf("-- seq_ack_failures     %d\n", MANUVR_MAX_ACK_FAILURES - _seq_ack_failures);
 
   int ses_buf_len = session_buffer.length();
   if (ses_buf_len > 0) {
     #if defined(__MANUVR_DEBUG)
-      output->concatf("-- Session Buffer (%d bytes) --------------------------\n", ses_buf_len);
+      output->concatf("-- Session Buffer (%d bytes):  ", ses_buf_len);
       session_buffer.printDebug(output);
       output->concat("\n\n");
     #else
@@ -449,17 +450,17 @@ int8_t ManuvrSession::bootComplete() {
   sync_event.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG);
   sync_event.isManaged(true);
   sync_event.specific_target = (EventReceiver*) this;
-  sync_event.alterScheduleRecurrence(-1);
+  sync_event.alterScheduleRecurrence(XENOSESSION_INITIAL_SYNC_COUNT);
   sync_event.alterSchedulePeriod(30);
   sync_event.autoClear(false);
   sync_event.enableSchedule(false);
 
   __kernel->addSchedule(&sync_event);
 
-  if (!owner->alwaysConnected() && owner->connected()) {
+  if (isConnected()) {
     // If we've been instanced because of a connetion, start the sync process...
     // But only if we can take the transport at its word...
-    //sendSyncPacket();
+    mark_session_desync(XENOSESSION_STATE_SYNC_INITIATOR);
   }
   return 1;
 }
@@ -591,3 +592,5 @@ void ManuvrSession::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
+
+#endif // MANUVR_OVER_THE_WIRE

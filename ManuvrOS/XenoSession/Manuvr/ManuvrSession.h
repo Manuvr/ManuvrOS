@@ -189,10 +189,10 @@ class ManuvrSession : public XenoSession {
     StringBuilder session_buffer;
 
     /* These variables track failure cases to inform sync-initiation. */
-    uint8_t sequential_parse_failures;  // How many parse attempts have failed in-a-row?
-    uint8_t sequential_ack_failures;    // How many of our outbound packets have failed to ACK?
-    uint8_t _stacked_sync_state;        // Is our stream sync'd?
-    uint8_t _sync_state;                // Is our stream sync'd?
+    uint8_t _seq_parse_failures;  // How many parse attempts have failed in-a-row?
+    uint8_t _seq_ack_failures;    // How many of our outbound packets have failed to ACK?
+    uint8_t _stacked_sync_state;  // Is our stream sync'd?
+    uint8_t _sync_state;          // Is our stream sync'd?
 
     /* Returns the answer to: "Is this session in sync?"   */
     inline bool syncd() {     return (_sync_state == XENOSESSION_STATE_SYNC_SYNCD);   }

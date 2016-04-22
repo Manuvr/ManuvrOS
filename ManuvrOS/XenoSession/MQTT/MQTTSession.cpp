@@ -64,13 +64,13 @@ MQTTOpts opts = {
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
 MQTTSession::MQTTSession(ManuvrXport* _xport) : XenoSession(_xport) {
-  __class_initializer();
-
   for (int i = 0; i < MAX_MESSAGE_HANDLERS; ++i) {
     messageHandlers[i].topicFilter = 0;
   }
 
-  bootComplete();    // Because we are instantiated well after boot, we call this on construction.
+  if (_xport->booted()) {
+    bootComplete();   // Because we are instantiated well after boot, we call this on construction.
+  }
 }
 
 
@@ -226,8 +226,9 @@ int8_t MQTTSession::bootComplete() {
 
   __kernel->addSchedule(&_ping_timer);
 
-  if (!owner->alwaysConnected() && owner->connected()) {
+  if (isConnected()) {
     // Are we connected right now?
+    sendConnectPacket();
   }
   return 1;
 }
@@ -287,6 +288,16 @@ int8_t MQTTSession::notify(ManuvrRunnable *active_event) {
           bin_stream_rx(buf->string(), buf->length());
         }
       }
+      return_value++;
+      break;
+
+    case MANUVR_MSG_SESS_HANGUP:
+      sendDisconnectPacket();
+      return_value++;
+      break;
+
+    case MANUVR_MSG_SESS_ORIGINATE_MSG:
+      sendKeepAlive();
       return_value++;
       break;
 

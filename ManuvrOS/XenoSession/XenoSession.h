@@ -178,7 +178,7 @@ class XenoSession : public EventReceiver {
     int8_t sendEvent(ManuvrRunnable*);
 
     /* Returns and isolates the lifecycle phase bits. */
-    inline uint8_t getPhase() {      return (session_state & 0xFFF0);    };
+    inline uint8_t getPhase() {      return (session_state & 0x00FF);    };
 
     /* Returns the answer to: "Is this session established?" */
     inline bool isEstablished() {    return (0 != (XENOSESSION_STATE_ESTABLISHED  & getPhase()));   }
@@ -209,10 +209,10 @@ class XenoSession : public EventReceiver {
     *
     * @param   uint8_t The code representing the desired new state of the session.
     */
-    inline void mark_session_state(uint8_t nu_state) {
+    inline void mark_session_state(uint16_t nu_state) {
       session_last_state = session_state;
-      session_state      = (session_state & 0x000F) | nu_state;
-    }
+      session_state      = (session_state & 0xFF00) | (nu_state & 0x00FF);
+    };
 
     int8_t sendPacket(unsigned char *buf, int len);
     int purgeInbound();
