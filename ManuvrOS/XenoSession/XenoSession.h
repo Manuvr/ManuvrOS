@@ -195,9 +195,6 @@ class XenoSession : public EventReceiver {
     /* Returns and isolates the lifecycle phase bits. */
     inline uint8_t getPhase() {      return (session_state & 0xFFF0);    };
 
-    /* Returns the entire state field. */
-    inline uint16_t getState() {     return session_state;    };
-
     /* Returns the answer to: "Is this session established?" */
     inline bool isEstablished() {    return (XENOSESSION_STATE_ESTABLISHED == getPhase());   }
 
@@ -210,8 +207,6 @@ class XenoSession : public EventReceiver {
 
     virtual int8_t bootComplete() =0;
     virtual int8_t bin_stream_rx(unsigned char* buf, int len) =0;            // Used to feed data to the session.
-
-    // TODO: These two should be private.
 
     /**
     * Mark the session with the given status.
