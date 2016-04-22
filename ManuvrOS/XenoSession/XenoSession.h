@@ -83,6 +83,8 @@ class XenoMessage {
     XenoMessage();                  // Typical use: building an inbound XemoMessage.
     XenoMessage(ManuvrRunnable*);   // Create a new XenoMessage with the given event as source data.
 
+    virtual ~XenoMessage() {};
+
     void wipe();                    // Call this to put this object into a fresh state (avoid a free/malloc).
 
     /* Message flow control. */
@@ -216,7 +218,6 @@ class XenoSession : public EventReceiver {
 
 
   private: // TODO: Migrate members here as session mitosis completes telophase.
-
     LinkedList<XenoMessage*> _outbound_messages;   // Messages that are bound for the counterparty.
     LinkedList<XenoMessage*> _inbound_messages;    // Messages that came from the counterparty.
 

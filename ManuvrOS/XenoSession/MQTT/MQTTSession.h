@@ -44,6 +44,16 @@ struct MQTTMessage {
     size_t payloadlen;
 };
 
+struct MQTTOpts {
+	char* clientid;
+	int nodelimiter;
+	char* delimiter;
+	enum QoS qos;
+	char* username;
+	char* password;
+	int showtopics;
+};
+
 struct MessageData {
     MQTTMessage* message;
     MQTTString* topicName;
@@ -76,13 +86,12 @@ class MQTTSession : public XenoSession {
 
   private:
     MessageHandlers messageHandlers[MAX_MESSAGE_HANDLERS];      // Message handlers are indexed by subscription topic
-
     unsigned int _next_packetid;
     unsigned int command_timeout_ms;
-    size_t readbuf_size;
+    unsigned int keepAliveInterval;
 
     unsigned char *readbuf;
-    unsigned int keepAliveInterval;
+    size_t readbuf_size;
     char ping_outstanding;
 
     void (*defaultMessageHandler) (MessageData*);
@@ -93,7 +102,11 @@ class MQTTSession : public XenoSession {
       return _next_packetid = (_next_packetid == MAX_PACKET_ID) ? 1 : _next_packetid + 1;
     };
 
+    int8_t sendSub(const char*, enum QoS);
+    int8_t sendUnsub(const char*);
     int8_t sendKeepAlive();
+    int8_t sendConnectPacket();
+    int8_t sendDisconnectPacket();
 
 };
 

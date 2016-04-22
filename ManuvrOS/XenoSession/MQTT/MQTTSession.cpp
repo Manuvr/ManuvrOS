@@ -38,7 +38,15 @@ limitations under the License.
 * Static members and initializers should be located here. Initializers first, functions second.
 ****************************************************************************************************/
 
-
+MQTTOpts opts = {
+	(char*)"stdout-subscriber",
+  0,
+  (char*)"\n",
+  QOS2,
+  NULL,
+  NULL,
+  0
+};
 
 
 /****************************************************************************************************
@@ -61,7 +69,6 @@ MQTTSession::MQTTSession(ManuvrXport* _xport) : XenoSession(_xport) {
   for (int i = 0; i < MAX_MESSAGE_HANDLERS; ++i) {
     messageHandlers[i].topicFilter = 0;
   }
-
 
   bootComplete();    // Because we are instantiated well after boot, we call this on construction.
 }
@@ -97,12 +104,82 @@ int8_t MQTTSession::bin_stream_rx(unsigned char *buf, int len) {
 
 
 
+int8_t MQTTSession::sendSub(const char* _topicStr, enum QoS qos) {
+  if (isEstablished()) {
+    MQTTString topic = MQTTString_initializer;
+    topic.cstring = (char *)_topicStr;
+
+    size_t buf_size     = 64;
+    unsigned char* buf  = (unsigned char*) alloca(buf_size);
+    int len = MQTTSerialize_subscribe(buf, buf_size, 0, getNextPacketId(), 1, &topic, (int*)&qos);
+
+    if (len > 0) {
+      return (0 == sendPacket(buf, len));
+    }
+  }
+  return -1;
+}
+
+int8_t MQTTSession::sendUnsub(const char* _topicStr) {
+  if (isEstablished()) {
+    MQTTString topic = MQTTString_initializer;
+    topic.cstring = (char *)_topicStr;
+
+    size_t buf_size     = 64;
+    unsigned char* buf  = (unsigned char*) alloca(buf_size);
+    int len = MQTTSerialize_unsubscribe(buf, buf_size, 0, getNextPacketId(), 1, &topic);
+
+    if (len > 0) {
+      return (0 == sendPacket(buf, len));
+    }
+  }
+  return -1;
+}
+
+
 int8_t MQTTSession::sendKeepAlive() {
   if (isEstablished()) {
-    unsigned char* buf  = (unsigned char*) alloca(16);
-    size_t buf_size     = 0;
-
+    size_t buf_size     = 16;
+    unsigned char* buf  = (unsigned char*) alloca(buf_size);
     int len = MQTTSerialize_pingreq(buf, buf_size);
+
+    if (len > 0) {
+      return (0 == sendPacket(buf, len));
+    }
+  }
+  return -1;
+}
+
+
+int8_t MQTTSession::sendConnectPacket() {
+  if (!isEstablished()) {
+    MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
+	  data.willFlag    = 0;
+    data.MQTTVersion = 3;
+    data.clientID.cstring = opts.clientid;
+    data.username.cstring = opts.username;
+    data.password.cstring = opts.password;
+    data.keepAliveInterval = 10;
+    data.cleansession = 1;
+
+    size_t buf_size     = 160;
+    unsigned char* buf  = (unsigned char*) alloca(buf_size);
+    int len = MQTTSerialize_connect(buf, buf_size, &data);
+
+    if (len > 0) {
+      return (0 == sendPacket(buf, len));
+    }
+  }
+  return -1;
+}
+
+
+int8_t MQTTSession::sendDisconnectPacket() {
+  if (isEstablished()) {
+    size_t buf_size     = 64;
+    unsigned char* buf  = (unsigned char*) alloca(buf_size);
+    int len = MQTTSerialize_disconnect(buf, buf_size);
+
     if (len > 0) {
       return (0 == sendPacket(buf, len));
     }
@@ -136,6 +213,8 @@ int8_t MQTTSession::sendKeepAlive() {
 */
 int8_t MQTTSession::bootComplete() {
   XenoSession::bootComplete();
+
+  owner->getMTU();
 
   _ping_timer.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG);
   _ping_timer.isManaged(true);

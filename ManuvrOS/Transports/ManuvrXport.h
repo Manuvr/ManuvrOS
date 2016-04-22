@@ -122,6 +122,7 @@ class ManuvrXport : public EventReceiver {
     */
     int8_t sendBuffer(StringBuilder* buf);
 
+    inline uint32_t getMTU() {   return _xport_mtu;  };
 
     /*
     * State imperatives.
@@ -129,6 +130,10 @@ class ManuvrXport : public EventReceiver {
     virtual int8_t connect() = 0;
     virtual int8_t listen()  = 0;
     virtual int8_t reset()   = 0;
+
+    // Mandatory override.
+    virtual bool   write_port(unsigned char* out, int out_len) = 0;
+    virtual int8_t read_port() = 0;
 
 
     /*
@@ -154,9 +159,6 @@ class ManuvrXport : public EventReceiver {
     inline bool isDebugConsole() {         return (_xport_flags & MANUVR_XPORT_FLAG_DEBUG_CONSOLE);  };
     void isDebugConsole(bool en);
 
-    // Mandatory override.
-    virtual bool   write_port(unsigned char* out, int out_len) = 0;
-    virtual int8_t read_port() = 0;
 
 
     /* We will override these functions in EventReceiver. */
