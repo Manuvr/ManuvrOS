@@ -84,7 +84,7 @@ class XenoManuvrMessage : public XenoMessage {
     XenoManuvrMessage();                  // Typical use: building an inbound XemoMessage.
     XenoManuvrMessage(ManuvrRunnable*);   // Create a new XenoMessage with the given event as source data.
 
-    ~XenoManuvrMessage();
+    ~XenoManuvrMessage() {};
 
     void wipe();                    // Call this to put this object into a fresh state (avoid a free/malloc).
 
@@ -121,17 +121,12 @@ class XenoManuvrMessage : public XenoMessage {
 
     const char* getMessageStateString();
 
-
-    static const uint8_t SYNC_PACKET_BYTES[4];    // Plase note the subtle abuse of type....
-
-    static int contains_sync_pattern(uint8_t* buf, int len);
-    static int locate_sync_break(uint8_t* buf, int len);
-
     /* Preallocation machinary. */
     static uint32_t _heap_instantiations;   // Prealloc starvation counter...
     static uint32_t _heap_freeds;           // Prealloc starvation counter...
     static XenoMessage* fetchPreallocation(XenoSession*);
     static void reclaimPreallocation(XenoMessage*);
+    static const uint8_t SYNC_PACKET_BYTES[4];    // Plase note the subtle abuse of type....
 
 
   private:
@@ -156,6 +151,9 @@ class XenoManuvrMessage : public XenoMessage {
     ManuvrRunnable _timeout;   // Occasionally, we must let a defunct message die on the wire...
 
     static XenoManuvrMessage __prealloc_pool[XENOMSG_M_PREALLOC_COUNT];
+
+    static int contains_sync_pattern(uint8_t* buf, int len);
+    static int locate_sync_break(uint8_t* buf, int len);
 };
 
 

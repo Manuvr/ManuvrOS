@@ -311,7 +311,6 @@ int XenoSession::purgeOutbound() {
       Kernel::log(&local_log);
     }
     #endif
-    delete temp;
     _outbound_messages.remove();
   }
   return return_value;
@@ -335,7 +334,6 @@ int XenoSession::purgeInbound() {
       Kernel::log(&local_log);
     }
     #endif
-    delete temp;
     _inbound_messages.remove();
   }
 

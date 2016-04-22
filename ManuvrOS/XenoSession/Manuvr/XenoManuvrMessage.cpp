@@ -108,7 +108,7 @@ void XenoManuvrMessage::reclaimPreallocation(XenoMessage* obj) {
     #endif
     // We were created because our prealloc was starved. we are therefore a transient heap object.
     _heap_freeds++;
-    delete obj;
+    delete (XenoManuvrMessage*) obj;
   }
 }
 
@@ -178,14 +178,6 @@ XenoManuvrMessage::XenoManuvrMessage(ManuvrRunnable* existing_event) {
   // Should maybe set a flag in the event to indicate that we are now responsible
   //   for memory upkeep? Don't want it to get jerked out from under us and cause a crash.
   provideEvent(existing_event);
-}
-
-
-XenoManuvrMessage::~XenoManuvrMessage() {
-  if (NULL != event) {
-    // TODO: Now we are worried about this.
-    event = NULL;
-  }
 }
 
 

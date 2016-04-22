@@ -74,13 +74,6 @@ XenoMessage::XenoMessage(ManuvrRunnable* existing_event) {
 }
 
 
-XenoMessage::~XenoMessage() {
-  if (NULL != event) {
-    // TODO: Now we are worried about this.
-    event = NULL;
-  }
-}
-
 
 /**
 * Sometimes we might want to re-use this allocated object rather than free it.

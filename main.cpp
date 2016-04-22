@@ -157,7 +157,7 @@ int main(int argc, char *argv[]) {
 
   // We need at least ONE transport to be useful...
   #if defined (MANUVR_SUPPORT_TCPSOCKET)
-    ManuvrTCP tcp_cli((const char*) "127.0.0.1", 2319);
+    ManuvrTCP tcp_cli((const char*) "127.0.0.1", 1883);
     kernel->subscribe(&tcp_cli);
 
     #if defined(MANUVR_SUPPORT_MQTT)

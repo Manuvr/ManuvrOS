@@ -83,8 +83,6 @@ class XenoMessage {
     XenoMessage();                  // Typical use: building an inbound XemoMessage.
     XenoMessage(ManuvrRunnable*);   // Create a new XenoMessage with the given event as source data.
 
-    ~XenoMessage();
-
     void wipe();                    // Call this to put this object into a fresh state (avoid a free/malloc).
 
     /* Message flow control. */
