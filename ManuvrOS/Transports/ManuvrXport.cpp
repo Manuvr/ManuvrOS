@@ -42,7 +42,6 @@ For debuggability, the transport has a special mode for acting as a debug
 #include "ManuvrXport.h"
 #include "FirmwareDefs.h"
 #include "XenoSession/XenoSession.h"
-#include "XenoSession/Manuvr/ManuvrSession.h"
 
 
 #if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
@@ -220,21 +219,30 @@ void ManuvrXport::connected(bool en) {
   _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_CONNECTED) : (_xport_flags & ~(MANUVR_XPORT_FLAG_CONNECTED));
   if (!nonSessionUsage()) {
     if (en) {
-      // We are expected to instantiate a XenoSession, and broadcast its existance.
-      // This will put it into the Event system so that auth and such can be handled cleanly.
-      // Once the session sets up, it will broadcast itself as having done so.
-      // TODO: Session discovery should happen at this point.
-      //XenoSession* ses = new XenoSession(this);
-      XenoSession* ses = (XenoSession*) new ManuvrSession(this);
-      provide_session(ses);
+      if (NULL == session) {
+        // We are expected to instantiate a XenoSession, and broadcast its existance.
+        // This will put it into the Event system so that auth and such can be handled cleanly.
+        // Once the session sets up, it will broadcast itself as having done so.
+        // TODO: Session discovery should happen at this point.
+        //XenoSession* ses = new XenoSession(this);
+        XenoSession* ses = (XenoSession*) new ManuvrSession(this);
+        provide_session(ses);
 
-      ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
-      event->addArg((EventReceiver*) ses);
-      raiseEvent(event);
+        ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
+        event->addArg((EventReceiver*) ses);
+        raiseEvent(event);
+
+        ses->connection_callback(true);
+      }
+      else {
+        // If there is a session already here, we'll mark it connected.
+        session->connection_callback(true);
+      }
     }
     else {
       // This is a disconnection event. We might want to cleanup all of our sessions
       // that are outstanding.
+      session->connection_callback(false);
     }
   }
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)

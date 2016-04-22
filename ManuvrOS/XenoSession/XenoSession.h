@@ -184,6 +184,8 @@ class XenoSession : public EventReceiver {
     inline bool isEstablished() {    return (0 != (XENOSESSION_STATE_ESTABLISHED  & getPhase()));   }
     inline bool isConnected() {      return (0 == (XENOSESSION_STATE_PENDING_CONN & getPhase()));   }
 
+    virtual int8_t connection_callback(bool connected);
+
     /* Overrides from EventReceiver */
     virtual void procDirectDebugInstruction(StringBuilder*);
     virtual const char* getReceiverName() =0;

@@ -368,7 +368,10 @@ int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
 }
 
 
-
+int8_t XenoSession::connection_callback(bool connected) {
+  mark_session_state(connected ? XENOSESSION_STATE_ESTABLISHED : XENOSESSION_STATE_DISCONNECTED);
+  return 0;
+}
 
 
 /****************************************************************************************************

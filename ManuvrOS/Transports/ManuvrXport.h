@@ -160,14 +160,11 @@ class ManuvrXport : public EventReceiver {
     void isDebugConsole(bool en);
 
 
-
     /* We will override these functions in EventReceiver. */
     // TODO: I'm not sure I've evaluated the full impact of this sort of
     //    choice.  Calltimes? vtable size? alignment? Fragility? Dig.
     virtual void   printDebug(StringBuilder *);
-    //virtual int8_t bootComplete();
     virtual int8_t notify(ManuvrRunnable*);
-    //virtual int8_t callback_proc(ManuvrRunnable *);
 
     // We can have up-to 65535 transport instances concurrently. This well-exceeds
     //   the configured limits of most linux installations, so it should be enough.
