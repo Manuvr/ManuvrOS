@@ -42,7 +42,7 @@ XenoSession is the class that manages dialog with other systems via some
 /**
 * Logging support fxn.
 */
-const char* XenoSession::getSessionStateString(uint16_t state_code) {
+const char* XenoSession::sessionPhaseString(uint16_t state_code) {
   switch (state_code & 0x000F) {
     case XENOSESSION_STATE_UNINITIALIZED:    return "UNINITIALIZED";
     case XENOSESSION_STATE_PENDING_SETUP:    return "PENDING_SETUP";
@@ -76,12 +76,7 @@ XenoSession::XenoSession(ManuvrXport* _xport) {
   owner = _xport;
   session_state             = XENOSESSION_STATE_UNINITIALIZED;
   session_last_state        = XENOSESSION_STATE_UNINITIALIZED;
-  sequential_parse_failures = 0;
-  sequential_ack_failures   = 0;
   working                   = NULL;
-
-  MAX_PARSE_FAILURES  = 3;  // How many failures-to-parse should we tolerate before SYNCing?
-  MAX_ACK_FAILURES    = 3;  // How many failures-to-ACK should we tolerate before SYNCing?
 }
 
 
@@ -93,6 +88,10 @@ XenoSession::~XenoSession() {
 
   purgeInbound();  // Need to do careful checks in here for open comm loops.
   purgeOutbound(); // Need to do careful checks in here for open comm loops.
+
+  _relay_list.clear();
+  _pending_exec.clear();
+  _pending_reply.clear();
 
   Kernel::raiseEvent(MANUVR_MSG_SESS_HANGUP, NULL);
 }
@@ -119,10 +118,12 @@ int8_t XenoSession::tapMessageType(uint16_t code) {
       return -1;
   }
 
-  MessageTypeDef* temp_msg_def = (MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(code);
-  if (!msg_relay_list.contains(temp_msg_def)) {
-    msg_relay_list.insert(temp_msg_def);
+  std::map<uint16_t, MessageTypeDef*>::iterator it = _relay_list.find(code);
+  if (_relay_list.end() == it) {
+    // If the relay list doesn't already have the message....
+    _relay_list[code] = (MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(code);
   }
+
   return 0;
 }
 
@@ -134,7 +135,7 @@ int8_t XenoSession::tapMessageType(uint16_t code) {
 * @return  nonzero if there was a problem.
 */
 int8_t XenoSession::untapMessageType(uint16_t code) {
-  msg_relay_list.remove((MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(code));
+  _relay_list.erase(code);
   return 0;
 }
 
@@ -146,7 +147,7 @@ int8_t XenoSession::untapMessageType(uint16_t code) {
 * @return  nonzero if there was a problem.
 */
 int8_t XenoSession::untapAll() {
-  msg_relay_list.clear();
+  _relay_list.clear();
   return 0;
 }
 
@@ -159,12 +160,12 @@ int8_t XenoSession::untapAll() {
 */
 int8_t XenoSession::markMessageComplete(uint16_t target_id) {
   XenoMessage *working_xeno;
-  for (int i = 0; i < outbound_messages.size(); i++) {
-    working_xeno = outbound_messages.get(i);
+  for (int i = 0; i < _outbound_messages.size(); i++) {
+    working_xeno = _outbound_messages.get(i);
     if (target_id == working_xeno->uniqueId()) {
       switch (working_xeno->getState()) {
         case XENO_MSG_PROC_STATE_AWAITING_REAP:
-          outbound_messages.remove(working_xeno);
+          _outbound_messages.remove(working_xeno);
           // TODO: How to cope with this?
           //XenoMessage::reclaimPreallocation(working_xeno);
           return 1;
@@ -235,11 +236,11 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
     /* General system events */
     case MANUVR_MSG_BT_CONNECTION_LOST:
       session_state = XENOSESSION_STATE_DISCONNECTED;
-      //msg_relay_list.clear();
+      //_relay_list.clear();
       purgeInbound();
       purgeOutbound();
       #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 3) local_log.concatf("0x%08x Session is now in state %s.\n", (uint32_t) this, getSessionStateString(getPhase()));
+      if (getVerbosity() > 3) local_log.concatf("0x%08x Session is now in state %s.\n", (uint32_t) this, sessionPhaseString(getPhase()));
       #endif
       return_value++;
       break;
@@ -266,11 +267,6 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
       return_value++;
       break;
 
-    case MANUVR_MSG_SESS_DUMP_DEBUG:
-      printDebug(&local_log);
-      return_value++;
-      break;
-
     default:
       return_value += EventReceiver::notify(active_event);
       break;
@@ -280,7 +276,9 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
   if (active_event->originator != (EventReceiver*) this) {
     if ((XENO_SESSION_IGNORE_NON_EXPORTABLES) && (active_event->isExportable())) {
       /* This is the block that allows the counterparty to intercept events of its choosing. */
-      if (msg_relay_list.contains(active_event->getMsgDef())) {
+      std::map<uint16_t, MessageTypeDef*>::iterator it = _relay_list.find(active_event->event_code);
+      if (_relay_list.end() == it) {
+        // If the relay list doesn't already have the message....
         // If we are in this block, it means we need to serialize the event and send it.
         sendEvent(active_event);
         return_value++;
@@ -305,10 +303,10 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
 * @return  int The number of outbound messages that were purged.
 */
 int XenoSession::purgeOutbound() {
-  int return_value = outbound_messages.size();
+  int return_value = _outbound_messages.size();
   XenoMessage* temp;
-  while (outbound_messages.hasNext()) {
-    temp = outbound_messages.get();
+  while (_outbound_messages.hasNext()) {
+    temp = _outbound_messages.get();
     #ifdef __MANUVR_DEBUG
     if (getVerbosity() > 6) {
       local_log.concatf("\nSession 0x%08x Destroying outbound msg:\n", (uint32_t) this);
@@ -317,7 +315,7 @@ int XenoSession::purgeOutbound() {
     }
     #endif
     delete temp;
-    outbound_messages.remove();
+    _outbound_messages.remove();
   }
   return return_value;
 }
@@ -329,10 +327,10 @@ int XenoSession::purgeOutbound() {
 * @return  int The number of inbound messages that were purged.
 */
 int XenoSession::purgeInbound() {
-  int return_value = inbound_messages.size();
+  int return_value = _inbound_messages.size();
   XenoMessage* temp;
-  while (inbound_messages.hasNext()) {
-    temp = inbound_messages.get();
+  while (_inbound_messages.hasNext()) {
+    temp = _inbound_messages.get();
     #ifdef __MANUVR_DEBUG
     if (getVerbosity() > 6) {
       local_log.concatf("\nSession 0x%08x Destroying inbound msg:\n", (uint32_t) this);
@@ -341,37 +339,12 @@ int XenoSession::purgeInbound() {
     }
     #endif
     delete temp;
-    inbound_messages.remove();
+    _inbound_messages.remove();
   }
-  session_buffer.clear();   // Also purge whatever hanging RX buffer we may have had.
+
   return return_value;
 }
 
-
-
-/**
-* We may decide to send a no-argument packet that demands acknowledgement so that we can...
-*  1. Unambiguously recover from a desync state without resorting to timers.
-*  2. Periodically ping the counterparty to ensure that we have not disconnected.
-*
-* The keep-alive system is not handled in the transport because it is part of the protocol.
-* A transport might have its own link-layer-appropriate keep-alive mechanism, which can be
-*   used in-place of the KA at this (Session) layer. In such case, the Transport class would
-*   carry configuration flags/members that co-ordinate with this class so that the Session
-*   doesn't feel the need to use case (2) given above.
-*               ---J. Ian Lindsay   Tue Aug 04 23:12:55 MST 2015
-*/
-int8_t XenoSession::sendKeepAlive() {
-  if (owner->connected()) {
-    ManuvrRunnable* ka_event = Kernel::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE);
-    sendEvent(ka_event);
-
-    //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
-    //event->specific_target = owner;  //   event to be the transport that instantiated us.
-    //raiseEvent(event);
-  }
-  return 0;
-}
 
 
 /**
@@ -388,7 +361,7 @@ int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
   //}
 
   //if (nu_outbound_msg->expectsACK()) {
-  //  outbound_messages.insert(nu_outbound_msg);
+  //  _outbound_messages.insert(nu_outbound_msg);
   //}
 
   // We are about to pass a message across the transport.
@@ -399,28 +372,6 @@ int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
   return 0;
 }
 
-
-
-// At this point, we can take it for granted that this message contains a valid event.
-// This is only for processing inbound messages.
-int8_t XenoSession::take_message() {
-  XenoMessage* nu_xm = working;
-  working = NULL;                   // ...make space for the next message.
-
-  switch (nu_xm->event->event_code) {
-    case MANUVR_MSG_REPLY:
-      break;
-
-    case MANUVR_MSG_SYNC_KEEPALIVE:
-      break;
-
-    default:
-      break;
-  }
-
-  if (local_log.length() > 0) Kernel::log(&local_log);
-  return 0;
-}
 
 
 
@@ -449,36 +400,27 @@ void XenoSession::printDebug(StringBuilder *output) {
   EventReceiver::printDebug(output);
 
   output->concatf("-- Session ID           0x%08x\n", (uint32_t) this);
-  output->concatf("-- Session state        %s\n--\n", getSessionStateString(getPhase()));
+  output->concatf("-- Session phase        %s\n--\n", sessionPhaseString(getPhase()));
 
-  int ses_buf_len = session_buffer.length();
-  if (ses_buf_len > 0) {
-    output->concatf("\n-- Session Buffer (%d bytes) --------------------------\n", ses_buf_len);
-    for (int i = 0; i < ses_buf_len; i++) {
-      output->concatf("0x%02x ", *(session_buffer.string() + i));
-    }
-    output->concat("\n\n");
+  std::map<uint16_t, MessageTypeDef*>::iterator it;
+  output->concat("-- Msg codes to relay:\n");
+  for (it = _relay_list.begin(); it != _relay_list.end(); it++) {
+    output->concatf("\t%s\n", it->second->debug_label);
   }
 
-  output->concat("\n-- Listening for the following event codes:\n");
-  int x = msg_relay_list.size();
-  for (int i = 0; i < x; i++) {
-    output->concatf("\t%s\n", msg_relay_list.get(i)->debug_label);
-  }
-
-  x = outbound_messages.size();
+  int x = _outbound_messages.size();
   if (x > 0) {
     output->concatf("\n-- Outbound Queue %d total, showing top %d ------------\n", x, XENO_SESSION_MAX_QUEUE_PRINT);
     for (int i = 0; i < min(x, XENO_SESSION_MAX_QUEUE_PRINT); i++) {
-        outbound_messages.get(i)->printDebug(output);
+        _outbound_messages.get(i)->printDebug(output);
     }
   }
 
-  x = inbound_messages.size();
+  x = _inbound_messages.size();
   if (x > 0) {
     output->concatf("\n-- Inbound Queue %d total, showing top %d -------------\n", x, XENO_SESSION_MAX_QUEUE_PRINT);
     for (int i = 0; i < min(x, XENO_SESSION_MAX_QUEUE_PRINT); i++) {
-      inbound_messages.get(i)->printDebug(output);
+      _inbound_messages.get(i)->printDebug(output);
     }
   }
 
@@ -499,19 +441,6 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
   }
 
   switch (*(str)) {
-    case 'S':  // Send a mess of sync packets.
-      //sync_event.alterScheduleRecurrence(XENOSESSION_INITIAL_SYNC_COUNT);
-      //sync_event.enableSchedule(true);
-      break;
-    case 'i':  // Send a mess of sync packets.
-      if (1 == temp_byte) {
-      }
-      else if (2 == temp_byte) {
-      }
-      else {
-        printDebug(&local_log);
-      }
-      break;
     case 'q':  // Manual message queue purge.
       purgeOutbound();
       purgeInbound();

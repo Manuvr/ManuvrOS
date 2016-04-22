@@ -172,26 +172,9 @@ int8_t MQTTSession::notify(ManuvrRunnable *active_event) {
       return_value++;
       break;
 
-    case MANUVR_MSG_SESS_DUMP_DEBUG:
-      printDebug(&local_log);
-      return_value++;
-      break;
-
     default:
       return_value += XenoSession::notify(active_event);
       break;
-  }
-
-  /* We don't want to resonate... Don't react to Events that have us as the originator. */
-  if (active_event->originator != (EventReceiver*) this) {
-    if ((XENO_SESSION_IGNORE_NON_EXPORTABLES) && (active_event->isExportable())) {
-      /* This is the block that allows the counterparty to intercept events of its choosing. */
-      if (msg_relay_list.contains(active_event->getMsgDef())) {
-        // If we are in this block, it means we need to serialize the event and send it.
-        sendEvent(active_event);
-        return_value++;
-      }
-    }
   }
 
   if (local_log.length() > 0) Kernel::log(&local_log);

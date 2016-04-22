@@ -32,6 +32,11 @@ limitations under the License.
 ManuvrSession::ManuvrSession(ManuvrXport* _xport) : XenoSession(_xport) {
   __class_initializer();
 
+  sequential_parse_failures = 0;
+  sequential_ack_failures   = 0;
+  MAX_PARSE_FAILURES  = 3;  // How many failures-to-parse should we tolerate before SYNCing?
+  MAX_ACK_FAILURES    = 3;  // How many failures-to-ACK should we tolerate before SYNCing?
+
   // These are messages that we want to relay from the rest of the system.
   tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
   tapMessageType(MANUVR_MSG_SESS_HANGUP);
@@ -122,29 +127,28 @@ int8_t ManuvrSession::scan_buffer_for_sync() {
 * @param   uint8_t The sync state code that represents where in the sync-state-machine we should be.
 */
 void ManuvrSession::mark_session_desync(uint8_t ds_src) {
-  session_last_state = session_state;               // Stack our session state.
-  session_state = getPhase() | ds_src;
-  if (session_state & ds_src) {
+  if (_sync_state & ds_src) {
     #ifdef __MANUVR_DEBUG
     if (getVerbosity() > 3) local_log.concatf("Session 0x%08x is already in the requested sync state (%s). Doing nothing.\n", (uint32_t) this, getSessionSyncString());
     #endif
   }
   else {
-    switch (ds_src) {
-      case XENOSESSION_STATE_SYNC_INITIATED:    // CP-initiated sync
-        break;
-      case XENOSESSION_STATE_SYNC_INITIATOR:    // We initiated sync
-        break;
+    _stacked_sync_state = getState();           // Stack our sync state.
+    _sync_state = ds_src;
+    switch (_sync_state) {
       case XENOSESSION_STATE_SYNC_PEND_EXIT:    // Sync has been recognized and we are rdy for a real packet.
-        break;
       case XENOSESSION_STATE_SYNC_SYNCD:        // Nominal state. Session is in sync.
         break;
+      case XENOSESSION_STATE_SYNC_INITIATED:    // CP-initiated sync
+      case XENOSESSION_STATE_SYNC_INITIATOR:    // We initiated sync
       case XENOSESSION_STATE_SYNC_CASTING:      //
+        sync_event.enableSchedule(true);
+        break;
       default:
         break;
     }
   }
-  sync_event.enableSchedule(true);
+
 
   if (local_log.length() > 0) Kernel::log(&local_log);
 }
@@ -161,16 +165,16 @@ void ManuvrSession::mark_session_desync(uint8_t ds_src) {
 void ManuvrSession::mark_session_sync(bool pending) {
   sequential_parse_failures = 0;
   sequential_ack_failures   = 0;
-  session_last_state = session_state;               // Stack our session state.
+  _stacked_sync_state = _sync_state;               // Stack our session state.
 
   if (pending) {
     // We *think* we might be done sync'ing...
-    session_state = getSync() | XENOSESSION_STATE_SYNC_PEND_EXIT;
+    _sync_state = XENOSESSION_STATE_SYNC_PEND_EXIT;
     sendEvent(Kernel::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE));
   }
   else {
     // We are definately done sync'ing.
-    session_state = getPhase();
+    _sync_state = XENOSESSION_STATE_SYNC_SYNCD;
 
     if (!isEstablished()) {
       // When (if) the session syncs, various components in the firmware might
@@ -216,7 +220,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
   }
   #endif
 
-  switch (getSync()) {   // Consider the top four bits of the session state.
+  switch (_sync_state) {   // Consider the top four bits of the session state.
     case XENOSESSION_STATE_SYNC_SYNCD:       // The nominal case. Session is in-sync. Do nothing.
     case XENOSESSION_STATE_SYNC_PEND_EXIT:   // We have exchanged sync packets with the counterparty.
       break;
@@ -242,7 +246,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
       break;
     default:
       #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 1) local_log.concatf("ILLEGAL session_state: 0x%02x (top 4)\n", session_state);
+      if (getVerbosity() > 1) local_log.concatf("ILLEGAL _sync_state: 0x%02x (top 4)\n", _sync_state);
       #endif
       break;
   }
@@ -263,7 +267,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
       break;
     default:
       #ifdef __MANUVR_DEBUG
-      //if (getVerbosity() > 1) local_log.concatf("ILLEGAL session_state: 0x%02x (bottom 4)\n", session_state);
+      if (getVerbosity() > 1) local_log.concatf("ILLEGAL session_state: 0x%04x\n", getPhase());
       #endif
       break;
   }
@@ -287,7 +291,6 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
     switch (working->getState()) {
       case XENO_MSG_PROC_STATE_AWAITING_PROC:
         // If the message is completed, we can move forward with proc'ing it...
-        take_message();
         break;
       case XENO_MSG_PROC_STATE_SYNC_PACKET:
         // T'was a sync packet. Consider our own state and react appropriately.
@@ -331,12 +334,37 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
   if (statcked_sess_state != getPhase()) {
     // The session changed state. Print it.
     #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 3) local_log.concatf("XenoSession state change:\t %s ---> %s\n", getSessionStateString(statcked_sess_state), getSessionStateString(getPhase()));
+      if (getVerbosity() > 3) local_log.concatf("XenoSession state change:\t %s ---> %s\n", sessionPhaseString(statcked_sess_state), sessionPhaseString(getPhase()));
     #endif
   }
 
   if (local_log.length() > 0) Kernel::log(&local_log);
   return return_value;
+}
+
+
+/**
+* We may decide to send a no-argument packet that demands acknowledgement so that we can...
+*  1. Unambiguously recover from a desync state without resorting to timers.
+*  2. Periodically ping the counterparty to ensure that we have not disconnected.
+*
+* The keep-alive system is not handled in the transport because it is part of the protocol.
+* A transport might have its own link-layer-appropriate keep-alive mechanism, which can be
+*   used in-place of the KA at this (Session) layer. In such case, the Transport class would
+*   carry configuration flags/members that co-ordinate with this class so that the Session
+*   doesn't feel the need to use case (2) given above.
+*               ---J. Ian Lindsay   Tue Aug 04 23:12:55 MST 2015
+*/
+int8_t ManuvrSession::sendKeepAlive() {
+  if (owner->connected()) {
+    ManuvrRunnable* ka_event = Kernel::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE);
+    sendEvent(ka_event);
+
+    //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
+    //event->specific_target = owner;  //   event to be the transport that instantiated us.
+    //raiseEvent(event);
+  }
+  return 0;
 }
 
 
@@ -362,6 +390,17 @@ void ManuvrSession::printDebug(StringBuilder *output) {
   output->concatf("-- _heap_frees          %u\n", (unsigned long) XenoManuvrMessage::_heap_freeds);
   output->concatf("-- seq parse failures   %d\n", sequential_parse_failures);
   output->concatf("-- seq_ack_failures     %d\n", sequential_ack_failures);
+
+  int ses_buf_len = session_buffer.length();
+  if (ses_buf_len > 0) {
+    #if defined(__MANUVR_DEBUG)
+      output->concatf("-- Session Buffer (%d bytes) --------------------------\n", ses_buf_len);
+      session_buffer.printDebug(output);
+      output->concat("\n\n");
+    #else
+      output->concatf("-- Session Buffer (%d bytes)\n\n", ses_buf_len);
+    #endif
+  }
 }
 
 
@@ -369,7 +408,7 @@ void ManuvrSession::printDebug(StringBuilder *output) {
 * Logging support fxn.
 */
 const char* ManuvrSession::getSessionSyncString() {
-  switch (getSync()) {
+  switch (_sync_state) {
     case XENOSESSION_STATE_SYNC_SYNCD:       return "SYNCD";
     case XENOSESSION_STATE_SYNC_CASTING:     return "CASTING";
     case XENOSESSION_STATE_SYNC_PEND_EXIT:   return "PENDING EXIT";
@@ -469,12 +508,12 @@ int8_t ManuvrSession::notify(ManuvrRunnable *active_event) {
   switch (active_event->event_code) {
     /* General system events */
     case MANUVR_MSG_BT_CONNECTION_LOST:
-      session_state = XENOSESSION_STATE_DISCONNECTED;
-      //msg_relay_list.clear();
+      mark_session_state(XENOSESSION_STATE_DISCONNECTED);
       purgeInbound();
       purgeOutbound();
+      session_buffer.clear();   // Also purge whatever hanging RX buffer we may have had.
       #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 3) local_log.concatf("0x%08x Session is now in state %s.\n", (uint32_t) this, getSessionStateString(getPhase()));
+      if (getVerbosity() > 3) local_log.concatf("0x%08x Session is now in state %s.\n", (uint32_t) this, sessionPhaseString(getPhase()));
       #endif
       return_value++;
       break;
@@ -506,29 +545,9 @@ int8_t ManuvrSession::notify(ManuvrRunnable *active_event) {
       return_value++;
       break;
 
-    case MANUVR_MSG_SESS_DUMP_DEBUG:
-      printDebug(&local_log);
-      return_value++;
-      break;
-
     default:
       return_value += XenoSession::notify(active_event);
       break;
-  }
-
-  /* We don't want to resonate... Don't react to Events that have us as the originator. */
-  if (active_event->originator != (EventReceiver*) this) {
-    if ((XENO_SESSION_IGNORE_NON_EXPORTABLES) && (active_event->isExportable())) {
-      /* This is the block that allows the counterparty to intercept events of its choosing. */
-
-      if (syncd()) {
-        if (msg_relay_list.contains(active_event->getMsgDef())) {
-          // If we are in this block, it means we need to serialize the event and send it.
-          sendEvent(active_event);
-          return_value++;
-        }
-      }
-    }
   }
 
   if (local_log.length() > 0) Kernel::log(&local_log);
@@ -563,9 +582,8 @@ void ManuvrSession::procDirectDebugInstruction(StringBuilder *input) {
       Kernel::raiseEvent(MANUVR_MSG_SESS_ORIGINATE_MSG, NULL);
       break;
 
-
     default:
-      EventReceiver::procDirectDebugInstruction(input);
+      XenoSession::procDirectDebugInstruction(input);
       break;
   }
 

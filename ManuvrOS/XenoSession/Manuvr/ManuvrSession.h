@@ -61,6 +61,17 @@ limitations under the License.
 
 #include "../XenoSession.h"
 
+/*
+* These are bitflags in the same space as the above-def'd constants. They all pertain to
+* the sync state of the session.
+*/
+// TODO: Split these out into ManuvrSession and cut the mutual-usage of the same flags variable.
+#define XENOSESSION_STATE_SYNC_INITIATED  0x0080  // The counterparty noticed a problem.
+#define XENOSESSION_STATE_SYNC_INITIATOR  0x0040  // We noticed a problem.
+#define XENOSESSION_STATE_SYNC_PEND_EXIT  0x0020  // We think we have just recovered from a sync.
+#define XENOSESSION_STATE_SYNC_CASTING    0x0010  // If set, we are broadcasting sync packets.
+#define XENOSESSION_STATE_SYNC_SYNCD      0x0000  // Pedantry... Just helps document.
+
 
 /**
 * This class is a special extension of ManuvrRunnable that is intended for communication with
@@ -157,15 +168,10 @@ class ManuvrSession : public XenoSession {
 
     int8_t sendSyncPacket();
 
-    // Returns and isolates the sync bits.
-    inline uint8_t getSync() {
-      return (session_state & 0x00F0);
-    };
+    /* Returns the answer to: "Is this session in sync?"   */
+    inline bool syncd() {     return (_sync_state == XENOSESSION_STATE_SYNC_SYNCD);   }
 
-    // Returns the answer to: "Is this session in sync?"
-    inline bool syncd() {
-      return (0 == ((session_state & 0x00F0) | XENOSESSION_STATE_SYNC_SYNCD));
-    }
+    int8_t sendKeepAlive();
 
     /* Overrides from EventReceiver */
     void procDirectDebugInstruction(StringBuilder*);
@@ -181,6 +187,20 @@ class ManuvrSession : public XenoSession {
 
   private:
     ManuvrRunnable sync_event;
+
+    /*
+    * A buffer for holding inbound stream until enough has arrived to parse. This eliminates
+    *   the need for the transport to care about how much data we consumed versus left in its buffer.
+    */
+    StringBuilder session_buffer;
+
+    /* These variables track failure cases to inform sync-initiation. */
+    uint8_t MAX_PARSE_FAILURES;         // How many failures-to-parse should we tolerate before SYNCing?
+    uint8_t MAX_ACK_FAILURES;           // How many failures-to-ACK should we tolerate before SYNCing?
+    uint8_t sequential_parse_failures;  // How many parse attempts have failed in-a-row?
+    uint8_t sequential_ack_failures;    // How many of our outbound packets have failed to ACK?
+    uint8_t _stacked_sync_state;        // Is our stream sync'd?
+    uint8_t _sync_state;                // Is our stream sync'd?
 
     int8_t scan_buffer_for_sync();
     void   mark_session_desync(uint8_t desync_source);

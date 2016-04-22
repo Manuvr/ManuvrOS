@@ -41,7 +41,6 @@ XenoManuvrMessage is the class that is the interface between ManuvrRunnables and
 *
 * Static members and initializers should be located here. Initializers first, functions second.
 ****************************************************************************************************/
-
 /* This is what a sync packet looks like. Always. So common, we'll hard-code it. */
 const uint8_t XenoManuvrMessage::SYNC_PACKET_BYTES[4] = {0x04, 0x00, 0x00, CHECKSUM_PRELOAD_BYTE};
 
