@@ -98,6 +98,10 @@ MQTTSession::~MQTTSession() {
 */
 int8_t MQTTSession::bin_stream_rx(unsigned char *buf, int len) {
   int8_t return_value = 0;
+	_input_buf.concat(buf, len);
+	if (_input_buf.length() >= 1) {
+		
+	}
   return return_value;
 }
 
@@ -224,6 +228,14 @@ int8_t MQTTSession::sendPublish(ManuvrRunnable* _msg) {
 	return -1;
 }
 
+
+int8_t MQTTSession::connection_callback(bool _con) {
+	XenoSession::connection_callback(_con);
+	if (_con) {
+		sendConnectPacket();
+	}
+  return 0;
+}
 
 /****************************************************************************************************
 *  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄

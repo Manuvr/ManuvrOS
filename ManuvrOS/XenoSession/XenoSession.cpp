@@ -383,7 +383,7 @@ int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
 
 
 int8_t XenoSession::connection_callback(bool _con) {
-  mark_session_state(_con ? XENOSESSION_STATE_ESTABLISHED : XENOSESSION_STATE_DISCONNECTED);
+  mark_session_state(_con ? XENOSESSION_STATE_PENDING_SETUP : XENOSESSION_STATE_DISCONNECTED);
   return 0;
 }
 

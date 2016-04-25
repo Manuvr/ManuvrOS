@@ -242,6 +242,7 @@ int8_t ManuvrTCP::read_port() {
   if (connected()) {
     unsigned char *buf = (unsigned char *) alloca(256);
     int n;
+    XenoSession *ses         = NULL;
     ManuvrRunnable *event    = NULL;
     StringBuilder  *nu_data  = NULL;
 
@@ -250,11 +251,11 @@ int8_t ManuvrTCP::read_port() {
       if (n > 0) {
         bytes_received += n;
 
+        // Do stuff regarding the data we just read...
         event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
         nu_data = new StringBuilder(buf, n);
         event->markArgForReap(event->addArg(nu_data), true);
 
-        // Do stuff regarding the data we just read...
         if (NULL != session) {
           session->notify(event);
         }

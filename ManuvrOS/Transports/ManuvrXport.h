@@ -217,7 +217,4 @@ class ManuvrXport : public EventReceiver {
     uint32_t _xport_flags;
 };
 
-
-// TODO: Might we need a transport manager of some sort, for cases like TCP socket listenrs, etc...?
-
 #endif   // __MANUVR_XPORT_H__

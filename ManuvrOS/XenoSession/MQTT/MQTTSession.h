@@ -71,6 +71,8 @@ class MQTTSession : public XenoSession {
     MQTTSession(ManuvrXport*);
     ~MQTTSession();
 
+    int8_t connection_callback(bool connected);
+
     /* Overrides from EventReceiver */
     void procDirectDebugInstruction(StringBuilder*);
     const char* getReceiverName();
@@ -85,6 +87,7 @@ class MQTTSession : public XenoSession {
 
 
   private:
+    StringBuilder _input_buf;
     MessageHandlers messageHandlers[MAX_MESSAGE_HANDLERS];      // Message handlers are indexed by subscription topic
     unsigned int _next_packetid;
     unsigned int command_timeout_ms;
