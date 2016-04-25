@@ -47,6 +47,7 @@ For debuggability, the transport has a special mode for acting as a debug
 
 #include <Platform/Platform.h>
 
+
 /*
 * Notes about how transport flags are organized:
 * This class is virtual, but contains the private member _xport_flags. All extending transport
@@ -66,6 +67,7 @@ For debuggability, the transport has a special mode for acting as a debug
 #define MANUVR_XPORT_FLAG_ALWAYS_CONNECTED 0x00800000
 #define MANUVR_XPORT_FLAG_CONNECTIONLESS   0x00400000  // This transport is "connectionless". See Note0 below.
 #define MANUVR_XPORT_FLAG_HAS_MULTICAST    0x00200000  // This transport supports multicast.
+#define MANUVR_XPORT_FLAG_AUTO_CONNECT     0x00100000  // This transport should periodically attempt to connect.
 
 /**
 * Note0:
@@ -90,15 +92,16 @@ For debuggability, the transport has a special mode for acting as a debug
 *        if not rejected entirely.
 */
 
+#define XPORT_DEFAULT_AUTOCONNECT_PERIOD 15000  // In ms. Unless otherwise specified...
+
 
 class XenoSession;
-
 
 
 class ManuvrXport : public EventReceiver {
   public:
     ManuvrXport();
-    virtual ~ManuvrXport() {};
+    virtual ~ManuvrXport();
 
     inline XenoSession* getSession() {   return session;   };
 
@@ -135,6 +138,11 @@ class ManuvrXport : public EventReceiver {
     inline bool alwaysConnected() {         return (_xport_flags & MANUVR_XPORT_FLAG_ALWAYS_CONNECTED);  }
     void alwaysConnected(bool en);
 
+    /* Is this transport set to autoconnect? Also returns true if alwaysConnected(). */
+    inline bool autoConnect() {   return (_xport_flags & (MANUVR_XPORT_FLAG_ALWAYS_CONNECTED | MANUVR_XPORT_FLAG_AUTO_CONNECT));  }
+    inline void autoConnect(bool en) {   autoConnect(en, XPORT_DEFAULT_AUTOCONNECT_PERIOD);  };
+    void autoConnect(bool en, uint32_t _ac_period);
+
     /* Members that deal with sessions. */
     inline bool streamOriented() {          return (_xport_flags & MANUVR_XPORT_FLAG_STREAM_ORIENTED);  };
 
@@ -167,18 +175,17 @@ class ManuvrXport : public EventReceiver {
     //   the configured limits of most linux installations, so it should be enough.
     static uint16_t TRANSPORT_ID_POOL;
 
-
+    // TODO: Should be protected.
+    int8_t provide_session(XenoSession*);   // Called whenever we instantiate a session.
 
 
   protected:
-    //EventReceiver *session;
     XenoSession* session;
+    ManuvrRunnable* _autoconnect_schedule;
 
     // Can also be used to poll the other side. Implementation is completely at the discretion
     //   any extending class. But generally, this feature is necessary.
     ManuvrRunnable read_abort_event;  // Used to timeout a read operation.
-    //uint32_t pid_read_abort;       // Used to timeout a read operation.
-    bool read_timeout_defer;       // Used to timeout a read operation.
 
     uint32_t _xport_mtu;      // The largest packet size we handle.
     uint32_t bytes_sent;
@@ -198,7 +205,7 @@ class ManuvrXport : public EventReceiver {
     //   handle undefined combinations as it chooses.
     //       ---J. Ian Lindsay   Thu Dec 03 03:37:41 MST 2015
     int8_t reapXenoSession(XenoSession*);   // Cleans up XenoSessions that were instantiated by this class.
-    int8_t provide_session(XenoSession*);   // Called whenever we instantiate a session.
+
 
     // TODO: Should be private. provide_session() / reset() are the blockers.
     inline void set_xport_state(uint32_t bitmask) {    _xport_flags = (bitmask  | _xport_flags);   }

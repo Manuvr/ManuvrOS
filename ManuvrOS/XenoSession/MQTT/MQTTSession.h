@@ -107,7 +107,7 @@ class MQTTSession : public XenoSession {
     int8_t sendKeepAlive();
     int8_t sendConnectPacket();
     int8_t sendDisconnectPacket();
-
+    int8_t sendPublish(ManuvrRunnable*);
 };
 
 #endif //__XENOSESSION_MQTT_H__

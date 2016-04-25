@@ -76,12 +76,13 @@ XenoSession::XenoSession(ManuvrXport* _xport) {
 
   owner = _xport;
   owner->nonSessionUsage(false);
+  owner->provide_session(this);
 
   working                   = NULL;
   session_state             = XENOSESSION_STATE_UNINITIALIZED;
   session_last_state        = XENOSESSION_STATE_UNINITIALIZED;
 
-  mark_session_state(XENOSESSION_STATE_PENDING_CONN);
+  //mark_session_state(XENOSESSION_STATE_PENDING_CONN);
 
   if (!owner->alwaysConnected() && owner->connected()) {
     // Are we connected right now?

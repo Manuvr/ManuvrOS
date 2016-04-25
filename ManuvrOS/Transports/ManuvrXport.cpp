@@ -73,18 +73,30 @@ ManuvrXport::ManuvrXport() {
   // No need to burden a client class with this.
   EventReceiver::__class_initializer();
 
-  xport_id           = ManuvrXport::TRANSPORT_ID_POOL++;
-  _xport_flags       = 0;
-  _xport_mtu         = PROTOCOL_MTU;
-  bytes_sent         = 0;
-  bytes_received     = 0;
-  session            = NULL;
-
-  read_timeout_defer = false;
+  xport_id              = ManuvrXport::TRANSPORT_ID_POOL++;
+  _xport_flags          = 0;
+  _xport_mtu            = PROTOCOL_MTU;
+  _autoconnect_schedule = NULL;
+  bytes_sent            = 0;
+  bytes_received        = 0;
+  session               = NULL;
 
   #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
     _thread_id       = 0;
   #endif
+}
+
+ManuvrXport::~ManuvrXport() {
+  #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+    // TODO: Tear down the thread.
+  #endif
+
+  // Cleanup any schedules...
+  if (NULL != _autoconnect_schedule) {
+    _autoconnect_schedule->enableSchedule(false);
+    __kernel->removeSchedule(_autoconnect_schedule);
+    _autoconnect_schedule = NULL;
+  }
 }
 
 
@@ -131,6 +143,44 @@ int8_t ManuvrXport::bridge(ManuvrXport* _xport) {
 */
 void ManuvrXport::alwaysConnected(bool en) {
   _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_ALWAYS_CONNECTED) : (_xport_flags & ~(MANUVR_XPORT_FLAG_ALWAYS_CONNECTED));
+  if (NULL == _autoconnect_schedule) {
+    // If we have a reconnection schedule (we should not), free it.
+    _autoconnect_schedule->enableSchedule(false);
+    __kernel->removeSchedule(_autoconnect_schedule);
+    _autoconnect_schedule = NULL;
+  }
+}
+
+/*
+* By setting this transport to autoconnect, we will instance a schedule and enable it if the
+*   transport is not already connected.
+* If and when the transport connects, the schedule will be disabled and reaped.
+* When disconnection occurs without explicit direction, the schedule will be re-enabled.
+* We will NOT do any of this if the ALWAYS_CONNECTED flag is set.
+*/
+void ManuvrXport::autoConnect(bool en, uint32_t _ac_period) {
+  if (en) {
+    if (!alwaysConnected()) {
+      _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_AUTO_CONNECT) : (_xport_flags & ~(MANUVR_XPORT_FLAG_AUTO_CONNECT));
+      if (NULL == _autoconnect_schedule) {
+        // If we don't already have a ref to a schedule for this purpose.
+        _autoconnect_schedule = Kernel::returnEvent(MANUVR_MSG_XPORT_CONNECT);
+        _autoconnect_schedule->specific_target = (EventReceiver*) this;
+        _autoconnect_schedule->alterScheduleRecurrence(-1);
+        _autoconnect_schedule->alterSchedulePeriod(_ac_period);
+        _autoconnect_schedule->autoClear(false);
+        _autoconnect_schedule->enableSchedule(!connected());
+        __kernel->addSchedule(_autoconnect_schedule);
+      }
+    }
+  }
+  else {
+    if (NULL != _autoconnect_schedule) {
+      _autoconnect_schedule->enableSchedule(false);
+      __kernel->removeSchedule(_autoconnect_schedule);
+      _autoconnect_schedule = NULL;
+    }
+  }
 }
 
 
@@ -232,22 +282,27 @@ void ManuvrXport::connected(bool en) {
       else {
         // If there is a session already here, we'll mark it connected.
       }
+      if (NULL != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(false);
       if (session) session->connection_callback(true);
     }
     else {
       // This is a disconnection event. We might want to cleanup all of our sessions
       // that are outstanding.
+      if (NULL != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(true);
       if (session) session->connection_callback(false);
     }
   }
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
-  createThread(&_thread_id, NULL, xport_read_handler, (void*) this);
+  if (_thread_id == 0) {
+    // If we are in a threaded environment, we will want a thread if there isn't one already.
+    createThread(&_thread_id, NULL, xport_read_handler, (void*) this);
+  }
   #endif
 }
 
 
 /*
-* Mark this transport connected or disconnected.
+* Mark this transport listening or not.
 * This method is virtual, and may be over-ridden if the specific transport has
 *   something more sophisticated in mind.
 */
@@ -264,7 +319,7 @@ void ManuvrXport::listening(bool en) {
 
 
 /*
-* Mark this transport connected or disconnected.
+* Mark this transport initialized or not.
 * This method is virtual, and may be over-ridden if the specific transport has
 *   something more sophisticated in mind.
 */

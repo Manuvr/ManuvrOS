@@ -152,7 +152,7 @@ int8_t MQTTSession::sendKeepAlive() {
 
 
 int8_t MQTTSession::sendConnectPacket() {
-  if (!isEstablished()) {
+  if (owner->connected()) {
     MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
 	  data.willFlag    = 0;
     data.MQTTVersion = 3;
@@ -187,7 +187,42 @@ int8_t MQTTSession::sendDisconnectPacket() {
   return -1;
 }
 
+int8_t MQTTSession::sendPublish(ManuvrRunnable* _msg) {
+	if (isEstablished()) {
+		enum QoS _qos = _msg->demandsACK() ? QOS1 : QOS0;
+		int _msg_id = 0;
+    MQTTString topic = MQTTString_initializer;
+    topic.cstring = (char *)_msg->getMsgDef()->debug_label;
 
+		switch (_qos) {
+			case QOS0:
+				break;
+			case QOS1:
+			case QOS2:
+				_msg_id = getNextPacketId();
+				break;
+		}
+
+    size_t buf_size     = 64;
+    unsigned char* buf  = (unsigned char*) alloca(buf_size);
+
+		int len = MQTTSerialize_publish(
+			buf, buf_size,
+			0,
+			_qos,
+			0, //message->retained,
+			_msg_id,
+      topic,
+			(unsigned char*) "TEST MESSAGE",         // message->payload,
+			strlen("TEST MESSAGE")  //message->payloadlen
+		);
+
+    if (len > 0) {
+      return (0 == sendPacket(buf, len));
+    }
+	}
+	return -1;
+}
 
 
 /****************************************************************************************************
@@ -319,9 +354,48 @@ void MQTTSession::procDirectDebugInstruction(StringBuilder *input) {
       purgeOutbound();
       purgeInbound();
       break;
+
+		case 's':
+			if (sendSub("sillytest", QOS2) == -1) {
+				local_log.concat("Failed to subscribe to 'sillytest'.");
+			}
+			else {
+				local_log.concat("Subscribed to 'sillytest'.");
+			}
+			break;
     case 'w':  // Manual session poll.
       Kernel::raiseEvent(MANUVR_MSG_SESS_ORIGINATE_MSG, NULL);
       break;
+
+		case 'c':
+			if (sendConnectPacket() == -1) {
+				local_log.concat("Failed to send MQTT connect packet.");
+			}
+			else {
+				local_log.concat("Sent MQTT connect packet.");
+			}
+			break;
+
+		case 'p':
+			{
+				ManuvrRunnable mr = ManuvrRunnable(MANUVR_MSG_SESS_ORIGINATE_MSG);
+				if (sendPublish(&mr) == -1) {
+					local_log.concat("Failed to send MQTT connect packet.");
+				}
+				else {
+					local_log.concat("Sent MQTT connect packet.");
+				}
+			}
+			break;
+
+		case 'd':
+			if (sendDisconnectPacket() == -1) {
+				local_log.concat("Failed to send MQTT disconnect packet.");
+			}
+			else {
+				local_log.concat("Sent MQTT disconnect packet.");
+			}
+			break;
 
     default:
       XenoSession::procDirectDebugInstruction(input);
@@ -348,6 +422,7 @@ const char* MQTTSession::getReceiverName() {  return "MQTTSession";  }
 */
 void MQTTSession::printDebug(StringBuilder *output) {
   XenoSession::printDebug(output);
+  output->concatf("-- Next Packet ID       0x%08x\n", (uint32_t) _next_packetid);
 }
 
 

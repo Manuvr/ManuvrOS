@@ -242,6 +242,7 @@ int main(int argc, char *argv[]) {
       tcp_srv.listen();
     #endif
     tcp_cli.connect();
+    //tcp_cli.autoConnect(true);
   #endif
   // TODO: End horrible hackishness.
 
