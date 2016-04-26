@@ -609,8 +609,9 @@ int StringBuilder::concatf(const char *format, ...) {
   int est_len = len + 64 + (f_codes * 15);
   char *temp = (char *) alloca(est_len);
   memset(temp, 0, est_len);
+  int ret = 0;
   va_start(args, format);
-  int ret = vsprintf(temp, format, args);
+  ret = vsprintf(temp, format, args);
   va_end(args);
   if (ret > 0) this->concat((char *) temp);
   return ret;
