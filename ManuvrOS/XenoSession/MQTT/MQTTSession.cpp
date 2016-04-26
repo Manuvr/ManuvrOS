@@ -72,6 +72,7 @@ int MQTTMessage::accumulate(unsigned char* _buf, int _len) {
 						payload = malloc(payloadlen);
 						if (NULL == payload) {
 							// Not enough memory.
+							payloadlen = 0;
 							return -1;
 						}
 					}
@@ -90,19 +91,22 @@ int MQTTMessage::accumulate(unsigned char* _buf, int _len) {
 				//   length target.
 				if (payloadlen > _rem_len) {
 					*((uint8_t*) payload + _rem_len++) = *((uint8_t*)_buf + _r++);
+					if (payloadlen == _rem_len) {
+						_parse_stage++;   // Field completed.
+					}
 				}
 				else {
 					_parse_stage++;   // Field completed.
 				}
 				break;
 			case 3:
-				return (_len - _r);
+				return _r;
 				break;
 			default:
 				break;
 		}
 	}
-	return (_len - _r);
+	return _r;
 }
 
 // TODO TODO TODO TODO TODO TODO TODO
@@ -121,7 +125,7 @@ int MQTTMessage::accumulate(unsigned char* _buf, int _len) {
 ****************************************************************************************************/
 
 MQTTOpts opts = {
-	(char*)"stdout-subscriber",
+	(char*)"manuvr_client",
   0,
   (char*)"\n",
   QOS2,
@@ -184,10 +188,11 @@ MQTTSession::~MQTTSession() {
 */
 int8_t MQTTSession::bin_stream_rx(unsigned char *buf, int len) {
   int8_t return_value = 0;
-	if (NULL == working) {
-		working = new MQTTMessage();
-	}
 	if (len >= 1) {
+		if (NULL == working) {
+			working = new MQTTMessage();
+		}
+
 		int _eaten = working->accumulate(buf, len);
 		if (-1 == _eaten) {
 			delete working;
@@ -196,12 +201,14 @@ int8_t MQTTSession::bin_stream_rx(unsigned char *buf, int len) {
 		}
 		else {
 			// These are success cases.
-			acceptInbound(working);
-			//working = NULL;
+			if (working->parseComplete()) {
+				acceptInbound(working);
+				working = NULL;
 
-			if (_eaten < len) {
-				// We not only finished a message, but we are beginning another. Recurse.
-				return bin_stream_rx(buf + _eaten, len - _eaten);
+				if (len - _eaten > 0) {
+					// We not only finished a message, but we are beginning another. Recurse.
+					return bin_stream_rx(buf + _eaten, len - _eaten);
+				}
 			}
 		}
 	}
@@ -349,18 +356,21 @@ int MQTTSession::acceptInbound(MQTTMessage* nu) {
 		switch (packet_type) {
 			case CONNACK:
 				{
-					unsigned char sessionPresent = *((uint8_t*)nu->payload) & 0x01;
+					if(0 == *((uint8_t*)nu->payload) & 0x01) {
+						// If we are in this block, it means we have a clean session.
+					}
 					switch (*((uint8_t*)nu->payload + 1)) {
 						case 0:
 							mark_session_state(XENOSESSION_STATE_ESTABLISHED);
+							//_ping_timer.enableSchedule(true);
 							break;
 						default:
 							mark_session_state(XENOSESSION_STATE_HUNGUP);
 							break;
 					}
-					//delete working;
 				}
-				break;
+				delete nu;
+				return 1;
       case PUBACK:
       case SUBACK:
         break;
@@ -412,7 +422,7 @@ int8_t MQTTSession::bootComplete() {
   _ping_timer.isManaged(true);
   _ping_timer.specific_target = (EventReceiver*) this;
   _ping_timer.alterScheduleRecurrence(-1);
-  _ping_timer.alterSchedulePeriod(30);
+  _ping_timer.alterSchedulePeriod(10000);
   _ping_timer.autoClear(false);
   _ping_timer.enableSchedule(false);
 
@@ -447,10 +457,6 @@ int8_t MQTTSession::callback_proc(ManuvrRunnable *event) {
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
-    case MANUVR_MSG_SESS_ORIGINATE_MSG:
-      // Sending a KA
-      sendKeepAlive();
-      break;
     case MANUVR_MSG_SELF_DESCRIBE:
       //sendEvent(event);
       break;
@@ -587,9 +593,9 @@ void MQTTSession::printDebug(StringBuilder *output) {
 		output->concatf("--     Packet type      0x%02x\n", working->packetType());
 		output->concatf("--     Payload length   %d\n", working->payloadlen);
 		output->concatf("--     Parse complete   %s\n", working->parseComplete() ? "yes":"no");
-		for (int i = 0; i < working->payloadlen; i++) {
-			output->concatf("--                      0x%02x\n", *((uint8_t*)working->payload + i));
-		}
+		//for (int i = 0; i < working->payloadlen; i++) {
+			//output->concatf("--  0x%02x\n", *((uint8_t*)working->payload + i));
+		//}
 	}
 }
 
