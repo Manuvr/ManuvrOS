@@ -191,6 +191,24 @@ int8_t ManuvrTCP::connect() {
   return 0;
 }
 
+int8_t ManuvrTCP::disconnect() {
+  if (listening()) {
+    Kernel::log("A TCP socket was told to connect while it is listening. Doing nothing.");
+    listening(false);
+  }
+
+  if (connected()) {
+    Kernel::log("A TCP socket was told to connect while it already was. Doing nothing.");
+    connected(false);
+  }
+
+  close(_sock);  // Close the socket.
+  _sock = 0;
+  return 0;
+}
+
+
+
 
 int8_t ManuvrTCP::listen() {
   // We're being told to start listening on whatever address was provided to the constructor.
@@ -252,14 +270,15 @@ int8_t ManuvrTCP::read_port() {
         bytes_received += n;
 
         // Do stuff regarding the data we just read...
-        event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
-        nu_data = new StringBuilder(buf, n);
-        event->markArgForReap(event->addArg(nu_data), true);
 
         if (NULL != session) {
-          session->notify(event);
+          //session->notify(event);
+          session->bin_stream_rx(buf, n);
         }
         else {
+          event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
+          nu_data = new StringBuilder(buf, n);
+          event->markArgForReap(event->addArg(nu_data), true);
           raiseEvent(event);
         }
       }

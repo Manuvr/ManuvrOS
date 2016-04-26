@@ -205,6 +205,11 @@ int8_t ManuvrSerial::connect() {
   return 0;
 }
 
+int8_t ManuvrSerial::disconnect() {
+  ManuvrXport::disconnect();
+  return 0;
+}
+
 
 int8_t ManuvrSerial::listen() {
   // We're a serial port. If we are initialized, we are always listening.

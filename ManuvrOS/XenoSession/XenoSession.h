@@ -185,6 +185,7 @@ class XenoSession : public EventReceiver {
     inline bool isConnected() {      return (0 == (XENOSESSION_STATE_PENDING_CONN & getPhase()));   }
 
     virtual int8_t connection_callback(bool connected);
+    virtual int8_t bin_stream_rx(unsigned char* buf, int len) =0;            // Used to feed data to the session.
 
     /* Overrides from EventReceiver */
     virtual void procDirectDebugInstruction(StringBuilder*);
@@ -202,7 +203,6 @@ class XenoSession : public EventReceiver {
     XenoMessage* working;         // If we are in the middle of receiving a message.
 
     virtual int8_t bootComplete();
-    virtual int8_t bin_stream_rx(unsigned char* buf, int len) =0;            // Used to feed data to the session.
 
     /**
     * Mark the session with the given status.
@@ -217,6 +217,8 @@ class XenoSession : public EventReceiver {
     int8_t sendPacket(unsigned char *buf, int len);
     int purgeInbound();
     int purgeOutbound();
+
+
 
 
   private: // TODO: Migrate members here as session mitosis completes telophase.

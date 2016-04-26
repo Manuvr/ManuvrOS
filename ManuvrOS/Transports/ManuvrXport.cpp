@@ -132,6 +132,11 @@ int8_t ManuvrXport::bridge(ManuvrXport* _xport) {
 }
 
 
+int8_t ManuvrXport::disconnect() {
+  // TODO: Might-should tear down the session?
+  connected(false);
+}
+
 
 /*
 * Accessors for session behavior regarding connect/disconnect.
@@ -452,3 +457,32 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
 //}
 //int8_t ManuvrXport::callback_proc(ManuvrRunnable *) {
 //}
+
+
+/**
+* This is a base-level debug function that takes direct input from a user.
+*
+* @param   input  A buffer containing the user's direct input.
+*/
+void ManuvrXport::procDirectDebugInstruction(StringBuilder *input) {
+#ifdef __MANUVR_CONSOLE_SUPPORT
+  char* str = input->position(0);
+
+  switch (*(str)) {
+    case 'C':
+    case 'D':
+      connected(*(str) == 'C');
+      break;
+    case 'R':
+      reset();
+      break;
+    default:
+      #ifdef __MANUVR_DEBUG
+      EventReceiver::procDirectDebugInstruction(input);
+      #endif
+      break;
+  }
+
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+#endif
+}

@@ -70,6 +70,7 @@ class ManuvrSerial : public ManuvrXport {
 
 
     int8_t connect();
+    int8_t disconnect();
     int8_t listen();
     int8_t reset();
 

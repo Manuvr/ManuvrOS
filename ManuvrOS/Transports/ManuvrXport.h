@@ -116,9 +116,10 @@ class ManuvrXport : public EventReceiver {
     /*
     * State imperatives.
     */
-    virtual int8_t connect() = 0;
-    virtual int8_t listen()  = 0;
-    virtual int8_t reset()   = 0;
+    virtual int8_t connect()    = 0;
+    virtual int8_t disconnect();
+    virtual int8_t listen()     = 0;
+    virtual int8_t reset()      = 0;
 
     // Mandatory override.
     virtual bool   write_port(unsigned char* out, int out_len) = 0;
@@ -130,9 +131,7 @@ class ManuvrXport : public EventReceiver {
     */
     /* Connection/Listen states */
     inline bool connected() {   return (_xport_flags & (MANUVR_XPORT_FLAG_CONNECTED | MANUVR_XPORT_FLAG_ALWAYS_CONNECTED));  }
-    void connected(bool);
     inline bool listening() {   return (_xport_flags & MANUVR_XPORT_FLAG_LISTENING);   };
-    void listening(bool);
 
     /* Can the transport be relied upon to provide connection status? */
     inline bool alwaysConnected() {         return (_xport_flags & MANUVR_XPORT_FLAG_ALWAYS_CONNECTED);  }
@@ -168,6 +167,7 @@ class ManuvrXport : public EventReceiver {
     /* We will override these functions in EventReceiver. */
     // TODO: I'm not sure I've evaluated the full impact of this sort of
     //    choice.  Calltimes? vtable size? alignment? Fragility? Dig.
+    virtual void   procDirectDebugInstruction(StringBuilder*);
     virtual void   printDebug(StringBuilder *);
     virtual int8_t notify(ManuvrRunnable*);
 
@@ -205,6 +205,10 @@ class ManuvrXport : public EventReceiver {
     //   handle undefined combinations as it chooses.
     //       ---J. Ian Lindsay   Thu Dec 03 03:37:41 MST 2015
     int8_t reapXenoSession(XenoSession*);   // Cleans up XenoSessions that were instantiated by this class.
+
+    /* Connection/Listen states */
+    void connected(bool);
+    void listening(bool);
 
 
     // TODO: Should be private. provide_session() / reset() are the blockers.

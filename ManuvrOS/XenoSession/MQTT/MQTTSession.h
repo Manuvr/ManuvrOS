@@ -35,14 +35,34 @@ This class originated from IBM's C-client demo code, but was re-written into
 
 enum QoS { QOS0, QOS1, QOS2 };
 
-struct MQTTMessage {
+
+class MQTTMessage {
+  public:
     enum QoS qos;
     char retained;
     char dup;
     unsigned short id;
     void *payload;
-    size_t payloadlen;
+    int payloadlen;
+
+    MQTTMessage();
+    ~MQTTMessage();
+
+    // Called to accumulate data into the class.
+    // Returns -1 on failure, or the number of bytes consumed on success.
+    int accumulate(unsigned char*, int);
+
+    inline uint16_t packetType() {  return _header.bits.type; };
+    inline bool parseComplete() {   return (_parse_stage > 2); };
+
+
+  private:
+    MQTTHeader _header;
+    int _rem_len;
+    uint8_t _parse_stage;
+    int _multiplier;
 };
+
 
 struct MQTTOpts {
 	char* clientid;
@@ -72,6 +92,7 @@ class MQTTSession : public XenoSession {
     ~MQTTSession();
 
     int8_t connection_callback(bool connected);
+    int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
 
     /* Overrides from EventReceiver */
     void procDirectDebugInstruction(StringBuilder*);
@@ -83,19 +104,16 @@ class MQTTSession : public XenoSession {
 
   protected:
     int8_t bootComplete();
-    int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
 
 
   private:
-    StringBuilder _input_buf;
+    MQTTMessage* working;
     MessageHandlers messageHandlers[MAX_MESSAGE_HANDLERS];      // Message handlers are indexed by subscription topic
     unsigned int _next_packetid;
     unsigned int command_timeout_ms;
     unsigned int keepAliveInterval;
 
-    unsigned char *readbuf;
-    size_t readbuf_size;
-    char ping_outstanding;
+    uint8_t _ping_outstanding;
 
     void (*defaultMessageHandler) (MessageData*);
 
@@ -111,6 +129,9 @@ class MQTTSession : public XenoSession {
     int8_t sendConnectPacket();
     int8_t sendDisconnectPacket();
     int8_t sendPublish(ManuvrRunnable*);
+
+    int acceptInbound(MQTTMessage*);
+
 };
 
 #endif //__XENOSESSION_MQTT_H__

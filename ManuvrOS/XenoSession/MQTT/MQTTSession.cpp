@@ -17,7 +17,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-
+This is my C++ translation of the Paho Demo C library.
 */
 
 
@@ -25,6 +25,88 @@ limitations under the License.
 
 #include "MQTTSession.h"
 
+
+// TODO TODO TODO TODO TODO TODO TODO
+// TODO TODO TODO TODO TODO TODO TODO
+
+MQTTMessage::MQTTMessage() {
+	_rem_len     = 0;
+	_parse_stage = 0;
+	_header.byte = 0;
+	_multiplier  = 1;
+	payload      = NULL;
+	payloadlen   = 0;
+	qos          = QOS0;
+	id = 0;
+	retained = 0;
+	dup = 0;
+}
+
+MQTTMessage::~MQTTMessage() {
+	if (payload) {
+		free(payload);
+		payload = NULL;
+		payloadlen   = 0;
+	}
+}
+
+/*
+*
+*/
+int MQTTMessage::accumulate(unsigned char* _buf, int _len) {
+	int _r = 0;
+	uint8_t _tmp;
+	while (_r < _len) {
+		switch (_parse_stage) {
+			case 0:
+				// We haven't gotten any fields yet. Read the header byte.
+				_header.byte = *((uint8_t*)_buf + _r++);
+				_parse_stage++;
+				break;
+			case 1:
+				// Read the remaining length, which is encoded as a string of 7-bit ints.
+				_tmp = *((uint8_t*)_buf + _r++);
+				payloadlen += (_tmp & 127) * _multiplier;
+				if (0 == (_tmp & 128)) {
+					if (payloadlen > 0) {
+						payload = malloc(payloadlen);
+						if (NULL == payload) {
+							// Not enough memory.
+							return -1;
+						}
+					}
+					_parse_stage++;   // Field completed.
+				}
+				else {
+					_multiplier *= 128;
+					if (_multiplier > 2097152) {
+						// We have exceeded the 4-byte length-field. Failure...
+						return -1;
+					}
+				}
+				break;
+			case 2:
+				// Here, we just copy bytes into the payload field until we reach our
+				//   length target.
+				if (payloadlen > _rem_len) {
+					*((uint8_t*) _rem_len++) = *((uint8_t*)_buf + _r++);
+				}
+				else {
+					_parse_stage++;   // Field completed.
+				}
+				break;
+			case 3:
+				return (_len - _r);
+				break;
+			default:
+				break;
+		}
+	}
+	return (_len - _r);
+}
+
+// TODO TODO TODO TODO TODO TODO TODO
+// TODO TODO TODO TODO TODO TODO TODO
 
 
 /****************************************************************************************************
@@ -64,6 +146,10 @@ MQTTOpts opts = {
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
 MQTTSession::MQTTSession(ManuvrXport* _xport) : XenoSession(_xport) {
+	_ping_outstanding = 0;
+	working = NULL;
+	_next_packetid = 1;
+
   for (int i = 0; i < MAX_MESSAGE_HANDLERS; ++i) {
     messageHandlers[i].topicFilter = 0;
   }
@@ -98,9 +184,26 @@ MQTTSession::~MQTTSession() {
 */
 int8_t MQTTSession::bin_stream_rx(unsigned char *buf, int len) {
   int8_t return_value = 0;
-	_input_buf.concat(buf, len);
-	if (_input_buf.length() >= 1) {
-		
+	if (NULL == working) {
+		working = new MQTTMessage();
+	}
+	if (len >= 1) {
+		int _eaten = working->accumulate(buf, len);
+		if (-1 == _eaten) {
+			delete working;
+			working = NULL;
+			return_value = -1;
+		}
+		else {
+			// These are success cases.
+			acceptInbound(working);
+			working = NULL;
+
+			if (_eaten < len) {
+				// We not only finished a message, but we are beginning another. Recurse.
+				return bin_stream_rx(buf + _eaten, len - _eaten);
+			}
+		}
 	}
   return return_value;
 }
@@ -236,6 +339,35 @@ int8_t MQTTSession::connection_callback(bool _con) {
 	}
   return 0;
 }
+
+
+// These messages are arriving from the parser.
+// Management of their memory is our responsibility.
+int MQTTSession::acceptInbound(MQTTMessage* nu) {
+	if (nu->parseComplete()) {
+		unsigned short packet_type = nu->packetType();
+		switch (packet_type) {
+			case CONNACK:
+      case PUBACK:
+      case SUBACK:
+        break;
+			case PUBLISH:
+        break;
+
+      case PUBCOMP:
+        break;
+      case PINGRESP:
+        _ping_outstanding = 0;
+        break;
+			default:
+				break;
+		}
+	}
+
+	return 0;
+}
+
+
 
 /****************************************************************************************************
 *  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
@@ -435,6 +567,14 @@ const char* MQTTSession::getReceiverName() {  return "MQTTSession";  }
 void MQTTSession::printDebug(StringBuilder *output) {
   XenoSession::printDebug(output);
   output->concatf("-- Next Packet ID       0x%08x\n", (uint32_t) _next_packetid);
+
+	if (NULL != working) {
+		output->concat("--\n-- Incomplete inbound message:\n");
+		output->concatf("--     Packet id        0x%04x\n", working->id);
+		output->concatf("--     Packet type      0x%02x\n", working->packetType());
+		output->concatf("--     Payload length   %d\n", working->payloadlen);
+		output->concatf("--     Parse complete   %s\n\n", working->parseComplete() ? "yes":"no");
+	}
 }
 
 

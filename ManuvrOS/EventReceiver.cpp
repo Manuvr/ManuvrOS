@@ -136,7 +136,7 @@ void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
       break;
     default:
       #ifdef __MANUVR_DEBUG
-      local_log.concatf("%s: No case in procDirectDebugInstruction().\n", getReceiverName());
+      local_log.concatf("%s: No comprende.\n", getReceiverName());
       #endif
       break;
   }
