@@ -89,7 +89,7 @@ int MQTTMessage::accumulate(unsigned char* _buf, int _len) {
 				// Here, we just copy bytes into the payload field until we reach our
 				//   length target.
 				if (payloadlen > _rem_len) {
-					*((uint8_t*) _rem_len++) = *((uint8_t*)_buf + _r++);
+					*((uint8_t*) payload + _rem_len++) = *((uint8_t*)_buf + _r++);
 				}
 				else {
 					_parse_stage++;   // Field completed.
@@ -147,7 +147,7 @@ MQTTOpts opts = {
 */
 MQTTSession::MQTTSession(ManuvrXport* _xport) : XenoSession(_xport) {
 	_ping_outstanding = 0;
-	working = NULL;
+	working   = NULL;
 	_next_packetid = 1;
 
   for (int i = 0; i < MAX_MESSAGE_HANDLERS; ++i) {
@@ -197,7 +197,7 @@ int8_t MQTTSession::bin_stream_rx(unsigned char *buf, int len) {
 		else {
 			// These are success cases.
 			acceptInbound(working);
-			working = NULL;
+//			working = NULL;
 
 			if (_eaten < len) {
 				// We not only finished a message, but we are beginning another. Recurse.

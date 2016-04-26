@@ -470,8 +470,14 @@ void ManuvrXport::procDirectDebugInstruction(StringBuilder *input) {
 
   switch (*(str)) {
     case 'C':
-    case 'D':
+    case 'D':  // Force a state change with no underlying physical reason. Abuse test...
       connected(*(str) == 'C');
+      break;
+    case 'c':
+      connect();
+      break;
+    case 'd':
+      disconnect();
       break;
     case 'R':
       reset();
