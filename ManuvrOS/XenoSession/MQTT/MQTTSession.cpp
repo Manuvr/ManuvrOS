@@ -43,7 +43,7 @@ MQTTMessage::MQTTMessage() {
 }
 
 MQTTMessage::~MQTTMessage() {
-	if (payload) {
+	if (NULL != payload) {
 		free(payload);
 		payload = NULL;
 		payloadlen   = 0;
@@ -197,7 +197,7 @@ int8_t MQTTSession::bin_stream_rx(unsigned char *buf, int len) {
 		else {
 			// These are success cases.
 			acceptInbound(working);
-//			working = NULL;
+			//working = NULL;
 
 			if (_eaten < len) {
 				// We not only finished a message, but we are beginning another. Recurse.
@@ -348,6 +348,19 @@ int MQTTSession::acceptInbound(MQTTMessage* nu) {
 		unsigned short packet_type = nu->packetType();
 		switch (packet_type) {
 			case CONNACK:
+				{
+					unsigned char sessionPresent = *((uint8_t*)nu->payload) & 0x01;
+					switch (*((uint8_t*)nu->payload + 1)) {
+						case 0:
+							mark_session_state(XENOSESSION_STATE_ESTABLISHED);
+							break;
+						default:
+							mark_session_state(XENOSESSION_STATE_HUNGUP);
+							break;
+					}
+					//delete working;
+				}
+				break;
       case PUBACK:
       case SUBACK:
         break;
@@ -573,7 +586,10 @@ void MQTTSession::printDebug(StringBuilder *output) {
 		output->concatf("--     Packet id        0x%04x\n", working->id);
 		output->concatf("--     Packet type      0x%02x\n", working->packetType());
 		output->concatf("--     Payload length   %d\n", working->payloadlen);
-		output->concatf("--     Parse complete   %s\n\n", working->parseComplete() ? "yes":"no");
+		output->concatf("--     Parse complete   %s\n", working->parseComplete() ? "yes":"no");
+		for (int i = 0; i < working->payloadlen; i++) {
+			output->concatf("--                      0x%02x\n", *((uint8_t*)working->payload + i));
+		}
 	}
 }
 
