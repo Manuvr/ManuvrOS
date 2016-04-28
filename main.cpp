@@ -160,6 +160,7 @@ int main(int argc, char *argv[]) {
       ManuvrTCP tcp_cli((const char*) "127.0.0.1", 1883);
       MQTTSession mqtt(&tcp_cli);
       kernel->subscribe(&mqtt);
+
     #else
       ManuvrTCP tcp_srv((const char*) "127.0.0.1", 2319);
       ManuvrTCP tcp_cli((const char*) "127.0.0.1", 2319);

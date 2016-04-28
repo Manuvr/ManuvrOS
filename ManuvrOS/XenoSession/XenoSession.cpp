@@ -74,6 +74,11 @@ const char* XenoSession::sessionPhaseString(uint16_t state_code) {
 XenoSession::XenoSession(ManuvrXport* _xport) {
   __class_initializer();
 
+  _session_service.repurpose(MANUVR_MSG_SESS_SERVICE);
+  _session_service.isManaged(true);
+  _session_service.specific_target = (EventReceiver*) this;
+  _session_service.originator      = (EventReceiver*) this;
+
   owner = _xport;
   owner->nonSessionUsage(false);
   owner->provide_session(this);
@@ -124,21 +129,27 @@ XenoSession::~XenoSession() {
 int8_t XenoSession::tapMessageType(uint16_t code) {
   switch (code) {
     case MANUVR_MSG_SESS_ORIGINATE_MSG:
+    case MANUVR_MSG_SESS_SERVICE:
     case MANUVR_MSG_SESS_DUMP_DEBUG:
 //    case MANUVR_MSG_SESS_HANGUP:
       #ifdef __MANUVR_DEBUG
       if (getVerbosity() > 3) local_log.concatf("0x%08x tapMessageType() tried to tap a blacklisted code (%d).\n", (uint32_t) this, code);
       #endif
-      return -1;
+      break;
+
+    default:
+      {
+        std::map<uint16_t, MessageTypeDef*>::iterator it = _relay_list.find(code);
+        if (_relay_list.end() == it) {
+          // If the relay list doesn't already have the message....
+          _relay_list[code] = (MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(code);
+          return 0;
+        }
+      }
+      break;
   }
 
-  std::map<uint16_t, MessageTypeDef*>::iterator it = _relay_list.find(code);
-  if (_relay_list.end() == it) {
-    // If the relay list doesn't already have the message....
-    _relay_list[code] = (MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(code);
-  }
-
-  return 0;
+  return -1;
 }
 
 
@@ -254,6 +265,17 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
       if (getVerbosity() > 3) local_log.concatf("0x%08x Session is now in state %s.\n", (uint32_t) this, sessionPhaseString(getPhase()));
       #endif
       return_value++;
+      break;
+
+    case MANUVR_MSG_SESS_SERVICE:
+      // If we ever see this, it means the class that extended us isn't reacting appropriately
+      //   to its own requests-for-service. Pitch a warning.
+      #ifdef __MANUVR_DEBUG
+      if (getVerbosity() > 1) {
+        local_log.concatf("0x%08x received SESS_SERVICE.\n", (uint32_t) this);
+        printDebug(&local_log);
+      }
+      #endif
       break;
 
     /* Things that only this class is likely to care about. */

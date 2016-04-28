@@ -76,6 +76,9 @@ int MQTTMessage::accumulate(unsigned char* _buf, int _len) {
 							return -1;
 						}
 					}
+					else if (payloadlen == 0) {
+						_parse_stage++;   // There will be no payload.
+					}
 					_parse_stage++;   // Field completed.
 				}
 				else {
@@ -154,9 +157,14 @@ MQTTSession::MQTTSession(ManuvrXport* _xport) : XenoSession(_xport) {
 	working   = NULL;
 	_next_packetid = 1;
 
-  for (int i = 0; i < MAX_MESSAGE_HANDLERS; ++i) {
-    messageHandlers[i].topicFilter = 0;
-  }
+  _ping_timer.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG);
+  _ping_timer.isManaged(true);
+  _ping_timer.originator      = (EventReceiver*) this;
+  _ping_timer.specific_target = (EventReceiver*) this;
+  _ping_timer.alterScheduleRecurrence(-1);
+  _ping_timer.alterSchedulePeriod(4000);
+  _ping_timer.autoClear(false);
+  _ping_timer.enableSchedule(false);
 
   if (_xport->booted()) {
     bootComplete();   // Because we are instantiated well after boot, we call this on construction.
@@ -170,8 +178,67 @@ MQTTSession::MQTTSession(ManuvrXport* _xport) : XenoSession(_xport) {
 MQTTSession::~MQTTSession() {
   _ping_timer.enableSchedule(false);
   __kernel->removeSchedule(&_ping_timer);
+
+	unsubscribeAll();
+	while (_pending_mqtt_messages.hasNext()) {
+		delete _pending_mqtt_messages.dequeue();
+	}
 }
 
+
+
+/****************************************************************************************************
+* Subscription management.                                                                          *
+****************************************************************************************************/
+int8_t MQTTSession::subscribe(const char* topic, ManuvrRunnable* runnable) {
+  std::map<const char*, ManuvrRunnable*>::iterator it = _subscriptions.find(topic);
+  if (_subscriptions.end() == it) {
+    // If the list doesn't already have the topic....
+    _subscriptions[topic] = runnable;
+    return 0;
+  }
+	return -1;
+}
+
+
+int8_t MQTTSession::unsubscribe(const char* topic) {
+  std::map<const char*, ManuvrRunnable*>::iterator it = _subscriptions.find(topic);
+  if (_subscriptions.end() != it) {
+    // TODO: We need to clean up the runnable. For now, we'll assume it is handled elsewhere.
+		// delete it->second;
+		_subscriptions.erase(topic);
+    return 0;
+  }
+	return -1;
+}
+
+
+int8_t MQTTSession::resubscribeAll() {
+	if (isEstablished()) {
+		std::map<const char*, ManuvrRunnable*>::iterator it;
+  	for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
+			if (!sendSub(it->first, QOS1)) {   // TODO: Make QoS dynmaic.
+				return -1;
+			}
+  	}
+	}
+	return 0;
+}
+
+int8_t MQTTSession::unsubscribeAll() {
+	if (isEstablished()) {
+		std::map<const char*, ManuvrRunnable*>::iterator it;
+  	for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
+			if (sendUnsub(it->first)) {
+				_subscriptions.erase(it->first);
+			}
+		}
+  }
+	else {
+		_subscriptions.clear();
+	}
+	return 0;
+}
 
 
 /****************************************************************************************************
@@ -202,7 +269,8 @@ int8_t MQTTSession::bin_stream_rx(unsigned char *buf, int len) {
 		else {
 			// These are success cases.
 			if (working->parseComplete()) {
-				acceptInbound(working);
+				_pending_mqtt_messages.insert(working);
+				requestService();   	// Pitch an event to deal with the message.
 				working = NULL;
 
 				if (len - _eaten > 0) {
@@ -218,7 +286,7 @@ int8_t MQTTSession::bin_stream_rx(unsigned char *buf, int len) {
 
 
 
-int8_t MQTTSession::sendSub(const char* _topicStr, enum QoS qos) {
+bool MQTTSession::sendSub(const char* _topicStr, enum QoS qos) {
   if (isEstablished()) {
     MQTTString topic = MQTTString_initializer;
     topic.cstring = (char *)_topicStr;
@@ -231,10 +299,10 @@ int8_t MQTTSession::sendSub(const char* _topicStr, enum QoS qos) {
       return (0 == sendPacket(buf, len));
     }
   }
-  return -1;
+  return false;
 }
 
-int8_t MQTTSession::sendUnsub(const char* _topicStr) {
+bool MQTTSession::sendUnsub(const char* _topicStr) {
   if (isEstablished()) {
     MQTTString topic = MQTTString_initializer;
     topic.cstring = (char *)_topicStr;
@@ -247,25 +315,35 @@ int8_t MQTTSession::sendUnsub(const char* _topicStr) {
       return (0 == sendPacket(buf, len));
     }
   }
-  return -1;
+  return false;
 }
 
 
-int8_t MQTTSession::sendKeepAlive() {
+bool MQTTSession::sendKeepAlive() {
   if (isEstablished()) {
+		if (_ping_outstanding) {
+			#if defined (__MANUVR_DEBUG)
+			if (getVerbosity() > 3) Kernel::log("MQTT session has an expired ping.\n");
+			#endif
+		}
+
     size_t buf_size     = 16;
     unsigned char* buf  = (unsigned char*) alloca(buf_size);
     int len = MQTTSerialize_pingreq(buf, buf_size);
 
     if (len > 0) {
+			_ping_outstanding = 1;
       return (0 == sendPacket(buf, len));
     }
   }
-  return -1;
+	else {
+		_ping_timer.enableSchedule(false);
+	}
+  return false;
 }
 
 
-int8_t MQTTSession::sendConnectPacket() {
+bool MQTTSession::sendConnectPacket() {
   if (owner->connected()) {
     MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
 	  data.willFlag    = 0;
@@ -284,11 +362,11 @@ int8_t MQTTSession::sendConnectPacket() {
       return (0 == sendPacket(buf, len));
     }
   }
-  return -1;
+  return false;
 }
 
 
-int8_t MQTTSession::sendDisconnectPacket() {
+bool MQTTSession::sendDisconnectPacket() {
   if (isEstablished()) {
     size_t buf_size     = 64;
     unsigned char* buf  = (unsigned char*) alloca(buf_size);
@@ -298,10 +376,10 @@ int8_t MQTTSession::sendDisconnectPacket() {
       return (0 == sendPacket(buf, len));
     }
   }
-  return -1;
+  return false;
 }
 
-int8_t MQTTSession::sendPublish(ManuvrRunnable* _msg) {
+bool MQTTSession::sendPublish(ManuvrRunnable* _msg) {
 	if (isEstablished()) {
 		enum QoS _qos = _msg->demandsACK() ? QOS1 : QOS0;
 		int _msg_id = 0;
@@ -335,7 +413,7 @@ int8_t MQTTSession::sendPublish(ManuvrRunnable* _msg) {
       return (0 == sendPacket(buf, len));
     }
 	}
-	return -1;
+	return false;
 }
 
 
@@ -348,44 +426,49 @@ int8_t MQTTSession::connection_callback(bool _con) {
 }
 
 
-// These messages are arriving from the parser.
-// Management of their memory is our responsibility.
-int MQTTSession::acceptInbound(MQTTMessage* nu) {
-	if (nu->parseComplete()) {
-		unsigned short packet_type = nu->packetType();
-		switch (packet_type) {
-			case CONNACK:
-				{
-					if(0 == *((uint8_t*)nu->payload) & 0x01) {
-						// If we are in this block, it means we have a clean session.
-					}
-					switch (*((uint8_t*)nu->payload + 1)) {
-						case 0:
-							mark_session_state(XENOSESSION_STATE_ESTABLISHED);
-							//_ping_timer.enableSchedule(true);
-							break;
-						default:
-							mark_session_state(XENOSESSION_STATE_HUNGUP);
-							break;
-					}
-				}
-				delete nu;
-				return 1;
-      case PUBACK:
-      case SUBACK:
-        break;
-			case PUBLISH:
-        break;
 
-      case PUBCOMP:
-        break;
-      case PINGRESP:
-        _ping_outstanding = 0;
-        break;
-			default:
-				break;
-		}
+int MQTTSession::process_inbound() {
+	if (0 == _pending_mqtt_messages.size()) {
+		return -1;
 	}
+	MQTTMessage* nu = _pending_mqtt_messages.dequeue();
+
+	unsigned short packet_type = nu->packetType();
+	switch (packet_type) {
+		case CONNACK:
+			{
+				switch (*((uint8_t*)nu->payload + 1)) {
+					case 0:
+						mark_session_state(XENOSESSION_STATE_ESTABLISHED);
+						if(0 == (*((uint8_t*)nu->payload) & 0x01)) {
+							// If we are in this block, it means we have a clean session.
+							resubscribeAll();
+						}
+						_ping_timer.enableSchedule(true);
+						break;
+					default:
+						mark_session_state(XENOSESSION_STATE_HUNGUP);
+						_ping_timer.enableSchedule(false);
+						break;
+				}
+			}
+			delete nu;
+			return 1;
+    case PUBACK:
+    case SUBACK:
+      break;
+		case PUBLISH:
+      break;
+
+    case PUBCOMP:
+      break;
+    case PINGRESP:
+      _ping_outstanding = 0;
+      break;
+		default:
+			break;
+	}
+
 
 	return 0;
 }
@@ -417,14 +500,6 @@ int8_t MQTTSession::bootComplete() {
   XenoSession::bootComplete();
 
   owner->getMTU();
-
-  _ping_timer.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG);
-  _ping_timer.isManaged(true);
-  _ping_timer.specific_target = (EventReceiver*) this;
-  _ping_timer.alterScheduleRecurrence(-1);
-  _ping_timer.alterSchedulePeriod(10000);
-  _ping_timer.autoClear(false);
-  _ping_timer.enableSchedule(false);
 
   __kernel->addSchedule(&_ping_timer);
 
@@ -489,8 +564,16 @@ int8_t MQTTSession::notify(ManuvrRunnable *active_event) {
       return_value++;
       break;
 
+    case MANUVR_MSG_SESS_SERVICE:
+      if (_pending_mqtt_messages.size() > 0) {
+				process_inbound();
+      	return_value++;
+			}
+      break;
+
     case MANUVR_MSG_SESS_HANGUP:
       sendDisconnectPacket();
+			XenoSession::notify(active_event);
       return_value++;
       break;
 
@@ -509,6 +592,10 @@ int8_t MQTTSession::notify(ManuvrRunnable *active_event) {
 }
 
 
+
+ManuvrRunnable test_sub_event(0x2425);
+
+
 void MQTTSession::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
 
@@ -519,7 +606,10 @@ void MQTTSession::procDirectDebugInstruction(StringBuilder *input) {
       break;
 
 		case 's':
-			if (sendSub("sillytest", QOS2) == -1) {
+			test_sub_event.isManaged(true);
+
+
+			if (subscribe("sillytest", &test_sub_event) == -1) {
 				local_log.concat("Failed to subscribe to 'sillytest'.");
 			}
 			else {
@@ -586,6 +676,13 @@ const char* MQTTSession::getReceiverName() {  return "MQTTSession";  }
 void MQTTSession::printDebug(StringBuilder *output) {
   XenoSession::printDebug(output);
   output->concatf("-- Next Packet ID       0x%08x\n", (uint32_t) _next_packetid);
+  if (_ping_outstanding) output->concat("-- EXPIRED PING\n");
+  output->concat("-- Subscribed topics\n");
+
+	std::map<const char*, ManuvrRunnable*>::iterator it;
+  for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
+    output->concatf("--\t%s\t~~~~> %s\n", it->first, it->second->getMsgDef()->debug_label);
+  }
 
 	if (NULL != working) {
 		output->concat("--\n-- Incomplete inbound message:\n");

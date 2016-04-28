@@ -200,7 +200,7 @@ class XenoSession : public EventReceiver {
 
   protected:
     ManuvrXport* owner;           // A reference to the transport that owns this session.
-    XenoMessage* working;         // If we are in the middle of receiving a message.
+    XenoMessage* working;         // If we are in the middle of receiving a message,
 
     virtual int8_t bootComplete();
 
@@ -215,6 +215,7 @@ class XenoSession : public EventReceiver {
     };
 
     int8_t sendPacket(unsigned char *buf, int len);
+    inline void requestService() {   raiseEvent(&_session_service);  };
     int purgeInbound();
     int purgeOutbound();
 
@@ -222,6 +223,7 @@ class XenoSession : public EventReceiver {
 
 
   private: // TODO: Migrate members here as session mitosis completes telophase.
+    ManuvrRunnable _session_service;
     LinkedList<XenoMessage*> _outbound_messages;   // Messages that are bound for the counterparty.
     LinkedList<XenoMessage*> _inbound_messages;    // Messages that came from the counterparty.
 

@@ -31,7 +31,6 @@ This class originated from IBM's C-client demo code, but was re-written into
 
 
 #define MAX_PACKET_ID 65535
-#define MAX_MESSAGE_HANDLERS 5
 
 enum QoS { QOS0, QOS1, QOS2 };
 
@@ -91,6 +90,12 @@ class MQTTSession : public XenoSession {
     MQTTSession(ManuvrXport*);
     ~MQTTSession();
 
+    /* Management of subscriptions... */
+    int8_t subscribe(const char*, ManuvrRunnable*);  // Start getting broadcasts about a given message type.
+    int8_t unsubscribe(const char*);                 // Stop getting broadcasts about a given message type.
+    int8_t resubscribeAll();
+    int8_t unsubscribeAll();
+
     int8_t connection_callback(bool connected);
     int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
 
@@ -108,7 +113,11 @@ class MQTTSession : public XenoSession {
 
   private:
     MQTTMessage* working;
-    MessageHandlers messageHandlers[MAX_MESSAGE_HANDLERS];      // Message handlers are indexed by subscription topic
+    //MessageHandlers messageHandlers[MAX_MESSAGE_HANDLERS];      // Message handlers are indexed by subscription topic
+
+    std::map<const char*, ManuvrRunnable*> _subscriptions;   // Topics we are subscribed to, and the events they trigger.
+    PriorityQueue<MQTTMessage*> _pending_mqtt_messages;      // Valid MQTT messages that have arrived.
+
     unsigned int _next_packetid;
     unsigned int command_timeout_ms;
     unsigned int keepAliveInterval;
@@ -123,14 +132,14 @@ class MQTTSession : public XenoSession {
       return _next_packetid = (_next_packetid == MAX_PACKET_ID) ? 1 : _next_packetid + 1;
     };
 
-    int8_t sendSub(const char*, enum QoS);
-    int8_t sendUnsub(const char*);
-    int8_t sendKeepAlive();
-    int8_t sendConnectPacket();
-    int8_t sendDisconnectPacket();
-    int8_t sendPublish(ManuvrRunnable*);
+    bool sendSub(const char*, enum QoS);
+    bool sendUnsub(const char*);
+    bool sendKeepAlive();
+    bool sendConnectPacket();
+    bool sendDisconnectPacket();
+    bool sendPublish(ManuvrRunnable*);
 
-    int acceptInbound(MQTTMessage*);
+    int process_inbound();
 
 };
 
