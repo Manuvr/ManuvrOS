@@ -78,11 +78,6 @@ struct MessageData {
     MQTTString* topicName;
 };
 
-struct MessageHandlers {
-    const char* topicFilter;
-    void (*fp) (MessageData*);
-};
-
 
 
 class MQTTSession : public XenoSession {
@@ -113,7 +108,6 @@ class MQTTSession : public XenoSession {
 
   private:
     MQTTMessage* working;
-    //MessageHandlers messageHandlers[MAX_MESSAGE_HANDLERS];      // Message handlers are indexed by subscription topic
 
     std::map<const char*, ManuvrRunnable*> _subscriptions;   // Topics we are subscribed to, and the events they trigger.
     PriorityQueue<MQTTMessage*> _pending_mqtt_messages;      // Valid MQTT messages that have arrived.
@@ -139,6 +133,7 @@ class MQTTSession : public XenoSession {
     bool sendDisconnectPacket();
     bool sendPublish(ManuvrRunnable*);
 
+    int proc_publish(MQTTMessage*);
     int process_inbound();
 
 };

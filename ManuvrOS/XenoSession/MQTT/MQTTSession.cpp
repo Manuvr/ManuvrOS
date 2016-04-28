@@ -93,6 +93,7 @@ int MQTTMessage::accumulate(unsigned char* _buf, int _len) {
 				// Here, we just copy bytes into the payload field until we reach our
 				//   length target.
 				if (payloadlen > _rem_len) {
+					//printf("PAYLOAD (%d): 0x%02x\n", _rem_len, *((uint8_t*)_buf + _r));
 					*((uint8_t*) payload + _rem_len++) = *((uint8_t*)_buf + _r++);
 					if (payloadlen == _rem_len) {
 						_parse_stage++;   // Field completed.
@@ -195,7 +196,7 @@ int8_t MQTTSession::subscribe(const char* topic, ManuvrRunnable* runnable) {
   if (_subscriptions.end() == it) {
     // If the list doesn't already have the topic....
     _subscriptions[topic] = runnable;
-    return 0;
+		return sendSub(topic, QOS1);   // TODO: make dynamic
   }
 	return -1;
 }
@@ -294,7 +295,6 @@ bool MQTTSession::sendSub(const char* _topicStr, enum QoS qos) {
     size_t buf_size     = 64;
     unsigned char* buf  = (unsigned char*) alloca(buf_size);
     int len = MQTTSerialize_subscribe(buf, buf_size, 0, getNextPacketId(), 1, &topic, (int*)&qos);
-
     if (len > 0) {
       return (0 == sendPacket(buf, len));
     }
@@ -426,6 +426,26 @@ int8_t MQTTSession::connection_callback(bool _con) {
 }
 
 
+int MQTTSession::proc_publish(MQTTMessage* nu) {
+	uint8_t _topic_len = *((uint8_t*) nu->payload + 1);
+	char* _topic = (char*) alloca(_topic_len+1);
+	_topic[_topic_len] = '\0';
+
+	for (int i = 0; i < _topic_len; i++) {
+		_topic[i] = *((uint8_t*) nu->payload + i + 2);
+	}
+
+  std::map<const char*, ManuvrRunnable*>::iterator it = _subscriptions.find(_topic);
+	for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
+		if (0 == strcmp((const char*) _topic, it->first)) {
+			raiseEvent(it->second);
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
 
 int MQTTSession::process_inbound() {
 	if (0 == _pending_mqtt_messages.size()) {
@@ -455,9 +475,13 @@ int MQTTSession::process_inbound() {
 			delete nu;
 			return 1;
     case PUBACK:
+			// TODO: Mark outbound message as received.
+      break;
     case SUBACK:
+			// TODO: Only NOW should we insert into the subscription queue.
       break;
 		case PUBLISH:
+			proc_publish(nu);
       break;
 
     case PUBCOMP:
