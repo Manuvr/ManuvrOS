@@ -43,13 +43,16 @@ limitations under the License.
 
 // Drivers particular to this Manuvrable...
 #include <Drivers/i2c-adapter/i2c-adapter.h>
+
+// This is ONLY used to expose the GPIO pins to the outside world.
+// It is not needed otherwise.
 #include <Drivers/ManuvrableGPIO/ManuvrableGPIO.h>
 
 // Transports...
 #include <Transports/ManuvrSerial/ManuvrSerial.h>
 #include <Transports/ManuvrSocket/ManuvrSocket.h>
-#include <Drivers/ManuvrCoAP/ManuvrCoAP.h>
 
+// We will use MQTT as our concept of "session"...
 #include <XenoSession/MQTT/MQTTSession.h>
 
 

@@ -36,6 +36,7 @@ CPP_SRCS  += XenoSession/Manuvr/ManuvrSession.cpp
 CPP_SRCS  += XenoSession/Manuvr/XenoManuvrMessage.cpp
 CPP_SRCS  += XenoSession/CoAP/CoAPSession.cpp
 CPP_SRCS  += XenoSession/MQTT/MQTTSession.cpp
+CPP_SRCS  += XenoSession/MQTT/MQTTMessage.cpp
 
 
 # TODO: Case-off for socket/TCP/Pipe support...
@@ -75,7 +76,6 @@ CPP_SRCS  += Drivers/ADP8866/ADP8866.cpp
 #CPP_SRCS  += Drivers/ManuvrableNeoPixel/ManuvrableNeoPixel.cpp
 
 CPP_SRCS  += Drivers/ExampleDriver/ExampleDriver.cpp
-CPP_SRCS  += Drivers/ManuvrCoAP/ManuvrCoAP.cpp
 CPP_SRCS  += Drivers/ISL23345/ISL23345.cpp
 CPP_SRCS  += Drivers/Bluetooth/RN4020/RN4020.cpp
 CPP_SRCS  += Drivers/ADG2128/ADG2128.cpp

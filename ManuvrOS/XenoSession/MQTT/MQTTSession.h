@@ -74,8 +74,8 @@ struct MQTTOpts {
 };
 
 struct MessageData {
-    MQTTMessage* message;
-    MQTTString* topicName;
+  MQTTMessage* message;
+  MQTTString* topicName;
 };
 
 
@@ -114,11 +114,8 @@ class MQTTSession : public XenoSession {
 
     unsigned int _next_packetid;
     unsigned int command_timeout_ms;
-    unsigned int keepAliveInterval;
 
     uint8_t _ping_outstanding;
-
-    void (*defaultMessageHandler) (MessageData*);
 
     ManuvrRunnable _ping_timer;    // Periodic KA ping.
 
