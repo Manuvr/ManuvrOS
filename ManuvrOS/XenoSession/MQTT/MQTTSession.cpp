@@ -89,6 +89,10 @@ MQTTSession::~MQTTSession() {
   _ping_timer.enableSchedule(false);
   __kernel->removeSchedule(&_ping_timer);
 
+	if (NULL != working) {
+		delete working;
+		working = NULL;
+	}
 	unsubscribeAll();
 	while (_pending_mqtt_messages.hasNext()) {
 		delete _pending_mqtt_messages.dequeue();
@@ -194,10 +198,27 @@ int8_t MQTTSession::bin_stream_rx(unsigned char *buf, int len) {
 }
 
 
+int8_t MQTTSession::connection_callback(bool _con) {
+	XenoSession::connection_callback(_con);
+	StringBuilder output;
+	output.concatf("\n\nSession%sconnected\n\n", (_con ? " " : " dis"));
+	Kernel::log(&output);
+	if (_con) {
+		sendConnectPacket();
+	}
+  return 0;
+}
 
+
+
+
+/****************************************************************************************************
+* Private functions that conduct the business of the session.                                       *
+****************************************************************************************************/
 
 bool MQTTSession::sendSub(const char* _topicStr, enum QoS qos) {
   if (isEstablished()) {
+		printf("SESSION OPERATION sendSub() \n");
     MQTTString topic = MQTTString_initializer;
     topic.cstring = (char *)_topicStr;
 
@@ -254,6 +275,7 @@ bool MQTTSession::sendKeepAlive() {
 
 bool MQTTSession::sendConnectPacket() {
   if (owner->connected()) {
+		printf("SESSION OPERATION sendConnectPacket() \n");
     MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
 	  data.willFlag    = 0;
     data.MQTTVersion = 3;
@@ -263,7 +285,7 @@ bool MQTTSession::sendConnectPacket() {
     data.keepAliveInterval = 10;
     data.cleansession = 1;
 
-    size_t buf_size     = 160;
+    size_t buf_size     = 96;
     unsigned char* buf  = (unsigned char*) alloca(buf_size);
     int len = MQTTSerialize_connect(buf, buf_size, &data);
 
@@ -287,6 +309,7 @@ bool MQTTSession::sendDisconnectPacket() {
   }
   return false;
 }
+
 
 bool MQTTSession::sendPublish(ManuvrRunnable* _msg) {
 	if (isEstablished()) {
@@ -326,15 +349,6 @@ bool MQTTSession::sendPublish(ManuvrRunnable* _msg) {
 }
 
 
-int8_t MQTTSession::connection_callback(bool _con) {
-	XenoSession::connection_callback(_con);
-	if (_con) {
-		sendConnectPacket();
-	}
-  return 0;
-}
-
-
 int MQTTSession::proc_publish(MQTTMessage* nu) {
 	uint8_t _topic_len = *((uint8_t*) nu->payload + 1);
 	char* _topic = (char*) alloca(_topic_len+1);
@@ -366,6 +380,7 @@ int MQTTSession::process_inbound() {
 	switch (packet_type) {
 		case CONNACK:
 			{
+				printf("SESSION DEBUG BITS  0x%02x\n", *((uint8_t*)nu->payload + 1));
 				switch (*((uint8_t*)nu->payload + 1)) {
 					case 0:
 						mark_session_state(XENOSESSION_STATE_ESTABLISHED);
@@ -436,7 +451,7 @@ int8_t MQTTSession::bootComplete() {
 
   __kernel->addSchedule(&_ping_timer);
 
-  if (isConnected()) {
+  if (owner->connected()) {
     // Are we connected right now?
     sendConnectPacket();
   }
@@ -465,9 +480,6 @@ int8_t MQTTSession::callback_proc(ManuvrRunnable *event) {
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
-    case MANUVR_MSG_SELF_DESCRIBE:
-      //sendEvent(event);
-      break;
     default:
       break;
   }
@@ -505,8 +517,13 @@ int8_t MQTTSession::notify(ManuvrRunnable *active_event) {
       break;
 
     case MANUVR_MSG_SESS_HANGUP:
-      sendDisconnectPacket();
-			XenoSession::notify(active_event);
+      //if (isEstablished()) {
+				// If we have an existing session, we try to end it politely.
+				sendDisconnectPacket();
+			//}
+			//else {
+				XenoSession::notify(active_event);
+			//}
       return_value++;
       break;
 
@@ -526,28 +543,22 @@ int8_t MQTTSession::notify(ManuvrRunnable *active_event) {
 
 
 
-ManuvrRunnable test_sub_event(0x2425);
-
 
 void MQTTSession::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
 
   switch (*(str)) {
     case 'q':  // Manual message queue purge.
-      purgeOutbound();
-      purgeInbound();
+      Kernel::raiseEvent(MANUVR_MSG_SESS_HANGUP, NULL);
       break;
 
 		case 's':
-			test_sub_event.isManaged(true);
-
-
-			if (subscribe("sillytest", &test_sub_event) == -1) {
+			//if (subscribe("sillytest", &test_sub_event) == -1) {
 				local_log.concat("Failed to subscribe to 'sillytest'.");
-			}
-			else {
-				local_log.concat("Subscribed to 'sillytest'.");
-			}
+			//}
+			//else {
+			//	local_log.concat("Subscribed to 'sillytest'.");
+			//}
 			break;
     case 'w':  // Manual session poll.
       Kernel::raiseEvent(MANUVR_MSG_SESS_ORIGINATE_MSG, NULL);
@@ -566,10 +577,10 @@ void MQTTSession::procDirectDebugInstruction(StringBuilder *input) {
 			{
 				ManuvrRunnable mr = ManuvrRunnable(MANUVR_MSG_SESS_ORIGINATE_MSG);
 				if (sendPublish(&mr) == -1) {
-					local_log.concat("Failed to send MQTT connect packet.");
+					local_log.concat("Failed to send MQTT publish packet.");
 				}
 				else {
-					local_log.concat("Sent MQTT connect packet.");
+					local_log.concat("Sent MQTT publish packet.");
 				}
 			}
 			break;

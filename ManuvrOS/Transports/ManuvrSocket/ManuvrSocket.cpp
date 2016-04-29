@@ -108,6 +108,28 @@ void ManuvrSocket::__class_initializer() {
   read_abort_event.addArg(xport_id);  // Add our assigned transport ID to our pre-baked argument.
 }
 
+
+/**
+* On linux, socket cleanup is fairly uniform...
+*/
+int8_t ManuvrSocket::disconnect() {
+  if (listening()) {
+    Kernel::log("Socket listener shut down.");
+    listening(false);
+  }
+
+  if (connected()) {
+    Kernel::log("Socket disconnection (client).");
+    connected(false);
+  }
+
+  close(_sock);  // Close the socket.
+  _sock = 0;
+  ManuvrXport::disconnect();
+  return 0;
+}
+
+
 #else   //Unsupportedness
 #endif  // __LINUX
 

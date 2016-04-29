@@ -164,6 +164,14 @@ int main(int argc, char *argv[]) {
       MQTTSession mqtt(&tcp_cli);
       kernel->subscribe(&mqtt);
 
+      ManuvrRunnable r_led(0x2425);
+      ManuvrRunnable g_led(0x2426);
+      ManuvrRunnable b_led(0x2427);
+
+      //mqtt.subscribe("R", &r_led);
+      //mqtt.subscribe("G", &g_led);
+      //mqtt.subscribe("B", &b_led);
+
     #else
       ManuvrTCP tcp_srv((const char*) "127.0.0.1", 2319);
       ManuvrTCP tcp_cli((const char*) "127.0.0.1", 2319);

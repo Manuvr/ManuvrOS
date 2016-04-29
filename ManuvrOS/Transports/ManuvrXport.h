@@ -68,6 +68,7 @@ For debuggability, the transport has a special mode for acting as a debug
 #define MANUVR_XPORT_FLAG_CONNECTIONLESS   0x00400000  // This transport is "connectionless". See Note0 below.
 #define MANUVR_XPORT_FLAG_HAS_MULTICAST    0x00200000  // This transport supports multicast.
 #define MANUVR_XPORT_FLAG_AUTO_CONNECT     0x00100000  // This transport should periodically attempt to connect.
+#define MANUVR_XPORT_FLAG_REAP_SESSION     0x00080000  // This transport is responsible for managing sesion allocation.
 
 /**
 * Note0:
@@ -206,19 +207,30 @@ class ManuvrXport : public EventReceiver {
     //       ---J. Ian Lindsay   Thu Dec 03 03:37:41 MST 2015
     int8_t reapXenoSession(XenoSession*);   // Cleans up XenoSessions that were instantiated by this class.
 
-    /* Connection/Listen states */
-    void connected(bool);
-    void listening(bool);
-
 
     // TODO: Should be private. provide_session() / reset() are the blockers.
     inline void set_xport_state(uint32_t bitmask) {    _xport_flags = (bitmask  | _xport_flags);   }
     inline void unset_xport_state(uint32_t bitmask) {  _xport_flags = (~bitmask & _xport_flags);   }
 
+    void connected(bool);
+    void listening(bool);
+
 
 
   private:
     uint32_t _xport_flags;
+
+    /* Connection/Listen states */
+    inline void mark_connected(bool en) {
+      _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_CONNECTED) : (_xport_flags & ~(MANUVR_XPORT_FLAG_CONNECTED));
+    };
+
+
+    inline bool _reap_session() {   return (_xport_flags & (MANUVR_XPORT_FLAG_REAP_SESSION | MANUVR_XPORT_FLAG_REAP_SESSION));  }
+    inline void _reap_session(bool en) {
+      _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_REAP_SESSION) : (_xport_flags & ~(MANUVR_XPORT_FLAG_REAP_SESSION));
+    };
+
 };
 
 #endif   // __MANUVR_XPORT_H__

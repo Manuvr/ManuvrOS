@@ -65,9 +65,9 @@ enum Protos {
   RAW       = 0,   // Raw has no format and no session except that which the transport imposes (if any).
   MANUVR    = 1,   // Manuvr's protocol.
   MQTT      = 2,   // MQTT
-  COAP      = 3,   // CoAP
-  OSC       = 4,   // OSC
-  CONSOLE   = 0xFF // A user with a text console and keyboard.
+  COAP      = 3,   // TODO: CoAP
+  OSC       = 4,   // TODO: OSC
+  CONSOLE   = 0xFF // TODO: A user with a text console and keyboard.
 };
 
 

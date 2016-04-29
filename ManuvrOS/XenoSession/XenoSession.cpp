@@ -87,8 +87,6 @@ XenoSession::XenoSession(ManuvrXport* _xport) {
   session_state             = XENOSESSION_STATE_UNINITIALIZED;
   session_last_state        = XENOSESSION_STATE_UNINITIALIZED;
 
-  //mark_session_state(XENOSESSION_STATE_PENDING_CONN);
-
   if (!owner->alwaysConnected() && owner->connected()) {
     // Are we connected right now?
     mark_session_state(XENOSESSION_STATE_PENDING_SETUP);
@@ -130,11 +128,6 @@ int8_t XenoSession::tapMessageType(uint16_t code) {
   switch (code) {
     case MANUVR_MSG_SESS_ORIGINATE_MSG:
     case MANUVR_MSG_SESS_SERVICE:
-    case MANUVR_MSG_SESS_DUMP_DEBUG:
-//    case MANUVR_MSG_SESS_HANGUP:
-      #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 3) local_log.concatf("0x%08x tapMessageType() tried to tap a blacklisted code (%d).\n", (uint32_t) this, code);
-      #endif
       break;
 
     default:
@@ -178,12 +171,9 @@ int8_t XenoSession::untapAll() {
 
 
 
-
 int8_t XenoSession::sendPacket(unsigned char *buf, int len) {
-  if (isConnected()) {
-    if (owner->write_port(buf, len)) {
-      return 0;
-    }
+  if (owner->write_port(buf, len)) {
+    return 0;
   }
   return -1;
 }
@@ -237,6 +227,12 @@ int8_t XenoSession::callback_proc(ManuvrRunnable *event) {
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
+    case MANUVR_MSG_SESS_HANGUP:
+      // It is now safe to destroy this session. By triggering our owner's disconnection
+      //   method, we indirectly invoke our own teardown.
+      owner->disconnect();
+      mark_session_state(XENOSESSION_STATE_HUNGUP);
+      break;
     default:
       break;
   }
@@ -257,7 +253,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
   switch (active_event->event_code) {
     /* General system events */
     case MANUVR_MSG_BT_CONNECTION_LOST:
-      session_state = XENOSESSION_STATE_DISCONNECTED;
+      mark_session_state(XENOSESSION_STATE_DISCONNECTED);
       //_relay_list.clear();
       purgeInbound();
       purgeOutbound();
@@ -280,6 +276,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
 
     /* Things that only this class is likely to care about. */
     case MANUVR_MSG_SESS_HANGUP:
+      mark_session_state(XENOSESSION_STATE_PENDING_HANGUP);
       {
         int out_purge = purgeOutbound();
         int in_purge  = purgeInbound();

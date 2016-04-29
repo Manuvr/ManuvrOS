@@ -91,11 +91,17 @@ ManuvrXport::~ManuvrXport() {
     // TODO: Tear down the thread.
   #endif
 
+  if(_reap_session()) {
+    delete session;
+    session = NULL;
+  }
+
   // Cleanup any schedules...
   if (NULL != _autoconnect_schedule) {
     _autoconnect_schedule->enableSchedule(false);
     __kernel->removeSchedule(_autoconnect_schedule);
     _autoconnect_schedule = NULL;
+    delete _autoconnect_schedule;
   }
 }
 
@@ -148,11 +154,12 @@ int8_t ManuvrXport::disconnect() {
 */
 void ManuvrXport::alwaysConnected(bool en) {
   _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_ALWAYS_CONNECTED) : (_xport_flags & ~(MANUVR_XPORT_FLAG_ALWAYS_CONNECTED));
-  if (NULL == _autoconnect_schedule) {
+  if (NULL != _autoconnect_schedule) {
     // If we have a reconnection schedule (we should not), free it.
     _autoconnect_schedule->enableSchedule(false);
     __kernel->removeSchedule(_autoconnect_schedule);
     _autoconnect_schedule = NULL;
+    delete _autoconnect_schedule;
   }
 }
 
@@ -166,10 +173,13 @@ void ManuvrXport::alwaysConnected(bool en) {
 void ManuvrXport::autoConnect(bool en, uint32_t _ac_period) {
   if (en) {
     if (!alwaysConnected()) {
+      // Autoconnection only makes sense if the transport is not always connected.
       _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_AUTO_CONNECT) : (_xport_flags & ~(MANUVR_XPORT_FLAG_AUTO_CONNECT));
       if (NULL == _autoconnect_schedule) {
         // If we don't already have a ref to a schedule for this purpose.
-        _autoconnect_schedule = Kernel::returnEvent(MANUVR_MSG_XPORT_CONNECT);
+        _autoconnect_schedule = new ManuvrRunnable(MANUVR_MSG_XPORT_CONNECT);
+        _autoconnect_schedule->isManaged(true);
+        _autoconnect_schedule->originator      = (EventReceiver*) this;
         _autoconnect_schedule->specific_target = (EventReceiver*) this;
         _autoconnect_schedule->alterScheduleRecurrence(-1);
         _autoconnect_schedule->alterSchedulePeriod(_ac_period);
@@ -183,6 +193,7 @@ void ManuvrXport::autoConnect(bool en, uint32_t _ac_period) {
     if (NULL != _autoconnect_schedule) {
       _autoconnect_schedule->enableSchedule(false);
       __kernel->removeSchedule(_autoconnect_schedule);
+      delete _autoconnect_schedule;
       _autoconnect_schedule = NULL;
     }
   }
@@ -258,8 +269,6 @@ int8_t ManuvrXport::provide_session(XenoSession* ses) {
 
 /*
 * Mark this transport connected or disconnected.
-* This method is virtual, and may be over-ridden if the specific transport has
-*   something more sophisticated in mind.
 */
 void ManuvrXport::connected(bool en) {
   if (connected() == en) {
@@ -268,7 +277,7 @@ void ManuvrXport::connected(bool en) {
     return;
   }
 
-  _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_CONNECTED) : (_xport_flags & ~(MANUVR_XPORT_FLAG_CONNECTED));
+  mark_connected(en);
   if (!nonSessionUsage()) {
     if (en) {
       if (NULL == session) {
@@ -278,15 +287,14 @@ void ManuvrXport::connected(bool en) {
         // TODO: Session discovery should happen at this point.
         //XenoSession* ses = new XenoSession(this);
         XenoSession* ses = (XenoSession*) new ManuvrSession(this);
+        _reap_session(true);
         provide_session(ses);
 
         ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
         event->addArg((EventReceiver*) ses);
         raiseEvent(event);
       }
-      else {
-        // If there is a session already here, we'll mark it connected.
-      }
+
       if (NULL != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(false);
       if (session) session->connection_callback(true);
     }
@@ -294,7 +302,13 @@ void ManuvrXport::connected(bool en) {
       // This is a disconnection event. We might want to cleanup all of our sessions
       // that are outstanding.
       if (NULL != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(true);
-      if (session) session->connection_callback(false);
+      if (session) {
+        session->connection_callback(false);
+        if(_reap_session()) {
+          delete session;
+          session = NULL;
+        }
+      }
     }
   }
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
@@ -470,13 +484,9 @@ void ManuvrXport::procDirectDebugInstruction(StringBuilder *input) {
 
   switch (*(str)) {
     case 'C':
-    case 'D':  // Force a state change with no underlying physical reason. Abuse test...
-      connected(*(str) == 'C');
-      break;
-    case 'c':
       connect();
       break;
-    case 'd':
+    case 'D':  // Force a state change with no underlying physical reason. Abuse test...
       disconnect();
       break;
     case 'R':

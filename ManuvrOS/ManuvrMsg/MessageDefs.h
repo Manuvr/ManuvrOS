@@ -104,7 +104,7 @@ limitations under the License.
   // Codes specific to session-management and control
   #define MANUVR_MSG_SESS_SUBCRIBE        0x0060 // Used to subscribe this session to other events.
   #define MANUVR_MSG_SESS_UNSUBCRIBE      0x0061 // Used to unsubscribe this session from other events.
-  #define MANUVR_MSG_SESS_DUMP_DEBUG      0x0062 // Cause the XenoSession to dump its debug data.
+  //#define MANUVR_MSG_SESS_DUMP_DEBUG      0x0062 // Cause the XenoSession to dump its debug data.
   #define MANUVR_MSG_SESS_ORIGINATE_MSG   0x0063 // The session has something to say, and the transport ought to service it.
   #define MANUVR_MSG_SESS_SERVICE         0x0064 // A session is requesting service.
 

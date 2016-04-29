@@ -191,23 +191,6 @@ int8_t ManuvrTCP::connect() {
   return 0;
 }
 
-int8_t ManuvrTCP::disconnect() {
-  if (listening()) {
-    Kernel::log("A TCP socket was told to connect while it is listening. Doing nothing.");
-    listening(false);
-  }
-
-  if (connected()) {
-    Kernel::log("A TCP socket was told to connect while it already was. Doing nothing.");
-    connected(false);
-  }
-
-  close(_sock);  // Close the socket.
-  _sock = 0;
-  return 0;
-}
-
-
 
 
 int8_t ManuvrTCP::listen() {
@@ -291,6 +274,8 @@ int8_t ManuvrTCP::read_port() {
   else if (getVerbosity() > 1) {
     local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
   }
+
+  _thread_id = 0;
 
   if (local_log.length() > 0) Kernel::log(&local_log);
   return 0;

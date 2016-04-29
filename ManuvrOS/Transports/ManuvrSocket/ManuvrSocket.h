@@ -49,12 +49,18 @@ This is basically only for linux until it is needed in a smaller space.
 
 #if defined(MANUVR_SUPPORT_TCPSOCKET) | defined(MANUVR_SUPPORT_UDP)
 
+/*
+* This is a wrapper around sockets as they exist in a linux system.
+* TODO: This might be an appropriate place for lwip?
+*/
 class ManuvrSocket : public ManuvrXport {
   public:
     ManuvrSocket(const char* addr, int port, uint32_t opts);
     ~ManuvrSocket();
 
     inline int getSockID() {  return _sock; };
+
+    virtual int8_t disconnect();
 
 
   protected:
@@ -93,7 +99,6 @@ class ManuvrTCP : public ManuvrSocket {
 
 
     int8_t connect();
-    int8_t disconnect();
     int8_t listen();
     int8_t reset();
 
