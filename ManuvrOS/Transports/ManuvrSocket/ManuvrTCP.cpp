@@ -430,11 +430,6 @@ int8_t ManuvrTCP::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
 
   switch (active_event->event_code) {
-    case MANUVR_MSG_XPORT_DEBUG:
-      printDebug(&local_log);
-      return_value++;
-      break;
-
     default:
       return_value += ManuvrXport::notify(active_event);
       break;
