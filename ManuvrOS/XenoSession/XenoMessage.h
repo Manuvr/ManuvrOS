@@ -89,9 +89,38 @@ class XenoMessage {
 
     virtual ~XenoMessage() {};
 
+    virtual void wipe();            // Call this to put this object into a fresh state (avoid a free/malloc).
+
+    virtual void printDebug(StringBuilder*);
+
+    virtual void provideEvent(ManuvrRunnable*);
+
+    // Mandatory overrides
+    virtual int serialize(StringBuilder*) =0;       // Returns the number of bytes resulting.
+    virtual int accumulate(unsigned char*, int) =0; // Returns the number of bytes consumed.
+
+    inline uint8_t getState() {  return proc_state; };
+    inline int bytesRemaining() {    return (bytes_total - bytes_received);  };
+
+    /* Any required setup finished without problems? */
+    inline bool awaitingSend() { return (proc_state & XENO_MSG_PROC_STATE_AWAITING_SEND); };
+    inline void awaitingSend(bool en) {
+      proc_state = (en) ? (proc_state | XENO_MSG_PROC_STATE_AWAITING_SEND) : (proc_state & ~(XENO_MSG_PROC_STATE_AWAITING_SEND));
+    };
+
+
+    static const char* getMessageStateString(uint8_t);
+
+
+  protected:
+    uint32_t  bytes_received;  // How many bytes of this command have we received? Meaningless for the sender.
+    uint32_t  bytes_total;     // How many bytes does this message occupy on the wire?
+    ManuvrRunnable* event;     // Associates this XenoMessage to an event.
+    ManuvrRunnable  _timeout;    // Occasionally, we must let a defunct message die on the wire...
+    uint8_t         proc_state;  // Where are we in the flow of this message? See XENO_MSG_PROC_STATES
+
 
   private:
-    ManuvrRunnable _timeout;   // Occasionally, we must let a defunct message die on the wire...
 };
 
 
@@ -101,36 +130,11 @@ class XenoMessage {
 
 class XenoMessage_old {
   public:
-    ManuvrRunnable* event;          // Associates this XenoMessage to an event.
-
-    void wipe();                    // Call this to put this object into a fresh state (avoid a free/malloc).
-
-    /* Message flow control. */
-    int8_t ack();      // Ack this message.
-    int8_t retry();    // Asks the counterparty for a retransmission of this packet. Assumes good unique-id.
-    int8_t fail();     // Informs the counterparty that the indicated message failed a high-level validity check.
-
-    virtual int feedBuffer(StringBuilder*) =0;  // This is used to build an event from data that arrives in chunks.
-    virtual int serialize(StringBuilder*)  =0;  // Returns the number of bytes resulting.
-
-    void provideEvent(ManuvrRunnable*, uint16_t);  // Call to make this XenoMessage outbound.
-    inline void provideEvent(ManuvrRunnable* runnable) {    // Override to support laziness.
-      provideEvent(runnable, (uint16_t) randomInt());
-    };
-
-    void printDebug(StringBuilder*);
-
-    inline uint8_t getState() {  return proc_state; };
-    inline uint16_t uniqueId() { return unique_id;  };
-
-    inline int bytesRemaining() {    return (bytes_total - bytes_received);  };
-
     /*
     * Functions used for manipulating this message's state-machine...
     */
     void claim(XenoSession*);
 
-    static const char* getMessageStateString(uint8_t);
     static int contains_sync_pattern(uint8_t* buf, int len);
     static int locate_sync_break(uint8_t* buf, int len);
 
@@ -140,15 +144,7 @@ class XenoMessage_old {
     uint32_t  time_created;    // Optional: What time did this message come into existance?
     uint32_t  millis_at_begin; // This is the milliseconds reading when we sent.
 
-    uint32_t  bytes_received;  // How many bytes of this command have we received? Meaningless for the sender.
-    uint32_t  bytes_total;     // How many bytes does this message occupy on the wire?
-
-    uint16_t  unique_id;       // An identifier for this message.
-    uint16_t  message_code;    // The integer code for this message class.
     uint8_t   retries;         // How many times have we retried this packet?
-    uint8_t   proc_state;      // Where are we in the flow of this message? See XENO_MSG_PROC_STATES
-
-    ManuvrRunnable _timeout;   // Occasionally, we must let a defunct message die on the wire...
 };
 
 #endif   //__XENOMESSAGE_H__

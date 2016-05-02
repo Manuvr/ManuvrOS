@@ -168,12 +168,12 @@ int XenoManuvrMessage::locate_sync_break(uint8_t* buf, int len) {
 * Constructors/destructors, class initialization functions and so-forth...
 ****************************************************************************************************/
 
-XenoManuvrMessage::XenoManuvrMessage() {
+XenoManuvrMessage::XenoManuvrMessage() : XenoMessage() {
   wipe();
 }
 
 
-XenoManuvrMessage::XenoManuvrMessage(ManuvrRunnable* existing_event) {
+XenoManuvrMessage::XenoManuvrMessage(ManuvrRunnable* existing_event) : XenoMessage(existing_event) {
   wipe();
   // Should maybe set a flag in the event to indicate that we are now responsible
   //   for memory upkeep? Don't want it to get jerked out from under us and cause a crash.
@@ -186,22 +186,15 @@ XenoManuvrMessage::XenoManuvrMessage(ManuvrRunnable* existing_event) {
 * Do not change the unique_id. One common use-case for this fxn is to reply to a message.
 */
 void XenoManuvrMessage::wipe() {
+  XenoMessage::wipe();
   session         = NULL;
-  proc_state      = XENO_MSG_PROC_STATE_UNINITIALIZED;
   checksum_c      = CHECKSUM_PRELOAD_BYTE;     // The checksum of the data that we calculate.
   retries         = 0;     // How many times have we retried this packet?
-  bytes_received  = 0;     // How many bytes of this command have we received? Meaningless for the sender.
   arg_count       = 0;
 
   unique_id       = 0;
-  bytes_total     = 0;     // How many bytes does this message occupy?
   checksum_i      = 0;     // The checksum of the data that we receive.
   message_code    = 0;     //
-
-  if (NULL != event) {
-    // TODO: Now we are worried about this.
-    event = NULL;
-  }
 
   millis_at_begin = 0;     // This is the milliseconds reading when we sent.
   time_created    = millis();
@@ -218,10 +211,9 @@ void XenoManuvrMessage::wipe() {
 * @param   uint16_t          An explicitly-provided unique_id so that a dialog can be perpetuated.
 */
 void XenoManuvrMessage::provideEvent(ManuvrRunnable *existing_event, uint16_t manual_id) {
-  event = existing_event;
+  XenoMessage::provideEvent(existing_event);
   unique_id = manual_id;
   message_code = event->event_code;                //
-  proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;  // Implies we are sending.
 }
 
 
@@ -234,7 +226,7 @@ void XenoManuvrMessage::provideEvent(ManuvrRunnable *existing_event, uint16_t ma
 int8_t XenoManuvrMessage::ack() {
   ManuvrRunnable temp_event(MANUVR_MSG_REPLY);
   provideEvent(&temp_event, unique_id);
-  proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
+  awaitingSend(true);
   return 0;
 }
 
@@ -247,7 +239,7 @@ int8_t XenoManuvrMessage::ack() {
 int8_t XenoManuvrMessage::retry() {
   ManuvrRunnable temp_event(MANUVR_MSG_REPLY_RETRY);
   provideEvent(&temp_event, unique_id);
-  proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
+  awaitingSend(true);
   retries++;
   return 0;
 }
@@ -262,7 +254,7 @@ int8_t XenoManuvrMessage::retry() {
 int8_t XenoManuvrMessage::fail() {
   ManuvrRunnable temp_event(MANUVR_MSG_REPLY_FAIL);
   provideEvent(&temp_event, unique_id);
-  proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
+  awaitingSend(true);
   return 0;
 }
 
@@ -280,7 +272,7 @@ int XenoManuvrMessage::serialize(StringBuilder* buffer) {
     return 0;
   }
 
-  proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;
+  awaitingSend(true);
   int arg_count  = event->serialize(buffer);
   if (arg_count >= 0) {
     bytes_total = (uint32_t) buffer->length() + 8;   // +8 because: checksum byte
@@ -324,12 +316,13 @@ int XenoManuvrMessage::serialize(StringBuilder* buffer) {
 */
 int XenoManuvrMessage::feedBuffer(StringBuilder *sb_buf) {
   if (NULL == sb_buf) return 0;
+  return accumulate((uint8_t*) sb_buf->string(), sb_buf->length());
+}
 
-  StringBuilder output;
+
+int XenoManuvrMessage::accumulate(unsigned char* buf, int buf_len){
   int return_value = 0;
-  int buf_len  = sb_buf->length();
-  uint8_t* buf = (uint8_t*) sb_buf->string();
-
+  StringBuilder output;
   /* Ok... by this point, we know we are eligible to receive data. So stop worrying about that. */
   if (0 == bytes_received) {      // If we haven't been fed any bytes yet...
     if (buf_len < 4) {
@@ -514,19 +507,11 @@ void XenoManuvrMessage::claim(XenoSession* _ses) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void XenoManuvrMessage::printDebug(StringBuilder *output) {
-  if (NULL == output) return;
-
-  output->concatf("\t Message ID      0x%08x\n", (uint32_t) this);
-  if (NULL != event) {
-    output->concatf("\t Message type    %s\n", event->getMsgTypeString());
-  }
-  output->concatf("\t Message state   %s\n", XenoMessage::getMessageStateString(proc_state));
+  XenoMessage::printDebug(output);
   output->concatf("\t unique_id       0x%04x\n", unique_id);
   output->concatf("\t checksum_i      0x%02x\n", checksum_i);
   output->concatf("\t checksum_c      0x%02x\n", checksum_c);
   output->concatf("\t arg_count       %d\n", arg_count);
-  output->concatf("\t bytes_total     %d\n", bytes_total);
-  output->concatf("\t bytes_received  %d\n", bytes_received);
   output->concatf("\t time_created    0x%08x\n", time_created);
   output->concatf("\t retries         %d\n\n", retries);
 }
