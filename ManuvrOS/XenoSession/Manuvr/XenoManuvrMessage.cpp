@@ -320,6 +320,11 @@ int XenoManuvrMessage::feedBuffer(StringBuilder *sb_buf) {
 }
 
 
+/**
+* This function should be called by the session to feed bytes to a message.
+*
+* @return  The number of bytes consumed, or a negative value on failure.
+*/
 int XenoManuvrMessage::accumulate(unsigned char* buf, int buf_len){
   int return_value = 0;
   StringBuilder output;

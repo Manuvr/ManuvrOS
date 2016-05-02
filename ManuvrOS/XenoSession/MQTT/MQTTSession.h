@@ -35,20 +35,23 @@ This class originated from IBM's C-client demo code, but was re-written into
 enum QoS { QOS0, QOS1, QOS2 };
 
 
-class MQTTMessage {
+class MQTTMessage : public XenoMessage {
   public:
     enum QoS qos;
     char retained;
     char dup;
-    unsigned short id;
+    unsigned short unique_id;
     void *payload;
     int payloadlen;
 
     MQTTMessage();
     ~MQTTMessage();
 
+    virtual void printDebug(StringBuilder*);
+
     // Called to accumulate data into the class.
     // Returns -1 on failure, or the number of bytes consumed on success.
+    int serialize(StringBuilder*);       // Returns the number of bytes resulting.
     int accumulate(unsigned char*, int);
 
     inline uint16_t packetType() {  return _header.bits.type; };

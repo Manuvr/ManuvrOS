@@ -25,15 +25,13 @@ This is my C++ translation of the Paho Demo C library.
 
 #include "MQTTSession.h"
 
-MQTTMessage::MQTTMessage() {
-	_rem_len     = 0;
+MQTTMessage::MQTTMessage() : XenoMessage() {
 	_parse_stage = 0;
 	_header.byte = 0;
 	_multiplier  = 1;
 	payload      = NULL;
-	payloadlen   = 0;
 	qos          = QOS0;
-	id = 0;
+	unique_id = 0;
 	retained = 0;
 	dup = 0;
 }
@@ -42,12 +40,36 @@ MQTTMessage::~MQTTMessage() {
 	if (NULL != payload) {
 		free(payload);
 		payload = NULL;
-		payloadlen   = 0;
 	}
 }
 
-/*
+
+/**
+* This method is called to flatten this message (and its Event) into a string
+*   so that the session can provide it to the transport.
 *
+* @return  The total size of the string that is meant for the transport,
+*            or -1 if something went wrong.
+*/
+int MQTTMessage::serialize(StringBuilder* buffer) {
+  if (NULL == event) {
+    return 0;
+  }
+
+  awaitingSend(true);
+  int arg_count  = event->serialize(buffer);
+  if (arg_count >= 0) {
+    bytes_total = (uint32_t) buffer->length();
+  }
+
+  return buffer->length();
+}
+
+
+/**
+* This function should be called by the session to feed bytes to a message.
+*
+* @return  The number of bytes consumed, or a negative value on failure.
 */
 int MQTTMessage::accumulate(unsigned char* _buf, int _len) {
 	int _r = 0;
@@ -62,17 +84,17 @@ int MQTTMessage::accumulate(unsigned char* _buf, int _len) {
 			case 1:
 				// Read the remaining length, which is encoded as a string of 7-bit ints.
 				_tmp = *((uint8_t*)_buf + _r++);
-				payloadlen += (_tmp & 127) * _multiplier;
+				bytes_total += (_tmp & 127) * _multiplier;
 				if (0 == (_tmp & 128)) {
-					if (payloadlen > 0) {
-						payload = malloc(payloadlen);
+					if (bytes_total > 0) {
+						payload = malloc(bytes_total);
 						if (NULL == payload) {
 							// Not enough memory.
-							payloadlen = 0;
+							bytes_total = 0;
 							return -1;
 						}
 					}
-					else if (payloadlen == 0) {
+					else if (bytes_total == 0) {
 						_parse_stage++;   // There will be no payload.
 					}
 					_parse_stage++;   // Field completed.
@@ -88,10 +110,10 @@ int MQTTMessage::accumulate(unsigned char* _buf, int _len) {
 			case 2:
 				// Here, we just copy bytes into the payload field until we reach our
 				//   length target.
-				if (payloadlen > _rem_len) {
-					//printf("PAYLOAD (%d): 0x%02x\n", _rem_len, *((uint8_t*)_buf + _r));
-					*((uint8_t*) payload + _rem_len++) = *((uint8_t*)_buf + _r++);
-					if (payloadlen == _rem_len) {
+				if (bytesRemaining()) {
+					//printf("PAYLOAD (%d): 0x%02x\n", bytes_received, *((uint8_t*)_buf + _r));
+					*((uint8_t*) payload + bytes_received++) = *((uint8_t*)_buf + _r++);
+					if (0 == bytesRemaining()) {
 						_parse_stage++;   // Field completed.
 					}
 				}
@@ -107,6 +129,21 @@ int MQTTMessage::accumulate(unsigned char* _buf, int _len) {
 		}
 	}
 	return _r;
+}
+
+
+/**
+* Debug support method. This fxn is only present in debug builds.
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
+void MQTTMessage::printDebug(StringBuilder *output) {
+  XenoMessage::printDebug(output);
+  output->concatf("\t unique_id       0x%04x\n", unique_id);
+  output->concatf("\t Packet type     0x%02x\n", packetType());
+	//for (int i = 0; i < bytes_total; i++) {
+		//output->concatf("--  0x%02x\n", *((uint8_t*)payload + i));
+	//}
 }
 
 #endif

@@ -630,13 +630,9 @@ void MQTTSession::printDebug(StringBuilder *output) {
 
 	if (NULL != working) {
 		output->concat("--\n-- Incomplete inbound message:\n");
-		output->concatf("--     Packet id        0x%04x\n", working->id);
-		output->concatf("--     Packet type      0x%02x\n", working->packetType());
+		working->printDebug(output);
 		output->concatf("--     Payload length   %d\n", working->payloadlen);
 		output->concatf("--     Parse complete   %s\n", working->parseComplete() ? "yes":"no");
-		//for (int i = 0; i < working->payloadlen; i++) {
-			//output->concatf("--  0x%02x\n", *((uint8_t*)working->payload + i));
-		//}
 	}
 }
 
