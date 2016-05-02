@@ -18,9 +18,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-XenoMessage is the class that is the interface between ManuvrRunnables and
-  XenoSessions.
-     ---J. Ian Lindsay
+XenoMessage is the class that unifies our counterparty's message format
+  into a single internal type.
 */
 
 #include "XenoSession.h"
