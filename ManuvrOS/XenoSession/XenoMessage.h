@@ -56,13 +56,26 @@ XenoMessage is the class that unifies our counterparty's message format
 * These are the enumerations of the protocols we intend to support.
 */
 enum Protos {
-  RAW       = 0,   // Raw has no format and no session except that which the transport imposes (if any).
-  MANUVR    = 1,   // Manuvr's protocol.
-  MQTT      = 2,   // MQTT
-  COAP      = 3,   // TODO: CoAP
-  OSC       = 4,   // TODO: OSC
-  CONSOLE   = 0xFF // TODO: A user with a text console and keyboard.
+  PROTO_RAW       = 0,   // Raw has no format and no session except that which the transport imposes (if any).
+  PROTO_MANUVR    = 1,   // Manuvr's protocol.
+  PROTO_MQTT      = 2,   // MQTT
+  PROTO_COAP      = 3,   // TODO: CoAP
+  PROTO_OSC       = 4,   // TODO: OSC
+  PROTO_CONSOLE   = 0xFF // TODO: A user with a text console and keyboard.
 };
+
+/**
+* These are the enumerations of the data encodings we intend to support. Sometimes
+*   this choice is independent of the protocol.
+*/
+enum TypeFormats {
+  TYPES_NONE      = 0,   // No type format.
+  TYPES_MANUVR    = 1,   // Manuvr's native types.
+  TYPES_CBOR      = 2,   // TODO: CBOR
+  TYPES_OSC       = 3,   // TODO: OSC's native types.
+  TYPES_CONSOLE   = 0xFF // Debug consoles interpret all I/O as C-style strings.
+};
+
 
 /**
 * This class is a special extension of ManuvrRunnable that is intended for communication with
@@ -71,12 +84,24 @@ enum Protos {
 */
 class XenoMessage {
   public:
-    ManuvrRunnable* event;          // Associates this XenoMessage to an event.
-
     XenoMessage();                  // Typical use: building an inbound XemoMessage.
     XenoMessage(ManuvrRunnable*);   // Create a new XenoMessage with the given event as source data.
 
     virtual ~XenoMessage() {};
+
+
+  private:
+    ManuvrRunnable _timeout;   // Occasionally, we must let a defunct message die on the wire...
+};
+
+
+
+
+
+
+class XenoMessage_old {
+  public:
+    ManuvrRunnable* event;          // Associates this XenoMessage to an event.
 
     void wipe();                    // Call this to put this object into a fresh state (avoid a free/malloc).
 
