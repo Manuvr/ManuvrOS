@@ -40,7 +40,7 @@ class MQTTMessage : public XenoMessage {
     enum QoS qos;
     char retained;
     char dup;
-    unsigned short unique_id;
+    uint16_t unique_id;
     void *payload;
     int payloadlen;
 

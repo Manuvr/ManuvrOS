@@ -90,16 +90,14 @@ class XenoMessage {
     virtual ~XenoMessage() {};
 
     virtual void wipe();            // Call this to put this object into a fresh state (avoid a free/malloc).
-
     virtual void printDebug(StringBuilder*);
-
     virtual void provideEvent(ManuvrRunnable*);
 
     // Mandatory overrides
     virtual int serialize(StringBuilder*) =0;       // Returns the number of bytes resulting.
     virtual int accumulate(unsigned char*, int) =0; // Returns the number of bytes consumed.
 
-    inline uint8_t getState() {  return proc_state; };
+    inline uint8_t getState() {      return proc_state; };
     inline int bytesRemaining() {    return (bytes_total - bytes_received);  };
 
     /* Any required setup finished without problems? */
@@ -124,26 +122,15 @@ class XenoMessage {
 };
 
 
-
-
-
-
+// TODO: These are the members that may yet wind up in the base-class.
 class XenoMessage_old {
   public:
-    /*
-    * Functions used for manipulating this message's state-machine...
-    */
     void claim(XenoSession*);
-
-    static int contains_sync_pattern(uint8_t* buf, int len);
-    static int locate_sync_break(uint8_t* buf, int len);
-
 
   private:
     XenoSession*    session;   // A reference to the session that we are associated with.
     uint32_t  time_created;    // Optional: What time did this message come into existance?
     uint32_t  millis_at_begin; // This is the milliseconds reading when we sent.
-
     uint8_t   retries;         // How many times have we retried this packet?
 };
 
