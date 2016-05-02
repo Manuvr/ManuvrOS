@@ -349,23 +349,28 @@ bool MQTTSession::sendPublish(ManuvrRunnable* _msg) {
 }
 
 
+/*
+*/
 int MQTTSession::proc_publish(MQTTMessage* nu) {
-	uint8_t _topic_len = *((uint8_t*) nu->payload + 1);
-	char* _topic = (char*) alloca(_topic_len+1);
-	_topic[_topic_len] = '\0';
+	int return_value = nu->decompose_publish();
 
-	for (int i = 0; i < _topic_len; i++) {
-		_topic[i] = *((uint8_t*) nu->payload + i + 2);
-	}
+	if (return_value >= 0) {
+  	std::map<const char*, ManuvrRunnable*>::iterator it = _subscriptions.find(nu->topic);
+		for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
+			if (0 == strcmp((const char*) nu->topic, it->first)) {
+				if (0 < nu->argumentBytes()) {
+					it->second->inflateArgumentsFromBuffer((uint8_t*) nu->payload, nu->argumentBytes());
+				}
+				raiseEvent(it->second);
+				return 0;
+			}
+		}
 
-  std::map<const char*, ManuvrRunnable*>::iterator it = _subscriptions.find(_topic);
-	for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
-		if (0 == strcmp((const char*) _topic, it->first)) {
-			raiseEvent(it->second);
-			return 0;
+		if (getVerbosity() > 2) {
+			local_log.concatf("%s got a PUBLISH on a topc (%s) it wasn't expecting.\n", getReceiverName(), nu->topic);
+			Kernel::log(&local_log);
 		}
 	}
-
 	return -1;
 }
 
@@ -631,8 +636,6 @@ void MQTTSession::printDebug(StringBuilder *output) {
 	if (NULL != working) {
 		output->concat("--\n-- Incomplete inbound message:\n");
 		working->printDebug(output);
-		output->concatf("--     Payload length   %d\n", working->payloadlen);
-		output->concatf("--     Parse complete   %s\n", working->parseComplete() ? "yes":"no");
 	}
 }
 

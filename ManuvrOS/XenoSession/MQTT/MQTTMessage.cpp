@@ -30,16 +30,21 @@ MQTTMessage::MQTTMessage() : XenoMessage() {
 	_header.byte = 0;
 	_multiplier  = 1;
 	payload      = NULL;
+	topic        = NULL;
 	qos          = QOS0;
-	unique_id = 0;
-	retained = 0;
-	dup = 0;
+	unique_id    = 0;
+	retained     = 0;
+	dup          = 0;
 }
 
 MQTTMessage::~MQTTMessage() {
 	if (NULL != payload) {
 		free(payload);
 		payload = NULL;
+	}
+	if (NULL != topic) {
+		free(topic);
+		topic = NULL;
 	}
 }
 
@@ -132,6 +137,54 @@ int MQTTMessage::accumulate(unsigned char* _buf, int _len) {
 }
 
 
+/*
+* This MQTT library will deliver the content of the incoming message
+*   in the payload field. This means that we need to extract the topic
+*   string from the payload.
+* These are not C-style strings (not null-terminated).
+*/
+int MQTTMessage::decompose_publish() {
+	uint16_t _topic_len = *((uint8_t*) payload + 1) + (*((uint8_t*) payload) * 256);
+	topic = (char*) malloc(_topic_len+1);
+	topic[_topic_len] = '\0';
+
+	int i = 0;
+	for (i = 0; i < _topic_len; i++) {  topic[i] = *((uint8_t*) payload + i + 2);  }
+
+	// Now that we've read the topic string, read the unique_id from the next two bytes...
+	i += 2;  // We cheated this variable forward.
+	unique_id  = *((uint8_t*) payload + i++) * 256;
+	unique_id += *((uint8_t*) payload + i++);
+
+	// Now we should clean up as much dynamic memory as we can.
+	if (i < bytes_total) {
+		void* _tmp_args = (void*) malloc(_topic_len+1);
+		if (NULL == _tmp_args) {
+			// Bailout if the malloc() failed...
+			return -1;
+		}
+		for (int x = 0; x < (bytes_total - i); x++) {
+			// Copy the remainder of the payload into the new allocation.
+			*((uint8_t*)_tmp_args + x) = *((uint8_t*) payload + i + x);
+		}
+		// Then free the old payload pointer and replace it with the new allocation.
+		// Don't forget to adjust the length.
+		free(payload);
+		payload = _tmp_args;
+		bytes_total = (bytes_total - i);
+	}
+	else {
+		// If the payload only contained the fields we just extracted, free it without
+		//   any replacement. There is no more data for it to hold.
+		free(payload);
+		payload = NULL;
+		bytes_total = 0;
+	}
+	// On success, return the remaining payload length, which may be zero.
+	return bytes_total;
+}
+
+
 /**
 * Debug support method. This fxn is only present in debug builds.
 *
@@ -139,11 +192,17 @@ int MQTTMessage::accumulate(unsigned char* _buf, int _len) {
 */
 void MQTTMessage::printDebug(StringBuilder *output) {
   XenoMessage::printDebug(output);
+  if (NULL != topic) output->concatf("\t topic           %s\n", topic);
   output->concatf("\t unique_id       0x%04x\n", unique_id);
   output->concatf("\t Packet type     0x%02x\n", packetType());
-	//for (int i = 0; i < bytes_total; i++) {
-		//output->concatf("--  0x%02x\n", *((uint8_t*)payload + i));
-	//}
+	output->concatf("\t Parse complete  %s\n", parseComplete() ? "yes":"no");
+	if ((bytes_total > 0) && (NULL != payload)) {
+		output->concat("\t Payload contents:\t");
+		for (int i = 0; i < bytes_total; i++) {
+			output->concatf("0x%02x ", *((uint8_t*)payload + i));
+		}
+		output->concat("\n");
+	}
 }
 
 #endif

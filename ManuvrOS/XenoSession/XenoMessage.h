@@ -98,6 +98,7 @@ class XenoMessage {
     virtual int accumulate(unsigned char*, int) =0; // Returns the number of bytes consumed.
 
     inline uint8_t getState() {      return proc_state; };
+    inline int argumentBytes() {     return (bytes_total);                   };
     inline int bytesRemaining() {    return (bytes_total - bytes_received);  };
 
     /* Any required setup finished without problems? */
