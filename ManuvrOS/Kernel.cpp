@@ -1127,6 +1127,12 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
 
   switch (active_runnable->event_code) {
     case MANUVR_MSG_USER_DEBUG_INPUT:
+      if (active_runnable->argCount()) {
+        StringBuilder* _tmp = NULL;
+        if (0 == active_runnable->getArgAs(&_tmp)) {
+          last_user_input.concatHandoff(_tmp);
+        }
+      }
       procDirectDebugInstruction(&last_user_input);
       return_value++;
       break;

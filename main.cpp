@@ -168,9 +168,14 @@ int main(int argc, char *argv[]) {
       ManuvrRunnable g_led(0x2426);
       ManuvrRunnable b_led(0x2427);
 
+      ManuvrRunnable debug_msg(MANUVR_MSG_USER_DEBUG_INPUT);
+      debug_msg.isManaged(true);
+      debug_msg.specific_target = (EventReceiver*) kernel;
+
       //mqtt.subscribe("R", &r_led);
       //mqtt.subscribe("G", &g_led);
       //mqtt.subscribe("B", &b_led);
+      mqtt.subscribe("d", &debug_msg);
 
     #else
       ManuvrTCP tcp_srv((const char*) "127.0.0.1", 2319);

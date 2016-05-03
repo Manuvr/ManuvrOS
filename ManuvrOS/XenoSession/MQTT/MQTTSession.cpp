@@ -108,6 +108,7 @@ int8_t MQTTSession::subscribe(const char* topic, ManuvrRunnable* runnable) {
   std::map<const char*, ManuvrRunnable*>::iterator it = _subscriptions.find(topic);
   if (_subscriptions.end() == it) {
     // If the list doesn't already have the topic....
+		runnable->originator  = (EventReceiver*) this;
     _subscriptions[topic] = runnable;
 		return sendSub(topic, QOS1);   // TODO: make dynamic
   }
@@ -359,9 +360,19 @@ int MQTTSession::proc_publish(MQTTMessage* nu) {
 		for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
 			if (0 == strcmp((const char*) nu->topic, it->first)) {
 				if (0 < nu->argumentBytes()) {
-					it->second->inflateArgumentsFromBuffer((uint8_t*) nu->payload, nu->argumentBytes());
+					//it->second->inflateArgumentsFromBuffer((uint8_t*) nu->payload, nu->argumentBytes());
+					StringBuilder* _hack = new StringBuilder((uint8_t*) nu->payload, nu->argumentBytes());
+					_hack->concat('\0');  // Yuck... No native null-term.
+					_hack->string();  // Condense.
+					it->second->markArgForReap(it->second->addArg(_hack), true);
 				}
+				//nu->printDebug(&local_log);
+				//local_log.concat("\n\n");
+				//it->second->printDebug(&local_log);
+				//Kernel::log(&local_log);
+
 				raiseEvent(it->second);
+				delete nu;  // TODO: Yuck. Nasty. No. Bad.
 				return 0;
 			}
 		}
@@ -486,6 +497,7 @@ int8_t MQTTSession::callback_proc(ManuvrRunnable *event) {
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     default:
+			event->clearArgs();
       break;
   }
 

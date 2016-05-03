@@ -172,6 +172,7 @@ int MQTTMessage::decompose_publish() {
 		free(payload);
 		payload = _tmp_args;
 		bytes_total = (bytes_total - i);
+		bytes_received = bytes_total;
 	}
 	else {
 		// If the payload only contained the fields we just extracted, free it without
@@ -179,6 +180,7 @@ int MQTTMessage::decompose_publish() {
 		free(payload);
 		payload = NULL;
 		bytes_total = 0;
+		bytes_received = 0;
 	}
 	// On success, return the remaining payload length, which may be zero.
 	return bytes_total;
