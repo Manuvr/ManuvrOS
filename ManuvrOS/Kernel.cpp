@@ -1129,7 +1129,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
     case MANUVR_MSG_USER_DEBUG_INPUT:
       if (active_runnable->argCount()) {
         StringBuilder* _tmp = NULL;
-        if (0 == active_runnable->getArgAs(&_tmp)) {
+        if (0 == active_runnable->consumeArgAs(&_tmp)) {
           last_user_input.concatHandoff(_tmp);
         }
       }

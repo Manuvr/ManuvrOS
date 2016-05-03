@@ -156,6 +156,15 @@ int main(int argc, char *argv[]) {
   * At this point, we should instantiate whatever specific functionality we
   *   want this Manuvrable to have.
   */
+  ManuvrableGPIO gpio;
+  kernel->subscribe(&gpio);
+
+  #if defined(RASPI) || defined(RASPI2)
+    // If we are running on a RasPi, let's try to fire up the i2c that is almost
+    //   certainly present.
+    I2CAdapter i2c(1);
+    kernel->subscribe(&i2c);
+  #endif
 
   // We need at least ONE transport to be useful...
   #if defined (MANUVR_SUPPORT_TCPSOCKET)
@@ -164,17 +173,31 @@ int main(int argc, char *argv[]) {
       MQTTSession mqtt(&tcp_cli);
       kernel->subscribe(&mqtt);
 
-      ManuvrRunnable r_led(0x2425);
-      ManuvrRunnable g_led(0x2426);
-      ManuvrRunnable b_led(0x2427);
+      ManuvrRunnable r_led(MANUVR_MSG_DIGITAL_WRITE);
+      r_led.isManaged(true);
+      r_led.addArg((uint8_t) 15);  // pin
+      r_led.addArg((uint16_t) 1);
+      r_led.specific_target = &gpio;
+
+      ManuvrRunnable g_led(MANUVR_MSG_DIGITAL_WRITE);
+      g_led.isManaged(true);
+      g_led.addArg((uint8_t) 16);  // pin
+      g_led.addArg((uint16_t) 1);
+      g_led.specific_target = &gpio;
+
+      ManuvrRunnable b_led(MANUVR_MSG_DIGITAL_WRITE);
+      b_led.isManaged(true);
+      b_led.addArg((uint8_t) 17);  // pin
+      b_led.addArg((uint16_t) 1);
+      b_led.specific_target = &gpio;
 
       ManuvrRunnable debug_msg(MANUVR_MSG_USER_DEBUG_INPUT);
       debug_msg.isManaged(true);
       debug_msg.specific_target = (EventReceiver*) kernel;
 
-      //mqtt.subscribe("R", &r_led);
-      //mqtt.subscribe("G", &g_led);
-      //mqtt.subscribe("B", &b_led);
+      mqtt.subscribe("r", &r_led);
+      mqtt.subscribe("g", &g_led);
+      mqtt.subscribe("b", &b_led);
       mqtt.subscribe("d", &debug_msg);
 
     #else
@@ -200,16 +223,6 @@ int main(int argc, char *argv[]) {
     ManuvrSerial* ser = NULL;
   #endif
 
-
-  #if defined(RASPI) || defined(RASPI2)
-    // If we are running on a RasPi, let's try to fire up the i2c that is almost
-    //   certainly present.
-    I2CAdapter i2c(1);
-    kernel->subscribe(&i2c);
-
-    ManuvrableGPIO gpio;
-    kernel->subscribe(&gpio);
-  #endif
 
 
   // Parse through all the command line arguments and flags...

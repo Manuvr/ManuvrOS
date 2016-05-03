@@ -256,6 +256,7 @@ class ManuvrMsg {
     inline int8_t consumeArgAs(uint32_t *trg_buf) {     return getArgAs(0, (void*) trg_buf, false);  }
     inline int8_t consumeArgAs(float *trg_buf) {        return getArgAs(0, (void*) trg_buf, false);  }
     inline int8_t consumeArgAs(ManuvrRunnable **trg_buf) {  return getArgAs(0, (void*) trg_buf, false);  }
+    inline int8_t consumeArgAs(StringBuilder **trg_buf) {   return getArgAs(0, (void*) trg_buf, false);  }
 
     inline int8_t getArgAs(int8_t *trg_buf) {           return getArgAs(0, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t *trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }

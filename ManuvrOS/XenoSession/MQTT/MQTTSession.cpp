@@ -497,7 +497,6 @@ int8_t MQTTSession::callback_proc(ManuvrRunnable *event) {
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     default:
-			event->clearArgs();
       break;
   }
 
