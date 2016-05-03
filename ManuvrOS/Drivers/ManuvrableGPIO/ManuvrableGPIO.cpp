@@ -24,6 +24,8 @@ The idea here is not to provide any manner of abstraction for GPIO. Our
 
 #include "ManuvrableGPIO.h"
 
+const unsigned char MSG_ARGS_U8_U16[] = {UINT8_FM, UINT16_FM, 0};
+
 
 const MessageTypeDef gpio_message_defs[] = {
   /*
@@ -33,17 +35,17 @@ const MessageTypeDef gpio_message_defs[] = {
   */
   #if defined (__ENABLE_MSG_SEMANTICS)
   {  MANUVR_MSG_GPIO_LEGEND       , MSG_FLAG_EXPORTABLE,  "GPIO_LEGEND",         ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_DIGITAL_READ      , MSG_FLAG_EXPORTABLE,  "DIGITAL_READ",        ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_DIGITAL_WRITE     , MSG_FLAG_EXPORTABLE,  "DIGITAL_WRITE",       ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_ANALOG_READ       , MSG_FLAG_EXPORTABLE,  "ANALOG_READ",         ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_ANALOG_WRITE      , MSG_FLAG_EXPORTABLE,  "ANALOG_WRITE",        ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_DIGITAL_READ      , MSG_FLAG_EXPORTABLE,  "DIGITAL_READ",        MSG_ARGS_U8_U16 }, //
+  {  MANUVR_MSG_DIGITAL_WRITE     , MSG_FLAG_EXPORTABLE,  "DIGITAL_WRITE",       MSG_ARGS_U8_U16 }, //
+  {  MANUVR_MSG_ANALOG_READ       , MSG_FLAG_EXPORTABLE,  "ANALOG_READ",         MSG_ARGS_U8_U16 }, //
+  {  MANUVR_MSG_ANALOG_WRITE      , MSG_FLAG_EXPORTABLE,  "ANALOG_WRITE",        MSG_ARGS_U8_U16 }, //
   {  MANUVR_MSG_EVENT_ON_INTERRUPT, MSG_FLAG_EXPORTABLE,  "EVENT_ON_INTERRUPT",  ManuvrMsg::MSG_ARGS_NONE }, //
   #else
   {  MANUVR_MSG_GPIO_LEGEND       , MSG_FLAG_EXPORTABLE,  "GPIO_LEGEND",         ManuvrMsg::MSG_ARGS_NONE, NULL }, //
-  {  MANUVR_MSG_DIGITAL_READ      , MSG_FLAG_EXPORTABLE,  "DIGITAL_READ",        ManuvrMsg::MSG_ARGS_NONE, NULL }, //
-  {  MANUVR_MSG_DIGITAL_WRITE     , MSG_FLAG_EXPORTABLE,  "DIGITAL_WRITE",       ManuvrMsg::MSG_ARGS_NONE, NULL }, //
-  {  MANUVR_MSG_ANALOG_READ       , MSG_FLAG_EXPORTABLE,  "ANALOG_READ",         ManuvrMsg::MSG_ARGS_NONE, NULL }, //
-  {  MANUVR_MSG_ANALOG_WRITE      , MSG_FLAG_EXPORTABLE,  "ANALOG_WRITE",        ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_DIGITAL_READ      , MSG_FLAG_EXPORTABLE,  "DIGITAL_READ",        MSG_ARGS_U8_U16, NULL }, //
+  {  MANUVR_MSG_DIGITAL_WRITE     , MSG_FLAG_EXPORTABLE,  "DIGITAL_WRITE",       MSG_ARGS_U8_U16, NULL }, //
+  {  MANUVR_MSG_ANALOG_READ       , MSG_FLAG_EXPORTABLE,  "ANALOG_READ",         MSG_ARGS_U8_U16, NULL }, //
+  {  MANUVR_MSG_ANALOG_WRITE      , MSG_FLAG_EXPORTABLE,  "ANALOG_WRITE",        MSG_ARGS_U8_U16, NULL }, //
   {  MANUVR_MSG_EVENT_ON_INTERRUPT, MSG_FLAG_EXPORTABLE,  "EVENT_ON_INTERRUPT",  ManuvrMsg::MSG_ARGS_NONE, NULL }, //
   #endif
 };
@@ -51,7 +53,8 @@ const MessageTypeDef gpio_message_defs[] = {
 
 
 ManuvrableGPIO::ManuvrableGPIO() {
-
+  _gpio_notice.isManaged(true);
+  _gpio_notice.originator  = (EventReceiver*) this;
   // Inform the Kernel of the codes we will be using...
   ManuvrMsg::registerMessages(gpio_message_defs, sizeof(gpio_message_defs) / sizeof(MessageTypeDef));
 }

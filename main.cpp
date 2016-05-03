@@ -173,32 +173,19 @@ int main(int argc, char *argv[]) {
       MQTTSession mqtt(&tcp_cli);
       kernel->subscribe(&mqtt);
 
-      ManuvrRunnable r_led(MANUVR_MSG_DIGITAL_WRITE);
-      r_led.isManaged(true);
-      r_led.addArg((uint8_t) 15);  // pin
-      r_led.addArg((uint16_t) 1);
-      r_led.specific_target = &gpio;
-
-      ManuvrRunnable g_led(MANUVR_MSG_DIGITAL_WRITE);
-      g_led.isManaged(true);
-      g_led.addArg((uint8_t) 16);  // pin
-      g_led.addArg((uint16_t) 1);
-      g_led.specific_target = &gpio;
-
-      ManuvrRunnable b_led(MANUVR_MSG_DIGITAL_WRITE);
-      b_led.isManaged(true);
-      b_led.addArg((uint8_t) 17);  // pin
-      b_led.addArg((uint16_t) 1);
-      b_led.specific_target = &gpio;
+      ManuvrRunnable gpio_write(MANUVR_MSG_DIGITAL_WRITE);
+      gpio_write.isManaged(true);
+      gpio_write.specific_target = &gpio;
 
       ManuvrRunnable debug_msg(MANUVR_MSG_USER_DEBUG_INPUT);
       debug_msg.isManaged(true);
       debug_msg.specific_target = (EventReceiver*) kernel;
 
-      mqtt.subscribe("r", &r_led);
-      mqtt.subscribe("g", &g_led);
-      mqtt.subscribe("b", &b_led);
+      mqtt.subscribe("gw", &gpio_write);
       mqtt.subscribe("d", &debug_msg);
+
+      mqtt.tapMessageType(MANUVR_MSG_DIGITAL_WRITE);
+      mqtt.tapMessageType(MANUVR_MSG_DIGITAL_READ);
 
     #else
       ManuvrTCP tcp_srv((const char*) "127.0.0.1", 2319);

@@ -74,7 +74,7 @@ class XenoSession : public EventReceiver {
     int8_t untapMessageType(uint16_t code);   // Stop getting broadcasts about a given message type.
     int8_t untapAll();
 
-    int8_t sendEvent(ManuvrRunnable*);
+    virtual int8_t sendEvent(ManuvrRunnable*);
 
     /* Returns and isolates the lifecycle phase bits. */
     inline uint8_t getPhase() {      return (session_state & 0x00FF);    };

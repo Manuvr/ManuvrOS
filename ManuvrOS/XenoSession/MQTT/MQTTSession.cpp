@@ -211,6 +211,30 @@ int8_t MQTTSession::connection_callback(bool _con) {
 }
 
 
+/**
+* Passing an Event into this fxn will cause the Event to be serialized and sent to our counter-party.
+* This is the point at which choices are made about what happens to the event's life-cycle.
+*/
+int8_t MQTTSession::sendEvent(ManuvrRunnable *active_event) {
+  //XenoMessage* nu_outbound_msg = XenoMessage::fetchPreallocation(this);
+  //nu_outbound_msg->provideEvent(active_event);
+
+  //StringBuilder buf;
+  //if (nu_outbound_msg->serialize(&buf) > 0) {
+  //  owner->sendBuffer(&buf);
+  //}
+
+  //if (nu_outbound_msg->expectsACK()) {
+  //  _outbound_messages.insert(nu_outbound_msg);
+  //}
+
+  // We are about to pass a message across the transport.
+  //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
+  //event->originator      = this;   // We want the callback and the only receiver of this
+  //event->specific_target = owner;  //   event to be the transport that instantiated us.
+  //raiseEvent(event);
+  return 0;
+}
 
 
 /****************************************************************************************************
@@ -360,11 +384,11 @@ int MQTTSession::proc_publish(MQTTMessage* nu) {
 		for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
 			if (0 == strcmp((const char*) nu->topic, it->first)) {
 				if (0 < nu->argumentBytes()) {
-					//it->second->inflateArgumentsFromBuffer((uint8_t*) nu->payload, nu->argumentBytes());
-					StringBuilder* _hack = new StringBuilder((uint8_t*) nu->payload, nu->argumentBytes());
-					_hack->concat('\0');  // Yuck... No native null-term.
-					_hack->string();  // Condense.
-					it->second->markArgForReap(it->second->addArg(_hack), true);
+					it->second->inflateArgumentsFromBuffer((uint8_t*) nu->payload, nu->argumentBytes());
+					//StringBuilder* _hack = new StringBuilder((uint8_t*) nu->payload, nu->argumentBytes());
+					//_hack->concat('\0');  // Yuck... No native null-term.
+					//_hack->string();  // Condense.
+					//it->second->markArgForReap(it->second->addArg(_hack), true);
 				}
 				//nu->printDebug(&local_log);
 				//local_log.concat("\n\n");
@@ -497,6 +521,7 @@ int8_t MQTTSession::callback_proc(ManuvrRunnable *event) {
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     default:
+			event->clearArgs();
       break;
   }
 

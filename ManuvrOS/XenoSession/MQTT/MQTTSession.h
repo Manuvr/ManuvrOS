@@ -84,6 +84,8 @@ class MQTTSession : public XenoSession {
     MQTTSession(ManuvrXport*);
     ~MQTTSession();
 
+    int8_t sendEvent(ManuvrRunnable*);
+
     /* Management of subscriptions... */
     int8_t subscribe(const char*, ManuvrRunnable*);  // Start getting broadcasts about a given message type.
     int8_t unsubscribe(const char*);                 // Stop getting broadcasts about a given message type.

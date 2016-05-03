@@ -49,6 +49,7 @@ The idea here is not to provide any manner of abstraction for GPIO. Our
 
 
     private:
+      ManuvrRunnable _gpio_notice;
   };
 
 #endif // MANUVRABLE_GPIO_H

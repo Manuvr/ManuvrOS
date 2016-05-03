@@ -845,7 +845,7 @@ int ManuvrMsg::collect_valid_grammatical_forms(int len, LinkedList<char*>* retur
   char* mode = (char*) message_def->arg_modes;
   int arg_mode_len = strlen((const char*) mode);
   int temp = 0;
-  while (arg_mode_len > 0) {
+
     temp = getMinimumSizeByTypeString(mode);
     if (len == temp) {
       return_modes->insert(mode);
@@ -860,7 +860,6 @@ int ManuvrMsg::collect_valid_grammatical_forms(int len, LinkedList<char*>* retur
 
     mode += arg_mode_len + 1;
     arg_mode_len = strlen((const char*) mode);
-  }
 
   return return_value;
 }
