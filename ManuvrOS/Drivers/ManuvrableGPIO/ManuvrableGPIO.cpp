@@ -201,3 +201,28 @@ int8_t ManuvrableGPIO::notify(ManuvrRunnable *active_event) {
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
   return return_value;
 }
+
+
+
+
+void ManuvrableGPIO::procDirectDebugInstruction(StringBuilder *input) {
+  char* str = input->position(0);
+  uint8_t  _pin = 0;
+  uint16_t _val = 0;
+
+  switch (*(str)) {
+    case 'r':   // Read a pin
+      _val = readPin(_pin);
+      local_log.concatf("Pin %d state: %d\n", _pin, _val);
+      break;
+    case 'w':   // Write a pin
+      local_log.concatf("Pin %d state: %d\n", _pin, (_val?1:0));
+      setPin(_pin, (_val?true:false));
+      break;
+    default:
+      EventReceiver::procDirectDebugInstruction(input);
+      break;
+  }
+
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+}
