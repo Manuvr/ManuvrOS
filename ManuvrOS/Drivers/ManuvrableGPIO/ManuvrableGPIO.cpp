@@ -219,6 +219,10 @@ void ManuvrableGPIO::procDirectDebugInstruction(StringBuilder *input) {
       local_log.concatf("Pin %d state: %d\n", _pin, (_val?1:0));
       setPin(_pin, (_val?true:false));
       break;
+    case 'm':   // Set a pin mode.
+      local_log.concatf("Pin %d state: %d\n", _pin, (_val?1:0));
+      setPin(_pin, (_val?true:false));
+      break;
     default:
       EventReceiver::procDirectDebugInstruction(input);
       break;
