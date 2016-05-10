@@ -41,7 +41,6 @@ limitations under the License.
   #include "ManuvrRunnable.h"
   #include "EventReceiver.h"
   #include "DataStructures/PriorityQueue.h"
-  #include "DataStructures/LightLinkedList.h"
   #include <DataStructures/StringBuilder.h>
   #include <map>
 

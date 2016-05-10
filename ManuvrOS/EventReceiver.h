@@ -24,11 +24,10 @@ limitations under the License.
   #define __MANUVR_MSG_MANAGER_H__
 
   #include <inttypes.h>
-  #include "EnumeratedTypeCodes.h"
+  #include <EnumeratedTypeCodes.h>
   #include <CommonConstants.h>
 
-  #include "DataStructures/PriorityQueue.h"
-  #include "DataStructures/LightLinkedList.h"
+  #include <DataStructures/PriorityQueue.h>
   #include <DataStructures/StringBuilder.h>
 
   #define EVENT_CALLBACK_RETURN_ERROR       -1 // Horrible things happened in the originating class. This should never happen.
