@@ -55,6 +55,11 @@ This is basically only for linux for now.
 
       ManuvrTCP* listening_inst = (ManuvrTCP*) active_xport;
       StringBuilder output;
+      if (0 != s) {
+        output.concatf("pthread_sigmask() returned an error: %d\n", s);
+        Kernel::log(&output);
+        return NULL;
+      }
       int      cli_sock;
       struct sockaddr_in cli_addr;
       while (listening_inst->listening()) {
@@ -243,8 +248,6 @@ int8_t ManuvrTCP::read_port() {
   if (connected()) {
     unsigned char *buf = (unsigned char *) alloca(256);
     int n;
-    XenoSession *ses         = NULL;
-    ManuvrRunnable *event    = NULL;
     StringBuilder  *nu_data  = NULL;
 
     while (connected()) {
@@ -253,13 +256,13 @@ int8_t ManuvrTCP::read_port() {
         bytes_received += n;
 
         // Do stuff regarding the data we just read...
-
         if (NULL != session) {
-          //session->notify(event);
+          // If we have a session, let it deal with the data.
           session->bin_stream_rx(buf, n);
         }
         else {
-          event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
+          // If we don't have a session, emit the data into the event system.
+          ManuvrRunnable *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
           nu_data = new StringBuilder(buf, n);
           event->markArgForReap(event->addArg(nu_data), true);
           raiseEvent(event);
@@ -285,28 +288,23 @@ int8_t ManuvrTCP::read_port() {
 /**
 * Does what it claims to do on linux.
 * Returns false on error and true on success.
+*
+* @param  unsigned char*   The buffer containing the outbound data.
+* @param  int              The length of data in the buffer.
+* @return bool             false on error, true on success.
 */
 bool ManuvrTCP::write_port(unsigned char* out, int out_len) {
-  if (_sock == -1) {
-    if (getVerbosity() > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to socket at: (%s:%d)\n", _addr, _port_number);
-    return false;
-  }
-
-  if (connected()) {
-    int bytes_written = (int) write(_sock, out, out_len);
-    bytes_sent += bytes_written;
-    if (bytes_written == out_len) {
-      return true;
-    }
-    Kernel::log("Failed to send bytes to client");
-  }
-  return false;
+  return write_port(getSockID(), out, out_len);
 }
-
 
 /**
 * Does what it claims to do on linux.
 * Returns false on error and true on success.
+*
+* @param  int              An identifier for a specific socket.
+* @param  unsigned char*   The buffer containing the outbound data.
+* @param  int              The length of data in the buffer.
+* @return bool             false on error, true on success.
 */
 bool ManuvrTCP::write_port(int sock, unsigned char* out, int out_len) {
   if (sock == -1) {
@@ -315,7 +313,7 @@ bool ManuvrTCP::write_port(int sock, unsigned char* out, int out_len) {
   }
 
   if (connected()) {
-    int bytes_written = (int) write(_sock, out, out_len);
+    int bytes_written = (int) write(sock, out, out_len);
     bytes_sent += bytes_written;
     if (bytes_written == out_len) {
       return true;

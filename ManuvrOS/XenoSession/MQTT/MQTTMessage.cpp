@@ -148,7 +148,7 @@ int MQTTMessage::decompose_publish() {
 	topic = (char*) malloc(_topic_len+1);
 	topic[_topic_len] = '\0';
 
-	int i = 0;
+	uint16_t i = 0;
 	for (i = 0; i < _topic_len; i++) {  topic[i] = *((uint8_t*) payload + i + 2);  }
 
 	// Now that we've read the topic string, read the unique_id from the next two bytes...
@@ -163,7 +163,7 @@ int MQTTMessage::decompose_publish() {
 			// Bailout if the malloc() failed...
 			return -1;
 		}
-		for (int x = 0; x < (bytes_total - i); x++) {
+		for (uint32_t x = 0; x < (bytes_total - i); x++) {
 			// Copy the remainder of the payload into the new allocation.
 			*((uint8_t*)_tmp_args + x) = *((uint8_t*) payload + i + x);
 		}
@@ -200,7 +200,7 @@ void MQTTMessage::printDebug(StringBuilder *output) {
 	output->concatf("\t Parse complete  %s\n", parseComplete() ? "yes":"no");
 	if ((bytes_total > 0) && (NULL != payload)) {
 		output->concat("\t Payload contents:\t");
-		for (int i = 0; i < bytes_total; i++) {
+		for (uint32_t i = 0; i < bytes_total; i++) {
 			output->concatf("0x%02x ", *((uint8_t*)payload + i));
 		}
 		output->concat("\n");

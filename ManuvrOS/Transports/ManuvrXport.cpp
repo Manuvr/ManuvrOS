@@ -141,6 +141,7 @@ int8_t ManuvrXport::bridge(ManuvrXport* _xport) {
 int8_t ManuvrXport::disconnect() {
   // TODO: Might-should tear down the session?
   connected(false);
+  return 0;
 }
 
 
