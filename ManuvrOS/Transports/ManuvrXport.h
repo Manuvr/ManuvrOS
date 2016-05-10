@@ -148,7 +148,9 @@ class ManuvrXport : public EventReceiver {
 
     /* Any required setup finished without problems? */
     inline bool initialized() { return (_xport_flags & MANUVR_XPORT_FLAG_INITIALIZED); };
-    void initialized(bool en);
+    inline void initialized(bool en) {
+      _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_INITIALIZED) : (_xport_flags & ~(MANUVR_XPORT_FLAG_INITIALIZED));
+    };
 
     /* Transport bridging... */
     inline bool isBridge() {                return (_xport_flags & MANUVR_XPORT_FLAG_IS_BRIDGED);  };

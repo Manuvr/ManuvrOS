@@ -38,6 +38,7 @@ The idea here is not to provide any manner of abstraction for GPIO. Our
 
 
       /* Overrides from EventReceiver */
+      void procDirectDebugInstruction(StringBuilder*);
       void printDebug(StringBuilder*);
       const char* getReceiverName();
       int8_t notify(ManuvrRunnable*);
@@ -49,6 +50,7 @@ The idea here is not to provide any manner of abstraction for GPIO. Our
 
 
     private:
+      ManuvrRunnable _gpio_notice;
   };
 
 #endif // MANUVRABLE_GPIO_H

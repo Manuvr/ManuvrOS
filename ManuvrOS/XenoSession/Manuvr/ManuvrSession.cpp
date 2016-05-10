@@ -273,7 +273,9 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
   }
 
   if (NULL == working) {
-    working = XenoManuvrMessage::fetchPreallocation(this);
+    working = new XenoManuvrMessage();
+    working->claim((XenoSession*)this);
+    //XenoManuvrMessage::fetchPreallocation(this);
   }
 
   // If the working message is not in a RECEIVING state, it means something has gone sideways.

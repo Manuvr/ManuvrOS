@@ -82,8 +82,6 @@ limitations under the License.
 */
 class XenoManuvrMessage : public XenoMessage {
   public:
-    ManuvrRunnable* event;          // Associates this XenoMessage to an event.
-
     XenoManuvrMessage();                  // Typical use: building an inbound XemoMessage.
     XenoManuvrMessage(ManuvrRunnable*);   // Create a new XenoMessage with the given event as source data.
 
@@ -97,7 +95,9 @@ class XenoManuvrMessage : public XenoMessage {
     int8_t fail();     // Informs the counterparty that the indicated message failed a high-level validity check.
 
     int feedBuffer(StringBuilder*);  // This is used to build an event from data that arrives in chunks.
-    int serialize(StringBuilder*);   // Returns the number of bytes resulting.
+
+    int serialize(StringBuilder*);       // Returns the number of bytes resulting.
+    int accumulate(unsigned char*, int); // Returns the number of bytes consumed.
 
     void provideEvent(ManuvrRunnable*, uint16_t);  // Call to make this XenoMessage outbound.
     inline void provideEvent(ManuvrRunnable* runnable) {    // Override to support laziness.
@@ -109,13 +109,10 @@ class XenoManuvrMessage : public XenoMessage {
 
     void printDebug(StringBuilder*);
 
-    inline uint8_t getState() {  return proc_state; };
     inline uint16_t uniqueId() { return unique_id;  };
     inline bool rxComplete() {
       return ((bytes_received == bytes_total) && (0 != message_code) && (checksum_c == checksum_i));
     };
-
-    inline int bytesRemaining() {    return (bytes_total - bytes_received);  };
 
     /*
     * Functions used for manipulating this message's state-machine...
@@ -137,21 +134,15 @@ class XenoManuvrMessage : public XenoMessage {
     uint32_t  time_created;    // Optional: What time did this message come into existance?
     uint32_t  millis_at_begin; // This is the milliseconds reading when we sent.
 
-    uint32_t  bytes_received;  // How many bytes of this command have we received? Meaningless for the sender.
-    uint32_t  bytes_total;     // How many bytes does this message occupy on the wire?
-
     uint16_t  unique_id;       // An identifier for this message.
     uint16_t  message_code;    // The integer code for this message class.
 
     uint8_t   retries;         // How many times have we retried this packet?
 
-    uint8_t   proc_state;      // Where are we in the flow of this message? See XENO_MSG_PROC_STATES
     uint8_t   arg_count;
 
     uint8_t   checksum_i;      // The checksum of the data that we receive.
     uint8_t   checksum_c;      // The checksum of the data that we calculate.
-
-    ManuvrRunnable _timeout;   // Occasionally, we must let a defunct message die on the wire...
 
     static XenoManuvrMessage __prealloc_pool[XENOMSG_M_PREALLOC_COUNT];
 
@@ -177,6 +168,8 @@ class ManuvrSession : public XenoSession {
   protected:
     int8_t bootComplete();
     int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
+
+    XenoManuvrMessage* working;         // If we are in the middle of receiving a message,
 
 
   private:

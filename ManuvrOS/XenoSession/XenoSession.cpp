@@ -471,6 +471,24 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
       purgeInbound();
       break;
 
+    case 'T':   // Cause the session to untap everything.
+      untapAll();
+      local_log.concatf("Session untapped all the things.\n");
+      break;
+
+    case 't':   // Cause the session to tap an event.
+      {
+        const MessageTypeDef* temp_msg_def = ManuvrMsg::lookupMsgDefByLabel(str+1);
+        if (MANUVR_MSG_UNDEFINED != temp_msg_def->msg_type_code) {
+          tapMessageType(temp_msg_def->msg_type_code);
+          local_log.concatf("Session tapped %s\n", temp_msg_def->debug_label);
+        }
+        else {
+          local_log.concatf("Undefined message type. Session subscriptions are unaltered.\n");
+        }
+      }
+      break;
+
     default:
       EventReceiver::procDirectDebugInstruction(input);
       break;

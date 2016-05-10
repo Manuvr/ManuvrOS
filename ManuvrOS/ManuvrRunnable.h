@@ -26,6 +26,14 @@ limitations under the License.
   #include "ManuvrMsg/ManuvrMsg.h"
   #include <MsgProfiler.h>
 
+  #define MANUVR_RUNNABLE_FLAG_MEM_MANAGED     0x01  // Set to true to cause the Kernel to not free().
+  #define MANUVR_RUNNABLE_FLAG_PREALLOCD       0x02  // Set to true to cause the Kernel to return this runnable to its prealloc.
+  #define MANUVR_RUNNABLE_FLAG_AUTOCLEAR       0x04  // If true, this schedule will be removed after its last execution.
+  #define MANUVR_RUNNABLE_FLAG_THREAD_ENABLED  0x08  // Is the schedule running?
+  #define MANUVR_RUNNABLE_FLAG_SCHEDULED       0x10  // Set to true to cause the Kernel to not free().
+  #define MANUVR_RUNNABLE_FLAG_PENDING_EXEC    0x20  // This schedule is pending execution.
+
+
   class EventReceiver;
 
 
@@ -55,22 +63,22 @@ limitations under the License.
 
       int8_t repurpose(uint16_t code);
 
-      bool kernelShouldReap();
+      /**
+      * If the memory isn't managed explicitly by some other class, this will tell the Kernel to delete
+      *   the completed event.
+      * Preallocation implies no reap.
+      *
+      * @return true if the Kernel ought to free() this Event. False otherwise.
+      */
+      inline bool kernelShouldReap() {
+        return (0 == (MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_PREALLOCD | MANUVR_RUNNABLE_FLAG_SCHEDULED));
+      };
 
       int8_t execute();
-
-      bool returnToPrealloc();
-      bool returnToPrealloc(bool);
-      bool isManaged(bool);
-      inline void isScheduled(bool nu) {  scheduled = nu;   };
-      inline bool isScheduled() {         return scheduled; };
 
       void printDebug();
       void printDebug(StringBuilder *);
       void printProfilerData(StringBuilder *);
-
-        /* If some other class is managing this memory, this should return 'true'. */
-      inline bool isManaged() {         return mem_managed;   }
 
       /* Functions for pinging the profiler data. */
       void noteExecutionTime(uint32_t start, uint32_t stop);
@@ -90,11 +98,47 @@ limitations under the License.
       bool delaySchedule(uint32_t by_ms);    // Set the schedule's TTW to the given value this execution only.
       inline bool delaySchedule() {         return delaySchedule(thread_period);  }  // Reset the given schedule to its period and enable it.
 
-      inline bool shouldFire() {            return thread_fire;      }
-      inline void autoClear(bool nu) {      autoclear = nu;          }
-      inline bool autoClear() {             return autoclear;        }
-      inline void threadEnabled(bool nu) {  thread_enabled = nu;     }
-      inline bool threadEnabled() {         return thread_enabled;   }
+      /* Any required setup finished without problems? */
+      inline bool shouldFire() { return (_flags & MANUVR_RUNNABLE_FLAG_PENDING_EXEC); };
+      inline void shouldFire(bool en) {
+        _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_PENDING_EXEC) : (_flags & ~(MANUVR_RUNNABLE_FLAG_PENDING_EXEC));
+      };
+
+      /* Any required setup finished without problems? */
+      inline bool threadEnabled() { return (_flags & MANUVR_RUNNABLE_FLAG_THREAD_ENABLED); };
+      inline void threadEnabled(bool en) {
+        _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_THREAD_ENABLED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_THREAD_ENABLED));
+      };
+
+      /* Any required setup finished without problems? */
+      inline bool autoClear() { return (_flags & MANUVR_RUNNABLE_FLAG_AUTOCLEAR); };
+      inline void autoClear(bool en) {
+        _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_AUTOCLEAR) : (_flags & ~(MANUVR_RUNNABLE_FLAG_AUTOCLEAR));
+      };
+
+      /* Any required setup finished without problems? */
+      inline bool isScheduled() { return (_flags & MANUVR_RUNNABLE_FLAG_SCHEDULED); };
+      inline void isScheduled(bool en) {
+        _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_SCHEDULED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_SCHEDULED));
+      };
+
+      /**
+      * Was this event preallocated?
+      * Preallocation implies no reap.
+      *
+      * @param  nu_val Pass true to cause this event to be marked as part of a preallocation pool.
+      * @return true if the Kernel ought to return this event to its preallocation queue.
+      */
+      inline bool returnToPrealloc() { return (_flags & MANUVR_RUNNABLE_FLAG_PREALLOCD); };
+      inline void returnToPrealloc(bool en) {
+        _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_PREALLOCD) : (_flags & ~(MANUVR_RUNNABLE_FLAG_PREALLOCD));
+      };
+
+      /* If some other class is managing this memory, this should return 'true'. */
+      inline bool isManaged() { return (_flags & MANUVR_RUNNABLE_FLAG_MEM_MANAGED); };
+      inline void isManaged(bool en) {
+        _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_MEM_MANAGED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_MEM_MANAGED));
+      };
 
       /**
       * Asks if this schedule is being profiled...
@@ -111,14 +155,7 @@ limitations under the License.
 
     private:
       TaskProfilerData* prof_data;  // If this schedule is being profiled, the ref will be here.
-      uint8_t  flags;               // Optional flags that might be important for a runnable.
-      bool     mem_managed;         // Set to true to cause the Kernel to not free().
-      bool     scheduled;           // Set to true to cause the Kernel to not free().
-      bool     preallocated;        // Set to true to cause the Kernel to return this runnable to its prealloc.
-
-      bool     thread_enabled;      // Is the schedule running?
-      bool     thread_fire;         // Is the schedule to be executed?
-      bool     autoclear;           // If true, this schedule will be removed after its last execution.
+      uint8_t  _flags;              // Optional flags that might be important for a runnable.
 
       void __class_initializer();
   };

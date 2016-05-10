@@ -251,6 +251,9 @@ int8_t ManuvrXport::provide_session(XenoSession* ses) {
   if ((NULL != session) && (ses != session)) {
     // If we are about to clobber an existing session, we need to free it first.
     __kernel->unsubscribe(session);
+    //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_RETRACT_SRVC);
+    //event->addArg((EventReceiver*) ses);
+    //raiseEvent(event);
 
     // TODO: Might should warn someone at the other side?
     //   Maybe we let XenoSession deal with it? At least we
@@ -333,23 +336,6 @@ void ManuvrXport::listening(bool en) {
   // TODO: Not strictly true. Unset connected? listening?
   // ---J. Ian Lindsay   Thu Dec 03 04:00:00 MST 2015
   _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_LISTENING) : (_xport_flags & ~(MANUVR_XPORT_FLAG_LISTENING));
-}
-
-
-
-/*
-* Mark this transport initialized or not.
-* This method is virtual, and may be over-ridden if the specific transport has
-*   something more sophisticated in mind.
-*/
-void ManuvrXport::initialized(bool en) {
-  if (initialized() == en) {
-    // If we are already in the state specified, do nothing.
-    return;
-  }
-  // TODO: Not strictly true. Unset connected? listening?
-  // ---J. Ian Lindsay   Thu Dec 03 04:00:00 MST 2015
-  _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_INITIALIZED) : (_xport_flags & ~(MANUVR_XPORT_FLAG_INITIALIZED));
 }
 
 
@@ -484,12 +470,15 @@ void ManuvrXport::procDirectDebugInstruction(StringBuilder *input) {
 
   switch (*(str)) {
     case 'C':
+      local_log.concatf("Transport 0x%04x: Connect...\n", xport_id);
       connect();
       break;
     case 'D':  // Force a state change with no underlying physical reason. Abuse test...
+      local_log.concatf("Transport 0x%04x: Disconnect...\n", xport_id);
       disconnect();
       break;
     case 'R':
+      local_log.concatf("Transport 0x%04x: Resetting...\n", xport_id);
       reset();
       break;
     default:

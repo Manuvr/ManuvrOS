@@ -65,12 +65,11 @@ ManuvrRunnable::ManuvrRunnable(uint16_t code) : ManuvrMsg(code) {
 */
 ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, FunctionPointer sch_callback) : ManuvrMsg(MANUVR_MSG_DEFERRED_FXN) {
   __class_initializer();
-  thread_enabled      = true;
-  thread_fire         = false;
+  threadEnabled(true);
+  autoClear(ac);
   thread_recurs       = recurrence;
   thread_period       = sch_period;
   thread_time_to_wait = sch_period;
-  autoclear           = ac;
 
   schedule_callback   = sch_callback;    // This constructor uses the legacy callback.
 }
@@ -88,12 +87,11 @@ ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac,
 */
 ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver* ori) {
   __class_initializer();
-  thread_enabled      = true;
-  thread_fire         = false;
+  threadEnabled(true);
+  autoClear(ac);
   thread_recurs       = recurrence;
   thread_period       = sch_period;
   thread_time_to_wait = sch_period;
-  autoclear           = ac;
 
   originator          = ori;   // This constructor uses the EventReceiver callback...
 }
@@ -117,24 +115,16 @@ ManuvrRunnable::~ManuvrRunnable(void) {
 *   repurposed many times, doing any sort of init in the constructor should probably be avoided.
 */
 void ManuvrRunnable::__class_initializer() {
-  flags              = 0x00;  // TODO: Optimistic about collapsing the bools into this. Or make gcc do it.
+  _flags             = 0x00;
   originator         = NULL;
   specific_target    = NULL;
   prof_data          = NULL;
   schedule_callback  = NULL;
   priority           = EVENT_PRIORITY_DEFAULT;
 
-  // These things have implications for memory management, which is why repurpose() doesn't touch them.
-  mem_managed     = false;
-  scheduled       = false;
-  preallocated    = false;
-
-  thread_enabled      = false;
-  thread_fire         = false;
   thread_recurs       = 0;
   thread_period       = 0;
   thread_time_to_wait = 0;
-  autoclear           = false;
 }
 
 
@@ -146,7 +136,10 @@ void ManuvrRunnable::__class_initializer() {
 * @return 0 on success, or appropriate failure code.
 */
 int8_t ManuvrRunnable::repurpose(uint16_t code) {
-  flags               = 0x00;
+  // These things have implications for memory management, which is why repurpose() doesn't touch them.
+  uint8_t _persist_mask = MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_PREALLOCD | MANUVR_RUNNABLE_FLAG_SCHEDULED;
+  _flags              = _flags & _persist_mask;
+
   originator          = NULL;
   specific_target     = NULL;
   schedule_callback   = NULL;
@@ -155,57 +148,9 @@ int8_t ManuvrRunnable::repurpose(uint16_t code) {
 }
 
 
-
-/**
-* Was this event preallocated?
-* Preallocation implies no reap.
-*
-* @return true if the Kernel ought to return this event to its preallocation queue.
-*/
-bool ManuvrRunnable::returnToPrealloc() {
-  return preallocated;
-}
-
-
-/**
-* Was this event preallocated?
-* Preallocation implies no reap.
-*
-* @param  nu_val Pass true to cause this event to be marked as part of a preallocation pool.
-* @return true if the Kernel ought to return this event to its preallocation queue.
-*/
-bool ManuvrRunnable::returnToPrealloc(bool nu_val) {
-  preallocated = nu_val;
-  //if (preallocated) mem_managed = true;
-  return preallocated;
-}
-
-
-/**
-* If the memory isn't managed explicitly by some other class, this will tell the Kernel to delete
-*   the completed event.
-* Preallocation implies no reap.
-*
-* @return true if the Kernel ought to free() this Event. False otherwise.
-*/
-bool ManuvrRunnable::kernelShouldReap() {
-  if (mem_managed || preallocated || scheduled) {
-    return false;
-  }
-  return true;
-}
-
-
-bool ManuvrRunnable::isManaged(bool nu) {
-  mem_managed = nu;
-  return mem_managed;
-}
-
-
 bool ManuvrRunnable::abort() {
   return Kernel::abortEvent(this);
 }
-
 
 
 /**
@@ -222,7 +167,7 @@ void ManuvrRunnable::printDebug(StringBuilder *output) {
   	  unsigned char* temp_buf = msg_serial.string();
   	  int temp_buf_len        = msg_serial.length();
 
-  	  output->concatf("\t Preallocated          %s\n", (preallocated ? "yes" : "no"));
+  	  output->concatf("\t Preallocated          %s\n", (returnToPrealloc() ? "yes" : "no"));
   	  output->concatf("\t Originator:           %s\n", (NULL == originator ? "NULL" : originator->getReceiverName()));
   	  output->concatf("\t specific_target:      %s\n", (NULL == specific_target ? "NULL" : specific_target->getReceiverName()));
   	  output->concatf("\t Argument count (ser): %d\n", arg_count);
@@ -238,12 +183,12 @@ void ManuvrRunnable::printDebug(StringBuilder *output) {
 
   output->concatf("\t [0x%08x] Schedule \n\t --------------------------------\n", ((unsigned long)this % 0xFFFFFFFF));
 
-  output->concatf("\t Enabled       \t%s\n", (thread_enabled ? "YES":"NO"));
+  output->concatf("\t Enabled       \t%s\n", (threadEnabled() ? "YES":"NO"));
   output->concatf("\t Time-till-fire\t%u\n", thread_time_to_wait);
   output->concatf("\t Period        \t%u\n", thread_period);
   output->concatf("\t Recurs?       \t%d\n", thread_recurs);
-  output->concatf("\t Exec pending: \t%s\n", (thread_fire ? "YES":"NO"));
-  output->concatf("\t Autoclear     \t%s\n", (autoclear ? "YES":"NO"));
+  output->concatf("\t Exec pending: \t%s\n", (shouldFire() ? "YES":"NO"));
+  output->concatf("\t Autoclear     \t%s\n", (autoClear() ? "YES":"NO"));
   output->concatf("\t Profiling?    \t%s\n", (profilingEnabled() ? "YES":"NO"));
 
   if (NULL != schedule_callback) {
@@ -310,7 +255,7 @@ void ManuvrRunnable::noteExecutionTime(uint32_t profile_start_time, uint32_t pro
 ****************************************************************************************************/
 
 void ManuvrRunnable::fireNow(bool nu) {
-  thread_fire = nu;
+  shouldFire(nu);
   thread_time_to_wait = thread_period;
 }
 

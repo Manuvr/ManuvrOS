@@ -108,6 +108,7 @@ int8_t MQTTSession::subscribe(const char* topic, ManuvrRunnable* runnable) {
   std::map<const char*, ManuvrRunnable*>::iterator it = _subscriptions.find(topic);
   if (_subscriptions.end() == it) {
     // If the list doesn't already have the topic....
+		runnable->originator  = (EventReceiver*) this;
     _subscriptions[topic] = runnable;
 		return sendSub(topic, QOS1);   // TODO: make dynamic
   }
@@ -210,6 +211,30 @@ int8_t MQTTSession::connection_callback(bool _con) {
 }
 
 
+/**
+* Passing an Event into this fxn will cause the Event to be serialized and sent to our counter-party.
+* This is the point at which choices are made about what happens to the event's life-cycle.
+*/
+int8_t MQTTSession::sendEvent(ManuvrRunnable *active_event) {
+  //XenoMessage* nu_outbound_msg = XenoMessage::fetchPreallocation(this);
+  //nu_outbound_msg->provideEvent(active_event);
+
+  //StringBuilder buf;
+  //if (nu_outbound_msg->serialize(&buf) > 0) {
+  //  owner->sendBuffer(&buf);
+  //}
+
+  //if (nu_outbound_msg->expectsACK()) {
+  //  _outbound_messages.insert(nu_outbound_msg);
+  //}
+
+  // We are about to pass a message across the transport.
+  //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
+  //event->originator      = this;   // We want the callback and the only receiver of this
+  //event->specific_target = owner;  //   event to be the transport that instantiated us.
+  //raiseEvent(event);
+  return 0;
+}
 
 
 /****************************************************************************************************
@@ -349,23 +374,38 @@ bool MQTTSession::sendPublish(ManuvrRunnable* _msg) {
 }
 
 
+/*
+*/
 int MQTTSession::proc_publish(MQTTMessage* nu) {
-	uint8_t _topic_len = *((uint8_t*) nu->payload + 1);
-	char* _topic = (char*) alloca(_topic_len+1);
-	_topic[_topic_len] = '\0';
+	int return_value = nu->decompose_publish();
 
-	for (int i = 0; i < _topic_len; i++) {
-		_topic[i] = *((uint8_t*) nu->payload + i + 2);
-	}
+	if (return_value >= 0) {
+  	std::map<const char*, ManuvrRunnable*>::iterator it = _subscriptions.find(nu->topic);
+		for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
+			if (0 == strcmp((const char*) nu->topic, it->first)) {
+				if (0 < nu->argumentBytes()) {
+					it->second->inflateArgumentsFromBuffer((uint8_t*) nu->payload, nu->argumentBytes());
+					//StringBuilder* _hack = new StringBuilder((uint8_t*) nu->payload, nu->argumentBytes());
+					//_hack->concat('\0');  // Yuck... No native null-term.
+					//_hack->string();  // Condense.
+					//it->second->markArgForReap(it->second->addArg(_hack), true);
+				}
+				//nu->printDebug(&local_log);
+				//local_log.concat("\n\n");
+				//it->second->printDebug(&local_log);
+				//Kernel::log(&local_log);
 
-  std::map<const char*, ManuvrRunnable*>::iterator it = _subscriptions.find(_topic);
-	for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
-		if (0 == strcmp((const char*) _topic, it->first)) {
-			raiseEvent(it->second);
-			return 0;
+				raiseEvent(it->second);
+				delete nu;  // TODO: Yuck. Nasty. No. Bad.
+				return 0;
+			}
+		}
+
+		if (getVerbosity() > 2) {
+			local_log.concatf("%s got a PUBLISH on a topc (%s) it wasn't expecting.\n", getReceiverName(), nu->topic);
+			Kernel::log(&local_log);
 		}
 	}
-
 	return -1;
 }
 
@@ -481,6 +521,7 @@ int8_t MQTTSession::callback_proc(ManuvrRunnable *event) {
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     default:
+			event->clearArgs();
       break;
   }
 
@@ -630,13 +671,7 @@ void MQTTSession::printDebug(StringBuilder *output) {
 
 	if (NULL != working) {
 		output->concat("--\n-- Incomplete inbound message:\n");
-		output->concatf("--     Packet id        0x%04x\n", working->id);
-		output->concatf("--     Packet type      0x%02x\n", working->packetType());
-		output->concatf("--     Payload length   %d\n", working->payloadlen);
-		output->concatf("--     Parse complete   %s\n", working->parseComplete() ? "yes":"no");
-		//for (int i = 0; i < working->payloadlen; i++) {
-			//output->concatf("--  0x%02x\n", *((uint8_t*)working->payload + i));
-		//}
+		working->printDebug(output);
 	}
 }
 

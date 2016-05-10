@@ -156,6 +156,15 @@ int main(int argc, char *argv[]) {
   * At this point, we should instantiate whatever specific functionality we
   *   want this Manuvrable to have.
   */
+  ManuvrableGPIO gpio;
+  kernel->subscribe(&gpio);
+
+  #if defined(RASPI) || defined(RASPI2)
+    // If we are running on a RasPi, let's try to fire up the i2c that is almost
+    //   certainly present.
+    I2CAdapter i2c(1);
+    kernel->subscribe(&i2c);
+  #endif
 
   // We need at least ONE transport to be useful...
   #if defined (MANUVR_SUPPORT_TCPSOCKET)
@@ -164,13 +173,19 @@ int main(int argc, char *argv[]) {
       MQTTSession mqtt(&tcp_cli);
       kernel->subscribe(&mqtt);
 
-      ManuvrRunnable r_led(0x2425);
-      ManuvrRunnable g_led(0x2426);
-      ManuvrRunnable b_led(0x2427);
+      ManuvrRunnable gpio_write(MANUVR_MSG_DIGITAL_WRITE);
+      gpio_write.isManaged(true);
+      gpio_write.specific_target = &gpio;
 
-      //mqtt.subscribe("R", &r_led);
-      //mqtt.subscribe("G", &g_led);
-      //mqtt.subscribe("B", &b_led);
+      ManuvrRunnable debug_msg(MANUVR_MSG_USER_DEBUG_INPUT);
+      debug_msg.isManaged(true);
+      debug_msg.specific_target = (EventReceiver*) kernel;
+
+      mqtt.subscribe("gw", &gpio_write);
+      mqtt.subscribe("d", &debug_msg);
+
+      mqtt.tapMessageType(MANUVR_MSG_DIGITAL_WRITE);
+      mqtt.tapMessageType(MANUVR_MSG_DIGITAL_READ);
 
     #else
       ManuvrTCP tcp_srv((const char*) "127.0.0.1", 2319);
@@ -195,16 +210,6 @@ int main(int argc, char *argv[]) {
     ManuvrSerial* ser = NULL;
   #endif
 
-
-  #if defined(RASPI) || defined(RASPI2)
-    // If we are running on a RasPi, let's try to fire up the i2c that is almost
-    //   certainly present.
-    I2CAdapter i2c(1);
-    kernel->subscribe(&i2c);
-
-    ManuvrableGPIO gpio;
-    kernel->subscribe(&gpio);
-  #endif
 
 
   // Parse through all the command line arguments and flags...
