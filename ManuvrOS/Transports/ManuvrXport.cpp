@@ -41,8 +41,8 @@ For debuggability, the transport has a special mode for acting as a debug
 
 #include "ManuvrXport.h"
 #include "FirmwareDefs.h"
-#include "XenoSession/XenoSession.h"
-#include "XenoSession/Manuvr/ManuvrSession.h"
+#include <XenoSession/XenoSession.h>
+#include <XenoSession/Manuvr/ManuvrSession.h>
 
 #if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
   /*
@@ -289,7 +289,6 @@ void ManuvrXport::connected(bool en) {
         // This will put it into the Event system so that auth and such can be handled cleanly.
         // Once the session sets up, it will broadcast itself as having done so.
         // TODO: Session discovery should happen at this point.
-        //XenoSession* ses = new XenoSession(this);
         XenoSession* ses = (XenoSession*) new ManuvrSession(this);
         _reap_session(true);
         provide_session(ses);
