@@ -215,15 +215,15 @@ void gpioSetup() {
   }
 
   /* GPIO Ports Clock Enable */
-  __GPIOE_CLK_ENABLE();
-  __GPIOB_CLK_ENABLE();
-  __GPIOG_CLK_ENABLE();
-  __GPIOD_CLK_ENABLE();
-  __GPIOC_CLK_ENABLE();
-  __GPIOA_CLK_ENABLE();
-  __GPIOI_CLK_ENABLE();
-  __GPIOH_CLK_ENABLE();
-  __GPIOF_CLK_ENABLE();
+  //__GPIOE_CLK_ENABLE();
+  //__GPIOB_CLK_ENABLE();
+  //__GPIOG_CLK_ENABLE();
+  //__GPIOD_CLK_ENABLE();
+  //__GPIOC_CLK_ENABLE();
+  //__GPIOA_CLK_ENABLE();
+  //__GPIOI_CLK_ENABLE();
+  //__GPIOH_CLK_ENABLE();
+  //__GPIOF_CLK_ENABLE();
 }
 
 
@@ -265,6 +265,7 @@ int8_t setPin(uint8_t pin, bool val) {
 
 
 int8_t readPin(uint8_t pin) {
+  //HAL_GPIO_ReadPin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
   return 0;
 }
 
