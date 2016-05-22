@@ -75,7 +75,7 @@ typedef struct typecode_def_t {
 #define INT16_PTR_FM      0xA4 // 16-bit integer
 #define INT8_PTR_FM       0xA5 // 8-bit integer
 #define FLOAT_PTR_FM      0xA6 // A float
-#define CHAIN PTR_FM      0xAD // A pointer to a Chain.
+#define CHAIN_PTR_FM      0xAD // A pointer to a Chain.
 #define STR_BUILDER_FM    0xAF // A pointer to a StringBuilder.
 
 /**

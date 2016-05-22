@@ -1,5 +1,5 @@
 /*
-File:   Platform.cpp
+File:   PlatformUnsupported.cpp
 Author: J. Ian Lindsay
 Date:   2015.11.01
 
@@ -31,132 +31,11 @@ This file forms the catch-all for linux platforms that have no support.
 #include "Platform.h"
 #include <Kernel.h>
 
-#include <sys/time.h>
-#include <unistd.h>
-#include <signal.h>
-
-
 
 /****************************************************************************************************
 * The code under this block is special on this platform, and will not be available elsewhere.       *
 ****************************************************************************************************/
 volatile Kernel* __kernel = NULL;
-
-struct itimerval _interval              = {0};
-struct sigaction _signal_action_SIGALRM = {0};
-
-
-bool set_linux_interval_timer() {
-  _interval.it_value.tv_sec      = 0;
-  _interval.it_value.tv_usec     = MANUVR_PLATFORM_TIMER_PERIOD_MS * 1000;
-  _interval.it_interval.tv_sec   = 0;
-  _interval.it_interval.tv_usec  = MANUVR_PLATFORM_TIMER_PERIOD_MS * 1000;
-
-  int err = setitimer(ITIMER_VIRTUAL, &_interval, NULL);
-  if (err) {
-    Kernel::log("Failed to enable interval timer.");
-  }
-  return (0 == err);
-}
-
-bool unset_linux_interval_timer() {
-  // TODO: We ultimately need to be retaining the values in the struct, as well as
-  //   the current system time to calculate the delta in case we get re-enabled.
-  _interval.it_value.tv_sec      = 0;
-  _interval.it_value.tv_usec     = 0;
-  _interval.it_interval.tv_sec   = 0;
-  _interval.it_interval.tv_usec  = 0;
-  return true;
-}
-
-
-void sig_handler(int signo) {
-  switch (signo) {
-    case SIGINT:
-      Kernel::log("Received a SIGINT signal. Closing up shop...");
-      jumpToBootloader();
-      break;
-    case SIGKILL:
-      Kernel::log("Received a SIGKILL signal. Something bad must have happened. Exiting hard....");
-      jumpToBootloader();
-      break;
-    case SIGTERM:
-      Kernel::log("Received a SIGTERM signal. Closing up shop...");
-      jumpToBootloader();
-      break;
-    case SIGQUIT:
-      Kernel::log("Received a SIGQUIT signal. Closing up shop...");
-      jumpToBootloader();
-      break;
-    case SIGHUP:
-      printf("Received a SIGHUP signal. Closing up shop...");
-      jumpToBootloader();
-      break;
-    case SIGSTOP:
-      Kernel::log("Received a SIGSTOP signal. Closing up shop...");
-      jumpToBootloader();
-      break;
-    case SIGUSR1:
-      break;
-    case SIGUSR2:
-      break;
-    default:
-      Kernel::log(__PRETTY_FUNCTION__, LOG_NOTICE, "Unhandled signal: %d", signo);
-      break;
-  }
-
-  // Echo whatever signals we receive to the child proc (if we are the parent).
-  //if ((looper_pid > 0) && (signo != SIGALRM) && (signo != SIGUSR2)) {
-  //  kill(looper_pid, signo);
-  //}
-}
-
-
-void linux_timer_handler(int sig_num) {
-  ((Kernel*)__kernel)->advanceScheduler(MANUVR_PLATFORM_TIMER_PERIOD_MS);
-}
-
-
-// The parent process should call this function to set the callback address to its signal handlers.
-//     Returns 1 on success, 0 on failure.
-// TODO: Convert all other signals over to sigaction().
-int initSigHandlers() {
-  int return_value    = 1;
-  // Try to open a binding to listen for signals from the OS...
-  if (signal(SIGINT, sig_handler) == SIG_ERR) {
-    Kernel::log("Failed to bind SIGINT to the signal system. Failing...");
-    return_value = 0;
-  }
-  if (signal(SIGQUIT, sig_handler) == SIG_ERR) {
-    Kernel::log("Failed to bind SIGQUIT to the signal system. Failing...");
-    return_value = 0;
-  }
-  if (signal(SIGHUP, sig_handler) == SIG_ERR) {
-    Kernel::log("Failed to bind SIGHUP to the signal system. Failing...");
-    return_value = 0;
-  }
-  if (signal(SIGTERM, sig_handler) == SIG_ERR) {
-    Kernel::log("Failed to bind SIGTERM to the signal system. Failing...");
-    return_value = 0;
-  }
-  if (signal(SIGUSR1, sig_handler) == SIG_ERR) {
-    Kernel::log("Failed to bind SIGUSR1 to the signal system. Failing...");
-    return_value = 0;
-  }
-  if (signal(SIGUSR2, sig_handler) == SIG_ERR) {
-    Kernel::log("Failed to bind SIGUSR2 to the signal system. Failing...");
-    return_value = 0;
-  }
-
-  _signal_action_SIGALRM.sa_handler   = &linux_timer_handler;
-  if (sigaction(SIGVTALRM, &_signal_action_SIGALRM, NULL)) {
-    Kernel::log("Failed to bind to SIGVTALRM.");
-    return_value = 0;
-  }
-
-  return return_value;
-}
-
 
 
 /****************************************************************************************************
@@ -215,7 +94,6 @@ int platformSerialNumberSize() {
   return 0;
 }
 
-
 /**
 * Writes the serial number to the indicated buffer.
 *
@@ -236,12 +114,10 @@ bool persistCapable() {
   return false;
 }
 
-
 // Returns the number of bytes availible to store data.
 unsigned long persistFree() {
   return -1L;
 }
-
 
 
 /****************************************************************************************************
@@ -254,8 +130,7 @@ uint32_t rtc_startup_state = MANUVR_RTC_STARTUP_UNINITED;
 *
 */
 bool initPlatformRTC() {
-  rtc_startup_state = MANUVR_RTC_STARTUP_GOOD_UNSET;
-  return true;
+  return false;
 }
 
 /*
@@ -273,8 +148,7 @@ bool setTimeAndDate(char* nu_date_time) {
 * Returns an integer representing the current datetime.
 */
 uint32_t currentTimestamp(void) {
-  uint32_t return_value = (uint32_t) time(0);
-  return return_value;
+  return 0;
 }
 
 
@@ -285,12 +159,7 @@ uint32_t currentTimestamp(void) {
 */
 void currentDateTime(StringBuilder* target) {
   if (target != NULL) {
-    time_t t = time(0);
-    struct tm  tstruct;
-    char       buf[64];
-    tstruct = *localtime(&t);
-    strftime(buf, sizeof(buf), "%Y-%m-%d.%X", &tstruct);
-    target->concat(buf);
+    target->concat("No time support on this platform.\n");
   }
 }
 
@@ -299,9 +168,7 @@ void currentDateTime(StringBuilder* target) {
 * Not provided elsewhere on a linux platform.
 */
 unsigned long millis() {
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000L);
+  return 0L;
 }
 
 
@@ -309,9 +176,7 @@ unsigned long millis() {
 * Not provided elsewhere on a linux platform.
 */
 unsigned long micros() {
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  return (ts.tv_sec * 1000000L + ts.tv_nsec / 1000L);
+  return 0L;
 }
 
 
@@ -379,62 +244,29 @@ int readPinAnalog(uint8_t pin) {
 /****************************************************************************************************
 * Interrupt-masking                                                                                 *
 ****************************************************************************************************/
-
-// Ze interrupts! Zhey do nuhsing!
-// TODO: Perhaps raise the nice value?
-// At minimum, turn off the periodic timer, since this is what would happen on
-//   other platforms.
-void globalIRQEnable() {
-  // TODO: Need to stack the time remaining.
-  //set_linux_interval_timer();
-}
-
-void globalIRQDisable() {
-  // TODO: Need to unstack the time remaining and fire any schedules.
-  //unset_linux_interval_timer();
-}
-
+void globalIRQEnable() {}
+void globalIRQDisable() {}
 
 
 /****************************************************************************************************
 * Process control                                                                                   *
 ****************************************************************************************************/
-
 /*
 * Terminate this running process, along with any children it may have forked() off.
 */
-volatile void seppuku() {
-  // Whatever the kernel cared to clean up, it better have done so by this point,
-  //   as no other platforms return from this function.
-  if (Kernel::log_buffer.length() > 0) {
-    printf("\n\njumpToBootloader(): About to exit(). Remaining log follows...\n%s", Kernel::log_buffer.string());
-  }
-  printf("\n\n");
-  exit(0);
-}
-
+volatile void seppuku() {}
 
 /*
-* On linux, we take this to mean: scheule a program restart with the OS,
-*   and then terminate this one.
+* Jump to the bootloader.
 */
-volatile void jumpToBootloader() {
-  // TODO: Schedule a program restart.
-  seppuku();
-}
+volatile void jumpToBootloader() {}
 
 
 /****************************************************************************************************
 * Underlying system control.                                                                        *
 ****************************************************************************************************/
-
-volatile void hardwareShutdown() {
-  // TODO: Actually shutdown the system.
-}
-
-volatile void reboot() {
-  // TODO: Actually reboot the system.
-}
+volatile void hardwareShutdown() {}
+volatile void reboot() {}
 
 
 
@@ -459,7 +291,4 @@ void platformInit() {
   start_time_micros = micros();
   init_RNG();
   initPlatformRTC();
-  __kernel = (volatile Kernel*) Kernel::getInstance();
-  initSigHandlers();
-  set_linux_interval_timer();
 }

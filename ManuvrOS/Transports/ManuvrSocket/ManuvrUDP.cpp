@@ -232,7 +232,7 @@ bool ManuvrUDP::write_datagram(unsigned char* out, int out_len, const char* _add
     if (-1 < result) {
       bytes_sent += result;
 
-      // TODO: We must receive from the socket before we ccan send again...
+      // TODO: We must receive from the socket before we can send again...
       char buffer[1024];
       buffer[0] = '\0';
       int _rec_bytes = recvfrom(_client_sock, buffer, 1024, 0, NULL, NULL);

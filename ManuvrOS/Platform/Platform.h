@@ -59,10 +59,6 @@ class ManuvrRunnable;
 #if defined (ARDUINO)
   #include <Arduino.h>
 #elif defined(STM32F7XX) | defined(STM32F746xx)
-  #include "stm32f7xx_hal.h"
-  #include "stm32f7xx_hal_gpio.h"
-  #include "stm32f7xx_hal_gpio_ex.h"
-
   #define HIGH         1
   #define LOW          0
   #define INPUT        GPIO_MODE_INPUT
@@ -99,7 +95,7 @@ class ManuvrRunnable;
 
 
 typedef struct __platform_gpio_def {
-  ManuvrRunnable*    event;
+  ManuvrRunnable* event;
   FunctionPointer fxn;
   uint8_t         pin;
   uint8_t         flags;

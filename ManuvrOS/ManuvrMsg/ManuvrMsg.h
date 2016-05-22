@@ -207,8 +207,6 @@ class ManuvrMsg {
     MessageTypeDef* getMsgDef();
 
 
-
-
     /*
     * Overrides for Argument constructor access. Prevents outside classes from having to care about
     *   implementation details of Arguments. Might look ugly, but takes the CPU burden off of runtime
