@@ -39,6 +39,8 @@ This file is meant to contain a set of common functions that are typically platf
 ****************************************************************************************************/
 #include "stm32f7xx_hal.h"
 #include "stm32f7xx_hal_rcc.h"
+#include "stm32f7xx_hal_gpio.h"
+#include "stm32f7xx_hal_gpio_ex.h"
 
 //#if defined(ENABLE_USB_VCP)
   #include "tm_stm32_usb_device.h"

@@ -6,7 +6,7 @@ C_STANDARD = c99
 INCLUDES    = -iquote. -I./paho.mqtt.embedded-c/MQTTPacket
 INCLUDES   += -I./wakaama -I./wakaama/core
 
-SOURCES_MQTT_C  = paho.mqtt.embedded-c/MQTTPacket/src/MQTTConnectServer.c
+#SOURCES_MQTT_C  = paho.mqtt.embedded-c/MQTTPacket/src/MQTTConnectServer.c
 SOURCES_MQTT_C  = paho.mqtt.embedded-c/MQTTPacket/src/MQTTConnectClient.c
 SOURCES_MQTT_C += paho.mqtt.embedded-c/MQTTPacket/src/MQTTDeserializePublish.c
 SOURCES_MQTT_C += paho.mqtt.embedded-c/MQTTPacket/src/MQTTFormat.c
@@ -19,7 +19,9 @@ SOURCES_MQTT_C += paho.mqtt.embedded-c/MQTTPacket/src/MQTTUnsubscribeServer.c
 
 SOURCES_COAP_C  = wakaama/core/er-coap-13/er-coap-13.c
 
-SOURCES_C  = $(SOURCES_MQTT_C) $(SOURCES_COAP_C)
+SOURCES_UECC_C  = uECC/uECC.c
+
+SOURCES_C  = $(SOURCES_MQTT_C) $(SOURCES_COAP_C) $(SOURCES_UECC_C)
 
 
 #FLAGS_LIBCOAP  = -DWITH_POSIX -DHAVE_CONFIG_H -DHAVE_NETINET_IN_H -D_GNU_SOURCE

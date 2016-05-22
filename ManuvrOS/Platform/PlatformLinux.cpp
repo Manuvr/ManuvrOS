@@ -1,5 +1,5 @@
 /*
-File:   PlatformRaspi.cpp
+File:   PlatformLinux.cpp
 Author: J. Ian Lindsay
 Date:   2015.11.01
 
@@ -25,51 +25,22 @@ This file is meant to contain a set of common functions that are typically platf
     * Get definitions for GPIO pins.
     * Access a true RNG (if it exists)
 
-
-Bits and pieces of low-level GPIO access and discovery code was taken from this library:
-http://abyz.co.uk/rpi/pigpio/
+This file forms the catch-all for linux platforms that have no support.
 */
-
-
 
 #include "Platform.h"
 #include <Kernel.h>
 
+#include <sys/time.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
+#include <signal.h>
 
-/* GPIO access macros... */
-#define PI_BANK (pin >> 5)
-#define PI_BIT  (1 << (pin & 0x1F))
-
-#define GPSET0 7
-#define GPSET1 8
-#define GPCLR0 10
-#define GPCLR1 11
-#define GPLEV0 13
-#define GPLEV1 14
 
 
 /****************************************************************************************************
 * The code under this block is special on this platform, and will not be available elsewhere.       *
 ****************************************************************************************************/
 volatile Kernel* __kernel = NULL;
-
-static volatile unsigned rev = 0;
-static volatile uint32_t piModel      = 0;
-static volatile uint32_t piPeriphBase = 0x20000000;
-static volatile uint32_t piBusAddr    = 0x40000000;
-
-#define GPIO_BASE  (piPeriphBase + 0x200000)
-#define SYST_BASE  (piPeriphBase + 0x003000)
-
-#define GPIO_LEN  0xB4
-#define SYST_LEN  0x1C
-
-static volatile uint32_t  *gpioReg = (volatile uint32_t*) MAP_FAILED;
-static volatile uint32_t  *systReg = (volatile uint32_t*) MAP_FAILED;
 
 struct itimerval _interval              = {0};
 struct sigaction _signal_action_SIGALRM = {0};
@@ -187,95 +158,6 @@ int initSigHandlers() {
 }
 
 
-/**
- * Import an absolute register address so we can access it as-if we were on
- *   a microcontroller...
- *
- * Taken from...
- * http://abyz.co.uk/rpi/pigpio/
- */
-static uint32_t* initMapMem(int fd, uint32_t addr, uint32_t len) {
-  return (uint32_t *) mmap(0, len,
-    PROT_READ|PROT_WRITE|PROT_EXEC,
-    MAP_SHARED|MAP_LOCKED,
-    fd, addr);
-}
-
-
-/**
- * Makes a guess at the version of the RasPi we are running on.
- *
- * Taken from...
- * http://abyz.co.uk/rpi/pigpio/
- * ...and adapted to fit this file.
- */
-unsigned gpioHardwareRevision() {
-  if (rev) return rev;
-
-  FILE * filp = fopen("/proc/cpuinfo", "r");
-  if (NULL != filp) {
-    char buf[512];
-    char term;
-    int chars = 4; /* number of chars in revision string */
-
-    while (fgets(buf, sizeof(buf), filp) != NULL) {
-      if (0 == piModel) {
-        if (!strncasecmp("model name", buf, 10)) {
-          if (strstr (buf, "ARMv6") != NULL) {
-            piModel = 1;
-            chars = 4;
-            piPeriphBase = 0x20000000;
-            piBusAddr = 0x40000000;
-          }
-          else if (strstr (buf, "ARMv7") != NULL) {
-            piModel = 2;
-            chars = 6;
-            piPeriphBase = 0x3F000000;
-            piBusAddr = 0xC0000000;
-          }
-        }
-      }
-      if (!strncasecmp("revision", buf, 8)) {
-        if (sscanf(buf+strlen(buf)-(chars+1), "%x%c", &rev, &term) == 2) {
-          if (term != '\n') {
-            rev = 0;
-          }
-        }
-      }
-    }
-    fclose(filp);
-  }
-  return rev;
-}
-
-
-int gpioInitialise() {
-  /* sets piModel, needed for peripherals address */
-  if (0 < gpioHardwareRevision()) {
-    int fd = open("/dev/mem", O_RDWR | O_SYNC) ;
-    if (fd < 0) {
-      Kernel::log("Cannot access /dev/mem. No GPIO functions available.");
-      return -1;
-    }
-
-    gpioReg  = initMapMem(fd, GPIO_BASE,  GPIO_LEN);
-    systReg  = initMapMem(fd, SYST_BASE,  SYST_LEN);
-
-    close(fd);
-
-    if ((gpioReg == MAP_FAILED) || (systReg == MAP_FAILED)) {
-      Kernel::log("mmap failed. No GPIO functions available.");
-      return -1;
-    }
-  }
-  else {
-    Kernel::log("Could not determine raspi hardware revision.");
-    return -1;
-  }
-  return 0;
-}
-
-
 
 /****************************************************************************************************
 * Watchdog                                                                                          *
@@ -320,7 +202,6 @@ void init_RNG() {
 }
 
 
-
 /****************************************************************************************************
 * Identity and serial number                                                                        *
 ****************************************************************************************************/
@@ -337,28 +218,11 @@ int platformSerialNumberSize() {
 
 /**
 * Writes the serial number to the indicated buffer.
-* Thanks, Narishma!
-* https://www.raspberrypi.org/forums/viewtopic.php?f=31&t=18936
 *
 * @param    A pointer to the target buffer.
 * @return   The number of bytes written.
 */
 int getSerialNumber(uint8_t *buf) {
-  FILE *f = fopen("/proc/cpuinfo", "r");
-  if (!f) return 0;
-
-  char line[256];
-  int serial = 0;
-  while (fgets(line, 256, f)) {
-    if (strncmp(line, "Serial", 6) == 0) {
-      char serial_string[16 + 1];
-      serial = atoi(strcpy(serial_string, strchr(line, ':') + 2));
-      fclose(f);
-      return serial;
-    }
-  }
-
-  fclose(f);
   return 0;
 }
 
@@ -377,6 +241,7 @@ bool persistCapable() {
 unsigned long persistFree() {
   return -1L;
 }
+
 
 
 /****************************************************************************************************
@@ -417,8 +282,6 @@ uint32_t currentTimestamp(void) {
 * Writes a human-readable datetime to the argument.
 * Returns ISO 8601 datetime string.
 * 2004-02-12T15:19:21+00:00
-*
-* date -u --iso-8601=s
 */
 void currentDateTime(StringBuilder* target) {
   if (target != NULL) {
@@ -444,14 +307,11 @@ unsigned long millis() {
 
 /*
 * Not provided elsewhere on a linux platform.
-* Returns the number of microseconds after system boot. Wraps around
-*   after 1 hour 11 minutes 35 seconds.
-*
-* Taken from:
-* http://abyz.co.uk/rpi/pigpio/
 */
 unsigned long micros() {
-  return systReg[1];
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (ts.tv_sec * 1000000L + ts.tv_nsec / 1000L);
 }
 
 
@@ -466,13 +326,10 @@ unsigned long micros() {
 *   individual classes work out their own requirements.
 */
 void gpioSetup() {
-  gpioInitialise();
 }
 
+
 int8_t gpioDefine(uint8_t pin, int mode) {
-  int reg   = pin / 10;
-  int shift = (pin % 10) * 3;
-  gpioReg[reg] = (gpioReg[reg] & ~(7<<shift)) | (mode<<shift);
   return 0;
 }
 
@@ -495,13 +352,12 @@ int8_t setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn) {
 
 
 int8_t setPin(uint8_t pin, bool val) {
-  *(gpioReg + (val ? GPSET0 : GPCLR0) + PI_BANK) = PI_BIT;
   return 0;
 }
 
 
 int8_t readPin(uint8_t pin) {
-  return (((*(gpioReg + GPLEV0 + PI_BANK) & PI_BIT) != 0) ? 1 : 0);
+  return 0;
 }
 
 

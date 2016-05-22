@@ -96,6 +96,9 @@ int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn,
 }
 
 int deleteThread(unsigned long _thread_id) {
+  #if defined(__MANUVR_LINUX)
+  #elif defined(__MANUVR_FREERTOS)
+  #endif
   return -1;
 }
 
@@ -134,9 +137,10 @@ void sleep_millis(unsigned long millis) {
 #elif defined(__MANUVR_PHOTON)
   #include "ParticlePhoton.cpp"
 #elif defined(__MANUVR_LINUX)
-  #include "PlatformUnsupported.cpp"
+  #include "PlatformLinux.cpp"
 #else
   // Unsupportage.
+  #include "PlatformUnsupported.cpp"
 #endif
 
 

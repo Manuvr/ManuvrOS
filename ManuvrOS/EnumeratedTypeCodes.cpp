@@ -167,7 +167,6 @@ const char* getTypeCodeString(uint8_t typecode) {
     case VECT_3_FLOAT:          return "VECT_3_FLOAT";
     case VECT_3_INT16:          return "VECT_3_INT16";
     case VECT_3_UINT16:         return "VECT_3_UINT16";
-
     case SYS_MANUVR_XPORT_FM:   return "MANUVR_XPORT";
     case SYS_EVENTRECEIVER_FM:  return "EVENTRECEIVER";
     case INT8_FM:               return "INT8";
@@ -176,7 +175,12 @@ const char* getTypeCodeString(uint8_t typecode) {
     case UINT16_FM:             return "UINT16";
     case INT32_FM:              return "INT32";
     case UINT32_FM:             return "UINT32";
+    case UINT64_FM:             return "UINT64";
+    case INT64_FM:              return "INT64";
+    case UINT128_FM:            return "UINT128";
+    case INT128_FM:             return "INT128";
     case FLOAT_FM:              return "FLOAT";
+    case DOUBLE_FM:             return "DOUBLE";
     case BOOLEAN_FM:            return "BOOLEAN";
     case STR_FM:                return "STR";
     case URL_FM:                return "URL";

@@ -267,7 +267,7 @@ void Argument::wipe() {
 
 
 /*
-* The prupose of this fxn is to pack up this Argument into something that can be stored or sent
+* The purpose of this fxn is to pack up this Argument into something that can be stored or sent
 *   over a wire.
 * This is the point at which we will have to translate any pointer types into something concrete.
 *

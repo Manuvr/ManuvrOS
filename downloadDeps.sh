@@ -29,6 +29,9 @@ cp lib/paho.mqtt.embedded-c/MQTTPacket/src/* lib/paho.mqtt.embedded-c/
 rm -rf lib/telehash-c
 git clone https://github.com/telehash/telehash-c.git lib/telehash-c
 
+# Elliptic curve crypto...
+git clone https://github.com/kmackay/micro-ecc.git lib/uECC
+
 # Arduino libraries...
 
 # Teensy loader...
