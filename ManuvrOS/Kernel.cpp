@@ -1133,6 +1133,8 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
           last_user_input.concatHandoff(_tmp);
         }
       }
+      last_user_input.string();
+      last_user_input.split(",");
       procDirectDebugInstruction(&last_user_input);
       return_value++;
       break;
