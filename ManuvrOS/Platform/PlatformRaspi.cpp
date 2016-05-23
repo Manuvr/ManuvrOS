@@ -59,11 +59,8 @@ volatile Kernel* __kernel = NULL;
 
 static volatile unsigned rev = 0;
 static volatile uint32_t piModel      = 0;
-static volatile uint32_t piPeriphBase = 0x20000000;
-static volatile uint32_t piBusAddr    = 0x40000000;
-
-#define GPIO_BASE  (piPeriphBase + 0x200000)
-#define SYST_BASE  (piPeriphBase + 0x003000)
+static volatile uint32_t piPeriphBase = 0;
+static volatile uint32_t piBusAddr    = 0;
 
 #define GPIO_LEN  0xB4
 #define SYST_LEN  0x1C
@@ -258,8 +255,8 @@ int gpioInitialise() {
       return -1;
     }
 
-    gpioReg  = initMapMem(fd, GPIO_BASE,  GPIO_LEN);
-    systReg  = initMapMem(fd, SYST_BASE,  SYST_LEN);
+    gpioReg  = initMapMem(fd, (piPeriphBase + 0x200000),  GPIO_LEN);
+    systReg  = initMapMem(fd, (piPeriphBase + 0x003000),  SYST_LEN);
 
     close(fd);
 
@@ -472,7 +469,20 @@ void gpioSetup() {
 int8_t gpioDefine(uint8_t pin, int mode) {
   int reg   = pin / 10;
   int shift = (pin % 10) * 3;
-  gpioReg[reg] = (gpioReg[reg] & ~(7<<shift)) | (mode<<shift);
+
+  gpioReg[reg] = (gpioReg[reg] & ~(7<<shift));
+
+  switch (mode) {
+    case INPUT:
+      break;
+    case INPUT_PULLUP:
+      break;
+    case OUTPUT:
+      gpioReg[reg] = (gpioReg[reg] | (1<<shift));
+      break;
+    default:
+      break;
+  }
   return 0;
 }
 

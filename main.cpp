@@ -160,6 +160,9 @@ int main(int argc, char *argv[]) {
   kernel->subscribe(&gpio);
 
   #if defined(RASPI) || defined(RASPI2)
+    gpioDefine(14, OUTPUT);
+    gpioDefine(15, OUTPUT);
+    gpioDefine(18, OUTPUT);
     // If we are running on a RasPi, let's try to fire up the i2c that is almost
     //   certainly present.
     I2CAdapter i2c(1);
