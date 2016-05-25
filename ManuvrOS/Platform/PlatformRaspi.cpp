@@ -467,23 +467,26 @@ void gpioSetup() {
 }
 
 int8_t gpioDefine(uint8_t pin, int mode) {
-  int reg   = pin / 10;
-  int shift = (pin % 10) * 3;
+  if (piModel) {
+    int reg   = pin / 10;
+    int shift = (pin % 10) * 3;
 
-  gpioReg[reg] = (gpioReg[reg] & ~(7<<shift));
+    gpioReg[reg] = (gpioReg[reg] & ~(7<<shift));
 
-  switch (mode) {
-    case INPUT:
-      break;
-    case INPUT_PULLUP:
-      break;
-    case OUTPUT:
-      gpioReg[reg] = (gpioReg[reg] | (1<<shift));
-      break;
-    default:
-      break;
+    switch (mode) {
+      case INPUT:
+        break;
+      case INPUT_PULLUP:
+        break;
+      case OUTPUT:
+        gpioReg[reg] = (gpioReg[reg] | (1<<shift));
+        break;
+      default:
+        break;
+    }
+    return 0;
   }
-  return 0;
+  return -1;
 }
 
 
@@ -505,18 +508,24 @@ int8_t setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn) {
 
 
 int8_t setPin(uint8_t pin, bool val) {
-  *(gpioReg + (val ? GPSET0 : GPCLR0) + PI_BANK) = PI_BIT;
-  return 0;
+  if (piModel) {
+    *(gpioReg + (val ? GPSET0 : GPCLR0) + PI_BANK) = PI_BIT;
+    return 0;
+  }
+  return -1;
 }
 
 
 int8_t readPin(uint8_t pin) {
-  return (((*(gpioReg + GPLEV0 + PI_BANK) & PI_BIT) != 0) ? 1 : 0);
+  if (piModel) {
+    return (((*(gpioReg + GPLEV0 + PI_BANK) & PI_BIT) != 0) ? 1 : 0);
+  }
+  return -1;
 }
 
 
 int8_t setPinAnalog(uint8_t pin, int val) {
-  return 0;
+  return -1;
 }
 
 int readPinAnalog(uint8_t pin) {
