@@ -244,6 +244,9 @@ unsigned gpioHardwareRevision() {
     }
     fclose(filp);
   }
+  else {
+    Kernel::log("Failed to open /proc/cpuinfo.\n");
+  }
   return rev;
 }
 
