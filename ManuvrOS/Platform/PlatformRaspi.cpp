@@ -223,12 +223,14 @@ unsigned gpioHardwareRevision() {
             chars = 4;
             piPeriphBase = 0x20000000;
             piBusAddr = 0x40000000;
+            Kernel::log("Found a Raspberry Pi v1.\n");
           }
           else if (strstr (buf, "ARMv7") != NULL) {
             piModel = 2;
             chars = 6;
             piPeriphBase = 0x3F000000;
             piBusAddr = 0xC0000000;
+            Kernel::log("Found a Raspberry Pi v2.\n");
           }
         }
       }
@@ -251,7 +253,7 @@ int gpioInitialise() {
   if (0 < gpioHardwareRevision()) {
     int fd = open("/dev/mem", O_RDWR | O_SYNC) ;
     if (fd < 0) {
-      Kernel::log("Cannot access /dev/mem. No GPIO functions available.");
+      Kernel::log("Cannot access /dev/mem. No GPIO functions available.\n");
       return -1;
     }
 
@@ -261,12 +263,12 @@ int gpioInitialise() {
     close(fd);
 
     if ((gpioReg == MAP_FAILED) || (systReg == MAP_FAILED)) {
-      Kernel::log("mmap failed. No GPIO functions available.");
+      Kernel::log("mmap failed. No GPIO functions available.\n");
       return -1;
     }
   }
   else {
-    Kernel::log("Could not determine raspi hardware revision.");
+    Kernel::log("Could not determine raspi hardware revision.\n");
     return -1;
   }
   return 0;
@@ -509,7 +511,7 @@ int8_t setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn) {
 
 int8_t setPin(uint8_t pin, bool val) {
   if (piModel) {
-    *(gpioReg + (val ? GPSET0 : GPCLR0) + PI_BANK) = PI_BIT;
+    *(gpioReg + (val ? GPSET0 : GPCLR0)) = 1 << pin;
     return 0;
   }
   return -1;
