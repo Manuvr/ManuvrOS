@@ -59,14 +59,20 @@ class ManuvrRunnable;
 #if defined (ARDUINO)
   #include <Arduino.h>
 #elif defined(STM32F7XX) | defined(STM32F746xx)
-  #define HIGH         1
-  #define LOW          0
-  #define INPUT        GPIO_MODE_INPUT
-  #define OUTPUT       1
-  #define INPUT_PULLUP 2
-  #define CHANGE       GPIO_MODE_IT_RISING_FALLING
-  #define FALLING      GPIO_MODE_IT_FALLING
-  #define RISING       GPIO_MODE_IT_RISING
+  #include <stm32f7xx_hal.h>
+
+  #define HIGH           GPIO_PIN_SET
+  #define LOW            GPIO_PIN_RESET
+
+  #define INPUT          GPIO_MODE_INPUT
+  #define OUTPUT         GPIO_MODE_OUTPUT_PP
+  #define OUTPUT_OD      GPIO_MODE_OUTPUT_OD
+  #define INPUT_PULLUP   0xFE
+  #define INPUT_PULLDOWN 0xFD
+
+  #define CHANGE         GPIO_MODE_IT_RISING_FALLING
+  #define FALLING        GPIO_MODE_IT_FALLING
+  #define RISING         GPIO_MODE_IT_RISING
   extern "C" {
     unsigned long millis();
     unsigned long micros();
@@ -75,9 +81,11 @@ class ManuvrRunnable;
   // We adopt Arduino GPIO access conventions.
   #define HIGH         1
   #define LOW          0
+
   #define INPUT        0
   #define OUTPUT       1
   #define INPUT_PULLUP 2
+
   #define CHANGE       4
   #define FALLING      2
   #define RISING       3

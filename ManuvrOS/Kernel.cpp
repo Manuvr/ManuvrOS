@@ -1133,6 +1133,8 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
           last_user_input.concatHandoff(_tmp);
         }
       }
+      last_user_input.string();
+      last_user_input.split(",");
       procDirectDebugInstruction(&last_user_input);
       return_value++;
       break;
@@ -1239,7 +1241,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
 */
 void Kernel::procDirectDebugInstruction(StringBuilder* input) {
   #ifdef __MANUVR_CONSOLE_SUPPORT
-  char *str = (char *) input->string();
+  char *str = (char *) input->position(0);
   char c = *(str);
   uint8_t subscriber_idx = 0;
   uint8_t temp_byte = 0;

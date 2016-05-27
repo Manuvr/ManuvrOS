@@ -26,21 +26,15 @@ This file is meant to contain a set of common functions that are typically platf
     * Access a true RNG (if it exists)
 */
 
-#include "Platform/Platform.h"
+#include "Platform.h"
+#include "STM32F7.h"
 
 #include <unistd.h>
-
-#define PLATFORM_GPIO_PIN_COUNT   33
-
 
 
 /****************************************************************************************************
 * The code under this block is special on this platform, and will not be available elsewhere.       *
 ****************************************************************************************************/
-#include "stm32f7xx_hal.h"
-#include "stm32f7xx_hal_rcc.h"
-#include "stm32f7xx_hal_gpio.h"
-#include "stm32f7xx_hal_gpio_ex.h"
 
 //#if defined(ENABLE_USB_VCP)
   #include "tm_stm32_usb_device.h"
@@ -50,6 +44,7 @@ This file is meant to contain a set of common functions that are typically platf
 volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
 volatile uint8_t  watchdog_mark      = 42;
 unsigned long     start_time_micros  = 0;
+
 
 
 /*
@@ -212,7 +207,7 @@ void gpioSetup() {
   for (uint8_t i = 0; i < PLATFORM_GPIO_PIN_COUNT; i++) {
     gpio_pins[i].event = 0;      // No event assigned.
     gpio_pins[i].fxn   = 0;      // No function pointer.
-    gpio_pins[i].mode  = 1;  // All pins begin as inputs.
+    gpio_pins[i].mode  = INPUT;  // All pins begin as inputs.
     gpio_pins[i].pin   = i;      // The pin number.
   }
 
@@ -232,14 +227,39 @@ void gpioSetup() {
 
 
 int8_t gpioDefine(uint8_t pin, int mode) {
-  GPIO_InitTypeDef GPIO_InitStruct;
+  if (pin < PLATFORM_GPIO_PIN_COUNT) {
+    GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Pin    = _associated_pin(pin);
+    GPIO_InitStruct.Speed  = GPIO_SPEED_LOW;
+    GPIO_InitStruct.Pull   = GPIO_NOPULL;
+    GPIO_InitStruct.Mode   = GPIO_MODE_INPUT;
 
-  GPIO_InitStruct.Pin    = GPIO_PIN_3|GPIO_PIN_2|GPIO_PIN_1|GPIO_PIN_0;
-  GPIO_InitStruct.Mode   = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull   = GPIO_NOPULL;
-  GPIO_InitStruct.Speed  = GPIO_SPEED_LOW;
+    switch (mode) {
+      case INPUT_PULLUP:
+        GPIO_InitStruct.Pull   = GPIO_PULLUP;
+      case INPUT_PULLDOWN:
+        GPIO_InitStruct.Pull   = GPIO_PULLDOWN;
+        break;
+      case OUTPUT:
+        GPIO_InitStruct.Mode   = GPIO_MODE_OUTPUT_PP;
+        break;
+      case OUTPUT_OD:
+        GPIO_InitStruct.Mode   = GPIO_MODE_OUTPUT_OD;
+        break;
+      case INPUT:
+        // Nothing needs to happen. This is the default we set above.
+        break;
+      default:
+        Kernel::log("Tried to define a GPIO pin with a mode that we don't handle.\n");
+        GPIO_InitStruct.Mode   = GPIO_MODE_ANALOG;
+        break;
+    }
 
-  //HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+    HAL_GPIO_Init(_associated_port(pin), &GPIO_InitStruct);
+  }
+  else {
+    Kernel::log("Tried to define a GPIO pin that was out-of-range for this platform.\n");
+  }
   return 0;
 }
 
@@ -262,13 +282,13 @@ int8_t setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn) {
 
 
 int8_t setPin(uint8_t pin, bool val) {
+  HAL_GPIO_WritePin(_associated_port(pin), _associated_pin(pin), (val?GPIO_PIN_SET:GPIO_PIN_RESET));
   return 0;
 }
 
 
 int8_t readPin(uint8_t pin) {
-  //HAL_GPIO_ReadPin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
-  return 0;
+  return (GPIO_PIN_SET == HAL_GPIO_ReadPin(_associated_port(pin), _associated_pin(pin)));
 }
 
 

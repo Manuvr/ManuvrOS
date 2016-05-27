@@ -160,6 +160,9 @@ int main(int argc, char *argv[]) {
   kernel->subscribe(&gpio);
 
   #if defined(RASPI) || defined(RASPI2)
+    gpioDefine(14, OUTPUT);
+    gpioDefine(15, OUTPUT);
+    gpioDefine(18, OUTPUT);
     // If we are running on a RasPi, let's try to fire up the i2c that is almost
     //   certainly present.
     I2CAdapter i2c(1);
@@ -263,12 +266,21 @@ int main(int argc, char *argv[]) {
   #endif
   // TODO: End horrible hackishness.
 
+  #if defined(RASPI) || defined(RASPI2)
+    gpioDefine(14, OUTPUT);
+    gpioDefine(15, OUTPUT);
+    gpioDefine(18, OUTPUT);
+    bool pin_14_state = false;
+  #endif
 
   // The main loop. Run forever.
   // TODO: It would be nice to be able to ask the kernel if we should continue running.
   while (running) {
     kernel->procIdleFlags();
-
+    #if defined(RASPI) || defined(RASPI2)
+      setPin(14, pin_14_state);
+      pin_14_state = !pin_14_state;
+    #endif
     // Move the kernel log to stdout.
     if (Kernel::log_buffer.count()) {
       if (!kernel->getVerbosity()) {

@@ -59,11 +59,8 @@ volatile Kernel* __kernel = NULL;
 
 static volatile unsigned rev = 0;
 static volatile uint32_t piModel      = 0;
-static volatile uint32_t piPeriphBase = 0x20000000;
-static volatile uint32_t piBusAddr    = 0x40000000;
-
-#define GPIO_BASE  (piPeriphBase + 0x200000)
-#define SYST_BASE  (piPeriphBase + 0x003000)
+static volatile uint32_t piPeriphBase = 0;
+static volatile uint32_t piBusAddr    = 0;
 
 #define GPIO_LEN  0xB4
 #define SYST_LEN  0x1C
@@ -226,12 +223,14 @@ unsigned gpioHardwareRevision() {
             chars = 4;
             piPeriphBase = 0x20000000;
             piBusAddr = 0x40000000;
+            Kernel::log("Found a Raspberry Pi v1.\n");
           }
           else if (strstr (buf, "ARMv7") != NULL) {
             piModel = 2;
             chars = 6;
             piPeriphBase = 0x3F000000;
             piBusAddr = 0xC0000000;
+            Kernel::log("Found a Raspberry Pi v2.\n");
           }
         }
       }
@@ -245,6 +244,9 @@ unsigned gpioHardwareRevision() {
     }
     fclose(filp);
   }
+  else {
+    Kernel::log("Failed to open /proc/cpuinfo.\n");
+  }
   return rev;
 }
 
@@ -254,22 +256,22 @@ int gpioInitialise() {
   if (0 < gpioHardwareRevision()) {
     int fd = open("/dev/mem", O_RDWR | O_SYNC) ;
     if (fd < 0) {
-      Kernel::log("Cannot access /dev/mem. No GPIO functions available.");
+      Kernel::log("Cannot access /dev/mem. No GPIO functions available.\n");
       return -1;
     }
 
-    gpioReg  = initMapMem(fd, GPIO_BASE,  GPIO_LEN);
-    systReg  = initMapMem(fd, SYST_BASE,  SYST_LEN);
+    gpioReg  = initMapMem(fd, (piPeriphBase + 0x200000),  GPIO_LEN);
+    systReg  = initMapMem(fd, (piPeriphBase + 0x003000),  SYST_LEN);
 
     close(fd);
 
     if ((gpioReg == MAP_FAILED) || (systReg == MAP_FAILED)) {
-      Kernel::log("mmap failed. No GPIO functions available.");
+      Kernel::log("mmap failed. No GPIO functions available.\n");
       return -1;
     }
   }
   else {
-    Kernel::log("Could not determine raspi hardware revision.");
+    Kernel::log("Could not determine raspi hardware revision.\n");
     return -1;
   }
   return 0;
@@ -470,10 +472,26 @@ void gpioSetup() {
 }
 
 int8_t gpioDefine(uint8_t pin, int mode) {
-  int reg   = pin / 10;
-  int shift = (pin % 10) * 3;
-  gpioReg[reg] = (gpioReg[reg] & ~(7<<shift)) | (mode<<shift);
-  return 0;
+  if (piModel) {
+    int reg   = pin / 10;
+    int shift = (pin % 10) * 3;
+
+    gpioReg[reg] = (gpioReg[reg] & ~(7<<shift));
+
+    switch (mode) {
+      case INPUT:
+        break;
+      case INPUT_PULLUP:
+        break;
+      case OUTPUT:
+        gpioReg[reg] = (gpioReg[reg] | (1<<shift));
+        break;
+      default:
+        break;
+    }
+    return 0;
+  }
+  return -1;
 }
 
 
@@ -495,18 +513,24 @@ int8_t setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn) {
 
 
 int8_t setPin(uint8_t pin, bool val) {
-  *(gpioReg + (val ? GPSET0 : GPCLR0) + PI_BANK) = PI_BIT;
-  return 0;
+  if (piModel) {
+    *(gpioReg + (val ? GPSET0 : GPCLR0)) = 1 << pin;
+    return 0;
+  }
+  return -1;
 }
 
 
 int8_t readPin(uint8_t pin) {
-  return (((*(gpioReg + GPLEV0 + PI_BANK) & PI_BIT) != 0) ? 1 : 0);
+  if (piModel) {
+    return (((*(gpioReg + GPLEV0 + PI_BANK) & PI_BIT) != 0) ? 1 : 0);
+  }
+  return -1;
 }
 
 
 int8_t setPinAnalog(uint8_t pin, int val) {
-  return 0;
+  return -1;
 }
 
 int readPinAnalog(uint8_t pin) {
