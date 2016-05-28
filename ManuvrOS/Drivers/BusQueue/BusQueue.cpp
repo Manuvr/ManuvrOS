@@ -35,10 +35,29 @@ limitations under the License.
 ****************************************************************************************************/
 
 
-
+/**
+* Debug and logging support.
+*
+* @return a const char* containing a human-readable representation of an opcode.
+*/
+const char* BusOp::getStateString(XferState state) {
+  switch (state) {
+    case XferState::IDLE:        return "IDLE";
+    case XferState::QUEUED:      return "QUEUED";
+    case XferState::INITIATE:    return "INITIATE";
+    case XferState::ADDR:        return "ADDR";
+    case XferState::IO_WAIT:     return "IO-WAIT";
+    case XferState::STOP:        return "STOP";
+    case XferState::COMPLETE:    return "COMPLETE";
+    case XferState::FAULT:       return "FAULT";
+    default:                     return "<UNDEF>";
+  }
+}
 
 /**
-* Debug support. Returns a human-readable representation of an opcode.
+* Debug and logging support.
+*
+* @return a const char* containing a human-readable representation of an opcode.
 */
 const char* BusOp::getOpcodeString(BusOpcode code) {
   switch (code) {

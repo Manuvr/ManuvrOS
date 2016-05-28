@@ -63,10 +63,13 @@ enum class BusOpcode {
 
 class BusOp {
   public:
+    static const char* getStateString(XferState);
     static const char* getOpcodeString(BusOpcode);
 
 
   protected:
+    // Call-ahead, call-back
+
   private:
 };
 
