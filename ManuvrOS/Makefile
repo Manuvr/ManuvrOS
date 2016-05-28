@@ -49,6 +49,7 @@ CPP_SRCS  += Transports/ManuvrSerial/ManuvrSerial.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrSocket.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrTCP.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrUDP.cpp
+CPP_SRCS  += Drivers/BusQueue/BusQueue.cpp
 
 # i2c apparatus...
 CPP_SRCS  += Drivers/i2c-adapter/I2CDevice.cpp
