@@ -143,7 +143,6 @@ Kernel::Kernel() {
   micros_occupied      = 0;
   max_events_per_loop  = 2;
   lagged_schedules     = 0;
-  bistable_skip_detect = false;  // Set in advanceScheduler(), cleared in serviceSchedules().
   _ms_elapsed          = 0;
 
 
@@ -701,7 +700,7 @@ int8_t Kernel::procIdleFlags() {
 
     // Now we start notify()'ing subscribers.
     EventReceiver *subscriber;   // No need to assign.
-    if (profiler_enabled) profiler_mark_1 = micros();
+    if (_profiler_enabled()) profiler_mark_1 = micros();
 
     if (NULL != active_runnable->schedule_callback) {
       // TODO: This is hold-over from the scheduler. Need to modernize it.
@@ -709,7 +708,7 @@ int8_t Kernel::procIdleFlags() {
       active_runnable->printDebug(&temp_log);
       printf("\n\n%s\n", temp_log.string());
       ((FunctionPointer) active_runnable->schedule_callback)();   // Call the schedule's service function.
-      if (profiler_enabled) profiler_mark_2 = micros();
+      if (_profiler_enabled()) profiler_mark_2 = micros();
       activity_count++;
     }
     else if (NULL != active_runnable->specific_target) {
@@ -721,7 +720,7 @@ int8_t Kernel::procIdleFlags() {
           subscriber->printDebug(&local_log);
         default:   // The subscriber acted.
           activity_count++;
-          if (profiler_enabled) profiler_mark_2 = micros();
+          if (_profiler_enabled()) profiler_mark_2 = micros();
           break;
       }
     }
@@ -736,7 +735,7 @@ int8_t Kernel::procIdleFlags() {
             subscriber->printDebug(&local_log);
           default:   // The subscriber acted.
             activity_count++;
-            if (profiler_enabled) profiler_mark_2 = micros();
+            if (_profiler_enabled()) profiler_mark_2 = micros();
             break;
         }
       }
@@ -805,7 +804,7 @@ int8_t Kernel::procIdleFlags() {
     total_events++;
 
     // This is a stat-gathering block.
-    if (profiler_enabled) {
+    if (_profiler_enabled()) {
       profiler_mark_3 = micros();
 
       TaskProfilerData* profiler_item = NULL;
@@ -894,7 +893,7 @@ int8_t Kernel::procIdleFlags() {
 * @param   enabled  If true, enables the profiler. If false, disables it.
 */
 void Kernel::profiler(bool enabled) {
-  profiler_enabled   = enabled;
+  _profiler_enabled(enabled);
   max_idle_loop_time = 0;
   max_events_p_loop  = 0;
 
@@ -957,7 +956,7 @@ void Kernel::printProfiler(StringBuilder* output) {
   output->concatf("-- max_idle_loop_time \t%u\n", (unsigned long) max_idle_loop_time);
   output->concatf("-- max_events_p_loop  \t%u\n", (unsigned long) max_events_p_loop);
 
-  if (profiler_enabled) {
+  if (_profiler_enabled()) {
     output->concat("-- Profiler:\n");
     if (total_events) {
       output->concatf("   prealloc hit fraction: \t%f\%\n", (double)(1-((burden_of_specific - prealloc_starved) / total_events)) * 100);
@@ -1443,11 +1442,11 @@ ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, 
 void Kernel::advanceScheduler(unsigned int ms_elapsed) {
   _ms_elapsed += (uint32_t) ms_elapsed;
 
-  if (bistable_skip_detect) {
+  if (_skip_detected()) {
     // Failsafe block
   }
   else {
-    bistable_skip_detect = true;
+    _skip_detected(true);
   }
 }
 
@@ -1526,7 +1525,7 @@ int Kernel::serviceSchedules() {
   }
 
   // We just ran a loop. Punch the bistable swtich.
-  bistable_skip_detect = false;
+  _skip_detected(false);
 
   _ms_elapsed = 0;
   return return_value;
