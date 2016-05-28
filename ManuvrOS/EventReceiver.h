@@ -36,20 +36,12 @@ limitations under the License.
   #define EVENT_CALLBACK_RETURN_RECYCLE     2  // The callback class is asking that this event be recycled into the event queue.
   #define EVENT_CALLBACK_RETURN_DROP        3  // The callback class is telling Kernel that it should dequeue
 
-  #define MANUVR_ER_FLAG_VERBOSITY_MASK     0x0007  // The bottom 3 bits are for the verbosity value.
-  #define MANUVR_ER_FLAG_BOOT_COMPLETE      0x0008  // Has the class been bootstrapped?
-  #define MANUVR_ER_FLAG_EVENT_PENDING      0x0010  // Set when the ER has an event waiting for service.
-  #define MANUVR_ER_FLAG_HIDDEN_FROM_DISCOV 0x0020  // Setting this indicates that the ER should not expose itself to discovery.
-  #define MANUVR_ER_FLAG_RESERVED_8         0x0040  // Reserved
-  #define MANUVR_ER_FLAG_RESERVED_7         0x0080  // Reserved
-  #define MANUVR_ER_FLAG_RESERVED_6         0x0100  // Reserved
-  #define MANUVR_ER_FLAG_RESERVED_5         0x0200  // Reserved
-  #define MANUVR_ER_FLAG_RESERVED_4         0x0400  // Reserved
-  #define MANUVR_ER_FLAG_RESERVED_3         0x0800  // Reserved
-  #define MANUVR_ER_FLAG_RESERVED_2         0x1000  // Reserved
-  #define MANUVR_ER_FLAG_RESERVED_1         0x2000  // Reserved
-  #define MANUVR_ER_FLAG_RESERVED_0         0x4000  // Reserved
-  #define MANUVR_ER_FLAG_THREADED           0x8000  // This ER is maintaining its own thread.
+  #define MANUVR_ER_FLAG_VERBOSITY_MASK     0x07  // The bottom 3 bits are for the verbosity value.
+  #define MANUVR_ER_FLAG_BOOT_COMPLETE      0x08  // Has the class been bootstrapped?
+  #define MANUVR_ER_FLAG_EVENT_PENDING      0x10  // Set when the ER has an event waiting for service.
+  #define MANUVR_ER_FLAG_HIDDEN_FROM_DISCOV 0x20  // Setting this indicates that the ER should not expose itself to discovery.
+  #define MANUVR_ER_FLAG_THREADED           0x40  // This ER is maintaining its own thread.
+  #define MANUVR_ER_FLAG_RESERVED_0         0x80  // Reserved
 
   class Kernel;
   class ManuvrRunnable;
@@ -123,6 +115,18 @@ limitations under the License.
 
         inline void _mark_boot_complete() {   _class_state |= MANUVR_ER_FLAG_BOOT_COMPLETE;  };
 
+        // These inlines are for convenience of extending classes.
+        inline uint8_t _er_flags() {                 return _extnd_state;            };
+        inline bool _er_flag(uint8_t _flag) {        return (_extnd_state & _flag);  };
+        inline void _er_flip_flag(uint8_t _flag) {   _extnd_state ^= _flag;          };
+        inline void _er_clear_flag(uint8_t _flag) {  _extnd_state &= ~_flag;         };
+        inline void _er_set_flag(uint8_t _flag) {    _extnd_state |= _flag;          };
+        inline void _er_set_flag(uint8_t _flag, bool nu) {
+          if (nu) _extnd_state |= _flag;
+          else    _extnd_state &= ~_flag;
+        };
+
+
 
       private:
         #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
@@ -131,7 +135,8 @@ limitations under the License.
           int _thread_id;
         #endif
 
-        uint16_t _class_state;
+        uint8_t _class_state;
+        uint8_t _extnd_state;  // This is here for use by the extending class.
 
         int8_t setVerbosity(ManuvrRunnable*);  // Private because it should be set with an Event.
     };

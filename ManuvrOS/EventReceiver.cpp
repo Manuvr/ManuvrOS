@@ -30,6 +30,7 @@ limitations under the License.
 void EventReceiver::__class_initializer() {
   __kernel  = NULL;
   _class_state = 0 | (DEFAULT_CLASS_VERBOSITY & MANUVR_ER_FLAG_VERBOSITY_MASK);
+  _extnd_state = 0;
   #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
     _thread_id = -1;
   #endif

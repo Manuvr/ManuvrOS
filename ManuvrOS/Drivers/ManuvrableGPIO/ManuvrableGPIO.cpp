@@ -210,18 +210,14 @@ void ManuvrableGPIO::procDirectDebugInstruction(StringBuilder *input) {
   uint16_t _val = (input->count() > 2) ? (0 < atoi((const char*) input->position(2))) : 0;
 
   switch (*(str)) {
-    case 'r':   // Read a pin
+    case 's':   // Read a pin
       _val = readPin(_pin);
       local_log.concatf("Pin %d state: %d\n", _pin, _val);
       break;
-    case 'w':   // Write a pin
-      local_log.concatf("Pin %d state: %d\n", _pin, (_val?1:0));
-      setPin(_pin, (_val?true:false));
-      break;
-    case 'I':   // Set a pin mode.
-    case 'O':   // Set a pin mode.
-      local_log.concatf("Setting pin %d as %s.\n", _pin, ((*(str) == 'I')?"INPUT":"OUTPUT"));
-      gpioDefine(_pin, (*(str) == 'I') ? INPUT : OUTPUT);
+    case 'r':   // Set a pin mode.
+    case 'w':   // Set a pin mode.
+      local_log.concatf("Setting pin %d as %s.\n", _pin, ((*(str) == 'r')?"INPUT":"OUTPUT"));
+      gpioDefine(_pin, (*(str) == 'r') ? INPUT : OUTPUT);
       break;
     case 'M':   // Set a pin mode.
     case 'm':   // Set a pin mode.
