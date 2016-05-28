@@ -89,11 +89,10 @@ void I2CAdapter::__class_initializer() {
   EventReceiver::__class_initializer();
 
   current_queue_item = NULL;
-  bus_error          = false;
-  bus_online         = false;
-  ping_run           = false;
-  full_ping_running  = false;
   last_used_bus_addr = 0;
+
+  _er_clear_flag(I2C_BUS_FLAG_BUS_ERROR | I2C_BUS_FLAG_BUS_ONLINE);
+  _er_clear_flag(I2C_BUS_FLAG_PING_RUN  | I2C_BUS_FLAG_PINGING);
 
   for (uint16_t i = 0; i < 128; i++) ping_map[i] = 0;   // Zero the ping map.
 
@@ -178,7 +177,7 @@ int8_t I2CAdapter::generateStart() {
   #ifdef __MANUVR_DEBUG
   if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
   #endif
-  if (! bus_online) return -1;
+  if (! busOnline()) return -1;
   I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, ENABLE);      //Enable EVT and ERR interrupts
   I2C_GenerateSTART(I2C1, ENABLE);   // Doing this will take us back to the ISR.
   return 0;
@@ -189,7 +188,7 @@ int8_t I2CAdapter::generateStop() {
   #ifdef __MANUVR_DEBUG
   if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
   #endif
-  if (! bus_online) return -1;
+  if (! busOnline()) return -1;
   DMA_ITConfig(DMA1_Stream0, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE | DMA_IT_DME, DISABLE);
   I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, DISABLE);
   I2C_GenerateSTOP(I2C1, ENABLE);
@@ -227,7 +226,7 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
 
     HAL_I2CEx_AnalogFilter_Config(&hi2c1, I2C_ANALOGFILTER_ENABLE);
 
-    bus_online = true;
+    busOnline(true);
   }
   else {
     // Unsupported
@@ -236,7 +235,7 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
 
 
 I2CAdapter::~I2CAdapter() {
-  bus_online = false;
+  busOnline(false);
   while (dev_list.hasNext()) {
     dev_list.get()->disassignBusInstance();
     dev_list.remove();
@@ -254,7 +253,7 @@ int8_t I2CAdapter::generateStart() {
   #ifdef __MANUVR_DEBUG
   if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
   #endif
-  if (! bus_online) return -1;
+  if (! busOnline()) return -1;
   return 0;
 }
 
@@ -263,7 +262,7 @@ int8_t I2CAdapter::generateStop() {
   #ifdef __MANUVR_DEBUG
   if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
   #endif
-  if (! bus_online) return -1;
+  if (! busOnline()) return -1;
   return 0;
 }
 
@@ -286,13 +285,13 @@ int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
     if (dev_id == 0) {
       Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR);
       Wire.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
-      bus_online = true;
+      busOnline(true);
     }
     #if defined(__MK20DX256__)
     else if (dev_id == 1) {
       Wire1.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR);
       Wire1.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
-      bus_online = true;
+      busOnline(true);
     }
     #endif
     else {
@@ -302,7 +301,7 @@ int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
 
 
   I2CAdapter::~I2CAdapter() {
-      bus_online = false;
+      busOnline(false);
       while (dev_list.hasNext()) {
         dev_list.get()->disassignBusInstance();
         dev_list.remove();
@@ -318,7 +317,7 @@ int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
     #ifdef __MANUVR_DEBUG
     if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
     #endif
-    if (! bus_online) return -1;
+    if (! busOnline()) return -1;
     //Wire1.sendTransmission(I2C_STOP);
     //Wire1.finish(900);   // We allow for 900uS for timeout.
     return 0;
@@ -329,7 +328,7 @@ int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
     #ifdef __MANUVR_DEBUG
     if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
     #endif
-    if (! bus_online) return -1;
+    if (! busOnline()) return -1;
     return 0;
   }
 
@@ -436,7 +435,7 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
 
   if (dev_id == 0) {
     Wire.begin();
-    bus_online = true;
+    busOnline(true);
   }
   else {
     // Unsupported.
@@ -445,7 +444,7 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
 
 
 I2CAdapter::~I2CAdapter() {
-    bus_online = false;
+    busOnline(false);
     while (dev_list.hasNext()) {
       dev_list.get()->disassignBusInstance();
       dev_list.remove();
@@ -460,7 +459,7 @@ int8_t I2CAdapter::generateStart() {
   #ifdef __MANUVR_DEBUG
   if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
   #endif
-  if (! bus_online) return -1;
+  if (! busOnline()) return -1;
   //Wire1.sendTransmission(I2C_STOP);
   //Wire1.finish(900);   // We allow for 900uS for timeout.
 
@@ -472,7 +471,7 @@ int8_t I2CAdapter::generateStop() {
   #ifdef __MANUVR_DEBUG
   if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
   #endif
-  if (! bus_online) return -1;
+  if (! busOnline()) return -1;
   return 0;
 }
 
@@ -487,13 +486,13 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
 
   if (dev_id == 1) {
     //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400);
-    bus_online = true;
+    busOnline(true);
   }
 }
 
 
 I2CAdapter::~I2CAdapter() {
-    bus_online = false;
+    busOnline(false);
     while (dev_list.hasNext()) {
       dev_list.get()->disassignBusInstance();
       dev_list.remove();
@@ -509,7 +508,7 @@ int8_t I2CAdapter::generateStart() {
   #ifdef __MANUVR_DEBUG
   if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
   #endif
-  if (! bus_online) return -1;
+  if (! busOnline()) return -1;
   //Wire1.sendTransmission(I2C_STOP);
   //Wire1.finish(900);   // We allow for 900uS for timeout.
 
@@ -521,7 +520,7 @@ int8_t I2CAdapter::generateStop() {
   #ifdef __MANUVR_DEBUG
   if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
   #endif
-  if (! bus_online) return -1;
+  if (! busOnline()) return -1;
   return 0;
 }
 
@@ -619,8 +618,8 @@ void I2CAdapter::gpioSetup() {
 int8_t I2CAdapter::bootComplete() {
   EventReceiver::bootComplete();
 
-  if (dev >= 0) bus_online = true;
-  if (bus_online) {
+  if (dev >= 0) busOnline(true);
+  if (busOnline()) {
     advance_work_queue();
   }
   return 1;
@@ -793,8 +792,8 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
       return return_value;
     }
     else {
-      while (bus_error && (timeout > 0)) { timeout--; }
-      if (bus_error) {
+      while (busError() && (timeout > 0)) { timeout--; }
+      if (busError()) {
         #ifdef __MANUVR_DEBUG
         Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "i2c bus was held for too long. Failing....");
         #endif
@@ -809,7 +808,7 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
         #ifdef __MANUVR_DEBUG
         Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to acquire bus access and/or talk to slave at %d.", nu_addr);
         #endif
-        bus_error = true;
+        busError(true);
       }
     }
   }
@@ -841,7 +840,7 @@ bool I2CAdapter::insert_work_item(I2CQueuedOperation *nu) {
 		// Bus is idle. Put this work item in the active slot and start the bus operations...
 		//Kernel::log(__PRETTY_FUNCTION__, 5, "Starting i2c operation now...");
 		current_queue_item = nu;
-		if ((dev >= 0) && (bus_online)) {
+		if ((dev >= 0) && busOnline()) {
 		  nu->begin();
 		  if (getVerbosity() > 6) {
 		    nu->printDebug(&local_log);
@@ -887,7 +886,7 @@ void I2CAdapter::advance_work_queue(void) {
 					ping_map[current_queue_item->dev_addr % 128] = -1;
 				}
 
-				if (full_ping_running) {
+				if (_er_flag(I2C_BUS_FLAG_PINGING)) {
 				  if ((current_queue_item->dev_addr & 0x00FF) < 127) {
 				    ping_slave_addr(current_queue_item->dev_addr + 1);
 				  }
@@ -895,7 +894,7 @@ void I2CAdapter::advance_work_queue(void) {
 				    #ifdef __MANUVR_DEBUG
 				    if (getVerbosity() > 3) local_log.concat("Concluded i2c ping sweep.");
 				    #endif
-				    full_ping_running = false;
+				    _er_clear_flag(I2C_BUS_FLAG_PINGING);
 				  }
 				}
 			}
@@ -983,7 +982,7 @@ void I2CAdapter::purge_stalled_job() {
 void I2CAdapter::ping_slave_addr(uint8_t addr) {
     I2CQueuedOperation* nu = new I2CQueuedOperation(I2C_OPERATION_PING, addr, (int16_t) -1, NULL, 0);
     insert_work_item(nu);
-    ping_run = true;
+    _er_set_flag(I2C_BUS_FLAG_PING_RUN);
 }
 
 
@@ -992,10 +991,6 @@ void I2CAdapter::ping_slave_addr(uint8_t addr) {
 */
 void I2CAdapter::printPingMap(StringBuilder *temp) {
   if (temp != NULL) {
-    if (!ping_run) {
-      temp->concat("\n\nNo ping map to show.\n");
-      return;
-    }
     temp->concat("\n\n\tPing Map\n\t      0 1 2 3 4 5 6 7 8 9 A B C D E F\n");
     // TODO: This is needlessly-extravagent of memory. Do it this way instead...
     //char str_buf[];
@@ -1067,7 +1062,7 @@ void I2CAdapter::printDebug(StringBuilder *temp) {
   if (temp == NULL) return;
 
   EventReceiver::printDebug(temp);
-  temp->concatf("--- bus_online             %s\n", (bus_online ? "yes" : "no"));
+  temp->concatf("--- bus_online             %s\n", (busOnline() ? "yes" : "no"));
   printPingMap(temp);
 
   if (current_queue_item != NULL) {
@@ -1147,8 +1142,8 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
         local_log.concatf("ping i2c slave 0x%02x.\n", temp_byte);
         ping_slave_addr(temp_byte);
       }
-      else if (!full_ping_running) {
-        full_ping_running = true;
+      else if (!_er_flag(I2C_BUS_FLAG_PINGING)) {
+        _er_set_flag(I2C_BUS_FLAG_PINGING);
         ping_slave_addr(1);
       }
       break;

@@ -77,14 +77,15 @@ void ADP8866::_isr_fxn(void) {
 */
 void ADP8866::__class_initializer() {
   EventReceiver::__class_initializer();
+  ADP8866::INSTANCE = this;
+
   reset_pin         = 0;
   irq_pin           = 0;
   stored_dimmer_val = 0;
   class_mode        = 0;
   power_mode        = 0;
-  init_complete     = false;
 
-  ADP8866::INSTANCE = this;
+  _er_clear_flag(ADP8866_FLAG_INIT_COMPLETE);
 
   int mes_count = sizeof(adp8866_message_defs) / sizeof(MessageTypeDef);
   ManuvrMsg::registerMessages(adp8866_message_defs, mes_count);
@@ -109,7 +110,7 @@ ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : I2CDevice
 
   setPin(_reset_pin, false);
 
-  init_complete = false;
+  _er_clear_flag(ADP8866_FLAG_INIT_COMPLETE);
   defineRegister(ADP8866_MANU_DEV_ID,  (uint8_t) 0x00, false,  true, false);
   defineRegister(ADP8866_MDCR,         (uint8_t) 0x00, false,  false, true);
   defineRegister(ADP8866_INT_STAT,     (uint8_t) 0x00, false,  false, true);
@@ -216,7 +217,7 @@ int8_t ADP8866::init() {
   writeIndirect(ADP8866_ISC9, 0x05, true);
 
   writeIndirect(ADP8866_ISCT_HB, 0x0A);
-  init_complete = true;
+  _er_set_flag(ADP8866_FLAG_INIT_COMPLETE);
   return 0;
 }
 
@@ -371,7 +372,7 @@ void ADP8866::printDebug(StringBuilder* temp) {
   if (NULL == temp) return;
   EventReceiver::printDebug(temp);
   I2CDeviceWithRegisters::printDebug(temp);
-  temp->concatf("\tinit_complete:      %s\n", init_complete ? "yes" :"no");
+  temp->concatf("\tinit_complete:      %s\n", _er_flag(ADP8866_FLAG_INIT_COMPLETE) ? "yes" :"no");
   temp->concatf("\tpower_mode:        %d\n", power_mode);
 }
 

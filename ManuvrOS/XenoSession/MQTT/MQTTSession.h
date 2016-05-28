@@ -28,9 +28,14 @@ This class originated from IBM's C-client demo code, but was re-written into
 
 #include <paho.mqtt.embedded-c/MQTTPacket.h>
 
-
-
 #define MAX_PACKET_ID 65535
+
+/*
+* These state flags are hosted by the EventReceiver. This may change in the future.
+* Might be too much convention surrounding their assignment across inherritence.
+*/
+#define MQTT_SESS_FLAG_PING_WAIT  0x01    // Are we waiting on a ping reply?
+
 
 enum QoS { QOS0, QOS1, QOS2 };
 
@@ -112,13 +117,13 @@ class MQTTSession : public XenoSession {
 
     std::map<const char*, ManuvrRunnable*> _subscriptions;   // Topics we are subscribed to, and the events they trigger.
     PriorityQueue<MQTTMessage*> _pending_mqtt_messages;      // Valid MQTT messages that have arrived.
+    ManuvrRunnable _ping_timer;    // Periodic KA ping.
 
     unsigned int _next_packetid;
     unsigned int command_timeout_ms;
 
-    uint8_t _ping_outstanding;
-
-    ManuvrRunnable _ping_timer;    // Periodic KA ping.
+    inline bool _ping_outstanding() {        return (_er_flag(MQTT_SESS_FLAG_PING_WAIT));         };
+    inline void _ping_outstanding(bool nu) { return (_er_set_flag(MQTT_SESS_FLAG_PING_WAIT, nu)); };
 
     inline int getNextPacketId() {
       return _next_packetid = (_next_packetid == MAX_PACKET_ID) ? 1 : _next_packetid + 1;

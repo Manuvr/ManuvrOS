@@ -90,6 +90,14 @@ This file is the tortured result of growing pains since the beginning of
   #define I2C_BUS_STATE_ERROR    0x01
   #define I2C_BUS_STATE_READY    0x02
 
+  /*
+  * These state flags are hosted by the EventReceiver. This may change in the future.
+  * Might be too much convention surrounding their assignment across inherritence.
+  */
+  #define I2C_BUS_FLAG_BUS_ERROR  0x01    // While this is true, don't interact with the RN.
+  #define I2C_BUS_FLAG_BUS_ONLINE 0x02    // Set when the module is verified to be in command mode.
+  #define I2C_BUS_FLAG_PING_RUN   0x04    // Have we run a full bus discovery?
+  #define I2C_BUS_FLAG_PINGING    0x08    // Are we running a full ping?
 
   // Forward declaration. Definition order in this file is very important.
   class I2CDevice;
@@ -180,11 +188,8 @@ This file is the tortured result of growing pains since the beginning of
   */
   class I2CAdapter : public EventReceiver {
     public:
-      bool bus_error;
-      bool bus_online;
-      int dev;
-
       I2CQueuedOperation* current_queue_item;
+      int dev;
 
       I2CAdapter(uint8_t dev_id = 1);         // Constructor takes a bus ID as an argument.
       ~I2CAdapter(void);           // Destructor
@@ -219,6 +224,11 @@ This file is the tortured result of growing pains since the beginning of
       int8_t dispatchOperation(I2CQueuedOperation*);   // Start the given operation on the bus.
       bool switch_device(uint8_t nu_addr);
 
+      inline bool busError() {          return (_er_flag(I2C_BUS_FLAG_BUS_ERROR));  };
+      inline bool busOnline() {         return (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)); };
+      inline void busError(bool nu) {   _er_set_flag(I2C_BUS_FLAG_BUS_ERROR, nu);   };
+      inline void busOnline(bool nu) {  _er_set_flag(I2C_BUS_FLAG_BUS_ONLINE, nu);  };
+
 
     protected:
       void __class_initializer();
@@ -226,8 +236,6 @@ This file is the tortured result of growing pains since the beginning of
 
 
     private:
-      bool ping_run;
-      bool full_ping_running;
       int8_t ping_map[128];
       int8_t last_used_bus_addr;
 

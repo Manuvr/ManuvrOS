@@ -80,12 +80,21 @@ limitations under the License.
 
 #define ADP8866_I2CADDR            0x27
 
+/*
+* These state flags are hosted by the EventReceiver. This may change in the future.
+* Might be too much convention surrounding their assignment across inherritence.
+*/
+#define ADP8866_FLAG_INIT_COMPLETE 0x01    // Is the device initialized?
 
+
+/*
+* Internal register bitmask definitions.
+*/
+#define ADP8866_INT_STATUS_OV      0x04
+#define ADP8866_INT_STATUS_OT      0x08
 #define ADP8866_INT_STATUS_ICS_OFF 0x40
 #define ADP8866_INT_STATUS_BL_OFF  0x20
 #define ADP8866_INT_STATUS_SHORT   0x10
-#define ADP8866_INT_STATUS_OT      0x08
-#define ADP8866_INT_STATUS_OV      0x04
 
 
 /*
@@ -144,14 +153,11 @@ class ADP8866 : public I2CDeviceWithRegisters, public EventReceiver {
 
 
   private:
-    bool init_complete;
     uint8_t power_mode;
     uint8_t class_mode;
     uint8_t stored_dimmer_val;
     uint8_t reset_pin;
     uint8_t irq_pin;
-
-
 
     // The chip only has 9 outputs, but we make a synthetic tenth
     //   channel to represent the backlight.
