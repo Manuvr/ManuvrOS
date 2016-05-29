@@ -34,6 +34,7 @@ limitations under the License.
 * Static members and initializers should be located here. Initializers first, functions second.
 ****************************************************************************************************/
 
+int BusOp::next_txn_id = 0;
 
 /**
 * Debug and logging support.

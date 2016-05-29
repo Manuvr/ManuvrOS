@@ -204,29 +204,27 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
 
   if (dev_id == 1) {
     GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.Pin = GPIO_PIN_7|GPIO_PIN_6;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    GPIO_InitStruct.Pin       = GPIO_PIN_7|GPIO_PIN_6;
+    GPIO_InitStruct.Mode      = GPIO_MODE_AF_OD;
+    GPIO_InitStruct.Pull      = GPIO_PULLUP;
+    GPIO_InitStruct.Speed     = GPIO_SPEED_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
     __HAL_RCC_I2C1_CLK_ENABLE();
 
-    hi2c1.Instance = I2C1;
-    hi2c1.Init.Timing = 0x00202E44;
-    hi2c1.Init.OwnAddress1 = 0;
-    hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-    hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-    hi2c1.Init.OwnAddress2 = 0;
+    hi2c1.Instance              = I2C1;
+    hi2c1.Init.Timing           = 0x00202E44;
+    hi2c1.Init.OwnAddress1      = 0;
+    hi2c1.Init.AddressingMode   = I2C_ADDRESSINGMODE_7BIT;
+    hi2c1.Init.DualAddressMode  = I2C_DUALADDRESS_DISABLE;
+    hi2c1.Init.OwnAddress2      = 0;
     hi2c1.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
-    hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-    hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+    hi2c1.Init.GeneralCallMode  = I2C_GENERALCALL_DISABLE;
+    hi2c1.Init.NoStretchMode    = I2C_NOSTRETCH_DISABLE;
     HAL_I2C_Init(&hi2c1);
 
-    HAL_I2CEx_AnalogFilter_Config(&hi2c1, I2C_ANALOGFILTER_ENABLE);
-
-    busOnline(true);
+    busOnline(HAL_OK == HAL_I2CEx_AnalogFilter_Config(&hi2c1, I2C_ANALOGFILTER_ENABLE));
   }
   else {
     // Unsupported
@@ -245,6 +243,7 @@ I2CAdapter::~I2CAdapter() {
        We should abort any open transfers prior to deleting this list. */
   __HAL_RCC_I2C1_CLK_DISABLE();
   HAL_GPIO_DeInit(GPIOB, GPIO_PIN_7|GPIO_PIN_6);
+  HAL_I2C_DeInit(&hi2c1);
 }
 
 
@@ -343,7 +342,7 @@ int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
         op->advance_operation(1);
       }
 
-      if (op->opcode == I2C_OPERATION_READ) {
+      if (op->opcode == BusOpcode::RX) {
         Wire.endTransmission(I2C_NOSTOP);
         Wire.requestFrom(op->dev_addr, op->len, I2C_STOP, 10000);
         int i = 0;
@@ -351,11 +350,11 @@ int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
           *(op->buf + i++) = (uint8_t) Wire.readByte();
         }
       }
-      else if (op->opcode == I2C_OPERATION_WRITE) {
+      else if (op->opcode == BusOpcode::TX) {
         for(int i = 0; i < op->len; i++) Wire.write(*(op->buf+i));
         Wire.endTransmission(I2C_STOP, 10000);   // 10ms timeout
       }
-      else if (op->opcode == I2C_OPERATION_PING) {
+      else if (op->opcode == BusOpcode::TX_CMD) {
         Wire.endTransmission(I2C_STOP, 10000);   // 10ms timeout
       }
 
@@ -385,7 +384,7 @@ int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
       op->advance_operation(1);
     }
 
-    if (op->opcode == I2C_OPERATION_READ) {
+    if (op->opcode == BusOpcode::RX) {
       Wire1.endTransmission(I2C_NOSTOP);
       Wire1.requestFrom(op->dev_addr, op->len, I2C_STOP, 10000);
       int i = 0;
@@ -393,11 +392,11 @@ int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
         *(op->buf + i++) = (uint8_t) Wire1.readByte();
       }
     }
-    else if (op->opcode == I2C_OPERATION_WRITE) {
+    else if (op->opcode == BusOpcode::TX) {
       for(int i = 0; i < op->len; i++) Wire1.write(*(op->buf+i));
       Wire1.endTransmission(I2C_STOP, 10000);   // 10ms timeout
     }
-    else if (op->opcode == I2C_OPERATION_PING) {
+    else if (op->opcode == BusOpcode::TX_CMD) {
       Wire1.endTransmission(I2C_STOP, 10000);   // 10ms timeout
     }
 
@@ -878,7 +877,7 @@ void I2CAdapter::advance_work_queue(void) {
 				// TODO: need some minor reorg to make this not so obtuse...
 				current_queue_item->requester->operationCompleteCallback(current_queue_item);
 			}
-			else if (current_queue_item->opcode == I2C_OPERATION_PING) {
+			else if (current_queue_item->opcode == BusOpcode::TX_CMD) {
 				if (current_queue_item->err_code == I2C_ERR_CODE_NO_ERROR) {
 					ping_map[current_queue_item->dev_addr % 128] = 1;
 				}
@@ -980,7 +979,7 @@ void I2CAdapter::purge_stalled_job() {
 *   to discover if a device is active on the bus and addressable.
 */
 void I2CAdapter::ping_slave_addr(uint8_t addr) {
-    I2CQueuedOperation* nu = new I2CQueuedOperation(I2C_OPERATION_PING, addr, (int16_t) -1, NULL, 0);
+    I2CQueuedOperation* nu = new I2CQueuedOperation(BusOpcode::TX_CMD, addr, (int16_t) -1, NULL, 0);
     insert_work_item(nu);
     _er_set_flag(I2C_BUS_FLAG_PING_RUN);
 }

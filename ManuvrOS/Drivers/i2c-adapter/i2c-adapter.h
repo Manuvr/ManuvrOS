@@ -39,17 +39,17 @@ This file is the tortured result of growing pains since the beginning of
   #include <inttypes.h>
   #include <stdint.h>
   #include <stdarg.h>
-  #include "DataStructures/LightLinkedList.h"
-  #include "DataStructures/StringBuilder.h"
+  #include <DataStructures/LightLinkedList.h>
+  #include <DataStructures/StringBuilder.h>
+  #include <Drivers/BusQueue/BusQueue.h>
+  #include <Drivers/DeviceWithRegisters/DeviceRegister.h>
   #include <Kernel.h>
-  #include "Drivers/DeviceWithRegisters/DeviceRegister.h"
 
   #define I2CADAPTER_MAX_QUEUE_PRINT 3
 
 
   #define I2C_OPERATION_READ  I2C_Direction_Receiver
   #define I2C_OPERATION_WRITE I2C_Direction_Transmitter
-  #define I2C_OPERATION_PING  0x04
 
 
   #define I2C_XFER_STATE_INITIATE  0x00
@@ -109,31 +109,29 @@ This file is the tortured result of growing pains since the beginning of
   */
   class I2CQueuedOperation {
     public:
-      static int next_txn_id;
+      I2CDevice  *requester;
+      I2CAdapter *device;
+
+      uint8_t*  buf;
+      int       txn_id;        // How are we going to keep track of this item?
+      BusOpcode opcode;        // What is the nature of this work-queue item?
+
+      int8_t verbosity;
+      uint8_t dev_addr;
+      int16_t sub_addr;
+
+      uint8_t   xfer_state;
+      int8_t    err_code;      // If we had an error, the code will be here.
+
+      uint8_t remaining_bytes;
+      uint8_t len;
 
       bool      initiated;     // Is this item fresh or is it waiting on a reply?
       bool      reap_buffer;   // If true, we will reap the buffer.
 
-      uint8_t   opcode;        // What is the nature of this work-queue item?
-      int       txn_id;        // How are we going to keep track of this item?
-      int8_t    err_code;      // If we had an error, the code will be here.
 
-      uint8_t dev_addr;
-      int16_t sub_addr;
-
-      uint8_t xfer_state;
-      uint8_t remaining_bytes;
-      uint8_t len;
-      uint8_t *buf;
-
-      I2CDevice  *requester;
-      I2CAdapter *device;
-
-      int8_t verbosity;
-
-
-      I2CQueuedOperation(uint8_t nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len);
-      ~I2CQueuedOperation(void);
+      I2CQueuedOperation(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len);
+      ~I2CQueuedOperation();
 
 
       /*
@@ -177,7 +175,6 @@ This file is the tortured result of growing pains since the beginning of
 
       int8_t init_dma();
       static const char* getErrorString(int8_t code);
-      static const char* getOpcodeString(uint8_t code);
       static const char* getStateString(uint8_t code);
 
   };

@@ -50,14 +50,11 @@ limitations under the License.
 #endif
 
 
-// Static initiallizer...
-int I2CQueuedOperation::next_txn_id = 0;
-
 /*
 * It is worth re-iterating here, that this class ought to never malloc() or free() the buf member. That should be
 *   under the exclusive control of the caller.
 */
-I2CQueuedOperation::I2CQueuedOperation(uint8_t nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len) {
+I2CQueuedOperation::I2CQueuedOperation(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len) {
   this->initiated       = false;
   this->subaddr_sent    = (sub_addr >= 0) ? false : true;
   this->opcode          = nu_op;
@@ -65,7 +62,7 @@ I2CQueuedOperation::I2CQueuedOperation(uint8_t nu_op, uint8_t dev_addr, int16_t 
   this->sub_addr        = sub_addr;
   this->buf             = buf;
   this->len             = len;
-  this->txn_id          = I2CQueuedOperation::next_txn_id++;
+  this->txn_id          = BusOp::next_txn_id++;
   this->err_code        = I2C_ERR_CODE_NO_ERROR;
   this->xfer_state      = I2C_XFER_STATE_INITIATE;
   this->device          = NULL;
@@ -77,7 +74,7 @@ I2CQueuedOperation::I2CQueuedOperation(uint8_t nu_op, uint8_t dev_addr, int16_t 
 };
 
 
-I2CQueuedOperation::~I2CQueuedOperation(void) {
+I2CQueuedOperation::~I2CQueuedOperation() {
 	if (reap_buffer) {
 		if (buf != NULL) {
 			free(buf);
@@ -104,15 +101,6 @@ const char* I2CQueuedOperation::getErrorString(int8_t code) {
     case I2C_ERR_CODE_CLASS_ABORT:  return "CLASS_ABORT";
     case I2C_ERR_CODE_BUS_BUSY:     return "ARBITRATION_LOST";
     case I2C_ERR_SLAVE_NOT_FOUND:   return "SLAVE_NOT_FOUND";
-    default:                        return "<UNKNOWN>";
-  }
-}
-
-const char* I2CQueuedOperation::getOpcodeString(uint8_t code) {
-  switch (code) {
-    case I2C_OPERATION_READ:        return "READ";
-    case I2C_OPERATION_WRITE:       return "WRITE";
-    case I2C_OPERATION_PING:        return "PING";
     default:                        return "<UNKNOWN>";
   }
 }
@@ -150,7 +138,7 @@ void I2CQueuedOperation::printDebug(void) {
 void I2CQueuedOperation::printDebug(StringBuilder* temp) {
   if (temp != NULL) {
     temp->concatf("\n---[ %s I2CQueueOperation  0x%08x ]---\n", (completed() ? "Complete" : (initiated ? "Initiated" : "Uninitiated")), txn_id);
-    temp->concatf("opcode:          %s\n", getOpcodeString(opcode));
+    temp->concatf("opcode:          %s\n", BusOp::getOpcodeString(opcode));
     temp->concatf("device:          0x%02x\n", dev_addr);
 
     if (sub_addr >= 0x00) {
@@ -253,7 +241,7 @@ int8_t I2CQueuedOperation::init_dma() {
   DMA_InitStructure.DMA_Memory0BaseAddr    = (uint32_t) buf;
   DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t) &I2C1->DR;
 
-  if (opcode == I2C_OPERATION_READ) {
+  if (opcode == BusOpcode::RX) {
     DMA_Cmd(DMA1_Stream0, DISABLE);
     DMA_DeInit(DMA1_Stream0);
     DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;   // Receive
@@ -262,7 +250,7 @@ int8_t I2CQueuedOperation::init_dma() {
     //if (verbosity > 5) local_log.concatf("init_dma():\ttxn_id: 0x%08x\tBuffer address: 0x%08x\n", txn_id, (uint32_t) buf);
     I2C_DMALastTransferCmd(I2C1, ENABLE);
   }
-  else if (opcode == I2C_OPERATION_WRITE) {
+  else if (opcode == BusOpcode::TX) {
     DMA_Cmd(DMA1_Stream7, DISABLE);
     DMA_DeInit(DMA1_Stream7);
     DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;   // Transmit
@@ -280,7 +268,7 @@ int8_t I2CQueuedOperation::init_dma() {
 #elif defined(__MANUVR_LINUX)   // Linux land...
   if (!device->switch_device(dev_addr)) return -1;
 
-  if (opcode == I2C_OPERATION_READ) {
+  if (opcode == BusOpcode::RX) {
     uint8_t sa = (uint8_t) (sub_addr & 0x00FF);
 
     if (write(device->dev, &sa, 1) == 1) {
@@ -296,7 +284,7 @@ int8_t I2CQueuedOperation::init_dma() {
     }
   }
 
-  else if (opcode == I2C_OPERATION_WRITE) {
+  else if (opcode == BusOpcode::TX) {
     uint8_t buffer[len + 1];
     buffer[0] = (uint8_t) (sub_addr & 0x00FF);
 
@@ -343,7 +331,7 @@ int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
     case I2C_XFER_STATE_ADDR:      // We need to send the 7-bit address.
       if (0x00000001 & status_reg) {
         // If we see a ping at this point, it means the ping succeeded. Mark it finished.
-        if (opcode == I2C_OPERATION_PING) {
+        if (opcode == BusOpcode::TX_CMD) {
           markComplete();
           device->generateStop();
           if (output.length() > 0) Kernel::log(&output);
@@ -351,7 +339,7 @@ int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
         }
         // We are ready to send the address...
         // If we need to send a subaddress, we will need to be in transmit mode. Even if our end-goal is to read.
-        uint8_t temp_dir_code = ((opcode == I2C_OPERATION_WRITE || need_to_send_subaddr()) ? I2C_OPERATION_WRITE : I2C_OPERATION_READ);
+        uint8_t temp_dir_code = ((opcode == BusOpcode::TX || need_to_send_subaddr()) ? BusOpcode::TX : BusOpcode::RX);
         I2C_Send7bitAddress(I2C1, (dev_addr << 1), temp_dir_code);
         if (need_to_send_subaddr()) {
           xfer_state = I2C_XFER_STATE_SUBADDR;
@@ -376,15 +364,16 @@ int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
       break;
     case I2C_XFER_STATE_BODY:      // We need to start the body of our transfer.
       xfer_state = I2C_XFER_STATE_DMA_WAIT;
-      if (opcode == I2C_OPERATION_WRITE) {
+      if (opcode == BusOpcode::TX) {
         DMA_Cmd(DMA1_Stream7, ENABLE);
         I2C_DMACmd(I2C1, ENABLE);
       }
-      else if (opcode == I2C_OPERATION_READ) {
+      else if (opcode == BusOpcode::RX) {
         DMA_Cmd(DMA1_Stream0, ENABLE);
         I2C_DMACmd(I2C1, ENABLE);
       }
-      else if (opcode == I2C_OPERATION_PING) {
+      else if (opcode == BusOpcode::TX_CMD) {
+        // Pinging...
         markComplete();
         device->generateStop();
       }
@@ -392,13 +381,13 @@ int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
     case I2C_XFER_STATE_DMA_WAIT:
       break;
     case I2C_XFER_STATE_STOP:      // We need to send a STOP condition.
-      if (opcode == I2C_OPERATION_WRITE) {
+      if (opcode == BusOpcode::TX) {
         if (0x00000004 & status_reg) {  // Byte transfer finished?
           device->generateStop();
           markComplete();
         }
       }
-      else if (opcode == I2C_OPERATION_READ) {
+      else if (opcode == BusOpcode::RX) {
         device->generateStop();
         markComplete();
       }

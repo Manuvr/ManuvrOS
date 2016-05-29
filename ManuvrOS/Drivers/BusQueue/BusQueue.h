@@ -35,7 +35,7 @@ enum class XferState {
   IDLE,       // Bus op is waiting somewhere outside of the queue.
 
   /* These states are unstable and should decay into a "finish" state. */
-  QUEUED,     // Bus op is idle and waiting for its turn.
+  QUEUED,     // Bus op is idle and waiting for its turn. No bus control.
   INITIATE,   // Waiting for initiation phase.
   ADDR,       // Addressing phase. Sending the address.
   IO_WAIT,    // I/O operation in-progress.
@@ -63,6 +63,10 @@ enum class BusOpcode {
 
 class BusOp {
   public:
+    //virtual void wipe()  =0;
+    //virtual void begin() =0;
+
+    static int next_txn_id;
     static const char* getStateString(XferState);
     static const char* getOpcodeString(BusOpcode);
 
