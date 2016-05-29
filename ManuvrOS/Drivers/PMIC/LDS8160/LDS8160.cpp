@@ -129,7 +129,7 @@ int8_t LDS8160::init() {
 * These are overrides from I2CDeviceWithRegisters.                                                  *
 ****************************************************************************************************/
 
-void LDS8160::operationCompleteCallback(I2CQueuedOperation* completed) {
+void LDS8160::operationCompleteCallback(I2CBusOp* completed) {
   I2CDeviceWithRegisters::operationCompleteCallback(completed);
 
   int i = 0;

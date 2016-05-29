@@ -1,5 +1,5 @@
 /*
-File:   I2CQueuedOperation.cpp
+File:   I2CBusOp.cpp
 Author: J. Ian Lindsay
 Date:   2014.03.10
 
@@ -54,7 +54,7 @@ limitations under the License.
 * It is worth re-iterating here, that this class ought to never malloc() or free() the buf member. That should be
 *   under the exclusive control of the caller.
 */
-I2CQueuedOperation::I2CQueuedOperation(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len) {
+I2CBusOp::I2CBusOp(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len) {
   this->initiated       = false;
   this->subaddr_sent    = (sub_addr >= 0) ? false : true;
   this->opcode          = nu_op;
@@ -74,7 +74,7 @@ I2CQueuedOperation::I2CQueuedOperation(BusOpcode nu_op, uint8_t dev_addr, int16_
 };
 
 
-I2CQueuedOperation::~I2CQueuedOperation() {
+I2CBusOp::~I2CBusOp() {
 	if (reap_buffer) {
 		if (buf != NULL) {
 			free(buf);
@@ -87,7 +87,7 @@ I2CQueuedOperation::~I2CQueuedOperation() {
 * These functions are for logging support.                                                          *
 ****************************************************************************************************/
 
-const char* I2CQueuedOperation::getErrorString(int8_t code) {
+const char* I2CBusOp::getErrorString(int8_t code) {
   switch (code) {
     case I2C_ERR_CODE_NO_ERROR:     return "NO_ERROR";
     case I2C_ERR_CODE_DEF_CASE:     return "I2C_ERR_CODE_DEF_CASE";
@@ -109,7 +109,7 @@ const char* I2CQueuedOperation::getErrorString(int8_t code) {
 /*
 * Dump this item to the dev log.
 */
-void I2CQueuedOperation::printDebug(void) {
+void I2CBusOp::printDebug(void) {
 	StringBuilder temp;
 	this->printDebug(&temp);
 	Kernel::log(&temp);
@@ -121,7 +121,7 @@ void I2CQueuedOperation::printDebug(void) {
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
-void I2CQueuedOperation::printDebug(StringBuilder* temp) {
+void I2CBusOp::printDebug(StringBuilder* temp) {
   if (temp != NULL) {
     temp->concatf("\n---[ %s I2CQueueOperation  0x%08x ]---\n", (completed() ? "Complete" : (initiated ? "Initiated" : "Uninitiated")), txn_id);
     temp->concatf("opcode:          %s\n", BusOp::getOpcodeString(opcode));
@@ -153,8 +153,8 @@ void I2CQueuedOperation::printDebug(StringBuilder* temp) {
 ****************************************************************************************************/
 
 /* Call to mark something completed that may not be. Also sends a stop. */
-int8_t I2CQueuedOperation::abort(void) {     return this->abort(I2C_ERR_CODE_NO_REASON);  }
-int8_t I2CQueuedOperation::abort(int8_t er) {
+int8_t I2CBusOp::abort(void) {     return this->abort(I2C_ERR_CODE_NO_REASON);  }
+int8_t I2CBusOp::abort(int8_t er) {
   markComplete();
   err_code  = er;
   return 0;
@@ -164,7 +164,7 @@ int8_t I2CQueuedOperation::abort(int8_t er) {
 /*
 *
 */
-void I2CQueuedOperation::markComplete(void) {
+void I2CBusOp::markComplete(void) {
 	xfer_state = XferState::COMPLETE;
   initiated = true;  // Just so we don't accidentally get hung up thinking we need to start it.
 	ManuvrRunnable* q_rdy = Kernel::returnEvent(MANUVR_MSG_I2C_QUEUE_READY);
@@ -178,7 +178,7 @@ void I2CQueuedOperation::markComplete(void) {
 * TODO: Needs to be doing bus-checks.
 */
 
-int8_t I2CQueuedOperation::begin(void) {
+int8_t I2CBusOp::begin(void) {
   if (NULL == device) {
     abort(I2C_ERR_CODE_NO_DEVICE);
     return -1;
@@ -203,7 +203,7 @@ int8_t I2CQueuedOperation::begin(void) {
 //http://tech.munts.com/MCU/Frameworks/ARM/stm32f4/libs/STM32F4xx_DSP_StdPeriph_Lib_V1.1.0/Project/STM32F4xx_StdPeriph_Examples/I2C/I2C_TwoBoards/I2C_DataExchangeDMA/main.c
 // TODO: should check length > 0 before doing DMA init.
 // TODO: should migrate this into i2c-adapter???
-int8_t I2CQueuedOperation::init_dma() {
+int8_t I2CBusOp::init_dma() {
   int return_value = 0;
 
 #if defined(__MK20DX256__) | defined(__MK20DX128__)
@@ -303,10 +303,10 @@ int8_t I2CQueuedOperation::init_dma() {
   * Called from the ISR to advance this operation on the bus.
   * Still required for DMA because of subaddresses, START/STOP, etc...
   */
-  int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
+  int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
     StringBuilder output;
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 6) output.concatf("I2CQueuedOperation::advance_operation(0x%08x): \t %s\t", status_reg, BusOp::getStateString(xfer_state));
+    if (verbosity > 6) output.concatf("I2CBusOp::advance_operation(0x%08x): \t %s\t", status_reg, BusOp::getStateString(xfer_state));
     #endif
     switch (xfer_state) {
       case XferState::QUEUED:     // These are states we should not be in at this point...
@@ -359,10 +359,10 @@ int8_t I2CQueuedOperation::init_dma() {
   * Called from the ISR to advance this operation on the bus.
   * Still required for DMA because of subaddresses, START/STOP, etc...
   */
-  int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
+  int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
     StringBuilder output;
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 6) output.concatf("I2CQueuedOperation::advance_operation(0x%08x): \t %s\t", status_reg, BusOp::getStateString(xfer_state));
+    if (verbosity > 6) output.concatf("I2CBusOp::advance_operation(0x%08x): \t %s\t", status_reg, BusOp::getStateString(xfer_state));
     #endif
     switch (xfer_state) {
       case XferState::INITIATE:     // We need to send a START condition.
@@ -472,7 +472,7 @@ int8_t I2CQueuedOperation::init_dma() {
   * Called from the ISR to advance this operation on the bus.
   * Still required for DMA because of subaddresses, START/STOP, etc...
   */
-  int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
+  int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
     switch (status_reg) {
       case 1:
         subaddr_sent = true;
@@ -487,7 +487,7 @@ int8_t I2CQueuedOperation::init_dma() {
   * Linux doesn't have a concept of interrupt, but we might call this
   *   from an I/O thread.
   */
-  int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
+  int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
     return 0;
   }
 
@@ -497,7 +497,7 @@ int8_t I2CQueuedOperation::init_dma() {
   * Linux doesn't have a concept of interrupt, but we might call this
   *   from an I/O thread.
   */
-  int8_t I2CQueuedOperation::advance_operation(uint32_t status_reg) {
+  int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
     return 0;
   }
 

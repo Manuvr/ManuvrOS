@@ -70,3 +70,28 @@ const char* BusOp::getOpcodeString(BusOpcode code) {
     default:                          return "<UNDEF>";
   }
 }
+
+/**
+* Debug and logging support.
+*
+* @return a const char* containing a human-readable representation of a fault code.
+*/
+const char* BusOp::getErrorString(XferFault code) {
+  switch (code) {
+    case XferFault::NONE:            return "NONE";
+    case XferFault::NO_REASON:       return "NO_REASON";
+    case XferFault::TIMEOUT:         return "TIMEOUT";
+    case XferFault::BAD_PARAM:       return "BAD_PARAM";
+    case XferFault::ILLEGAL_STATE:   return "ILLEGAL_STATE";
+    case XferFault::BUS_BUSY:        return "BUS_BUSY";
+    case XferFault::BUS_FAULT:       return "BUS_FAULT";
+    case XferFault::HUNG_IRQ:        return "HUNG_IRQ";
+    case XferFault::DMA_FAULT:       return "DMA_FAULT";
+    case XferFault::DEV_NOT_FOUND:   return "DEV_NOT_FOUND";
+    case XferFault::RO_REGISTER:     return "RO_REGISTER";
+    case XferFault::UNDEFD_REGISTER: return "UNDEFD_REGISTER";
+    case XferFault::IO_RECALL:       return "IO_RECALL";
+    case XferFault::QUEUE_FLUSH:     return "QUEUE_FLUSH";
+    default:                         return "<UNDEF>";
+  }
+}

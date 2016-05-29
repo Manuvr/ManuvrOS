@@ -267,7 +267,7 @@ int8_t I2CAdapter::generateStop() {
 
 
 
-int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
+int8_t I2CAdapter::dispatchOperation(I2CBusOp* op) {
   op->abort(I2C_ERR_CODE_TIMEOUT);
   return 0;
 }
@@ -333,7 +333,7 @@ int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
 
 
 
-  int8_t I2CAdapter::dispatchOperation(I2CQueuedOperation* op) {
+  int8_t I2CAdapter::dispatchOperation(I2CBusOp* op) {
     // TODO: This is awful. Need to ultimately have a direct ref to the class that *is* the adapter.
     if (0 == dev) {
       Wire.beginTransmission((uint8_t) (op->dev_addr & 0x00FF));
@@ -827,7 +827,7 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
 * This is the function that should be called to queue-up a bus operation.
 * It may or may not be started immediately.
 */
-bool I2CAdapter::insert_work_item(I2CQueuedOperation *nu) {
+bool I2CAdapter::insert_work_item(I2CBusOp *nu) {
   nu->verbosity = getVerbosity();
   nu->device = this;
 	if (current_queue_item != NULL) {
@@ -926,7 +926,7 @@ void I2CAdapter::advance_work_queue(void) {
 *   went bad.
 */
 void I2CAdapter::purge_queued_work_by_dev(I2CDevice *dev) {
-  I2CQueuedOperation* current = NULL;
+  I2CBusOp* current = NULL;
 
   if (work_queue.size() > 0) {
     for (int i = 0; i < work_queue.size(); i++) {
@@ -950,7 +950,7 @@ void I2CAdapter::purge_queued_work_by_dev(I2CDevice *dev) {
 * Purges only the work_queue. Leaves the currently-executing job.
 */
 void I2CAdapter::purge_queued_work() {
-  I2CQueuedOperation* current = NULL;
+  I2CBusOp* current = NULL;
   while (work_queue.hasNext()) {
     current = work_queue.get();
     current_queue_item->abort();
@@ -979,7 +979,7 @@ void I2CAdapter::purge_stalled_job() {
 *   to discover if a device is active on the bus and addressable.
 */
 void I2CAdapter::ping_slave_addr(uint8_t addr) {
-    I2CQueuedOperation* nu = new I2CQueuedOperation(BusOpcode::TX_CMD, addr, (int16_t) -1, NULL, 0);
+    I2CBusOp* nu = new I2CBusOp(BusOpcode::TX_CMD, addr, (int16_t) -1, NULL, 0);
     insert_work_item(nu);
     _er_set_flag(I2C_BUS_FLAG_PING_RUN);
 }

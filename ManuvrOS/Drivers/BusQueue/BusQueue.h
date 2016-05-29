@@ -48,7 +48,7 @@ enum class XferState {
 
 
 /*
-* These are the opcodes that we use to represent different types of messages to the RN.
+* These are the opcodes that we use to represent different bus operations.
 */
 enum class BusOpcode {
   UNDEF,          // Freshly instanced (or wiped, if preallocated).
@@ -57,6 +57,27 @@ enum class BusOpcode {
   TX_WAIT_RX,     // Send to the bus and capture the reply.
   TX_CMD,         // Send to the bus command register without expecting a reply.
   TX_CMD_WAIT_RX  // Send to the bus command register and capture a reply.
+};
+
+
+/*
+* Possible fault conditions that might occur.
+*/
+enum class XferFault {
+  NONE,            // No error on this transfer.
+  NO_REASON,       // No reason provided, but still errored.
+  TIMEOUT,         // We ran out of patience.
+  BAD_PARAM,       // Invalid rtansfer parameters.
+  ILLEGAL_STATE,   // The bus operation is in an illegal state.
+  BUS_BUSY,        // The bus didn't get back to us in time..
+  BUS_FAULT,       // The bus had a meltdown and failed this transfer.
+  HUNG_IRQ,        // One too many IRQs happened for this operation.
+  DMA_FAULT,       // Something went sideways with DMA that wasn't a timeout.
+  DEV_NOT_FOUND,   // When an addressed device we expected to find is not found.
+  RO_REGISTER,     // We tried to write to a register defined as read-only.
+  UNDEFD_REGISTER, // The requested register was not defined.
+  IO_RECALL,       // The class that spawned this request changed its mind.
+  QUEUE_FLUSH      // The work queue was flushed and this was a casualty.
 };
 
 
@@ -71,11 +92,15 @@ enum class BusOpcode {
 *   there should be no function members that are not pure virtuals or inlines.
 *
 * Note also, that a class is not required to inherrit from this ddefinition of
-*   a bus operation to use the XferState and Opcode enums, with their associated
-*   static support functions.
+*   a bus operation to use the enums defined above, with their associated static
+*   support functions.
 */
 class BusOp {
   public:
+    uint8_t* buf         = 0;                  // Pointer to the data buffer for the transaction.
+    uint16_t buf_len     = 0;                  // How large is the above buffer?
+    
+    /* Mandatory overrides... */
     //virtual void wipe()  =0;
     //virtual void begin() =0;
 
@@ -83,6 +108,17 @@ class BusOp {
     * @return true if this operation is idle.
     */
     inline bool isIdle() {       return (XferState::IDLE     == xfer_state);  };
+
+    /**
+    * @return true if this operation completed without problems.
+    */
+    inline bool isComplete() {   return (XferState::COMPLETE == xfer_state);  };
+
+    /**
+    * @return true if this operation experienced any abnormal condition.
+    */
+    inline bool hasFault() {     return (XferFault::NONE != xfer_fault);     };
+
 
     /* Inlines for protected access... TODO: These should be eliminated over time. */
     inline XferState get_state() {                 return xfer_state;       };
@@ -93,19 +129,21 @@ class BusOp {
     /* Inlines for object-style usage of static functions... */
     inline const char* getOpcodeString() {  return BusOp::getOpcodeString(opcode);     };
     inline const char* getStateString() {   return BusOp::getStateString(xfer_state);  };
+    inline const char* getErrorString() {   return BusOp::getErrorString(xfer_fault);  };
 
 
     static int next_txn_id;
     static const char* getStateString(XferState);
     static const char* getOpcodeString(BusOpcode);
+    static const char* getErrorString(XferFault);
 
 
 
   protected:
-    BusOpcode opcode     = BusOpcode::UNDEF;      // What is the particular operation being done?
-    XferState xfer_state = XferState::UNDEF;      // What state is this transfer in?
-
-    // Call-ahead, call-back
+    BusOpcode opcode     = BusOpcode::UNDEF;   // What is the particular operation being done?
+    XferState xfer_state = XferState::UNDEF;   // What state is this transfer in?
+    XferFault xfer_fault = XferFault::NONE;    // Fault code.
+    // TODO: Call-ahead, call-back
 
   private:
 };

@@ -96,7 +96,7 @@ int8_t TMP006::getParameter(uint16_t reg, int len, uint8_t*) {
 * These are overrides from I2CDeviceWithRegisters.                                                  *
 ****************************************************************************************************/
 
-void TMP006::operationCompleteCallback(I2CQueuedOperation* completed) {
+void TMP006::operationCompleteCallback(I2CBusOp* completed) {
   I2CDeviceWithRegisters::operationCompleteCallback(completed);
   int i = 0;
   DeviceRegister *temp_reg = reg_defs.get(i++);

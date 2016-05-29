@@ -93,7 +93,7 @@ This file is the tortured result of growing pains since the beginning of
   /*
   * This class represents an atomic operation on the i2c bus.
   */
-  class I2CQueuedOperation {
+  class I2CBusOp {
     public:
       I2CDevice  *requester;
       I2CAdapter *device;
@@ -116,8 +116,8 @@ This file is the tortured result of growing pains since the beginning of
       bool      reap_buffer;   // If true, we will reap the buffer.
 
 
-      I2CQueuedOperation(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len);
-      ~I2CQueuedOperation();
+      I2CBusOp(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len);
+      ~I2CBusOp();
 
 
       /*
@@ -170,7 +170,7 @@ This file is the tortured result of growing pains since the beginning of
   */
   class I2CAdapter : public EventReceiver {
     public:
-      I2CQueuedOperation* current_queue_item;
+      I2CBusOp* current_queue_item;
       int dev;
 
       I2CAdapter(uint8_t dev_id = 1);         // Constructor takes a bus ID as an argument.
@@ -184,7 +184,7 @@ This file is the tortured result of growing pains since the beginning of
       int8_t removeSlaveDevice(I2CDevice*);  // Removes a device from the bus.
 
       // This is the fxn that is called to do I/O on the bus.
-      bool insert_work_item(I2CQueuedOperation *);
+      bool insert_work_item(I2CBusOp *);
 
       /* Debug aides */
       const char* getReceiverName();
@@ -203,7 +203,7 @@ This file is the tortured result of growing pains since the beginning of
       //   that may or may not be present on a given platform.
       int8_t generateStart();    // Generate a start condition on the bus.
       int8_t generateStop();     // Generate a stahp condition on the bus.
-      int8_t dispatchOperation(I2CQueuedOperation*);   // Start the given operation on the bus.
+      int8_t dispatchOperation(I2CBusOp*);   // Start the given operation on the bus.
       bool switch_device(uint8_t nu_addr);
 
       inline bool busError() {          return (_er_flag(I2C_BUS_FLAG_BUS_ERROR));  };
@@ -221,7 +221,7 @@ This file is the tortured result of growing pains since the beginning of
       int8_t ping_map[128];
       int8_t last_used_bus_addr;
 
-      LinkedList<I2CQueuedOperation*> work_queue;     // A work queue to keep transactions in order.
+      LinkedList<I2CBusOp*> work_queue;     // A work queue to keep transactions in order.
       LinkedList<I2CDevice*> dev_list;                // A list of active slaves on this bus.
 
       void gpioSetup();
@@ -255,10 +255,10 @@ This file is the tortured result of growing pains since the beginning of
       ~I2CDevice(void);
 
       // Callback for requested operation completion.
-      virtual void operationCompleteCallback(I2CQueuedOperation*);
+      virtual void operationCompleteCallback(I2CBusOp*);
 
       /* If your device needs something to happen immediately prior to bus I/O... */
-      virtual bool operationCallahead(I2CQueuedOperation*);
+      virtual bool operationCallahead(I2CBusOp*);
 
       bool assignBusInstance(I2CAdapter *);              // Needs to be called by the i2c class during insertion.
       bool assignBusInstance(volatile I2CAdapter *bus);  // Trivial override.
@@ -311,9 +311,9 @@ This file is the tortured result of growing pains since the beginning of
 
 
       // Callback for requested operation completion.
-      virtual void operationCompleteCallback(I2CQueuedOperation*);
+      virtual void operationCompleteCallback(I2CBusOp*);
       /* If your device needs something to happen immediately prior to bus I/O... */
-      virtual bool operationCallahead(I2CQueuedOperation*);
+      virtual bool operationCallahead(I2CBusOp*);
 
       bool defineRegister(uint16_t _addr, uint8_t  val, bool dirty, bool unread, bool writable);
       bool defineRegister(uint16_t _addr, uint16_t val, bool dirty, bool unread, bool writable);

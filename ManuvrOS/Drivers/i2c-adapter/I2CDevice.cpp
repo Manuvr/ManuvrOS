@@ -45,7 +45,7 @@ I2CDevice::~I2CDevice(void) {
 
 
 
-void I2CDevice::operationCompleteCallback(I2CQueuedOperation* completed) {
+void I2CDevice::operationCompleteCallback(I2CBusOp* completed) {
 	StringBuilder temp;
 	if (completed != NULL) {
 	  #ifdef __MANUVR_DEBUG
@@ -62,7 +62,7 @@ void I2CDevice::operationCompleteCallback(I2CQueuedOperation* completed) {
 }
 
 /* If your device needs something to happen immediately prior to bus I/O... */
-bool I2CDevice::operationCallahead(I2CQueuedOperation* op) {
+bool I2CDevice::operationCallahead(I2CBusOp* op) {
   // Default behavior is to return true, to tell the bus "Go Ahead".
   return true;
 }
@@ -107,7 +107,7 @@ bool I2CDevice::write16(int sub_addr, uint16_t dat) {
     uint8_t* temp = (uint8_t*) malloc(2);
     *(temp + 0) = (dat >> 8);
     *(temp + 1) = (uint8_t) (dat & 0x00FF);
-    I2CQueuedOperation* nu = new I2CQueuedOperation(BusOpcode::TX, _dev_addr, (int16_t) sub_addr, temp, 2);
+    I2CBusOp* nu = new I2CBusOp(BusOpcode::TX, _dev_addr, (int16_t) sub_addr, temp, 2);
     nu->requester = this;
     return _bus->insert_work_item(nu);
 }
@@ -122,7 +122,7 @@ bool I2CDevice::write8(uint8_t dat) {
     }
     uint8_t* temp = (uint8_t*) malloc(1);
     *(temp + 0) = dat;
-    I2CQueuedOperation* nu = new I2CQueuedOperation(BusOpcode::TX, _dev_addr, (int16_t) -1, temp, 1);
+    I2CBusOp* nu = new I2CBusOp(BusOpcode::TX, _dev_addr, (int16_t) -1, temp, 1);
     nu->requester = this;
     return _bus->insert_work_item(nu);
 }
@@ -137,7 +137,7 @@ bool I2CDevice::write8(int sub_addr, uint8_t dat) {
     }
     uint8_t* temp = (uint8_t*) malloc(1);
     *(temp + 0) = dat;
-    I2CQueuedOperation* nu = new I2CQueuedOperation(BusOpcode::TX, _dev_addr, (int16_t) sub_addr, temp, 1);
+    I2CBusOp* nu = new I2CBusOp(BusOpcode::TX, _dev_addr, (int16_t) sub_addr, temp, 1);
     nu->requester = this;
     return _bus->insert_work_item(nu);
 }
@@ -151,7 +151,7 @@ bool I2CDevice::writeX(int sub_addr, uint16_t byte_count, uint8_t *buf) {
       #endif
       return false;
     }
-    I2CQueuedOperation* nu = new I2CQueuedOperation(BusOpcode::TX, _dev_addr, (int16_t) sub_addr, buf, byte_count);
+    I2CBusOp* nu = new I2CBusOp(BusOpcode::TX, _dev_addr, (int16_t) sub_addr, buf, byte_count);
     nu->reap_buffer = false;
     nu->requester = this;
     return _bus->insert_work_item(nu);
@@ -168,7 +168,7 @@ bool I2CDevice::readX(int sub_addr, uint8_t len, uint8_t *buf) {
       #endif
       return false;
     }
-    I2CQueuedOperation* nu = new I2CQueuedOperation(BusOpcode::RX, _dev_addr, (int16_t) sub_addr, buf, len);
+    I2CBusOp* nu = new I2CBusOp(BusOpcode::RX, _dev_addr, (int16_t) sub_addr, buf, len);
     nu->reap_buffer = false;
     nu->requester = this;
     return _bus->insert_work_item(nu);
@@ -185,7 +185,7 @@ bool I2CDevice::read8(int sub_addr) {
     }
     uint8_t* temp = (uint8_t*) malloc(1);
     *(temp + 0) = 0x00;
-    I2CQueuedOperation* nu = new I2CQueuedOperation(BusOpcode::RX, _dev_addr, (int16_t) sub_addr, temp, 1);
+    I2CBusOp* nu = new I2CBusOp(BusOpcode::RX, _dev_addr, (int16_t) sub_addr, temp, 1);
     nu->requester = this;
     return _bus->insert_work_item(nu);
 }
@@ -200,7 +200,7 @@ bool I2CDevice::read8(void) {
     }
     uint8_t* temp = (uint8_t*) malloc(1);
     *(temp + 0) = 0x00;
-    I2CQueuedOperation* nu = new I2CQueuedOperation(BusOpcode::RX, _dev_addr, (int16_t) -1, temp, 1);
+    I2CBusOp* nu = new I2CBusOp(BusOpcode::RX, _dev_addr, (int16_t) -1, temp, 1);
     nu->requester = this;
     return _bus->insert_work_item(nu);
 }
@@ -219,7 +219,7 @@ bool I2CDevice::read16(int sub_addr) {
     uint8_t* temp = (uint8_t*) malloc(2);
     *(temp + 0) = 0x00;
     *(temp + 1) = 0x00;
-    I2CQueuedOperation* nu = new I2CQueuedOperation(BusOpcode::RX, _dev_addr, (int16_t) sub_addr, temp, 2);
+    I2CBusOp* nu = new I2CBusOp(BusOpcode::RX, _dev_addr, (int16_t) sub_addr, temp, 2);
     nu->requester = this;
     return _bus->insert_work_item(nu);
 }
@@ -238,7 +238,7 @@ bool I2CDevice::read16(void) {
     uint8_t* temp = (uint8_t*) malloc(2);
     *(temp + 0) = 0x00;
     *(temp + 1) = 0x00;
-    I2CQueuedOperation* nu = new I2CQueuedOperation(BusOpcode::RX, _dev_addr, (int16_t) -1, temp, 2);
+    I2CBusOp* nu = new I2CBusOp(BusOpcode::RX, _dev_addr, (int16_t) -1, temp, 2);
     nu->requester = this;
     return _bus->insert_work_item(nu);
 }

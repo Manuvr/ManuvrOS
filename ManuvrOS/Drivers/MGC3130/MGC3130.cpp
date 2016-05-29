@@ -498,7 +498,7 @@ void MGC3130::dispatchGestureEvents() {
 * These are overrides from I2CDevice.                                                               *
 ****************************************************************************************************/
 
-void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
+void MGC3130::operationCompleteCallback(I2CBusOp* completed) {
   gpioDefine(_ts_pin, INPUT_PULLUP);
   are_we_holding_ts(false);
   setPinFxn(_ts_pin, FALLING, mgc3130_isr_check);
@@ -667,7 +667,7 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
 
 
 /* If your device needs something to happen immediately prior to bus I/O... */
-bool MGC3130::operationCallahead(I2CQueuedOperation* op) {
+bool MGC3130::operationCallahead(I2CBusOp* op) {
   if (!readPin(_ts_pin)) {   // Only initiate a read if there is something there.
     unsetPinIRQ(_ts_pin);
     gpioDefine(_ts_pin, OUTPUT);

@@ -55,7 +55,7 @@ CPP_SRCS  += Drivers/BusQueue/BusQueue.cpp
 CPP_SRCS  += Drivers/i2c-adapter/I2CDevice.cpp
 CPP_SRCS  += Drivers/i2c-adapter/i2c-adapter.cpp
 CPP_SRCS  += Drivers/i2c-adapter/I2CDeviceWithRegisters.cpp
-CPP_SRCS  += Drivers/i2c-adapter/I2CQueuedOperation.cpp
+CPP_SRCS  += Drivers/i2c-adapter/I2CBusOp.cpp
 
 
 # TODO: Bring up to speed WRT Runnable.

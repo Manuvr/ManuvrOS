@@ -166,7 +166,7 @@ int8_t INA219::readSensor(void) {
 * These are overrides from I2CDeviceWithRegisters.                                                  *
 ****************************************************************************************************/
 
-void INA219::operationCompleteCallback(I2CQueuedOperation* completed) {
+void INA219::operationCompleteCallback(I2CBusOp* completed) {
   I2CDeviceWithRegisters::operationCompleteCallback(completed);
   int i = 0;
   DeviceRegister *temp_reg = reg_defs.get(i++);

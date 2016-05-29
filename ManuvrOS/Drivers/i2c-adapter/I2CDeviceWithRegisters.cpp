@@ -337,7 +337,7 @@ int8_t I2CDeviceWithRegisters::writeDirtyRegisters(void) {
 }
 
 
-void I2CDeviceWithRegisters::operationCompleteCallback(I2CQueuedOperation* completed) {
+void I2CDeviceWithRegisters::operationCompleteCallback(I2CBusOp* completed) {
 	StringBuilder temp; //("Default callback for registers!\n");
 	if (completed != NULL) {
 		if (completed->err_code == I2C_ERR_CODE_NO_ERROR) {
@@ -379,7 +379,7 @@ void I2CDeviceWithRegisters::operationCompleteCallback(I2CQueuedOperation* compl
 
 
 /* If your device needs something to happen immediately prior to bus I/O... */
-bool I2CDeviceWithRegisters::operationCallahead(I2CQueuedOperation* op) {
+bool I2CDeviceWithRegisters::operationCallahead(I2CBusOp* op) {
   // Default behavior is to return true, to tell the bus "Go Ahead".
   return true;
 }

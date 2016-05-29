@@ -148,7 +148,7 @@ uint8_t ADG2128::getValue(uint8_t row) {
 * These are overrides from I2CDevice                                                                *
 ****************************************************************************************************/
 
-void ADG2128::operationCompleteCallback(I2CQueuedOperation* completed) {
+void ADG2128::operationCompleteCallback(I2CBusOp* completed) {
   if (completed->err_code != I2C_ERR_CODE_NO_ERROR) {
     StringBuilder output;
     output.concat("An i2c operation requested by the ADG2128 came back failed.\n");

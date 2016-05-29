@@ -183,7 +183,7 @@ int8_t ISL29033::readSensor(void) {
 * These are overrides from I2CDevice.                                                               *
 ****************************************************************************************************/
 
-void ISL29033::operationCompleteCallback(I2CQueuedOperation* completed) {
+void ISL29033::operationCompleteCallback(I2CBusOp* completed) {
   I2CDeviceWithRegisters::operationCompleteCallback(completed);
   if (completed != NULL) {
     switch (completed->opcode) {
