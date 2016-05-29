@@ -32,6 +32,7 @@ CPP_SRCS  += ManuvrMsg/ManuvrMsg.cpp
 # Concepts of "session" according to various standards...
 CPP_SRCS  += XenoSession/XenoMessage.cpp
 CPP_SRCS  += XenoSession/XenoSession.cpp
+CPP_SRCS  += XenoSession/Console/ManuvrConsole.cpp
 CPP_SRCS  += XenoSession/Manuvr/ManuvrSession.cpp
 CPP_SRCS  += XenoSession/Manuvr/XenoManuvrMessage.cpp
 CPP_SRCS  += XenoSession/CoAP/CoAPSession.cpp

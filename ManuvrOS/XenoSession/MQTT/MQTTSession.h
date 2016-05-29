@@ -42,7 +42,7 @@ enum QoS { QOS0, QOS1, QOS2 };
 
 class MQTTMessage : public XenoMessage {
   public:
-    enum QoS qos;
+    QoS  qos;
     char retained;
     char dup;
     uint16_t unique_id;
