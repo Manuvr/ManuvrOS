@@ -83,12 +83,15 @@ void printHelp() {
 /****************************************************************************************************
 * Code related to running a local stdio shell...                                                    *
 ****************************************************************************************************/
-#define U_INPUT_BUFF_SIZE   255    // How big a buffer for user-input?
 
 long unsigned int _thread_id = 0;;
-StringBuilder user_input;
 bool running = true;
 
+
+#if defined(__MANUVR_CONSOLE_SUPPORT)
+#define U_INPUT_BUFF_SIZE   255    // How big a buffer for user-input?
+
+StringBuilder user_input;
 
 void* spawnUIThread(void*) {
   char *input_text	= (char*) alloca(U_INPUT_BUFF_SIZE);	// Buffer to hold user-input.
@@ -102,7 +105,7 @@ void* spawnUIThread(void*) {
       user_input.trim();
 
       //while(*t_iterator++ = toupper(*t_iterator));        // Convert to uniform case...
-      int arg_count = user_input.split(" \n");
+      int arg_count = user_input.split("\n");
       if (arg_count > 0) {  // We should have at least ONE argument. Right???
         // Begin the cases...
         if      (strcasestr(user_input.position(0), "QUIT"))  running = false;  // Exit
@@ -131,7 +134,7 @@ void* spawnUIThread(void*) {
   return NULL;
 }
 
-
+#endif  // __MANUVR_CONSOLE_SUPPORT
 
 
 /****************************************************************************************************
@@ -160,9 +163,6 @@ int main(int argc, char *argv[]) {
   kernel->subscribe(&gpio);
 
   #if defined(RASPI) || defined(RASPI2)
-    gpioDefine(14, OUTPUT);
-    gpioDefine(15, OUTPUT);
-    gpioDefine(18, OUTPUT);
     // If we are running on a RasPi, let's try to fire up the i2c that is almost
     //   certainly present.
     I2CAdapter i2c(1);
@@ -229,7 +229,11 @@ int main(int argc, char *argv[]) {
     }
     if ((strcasestr(argv[i], "--console")) || ((argv[i][0] == '-') && (argv[i][1] == 'c'))) {
       // The user wants a local stdio "Shell".
-      createThread(&_thread_id, NULL, spawnUIThread, NULL);
+      #if defined(__MANUVR_CONSOLE_SUPPORT)
+        createThread(&_thread_id, NULL, spawnUIThread, NULL);
+      #else
+        printf("%s was compiled without any console support. Ignoring directive...\n", argv[0]);
+      #endif
     }
     if ((strcasestr(argv[i], "--serial")) && (argc > (i-2))) {
       // The user wants us to listen to the given serial port.
@@ -267,10 +271,10 @@ int main(int argc, char *argv[]) {
   // TODO: End horrible hackishness.
 
   #if defined(RASPI) || defined(RASPI2)
-    gpioDefine(14, OUTPUT);
-    gpioDefine(15, OUTPUT);
-    gpioDefine(18, OUTPUT);
-    bool pin_14_state = false;
+    //gpioDefine(14, OUTPUT);
+    //gpioDefine(15, OUTPUT);
+    //gpioDefine(18, OUTPUT);
+    //bool pin_14_state = false;
   #endif
 
   // The main loop. Run forever.
@@ -278,8 +282,8 @@ int main(int argc, char *argv[]) {
   while (running) {
     kernel->procIdleFlags();
     #if defined(RASPI) || defined(RASPI2)
-      setPin(14, pin_14_state);
-      pin_14_state = !pin_14_state;
+      //setPin(14, pin_14_state);
+      //pin_14_state = !pin_14_state;
     #endif
     // Move the kernel log to stdout.
     if (Kernel::log_buffer.count()) {

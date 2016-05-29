@@ -63,7 +63,7 @@ MQTTOpts opts = {
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
 MQTTSession::MQTTSession(ManuvrXport* _xport) : XenoSession(_xport) {
-	_ping_outstanding = 0;
+	_ping_outstanding(false);
 	working   = NULL;
 	_next_packetid = 1;
 
@@ -276,7 +276,7 @@ bool MQTTSession::sendUnsub(const char* _topicStr) {
 
 bool MQTTSession::sendKeepAlive() {
   if (isEstablished()) {
-		if (_ping_outstanding) {
+		if (_ping_outstanding()) {
 			#if defined (__MANUVR_DEBUG)
 			if (getVerbosity() > 3) Kernel::log("MQTT session has an expired ping.\n");
 			#endif
@@ -287,7 +287,7 @@ bool MQTTSession::sendKeepAlive() {
     int len = MQTTSerialize_pingreq(buf, buf_size);
 
     if (len > 0) {
-			_ping_outstanding = 1;
+			_ping_outstanding(true);
       return (0 == sendPacket(buf, len));
     }
   }
@@ -451,7 +451,7 @@ int MQTTSession::process_inbound() {
     case PUBCOMP:
       break;
     case PINGRESP:
-      _ping_outstanding = 0;
+      _ping_outstanding(false);
       break;
 		default:
 			break;
@@ -584,7 +584,7 @@ int8_t MQTTSession::notify(ManuvrRunnable *active_event) {
 
 
 
-
+#if defined(__MANUVR_CONSOLE_SUPPORT)
 void MQTTSession::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
 
@@ -642,7 +642,7 @@ void MQTTSession::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-
+#endif  // __MANUVR_CONSOLE_SUPPORT
 
 
 /**
@@ -661,7 +661,7 @@ const char* MQTTSession::getReceiverName() {  return "MQTTSession";  }
 void MQTTSession::printDebug(StringBuilder *output) {
   XenoSession::printDebug(output);
   output->concatf("-- Next Packet ID       0x%08x\n", (uint32_t) _next_packetid);
-  if (_ping_outstanding) output->concat("-- EXPIRED PING\n");
+  if (_ping_outstanding()) output->concat("-- EXPIRED PING\n");
   output->concat("-- Subscribed topics\n");
 
 	std::map<const char*, ManuvrRunnable*>::iterator it;

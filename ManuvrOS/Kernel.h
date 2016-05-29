@@ -56,6 +56,13 @@ limitations under the License.
 
   #define SCHEDULER_MAX_SKIP_BEFORE_RESET  10   // Skipping this many loops will cause us to reboot.
 
+  /*
+  * These state flags are hosted by the EventReceiver. This may change in the future.
+  * Might be too much convention surrounding their assignment across inherritence.
+  */
+  #define MKERNEL_FLAG_PROFILING    0x01    // Should we spend time profiling this component?
+  #define MKERNEL_FLAG_SKIP_DETECT  0x02    // Set in advanceScheduler(), cleared in serviceSchedules().
+
 
   #if defined(__MANUVR_CONSOLE_SUPPORT) || defined(__MANUVR_DEBUG)
     #ifdef __MANUVR_DEBUG
@@ -94,7 +101,6 @@ limitations under the License.
   */
   class Kernel : public EventReceiver {
     public:
-
       Kernel(void);
       ~Kernel(void);
 
@@ -150,9 +156,6 @@ limitations under the License.
         void print_type_sizes();      // Prints the memory-costs of various classes.
       #endif
 
-      /* Takes user input in the form of direct strings. */
-      void accumulateConsoleInput(uint8_t *buf, int len, bool terminal);
-
       /* Profiling support.. */
       float cpu_usage();
       void profiler(bool enabled);
@@ -163,13 +166,17 @@ limitations under the License.
       inline int queueSize() {                  return INSTANCE->exec_queue.size();     }
       inline bool containsPreformedEvent(ManuvrRunnable* event) {   return exec_queue.contains(event);  };
 
-
       /* Overrides from EventReceiver
          Just gracefully fall into those when needed. */
       const char* getReceiverName();
       int8_t notify(ManuvrRunnable*);
       int8_t callback_proc(ManuvrRunnable *);
-      void procDirectDebugInstruction(StringBuilder *);
+      #if defined(__MANUVR_CONSOLE_SUPPORT)
+        void procDirectDebugInstruction(StringBuilder *);
+
+        /* Takes user input in the form of direct strings. */
+        void accumulateConsoleInput(uint8_t *buf, int len, bool terminal);
+      #endif
 
 
       static StringBuilder log_buffer;
@@ -238,8 +245,6 @@ limitations under the License.
 
       uint8_t  max_events_p_loop;     // What is the most events we've handled in a single loop?
       int8_t   max_events_per_loop;
-      bool     profiler_enabled;      // Should we spend time profiling this component?
-      bool     bistable_skip_detect;  // Set in advanceScheduler(), cleared in serviceSchedules().
 
 
       int8_t procCallAheads(ManuvrRunnable *active_event);
@@ -252,8 +257,17 @@ limitations under the License.
       void reclaim_event(ManuvrRunnable*);
       inline void update_maximum_queue_depth() {   max_queue_depth = (exec_queue.size() > (int) max_queue_depth) ? exec_queue.size() : max_queue_depth;   };
 
+      #if defined(__MANUVR_CONSOLE_SUPPORT)
+      int8_t _route_console_input();
+      #endif
+
       /*  */
       inline bool should_run_another_event(int8_t loops, uint32_t begin) {     return (max_events_per_loop ? ((int8_t) max_events_per_loop > loops) : ((micros() - begin) < 1200));   };
+
+      inline bool _profiler_enabled() {         return (_er_flag(MKERNEL_FLAG_PROFILING));           };
+      inline void _profiler_enabled(bool nu) {  return (_er_set_flag(MKERNEL_FLAG_PROFILING, nu));   };
+      inline bool _skip_detected() {            return (_er_flag(MKERNEL_FLAG_SKIP_DETECT));         };
+      inline void _skip_detected(bool nu) {     return (_er_set_flag(MKERNEL_FLAG_SKIP_DETECT, nu)); };
 
       static Kernel* INSTANCE;
       static PriorityQueue<ManuvrRunnable*> isr_exec_queue;   // Events that have been raised from ISRs.

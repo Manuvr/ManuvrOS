@@ -47,7 +47,7 @@ class ADG2128 : public I2CDevice {
     uint8_t getValue(uint8_t row);
 
     /* Overrides from I2CDevice... */
-    void operationCompleteCallback(I2CQueuedOperation*);
+    void operationCompleteCallback(I2CBusOp*);
     void printDebug(StringBuilder*);
 
 

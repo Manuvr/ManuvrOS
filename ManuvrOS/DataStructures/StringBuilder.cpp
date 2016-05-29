@@ -134,10 +134,7 @@ int StringBuilder::length() {
 * Includes the base str member in the count.
 */
 unsigned short StringBuilder::count() {
-  unsigned short return_value = 0;
-  if (this->str != NULL) {
-  return_value++;
-  }
+  unsigned short return_value = (NULL != this->str) ? 1 : 0;
   StrLL *current = this->root;
   while (current != NULL) {
     return_value++;
@@ -835,15 +832,15 @@ int StringBuilder::split(const char *delims) {
   if (temp_str != NULL) {
     while (temp_str != NULL) {
       this->concat(temp_str);
-      temp_str  = strtok(NULL, delims);
       return_value++;
+      temp_str  = strtok(NULL, delims);
     }
     free(this->str);
     this->str = NULL;
     this->col_length = 0;
   }
   else {
-    this->concat("");
+    this->concat("");   // Assure at least one token.
   }
   return return_value;
 }

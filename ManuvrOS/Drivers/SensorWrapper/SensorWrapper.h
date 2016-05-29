@@ -182,10 +182,10 @@ class SensorWrapper {
 
 
   protected:
-    bool     is_dirty;          // Has the sensor been updated?
+    SensorDatum* datum_list;    // Linked list of data that this sensor might carry.
     long     updated_at;        // When was the last update?
     uint8_t  data_count;        // How many datums does this sensor produce?
-    SensorDatum* datum_list;    // Linked list of data that this sensor might carry.
+    bool     is_dirty;          // Has the sensor been updated?
 
     bool defineDatum(const char*, const char*, uint8_t);
     bool defineDatum(int, const char*, const char*, uint8_t, uint8_t);

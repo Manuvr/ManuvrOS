@@ -77,8 +77,8 @@ class MGC3130 : public I2CDevice, public EventReceiver {
 
 
     /* Overrides from I2CDevice... */
-    void operationCompleteCallback(I2CQueuedOperation*);
-    bool operationCallahead(I2CQueuedOperation* op);
+    void operationCompleteCallback(I2CBusOp*);
+    bool operationCallahead(I2CBusOp* op);
 
     /* Overrides from EventReceiver */
     int8_t notify(ManuvrRunnable*);

@@ -203,25 +203,21 @@ int8_t ManuvrableGPIO::notify(ManuvrRunnable *active_event) {
 }
 
 
-
+#if defined(__MANUVR_CONSOLE_SUPPORT)
 void ManuvrableGPIO::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
-  uint8_t  _pin = (input->count() > 1) ? atoi((const char*) input->position(1)) : 0;
-  uint16_t _val = (input->count() > 2) ? (0 < atoi((const char*) input->position(2))) : 0;
+  uint8_t  _pin = (input->count() > 1) ? input->position_as_int(1) : 0;
+  uint16_t _val = (input->count() > 2) ? input->position_as_int(2) : 0;
 
   switch (*(str)) {
-    case 'r':   // Read a pin
+    case 's':   // Read a pin
       _val = readPin(_pin);
       local_log.concatf("Pin %d state: %d\n", _pin, _val);
       break;
-    case 'w':   // Write a pin
-      local_log.concatf("Pin %d state: %d\n", _pin, (_val?1:0));
-      setPin(_pin, (_val?true:false));
-      break;
-    case 'I':   // Set a pin mode.
-    case 'O':   // Set a pin mode.
-      local_log.concatf("Setting pin %d as %s.\n", _pin, ((*(str) == 'I')?"INPUT":"OUTPUT"));
-      gpioDefine(_pin, (*(str) == 'I') ? INPUT : OUTPUT);
+    case 'r':   // Set a pin mode.
+    case 'w':   // Set a pin mode.
+      local_log.concatf("Setting pin %d as %s.\n", _pin, ((*(str) == 'r')?"INPUT":"OUTPUT"));
+      gpioDefine(_pin, (*(str) == 'r') ? INPUT : OUTPUT);
       break;
     case 'M':   // Set a pin mode.
     case 'm':   // Set a pin mode.
@@ -235,3 +231,4 @@ void ManuvrableGPIO::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
+#endif  // __MANUVR_CONSOLE_SUPPORT

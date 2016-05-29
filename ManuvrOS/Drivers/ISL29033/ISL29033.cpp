@@ -183,11 +183,11 @@ int8_t ISL29033::readSensor(void) {
 * These are overrides from I2CDevice.                                                               *
 ****************************************************************************************************/
 
-void ISL29033::operationCompleteCallback(I2CQueuedOperation* completed) {
+void ISL29033::operationCompleteCallback(I2CBusOp* completed) {
   I2CDeviceWithRegisters::operationCompleteCallback(completed);
   if (completed != NULL) {
-    switch (completed->opcode) {
-      case I2C_OPERATION_READ:
+    switch (completed->get_opcode()) {
+      case BusOpcode::RX:
         switch (completed->sub_addr) {
           case ISL29033_REG_COMMAND_1:
             break;
@@ -211,7 +211,7 @@ void ISL29033::operationCompleteCallback(I2CQueuedOperation* completed) {
             break;
         }
         break;
-      case I2C_OPERATION_WRITE:
+      case BusOpcode::TX:
         switch (completed->sub_addr) {
           case ISL29033_REG_COMMAND_1:
             break;
@@ -228,9 +228,6 @@ void ISL29033::operationCompleteCallback(I2CQueuedOperation* completed) {
           default:
             break;
         }
-        break;
-      case I2C_OPERATION_PING:
-        Kernel::log("Ping received.");
         break;
       default:
         break;

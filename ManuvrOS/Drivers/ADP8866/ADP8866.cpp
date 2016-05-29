@@ -77,14 +77,15 @@ void ADP8866::_isr_fxn(void) {
 */
 void ADP8866::__class_initializer() {
   EventReceiver::__class_initializer();
+  ADP8866::INSTANCE = this;
+
   reset_pin         = 0;
   irq_pin           = 0;
   stored_dimmer_val = 0;
   class_mode        = 0;
   power_mode        = 0;
-  init_complete     = false;
 
-  ADP8866::INSTANCE = this;
+  _er_clear_flag(ADP8866_FLAG_INIT_COMPLETE);
 
   int mes_count = sizeof(adp8866_message_defs) / sizeof(MessageTypeDef);
   ManuvrMsg::registerMessages(adp8866_message_defs, mes_count);
@@ -109,7 +110,7 @@ ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : I2CDevice
 
   setPin(_reset_pin, false);
 
-  init_complete = false;
+  _er_clear_flag(ADP8866_FLAG_INIT_COMPLETE);
   defineRegister(ADP8866_MANU_DEV_ID,  (uint8_t) 0x00, false,  true, false);
   defineRegister(ADP8866_MDCR,         (uint8_t) 0x00, false,  false, true);
   defineRegister(ADP8866_INT_STAT,     (uint8_t) 0x00, false,  false, true);
@@ -216,7 +217,7 @@ int8_t ADP8866::init() {
   writeIndirect(ADP8866_ISC9, 0x05, true);
 
   writeIndirect(ADP8866_ISCT_HB, 0x0A);
-  init_complete = true;
+  _er_set_flag(ADP8866_FLAG_INIT_COMPLETE);
   return 0;
 }
 
@@ -225,7 +226,7 @@ int8_t ADP8866::init() {
 * These are overrides from I2CDeviceWithRegisters.                                                  *
 ****************************************************************************************************/
 
-void ADP8866::operationCompleteCallback(I2CQueuedOperation* completed) {
+void ADP8866::operationCompleteCallback(I2CBusOp* completed) {
   I2CDeviceWithRegisters::operationCompleteCallback(completed);
 
   DeviceRegister *temp_reg = getRegisterByBaseAddress(completed->sub_addr);
@@ -240,7 +241,7 @@ void ADP8866::operationCompleteCallback(I2CQueuedOperation* completed) {
       case ADP8866_MDCR:
         break;
       case ADP8866_INT_STAT:      // Interrupt status.
-        if (I2C_OPERATION_READ == completed->opcode) {
+        if (BusOpcode::RX == completed->get_opcode()) {
           uint8_t value = *((uint8_t*) completed->buf);
           if (value & 0x04) {
             Kernel::log("ADP8866 experienced an over-voltage fault.\n");
@@ -371,7 +372,7 @@ void ADP8866::printDebug(StringBuilder* temp) {
   if (NULL == temp) return;
   EventReceiver::printDebug(temp);
   I2CDeviceWithRegisters::printDebug(temp);
-  temp->concatf("\tinit_complete:      %s\n", init_complete ? "yes" :"no");
+  temp->concatf("\tinit_complete:      %s\n", _er_flag(ADP8866_FLAG_INIT_COMPLETE) ? "yes" :"no");
   temp->concatf("\tpower_mode:        %d\n", power_mode);
 }
 
@@ -456,16 +457,29 @@ int8_t ADP8866::notify(ManuvrRunnable *active_event) {
 }
 
 
+#if defined(__MANUVR_CONSOLE_SUPPORT)
 
 void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
-  char* str = input->position(0);
+  const char* str = (char *) input->position(0);
+  char c    = *str;
+  int channel  = 0;
+  int temp_int = 0;
 
-  uint8_t temp_byte = 0;
-  if (*(str) != 0) {
-    temp_byte = atoi((char*) str+1);
+  if (input->count() > 1) {
+    // If there is a second token, we proceed on good-faith that it's an int.
+    channel = input->position_as_int(1);
+  }
+  else if (strlen(str) > 1) {
+    // We allow a short-hand for the sake of short commands that involve a single int.
+    channel = atoi(str + 1);
   }
 
-  switch (*(str)) {
+  if (input->count() > 2) {
+    // If there is a second token, we proceed on good-faith that it's an int.
+    temp_int = input->position_as_int(2);
+  }
+
+  switch (c) {
     case 'r':
       reset();
       break;
@@ -473,11 +487,11 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
       syncRegisters();
       break;
     case 'p':
-      pulse_channel(*(str) - 0x30, temp_byte);
+      pulse_channel(channel, temp_int);
       break;
     case 'l':
     case 'L':
-      enable_channel(temp_byte, (*(str) == 'L'));
+      enable_channel(channel, (*(str) == 'L'));
       break;
     case '0':
     case '1':
@@ -489,12 +503,8 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
     case '7':
     case '8':
     case '9':
-      set_brightness(*(str) - 0x30, temp_byte);
-      {
-        StringBuilder output;
-        output.concatf("ADP8866: set_brightness(%u, %u)\n", *(str) - 0x30, temp_byte);
-        Kernel::log(&output);
-      }
+      set_brightness(*(str) - 0x30, channel);
+      if (getVerbosity() > 5) local_log.concatf("ADP8866: set_brightness(%u, %u)\n", *(str) - 0x30, temp_int);
       break;
     default:
       EventReceiver::procDirectDebugInstruction(input);
@@ -503,6 +513,7 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
+#endif  //__MANUVR_CONSOLE_SUPPORT
 
 
 

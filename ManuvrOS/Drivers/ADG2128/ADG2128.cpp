@@ -148,16 +148,16 @@ uint8_t ADG2128::getValue(uint8_t row) {
 * These are overrides from I2CDevice                                                                *
 ****************************************************************************************************/
 
-void ADG2128::operationCompleteCallback(I2CQueuedOperation* completed) {
-  if (completed->err_code != I2C_ERR_CODE_NO_ERROR) {
+void ADG2128::operationCompleteCallback(I2CBusOp* completed) {
+  if (completed->hasFault()) {
     StringBuilder output;
     output.concat("An i2c operation requested by the ADG2128 came back failed.\n");
     completed->printDebug(&output);
     Kernel::log(&output);
     return;
   }
-  switch (completed->opcode) {
-    case I2C_OPERATION_READ:
+  switch (completed->get_opcode()) {
+    case BusOpcode::RX:
       switch (completed->sub_addr) {
         case 0x3400:  values[0] = (uint8_t) *(completed->buf);
           break;
@@ -188,7 +188,7 @@ void ADG2128::operationCompleteCallback(I2CQueuedOperation* completed) {
       }
       // We just read back data from the switch.
       break;
-    case I2C_OPERATION_WRITE:
+    case BusOpcode::TX:
       // We just confirmed a write to the switch.
       break;
     default:

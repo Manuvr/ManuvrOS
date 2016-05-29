@@ -39,29 +39,18 @@ This file is the tortured result of growing pains since the beginning of
   #include <inttypes.h>
   #include <stdint.h>
   #include <stdarg.h>
-  #include "DataStructures/LightLinkedList.h"
-  #include "DataStructures/StringBuilder.h"
+  #include <DataStructures/LightLinkedList.h>
+  #include <DataStructures/StringBuilder.h>
+  #include <Drivers/BusQueue/BusQueue.h>
+  #include <Drivers/DeviceWithRegisters/DeviceRegister.h>
   #include <Kernel.h>
-  #include "Drivers/DeviceWithRegisters/DeviceRegister.h"
 
   #define I2CADAPTER_MAX_QUEUE_PRINT 3
 
-
-  #define I2C_OPERATION_READ  I2C_Direction_Receiver
-  #define I2C_OPERATION_WRITE I2C_Direction_Transmitter
-  #define I2C_OPERATION_PING  0x04
-
-
-  #define I2C_XFER_STATE_INITIATE  0x00
-  #define I2C_XFER_STATE_START     0x01
-  #define I2C_XFER_STATE_ADDR      0x02
-  #define I2C_XFER_STATE_SUBADDR   0x03
-  #define I2C_XFER_STATE_BODY      0x04
-  #define I2C_XFER_STATE_DMA_WAIT  0x05
-  #define I2C_XFER_STATE_STOP      0x06
-  #define I2C_XFER_STATE_COMPLETE  0x07   // The stop signal was sent.
-
-
+  /*
+  * These are used as function-return codes, and have nothing to do with bus
+  *   operations.
+  */
   #define I2C_ERR_CODE_NO_ERROR    0
   #define I2C_ERR_CODE_NO_CASE     -1
   #define I2C_ERR_CODE_NO_REASON   -2
@@ -85,11 +74,18 @@ This file is the tortured result of growing pains since the beginning of
   #define I2C_ERR_SLAVE_REG_IS_RO   -18   // We tried to write to a register defined as read-only.
 
 
-
   #define I2C_BUS_STATE_NO_INIT  0x00
   #define I2C_BUS_STATE_ERROR    0x01
   #define I2C_BUS_STATE_READY    0x02
 
+  /*
+  * These state flags are hosted by the EventReceiver. This may change in the future.
+  * Might be too much convention surrounding their assignment across inherritence.
+  */
+  #define I2C_BUS_FLAG_BUS_ERROR  0x01    // While this is true, don't interact with the RN.
+  #define I2C_BUS_FLAG_BUS_ONLINE 0x02    // Set when the module is verified to be in command mode.
+  #define I2C_BUS_FLAG_PING_RUN   0x04    // Have we run a full bus discovery?
+  #define I2C_BUS_FLAG_PINGING    0x08    // Are we running a full ping?
 
   // Forward declaration. Definition order in this file is very important.
   class I2CDevice;
@@ -99,33 +95,24 @@ This file is the tortured result of growing pains since the beginning of
   /*
   * This class represents an atomic operation on the i2c bus.
   */
-  class I2CQueuedOperation {
+  class I2CBusOp : public BusOp {
     public:
-      static int next_txn_id;
-
-      bool      initiated;     // Is this item fresh or is it waiting on a reply?
-      bool      reap_buffer;   // If true, we will reap the buffer.
-
-      uint8_t   opcode;        // What is the nature of this work-queue item?
-      int       txn_id;        // How are we going to keep track of this item?
-      int8_t    err_code;      // If we had an error, the code will be here.
-
-      uint8_t dev_addr;
-      int16_t sub_addr;
-
-      uint8_t xfer_state;
-      uint8_t remaining_bytes;
-      uint8_t len;
-      uint8_t *buf;
-
       I2CDevice  *requester;
       I2CAdapter *device;
 
+      int16_t sub_addr;
+      uint16_t remaining_bytes;
+
+      int       txn_id;        // How are we going to keep track of this item?
+
       int8_t verbosity;
+      uint8_t dev_addr;
+
+      bool      subaddr_sent;    // Have the subaddress been sent yet?
 
 
-      I2CQueuedOperation(uint8_t nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len);
-      ~I2CQueuedOperation(void);
+      I2CBusOp(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len);
+      ~I2CBusOp();
 
 
       /*
@@ -133,13 +120,6 @@ This file is the tortured result of growing pains since the beginning of
       */
       int8_t begin(void);
 
-
-      /**
-      * Inlined. If this job is done processing. Errors or not.
-      *
-      * @return true if so. False otherwise.
-      */
-      inline bool completed(void) {  return (xfer_state == I2C_XFER_STATE_COMPLETE);  }
 
       /**
       * Decide if we need to send a subaddress.
@@ -155,8 +135,15 @@ This file is the tortured result of growing pains since the beginning of
 
       /* Call to mark something completed that may not be. */
       void markComplete(void);
-      int8_t abort(void);
-      int8_t abort(int8_t);
+
+      /**
+      * This will mark the bus operation complete with a given error code.
+      * Overriden for simplicity. Marks the operation with failure code NO_REASON.
+      *
+      * @return 0 on success. Non-zero on failure.
+      */
+      inline int8_t abort() {    return abort(XferFault::NO_REASON); }
+      int8_t abort(XferFault);
 
       /* Debug aides */
       void printDebug(void);
@@ -164,14 +151,9 @@ This file is the tortured result of growing pains since the beginning of
 
 
     private:
-      bool      subaddr_sent;    // Have the subaddress been sent yet?
       static ManuvrRunnable event_queue_ready;
 
       int8_t init_dma();
-      static const char* getErrorString(int8_t code);
-      static const char* getOpcodeString(uint8_t code);
-      static const char* getStateString(uint8_t code);
-
   };
 
 
@@ -180,14 +162,11 @@ This file is the tortured result of growing pains since the beginning of
   */
   class I2CAdapter : public EventReceiver {
     public:
-      bool bus_error;
-      bool bus_online;
+      I2CBusOp* current_queue_item;
       int dev;
 
-      I2CQueuedOperation* current_queue_item;
-
-      I2CAdapter(uint8_t dev_id = 1);         // Constructor takes a bus ID as an argument.
-      ~I2CAdapter(void);           // Destructor
+      I2CAdapter(uint8_t dev_id = 1);  // Constructor takes a bus ID as an argument.
+      ~I2CAdapter();                   // Destructor
 
 
       // Builds a special bus transaction that does nothing but test for the presence or absence of a slave device.
@@ -197,27 +176,34 @@ This file is the tortured result of growing pains since the beginning of
       int8_t removeSlaveDevice(I2CDevice*);  // Removes a device from the bus.
 
       // This is the fxn that is called to do I/O on the bus.
-      bool insert_work_item(I2CQueuedOperation *);
+      bool insert_work_item(I2CBusOp *);
 
       /* Debug aides */
       const char* getReceiverName();
       void printPingMap(StringBuilder *);
-      void printDebug(StringBuilder *);
+      void printDebug(StringBuilder*);
       void printDevs(StringBuilder *);
       void printDevs(StringBuilder *, uint8_t dev_num);
 
       /* Overrides from EventReceiver */
-      void procDirectDebugInstruction(StringBuilder *);
       int8_t notify(ManuvrRunnable*);
       int8_t callback_proc(ManuvrRunnable *);
+      #if defined(__MANUVR_CONSOLE_SUPPORT)
+        void procDirectDebugInstruction(StringBuilder*);
+      #endif  //__MANUVR_CONSOLE_SUPPORT
 
 
       // These are meant to be called from the bus jobs. They deal with specific bus functions
       //   that may or may not be present on a given platform.
       int8_t generateStart();    // Generate a start condition on the bus.
       int8_t generateStop();     // Generate a stahp condition on the bus.
-      int8_t dispatchOperation(I2CQueuedOperation*);   // Start the given operation on the bus.
+      int8_t dispatchOperation(I2CBusOp*);   // Start the given operation on the bus.
       bool switch_device(uint8_t nu_addr);
+
+      inline bool busError() {          return (_er_flag(I2C_BUS_FLAG_BUS_ERROR));  };
+      inline bool busOnline() {         return (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)); };
+      inline void busError(bool nu) {   _er_set_flag(I2C_BUS_FLAG_BUS_ERROR, nu);   };
+      inline void busOnline(bool nu) {  _er_set_flag(I2C_BUS_FLAG_BUS_ONLINE, nu);  };
 
 
     protected:
@@ -226,12 +212,10 @@ This file is the tortured result of growing pains since the beginning of
 
 
     private:
-      bool ping_run;
-      bool full_ping_running;
       int8_t ping_map[128];
       int8_t last_used_bus_addr;
 
-      LinkedList<I2CQueuedOperation*> work_queue;     // A work queue to keep transactions in order.
+      LinkedList<I2CBusOp*> work_queue;     // A work queue to keep transactions in order.
       LinkedList<I2CDevice*> dev_list;                // A list of active slaves on this bus.
 
       void gpioSetup();
@@ -265,10 +249,10 @@ This file is the tortured result of growing pains since the beginning of
       ~I2CDevice(void);
 
       // Callback for requested operation completion.
-      virtual void operationCompleteCallback(I2CQueuedOperation*);
+      virtual void operationCompleteCallback(I2CBusOp*);
 
       /* If your device needs something to happen immediately prior to bus I/O... */
-      virtual bool operationCallahead(I2CQueuedOperation*);
+      virtual bool operationCallahead(I2CBusOp*);
 
       bool assignBusInstance(I2CAdapter *);              // Needs to be called by the i2c class during insertion.
       bool assignBusInstance(volatile I2CAdapter *bus);  // Trivial override.
@@ -321,9 +305,9 @@ This file is the tortured result of growing pains since the beginning of
 
 
       // Callback for requested operation completion.
-      virtual void operationCompleteCallback(I2CQueuedOperation*);
+      virtual void operationCompleteCallback(I2CBusOp*);
       /* If your device needs something to happen immediately prior to bus I/O... */
-      virtual bool operationCallahead(I2CQueuedOperation*);
+      virtual bool operationCallahead(I2CBusOp*);
 
       bool defineRegister(uint16_t _addr, uint8_t  val, bool dirty, bool unread, bool writable);
       bool defineRegister(uint16_t _addr, uint16_t val, bool dirty, bool unread, bool writable);
@@ -364,14 +348,6 @@ This file is the tortured result of growing pains since the beginning of
   };
 
 
-
-#ifndef STM32F4XX
-  // To maintain uniformity with ST's code in an non-ST env...
-  #define  I2C_Direction_Transmitter      ((uint8_t)0x00)
-  #define  I2C_Direction_Receiver         ((uint8_t)0x01)
-  #define IS_I2C_DIRECTION(DIRECTION) (((DIRECTION) == I2C_Direction_Transmitter) || \
-                                       ((DIRECTION) == I2C_Direction_Receiver))
-#endif
 
 #if defined(__MANUVR_LINUX)
   #include <stdlib.h>

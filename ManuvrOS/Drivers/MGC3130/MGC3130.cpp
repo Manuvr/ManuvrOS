@@ -498,13 +498,13 @@ void MGC3130::dispatchGestureEvents() {
 * These are overrides from I2CDevice.                                                               *
 ****************************************************************************************************/
 
-void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
+void MGC3130::operationCompleteCallback(I2CBusOp* completed) {
   gpioDefine(_ts_pin, INPUT_PULLUP);
   are_we_holding_ts(false);
   setPinFxn(_ts_pin, FALLING, mgc3130_isr_check);
 
-  if (completed->err_code == I2C_ERR_CODE_NO_ERROR) {
-    if (completed->opcode == I2C_OPERATION_READ) {
+  if (!completed->hasFault()) {
+    if (completed->get_opcode() == BusOpcode::RX) {
       uint8_t data;
       int c = 0;
       uint32_t temp_value = 0;   // Used to aggregate fields that span several bytes.
@@ -515,7 +515,7 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
       bool wheel_valid = false;
       uint8_t byte_index = 0;
 
-      int bytes_expected = completed->len;
+      int bytes_expected = completed->buf_len;
 
       while(0 < bytes_expected) {
         data = *(read_buffer + byte_index++);
@@ -667,7 +667,7 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
 
 
 /* If your device needs something to happen immediately prior to bus I/O... */
-bool MGC3130::operationCallahead(I2CQueuedOperation* op) {
+bool MGC3130::operationCallahead(I2CBusOp* op) {
   if (!readPin(_ts_pin)) {   // Only initiate a read if there is something there.
     unsetPinIRQ(_ts_pin);
     gpioDefine(_ts_pin, OUTPUT);
@@ -797,9 +797,8 @@ int8_t MGC3130::notify(ManuvrRunnable *active_event) {
 }
 
 
-
+#if defined(__MANUVR_CONSOLE_SUPPORT)
 void MGC3130::procDirectDebugInstruction(StringBuilder *input) {
-#ifdef __MANUVR_CONSOLE_SUPPORT
   char* str = input->position(0);
 
   /* These are debug case-offs that are typically used to test functionality, and are then
@@ -810,6 +809,6 @@ void MGC3130::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
 
-#endif
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
+#endif  // __MANUVR_CONSOLE_SUPPORT

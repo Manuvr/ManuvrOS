@@ -32,6 +32,7 @@ CPP_SRCS  += ManuvrMsg/ManuvrMsg.cpp
 # Concepts of "session" according to various standards...
 CPP_SRCS  += XenoSession/XenoMessage.cpp
 CPP_SRCS  += XenoSession/XenoSession.cpp
+CPP_SRCS  += XenoSession/Console/ManuvrConsole.cpp
 CPP_SRCS  += XenoSession/Manuvr/ManuvrSession.cpp
 CPP_SRCS  += XenoSession/Manuvr/XenoManuvrMessage.cpp
 CPP_SRCS  += XenoSession/CoAP/CoAPSession.cpp
@@ -49,12 +50,13 @@ CPP_SRCS  += Transports/ManuvrSerial/ManuvrSerial.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrSocket.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrTCP.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrUDP.cpp
+CPP_SRCS  += Drivers/BusQueue/BusQueue.cpp
 
 # i2c apparatus...
 CPP_SRCS  += Drivers/i2c-adapter/I2CDevice.cpp
 CPP_SRCS  += Drivers/i2c-adapter/i2c-adapter.cpp
 CPP_SRCS  += Drivers/i2c-adapter/I2CDeviceWithRegisters.cpp
-CPP_SRCS  += Drivers/i2c-adapter/I2CQueuedOperation.cpp
+CPP_SRCS  += Drivers/i2c-adapter/I2CBusOp.cpp
 
 
 # TODO: Bring up to speed WRT Runnable.

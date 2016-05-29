@@ -87,11 +87,13 @@ class XenoSession : public EventReceiver {
     virtual int8_t bin_stream_rx(unsigned char* buf, int len) =0;            // Used to feed data to the session.
 
     /* Overrides from EventReceiver */
-    virtual void procDirectDebugInstruction(StringBuilder*);
     virtual const char* getReceiverName() =0;
     virtual void printDebug(StringBuilder*);
     virtual int8_t notify(ManuvrRunnable*);
     virtual int8_t callback_proc(ManuvrRunnable *);
+    #if defined(__MANUVR_CONSOLE_SUPPORT)
+      virtual void procDirectDebugInstruction(StringBuilder *);
+    #endif
 
 
     static const char* sessionPhaseString(uint16_t state_code);

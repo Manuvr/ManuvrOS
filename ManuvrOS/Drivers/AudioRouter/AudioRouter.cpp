@@ -43,15 +43,15 @@ AudioRouter::AudioRouter(I2CAdapter* i2c, uint8_t cp_addr, uint8_t dp_lo_addr, u
   i2c_addr_cp_switch = cp_addr;
   i2c_addr_dp_lo = dp_lo_addr;
   i2c_addr_dp_hi = dp_hi_addr;
-  
+
     cp_switch = new ADG2128(cp_addr);
     dp_lo     = new ISL23345(dp_lo_addr);
     dp_hi     = new ISL23345(dp_hi_addr);
-    
+
     i2c->addSlaveDevice(cp_switch);
     i2c->addSlaveDevice(dp_lo);
     i2c->addSlaveDevice(dp_hi);
-    
+
     for (uint8_t i = 0; i < 12; i++) {   // Setup our input channels.
       inputs[i] = (CPInputChannel*) malloc(sizeof(CPInputChannel));
       inputs[i]->cp_row   = i;
@@ -106,14 +106,14 @@ int8_t AudioRouter::init(void) {
     Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to init() cp_switch (0x%02x) with cause (%d).", i2c_addr_cp_switch, result);
     return AUDIO_ROUTER_ERROR_BUS;
   }
-  
+
   // If we are this far, it means we've successfully refreshed all the device classes
   //   to reflect the state of the hardware. Now to parse that data into structs that
   //   mean something to us at this level...
   for (int i = 0; i < 8; i++) {  // Volumes...
     outputs[i]->dp_val = outputs[i]->dp_dev->getValue(outputs[i]->dp_reg);
   }
-  
+
   for (int i = 0; i < 12; i++) {  // Routes...
     uint8_t temp_byte = cp_switch->getValue(inputs[i]->cp_row);
     for (int j = 0; j < 8; j++) {
@@ -126,7 +126,7 @@ int8_t AudioRouter::init(void) {
       temp_byte = temp_byte >> 1;
     }
   }
-  
+
   return AUDIO_ROUTER_ERROR_NO_ERROR;
 }
 
@@ -221,7 +221,7 @@ int8_t AudioRouter::route(uint8_t col, uint8_t row) {
   uint8_t return_value = AUDIO_ROUTER_ERROR_NO_ERROR;
   if (col > 7)  return AUDIO_ROUTER_ERROR_BAD_COLUMN;
   if (row > 11) return AUDIO_ROUTER_ERROR_BAD_ROW;
-  
+
   if (outputs[col]->cp_row != NULL) {
     int8_t result = unroute(col);
     if (result == AUDIO_ROUTER_ERROR_NO_ERROR) {
@@ -232,7 +232,7 @@ int8_t AudioRouter::route(uint8_t col, uint8_t row) {
       return_value = AUDIO_ROUTER_ERROR_UNROUTE_FAILED;
     }
   }
-  
+
   if (return_value >= 0) {
     int8_t result = cp_switch->setRoute(outputs[col]->cp_column, row);
     if (result != AUDIO_ROUTER_ERROR_NO_ERROR) {
@@ -242,7 +242,7 @@ int8_t AudioRouter::route(uint8_t col, uint8_t row) {
       outputs[col]->cp_row = inputs[row];
     }
   }
-  
+
   return return_value;
 }
 
@@ -298,7 +298,7 @@ void AudioRouter::dumpOutputChannel(uint8_t chan, StringBuilder* output) {
     return;
   }
   output->concatf("Output channel %d\n", chan);
-  
+
   if (outputs[chan]->name != NULL) output->concatf("%s\n", outputs[chan]->name);
   output->concatf("Switch column %d\n", outputs[chan]->cp_column);
   if (outputs[chan]->dp_dev == NULL) {
@@ -348,13 +348,13 @@ int8_t AudioRouter::status(StringBuilder* output) {
     dumpOutputChannel(i, output);
   }
   output->concat("\n");
-  
+
   dp_lo->printDebug(output);
   dp_hi->printDebug(output);
   cp_switch->printDebug(output);
-  
+
   Kernel::log(output);
-  
+
   return AudioRouter::AUDIO_ROUTER_ERROR_NO_ERROR;
 }
 
@@ -362,23 +362,23 @@ int8_t AudioRouter::status(StringBuilder* output) {
 
 
 /****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌          
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄ 
+* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
+* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
+* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
 * ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
 * ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
 * ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
 * ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀ 
-* 
+*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+*
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
 
 /**
-* There is a NULL-check performed upstream for the scheduler member. So no need 
+* There is a NULL-check performed upstream for the scheduler member. So no need
 *   to do it again here.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
@@ -401,15 +401,15 @@ const char* AudioRouter::getReceiverName() {  return "AudioRouter";  }
 
 
 /**
-* Debug support method. This fxn is only present in debug builds. 
+* Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void AudioRouter::printDebug(StringBuilder *output) {
   if (output == NULL) return;
-  
+
   EventReceiver::printDebug(output);
-  
+
   if (verbosity > 5) {
     status(output);
   }
@@ -425,10 +425,10 @@ void AudioRouter::printDebug(StringBuilder *output) {
 
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
-*   has been serviced and we are now getting the chance to see the results. The argument 
+*   has been serviced and we are now getting the chance to see the results. The argument
 *   to this fxn will never be NULL.
 *
-* Depending on class implementations, we might choose to handle the completed Event differently. We 
+* Depending on class implementations, we might choose to handle the completed Event differently. We
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
 *   ourselves and return DROP. By default, we will return REAP to instruct the EventManager
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
@@ -439,15 +439,15 @@ void AudioRouter::printDebug(StringBuilder *output) {
 */
 int8_t AudioRouter::callback_proc(ManuvrEvent *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
-     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
+     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
-  
+
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     default:
       break;
   }
-  
+
   return return_value;
 }
 
@@ -457,8 +457,8 @@ int8_t AudioRouter::notify(ManuvrEvent *active_event) {
   uint8_t temp_uint8_0;
   uint8_t temp_uint8_1;
   StringBuilder *temp_sb;
-  
-  
+
+
   switch (active_event->event_code) {
     case VIAM_SONUS_MSG_DUMP_ROUTER:
       printDebug(&local_log);
@@ -485,7 +485,7 @@ int8_t AudioRouter::notify(ManuvrEvent *active_event) {
           // Setting the volume at a speciifc output channel.
           result = setVolume(temp_uint8_1, temp_uint8_0);
         }
-        else { 
+        else {
           // Setting volume at all output channels.
           result = 0;
           for (int i = 0; i < 8; i++) result += setVolume(i, temp_uint8_0);
@@ -555,33 +555,33 @@ int8_t AudioRouter::notify(ManuvrEvent *active_event) {
 
 
 
-
+#if defined(__MANUVR_CONSOLE_SUPPORT)
 void AudioRouter::procDirectDebugInstruction(StringBuilder *input) {
   char* str = (char*) input->string();
-  
+
   char c = *(str);
   uint8_t temp_byte = 0;        // Many commands here take a single integer argument.
-  
+
   if (*(str) != 0) {
     temp_byte = atoi((char*) str+1);
   }
 
   StringBuilder parse_mule;
   ManuvrEvent* event;
-  
+
   switch (c) {
     // AudioRouter debugging cases....
     case 'i':
       printDebug(&local_log);
       break;
 
-	  
+
 	case 'r':
 	case 'u':
       parse_mule.concat(str);
       parse_mule.split(" ");
       parse_mule.drop_position(0);
-      
+
       event = new ManuvrEvent((c == 'r') ? VIAM_SONUS_MSG_ROUTE : VIAM_SONUS_MSG_UNROUTE);
       switch (parse_mule.count()) {
         case 2:
@@ -594,7 +594,7 @@ void AudioRouter::procDirectDebugInstruction(StringBuilder *input) {
       }
       raiseEvent(event);
 	  break;
-	  
+
 	case 'V':
       parse_mule.concat(str);
       parse_mule.split(" ");
@@ -614,7 +614,7 @@ void AudioRouter::procDirectDebugInstruction(StringBuilder *input) {
       }
       raiseEvent(event);
 	  break;
-	  
+
     case 'e':
       if (AUDIO_ROUTER_ERROR_NO_ERROR != enable()) local_log.concat("Failed to enable routing.\n");
       break;
@@ -626,6 +626,7 @@ void AudioRouter::procDirectDebugInstruction(StringBuilder *input) {
       EventReceiver::procDirectDebugInstruction(input);
       break;
   }
-  
+
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
+#endif  //__MANUVR_CONSOLE_SUPPORT

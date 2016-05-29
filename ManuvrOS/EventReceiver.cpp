@@ -30,6 +30,7 @@ limitations under the License.
 void EventReceiver::__class_initializer() {
   __kernel  = NULL;
   _class_state = 0 | (DEFAULT_CLASS_VERBOSITY & MANUVR_ER_FLAG_VERBOSITY_MASK);
+  _extnd_state = 0;
   #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
     _thread_id = -1;
   #endif
@@ -121,18 +122,26 @@ int EventReceiver::purgeLogs() {
 
 
 
+#ifdef __MANUVR_CONSOLE_SUPPORT
 /**
 * This is a base-level debug function that takes direct input from a user.
 *
 * @param   input  A buffer containing the user's direct input.
 */
 void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
-#ifdef __MANUVR_CONSOLE_SUPPORT
   char* str = input->position(0);
 
   switch (*(str)) {
     case 'i':    // Print debug
       printDebug(&local_log);
+      break;
+    case 'v':    // Set or print verbosity.
+      if (input->count() > 1) {
+        setVerbosity(input->position_as_int(1));
+      }
+      else {
+        local_log.concatf("%s: Verbosity is %d.\n", getReceiverName(), getVerbosity());
+      }
       break;
     default:
       #ifdef __MANUVR_DEBUG
@@ -142,8 +151,8 @@ void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
   }
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
-#endif
 }
+#endif  // __MANUVR_CONSOLE_SUPPORT
 
 
 /**
