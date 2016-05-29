@@ -100,15 +100,15 @@ This file is the tortured result of growing pains since the beginning of
       I2CDevice  *requester;
       I2CAdapter *device;
 
+      int16_t sub_addr;
+      uint16_t remaining_bytes;
+
       int       txn_id;        // How are we going to keep track of this item?
 
       int8_t verbosity;
       uint8_t dev_addr;
 
-      int16_t sub_addr;
-      uint16_t remaining_bytes;
-
-      bool      reap_buffer;   // If true, we will reap the buffer.
+      bool      subaddr_sent;    // Have the subaddress been sent yet?
 
 
       I2CBusOp(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len);
@@ -151,9 +151,6 @@ This file is the tortured result of growing pains since the beginning of
 
 
     private:
-      bool      subaddr_sent;    // Have the subaddress been sent yet?
-
-
       static ManuvrRunnable event_queue_ready;
 
       int8_t init_dma();
@@ -168,8 +165,8 @@ This file is the tortured result of growing pains since the beginning of
       I2CBusOp* current_queue_item;
       int dev;
 
-      I2CAdapter(uint8_t dev_id = 1);         // Constructor takes a bus ID as an argument.
-      ~I2CAdapter(void);           // Destructor
+      I2CAdapter(uint8_t dev_id = 1);  // Constructor takes a bus ID as an argument.
+      ~I2CAdapter();                   // Destructor
 
 
       // Builds a special bus transaction that does nothing but test for the presence or absence of a slave device.

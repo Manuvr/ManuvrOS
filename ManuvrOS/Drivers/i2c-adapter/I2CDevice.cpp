@@ -152,7 +152,6 @@ bool I2CDevice::writeX(int sub_addr, uint16_t byte_count, uint8_t *buf) {
       return false;
     }
     I2CBusOp* nu = new I2CBusOp(BusOpcode::TX, _dev_addr, (int16_t) sub_addr, buf, byte_count);
-    nu->reap_buffer = false;
     nu->requester = this;
     return _bus->insert_work_item(nu);
 }
@@ -169,7 +168,6 @@ bool I2CDevice::readX(int sub_addr, uint8_t len, uint8_t *buf) {
       return false;
     }
     I2CBusOp* nu = new I2CBusOp(BusOpcode::RX, _dev_addr, (int16_t) sub_addr, buf, len);
-    nu->reap_buffer = false;
     nu->requester = this;
     return _bus->insert_work_item(nu);
 }

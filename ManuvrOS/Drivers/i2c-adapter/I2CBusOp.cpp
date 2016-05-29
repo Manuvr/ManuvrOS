@@ -67,18 +67,12 @@ I2CBusOp::I2CBusOp(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t 
   this->device          = NULL;
   this->remaining_bytes = 0;
   this->requester       = NULL;
-  this->reap_buffer     = false;
   this->subaddr_sent    = false;
   verbosity = 0;
 };
 
 
 I2CBusOp::~I2CBusOp() {
-	if (reap_buffer) {
-		if (buf != NULL) {
-			free(buf);
-		}
-	}
 }
 
 

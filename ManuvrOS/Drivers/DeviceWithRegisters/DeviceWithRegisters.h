@@ -38,7 +38,7 @@ limitations under the License.
     protected:
       DeviceRegister *reg_defs;  // Here is where they will be enumerated.
       uint8_t*  register_pool        = NULL;
-      uint8_t        reg_count;  // This is how many registers this device has.
+      uint8_t   reg_count;       // This is how many registers this device has.
       bool      multi_access_support = false;   // TODO: Make this happen! Depends on pooled_registers.
 
       unsigned int regValue(uint8_t idx);
