@@ -482,9 +482,7 @@ void ManuvrXport::procDirectDebugInstruction(StringBuilder *input) {
       reset();
       break;
     default:
-      #ifdef __MANUVR_DEBUG
       EventReceiver::procDirectDebugInstruction(input);
-      #endif
       break;
   }
 
