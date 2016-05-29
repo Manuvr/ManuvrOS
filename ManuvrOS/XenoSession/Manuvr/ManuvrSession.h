@@ -158,11 +158,13 @@ class ManuvrSession : public XenoSession {
     ~ManuvrSession();
 
     /* Overrides from EventReceiver */
-    void procDirectDebugInstruction(StringBuilder*);
     const char* getReceiverName();
     void printDebug(StringBuilder*);
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);
+    #if defined(__MANUVR_CONSOLE_SUPPORT)
+      void procDirectDebugInstruction(StringBuilder*);
+    #endif  //__MANUVR_CONSOLE_SUPPORT
 
 
   protected:

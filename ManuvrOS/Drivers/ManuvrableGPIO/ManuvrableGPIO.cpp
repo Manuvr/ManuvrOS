@@ -203,7 +203,7 @@ int8_t ManuvrableGPIO::notify(ManuvrRunnable *active_event) {
 }
 
 
-
+#if defined(__MANUVR_CONSOLE_SUPPORT)
 void ManuvrableGPIO::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
   uint8_t  _pin = (input->count() > 1) ? atoi((const char*) input->position(1)) : 0;
@@ -231,3 +231,4 @@ void ManuvrableGPIO::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
+#endif  // __MANUVR_CONSOLE_SUPPORT

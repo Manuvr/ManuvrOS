@@ -459,13 +459,13 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
 //}
 
 
+#if defined(__MANUVR_CONSOLE_SUPPORT)
 /**
 * This is a base-level debug function that takes direct input from a user.
 *
 * @param   input  A buffer containing the user's direct input.
 */
 void ManuvrXport::procDirectDebugInstruction(StringBuilder *input) {
-#ifdef __MANUVR_CONSOLE_SUPPORT
   char* str = input->position(0);
 
   switch (*(str)) {
@@ -489,5 +489,6 @@ void ManuvrXport::procDirectDebugInstruction(StringBuilder *input) {
   }
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
-#endif
 }
+
+#endif  // __MANUVR_CONSOLE_SUPPORT

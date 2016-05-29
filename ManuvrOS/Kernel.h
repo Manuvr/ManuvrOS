@@ -156,9 +156,6 @@ limitations under the License.
         void print_type_sizes();      // Prints the memory-costs of various classes.
       #endif
 
-      /* Takes user input in the form of direct strings. */
-      void accumulateConsoleInput(uint8_t *buf, int len, bool terminal);
-
       /* Profiling support.. */
       float cpu_usage();
       void profiler(bool enabled);
@@ -174,7 +171,12 @@ limitations under the License.
       const char* getReceiverName();
       int8_t notify(ManuvrRunnable*);
       int8_t callback_proc(ManuvrRunnable *);
-      void procDirectDebugInstruction(StringBuilder *);
+      #if defined(__MANUVR_CONSOLE_SUPPORT)
+        void procDirectDebugInstruction(StringBuilder *);
+
+        /* Takes user input in the form of direct strings. */
+        void accumulateConsoleInput(uint8_t *buf, int len, bool terminal);
+      #endif
 
 
       static StringBuilder log_buffer;
@@ -254,6 +256,10 @@ limitations under the License.
       int8_t validate_insertion(ManuvrRunnable*);
       void reclaim_event(ManuvrRunnable*);
       inline void update_maximum_queue_depth() {   max_queue_depth = (exec_queue.size() > (int) max_queue_depth) ? exec_queue.size() : max_queue_depth;   };
+
+      #if defined(__MANUVR_CONSOLE_SUPPORT)
+      int8_t _route_console_input();
+      #endif
 
       /*  */
       inline bool should_run_another_event(int8_t loops, uint32_t begin) {     return (max_events_per_loop ? ((int8_t) max_events_per_loop > loops) : ((micros() - begin) < 1200));   };

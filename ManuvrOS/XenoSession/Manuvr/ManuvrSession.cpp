@@ -559,7 +559,7 @@ int8_t ManuvrSession::notify(ManuvrRunnable *active_event) {
   return return_value;
 }
 
-
+#if defined(__MANUVR_CONSOLE_SUPPORT)
 void ManuvrSession::procDirectDebugInstruction(StringBuilder *input) {
   uint8_t temp_byte = 0;
 
@@ -594,5 +594,6 @@ void ManuvrSession::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
+#endif  //__MANUVR_CONSOLE_SUPPORT
 
 #endif // MANUVR_OVER_THE_WIRE

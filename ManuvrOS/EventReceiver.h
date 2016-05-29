@@ -70,7 +70,9 @@ limitations under the License.
         */
         void         printDebug();
         virtual void printDebug(StringBuilder*);
-        virtual void procDirectDebugInstruction(StringBuilder *input);
+        #ifdef __MANUVR_CONSOLE_SUPPORT
+          virtual void procDirectDebugInstruction(StringBuilder *input);
+        #endif
 
         // TODO: Why in God's name did I do it this way vs a static CONST? Was it because
         //   I didn't know how to link such that it never took up RAM? If so, I can fix that now...

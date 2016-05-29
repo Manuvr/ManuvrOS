@@ -366,9 +366,8 @@ int8_t ManuvrUDP::notify(ManuvrRunnable *active_event) {
 }
 
 
-
+#if defined(__MANUVR_CONSOLE_SUPPORT)
 void ManuvrUDP::procDirectDebugInstruction(StringBuilder *input) {
-#ifdef __MANUVR_CONSOLE_SUPPORT
   char* str = input->position(0);
 
   uint8_t temp_byte = 0;
@@ -390,9 +389,9 @@ void ManuvrUDP::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
 
-#endif
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
+#endif  // __MANUVR_CONSOLE_SUPPORT
 
 
 #endif  // UDP support

@@ -797,9 +797,8 @@ int8_t MGC3130::notify(ManuvrRunnable *active_event) {
 }
 
 
-
+#if defined(__MANUVR_CONSOLE_SUPPORT)
 void MGC3130::procDirectDebugInstruction(StringBuilder *input) {
-#ifdef __MANUVR_CONSOLE_SUPPORT
   char* str = input->position(0);
 
   /* These are debug case-offs that are typically used to test functionality, and are then
@@ -810,6 +809,6 @@ void MGC3130::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
 
-#endif
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
+#endif  // __MANUVR_CONSOLE_SUPPORT

@@ -1085,7 +1085,7 @@ void I2CAdapter::printDebug(StringBuilder *temp) {
 }
 
 
-
+#if defined(__MANUVR_CONSOLE_SUPPORT)
 void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
 
@@ -1130,11 +1130,11 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       purge_stalled_job();
       local_log.concatf("Attempting to purge a stalled jorbe...\n");
       break;
-#ifdef STM32F4XX
-    case 'b':
-      I2C1_EV_IRQHandler();
-      break;
-#endif
+    #ifdef STM32F4XX
+      case 'b':
+        I2C1_EV_IRQHandler();
+        break;
+    #endif
 
     case 'K':
       if (temp_byte) {
@@ -1158,3 +1158,4 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
+#endif  //__MANUVR_CONSOLE_SUPPORT

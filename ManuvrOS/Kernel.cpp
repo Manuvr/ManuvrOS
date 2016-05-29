@@ -254,31 +254,6 @@ int8_t Kernel::bootstrap() {
 
 
 /****************************************************************************************************
-* The code below is related to accepting and parsing user input. It is only relevant if console     *
-*   support is enabled.                                                                             *
-****************************************************************************************************/
-
-/*
-* This is the means by which we feed raw string input from a console into the
-*   kernel's user input slot.
-*/
-void Kernel::accumulateConsoleInput(uint8_t *buf, int len, bool terminal) {
-  if (len > 0) {
-    last_user_input.concat(buf, len);
-
-    if (terminal) {
-      // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
-      // run in idle time.
-      ManuvrRunnable* event = returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
-      event->specific_target = (EventReceiver*) this;
-      Kernel::staticRaiseEvent(event);
-    }
-  }
-}
-
-
-
-/****************************************************************************************************
 * Subscriptions and client management fxns.                                                         *
 ****************************************************************************************************/
 
@@ -1125,18 +1100,19 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
   int8_t return_value = 0;
 
   switch (active_runnable->event_code) {
-    case MANUVR_MSG_USER_DEBUG_INPUT:
-      if (active_runnable->argCount()) {
-        StringBuilder* _tmp = NULL;
-        if (0 == active_runnable->consumeArgAs(&_tmp)) {
-          last_user_input.concatHandoff(_tmp);
+    #if defined(__MANUVR_CONSOLE_SUPPORT)
+      case MANUVR_MSG_USER_DEBUG_INPUT:
+        if (active_runnable->argCount()) {
+          // If the event came with a StringBuilder, concat it onto the last_user_input.
+          StringBuilder* _tmp = NULL;
+          if (0 == active_runnable->consumeArgAs(&_tmp)) {
+            last_user_input.concatHandoff(_tmp);
+          }
         }
-      }
-      last_user_input.string();
-      last_user_input.split(",");
-      procDirectDebugInstruction(&last_user_input);
-      return_value++;
-      break;
+        _route_console_input();
+        return_value++;
+        break;
+    #endif  // __MANUVR_CONSOLE_SUPPORT
 
     case MANUVR_MSG_SELF_DESCRIBE:
       // Field order: 1 uint32, 4 required null-terminated strings, 1 optional.
@@ -1229,144 +1205,6 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
       break;
   }
   return return_value;
-}
-
-
-/**
-* Because this is the root of all console commands into the system, we treat
-*   things a bit differently here.
-* Console commands start with the index of the subscriber they are addressed
-*   to. The following string will be passed into the EventReceiver.
-*/
-void Kernel::procDirectDebugInstruction(StringBuilder* input) {
-  #ifdef __MANUVR_CONSOLE_SUPPORT
-  char *str = (char *) input->position(0);
-  char c = *(str);
-  uint8_t subscriber_idx = 0;
-  uint8_t temp_byte = 0;
-
-  if (*(str) != 0) {
-    // This is always safe because the null terminator shows up as zero, and
-    //   we already know that the string is not zero-length.
-    subscriber_idx = (((uint8_t)*str)-0x30);
-    temp_byte = atoi((char*) str+1);
-  }
-  ManuvrRunnable *event = NULL;  // Pitching events is a common thing in this fxn...
-
-  StringBuilder parse_mule;
-
-  EventReceiver* subscriber = subscribers.get(subscriber_idx);
-  if ((NULL == subscriber) || ((EventReceiver*)this == subscriber)) {
-    // If there was no subscriber specified, or WE were specified
-    //   (for some reason), we process the command ourselves.
-
-    switch (c) {
-      case 'B':
-        if (temp_byte == 128) {
-          Kernel::raiseEvent(MANUVR_MSG_SYS_BOOTLOADER, NULL);
-          break;
-        }
-        local_log.concatf("Will only jump to bootloader if the number '128' follows the command.\n");
-        break;
-      case 'b':
-        if (temp_byte == 128) {
-          Kernel::raiseEvent(MANUVR_MSG_SYS_REBOOT, NULL);
-          break;
-        }
-        local_log.concatf("Will only reboot if the number '128' follows the command.\n");
-        break;
-
-      case 'r':        // Read so many random integers...
-        { // TODO: I don't think the RNG is ever being turned off. Save some power....
-          temp_byte = (temp_byte == 0) ? PLATFORM_RNG_CARRY_CAPACITY : temp_byte;
-          for (uint8_t i = 0; i < temp_byte; i++) {
-            uint32_t x = randomInt();
-            if (x) {
-              local_log.concatf("Random number: 0x%08x\n", x);
-            }
-            else {
-              local_log.concatf("Restarting RNG\n");
-              init_RNG();
-            }
-          }
-        }
-        break;
-
-      case 'u':
-        switch (temp_byte) {
-          case 1:
-            Kernel::raiseEvent(MANUVR_MSG_SELF_DESCRIBE, NULL);
-            break;
-          case 3:
-            Kernel::raiseEvent(MANUVR_MSG_LEGEND_MESSAGES, NULL);
-            break;
-          default:
-            break;
-        }
-        break;
-
-      case 'y':    // Power mode.
-        if (255 != temp_byte) {
-          event = Kernel::returnEvent(MANUVR_MSG_SYS_POWER_MODE);
-          event->addArg((uint8_t) temp_byte);
-          EventReceiver::raiseEvent(event);
-          local_log.concatf("Power mode is now %d.\n", temp_byte);
-        }
-        else {
-        }
-        break;
-
-      #if defined(__MANUVR_DEBUG)
-      case 'i':   // Debug prints.
-        if (1 == temp_byte) {
-          local_log.concat("Kernel profiling enabled.\n");
-          profiler(true);
-        }
-        else if (2 == temp_byte) {
-          printDebug(&local_log);
-        }
-        else if (3 == temp_byte) {
-          local_log.concat("Kernel profiling disabled.\n");
-          profiler(false);
-        }
-        else {
-          printDebug(&local_log);
-        }
-        break;
-      #endif //__MANUVR_DEBUG
-
-      case 'v':           // Set log verbosity.
-        parse_mule.concat(str);
-        parse_mule.split(" ");
-        parse_mule.drop_position(0);
-
-        event = new ManuvrRunnable(MANUVR_MSG_SYS_LOG_VERBOSITY);
-        switch (parse_mule.count()) {
-          case 2:
-            event->specific_target = getSubscriberByName((const char*) (parse_mule.position_trimmed(1)));
-            local_log.concatf("Directing verbosity change to %s.\n", (NULL == event->specific_target) ? "NULL" : event->specific_target->getReceiverName());
-          case 1:
-            event->addArg((uint8_t) parse_mule.position_as_int(0));
-            break;
-          default:
-            break;
-        }
-        EventReceiver::raiseEvent(event);
-        break;
-
-      default:
-        EventReceiver::procDirectDebugInstruction(input);
-        break;
-    }
-  }
-  else {
-    input->cull(1); // Shuck the identifier byte.
-    subscriber->procDirectDebugInstruction(input);
-  }
-  #endif  //__MANUVR_CONSOLE_SUPPORT
-
-  if (local_log.length() > 0) Kernel::log(&local_log);
-  last_user_input.clear();
 }
 
 
@@ -1530,3 +1368,175 @@ int Kernel::serviceSchedules() {
   _ms_elapsed = 0;
   return return_value;
 }
+
+
+/****************************************************************************************************
+* The code below is related to accepting and parsing user input. It is only relevant if console     *
+*   support is enabled.                                                                             *
+****************************************************************************************************/
+#if defined(__MANUVR_CONSOLE_SUPPORT)
+
+/*
+* This is the means by which we feed raw string input from a console into the
+*   kernel's user input slot.
+*/
+void Kernel::accumulateConsoleInput(uint8_t *buf, int len, bool terminal) {
+  if (len > 0) {
+    last_user_input.concat(buf, len);
+
+    if (terminal) {
+      // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
+      // run in idle time.
+      ManuvrRunnable* event = returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
+      event->specific_target = (EventReceiver*) this;
+      Kernel::staticRaiseEvent(event);
+    }
+  }
+}
+
+
+/**
+* Responsible for taking any accumulated console input, doing some basic
+*   error-checking, and routing it to its intended target.
+*/
+int8_t Kernel::_route_console_input() {
+  last_user_input.string();
+  StringBuilder _raw_from_console;
+  // Now we take the data from the buffer so that further input isn't lost. JIC.
+  _raw_from_console.concatHandoff(&last_user_input);
+
+  _raw_from_console.split(" ");
+  if (_raw_from_console.count() > 0) {
+    const char* str = (const char *) _raw_from_console.position(0);
+    int subscriber_idx = atoi(str);
+    switch (*str) {
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      case '8':
+      case '9':
+        // If the first position is a number, we drop the first position.
+        _raw_from_console.drop_position(0);
+        break;
+    }
+
+    if (_raw_from_console.count() > 0) {
+      // If there are still positions, lookup the subscriber and send it the input.
+      EventReceiver* subscriber = subscribers.get(subscriber_idx);
+      if (NULL != subscriber) {
+        subscriber->procDirectDebugInstruction(&_raw_from_console);
+      }
+      else if (getVerbosity() > 2) {
+        local_log.concatf("No such subscriber: %d\n", subscriber_idx);
+      }
+    }
+  }
+
+  if (local_log.length() > 0) Kernel::log(&local_log);
+  return 0;
+}
+
+
+/**
+* Console commands are space-delimited and arrive here already NULL-checked and
+*   tokenized. We can be assured that there is at least one token.
+*/
+void Kernel::procDirectDebugInstruction(StringBuilder* input) {
+  const char* str = (char *) input->position(0);
+  char c    = *str;
+  int temp_int = 0;
+
+  if (input->count() > 1) {
+    // If there is a second token, we proceed on good-faith that it's an int.
+    temp_int = input->position_as_int(1);
+  }
+  else if (strlen(str) > 1) {
+    // We allow a short-hand for the sake of short commands that involve a single int.
+    temp_int = atoi(str + 1);
+  }
+
+  switch (c) {
+    case 'B':
+      if (temp_int == 128) {
+        Kernel::raiseEvent(MANUVR_MSG_SYS_BOOTLOADER, NULL);
+        break;
+      }
+      local_log.concatf("Will only jump to bootloader if the number '128' follows the command.\n");
+      break;
+    case 'b':
+      if (temp_int == 128) {
+        Kernel::raiseEvent(MANUVR_MSG_SYS_REBOOT, NULL);
+        break;
+      }
+      local_log.concatf("Will only reboot if the number '128' follows the command.\n");
+      break;
+    case 'f':  // FPU benchmark
+      {
+        float a = 1.001;
+        long time_var2 = millis();
+        for (int i = 0;i < 1000000;i++) {
+          a += 0.01 * sqrtf(a);
+        }
+        local_log.concatf("Running floating-point test...\nTime:      %d ms\n", millis() - time_var2);
+        local_log.concatf("Value:     %.5f\nFPU test concluded.\n", (double) a);
+      }
+      break;
+    case 'r':        // Read so many random integers...
+      { // TODO: I don't think the RNG is ever being turned off. Save some power....
+        temp_int = (temp_int <= 0) ? PLATFORM_RNG_CARRY_CAPACITY : temp_int;
+        for (uint8_t i = 0; i < temp_int; i++) {
+          uint32_t x = randomInt();
+          if (x) {
+            local_log.concatf("Random number: 0x%08x\n", x);
+          }
+          else {
+            local_log.concatf("Restarting RNG\n");
+            init_RNG();
+          }
+        }
+      }
+      break;
+    case 'u':
+      switch (temp_int) {
+        case 1:
+          Kernel::raiseEvent(MANUVR_MSG_SELF_DESCRIBE, NULL);
+          break;
+        case 3:
+          Kernel::raiseEvent(MANUVR_MSG_LEGEND_MESSAGES, NULL);
+          break;
+        default:
+          break;
+      }
+      break;
+    #if defined(__MANUVR_DEBUG)
+    case 'i':   // Debug prints.
+      if (1 == temp_int) {
+        local_log.concat("Kernel profiling enabled.\n");
+        profiler(true);
+      }
+      else if (2 == temp_int) {
+        printDebug(&local_log);
+      }
+      else if (3 == temp_int) {
+        local_log.concat("Kernel profiling disabled.\n");
+        profiler(false);
+      }
+      else {
+        printDebug(&local_log);
+      }
+      break;
+    #endif //__MANUVR_DEBUG
+    default:
+      EventReceiver::procDirectDebugInstruction(input);
+      break;
+  }
+
+  if (local_log.length() > 0) Kernel::log(&local_log);
+  last_user_input.clear();
+}
+#endif  //__MANUVR_CONSOLE_SUPPORT

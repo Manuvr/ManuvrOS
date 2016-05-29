@@ -460,7 +460,7 @@ int8_t LDS8160::notify(ManuvrRunnable *active_event) {
 }
 
 
-
+#if defined(__MANUVR_CONSOLE_SUPPORT)
 void LDS8160::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
   ManuvrRunnable *event = NULL;  // Pitching events is a common thing in this fxn...
@@ -561,6 +561,7 @@ void LDS8160::procDirectDebugInstruction(StringBuilder *input) {
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 
+#endif  // __MANUVR_CONSOLE_SUPPORT
 
 
 /****************************************************************************************************

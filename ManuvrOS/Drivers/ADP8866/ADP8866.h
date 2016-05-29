@@ -125,7 +125,10 @@ class ADP8866 : public I2CDeviceWithRegisters, public EventReceiver {
     /* Overrides from EventReceiver */
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);
-    void procDirectDebugInstruction(StringBuilder *);
+    #if defined(__MANUVR_CONSOLE_SUPPORT)
+      void procDirectDebugInstruction(StringBuilder*);
+    #endif  //__MANUVR_CONSOLE_SUPPORT
+
 
     /* Direct channel manipulation. */
     void enable_channel(uint8_t, bool);

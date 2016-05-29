@@ -20,7 +20,8 @@ limitations under the License.
 
 */
 
-#ifdef defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SESSION) & defined(__MANUVR_CONSOLE_SUPPORT)
+
 
 #include "ManuvrConsole.h"
 
@@ -209,6 +210,9 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
 }
 
 
+
+// We don't bother casing this off for the preprocessor. In this case, it
+//   is a given that we have __MANUVR_CONSOLE_SUPPORT.
 void ManuvrConsole::procDirectDebugInstruction(StringBuilder *input) {
   uint8_t temp_byte = 0;
 
@@ -232,4 +236,4 @@ void ManuvrConsole::procDirectDebugInstruction(StringBuilder *input) {
 }
 
 
-#endif  // __MANUVR_CONSOLE_SUPPORT
+#endif  // MANUVR_CONSOLE_SESSION  &  __MANUVR_CONSOLE_SUPPORT

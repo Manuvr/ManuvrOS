@@ -135,8 +135,8 @@ int8_t ExampleDriver::notify(ManuvrRunnable *active_event) {
 
 
 
-void ExampleDriver::procDirectDebugInstruction(StringBuilder *input) {
 #ifdef __MANUVR_CONSOLE_SUPPORT
-#endif
+void ExampleDriver::procDirectDebugInstruction(StringBuilder *input) {
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
+#endif

@@ -170,16 +170,18 @@ class ManuvrXport : public EventReceiver {
     /* We will override these functions in EventReceiver. */
     // TODO: I'm not sure I've evaluated the full impact of this sort of
     //    choice.  Calltimes? vtable size? alignment? Fragility? Dig.
-    virtual void   procDirectDebugInstruction(StringBuilder*);
     virtual void   printDebug(StringBuilder *);
     virtual int8_t notify(ManuvrRunnable*);
+    #if defined(__MANUVR_CONSOLE_SUPPORT)
+      virtual void   procDirectDebugInstruction(StringBuilder*);
+    #endif  //__MANUVR_CONSOLE_SUPPORT
+
+    // TODO: Should be protected.
+    int8_t provide_session(XenoSession*);   // Called whenever we instantiate a session.
 
     // We can have up-to 65535 transport instances concurrently. This well-exceeds
     //   the configured limits of most linux installations, so it should be enough.
     static uint16_t TRANSPORT_ID_POOL;
-
-    // TODO: Should be protected.
-    int8_t provide_session(XenoSession*);   // Called whenever we instantiate a session.
 
 
   protected:
