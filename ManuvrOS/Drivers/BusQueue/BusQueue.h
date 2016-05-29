@@ -32,7 +32,7 @@ limitations under the License.
 enum class XferState {
   /* These are start states. */
   UNDEF,      // Freshly instanced (or wiped, if preallocated).
-  IDLE,       // Bus op is waiting somewhere outside of the queue.
+  IDLE,       // Bus op is allocated and waiting somewhere outside of the queue.
 
   /* These states are unstable and should decay into a "finish" state. */
   QUEUED,     // Bus op is idle and waiting for its turn. No bus control.
@@ -61,17 +61,50 @@ enum class BusOpcode {
 
 
 
+/*
+* This class represents a single transaction on the bus, but is dewvoid of
+*   implementation details. This is an interface class that should be extended
+*   by classes that require hardware-level specificity.
+*
+* Since C++ has no formal means of declaring an interface, we will use Java's
+*   conventions. That is, state-bearing members in this interface are ok, but
+*   there should be no function members that are not pure virtuals or inlines.
+*
+* Note also, that a class is not required to inherrit from this ddefinition of
+*   a bus operation to use the XferState and Opcode enums, with their associated
+*   static support functions.
+*/
 class BusOp {
   public:
     //virtual void wipe()  =0;
     //virtual void begin() =0;
+
+    /**
+    * @return true if this operation is idle.
+    */
+    inline bool isIdle() {       return (XferState::IDLE     == xfer_state);  };
+
+    /* Inlines for protected access... TODO: These should be eliminated over time. */
+    inline XferState get_state() {                 return xfer_state;       };
+    inline void      set_state(XferState nu) {     xfer_state = nu;         };
+    inline BusOpcode get_opcode() {                return opcode;           };
+    inline void      set_opcode(BusOpcode nu) {    opcode = nu;             };
+
+    /* Inlines for object-style usage of static functions... */
+    inline const char* getOpcodeString() {  return BusOp::getOpcodeString(opcode);     };
+    inline const char* getStateString() {   return BusOp::getStateString(xfer_state);  };
+
 
     static int next_txn_id;
     static const char* getStateString(XferState);
     static const char* getOpcodeString(BusOpcode);
 
 
+
   protected:
+    BusOpcode opcode     = BusOpcode::UNDEF;      // What is the particular operation being done?
+    XferState xfer_state = XferState::UNDEF;      // What state is this transfer in?
+
     // Call-ahead, call-back
 
   private:
