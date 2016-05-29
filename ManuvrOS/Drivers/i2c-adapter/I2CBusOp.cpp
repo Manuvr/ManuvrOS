@@ -55,16 +55,15 @@ limitations under the License.
 *   under the exclusive control of the caller.
 */
 I2CBusOp::I2CBusOp(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len) {
-  this->initiated       = false;
-  this->subaddr_sent    = (sub_addr >= 0) ? false : true;
+  this->xfer_state      = XferState::IDLE;
+  this->xfer_fault      = XferFault::NONE;
   this->opcode          = nu_op;
+  this->subaddr_sent    = (sub_addr >= 0) ? false : true;
   this->dev_addr        = dev_addr;
   this->sub_addr        = sub_addr;
   this->buf             = buf;
-  this->len             = len;
+  this->buf_len         = len;
   this->txn_id          = BusOp::next_txn_id++;
-  this->err_code        = I2C_ERR_CODE_NO_ERROR;
-  this->xfer_state      = XferState::IDLE;
   this->device          = NULL;
   this->remaining_bytes = 0;
   this->requester       = NULL;
@@ -87,25 +86,6 @@ I2CBusOp::~I2CBusOp() {
 * These functions are for logging support.                                                          *
 ****************************************************************************************************/
 
-const char* I2CBusOp::getErrorString(int8_t code) {
-  switch (code) {
-    case I2C_ERR_CODE_NO_ERROR:     return "NO_ERROR";
-    case I2C_ERR_CODE_DEF_CASE:     return "I2C_ERR_CODE_DEF_CASE";
-    case I2C_ERR_CODE_NO_CASE:      return "NO_CASE";
-    case I2C_ERR_CODE_NO_REASON:    return "NO_REASON";
-    case I2C_ERR_CODE_BUS_FAULT:    return "BUS_FAULT";
-    case I2C_ERR_CODE_NO_DEVICE:    return "NO_DEVICE";
-    case I2C_ERR_CODE_ADDR_2TX:     return "ADDR_2TX";
-    case I2C_ERR_CODE_BAD_OP:       return "Bad operation code";
-    case I2C_ERR_CODE_TIMEOUT:      return "TIMEOUT";
-    case I2C_ERR_CODE_CLASS_ABORT:  return "CLASS_ABORT";
-    case I2C_ERR_CODE_BUS_BUSY:     return "ARBITRATION_LOST";
-    case I2C_ERR_SLAVE_NOT_FOUND:   return "SLAVE_NOT_FOUND";
-    default:                        return "<UNKNOWN>";
-  }
-}
-
-
 /*
 * Dump this item to the dev log.
 */
@@ -123,20 +103,20 @@ void I2CBusOp::printDebug(void) {
 */
 void I2CBusOp::printDebug(StringBuilder* temp) {
   if (temp != NULL) {
-    temp->concatf("\n---[ %s I2CQueueOperation  0x%08x ]---\n", (completed() ? "Complete" : (initiated ? "Initiated" : "Uninitiated")), txn_id);
-    temp->concatf("opcode:          %s\n", BusOp::getOpcodeString(opcode));
+    temp->concatf("\n---[ I2CQueueOperation  0x%08x ]---\n", txn_id);
+    temp->concatf("opcode:          %s\n", getOpcodeString());
     temp->concatf("device:          0x%02x\n", dev_addr);
 
     if (sub_addr >= 0x00) {
       temp->concatf("subaddress:      0x%02x (%ssent)\n", sub_addr, (subaddr_sent ? "" : "un"));
     }
-    temp->concatf("xfer_state:      %s\n", BusOp::getStateString(xfer_state));
-    temp->concatf("err_code:        %s (%d)\n", getErrorString(err_code), err_code);
-    temp->concatf("len:             %d\n", len);
+    temp->concatf("xfer_state:      %s\n", getStateString());
+    temp->concatf("Fault:           %s\n", getErrorString());
+    temp->concatf("buf_len:         %d\n", buf_len);
     temp->concatf("remaining_bytes: %d\n", remaining_bytes);
-    if (len > 0) {
+    if (buf_len > 0) {
       temp->concatf( "*(0x%08x):   ", (uint32_t) buf);
-      for (uint8_t i = 0; i < len; i++) {
+      for (uint8_t i = 0; i < buf_len; i++) {
         temp->concatf("0x%02x ", (uint8_t) *(buf + i));
       }
     }
@@ -153,10 +133,9 @@ void I2CBusOp::printDebug(StringBuilder* temp) {
 ****************************************************************************************************/
 
 /* Call to mark something completed that may not be. Also sends a stop. */
-int8_t I2CBusOp::abort(void) {     return this->abort(I2C_ERR_CODE_NO_REASON);  }
-int8_t I2CBusOp::abort(int8_t er) {
+int8_t I2CBusOp::abort(XferFault er) {
   markComplete();
-  err_code  = er;
+  xfer_fault = er;
   return 0;
 }
 
@@ -166,7 +145,6 @@ int8_t I2CBusOp::abort(int8_t er) {
 */
 void I2CBusOp::markComplete(void) {
 	xfer_state = XferState::COMPLETE;
-  initiated = true;  // Just so we don't accidentally get hung up thinking we need to start it.
 	ManuvrRunnable* q_rdy = Kernel::returnEvent(MANUVR_MSG_I2C_QUEUE_READY);
 	q_rdy->specific_target = device;
   Kernel::isrRaiseEvent(q_rdy);   // Raise an event
@@ -180,21 +158,20 @@ void I2CBusOp::markComplete(void) {
 
 int8_t I2CBusOp::begin(void) {
   if (NULL == device) {
-    abort(I2C_ERR_CODE_NO_DEVICE);
+    abort(XferFault::DEV_NOT_FOUND);
     return -1;
   }
 
   if ((NULL != requester) && !requester->operationCallahead(this)) {
-    abort(I2C_ERR_CODE_CLASS_ABORT);
+    abort(XferFault::IO_RECALL);
     return -1;
   }
 
-  initiated = true;
   xfer_state = XferState::ADDR;
   init_dma();
   if (device->generateStart()) {
     // Failure to generate START condition.
-    abort(I2C_ERR_CODE_NO_DEVICE);
+    abort(XferFault::DEV_NOT_FOUND);
     return -1;
   }
   return 0;
@@ -223,7 +200,7 @@ int8_t I2CBusOp::init_dma() {
   DMA_InitStructure.DMA_PeripheralInc      = DMA_PeripheralInc_Disable;
   DMA_InitStructure.DMA_MemoryInc          = DMA_MemoryInc_Enable;
   DMA_InitStructure.DMA_Mode               = DMA_Mode_Normal;
-  DMA_InitStructure.DMA_BufferSize         = (uint16_t) len;   // Why did clive1 have (len-1)??
+  DMA_InitStructure.DMA_BufferSize         = (uint16_t) buf_len;   // Why did clive1 have (len-1)??
   DMA_InitStructure.DMA_Memory0BaseAddr    = (uint32_t) buf;
   DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t) &I2C1->DR;
 
@@ -258,8 +235,8 @@ int8_t I2CBusOp::init_dma() {
     uint8_t sa = (uint8_t) (sub_addr & 0x00FF);
 
     if (write(device->dev, &sa, 1) == 1) {
-      return_value = read(device->dev, buf, len);
-      if (return_value == len) {
+      return_value = read(device->dev, buf, buf_len);
+      if (return_value == buf_len) {
         markComplete();
       }
       else return -1;
@@ -271,12 +248,12 @@ int8_t I2CBusOp::init_dma() {
   }
 
   else if (opcode == BusOpcode::TX) {
-    uint8_t buffer[len + 1];
+    uint8_t buffer[buf_len + 1];
     buffer[0] = (uint8_t) (sub_addr & 0x00FF);
 
-    for (int i = 0; i < len; i++) buffer[i + 1] = *(buf + i);
+    for (int i = 0; i < buf_len; i++) buffer[i + 1] = *(buf + i);
 
-    if (write(device->dev, &buffer, len+1) == len+1) {
+    if (write(device->dev, &buffer, buf_len+1) == buf_len+1) {
       markComplete();
     }
     else {
@@ -338,7 +315,7 @@ int8_t I2CBusOp::init_dma() {
         #ifdef __MANUVR_DEBUG
         if (verbosity > 1) output.concatf("\t--- Something is bad wrong. Our xfer_state is %s\n", BusOp::getStateString(xfer_state));
         #endif
-        abort(I2C_ERR_CODE_DEF_CASE);
+        abort();
         break;
     }
 

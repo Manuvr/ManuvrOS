@@ -340,10 +340,10 @@ int8_t I2CDeviceWithRegisters::writeDirtyRegisters(void) {
 void I2CDeviceWithRegisters::operationCompleteCallback(I2CBusOp* completed) {
 	StringBuilder temp; //("Default callback for registers!\n");
 	if (completed != NULL) {
-		if (completed->err_code == I2C_ERR_CODE_NO_ERROR) {
+		if (!completed->hasFault()) {
 			DeviceRegister *nu = getRegisterByBaseAddress(completed->sub_addr);
 			if (nu != NULL) {
-				switch (completed->opcode) {
+				switch (completed->get_opcode()) {
 				  case BusOpcode::RX:
 				    nu->unread = true;
 				    //temp.concat("Buffer contents (read):  ");

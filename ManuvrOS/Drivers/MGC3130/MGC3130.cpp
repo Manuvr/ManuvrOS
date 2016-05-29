@@ -503,8 +503,8 @@ void MGC3130::operationCompleteCallback(I2CBusOp* completed) {
   are_we_holding_ts(false);
   setPinFxn(_ts_pin, FALLING, mgc3130_isr_check);
 
-  if (completed->err_code == I2C_ERR_CODE_NO_ERROR) {
-    if (completed->opcode == BusOpcode::RX) {
+  if (!completed->hasFault()) {
+    if (completed->get_opcode() == BusOpcode::RX) {
       uint8_t data;
       int c = 0;
       uint32_t temp_value = 0;   // Used to aggregate fields that span several bytes.
@@ -515,7 +515,7 @@ void MGC3130::operationCompleteCallback(I2CBusOp* completed) {
       bool wheel_valid = false;
       uint8_t byte_index = 0;
 
-      int bytes_expected = completed->len;
+      int bytes_expected = completed->buf_len;
 
       while(0 < bytes_expected) {
         data = *(read_buffer + byte_index++);

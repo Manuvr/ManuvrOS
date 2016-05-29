@@ -99,7 +99,7 @@ class BusOp {
   public:
     uint8_t* buf         = 0;                  // Pointer to the data buffer for the transaction.
     uint16_t buf_len     = 0;                  // How large is the above buffer?
-    
+
     /* Mandatory overrides... */
     //virtual void wipe()  =0;
     //virtual void begin() =0;
@@ -108,6 +108,18 @@ class BusOp {
     * @return true if this operation is idle.
     */
     inline bool isIdle() {       return (XferState::IDLE     == xfer_state);  };
+
+    /**
+    * This only works because of careful defines. Tread lightly.
+    *
+    * @return true if this operation completed without problems.
+    */
+    inline bool has_bus_control() {
+      return (
+        (xfer_state == XferState::STOP) | (xfer_state == XferState::IO_WAIT) | \
+        (xfer_state == XferState::INITIATE) | (xfer_state == XferState::ADDR)
+      );
+    };
 
     /**
     * @return true if this operation completed without problems.

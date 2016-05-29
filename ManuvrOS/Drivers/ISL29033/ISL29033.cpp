@@ -186,7 +186,7 @@ int8_t ISL29033::readSensor(void) {
 void ISL29033::operationCompleteCallback(I2CBusOp* completed) {
   I2CDeviceWithRegisters::operationCompleteCallback(completed);
   if (completed != NULL) {
-    switch (completed->opcode) {
+    switch (completed->get_opcode()) {
       case BusOpcode::RX:
         switch (completed->sub_addr) {
           case ISL29033_REG_COMMAND_1:

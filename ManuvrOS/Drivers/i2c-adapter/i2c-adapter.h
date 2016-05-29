@@ -47,7 +47,10 @@ This file is the tortured result of growing pains since the beginning of
 
   #define I2CADAPTER_MAX_QUEUE_PRINT 3
 
-
+  /*
+  * These are used as function-return codes, and have nothing to do with bus
+  *   operations.
+  */
   #define I2C_ERR_CODE_NO_ERROR    0
   #define I2C_ERR_CODE_NO_CASE     -1
   #define I2C_ERR_CODE_NO_REASON   -2
@@ -71,7 +74,6 @@ This file is the tortured result of growing pains since the beginning of
   #define I2C_ERR_SLAVE_REG_IS_RO   -18   // We tried to write to a register defined as read-only.
 
 
-
   #define I2C_BUS_STATE_NO_INIT  0x00
   #define I2C_BUS_STATE_ERROR    0x01
   #define I2C_BUS_STATE_READY    0x02
@@ -93,26 +95,19 @@ This file is the tortured result of growing pains since the beginning of
   /*
   * This class represents an atomic operation on the i2c bus.
   */
-  class I2CBusOp {
+  class I2CBusOp : public BusOp {
     public:
       I2CDevice  *requester;
       I2CAdapter *device;
 
-      uint8_t*  buf;
       int       txn_id;        // How are we going to keep track of this item?
-      BusOpcode opcode;        // What is the nature of this work-queue item?
-      XferState xfer_state;    // What state is the transfer in?
 
       int8_t verbosity;
       uint8_t dev_addr;
+
       int16_t sub_addr;
+      uint16_t remaining_bytes;
 
-      int8_t    err_code;      // If we had an error, the code will be here.
-
-      uint8_t remaining_bytes;
-      uint8_t len;
-
-      bool      initiated;     // Is this item fresh or is it waiting on a reply?
       bool      reap_buffer;   // If true, we will reap the buffer.
 
 
@@ -125,13 +120,6 @@ This file is the tortured result of growing pains since the beginning of
       */
       int8_t begin(void);
 
-
-      /**
-      * Inlined. If this job is done processing. Errors or not.
-      *
-      * @return true if so. False otherwise.
-      */
-      inline bool completed(void) {  return (xfer_state == XferState::COMPLETE);  }
 
       /**
       * Decide if we need to send a subaddress.
@@ -147,8 +135,15 @@ This file is the tortured result of growing pains since the beginning of
 
       /* Call to mark something completed that may not be. */
       void markComplete(void);
-      int8_t abort(void);
-      int8_t abort(int8_t);
+
+      /**
+      * This will mark the bus operation complete with a given error code.
+      * Overriden for simplicity. Marks the operation with failure code NO_REASON.
+      *
+      * @return 0 on success. Non-zero on failure.
+      */
+      inline int8_t abort() {    return abort(XferFault::NO_REASON); }
+      int8_t abort(XferFault);
 
       /* Debug aides */
       void printDebug(void);
@@ -157,11 +152,11 @@ This file is the tortured result of growing pains since the beginning of
 
     private:
       bool      subaddr_sent;    // Have the subaddress been sent yet?
+
+
       static ManuvrRunnable event_queue_ready;
 
       int8_t init_dma();
-      static const char* getErrorString(int8_t code);
-
   };
 
 

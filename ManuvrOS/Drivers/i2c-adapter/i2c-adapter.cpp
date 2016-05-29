@@ -268,7 +268,7 @@ int8_t I2CAdapter::generateStop() {
 
 
 int8_t I2CAdapter::dispatchOperation(I2CBusOp* op) {
-  op->abort(I2C_ERR_CODE_TIMEOUT);
+  op->abort(XferFault::TIMEOUT);
   return 0;
 }
 
@@ -342,7 +342,7 @@ int8_t I2CAdapter::dispatchOperation(I2CBusOp* op) {
         op->advance_operation(1);
       }
 
-      if (op->opcode == BusOpcode::RX) {
+      if (op->get_opcode() == BusOpcode::RX) {
         Wire.endTransmission(I2C_NOSTOP);
         Wire.requestFrom(op->dev_addr, op->len, I2C_STOP, 10000);
         int i = 0;
@@ -350,11 +350,11 @@ int8_t I2CAdapter::dispatchOperation(I2CBusOp* op) {
           *(op->buf + i++) = (uint8_t) Wire.readByte();
         }
       }
-      else if (op->opcode == BusOpcode::TX) {
+      else if (op->get_opcode() == BusOpcode::TX) {
         for(int i = 0; i < op->len; i++) Wire.write(*(op->buf+i));
         Wire.endTransmission(I2C_STOP, 10000);   // 10ms timeout
       }
-      else if (op->opcode == BusOpcode::TX_CMD) {
+      else if (op->get_opcode() == BusOpcode::TX_CMD) {
         Wire.endTransmission(I2C_STOP, 10000);   // 10ms timeout
       }
 
@@ -384,7 +384,7 @@ int8_t I2CAdapter::dispatchOperation(I2CBusOp* op) {
       op->advance_operation(1);
     }
 
-    if (op->opcode == BusOpcode::RX) {
+    if (op->get_opcode() == BusOpcode::RX) {
       Wire1.endTransmission(I2C_NOSTOP);
       Wire1.requestFrom(op->dev_addr, op->len, I2C_STOP, 10000);
       int i = 0;
@@ -392,11 +392,11 @@ int8_t I2CAdapter::dispatchOperation(I2CBusOp* op) {
         *(op->buf + i++) = (uint8_t) Wire1.readByte();
       }
     }
-    else if (op->opcode == BusOpcode::TX) {
+    else if (op->get_opcode() == BusOpcode::TX) {
       for(int i = 0; i < op->len; i++) Wire1.write(*(op->buf+i));
       Wire1.endTransmission(I2C_STOP, 10000);   // 10ms timeout
     }
-    else if (op->opcode == BusOpcode::TX_CMD) {
+    else if (op->get_opcode() == BusOpcode::TX_CMD) {
       Wire1.endTransmission(I2C_STOP, 10000);   // 10ms timeout
     }
 
@@ -859,8 +859,8 @@ bool I2CAdapter::insert_work_item(I2CBusOp *nu) {
 */
 void I2CAdapter::advance_work_queue(void) {
 	if (current_queue_item != NULL) {
-		if (current_queue_item->completed()) {
-			if (I2C_ERR_CODE_NO_ERROR == current_queue_item->err_code) {
+		if (current_queue_item->isComplete()) {
+			if (!current_queue_item->hasFault()) {
 			  //temp.concatf("Destroying successful job 0x%08x.\n", current_queue_item->txn_id);
 			}
 			else {
@@ -877,8 +877,8 @@ void I2CAdapter::advance_work_queue(void) {
 				// TODO: need some minor reorg to make this not so obtuse...
 				current_queue_item->requester->operationCompleteCallback(current_queue_item);
 			}
-			else if (current_queue_item->opcode == BusOpcode::TX_CMD) {
-				if (current_queue_item->err_code == I2C_ERR_CODE_NO_ERROR) {
+			else if (current_queue_item->get_opcode() == BusOpcode::TX_CMD) {
+				if (!current_queue_item->hasFault()) {
 					ping_map[current_queue_item->dev_addr % 128] = 1;
 				}
 				else {
@@ -911,7 +911,7 @@ void I2CAdapter::advance_work_queue(void) {
 	}
 
 	if (current_queue_item != NULL) {
-		if (!current_queue_item->initiated) {
+		if (!current_queue_item->has_bus_control()) {
 			current_queue_item->begin();
 		}
 	}
