@@ -137,6 +137,28 @@ int8_t ExampleDriver::notify(ManuvrRunnable *active_event) {
 
 #ifdef __MANUVR_CONSOLE_SUPPORT
 void ExampleDriver::procDirectDebugInstruction(StringBuilder *input) {
+  const char* str = (char *) input->position(0);
+  char c    = *str;
+  int temp_int = 0;
+
+  if (input->count() > 1) {
+    // If there is a second token, we proceed on good-faith that it's an int.
+    temp_int = input->position_as_int(1);
+  }
+  else if (strlen(str) > 1) {
+    // We allow a short-hand for the sake of short commands that involve a single int.
+    temp_int = atoi(str + 1);
+  }
+
+  switch (c) {
+    case '*':
+      break;
+
+    default:
+      EventReceiver::procDirectDebugInstruction(input);
+      break;
+  }
+
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 #endif

@@ -277,9 +277,9 @@ void ManuvrableNeoPixel::theaterChase(uint32_t c, uint8_t wait) {
         setPixelColor(i+q, c);    //turn every third pixel on
       }
       show();
-     
+
       delay(wait);
-     
+
       for (int i=0; i < numPixels(); i=i+3) {
         setPixelColor(i+q, 0);        //turn every third pixel off
       }
@@ -311,9 +311,9 @@ void ManuvrableNeoPixel::theaterChaseRainbow(uint8_t wait) {
           setPixelColor(i+q, Wheel( (i+j) % 255));    //turn every third pixel on
         }
         show();
-       
+
         delay(wait);
-       
+
         for (int i=0; i < numPixels(); i=i+3) {
           setPixelColor(i+q, 0);        //turn every third pixel off
         }
@@ -329,18 +329,18 @@ void ManuvrableNeoPixel::theaterChaseRainbow(uint8_t wait) {
 
 
 /****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌          
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄ 
+* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
+* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
+* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
 * ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
 * ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
 * ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
 * ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀ 
-* 
+*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+*
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
 
@@ -353,13 +353,13 @@ const char* ManuvrableNeoPixel::getReceiverName() {  return "NeoPixel";  }
 
 
 /**
-* Debug support method. This fxn is only present in debug builds. 
+* Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void ManuvrableNeoPixel::printDebug(StringBuilder *output) {
   if (output == NULL) return;
-  
+
   EventReceiver::printDebug(output);
   output->concat("\n");
 }
@@ -384,10 +384,10 @@ int8_t ManuvrableNeoPixel::bootComplete() {
 
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
-*   has been serviced and we are now getting the chance to see the results. The argument 
+*   has been serviced and we are now getting the chance to see the results. The argument
 *   to this fxn will never be NULL.
 *
-* Depending on class implementations, we might choose to handle the completed Event differently. We 
+* Depending on class implementations, we might choose to handle the completed Event differently. We
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
 *   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
@@ -398,15 +398,15 @@ int8_t ManuvrableNeoPixel::bootComplete() {
 */
 int8_t ManuvrableNeoPixel::callback_proc(ManuvrRunnable *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
-     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
+     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
-  
+
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     default:
       break;
   }
-  
+
   return return_value;
 }
 
@@ -415,7 +415,7 @@ int8_t ManuvrableNeoPixel::callback_proc(ManuvrRunnable *event) {
 
 int8_t ManuvrableNeoPixel::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
-  
+
   switch (active_event->event_code) {
     case MANUVR_MSG_NEOPIXEL_REFRESH:
       show();
@@ -484,5 +484,30 @@ int8_t ManuvrableNeoPixel::notify(ManuvrRunnable *active_event) {
 }
 
 
+#ifdef __MANUVR_CONSOLE_SUPPORT
+void ManuvrableNeoPixel::procDirectDebugInstruction(StringBuilder *input) {
+  const char* str = (char *) input->position(0);
+  char c    = *str;
+  int temp_int = 0;
 
+  if (input->count() > 1) {
+    // If there is a second token, we proceed on good-faith that it's an int.
+    temp_int = input->position_as_int(1);
+  }
+  else if (strlen(str) > 1) {
+    // We allow a short-hand for the sake of short commands that involve a single int.
+    temp_int = atoi(str + 1);
+  }
 
+  switch (c) {
+    case '*':
+      break;
+
+    default:
+      EventReceiver::procDirectDebugInstruction(input);
+      break;
+  }
+
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+}
+#endif

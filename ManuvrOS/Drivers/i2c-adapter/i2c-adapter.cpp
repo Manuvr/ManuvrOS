@@ -1088,23 +1088,28 @@ void I2CAdapter::printDebug(StringBuilder *temp) {
 #if defined(__MANUVR_CONSOLE_SUPPORT)
 void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
-
   char c = *(str);
-  uint8_t temp_byte = 0;        // Many commands here take a single integer argument.
-  if (*(str) != 0) {
-    temp_byte = atoi((char*) str+1);
+  int temp_int = 0;
+
+  if (input->count() > 1) {
+    // If there is a second token, we proceed on good-faith that it's an int.
+    temp_int = input->position_as_int(1);
+  }
+  else if (strlen(str) > 1) {
+    // We allow a short-hand for the sake of short commands that involve a single int.
+    temp_int = atoi(str + 1);
   }
 
   switch (c) {
     // i2c debugging cases....
     case 'i':
-      if (temp_byte < dev_list.size()) {
-        dev_list.get(temp_byte)->printDebug(&local_log);
+      if (temp_int < dev_list.size()) {
+        dev_list.get(temp_int)->printDebug(&local_log);
       }
-      else if (temp_byte == 255) {
+      else if (temp_int == 255) {
         printDevs(&local_log);
       }
-      else if (temp_byte == 253) {
+      else if (temp_int == 253) {
         printPingMap(&local_log);
       }
       else {
@@ -1137,9 +1142,9 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
     #endif
 
     case 'K':
-      if (temp_byte) {
-        local_log.concatf("ping i2c slave 0x%02x.\n", temp_byte);
-        ping_slave_addr(temp_byte);
+      if (temp_int) {
+        local_log.concatf("ping i2c slave 0x%02x.\n", temp_int);
+        ping_slave_addr(temp_int);
       }
       else if (!_er_flag(I2C_BUS_FLAG_PINGING)) {
         _er_set_flag(I2C_BUS_FLAG_PINGING);

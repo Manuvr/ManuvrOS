@@ -42,9 +42,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 *
 * Another consideration: There are 8 digital potentiometers on the PCB attached to the columns. The class is presently
 *   organized to maintain the output attenuation regardless of input. It is, of course, possible to maintain the
-*   attenuation settings such that they follow a given input, but this will require additions to this class to shift 
+*   attenuation settings such that they follow a given input, but this will require additions to this class to shift
 *   potentiometer values alongside crosspoint configurations.
-* 
+*
 * Notes regarding hardware design....
 * Normally, we would want to keep one input channel tied to ground so that otherwise unbound outputs can be tied to it
 *   for improved noise suppression. But since we have the digital potentiometers on the side of the crosspoint that
@@ -85,14 +85,14 @@ class AudioRouter : public EventReceiver {
 
     int8_t init(void);
     void preserveOnDestroy(bool);
-    
+
     int8_t route(uint8_t col, uint8_t row);       // Establish a route to the given output from the given input.
 
     int8_t unroute(uint8_t col, uint8_t row);     // Disconnect the given output from the given input.
     int8_t unroute(uint8_t col);                  // Disconnect the given output from all inputs.
 
-    int8_t nameInput(uint8_t row, char*);   // Name the input channel. 
-    int8_t nameOutput(uint8_t col, char*);  // Name the output channel. 
+    int8_t nameInput(uint8_t row, char*);   // Name the input channel.
+    int8_t nameOutput(uint8_t col, char*);  // Name the output channel.
 
     int8_t setVolume(uint8_t col, uint8_t vol);   // Set the volume coming out of a given output channel.
 
@@ -101,13 +101,15 @@ class AudioRouter : public EventReceiver {
 
     int8_t status(StringBuilder*);     // Write some status about the routes to the provided char buffer.
 
-    
+
     /* Overrides from EventReceiver */
     void printDebug(StringBuilder*);
     const char* getReceiverName();
     int8_t notify(ManuvrEvent*);
     int8_t callback_proc(ManuvrEvent *);
-	void procDirectDebugInstruction(StringBuilder*);
+    #if defined(__MANUVR_CONSOLE_SUPPORT)
+      void procDirectDebugInstruction(StringBuilder*);
+    #endif  //__MANUVR_CONSOLE_SUPPORT
 
 
     // TODO: These ought to be statics...
@@ -115,7 +117,7 @@ class AudioRouter : public EventReceiver {
     void dumpInputChannel(uint8_t chan, StringBuilder*);
     void dumpOutputChannel(uint8_t chan, StringBuilder*);
 
-    
+
     static constexpr const int8_t AUDIO_ROUTER_ERROR_INPUT_DISPLACED = 1;    // There was no error, but a channel-routing operation has displaced a previously-routed input.
     static constexpr const int8_t AUDIO_ROUTER_ERROR_NO_ERROR        = 0;    // There was no error.
     static constexpr const int8_t AUDIO_ROUTER_ERROR_UNROUTE_FAILED  = -1;   // We tried to unroute a signal from an output and failed.
@@ -123,26 +125,25 @@ class AudioRouter : public EventReceiver {
     static constexpr const int8_t AUDIO_ROUTER_ERROR_BAD_COLUMN      = -3;   // Column was out-of-bounds.
     static constexpr const int8_t AUDIO_ROUTER_ERROR_BAD_ROW         = -4;   // Row was out-of-bounds.
 
-    
+
   protected:
     int8_t bootComplete();
-    
-    
+
+
   private:
     uint8_t i2c_addr_dp_lo;
     uint8_t i2c_addr_dp_hi;
     uint8_t i2c_addr_cp_switch;
-    
+
     CPInputChannel*  inputs[12];
     CPOutputChannel* outputs[8];
-    
+
     ADG2128 *cp_switch;
     ISL23345 *dp_lo;
     ISL23345 *dp_hi;
-    
+
     CPOutputChannel* getOutputByCol(uint8_t);
-    
+
     static const uint8_t col_remap[8];
 };
 #endif
-

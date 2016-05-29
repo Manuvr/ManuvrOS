@@ -181,14 +181,16 @@ This file is the tortured result of growing pains since the beginning of
       /* Debug aides */
       const char* getReceiverName();
       void printPingMap(StringBuilder *);
-      void printDebug(StringBuilder *);
+      void printDebug(StringBuilder*);
       void printDevs(StringBuilder *);
       void printDevs(StringBuilder *, uint8_t dev_num);
 
       /* Overrides from EventReceiver */
-      void procDirectDebugInstruction(StringBuilder *);
       int8_t notify(ManuvrRunnable*);
       int8_t callback_proc(ManuvrRunnable *);
+      #if defined(__MANUVR_CONSOLE_SUPPORT)
+        void procDirectDebugInstruction(StringBuilder*);
+      #endif  //__MANUVR_CONSOLE_SUPPORT
 
 
       // These are meant to be called from the bus jobs. They deal with specific bus functions

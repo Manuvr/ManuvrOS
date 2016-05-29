@@ -62,7 +62,7 @@ class ManuvrableNeoPixel : public EventReceiver {
     uint16_t numPixels(void) const;
     static uint32_t Color(uint8_t r, uint8_t g, uint8_t b);
     uint32_t getPixelColor(uint16_t n) const;
-    
+
 
     /* Overrides from EventReceiver */
     int8_t bootComplete();
@@ -70,17 +70,19 @@ class ManuvrableNeoPixel : public EventReceiver {
     const char* getReceiverName();
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);
+    #if defined(__MANUVR_CONSOLE_SUPPORT)
+      void procDirectDebugInstruction(StringBuilder*);
+    #endif  //__MANUVR_CONSOLE_SUPPORT
 
 
   private:
+    uint32_t endTime;         // Latch timing reference
+    const uint16_t numLEDs;   // Number of RGB LEDs in strip
+    const uint16_t numBytes;  // Size of 'pixels' buffer below
     uint8_t  mode;
-    
-    const uint16_t numLEDs;       // Number of RGB LEDs in strip
-    const uint16_t numBytes;      // Size of 'pixels' buffer below
-    uint8_t  pin;           // Output pin number
+    uint8_t  pin;             // Output pin number
     uint8_t  brightness;
-    uint8_t  *pixels;        // Holds LED color values (3 bytes each)
-    uint32_t endTime;       // Latch timing reference
+    uint8_t  *pixels;         // Holds LED color values (3 bytes each)
 };
 
 #endif // MANUVRABLE_NEOPIXEL_H

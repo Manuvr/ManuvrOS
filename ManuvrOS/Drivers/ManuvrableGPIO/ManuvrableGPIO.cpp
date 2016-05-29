@@ -206,8 +206,8 @@ int8_t ManuvrableGPIO::notify(ManuvrRunnable *active_event) {
 #if defined(__MANUVR_CONSOLE_SUPPORT)
 void ManuvrableGPIO::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
-  uint8_t  _pin = (input->count() > 1) ? atoi((const char*) input->position(1)) : 0;
-  uint16_t _val = (input->count() > 2) ? (0 < atoi((const char*) input->position(2))) : 0;
+  uint8_t  _pin = (input->count() > 1) ? input->position_as_int(1) : 0;
+  uint16_t _val = (input->count() > 2) ? input->position_as_int(2) : 0;
 
   switch (*(str)) {
     case 's':   // Read a pin

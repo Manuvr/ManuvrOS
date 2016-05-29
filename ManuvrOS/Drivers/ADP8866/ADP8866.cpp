@@ -460,14 +460,26 @@ int8_t ADP8866::notify(ManuvrRunnable *active_event) {
 #if defined(__MANUVR_CONSOLE_SUPPORT)
 
 void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
-  char* str = input->position(0);
+  const char* str = (char *) input->position(0);
+  char c    = *str;
+  int channel  = 0;
+  int temp_int = 0;
 
-  uint8_t temp_byte = 0;
-  if (*(str) != 0) {
-    temp_byte = atoi((char*) str+1);
+  if (input->count() > 1) {
+    // If there is a second token, we proceed on good-faith that it's an int.
+    channel = input->position_as_int(1);
+  }
+  else if (strlen(str) > 1) {
+    // We allow a short-hand for the sake of short commands that involve a single int.
+    channel = atoi(str + 1);
   }
 
-  switch (*(str)) {
+  if (input->count() > 2) {
+    // If there is a second token, we proceed on good-faith that it's an int.
+    temp_int = input->position_as_int(2);
+  }
+
+  switch (c) {
     case 'r':
       reset();
       break;
@@ -475,11 +487,11 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
       syncRegisters();
       break;
     case 'p':
-      pulse_channel(*(str) - 0x30, temp_byte);
+      pulse_channel(channel, temp_int);
       break;
     case 'l':
     case 'L':
-      enable_channel(temp_byte, (*(str) == 'L'));
+      enable_channel(channel, (*(str) == 'L'));
       break;
     case '0':
     case '1':
@@ -491,12 +503,8 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
     case '7':
     case '8':
     case '9':
-      set_brightness(*(str) - 0x30, temp_byte);
-      {
-        StringBuilder output;
-        output.concatf("ADP8866: set_brightness(%u, %u)\n", *(str) - 0x30, temp_byte);
-        Kernel::log(&output);
-      }
+      set_brightness(*(str) - 0x30, channel);
+      if (getVerbosity() > 5) local_log.concatf("ADP8866: set_brightness(%u, %u)\n", *(str) - 0x30, temp_int);
       break;
     default:
       EventReceiver::procDirectDebugInstruction(input);
