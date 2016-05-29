@@ -203,14 +203,6 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
   dev = dev_id;
 
   if (dev_id == 1) {
-    GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.Pin       = GPIO_PIN_7|GPIO_PIN_6;
-    GPIO_InitStruct.Mode      = GPIO_MODE_AF_OD;
-    GPIO_InitStruct.Pull      = GPIO_PULLUP;
-    GPIO_InitStruct.Speed     = GPIO_SPEED_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
     __HAL_RCC_I2C1_CLK_ENABLE();
 
     hi2c1.Instance              = I2C1;
@@ -223,6 +215,14 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
     hi2c1.Init.GeneralCallMode  = I2C_GENERALCALL_DISABLE;
     hi2c1.Init.NoStretchMode    = I2C_NOSTRETCH_DISABLE;
     HAL_I2C_Init(&hi2c1);
+
+    GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Pin       = GPIO_PIN_7|GPIO_PIN_6;
+    GPIO_InitStruct.Mode      = GPIO_MODE_AF_OD;
+    GPIO_InitStruct.Pull      = GPIO_PULLUP;
+    GPIO_InitStruct.Speed     = GPIO_SPEED_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
     busOnline(HAL_OK == HAL_I2CEx_AnalogFilter_Config(&hi2c1, I2C_ANALOGFILTER_ENABLE));
   }

@@ -48,16 +48,6 @@ This file is the tortured result of growing pains since the beginning of
   #define I2CADAPTER_MAX_QUEUE_PRINT 3
 
 
-  #define I2C_XFER_STATE_INITIATE  0x00
-  #define I2C_XFER_STATE_START     0x01
-  #define I2C_XFER_STATE_ADDR      0x02
-  #define I2C_XFER_STATE_SUBADDR   0x03
-  #define I2C_XFER_STATE_BODY      0x04
-  #define I2C_XFER_STATE_DMA_WAIT  0x05
-  #define I2C_XFER_STATE_STOP      0x06
-  #define I2C_XFER_STATE_COMPLETE  0x07   // The stop signal was sent.
-
-
   #define I2C_ERR_CODE_NO_ERROR    0
   #define I2C_ERR_CODE_NO_CASE     -1
   #define I2C_ERR_CODE_NO_REASON   -2
@@ -111,12 +101,12 @@ This file is the tortured result of growing pains since the beginning of
       uint8_t*  buf;
       int       txn_id;        // How are we going to keep track of this item?
       BusOpcode opcode;        // What is the nature of this work-queue item?
+      XferState xfer_state;    // What state is the transfer in?
 
       int8_t verbosity;
       uint8_t dev_addr;
       int16_t sub_addr;
 
-      uint8_t   xfer_state;
       int8_t    err_code;      // If we had an error, the code will be here.
 
       uint8_t remaining_bytes;
@@ -141,7 +131,7 @@ This file is the tortured result of growing pains since the beginning of
       *
       * @return true if so. False otherwise.
       */
-      inline bool completed(void) {  return (xfer_state == I2C_XFER_STATE_COMPLETE);  }
+      inline bool completed(void) {  return (xfer_state == XferState::COMPLETE);  }
 
       /**
       * Decide if we need to send a subaddress.
@@ -171,7 +161,6 @@ This file is the tortured result of growing pains since the beginning of
 
       int8_t init_dma();
       static const char* getErrorString(int8_t code);
-      static const char* getStateString(uint8_t code);
 
   };
 
