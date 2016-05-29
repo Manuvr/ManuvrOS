@@ -48,10 +48,6 @@ This file is the tortured result of growing pains since the beginning of
   #define I2CADAPTER_MAX_QUEUE_PRINT 3
 
 
-  #define I2C_OPERATION_READ  I2C_Direction_Receiver
-  #define I2C_OPERATION_WRITE I2C_Direction_Transmitter
-
-
   #define I2C_XFER_STATE_INITIATE  0x00
   #define I2C_XFER_STATE_START     0x01
   #define I2C_XFER_STATE_ADDR      0x02
@@ -369,14 +365,6 @@ This file is the tortured result of growing pains since the beginning of
   };
 
 
-
-#ifndef STM32F4XX
-  // To maintain uniformity with ST's code in an non-ST env...
-  #define  I2C_Direction_Transmitter      ((uint8_t)0x00)
-  #define  I2C_Direction_Receiver         ((uint8_t)0x01)
-  #define IS_I2C_DIRECTION(DIRECTION) (((DIRECTION) == I2C_Direction_Transmitter) || \
-                                       ((DIRECTION) == I2C_Direction_Receiver))
-#endif
 
 #if defined(__MANUVR_LINUX)
   #include <stdlib.h>

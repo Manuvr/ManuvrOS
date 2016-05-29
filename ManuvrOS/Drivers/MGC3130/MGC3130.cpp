@@ -504,7 +504,7 @@ void MGC3130::operationCompleteCallback(I2CQueuedOperation* completed) {
   setPinFxn(_ts_pin, FALLING, mgc3130_isr_check);
 
   if (completed->err_code == I2C_ERR_CODE_NO_ERROR) {
-    if (completed->opcode == I2C_OPERATION_READ) {
+    if (completed->opcode == BusOpcode::RX) {
       uint8_t data;
       int c = 0;
       uint32_t temp_value = 0;   // Used to aggregate fields that span several bytes.

@@ -344,15 +344,15 @@ void I2CDeviceWithRegisters::operationCompleteCallback(I2CQueuedOperation* compl
 			DeviceRegister *nu = getRegisterByBaseAddress(completed->sub_addr);
 			if (nu != NULL) {
 				switch (completed->opcode) {
-				  case I2C_OPERATION_READ:
+				  case BusOpcode::RX:
 				    nu->unread = true;
 				    //temp.concat("Buffer contents (read):  ");
 				    break;
-				  case I2C_OPERATION_WRITE:
+				  case BusOpcode::TX:
 				    nu->dirty = false;
 				    //temp.concat("Buffer contents (write):  ");
 				    break;
-				  case I2C_OPERATION_PING:
+				  case BusOpcode::TX_CMD:
 				    //temp.concat("Ping received.\n");
 				    break;
 				  default:

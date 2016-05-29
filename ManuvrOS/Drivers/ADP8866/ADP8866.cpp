@@ -241,7 +241,7 @@ void ADP8866::operationCompleteCallback(I2CQueuedOperation* completed) {
       case ADP8866_MDCR:
         break;
       case ADP8866_INT_STAT:      // Interrupt status.
-        if (I2C_OPERATION_READ == completed->opcode) {
+        if (BusOpcode::RX == completed->opcode) {
           uint8_t value = *((uint8_t*) completed->buf);
           if (value & 0x04) {
             Kernel::log("ADP8866 experienced an over-voltage fault.\n");

@@ -153,7 +153,7 @@ void LPS331::operationCompleteCallback(I2CQueuedOperation* completed) {
 		  case LPS331_REG_PRS_P_OUT_XL:
 		  case LPS331_REG_PRS_OUT_LO:
 		  case LPS331_REG_PRS_OUT_HI:
-		    if (I2C_OPERATION_READ == completed->opcode) {
+		    if (BusOpcode::RX == completed->opcode) {
 		      if (calculate_pressure()) {
 		      }
 		    }
@@ -161,7 +161,7 @@ void LPS331::operationCompleteCallback(I2CQueuedOperation* completed) {
 
 		  case LPS331_REG_TEMP_OUT_HI:
 		  case LPS331_REG_TEMP_OUT_LO:
-		    if (I2C_OPERATION_READ == completed->opcode) {
+		    if (BusOpcode::RX == completed->opcode) {
 		      if (calculate_temperature()) {
 		      }
 		    }

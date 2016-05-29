@@ -157,7 +157,7 @@ void ADG2128::operationCompleteCallback(I2CQueuedOperation* completed) {
     return;
   }
   switch (completed->opcode) {
-    case I2C_OPERATION_READ:
+    case BusOpcode::RX:
       switch (completed->sub_addr) {
         case 0x3400:  values[0] = (uint8_t) *(completed->buf);
           break;
@@ -188,7 +188,7 @@ void ADG2128::operationCompleteCallback(I2CQueuedOperation* completed) {
       }
       // We just read back data from the switch.
       break;
-    case I2C_OPERATION_WRITE:
+    case BusOpcode::TX:
       // We just confirmed a write to the switch.
       break;
     default:
