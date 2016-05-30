@@ -145,6 +145,7 @@ Kernel::Kernel() {
   lagged_schedules     = 0;
   _ms_elapsed          = 0;
 
+  _skips_observed      = 0;
 
   for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
     /* We carved out a space in our allocation for a pool of events. Ideally, this would be enough
@@ -1011,9 +1012,14 @@ void Kernel::printDebug(StringBuilder* output) {
     output->concatf("-- events_destroyed:         %u\n", (unsigned long) events_destroyed);
     output->concatf("-- burden_of_being_specific  %u\n", (unsigned long) burden_of_specific);
     output->concatf("-- idempotent_blocks         %u\n", (unsigned long) idempotent_blocks);
+    output->concatf("-- Scheduler skips           %u\n", (unsigned long) _skips_observed);
   }
 
-  output->concatf("-- Lagged schedules %u\n", (unsigned long) lagged_schedules);
+  if (_er_flag(MKERNEL_FLAG_SKIP_FAILSAFE)) {
+    output->concatf("-- %u skips before fail-to-bootloader.\n", (unsigned long) MAXIMUM_SEQUENTIAL_SKIPS);
+  }
+
+  output->concatf("-- Lagged schedules  %u\n", (unsigned long) lagged_schedules);
   output->concatf("-- Total schedules:  %d\n-- Active schedules: %d\n\n", schedules.size(), countActiveSchedules());
 
   if (subscribers.size() > 0) {
@@ -1282,8 +1288,16 @@ void Kernel::advanceScheduler(unsigned int ms_elapsed) {
 
   if (_skip_detected()) {
     // Failsafe block
+    //_skips_observed++;
+    //if (getVerbosity() > 3) Kernel::log("Scheduler skip\n");
+    //if (_er_flag(MKERNEL_FLAG_SKIP_FAILSAFE)) {
+    //  if (_skips_observed >= MAXIMUM_SEQUENTIAL_SKIPS) {
+    //    jumpToBootloader();
+    //  }
+    //}
   }
   else {
+    // The nominal case.
     _skip_detected(true);
   }
 }
@@ -1364,6 +1378,7 @@ int Kernel::serviceSchedules() {
 
   // We just ran a loop. Punch the bistable swtich.
   _skip_detected(false);
+  _skips_observed = 0;
 
   _ms_elapsed = 0;
   return return_value;

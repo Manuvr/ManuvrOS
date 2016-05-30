@@ -214,17 +214,20 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
     hi2c1.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
     hi2c1.Init.GeneralCallMode  = I2C_GENERALCALL_DISABLE;
     hi2c1.Init.NoStretchMode    = I2C_NOSTRETCH_DISABLE;
-    HAL_I2C_Init(&hi2c1);
+    if (HAL_OK == HAL_I2C_Init(&hi2c1)) {
+      GPIO_InitTypeDef GPIO_InitStruct;
+      GPIO_InitStruct.Pin       = GPIO_PIN_7|GPIO_PIN_6;
+      GPIO_InitStruct.Mode      = GPIO_MODE_AF_OD;
+      GPIO_InitStruct.Pull      = GPIO_PULLUP;
+      GPIO_InitStruct.Speed     = GPIO_SPEED_HIGH;
+      GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
+      HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.Pin       = GPIO_PIN_7|GPIO_PIN_6;
-    GPIO_InitStruct.Mode      = GPIO_MODE_AF_OD;
-    GPIO_InitStruct.Pull      = GPIO_PULLUP;
-    GPIO_InitStruct.Speed     = GPIO_SPEED_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-    busOnline(HAL_OK == HAL_I2CEx_AnalogFilter_Config(&hi2c1, I2C_ANALOGFILTER_ENABLE));
+      busOnline(HAL_OK == HAL_I2CEx_AnalogFilter_Config(&hi2c1, I2C_ANALOGFILTER_ENABLE));
+    }
+    else {
+      Kernel::log("I2CAdapter failed to init.\n");
+    }
   }
   else {
     // Unsupported
@@ -268,9 +271,45 @@ int8_t I2CAdapter::generateStop() {
 
 
 int8_t I2CAdapter::dispatchOperation(I2CBusOp* op) {
-  op->abort(XferFault::TIMEOUT);
+  if (op->get_opcode() == BusOpcode::RX) {
+    if (HAL_OK != HAL_I2C_Master_Receive(&hi2c1, (uint16_t) op->dev_addr, op->buf, op->buf_len, 1000)) {
+      op->abort(XferFault::BUS_FAULT);
+    }
+    else {
+      op->markComplete();
+    }
+  }
+  else if (op->get_opcode() == BusOpcode::TX) {
+    if (HAL_OK != HAL_I2C_Master_Transmit(&hi2c1, (uint16_t) op->dev_addr, op->buf, op->buf_len, 1000)) {
+      op->abort(XferFault::BUS_FAULT);
+    }
+    else {
+      op->markComplete();
+    }
+  }
+  else if (op->get_opcode() == BusOpcode::TX_CMD) {
+    // Ping
+  }
   return 0;
 }
+
+
+/*
+* This is an ISR.
+*/
+void I2C1_EV_IRQHandler(void) {
+  Kernel::log("I2c ISR\n");
+}
+
+
+/*
+* This is an ISR.
+*/
+void I2C1_ER_IRQHandler(void) {
+  Kernel::log("I2c ERR ISR\n");
+}
+
+
 
 
 
@@ -773,10 +812,6 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
   bool return_value = true;
 #elif defined(STM32F4XX)
   bool return_value = true;
-
-
-#elif defined(MPCMZ)
-// PIC32 MZ i2c support is broken at the time of this writing.
 
 #elif defined(__MANUVR_LINUX)   // Assuming a linux environment.
   bool return_value = false;

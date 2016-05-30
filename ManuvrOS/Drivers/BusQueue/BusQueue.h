@@ -161,4 +161,21 @@ class BusOp {
   private:
 };
 
+/*
+* This class represents a generic bus adapter. We are not so concerned with
+*   performance and memory overhead in this class, because there is typically
+*   only a handful of such classes, and they have low turnover rates.
+*/
+class BusAdapter {
+  public:
+    /* Mandatory overrides... */
+    virtual int8_t insert_work_item()   =0;
+    virtual void   advance_work_queue() =0;
+
+  protected:
+
+  private:
+};
+
+
 #endif  // __MANUVR_BUS_QUEUE_H__
