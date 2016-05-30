@@ -44,8 +44,6 @@ limitations under the License.
   #include <inttypes.h>
   #include <ctype.h>
 #elif defined(STM32F7XX) | defined(STM32F746xx)
-  #include "stm32f7xx_hal.h"
-  #include "stm32f7xx_hal_i2c.h"
 #else
   // Unsupported platform
 #endif
@@ -66,7 +64,6 @@ I2CBusOp::I2CBusOp(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t 
   this->buf_len         = len;
   this->txn_id          = BusOp::next_txn_id++;
   this->device          = NULL;
-  this->remaining_bytes = 0;
   this->requester       = NULL;
   this->subaddr_sent    = false;
   verbosity = 0;
@@ -107,8 +104,7 @@ void I2CBusOp::printDebug(StringBuilder* temp) {
     }
     temp->concatf("\txfer_state:      %s\n", getStateString());
     temp->concatf("\tFault:           %s\n", getErrorString());
-    temp->concatf("\tbuf_len:         %d\n", buf_len);
-    temp->concatf("\tremaining_bytes: %d\n\t", remaining_bytes);
+    temp->concatf("\tbuf_len:         %d\n\t", buf_len);
     if (buf_len > 0) {
       temp->concatf( "*(0x%08x):   ", (uint32_t) buf);
       for (uint8_t i = 0; i < buf_len; i++) {
@@ -222,7 +218,7 @@ int8_t I2CBusOp::init_dma() {
   }
 
 #elif defined(STM32F7XX) | defined(STM32F746xx)
-  //device->dispatchOperation(this);
+  device->dispatchOperation(this);
 
 #elif defined(__MANUVR_LINUX)   // Linux land...
   if (!device->switch_device(dev_addr)) return -1;

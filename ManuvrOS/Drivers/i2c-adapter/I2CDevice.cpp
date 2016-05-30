@@ -50,10 +50,10 @@ void I2CDevice::operationCompleteCallback(I2CBusOp* completed) {
 	if (completed != NULL) {
 	  #ifdef __MANUVR_DEBUG
 		if (completed->get_opcode() == BusOpcode::RX) {
-			temp.concatf("Default callback (I2CDevice)\tReceived %d bytes from i2c slave.\n", (completed->buf_len - completed->remaining_bytes));
+			temp.concatf("Default callback (I2CDevice)\tReceived %d bytes from i2c slave.\n", completed->buf_len);
 		}
 		else {
-			temp.concatf("Default callback (I2CDevice)\tSent %d/%d bytes to i2c slave.\n", (completed->buf_len - completed->remaining_bytes), completed->buf_len);
+			temp.concatf("Default callback (I2CDevice)\tSent %d bytes to i2c slave.\n", completed->buf_len, completed->buf_len);
 		}
 		#endif
 		completed->printDebug(&temp);

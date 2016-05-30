@@ -445,7 +445,7 @@ int8_t setPinFxn(uint8_t _pin, uint8_t condition, FunctionPointer fxn) {
     }
     HAL_GPIO_Init(_associated_port(_pin), &GPIO_InitStruct);
     IRQn_Type chan = _get_stm32f7_irq_channel(_pin);
-    HAL_NVIC_SetPriority(chan, 0, pin_idx);  // IRQ channel, priority, pin idex.
+    HAL_NVIC_SetPriority(chan, 1, pin_idx);  // IRQ channel, priority, pin idex.
     HAL_NVIC_EnableIRQ(chan);
   }
   else if (NULL == __ext_line_bindings[pin_idx].fxn) {
@@ -530,7 +530,7 @@ volatile void jumpToBootloader() {
   // We don't really care if we clobber something, because this fxn will reboot us. But
   // when the reset handler is executed, it will look for this value. If it finds it, it
   // will branch to the Bootloader code.
-  *((unsigned long *)0x2000FFF0) = 0xb00710ad;
+  *((unsigned long *)0x20001FF0) = 0xb00710ad;
   NVIC_SystemReset();
 }
 

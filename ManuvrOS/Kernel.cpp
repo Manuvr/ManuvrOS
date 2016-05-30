@@ -1288,13 +1288,13 @@ void Kernel::advanceScheduler(unsigned int ms_elapsed) {
 
   if (_skip_detected()) {
     // Failsafe block
-    //_skips_observed++;
+    _skips_observed++;
     //if (getVerbosity() > 3) Kernel::log("Scheduler skip\n");
-    //if (_er_flag(MKERNEL_FLAG_SKIP_FAILSAFE)) {
-    //  if (_skips_observed >= MAXIMUM_SEQUENTIAL_SKIPS) {
+    if (_er_flag(MKERNEL_FLAG_SKIP_FAILSAFE)) {
+      if (_skips_observed >= MAXIMUM_SEQUENTIAL_SKIPS) {
     //    jumpToBootloader();
-    //  }
-    //}
+      }
+    }
   }
   else {
     // The nominal case.
