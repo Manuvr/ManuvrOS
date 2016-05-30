@@ -32,6 +32,7 @@ This file is meant to contain a set of common functions that are typically platf
 extern "C" {
 
 
+
 /****************************************************************************************************
 * Functions that convert from #define codes to something readable by a human...                     *
 ****************************************************************************************************/
@@ -44,6 +45,20 @@ const char* getRTCStateString(uint32_t code) {
     default:                             return "RTC_UNDEFINED";
   }
 }
+
+/*
+* Issue a human-readable string representing the condition that causes an
+*   IRQ to fire.
+*/
+const char* getIRQConditionString(int con_code) {
+  switch (con_code) {
+    case RISING:   return "RISING";
+    case FALLING:  return "FALLING";
+    case CHANGE:   return "CHANGE";
+    default:       return "<UNDEF>";
+  }
+}
+
 
 
 /*

@@ -29,6 +29,21 @@ limitations under the License.
 
 #define PLATFORM_GPIO_PIN_COUNT   48
 
+
+/*
+* External interrupt actions are stored this way in an array, with indecies
+*   corresponding to the EXTI source.
+* If both values are non-NULL, they will both be proc'd, with the function call
+*   preceeding Runnable insertion to the Kernel's ISR queue.
+*/
+typedef struct __platform_exti_def {
+  ManuvrRunnable* event;
+  FunctionPointer fxn;
+  uint8_t         pin;
+  uint8_t         condition;
+} PlatformEXTIDef;
+
+
 /*
 * For the STM32 parts, we will treat pins as being the linear sequence of ports
 *   and pins. This incurs a slight performance hit as we need to shift and divide

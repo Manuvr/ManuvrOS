@@ -1482,7 +1482,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
         for (int i = 0;i < 1000000;i++) {
           a += 0.01 * sqrtf(a);
         }
-        local_log.concatf("Running floating-point test...\nTime:      %d ms\n", millis() - time_var2);
+        local_log.concatf("Running floating-point test...\nTime:      %ul ms\n", (unsigned long) millis() - time_var2);
         local_log.concatf("Value:     %.5f\nFPU test concluded.\n", (double) a);
       }
       break;
