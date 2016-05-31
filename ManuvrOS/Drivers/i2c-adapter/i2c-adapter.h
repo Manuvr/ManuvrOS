@@ -101,7 +101,6 @@ This file is the tortured result of growing pains since the beginning of
       I2CAdapter *device;
 
       int16_t sub_addr;
-      uint16_t remaining_bytes;
 
       int       txn_id;        // How are we going to keep track of this item?
 
@@ -119,7 +118,6 @@ This file is the tortured result of growing pains since the beginning of
       * This queue item can begin executing. This is where any bus access should be initiated.
       */
       int8_t begin(void);
-
 
       /**
       * Decide if we need to send a subaddress.
@@ -151,9 +149,9 @@ This file is the tortured result of growing pains since the beginning of
 
 
     private:
-      static ManuvrRunnable event_queue_ready;
-
       int8_t init_dma();
+
+      static ManuvrRunnable event_queue_ready;
   };
 
 

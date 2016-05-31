@@ -36,15 +36,48 @@ This file is meant to contain a set of common functions that are typically platf
 * The code under this block is special on this platform, and will not be available elsewhere.       *
 ****************************************************************************************************/
 
-//#if defined(ENABLE_USB_VCP)
+#if defined(ENABLE_USB_VCP)
   #include "tm_stm32_usb_device.h"
   #include "tm_stm32_usb_device_cdc.h"
-//#endif
+#endif
+
+volatile static PlatformEXTIDef __ext_line_bindings[16];
+
+/* Takes a pin and returns the IRQ channel. */
+IRQn_Type _get_stm32f7_irq_channel(uint8_t _pin) {
+  switch (_pin % 16) {
+    case 0:  return EXTI0_IRQn;
+    case 1:  return EXTI1_IRQn;
+    case 2:  return EXTI2_IRQn;
+    case 3:  return EXTI3_IRQn;
+    case 4:  return EXTI4_IRQn;
+    case 5:
+    case 6:
+    case 7:
+    case 8:
+    case 9:  return EXTI9_5_IRQn;
+    default: return EXTI15_10_IRQn;
+  }
+}
+
+
+void printEXTIDef(uint8_t _pin, StringBuilder* output) {
+  uint16_t pin_idx   = (_pin % 16);
+  const char* _msg_name = "<NONE>";
+  if (NULL != __ext_line_bindings[pin_idx].event) {
+    _msg_name = ManuvrMsg::getMsgTypeString(__ext_line_bindings[pin_idx].event->event_code);
+  }
+  output->concatf("\t---< EXTI Def %d >----------\n", pin_idx);
+  output->concatf("\tPin         %d\n", __ext_line_bindings[pin_idx].pin);
+  output->concatf("\tCondition   %d\n", getIRQConditionString(__ext_line_bindings[pin_idx].condition));
+  output->concatf("\tFXN         0x%08x\n", (uint32_t) __ext_line_bindings[pin_idx].fxn);
+  output->concatf("\tEvent       %s\n\n", _msg_name);
+}
+
 
 volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
 volatile uint8_t  watchdog_mark      = 42;
 unsigned long     start_time_micros  = 0;
-
 
 
 /*
@@ -55,6 +88,8 @@ unsigned long     start_time_micros  = 0;
 */
 unsigned long millis(void) {  return millis_since_reset;  }
 
+
+#define MCK 16000000
 /**
 * Written by Magnus Lundin.
 * https://github.com/mlu/arduino-stm32/blob/master/hardware/cores/stm32/wiring.c
@@ -67,12 +102,12 @@ unsigned long micros(void) {
   long v1 = SysTick->VAL;
   long c1 = millis_since_reset;
   if (v1 < v0) {             // Downcounting, no systick rollover
-    //return c0*8000-v1/(MCK/8000000UL);
-    return (unsigned long) millis_since_reset/1000000;
+    return c0*8000-v1/(MCK/8000000UL);
+    //return (unsigned long) millis_since_reset/1000000;
   }
   else { // systick rollover, use last count value
-    //return c1*8000-v1/(MCK/8000000UL);
-    return (unsigned long) millis_since_reset/1000000;
+    return c1*8000-v1/(MCK/8000000UL);
+    //return (unsigned long) millis_since_reset/1000000;
   }
   return 0;
 }
@@ -191,9 +226,6 @@ void currentDateTime(StringBuilder* target) {
 */
 volatile PlatformGPIODef gpio_pins[PLATFORM_GPIO_PIN_COUNT];
 
-void pin_isr_pitch_event() {
-}
-
 
 /*
 * This fxn should be called once on boot to setup the CPU pins that are not claimed
@@ -210,6 +242,13 @@ void gpioSetup() {
     gpio_pins[i].mode  = INPUT;  // All pins begin as inputs.
     gpio_pins[i].pin   = i;      // The pin number.
   }
+  for (uint8_t i = 0; i < 16; i++) {
+    /* Zero all the EXTI definitions */
+    __ext_line_bindings[i].event     = 0;
+    __ext_line_bindings[i].fxn       = 0;
+    __ext_line_bindings[i].condition = 0;
+    __ext_line_bindings[i].pin       = 0;
+  }
 
   /* GPIO Ports Clock Enable */
   //__GPIOE_CLK_ENABLE();
@@ -225,18 +264,22 @@ void gpioSetup() {
 
 
 
-
+/**
+* On STM32 parts, we construe an 8-bit pin number to be a linear reference to
+*   successive 16-bit ports. See STM32F7.h for clarification.
+*/
 int8_t gpioDefine(uint8_t pin, int mode) {
-  if (pin < PLATFORM_GPIO_PIN_COUNT) {
+  //if (pin < PLATFORM_GPIO_PIN_COUNT) {
     GPIO_InitTypeDef GPIO_InitStruct;
     GPIO_InitStruct.Pin    = _associated_pin(pin);
-    GPIO_InitStruct.Speed  = GPIO_SPEED_LOW;
+    GPIO_InitStruct.Speed  = GPIO_SPEED_HIGH;
     GPIO_InitStruct.Pull   = GPIO_NOPULL;
     GPIO_InitStruct.Mode   = GPIO_MODE_INPUT;
 
     switch (mode) {
       case INPUT_PULLUP:
         GPIO_InitStruct.Pull   = GPIO_PULLUP;
+        break;
       case INPUT_PULLDOWN:
         GPIO_InitStruct.Pull   = GPIO_PULLDOWN;
         break;
@@ -256,10 +299,10 @@ int8_t gpioDefine(uint8_t pin, int mode) {
     }
 
     HAL_GPIO_Init(_associated_port(pin), &GPIO_InitStruct);
-  }
-  else {
-    Kernel::log("Tried to define a GPIO pin that was out-of-range for this platform.\n");
-  }
+  //}
+  //else {
+    //Kernel::log("Tried to define a GPIO pin that was out-of-range for this platform.\n");
+  //}
   return 0;
 }
 
@@ -268,7 +311,77 @@ void unsetPinIRQ(uint8_t pin) {
 }
 
 
-int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrRunnable* isr_event) {
+int8_t setPinEvent(uint8_t _pin, uint8_t condition, ManuvrRunnable* isr_event) {
+  uint16_t pin_idx   = (_pin % 16);
+  GPIO_TypeDef* port = _associated_port(_pin);
+
+  if (0 == __ext_line_bindings[pin_idx].condition) {
+    /* There is not presently an interrupt condition on this pin.
+       Proceed with impunity.  */
+    __ext_line_bindings[pin_idx].pin       = _pin;
+    __ext_line_bindings[pin_idx].condition = condition;
+    __ext_line_bindings[pin_idx].event     = isr_event;
+
+    GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Pin    = _associated_pin(_pin);
+    GPIO_InitStruct.Speed  = GPIO_SPEED_LOW;
+    GPIO_InitStruct.Pull   = GPIO_NOPULL;
+
+    switch (condition) {
+      case RISING:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+        break;
+      case FALLING:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+        break;
+      case CHANGE:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+        break;
+      case RISING_PULL_UP:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+        GPIO_InitStruct.Pull = GPIO_PULLUP;
+        break;
+      case FALLING_PULL_UP:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+        GPIO_InitStruct.Pull = GPIO_PULLUP;
+        break;
+      case CHANGE_PULL_UP:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+        GPIO_InitStruct.Pull = GPIO_PULLUP;
+        break;
+      case RISING_PULL_DOWN:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+        GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+        break;
+      case FALLING_PULL_DOWN:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+        GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+        break;
+      case CHANGE_PULL_DOWN:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+        GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+        break;
+      default:
+        GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+        break;
+    }
+    HAL_GPIO_Init(_associated_port(_pin), &GPIO_InitStruct);
+    IRQn_Type chan = _get_stm32f7_irq_channel(_pin);
+    HAL_NVIC_SetPriority(chan, 0, pin_idx);  // IRQ channel, priority, pin idex.
+    HAL_NVIC_EnableIRQ(chan);
+  }
+  else if (NULL == __ext_line_bindings[pin_idx].event) {
+    /* No event already occupies the slot, but the def is active. Probably
+         already has a FXN assigned. Ignore the supplied condition and add this
+         event to the list of things to do. */
+    __ext_line_bindings[pin_idx].event     = isr_event;
+  }
+  else {
+    StringBuilder local_log("Tried to clobber an existing IRQ event association...\n");
+    printEXTIDef(_pin, &local_log);
+    Kernel::log(&local_log);
+    return -1;
+  }
   return 0;
 }
 
@@ -276,7 +389,77 @@ int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrRunnable* isr_event) {
 /*
 * Pass the function pointer
 */
-int8_t setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn) {
+int8_t setPinFxn(uint8_t _pin, uint8_t condition, FunctionPointer fxn) {
+  uint16_t pin_idx   = (_pin % 16);
+  GPIO_TypeDef* port = _associated_port(_pin);
+
+  if (0 == __ext_line_bindings[pin_idx].condition) {
+    /* There is not presently an interrupt condition on this pin.
+       Proceed with impunity.  */
+    __ext_line_bindings[pin_idx].pin       = _pin;
+    __ext_line_bindings[pin_idx].condition = condition;
+    __ext_line_bindings[pin_idx].fxn       = fxn;
+
+    GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Pin    = _associated_pin(_pin);
+    GPIO_InitStruct.Speed  = GPIO_SPEED_LOW;
+    GPIO_InitStruct.Pull   = GPIO_NOPULL;
+
+    switch (condition) {
+      case RISING:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+        break;
+      case FALLING:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+        break;
+      case CHANGE:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+        break;
+      case RISING_PULL_UP:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+        GPIO_InitStruct.Pull = GPIO_PULLUP;
+        break;
+      case FALLING_PULL_UP:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+        GPIO_InitStruct.Pull = GPIO_PULLUP;
+        break;
+      case CHANGE_PULL_UP:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+        GPIO_InitStruct.Pull = GPIO_PULLUP;
+        break;
+      case RISING_PULL_DOWN:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+        GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+        break;
+      case FALLING_PULL_DOWN:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+        GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+        break;
+      case CHANGE_PULL_DOWN:
+        GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+        GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+        break;
+      default:
+        GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+        break;
+    }
+    HAL_GPIO_Init(_associated_port(_pin), &GPIO_InitStruct);
+    IRQn_Type chan = _get_stm32f7_irq_channel(_pin);
+    HAL_NVIC_SetPriority(chan, 1, pin_idx);  // IRQ channel, priority, pin idex.
+    HAL_NVIC_EnableIRQ(chan);
+  }
+  else if (NULL == __ext_line_bindings[pin_idx].fxn) {
+    /* No fxn already occupies the slot, but the def is active. Probably
+         already has an event assigned. Ignore the supplied condition and add this
+         fxn to the list of things to do. */
+    __ext_line_bindings[pin_idx].fxn = fxn;
+  }
+  else {
+    StringBuilder local_log("Tried to clobber an existing IRQ event association...\n");
+    printEXTIDef(_pin, &local_log);
+    Kernel::log(&local_log);
+    return -1;
+  }
   return 0;
 }
 
@@ -328,6 +511,7 @@ void globalIRQDisable() {    asm volatile ("cpsie i");    }
 volatile void seppuku() {
   // This means "Halt" on a base-metal build.
   globalIRQDisable();
+  HAL_RCC_DeInit();               // Switch to HSI, no PLL
   while(true);
 }
 
@@ -338,13 +522,15 @@ volatile void seppuku() {
 */
 volatile void jumpToBootloader() {
   globalIRQDisable();
-  __set_MSP(0x20001000);      // Set the main stack pointer to default value for the F417...
+  TM_USBD_Stop(TM_USB_FS);    // DeInit() The USB device.
+  __set_MSP(0x20001000);      // Set the main stack pointer...
+  HAL_RCC_DeInit();               // Switch to HSI, no PLL
 
   // Per clive1's post, set some sort of key value just below the initial stack pointer.
   // We don't really care if we clobber something, because this fxn will reboot us. But
   // when the reset handler is executed, it will look for this value. If it finds it, it
   // will branch to the Bootloader code.
-  *((unsigned long *)0x2000FFF0) = 0xb00710ad;
+  *((unsigned long *)0x20001FF0) = 0xb00710ad;
   NVIC_SystemReset();
 }
 
@@ -359,7 +545,7 @@ volatile void jumpToBootloader() {
 */
 volatile void hardwareShutdown() {
   globalIRQDisable();
-  while(true);
+  NVIC_SystemReset();
 }
 
 /*
@@ -368,18 +554,12 @@ volatile void hardwareShutdown() {
 */
 volatile void reboot() {
   globalIRQDisable();
-  //HAL_RCC_DeInit();                   // Switch to HSI, no PLL
-  SysTick->CTRL = 0;
-  SysTick->LOAD = 0;
-  SysTick->VAL  = 0;
+  TM_USBD_Stop(TM_USB_FS);    // DeInit() The USB device.
+  __set_MSP(0x20001000);      // Set the main stack pointer...
+  HAL_RCC_DeInit();               // Switch to HSI, no PLL
 
-  __set_MSP(0x20001000);      // Set the main stack pointer to default value for the F417...
-
-  // Per clive1's post, set some sort of key value just below the initial stack pointer.
-  // We don't really care if we clobber something, because this fxn will reboot us. But
-  // when the reset handler is executed, it will look for this value. If it finds it, it
-  // will branch to the Bootloader code.
-  *((unsigned long *)0x2000FFF0) = 0xb00710ad;
+  // We do not want to enter the bootloader....
+  *((unsigned long *)0x2000FFF0) = 0;
   NVIC_SystemReset();
 }
 
@@ -405,8 +585,211 @@ void platformInit() {
   start_time_micros = micros();
   init_RNG();
   #if defined(ENABLE_USB_VCP)
-    TM_USB_Init();    /* Init USB peripheral */
+    TM_USB_Init();    /* Init USB peripheral as VCP */
     TM_USBD_CDC_Init(TM_USB_FS);
     TM_USBD_Start(TM_USB_FS);
   #endif
+}
+
+
+
+
+
+
+/*
+*
+*/
+void EXTI0_IRQHandler(void) {
+  if (EXTI->PR & (EXTI_PR_PR0)) {
+    EXTI->PR = EXTI_PR_PR0;   // Clear service bit.
+    //Kernel::log("EXTI 0\n");
+    if (NULL != __ext_line_bindings[0].fxn) {
+      __ext_line_bindings[0].fxn();
+    }
+    if (NULL != __ext_line_bindings[0].event) {
+      Kernel::isrRaiseEvent(__ext_line_bindings[0].event);
+    }
+  }
+}
+
+
+/*
+*
+*/
+void EXTI1_IRQHandler(void) {
+  if (EXTI->PR & (EXTI_PR_PR1)) {
+    EXTI->PR = EXTI_PR_PR1;   // Clear service bit.
+    //Kernel::log("EXTI 1\n");
+    if (NULL != __ext_line_bindings[1].fxn) {
+      __ext_line_bindings[1].fxn();
+    }
+    if (NULL != __ext_line_bindings[1].event) {
+      Kernel::isrRaiseEvent(__ext_line_bindings[1].event);
+    }
+  }
+}
+
+
+/*
+*
+*/
+void EXTI2_IRQHandler(void) {
+  if (EXTI->PR & (EXTI_PR_PR2)) {
+    EXTI->PR = EXTI_PR_PR2;   // Clear service bit.
+    Kernel::log("EXTI 2\n");
+    if (NULL != __ext_line_bindings[2].fxn) {
+      __ext_line_bindings[2].fxn();
+    }
+    if (NULL != __ext_line_bindings[2].event) {
+      Kernel::isrRaiseEvent(__ext_line_bindings[2].event);
+    }
+  }
+}
+
+
+/*
+*
+*/
+void EXTI3_IRQHandler(void) {
+  if (EXTI->PR & (EXTI_PR_PR3)) {
+    EXTI->PR = EXTI_PR_PR3;   // Clear service bit.
+    Kernel::log("EXTI 3\n");
+    if (NULL != __ext_line_bindings[3].fxn) {
+      __ext_line_bindings[3].fxn();
+    }
+    if (NULL != __ext_line_bindings[3].event) {
+      Kernel::isrRaiseEvent(__ext_line_bindings[3].event);
+    }
+  }
+}
+
+
+/*
+*
+*/
+void EXTI4_IRQHandler(void) {
+  if (EXTI->PR & (EXTI_PR_PR4)) {
+    EXTI->PR = EXTI_PR_PR4;   // Clear service bit.
+    Kernel::log("EXTI 4\n");
+    if (NULL != __ext_line_bindings[4].fxn) {
+      __ext_line_bindings[4].fxn();
+    }
+    if (NULL != __ext_line_bindings[4].event) {
+      Kernel::isrRaiseEvent(__ext_line_bindings[4].event);
+    }
+  }
+}
+
+
+/*
+*
+*/
+void EXTI9_5_IRQHandler(void) {
+  if (EXTI->PR & (EXTI_PR_PR5)) {
+    EXTI->PR = EXTI_PR_PR5;   // Clear service bit.
+    Kernel::log("EXTI 5\n");
+    if (NULL != __ext_line_bindings[5].fxn) {
+      __ext_line_bindings[5].fxn();
+    }
+    if (NULL != __ext_line_bindings[5].event) {
+      Kernel::isrRaiseEvent(__ext_line_bindings[5].event);
+    }
+  }
+  if (EXTI->PR & (EXTI_PR_PR6)) {
+    EXTI->PR = EXTI_PR_PR6;   // Clear service bit.
+    Kernel::log("EXTI 6\n");
+    if (NULL != __ext_line_bindings[6].fxn) {
+      __ext_line_bindings[6].fxn();
+    }
+    if (NULL != __ext_line_bindings[6].event) {
+      Kernel::isrRaiseEvent(__ext_line_bindings[6].event);
+    }
+  }
+  if (EXTI->PR & (EXTI_PR_PR7)) {
+    EXTI->PR = EXTI_PR_PR7;   // Clear service bit.
+    Kernel::log("EXTI 7\n");
+    if (NULL != __ext_line_bindings[7].fxn) {
+      __ext_line_bindings[7].fxn();
+    }
+    if (NULL != __ext_line_bindings[7].event) {
+      Kernel::isrRaiseEvent(__ext_line_bindings[7].event);
+    }
+  }
+  if (EXTI->PR & (EXTI_PR_PR8)) {
+    EXTI->PR = EXTI_PR_PR8;   // Clear service bit.
+    Kernel::log("EXTI 8\n");
+    if (NULL != __ext_line_bindings[8].fxn) {
+      __ext_line_bindings[8].fxn();
+    }
+    if (NULL != __ext_line_bindings[8].event) {
+      Kernel::isrRaiseEvent(__ext_line_bindings[8].event);
+    }
+  }
+  if (EXTI->PR & (EXTI_PR_PR9)) {
+    EXTI->PR = EXTI_PR_PR9;   // Clear service bit.
+    Kernel::log("EXTI 9\n");
+    if (NULL != __ext_line_bindings[9].fxn) {
+      __ext_line_bindings[9].fxn();
+    }
+    if (NULL != __ext_line_bindings[9].event) {
+      Kernel::isrRaiseEvent(__ext_line_bindings[9].event);
+    }
+  }
+}
+
+
+/*
+*
+*/
+void EXTI15_10_IRQHandler(void) {
+  if (EXTI->PR & (EXTI_PR_PR11)) {
+    EXTI->PR = EXTI_PR_PR11;   // Clear service bit.
+    Kernel::log("EXTI 11\n");
+    if (NULL != __ext_line_bindings[11].fxn) {
+      __ext_line_bindings[11].fxn();
+    }
+    if (NULL != __ext_line_bindings[11].event) {
+      Kernel::isrRaiseEvent(__ext_line_bindings[11].event);
+    }
+  }
+  if (EXTI->PR & (EXTI_PR_PR12)) {
+    EXTI->PR = EXTI_PR_PR12;   // Clear service bit.
+    Kernel::log("EXTI 12\n");
+    if (NULL != __ext_line_bindings[12].fxn) {
+      __ext_line_bindings[12].fxn();
+    }
+    if (NULL != __ext_line_bindings[12].event) {
+      Kernel::isrRaiseEvent(__ext_line_bindings[12].event);
+    }
+  }
+  if (EXTI->PR & (EXTI_PR_PR13)) {
+    EXTI->PR = EXTI_PR_PR13;   // Clear service bit.
+    Kernel::log("EXTI 13\n");
+    if (NULL != __ext_line_bindings[13].fxn) {
+      __ext_line_bindings[13].fxn();
+    }
+    if (NULL != __ext_line_bindings[13].event) {
+      Kernel::isrRaiseEvent(__ext_line_bindings[13].event);
+    }
+  }
+  if (EXTI->PR & (EXTI_PR_PR14)) {
+    EXTI->PR = EXTI_PR_PR14;   // Clear service bit.
+    Kernel::log("EXTI 14\n");
+    if (NULL != __ext_line_bindings[14].fxn) {
+      __ext_line_bindings[14].fxn();
+    }
+    if (NULL != __ext_line_bindings[14].event) {
+      Kernel::isrRaiseEvent(__ext_line_bindings[14].event);
+    }
+  }
+  if (EXTI->PR & (EXTI_PR_PR15)) {
+    EXTI->PR = EXTI_PR_PR15;   // Clear service bit.
+    Kernel::log("EXTI 15\n");
+    if (NULL != __ext_line_bindings[15].fxn) {
+      __ext_line_bindings[15].fxn();
+    }
+    if (NULL != __ext_line_bindings[15].event) {
+      Kernel::isrRaiseEvent(__ext_line_bindings[15].event);
+    }
+  }
 }

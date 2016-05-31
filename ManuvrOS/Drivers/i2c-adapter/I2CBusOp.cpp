@@ -44,7 +44,6 @@ limitations under the License.
   #include <inttypes.h>
   #include <ctype.h>
 #elif defined(STM32F7XX) | defined(STM32F746xx)
-  #include "stm32f7xx_hal.h"
 #else
   // Unsupported platform
 #endif
@@ -65,7 +64,6 @@ I2CBusOp::I2CBusOp(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t 
   this->buf_len         = len;
   this->txn_id          = BusOp::next_txn_id++;
   this->device          = NULL;
-  this->remaining_bytes = 0;
   this->requester       = NULL;
   this->subaddr_sent    = false;
   verbosity = 0;
@@ -98,16 +96,15 @@ void I2CBusOp::printDebug(void) {
 void I2CBusOp::printDebug(StringBuilder* temp) {
   if (temp != NULL) {
     temp->concatf("\n---[ I2CQueueOperation  0x%08x ]---\n", txn_id);
-    temp->concatf("opcode:          %s\n", getOpcodeString());
-    temp->concatf("device:          0x%02x\n", dev_addr);
+    temp->concatf("\topcode:          %s\n", getOpcodeString());
+    temp->concatf("\tdevice:          0x%02x\n", dev_addr);
 
     if (sub_addr >= 0x00) {
-      temp->concatf("subaddress:      0x%02x (%ssent)\n", sub_addr, (subaddr_sent ? "" : "un"));
+      temp->concatf("\tsubaddress:      0x%02x (%ssent)\n", sub_addr, (subaddr_sent ? "" : "un"));
     }
-    temp->concatf("xfer_state:      %s\n", getStateString());
-    temp->concatf("Fault:           %s\n", getErrorString());
-    temp->concatf("buf_len:         %d\n", buf_len);
-    temp->concatf("remaining_bytes: %d\n", remaining_bytes);
+    temp->concatf("\txfer_state:      %s\n", getStateString());
+    temp->concatf("\tFault:           %s\n", getErrorString());
+    temp->concatf("\tbuf_len:         %d\n\t", buf_len);
     if (buf_len > 0) {
       temp->concatf( "*(0x%08x):   ", (uint32_t) buf);
       for (uint8_t i = 0; i < buf_len; i++) {
@@ -137,7 +134,7 @@ int8_t I2CBusOp::abort(XferFault er) {
 /*
 *
 */
-void I2CBusOp::markComplete(void) {
+void I2CBusOp::markComplete() {
 	xfer_state = XferState::COMPLETE;
 	ManuvrRunnable* q_rdy = Kernel::returnEvent(MANUVR_MSG_I2C_QUEUE_READY);
 	q_rdy->specific_target = device;
@@ -150,7 +147,7 @@ void I2CBusOp::markComplete(void) {
 * TODO: Needs to be doing bus-checks.
 */
 
-int8_t I2CBusOp::begin(void) {
+int8_t I2CBusOp::begin() {
   if (NULL == device) {
     abort(XferFault::DEV_NOT_FOUND);
     return -1;
@@ -165,7 +162,7 @@ int8_t I2CBusOp::begin(void) {
   init_dma();
   if (device->generateStart()) {
     // Failure to generate START condition.
-    abort(XferFault::DEV_NOT_FOUND);
+    abort(XferFault::BUS_BUSY);
     return -1;
   }
   return 0;
@@ -221,6 +218,7 @@ int8_t I2CBusOp::init_dma() {
   }
 
 #elif defined(STM32F7XX) | defined(STM32F746xx)
+  device->dispatchOperation(this);
 
 #elif defined(__MANUVR_LINUX)   // Linux land...
   if (!device->switch_device(dev_addr)) return -1;

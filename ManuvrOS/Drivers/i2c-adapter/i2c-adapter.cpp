@@ -57,9 +57,9 @@ This file is the tortured result of growing pains since the beginning of
 #elif defined(STM32F7XX) | defined(STM32F746xx)
   // TODO: This is bad, and I know it. Need support ahead of a better abstraction strategy.
   extern "C" {
-    #include "stm32f7xx_hal.h"
+    #include <stm32f7xx_hal.h>
     #include <stm32f7xx_hal_gpio.h>
-
+    #include <stm32f7xx_hal_i2c.h>
     I2C_HandleTypeDef hi2c1;
   }
 
@@ -203,10 +203,17 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
   dev = dev_id;
 
   if (dev_id == 1) {
+    GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Pin       = GPIO_PIN_7|GPIO_PIN_6;
+    GPIO_InitStruct.Mode      = GPIO_MODE_AF_OD;
+    GPIO_InitStruct.Pull      = GPIO_PULLUP;
+    GPIO_InitStruct.Speed     = GPIO_SPEED_LOW;
+    GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
     __HAL_RCC_I2C1_CLK_ENABLE();
 
     hi2c1.Instance              = I2C1;
-    hi2c1.Init.Timing           = 0x00202E44;
+    hi2c1.Init.Timing           = 0x0030334E;
     hi2c1.Init.OwnAddress1      = 0;
     hi2c1.Init.AddressingMode   = I2C_ADDRESSINGMODE_7BIT;
     hi2c1.Init.DualAddressMode  = I2C_DUALADDRESS_DISABLE;
@@ -214,17 +221,16 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
     hi2c1.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
     hi2c1.Init.GeneralCallMode  = I2C_GENERALCALL_DISABLE;
     hi2c1.Init.NoStretchMode    = I2C_NOSTRETCH_DISABLE;
-    HAL_I2C_Init(&hi2c1);
-
-    GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.Pin       = GPIO_PIN_7|GPIO_PIN_6;
-    GPIO_InitStruct.Mode      = GPIO_MODE_AF_OD;
-    GPIO_InitStruct.Pull      = GPIO_PULLUP;
-    GPIO_InitStruct.Speed     = GPIO_SPEED_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-    busOnline(HAL_OK == HAL_I2CEx_AnalogFilter_Config(&hi2c1, I2C_ANALOGFILTER_ENABLE));
+    if (HAL_OK == HAL_I2C_Init(&hi2c1)) {
+      busOnline(HAL_OK == HAL_I2CEx_ConfigAnalogFilter(&hi2c1, I2C_ANALOGFILTER_ENABLE));
+      HAL_NVIC_SetPriority(I2C1_EV_IRQn, 2, 0);
+      HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
+      HAL_NVIC_SetPriority(I2C1_ER_IRQn, 1, 0);
+      HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);
+    }
+    else {
+      Kernel::log("I2CAdapter failed to init.\n");
+    }
   }
   else {
     // Unsupported
@@ -249,18 +255,18 @@ I2CAdapter::~I2CAdapter() {
 
 
 int8_t I2CAdapter::generateStart() {
-  #ifdef __MANUVR_DEBUG
-  if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
-  #endif
+  //#ifdef __MANUVR_DEBUG
+  //if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
+  //#endif
   if (! busOnline()) return -1;
   return 0;
 }
 
 
 int8_t I2CAdapter::generateStop() {
-  #ifdef __MANUVR_DEBUG
-  if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
-  #endif
+  //#ifdef __MANUVR_DEBUG
+  //if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
+  //#endif
   if (! busOnline()) return -1;
   return 0;
 }
@@ -268,10 +274,59 @@ int8_t I2CAdapter::generateStop() {
 
 
 int8_t I2CAdapter::dispatchOperation(I2CBusOp* op) {
-  op->abort(XferFault::TIMEOUT);
+  if (op->get_opcode() == BusOpcode::RX) {
+    if (HAL_OK != HAL_I2C_Master_Receive_IT(&hi2c1, (uint16_t) op->dev_addr, op->buf, op->buf_len)) {
+      op->abort(XferFault::BUS_FAULT);
+    }
+  }
+  else if (op->get_opcode() == BusOpcode::TX) {
+    if (HAL_OK != HAL_I2C_Master_Transmit_IT(&hi2c1, (uint16_t) op->dev_addr, op->buf, op->buf_len)) {
+      op->abort(XferFault::BUS_FAULT);
+    }
+  }
+  else if (op->get_opcode() == BusOpcode::TX_CMD) {
+    // Ping
+  }
+  else {
+    op->abort(XferFault::BAD_PARAM);
+  }
   return 0;
 }
 
+extern "C" {
+  /* HAL ISR wrappers. */
+  void I2C1_EV_IRQHandler(void) {    HAL_I2C_EV_IRQHandler(&hi2c1);  }
+  void I2C1_ER_IRQHandler(void) {    HAL_I2C_ER_IRQHandler(&hi2c1);  }
+
+  /*
+  * This is an ISR.
+  */
+  void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
+    if (i2c->current_queue_item != NULL) {
+      //i2c->current_queue_item->markComplete();
+      i2c->current_queue_item->advance_operation(1);
+    }
+  }
+
+  /*
+  * This is an ISR.
+  */
+  void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
+    if (i2c->current_queue_item != NULL) {
+      //i2c->current_queue_item->markComplete();
+      i2c->current_queue_item->advance_operation(1);
+    }
+  }
+
+  /*
+  * This is an ISR.
+  */
+  void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c) {
+    if (i2c->current_queue_item != NULL) {
+      i2c->current_queue_item->abort(XferFault::HUNG_IRQ);
+    }
+  }
+}
 
 
 #elif defined(__MK20DX256__) | defined(__MK20DX128__)
@@ -344,14 +399,14 @@ int8_t I2CAdapter::dispatchOperation(I2CBusOp* op) {
 
       if (op->get_opcode() == BusOpcode::RX) {
         Wire.endTransmission(I2C_NOSTOP);
-        Wire.requestFrom(op->dev_addr, op->len, I2C_STOP, 10000);
+        Wire.requestFrom(op->dev_addr, op->buf_len, I2C_STOP, 10000);
         int i = 0;
         while(Wire.available()) {
           *(op->buf + i++) = (uint8_t) Wire.readByte();
         }
       }
       else if (op->get_opcode() == BusOpcode::TX) {
-        for(int i = 0; i < op->len; i++) Wire.write(*(op->buf+i));
+        for(int i = 0; i < op->buf_len; i++) Wire.write(*(op->buf+i));
         Wire.endTransmission(I2C_STOP, 10000);   // 10ms timeout
       }
       else if (op->get_opcode() == BusOpcode::TX_CMD) {
@@ -363,16 +418,16 @@ int8_t I2CAdapter::dispatchOperation(I2CBusOp* op) {
           op->markComplete();
           break;
         case I2C_ADDR_NAK:
-          op->abort(I2C_ERR_SLAVE_NOT_FOUND);
+          op->abort(XferFault::DEV_NOT_FOUND);
           break;
         case I2C_DATA_NAK:
-          op->abort(I2C_ERR_SLAVE_INVALID);
+          op->abort(XferFault::DEV_NOT_FOUND);
           break;
         case I2C_ARB_LOST:
-          op->abort(I2C_ERR_CODE_BUS_BUSY);
+          op->abort(XferFault::BUS_BUSY);
           break;
         case I2C_TIMEOUT:
-          op->abort(I2C_ERR_CODE_TIMEOUT);
+          op->abort(XferFault::TIMEOUT);
           break;
       }
     }
@@ -386,14 +441,14 @@ int8_t I2CAdapter::dispatchOperation(I2CBusOp* op) {
 
     if (op->get_opcode() == BusOpcode::RX) {
       Wire1.endTransmission(I2C_NOSTOP);
-      Wire1.requestFrom(op->dev_addr, op->len, I2C_STOP, 10000);
+      Wire1.requestFrom(op->dev_addr, op->buf_len, I2C_STOP, 10000);
       int i = 0;
       while(Wire1.available()) {
         *(op->buf + i++) = (uint8_t) Wire1.readByte();
       }
     }
     else if (op->get_opcode() == BusOpcode::TX) {
-      for(int i = 0; i < op->len; i++) Wire1.write(*(op->buf+i));
+      for(int i = 0; i < op->buf_len; i++) Wire1.write(*(op->buf+i));
       Wire1.endTransmission(I2C_STOP, 10000);   // 10ms timeout
     }
     else if (op->get_opcode() == BusOpcode::TX_CMD) {
@@ -405,16 +460,16 @@ int8_t I2CAdapter::dispatchOperation(I2CBusOp* op) {
         op->markComplete();
         break;
       case I2C_ADDR_NAK:
-        op->abort(I2C_ERR_SLAVE_NOT_FOUND);
+        op->abort(XferFault::DEV_NOT_FOUND);
         break;
       case I2C_DATA_NAK:
-        op->abort(I2C_ERR_SLAVE_INVALID);
+        op->abort(XferFault::DEV_NOT_FOUND);
         break;
       case I2C_ARB_LOST:
-        op->abort(I2C_ERR_CODE_BUS_BUSY);
+        op->abort(XferFault::BUS_BUSY);
         break;
       case I2C_TIMEOUT:
-        op->abort(I2C_ERR_CODE_TIMEOUT);
+        op->abort(XferFault::TIMEOUT);
         break;
     }
   }
@@ -774,10 +829,6 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
 #elif defined(STM32F4XX)
   bool return_value = true;
 
-
-#elif defined(MPCMZ)
-// PIC32 MZ i2c support is broken at the time of this writing.
-
 #elif defined(__MANUVR_LINUX)   // Assuming a linux environment.
   bool return_value = false;
   unsigned short timeout = 10000;
@@ -1061,7 +1112,14 @@ void I2CAdapter::printDebug(StringBuilder *temp) {
   if (temp == NULL) return;
 
   EventReceiver::printDebug(temp);
-  temp->concatf("--- bus_online             %s\n", (busOnline() ? "yes" : "no"));
+  temp->concatf("-- bus_online              %s\n", (busOnline() ? "yes" : "no"));
+  #if defined(STM32F7XX) | defined(STM32F746xx)
+    temp->concatf("-- XferCount               %u\n", hi2c1.XferCount);
+    temp->concatf("-- State                   %u\n", hi2c1.ErrorCode);
+    temp->concatf("-- ErrorCode               %u\n", hi2c1.ErrorCode);
+    temp->concatf("-- pBuffPtr                0x%08x\n", (uint32_t) hi2c1.pBuffPtr);
+    temp->concatf("-- XferSize                %d\n", hi2c1.XferSize);
+  #endif
   printPingMap(temp);
 
   if (current_queue_item != NULL) {

@@ -70,9 +70,15 @@ class ManuvrRunnable;
   #define INPUT_PULLUP   0xFE
   #define INPUT_PULLDOWN 0xFD
 
-  #define CHANGE         GPIO_MODE_IT_RISING_FALLING
-  #define FALLING        GPIO_MODE_IT_FALLING
-  #define RISING         GPIO_MODE_IT_RISING
+  #define CHANGE             0xFC
+  #define FALLING            0xFB
+  #define RISING             0xFA
+  #define CHANGE_PULL_UP     0xF9
+  #define FALLING_PULL_UP    0xF8
+  #define RISING_PULL_UP     0xF7
+  #define CHANGE_PULL_DOWN   0xF6
+  #define FALLING_PULL_DOWN  0xF5
+  #define RISING_PULL_DOWN   0xF4
   extern "C" {
     unsigned long millis();
     unsigned long micros();
@@ -109,6 +115,12 @@ typedef struct __platform_gpio_def {
   uint8_t         flags;
   uint16_t        mode;  // Strictly more than needed. Padding structure...
 } PlatformGPIODef;
+
+/*
+* Internal utility function prototypes
+*/
+const char* getIRQConditionString(int);
+
 
 /*
 * Time and date
@@ -181,9 +193,10 @@ void init_RNG();                             // Fire up the random number genera
 *   and instead use it as a PRNG seed or some other such approach. Please see the
 *   security documentation for a deeper discussion of the issues at hand.
 */
-int platformSerialNumberSize();   // Returns the length of the serial number on this platform (in bytes).
-int getSerialNumber(uint8_t*);    // Writes the serial number to the indicated buffer.
+int platformSerialNumberSize();    // Returns the length of the serial number on this platform (in bytes).
+int getSerialNumber(uint8_t*);     // Writes the serial number to the indicated buffer.
 
+//void manuvrPlatformInfo(StringBuilder*); // Writes a platform information string to the provided buffer.
 
 /*
 * GPIO and change-notice.

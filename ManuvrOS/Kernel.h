@@ -60,8 +60,9 @@ limitations under the License.
   * These state flags are hosted by the EventReceiver. This may change in the future.
   * Might be too much convention surrounding their assignment across inherritence.
   */
-  #define MKERNEL_FLAG_PROFILING    0x01    // Should we spend time profiling this component?
-  #define MKERNEL_FLAG_SKIP_DETECT  0x02    // Set in advanceScheduler(), cleared in serviceSchedules().
+  #define MKERNEL_FLAG_PROFILING     0x01    // Should we spend time profiling this component?
+  #define MKERNEL_FLAG_SKIP_DETECT   0x02    // Set in advanceScheduler(), cleared in serviceSchedules().
+  #define MKERNEL_FLAG_SKIP_FAILSAFE 0x04    // Too many skips will send us to the bootloader.
 
 
   #if defined(__MANUVR_CONSOLE_SUPPORT) || defined(__MANUVR_DEBUG)
@@ -240,6 +241,8 @@ limitations under the License.
       uint32_t idempotent_blocks;     // How many times has the idempotent flag prevented a raiseEvent()?
       uint32_t insertion_denials;     // How many times have we rejected events?
       uint32_t max_queue_depth;       // What is the deepest point the queue has reached?
+
+      uint32_t _skips_observed;       // How many sequential scheduler skips have we noticed?
 
       ManuvrRunnable _preallocation_pool[EVENT_MANAGER_PREALLOC_COUNT];
 

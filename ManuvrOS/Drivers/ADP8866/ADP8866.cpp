@@ -62,7 +62,9 @@ void ADP8866_ISR(void) {
 
 // TODO: Bleh... I really dislike htis indirection...
 void ADP8866::_isr_fxn(void) {
-  readRegister((uint8_t) ADP8866_INT_STAT);
+  if (_er_flag(ADP8866_FLAG_INIT_COMPLETE)) {
+    readRegister((uint8_t) ADP8866_INT_STAT);
+  }
 }
 
 
@@ -103,10 +105,6 @@ ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : I2CDevice
   irq_pin   = _irq_pin;
   gpioDefine(_irq_pin, INPUT_PULLUP);
   gpioDefine(_reset_pin, OUTPUT);
-
-  if (irq_pin > 0) {
-    setPinFxn(irq_pin, FALLING, ADP8866_ISR);
-  }
 
   setPin(_reset_pin, false);
 
@@ -406,6 +404,11 @@ int8_t ADP8866::bootComplete() {
   // If this read comes back the way we think it should,
   //   we will init() the chip.
   readRegister((uint8_t) ADP8866_MANU_DEV_ID);
+
+  if (irq_pin > 0) {
+    setPinFxn(irq_pin, FALLING, ADP8866_ISR);
+  }
+
   return 1;
 }
 
