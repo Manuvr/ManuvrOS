@@ -272,7 +272,7 @@ int8_t gpioDefine(uint8_t pin, int mode) {
   //if (pin < PLATFORM_GPIO_PIN_COUNT) {
     GPIO_InitTypeDef GPIO_InitStruct;
     GPIO_InitStruct.Pin    = _associated_pin(pin);
-    GPIO_InitStruct.Speed  = GPIO_SPEED_LOW;
+    GPIO_InitStruct.Speed  = GPIO_SPEED_HIGH;
     GPIO_InitStruct.Pull   = GPIO_NOPULL;
     GPIO_InitStruct.Mode   = GPIO_MODE_INPUT;
 
