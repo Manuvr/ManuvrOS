@@ -99,7 +99,6 @@ class BusOp {
   public:
     uint8_t* buf         = 0;                  // Pointer to the data buffer for the transaction.
     uint16_t buf_len     = 0;                  // How large is the above buffer?
-    uint8_t  flags       = 0;                  // No flags set.
 
     /* Mandatory overrides... */
     //virtual void wipe()  =0;
