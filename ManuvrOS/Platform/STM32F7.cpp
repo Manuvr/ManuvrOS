@@ -376,7 +376,7 @@ int8_t setPinEvent(uint8_t _pin, uint8_t condition, ManuvrRunnable* isr_event) {
          event to the list of things to do. */
     __ext_line_bindings[pin_idx].event     = isr_event;
   }
-  else {
+  else if (__ext_line_bindings[pin_idx].event != isr_event) {
     StringBuilder local_log("Tried to clobber an existing IRQ event association...\n");
     printEXTIDef(_pin, &local_log);
     Kernel::log(&local_log);
@@ -454,7 +454,7 @@ int8_t setPinFxn(uint8_t _pin, uint8_t condition, FunctionPointer fxn) {
          fxn to the list of things to do. */
     __ext_line_bindings[pin_idx].fxn = fxn;
   }
-  else {
+  else if (__ext_line_bindings[pin_idx].fxn != fxn) {
     StringBuilder local_log("Tried to clobber an existing IRQ event association...\n");
     printEXTIDef(_pin, &local_log);
     Kernel::log(&local_log);
@@ -619,7 +619,6 @@ void EXTI0_IRQHandler(void) {
 void EXTI1_IRQHandler(void) {
   if (EXTI->PR & (EXTI_PR_PR1)) {
     EXTI->PR = EXTI_PR_PR1;   // Clear service bit.
-    //Kernel::log("EXTI 1\n");
     if (NULL != __ext_line_bindings[1].fxn) {
       __ext_line_bindings[1].fxn();
     }
@@ -636,7 +635,6 @@ void EXTI1_IRQHandler(void) {
 void EXTI2_IRQHandler(void) {
   if (EXTI->PR & (EXTI_PR_PR2)) {
     EXTI->PR = EXTI_PR_PR2;   // Clear service bit.
-    Kernel::log("EXTI 2\n");
     if (NULL != __ext_line_bindings[2].fxn) {
       __ext_line_bindings[2].fxn();
     }
@@ -653,7 +651,6 @@ void EXTI2_IRQHandler(void) {
 void EXTI3_IRQHandler(void) {
   if (EXTI->PR & (EXTI_PR_PR3)) {
     EXTI->PR = EXTI_PR_PR3;   // Clear service bit.
-    Kernel::log("EXTI 3\n");
     if (NULL != __ext_line_bindings[3].fxn) {
       __ext_line_bindings[3].fxn();
     }
@@ -670,7 +667,6 @@ void EXTI3_IRQHandler(void) {
 void EXTI4_IRQHandler(void) {
   if (EXTI->PR & (EXTI_PR_PR4)) {
     EXTI->PR = EXTI_PR_PR4;   // Clear service bit.
-    Kernel::log("EXTI 4\n");
     if (NULL != __ext_line_bindings[4].fxn) {
       __ext_line_bindings[4].fxn();
     }
@@ -687,7 +683,6 @@ void EXTI4_IRQHandler(void) {
 void EXTI9_5_IRQHandler(void) {
   if (EXTI->PR & (EXTI_PR_PR5)) {
     EXTI->PR = EXTI_PR_PR5;   // Clear service bit.
-    Kernel::log("EXTI 5\n");
     if (NULL != __ext_line_bindings[5].fxn) {
       __ext_line_bindings[5].fxn();
     }
@@ -697,7 +692,6 @@ void EXTI9_5_IRQHandler(void) {
   }
   if (EXTI->PR & (EXTI_PR_PR6)) {
     EXTI->PR = EXTI_PR_PR6;   // Clear service bit.
-    Kernel::log("EXTI 6\n");
     if (NULL != __ext_line_bindings[6].fxn) {
       __ext_line_bindings[6].fxn();
     }
@@ -707,7 +701,6 @@ void EXTI9_5_IRQHandler(void) {
   }
   if (EXTI->PR & (EXTI_PR_PR7)) {
     EXTI->PR = EXTI_PR_PR7;   // Clear service bit.
-    Kernel::log("EXTI 7\n");
     if (NULL != __ext_line_bindings[7].fxn) {
       __ext_line_bindings[7].fxn();
     }
@@ -717,7 +710,6 @@ void EXTI9_5_IRQHandler(void) {
   }
   if (EXTI->PR & (EXTI_PR_PR8)) {
     EXTI->PR = EXTI_PR_PR8;   // Clear service bit.
-    Kernel::log("EXTI 8\n");
     if (NULL != __ext_line_bindings[8].fxn) {
       __ext_line_bindings[8].fxn();
     }
@@ -727,7 +719,6 @@ void EXTI9_5_IRQHandler(void) {
   }
   if (EXTI->PR & (EXTI_PR_PR9)) {
     EXTI->PR = EXTI_PR_PR9;   // Clear service bit.
-    Kernel::log("EXTI 9\n");
     if (NULL != __ext_line_bindings[9].fxn) {
       __ext_line_bindings[9].fxn();
     }
@@ -744,7 +735,6 @@ void EXTI9_5_IRQHandler(void) {
 void EXTI15_10_IRQHandler(void) {
   if (EXTI->PR & (EXTI_PR_PR11)) {
     EXTI->PR = EXTI_PR_PR11;   // Clear service bit.
-    Kernel::log("EXTI 11\n");
     if (NULL != __ext_line_bindings[11].fxn) {
       __ext_line_bindings[11].fxn();
     }
@@ -754,7 +744,6 @@ void EXTI15_10_IRQHandler(void) {
   }
   if (EXTI->PR & (EXTI_PR_PR12)) {
     EXTI->PR = EXTI_PR_PR12;   // Clear service bit.
-    Kernel::log("EXTI 12\n");
     if (NULL != __ext_line_bindings[12].fxn) {
       __ext_line_bindings[12].fxn();
     }
@@ -764,7 +753,6 @@ void EXTI15_10_IRQHandler(void) {
   }
   if (EXTI->PR & (EXTI_PR_PR13)) {
     EXTI->PR = EXTI_PR_PR13;   // Clear service bit.
-    Kernel::log("EXTI 13\n");
     if (NULL != __ext_line_bindings[13].fxn) {
       __ext_line_bindings[13].fxn();
     }
@@ -774,7 +762,6 @@ void EXTI15_10_IRQHandler(void) {
   }
   if (EXTI->PR & (EXTI_PR_PR14)) {
     EXTI->PR = EXTI_PR_PR14;   // Clear service bit.
-    Kernel::log("EXTI 14\n");
     if (NULL != __ext_line_bindings[14].fxn) {
       __ext_line_bindings[14].fxn();
     }
@@ -784,7 +771,6 @@ void EXTI15_10_IRQHandler(void) {
   }
   if (EXTI->PR & (EXTI_PR_PR15)) {
     EXTI->PR = EXTI_PR_PR15;   // Clear service bit.
-    Kernel::log("EXTI 15\n");
     if (NULL != __ext_line_bindings[15].fxn) {
       __ext_line_bindings[15].fxn();
     }
