@@ -752,7 +752,7 @@ int8_t Kernel::procIdleFlags() {
             // NOTE: No break;
           case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
             #ifdef __MANUVR_DEBUG
-            if (getVerbosity() > 6) local_log.concatf("Dropping %s after running.\n", active_runnable->getMsgTypeString());
+            //if (getVerbosity() > 6) local_log.concatf("Dropping %s after running.\n", active_runnable->getMsgTypeString());
             #endif
             // NOTE: No break;
           case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
@@ -1516,18 +1516,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
         }
       }
       break;
-    case 'u':
-      switch (temp_int) {
-        case 1:
-          Kernel::raiseEvent(MANUVR_MSG_SELF_DESCRIBE, NULL);
-          break;
-        case 3:
-          Kernel::raiseEvent(MANUVR_MSG_LEGEND_MESSAGES, NULL);
-          break;
-        default:
-          break;
-      }
-      break;
+
     #if defined(__MANUVR_DEBUG)
     case 'i':   // Debug prints.
       if (1 == temp_int) {
