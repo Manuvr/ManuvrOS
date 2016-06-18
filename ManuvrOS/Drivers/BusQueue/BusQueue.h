@@ -177,4 +177,20 @@ class BusAdapter {
 };
 
 
+/*
+* This is an interface class that implements a callback path for I/O operations.
+* If a class wants to put operations into the SPI queue, it must either implement this
+*   interface, or delegate its callback duties to a class that does.
+*/
+class BusOpCallback {
+  public:
+    // The SPI driver will call this fxn when the bus op finishes.
+    virtual int8_t io_op_callback(BusOp*) =0;
+
+    /*
+    */
+    virtual int8_t queue_io_job(BusOp*) =0;
+
+};
+
 #endif  // __MANUVR_BUS_QUEUE_H__
