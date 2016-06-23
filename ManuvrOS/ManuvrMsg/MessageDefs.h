@@ -176,9 +176,6 @@ limitations under the License.
     // i2c
     #define MANUVR_MSG_I2C_QUEUE_READY      0x0220 // The i2c queue is ready for attention.
 
-    // SPI
-    #define MANUVR_MSG_SPI_QUEUE_READY      0x0230 // There is a new job in the SPI bus queue.
-    #define MANUVR_MSG_SPI_CB_QUEUE_READY   0x0231 // There is something ready in the callback queue.
     // USB VCP stuff...
     #define MANUVR_MSG_SYS_USB_CONNECT      0x0250 // Something was plugged into our USB port.
     #define MANUVR_MSG_SYS_USB_DISCONNECT   0x0251 // Something was unplugged from our USB port.

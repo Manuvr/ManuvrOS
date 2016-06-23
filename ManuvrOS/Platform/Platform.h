@@ -125,9 +125,10 @@ const char* getIRQConditionString(int);
 /*
 * Time and date
 */
-bool initPlatformRTC();       // We call this once on bootstrap. Sets up the RTC.
-bool setTimeAndDate(char*);   // Takes a string of the form given by RFC-2822: "Mon, 15 Aug 2005 15:52:01 +0000"   https://www.ietf.org/rfc/rfc2822.txt
-uint32_t epochTime();         // Returns an integer representing the current datetime.
+bool initPlatformRTC();          // We call this once on bootstrap. Sets up the RTC.
+bool setTimeAndDateStr(char*);   // Takes a string of the form given by RFC-2822: "Mon, 15 Aug 2005 15:52:01 +0000"   https://www.ietf.org/rfc/rfc2822.txt
+bool setTimeAndDate(uint8_t y, uint8_t m, uint8_t d, uint8_t wd, uint8_t h, uint8_t mi, uint8_t s);
+uint32_t epochTime();            // Returns an integer representing the current datetime.
 void currentDateTime(StringBuilder*);    // Writes a human-readable datetime to the argument.
 
 // Performs string conversion for integer type-code, and is only useful for logging.

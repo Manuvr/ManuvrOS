@@ -22,10 +22,12 @@ limitations under the License.
 #ifndef __PLATFORM_STM32F7_H__
 #define __PLATFORM_STM32F7_H__
 
-#include "stm32f7xx_hal.h"
-#include "stm32f7xx_hal_rcc.h"
-#include "stm32f7xx_hal_gpio.h"
-#include "stm32f7xx_hal_gpio_ex.h"
+#include <stm32f7xx_hal.h>
+#include <stm32f7xx_hal_rcc.h>
+#include <stm32f7xx_hal_rtc.h>
+#include <stm32f7xx_hal_rtc_ex.h>
+#include <stm32f7xx_hal_gpio.h>
+#include <stm32f7xx_hal_gpio_ex.h>
 
 #define PLATFORM_GPIO_PIN_COUNT   48
 

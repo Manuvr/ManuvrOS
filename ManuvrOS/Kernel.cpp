@@ -555,10 +555,10 @@ void Kernel::reclaim_event(ManuvrRunnable* active_runnable) {
   bool reap_current_event = active_runnable->kernelShouldReap();
 
   #ifdef __MANUVR_DEBUG
-  if (getVerbosity() > 5) {
-    local_log.concatf("We will%s be reaping %s.\n", (reap_current_event ? "":" not"), active_runnable->getMsgTypeString());
-    Kernel::log(&local_log);
-  }
+  //if (getVerbosity() > 5) {
+  //  local_log.concatf("We will%s be reaping %s.\n", (reap_current_event ? "":" not"), active_runnable->getMsgTypeString());
+  //  Kernel::log(&local_log);
+  //}
   #endif // __MANUVR_DEBUG
 
   if (reap_current_event) {                   // If we are to reap this event...
@@ -667,7 +667,7 @@ int8_t Kernel::procIdleFlags() {
 
     // Chat and measure.
     #ifdef __MANUVR_DEBUG
-    if (getVerbosity() > 6) local_log.concatf("Servicing: %s\n", active_runnable->getMsgTypeString());
+    //if (getVerbosity() > 6) local_log.concatf("Servicing: %s\n", active_runnable->getMsgTypeString());
     #endif
 
     profiler_mark_0 = micros();
@@ -752,7 +752,7 @@ int8_t Kernel::procIdleFlags() {
             // NOTE: No break;
           case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
             #ifdef __MANUVR_DEBUG
-            if (getVerbosity() > 6) local_log.concatf("Dropping %s after running.\n", active_runnable->getMsgTypeString());
+            //if (getVerbosity() > 6) local_log.concatf("Dropping %s after running.\n", active_runnable->getMsgTypeString());
             #endif
             // NOTE: No break;
           case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
@@ -1516,18 +1516,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
         }
       }
       break;
-    case 'u':
-      switch (temp_int) {
-        case 1:
-          Kernel::raiseEvent(MANUVR_MSG_SELF_DESCRIBE, NULL);
-          break;
-        case 3:
-          Kernel::raiseEvent(MANUVR_MSG_LEGEND_MESSAGES, NULL);
-          break;
-        default:
-          break;
-      }
-      break;
+
     #if defined(__MANUVR_DEBUG)
     case 'i':   // Debug prints.
       if (1 == temp_int) {

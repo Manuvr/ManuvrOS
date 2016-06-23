@@ -36,6 +36,8 @@ This file is meant to contain a set of common functions that are typically platf
 * The code under this block is special on this platform, and will not be available elsewhere.       *
 ****************************************************************************************************/
 
+RTC_HandleTypeDef rtc;
+
 #if defined(ENABLE_USB_VCP)
   #include "tm_stm32_usb_device.h"
   #include "tm_stm32_usb_device_cdc.h"
@@ -179,11 +181,123 @@ uint32_t rtc_startup_state = MANUVR_RTC_STARTUP_UNINITED;
 
 
 /*
-*
+* Setup the realtime clock module.
+* Informed by code here:
+* http://autoquad.googlecode.com/svn/trunk/onboard/rtc.c
 */
 bool initPlatformRTC() {
+    RTC_DateTypeDef RTC_DateStructure;
+    RTC_TimeTypeDef RTC_TimeStructure;
+
+    //RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE); /* Enable the PWR clock.      */
+    //RCC_APB1PeriphClockCmd(RCC_AHB1Periph_BKPSRAM, ENABLE);
+    //PWR_BackupAccessCmd(ENABLE);                        /* Allow access to RTC.       */
+
+    uint32_t temp_bud_read = MANUVR_RTC_STARTUP_GOOD_SET; //RTC_ReadBackupRegister(RTC_BKP_DR0);
+    Kernel::log(__PRETTY_FUNCTION__, 7, "BU domain reg 0:   0x%08x.", temp_bud_read);
+    switch (temp_bud_read) {
+      case MANUVR_RTC_STARTUP_GOOD_UNSET:  // We previously set up the peripheral, but don't know what time it is.
+      case MANUVR_RTC_STARTUP_GOOD_SET:    // We are set up and we know the present time.
+        rtc_startup_state = temp_bud_read;
+        break;
+      default:
+        //RCC_BackupResetCmd(ENABLE);                         /* Reset the backup domain... */
+        //RCC_BackupResetCmd(DISABLE);                        /* ...then dis-assert.        */
+        //RCC_LSEConfig(RCC_LSE_ON);                          /* Enable the LSE OSC.        */
+        //RCC_LSICmd(ENABLE);
+
+        /* Wait till LSE is ready. Timeout after awhile and record a failure. */
+        {
+          uint32_t ext_osc_timeout = 0x10000000;
+          //while((RCC_GetFlagStatus(RCC_FLAG_LSERDY) == RESET) & (ext_osc_timeout-- > 0));
+          if (ext_osc_timeout == 0) {
+            rtc_startup_state = MANUVR_RTC_OSC_FAILURE;
+            Kernel::log(__PRETTY_FUNCTION__, 1, "LSE failed to start.", temp_bud_read);
+            return false;   // Might decide to fall back on LSI...
+          }
+        }
+
+        //RCC_RTCCLKConfig(RCC_RTCCLKSource_LSE);             /* Select the RTC Clock Source       */
+        //RCC_RTCCLKCmd(ENABLE);                              /* Enable the RTC Clock              */
+        HAL_RTC_WaitForSynchro(&rtc);                       /* Wait for RTC APB register's sync. */
+
+        Kernel::log(__PRETTY_FUNCTION__, 1, "WaitForSynchro finished.");
+        /* Configure the RTC data register and RTC prescaler */
+        /* ck_spre(1Hz) = RTCCLK(LSE) /(uwAsynchPrediv + 1)*(uwSynchPrediv + 1)*/
+        rtc.Init.AsynchPrediv = 0x7F;
+        rtc.Init.SynchPrediv  = 0xFF;
+        rtc.Init.HourFormat   = RTC_HOURFORMAT_24;
+        HAL_RTC_Init(&rtc);
+
+        __HAL_RTC_WRITEPROTECTION_DISABLE(&rtc);
+        RTC_EnterInitMode(&rtc);
+
+        //RTC_ClearFlag(RTC_FLAG_ALRAF);              /* Need to clear the RTC alarm flag. */
+
+        /* Set the date: Friday January 11th 2013 */
+        RTC_DateStructure.Year    = 16;
+        RTC_DateStructure.Month   = RTC_MONTH_JUNE;
+        RTC_DateStructure.Date    = 7;
+        RTC_DateStructure.WeekDay = RTC_WEEKDAY_TUESDAY;
+        HAL_RTC_SetDate(&rtc, &RTC_DateStructure, RTC_FORMAT_BCD);
+
+        /* Set the time to 05h 20mn 00s AM */
+        RTC_TimeStructure.TimeFormat = RTC_HOURFORMAT12_AM;
+        RTC_TimeStructure.Hours      = 0;
+        RTC_TimeStructure.Minutes    = 0;
+        RTC_TimeStructure.Seconds    = 0;
+        HAL_RTC_SetTime(&rtc, &RTC_TimeStructure, RTC_FORMAT_BCD);
+
+        /* Let's us determine that we've already setup the peripheral on next run... */
+        //RTC_WriteBackupRegister(RTC_BKP_DR0, MANUVR_RTC_STARTUP_GOOD_UNSET);
+        __HAL_RTC_WRITEPROTECTION_ENABLE(&rtc);
+        //RTC_ExitInitMode(&rtc);
+        break;
+    }
+
+    //RTC_WakeUpCmd(DISABLE);
+    //  // Configure the RTC WakeUp Clock source: CK_SPRE (1Hz)
+    //  RTC_WakeUpClockConfig(RTC_WakeUpClock_CK_SPRE_16bits);
+    //  RTC_SetWakeUpCounter(0x0);
+    //
+    //  // Enable Wakeup Counter
+    //  //RTC_WakeUpCmd(ENABLE);
+    //
+    //  // Enable the RTC Wakeup Interrupt
+    //  RTC_ClearITPendingBit(RTC_IT_WUT);
+    //  RTC_ITConfig(RTC_IT_WUT, ENABLE);
   return true;
 }
+
+/*
+*/
+bool setTimeAndDate(uint8_t y, uint8_t m, uint8_t d, uint8_t wd, uint8_t h, uint8_t mi, uint8_t s) {
+  //RTC_WriteProtectionCmd(DISABLE);
+  RTC_EnterInitMode(&rtc);
+  RTC_DateTypeDef RTC_DateStructure;
+  RTC_TimeTypeDef RTC_TimeStructure;
+
+  /* Set the date: Friday January 11th 2013 */
+  RTC_DateStructure.Year    = y;
+  RTC_DateStructure.Month   = m;
+  RTC_DateStructure.Date    = d;
+  RTC_DateStructure.WeekDay = wd;
+  HAL_RTC_SetDate(&rtc, &RTC_DateStructure, RTC_FORMAT_BCD);
+
+  /* Set the time to 05h 20mn 00s AM */
+  RTC_TimeStructure.TimeFormat = RTC_HOURFORMAT12_AM;
+  RTC_TimeStructure.Hours      = h;
+  RTC_TimeStructure.Minutes    = mi;
+  RTC_TimeStructure.Seconds    = s;
+  HAL_RTC_SetTime(&rtc, &RTC_TimeStructure, RTC_FORMAT_BCD);
+
+  /* Let's us determine that we've already setup the peripheral on next run... */
+  //RTC_WriteBackupRegister(RTC_BKP_DR0, MANUVR_RTC_STARTUP_GOOD_SET);
+  //RTC_WriteProtectionCmd(ENABLE);
+  //RTC_ExitInitMode();
+  return true;
+}
+
 
 /*
 * Given an RFC2822 datetime string, decompose it and set the time and date.
@@ -191,10 +305,9 @@ bool initPlatformRTC() {
 *   time or timezone.
 * Returns false if the date failed to set. True if it did.
 */
-bool setTimeAndDate(char* nu_date_time) {
+bool setTimeAndDateStr(char* nu_date_time) {
   return false;
 }
-
 
 
 /*
@@ -212,6 +325,12 @@ uint32_t epochTime(void) {
 */
 void currentDateTime(StringBuilder* target) {
   if (target != NULL) {
+    RTC_TimeTypeDef RTC_TimeStructure;
+    RTC_DateTypeDef RTC_DateStructure;
+    //RTC_GetTimeStamp(RTC_FORMAT_BCD, &RTC_TimeStructure, &RTC_DateStructure);
+
+    target->concatf("%d-%d-%dT", RTC_DateStructure.Year, RTC_DateStructure.Month, RTC_DateStructure.Date);
+    target->concatf("%d:%d:%d+00:00", RTC_TimeStructure.Hours, RTC_TimeStructure.Minutes, RTC_TimeStructure.Seconds);
   }
 }
 
@@ -313,7 +432,6 @@ void unsetPinIRQ(uint8_t pin) {
 
 int8_t setPinEvent(uint8_t _pin, uint8_t condition, ManuvrRunnable* isr_event) {
   uint16_t pin_idx   = (_pin % 16);
-  GPIO_TypeDef* port = _associated_port(_pin);
 
   if (0 == __ext_line_bindings[pin_idx].condition) {
     /* There is not presently an interrupt condition on this pin.
@@ -376,7 +494,7 @@ int8_t setPinEvent(uint8_t _pin, uint8_t condition, ManuvrRunnable* isr_event) {
          event to the list of things to do. */
     __ext_line_bindings[pin_idx].event     = isr_event;
   }
-  else {
+  else if (__ext_line_bindings[pin_idx].event != isr_event) {
     StringBuilder local_log("Tried to clobber an existing IRQ event association...\n");
     printEXTIDef(_pin, &local_log);
     Kernel::log(&local_log);
@@ -391,7 +509,6 @@ int8_t setPinEvent(uint8_t _pin, uint8_t condition, ManuvrRunnable* isr_event) {
 */
 int8_t setPinFxn(uint8_t _pin, uint8_t condition, FunctionPointer fxn) {
   uint16_t pin_idx   = (_pin % 16);
-  GPIO_TypeDef* port = _associated_port(_pin);
 
   if (0 == __ext_line_bindings[pin_idx].condition) {
     /* There is not presently an interrupt condition on this pin.
@@ -454,7 +571,7 @@ int8_t setPinFxn(uint8_t _pin, uint8_t condition, FunctionPointer fxn) {
          fxn to the list of things to do. */
     __ext_line_bindings[pin_idx].fxn = fxn;
   }
-  else {
+  else if (__ext_line_bindings[pin_idx].fxn != fxn) {
     StringBuilder local_log("Tried to clobber an existing IRQ event association...\n");
     printEXTIDef(_pin, &local_log);
     Kernel::log(&local_log);
@@ -619,7 +736,6 @@ void EXTI0_IRQHandler(void) {
 void EXTI1_IRQHandler(void) {
   if (EXTI->PR & (EXTI_PR_PR1)) {
     EXTI->PR = EXTI_PR_PR1;   // Clear service bit.
-    //Kernel::log("EXTI 1\n");
     if (NULL != __ext_line_bindings[1].fxn) {
       __ext_line_bindings[1].fxn();
     }
@@ -636,7 +752,6 @@ void EXTI1_IRQHandler(void) {
 void EXTI2_IRQHandler(void) {
   if (EXTI->PR & (EXTI_PR_PR2)) {
     EXTI->PR = EXTI_PR_PR2;   // Clear service bit.
-    Kernel::log("EXTI 2\n");
     if (NULL != __ext_line_bindings[2].fxn) {
       __ext_line_bindings[2].fxn();
     }
@@ -653,7 +768,6 @@ void EXTI2_IRQHandler(void) {
 void EXTI3_IRQHandler(void) {
   if (EXTI->PR & (EXTI_PR_PR3)) {
     EXTI->PR = EXTI_PR_PR3;   // Clear service bit.
-    Kernel::log("EXTI 3\n");
     if (NULL != __ext_line_bindings[3].fxn) {
       __ext_line_bindings[3].fxn();
     }
@@ -670,7 +784,6 @@ void EXTI3_IRQHandler(void) {
 void EXTI4_IRQHandler(void) {
   if (EXTI->PR & (EXTI_PR_PR4)) {
     EXTI->PR = EXTI_PR_PR4;   // Clear service bit.
-    Kernel::log("EXTI 4\n");
     if (NULL != __ext_line_bindings[4].fxn) {
       __ext_line_bindings[4].fxn();
     }
@@ -687,7 +800,6 @@ void EXTI4_IRQHandler(void) {
 void EXTI9_5_IRQHandler(void) {
   if (EXTI->PR & (EXTI_PR_PR5)) {
     EXTI->PR = EXTI_PR_PR5;   // Clear service bit.
-    Kernel::log("EXTI 5\n");
     if (NULL != __ext_line_bindings[5].fxn) {
       __ext_line_bindings[5].fxn();
     }
@@ -697,7 +809,6 @@ void EXTI9_5_IRQHandler(void) {
   }
   if (EXTI->PR & (EXTI_PR_PR6)) {
     EXTI->PR = EXTI_PR_PR6;   // Clear service bit.
-    Kernel::log("EXTI 6\n");
     if (NULL != __ext_line_bindings[6].fxn) {
       __ext_line_bindings[6].fxn();
     }
@@ -707,7 +818,6 @@ void EXTI9_5_IRQHandler(void) {
   }
   if (EXTI->PR & (EXTI_PR_PR7)) {
     EXTI->PR = EXTI_PR_PR7;   // Clear service bit.
-    Kernel::log("EXTI 7\n");
     if (NULL != __ext_line_bindings[7].fxn) {
       __ext_line_bindings[7].fxn();
     }
@@ -717,7 +827,6 @@ void EXTI9_5_IRQHandler(void) {
   }
   if (EXTI->PR & (EXTI_PR_PR8)) {
     EXTI->PR = EXTI_PR_PR8;   // Clear service bit.
-    Kernel::log("EXTI 8\n");
     if (NULL != __ext_line_bindings[8].fxn) {
       __ext_line_bindings[8].fxn();
     }
@@ -727,7 +836,6 @@ void EXTI9_5_IRQHandler(void) {
   }
   if (EXTI->PR & (EXTI_PR_PR9)) {
     EXTI->PR = EXTI_PR_PR9;   // Clear service bit.
-    Kernel::log("EXTI 9\n");
     if (NULL != __ext_line_bindings[9].fxn) {
       __ext_line_bindings[9].fxn();
     }
@@ -744,7 +852,6 @@ void EXTI9_5_IRQHandler(void) {
 void EXTI15_10_IRQHandler(void) {
   if (EXTI->PR & (EXTI_PR_PR11)) {
     EXTI->PR = EXTI_PR_PR11;   // Clear service bit.
-    Kernel::log("EXTI 11\n");
     if (NULL != __ext_line_bindings[11].fxn) {
       __ext_line_bindings[11].fxn();
     }
@@ -754,7 +861,6 @@ void EXTI15_10_IRQHandler(void) {
   }
   if (EXTI->PR & (EXTI_PR_PR12)) {
     EXTI->PR = EXTI_PR_PR12;   // Clear service bit.
-    Kernel::log("EXTI 12\n");
     if (NULL != __ext_line_bindings[12].fxn) {
       __ext_line_bindings[12].fxn();
     }
@@ -764,7 +870,6 @@ void EXTI15_10_IRQHandler(void) {
   }
   if (EXTI->PR & (EXTI_PR_PR13)) {
     EXTI->PR = EXTI_PR_PR13;   // Clear service bit.
-    Kernel::log("EXTI 13\n");
     if (NULL != __ext_line_bindings[13].fxn) {
       __ext_line_bindings[13].fxn();
     }
@@ -774,7 +879,6 @@ void EXTI15_10_IRQHandler(void) {
   }
   if (EXTI->PR & (EXTI_PR_PR14)) {
     EXTI->PR = EXTI_PR_PR14;   // Clear service bit.
-    Kernel::log("EXTI 14\n");
     if (NULL != __ext_line_bindings[14].fxn) {
       __ext_line_bindings[14].fxn();
     }
@@ -784,7 +888,6 @@ void EXTI15_10_IRQHandler(void) {
   }
   if (EXTI->PR & (EXTI_PR_PR15)) {
     EXTI->PR = EXTI_PR_PR15;   // Clear service bit.
-    Kernel::log("EXTI 15\n");
     if (NULL != __ext_line_bindings[15].fxn) {
       __ext_line_bindings[15].fxn();
     }

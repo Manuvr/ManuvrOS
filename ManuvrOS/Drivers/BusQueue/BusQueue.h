@@ -99,7 +99,6 @@ class BusOp {
   public:
     uint8_t* buf         = 0;                  // Pointer to the data buffer for the transaction.
     uint16_t buf_len     = 0;                  // How large is the above buffer?
-    uint8_t  flags       = 0;                  // No flags set.
 
     /* Mandatory overrides... */
     //virtual void wipe()  =0;
@@ -177,5 +176,21 @@ class BusAdapter {
   private:
 };
 
+
+/*
+* This is an interface class that implements a callback path for I/O operations.
+* If a class wants to put operations into the SPI queue, it must either implement this
+*   interface, or delegate its callback duties to a class that does.
+*/
+class BusOpCallback {
+  public:
+    // The SPI driver will call this fxn when the bus op finishes.
+    virtual int8_t io_op_callback(BusOp*) =0;
+
+    /*
+    */
+    virtual int8_t queue_io_job(BusOp*) =0;
+
+};
 
 #endif  // __MANUVR_BUS_QUEUE_H__
