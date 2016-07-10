@@ -36,6 +36,7 @@ LIBNAME = extraprotocols.a
 
 
 all: $(LIBNAME)
+	$(MAKE) -C mbedtls
 #	$(MAKE) -C telehash-c
 
 %.o : %.c

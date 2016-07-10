@@ -25,12 +25,21 @@ rm -rf lib/paho.mqtt.embedded-c
 git clone https://github.com/eclipse/paho.mqtt.embedded-c.git lib/paho.mqtt.embedded-c
 cp lib/paho.mqtt.embedded-c/MQTTPacket/src/* lib/paho.mqtt.embedded-c/
 
+# TinyCBOR...
+rm -rf lib/tinycbor
+git clone https://github.com/01org/tinycbor.git lib/tinycbor
+
+# mbedTLS...
+rm -rf lib/mbedtls
+git clone https://github.com/ARMmbed/mbedtls.git lib/mbedtls
+
 # Telehash
 rm -rf lib/telehash-c
 git clone https://github.com/telehash/telehash-c.git lib/telehash-c
 
 # Elliptic curve crypto...
-git clone https://github.com/kmackay/micro-ecc.git lib/uECC
+#rm -rf lib/uECC
+#git clone https://github.com/kmackay/micro-ecc.git lib/uECC
 
 # Arduino libraries...
 
