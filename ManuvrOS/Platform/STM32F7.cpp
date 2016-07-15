@@ -120,19 +120,56 @@ unsigned long micros(void) {
 /****************************************************************************************************
 * Randomness                                                                                        *
 ****************************************************************************************************/
-volatile uint32_t next_random_int[PLATFORM_RNG_CARRY_CAPACITY];
+volatile uint32_t randomness_pool[PLATFORM_RNG_CARRY_CAPACITY];
+volatile unsigned int _random_pool_r_ptr = 0;
+volatile unsigned int _random_pool_w_ptr = 0;
+
+/*
+* The ISR for the hardware RNG subsystem.
+*/
+void RNG_IRQHandler() {
+  uint32_t sr = RNG->SR;
+  if (sr & (RNG_SR_SEIS | RNG_SR_CEIS)) {
+    // RNG fault? Clear the flags. Log?
+    RNG->SR &= ~(RNG_SR_SEIS | RNG_SR_CEIS);
+  }
+
+  if (sr & RNG_SR_DRDY) {
+    unsigned int _w_ptr = _random_pool_w_ptr % PLATFORM_RNG_CARRY_CAPACITY;
+    randomness_pool[_w_ptr] = RNG->DR;
+    _random_pool_w_ptr++;   // Concurrency...
+
+    if ((_random_pool_w_ptr - _random_pool_r_ptr) >= PLATFORM_RNG_CARRY_CAPACITY) {
+      // We have filled our entropy pool. Turn off the interrupts...
+      RNG->CR &= ~(RNG_CR_IE);
+      // ...and the RNG.
+      RNG->CR &= ~(RNG_CR_RNGEN);
+    }
+  }
+}
 
 /**
 * Dead-simple interface to the RNG. Despite the fact that it is interrupt-driven, we may resort
 *   to polling if random demand exceeds random supply. So this may block until a random number
-*   is actually availible (next_random_int != 0).
+*   is actually availible (randomness_pool != 0).
 *
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
 uint32_t randomInt() {
-  while (!(RNG->SR & (RNG_SR_DRDY)));
-  uint32_t return_value = RNG->DR;
-  return return_value;
+  uint32_t enablement_mask = (RNG_CR_RNGEN | RNG_CR_IE);
+  // Preferably, we'd shunt to a PRNG at this point. For now we block.
+  while (_random_pool_w_ptr <= _random_pool_r_ptr) {
+    if ((RNG->CR & enablement_mask) != enablement_mask) {
+      // As long as we are going to block, prevent lock-ups due to possible
+      //   concurrency mis-alignments.
+      RNG->CR |= enablement_mask;
+    }
+    if (RNG->SR & RNG_SR_DRDY) {
+      // And just-in-case we have interrupts disabled for some reason.
+      return RNG->DR;
+    }
+  }
+  return randomness_pool[_random_pool_r_ptr++ % PLATFORM_RNG_CARRY_CAPACITY];
 }
 
 /**
@@ -143,8 +180,8 @@ uint32_t randomInt() {
 */
 volatile bool provide_random_int(uint32_t nu_rnd) {
   for (uint8_t i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) {
-    if (next_random_int[i] == 0) {
-      next_random_int[i] = nu_rnd;
+    if (randomness_pool[i] == 0) {
+      randomness_pool[i] = nu_rnd;
       return (i == PLATFORM_RNG_CARRY_CAPACITY-1) ? false : true;
     }
   }
@@ -155,9 +192,11 @@ volatile bool provide_random_int(uint32_t nu_rnd) {
 * Init the RNG. Short and sweet.
 */
 void init_RNG() {
-  for (uint8_t i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) next_random_int[i] = 0;
+  for (uint8_t i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) randomness_pool[i] = 0;
   __HAL_RCC_RNG_CLK_ENABLE();
-  RNG->CR |= RNG_CR_RNGEN;
+  RNG->CR |= (RNG_CR_RNGEN | RNG_CR_IE);
+  HAL_NVIC_SetPriority(RNG_IRQn, 1, 0);  // IRQ channel, priority, pin idex.
+  HAL_NVIC_EnableIRQ(RNG_IRQn);
 }
 
 

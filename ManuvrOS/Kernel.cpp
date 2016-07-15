@@ -1510,7 +1510,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
             local_log.concatf("Random number: 0x%08x\n", x);
           }
           else {
-            local_log.concatf("Restarting RNG\n");
+            local_log.concatf("RNG underflow. Reinit()\n");
             init_RNG();
           }
         }

@@ -214,7 +214,7 @@ bool _stm32f7_timing_reinit(I2C_HandleTypeDef *hi2c, uint32_t val) {
     hi2c->Init.OwnAddress2      = 0;
     hi2c->Init.OwnAddress2Masks = I2C_OA2_NOMASK;
     hi2c->Init.GeneralCallMode  = I2C_GENERALCALL_DISABLE;
-    hi2c->Init.NoStretchMode    = I2C_NOSTRETCH_ENABLE;
+    hi2c->Init.NoStretchMode    = I2C_NOSTRETCH_DISABLE;
   return (HAL_OK == HAL_I2C_Init(hi2c));
 }
 
