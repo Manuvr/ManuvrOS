@@ -53,7 +53,6 @@ const MessageTypeDef message_defs[] = {
   {  MANUVR_MSG_DEFERRED_FXN         , 0x0000,               "DEFERRED_FXN",          MSG_ARGS_NO_ARGS }, // Message to allow for deferred fxn calls without an EventReceiver.
 
   {  MANUVR_MSG_XPORT_SEND           , MSG_FLAG_IDEMPOTENT,  "XPORT_SEND"           , ManuvrMsg::MSG_ARGS_STR_BUILDER }, //
-  {  MANUVR_MSG_RNG_BUFFER_EMPTY     , 0x0000,               "RNG_BUFFER_EMPTY"     , MSG_ARGS_NO_ARGS }, // The RNG couldn't keep up with our entropy demands.
 
   {  MANUVR_MSG_SYS_FAULT_REPORT     , 0x0000,               "SYS_FAULT"            , ManuvrMsg::MSG_ARGS_U32 }, //
 
