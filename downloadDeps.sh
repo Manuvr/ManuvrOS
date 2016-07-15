@@ -17,7 +17,9 @@ git clone https://github.com/greiman/FreeRTOS-Arduino lib/FreeRTOS_Arduino
 
 # CoAP, if desired.
 rm -rf lib/wakaama
-git clone https://github.com/eclipse/wakaama.git lib/wakaama
+#git clone https://github.com/eclipse/wakaama.git lib/wakaama
+rm -rf lib/cantcoap
+git clone https://github.com/staropram/cantcoap.git lib/cantcoap
 
 # MQTT, if desired.
 # Note that we do special-handling here to make the build-process smoother...
@@ -38,7 +40,7 @@ rm -rf lib/telehash-c
 git clone https://github.com/telehash/telehash-c.git lib/telehash-c
 
 # Elliptic curve crypto...
-#rm -rf lib/uECC
+rm -rf lib/uECC
 #git clone https://github.com/kmackay/micro-ecc.git lib/uECC
 
 # Arduino libraries...

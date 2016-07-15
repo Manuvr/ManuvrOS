@@ -47,14 +47,14 @@ limitations under the License.
   #include <MsgProfiler.h>
 
   #if defined (__MANUVR_FREERTOS)
-  #include <FreeRTOS_ARM.h>
+    #include <FreeRTOS_ARM.h>
   #endif
 
   #define EVENT_PRIORITY_HIGHEST            100
   #define EVENT_PRIORITY_DEFAULT              2
   #define EVENT_PRIORITY_LOWEST               0
 
-  #define SCHEDULER_MAX_SKIP_BEFORE_RESET  10   // Skipping this many loops will cause us to reboot.
+  #define SCHEDULER_MAX_SKIP_BEFORE_RESET    10  // Skipping this many loops will cause us to reboot.
 
   /*
   * These state flags are hosted by the EventReceiver. This may change in the future.
@@ -151,6 +151,8 @@ limitations under the License.
       inline void advanceScheduler() {   advanceScheduler(MANUVR_PLATFORM_TIMER_PERIOD_MS);  };
 
       // Logging messages, as well as an override to log locally.
+      void printPlatformInfo(StringBuilder*);
+      void printScheduler(StringBuilder*);
       void printDebug(StringBuilder*);
       inline void printDebug() {        printDebug(&local_log);      };
       #if defined(__MANUVR_DEBUG)

@@ -36,15 +36,24 @@ CPP_SRCS  += XenoSession/Console/ManuvrConsole.cpp
 CPP_SRCS  += XenoSession/Manuvr/ManuvrSession.cpp
 CPP_SRCS  += XenoSession/Manuvr/XenoManuvrMessage.cpp
 CPP_SRCS  += XenoSession/CoAP/CoAPSession.cpp
+CPP_SRCS  += XenoSession/CoAP/CoAPMessage.cpp
 CPP_SRCS  += XenoSession/MQTT/MQTTSession.cpp
 CPP_SRCS  += XenoSession/MQTT/MQTTMessage.cpp
+CPP_SRCS  += XenoSession/OSC/OSCSession.cpp
+CPP_SRCS  += XenoSession/OSC/OSCMessage.cpp
 
 
 # TODO: Case-off for socket/TCP/Pipe support...
 #CPP_SRCS  += Transports/ManuvrPipe/ManuvrPipe.cpp
 #CPP_SRCS  += Transports/ManuvrTelehash/ManuvrTelehash.cpp
 
-# Transports
+# Transports (Transformers)
+CPP_SRCS  += Transports/CommTransformers/CommTransformer.cpp
+CPP_SRCS  += Transports/CommTransformers/ManuvrGPS/ManuvrGPS.cpp
+CPP_SRCS  += Transports/CommTransformers/ManuvrTLS/ManuvrTLS.cpp
+CPP_SRCS  += Transports/CommTransformers/XportBridge/XportBridge.cpp
+
+# Transports (Drivers)
 CPP_SRCS  += Transports/ManuvrXport.cpp
 CPP_SRCS  += Transports/ManuvrSerial/ManuvrSerial.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrSocket.cpp

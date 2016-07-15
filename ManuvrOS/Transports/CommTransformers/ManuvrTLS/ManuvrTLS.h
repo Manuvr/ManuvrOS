@@ -18,8 +18,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-This class is meant to provide a transport translation layer for TLS.
+These classes are meant to provide a transport translation layer for TLS.
 Initial implentation is via mbedTLS.
+
+One class is for the server (listener), and the other for client (initiator),
+  since TLS distinguishes between those roles. I might consolidate this into
+  a larger, single class that figures matters out for itself.
 
 */
 
@@ -43,10 +47,14 @@ Initial implentation is via mbedTLS.
 #include "mbedtls/ssl_cache.h"
 #endif
 
+
+#define MAX_CIPHERSUITE_COUNT   10
+
+
 class ManuvrTLSServer : public XportXformer {
   public:
-    ManuvrTLS();
-    ~ManuvrTLS();
+    ManuvrTLSServer();
+    ~ManuvrTLSServer();
 
 
   protected:
@@ -54,7 +62,6 @@ class ManuvrTLSServer : public XportXformer {
 
   private:
     void throwError(int ret);
-    ~DtlsServer();
 
     mbedtls_ssl_cookie_ctx cookie_ctx;
     mbedtls_entropy_context entropy;
@@ -77,9 +84,6 @@ class ManuvrTLSClient : public XportXformer {
              const unsigned char *ca_pem,       size_t ca_pem_len,
              const unsigned char *psk,          size_t psk_len,
              const unsigned char *ident,        size_t ident_len,
-             Nan::Callback* send_callback,
-             Nan::Callback* hs_callback,
-             Nan::Callback* error_callback,
              int debug_level);
     ~ManuvrTLSClient();
 
@@ -103,7 +107,7 @@ class ManuvrTLSClient : public XportXformer {
     mbedtls_x509_crt clicert;
     mbedtls_x509_crt cacert;
     mbedtls_pk_context pkey;
-    mbedtls_timing_delay_context timer;
+    //mbedtls_timing_delay_context timer;
     const unsigned char *recv_buf;
     size_t recv_len;
 };

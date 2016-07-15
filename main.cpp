@@ -54,6 +54,7 @@ limitations under the License.
 
 // We will use MQTT as our concept of "session"...
 #include <XenoSession/MQTT/MQTTSession.h>
+#include <XenoSession/CoAP/CoAPSession.h>
 
 
 /****************************************************************************************************
@@ -205,7 +206,7 @@ int main(int argc, char *argv[]) {
   #endif
 
   #if defined (MANUVR_SUPPORT_COAP)
-    ManuvrCoAP coap_srv((const char*) "127.0.0.1", "6053");
+    CoAPSession coap_srv(&udp_srv);
     kernel->subscribe(&coap_srv);
   #endif
 

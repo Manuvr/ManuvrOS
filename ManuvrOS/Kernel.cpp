@@ -23,6 +23,10 @@ limitations under the License.
 #include <Kernel.h>
 #include <Platform/Platform.h>
 
+#if defined(__MANuVR_MBEDTLS)
+  #include "mbedtls/ssl.h"
+#endif
+
 extern uint32_t rtc_startup_state;
 
 /****************************************************************************************************
@@ -983,6 +987,58 @@ const char* Kernel::getReceiverName() {  return "Kernel";  }
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
+void Kernel::printPlatformInfo(StringBuilder* output) {
+  output->concatf("-- Hardware version:   %s\n", HW_VERSION_STRING);
+  output->concatf("-- Timer resolution:   %d ms\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
+  output->concatf("-- Entropy pool size:  %u bytes\n", PLATFORM_RNG_CARRY_CAPACITY * 4);
+  output->concatf("-- RTC State:          %s\n", getRTCStateString(rtc_startup_state));
+  output->concat("-- Supported protocols: \n\t Console\n");
+  #if defined(MANUVR_OVER_THE_WIRE)
+    output->concat("\t Manuvr\n");
+  #endif
+  #if defined(MANUVR_SUPPORT_COAP)
+    output->concat("\t CoAP\n");
+  #endif
+  #if defined(MANUVR_SUPPORT_MQTT)
+    output->concat("\t MQTT\n");
+  #endif
+  #if defined(MANUVR_SUPPORT_OSC)
+    output->concat("\t OSC\n");
+  #endif
+
+  #if defined(__MANuVR_MBEDTLS)
+    output->concat("-- Supported TLS ciphersuites:\n");
+    const int* ciphersuites = mbedtls_ssl_list_ciphersuites();
+    while (0 != *(ciphersuites)) {
+      output->concatf("\t %s\n", mbedtls_ssl_get_ciphersuite_name(*(ciphersuites++)));
+    }
+  #endif
+}
+
+/**
+* Debug support method. This fxn is only present in debug builds.
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
+void Kernel::printScheduler(StringBuilder* output) {
+  output->concatf("-- Total schedules:    %d\n-- Active schedules:   %d\n\n", schedules.size(), countActiveSchedules());
+  if (lagged_schedules)    output->concatf("-- Lagged schedules:    %u\n", (unsigned long) lagged_schedules);
+  if (_skips_observed)     output->concatf("-- Scheduler skips:     %u\n", (unsigned long) _skips_observed);
+  if (_er_flag(MKERNEL_FLAG_SKIP_FAILSAFE)) {
+    output->concatf("-- %u skips before fail-to-bootloader.\n", (unsigned long) MAXIMUM_SEQUENTIAL_SKIPS);
+  }
+
+  for (int i = 0; i < schedules.size(); i++) {
+    schedules.recycle()->printDebug(output);
+  }
+}
+
+
+/**
+* Debug support method. This fxn is only present in debug builds.
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
 void Kernel::printDebug(StringBuilder* output) {
   if (NULL == output) return;
   uint32_t initial_sp = getStackPointer();
@@ -990,13 +1046,12 @@ void Kernel::printDebug(StringBuilder* output) {
 
   EventReceiver::printDebug(output);
 
-  output->concatf("-- %s v%s    Build date: %s %s\n--\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
+  output->concatf("-- %s v%s \t Build date: %s %s\n--\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
   //output->concatf("-- our_mem_addr:             0x%08x\n", (uint32_t) this);
   if (getVerbosity() > 5) {
     output->concat("-- Current datetime          ");
     currentDateTime(output);
-    output->concatf("\n-- RTC State                 %s\n", getRTCStateString(rtc_startup_state));
-    output->concatf("-- millis()                  0x%08x\n", millis());
+    output->concatf("\n-- millis()                  0x%08x\n", millis());
     output->concatf("-- micros()                  0x%08x\n", micros());
     output->concatf("-- _ms_elapsed               %u\n", (unsigned long) _ms_elapsed);
   }
@@ -1013,15 +1068,7 @@ void Kernel::printDebug(StringBuilder* output) {
     output->concatf("-- events_destroyed:         %u\n", (unsigned long) events_destroyed);
     output->concatf("-- burden_of_being_specific  %u\n", (unsigned long) burden_of_specific);
     output->concatf("-- idempotent_blocks         %u\n", (unsigned long) idempotent_blocks);
-    output->concatf("-- Scheduler skips           %u\n", (unsigned long) _skips_observed);
   }
-
-  if (_er_flag(MKERNEL_FLAG_SKIP_FAILSAFE)) {
-    output->concatf("-- %u skips before fail-to-bootloader.\n", (unsigned long) MAXIMUM_SEQUENTIAL_SKIPS);
-  }
-
-  output->concatf("-- Lagged schedules  %u\n", (unsigned long) lagged_schedules);
-  output->concatf("-- Total schedules:  %d\n-- Active schedules: %d\n\n", schedules.size(), countActiveSchedules());
 
   if (subscribers.size() > 0) {
     output->concatf("-- Subscribers: (%d total):\n", subscribers.size());
@@ -1035,8 +1082,6 @@ void Kernel::printDebug(StringBuilder* output) {
     output->concat("-- Current Runnable:\n");
     current_event->printDebug(output);
   }
-
-  printProfiler(output);
 }
 
 
@@ -1479,17 +1524,16 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
   switch (c) {
     case 'B':
       if (temp_int == 128) {
-        Kernel::raiseEvent(MANUVR_MSG_SYS_BOOTLOADER, NULL);
-        break;
+        Kernel::raiseEvent(('B' == c ? MANUVR_MSG_SYS_BOOTLOADER : MANUVR_MSG_SYS_REBOOT), NULL);
       }
-      local_log.concatf("Will only jump to bootloader if the number '128' follows the command.\n");
+      else {
+        local_log.concatf("Will only %s if the number '128' follows the command.\n", ('B' == c) ? "jump to bootloader" : "reboot");
+      }
       break;
-    case 'b':
-      if (temp_int == 128) {
-        Kernel::raiseEvent(MANUVR_MSG_SYS_REBOOT, NULL);
-        break;
-      }
-      local_log.concatf("Will only reboot if the number '128' follows the command.\n");
+    case 'P':
+    case 'p':
+      local_log.concatf("Kernel profiling %sabled.\n", ('P' == c) ? "en" : "dis");
+      profiler('P' == c);
       break;
     case 'f':  // FPU benchmark
       {
@@ -1503,36 +1547,33 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       }
       break;
     case 'r':        // Read so many random integers...
-      { // TODO: I don't think the RNG is ever being turned off. Save some power....
-        temp_int = (temp_int <= 0) ? PLATFORM_RNG_CARRY_CAPACITY : temp_int;
-        for (uint8_t i = 0; i < temp_int; i++) {
-          uint32_t x = randomInt();
-          if (x) {
-            local_log.concatf("Random number: 0x%08x\n", x);
-          }
-          else {
-            local_log.concatf("RNG underflow. Reinit()\n");
-            init_RNG();
-          }
-        }
+      temp_int = (temp_int <= 0) ? PLATFORM_RNG_CARRY_CAPACITY : temp_int;
+      for (uint8_t i = 0; i < temp_int; i++) {
+        local_log.concatf("Random number: 0x%08x\n", randomInt());
       }
       break;
 
     #if defined(__MANUVR_DEBUG)
     case 'i':   // Debug prints.
-      if (1 == temp_int) {
-        local_log.concat("Kernel profiling enabled.\n");
-        profiler(true);
-      }
-      else if (2 == temp_int) {
-        printDebug(&local_log);
-      }
-      else if (3 == temp_int) {
-        local_log.concat("Kernel profiling disabled.\n");
-        profiler(false);
-      }
-      else {
-        printDebug(&local_log);
+      switch (temp_int) {
+        case 1:
+          printDebug(&local_log);
+          printProfiler(&local_log);
+          printPlatformInfo(&local_log);
+          printScheduler(&local_log);
+          break;
+        case 2:
+          printProfiler(&local_log);
+          break;
+        case 3:
+          printPlatformInfo(&local_log);
+          break;
+        case 4:
+          printScheduler(&local_log);
+          break;
+        default:
+          printDebug(&local_log);
+          break;
       }
       break;
     #endif //__MANUVR_DEBUG

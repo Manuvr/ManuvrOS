@@ -35,6 +35,7 @@ INCLUDES   += -I$(WHERE_I_AM)/ManuvrOS
 INCLUDES   += -I$(WHERE_I_AM)/lib
 
 INCLUDES   += -I$(WHERE_I_AM)/lib/paho.mqtt.embedded-c/
+INCLUDES   += -I$(WHERE_I_AM)/lib/mbedtls/include/
 
 # Libraries to link
 LIBS = -L$(OUTPUT_PATH) -L$(WHERE_I_AM)/lib -lstdc++ -lm -lmanuvr
@@ -63,6 +64,7 @@ else
 endif
 
 
+
 ###########################################################################
 # Source file definitions...
 ###########################################################################
@@ -80,13 +82,20 @@ MANUVR_OPTIONS += -D__MANUVR_DEBUG
 #MANUVR_OPTIONS += -D__MANUVR_FREERTOS
 MANUVR_OPTIONS += -D__MANUVR_LINUX
 #MANUVR_OPTIONS += -DRASPI
-#MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
+#MANUVR_OPTIONS += -DMANUVR_SUPPORT_OSC
+MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
 MANUVR_OPTIONS += -DMANUVR_OVER_THE_WIRE
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_MQTT
-#MANUVR_OPTIONS += -DMANUVR_SUPPORT_UDP
-MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
+MANUVR_OPTIONS += -DMANUVR_SUPPORT_UDP
+#MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
+
+MANUVR_OPTIONS += -D__MANuVR_MBEDTLS
+MBEDTLS_CONFIG_FILE = $(WHERE_I_AM)/mbedTLS_conf.h
 
 LIBS += -lpthread $(OUTPUT_PATH)/extraprotocols.a
+LIBS += $(OUTPUT_PATH)/libmbedtls.a
+LIBS += $(OUTPUT_PATH)/libmbedx509.a
+LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
 
 CFLAGS += $(MANUVR_OPTIONS)
 

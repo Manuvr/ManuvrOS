@@ -46,9 +46,8 @@ Meaningful distinctions between datagram and stream-oriented transports ought
 #ifndef __MANUVR_XPORT_XFORMR_H__
 #define __MANUVR_XPORT_XFORMR_H__
 
-#include "../Kernel.h"
-#include "DataStructures/StringBuilder.h"
-
+#include <Kernel.h>
+#include <DataStructures/StringBuilder.h>
 #include <Platform/Platform.h>
 
 
@@ -56,6 +55,8 @@ class XportXformer {
   public:
     XportXformer();
     ~XportXformer();
+
+    virtual void printDebug(StringBuilder*);
 
 
   protected:
