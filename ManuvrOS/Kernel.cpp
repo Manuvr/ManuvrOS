@@ -23,6 +23,7 @@ limitations under the License.
 #include <Kernel.h>
 #include <Platform/Platform.h>
 
+extern uint32_t rtc_startup_state;
 
 /****************************************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -994,7 +995,8 @@ void Kernel::printDebug(StringBuilder* output) {
   if (getVerbosity() > 5) {
     output->concat("-- Current datetime          ");
     currentDateTime(output);
-    output->concatf("\n-- millis()                  0x%08x\n", millis());
+    output->concatf("\n-- RTC State                 %s\n", getRTCStateString(rtc_startup_state));
+    output->concatf("-- millis()                  0x%08x\n", millis());
     output->concatf("-- micros()                  0x%08x\n", micros());
     output->concatf("-- _ms_elapsed               %u\n", (unsigned long) _ms_elapsed);
   }

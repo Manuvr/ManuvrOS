@@ -31,17 +31,26 @@ This file is meant to contain a set of common functions that are typically platf
 
 #include <unistd.h>
 
-
-/****************************************************************************************************
-* The code under this block is special on this platform, and will not be available elsewhere.       *
-****************************************************************************************************/
-
-RTC_HandleTypeDef rtc;
-
 #if defined(ENABLE_USB_VCP)
   #include "tm_stm32_usb_device.h"
   #include "tm_stm32_usb_device_cdc.h"
 #endif
+
+
+/****************************************************************************************************
+* The code under this block is special on this platform, and will not be available elsewhere.       *
+****************************************************************************************************/
+RTC_HandleTypeDef rtc;
+
+unsigned long         start_time_micros  = 0;
+uint32_t rtc_startup_state = MANUVR_RTC_STARTUP_UNINITED;
+
+volatile uint32_t     randomness_pool[PLATFORM_RNG_CARRY_CAPACITY];
+volatile unsigned int _random_pool_r_ptr = 0;
+volatile unsigned int _random_pool_w_ptr = 0;
+
+volatile uint32_t     millis_since_reset = 1;   // Start at one because WWDG.
+volatile uint8_t      watchdog_mark      = 42;
 
 volatile static PlatformEXTIDef __ext_line_bindings[16];
 
@@ -75,11 +84,6 @@ void printEXTIDef(uint8_t _pin, StringBuilder* output) {
   output->concatf("\tFXN         0x%08x\n", (uint32_t) __ext_line_bindings[pin_idx].fxn);
   output->concatf("\tEvent       %s\n\n", _msg_name);
 }
-
-
-volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
-volatile uint8_t  watchdog_mark      = 42;
-unsigned long     start_time_micros  = 0;
 
 
 /*
@@ -120,34 +124,6 @@ unsigned long micros(void) {
 /****************************************************************************************************
 * Randomness                                                                                        *
 ****************************************************************************************************/
-volatile uint32_t randomness_pool[PLATFORM_RNG_CARRY_CAPACITY];
-volatile unsigned int _random_pool_r_ptr = 0;
-volatile unsigned int _random_pool_w_ptr = 0;
-
-/*
-* The ISR for the hardware RNG subsystem.
-*/
-void RNG_IRQHandler() {
-  uint32_t sr = RNG->SR;
-  if (sr & (RNG_SR_SEIS | RNG_SR_CEIS)) {
-    // RNG fault? Clear the flags. Log?
-    RNG->SR &= ~(RNG_SR_SEIS | RNG_SR_CEIS);
-  }
-
-  if (sr & RNG_SR_DRDY) {
-    unsigned int _w_ptr = _random_pool_w_ptr % PLATFORM_RNG_CARRY_CAPACITY;
-    randomness_pool[_w_ptr] = RNG->DR;
-    _random_pool_w_ptr++;   // Concurrency...
-
-    if ((_random_pool_w_ptr - _random_pool_r_ptr) >= PLATFORM_RNG_CARRY_CAPACITY) {
-      // We have filled our entropy pool. Turn off the interrupts...
-      RNG->CR &= ~(RNG_CR_IE);
-      // ...and the RNG.
-      RNG->CR &= ~(RNG_CR_RNGEN);
-    }
-  }
-}
-
 /**
 * Dead-simple interface to the RNG. Despite the fact that it is interrupt-driven, we may resort
 *   to polling if random demand exceeds random supply. So this may block until a random number
@@ -216,8 +192,6 @@ int getSerialNumber(uint8_t* buf) {
 /****************************************************************************************************
 * Time and date                                                                                     *
 ****************************************************************************************************/
-uint32_t rtc_startup_state = MANUVR_RTC_STARTUP_UNINITED;
-
 
 /*
 * Setup the realtime clock module.
@@ -225,86 +199,64 @@ uint32_t rtc_startup_state = MANUVR_RTC_STARTUP_UNINITED;
 * http://autoquad.googlecode.com/svn/trunk/onboard/rtc.c
 */
 bool initPlatformRTC() {
+    __HAL_RCC_PWR_CLK_ENABLE();
+    HAL_PWR_EnableBkUpAccess();        /* Allow access to BKP Domain */
+
+    RCC_OscInitTypeDef RCC_OscInitStruct;
+    RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
+
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+    PeriphClkInitStruct.RTCClockSelection    = RCC_RTCCLKSOURCE_LSE;
+    RCC_OscInitStruct.PLL.PLLState   = RCC_PLL_NONE;
+    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSE;
+    RCC_OscInitStruct.LSEState       = RCC_LSE_ON;
+
+    HAL_RCC_OscConfig(&RCC_OscInitStruct);
+    HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct);
+    __HAL_RCC_RTC_ENABLE();     /* Enable the RTC Clock */
+
+    /* Configure the RTC data register and RTC prescaler */
+    /* ck_spre(1Hz) = RTCCLK(LSE) /(uwAsynchPrediv + 1)*(uwSynchPrediv + 1)*/
+    rtc.Init.AsynchPrediv   = 0x1F;
+    rtc.Init.SynchPrediv    = 0x03FF;
+    rtc.Init.HourFormat     = RTC_HOURFORMAT_24;
+    rtc.Init.OutPut         = RTC_OUTPUT_DISABLE;
+    rtc.Init.OutPutType     = RTC_OUTPUT_TYPE_PUSHPULL;
+    rtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+
     RTC_DateTypeDef RTC_DateStructure;
     RTC_TimeTypeDef RTC_TimeStructure;
+    rtc_startup_state = HAL_RTCEx_BKUPRead(&rtc, RTC_BKP_DR31);
 
-    //RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE); /* Enable the PWR clock.      */
-    //RCC_APB1PeriphClockCmd(RCC_AHB1Periph_BKPSRAM, ENABLE);
-    //PWR_BackupAccessCmd(ENABLE);                        /* Allow access to RTC.       */
+    switch (rtc_startup_state) {
+      case MANUVR_RTC_STARTUP_GOOD_SET:
+      case MANUVR_RTC_STARTUP_GOOD_UNSET:
+        /* Wait for RTC APB register's sync. */
+        if (HAL_OK == HAL_RTC_WaitForSynchro(&rtc)) {
 
-    uint32_t temp_bud_read = MANUVR_RTC_STARTUP_GOOD_SET; //RTC_ReadBackupRegister(RTC_BKP_DR0);
-    Kernel::log(__PRETTY_FUNCTION__, 7, "BU domain reg 0:   0x%08x.", temp_bud_read);
-    switch (temp_bud_read) {
-      case MANUVR_RTC_STARTUP_GOOD_UNSET:  // We previously set up the peripheral, but don't know what time it is.
-      case MANUVR_RTC_STARTUP_GOOD_SET:    // We are set up and we know the present time.
-        rtc_startup_state = temp_bud_read;
+        }
+        HAL_RTC_GetTime(&rtc, &RTC_TimeStructure, RTC_FORMAT_BCD);
+        HAL_RTC_GetDate(&rtc, &RTC_DateStructure, RTC_FORMAT_BCD);
+        __HAL_RCC_CLEAR_RESET_FLAGS();
         break;
       default:
-        //RCC_BackupResetCmd(ENABLE);                         /* Reset the backup domain... */
-        //RCC_BackupResetCmd(DISABLE);                        /* ...then dis-assert.        */
-        //RCC_LSEConfig(RCC_LSE_ON);                          /* Enable the LSE OSC.        */
-        //RCC_LSICmd(ENABLE);
-
-        /* Wait till LSE is ready. Timeout after awhile and record a failure. */
-        {
-          uint32_t ext_osc_timeout = 0x10000000;
-          //while((RCC_GetFlagStatus(RCC_FLAG_LSERDY) == RESET) & (ext_osc_timeout-- > 0));
-          if (ext_osc_timeout == 0) {
-            rtc_startup_state = MANUVR_RTC_OSC_FAILURE;
-            Kernel::log(__PRETTY_FUNCTION__, 1, "LSE failed to start.", temp_bud_read);
-            return false;   // Might decide to fall back on LSI...
-          }
-        }
-
-        //RCC_RTCCLKConfig(RCC_RTCCLKSource_LSE);             /* Select the RTC Clock Source       */
-        //RCC_RTCCLKCmd(ENABLE);                              /* Enable the RTC Clock              */
-        HAL_RTC_WaitForSynchro(&rtc);                       /* Wait for RTC APB register's sync. */
-
-        Kernel::log(__PRETTY_FUNCTION__, 1, "WaitForSynchro finished.");
-        /* Configure the RTC data register and RTC prescaler */
-        /* ck_spre(1Hz) = RTCCLK(LSE) /(uwAsynchPrediv + 1)*(uwSynchPrediv + 1)*/
-        rtc.Init.AsynchPrediv = 0x7F;
-        rtc.Init.SynchPrediv  = 0xFF;
-        rtc.Init.HourFormat   = RTC_HOURFORMAT_24;
-        HAL_RTC_Init(&rtc);
-
-        __HAL_RTC_WRITEPROTECTION_DISABLE(&rtc);
-        RTC_EnterInitMode(&rtc);
-
-        //RTC_ClearFlag(RTC_FLAG_ALRAF);              /* Need to clear the RTC alarm flag. */
-
-        /* Set the date: Friday January 11th 2013 */
+        /* Set the initial date, */
+        // TODO: Do this from build datetime.
         RTC_DateStructure.Year    = 16;
         RTC_DateStructure.Month   = RTC_MONTH_JUNE;
-        RTC_DateStructure.Date    = 7;
-        RTC_DateStructure.WeekDay = RTC_WEEKDAY_TUESDAY;
+        RTC_DateStructure.Date    = 8;
+        RTC_DateStructure.WeekDay = RTC_WEEKDAY_WEDNESDAY;
         HAL_RTC_SetDate(&rtc, &RTC_DateStructure, RTC_FORMAT_BCD);
-
-        /* Set the time to 05h 20mn 00s AM */
+        /* Set the initial time. */
         RTC_TimeStructure.TimeFormat = RTC_HOURFORMAT12_AM;
         RTC_TimeStructure.Hours      = 0;
         RTC_TimeStructure.Minutes    = 0;
         RTC_TimeStructure.Seconds    = 0;
         HAL_RTC_SetTime(&rtc, &RTC_TimeStructure, RTC_FORMAT_BCD);
-
-        /* Let's us determine that we've already setup the peripheral on next run... */
-        //RTC_WriteBackupRegister(RTC_BKP_DR0, MANUVR_RTC_STARTUP_GOOD_UNSET);
-        __HAL_RTC_WRITEPROTECTION_ENABLE(&rtc);
-        //RTC_ExitInitMode(&rtc);
+        HAL_RTC_Init(&rtc);
+        HAL_RTCEx_BKUPWrite(&rtc, RTC_BKP_DR31, MANUVR_RTC_STARTUP_GOOD_UNSET);
         break;
     }
-
-    //RTC_WakeUpCmd(DISABLE);
-    //  // Configure the RTC WakeUp Clock source: CK_SPRE (1Hz)
-    //  RTC_WakeUpClockConfig(RTC_WakeUpClock_CK_SPRE_16bits);
-    //  RTC_SetWakeUpCounter(0x0);
-    //
-    //  // Enable Wakeup Counter
-    //  //RTC_WakeUpCmd(ENABLE);
-    //
-    //  // Enable the RTC Wakeup Interrupt
-    //  RTC_ClearITPendingBit(RTC_IT_WUT);
-    //  RTC_ITConfig(RTC_IT_WUT, ENABLE);
   return true;
 }
 
@@ -366,7 +318,9 @@ void currentDateTime(StringBuilder* target) {
   if (target != NULL) {
     RTC_TimeTypeDef RTC_TimeStructure;
     RTC_DateTypeDef RTC_DateStructure;
-    //RTC_GetTimeStamp(RTC_FORMAT_BCD, &RTC_TimeStructure, &RTC_DateStructure);
+
+    HAL_RTC_GetTime(&rtc, &RTC_TimeStructure, RTC_FORMAT_BCD);
+    HAL_RTC_GetDate(&rtc, &RTC_DateStructure, RTC_FORMAT_BCD);
 
     target->concatf("%d-%d-%dT", RTC_DateStructure.Year, RTC_DateStructure.Month, RTC_DateStructure.Date);
     target->concatf("%d:%d:%d+00:00", RTC_TimeStructure.Hours, RTC_TimeStructure.Minutes, RTC_TimeStructure.Seconds);
@@ -749,9 +703,37 @@ void platformInit() {
 }
 
 
+/*******************************************************************************
+* .-. .----..----.    .-.     .--.  .-. .-..----.
+* | |{ {__  | {}  }   | |    / {} \ |  `| || {}  \
+* | |.-._} }| .-. \   | `--./  /\  \| |\  ||     /
+* `-'`----' `-' `-'   `----'`-'  `-'`-' `-'`----'
+*
+* Interrupt service routine support functions. Everything in this block
+*   executes under an ISR. Keep it brief...
+*******************************************************************************/
 
+/* The ISR for the hardware RNG subsystem. Adds to entropy buffer. */
+void RNG_IRQHandler() {
+  uint32_t sr = RNG->SR;
+  if (sr & (RNG_SR_SEIS | RNG_SR_CEIS)) {
+    // RNG fault? Clear the flags. Log?
+    RNG->SR &= ~(RNG_SR_SEIS | RNG_SR_CEIS);
+  }
 
+  if (sr & RNG_SR_DRDY) {
+    unsigned int _w_ptr = _random_pool_w_ptr % PLATFORM_RNG_CARRY_CAPACITY;
+    randomness_pool[_w_ptr] = RNG->DR;
+    _random_pool_w_ptr++;   // Concurrency...
 
+    if ((_random_pool_w_ptr - _random_pool_r_ptr) >= PLATFORM_RNG_CARRY_CAPACITY) {
+      // We have filled our entropy pool. Turn off the interrupts...
+      RNG->CR &= ~(RNG_CR_IE);
+      // ...and the RNG.
+      RNG->CR &= ~(RNG_CR_RNGEN);
+    }
+  }
+}
 
 /*
 *
@@ -769,7 +751,6 @@ void EXTI0_IRQHandler(void) {
   }
 }
 
-
 /*
 *
 */
@@ -784,7 +765,6 @@ void EXTI1_IRQHandler(void) {
     }
   }
 }
-
 
 /*
 *
@@ -801,7 +781,6 @@ void EXTI2_IRQHandler(void) {
   }
 }
 
-
 /*
 *
 */
@@ -817,7 +796,6 @@ void EXTI3_IRQHandler(void) {
   }
 }
 
-
 /*
 *
 */
@@ -832,7 +810,6 @@ void EXTI4_IRQHandler(void) {
     }
   }
 }
-
 
 /*
 *
@@ -884,7 +861,6 @@ void EXTI9_5_IRQHandler(void) {
     }
   }
 }
-
 
 /*
 *
