@@ -1398,6 +1398,7 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       local_log.concat("i2c GPIO reset.\n");
       break;
 
+    #if defined(STM32F7XX) | defined(STM32F746xx)
     case '3':
       {
         I2CBusOp* nu = new I2CBusOp(BusOpcode::RX, 0x27, (int16_t) 0, &_debug_scratch, 1);
@@ -1411,6 +1412,7 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       busOnline(_stm32f7_timing_reinit(&hi2c1, temp_int));
       local_log.concat("i2c timing set.\n");
       break;
+    #endif
 
     case 'r':
       #ifdef STM32F4XX

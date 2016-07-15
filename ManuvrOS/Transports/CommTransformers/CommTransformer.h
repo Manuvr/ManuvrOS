@@ -22,7 +22,24 @@ This class is meant to be the glue between a platform-abstracted transport,
   and any parser/session/presentation layer that sits on top of it (if any).
 
 For instance: A simple parser that sits on a serial port or net socket, and
-  does not require a session.
+  does not require a session. This would encompass GPS, and also any transport
+  bridges.
+
+Another (more complex) case would be TLS. Two-way interchange with the transport
+  happens independently of the attached Session (if any). This also allows for
+  the easy selection and abstraction of TLS/DTLS from the underlying transport,
+  allowing the choice to be made based on the nature of the transport.
+
+A third use-case would be a traffic-analysis class that looks at connections
+  originating in a listening transport and chooses what flavor of session
+  is most-appropriate for servicing it. Thereafter performing the necessary
+  association and distancing itself from further interaction.
+
+Meaningful distinctions between datagram and stream-oriented transports ought
+  to end here, with all downstream software experiencing the transport as a
+  buffered stream, with the divisions between messages (if any) left to the
+  classes that care.
+
 */
 
 
