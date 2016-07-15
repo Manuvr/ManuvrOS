@@ -23,6 +23,7 @@ limitations under the License.
 #include <Kernel.h>
 #include <Platform/Platform.h>
 
+extern uint32_t rtc_startup_state;
 
 /****************************************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -53,7 +54,6 @@ const MessageTypeDef message_defs[] = {
   {  MANUVR_MSG_DEFERRED_FXN         , 0x0000,               "DEFERRED_FXN",          MSG_ARGS_NO_ARGS }, // Message to allow for deferred fxn calls without an EventReceiver.
 
   {  MANUVR_MSG_XPORT_SEND           , MSG_FLAG_IDEMPOTENT,  "XPORT_SEND"           , ManuvrMsg::MSG_ARGS_STR_BUILDER }, //
-  {  MANUVR_MSG_RNG_BUFFER_EMPTY     , 0x0000,               "RNG_BUFFER_EMPTY"     , MSG_ARGS_NO_ARGS }, // The RNG couldn't keep up with our entropy demands.
 
   {  MANUVR_MSG_SYS_FAULT_REPORT     , 0x0000,               "SYS_FAULT"            , ManuvrMsg::MSG_ARGS_U32 }, //
 
@@ -995,7 +995,8 @@ void Kernel::printDebug(StringBuilder* output) {
   if (getVerbosity() > 5) {
     output->concat("-- Current datetime          ");
     currentDateTime(output);
-    output->concatf("\n-- millis()                  0x%08x\n", millis());
+    output->concatf("\n-- RTC State                 %s\n", getRTCStateString(rtc_startup_state));
+    output->concatf("-- millis()                  0x%08x\n", millis());
     output->concatf("-- micros()                  0x%08x\n", micros());
     output->concatf("-- _ms_elapsed               %u\n", (unsigned long) _ms_elapsed);
   }
@@ -1510,7 +1511,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
             local_log.concatf("Random number: 0x%08x\n", x);
           }
           else {
-            local_log.concatf("Restarting RNG\n");
+            local_log.concatf("RNG underflow. Reinit()\n");
             init_RNG();
           }
         }
