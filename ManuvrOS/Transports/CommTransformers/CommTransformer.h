@@ -51,18 +51,65 @@ Meaningful distinctions between datagram and stream-oriented transports ought
 #include <Platform/Platform.h>
 
 
-class XportXformer {
+/*
+* This is an interface class that is the common-ground between...
+*   ManuvrXports, which use it to move buffers out of the I/O layer.
+*   XenoSessions, which use it to move buffers into the application layer.
+*   XportXformers, which optionally connects these things together.
+*
+* The idea is have a strategy flexible-enough to facillitate basic
+*   buffer-processing tasks without incurring the complexity of extending
+*   XenoSession or wrapping ManuvrXport.
+*
+* TODO: Notes for the future:
+* BufferRouter could be implemented as a bi-directional FIFO queue. But it isn't.
+* This is a good place to wrap various IPC strategies.
+* This is an *excellent* place for concurrency-control and memory-management.
+*/
+class BufferRouter {
+  public:
+    // This is outward-facing.
+    virtual unsigned int take_buffer(uint8_t* buf, unsigned int len) =0;
+  protected:
+    // This is a class-internal means of gaining API uniformity.
+    virtual unsigned int give_buffer(uint8_t* buf, unsigned int len) =0;
+};
+
+/*
+* There is only one BufferRouter reference native to this class: That of the owner.
+* Reasons for possibly wanting a single-ended XportXformer might include...
+*   1) A computationally-heavy operation at the transport level
+*/
+class XportXformer : public BufferRouter{
   public:
     XportXformer();
+    XportXformer(BufferRouter*);
+    XportXformer(BufferRouter*, BufferRouter*);
     ~XportXformer();
+
+    /* Override from BufferRouter. */
+    virtual unsigned int take(uint8_t* buf, unsigned int len) =0;
 
     virtual void printDebug(StringBuilder*);
 
 
   protected:
+    BufferRouter* _owner;     //
+    BufferRouter* _associate; //
 
-
-  private:
+    /* Override from BufferRouter. */
+    virtual unsigned int give(uint8_t* buf, unsigned int len) =0;
 };
+
+
+/*
+* A common use-case: Bridging two transports together.
+*/
+
+/*
+* Another common use-case: Performing simple protocol discovery.
+*/
+
+
 
 #endif   // __MANUVR_XPORT_XFORMR_H__

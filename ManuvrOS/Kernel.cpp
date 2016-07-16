@@ -23,7 +23,7 @@ limitations under the License.
 #include <Kernel.h>
 #include <Platform/Platform.h>
 
-#if defined(__MANuVR_MBEDTLS)
+#if defined(__MANUVR_MBEDTLS)
   #include "mbedtls/ssl.h"
 #endif
 
@@ -1006,7 +1006,7 @@ void Kernel::printPlatformInfo(StringBuilder* output) {
     output->concat("\t OSC\n");
   #endif
 
-  #if defined(__MANuVR_MBEDTLS)
+  #if defined(__MANUVR_MBEDTLS)
     output->concat("-- Supported TLS ciphersuites:\n");
     const int* ciphersuites = mbedtls_ssl_list_ciphersuites();
     while (0 != *(ciphersuites)) {
