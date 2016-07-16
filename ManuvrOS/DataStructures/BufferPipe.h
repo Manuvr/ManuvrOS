@@ -94,17 +94,23 @@ class BufferPipe {
     /*
     * Generally, this will be called from within the instance pointed-at by _far.
     */
-    virtual unsigned int toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
-    inline unsigned int toCounterparty(uint8_t* buf, unsigned int len) {
-      return this->toCounterparty(buf, len, _near_mm_default);
+    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
+    inline int8_t toCounterparty(uint8_t* buf, unsigned int len) {
+      return toCounterparty(buf, len, _near_mm_default);
     };
 
     /*
     * Generally, this will be called from within the instance pointed-at by _near.
     */
-    virtual unsigned int fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
-    inline unsigned int fromCounterparty(uint8_t* buf, unsigned int len) {
-      return this->fromCounterparty(buf, len, _far_mm_default);
+    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
+    inline int8_t fromCounterparty(uint8_t* buf, unsigned int len) {
+      return fromCounterparty(buf, len, _far_mm_default);
+    };
+
+    /* This is here to simplify the logic of endpoints. */
+    int8_t transfer(uint8_t* buf, unsigned int len, int8_t mm);
+    inline int8_t transfer(uint8_t* buf, unsigned int len) {
+      return transfer(buf, len, (this == _near) ? _near_mm_default : _far_mm_default);
     };
 
     int8_t setNear(BufferPipe* nu, int8_t _mm);

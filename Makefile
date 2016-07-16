@@ -127,15 +127,17 @@ raspi: clean libs
 	$(CXX) -static -g -o manuvr $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -DRASPI -D_GNU_SOURCE -O2
 
 debug:
-	$(CXX) -static -g -o manuvr main.cpp $(SRCS) $(GENERIC_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D__MANUVR_DEBUG -D_GNU_SOURCE -O0 -fstack-usage
+	$(CXX) -static -g -o manuvr $(SRCS) $(GENERIC_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D__MANUVR_DEBUG -D_GNU_SOURCE -O0 -fstack-usage
 # Options configured such that you can then...
 # valgrind --tool=callgrind ./manuvr
 # gprof2dot --format=callgrind --output=out.dot callgrind.out.16562
 # dot  -Tpng out.dot -o graph.png
 
-manuvrtests:
-	mkdir $(OUTPUT_PATH)
-	$(CXX) -o $(OUTPUT_PATH)/dstest tests/TestDataStructures.cpp DataStructures/*.cpp -I. -lstdc++ -lc -lm
+tests: libs
+	export __MANUVR_LINUX
+	make -C ManuvrOS/
+	$(CXX) -static -g -o dstest tests/TestDataStructures.cpp $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
+	$(CXX) -static -g -o bptest tests/BufferPipeTest.cpp $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
 
 builddir:
 	mkdir -p $(OUTPUT_PATH)

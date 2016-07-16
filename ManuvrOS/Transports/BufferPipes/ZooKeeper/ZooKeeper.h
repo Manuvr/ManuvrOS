@@ -59,8 +59,8 @@ class ZooKeeper : public BufferPipe {
     ~ZooKeeper();
 
     /* Override from BufferPipe. */
-    virtual unsigned int toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
-    virtual unsigned int fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
 
     void printDebug(StringBuilder*);
 

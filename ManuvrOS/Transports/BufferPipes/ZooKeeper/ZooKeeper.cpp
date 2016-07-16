@@ -88,7 +88,7 @@ void ZooKeeper::printDebug(StringBuilder* output) {
     output->concatf("\t _far          \t[0x%08x] %s\n", (unsigned long)_far, BufferPipe::memMgmtString(_far_mm_default));
   }
   if (_accumulator.length() > 0) {
-    output->concatf("\t _accumulator (%d bytes):\t", _accumulator.length());
+    output->concatf("\t _accumulator (%d bytes):  ", _accumulator.length());
     _accumulator.printDebug(output);
   }
 }

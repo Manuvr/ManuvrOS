@@ -78,7 +78,7 @@ BufferPipe::BufferPipe() {
 int8_t BufferPipe::setNear(BufferPipe* nu, int8_t _mm) {
   if (NULL == _near) {
     // If the slot is vacant..
-    if ((NULL == nu) && (_mm >= 0)) {
+    if ((NULL != nu) && (_mm >= 0)) {
       // ...and nu is itself non-null, and the _mm is valid...
       _near_mm_default = _mm;
       _near = nu;
@@ -104,11 +104,33 @@ int8_t BufferPipe::setNear(BufferPipe* nu, int8_t _mm) {
 int8_t BufferPipe::setFar(BufferPipe* nu, int8_t _mm) {
   if (NULL == _far) {
     // If the slot is vacant..
-    if ((NULL == nu) && (_mm >= 0)) {
+    if ((NULL != nu) && (_mm >= 0)) {
       // ...and nu is itself non-null, and the _mm is valid...
       _far_mm_default = _mm;
       _far = nu;
       return _mm;
+    }
+  }
+  return MEM_MGMT_RESPONSIBLE_ERROR;
+}
+
+
+/**
+* Simplification for single-ended BufferPipes.
+*
+* @param   BufferPipe*  A pointer to the sender.
+* @param   int8_t       The default mem-mgmt strategy for this BufferPipe.
+* @return  A result code.
+*/
+int8_t BufferPipe::transfer(uint8_t* buf, unsigned int len, int8_t _mm) {
+  if (this == _near) {
+    if (haveFar() && (_mm >= 0)) {
+      return _far->fromCounterparty(buf, len, _mm);
+    }
+  }
+  else if (this == _far) {
+    if (haveNear() && (_mm >= 0)) {
+      return _near->toCounterparty(buf, len, _mm);
     }
   }
   return MEM_MGMT_RESPONSIBLE_ERROR;
