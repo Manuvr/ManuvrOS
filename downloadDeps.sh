@@ -28,8 +28,11 @@ git clone https://github.com/eclipse/paho.mqtt.embedded-c.git lib/paho.mqtt.embe
 cp lib/paho.mqtt.embedded-c/MQTTPacket/src/* lib/paho.mqtt.embedded-c/
 
 # TinyCBOR...
+# Note that we do special-handling here to make the build-process smoother...
 rm -rf lib/tinycbor
 git clone https://github.com/01org/tinycbor.git lib/tinycbor
+mkdir -p lib/tinycbor/include
+cp lib/tinycbor/src/*.h lib/tinycbor/include
 
 # mbedTLS...
 rm -rf lib/mbedtls
