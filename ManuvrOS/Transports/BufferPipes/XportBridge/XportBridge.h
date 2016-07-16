@@ -18,32 +18,49 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-Probably the simplest-possible XportXform that isn't a bitbucket.
+Probably the simplest-possible general XportXform that isn't a bitbucket.
+
 Takes two transports and cross-wires them such that one's output
   becomes the other's input. This is only really useful for deploying
-  ManuvrOS as a transport adapter.
+  ManuvrOS as a transport adapter, but it will doubtless lend itself to such
+  hackery as piping GPS data from serial ports over the internet without SLIP.
+
 This class does not concern itself with network-layer tasks or anything
   above it in the OSI. It just shuttles payloads between transports as
   transparently as possible.
+
+Unlike most other implementations of this class, this one is equidistant from
+  (we presume) two counterparties. Therefore, "near" and "far" distinction is
+  meaningless, provided we keep straight which is which. Combined with the
+  fact that we do no transforms, this means that we simply pass traffic.
 */
 
 
 #ifndef __MANUVR_XPORT_BRIDGE_H__
 #define __MANUVR_XPORT_BRIDGE_H__
 
-#include "../CommTransformer.h"
+#include <DataStructures/BufferPipe.h>
 
 
-class XportBridge {
+/*
+* A common use-case: Bridging two transports together.
+*/
+class XportBridge : public BufferPipe {
   public:
     XportBridge();
+    XportBridge(BufferPipe*);
+    XportBridge(BufferPipe*, BufferPipe*);
     ~XportBridge();
+
+    /* Override from BufferPipe. */
+    virtual unsigned int toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual unsigned int fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+
+    virtual void printDebug(StringBuilder*);
 
 
   protected:
-
-
-  private:
 };
+
 
 #endif   // __MANUVR_XPORT_BRIDGE_H__

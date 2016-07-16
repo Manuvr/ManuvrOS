@@ -23,27 +23,39 @@ This is a basic class for parsing NMEA sentences from a GPS and emitting
 
 This class in unidirectional in the sense that it only reads from the
   associated transport. Hardware that has bidirectional capability for
-  whatever reason can extend this class into something with non-trivial
-  write methods.
+  whatever reason can extend this class into something with a non-trivial
+  fromCounterparty() method.
 */
 
 
 #ifndef __MANUVR_BASIC_GPS_H__
 #define __MANUVR_BASIC_GPS_H__
 
-#include "../CommTransformer.h"
+#include <DataStructures/BufferPipe.h>
+#include <Kernel.h>
 
-
-class ManuvrGPS {
+/*
+* A BufferPipe that is specialized for parsing NMEA.
+* After enough successful parsing, this class will emit messages into the
+*   Kernel's general message queue containing framed high-level GPS data.
+*/
+class ManuvrGPS : public BufferPipe {
   public:
     ManuvrGPS();
-    ~ManuvrGPS();
+    ManuvrGPS(BufferPipe*);
+    ~LogPipe();
 
+    /* Override from BufferPipe. */
+    virtual unsigned int toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual unsigned int fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
 
-  protected:
+    void printDebug(StringBuilder*);
 
 
   private:
+    uint32_t       _sentences_parsed;
+    StringBuilder  _accumulator;
+    ManuvrRunnable _gps_frame;
 };
 
 #endif   // __MANUVR_BASIC_GPS_H__

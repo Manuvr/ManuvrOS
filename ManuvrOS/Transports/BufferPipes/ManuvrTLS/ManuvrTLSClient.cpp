@@ -1,7 +1,7 @@
 /*
-File:   ManuvrTLS.cpp
+File:   ManuvrTLSClient.cpp
 Author: J. Ian Lindsay
-Date:   2016.07.11
+Date:   2016.07.15
 
 Copyright 2016 Manuvr, Inc
 
@@ -27,8 +27,7 @@ Initial implentation is via mbedTLS.
 #if defined(WITH_MBED_TLS)
 
 
-ManuvrTLS::ManuvrTLS() {
-  public:
+ManuvrTLSClient::ManuvrTLSClient() : ManuvrTLS() {
 }
 
 #endif

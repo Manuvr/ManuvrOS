@@ -17,10 +17,15 @@ LIBS =  -lm
 
 # Datastructures
 CPP_SRCS   = DataStructures/StringBuilder.cpp
+CPP_SRCS  += DataStructures/BufferPipe.cpp
 CPP_SRCS  += DataStructures/Quaternion.cpp
 CPP_SRCS  += DataStructures/InertialMeasurement.cpp
 
+# Types and encodings
+CPP_SRCS  += Types/ManuvrCBOR/ManuvrCBOR.cpp
+
 # Manuvr core
+CPP_SRCS  += LogPipe.cpp
 CPP_SRCS  += ManuvrRunnable.cpp
 CPP_SRCS  += EnumeratedTypeCodes.cpp
 CPP_SRCS  += Kernel.cpp
@@ -47,11 +52,14 @@ CPP_SRCS  += XenoSession/OSC/OSCMessage.cpp
 #CPP_SRCS  += Transports/ManuvrPipe/ManuvrPipe.cpp
 #CPP_SRCS  += Transports/ManuvrTelehash/ManuvrTelehash.cpp
 
-# Transports (Transformers)
-CPP_SRCS  += Transports/CommTransformers/CommTransformer.cpp
-CPP_SRCS  += Transports/CommTransformers/ManuvrGPS/ManuvrGPS.cpp
-CPP_SRCS  += Transports/CommTransformers/ManuvrTLS/ManuvrTLS.cpp
-CPP_SRCS  += Transports/CommTransformers/XportBridge/XportBridge.cpp
+# Specialized BufferPipes
+CPP_SRCS  += Transports/BufferPipes/ZooKeeper/ZooKeeper.cpp
+CPP_SRCS  += Transports/BufferPipes/ManuvrGPS/ManuvrGPS.cpp
+CPP_SRCS  += Transports/BufferPipes/ManuvrTLS/ManuvrTLS.cpp
+CPP_SRCS  += Transports/BufferPipes/ManuvrTLS/ManuvrTLSServer.cpp
+CPP_SRCS  += Transports/BufferPipes/ManuvrTLS/ManuvrTLSClient.cpp
+CPP_SRCS  += Transports/BufferPipes/XportBridge/XportBridge.cpp
+#CPP_SRCS  += Transports/BufferPipes/LogPipe/LogPipe.cpp
 
 # Transports (Drivers)
 CPP_SRCS  += Transports/ManuvrXport.cpp

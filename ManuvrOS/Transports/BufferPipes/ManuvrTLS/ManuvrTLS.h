@@ -31,7 +31,7 @@ One class is for the server (listener), and the other for client (initiator),
 #ifndef __MANUVR_TLS_XFORMER_H__
 #define __MANUVR_TLS_XFORMER_H__
 
-#include "../CommTransformer.h"
+#include <DataStructures/BufferPipe.h>
 
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
@@ -51,24 +51,48 @@ One class is for the server (listener), and the other for client (initiator),
 #define MAX_CIPHERSUITE_COUNT   10
 
 
-class ManuvrTLSServer : public XportXformer {
+/*
+* Clients and servers have these things in common...
+*/
+class ManuvrTLS : protected BufferPipe {
+  public:
+    ManuvrTLS();
+    ~ManuvrTLS();
+
+    /* Override from BufferPipe. */
+    virtual unsigned int toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual unsigned int fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+
+
+  protected:
+    mbedtls_pk_context       _pkey;
+    mbedtls_ssl_config       _conf;
+    mbedtls_x509_crt         _our_cert;
+    mbedtls_entropy_context  _entropy;
+    mbedtls_ctr_drbg_context _ctr_drbg;
+
+    virtual void throwError(int ret) =0;
+
+
+  private:
+};
+
+
+class ManuvrTLSServer : public ManuvrTLS {
   public:
     ManuvrTLSServer();
     ~ManuvrTLSServer();
 
+    void printDebug(StringBuilder*);
+
 
   protected:
+    void throwError(int ret);
 
 
   private:
-    void throwError(int ret);
-
     mbedtls_ssl_cookie_ctx cookie_ctx;
-    mbedtls_entropy_context entropy;
-    mbedtls_ctr_drbg_context ctr_drbg;
-    mbedtls_ssl_config conf;
-    mbedtls_x509_crt srvcert;
-    mbedtls_pk_context pkey;
+
     #if defined(MBEDTLS_SSL_CACHE_C)
       mbedtls_ssl_cache_context cache;
     #endif
@@ -76,7 +100,7 @@ class ManuvrTLSServer : public XportXformer {
 
 
 
-class ManuvrTLSClient : public XportXformer {
+class ManuvrTLSClient : protected ManuvrTLS {
   public:
     ManuvrTLSClient(
              const unsigned char *priv_key,     size_t priv_key_len,
@@ -87,6 +111,9 @@ class ManuvrTLSClient : public XportXformer {
              int debug_level);
     ~ManuvrTLSClient();
 
+    void printDebug(StringBuilder*);
+
+
     int recv(unsigned char *buf, size_t len);
     int receive_data(unsigned char *buf, int len);
     int send_encrypted(const unsigned char *buf, size_t len);
@@ -96,17 +123,15 @@ class ManuvrTLSClient : public XportXformer {
     void store_data(const unsigned char *buf, size_t len);
     void error(int ret);
 
-  private:
+
+  protected:
     void throwError(int ret);
 
+
+  private:
     int allowed_ciphersuites[MAX_CIPHERSUITE_COUNT];
-    mbedtls_ssl_context ssl_context;
-    mbedtls_entropy_context entropy;
-    mbedtls_ctr_drbg_context ctr_drbg;
-    mbedtls_ssl_config conf;
-    mbedtls_x509_crt clicert;
     mbedtls_x509_crt cacert;
-    mbedtls_pk_context pkey;
+
     //mbedtls_timing_delay_context timer;
     const unsigned char *recv_buf;
     size_t recv_len;
