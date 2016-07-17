@@ -17,6 +17,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
+    __  ___                             ____  _____
+   /  |/  /___ _____  __  ___   _______/ __ \/ ___/
+  / /|_/ / __ `/ __ \/ / / / | / / ___/ / / /\__ \
+ / /  / / /_/ / / / / /_/ /| |/ / /  / /_/ /___/ /
+/_/  /_/\__,_/_/ /_/\__,_/ |___/_/   \____//____/
+
+Main demo application.
+
 */
 
 
@@ -57,9 +65,9 @@ limitations under the License.
 #include <XenoSession/CoAP/CoAPSession.h>
 
 
-/****************************************************************************************************
-* Globals and defines that make our life easier.                                                    *
-****************************************************************************************************/
+/*******************************************************************************
+* Globals and defines that make our life easier.                               *
+*******************************************************************************/
 char *program_name  = NULL;
 int __main_pid      = 0;
 int __shell_pid     = 0;
@@ -73,18 +81,18 @@ void kernelDebugDump() {
 
 
 
-/****************************************************************************************************
-* Functions that just print things.                                                                 *
-****************************************************************************************************/
+/*******************************************************************************
+* Functions that just print things.                                            *
+*******************************************************************************/
 void printHelp() {
   printf("Help would ordinarily be displayed here.\n");
 }
 
 
-/****************************************************************************************************
-* Code related to running a local stdio shell...                                                    *
-****************************************************************************************************/
-
+/*******************************************************************************
+* Code related to running a local stdio shell...                               *
+* TODO: Generalize all this and move it to the Console Session.                *
+*******************************************************************************/
 long unsigned int _thread_id = 0;;
 bool running = true;
 
@@ -138,9 +146,9 @@ void* spawnUIThread(void*) {
 #endif  // __MANUVR_CONSOLE_SUPPORT
 
 
-/****************************************************************************************************
-* The main function.                                                                                *
-****************************************************************************************************/
+/*******************************************************************************
+* The main function.                                                           *
+*******************************************************************************/
 
 int main(int argc, char *argv[]) {
   program_name = argv[0];  // Name of running binary.
@@ -280,8 +288,9 @@ int main(int argc, char *argv[]) {
 
   // The main loop. Run forever.
   // TODO: It would be nice to be able to ask the kernel if we should continue running.
+  int events_procd = 0;
   while (running) {
-    kernel->procIdleFlags();
+    events_procd = kernel->procIdleFlags();
     #if defined(RASPI) || defined(RASPI2)
       //setPin(14, pin_14_state);
       //pin_14_state = !pin_14_state;
@@ -295,6 +304,12 @@ int main(int argc, char *argv[]) {
         printf("%s", Kernel::log_buffer.position(0));
         Kernel::log_buffer.drop_position(0);
       }
+    }
+    if (0 == events_procd + Kernel::log_buffer.count()) {
+      // This is a resource-saver. How this is handled on a particular platform
+      //   is still out-of-scope. Since we are in a threaded environment, we can
+      //   sleep. Other systems might use ISR hooks or RTC notifications.
+      sleep_millis(20);
     }
   }
 

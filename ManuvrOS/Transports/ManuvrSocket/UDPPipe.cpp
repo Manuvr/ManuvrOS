@@ -20,6 +20,7 @@ limitations under the License.
 
 */
 
+#if defined(MANUVR_SUPPORT_UDP)
 #include "ManuvrSocket.h"
 
 /*******************************************************************************
@@ -74,8 +75,13 @@ UDPPipe::~UDPPipe() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
-/*
+/**
 * Back toward ManuvrUDP....
+*
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
 */
 int8_t UDPPipe::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
   switch (mm) {
@@ -99,8 +105,13 @@ int8_t UDPPipe::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
   }
 }
 
-/*
+/**
 * Outward toward the application (or into the accumulator).
+*
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
 */
 int8_t UDPPipe::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
   switch (mm) {
@@ -142,6 +153,11 @@ int8_t UDPPipe::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
 * UDPPipe-specific functions                                                   *
 *******************************************************************************/
 
+/**
+* Debug support function.
+*
+* @param A pointer to a StringBuffer object to receive the output.
+*/
 void UDPPipe::printDebug(StringBuilder* output) {
   output->concat("\t-- UDPPipe ----------------------------------\n");
   struct in_addr _inet_addr;
@@ -162,8 +178,23 @@ void UDPPipe::printDebug(StringBuilder* output) {
 }
 
 
-// Called by the _far side when it first attaches.
-// Mem-mgmt issues should be handled by StringBuilder.
+/**
+* Called by the far-side when it first attaches.
+* Mem-mgmt issues should be handled by StringBuilder.
+*
+* Because we are dealing with datagrams, we can't simply glom the entire
+*   accumulator onto the far-side in a single call. Many datagram-oriented
+*   protocols rely on the natural divisions between packets to avoid having
+*   to codify length data in the message explicitly.
+* This saves space on the wire, but without even simple framing it means we must
+*   preserve those natural boundaries by supporting the ability for a far-side
+*   protocol stack to retrieve packets from the accumulator chunkwise.
+* Far-side consumers of the accumulator need to call this function until it
+*   returns zero, or it will miss all packets after the first.
+*
+* @param A pointer to a StringBuffer object to receive the output.
+* @return The number of bytes retrieved into the buffer on this call.
+*/
 int UDPPipe::takeAccumulator(StringBuilder* target) {
   int return_value = _accumulator.length();
   if (return_value > 0) {
@@ -172,8 +203,4 @@ int UDPPipe::takeAccumulator(StringBuilder* target) {
   return return_value;
 }
 
-
-bool UDPPipe::persistAfterReply() {
-  // TODO: Once things are verified, make dynamic.
-  return true;
-}
+#endif //MANUVR_SUPPORT_UDP

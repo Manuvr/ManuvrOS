@@ -1,5 +1,5 @@
 /*
-File:   CommTransformer.h
+File:   BufferPipe.h
 Author: J. Ian Lindsay
 Date:   2016.06.29
 
@@ -21,25 +21,38 @@ limitations under the License.
 This class is meant to be the glue between a platform-abstracted transport,
   and any parser/session/presentation layer that sits on top of it (if any).
 
+Extending classes may be...
+ ManuvrXports, which use it to move buffers across the I/O layer.
+ XenoSessions, which use it to move buffers across the application layer.
+ XportXformers, which optionally connects these things together.
+
+The idea is have a strategy flexible-enough to facillitate basic
+ buffer-processing tasks without incurring the complexity of extending
+ XenoSession or wrapping ManuvrXport.
+
 For instance: A simple parser that sits on a serial port or net socket, and
   does not require a session. This would encompass GPS, and also any transport
   bridges.
+See ManuvrGPS for the GPS parser case.
+See XportBridge for a bi-directional implementation.
 
 Another (more complex) case would be TLS. Two-way interchange with the transport
   happens independently of the attached Session (if any). This also allows for
   the easy selection and abstraction of TLS/DTLS from the underlying transport,
   allowing the choice to be made based on the nature of the transport.
+See ManuvrTLS.
 
 A third use-case would be a traffic-analysis class that looks at connections
   originating in a listening transport and chooses what flavor of session
   is most-appropriate for servicing it. Thereafter performing the necessary
   association and distancing itself from further interaction.
+See ZooKeeper.
 
 Meaningful distinctions between datagram and stream-oriented transports ought
   to end here, with all downstream software experiencing the transport as a
   buffered stream, with the divisions between messages (if any) left to the
   classes that care.
-
+See UDPPipe for a case where this matters.
 */
 
 
@@ -52,12 +65,14 @@ Meaningful distinctions between datagram and stream-oriented transports ought
 * These are return codes and directives for keeping track of where the
 *   responsibility lies for cleaning up memory for buffers that are passed.
 * As return codes, these are interpreted as a declaration of the beliefs of the
-*   receiving instance. Therefore, a return value of zero is an error.
+*   callee instance. Therefore, a return value of zero is an error.
 * As function arguments, these are interpreted as directives given by the
 *   sending instance, and should be treated appropriately.
 * At this point, we cannot unambiguously support partial buffer transfers. The
 *   receiving instance should take everything or nothing at all.
 * Remember: The issuer of the buffer has sole-authority to dictate its fate.
+*   This implies that we can safely copy and transform buffers in this class if
+*   we feel the need. But we need to make copies under certain circumstances.
 */
 #define MEM_MGMT_RESPONSIBLE_ERROR      -2  // Only used as a return code.
 #define MEM_MGMT_RESPONSIBLE_CALLER     -1  // The passive instance refused the buffer.
@@ -66,19 +81,12 @@ Meaningful distinctions between datagram and stream-oriented transports ought
 #define MEM_MGMT_RESPONSIBLE_BEARER      2  // The bearer is responsible.
 
 /*
-* This is an interface class that is the common-ground between...
-*   ManuvrXports, which use it to move buffers out of the I/O layer.
-*   XenoSessions, which use it to move buffers into the application layer.
-*   XportXformers, which optionally connects these things together.
-*
-* The idea is have a strategy flexible-enough to facillitate basic
-*   buffer-processing tasks without incurring the complexity of extending
-*   XenoSession or wrapping ManuvrXport.
-*
 * Here, "far" refers to "farther from the counterparty". That is: closer to our
 *   local idea of "the application".
-* The _near pointer should _always_ be closer to the transport driver, if present.
-* The _far pointer should _always_ be closer to the firmware end-point, if present.
+*
+* _near should _always_ be closer to the transport driver, if present.
+* _far should _always_ be closer to the application-layer end-point, if present.
+*
 * The _near and _far members cannot be relied upon to be present for a variety
 *   of reasons. But calling those methods should always be made to be safe.
 *
@@ -111,11 +119,13 @@ class BufferPipe {
       return emitBuffer(buf, len, (this == _near) ? _near_mm_default : _far_mm_default);
     };
 
+    /* Set the identity of the near-side. */
     int8_t setNear(BufferPipe* nu, int8_t _mm);
     inline int8_t setNear(BufferPipe* nu) {
       return setNear(nu, MEM_MGMT_RESPONSIBLE_UNKNOWN);
     };
 
+    /* Set the identity of the far-side. */
     int8_t setFar(BufferPipe* nu, int8_t _mm);
     inline int8_t setFar(BufferPipe* nu) {
       return setFar(nu, MEM_MGMT_RESPONSIBLE_UNKNOWN);
@@ -126,22 +136,22 @@ class BufferPipe {
 
   protected:
     BufferPipe* _near;  // These two members create a double-linked-list.
-    BufferPipe* _far;   // Need such topology for be-directional pipe.
+    BufferPipe* _far;   // Need such topology for bi-directional pipe.
 
-    /* Default mem-mgmt responsibilities. */
-    int8_t _near_mm_default;
-    int8_t _far_mm_default;
+    /* Default mem-mgmt responsibilities... */
+    int8_t _near_mm_default;   // ...for buffers originating from the near side.
+    int8_t _far_mm_default;    // ...for buffers originating from the far side.
 
     BufferPipe();           // Protected constructor with no params for class init.
     virtual ~BufferPipe();  // Protected destructor.
 
+    /* Notification of destruction. Needed to maintain chain integrity. */
     void _bp_notify_drop(BufferPipe*);
 
-    /*
-    * Simple checks that we will need to do.
-    */
+    /* Simple checks that we will need to do. */
     inline bool haveNear() {  return (NULL != _near);  };
     inline bool haveFar() {   return (NULL != _far);   };
+
 
   private:
 };

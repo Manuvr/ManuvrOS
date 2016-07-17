@@ -149,6 +149,11 @@ int8_t XportBridge::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) 
 }
 
 
+/**
+* Debug support function.
+*
+* @param A pointer to a StringBuffer object to receive the output.
+*/
 void XportBridge::printDebug(StringBuilder* output) {
   output->concat("\t-- XportBridge ----------------------------------\n");
   if (_near) {

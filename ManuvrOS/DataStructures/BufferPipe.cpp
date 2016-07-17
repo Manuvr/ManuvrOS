@@ -81,9 +81,18 @@ BufferPipe::~BufferPipe() {
 }
 
 
+/*******************************************************************************
+*  _       _   _        _
+* |_)    _|_ _|_ _  ._ |_) o ._   _
+* |_) |_| |   | (/_ |  |   | |_) (/_
+*                            |
+* Basal implementations.
+*******************************************************************************/
 /**
 * Called by another instance to tell us they are being destructed.
 * Depending on class implementation, we might choose to propagate this call.
+*
+* @param  _drop  A pointer to the instance that is being destroyed.
 */
 void BufferPipe::_bp_notify_drop(BufferPipe* _drop) {
   if (_drop == _near) {

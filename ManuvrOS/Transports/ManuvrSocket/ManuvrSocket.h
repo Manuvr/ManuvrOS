@@ -145,6 +145,8 @@ class ManuvrTCP : public ManuvrSocket {
 #define MANUVR_MSG_UDP_RX  0xF544
 #define MANUVR_MSG_UDP_TX  0xF545
 
+#define MANUVR_UDP_FLAG_PERSIST       0x01  // Keep this pipe alive until explicit close.
+
 class ManuvrUDP;
 
 /*
@@ -167,7 +169,12 @@ class UDPPipe : public BufferPipe {
 
     void printDebug(StringBuilder*);
     int takeAccumulator(StringBuilder*);
-    bool persistAfterReply();
+
+    /* Is this transport used for non-session purposes? IE, GPS? */
+    inline bool persistAfterReply() {         return (_flags & MANUVR_UDP_FLAG_PERSIST);  };
+    inline void persistAfterReply(bool en) {
+      _flags = (en) ? (_flags | MANUVR_UDP_FLAG_PERSIST) : (_flags & ~(MANUVR_UDP_FLAG_PERSIST));
+    };
 
 
   private:
@@ -197,9 +204,14 @@ class ManuvrUDP : public ManuvrSocket, BufferPipe {
     bool write_port(unsigned char* out, int out_len);
 
     bool write_datagram(unsigned char* out, int out_len, uint32_t addr, int port, uint32_t opts);
-    bool write_datagram(unsigned char* out, int out_len, const char* addr, int port, uint32_t opts);
-    inline bool write_datagram(unsigned char* out, int out_len, const char* addr, int port) {
+    inline bool write_datagram(unsigned char* out, int out_len, uint32_t addr, int port) {
       return write_datagram(out, out_len, addr, port, 0);
+    };
+    inline bool write_datagram(unsigned char* out, int out_len, const char* addr, int port, uint32_t opts) {
+      return write_datagram(out, out_len, inet_addr(addr), port, opts);
+    };
+    inline bool write_datagram(unsigned char* out, int out_len, const char* addr, int port) {
+      return write_datagram(out, out_len, inet_addr(addr), port, 0);
     };
 
     /* Overrides from EventReceiver */
@@ -223,7 +235,6 @@ class ManuvrUDP : public ManuvrSocket, BufferPipe {
   private:
     // We index our spawned UDPPipes by counterparty port number.
     std::map<uint16_t, UDPPipe*> _open_replies;
-    int         _client_sock;
 };
 
 
