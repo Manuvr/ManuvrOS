@@ -21,8 +21,8 @@ limitations under the License.
 */
 
 
-#ifndef __MANUVR_PROTOCOL_ZOOKEEPER_H__
-#define __MANUVR_PROTOCOL_ZOOKEEPER_H__
+#ifndef __MANUVR_LOGPIPE_H__
+#define __MANUVR_LOGPIPE_H__
 
 #include <DataStructures/BufferPipe.h>
 
@@ -41,6 +41,7 @@ class LogPipe : public BufferPipe {
 
     void printDebug(StringBuilder*);
 
+    int8_t log(StringBuilder *str, int8_t mm);
 
 
   private:
@@ -49,4 +50,4 @@ class LogPipe : public BufferPipe {
 };
 
 
-#endif //__MANUVR_PROTOCOL_ZOOKEEPER_H__
+#endif //__MANUVR_LOGPIPE_H__

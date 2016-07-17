@@ -47,6 +47,7 @@ limitations under the License.
 * Constructor. The simple case. Usually for static-allocation.
 */
 LogPipe::LogPipe() : BufferPipe() {
+  setFar(this, MEM_MGMT_RESPONSIBLE_BEARER);
 }
 
 /**
@@ -55,6 +56,7 @@ LogPipe::LogPipe() : BufferPipe() {
 */
 LogPipe::LogPipe(BufferPipe* log_target) : BufferPipe() {
   setNear(log_target);
+  setFar(this, MEM_MGMT_RESPONSIBLE_BEARER);
 }
 
 /**
@@ -76,7 +78,7 @@ LogPipe::~LogPipe() {
 /*
 * Take log data
 */
-unsigned int LogPipe::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+int8_t LogPipe::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
   switch (mm) {
     case MEM_MGMT_RESPONSIBLE_CALLER:
       // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -110,18 +112,30 @@ unsigned int LogPipe::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) 
 /*
 * We don't accept data from the counterparty. Logging is a one-way thing.
 */
-unsigned int LogPipe::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+int8_t LogPipe::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
   return MEM_MGMT_RESPONSIBLE_CALLER;
 }
+
+
+int8_t LogPipe::log(StringBuilder *str, int8_t mm) {
+  switch (mm) {
+    case MEM_MGMT_RESPONSIBLE_CREATOR:
+      _accumulator.concat(str);
+      return MEM_MGMT_RESPONSIBLE_CREATOR;
+    case MEM_MGMT_RESPONSIBLE_BEARER:
+      _accumulator.concatHandoff(str);
+      return MEM_MGMT_RESPONSIBLE_BEARER;
+    default:
+      /* This is more ambiguity than we are willing to bear... */
+      return MEM_MGMT_RESPONSIBLE_ERROR;
+  }
+};
 
 
 void LogPipe::printDebug(StringBuilder* output) {
   output->concat("\t-- LogPipe ----------------------------------\n");
   if (_near) {
     output->concatf("\t _near         \t[0x%08x] %s\n", (unsigned long)_near, BufferPipe::memMgmtString(_near_mm_default));
-  }
-  if (_far) {
-    output->concatf("\t _far          \t[0x%08x] %s\n", (unsigned long)_far, BufferPipe::memMgmtString(_far_mm_default));
   }
   if (_accumulator.length() > 0) {
     output->concatf("\t _accumulator (%d bytes):\t", _accumulator.length());

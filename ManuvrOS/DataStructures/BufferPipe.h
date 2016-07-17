@@ -46,9 +46,7 @@ Meaningful distinctions between datagram and stream-oriented transports ought
 #ifndef __MANUVR_BUFFER_PIPE_H__
 #define __MANUVR_BUFFER_PIPE_H__
 
-#include <Kernel.h>
 #include <DataStructures/StringBuilder.h>
-#include <Platform/Platform.h>
 
 /*
 * These are return codes and directives for keeping track of where the
@@ -108,9 +106,9 @@ class BufferPipe {
     };
 
     /* This is here to simplify the logic of endpoints. */
-    int8_t transfer(uint8_t* buf, unsigned int len, int8_t mm);
-    inline int8_t transfer(uint8_t* buf, unsigned int len) {
-      return transfer(buf, len, (this == _near) ? _near_mm_default : _far_mm_default);
+    int8_t emitBuffer(uint8_t* buf, unsigned int len, int8_t mm);
+    inline int8_t emitBuffer(uint8_t* buf, unsigned int len) {
+      return emitBuffer(buf, len, (this == _near) ? _near_mm_default : _far_mm_default);
     };
 
     int8_t setNear(BufferPipe* nu, int8_t _mm);
@@ -134,7 +132,10 @@ class BufferPipe {
     int8_t _near_mm_default;
     int8_t _far_mm_default;
 
-    BufferPipe();   // Protected constructor with no params for class init.
+    BufferPipe();           // Protected constructor with no params for class init.
+    virtual ~BufferPipe();  // Protected destructor.
+
+    void _bp_notify_drop(BufferPipe*);
 
     /*
     * Simple checks that we will need to do.

@@ -64,6 +64,39 @@ BufferPipe::BufferPipe() {
 }
 
 /**
+* Destructor.
+* Tell the other sides of the links that we are departing.
+*/
+BufferPipe::~BufferPipe() {
+  if (NULL != _near) {
+    _near->_bp_notify_drop(this);
+    _near = NULL;
+  }
+  if (NULL != _far) {
+    _far->_bp_notify_drop(this);
+    _far  = NULL;
+  }
+  _near_mm_default = MEM_MGMT_RESPONSIBLE_UNKNOWN;
+  _far_mm_default  = MEM_MGMT_RESPONSIBLE_UNKNOWN;
+}
+
+
+/**
+* Called by another instance to tell us they are being destructed.
+* Depending on class implementation, we might choose to propagate this call.
+*/
+void BufferPipe::_bp_notify_drop(BufferPipe* _drop) {
+  if (_drop == _near) {
+    _near = NULL;
+    _near_mm_default = MEM_MGMT_RESPONSIBLE_UNKNOWN;
+  }
+  if (_drop == _far) {
+    _far = NULL;
+    _far_mm_default = MEM_MGMT_RESPONSIBLE_UNKNOWN;
+  }
+}
+
+/**
 * Sets the slot that sits nearer to the counterparty, as well as the default
 *   memory-managemnt strategy for buffers moving toward the application.
 * This allows a class setting itself up in a buffer chain to control the
@@ -122,7 +155,7 @@ int8_t BufferPipe::setFar(BufferPipe* nu, int8_t _mm) {
 * @param   int8_t       The default mem-mgmt strategy for this BufferPipe.
 * @return  A result code.
 */
-int8_t BufferPipe::transfer(uint8_t* buf, unsigned int len, int8_t _mm) {
+int8_t BufferPipe::emitBuffer(uint8_t* buf, unsigned int len, int8_t _mm) {
   if (this == _near) {
     if (haveFar() && (_mm >= 0)) {
       return _far->fromCounterparty(buf, len, _mm);

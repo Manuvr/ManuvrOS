@@ -37,7 +37,7 @@ XenoSession is the class that manages dialog with other systems via some
 #define XENO_SESSION_MAX_QUEUE_PRINT        3  // This is only relevant for debug.
 
 /*
-* These are defines for the low-4 bits of the session_state. They confine the space of our
+* These are defines for the session_state. They confine the space of our
 *   possible dialog, and bias the conversation in a given direction.
 */
 #define XENOSESSION_STATE_UNINITIALIZED   0x0000  // Nothing has happened. Freshly-instantiated session.

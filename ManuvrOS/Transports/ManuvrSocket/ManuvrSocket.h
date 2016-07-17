@@ -27,8 +27,9 @@ This is basically only for linux until it is needed in a smaller space.
 #ifndef __MANUVR_SOCKET_H__
 #define __MANUVR_SOCKET_H__
 
-#include "Transports/ManuvrXport.h"
+#include <Transports/ManuvrXport.h>
 #include <XenoSession/XenoSession.h>
+#include <DataStructures/BufferPipe.h>
 
 #if defined(__MANUVR_LINUX)
   #include <cstdio>
@@ -119,15 +120,75 @@ class ManuvrTCP : public ManuvrSocket {
 
 
 #if defined(MANUVR_SUPPORT_UDP)
+/*
+* UDP presents a clash with Manuvr's xport<--->session relationships.
+* The fundamental problem is: If we want bi-directional communication, we can
+*   only respond to individual packets we receive. The is no "connection", and
+*   no session. So this class _must_ have some notion of a session that only
+*   lasts for the duration of a request if we are to avoid passing return-path
+*   data around with the buffers (see UDPPipe below).
+*
+*
+* Furthermore, Manuvr's xport classes were not designed with multicast in mind.
+*   The turmoil will continue until these issues have been properly solved.
+*
+*/
 
+/*
+* To faciliate the usage of this transport in a manner consistent with a
+*   connectionless, multicast protocol, we use the messaging system as an
+*   additional means of transacting with this transport.
+* If the class is listening, and a packet arrives without an attached BufferPipe
+*   into which to direct the packet, the class will emit it into the message
+*   bus.
+*/
 #define MANUVR_MSG_UDP_RX  0xF544
 #define MANUVR_MSG_UDP_TX  0xF545
 
-class ManuvrUDP : public ManuvrSocket {
+class ManuvrUDP;
+
+/*
+* We use this to track packets and replies so that addressing information does
+*   not need to leave the class, thereby damaging the abstraction.
+*/
+class UDPPipe : public BufferPipe {
+  public:
+    UDPPipe();
+    UDPPipe(ManuvrUDP*, uint32_t, uint16_t);
+    UDPPipe(ManuvrUDP*, BufferPipe*);
+    ~UDPPipe();
+
+    /* Override from BufferPipe. */
+    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    inline int8_t fromCounterparty(uint8_t* buf, unsigned int len) {
+      return fromCounterparty(buf, len, _far_mm_default);
+    };
+
+    void printDebug(StringBuilder*);
+    int takeAccumulator(StringBuilder*);
+    bool persistAfterReply();
+
+
+  private:
+    uint16_t      _port;
+    uint16_t      _flags;
+    uint32_t      _ip;
+    ManuvrUDP*    _udp;
+    StringBuilder _accumulator;   // Holds an incoming packet prior to setFar().
+};
+
+
+
+class ManuvrUDP : public ManuvrSocket, BufferPipe {
   public:
     ManuvrUDP(const char* addr, int port);
     ManuvrUDP(const char* addr, int port, uint32_t opts);
     ~ManuvrUDP();
+
+    /* Override from BufferPipe. */
+    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
 
     int8_t connect();
     int8_t listen();
@@ -135,12 +196,11 @@ class ManuvrUDP : public ManuvrSocket {
     int8_t read_port();
     bool write_port(unsigned char* out, int out_len);
 
+    bool write_datagram(unsigned char* out, int out_len, uint32_t addr, int port, uint32_t opts);
     bool write_datagram(unsigned char* out, int out_len, const char* addr, int port, uint32_t opts);
     inline bool write_datagram(unsigned char* out, int out_len, const char* addr, int port) {
       return write_datagram(out, out_len, addr, port, 0);
     };
-
-    inline void count_rx_bytes(int x) {   bytes_received += x;  };
 
     /* Overrides from EventReceiver */
     int8_t notify(ManuvrRunnable*);
@@ -161,12 +221,12 @@ class ManuvrUDP : public ManuvrSocket {
 
 
   private:
+    // We index our spawned UDPPipes by counterparty port number.
+    std::map<uint16_t, UDPPipe*> _open_replies;
     int         _client_sock;
 };
 
 
 #endif  // MANUVR_SUPPORT_UDP
-
-#endif // General socket support
-
-#endif   // __MANUVR_SOCKET_H__
+#endif  // General socket support
+#endif  // Header guard __MANUVR_SOCKET_H__

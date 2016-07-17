@@ -40,7 +40,8 @@ limitations under the License.
   #include "FirmwareDefs.h"
   #include "ManuvrRunnable.h"
   #include "EventReceiver.h"
-  #include "DataStructures/PriorityQueue.h"
+  #include "LogPipe.h"
+  #include <DataStructures/PriorityQueue.h>
   #include <DataStructures/StringBuilder.h>
   #include <map>
 
@@ -215,6 +216,7 @@ limitations under the License.
 
 
     private:
+      LogPipe logger;
       ManuvrRunnable* current_event;
       PriorityQueue<ManuvrRunnable*>   exec_queue;    // Runnables that are pending execution.
       PriorityQueue<ManuvrRunnable*>   schedules;     // These are Runnables scheduled to be run.
@@ -250,7 +252,6 @@ limitations under the License.
 
       uint8_t  max_events_p_loop;     // What is the most events we've handled in a single loop?
       int8_t   max_events_per_loop;
-
 
       int8_t procCallAheads(ManuvrRunnable *active_event);
       int8_t procCallBacks(ManuvrRunnable *active_event);
