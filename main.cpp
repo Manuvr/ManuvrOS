@@ -58,7 +58,8 @@ Main demo application.
 
 // Transports...
 #include <Transports/ManuvrSerial/ManuvrSerial.h>
-#include <Transports/ManuvrSocket/ManuvrSocket.h>
+#include <Transports/ManuvrSocket/ManuvrUDP.h>
+#include <Transports/ManuvrSocket/ManuvrTCP.h>
 
 // We will use MQTT as our concept of "session"...
 #include <XenoSession/MQTT/MQTTSession.h>

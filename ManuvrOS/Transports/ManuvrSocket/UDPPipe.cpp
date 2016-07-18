@@ -21,7 +21,7 @@ limitations under the License.
 */
 
 #if defined(MANUVR_SUPPORT_UDP)
-#include "ManuvrSocket.h"
+#include "ManuvrUDP.h"
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.

@@ -24,12 +24,12 @@ This is basically only for linux until it is needed in a smaller space.
 */
 
 
-#ifndef __MANUVR_SOCKET_H__
-#define __MANUVR_SOCKET_H__
+#ifndef __MANUVR_TCP_SOCKET_H__
+#define __MANUVR_TCP_SOCKET_H__
 
 #include <Transports/ManuvrXport.h>
 #include <XenoSession/XenoSession.h>
-#include <DataStructures/BufferPipe.h>
+#include "ManuvrSocket.h"
 
 #if defined(__MANUVR_LINUX)
   #include <cstdio>
@@ -48,36 +48,41 @@ This is basically only for linux until it is needed in a smaller space.
 #endif
 
 
-#if defined(MANUVR_SUPPORT_TCPSOCKET) | defined(MANUVR_SUPPORT_UDP)
+#if defined(MANUVR_SUPPORT_TCPSOCKET)
 
-/*
-* This is a wrapper around sockets as they exist in a linux system.
-* TODO: This might be an appropriate place for lwip?
-*/
-class ManuvrSocket : public ManuvrXport {
+// TODO: Might generalize UDP and websocket support into this. For now, we only deal in TCP.
+// If generalization takes place, we should probably have a pure interface class "ManuvrSocket"
+//   that handles all the common-gound.
+class ManuvrTCP : public ManuvrSocket {
   public:
-    ManuvrSocket(const char* addr, int port, uint32_t opts);
-    ~ManuvrSocket();
+    ManuvrTCP(const char* addr, int port);
+    ManuvrTCP(const char* addr, int port, uint32_t opts);
+    ManuvrTCP(ManuvrTCP* listening_instance, int nu_sock, struct sockaddr_in* nu_sockaddr);
+    ~ManuvrTCP();
 
-    inline int getSockID() {  return _sock; };
+    /* Overrides from EventReceiver */
+    const char* getReceiverName();
+    void printDebug(StringBuilder *);
+    int8_t notify(ManuvrRunnable*);
+    int8_t callback_proc(ManuvrRunnable *);
 
-    virtual int8_t disconnect();
+
+    int8_t connect();
+    int8_t listen();
+    int8_t reset();
+
+    bool write_port(unsigned char* out, int out_len);
+    bool write_port(int sock, unsigned char* out, int out_len);
+    int8_t read_port();
 
 
   protected:
-    const char* _addr;
-    int         _port_number;
-    uint32_t    _options;
-    int         _sock;
+    int8_t bootComplete();
 
-    #if defined(__MANUVR_LINUX)
-      struct sockaddr_in _sockaddr;
-    #endif
 
   private:
-    void __class_initializer();
+    LinkedList<ManuvrTCP*> _connections;   // A list of client connections.
 };
 
-
-#endif  // General socket support
-#endif  // Header guard __MANUVR_SOCKET_H__
+#endif  // MANUVR_SUPPORT_TCPSOCKET
+#endif  // __MANUVR_TCP_SOCKET_H__

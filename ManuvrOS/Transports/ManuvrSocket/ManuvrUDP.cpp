@@ -24,8 +24,8 @@ This class implements a crude UDP connector.
 
 #if defined(MANUVR_SUPPORT_UDP)
 
-#include "ManuvrSocket.h"
 #include <DataStructures/StringBuilder.h>
+#include "ManuvrUDP.h"
 
 
 /*******************************************************************************
