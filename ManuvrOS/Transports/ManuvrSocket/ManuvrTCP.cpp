@@ -142,9 +142,6 @@ ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in
     *((uint8_t *) &_sockaddr + i) = *(((uint8_t*)nu_sockaddr) + i);
   }
 
-  // Inherrit the listener's configuration...
-  nonSessionUsage(listening_instance->nonSessionUsage());
-
   bootComplete();
   connected(true);  // TODO: Possibly not true....
 }

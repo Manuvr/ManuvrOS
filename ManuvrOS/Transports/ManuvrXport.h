@@ -62,9 +62,9 @@ For debuggability, the transport has a special mode for acting as a debug
 #define MANUVR_XPORT_FLAG_BUSY             0x20000000  // The xport is moving something.
 #define MANUVR_XPORT_FLAG_STREAM_ORIENTED  0x10000000  // See note below.
 #define MANUVR_XPORT_FLAG_LISTENING        0x08000000  // We are listening for connections.
-#define MANUVR_XPORT_FLAG_IS_BRIDGED       0x04000000  // This transport instance is bridged to another.
-#define MANUVR_XPORT_FLAG_NON_SESSION      0x02000000  // Used to feed a transport into (suppose) a GPS parser.
-#define MANUVR_XPORT_FLAG_DEBUG_CONSOLE    0x01000000  // A human is on the other side.
+#define MANUVR_XPORT_FLAG_RESERVED_1       0x04000000  //
+#define MANUVR_XPORT_FLAG_RESERVED_2       0x02000000  //
+#define MANUVR_XPORT_FLAG_RESERVED_0       0x01000000  //
 #define MANUVR_XPORT_FLAG_ALWAYS_CONNECTED 0x00800000  // Serial ports.
 #define MANUVR_XPORT_FLAG_CONNECTIONLESS   0x00400000  // This transport is "connectionless". See Note0 below.
 #define MANUVR_XPORT_FLAG_HAS_MULTICAST    0x00200000  // This transport supports multicast.
@@ -113,6 +113,7 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
 
     /*
     * High-level data functions.
+    * TODO: This is going to be cut in favor of BufferPipe's API.
     */
     int8_t sendBuffer(StringBuilder* buf);
 
@@ -126,10 +127,10 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     virtual int8_t listen()     = 0;
     virtual int8_t reset()      = 0;
 
+    // TODO: This is going to be cut in favor of BufferPipe's API.
     // Mandatory override.
     virtual bool   write_port(unsigned char* out, int out_len) = 0;
     virtual int8_t read_port() = 0;
-
 
     /*
     * State accessors.
@@ -155,21 +156,6 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     inline void initialized(bool en) {
       _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_INITIALIZED) : (_xport_flags & ~(MANUVR_XPORT_FLAG_INITIALIZED));
     };
-
-    /* Transport bridging... */
-    inline bool isBridge() {                return (_xport_flags & MANUVR_XPORT_FLAG_IS_BRIDGED);  };
-    int8_t bridge(ManuvrXport*);
-
-    /* Is this transport used for non-session purposes? IE, GPS? */
-    inline bool nonSessionUsage() {         return (_xport_flags & MANUVR_XPORT_FLAG_NON_SESSION);  };
-    inline void nonSessionUsage(bool en) {
-      _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_NON_SESSION) : (_xport_flags & ~(MANUVR_XPORT_FLAG_NON_SESSION));
-    };
-
-    /* Is this transport being used as a debug console? If so, we will hangup a session if it exists.    */
-    inline bool isDebugConsole() {         return (_xport_flags & MANUVR_XPORT_FLAG_DEBUG_CONSOLE);  };
-    void isDebugConsole(bool en);
-
 
     /* We will override these functions in EventReceiver. */
     // TODO: I'm not sure I've evaluated the full impact of this sort of

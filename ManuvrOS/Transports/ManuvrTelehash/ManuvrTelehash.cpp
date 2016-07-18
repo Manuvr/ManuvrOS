@@ -149,9 +149,6 @@ ManuvrTelehash::ManuvrTelehash(ManuvrTelehash* listening_instance, int sock, str
     *((uint8_t *) &_sockaddr + i) = *(((uint8_t*)nu_sockaddr) + i);
   }
 
-  // Inherrit the listener's configuration...
-  nonSessionUsage(listening_instance->nonSessionUsage());
-
   bootComplete();
   connected(true);  // TODO: Possibly not true....
 }

@@ -80,7 +80,6 @@ XenoSession::XenoSession(ManuvrXport* _xport) {
   _session_service.originator      = (EventReceiver*) this;
 
   owner = _xport;
-  owner->nonSessionUsage(false);
   owner->provide_session(this);
 
   working                   = NULL;

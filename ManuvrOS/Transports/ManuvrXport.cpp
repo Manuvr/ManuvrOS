@@ -146,37 +146,6 @@ ManuvrXport::~ManuvrXport() {
 * Basal implementations.
 *******************************************************************************/
 
-/**
-* Calling this function with another transport as an argument will cause them to be bound into a
-*   bridge.
-* Both transports must be non-session, and have no other transports bridged.
-*/
-int8_t ManuvrXport::bridge(ManuvrXport* _xport) {
-  int8_t return_value = -1;
-  if (NULL != _xport) {
-    if (_xport != this) {
-      if (!getSession() && !_xport->getSession()) {
-        // TODO: At this point, we can create the bridge.
-        nonSessionUsage(true);
-        _xport->nonSessionUsage(true);
-        _xport_flags = _xport_flags | MANUVR_XPORT_FLAG_IS_BRIDGED;
-        return_value = 0;
-      }
-      else {
-        Kernel::log("Cannot bridge. One or both transports have sessions.");
-      }
-    }
-    else {
-      Kernel::log("Cannot bridge to self.");
-    }
-  }
-  else {
-    Kernel::log("Cannot bridge to a NULL transport.");
-  }
-  return return_value;
-}
-
-
 int8_t ManuvrXport::disconnect() {
   // TODO: Might-should tear down the session?
   connected(false);
@@ -238,14 +207,6 @@ void ManuvrXport::autoConnect(bool en, uint32_t _ac_period) {
     }
   }
 }
-
-
-void ManuvrXport::isDebugConsole(bool en) {
-  _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_DEBUG_CONSOLE) : (_xport_flags & ~(MANUVR_XPORT_FLAG_DEBUG_CONSOLE));
-
-  if (en) nonSessionUsage(true);    // If we are being used as a console, this most definately applies.
-}
-
 
 
 int8_t ManuvrXport::sendBuffer(StringBuilder* buf) {
@@ -321,7 +282,6 @@ void ManuvrXport::connected(bool en) {
   }
 
   mark_connected(en);
-  if (!nonSessionUsage()) {
     if (en) {
       if (NULL == session) {
         // We are expected to instantiate a XenoSession, and broadcast its existance.
@@ -352,7 +312,6 @@ void ManuvrXport::connected(bool en) {
         }
       }
     }
-  }
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
   if (_thread_id == 0) {
     // If we are in a threaded environment, we will want a thread if there isn't one already.

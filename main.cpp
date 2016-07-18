@@ -203,7 +203,6 @@ int main(int argc, char *argv[]) {
     #else
       ManuvrTCP tcp_srv((const char*) "127.0.0.1", 2319);
       ManuvrTCP tcp_cli((const char*) "127.0.0.1", 2319);
-      //tcp_srv.nonSessionUsage(true);
       kernel->subscribe(&tcp_srv);
     #endif
     kernel->subscribe(&tcp_cli);
@@ -249,7 +248,6 @@ int main(int argc, char *argv[]) {
       // The user wants us to listen to the given serial port.
       #if defined (MANUVR_SUPPORT_SERIAL)
         ser = new ManuvrSerial((const char*) argv[++i], 9600);
-        ser->nonSessionUsage(true);   // TODO: Hack to test. Remove and make dynmaic.
         kernel->subscribe(ser);
       #else
         printf("%s was compiled without serial port support. Exiting...\n", argv[0]);
