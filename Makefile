@@ -35,6 +35,7 @@ INCLUDES   += -I$(WHERE_I_AM)/ManuvrOS
 INCLUDES   += -I$(WHERE_I_AM)/lib
 
 INCLUDES   += -I$(WHERE_I_AM)/lib/paho.mqtt.embedded-c/
+INCLUDES   += -I$(WHERE_I_AM)/lib/mbedtls/include/
 
 # Libraries to link
 LIBS = -L$(OUTPUT_PATH) -L$(WHERE_I_AM)/lib -lstdc++ -lm -lmanuvr
@@ -63,6 +64,7 @@ else
 endif
 
 
+
 ###########################################################################
 # Source file definitions...
 ###########################################################################
@@ -80,13 +82,20 @@ MANUVR_OPTIONS += -D__MANUVR_DEBUG
 #MANUVR_OPTIONS += -D__MANUVR_FREERTOS
 MANUVR_OPTIONS += -D__MANUVR_LINUX
 #MANUVR_OPTIONS += -DRASPI
-#MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
+#MANUVR_OPTIONS += -DMANUVR_SUPPORT_OSC
+MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
 MANUVR_OPTIONS += -DMANUVR_OVER_THE_WIRE
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_MQTT
-#MANUVR_OPTIONS += -DMANUVR_SUPPORT_UDP
-MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
+MANUVR_OPTIONS += -DMANUVR_SUPPORT_UDP
+#MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
+
+MANUVR_OPTIONS += -D__MANUVR_MBEDTLS
+MBEDTLS_CONFIG_FILE = $(WHERE_I_AM)/mbedTLS_conf.h
 
 LIBS += -lpthread $(OUTPUT_PATH)/extraprotocols.a
+LIBS += $(OUTPUT_PATH)/libmbedtls.a
+LIBS += $(OUTPUT_PATH)/libmbedx509.a
+LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
 
 CFLAGS += $(MANUVR_OPTIONS)
 
@@ -118,15 +127,17 @@ raspi: clean libs
 	$(CXX) -static -g -o manuvr $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -DRASPI -D_GNU_SOURCE -O2
 
 debug:
-	$(CXX) -static -g -o manuvr main.cpp $(SRCS) $(GENERIC_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D__MANUVR_DEBUG -D_GNU_SOURCE -O0 -fstack-usage
+	$(CXX) -static -g -o manuvr $(SRCS) $(GENERIC_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D__MANUVR_DEBUG -D_GNU_SOURCE -O0 -fstack-usage
 # Options configured such that you can then...
 # valgrind --tool=callgrind ./manuvr
 # gprof2dot --format=callgrind --output=out.dot callgrind.out.16562
 # dot  -Tpng out.dot -o graph.png
 
-manuvrtests:
-	mkdir $(OUTPUT_PATH)
-	$(CXX) -o $(OUTPUT_PATH)/dstest tests/TestDataStructures.cpp DataStructures/*.cpp -I. -lstdc++ -lc -lm
+tests: libs
+	export __MANUVR_LINUX
+	make -C ManuvrOS/
+	$(CXX) -static -g -o dstest tests/TestDataStructures.cpp $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
+	$(CXX) -static -g -o bptest tests/BufferPipeTest.cpp $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
 
 builddir:
 	mkdir -p $(OUTPUT_PATH)

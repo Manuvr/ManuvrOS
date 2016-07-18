@@ -25,8 +25,8 @@
  */
 
  
-#ifndef __MANuVR_AUDIO_H__
-#define __MANuVR_AUDIO_H__
+#ifndef __MANUVR_AUDIO_H__
+#define __MANUVR_AUDIO_H__
 
 
 #if defined(__MK20DX256__) | defined(__MK20DX128__) | defined(STM32F4XX)
@@ -561,4 +561,4 @@ class ManuvrAudio : public EventReceiver {
 
 };
 
-#endif  // __MANuVR_AUDIO_H__
+#endif  // __MANUVR_AUDIO_H__

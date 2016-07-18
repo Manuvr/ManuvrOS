@@ -64,7 +64,7 @@ For debuggability, the transport has a special mode for acting as a debug
 #define MANUVR_XPORT_FLAG_IS_BRIDGED       0x04000000  // This transport instance is bridged to another.
 #define MANUVR_XPORT_FLAG_NON_SESSION      0x02000000  // Used to feed a transport into (suppose) a GPS parser.
 #define MANUVR_XPORT_FLAG_DEBUG_CONSOLE    0x01000000  // A human is on the other side.
-#define MANUVR_XPORT_FLAG_ALWAYS_CONNECTED 0x00800000
+#define MANUVR_XPORT_FLAG_ALWAYS_CONNECTED 0x00800000  // Serial ports.
 #define MANUVR_XPORT_FLAG_CONNECTIONLESS   0x00400000  // This transport is "connectionless". See Note0 below.
 #define MANUVR_XPORT_FLAG_HAS_MULTICAST    0x00200000  // This transport supports multicast.
 #define MANUVR_XPORT_FLAG_AUTO_CONNECT     0x00100000  // This transport should periodically attempt to connect.

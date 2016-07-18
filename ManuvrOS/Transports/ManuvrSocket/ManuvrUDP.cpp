@@ -24,8 +24,22 @@ This class implements a crude UDP connector.
 
 #if defined(MANUVR_SUPPORT_UDP)
 
-#include "ManuvrSocket.h"
 #include <DataStructures/StringBuilder.h>
+#include "ManuvrUDP.h"
+
+
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
+
+volatile ManuvrUDP* ManuvrUDP::INSTANCE = NULL;
 
 const MessageTypeDef udp_message_defs[] = {
   #if defined (__ENABLE_MSG_SEMANTICS)
@@ -39,7 +53,15 @@ const MessageTypeDef udp_message_defs[] = {
 
 
 
-volatile ManuvrUDP* ManuvrUDP::INSTANCE = NULL;
+/*******************************************************************************
+* .-. .----..----.    .-.     .--.  .-. .-..----.
+* | |{ {__  | {}  }   | |    / {} \ |  `| || {}  \
+* | |.-._} }| .-. \   | `--./  /\  \| |\  ||     /
+* `-'`----' `-' `-'   `----'`-'  `-'`-' `-'`----'
+*
+* Interrupt service routine support functions. Everything in this block
+*   executes under an ISR. Keep it brief...
+*******************************************************************************/
 
 #if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
 
@@ -60,48 +82,15 @@ volatile ManuvrUDP* ManuvrUDP::INSTANCE = NULL;
       int s = pthread_sigmask(SIG_BLOCK, &set, NULL);
 
       ManuvrUDP* listening_inst = (ManuvrUDP*) active_xport;
-      ManuvrRunnable* event = NULL;
-      StringBuilder output;
-      int      cli_sock;
-      struct sockaddr_in cli_addr;
+
       while (listening_inst->listening()) {
-        unsigned int clientlen = sizeof(cli_addr);
-
-        unsigned char buf[1024];
-
         // Read data from UDP port. Blocks...
-        int n = recvfrom(listening_inst->getSockID(), buf, 1024, 0, (struct sockaddr *) &cli_addr, &clientlen);
-        if (-1 == n) {
-          output.concat("Failed to read UDP packet.\n");
-        }
-        else if (n > 0) {
-          //bytes_received += n;
-          event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
-          StringBuilder* nu_data = new StringBuilder(buf, n);
-          event->markArgForReap(event->addArg(nu_data), true);
-          listening_inst->count_rx_bytes(n);
-          output.concatf("UDP read %d bytes from client ", n);
-          output.concat((char*) inet_ntoa(cli_addr.sin_addr));
-          output.concat("\n");
-
-          nu_data->printDebug(&output);
-          Kernel::log(&output);
-
-          Kernel::staticRaiseEvent(event);
-        }
-        else {
+        if (0 > listening_inst->read_port()) {
           // Don't thrash the CPU for no reason...
           sleep_millis(20);
         }
-
-        for (uint16_t i = 0; i < sizeof(cli_addr);  i++) {
-          // Zero the sockaddr structure for next use. The new transport
-          //   instance should have copied it by now.
-          *((uint8_t *) &cli_addr  + i) = 0;
-        }
       }
       // Close the listener...
-      // TODO: Is this all we need to do?   ---J. Ian Lindsay   Fri Jan 15 11:32:12 PST 2016
       close(listening_inst->getSockID());
     }
     else {
@@ -110,7 +99,6 @@ volatile ManuvrUDP* ManuvrUDP::INSTANCE = NULL;
 
     return NULL;
   }
-
 #else
   // Threads are unsupported here.
 #endif
@@ -118,8 +106,20 @@ volatile ManuvrUDP* ManuvrUDP::INSTANCE = NULL;
 
 
 
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
+
 /**
 * Constructor.
+*
+* @param  addr  An IPv4 address in dotted quad notation.
+* @param  port  A 16-bit port number.
 */
 ManuvrUDP::ManuvrUDP(const char* addr, int port) : ManuvrSocket(addr, port, 0) {
   set_xport_state(MANUVR_XPORT_FLAG_HAS_MULTICAST | MANUVR_XPORT_FLAG_CONNECTIONLESS);
@@ -131,9 +131,18 @@ ManuvrUDP::ManuvrUDP(const char* addr, int port) : ManuvrSocket(addr, port, 0) {
     // Inform the Kernel of the codes we will be using...
     ManuvrMsg::registerMessages(udp_message_defs, sizeof(udp_message_defs) / sizeof(MessageTypeDef));
   }
+  // Per RFC1122: Minimum reassembly buffer is 576 bytes of effective MTU.
+  _xport_mtu = 576;
 }
 
 
+/**
+* Constructor.
+*
+* @param  addr  An IPv4 address in dotted quad notation.
+* @param  port  A 16-bit port number.
+* @param  opts  An options mask to pass to the underlying socket implentation.
+*/
 ManuvrUDP::ManuvrUDP(const char* addr, int port, uint32_t opts) : ManuvrSocket(addr, port, opts) {
   set_xport_state(MANUVR_XPORT_FLAG_HAS_MULTICAST | MANUVR_XPORT_FLAG_CONNECTIONLESS);
 
@@ -144,22 +153,128 @@ ManuvrUDP::ManuvrUDP(const char* addr, int port, uint32_t opts) : ManuvrSocket(a
     // Inform the Kernel of the codes we will be using...
     ManuvrMsg::registerMessages(udp_message_defs, sizeof(udp_message_defs) / sizeof(MessageTypeDef));
   }
+  // Per RFC1122: Minimum reassembly buffer is 576 bytes of effective MTU.
+  _xport_mtu = 576;
 }
 
 
-
+/**
+* Destructor.
+* Clean up any outstanding exchanges.
+* The UDPPipe classes will be informed of our demise and take their own measures
+*   as appropriate.
+*/
 ManuvrUDP::~ManuvrUDP() {
+	std::map<uint16_t, UDPPipe*>::iterator it;
+	for (it = _open_replies.begin(); it != _open_replies.end(); it++) {
+    delete it->second;
+	}
   __kernel->unsubscribe(this);
 }
 
 
 
-/****************************************************************************************************
-* Port I/O fxns                                                                                     *
-****************************************************************************************************/
+/*******************************************************************************
+*  _       _   _        _
+* |_)    _|_ _|_ _  ._ |_) o ._   _
+* |_) |_| |   | (/_ |  |   | |_) (/_
+*                            |
+* Overrides and addendums to BufferPipe.
+*******************************************************************************/
+/**
+* Inward toward the transport.
+*
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
+*/
+int8_t ManuvrUDP::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+//  switch (mm) {
+//    case MEM_MGMT_RESPONSIBLE_CALLER:
+//      // NOTE: No break. This might be construed as a way of saying CREATOR.
+//    case MEM_MGMT_RESPONSIBLE_CREATOR:
+//      /* The system that allocated this buffer either...
+//          a) Did so with the intention that it never be free'd, or...
+//          b) Has a means of discovering when it is safe to free.  */
+//      return (write_datagram(buf, len, _ip, _port, 0) ? MEM_MGMT_RESPONSIBLE_CREATOR : MEM_MGMT_RESPONSIBLE_CALLER);
+//
+//    case MEM_MGMT_RESPONSIBLE_BEARER:
+//      /* We are now the bearer. That means that by returning non-failure, the
+//          caller will expect _us_ to manage this memory.  */
+//      // TODO: Freeing the buffer? Let UDP do it?
+//      return (write_datagram(buf, len, _ip, _port, 0) ? MEM_MGMT_RESPONSIBLE_BEARER : MEM_MGMT_RESPONSIBLE_CALLER);
+//
+//    default:
+//      /* This is more ambiguity than we are willing to bear... */
+//      return MEM_MGMT_RESPONSIBLE_ERROR;
+//  }
+  Kernel::log("ManuvrUDP has not yet implemented toCounterparty().\n");
+  return MEM_MGMT_RESPONSIBLE_ERROR;
+}
+
+/**
+* Outward toward the application (or into the accumulator).
+*
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
+*/
+int8_t ManuvrUDP::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+//  switch (mm) {
+//    case MEM_MGMT_RESPONSIBLE_CALLER:
+//      // NOTE: No break. This might be construed as a way of saying CREATOR.
+//    case MEM_MGMT_RESPONSIBLE_CREATOR:
+//      /* The system that allocated this buffer either...
+//          a) Did so with the intention that it never be free'd, or...
+//          b) Has a means of discovering when it is safe to free.  */
+//      if (haveFar()) {
+//        return _far->fromCounterparty(buf, len, mm);
+//      }
+//      else {
+//        _accumulator.concat(buf, len);
+//        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
+//      }
+//
+//    case MEM_MGMT_RESPONSIBLE_BEARER:
+//      /* We are now the bearer. That means that by returning non-failure, the
+//          caller will expect _us_ to manage this memory.  */
+//      if (haveFar()) {
+//        /* We are not the transport driver, and we do no transformation. */
+//        return _far->fromCounterparty(buf, len, mm);
+//      }
+//      else {
+//        _accumulator.concat(buf, len);
+//        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
+//      }
+//
+//    default:
+//      /* This is more ambiguity than we are willing to bear... */
+//      return MEM_MGMT_RESPONSIBLE_ERROR;
+//  }
+  Kernel::log("ManuvrUDP has not yet implemented fromCounterparty().\n");
+  return MEM_MGMT_RESPONSIBLE_ERROR;
+}
+
+
+/*******************************************************************************
+* ___________                                                  __
+* \__    ___/___________    ____   ____________   ____________/  |_
+*   |    |  \_  __ \__  \  /    \ /  ___/\____ \ /  _ \_  __ \   __\
+*   |    |   |  | \// __ \|   |  \\___ \ |  |_> >  <_> )  | \/|  |
+*   |____|   |__|  (____  /___|  /____  >|   __/ \____/|__|   |__|
+*                       \/     \/     \/ |__|
+* These members are particular to the transport driver and any implicit
+*   protocol it might contain.
+*******************************************************************************/
+/**
+* We're being told to start listening on whatever address was provided to the
+*   constructor. That means we are a server.
+*
+* @return 0 on success. Negative value on failure.
+*/
 int8_t ManuvrUDP::listen() {
-  // We're being told to start listening on whatever address was provided to the constructor.
-  // That means we are a server.
   if (0 < _sock) {
     Kernel::log("A UDP socket was told to listen when it already was. Doing nothing.");
     return -1;
@@ -193,14 +308,99 @@ int8_t ManuvrUDP::listen() {
 }
 
 
-
-// TODO: Nonsense in UDP land. generalize? Special-case? So many (?)...
+/**
+* Read data from UDP port.
+*
+* NOTE: Blocks. So only call from within a thread.
+* TODO: ALL OF THIS RUNS IN A THREAD. IT IS NOT SAFE AS IT STANDS.
+*
+* @return 0 on success. Negative value on failure.
+*/
 int8_t ManuvrUDP::read_port() {
-  return 0;
+  int8_t return_value = -1;
+  unsigned char buf[_xport_mtu];
+  struct sockaddr_in cli_addr;
+  for (uint16_t i = 0; i < sizeof(cli_addr); i++) {
+    *((uint8_t *) &cli_addr  + i) = 0;   // Zero the sockaddr structure for use.
+  }
+
+  unsigned int clientlen = sizeof(cli_addr);
+  int n = recvfrom(getSockID(), buf, _xport_mtu, 0, (struct sockaddr*) &cli_addr, &clientlen);
+  if (-1 == n) {
+    local_log.concat("Failed to read UDP packet.\n");
+  }
+  else if (n > 0) {
+    // We received a packet. Send it further away.
+    bytes_received += n;   // Log the bytes.
+    if (getVerbosity() > 6) {
+      local_log.concatf("UDP read %d bytes from counterparty.\n", n);
+      local_log.concat((char*) inet_ntoa(cli_addr.sin_addr));
+      local_log.concat("\n");
+    }
+    UDPPipe* related_pipe = _open_replies[cli_addr.sin_port];
+    if (NULL == related_pipe) {
+      // Non-existence. Create...
+      related_pipe = new UDPPipe(this, cli_addr.sin_addr.s_addr, cli_addr.sin_port);
+      if (MEM_MGMT_RESPONSIBLE_BEARER == related_pipe->fromCounterparty(buf, n)) {
+        // The pipe copied the buffer. Success.
+        // Since we don't have a pipe, we create one and realize that there will
+        //   be nothing on the other side to take the buffer. So we only broadcast
+        //   a system-wide message if mem-mgmt responsibility for the buffer was
+        //   accepted by the bearer.
+        _open_replies[cli_addr.sin_port] = related_pipe;
+        ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
+        // Because we allocated the pipe, we must clean it up if it is not taken.
+        event->originator = (EventReceiver*) this;
+        //event->addArg(related_pipe);   // Add the newly-minted pipe.
+        // Convey the transport. This is optional, but helps downstream classes
+        //   make choices about binding to the BufferPipe.
+        //event->addArg((ManuvrXport*) this);
+        Kernel::staticRaiseEvent(event);
+      }
+      else {
+        if (getVerbosity() > 2) {
+          local_log.concat("UDPPipe failed to take the buffer. Dropping this created pipe:\n");
+          related_pipe->printDebug(&local_log);
+        }
+        delete related_pipe;
+      }
+    }
+    else {
+      // We have a related pipe.
+      switch (related_pipe->fromCounterparty(buf, n)) {
+        case MEM_MGMT_RESPONSIBLE_BEARER:
+          // Success
+          break;
+        case MEM_MGMT_RESPONSIBLE_CREATOR:
+          if (getVerbosity() > 3) local_log.concat("UDPPipe took the buffer, but will probably fail (RESPONSIBLE_CREATOR).\n");
+        case MEM_MGMT_RESPONSIBLE_CALLER:
+        default:
+          break;
+      }
+
+      if (!related_pipe->persistAfterReply()) {
+        if (getVerbosity() > 3) local_log.concat("Attempting orderly cleanup of UDPPipe.\n");
+        delete related_pipe;
+      }
+    }
+    return_value = 0;
+  }
+  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  return return_value;
 }
 
 
+/**
+* Resets the transport driver into a state of being freshly-initialized,
+*   to the extent that is possible.
+*
+* @return false on error and true on success.
+*/
 int8_t ManuvrUDP::reset() {
+	std::map<uint16_t, UDPPipe*>::iterator it;
+	for (it = _open_replies.begin(); it != _open_replies.end(); it++) {
+    delete it->second;
+	}
   initialized(true);
   return 0;
 }
@@ -216,15 +416,23 @@ bool ManuvrUDP::write_port(unsigned char* out, int out_len) {
 
 /**
 * Does what it claims to do on linux.
-* Returns false on error and true on success.
+*
+* @param  out     The buffer to send.
+* @param  out_len The size of the buffer.
+* @param  addr    The target IP as a network-order 32-bit unsigned.
+* @param  port    The target port as a native-order 16-bit unsigned.
+* @param  opts    Any options to the network driver.
+* @return false on error and true on success.
 */
-bool ManuvrUDP::write_datagram(unsigned char* out, int out_len, const char* _addr, int port, uint32_t opts) {
+bool ManuvrUDP::write_datagram(unsigned char* out, int out_len, uint32_t addr, int port, uint32_t opts) {
   struct sockaddr_in _tmp_sockaddr;
   bool return_value = false;
 
+  int _client_sock = socket(PF_INET, SOCK_DGRAM, 0);
+
   _tmp_sockaddr.sin_family      = AF_INET;
   _tmp_sockaddr.sin_port        = htons(port);
-  _tmp_sockaddr.sin_addr.s_addr = inet_addr(_addr);
+  _tmp_sockaddr.sin_addr.s_addr = addr;
   memset(_tmp_sockaddr.sin_zero, '\0', sizeof(_tmp_sockaddr.sin_zero));
 
   if (-1 != _client_sock) {
@@ -232,24 +440,45 @@ bool ManuvrUDP::write_datagram(unsigned char* out, int out_len, const char* _add
     if (-1 < result) {
       bytes_sent += result;
 
+      UDPPipe* related_pipe = _open_replies[_tmp_sockaddr.sin_port];
+      if (NULL == related_pipe) {
+        // Non-existence. Create...
+        related_pipe = new UDPPipe(this, _tmp_sockaddr.sin_addr.s_addr, _tmp_sockaddr.sin_port);
+        _open_replies[_tmp_sockaddr.sin_port] = related_pipe;
+      }
+
       // TODO: We must receive from the socket before we can send again...
-      char buffer[1024];
+      char buffer[_xport_mtu];
       buffer[0] = '\0';
-      int _rec_bytes = recvfrom(_client_sock, buffer, 1024, 0, NULL, NULL);
+      int _rec_bytes = recvfrom(_client_sock, buffer, _xport_mtu, 0, NULL, NULL);
       Kernel::log(buffer);
       return_value = true;
     }
     else {
-      Kernel::log("Failed to write a UDP datagram because of sentto().\n");
+      if (getVerbosity() > 3) Kernel::log("Failed to write a UDP datagram because of sentto().\n");
     }
   }
   else {
-    Kernel::log("Failed to write a UDP datagram. No client socket.\n");
+    if (getVerbosity() > 3) Kernel::log("Failed to write a UDP datagram. No client socket.\n");
   }
 
   return return_value;
 }
 
+
+/**
+* UDP pipes call this during their destructors to cause the
+*   issuing class to clean up references.
+*
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
+*/
+int8_t ManuvrUDP::udpPipeDestroyCallback(UDPPipe* _dead_walking) {
+  _open_replies.erase(_dead_walking->getPort());
+  return 0;
+}
 
 
 
@@ -288,6 +517,13 @@ void ManuvrUDP::printDebug(StringBuilder* output) {
   output->concatf("-- _addr           %s:%d\n",  _addr, _port_number);
   output->concatf("-- _options        0x%08x\n", _options);
   output->concatf("-- _sock           0x%08x\n", _sock);
+
+  output->concatf("--\n-- _open_replies \n");
+  std::map<uint16_t, UDPPipe*>::iterator it;
+	for (it = _open_replies.begin(); it != _open_replies.end(); it++) {
+		it->second->printDebug(output);
+	}
+  output->concat("\n");
 }
 
 
@@ -300,16 +536,14 @@ void ManuvrUDP::printDebug(StringBuilder* output) {
 */
 int8_t ManuvrUDP::bootComplete() {
   EventReceiver::bootComplete();   // Call up to get scheduler ref and class init.
-  // We will suffer a 300ms latency if the platform's networking stack doesn't flush
-  //   its buffer in time.
+  // Because this is not a stream-oriented transport, the timeout value is used
+  //   to periodically flush our connection cache.
   read_abort_event.alterScheduleRecurrence(0);
   read_abort_event.alterSchedulePeriod(300);
   read_abort_event.autoClear(false);
   read_abort_event.enableSchedule(false);
   read_abort_event.enableSchedule(false);
   //__kernel->addSchedule(&read_abort_event);
-
-  _client_sock = socket(PF_INET, SOCK_DGRAM, 0);
 
   listen();
   return 1;
@@ -338,6 +572,28 @@ int8_t ManuvrUDP::callback_proc(ManuvrRunnable *event) {
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
+    case MANUVR_MSG_XPORT_RECEIVE:
+      if (event->originator == (EventReceiver*) this) {
+        // If we originated this message, it means we attached a BufferPipe that
+        //   we allocated. If it is still attached to the event, it means it was
+        //   not joined to any other pipe. Clean it up.
+        BufferPipe* tmp_pipe = NULL;
+        switch (event->getArgumentType(0)) {
+          case BUFFERPIPE_PTR_FM:
+            // The pipe was NOT taken. Clean it up.
+            if (0 == event->getArgAs(&tmp_pipe)) {
+              // We rely on the UDPPipe to call us back to trigger a cleanup of
+              //   the entry in _open_replies.
+              delete (UDPPipe*) tmp_pipe;  // TODO: Any safer way?
+            }
+            break;
+          case SYS_MANUVR_XPORT_FM:
+            // This is a good indication that the pipe was taken.
+            break;
+          default:
+            break;
+        }
+      }
     default:
       break;
   }
@@ -378,9 +634,6 @@ void ManuvrUDP::procDirectDebugInstruction(StringBuilder *input) {
   /* These are debug case-offs that are typically used to test functionality, and are then
      struck from the build. */
   switch (*(str)) {
-    case 'w':
-      write_datagram((unsigned char*) "Horrid hack", strlen("Horrid hack"), "127.0.0.1", 6001);
-      break;
     case 'W':
       write_datagram((unsigned char*) str, strlen((const char*)str), "127.0.0.1", 6001);
       break;

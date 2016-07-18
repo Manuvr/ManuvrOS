@@ -44,6 +44,7 @@ const unsigned char ManuvrMsg::MSG_ARGS_U32[] = {UINT32_FM, 0};
 
 const unsigned char ManuvrMsg::MSG_ARGS_STR_BUILDER[] = {STR_BUILDER_FM, 0};
 
+const unsigned char ManuvrMsg::MSG_ARGS_BUFFERPIPE[]  = {BUFFERPIPE_PTR_FM, 0};
 const unsigned char ManuvrMsg::MSG_ARGS_XPORT[]       = {SYS_MANUVR_XPORT_FM, 0};
 
 /*
@@ -393,6 +394,7 @@ int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf, bool preserve) {
 
       case STR_BUILDER_FM:          // This is a pointer to some StringBuilder. Presumably this is on the heap.
       case STR_FM:                  // This is a pointer to a string constant. Presumably this is stored in flash.
+      case BUFFERPIPE_PTR_FM:       // This is a pointer to a BufferPipe/.
       case SYS_MANUVR_EVENT_PTR_FM: // This is a pointer to ManuvrRunnable.
       case SYS_EVENTRECEIVER_FM:    // This is a pointer to an EventReceiver.
       case SYS_MANUVR_XPORT_FM:     // This is a pointer to a transport.

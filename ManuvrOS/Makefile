@@ -17,10 +17,15 @@ LIBS =  -lm
 
 # Datastructures
 CPP_SRCS   = DataStructures/StringBuilder.cpp
+CPP_SRCS  += DataStructures/BufferPipe.cpp
 CPP_SRCS  += DataStructures/Quaternion.cpp
 CPP_SRCS  += DataStructures/InertialMeasurement.cpp
 
+# Types and encodings
+CPP_SRCS  += Types/ManuvrCBOR/ManuvrCBOR.cpp
+
 # Manuvr core
+CPP_SRCS  += LogPipe.cpp
 CPP_SRCS  += ManuvrRunnable.cpp
 CPP_SRCS  += EnumeratedTypeCodes.cpp
 CPP_SRCS  += Kernel.cpp
@@ -36,20 +41,33 @@ CPP_SRCS  += XenoSession/Console/ManuvrConsole.cpp
 CPP_SRCS  += XenoSession/Manuvr/ManuvrSession.cpp
 CPP_SRCS  += XenoSession/Manuvr/XenoManuvrMessage.cpp
 CPP_SRCS  += XenoSession/CoAP/CoAPSession.cpp
+CPP_SRCS  += XenoSession/CoAP/CoAPMessage.cpp
 CPP_SRCS  += XenoSession/MQTT/MQTTSession.cpp
 CPP_SRCS  += XenoSession/MQTT/MQTTMessage.cpp
+CPP_SRCS  += XenoSession/OSC/OSCSession.cpp
+CPP_SRCS  += XenoSession/OSC/OSCMessage.cpp
 
 
 # TODO: Case-off for socket/TCP/Pipe support...
 #CPP_SRCS  += Transports/ManuvrPipe/ManuvrPipe.cpp
 #CPP_SRCS  += Transports/ManuvrTelehash/ManuvrTelehash.cpp
 
-# Transports
+# Specialized BufferPipes
+CPP_SRCS  += Transports/BufferPipes/ZooKeeper/ZooKeeper.cpp
+CPP_SRCS  += Transports/BufferPipes/ManuvrGPS/ManuvrGPS.cpp
+CPP_SRCS  += Transports/BufferPipes/ManuvrTLS/ManuvrTLS.cpp
+CPP_SRCS  += Transports/BufferPipes/ManuvrTLS/ManuvrTLSServer.cpp
+CPP_SRCS  += Transports/BufferPipes/ManuvrTLS/ManuvrTLSClient.cpp
+CPP_SRCS  += Transports/BufferPipes/XportBridge/XportBridge.cpp
+#CPP_SRCS  += Transports/BufferPipes/LogPipe/LogPipe.cpp
+
+# Transports (Drivers)
 CPP_SRCS  += Transports/ManuvrXport.cpp
 CPP_SRCS  += Transports/ManuvrSerial/ManuvrSerial.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrSocket.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrTCP.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrUDP.cpp
+CPP_SRCS  += Transports/ManuvrSocket/UDPPipe.cpp
 CPP_SRCS  += Drivers/BusQueue/BusQueue.cpp
 
 # i2c apparatus...

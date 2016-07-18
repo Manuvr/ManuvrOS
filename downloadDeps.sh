@@ -17,7 +17,9 @@ git clone https://github.com/greiman/FreeRTOS-Arduino lib/FreeRTOS_Arduino
 
 # CoAP, if desired.
 rm -rf lib/wakaama
-git clone https://github.com/eclipse/wakaama.git lib/wakaama
+#git clone https://github.com/eclipse/wakaama.git lib/wakaama
+rm -rf lib/cantcoap
+git clone https://github.com/staropram/cantcoap.git lib/cantcoap
 
 # MQTT, if desired.
 # Note that we do special-handling here to make the build-process smoother...
@@ -25,12 +27,24 @@ rm -rf lib/paho.mqtt.embedded-c
 git clone https://github.com/eclipse/paho.mqtt.embedded-c.git lib/paho.mqtt.embedded-c
 cp lib/paho.mqtt.embedded-c/MQTTPacket/src/* lib/paho.mqtt.embedded-c/
 
+# TinyCBOR...
+# Note that we do special-handling here to make the build-process smoother...
+rm -rf lib/tinycbor
+git clone https://github.com/01org/tinycbor.git lib/tinycbor
+mkdir -p lib/tinycbor/include
+cp lib/tinycbor/src/*.h lib/tinycbor/include
+
+# mbedTLS...
+rm -rf lib/mbedtls
+git clone https://github.com/ARMmbed/mbedtls.git lib/mbedtls
+
 # Telehash
 rm -rf lib/telehash-c
 git clone https://github.com/telehash/telehash-c.git lib/telehash-c
 
 # Elliptic curve crypto...
-git clone https://github.com/kmackay/micro-ecc.git lib/uECC
+rm -rf lib/uECC
+#git clone https://github.com/kmackay/micro-ecc.git lib/uECC
 
 # Arduino libraries...
 

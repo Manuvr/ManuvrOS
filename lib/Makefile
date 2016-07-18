@@ -4,7 +4,6 @@ C_STANDARD = c99
 # Oh man.... this will be very messy.
 
 INCLUDES    = -iquote. -I./paho.mqtt.embedded-c/MQTTPacket
-INCLUDES   += -I./wakaama -I./wakaama/core
 
 #SOURCES_MQTT_C  = paho.mqtt.embedded-c/MQTTPacket/src/MQTTConnectServer.c
 SOURCES_MQTT_C  = paho.mqtt.embedded-c/MQTTPacket/src/MQTTConnectClient.c
@@ -17,14 +16,23 @@ SOURCES_MQTT_C += paho.mqtt.embedded-c/MQTTPacket/src/MQTTSubscribeServer.c
 SOURCES_MQTT_C += paho.mqtt.embedded-c/MQTTPacket/src/MQTTUnsubscribeClient.c
 SOURCES_MQTT_C += paho.mqtt.embedded-c/MQTTPacket/src/MQTTUnsubscribeServer.c
 
-SOURCES_COAP_C  = wakaama/core/er-coap-13/er-coap-13.c
+#SOURCES_COAP_C  = wakaama/core/er-coap-13/er-coap-13.c
 
-SOURCES_UECC_C  = uECC/uECC.c
+SOURCES_COAP_C  = cantcoap/cantcoap.cpp
 
-SOURCES_C  = $(SOURCES_MQTT_C) $(SOURCES_COAP_C) $(SOURCES_UECC_C)
+SOURCES_CBOR_C  = tinycbor/src/cborerrorstrings.c
+SOURCES_CBOR_C += tinycbor/src/cborencoder.c
+SOURCES_CBOR_C += tinycbor/src/cborencoder_close_container_checked.c
+SOURCES_CBOR_C += tinycbor/src/cborparser.c
+SOURCES_CBOR_C += tinycbor/src/cborparser_dup_string.c
+SOURCES_CBOR_C += tinycbor/src/cborpretty.c
+SOURCES_CBOR_C += tinycbor/src/cbortojson.c
 
+#SOURCES_UECC_C  = uECC/uECC.c
 
-#FLAGS_LIBCOAP  = -DWITH_POSIX -DHAVE_CONFIG_H -DHAVE_NETINET_IN_H -D_GNU_SOURCE
+SOURCES_C  = $(SOURCES_MQTT_C) $(SOURCES_COAP_C) $(SOURCES_CBOR_C)
+SOURCES_C += $(SOURCES_UECC_C)
+
 FLAGS_LIBMQTT  =
 
 #LOCAL_C_FLAGS = $(FLAGS_LIBCOAP)
@@ -36,6 +44,10 @@ LIBNAME = extraprotocols.a
 
 
 all: $(LIBNAME)
+	$(MAKE) -C mbedtls
+	cp -RP mbedtls/library/libmbedtls.*    $(OUTPUT_PATH)
+	cp -RP mbedtls/library/libmbedx509.*   $(OUTPUT_PATH)
+	cp -RP mbedtls/library/libmbedcrypto.* $(OUTPUT_PATH)
 #	$(MAKE) -C telehash-c
 
 %.o : %.c

@@ -285,6 +285,7 @@ int8_t I2CBusOp::init_dma() {
         break;
 
       case XferState::ADDR:      // We need to send the 7-bit address.
+        markComplete();  // TODO: As long as we are using the HAL driver....
         break;
 
       case XferState::IO_WAIT:   // Main transfer.
