@@ -48,8 +48,6 @@ This is basically only for linux until it is needed in a smaller space.
 #endif
 
 
-#if defined(MANUVR_SUPPORT_TCPSOCKET)
-
 // TODO: Might generalize UDP and websocket support into this. For now, we only deal in TCP.
 // If generalization takes place, we should probably have a pure interface class "ManuvrSocket"
 //   that handles all the common-gound.
@@ -59,6 +57,10 @@ class ManuvrTCP : public ManuvrSocket {
     ManuvrTCP(const char* addr, int port, uint32_t opts);
     ManuvrTCP(ManuvrTCP* listening_instance, int nu_sock, struct sockaddr_in* nu_sockaddr);
     ~ManuvrTCP();
+
+    /* Override from BufferPipe. */
+    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
 
     /* Overrides from EventReceiver */
     const char* getReceiverName();
@@ -84,5 +86,4 @@ class ManuvrTCP : public ManuvrSocket {
     LinkedList<ManuvrTCP*> _connections;   // A list of client connections.
 };
 
-#endif  // MANUVR_SUPPORT_TCPSOCKET
 #endif  // __MANUVR_TCP_SOCKET_H__

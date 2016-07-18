@@ -59,17 +59,31 @@ Platforms that require it should be able to extend this driver for specific
 
 
 
-/****************************************************************************************************
-* Static initializers                                                                               *
-****************************************************************************************************/
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
 
 
-/****************************************************************************************************
-* Class management                                                                                  *
-****************************************************************************************************/
-
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
 /**
 * Constructor.
+*
+* @param  tty_path  Path to the TTY.
+* @param  b_rate    The port baud rate.
 */
 ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate) : ManuvrXport() {
   __class_initializer();
@@ -78,9 +92,12 @@ ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate) : ManuvrXport() {
   _options   = 0;
 }
 
-
 /**
 * Constructor.
+*
+* @param  tty_path  Path to the TTY.
+* @param  b_rate    The port baud rate.
+* @param  opts      Options to the underlying implementation.
 */
 ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate, uint32_t opts) : ManuvrXport() {
   __class_initializer();
@@ -89,16 +106,12 @@ ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate, uint32_t opts) : Ma
   _options  = opts;
 }
 
-
-
 /**
 * Destructor
 */
 ManuvrSerial::~ManuvrSerial() {
   __kernel->unsubscribe(this);
 }
-
-
 
 /**
 * This is here for compatibility with C++ standards that do not allow for definition and declaration
@@ -118,14 +131,101 @@ void ManuvrSerial::__class_initializer() {
 }
 
 
+/*******************************************************************************
+*  _       _   _        _
+* |_)    _|_ _|_ _  ._ |_) o ._   _
+* |_) |_| |   | (/_ |  |   | |_) (/_
+*                            |
+* Overrides and addendums to BufferPipe.
+*******************************************************************************/
+/**
+* Inward toward the transport.
+*
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
+*/
+int8_t ManuvrSerial::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+//  switch (mm) {
+//    case MEM_MGMT_RESPONSIBLE_CALLER:
+//      // NOTE: No break. This might be construed as a way of saying CREATOR.
+//    case MEM_MGMT_RESPONSIBLE_CREATOR:
+//      /* The system that allocated this buffer either...
+//          a) Did so with the intention that it never be free'd, or...
+//          b) Has a means of discovering when it is safe to free.  */
+//      return (write_datagram(buf, len, _ip, _port, 0) ? MEM_MGMT_RESPONSIBLE_CREATOR : MEM_MGMT_RESPONSIBLE_CALLER);
+//
+//    case MEM_MGMT_RESPONSIBLE_BEARER:
+//      /* We are now the bearer. That means that by returning non-failure, the
+//          caller will expect _us_ to manage this memory.  */
+//      // TODO: Freeing the buffer? Let UDP do it?
+//      return (write_datagram(buf, len, _ip, _port, 0) ? MEM_MGMT_RESPONSIBLE_BEARER : MEM_MGMT_RESPONSIBLE_CALLER);
+//
+//    default:
+//      /* This is more ambiguity than we are willing to bear... */
+//      return MEM_MGMT_RESPONSIBLE_ERROR;
+//  }
+  Kernel::log("ManuvrSerial has not yet implemented toCounterparty().\n");
+  return MEM_MGMT_RESPONSIBLE_ERROR;
+}
+
+/**
+* Outward toward the application (or into the accumulator).
+*
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
+*/
+int8_t ManuvrSerial::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+//  switch (mm) {
+//    case MEM_MGMT_RESPONSIBLE_CALLER:
+//      // NOTE: No break. This might be construed as a way of saying CREATOR.
+//    case MEM_MGMT_RESPONSIBLE_CREATOR:
+//      /* The system that allocated this buffer either...
+//          a) Did so with the intention that it never be free'd, or...
+//          b) Has a means of discovering when it is safe to free.  */
+//      if (haveFar()) {
+//        return _far->fromCounterparty(buf, len, mm);
+//      }
+//      else {
+//        _accumulator.concat(buf, len);
+//        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
+//      }
+//
+//    case MEM_MGMT_RESPONSIBLE_BEARER:
+//      /* We are now the bearer. That means that by returning non-failure, the
+//          caller will expect _us_ to manage this memory.  */
+//      if (haveFar()) {
+//        /* We are not the transport driver, and we do no transformation. */
+//        return _far->fromCounterparty(buf, len, mm);
+//      }
+//      else {
+//        _accumulator.concat(buf, len);
+//        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
+//      }
+//
+//    default:
+//      /* This is more ambiguity than we are willing to bear... */
+//      return MEM_MGMT_RESPONSIBLE_ERROR;
+//  }
+  Kernel::log("ManuvrSerial has not yet implemented fromCounterparty().\n");
+  return MEM_MGMT_RESPONSIBLE_ERROR;
+}
 
 
 
-/****************************************************************************************************
-* Port I/O fxns                                                                                     *
-****************************************************************************************************/
-
-
+/*******************************************************************************
+* ___________                                                  __
+* \__    ___/___________    ____   ____________   ____________/  |_
+*   |    |  \_  __ \__  \  /    \ /  ___/\____ \ /  _ \_  __ \   __\
+*   |    |   |  | \// __ \|   |  \\___ \ |  |_> >  <_> )  | \/|  |
+*   |____|   |__|  (____  /___|  /____  >|   __/ \____/|__|   |__|
+*                       \/     \/     \/ |__|
+* These members are particular to the transport driver and any implicit
+*   protocol it might contain.
+*******************************************************************************/
 
 int8_t ManuvrSerial::init() {
   uint32_t xport_state_modifier = MANUVR_XPORT_FLAG_CONNECTED | MANUVR_XPORT_FLAG_LISTENING | MANUVR_XPORT_FLAG_INITIALIZED;

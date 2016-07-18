@@ -44,6 +44,30 @@ For debuggability, the transport has a special mode for acting as a debug
 #include <XenoSession/XenoSession.h>
 #include <XenoSession/Manuvr/ManuvrSession.h>
 
+
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
+uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
+
+
+/*******************************************************************************
+* .-. .----..----.    .-.     .--.  .-. .-..----.
+* | |{ {__  | {}  }   | |    / {} \ |  `| || {}  \
+* | |.-._} }| .-. \   | `--./  /\  \| |\  ||     /
+* `-'`----' `-' `-'   `----'`-'  `-'`-' `-'`----'
+*
+* Interrupt service routine support functions. Everything in this block
+*   executes under an ISR. Keep it brief...
+*******************************************************************************/
+
 #if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
   /*
   * In a threaded environment, we use threads to read ports.
@@ -60,16 +84,19 @@ For debuggability, the transport has a special mode for acting as a debug
 #endif
 
 
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
 
-
-/****************************************************************************************************
-* Static initializers                                                                               *
-****************************************************************************************************/
-
-uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
-
-
-ManuvrXport::ManuvrXport() {
+/**
+* Constructor.
+*/
+ManuvrXport::ManuvrXport() : BufferPipe() {
   // No need to burden a client class with this.
   EventReceiver::__class_initializer();
 
@@ -86,6 +113,9 @@ ManuvrXport::ManuvrXport() {
   #endif
 }
 
+/**
+* Destructor.
+*/
 ManuvrXport::~ManuvrXport() {
   #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
     // TODO: Tear down the thread.
@@ -106,6 +136,15 @@ ManuvrXport::~ManuvrXport() {
 }
 
 
+/*******************************************************************************
+* ___________                                                  __
+* \__    ___/___________    ____   ____________   ____________/  |_
+*   |    |  \_  __ \__  \  /    \ /  ___/\____ \ /  _ \_  __ \   __\
+*   |    |   |  | \// __ \|   |  \\___ \ |  |_> >  <_> )  | \/|  |
+*   |____|   |__|  (____  /___|  /____  >|   __/ \____/|__|   |__|
+*                       \/     \/     \/ |__|
+* Basal implementations.
+*******************************************************************************/
 
 /**
 * Calling this function with another transport as an argument will cause them to be bound into a

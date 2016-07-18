@@ -48,7 +48,6 @@ This is basically only for linux until it is needed in a smaller space.
 #endif
 
 
-#if defined(MANUVR_SUPPORT_UDP)
 /*
 * UDP presents a clash with Manuvr's xport<--->session relationships.
 * The fundamental problem is: If we want bi-directional communication, we can
@@ -118,7 +117,7 @@ class UDPPipe : public BufferPipe {
 
 
 
-class ManuvrUDP : public ManuvrSocket, BufferPipe {
+class ManuvrUDP : public ManuvrSocket {
   public:
     ManuvrUDP(const char* addr, int port);
     ManuvrUDP(const char* addr, int port, uint32_t opts);
@@ -171,5 +170,4 @@ class ManuvrUDP : public ManuvrSocket, BufferPipe {
 };
 
 
-#endif  // MANUVR_SUPPORT_UDP
 #endif  // __MANUVR_UDP_SOCKET_H__

@@ -61,6 +61,10 @@ class ManuvrSerial : public ManuvrXport {
     ManuvrSerial(const char* tty_path, int b_rate, uint32_t opts);
     ~ManuvrSerial();
 
+    /* Override from BufferPipe. */
+    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+
     /* Overrides from EventReceiver */
     int8_t bootComplete();
     const char* getReceiverName();

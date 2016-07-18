@@ -42,8 +42,9 @@ For debuggability, the transport has a special mode for acting as a debug
 #ifndef __MANUVR_XPORT_H__
 #define __MANUVR_XPORT_H__
 
-#include "../Kernel.h"
-#include "DataStructures/StringBuilder.h"
+#include <Kernel.h>
+#include <DataStructures/StringBuilder.h>
+#include <DataStructures/BufferPipe.h>
 
 #include <Platform/Platform.h>
 
@@ -99,13 +100,16 @@ For debuggability, the transport has a special mode for acting as a debug
 class XenoSession;
 
 
-class ManuvrXport : public EventReceiver {
+class ManuvrXport : public EventReceiver, public BufferPipe {
   public:
     ManuvrXport();
     virtual ~ManuvrXport();
 
     inline XenoSession* getSession() {   return session;   };
 
+    /* Override from BufferPipe. */
+    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
+    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
 
     /*
     * High-level data functions.
