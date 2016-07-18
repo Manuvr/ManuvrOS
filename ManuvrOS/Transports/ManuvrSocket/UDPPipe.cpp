@@ -65,6 +65,7 @@ UDPPipe::UDPPipe(ManuvrUDP* udp, uint32_t ip, uint16_t port) : BufferPipe() {
 
 UDPPipe::~UDPPipe() {
   _accumulator.clear();
+  if (_udp) _udp->udpPipeDestroyCallback(this);
 }
 
 

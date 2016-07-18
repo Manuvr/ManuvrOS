@@ -176,6 +176,8 @@ class UDPPipe : public BufferPipe {
       _flags = (en) ? (_flags | MANUVR_UDP_FLAG_PERSIST) : (_flags & ~(MANUVR_UDP_FLAG_PERSIST));
     };
 
+    inline uint16_t getPort() {   return _port;   };
+
 
   private:
     uint16_t      _port;
@@ -196,6 +198,8 @@ class ManuvrUDP : public ManuvrSocket, BufferPipe {
     /* Override from BufferPipe. */
     virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
     virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+
+    int8_t udpPipeDestroyCallback(UDPPipe*);
 
     int8_t connect();
     int8_t listen();

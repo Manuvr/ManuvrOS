@@ -168,7 +168,6 @@ ManuvrUDP::~ManuvrUDP() {
 	std::map<uint16_t, UDPPipe*>::iterator it;
 	for (it = _open_replies.begin(); it != _open_replies.end(); it++) {
     delete it->second;
-		_open_replies.erase(it->first);
 	}
   __kernel->unsubscribe(this);
 }
@@ -257,7 +256,6 @@ int8_t ManuvrUDP::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
   Kernel::log("ManuvrUDP has not yet implemented fromCounterparty().\n");
   return MEM_MGMT_RESPONSIBLE_ERROR;
 }
-
 
 
 /*******************************************************************************
@@ -351,8 +349,12 @@ int8_t ManuvrUDP::read_port() {
         //   accepted by the bearer.
         _open_replies[cli_addr.sin_port] = related_pipe;
         ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
-        //event->markArgForReap(event->addArg(nu_data), true);
-        //event->addArg(related_pipe);
+        // Because we allocated the pipe, we must clean it up if it is not taken.
+        event->originator = (EventReceiver*) this;
+        //event->addArg(related_pipe);   // Add the newly-minted pipe.
+        // Convey the transport. This is optional, but helps downstream classes
+        //   make choices about binding to the BufferPipe.
+        //event->addArg((ManuvrXport*) this);
         Kernel::staticRaiseEvent(event);
       }
       else {
@@ -378,7 +380,6 @@ int8_t ManuvrUDP::read_port() {
 
       if (!related_pipe->persistAfterReply()) {
         if (getVerbosity() > 3) local_log.concat("Attempting orderly cleanup of UDPPipe.\n");
-        _open_replies.erase(cli_addr.sin_port);
         delete related_pipe;
       }
     }
@@ -399,7 +400,6 @@ int8_t ManuvrUDP::reset() {
 	std::map<uint16_t, UDPPipe*>::iterator it;
 	for (it = _open_replies.begin(); it != _open_replies.end(); it++) {
     delete it->second;
-		_open_replies.erase(it->first);
 	}
   initialized(true);
   return 0;
@@ -465,6 +465,20 @@ bool ManuvrUDP::write_datagram(unsigned char* out, int out_len, uint32_t addr, i
   return return_value;
 }
 
+
+/**
+* UDP pipes call this during their destructors to cause the
+*   issuing class to clean up references.
+*
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
+*/
+int8_t ManuvrUDP::udpPipeDestroyCallback(UDPPipe* _dead_walking) {
+  _open_replies.erase(_dead_walking->getPort());
+  return 0;
+}
 
 
 
@@ -558,6 +572,28 @@ int8_t ManuvrUDP::callback_proc(ManuvrRunnable *event) {
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
+    case MANUVR_MSG_XPORT_RECEIVE:
+      if (event->originator == (EventReceiver*) this) {
+        // If we originated this message, it means we attached a BufferPipe that
+        //   we allocated. If it is still attached to the event, it means it was
+        //   not joined to any other pipe. Clean it up.
+        BufferPipe* tmp_pipe = NULL;
+        switch (event->getArgumentType(0)) {
+          case BUFFERPIPE_PTR_FM:
+            // The pipe was NOT taken. Clean it up.
+            if (0 == event->getArgAs(&tmp_pipe)) {
+              // We rely on the UDPPipe to call us back to trigger a cleanup of
+              //   the entry in _open_replies.
+              delete (UDPPipe*) tmp_pipe;  // TODO: Any safer way?
+            }
+            break;
+          case SYS_MANUVR_XPORT_FM:
+            // This is a good indication that the pipe was taken.
+            break;
+          default:
+            break;
+        }
+      }
     default:
       break;
   }

@@ -905,6 +905,7 @@ void Kernel::print_type_sizes() {
   StringBuilder temp("---< Type sizes >-----------------------------\n");
   temp.concatf("Elemental data structures:\n");
   temp.concatf("\t StringBuilder         %zu\n", sizeof(StringBuilder));
+  temp.concatf("\t BufferPipe            %zu\n", sizeof(BufferPipe));
   temp.concatf("\t LinkedList<void*>     %zu\n", sizeof(LinkedList<void*>));
   temp.concatf("\t PriorityQueue<void*>  %zu\n", sizeof(PriorityQueue<void*>));
 
@@ -1570,6 +1571,9 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
           break;
         case 4:
           printScheduler(&local_log);
+          break;
+        case 9:
+          print_type_sizes();
           break;
         default:
           printDebug(&local_log);

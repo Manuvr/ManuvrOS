@@ -296,6 +296,7 @@ class ManuvrMsg {
     inline int8_t getArgAs(uint8_t idx, ManuvrXport  **trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, ManuvrRunnable  **trg_buf) {    return getArgAs(idx, (void*) trg_buf, true);  }
 
+
     /*
     * Protip: Think on the stack...
     * markForReap(addArg(new StringBuilder("Sample data to reap on destruction.")), true);
