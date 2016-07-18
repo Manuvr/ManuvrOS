@@ -87,6 +87,10 @@ class CoAPSession : public XenoSession {
     int8_t connection_callback(bool connected);
     int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
 
+    /* Override from BufferPipe. */
+    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+
     /* Overrides from EventReceiver */
     void procDirectDebugInstruction(StringBuilder*);
     const char* getReceiverName();

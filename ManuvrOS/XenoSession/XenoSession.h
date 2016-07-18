@@ -26,9 +26,9 @@ XenoSession is the class that manages dialog with other systems via some
 #ifndef __XENOSESSION_COMM_LAYER_H__
 #define __XENOSESSION_COMM_LAYER_H__
 
-#include "../Kernel.h"
-#include "../EnumeratedTypeCodes.h"
-#include "../Transports/ManuvrXport.h"
+#include <Kernel.h>
+#include <EnumeratedTypeCodes.h>
+#include <Transports/ManuvrXport.h>
 #include "XenoMessage.h"
 
 #include <map>
@@ -64,7 +64,7 @@ XenoSession is the class that manages dialog with other systems via some
 *   be happening over USB, BlueTooth, WiFi, IRDa, etc. All we care about is the byte stream.
 * A transport class instantiates us, and maintains a pointer to us.
 */
-class XenoSession : public EventReceiver {
+class XenoSession : public EventReceiver, public BufferPipe {
   public:
     XenoSession(ManuvrXport*);
     ~XenoSession();
@@ -82,6 +82,10 @@ class XenoSession : public EventReceiver {
     /* Returns the answer to: "Is this session established?" */
     inline bool isEstablished() {    return (0 != (XENOSESSION_STATE_ESTABLISHED  & getPhase()));   }
     inline bool isConnected() {      return (0 == (XENOSESSION_STATE_PENDING_CONN & getPhase()));   }
+
+    /* Override from BufferPipe. */
+    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
+    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
 
     virtual int8_t connection_callback(bool connected);
     virtual int8_t bin_stream_rx(unsigned char* buf, int len) =0;            // Used to feed data to the session.

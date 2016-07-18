@@ -157,6 +157,10 @@ class ManuvrSession : public XenoSession {
     ManuvrSession(ManuvrXport*);
     ~ManuvrSession();
 
+    /* Override from BufferPipe. */
+    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+
     /* Overrides from EventReceiver */
     const char* getReceiverName();
     void printDebug(StringBuilder*);
