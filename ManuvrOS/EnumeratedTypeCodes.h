@@ -55,8 +55,6 @@ typedef struct typecode_def_t {
 #define TYPE_CODE_FLAG_RESERVED_0          0b10000000   // Reserved for future use.
 
 
-
-
 /**
 * Special cases.
 */
@@ -76,6 +74,7 @@ typedef struct typecode_def_t {
 #define INT8_PTR_FM       0xA5 // 8-bit integer
 #define FLOAT_PTR_FM      0xA6 // A float
 #define CHAIN_PTR_FM      0xAD // A pointer to a Chain.
+#define BUFFERPIPE_PTR_FM 0xAE // A pointer to a BufferPipe.
 #define STR_BUILDER_FM    0xAF // A pointer to a StringBuilder.
 
 /**
@@ -85,8 +84,8 @@ typedef struct typecode_def_t {
 */
 
 #define SYS_EVENTRECEIVER_FM    0xE0 // A pointer to an EventReceiver.
-#define SYS_MANUVR_XPORT_FM     0xE1 // A pointer to a transport.
-#define SYS_MANUVR_EVENT_PTR_FM 0xE2 // A pointer to an Event.
+#define SYS_MANUVR_XPORT_FM     0xE1 // A pointer to a ManuvrXport.
+#define SYS_MANUVR_EVENT_PTR_FM 0xE2 // A pointer to a ManuvrRunnable..
 
 
 /**

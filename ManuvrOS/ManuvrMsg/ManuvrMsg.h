@@ -40,11 +40,12 @@ limitations under the License.
 #include "../EnumeratedTypeCodes.h"
 #include "MessageDefs.h"    // This include file contains all of the message codes.
 
-#include "DataStructures/StringBuilder.h"
-#include "DataStructures/PriorityQueue.h"
-#include "DataStructures/LightLinkedList.h"
-#include "DataStructures/Vector3.h"
-#include "DataStructures/Quaternion.h"
+#include <DataStructures/StringBuilder.h>
+#include <DataStructures/BufferPipe.h>
+#include <DataStructures/PriorityQueue.h>
+#include <DataStructures/LightLinkedList.h>
+#include <DataStructures/Vector3.h>
+#include <DataStructures/Quaternion.h>
 
 
 #define DIG_MSG_ERROR_NO_ERROR        0
@@ -144,6 +145,7 @@ class Argument {
     Argument(StringBuilder *);
     Argument(EventReceiver *);
     Argument(ManuvrXport *);
+    Argument(BufferPipe *);
     Argument(ManuvrRunnable *);
 
     ~Argument();
@@ -236,6 +238,7 @@ class ManuvrMsg {
     inline int addArg(void *val, int len) {      return args.insert(new Argument(val, len));   }
     inline int addArg(const char *val) {         return args.insert(new Argument(val));   }
     inline int addArg(StringBuilder *val) {      return args.insert(new Argument(val));   }
+    inline int addArg(BufferPipe *val) {         return args.insert(new Argument(val));   }
     inline int addArg(EventReceiver *val) {      return args.insert(new Argument(val));   }
     inline int addArg(ManuvrXport *val) {        return args.insert(new Argument(val));   }
     inline int addArg(ManuvrRunnable *val) {     return args.insert(new Argument(val));   }
@@ -278,6 +281,7 @@ class ManuvrMsg {
     inline int8_t getArgAs(Vector3i16 **trg_buf) {               return getArgAs(0, (void*) trg_buf, true);  }
     inline int8_t getArgAs(const char **trg_buf) {               return getArgAs(0, (void*) trg_buf, true);  }
     inline int8_t getArgAs(StringBuilder **trg_buf) {            return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(BufferPipe **trg_buf) {               return getArgAs(0, (void*) trg_buf, true);  }
     inline int8_t getArgAs(EventReceiver **trg_buf) {            return getArgAs(0, (void*) trg_buf, true);  }
     inline int8_t getArgAs(ManuvrXport **trg_buf) {              return getArgAs(0, (void*) trg_buf, true);  }
     inline int8_t getArgAs(ManuvrRunnable **trg_buf) {           return getArgAs(0, (void*) trg_buf, true);  }
@@ -287,6 +291,7 @@ class ManuvrMsg {
     inline int8_t getArgAs(uint8_t idx, Vector3i16  **trg_buf) {        return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, const char  **trg_buf) {        return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, StringBuilder  **trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, BufferPipe  **trg_buf) {        return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, EventReceiver  **trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, ManuvrXport  **trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
     inline int8_t getArgAs(uint8_t idx, ManuvrRunnable  **trg_buf) {    return getArgAs(idx, (void*) trg_buf, true);  }
@@ -336,6 +341,7 @@ class ManuvrMsg {
     static const unsigned char MSG_ARGS_SELF_DESC[];
     static const unsigned char MSG_ARGS_MSG_FORWARD[];
 
+    static const unsigned char MSG_ARGS_BUFFERPIPE[];
     static const unsigned char MSG_ARGS_XPORT[];
 
 

@@ -231,7 +231,18 @@ Argument::Argument(ManuvrRunnable* val) {
 Argument::Argument(ManuvrXport* val) {
 	wipe();
 	len = sizeof(val);
-	type_code = SYS_MANUVR_XPORT_FM;
+	type_code  = SYS_MANUVR_XPORT_FM;
+	target_mem = (void*) val;
+	reap       = false;
+}
+
+/*
+* This is a system service pointer. Do not reap it.
+*/
+Argument::Argument(BufferPipe* val) {
+	wipe();
+	len = sizeof(val);
+	type_code  = BUFFERPIPE_PTR_FM;
 	target_mem = (void*) val;
 	reap       = false;
 }
@@ -242,7 +253,7 @@ Argument::Argument(ManuvrXport* val) {
 Argument::Argument(EventReceiver* val) {
 	wipe();
 	len = sizeof(val);
-	type_code = SYS_EVENTRECEIVER_FM;
+	type_code  = SYS_EVENTRECEIVER_FM;
 	target_mem = (void*) val;
 	reap       = false;
 }
@@ -340,6 +351,7 @@ int8_t Argument::serialize(StringBuilder *out) {
 	  /* These are pointer types that will not make sense to the host. They should be dropped. */
 	  case RSRVD_FM:              // Reserved code is meaningless to us. How did this happen?
 	  case NOTYPE_FM:             // No type isn't valid ANYWHERE in this system. How did this happen?
+		case BUFFERPIPE_PTR_FM:     // This would not be an actual buffer. Just it's pipe.
 	  case SYS_EVENTRECEIVER_FM:  // Host can't use our internal system services.
 	  case SYS_MANUVR_XPORT_FM:   // Host can't use our internal system services.
 	  default:
@@ -413,6 +425,7 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
 	  /* These are pointer types that will not make sense to the host. They should be dropped. */
 	  case RSRVD_FM:              // Reserved code is meaningless to us. How did this happen?
 	  case NOTYPE_FM:             // No type isn't valid ANYWHERE in this system. How did this happen?
+		case BUFFERPIPE_PTR_FM:     // This would not be an actual buffer. Just it's pipe.
 	  case SYS_EVENTRECEIVER_FM:  // Host can't use our internal system services.
 	  case SYS_MANUVR_XPORT_FM:   // Host can't use our internal system services.
 	  default:
