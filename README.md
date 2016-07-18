@@ -24,6 +24,8 @@ A cross-platform real-time, event-driven "Operating System" for asynchronous app
 
 **./downloadDeps.sh**   A script to download dependencies.
 
+
+----------------------
 ##### Demo project files
     FirmwareDefs.h      Build-time configuration for the demo project.
     main.cpp            
