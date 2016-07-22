@@ -220,34 +220,6 @@ int8_t ManuvrXport::sendBuffer(StringBuilder* buf) {
 }
 
 
-
-
-/**
-* This is used to cleanup XenoSessions that were instantiated by this class.
-* Typically, this would be called from  the session being passed in as the argument.
-*   It might be the last thing to happen in the session object following hangup.
-*
-* This is a very basic implementation. An extension of this class might choose to
-*   do something else here (disconnect the transport?). But this ensures memory safety.
-*
-* @param  The XenoSession to be reaped.
-* @return zero on sucess. Non-zero on failure.
-*/
-int8_t ManuvrXport::reapXenoSession(XenoSession* ses) {
-  if (NULL != ses) {
-    ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_RETRACT_SRVC);
-    event->addArg((EventReceiver*) ses);
-    raiseEvent(event);
-
-    // Might not do this, depending on transport.
-    delete ses;  // TODO: should do this on the event callback.
-    return 0;
-  }
-
-  return -1;
-}
-
-
 int8_t ManuvrXport::provide_session(XenoSession* ses) {
   if ((NULL != session) && (ses != session)) {
     // If we are about to clobber an existing session, we need to free it first.
@@ -264,11 +236,8 @@ int8_t ManuvrXport::provide_session(XenoSession* ses) {
     session = NULL;
   }
   session = ses;
-  //session->setVerbosity(getVerbosity());
-
   return 0;
 }
-
 
 
 /*

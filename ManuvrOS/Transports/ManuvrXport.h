@@ -33,9 +33,6 @@ If sessions are enabled for a transport, the highest-level of the protocol
 For non-session applications of this class, session-creation and management
   can be disabled. This would be appropriate in cases such as GPS, modems,
   and generally, anything that isn't manuvrable.
-
-For debuggability, the transport has a special mode for acting as a debug
-  console.
 */
 
 
@@ -192,15 +189,6 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
       // Threaded platforms have a concept of threads...
       unsigned long _thread_id;
     #endif
-
-    // TODO: This is preventing us from encapsulating more deeply.
-    //   The reason it isn't done is because there are instance-specific nuances in behavior that have
-    //   to be delt with. A GPS device driver might be confused if we load a session. How about session hand-off
-    //   to other transport instances? Until this behavior can be generalized, we rely on the extending class to
-    //   handle undefined combinations as it chooses.
-    //       ---J. Ian Lindsay   Thu Dec 03 03:37:41 MST 2015
-    int8_t reapXenoSession(XenoSession*);   // Cleans up XenoSessions that were instantiated by this class.
-
 
     // TODO: Should be private. provide_session() / reset() are the blockers.
     inline void set_xport_state(uint32_t bitmask) {    _xport_flags = (bitmask  | _xport_flags);   }
