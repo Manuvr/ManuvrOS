@@ -226,8 +226,8 @@ int8_t I2CBusOp::init_dma() {
   if (opcode == BusOpcode::RX) {
     uint8_t sa = (uint8_t) (sub_addr & 0x00FF);
 
-    if (write(device->dev, &sa, 1) == 1) {
-      return_value = read(device->dev, buf, buf_len);
+    if (write(device->getDevId(), &sa, 1) == 1) {
+      return_value = read(device->getDevId(), buf, buf_len);
       if (return_value == buf_len) {
         markComplete();
       }
@@ -245,7 +245,7 @@ int8_t I2CBusOp::init_dma() {
 
     for (int i = 0; i < buf_len; i++) buffer[i + 1] = *(buf + i);
 
-    if (write(device->dev, &buffer, buf_len+1) == buf_len+1) {
+    if (write(device->getDevId(), &buffer, buf_len+1) == buf_len+1) {
       markComplete();
     }
     else {

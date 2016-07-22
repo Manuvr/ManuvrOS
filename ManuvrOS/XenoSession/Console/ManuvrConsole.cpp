@@ -20,10 +20,12 @@ limitations under the License.
 
 */
 
-#if defined(MANUVR_CONSOLE_SESSION) & defined(__MANUVR_CONSOLE_SUPPORT)
-
+#if defined(__MANUVR_DEBUG) || defined(__MANUVR_CONSOLE_SUPPORT)
 
 #include "ManuvrConsole.h"
+
+extern void printHelp();  // TODO: Hack. Remove later.
+extern bool running;      // TODO: Hack. Remove later.
 
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
@@ -121,35 +123,29 @@ int8_t ManuvrConsole::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm
       /* The system that allocated this buffer either...
           a) Did so with the intention that it never be free'd, or...
           b) Has a means of discovering when it is safe to free.  */
-      _accumulator.concat(buf, len);
-
-      if (0 < _accumulator.split("\n")) {
-        // Begin the cases...
-        if      (strcasestr(user_input.position(0), "QUIT"))  running = false;  // Exit
-        else if (strcasestr(user_input.position(0), "HELP"))  printHelp();      // Show help.
-        else {
-          // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
-          // run in idle time.
-          ManuvrRunnable* event = returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
-          event->originator = (EventReceiver*) this;
-          Kernel::staticRaiseEvent(event);
-          _kernel->accumulateConsoleInput((uint8_t*) user_input.position(0), strlen(user_input.position(0)), true);
-          _accumulator.drop_position(0);
-        }
-      }
-      break;
-
     case MEM_MGMT_RESPONSIBLE_BEARER:
       /* We are now the bearer. That means that by returning non-failure, the
           caller will expect _us_ to manage this memory.  */
-      if (haveFar()) {
-        /* We are not the transport driver, and we do no transformation. */
-        return _far->fromCounterparty(buf, len, mm);
+      session_buffer.concat(buf, len);
+      for (int toks = session_buffer.split("\n"); toks > 0; toks--) {
+        char* temp_ptr = session_buffer.position(0);
+        int temp_len   = strlen(temp_ptr);
+
+        // Begin the cases...
+        if      (strcasestr(temp_ptr, "QUIT"))  running = false;  // Exit
+        else if (strcasestr(temp_ptr, "HELP"))  printHelp();      // Show help.
+        else {
+          // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
+          // run in idle time.
+          ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
+          event->originator = (EventReceiver*) this;
+          StringBuilder* dispatched = new StringBuilder((uint8_t*) temp_ptr, temp_len);
+          event->markArgForReap(event->addArg(dispatched), true);
+          Kernel::staticRaiseEvent(event);
+        }
+        session_buffer.drop_position(0);
       }
-      else {
-        _accumulator.concat(buf, len);
-        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
-      }
+      return MEM_MGMT_RESPONSIBLE_CREATOR;
 
     default:
       /* This is more ambiguity than we are willing to bear... */

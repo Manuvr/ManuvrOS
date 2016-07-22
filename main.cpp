@@ -60,6 +60,7 @@ Main demo application.
 #include <Transports/ManuvrSerial/ManuvrSerial.h>
 #include <Transports/ManuvrSocket/ManuvrUDP.h>
 #include <Transports/ManuvrSocket/ManuvrTCP.h>
+#include <Transports/BufferPipes/XportBridge/XportBridge.h>
 
 // We will use MQTT as our concept of "session"...
 #include <XenoSession/MQTT/MQTTSession.h>
@@ -114,33 +115,7 @@ void* spawnUIThread(void*) {
     printf("%c[36m%s> %c[39m", 0x1B, program_name, 0x1B);
     bzero(input_text, U_INPUT_BUFF_SIZE);
     if (fgets(input_text, U_INPUT_BUFF_SIZE, stdin) != NULL) {
-      _test_bridge.fromCounterparty(input_text, strlen(input_text));
-
-
-
-      user_input.concat(input_text);
-      user_input.trim();
-
-      //while(*t_iterator++ = toupper(*t_iterator));        // Convert to uniform case...
-      int arg_count = user_input.split("\n");
-      if (arg_count > 0) {  // We should have at least ONE argument. Right???
-        // Begin the cases...
-        if      (strcasestr(user_input.position(0), "QUIT"))  running = false;  // Exit
-        else if (strcasestr(user_input.position(0), "HELP"))  printHelp();      // Show help.
-        else {
-          // This test is detined for input into the running kernel-> Send it back
-          //   up the pipe.
-          bool terminal = (user_input.split("\n") > 0);
-          if (terminal) {
-            kernel->accumulateConsoleInput((uint8_t*) user_input.position(0), strlen(user_input.position(0)), true);
-            user_input.drop_position(0);
-          }
-        }
-      }
-      else {
-        // User entered nothing.
-        printHelp();
-      }
+      _test_bridge.fromCounterparty((uint8_t*) input_text, strlen(input_text), MEM_MGMT_RESPONSIBLE_CREATOR);
     }
     else {
       // User insulted fgets()...

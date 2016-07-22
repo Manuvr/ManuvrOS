@@ -202,6 +202,8 @@ This file is the tortured result of growing pains since the beginning of
       inline void busError(bool nu) {   _er_set_flag(I2C_BUS_FLAG_BUS_ERROR, nu);   };
       inline void busOnline(bool nu) {  _er_set_flag(I2C_BUS_FLAG_BUS_ONLINE, nu);  };
 
+      inline int getDevId() {  return(dev);  };
+
 
     protected:
       void __class_initializer();

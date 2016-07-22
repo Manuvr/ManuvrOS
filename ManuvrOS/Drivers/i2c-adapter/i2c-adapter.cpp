@@ -607,6 +607,8 @@ int8_t I2CAdapter::notify(ManuvrRunnable *active_event) {
       return_value++;
       break;
 
+    #if defined(STM32F7XX) | defined(STM32F746xx)
+    // TODO: This is a debugging aid while I sort out i2c on the STM32F7.
     case 0x5051:
       {
         I2CBusOp* nu = new I2CBusOp(BusOpcode::RX, 0x27, (int16_t) 0, &_debug_scratch, 1);
@@ -614,6 +616,7 @@ int8_t I2CAdapter::notify(ManuvrRunnable *active_event) {
         insert_work_item(nu);
       }
       break;
+    #endif
 
     default:
       return_value += EventReceiver::notify(active_event);

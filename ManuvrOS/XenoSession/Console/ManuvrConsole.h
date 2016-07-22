@@ -22,14 +22,15 @@ This class represents a console session with the running Kernel. This simple
   role is done with this amount of complexity to avoid the necessity of
   designating a transport or a serial port specifically for this task.
 
-If you want this feature, you must define MANUVR_CONSOLE_SESSION as well as
-  __MANUVR_CONSOLE_SUPPORT in the firmware defs file, or pass it into the build.
+If you want this feature, you must define __MANUVR_CONSOLE_SUPPORT in the
+  firmware defs file, or pass it into the build.
 */
 
 #ifndef __MANUVR_CONSOLE_SESS_H__
 #define __MANUVR_CONSOLE_SESS_H__
 
 #include "../XenoSession.h"
+
 
 class ManuvrConsole : public XenoSession {
   public:
@@ -50,8 +51,6 @@ class ManuvrConsole : public XenoSession {
 
 
   protected:
-    XenoManuvrMessage* working;         // If we are in the middle of receiving a message,
-
     int8_t bootComplete();
     int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
 
