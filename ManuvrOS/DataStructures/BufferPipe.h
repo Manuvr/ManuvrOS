@@ -59,6 +59,7 @@ See UDPPipe for a case where this matters.
 #ifndef __MANUVR_BUFFER_PIPE_H__
 #define __MANUVR_BUFFER_PIPE_H__
 
+#include <stdlib.h>
 #include <DataStructures/StringBuilder.h>
 
 /*

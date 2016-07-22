@@ -71,7 +71,7 @@ const char* XenoSession::sessionPhaseString(uint16_t state_code) {
 *
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
-XenoSession::XenoSession(ManuvrXport* _xport) {
+XenoSession::XenoSession(ManuvrXport* _xport) : BufferPipe() {
   __class_initializer();
 
   _session_service.repurpose(MANUVR_MSG_SESS_SERVICE);
@@ -93,6 +93,34 @@ XenoSession::XenoSession(ManuvrXport* _xport) {
   else {
     mark_session_state(XENOSESSION_STATE_PENDING_CONN);
   }
+}
+
+
+/**
+* When a connectable class gets a connection, we get instantiated to handle the protocol...
+*
+* @param   ManuvrXport* All sessions must have one (and only one) transport.
+*/
+XenoSession::XenoSession(BufferPipe* _near_side) : BufferPipe() {
+  __class_initializer();
+
+  // Our near-side is that passed-in transport.
+  setNear(_near_side, MEM_MGMT_RESPONSIBLE_CREATOR);
+
+  // TODO: Audit implications of this....
+  // The link nearer to the transport should not free.
+  _near_side->setFar((BufferPipe*) this, MEM_MGMT_RESPONSIBLE_CREATOR);
+
+  _session_service.repurpose(MANUVR_MSG_SESS_SERVICE);
+  _session_service.isManaged(true);
+  _session_service.specific_target = (EventReceiver*) this;
+  _session_service.originator      = (EventReceiver*) this;
+
+  working                   = NULL;
+  session_state             = XENOSESSION_STATE_UNINITIALIZED;
+  session_last_state        = XENOSESSION_STATE_UNINITIALIZED;
+
+  mark_session_state(XENOSESSION_STATE_PENDING_SETUP);
 }
 
 

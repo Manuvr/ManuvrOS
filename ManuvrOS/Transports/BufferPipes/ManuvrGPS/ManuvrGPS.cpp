@@ -86,7 +86,7 @@ void ManuvrGPS::printDebug(StringBuilder* output) {
 * Undigested GPS functions                                                     *
 *******************************************************************************/
 
-
+#if defined(MANUVR_GPS_PIPE)
 
 #include <stdlib.h>
 #include <string.h>
@@ -673,3 +673,5 @@ int minmea_gettime(struct timespec *ts, const struct minmea_date *date, const st
         return -1;
     }
 }
+
+#endif  //MANUVR_GPS_PIPE

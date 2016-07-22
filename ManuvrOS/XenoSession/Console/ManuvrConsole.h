@@ -34,6 +34,7 @@ If you want this feature, you must define MANUVR_CONSOLE_SESSION as well as
 class ManuvrConsole : public XenoSession {
   public:
     ManuvrConsole(ManuvrXport*);
+    ManuvrConsole(BufferPipe*);
     ~ManuvrConsole();
 
     /* Override from BufferPipe. */
