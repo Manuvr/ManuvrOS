@@ -64,6 +64,7 @@ Main demo application.
 // We will use MQTT as our concept of "session"...
 #include <XenoSession/MQTT/MQTTSession.h>
 #include <XenoSession/CoAP/CoAPSession.h>
+#include <XenoSession/Console/ManuvrConsole.h>
 
 
 /*******************************************************************************
@@ -101,9 +102,11 @@ bool running = true;
 #if defined(__MANUVR_CONSOLE_SUPPORT)
 #define U_INPUT_BUFF_SIZE   255    // How big a buffer for user-input?
 
-StringBuilder user_input;
 
 void* spawnUIThread(void*) {
+  XportBridge _test_bridge;   // Needed until USB VCP is migrated.
+  ManuvrConsole _console_session(&_test_bridge);
+
   char *input_text	= (char*) alloca(U_INPUT_BUFF_SIZE);	// Buffer to hold user-input.
   StringBuilder user_input;
 
@@ -111,6 +114,10 @@ void* spawnUIThread(void*) {
     printf("%c[36m%s> %c[39m", 0x1B, program_name, 0x1B);
     bzero(input_text, U_INPUT_BUFF_SIZE);
     if (fgets(input_text, U_INPUT_BUFF_SIZE, stdin) != NULL) {
+      _test_bridge.fromCounterparty(input_text, strlen(input_text));
+
+
+
       user_input.concat(input_text);
       user_input.trim();
 
@@ -140,10 +147,8 @@ void* spawnUIThread(void*) {
       printHelp();
     }
   }
-
   return NULL;
 }
-
 #endif  // __MANUVR_CONSOLE_SUPPORT
 
 

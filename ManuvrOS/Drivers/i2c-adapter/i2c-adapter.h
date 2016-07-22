@@ -161,7 +161,6 @@ This file is the tortured result of growing pains since the beginning of
   class I2CAdapter : public EventReceiver {
     public:
       I2CBusOp* current_queue_item;
-      int dev;
 
       I2CAdapter(uint8_t dev_id = 1);  // Constructor takes a bus ID as an argument.
       ~I2CAdapter();                   // Destructor
@@ -174,18 +173,18 @@ This file is the tortured result of growing pains since the beginning of
       int8_t removeSlaveDevice(I2CDevice*);  // Removes a device from the bus.
 
       // This is the fxn that is called to do I/O on the bus.
-      bool insert_work_item(I2CBusOp *);
+      bool insert_work_item(I2CBusOp*);
 
       /* Debug aides */
       const char* getReceiverName();
-      void printPingMap(StringBuilder *);
+      void printPingMap(StringBuilder*);
       void printDebug(StringBuilder*);
-      void printDevs(StringBuilder *);
-      void printDevs(StringBuilder *, uint8_t dev_num);
+      void printDevs(StringBuilder*);
+      void printDevs(StringBuilder*, uint8_t dev_num);
 
       /* Overrides from EventReceiver */
       int8_t notify(ManuvrRunnable*);
-      int8_t callback_proc(ManuvrRunnable *);
+      int8_t callback_proc(ManuvrRunnable*);
       #if defined(__MANUVR_CONSOLE_SUPPORT)
         void procDirectDebugInstruction(StringBuilder*);
       #endif  //__MANUVR_CONSOLE_SUPPORT
@@ -210,15 +209,17 @@ This file is the tortured result of growing pains since the beginning of
 
 
     private:
+      LinkedList<I2CBusOp*>  work_queue;  // A work queue to keep transactions in order.
+      LinkedList<I2CDevice*> dev_list;    // A list of active slaves on this bus.
+      ManuvrRunnable _periodic_i2c_debug;
+
       int8_t ping_map[128];
       int8_t last_used_bus_addr;
-
-      LinkedList<I2CBusOp*> work_queue;     // A work queue to keep transactions in order.
-      LinkedList<I2CDevice*> dev_list;                // A list of active slaves on this bus.
+      int dev;
 
       void gpioSetup();
 
-      void advance_work_queue(void);                  // Called from the ISR via Event. Advances the bus.
+      void advance_work_queue();           // Called from the ISR via Event. Advances the bus.
 
       int get_slave_dev_by_addr(uint8_t search_addr);
       void purge_queued_work_by_dev(I2CDevice *dev);
@@ -252,8 +253,8 @@ This file is the tortured result of growing pains since the beginning of
       /* If your device needs something to happen immediately prior to bus I/O... */
       virtual bool operationCallahead(I2CBusOp*);
 
-      bool assignBusInstance(I2CAdapter *);              // Needs to be called by the i2c class during insertion.
-      bool assignBusInstance(volatile I2CAdapter *bus);  // Trivial override.
+      bool assignBusInstance(I2CAdapter*);               // Needs to be called by the i2c class during insertion.
+      bool assignBusInstance(volatile I2CAdapter* bus);  // Trivial override.
 
       bool disassignBusInstance(void);                   // This is to be called from the adapter's unassignment function.
 
@@ -280,7 +281,7 @@ This file is the tortured result of growing pains since the beginning of
 
     private:
       I2CAdapter* _bus;
-  };
+};
 
 
   /*
@@ -341,8 +342,8 @@ This file is the tortured result of growing pains since the beginning of
     private:
       uint8_t reg_count;
 
-      int8_t writeRegister(DeviceRegister *reg);
-      int8_t readRegister(DeviceRegister *reg);
+      int8_t writeRegister(DeviceRegister* reg);
+      int8_t readRegister(DeviceRegister* reg);
   };
 
 

@@ -1438,23 +1438,23 @@ int Kernel::serviceSchedules() {
 ****************************************************************************************************/
 #if defined(__MANUVR_CONSOLE_SUPPORT)
 
-/*
-* This is the means by which we feed raw string input from a console into the
-*   kernel's user input slot.
-*/
-void Kernel::accumulateConsoleInput(uint8_t *buf, int len, bool terminal) {
-  if (len > 0) {
-    last_user_input.concat(buf, len);
-
-    if (terminal) {
-      // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
-      // run in idle time.
-      ManuvrRunnable* event = returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
-      event->specific_target = (EventReceiver*) this;
-      Kernel::staticRaiseEvent(event);
-    }
-  }
-}
+///*
+//* This is the means by which we feed raw string input from a console into the
+//*   kernel's user input slot.
+//*/
+//void Kernel::accumulateConsoleInput(uint8_t *buf, int len, bool terminal) {
+//  if (len > 0) {
+//    last_user_input.concat(buf, len);
+//
+//    if (terminal) {
+//      // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
+//      // run in idle time.
+//      ManuvrRunnable* event = returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
+//      event->specific_target = (EventReceiver*) this;
+//      Kernel::staticRaiseEvent(event);
+//    }
+//  }
+//}
 
 
 /**
@@ -1524,6 +1524,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
 
   switch (c) {
     case 'B':
+    case 'b':
       if (temp_int == 128) {
         Kernel::raiseEvent(('B' == c ? MANUVR_MSG_SYS_BOOTLOADER : MANUVR_MSG_SYS_REBOOT), NULL);
       }

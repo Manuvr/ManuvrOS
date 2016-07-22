@@ -43,6 +43,23 @@ ManuvrConsole::ManuvrConsole(ManuvrXport* _xport) : XenoSession(_xport) {
 
 
 /**
+* When a connectable class gets a connection, we get instantiated to handle the protocol...
+*
+* @param   ManuvrXport* All sessions must have one (and only one) transport.
+*/
+ManuvrConsole::ManuvrConsole(BufferPipe* _near_side) : XenoSession(_near_side) {
+  // These are messages that we want to relay from the rest of the system.
+  tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
+  tapMessageType(MANUVR_MSG_SESS_HANGUP);
+  tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
+
+  if (Kernel::getInstance()->booted()) {
+    bootComplete();   // Because we are instantiated well after boot, we call this on construction.
+  }
+}
+
+
+/**
 * Unlike many of the other EventReceivers, THIS one needs to be able to be torn down.
 */
 ManuvrConsole::~ManuvrConsole() {
@@ -89,7 +106,7 @@ int8_t ManuvrConsole::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) 
 }
 
 /**
-* Outward toward the application (or into the accumulator).
+* Taking user input from the transport...
 *
 * @param  buf    A pointer to the buffer.
 * @param  len    How long the buffer is.
@@ -97,37 +114,47 @@ int8_t ManuvrConsole::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) 
 * @return A declaration of memory-management responsibility.
 */
 int8_t ManuvrConsole::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
-//  switch (mm) {
-//    case MEM_MGMT_RESPONSIBLE_CALLER:
-//      // NOTE: No break. This might be construed as a way of saying CREATOR.
-//    case MEM_MGMT_RESPONSIBLE_CREATOR:
-//      /* The system that allocated this buffer either...
-//          a) Did so with the intention that it never be free'd, or...
-//          b) Has a means of discovering when it is safe to free.  */
-//      if (haveFar()) {
-//        return _far->fromCounterparty(buf, len, mm);
-//      }
-//      else {
-//        _accumulator.concat(buf, len);
-//        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
-//      }
-//
-//    case MEM_MGMT_RESPONSIBLE_BEARER:
-//      /* We are now the bearer. That means that by returning non-failure, the
-//          caller will expect _us_ to manage this memory.  */
-//      if (haveFar()) {
-//        /* We are not the transport driver, and we do no transformation. */
-//        return _far->fromCounterparty(buf, len, mm);
-//      }
-//      else {
-//        _accumulator.concat(buf, len);
-//        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
-//      }
-//
-//    default:
-//      /* This is more ambiguity than we are willing to bear... */
-//      return MEM_MGMT_RESPONSIBLE_ERROR;
-//  }
+  switch (mm) {
+    case MEM_MGMT_RESPONSIBLE_CALLER:
+      // NOTE: No break. This might be construed as a way of saying CREATOR.
+    case MEM_MGMT_RESPONSIBLE_CREATOR:
+      /* The system that allocated this buffer either...
+          a) Did so with the intention that it never be free'd, or...
+          b) Has a means of discovering when it is safe to free.  */
+      _accumulator.concat(buf, len);
+
+      if (0 < _accumulator.split("\n")) {
+        // Begin the cases...
+        if      (strcasestr(user_input.position(0), "QUIT"))  running = false;  // Exit
+        else if (strcasestr(user_input.position(0), "HELP"))  printHelp();      // Show help.
+        else {
+          // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
+          // run in idle time.
+          ManuvrRunnable* event = returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
+          event->originator = (EventReceiver*) this;
+          Kernel::staticRaiseEvent(event);
+          _kernel->accumulateConsoleInput((uint8_t*) user_input.position(0), strlen(user_input.position(0)), true);
+          _accumulator.drop_position(0);
+        }
+      }
+      break;
+
+    case MEM_MGMT_RESPONSIBLE_BEARER:
+      /* We are now the bearer. That means that by returning non-failure, the
+          caller will expect _us_ to manage this memory.  */
+      if (haveFar()) {
+        /* We are not the transport driver, and we do no transformation. */
+        return _far->fromCounterparty(buf, len, mm);
+      }
+      else {
+        _accumulator.concat(buf, len);
+        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
+      }
+
+    default:
+      /* This is more ambiguity than we are willing to bear... */
+      return MEM_MGMT_RESPONSIBLE_ERROR;
+  }
   Kernel::log("ManuvrConsole has not yet implemented fromCounterparty().\n");
   return MEM_MGMT_RESPONSIBLE_ERROR;
 }
@@ -297,6 +324,9 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
 
 // We don't bother casing this off for the preprocessor. In this case, it
 //   is a given that we have __MANUVR_CONSOLE_SUPPORT.
+// This may be a strange loop that we might optimize later, but this is
+//   still a valid call target that deals with allowing the console to operate
+//   on itself.
 void ManuvrConsole::procDirectDebugInstruction(StringBuilder *input) {
   uint8_t temp_byte = 0;
 
