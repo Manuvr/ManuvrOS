@@ -345,18 +345,7 @@ int8_t ManuvrSerial::read_port() {
         n = read(_sock, buf, 255);
         if (n > 0) {
           bytes_received += n;
-
-          event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
-          nu_data = new StringBuilder(buf, n);
-          event->markArgForReap(event->addArg(nu_data), true);
-
-          //Do stuff regarding the data we just read...
-          if (NULL != session) {
-            session->notify(event);
-          }
-          else {
-            raiseEvent(event);
-          }
+          fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
         }
         else {
           sleep_millis(50);

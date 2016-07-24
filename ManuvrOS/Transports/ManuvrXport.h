@@ -102,8 +102,6 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     ManuvrXport();
     virtual ~ManuvrXport();
 
-    inline XenoSession* getSession() {   return session;   };
-
     /* Override from BufferPipe. */
     virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
     virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
@@ -162,16 +160,12 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
       virtual void   procDirectDebugInstruction(StringBuilder*);
     #endif  //__MANUVR_CONSOLE_SUPPORT
 
-    // TODO: Should be protected.
-    int8_t provide_session(XenoSession*);   // Called whenever we instantiate a session.
-
     // We can have up-to 65535 transport instances concurrently. This well-exceeds
     //   the configured limits of most linux installations, so it should be enough.
     static uint16_t TRANSPORT_ID_POOL;
 
 
   protected:
-    XenoSession* session;
     ManuvrRunnable* _autoconnect_schedule;
 
     // Can also be used to poll the other side. Implementation is completely at the discretion
@@ -205,13 +199,6 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     inline void mark_connected(bool en) {
       _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_CONNECTED) : (_xport_flags & ~(MANUVR_XPORT_FLAG_CONNECTED));
     };
-
-
-    inline bool _reap_session() {   return (_xport_flags & (MANUVR_XPORT_FLAG_REAP_SESSION | MANUVR_XPORT_FLAG_REAP_SESSION));  }
-    inline void _reap_session(bool en) {
-      _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_REAP_SESSION) : (_xport_flags & ~(MANUVR_XPORT_FLAG_REAP_SESSION));
-    };
-
 };
 
 #endif   // __MANUVR_XPORT_H__

@@ -71,36 +71,6 @@ const char* XenoSession::sessionPhaseString(uint16_t state_code) {
 *
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
-XenoSession::XenoSession(ManuvrXport* _xport) : BufferPipe() {
-  __class_initializer();
-
-  _session_service.repurpose(MANUVR_MSG_SESS_SERVICE);
-  _session_service.isManaged(true);
-  _session_service.specific_target = (EventReceiver*) this;
-  _session_service.originator      = (EventReceiver*) this;
-
-  owner = _xport;
-  owner->provide_session(this);
-
-  working                   = NULL;
-  session_state             = XENOSESSION_STATE_UNINITIALIZED;
-  session_last_state        = XENOSESSION_STATE_UNINITIALIZED;
-
-  if (!owner->alwaysConnected() && owner->connected()) {
-    // Are we connected right now?
-    mark_session_state(XENOSESSION_STATE_PENDING_SETUP);
-  }
-  else {
-    mark_session_state(XENOSESSION_STATE_PENDING_CONN);
-  }
-}
-
-
-/**
-* When a connectable class gets a connection, we get instantiated to handle the protocol...
-*
-* @param   ManuvrXport* All sessions must have one (and only one) transport.
-*/
 XenoSession::XenoSession(BufferPipe* _near_side) : BufferPipe() {
   __class_initializer();
 
@@ -318,7 +288,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
       {
         StringBuilder* buf;
         if (0 == active_event->getArgAs(&buf)) {
-          bin_stream_rx(buf->string(), buf->length());
+          fromCounterparty(buf->string(), buf->length(), MEM_MGMT_RESPONSIBLE_BEARER);
         }
       }
       return_value++;

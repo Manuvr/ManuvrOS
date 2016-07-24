@@ -175,7 +175,6 @@ class ManuvrSession : public XenoSession {
     XenoManuvrMessage* working;         // If we are in the middle of receiving a message,
 
     int8_t bootComplete();
-    int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
 
 
   private:
@@ -192,6 +191,8 @@ class ManuvrSession : public XenoSession {
     uint8_t _seq_ack_failures;    // How many of our outbound packets have failed to ACK?
     uint8_t _stacked_sync_state;  // Is our stream sync'd?
     uint8_t _sync_state;          // Is our stream sync'd?
+
+    int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
 
     /* Returns the answer to: "Is this session in sync?"   */
     inline bool syncd() {     return (_sync_state == XENOSESSION_STATE_SYNC_SYNCD);   }

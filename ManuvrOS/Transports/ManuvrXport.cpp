@@ -106,7 +106,6 @@ ManuvrXport::ManuvrXport() : BufferPipe() {
   _autoconnect_schedule = NULL;
   bytes_sent            = 0;
   bytes_received        = 0;
-  session               = NULL;
 
   #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
     _thread_id       = 0;
@@ -120,11 +119,6 @@ ManuvrXport::~ManuvrXport() {
   #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
     // TODO: Tear down the thread.
   #endif
-
-  if(_reap_session()) {
-    delete session;
-    session = NULL;
-  }
 
   // Cleanup any schedules...
   if (NULL != _autoconnect_schedule) {
@@ -220,26 +214,6 @@ int8_t ManuvrXport::sendBuffer(StringBuilder* buf) {
 }
 
 
-int8_t ManuvrXport::provide_session(XenoSession* ses) {
-  if ((NULL != session) && (ses != session)) {
-    // If we are about to clobber an existing session, we need to free it first.
-    __kernel->unsubscribe(session);
-    //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_RETRACT_SRVC);
-    //event->addArg((EventReceiver*) ses);
-    //raiseEvent(event);
-
-    // TODO: Might should warn someone at the other side?
-    //   Maybe we let XenoSession deal with it? At least we
-    //   won't have a memory leak, lol.
-    //     ---J. Ian Lindsay   Thu Dec 03 04:38:52 MST 2015
-    delete session;
-    session = NULL;
-  }
-  session = ses;
-  return 0;
-}
-
-
 /*
 * Mark this transport connected or disconnected.
 */
@@ -252,34 +226,34 @@ void ManuvrXport::connected(bool en) {
 
   mark_connected(en);
     if (en) {
-      if (NULL == session) {
-        // We are expected to instantiate a XenoSession, and broadcast its existance.
-        // This will put it into the Event system so that auth and such can be handled cleanly.
-        // Once the session sets up, it will broadcast itself as having done so.
-        // TODO: Session discovery should happen at this point.
-        XenoSession* ses = (XenoSession*) new ManuvrSession(this);
-        _reap_session(true);
-        provide_session(ses);
+      //if (NULL == session) {
+      //  // We are expected to instantiate a XenoSession, and broadcast its existance.
+      //  // This will put it into the Event system so that auth and such can be handled cleanly.
+      //  // Once the session sets up, it will broadcast itself as having done so.
+      //  // TODO: Session discovery should happen at this point.
+      //  XenoSession* ses = (XenoSession*) new ManuvrSession(this);
+      //  _reap_session(true);
+      //  provide_session(ses);
 
-        ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
-        event->addArg((EventReceiver*) ses);
-        raiseEvent(event);
-      }
+      //  ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
+      //  event->addArg((EventReceiver*) ses);
+      //  raiseEvent(event);
+      //}
 
       if (NULL != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(false);
-      if (session) session->connection_callback(true);
+      //if (session) session->connection_callback(true);
     }
     else {
       // This is a disconnection event. We might want to cleanup all of our sessions
       // that are outstanding.
       if (NULL != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(true);
-      if (session) {
-        session->connection_callback(false);
-        if(_reap_session()) {
-          delete session;
-          session = NULL;
-        }
-      }
+      //if (session) {
+      //  session->connection_callback(false);
+      //  if(_reap_session()) {
+      //    delete session;
+      //    session = NULL;
+      //  }
+      //}
     }
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
   if (_thread_id == 0) {
@@ -341,7 +315,6 @@ void ManuvrXport::printDebug(StringBuilder *temp) {
   temp->concatf("-- initialized     %s\n", (initialized() ? "yes" : "no"));
   temp->concatf("-- connected       %s\n", (connected() ? "yes" : "no"));
   temp->concatf("-- listening       %s\n", (listening() ? "yes" : "no"));
-  temp->concatf("-- Has session     %s\n--\n", (getSession() ? "yes" : "no"));
 }
 
 
@@ -350,32 +323,22 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
 
   switch (active_event->event_code) {
     case MANUVR_MSG_XPORT_SEND:
-      if (NULL != session) {
-        if (connected()) {
-          StringBuilder* temp_sb;
-          if (0 == active_event->getArgAs(&temp_sb)) {
-            #ifdef __MANUVR_DEBUG
-            if (getVerbosity() > 3) local_log.concatf("We about to print %d bytes to the transport.\n", temp_sb->length());
-            #endif
-            toCounterparty(temp_sb->string(), temp_sb->length(), MEM_MGMT_RESPONSIBLE_CREATOR);
-          }
-
-          //uint16_t xenomsg_id = session->nextMessage(&outbound_msg);
-          //if (xenomsg_id) {
-          //  if (write_port(outbound_msg.string(), outbound_msg.length()) ) {
-          //    if (getVerbosity() > 2) local_log.concatf("There was a problem writing to %s.\n", _addr);
-          //  }
-          //  return_value++;
-          //}
+      if (connected()) {
+        StringBuilder* temp_sb;
+        if (0 == active_event->getArgAs(&temp_sb)) {
           #ifdef __MANUVR_DEBUG
-          else if (getVerbosity() > 6) local_log.concat("Ignoring a broadcast that wasn't a StringBuilder.\n");
+          if (getVerbosity() > 3) local_log.concatf("We about to print %d bytes to the transport.\n", temp_sb->length());
           #endif
+          toCounterparty(temp_sb->string(), temp_sb->length(), MEM_MGMT_RESPONSIBLE_CREATOR);
         }
-        else {
-          #ifdef __MANUVR_DEBUG
-          if (getVerbosity() > 3) local_log.concat("Session is chatting, but we don't appear to have a connection.\n");
-          #endif
-        }
+        #ifdef __MANUVR_DEBUG
+        else if (getVerbosity() > 6) local_log.concat("Ignoring a broadcast that wasn't a StringBuilder.\n");
+        #endif
+      }
+      else {
+        #ifdef __MANUVR_DEBUG
+        if (getVerbosity() > 3) local_log.concat("Session is chatting, but we don't appear to have a connection.\n");
+        #endif
       }
       return_value++;
       break;
