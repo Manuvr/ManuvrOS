@@ -103,26 +103,31 @@ CoAPSession::~CoAPSession() {
 * @return A declaration of memory-management responsibility.
 */
 int8_t CoAPSession::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
-//  switch (mm) {
-//    case MEM_MGMT_RESPONSIBLE_CALLER:
-//      // NOTE: No break. This might be construed as a way of saying CREATOR.
-//    case MEM_MGMT_RESPONSIBLE_CREATOR:
-//      /* The system that allocated this buffer either...
-//          a) Did so with the intention that it never be free'd, or...
-//          b) Has a means of discovering when it is safe to free.  */
-//      return (write_datagram(buf, len, _ip, _port, 0) ? MEM_MGMT_RESPONSIBLE_CREATOR : MEM_MGMT_RESPONSIBLE_CALLER);
-//
-//    case MEM_MGMT_RESPONSIBLE_BEARER:
-//      /* We are now the bearer. That means that by returning non-failure, the
-//          caller will expect _us_ to manage this memory.  */
-//      // TODO: Freeing the buffer? Let UDP do it?
-//      return (write_datagram(buf, len, _ip, _port, 0) ? MEM_MGMT_RESPONSIBLE_BEARER : MEM_MGMT_RESPONSIBLE_CALLER);
-//
-//    default:
-//      /* This is more ambiguity than we are willing to bear... */
-//      return MEM_MGMT_RESPONSIBLE_ERROR;
-//  }
-  Kernel::log("CoAPSession has not yet implemented toCounterparty().\n");
+  switch (mm) {
+    case MEM_MGMT_RESPONSIBLE_CALLER:
+      // NOTE: No break. This might be construed as a way of saying CREATOR.
+    case MEM_MGMT_RESPONSIBLE_CREATOR:
+      /* The system that allocated this buffer either...
+          a) Did so with the intention that it never be free'd, or...
+          b) Has a means of discovering when it is safe to free.  */
+      if (haveNear()) {
+        return _near->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_CREATOR);
+      }
+      return MEM_MGMT_RESPONSIBLE_CALLER;
+
+    case MEM_MGMT_RESPONSIBLE_BEARER:
+      /* We are now the bearer. That means that by returning non-failure, the
+          caller will expect _us_ to manage this memory.  */
+      // TODO: Freeing the buffer? Let UDP do it?
+      if (haveNear()) {
+        return _near->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_BEARER);
+      }
+      return MEM_MGMT_RESPONSIBLE_CALLER;
+
+    default:
+      /* This is more ambiguity than we are willing to bear... */
+      return MEM_MGMT_RESPONSIBLE_ERROR;
+  }
   return MEM_MGMT_RESPONSIBLE_ERROR;
 }
 
@@ -135,39 +140,8 @@ int8_t CoAPSession::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
 * @return A declaration of memory-management responsibility.
 */
 int8_t CoAPSession::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
-//  switch (mm) {
-//    case MEM_MGMT_RESPONSIBLE_CALLER:
-//      // NOTE: No break. This might be construed as a way of saying CREATOR.
-//    case MEM_MGMT_RESPONSIBLE_CREATOR:
-//      /* The system that allocated this buffer either...
-//          a) Did so with the intention that it never be free'd, or...
-//          b) Has a means of discovering when it is safe to free.  */
-//      if (haveFar()) {
-//        return _far->fromCounterparty(buf, len, mm);
-//      }
-//      else {
-//        _accumulator.concat(buf, len);
-//        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
-//      }
-//
-//    case MEM_MGMT_RESPONSIBLE_BEARER:
-//      /* We are now the bearer. That means that by returning non-failure, the
-//          caller will expect _us_ to manage this memory.  */
-//      if (haveFar()) {
-//        /* We are not the transport driver, and we do no transformation. */
-//        return _far->fromCounterparty(buf, len, mm);
-//      }
-//      else {
-//        _accumulator.concat(buf, len);
-//        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
-//      }
-//
-//    default:
-//      /* This is more ambiguity than we are willing to bear... */
-//      return MEM_MGMT_RESPONSIBLE_ERROR;
-//  }
-  Kernel::log("CoAPSession has not yet implemented fromCounterparty().\n");
-  return MEM_MGMT_RESPONSIBLE_ERROR;
+	bin_stream_rx(buf, len);
+  return MEM_MGMT_RESPONSIBLE_BEARER;
 }
 
 

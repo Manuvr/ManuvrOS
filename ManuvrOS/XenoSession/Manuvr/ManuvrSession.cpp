@@ -128,7 +128,6 @@ int8_t ManuvrSession::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) 
       /* This is more ambiguity than we are willing to bear... */
       return MEM_MGMT_RESPONSIBLE_ERROR;
   }
-  Kernel::log("ManuvrSession has not yet implemented toCounterparty().\n");
   return MEM_MGMT_RESPONSIBLE_ERROR;
 }
 
@@ -142,7 +141,7 @@ int8_t ManuvrSession::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) 
 */
 int8_t ManuvrSession::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
   bin_stream_rx(buf, len);
-  return MEM_MGMT_RESPONSIBLE_ERROR;
+  return MEM_MGMT_RESPONSIBLE_BEARER;
 }
 
 

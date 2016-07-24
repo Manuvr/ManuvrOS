@@ -30,6 +30,27 @@ This is basically only for linux for now.
 
 #include <Kernel.h>
 
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
+
+/*******************************************************************************
+* .-. .----..----.    .-.     .--.  .-. .-..----.
+* | |{ {__  | {}  }   | |    / {} \ |  `| || {}  \
+* | |.-._} }| .-. \   | `--./  /\  \| |\  ||     /
+* `-'`----' `-' `-'   `----'`-'  `-'`-' `-'`----'
+*
+* Interrupt service routine support functions. Everything in this block
+*   executes under an ISR. Keep it brief...
+*******************************************************************************/
+
 #if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
   #include <arpa/inet.h>
 
@@ -104,14 +125,14 @@ This is basically only for linux for now.
 #endif
 
 
-/****************************************************************************************************
-* Static initializers                                                                               *
-****************************************************************************************************/
-
-
-/****************************************************************************************************
-* Class management                                                                                  *
-****************************************************************************************************/
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
 
 /**
 * Constructor.
@@ -155,9 +176,98 @@ ManuvrTCP::~ManuvrTCP() {
 }
 
 
-/****************************************************************************************************
-* Port I/O fxns                                                                                     *
-****************************************************************************************************/
+
+/*******************************************************************************
+*  _       _   _        _
+* |_)    _|_ _|_ _  ._ |_) o ._   _
+* |_) |_| |   | (/_ |  |   | |_) (/_
+*                            |
+* Overrides and addendums to BufferPipe.
+*******************************************************************************/
+/**
+* Inward toward the transport.
+*
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
+*/
+int8_t ManuvrTCP::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+  switch (mm) {
+    case MEM_MGMT_RESPONSIBLE_CALLER:
+      // NOTE: No break. This might be construed as a way of saying CREATOR.
+    case MEM_MGMT_RESPONSIBLE_CREATOR:
+      /* The system that allocated this buffer either...
+          a) Did so with the intention that it never be free'd, or...
+          b) Has a means of discovering when it is safe to free.  */
+      return (write_port(buf, len) ? MEM_MGMT_RESPONSIBLE_CREATOR : MEM_MGMT_RESPONSIBLE_CALLER);
+
+    case MEM_MGMT_RESPONSIBLE_BEARER:
+      /* We are now the bearer. That means that by returning non-failure, the
+          caller will expect _us_ to manage this memory.  */
+      // TODO: Freeing the buffer?
+      return (write_port(buf, len) ? MEM_MGMT_RESPONSIBLE_BEARER : MEM_MGMT_RESPONSIBLE_CALLER);
+
+    default:
+      /* This is more ambiguity than we are willing to bear... */
+      return MEM_MGMT_RESPONSIBLE_ERROR;
+  }
+  return MEM_MGMT_RESPONSIBLE_ERROR;
+}
+
+/**
+* Outward toward the application (or into the accumulator).
+*
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
+*/
+int8_t ManuvrTCP::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+  switch (mm) {
+    case MEM_MGMT_RESPONSIBLE_CALLER:
+      // NOTE: No break. This might be construed as a way of saying CREATOR.
+    case MEM_MGMT_RESPONSIBLE_CREATOR:
+      /* The system that allocated this buffer either...
+          a) Did so with the intention that it never be free'd, or...
+          b) Has a means of discovering when it is safe to free.  */
+      if (haveFar()) {
+        return _far->fromCounterparty(buf, len, mm);
+      }
+      else {
+        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
+      }
+
+    case MEM_MGMT_RESPONSIBLE_BEARER:
+      /* We are now the bearer. That means that by returning non-failure, the
+          caller will expect _us_ to manage this memory.  */
+      if (haveFar()) {
+        /* We are not the transport driver, and we do no transformation. */
+        return _far->fromCounterparty(buf, len, mm);
+      }
+      else {
+        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
+      }
+
+    default:
+      /* This is more ambiguity than we are willing to bear... */
+      return MEM_MGMT_RESPONSIBLE_ERROR;
+  }
+  return MEM_MGMT_RESPONSIBLE_ERROR;
+}
+
+
+
+/*******************************************************************************
+* ___________                                                  __
+* \__    ___/___________    ____   ____________   ____________/  |_
+*   |    |  \_  __ \__  \  /    \ /  ___/\____ \ /  _ \_  __ \   __\
+*   |    |   |  | \// __ \|   |  \\___ \ |  |_> >  <_> )  | \/|  |
+*   |____|   |__|  (____  /___|  /____  >|   __/ \____/|__|   |__|
+*                       \/     \/     \/ |__|
+* These members are particular to the transport driver and any implicit
+*   protocol it might contain.
+*******************************************************************************/
 
 int8_t ManuvrTCP::connect() {
   // We're being told to act as a client.
@@ -251,19 +361,7 @@ int8_t ManuvrTCP::read_port() {
       n = read(_sock, buf, 255);
       if (n > 0) {
         bytes_received += n;
-
-        // Do stuff regarding the data we just read...
-        if (NULL != session) {
-          // If we have a session, let it deal with the data.
-          session->bin_stream_rx(buf, n);
-        }
-        else {
-          // If we don't have a session, emit the data into the event system.
-          ManuvrRunnable *event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
-          nu_data = new StringBuilder(buf, n);
-          event->markArgForReap(event->addArg(nu_data), true);
-          raiseEvent(event);
-        }
+        fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
       }
       else {
         // Don't thrash the CPU for no reason...
@@ -286,31 +384,19 @@ int8_t ManuvrTCP::read_port() {
 * Does what it claims to do on linux.
 * Returns false on error and true on success.
 *
-* @param  unsigned char*   The buffer containing the outbound data.
-* @param  int              The length of data in the buffer.
-* @return bool             false on error, true on success.
-*/
-bool ManuvrTCP::write_port(unsigned char* out, int out_len) {
-  return write_port(getSockID(), out, out_len);
-}
-
-/**
-* Does what it claims to do on linux.
-* Returns false on error and true on success.
-*
 * @param  int              An identifier for a specific socket.
 * @param  unsigned char*   The buffer containing the outbound data.
 * @param  int              The length of data in the buffer.
 * @return bool             false on error, true on success.
 */
-bool ManuvrTCP::write_port(int sock, unsigned char* out, int out_len) {
-  if (sock == -1) {
+bool ManuvrTCP::write_port(unsigned char* out, int out_len) {
+  if (getSockID() == -1) {
     if (getVerbosity() > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to socket at: (%s:%d)\n", _addr, _port_number);
     return false;
   }
 
   if (connected()) {
-    int bytes_written = (int) write(sock, out, out_len);
+    int bytes_written = (int) write(getSockID(), out, out_len);
     bytes_sent += bytes_written;
     if (bytes_written == out_len) {
       return true;

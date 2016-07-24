@@ -74,7 +74,6 @@ class ManuvrTCP : public ManuvrSocket {
     int8_t reset();
 
     bool write_port(unsigned char* out, int out_len);
-    bool write_port(int sock, unsigned char* out, int out_len);
     int8_t read_port();
 
 
