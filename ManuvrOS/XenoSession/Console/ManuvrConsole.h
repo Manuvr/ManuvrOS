@@ -52,7 +52,6 @@ class ManuvrConsole : public XenoSession {
 
   protected:
     int8_t bootComplete();
-    int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
 
 
   private:

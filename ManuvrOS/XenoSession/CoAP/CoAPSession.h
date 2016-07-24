@@ -85,7 +85,6 @@ class CoAPSession : public XenoSession {
     int8_t unsubscribeAll();
 
     int8_t connection_callback(bool connected);
-    int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
 
     /* Override from BufferPipe. */
     virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
@@ -110,6 +109,8 @@ class CoAPSession : public XenoSession {
     ManuvrRunnable _ping_timer;    // Periodic KA ping.
 
     unsigned int _next_packetid;
+
+    int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
 
     inline int getNextPacketId() {
       return _next_packetid = (_next_packetid == MAX_PACKET_ID) ? 1 : _next_packetid + 1;

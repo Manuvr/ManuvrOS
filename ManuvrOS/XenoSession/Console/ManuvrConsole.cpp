@@ -151,7 +151,6 @@ int8_t ManuvrConsole::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm
       /* This is more ambiguity than we are willing to bear... */
       return MEM_MGMT_RESPONSIBLE_ERROR;
   }
-  Kernel::log("ManuvrConsole has not yet implemented fromCounterparty().\n");
   return MEM_MGMT_RESPONSIBLE_ERROR;
 }
 
@@ -160,26 +159,6 @@ int8_t ManuvrConsole::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm
 /****************************************************************************************************
 * Functions for interacting with the transport driver.                                              *
 ****************************************************************************************************/
-
-/**
-* When we take bytes from the transport, and can't use them all right away,
-*   we store them to prepend to the next group of bytes that come through.
-*
-* @param
-* @param
-* @return  int8_t  // TODO!!!
-*/
-int8_t ManuvrConsole::bin_stream_rx(unsigned char *buf, int len) {
-  int8_t return_value = 0;
-
-  session_buffer.concat(buf, len);
-
-  if (local_log.length() > 0) Kernel::log(&local_log);
-  return return_value;
-}
-
-
-
 /**
 * Debug support function.
 *
@@ -301,7 +280,7 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
       {
         StringBuilder* buf;
         if (0 == active_event->getArgAs(&buf)) {
-          bin_stream_rx(buf->string(), buf->length());
+          fromCounterparty(buf->string(), buf->length(), MEM_MGMT_RESPONSIBLE_BEARER);
         }
       }
       return_value++;

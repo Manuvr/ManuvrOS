@@ -88,7 +88,6 @@ class XenoSession : public EventReceiver, public BufferPipe {
     virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
 
     virtual int8_t connection_callback(bool connected);
-    virtual int8_t bin_stream_rx(unsigned char* buf, int len) =0;            // Used to feed data to the session.
 
     /* Overrides from EventReceiver */
     virtual const char* getReceiverName() =0;
