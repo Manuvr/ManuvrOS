@@ -199,7 +199,7 @@ int8_t XenoSession::untapAll() {
 
 
 int8_t XenoSession::sendPacket(unsigned char *buf, int len) {
-  if (owner->write_port(buf, len)) {
+  if (owner->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_CREATOR)) {
     return 0;
   }
   return -1;

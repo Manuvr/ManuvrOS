@@ -126,7 +126,6 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
 
     // TODO: This is going to be cut in favor of BufferPipe's API.
     // Mandatory override.
-    virtual bool   write_port(unsigned char* out, int out_len) = 0;
     virtual int8_t read_port() = 0;
 
     /*

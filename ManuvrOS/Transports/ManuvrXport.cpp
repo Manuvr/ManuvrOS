@@ -211,7 +211,7 @@ void ManuvrXport::autoConnect(bool en, uint32_t _ac_period) {
 
 int8_t ManuvrXport::sendBuffer(StringBuilder* buf) {
   if (connected()) {
-    write_port(buf->string(), buf->length());
+    toCounterparty(buf->string(), buf->length(), MEM_MGMT_RESPONSIBLE_CREATOR);
   }
   else {
     Kernel::log("Tried to write to a transport that was not connected.");
@@ -357,7 +357,7 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
             #ifdef __MANUVR_DEBUG
             if (getVerbosity() > 3) local_log.concatf("We about to print %d bytes to the transport.\n", temp_sb->length());
             #endif
-            write_port(temp_sb->string(), temp_sb->length());
+            toCounterparty(temp_sb->string(), temp_sb->length(), MEM_MGMT_RESPONSIBLE_CREATOR);
           }
 
           //uint16_t xenomsg_id = session->nextMessage(&outbound_msg);
