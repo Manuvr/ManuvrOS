@@ -25,7 +25,6 @@ CPP_SRCS  += DataStructures/InertialMeasurement.cpp
 CPP_SRCS  += Types/ManuvrCBOR/ManuvrCBOR.cpp
 
 # Manuvr core
-CPP_SRCS  += LogPipe.cpp
 CPP_SRCS  += ManuvrRunnable.cpp
 CPP_SRCS  += EnumeratedTypeCodes.cpp
 CPP_SRCS  += Kernel.cpp
@@ -63,6 +62,7 @@ CPP_SRCS  += Transports/BufferPipes/XportBridge/XportBridge.cpp
 
 # Transports (Drivers)
 CPP_SRCS  += Transports/ManuvrXport.cpp
+CPP_SRCS  += Transports/StandardIO/StandardIO.cpp
 CPP_SRCS  += Transports/ManuvrSerial/ManuvrSerial.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrSocket.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrTCP.cpp

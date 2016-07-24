@@ -53,19 +53,20 @@ Main demo application.
 #include <Drivers/i2c-adapter/i2c-adapter.h>
 
 // This is ONLY used to expose the GPIO pins to the outside world.
-// It is not needed otherwise.
+// It is not required for GPIO usage internally.
 #include <Drivers/ManuvrableGPIO/ManuvrableGPIO.h>
 
 // Transports...
 #include <Transports/ManuvrSerial/ManuvrSerial.h>
 #include <Transports/ManuvrSocket/ManuvrUDP.h>
 #include <Transports/ManuvrSocket/ManuvrTCP.h>
+#include <Transports/StandardIO/StandardIO.h>
 #include <Transports/BufferPipes/XportBridge/XportBridge.h>
 
 // We will use MQTT as our concept of "session"...
 #include <XenoSession/MQTT/MQTTSession.h>
 #include <XenoSession/CoAP/CoAPSession.h>
-#include <XenoSession/Console/ManuvrConsole.h>
+
 
 
 /*******************************************************************************
@@ -88,7 +89,7 @@ void kernelDebugDump() {
 * Functions that just print things.                                            *
 *******************************************************************************/
 void printHelp() {
-  printf("Help would ordinarily be displayed here.\n");
+  Kernel::log("Help would ordinarily be displayed here.\n");
 }
 
 
@@ -98,33 +99,6 @@ void printHelp() {
 *******************************************************************************/
 long unsigned int _thread_id = 0;;
 bool running = true;
-
-
-#if defined(__MANUVR_CONSOLE_SUPPORT)
-#define U_INPUT_BUFF_SIZE   255    // How big a buffer for user-input?
-
-
-void* spawnUIThread(void*) {
-  XportBridge _test_bridge;   // Needed until USB VCP is migrated.
-  ManuvrConsole _console_session(&_test_bridge);
-
-  char *input_text	= (char*) alloca(U_INPUT_BUFF_SIZE);	// Buffer to hold user-input.
-  StringBuilder user_input;
-
-  while (running) {
-    printf("%c[36m%s> %c[39m", 0x1B, program_name, 0x1B);
-    bzero(input_text, U_INPUT_BUFF_SIZE);
-    if (fgets(input_text, U_INPUT_BUFF_SIZE, stdin) != NULL) {
-      _test_bridge.fromCounterparty((uint8_t*) input_text, strlen(input_text), MEM_MGMT_RESPONSIBLE_CREATOR);
-    }
-    else {
-      // User insulted fgets()...
-      printHelp();
-    }
-  }
-  return NULL;
-}
-#endif  // __MANUVR_CONSOLE_SUPPORT
 
 
 /*******************************************************************************
@@ -144,7 +118,6 @@ int main(int argc, char *argv[]) {
     //kernel->createSchedule(1000, -1, false, kernelDebugDump);
   #endif
 
-
   /*
   * At this point, we should instantiate whatever specific functionality we
   *   want this Manuvrable to have.
@@ -160,7 +133,7 @@ int main(int argc, char *argv[]) {
   #endif
 
   // We need at least ONE transport to be useful...
-  #if defined (MANUVR_SUPPORT_TCPSOCKET)
+  #if defined(MANUVR_SUPPORT_TCPSOCKET)
     #if defined(MANUVR_SUPPORT_MQTT)
       ManuvrTCP tcp_cli((const char*) "127.0.0.1", 1883);
       MQTTSession mqtt(&tcp_cli);
@@ -188,17 +161,17 @@ int main(int argc, char *argv[]) {
     kernel->subscribe(&tcp_cli);
   #endif
 
-  #if defined (MANUVR_SUPPORT_UDP)
+  #if defined(MANUVR_SUPPORT_UDP)
     ManuvrUDP udp_srv((const char*) "127.0.0.1", 6053);
     kernel->subscribe(&udp_srv);
   #endif
 
-  #if defined (MANUVR_SUPPORT_COAP)
+  #if defined(MANUVR_SUPPORT_COAP)
     CoAPSession coap_srv(&udp_srv);
     kernel->subscribe(&coap_srv);
   #endif
 
-  #if defined (MANUVR_SUPPORT_SERIAL)
+  #if defined(MANUVR_SUPPORT_SERIAL)
     ManuvrSerial* ser = NULL;
   #endif
 
@@ -219,7 +192,7 @@ int main(int argc, char *argv[]) {
     if ((strcasestr(argv[i], "--console")) || ((argv[i][0] == '-') && (argv[i][1] == 'c'))) {
       // The user wants a local stdio "Shell".
       #if defined(__MANUVR_CONSOLE_SUPPORT)
-        createThread(&_thread_id, NULL, spawnUIThread, NULL);
+        kernel->subscribe(new StandardIO());
       #else
         printf("%s was compiled without any console support. Ignoring directive...\n", argv[0]);
       #endif
@@ -248,7 +221,7 @@ int main(int argc, char *argv[]) {
   kernel->bootstrap();
 
   // TODO: Horrible hackishness to test TCP...
-  #if defined (MANUVR_SUPPORT_TCPSOCKET)
+  #if defined(MANUVR_SUPPORT_TCPSOCKET)
     #if defined(MANUVR_SUPPORT_MQTT)
     #else
       tcp_srv.listen();
@@ -274,17 +247,8 @@ int main(int argc, char *argv[]) {
       //setPin(14, pin_14_state);
       //pin_14_state = !pin_14_state;
     #endif
-    // Move the kernel log to stdout.
-    if (Kernel::log_buffer.count()) {
-      if (!kernel->getVerbosity()) {
-        Kernel::log_buffer.clear();
-      }
-      else {
-        printf("%s", Kernel::log_buffer.position(0));
-        Kernel::log_buffer.drop_position(0);
-      }
-    }
-    if (0 == events_procd + Kernel::log_buffer.count()) {
+
+    if (0 == events_procd) {
       // This is a resource-saver. How this is handled on a particular platform
       //   is still out-of-scope. Since we are in a threaded environment, we can
       //   sleep. Other systems might use ISR hooks or RTC notifications.

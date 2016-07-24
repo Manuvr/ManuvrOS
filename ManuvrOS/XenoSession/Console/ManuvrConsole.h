@@ -20,10 +20,12 @@ limitations under the License.
 
 This class represents a console session with the running Kernel. This simple
   role is done with this amount of complexity to avoid the necessity of
-  designating a transport or a serial port specifically for this task.
+  designating a transport or a serial port specifically for this task, and to
+  accomodate flexibility WRT logging.
 
 If you want this feature, you must define __MANUVR_CONSOLE_SUPPORT in the
-  firmware defs file, or pass it into the build.
+  firmware defs file, or pass it into the build. Logging support will remain
+  independently.
 */
 
 #ifndef __MANUVR_CONSOLE_SESS_H__

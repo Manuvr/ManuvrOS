@@ -39,7 +39,8 @@ extern uint32_t rtc_startup_state;
 *
 * Static members and initializers should be located here. Initializers first, functions second.
 ****************************************************************************************************/
-Kernel* Kernel::INSTANCE = NULL;
+Kernel*     Kernel::INSTANCE = NULL;
+BufferPipe* Kernel::_logger  = NULL;  // The logger slot.
 PriorityQueue<ManuvrRunnable*> Kernel::isr_exec_queue;
 
 const unsigned char MSG_ARGS_EVENTRECEIVER[] = {SYS_EVENTRECEIVER_FM, 0, 0};
@@ -185,7 +186,6 @@ Kernel::~Kernel() {
 StringBuilder Kernel::log_buffer;
 
 #if defined (__MANUVR_FREERTOS)
-  uint32_t Kernel::logger_pid = 0;
   uint32_t Kernel::kernel_pid = 0;
 #endif
 
@@ -195,49 +195,50 @@ StringBuilder Kernel::log_buffer;
 volatile void Kernel::log(int severity, const char *str) {
   if (!INSTANCE->getVerbosity()) return;
   log_buffer.concat(str);
-  #if defined (__MANUVR_FREERTOS)
-    if (logger_pid) vTaskResume((TaskHandle_t) logger_pid);
-  #endif
 }
 
 volatile void Kernel::log(char *str) {
   if (!INSTANCE->getVerbosity()) return;
   log_buffer.concat(str);
-  #if defined (__MANUVR_FREERTOS)
-    if (logger_pid) vTaskResume((TaskHandle_t) logger_pid);
-  #endif
 }
 
 volatile void Kernel::log(const char *str) {
   if (!INSTANCE->getVerbosity()) return;
   log_buffer.concat(str);
-  #if defined (__MANUVR_FREERTOS)
-    if (logger_pid) vTaskResume((TaskHandle_t) logger_pid);
-  #endif
 }
 
 volatile void Kernel::log(const char *fxn_name, int severity, const char *str, ...) {
   if (!INSTANCE->getVerbosity()) return;
   log_buffer.concatf("%d  %s:\t", severity, fxn_name);
   va_list marker;
-
   va_start(marker, str);
   log_buffer.concatf(str, marker);
   va_end(marker);
-  #if defined (__MANUVR_FREERTOS)
-    if (logger_pid) vTaskResume((TaskHandle_t) logger_pid);
-  #endif
 }
 
 volatile void Kernel::log(StringBuilder *str) {
   if (!INSTANCE->getVerbosity()) return;
   log_buffer.concatHandoff(str);
-  #if defined (__MANUVR_FREERTOS)
-    if (logger_pid) vTaskResume((TaskHandle_t) logger_pid);
-  #endif
 }
 
+// TODO: Only one pipe can move log data at this moment.
+int8_t Kernel::attachToLogger(BufferPipe* _pipe) {
+  if (NULL == _logger) {
+    _logger = _pipe;
+    return 0;
+  }
+  return -1;
+}
 
+// TODO: Only one pipe can move log data at this moment.
+int8_t Kernel::detachFromLogger(BufferPipe* _pipe) {
+  if (_pipe == _logger) {
+    _logger = NULL;
+    log_buffer.clear();
+    return 0;
+  }
+  return -1;
+}
 
 
 /****************************************************************************************************
@@ -830,6 +831,10 @@ int8_t Kernel::procIdleFlags() {
     }
 
     return_value++;   // We just serviced an Event.
+    if ((NULL != _logger) && (local_log.length() > 0)) {
+      if (local_log.length() > 0) Kernel::log(&local_log);
+      _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
+    }
   }
 
   total_loops++;

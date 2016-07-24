@@ -82,6 +82,13 @@ See UDPPipe for a case where this matters.
 #define MEM_MGMT_RESPONSIBLE_BEARER      2  // The bearer is responsible.
 
 /*
+* Definition of signals passable via the pipe's control channel.
+*/
+enum class ManuvrPipeSignal {
+  UNDEF           // Undefined.
+};
+
+/*
 * Here, "far" refers to "farther from the counterparty". That is: closer to our
 *   local idea of "the application".
 *
@@ -101,6 +108,8 @@ class BufferPipe {
     /*
     * Generally, this will be called from within the instance pointed-at by _far.
     */
+    virtual int8_t toCounterparty(ManuvrPipeSignal, void*);
+    virtual int8_t toCounterparty(StringBuilder*, int8_t mm);
     virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
     inline int8_t toCounterparty(uint8_t* buf, unsigned int len) {
       return toCounterparty(buf, len, _near_mm_default);
@@ -109,16 +118,20 @@ class BufferPipe {
     /*
     * Generally, this will be called from within the instance pointed-at by _near.
     */
+    virtual int8_t fromCounterparty(ManuvrPipeSignal, void*);
+    virtual int8_t fromCounterparty(StringBuilder*, int8_t mm);
     virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
     inline int8_t fromCounterparty(uint8_t* buf, unsigned int len) {
       return fromCounterparty(buf, len, _far_mm_default);
     };
 
     /* This is here to simplify the logic of endpoints. */
+    // TODO: This will probably be cut.
     int8_t emitBuffer(uint8_t* buf, unsigned int len, int8_t mm);
     inline int8_t emitBuffer(uint8_t* buf, unsigned int len) {
       return emitBuffer(buf, len, (this == _near) ? _near_mm_default : _far_mm_default);
     };
+
 
     /* Set the identity of the near-side. */
     int8_t setNear(BufferPipe* nu, int8_t _mm);

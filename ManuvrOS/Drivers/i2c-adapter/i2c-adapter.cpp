@@ -867,7 +867,7 @@ void I2CAdapter::advance_work_queue(void) {
 
 /*
 * Pass an i2c device, and this fxn will purge all of its queued work. Presumably, this is
-*   because it is being detatched from the bux, but it may also be because one of it's operations
+*   because it is being detached from the bux, but it may also be because one of it's operations
 *   went bad.
 */
 void I2CAdapter::purge_queued_work_by_dev(I2CDevice *dev) {

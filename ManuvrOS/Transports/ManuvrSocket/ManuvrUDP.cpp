@@ -299,7 +299,6 @@ int8_t ManuvrUDP::listen() {
 
   //initialized(true);
   createThread(&_thread_id, NULL, _udp_socket_listener_loop, (void*) this);
-
   listening(true);
   local_log.concatf("UDP Now listening at %s:%d.\n", _addr, _port_number);
 

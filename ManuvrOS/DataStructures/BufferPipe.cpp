@@ -88,6 +88,66 @@ BufferPipe::~BufferPipe() {
 *                            |
 * Basal implementations.
 *******************************************************************************/
+
+/**
+* Pass a signal to the counterparty.
+*
+* Data referenced by _args should be assumed to be on the stack of the caller.
+*
+* @param   _sig   The signal.
+* @param   _args  Optional argument pointer.
+* @return  An MM return code.
+*/
+int8_t BufferPipe::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
+  return haveNear() ? _near->toCounterparty(_sig, _args) : 0;
+}
+
+/**
+* Pass a signal to the counterparty.
+*
+* Data referenced by _args should be assumed to be on the stack of the caller.
+*
+* @param   _sig   The signal.
+* @param   _args  Optional argument pointer.
+* @return  An MM return code.
+*/
+int8_t BufferPipe::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
+  return haveFar() ? _far->fromCounterparty(_sig, _args) : 0;
+}
+
+
+/**
+* This allows us to minimize the burden of dynamic mem alloc if it has already
+*   been incurred. This implementation will simply punt to the far side, if
+*   possible. If not, we fail and don't take the buffer.
+*
+* Any override of this method should probably concatHandoff into it's local
+*   StringBuilder instance.
+*
+* @param   buf  A pointer to the transport-bound buffer.
+* @param   mm   The length of the buffer.
+* @return  An MM return code.
+*/
+int8_t BufferPipe::toCounterparty(StringBuilder* buf, int8_t mm) {
+  return haveNear() ? _near->toCounterparty(buf, mm) : MEM_MGMT_RESPONSIBLE_CALLER;
+}
+
+/**
+* This allows us to minimize the burden of dynamic mem alloc if it has already
+*   been incurred. This implementation will simply punt to the far side, if
+*   possible. If not, we fail and don't take the buffer.
+*
+* Any override of this method should probably concatHandoff into it's local
+*   StringBuilder instance.
+*
+* @param   buf  A pointer to the transport-spawned buffer.
+* @param   mm   The length of the buffer.
+* @return  An MM return code.
+*/
+int8_t BufferPipe::fromCounterparty(StringBuilder* buf, int8_t mm) {
+  return haveFar() ? _far->fromCounterparty(buf, mm) : MEM_MGMT_RESPONSIBLE_CALLER;
+}
+
 /**
 * Called by another instance to tell us they are being destructed.
 * Depending on class implementation, we might choose to propagate this call.
@@ -115,7 +175,7 @@ void BufferPipe::_bp_notify_drop(BufferPipe* _drop) {
 *
 * @param   BufferPipe*  The newly-introduced BufferPipe.
 * @param   int8_t       The default mem-mgmt strategy for this BufferPipe.
-* @return  A result code.
+* @return  An MM return code.
 */
 int8_t BufferPipe::setNear(BufferPipe* nu, int8_t _mm) {
   if (NULL == _near) {
