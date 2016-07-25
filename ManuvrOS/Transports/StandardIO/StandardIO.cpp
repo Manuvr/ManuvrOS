@@ -127,6 +127,10 @@ int8_t StandardIO::toCounterparty(StringBuilder* buf, int8_t mm) {
     buf->drop_position(0);
   }
 
+  // TODO: This prompt ought to be in the console session.
+  printf("\n%c[36mManuvr> %c[39m", 0x1B, 0x1B);
+  fflush(stdout);
+
   switch (mm) {
     case MEM_MGMT_RESPONSIBLE_CALLER:
       // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -257,7 +261,6 @@ int8_t StandardIO::read_port() {
   int read_len = 0;
 
   while (listening()) {
-    printf("%c[36mManuvr> %c[39m", 0x1B, 0x1B);
     bzero(input_text, getMTU());
 
     if (fgets(input_text, getMTU(), stdin) != NULL) {
