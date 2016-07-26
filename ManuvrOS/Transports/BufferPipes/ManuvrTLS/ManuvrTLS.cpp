@@ -34,7 +34,7 @@ static void tls_log_shunt(void *ctx, int level, const char *file, int line, cons
 
 
 
-ManuvrTLS::ManuvrTLS() : BufferPipe() {
+ManuvrTLS::ManuvrTLS(int debug_lvl) : BufferPipe() {
   // mbedTLS will expect this array to be null-terminated. Zero it all...
   for (int x = 0; x < MAX_CIPHERSUITE_COUNT; x++) allowed_ciphersuites[x] = 0;
 
@@ -43,7 +43,19 @@ ManuvrTLS::ManuvrTLS() : BufferPipe() {
   mbedtls_pk_init(&_pkey);
   mbedtls_entropy_init(&_entropy);
   mbedtls_ctr_drbg_init(&_ctr_drbg);
-  mbedtls_debug_set_threshold(4);
+  mbedtls_debug_set_threshold(debug_lvl);
+}
+
+ManuvrTLS::~ManuvrTLS() {
+  // mbedTLS will expect this array to be null-terminated. Zero it all...
+  for (int x = 0; x < MAX_CIPHERSUITE_COUNT; x++) allowed_ciphersuites[x] = 0;
+
+  mbedtls_ssl_config_init(&_conf);
+  mbedtls_x509_crt_init(&_ourcert);
+  mbedtls_pk_init(&_pkey);
+  mbedtls_entropy_init(&_entropy);
+  mbedtls_ctr_drbg_init(&_ctr_drbg);
+  mbedtls_debug_set_threshold(debug_lvl);
 }
 
 #endif

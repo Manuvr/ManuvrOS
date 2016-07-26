@@ -44,6 +44,16 @@ const char* BufferPipe::memMgmtString(int8_t code) {
   }
 }
 
+const char* BufferPipe::signalString(ManuvrPipeSignal code) {
+  switch (code) {
+    case ManuvrPipeSignal::FAR_SIDE_DETACH:   return "FAR_DETACH";
+    case ManuvrPipeSignal::NEAR_SIDE_DETACH:  return "NEAR_DETACH";
+    case ManuvrPipeSignal::FAR_SIDE_ATTACH:   return "FAR_ATTACH";
+    case ManuvrPipeSignal::NEAR_SIDE_ATTACH:  return "NEAR_ATTACH";
+    case ManuvrPipeSignal::UNDEF:
+    default:                                  return "SIGNAL_UNDEF";
+  }
+}
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -57,8 +67,9 @@ const char* BufferPipe::memMgmtString(int8_t code) {
 * Constructor.
 */
 BufferPipe::BufferPipe() {
-  _near = NULL;
-  _far  = NULL;
+  _near            = NULL;
+  _far             = NULL;
+  _flags           = 0;
   _near_mm_default = MEM_MGMT_RESPONSIBLE_UNKNOWN;
   _far_mm_default  = MEM_MGMT_RESPONSIBLE_UNKNOWN;
 }
@@ -96,7 +107,7 @@ BufferPipe::~BufferPipe() {
 *
 * @param   _sig   The signal.
 * @param   _args  Optional argument pointer.
-* @return  An MM return code.
+* @return  Negative on error. Zero on success.
 */
 int8_t BufferPipe::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
   return haveNear() ? _near->toCounterparty(_sig, _args) : 0;
@@ -109,7 +120,7 @@ int8_t BufferPipe::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
 *
 * @param   _sig   The signal.
 * @param   _args  Optional argument pointer.
-* @return  An MM return code.
+* @return  Negative on error. Zero on success.
 */
 int8_t BufferPipe::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
   return haveFar() ? _far->fromCounterparty(_sig, _args) : 0;
@@ -167,7 +178,7 @@ void BufferPipe::_bp_notify_drop(BufferPipe* _drop) {
 
 /**
 * Sets the slot that sits nearer to the counterparty, as well as the default
-*   memory-managemnt strategy for buffers moving toward the application.
+*   memory-management strategy for buffers moving toward the application.
 * This allows a class setting itself up in a buffer chain to control the
 *   default memory-management policy on buffers it isses. This default may be
 *   overridden on a buffer-by-buffer basis by calling the overloaded transfer

@@ -82,10 +82,27 @@ See UDPPipe for a case where this matters.
 #define MEM_MGMT_RESPONSIBLE_BEARER      2  // The bearer is responsible.
 
 /*
+*
+*/
+#define BPIPE_FLAG_IS_TERMINUS      0x0001  // This pipe is an endpoint.
+#define BPIPE_FLAG_PIPE_LOCKED      0x2000  // The pipe is locked.
+#define BPIPE_FLAG_PIPE_PACKETIZED  0x4000  // The pipe's issuances coincide with packet boundaries.
+#define BPIPE_FLAG_IS_BUFFERED      0x8000  // This pipe has the capability to buffer.
+
+/*
 * Definition of signals passable via the pipe's control channel.
+* These should be kept as general as possible, and have no direct relationship
+*   to POSIX signals.
+* For one, POSIX signals are async, and there are ALWAYS synchronous.
+* For another, they are not used for IPC. The primary function is to signal
+*   setup, tear-down, and a handful of transport ideas.
 */
 enum class ManuvrPipeSignal {
-  UNDEF           // Undefined.
+  UNDEF = 0,           // Undefined.
+  FAR_SIDE_DETACH,     // Far-side informing the near-side of its departure.
+  NEAR_SIDE_DETACH,    // Near-side informing the far-side of its departure.
+  FAR_SIDE_ATTACH,     // Far-side informing the near-side of its arrival.
+  NEAR_SIDE_ATTACH     // Near-side informing the far-side of its arrival.
 };
 
 /*
@@ -146,6 +163,7 @@ class BufferPipe {
     };
 
     static const char* memMgmtString(int8_t);
+    static const char* signalString(ManuvrPipeSignal);
 
 
   protected:
@@ -168,6 +186,7 @@ class BufferPipe {
 
 
   private:
+    uint16_t _flags;
 };
 
 #endif   // __MANUVR_BUFFER_PIPE_H__
