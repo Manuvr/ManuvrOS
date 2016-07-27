@@ -140,9 +140,13 @@ int8_t ManuvrConsole::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm
         int temp_len   = strlen(temp_ptr);
 
         // Begin the cases...
+        #if defined(_GNU_SOURCE)
         if      (strcasestr(temp_ptr, "QUIT"))  running = false;  // Exit
         else if (strcasestr(temp_ptr, "HELP"))  printHelp();      // Show help.
         else {
+        #else
+        {
+        #endif
           // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
           // run in idle time.
           ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
