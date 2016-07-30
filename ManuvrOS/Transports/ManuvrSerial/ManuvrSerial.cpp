@@ -371,7 +371,10 @@ int8_t ManuvrSerial::read_port() {
 bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
   if (_sock == -1) {
     #ifdef __MANUVR_DEBUG
-    if (getVerbosity() > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to port: (%s)\n", _addr);
+      if (getVerbosity() > 2) {
+        local_log.concatf("Unable to write to transport: %s\n", _addr);
+        Kernel::log(&local_log);
+      }
     #endif
     return false;
   }

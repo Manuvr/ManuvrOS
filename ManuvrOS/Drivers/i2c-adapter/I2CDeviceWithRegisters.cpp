@@ -51,8 +51,8 @@ I2CDeviceWithRegisters::~I2CDeviceWithRegisters(void) {
 
 
 bool I2CDeviceWithRegisters::sync(void) {
-	bool return_value = (syncRegisters() == I2C_ERR_CODE_NO_ERROR);
-	return return_value;
+  bool return_value = (syncRegisters() == I2C_ERR_CODE_NO_ERROR);
+  return return_value;
 }
 
 
@@ -194,7 +194,7 @@ int8_t I2CDeviceWithRegisters::writeRegister(uint8_t base_addr) {
 
   else if (!writeX(nu->addr, nu->len, nu->val)) {
     #ifdef __MANUVR_DEBUG
-    Kernel::log(__PRETTY_FUNCTION__, 1, "Bus error while writing device.");
+    Kernel::log("Bus error while writing device.\n");
     #endif
     return I2C_ERR_CODE_BUS_FAULT;
   }
@@ -210,7 +210,7 @@ int8_t I2CDeviceWithRegisters::writeRegister(DeviceRegister *reg) {
   }
   else if (!writeX(reg->addr, reg->len, reg->val)) {
     #ifdef __MANUVR_DEBUG
-    Kernel::log(__PRETTY_FUNCTION__, 1, "Bus error while writing device.");
+    Kernel::log("Bus error while writing device.\n");
     #endif
     return I2C_ERR_CODE_BUS_FAULT;
   }
@@ -229,7 +229,7 @@ int8_t I2CDeviceWithRegisters::readRegister(uint8_t base_addr) {
   }
   if (!readX(reg->addr, reg->len, reg->val)) {
     #ifdef __MANUVR_DEBUG
-    Kernel::log(__PRETTY_FUNCTION__, 1, "Bus error while reading device.");
+    Kernel::log("Bus error while reading device.\n");
     #endif
     return I2C_ERR_CODE_BUS_FAULT;
   }
@@ -242,7 +242,7 @@ int8_t I2CDeviceWithRegisters::readRegister(DeviceRegister *reg) {
   }
   if (!readX(reg->addr, reg->len, reg->val)) {
     #ifdef __MANUVR_DEBUG
-    Kernel::log(__PRETTY_FUNCTION__, 1, "Bus error while reading device.");
+    Kernel::log("Bus error while reading device.\n");
     #endif
     return I2C_ERR_CODE_BUS_FAULT;
   }
@@ -282,28 +282,28 @@ void I2CDeviceWithRegisters::printDebug(StringBuilder* temp) {
 *   register values into alignment with "what really is" in the device.
 */
 int8_t I2CDeviceWithRegisters::syncRegisters(void) {
-	DeviceRegister *temp = NULL;
-	int8_t return_value = I2C_ERR_CODE_NO_ERROR;
-	uint8_t count = reg_defs.size();
-	for (int i = 0; i < count; i++) {
+  DeviceRegister *temp = NULL;
+  int8_t return_value = I2C_ERR_CODE_NO_ERROR;
+  uint8_t count = reg_defs.size();
+  for (int i = 0; i < count; i++) {
 
-		temp = reg_defs.get(i);
-		if (temp == NULL) {
-			// Safety-check that an out-of-bounds reg wasn't in the list...
-			return I2C_ERR_SLAVE_UNDEFD_REG;
-		}
+    temp = reg_defs.get(i);
+    if (temp == NULL) {
+      // Safety-check that an out-of-bounds reg wasn't in the list...
+      return I2C_ERR_SLAVE_UNDEFD_REG;
+    }
 
-		return_value = readRegister(temp);
-		if (return_value != I2C_ERR_CODE_NO_ERROR) {
-		  #ifdef __MANUVR_DEBUG
-			StringBuilder output;
-			output.concatf("Failed to read from register %d\n", temp->addr);
-			Kernel::log(&output);
-			#endif
-		}
-	}
+    return_value = readRegister(temp);
+    if (return_value != I2C_ERR_CODE_NO_ERROR) {
+      #ifdef __MANUVR_DEBUG
+      StringBuilder output;
+      output.concatf("Failed to read from register %d\n", temp->addr);
+      Kernel::log(&output);
+      #endif
+    }
+  }
 
-	return return_value;
+  return return_value;
 }
 
 
@@ -311,70 +311,79 @@ int8_t I2CDeviceWithRegisters::syncRegisters(void) {
 * Any registers marked dirty will be written to the device if the register is also marked wriatable.
 */
 int8_t I2CDeviceWithRegisters::writeDirtyRegisters(void) {
-	int8_t return_value = I2C_ERR_CODE_NO_ERROR;
-	DeviceRegister *temp = NULL;
-	for (int i = 0; i < reg_defs.size(); i++) {
-		temp = reg_defs.get(i);
-		if (temp->dirty) {
-			if (temp->writable) {
-				return_value = writeRegister(temp);
-				if (return_value != I2C_ERR_CODE_NO_ERROR) {
-				  #ifdef __MANUVR_DEBUG
-					Kernel::log(__PRETTY_FUNCTION__, 2, "Failed to write dirty register %d with code(%d). The dropped data was (%d). Aborting...", temp->addr, return_value, temp->val);
-					#endif
-					return return_value;
-				}
-			}
-			else {
-			  #ifdef __MANUVR_DEBUG
-				Kernel::log(__PRETTY_FUNCTION__, 3, "Uh oh... register %d was marked dirty but it isn't writable. Marking clean with no write...", temp->addr);
-				#endif
-			}
-			//temp->dirty = false;  This ought to be set in the callback.  ---J. Ian Lindsay   Mon Dec 15 13:07:33 MST 2014
-		}
-	}
-	return return_value;
+  int8_t return_value = I2C_ERR_CODE_NO_ERROR;
+  DeviceRegister *temp = NULL;
+  for (int i = 0; i < reg_defs.size(); i++) {
+    temp = reg_defs.get(i);
+    if (temp->dirty) {
+      if (temp->writable) {
+        return_value = writeRegister(temp);
+        if (return_value != I2C_ERR_CODE_NO_ERROR) {
+          #ifdef __MANUVR_DEBUG
+          StringBuilder output;
+          output.concatf("Failed to write dirty register %d with code(%d). The dropped data was (%d). Aborting...\n", temp->addr, return_value, temp->val);
+          Kernel::log(&output);
+          #endif
+          return return_value;
+        }
+      }
+      else {
+        #ifdef __MANUVR_DEBUG
+          StringBuilder output;
+          output.concatf("Uh oh... register %d was marked dirty but it isn't writable. Marking clean with no write...\n", temp->addr);
+          Kernel::log(&output);
+        #endif
+      }
+      //temp->dirty = false;  This ought to be set in the callback.  ---J. Ian Lindsay   Mon Dec 15 13:07:33 MST 2014
+    }
+  }
+  return return_value;
 }
 
 
 void I2CDeviceWithRegisters::operationCompleteCallback(I2CBusOp* completed) {
-	StringBuilder temp; //("Default callback for registers!\n");
-	if (completed != NULL) {
-		if (!completed->hasFault()) {
-			DeviceRegister *nu = getRegisterByBaseAddress(completed->sub_addr);
-			if (nu != NULL) {
-				switch (completed->get_opcode()) {
-				  case BusOpcode::RX:
-				    nu->unread = true;
-				    //temp.concat("Buffer contents (read):  ");
-				    break;
-				  case BusOpcode::TX:
-				    nu->dirty = false;
-				    //temp.concat("Buffer contents (write):  ");
-				    break;
-				  case BusOpcode::TX_CMD:
-				    //temp.concat("Ping received.\n");
-				    break;
-				  default:
-				    break;
-				}
-			}
-			else {
-			  #ifdef __MANUVR_DEBUG
-				temp.concatf("Failed to lookup the register for a callback operation.\n");
-				#endif
-				completed->printDebug(&temp);
-			}
-		}
-		else {
-		  #ifdef __MANUVR_DEBUG
-			temp.concatf("i2c operation errored.\n");
-			#endif
-			completed->printDebug(&temp);
-		}
-	}
+  #ifdef __MANUVR_DEBUG
+  StringBuilder temp; //("Default callback for registers!\n");
+  #endif
 
-	if (temp.length() > 0) {    Kernel::log(&temp);  }
+  if (completed != NULL) {
+    if (!completed->hasFault()) {
+      DeviceRegister *nu = getRegisterByBaseAddress(completed->sub_addr);
+      if (nu != NULL) {
+        switch (completed->get_opcode()) {
+          case BusOpcode::RX:
+            nu->unread = true;
+            //temp.concat("Buffer contents (read):  ");
+            break;
+          case BusOpcode::TX:
+            nu->dirty = false;
+            //temp.concat("Buffer contents (write):  ");
+            break;
+          case BusOpcode::TX_CMD:
+            //temp.concat("Ping received.\n");
+            break;
+          default:
+            break;
+        }
+      }
+      else {
+        #ifdef __MANUVR_DEBUG
+        temp.concatf("Failed to lookup the register for a callback operation.\n");
+        #endif
+        completed->printDebug(&temp);
+      }
+    }
+    else {
+      #ifdef __MANUVR_DEBUG
+      temp.concatf("i2c operation errored.\n");
+      #endif
+      completed->printDebug(&temp);
+    }
+  }
+
+  #ifdef __MANUVR_DEBUG
+    if (temp.length() > 0) {    Kernel::log(&temp);  }
+  #endif
 }
 
 

@@ -32,23 +32,6 @@ extern bool running;      // TODO: Hack. Remove later.
 *
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
-ManuvrConsole::ManuvrConsole(ManuvrXport* _xport) : XenoSession(_xport) {
-  // These are messages that we want to relay from the rest of the system.
-  tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
-  tapMessageType(MANUVR_MSG_SESS_HANGUP);
-  tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
-
-  if (_xport->booted()) {
-    bootComplete();   // Because we are instantiated well after boot, we call this on construction.
-  }
-}
-
-
-/**
-* When a connectable class gets a connection, we get instantiated to handle the protocol...
-*
-* @param   ManuvrXport* All sessions must have one (and only one) transport.
-*/
 ManuvrConsole::ManuvrConsole(BufferPipe* _near_side) : XenoSession(_near_side) {
   // These are messages that we want to relay from the rest of the system.
   tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);

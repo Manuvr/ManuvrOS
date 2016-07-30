@@ -472,13 +472,19 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
     dev = open(filename, O_RDWR);
     if (dev < 0) {
       #ifdef __MANUVR_DEBUG
-      Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to open the i2c bus represented by %s.\n", filename);
+      if (getVerbosity() > 2) {
+        local_log.concatf("Failed to open the i2c bus represented by %s.\n", filename);
+        Kernel::log(&local_log);
+      }
       #endif
     }
   }
   else {
     #ifdef __MANUVR_DEBUG
-    Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Somehow we failed to sprintf and build a filename to open i2c bus %d.\n", dev_id);
+    if (getVerbosity() > 2) {
+      local_log.concatf("Somehow we failed to sprintf and build a filename to open i2c bus %d.\n", dev_id);
+      Kernel::log(&local_log);
+    }
     #endif
   }
 }
@@ -488,7 +494,7 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) {
 I2CAdapter::~I2CAdapter() {
     if (dev >= 0) {
       #ifdef __MANUVR_DEBUG
-      Kernel::log(__PRETTY_FUNCTION__, LOG_INFO, "Closing the open i2c bus...\n");
+      Kernel::log("Closing the open i2c bus...\n");
       #endif
       close(dev);
     }
@@ -640,13 +646,13 @@ int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
 	int8_t return_value = I2C_ERR_CODE_NO_ERROR;
 	if (slave == NULL) {
 	  #ifdef __MANUVR_DEBUG
-		Kernel::log("Slave is invalid.");
+		Kernel::log("Slave is invalid.\n");
 		#endif
 		return_value = I2C_ERR_SLAVE_INVALID;
 	}
 	if (dev_list.contains(slave)) {    // Check for pointer eqivillence.
 	  #ifdef __MANUVR_DEBUG
-		Kernel::log("Slave device exists.");
+		Kernel::log("Slave device exists.\n");
 		#endif
 		return_value = I2C_ERR_SLAVE_EXISTS;
 	}
@@ -655,7 +661,7 @@ int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
 			int slave_index = dev_list.insert(slave);
 			if (slave_index == -1) {
 			  #ifdef __MANUVR_DEBUG
-				Kernel::log("Failed to insert somehow. Disassigning...");
+				Kernel::log("Failed to insert somehow. Disassigning...\n");
 				#endif
 				slave->disassignBusInstance();
 				return_value = I2C_ERR_SLAVE_INSERTION;
@@ -663,14 +669,14 @@ int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
 		}
 		else {
 		  #ifdef __MANUVR_DEBUG
-			Kernel::log("Op would clobber bus instance.");
+			Kernel::log("Op would clobber bus instance.\n");
 			#endif
 			return_value = I2C_ERR_SLAVE_ASSIGN_CLOB;
 		}
 	}
 	else {
 	  #ifdef __MANUVR_DEBUG
-		Kernel::log("Op would cause address collision with another slave device.");
+		Kernel::log("Op would cause address collision with another slave device.\n");
 		#endif
 		return_value = I2C_ERR_SLAVE_COLLISION;
 	}
@@ -731,7 +737,9 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
       // If the bus is either uninitiallized or not idle, decline
       // to switch the device. Return false;
       #ifdef __MANUVR_DEBUG
-      Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "i2c bus is not online, so won't switch device. Failing....");
+      if (getVerbosity() > 1) {
+        Kernel::log("i2c bus is not online, so won't switch device. Failing....\n");
+      }
       #endif
       return return_value;
     }
@@ -739,7 +747,9 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
       while (busError() && (timeout > 0)) { timeout--; }
       if (busError()) {
         #ifdef __MANUVR_DEBUG
-        Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "i2c bus was held for too long. Failing....");
+        if (getVerbosity() > 1) {
+          Kernel::log("i2c bus was held for too long. Failing....\n");
+        }
         #endif
         return return_value;
       }
@@ -750,7 +760,10 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
       }
       else {
         #ifdef __MANUVR_DEBUG
-        Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to acquire bus access and/or talk to slave at %d.", nu_addr);
+        if (getVerbosity() > 1) {
+          local_log.concatf("Failed to acquire bus access and/or talk to slave at %d.\n", nu_addr);
+          Kernel::log(&local_log);
+        }
         #endif
         busError(true);
       }
@@ -777,12 +790,10 @@ bool I2CAdapter::insert_work_item(I2CBusOp *nu) {
   nu->device = this;
 	if (current_queue_item != NULL) {
 		// Something is already going on with the bus. Queue...
-		//Kernel::log(__PRETTY_FUNCTION__, 5, "Deferring i2c bus operation...");
 		work_queue.insert(nu);
 	}
 	else {
 		// Bus is idle. Put this work item in the active slot and start the bus operations...
-		//Kernel::log(__PRETTY_FUNCTION__, 5, "Starting i2c operation now...");
 		current_queue_item = nu;
 		if ((dev >= 0) && busOnline()) {
 		  nu->begin();

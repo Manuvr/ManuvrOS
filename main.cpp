@@ -66,6 +66,7 @@ Main demo application.
 // We will use MQTT as our concept of "session"...
 #include <XenoSession/MQTT/MQTTSession.h>
 #include <XenoSession/CoAP/CoAPSession.h>
+#include <XenoSession/Console/ManuvrConsole.h>
 
 
 
@@ -192,6 +193,13 @@ int main(int argc, char *argv[]) {
     if ((strcasestr(argv[i], "--console")) || ((argv[i][0] == '-') && (argv[i][1] == 'c'))) {
       // The user wants a local stdio "Shell".
       #if defined(__MANUVR_CONSOLE_SUPPORT)
+
+        // TODO: Until smarter idea is finished, manually patch the USB-VCP into a
+        //         BufferPipe that takes the place of the transport driver.
+        StandardIO* _console_patch = new StandardIO();
+        ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_patch);
+        kernel->subscribe((EventReceiver*) _console);
+
         kernel->subscribe(new StandardIO());
       #else
         printf("%s was compiled without any console support. Ignoring directive...\n", argv[0]);

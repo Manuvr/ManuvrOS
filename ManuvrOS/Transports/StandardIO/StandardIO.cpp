@@ -18,15 +18,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-This driver is designed to give Manuvr platform-abstracted COM ports. By
-  this is meant generic asynchronous serial ports. On Arduino, this means
-  the Serial (or HardwareSerial) class. On linux, it means /dev/tty<x>.
-
-Platforms that require it should be able to extend this driver for specific
-  kinds of hardware support. For an example of this, I would refer you to
-  the STM32F4 case-offs I understand that this might seem "upside down"
-  WRT how drivers are more typically implemented, and it may change later on.
-  But for now, it seems like a good idea.
+StandardIO is the transport driver for wrapping POSIX-style STDIN/STDOUT/STDERR.
 */
 
 

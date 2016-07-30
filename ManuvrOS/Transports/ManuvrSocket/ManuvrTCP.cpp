@@ -391,7 +391,12 @@ int8_t ManuvrTCP::read_port() {
 */
 bool ManuvrTCP::write_port(unsigned char* out, int out_len) {
   if (getSockID() == -1) {
-    if (getVerbosity() > 2) Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Unable to write to socket at: (%s:%d)\n", _addr, _port_number);
+    #ifdef __MANUVR_DEBUG
+      if (getVerbosity() > 2) {
+        local_log.concatf("Unable to write to transport: %s\n", _addr);
+        Kernel::log(&local_log);
+      }
+    #endif
     return false;
   }
 

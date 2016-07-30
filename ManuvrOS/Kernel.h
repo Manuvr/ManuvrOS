@@ -180,10 +180,7 @@ limitations under the License.
       #endif
 
 
-      static StringBuilder log_buffer;
-
       /* These functions deal with logging.*/
-      volatile static void log(const char *fxn_name, int severity, const char *str, ...);  // Pass-through to the logger class, whatever that happens to be.
       volatile static void log(int severity, const char *str);                             // Pass-through to the logger class, whatever that happens to be.
       volatile static void log(const char *str);                                           // Pass-through to the logger class, whatever that happens to be.
       volatile static void log(char *str);                                           // Pass-through to the logger class, whatever that happens to be.
@@ -208,6 +205,8 @@ limitations under the License.
 
       /* Factory method. Returns a preallocated Event. */
       static ManuvrRunnable* returnEvent(uint16_t event_code);
+
+      static BufferPipe* _logger;       // The log pipe.
 
 
     protected:
@@ -274,7 +273,6 @@ limitations under the License.
       inline void _skip_detected(bool nu) {     return (_er_set_flag(MKERNEL_FLAG_SKIP_DETECT, nu)); };
 
       static Kernel*     INSTANCE;
-      static BufferPipe* _logger;       // The log pipe.
       static PriorityQueue<ManuvrRunnable*> isr_exec_queue;   // Events that have been raised from ISRs.
   };
 

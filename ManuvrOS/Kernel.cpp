@@ -183,7 +183,6 @@ Kernel::~Kernel() {
 /****************************************************************************************************
 * Logging members...                                                                                *
 ****************************************************************************************************/
-StringBuilder Kernel::log_buffer;
 
 #if defined (__MANUVR_FREERTOS)
   uint32_t Kernel::kernel_pid = 0;
@@ -194,31 +193,33 @@ StringBuilder Kernel::log_buffer;
 */
 volatile void Kernel::log(int severity, const char *str) {
   if (!INSTANCE->getVerbosity()) return;
-  log_buffer.concat(str);
+  if (NULL != _logger) {
+    StringBuilder log_buffer(str);
+    _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
+  }
 }
 
 volatile void Kernel::log(char *str) {
   if (!INSTANCE->getVerbosity()) return;
-  log_buffer.concat(str);
+  if (NULL != _logger) {
+    StringBuilder log_buffer(str);
+    _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
+  }
 }
 
 volatile void Kernel::log(const char *str) {
   if (!INSTANCE->getVerbosity()) return;
-  log_buffer.concat(str);
-}
-
-volatile void Kernel::log(const char *fxn_name, int severity, const char *str, ...) {
-  if (!INSTANCE->getVerbosity()) return;
-  log_buffer.concatf("%d  %s:\t", severity, fxn_name);
-  va_list marker;
-  va_start(marker, str);
-  log_buffer.concatf(str, marker);
-  va_end(marker);
+  if (NULL != _logger) {
+    StringBuilder log_buffer(str);
+    _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
+  }
 }
 
 volatile void Kernel::log(StringBuilder *str) {
   if (!INSTANCE->getVerbosity()) return;
-  log_buffer.concatHandoff(str);
+  if (NULL != _logger) {
+    _logger->toCounterparty(str, MEM_MGMT_RESPONSIBLE_BEARER);
+  }
 }
 
 // TODO: Only one pipe can move log data at this moment.
@@ -234,7 +235,6 @@ int8_t Kernel::attachToLogger(BufferPipe* _pipe) {
 int8_t Kernel::detachFromLogger(BufferPipe* _pipe) {
   if (_pipe == _logger) {
     _logger = NULL;
-    log_buffer.clear();
     return 0;
   }
   return -1;
@@ -831,10 +831,12 @@ int8_t Kernel::procIdleFlags() {
     }
 
     return_value++;   // We just serviced an Event.
-    if ((NULL != _logger) && (local_log.length() > 0)) {
-      if (local_log.length() > 0) Kernel::log(&local_log);
-      _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
-    }
+    //if (NULL != _logger) {
+    //  if (local_log.length() > 0) {
+    //    Kernel::log(&local_log);
+    //  }
+    //  _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
+    //}
   }
 
   total_loops++;
@@ -1239,10 +1241,10 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
       break;
 
     case MANUVR_MSG_SYS_ISSUE_LOG_ITEM:
-      {
+      if (NULL != _logger) {
         StringBuilder *log_item;
         if (0 == active_runnable->getArgAs(&log_item)) {
-          log_buffer.concatHandoff(log_item);
+          _logger->toCounterparty(log_item, MEM_MGMT_RESPONSIBLE_BEARER);
         }
       }
       break;

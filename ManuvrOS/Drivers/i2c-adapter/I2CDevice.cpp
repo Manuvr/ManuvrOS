@@ -100,7 +100,9 @@ bool I2CDevice::disassignBusInstance(void) {
 bool I2CDevice::write16(int sub_addr, uint16_t dat) {
     if (_bus == NULL) {
       #ifdef __MANUVR_DEBUG
-      Kernel::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      StringBuilder _log;
+      _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
+      Kernel::log(&_log);
       #endif
       return false;
     }
@@ -116,7 +118,9 @@ bool I2CDevice::write16(int sub_addr, uint16_t dat) {
 bool I2CDevice::write8(uint8_t dat) {
     if (_bus == NULL) {
       #ifdef __MANUVR_DEBUG
-      Kernel::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      StringBuilder _log;
+      _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
+      Kernel::log(&_log);
       #endif
       return false;
     }
@@ -131,7 +135,9 @@ bool I2CDevice::write8(uint8_t dat) {
 bool I2CDevice::write8(int sub_addr, uint8_t dat) {
     if (_bus == NULL) {
       #ifdef __MANUVR_DEBUG
-      Kernel::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      StringBuilder _log;
+      _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
+      Kernel::log(&_log);
       #endif
       return false;
     }
@@ -147,7 +153,9 @@ bool I2CDevice::write8(int sub_addr, uint8_t dat) {
 bool I2CDevice::writeX(int sub_addr, uint16_t byte_count, uint8_t *buf) {
     if (_bus == NULL) {
       #ifdef __MANUVR_DEBUG
-      Kernel::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      StringBuilder _log;
+      _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
+      Kernel::log(&_log);
       #endif
       return false;
     }
@@ -163,7 +171,9 @@ bool I2CDevice::writeX(int sub_addr, uint16_t byte_count, uint8_t *buf) {
 bool I2CDevice::readX(int sub_addr, uint8_t len, uint8_t *buf) {
     if (_bus == NULL) {
       #ifdef __MANUVR_DEBUG
-      Kernel::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      StringBuilder _log;
+      _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
+      Kernel::log(&_log);
       #endif
       return false;
     }
@@ -177,7 +187,9 @@ bool I2CDevice::readX(int sub_addr, uint8_t len, uint8_t *buf) {
 bool I2CDevice::read8(int sub_addr) {
     if (_bus == NULL) {
       #ifdef __MANUVR_DEBUG
-      Kernel::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      StringBuilder _log;
+      _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
+      Kernel::log(&_log);
       #endif
       return false;
     }
@@ -192,7 +204,9 @@ bool I2CDevice::read8(int sub_addr) {
 bool I2CDevice::read8(void) {
     if (_bus == NULL) {
       #ifdef __MANUVR_DEBUG
-      Kernel::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      StringBuilder _log;
+      _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
+      Kernel::log(&_log);
       #endif
       return false;
     }
@@ -210,7 +224,9 @@ bool I2CDevice::read8(void) {
 bool I2CDevice::read16(int sub_addr) {
     if (_bus == NULL) {
       #ifdef __MANUVR_DEBUG
-      Kernel::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      StringBuilder _log;
+      _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
+      Kernel::log(&_log);
       #endif
       return false;
     }
@@ -229,7 +245,9 @@ bool I2CDevice::read16(int sub_addr) {
 bool I2CDevice::read16(void) {
     if (_bus == NULL) {
       #ifdef __MANUVR_DEBUG
-      Kernel::log(__PRETTY_FUNCTION__, 2, "No bus assignment (i2c addr 0x%02x).", _dev_addr);
+      StringBuilder _log;
+      _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
+      Kernel::log(&_log);
       #endif
       return false;
     }
