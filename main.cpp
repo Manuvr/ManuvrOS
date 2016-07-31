@@ -199,8 +199,7 @@ int main(int argc, char *argv[]) {
         StandardIO* _console_patch = new StandardIO();
         ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_patch);
         kernel->subscribe((EventReceiver*) _console);
-
-        kernel->subscribe(new StandardIO());
+        kernel->subscribe((EventReceiver*) _console_patch);
       #else
         printf("%s was compiled without any console support. Ignoring directive...\n", argv[0]);
       #endif

@@ -84,6 +84,8 @@ XportBridge::~XportBridge() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
+const char* XportBridge::pipeName() { return "XportBridge"; }
+
 /*
 * One side of the bridge.
 */
@@ -155,11 +157,5 @@ int8_t XportBridge::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) 
 * @param A pointer to a StringBuffer object to receive the output.
 */
 void XportBridge::printDebug(StringBuilder* output) {
-  output->concat("\t-- XportBridge ----------------------------------\n");
-  if (_near) {
-    output->concatf("\t _near         \t[0x%08x] %s\n", (unsigned long)_near, BufferPipe::memMgmtString(_near_mm_default));
-  }
-  if (_far) {
-    output->concatf("\t _far          \t[0x%08x] %s\n", (unsigned long)_far, BufferPipe::memMgmtString(_far_mm_default));
-  }
+  BufferPipe::printDebug(output);
 }

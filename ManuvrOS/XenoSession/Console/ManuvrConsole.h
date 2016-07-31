@@ -48,12 +48,13 @@ class ManuvrConsole : public XenoSession {
     void procDirectDebugInstruction(StringBuilder*);
     const char* getReceiverName();
     void printDebug(StringBuilder*);
+    int8_t bootComplete();
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);
 
 
   protected:
-    int8_t bootComplete();
+    const char* pipeName();
 
 
   private:

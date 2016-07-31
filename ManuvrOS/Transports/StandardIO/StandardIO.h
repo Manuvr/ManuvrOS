@@ -56,7 +56,7 @@ class StandardIO : public ManuvrXport {
     const char* getReceiverName();
     void printDebug(StringBuilder *);
     int8_t notify(ManuvrRunnable*);
-    int8_t callback_proc(ManuvrRunnable *);
+    int8_t callback_proc(ManuvrRunnable*);
 
 
     int8_t connect();
@@ -68,10 +68,11 @@ class StandardIO : public ManuvrXport {
 
 
   protected:
-    void __class_initializer();
+    const char* pipeName();
 
 
   private:
+    void __class_initializer();
 };
 
 #endif   // __MANUVR_STANDARD_IO_H__

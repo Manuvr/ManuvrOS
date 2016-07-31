@@ -107,6 +107,8 @@ MQTTSession::~MQTTSession() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
+const char* MQTTSession::pipeName() { return getReceiverName(); }
+
 /**
 * Inward toward the transport.
 *

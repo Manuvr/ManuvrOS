@@ -12,7 +12,7 @@
 OPTIMIZATION       = -O0 -g
 C_STANDARD         = gnu99
 CPP_STANDARD       = gnu++11
-
+FIRMWARE_NAME      = manuvr
 
 # Environmental awareness...
 ###########################################################################
@@ -21,8 +21,10 @@ WHO_I_AM       = $(shell whoami)
 WHERE_I_AM     = $(shell pwd)
 HOME_DIRECTORY = /home/$(WHO_I_AM)
 
-export CXX         = $(shell which g++)
-export CC          = $(shell which gcc)
+export CXX     = $(shell which g++)
+export CC      = $(shell which gcc)
+export SZ      = $(shell which size)
+export MAKE    = make
 
 export OUTPUT_PATH = $(WHERE_I_AM)/build/
 
@@ -119,16 +121,19 @@ export CPP_FLAGS = $(CFLAGS)
 all: clean libs
 	export __MANUVR_LINUX
 	make -C ManuvrOS/
-	$(CXX) -static -g -o manuvr $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
+	$(CXX) -static -g -o $(FIRMWARE_NAME) $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
+	$(SZ) $(FIRMWARE_NAME)
 
 raspi: clean libs
 	export RASPI
 	export __MANUVR_LINUX
 	make -C ManuvrOS/
-	$(CXX) -static -g -o manuvr $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -DRASPI -D_GNU_SOURCE -O2
+	$(CXX) -static -g -o $(FIRMWARE_NAME) $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -DRASPI -D_GNU_SOURCE -O2
+	$(SZ) $(FIRMWARE_NAME)
 
-debug:
-	$(CXX) -static -g -o manuvr $(SRCS) $(GENERIC_DRIVERS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D__MANUVR_DEBUG -D_GNU_SOURCE -O0 -fstack-usage
+debug: clean libs
+	$(CXX) -static -g -o $(FIRMWARE_NAME) $(SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D__MANUVR_DEBUG -D_GNU_SOURCE -O0
+	$(SZ) $(FIRMWARE_NAME)
 # Options configured such that you can then...
 # valgrind --tool=callgrind ./manuvr
 # gprof2dot --format=callgrind --output=out.dot callgrind.out.16562
@@ -148,7 +153,7 @@ libs: builddir
 
 clean:
 	make clean -C ManuvrOS/
-	rm -f *.o *.su *~ testbench manuvr
+	rm -f *.o *.su *~ testbench $(FIRMWARE_NAME)
 	rm -rf $(OUTPUT_PATH)
 
 fullclean: clean

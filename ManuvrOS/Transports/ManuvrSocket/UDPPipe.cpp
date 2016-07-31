@@ -76,6 +76,8 @@ UDPPipe::~UDPPipe() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
+const char* UDPPipe::pipeName() { return "UDPPipe"; }
+
 /**
 * Back toward ManuvrUDP....
 *
@@ -160,19 +162,16 @@ int8_t UDPPipe::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
 * @param A pointer to a StringBuffer object to receive the output.
 */
 void UDPPipe::printDebug(StringBuilder* output) {
-  output->concat("\t-- UDPPipe ----------------------------------\n");
+  BufferPipe::printDebug(output);
   struct in_addr _inet_addr;
   _inet_addr.s_addr = _ip;
-  output->concatf("\t Counterparty: \t%s:%d\n", (char*) inet_ntoa(_inet_addr), _port);
-
   if (_udp) {
-    output->concatf("\t _near         \t[0x%08x] %s\n", (unsigned long)_udp, BufferPipe::memMgmtString(_near_mm_default));
+    output->concatf("--\t_udp          \t[0x%08x] %s\n", (unsigned long)_udp, BufferPipe::memMgmtString(_near_mm_default));
   }
-  if (_far) {
-    output->concatf("\t _far          \t[0x%08x] %s\n", (unsigned long)_far, BufferPipe::memMgmtString(_far_mm_default));
-  }
+  output->concatf("--\tCounterparty: \t%s:%d\n", (char*) inet_ntoa(_inet_addr), _port);
+
   if (_accumulator.length() > 0) {
-    output->concatf("\t _accumulator (%d bytes):  ", _accumulator.length());
+    output->concatf("--\t_accumulator (%d bytes):  ", _accumulator.length());
     _accumulator.printDebug(output);
   }
   output->concat("\n");

@@ -192,7 +192,6 @@ Kernel::~Kernel() {
 * Logger pass-through functions. Please mind the variadics...
 */
 volatile void Kernel::log(int severity, const char *str) {
-  if (!INSTANCE->getVerbosity()) return;
   if (NULL != _logger) {
     StringBuilder log_buffer(str);
     _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
@@ -200,7 +199,6 @@ volatile void Kernel::log(int severity, const char *str) {
 }
 
 volatile void Kernel::log(char *str) {
-  if (!INSTANCE->getVerbosity()) return;
   if (NULL != _logger) {
     StringBuilder log_buffer(str);
     _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
@@ -208,7 +206,6 @@ volatile void Kernel::log(char *str) {
 }
 
 volatile void Kernel::log(const char *str) {
-  if (!INSTANCE->getVerbosity()) return;
   if (NULL != _logger) {
     StringBuilder log_buffer(str);
     _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
@@ -216,10 +213,10 @@ volatile void Kernel::log(const char *str) {
 }
 
 volatile void Kernel::log(StringBuilder *str) {
-  if (!INSTANCE->getVerbosity()) return;
   if (NULL != _logger) {
     _logger->toCounterparty(str, MEM_MGMT_RESPONSIBLE_BEARER);
   }
+  str->clear();
 }
 
 // TODO: Only one pipe can move log data at this moment.
@@ -831,12 +828,6 @@ int8_t Kernel::procIdleFlags() {
     }
 
     return_value++;   // We just serviced an Event.
-    //if (NULL != _logger) {
-    //  if (local_log.length() > 0) {
-    //    Kernel::log(&local_log);
-    //  }
-    //  _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
-    //}
   }
 
   total_loops++;
@@ -1148,6 +1139,17 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
       if (getVerbosity() > 4) Kernel::log("Boot complete.\n");
       _mark_boot_complete();
       break;
+
+    case MANUVR_MSG_SYS_REBOOT:
+      reboot();
+      break;
+    case MANUVR_MSG_SYS_SHUTDOWN:
+      seppuku();  // TODO: We need to distinguish between this and SYSTEM shutdown for linux.
+      break;
+    case MANUVR_MSG_SYS_BOOTLOADER:
+      jumpToBootloader();
+      break;
+
     default:
       break;
   }
@@ -1165,11 +1167,11 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
         if (active_runnable->argCount()) {
           // If the event came with a StringBuilder, concat it onto the last_user_input.
           StringBuilder* _tmp = NULL;
-          if (0 == active_runnable->consumeArgAs(&_tmp)) {
+          if (0 == active_runnable->getArgAs(&_tmp)) {
             last_user_input.concatHandoff(_tmp);
+            _route_console_input();
           }
         }
-        _route_console_input();
         return_value++;
         break;
     #endif  // __MANUVR_CONSOLE_SUPPORT
@@ -1196,16 +1198,6 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
         #endif
         return_value++;
       }
-      break;
-
-    case MANUVR_MSG_SYS_REBOOT:
-      reboot();
-      break;
-    case MANUVR_MSG_SYS_SHUTDOWN:
-      seppuku();  // TODO: We need to distinguish between this and SYSTEM shutdown for linux.
-      break;
-    case MANUVR_MSG_SYS_BOOTLOADER:
-      jumpToBootloader();
       break;
 
     case MANUVR_MSG_SYS_ADVERTISE_SRVC:  // Some service is annoucing its arrival.
@@ -1444,25 +1436,6 @@ int Kernel::serviceSchedules() {
 *   support is enabled.                                                                             *
 ****************************************************************************************************/
 #if defined(__MANUVR_CONSOLE_SUPPORT)
-
-///*
-//* This is the means by which we feed raw string input from a console into the
-//*   kernel's user input slot.
-//*/
-//void Kernel::accumulateConsoleInput(uint8_t *buf, int len, bool terminal) {
-//  if (len > 0) {
-//    last_user_input.concat(buf, len);
-//
-//    if (terminal) {
-//      // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
-//      // run in idle time.
-//      ManuvrRunnable* event = returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
-//      event->specific_target = (EventReceiver*) this;
-//      Kernel::staticRaiseEvent(event);
-//    }
-//  }
-//}
-
 
 /**
 * Responsible for taking any accumulated console input, doing some basic

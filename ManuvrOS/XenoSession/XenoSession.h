@@ -106,7 +106,7 @@ class XenoSession : public EventReceiver, public BufferPipe {
     ManuvrXport* owner;           // A reference to the transport that owns this session.
     XenoMessage* working;         // If we are in the middle of receiving a message,
 
-    virtual int8_t bootComplete();
+    virtual int8_t bootComplete() =0;
 
     /**
     * Mark the session with the given status.

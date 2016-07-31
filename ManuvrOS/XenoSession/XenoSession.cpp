@@ -72,8 +72,7 @@ const char* XenoSession::sessionPhaseString(uint16_t state_code) {
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
 XenoSession::XenoSession(BufferPipe* _near_side) : BufferPipe() {
-  __class_initializer();
-
+  EventReceiver::__class_initializer();
   // Our near-side is that passed-in transport.
   setNear(_near_side, MEM_MGMT_RESPONSIBLE_CREATOR);
 
@@ -86,9 +85,9 @@ XenoSession::XenoSession(BufferPipe* _near_side) : BufferPipe() {
   _session_service.specific_target = (EventReceiver*) this;
   _session_service.originator      = (EventReceiver*) this;
 
-  working                   = NULL;
-  session_state             = XENOSESSION_STATE_UNINITIALIZED;
-  session_last_state        = XENOSESSION_STATE_UNINITIALIZED;
+  working            = NULL;
+  session_state      = XENOSESSION_STATE_UNINITIALIZED;
+  session_last_state = XENOSESSION_STATE_UNINITIALIZED;
 
   mark_session_state(XENOSESSION_STATE_PENDING_SETUP);
 }
@@ -191,17 +190,6 @@ int8_t XenoSession::sendPacket(unsigned char *buf, int len) {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-
-/**
-* Boot done finished-up.
-*
-* @return 0 on no action, 1 on action, -1 on failure.
-*/
-int8_t XenoSession::bootComplete() {
-  EventReceiver::bootComplete();
-  return 1;
-}
-
 
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
@@ -426,6 +414,7 @@ int8_t XenoSession::connection_callback(bool _con) {
 void XenoSession::printDebug(StringBuilder *output) {
   if (NULL == output) return;
   EventReceiver::printDebug(output);
+  BufferPipe::printDebug(output);
 
   output->concatf("-- Session ID           0x%08x\n", (uint32_t) this);
   output->concatf("-- Session phase        %s\n--\n", sessionPhaseString(getPhase()));

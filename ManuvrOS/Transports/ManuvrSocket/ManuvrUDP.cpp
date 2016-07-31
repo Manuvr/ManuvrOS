@@ -181,6 +181,8 @@ ManuvrUDP::~ManuvrUDP() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
+const char* ManuvrUDP::pipeName() { return getReceiverName(); }
+
 /**
 * Inward toward the transport.
 *

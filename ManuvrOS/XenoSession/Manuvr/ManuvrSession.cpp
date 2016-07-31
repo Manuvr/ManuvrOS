@@ -94,6 +94,8 @@ ManuvrSession::~ManuvrSession() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
+const char* ManuvrSession::pipeName() { return "ManuvrSession"; }
+
 /**
 * Inward toward the transport.
 *

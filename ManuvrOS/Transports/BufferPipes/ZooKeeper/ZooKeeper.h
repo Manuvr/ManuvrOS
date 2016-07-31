@@ -71,6 +71,10 @@ class ZooKeeper : public BufferPipe {
     static BufferPipe* searchZoo(uint8_t* _pattern, int _p_len);
 
 
+  protected:
+    const char* pipeName();
+
+
   private:
     StringBuilder _accumulator;
     static PriorityQueue<BufferPipe*> _protocol_zoo;

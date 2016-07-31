@@ -94,6 +94,8 @@ CoAPSession::~CoAPSession() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
+const char* CoAPSession::pipeName() { return getReceiverName(); }
+
 /**
 * Inward toward the transport.
 *
@@ -209,8 +211,7 @@ int8_t CoAPSession::sendEvent(ManuvrRunnable *active_event) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t CoAPSession::bootComplete() {
-  XenoSession::bootComplete();
-
+  EventReceiver::bootComplete();
   owner->getMTU();
 
   __kernel->addSchedule(&_ping_timer);

@@ -107,6 +107,10 @@ class UDPPipe : public BufferPipe {
     inline uint16_t getPort() {   return _port;   };
 
 
+  protected:
+    const char* pipeName();
+
+
   private:
     uint16_t      _port;
     uint16_t      _flags;
@@ -162,6 +166,7 @@ class ManuvrUDP : public ManuvrSocket {
 
   protected:
     int8_t bootComplete();
+    const char* pipeName();
 
 
   private:

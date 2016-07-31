@@ -250,6 +250,9 @@ class ManuvrGPS : public BufferPipe {
     void printDebug(StringBuilder*);
 
 
+  protected:
+    const char* pipeName();
+
 
   private:
     uint32_t       _sentences_parsed;

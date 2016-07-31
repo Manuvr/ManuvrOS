@@ -307,6 +307,7 @@ void ManuvrXport::listening(bool en) {
 */
 void ManuvrXport::printDebug(StringBuilder *temp) {
   EventReceiver::printDebug(temp);
+  BufferPipe::printDebug(temp);
   temp->concatf("--\n-- %s-oriented transport\n--\n", (streamOriented() ? "stream" : "message"));
   temp->concatf("-- _xport_flags    0x%08x\n", _xport_flags);
   temp->concatf("-- xport_id        0x%04x\n", xport_id);

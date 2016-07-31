@@ -89,6 +89,7 @@ class ManuvrTLSServer : public ManuvrTLS {
 
 
   protected:
+    const char* pipeName();
     void throwError(int ret);
 
 
@@ -127,6 +128,7 @@ class ManuvrTLSClient : protected ManuvrTLS {
 
 
   protected:
+    const char* pipeName();
     void throwError(int ret);
 
 

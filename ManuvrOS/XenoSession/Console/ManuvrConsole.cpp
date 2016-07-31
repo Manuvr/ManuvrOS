@@ -33,11 +33,6 @@ extern bool running;      // TODO: Hack. Remove later.
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
 ManuvrConsole::ManuvrConsole(BufferPipe* _near_side) : XenoSession(_near_side) {
-  // These are messages that we want to relay from the rest of the system.
-  tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
-  tapMessageType(MANUVR_MSG_SESS_HANGUP);
-  tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
-
   if (Kernel::getInstance()->booted()) {
     bootComplete();   // Because we are instantiated well after boot, we call this on construction.
   }
@@ -58,6 +53,8 @@ ManuvrConsole::~ManuvrConsole() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
+const char* ManuvrConsole::pipeName() { return getReceiverName(); }
+
 /**
 * Inward toward the transport.
 *
@@ -181,7 +178,7 @@ const char* ManuvrConsole::getReceiverName() {  return "Console";  }
 */
 int8_t ManuvrConsole::bootComplete() {
   EventReceiver::bootComplete();
-
+  //toCounterparty((uint8_t*) temp, strlen(temp), MEM_MGMT_RESPONSIBLE_BEARER);
   // This is a console. Presumable it should also render log output.
   Kernel::attachToLogger((BufferPipe*) this);
   return 1;

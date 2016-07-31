@@ -56,10 +56,11 @@ class XportBridge : public BufferPipe {
     virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
     virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
 
-    virtual void printDebug(StringBuilder*);
+    void printDebug(StringBuilder*);
 
 
   protected:
+    const char* pipeName();
 };
 
 

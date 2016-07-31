@@ -62,6 +62,8 @@ See UDPPipe for a case where this matters.
 #include <stdlib.h>
 #include <DataStructures/StringBuilder.h>
 
+#define __MANUVR_PIPE_DEBUG 1
+
 /*
 * These are return codes and directives for keeping track of where the
 *   responsibility lies for cleaning up memory for buffers that are passed.
@@ -142,14 +144,6 @@ class BufferPipe {
       return fromCounterparty(buf, len, _far_mm_default);
     };
 
-    /* This is here to simplify the logic of endpoints. */
-    // TODO: This will probably be cut.
-    int8_t emitBuffer(uint8_t* buf, unsigned int len, int8_t mm);
-    inline int8_t emitBuffer(uint8_t* buf, unsigned int len) {
-      return emitBuffer(buf, len, (this == _near) ? _near_mm_default : _far_mm_default);
-    };
-
-
     /* Set the identity of the near-side. */
     int8_t setNear(BufferPipe* nu, int8_t _mm);
     inline int8_t setNear(BufferPipe* nu) {
@@ -161,6 +155,9 @@ class BufferPipe {
     inline int8_t setFar(BufferPipe* nu) {
       return setFar(nu, MEM_MGMT_RESPONSIBLE_UNKNOWN);
     };
+
+    /* Join the ends of this pipe to one-another. */
+    int8_t joinEnds();
 
     static const char* memMgmtString(int8_t);
     static const char* signalString(ManuvrPipeSignal);
@@ -177,12 +174,12 @@ class BufferPipe {
     BufferPipe();           // Protected constructor with no params for class init.
     virtual ~BufferPipe();  // Protected destructor.
 
-    /* Notification of destruction. Needed to maintain chain integrity. */
-    void _bp_notify_drop(BufferPipe*);
-
     /* Simple checks that we will need to do. */
     inline bool haveNear() {  return (NULL != _near);  };
     inline bool haveFar() {   return (NULL != _far);   };
+
+    virtual void printDebug(StringBuilder*);
+    virtual const char* pipeName() =0;
 
 
   private:

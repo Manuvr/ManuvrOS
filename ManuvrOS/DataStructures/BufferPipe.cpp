@@ -21,7 +21,9 @@ limitations under the License.
 */
 
 #include "BufferPipe.h"
-
+#if defined(__MANUVR_PIPE_DEBUG)
+  #include <Kernel.h>
+#endif
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -80,11 +82,11 @@ BufferPipe::BufferPipe() {
 */
 BufferPipe::~BufferPipe() {
   if (NULL != _near) {
-    _near->_bp_notify_drop(this);
+    _near->toCounterparty(ManuvrPipeSignal::FAR_SIDE_DETACH, NULL);
     _near = NULL;
   }
   if (NULL != _far) {
-    _far->_bp_notify_drop(this);
+    _far->toCounterparty(ManuvrPipeSignal::NEAR_SIDE_DETACH, NULL);
     _far  = NULL;
   }
   _near_mm_default = MEM_MGMT_RESPONSIBLE_UNKNOWN;
@@ -110,6 +112,22 @@ BufferPipe::~BufferPipe() {
 * @return  Negative on error. Zero on success.
 */
 int8_t BufferPipe::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
+  switch (_sig) {
+    case ManuvrPipeSignal::FAR_SIDE_DETACH:   // The far side is detaching.
+      _far = NULL;
+      _far_mm_default = MEM_MGMT_RESPONSIBLE_UNKNOWN;
+      break;
+    case ManuvrPipeSignal::NEAR_SIDE_DETACH:
+      #if defined(__MANUVR_PIPE_DEBUG)
+      Kernel::log("toCounterparty(): Possible misdirected NEAR_SIDE_DETACH.\n");
+      #endif
+      break;
+    case ManuvrPipeSignal::FAR_SIDE_ATTACH:
+    case ManuvrPipeSignal::NEAR_SIDE_ATTACH:
+    case ManuvrPipeSignal::UNDEF:
+    default:
+      break;
+  }
   return haveNear() ? _near->toCounterparty(_sig, _args) : 0;
 }
 
@@ -123,6 +141,22 @@ int8_t BufferPipe::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
 * @return  Negative on error. Zero on success.
 */
 int8_t BufferPipe::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
+  switch (_sig) {
+    case ManuvrPipeSignal::FAR_SIDE_DETACH:   // The far side is detaching.
+      #if defined(__MANUVR_PIPE_DEBUG)
+      Kernel::log("fromCounterparty(): Possible misdirected FAR_SIDE_DETACH.\n");
+      #endif
+      break;
+    case ManuvrPipeSignal::NEAR_SIDE_DETACH:   // The near side is detaching.
+      _near = NULL;
+      _near_mm_default = MEM_MGMT_RESPONSIBLE_UNKNOWN;
+      break;
+    case ManuvrPipeSignal::FAR_SIDE_ATTACH:
+    case ManuvrPipeSignal::NEAR_SIDE_ATTACH:
+    case ManuvrPipeSignal::UNDEF:
+    default:
+      break;
+  }
   return haveFar() ? _far->fromCounterparty(_sig, _args) : 0;
 }
 
@@ -160,23 +194,6 @@ int8_t BufferPipe::fromCounterparty(StringBuilder* buf, int8_t mm) {
 }
 
 /**
-* Called by another instance to tell us they are being destructed.
-* Depending on class implementation, we might choose to propagate this call.
-*
-* @param  _drop  A pointer to the instance that is being destroyed.
-*/
-void BufferPipe::_bp_notify_drop(BufferPipe* _drop) {
-  if (_drop == _near) {
-    _near = NULL;
-    _near_mm_default = MEM_MGMT_RESPONSIBLE_UNKNOWN;
-  }
-  if (_drop == _far) {
-    _far = NULL;
-    _far_mm_default = MEM_MGMT_RESPONSIBLE_UNKNOWN;
-  }
-}
-
-/**
 * Sets the slot that sits nearer to the counterparty, as well as the default
 *   memory-management strategy for buffers moving toward the application.
 * This allows a class setting itself up in a buffer chain to control the
@@ -197,6 +214,11 @@ int8_t BufferPipe::setNear(BufferPipe* nu, int8_t _mm) {
       _near = nu;
       return _mm;
     }
+  }
+  else {
+    #if defined(__MANUVR_PIPE_DEBUG)
+    Kernel::log("setNear() tried to clobber another pipe.\n");
+    #endif
   }
   return MEM_MGMT_RESPONSIBLE_ERROR;
 }
@@ -224,27 +246,50 @@ int8_t BufferPipe::setFar(BufferPipe* nu, int8_t _mm) {
       return _mm;
     }
   }
+  else {
+    #if defined(__MANUVR_PIPE_DEBUG)
+    Kernel::log("setFar() tried to clobber another pipe.\n");
+    #endif
+  }
   return MEM_MGMT_RESPONSIBLE_ERROR;
 }
 
 
 /**
-* Simplification for single-ended BufferPipes.
+* Joins the ends of this pipe in preparation for our own tear-down.
+* Retains the default mem-mgmt settings from the data we have on-hand.
 *
-* @param   BufferPipe*  A pointer to the sender.
-* @param   int8_t       The default mem-mgmt strategy for this BufferPipe.
-* @return  A result code.
+* @return  Non-zero on error. Otherwise implies success.
 */
-int8_t BufferPipe::emitBuffer(uint8_t* buf, unsigned int len, int8_t _mm) {
-  if (this == _near) {
-    if (haveFar() && (_mm >= 0)) {
-      return _far->fromCounterparty(buf, len, _mm);
-    }
+int8_t BufferPipe::joinEnds() {
+  if ((NULL == _far) || (NULL == _near)) {
+    #if defined(__MANUVR_PIPE_DEBUG)
+    Kernel::log("joinEnds(): The pipe does not have both ends defined.\n");
+    #endif
   }
-  else if (this == _far) {
-    if (haveNear() && (_mm >= 0)) {
-      return _near->toCounterparty(buf, len, _mm);
-    }
+  else {
+    BufferPipe* temp_far  = _far;
+    BufferPipe* temp_near = _near;
+    _far  = NULL;
+    _near = NULL;
+
+    temp_far->_near  = temp_near;
+    temp_near->_far  = temp_far;
+    return 0;
   }
-  return MEM_MGMT_RESPONSIBLE_ERROR;
+  return -1;
+}
+
+
+/**
+* Debug support method. This fxn is only present in debug builds.
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
+void BufferPipe::printDebug(StringBuilder* out) {
+  #if defined(__MANUVR_PIPE_DEBUG)
+    out->concatf("-- Pipe: %s [0x%04x]\n", pipeName(), _flags);
+    if (haveFar())  out->concatf("--\t_far:    %s\t%s\n", _far->pipeName(),  BufferPipe::memMgmtString(_far_mm_default));
+    if (haveNear()) out->concatf("--\t_near:   %s\t%s\n", _near->pipeName(), BufferPipe::memMgmtString(_near_mm_default));
+  #endif
 }

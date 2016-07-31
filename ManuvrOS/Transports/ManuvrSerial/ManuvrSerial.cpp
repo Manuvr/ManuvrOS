@@ -142,6 +142,8 @@ void ManuvrSerial::__class_initializer() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
+const char* ManuvrSerial::pipeName() { return getReceiverName(); }
+
 /**
 * Inward toward the transport.
 *

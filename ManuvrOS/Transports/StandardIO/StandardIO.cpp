@@ -102,6 +102,8 @@ void StandardIO::__class_initializer() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
+const char* StandardIO::pipeName() { return getReceiverName(); }
+
 /**
 * Log has reached the end of its journey. This class will render it to the user.
 *
@@ -323,11 +325,9 @@ int8_t StandardIO::bootComplete() {
   read_abort_event.alterSchedulePeriod(30);
   read_abort_event.autoClear(false);
   read_abort_event.enableSchedule(false);
-  read_abort_event.enableSchedule(false);
 
   reset();
 
-  ManuvrConsole* _console_session = new ManuvrConsole((BufferPipe*) this);
   return 1;
 }
 

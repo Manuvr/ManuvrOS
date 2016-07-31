@@ -175,6 +175,7 @@ class ManuvrSession : public XenoSession {
     XenoManuvrMessage* working;         // If we are in the middle of receiving a message,
 
     int8_t bootComplete();
+    const char* pipeName();
 
 
   private:

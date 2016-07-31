@@ -67,6 +67,9 @@ https://github.com/cloudyourcar/minmea
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
+const char* ManuvrGPS::pipeName() { return "ManuvrGPS"; }
+
+
 /**
 * Inward toward the transport.
 * Doesn't make sense for GPS.
@@ -136,14 +139,11 @@ int8_t ManuvrGPS::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
 *******************************************************************************/
 
 void ManuvrGPS::printDebug(StringBuilder* output) {
-  output->concat ("\t-- ManuvrGPS ----------------------------------\n");
-  output->concatf("\t Sentences     \t%u\n", _sentences_parsed);
+  BufferPipe::printDebug(output);
+  output->concatf("--\tSentences     \t%u\n", _sentences_parsed);
 
-  if (_near) {
-    output->concatf("\t _near         \t[0x%08x] %s\n", (unsigned long)_near, BufferPipe::memMgmtString(_near_mm_default));
-  }
   if (_accumulator.length() > 0) {
-    output->concatf("\t _accumulator (%d bytes):  ", _accumulator.length());
+    output->concatf("--\t_accumulator (%d bytes):  ", _accumulator.length());
     _accumulator.printDebug(output);
   }
 }

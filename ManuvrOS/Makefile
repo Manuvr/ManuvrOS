@@ -119,6 +119,7 @@ LIBNAME = libmanuvr.a
 
 all: setenvars $(LIBNAME)
 
+debug: all
 
 %.o : %.cpp
 	$(CXX) $(INCLUDES) $(CPP_FLAGS) -std=$(CPP_STANDARD) -nostdlib -c $< -o $@
