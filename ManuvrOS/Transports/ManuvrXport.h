@@ -182,8 +182,9 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
       // Threaded platforms have a concept of threads...
       unsigned long _thread_id;
     #endif
-    
+
     virtual int8_t bootComplete() =0;
+    const char* pipeName();
 
     // TODO: Should be private. provide_session() / reset() are the blockers.
     inline void set_xport_state(uint32_t bitmask) {    _xport_flags = (bitmask  | _xport_flags);   }

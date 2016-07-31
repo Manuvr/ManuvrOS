@@ -75,7 +75,6 @@ Main demo application.
 *******************************************************************************/
 char *program_name  = NULL;
 int __main_pid      = 0;
-int __shell_pid     = 0;
 Kernel* kernel      = NULL;
 
 void kernelDebugDump() {
@@ -85,21 +84,12 @@ void kernelDebugDump() {
 }
 
 
-
 /*******************************************************************************
 * Functions that just print things.                                            *
 *******************************************************************************/
 void printHelp() {
   Kernel::log("Help would ordinarily be displayed here.\n");
 }
-
-
-/*******************************************************************************
-* Code related to running a local stdio shell...                               *
-* TODO: Generalize all this and move it to the Console Session.                *
-*******************************************************************************/
-long unsigned int _thread_id = 0;;
-bool running = true;
 
 
 /*******************************************************************************
@@ -114,10 +104,53 @@ int main(int argc, char *argv[]) {
 
   #if defined(__MANUVR_DEBUG)
     // We want to see this data if we are a debug build.
-    kernel->print_type_sizes();
     kernel->profiler(true);
     //kernel->createSchedule(1000, -1, false, kernelDebugDump);
   #endif
+
+  // Parse through all the command line arguments and flags...
+  // Please note that the order matters. Put all the most-general matches at the bottom of the loop.
+  for (int i = 1; i < argc; i++) {
+    if ((strcasestr(argv[i], "--version")) || ((argv[i][0] == '-') && (argv[i][1] == 'v'))) {
+      // Print the version and quit.
+      printf("%s v%s\n\n", argv[0], VERSION_STRING);
+      exit(0);
+    }
+    if ((strcasestr(argv[i], "--info")) || ((argv[i][0] == '-') && (argv[i][1] == 'i'))) {
+      // Cause the kernel to write a self-report to its own log.
+      kernel->printDebug();
+    }
+    if ((strcasestr(argv[i], "--console")) || ((argv[i][0] == '-') && (argv[i][1] == 'c'))) {
+      // The user wants a local stdio "Shell".
+      #if defined(__MANUVR_CONSOLE_SUPPORT)
+
+        // TODO: Until smarter idea is finished, manually patch the USB-VCP into a
+        //         BufferPipe that takes the place of the transport driver.
+        StandardIO* _console_patch = new StandardIO();
+        ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_patch);
+        kernel->subscribe((EventReceiver*) _console);
+        kernel->subscribe((EventReceiver*) _console_patch);
+      #else
+        printf("%s was compiled without any console support. Ignoring directive...\n", argv[0]);
+      #endif
+    }
+    if ((strcasestr(argv[i], "--serial")) && (argc > (i-2))) {
+      // The user wants us to listen to the given serial port.
+      #if defined (MANUVR_SUPPORT_SERIAL)
+        ManuvrSerial* ser = new ManuvrSerial((const char*) argv[++i], 9600);
+        kernel->subscribe(ser);
+      #else
+        printf("%s was compiled without serial port support. Exiting...\n", argv[0]);
+        exit(1);
+      #endif
+    }
+    if ((strcasestr(argv[i], "--quit")) || ((argv[i][0] == '-') && (argv[i][1] == 'q'))) {
+      // Execute up-to-and-including boot. Then immediately shutdown.
+      // This is how you can stack post-boot-operations into the kernel-> They will execute
+      //   following the BOOT_COMPLETE message.
+      Kernel::raiseEvent(MANUVR_MSG_SYS_SHUTDOWN, NULL);
+    }
+  }
 
   /*
   * At this point, we should instantiate whatever specific functionality we
@@ -172,57 +205,6 @@ int main(int argc, char *argv[]) {
     kernel->subscribe(&coap_srv);
   #endif
 
-  #if defined(MANUVR_SUPPORT_SERIAL)
-    ManuvrSerial* ser = NULL;
-  #endif
-
-
-
-  // Parse through all the command line arguments and flags...
-  // Please note that the order matters. Put all the most-general matches at the bottom of the loop.
-  for (int i = 1; i < argc; i++) {
-    if ((strcasestr(argv[i], "--version")) || ((argv[i][0] == '-') && (argv[i][1] == 'v'))) {
-      // Print the version and quit.
-      printf("%s v%s\n\n", argv[0], VERSION_STRING);
-      exit(0);
-    }
-    if ((strcasestr(argv[i], "--info")) || ((argv[i][0] == '-') && (argv[i][1] == 'i'))) {
-      // Cause the kernel to write a self-report to its own log.
-      kernel->printDebug();
-    }
-    if ((strcasestr(argv[i], "--console")) || ((argv[i][0] == '-') && (argv[i][1] == 'c'))) {
-      // The user wants a local stdio "Shell".
-      #if defined(__MANUVR_CONSOLE_SUPPORT)
-
-        // TODO: Until smarter idea is finished, manually patch the USB-VCP into a
-        //         BufferPipe that takes the place of the transport driver.
-        StandardIO* _console_patch = new StandardIO();
-        ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_patch);
-        kernel->subscribe((EventReceiver*) _console);
-        kernel->subscribe((EventReceiver*) _console_patch);
-      #else
-        printf("%s was compiled without any console support. Ignoring directive...\n", argv[0]);
-      #endif
-    }
-    if ((strcasestr(argv[i], "--serial")) && (argc > (i-2))) {
-      // The user wants us to listen to the given serial port.
-      #if defined (MANUVR_SUPPORT_SERIAL)
-        ser = new ManuvrSerial((const char*) argv[++i], 9600);
-        kernel->subscribe(ser);
-      #else
-        printf("%s was compiled without serial port support. Exiting...\n", argv[0]);
-        exit(1);
-      #endif
-    }
-    if ((strcasestr(argv[i], "--quit")) || ((argv[i][0] == '-') && (argv[i][1] == 'q'))) {
-      // Execute up-to-and-including boot. Then immediately shutdown.
-      // This is how you can stack post-boot-operations into the kernel-> They will execute
-      //   following the BOOT_COMPLETE message.
-      Kernel::raiseEvent(MANUVR_MSG_SYS_SHUTDOWN, NULL);
-    }
-  }
-
-
   // Once we've loaded up all the goodies we want, we finalize everything thusly...
   printf("%s: Booting Manuvr Kernel....\n", program_name);
   kernel->bootstrap();
@@ -248,7 +230,7 @@ int main(int argc, char *argv[]) {
   // The main loop. Run forever.
   // TODO: It would be nice to be able to ask the kernel if we should continue running.
   int events_procd = 0;
-  while (running) {
+  while (1) {
     events_procd = kernel->procIdleFlags();
     #if defined(RASPI) || defined(RASPI2)
       //setPin(14, pin_14_state);
@@ -262,12 +244,5 @@ int main(int argc, char *argv[]) {
       sleep_millis(20);
     }
   }
-
-  // Pass a termination signal to the child proc (if we have one).
-  if (__shell_pid > 0)  {
-    kill(__shell_pid, SIGQUIT);
-  }
-
-  printf("\n\n");
   exit(0);
 }

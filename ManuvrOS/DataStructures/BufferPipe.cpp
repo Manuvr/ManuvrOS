@@ -48,6 +48,8 @@ const char* BufferPipe::memMgmtString(int8_t code) {
 
 const char* BufferPipe::signalString(ManuvrPipeSignal code) {
   switch (code) {
+    case ManuvrPipeSignal::FLUSH:             return "FLUSH";
+    case ManuvrPipeSignal::FLUSHED:           return "FLUSHED";
     case ManuvrPipeSignal::FAR_SIDE_DETACH:   return "FAR_DETACH";
     case ManuvrPipeSignal::NEAR_SIDE_DETACH:  return "NEAR_DETACH";
     case ManuvrPipeSignal::FAR_SIDE_ATTACH:   return "FAR_ATTACH";
@@ -83,12 +85,13 @@ BufferPipe::BufferPipe() {
 BufferPipe::~BufferPipe() {
   if (NULL != _near) {
     _near->toCounterparty(ManuvrPipeSignal::FAR_SIDE_DETACH, NULL);
-    _near = NULL;
   }
   if (NULL != _far) {
     _far->toCounterparty(ManuvrPipeSignal::NEAR_SIDE_DETACH, NULL);
-    _far  = NULL;
   }
+  joinEnds();
+  _near = NULL;
+  _far  = NULL;
   _near_mm_default = MEM_MGMT_RESPONSIBLE_UNKNOWN;
   _far_mm_default  = MEM_MGMT_RESPONSIBLE_UNKNOWN;
 }
@@ -101,6 +104,9 @@ BufferPipe::~BufferPipe() {
 *                            |
 * Basal implementations.
 *******************************************************************************/
+#if defined(__MANUVR_PIPE_DEBUG)
+const char* BufferPipe::pipeName() { return "You done goofed"; }
+#endif
 
 /**
 * Pass a signal to the counterparty.
@@ -112,6 +118,11 @@ BufferPipe::~BufferPipe() {
 * @return  Negative on error. Zero on success.
 */
 int8_t BufferPipe::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
+  #if defined(__MANUVR_PIPE_DEBUG)
+  StringBuilder log;
+  log.concatf("%s <--sig-- %s: %s\n", pipeName(), (haveFar() ? _far->pipeName() : "ORIG"), signalString(_sig));
+  Kernel::log(&log);
+  #endif
   switch (_sig) {
     case ManuvrPipeSignal::FAR_SIDE_DETACH:   // The far side is detaching.
       _far = NULL;
@@ -141,6 +152,11 @@ int8_t BufferPipe::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
 * @return  Negative on error. Zero on success.
 */
 int8_t BufferPipe::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
+  #if defined(__MANUVR_PIPE_DEBUG)
+  StringBuilder log;
+  log.concatf("%s --sig--> %s: %s\n", (haveNear() ? _near->pipeName() : "ORIG"), pipeName(), signalString(_sig));
+  Kernel::log(&log);
+  #endif
   switch (_sig) {
     case ManuvrPipeSignal::FAR_SIDE_DETACH:   // The far side is detaching.
       #if defined(__MANUVR_PIPE_DEBUG)
@@ -173,8 +189,13 @@ int8_t BufferPipe::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
 * @param   mm   The length of the buffer.
 * @return  An MM return code.
 */
-int8_t BufferPipe::toCounterparty(StringBuilder* buf, int8_t mm) {
-  return haveNear() ? _near->toCounterparty(buf, mm) : MEM_MGMT_RESPONSIBLE_CALLER;
+int8_t BufferPipe::toCounterparty(StringBuilder* buf, int8_t _mm) {
+  #if defined(__MANUVR_PIPE_DEBUG)
+  //StringBuilder log;
+  //log.concatf("BufferPipe::toCounterparty(StringBuilder*, %s).\n", memMgmtString(_mm));
+  //Kernel::log(&log);
+  #endif
+  return haveNear() ? _near->toCounterparty(buf, _mm) : MEM_MGMT_RESPONSIBLE_CALLER;
 }
 
 /**
@@ -189,8 +210,13 @@ int8_t BufferPipe::toCounterparty(StringBuilder* buf, int8_t mm) {
 * @param   mm   The length of the buffer.
 * @return  An MM return code.
 */
-int8_t BufferPipe::fromCounterparty(StringBuilder* buf, int8_t mm) {
-  return haveFar() ? _far->fromCounterparty(buf, mm) : MEM_MGMT_RESPONSIBLE_CALLER;
+int8_t BufferPipe::fromCounterparty(StringBuilder* buf, int8_t _mm) {
+  #if defined(__MANUVR_PIPE_DEBUG)
+  StringBuilder log;
+  log.concatf("BufferPipe::fromCounterparty(StringBuilder*, %s).\n", memMgmtString(_mm));
+  Kernel::log(&log);
+  #endif
+  return haveFar() ? _far->fromCounterparty(buf, _mm) : MEM_MGMT_RESPONSIBLE_CALLER;
 }
 
 /**
@@ -207,6 +233,11 @@ int8_t BufferPipe::fromCounterparty(StringBuilder* buf, int8_t mm) {
 */
 int8_t BufferPipe::setNear(BufferPipe* nu, int8_t _mm) {
   if (NULL == _near) {
+    #if defined(__MANUVR_PIPE_DEBUG)
+    //StringBuilder log;
+    //log.concatf("BufferPipe::setNear(%s, %s).\n", nu->pipeName(), memMgmtString(_mm));
+    //Kernel::log(&log);
+    #endif
     // If the slot is vacant..
     if ((NULL != nu) && (_mm >= 0)) {
       // ...and nu is itself non-null, and the _mm is valid...
@@ -238,6 +269,11 @@ int8_t BufferPipe::setNear(BufferPipe* nu, int8_t _mm) {
 */
 int8_t BufferPipe::setFar(BufferPipe* nu, int8_t _mm) {
   if (NULL == _far) {
+    #if defined(__MANUVR_PIPE_DEBUG)
+    //StringBuilder log;
+    //log.concatf("BufferPipe::setFar(%s, %s).\n", nu->pipeName(), memMgmtString(_mm));
+    //Kernel::log(&log);
+    #endif
     // If the slot is vacant..
     if ((NULL != nu) && (_mm >= 0)) {
       // ...and nu is itself non-null, and the _mm is valid...
@@ -258,6 +294,7 @@ int8_t BufferPipe::setFar(BufferPipe* nu, int8_t _mm) {
 /**
 * Joins the ends of this pipe in preparation for our own tear-down.
 * Retains the default mem-mgmt settings from the data we have on-hand.
+* Does not send attach/detatch signals.
 *
 * @return  Non-zero on error. Otherwise implies success.
 */
@@ -268,13 +305,18 @@ int8_t BufferPipe::joinEnds() {
     #endif
   }
   else {
+    #if defined(__MANUVR_PIPE_DEBUG)
+    StringBuilder log;
+    log.concatf("joinEnds(): %s <--n- (%s) -f--> %s\n", pipeName(), _near->pipeName(), _far->pipeName());
+    Kernel::log(&log);
+    #endif
     BufferPipe* temp_far  = _far;
     BufferPipe* temp_near = _near;
     _far  = NULL;
     _near = NULL;
 
-    temp_far->_near  = temp_near;
-    temp_near->_far  = temp_far;
+    temp_far->_near = temp_near;
+    temp_near->_far = temp_far;
     return 0;
   }
   return -1;
@@ -289,7 +331,7 @@ int8_t BufferPipe::joinEnds() {
 void BufferPipe::printDebug(StringBuilder* out) {
   #if defined(__MANUVR_PIPE_DEBUG)
     out->concatf("-- Pipe: %s [0x%04x]\n", pipeName(), _flags);
-    if (haveFar())  out->concatf("--\t_far:    %s\t%s\n", _far->pipeName(),  BufferPipe::memMgmtString(_far_mm_default));
     if (haveNear()) out->concatf("--\t_near:   %s\t%s\n", _near->pipeName(), BufferPipe::memMgmtString(_near_mm_default));
+    if (haveFar())  out->concatf("--\t_far:    %s\t%s\n", _far->pipeName(),  BufferPipe::memMgmtString(_far_mm_default));
   #endif
 }

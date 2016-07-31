@@ -45,7 +45,6 @@ limitations under the License.
 *                                          |_|
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
-
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
 *
@@ -94,8 +93,6 @@ ManuvrSession::~ManuvrSession() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
-const char* ManuvrSession::pipeName() { return "ManuvrSession"; }
-
 /**
 * Inward toward the transport.
 *

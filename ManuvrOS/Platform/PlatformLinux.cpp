@@ -89,7 +89,7 @@ void sig_handler(int signo) {
       jumpToBootloader();
       break;
     case SIGHUP:
-      printf("Received a SIGHUP signal. Closing up shop...");
+      Kernel::log("Received a SIGHUP signal. Closing up shop...");
       jumpToBootloader();
       break;
     case SIGSTOP:
@@ -420,11 +420,7 @@ void globalIRQDisable() {
 volatile void seppuku() {
   // Whatever the kernel cared to clean up, it better have done so by this point,
   //   as no other platforms return from this function.
-  //if (Kernel::log_buffer.length() > 0) {
-  //  printf("\n\njumpToBootloader(): About to exit(). Remaining log follows...\n%s", Kernel::log_buffer.string());
-  //}
-  printf("\n\njumpToBootloader(): About to exit(). Remaining log was lost...\n");
-  printf("\n\n");
+  printf("\n\njumpToBootloader(): About to exit().\n\n");
   exit(0);
 }
 
@@ -445,10 +441,12 @@ volatile void jumpToBootloader() {
 
 volatile void hardwareShutdown() {
   // TODO: Actually shutdown the system.
+  seppuku();
 }
 
 volatile void reboot() {
   // TODO: Actually reboot the system.
+  seppuku();
 }
 
 

@@ -62,7 +62,6 @@ See UDPPipe for a case where this matters.
 #include <stdlib.h>
 #include <DataStructures/StringBuilder.h>
 
-#define __MANUVR_PIPE_DEBUG 1
 
 /*
 * These are return codes and directives for keeping track of where the
@@ -101,6 +100,8 @@ See UDPPipe for a case where this matters.
 */
 enum class ManuvrPipeSignal {
   UNDEF = 0,           // Undefined.
+  FLUSH,               // Flush the pipe.
+  FLUSHED,             // The pipe is flushed.
   FAR_SIDE_DETACH,     // Far-side informing the near-side of its departure.
   NEAR_SIDE_DETACH,    // Near-side informing the far-side of its departure.
   FAR_SIDE_ATTACH,     // Far-side informing the near-side of its arrival.
@@ -159,6 +160,12 @@ class BufferPipe {
     /* Join the ends of this pipe to one-another. */
     int8_t joinEnds();
 
+    #if defined(__MANUVR_PIPE_DEBUG)
+    virtual const char* pipeName();
+    #else
+    virtual const char* pipeName() =0;
+    #endif
+
     static const char* memMgmtString(int8_t);
     static const char* signalString(ManuvrPipeSignal);
 
@@ -179,7 +186,6 @@ class BufferPipe {
     inline bool haveFar() {   return (NULL != _far);   };
 
     virtual void printDebug(StringBuilder*);
-    virtual const char* pipeName() =0;
 
 
   private:

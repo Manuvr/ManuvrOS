@@ -113,7 +113,6 @@ class MQTTSession : public XenoSession {
 
   protected:
     int8_t bootComplete();
-    const char* pipeName();
 
 
   private:

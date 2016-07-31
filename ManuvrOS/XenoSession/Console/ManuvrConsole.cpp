@@ -25,7 +25,6 @@ limitations under the License.
 #include "ManuvrConsole.h"
 
 extern void printHelp();  // TODO: Hack. Remove later.
-extern bool running;      // TODO: Hack. Remove later.
 
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
@@ -33,6 +32,7 @@ extern bool running;      // TODO: Hack. Remove later.
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
 ManuvrConsole::ManuvrConsole(BufferPipe* _near_side) : XenoSession(_near_side) {
+  Kernel::attachToLogger((BufferPipe*) this);
   if (Kernel::getInstance()->booted()) {
     bootComplete();   // Because we are instantiated well after boot, we call this on construction.
   }
@@ -43,6 +43,8 @@ ManuvrConsole::ManuvrConsole(BufferPipe* _near_side) : XenoSession(_near_side) {
 * Unlike many of the other EventReceivers, THIS one needs to be able to be torn down.
 */
 ManuvrConsole::~ManuvrConsole() {
+  session_buffer.clear();
+  _log_accumulator.clear();
 }
 
 
@@ -53,7 +55,31 @@ ManuvrConsole::~ManuvrConsole() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
-const char* ManuvrConsole::pipeName() { return getReceiverName(); }
+/**
+* Pass a signal to the counterparty.
+*
+* Data referenced by _args should be assumed to be on the stack of the caller.
+*
+* @param   _sig   The signal.
+* @param   _args  Optional argument pointer.
+* @return  Negative on error. Zero on success.
+*/
+int8_t ManuvrConsole::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
+  switch (_sig) {
+    case ManuvrPipeSignal::FLUSH:
+      // In this context, we flush out log accumulator back to the counterparty.
+      if (haveNear() && _log_accumulator.length() > 0) {
+        _near->toCounterparty(&_log_accumulator, MEM_MGMT_RESPONSIBLE_BEARER);
+      }
+      break;
+    default:
+      break;
+  }
+
+  /* By doing this, we propagate the signal further toward the counterparty. */
+  return BufferPipe::toCounterparty(_sig, _args);
+}
+
 
 /**
 * Inward toward the transport.
@@ -67,6 +93,11 @@ const char* ManuvrConsole::pipeName() { return getReceiverName(); }
 * @return A declaration of memory-management responsibility.
 */
 int8_t ManuvrConsole::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+  if (!booted()) {
+    // Until we boot, we cache logs...
+    _log_accumulator.concat(buf, len);
+    return MEM_MGMT_RESPONSIBLE_BEARER;
+  }
   switch (mm) {
     case MEM_MGMT_RESPONSIBLE_CALLER:
       // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -121,7 +152,11 @@ int8_t ManuvrConsole::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm
 
         // Begin the cases...
         #if defined(_GNU_SOURCE)
-        if      (strcasestr(temp_ptr, "QUIT"))  running = false;  // Exit
+        if (strcasestr(temp_ptr, "QUIT")) {
+          ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_REBOOT);
+          event->originator = (EventReceiver*) __kernel;
+          Kernel::staticRaiseEvent(event);
+        }
         else if (strcasestr(temp_ptr, "HELP"))  printHelp();      // Show help.
         else {
         #else
@@ -180,7 +215,6 @@ int8_t ManuvrConsole::bootComplete() {
   EventReceiver::bootComplete();
   //toCounterparty((uint8_t*) temp, strlen(temp), MEM_MGMT_RESPONSIBLE_BEARER);
   // This is a console. Presumable it should also render log output.
-  Kernel::attachToLogger((BufferPipe*) this);
   return 1;
 }
 
@@ -226,14 +260,19 @@ void ManuvrConsole::printDebug(StringBuilder *output) {
   XenoSession::printDebug(output);
 
   int ses_buf_len = session_buffer.length();
+  int la_len      = _log_accumulator.length();
   if (ses_buf_len > 0) {
     #if defined(__MANUVR_DEBUG)
       output->concatf("-- Session Buffer (%d bytes):  ", ses_buf_len);
       session_buffer.printDebug(output);
-      output->concat("\n\n");
+      output->concat("\n");
     #else
-      output->concatf("-- Session Buffer (%d bytes)\n\n", ses_buf_len);
+      output->concatf("-- Session Buffer (%d bytes)\n", ses_buf_len);
     #endif
+  }
+
+  if (la_len > 0) {
+    output->concatf("-- Accumulated log length (%d bytes)\n", la_len);
   }
 }
 

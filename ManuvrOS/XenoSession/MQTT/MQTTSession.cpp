@@ -107,8 +107,6 @@ MQTTSession::~MQTTSession() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
-const char* MQTTSession::pipeName() { return getReceiverName(); }
-
 /**
 * Inward toward the transport.
 *
@@ -303,7 +301,6 @@ int8_t MQTTSession::sendEvent(ManuvrRunnable *active_event) {
 
 bool MQTTSession::sendSub(const char* _topicStr, enum QoS qos) {
   if (isEstablished()) {
-		printf("SESSION OPERATION sendSub() \n");
     MQTTString topic = MQTTString_initializer;
     topic.cstring = (char *)_topicStr;
 
@@ -360,7 +357,6 @@ bool MQTTSession::sendKeepAlive() {
 
 bool MQTTSession::sendConnectPacket() {
   if (owner->connected()) {
-		printf("SESSION OPERATION sendConnectPacket() \n");
     MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
 	  data.willFlag    = 0;
     data.MQTTVersion = 3;
@@ -480,7 +476,8 @@ int MQTTSession::process_inbound() {
 	switch (packet_type) {
 		case CONNACK:
 			{
-				printf("SESSION DEBUG BITS  0x%02x\n", *((uint8_t*)nu->payload + 1));
+				local_log.concatf("SESSION DEBUG BITS  0x%02x\n", *((uint8_t*)nu->payload + 1));
+				Kernel::log(&local_log);
 				switch (*((uint8_t*)nu->payload + 1)) {
 					case 0:
 						mark_session_state(XENOSESSION_STATE_ESTABLISHED);

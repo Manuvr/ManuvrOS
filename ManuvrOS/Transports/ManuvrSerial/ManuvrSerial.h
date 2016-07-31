@@ -85,7 +85,6 @@ class ManuvrSerial : public ManuvrXport {
 
   protected:
     void __class_initializer();
-    const char* pipeName();
 
 
   private:

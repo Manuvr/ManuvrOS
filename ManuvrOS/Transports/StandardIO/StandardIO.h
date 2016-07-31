@@ -67,10 +67,6 @@ class StandardIO : public ManuvrXport {
     int8_t read_port();
 
 
-  protected:
-    const char* pipeName();
-
-
   private:
     void __class_initializer();
 };

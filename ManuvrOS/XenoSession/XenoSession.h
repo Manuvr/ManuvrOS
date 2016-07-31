@@ -107,6 +107,7 @@ class XenoSession : public EventReceiver, public BufferPipe {
     XenoMessage* working;         // If we are in the middle of receiving a message,
 
     virtual int8_t bootComplete() =0;
+    const char* pipeName();
 
     /**
     * Mark the session with the given status.

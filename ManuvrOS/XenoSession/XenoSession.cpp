@@ -110,6 +110,8 @@ XenoSession::~XenoSession() {
 }
 
 
+const char* XenoSession::pipeName() { return getReceiverName(); }
+
 
 /**
 * Tell the session to relay the given message code.

@@ -45,6 +45,7 @@ LIBS = -L$(OUTPUT_PATH) -L$(WHERE_I_AM)/lib -lstdc++ -lm -lmanuvr
 # Wrap the include paths into the flags...
 CFLAGS  = $(OPTIMIZATION) -Wall $(INCLUDES)
 CFLAGS += -fsingle-precision-constant -Wdouble-promotion
+CFLAGS += -fno-rtti -fno-exceptions
 
 
 ###########################################################################
@@ -79,7 +80,7 @@ SRCS   = $(CPP_SRCS)
 #   I've at least tried to modularize to make the invariable transition less-painful...
 MANUVR_OPTIONS  = -DMANUVR_SUPPORT_SERIAL
 MANUVR_OPTIONS += -D__MANUVR_DEBUG
-
+MANUVR_OPTIONS += -D__MANUVR_PIPE_DEBUG
 # Options that build for certain threading models (if any).
 #MANUVR_OPTIONS += -D__MANUVR_FREERTOS
 MANUVR_OPTIONS += -D__MANUVR_LINUX

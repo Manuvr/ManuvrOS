@@ -157,7 +157,7 @@ limitations under the License.
       void printDebug(StringBuilder*);
       inline void printDebug() {        printDebug(&local_log);      };
       #if defined(__MANUVR_DEBUG)
-        void print_type_sizes();      // Prints the memory-costs of various classes.
+        void print_type_sizes(StringBuilder*);   // Prints the memory-costs of various classes.
       #endif
 
       /* Profiling support.. */

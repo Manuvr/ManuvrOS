@@ -190,7 +190,6 @@ int ManuvrMsg::argByteCount() {
   return return_value;
 }
 
-#include<stdio.h>
 
 /**
 * This function is for the exclusive purpose of inflating an argument from a place where a
@@ -214,22 +213,17 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
   switch (collect_valid_grammatical_forms(len, &possible_forms)) {
     case 0:
       // No valid forms. This is a problem.
-      printf("No valid argument forms...\n");
+      //Kernel::log("No valid argument forms...\n");
       return 0;
       break;
     case 1:
       // Only one possibility.
       arg_mode = possible_forms.get(r++);
-      printf("%s\n", arg_mode);
       break;
     default:
       // There are a few possible forms. We need to isolate which is correct.
       while (possible_forms.size() > 0) {
         arg_mode = possible_forms.get(r++);
-        for (unsigned int q = 0; q < strlen(arg_mode); q++) {
-          printf("%u ", (uint8_t) *(arg_mode+q));
-        }
-        printf("\n");
       }
       break;
   }

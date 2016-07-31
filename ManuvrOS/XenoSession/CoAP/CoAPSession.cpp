@@ -94,8 +94,6 @@ CoAPSession::~CoAPSession() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
-const char* CoAPSession::pipeName() { return getReceiverName(); }
-
 /**
 * Inward toward the transport.
 *

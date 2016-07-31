@@ -41,6 +41,7 @@ class ManuvrConsole : public XenoSession {
     ~ManuvrConsole();
 
     /* Override from BufferPipe. */
+    virtual int8_t toCounterparty(ManuvrPipeSignal, void*);
     virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
     virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
 
@@ -53,16 +54,13 @@ class ManuvrConsole : public XenoSession {
     int8_t callback_proc(ManuvrRunnable *);
 
 
-  protected:
-    const char* pipeName();
-
-
   private:
     /*
     * A buffer for holding inbound stream until enough has arrived to parse. This eliminates
     *   the need for the transport to care about how much data we consumed versus left in its buffer.
     */
     StringBuilder session_buffer;
+    StringBuilder _log_accumulator;
 };
 
 

@@ -682,9 +682,7 @@ int8_t Kernel::procIdleFlags() {
 
     if (NULL != active_runnable->schedule_callback) {
       // TODO: This is hold-over from the scheduler. Need to modernize it.
-      StringBuilder temp_log;
-      active_runnable->printDebug(&temp_log);
-      printf("\n\n%s\n", temp_log.string());
+      active_runnable->printDebug(&local_log);
       ((FunctionPointer) active_runnable->schedule_callback)();   // Call the schedule's service function.
       if (_profiler_enabled()) profiler_mark_2 = micros();
       activity_count++;
@@ -733,39 +731,34 @@ int8_t Kernel::procIdleFlags() {
     /* Should we clean up the Event? */
     bool clean_up_active_runnable = true;  // Defaults to 'yes'.
     if (NULL != active_runnable->originator) {
-      if ((EventReceiver*) this != active_runnable->originator) {  // We don't want to invoke our own originator callback.
-        /* If the event has a valid originator, do the callback dance and take instruction
-           from the return value. */
-        //   if (verbosity >=7) output.concatf("specific_event_callback returns %d\n", active_runnable->originator->callback_proc(active_runnable));
-        switch (active_runnable->originator->callback_proc(active_runnable)) {
-          case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
-            #ifdef __MANUVR_DEBUG
-            if (getVerbosity() > 6) local_log.concatf("Recycling %s.\n", active_runnable->getMsgTypeString());
-            #endif
-            if (0 == validate_insertion(active_runnable)) {
-              exec_queue.insert(active_runnable, active_runnable->priority);
-              // This is the one case where we do NOT want the event reclaimed.
-              clean_up_active_runnable = false;
-            }
-            break;
-          case EVENT_CALLBACK_RETURN_ERROR:       // Something went wrong. Should never occur.
-          case EVENT_CALLBACK_RETURN_UNDEFINED:   // The originating class doesn't care what we do with the event.
-            //if (verbosity > 1) local_log.concatf("Kernel found a possible mistake. Unexpected return case from callback_proc.\n");
-            // NOTE: No break;
-          case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
-            #ifdef __MANUVR_DEBUG
-            //if (getVerbosity() > 6) local_log.concatf("Dropping %s after running.\n", active_runnable->getMsgTypeString());
-            #endif
-            // NOTE: No break;
-          case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
-            // NOTE: No break;
-          default:
-            //if (verbosity > 0) local_log.concatf("Event %s has no cleanup case.\n", active_runnable->getMsgTypeString());
-            break;
-        }
-      }
-      else {
-        //reclaim_event(active_runnable);
+      /* If the event has a valid originator, do the callback dance and take instruction
+         from the return value. */
+      //   if (verbosity >=7) output.concatf("specific_event_callback returns %d\n", active_runnable->originator->callback_proc(active_runnable));
+      switch (active_runnable->originator->callback_proc(active_runnable)) {
+        case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
+          #ifdef __MANUVR_DEBUG
+          if (getVerbosity() > 6) local_log.concatf("Recycling %s.\n", active_runnable->getMsgTypeString());
+          #endif
+          if (0 == validate_insertion(active_runnable)) {
+            exec_queue.insert(active_runnable, active_runnable->priority);
+            // This is the one case where we do NOT want the event reclaimed.
+            clean_up_active_runnable = false;
+          }
+          break;
+        case EVENT_CALLBACK_RETURN_ERROR:       // Something went wrong. Should never occur.
+        case EVENT_CALLBACK_RETURN_UNDEFINED:   // The originating class doesn't care what we do with the event.
+          //if (verbosity > 1) local_log.concatf("Kernel found a possible mistake. Unexpected return case from callback_proc.\n");
+          // NOTE: No break;
+        case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
+          #ifdef __MANUVR_DEBUG
+          //if (getVerbosity() > 6) local_log.concatf("Dropping %s after running.\n", active_runnable->getMsgTypeString());
+          #endif
+          // NOTE: No break;
+        case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
+          // NOTE: No break;
+        default:
+          //if (verbosity > 0) local_log.concatf("Event %s has no cleanup case.\n", active_runnable->getMsgTypeString());
+          break;
       }
     }
     else {
@@ -899,24 +892,21 @@ float Kernel::cpu_usage() {
 *
 * @param   StringBuilder*  The buffer that this fxn will write output into.
 */
-void Kernel::print_type_sizes() {
-  StringBuilder temp("---< Type sizes >-----------------------------\n");
-  temp.concatf("Elemental data structures:\n");
-  temp.concatf("\t StringBuilder         %zu\n", sizeof(StringBuilder));
-  temp.concatf("\t BufferPipe            %zu\n", sizeof(BufferPipe));
-  temp.concatf("\t LinkedList<void*>     %zu\n", sizeof(LinkedList<void*>));
-  temp.concatf("\t PriorityQueue<void*>  %zu\n", sizeof(PriorityQueue<void*>));
+void Kernel::print_type_sizes(StringBuilder* output) {
+  output->concat("---< Type sizes >-----------------------------\nElemental data structures:\n");
+  output->concatf("\t StringBuilder         %u\n", (unsigned long) sizeof(StringBuilder));
+  output->concatf("\t BufferPipe            %u\n", (unsigned long) sizeof(BufferPipe));
+  output->concatf("\t LinkedList<void*>     %u\n", (unsigned long) sizeof(LinkedList<void*>));
+  output->concatf("\t PriorityQueue<void*>  %u\n", (unsigned long) sizeof(PriorityQueue<void*>));
 
-  temp.concatf(" Core singletons:\n");
-  temp.concatf("\t Kernel                %zu\n", sizeof(Kernel));
+  output->concat(" Core singletons:\n");
+  output->concatf("\t Kernel                %u\n", (unsigned long) sizeof(Kernel));
 
-  temp.concatf(" Messaging components:\n");
-  temp.concatf("\t ManuvrRunnable        %zu\n", sizeof(ManuvrRunnable));
-  temp.concatf("\t ManuvrMsg             %zu\n", sizeof(ManuvrMsg));
-  temp.concatf("\t Argument              %zu\n", sizeof(Argument));
-  temp.concatf("\t TaskProfilerData      %zu\n", sizeof(TaskProfilerData));
-
-  Kernel::log(&temp);
+  output->concat(" Messaging components:\n");
+  output->concatf("\t ManuvrRunnable        %u\n", (unsigned long) sizeof(ManuvrRunnable));
+  output->concatf("\t ManuvrMsg             %u\n", (unsigned long) sizeof(ManuvrMsg));
+  output->concatf("\t Argument              %u\n", (unsigned long) sizeof(Argument));
+  output->concatf("\t TaskProfilerData      %u\n", (unsigned long) sizeof(TaskProfilerData));
 }
 #endif
 
@@ -1108,7 +1098,6 @@ void Kernel::printDebug(StringBuilder* output) {
 */
 int8_t Kernel::bootComplete() {
   EventReceiver::bootComplete();
-  _mark_boot_complete();
   maskableInterrupts(true);  // Now configure interrupts, lift interrupt masks, and let the madness begin.
   return 1;
 }
@@ -1137,16 +1126,19 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
   switch (event->event_code) {
     case MANUVR_MSG_SYS_BOOT_COMPLETED:
       if (getVerbosity() > 4) Kernel::log("Boot complete.\n");
-      _mark_boot_complete();
+      if (NULL != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, NULL);
       break;
 
     case MANUVR_MSG_SYS_REBOOT:
+      if (NULL != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, NULL);
       reboot();
       break;
     case MANUVR_MSG_SYS_SHUTDOWN:
+      if (NULL != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, NULL);
       seppuku();  // TODO: We need to distinguish between this and SYSTEM shutdown for linux.
       break;
     case MANUVR_MSG_SYS_BOOTLOADER:
+      //if (NULL != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, NULL);
       jumpToBootloader();
       break;
 
@@ -1554,7 +1546,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
           printScheduler(&local_log);
           break;
         case 9:
-          print_type_sizes();
+          print_type_sizes(&local_log);
           break;
         default:
           printDebug(&local_log);

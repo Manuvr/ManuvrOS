@@ -121,10 +121,6 @@ void ManuvrSerial::__class_initializer() {
   _options           = 0;
   _sock              = 0;
 
-  // We are the software nearest to the counterparty, and we do not
-  //   allocate buffers we send.
-  setNear(this, MEM_MGMT_RESPONSIBLE_BEARER);
-
   // Build some pre-formed Events.
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
   read_abort_event.isManaged(true);
@@ -142,8 +138,6 @@ void ManuvrSerial::__class_initializer() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
-const char* ManuvrSerial::pipeName() { return getReceiverName(); }
-
 /**
 * Inward toward the transport.
 *

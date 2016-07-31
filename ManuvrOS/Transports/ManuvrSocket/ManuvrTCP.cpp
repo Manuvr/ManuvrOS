@@ -184,8 +184,6 @@ ManuvrTCP::~ManuvrTCP() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
-const char* ManuvrTCP::pipeName() { return getReceiverName(); }
-
 /**
 * Inward toward the transport.
 *
