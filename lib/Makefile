@@ -16,10 +16,6 @@ SOURCES_MQTT_C += paho.mqtt.embedded-c/MQTTPacket/src/MQTTSubscribeServer.c
 SOURCES_MQTT_C += paho.mqtt.embedded-c/MQTTPacket/src/MQTTUnsubscribeClient.c
 SOURCES_MQTT_C += paho.mqtt.embedded-c/MQTTPacket/src/MQTTUnsubscribeServer.c
 
-#SOURCES_COAP_C  = wakaama/core/er-coap-13/er-coap-13.c
-
-SOURCES_COAP_C  = cantcoap/cantcoap.cpp
-
 SOURCES_CBOR_C  = tinycbor/src/cborerrorstrings.c
 SOURCES_CBOR_C += tinycbor/src/cborencoder.c
 SOURCES_CBOR_C += tinycbor/src/cborencoder_close_container_checked.c
@@ -28,14 +24,11 @@ SOURCES_CBOR_C += tinycbor/src/cborparser_dup_string.c
 SOURCES_CBOR_C += tinycbor/src/cborpretty.c
 SOURCES_CBOR_C += tinycbor/src/cbortojson.c
 
-#SOURCES_UECC_C  = uECC/uECC.c
-
-SOURCES_C  = $(SOURCES_MQTT_C) $(SOURCES_COAP_C) $(SOURCES_CBOR_C)
+SOURCES_C  = $(SOURCES_MQTT_C) $(SOURCES_CBOR_C)
 SOURCES_C += $(SOURCES_UECC_C)
 
 FLAGS_LIBMQTT  =
 
-#LOCAL_C_FLAGS = $(FLAGS_LIBCOAP)
 LOCAL_C_FLAGS = -nostdlib $(FLAGS_LIBMQTT)
 
 

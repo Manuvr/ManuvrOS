@@ -1,5 +1,5 @@
 /*
-File:   CoAP.cpp
+File:   CoAPSession.cpp
 Author: J. Ian Lindsay
 Date:   2016.04.09
 
@@ -25,7 +25,6 @@ limitations under the License.
 
 #include "CoAPSession.h"
 
-
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
@@ -48,9 +47,9 @@ limitations under the License.
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
 *
-* @param   ManuvrXport* All sessions must have one (and only one) transport.
+* @param   BufferPipe* All sessions must have one (and only one) transport.
 */
-CoAPSession::CoAPSession(ManuvrXport* _xport) : XenoSession(_xport) {
+CoAPSession::CoAPSession(BufferPipe* _near_side) : XenoSession(_near_side) {
 	working   = NULL;
 	_next_packetid = 1;
 
@@ -63,7 +62,15 @@ CoAPSession::CoAPSession(ManuvrXport* _xport) : XenoSession(_xport) {
   _ping_timer.autoClear(false);
   _ping_timer.enableSchedule(false);
 
-  if (_xport->booted()) {
+  _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
+
+	// If our base transport is packetized, we will implement CoAP as it is
+	//   defined to run over UDP. Otherwise, we will assume TCP.
+	if (_near_side->_bp_flag(BPIPE_FLAG_PIPE_PACKETIZED)) {
+		_bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
+	}
+
+  if (Kernel::getInstance()->booted()) {
     bootComplete();   // Because we are instantiated well after boot, we call this on construction.
   }
 }
@@ -160,15 +167,27 @@ int8_t CoAPSession::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) 
 */
 int8_t CoAPSession::bin_stream_rx(unsigned char *buf, int len) {
   int8_t return_value = 0;
+	local_log.concatf("CoAPSession::bin_stream_rx(0x%08x, %d): ", (uint32_t) buf, len);
+	CoapPDU *recvPDU = new CoapPDU(buf, len, len);
+	if(recvPDU->validate()!=1) {
+		local_log.concat("Malformed CoAP packet\n");
+		return return_value;
+	}
+	recvPDU->printHuman();
+
+	for (int x = 0; x < len; x++) {
+		local_log.concatf("%02x ", *(buf+x));
+	}
+	local_log.concat("\n");
+	Kernel::log(&local_log);
   return return_value;
 }
 
 
 int8_t CoAPSession::connection_callback(bool _con) {
 	XenoSession::connection_callback(_con);
-	StringBuilder output;
-	output.concatf("\n\nSession%sconnected\n\n", (_con ? " " : " dis"));
-	Kernel::log(&output);
+	local_log.concatf("\n\nSession%sconnected\n\n", (_con ? " " : " dis"));
+	Kernel::log(&local_log);
 	if (_con) {
 		//sendConnectPacket();
 	}
@@ -210,14 +229,13 @@ int8_t CoAPSession::sendEvent(ManuvrRunnable *active_event) {
 */
 int8_t CoAPSession::bootComplete() {
   EventReceiver::bootComplete();
-  owner->getMTU();
 
   __kernel->addSchedule(&_ping_timer);
 
-  if (owner->connected()) {
+  //if (owner->connected()) {
     // Are we connected right now?
     //sendConnectPacket();
-  }
+  //}
   return 1;
 }
 

@@ -155,6 +155,15 @@ class BufferPipe {
     virtual const char* pipeName() =0;
     #endif
 
+    // These inlines are for convenience of extending classes.
+    // TODO: Ought to be private.
+    inline bool _bp_flag(uint16_t flag) {        return (_flags & flag);  };
+    inline void _bp_set_flag(uint16_t flag, bool nu) {
+      if (nu) _flags |= flag;
+      else    _flags &= ~flag;
+    };
+
+
     static const char* memMgmtString(int8_t);
     static const char* signalString(ManuvrPipeSignal);
 
@@ -167,15 +176,8 @@ class BufferPipe {
     ~BufferPipe();  // Protected destructor.
 
     /* Simple checks that we will need to do. */
-    inline bool haveNear() {  return (NULL != _near);  };
-    inline bool haveFar() {   return (NULL != _far);   };
-
-    // These inlines are for convenience of extending classes.
-    inline bool _bp_flag(uint16_t flag) {        return (_flags & flag);  };
-    inline void _bp_set_flag(uint16_t flag, bool nu) {
-      if (nu) _flags |= flag;
-      else    _flags &= ~flag;
-    };
+    inline bool haveNear() {  return (nullptr != _near);  };
+    inline bool haveFar() {   return (nullptr != _far);   };
 
     virtual void printDebug(StringBuilder*);
 
