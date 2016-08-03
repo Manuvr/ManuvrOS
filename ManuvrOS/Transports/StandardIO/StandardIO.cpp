@@ -88,6 +88,7 @@ void StandardIO::__class_initializer() {
   read_abort_event.originator      = (EventReceiver*) this;
   read_abort_event.priority        = 5;
   read_abort_event.addArg(xport_id);  // Add our assigned transport ID to our pre-baked argument.
+  _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
 }
 
 

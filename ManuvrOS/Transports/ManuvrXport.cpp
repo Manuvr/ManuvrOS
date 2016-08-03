@@ -100,6 +100,9 @@ ManuvrXport::ManuvrXport() : BufferPipe() {
   // No need to burden a client class with this.
   EventReceiver::__class_initializer();
 
+  // Transports are all terminal.
+  _bp_set_flag(BPIPE_FLAG_IS_TERMINUS, true);
+
   xport_id              = ManuvrXport::TRANSPORT_ID_POOL++;
   _xport_flags          = 0;
   _xport_mtu            = PROTOCOL_MTU;

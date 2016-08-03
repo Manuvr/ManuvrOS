@@ -48,18 +48,19 @@ UDPPipe::UDPPipe() : BufferPipe() {
   _port  = 0;
   _udp   = NULL;
   _flags = 0;
+
+  _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED | BPIPE_FLAG_IS_BUFFERED, true);
 }
 
 UDPPipe::UDPPipe(ManuvrUDP* udp, uint32_t ip, uint16_t port) : BufferPipe() {
+  // The near-side will always be feeding us from buffers on the stack. Since
+  //   the buffer will vanish after return, we must copy it.
   _ip    = ip;
   _port  = port;
   _udp   = udp;   // TODO: setNear(udp); and thereafter cast to ManuvrUDP?
   _flags = 0;
 
-  // The near-side will always be feeding us from buffers on the stack. Since
-  //   the buffer will vanish after return, we must copy it.
-  _near_mm_default = MEM_MGMT_RESPONSIBLE_CREATOR;
-  _far_mm_default = MEM_MGMT_RESPONSIBLE_BEARER;
+  _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED | BPIPE_FLAG_IS_BUFFERED, true);
 }
 
 
@@ -166,7 +167,7 @@ void UDPPipe::printDebug(StringBuilder* output) {
   struct in_addr _inet_addr;
   _inet_addr.s_addr = _ip;
   if (_udp) {
-    output->concatf("--\t_udp          \t[0x%08x] %s\n", (unsigned long)_udp, BufferPipe::memMgmtString(_near_mm_default));
+    output->concatf("--\t_udp          \t[0x%08x] %s\n", (unsigned long)_udp);
   }
   output->concatf("--\tCounterparty: \t%s:%d\n", (char*) inet_ntoa(_inet_addr), _port);
 

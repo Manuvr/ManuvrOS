@@ -97,9 +97,7 @@ This is basically only for linux for now.
           event->addArg((EventReceiver*) nu_connection);
           Kernel::staticRaiseEvent(event);
 
-          output.concat("Client connected: ");
-          output.concat((char*) inet_ntoa(cli_addr.sin_addr));
-          output.concat("\n");
+          output.concatf("TCP Client connected: %s\n", (char*) inet_ntoa(cli_addr.sin_addr));
         }
         Kernel::log(&output);
 

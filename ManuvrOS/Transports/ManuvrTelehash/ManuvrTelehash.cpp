@@ -72,9 +72,7 @@ TODO: It does not do this. Need to finish addressing issues with the build
           event->addArg((EventReceiver*) nu_connection);
           Kernel::staticRaiseEvent(event);
 
-          output.concat("Client connected: ");
-          output.concat((char*) inet_ntoa(cli_addr.sin_addr));
-          output.concat("\n");
+          output.concatf("Telehash Client connected: %s\n", (char*) inet_ntoa(cli_addr.sin_addr));
         }
         Kernel::log(&output);
 

@@ -74,8 +74,6 @@ BufferPipe::BufferPipe() {
   _near            = NULL;
   _far             = NULL;
   _flags           = 0;
-  _near_mm_default = MEM_MGMT_RESPONSIBLE_UNKNOWN;
-  _far_mm_default  = MEM_MGMT_RESPONSIBLE_UNKNOWN;
 }
 
 /**
@@ -83,6 +81,9 @@ BufferPipe::BufferPipe() {
 * Tell the other sides of the links that we are departing.
 */
 BufferPipe::~BufferPipe() {
+  #if defined(__MANUVR_PIPE_DEBUG)
+  Kernel::log("BufferPipe(): teardown\n");
+  #endif
   if (NULL != _near) {
     _near->toCounterparty(ManuvrPipeSignal::FAR_SIDE_DETACH, NULL);
   }
@@ -92,8 +93,6 @@ BufferPipe::~BufferPipe() {
   joinEnds();
   _near = NULL;
   _far  = NULL;
-  _near_mm_default = MEM_MGMT_RESPONSIBLE_UNKNOWN;
-  _far_mm_default  = MEM_MGMT_RESPONSIBLE_UNKNOWN;
 }
 
 
@@ -126,7 +125,6 @@ int8_t BufferPipe::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
   switch (_sig) {
     case ManuvrPipeSignal::FAR_SIDE_DETACH:   // The far side is detaching.
       _far = NULL;
-      _far_mm_default = MEM_MGMT_RESPONSIBLE_UNKNOWN;
       break;
     case ManuvrPipeSignal::NEAR_SIDE_DETACH:
       #if defined(__MANUVR_PIPE_DEBUG)
@@ -165,7 +163,6 @@ int8_t BufferPipe::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
       break;
     case ManuvrPipeSignal::NEAR_SIDE_DETACH:   // The near side is detaching.
       _near = NULL;
-      _near_mm_default = MEM_MGMT_RESPONSIBLE_UNKNOWN;
       break;
     case ManuvrPipeSignal::FAR_SIDE_ATTACH:
     case ManuvrPipeSignal::NEAR_SIDE_ATTACH:
@@ -231,19 +228,13 @@ int8_t BufferPipe::fromCounterparty(StringBuilder* buf, int8_t _mm) {
 * @param   int8_t       The default mem-mgmt strategy for this BufferPipe.
 * @return  An MM return code.
 */
-int8_t BufferPipe::setNear(BufferPipe* nu, int8_t _mm) {
+int8_t BufferPipe::setNear(BufferPipe* nu) {
   if (NULL == _near) {
-    #if defined(__MANUVR_PIPE_DEBUG)
-    //StringBuilder log;
-    //log.concatf("BufferPipe::setNear(%s, %s).\n", nu->pipeName(), memMgmtString(_mm));
-    //Kernel::log(&log);
-    #endif
     // If the slot is vacant..
-    if ((NULL != nu) && (_mm >= 0)) {
+    if (NULL != nu) {
       // ...and nu is itself non-null, and the _mm is valid...
-      _near_mm_default = _mm;
       _near = nu;
-      return _mm;
+      return 0;  // TODO: Yuck.
     }
   }
   else {
@@ -267,19 +258,13 @@ int8_t BufferPipe::setNear(BufferPipe* nu, int8_t _mm) {
 * @param   int8_t       The default mem-mgmt strategy for this BufferPipe.
 * @return  A result code.
 */
-int8_t BufferPipe::setFar(BufferPipe* nu, int8_t _mm) {
+int8_t BufferPipe::setFar(BufferPipe* nu) {
   if (NULL == _far) {
-    #if defined(__MANUVR_PIPE_DEBUG)
-    //StringBuilder log;
-    //log.concatf("BufferPipe::setFar(%s, %s).\n", nu->pipeName(), memMgmtString(_mm));
-    //Kernel::log(&log);
-    #endif
     // If the slot is vacant..
-    if ((NULL != nu) && (_mm >= 0)) {
+    if (NULL != nu) {
       // ...and nu is itself non-null, and the _mm is valid...
-      _far_mm_default = _mm;
       _far = nu;
-      return _mm;
+      return 0;  // TODO: Yuck.
     }
   }
   else {
@@ -330,8 +315,12 @@ int8_t BufferPipe::joinEnds() {
 */
 void BufferPipe::printDebug(StringBuilder* out) {
   #if defined(__MANUVR_PIPE_DEBUG)
-    out->concatf("-- Pipe: %s [0x%04x]\n", pipeName(), _flags);
-    if (haveNear()) out->concatf("--\t_near:   %s\t%s\n", _near->pipeName(), BufferPipe::memMgmtString(_near_mm_default));
-    if (haveFar())  out->concatf("--\t_far:    %s\t%s\n", _far->pipeName(),  BufferPipe::memMgmtString(_far_mm_default));
+    out->concatf("-- Pipe: %s [", pipeName());
+    if (_bp_flag(BPIPE_FLAG_IS_BUFFERED))     out->concat(" BUFFERED");
+    if (_bp_flag(BPIPE_FLAG_PIPE_PACKETIZED)) out->concat(" PACKETIZED");
+    if (_bp_flag(BPIPE_FLAG_IS_TERMINUS))     out->concat(" TERMINUS");
+    out->concat(" ]\n");
+    if (haveNear()) out->concatf("--\t_near:   %s\t%s\n", _near->pipeName(), (_bp_flag(BPIPE_FLAG_WE_ALLOCD_NEAR) ? "[WE_ALLOC'D]" : ""));
+    if (haveFar())  out->concatf("--\t_far:    %s\t%s\n", _far->pipeName(),  (_bp_flag(BPIPE_FLAG_WE_ALLOCD_FAR)  ? "[WE_ALLOC'D]" : ""));
   #endif
 }

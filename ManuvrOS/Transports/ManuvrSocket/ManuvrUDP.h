@@ -91,9 +91,6 @@ class UDPPipe : public BufferPipe {
     /* Override from BufferPipe. */
     virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
     virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
-    inline int8_t fromCounterparty(uint8_t* buf, unsigned int len) {
-      return fromCounterparty(buf, len, _far_mm_default);
-    };
 
     void printDebug(StringBuilder*);
     int takeAccumulator(StringBuilder*);

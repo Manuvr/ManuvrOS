@@ -60,6 +60,28 @@ https://github.com/cloudyourcar/minmea
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
 
+ManuvrGPS::ManuvrGPS() : BufferPipe() {
+  _bp_set_flag(BPIPE_FLAG_IS_TERMINUS | BPIPE_FLAG_IS_BUFFERED, true);
+}
+
+ManuvrGPS::ManuvrGPS(ManuvrUDP* udp, uint32_t ip, uint16_t port) : BufferPipe() {
+  // The near-side will always be feeding us from buffers on the stack. Since
+  //   the buffer will vanish after return, we must copy it.
+  _ip    = ip;
+  _port  = port;
+  _udp   = udp;   // TODO: setNear(udp); and thereafter cast to ManuvrUDP?
+  _flags = 0;
+
+  _bp_set_flag(BPIPE_FLAG_IS_TERMINUS | BPIPE_FLAG_IS_BUFFERED, true);
+}
+
+
+ManuvrGPS::~ManuvrGPS() {
+  _accumulator.clear();
+  if (_udp) _udp->udpPipeDestroyCallback(this);
+}
+
+
 /*******************************************************************************
 *  _       _   _        _
 * |_)    _|_ _|_ _  ._ |_) o ._   _

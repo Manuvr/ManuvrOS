@@ -33,6 +33,9 @@ extern void printHelp();  // TODO: Hack. Remove later.
 */
 ManuvrConsole::ManuvrConsole(BufferPipe* _near_side) : XenoSession(_near_side) {
   Kernel::attachToLogger((BufferPipe*) this);
+  mark_session_state(XENOSESSION_STATE_ESTABLISHED);
+  _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
+
   if (Kernel::getInstance()->booted()) {
     bootComplete();   // Because we are instantiated well after boot, we call this on construction.
   }
@@ -323,7 +326,6 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
 }
 
 
-
 // We don't bother casing this off for the preprocessor. In this case, it
 //   is a given that we have __MANUVR_CONSOLE_SUPPORT.
 // This may be a strange loop that we might optimize later, but this is
@@ -350,6 +352,5 @@ void ManuvrConsole::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-
 
 #endif  // MANUVR_CONSOLE_SESSION  &  __MANUVR_CONSOLE_SUPPORT

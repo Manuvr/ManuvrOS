@@ -59,7 +59,6 @@ See UDPPipe for a case where this matters.
 #ifndef __MANUVR_BUFFER_PIPE_H__
 #define __MANUVR_BUFFER_PIPE_H__
 
-#include <stdlib.h>
 #include <DataStructures/StringBuilder.h>
 
 
@@ -83,10 +82,12 @@ See UDPPipe for a case where this matters.
 #define MEM_MGMT_RESPONSIBLE_BEARER      2  // The bearer is responsible.
 
 /*
-*
+* Flag definitions.
 */
-#define BPIPE_FLAG_IS_TERMINUS      0x0001  // This pipe is an endpoint.
-#define BPIPE_FLAG_PIPE_LOCKED      0x2000  // The pipe is locked.
+#define BPIPE_FLAG_WE_ALLOCD_NEAR   0x0001  // We are responsible for near-side teardown.
+#define BPIPE_FLAG_WE_ALLOCD_FAR    0x0002  // We are responsible for far-side teardown.
+#define BPIPE_FLAG_IS_TERMINUS      0x0004  // This pipe is an endpoint.
+#define BPIPE_FLAG_PIPE_LOCKED      0x1000  // The pipe is locked.
 #define BPIPE_FLAG_PIPE_PACKETIZED  0x4000  // The pipe's issuances coincide with packet boundaries.
 #define BPIPE_FLAG_IS_BUFFERED      0x8000  // This pipe has the capability to buffer.
 
@@ -131,9 +132,6 @@ class BufferPipe {
     virtual int8_t toCounterparty(ManuvrPipeSignal, void*);
     virtual int8_t toCounterparty(StringBuilder*, int8_t mm);
     virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
-    inline int8_t toCounterparty(uint8_t* buf, unsigned int len) {
-      return toCounterparty(buf, len, _near_mm_default);
-    };
 
     /*
     * Generally, this will be called from within the instance pointed-at by _near.
@@ -141,21 +139,12 @@ class BufferPipe {
     virtual int8_t fromCounterparty(ManuvrPipeSignal, void*);
     virtual int8_t fromCounterparty(StringBuilder*, int8_t mm);
     virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
-    inline int8_t fromCounterparty(uint8_t* buf, unsigned int len) {
-      return fromCounterparty(buf, len, _far_mm_default);
-    };
 
     /* Set the identity of the near-side. */
-    int8_t setNear(BufferPipe* nu, int8_t _mm);
-    inline int8_t setNear(BufferPipe* nu) {
-      return setNear(nu, MEM_MGMT_RESPONSIBLE_UNKNOWN);
-    };
+    int8_t setNear(BufferPipe*);
 
     /* Set the identity of the far-side. */
-    int8_t setFar(BufferPipe* nu, int8_t _mm);
-    inline int8_t setFar(BufferPipe* nu) {
-      return setFar(nu, MEM_MGMT_RESPONSIBLE_UNKNOWN);
-    };
+    int8_t setFar(BufferPipe*);
 
     /* Join the ends of this pipe to one-another. */
     int8_t joinEnds();
@@ -174,16 +163,19 @@ class BufferPipe {
     BufferPipe* _near;  // These two members create a double-linked-list.
     BufferPipe* _far;   // Need such topology for bi-directional pipe.
 
-    /* Default mem-mgmt responsibilities... */
-    int8_t _near_mm_default;   // ...for buffers originating from the near side.
-    int8_t _far_mm_default;    // ...for buffers originating from the far side.
-
     BufferPipe();           // Protected constructor with no params for class init.
-    virtual ~BufferPipe();  // Protected destructor.
+    ~BufferPipe();  // Protected destructor.
 
     /* Simple checks that we will need to do. */
     inline bool haveNear() {  return (NULL != _near);  };
     inline bool haveFar() {   return (NULL != _far);   };
+
+    // These inlines are for convenience of extending classes.
+    inline bool _bp_flag(uint16_t flag) {        return (_flags & flag);  };
+    inline void _bp_set_flag(uint16_t flag, bool nu) {
+      if (nu) _flags |= flag;
+      else    _flags &= ~flag;
+    };
 
     virtual void printDebug(StringBuilder*);
 

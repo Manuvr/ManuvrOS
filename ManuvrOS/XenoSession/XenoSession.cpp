@@ -74,11 +74,12 @@ const char* XenoSession::sessionPhaseString(uint16_t state_code) {
 XenoSession::XenoSession(BufferPipe* _near_side) : BufferPipe() {
   EventReceiver::__class_initializer();
   // Our near-side is that passed-in transport.
-  setNear(_near_side, MEM_MGMT_RESPONSIBLE_CREATOR);
+  setNear(_near_side);
+  _bp_set_flag(BPIPE_FLAG_IS_TERMINUS, true);
 
   // TODO: Audit implications of this....
   // The link nearer to the transport should not free.
-  _near_side->setFar((BufferPipe*) this, MEM_MGMT_RESPONSIBLE_CREATOR);
+  _near_side->setFar((BufferPipe*) this);
 
   _session_service.repurpose(MANUVR_MSG_SESS_SERVICE);
   _session_service.isManaged(true);
