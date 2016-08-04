@@ -150,6 +150,8 @@ raspi: clean libs
 	$(SZ) $(FIRMWARE_NAME)
 
 debug: clean libs
+	export __MANUVR_LINUX
+	make debug -C ManuvrOS/
 	$(CXX) -static -g -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D__MANUVR_DEBUG -D_GNU_SOURCE -O0
 	$(SZ) $(FIRMWARE_NAME)
 # Options configured such that you can then...

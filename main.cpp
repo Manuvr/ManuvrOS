@@ -156,14 +156,14 @@ int main(int argc, char *argv[]) {
   * At this point, we should instantiate whatever specific functionality we
   *   want this Manuvrable to have.
   */
-  ManuvrableGPIO gpio;
-  kernel->subscribe(&gpio);
-
   #if defined(RASPI) || defined(RASPI2)
     // If we are running on a RasPi, let's try to fire up the i2c that is almost
     //   certainly present.
     I2CAdapter i2c(1);
     kernel->subscribe(&i2c);
+    
+    ManuvrableGPIO gpio;
+    kernel->subscribe(&gpio);
   #endif
 
   // We need at least ONE transport to be useful...

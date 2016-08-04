@@ -110,6 +110,29 @@ enum class ManuvrPipeSignal {
 };
 
 /*
+* Notes regarding pipe-strategies...
+* This is an experiment for testing an idea about building dynamic chains of
+*   pipes.
+* Something like this is needed to avoid having to code for a small, static set
+*   of pipe combinations (IE: "Bluetooth <--> DTLS <--> Console").
+*   It might be a good idea to have it in BufferPipe since this is where the
+*   allocation would occur, and the datastructure nicely fits the problem.
+* On the other-hand, it stands to cause us some linguistic grief of necessitating
+*   this class containing knowledge of higher-layer components (thus hurting its
+*   purity as a data structure).
+* If the transport is always to be the progenitor of the chain, it might be better
+*   to contain the definitional aspects of this idea in ManuvrXport (or the Kernel).
+* Same problem as we have with Message definitions.
+*
+* If it remains here, the pipe-strategy should be executed on first-call to haveFar()
+*   that would otherwise return false.
+*/
+
+// Hopefully, this will be enough until we think of something smarter.
+#define MAXIMUM_PIPE_DIVERSITY  16
+
+
+/*
 * Here, "far" refers to "farther from the counterparty". That is: closer to our
 *   local idea of "the application".
 *
@@ -149,6 +172,11 @@ class BufferPipe {
     /* Join the ends of this pipe to one-another. */
     int8_t joinEnds();
 
+    /* Members pertaining to pipe-strategy. */
+    inline void setPipeStrategy(const uint8_t* strat) {  _pipe_strategy = strat;  };
+    inline uint8_t pipeCode() {  return _pipe_code;  };
+
+
     #if defined(__MANUVR_PIPE_DEBUG)
     virtual const char* pipeName();
     #else
@@ -163,7 +191,7 @@ class BufferPipe {
       else    _flags &= ~flag;
     };
 
-
+    static uint8_t* _pipe_strategies[];
     static const char* memMgmtString(int8_t);
     static const char* signalString(ManuvrPipeSignal);
 
@@ -183,7 +211,9 @@ class BufferPipe {
 
 
   private:
+    const uint8_t* _pipe_strategy;  // See notes.
     uint16_t _flags;
+    uint8_t  _pipe_code;
 };
 
 #endif   // __MANUVR_BUFFER_PIPE_H__

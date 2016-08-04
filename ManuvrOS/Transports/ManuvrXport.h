@@ -29,10 +29,6 @@ XenoSessions are optionally established by this class, and broadcast to the
 
 If sessions are enabled for a transport, the highest-level of the protocol
   touched by this class ought to be dealing with sync.
-
-For non-session applications of this class, session-creation and management
-  can be disabled. This would be appropriate in cases such as GPS, modems,
-  and generally, anything that isn't manuvrable.
 */
 
 
@@ -167,21 +163,19 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
 
   protected:
     ManuvrRunnable* _autoconnect_schedule;
-
-    // Can also be used to poll the other side. Implementation is completely at the discretion
-    //   any extending class. But generally, this feature is necessary.
-    ManuvrRunnable read_abort_event;  // Used to timeout a read operation.
-
-    uint32_t _xport_mtu;      // The largest packet size we handle.
-    uint32_t bytes_sent;
-    uint32_t bytes_received;
-
-    uint16_t xport_id;
-
     #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
       // Threaded platforms have a concept of threads...
       unsigned long _thread_id;
     #endif
+
+    uint32_t _xport_mtu;      // The largest packet size we handle.
+    uint32_t bytes_sent;
+    uint32_t bytes_received;
+    uint16_t xport_id;
+
+    // Can also be used to poll the other side. Implementation is completely at the discretion
+    //   any extending class. But generally, this feature is necessary.
+    ManuvrRunnable read_abort_event;  // Used to timeout a read operation.
 
     virtual int8_t bootComplete() =0;
     const char* pipeName();
