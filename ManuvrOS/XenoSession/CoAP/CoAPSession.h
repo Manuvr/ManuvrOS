@@ -22,12 +22,24 @@ The message class was derived from cantcoap. Pieces of the original header
   are removed.
 */
 
-#ifndef SYSDEP_H
-#define SYSDEP_H
+#ifndef __XENOSESSION_CoAP_H__
+#define __XENOSESSION_CoAP_H__
 
 #include <stdint.h>
+#include <arpa/inet.h>  /* __BYTE_ORDER */  // TODO: Bad. Strip.
+#include "../XenoSession.h"
 
-#include <arpa/inet.h>  /* __BYTE_ORDER */
+#define MAX_PACKET_ID 65535
+
+/*
+* These state flags are hosted by the EventReceiver. This may change in the future.
+* Might be too much convention surrounding their assignment across inherritence.
+*/
+#define CoAP_SESS_FLAG_PING_WAIT  0x01    // Are we waiting on a ping reply?
+
+
+#ifndef SYSDEP_H
+#define SYSDEP_H
 
 #if !defined(__LITTLE_ENDIAN__) && !defined(__BIG_ENDIAN__)
   #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -122,7 +134,6 @@ The message class was derived from cantcoap. Pieces of the original header
 #define COAP_OPTION_HDR_BYTE 1
 
 // CoAP PDU format
-
 //   0                   1                   2                   3
 //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -135,10 +146,30 @@ The message class was derived from cantcoap. Pieces of the original header
 // |1 1 1 1 1 1 1 1|    Payload (if any) ...
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-class CoapPDU {
 
+class CoAPMessage : public XenoMessage {
+  public:
+    char retained;
+    char dup;
+    uint16_t unique_id;
+    char* topic;
+    void *payload;
 
-	public:
+		CoAPMessage();
+		CoAPMessage(uint8_t *pdu, int pduLength);
+		CoAPMessage(uint8_t *buffer, int bufferLength, int pduLength);
+    ~CoAPMessage();
+
+    virtual void printDebug(StringBuilder*);
+
+    // Called to accumulate data into the class.
+    // Returns -1 on failure, or the number of bytes consumed on success.
+    int serialize(StringBuilder*);       // Returns the number of bytes resulting.
+    int accumulate(unsigned char*, int);
+
+    int decompose_publish();
+
+    // TODO: These members were digested from cantcoap...
 		/// CoAP message types. Note, values only work as enum.
 		enum Type {
 			COAP_CONFIRMABLE=0x00,
@@ -211,7 +242,7 @@ class CoapPDU {
 			COAP_CONTENT_FORMAT_APP_JSON  = 50
 		};
 
-		/// Sequence of these is returned by CoapPDU::getOptions()
+		/// Sequence of these is returned by CoAPMessage::getOptions()
 		struct CoapOption {
 			uint16_t optionDelta;
 			uint16_t optionNumber;
@@ -221,11 +252,6 @@ class CoapPDU {
 			uint8_t *optionValuePointer;
 		};
 
-		// construction and destruction
-		CoapPDU();
-		CoapPDU(uint8_t *pdu, int pduLength);
-		CoapPDU(uint8_t *buffer, int bufferLength, int pduLength);
-		~CoapPDU();
 		int reset();
 		int validate();
 
@@ -234,8 +260,8 @@ class CoapPDU {
 		uint8_t getVersion();
 
 		// message type
-		void setType(CoapPDU::Type type);
-		CoapPDU::Type getType();
+		void setType(CoAPMessage::Type type);
+		CoAPMessage::Type getType();
 
 		// tokens
 		int setTokenLength(uint8_t tokenLength);
@@ -244,9 +270,8 @@ class CoapPDU {
 		int setToken(uint8_t *token, uint8_t tokenLength);
 
 		// message code
-		void setCode(CoapPDU::Code code);
-		CoapPDU::Code getCode();
-		CoapPDU::Code httpStatusToCode(int httpStatus);
+		void setCode(CoAPMessage::Code code);
+		CoAPMessage::Code getCode();
 
 		// message ID
 		int setMessageID(uint16_t messageID);
@@ -256,7 +281,10 @@ class CoapPDU {
 		int addOption(uint16_t optionNumber, uint16_t optionLength, uint8_t *optionValue);
 		// gets a list of all options
 		CoapOption* getOptions();
-		int getNumOptions();
+
+    /* Return the number of options in the message. */
+		inline int getNumOptions() {      return _numOptions;    };
+
 		// shorthand helpers
 		int setURI(char *uri);
 		int setURI(char *uri, int urilen);
@@ -264,7 +292,7 @@ class CoapPDU {
 		int addURIQuery(char *query);
 
 		// content format helper
-		int setContentFormat(CoapPDU::ContentFormat format);
+		int setContentFormat(CoAPMessage::ContentFormat format);
 
 		// payload
 		uint8_t* mallocPayload(int bytes);
@@ -274,12 +302,11 @@ class CoapPDU {
 		uint8_t* getPayloadCopy();
 
 		// pdu
-		int getPDULength();
+		inline int getPDULength() {  return _pduLength;  };
 		uint8_t* getPDUPointer();
 		void setPDULength(int len);
 
 		// debugging
-		static void printBinary(uint8_t b);
 		void print();
 		void printBin();
 		void printHex();
@@ -287,24 +314,26 @@ class CoapPDU {
 		void printHuman();
 		void printPDUAsCArray();
 
-	private:
-		// variables
-		uint8_t *_pdu;
-		int _pduLength;
+		static void printBinary(uint8_t b);
+    static const char* optionNumToString(uint16_t);
+    static const char* codeToString(CoAPMessage::Code);
+		static CoAPMessage::Code httpStatusToCode(int httpStatus);
 
+
+  private:
+    // TODO: These members were digested from cantcoap...
+		uint8_t* _pdu;
+		uint8_t* _payloadPointer;
+		int _pduLength;
 		int _constructedFromBuffer;
 		int _bufferLength;
-
-		uint8_t *_payloadPointer;
 		int _payloadLength;
-
 		int _numOptions;
 		uint16_t _maxAddedOptionNumber;
 
-		// functions
 		void shiftPDUUp(int shiftOffset, int shiftAmount);
 		void shiftPDUDown(int startLocation, int shiftOffset, int shiftAmount);
-		uint8_t codeToValue(CoapPDU::Code c);
+		uint8_t codeToValue(CoAPMessage::Code c);
 
 		// option stuff
 		int findInsertionPosition(uint16_t optionNumber, uint16_t *prevOptionNumber);
@@ -313,85 +342,6 @@ class CoapPDU {
 		uint16_t getOptionDelta(uint8_t *option);
 		void setOptionDelta(int optionPosition, uint16_t optionDelta);
 		uint16_t getOptionValueLength(uint8_t *option);
-
-};
-
-/*
-#define COAP_CODE_EMPTY 0x00
-
-// method codes 0.01-0.31
-#define COAP_CODE_GET 	0x01
-#define COAP_CODE_POST 	0x02
-#define COAP_CODE_PUT 	0x03
-#define COAP_CODE_DELETE 0x04
-
-// Response codes 2.00 - 5.31
-// 2.00 - 2.05
-#define COAP_CODE_CREATED 0x41
-#define COAP_CODE_DELETED 0x42
-#define COAP_CODE_VALID   0x43
-#define COAP_CODE_CHANGED 0x44
-#define COAP_CODE_CONTENT 0x45
-
-// 4.00 - 4.15
-#define COAP_CODE_BAD_REQUEST                0x80
-#define COAP_CODE_UNAUTHORIZED               0x81
-#define COAP_CODE_BAD_OPTION                 0x82
-#define COAP_CODE_FORBIDDEN                  0x83
-#define COAP_CODE_NOT_FOUND                  0x84
-#define COAP_CODE_METHOD_NOT_ALLOWED         0x85
-#define COAP_CODE_NOT_ACCEPTABLE             0x86
-#define COAP_CODE_PRECONDITION_FAILED        0x8C
-#define COAP_CODE_REQUEST_ENTITY_TOO_LARGE   0x8D
-#define COAP_CODE_UNSUPPORTED_CONTENT_FORMAT 0x8F
-
-// 5.00 - 5.05
-#define COAP_CODE_INTERNAL_SERVER_ERROR      0xA0
-#define COAP_CODE_NOT_IMPLEMENTED            0xA1
-#define COAP_CODE_BAD_GATEWAY                0xA2
-#define COAP_CODE_SERVICE_UNAVAILABLE        0xA3
-#define COAP_CODE_GATEWAY_TIMEOUT            0xA4
-#define COAP_CODE_PROXYING_NOT_SUPPORTED     0xA5
-*/
-
-
-#ifndef __XENOSESSION_CoAP_H__
-#define __XENOSESSION_CoAP_H__
-
-#include "../XenoSession.h"
-
-#define MAX_PACKET_ID 65535
-
-/*
-* These state flags are hosted by the EventReceiver. This may change in the future.
-* Might be too much convention surrounding their assignment across inherritence.
-*/
-#define CoAP_SESS_FLAG_PING_WAIT  0x01    // Are we waiting on a ping reply?
-
-
-
-class CoAPMessage : public XenoMessage {
-  public:
-    char retained;
-    char dup;
-    uint16_t unique_id;
-    char* topic;
-    void *payload;
-
-    CoAPMessage();
-    ~CoAPMessage();
-
-    virtual void printDebug(StringBuilder*);
-
-    // Called to accumulate data into the class.
-    // Returns -1 on failure, or the number of bytes consumed on success.
-    int serialize(StringBuilder*);       // Returns the number of bytes resulting.
-    int accumulate(unsigned char*, int);
-
-    int decompose_publish();
-
-
-  private:
 };
 
 

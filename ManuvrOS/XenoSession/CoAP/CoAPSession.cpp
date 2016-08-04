@@ -168,7 +168,7 @@ int8_t CoAPSession::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) 
 int8_t CoAPSession::bin_stream_rx(unsigned char *buf, int len) {
   int8_t return_value = 0;
 	local_log.concatf("CoAPSession::bin_stream_rx(0x%08x, %d): ", (uint32_t) buf, len);
-	CoapPDU *recvPDU = new CoapPDU(buf, len, len);
+	CoAPMessage *recvPDU = new CoAPMessage(buf, len, len);
 	if(recvPDU->validate()!=1) {
 		local_log.concat("Malformed CoAP packet\n");
 		return return_value;

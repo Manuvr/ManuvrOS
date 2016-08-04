@@ -3,7 +3,7 @@ File:   CoAPMessage.cpp
 Author: J. Ian Lindsay
 Date:   2016.08.03
 
-This file is an adaption of cantcoap to Manuvr. I would have preffered to
+This file is an adaption of cantcoap to Manuvr. I would have preferred to
   build it as a library as is done with MQTT, but C++ linkage and
   platform-specific ties made this necessary to acheive IP abstraction.
 Original license preserved below.
@@ -44,7 +44,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // length of token in bytes (only 0 to 8 bytes allowed)
 #include "CoAPSession.h"
 
-StringBuilder coap_log;
+StringBuilder coap_log;   // TODO: Make local variable.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,10 +54,10 @@ StringBuilder coap_log;
 
 /// Memory-managed constructor. Buffer for PDU is dynamically sized and allocated by the object.
 /**
- * When using this constructor, the CoapPDU class will allocate space for the PDU.
+ * When using this constructor, the CoAPMessage class will allocate space for the PDU.
  * Contrast this with the parameterized constructors, which allow the use of an external buffer.
  *
- * Note, the PDU container and space can be reused by issuing a CoapPDU::reset(). If the new PDU exceeds the
+ * Note, the PDU container and space can be reused by issuing a CoAPMessage::reset(). If the new PDU exceeds the
  * space of the previously allocated memory, then further memory will be dynamically allocated.
  *
  * Deleting the object will free the Object container and all dynamically allocated memory.
@@ -67,11 +67,11 @@ StringBuilder coap_log;
  *
  * CoAP version defaults to 1.
  *
- * \sa CoapPDU::CoapPDU(uint8_t *pdu, int pduLength), CoapPDU::CoapPDU::(uint8_t *buffer, int bufferLength, int pduLength),
- * CoapPDU:CoapPDU()~
+ * \sa CoAPMessage::CoAPMessage(uint8_t *pdu, int pduLength), CoAPMessage::CoAPMessage::(uint8_t *buffer, int bufferLength, int pduLength),
+ * CoAPMessage:CoAPMessage()~
  *
  */
-CoapPDU::CoapPDU() {
+CoAPMessage::CoAPMessage() {
 	// pdu
 	_pdu = (uint8_t*)calloc(4,sizeof(uint8_t));
 	_pduLength = 4;
@@ -93,47 +93,47 @@ CoapPDU::CoapPDU() {
 /// Construct a PDU using an external buffer. No copy of the buffer is made.
 /**
  * This constructor is normally used where a PDU has been received over the network, and it's length is known.
- * In this case the CoapPDU object is probably going to be used as a temporary container to access member values.
+ * In this case the CoAPMessage object is probably going to be used as a temporary container to access member values.
  *
  * It is assumed that \b pduLength is the length of the actual CoAP PDU, and consequently the buffer will also be this size,
- * contrast this with CoapPDU::CoapPDU(uint8_t *buffer, int bufferLength, int pduLength) which allows the buffer to
+ * contrast this with CoAPMessage::CoAPMessage(uint8_t *buffer, int bufferLength, int pduLength) which allows the buffer to
  * be larger than the PDU.
  *
- * A PDU constructed in this manner must be validated with CoapPDU::validate() before the member variables will be accessible.
+ * A PDU constructed in this manner must be validated with CoAPMessage::validate() before the member variables will be accessible.
  *
  * \warning The validation call parses the PDU structure to set some internal parameters. If you do
  * not validate the PDU, then the behaviour of member access functions will be undefined.
  *
- * The buffer can be reused by issuing a CoapPDU::reset() but the class will not change the size of the buffer. If the
- * newly constructed PDU exceeds the size of the buffer, the function called (for example CoapPDU::addOption) will fail.
+ * The buffer can be reused by issuing a CoAPMessage::reset() but the class will not change the size of the buffer. If the
+ * newly constructed PDU exceeds the size of the buffer, the function called (for example CoAPMessage::addOption) will fail.
  *
  * Deleting this object will only delete the Object container and will not delete the PDU buffer.
  *
  * @param pdu A pointer to an array of bytes which comprise the CoAP PDU
  * @param pduLength The length of the CoAP PDU pointed to by \b pdu
 
- * \sa CoapPDU::CoapPDU(), CoapPDU::CoapPDU(uint8_t *buffer, int bufferLength, int pduLength)
+ * \sa CoAPMessage::CoAPMessage(), CoAPMessage::CoAPMessage(uint8_t *buffer, int bufferLength, int pduLength)
  */
-CoapPDU::CoapPDU(uint8_t *pdu, int pduLength) : CoapPDU(pdu,pduLength,pduLength) {
-	// delegated to CoapPDU::CoapPDU(uint8_t *buffer, int bufferLength, int pduLength)
+CoAPMessage::CoAPMessage(uint8_t *pdu, int pduLength) : CoAPMessage(pdu,pduLength,pduLength) {
+	// delegated to CoAPMessage::CoAPMessage(uint8_t *buffer, int bufferLength, int pduLength)
 }
 
 /// Construct object from external buffer that may be larger than actual PDU.
 /**
- * This differs from CoapPDU::CoapPDU(uint8_t *pdu, int pduLength) in that the buffer may be larger
+ * This differs from CoAPMessage::CoAPMessage(uint8_t *pdu, int pduLength) in that the buffer may be larger
  * than the actual CoAP PDU contained int the buffer. This is typically used when a large buffer is reused
  * multiple times. Note that \b pduLength can be 0.
  *
- * If an actual CoAP PDU is passed in the buffer, \b pduLength should match its length. CoapPDU::validate() must
+ * If an actual CoAP PDU is passed in the buffer, \b pduLength should match its length. CoAPMessage::validate() must
  * be called to initiate the object before member functions can be used.
  *
- * A PDU constructed in this manner must be validated with CoapPDU::validate() before the member variables will be accessible.
+ * A PDU constructed in this manner must be validated with CoAPMessage::validate() before the member variables will be accessible.
  *
  * \warning The validation call parses the PDU structure to set some internal parameters. If you do
  * not validate the PDU, then the behaviour of member access functions will be undefined.
  *
- * The buffer can be reused by issuing a CoapPDU::reset() but the class will not change the size of the buffer. If the
- * newly constructed PDU exceeds the size of the buffer, the function called (for example CoapPDU::addOption) will fail.
+ * The buffer can be reused by issuing a CoAPMessage::reset() but the class will not change the size of the buffer. If the
+ * newly constructed PDU exceeds the size of the buffer, the function called (for example CoAPMessage::addOption) will fail.
  *
  * Deleting this object will only delete the Object container and will not delete the PDU buffer.
  *
@@ -141,9 +141,9 @@ CoapPDU::CoapPDU(uint8_t *pdu, int pduLength) : CoapPDU(pdu,pduLength,pduLength)
  * \param bufferLength The length of the buffer
  * \param pduLength If the buffer contains a CoAP PDU, this specifies the length of the PDU within the buffer.
  *
- * \sa CoapPDU::CoapPDU(), CoapPDU::CoapPDU(uint8_t *pdu, int pduLength)
+ * \sa CoAPMessage::CoAPMessage(), CoAPMessage::CoAPMessage(uint8_t *pdu, int pduLength)
  */
-CoapPDU::CoapPDU(uint8_t *buffer, int bufferLength, int pduLength) {
+CoAPMessage::CoAPMessage(uint8_t *buffer, int bufferLength, int pduLength) {
 	// sanity
 	if(pduLength<4&&pduLength!=0) {
 		coap_log.concat("PDU cannot have a length less than 4\n");
@@ -174,28 +174,28 @@ CoapPDU::CoapPDU(uint8_t *buffer, int bufferLength, int pduLength) {
 	_payloadLength = 0;
 }
 
-/// Reset CoapPDU container so it can be reused to build a new PDU.
+/// Reset CoAPMessage container so it can be reused to build a new PDU.
 /**
- * This resets the CoapPDU container, setting the pdu length, option count, etc back to zero. The
+ * This resets the CoAPMessage container, setting the pdu length, option count, etc back to zero. The
  * PDU can then be populated as if it were newly constructed.
  *
- * Note that the space available will depend on how the CoapPDU was originally constructed:
- * -# CoapPDU::CoapPDU()
+ * Note that the space available will depend on how the CoAPMessage was originally constructed:
+ * -# CoAPMessage::CoAPMessage()
  *
  * 	Available space initially be \b _pduLength. But further space will be allocated as needed on demand,
  *    limited only by the OS/environment.
  *
- * -# CoapPDU::CoapPDU(uint8_t *pdu, int pduLength)
+ * -# CoAPMessage::CoAPMessage(uint8_t *pdu, int pduLength)
  *
  *		Space is limited by the variable \b pduLength. The PDU cannot exceed \b pduLength bytes.
  *
- * -# CoapPDU::CoapPDU(uint8_t *buffer, int bufferLength, int pduLength)
+ * -# CoAPMessage::CoAPMessage(uint8_t *buffer, int bufferLength, int pduLength)
  *
  *		Space is limited by the variable \b bufferLength. The PDU cannot exceed \b bufferLength bytes.
  *
  * \return 0 on success, 1 on failure.
  */
-int CoapPDU::reset() {
+int CoAPMessage::reset() {
 	// pdu
 	memset(_pdu,0x00,_bufferLength);
 	// packet always has at least a header
@@ -212,7 +212,7 @@ int CoapPDU::reset() {
 
 /// Validates a PDU constructed using an external buffer.
 /**
- * When a CoapPDU is constructed using an external buffer, the programmer must call this function to
+ * When a CoAPMessage is constructed using an external buffer, the programmer must call this function to
  * check that the received PDU is a valid CoAP PDU.
  *
  * \warning The validation call parses the PDU structure to set some internal parameters. If you do
@@ -220,7 +220,7 @@ int CoapPDU::reset() {
  *
  * \return 1 if the PDU validates correctly, 0 if not. XXX maybe add some error codes
  */
-int CoapPDU::validate() {
+int CoAPMessage::validate() {
 	if(_pduLength<4) {
 		coap_log.concatf("PDU has to be a minimum of 4 bytes. This: %d bytes\n",_pduLength);
 		Kernel::log(&coap_log);
@@ -266,7 +266,7 @@ int CoapPDU::validate() {
 	}
 
 	// check that code is valid
-	CoapPDU::Code code = getCode();
+	CoAPMessage::Code code = getCode();
 	if(code<COAP_EMPTY ||
 		(code>COAP_DELETE&&code<COAP_CREATED) ||
 		(code>COAP_CONTENT&&code<COAP_BAD_REQUEST) ||
@@ -400,45 +400,45 @@ int CoapPDU::validate() {
 /**
  * The destructor acts differently, depending on how the object was initially constructed (from buffer or not):
  *
- * -# CoapPDU::CoapPDU()
+ * -# CoAPMessage::CoAPMessage()
  *
  * 	Complete object is destroyed.
  *
- * -# CoapPDU::CoapPDU(uint8_t *pdu, int pduLength)
+ * -# CoAPMessage::CoAPMessage(uint8_t *pdu, int pduLength)
  *
  *		Only object container is destroyed. \b pdu is left intact.
  *
- * -# CoapPDU::CoapPDU(uint8_t *buffer, int bufferLength, int pduLength)
+ * -# CoAPMessage::CoAPMessage(uint8_t *buffer, int bufferLength, int pduLength)
  *
  *		Only object container is destroyed. \b pdu is left intact.
  *
  */
-CoapPDU::~CoapPDU() {
+CoAPMessage::~CoAPMessage() {
 	if(!_constructedFromBuffer) {
 		free(_pdu);
 	}
 }
 
 /// Returns a pointer to the internal buffer.
-uint8_t* CoapPDU::getPDUPointer() {
+uint8_t* CoAPMessage::getPDUPointer() {
 	return _pdu;
 }
 
 /// Set the PDU length to the length specified.
 /**
- * This is used when re-using a PDU container before calling CoapPDU::validate() as it
+ * This is used when re-using a PDU container before calling CoAPMessage::validate() as it
  * is not possible to deduce the length of a PDU since the payload has no length marker.
  * \param len The length of the PDU
  */
-void CoapPDU::setPDULength(int len) {
+void CoAPMessage::setPDULength(int len) {
 	_pduLength = len;
 }
 
 /// Shorthand function for setting a resource URI.
 /**
- * Calls CoapPDU::setURI(uri,strlen(uri).
+ * Calls CoAPMessage::setURI(uri,strlen(uri).
  */
-int CoapPDU::setURI(char *uri) {
+int CoAPMessage::setURI(char *uri) {
 	return setURI(uri,strlen(uri));
 }
 
@@ -466,7 +466,7 @@ int CoapPDU::setURI(char *uri) {
  *
  * \return 1 on success, 0 on failure.
  */
-int CoapPDU::setURI(char *uri, int urilen) {
+int CoAPMessage::setURI(char *uri, int urilen) {
 	// only '/', '?', '&' and ascii chars allowed
 
 	// sanitation
@@ -560,7 +560,7 @@ int CoapPDU::setURI(char *uri, int urilen) {
  * \param query The uri query to encode.
  * \return 0 on success, 1 on failure.
  */
-int CoapPDU::addURIQuery(char *query) {
+int CoAPMessage::addURIQuery(char *query) {
 	return addOption(COAP_OPTION_URI_QUERY,strlen(query),(uint8_t*)query);
 }
 
@@ -577,7 +577,7 @@ int CoapPDU::addURIQuery(char *query) {
  *
  * \return 0 on success, 1 on failure. \b outLen will contain the length of the concatenated elements.
  */
-int CoapPDU::getURI(char *dst, int dstlen, int *outLen) {
+int CoAPMessage::getURI(char *dst, int dstlen, int *outLen) {
 	if(outLen==NULL) {
 		coap_log.concat("Output length pointer is NULL\n");
 		Kernel::log(&coap_log);
@@ -606,7 +606,7 @@ int CoapPDU::getURI(char *dst, int dstlen, int *outLen) {
 		return 0;
 	}
 	// get options
-	CoapPDU::CoapOption *options = getOptions();
+	CoAPMessage::CoapOption *options = getOptions();
 	if(options==NULL) {
 		*dst = 0x00;
 		*outLen = 0;
@@ -699,7 +699,7 @@ int CoapPDU::getURI(char *dst, int dstlen, int *outLen) {
  * \param version CoAP version between 0 and 3.
  * \return 0 on success, 1 on failure.
  */
-int CoapPDU::setVersion(uint8_t version) {
+int CoAPMessage::setVersion(uint8_t version) {
 	if(version>3) {
 		return 0;
 	}
@@ -713,7 +713,7 @@ int CoapPDU::setVersion(uint8_t version) {
  * Gets the CoAP Version.
  * @return The CoAP version between 0 and 3.
  */
-uint8_t CoapPDU::getVersion() {  return (_pdu[0]&0xC0)>>6; }
+uint8_t CoAPMessage::getVersion() {  return (_pdu[0]&0xC0)>>6; }
 
 /**
  * Sets the type of this CoAP PDU.
@@ -723,14 +723,14 @@ uint8_t CoapPDU::getVersion() {  return (_pdu[0]&0xC0)>>6; }
  * - COAP_ACKNOWLEDGEMENT
  * - COAP_RESET.
  */
-void CoapPDU::setType(CoapPDU::Type mt) {
+void CoAPMessage::setType(CoAPMessage::Type mt) {
 	_pdu[0] &= 0xCF;
 	_pdu[0] |= mt;
 }
 
 /// Returns the type of the PDU.
-CoapPDU::Type CoapPDU::getType() {
-	return (CoapPDU::Type)(_pdu[0]&0x30);
+CoAPMessage::Type CoAPMessage::getType() {
+	return (CoAPMessage::Type)(_pdu[0]&0x30);
 }
 
 
@@ -739,7 +739,7 @@ CoapPDU::Type CoapPDU::getType() {
  * \param tokenLength The length of the token in bytes, between 0 and 8.
  * \return 0 on success, 1 on failure.
  */
-int CoapPDU::setTokenLength(uint8_t tokenLength) {
+int CoAPMessage::setTokenLength(uint8_t tokenLength) {
 	if(tokenLength>8)
 		return 1;
 
@@ -749,12 +749,12 @@ int CoapPDU::setTokenLength(uint8_t tokenLength) {
 }
 
 /// Returns the token length.
-int CoapPDU::getTokenLength() {
+int CoAPMessage::getTokenLength() {
 	return _pdu[0] & 0x0F;
 }
 
 /// Returns a pointer to the PDU token.
-uint8_t* CoapPDU::getTokenPointer() {
+uint8_t* CoAPMessage::getTokenPointer() {
 	if(getTokenLength()==0) {
 		return NULL;
 	}
@@ -768,7 +768,7 @@ uint8_t* CoapPDU::getTokenPointer() {
  * \param tokenLength The length of the byte sequence.
  * \return 0 on success, 1 on failure.
  */
-int CoapPDU::setToken(uint8_t *token, uint8_t tokenLength) {
+int CoAPMessage::setToken(uint8_t *token, uint8_t tokenLength) {
 	coap_log.concat("Setting token\n");
 	Kernel::log(&coap_log);
 	if(token==NULL) {
@@ -810,7 +810,8 @@ int CoapPDU::setToken(uint8_t *token, uint8_t tokenLength) {
 			}
 			_pdu = newMemory;
 			_bufferLength = _pduLength;
-		} else {
+		}
+    else {
 			// constructed from buffer, check space
 			if(_pduLength>_bufferLength) {
 				coap_log.concatf("Buffer too small to contain token, needed %d, got %d.\n",_pduLength-oldPDULength,_bufferLength-oldPDULength);
@@ -860,51 +861,51 @@ int CoapPDU::setToken(uint8_t *token, uint8_t tokenLength) {
 }
 
 /// Sets the CoAP response code
-void CoapPDU::setCode(CoapPDU::Code code) {
+void CoAPMessage::setCode(CoAPMessage::Code code) {
 	_pdu[1] = code;
 	// there is a limited set of response codes
 }
 
 /// Gets the CoAP response code
-CoapPDU::Code CoapPDU::getCode() {
-	return (CoapPDU::Code)_pdu[1];
+CoAPMessage::Code CoAPMessage::getCode() {
+	return (CoAPMessage::Code)_pdu[1];
 }
 
 
 /// Converts a http status code as an integer, to a CoAP code.
 /**
  * \param httpStatus the HTTP status code as an integer (e.g 200)
- * \return The correct corresponding CoapPDU::Code on success,
- * CoapPDU::COAP_UNDEFINED_CODE on failure.
+ * \return The correct corresponding CoAPMessage::Code on success,
+ * CoAPMessage::COAP_UNDEFINED_CODE on failure.
  */
-CoapPDU::Code CoapPDU::httpStatusToCode(int httpStatus) {
+CoAPMessage::Code CoAPMessage::httpStatusToCode(int httpStatus) {
 	switch(httpStatus) {
-		case 1:    return CoapPDU::COAP_GET;
-		case 2:    return CoapPDU::COAP_POST;
-		case 3:    return CoapPDU::COAP_PUT;
-		case 4:    return CoapPDU::COAP_DELETE;
-		case 201:  return CoapPDU::COAP_CREATED;
-		case 202:  return CoapPDU::COAP_DELETED;
-		case 203:  return CoapPDU::COAP_VALID;
-		case 204:  return CoapPDU::COAP_CHANGED;
-		case 205:  return CoapPDU::COAP_CONTENT;
-		case 400:  return CoapPDU::COAP_BAD_REQUEST;
-		case 401:  return CoapPDU::COAP_UNAUTHORIZED;
-		case 402:  return CoapPDU::COAP_BAD_OPTION;
-		case 403:  return CoapPDU::COAP_FORBIDDEN;
-		case 404:  return CoapPDU::COAP_NOT_FOUND;
-		case 405:  return CoapPDU::COAP_METHOD_NOT_ALLOWED;
-		case 406:  return CoapPDU::COAP_NOT_ACCEPTABLE;
-		case 412:  return CoapPDU::COAP_PRECONDITION_FAILED;
-		case 413:  return CoapPDU::COAP_REQUEST_ENTITY_TOO_LARGE;
-		case 415:  return CoapPDU::COAP_UNSUPPORTED_CONTENT_FORMAT;
-		case 500:  return CoapPDU::COAP_INTERNAL_SERVER_ERROR;
-		case 501:  return CoapPDU::COAP_NOT_IMPLEMENTED;
-		case 502:  return CoapPDU::COAP_BAD_GATEWAY;
-		case 503:  return CoapPDU::COAP_SERVICE_UNAVAILABLE;
-		case 504:  return CoapPDU::COAP_GATEWAY_TIMEOUT;
-		case 505:  return CoapPDU::COAP_PROXYING_NOT_SUPPORTED;
-		default:   return CoapPDU::COAP_UNDEFINED_CODE;
+		case 1:    return CoAPMessage::COAP_GET;
+		case 2:    return CoAPMessage::COAP_POST;
+		case 3:    return CoAPMessage::COAP_PUT;
+		case 4:    return CoAPMessage::COAP_DELETE;
+		case 201:  return CoAPMessage::COAP_CREATED;
+		case 202:  return CoAPMessage::COAP_DELETED;
+		case 203:  return CoAPMessage::COAP_VALID;
+		case 204:  return CoAPMessage::COAP_CHANGED;
+		case 205:  return CoAPMessage::COAP_CONTENT;
+		case 400:  return CoAPMessage::COAP_BAD_REQUEST;
+		case 401:  return CoAPMessage::COAP_UNAUTHORIZED;
+		case 402:  return CoAPMessage::COAP_BAD_OPTION;
+		case 403:  return CoAPMessage::COAP_FORBIDDEN;
+		case 404:  return CoAPMessage::COAP_NOT_FOUND;
+		case 405:  return CoAPMessage::COAP_METHOD_NOT_ALLOWED;
+		case 406:  return CoAPMessage::COAP_NOT_ACCEPTABLE;
+		case 412:  return CoAPMessage::COAP_PRECONDITION_FAILED;
+		case 413:  return CoAPMessage::COAP_REQUEST_ENTITY_TOO_LARGE;
+		case 415:  return CoAPMessage::COAP_UNSUPPORTED_CONTENT_FORMAT;
+		case 500:  return CoAPMessage::COAP_INTERNAL_SERVER_ERROR;
+		case 501:  return CoAPMessage::COAP_NOT_IMPLEMENTED;
+		case 502:  return CoAPMessage::COAP_BAD_GATEWAY;
+		case 503:  return CoAPMessage::COAP_SERVICE_UNAVAILABLE;
+		case 504:  return CoAPMessage::COAP_GATEWAY_TIMEOUT;
+		case 505:  return CoAPMessage::COAP_PROXYING_NOT_SUPPORTED;
+		default:   return CoAPMessage::COAP_UNDEFINED_CODE;
 	}
 }
 
@@ -913,7 +914,7 @@ CoapPDU::Code CoapPDU::httpStatusToCode(int httpStatus) {
  * \param messageID A 16bit message id.
  * \return 0 on success, 1 on failure.
  */
-int CoapPDU::setMessageID(uint16_t messageID) {
+int CoAPMessage::setMessageID(uint16_t messageID) {
 	// message ID is stored in network byte order
 	uint8_t *to = &_pdu[2];
 	endian_store16(to, messageID);
@@ -921,28 +922,18 @@ int CoapPDU::setMessageID(uint16_t messageID) {
 }
 
 /// Returns the 16 bit message ID of the PDU.
-uint16_t CoapPDU::getMessageID() {
+uint16_t CoAPMessage::getMessageID() {
 	// mesasge ID is stored in network byteorder
 	uint8_t *from = &_pdu[2];
 	uint16_t messageID = endian_load16(uint16_t, from);
 	return messageID;
 }
 
-/// Returns the length of the PDU.
-int CoapPDU::getPDULength() {
-	return _pduLength;
-}
-
-/// Return the number of options that the PDU has.
-int CoapPDU::getNumOptions() {
-	return _numOptions;
-}
-
 
 /**
  * This returns the options as a sequence of structs.
  */
-CoapPDU::CoapOption* CoapPDU::getOptions() {
+CoAPMessage::CoapOption* CoAPMessage::getOptions() {
 	coap_log.concatf("getOptions() called, %d options.\n",_numOptions);
 	Kernel::log(&coap_log);
 
@@ -995,12 +986,12 @@ CoapPDU::CoapOption* CoapPDU::getOptions() {
  * performed to ensure the correct ordering of options (they use a delta encoding of option numbers).
  * Re-ordering memory like this incurs a small performance cost, so if you care about this, then you
  * might want to add options in ascending order of option number.
- * \param optionNumber The number of the option, see the enum CoapPDU::Option for shorthand notations.
+ * \param optionNumber The number of the option, see the enum CoAPMessage::Option for shorthand notations.
  * \param optionLength The length of the option payload in bytes.
  * \param optionValue A pointer to the byte sequence that is the option payload (bytes will be copied).
  * \return 0 on success, 1 on failure.
  */
-int CoapPDU::addOption(uint16_t insertedOptionNumber, uint16_t optionValueLength, uint8_t *optionValue) {
+int CoAPMessage::addOption(uint16_t insertedOptionNumber, uint16_t optionValueLength, uint8_t *optionValue) {
 	// this inserts the option in memory, and re-computes the deltas accordingly
 	// prevOption <-- insertionPosition
 	// nextOption
@@ -1151,7 +1142,7 @@ int CoapPDU::addOption(uint16_t insertedOptionNumber, uint16_t optionValueLength
  * \param len The length of the payload buffer to allocate.
  * \return Either a pointer to the payload buffer, or NULL if there wasn't enough space / allocation failed.
  */
-uint8_t* CoapPDU::mallocPayload(int len) {
+uint8_t* CoAPMessage::mallocPayload(int len) {
 	coap_log.concat("Entering mallocPayload\n");
 	// sanity checks
 	if(len==0) {
@@ -1236,7 +1227,7 @@ uint8_t* CoapPDU::mallocPayload(int len) {
  * \param len Length of payload byte sequence.
  * \return 0 on success, 1 on failure.
  */
-int CoapPDU::setPayload(uint8_t *payload, int len) {
+int CoAPMessage::setPayload(uint8_t *payload, int len) {
 	if(payload==NULL) {
 		coap_log.concat("NULL payload pointer.\n");
 		Kernel::log(&coap_log);
@@ -1257,17 +1248,17 @@ int CoapPDU::setPayload(uint8_t *payload, int len) {
 }
 
 /// Returns a pointer to the payload buffer.
-uint8_t* CoapPDU::getPayloadPointer() {
+uint8_t* CoAPMessage::getPayloadPointer() {
 	return _payloadPointer;
 }
 
 /// Gets the length of the payload buffer.
-int CoapPDU::getPayloadLength() {
+int CoAPMessage::getPayloadLength() {
 	return _payloadLength;
 }
 
 /// Returns a pointer to a buffer which is a copy of the payload buffer (dynamically allocated).
-uint8_t* CoapPDU::getPayloadCopy() {
+uint8_t* CoAPMessage::getPayloadCopy() {
 	if(_payloadLength==0) {
 		return NULL;
 	}
@@ -1299,10 +1290,10 @@ uint8_t* CoapPDU::getPayloadCopy() {
  *
  * \return 0 on success, 1 on failure.
  */
-int CoapPDU::setContentFormat(CoapPDU::ContentFormat format) {
+int CoAPMessage::setContentFormat(CoAPMessage::ContentFormat format) {
 	if(format==0) {
 		// minimal representation means null option value
-		if(addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT,0,NULL)!=0) {
+		if(addOption(CoAPMessage::COAP_OPTION_CONTENT_FORMAT,0,NULL)!=0) {
 			coap_log.concat("Error setting content format\n");
 			Kernel::log(&coap_log);
 			return 1;
@@ -1315,7 +1306,7 @@ int CoapPDU::setContentFormat(CoapPDU::ContentFormat format) {
 	// just use 1 byte if can do it
 	if(format<256) {
 		c[0] = format;
-		if(addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT,1,c)!=0) {
+		if(addOption(CoAPMessage::COAP_OPTION_CONTENT_FORMAT,1,c)!=0) {
 			coap_log.concat("Error setting content format\n");
 			Kernel::log(&coap_log);
 			return 1;
@@ -1325,7 +1316,7 @@ int CoapPDU::setContentFormat(CoapPDU::ContentFormat format) {
 
 	uint8_t *to = c;
 	endian_store16(to, format);
-	if(addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT,2,c)!=0) {
+	if(addOption(CoAPMessage::COAP_OPTION_CONTENT_FORMAT,2,c)!=0) {
 		coap_log.concat("Error setting content format\n");
 		Kernel::log(&coap_log);
 		return 1;
@@ -1343,7 +1334,7 @@ int CoapPDU::setContentFormat(CoapPDU::ContentFormat format) {
  * \param shiftOffset End of block to move, relative to end of PDU (-1).
  * \param shiftAmount Length of block to move.
  */
-void CoapPDU::shiftPDUUp(int shiftOffset, int shiftAmount) {
+void CoAPMessage::shiftPDUUp(int shiftOffset, int shiftAmount) {
 	coap_log.concatf("shiftOffset: %d, shiftAmount: %d",shiftOffset,shiftAmount);
 	int destPointer = _pduLength-1;
 	int srcPointer  = destPointer-shiftOffset;
@@ -1363,7 +1354,7 @@ void CoapPDU::shiftPDUUp(int shiftOffset, int shiftAmount) {
  * \param shiftOffset Where the block starts, relative to start index.
  * \param shiftAmount Length of block to shift.
  */
-void CoapPDU::shiftPDUDown(int startLocation, int shiftOffset, int shiftAmount) {
+void CoAPMessage::shiftPDUDown(int startLocation, int shiftOffset, int shiftAmount) {
 	coap_log.concatf("startLocation: %d, shiftOffset: %d, shiftAmount: %d\n",startLocation,shiftOffset,shiftAmount);
 	int srcPointer = startLocation+shiftOffset;
 	while(shiftAmount--) {
@@ -1379,7 +1370,7 @@ void CoapPDU::shiftPDUDown(int startLocation, int shiftOffset, int shiftAmount) 
  * \param option Pointer to location of option in PDU.
  * \return The 16 bit option-payload length.
  */
-uint16_t CoapPDU::getOptionValueLength(uint8_t *option) {
+uint16_t CoAPMessage::getOptionValueLength(uint8_t *option) {
 	uint16_t delta = (option[0] & 0xF0) >> 4;
 	uint16_t length = (option[0] & 0x0F);
 	// no extra bytes
@@ -1414,7 +1405,7 @@ uint16_t CoapPDU::getOptionValueLength(uint8_t *option) {
  * \param option Pointer to location of option in PDU.
  * \return The 16 bit delta.
  */
-uint16_t CoapPDU::getOptionDelta(uint8_t *option) {
+uint16_t CoAPMessage::getOptionDelta(uint8_t *option) {
 	uint16_t delta = (option[0] & 0xF0) >> 4;
 	switch(delta) {
 		case 13:    // single byte option delta
@@ -1436,7 +1427,7 @@ uint16_t CoapPDU::getOptionDelta(uint8_t *option) {
  * \return 0 on success, 1 on failure. \b prevOptionNumber will contain the option number of the option
  * before the insertion position (for example 0 if no options have been inserted).
  */
-int CoapPDU::findInsertionPosition(uint16_t optionNumber, uint16_t *prevOptionNumber) {
+int CoAPMessage::findInsertionPosition(uint16_t optionNumber, uint16_t *prevOptionNumber) {
 	// zero this for safety
 	*prevOptionNumber = 0x00;
 
@@ -1475,7 +1466,7 @@ int CoapPDU::findInsertionPosition(uint16_t optionNumber, uint16_t *prevOptionNu
 }
 
 /// CoAP uses a minimal-byte representation for length fields. This returns the number of bytes needed to represent a given length.
-int CoapPDU::computeExtraBytes(uint16_t n) {
+int CoAPMessage::computeExtraBytes(uint16_t n) {
 	if(n<269) {
 		return (n<13) ? 0 : 1;
 	}
@@ -1488,7 +1479,7 @@ int CoapPDU::computeExtraBytes(uint16_t n) {
  * \param optionPosition The index of the option in the PDU.
  * \param optionDelta The option delta value to set.
  */
-void CoapPDU::setOptionDelta(int optionPosition, uint16_t optionDelta) {
+void CoAPMessage::setOptionDelta(int optionPosition, uint16_t optionDelta) {
 	int headerStart = optionPosition;
 	// clear the old option delta bytes
 	_pdu[headerStart] &= 0x0F;
@@ -1522,7 +1513,7 @@ void CoapPDU::setOptionDelta(int optionPosition, uint16_t optionDelta) {
  * \param optionValue A pointer to the sequence of bytes representing the option value.
  * \return 0 on success, 1 on failure.
  */
-int CoapPDU::insertOption(
+int CoAPMessage::insertOption(
 	int insertionPosition,
 	uint16_t optionDelta,
 	uint16_t optionValueLength,
@@ -1579,8 +1570,7 @@ int CoapPDU::insertOption(
 // DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG
 
 /// Prints the PDU in human-readable format.
-void CoapPDU::printHuman() {
-	coap_log.concat("__________________\n");
+void CoAPMessage::printHuman() {
 	if(_constructedFromBuffer) {
 		coap_log.concatf("PDU was constructed from buffer of %d bytes\n",_bufferLength);
 	}
@@ -1605,90 +1595,7 @@ void CoapPDU::printHuman() {
 		break;
 	}
 	coap_log.concatf("Token length: %d\n",getTokenLength());
-	coap_log.concat("Code: ");
-	switch(getCode()) {
-		case COAP_EMPTY:
-			coap_log.concat("0.00 Empty\n");
-		break;
-		case COAP_GET:
-			coap_log.concat("0.01 GET\n");
-		break;
-		case COAP_POST:
-			coap_log.concat("0.02 POST\n");
-		break;
-		case COAP_PUT:
-			coap_log.concat("0.03 PUT\n");
-		break;
-		case COAP_DELETE:
-			coap_log.concat("0.04 DELETE\n");
-		break;
-		case COAP_CREATED:
-			coap_log.concat("2.01 Created\n");
-		break;
-		case COAP_DELETED:
-			coap_log.concat("2.02 Deleted\n");
-		break;
-		case COAP_VALID:
-			coap_log.concat("2.03 Valid\n");
-		break;
-		case COAP_CHANGED:
-			coap_log.concat("2.04 Changed\n");
-		break;
-		case COAP_CONTENT:
-			coap_log.concat("2.05 Content\n");
-		break;
-		case COAP_BAD_REQUEST:
-			coap_log.concat("4.00 Bad Request\n");
-		break;
-		case COAP_UNAUTHORIZED:
-			coap_log.concat("4.01 Unauthorized\n");
-		break;
-		case COAP_BAD_OPTION:
-			coap_log.concat("4.02 Bad Option\n");
-		break;
-		case COAP_FORBIDDEN:
-			coap_log.concat("4.03 Forbidden\n");
-		break;
-		case COAP_NOT_FOUND:
-			coap_log.concat("4.04 Not Found\n");
-		break;
-		case COAP_METHOD_NOT_ALLOWED:
-			coap_log.concat("4.05 Method Not Allowef\n");
-		break;
-		case COAP_NOT_ACCEPTABLE:
-			coap_log.concat("4.06 Not Acceptable\n");
-		break;
-		case COAP_PRECONDITION_FAILED:
-			coap_log.concat("4.12 Precondition Failed\n");
-		break;
-		case COAP_REQUEST_ENTITY_TOO_LARGE:
-			coap_log.concat("4.13 Request Entity Too Large\n");
-		break;
-		case COAP_UNSUPPORTED_CONTENT_FORMAT:
-			coap_log.concat("4.15 Unsupported Content-Format\n");
-		break;
-		case COAP_INTERNAL_SERVER_ERROR:
-			coap_log.concat("5.00 Internal Server Error\n");
-		break;
-		case COAP_NOT_IMPLEMENTED:
-			coap_log.concat("5.01 Not Implemented\n");
-		break;
-		case COAP_BAD_GATEWAY:
-			coap_log.concat("5.02 Bad Gateway\n");
-		break;
-		case COAP_SERVICE_UNAVAILABLE:
-			coap_log.concat("5.03 Service Unavailable\n");
-		break;
-		case COAP_GATEWAY_TIMEOUT:
-			coap_log.concat("5.04 Gateway Timeout\n");
-		break;
-		case COAP_PROXYING_NOT_SUPPORTED:
-			coap_log.concat("5.05 Proxying Not Supported\n");
-		break;
-		case COAP_UNDEFINED_CODE:
-			coap_log.concat("Undefined Code\n");
-		break;
-	}
+	coap_log.concatf("Code: %s", codeToString(getCode()));
 
 	// print message ID
 	coap_log.concatf("Message ID: %u\n",getMessageID());
@@ -1708,7 +1615,7 @@ void CoapPDU::printHuman() {
 	}
 
 	// print options
-	CoapPDU::CoapOption* options = getOptions();
+	CoAPMessage::CoapOption* options = getOptions();
 	if(options==NULL) {
 		return;
 	}
@@ -1717,69 +1624,7 @@ void CoapPDU::printHuman() {
 	for(int i=0; i<_numOptions; i++) {
 		coap_log.concatf("OPTION (%d/%d)\n",i + 1,_numOptions);
 		coap_log.concatf("   Option number (delta): %hu (%hu)\n",options[i].optionNumber,options[i].optionDelta);
-		coap_log.concat("   Name: ");
-		switch(options[i].optionNumber) {
-			case COAP_OPTION_IF_MATCH:
-				coap_log.concat("IF_MATCH\n");
-			break;
-			case COAP_OPTION_URI_HOST:
-				coap_log.concat("URI_HOST\n");
-			break;
-			case COAP_OPTION_ETAG:
-				coap_log.concat("ETAG\n");
-			break;
-			case COAP_OPTION_IF_NONE_MATCH:
-				coap_log.concat("IF_NONE_MATCH\n");
-			break;
-			case COAP_OPTION_OBSERVE:
-				coap_log.concat("OBSERVE\n");
-			break;
-			case COAP_OPTION_URI_PORT:
-				coap_log.concat("URI_PORT\n");
-			break;
-			case COAP_OPTION_LOCATION_PATH:
-				coap_log.concat("LOCATION_PATH\n");
-			break;
-			case COAP_OPTION_URI_PATH:
-				coap_log.concat("URI_PATH\n");
-			break;
-			case COAP_OPTION_CONTENT_FORMAT:
-				coap_log.concat("CONTENT_FORMAT\n");
-			break;
-			case COAP_OPTION_MAX_AGE:
-				coap_log.concat("MAX_AGE\n");
-			break;
-			case COAP_OPTION_URI_QUERY:
-				coap_log.concat("URI_QUERY\n");
-			break;
-			case COAP_OPTION_ACCEPT:
-				coap_log.concat("ACCEPT\n");
-			break;
-			case COAP_OPTION_LOCATION_QUERY:
-				coap_log.concat("LOCATION_QUERY\n");
-			break;
-			case COAP_OPTION_PROXY_URI:
-				coap_log.concat("PROXY_URI\n");
-			break;
-			case COAP_OPTION_PROXY_SCHEME:
-				coap_log.concat("PROXY_SCHEME\n");
-			break;
-			case COAP_OPTION_BLOCK1:
-				coap_log.concat("BLOCK1\n");
-			break;
-			case COAP_OPTION_BLOCK2:
-				coap_log.concat("BLOCK2\n");
-			break;
-			case COAP_OPTION_SIZE1:
-				coap_log.concat("SIZE1\n");
-			break;
-			case COAP_OPTION_SIZE2:
-				coap_log.concat("SIZE2\n");
-			break;
-			default:
-				coap_log.concat("Unknown option\n");
-			break;
-		}
+		coap_log.concatf("   Name: %s\n", optionNumToString(options[i].optionNumber));
 		coap_log.concatf("   Value length: %u\n",options[i].optionValueLength);
 		coap_log.concat("   Value: \"");
 		for(int j=0; j<options[i].optionValueLength; j++) {
@@ -1817,7 +1662,7 @@ void CoapPDU::printHuman() {
 }
 
 /// Prints the PDU as a c array (useful for debugging or hardcoding PDUs)
-void CoapPDU::printPDUAsCArray() {
+void CoAPMessage::printPDUAsCArray() {
 	coap_log.concat("const uint8_t array[] = {");
 	for(int i=0; i<_pduLength; i++) {
 		coap_log.concatf("0x%.2x, ",_pdu[i]);
@@ -1830,7 +1675,7 @@ void CoapPDU::printPDUAsCArray() {
 /**
  * \param option This is a pointer to where the option begins in the PDU.
  */
-void CoapPDU::printOptionHuman(uint8_t *option) {
+void CoAPMessage::printOptionHuman(uint8_t *option) {
 	// compute some useful stuff
 	uint16_t optionDelta = getOptionDelta(option);
 	uint16_t optionValueLength = getOptionValueLength(option);
@@ -1853,18 +1698,18 @@ void CoapPDU::printOptionHuman(uint8_t *option) {
 		if(i%4==0) {
 			coap_log.concatf("   %.2d ",i);
 		}
-		CoapPDU::printBinary(option[i]);
+		CoAPMessage::printBinary(option[i]);
 	}
 
 	// print header byte
 	coap_log.concat("Header byte:  ");
-	CoapPDU::printBinary(*option++);
+	CoAPMessage::printBinary(*option++);
 
 	// print extended delta bytes
 	if(extraDeltaBytes) {
 		coap_log.concatf("Extended delta bytes (%d) in network order:  ",extraDeltaBytes);
 		while(extraDeltaBytes--) {
-			CoapPDU::printBinary(*option++);
+			CoAPMessage::printBinary(*option++);
 		}
 	}
 	else {
@@ -1875,7 +1720,7 @@ void CoapPDU::printOptionHuman(uint8_t *option) {
 	if(extraValueLengthBytes) {
 		coap_log.concatf("Extended value length bytes (%d) in network order: ",extraValueLengthBytes);
 		while(extraValueLengthBytes--) {
-			CoapPDU::printBinary(*option++);
+			CoAPMessage::printBinary(*option++);
 		}
 	}
 	else {
@@ -1889,32 +1734,32 @@ void CoapPDU::printOptionHuman(uint8_t *option) {
 		if(i%4==0) {
 			coap_log.concatf("   %.2d ",i);
 		}
-		CoapPDU::printBinary(*option++);
+		CoAPMessage::printBinary(*option++);
 	}
 	coap_log.concat("\n");
 	Kernel::log(&coap_log);
 }
 
 /// Dumps the PDU header in hex.
-void CoapPDU::printHex() {
+void CoAPMessage::printHex() {
 	coap_log.concatf("Hexdump dump of PDU:  %.2x %.2x %.2x %.2x\n",_pdu[0],_pdu[1],_pdu[2],_pdu[3]);
 	Kernel::log(&coap_log);
 }
 
 /// Dumps the entire PDU in binary.
-void CoapPDU::printBin() {
+void CoAPMessage::printBin() {
 	for(int i=0; i<_pduLength; i++) {
 		if(i%4==0) {
 			coap_log.concatf("%.2d \n",i);
 		}
-		CoapPDU::printBinary(_pdu[i]);
+		CoAPMessage::printBinary(_pdu[i]);
 	}
 	coap_log.concat("\n");
 	Kernel::log(&coap_log);
 }
 
 /// Prints a single byte in binary.
-void CoapPDU::printBinary(uint8_t b) {
+void CoAPMessage::printBinary(uint8_t b) {
 	coap_log.concatf("%d%d%d%d%d%d%d%d",
 		(b&0x80)&&0x01, (b&0x40)&&0x01,
 		(b&0x20)&&0x01, (b&0x10)&&0x01,
@@ -1925,6 +1770,107 @@ void CoapPDU::printBinary(uint8_t b) {
 }
 
 /// Dumps the PDU as a byte sequence to stdout.
-void CoapPDU::print() {
+void CoAPMessage::print() {
 	fwrite(_pdu,1,_pduLength,stdout);
+}
+
+
+
+
+
+/**
+* This method is called to flatten this message (and its Event) into a string
+*   so that the session can provide it to the transport.
+*
+* @return  The total size of the string that is meant for the transport,
+*            or -1 if something went wrong.
+*/
+int CoAPMessage::serialize(StringBuilder* buffer) {
+  return 0;
+}
+
+
+/**
+* This function should be called by the session to feed bytes to a message.
+*
+* @return  The number of bytes consumed, or a negative value on failure.
+*/
+int CoAPMessage::accumulate(unsigned char* _buf, int _len) {
+	return 0;
+}
+
+/**
+* Debug support method. This fxn is only present in debug builds.
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
+void CoAPMessage::printDebug(StringBuilder *output) {
+  XenoMessage::printDebug(output);
+	//output->concatf("\t Parse complete  %s\n", parseComplete() ? "yes":"no");
+	//if ((bytes_total > 0) && (NULL != payload)) {
+	//	output->concat("\t Payload contents:\t");
+	//	for (uint32_t i = 0; i < bytes_total; i++) {
+	//		output->concatf("0x%02x ", *((uint8_t*)payload + i));
+	//	}
+	//	output->concat("\n");
+	//}
+}
+
+
+const char* CoAPMessage::optionNumToString(uint16_t code) {
+	switch(code) {
+		case COAP_OPTION_IF_MATCH:       return "IF_MATCH";
+		case COAP_OPTION_URI_HOST:       return "URI_HOST";
+		case COAP_OPTION_ETAG:           return "ETAG";
+		case COAP_OPTION_IF_NONE_MATCH:  return "IF_NONE_MATCH";
+		case COAP_OPTION_OBSERVE:        return "OBSERVE";
+		case COAP_OPTION_URI_PORT:       return "URI_PORT";
+		case COAP_OPTION_LOCATION_PATH:  return "LOCATION_PATH";
+		case COAP_OPTION_URI_PATH:       return "URI_PATH";
+		case COAP_OPTION_CONTENT_FORMAT: return "CONTENT_FORMAT";
+		case COAP_OPTION_MAX_AGE:        return "MAX_AGE";
+		case COAP_OPTION_URI_QUERY:      return "URI_QUERY";
+		case COAP_OPTION_ACCEPT:         return "ACCEPT";
+		case COAP_OPTION_LOCATION_QUERY: return "LOCATION_QUERY";
+		case COAP_OPTION_PROXY_URI:      return "PROXY_URI";
+		case COAP_OPTION_PROXY_SCHEME:   return "PROXY_SCHEME";
+		case COAP_OPTION_BLOCK1:         return "BLOCK1";
+		case COAP_OPTION_BLOCK2:         return "BLOCK2";
+		case COAP_OPTION_SIZE1:          return "SIZE1";
+		case COAP_OPTION_SIZE2:          return "SIZE2";
+		default:                         return "<UNDEF>";
+	}
+}
+
+const char* CoAPMessage::codeToString(CoAPMessage::Code code) {
+	switch(code) {
+		case COAP_EMPTY:                      return "0.00 Empty";
+		case COAP_GET:                        return "0.01 GET";
+		case COAP_POST:                       return "0.02 POST";
+		case COAP_PUT:                        return "0.03 PUT";
+		case COAP_DELETE:                     return "0.04 DELETE";
+		case COAP_CREATED:                    return "2.01 Created";
+		case COAP_DELETED:                    return "2.02 Deleted";
+		case COAP_VALID:                      return "2.03 Valid";
+		case COAP_CHANGED:                    return "2.04 Changed";
+		case COAP_CONTENT:                    return "2.05 Content";
+		case COAP_BAD_REQUEST:                return "4.00 Bad Request";
+		case COAP_UNAUTHORIZED:               return "4.01 Unauthorized";
+		case COAP_BAD_OPTION:                 return "4.02 Bad Option";
+		case COAP_FORBIDDEN:                  return "4.03 Forbidden";
+		case COAP_NOT_FOUND:                  return "4.04 Not Found";
+		case COAP_METHOD_NOT_ALLOWED:         return "4.05 Method Not Allowef";
+		case COAP_NOT_ACCEPTABLE:             return "4.06 Not Acceptable";
+		case COAP_PRECONDITION_FAILED:        return "4.12 Precondition Failed";
+		case COAP_REQUEST_ENTITY_TOO_LARGE:   return "4.13 Request Entity Too Large";
+		case COAP_UNSUPPORTED_CONTENT_FORMAT: return "4.15 Unsupported Content-Format";
+		case COAP_INTERNAL_SERVER_ERROR:      return "5.00 Internal Server Error";
+		case COAP_NOT_IMPLEMENTED:            return "5.01 Not Implemented";
+		case COAP_BAD_GATEWAY:                return "5.02 Bad Gateway";
+		case COAP_SERVICE_UNAVAILABLE:        return "5.03 Service Unavailable";
+		case COAP_GATEWAY_TIMEOUT:            return "5.04 Gateway Timeout";
+		case COAP_PROXYING_NOT_SUPPORTED:     return "5.05 Proxying Not Supported";
+		case COAP_UNDEFINED_CODE:
+    default:                              return "<UNDEF>";
+	}
 }
