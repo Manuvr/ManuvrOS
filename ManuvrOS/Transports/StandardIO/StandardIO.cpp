@@ -22,7 +22,7 @@ StandardIO is the transport driver for wrapping POSIX-style STDIN/STDOUT/STDERR.
 */
 
 
-#if defined(__MANUVR_LINUX)
+#if defined(__MANUVR_LINUX) && defined(MANUVR_STDIO)
 
 #include "StandardIO.h"
 #include "FirmwareDefs.h"
@@ -307,8 +307,7 @@ void StandardIO::printDebug(StringBuilder *temp) {
 
 
 /**
-* There is a NULL-check performed upstream for the scheduler member. So no need
-*   to do it again here.
+* The Kernel is booting, or has-booted prior to our being instanced.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
@@ -372,4 +371,4 @@ int8_t StandardIO::notify(ManuvrRunnable *active_event) {
   return return_value;
 }
 
-#endif  // __MANUVR_LINUX
+#endif  // __MANUVR_LINUX && MANUVR_STDIO

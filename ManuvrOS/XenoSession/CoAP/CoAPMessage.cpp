@@ -5,7 +5,9 @@ Date:   2016.08.03
 
 This file is an adaption of cantcoap to Manuvr. I would have preferred to
   build it as a library as is done with MQTT, but C++ linkage and
-  platform-specific ties made this necessary to acheive IP abstraction.
+  platform-specific ties made this necessary to achieve IP abstraction.
+Cantcoap is simply a packet parser/packer, so all notions of stateful
+  session are concentrated in CoAPSession.
 Original license preserved below.
 
 
@@ -51,6 +53,87 @@ StringBuilder coap_log;   // TODO: Make local variable.
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
+
+
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
+
+const char* CoAPMessage::optionNumToString(uint16_t code) {
+	switch(code) {
+		case COAP_OPTION_IF_MATCH:       return "IF_MATCH";
+		case COAP_OPTION_URI_HOST:       return "URI_HOST";
+		case COAP_OPTION_ETAG:           return "ETAG";
+		case COAP_OPTION_IF_NONE_MATCH:  return "IF_NONE_MATCH";
+		case COAP_OPTION_OBSERVE:        return "OBSERVE";
+		case COAP_OPTION_URI_PORT:       return "URI_PORT";
+		case COAP_OPTION_LOCATION_PATH:  return "LOCATION_PATH";
+		case COAP_OPTION_URI_PATH:       return "URI_PATH";
+		case COAP_OPTION_CONTENT_FORMAT: return "CONTENT_FORMAT";
+		case COAP_OPTION_MAX_AGE:        return "MAX_AGE";
+		case COAP_OPTION_URI_QUERY:      return "URI_QUERY";
+		case COAP_OPTION_ACCEPT:         return "ACCEPT";
+		case COAP_OPTION_LOCATION_QUERY: return "LOCATION_QUERY";
+		case COAP_OPTION_PROXY_URI:      return "PROXY_URI";
+		case COAP_OPTION_PROXY_SCHEME:   return "PROXY_SCHEME";
+		case COAP_OPTION_BLOCK1:         return "BLOCK1";
+		case COAP_OPTION_BLOCK2:         return "BLOCK2";
+		case COAP_OPTION_SIZE1:          return "SIZE1";
+		case COAP_OPTION_SIZE2:          return "SIZE2";
+		default:                         return "<UNDEF>";
+	}
+}
+
+const char* CoAPMessage::codeToString(CoAPMessage::Code code) {
+	switch(code) {
+		case COAP_EMPTY:                      return "0.00 Empty";
+		case COAP_GET:                        return "0.01 GET";
+		case COAP_POST:                       return "0.02 POST";
+		case COAP_PUT:                        return "0.03 PUT";
+		case COAP_DELETE:                     return "0.04 DELETE";
+		case COAP_CREATED:                    return "2.01 Created";
+		case COAP_DELETED:                    return "2.02 Deleted";
+		case COAP_VALID:                      return "2.03 Valid";
+		case COAP_CHANGED:                    return "2.04 Changed";
+		case COAP_CONTENT:                    return "2.05 Content";
+		case COAP_BAD_REQUEST:                return "4.00 Bad Request";
+		case COAP_UNAUTHORIZED:               return "4.01 Unauthorized";
+		case COAP_BAD_OPTION:                 return "4.02 Bad Option";
+		case COAP_FORBIDDEN:                  return "4.03 Forbidden";
+		case COAP_NOT_FOUND:                  return "4.04 Not Found";
+		case COAP_METHOD_NOT_ALLOWED:         return "4.05 Method Not Allowef";
+		case COAP_NOT_ACCEPTABLE:             return "4.06 Not Acceptable";
+		case COAP_PRECONDITION_FAILED:        return "4.12 Precondition Failed";
+		case COAP_REQUEST_ENTITY_TOO_LARGE:   return "4.13 Request Entity Too Large";
+		case COAP_UNSUPPORTED_CONTENT_FORMAT: return "4.15 Unsupported Content-Format";
+		case COAP_INTERNAL_SERVER_ERROR:      return "5.00 Internal Server Error";
+		case COAP_NOT_IMPLEMENTED:            return "5.01 Not Implemented";
+		case COAP_BAD_GATEWAY:                return "5.02 Bad Gateway";
+		case COAP_SERVICE_UNAVAILABLE:        return "5.03 Service Unavailable";
+		case COAP_GATEWAY_TIMEOUT:            return "5.04 Gateway Timeout";
+		case COAP_PROXYING_NOT_SUPPORTED:     return "5.05 Proxying Not Supported";
+		case COAP_UNDEFINED_CODE:
+    default:                              return "<UNDEF>";
+	}
+}
+
+
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
+
 
 /// Memory-managed constructor. Buffer for PDU is dynamically sized and allocated by the object.
 /**
@@ -1814,63 +1897,4 @@ void CoAPMessage::printDebug(StringBuilder *output) {
 	//	}
 	//	output->concat("\n");
 	//}
-}
-
-
-const char* CoAPMessage::optionNumToString(uint16_t code) {
-	switch(code) {
-		case COAP_OPTION_IF_MATCH:       return "IF_MATCH";
-		case COAP_OPTION_URI_HOST:       return "URI_HOST";
-		case COAP_OPTION_ETAG:           return "ETAG";
-		case COAP_OPTION_IF_NONE_MATCH:  return "IF_NONE_MATCH";
-		case COAP_OPTION_OBSERVE:        return "OBSERVE";
-		case COAP_OPTION_URI_PORT:       return "URI_PORT";
-		case COAP_OPTION_LOCATION_PATH:  return "LOCATION_PATH";
-		case COAP_OPTION_URI_PATH:       return "URI_PATH";
-		case COAP_OPTION_CONTENT_FORMAT: return "CONTENT_FORMAT";
-		case COAP_OPTION_MAX_AGE:        return "MAX_AGE";
-		case COAP_OPTION_URI_QUERY:      return "URI_QUERY";
-		case COAP_OPTION_ACCEPT:         return "ACCEPT";
-		case COAP_OPTION_LOCATION_QUERY: return "LOCATION_QUERY";
-		case COAP_OPTION_PROXY_URI:      return "PROXY_URI";
-		case COAP_OPTION_PROXY_SCHEME:   return "PROXY_SCHEME";
-		case COAP_OPTION_BLOCK1:         return "BLOCK1";
-		case COAP_OPTION_BLOCK2:         return "BLOCK2";
-		case COAP_OPTION_SIZE1:          return "SIZE1";
-		case COAP_OPTION_SIZE2:          return "SIZE2";
-		default:                         return "<UNDEF>";
-	}
-}
-
-const char* CoAPMessage::codeToString(CoAPMessage::Code code) {
-	switch(code) {
-		case COAP_EMPTY:                      return "0.00 Empty";
-		case COAP_GET:                        return "0.01 GET";
-		case COAP_POST:                       return "0.02 POST";
-		case COAP_PUT:                        return "0.03 PUT";
-		case COAP_DELETE:                     return "0.04 DELETE";
-		case COAP_CREATED:                    return "2.01 Created";
-		case COAP_DELETED:                    return "2.02 Deleted";
-		case COAP_VALID:                      return "2.03 Valid";
-		case COAP_CHANGED:                    return "2.04 Changed";
-		case COAP_CONTENT:                    return "2.05 Content";
-		case COAP_BAD_REQUEST:                return "4.00 Bad Request";
-		case COAP_UNAUTHORIZED:               return "4.01 Unauthorized";
-		case COAP_BAD_OPTION:                 return "4.02 Bad Option";
-		case COAP_FORBIDDEN:                  return "4.03 Forbidden";
-		case COAP_NOT_FOUND:                  return "4.04 Not Found";
-		case COAP_METHOD_NOT_ALLOWED:         return "4.05 Method Not Allowef";
-		case COAP_NOT_ACCEPTABLE:             return "4.06 Not Acceptable";
-		case COAP_PRECONDITION_FAILED:        return "4.12 Precondition Failed";
-		case COAP_REQUEST_ENTITY_TOO_LARGE:   return "4.13 Request Entity Too Large";
-		case COAP_UNSUPPORTED_CONTENT_FORMAT: return "4.15 Unsupported Content-Format";
-		case COAP_INTERNAL_SERVER_ERROR:      return "5.00 Internal Server Error";
-		case COAP_NOT_IMPLEMENTED:            return "5.01 Not Implemented";
-		case COAP_BAD_GATEWAY:                return "5.02 Bad Gateway";
-		case COAP_SERVICE_UNAVAILABLE:        return "5.03 Service Unavailable";
-		case COAP_GATEWAY_TIMEOUT:            return "5.04 Gateway Timeout";
-		case COAP_PROXYING_NOT_SUPPORTED:     return "5.05 Proxying Not Supported";
-		case COAP_UNDEFINED_CODE:
-    default:                              return "<UNDEF>";
-	}
 }
