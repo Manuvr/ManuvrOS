@@ -172,7 +172,7 @@ int8_t CoAPSession::bin_stream_rx(unsigned char *buf, int len) {
 		local_log.concat("Malformed CoAP packet\n");
 		return return_value;
 	}
-	recvPDU->printHuman();
+	recvPDU->printDebug(&local_log);
 
 	for (int x = 0; x < len; x++) {
 		local_log.concatf("%02x ", *(buf+x));
