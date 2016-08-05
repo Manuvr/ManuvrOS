@@ -48,8 +48,6 @@ This is basically only for linux until it is needed in a smaller space.
 #endif
 
 
-#if defined(MANUVR_SUPPORT_TCPSOCKET) | defined(MANUVR_SUPPORT_UDP)
-
 /*
 * This is a wrapper around sockets as they exist in a linux system.
 * TODO: This might be an appropriate place for lwip?
@@ -58,6 +56,10 @@ class ManuvrSocket : public ManuvrXport {
   public:
     ManuvrSocket(const char* addr, int port, uint32_t opts);
     ~ManuvrSocket();
+
+    /* Override from BufferPipe. */
+    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
+    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
 
     inline int getSockID() {  return _sock; };
 
@@ -78,6 +80,4 @@ class ManuvrSocket : public ManuvrXport {
     void __class_initializer();
 };
 
-
-#endif  // General socket support
 #endif  // Header guard __MANUVR_SOCKET_H__

@@ -97,8 +97,11 @@ class MQTTSession : public XenoSession {
     int8_t resubscribeAll();
     int8_t unsubscribeAll();
 
+    /* Override from BufferPipe. */
+    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+
     int8_t connection_callback(bool connected);
-    int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
 
     /* Overrides from EventReceiver */
     void procDirectDebugInstruction(StringBuilder*);
@@ -121,6 +124,8 @@ class MQTTSession : public XenoSession {
 
     unsigned int _next_packetid;
     unsigned int command_timeout_ms;
+
+    int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
 
     inline bool _ping_outstanding() {        return (_er_flag(MQTT_SESS_FLAG_PING_WAIT));         };
     inline void _ping_outstanding(bool nu) { return (_er_set_flag(MQTT_SESS_FLAG_PING_WAIT, nu)); };

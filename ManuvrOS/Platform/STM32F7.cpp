@@ -664,7 +664,6 @@ volatile void hardwareShutdown() {
 */
 volatile void reboot() {
   globalIRQDisable();
-  TM_USBD_Stop(TM_USB_FS);    // DeInit() The USB device.
   __set_MSP(0x20001000);      // Set the main stack pointer...
   HAL_RCC_DeInit();               // Switch to HSI, no PLL
 
@@ -694,11 +693,6 @@ void platformPreInit() {
 void platformInit() {
   start_time_micros = micros();
   init_RNG();
-  #if defined(ENABLE_USB_VCP)
-    /* Init USB peripheral as VCP */
-    TM_USBD_CDC_Init(TM_USB_FS);
-    TM_USBD_Start(TM_USB_FS);
-  #endif
   initPlatformRTC();
 }
 

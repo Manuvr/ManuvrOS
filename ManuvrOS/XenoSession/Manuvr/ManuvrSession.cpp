@@ -25,6 +25,26 @@ limitations under the License.
 #include "ManuvrSession.h"
 
 
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
+
+
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
 *
@@ -54,9 +74,80 @@ ManuvrSession::~ManuvrSession() {
 }
 
 
-/****************************************************************************************************
-* Functions for managing and reacting to sync states.                                               *
-****************************************************************************************************/
+
+/*******************************************************************************
+*    _  __                _____                _
+*   | |/ /__  ____  ____ / ___/___  __________(_)___  ____
+*   |   / _ \/ __ \/ __ \\__ \/ _ \/ ___/ ___/ / __ \/ __ \
+*  /   /  __/ / / / /_/ /__/ /  __(__  |__  ) / /_/ / / / /
+* /_/|_\___/_/ /_/\____/____/\___/____/____/_/\____/_/ /_/
+*
+* Tracks protocol state, responds appropriately.
+*******************************************************************************/
+
+
+/*******************************************************************************
+*  _       _   _        _
+* |_)    _|_ _|_ _  ._ |_) o ._   _
+* |_) |_| |   | (/_ |  |   | |_) (/_
+*                            |
+* Overrides and addendums to BufferPipe.
+*******************************************************************************/
+/**
+* Inward toward the transport.
+*
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
+*/
+int8_t ManuvrSession::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+  switch (mm) {
+    case MEM_MGMT_RESPONSIBLE_CALLER:
+      // NOTE: No break. This might be construed as a way of saying CREATOR.
+    case MEM_MGMT_RESPONSIBLE_CREATOR:
+      /* The system that allocated this buffer either...
+          a) Did so with the intention that it never be free'd, or...
+          b) Has a means of discovering when it is safe to free.  */
+      if (haveNear()) {
+        return _near->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_CREATOR);
+      }
+      return MEM_MGMT_RESPONSIBLE_CALLER;
+
+    case MEM_MGMT_RESPONSIBLE_BEARER:
+      /* We are now the bearer. That means that by returning non-failure, the
+          caller will expect _us_ to manage this memory.  */
+      // TODO: Freeing the buffer? Let UDP do it?
+      if (haveNear()) {
+        return _near->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_BEARER);
+      }
+      return MEM_MGMT_RESPONSIBLE_CALLER;
+
+    default:
+      /* This is more ambiguity than we are willing to bear... */
+      return MEM_MGMT_RESPONSIBLE_ERROR;
+  }
+  return MEM_MGMT_RESPONSIBLE_ERROR;
+}
+
+/**
+* Outward toward the application (or into the accumulator).
+*
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
+*/
+int8_t ManuvrSession::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+  bin_stream_rx(buf, len);
+  return MEM_MGMT_RESPONSIBLE_BEARER;
+}
+
+
+
+/*******************************************************************************
+* Functions for managing and reacting to sync states.                          *
+*******************************************************************************/
 
 int8_t ManuvrSession::sendSyncPacket() {
   if (owner->connected()) {

@@ -123,6 +123,7 @@ const MessageTypeDef udp_message_defs[] = {
 */
 ManuvrUDP::ManuvrUDP(const char* addr, int port) : ManuvrSocket(addr, port, 0) {
   set_xport_state(MANUVR_XPORT_FLAG_HAS_MULTICAST | MANUVR_XPORT_FLAG_CONNECTIONLESS);
+  _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
 
   // TODO: Singleton due-to-feature thrust. Need to ditch the singleton...
   if (NULL == INSTANCE) {
@@ -145,6 +146,7 @@ ManuvrUDP::ManuvrUDP(const char* addr, int port) : ManuvrSocket(addr, port, 0) {
 */
 ManuvrUDP::ManuvrUDP(const char* addr, int port, uint32_t opts) : ManuvrSocket(addr, port, opts) {
   set_xport_state(MANUVR_XPORT_FLAG_HAS_MULTICAST | MANUVR_XPORT_FLAG_CONNECTIONLESS);
+  _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
 
   // TODO: Singleton due-to-feature thrust. Need to ditch the singleton...
   if (NULL == INSTANCE) {
@@ -299,7 +301,6 @@ int8_t ManuvrUDP::listen() {
 
   //initialized(true);
   createThread(&_thread_id, NULL, _udp_socket_listener_loop, (void*) this);
-
   listening(true);
   local_log.concatf("UDP Now listening at %s:%d.\n", _addr, _port_number);
 
@@ -341,7 +342,7 @@ int8_t ManuvrUDP::read_port() {
     if (NULL == related_pipe) {
       // Non-existence. Create...
       related_pipe = new UDPPipe(this, cli_addr.sin_addr.s_addr, cli_addr.sin_port);
-      if (MEM_MGMT_RESPONSIBLE_BEARER == related_pipe->fromCounterparty(buf, n)) {
+      if (MEM_MGMT_RESPONSIBLE_BEARER == related_pipe->fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER)) {
         // The pipe copied the buffer. Success.
         // Since we don't have a pipe, we create one and realize that there will
         //   be nothing on the other side to take the buffer. So we only broadcast
@@ -367,7 +368,7 @@ int8_t ManuvrUDP::read_port() {
     }
     else {
       // We have a related pipe.
-      switch (related_pipe->fromCounterparty(buf, n)) {
+      switch (related_pipe->fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER)) {
         case MEM_MGMT_RESPONSIBLE_BEARER:
           // Success
           break;

@@ -20,10 +20,12 @@ limitations under the License.
 
 This class represents a console session with the running Kernel. This simple
   role is done with this amount of complexity to avoid the necessity of
-  designating a transport or a serial port specifically for this task.
+  designating a transport or a serial port specifically for this task, and to
+  accomodate flexibility WRT logging.
 
-If you want this feature, you must define MANUVR_CONSOLE_SESSION as well as
-  __MANUVR_CONSOLE_SUPPORT in the firmware defs file, or pass it into the build.
+If you want this feature, you must define __MANUVR_CONSOLE_SUPPORT in the
+  firmware defs file, or pass it into the build. Logging support will remain
+  independently.
 */
 
 #ifndef __MANUVR_CONSOLE_SESS_H__
@@ -31,24 +33,25 @@ If you want this feature, you must define MANUVR_CONSOLE_SESSION as well as
 
 #include "../XenoSession.h"
 
+
 class ManuvrConsole : public XenoSession {
   public:
     ManuvrConsole(ManuvrXport*);
+    ManuvrConsole(BufferPipe*);
     ~ManuvrConsole();
+
+    /* Override from BufferPipe. */
+    virtual int8_t toCounterparty(ManuvrPipeSignal, void*);
+    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
 
     /* Overrides from EventReceiver */
     void procDirectDebugInstruction(StringBuilder*);
     const char* getReceiverName();
     void printDebug(StringBuilder*);
+    int8_t bootComplete();
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);
-
-
-  protected:
-    XenoManuvrMessage* working;         // If we are in the middle of receiving a message,
-
-    int8_t bootComplete();
-    int8_t bin_stream_rx(unsigned char* buf, int len);            // Used to feed data to the session.
 
 
   private:
@@ -57,6 +60,7 @@ class ManuvrConsole : public XenoSession {
     *   the need for the transport to care about how much data we consumed versus left in its buffer.
     */
     StringBuilder session_buffer;
+    StringBuilder _log_accumulator;
 };
 
 

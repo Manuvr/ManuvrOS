@@ -1,5 +1,5 @@
 /*
-File:   ManuvrCBOR.cpp
+File:   ManuvrCBOR.h
 Author: J. Ian Lindsay
 Date:   2016.07.16
 
@@ -18,4 +18,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
+This class is a type-conversion wrapper around TinyCBOR.
 */

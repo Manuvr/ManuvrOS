@@ -127,7 +127,13 @@ void sig_handler(int signo) {
     case SIGUSR2:
       break;
     default:
-      Kernel::log(__PRETTY_FUNCTION__, LOG_NOTICE, "Unhandled signal: %d", signo);
+      #ifdef __MANUVR_DEBUG
+      {
+        StringBuilder _log
+        _log.concatf("Unhandled signal: %d", signo);
+        Kernel::log(&_log);
+      }
+      #endif
       break;
   }
 
@@ -582,10 +588,7 @@ void globalIRQDisable() {
 volatile void seppuku() {
   // Whatever the kernel cared to clean up, it better have done so by this point,
   //   as no other platforms return from this function.
-  if (Kernel::log_buffer.length() > 0) {
-    printf("\n\njumpToBootloader(): About to exit(). Remaining log follows...\n%s", Kernel::log_buffer.string());
-  }
-  printf("\n\n");
+  printf("\n\njumpToBootloader(): About to exit().\n\n");
   exit(0);
 }
 
@@ -606,10 +609,12 @@ volatile void jumpToBootloader() {
 
 volatile void hardwareShutdown() {
   // TODO: Actually shutdown the system.
+  seppuku();
 }
 
 volatile void reboot() {
   // TODO: Actually reboot the system.
+  seppuku();
 }
 
 

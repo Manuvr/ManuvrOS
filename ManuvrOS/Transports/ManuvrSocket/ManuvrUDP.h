@@ -48,7 +48,6 @@ This is basically only for linux until it is needed in a smaller space.
 #endif
 
 
-#if defined(MANUVR_SUPPORT_UDP)
 /*
 * UDP presents a clash with Manuvr's xport<--->session relationships.
 * The fundamental problem is: If we want bi-directional communication, we can
@@ -92,25 +91,26 @@ class UDPPipe : public BufferPipe {
     /* Override from BufferPipe. */
     virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
     virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
-    inline int8_t fromCounterparty(uint8_t* buf, unsigned int len) {
-      return fromCounterparty(buf, len, _far_mm_default);
-    };
 
     void printDebug(StringBuilder*);
     int takeAccumulator(StringBuilder*);
 
     /* Is this transport used for non-session purposes? IE, GPS? */
-    inline bool persistAfterReply() {         return (_flags & MANUVR_UDP_FLAG_PERSIST);  };
+    inline bool persistAfterReply() {         return (_udpflags & MANUVR_UDP_FLAG_PERSIST);  };
     inline void persistAfterReply(bool en) {
-      _flags = (en) ? (_flags | MANUVR_UDP_FLAG_PERSIST) : (_flags & ~(MANUVR_UDP_FLAG_PERSIST));
+      _udpflags = (en) ? (_udpflags | MANUVR_UDP_FLAG_PERSIST) : (_udpflags & ~(MANUVR_UDP_FLAG_PERSIST));
     };
 
     inline uint16_t getPort() {   return _port;   };
 
 
+  protected:
+    const char* pipeName();
+
+
   private:
     uint16_t      _port;
-    uint16_t      _flags;
+    uint16_t      _udpflags;
     uint32_t      _ip;
     ManuvrUDP*    _udp;
     StringBuilder _accumulator;   // Holds an incoming packet prior to setFar().
@@ -118,7 +118,7 @@ class UDPPipe : public BufferPipe {
 
 
 
-class ManuvrUDP : public ManuvrSocket, BufferPipe {
+class ManuvrUDP : public ManuvrSocket {
   public:
     ManuvrUDP(const char* addr, int port);
     ManuvrUDP(const char* addr, int port, uint32_t opts);
@@ -171,5 +171,4 @@ class ManuvrUDP : public ManuvrSocket, BufferPipe {
 };
 
 
-#endif  // MANUVR_SUPPORT_UDP
 #endif  // __MANUVR_UDP_SOCKET_H__

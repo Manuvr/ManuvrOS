@@ -20,23 +20,23 @@ limitations under the License.
 
 */
 
-#if defined(MANUVR_CONSOLE_SESSION) & defined(__MANUVR_CONSOLE_SUPPORT)
-
+#if defined(__MANUVR_DEBUG) || defined(__MANUVR_CONSOLE_SUPPORT)
 
 #include "ManuvrConsole.h"
+
+extern void printHelp();  // TODO: Hack. Remove later.
 
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
 *
-* @param   ManuvrXport* All sessions must have one (and only one) transport.
+* @param   BufferPipe* All sessions must have one (and only one) transport.
 */
-ManuvrConsole::ManuvrConsole(ManuvrXport* _xport) : XenoSession(_xport) {
-  // These are messages that we want to relay from the rest of the system.
-  tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
-  tapMessageType(MANUVR_MSG_SESS_HANGUP);
-  tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
+ManuvrConsole::ManuvrConsole(BufferPipe* _near_side) : XenoSession(_near_side) {
+  Kernel::attachToLogger((BufferPipe*) this);
+  mark_session_state(XENOSESSION_STATE_ESTABLISHED);
+  _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
 
-  if (_xport->booted()) {
+  if (Kernel::getInstance()->booted()) {
     bootComplete();   // Because we are instantiated well after boot, we call this on construction.
   }
 }
@@ -46,61 +46,143 @@ ManuvrConsole::ManuvrConsole(ManuvrXport* _xport) : XenoSession(_xport) {
 * Unlike many of the other EventReceivers, THIS one needs to be able to be torn down.
 */
 ManuvrConsole::~ManuvrConsole() {
+  session_buffer.clear();
+  _log_accumulator.clear();
 }
 
 
-
-/****************************************************************************************************
-* Functions for interacting with the transport driver.                                              *
-****************************************************************************************************/
-
+/*******************************************************************************
+*  _       _   _        _
+* |_)    _|_ _|_ _  ._ |_) o ._   _
+* |_) |_| |   | (/_ |  |   | |_) (/_
+*                            |
+* Overrides and addendums to BufferPipe.
+*******************************************************************************/
 /**
-* When we take bytes from the transport, and can't use them all right away,
-*   we store them to prepend to the next group of bytes that come through.
+* Pass a signal to the counterparty.
 *
-* @param
-* @param
-* @return  int8_t  // TODO!!!
-*/
-int8_t ManuvrConsole::bin_stream_rx(unsigned char *buf, int len) {
-  int8_t return_value = 0;
-
-  session_buffer.concat(buf, len);
-
-  if (local_log.length() > 0) Kernel::log(&local_log);
-  return return_value;
-}
-
-
-
-/**
-* Debug support function.
+* Data referenced by _args should be assumed to be on the stack of the caller.
 *
-* @return a pointer to a string constant.
+* @param   _sig   The signal.
+* @param   _args  Optional argument pointer.
+* @return  Negative on error. Zero on success.
 */
-const char* ManuvrConsole::getReceiverName() {  return "Console";  }
-
-
-/**
-* Debug support method. This fxn is only present in debug builds.
-*
-* @param   StringBuilder* The buffer into which this fxn should write its output.
-*/
-void ManuvrConsole::printDebug(StringBuilder *output) {
-  XenoSession::printDebug(output);
-
-  int ses_buf_len = session_buffer.length();
-  if (ses_buf_len > 0) {
-    #if defined(__MANUVR_DEBUG)
-      output->concatf("-- Session Buffer (%d bytes):  ", ses_buf_len);
-      session_buffer.printDebug(output);
-      output->concat("\n\n");
-    #else
-      output->concatf("-- Session Buffer (%d bytes)\n\n", ses_buf_len);
-    #endif
+int8_t ManuvrConsole::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
+  switch (_sig) {
+    case ManuvrPipeSignal::FLUSH:
+      // In this context, we flush out log accumulator back to the counterparty.
+      if (haveNear() && _log_accumulator.length() > 0) {
+        _near->toCounterparty(&_log_accumulator, MEM_MGMT_RESPONSIBLE_BEARER);
+      }
+      break;
+    default:
+      break;
   }
+
+  /* By doing this, we propagate the signal further toward the counterparty. */
+  return BufferPipe::toCounterparty(_sig, _args);
 }
 
+
+/**
+* Inward toward the transport.
+*
+* This is where we relay logs back across the same transport on which we are
+*   listening for user input.
+*
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
+*/
+int8_t ManuvrConsole::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+  if (!booted()) {
+    // Until we boot, we cache logs...
+    _log_accumulator.concat(buf, len);
+    return MEM_MGMT_RESPONSIBLE_BEARER;
+  }
+  switch (mm) {
+    case MEM_MGMT_RESPONSIBLE_CALLER:
+      // NOTE: No break. This might be construed as a way of saying CREATOR.
+    case MEM_MGMT_RESPONSIBLE_CREATOR:
+      /* The system that allocated this buffer either...
+          a) Did so with the intention that it never be free'd, or...
+          b) Has a means of discovering when it is safe to free.  */
+      if (haveNear()) {
+        return _near->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_CREATOR);
+      }
+      return MEM_MGMT_RESPONSIBLE_CALLER;
+
+    case MEM_MGMT_RESPONSIBLE_BEARER:
+      /* We are now the bearer. That means that by returning non-failure, the
+          caller will expect _us_ to manage this memory.  */
+      // TODO: Freeing the buffer?
+      if (haveNear()) {
+        return _near->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_BEARER);
+      }
+      return MEM_MGMT_RESPONSIBLE_CALLER;
+
+    default:
+      /* This is more ambiguity than we are willing to bear... */
+      return MEM_MGMT_RESPONSIBLE_ERROR;
+  }
+  return MEM_MGMT_RESPONSIBLE_ERROR;
+}
+
+/**
+* Taking user input from the transport...
+*
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
+*/
+int8_t ManuvrConsole::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+  switch (mm) {
+    case MEM_MGMT_RESPONSIBLE_CALLER:
+      // NOTE: No break. This might be construed as a way of saying CREATOR.
+    case MEM_MGMT_RESPONSIBLE_CREATOR:
+      /* The system that allocated this buffer either...
+          a) Did so with the intention that it never be free'd, or...
+          b) Has a means of discovering when it is safe to free.  */
+    case MEM_MGMT_RESPONSIBLE_BEARER:
+      /* We are now the bearer. That means that by returning non-failure, the
+          caller will expect _us_ to manage this memory.  */
+      session_buffer.concat(buf, len);
+      for (int toks = session_buffer.split("\n"); toks > 0; toks--) {
+        char* temp_ptr = session_buffer.position(0);
+        int temp_len   = strlen(temp_ptr);
+
+        // Begin the cases...
+        #if defined(_GNU_SOURCE)
+        if (strcasestr(temp_ptr, "QUIT")) {
+          ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_REBOOT);
+          event->originator = (EventReceiver*) __kernel;
+          Kernel::staticRaiseEvent(event);
+        }
+        else if (strcasestr(temp_ptr, "HELP"))  printHelp();      // Show help.
+        else {
+        #else
+        {
+        #endif
+          // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
+          // run in idle time.
+          ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
+          event->originator = (EventReceiver*) this;
+          StringBuilder* dispatched = new StringBuilder((uint8_t*) temp_ptr, temp_len);
+          event->markArgForReap(event->addArg(dispatched), true);
+          Kernel::staticRaiseEvent(event);
+        }
+        session_buffer.drop_position(0);
+      }
+      return MEM_MGMT_RESPONSIBLE_CREATOR;
+
+    default:
+      /* This is more ambiguity than we are willing to bear... */
+      return MEM_MGMT_RESPONSIBLE_ERROR;
+  }
+  return MEM_MGMT_RESPONSIBLE_ERROR;
+}
 
 
 
@@ -119,6 +201,13 @@ void ManuvrConsole::printDebug(StringBuilder *output) {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
+/**
+* Debug support function.
+*
+* @return a pointer to a string constant.
+*/
+const char* ManuvrConsole::getReceiverName() {  return "Console";  }
+
 
 /**
 * Boot done finished-up.
@@ -127,9 +216,10 @@ void ManuvrConsole::printDebug(StringBuilder *output) {
 */
 int8_t ManuvrConsole::bootComplete() {
   EventReceiver::bootComplete();
+  //toCounterparty((uint8_t*) temp, strlen(temp), MEM_MGMT_RESPONSIBLE_BEARER);
+  // This is a console. Presumable it should also render log output.
   return 1;
 }
-
 
 
 /**
@@ -164,6 +254,32 @@ int8_t ManuvrConsole::callback_proc(ManuvrRunnable *event) {
 }
 
 
+/**
+* Debug support method. This fxn is only present in debug builds.
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
+void ManuvrConsole::printDebug(StringBuilder *output) {
+  XenoSession::printDebug(output);
+
+  int ses_buf_len = session_buffer.length();
+  int la_len      = _log_accumulator.length();
+  if (ses_buf_len > 0) {
+    #if defined(__MANUVR_DEBUG)
+      output->concatf("-- Session Buffer (%d bytes):  ", ses_buf_len);
+      session_buffer.printDebug(output);
+      output->concat("\n");
+    #else
+      output->concatf("-- Session Buffer (%d bytes)\n", ses_buf_len);
+    #endif
+  }
+
+  if (la_len > 0) {
+    output->concatf("-- Accumulated log length (%d bytes)\n", la_len);
+  }
+}
+
+
 /*
 * This is the override from EventReceiver, but there is a bit of a twist this time.
 * Following the normal processing of the incoming event, this class compares it against
@@ -194,7 +310,7 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
       {
         StringBuilder* buf;
         if (0 == active_event->getArgAs(&buf)) {
-          bin_stream_rx(buf->string(), buf->length());
+          fromCounterparty(buf->string(), buf->length(), MEM_MGMT_RESPONSIBLE_BEARER);
         }
       }
       return_value++;
@@ -210,9 +326,11 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
 }
 
 
-
 // We don't bother casing this off for the preprocessor. In this case, it
 //   is a given that we have __MANUVR_CONSOLE_SUPPORT.
+// This may be a strange loop that we might optimize later, but this is
+//   still a valid call target that deals with allowing the console to operate
+//   on itself.
 void ManuvrConsole::procDirectDebugInstruction(StringBuilder *input) {
   uint8_t temp_byte = 0;
 
@@ -234,6 +352,5 @@ void ManuvrConsole::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-
 
 #endif  // MANUVR_CONSOLE_SESSION  &  __MANUVR_CONSOLE_SUPPORT

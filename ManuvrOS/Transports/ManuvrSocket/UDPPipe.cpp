@@ -23,6 +23,8 @@ limitations under the License.
 #if defined(MANUVR_SUPPORT_UDP)
 #include "ManuvrUDP.h"
 
+#include <XenoSession/CoAP/CoAPSession.h>  // TODO: Need Zookeeper.
+
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
@@ -47,19 +49,20 @@ UDPPipe::UDPPipe() : BufferPipe() {
   _ip    = 0;
   _port  = 0;
   _udp   = NULL;
-  _flags = 0;
+  _udpflags = 0;
+
+  _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED | BPIPE_FLAG_IS_BUFFERED, true);
 }
 
 UDPPipe::UDPPipe(ManuvrUDP* udp, uint32_t ip, uint16_t port) : BufferPipe() {
+  // The near-side will always be feeding us from buffers on the stack. Since
+  //   the buffer will vanish after return, we must copy it.
   _ip    = ip;
   _port  = port;
   _udp   = udp;   // TODO: setNear(udp); and thereafter cast to ManuvrUDP?
-  _flags = 0;
+  _udpflags = 0;
 
-  // The near-side will always be feeding us from buffers on the stack. Since
-  //   the buffer will vanish after return, we must copy it.
-  _near_mm_default = MEM_MGMT_RESPONSIBLE_CREATOR;
-  _far_mm_default = MEM_MGMT_RESPONSIBLE_BEARER;
+  _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED | BPIPE_FLAG_IS_BUFFERED, true);
 }
 
 
@@ -76,6 +79,8 @@ UDPPipe::~UDPPipe() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
+const char* UDPPipe::pipeName() { return "UDPPipe"; }
+
 /**
 * Back toward ManuvrUDP....
 *
@@ -122,15 +127,6 @@ int8_t UDPPipe::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
       /* The system that allocated this buffer either...
           a) Did so with the intention that it never be free'd, or...
           b) Has a means of discovering when it is safe to free.  */
-      if (haveFar()) {
-        /* We are not the transport driver, and we do no transformation. */
-        return _far->fromCounterparty(buf, len, mm);
-      }
-      else {
-        _accumulator.concat(buf, len);
-        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
-      }
-
     case MEM_MGMT_RESPONSIBLE_BEARER:
       /* We are now the bearer. That means that by returning non-failure, the
           caller will expect _us_ to manage this memory.  */
@@ -139,6 +135,18 @@ int8_t UDPPipe::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
         return _far->fromCounterparty(buf, len, mm);
       }
       else {
+        CoAPSession* _nu = new CoAPSession((BufferPipe*) this);
+        if (nullptr != _nu) {
+          Kernel::getInstance()->subscribe(_nu);
+          setFar(_nu);
+          // We allocated this class. We need to tear it down, ultimately.
+          _bp_set_flag(BPIPE_FLAG_WE_ALLOCD_FAR, true);
+
+          // Also, we want to hold the UDPPipe open for subsequent exchanges.
+          persistAfterReply(true);
+
+          return _far->fromCounterparty(buf, len, mm);
+        }
         _accumulator.concat(buf, len);
         return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
       }
@@ -160,19 +168,16 @@ int8_t UDPPipe::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
 * @param A pointer to a StringBuffer object to receive the output.
 */
 void UDPPipe::printDebug(StringBuilder* output) {
-  output->concat("\t-- UDPPipe ----------------------------------\n");
+  BufferPipe::printDebug(output);
   struct in_addr _inet_addr;
   _inet_addr.s_addr = _ip;
-  output->concatf("\t Counterparty: \t%s:%d\n", (char*) inet_ntoa(_inet_addr), _port);
-
   if (_udp) {
-    output->concatf("\t _near         \t[0x%08x] %s\n", (unsigned long)_udp, BufferPipe::memMgmtString(_near_mm_default));
+    output->concatf("--\t_udp          \t[0x%08x]\n", (uint32_t) _udp);
   }
-  if (_far) {
-    output->concatf("\t _far          \t[0x%08x] %s\n", (unsigned long)_far, BufferPipe::memMgmtString(_far_mm_default));
-  }
+  output->concatf("--\tCounterparty: \t%s:%d\n", (char*) inet_ntoa(_inet_addr), _port);
+
   if (_accumulator.length() > 0) {
-    output->concatf("\t _accumulator (%d bytes):  ", _accumulator.length());
+    output->concatf("--\t_accumulator (%d bytes):  ", _accumulator.length());
     _accumulator.printDebug(output);
   }
   output->concat("\n");

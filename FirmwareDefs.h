@@ -66,15 +66,15 @@ This is an example file for building firmware on linux. Anticipated target is a 
 * Optional fields...                                                                                *
 ****************************************************************************************************/
 
-  /**************************************************************************************************
-  * Threading options                                                                               *
-  * Manuvr was designed to not be reliant on a threading model. However, many designes and          *
-  *   environments mandate threading. Set options related to these features below.                  *
-  * In anticipation of support for RIOT and Zephyr,                                                 *
-  **************************************************************************************************/
-  //#define MANUVR_THREAD_MODEL     "__THREADING_PTHREADS"
-  //#define MANUVR_THREAD_MODEL     "__THREADING_FREERTOS"
-  //#define MANUVR_THREAD_MODEL     "__THREADING_ZEPHYR"
+/**************************************************************************************************
+* Threading options                                                                               *
+* Manuvr was designed to not be reliant on a threading model. However, many designes and          *
+*   environments mandate threading. Set options related to these features below.                  *
+* In anticipation of support for RIOT and Zephyr,                                                 *
+**************************************************************************************************/
+//#define MANUVR_THREAD_MODEL     "__THREADING_PTHREADS"
+//#define MANUVR_THREAD_MODEL     "__THREADING_FREERTOS"
+//#define MANUVR_THREAD_MODEL     "__THREADING_ZEPHYR"
 
 
 #define EXTENDED_DETAIL_STRING    "RasPiBuild"  // Optional. User-defined.
@@ -84,11 +84,9 @@ This is an example file for building firmware on linux. Anticipated target is a 
 //   typically only useful for debugging firmware.
 // If you don't want console support, comment the line below.
 // NOTE: If your Makefile passes the __MANUVR_DEBUG option, this will be enabled regardless.
-#define __MANUVR_CONSOLE_SUPPORT
-
-// If you want the console exposed via an arbitrary transport, rather than declaring
-//   a serial port for unsecured access, uncomment the flag below.
-//#define MANUVR_CONSOLE_SESSION
+#if defined(__MANUVR_DEBUG) && !defined(__MANUVR_CONSOLE_SUPPORT)
+  #define __MANUVR_CONSOLE_SUPPORT
+#endif
 
 // If another Manuverable asks, we will send them semantic definitions for our messages.
 // Comment the line below if your platform is too-small to support these, or you don't intend

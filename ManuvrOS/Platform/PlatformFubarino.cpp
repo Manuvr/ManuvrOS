@@ -181,7 +181,7 @@ int8_t gpioDefine(uint8_t pin, uint8_t mode) {
 
 
 void unsetPinIRQ(uint8_t pin) {
-  detatchInterrupt(pin);
+  detachInterrupt(pin);
 }
 
 

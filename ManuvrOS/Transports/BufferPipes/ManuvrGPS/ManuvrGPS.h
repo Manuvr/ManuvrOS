@@ -192,56 +192,6 @@ struct minmea_sentence_vtg {
     enum minmea_faa_mode faa_mode;
 };
 
-
-/**
- * Calculate raw sentence checksum. Does not check sentence integrity.
- */
-uint8_t minmea_checksum(const char *sentence);
-
-/**
- * Check sentence validity and checksum. Returns true for valid sentences.
- */
-bool minmea_check(const char *sentence, bool strict);
-
-/**
- * Determine talker identifier.
- */
-bool minmea_talker_id(char talker[3], const char *sentence);
-
-/**
- * Determine sentence identifier.
- */
-enum minmea_sentence_id minmea_sentence_id(const char *sentence, bool strict);
-
-/**
- * Scanf-like processor for NMEA sentences. Supports the following formats:
- * c - single character (char *)
- * d - direction, returned as 1/-1, default 0 (int *)
- * f - fractional, returned as value + scale (int *, int *)
- * i - decimal, default zero (int *)
- * s - string (char *)
- * t - talker identifier and type (char *)
- * T - date/time stamp (int *, int *, int *)
- * Returns true on success. See library source code for details.
- */
-bool minmea_scan(const char *sentence, const char *format, ...);
-
-/*
- * Parse a specific type of sentence. Return true on success.
- */
-bool minmea_parse_rmc(struct minmea_sentence_rmc *frame, const char *sentence);
-bool minmea_parse_gga(struct minmea_sentence_gga *frame, const char *sentence);
-bool minmea_parse_gsa(struct minmea_sentence_gsa *frame, const char *sentence);
-bool minmea_parse_gll(struct minmea_sentence_gll *frame, const char *sentence);
-bool minmea_parse_gst(struct minmea_sentence_gst *frame, const char *sentence);
-bool minmea_parse_gsv(struct minmea_sentence_gsv *frame, const char *sentence);
-bool minmea_parse_vtg(struct minmea_sentence_vtg *frame, const char *sentence);
-
-/**
- * Convert GPS UTC date/time representation to a UNIX timestamp.
- */
-int minmea_gettime(struct timespec *ts, const struct minmea_date *date, const struct minmea_time *time_);
-
 /**
  * Rescale a fixed-point value to a different scale. Rounds towards zero.
  */
@@ -300,10 +250,63 @@ class ManuvrGPS : public BufferPipe {
     void printDebug(StringBuilder*);
 
 
+  protected:
+    const char* pipeName();
+
+
   private:
     uint32_t       _sentences_parsed;
     StringBuilder  _accumulator;
     ManuvrRunnable _gps_frame;
+
+    /**
+    * Calculate raw sentence checksum. Does not check sentence integrity.
+    */
+    uint8_t _checksum(const char *sentence);
+
+    /**
+    * Check sentence validity and checksum. Returns true for valid sentences.
+    */
+    bool _check(const char *sentence, bool strict);
+
+    /**
+    * Determine talker identifier.
+    */
+    bool minmea_talker_id(char talker[3], const char *sentence);
+
+    /**
+    * Determine sentence identifier.
+    */
+    enum minmea_sentence_id minmea_sentence_id(const char *sentence, bool strict);
+
+    /*
+    * Parse a specific type of sentence. Return true on success.
+    */
+    bool _parse_rmc(struct minmea_sentence_rmc *frame, const char *sentence);
+    bool _parse_gga(struct minmea_sentence_gga *frame, const char *sentence);
+    bool _parse_gsa(struct minmea_sentence_gsa *frame, const char *sentence);
+    bool _parse_gll(struct minmea_sentence_gll *frame, const char *sentence);
+    bool _parse_gst(struct minmea_sentence_gst *frame, const char *sentence);
+    bool _parse_gsv(struct minmea_sentence_gsv *frame, const char *sentence);
+    bool _parse_vtg(struct minmea_sentence_vtg *frame, const char *sentence);
+
+    /**
+    * Scanf-like processor for NMEA sentences. Supports the following formats:
+    * c - single character (char *)
+    * d - direction, returned as 1/-1, default 0 (int *)
+    * f - fractional, returned as value + scale (int *, int *)
+    * i - decimal, default zero (int *)
+    * s - string (char *)
+    * t - talker identifier and type (char *)
+    * T - date/time stamp (int *, int *, int *)
+    * Returns true on success. See library source code for details.
+    */
+    bool minmea_scan(const char *sentence, const char *format, ...);
+
+    /**
+    * Convert GPS UTC date/time representation to a UNIX timestamp.
+    */
+    int _gettime(struct timespec *ts, const struct minmea_date *date, const struct minmea_time *time_);
 };
 
 #endif   // __MANUVR_BASIC_GPS_H__

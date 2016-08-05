@@ -53,17 +53,21 @@ Main demo application.
 #include <Drivers/i2c-adapter/i2c-adapter.h>
 
 // This is ONLY used to expose the GPIO pins to the outside world.
-// It is not needed otherwise.
+// It is not required for GPIO usage internally.
 #include <Drivers/ManuvrableGPIO/ManuvrableGPIO.h>
 
 // Transports...
 #include <Transports/ManuvrSerial/ManuvrSerial.h>
 #include <Transports/ManuvrSocket/ManuvrUDP.h>
 #include <Transports/ManuvrSocket/ManuvrTCP.h>
+#include <Transports/StandardIO/StandardIO.h>
+#include <Transports/BufferPipes/XportBridge/XportBridge.h>
 
 // We will use MQTT as our concept of "session"...
 #include <XenoSession/MQTT/MQTTSession.h>
 #include <XenoSession/CoAP/CoAPSession.h>
+#include <XenoSession/Console/ManuvrConsole.h>
+
 
 
 /*******************************************************************************
@@ -71,7 +75,6 @@ Main demo application.
 *******************************************************************************/
 char *program_name  = NULL;
 int __main_pid      = 0;
-int __shell_pid     = 0;
 Kernel* kernel      = NULL;
 
 void kernelDebugDump() {
@@ -81,70 +84,12 @@ void kernelDebugDump() {
 }
 
 
-
 /*******************************************************************************
 * Functions that just print things.                                            *
 *******************************************************************************/
 void printHelp() {
-  printf("Help would ordinarily be displayed here.\n");
+  Kernel::log("Help would ordinarily be displayed here.\n");
 }
-
-
-/*******************************************************************************
-* Code related to running a local stdio shell...                               *
-* TODO: Generalize all this and move it to the Console Session.                *
-*******************************************************************************/
-long unsigned int _thread_id = 0;;
-bool running = true;
-
-
-#if defined(__MANUVR_CONSOLE_SUPPORT)
-#define U_INPUT_BUFF_SIZE   255    // How big a buffer for user-input?
-
-StringBuilder user_input;
-
-void* spawnUIThread(void*) {
-  char *input_text	= (char*) alloca(U_INPUT_BUFF_SIZE);	// Buffer to hold user-input.
-  StringBuilder user_input;
-
-  while (running) {
-    printf("%c[36m%s> %c[39m", 0x1B, program_name, 0x1B);
-    bzero(input_text, U_INPUT_BUFF_SIZE);
-    if (fgets(input_text, U_INPUT_BUFF_SIZE, stdin) != NULL) {
-      user_input.concat(input_text);
-      user_input.trim();
-
-      //while(*t_iterator++ = toupper(*t_iterator));        // Convert to uniform case...
-      int arg_count = user_input.split("\n");
-      if (arg_count > 0) {  // We should have at least ONE argument. Right???
-        // Begin the cases...
-        if      (strcasestr(user_input.position(0), "QUIT"))  running = false;  // Exit
-        else if (strcasestr(user_input.position(0), "HELP"))  printHelp();      // Show help.
-        else {
-          // This test is detined for input into the running kernel-> Send it back
-          //   up the pipe.
-          bool terminal = (user_input.split("\n") > 0);
-          if (terminal) {
-            kernel->accumulateConsoleInput((uint8_t*) user_input.position(0), strlen(user_input.position(0)), true);
-            user_input.drop_position(0);
-          }
-        }
-      }
-      else {
-        // User entered nothing.
-        printHelp();
-      }
-    }
-    else {
-      // User insulted fgets()...
-      printHelp();
-    }
-  }
-
-  return NULL;
-}
-
-#endif  // __MANUVR_CONSOLE_SUPPORT
 
 
 /*******************************************************************************
@@ -159,28 +104,70 @@ int main(int argc, char *argv[]) {
 
   #if defined(__MANUVR_DEBUG)
     // We want to see this data if we are a debug build.
-    kernel->print_type_sizes();
     kernel->profiler(true);
     //kernel->createSchedule(1000, -1, false, kernelDebugDump);
   #endif
 
+  // Parse through all the command line arguments and flags...
+  // Please note that the order matters. Put all the most-general matches at the bottom of the loop.
+  for (int i = 1; i < argc; i++) {
+    if ((strcasestr(argv[i], "--version")) || ((argv[i][0] == '-') && (argv[i][1] == 'v'))) {
+      // Print the version and quit.
+      printf("%s v%s\n\n", argv[0], VERSION_STRING);
+      exit(0);
+    }
+    if ((strcasestr(argv[i], "--info")) || ((argv[i][0] == '-') && (argv[i][1] == 'i'))) {
+      // Cause the kernel to write a self-report to its own log.
+      kernel->printDebug();
+    }
+    if ((strcasestr(argv[i], "--console")) || ((argv[i][0] == '-') && (argv[i][1] == 'c'))) {
+      // The user wants a local stdio "Shell".
+      #if defined(__MANUVR_CONSOLE_SUPPORT)
+
+        // TODO: Until smarter idea is finished, manually patch the USB-VCP into a
+        //         BufferPipe that takes the place of the transport driver.
+        StandardIO* _console_patch = new StandardIO();
+        ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_patch);
+        kernel->subscribe((EventReceiver*) _console);
+        kernel->subscribe((EventReceiver*) _console_patch);
+      #else
+        printf("%s was compiled without any console support. Ignoring directive...\n", argv[0]);
+      #endif
+    }
+    if ((strcasestr(argv[i], "--serial")) && (argc > (i-2))) {
+      // The user wants us to listen to the given serial port.
+      #if defined (MANUVR_SUPPORT_SERIAL)
+        ManuvrSerial* ser = new ManuvrSerial((const char*) argv[++i], 9600);
+        kernel->subscribe(ser);
+      #else
+        printf("%s was compiled without serial port support. Exiting...\n", argv[0]);
+        exit(1);
+      #endif
+    }
+    if ((strcasestr(argv[i], "--quit")) || ((argv[i][0] == '-') && (argv[i][1] == 'q'))) {
+      // Execute up-to-and-including boot. Then immediately shutdown.
+      // This is how you can stack post-boot-operations into the kernel-> They will execute
+      //   following the BOOT_COMPLETE message.
+      Kernel::raiseEvent(MANUVR_MSG_SYS_SHUTDOWN, NULL);
+    }
+  }
 
   /*
   * At this point, we should instantiate whatever specific functionality we
   *   want this Manuvrable to have.
   */
-  ManuvrableGPIO gpio;
-  kernel->subscribe(&gpio);
-
   #if defined(RASPI) || defined(RASPI2)
     // If we are running on a RasPi, let's try to fire up the i2c that is almost
     //   certainly present.
     I2CAdapter i2c(1);
     kernel->subscribe(&i2c);
+    
+    ManuvrableGPIO gpio;
+    kernel->subscribe(&gpio);
   #endif
 
   // We need at least ONE transport to be useful...
-  #if defined (MANUVR_SUPPORT_TCPSOCKET)
+  #if defined(MANUVR_SUPPORT_TCPSOCKET)
     #if defined(MANUVR_SUPPORT_MQTT)
       ManuvrTCP tcp_cli((const char*) "127.0.0.1", 1883);
       MQTTSession mqtt(&tcp_cli);
@@ -203,74 +190,27 @@ int main(int argc, char *argv[]) {
     #else
       ManuvrTCP tcp_srv((const char*) "127.0.0.1", 2319);
       ManuvrTCP tcp_cli((const char*) "127.0.0.1", 2319);
-      //tcp_srv.nonSessionUsage(true);
       kernel->subscribe(&tcp_srv);
     #endif
     kernel->subscribe(&tcp_cli);
   #endif
 
-  #if defined (MANUVR_SUPPORT_UDP)
+  #if defined(MANUVR_SUPPORT_UDP)
     ManuvrUDP udp_srv((const char*) "127.0.0.1", 6053);
     kernel->subscribe(&udp_srv);
   #endif
 
-  #if defined (MANUVR_SUPPORT_COAP)
+  #if defined(MANUVR_SUPPORT_COAP)
     CoAPSession coap_srv(&udp_srv);
     kernel->subscribe(&coap_srv);
   #endif
-
-  #if defined (MANUVR_SUPPORT_SERIAL)
-    ManuvrSerial* ser = NULL;
-  #endif
-
-
-
-  // Parse through all the command line arguments and flags...
-  // Please note that the order matters. Put all the most-general matches at the bottom of the loop.
-  for (int i = 1; i < argc; i++) {
-    if ((strcasestr(argv[i], "--version")) || ((argv[i][0] == '-') && (argv[i][1] == 'v'))) {
-      // Print the version and quit.
-      printf("%s v%s\n\n", argv[0], VERSION_STRING);
-      exit(0);
-    }
-    if ((strcasestr(argv[i], "--info")) || ((argv[i][0] == '-') && (argv[i][1] == 'i'))) {
-      // Cause the kernel to write a self-report to its own log.
-      kernel->printDebug();
-    }
-    if ((strcasestr(argv[i], "--console")) || ((argv[i][0] == '-') && (argv[i][1] == 'c'))) {
-      // The user wants a local stdio "Shell".
-      #if defined(__MANUVR_CONSOLE_SUPPORT)
-        createThread(&_thread_id, NULL, spawnUIThread, NULL);
-      #else
-        printf("%s was compiled without any console support. Ignoring directive...\n", argv[0]);
-      #endif
-    }
-    if ((strcasestr(argv[i], "--serial")) && (argc > (i-2))) {
-      // The user wants us to listen to the given serial port.
-      #if defined (MANUVR_SUPPORT_SERIAL)
-        ser = new ManuvrSerial((const char*) argv[++i], 9600);
-        ser->nonSessionUsage(true);   // TODO: Hack to test. Remove and make dynmaic.
-        kernel->subscribe(ser);
-      #else
-        printf("%s was compiled without serial port support. Exiting...\n", argv[0]);
-        exit(1);
-      #endif
-    }
-    if ((strcasestr(argv[i], "--quit")) || ((argv[i][0] == '-') && (argv[i][1] == 'q'))) {
-      // Execute up-to-and-including boot. Then immediately shutdown.
-      // This is how you can stack post-boot-operations into the kernel-> They will execute
-      //   following the BOOT_COMPLETE message.
-      Kernel::raiseEvent(MANUVR_MSG_SYS_SHUTDOWN, NULL);
-    }
-  }
-
 
   // Once we've loaded up all the goodies we want, we finalize everything thusly...
   printf("%s: Booting Manuvr Kernel....\n", program_name);
   kernel->bootstrap();
 
   // TODO: Horrible hackishness to test TCP...
-  #if defined (MANUVR_SUPPORT_TCPSOCKET)
+  #if defined(MANUVR_SUPPORT_TCPSOCKET)
     #if defined(MANUVR_SUPPORT_MQTT)
     #else
       tcp_srv.listen();
@@ -290,35 +230,19 @@ int main(int argc, char *argv[]) {
   // The main loop. Run forever.
   // TODO: It would be nice to be able to ask the kernel if we should continue running.
   int events_procd = 0;
-  while (running) {
+  while (1) {
     events_procd = kernel->procIdleFlags();
     #if defined(RASPI) || defined(RASPI2)
       //setPin(14, pin_14_state);
       //pin_14_state = !pin_14_state;
     #endif
-    // Move the kernel log to stdout.
-    if (Kernel::log_buffer.count()) {
-      if (!kernel->getVerbosity()) {
-        Kernel::log_buffer.clear();
-      }
-      else {
-        printf("%s", Kernel::log_buffer.position(0));
-        Kernel::log_buffer.drop_position(0);
-      }
-    }
-    if (0 == events_procd + Kernel::log_buffer.count()) {
+
+    if (0 == events_procd) {
       // This is a resource-saver. How this is handled on a particular platform
       //   is still out-of-scope. Since we are in a threaded environment, we can
       //   sleep. Other systems might use ISR hooks or RTC notifications.
       sleep_millis(20);
     }
   }
-
-  // Pass a termination signal to the child proc (if we have one).
-  if (__shell_pid > 0)  {
-    kill(__shell_pid, SIGQUIT);
-  }
-
-  printf("\n\n");
   exit(0);
 }

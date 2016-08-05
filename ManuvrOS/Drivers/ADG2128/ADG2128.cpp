@@ -54,7 +54,9 @@ int8_t ADG2128::init(void) {
   for (int i = 0; i < 12; i++) {
     if (readback(i) != ADG2128_ERROR_NO_ERROR) {
       dev_init = false;
-      Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to init switch.");
+      #ifdef __MANUVR_DEBUG
+        Kernel::log("Failed to init switch.\n");
+      #endif
       return ADG2128_ERROR_BUS;
     }
   }
@@ -72,7 +74,9 @@ int8_t ADG2128::setRoute(uint8_t col, uint8_t row) {
   if (safe_row >= 6) safe_row = safe_row + 2;
   uint16_t val = 0x01 + ((0x80 + (safe_row << 3) + col) << 8);
   if (!write16(-1, val)) {
-    Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to write new value.");
+    #ifdef __MANUVR_DEBUG
+      Kernel::log("Failed to write new value.\n");
+    #endif
     return ADG2128_ERROR_BUS;
   }
   values[row] = values[row] | (0x01 << col);  // TODO: Should be in the callback.
@@ -88,7 +92,9 @@ int8_t ADG2128::unsetRoute(uint8_t col, uint8_t row) {
   if (safe_row >= 6) safe_row = safe_row + 2;
   uint16_t val = 0x01 + ((0x00 + (safe_row << 3) + col) << 8);
   if (!write16(-1, val)) {
-    Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Failed to write new value.");
+    #ifdef __MANUVR_DEBUG
+      Kernel::log("Failed to write new value.\n");
+    #endif
     return ADG2128_ERROR_BUS;
   }
   values[row] = values[row] & ~(0x01 << col);  // TODO: Should be in the callback.
@@ -128,7 +134,11 @@ int8_t ADG2128::readback(uint8_t row) {
 
   uint16_t readback_addr[12] = {0x3400, 0x3b00, 0x7400, 0x7b00, 0x3500, 0x3D00, 0x7500, 0x7D00, 0x3600, 0x3E00, 0x7600, 0x7E00};
   if (!read16(readback_addr[row])) {
-    Kernel::log(__PRETTY_FUNCTION__, LOG_ERR, "Bus error while reading readback address %d.\n", row);
+    #ifdef __MANUVR_DEBUG
+      StringBuilder _log;
+      _log.concatf("Bus error while reading readback address %d.\n", row);
+      Kernel::log(&_log);
+    #endif
     return ADG2128_ERROR_ABSENT;
   }
   return ADG2128_ERROR_NO_ERROR;

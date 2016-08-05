@@ -25,7 +25,6 @@ CPP_SRCS  += DataStructures/InertialMeasurement.cpp
 CPP_SRCS  += Types/ManuvrCBOR/ManuvrCBOR.cpp
 
 # Manuvr core
-CPP_SRCS  += LogPipe.cpp
 CPP_SRCS  += ManuvrRunnable.cpp
 CPP_SRCS  += EnumeratedTypeCodes.cpp
 CPP_SRCS  += Kernel.cpp
@@ -47,11 +46,6 @@ CPP_SRCS  += XenoSession/MQTT/MQTTMessage.cpp
 CPP_SRCS  += XenoSession/OSC/OSCSession.cpp
 CPP_SRCS  += XenoSession/OSC/OSCMessage.cpp
 
-
-# TODO: Case-off for socket/TCP/Pipe support...
-#CPP_SRCS  += Transports/ManuvrPipe/ManuvrPipe.cpp
-#CPP_SRCS  += Transports/ManuvrTelehash/ManuvrTelehash.cpp
-
 # Specialized BufferPipes
 CPP_SRCS  += Transports/BufferPipes/ZooKeeper/ZooKeeper.cpp
 CPP_SRCS  += Transports/BufferPipes/ManuvrGPS/ManuvrGPS.cpp
@@ -59,23 +53,27 @@ CPP_SRCS  += Transports/BufferPipes/ManuvrTLS/ManuvrTLS.cpp
 CPP_SRCS  += Transports/BufferPipes/ManuvrTLS/ManuvrTLSServer.cpp
 CPP_SRCS  += Transports/BufferPipes/ManuvrTLS/ManuvrTLSClient.cpp
 CPP_SRCS  += Transports/BufferPipes/XportBridge/XportBridge.cpp
-#CPP_SRCS  += Transports/BufferPipes/LogPipe/LogPipe.cpp
 
 # Transports (Drivers)
 CPP_SRCS  += Transports/ManuvrXport.cpp
+CPP_SRCS  += Transports/StandardIO/StandardIO.cpp
 CPP_SRCS  += Transports/ManuvrSerial/ManuvrSerial.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrSocket.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrTCP.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrUDP.cpp
 CPP_SRCS  += Transports/ManuvrSocket/UDPPipe.cpp
 CPP_SRCS  += Drivers/BusQueue/BusQueue.cpp
+# TODO: Case-off for socket/TCP/Pipe support...
+#CPP_SRCS  += Transports/ManuvrTelehash/ManuvrTelehash.cpp
+
+# "Layer-7" Frameworks
+CPP_SRCS  += Frameworks/OIC/ManuvrOIC.cpp
 
 # i2c apparatus...
 CPP_SRCS  += Drivers/i2c-adapter/I2CDevice.cpp
 CPP_SRCS  += Drivers/i2c-adapter/i2c-adapter.cpp
 CPP_SRCS  += Drivers/i2c-adapter/I2CDeviceWithRegisters.cpp
 CPP_SRCS  += Drivers/i2c-adapter/I2CBusOp.cpp
-
 
 # TODO: Bring up to speed WRT Runnable.
 #CPP_SRCS  += Drivers/LightSensor/LightSensor.cpp
@@ -119,6 +117,7 @@ LIBNAME = libmanuvr.a
 
 all: setenvars $(LIBNAME)
 
+debug: all
 
 %.o : %.cpp
 	$(CXX) $(INCLUDES) $(CPP_FLAGS) -std=$(CPP_STANDARD) -nostdlib -c $< -o $@

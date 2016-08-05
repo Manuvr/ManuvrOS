@@ -26,7 +26,7 @@ This is my C++ translation of the Paho Demo C library.
 #include "MQTTSession.h"
 
 
-/****************************************************************************************************
+/*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
 *    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
@@ -34,8 +34,8 @@ This is my C++ translation of the Paho Demo C library.
 * .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
 * |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
 *
-* Static members and initializers should be located here. Initializers first, functions second.
-****************************************************************************************************/
+* Static members and initializers should be located here.
+*******************************************************************************/
 
 MQTTOpts opts = {
 	(char*)"manuvr_client",
@@ -48,14 +48,14 @@ MQTTOpts opts = {
 };
 
 
-/****************************************************************************************************
+/*******************************************************************************
 *   ___ _              ___      _ _              _      _
 *  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
 * | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
 *  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
 *                                          |_|
 * Constructors/destructors, class initialization functions and so-forth...
-****************************************************************************************************/
+*******************************************************************************/
 
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
@@ -97,6 +97,64 @@ MQTTSession::~MQTTSession() {
 	while (_pending_mqtt_messages.hasNext()) {
 		delete _pending_mqtt_messages.dequeue();
 	}
+}
+
+
+/*******************************************************************************
+*  _       _   _        _
+* |_)    _|_ _|_ _  ._ |_) o ._   _
+* |_) |_| |   | (/_ |  |   | |_) (/_
+*                            |
+* Overrides and addendums to BufferPipe.
+*******************************************************************************/
+/**
+* Inward toward the transport.
+*
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
+*/
+int8_t MQTTSession::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+  switch (mm) {
+    case MEM_MGMT_RESPONSIBLE_CALLER:
+      // NOTE: No break. This might be construed as a way of saying CREATOR.
+    case MEM_MGMT_RESPONSIBLE_CREATOR:
+      /* The system that allocated this buffer either...
+          a) Did so with the intention that it never be free'd, or...
+          b) Has a means of discovering when it is safe to free.  */
+      if (haveNear()) {
+        return _near->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_CREATOR);
+      }
+      return MEM_MGMT_RESPONSIBLE_CALLER;
+
+    case MEM_MGMT_RESPONSIBLE_BEARER:
+      /* We are now the bearer. That means that by returning non-failure, the
+          caller will expect _us_ to manage this memory.  */
+      // TODO: Freeing the buffer? Let UDP do it?
+      if (haveNear()) {
+        return _near->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_BEARER);
+      }
+      return MEM_MGMT_RESPONSIBLE_CALLER;
+
+    default:
+      /* This is more ambiguity than we are willing to bear... */
+      return MEM_MGMT_RESPONSIBLE_ERROR;
+  }
+  return MEM_MGMT_RESPONSIBLE_ERROR;
+}
+
+/**
+* Outward toward the application (or into the accumulator).
+*
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
+*/
+int8_t MQTTSession::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+  bin_stream_rx(buf, len);
+  return MEM_MGMT_RESPONSIBLE_BEARER;
 }
 
 
@@ -243,7 +301,6 @@ int8_t MQTTSession::sendEvent(ManuvrRunnable *active_event) {
 
 bool MQTTSession::sendSub(const char* _topicStr, enum QoS qos) {
   if (isEstablished()) {
-		printf("SESSION OPERATION sendSub() \n");
     MQTTString topic = MQTTString_initializer;
     topic.cstring = (char *)_topicStr;
 
@@ -300,7 +357,6 @@ bool MQTTSession::sendKeepAlive() {
 
 bool MQTTSession::sendConnectPacket() {
   if (owner->connected()) {
-		printf("SESSION OPERATION sendConnectPacket() \n");
     MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
 	  data.willFlag    = 0;
     data.MQTTVersion = 3;
@@ -420,7 +476,8 @@ int MQTTSession::process_inbound() {
 	switch (packet_type) {
 		case CONNACK:
 			{
-				printf("SESSION DEBUG BITS  0x%02x\n", *((uint8_t*)nu->payload + 1));
+				local_log.concatf("SESSION DEBUG BITS  0x%02x\n", *((uint8_t*)nu->payload + 1));
+				Kernel::log(&local_log);
 				switch (*((uint8_t*)nu->payload + 1)) {
 					case 0:
 						mark_session_state(XENOSESSION_STATE_ESTABLISHED);

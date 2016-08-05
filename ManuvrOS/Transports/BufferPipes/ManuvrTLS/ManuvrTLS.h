@@ -33,6 +33,8 @@ One class is for the server (listener), and the other for client (initiator),
 
 #include <DataStructures/BufferPipe.h>
 
+#if defined(MANUVR_WITH_MBEDTLS)
+
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/certs.h"
@@ -56,7 +58,7 @@ One class is for the server (listener), and the other for client (initiator),
 */
 class ManuvrTLS : protected BufferPipe {
   public:
-    ManuvrTLS();
+    ManuvrTLS(int debug_lvl);
     ~ManuvrTLS();
 
     /* Override from BufferPipe. */
@@ -87,6 +89,7 @@ class ManuvrTLSServer : public ManuvrTLS {
 
 
   protected:
+    const char* pipeName();
     void throwError(int ret);
 
 
@@ -125,6 +128,7 @@ class ManuvrTLSClient : protected ManuvrTLS {
 
 
   protected:
+    const char* pipeName();
     void throwError(int ret);
 
 
@@ -137,3 +141,5 @@ class ManuvrTLSClient : protected ManuvrTLS {
     size_t recv_len;
 };
 #endif   // __MANUVR_TLS_XFORMER_H__
+
+#endif  // MANUVR_WITH_MBEDTLS

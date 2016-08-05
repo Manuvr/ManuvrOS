@@ -61,6 +61,7 @@ See UDPPipe for a case where this matters.
 
 #include <DataStructures/StringBuilder.h>
 
+
 /*
 * These are return codes and directives for keeping track of where the
 *   responsibility lies for cleaning up memory for buffers that are passed.
@@ -79,6 +80,57 @@ See UDPPipe for a case where this matters.
 #define MEM_MGMT_RESPONSIBLE_UNKNOWN     0  // TODO: God save you.
 #define MEM_MGMT_RESPONSIBLE_CREATOR     1  // The allocator is responsible.
 #define MEM_MGMT_RESPONSIBLE_BEARER      2  // The bearer is responsible.
+
+/*
+* Flag definitions.
+*/
+#define BPIPE_FLAG_WE_ALLOCD_NEAR   0x0001  // We are responsible for near-side teardown.
+#define BPIPE_FLAG_WE_ALLOCD_FAR    0x0002  // We are responsible for far-side teardown.
+#define BPIPE_FLAG_IS_TERMINUS      0x0004  // This pipe is an endpoint.
+#define BPIPE_FLAG_PIPE_LOCKED      0x1000  // The pipe is locked.
+#define BPIPE_FLAG_PIPE_PACKETIZED  0x4000  // The pipe's issuances coincide with packet boundaries.
+#define BPIPE_FLAG_IS_BUFFERED      0x8000  // This pipe has the capability to buffer.
+
+/*
+* Definition of signals passable via the pipe's control channel.
+* These should be kept as general as possible, and have no direct relationship
+*   to POSIX signals.
+* For one, POSIX signals are async, and there are ALWAYS synchronous.
+* For another, they are not used for IPC. The primary function is to signal
+*   setup, tear-down, and a handful of transport ideas.
+*/
+enum class ManuvrPipeSignal {
+  UNDEF = 0,           // Undefined.
+  FLUSH,               // Flush the pipe.
+  FLUSHED,             // The pipe is flushed.
+  FAR_SIDE_DETACH,     // Far-side informing the near-side of its departure.
+  NEAR_SIDE_DETACH,    // Near-side informing the far-side of its departure.
+  FAR_SIDE_ATTACH,     // Far-side informing the near-side of its arrival.
+  NEAR_SIDE_ATTACH     // Near-side informing the far-side of its arrival.
+};
+
+/*
+* Notes regarding pipe-strategies...
+* This is an experiment for testing an idea about building dynamic chains of
+*   pipes.
+* Something like this is needed to avoid having to code for a small, static set
+*   of pipe combinations (IE: "Bluetooth <--> DTLS <--> Console").
+*   It might be a good idea to have it in BufferPipe since this is where the
+*   allocation would occur, and the datastructure nicely fits the problem.
+* On the other-hand, it stands to cause us some linguistic grief of necessitating
+*   this class containing knowledge of higher-layer components (thus hurting its
+*   purity as a data structure).
+* If the transport is always to be the progenitor of the chain, it might be better
+*   to contain the definitional aspects of this idea in ManuvrXport (or the Kernel).
+* Same problem as we have with Message definitions.
+*
+* If it remains here, the pipe-strategy should be executed on first-call to haveFar()
+*   that would otherwise return false.
+*/
+
+// Hopefully, this will be enough until we think of something smarter.
+#define MAXIMUM_PIPE_DIVERSITY  16
+
 
 /*
 * Here, "far" refers to "farther from the counterparty". That is: closer to our
@@ -100,60 +152,68 @@ class BufferPipe {
     /*
     * Generally, this will be called from within the instance pointed-at by _far.
     */
+    virtual int8_t toCounterparty(ManuvrPipeSignal, void*);
+    virtual int8_t toCounterparty(StringBuilder*, int8_t mm);
     virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
-    inline int8_t toCounterparty(uint8_t* buf, unsigned int len) {
-      return toCounterparty(buf, len, _near_mm_default);
-    };
 
     /*
     * Generally, this will be called from within the instance pointed-at by _near.
     */
+    virtual int8_t fromCounterparty(ManuvrPipeSignal, void*);
+    virtual int8_t fromCounterparty(StringBuilder*, int8_t mm);
     virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
-    inline int8_t fromCounterparty(uint8_t* buf, unsigned int len) {
-      return fromCounterparty(buf, len, _far_mm_default);
-    };
-
-    /* This is here to simplify the logic of endpoints. */
-    int8_t emitBuffer(uint8_t* buf, unsigned int len, int8_t mm);
-    inline int8_t emitBuffer(uint8_t* buf, unsigned int len) {
-      return emitBuffer(buf, len, (this == _near) ? _near_mm_default : _far_mm_default);
-    };
 
     /* Set the identity of the near-side. */
-    int8_t setNear(BufferPipe* nu, int8_t _mm);
-    inline int8_t setNear(BufferPipe* nu) {
-      return setNear(nu, MEM_MGMT_RESPONSIBLE_UNKNOWN);
-    };
+    int8_t setNear(BufferPipe*);
 
     /* Set the identity of the far-side. */
-    int8_t setFar(BufferPipe* nu, int8_t _mm);
-    inline int8_t setFar(BufferPipe* nu) {
-      return setFar(nu, MEM_MGMT_RESPONSIBLE_UNKNOWN);
+    int8_t setFar(BufferPipe*);
+
+    /* Join the ends of this pipe to one-another. */
+    int8_t joinEnds();
+
+    /* Members pertaining to pipe-strategy. */
+    inline void setPipeStrategy(const uint8_t* strat) {  _pipe_strategy = strat;  };
+    inline uint8_t pipeCode() {  return _pipe_code;  };
+
+
+    #if defined(__MANUVR_PIPE_DEBUG)
+    virtual const char* pipeName();
+    #else
+    virtual const char* pipeName() =0;
+    #endif
+
+    // These inlines are for convenience of extending classes.
+    // TODO: Ought to be private.
+    inline bool _bp_flag(uint16_t flag) {        return (_flags & flag);  };
+    inline void _bp_set_flag(uint16_t flag, bool nu) {
+      if (nu) _flags |= flag;
+      else    _flags &= ~flag;
     };
 
+    static uint8_t* _pipe_strategies[];
     static const char* memMgmtString(int8_t);
+    static const char* signalString(ManuvrPipeSignal);
 
 
   protected:
     BufferPipe* _near;  // These two members create a double-linked-list.
     BufferPipe* _far;   // Need such topology for bi-directional pipe.
 
-    /* Default mem-mgmt responsibilities... */
-    int8_t _near_mm_default;   // ...for buffers originating from the near side.
-    int8_t _far_mm_default;    // ...for buffers originating from the far side.
-
     BufferPipe();           // Protected constructor with no params for class init.
-    virtual ~BufferPipe();  // Protected destructor.
-
-    /* Notification of destruction. Needed to maintain chain integrity. */
-    void _bp_notify_drop(BufferPipe*);
+    ~BufferPipe();  // Protected destructor.
 
     /* Simple checks that we will need to do. */
-    inline bool haveNear() {  return (NULL != _near);  };
-    inline bool haveFar() {   return (NULL != _far);   };
+    inline bool haveNear() {  return (nullptr != _near);  };
+    inline bool haveFar() {   return (nullptr != _far);   };
+
+    virtual void printDebug(StringBuilder*);
 
 
   private:
+    const uint8_t* _pipe_strategy;  // See notes.
+    uint16_t _flags;
+    uint8_t  _pipe_code;
 };
 
 #endif   // __MANUVR_BUFFER_PIPE_H__

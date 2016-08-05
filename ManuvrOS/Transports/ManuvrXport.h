@@ -29,21 +29,15 @@ XenoSessions are optionally established by this class, and broadcast to the
 
 If sessions are enabled for a transport, the highest-level of the protocol
   touched by this class ought to be dealing with sync.
-
-For non-session applications of this class, session-creation and management
-  can be disabled. This would be appropriate in cases such as GPS, modems,
-  and generally, anything that isn't manuvrable.
-
-For debuggability, the transport has a special mode for acting as a debug
-  console.
 */
 
 
 #ifndef __MANUVR_XPORT_H__
 #define __MANUVR_XPORT_H__
 
-#include "../Kernel.h"
-#include "DataStructures/StringBuilder.h"
+#include <Kernel.h>
+#include <DataStructures/StringBuilder.h>
+#include <DataStructures/BufferPipe.h>
 
 #include <Platform/Platform.h>
 
@@ -61,9 +55,9 @@ For debuggability, the transport has a special mode for acting as a debug
 #define MANUVR_XPORT_FLAG_BUSY             0x20000000  // The xport is moving something.
 #define MANUVR_XPORT_FLAG_STREAM_ORIENTED  0x10000000  // See note below.
 #define MANUVR_XPORT_FLAG_LISTENING        0x08000000  // We are listening for connections.
-#define MANUVR_XPORT_FLAG_IS_BRIDGED       0x04000000  // This transport instance is bridged to another.
-#define MANUVR_XPORT_FLAG_NON_SESSION      0x02000000  // Used to feed a transport into (suppose) a GPS parser.
-#define MANUVR_XPORT_FLAG_DEBUG_CONSOLE    0x01000000  // A human is on the other side.
+#define MANUVR_XPORT_FLAG_RESERVED_1       0x04000000  //
+#define MANUVR_XPORT_FLAG_RESERVED_2       0x02000000  //
+#define MANUVR_XPORT_FLAG_RESERVED_0       0x01000000  //
 #define MANUVR_XPORT_FLAG_ALWAYS_CONNECTED 0x00800000  // Serial ports.
 #define MANUVR_XPORT_FLAG_CONNECTIONLESS   0x00400000  // This transport is "connectionless". See Note0 below.
 #define MANUVR_XPORT_FLAG_HAS_MULTICAST    0x00200000  // This transport supports multicast.
@@ -99,16 +93,18 @@ For debuggability, the transport has a special mode for acting as a debug
 class XenoSession;
 
 
-class ManuvrXport : public EventReceiver {
+class ManuvrXport : public EventReceiver, public BufferPipe {
   public:
     ManuvrXport();
     virtual ~ManuvrXport();
 
-    inline XenoSession* getSession() {   return session;   };
-
+    /* Override from BufferPipe. */
+    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
+    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
 
     /*
     * High-level data functions.
+    * TODO: This is going to be cut in favor of BufferPipe's API.
     */
     int8_t sendBuffer(StringBuilder* buf);
 
@@ -122,10 +118,9 @@ class ManuvrXport : public EventReceiver {
     virtual int8_t listen()     = 0;
     virtual int8_t reset()      = 0;
 
+    // TODO: This is going to be cut in favor of BufferPipe's API.
     // Mandatory override.
-    virtual bool   write_port(unsigned char* out, int out_len) = 0;
     virtual int8_t read_port() = 0;
-
 
     /*
     * State accessors.
@@ -152,21 +147,6 @@ class ManuvrXport : public EventReceiver {
       _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_INITIALIZED) : (_xport_flags & ~(MANUVR_XPORT_FLAG_INITIALIZED));
     };
 
-    /* Transport bridging... */
-    inline bool isBridge() {                return (_xport_flags & MANUVR_XPORT_FLAG_IS_BRIDGED);  };
-    int8_t bridge(ManuvrXport*);
-
-    /* Is this transport used for non-session purposes? IE, GPS? */
-    inline bool nonSessionUsage() {         return (_xport_flags & MANUVR_XPORT_FLAG_NON_SESSION);  };
-    inline void nonSessionUsage(bool en) {
-      _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_NON_SESSION) : (_xport_flags & ~(MANUVR_XPORT_FLAG_NON_SESSION));
-    };
-
-    /* Is this transport being used as a debug console? If so, we will hangup a session if it exists.    */
-    inline bool isDebugConsole() {         return (_xport_flags & MANUVR_XPORT_FLAG_DEBUG_CONSOLE);  };
-    void isDebugConsole(bool en);
-
-
     /* We will override these functions in EventReceiver. */
     // TODO: I'm not sure I've evaluated the full impact of this sort of
     //    choice.  Calltimes? vtable size? alignment? Fragility? Dig.
@@ -176,41 +156,29 @@ class ManuvrXport : public EventReceiver {
       virtual void   procDirectDebugInstruction(StringBuilder*);
     #endif  //__MANUVR_CONSOLE_SUPPORT
 
-    // TODO: Should be protected.
-    int8_t provide_session(XenoSession*);   // Called whenever we instantiate a session.
-
     // We can have up-to 65535 transport instances concurrently. This well-exceeds
     //   the configured limits of most linux installations, so it should be enough.
     static uint16_t TRANSPORT_ID_POOL;
 
 
   protected:
-    XenoSession* session;
     ManuvrRunnable* _autoconnect_schedule;
-
-    // Can also be used to poll the other side. Implementation is completely at the discretion
-    //   any extending class. But generally, this feature is necessary.
-    ManuvrRunnable read_abort_event;  // Used to timeout a read operation.
-
-    uint32_t _xport_mtu;      // The largest packet size we handle.
-    uint32_t bytes_sent;
-    uint32_t bytes_received;
-
-    uint16_t xport_id;
-
     #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
       // Threaded platforms have a concept of threads...
       unsigned long _thread_id;
     #endif
 
-    // TODO: This is preventing us from encapsulating more deeply.
-    //   The reason it isn't done is because there are instance-specific nuances in behavior that have
-    //   to be delt with. A GPS device driver might be confused if we load a session. How about session hand-off
-    //   to other transport instances? Until this behavior can be generalized, we rely on the extending class to
-    //   handle undefined combinations as it chooses.
-    //       ---J. Ian Lindsay   Thu Dec 03 03:37:41 MST 2015
-    int8_t reapXenoSession(XenoSession*);   // Cleans up XenoSessions that were instantiated by this class.
+    uint32_t _xport_mtu;      // The largest packet size we handle.
+    uint32_t bytes_sent;
+    uint32_t bytes_received;
+    uint16_t xport_id;
 
+    // Can also be used to poll the other side. Implementation is completely at the discretion
+    //   any extending class. But generally, this feature is necessary.
+    ManuvrRunnable read_abort_event;  // Used to timeout a read operation.
+
+    virtual int8_t bootComplete() =0;
+    const char* pipeName();
 
     // TODO: Should be private. provide_session() / reset() are the blockers.
     inline void set_xport_state(uint32_t bitmask) {    _xport_flags = (bitmask  | _xport_flags);   }
@@ -221,6 +189,7 @@ class ManuvrXport : public EventReceiver {
 
 
 
+
   private:
     uint32_t _xport_flags;
 
@@ -228,13 +197,6 @@ class ManuvrXport : public EventReceiver {
     inline void mark_connected(bool en) {
       _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_CONNECTED) : (_xport_flags & ~(MANUVR_XPORT_FLAG_CONNECTED));
     };
-
-
-    inline bool _reap_session() {   return (_xport_flags & (MANUVR_XPORT_FLAG_REAP_SESSION | MANUVR_XPORT_FLAG_REAP_SESSION));  }
-    inline void _reap_session(bool en) {
-      _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_REAP_SESSION) : (_xport_flags & ~(MANUVR_XPORT_FLAG_REAP_SESSION));
-    };
-
 };
 
 #endif   // __MANUVR_XPORT_H__

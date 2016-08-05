@@ -28,7 +28,7 @@ XenoSession is the class that manages dialog with other systems via some
 
 
 
-/****************************************************************************************************
+/*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
 *    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
@@ -36,8 +36,8 @@ XenoSession is the class that manages dialog with other systems via some
 * .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
 * |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
 *
-* Static members and initializers should be located here. Initializers first, functions second.
-****************************************************************************************************/
+* Static members and initializers should be located here.
+*******************************************************************************/
 
 /**
 * Logging support fxn.
@@ -57,43 +57,40 @@ const char* XenoSession::sessionPhaseString(uint16_t state_code) {
 }
 
 
-/****************************************************************************************************
+/*******************************************************************************
 *   ___ _              ___      _ _              _      _
 *  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
 * | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
 *  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
 *                                          |_|
 * Constructors/destructors, class initialization functions and so-forth...
-****************************************************************************************************/
+*******************************************************************************/
 
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
 *
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
-XenoSession::XenoSession(ManuvrXport* _xport) {
-  __class_initializer();
+XenoSession::XenoSession(BufferPipe* _near_side) : BufferPipe() {
+  EventReceiver::__class_initializer();
+  // Our near-side is that passed-in transport.
+  setNear(_near_side);
+  _bp_set_flag(BPIPE_FLAG_IS_TERMINUS, true);
+
+  // TODO: Audit implications of this....
+  // The link nearer to the transport should not free.
+  _near_side->setFar((BufferPipe*) this);
 
   _session_service.repurpose(MANUVR_MSG_SESS_SERVICE);
   _session_service.isManaged(true);
   _session_service.specific_target = (EventReceiver*) this;
   _session_service.originator      = (EventReceiver*) this;
 
-  owner = _xport;
-  owner->nonSessionUsage(false);
-  owner->provide_session(this);
+  working            = NULL;
+  session_state      = XENOSESSION_STATE_UNINITIALIZED;
+  session_last_state = XENOSESSION_STATE_UNINITIALIZED;
 
-  working                   = NULL;
-  session_state             = XENOSESSION_STATE_UNINITIALIZED;
-  session_last_state        = XENOSESSION_STATE_UNINITIALIZED;
-
-  if (!owner->alwaysConnected() && owner->connected()) {
-    // Are we connected right now?
-    mark_session_state(XENOSESSION_STATE_PENDING_SETUP);
-  }
-  else {
-    mark_session_state(XENOSESSION_STATE_PENDING_CONN);
-  }
+  mark_session_state(XENOSESSION_STATE_PENDING_SETUP);
 }
 
 
@@ -113,6 +110,8 @@ XenoSession::~XenoSession() {
   Kernel::raiseEvent(MANUVR_MSG_SESS_HANGUP, NULL);
 }
 
+
+const char* XenoSession::pipeName() { return getReceiverName(); }
 
 
 /**
@@ -172,7 +171,7 @@ int8_t XenoSession::untapAll() {
 
 
 int8_t XenoSession::sendPacket(unsigned char *buf, int len) {
-  if (owner->write_port(buf, len)) {
+  if (owner->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_CREATOR)) {
     return 0;
   }
   return -1;
@@ -194,17 +193,6 @@ int8_t XenoSession::sendPacket(unsigned char *buf, int len) {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-
-/**
-* Boot done finished-up.
-*
-* @return 0 on no action, 1 on action, -1 on failure.
-*/
-int8_t XenoSession::bootComplete() {
-  EventReceiver::bootComplete();
-  return 1;
-}
-
 
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
@@ -291,7 +279,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
       {
         StringBuilder* buf;
         if (0 == active_event->getArgAs(&buf)) {
-          bin_stream_rx(buf->string(), buf->length());
+          fromCounterparty(buf->string(), buf->length(), MEM_MGMT_RESPONSIBLE_BEARER);
         }
       }
       return_value++;
@@ -429,6 +417,7 @@ int8_t XenoSession::connection_callback(bool _con) {
 void XenoSession::printDebug(StringBuilder *output) {
   if (NULL == output) return;
   EventReceiver::printDebug(output);
+  BufferPipe::printDebug(output);
 
   output->concatf("-- Session ID           0x%08x\n", (uint32_t) this);
   output->concatf("-- Session phase        %s\n--\n", sessionPhaseString(getPhase()));

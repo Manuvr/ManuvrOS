@@ -125,9 +125,6 @@ class StringBuilder {
 
 		int cmpBinString(unsigned char *unknown, int len);
 
-#ifdef __MANUVR_DEBUG
-		void printDebug();
-#endif
 		void printDebug(StringBuilder*);
 
 

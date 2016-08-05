@@ -40,7 +40,7 @@ limitations under the License.
   #include "FirmwareDefs.h"
   #include "ManuvrRunnable.h"
   #include "EventReceiver.h"
-  #include "LogPipe.h"
+  #include <DataStructures/BufferPipe.h>
   #include <DataStructures/PriorityQueue.h>
   #include <DataStructures/StringBuilder.h>
   #include <map>
@@ -157,7 +157,7 @@ limitations under the License.
       void printDebug(StringBuilder*);
       inline void printDebug() {        printDebug(&local_log);      };
       #if defined(__MANUVR_DEBUG)
-        void print_type_sizes();      // Prints the memory-costs of various classes.
+        void print_type_sizes(StringBuilder*);   // Prints the memory-costs of various classes.
       #endif
 
       /* Profiling support.. */
@@ -177,20 +177,16 @@ limitations under the License.
       int8_t callback_proc(ManuvrRunnable *);
       #if defined(__MANUVR_CONSOLE_SUPPORT)
         void procDirectDebugInstruction(StringBuilder *);
-
-        /* Takes user input in the form of direct strings. */
-        void accumulateConsoleInput(uint8_t *buf, int len, bool terminal);
       #endif
 
 
-      static StringBuilder log_buffer;
-
       /* These functions deal with logging.*/
-      volatile static void log(const char *fxn_name, int severity, const char *str, ...);  // Pass-through to the logger class, whatever that happens to be.
       volatile static void log(int severity, const char *str);                             // Pass-through to the logger class, whatever that happens to be.
       volatile static void log(const char *str);                                           // Pass-through to the logger class, whatever that happens to be.
       volatile static void log(char *str);                                           // Pass-through to the logger class, whatever that happens to be.
       volatile static void log(StringBuilder *str);
+      static int8_t attachToLogger(BufferPipe*);
+      static int8_t detachFromLogger(BufferPipe*);
 
       static Kernel* getInstance(void);
       static int8_t  raiseEvent(uint16_t event_code, EventReceiver* data);
@@ -210,14 +206,15 @@ limitations under the License.
       /* Factory method. Returns a preallocated Event. */
       static ManuvrRunnable* returnEvent(uint16_t event_code);
 
+      static BufferPipe* _logger;       // The log pipe.
+
 
     protected:
       int8_t bootComplete();
 
 
     private:
-      LogPipe logger;
-      ManuvrRunnable* current_event;
+      ManuvrRunnable*                  current_event; // The presently-executing event.
       PriorityQueue<ManuvrRunnable*>   exec_queue;    // Runnables that are pending execution.
       PriorityQueue<ManuvrRunnable*>   schedules;     // These are Runnables scheduled to be run.
       PriorityQueue<ManuvrRunnable*>   preallocated;  // This is the listing of pre-allocated Runnables.
@@ -275,7 +272,7 @@ limitations under the License.
       inline bool _skip_detected() {            return (_er_flag(MKERNEL_FLAG_SKIP_DETECT));         };
       inline void _skip_detected(bool nu) {     return (_er_set_flag(MKERNEL_FLAG_SKIP_DETECT, nu)); };
 
-      static Kernel* INSTANCE;
+      static Kernel*     INSTANCE;
       static PriorityQueue<ManuvrRunnable*> isr_exec_queue;   // Events that have been raised from ISRs.
   };
 

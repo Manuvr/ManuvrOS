@@ -603,7 +603,7 @@ int StringBuilder::concatf(const char *format, ...) {
   for (unsigned short i = 0; i < len; i++) {  if (*(format+i) == '%') f_codes++; }
   va_list args;
   // Allocate (hopefully) more space than we will need....
-  int est_len = len + 64 + (f_codes * 15);
+  int est_len = len + 640 + (f_codes * 15);
   char *temp = (char *) alloca(est_len);
   memset(temp, 0, est_len);
   int ret = 0;
@@ -873,23 +873,6 @@ void StringBuilder::null_term_check() {
   }
 }
 
-
-
-#ifdef __MANUVR_DEBUG
-void StringBuilder::printDebug() {
-  unsigned char* temp = this->string();
-  int temp_len  = this->length();
-  printf("\nStringBuilder\t Total bytes: %d\n", temp_len);
-
-  if ((temp != NULL) && (temp_len > 0)) {
-    for (int i = 0; i < temp_len; i++) {
-      printf("%02x ", *(temp + i));
-    }
-    printf("\n\n");
-  }
-}
-
-#endif
 
 // TODO: Make this a static.
 void StringBuilder::printDebug(StringBuilder* output) {
