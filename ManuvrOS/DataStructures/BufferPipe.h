@@ -167,8 +167,8 @@ class BufferPipe {
     ~BufferPipe();  // Protected destructor.
 
     /* Simple checks that we will need to do. */
-    inline bool haveNear() {  return (NULL != _near);  };
-    inline bool haveFar() {   return (NULL != _far);   };
+    inline bool haveNear() {  return (nullptr != _near);  };
+    inline bool haveFar() {   return (nullptr != _far);   };
 
     // These inlines are for convenience of extending classes.
     inline bool _bp_flag(uint16_t flag) {        return (_flags & flag);  };

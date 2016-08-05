@@ -71,8 +71,8 @@ const char* BufferPipe::signalString(ManuvrPipeSignal code) {
 * Constructor.
 */
 BufferPipe::BufferPipe() {
-  _near            = NULL;
-  _far             = NULL;
+  _near            = nullptr;
+  _far             = nullptr;
   _flags           = 0;
 }
 
@@ -84,15 +84,15 @@ BufferPipe::~BufferPipe() {
   #if defined(__MANUVR_PIPE_DEBUG)
   Kernel::log("BufferPipe(): teardown\n");
   #endif
-  if (NULL != _near) {
-    _near->toCounterparty(ManuvrPipeSignal::FAR_SIDE_DETACH, NULL);
+  if (nullptr != _near) {
+    _near->toCounterparty(ManuvrPipeSignal::FAR_SIDE_DETACH, nullptr);
   }
-  if (NULL != _far) {
-    _far->toCounterparty(ManuvrPipeSignal::NEAR_SIDE_DETACH, NULL);
+  if (nullptr != _far) {
+    _far->toCounterparty(ManuvrPipeSignal::NEAR_SIDE_DETACH, nullptr);
   }
   joinEnds();
-  _near = NULL;
-  _far  = NULL;
+  _near = nullptr;
+  _far  = nullptr;
 }
 
 
@@ -124,7 +124,7 @@ int8_t BufferPipe::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
   #endif
   switch (_sig) {
     case ManuvrPipeSignal::FAR_SIDE_DETACH:   // The far side is detaching.
-      _far = NULL;
+      _far = nullptr;
       break;
     case ManuvrPipeSignal::NEAR_SIDE_DETACH:
       #if defined(__MANUVR_PIPE_DEBUG)
@@ -162,7 +162,7 @@ int8_t BufferPipe::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
       #endif
       break;
     case ManuvrPipeSignal::NEAR_SIDE_DETACH:   // The near side is detaching.
-      _near = NULL;
+      _near = nullptr;
       break;
     case ManuvrPipeSignal::FAR_SIDE_ATTACH:
     case ManuvrPipeSignal::NEAR_SIDE_ATTACH:
@@ -229,9 +229,9 @@ int8_t BufferPipe::fromCounterparty(StringBuilder* buf, int8_t _mm) {
 * @return  An MM return code.
 */
 int8_t BufferPipe::setNear(BufferPipe* nu) {
-  if (NULL == _near) {
+  if (nullptr == _near) {
     // If the slot is vacant..
-    if (NULL != nu) {
+    if (nullptr != nu) {
       // ...and nu is itself non-null, and the _mm is valid...
       _near = nu;
       return 0;  // TODO: Yuck.
@@ -259,9 +259,9 @@ int8_t BufferPipe::setNear(BufferPipe* nu) {
 * @return  A result code.
 */
 int8_t BufferPipe::setFar(BufferPipe* nu) {
-  if (NULL == _far) {
+  if (nullptr == _far) {
     // If the slot is vacant..
-    if (NULL != nu) {
+    if (nullptr != nu) {
       // ...and nu is itself non-null, and the _mm is valid...
       _far = nu;
       return 0;  // TODO: Yuck.
@@ -284,7 +284,7 @@ int8_t BufferPipe::setFar(BufferPipe* nu) {
 * @return  Non-zero on error. Otherwise implies success.
 */
 int8_t BufferPipe::joinEnds() {
-  if ((NULL == _far) || (NULL == _near)) {
+  if ((nullptr == _far) || (nullptr == _near)) {
     #if defined(__MANUVR_PIPE_DEBUG)
     Kernel::log("joinEnds(): The pipe does not have both ends defined.\n");
     #endif
@@ -297,8 +297,8 @@ int8_t BufferPipe::joinEnds() {
     #endif
     BufferPipe* temp_far  = _far;
     BufferPipe* temp_near = _near;
-    _far  = NULL;
-    _near = NULL;
+    _far  = nullptr;
+    _near = nullptr;
 
     temp_far->_near = temp_near;
     temp_near->_far = temp_far;
