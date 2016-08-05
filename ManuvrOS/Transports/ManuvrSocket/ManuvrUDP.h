@@ -96,9 +96,9 @@ class UDPPipe : public BufferPipe {
     int takeAccumulator(StringBuilder*);
 
     /* Is this transport used for non-session purposes? IE, GPS? */
-    inline bool persistAfterReply() {         return (_flags & MANUVR_UDP_FLAG_PERSIST);  };
+    inline bool persistAfterReply() {         return (_udpflags & MANUVR_UDP_FLAG_PERSIST);  };
     inline void persistAfterReply(bool en) {
-      _flags = (en) ? (_flags | MANUVR_UDP_FLAG_PERSIST) : (_flags & ~(MANUVR_UDP_FLAG_PERSIST));
+      _udpflags = (en) ? (_udpflags | MANUVR_UDP_FLAG_PERSIST) : (_udpflags & ~(MANUVR_UDP_FLAG_PERSIST));
     };
 
     inline uint16_t getPort() {   return _port;   };
@@ -110,7 +110,7 @@ class UDPPipe : public BufferPipe {
 
   private:
     uint16_t      _port;
-    uint16_t      _flags;
+    uint16_t      _udpflags;
     uint32_t      _ip;
     ManuvrUDP*    _udp;
     StringBuilder _accumulator;   // Holds an incoming packet prior to setFar().

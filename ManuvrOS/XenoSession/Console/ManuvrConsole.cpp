@@ -29,7 +29,7 @@ extern void printHelp();  // TODO: Hack. Remove later.
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
 *
-* @param   ManuvrXport* All sessions must have one (and only one) transport.
+* @param   BufferPipe* All sessions must have one (and only one) transport.
 */
 ManuvrConsole::ManuvrConsole(BufferPipe* _near_side) : XenoSession(_near_side) {
   Kernel::attachToLogger((BufferPipe*) this);
