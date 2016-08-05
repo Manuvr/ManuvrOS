@@ -161,7 +161,7 @@ int main(int argc, char *argv[]) {
     //   certainly present.
     I2CAdapter i2c(1);
     kernel->subscribe(&i2c);
-    
+
     ManuvrableGPIO gpio;
     kernel->subscribe(&gpio);
   #endif
@@ -188,7 +188,7 @@ int main(int argc, char *argv[]) {
       mqtt.tapMessageType(MANUVR_MSG_DIGITAL_READ);
 
     #else
-      ManuvrTCP tcp_srv((const char*) "127.0.0.1", 2319);
+      ManuvrTCP tcp_srv((const char*) "0.0.0.0", 2319);
       ManuvrTCP tcp_cli((const char*) "127.0.0.1", 2319);
       kernel->subscribe(&tcp_srv);
     #endif
@@ -196,7 +196,7 @@ int main(int argc, char *argv[]) {
   #endif
 
   #if defined(MANUVR_SUPPORT_UDP)
-    ManuvrUDP udp_srv((const char*) "127.0.0.1", 6053);
+    ManuvrUDP udp_srv((const char*) "0.0.0.0", 6053);
     kernel->subscribe(&udp_srv);
   #endif
 

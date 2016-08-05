@@ -76,12 +76,6 @@ The message class was derived from cantcoap.
 
 class CoAPMessage : public XenoMessage {
   public:
-    char retained;
-    char dup;
-    uint16_t unique_id;
-    char* topic;
-    void *payload;
-
 		CoAPMessage();
 		CoAPMessage(uint8_t *pdu, int pduLength);
 		CoAPMessage(uint8_t *buffer, int bufferLength, int pduLength);
@@ -99,10 +93,10 @@ class CoAPMessage : public XenoMessage {
     // TODO: These members were digested from cantcoap...
 		/// CoAP message types. Note, values only work as enum.
 		enum Type {
-			COAP_CONFIRMABLE=0x00,
-			COAP_NON_CONFIRMABLE=0x10,
-			COAP_ACKNOWLEDGEMENT=0x20,
-			COAP_RESET=0x30
+			COAP_CONFIRMABLE     = 0x00,
+			COAP_NON_CONFIRMABLE = 0x10,
+			COAP_ACKNOWLEDGEMENT = 0x20,
+			COAP_RESET           = 0x30
 		};
 
 		// CoAP response codes.
@@ -161,12 +155,12 @@ class CoAPMessage : public XenoMessage {
 
 		/// CoAP content-formats.
 		enum ContentFormat {
-			COAP_CONTENT_FORMAT_TEXT_PLAIN = 0,
-			COAP_CONTENT_FORMAT_APP_LINK  = 40,
-			COAP_CONTENT_FORMAT_APP_XML,
-			COAP_CONTENT_FORMAT_APP_OCTET,
-			COAP_CONTENT_FORMAT_APP_EXI   = 47,
-			COAP_CONTENT_FORMAT_APP_JSON  = 50
+			COAP_CONTENT_FORMAT_TEXT_PLAIN =  0,
+			COAP_CONTENT_FORMAT_APP_LINK   = 40,
+			COAP_CONTENT_FORMAT_APP_XML    = 41,
+			COAP_CONTENT_FORMAT_APP_OCTET  = 42,
+			COAP_CONTENT_FORMAT_APP_EXI    = 47,
+			COAP_CONTENT_FORMAT_APP_JSON   = 50
 		};
 
 		/// Sequence of these is returned by CoAPMessage::getOptions()
@@ -212,11 +206,22 @@ class CoAPMessage : public XenoMessage {
     /* Return the number of options in the message. */
 		inline int getNumOptions() {      return _numOptions;    };
 
-		// shorthand helpers
-		int setURI(char *uri);
+
+    inline int setURI(char *uri) {
+      return setURI(uri, strlen(uri));
+    };
 		int setURI(char *uri, int urilen);
 		int getURI(char *dst, int dstlen, int *outLen);
-		int addURIQuery(char *query);
+
+    /**
+    * Adds a new option to the CoAP PDU that encodes a URI_QUERY.
+    *
+    * \param query The uri query to encode.
+    * \return 0 on success, 1 on failure.
+    */
+		inline int addURIQuery(char *query) {
+      return addOption(COAP_OPTION_URI_QUERY,strlen(query),(uint8_t*)query);
+    };
 
 		// content format helper
 		int setContentFormat(CoAPMessage::ContentFormat format);
@@ -224,25 +229,27 @@ class CoAPMessage : public XenoMessage {
 		// payload
 		uint8_t* mallocPayload(int bytes);
 		int setPayload(uint8_t *value, int len);
-		uint8_t* getPayloadPointer();
-		int getPayloadLength();
+
+		inline uint8_t* getPayloadPointer() {  return _payloadPointer; };
+		inline int getPayloadLength() {        return _payloadLength;  };
 		uint8_t* getPayloadCopy();
 
-		// pdu
-		inline int getPDULength() {  return _pduLength;  };
-		uint8_t* getPDUPointer();
-		void setPDULength(int len);
+    /**
+    * This is used when re-using a PDU container before calling CoAPMessage::validate() as it
+    * is not possible to deduce the length of a PDU since the payload has no length marker.
+    * \param len The length of the PDU
+    */
+		inline void setPDULength(int len) { _pduLength = len;   };
+		// pdu buffer accessors.
+		inline uint16_t getPDULength() {    return _pduLength;  };
+		inline uint8_t* getPDUPointer() {   return _pdu;        };
 
 		// debugging
-		void print();
-		void printBin();
-		void printHex();
 		void printOptionHuman(uint8_t *option);
-		void printPDUAsCArray();
 
-		static void printBinary(StringBuilder*, uint8_t);
     static const char* optionNumToString(uint16_t);
     static const char* codeToString(CoAPMessage::Code);
+    static const char* typeToString(CoAPMessage::Type);
 		static CoAPMessage::Code httpStatusToCode(int httpStatus);
 
 

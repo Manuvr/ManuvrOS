@@ -123,6 +123,15 @@ const char* CoAPMessage::codeToString(CoAPMessage::Code code) {
   }
 }
 
+const char* CoAPMessage::typeToString(CoAPMessage::Type type) {
+  switch(type) {
+    case COAP_CONFIRMABLE:      return "CONFIRMABLE";
+    case COAP_NON_CONFIRMABLE:  return "NON-CONFIRMABLE";
+    case COAP_ACKNOWLEDGEMENT:  return "ACK";
+    case COAP_RESET:            return "RESET";
+  }
+}
+
 /**
 * Converts a http status code as an integer, to a CoAP code.
 *
@@ -539,29 +548,6 @@ CoAPMessage::~CoAPMessage() {
   }
 }
 
-/// Returns a pointer to the internal buffer.
-uint8_t* CoAPMessage::getPDUPointer() {
-  return _pdu;
-}
-
-/// Set the PDU length to the length specified.
-/**
- * This is used when re-using a PDU container before calling CoAPMessage::validate() as it
- * is not possible to deduce the length of a PDU since the payload has no length marker.
- * \param len The length of the PDU
- */
-void CoAPMessage::setPDULength(int len) {
-  _pduLength = len;
-}
-
-/// Shorthand function for setting a resource URI.
-/**
- * Calls CoAPMessage::setURI(uri,strlen(uri).
- */
-int CoAPMessage::setURI(char *uri) {
-  return setURI(uri,strlen(uri));
-}
-
 /// Shorthand function for setting a resource URI.
 /**
  * This will parse the supplied \b uri and construct enough URI_PATH and URI_QUERY options to encode it.
@@ -671,17 +657,6 @@ int CoAPMessage::setURI(char *uri, int urilen) {
   }
 
   return 0;
-}
-
-/// Shorthand for adding a URI QUERY to the option list.
-/**
- * Adds a new option to the CoAP PDU that encodes a URI_QUERY.
- *
- * \param query The uri query to encode.
- * \return 0 on success, 1 on failure.
- */
-int CoAPMessage::addURIQuery(char *query) {
-  return addOption(COAP_OPTION_URI_QUERY,strlen(query),(uint8_t*)query);
 }
 
 /// Concatenates any URI_PATH elements and URI_QUERY elements into a single string.
@@ -1330,16 +1305,6 @@ int CoAPMessage::setPayload(uint8_t *payload, int len) {
   return 0;
 }
 
-/// Returns a pointer to the payload buffer.
-uint8_t* CoAPMessage::getPayloadPointer() {
-  return _payloadPointer;
-}
-
-/// Gets the length of the payload buffer.
-int CoAPMessage::getPayloadLength() {
-  return _payloadLength;
-}
-
 /// Returns a pointer to a buffer which is a copy of the payload buffer (dynamically allocated).
 uint8_t* CoAPMessage::getPayloadCopy() {
   if(_payloadLength==0) {
@@ -1652,16 +1617,6 @@ int CoAPMessage::insertOption(
 // DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG
 // DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG
 
-/// Prints the PDU as a c array (useful for debugging or hardcoding PDUs)
-void CoAPMessage::printPDUAsCArray() {
-  coap_log.concat("const uint8_t array[] = {");
-  for(int i=0; i<_pduLength; i++) {
-    coap_log.concatf("0x%.2x, ",_pdu[i]);
-  }
-  coap_log.concat("};\n");
-  Kernel::log(&coap_log);
-}
-
 /// A routine for printing an option in human-readable format.
 /**
  * \param option This is a pointer to where the option begins in the PDU.
@@ -1689,18 +1644,19 @@ void CoAPMessage::printOptionHuman(uint8_t *option) {
     if(i%4==0) {
       coap_log.concatf("   %.2d ",i);
     }
-    CoAPMessage::printBinary(&coap_log, option[i]);
+		coap_log.concatf("0x%02x ", option[i]);
   }
 
   // print header byte
   coap_log.concat("Header byte:  ");
-  CoAPMessage::printBinary(&coap_log, *option++);
+	coap_log.concatf("0x%02x ", *option++);
+	coap_log.concat("\n");
 
   // print extended delta bytes
   if(extraDeltaBytes) {
     coap_log.concatf("Extended delta bytes (%d) in network order:  ",extraDeltaBytes);
     while(extraDeltaBytes--) {
-      CoAPMessage::printBinary(&coap_log, *option++);
+			coap_log.concatf("0x%02x ", *option++);
     }
   }
   else {
@@ -1711,7 +1667,7 @@ void CoAPMessage::printOptionHuman(uint8_t *option) {
   if(extraValueLengthBytes) {
     coap_log.concatf("Extended value length bytes (%d) in network order: ",extraValueLengthBytes);
     while(extraValueLengthBytes--) {
-      CoAPMessage::printBinary(&coap_log, *option++);
+			coap_log.concatf("0x%02x ", *option++);
     }
   }
   else {
@@ -1725,40 +1681,11 @@ void CoAPMessage::printOptionHuman(uint8_t *option) {
     if(i%4==0) {
       coap_log.concatf("   %.2d ",i);
     }
-    CoAPMessage::printBinary(&coap_log, *option++);
+		coap_log.concatf("0x%02x ", *option++);
   }
   coap_log.concat("\n");
   Kernel::log(&coap_log);
 }
-
-/// Dumps the PDU header in hex.
-void CoAPMessage::printHex() {
-  coap_log.concatf("Hexdump dump of PDU:  %.2x %.2x %.2x %.2x\n",_pdu[0],_pdu[1],_pdu[2],_pdu[3]);
-  Kernel::log(&coap_log);
-}
-
-/// Dumps the entire PDU in binary.
-void CoAPMessage::printBin() {
-  for(int i=0; i<_pduLength; i++) {
-    if(i%4==0) {
-      coap_log.concatf("%.2d \n",i);
-    }
-    CoAPMessage::printBinary(&coap_log, _pdu[i]);
-  }
-  coap_log.concat("\n");
-  Kernel::log(&coap_log);
-}
-
-/// Prints a single byte in binary.
-void CoAPMessage::printBinary(StringBuilder* out, uint8_t b) {
-  out->concatf("%d%d%d%d%d%d%d%d",
-    (b&0x80)&&0x01, (b&0x40)&&0x01,
-    (b&0x20)&&0x01, (b&0x10)&&0x01,
-    (b&0x08)&&0x01, (b&0x04)&&0x01,
-    (b&0x02)&&0x01, (b&0x01)&&0x01
-  );
-}
-
 
 
 /**
@@ -1789,90 +1716,53 @@ int CoAPMessage::accumulate(unsigned char* _buf, int _len) {
 */
 void CoAPMessage::printDebug(StringBuilder *output) {
   XenoMessage::printDebug(output);
-  //output->concatf("\t Parse complete  %s\n", parseComplete() ? "yes":"no");
-  //if ((bytes_total > 0) && (NULL != payload)) {
-  //  output->concat("\t Payload contents:\t");
-  //  for (uint32_t i = 0; i < bytes_total; i++) {
-  //    output->concatf("0x%02x ", *((uint8_t*)payload + i));
-  //  }
-  //  output->concat("\n");
-  //}
   if(_constructedFromBuffer) {
-    output->concatf("PDU was constructed from buffer of %d bytes\n",_bufferLength);
+    output->concatf("\t PDU was constructed from buffer of %d bytes\n",_bufferLength);
   }
+	output->concatf("\t CoAP v%d code:   %s\n", getVersion(), codeToString(getCode()));
 	output->concatf("\t Message ID:     %u\n", getMessageID());
-	output->concatf("\t PDU length      %d\n", _pduLength);
+	output->concatf("\t Message Type:   %s\n", typeToString(getType()));
+	output->concatf("\t PDU (%d bytes): ", _pduLength);
+  for (int i = 0; i < _pduLength; i++) output->concatf("0x%02x ", _pdu[i]);
+	output->concat("\n");
 
-  output->concatf("CoAP Version: %d",getVersion());
-  output->concat("Message Type: ");
-  switch(getType()) {
-    case COAP_CONFIRMABLE:
-      output->concat("Confirmable\n");
-    break;
-
-    case COAP_NON_CONFIRMABLE:
-      output->concat("Non-Confirmable\n");
-    break;
-
-    case COAP_ACKNOWLEDGEMENT:
-      output->concat("Acknowledgement\n");
-    break;
-
-    case COAP_RESET:
-      output->concat("Reset\n");
-    break;
-  }
-  output->concatf("Token length: %d\n",getTokenLength());
-  output->concatf("Code: %s", codeToString(getCode()));
-
-  // print token value
   int tokenLength = getTokenLength();
-  uint8_t *tokenPointer = getPDUPointer()+COAP_HDR_SIZE;
-  if(tokenLength==0) {
-    output->concat("No token.\n");
-  }
-  else {
-    output->concatf("Token of %d bytes.\n  Value: 0x",tokenLength);
-    for(int j=0; j<tokenLength; j++) {
-      output->concatf("%.2x",tokenPointer[j]);
-    }
-    output->concat("\n");
-  }
+	if (0 < tokenLength) {
+		uint8_t *tokenPointer = getPDUPointer()+COAP_HDR_SIZE;
+  	output->concatf("\n\t Token length:   %d\t", tokenLength);
+		for (int i = 0; i < tokenLength; i++) output->concatf("0x%02x ", tokenPointer[i]);
+		output->concat("\n");
+	}
 
   // print options
   CoAPMessage::CoapOption* options = getOptions();
-  if(options==nullptr) {
-    return;
-  }
-
-  output->concatf("%d options:\n",_numOptions);
-  for(int i=0; i<_numOptions; i++) {
-    output->concatf("OPTION (%d/%d)\n",i + 1,_numOptions);
-    output->concatf("   Option number (delta): %hu (%hu)\n",options[i].optionNumber,options[i].optionDelta);
-    output->concatf("   Name: %s\n", optionNumToString(options[i].optionNumber));
-    output->concatf("   Value length: %u\n",options[i].optionValueLength);
-    output->concat("   Value: \"");
-    for(int j=0; j<options[i].optionValueLength; j++) {
-      char c = options[i].optionValuePointer[j];
-      if((c>='!'&&c<='~')||c==' ') {
-        output->concatf("%c",c);
-      }
-      else {
-        output->concatf("\\%.2d",c);
-      }
-    }
-    output->concat("\"\n");
+  if(nullptr != options) {
+		output->concat("\t Options:\n");
+  	for(int i = 0; i < _numOptions; i++) {
+    	output->concatf("OPTION (%d/%d)\n",i + 1,_numOptions);
+    	output->concatf("   Option number (delta): %hu (%hu)\n",options[i].optionNumber,options[i].optionDelta);
+    	output->concatf("   Name: %s\n", optionNumToString(options[i].optionNumber));
+    	output->concatf("   Value length: %u\n",options[i].optionValueLength);
+    	output->concat("   Value: \"");
+    	for(int j = 0; j < options[i].optionValueLength; j++) {
+      	char c = options[i].optionValuePointer[j];
+      	if((c>='!'&&c<='~')||c==' ') {
+        	output->concatf("%c",c);
+      	}
+      	else {
+        	output->concatf("\\%.2d",c);
+      	}
+    	}
+    	output->concat("\"\n");
+  	}
+		free(options);
   }
 
   // print payload
-  if(_payloadLength==0) {
-    output->concat("No payload.\n");
-  }
-  else {
-    output->concatf("Payload of %d bytes\n",_payloadLength);
-    output->concat("   Value: \"");
-    for(int j=0; j<_payloadLength; j++) {
-      char c = _payloadPointer[j];
+  if(0 < _payloadLength) {
+    output->concatf("\t Payload (%d bytes)\t\"",_payloadLength);
+		for(int i = 0; i < _payloadLength; i++) {
+      char c = _payloadPointer[i];
       if((c>='!'&&c<='~')||c==' ') {
         output->concatf("%c",c);
       }
@@ -1882,6 +1772,4 @@ void CoAPMessage::printDebug(StringBuilder *output) {
     }
     output->concat("\"\n");
   }
-  free(options);
-  output->concat("__________________\n");
 }
