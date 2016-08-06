@@ -111,7 +111,47 @@ XenoSession::~XenoSession() {
 }
 
 
+/*******************************************************************************
+*  _       _   _        _
+* |_)    _|_ _|_ _  ._ |_) o ._   _
+* |_) |_| |   | (/_ |  |   | |_) (/_
+*                            |
+* Session-base implementations.
+*******************************************************************************/
+
 const char* XenoSession::pipeName() { return getReceiverName(); }
+
+/**
+* Pass a signal to the counterparty.
+*
+* Data referenced by _args should be assumed to be on the stack of the caller.
+*
+* @param   _sig   The signal.
+* @param   _args  Optional argument pointer.
+* @return  Negative on error. Zero on success.
+*/
+int8_t XenoSession::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
+  if (getVerbosity() > 5) {
+    local_log.concatf("%s --sig--> %s: %s\n", (haveNear() ? _near->pipeName() : "ORIG"), pipeName(), signalString(_sig));
+    Kernel::log(&local_log);
+  }
+  switch (_sig) {
+    case ManuvrPipeSignal::XPORT_CONNECT:
+    case ManuvrPipeSignal::XPORT_DISCONNECT:
+      this->connection_callback(_sig == ManuvrPipeSignal::XPORT_CONNECT);
+      return 1;
+
+    case ManuvrPipeSignal::FAR_SIDE_DETACH:   // The far side is detaching.
+    case ManuvrPipeSignal::NEAR_SIDE_DETACH:   // The near side is detaching.
+    case ManuvrPipeSignal::FAR_SIDE_ATTACH:
+    case ManuvrPipeSignal::NEAR_SIDE_ATTACH:
+    case ManuvrPipeSignal::UNDEF:
+    default:
+      break;
+  }
+  return BufferPipe::fromCounterparty(_sig, _args);
+}
+
 
 
 /**
@@ -209,7 +249,7 @@ int8_t XenoSession::callback_proc(ManuvrRunnable *event) {
     case MANUVR_MSG_SESS_HANGUP:
       // It is now safe to destroy this session. By triggering our owner's disconnection
       //   method, we indirectly invoke our own teardown.
-      owner->disconnect();
+      BufferPipe::toCounterparty(ManuvrPipeSignal::XPORT_DISCONNECT, NULL);
       mark_session_state(XENOSESSION_STATE_HUNGUP);
       break;
     default:
@@ -364,7 +404,7 @@ int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
 
   //StringBuilder buf;
   //if (nu_outbound_msg->serialize(&buf) > 0) {
-  //  owner->sendBuffer(&buf);
+  //  toCounterparty(&buf);
   //}
 
   //if (nu_outbound_msg->expectsACK()) {

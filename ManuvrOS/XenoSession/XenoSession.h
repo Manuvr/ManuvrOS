@@ -84,6 +84,7 @@ class XenoSession : public EventReceiver, public BufferPipe {
     inline bool isConnected() {      return (0 == (XENOSESSION_STATE_PENDING_CONN & getPhase()));   }
 
     /* Override from BufferPipe. */
+    virtual int8_t fromCounterparty(ManuvrPipeSignal, void *);
     virtual int8_t toCounterparty(StringBuilder*, int8_t mm) =0;
     virtual int8_t fromCounterparty(StringBuilder*, int8_t mm) =0;
 
@@ -103,7 +104,7 @@ class XenoSession : public EventReceiver, public BufferPipe {
 
 
   protected:
-    ManuvrXport* owner;           // A reference to the transport that owns this session.
+    //ManuvrXport* owner;           // A reference to the transport that owns this session.
     XenoMessage* working;         // If we are in the middle of receiving a message,
 
     virtual int8_t bootComplete() =0;

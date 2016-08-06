@@ -99,6 +99,7 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     virtual ~ManuvrXport();
 
     /* Override from BufferPipe. */
+    virtual int8_t toCounterparty(ManuvrPipeSignal, void*);
     virtual int8_t toCounterparty(StringBuilder*, int8_t mm) =0;
     virtual int8_t fromCounterparty(StringBuilder*, int8_t mm) =0;
 

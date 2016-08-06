@@ -354,7 +354,7 @@ bool MQTTSession::sendKeepAlive() {
 
 
 bool MQTTSession::sendConnectPacket() {
-  if (owner->connected()) {
+  //if (owner->connected()) {
     MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
 	  data.willFlag    = 0;
     data.MQTTVersion = 3;
@@ -371,7 +371,7 @@ bool MQTTSession::sendConnectPacket() {
     if (len > 0) {
       return sendPacket(buf, len);
     }
-  }
+  //}
   return false;
 }
 
@@ -541,15 +541,12 @@ int MQTTSession::process_inbound() {
 */
 int8_t MQTTSession::bootComplete() {
   EventReceiver::bootComplete();
-
-  owner->getMTU();
-
   __kernel->addSchedule(&_ping_timer);
 
-  if (owner->connected()) {
-    // Are we connected right now?
-    sendConnectPacket();
-  }
+  //if (owner->connected()) {
+  //  // Are we connected right now?
+  //  sendConnectPacket();
+  //}
   return 1;
 }
 

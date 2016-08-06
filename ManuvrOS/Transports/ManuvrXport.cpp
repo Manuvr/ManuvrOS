@@ -133,7 +133,53 @@ ManuvrXport::~ManuvrXport() {
 }
 
 
+/*******************************************************************************
+*  _       _   _        _
+* |_)    _|_ _|_ _  ._ |_) o ._   _
+* |_) |_| |   | (/_ |  |   | |_) (/_
+*                            |
+* These functions can stop at transport.
+*******************************************************************************/
 const char* ManuvrXport::pipeName() { return getReceiverName(); }
+
+/**
+* Pass a signal to the counterparty.
+*
+* Data referenced by _args should be assumed to be on the stack of the caller.
+*
+* @param   _sig   The signal.
+* @param   _args  Optional argument pointer.
+* @return  Negative on error. Zero on success.
+*/
+int8_t ManuvrXport::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
+  if (getVerbosity() > 5) {
+    local_log.concatf("%s --sig--> %s: %s\n", (haveNear() ? _near->pipeName() : "ORIG"), pipeName(), signalString(_sig));
+    Kernel::log(&local_log);
+  }
+  switch (_sig) {
+    case ManuvrPipeSignal::XPORT_CONNECT:
+      if (!connected()) {
+        connect();
+      }
+      return 0;
+    case ManuvrPipeSignal::XPORT_DISCONNECT:
+      if (connected()) {
+        disconnect();
+      }
+      return 0;
+
+    case ManuvrPipeSignal::FAR_SIDE_DETACH:   // The far side is detaching.
+    case ManuvrPipeSignal::NEAR_SIDE_DETACH:
+    case ManuvrPipeSignal::FAR_SIDE_ATTACH:
+    case ManuvrPipeSignal::NEAR_SIDE_ATTACH:
+    case ManuvrPipeSignal::UNDEF:
+    default:
+      break;
+  }
+
+  // If we are at this point, we need to pass to base-class.
+  return BufferPipe::toCounterparty(_sig, _args);
+}
 
 
 /*******************************************************************************
@@ -267,6 +313,7 @@ void ManuvrXport::connected(bool en) {
     createThread(&_thread_id, NULL, xport_read_handler, (void*) this);
   }
   #endif
+  BufferPipe::fromCounterparty(en ? ManuvrPipeSignal::XPORT_CONNECT : ManuvrPipeSignal::XPORT_DISCONNECT, nullptr);
 }
 
 

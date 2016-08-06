@@ -107,7 +107,11 @@ enum class ManuvrPipeSignal {
   FAR_SIDE_DETACH,     // Far-side informing the near-side of its departure.
   NEAR_SIDE_DETACH,    // Near-side informing the far-side of its departure.
   FAR_SIDE_ATTACH,     // Far-side informing the near-side of its arrival.
-  NEAR_SIDE_ATTACH     // Near-side informing the far-side of its arrival.
+  NEAR_SIDE_ATTACH,    // Near-side informing the far-side of its arrival.
+
+  // These are signals for transport-compat. They might be generalized.
+  XPORT_CONNECT,       // connect()/connected()
+  XPORT_DISCONNECT     // disconnect()/disconnected()
 };
 
 /*
