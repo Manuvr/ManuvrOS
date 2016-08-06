@@ -43,7 +43,8 @@
 #include "ManuvrableNeoPixel.h"
 
 
-ManuvrableNeoPixel::ManuvrableNeoPixel(uint16_t n, uint8_t p, uint8_t t) : numLEDs(n), numBytes(n * 3), pin(p), pixels(NULL) {
+ManuvrableNeoPixel::ManuvrableNeoPixel(uint16_t n, uint8_t p, uint8_t t) : numLEDs(n), numBytes(n * 3), pin(p), pixels(NULL) : EventReceiver() {
+  setReceiverName("NeoPixel");
   mode = 0;
   if((pixels = (uint8_t *)malloc(numBytes))) {
     memset(pixels, 0, numBytes);
@@ -343,15 +344,6 @@ void ManuvrableNeoPixel::theaterChaseRainbow(uint8_t wait) {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ManuvrableNeoPixel::getReceiverName() {  return "NeoPixel";  }
-
-
 /**
 * Debug support method. This fxn is only present in debug builds.
 *
@@ -363,7 +355,6 @@ void ManuvrableNeoPixel::printDebug(StringBuilder *output) {
   EventReceiver::printDebug(output);
   output->concat("\n");
 }
-
 
 
 /**

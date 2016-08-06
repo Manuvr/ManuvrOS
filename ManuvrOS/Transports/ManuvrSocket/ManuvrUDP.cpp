@@ -127,6 +127,7 @@ const MessageTypeDef udp_message_defs[] = {
 * @param  port  A 16-bit port number.
 */
 ManuvrUDP::ManuvrUDP(const char* addr, int port) : ManuvrSocket(addr, port, 0) {
+  setReceiverName("ManuvrUDP");
   set_xport_state(MANUVR_XPORT_FLAG_HAS_MULTICAST | MANUVR_XPORT_FLAG_CONNECTIONLESS);
   _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
 
@@ -150,6 +151,7 @@ ManuvrUDP::ManuvrUDP(const char* addr, int port) : ManuvrSocket(addr, port, 0) {
 * @param  opts  An options mask to pass to the underlying socket implentation.
 */
 ManuvrUDP::ManuvrUDP(const char* addr, int port, uint32_t opts) : ManuvrSocket(addr, port, opts) {
+  setReceiverName("ManuvrUDP");
   set_xport_state(MANUVR_XPORT_FLAG_HAS_MULTICAST | MANUVR_XPORT_FLAG_CONNECTIONLESS);
   _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
 
@@ -176,7 +178,6 @@ ManuvrUDP::~ManuvrUDP() {
 	for (it = _open_replies.begin(); it != _open_replies.end(); it++) {
     delete it->second;
 	}
-  __kernel->unsubscribe(this);
 }
 
 
@@ -507,15 +508,6 @@ int8_t ManuvrUDP::udpPipeDestroyCallback(UDPPipe* _dead_walking) {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ManuvrUDP::getReceiverName() {  return "ManuvrUDP";  }
-
-
 /**
 * Debug support function.
 *

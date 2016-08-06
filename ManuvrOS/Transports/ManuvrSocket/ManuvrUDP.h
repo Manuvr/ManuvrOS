@@ -105,7 +105,6 @@ class UDPPipe : public BufferPipe {
 
 
   protected:
-    inline const char* pipeName() { return "UDPPipe"; };
 
 
   private:
@@ -122,7 +121,7 @@ class ManuvrUDP : public ManuvrSocket {
   public:
     ManuvrUDP(const char* addr, int port);
     ManuvrUDP(const char* addr, int port, uint32_t opts);
-    ~ManuvrUDP();
+    virtual ~ManuvrUDP();
 
     /* Override from BufferPipe. */
     virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
@@ -150,7 +149,6 @@ class ManuvrUDP : public ManuvrSocket {
     /* Overrides from EventReceiver */
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);
-    const char* getReceiverName();
     void printDebug(StringBuilder*);
     #if defined(__MANUVR_CONSOLE_SUPPORT)
       void procDirectDebugInstruction(StringBuilder*);

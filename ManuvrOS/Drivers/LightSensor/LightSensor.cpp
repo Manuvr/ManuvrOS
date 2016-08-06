@@ -30,8 +30,8 @@ uint16_t last_lux_read = 0;
 uint8_t  last_lux_bin  = 0;
 
 
-LightSensor::LightSensor() {
-  __class_initializer();
+LightSensor::LightSensor() : EventReceiver() {
+  setReceiverName("LightSensor");
   pid_light_level_check = 0;
 }
 
@@ -85,14 +85,6 @@ int8_t LightSensor::bootComplete() {
   pid_light_level_check = scheduler->createSchedule(501, -1, false, light_check);
   return 1;
 }
-
-
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* LightSensor::getReceiverName() {  return "LightSensor";  }
 
 
 /**

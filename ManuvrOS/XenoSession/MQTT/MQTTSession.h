@@ -87,7 +87,7 @@ struct MQTTOpts {
 class MQTTSession : public XenoSession {
   public:
     MQTTSession(ManuvrXport*);
-    ~MQTTSession();
+    virtual ~MQTTSession();
 
     int8_t sendEvent(ManuvrRunnable*);
 
@@ -105,7 +105,6 @@ class MQTTSession : public XenoSession {
 
     /* Overrides from EventReceiver */
     void procDirectDebugInstruction(StringBuilder*);
-    const char* getReceiverName();
     void printDebug(StringBuilder*);
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);

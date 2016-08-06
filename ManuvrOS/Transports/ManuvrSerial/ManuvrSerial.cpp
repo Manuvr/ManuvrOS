@@ -110,7 +110,6 @@ ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate, uint32_t opts) : Ma
 * Destructor
 */
 ManuvrSerial::~ManuvrSerial() {
-  __kernel->unsubscribe(this);
 }
 
 /**
@@ -118,6 +117,7 @@ ManuvrSerial::~ManuvrSerial() {
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void ManuvrSerial::__class_initializer() {
+  setReceiverName("ManuvrSerial");
   _options           = 0;
   _sock              = 0;
 
@@ -409,14 +409,6 @@ bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ManuvrSerial::getReceiverName() {  return "ManuvrSerial";  }
-
-
 /**
 * Debug support method. This fxn is only present in debug builds.
 *

@@ -137,11 +137,13 @@ This is basically only for linux for now.
 * Constructor.
 */
 ManuvrTCP::ManuvrTCP(const char* addr, int port) : ManuvrSocket(addr, port, 0) {
+  setReceiverName("ManuvrTCP");
   set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED | MANUVR_XPORT_FLAG_HAS_MULTICAST);
 }
 
 
 ManuvrTCP::ManuvrTCP(const char* addr, int port, uint32_t opts) : ManuvrSocket(addr, port, opts) {
+  setReceiverName("ManuvrTCP");
   set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED | MANUVR_XPORT_FLAG_HAS_MULTICAST);
 }
 
@@ -151,6 +153,7 @@ ManuvrTCP::ManuvrTCP(const char* addr, int port, uint32_t opts) : ManuvrSocket(a
 */
 // TODO: This is very ugly.... Might need a better way of fractioning into new threads...
 ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in* nu_sockaddr) : ManuvrSocket(listening_instance->_addr, listening_instance->_port_number, 0) {
+  setReceiverName("ManuvrTCP");
   set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED | MANUVR_XPORT_FLAG_HAS_MULTICAST);
   _sock          = sock;
   _options       = listening_instance->_options;
@@ -171,7 +174,6 @@ ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in
 * Destructor
 */
 ManuvrTCP::~ManuvrTCP() {
-  __kernel->unsubscribe(this);
 }
 
 
@@ -424,14 +426,6 @@ bool ManuvrTCP::write_port(unsigned char* out, int out_len) {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ManuvrTCP::getReceiverName() {  return "ManuvrTCP";  }
-
-
 /**
 * Debug support method. This fxn is only present in debug builds.
 *

@@ -34,12 +34,11 @@ The idea here is not to provide any manner of abstraction for GPIO. Our
 
     public:
       ManuvrableGPIO();
-      ~ManuvrableGPIO();
+      virtual ~ManuvrableGPIO();
 
 
       /* Overrides from EventReceiver */
       void printDebug(StringBuilder*);
-      const char* getReceiverName();
       int8_t notify(ManuvrRunnable*);
       int8_t callback_proc(ManuvrRunnable *);
       #if defined(__MANUVR_CONSOLE_SUPPORT)

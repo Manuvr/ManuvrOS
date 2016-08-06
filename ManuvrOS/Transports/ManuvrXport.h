@@ -95,7 +95,6 @@ class XenoSession;
 
 class ManuvrXport : public EventReceiver, public BufferPipe {
   public:
-    ManuvrXport();
     virtual ~ManuvrXport();
 
     /* Override from BufferPipe. */
@@ -178,6 +177,8 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     // Can also be used to poll the other side. Implementation is completely at the discretion
     //   any extending class. But generally, this feature is necessary.
     ManuvrRunnable read_abort_event;  // Used to timeout a read operation.
+
+    ManuvrXport();
 
     virtual int8_t bootComplete() =0;
     const char* pipeName();

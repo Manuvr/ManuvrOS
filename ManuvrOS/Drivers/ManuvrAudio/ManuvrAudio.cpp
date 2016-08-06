@@ -23,7 +23,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
- 
+
 /*
 * This is a class that encompasses the functions provided by various filters
 *   in PJRC's Audio library. Original commentary is preserved.
@@ -40,8 +40,9 @@
 volatile ManuvrAudio* ManuvrAudio::INSTANCE = NULL;
 
 
-ManuvrAudio::ManuvrAudio() {
+ManuvrAudio::ManuvrAudio() : EventReceiver() {
   INSTANCE = this;
+  setReceiverName("PJRCAudio");
 }
 
 
@@ -52,29 +53,20 @@ ManuvrAudio::~ManuvrAudio() {
 
 
 /****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌          
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄ 
+* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
+* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
+* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
 * ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
 * ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
 * ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
 * ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀ 
-* 
+*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+*
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ManuvrAudio::getReceiverName() {  return "ManuvrAudio";  }
-
-
 /**
 * Debug support function.
 *
@@ -88,7 +80,7 @@ void ManuvrAudio::printDebug(StringBuilder* output) {
 
 
 /**
-* There is a NULL-check performed upstream for the scheduler member. So no need 
+* There is a NULL-check performed upstream for the scheduler member. So no need
 *   to do it again here.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
@@ -103,10 +95,10 @@ int8_t ManuvrAudio::bootComplete() {
 
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
-*   has been serviced and we are now getting the chance to see the results. The argument 
+*   has been serviced and we are now getting the chance to see the results. The argument
 *   to this fxn will never be NULL.
 *
-* Depending on class implementations, we might choose to handle the completed Event differently. We 
+* Depending on class implementations, we might choose to handle the completed Event differently. We
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
 *   ourselves and return DROP. By default, we will return REAP to instruct the EventManager
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
@@ -117,15 +109,15 @@ int8_t ManuvrAudio::bootComplete() {
 */
 int8_t ManuvrAudio::callback_proc(ManuvrEvent *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
-     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */ 
+     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
-  
+
   /* Some class-specific set of conditionals below this line. */
   switch (event->event_code) {
     default:
       break;
   }
-  
+
   return return_value;
 }
 
@@ -133,7 +125,7 @@ int8_t ManuvrAudio::callback_proc(ManuvrEvent *event) {
 
 int8_t ManuvrAudio::notify(ManuvrEvent *active_event) {
   int8_t return_value = 0;
-  
+
   switch (active_event->event_code) {
     case MANUVR_MSG_SYS_POWER_MODE:
       break;
@@ -142,7 +134,7 @@ int8_t ManuvrAudio::notify(ManuvrEvent *active_event) {
       return_value += EventReceiver::notify(active_event);
       break;
   }
-      
+
   if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
   return return_value;
 }
@@ -193,42 +185,42 @@ void ManuvrAudio::procDirectDebugInstruction(StringBuilder *input) {
         }
         local_log.concatf("multiply_32x32_rshift32()\t 0x%08x \t %u us\n", r, (unsigned long) (micros() - time_var2));
         r = 0;
-        
+
         time_var2 = micros();
         for (int x = 0; x < 1000; x++) {
           r += multiply_32x32_rshift32_rounded(0x12345a5a, x);
         }
         local_log.concatf("multiply_32x32_rshift32_rounded()\t 0x%08x \t %u us\n", r, (unsigned long) (micros() - time_var2));
         r = 0;
-        
+
         time_var2 = micros();
         for (int x = 0; x < 1000; x++) {
           r = multiply_accumulate_32x32_rshift32_rounded(r, 0x12345a5a, x);
         }
         local_log.concatf("multiply_accumulate_32x32_rshift32_rounded()\t 0x%08x \t %u us\n", r, (unsigned long) (micros() - time_var2));
         r = 0;
-        
+
         time_var2 = micros();
         for (int x = 0; x < 1000; x++) {
           r = multiply_subtract_32x32_rshift32_rounded(r, 0x12345a5a, x);
         }
         local_log.concatf("multiply_subtract_32x32_rshift32_rounded()\t 0x%08x \t %u us\n", r, (unsigned long) (micros() - time_var2));
         r = 0;
-        
+
         time_var2 = micros();
         for (int x = 0; x < 1000; x++) {
           r = pack_16t_16t(0x46465757, 0x24243535);
         }
         local_log.concatf("pack_16t_16t()\t 0x%08x \t %u us\n", r, (unsigned long) (micros() - time_var2));
         r = 0;
-        
+
         time_var2 = micros();
         for (int x = 0; x < 1000; x++) {
           r = pack_16t_16b(0x46465757, 0x24243535);
         }
         local_log.concatf("pack_16t_16b()\t 0x%08x \t %u us\n", r, (unsigned long) (micros() - time_var2));
         r = 0;
-        
+
         time_var2 = micros();
         for (int x = 0; x < 1000; x++) {
           r = pack_16b_16b(0x46465757, 0x24243535);
@@ -242,42 +234,42 @@ void ManuvrAudio::procDirectDebugInstruction(StringBuilder *input) {
         }
         local_log.concatf("pack_16x16()\t 0x%08x \t %u us\n", r, (unsigned long) (micros() - time_var2));
         r = 0;
-        
+
         time_var2 = micros();
         for (int x = 0; x < 1000; x++) {
           r += signed_add_16_and_16(0x55555555, x);
         }
         local_log.concatf("signed_add_16_and_16()\t 0x%08x \t %u us\n", r, (unsigned long) (micros() - time_var2));
         r = 0;
-        
+
         time_var2 = micros();
         for (int x = 0; x < 1000; x++) {
           r = signed_multiply_accumulate_32x16b(r, 0x00011831, x);
         }
         local_log.concatf("signed_multiply_accumulate_32x16b()\t 0x%08x \t %u us\n", r, (unsigned long) (micros() - time_var2));
         r = 0;
-        
+
         time_var2 = micros();
         for (int x = 0; x < 1000; x++) {
           r = signed_multiply_accumulate_32x16t(r, 0x00011831, 0x00200300);
         }
         local_log.concatf("signed_multiply_accumulate_32x16t()\t 0x%08x \t %u us\n", r, (unsigned long) (micros() - time_var2));
         r = 0;
-        
+
         time_var2 = micros();
         for (int x = 0; x < 1000; x++) {
           r = logical_and(0x10101010, 0x10010011);
         }
         local_log.concatf("logical_and()\t 0x%08x \t %u us\n", r, (unsigned long) (micros() - time_var2));
         r = 0;
-        
+
         time_var2 = micros();
         for (int x = 0; x < 1000; x++) {
           r = multiply_16tx16t_add_16bx16b(0x14231010, 0x00100011);
         }
         local_log.concatf("multiply_16tx16t_add_16bx16b()\t 0x%08x \t %u us\n", r, (unsigned long) (micros() - time_var2));
         r = 0;
-        
+
         time_var2 = micros();
         for (int x = 0; x < 1000; x++) {
           r = multiply_16tx16b_add_16bx16t(0x14231010, 0x00100011);
@@ -291,28 +283,28 @@ void ManuvrAudio::procDirectDebugInstruction(StringBuilder *input) {
         }
         local_log.concatf("multiply_16bx16b()\t 0x%08x \t %u us\n", r, (unsigned long) (micros() - time_var2));
         r = 0;
-        
+
         time_var2 = micros();
         for (int x = 0; x < 1000; x++) {
           r = multiply_16bx16t(0x14231010, 0x00100011);
         }
         local_log.concatf("multiply_16bx16t()\t 0x%08x \t %u us\n", r, (unsigned long) (micros() - time_var2));
         r = 0;
-        
+
         time_var2 = micros();
         for (int x = 0; x < 1000; x++) {
           r = multiply_16tx16b(0x14231010, 0x00100011);
         }
         local_log.concatf("multiply_16tx16b()\t 0x%08x \t %u us\n", r, (unsigned long) (micros() - time_var2));
         r = 0;
-        
+
         time_var2 = micros();
         for (int x = 0; x < 1000; x++) {
           r = multiply_16tx16t(0x14231010, 0x00100011);
         }
         local_log.concatf("multiply_16tx16t()\t 0x%08x \t %u us\n", r, (unsigned long) (micros() - time_var2));
         r = 0;
-          
+
         time_var2 = micros();
         for (int x = 0; x < 1000; x++) {
           r = substract_32_saturate(r, x);
@@ -326,9 +318,7 @@ void ManuvrAudio::procDirectDebugInstruction(StringBuilder *input) {
       EventReceiver::procDirectDebugInstruction(input);
       break;
   }
-  
+
 #endif
   if (local_log.length() > 0) {    StaticHub::log(&local_log);  }
 }
-
-

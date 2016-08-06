@@ -163,7 +163,7 @@ This file is the tortured result of growing pains since the beginning of
       I2CBusOp* current_queue_item;
 
       I2CAdapter(uint8_t dev_id = 1);  // Constructor takes a bus ID as an argument.
-      ~I2CAdapter();                   // Destructor
+      virtual ~I2CAdapter();           // Destructor
 
 
       // Builds a special bus transaction that does nothing but test for the presence or absence of a slave device.
@@ -176,7 +176,6 @@ This file is the tortured result of growing pains since the beginning of
       bool insert_work_item(I2CBusOp*);
 
       /* Debug aides */
-      const char* getReceiverName();
       void printPingMap(StringBuilder*);
       void printDebug(StringBuilder*);
       void printDevs(StringBuilder*);
@@ -206,7 +205,6 @@ This file is the tortured result of growing pains since the beginning of
 
 
     protected:
-      void __class_initializer();
       int8_t bootComplete();      // This is called from the base notify().
 
 
@@ -219,6 +217,7 @@ This file is the tortured result of growing pains since the beginning of
       int8_t last_used_bus_addr;
       int dev;
 
+      void __class_initializer();
       void gpioSetup();
 
       void advance_work_queue();           // Called from the ISR via Event. Advances the bus.

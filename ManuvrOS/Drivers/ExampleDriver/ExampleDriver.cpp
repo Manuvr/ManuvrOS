@@ -30,8 +30,9 @@ limitations under the License.
 //volatile ExampleDriver* ExampleDriver::INSTANCE = NULL;
 
 
-ExampleDriver::ExampleDriver() {
+ExampleDriver::ExampleDriver() : EventReceiver() {
   //INSTANCE = this;
+  setReceiverName("ExampleDriver");
 }
 
 
@@ -56,15 +57,6 @@ ExampleDriver::~ExampleDriver() {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ExampleDriver::getReceiverName() {  return "ExampleDriver";  }
-
-
 /**
 * Debug support function.
 *

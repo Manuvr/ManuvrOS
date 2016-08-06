@@ -25,7 +25,7 @@ limitations under the License.
 #include <inttypes.h>
 #include <stdint.h>
 #include <Kernel.h>
-#include "Drivers/i2c-adapter/i2c-adapter.h"
+#include <Drivers/i2c-adapter/i2c-adapter.h>
 
 
 
@@ -64,14 +64,13 @@ limitations under the License.
 class LDS8160 : public I2CDeviceWithRegisters, public EventReceiver {
   public:
     LDS8160(uint8_t addr = LDS8160_I2CADDR);
-    ~LDS8160(void);
+    ~LDS8160();
 
-    int8_t init(void);
+    int8_t init();
 
 
     /* Overrides from I2CDeviceWithRegisters... */
     void operationCompleteCallback(I2CBusOp*);
-    const char* getReceiverName();
     void printDebug(StringBuilder*);
 
     /* Overrides from EventReceiver */
@@ -114,8 +113,6 @@ class LDS8160 : public I2CDeviceWithRegisters, public EventReceiver {
 
     void reset();
     void set_power_mode(uint8_t);
-
-
 };
 
 #endif

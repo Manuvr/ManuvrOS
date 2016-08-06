@@ -104,7 +104,6 @@ class AudioRouter : public EventReceiver {
 
     /* Overrides from EventReceiver */
     void printDebug(StringBuilder*);
-    const char* getReceiverName();
     int8_t notify(ManuvrEvent*);
     int8_t callback_proc(ManuvrEvent *);
     #if defined(__MANUVR_CONSOLE_SUPPORT)

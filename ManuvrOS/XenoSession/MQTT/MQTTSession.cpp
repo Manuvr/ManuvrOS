@@ -63,6 +63,7 @@ MQTTOpts opts = {
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
 MQTTSession::MQTTSession(ManuvrXport* _xport) : XenoSession(_xport) {
+	setReceiverName("MQTTSession");
 	_ping_outstanding(false);
 	working   = NULL;
 	_next_packetid = 1;
@@ -695,14 +696,6 @@ void MQTTSession::procDirectDebugInstruction(StringBuilder *input) {
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 #endif  // __MANUVR_CONSOLE_SUPPORT
-
-
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* MQTTSession::getReceiverName() {  return "MQTTSession";  }
 
 
 /**

@@ -86,7 +86,7 @@ const MessageTypeDef i2c_message_defs[] = {
 **************************************************************************/
 
 void I2CAdapter::__class_initializer() {
-  EventReceiver::__class_initializer();
+  setReceiverName("I2CAdapter");
 
   current_queue_item = NULL;
   last_used_bus_addr = 0;
@@ -115,7 +115,7 @@ void I2CAdapter::__class_initializer() {
 
 
 #ifdef STM32F4XX
-I2CAdapter::I2CAdapter(uint8_t dev_id) {
+I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
   __class_initializer();
   dev = dev_id;
 
@@ -213,7 +213,7 @@ int8_t I2CAdapter::generateStop() {
 #elif defined(__MK20DX256__) | defined(__MK20DX128__)
 
 
-  I2CAdapter::I2CAdapter(uint8_t dev_id) {
+  I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
     __class_initializer();
     dev = dev_id;
 
@@ -364,7 +364,7 @@ int8_t I2CAdapter::generateStop() {
 #elif defined(_BOARD_FUBARINO_MINI_)    // Perhaps this is an arduino-style env?
 
 
-I2CAdapter::I2CAdapter(uint8_t dev_id) {
+I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
   __class_initializer();
   dev = dev_id;
 
@@ -415,7 +415,7 @@ int8_t I2CAdapter::generateStop() {
 
 #elif defined(ARDUINO)    // Perhaps this is an arduino-style env?
 
-I2CAdapter::I2CAdapter(uint8_t dev_id) {
+I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
   __class_initializer();
   dev = dev_id;
 
@@ -462,7 +462,7 @@ int8_t I2CAdapter::generateStop() {
 
 #elif defined(__MANUVR_LINUX)  // Assuming a linux system...
 
-I2CAdapter::I2CAdapter(uint8_t dev_id) {
+I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
   __class_initializer();
   dev = dev_id;
 
@@ -997,15 +997,6 @@ void I2CAdapter::printDevs(StringBuilder *temp) {
   }
   temp->concat("\n");
 }
-
-
-
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* I2CAdapter::getReceiverName() {  return "I2CAdapter";  }
 
 
 /**

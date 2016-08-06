@@ -49,6 +49,7 @@ limitations under the License.
 * @param   BufferPipe* All sessions must have one (and only one) transport.
 */
 CoAPSession::CoAPSession(BufferPipe* _near_side) : XenoSession(_near_side) {
+	setReceiverName("CoAPSession");
 	working   = NULL;
 	_next_packetid = 1;
   _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
@@ -334,14 +335,6 @@ void CoAPSession::procDirectDebugInstruction(StringBuilder *input) {
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 #endif  // __MANUVR_CONSOLE_SUPPORT
-
-
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* CoAPSession::getReceiverName() {  return "CoAPSession";  }
 
 
 /**

@@ -63,7 +63,6 @@ class ManuvrTCP : public ManuvrSocket {
     virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
 
     /* Overrides from EventReceiver */
-    const char* getReceiverName();
     void printDebug(StringBuilder *);
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);

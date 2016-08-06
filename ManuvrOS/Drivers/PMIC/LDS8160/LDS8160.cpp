@@ -72,8 +72,8 @@ void lds8160_chan_5(void) {
 /*
 * Constructor. Takes i2c address as argument.
 */
-LDS8160::LDS8160(uint8_t addr) : I2CDeviceWithRegisters() {
-  __class_initializer();
+LDS8160::LDS8160(uint8_t addr) : EventReceiver(), I2CDeviceWithRegisters() {
+  setReceiverName("LDS8160");
   _dev_addr = addr;
 
   init_complete = false;
@@ -143,16 +143,6 @@ void LDS8160::operationCompleteCallback(I2CBusOp* completed) {
     temp_reg = reg_defs.get(i++);
   }
 }
-
-
-
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* LDS8160::getReceiverName() {  return "LDS8160";  }
-
 
 /*
 * Dump this item to the dev log.

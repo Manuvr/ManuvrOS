@@ -54,15 +54,9 @@ This is basically only for linux until it is needed in a smaller space.
 */
 class ManuvrSocket : public ManuvrXport {
   public:
-    ManuvrSocket(const char* addr, int port, uint32_t opts);
-    ~ManuvrSocket();
-
-    /* Override from BufferPipe. */
-    //virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm) =0;
-    //virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm) =0;
+    virtual ~ManuvrSocket();
 
     inline int getSockID() {  return _sock; };
-
     virtual int8_t disconnect();
 
 
@@ -75,6 +69,9 @@ class ManuvrSocket : public ManuvrXport {
     #if defined(__MANUVR_LINUX)
       struct sockaddr_in _sockaddr;
     #endif
+
+    ManuvrSocket(const char* addr, int port, uint32_t opts);
+
 
   private:
     void __class_initializer();

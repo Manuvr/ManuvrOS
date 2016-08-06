@@ -156,7 +156,6 @@ ManuvrTelehash::ManuvrTelehash(ManuvrTelehash* listening_instance, int sock, str
 * Destructor
 */
 ManuvrTelehash::~ManuvrTelehash() {
-  __kernel->unsubscribe(this);
 }
 
 
@@ -166,6 +165,7 @@ ManuvrTelehash::~ManuvrTelehash() {
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void ManuvrTelehash::__class_initializer() {
+  setReceiverName("ManuvrTelehash");
   _options           = 0;
   _port_number       = 0;
   _sock              = 0;
@@ -419,14 +419,6 @@ bool ManuvrTelehash::write_port(int sock, unsigned char* out, int out_len) {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ManuvrTelehash::getReceiverName() {  return "ManuvrTelehash";  }
-
-
 /**
 * Debug support method. This fxn is only present in debug builds.
 *

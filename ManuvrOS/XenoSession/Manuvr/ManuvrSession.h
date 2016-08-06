@@ -155,14 +155,13 @@ class XenoManuvrMessage : public XenoMessage {
 class ManuvrSession : public XenoSession {
   public:
     ManuvrSession(ManuvrXport*);
-    ~ManuvrSession();
+    virtual ~ManuvrSession();
 
     /* Override from BufferPipe. */
     virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
     virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
 
     /* Overrides from EventReceiver */
-    const char* getReceiverName();
     void printDebug(StringBuilder*);
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);

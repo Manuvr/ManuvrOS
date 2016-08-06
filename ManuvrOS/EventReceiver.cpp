@@ -23,17 +23,27 @@ limitations under the License.
 #include <Kernel.h>
 
 
-/**
-* This is here for compatibility with C++ standards that do not allow for definition and declaration
-*   in the header file. Takes no parameters, and returns nothing.
-*/
-void EventReceiver::__class_initializer() {
-  __kernel  = nullptr;
-  _class_state = 0 | (DEFAULT_CLASS_VERBOSITY & MANUVR_ER_FLAG_VERBOSITY_MASK);
-  _extnd_state = 0;
+EventReceiver::EventReceiver() {
+  _receiver_name = "EventReceiver";
+  __kernel       = nullptr;
+  _class_state   = (DEFAULT_CLASS_VERBOSITY & MANUVR_ER_FLAG_VERBOSITY_MASK);
+  _extnd_state   = 0;
   #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
     _thread_id = -1;
   #endif
+}
+
+
+EventReceiver::~EventReceiver() {
+  if (nullptr != __kernel) {
+    __kernel->unsubscribe(this);
+  }
+  #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+    if (_thread_id > -1) {
+      // TODO: Clean up any threads we may have fired up.
+    }
+  #endif
+  Kernel::log(&local_log);  // Clears the local_log.
 }
 
 

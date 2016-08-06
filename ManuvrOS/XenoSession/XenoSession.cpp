@@ -71,8 +71,8 @@ const char* XenoSession::sessionPhaseString(uint16_t state_code) {
 *
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
-XenoSession::XenoSession(BufferPipe* _near_side) : BufferPipe() {
-  EventReceiver::__class_initializer();
+XenoSession::XenoSession(BufferPipe* _near_side) : EventReceiver(), BufferPipe() {
+  setReceiverName("XenoSession");
   // Our near-side is that passed-in transport.
   setNear(_near_side);
   _bp_set_flag(BPIPE_FLAG_IS_TERMINUS, true);
@@ -86,7 +86,7 @@ XenoSession::XenoSession(BufferPipe* _near_side) : BufferPipe() {
   _session_service.specific_target = (EventReceiver*) this;
   _session_service.originator      = (EventReceiver*) this;
 
-  working            = NULL;
+  working            = nullptr;
   session_state      = XENOSESSION_STATE_UNINITIALIZED;
   session_last_state = XENOSESSION_STATE_UNINITIALIZED;
 
@@ -98,16 +98,19 @@ XenoSession::XenoSession(BufferPipe* _near_side) : BufferPipe() {
 * Unlike many of the other EventReceivers, THIS one needs to be able to be torn down.
 */
 XenoSession::~XenoSession() {
-  __kernel->unsubscribe((EventReceiver*) this);  // Unsubscribe
-
   purgeInbound();  // Need to do careful checks in here for open comm loops.
   purgeOutbound(); // Need to do careful checks in here for open comm loops.
+
+  if (nullptr != working) {
+    delete working;
+    working = nullptr;
+  }
 
   _relay_list.clear();
   _pending_exec.clear();
   _pending_reply.clear();
 
-  Kernel::raiseEvent(MANUVR_MSG_SESS_HANGUP, NULL);
+  Kernel::raiseEvent(MANUVR_MSG_SESS_HANGUP, nullptr);
 }
 
 

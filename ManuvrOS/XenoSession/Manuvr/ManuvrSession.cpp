@@ -51,6 +51,7 @@ limitations under the License.
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
 ManuvrSession::ManuvrSession(ManuvrXport* _xport) : XenoSession(_xport) {
+  setReceiverName("ManuvrSession");
   _seq_parse_failures = MANUVR_MAX_PARSE_FAILURES;
   _seq_ack_failures   = MANUVR_MAX_ACK_FAILURES;
 
@@ -462,16 +463,6 @@ int8_t ManuvrSession::sendKeepAlive() {
   }
   return 0;
 }
-
-
-
-
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ManuvrSession::getReceiverName() {  return "ManuvrSession";  }
 
 
 /**

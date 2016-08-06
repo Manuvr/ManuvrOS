@@ -136,8 +136,8 @@ Kernel* Kernel::getInstance() {
 /**
 * Vanilla constructor.
 */
-Kernel::Kernel() {
-  __class_initializer();
+Kernel::Kernel() : EventReceiver() {
+  setReceiverName("Kernel");
   INSTANCE           = this;  // For singleton reference. TODO: Will not parallelize.
   __kernel           = this;  // We extend EventReceiver. So we populate this.
 
@@ -964,14 +964,6 @@ void Kernel::printProfiler(StringBuilder* output) {
 
 
 /**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* Kernel::getReceiverName() {  return "Kernel";  }
-
-
-/**
 * Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
@@ -1199,6 +1191,9 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
         if (0 == active_runnable->getArgAs(&er_ptr)) {
           if (MANUVR_MSG_SYS_ADVERTISE_SRVC == active_runnable->event_code) {
             subscribe((EventReceiver*) er_ptr);
+            if (booted()) {
+              er_ptr->bootComplete();
+            }
           }
           else {
             unsubscribe((EventReceiver*) er_ptr);

@@ -96,9 +96,9 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
 /**
 * Constructor.
 */
-ManuvrXport::ManuvrXport() : BufferPipe() {
+ManuvrXport::ManuvrXport() : EventReceiver(), BufferPipe() {
   // No need to burden a client class with this.
-  EventReceiver::__class_initializer();
+  setReceiverName("ManuvrXport");
 
   // Transports are all terminal.
   _bp_set_flag(BPIPE_FLAG_IS_TERMINUS, true);
@@ -121,6 +121,7 @@ ManuvrXport::ManuvrXport() : BufferPipe() {
 ManuvrXport::~ManuvrXport() {
   #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
     // TODO: Tear down the thread.
+    listening(false);
   #endif
 
   // Cleanup any schedules...

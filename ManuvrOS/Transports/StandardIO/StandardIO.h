@@ -52,7 +52,6 @@ class StandardIO : public ManuvrXport {
 
     /* Overrides from EventReceiver */
     int8_t bootComplete();
-    const char* getReceiverName();
     void printDebug(StringBuilder *);
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable*);

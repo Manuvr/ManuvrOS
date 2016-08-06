@@ -67,7 +67,7 @@ XenoSession is the class that manages dialog with other systems via some
 class XenoSession : public EventReceiver, public BufferPipe {
   public:
     XenoSession(BufferPipe*);
-    ~XenoSession();
+    virtual ~XenoSession();
 
     /* Functions that are indirectly called by counterparty requests for subscription. */
     int8_t tapMessageType(uint16_t code);     // Start getting broadcasts about a given message type.
@@ -92,7 +92,6 @@ class XenoSession : public EventReceiver, public BufferPipe {
     virtual int8_t connection_callback(bool connected);
 
     /* Overrides from EventReceiver */
-    virtual const char* getReceiverName() =0;
     virtual void printDebug(StringBuilder*);
     virtual int8_t notify(ManuvrRunnable*);
     virtual int8_t callback_proc(ManuvrRunnable *);
@@ -106,7 +105,6 @@ class XenoSession : public EventReceiver, public BufferPipe {
 
 
   protected:
-    //ManuvrXport* owner;           // A reference to the transport that owns this session.
     XenoMessage* working;         // If we are in the middle of receiving a message,
 
     virtual int8_t bootComplete() =0;

@@ -32,6 +32,7 @@ extern void printHelp();  // TODO: Hack. Remove later.
 * @param   BufferPipe* All sessions must have one (and only one) transport.
 */
 ManuvrConsole::ManuvrConsole(BufferPipe* _near_side) : XenoSession(_near_side) {
+  setReceiverName("Console");
   Kernel::attachToLogger((BufferPipe*) this);
   mark_session_state(XENOSESSION_STATE_ESTABLISHED);
   _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
@@ -199,14 +200,6 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ManuvrConsole::getReceiverName() {  return "Console";  }
-
-
 /**
 * Boot done finished-up.
 *

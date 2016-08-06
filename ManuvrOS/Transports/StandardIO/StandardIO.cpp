@@ -73,7 +73,6 @@ StandardIO::StandardIO() : ManuvrXport() {
 * Destructor
 */
 StandardIO::~StandardIO() {
-  __kernel->unsubscribe(this);
 }
 
 /**
@@ -81,6 +80,7 @@ StandardIO::~StandardIO() {
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void StandardIO::__class_initializer() {
+  setReceiverName("StandardIO");
   // Build some pre-formed Events.
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
   read_abort_event.isManaged(true);
@@ -262,14 +262,6 @@ int8_t StandardIO::read_port() {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* StandardIO::getReceiverName() {  return "StandardIO";  }
-
-
 /**
 * Debug support method. This fxn is only present in debug builds.
 *

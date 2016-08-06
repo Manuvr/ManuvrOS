@@ -84,7 +84,6 @@ class MGC3130 : public I2CDevice, public EventReceiver {
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);
     void procDirectDebugInstruction(StringBuilder *);
-    const char* getReceiverName();
     void printDebug(StringBuilder*);
 
 

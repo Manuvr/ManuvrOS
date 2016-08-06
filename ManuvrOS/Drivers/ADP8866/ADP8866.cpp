@@ -78,7 +78,7 @@ void ADP8866::_isr_fxn(void) {
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void ADP8866::__class_initializer() {
-  EventReceiver::__class_initializer();
+  setReceiverName("ADP8866");
   ADP8866::INSTANCE = this;
 
   reset_pin         = 0;
@@ -97,7 +97,7 @@ void ADP8866::__class_initializer() {
 /*
 * Constructor. Takes i2c address as argument.
 */
-ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : I2CDeviceWithRegisters() {
+ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : EventReceiver(), I2CDeviceWithRegisters() {
   __class_initializer();
   _dev_addr = addr;
 
@@ -352,15 +352,6 @@ void ADP8866::operationCompleteCallback(I2CBusOp* completed) {
   }
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-
-
-
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ADP8866::getReceiverName() {  return "ADP8866";  }
 
 
 /*

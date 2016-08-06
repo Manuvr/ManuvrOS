@@ -32,11 +32,10 @@ This is a quick-and-dirty class to support reading a CdS cell from an analog
   class LightSensor : public EventReceiver {
     public:
       LightSensor();
-      ~LightSensor();
+      virtual ~LightSensor();
 
       /* Overrides from EventReceiver */
       void printDebug(StringBuilder*);
-      const char* getReceiverName();
       int8_t notify(ManuvrEvent*);
       int8_t callback_proc(ManuvrEvent *);
 

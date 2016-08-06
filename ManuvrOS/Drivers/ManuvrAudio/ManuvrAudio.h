@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
- 
+
 #ifndef __MANUVR_AUDIO_H__
 #define __MANUVR_AUDIO_H__
 
@@ -233,7 +233,7 @@ static inline int32_t substract_32_saturate(uint32_t a, uint32_t b)
 #elif defined(__PIC32MX2XX__) | defined(__PIC32MX3XX__) | defined(__PIC32MZ__)
 /*
 * I have ported these fxns to MIPS, and am integrating them into ManuvrOS for the
-*   sake of benchmarking. 
+*   sake of benchmarking.
 *
 * It would probably be better to re-code the client code that uses these fxns to take
 *   better advantage of MIPS pipelining rather than try to emulate a split-word register
@@ -539,15 +539,13 @@ static inline int32_t substract_32_saturate(uint32_t a, uint32_t b)
 
 class ManuvrAudio : public EventReceiver {
   public:
-
     ManuvrAudio();
-    ~ManuvrAudio();
+    virtual ~ManuvrAudio();
 
     /* Overrides from EventReceiver */
     int8_t notify(ManuvrEvent*);
     int8_t callback_proc(ManuvrEvent *);
     void procDirectDebugInstruction(StringBuilder *);
-    const char* getReceiverName();
     void printDebug(StringBuilder*);
 
     volatile static ManuvrAudio* INSTANCE;

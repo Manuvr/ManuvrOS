@@ -172,7 +172,6 @@ limitations under the License.
 
       /* Overrides from EventReceiver
          Just gracefully fall into those when needed. */
-      const char* getReceiverName();
       int8_t notify(ManuvrRunnable*);
       int8_t callback_proc(ManuvrRunnable *);
       #if defined(__MANUVR_CONSOLE_SUPPORT)

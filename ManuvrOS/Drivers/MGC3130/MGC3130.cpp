@@ -106,7 +106,8 @@ void gest_3() {
 
 
 
-MGC3130::MGC3130(int ts, int rst, uint8_t addr) {
+MGC3130::MGC3130(int ts, int rst, uint8_t addr) : EventReceiver() {
+  setReceiverName("MGC3130");
   _dev_addr  = addr;
   _ts_pin    = (uint8_t) ts;
   _isr_ts_pin = ts;
@@ -676,14 +677,6 @@ bool MGC3130::operationCallahead(I2CBusOp* op) {
   }
   return false;
 }
-
-
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* MGC3130::getReceiverName() {  return "MGC3130";  }
 
 
 

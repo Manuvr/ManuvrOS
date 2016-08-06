@@ -47,8 +47,8 @@ limitations under the License.
 * @param   BufferPipe* All sessions must have one (and only one) transport.
 */
 ManuvrOIC::ManuvrOIC() {
-  EventReceiver::__class_initializer();
-
+  // NOTE: This is lower-cased due-to its usage in URIs.
+  setReceiverName("oic");
 }
 
 
@@ -75,15 +75,6 @@ ManuvrOIC::~ManuvrOIC() {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-/**
-* Debug support function.
-* NOTE: This is lower-cased due-to its usage in URIs.
-*
-* @return a pointer to a string constant.
-*/
-const char* ManuvrOIC::getReceiverName() {  return "oic";  }
-
-
 /**
 * The Kernel is booting, or has-booted prior to our being instanced.
 *
