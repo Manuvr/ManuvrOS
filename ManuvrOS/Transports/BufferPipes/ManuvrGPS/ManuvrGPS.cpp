@@ -395,7 +395,7 @@ bool ManuvrGPS::_scan(const char *sentence, const char *format, ...) {
             sentence++; \
             field = sentence; \
         } else { \
-            field = NULL; \
+            field = nullptr; \
         } \
     } while (0)
 
@@ -557,9 +557,9 @@ bool ManuvrGPS::_scan(const char *sentence, const char *format, ...) {
                     char dArr[] = {field[0], field[1], '\0'};
                     char mArr[] = {field[2], field[3], '\0'};
                     char yArr[] = {field[4], field[5], '\0'};
-                    d = strtol(dArr, NULL, 10);
-                    m = strtol(mArr, NULL, 10);
-                    y = strtol(yArr, NULL, 10);
+                    d = strtol(dArr, nullptr, 10);
+                    m = strtol(mArr, nullptr, 10);
+                    y = strtol(yArr, nullptr, 10);
                 }
 
                 date->day = d;
@@ -581,9 +581,9 @@ bool ManuvrGPS::_scan(const char *sentence, const char *format, ...) {
                     char hArr[] = {field[0], field[1], '\0'};
                     char iArr[] = {field[2], field[3], '\0'};
                     char sArr[] = {field[4], field[5], '\0'};
-                    h = strtol(hArr, NULL, 10);
-                    i = strtol(iArr, NULL, 10);
-                    s = strtol(sArr, NULL, 10);
+                    h = strtol(hArr, nullptr, 10);
+                    i = strtol(iArr, nullptr, 10);
+                    s = strtol(sArr, nullptr, 10);
                     field += 6;
 
                     // Extra: fractional time. Saved as microseconds.

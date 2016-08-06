@@ -23,8 +23,6 @@ limitations under the License.
 #if defined(MANUVR_SUPPORT_UDP)
 #include "ManuvrUDP.h"
 
-#include <XenoSession/CoAP/CoAPSession.h>  // TODO: Need Zookeeper.
-
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
@@ -48,7 +46,7 @@ limitations under the License.
 UDPPipe::UDPPipe() : BufferPipe() {
   _ip    = 0;
   _port  = 0;
-  _udp   = NULL;
+  _udp   = nullptr;
   _udpflags = 0;
 
   _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED | BPIPE_FLAG_IS_BUFFERED, true);
@@ -59,7 +57,7 @@ UDPPipe::UDPPipe(ManuvrUDP* udp, uint32_t ip, uint16_t port) : BufferPipe() {
   //   the buffer will vanish after return, we must copy it.
   _ip    = ip;
   _port  = port;
-  _udp   = udp;   // TODO: setNear(udp); and thereafter cast to ManuvrUDP?
+  _udp   = udp;
   _udpflags = 0;
 
   _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED | BPIPE_FLAG_IS_BUFFERED, true);
@@ -67,7 +65,6 @@ UDPPipe::UDPPipe(ManuvrUDP* udp, uint32_t ip, uint16_t port) : BufferPipe() {
 
 
 UDPPipe::~UDPPipe() {
-  Kernel::log("~UDPPipe() ~UDPPipe() ~UDPPipe() ~UDPPipe() ~UDPPipe()\n");
   _accumulator.clear();
   if (_udp) _udp->udpPipeDestroyCallback(this);
 }
@@ -136,18 +133,6 @@ int8_t UDPPipe::fromCounterparty(StringBuilder* buf, int8_t mm) {
         return _far->fromCounterparty(buf, mm);
       }
       else {
-        CoAPSession* _nu = new CoAPSession((BufferPipe*) this);
-        if (nullptr != _nu) {
-          Kernel::getInstance()->subscribe(_nu);
-          setFar(_nu);
-          // We allocated this class. We need to tear it down, ultimately.
-          _bp_set_flag(BPIPE_FLAG_WE_ALLOCD_FAR, true);
-
-          // Also, we want to hold the UDPPipe open for subsequent exchanges.
-          persistAfterReply(true);
-
-          return _far->fromCounterparty(buf, mm);
-        }
         _accumulator.concatHandoff(buf);
         return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
       }

@@ -41,7 +41,7 @@ int8_t ZooKeeper::registerAtZoo(ZooInmate* inmate) {
 }
 
 BufferPipe* ZooKeeper::searchZoo(uint8_t* _pattern, int _p_len) {
-  return NULL;
+  return nullptr;
 }
 
 /*******************************************************************************
@@ -74,7 +74,7 @@ ZooKeeper::~ZooKeeper() {
   //TODO: deleting object of abstract class type BufferPipe which has
   //         non-virtual destructor will cause undefined behaviour
   //BufferPipe* _local_far = _far;
-  //_far = NULL;
+  //_far = nullptr;
   //if (_local_far) delete _local_far;
 }
 

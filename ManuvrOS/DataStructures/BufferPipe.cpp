@@ -121,18 +121,18 @@ BufferPipe::~BufferPipe() {
   #endif
   if (nullptr != _near) {
     _near->toCounterparty(ManuvrPipeSignal::FAR_SIDE_DETACH, nullptr);
-
+    if (_bp_flag(BPIPE_FLAG_WE_ALLOCD_NEAR)) {
+      delete _near;
+    }
+    _near  = nullptr;
   }
   if (nullptr != _far) {
     _far->fromCounterparty(ManuvrPipeSignal::NEAR_SIDE_DETACH, nullptr);
     if (_bp_flag(BPIPE_FLAG_WE_ALLOCD_FAR)) {
       delete _far;
-      _far  = nullptr;
     }
+    _far  = nullptr;
   }
-
-  _near = nullptr;
-  _far  = nullptr;
 }
 
 

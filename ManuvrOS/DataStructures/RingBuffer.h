@@ -63,7 +63,7 @@ template <class T> RingBuffer<T>::~RingBuffer() {
 	last_element  = 0;
 	element_count = 0;
 	free(root);
-	root = NULL;
+	root = nullptr;
 }
 
 

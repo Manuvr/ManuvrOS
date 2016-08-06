@@ -28,7 +28,7 @@ limitations under the License.
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void EventReceiver::__class_initializer() {
-  __kernel  = NULL;
+  __kernel  = nullptr;
   _class_state = 0 | (DEFAULT_CLASS_VERBOSITY & MANUVR_ER_FLAG_VERBOSITY_MASK);
   _extnd_state = 0;
   #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
@@ -81,7 +81,7 @@ int8_t EventReceiver::setVerbosity(int8_t nu_verbosity) {
 * @return  -1 on failure, and 0 on no change, and 1 on success.
 */
 int8_t EventReceiver::setVerbosity(ManuvrRunnable* active_event) {
-  if (NULL == active_event) return -1;
+  if (nullptr == active_event) return -1;
   if (MANUVR_MSG_SYS_LOG_VERBOSITY != active_event->event_code) return -1;
   switch (active_event->argCount()) {
     case 0:
@@ -160,7 +160,7 @@ void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
 *   already an originator specified, add ourselves as the originator.
 */
 int8_t EventReceiver::raiseEvent(ManuvrRunnable* event) {
-  if (event != NULL) {
+  if (event != nullptr) {
     event->originator = (EventReceiver*) this;
     return Kernel::staticRaiseEvent(event);
   }
@@ -184,7 +184,7 @@ void EventReceiver::printDebug() {
 */
 void EventReceiver::printDebug(StringBuilder *output) {
   output->concatf("\n==< %s >===================================\n", getReceiverName());
-  output->concatf("-- bootstrap_completed \t\t%s\n", booted() ? "yes" : "no", (NULL != __kernel) ? "yes" : "no");
+  output->concatf("-- bootstrap_completed \t\t%s\n", booted() ? "yes" : "no", (nullptr != __kernel) ? "yes" : "no");
 }
 
 

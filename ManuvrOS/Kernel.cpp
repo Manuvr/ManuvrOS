@@ -39,8 +39,8 @@ extern uint32_t rtc_startup_state;
 *
 * Static members and initializers should be located here. Initializers first, functions second.
 ****************************************************************************************************/
-Kernel*     Kernel::INSTANCE = NULL;
-BufferPipe* Kernel::_logger  = NULL;  // The logger slot.
+Kernel*     Kernel::INSTANCE = nullptr;
+BufferPipe* Kernel::_logger  = nullptr;  // The logger slot.
 PriorityQueue<ManuvrRunnable*> Kernel::isr_exec_queue;
 
 const unsigned char MSG_ARGS_EVENTRECEIVER[] = {SYS_EVENTRECEIVER_FM, 0, 0};
@@ -97,10 +97,10 @@ const MessageTypeDef message_defs[] = {
   {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_U8, "Power Mode\0\0" }, //
   {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_U8, "Level\0\0"      },   // This tells client classes to adjust their log verbosity.
   #else
-  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_STR_BUILDER, NULL }, //
-  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_STR_BUILDER, NULL }, // Classes emit this to get their log data saved/sent.
-  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_U8, NULL }, //
-  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_U8, NULL },   // This tells client classes to adjust their log verbosity.
+  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_STR_BUILDER, nullptr }, //
+  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_STR_BUILDER, nullptr }, // Classes emit this to get their log data saved/sent.
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_U8, nullptr }, //
+  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_U8, nullptr },   // This tells client classes to adjust their log verbosity.
   #endif
 };
 
@@ -112,7 +112,7 @@ const MessageTypeDef message_defs[] = {
 *   recursion.
 */
 Kernel* Kernel::getInstance() {
-  if (INSTANCE == NULL) {
+  if (INSTANCE == nullptr) {
     // This is a valid means of instantiating the kernel. Typically, user code
     //   would have the Kernel on the stack, but if they want to live in the heap,
     //   that's fine by us. Oblige...
@@ -141,7 +141,7 @@ Kernel::Kernel() {
   INSTANCE           = this;  // For singleton reference. TODO: Will not parallelize.
   __kernel           = this;  // We extend EventReceiver. So we populate this.
 
-  current_event        = NULL;
+  current_event        = nullptr;
   max_queue_depth      = 0;
   total_events         = 0;
   total_events_dead    = 0;
@@ -192,28 +192,28 @@ Kernel::~Kernel() {
 * Logger pass-through functions. Please mind the variadics...
 */
 volatile void Kernel::log(int severity, const char *str) {
-  if (NULL != _logger) {
+  if (nullptr != _logger) {
     StringBuilder log_buffer(str);
     _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
   }
 }
 
 volatile void Kernel::log(char *str) {
-  if (NULL != _logger) {
+  if (nullptr != _logger) {
     StringBuilder log_buffer(str);
     _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
   }
 }
 
 volatile void Kernel::log(const char *str) {
-  if (NULL != _logger) {
+  if (nullptr != _logger) {
     StringBuilder log_buffer(str);
     _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
   }
 }
 
 volatile void Kernel::log(StringBuilder *str) {
-  if (NULL != _logger) {
+  if (nullptr != _logger) {
     _logger->toCounterparty(str, MEM_MGMT_RESPONSIBLE_BEARER);
   }
   str->clear();
@@ -221,7 +221,7 @@ volatile void Kernel::log(StringBuilder *str) {
 
 // TODO: Only one pipe can move log data at this moment.
 int8_t Kernel::attachToLogger(BufferPipe* _pipe) {
-  if (NULL == _logger) {
+  if (nullptr == _logger) {
     _logger = _pipe;
     return 0;
   }
@@ -231,7 +231,7 @@ int8_t Kernel::attachToLogger(BufferPipe* _pipe) {
 // TODO: Only one pipe can move log data at this moment.
 int8_t Kernel::detachFromLogger(BufferPipe* _pipe) {
   if (_pipe == _logger) {
-    _logger = NULL;
+    _logger = nullptr;
     return 0;
   }
   return -1;
@@ -269,7 +269,7 @@ int8_t Kernel::bootstrap() {
 * @return 0 on success and -1 on failure.
 */
 int8_t Kernel::subscribe(EventReceiver *client) {
-  if (NULL == client) return -1;
+  if (nullptr == client) return -1;
 
   client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
   int8_t return_value = subscribers.insert(client);
@@ -293,7 +293,7 @@ int8_t Kernel::subscribe(EventReceiver *client) {
 * @return 0 on success and -1 on failure.
 */
 int8_t Kernel::subscribe(EventReceiver *client, uint8_t priority) {
-  if (NULL == client) return -1;
+  if (nullptr == client) return -1;
 
   client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
   int8_t return_value = subscribers.insert(client, priority);
@@ -312,7 +312,7 @@ int8_t Kernel::subscribe(EventReceiver *client, uint8_t priority) {
 * @return 0 on success and -1 on failure.
 */
 int8_t Kernel::unsubscribe(EventReceiver *client) {
-  if (NULL == client) return -1;
+  if (nullptr == client) return -1;
   return (subscribers.remove(client) ? 0 : -1);
 }
 
@@ -325,7 +325,7 @@ EventReceiver* Kernel::getSubscriberByName(const char* search_str) {
       return working;
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 
@@ -334,18 +334,18 @@ EventReceiver* Kernel::getSubscriberByName(const char* search_str) {
 ****************************************************************************************************/
 
 int8_t Kernel::registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFxnPtr cb, uint32_t options) {
-  if (ca != NULL) {
+  if (ca != nullptr) {
     PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[msgCode];
-    if (NULL == ca_queue) {
+    if (nullptr == ca_queue) {
       ca_queue = new PriorityQueue<listenerFxnPtr>();
       ca_listeners[msgCode] = ca_queue;
     }
     ca_queue->insert(ca);
   }
 
-  if (cb != NULL) {
+  if (cb != nullptr) {
     PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[msgCode];
-    if (NULL == cb_queue) {
+    if (nullptr == cb_queue) {
       cb_queue = new PriorityQueue<listenerFxnPtr>();
       cb_listeners[msgCode] = cb_queue;
     }
@@ -373,7 +373,7 @@ int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* ori) {
 
   // We are creating a new Event. Try to snatch a prealloc'd one and fall back to malloc if needed.
   ManuvrRunnable* nu = INSTANCE->preallocated.dequeue();
-  if (nu == NULL) {
+  if (nu == nullptr) {
     INSTANCE->prealloc_starved++;
     nu = new ManuvrRunnable(code, ori);
   }
@@ -488,7 +488,7 @@ int8_t Kernel::isrRaiseEvent(ManuvrRunnable* event) {
 ManuvrRunnable* Kernel::returnEvent(uint16_t code) {
   // We are creating a new Event. Try to snatch a prealloc'd one and fall back to malloc if needed.
   ManuvrRunnable* return_value = INSTANCE->preallocated.dequeue();
-  if (return_value == NULL) {
+  if (return_value == nullptr) {
     INSTANCE->prealloc_starved++;
     return_value = new ManuvrRunnable(code, (EventReceiver*) INSTANCE);
   }
@@ -510,7 +510,7 @@ ManuvrRunnable* Kernel::returnEvent(uint16_t code) {
 * @return 0 if the event is good-to-go. Otherwise, an appropriate failure code.
 */
 int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
-  if (NULL == event) return -1;                                // No NULL events.
+  if (nullptr == event) return -1;                                // No NULL events.
   if (MANUVR_MSG_UNDEFINED == event->event_code) {
     return -2;  // No undefined events.
   }
@@ -545,7 +545,7 @@ int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
 * @param active_runnable The event that has reached the end of its life-cycle.
 */
 void Kernel::reclaim_event(ManuvrRunnable* active_runnable) {
-  if (NULL == active_runnable) {
+  if (nullptr == active_runnable) {
     return;
   }
 
@@ -592,7 +592,7 @@ void Kernel::reclaim_event(ManuvrRunnable* active_runnable) {
 int8_t Kernel::procCallAheads(ManuvrRunnable *active_runnable) {
   int8_t return_value = 0;
   PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[active_runnable->event_code];
-  if (NULL != ca_queue) {
+  if (nullptr != ca_queue) {
     listenerFxnPtr current_fxn;
     for (int i = 0; i < ca_queue->size(); i++) {
       current_fxn = ca_queue->recycle();  // TODO: This is ugly for many reasons.
@@ -608,7 +608,7 @@ int8_t Kernel::procCallAheads(ManuvrRunnable *active_runnable) {
 int8_t Kernel::procCallBacks(ManuvrRunnable *active_runnable) {
   int8_t return_value = 0;
   PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[active_runnable->event_code];
-  if (NULL != cb_queue) {
+  if (nullptr != cb_queue) {
     listenerFxnPtr current_fxn;
     for (int i = 0; i < cb_queue->size(); i++) {
       current_fxn = cb_queue->recycle();  // TODO: This is ugly for many reasons.
@@ -644,7 +644,7 @@ int8_t Kernel::procIdleFlags() {
 
   serviceSchedules();
 
-  ManuvrRunnable *active_runnable = NULL;  // Our short-term focus.
+  ManuvrRunnable *active_runnable = nullptr;  // Our short-term focus.
   uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
 
   globalIRQDisable();
@@ -658,7 +658,7 @@ int8_t Kernel::procIdleFlags() {
   }
   globalIRQEnable();
 
-  active_runnable = NULL;   // Pedantic...
+  active_runnable = nullptr;   // Pedantic...
 
   /* As long as we have an open event and we aren't yet at our proc ceiling... */
   while (exec_queue.hasNext() && should_run_another_event(return_value, profiler_mark)) {
@@ -680,14 +680,14 @@ int8_t Kernel::procIdleFlags() {
     EventReceiver *subscriber;   // No need to assign.
     if (_profiler_enabled()) profiler_mark_1 = micros();
 
-    if (NULL != active_runnable->schedule_callback) {
+    if (nullptr != active_runnable->schedule_callback) {
       // TODO: This is hold-over from the scheduler. Need to modernize it.
       active_runnable->printDebug(&local_log);
       ((FunctionPointer) active_runnable->schedule_callback)();   // Call the schedule's service function.
       if (_profiler_enabled()) profiler_mark_2 = micros();
       activity_count++;
     }
-    else if (NULL != active_runnable->specific_target) {
+    else if (nullptr != active_runnable->specific_target) {
       subscriber = active_runnable->specific_target;
       switch (subscriber->notify(active_runnable)) {
         case 0:   // The nominal case. No response.
@@ -730,7 +730,7 @@ int8_t Kernel::procIdleFlags() {
 
     /* Should we clean up the Event? */
     bool clean_up_active_runnable = true;  // Defaults to 'yes'.
-    if (NULL != active_runnable->originator) {
+    if (nullptr != active_runnable->originator) {
       /* If the event has a valid originator, do the callback dance and take instruction
          from the return value. */
       //   if (verbosity >=7) output.concatf("specific_event_callback returns %d\n", active_runnable->originator->callback_proc(active_runnable));
@@ -778,16 +778,16 @@ int8_t Kernel::procIdleFlags() {
     if (_profiler_enabled()) {
       profiler_mark_3 = micros();
 
-      TaskProfilerData* profiler_item = NULL;
+      TaskProfilerData* profiler_item = nullptr;
       int cost_size = event_costs.size();
       int i = 0;
-      while ((NULL == profiler_item) && (i < cost_size)) {
+      while ((nullptr == profiler_item) && (i < cost_size)) {
         if (event_costs.get(i)->msg_code == msg_code_local) {
           profiler_item = event_costs.get(i);
         }
         i++;
       }
-      if (NULL == profiler_item) {
+      if (nullptr == profiler_item) {
         // If we don't yet have a profiler item for this message type...
         profiler_item = new TaskProfilerData();    // ...create one...
         profiler_item->msg_code = msg_code_local;   // ...assign the code...
@@ -838,7 +838,7 @@ int8_t Kernel::procIdleFlags() {
   }
 
   if (local_log.length() > 0) Kernel::log(&local_log);
-  current_event = NULL;
+  current_event = nullptr;
   return return_value;
 }
 
@@ -917,7 +917,7 @@ void Kernel::print_type_sizes(StringBuilder* output) {
 * @param   StringBuilder*  The buffer that this fxn will write output into.
 */
 void Kernel::printProfiler(StringBuilder* output) {
-  if (NULL == output) return;
+  if (nullptr == output) return;
   output->concatf("-- total_events       \t%u\n", (unsigned long) total_events);
   output->concatf("-- total_events_dead  \t%u\n", (unsigned long) total_events_dead);
   output->concatf("-- max_queue_depth    \t%u\n", (unsigned long) max_queue_depth);
@@ -1029,7 +1029,7 @@ void Kernel::printScheduler(StringBuilder* output) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void Kernel::printDebug(StringBuilder* output) {
-  if (NULL == output) return;
+  if (nullptr == output) return;
   uint32_t initial_sp = getStackPointer();
   uint32_t final_sp = getStackPointer();
 
@@ -1067,7 +1067,7 @@ void Kernel::printDebug(StringBuilder* output) {
     output->concat("\n");
   }
 
-  if (NULL != current_event) {
+  if (nullptr != current_event) {
     output->concat("-- Current Runnable:\n");
     current_event->printDebug(output);
   }
@@ -1126,19 +1126,19 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
   switch (event->event_code) {
     case MANUVR_MSG_SYS_BOOT_COMPLETED:
       if (getVerbosity() > 4) Kernel::log("Boot complete.\n");
-      if (NULL != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, NULL);
+      if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
       break;
 
     case MANUVR_MSG_SYS_REBOOT:
-      if (NULL != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, NULL);
+      if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
       reboot();
       break;
     case MANUVR_MSG_SYS_SHUTDOWN:
-      if (NULL != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, NULL);
+      if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
       seppuku();  // TODO: We need to distinguish between this and SYSTEM shutdown for linux.
       break;
     case MANUVR_MSG_SYS_BOOTLOADER:
-      //if (NULL != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, NULL);
+      //if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
       jumpToBootloader();
       break;
 
@@ -1158,7 +1158,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
       case MANUVR_MSG_USER_DEBUG_INPUT:
         if (active_runnable->argCount()) {
           // If the event came with a StringBuilder, concat it onto the last_user_input.
-          StringBuilder* _tmp = NULL;
+          StringBuilder* _tmp = nullptr;
           if (0 == active_runnable->getArgAs(&_tmp)) {
             last_user_input.concatHandoff(_tmp);
             _route_console_input();
@@ -1225,7 +1225,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
       break;
 
     case MANUVR_MSG_SYS_ISSUE_LOG_ITEM:
-      if (NULL != _logger) {
+      if (nullptr != _logger) {
         StringBuilder *log_item;
         if (0 == active_runnable->getArgAs(&log_item)) {
           _logger->toCounterparty(log_item, MEM_MGMT_RESPONSIBLE_BEARER);
@@ -1282,11 +1282,11 @@ unsigned int Kernel::countActiveSchedules() {
 *  Returns the newly-created PID on success, or 0 on failure.
 */
 ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FunctionPointer sch_callback) {
-  ManuvrRunnable* return_value = NULL;
+  ManuvrRunnable* return_value = nullptr;
   if (sch_period > 1) {
-    if (sch_callback != NULL) {
+    if (sch_callback != nullptr) {
       return_value = new ManuvrRunnable(recurrence, sch_period, ac, sch_callback);
-      if (return_value != NULL) {  // Did we actually malloc() successfully?
+      if (return_value != nullptr) {  // Did we actually malloc() successfully?
         return_value->isScheduled(true);
         schedules.insert(return_value);
       }
@@ -1303,10 +1303,10 @@ ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, 
 *  Returns the newly-created PID on success, or 0 on failure.
 */
 ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, EventReceiver* ori) {
-  ManuvrRunnable* return_value = NULL;
+  ManuvrRunnable* return_value = nullptr;
   if (sch_period > 1) {
     return_value = new ManuvrRunnable(recurrence, sch_period, ac, ori);
-    if (return_value != NULL) {  // Did we actually malloc() successfully?
+    if (return_value != nullptr) {  // Did we actually malloc() successfully?
       return_value->isScheduled(true);
       schedules.insert(return_value);
     }
@@ -1351,7 +1351,7 @@ void Kernel::advanceScheduler(unsigned int ms_elapsed) {
 * @return true on success and false on failure.
 */
 bool Kernel::removeSchedule(ManuvrRunnable *obj) {
-  if (obj != NULL) {
+  if (obj != nullptr) {
     if (obj != current_event) {
       obj->isScheduled(false);
       schedules.remove(obj);
@@ -1366,7 +1366,7 @@ bool Kernel::removeSchedule(ManuvrRunnable *obj) {
 }
 
 bool Kernel::addSchedule(ManuvrRunnable *obj) {
-  if (obj != NULL) {
+  if (obj != nullptr) {
     if (!schedules.contains(obj)) {
       obj->isScheduled(true);
       schedules.insert(obj);
@@ -1462,7 +1462,7 @@ int8_t Kernel::_route_console_input() {
     if (_raw_from_console.count() > 0) {
       // If there are still positions, lookup the subscriber and send it the input.
       EventReceiver* subscriber = subscribers.get(subscriber_idx);
-      if (NULL != subscriber) {
+      if (nullptr != subscriber) {
         subscriber->procDirectDebugInstruction(&_raw_from_console);
       }
       else if (getVerbosity() > 2) {
@@ -1498,7 +1498,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
     case 'B':
     case 'b':
       if (temp_int == 128) {
-        Kernel::raiseEvent(('B' == c ? MANUVR_MSG_SYS_BOOTLOADER : MANUVR_MSG_SYS_REBOOT), NULL);
+        Kernel::raiseEvent(('B' == c ? MANUVR_MSG_SYS_BOOTLOADER : MANUVR_MSG_SYS_REBOOT), nullptr);
       }
       else {
         local_log.concatf("Will only %s if the number '128' follows the command.\n", ('B' == c) ? "jump to bootloader" : "reboot");

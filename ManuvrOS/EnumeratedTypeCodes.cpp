@@ -122,7 +122,7 @@ int getTypemapSizeAndPointer(const unsigned char **pointer) {
 */
 int getMinimumSizeByTypeString(char *str) {
   int return_value = 0;
-  if (str != NULL) {
+  if (str != nullptr) {
     while (*(str)) {
       return_value += sizeOfArg(*(str++));
     }

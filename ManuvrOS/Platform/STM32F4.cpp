@@ -142,7 +142,7 @@ uint32_t epochTime(void) {
 * 2004-02-12T15:19:21+00:00
 */
 void currentDateTime(StringBuilder* target) {
-  if (target != NULL) {
+  if (target != nullptr) {
     target->concatf("%04d-%02d-%02dT", year(), month(), day());
     target->concatf("%02d:%02d:%02d+00:00", hour(), minute(), second());
   }
