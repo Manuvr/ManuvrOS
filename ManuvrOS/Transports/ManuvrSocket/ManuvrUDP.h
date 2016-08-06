@@ -86,7 +86,7 @@ class UDPPipe : public BufferPipe {
     UDPPipe();
     UDPPipe(ManuvrUDP*, uint32_t, uint16_t);
     UDPPipe(ManuvrUDP*, BufferPipe*);
-    ~UDPPipe();
+    virtual ~UDPPipe();
 
     /* Override from BufferPipe. */
     virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
@@ -105,7 +105,7 @@ class UDPPipe : public BufferPipe {
 
 
   protected:
-    const char* pipeName();
+    inline const char* pipeName() { return "UDPPipe"; };
 
 
   private:

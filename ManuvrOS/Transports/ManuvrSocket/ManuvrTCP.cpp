@@ -352,7 +352,6 @@ int8_t ManuvrTCP::read_port() {
   if (connected()) {
     unsigned char *buf = (unsigned char *) alloca(256);
     int n;
-    StringBuilder  *nu_data  = NULL;
 
     while (connected()) {
       n = read(_sock, buf, 255);

@@ -330,24 +330,7 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
 //   still a valid call target that deals with allowing the console to operate
 //   on itself.
 void ManuvrConsole::procDirectDebugInstruction(StringBuilder *input) {
-  uint8_t temp_byte = 0;
-
-  char* str = input->position(0);
-
-  if (*(str) != 0) {
-    temp_byte = atoi((char*) str+1);
-  }
-
-  switch (*(str)) {
-    case 'i':
-      printDebug(&local_log);
-      break;
-
-    default:
-      XenoSession::procDirectDebugInstruction(input);
-      break;
-  }
-
+  XenoSession::procDirectDebugInstruction(input);
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 

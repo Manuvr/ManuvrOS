@@ -323,9 +323,6 @@ int8_t ManuvrSerial::read_port() {
   if (connected()) {
     unsigned char *buf = (unsigned char *) alloca(256);
     int n;
-    ManuvrRunnable *event    = NULL;
-    StringBuilder  *nu_data  = NULL;
-
     #if defined (STM32F4XX)        // STM32F4
 
     #elif defined (__MK20DX128__)  // Teensy3

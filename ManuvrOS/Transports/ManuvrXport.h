@@ -162,6 +162,7 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     static uint16_t TRANSPORT_ID_POOL;
 
 
+
   protected:
     ManuvrRunnable* _autoconnect_schedule;
     #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
@@ -187,7 +188,6 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
 
     void connected(bool);
     void listening(bool);
-
 
 
 

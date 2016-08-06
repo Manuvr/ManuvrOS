@@ -80,18 +80,23 @@ const MessageTypeDef udp_message_defs[] = {
       sigaddset(&set, SIGVTALRM);
       sigaddset(&set, SIGINT);
       int s = pthread_sigmask(SIG_BLOCK, &set, NULL);
-
       ManuvrUDP* listening_inst = (ManuvrUDP*) active_xport;
 
-      while (listening_inst->listening()) {
-        // Read data from UDP port. Blocks...
-        if (0 > listening_inst->read_port()) {
-          // Don't thrash the CPU for no reason...
-          sleep_millis(20);
+      if (0 == s) {
+        while (listening_inst->listening()) {
+          // Read data from UDP port. Blocks...
+          if (0 > listening_inst->read_port()) {
+            // Don't thrash the CPU for no reason...
+            sleep_millis(20);
+          }
         }
       }
+      else {
+        Kernel::log("Failed to thread the UDP listener loop.\n");
+      }
+
       // Close the listener...
-      close(listening_inst->getSockID());
+      listening_inst->disconnect();
     }
     else {
       Kernel::log("Tried to listen with a NULL transport.");
@@ -340,6 +345,8 @@ int8_t ManuvrUDP::read_port() {
     if (NULL == related_pipe) {
       // Non-existence. Create...
       related_pipe = new UDPPipe(this, cli_addr.sin_addr.s_addr, cli_addr.sin_port);
+      if (_pipe_strategy) related_pipe->setPipeStrategy(_pipe_strategy);
+
       if (MEM_MGMT_RESPONSIBLE_BEARER == ((BufferPipe*)related_pipe)->fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER)) {
         // The pipe copied the buffer. Success.
         // Since we don't have a pipe, we create one and realize that there will
@@ -396,10 +403,14 @@ int8_t ManuvrUDP::read_port() {
 * @return false on error and true on success.
 */
 int8_t ManuvrUDP::reset() {
+  initialized(false);
 	std::map<uint16_t, UDPPipe*>::iterator it;
 	for (it = _open_replies.begin(); it != _open_replies.end(); it++) {
     delete it->second;
 	}
+
+  disconnect();
+
   initialized(true);
   return 0;
 }
@@ -625,17 +636,9 @@ int8_t ManuvrUDP::notify(ManuvrRunnable *active_event) {
 void ManuvrUDP::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
 
-  uint8_t temp_byte = 0;
-  if (*(str) != 0) {
-    temp_byte = atoi((char*) str+1);
-  }
-
   /* These are debug case-offs that are typically used to test functionality, and are then
      struck from the build. */
   switch (*(str)) {
-    case 'W':
-      write_datagram((unsigned char*) str, strlen((const char*)str), "127.0.0.1", 6001);
-      break;
     default:
       EventReceiver::procDirectDebugInstruction(input);
       break;
@@ -644,6 +647,5 @@ void ManuvrUDP::procDirectDebugInstruction(StringBuilder *input) {
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 #endif  // __MANUVR_CONSOLE_SUPPORT
-
 
 #endif  // UDP support

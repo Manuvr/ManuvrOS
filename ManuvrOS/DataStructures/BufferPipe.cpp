@@ -121,11 +121,16 @@ BufferPipe::~BufferPipe() {
   #endif
   if (nullptr != _near) {
     _near->toCounterparty(ManuvrPipeSignal::FAR_SIDE_DETACH, nullptr);
+
   }
   if (nullptr != _far) {
-    _far->toCounterparty(ManuvrPipeSignal::NEAR_SIDE_DETACH, nullptr);
+    _far->fromCounterparty(ManuvrPipeSignal::NEAR_SIDE_DETACH, nullptr);
+    if (_bp_flag(BPIPE_FLAG_WE_ALLOCD_FAR)) {
+      delete _far;
+      _far  = nullptr;
+    }
   }
-  joinEnds();
+
   _near = nullptr;
   _far  = nullptr;
 }
@@ -138,9 +143,10 @@ BufferPipe::~BufferPipe() {
 *                            |
 * Basal implementations.
 *******************************************************************************/
-#if defined(__MANUVR_PIPE_DEBUG)
-const char* BufferPipe::pipeName() { return "You done goofed"; }
-#endif
+// TODO: Suspect that crashes being caused by this being pure-virtual are
+//         being caused by logging operations executed from the base destructor
+//         which is already destructed.
+const char* BufferPipe::pipeName() { return "<IN TEARDOWN>"; }
 
 /**
 * Pass a signal to the counterparty.

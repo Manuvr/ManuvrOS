@@ -83,8 +83,10 @@ void kernelDebugDump() {
   Kernel::log(&output);
 }
 
-BufferPipe* _pipe_factory_0(BufferPipe* _n, BufferPipe* _f) {
-  return (BufferPipe*) new ManuvrGPS(_n);
+BufferPipe* _pipe_factory_1(BufferPipe* _n, BufferPipe* _f) {
+  CoAPSession* coap_srv = new CoAPSession(_n);
+  kernel->subscribe(coap_srv);
+  return (BufferPipe*) coap_srv;
 }
 
 
@@ -106,6 +108,16 @@ int main(int argc, char *argv[]) {
 
   // The first thing we should do: Instance a kernel.
   kernel = new Kernel();
+
+
+  if (0 != BufferPipe::registerPipe("CoAP", 1, _pipe_factory_1)) {
+    printf("Failed to add CoAP to the pipe registry.\n");
+    exit(1);
+  }
+
+  // Pipe strategy planning...
+  const uint8_t pipe_plan_coap[] = {1, 0};
+
 
   #if defined(__MANUVR_DEBUG)
     // spend time and memory measuring performance.
@@ -207,9 +219,7 @@ int main(int argc, char *argv[]) {
     #if defined(MANUVR_SUPPORT_COAP)
       ManuvrUDP udp_srv((const char*) "0.0.0.0", 6053);
       kernel->subscribe(&udp_srv);
-
-      CoAPSession coap_srv(&udp_srv);
-      kernel->subscribe(&coap_srv);
+      udp_srv.setPipeStrategy(pipe_plan_coap);
     #else
       ManuvrUDP udp_srv((const char*) "0.0.0.0", 6053);
       kernel->subscribe(&udp_srv);

@@ -121,8 +121,10 @@ int8_t ManuvrSocket::disconnect() {
     connected(false);
   }
 
-  close(_sock);  // Close the socket.
-  _sock = 0;
+  if (_sock) {
+    close(_sock);  // Close the socket.
+    _sock = 0;
+  }
   ManuvrXport::disconnect();
   return 0;
 }

@@ -210,11 +210,7 @@ class BufferPipe {
     inline uint8_t pipeCode() {  return _pipe_code;  };
 
 
-    #if defined(__MANUVR_PIPE_DEBUG)
     virtual const char* pipeName();
-    #else
-    virtual const char* pipeName() =0;
-    #endif
 
     // These inlines are for convenience of extending classes.
     // TODO: Ought to be private.
@@ -245,7 +241,7 @@ class BufferPipe {
     BufferPipe* _far;   // Need such topology for bi-directional pipe.
 
     BufferPipe();           // Protected constructor with no params for class init.
-    ~BufferPipe();  // Protected destructor.
+    virtual ~BufferPipe();  // Protected destructor.
 
     /* Simple checks that we will need to do. */
     inline bool haveNear() {  return (nullptr != _near);  };

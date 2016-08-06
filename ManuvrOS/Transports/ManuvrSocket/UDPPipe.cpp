@@ -67,6 +67,7 @@ UDPPipe::UDPPipe(ManuvrUDP* udp, uint32_t ip, uint16_t port) : BufferPipe() {
 
 
 UDPPipe::~UDPPipe() {
+  Kernel::log("~UDPPipe() ~UDPPipe() ~UDPPipe() ~UDPPipe() ~UDPPipe()\n");
   _accumulator.clear();
   if (_udp) _udp->udpPipeDestroyCallback(this);
 }
@@ -79,7 +80,7 @@ UDPPipe::~UDPPipe() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
-const char* UDPPipe::pipeName() { return "UDPPipe"; }
+//const char* UDPPipe::pipeName() { return "UDPPipe"; }
 
 /**
 * Back toward ManuvrUDP....
