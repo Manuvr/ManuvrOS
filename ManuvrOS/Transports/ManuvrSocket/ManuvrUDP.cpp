@@ -187,11 +187,10 @@ ManuvrUDP::~ManuvrUDP() {
 * Inward toward the transport.
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
-int8_t ManuvrUDP::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+int8_t ManuvrUDP::toCounterparty(StringBuilder* buf, int8_t mm) {
 //  switch (mm) {
 //    case MEM_MGMT_RESPONSIBLE_CALLER:
 //      // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -219,11 +218,10 @@ int8_t ManuvrUDP::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
 * Outward toward the application (or into the accumulator).
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
-int8_t ManuvrUDP::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+int8_t ManuvrUDP::fromCounterparty(StringBuilder* buf, int8_t mm) {
 //  switch (mm) {
 //    case MEM_MGMT_RESPONSIBLE_CALLER:
 //      // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -342,7 +340,7 @@ int8_t ManuvrUDP::read_port() {
     if (NULL == related_pipe) {
       // Non-existence. Create...
       related_pipe = new UDPPipe(this, cli_addr.sin_addr.s_addr, cli_addr.sin_port);
-      if (MEM_MGMT_RESPONSIBLE_BEARER == related_pipe->fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER)) {
+      if (MEM_MGMT_RESPONSIBLE_BEARER == ((BufferPipe*)related_pipe)->fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER)) {
         // The pipe copied the buffer. Success.
         // Since we don't have a pipe, we create one and realize that there will
         //   be nothing on the other side to take the buffer. So we only broadcast
@@ -368,7 +366,7 @@ int8_t ManuvrUDP::read_port() {
     }
     else {
       // We have a related pipe.
-      switch (related_pipe->fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER)) {
+      switch (((BufferPipe*)related_pipe)->fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER)) {
         case MEM_MGMT_RESPONSIBLE_BEARER:
           // Success
           break;

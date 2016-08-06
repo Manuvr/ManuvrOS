@@ -53,8 +53,8 @@ class XportBridge : public BufferPipe {
     ~XportBridge();
 
     /* Override from BufferPipe. */
-    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
-    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
+    virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
 
     void printDebug(StringBuilder*);
 

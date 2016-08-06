@@ -97,11 +97,10 @@ const char* ManuvrGPS::pipeName() { return "ManuvrGPS"; }
 * Doesn't make sense for GPS.
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
-int8_t ManuvrGPS::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+int8_t ManuvrGPS::toCounterparty(StringBuilder* buf, int8_t mm) {
   switch (mm) {
     case MEM_MGMT_RESPONSIBLE_CALLER:
       // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -127,11 +126,10 @@ int8_t ManuvrGPS::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
 * Outward toward the application (or into the accumulator).
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
-int8_t ManuvrGPS::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+int8_t ManuvrGPS::fromCounterparty(StringBuilder* buf, int8_t mm) {
   switch (mm) {
     case MEM_MGMT_RESPONSIBLE_CALLER:
       // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -139,13 +137,13 @@ int8_t ManuvrGPS::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
       /* The system that allocated this buffer either...
           a) Did so with the intention that it never be free'd, or...
           b) Has a means of discovering when it is safe to free.  */
-      _accumulator.concat(buf, len);
+      _accumulator.concatHandoff(buf);
       return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
 
     case MEM_MGMT_RESPONSIBLE_BEARER:
       /* We are now the bearer. That means that by returning non-failure, the
           caller will expect _us_ to manage this memory.  */
-      _accumulator.concat(buf, len);
+      _accumulator.concatHandoff(buf);
       return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
 
     default:

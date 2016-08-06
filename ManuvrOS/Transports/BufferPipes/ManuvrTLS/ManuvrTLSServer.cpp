@@ -41,10 +41,14 @@ ManuvrTLSServer::ManuvrTLSServer() : ManuvrTLS() {
 *******************************************************************************/
 const char* ManuvrTLSServer::pipeName() { return "ManuvrTLSServer"; }
 
-/*
-* One side of the bridge.
+/**
+* Inward toward the transport.
+*
+* @param  buf    A pointer to the buffer.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
 */
-int8_t ManuvrTLSServer::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+int8_t ManuvrTLSServer::toCounterparty(StringBuilder* buf, int8_t mm) {
   switch (mm) {
     case MEM_MGMT_RESPONSIBLE_CALLER:
       // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -54,7 +58,7 @@ int8_t ManuvrTLSServer::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm
           b) Has a means of discovering when it is safe to free.  */
       if (haveNear()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _near->toCounterparty(buf, len, mm);
+        return _near->toCounterparty(buf, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 
@@ -63,7 +67,7 @@ int8_t ManuvrTLSServer::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm
           caller will expect _us_ to manage this memory.  */
       if (haveNear()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _near->toCounterparty(buf, len, mm);
+        return _near->toCounterparty(buf, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 
@@ -73,10 +77,14 @@ int8_t ManuvrTLSServer::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm
   }
 }
 
-/*
-* The other side of the bridge.
+/**
+* Outward toward the application (or into the accumulator).
+*
+* @param  buf    A pointer to the buffer.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
 */
-int8_t ManuvrTLSServer::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+int8_t ManuvrTLSServer::fromCounterparty(StringBuilder* buf, int8_t mm) {
   switch (mm) {
     case MEM_MGMT_RESPONSIBLE_CALLER:
       // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -86,7 +94,7 @@ int8_t ManuvrTLSServer::fromCounterparty(uint8_t* buf, unsigned int len, int8_t 
           b) Has a means of discovering when it is safe to free.  */
       if (haveFar()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _far->fromCounterparty(buf, len, mm);
+        return _far->fromCounterparty(buf, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 
@@ -95,7 +103,7 @@ int8_t ManuvrTLSServer::fromCounterparty(uint8_t* buf, unsigned int len, int8_t 
           caller will expect _us_ to manage this memory.  */
       if (haveFar()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _far->fromCounterparty(buf, len, mm);
+        return _far->fromCounterparty(buf, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 

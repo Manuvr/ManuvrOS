@@ -211,7 +211,7 @@ void ManuvrXport::autoConnect(bool en, uint32_t _ac_period) {
 
 int8_t ManuvrXport::sendBuffer(StringBuilder* buf) {
   if (connected()) {
-    toCounterparty(buf->string(), buf->length(), MEM_MGMT_RESPONSIBLE_CREATOR);
+    toCounterparty(buf, MEM_MGMT_RESPONSIBLE_BEARER);
   }
   else {
     Kernel::log("Tried to write to a transport that was not connected.");
@@ -336,7 +336,7 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
           #ifdef __MANUVR_DEBUG
           if (getVerbosity() > 3) local_log.concatf("We about to print %d bytes to the transport.\n", temp_sb->length());
           #endif
-          toCounterparty(temp_sb->string(), temp_sb->length(), MEM_MGMT_RESPONSIBLE_CREATOR);
+          toCounterparty(temp_sb, MEM_MGMT_RESPONSIBLE_CREATOR);
         }
         #ifdef __MANUVR_DEBUG
         else if (getVerbosity() > 6) local_log.concat("Ignoring a broadcast that wasn't a StringBuilder.\n");

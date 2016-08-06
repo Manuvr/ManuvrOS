@@ -59,6 +59,8 @@ const char* BufferPipe::signalString(ManuvrPipeSignal code) {
   }
 }
 
+PipeDef* BufferPipe::_supported_strategies[MAXIMUM_PIPE_DIVERSITY];
+
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
 *  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
@@ -182,17 +184,22 @@ int8_t BufferPipe::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
 * Any override of this method should probably concatHandoff into it's local
 *   StringBuilder instance.
 *
-* @param   buf  A pointer to the transport-bound buffer.
-* @param   mm   The length of the buffer.
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
 * @return  An MM return code.
 */
-int8_t BufferPipe::toCounterparty(StringBuilder* buf, int8_t _mm) {
-  #if defined(__MANUVR_PIPE_DEBUG)
-  //StringBuilder log;
-  //log.concatf("BufferPipe::toCounterparty(StringBuilder*, %s).\n", memMgmtString(_mm));
-  //Kernel::log(&log);
-  #endif
-  return haveNear() ? _near->toCounterparty(buf, _mm) : MEM_MGMT_RESPONSIBLE_CALLER;
+int8_t BufferPipe::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+  StringBuilder temp(buf, len);
+  // We just ate the dynamic memory penalty for safety's sake.
+  // Propagate this fact downstream.
+  // If the buffer is not taken, StringBuilder's destructor will assume
+  //   responsibility for the copy and free it, and the worst that will
+  //   happen is that we waste time.
+  // Note that this call does NOT leave this pipe instance. It is only
+  //   an override to the member of the same name that moves high-level
+  //   buffers.
+  return toCounterparty(&temp, MEM_MGMT_RESPONSIBLE_BEARER);
 }
 
 /**
@@ -203,17 +210,22 @@ int8_t BufferPipe::toCounterparty(StringBuilder* buf, int8_t _mm) {
 * Any override of this method should probably concatHandoff into it's local
 *   StringBuilder instance.
 *
-* @param   buf  A pointer to the transport-spawned buffer.
-* @param   mm   The length of the buffer.
+* @param  buf    A pointer to the buffer.
+* @param  len    How long the buffer is.
+* @param  mm     A declaration of memory-management responsibility.
 * @return  An MM return code.
 */
-int8_t BufferPipe::fromCounterparty(StringBuilder* buf, int8_t _mm) {
-  #if defined(__MANUVR_PIPE_DEBUG)
-  StringBuilder log;
-  log.concatf("BufferPipe::fromCounterparty(StringBuilder*, %s).\n", memMgmtString(_mm));
-  Kernel::log(&log);
-  #endif
-  return haveFar() ? _far->fromCounterparty(buf, _mm) : MEM_MGMT_RESPONSIBLE_CALLER;
+int8_t BufferPipe::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+  StringBuilder temp(buf, len);
+  // We just ate the dynamic memory penalty for safety's sake.
+  // Propagate this fact downstream.
+  // If the buffer is not taken, StringBuilder's destructor will assume
+  //   responsibility for the copy and free it, and the worst that will
+  //   happen is that we waste time.
+  // Note that this call does NOT leave this pipe instance. It is only
+  //   an override to the member of the same name that moves high-level
+  //   buffers.
+  return fromCounterparty(&temp, MEM_MGMT_RESPONSIBLE_BEARER);
 }
 
 /**

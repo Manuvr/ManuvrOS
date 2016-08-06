@@ -58,8 +58,8 @@ class ManuvrSocket : public ManuvrXport {
     ~ManuvrSocket();
 
     /* Override from BufferPipe. */
-    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
-    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
+    //virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm) =0;
+    //virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm) =0;
 
     inline int getSockID() {  return _sock; };
 

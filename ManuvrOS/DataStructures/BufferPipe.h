@@ -59,6 +59,7 @@ See UDPPipe for a case where this matters.
 #ifndef __MANUVR_BUFFER_PIPE_H__
 #define __MANUVR_BUFFER_PIPE_H__
 
+// Our notion of buffer.
 #include <DataStructures/StringBuilder.h>
 
 
@@ -131,6 +132,17 @@ enum class ManuvrPipeSignal {
 // Hopefully, this will be enough until we think of something smarter.
 #define MAXIMUM_PIPE_DIVERSITY  16
 
+/*
+* TODO: This structure might evolve into ZooInmate.
+* This structure tracks the types of pipes this build supports. It is
+*   needed for runtime instantiation of new pipes to service strategy in
+*   the absense of RTTI.
+*/
+typedef struct {
+  const char* pipe_name;
+  int         pipe_code;
+  void*       factory;
+} PipeDef;
 
 /*
 * Here, "far" refers to "farther from the counterparty". That is: closer to our
@@ -150,23 +162,34 @@ enum class ManuvrPipeSignal {
 class BufferPipe {
   public:
     /*
-    * Generally, this will be called from within the instance pointed-at by _far.
+    * Sending signals through pipes...
     */
     virtual int8_t toCounterparty(ManuvrPipeSignal, void*);
-    virtual int8_t toCounterparty(StringBuilder*, int8_t mm);
-    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
+    virtual int8_t fromCounterparty(ManuvrPipeSignal, void*);
 
     /*
-    * Generally, this will be called from within the instance pointed-at by _near.
+    * Sending dynamically-alloc'd buffers through pipes...
+    * This is the override point for extending classes.
     */
-    virtual int8_t fromCounterparty(ManuvrPipeSignal, void*);
-    virtual int8_t fromCounterparty(StringBuilder*, int8_t mm);
-    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
+    virtual int8_t toCounterparty(StringBuilder*, int8_t mm) =0;
+    virtual int8_t fromCounterparty(StringBuilder*, int8_t mm) =0;
 
-    /* Set the identity of the near-side. */
+    /*
+    * Override to allow a pointer-length interface.
+    */
+    int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+
+    /*
+    * Set the identity of the near-side.
+    * The side closer to the counterparty.
+    */
     int8_t setNear(BufferPipe*);
 
-    /* Set the identity of the far-side. */
+    /*
+    * Set the identity of the far-side.
+    * The side closer to the application logic.
+    */
     int8_t setFar(BufferPipe*);
 
     /* Join the ends of this pipe to one-another. */
@@ -191,7 +214,14 @@ class BufferPipe {
       else    _flags &= ~flag;
     };
 
-    static uint8_t* _pipe_strategies[];
+
+    /*
+    * This is the list of all supported pipe types in the system. It is
+    *   NULL-terminated.
+    */
+    static PipeDef* _supported_strategies[];
+
+    /* Debug and logging support */
     static const char* memMgmtString(int8_t);
     static const char* signalString(ManuvrPipeSignal);
 

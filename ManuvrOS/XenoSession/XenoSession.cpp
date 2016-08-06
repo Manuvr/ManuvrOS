@@ -169,15 +169,6 @@ int8_t XenoSession::untapAll() {
 }
 
 
-
-int8_t XenoSession::sendPacket(unsigned char *buf, int len) {
-  if (owner->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_CREATOR)) {
-    return 0;
-  }
-  return -1;
-}
-
-
 /****************************************************************************************************
 *  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
@@ -279,7 +270,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
       {
         StringBuilder* buf;
         if (0 == active_event->getArgAs(&buf)) {
-          fromCounterparty(buf->string(), buf->length(), MEM_MGMT_RESPONSIBLE_BEARER);
+          fromCounterparty(buf, MEM_MGMT_RESPONSIBLE_BEARER);
         }
       }
       return_value++;

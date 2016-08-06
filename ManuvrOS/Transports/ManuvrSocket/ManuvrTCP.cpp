@@ -186,11 +186,10 @@ ManuvrTCP::~ManuvrTCP() {
 * Inward toward the transport.
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
-int8_t ManuvrTCP::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+int8_t ManuvrTCP::toCounterparty(StringBuilder* buf, int8_t mm) {
   switch (mm) {
     case MEM_MGMT_RESPONSIBLE_CALLER:
       // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -198,13 +197,13 @@ int8_t ManuvrTCP::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
       /* The system that allocated this buffer either...
           a) Did so with the intention that it never be free'd, or...
           b) Has a means of discovering when it is safe to free.  */
-      return (write_port(buf, len) ? MEM_MGMT_RESPONSIBLE_CREATOR : MEM_MGMT_RESPONSIBLE_CALLER);
+      return (write_port(buf->string(), buf->length()) ? MEM_MGMT_RESPONSIBLE_CREATOR : MEM_MGMT_RESPONSIBLE_CALLER);
 
     case MEM_MGMT_RESPONSIBLE_BEARER:
       /* We are now the bearer. That means that by returning non-failure, the
           caller will expect _us_ to manage this memory.  */
       // TODO: Freeing the buffer?
-      return (write_port(buf, len) ? MEM_MGMT_RESPONSIBLE_BEARER : MEM_MGMT_RESPONSIBLE_CALLER);
+      return (write_port(buf->string(), buf->length()) ? MEM_MGMT_RESPONSIBLE_BEARER : MEM_MGMT_RESPONSIBLE_CALLER);
 
     default:
       /* This is more ambiguity than we are willing to bear... */
@@ -217,11 +216,10 @@ int8_t ManuvrTCP::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
 * Outward toward the application (or into the accumulator).
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
-int8_t ManuvrTCP::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+int8_t ManuvrTCP::fromCounterparty(StringBuilder* buf, int8_t mm) {
   switch (mm) {
     case MEM_MGMT_RESPONSIBLE_CALLER:
       // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -230,7 +228,7 @@ int8_t ManuvrTCP::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
           a) Did so with the intention that it never be free'd, or...
           b) Has a means of discovering when it is safe to free.  */
       if (haveFar()) {
-        return _far->fromCounterparty(buf, len, mm);
+        return _far->fromCounterparty(buf, mm);
       }
       else {
         return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
@@ -241,7 +239,7 @@ int8_t ManuvrTCP::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
           caller will expect _us_ to manage this memory.  */
       if (haveFar()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _far->fromCounterparty(buf, len, mm);
+        return _far->fromCounterparty(buf, mm);
       }
       else {
         return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
@@ -359,7 +357,7 @@ int8_t ManuvrTCP::read_port() {
       n = read(_sock, buf, 255);
       if (n > 0) {
         bytes_received += n;
-        fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
+        BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
       }
       else {
         // Don't thrash the CPU for no reason...
