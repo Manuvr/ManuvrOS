@@ -130,6 +130,9 @@ class MQTTSession : public XenoSession {
     inline bool _ping_outstanding() {        return (_er_flag(MQTT_SESS_FLAG_PING_WAIT));         };
     inline void _ping_outstanding(bool nu) { return (_er_set_flag(MQTT_SESS_FLAG_PING_WAIT, nu)); };
 
+    inline bool sendPacket(uint8_t* buf, int len) {
+      return (MEM_MGMT_RESPONSIBLE_BEARER == BufferPipe::toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_BEARER));
+    };
     inline int getNextPacketId() {
       return _next_packetid = (_next_packetid == MAX_PACKET_ID) ? 1 : _next_packetid + 1;
     };

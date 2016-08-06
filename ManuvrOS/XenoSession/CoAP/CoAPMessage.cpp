@@ -129,6 +129,7 @@ const char* CoAPMessage::typeToString(CoAPMessage::Type type) {
     case COAP_NON_CONFIRMABLE:  return "NON-CONFIRMABLE";
     case COAP_ACKNOWLEDGEMENT:  return "ACK";
     case COAP_RESET:            return "RESET";
+		default:                    return "<UNDEF>";
   }
 }
 

@@ -111,11 +111,10 @@ MQTTSession::~MQTTSession() {
 * Inward toward the transport.
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
-int8_t MQTTSession::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+int8_t MQTTSession::toCounterparty(StringBuilder* buf, int8_t mm) {
   switch (mm) {
     case MEM_MGMT_RESPONSIBLE_CALLER:
       // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -124,7 +123,7 @@ int8_t MQTTSession::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
           a) Did so with the intention that it never be free'd, or...
           b) Has a means of discovering when it is safe to free.  */
       if (haveNear()) {
-        return _near->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_CREATOR);
+        return _near->toCounterparty(buf, MEM_MGMT_RESPONSIBLE_CREATOR);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;
 
@@ -133,7 +132,7 @@ int8_t MQTTSession::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
           caller will expect _us_ to manage this memory.  */
       // TODO: Freeing the buffer? Let UDP do it?
       if (haveNear()) {
-        return _near->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_BEARER);
+        return _near->toCounterparty(buf, MEM_MGMT_RESPONSIBLE_BEARER);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;
 
@@ -148,12 +147,11 @@ int8_t MQTTSession::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
 * Outward toward the application (or into the accumulator).
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
-int8_t MQTTSession::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
-  bin_stream_rx(buf, len);
+int8_t MQTTSession::fromCounterparty(StringBuilder* buf, int8_t mm) {
+  bin_stream_rx(buf->string(), buf->length());
   return MEM_MGMT_RESPONSIBLE_BEARER;
 }
 
@@ -308,7 +306,7 @@ bool MQTTSession::sendSub(const char* _topicStr, enum QoS qos) {
     unsigned char* buf  = (unsigned char*) alloca(buf_size);
     int len = MQTTSerialize_subscribe(buf, buf_size, 0, getNextPacketId(), 1, &topic, (int*)&qos);
     if (len > 0) {
-      return (0 == sendPacket(buf, len));
+      return sendPacket(buf, len);
     }
   }
   return false;
@@ -324,7 +322,7 @@ bool MQTTSession::sendUnsub(const char* _topicStr) {
     int len = MQTTSerialize_unsubscribe(buf, buf_size, 0, getNextPacketId(), 1, &topic);
 
     if (len > 0) {
-      return (0 == sendPacket(buf, len));
+      return sendPacket(buf, len);
     }
   }
   return false;
@@ -345,7 +343,7 @@ bool MQTTSession::sendKeepAlive() {
 
     if (len > 0) {
 			_ping_outstanding(true);
-      return (0 == sendPacket(buf, len));
+      return sendPacket(buf, len);
     }
   }
 	else {
@@ -371,7 +369,7 @@ bool MQTTSession::sendConnectPacket() {
     int len = MQTTSerialize_connect(buf, buf_size, &data);
 
     if (len > 0) {
-      return (0 == sendPacket(buf, len));
+      return sendPacket(buf, len);
     }
   }
   return false;
@@ -385,7 +383,7 @@ bool MQTTSession::sendDisconnectPacket() {
     int len = MQTTSerialize_disconnect(buf, buf_size);
 
     if (len > 0) {
-      return (0 == sendPacket(buf, len));
+      return sendPacket(buf, len);
     }
   }
   return false;
@@ -423,7 +421,7 @@ bool MQTTSession::sendPublish(ManuvrRunnable* _msg) {
 		);
 
     if (len > 0) {
-      return (0 == sendPacket(buf, len));
+      return sendPacket(buf, len);
     }
 	}
 	return false;
@@ -542,7 +540,7 @@ int MQTTSession::process_inbound() {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t MQTTSession::bootComplete() {
-  XenoSession::bootComplete();
+  EventReceiver::bootComplete();
 
   owner->getMTU();
 

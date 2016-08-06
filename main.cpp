@@ -175,19 +175,21 @@ int main(int argc, char *argv[]) {
       MQTTSession mqtt(&tcp_cli);
       kernel->subscribe(&mqtt);
 
-      ManuvrRunnable gpio_write(MANUVR_MSG_DIGITAL_WRITE);
-      gpio_write.isManaged(true);
-      gpio_write.specific_target = &gpio;
+      #if defined(RASPI) || defined(RASPI2)
+        ManuvrRunnable gpio_write(MANUVR_MSG_DIGITAL_WRITE);
+        gpio_write.isManaged(true);
+        gpio_write.specific_target = &gpio;
+        mqtt.subscribe("gw", &gpio_write);
+
+        mqtt.tapMessageType(MANUVR_MSG_DIGITAL_WRITE);
+        mqtt.tapMessageType(MANUVR_MSG_DIGITAL_READ);
+      #endif
 
       ManuvrRunnable debug_msg(MANUVR_MSG_USER_DEBUG_INPUT);
       debug_msg.isManaged(true);
       debug_msg.specific_target = (EventReceiver*) kernel;
 
-      mqtt.subscribe("gw", &gpio_write);
       mqtt.subscribe("d", &debug_msg);
-
-      mqtt.tapMessageType(MANUVR_MSG_DIGITAL_WRITE);
-      mqtt.tapMessageType(MANUVR_MSG_DIGITAL_READ);
 
     #else
       ManuvrTCP tcp_srv((const char*) "0.0.0.0", 2319);
