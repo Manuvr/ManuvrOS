@@ -340,7 +340,7 @@ bool BufferPipe::haveFar() {
     if (0 != *_pipe_strategy) {
       // ...and that stratgy makes sense, try and implement it with this
       //   instance as the near-side of the new pipe.
-      setFar(spawnPipe(*_pipe_strategy, this, NULL));
+      setFar(spawnPipe(*_pipe_strategy, this, nullptr));
       if (nullptr != _far) {
         // Mark that we allocated the new pipe.
         _bp_set_flag(BPIPE_FLAG_WE_ALLOCD_FAR, true);

@@ -227,7 +227,6 @@ int8_t StandardIO::read_port() {
 
   while (listening()) {
     bzero(input_text, getMTU());
-
     if (fgets(input_text, getMTU(), stdin) != NULL) {
       read_len = strlen(input_text);
       if (read_len) {

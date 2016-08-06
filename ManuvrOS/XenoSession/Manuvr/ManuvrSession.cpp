@@ -102,7 +102,7 @@ ManuvrSession::~ManuvrSession() {
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
-int8_t ManuvrSession::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+int8_t ManuvrSession::toCounterparty(StringBuilder* buf, int8_t mm) {
   switch (mm) {
     case MEM_MGMT_RESPONSIBLE_CALLER:
       // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -111,7 +111,7 @@ int8_t ManuvrSession::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) 
           a) Did so with the intention that it never be free'd, or...
           b) Has a means of discovering when it is safe to free.  */
       if (haveNear()) {
-        return _near->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_CREATOR);
+        return _near->toCounterparty(buf, MEM_MGMT_RESPONSIBLE_CREATOR);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;
 
@@ -120,7 +120,7 @@ int8_t ManuvrSession::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) 
           caller will expect _us_ to manage this memory.  */
       // TODO: Freeing the buffer? Let UDP do it?
       if (haveNear()) {
-        return _near->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_BEARER);
+        return _near->toCounterparty(buf, MEM_MGMT_RESPONSIBLE_BEARER);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;
 
@@ -139,8 +139,8 @@ int8_t ManuvrSession::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) 
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
-int8_t ManuvrSession::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
-  bin_stream_rx(buf, len);
+int8_t ManuvrSession::fromCounterparty(StringBuilder* buf, int8_t mm) {
+  bin_stream_rx(buf->string(), buf->length());
   return MEM_MGMT_RESPONSIBLE_BEARER;
 }
 
@@ -151,14 +151,8 @@ int8_t ManuvrSession::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm
 *******************************************************************************/
 
 int8_t ManuvrSession::sendSyncPacket() {
-  if (owner->connected()) {
-    StringBuilder sync_packet((unsigned char*) XenoManuvrMessage::SYNC_PACKET_BYTES, 4);
-    owner->sendBuffer(&sync_packet);
-
-    //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
-    //event->specific_target = owner;  //   event to be the transport that instantiated us.
-    //raiseEvent(event);
-  }
+  StringBuilder sync_packet((unsigned char*) XenoManuvrMessage::SYNC_PACKET_BYTES, 4);
+  toCounterparty(&sync_packet, MEM_MGMT_RESPONSIBLE_BEARER);
   return 0;
 }
 
@@ -453,14 +447,8 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
 *               ---J. Ian Lindsay   Tue Aug 04 23:12:55 MST 2015
 */
 int8_t ManuvrSession::sendKeepAlive() {
-  if (owner->connected()) {
-    ManuvrRunnable* ka_event = Kernel::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE);
-    sendEvent(ka_event);
-
-    //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
-    //event->specific_target = owner;  //   event to be the transport that instantiated us.
-    //raiseEvent(event);
-  }
+  ManuvrRunnable* ka_event = Kernel::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE);
+  sendEvent(ka_event);
   return 0;
 }
 

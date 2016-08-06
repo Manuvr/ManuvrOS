@@ -246,6 +246,7 @@ int8_t Kernel::bootstrap() {
 
   ManuvrRunnable *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
   boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
+  /* Follow your shadow. */
   Kernel::staticRaiseEvent(boot_completed_ev);
 
   #if defined (__MANUVR_FREERTOS)
