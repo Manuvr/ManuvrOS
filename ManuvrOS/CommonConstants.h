@@ -34,8 +34,8 @@ There ought to be no inclusion in this file. It is the bottom.
   #define LOG_DEBUG   7    /* debug-level messages */
 
   // Function-pointer definitions
-  typedef void (*FunctionPointer) ();
-  typedef void *(*ThreadFxnPtr)    (void*);
+  typedef void  (*FunctionPointer) ();
+  typedef void* (*ThreadFxnPtr)    (void*);
 
 
 

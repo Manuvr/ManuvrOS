@@ -60,6 +60,11 @@ char *program_name  = NULL;
 int __main_pid      = 0;
 Kernel* kernel      = NULL;
 
+BufferPipe* _pipe_factory_1(BufferPipe* _n, BufferPipe* _f) {
+  return (BufferPipe*) new ManuvrGPS(_n);
+}
+
+
 
 /*******************************************************************************
 * Functions that just print things.                                            *
@@ -79,6 +84,14 @@ int main(int argc, char *argv[]) {
 
   // The first thing we should do: Instance a kernel.
   kernel = new Kernel();
+
+  if (0 != BufferPipe::registerPipe("ManuvrGPS", 1, _pipe_factory_1)) {
+    printf("Failed to add ManuvrGPS to the pipe registry.\n");
+    exit(1);
+  }
+
+  // Pipe strategy planning...
+  const uint8_t pipe_plan_gps[] = {1, 0};
 
   #if defined(__MANUVR_DEBUG)
     // spend time and memory measuring performance.
@@ -110,16 +123,14 @@ int main(int argc, char *argv[]) {
   // We need at least ONE transport to be useful...
   #if defined(MANUVR_SUPPORT_TCPSOCKET)
     ManuvrTCP tcp_srv((const char*) "0.0.0.0", 2319);
+    tcp_srv.setPipeStrategy(pipe_plan_gps);
     kernel->subscribe(&tcp_srv);
-
-    ManuvrGPS gps0(&tcp_srv);
   #endif
 
   #if defined(MANUVR_SUPPORT_UDP)
     ManuvrUDP udp_srv((const char*) "0.0.0.0", 6053);
+    udp_srv.setPipeStrategy(pipe_plan_gps);
     kernel->subscribe(&udp_srv);
-
-    ManuvrGPS gps1(&udp_srv);
   #endif
 
   // Once we've loaded up all the goodies we want, we finalize everything thusly...

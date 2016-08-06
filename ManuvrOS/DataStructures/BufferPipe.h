@@ -136,6 +136,10 @@ enum class ManuvrPipeSignal {
 // Hopefully, this will be enough until we think of something smarter.
 #define MAXIMUM_PIPE_DIVERSITY  16
 
+class BufferPipe;
+
+typedef BufferPipe* (*bpFactory) (BufferPipe*, BufferPipe*);
+
 /*
 * TODO: This structure might evolve into ZooInmate.
 * This structure tracks the types of pipes this build supports. It is
@@ -145,8 +149,9 @@ enum class ManuvrPipeSignal {
 typedef struct {
   const char* pipe_name;
   int         pipe_code;
-  void*       factory;
+  bpFactory   factory;
 } PipeDef;
+
 
 /*
 * Here, "far" refers to "farther from the counterparty". That is: closer to our
@@ -200,6 +205,7 @@ class BufferPipe {
     int8_t joinEnds();
 
     /* Members pertaining to pipe-strategy. */
+    inline const uint8_t* getPipeStrategy()           {  return _pipe_strategy;   };
     inline void setPipeStrategy(const uint8_t* strat) {  _pipe_strategy = strat;  };
     inline uint8_t pipeCode() {  return _pipe_code;  };
 
@@ -223,14 +229,18 @@ class BufferPipe {
     * This is the list of all supported pipe types in the system. It is
     *   NULL-terminated.
     */
-    static PipeDef* _supported_strategies[];
+    static PipeDef _supported_strategies[];
+    static int registerPipe(const char*, int, bpFactory);
+    static BufferPipe* spawnPipe(int, BufferPipe*, BufferPipe*);
 
     /* Debug and logging support */
     static const char* memMgmtString(int8_t);
     static const char* signalString(ManuvrPipeSignal);
 
 
+
   protected:
+    const uint8_t* _pipe_strategy;  // See notes.
     BufferPipe* _near;  // These two members create a double-linked-list.
     BufferPipe* _far;   // Need such topology for bi-directional pipe.
 
@@ -239,13 +249,13 @@ class BufferPipe {
 
     /* Simple checks that we will need to do. */
     inline bool haveNear() {  return (nullptr != _near);  };
-    inline bool haveFar() {   return (nullptr != _far);   };
+    bool haveFar();
 
     virtual void printDebug(StringBuilder*);
 
 
+
   private:
-    const uint8_t* _pipe_strategy;  // See notes.
     uint16_t _flags;
     uint8_t  _pipe_code;
 };

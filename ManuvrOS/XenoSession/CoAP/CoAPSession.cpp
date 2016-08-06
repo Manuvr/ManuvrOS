@@ -51,6 +51,13 @@ limitations under the License.
 CoAPSession::CoAPSession(BufferPipe* _near_side) : XenoSession(_near_side) {
 	working   = NULL;
 	_next_packetid = 1;
+  _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
+
+	// If our base transport is packetized, we will implement CoAP as it is
+	//   defined to run over UDP. Otherwise, we will assume TCP.
+	if (_near_side->_bp_flag(BPIPE_FLAG_PIPE_PACKETIZED)) {
+		_bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
+	}
 
   _ping_timer.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG);
   _ping_timer.isManaged(true);
@@ -60,14 +67,6 @@ CoAPSession::CoAPSession(BufferPipe* _near_side) : XenoSession(_near_side) {
   _ping_timer.alterSchedulePeriod(4000);
   _ping_timer.autoClear(false);
   _ping_timer.enableSchedule(false);
-
-  _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
-
-	// If our base transport is packetized, we will implement CoAP as it is
-	//   defined to run over UDP. Otherwise, we will assume TCP.
-	if (_near_side->_bp_flag(BPIPE_FLAG_PIPE_PACKETIZED)) {
-		_bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
-	}
 
   if (Kernel::getInstance()->booted()) {
     bootComplete();   // Because we are instantiated well after boot, we call this on construction.
@@ -144,7 +143,9 @@ int8_t CoAPSession::toCounterparty(StringBuilder* buf, int8_t mm) {
 * @return A declaration of memory-management responsibility.
 */
 int8_t CoAPSession::fromCounterparty(StringBuilder* buf, int8_t mm) {
-	bin_stream_rx(buf->string(), buf->length());
+	if (bin_stream_rx(buf->string(), buf->length())) {
+	}
+	buf->clear();
   return MEM_MGMT_RESPONSIBLE_BEARER;
 }
 
@@ -163,28 +164,26 @@ int8_t CoAPSession::fromCounterparty(StringBuilder* buf, int8_t mm) {
 * @return  int8_t  // TODO!!!
 */
 int8_t CoAPSession::bin_stream_rx(unsigned char *buf, int len) {
-  int8_t return_value = 0;
 	local_log.concatf("CoAPSession::bin_stream_rx(0x%08x, %d): ", (uint32_t) buf, len);
 	CoAPMessage *recvPDU = new CoAPMessage(buf, len, len);
 	if(recvPDU->validate()!=1) {
 		local_log.concat("Malformed CoAP packet\n");
-		return return_value;
+		return 0;
 	}
 	recvPDU->printDebug(&local_log);
 
-	for (int x = 0; x < len; x++) {
-		local_log.concatf("%02x ", *(buf+x));
-	}
+	for (int x = 0; x < len; x++) local_log.concatf("%02x ", *(buf+x));
+
 	local_log.concat("\n");
 	Kernel::log(&local_log);
-  return return_value;
+  return 1;
 }
 
 
 int8_t CoAPSession::connection_callback(bool _con) {
-	XenoSession::connection_callback(_con);
 	local_log.concatf("\n\nSession%sconnected\n\n", (_con ? " " : " dis"));
 	Kernel::log(&local_log);
+	XenoSession::connection_callback(_con);
 	if (_con) {
 		//sendConnectPacket();
 	}

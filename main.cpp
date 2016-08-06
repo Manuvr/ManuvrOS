@@ -83,6 +83,10 @@ void kernelDebugDump() {
   Kernel::log(&output);
 }
 
+BufferPipe* _pipe_factory_0(BufferPipe* _n, BufferPipe* _f) {
+  return (BufferPipe*) new ManuvrGPS(_n);
+}
+
 
 /*******************************************************************************
 * Functions that just print things.                                            *

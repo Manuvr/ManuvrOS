@@ -61,7 +61,38 @@ const char* BufferPipe::signalString(ManuvrPipeSignal code) {
   }
 }
 
-PipeDef* BufferPipe::_supported_strategies[MAXIMUM_PIPE_DIVERSITY];
+PipeDef BufferPipe::_supported_strategies[MAXIMUM_PIPE_DIVERSITY];
+
+int BufferPipe::registerPipe(const char* _nom, int _code, bpFactory _factory) {
+  for (int i = 0; i < MAXIMUM_PIPE_DIVERSITY; i++) {
+    if (0 == _supported_strategies[i].pipe_code) {
+      _supported_strategies[i].pipe_name = _nom;
+      _supported_strategies[i].pipe_code = _code;
+      _supported_strategies[i].factory   = _factory;
+      return 0;
+    }
+    else if (_supported_strategies[i].pipe_code == _code) {
+      // Pipe code exists. Abort.
+      return -2;
+    }
+  }
+  return -1;
+}
+
+BufferPipe* BufferPipe::spawnPipe(int _code, BufferPipe* _n, BufferPipe* _f) {
+  for (int i = 0; i < MAXIMUM_PIPE_DIVERSITY; i++) {
+    if (_supported_strategies[i].pipe_code == _code) {
+      #if defined(__MANUVR_PIPE_DEBUG)
+      StringBuilder log;
+      log.concatf("spawnPipe(%d, %s, %s)\n", _code, (_n ? _n->pipeName() : "NULL"), (_f ? _f->pipeName() : "NULL"));
+      Kernel::log(&log);
+      #endif
+      return _supported_strategies[i].factory(_n, _f);
+    }
+  }
+  return nullptr;
+}
+
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -240,7 +271,7 @@ int8_t BufferPipe::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
 *
 * @param   BufferPipe*  The newly-introduced BufferPipe.
 * @param   int8_t       The default mem-mgmt strategy for this BufferPipe.
-* @return  An MM return code.
+* @return  Non-zero on error.
 */
 int8_t BufferPipe::setNear(BufferPipe* nu) {
   if (nullptr == _near) {
@@ -248,7 +279,7 @@ int8_t BufferPipe::setNear(BufferPipe* nu) {
     if (nullptr != nu) {
       // ...and nu is itself non-null, and the _mm is valid...
       _near = nu;
-      return 0;  // TODO: Yuck.
+      return 0;
     }
   }
   else {
@@ -256,7 +287,7 @@ int8_t BufferPipe::setNear(BufferPipe* nu) {
     Kernel::log("setNear() tried to clobber another pipe.\n");
     #endif
   }
-  return MEM_MGMT_RESPONSIBLE_ERROR;
+  return -1;
 }
 
 
@@ -270,7 +301,7 @@ int8_t BufferPipe::setNear(BufferPipe* nu) {
 *
 * @param   BufferPipe*  The newly-introduced BufferPipe.
 * @param   int8_t       The default mem-mgmt strategy for this BufferPipe.
-* @return  A result code.
+* @return  Non-zero on error.
 */
 int8_t BufferPipe::setFar(BufferPipe* nu) {
   if (nullptr == _far) {
@@ -278,7 +309,7 @@ int8_t BufferPipe::setFar(BufferPipe* nu) {
     if (nullptr != nu) {
       // ...and nu is itself non-null, and the _mm is valid...
       _far = nu;
-      return 0;  // TODO: Yuck.
+      return 0;
     }
   }
   else {
@@ -286,9 +317,35 @@ int8_t BufferPipe::setFar(BufferPipe* nu) {
     Kernel::log("setFar() tried to clobber another pipe.\n");
     #endif
   }
-  return MEM_MGMT_RESPONSIBLE_ERROR;
+  return -1;
 }
 
+/**
+* Called to find out if there is a far-side.
+* If there is no far-side, but there is a pipe-strategy, this method will
+*   attempt to inflect it.
+*
+* @return  true is there is a far-side.
+*/
+bool BufferPipe::haveFar() {
+  if (nullptr != _far) return true;
+  if (nullptr != _pipe_strategy) {
+    // If there is no far-side, but we DO have a strategy...
+    if (0 != *_pipe_strategy) {
+      // ...and that stratgy makes sense, try and implement it with this
+      //   instance as the near-side of the new pipe.
+      setFar(spawnPipe(*_pipe_strategy, this, NULL));
+      if (nullptr != _far) {
+        // Mark that we allocated the new pipe.
+        _bp_set_flag(BPIPE_FLAG_WE_ALLOCD_FAR, true);
+        // Propagate the strategy.
+        _far->setPipeStrategy(_pipe_strategy+1);
+        return true;  // We now have a far-side.
+      }
+    }
+  }
+  return false;
+}
 
 /**
 * Joins the ends of this pipe in preparation for our own tear-down.

@@ -92,6 +92,7 @@ This is basically only for linux for now.
         }
         else {
           ManuvrTCP* nu_connection = new ManuvrTCP(listening_inst, cli_sock, &cli_addr);
+          nu_connection->setPipeStrategy(listening_inst->getPipeStrategy());
 
           ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
           event->addArg((EventReceiver*) nu_connection);
