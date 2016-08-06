@@ -244,6 +244,7 @@ class ManuvrGPS : public BufferPipe {
     ~ManuvrGPS();
 
     /* Override from BufferPipe. */
+    virtual int8_t fromCounterparty(ManuvrPipeSignal, void*);
     virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
     virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
 
@@ -259,6 +260,8 @@ class ManuvrGPS : public BufferPipe {
     StringBuilder  _accumulator;
     ManuvrRunnable _gps_frame;
 
+    bool _attempt_parse();
+
     /**
     * Calculate raw sentence checksum. Does not check sentence integrity.
     */
@@ -272,12 +275,12 @@ class ManuvrGPS : public BufferPipe {
     /**
     * Determine talker identifier.
     */
-    bool minmea_talker_id(char talker[3], const char *sentence);
+    bool _talker_id(char talker[3], const char *sentence);
 
     /**
     * Determine sentence identifier.
     */
-    enum minmea_sentence_id minmea_sentence_id(const char *sentence, bool strict);
+    enum minmea_sentence_id _sentence_id(const char *sentence, bool strict);
 
     /*
     * Parse a specific type of sentence. Return true on success.
@@ -301,7 +304,7 @@ class ManuvrGPS : public BufferPipe {
     * T - date/time stamp (int *, int *, int *)
     * Returns true on success. See library source code for details.
     */
-    bool minmea_scan(const char *sentence, const char *format, ...);
+    bool _scan(const char *sentence, const char *format, ...);
 
     /**
     * Convert GPS UTC date/time representation to a UNIX timestamp.

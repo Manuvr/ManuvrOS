@@ -98,6 +98,8 @@ MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
 #MANUVR_OPTIONS += -D__MANUVR_FREERTOS
 MANUVR_OPTIONS += -D__MANUVR_LINUX
 
+MANUVR_OPTIONS += -DMANUVR_GPS_PIPE
+
 # Wire and session protocols...
 #MANUVR_OPTIONS += -DMANUVR_SUPPORT_OSC
 #MANUVR_OPTIONS += -DMANUVR_OVER_THE_WIRE
@@ -164,6 +166,11 @@ tests: libs
 	make -C ManuvrOS/
 	$(CXX) -static -g -o dstest tests/TestDataStructures.cpp $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
 	$(CXX) -static -g -o bptest tests/BufferPipeTest.cpp $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
+
+examples: libs
+	export __MANUVR_LINUX
+	make -C ManuvrOS/
+	$(CXX) -static -g -o gpstest examples/tcp-gps.cpp $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O0
 
 builddir:
 	mkdir -p $(OUTPUT_PATH)

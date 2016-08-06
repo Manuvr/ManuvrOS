@@ -64,21 +64,16 @@ ManuvrGPS::ManuvrGPS() : BufferPipe() {
   _bp_set_flag(BPIPE_FLAG_IS_TERMINUS | BPIPE_FLAG_IS_BUFFERED, true);
 }
 
-ManuvrGPS::ManuvrGPS(ManuvrUDP* udp, uint32_t ip, uint16_t port) : BufferPipe() {
+ManuvrGPS::ManuvrGPS(BufferPipe* src) : BufferPipe() {
+  _bp_set_flag(BPIPE_FLAG_IS_TERMINUS | BPIPE_FLAG_IS_BUFFERED, true);
   // The near-side will always be feeding us from buffers on the stack. Since
   //   the buffer will vanish after return, we must copy it.
-  _ip    = ip;
-  _port  = port;
-  _udp   = udp;   // TODO: setNear(udp); and thereafter cast to ManuvrUDP?
-  _flags = 0;
-
-  _bp_set_flag(BPIPE_FLAG_IS_TERMINUS | BPIPE_FLAG_IS_BUFFERED, true);
+  setNear(src);
 }
 
 
 ManuvrGPS::~ManuvrGPS() {
   _accumulator.clear();
-  if (_udp) _udp->udpPipeDestroyCallback(this);
 }
 
 
@@ -90,6 +85,39 @@ ManuvrGPS::~ManuvrGPS() {
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
 const char* ManuvrGPS::pipeName() { return "ManuvrGPS"; }
+
+/**
+* Pass a signal to the counterparty.
+*
+* Data referenced by _args should be assumed to be on the stack of the caller.
+*
+* @param   _sig   The signal.
+* @param   _args  Optional argument pointer.
+* @return  Negative on error. Zero on success.
+*/
+int8_t ManuvrGPS::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
+  #if defined(__MANUVR_PIPE_DEBUG)
+    StringBuilder local_log;
+    local_log.concatf("%s --sig--> %s: %s\n", (haveNear() ? _near->pipeName() : "ORIG"), pipeName(), signalString(_sig));
+    Kernel::log(&local_log);
+  #endif
+  switch (_sig) {
+    case ManuvrPipeSignal::XPORT_CONNECT:
+    case ManuvrPipeSignal::XPORT_DISCONNECT:
+      // If we lose or gain a connection, wipe the buffer.
+      _accumulator.clear();
+      return 1;
+
+    case ManuvrPipeSignal::FAR_SIDE_DETACH:   // The far side is detaching.
+    case ManuvrPipeSignal::NEAR_SIDE_DETACH:   // The near side is detaching.
+    case ManuvrPipeSignal::FAR_SIDE_ATTACH:
+    case ManuvrPipeSignal::NEAR_SIDE_ATTACH:
+    case ManuvrPipeSignal::UNDEF:
+    default:
+      break;
+  }
+  return BufferPipe::fromCounterparty(_sig, _args);
+}
 
 
 /**
@@ -138,12 +166,14 @@ int8_t ManuvrGPS::fromCounterparty(StringBuilder* buf, int8_t mm) {
           a) Did so with the intention that it never be free'd, or...
           b) Has a means of discovering when it is safe to free.  */
       _accumulator.concatHandoff(buf);
+      _attempt_parse();
       return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
 
     case MEM_MGMT_RESPONSIBLE_BEARER:
       /* We are now the bearer. That means that by returning non-failure, the
           caller will expect _us_ to manage this memory.  */
       _accumulator.concatHandoff(buf);
+      _attempt_parse();
       return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
 
     default:
@@ -157,6 +187,108 @@ int8_t ManuvrGPS::fromCounterparty(StringBuilder* buf, int8_t mm) {
 /*******************************************************************************
 * GPS-specific functions                                                       *
 *******************************************************************************/
+
+bool ManuvrGPS::_attempt_parse() {
+  if (_accumulator.split("\n") == 0) return false;
+
+  char* line = nullptr;
+  while (_accumulator.count() > 1) {
+    line = _accumulator.position(0);
+    switch (_sentence_id(line, false)) {
+          case MINMEA_SENTENCE_RMC: {
+              struct minmea_sentence_rmc frame;
+              if (_parse_rmc(&frame, line)) {
+                  printf("$xxRMC: raw coordinates and speed: (%d/%d,%d/%d) %d/%d\n",
+                          frame.latitude.value, frame.latitude.scale,
+                          frame.longitude.value, frame.longitude.scale,
+                          frame.speed.value, frame.speed.scale);
+                  printf("$xxRMC fixed-point coordinates and speed scaled to three decimal places: (%d,%d) %d\n",
+                          minmea_rescale(&frame.latitude, 1000),
+                          minmea_rescale(&frame.longitude, 1000),
+                          minmea_rescale(&frame.speed, 1000));
+                  printf("$xxRMC floating point degree coordinates and speed: (%f,%f) %f\n",
+                          minmea_tocoord(&frame.latitude),
+                          minmea_tocoord(&frame.longitude),
+                          minmea_tofloat(&frame.speed));
+              }
+              else {
+                  printf("$xxRMC sentence is not parsed\n");
+              }
+          } break;
+          case MINMEA_SENTENCE_GGA: {
+              struct minmea_sentence_gga frame;
+              if (_parse_gga(&frame, line)) {
+                  printf("$xxGGA: fix quality: %d\n", frame.fix_quality);
+              }
+              else {
+                  printf("$xxGGA sentence is not parsed\n");
+              }
+          } break;
+          case MINMEA_SENTENCE_GST: {
+              struct minmea_sentence_gst frame;
+              if (_parse_gst(&frame, line)) {
+                  printf("$xxGST: raw latitude,longitude and altitude error deviation: (%d/%d,%d/%d,%d/%d)\n",
+                          frame.latitude_error_deviation.value, frame.latitude_error_deviation.scale,
+                          frame.longitude_error_deviation.value, frame.longitude_error_deviation.scale,
+                          frame.altitude_error_deviation.value, frame.altitude_error_deviation.scale);
+                  printf("$xxGST fixed point latitude,longitude and altitude error deviation"
+                         " scaled to one decimal place: (%d,%d,%d)\n",
+                          minmea_rescale(&frame.latitude_error_deviation, 10),
+                          minmea_rescale(&frame.longitude_error_deviation, 10),
+                          minmea_rescale(&frame.altitude_error_deviation, 10));
+                  printf("$xxGST floating point degree latitude, longitude and altitude error deviation: (%f,%f,%f)",
+                          minmea_tofloat(&frame.latitude_error_deviation),
+                          minmea_tofloat(&frame.longitude_error_deviation),
+                          minmea_tofloat(&frame.altitude_error_deviation));
+              }
+              else {
+                  printf("$xxGST sentence is not parsed\n");
+              }
+          } break;
+          case MINMEA_SENTENCE_GSV: {
+              struct minmea_sentence_gsv frame;
+              if (_parse_gsv(&frame, line)) {
+                  printf("$xxGSV: message %d of %d\n", frame.msg_nr, frame.total_msgs);
+                  printf("$xxGSV: sattelites in view: %d\n", frame.total_sats);
+                  for (int i = 0; i < 4; i++)
+                      printf("$xxGSV: sat nr %d, elevation: %d, azimuth: %d, snr: %d dbm\n",
+                          frame.sats[i].nr,
+                          frame.sats[i].elevation,
+                          frame.sats[i].azimuth,
+                          frame.sats[i].snr);
+              }
+              else {
+                  printf("$xxGSV sentence is not parsed\n");
+              }
+          } break;
+          case MINMEA_SENTENCE_VTG: {
+             struct minmea_sentence_vtg frame;
+             if (_parse_vtg(&frame, line)) {
+                  printf("$xxVTG: true track degrees = %f\n",
+                         minmea_tofloat(&frame.true_track_degrees));
+                  printf("        magnetic track degrees = %f\n",
+                         minmea_tofloat(&frame.magnetic_track_degrees));
+                  printf("        speed knots = %f\n",
+                          minmea_tofloat(&frame.speed_knots));
+                  printf("        speed kph = %f\n",
+                          minmea_tofloat(&frame.speed_kph));
+             }
+             else {
+                  printf("$xxVTG sentence is not parsed\n");
+             }
+          } break;
+          case MINMEA_INVALID: {
+              printf("$xxxxx sentence is not valid\n");
+          } break;
+          default: {
+              printf("$xxxxx sentence is not parsed\n");
+          } break;
+    }
+    _accumulator.drop_position(0);
+  }
+  return true;
+}
+
 
 void ManuvrGPS::printDebug(StringBuilder* output) {
   BufferPipe::printDebug(output);
@@ -494,7 +626,7 @@ parse_error:
 
 bool ManuvrGPS::_talker_id(char talker[3], const char *sentence) {
   char type[6];
-  if (!minmea_scan(sentence, "t", type)) {
+  if (!_scan(sentence, "t", type)) {
     return false;
   }
   talker[0] = type[0];
@@ -504,9 +636,9 @@ bool ManuvrGPS::_talker_id(char talker[3], const char *sentence) {
 }
 
 enum minmea_sentence_id ManuvrGPS::_sentence_id(const char *sentence, bool strict) {
-    if (!minmea_check(sentence, strict)) return MINMEA_INVALID;
+    if (!_check(sentence, strict)) return MINMEA_INVALID;
     char type[6];
-    if (!minmea_scan(sentence, "t", type)) {
+    if (!_scan(sentence, "t", type)) {
       return MINMEA_INVALID;
     }
 
@@ -536,7 +668,7 @@ bool ManuvrGPS::_parse_rmc(struct minmea_sentence_rmc *frame, const char *senten
   int latitude_direction;
   int longitude_direction;
   int variation_direction;
-  if (!minmea_scan(sentence, "tTcfdfdffDfd",
+  if (!_scan(sentence, "tTcfdfdffDfd",
       type,
       &frame->time,
       &validity,
@@ -564,7 +696,7 @@ bool ManuvrGPS::_parse_gga(struct minmea_sentence_gga *frame, const char *senten
   int latitude_direction;
   int longitude_direction;
 
-    if (!minmea_scan(sentence, "tTfdfdiiffcfci_",
+    if (!_scan(sentence, "tTfdfdiiffcfci_",
             type,
             &frame->time,
             &frame->latitude, &latitude_direction,
@@ -590,7 +722,7 @@ bool ManuvrGPS::_parse_gsa(struct minmea_sentence_gsa *frame, const char *senten
     // $GPGSA,A,3,04,05,,09,12,,,24,,,,,2.5,1.3,2.1*39
     char type[6];
 
-    if (!minmea_scan(sentence, "tciiiiiiiiiiiiifff",
+    if (!_scan(sentence, "tciiiiiiiiiiiiifff",
             type,
             &frame->mode,
             &frame->fix_type,
@@ -622,7 +754,7 @@ bool ManuvrGPS::_parse_gll(struct minmea_sentence_gll *frame, const char *senten
     int latitude_direction;
     int longitude_direction;
 
-    if (!minmea_scan(sentence, "tfdfdTc;c",
+    if (!_scan(sentence, "tfdfdTc;c",
             type,
             &frame->latitude, &latitude_direction,
             &frame->longitude, &longitude_direction,
@@ -643,7 +775,7 @@ bool ManuvrGPS::_parse_gst(struct minmea_sentence_gst *frame, const char *senten
     // $GPGST,024603.00,3.2,6.6,4.7,47.3,5.8,5.6,22.0*58
     char type[6];
 
-    if (!minmea_scan(sentence, "tTfffffff",
+    if (!_scan(sentence, "tTfffffff",
             type,
             &frame->time,
             &frame->rms_deviation,
@@ -668,7 +800,7 @@ bool ManuvrGPS::_parse_gsv(struct minmea_sentence_gsv *frame, const char *senten
     // $GPGSV,4,4,13*7B
     char type[6];
 
-    if (!minmea_scan(sentence, "tiii;iiiiiiiiiiiiiiii",
+    if (!_scan(sentence, "tiii;iiiiiiiiiiiiiiii",
             type,
             &frame->total_msgs,
             &frame->msg_nr,
@@ -706,7 +838,7 @@ bool ManuvrGPS::_parse_vtg(struct minmea_sentence_vtg *frame, const char *senten
     char type[6];
     char c_true, c_magnetic, c_knots, c_kph, c_faa_mode;
 
-    if (!minmea_scan(sentence, "tfcfcfcfc;c",
+    if (!_scan(sentence, "tfcfcfcfc;c",
             type,
             &frame->true_track_degrees,
             &c_true,

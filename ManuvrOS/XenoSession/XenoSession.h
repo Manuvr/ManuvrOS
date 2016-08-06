@@ -84,10 +84,11 @@ class XenoSession : public EventReceiver, public BufferPipe {
     inline bool isConnected() {      return (0 == (XENOSESSION_STATE_PENDING_CONN & getPhase()));   }
 
     /* Override from BufferPipe. */
-    virtual int8_t fromCounterparty(ManuvrPipeSignal, void *);
+    virtual int8_t fromCounterparty(ManuvrPipeSignal, void*);
     virtual int8_t toCounterparty(StringBuilder*, int8_t mm) =0;
     virtual int8_t fromCounterparty(StringBuilder*, int8_t mm) =0;
 
+    /* These are callbacks invoked by the Pipe signalling system. */
     virtual int8_t connection_callback(bool connected);
 
     /* Overrides from EventReceiver */
@@ -101,6 +102,7 @@ class XenoSession : public EventReceiver, public BufferPipe {
 
 
     static const char* sessionPhaseString(uint16_t state_code);
+
 
 
   protected:
@@ -123,7 +125,6 @@ class XenoSession : public EventReceiver, public BufferPipe {
     inline void requestService() {   raiseEvent(&_session_service);  };
     int purgeInbound();
     int purgeOutbound();
-
 
 
 

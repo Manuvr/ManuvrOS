@@ -104,7 +104,6 @@ CoAPSession::~CoAPSession() {
 * Inward toward the transport.
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
@@ -124,7 +123,7 @@ int8_t CoAPSession::toCounterparty(StringBuilder* buf, int8_t mm) {
     case MEM_MGMT_RESPONSIBLE_BEARER:
       /* We are now the bearer. That means that by returning non-failure, the
           caller will expect _us_ to manage this memory.  */
-      // TODO: Freeing the buffer? Let UDP do it?
+      // TODO: Freeing the buffer?
       if (haveNear()) {
         return _near->toCounterparty(buf, MEM_MGMT_RESPONSIBLE_BEARER);
       }
@@ -141,7 +140,6 @@ int8_t CoAPSession::toCounterparty(StringBuilder* buf, int8_t mm) {
 * Outward toward the application (or into the accumulator).
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
