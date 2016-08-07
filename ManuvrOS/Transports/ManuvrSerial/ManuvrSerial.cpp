@@ -45,19 +45,20 @@ Platforms that require it should be able to extend this driver for specific
 
 #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
-
-#elif defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
+#elif defined(__MANUVR_LINUX)
+  // Linux requires these libraries for serial port.
   #include <cstdio>
   #include <stdlib.h>
   #include <unistd.h>
-
-  // Threaded platforms will need this to compensate for a loss of ISR.
-  extern void* xport_read_handler(void* active_xport);
 #else
   // No special globals needed for this platform.
 #endif
 
 
+#if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
+  // Threaded platforms will need this to compensate for a loss of ISR.
+  extern void* xport_read_handler(void* active_xport);
+#endif
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -119,7 +120,9 @@ ManuvrSerial::~ManuvrSerial() {
 void ManuvrSerial::__class_initializer() {
   setReceiverName("ManuvrSerial");
   _options           = 0;
-  _sock              = 0;
+  #if defined(__MANUVR_LINUX)
+    _sock            = 0;
+  #endif
 
   // Build some pre-formed Events.
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
@@ -146,20 +149,22 @@ void ManuvrSerial::__class_initializer() {
 * @return A declaration of memory-management responsibility.
 */
 int8_t ManuvrSerial::toCounterparty(StringBuilder* buf, int8_t mm) {
+  uint8_t* ptr = buf->string();
+  int      len = buf->length();
+  bool     res = write_port(ptr, len) ? MEM_MGMT_RESPONSIBLE_BEARER : MEM_MGMT_RESPONSIBLE_CALLER;
+
   switch (mm) {
     case MEM_MGMT_RESPONSIBLE_CALLER:
       // NOTE: No break. This might be construed as a way of saying CREATOR.
+    case MEM_MGMT_RESPONSIBLE_BEARER:
+      /* We are now the bearer. That means that by returning non-failure, the
+          caller will expect _us_ to manage this memory.  */
+      buf->clear();
     case MEM_MGMT_RESPONSIBLE_CREATOR:
       /* The system that allocated this buffer either...
           a) Did so with the intention that it never be free'd, or...
           b) Has a means of discovering when it is safe to free.  */
-      return (write_port(buf->string(), buf->length()) ? MEM_MGMT_RESPONSIBLE_CREATOR : MEM_MGMT_RESPONSIBLE_CALLER);
-
-    case MEM_MGMT_RESPONSIBLE_BEARER:
-      /* We are now the bearer. That means that by returning non-failure, the
-          caller will expect _us_ to manage this memory.  */
-      // TODO: Freeing the buffer?
-      return (write_port(buf->string(), buf->length()) ? MEM_MGMT_RESPONSIBLE_BEARER : MEM_MGMT_RESPONSIBLE_CALLER);
+      return mm;
 
     default:
       /* This is more ambiguity than we are willing to bear... */
@@ -231,10 +236,27 @@ int8_t ManuvrSerial::init() {
 
   #if defined (STM32F4XX)        // STM32F4
 
-  #elif defined (__MK20DX128__)  // Teensy3
-
-  #elif defined (__MK20DX256__)  // Teensy3.1
-
+  #elif defined (__MK20DX128__) || defined (__MK20DX256__)  // Teensy3.x
+    if (nullptr == _addr) {
+      if (getVerbosity() > 1) {
+        local_log.concatf("No serial port ID supplied.\n", *_addr);
+        Kernel::log(&local_log);
+      }
+      return -1;
+    }
+    switch (*_addr) {
+      case 'U':   // This is the USB driver.
+        Serial.begin(_baud_rate);
+        break;
+      #if defined (__MK20DX256__)  // Teensy3.1 has more options.
+      #endif
+      default:
+        if (getVerbosity() > 1) {
+          local_log.concatf("Unsupported serial port: %c...\n", *_addr);
+          Kernel::log(&local_log);
+        }
+        return -1;
+    }
   #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
   #elif defined (__MANUVR_LINUX) // Linux environment
@@ -321,14 +343,25 @@ int8_t ManuvrSerial::reset() {
 
 int8_t ManuvrSerial::read_port() {
   if (connected()) {
-    unsigned char *buf = (unsigned char *) alloca(256);
-    int n;
+    unsigned char *buf = (unsigned char *) alloca(255);
+    int n = 0;
     #if defined (STM32F4XX)        // STM32F4
 
-    #elif defined (__MK20DX128__)  // Teensy3
-
-    #elif defined (__MK20DX256__)  // Teensy3.1
-
+    #elif defined (__MK20DX128__) || defined (__MK20DX256__) // Teensy3.x
+      while (listening()) {
+        if (Serial.available()) {
+          while (Serial.available()) {
+            *(buf + n++) = Serial.read();
+          }
+          bytes_received += n;
+          BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
+          for (int i = 0; i < 255; i++) *(buf+i) = 0;
+          n = 0;
+        }
+        else {
+          sleep_millis(50);
+        }
+      }
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
     #elif defined (__MANUVR_LINUX) // Linux with pthreads...
@@ -376,10 +409,9 @@ bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
 
     #elif defined(STM32F7XX) | defined(STM32F746xx)
       bytes_written = out_len;
-    #elif defined (__MK20DX128__)  // Teensy3
-
-    #elif defined (__MK20DX256__)  // Teensy3.1
-
+    #elif defined (__MK20DX128__) || defined (__MK20DX256__) // Teensy3.x
+      Serial.print((char*) out);
+      bytes_written = out_len;
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
     #elif defined (__MANUVR_LINUX) // Linux
       bytes_written = (int) write(_sock, out, out_len);

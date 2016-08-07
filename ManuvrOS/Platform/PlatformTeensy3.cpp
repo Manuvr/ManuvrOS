@@ -158,10 +158,15 @@ bool initPlatformRTC() {
 *   time or timezone.
 * Returns false if the date failed to set. True if it did.
 */
-bool setTimeAndDate(char* nu_date_time) {
+bool setTimeAndDateStr(char* nu_date_time) {
   return false;
 }
 
+/*
+*/
+bool setTimeAndDate(uint8_t y, uint8_t m, uint8_t d, uint8_t wd, uint8_t h, uint8_t mi, uint8_t s) {
+  return false;
+}
 
 
 /*
