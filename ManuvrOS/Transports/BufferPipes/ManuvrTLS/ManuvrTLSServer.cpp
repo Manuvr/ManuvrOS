@@ -23,11 +23,12 @@ Initial implentation is via mbedTLS.
 */
 
 #include "ManuvrTLS.h"
+#include <Kernel.h>
 
-#if defined(WITH_MBED_TLS)
+#if defined(__MANUVR_MBEDTLS)
 
 
-ManuvrTLSServer::ManuvrTLSServer() : ManuvrTLS() {
+ManuvrTLSServer::ManuvrTLSServer(BufferPipe* _n) : ManuvrTLS(_n, MBEDTLS_DEBUG_LEVEL) {
 }
 
 

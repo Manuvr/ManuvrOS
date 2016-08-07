@@ -33,7 +33,7 @@ One class is for the server (listener), and the other for client (initiator),
 
 #include <DataStructures/BufferPipe.h>
 
-#if defined(MANUVR_WITH_MBEDTLS)
+#if defined(__MANUVR_MBEDTLS)
 
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
@@ -51,6 +51,7 @@ One class is for the server (listener), and the other for client (initiator),
 
 
 #define MAX_CIPHERSUITE_COUNT   10
+#define MBEDTLS_DEBUG_LEVEL     5
 
 
 /*
@@ -58,22 +59,24 @@ One class is for the server (listener), and the other for client (initiator),
 */
 class ManuvrTLS : protected BufferPipe {
   public:
-    ManuvrTLS(int debug_lvl);
-    ~ManuvrTLS();
-
-    /* Override from BufferPipe. */
-    virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
-    virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
+    virtual ~ManuvrTLS();
 
 
   protected:
+    StringBuilder _log;
+
     mbedtls_pk_context       _pkey;
     mbedtls_ssl_config       _conf;
     mbedtls_x509_crt         _our_cert;
     mbedtls_entropy_context  _entropy;
     mbedtls_ctr_drbg_context _ctr_drbg;
 
+    ManuvrTLS(BufferPipe*, int);
+
     virtual void throwError(int ret) =0;
+
+
+    static int allowed_ciphersuites[];
 
 
   private:
@@ -82,9 +85,12 @@ class ManuvrTLS : protected BufferPipe {
 
 class ManuvrTLSServer : public ManuvrTLS {
   public:
-    ManuvrTLSServer();
-    ~ManuvrTLSServer();
+    ManuvrTLSServer(BufferPipe*);
+    virtual ~ManuvrTLSServer();
 
+    /* Override from BufferPipe. */
+    virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
+    virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
     void printDebug(StringBuilder*);
 
 
@@ -103,17 +109,21 @@ class ManuvrTLSServer : public ManuvrTLS {
 
 
 
-class ManuvrTLSClient : protected ManuvrTLS {
+class ManuvrTLSClient : public ManuvrTLS {
   public:
-    ManuvrTLSClient(
-             const unsigned char *priv_key,     size_t priv_key_len,
-             const unsigned char *peer_pub_key, size_t peer_pub_key_len,
-             const unsigned char *ca_pem,       size_t ca_pem_len,
-             const unsigned char *psk,          size_t psk_len,
-             const unsigned char *ident,        size_t ident_len,
-             int debug_level);
-    ~ManuvrTLSClient();
+    //ManuvrTLSClient(
+    //         const unsigned char *priv_key,     size_t priv_key_len,
+    //         const unsigned char *peer_pub_key, size_t peer_pub_key_len,
+    //         const unsigned char *ca_pem,       size_t ca_pem_len,
+    //         const unsigned char *psk,          size_t psk_len,
+    //         const unsigned char *ident,        size_t ident_len,
+    //         int debug_level);
+    ManuvrTLSClient(BufferPipe*);
+    virtual ~ManuvrTLSClient();
 
+    /* Override from BufferPipe. */
+    virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
+    virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
     void printDebug(StringBuilder*);
 
 
@@ -134,7 +144,8 @@ class ManuvrTLSClient : protected ManuvrTLS {
 
   private:
     int allowed_ciphersuites[MAX_CIPHERSUITE_COUNT];
-    mbedtls_x509_crt cacert;
+    mbedtls_x509_crt     cacert;
+    mbedtls_ssl_context  _ssl;
 
     //mbedtls_timing_delay_context timer;
     const unsigned char *recv_buf;
@@ -142,4 +153,4 @@ class ManuvrTLSClient : protected ManuvrTLS {
 };
 #endif   // __MANUVR_TLS_XFORMER_H__
 
-#endif  // MANUVR_WITH_MBEDTLS
+#endif  // __MANUVR_MBEDTLS

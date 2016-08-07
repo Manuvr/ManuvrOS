@@ -23,39 +23,66 @@ Initial implentation is via mbedTLS.
 */
 
 #include "ManuvrTLS.h"
+#include <Kernel.h>
 
-#if defined(WITH_MBED_TLS)
+#if defined(__MANUVR_MBEDTLS)
 
-static void tls_log_shunt(void *ctx, int level, const char *file, int line, const char *str) {
-  StringBuilder _tls_log;
-  _tls_log.concatf("%s:%04d: %s", file, line, str);
-  Kernel::log(&_tls_log);
-}
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
+
+// TODO: This needs to be full-featured, and then culled based
+//         on circumstance of connection.
+int ManuvrTLS::allowed_ciphersuites[] = {
+  MBEDTLS_TLS_PSK_WITH_AES_128_CCM_8,
+  0
+};
 
 
 
-ManuvrTLS::ManuvrTLS(int debug_lvl) : BufferPipe() {
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
+/**
+* Constructor.
+*/
+ManuvrTLS::ManuvrTLS(BufferPipe* _n, int debug_lvl) : BufferPipe() {
+  _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
   // mbedTLS will expect this array to be null-terminated. Zero it all...
   for (int x = 0; x < MAX_CIPHERSUITE_COUNT; x++) allowed_ciphersuites[x] = 0;
-
+  int ret = 0;
   mbedtls_ssl_config_init(&_conf);
-  mbedtls_x509_crt_init(&_ourcert);
+  mbedtls_x509_crt_init(&_our_cert);
   mbedtls_pk_init(&_pkey);
   mbedtls_entropy_init(&_entropy);
   mbedtls_ctr_drbg_init(&_ctr_drbg);
   mbedtls_debug_set_threshold(debug_lvl);
+
+  setNear(_n);
 }
 
+
+/**
+* Destructor.
+*/
 ManuvrTLS::~ManuvrTLS() {
-  // mbedTLS will expect this array to be null-terminated. Zero it all...
-  for (int x = 0; x < MAX_CIPHERSUITE_COUNT; x++) allowed_ciphersuites[x] = 0;
-
-  mbedtls_ssl_config_init(&_conf);
-  mbedtls_x509_crt_init(&_ourcert);
-  mbedtls_pk_init(&_pkey);
-  mbedtls_entropy_init(&_entropy);
-  mbedtls_ctr_drbg_init(&_ctr_drbg);
-  mbedtls_debug_set_threshold(debug_lvl);
+  mbedtls_ssl_config_free(&_conf);
+  mbedtls_x509_crt_free(&_our_cert);
+  mbedtls_pk_free(&_pkey);
+  mbedtls_entropy_free(&_entropy);
+  mbedtls_ctr_drbg_free(&_ctr_drbg);
 }
 
 #endif

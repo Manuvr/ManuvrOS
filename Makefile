@@ -112,6 +112,7 @@ MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT
 
 # Options for various security features.
 MANUVR_OPTIONS += -D__MANUVR_MBEDTLS
+
 # mbedTLS will require this in order to use our chosen options.
 MBEDTLS_CONFIG_FILE = $(WHERE_I_AM)/mbedTLS_conf.h
 
