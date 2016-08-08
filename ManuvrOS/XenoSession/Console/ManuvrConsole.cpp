@@ -312,7 +312,7 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
       break;
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }
 

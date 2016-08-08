@@ -338,7 +338,7 @@ int8_t ManuvrTCP::listen() {
   listening(true);
   local_log.concatf("TCP Now listening at %s:%d.\n", _addr, _port_number);
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -373,7 +373,7 @@ int8_t ManuvrTCP::read_port() {
 
   _thread_id = 0;
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -511,7 +511,7 @@ int8_t ManuvrTCP::notify(ManuvrRunnable *active_event) {
       break;
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }
 

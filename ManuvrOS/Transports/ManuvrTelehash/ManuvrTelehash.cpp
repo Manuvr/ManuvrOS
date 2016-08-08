@@ -294,7 +294,7 @@ int8_t ManuvrTelehash::listen() {
   listening(true);
   local_log.concatf("TCP Now listening at %s:%d.\n", _addr, _port_number);
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -340,7 +340,7 @@ int8_t ManuvrTelehash::read_port() {
     local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -506,6 +506,6 @@ int8_t ManuvrTelehash::notify(ManuvrRunnable *active_event) {
       break;
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }

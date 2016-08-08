@@ -131,6 +131,10 @@ int EventReceiver::purgeLogs() {
 }
 
 
+void EventReceiver::flushLocalLog() {
+  if (local_log.length() > 0) Kernel::log(&local_log);
+}
+
 
 #ifdef __MANUVR_CONSOLE_SUPPORT
 /**

@@ -838,7 +838,7 @@ int8_t Kernel::procIdleFlags() {
     // there was a problem. Do nothing.
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   current_event = nullptr;
   return return_value;
 }
@@ -1467,7 +1467,7 @@ int8_t Kernel::_route_console_input() {
     }
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -1555,7 +1555,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       break;
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   last_user_input.clear();
 }
 #endif  //__MANUVR_CONSOLE_SUPPORT

@@ -278,41 +278,41 @@ void ManuvrXport::connected(bool en) {
   }
 
   mark_connected(en);
-    if (en) {
-      //if (NULL == session) {
-      //  // We are expected to instantiate a XenoSession, and broadcast its existance.
-      //  // This will put it into the Event system so that auth and such can be handled cleanly.
-      //  // Once the session sets up, it will broadcast itself as having done so.
-      //  // TODO: Session discovery should happen at this point.
-      //  XenoSession* ses = (XenoSession*) new ManuvrSession(this);
-      //  _reap_session(true);
-      //  provide_session(ses);
+  if (en) {
+    //if (NULL == session) {
+    //  // We are expected to instantiate a XenoSession, and broadcast its existance.
+    //  // This will put it into the Event system so that auth and such can be handled cleanly.
+    //  // Once the session sets up, it will broadcast itself as having done so.
+    //  // TODO: Session discovery should happen at this point.
+    //  XenoSession* ses = (XenoSession*) new ManuvrSession(this);
+    //  _reap_session(true);
+    //  provide_session(ses);
 
-      //  ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
-      //  event->addArg((EventReceiver*) ses);
-      //  raiseEvent(event);
-      //}
+    //  ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
+    //  event->addArg((EventReceiver*) ses);
+    //  raiseEvent(event);
+    //}
 
-      if (NULL != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(false);
-      //if (session) session->connection_callback(true);
-    }
-    else {
-      // This is a disconnection event. We might want to cleanup all of our sessions
-      // that are outstanding.
-      if (NULL != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(true);
-      //if (session) {
-      //  session->connection_callback(false);
-      //  if(_reap_session()) {
-      //    delete session;
-      //    session = NULL;
-      //  }
-      //}
-    }
-  #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
-  if (_thread_id == 0) {
-    // If we are in a threaded environment, we will want a thread if there isn't one already.
-    createThread(&_thread_id, NULL, xport_read_handler, (void*) this);
+    if (nullptr != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(false);
+    //if (session) session->connection_callback(true);
   }
+  else {
+    // This is a disconnection event. We might want to cleanup all of our sessions
+    // that are outstanding.
+    if (nullptr != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(true);
+    //if (session) {
+    //  session->connection_callback(false);
+    //  if(_reap_session()) {
+    //    delete session;
+    //    session = NULL;
+    //  }
+    //}
+  }
+  #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
+    if (_thread_id == 0) {
+      // If we are in a threaded environment, we will want a thread if there isn't one already.
+      createThread(&_thread_id, nullptr, xport_read_handler, (void*) this);
+    }
   #endif
   BufferPipe::fromCounterparty(en ? ManuvrPipeSignal::XPORT_CONNECT : ManuvrPipeSignal::XPORT_DISCONNECT, nullptr);
 }
@@ -433,7 +433,7 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
       break;
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }
 

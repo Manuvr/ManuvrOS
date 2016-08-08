@@ -308,7 +308,7 @@ int8_t ManuvrUDP::listen() {
   listening(true);
   local_log.concatf("UDP Now listening at %s:%d.\n", _addr, _port_number);
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -619,7 +619,7 @@ int8_t ManuvrUDP::notify(ManuvrRunnable *active_event) {
       break;
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }
 

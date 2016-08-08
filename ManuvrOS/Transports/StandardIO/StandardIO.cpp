@@ -214,7 +214,7 @@ int8_t StandardIO::reset() {
   listening(true);
   connected(true);
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -240,7 +240,7 @@ int8_t StandardIO::read_port() {
     }
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -334,7 +334,7 @@ int8_t StandardIO::notify(ManuvrRunnable *active_event) {
       break;
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }
 

@@ -119,6 +119,7 @@ limitations under the License.
         inline void _mark_boot_complete() {   _class_state |= MANUVR_ER_FLAG_BOOT_COMPLETE;  };
 
         inline void setReceiverName(const char* nom) {  _receiver_name = nom;  }
+        void flushLocalLog();
 
         // These inlines are for convenience of extending classes.
         inline uint8_t _er_flags() {                 return _extnd_state;            };

@@ -339,7 +339,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
     }
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }
 

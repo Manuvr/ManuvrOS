@@ -229,7 +229,7 @@ int8_t ManuvrSerial::fromCounterparty(StringBuilder* buf, int8_t mm) {
 int8_t ManuvrSerial::init() {
   uint32_t xport_state_modifier = MANUVR_XPORT_FLAG_CONNECTED | MANUVR_XPORT_FLAG_LISTENING | MANUVR_XPORT_FLAG_INITIALIZED;
   #ifdef __MANUVR_DEBUG
-  if (getVerbosity() > 4) local_log.concatf("Resetting port %s...\n", _addr);
+    if (getVerbosity() > 4) local_log.concatf("Resetting port %s...\n", _addr);
   #endif
   bytes_sent         = 0;
   bytes_received     = 0;
@@ -240,7 +240,7 @@ int8_t ManuvrSerial::init() {
     if (nullptr == _addr) {
       if (getVerbosity() > 1) {
         local_log.concatf("No serial port ID supplied.\n", *_addr);
-        Kernel::log(&local_log);
+        flushLocalLog();
       }
       return -1;
     }
@@ -253,64 +253,67 @@ int8_t ManuvrSerial::init() {
       default:
         if (getVerbosity() > 1) {
           local_log.concatf("Unsupported serial port: %c...\n", *_addr);
-          Kernel::log(&local_log);
+          flushLocalLog();
         }
         return -1;
     }
+    initialized(true);
+    //connected(true);
+    listening(true);
+
   #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
   #elif defined (__MANUVR_LINUX) // Linux environment
-  if (_sock) {
-    close(_sock);
-  }
+    if (_sock) {
+      close(_sock);
+    }
 
-  _sock = open(_addr, _options);
-  if (_sock == -1) {
+    _sock = open(_addr, _options);
+    if (_sock == -1) {
+      #ifdef __MANUVR_DEBUG
+        if (getVerbosity() > 1) local_log.concatf("Unable to open port: (%s)\n", _addr);
+        flushLocalLog();
+      #endif
+      unset_xport_state(xport_state_modifier);
+      return -1;
+    }
     #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 1) local_log.concatf("Unable to open port: (%s)\n", _addr);
-      Kernel::log(&local_log);
+      if (getVerbosity() > 4) local_log.concatf("Opened port (%s) at %d\n", _addr, _baud_rate);
     #endif
-    unset_xport_state(xport_state_modifier);
-    return -1;
-  }
-    #ifdef __MANUVR_DEBUG
-  if (getVerbosity() > 4) local_log.concatf("Opened port (%s) at %d\n", _addr, _baud_rate);
-    #endif
-  set_xport_state(MANUVR_XPORT_FLAG_INITIALIZED);
+    set_xport_state(MANUVR_XPORT_FLAG_INITIALIZED);
+    tcgetattr(_sock, &termAttr);
+    cfsetspeed(&termAttr, _baud_rate);
+    // TODO: These choices should come from _options. Find a good API to emulate.
+    //    ---J. Ian Lindsay   Thu Dec 03 03:43:12 MST 2015
+    termAttr.c_cflag &= ~PARENB;          // No parity
+    termAttr.c_cflag &= ~CSTOPB;          // 1 stop bit
+    termAttr.c_cflag &= ~CSIZE;           // Enable char size mask
+    termAttr.c_cflag |= CS8;              // 8-bit characters
+    termAttr.c_cflag |= (CLOCAL | CREAD);
+    termAttr.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+    termAttr.c_iflag &= ~(IXON | IXOFF | IXANY);
+    termAttr.c_oflag &= ~OPOST;
 
-  tcgetattr(_sock, &termAttr);
-  cfsetspeed(&termAttr, _baud_rate);
-  // TODO: These choices should come from _options. Find a good API to emulate.
-  //    ---J. Ian Lindsay   Thu Dec 03 03:43:12 MST 2015
-  termAttr.c_cflag &= ~PARENB;          // No parity
-  termAttr.c_cflag &= ~CSTOPB;          // 1 stop bit
-  termAttr.c_cflag &= ~CSIZE;           // Enable char size mask
-  termAttr.c_cflag |= CS8;              // 8-bit characters
-  termAttr.c_cflag |= (CLOCAL | CREAD);
-  termAttr.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
-  termAttr.c_iflag &= ~(IXON | IXOFF | IXANY);
-  termAttr.c_oflag &= ~OPOST;
+    if (tcsetattr(_sock, TCSANOW, &termAttr) == 0) {
+      set_xport_state(xport_state_modifier);
 
-  if (tcsetattr(_sock, TCSANOW, &termAttr) == 0) {
-    set_xport_state(xport_state_modifier);
-
-    initialized(true);
-    connected(true);
-    listening(true);
-    #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 6) local_log.concatf("Port opened, and handler bound.\n");
-    #endif //__MANUVR_DEBUG
-  }
-  else {
-    unset_xport_state(xport_state_modifier);
-    initialized(false);
-    #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 1) local_log.concatf("Failed to tcsetattr...\n");
-    #endif
-  }
+      initialized(true);
+      connected(true);
+      listening(true);
+      #ifdef __MANUVR_DEBUG
+        if (getVerbosity() > 6) local_log.concatf("Port opened, and handler bound.\n");
+      #endif //__MANUVR_DEBUG
+    }
+    else {
+      unset_xport_state(xport_state_modifier);
+      initialized(false);
+      #ifdef __MANUVR_DEBUG
+        if (getVerbosity() > 1) local_log.concatf("Failed to tcsetattr...\n");
+      #endif
+    }
   #endif //LINUX
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -383,7 +386,7 @@ int8_t ManuvrSerial::read_port() {
     #endif
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -393,18 +396,9 @@ int8_t ManuvrSerial::read_port() {
 * Returns false on error and true on success.
 */
 bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
-  if (_sock == -1) {
-    #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 2) {
-        local_log.concatf("Unable to write to transport: %s\n", _addr);
-        Kernel::log(&local_log);
-      }
-    #endif
-    return false;
-  }
-
   if (connected()) {
     int bytes_written = 0;
+
     #if defined (STM32F4XX)        // STM32F4
 
     #elif defined(STM32F7XX) | defined(STM32F746xx)
@@ -413,7 +407,17 @@ bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
       Serial.print((char*) out);
       bytes_written = out_len;
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
+
     #elif defined (__MANUVR_LINUX) // Linux
+      if (_sock == -1) {
+        #ifdef __MANUVR_DEBUG
+          if (getVerbosity() > 2) {
+            local_log.concatf("Unable to write to transport: %s\n", _addr);
+            Kernel::log(&local_log);
+          }
+        #endif
+        return false;
+      }
       bytes_written = (int) write(_sock, out, out_len);
     #else   // Unsupported.
     #endif
@@ -452,7 +456,9 @@ void ManuvrSerial::printDebug(StringBuilder *temp) {
   ManuvrXport::printDebug(temp);
   temp->concatf("-- _addr           %s\n",     _addr);
   temp->concatf("-- _options        0x%08x\n", _options);
-  temp->concatf("-- _sock           0x%08x\n", _sock);
+  #if defined(__MANUVR_LINUX)
+    temp->concatf("-- _sock           0x%08x\n", _sock);
+  #endif
   temp->concatf("-- Baud            %d\n",     _baud_rate);
   temp->concatf("-- Class size      %d\n",     sizeof(ManuvrSerial));
 }
@@ -526,6 +532,6 @@ int8_t ManuvrSerial::notify(ManuvrRunnable *active_event) {
       break;
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }

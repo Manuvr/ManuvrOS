@@ -236,7 +236,7 @@ void ManuvrSession::mark_session_desync(uint8_t ds_src) {
   }
 
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
 }
 
 
@@ -326,7 +326,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
         #ifdef __MANUVR_DEBUG
           if (getVerbosity() > 2) local_log.concat("Session still out of sync.\n");
         #endif
-        if (local_log.length() > 0) Kernel::log(&local_log);
+        flushLocalLog();
         return return_value;
       }
       break;
@@ -429,7 +429,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
     #endif
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }
 
@@ -625,7 +625,7 @@ int8_t ManuvrSession::notify(ManuvrRunnable *active_event) {
       break;
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }
 
