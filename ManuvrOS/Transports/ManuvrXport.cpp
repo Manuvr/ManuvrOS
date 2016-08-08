@@ -74,7 +74,11 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
   */
   void* xport_read_handler(void* active_xport) {
     if (NULL != active_xport) {
-      ((ManuvrXport*)active_xport)->read_port();
+      // Wait until boot has ocurred...
+      while (!((ManuvrXport*)active_xport)->booted()) sleep_millis(50);
+      while (1) {
+        ((ManuvrXport*)active_xport)->read_port();
+      }
     }
     return NULL;
   }
@@ -92,7 +96,6 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
 *                                          |_|
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
-
 /**
 * Constructor.
 */
@@ -109,10 +112,6 @@ ManuvrXport::ManuvrXport() : EventReceiver(), BufferPipe() {
   _autoconnect_schedule = NULL;
   bytes_sent            = 0;
   bytes_received        = 0;
-
-  #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
-    _thread_id       = 0;
-  #endif
 }
 
 /**
@@ -194,7 +193,6 @@ int8_t ManuvrXport::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
 *******************************************************************************/
 
 int8_t ManuvrXport::disconnect() {
-  // TODO: Might-should tear down the session?
   connected(false);
   return 0;
 }
@@ -256,17 +254,6 @@ void ManuvrXport::autoConnect(bool en, uint32_t _ac_period) {
 }
 
 
-int8_t ManuvrXport::sendBuffer(StringBuilder* buf) {
-  if (connected()) {
-    toCounterparty(buf, MEM_MGMT_RESPONSIBLE_BEARER);
-  }
-  else {
-    Kernel::log("Tried to write to a transport that was not connected.");
-  }
-  return 0;
-}
-
-
 /*
 * Mark this transport connected or disconnected.
 */
@@ -279,37 +266,19 @@ void ManuvrXport::connected(bool en) {
 
   mark_connected(en);
   if (en) {
-    //if (NULL == session) {
-    //  // We are expected to instantiate a XenoSession, and broadcast its existance.
-    //  // This will put it into the Event system so that auth and such can be handled cleanly.
-    //  // Once the session sets up, it will broadcast itself as having done so.
-    //  // TODO: Session discovery should happen at this point.
-    //  XenoSession* ses = (XenoSession*) new ManuvrSession(this);
-    //  _reap_session(true);
-    //  provide_session(ses);
-
-    //  ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
-    //  event->addArg((EventReceiver*) ses);
-    //  raiseEvent(event);
-    //}
+    // We are expected to instantiate a XenoSession, and broadcast its existance.
+    // This will put it into the Event system so that auth and such can be handled cleanly.
+    // Once the session sets up, it will broadcast itself as having done so.
 
     if (nullptr != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(false);
-    //if (session) session->connection_callback(true);
   }
   else {
     // This is a disconnection event. We might want to cleanup all of our sessions
     // that are outstanding.
     if (nullptr != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(true);
-    //if (session) {
-    //  session->connection_callback(false);
-    //  if(_reap_session()) {
-    //    delete session;
-    //    session = NULL;
-    //  }
-    //}
   }
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
-    if (_thread_id == 0) {
+    if (0 == _thread_id) {
       // If we are in a threaded environment, we will want a thread if there isn't one already.
       createThread(&_thread_id, nullptr, xport_read_handler, (void*) this);
     }
@@ -332,9 +301,6 @@ void ManuvrXport::listening(bool en) {
   // ---J. Ian Lindsay   Thu Dec 03 04:00:00 MST 2015
   _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_LISTENING) : (_xport_flags & ~(MANUVR_XPORT_FLAG_LISTENING));
 }
-
-
-
 
 
 

@@ -85,6 +85,22 @@ int8_t ManuvrConsole::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
 }
 
 /**
+* Inward toward the transport.
+* Or into the accumulator.
+*
+* @param  buf    A pointer to the buffer.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
+*/
+int8_t ManuvrConsole::toCounterparty(StringBuilder* buf, int8_t mm) {
+  _log_accumulator.concatHandoff(buf);
+  if (isConnected() && booted()) {
+    BufferPipe::toCounterparty(&_log_accumulator, MEM_MGMT_RESPONSIBLE_BEARER);
+  }
+  return MEM_MGMT_RESPONSIBLE_BEARER;
+}
+
+/**
 * Taking user input from the transport...
 *
 * @param  buf    A pointer to the buffer.
@@ -129,7 +145,7 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
         }
         session_buffer.drop_position(0);
       }
-      return MEM_MGMT_RESPONSIBLE_CREATOR;
+      return MEM_MGMT_RESPONSIBLE_BEARER;
 
     default:
       /* This is more ambiguity than we are willing to bear... */

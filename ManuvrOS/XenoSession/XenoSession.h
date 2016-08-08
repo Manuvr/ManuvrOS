@@ -131,16 +131,16 @@ class XenoSession : public EventReceiver, public BufferPipe {
 
 
   private: // TODO: Migrate members here as session mitosis completes telophase.
-    ManuvrRunnable _session_service;
+    uint16_t session_state;       // What state is this session in?
+    uint16_t session_last_state;  // The prior state of the sesssion.
     LinkedList<XenoMessage*> _outbound_messages;   // Messages that are bound for the counterparty.
     LinkedList<XenoMessage*> _inbound_messages;    // Messages that came from the counterparty.
+
+    ManuvrRunnable _session_service;
 
     std::map<uint16_t, MessageTypeDef*> _relay_list;     // Which message codes will we relay to the counterparty?
     std::map<uint16_t, XenoMessage*>    _pending_exec;   // Messages pending execution (waiting on us).
     std::map<uint16_t, XenoMessage*>    _pending_reply;  // Messages pending reply (waiting on counterparty).
-
-    uint16_t session_state;       // What state is this session in?
-    uint16_t session_last_state;  // The prior state of the sesssion.
 };
 
 

@@ -147,7 +147,6 @@ typedef BufferPipe* (*bpFactory) (BufferPipe*, BufferPipe*);
 *   the absense of RTTI.
 */
 typedef struct {
-  const char* pipe_name;
   int         pipe_code;
   bpFactory   factory;
 } PipeDef;
@@ -226,7 +225,7 @@ class BufferPipe {
     *   NULL-terminated.
     */
     static PipeDef _supported_strategies[];
-    static int registerPipe(const char*, int, bpFactory);
+    static int registerPipe(int, bpFactory);
     static BufferPipe* spawnPipe(int, BufferPipe*, BufferPipe*);
 
     /* Debug and logging support */

@@ -88,6 +88,12 @@ BufferPipe* _pipe_factory_1(BufferPipe* _n, BufferPipe* _f) {
   return (BufferPipe*) coap_srv;
 }
 
+BufferPipe* _pipe_factory_2(BufferPipe* _n, BufferPipe* _f) {
+  ManuvrConsole* _console = new ManuvrConsole(_n);
+  kernel->subscribe(_console);
+  return (BufferPipe*) _console;
+}
+
 
 /*******************************************************************************
 * Functions that just print things.                                            *
@@ -109,8 +115,13 @@ int main(int argc, char *argv[]) {
   kernel = new Kernel();
 
 
-  if (0 != BufferPipe::registerPipe("CoAP", 1, _pipe_factory_1)) {
+  if (0 != BufferPipe::registerPipe(1, _pipe_factory_1)) {
     printf("Failed to add CoAP to the pipe registry.\n");
+    exit(1);
+  }
+
+  if (0 != BufferPipe::registerPipe(2, _pipe_factory_2)) {
+    printf("Failed to add console to the pipe registry.\n");
     exit(1);
   }
 

@@ -103,23 +103,25 @@ void StandardIO::__class_initializer() {
 * Log has reached the end of its journey. This class will render it to the user.
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
 int8_t StandardIO::toCounterparty(StringBuilder* buf, int8_t mm) {
-  char* working_chunk = NULL;
-  while (buf->count()) {
-    working_chunk = buf->position(0);
-    printf("%s", (const char*) working_chunk);
-    bytes_sent += strlen(working_chunk);
-    buf->drop_position(0);
-  }
+  if (connected()) {
+    char* working_chunk = NULL;
+    while (buf->count()) {
+      working_chunk = buf->position(0);
+      printf("%s", (const char*) working_chunk);
+      bytes_sent += strlen(working_chunk);
+      buf->drop_position(0);
+    }
 
-  // TODO: This prompt ought to be in the console session.
-  printf("\n%c[36mManuvr> %c[39m", 0x1B, 0x1B);
-  fflush(stdout);
-  return mm;
+    // TODO: This prompt ought to be in the console session.
+    printf("\n%c[36mManuvr> %c[39m", 0x1B, 0x1B);
+    fflush(stdout);
+    return MEM_MGMT_RESPONSIBLE_BEARER;
+  }
+  return MEM_MGMT_RESPONSIBLE_ERROR;
 }
 
 
@@ -159,8 +161,8 @@ int8_t StandardIO::reset() {
     if (getVerbosity() > 3) local_log.concatf("StandardIO initialized.\n");
   #endif
   initialized(true);
-  listening(true);
-  connected(true);
+  listen();
+  connect();
 
   flushLocalLog();
   return 0;
@@ -173,13 +175,13 @@ int8_t StandardIO::read_port() {
   char *input_text	= (char*) alloca(getMTU());	// Buffer to hold user-input.
   int read_len = 0;
 
-  while (listening()) {
+  while (connected()) {
     bzero(input_text, getMTU());
     if (fgets(input_text, getMTU(), stdin) != NULL) {
       read_len = strlen(input_text);
       if (read_len) {
         bytes_received += read_len;
-        BufferPipe::fromCounterparty((uint8_t*) input_text, read_len, MEM_MGMT_RESPONSIBLE_CREATOR);
+        BufferPipe::fromCounterparty((uint8_t*) input_text, read_len, MEM_MGMT_RESPONSIBLE_BEARER);
       }
     }
     else {
@@ -187,7 +189,6 @@ int8_t StandardIO::read_port() {
       Kernel::log("StandardIO: fgets() failed.\n");
     }
   }
-
   flushLocalLog();
   return 0;
 }

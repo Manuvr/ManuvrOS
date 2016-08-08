@@ -107,14 +107,6 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     };
 
     /*
-    * High-level data functions.
-    * TODO: This is going to be cut in favor of BufferPipe's API.
-    */
-    int8_t sendBuffer(StringBuilder* buf);
-
-    inline uint32_t getMTU() {   return _xport_mtu;  };
-
-    /*
     * State imperatives.
     */
     virtual int8_t connect()    = 0;
@@ -129,6 +121,8 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     /*
     * State accessors.
     */
+    inline uint32_t getMTU() {   return _xport_mtu;  };
+
     /* Connection/Listen states */
     inline bool connected() {   return (_xport_flags & (MANUVR_XPORT_FLAG_CONNECTED | MANUVR_XPORT_FLAG_ALWAYS_CONNECTED));  }
     inline bool listening() {   return (_xport_flags & MANUVR_XPORT_FLAG_LISTENING);   };

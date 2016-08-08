@@ -63,10 +63,9 @@ const char* BufferPipe::signalString(ManuvrPipeSignal code) {
 
 PipeDef BufferPipe::_supported_strategies[MAXIMUM_PIPE_DIVERSITY];
 
-int BufferPipe::registerPipe(const char* _nom, int _code, bpFactory _factory) {
+int BufferPipe::registerPipe(int _code, bpFactory _factory) {
   for (int i = 0; i < MAXIMUM_PIPE_DIVERSITY; i++) {
     if (0 == _supported_strategies[i].pipe_code) {
-      _supported_strategies[i].pipe_name = _nom;
       _supported_strategies[i].pipe_code = _code;
       _supported_strategies[i].factory   = _factory;
       return 0;

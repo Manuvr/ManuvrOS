@@ -42,6 +42,7 @@ class ManuvrConsole : public XenoSession {
 
     /* Override from BufferPipe. */
     virtual int8_t toCounterparty(ManuvrPipeSignal, void*);
+    virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
     virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
 
     /* Overrides from EventReceiver */
