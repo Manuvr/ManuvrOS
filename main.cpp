@@ -126,7 +126,8 @@ int main(int argc, char *argv[]) {
   }
 
   // Pipe strategy planning...
-  const uint8_t pipe_plan_coap[] = {1, 0};
+  const uint8_t pipe_plan_coap[]    = {1, 0};
+  const uint8_t pipe_plan_console[] = {2, 0};
 
 
   #if defined(__MANUVR_DEBUG)
@@ -219,7 +220,7 @@ int main(int argc, char *argv[]) {
 
     #else
       ManuvrTCP tcp_srv((const char*) "0.0.0.0", 2319);
-      ManuvrTCP tcp_cli((const char*) "127.0.0.1", 2319);
+      tcp_srv.setPipeStrategy(pipe_plan_console);
       kernel->subscribe(&tcp_srv);
     #endif
     kernel->subscribe(&tcp_cli);

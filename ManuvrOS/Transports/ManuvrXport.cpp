@@ -112,6 +112,9 @@ ManuvrXport::ManuvrXport() : EventReceiver(), BufferPipe() {
   _autoconnect_schedule = NULL;
   bytes_sent            = 0;
   bytes_received        = 0;
+  #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
+    _thread_id       = 0;
+  #endif
 }
 
 /**
@@ -280,7 +283,9 @@ void ManuvrXport::connected(bool en) {
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
     if (0 == _thread_id) {
       // If we are in a threaded environment, we will want a thread if there isn't one already.
-      createThread(&_thread_id, nullptr, xport_read_handler, (void*) this);
+      if (createThread(&_thread_id, nullptr, xport_read_handler, (void*) this)) {
+        Kernel::log("Failed to create transport read thread.\n");
+      }
     }
   #endif
   BufferPipe::fromCounterparty(en ? ManuvrPipeSignal::XPORT_CONNECT : ManuvrPipeSignal::XPORT_DISCONNECT, nullptr);

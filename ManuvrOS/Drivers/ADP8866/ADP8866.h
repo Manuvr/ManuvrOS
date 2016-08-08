@@ -109,13 +109,12 @@ typedef struct adp8866_led_chan {
 
 
 
-class ADP8866 : public I2CDeviceWithRegisters, public EventReceiver {
+class ADP8866 : public EventReceiver, I2CDeviceWithRegisters {
   public:
     ADP8866(uint8_t reset_pin, uint8_t irq_pin, uint8_t addr = ADP8866_I2CADDR);
     virtual ~ADP8866();
 
     int8_t init();
-
 
     /* Overrides from I2CDeviceWithRegisters... */
     void operationCompleteCallback(I2CBusOp*);

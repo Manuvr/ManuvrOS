@@ -32,10 +32,10 @@ Platforms that require it should be able to extend this driver for specific
 
 #include "ManuvrSerial.h"
 #include "FirmwareDefs.h"
-#include "XenoSession/XenoSession.h"
 
 #include <Kernel.h>
 #include <Platform/Platform.h>
+#include <XenoSession/XenoSession.h>
 
 
 #if defined (STM32F4XX)        // STM32F4
@@ -151,26 +151,12 @@ void ManuvrSerial::__class_initializer() {
 int8_t ManuvrSerial::toCounterparty(StringBuilder* buf, int8_t mm) {
   uint8_t* ptr = buf->string();
   int      len = buf->length();
-  bool     res = write_port(ptr, len) ? MEM_MGMT_RESPONSIBLE_BEARER : MEM_MGMT_RESPONSIBLE_CALLER;
+  bool     res = write_port(ptr, len);
 
-  switch (mm) {
-    case MEM_MGMT_RESPONSIBLE_CALLER:
-      // NOTE: No break. This might be construed as a way of saying CREATOR.
-    case MEM_MGMT_RESPONSIBLE_BEARER:
-      /* We are now the bearer. That means that by returning non-failure, the
-          caller will expect _us_ to manage this memory.  */
-      buf->clear();
-    case MEM_MGMT_RESPONSIBLE_CREATOR:
-      /* The system that allocated this buffer either...
-          a) Did so with the intention that it never be free'd, or...
-          b) Has a means of discovering when it is safe to free.  */
-      return mm;
-
-    default:
-      /* This is more ambiguity than we are willing to bear... */
-      return MEM_MGMT_RESPONSIBLE_ERROR;
+  if (res) {
+    buf->clear();
   }
-  return MEM_MGMT_RESPONSIBLE_ERROR;
+  return (res ? MEM_MGMT_RESPONSIBLE_BEARER : MEM_MGMT_RESPONSIBLE_CALLER);
 }
 
 
@@ -218,7 +204,7 @@ int8_t ManuvrSerial::init() {
         return -1;
     }
     initialized(true);
-    //connected(true);
+    connected(true);
     listening(true);
 
   #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
@@ -311,10 +297,11 @@ int8_t ManuvrSerial::read_port() {
     #if defined (STM32F4XX)        // STM32F4
 
     #elif defined (__MK20DX128__) || defined (__MK20DX256__) // Teensy3.x
-      while (listening()) {
+      while (connected()) {
         if (Serial.available()) {
           while (Serial.available()) {
             *(buf + n++) = Serial.read();
+            Serial.print(*(buf + n-1));
           }
           bytes_received += n;
           BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);

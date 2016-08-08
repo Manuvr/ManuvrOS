@@ -161,7 +161,7 @@ volatile void hardwareShutdown();
 * Threading
 */
 int createThread(unsigned long*, void*, ThreadFxnPtr, void*);
-int deleteThread(unsigned long);
+int deleteThread(unsigned long*);
 void sleep_millis(unsigned long millis);
 
 /*

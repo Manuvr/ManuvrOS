@@ -697,6 +697,15 @@ void StringBuilder::trim() {
   //    ---J. Ian Lindsay   Thu Dec 17 03:22:01 MST 2015
 }
 
+bool StringBuilder::contains(char test) {
+  this->collapseIntoBuffer();
+  if (this->col_length == 0) return 0;
+
+  for (int i = 0; i < this->col_length; i++) {
+    if (test == *(this->str + i)) return true;
+  }
+  return false;
+}
 
 
 StrLL* StringBuilder::stackStrOntoList(StrLL *current, StrLL *nu) {
