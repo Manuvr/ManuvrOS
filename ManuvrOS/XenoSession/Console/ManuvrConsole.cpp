@@ -84,51 +84,6 @@ int8_t ManuvrConsole::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
   return BufferPipe::toCounterparty(_sig, _args);
 }
 
-
-/**
-* Inward toward the transport.
-*
-* This is where we relay logs back across the same transport on which we are
-*   listening for user input.
-*
-* @param  buf    A pointer to the buffer.
-* @param  mm     A declaration of memory-management responsibility.
-* @return A declaration of memory-management responsibility.
-*/
-int8_t ManuvrConsole::toCounterparty(StringBuilder* buf, int8_t mm) {
-  if (!booted()) {
-    // Until we boot, we cache logs...
-    _log_accumulator.concatHandoff(buf);
-    return MEM_MGMT_RESPONSIBLE_BEARER;
-  }
-  switch (mm) {
-    case MEM_MGMT_RESPONSIBLE_CALLER:
-      // NOTE: No break. This might be construed as a way of saying CREATOR.
-    case MEM_MGMT_RESPONSIBLE_CREATOR:
-      /* The system that allocated this buffer either...
-          a) Did so with the intention that it never be free'd, or...
-          b) Has a means of discovering when it is safe to free.  */
-      if (haveNear()) {
-        return _near->toCounterparty(buf, MEM_MGMT_RESPONSIBLE_CREATOR);
-      }
-      return MEM_MGMT_RESPONSIBLE_CALLER;
-
-    case MEM_MGMT_RESPONSIBLE_BEARER:
-      /* We are now the bearer. That means that by returning non-failure, the
-          caller will expect _us_ to manage this memory.  */
-      // TODO: Freeing the buffer?
-      if (haveNear()) {
-        return _near->toCounterparty(buf, MEM_MGMT_RESPONSIBLE_BEARER);
-      }
-      return MEM_MGMT_RESPONSIBLE_CALLER;
-
-    default:
-      /* This is more ambiguity than we are willing to bear... */
-      return MEM_MGMT_RESPONSIBLE_ERROR;
-  }
-  return MEM_MGMT_RESPONSIBLE_ERROR;
-}
-
 /**
 * Taking user input from the transport...
 *

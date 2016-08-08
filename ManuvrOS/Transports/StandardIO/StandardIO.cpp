@@ -119,60 +119,8 @@ int8_t StandardIO::toCounterparty(StringBuilder* buf, int8_t mm) {
   // TODO: This prompt ought to be in the console session.
   printf("\n%c[36mManuvr> %c[39m", 0x1B, 0x1B);
   fflush(stdout);
-
-  switch (mm) {
-    case MEM_MGMT_RESPONSIBLE_CALLER:
-      // NOTE: No break. This might be construed as a way of saying CREATOR.
-    case MEM_MGMT_RESPONSIBLE_CREATOR:
-    case MEM_MGMT_RESPONSIBLE_BEARER:
-      // TODO: Freeing the buffer?
-    default:
-      break;
-  }
   return mm;
 }
-
-/**
-* The buffer contains keyboard input.
-*
-* @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
-* @param  mm     A declaration of memory-management responsibility.
-* @return A declaration of memory-management responsibility.
-*/
-int8_t StandardIO::fromCounterparty(StringBuilder* buf, int8_t mm) {
-  switch (mm) {
-    case MEM_MGMT_RESPONSIBLE_CALLER:
-      // NOTE: No break. This might be construed as a way of saying CREATOR.
-    case MEM_MGMT_RESPONSIBLE_CREATOR:
-      /* The system that allocated this buffer either...
-          a) Did so with the intention that it never be free'd, or...
-          b) Has a means of discovering when it is safe to free.  */
-      if (haveFar()) {
-        return _far->fromCounterparty(buf, mm);
-      }
-      else {
-        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
-      }
-
-    case MEM_MGMT_RESPONSIBLE_BEARER:
-      /* We are now the bearer. That means that by returning non-failure, the
-          caller will expect _us_ to manage this memory.  */
-      if (haveFar()) {
-        /* We are not the transport driver, and we do no transformation. */
-        return _far->fromCounterparty(buf, mm);
-      }
-      else {
-        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
-      }
-
-    default:
-      /* This is more ambiguity than we are willing to bear... */
-      return MEM_MGMT_RESPONSIBLE_ERROR;
-  }
-  return MEM_MGMT_RESPONSIBLE_ERROR;
-}
-
 
 
 /*******************************************************************************

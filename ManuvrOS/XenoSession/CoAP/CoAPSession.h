@@ -306,7 +306,6 @@ class CoAPSession : public XenoSession {
     int8_t connection_callback(bool connected);
 
     /* Override from BufferPipe. */
-    virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
     virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
 
     /* Overrides from EventReceiver */

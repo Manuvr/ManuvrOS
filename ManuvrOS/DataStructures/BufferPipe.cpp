@@ -267,6 +267,32 @@ int8_t BufferPipe::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
   return fromCounterparty(&temp, MEM_MGMT_RESPONSIBLE_BEARER);
 }
 
+
+/**
+* Inward toward the transport.
+* Default implementation attempts to pass down the chain.
+*
+* @param  buf    A pointer to the buffer.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
+*/
+int8_t BufferPipe::toCounterparty(StringBuilder* buf, int8_t mm) {
+  return haveNear() ? _near->toCounterparty(buf, mm) : MEM_MGMT_RESPONSIBLE_ERROR;
+}
+
+/**
+* Outward toward the application (or into the accumulator).
+* Default implementation attempts to pass down the chain.
+*
+* @param  buf    A pointer to the buffer.
+* @param  mm     A declaration of memory-management responsibility.
+* @return A declaration of memory-management responsibility.
+*/
+int8_t BufferPipe::fromCounterparty(StringBuilder* buf, int8_t mm) {
+  return haveFar() ? _far->fromCounterparty(buf, mm) : MEM_MGMT_RESPONSIBLE_ERROR;
+}
+
+
 /**
 * Sets the slot that sits nearer to the counterparty, as well as the default
 *   memory-management strategy for buffers moving toward the application.

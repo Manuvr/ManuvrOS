@@ -85,8 +85,12 @@ class XenoSession : public EventReceiver, public BufferPipe {
 
     /* Override from BufferPipe. */
     virtual int8_t fromCounterparty(ManuvrPipeSignal, void*);
-    virtual int8_t toCounterparty(StringBuilder*, int8_t mm) =0;
-    virtual int8_t fromCounterparty(StringBuilder*, int8_t mm) =0;
+    virtual inline int8_t toCounterparty(StringBuilder* buf, int8_t mm) {
+      return BufferPipe::toCounterparty(buf, mm);
+    };
+    virtual inline int8_t fromCounterparty(StringBuilder* buf, int8_t mm) {
+      return BufferPipe::fromCounterparty(buf, mm);
+    };
 
     /* These are callbacks invoked by the Pipe signalling system. */
     virtual int8_t connection_callback(bool connected);

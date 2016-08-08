@@ -60,7 +60,6 @@ class ManuvrTCP : public ManuvrSocket {
 
     /* Override from BufferPipe. */
     virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
-    virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
 
     /* Overrides from EventReceiver */
     void printDebug(StringBuilder *);

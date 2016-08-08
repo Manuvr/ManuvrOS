@@ -180,8 +180,8 @@ class BufferPipe {
     * Sending dynamically-alloc'd buffers through pipes...
     * This is the override point for extending classes.
     */
-    virtual int8_t toCounterparty(StringBuilder*, int8_t mm) =0;
-    virtual int8_t fromCounterparty(StringBuilder*, int8_t mm) =0;
+    virtual int8_t toCounterparty(StringBuilder*, int8_t mm);
+    virtual int8_t fromCounterparty(StringBuilder*, int8_t mm);
 
     /*
     * Override to allow a pointer-length interface.

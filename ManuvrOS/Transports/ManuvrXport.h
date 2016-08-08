@@ -99,8 +99,12 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
 
     /* Override from BufferPipe. */
     virtual int8_t toCounterparty(ManuvrPipeSignal, void*);
-    virtual int8_t toCounterparty(StringBuilder*, int8_t mm) =0;
-    virtual int8_t fromCounterparty(StringBuilder*, int8_t mm) =0;
+    virtual inline int8_t toCounterparty(StringBuilder* buf, int8_t mm) {
+      return BufferPipe::toCounterparty(buf, mm);
+    };
+    virtual inline int8_t fromCounterparty(StringBuilder* buf, int8_t mm) {
+      return BufferPipe::fromCounterparty(buf, mm);
+    };
 
     /*
     * High-level data functions.
