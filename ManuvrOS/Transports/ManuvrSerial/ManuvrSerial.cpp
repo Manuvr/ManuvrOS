@@ -301,7 +301,6 @@ int8_t ManuvrSerial::read_port() {
         if (Serial.available()) {
           while (Serial.available()) {
             *(buf + n++) = Serial.read();
-            Serial.print(*(buf + n-1));
           }
           bytes_received += n;
           BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);

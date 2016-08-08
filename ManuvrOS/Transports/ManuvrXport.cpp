@@ -77,7 +77,10 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
       // Wait until boot has ocurred...
       while (!((ManuvrXport*)active_xport)->booted()) sleep_millis(50);
       while (1) {
-        ((ManuvrXport*)active_xport)->read_port();
+        if (0 == ((ManuvrXport*)active_xport)->read_port()) {
+          // TODO: Concentrate sleep logic here.
+          sleep_millis(20);
+        }
       }
     }
     return NULL;
