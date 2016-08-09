@@ -67,7 +67,7 @@ XenoSession is the class that manages dialog with other systems via some
 class XenoSession : public EventReceiver, public BufferPipe {
   public:
     XenoSession(BufferPipe*);
-    ~XenoSession();
+    virtual ~XenoSession();
 
     /* Functions that are indirectly called by counterparty requests for subscription. */
     int8_t tapMessageType(uint16_t code);     // Start getting broadcasts about a given message type.
@@ -84,13 +84,18 @@ class XenoSession : public EventReceiver, public BufferPipe {
     inline bool isConnected() {      return (0 == (XENOSESSION_STATE_PENDING_CONN & getPhase()));   }
 
     /* Override from BufferPipe. */
-    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
-    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
+    virtual int8_t fromCounterparty(ManuvrPipeSignal, void*);
+    virtual inline int8_t toCounterparty(StringBuilder* buf, int8_t mm) {
+      return BufferPipe::toCounterparty(buf, mm);
+    };
+    virtual inline int8_t fromCounterparty(StringBuilder* buf, int8_t mm) {
+      return BufferPipe::fromCounterparty(buf, mm);
+    };
 
+    /* These are callbacks invoked by the Pipe signalling system. */
     virtual int8_t connection_callback(bool connected);
 
     /* Overrides from EventReceiver */
-    virtual const char* getReceiverName() =0;
     virtual void printDebug(StringBuilder*);
     virtual int8_t notify(ManuvrRunnable*);
     virtual int8_t callback_proc(ManuvrRunnable *);
@@ -102,8 +107,8 @@ class XenoSession : public EventReceiver, public BufferPipe {
     static const char* sessionPhaseString(uint16_t state_code);
 
 
+
   protected:
-    ManuvrXport* owner;           // A reference to the transport that owns this session.
     XenoMessage* working;         // If we are in the middle of receiving a message,
 
     virtual int8_t bootComplete() =0;
@@ -119,25 +124,23 @@ class XenoSession : public EventReceiver, public BufferPipe {
       session_state      = (session_state & 0xFF00) | (nu_state & 0x00FF);
     };
 
-    int8_t sendPacket(unsigned char *buf, int len);
     inline void requestService() {   raiseEvent(&_session_service);  };
     int purgeInbound();
     int purgeOutbound();
 
 
 
-
   private: // TODO: Migrate members here as session mitosis completes telophase.
-    ManuvrRunnable _session_service;
+    uint16_t session_state;       // What state is this session in?
+    uint16_t session_last_state;  // The prior state of the sesssion.
     LinkedList<XenoMessage*> _outbound_messages;   // Messages that are bound for the counterparty.
     LinkedList<XenoMessage*> _inbound_messages;    // Messages that came from the counterparty.
+
+    ManuvrRunnable _session_service;
 
     std::map<uint16_t, MessageTypeDef*> _relay_list;     // Which message codes will we relay to the counterparty?
     std::map<uint16_t, XenoMessage*>    _pending_exec;   // Messages pending execution (waiting on us).
     std::map<uint16_t, XenoMessage*>    _pending_reply;  // Messages pending reply (waiting on counterparty).
-
-    uint16_t session_state;       // What state is this session in?
-    uint16_t session_last_state;  // The prior state of the sesssion.
 };
 
 

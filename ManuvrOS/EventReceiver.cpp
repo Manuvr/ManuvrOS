@@ -23,17 +23,27 @@ limitations under the License.
 #include <Kernel.h>
 
 
-/**
-* This is here for compatibility with C++ standards that do not allow for definition and declaration
-*   in the header file. Takes no parameters, and returns nothing.
-*/
-void EventReceiver::__class_initializer() {
-  __kernel  = NULL;
-  _class_state = 0 | (DEFAULT_CLASS_VERBOSITY & MANUVR_ER_FLAG_VERBOSITY_MASK);
-  _extnd_state = 0;
+EventReceiver::EventReceiver() {
+  _receiver_name = "EventReceiver";
+  __kernel       = nullptr;
+  _class_state   = (DEFAULT_CLASS_VERBOSITY & MANUVR_ER_FLAG_VERBOSITY_MASK);
+  _extnd_state   = 0;
   #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
     _thread_id = -1;
   #endif
+}
+
+
+EventReceiver::~EventReceiver() {
+  if (nullptr != __kernel) {
+    __kernel->unsubscribe(this);
+  }
+  #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+    if (_thread_id > -1) {
+      // TODO: Clean up any threads we may have fired up.
+    }
+  #endif
+  Kernel::log(&local_log);  // Clears the local_log.
 }
 
 
@@ -81,7 +91,7 @@ int8_t EventReceiver::setVerbosity(int8_t nu_verbosity) {
 * @return  -1 on failure, and 0 on no change, and 1 on success.
 */
 int8_t EventReceiver::setVerbosity(ManuvrRunnable* active_event) {
-  if (NULL == active_event) return -1;
+  if (nullptr == active_event) return -1;
   if (MANUVR_MSG_SYS_LOG_VERBOSITY != active_event->event_code) return -1;
   switch (active_event->argCount()) {
     case 0:
@@ -120,6 +130,10 @@ int EventReceiver::purgeLogs() {
   return return_value;
 }
 
+
+void EventReceiver::flushLocalLog() {
+  if (local_log.length() > 0) Kernel::log(&local_log);
+}
 
 
 #ifdef __MANUVR_CONSOLE_SUPPORT
@@ -160,7 +174,7 @@ void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
 *   already an originator specified, add ourselves as the originator.
 */
 int8_t EventReceiver::raiseEvent(ManuvrRunnable* event) {
-  if (event != NULL) {
+  if (event != nullptr) {
     event->originator = (EventReceiver*) this;
     return Kernel::staticRaiseEvent(event);
   }
@@ -184,7 +198,7 @@ void EventReceiver::printDebug() {
 */
 void EventReceiver::printDebug(StringBuilder *output) {
   output->concatf("\n==< %s >===================================\n", getReceiverName());
-  output->concatf("-- bootstrap_completed \t\t%s\n", booted() ? "yes" : "no", (NULL != __kernel) ? "yes" : "no");
+  output->concatf("-- Booted \t\t%s\n", booted() ? "yes" : "no");
 }
 
 

@@ -40,7 +40,7 @@ This file forms the catch-all for linux platforms that have no support.
 /****************************************************************************************************
 * The code under this block is special on this platform, and will not be available elsewhere.       *
 ****************************************************************************************************/
-volatile Kernel* __kernel = NULL;
+volatile Kernel* __kernel = nullptr;
 
 struct itimerval _interval              = {0};
 struct sigaction _signal_action_SIGALRM = {0};
@@ -52,7 +52,7 @@ bool set_linux_interval_timer() {
   _interval.it_interval.tv_sec   = 0;
   _interval.it_interval.tv_usec  = MANUVR_PLATFORM_TIMER_PERIOD_MS * 1000;
 
-  int err = setitimer(ITIMER_VIRTUAL, &_interval, NULL);
+  int err = setitimer(ITIMER_VIRTUAL, &_interval, nullptr);
   if (err) {
     Kernel::log("Failed to enable interval timer.");
   }
@@ -155,7 +155,7 @@ int initSigHandlers() {
   }
 
   _signal_action_SIGALRM.sa_handler   = &linux_timer_handler;
-  if (sigaction(SIGVTALRM, &_signal_action_SIGALRM, NULL)) {
+  if (sigaction(SIGVTALRM, &_signal_action_SIGALRM, nullptr)) {
     Kernel::log("Failed to bind to SIGVTALRM.");
     return_value = 0;
   }
@@ -204,7 +204,7 @@ volatile bool provide_random_int(uint32_t nu_rnd) {
 * Init the RNG. Short and sweet.
 */
 void init_RNG() {
-  srand(time(NULL));          // Seed the PRNG...
+  srand(time(nullptr));          // Seed the PRNG...
 }
 
 
@@ -298,7 +298,7 @@ uint32_t currentTimestamp(void) {
 * 2004-02-12T15:19:21+00:00
 */
 void currentDateTime(StringBuilder* target) {
-  if (target != NULL) {
+  if (target != nullptr) {
     time_t t = time(0);
     struct tm  tstruct;
     char       buf[64];

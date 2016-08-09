@@ -55,7 +55,7 @@ http://abyz.co.uk/rpi/pigpio/
 /****************************************************************************************************
 * The code under this block is special on this platform, and will not be available elsewhere.       *
 ****************************************************************************************************/
-volatile Kernel* __kernel = NULL;
+volatile Kernel* __kernel = nullptr;
 
 static volatile unsigned rev = 0;
 static volatile uint32_t piModel      = 0;
@@ -78,7 +78,7 @@ bool set_linux_interval_timer() {
   _interval.it_interval.tv_sec   = 0;
   _interval.it_interval.tv_usec  = MANUVR_PLATFORM_TIMER_PERIOD_MS * 1000;
 
-  int err = setitimer(ITIMER_VIRTUAL, &_interval, NULL);
+  int err = setitimer(ITIMER_VIRTUAL, &_interval, nullptr);
   if (err) {
     Kernel::log("Failed to enable interval timer.");
   }
@@ -181,7 +181,7 @@ int initSigHandlers() {
   }
 
   _signal_action_SIGALRM.sa_handler   = &linux_timer_handler;
-  if (sigaction(SIGVTALRM, &_signal_action_SIGALRM, NULL)) {
+  if (sigaction(SIGVTALRM, &_signal_action_SIGALRM, nullptr)) {
     Kernel::log("Failed to bind to SIGVTALRM.");
     return_value = 0;
   }
@@ -216,22 +216,22 @@ unsigned gpioHardwareRevision() {
   if (rev) return rev;
 
   FILE * filp = fopen("/proc/cpuinfo", "r");
-  if (NULL != filp) {
+  if (nullptr != filp) {
     char buf[512];
     char term;
     int chars = 4; /* number of chars in revision string */
 
-    while (fgets(buf, sizeof(buf), filp) != NULL) {
+    while (fgets(buf, sizeof(buf), filp) != nullptr) {
       if (0 == piModel) {
         if (!strncasecmp("model name", buf, 10)) {
-          if (strstr (buf, "ARMv6") != NULL) {
+          if (strstr (buf, "ARMv6") != nullptr) {
             piModel = 1;
             chars = 4;
             piPeriphBase = 0x20000000;
             piBusAddr = 0x40000000;
             Kernel::log("Found a Raspberry Pi v1.\n");
           }
-          else if (strstr (buf, "ARMv7") != NULL) {
+          else if (strstr (buf, "ARMv7") != nullptr) {
             piModel = 2;
             chars = 6;
             piPeriphBase = 0x3F000000;
@@ -324,7 +324,7 @@ volatile bool provide_random_int(uint32_t nu_rnd) {
 * Init the RNG. Short and sweet.
 */
 void init_RNG() {
-  srand(time(NULL));          // Seed the PRNG...
+  srand(time(nullptr));          // Seed the PRNG...
 }
 
 
@@ -437,7 +437,7 @@ uint32_t currentTimestamp(void) {
 * date -u --iso-8601=s
 */
 void currentDateTime(StringBuilder* target) {
-  if (target != NULL) {
+  if (target != nullptr) {
     time_t t = time(0);
     struct tm  tstruct;
     char       buf[64];

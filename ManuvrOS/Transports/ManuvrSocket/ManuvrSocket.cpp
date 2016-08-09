@@ -72,13 +72,15 @@ ManuvrSocket::ManuvrSocket(const char* addr, int port, uint32_t opts) : ManuvrXp
 }
 
 
-
 /**
 * Destructor
 */
 ManuvrSocket::~ManuvrSocket() {
+  if (_sock) {
+    close(_sock);  // Close the socket.
+    _sock = 0;
+  }
 }
-
 
 
 /**
@@ -86,7 +88,7 @@ ManuvrSocket::~ManuvrSocket() {
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void ManuvrSocket::__class_initializer() {
-  EventReceiver::__class_initializer();
+  setReceiverName("ManuvrSocket");
   _options           = 0;
   _port_number       = 0;
 
@@ -121,8 +123,10 @@ int8_t ManuvrSocket::disconnect() {
     connected(false);
   }
 
-  close(_sock);  // Close the socket.
-  _sock = 0;
+  if (_sock) {
+    close(_sock);  // Close the socket.
+    _sock = 0;
+  }
   ManuvrXport::disconnect();
   return 0;
 }

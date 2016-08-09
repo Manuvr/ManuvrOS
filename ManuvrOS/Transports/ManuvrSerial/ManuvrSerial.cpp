@@ -32,10 +32,10 @@ Platforms that require it should be able to extend this driver for specific
 
 #include "ManuvrSerial.h"
 #include "FirmwareDefs.h"
-#include "XenoSession/XenoSession.h"
 
 #include <Kernel.h>
 #include <Platform/Platform.h>
+#include <XenoSession/XenoSession.h>
 
 
 #if defined (STM32F4XX)        // STM32F4
@@ -45,19 +45,20 @@ Platforms that require it should be able to extend this driver for specific
 
 #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
-
-#elif defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
+#elif defined(__MANUVR_LINUX)
+  // Linux requires these libraries for serial port.
   #include <cstdio>
   #include <stdlib.h>
   #include <unistd.h>
-
-  // Threaded platforms will need this to compensate for a loss of ISR.
-  extern void* xport_read_handler(void* active_xport);
 #else
   // No special globals needed for this platform.
 #endif
 
 
+#if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
+  // Threaded platforms will need this to compensate for a loss of ISR.
+  extern void* xport_read_handler(void* active_xport);
+#endif
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -110,7 +111,6 @@ ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate, uint32_t opts) : Ma
 * Destructor
 */
 ManuvrSerial::~ManuvrSerial() {
-  __kernel->unsubscribe(this);
 }
 
 /**
@@ -118,8 +118,11 @@ ManuvrSerial::~ManuvrSerial() {
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void ManuvrSerial::__class_initializer() {
+  setReceiverName("ManuvrSerial");
   _options           = 0;
-  _sock              = 0;
+  #if defined(__MANUVR_LINUX)
+    _sock            = 0;
+  #endif
 
   // Build some pre-formed Events.
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
@@ -142,72 +145,18 @@ void ManuvrSerial::__class_initializer() {
 * Inward toward the transport.
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
-int8_t ManuvrSerial::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
-  switch (mm) {
-    case MEM_MGMT_RESPONSIBLE_CALLER:
-      // NOTE: No break. This might be construed as a way of saying CREATOR.
-    case MEM_MGMT_RESPONSIBLE_CREATOR:
-      /* The system that allocated this buffer either...
-          a) Did so with the intention that it never be free'd, or...
-          b) Has a means of discovering when it is safe to free.  */
-      return (write_port(buf, len) ? MEM_MGMT_RESPONSIBLE_CREATOR : MEM_MGMT_RESPONSIBLE_CALLER);
+int8_t ManuvrSerial::toCounterparty(StringBuilder* buf, int8_t mm) {
+  uint8_t* ptr = buf->string();
+  int      len = buf->length();
+  bool     res = write_port(ptr, len);
 
-    case MEM_MGMT_RESPONSIBLE_BEARER:
-      /* We are now the bearer. That means that by returning non-failure, the
-          caller will expect _us_ to manage this memory.  */
-      // TODO: Freeing the buffer?
-      return (write_port(buf, len) ? MEM_MGMT_RESPONSIBLE_BEARER : MEM_MGMT_RESPONSIBLE_CALLER);
-
-    default:
-      /* This is more ambiguity than we are willing to bear... */
-      return MEM_MGMT_RESPONSIBLE_ERROR;
+  if (res) {
+    buf->clear();
   }
-  return MEM_MGMT_RESPONSIBLE_ERROR;
-}
-
-/**
-* Outward toward the application (or into the accumulator).
-*
-* @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
-* @param  mm     A declaration of memory-management responsibility.
-* @return A declaration of memory-management responsibility.
-*/
-int8_t ManuvrSerial::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
-  switch (mm) {
-    case MEM_MGMT_RESPONSIBLE_CALLER:
-      // NOTE: No break. This might be construed as a way of saying CREATOR.
-    case MEM_MGMT_RESPONSIBLE_CREATOR:
-      /* The system that allocated this buffer either...
-          a) Did so with the intention that it never be free'd, or...
-          b) Has a means of discovering when it is safe to free.  */
-      if (haveFar()) {
-        return _far->fromCounterparty(buf, len, mm);
-      }
-      else {
-        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
-      }
-
-    case MEM_MGMT_RESPONSIBLE_BEARER:
-      /* We are now the bearer. That means that by returning non-failure, the
-          caller will expect _us_ to manage this memory.  */
-      if (haveFar()) {
-        /* We are not the transport driver, and we do no transformation. */
-        return _far->fromCounterparty(buf, len, mm);
-      }
-      else {
-        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
-      }
-
-    default:
-      /* This is more ambiguity than we are willing to bear... */
-      return MEM_MGMT_RESPONSIBLE_ERROR;
-  }
-  return MEM_MGMT_RESPONSIBLE_ERROR;
+  return (res ? MEM_MGMT_RESPONSIBLE_BEARER : MEM_MGMT_RESPONSIBLE_CALLER);
 }
 
 
@@ -226,71 +175,91 @@ int8_t ManuvrSerial::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm)
 int8_t ManuvrSerial::init() {
   uint32_t xport_state_modifier = MANUVR_XPORT_FLAG_CONNECTED | MANUVR_XPORT_FLAG_LISTENING | MANUVR_XPORT_FLAG_INITIALIZED;
   #ifdef __MANUVR_DEBUG
-  if (getVerbosity() > 4) local_log.concatf("Resetting port %s...\n", _addr);
+    if (getVerbosity() > 4) local_log.concatf("Resetting port %s...\n", _addr);
   #endif
   bytes_sent         = 0;
   bytes_received     = 0;
 
   #if defined (STM32F4XX)        // STM32F4
 
-  #elif defined (__MK20DX128__)  // Teensy3
-
-  #elif defined (__MK20DX256__)  // Teensy3.1
+  #elif defined (__MK20DX128__) || defined (__MK20DX256__)  // Teensy3.x
+    if (nullptr == _addr) {
+      if (getVerbosity() > 1) {
+        local_log.concatf("No serial port ID supplied.\n", *_addr);
+        flushLocalLog();
+      }
+      return -1;
+    }
+    switch (*_addr) {
+      case 'U':   // This is the USB driver.
+        Serial.begin(_baud_rate);
+        break;
+      #if defined (__MK20DX256__)  // Teensy3.1 has more options.
+      #endif
+      default:
+        if (getVerbosity() > 1) {
+          local_log.concatf("Unsupported serial port: %c...\n", *_addr);
+          flushLocalLog();
+        }
+        return -1;
+    }
+    initialized(true);
+    connected(true);
+    listening(true);
 
   #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
   #elif defined (__MANUVR_LINUX) // Linux environment
-  if (_sock) {
-    close(_sock);
-  }
+    if (_sock) {
+      close(_sock);
+    }
 
-  _sock = open(_addr, _options);
-  if (_sock == -1) {
+    _sock = open(_addr, _options);
+    if (_sock == -1) {
+      #ifdef __MANUVR_DEBUG
+        if (getVerbosity() > 1) local_log.concatf("Unable to open port: (%s)\n", _addr);
+        flushLocalLog();
+      #endif
+      unset_xport_state(xport_state_modifier);
+      return -1;
+    }
     #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 1) local_log.concatf("Unable to open port: (%s)\n", _addr);
-      Kernel::log(&local_log);
+      if (getVerbosity() > 4) local_log.concatf("Opened port (%s) at %d\n", _addr, _baud_rate);
     #endif
-    unset_xport_state(xport_state_modifier);
-    return -1;
-  }
-    #ifdef __MANUVR_DEBUG
-  if (getVerbosity() > 4) local_log.concatf("Opened port (%s) at %d\n", _addr, _baud_rate);
-    #endif
-  set_xport_state(MANUVR_XPORT_FLAG_INITIALIZED);
+    set_xport_state(MANUVR_XPORT_FLAG_INITIALIZED);
+    tcgetattr(_sock, &termAttr);
+    cfsetspeed(&termAttr, _baud_rate);
+    // TODO: These choices should come from _options. Find a good API to emulate.
+    //    ---J. Ian Lindsay   Thu Dec 03 03:43:12 MST 2015
+    termAttr.c_cflag &= ~PARENB;          // No parity
+    termAttr.c_cflag &= ~CSTOPB;          // 1 stop bit
+    termAttr.c_cflag &= ~CSIZE;           // Enable char size mask
+    termAttr.c_cflag |= CS8;              // 8-bit characters
+    termAttr.c_cflag |= (CLOCAL | CREAD);
+    termAttr.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+    termAttr.c_iflag &= ~(IXON | IXOFF | IXANY);
+    termAttr.c_oflag &= ~OPOST;
 
-  tcgetattr(_sock, &termAttr);
-  cfsetspeed(&termAttr, _baud_rate);
-  // TODO: These choices should come from _options. Find a good API to emulate.
-  //    ---J. Ian Lindsay   Thu Dec 03 03:43:12 MST 2015
-  termAttr.c_cflag &= ~PARENB;          // No parity
-  termAttr.c_cflag &= ~CSTOPB;          // 1 stop bit
-  termAttr.c_cflag &= ~CSIZE;           // Enable char size mask
-  termAttr.c_cflag |= CS8;              // 8-bit characters
-  termAttr.c_cflag |= (CLOCAL | CREAD);
-  termAttr.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
-  termAttr.c_iflag &= ~(IXON | IXOFF | IXANY);
-  termAttr.c_oflag &= ~OPOST;
+    if (tcsetattr(_sock, TCSANOW, &termAttr) == 0) {
+      set_xport_state(xport_state_modifier);
 
-  if (tcsetattr(_sock, TCSANOW, &termAttr) == 0) {
-    set_xport_state(xport_state_modifier);
-
-    initialized(true);
-    connected(true);
-    listening(true);
-    #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 6) local_log.concatf("Port opened, and handler bound.\n");
-    #endif //__MANUVR_DEBUG
-  }
-  else {
-    unset_xport_state(xport_state_modifier);
-    initialized(false);
-    #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 1) local_log.concatf("Failed to tcsetattr...\n");
-    #endif
-  }
+      initialized(true);
+      connected(true);
+      listening(true);
+      #ifdef __MANUVR_DEBUG
+        if (getVerbosity() > 6) local_log.concatf("Port opened, and handler bound.\n");
+      #endif //__MANUVR_DEBUG
+    }
+    else {
+      unset_xport_state(xport_state_modifier);
+      initialized(false);
+      #ifdef __MANUVR_DEBUG
+        if (getVerbosity() > 1) local_log.concatf("Failed to tcsetattr...\n");
+      #endif
+    }
   #endif //LINUX
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -323,17 +292,25 @@ int8_t ManuvrSerial::reset() {
 
 int8_t ManuvrSerial::read_port() {
   if (connected()) {
-    unsigned char *buf = (unsigned char *) alloca(256);
-    int n;
-    ManuvrRunnable *event    = NULL;
-    StringBuilder  *nu_data  = NULL;
-
+    unsigned char *buf = (unsigned char *) alloca(255);
+    int n = 0;
     #if defined (STM32F4XX)        // STM32F4
 
-    #elif defined (__MK20DX128__)  // Teensy3
-
-    #elif defined (__MK20DX256__)  // Teensy3.1
-
+    #elif defined (__MK20DX128__) || defined (__MK20DX256__) // Teensy3.x
+      while (connected()) {
+        if (Serial.available()) {
+          while (Serial.available()) {
+            *(buf + n++) = Serial.read();
+          }
+          bytes_received += n;
+          BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
+          for (int i = 0; i < 255; i++) *(buf+i) = 0;
+          n = 0;
+        }
+        else {
+          sleep_millis(50);
+        }
+      }
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
     #elif defined (__MANUVR_LINUX) // Linux with pthreads...
@@ -341,7 +318,7 @@ int8_t ManuvrSerial::read_port() {
         n = read(_sock, buf, 255);
         if (n > 0) {
           bytes_received += n;
-          fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
+          BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
         }
         else {
           sleep_millis(50);
@@ -355,7 +332,7 @@ int8_t ManuvrSerial::read_port() {
     #endif
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -365,28 +342,28 @@ int8_t ManuvrSerial::read_port() {
 * Returns false on error and true on success.
 */
 bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
-  if (_sock == -1) {
-    #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 2) {
-        local_log.concatf("Unable to write to transport: %s\n", _addr);
-        Kernel::log(&local_log);
-      }
-    #endif
-    return false;
-  }
-
   if (connected()) {
     int bytes_written = 0;
+
     #if defined (STM32F4XX)        // STM32F4
 
     #elif defined(STM32F7XX) | defined(STM32F746xx)
       bytes_written = out_len;
-    #elif defined (__MK20DX128__)  // Teensy3
-
-    #elif defined (__MK20DX256__)  // Teensy3.1
-
+    #elif defined (__MK20DX128__) || defined (__MK20DX256__) // Teensy3.x
+      Serial.print((char*) out);
+      bytes_written = out_len;
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
+
     #elif defined (__MANUVR_LINUX) // Linux
+      if (_sock == -1) {
+        #ifdef __MANUVR_DEBUG
+          if (getVerbosity() > 2) {
+            local_log.concatf("Unable to write to transport: %s\n", _addr);
+            Kernel::log(&local_log);
+          }
+        #endif
+        return false;
+      }
       bytes_written = (int) write(_sock, out, out_len);
     #else   // Unsupported.
     #endif
@@ -415,14 +392,6 @@ bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
 /**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ManuvrSerial::getReceiverName() {  return "ManuvrSerial";  }
-
-
-/**
 * Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
@@ -433,7 +402,9 @@ void ManuvrSerial::printDebug(StringBuilder *temp) {
   ManuvrXport::printDebug(temp);
   temp->concatf("-- _addr           %s\n",     _addr);
   temp->concatf("-- _options        0x%08x\n", _options);
-  temp->concatf("-- _sock           0x%08x\n", _sock);
+  #if defined(__MANUVR_LINUX)
+    temp->concatf("-- _sock           0x%08x\n", _sock);
+  #endif
   temp->concatf("-- Baud            %d\n",     _baud_rate);
   temp->concatf("-- Class size      %d\n",     sizeof(ManuvrSerial));
 }
@@ -507,6 +478,6 @@ int8_t ManuvrSerial::notify(ManuvrRunnable *active_event) {
       break;
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }

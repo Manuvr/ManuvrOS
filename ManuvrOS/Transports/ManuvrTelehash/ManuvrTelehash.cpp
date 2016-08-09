@@ -156,7 +156,6 @@ ManuvrTelehash::ManuvrTelehash(ManuvrTelehash* listening_instance, int sock, str
 * Destructor
 */
 ManuvrTelehash::~ManuvrTelehash() {
-  __kernel->unsubscribe(this);
 }
 
 
@@ -166,6 +165,7 @@ ManuvrTelehash::~ManuvrTelehash() {
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void ManuvrTelehash::__class_initializer() {
+  setReceiverName("ManuvrTelehash");
   _options           = 0;
   _port_number       = 0;
   _sock              = 0;
@@ -294,7 +294,7 @@ int8_t ManuvrTelehash::listen() {
   listening(true);
   local_log.concatf("TCP Now listening at %s:%d.\n", _addr, _port_number);
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -340,7 +340,7 @@ int8_t ManuvrTelehash::read_port() {
     local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -419,14 +419,6 @@ bool ManuvrTelehash::write_port(int sock, unsigned char* out, int out_len) {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ManuvrTelehash::getReceiverName() {  return "ManuvrTelehash";  }
-
-
 /**
 * Debug support method. This fxn is only present in debug builds.
 *
@@ -514,6 +506,6 @@ int8_t ManuvrTelehash::notify(ManuvrRunnable *active_event) {
       break;
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }

@@ -24,6 +24,10 @@ This class began life as the merger of ScheduleItem and ManuvrRunnable.
 #include "Kernel.h"
 #include "ManuvrRunnable.h"
 
+const char* NUL_STR = "NULL";
+const char* YES_STR = "Yes";
+const char* NO_STR  = "No";
+
 
 /**
 * Vanilla constructor.
@@ -116,10 +120,10 @@ ManuvrRunnable::~ManuvrRunnable(void) {
 */
 void ManuvrRunnable::__class_initializer() {
   _flags             = 0x00;
-  originator         = NULL;
-  specific_target    = NULL;
-  prof_data          = NULL;
-  schedule_callback  = NULL;
+  originator         = nullptr;
+  specific_target    = nullptr;
+  prof_data          = nullptr;
+  schedule_callback  = nullptr;
   priority           = EVENT_PRIORITY_DEFAULT;
 
   thread_recurs       = 0;
@@ -140,9 +144,9 @@ int8_t ManuvrRunnable::repurpose(uint16_t code) {
   uint8_t _persist_mask = MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_PREALLOCD | MANUVR_RUNNABLE_FLAG_SCHEDULED;
   _flags              = _flags & _persist_mask;
 
-  originator          = NULL;
-  specific_target     = NULL;
-  schedule_callback   = NULL;
+  originator          = nullptr;
+  specific_target     = nullptr;
+  schedule_callback   = nullptr;
   priority            = EVENT_PRIORITY_DEFAULT;
   return ManuvrMsg::repurpose(code);
 }
@@ -152,14 +156,13 @@ bool ManuvrRunnable::abort() {
   return Kernel::abortEvent(this);
 }
 
-
 /**
 * Debug support method. This fxn is only present in debug builds.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void ManuvrRunnable::printDebug(StringBuilder *output) {
-  if (output == NULL) return;
+  if (output == nullptr) return;
   StringBuilder msg_serial;
   ManuvrMsg::printDebug(output);
   int arg_count = serialize(&msg_serial);
@@ -167,9 +170,9 @@ void ManuvrRunnable::printDebug(StringBuilder *output) {
   	  unsigned char* temp_buf = msg_serial.string();
   	  int temp_buf_len        = msg_serial.length();
 
-  	  output->concatf("\t Preallocated          %s\n", (returnToPrealloc() ? "yes" : "no"));
-  	  output->concatf("\t Originator:           %s\n", (NULL == originator ? "NULL" : originator->getReceiverName()));
-  	  output->concatf("\t specific_target:      %s\n", (NULL == specific_target ? "NULL" : specific_target->getReceiverName()));
+  	  output->concatf("\t Preallocated          %s\n", (returnToPrealloc() ? YES_STR : NO_STR));
+  	  output->concatf("\t Originator:           %s\n", (nullptr == originator ? NUL_STR : originator->getReceiverName()));
+  	  output->concatf("\t specific_target:      %s\n", (nullptr == specific_target ? NUL_STR : specific_target->getReceiverName()));
   	  output->concatf("\t Argument count (ser): %d\n", arg_count);
   	  output->concatf("\t Bitstream length:     %d\n\t Buffer:  ", temp_buf_len);
   	  for (int i = 0; i < temp_buf_len; i++) {
@@ -183,22 +186,22 @@ void ManuvrRunnable::printDebug(StringBuilder *output) {
 
   output->concatf("\t [0x%08x] Schedule \n\t --------------------------------\n", ((unsigned long)this % 0xFFFFFFFF));
 
-  output->concatf("\t Enabled       \t%s\n", (threadEnabled() ? "YES":"NO"));
+  output->concatf("\t Enabled       \t%s\n", (threadEnabled() ? YES_STR : NO_STR));
   output->concatf("\t Time-till-fire\t%u\n", thread_time_to_wait);
   output->concatf("\t Period        \t%u\n", thread_period);
   output->concatf("\t Recurs?       \t%d\n", thread_recurs);
-  output->concatf("\t Exec pending: \t%s\n", (shouldFire() ? "YES":"NO"));
-  output->concatf("\t Autoclear     \t%s\n", (autoClear() ? "YES":"NO"));
-  output->concatf("\t Profiling?    \t%s\n", (profilingEnabled() ? "YES":"NO"));
+  output->concatf("\t Exec pending: \t%s\n", (shouldFire() ? YES_STR : NO_STR));
+  output->concatf("\t Autoclear     \t%s\n", (autoClear() ? YES_STR : NO_STR));
+  output->concatf("\t Profiling?    \t%s\n", (profilingEnabled() ? YES_STR : NO_STR));
 
-  if (NULL != schedule_callback) {
+  if (nullptr != schedule_callback) {
     output->concat("\t Legacy callback\n");
   }
 }
 
 
 void ManuvrRunnable::printProfilerData(StringBuilder *output) {
-  if (NULL != prof_data) output->concatf("\t 0x%08x  %9u  %9u  %9u  %9u  %9u  %9u %s\n", ((unsigned long)this % 0xFFFFFFFF), prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last, (threadEnabled() ? " " : "(INACTIVE)"));
+  if (nullptr != prof_data) output->concatf("\t 0x%08x  %9u  %9u  %9u  %9u  %9u  %9u %s\n", ((unsigned long)this % 0xFFFFFFFF), prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last, (threadEnabled() ? " " : "(INACTIVE)"));
 }
 
 
@@ -211,7 +214,7 @@ void ManuvrRunnable::printProfilerData(StringBuilder *output) {
 *  So to begin profiling a schedule, simply instance the appropriate struct into place.
 */
 void ManuvrRunnable::profilingEnabled(bool enabled) {
-  if (NULL == prof_data) {
+  if (nullptr == prof_data) {
     // Profiler data does not exist. If enabled == false, do nothing.
     if (enabled) {
       prof_data = new TaskProfilerData();
@@ -229,16 +232,16 @@ void ManuvrRunnable::profilingEnabled(bool enabled) {
 * Destroys whatever profiling data might be stored in this Runnable.
 */
 void ManuvrRunnable::clearProfilingData() {
-  if (NULL != prof_data) {
+  if (nullptr != prof_data) {
     prof_data->profiling_active = false;
     delete prof_data;
-    prof_data = NULL;
+    prof_data = nullptr;
   }
 }
 
 
 void ManuvrRunnable::noteExecutionTime(uint32_t profile_start_time, uint32_t profile_stop_time) {
-  if (NULL != prof_data) {
+  if (nullptr != prof_data) {
     profile_stop_time = micros();
     prof_data->run_time_last    = max(profile_start_time, profile_stop_time) - min(profile_start_time, profile_stop_time);  // Rollover invarient.
     prof_data->run_time_best    = min(prof_data->run_time_best,  prof_data->run_time_last);
@@ -287,7 +290,7 @@ bool ManuvrRunnable::alterScheduleRecurrence(int16_t recurrence) {
 bool ManuvrRunnable::alterSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FunctionPointer sch_callback) {
   bool return_value  = false;
   if (sch_period > 1) {
-    if (sch_callback != NULL) {
+    if (sch_callback != nullptr) {
       fireNow(false);
       autoClear(ac);
       thread_recurs       = recurrence;

@@ -17,121 +17,48 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-The message class was derived from cantcoap. Pieces of the original header
-  files are here until they are fully-digested and the useless WIN32 case-offs
-  are removed.
+The message class was derived from cantcoap.
 */
 
 #ifndef __XENOSESSION_CoAP_H__
 #define __XENOSESSION_CoAP_H__
 
 #include <stdint.h>
-#include <arpa/inet.h>  /* __BYTE_ORDER */  // TODO: Bad. Strip.
 #include "../XenoSession.h"
-
-#define MAX_PACKET_ID 65535
 
 /*
 * These state flags are hosted by the EventReceiver. This may change in the future.
 * Might be too much convention surrounding their assignment across inherritence.
 */
-#define CoAP_SESS_FLAG_PING_WAIT  0x01    // Are we waiting on a ping reply?
+#define COAP_SESS_FLAG_PING_WAIT  0x01    // Are we waiting on a ping reply?
 
 
-#ifndef SYSDEP_H
-#define SYSDEP_H
+#define MAX_PACKET_ID        65535
+#define COAP_HDR_SIZE            4
+#define COAP_OPTION_HDR_BYTE     1
 
-#if !defined(__LITTLE_ENDIAN__) && !defined(__BIG_ENDIAN__)
-  #if __BYTE_ORDER == __LITTLE_ENDIAN
-    #define __LITTLE_ENDIAN__
-  #elif __BYTE_ORDER == __BIG_ENDIAN
-    #define __BIG_ENDIAN__
-  #endif
-#endif
+#if (__BYTE_ORDER == __LITTLE_ENDIAN__) || (__BYTE_ORDER == __ORDER_LITTLE_ENDIAN__)
+  inline uint16_t endian_be16(uint16_t val) {
+    return (((val & 0xFF00) >> 8) | ((val & 0x00FF) << 8));
+  };
 
-#ifdef __LITTLE_ENDIAN__
+  #define endian_load16(cast, from) ((cast)( \
+    (((uint16_t)((uint8_t*)(from))[0]) >> 8) | \
+    (((uint16_t)((uint8_t*)(from))[1])     ) ))
+#elif (__BYTE_ORDER == __BIG_ENDIAN__) || (__BYTE_ORDER == __ORDER_BIG_ENDIAN__)
+  inline uint16_t endian_be16(uint16_t val) {
+    return val;
+  };
 
-#define endian_be16(x) ntohs(x)
-#define endian_be32(x) ntohl(x)
+  #define endian_load16(cast, from) ((cast)( \
+    (((uint16_t)((uint8_t*)(from))[0]) << 8) | \
+    (((uint16_t)((uint8_t*)(from))[1])     ) ))
+#endif  // __BYTE_ORDER
 
-#if defined(_byteswap_uint64) || (defined(_MSC_VER) && _MSC_VER >= 1400)
-#  define endian_be64(x) (_byteswap_uint64(x))
-#elif defined(bswap_64)
-#  define endian_be64(x) bswap_64(x)
-#elif defined(__DARWIN_OSSwapInt64)
-#  define endian_be64(x) __DARWIN_OSSwapInt64(x)
-#else
-#define endian_be64(x) \
-    ( ((((uint64_t)x) << 56)                         ) | \
-      ((((uint64_t)x) << 40) & 0x00ff000000000000ULL ) | \
-      ((((uint64_t)x) << 24) & 0x0000ff0000000000ULL ) | \
-      ((((uint64_t)x) <<  8) & 0x000000ff00000000ULL ) | \
-      ((((uint64_t)x) >>  8) & 0x00000000ff000000ULL ) | \
-      ((((uint64_t)x) >> 24) & 0x0000000000ff0000ULL ) | \
-      ((((uint64_t)x) >> 40) & 0x000000000000ff00ULL ) | \
-      ((((uint64_t)x) >> 56)                         ) )
-#endif
-
-#define endian_load16(cast, from) ((cast)( \
-        (((uint16_t)((uint8_t*)(from))[0]) << 8) | \
-        (((uint16_t)((uint8_t*)(from))[1])     ) ))
-
-#define endian_load32(cast, from) ((cast)( \
-        (((uint32_t)((uint8_t*)(from))[0]) << 24) | \
-        (((uint32_t)((uint8_t*)(from))[1]) << 16) | \
-        (((uint32_t)((uint8_t*)(from))[2]) <<  8) | \
-        (((uint32_t)((uint8_t*)(from))[3])      ) ))
-
-#define endian_load64(cast, from) ((cast)( \
-        (((uint64_t)((uint8_t*)(from))[0]) << 56) | \
-        (((uint64_t)((uint8_t*)(from))[1]) << 48) | \
-        (((uint64_t)((uint8_t*)(from))[2]) << 40) | \
-        (((uint64_t)((uint8_t*)(from))[3]) << 32) | \
-        (((uint64_t)((uint8_t*)(from))[4]) << 24) | \
-        (((uint64_t)((uint8_t*)(from))[5]) << 16) | \
-        (((uint64_t)((uint8_t*)(from))[6]) << 8)  | \
-        (((uint64_t)((uint8_t*)(from))[7])     )  ))
-
-#else // __LITTLE_ENDIAN__
-
-#define endian_be16(x) (x)
-#define endian_be32(x) (x)
-#define endian_be64(x) (x)
-
-#define endian_load16(cast, from) ((cast)( \
-        (((uint16_t)((uint8_t*)(from))[0]) << 8) | \
-        (((uint16_t)((uint8_t*)(from))[1])     ) ))
-
-#define endian_load32(cast, from) ((cast)( \
-        (((uint32_t)((uint8_t*)(from))[0]) << 24) | \
-        (((uint32_t)((uint8_t*)(from))[1]) << 16) | \
-        (((uint32_t)((uint8_t*)(from))[2]) <<  8) | \
-        (((uint32_t)((uint8_t*)(from))[3])      ) ))
-
-#define endian_load64(cast, from) ((cast)( \
-        (((uint64_t)((uint8_t*)(from))[0]) << 56) | \
-        (((uint64_t)((uint8_t*)(from))[1]) << 48) | \
-        (((uint64_t)((uint8_t*)(from))[2]) << 40) | \
-        (((uint64_t)((uint8_t*)(from))[3]) << 32) | \
-        (((uint64_t)((uint8_t*)(from))[4]) << 24) | \
-        (((uint64_t)((uint8_t*)(from))[5]) << 16) | \
-        (((uint64_t)((uint8_t*)(from))[6]) << 8)  | \
-        (((uint64_t)((uint8_t*)(from))[7])     )  ))
-#endif
 
 #define endian_store16(to, num) \
-    do { uint16_t val = endian_be16(num); memcpy(to, &val, 2); } while(0)
-#define endian_store32(to, num) \
-    do { uint32_t val = endian_be32(num); memcpy(to, &val, 4); } while(0)
-#define endian_store64(to, num) \
-    do { uint64_t val = endian_be64(num); memcpy(to, &val, 8); } while(0)
+  do { uint16_t val = endian_be16(num); memcpy(to, &val, 2); } while(0);
 
-#endif // SYSDEP_H
-
-
-/// Copyright (c) 2013, Ashley Mills.
-#define COAP_HDR_SIZE 4
-#define COAP_OPTION_HDR_BYTE 1
 
 // CoAP PDU format
 //   0                   1                   2                   3
@@ -149,12 +76,6 @@ The message class was derived from cantcoap. Pieces of the original header
 
 class CoAPMessage : public XenoMessage {
   public:
-    char retained;
-    char dup;
-    uint16_t unique_id;
-    char* topic;
-    void *payload;
-
 		CoAPMessage();
 		CoAPMessage(uint8_t *pdu, int pduLength);
 		CoAPMessage(uint8_t *buffer, int bufferLength, int pduLength);
@@ -172,10 +93,10 @@ class CoAPMessage : public XenoMessage {
     // TODO: These members were digested from cantcoap...
 		/// CoAP message types. Note, values only work as enum.
 		enum Type {
-			COAP_CONFIRMABLE=0x00,
-			COAP_NON_CONFIRMABLE=0x10,
-			COAP_ACKNOWLEDGEMENT=0x20,
-			COAP_RESET=0x30
+			COAP_CONFIRMABLE     = 0x00,
+			COAP_NON_CONFIRMABLE = 0x10,
+			COAP_ACKNOWLEDGEMENT = 0x20,
+			COAP_RESET           = 0x30
 		};
 
 		// CoAP response codes.
@@ -234,12 +155,12 @@ class CoAPMessage : public XenoMessage {
 
 		/// CoAP content-formats.
 		enum ContentFormat {
-			COAP_CONTENT_FORMAT_TEXT_PLAIN = 0,
-			COAP_CONTENT_FORMAT_APP_LINK  = 40,
-			COAP_CONTENT_FORMAT_APP_XML,
-			COAP_CONTENT_FORMAT_APP_OCTET,
-			COAP_CONTENT_FORMAT_APP_EXI   = 47,
-			COAP_CONTENT_FORMAT_APP_JSON  = 50
+			COAP_CONTENT_FORMAT_TEXT_PLAIN =  0,
+			COAP_CONTENT_FORMAT_APP_LINK   = 40,
+			COAP_CONTENT_FORMAT_APP_XML    = 41,
+			COAP_CONTENT_FORMAT_APP_OCTET  = 42,
+			COAP_CONTENT_FORMAT_APP_EXI    = 47,
+			COAP_CONTENT_FORMAT_APP_JSON   = 50
 		};
 
 		/// Sequence of these is returned by CoAPMessage::getOptions()
@@ -285,11 +206,22 @@ class CoAPMessage : public XenoMessage {
     /* Return the number of options in the message. */
 		inline int getNumOptions() {      return _numOptions;    };
 
-		// shorthand helpers
-		int setURI(char *uri);
+
+    inline int setURI(char *uri) {
+      return setURI(uri, strlen(uri));
+    };
 		int setURI(char *uri, int urilen);
 		int getURI(char *dst, int dstlen, int *outLen);
-		int addURIQuery(char *query);
+
+    /**
+    * Adds a new option to the CoAP PDU that encodes a URI_QUERY.
+    *
+    * \param query The uri query to encode.
+    * \return 0 on success, 1 on failure.
+    */
+		inline int addURIQuery(char *query) {
+      return addOption(COAP_OPTION_URI_QUERY,strlen(query),(uint8_t*)query);
+    };
 
 		// content format helper
 		int setContentFormat(CoAPMessage::ContentFormat format);
@@ -297,30 +229,33 @@ class CoAPMessage : public XenoMessage {
 		// payload
 		uint8_t* mallocPayload(int bytes);
 		int setPayload(uint8_t *value, int len);
-		uint8_t* getPayloadPointer();
-		int getPayloadLength();
+
+		inline uint8_t* getPayloadPointer() {  return _payloadPointer; };
+		inline int getPayloadLength() {        return _payloadLength;  };
 		uint8_t* getPayloadCopy();
 
-		// pdu
-		inline int getPDULength() {  return _pduLength;  };
-		uint8_t* getPDUPointer();
-		void setPDULength(int len);
+    /**
+    * This is used when re-using a PDU container before calling CoAPMessage::validate() as it
+    * is not possible to deduce the length of a PDU since the payload has no length marker.
+    * \param len The length of the PDU
+    */
+		inline void setPDULength(int len) { _pduLength = len;   };
+		// pdu buffer accessors.
+		inline uint16_t getPDULength() {    return _pduLength;  };
+		inline uint8_t* getPDUPointer() {   return _pdu;        };
 
 		// debugging
-		void print();
-		void printBin();
-		void printHex();
 		void printOptionHuman(uint8_t *option);
-		void printHuman();
-		void printPDUAsCArray();
 
-		static void printBinary(uint8_t b);
     static const char* optionNumToString(uint16_t);
     static const char* codeToString(CoAPMessage::Code);
+    static const char* typeToString(CoAPMessage::Type);
 		static CoAPMessage::Code httpStatusToCode(int httpStatus);
 
 
   private:
+    StringBuilder coap_log;   // TODO: Make local variable.
+
     // TODO: These members were digested from cantcoap...
 		uint8_t* _pdu;
 		uint8_t* _payloadPointer;
@@ -371,12 +306,10 @@ class CoAPSession : public XenoSession {
     int8_t connection_callback(bool connected);
 
     /* Override from BufferPipe. */
-    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
-    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
 
     /* Overrides from EventReceiver */
     void procDirectDebugInstruction(StringBuilder*);
-    const char* getReceiverName();
     void printDebug(StringBuilder*);
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);

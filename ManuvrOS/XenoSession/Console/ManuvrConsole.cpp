@@ -32,6 +32,7 @@ extern void printHelp();  // TODO: Hack. Remove later.
 * @param   BufferPipe* All sessions must have one (and only one) transport.
 */
 ManuvrConsole::ManuvrConsole(BufferPipe* _near_side) : XenoSession(_near_side) {
+  setReceiverName("Console");
   Kernel::attachToLogger((BufferPipe*) this);
   mark_session_state(XENOSESSION_STATE_ESTABLISHED);
   _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
@@ -83,105 +84,62 @@ int8_t ManuvrConsole::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
   return BufferPipe::toCounterparty(_sig, _args);
 }
 
-
 /**
 * Inward toward the transport.
-*
-* This is where we relay logs back across the same transport on which we are
-*   listening for user input.
+* Or into the accumulator.
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
-int8_t ManuvrConsole::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
-  if (!booted()) {
-    // Until we boot, we cache logs...
-    _log_accumulator.concat(buf, len);
-    return MEM_MGMT_RESPONSIBLE_BEARER;
+int8_t ManuvrConsole::toCounterparty(StringBuilder* buf, int8_t mm) {
+  _log_accumulator.concatHandoff(buf);
+  if (isConnected() && booted()) {
+    BufferPipe::toCounterparty(&_log_accumulator, MEM_MGMT_RESPONSIBLE_BEARER);
   }
-  switch (mm) {
-    case MEM_MGMT_RESPONSIBLE_CALLER:
-      // NOTE: No break. This might be construed as a way of saying CREATOR.
-    case MEM_MGMT_RESPONSIBLE_CREATOR:
-      /* The system that allocated this buffer either...
-          a) Did so with the intention that it never be free'd, or...
-          b) Has a means of discovering when it is safe to free.  */
-      if (haveNear()) {
-        return _near->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_CREATOR);
-      }
-      return MEM_MGMT_RESPONSIBLE_CALLER;
-
-    case MEM_MGMT_RESPONSIBLE_BEARER:
-      /* We are now the bearer. That means that by returning non-failure, the
-          caller will expect _us_ to manage this memory.  */
-      // TODO: Freeing the buffer?
-      if (haveNear()) {
-        return _near->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_BEARER);
-      }
-      return MEM_MGMT_RESPONSIBLE_CALLER;
-
-    default:
-      /* This is more ambiguity than we are willing to bear... */
-      return MEM_MGMT_RESPONSIBLE_ERROR;
-  }
-  return MEM_MGMT_RESPONSIBLE_ERROR;
+  return MEM_MGMT_RESPONSIBLE_BEARER;
 }
 
 /**
 * Taking user input from the transport...
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
-int8_t ManuvrConsole::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
-  switch (mm) {
-    case MEM_MGMT_RESPONSIBLE_CALLER:
-      // NOTE: No break. This might be construed as a way of saying CREATOR.
-    case MEM_MGMT_RESPONSIBLE_CREATOR:
-      /* The system that allocated this buffer either...
-          a) Did so with the intention that it never be free'd, or...
-          b) Has a means of discovering when it is safe to free.  */
-    case MEM_MGMT_RESPONSIBLE_BEARER:
-      /* We are now the bearer. That means that by returning non-failure, the
-          caller will expect _us_ to manage this memory.  */
-      session_buffer.concat(buf, len);
-      for (int toks = session_buffer.split("\n"); toks > 0; toks--) {
-        char* temp_ptr = session_buffer.position(0);
-        int temp_len   = strlen(temp_ptr);
-
-        // Begin the cases...
-        #if defined(_GNU_SOURCE)
-        if (strcasestr(temp_ptr, "QUIT")) {
-          ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_REBOOT);
-          event->originator = (EventReceiver*) __kernel;
-          Kernel::staticRaiseEvent(event);
-        }
-        else if (strcasestr(temp_ptr, "HELP"))  printHelp();      // Show help.
-        else {
-        #else
-        {
-        #endif
-          // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
-          // run in idle time.
-          ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
-          event->originator = (EventReceiver*) this;
-          StringBuilder* dispatched = new StringBuilder((uint8_t*) temp_ptr, temp_len);
-          event->markArgForReap(event->addArg(dispatched), true);
-          Kernel::staticRaiseEvent(event);
-        }
-        session_buffer.drop_position(0);
-      }
-      return MEM_MGMT_RESPONSIBLE_CREATOR;
-
-    default:
-      /* This is more ambiguity than we are willing to bear... */
-      return MEM_MGMT_RESPONSIBLE_ERROR;
+int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
+  if (!(buf->contains('\n') || buf->contains('\r'))) {
+    // If the console doesn't see a CR, it will not register a command.
+    session_buffer.concatHandoff(buf);  // buf check will fail if the precedes it.
+    return MEM_MGMT_RESPONSIBLE_BEARER;
   }
-  return MEM_MGMT_RESPONSIBLE_ERROR;
+  session_buffer.concatHandoff(buf);
+  for (int toks = session_buffer.split("\n"); toks > 0; toks--) {
+    char* temp_ptr = session_buffer.position(0);
+    int temp_len   = strlen(temp_ptr);
+    // Begin the cases...
+    #if defined(_GNU_SOURCE)
+      if (strcasestr(temp_ptr, "QUIT")) {
+        ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_REBOOT);
+        event->originator = (EventReceiver*) __kernel;
+        Kernel::staticRaiseEvent(event);
+      }
+      else if (strcasestr(temp_ptr, "HELP"))  printHelp();      // Show help.
+      else
+    #else
+    #endif
+    {
+      // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
+      // run in idle time.
+      ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
+      event->originator = (EventReceiver*) this;
+      StringBuilder* dispatched = new StringBuilder((uint8_t*) temp_ptr, temp_len);
+      event->markArgForReap(event->addArg(dispatched), true);
+      Kernel::staticRaiseEvent(event);
+    }
+    session_buffer.drop_position(0);
+  }
+  return MEM_MGMT_RESPONSIBLE_BEARER;
 }
 
 
@@ -201,14 +159,6 @@ int8_t ManuvrConsole::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ManuvrConsole::getReceiverName() {  return "Console";  }
-
-
 /**
 * Boot done finished-up.
 *
@@ -310,7 +260,7 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
       {
         StringBuilder* buf;
         if (0 == active_event->getArgAs(&buf)) {
-          fromCounterparty(buf->string(), buf->length(), MEM_MGMT_RESPONSIBLE_BEARER);
+          fromCounterparty(buf, MEM_MGMT_RESPONSIBLE_BEARER);
         }
       }
       return_value++;
@@ -321,7 +271,7 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
       break;
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }
 
@@ -332,24 +282,7 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
 //   still a valid call target that deals with allowing the console to operate
 //   on itself.
 void ManuvrConsole::procDirectDebugInstruction(StringBuilder *input) {
-  uint8_t temp_byte = 0;
-
-  char* str = input->position(0);
-
-  if (*(str) != 0) {
-    temp_byte = atoi((char*) str+1);
-  }
-
-  switch (*(str)) {
-    case 'i':
-      printDebug(&local_log);
-      break;
-
-    default:
-      XenoSession::procDirectDebugInstruction(input);
-      break;
-  }
-
+  XenoSession::procDirectDebugInstruction(input);
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 

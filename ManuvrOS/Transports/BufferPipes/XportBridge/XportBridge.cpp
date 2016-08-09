@@ -89,7 +89,7 @@ const char* XportBridge::pipeName() { return "XportBridge"; }
 /*
 * One side of the bridge.
 */
-int8_t XportBridge::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+int8_t XportBridge::toCounterparty(StringBuilder* buf, int8_t mm) {
   switch (mm) {
     case MEM_MGMT_RESPONSIBLE_CALLER:
       // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -99,7 +99,7 @@ int8_t XportBridge::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
           b) Has a means of discovering when it is safe to free.  */
       if (haveNear()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _near->toCounterparty(buf, len, mm);
+        return _near->toCounterparty(buf, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 
@@ -108,7 +108,7 @@ int8_t XportBridge::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
           caller will expect _us_ to manage this memory.  */
       if (haveNear()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _near->toCounterparty(buf, len, mm);
+        return _near->toCounterparty(buf, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 
@@ -121,7 +121,7 @@ int8_t XportBridge::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
 /*
 * The other side of the bridge.
 */
-int8_t XportBridge::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+int8_t XportBridge::fromCounterparty(StringBuilder* buf, int8_t mm) {
   switch (mm) {
     case MEM_MGMT_RESPONSIBLE_CALLER:
       // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -131,7 +131,7 @@ int8_t XportBridge::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) 
           b) Has a means of discovering when it is safe to free.  */
       if (haveFar()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _far->fromCounterparty(buf, len, mm);
+        return _far->fromCounterparty(buf, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 
@@ -140,7 +140,7 @@ int8_t XportBridge::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) 
           caller will expect _us_ to manage this memory.  */
       if (haveFar()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _far->fromCounterparty(buf, len, mm);
+        return _far->fromCounterparty(buf, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 

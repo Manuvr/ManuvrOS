@@ -34,8 +34,8 @@ There ought to be no inclusion in this file. It is the bottom.
   #define LOG_DEBUG   7    /* debug-level messages */
 
   // Function-pointer definitions
-  typedef void (*FunctionPointer) ();
-  typedef void *(*ThreadFxnPtr)    (void*);
+  typedef void  (*FunctionPointer) ();
+  typedef void* (*ThreadFxnPtr)    (void*);
 
 
 
@@ -58,4 +58,8 @@ There ought to be no inclusion in this file. It is the bottom.
   #define DEVICE_FLAG_INTERNET_ACCESS             0x00000002  // Can this firmware potentially provide net access?
   #define DEVICE_FLAG_MESSAGE_RELAY               0x00000004  // Can we act as a message relay?
   #define DEVICE_FLAG_MESSAGE_SEMANTICS           0x00000008  // Will this firmware supply message semantics?
+
+  /*
+  * String constants that don't need to be replicated all over the program...
+  */
 #endif

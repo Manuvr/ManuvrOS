@@ -40,8 +40,8 @@ limitations under the License.
 * Vanilla constructor.
 */
 StringBuilder::StringBuilder() {
-  this->root   = NULL;
-  this->str    = NULL;
+  this->root   = nullptr;
+  this->str    = nullptr;
   this->col_length = 0;
   this->preserve_ll = false;
   #if defined(__MANUVR_LINUX)
@@ -52,8 +52,8 @@ StringBuilder::StringBuilder() {
 }
 
 StringBuilder::StringBuilder(char *initial) {
-  this->root   = NULL;
-  this->str    = NULL;
+  this->root   = nullptr;
+  this->str    = nullptr;
   this->col_length = 0;
   this->preserve_ll = false;
   this->concat(initial);
@@ -65,8 +65,8 @@ StringBuilder::StringBuilder(char *initial) {
 }
 
 StringBuilder::StringBuilder(unsigned char *initial, int len) {
-  this->root   = NULL;
-  this->str    = NULL;
+  this->root   = nullptr;
+  this->str    = nullptr;
   this->col_length = 0;
   this->preserve_ll = false;
   this->concat(initial, len);
@@ -79,8 +79,8 @@ StringBuilder::StringBuilder(unsigned char *initial, int len) {
 
 
 StringBuilder::StringBuilder(const char *initial) {
-  this->root   = NULL;
-  this->str    = NULL;
+  this->root   = nullptr;
+  this->str    = nullptr;
   this->col_length = 0;
   this->preserve_ll = false;
   this->concat(initial);
@@ -98,11 +98,11 @@ StringBuilder::StringBuilder(const char *initial) {
 */
 StringBuilder::~StringBuilder() {
   if (!this->preserve_ll) {
-    if (this->root != NULL) destroyStrLL(this->root);
+    if (this->root != nullptr) destroyStrLL(this->root);
 
-    if (this->str != NULL) {
+    if (this->str != nullptr) {
       free(this->str);
-      this->str = NULL;
+      this->str = nullptr;
     }
   }
   #if defined(__MANUVR_LINUX)
@@ -123,7 +123,7 @@ StringBuilder::~StringBuilder() {
 */
 int StringBuilder::length() {
   int return_value = this->col_length;
-  if (this->root != NULL) {
+  if (this->root != nullptr) {
     return_value  = return_value + this->totalStrLen(this->root);
   }
   return return_value;
@@ -134,9 +134,9 @@ int StringBuilder::length() {
 * Includes the base str member in the count.
 */
 unsigned short StringBuilder::count() {
-  unsigned short return_value = (NULL != this->str) ? 1 : 0;
+  unsigned short return_value = (nullptr != this->str) ? 1 : 0;
   StrLL *current = this->root;
-  while (current != NULL) {
+  while (current != nullptr) {
     return_value++;
     current = current->next;
   }
@@ -147,10 +147,10 @@ unsigned short StringBuilder::count() {
 
 /**
 * Public fxn to retrieve the flattened string as an unsigned char *.
-*   Will never return NULL. Will return a zero-length string in the worst-case.
+*   Will never return nullptr. Will return a zero-length string in the worst-case.
 */
 unsigned char* StringBuilder::string() {
-  if ((this->str == NULL) && (this->root == NULL)) {
+  if ((this->str == nullptr) && (this->root == nullptr)) {
     // Nothing in this object. Return a zero-length string.
     this->str = (unsigned char *) malloc(1);
     this->str[0] = '\0';
@@ -168,12 +168,12 @@ void StringBuilder::clear(void) {
     //pthread_mutex_lock(&_mutex);
   #elif defined(__MANUVR_FREERTOS)
   #endif
-  if (this->root != NULL) destroyStrLL(this->root);
-  if (this->str != NULL) {
+  if (this->root != nullptr) destroyStrLL(this->root);
+  if (this->str != nullptr) {
     free(this->str);
   }
-  this->root   = NULL;
-  this->str    = NULL;
+  this->root   = nullptr;
+  this->str    = nullptr;
   this->col_length = 0;
   #if defined(__MANUVR_LINUX)
     //pthread_mutex_unlock(&_mutex);
@@ -187,7 +187,7 @@ void StringBuilder::clear(void) {
 * Null on failure.
 */
 char* StringBuilder::position(int pos) {
-  if (this->str != NULL) {
+  if (this->str != nullptr) {
     if (pos == 0) {
       return (char*) this->str;
     }
@@ -195,11 +195,11 @@ char* StringBuilder::position(int pos) {
   }
   StrLL *current = this->root;
   int i = 0;
-  while ((i != pos) & (current != NULL)){
+  while ((i != pos) & (current != nullptr)){
     current = current->next;
     i++;
   }
-  return (current == NULL) ? NULL : ((char *)current->str);
+  return (current == nullptr) ? nullptr : ((char *)current->str);
 }
 
 
@@ -208,7 +208,7 @@ char* StringBuilder::position(int pos) {
 */
 int StringBuilder::position_as_int(int pos) {
   const char* temp = (const char*) position(pos);
-  if (temp != NULL) {
+  if (temp != nullptr) {
     int len = strlen(temp);
     if ((len > 2) && (*(temp) == '0') && (*(temp + 1) == 'x')) {
       // Possibly dealing with a hex representation. Try to convert....
@@ -265,7 +265,7 @@ int StringBuilder::position_as_int(int pos) {
 * Null on failure.
 */
 unsigned char* StringBuilder::position(int pos, int *pos_len) {
-  if (this->str != NULL) {
+  if (this->str != nullptr) {
     if (pos == 0) {
       *pos_len = this->col_length;
       return this->str;
@@ -274,18 +274,18 @@ unsigned char* StringBuilder::position(int pos, int *pos_len) {
   }
   StrLL *current = this->root;
   int i = 0;
-  while ((i != pos) & (current != NULL)){
+  while ((i != pos) & (current != nullptr)){
     current = current->next;
     i++;
   }
-  *pos_len = (current != NULL) ? current->len : 0;
-  return ((current != NULL) ? current->str : (unsigned char *)"");
+  *pos_len = (current != nullptr) ? current->len : 0;
+  return ((current != nullptr) ? current->str : (unsigned char *)"");
 }
 
 
 char* StringBuilder::position_trimmed(int pos){
   char* str = position(pos);
-  if (str == NULL) {
+  if (str == nullptr) {
     return (char*) "";
   }
   char *end;
@@ -302,32 +302,32 @@ char* StringBuilder::position_trimmed(int pos){
 * Returns true on success, false on failure.
 */
 bool StringBuilder::drop_position(unsigned int pos) {
-  if (this->str != NULL) {
+  if (this->str != nullptr) {
     if (pos == 0) {
       this->col_length = 0;
       free(this->str);
-      this->str = NULL;
+      this->str = nullptr;
       return true;
     }
     pos--;
   }
   StrLL *current = this->root;
-  StrLL *prior = NULL;
+  StrLL *prior = nullptr;
   unsigned int i = 0;
-  while ((i != pos) & (current != NULL)){
+  while ((i != pos) & (current != nullptr)){
     prior = current;
     current = current->next;
     i++;
   }
-  if (current != NULL) {
-    if (prior == NULL) {
+  if (current != nullptr) {
+    if (prior == nullptr) {
       this->root = current->next;
-      current->next = NULL;
+      current->next = nullptr;
       destroyStrLL(current);
     }
     else {
       prior->next = current->next;
-      current->next = NULL;
+      current->next = nullptr;
       destroyStrLL(current);
     }
     return true;
@@ -351,12 +351,12 @@ void StringBuilder::concatHandoff(StringBuilder *nu) {
     //xSemaphoreTakeRecursive(&_mutex, 0);
     //xSemaphoreTakeRecursive(&nu->_mutex, 0);
   #endif
-  if ((NULL != nu) && (nu->length() > 0)) {
+  if ((nullptr != nu) && (nu->length() > 0)) {
     nu->promote_collapsed_into_ll();   // Promote the previously-collapsed string.
 
-    if (NULL != nu->root) {
+    if (nullptr != nu->root) {
       this->stackStrOntoList(nu->root);
-      nu->root = NULL;  // Inform the origin instance...
+      nu->root = nullptr;  // Inform the origin instance...
     }
   }
   #if defined(__MANUVR_LINUX)
@@ -371,19 +371,19 @@ void StringBuilder::concatHandoff(StringBuilder *nu) {
 
 /*
 * Thank you N. Gortari for the most excellent tip:
-*   Intention:       if (obj == NULL)  // Null-checking is a common thing to do...
-*   The risk:        if (obj = NULL)   // Compiler allows this. Assignment always evals to 'true'.
-*   The mitigation:  if (NULL == obj)  // Equality is commutitive.
+*   Intention:       if (obj == nullptr)  // Null-checking is a common thing to do...
+*   The risk:        if (obj = nullptr)   // Compiler allows this. Assignment always evals to 'true'.
+*   The mitigation:  if (nullptr == obj)  // Equality is commutitive.
 *
-*     "(NULL == obj)" and "(obj == NULL)" mean exaclty the same thing, and are equally valid.
+*     "(nullptr == obj)" and "(obj == nullptr)" mean exaclty the same thing, and are equally valid.
 *
 * Levarge assignment operator's non-commutivity, so if you derp and do this...
-*           if (NULL = obj)
+*           if (nullptr = obj)
 * ...the mechanics of the language will prevent compilation, and thus, not allow you
 *       to overlook it on accident.
 */
 void StringBuilder::prependHandoff(StringBuilder *nu) {
-  if (NULL != nu) {
+  if (nullptr != nu) {
     #if defined(__MANUVR_LINUX)
       //pthread_mutex_lock(&_mutex);
       //pthread_mutex_lock(&nu->_mutex);
@@ -394,13 +394,13 @@ void StringBuilder::prependHandoff(StringBuilder *nu) {
     // Promote the donor instance's previously-collapsed string so we don't have to worry about it.
     StrLL *current = nu->promote_collapsed_into_ll();
 
-    if (NULL != nu->root) {
+    if (nullptr != nu->root) {
       // Scan to the end of the donated LL...
-      while (NULL != current->next) {   current = current->next;  }
+      while (nullptr != current->next) {   current = current->next;  }
 
       current->next = this->root;  // ...and tack our existing list to the end of it.
       this->root = nu->root;       // ...replace our idea of the root.
-      nu->root = NULL;             // Inform the origin instance so it doesn't free what we just took.
+      nu->root = nullptr;             // Inform the origin instance so it doesn't free what we just took.
     }
     #if defined(__MANUVR_LINUX)
       //pthread_mutex_unlock(&nu->_mutex);
@@ -418,15 +418,15 @@ void StringBuilder::prependHandoff(StringBuilder *nu) {
 * Always returns a pointer to the root of the LL. Changed or otherwise.
 */
 StrLL* StringBuilder::promote_collapsed_into_ll(void) {
-  if ((NULL != str) && (col_length > 0)) {
+  if ((nullptr != str) && (col_length > 0)) {
     StrLL *nu_element = (StrLL *) malloc(sizeof(StrLL));
-    if (NULL != nu_element) {   // This is going to grief us later...
+    if (nullptr != nu_element) {   // This is going to grief us later...
       nu_element->reap = true;
       nu_element->next = this->root;
       this->root = nu_element;
       nu_element->str = this->str;
       nu_element->len = this->col_length;
-      this->str = NULL;
+      this->str = nullptr;
       this->col_length = 0;
     }
   }
@@ -437,15 +437,15 @@ StrLL* StringBuilder::promote_collapsed_into_ll(void) {
 /*
 */
 void StringBuilder::prepend(unsigned char *nu, int len) {
-  if ((NULL != nu) && (len > 0)) {
+  if ((nullptr != nu) && (len > 0)) {
     this->root = promote_collapsed_into_ll();   // Promote the previously-collapsed string.
 
     StrLL *nu_element = (StrLL *) malloc(sizeof(StrLL));
-    if (NULL == nu_element) return;   // O no.
+    if (nullptr == nu_element) return;   // O no.
     nu_element->reap = true;
     nu_element->len  = len;
     nu_element->str  = (unsigned char *) malloc(len+1);
-    if (nu_element->str != NULL) {
+    if (nu_element->str != nullptr) {
       *(nu_element->str + len) = '\0';
       memcpy(nu_element->str, nu, len);
       nu_element->next = this->root;
@@ -473,27 +473,27 @@ void StringBuilder::prepend(const char *nu) {
 */
 int StringBuilder::totalStrLen(StrLL *node) {
   int len  = 0;
-  if (node != NULL) {
+  if (node != nullptr) {
     len  = this->totalStrLen(node->next);
-    if (node->str != NULL)  len  = len + node->len;
+    if (node->str != nullptr)  len  = len + node->len;
   }
   return len;
 }
 
 
 void StringBuilder::concat(unsigned char *nu, int len) {
-  if ((nu != NULL) && (len > 0)) {
+  if ((nu != nullptr) && (len > 0)) {
     #if defined(__MANUVR_LINUX)
       //pthread_mutex_lock(&_mutex);
     #elif defined(__MANUVR_FREERTOS)
     #endif
     StrLL *nu_element = (StrLL *) malloc(sizeof(StrLL));
-    if (nu_element != NULL) {
+    if (nu_element != nullptr) {
       nu_element->reap = true;
-      nu_element->next = NULL;
+      nu_element->next = nullptr;
       nu_element->len  = len;
       nu_element->str  = (unsigned char *) malloc(len+1);
-      if (nu_element->str != NULL) {
+      if (nu_element->str != nullptr) {
         *(nu_element->str + len) = '\0';
         memcpy(nu_element->str, nu, len);
         this->stackStrOntoList(nu_element);
@@ -520,7 +520,7 @@ void StringBuilder::concat(char *nu) {
 *   until it is manipulated somehow. So be very careful if you cast to (const char*).
 */
 void StringBuilder::concat(const char *nu) {
-  if (nu != NULL) {
+  if (nu != nullptr) {
     int len = strlen(nu);
     if (len > 0) {
       #if defined(__MANUVR_LINUX)
@@ -528,9 +528,9 @@ void StringBuilder::concat(const char *nu) {
       #elif defined(__MANUVR_FREERTOS)
       #endif
       StrLL *nu_element = (StrLL *) malloc(sizeof(StrLL));
-      if (nu_element != NULL) {
+      if (nu_element != nullptr) {
         nu_element->reap = false;
-        nu_element->next = NULL;
+        nu_element->next = nullptr;
         nu_element->len  = len;
         nu_element->str  = (unsigned char *) nu;
         this->stackStrOntoList(nu_element);
@@ -589,7 +589,7 @@ void StringBuilder::concat(bool nu) {
 *   the advantage of making a copy of the argument.
 */
 void StringBuilder::concat(StringBuilder *nu) {
-  if (nu != NULL) {
+  if (nu != nullptr) {
     this->concat(nu->string(), nu->length());
   }
 }
@@ -643,7 +643,7 @@ void StringBuilder::cull(int offset, int length) {
   if (this->length() >= (length-offset)) {   // Does the given range exist?
     int remaining_length = length-offset;
     unsigned char* temp = (unsigned char*) malloc(remaining_length+1);  // + 1 for null-terminator.
-    if (temp != NULL) {
+    if (temp != nullptr) {
       *(temp + remaining_length) = '\0';
       this->collapseIntoBuffer();   // Room to optimize here...
       memcpy(temp, this->str, remaining_length);
@@ -673,7 +673,7 @@ void StringBuilder::cull(int x) {
   else if (this->length() > x) {   // Does the given range exist?
     int remaining_length = this->length()-x;
     unsigned char* temp = (unsigned char*) malloc(remaining_length+1);  // + 1 for null-terminator.
-    if (temp != NULL) {
+    if (temp != nullptr) {
       *(temp + remaining_length) = '\0';
       this->collapseIntoBuffer();   // Room to optimize here...
       memcpy(temp, (unsigned char*)(this->str + x), remaining_length);
@@ -697,11 +697,20 @@ void StringBuilder::trim() {
   //    ---J. Ian Lindsay   Thu Dec 17 03:22:01 MST 2015
 }
 
+bool StringBuilder::contains(char test) {
+  this->collapseIntoBuffer();
+  if (this->col_length == 0) return 0;
+
+  for (int i = 0; i < this->col_length; i++) {
+    if (test == *(this->str + i)) return true;
+  }
+  return false;
+}
 
 
 StrLL* StringBuilder::stackStrOntoList(StrLL *current, StrLL *nu) {
-  if (current != NULL) {
-    if (current->next == NULL) current->next = nu;
+  if (current != nullptr) {
+    if (current->next == nullptr) current->next = nu;
     else this->stackStrOntoList(current->next, nu);
   }
   return current;
@@ -711,12 +720,12 @@ StrLL* StringBuilder::stackStrOntoList(StrLL *current, StrLL *nu) {
 * Non-recursive override to make additions less cumbersome.
 */
 StrLL* StringBuilder::stackStrOntoList(StrLL *nu) {
-  StrLL* return_value = NULL;
+  StrLL* return_value = nullptr;
   #if defined(__MANUVR_LINUX)
     //pthread_mutex_lock(&_mutex);
   #elif defined(__MANUVR_FREERTOS)
   #endif
-  if (this->root == NULL) {
+  if (this->root == nullptr) {
     this->root  = nu;
     return_value = this->root;
   }
@@ -734,7 +743,7 @@ StrLL* StringBuilder::stackStrOntoList(StrLL *nu) {
 
 /**
 * Traverse the list and keep appending strings to the buffer.
-* Will prepend the str buffer if it is not NULL.
+* Will prepend the str buffer if it is not nullptr.
 * Updates the length.
 */
 void StringBuilder::collapseIntoBuffer() {
@@ -743,15 +752,15 @@ void StringBuilder::collapseIntoBuffer() {
   #elif defined(__MANUVR_FREERTOS)
   #endif
   StrLL *current = promote_collapsed_into_ll();   // Promote the previously-collapsed string.
-  if (current != NULL) {
+  if (current != nullptr) {
     this->col_length = this->totalStrLen(this->root);
     if (this->col_length > 0) {
       this->str = (unsigned char *) malloc(this->col_length + 1);
-      if (this->str != NULL) {
+      if (this->str != nullptr) {
         *(this->str + this->col_length) = '\0';
         int tmp_len = 0;
-        while (current != NULL) {
-          if (current->str != NULL) {
+        while (current != nullptr) {
+          if (current->str != nullptr) {
             memcpy((void *)(this->str + tmp_len), (void *)(current->str), current->len);
             tmp_len = tmp_len + current->len;
           }
@@ -776,14 +785,14 @@ void StringBuilder::destroyStrLL(StrLL *r_node) {
     //pthread_mutex_lock(&_mutex);
   #elif defined(__MANUVR_FREERTOS)
   #endif
-  if (r_node != NULL) {
-    if (r_node->next != NULL) {
+  if (r_node != nullptr) {
+    if (r_node->next != nullptr) {
       destroyStrLL(r_node->next);
-      r_node->next  = NULL;
+      r_node->next  = nullptr;
     }
     if (r_node->reap) free(r_node->str);
     free(r_node);
-    if (r_node == this->root) this->root = NULL;
+    if (r_node == this->root) this->root = nullptr;
   }
   #if defined(__MANUVR_LINUX)
     //pthread_mutex_unlock(&_mutex);
@@ -810,8 +819,8 @@ int StringBuilder::cmpBinString(unsigned char *unknown, int len) {
 
 
 int StringBuilder::implode(const char *delim) {
-  if (delim != NULL) {
-    if (str != NULL) {
+  if (delim != nullptr) {
+    if (str != nullptr) {
 
     }
   }
@@ -829,14 +838,14 @@ int StringBuilder::split(const char *delims) {
   if (this->col_length == 0) return 0;
   this->null_term_check();
   char *temp_str  = strtok((char *)this->str, delims);
-  if (temp_str != NULL) {
-    while (temp_str != NULL) {
+  if (temp_str != nullptr) {
+    while (temp_str != nullptr) {
       this->concat(temp_str);
       return_value++;
-      temp_str  = strtok(NULL, delims);
+      temp_str  = strtok(nullptr, delims);
     }
     free(this->str);
-    this->str = NULL;
+    this->str = nullptr;
     this->col_length = 0;
   }
   else {
@@ -860,10 +869,10 @@ int StringBuilder::split(const char *delims) {
 * NOTE: This only operates on the collapsed buffer.
 */
 void StringBuilder::null_term_check() {
-  if (this->str != NULL) {
+  if (this->str != nullptr) {
     if (*(this->str + (this->col_length-1)) != '\0') {
       unsigned char *temp = (unsigned char *) malloc(this->col_length+1);
-      if (temp != NULL) {
+      if (temp != nullptr) {
         *(temp + this->col_length) = '\0';
         memcpy(temp, this->str, this->col_length);
         free(this->str);
@@ -879,7 +888,7 @@ void StringBuilder::printDebug(StringBuilder* output) {
   unsigned char* temp = this->string();
   int temp_len  = this->length();
 
-  if ((temp != NULL) && (temp_len > 0)) {
+  if ((temp != nullptr) && (temp_len > 0)) {
     for (int i = 0; i < temp_len; i++) {
       output->concatf("%02x ", *(temp + i));
     }

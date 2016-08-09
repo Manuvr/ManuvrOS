@@ -87,7 +87,7 @@ struct MQTTOpts {
 class MQTTSession : public XenoSession {
   public:
     MQTTSession(ManuvrXport*);
-    ~MQTTSession();
+    virtual ~MQTTSession();
 
     int8_t sendEvent(ManuvrRunnable*);
 
@@ -98,14 +98,12 @@ class MQTTSession : public XenoSession {
     int8_t unsubscribeAll();
 
     /* Override from BufferPipe. */
-    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
-    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
 
     int8_t connection_callback(bool connected);
 
     /* Overrides from EventReceiver */
     void procDirectDebugInstruction(StringBuilder*);
-    const char* getReceiverName();
     void printDebug(StringBuilder*);
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);
@@ -130,6 +128,9 @@ class MQTTSession : public XenoSession {
     inline bool _ping_outstanding() {        return (_er_flag(MQTT_SESS_FLAG_PING_WAIT));         };
     inline void _ping_outstanding(bool nu) { return (_er_set_flag(MQTT_SESS_FLAG_PING_WAIT, nu)); };
 
+    inline bool sendPacket(uint8_t* buf, int len) {
+      return (MEM_MGMT_RESPONSIBLE_BEARER == BufferPipe::toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_BEARER));
+    };
     inline int getNextPacketId() {
       return _next_packetid = (_next_packetid == MAX_PACKET_ID) ? 1 : _next_packetid + 1;
     };

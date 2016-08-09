@@ -59,11 +59,9 @@ class ManuvrTCP : public ManuvrSocket {
     ~ManuvrTCP();
 
     /* Override from BufferPipe. */
-    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
-    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
 
     /* Overrides from EventReceiver */
-    const char* getReceiverName();
     void printDebug(StringBuilder *);
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);

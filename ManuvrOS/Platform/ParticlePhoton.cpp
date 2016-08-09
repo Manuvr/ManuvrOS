@@ -28,7 +28,7 @@ Particle Photon support...
 /****************************************************************************************************
 * The code under this block is special on this platform, and will not be available elsewhere.       *
 ****************************************************************************************************/
-volatile Kernel* __kernel = NULL;
+volatile Kernel* __kernel = nullptr;
 
 
 /****************************************************************************************************
@@ -70,7 +70,7 @@ volatile bool provide_random_int(uint32_t nu_rnd) {
 * Init the RNG. Short and sweet.
 */
 void init_RNG() {
-  srand(time(NULL));          // Seed the PRNG...
+  srand(time(nullptr));          // Seed the PRNG...
 }
 
 
@@ -156,7 +156,7 @@ uint32_t currentTimestamp(void) {
 * 2004-02-12T15:19:21+00:00
 */
 void currentDateTime(StringBuilder* target) {
-  if (target != NULL) {
+  if (target != nullptr) {
   }
 }
 

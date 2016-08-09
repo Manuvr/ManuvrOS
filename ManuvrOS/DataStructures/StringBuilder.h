@@ -107,6 +107,7 @@ class StringBuilder {
 		void cull(int length);                   // Use to discard the first X characters from the string.
 
 		void trim(void);                         // Trim whitespace off the ends of the string.
+    bool contains(char);                     // Does the buffer contain the given character.
 
 		void clear(void);                        // Clears the string and frees the memory that was used to hold it.
 

@@ -92,6 +92,7 @@ This is basically only for linux for now.
         }
         else {
           ManuvrTCP* nu_connection = new ManuvrTCP(listening_inst, cli_sock, &cli_addr);
+          nu_connection->setPipeStrategy(listening_inst->getPipeStrategy());
 
           ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
           event->addArg((EventReceiver*) nu_connection);
@@ -136,11 +137,13 @@ This is basically only for linux for now.
 * Constructor.
 */
 ManuvrTCP::ManuvrTCP(const char* addr, int port) : ManuvrSocket(addr, port, 0) {
+  setReceiverName("ManuvrTCP");
   set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED | MANUVR_XPORT_FLAG_HAS_MULTICAST);
 }
 
 
 ManuvrTCP::ManuvrTCP(const char* addr, int port, uint32_t opts) : ManuvrSocket(addr, port, opts) {
+  setReceiverName("ManuvrTCP");
   set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED | MANUVR_XPORT_FLAG_HAS_MULTICAST);
 }
 
@@ -150,6 +153,7 @@ ManuvrTCP::ManuvrTCP(const char* addr, int port, uint32_t opts) : ManuvrSocket(a
 */
 // TODO: This is very ugly.... Might need a better way of fractioning into new threads...
 ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in* nu_sockaddr) : ManuvrSocket(listening_instance->_addr, listening_instance->_port_number, 0) {
+  setReceiverName("ManuvrTCP");
   set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED | MANUVR_XPORT_FLAG_HAS_MULTICAST);
   _sock          = sock;
   _options       = listening_instance->_options;
@@ -170,7 +174,6 @@ ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in
 * Destructor
 */
 ManuvrTCP::~ManuvrTCP() {
-  __kernel->unsubscribe(this);
 }
 
 
@@ -186,11 +189,10 @@ ManuvrTCP::~ManuvrTCP() {
 * Inward toward the transport.
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
-int8_t ManuvrTCP::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+int8_t ManuvrTCP::toCounterparty(StringBuilder* buf, int8_t mm) {
   switch (mm) {
     case MEM_MGMT_RESPONSIBLE_CALLER:
       // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -198,54 +200,13 @@ int8_t ManuvrTCP::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
       /* The system that allocated this buffer either...
           a) Did so with the intention that it never be free'd, or...
           b) Has a means of discovering when it is safe to free.  */
-      return (write_port(buf, len) ? MEM_MGMT_RESPONSIBLE_CREATOR : MEM_MGMT_RESPONSIBLE_CALLER);
+      return (write_port(buf->string(), buf->length()) ? MEM_MGMT_RESPONSIBLE_CREATOR : MEM_MGMT_RESPONSIBLE_CALLER);
 
     case MEM_MGMT_RESPONSIBLE_BEARER:
       /* We are now the bearer. That means that by returning non-failure, the
           caller will expect _us_ to manage this memory.  */
       // TODO: Freeing the buffer?
-      return (write_port(buf, len) ? MEM_MGMT_RESPONSIBLE_BEARER : MEM_MGMT_RESPONSIBLE_CALLER);
-
-    default:
-      /* This is more ambiguity than we are willing to bear... */
-      return MEM_MGMT_RESPONSIBLE_ERROR;
-  }
-  return MEM_MGMT_RESPONSIBLE_ERROR;
-}
-
-/**
-* Outward toward the application (or into the accumulator).
-*
-* @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
-* @param  mm     A declaration of memory-management responsibility.
-* @return A declaration of memory-management responsibility.
-*/
-int8_t ManuvrTCP::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
-  switch (mm) {
-    case MEM_MGMT_RESPONSIBLE_CALLER:
-      // NOTE: No break. This might be construed as a way of saying CREATOR.
-    case MEM_MGMT_RESPONSIBLE_CREATOR:
-      /* The system that allocated this buffer either...
-          a) Did so with the intention that it never be free'd, or...
-          b) Has a means of discovering when it is safe to free.  */
-      if (haveFar()) {
-        return _far->fromCounterparty(buf, len, mm);
-      }
-      else {
-        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
-      }
-
-    case MEM_MGMT_RESPONSIBLE_BEARER:
-      /* We are now the bearer. That means that by returning non-failure, the
-          caller will expect _us_ to manage this memory.  */
-      if (haveFar()) {
-        /* We are not the transport driver, and we do no transformation. */
-        return _far->fromCounterparty(buf, len, mm);
-      }
-      else {
-        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
-      }
+      return (write_port(buf->string(), buf->length()) ? MEM_MGMT_RESPONSIBLE_BEARER : MEM_MGMT_RESPONSIBLE_CALLER);
 
     default:
       /* This is more ambiguity than we are willing to bear... */
@@ -337,7 +298,7 @@ int8_t ManuvrTCP::listen() {
   listening(true);
   local_log.concatf("TCP Now listening at %s:%d.\n", _addr, _port_number);
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -353,13 +314,12 @@ int8_t ManuvrTCP::read_port() {
   if (connected()) {
     unsigned char *buf = (unsigned char *) alloca(256);
     int n;
-    StringBuilder  *nu_data  = NULL;
 
     while (connected()) {
       n = read(_sock, buf, 255);
       if (n > 0) {
         bytes_received += n;
-        fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
+        BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
       }
       else {
         // Don't thrash the CPU for no reason...
@@ -373,7 +333,7 @@ int8_t ManuvrTCP::read_port() {
 
   _thread_id = 0;
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -426,14 +386,6 @@ bool ManuvrTCP::write_port(unsigned char* out, int out_len) {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ManuvrTCP::getReceiverName() {  return "ManuvrTCP";  }
-
-
 /**
 * Debug support method. This fxn is only present in debug builds.
 *
@@ -519,7 +471,7 @@ int8_t ManuvrTCP::notify(ManuvrRunnable *active_event) {
       break;
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }
 

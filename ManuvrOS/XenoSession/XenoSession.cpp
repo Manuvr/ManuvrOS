@@ -71,22 +71,23 @@ const char* XenoSession::sessionPhaseString(uint16_t state_code) {
 *
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
-XenoSession::XenoSession(BufferPipe* _near_side) : BufferPipe() {
-  EventReceiver::__class_initializer();
-  // Our near-side is that passed-in transport.
-  setNear(_near_side);
+XenoSession::XenoSession(BufferPipe* _near_side) : EventReceiver(), BufferPipe() {
+  setReceiverName("XenoSession");
   _bp_set_flag(BPIPE_FLAG_IS_TERMINUS, true);
 
   // TODO: Audit implications of this....
   // The link nearer to the transport should not free.
-  _near_side->setFar((BufferPipe*) this);
+  if (_near_side) {
+    setNear(_near_side);  // Our near-side is that passed-in transport.
+    _near_side->setFar((BufferPipe*) this);
+  }
 
   _session_service.repurpose(MANUVR_MSG_SESS_SERVICE);
   _session_service.isManaged(true);
   _session_service.specific_target = (EventReceiver*) this;
   _session_service.originator      = (EventReceiver*) this;
 
-  working            = NULL;
+  working            = nullptr;
   session_state      = XENOSESSION_STATE_UNINITIALIZED;
   session_last_state = XENOSESSION_STATE_UNINITIALIZED;
 
@@ -98,20 +99,63 @@ XenoSession::XenoSession(BufferPipe* _near_side) : BufferPipe() {
 * Unlike many of the other EventReceivers, THIS one needs to be able to be torn down.
 */
 XenoSession::~XenoSession() {
-  __kernel->unsubscribe((EventReceiver*) this);  // Unsubscribe
-
   purgeInbound();  // Need to do careful checks in here for open comm loops.
   purgeOutbound(); // Need to do careful checks in here for open comm loops.
+
+  if (nullptr != working) {
+    delete working;
+    working = nullptr;
+  }
 
   _relay_list.clear();
   _pending_exec.clear();
   _pending_reply.clear();
 
-  Kernel::raiseEvent(MANUVR_MSG_SESS_HANGUP, NULL);
+  Kernel::raiseEvent(MANUVR_MSG_SESS_HANGUP, nullptr);
 }
 
 
+/*******************************************************************************
+*  _       _   _        _
+* |_)    _|_ _|_ _  ._ |_) o ._   _
+* |_) |_| |   | (/_ |  |   | |_) (/_
+*                            |
+* Session-base implementations.
+*******************************************************************************/
+
 const char* XenoSession::pipeName() { return getReceiverName(); }
+
+/**
+* Pass a signal to the counterparty.
+*
+* Data referenced by _args should be assumed to be on the stack of the caller.
+*
+* @param   _sig   The signal.
+* @param   _args  Optional argument pointer.
+* @return  Negative on error. Zero on success.
+*/
+int8_t XenoSession::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
+  if (getVerbosity() > 5) {
+    local_log.concatf("%s --sig--> %s: %s\n", (haveNear() ? _near->pipeName() : "ORIG"), pipeName(), signalString(_sig));
+    Kernel::log(&local_log);
+  }
+  switch (_sig) {
+    case ManuvrPipeSignal::XPORT_CONNECT:
+    case ManuvrPipeSignal::XPORT_DISCONNECT:
+      this->connection_callback(_sig == ManuvrPipeSignal::XPORT_CONNECT);
+      return 1;
+
+    case ManuvrPipeSignal::FAR_SIDE_DETACH:   // The far side is detaching.
+    case ManuvrPipeSignal::NEAR_SIDE_DETACH:   // The near side is detaching.
+    case ManuvrPipeSignal::FAR_SIDE_ATTACH:
+    case ManuvrPipeSignal::NEAR_SIDE_ATTACH:
+    case ManuvrPipeSignal::UNDEF:
+    default:
+      break;
+  }
+  return BufferPipe::fromCounterparty(_sig, _args);
+}
+
 
 
 /**
@@ -169,15 +213,6 @@ int8_t XenoSession::untapAll() {
 }
 
 
-
-int8_t XenoSession::sendPacket(unsigned char *buf, int len) {
-  if (owner->toCounterparty(buf, len, MEM_MGMT_RESPONSIBLE_CREATOR)) {
-    return 0;
-  }
-  return -1;
-}
-
-
 /****************************************************************************************************
 *  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
@@ -218,7 +253,7 @@ int8_t XenoSession::callback_proc(ManuvrRunnable *event) {
     case MANUVR_MSG_SESS_HANGUP:
       // It is now safe to destroy this session. By triggering our owner's disconnection
       //   method, we indirectly invoke our own teardown.
-      owner->disconnect();
+      BufferPipe::toCounterparty(ManuvrPipeSignal::XPORT_DISCONNECT, NULL);
       mark_session_state(XENOSESSION_STATE_HUNGUP);
       break;
     default:
@@ -279,7 +314,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
       {
         StringBuilder* buf;
         if (0 == active_event->getArgAs(&buf)) {
-          fromCounterparty(buf->string(), buf->length(), MEM_MGMT_RESPONSIBLE_BEARER);
+          fromCounterparty(buf, MEM_MGMT_RESPONSIBLE_BEARER);
         }
       }
       return_value++;
@@ -304,7 +339,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
     }
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }
 
@@ -373,7 +408,7 @@ int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
 
   //StringBuilder buf;
   //if (nu_outbound_msg->serialize(&buf) > 0) {
-  //  owner->sendBuffer(&buf);
+  //  toCounterparty(&buf);
   //}
 
   //if (nu_outbound_msg->expectsACK()) {

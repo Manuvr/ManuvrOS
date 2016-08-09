@@ -92,16 +92,18 @@ MANUVR_OPTIONS += -D__MANUVR_PIPE_DEBUG
 MANUVR_OPTIONS += -DMANUVR_STDIO
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_SERIAL
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_UDP
-#MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
+MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
 
 # Options that build for certain threading models (if any).
 #MANUVR_OPTIONS += -D__MANUVR_FREERTOS
 MANUVR_OPTIONS += -D__MANUVR_LINUX
 
+MANUVR_OPTIONS += -DMANUVR_GPS_PIPE
+
 # Wire and session protocols...
 #MANUVR_OPTIONS += -DMANUVR_SUPPORT_OSC
 #MANUVR_OPTIONS += -DMANUVR_OVER_THE_WIRE
-#MANUVR_OPTIONS += -DMANUVR_SUPPORT_MQTT
+MANUVR_OPTIONS += -DMANUVR_SUPPORT_MQTT
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
 MANUVR_OPTIONS += -D__MANUVR_CONSOLE_SUPPORT
 
@@ -110,6 +112,7 @@ MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT
 
 # Options for various security features.
 MANUVR_OPTIONS += -D__MANUVR_MBEDTLS
+
 # mbedTLS will require this in order to use our chosen options.
 MBEDTLS_CONFIG_FILE = $(WHERE_I_AM)/mbedTLS_conf.h
 
@@ -164,6 +167,11 @@ tests: libs
 	make -C ManuvrOS/
 	$(CXX) -static -g -o dstest tests/TestDataStructures.cpp $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
 	$(CXX) -static -g -o bptest tests/BufferPipeTest.cpp $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
+
+examples: libs
+	export __MANUVR_LINUX
+	make -C ManuvrOS/
+	$(CXX) -static -g -o gpstest examples/tcp-gps.cpp $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O0
 
 builddir:
 	mkdir -p $(OUTPUT_PATH)

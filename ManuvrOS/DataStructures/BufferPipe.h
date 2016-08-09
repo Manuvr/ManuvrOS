@@ -59,6 +59,7 @@ See UDPPipe for a case where this matters.
 #ifndef __MANUVR_BUFFER_PIPE_H__
 #define __MANUVR_BUFFER_PIPE_H__
 
+// Our notion of buffer.
 #include <DataStructures/StringBuilder.h>
 
 
@@ -106,7 +107,11 @@ enum class ManuvrPipeSignal {
   FAR_SIDE_DETACH,     // Far-side informing the near-side of its departure.
   NEAR_SIDE_DETACH,    // Near-side informing the far-side of its departure.
   FAR_SIDE_ATTACH,     // Far-side informing the near-side of its arrival.
-  NEAR_SIDE_ATTACH     // Near-side informing the far-side of its arrival.
+  NEAR_SIDE_ATTACH,    // Near-side informing the far-side of its arrival.
+
+  // These are signals for transport-compat. They might be generalized.
+  XPORT_CONNECT,       // connect()/connected()
+  XPORT_DISCONNECT     // disconnect()/disconnected()
 };
 
 /*
@@ -131,6 +136,21 @@ enum class ManuvrPipeSignal {
 // Hopefully, this will be enough until we think of something smarter.
 #define MAXIMUM_PIPE_DIVERSITY  16
 
+class BufferPipe;
+
+typedef BufferPipe* (*bpFactory) (BufferPipe*, BufferPipe*);
+
+/*
+* TODO: This structure might evolve into ZooInmate.
+* This structure tracks the types of pipes this build supports. It is
+*   needed for runtime instantiation of new pipes to service strategy in
+*   the absense of RTTI.
+*/
+typedef struct {
+  int         pipe_code;
+  bpFactory   factory;
+} PipeDef;
+
 
 /*
 * Here, "far" refers to "farther from the counterparty". That is: closer to our
@@ -150,38 +170,46 @@ enum class ManuvrPipeSignal {
 class BufferPipe {
   public:
     /*
-    * Generally, this will be called from within the instance pointed-at by _far.
+    * Sending signals through pipes...
     */
     virtual int8_t toCounterparty(ManuvrPipeSignal, void*);
-    virtual int8_t toCounterparty(StringBuilder*, int8_t mm);
-    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
+    virtual int8_t fromCounterparty(ManuvrPipeSignal, void*);
 
     /*
-    * Generally, this will be called from within the instance pointed-at by _near.
+    * Sending dynamically-alloc'd buffers through pipes...
+    * This is the override point for extending classes.
     */
-    virtual int8_t fromCounterparty(ManuvrPipeSignal, void*);
+    virtual int8_t toCounterparty(StringBuilder*, int8_t mm);
     virtual int8_t fromCounterparty(StringBuilder*, int8_t mm);
-    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
 
-    /* Set the identity of the near-side. */
+    /*
+    * Override to allow a pointer-length interface.
+    */
+    int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+
+    /*
+    * Set the identity of the near-side.
+    * The side closer to the counterparty.
+    */
     int8_t setNear(BufferPipe*);
 
-    /* Set the identity of the far-side. */
+    /*
+    * Set the identity of the far-side.
+    * The side closer to the application logic.
+    */
     int8_t setFar(BufferPipe*);
 
     /* Join the ends of this pipe to one-another. */
     int8_t joinEnds();
 
     /* Members pertaining to pipe-strategy. */
+    inline const uint8_t* getPipeStrategy()           {  return _pipe_strategy;   };
     inline void setPipeStrategy(const uint8_t* strat) {  _pipe_strategy = strat;  };
     inline uint8_t pipeCode() {  return _pipe_code;  };
 
 
-    #if defined(__MANUVR_PIPE_DEBUG)
     virtual const char* pipeName();
-    #else
-    virtual const char* pipeName() =0;
-    #endif
 
     // These inlines are for convenience of extending classes.
     // TODO: Ought to be private.
@@ -191,27 +219,38 @@ class BufferPipe {
       else    _flags &= ~flag;
     };
 
-    static uint8_t* _pipe_strategies[];
+
+    /*
+    * This is the list of all supported pipe types in the system. It is
+    *   NULL-terminated.
+    */
+    static PipeDef _supported_strategies[];
+    static int registerPipe(int, bpFactory);
+    static BufferPipe* spawnPipe(int, BufferPipe*, BufferPipe*);
+
+    /* Debug and logging support */
     static const char* memMgmtString(int8_t);
     static const char* signalString(ManuvrPipeSignal);
 
 
+
   protected:
+    const uint8_t* _pipe_strategy;  // See notes.
     BufferPipe* _near;  // These two members create a double-linked-list.
     BufferPipe* _far;   // Need such topology for bi-directional pipe.
 
     BufferPipe();           // Protected constructor with no params for class init.
-    ~BufferPipe();  // Protected destructor.
+    virtual ~BufferPipe();  // Protected destructor.
 
     /* Simple checks that we will need to do. */
     inline bool haveNear() {  return (nullptr != _near);  };
-    inline bool haveFar() {   return (nullptr != _far);   };
+    bool haveFar();
 
     virtual void printDebug(StringBuilder*);
 
 
+
   private:
-    const uint8_t* _pipe_strategy;  // See notes.
     uint16_t _flags;
     uint8_t  _pipe_code;
 };

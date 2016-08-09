@@ -74,7 +74,14 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
   */
   void* xport_read_handler(void* active_xport) {
     if (NULL != active_xport) {
-      ((ManuvrXport*)active_xport)->read_port();
+      // Wait until boot has ocurred...
+      while (!((ManuvrXport*)active_xport)->booted()) sleep_millis(50);
+      while (1) {
+        if (0 == ((ManuvrXport*)active_xport)->read_port()) {
+          // TODO: Concentrate sleep logic here.
+          sleep_millis(20);
+        }
+      }
     }
     return NULL;
   }
@@ -92,13 +99,12 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
 *                                          |_|
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
-
 /**
 * Constructor.
 */
-ManuvrXport::ManuvrXport() : BufferPipe() {
+ManuvrXport::ManuvrXport() : EventReceiver(), BufferPipe() {
   // No need to burden a client class with this.
-  EventReceiver::__class_initializer();
+  setReceiverName("ManuvrXport");
 
   // Transports are all terminal.
   _bp_set_flag(BPIPE_FLAG_IS_TERMINUS, true);
@@ -109,8 +115,7 @@ ManuvrXport::ManuvrXport() : BufferPipe() {
   _autoconnect_schedule = NULL;
   bytes_sent            = 0;
   bytes_received        = 0;
-
-  #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+  #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
     _thread_id       = 0;
   #endif
 }
@@ -121,6 +126,7 @@ ManuvrXport::ManuvrXport() : BufferPipe() {
 ManuvrXport::~ManuvrXport() {
   #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
     // TODO: Tear down the thread.
+    listening(false);
   #endif
 
   // Cleanup any schedules...
@@ -133,7 +139,53 @@ ManuvrXport::~ManuvrXport() {
 }
 
 
+/*******************************************************************************
+*  _       _   _        _
+* |_)    _|_ _|_ _  ._ |_) o ._   _
+* |_) |_| |   | (/_ |  |   | |_) (/_
+*                            |
+* These functions can stop at transport.
+*******************************************************************************/
 const char* ManuvrXport::pipeName() { return getReceiverName(); }
+
+/**
+* Pass a signal to the counterparty.
+*
+* Data referenced by _args should be assumed to be on the stack of the caller.
+*
+* @param   _sig   The signal.
+* @param   _args  Optional argument pointer.
+* @return  Negative on error. Zero on success.
+*/
+int8_t ManuvrXport::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
+  if (getVerbosity() > 5) {
+    local_log.concatf("%s --sig--> %s: %s\n", (haveNear() ? _near->pipeName() : "ORIG"), pipeName(), signalString(_sig));
+    Kernel::log(&local_log);
+  }
+  switch (_sig) {
+    case ManuvrPipeSignal::XPORT_CONNECT:
+      if (!connected()) {
+        connect();
+      }
+      return 0;
+    case ManuvrPipeSignal::XPORT_DISCONNECT:
+      if (connected()) {
+        disconnect();
+      }
+      return 0;
+
+    case ManuvrPipeSignal::FAR_SIDE_DETACH:   // The far side is detaching.
+    case ManuvrPipeSignal::NEAR_SIDE_DETACH:
+    case ManuvrPipeSignal::FAR_SIDE_ATTACH:
+    case ManuvrPipeSignal::NEAR_SIDE_ATTACH:
+    case ManuvrPipeSignal::UNDEF:
+    default:
+      break;
+  }
+
+  // If we are at this point, we need to pass to base-class.
+  return BufferPipe::toCounterparty(_sig, _args);
+}
 
 
 /*******************************************************************************
@@ -147,7 +199,6 @@ const char* ManuvrXport::pipeName() { return getReceiverName(); }
 *******************************************************************************/
 
 int8_t ManuvrXport::disconnect() {
-  // TODO: Might-should tear down the session?
   connected(false);
   return 0;
 }
@@ -209,17 +260,6 @@ void ManuvrXport::autoConnect(bool en, uint32_t _ac_period) {
 }
 
 
-int8_t ManuvrXport::sendBuffer(StringBuilder* buf) {
-  if (connected()) {
-    toCounterparty(buf->string(), buf->length(), MEM_MGMT_RESPONSIBLE_CREATOR);
-  }
-  else {
-    Kernel::log("Tried to write to a transport that was not connected.");
-  }
-  return 0;
-}
-
-
 /*
 * Mark this transport connected or disconnected.
 */
@@ -231,42 +271,27 @@ void ManuvrXport::connected(bool en) {
   }
 
   mark_connected(en);
-    if (en) {
-      //if (NULL == session) {
-      //  // We are expected to instantiate a XenoSession, and broadcast its existance.
-      //  // This will put it into the Event system so that auth and such can be handled cleanly.
-      //  // Once the session sets up, it will broadcast itself as having done so.
-      //  // TODO: Session discovery should happen at this point.
-      //  XenoSession* ses = (XenoSession*) new ManuvrSession(this);
-      //  _reap_session(true);
-      //  provide_session(ses);
+  if (en) {
+    // We are expected to instantiate a XenoSession, and broadcast its existance.
+    // This will put it into the Event system so that auth and such can be handled cleanly.
+    // Once the session sets up, it will broadcast itself as having done so.
 
-      //  ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
-      //  event->addArg((EventReceiver*) ses);
-      //  raiseEvent(event);
-      //}
-
-      if (NULL != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(false);
-      //if (session) session->connection_callback(true);
-    }
-    else {
-      // This is a disconnection event. We might want to cleanup all of our sessions
-      // that are outstanding.
-      if (NULL != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(true);
-      //if (session) {
-      //  session->connection_callback(false);
-      //  if(_reap_session()) {
-      //    delete session;
-      //    session = NULL;
-      //  }
-      //}
-    }
-  #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
-  if (_thread_id == 0) {
-    // If we are in a threaded environment, we will want a thread if there isn't one already.
-    createThread(&_thread_id, NULL, xport_read_handler, (void*) this);
+    if (nullptr != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(false);
   }
+  else {
+    // This is a disconnection event. We might want to cleanup all of our sessions
+    // that are outstanding.
+    if (nullptr != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(true);
+  }
+  #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
+    if (0 == _thread_id) {
+      // If we are in a threaded environment, we will want a thread if there isn't one already.
+      if (createThread(&_thread_id, nullptr, xport_read_handler, (void*) this)) {
+        Kernel::log("Failed to create transport read thread.\n");
+      }
+    }
   #endif
+  BufferPipe::fromCounterparty(en ? ManuvrPipeSignal::XPORT_CONNECT : ManuvrPipeSignal::XPORT_DISCONNECT, nullptr);
 }
 
 
@@ -284,9 +309,6 @@ void ManuvrXport::listening(bool en) {
   // ---J. Ian Lindsay   Thu Dec 03 04:00:00 MST 2015
   _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_LISTENING) : (_xport_flags & ~(MANUVR_XPORT_FLAG_LISTENING));
 }
-
-
-
 
 
 
@@ -336,7 +358,7 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
           #ifdef __MANUVR_DEBUG
           if (getVerbosity() > 3) local_log.concatf("We about to print %d bytes to the transport.\n", temp_sb->length());
           #endif
-          toCounterparty(temp_sb->string(), temp_sb->length(), MEM_MGMT_RESPONSIBLE_CREATOR);
+          toCounterparty(temp_sb, MEM_MGMT_RESPONSIBLE_CREATOR);
         }
         #ifdef __MANUVR_DEBUG
         else if (getVerbosity() > 6) local_log.concat("Ignoring a broadcast that wasn't a StringBuilder.\n");
@@ -385,7 +407,7 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
       break;
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }
 

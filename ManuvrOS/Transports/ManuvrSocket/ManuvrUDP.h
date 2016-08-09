@@ -86,11 +86,11 @@ class UDPPipe : public BufferPipe {
     UDPPipe();
     UDPPipe(ManuvrUDP*, uint32_t, uint16_t);
     UDPPipe(ManuvrUDP*, BufferPipe*);
-    ~UDPPipe();
+    virtual ~UDPPipe();
 
     /* Override from BufferPipe. */
-    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
-    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
+    virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
 
     void printDebug(StringBuilder*);
     int takeAccumulator(StringBuilder*);
@@ -105,7 +105,6 @@ class UDPPipe : public BufferPipe {
 
 
   protected:
-    const char* pipeName();
 
 
   private:
@@ -122,11 +121,11 @@ class ManuvrUDP : public ManuvrSocket {
   public:
     ManuvrUDP(const char* addr, int port);
     ManuvrUDP(const char* addr, int port, uint32_t opts);
-    ~ManuvrUDP();
+    virtual ~ManuvrUDP();
 
     /* Override from BufferPipe. */
-    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
-    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
+    virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
 
     int8_t udpPipeDestroyCallback(UDPPipe*);
 
@@ -150,7 +149,6 @@ class ManuvrUDP : public ManuvrSocket {
     /* Overrides from EventReceiver */
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);
-    const char* getReceiverName();
     void printDebug(StringBuilder*);
     #if defined(__MANUVR_CONSOLE_SUPPORT)
       void procDirectDebugInstruction(StringBuilder*);

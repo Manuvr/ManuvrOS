@@ -26,8 +26,8 @@ limitations under the License.
   #include "Arduino.h"
 #endif
 
-ADCScanner::ADCScanner() {
-  __class_initializer();
+ADCScanner::ADCScanner() : EventReceiver() {
+  setReceiverName("ADCScanner");
   pid_adc_check = 0;
   for (int i = 0; i < 16; i++) {
     adc_list[i] = -1;
@@ -123,14 +123,6 @@ int8_t ADCScanner::bootComplete() {
   pid_adc_check = scheduler->createSchedule(50, -1, false, this, event);
   return 1;
 }
-
-
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ADCScanner::getReceiverName() {  return "ADCScanner";  }
 
 
 /**

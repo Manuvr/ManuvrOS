@@ -30,8 +30,9 @@ limitations under the License.
 //volatile ExampleDriver* ExampleDriver::INSTANCE = NULL;
 
 
-ExampleDriver::ExampleDriver() {
+ExampleDriver::ExampleDriver() : EventReceiver() {
   //INSTANCE = this;
+  setReceiverName("ExampleDriver");
 }
 
 
@@ -56,15 +57,6 @@ ExampleDriver::~ExampleDriver() {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ExampleDriver::getReceiverName() {  return "ExampleDriver";  }
-
-
 /**
 * Debug support function.
 *
@@ -139,16 +131,6 @@ int8_t ExampleDriver::notify(ManuvrRunnable *active_event) {
 void ExampleDriver::procDirectDebugInstruction(StringBuilder *input) {
   const char* str = (char *) input->position(0);
   char c    = *str;
-  int temp_int = 0;
-
-  if (input->count() > 1) {
-    // If there is a second token, we proceed on good-faith that it's an int.
-    temp_int = input->position_as_int(1);
-  }
-  else if (strlen(str) > 1) {
-    // We allow a short-hand for the sake of short commands that involve a single int.
-    temp_int = atoi(str + 1);
-  }
 
   switch (c) {
     case '*':

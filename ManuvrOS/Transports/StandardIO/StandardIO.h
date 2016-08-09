@@ -48,17 +48,14 @@ class StandardIO : public ManuvrXport {
 
     /* Override from BufferPipe. */
     virtual int8_t toCounterparty(StringBuilder*, int8_t mm);
-    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
-    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
 
     /* Overrides from EventReceiver */
     int8_t bootComplete();
-    const char* getReceiverName();
     void printDebug(StringBuilder *);
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable*);
 
-
+    /* Overrides from ManuvrXport */
     int8_t connect();
     int8_t disconnect();
     int8_t listen();

@@ -143,9 +143,6 @@ setenvars:
 	@echo	'======================================================'
 
 
-
-
-
 fullclean: clean
 	rm -rf doc/doxygen
 

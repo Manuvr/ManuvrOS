@@ -53,7 +53,7 @@ limitations under the License.
     */
     class EventReceiver {
       public:
-        virtual ~EventReceiver() {};
+        virtual ~EventReceiver();
 
         /*
         * This is the fxn by which subscribers are notified of events. This fxn should return
@@ -74,15 +74,11 @@ limitations under the License.
           virtual void procDirectDebugInstruction(StringBuilder *input);
         #endif
 
-        // TODO: Why in God's name did I do it this way vs a static CONST? Was it because
-        //   I didn't know how to link such that it never took up RAM? If so, I can fix that now...
-        //        ---J. Ian Lindsay   Thu Dec 03 03:20:26 MST 2015
-        virtual const char* getReceiverName() = 0;
-
         /* These are intended to be overridden. */
         virtual int8_t callback_proc(ManuvrRunnable *);
         int8_t raiseEvent(ManuvrRunnable* event);
 
+        inline const char* getReceiverName() {   return _receiver_name;  }
         int purgeLogs();
 
         /**
@@ -101,6 +97,12 @@ limitations under the License.
         inline int8_t getVerbosity() {   return (_class_state & MANUVR_ER_FLAG_VERBOSITY_MASK);       };
 
         /**
+        *
+        * @return  true if the class has been booted.
+        */
+        virtual int8_t bootComplete();        // This is called from the base notify().
+
+        /**
         * Has the class been boot-strapped?
         *
         * @return  true if the class has been booted.
@@ -112,10 +114,12 @@ limitations under the License.
         Kernel* __kernel;
         StringBuilder local_log;
 
-        virtual int8_t bootComplete();        // This is called from the base notify().
-        virtual void   __class_initializer();
+        EventReceiver();
 
         inline void _mark_boot_complete() {   _class_state |= MANUVR_ER_FLAG_BOOT_COMPLETE;  };
+
+        inline void setReceiverName(const char* nom) {  _receiver_name = nom;  }
+        void flushLocalLog();
 
         // These inlines are for convenience of extending classes.
         inline uint8_t _er_flags() {                 return _extnd_state;            };
@@ -131,6 +135,7 @@ limitations under the License.
 
 
       private:
+        const char* _receiver_name;
         #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
           // In threaded environments, we allow resources to enable their own threading
           //   if needed.

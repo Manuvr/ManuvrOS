@@ -52,7 +52,8 @@ const MessageTypeDef gpio_message_defs[] = {
 
 
 
-ManuvrableGPIO::ManuvrableGPIO() {
+ManuvrableGPIO::ManuvrableGPIO() : EventReceiver() {
+  setReceiverName("GPIO");
   _gpio_notice.isManaged(true);
   _gpio_notice.originator  = (EventReceiver*) this;
   // Inform the Kernel of the codes we will be using...
@@ -79,15 +80,6 @@ ManuvrableGPIO::~ManuvrableGPIO() {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ManuvrableGPIO::getReceiverName() {  return "ManuvrableGPIO";  }
-
-
 /**
 * Debug support method. This fxn is only present in debug builds.
 *

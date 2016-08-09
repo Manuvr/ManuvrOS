@@ -80,18 +80,23 @@ const MessageTypeDef udp_message_defs[] = {
       sigaddset(&set, SIGVTALRM);
       sigaddset(&set, SIGINT);
       int s = pthread_sigmask(SIG_BLOCK, &set, NULL);
-
       ManuvrUDP* listening_inst = (ManuvrUDP*) active_xport;
 
-      while (listening_inst->listening()) {
-        // Read data from UDP port. Blocks...
-        if (0 > listening_inst->read_port()) {
-          // Don't thrash the CPU for no reason...
-          sleep_millis(20);
+      if (0 == s) {
+        while (listening_inst->listening()) {
+          // Read data from UDP port. Blocks...
+          if (0 > listening_inst->read_port()) {
+            // Don't thrash the CPU for no reason...
+            sleep_millis(20);
+          }
         }
       }
+      else {
+        Kernel::log("Failed to thread the UDP listener loop.\n");
+      }
+
       // Close the listener...
-      close(listening_inst->getSockID());
+      listening_inst->disconnect();
     }
     else {
       Kernel::log("Tried to listen with a NULL transport.");
@@ -122,6 +127,7 @@ const MessageTypeDef udp_message_defs[] = {
 * @param  port  A 16-bit port number.
 */
 ManuvrUDP::ManuvrUDP(const char* addr, int port) : ManuvrSocket(addr, port, 0) {
+  setReceiverName("ManuvrUDP");
   set_xport_state(MANUVR_XPORT_FLAG_HAS_MULTICAST | MANUVR_XPORT_FLAG_CONNECTIONLESS);
   _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
 
@@ -145,6 +151,7 @@ ManuvrUDP::ManuvrUDP(const char* addr, int port) : ManuvrSocket(addr, port, 0) {
 * @param  opts  An options mask to pass to the underlying socket implentation.
 */
 ManuvrUDP::ManuvrUDP(const char* addr, int port, uint32_t opts) : ManuvrSocket(addr, port, opts) {
+  setReceiverName("ManuvrUDP");
   set_xport_state(MANUVR_XPORT_FLAG_HAS_MULTICAST | MANUVR_XPORT_FLAG_CONNECTIONLESS);
   _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
 
@@ -171,7 +178,6 @@ ManuvrUDP::~ManuvrUDP() {
 	for (it = _open_replies.begin(); it != _open_replies.end(); it++) {
     delete it->second;
 	}
-  __kernel->unsubscribe(this);
 }
 
 
@@ -187,11 +193,10 @@ ManuvrUDP::~ManuvrUDP() {
 * Inward toward the transport.
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
-int8_t ManuvrUDP::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+int8_t ManuvrUDP::toCounterparty(StringBuilder* buf, int8_t mm) {
 //  switch (mm) {
 //    case MEM_MGMT_RESPONSIBLE_CALLER:
 //      // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -219,11 +224,10 @@ int8_t ManuvrUDP::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
 * Outward toward the application (or into the accumulator).
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
-int8_t ManuvrUDP::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
+int8_t ManuvrUDP::fromCounterparty(StringBuilder* buf, int8_t mm) {
 //  switch (mm) {
 //    case MEM_MGMT_RESPONSIBLE_CALLER:
 //      // NOTE: No break. This might be construed as a way of saying CREATOR.
@@ -304,7 +308,7 @@ int8_t ManuvrUDP::listen() {
   listening(true);
   local_log.concatf("UDP Now listening at %s:%d.\n", _addr, _port_number);
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -342,7 +346,9 @@ int8_t ManuvrUDP::read_port() {
     if (NULL == related_pipe) {
       // Non-existence. Create...
       related_pipe = new UDPPipe(this, cli_addr.sin_addr.s_addr, cli_addr.sin_port);
-      if (MEM_MGMT_RESPONSIBLE_BEARER == related_pipe->fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER)) {
+      if (_pipe_strategy) related_pipe->setPipeStrategy(_pipe_strategy);
+
+      if (MEM_MGMT_RESPONSIBLE_BEARER == ((BufferPipe*)related_pipe)->fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER)) {
         // The pipe copied the buffer. Success.
         // Since we don't have a pipe, we create one and realize that there will
         //   be nothing on the other side to take the buffer. So we only broadcast
@@ -368,7 +374,7 @@ int8_t ManuvrUDP::read_port() {
     }
     else {
       // We have a related pipe.
-      switch (related_pipe->fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER)) {
+      switch (((BufferPipe*)related_pipe)->fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER)) {
         case MEM_MGMT_RESPONSIBLE_BEARER:
           // Success
           break;
@@ -398,10 +404,14 @@ int8_t ManuvrUDP::read_port() {
 * @return false on error and true on success.
 */
 int8_t ManuvrUDP::reset() {
+  initialized(false);
 	std::map<uint16_t, UDPPipe*>::iterator it;
 	for (it = _open_replies.begin(); it != _open_replies.end(); it++) {
     delete it->second;
 	}
+
+  disconnect();
+
   initialized(true);
   return 0;
 }
@@ -498,15 +508,6 @@ int8_t ManuvrUDP::udpPipeDestroyCallback(UDPPipe* _dead_walking) {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* ManuvrUDP::getReceiverName() {  return "ManuvrUDP";  }
-
-
 /**
 * Debug support function.
 *
@@ -618,7 +619,7 @@ int8_t ManuvrUDP::notify(ManuvrRunnable *active_event) {
       break;
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }
 
@@ -627,17 +628,9 @@ int8_t ManuvrUDP::notify(ManuvrRunnable *active_event) {
 void ManuvrUDP::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
 
-  uint8_t temp_byte = 0;
-  if (*(str) != 0) {
-    temp_byte = atoi((char*) str+1);
-  }
-
   /* These are debug case-offs that are typically used to test functionality, and are then
      struck from the build. */
   switch (*(str)) {
-    case 'W':
-      write_datagram((unsigned char*) str, strlen((const char*)str), "127.0.0.1", 6001);
-      break;
     default:
       EventReceiver::procDirectDebugInstruction(input);
       break;
@@ -646,6 +639,5 @@ void ManuvrUDP::procDirectDebugInstruction(StringBuilder *input) {
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 #endif  // __MANUVR_CONSOLE_SUPPORT
-
 
 #endif  // UDP support

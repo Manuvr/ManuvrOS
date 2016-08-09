@@ -73,7 +73,6 @@ StandardIO::StandardIO() : ManuvrXport() {
 * Destructor
 */
 StandardIO::~StandardIO() {
-  __kernel->unsubscribe(this);
 }
 
 /**
@@ -81,6 +80,7 @@ StandardIO::~StandardIO() {
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void StandardIO::__class_initializer() {
+  setReceiverName("StandardIO");
   // Build some pre-formed Events.
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
   read_abort_event.isManaged(true);
@@ -103,100 +103,26 @@ void StandardIO::__class_initializer() {
 * Log has reached the end of its journey. This class will render it to the user.
 *
 * @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
 * @return A declaration of memory-management responsibility.
 */
 int8_t StandardIO::toCounterparty(StringBuilder* buf, int8_t mm) {
-  char* working_chunk = NULL;
-  while (buf->count()) {
-    working_chunk = buf->position(0);
-    printf("%s", (const char*) working_chunk);
-    bytes_sent += strlen(working_chunk);
-    buf->drop_position(0);
-  }
+  if (connected()) {
+    char* working_chunk = NULL;
+    while (buf->count()) {
+      working_chunk = buf->position(0);
+      printf("%s", (const char*) working_chunk);
+      bytes_sent += strlen(working_chunk);
+      buf->drop_position(0);
+    }
 
-  // TODO: This prompt ought to be in the console session.
-  printf("\n%c[36mManuvr> %c[39m", 0x1B, 0x1B);
-  fflush(stdout);
-
-  switch (mm) {
-    case MEM_MGMT_RESPONSIBLE_CALLER:
-      // NOTE: No break. This might be construed as a way of saying CREATOR.
-    case MEM_MGMT_RESPONSIBLE_CREATOR:
-    case MEM_MGMT_RESPONSIBLE_BEARER:
-      // TODO: Freeing the buffer?
-    default:
-      break;
-  }
-  return mm;
-}
-
-/**
-* Log has reached the end of its journey. This class will render it to the user.
-*
-* @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
-* @param  mm     A declaration of memory-management responsibility.
-* @return A declaration of memory-management responsibility.
-*/
-int8_t StandardIO::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
-  printf("%s", (const char*) buf);
-  bytes_sent += len;
-
-  switch (mm) {
-    case MEM_MGMT_RESPONSIBLE_CALLER:
-      // NOTE: No break. This might be construed as a way of saying CREATOR.
-    case MEM_MGMT_RESPONSIBLE_CREATOR:
-    case MEM_MGMT_RESPONSIBLE_BEARER:
-      // TODO: Freeing the buffer?
-    default:
-      break;
-  }
-  return mm;
-}
-
-/**
-* The buffer contains keyboard input.
-*
-* @param  buf    A pointer to the buffer.
-* @param  len    How long the buffer is.
-* @param  mm     A declaration of memory-management responsibility.
-* @return A declaration of memory-management responsibility.
-*/
-int8_t StandardIO::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
-  switch (mm) {
-    case MEM_MGMT_RESPONSIBLE_CALLER:
-      // NOTE: No break. This might be construed as a way of saying CREATOR.
-    case MEM_MGMT_RESPONSIBLE_CREATOR:
-      /* The system that allocated this buffer either...
-          a) Did so with the intention that it never be free'd, or...
-          b) Has a means of discovering when it is safe to free.  */
-      if (haveFar()) {
-        return _far->fromCounterparty(buf, len, mm);
-      }
-      else {
-        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
-      }
-
-    case MEM_MGMT_RESPONSIBLE_BEARER:
-      /* We are now the bearer. That means that by returning non-failure, the
-          caller will expect _us_ to manage this memory.  */
-      if (haveFar()) {
-        /* We are not the transport driver, and we do no transformation. */
-        return _far->fromCounterparty(buf, len, mm);
-      }
-      else {
-        return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
-      }
-
-    default:
-      /* This is more ambiguity than we are willing to bear... */
-      return MEM_MGMT_RESPONSIBLE_ERROR;
+    // TODO: This prompt ought to be in the console session.
+    printf("\n%c[36mManuvr> %c[39m", 0x1B, 0x1B);
+    fflush(stdout);
+    return MEM_MGMT_RESPONSIBLE_BEARER;
   }
   return MEM_MGMT_RESPONSIBLE_ERROR;
 }
-
 
 
 /*******************************************************************************
@@ -235,10 +161,10 @@ int8_t StandardIO::reset() {
     if (getVerbosity() > 3) local_log.concatf("StandardIO initialized.\n");
   #endif
   initialized(true);
-  listening(true);
-  connected(true);
+  listen();
+  connect();
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -249,14 +175,13 @@ int8_t StandardIO::read_port() {
   char *input_text	= (char*) alloca(getMTU());	// Buffer to hold user-input.
   int read_len = 0;
 
-  while (listening()) {
+  while (connected()) {
     bzero(input_text, getMTU());
-
     if (fgets(input_text, getMTU(), stdin) != NULL) {
       read_len = strlen(input_text);
       if (read_len) {
         bytes_received += read_len;
-        fromCounterparty((uint8_t*) input_text, read_len, MEM_MGMT_RESPONSIBLE_CREATOR);
+        BufferPipe::fromCounterparty((uint8_t*) input_text, read_len, MEM_MGMT_RESPONSIBLE_BEARER);
       }
     }
     else {
@@ -264,8 +189,7 @@ int8_t StandardIO::read_port() {
       Kernel::log("StandardIO: fgets() failed.\n");
     }
   }
-
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return 0;
 }
 
@@ -286,14 +210,6 @@ int8_t StandardIO::read_port() {
 *
 * These are overrides from EventReceiver interface...
 ****************************************************************************************************/
-/**
-* Debug support function.
-*
-* @return a pointer to a string constant.
-*/
-const char* StandardIO::getReceiverName() {  return "StandardIO";  }
-
-
 /**
 * Debug support method. This fxn is only present in debug builds.
 *
@@ -367,7 +283,7 @@ int8_t StandardIO::notify(ManuvrRunnable *active_event) {
       break;
   }
 
-  if (local_log.length() > 0) Kernel::log(&local_log);
+  flushLocalLog();
   return return_value;
 }
 

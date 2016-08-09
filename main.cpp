@@ -61,7 +61,6 @@ Main demo application.
 #include <Transports/ManuvrSocket/ManuvrUDP.h>
 #include <Transports/ManuvrSocket/ManuvrTCP.h>
 #include <Transports/StandardIO/StandardIO.h>
-#include <Transports/BufferPipes/XportBridge/XportBridge.h>
 
 // We will use MQTT as our concept of "session"...
 #include <XenoSession/MQTT/MQTTSession.h>
@@ -83,6 +82,18 @@ void kernelDebugDump() {
   Kernel::log(&output);
 }
 
+BufferPipe* _pipe_factory_1(BufferPipe* _n, BufferPipe* _f) {
+  CoAPSession* coap_srv = new CoAPSession(_n);
+  kernel->subscribe(coap_srv);
+  return (BufferPipe*) coap_srv;
+}
+
+BufferPipe* _pipe_factory_2(BufferPipe* _n, BufferPipe* _f) {
+  ManuvrConsole* _console = new ManuvrConsole(_n);
+  kernel->subscribe(_console);
+  return (BufferPipe*) _console;
+}
+
 
 /*******************************************************************************
 * Functions that just print things.                                            *
@@ -100,14 +111,37 @@ int main(int argc, char *argv[]) {
   program_name = argv[0];  // Name of running binary.
   __main_pid = getpid();
 
-  kernel = new Kernel();  // Instance a kernel.
+  // The first thing we should do: Instance a kernel.
+  kernel = new Kernel();
+
+
+  if (0 != BufferPipe::registerPipe(1, _pipe_factory_1)) {
+    printf("Failed to add CoAP to the pipe registry.\n");
+    exit(1);
+  }
+
+  if (0 != BufferPipe::registerPipe(2, _pipe_factory_2)) {
+    printf("Failed to add console to the pipe registry.\n");
+    exit(1);
+  }
+
+  // Pipe strategy planning...
+  const uint8_t pipe_plan_coap[]    = {1, 0};
+  const uint8_t pipe_plan_console[] = {2, 0};
+
 
   #if defined(__MANUVR_DEBUG)
-    // We want to see this data if we are a debug build.
+    // spend time and memory measuring performance.
     kernel->profiler(true);
+
+    // Creating a simple schedule to a void*(void) function...
     //kernel->createSchedule(1000, -1, false, kernelDebugDump);
   #endif
 
+  /*
+  * At this point, we should instantiate whatever specific functionality we
+  *   want this Manuvrable to have.
+  */
   // Parse through all the command line arguments and flags...
   // Please note that the order matters. Put all the most-general matches at the bottom of the loop.
   for (int i = 1; i < argc; i++) {
@@ -123,13 +157,12 @@ int main(int argc, char *argv[]) {
     if ((strcasestr(argv[i], "--console")) || ((argv[i][0] == '-') && (argv[i][1] == 'c'))) {
       // The user wants a local stdio "Shell".
       #if defined(__MANUVR_CONSOLE_SUPPORT)
-
-        // TODO: Until smarter idea is finished, manually patch the USB-VCP into a
-        //         BufferPipe that takes the place of the transport driver.
-        StandardIO* _console_patch = new StandardIO();
-        ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_patch);
+        // TODO: Until smarter idea is finished, manually patch the transport
+        //         into a console session.
+        StandardIO* _console_xport = new StandardIO();
+        ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_xport);
         kernel->subscribe((EventReceiver*) _console);
-        kernel->subscribe((EventReceiver*) _console_patch);
+        kernel->subscribe((EventReceiver*) _console_xport);
       #else
         printf("%s was compiled without any console support. Ignoring directive...\n", argv[0]);
       #endif
@@ -146,22 +179,18 @@ int main(int argc, char *argv[]) {
     }
     if ((strcasestr(argv[i], "--quit")) || ((argv[i][0] == '-') && (argv[i][1] == 'q'))) {
       // Execute up-to-and-including boot. Then immediately shutdown.
-      // This is how you can stack post-boot-operations into the kernel-> They will execute
-      //   following the BOOT_COMPLETE message.
+      // This is how you can stack post-boot-operations into the kernel.
+      // They will execute following the BOOT_COMPLETE message.
       Kernel::raiseEvent(MANUVR_MSG_SYS_SHUTDOWN, NULL);
     }
   }
 
-  /*
-  * At this point, we should instantiate whatever specific functionality we
-  *   want this Manuvrable to have.
-  */
   #if defined(RASPI) || defined(RASPI2)
     // If we are running on a RasPi, let's try to fire up the i2c that is almost
     //   certainly present.
     I2CAdapter i2c(1);
     kernel->subscribe(&i2c);
-    
+
     ManuvrableGPIO gpio;
     kernel->subscribe(&gpio);
   #endif
@@ -173,36 +202,39 @@ int main(int argc, char *argv[]) {
       MQTTSession mqtt(&tcp_cli);
       kernel->subscribe(&mqtt);
 
-      ManuvrRunnable gpio_write(MANUVR_MSG_DIGITAL_WRITE);
-      gpio_write.isManaged(true);
-      gpio_write.specific_target = &gpio;
+      #if defined(RASPI) || defined(RASPI2)
+        ManuvrRunnable gpio_write(MANUVR_MSG_DIGITAL_WRITE);
+        gpio_write.isManaged(true);
+        gpio_write.specific_target = &gpio;
+        mqtt.subscribe("gw", &gpio_write);
+
+        mqtt.tapMessageType(MANUVR_MSG_DIGITAL_WRITE);
+        mqtt.tapMessageType(MANUVR_MSG_DIGITAL_READ);
+      #endif
 
       ManuvrRunnable debug_msg(MANUVR_MSG_USER_DEBUG_INPUT);
       debug_msg.isManaged(true);
       debug_msg.specific_target = (EventReceiver*) kernel;
 
-      mqtt.subscribe("gw", &gpio_write);
       mqtt.subscribe("d", &debug_msg);
 
-      mqtt.tapMessageType(MANUVR_MSG_DIGITAL_WRITE);
-      mqtt.tapMessageType(MANUVR_MSG_DIGITAL_READ);
-
     #else
-      ManuvrTCP tcp_srv((const char*) "127.0.0.1", 2319);
-      ManuvrTCP tcp_cli((const char*) "127.0.0.1", 2319);
+      ManuvrTCP tcp_srv((const char*) "0.0.0.0", 2319);
+      tcp_srv.setPipeStrategy(pipe_plan_console);
       kernel->subscribe(&tcp_srv);
     #endif
     kernel->subscribe(&tcp_cli);
   #endif
 
   #if defined(MANUVR_SUPPORT_UDP)
-    ManuvrUDP udp_srv((const char*) "127.0.0.1", 6053);
-    kernel->subscribe(&udp_srv);
-  #endif
-
-  #if defined(MANUVR_SUPPORT_COAP)
-    CoAPSession coap_srv(&udp_srv);
-    kernel->subscribe(&coap_srv);
+    #if defined(MANUVR_SUPPORT_COAP)
+      ManuvrUDP udp_srv((const char*) "0.0.0.0", 6053);
+      kernel->subscribe(&udp_srv);
+      udp_srv.setPipeStrategy(pipe_plan_coap);
+    #else
+      ManuvrUDP udp_srv((const char*) "0.0.0.0", 6053);
+      kernel->subscribe(&udp_srv);
+    #endif
   #endif
 
   // Once we've loaded up all the goodies we want, we finalize everything thusly...
@@ -221,20 +253,22 @@ int main(int argc, char *argv[]) {
   // TODO: End horrible hackishness.
 
   #if defined(RASPI) || defined(RASPI2)
-    //gpioDefine(14, OUTPUT);
-    //gpioDefine(15, OUTPUT);
-    //gpioDefine(18, OUTPUT);
+    gpioDefine(14, OUTPUT);
+    gpioDefine(15, OUTPUT);
+    gpioDefine(18, OUTPUT);
     //bool pin_14_state = false;
   #endif
 
-  // The main loop. Run forever.
-  // TODO: It would be nice to be able to ask the kernel if we should continue running.
+  // The main loop. Run forever, as a microcontroller would.
+  // Program exit is handled in Platform.
   int events_procd = 0;
   while (1) {
     events_procd = kernel->procIdleFlags();
     #if defined(RASPI) || defined(RASPI2)
-      //setPin(14, pin_14_state);
-      //pin_14_state = !pin_14_state;
+      // Combined with the sleep below, this will give a
+      // visual indication of kernel activity.
+      setPin(14, pin_14_state);
+      pin_14_state = !pin_14_state;
     #endif
 
     if (0 == events_procd) {
@@ -244,5 +278,4 @@ int main(int argc, char *argv[]) {
       sleep_millis(20);
     }
   }
-  exit(0);
 }

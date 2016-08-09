@@ -144,7 +144,7 @@ limitations under the License.
       * Asks if this schedule is being profiled...
       *  Returns true if so, and false if not.
       */
-      inline bool profilingEnabled() {       return (prof_data != NULL); };
+      inline bool profilingEnabled() {       return (prof_data != nullptr); };
 
       /* If this runnable is scheduled, aborts it. Returns true if the schedule was aborted. */
       bool abort();

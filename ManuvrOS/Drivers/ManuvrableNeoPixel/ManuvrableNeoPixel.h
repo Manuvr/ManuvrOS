@@ -67,7 +67,6 @@ class ManuvrableNeoPixel : public EventReceiver {
     /* Overrides from EventReceiver */
     int8_t bootComplete();
     void printDebug(StringBuilder*);
-    const char* getReceiverName();
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);
     #if defined(__MANUVR_CONSOLE_SUPPORT)

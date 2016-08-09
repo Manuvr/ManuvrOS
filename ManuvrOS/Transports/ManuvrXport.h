@@ -95,20 +95,16 @@ class XenoSession;
 
 class ManuvrXport : public EventReceiver, public BufferPipe {
   public:
-    ManuvrXport();
     virtual ~ManuvrXport();
 
     /* Override from BufferPipe. */
-    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
-    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) =0;
-
-    /*
-    * High-level data functions.
-    * TODO: This is going to be cut in favor of BufferPipe's API.
-    */
-    int8_t sendBuffer(StringBuilder* buf);
-
-    inline uint32_t getMTU() {   return _xport_mtu;  };
+    virtual int8_t toCounterparty(ManuvrPipeSignal, void*);
+    virtual inline int8_t toCounterparty(StringBuilder* buf, int8_t mm) {
+      return BufferPipe::toCounterparty(buf, mm);
+    };
+    virtual inline int8_t fromCounterparty(StringBuilder* buf, int8_t mm) {
+      return BufferPipe::fromCounterparty(buf, mm);
+    };
 
     /*
     * State imperatives.
@@ -125,6 +121,8 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     /*
     * State accessors.
     */
+    inline uint32_t getMTU() {   return _xport_mtu;  };
+
     /* Connection/Listen states */
     inline bool connected() {   return (_xport_flags & (MANUVR_XPORT_FLAG_CONNECTED | MANUVR_XPORT_FLAG_ALWAYS_CONNECTED));  }
     inline bool listening() {   return (_xport_flags & MANUVR_XPORT_FLAG_LISTENING);   };
@@ -161,6 +159,7 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     static uint16_t TRANSPORT_ID_POOL;
 
 
+
   protected:
     ManuvrRunnable* _autoconnect_schedule;
     #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
@@ -177,6 +176,8 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     //   any extending class. But generally, this feature is necessary.
     ManuvrRunnable read_abort_event;  // Used to timeout a read operation.
 
+    ManuvrXport();
+
     virtual int8_t bootComplete() =0;
     const char* pipeName();
 
@@ -186,7 +187,6 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
 
     void connected(bool);
     void listening(bool);
-
 
 
 

@@ -26,9 +26,9 @@ XenoMessage is the class that unifies our counterparty's message format
 #ifndef __XENOMESSAGE_H__
 #define __XENOMESSAGE_H__
 
-#include "../Kernel.h"
-#include "../EnumeratedTypeCodes.h"
-#include "../Transports/ManuvrXport.h"
+#include <Kernel.h>
+#include <EnumeratedTypeCodes.h>
+#include <Transports/ManuvrXport.h>
 
 #include <map>
 

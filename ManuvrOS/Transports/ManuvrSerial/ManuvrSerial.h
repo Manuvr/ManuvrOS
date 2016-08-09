@@ -59,15 +59,13 @@ class ManuvrSerial : public ManuvrXport {
   public:
     ManuvrSerial(const char* tty_path, int b_rate);
     ManuvrSerial(const char* tty_path, int b_rate, uint32_t opts);
-    ~ManuvrSerial();
+    virtual ~ManuvrSerial();
 
     /* Override from BufferPipe. */
-    virtual int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
-    virtual int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
+    virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
 
     /* Overrides from EventReceiver */
     int8_t bootComplete();
-    const char* getReceiverName();
     void printDebug(StringBuilder *);
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);
@@ -89,12 +87,10 @@ class ManuvrSerial : public ManuvrXport {
 
   private:
     const char* _addr;
-    int         _sock;
     uint32_t    _options;
-
-    int _baud_rate;
-
+    int         _baud_rate;
     #if defined(__MANUVR_LINUX)
+      int         _sock;
       struct termios termAttr;
     #endif
 
