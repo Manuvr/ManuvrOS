@@ -106,7 +106,7 @@ void I2CBusOp::printDebug(StringBuilder* temp) {
     temp->concatf("\tFault:           %s\n", getErrorString());
     temp->concatf("\tbuf_len:         %d\n\t", buf_len);
     if (buf_len > 0) {
-      temp->concatf( "*(0x%08x):   ", (uint32_t) buf);
+      temp->concatf( "*(0x%p):   ", buf);
       for (uint8_t i = 0; i < buf_len; i++) {
         temp->concatf("0x%02x ", (uint8_t) *(buf + i));
       }

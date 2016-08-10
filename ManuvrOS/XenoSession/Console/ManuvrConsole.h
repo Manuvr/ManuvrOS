@@ -47,7 +47,6 @@ class ManuvrConsole : public XenoSession {
 
     /* Overrides from EventReceiver */
     void procDirectDebugInstruction(StringBuilder*);
-    const char* getReceiverName();
     void printDebug(StringBuilder*);
     int8_t bootComplete();
     int8_t notify(ManuvrRunnable*);

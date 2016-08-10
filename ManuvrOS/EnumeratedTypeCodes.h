@@ -85,7 +85,7 @@ typedef struct typecode_def_t {
 
 #define SYS_EVENTRECEIVER_FM    0xE0 // A pointer to an EventReceiver.
 #define SYS_MANUVR_XPORT_FM     0xE1 // A pointer to a ManuvrXport.
-#define SYS_MANUVR_EVENT_PTR_FM 0xE2 // A pointer to a ManuvrRunnable..
+#define SYS_RUNNABLE_PTR_FM     0xE2 // A pointer to a ManuvrRunnable..
 
 
 /**
@@ -126,6 +126,11 @@ typedef struct typecode_def_t {
 #define UINT16_FM      0x07   // Unsigned 16-bit integer
 #define UINT32_FM      0x08   // Unsigned 32-bit integer
 
+
+void* pack_into_ptr_space(unsigned int x);
+// Let the compiler play the type-casting game for us...
+inline void* pack_into_ptr_space(int x) {   return pack_into_ptr_space((unsigned int) x); };
+inline void* pack_into_ptr_space(float x) { return pack_into_ptr_space((uint32_t) x); };
 
 /**
 * The host sends binary data little-endian. This will convert bytes to the indicated type.

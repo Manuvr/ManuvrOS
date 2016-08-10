@@ -79,6 +79,20 @@ const TypeCodeDef type_codes[] = {
 };
 
 
+/**
+* Allows us to maximize the use of the register-width available to us on this
+*   platform.
+* Might extend this out to near-pointers, or 16-bit platforms?
+* Is this better or worse than a preprocessor macro?
+*/
+void* pack_into_ptr_space(unsigned int x) {
+  switch (sizeof(void*)) {
+    case 8: return (void*)(0x0000000000000000 | x);
+    default:  // Might extend this out to
+    case 4: return (void*)(0x00000000 | x);
+  }
+}
+
 
 /**
 * Given type code, find size in bytes. Returns 1 for variable-length arguments,

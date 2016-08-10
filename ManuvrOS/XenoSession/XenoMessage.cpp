@@ -109,7 +109,7 @@ void XenoMessage::provideEvent(ManuvrRunnable *existing_event) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void XenoMessage::printDebug(StringBuilder *output) {
-  output->concatf("\t Message ID      0x%08x\n", (uint32_t) this);
+  output->concatf("\t Message ID      0x%08x\n", (unsigned long) this);
   output->concatf("\t Message state   %s\n", getMessageStateString(proc_state));
   output->concatf("\t bytes_total     %d\n", bytes_total);
   output->concatf("\t bytes_received  %d\n", bytes_received);

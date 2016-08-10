@@ -108,10 +108,10 @@ class UDPPipe : public BufferPipe {
 
 
   private:
+    ManuvrUDP*    _udp;
+    uint32_t      _ip;
     uint16_t      _port;
     uint16_t      _udpflags;
-    uint32_t      _ip;
-    ManuvrUDP*    _udp;
     StringBuilder _accumulator;   // Holds an incoming packet prior to setFar().
 };
 

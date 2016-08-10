@@ -26,238 +26,42 @@ This class represents our type-abstraction layer. It is the means by which
 #include "ManuvrMsg.h"
 #include <string.h>
 
+static const unsigned long INTEGER_ANVIL = 0;
 
 /****************************************************************************************************
 * Argument class constructors.                                                                      *
 ****************************************************************************************************/
-// TODO: Need to devolve into this constructor. Forgot how.
+/*
+* Basal constructor.
+*/
 Argument::Argument(){
 	wipe();
 }
 
-Argument::Argument(uint8_t val) {
-	wipe();
-	len = sizeof(val);
-	type_code = UINT8_FM;
-	target_mem = (void*) (0x00000000 + val);
-}
-
-Argument::Argument(uint16_t val) {
-	wipe();
-	len = sizeof(val);
-	type_code = UINT16_FM;
-	target_mem = (void*) (0x00000000 + val);
-}
-
-Argument::Argument(uint32_t val) {
-	wipe();
-	len = sizeof(val);
-	type_code = UINT32_FM;
-	target_mem = (void*) (0x00000000 + val);
-}
-
-
-Argument::Argument(int8_t val) {
-	wipe();
-	len = sizeof(val);
-	type_code = INT8_FM;
-	target_mem = (void*) (0x00000000 + val);
-}
-
-Argument::Argument(int16_t val) {
-	wipe();
-	len = sizeof(val);
-	type_code = INT16_FM;
-	target_mem = (void*) (0x00000000 + val);
-}
-
-Argument::Argument(int32_t val) {
-	wipe();
-	len = sizeof(val);
-	type_code = INT32_FM;
-	target_mem = (void*) (0x00000000 + val);
-}
-
-Argument::Argument(float val) {
-	wipe();
-	len = sizeof(val);
-	type_code = FLOAT_FM;
-	target_mem = (void*) ((uint32_t) val);
-}
-
-
-Argument::Argument(uint8_t* val) {
-	wipe();
-	len = sizeof(val);
-	type_code = UINT8_PTR_FM;
-	target_mem = (void*) val;
-}
-
-Argument::Argument(uint16_t* val) {
-	wipe();
-	len = sizeof(val);
-	type_code = UINT16_PTR_FM;
-	target_mem = (void*) val;
-}
-
-Argument::Argument(uint32_t* val) {
-	wipe();
-	len = sizeof(val);
-	type_code = UINT32_PTR_FM;
-	target_mem = (void*) val;
-}
-
-
-Argument::Argument(int8_t* val) {
-	wipe();
-	len = sizeof(val);
-	type_code = INT8_PTR_FM;
-	target_mem = (void*) val;
-}
-
-Argument::Argument(int16_t* val) {
-	wipe();
-	len = sizeof(val);
-	type_code = INT16_PTR_FM;
-	target_mem = (void*) val;
-}
-
-Argument::Argument(int32_t* val) {
-	wipe();
-	len = sizeof(val);
-	type_code = INT32_PTR_FM;
-	target_mem = (void*) val;
-}
-
-Argument::Argument(float* val) {
-	wipe();
-	len = sizeof(val);
-	type_code = FLOAT_PTR_FM;
-	target_mem = (void*) val;
-	reap       = false;
-}
-
-Argument::Argument(Vector4f* val) {
-	wipe();
-	len = 16;
-	type_code = VECT_4_FLOAT;
-	target_mem = (void*) val;
-}
-
-Argument::Argument(Vector3f* val) {
-	wipe();
-	len = 12;
-	type_code = VECT_3_FLOAT;
-	target_mem = (void*) val;
-}
-
-Argument::Argument(Vector3i16* val) {
-	wipe();
-	len = 8;
-	type_code = VECT_3_INT16;
-	target_mem = (void*) val;
-}
-
-Argument::Argument(Vector3ui16* val) {
-	wipe();
-	len = 6;
-	type_code = VECT_3_UINT16;
-	target_mem = (void*) val;
-}
-
 /*
-* This is a constant character pointer. Do not reap it.
+* Protected delegate constructor.
 */
-Argument::Argument(const char* val) {
-	wipe();
-	len = strlen(val)+1;  // +1 because: NULL terminator.
-	type_code  = STR_FM;
-	target_mem = (void*) val;
-	reap       = false;
+Argument::Argument(void* ptr, int l, uint8_t code) : Argument() {
+	len = l;
+	type_code  = code;
+	target_mem = ptr;
 }
 
 /*
 * This is a character pointer. Reap.
 */
-Argument::Argument(char* val) {
-	wipe();
-	len = strlen(val)+1;  // +1 because: NULL terminator.
-	type_code  = STR_FM;
-	target_mem = (void*) val;
-	reap       = true;
+Argument::Argument(char* val) : Argument(val, (strlen(val)+1), STR_FM) {
+	reap = true;
 }
-
 
 /*
 * This constructor produces reapable Arguments.
 * We typically want StringBuilder references to be reaped at the end of
 *   the Argument's life cycle. We will specify otherwise when appropriate.
 */
-Argument::Argument(StringBuilder* val) {
-	wipe();
-	len = sizeof(val);
-	type_code = STR_BUILDER_FM;
-	target_mem = (void*) val;
-	reap       = true;
+Argument::Argument(StringBuilder* val) : Argument(val, sizeof(val), STR_BUILDER_FM) {
+	reap = true;
 }
-
-/*
-* We typically want references to typeless swaths of memory be left alone at the end of
-*   the Argument's life cycle. We will specify otherwise when appropriate.
-*/
-Argument::Argument(void* val, uint16_t buf_len) {
-	wipe();
-	len = buf_len;
-	type_code  = BINARY_FM;
-	target_mem = (void*) val;
-	reap       = false;
-}
-
-/*
-* We typically want ManuvrRunnable references to be left alone at the end of
-*   the Argument's life cycle. We will specify otherwise when appropriate.
-*/
-Argument::Argument(ManuvrRunnable* val) {
-	wipe();
-	len = sizeof(val);
-	type_code = SYS_MANUVR_EVENT_PTR_FM;
-	target_mem = (void*) val;
-	reap       = false;
-}
-
-/*
-* This is a system service pointer. Do not reap it.
-*/
-Argument::Argument(ManuvrXport* val) {
-	wipe();
-	len = sizeof(val);
-	type_code  = SYS_MANUVR_XPORT_FM;
-	target_mem = (void*) val;
-	reap       = false;
-}
-
-/*
-* This is a system service pointer. Do not reap it.
-*/
-Argument::Argument(BufferPipe* val) {
-	wipe();
-	len = sizeof(val);
-	type_code  = BUFFERPIPE_PTR_FM;
-	target_mem = (void*) val;
-	reap       = false;
-}
-
-/*
-* This is a system service pointer. Do not reap it.
-*/
-Argument::Argument(EventReceiver* val) {
-	wipe();
-	len = sizeof(val);
-	type_code  = SYS_EVENTRECEIVER_FM;
-	target_mem = (void*) val;
-	reap       = false;
-}
-
 
 
 
@@ -298,18 +102,18 @@ int8_t Argument::serialize(StringBuilder *out) {
 	  case INT8_FM:
 	  case UINT8_FM:   // This frightens the compiler. Its fears are unfounded.
 	    arg_bin_len = 1;
-	    *(sp_index) = (uint8_t) (((uint32_t) target_mem) & 0x000000FF);
+	    *((uint8_t*) sp_index) = *((uint8_t*)& target_mem);
 	    break;
 	  case INT16_FM:
 	  case UINT16_FM:   // This frightens the compiler. Its fears are unfounded.
 	    arg_bin_len = 2;
-	    *(sp_index) = (uint16_t) (((uint32_t) target_mem) & 0x0000FFFF);
+			*((uint16_t*) sp_index) = *((uint16_t*)& target_mem);
 	    break;
 	  case INT32_FM:
 	  case UINT32_FM:   // This frightens the compiler. Its fears are unfounded.
 	  case FLOAT_FM:   // This frightens the compiler. Its fears are unfounded.
 	    arg_bin_len = 4;
-	    *(sp_index) = (uint32_t) target_mem;
+			*((uint32_t*) sp_index) = *((uint32_t*)& target_mem);
 	    break;
 
 	  /* These are pointer types to data that can be sent as-is. Remember: LITTLE ENDIAN */
