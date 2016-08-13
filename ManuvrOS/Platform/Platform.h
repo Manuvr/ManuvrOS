@@ -197,7 +197,8 @@ void init_RNG();                             // Fire up the random number genera
 int platformSerialNumberSize();    // Returns the length of the serial number on this platform (in bytes).
 int getSerialNumber(uint8_t*);     // Writes the serial number to the indicated buffer.
 
-//void manuvrPlatformInfo(StringBuilder*); // Writes a platform information string to the provided buffer.
+/* Writes a platform information string to the provided buffer. */
+void manuvrPlatformInfo(StringBuilder*);
 
 /*
 * GPIO and change-notice.

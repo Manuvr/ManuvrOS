@@ -28,7 +28,40 @@ Initial implentation is via mbedTLS.
 #if defined(__MANUVR_MBEDTLS)
 
 
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
+
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
+/**
+* Constructor.
+*/
 ManuvrTLSServer::ManuvrTLSServer(BufferPipe* _n) : ManuvrTLS(_n, MBEDTLS_DEBUG_LEVEL) {
+  _tls_pipe_name = "TLSServer";
+}
+
+/**
+* Destructor.
+*/
+ManuvrTLSServer::~ManuvrTLSServer() {
+  // TODO: free cookie_ctx
+  #if defined(MBEDTLS_SSL_CACHE_C)
+    //TODO: free mbedtls_ssl_cache_context cache;
+  #endif
 }
 
 
@@ -40,10 +73,10 @@ ManuvrTLSServer::ManuvrTLSServer(BufferPipe* _n) : ManuvrTLS(_n, MBEDTLS_DEBUG_L
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
-const char* ManuvrTLSServer::pipeName() { return "ManuvrTLSServer"; }
-
 /**
 * Inward toward the transport.
+* This member receives plaintext from the application, and propagates a
+*   ciphertext into the transport.
 *
 * @param  buf    A pointer to the buffer.
 * @param  mm     A declaration of memory-management responsibility.
@@ -80,6 +113,8 @@ int8_t ManuvrTLSServer::toCounterparty(StringBuilder* buf, int8_t mm) {
 
 /**
 * Outward toward the application (or into the accumulator).
+* This member receives ciphertext from the transport, and propagates a
+*   plaintext into the application.
 *
 * @param  buf    A pointer to the buffer.
 * @param  mm     A declaration of memory-management responsibility.

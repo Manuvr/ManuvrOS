@@ -39,19 +39,6 @@ This class implements a crude UDP connector.
 * Static members and initializers should be located here.
 *******************************************************************************/
 
-volatile ManuvrUDP* ManuvrUDP::INSTANCE = NULL;
-
-const MessageTypeDef udp_message_defs[] = {
-  #if defined (__ENABLE_MSG_SEMANTICS)
-  {  MANUVR_MSG_UDP_RX    , 0,  "UDP_RX",         ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_UDP_TX    , 0,  "UDP_TX",         ManuvrMsg::MSG_ARGS_NONE }, //
-  #else
-  {  MANUVR_MSG_UDP_RX    , 0,  "UDP_RX",         ManuvrMsg::MSG_ARGS_NONE, NULL }, //
-  {  MANUVR_MSG_UDP_TX    , 0,  "UDP_TX",         ManuvrMsg::MSG_ARGS_NONE, NULL }, //
-  #endif
-};
-
-
 
 /*******************************************************************************
 * .-. .----..----.    .-.     .--.  .-. .-..----.
@@ -131,13 +118,6 @@ ManuvrUDP::ManuvrUDP(const char* addr, int port) : ManuvrSocket(addr, port, 0) {
   set_xport_state(MANUVR_XPORT_FLAG_HAS_MULTICAST | MANUVR_XPORT_FLAG_CONNECTIONLESS);
   _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
 
-  // TODO: Singleton due-to-feature thrust. Need to ditch the singleton...
-  if (NULL == INSTANCE) {
-    INSTANCE = this;
-    // TODO: ...as well as decide on a strategy for THIS:
-    // Inform the Kernel of the codes we will be using...
-    ManuvrMsg::registerMessages(udp_message_defs, sizeof(udp_message_defs) / sizeof(MessageTypeDef));
-  }
   // Per RFC1122: Minimum reassembly buffer is 576 bytes of effective MTU.
   _xport_mtu = 576;
 }
@@ -155,13 +135,6 @@ ManuvrUDP::ManuvrUDP(const char* addr, int port, uint32_t opts) : ManuvrSocket(a
   set_xport_state(MANUVR_XPORT_FLAG_HAS_MULTICAST | MANUVR_XPORT_FLAG_CONNECTIONLESS);
   _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
 
-  // TODO: Singleton due-to-feature thrust. Need to ditch the singleton...
-  if (NULL == INSTANCE) {
-    INSTANCE = this;
-    // TODO: ...as well as decide on a strategy for THIS:
-    // Inform the Kernel of the codes we will be using...
-    ManuvrMsg::registerMessages(udp_message_defs, sizeof(udp_message_defs) / sizeof(MessageTypeDef));
-  }
   // Per RFC1122: Minimum reassembly buffer is 576 bytes of effective MTU.
   _xport_mtu = 576;
 }
@@ -293,13 +266,13 @@ int8_t ManuvrUDP::listen() {
 
   _sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);    // Open the socket...
   if (-1 == _sock) {
-    Kernel::log("Failed to bind the server socket.\n");
+    Kernel::log("Failed to bind the UDP server socket.\n");
     return -1;
   }
 
   /* Bind the server socket */
   if (bind(_sock, (struct sockaddr *) &_sockaddr, sizeof(_sockaddr))) {
-    Kernel::log("Failed to bind the server socket.\n");
+    Kernel::log("Failed to bind the UDP server socket.\n");
     return -1;
   }
 
@@ -338,9 +311,7 @@ int8_t ManuvrUDP::read_port() {
     // We received a packet. Send it further away.
     bytes_received += n;   // Log the bytes.
     if (getVerbosity() > 6) {
-      local_log.concatf("UDP read %d bytes from counterparty.\n", n);
-      local_log.concat((char*) inet_ntoa(cli_addr.sin_addr));
-      local_log.concat("\n");
+      local_log.concatf("UDP read %d bytes from counterparty (%s).\n", n, (const char*) inet_ntoa(cli_addr.sin_addr));
     }
     UDPPipe* related_pipe = _open_replies[cli_addr.sin_port];
     if (NULL == related_pipe) {
@@ -392,7 +363,7 @@ int8_t ManuvrUDP::read_port() {
     }
     return_value = 0;
   }
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
   return return_value;
 }
 

@@ -207,10 +207,27 @@ void init_RNG() {
   srand(time(nullptr));          // Seed the PRNG...
 }
 
-
 /****************************************************************************************************
 * Identity and serial number                                                                        *
 ****************************************************************************************************/
+#if defined(__MANUVR_UUID)
+  // Under linux, we use the platform UUID library.
+  #include <uuid/uuid.h>
+
+  uuid_t instance_serial_number;  // If we have UUID support.
+#endif
+
+void manuvrPlatformInfo(StringBuilder* out) {
+  out->concat("Linux ");
+  #if defined(__MANUVR_UUID)
+  char* uuid_str = (char*) alloca(36);
+  bzero(uuid_str, 36);
+  uuid_unparse_lower(instance_serial_number, uuid_str);
+  out->concat(uuid_str);
+  #endif
+}
+
+
 /**
 * We sometimes need to know the length of the platform's unique identifier (if any). If this platform
 *   is not serialized, this function will return zero.
@@ -218,7 +235,11 @@ void init_RNG() {
 * @return   The length of the serial number on this platform, in terms of bytes.
 */
 int platformSerialNumberSize() {
-  return 0;
+  #if defined(__MANUVR_UUID)
+    return 16;
+  #else
+    return 0;
+  #endif
 }
 
 
@@ -229,7 +250,12 @@ int platformSerialNumberSize() {
 * @return   The number of bytes written.
 */
 int getSerialNumber(uint8_t *buf) {
+  #if defined(__MANUVR_UUID)
+  for (int i = 0; i < 16; i++) *(buf + i) = *(((uint8_t*)instance_serial_number) + i);
+  return 16;
+  #else
   return 0;
+  #endif
 }
 
 
@@ -473,6 +499,9 @@ void platformInit() {
   init_RNG();
   initPlatformRTC();
   __kernel = (volatile Kernel*) Kernel::getInstance();
+  #if defined(__MANUVR_UUID)
+    uuid_generate(instance_serial_number);
+  #endif
   initSigHandlers();
   set_linux_interval_timer();
 }

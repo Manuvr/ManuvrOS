@@ -80,6 +80,7 @@ class ManuvrUDP;
 /*
 * We use this to track packets and replies so that addressing information does
 *   not need to leave the class, thereby damaging the abstraction.
+* This allows us to have a notion of session over UDP (which is connectionless).
 */
 class UDPPipe : public BufferPipe {
   public:
@@ -91,6 +92,7 @@ class UDPPipe : public BufferPipe {
     /* Override from BufferPipe. */
     virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
     virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
+    const char* pipeName();
 
     void printDebug(StringBuilder*);
     int takeAccumulator(StringBuilder*);
@@ -154,9 +156,6 @@ class ManuvrUDP : public ManuvrSocket {
       void procDirectDebugInstruction(StringBuilder*);
     #endif  //__MANUVR_CONSOLE_SUPPORT
 
-
-    // UDP is connectionless. We should only have a single instance of this class.
-    volatile static ManuvrUDP* INSTANCE;
 
 
   protected:

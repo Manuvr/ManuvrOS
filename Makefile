@@ -45,7 +45,7 @@ INCLUDES   += -I$(WHERE_I_AM)/lib/mbedtls/include/
 # Libraries to link
 # We should be gradually phasing out C++ standard library on linux builds.
 # TODO: Advance this goal.
-LIBS = -L$(OUTPUT_PATH) -L$(WHERE_I_AM)/lib -lstdc++ -lm -lmanuvr
+LIBS = -L$(OUTPUT_PATH) -L$(WHERE_I_AM)/lib -lstdc++ -lm -lmanuvr 
 
 # Wrap the include paths into the flags...
 CFLAGS += $(OPTIMIZATION) $(INCLUDES)
@@ -97,6 +97,7 @@ MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
 # Options that build for certain threading models (if any).
 #MANUVR_OPTIONS += -D__MANUVR_FREERTOS
 MANUVR_OPTIONS += -D__MANUVR_LINUX
+#MANUVR_OPTIONS += -D__MANUVR_UUID
 
 MANUVR_OPTIONS += -DMANUVR_GPS_PIPE
 

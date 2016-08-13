@@ -22,10 +22,8 @@ limitations under the License.
 #include "FirmwareDefs.h"
 #include <Kernel.h>
 #include <Platform/Platform.h>
+#include <Platform/Cryptographic.h>
 
-#if defined(__MANUVR_MBEDTLS)
-  #include "mbedtls/ssl.h"
-#endif
 
 extern uint32_t rtc_startup_state;
 
@@ -987,14 +985,6 @@ void Kernel::printPlatformInfo(StringBuilder* output) {
   #if defined(MANUVR_SUPPORT_OSC)
     output->concat("\t OSC\n");
   #endif
-
-  #if defined(__MANUVR_MBEDTLS)
-    output->concat("-- Supported TLS ciphersuites:\n");
-    const int* ciphersuites = mbedtls_ssl_list_ciphersuites();
-    while (0 != *(ciphersuites)) {
-      output->concatf("\t %s\n", mbedtls_ssl_get_ciphersuite_name(*(ciphersuites++)));
-    }
-  #endif
 }
 
 /**
@@ -1029,6 +1019,8 @@ void Kernel::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
 
   output->concatf("-- %s v%s \t Build date: %s %s\n--\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
+  manuvrPlatformInfo(output);
+  output->concat("\n");
   //output->concatf("-- our_mem_addr:             0x%08x\n", (uint32_t) this);
   if (getVerbosity() > 5) {
     output->concat("-- Current datetime          ");
@@ -1505,6 +1497,8 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       local_log.concatf("Kernel profiling %sabled.\n", ('P' == c) ? "en" : "dis");
       profiler('P' == c);
       break;
+
+    #if defined(__MANUVR_DEBUG)
     case 'f':  // FPU benchmark
       {
         float a = 1.001;
@@ -1516,6 +1510,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
         local_log.concatf("Value:     %.5f\nFPU test concluded.\n", (double) a);
       }
       break;
+
     case 'r':        // Read so many random integers...
       temp_int = (temp_int <= 0) ? PLATFORM_RNG_CARRY_CAPACITY : temp_int;
       for (uint8_t i = 0; i < temp_int; i++) {
@@ -1523,7 +1518,6 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       }
       break;
 
-    #if defined(__MANUVR_DEBUG)
     case 'i':   // Debug prints.
       switch (temp_int) {
         case 1:

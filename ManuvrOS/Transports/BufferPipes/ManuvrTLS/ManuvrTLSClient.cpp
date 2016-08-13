@@ -38,21 +38,6 @@ Initial implentation is via mbedTLS.
 * Static members and initializers should be located here.
 *******************************************************************************/
 
-/**
-* This is out-of-class. Passed-by-reference into the mbedtls library to
-*   facilitate logging.
-*/
-extern "C" {
-  static void tls_log_shunt(void* ctx, int level, const char *file,
-                            int line, const char *str) {
-    StringBuilder _tls_log;
-    _tls_log.concatf("%s:%04d: %s", file, line, str);
-    Kernel::log(&_tls_log);
-  }
-}
-
-
-
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
 *  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
@@ -65,6 +50,7 @@ extern "C" {
 * Constructor.
 */
 ManuvrTLSClient::ManuvrTLSClient(BufferPipe* _n) : ManuvrTLS(_n, MBEDTLS_DEBUG_LEVEL) {
+  _tls_pipe_name = "TLSClient";
   mbedtls_ssl_init(&_ssl);
 
   if (nullptr != _n) {
@@ -148,8 +134,6 @@ ManuvrTLSClient::~ManuvrTLSClient() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
-const char* ManuvrTLSClient::pipeName() { return "ManuvrTLSClient"; }
-
 /**
 * Inward toward the transport.
 *

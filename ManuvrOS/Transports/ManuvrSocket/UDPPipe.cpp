@@ -77,7 +77,7 @@ UDPPipe::~UDPPipe() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
-//const char* UDPPipe::pipeName() { return "UDPPipe"; }
+const char* UDPPipe::pipeName() { return "UDPPipe"; }
 
 /**
 * Back toward ManuvrUDP....

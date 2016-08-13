@@ -143,6 +143,7 @@ void sleep_millis(unsigned long millis) {
 
 
 
+
 // TODO: I know this is horrid. I'm sick of screwing with the build system today...
 #if defined(RASPI) | defined(RASPI2)
   #include "PlatformRaspi.cpp"
@@ -163,6 +164,4 @@ void sleep_millis(unsigned long millis) {
   // Unsupportage.
   #include "PlatformUnsupported.cpp"
 #endif
-
-
-}
+}  // extern "C"
