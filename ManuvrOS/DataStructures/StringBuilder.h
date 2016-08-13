@@ -25,6 +25,7 @@ limitations under the License.
 
 #include <inttypes.h>
 #include <stdarg.h>
+#include <string.h>
 
 #if defined(__MANUVR_LINUX)
   #include <pthread.h>
@@ -60,27 +61,28 @@ typedef struct str_ll_t {
 *   usage.
 */
 class StringBuilder {
-	StrLL *root;         // The root of the linked-list.
-	int col_length;      // The length of the collapsed string.
-	unsigned char *str;  // The collapsed string.
-	bool preserve_ll;    // If true, do not reap the linked list in the destructor.
-
 	public:
-		StringBuilder(void);
+		StringBuilder();
 		StringBuilder(char *initial);
 		StringBuilder(unsigned char *initial, int len);
 		StringBuilder(const char *);
-		~StringBuilder(void);
+		~StringBuilder();
 
-		int length(void);
-		unsigned char* string(void);
+		int length();
+		unsigned char* string();
 		void prepend(unsigned char *nu, int len);
-		void prepend(char *nu);
+
+    /**
+    * Overrides to cleanly support C-style strings..
+    */
+    inline void concat(char* nu) {  concat((unsigned char*) nu, strlen(nu));  };
+    inline void prepend(char* nu) { prepend((unsigned char*) nu, strlen(nu)); };
+
+		void concat(const char *nu);
 		void prepend(const char *nu);   // TODO: Mark as non-reapable and store the pointer.
+
 		void concat(StringBuilder *nu);
 		void concat(unsigned char *nu, int len);
-		void concat(const char *nu);   // TODO: Mark as non-reapable and store the pointer.
-		void concat(char *nu);
 		void concat(char nu);
 		void concat(unsigned char nu);
 
@@ -92,16 +94,16 @@ class StringBuilder {
 		void concatHandoff(StringBuilder *nu);
 		void prependHandoff(StringBuilder *nu);
 
-		// TODO: Badly need a variadic concat...
-		// TODID: Got ir dun
-		int concatf(const char *nu, ...);
+    /* Variadic concat. Semantics are the same as printf. */
+    int concatf(const char *nu, ...);
 
 		//inline void concat(uint16_t nu) { this->concat((unsigned int) nu); }
 		//inline void concat(int16_t nu) { this->concat((int) nu); }
 
 		void concat(double nu);
-		void concat(float nu);
-		void concat(bool nu);
+    /* Floats are upgraded to doubles. */
+		inline void concat(float nu) { concat((double) nu); };
+		inline void concat(bool nu) {  concat(nu ? "T" : "F"); };
 
 		void cull(int offset, int length);       // Use to throw away all but the specified range of this string.
 		void cull(int length);                   // Use to discard the first X characters from the string.
@@ -130,6 +132,11 @@ class StringBuilder {
 
 
 	private:
+    StrLL *root;         // The root of the linked-list.
+    int col_length;      // The length of the collapsed string.
+    unsigned char *str;  // The collapsed string.
+    bool preserve_ll;    // If true, do not reap the linked list in the destructor.
+
     #if defined(__MANUVR_LINUX)
       // If we are on linux, we control for concurrency with a mutex...
       pthread_mutex_t _mutex;

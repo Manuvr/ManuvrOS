@@ -17,7 +17,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-
 */
 
 #include "StringBuilder.h"
@@ -27,7 +26,6 @@ limitations under the License.
 #else
   #include <stdio.h>
   #include <stdlib.h>
-  #include <string.h>
   #include <ctype.h>
 #endif
 
@@ -51,46 +49,18 @@ StringBuilder::StringBuilder() {
   #endif
 }
 
-StringBuilder::StringBuilder(char *initial) {
-  this->root   = nullptr;
-  this->str    = nullptr;
-  this->col_length = 0;
-  this->preserve_ll = false;
+StringBuilder::StringBuilder(char *initial) : StringBuilder() {
   this->concat(initial);
-  #if defined(__MANUVR_LINUX)
-    _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
-  #elif defined(__MANUVR_FREERTOS)
-    //_mutex = xSemaphoreCreateRecursiveMutex();
-  #endif
 }
 
-StringBuilder::StringBuilder(unsigned char *initial, int len) {
-  this->root   = nullptr;
-  this->str    = nullptr;
-  this->col_length = 0;
-  this->preserve_ll = false;
+StringBuilder::StringBuilder(unsigned char *initial, int len) : StringBuilder() {
   this->concat(initial, len);
-  #if defined(__MANUVR_LINUX)
-    _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
-  #elif defined(__MANUVR_FREERTOS)
-    //_mutex = xSemaphoreCreateRecursiveMutex();
-  #endif
 }
 
 
-StringBuilder::StringBuilder(const char *initial) {
-  this->root   = nullptr;
-  this->str    = nullptr;
-  this->col_length = 0;
-  this->preserve_ll = false;
+StringBuilder::StringBuilder(const char *initial) : StringBuilder() {
   this->concat(initial);
-  #if defined(__MANUVR_LINUX)
-    _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
-  #elif defined(__MANUVR_FREERTOS)
-    //_mutex = xSemaphoreCreateRecursiveMutex();
-  #endif
 }
-
 
 
 /**
@@ -163,7 +133,10 @@ unsigned char* StringBuilder::string() {
 }
 
 
-void StringBuilder::clear(void) {
+/**
+* Wipes the StringBuilder, free'ing memory as appropriate.
+*/
+void StringBuilder::clear() {
   #if defined(__MANUVR_LINUX)
     //pthread_mutex_lock(&_mutex);
   #elif defined(__MANUVR_FREERTOS)
@@ -455,13 +428,6 @@ void StringBuilder::prepend(unsigned char *nu, int len) {
 }
 
 
-/**
-* Override to cleanly support signed characters.
-*/
-void StringBuilder::prepend(char *nu) {
-  this->prepend((unsigned char *) nu, strlen(nu));
-}
-
 void StringBuilder::prepend(const char *nu) {
   this->prepend((unsigned char *) nu, strlen(nu));
 }
@@ -506,12 +472,6 @@ void StringBuilder::concat(unsigned char *nu, int len) {
   }
 }
 
-/**
-* Override to cleanly support signed characters.
-*/
-void StringBuilder::concat(char *nu) {
-  this->concat((unsigned char *) nu, strlen(nu));
-}
 
 /**
 * Override to make best use of memory for const strings...
@@ -572,15 +532,6 @@ void StringBuilder::concat(double nu) {
   memset(temp, 0x00, 16);
   sprintf(temp, "%f", nu);
   this->concat(temp);
-}
-
-void StringBuilder::concat(float nu) {
-  this->concat((double) nu);
-}
-
-void StringBuilder::concat(bool nu) {
-  if (nu) this->concat("1");
-  else this->concat("0");
 }
 
 /**
@@ -883,7 +834,6 @@ void StringBuilder::null_term_check() {
 }
 
 
-// TODO: Make this a static.
 void StringBuilder::printDebug(StringBuilder* output) {
   unsigned char* temp = this->string();
   int temp_len  = this->length();
