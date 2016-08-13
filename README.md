@@ -60,17 +60,14 @@ The test-bench consists of these files. It was meant to run on linux with possib
 
 ----------------------
 ### If you intend on using ManuvrOS in an Arduino-esque environment...
-Arduino support has been shelved for the moment. It may make a re-appearance in the future.
+Arduino support has been shelved for the moment due to restrictions in their build system. It may make a re-appearance in the future.
 
 
 ----------------------
 #### High-level TODO list
--   Clean up the unit tests that exist, and merge in some that aren't in the test-bench yet.
--   Verify that ManuvrOS works correctly when built as 64-bit.
--   Write an autoconf script to choose target and features, detect env, etc...
--   Continue extending session support to cover OSC, CoAP, along with their commonly-associated wire-encodings (notably CBOR). Currently, only MQTT and Manuvr native are supported.
--   Incorporate assertions into preprocessor logic to case-off DEBUG? Investigate.
--   Support additional threading models (Zephyr? RIOT? mbed?).
+General issues and support goals are being tracked in Trello.
+https://trello.com/b/3COZhcRs
+
 
 ----------------------
 ### License

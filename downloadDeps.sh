@@ -7,9 +7,9 @@
 # Make the lib directory...
 mkdir lib
 
-# JSON support via ArduinoJson...
-rm -rf lib/ArduinoJson
-git clone https://github.com/bblanchon/ArduinoJson.git lib/ArduinoJson
+# JSON support via jansson...
+rm -rf lib/jansson
+git clone https://github.com/akheron/jansson.git lib/jansson
 
 # FreeRTOS...
 rm -rf lib/FreeRTOS_Arduino
@@ -27,6 +27,12 @@ rm -rf lib/tinycbor
 git clone https://github.com/01org/tinycbor.git lib/tinycbor
 mkdir -p lib/tinycbor/include
 cp lib/tinycbor/src/*.h lib/tinycbor/include
+
+# Avro. Again, we will shuffle things a bit to make inclusion uniform.
+# Note that Avro requires jansson for JSON support.
+rm -rf lib/avro
+git clone https://github.com/apache/avro.git lib/avro
+ln -s `pwd`/lib/avro/lang/c/src/ lib/avro/include
 
 # mbedTLS...
 rm -rf lib/mbedtls

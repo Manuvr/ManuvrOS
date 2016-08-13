@@ -30,7 +30,7 @@ Target is OIC v1.1.
 #define __MANUVR_OIC_FRAMEWORK_H__
 
 #include <EventReceiver.h>
-
+#include <map>
 
 class ManuvrOIC : public EventReceiver {
   public:
@@ -43,12 +43,17 @@ class ManuvrOIC : public EventReceiver {
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);
 
+    int8_t makeDiscoverable();
+
 
   protected:
     int8_t bootComplete();
 
 
   private:
+    /* This maps URIs to resources. */
+    std::map<const char*, listenerFxnPtr> _uri_map;
+
 };
 
 #endif //__MANUVR_OIC_FRAMEWORK_H__

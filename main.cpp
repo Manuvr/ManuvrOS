@@ -256,7 +256,7 @@ int main(int argc, char *argv[]) {
     gpioDefine(14, OUTPUT);
     gpioDefine(15, OUTPUT);
     gpioDefine(18, OUTPUT);
-    //bool pin_14_state = false;
+    bool pin_14_state = false;
   #endif
 
   // The main loop. Run forever, as a microcontroller would.

@@ -1,7 +1,7 @@
 /*
-File:   ManuvrCBOR.h
+File:   Cryptographic.h
 Author: J. Ian Lindsay
-Date:   2016.07.16
+Date:   2016.08.13
 
 Copyright 2016 Manuvr, Inc
 
@@ -18,7 +18,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-This class is a type-conversion wrapper around TinyCBOR.
+This file is meant to contain a set of common functions for cryptographic operations.
+Baseline support will be via mbedtls, but certain platforms will have hardware
+  support for many of these operations, or will wish to handle them in their
+  own way for some other reason.
 */
-
-#include "tinycbor/include/cbor.h"
