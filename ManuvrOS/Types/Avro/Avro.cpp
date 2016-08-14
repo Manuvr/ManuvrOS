@@ -19,3 +19,8 @@ limitations under the License.
 
 
 */
+
+#if defined(MANUVR_AVRO)
+  #include "Avro.h"
+
+#endif  // MANUVR_CBOR

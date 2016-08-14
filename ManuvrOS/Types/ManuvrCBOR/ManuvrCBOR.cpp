@@ -21,4 +21,7 @@ limitations under the License.
 This class is a type-conversion wrapper around TinyCBOR.
 */
 
-#include "ManuvrCBOR.h"
+#if defined(MANUVR_CBOR)
+  #include "ManuvrCBOR.h"
+
+#endif  // MANUVR_CBOR
