@@ -82,7 +82,9 @@ ManuvrTLS::ManuvrTLS(BufferPipe* _n, int debug_lvl) : BufferPipe() {
   mbedtls_pk_init(&_pkey);
   mbedtls_entropy_init(&_entropy);
   mbedtls_ctr_drbg_init(&_ctr_drbg);
-  mbedtls_debug_set_threshold(debug_lvl);
+  #if defined(MBEDTLS_DEBUG_C)
+    mbedtls_debug_set_threshold(debug_lvl);
+  #endif
 
   setNear(_n);
 }

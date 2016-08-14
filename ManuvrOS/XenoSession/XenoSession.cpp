@@ -281,7 +281,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
       purgeInbound();
       purgeOutbound();
       #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 3) local_log.concatf("0x%08x Session is now in state %s.\n", (uint32_t) this, sessionPhaseString(getPhase()));
+      if (getVerbosity() > 3) local_log.concatf("%p Session is now in state %s.\n", this, sessionPhaseString(getPhase()));
       #endif
       return_value++;
       break;
@@ -291,7 +291,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
       //   to its own requests-for-service. Pitch a warning.
       #ifdef __MANUVR_DEBUG
       if (getVerbosity() > 1) {
-        local_log.concatf("0x%08x received SESS_SERVICE.\n", (uint32_t) this);
+        local_log.concatf("%p received SESS_SERVICE.\n", this);
         printDebug(&local_log);
       }
       #endif
@@ -304,7 +304,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
         int out_purge = purgeOutbound();
         int in_purge  = purgeInbound();
         #ifdef __MANUVR_DEBUG
-        if (getVerbosity() > 5) local_log.concatf("0x%08x Purged (%d) msgs from outbound and (%d) from inbound.\n", (uint32_t) this, out_purge, in_purge);
+        if (getVerbosity() > 5) local_log.concatf("%p Purged (%d) msgs from outbound and (%d) from inbound.\n", this, out_purge, in_purge);
         #endif
       }
       return_value++;
@@ -362,7 +362,7 @@ int XenoSession::purgeOutbound() {
     temp = _outbound_messages.get();
     #ifdef __MANUVR_DEBUG
     if (getVerbosity() > 6) {
-      local_log.concatf("\nSession 0x%08x Destroying outbound msg:\n", (uint32_t) this);
+      local_log.concatf("\nSession %p Destroying outbound msg:\n", this);
       temp->printDebug(&local_log);
       Kernel::log(&local_log);
     }
@@ -385,7 +385,7 @@ int XenoSession::purgeInbound() {
     temp = _inbound_messages.get();
     #ifdef __MANUVR_DEBUG
     if (getVerbosity() > 6) {
-      local_log.concatf("\nSession 0x%08x Destroying inbound msg:\n", (uint32_t) this);
+      local_log.concatf("\nSession %p Destroying inbound msg:\n", this);
       temp->printDebug(&local_log);
       Kernel::log(&local_log);
     }
@@ -454,7 +454,7 @@ void XenoSession::printDebug(StringBuilder *output) {
   EventReceiver::printDebug(output);
   BufferPipe::printDebug(output);
 
-  output->concatf("-- Session ID           0x%08x\n", (uint32_t) this);
+  output->concatf("-- Session ID           %p\n", this);
   output->concatf("-- Session phase        %s\n--\n", sessionPhaseString(getPhase()));
 
   std::map<uint16_t, MessageTypeDef*>::iterator it;

@@ -1012,7 +1012,7 @@ void I2CAdapter::printDebug(StringBuilder *temp) {
   #if defined(STM32F7XX) | defined(STM32F746xx)
     temp->concatf("-- State                   %u\n", hi2c1.State);
     temp->concatf("-- ErrorCode               %u\n", hi2c1.ErrorCode);
-    temp->concatf("-- pBuffPtr                0x%08x\n", (uint32_t) hi2c1.pBuffPtr);
+    temp->concatf("-- pBuffPtr                %p\n", hi2c1.pBuffPtr);
     temp->concatf("-- XferSize                %d\n", hi2c1.XferSize);
     temp->concatf("-- XferCount               %u\n", hi2c1.XferCount);
     temp->concatf("-- CR1                     0x%08x\n", I2C1->CR1);

@@ -220,10 +220,10 @@ void init_RNG() {
 void manuvrPlatformInfo(StringBuilder* out) {
   out->concat("Linux ");
   #if defined(__MANUVR_UUID)
-  char* uuid_str = (char*) alloca(36);
-  bzero(uuid_str, 36);
-  uuid_unparse_lower(instance_serial_number, uuid_str);
-  out->concat(uuid_str);
+    char* uuid_str = (char*) alloca(36);
+    bzero(uuid_str, 36);
+    uuid_unparse_lower(instance_serial_number, uuid_str);
+    out->concat(uuid_str);
   #endif
 }
 

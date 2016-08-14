@@ -1019,9 +1019,10 @@ void Kernel::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
 
   output->concatf("-- %s v%s \t Build date: %s %s\n--\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
+  output->concat("-- Platform                  ");
   manuvrPlatformInfo(output);
   output->concat("\n");
-  //output->concatf("-- our_mem_addr:             0x%08x\n", (uint32_t) this);
+  //output->concatf("-- our_mem_addr:             %p\n", this);
   if (getVerbosity() > 5) {
     output->concat("-- Current datetime          ");
     currentDateTime(output);

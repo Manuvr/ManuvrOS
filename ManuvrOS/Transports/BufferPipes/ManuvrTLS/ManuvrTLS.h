@@ -130,10 +130,10 @@ class ManuvrTLSServer : public ManuvrTLS {
 
 
   private:
-    mbedtls_ssl_cookie_ctx cookie_ctx;
+    mbedtls_ssl_cookie_ctx _cookie_ctx;
 
     #if defined(MBEDTLS_SSL_CACHE_C)
-      mbedtls_ssl_cache_context cache;
+      mbedtls_ssl_cache_context _cache;
     #endif
 };
 

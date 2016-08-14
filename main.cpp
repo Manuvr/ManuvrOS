@@ -275,17 +275,6 @@ int main(int argc, char *argv[]) {
     bool pin_14_state = false;
   #endif
 
-  char* hash_in  = "Uniform input text";
-  uint8_t* hash_out = (uint8_t*) alloca(64);
-  if (0 == manuvr_hash((uint8_t*) hash_in, strlen(hash_in), hash_out, 32, Hashes::MBEDTLS_MD_SHA256)) {
-    printf("Hash value:  ");
-    for (uint8_t i = 0; i < 32; i++) printf("0x%02x ", *(hash_out + i));
-    printf("\n");
-  }
-  else {
-    printf("Failed to hash.\n");
-  }
-
 
   // The main loop. Run forever, as a microcontroller would.
   // Program exit is handled in Platform.

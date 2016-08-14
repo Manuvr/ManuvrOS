@@ -246,7 +246,7 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
         int out_purge = purgeOutbound();
         int in_purge  = purgeInbound();
         #ifdef __MANUVR_DEBUG
-        if (getVerbosity() > 5) local_log.concatf("0x%08x Purged (%d) msgs from outbound and (%d) from inbound.\n", (uint32_t) this, out_purge, in_purge);
+        if (getVerbosity() > 5) local_log.concatf("%p Purged (%d) msgs from outbound and (%d) from inbound.\n", this, out_purge, in_purge);
         #endif
       }
       return_value++;

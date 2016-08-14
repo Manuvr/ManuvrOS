@@ -81,7 +81,7 @@ void printEXTIDef(uint8_t _pin, StringBuilder* output) {
   output->concatf("\t---< EXTI Def %d >----------\n", pin_idx);
   output->concatf("\tPin         %d\n", __ext_line_bindings[pin_idx].pin);
   output->concatf("\tCondition   %d\n", getIRQConditionString(__ext_line_bindings[pin_idx].condition));
-  output->concatf("\tFXN         0x%08x\n", (uint32_t) __ext_line_bindings[pin_idx].fxn);
+  output->concatf("\tFXN         %p\n", __ext_line_bindings[pin_idx].fxn);
   output->concatf("\tEvent       %s\n\n", _msg_name);
 }
 

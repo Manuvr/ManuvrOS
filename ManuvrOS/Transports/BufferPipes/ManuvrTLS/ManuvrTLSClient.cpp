@@ -89,33 +89,28 @@ ManuvrTLSClient::ManuvrTLSClient(BufferPipe* _n) : ManuvrTLS(_n, MBEDTLS_DEBUG_L
             //ret = mbedtls_ssl_set_hostname(&_ssl, SERVER_NAME);
             if (0 == ret) {
               _log.concatf("ManuvrTLSClient(): Construction completed.\n");
-              Kernel::log(&_log);
             }
             else {
               _log.concatf("ManuvrTLSClient() failed: mbedtls_ssl_set_hostname returned 0x%04x\n", ret);
-              Kernel::log(&_log);
             }
           }
           else {
             _log.concatf("ManuvrTLSClient() failed: mbedtls_ssl_setup returned 0x%04x\n", ret);
-            Kernel::log(&_log);
           }
         }
         else {
           _log.concatf("ManuvrTLSClient() failed: mbedtls_ssl_conf_psk returned 0x%04x\n", ret);
-          Kernel::log(&_log);
         }
       }
       else {
         _log.concatf("ManuvrTLSClient() failed: mbedtls_x509_crt_parse returned 0x%04x\n", ret);
-        Kernel::log(&_log);
       }
     }
     else {
       _log.concatf("ManuvrTLSClient() failed: mbedtls_ssl_config_defaults returned 0x%04x\n", ret);
-      Kernel::log(&_log);
     }
   }
+  Kernel::log(&_log);
 }
 
 
