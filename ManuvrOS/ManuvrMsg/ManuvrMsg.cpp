@@ -113,7 +113,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
 /**
 * Vanilla constructor.
 */
-ManuvrMsg::ManuvrMsg(void) {
+ManuvrMsg::ManuvrMsg() {
   event_code = MANUVR_MSG_UNDEFINED;
   __class_initializer();
 }
@@ -134,7 +134,7 @@ ManuvrMsg::ManuvrMsg(uint16_t code) {
 * Destructor. Clears all Arguments. Memory management is accounted
 *   for in each Argument, so no need to worry about that here.
 */
-ManuvrMsg::~ManuvrMsg(void) {
+ManuvrMsg::~ManuvrMsg() {
   clearArgs();
 }
 
@@ -372,7 +372,8 @@ int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf, bool preserve) {
       case INT32_FM:    // This frightens the compiler. Its fears are unfounded.
       case UINT32_FM:   // This frightens the compiler. Its fears are unfounded.
       case FLOAT_FM:    // This frightens the compiler. Its fears are unfounded.
-
+        return_value = DIG_MSG_ERROR_NO_ERROR;
+        *((uint32_t*) trg_buf) = *((uint32_t*)&arg->target_mem);
 
       case UINT32_PTR_FM:  // These are *pointers* to the indicated types. They
       case UINT16_PTR_FM:  //   therefore take the whole 4 bytes of memory allocated
@@ -393,7 +394,7 @@ int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf, bool preserve) {
       case SYS_EVENTRECEIVER_FM:    // This is a pointer to an EventReceiver.
       case SYS_MANUVR_XPORT_FM:     // This is a pointer to a transport.
         return_value = DIG_MSG_ERROR_NO_ERROR;
-        *((uint32_t*) trg_buf) = *((uint32_t*)&arg->target_mem);
+        *((uintptr_t*) trg_buf) = *((uintptr_t*)&arg->target_mem);
         break;
       default:
         return_value = DIG_MSG_ERROR_INVALID_TYPE;
@@ -445,7 +446,7 @@ int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
       case STR_FM:
       case BINARY_FM:
         return_value = DIG_MSG_ERROR_NO_ERROR;
-        *((uint32_t*) arg->target_mem) = *((uint32_t*) trg_buf);
+        *((uintptr_t*) arg->target_mem) = *((uintptr_t*) trg_buf);
         break;
       default:
         return_value = DIG_MSG_ERROR_INVALID_TYPE;

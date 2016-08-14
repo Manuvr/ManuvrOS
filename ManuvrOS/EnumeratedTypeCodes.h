@@ -127,11 +127,6 @@ typedef struct typecode_def_t {
 #define UINT32_FM      0x08   // Unsigned 32-bit integer
 
 
-void* pack_into_ptr_space(unsigned int x);
-// Let the compiler play the type-casting game for us...
-inline void* pack_into_ptr_space(int x) {   return pack_into_ptr_space((unsigned int) x); };
-inline void* pack_into_ptr_space(float x) { return pack_into_ptr_space((uint32_t) x); };
-
 /**
 * The host sends binary data little-endian. This will convert bytes to the indicated type.
 * It is the responsibility of the caller to check that these bytes actually exist in the buffer.

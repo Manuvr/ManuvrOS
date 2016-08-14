@@ -83,9 +83,9 @@ void maskableInterrupts(bool enable) {
 *
 * @return the stack pointer at call time.
 */
-volatile uint32_t getStackPointer() {
-  uint32_t test;  // Important to not do assignment here.
-  test = (uint32_t) &test;  // Store the pointer.
+volatile uintptr_t getStackPointer() {
+  uintptr_t test;  // Important to not do assignment here.
+  test = (uintptr_t) &test;  // Store the pointer.
   return test;
 }
 

@@ -167,7 +167,7 @@ void sleep_millis(unsigned long millis);
 /*
 * Misc
 */
-volatile uint32_t getStackPointer();   // Returns the value of the stack pointer.
+volatile uintptr_t getStackPointer();   // Returns the value of the stack pointer.
 
 /*
 * Data-persistence functions. This is the API used by anything that wants to write

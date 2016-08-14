@@ -448,25 +448,25 @@ void MGC3130::dispatchGestureEvents() {
 
   if (0 < last_tap) {
     event = Kernel::returnEvent(MANUVR_MSG_GESTURE_ONE_SHOT);
-    event->addArg((uint32_t) getTouchTapString(last_tap));
+    event->addArg(getTouchTapString(last_tap));
     raiseEvent(event);
     last_tap = 0;
   }
   if (0 < last_double_tap) {
     event = Kernel::returnEvent(MANUVR_MSG_GESTURE_ONE_SHOT);
-    event->addArg((uint32_t) getTouchTapString(last_double_tap));
+    event->addArg(getTouchTapString(last_double_tap));
     raiseEvent(event);
     last_double_tap = 0;
   }
   if (0 < last_swipe) {
     event = Kernel::returnEvent(MANUVR_MSG_GESTURE_ONE_SHOT);
-    event->addArg((uint32_t) getTouchTapString(last_swipe));
+    event->addArg(getTouchTapString(last_swipe));
     raiseEvent(event);
     last_swipe = 0;
   }
   if (isTouchDirty()) {
     event = Kernel::returnEvent(MANUVR_MSG_GESTURE_ONE_SHOT);
-    event->addArg((uint32_t) getTouchTapString(last_touch));
+    event->addArg(getTouchTapString(last_touch));
     raiseEvent(event);
     last_touch_noted = last_touch;
   }

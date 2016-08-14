@@ -118,13 +118,13 @@ class Argument {
     bool     reap;
 
     Argument();
-    Argument(uint8_t  val) : Argument(pack_into_ptr_space(val), sizeof(val), UINT8_FM)  {};
-    Argument(uint16_t val) : Argument(pack_into_ptr_space(val), sizeof(val), UINT16_FM) {};
-    Argument(uint32_t val) : Argument(pack_into_ptr_space(val), sizeof(val), UINT32_FM) {};
-    Argument(int8_t   val) : Argument(pack_into_ptr_space(val), sizeof(val), INT8_FM)   {};
-    Argument(int16_t  val) : Argument(pack_into_ptr_space(val), sizeof(val), INT16_FM)  {};
-    Argument(int32_t  val) : Argument(pack_into_ptr_space(val), sizeof(val), INT32_FM)  {};
-    Argument(float    val) : Argument(pack_into_ptr_space(val), sizeof(val), FLOAT_FM)  {};
+    Argument(uint8_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT8_FM)  {};
+    Argument(uint16_t val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT16_FM) {};
+    Argument(uint32_t val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT32_FM) {};
+    Argument(int8_t   val) : Argument((void*)(uintptr_t) val, sizeof(val), INT8_FM)   {};
+    Argument(int16_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), INT16_FM)  {};
+    Argument(int32_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), INT32_FM)  {};
+    Argument(float    val) : Argument((void*)(uintptr_t) val, sizeof(val), FLOAT_FM)  {};
 
     Argument(uint8_t*  val) : Argument((void*) val, sizeof(val), UINT8_PTR_FM)  {};
     Argument(uint16_t* val) : Argument((void*) val, sizeof(val), UINT16_PTR_FM) {};

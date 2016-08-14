@@ -1013,8 +1013,8 @@ void Kernel::printScheduler(StringBuilder* output) {
 */
 void Kernel::printDebug(StringBuilder* output) {
   if (nullptr == output) return;
-  uint32_t initial_sp = getStackPointer();
-  uint32_t final_sp = getStackPointer();
+  uintptr_t initial_sp = getStackPointer();
+  uintptr_t final_sp = getStackPointer();
 
   EventReceiver::printDebug(output);
 
@@ -1032,7 +1032,7 @@ void Kernel::printDebug(StringBuilder* output) {
   }
 
   if (getVerbosity() > 6) {
-    output->concatf("-- getStackPointer()         0x%08x\n", getStackPointer());
+    output->concatf("-- getStackPointer()         %p\n", getStackPointer());
     output->concatf("-- stack grows %s\n--\n", (final_sp > initial_sp) ? "up" : "down");
   }
 
@@ -1146,6 +1146,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
           // If the event came with a StringBuilder, concat it onto the last_user_input.
           StringBuilder* _tmp = nullptr;
           if (0 == active_runnable->getArgAs(&_tmp)) {
+            _tmp->printDebug(&local_log);
             last_user_input.concatHandoff(_tmp);
             _route_console_input();
           }
