@@ -132,10 +132,9 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
       // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
       // run in idle time.
       ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
-      event->originator = (EventReceiver*) this;
       StringBuilder* dispatched = new StringBuilder((uint8_t*) temp_ptr, temp_len);
       event->markArgForReap(event->addArg(dispatched), true);
-      Kernel::staticRaiseEvent(event);
+      raiseEvent(event);
     }
     session_buffer.drop_position(0);
   }
@@ -246,7 +245,7 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
         int out_purge = purgeOutbound();
         int in_purge  = purgeInbound();
         #ifdef __MANUVR_DEBUG
-        if (getVerbosity() > 5) local_log.concatf("0x%08x Purged (%d) msgs from outbound and (%d) from inbound.\n", (uint32_t) this, out_purge, in_purge);
+        if (getVerbosity() > 5) local_log.concatf("%p Purged (%d) msgs from outbound and (%d) from inbound.\n", this, out_purge, in_purge);
         #endif
       }
       return_value++;

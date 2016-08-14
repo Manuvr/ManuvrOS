@@ -28,7 +28,110 @@ Initial implentation is via mbedTLS.
 #if defined(__MANUVR_MBEDTLS)
 
 
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
+
+/**
+* Callback to get PSK given identity. Prevents us from having to hard-code
+*   authorized keys.
+*/
+int fetchPSKGivenID(void *parameter, mbedtls_ssl_context *ssl, const unsigned char *psk_identity, size_t identity_len) {
+  //printf("PSK handler entry.\n");
+  // Normally, the code below would be a shunt into an HSM, local key store,
+  //   or some other means of storing keys securely.
+  // We hard-code for the moment to test.
+  if (0 == memcmp((const uint8_t*)psk_identity, (const uint8_t*)"32323232-3232-3232-3232-323232323232", identity_len)) {
+    mbedtls_ssl_set_hs_psk(ssl, (const unsigned char*)"AAAAAAAAAAAAAAAA", 16);
+    //printf("PSK handler departure with success.\n");
+    return 0;
+  }
+  //printf("PSK handler departure with failure.\n");
+  return 1;
+}
+
+
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
+/**
+* Constructor.
+*/
 ManuvrTLSServer::ManuvrTLSServer(BufferPipe* _n) : ManuvrTLS(_n, MBEDTLS_DEBUG_LEVEL) {
+  _tls_pipe_name = "TLSServer";
+  mbedtls_ssl_cookie_init(&_cookie_ctx);
+  #if defined(MBEDTLS_SSL_CACHE_C)
+    mbedtls_ssl_cache_init(&_cache);
+  #endif
+
+  mbedtls_ssl_conf_psk_cb(&_conf, fetchPSKGivenID, this);
+
+  int ret = mbedtls_ssl_config_defaults(&_conf,
+    MBEDTLS_SSL_IS_SERVER,
+    _n->_bp_flag(BPIPE_FLAG_PIPE_PACKETIZED) ?
+      MBEDTLS_SSL_TRANSPORT_DATAGRAM : MBEDTLS_SSL_TRANSPORT_STREAM,
+    MBEDTLS_SSL_PRESET_DEFAULT
+  );
+
+  if (0 == ret) {
+    mbedtls_ssl_conf_min_version(&_conf, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_3);
+
+    mbedtls_ssl_conf_rng(&_conf, mbedtls_ctr_drbg_random, &_ctr_drbg);
+    mbedtls_ssl_conf_dbg(&_conf, tls_log_shunt, stdout);  // TODO: Suspect...
+
+    ret = mbedtls_ssl_conf_own_cert(&_conf, &_our_cert, &_pkey);
+
+    if (0 == ret) {
+      ret = mbedtls_ssl_cookie_setup(
+        &_cookie_ctx,
+        mbedtls_ctr_drbg_random,
+        &_ctr_drbg
+      );
+
+      if (0 == ret) {
+        // TODO: Sec-fail. YOU FAIL! Remove once inter-op is demonstrated.
+        mbedtls_ssl_conf_authmode(&_conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
+        mbedtls_ssl_conf_dtls_cookies(
+          &_conf,
+          mbedtls_ssl_cookie_write,
+          mbedtls_ssl_cookie_check,
+          &_cookie_ctx
+        );
+      }
+      else {
+        _log.concatf("TLSServer failed to mbedtls_ssl_cookie_setup() 0x%04x\n", ret);
+      }
+    }
+    else {
+      _log.concatf("TLSServer failed to mbedtls_ssl_conf_own_cert() 0x%04x\n", ret);
+    }
+  }
+  else {
+    _log.concatf("TLSServer failed to mbedtls_ssl_config_defaults() 0x%04x\n", ret);
+  }
+  Kernel::log(&_log);
+}
+
+/**
+* Destructor.
+*/
+ManuvrTLSServer::~ManuvrTLSServer() {
+  mbedtls_ssl_cookie_free(&_cookie_ctx);
+  #if defined(MBEDTLS_SSL_CACHE_C)
+    mbedtls_ssl_cache_free(&_cache);
+  #endif
 }
 
 
@@ -40,10 +143,10 @@ ManuvrTLSServer::ManuvrTLSServer(BufferPipe* _n) : ManuvrTLS(_n, MBEDTLS_DEBUG_L
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
-const char* ManuvrTLSServer::pipeName() { return "ManuvrTLSServer"; }
-
 /**
 * Inward toward the transport.
+* This member receives plaintext from the application, and propagates a
+*   ciphertext into the transport.
 *
 * @param  buf    A pointer to the buffer.
 * @param  mm     A declaration of memory-management responsibility.
@@ -80,6 +183,8 @@ int8_t ManuvrTLSServer::toCounterparty(StringBuilder* buf, int8_t mm) {
 
 /**
 * Outward toward the application (or into the accumulator).
+* This member receives ciphertext from the transport, and propagates a
+*   plaintext into the application.
 *
 * @param  buf    A pointer to the buffer.
 * @param  mm     A declaration of memory-management responsibility.

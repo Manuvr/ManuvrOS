@@ -49,6 +49,11 @@ limitations under the License.
 ManuvrOIC::ManuvrOIC() {
   // NOTE: This is lower-cased due-to its usage in URIs.
   setReceiverName("oic");
+
+  // We will have these, at minimum.
+  _uri_map["/oic/p"] = NULL;
+  _uri_map["/oic/d"] = NULL;
+  _uri_map["/oic/res"] = NULL;
 }
 
 

@@ -83,9 +83,9 @@ void maskableInterrupts(bool enable) {
 *
 * @return the stack pointer at call time.
 */
-volatile uint32_t getStackPointer() {
-  uint32_t test;  // Important to not do assignment here.
-  test = (uint32_t) &test;  // Store the pointer.
+volatile uintptr_t getStackPointer() {
+  uintptr_t test;  // Important to not do assignment here.
+  test = (uintptr_t) &test;  // Store the pointer.
   return test;
 }
 
@@ -143,9 +143,11 @@ void sleep_millis(unsigned long millis) {
 
 
 
+
 // TODO: I know this is horrid. I'm sick of screwing with the build system today...
 #if defined(RASPI) | defined(RASPI2)
   #include "PlatformRaspi.cpp"
+  #include "Raspi/DieThermometer.cpp"
 #elif defined(__MK20DX256__) | defined(__MK20DX128__)
   #include "PlatformTeensy3.cpp"
 #elif defined(STM32F4XX)
@@ -162,6 +164,4 @@ void sleep_millis(unsigned long millis) {
   // Unsupportage.
   #include "PlatformUnsupported.cpp"
 #endif
-
-
-}
+}  // extern "C"

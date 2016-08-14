@@ -69,9 +69,9 @@ CFLAGS += -fno-rtti -fno-exceptions
 ###########################################################################
 LBITS = $(shell getconf LONG_BIT)
 ifeq ($(LBITS),64)
-  CFLAGS += -m32
-else
-  TARGET_WIDTH =
+	# This is no longer required on 64-bit platforms. But it is being retained in
+	#   case 32-bit problems need to be debugged.
+  #CFLAGS += -m32
 endif
 
 
@@ -97,6 +97,7 @@ MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
 # Options that build for certain threading models (if any).
 #MANUVR_OPTIONS += -D__MANUVR_FREERTOS
 MANUVR_OPTIONS += -D__MANUVR_LINUX
+#MANUVR_OPTIONS += -D__MANUVR_UUID
 
 MANUVR_OPTIONS += -DMANUVR_GPS_PIPE
 
@@ -141,20 +142,20 @@ export CPP_FLAGS = $(CFLAGS)
 
 all: clean libs
 	export __MANUVR_LINUX
-	make -C ManuvrOS/
+	$(MAKE) -C ManuvrOS/
 	$(CXX) -static -g -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
 	$(SZ) $(FIRMWARE_NAME)
 
 raspi: clean libs
 	export RASPI
 	export __MANUVR_LINUX
-	make -C ManuvrOS/
+	$(MAKE) -C ManuvrOS/
 	$(CXX) -static -g -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -DRASPI -D_GNU_SOURCE -O2
 	$(SZ) $(FIRMWARE_NAME)
 
 debug: clean libs
 	export __MANUVR_LINUX
-	make debug -C ManuvrOS/
+	$(MAKE) debug -C ManuvrOS/
 	$(CXX) -static -g -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D__MANUVR_DEBUG -D_GNU_SOURCE -O0
 	$(SZ) $(FIRMWARE_NAME)
 # Options configured such that you can then...
@@ -164,27 +165,28 @@ debug: clean libs
 
 tests: libs
 	export __MANUVR_LINUX
-	make -C ManuvrOS/
+	$(MAKE) -C ManuvrOS/
 	$(CXX) -static -g -o dstest tests/TestDataStructures.cpp $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
 	$(CXX) -static -g -o bptest tests/BufferPipeTest.cpp $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
 
 examples: libs
 	export __MANUVR_LINUX
-	make -C ManuvrOS/
+	$(MAKE) -C ManuvrOS/
 	$(CXX) -static -g -o gpstest examples/tcp-gps.cpp $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O0
 
 builddir:
 	mkdir -p $(OUTPUT_PATH)
 
 libs: builddir
-	make -C lib/
+	$(MAKE) -C lib/
 
 clean:
-	make clean -C ManuvrOS/
+	$(MAKE) clean -C ManuvrOS/
 	rm -f *.o *.su *~ testbench $(FIRMWARE_NAME)
 	rm -rf $(OUTPUT_PATH)
 
 fullclean: clean
+	$(MAKE) clean -C lib/
 	rm -rf doc/doxygen
 
 

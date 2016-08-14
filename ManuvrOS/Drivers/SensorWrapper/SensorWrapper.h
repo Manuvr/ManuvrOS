@@ -34,11 +34,7 @@ using namespace std;
 
 #include <Kernel.h>
 
-#ifdef ARDUINO
-  #include "Arduino.h"
-#elif defined(STM32F4XX)
-  #include "FirmwareDefs.h"
-#endif
+#include "FirmwareDefs.h"
 
 
 /**************************************************************************

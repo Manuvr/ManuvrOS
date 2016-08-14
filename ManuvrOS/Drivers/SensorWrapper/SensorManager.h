@@ -1,7 +1,7 @@
 /*
-File:   ManuvrCBOR.h
+File:   SensorManager.h
 Author: J. Ian Lindsay
-Date:   2016.07.16
+Date:   2016.08.13
 
 Copyright 2016 Manuvr, Inc
 
@@ -18,7 +18,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-This class is a type-conversion wrapper around TinyCBOR.
+This is an EventReceiver that is meant to ease the implementation burden of
+  sensor I/O and management. There should only ever be one of these instanced,
+  and sensors ought to be added to it.
 */
-
-#include "tinycbor/include/cbor.h"

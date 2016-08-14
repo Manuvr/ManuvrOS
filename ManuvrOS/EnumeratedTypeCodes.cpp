@@ -79,7 +79,6 @@ const TypeCodeDef type_codes[] = {
 };
 
 
-
 /**
 * Given type code, find size in bytes. Returns 1 for variable-length arguments,
 *   since this is their minimum size.

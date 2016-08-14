@@ -46,6 +46,20 @@ int ManuvrTLS::allowed_ciphersuites[] = {
 };
 
 
+/**
+* Passed-by-reference into the mbedtls library to facilitate logging.
+* Must therefore be reachable by C-linkage.
+*/
+extern "C" {
+  void ManuvrTLS::tls_log_shunt(void* ctx, int level, const char *file,
+                            int line, const char *str) {
+    StringBuilder _tls_log;
+    _tls_log.concatf("%s:%04d: %s", file, line, str);
+    Kernel::log(&_tls_log);
+  }
+}
+
+
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -68,7 +82,9 @@ ManuvrTLS::ManuvrTLS(BufferPipe* _n, int debug_lvl) : BufferPipe() {
   mbedtls_pk_init(&_pkey);
   mbedtls_entropy_init(&_entropy);
   mbedtls_ctr_drbg_init(&_ctr_drbg);
-  mbedtls_debug_set_threshold(debug_lvl);
+  #if defined(MBEDTLS_DEBUG_C)
+    mbedtls_debug_set_threshold(debug_lvl);
+  #endif
 
   setNear(_n);
 }
@@ -84,5 +100,22 @@ ManuvrTLS::~ManuvrTLS() {
   mbedtls_entropy_free(&_entropy);
   mbedtls_ctr_drbg_free(&_ctr_drbg);
 }
+
+
+void ManuvrTLS::throwError(int ret) {
+  _log.concatf("%s::throwError(%d). Disconnecting...\n", pipeName(), ret);
+  Kernel::log(&_log);
+}
+
+
+/*******************************************************************************
+*  _       _   _        _
+* |_)    _|_ _|_ _  ._ |_) o ._   _
+* |_) |_| |   | (/_ |  |   | |_) (/_
+*                            |
+* Overrides and addendums to BufferPipe.
+*******************************************************************************/
+const char* ManuvrTLS::pipeName() { return _tls_pipe_name; }
+
 
 #endif

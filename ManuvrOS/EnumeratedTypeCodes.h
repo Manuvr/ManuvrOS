@@ -85,7 +85,7 @@ typedef struct typecode_def_t {
 
 #define SYS_EVENTRECEIVER_FM    0xE0 // A pointer to an EventReceiver.
 #define SYS_MANUVR_XPORT_FM     0xE1 // A pointer to a ManuvrXport.
-#define SYS_MANUVR_EVENT_PTR_FM 0xE2 // A pointer to a ManuvrRunnable..
+#define SYS_RUNNABLE_PTR_FM     0xE2 // A pointer to a ManuvrRunnable..
 
 
 /**

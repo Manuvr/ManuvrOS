@@ -77,7 +77,7 @@ UDPPipe::~UDPPipe() {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
-//const char* UDPPipe::pipeName() { return "UDPPipe"; }
+const char* UDPPipe::pipeName() { return "UDPPipe"; }
 
 /**
 * Back toward ManuvrUDP....
@@ -158,7 +158,7 @@ void UDPPipe::printDebug(StringBuilder* output) {
   struct in_addr _inet_addr;
   _inet_addr.s_addr = _ip;
   if (_udp) {
-    output->concatf("--\t_udp          \t[0x%08x]\n", (uint32_t) _udp);
+    output->concatf("--\t_udp          \t[%p]\n", _udp);
   }
   output->concatf("--\tCounterparty: \t%s:%d\n", (char*) inet_ntoa(_inet_addr), _port);
 

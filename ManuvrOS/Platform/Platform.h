@@ -167,7 +167,7 @@ void sleep_millis(unsigned long millis);
 /*
 * Misc
 */
-volatile uint32_t getStackPointer();   // Returns the value of the stack pointer.
+volatile uintptr_t getStackPointer();   // Returns the value of the stack pointer.
 
 /*
 * Data-persistence functions. This is the API used by anything that wants to write
@@ -197,7 +197,8 @@ void init_RNG();                             // Fire up the random number genera
 int platformSerialNumberSize();    // Returns the length of the serial number on this platform (in bytes).
 int getSerialNumber(uint8_t*);     // Writes the serial number to the indicated buffer.
 
-//void manuvrPlatformInfo(StringBuilder*); // Writes a platform information string to the provided buffer.
+/* Writes a platform information string to the provided buffer. */
+void manuvrPlatformInfo(StringBuilder*);
 
 /*
 * GPIO and change-notice.

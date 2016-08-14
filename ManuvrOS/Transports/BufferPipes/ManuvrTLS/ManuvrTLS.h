@@ -54,6 +54,37 @@ One class is for the server (listener), and the other for client (initiator),
 #define MBEDTLS_DEBUG_LEVEL     5
 
 
+// TODO: This is probably going to be moved into a more-accessible location.
+// TODO: This is probably going to be moved into a more-accessible location.
+// TODO: This is probably going to be moved into a more-accessible location.
+
+enum class IdentityFormats {
+  /*
+  * TODO: Since we wrote this interface against mbedtls, we will use the preprocessor
+  *   defines from that library for normalizing purposes.
+  */
+  CERT_FORMAT_DER,
+  PSK
+};
+
+/*
+* This is the object that is passed on pipe-signal to the session. It allows
+*   the session to validate connected identities and (if necessary) pass policy
+*   into the application layer.
+*/
+class CryptoIdentity {
+  public:
+    char*           handle;         // Human-readable name of this identity.
+    IdentityFormats ident_format;   // What is the nature of this identity?
+    uint8_t*        ident;          // Pointer to the identity.
+    int             ident_length;   // How many bytes does the cert occupy?
+};
+
+// TODO: This is probably going to be moved into a more-accessible location.
+// TODO: This is probably going to be moved into a more-accessible location.
+// TODO: This is probably going to be moved into a more-accessible location.
+
+
 /*
 * Clients and servers have these things in common...
 */
@@ -64,6 +95,7 @@ class ManuvrTLS : protected BufferPipe {
 
   protected:
     StringBuilder _log;
+    const char* _tls_pipe_name;
 
     mbedtls_pk_context       _pkey;
     mbedtls_ssl_config       _conf;
@@ -73,9 +105,12 @@ class ManuvrTLS : protected BufferPipe {
 
     ManuvrTLS(BufferPipe*, int);
 
-    virtual void throwError(int ret) =0;
+    const char* pipeName();
+
+    void throwError(int ret);
 
 
+    static void tls_log_shunt(void* ctx, int level, const char *file, int line, const char *str);
     static int allowed_ciphersuites[];
 
 
@@ -94,16 +129,11 @@ class ManuvrTLSServer : public ManuvrTLS {
     void printDebug(StringBuilder*);
 
 
-  protected:
-    const char* pipeName();
-    void throwError(int ret);
-
-
   private:
-    mbedtls_ssl_cookie_ctx cookie_ctx;
+    mbedtls_ssl_cookie_ctx _cookie_ctx;
 
     #if defined(MBEDTLS_SSL_CACHE_C)
-      mbedtls_ssl_cache_context cache;
+      mbedtls_ssl_cache_context _cache;
     #endif
 };
 
@@ -126,7 +156,6 @@ class ManuvrTLSClient : public ManuvrTLS {
     virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
     void printDebug(StringBuilder*);
 
-
     int recv(unsigned char *buf, size_t len);
     int receive_data(unsigned char *buf, int len);
     int send_encrypted(const unsigned char *buf, size_t len);
@@ -135,11 +164,6 @@ class ManuvrTLSClient : public ManuvrTLS {
     int close();
     void store_data(const unsigned char *buf, size_t len);
     void error(int ret);
-
-
-  protected:
-    const char* pipeName();
-    void throwError(int ret);
 
 
   private:

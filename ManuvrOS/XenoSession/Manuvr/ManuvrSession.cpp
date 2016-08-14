@@ -177,7 +177,7 @@ int8_t ManuvrSession::scan_buffer_for_sync() {
 void ManuvrSession::mark_session_desync(uint8_t ds_src) {
   if (_sync_state & ds_src) {
     #ifdef __MANUVR_DEBUG
-    if (getVerbosity() > 3) local_log.concatf("Session 0x%08x is already in the requested sync state (%s). Doing nothing.\n", (uint32_t) this, getSessionSyncString());
+    if (getVerbosity() > 3) local_log.concatf("Session %p is already in the requested sync state (%s). Doing nothing.\n", this, getSessionSyncString());
     #endif
   }
   else {
@@ -261,7 +261,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
 
   #ifdef __MANUVR_DEBUG
   if (getVerbosity() > 6) {
-    local_log.concatf("Bytes received into session 0x%08x buffer: \n\t", (uint32_t) this);
+    local_log.concatf("Bytes received into session %p buffer: \n\t", this);
     for (int i = 0; i < len; i++) {
       local_log.concatf("0x%02x ", *(buf + i));
     }
@@ -282,7 +282,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
            the values that it will use to index and make decisions... */
         mark_session_sync(true);   // Indicate that we are done with sync, but may still see such packets.
         #ifdef __MANUVR_DEBUG
-        if (getVerbosity() > 3) local_log.concatf("Session 0x%08x re-sync'd with %d bytes remaining in the buffer. Sync'd state is now pending.\n", (uint32_t) this, len);
+        if (getVerbosity() > 3) local_log.concatf("Session %p re-sync'd with %d bytes remaining in the buffer. Sync'd state is now pending.\n", this, len);
         #endif
       }
       else {
@@ -331,7 +331,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
   if ((XENO_MSG_PROC_STATE_RECEIVING | XENO_MSG_PROC_STATE_UNINITIALIZED) & working->getState()) {
     int consumed = working->feedBuffer(&session_buffer);
     #ifdef __MANUVR_DEBUG
-    if (getVerbosity() > 5) local_log.concatf("Feeding message 0x%08x. Consumed %d of %d bytes.\n", (uint32_t) working, consumed, len);
+    if (getVerbosity() > 5) local_log.concatf("Feeding message %p. Consumed %d of %d bytes.\n", working, consumed, len);
     #endif
 
     if (consumed > 0) {
@@ -358,7 +358,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
       case (XENO_MSG_PROC_STATE_ERROR | XENO_MSG_PROC_STATE_AWAITING_REAP):
         // There was some sort of problem...
         if (getVerbosity() > 3) {
-          local_log.concatf("XenoManuvrMessage 0x%08x reports an error:\n", (uint32_t) this);
+          local_log.concatf("XenoManuvrMessage %p reports an error:\n", this);
           working->printDebug(&local_log);
         }
         if (0 == _seq_parse_failures--) {
@@ -379,7 +379,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
   }
   else {
     if (getVerbosity() > 3) {
-      local_log.concatf("XenoManuvrMessage 0x%08x is in the wrong state to accept bytes.\n", (uint32_t) working);
+      local_log.concatf("XenoManuvrMessage %p is in the wrong state to accept bytes.\n", working);
       if (getVerbosity() > 5) working->printDebug(&local_log);
     }
   }
@@ -551,7 +551,7 @@ int8_t ManuvrSession::notify(ManuvrRunnable *active_event) {
       purgeOutbound();
       session_buffer.clear();   // Also purge whatever hanging RX buffer we may have had.
       #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 3) local_log.concatf("0x%08x Session is now in state %s.\n", (uint32_t) this, sessionPhaseString(getPhase()));
+      if (getVerbosity() > 3) local_log.concatf("%p Session is now in state %s.\n", this, sessionPhaseString(getPhase()));
       #endif
       return_value++;
       break;
@@ -562,7 +562,7 @@ int8_t ManuvrSession::notify(ManuvrRunnable *active_event) {
         int out_purge = purgeOutbound();
         int in_purge  = purgeInbound();
         #ifdef __MANUVR_DEBUG
-        if (getVerbosity() > 5) local_log.concatf("0x%08x Purged (%d) msgs from outbound and (%d) from inbound.\n", (uint32_t) this, out_purge, in_purge);
+        if (getVerbosity() > 5) local_log.concatf("%p Purged (%d) msgs from outbound and (%d) from inbound.\n", this, out_purge, in_purge);
         #endif
       }
       return_value++;

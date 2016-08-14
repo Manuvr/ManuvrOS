@@ -54,3 +54,4 @@ $(LIBNAME): $(OBJS)
 clean:
 	rm -f $(OBJS)
 	rm -f $(OUTPUT_PATH)/$(LIBNAME)
+	$(MAKE) clean -C mbedtls

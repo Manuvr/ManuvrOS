@@ -240,16 +240,3 @@ volatile void jumpToBootloader(void) {
 volatile void reboot(void) {
   executeSoftReset(ENTER_BOOTLOADER_ON_BOOT);
 }
-
-
-
-/**
-* Sometimes we question the size of the stack.
-*
-* @return the stack pointer at call time.
-*/
-volatile uint32_t getStackPointer() {
-  uint32_t test;  // Important to not do assignment here.
-  test = (uint32_t) &test;  // Store the pointer.
-  return test;
-}

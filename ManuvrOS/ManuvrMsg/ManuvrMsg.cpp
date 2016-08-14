@@ -81,20 +81,20 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_UNDEFINED            , 0x0000,               "<UNDEF>"          , MSG_ARGS_NONE }, // This should be the first entry for failure cases.
 
   /* Protocol basics. */
+  #if defined(MANUVR_OVER_THE_WIRE)
   {  MANUVR_MSG_REPLY_FAIL           , MSG_FLAG_EXPORTABLE,               "REPLY_FAIL"           , MSG_ARGS_NONE }, //  This reply denotes that the packet failed to parse (despite passing checksum).
   {  MANUVR_MSG_REPLY_RETRY          , MSG_FLAG_EXPORTABLE,               "REPLY_RETRY"          , MSG_ARGS_NONE }, //  This reply asks for a reply of the given Unique ID.
   {  MANUVR_MSG_REPLY                , MSG_FLAG_EXPORTABLE,               "REPLY"                , MSG_ARGS_NONE }, //  This reply is for success-case.
+  {  MANUVR_MSG_SELF_DESCRIBE        , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SELF_DESCRIBE"        , MSG_ARGS_SELF_DESC }, // Starting an application on the receiver. Needs a string.
+  {  MANUVR_MSG_SYNC_KEEPALIVE       , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "KA"                  , MSG_ARGS_NONE }, //  A keep-alive message to be ack'd.
+  {  MANUVR_MSG_LEGEND_TYPES         , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_TYPES"         , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
+  {  MANUVR_MSG_LEGEND_MESSAGES      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_MESSAGES"      , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
+  {  MANUVR_MSG_LEGEND_SEMANTIC      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_SEMANTIC"      , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
+  #endif
 
   {  MANUVR_MSG_SESS_ESTABLISHED     , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_ESTABLISHED"     , MSG_ARGS_NONE }, // Session established.
   {  MANUVR_MSG_SESS_HANGUP          , MSG_FLAG_EXPORTABLE,                        "SESS_HANGUP"          , MSG_ARGS_NONE }, // Session hangup.
   {  MANUVR_MSG_SESS_AUTH_CHALLENGE  , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_AUTH_CHALLENGE"  , MSG_ARGS_NONE }, // A code for challenge-response authentication.
-  {  MANUVR_MSG_SELF_DESCRIBE        , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SELF_DESCRIBE"        , MSG_ARGS_SELF_DESC }, // Starting an application on the receiver. Needs a string.
-
-  {  MANUVR_MSG_SYNC_KEEPALIVE       , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "KA"                  , MSG_ARGS_NONE }, //  A keep-alive message to be ack'd.
-
-  {  MANUVR_MSG_LEGEND_TYPES         , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_TYPES"         , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
-  {  MANUVR_MSG_LEGEND_MESSAGES      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_MESSAGES"      , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
-  {  MANUVR_MSG_LEGEND_SEMANTIC      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_SEMANTIC"      , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
 
   {  MANUVR_MSG_MSG_FORWARD          , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "MSG_FORWARD"          , MSG_ARGS_MSG_FORWARD }, // No args? Asking for this legend. One arg: Legend provided.
 
@@ -113,7 +113,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
 /**
 * Vanilla constructor.
 */
-ManuvrMsg::ManuvrMsg(void) {
+ManuvrMsg::ManuvrMsg() {
   event_code = MANUVR_MSG_UNDEFINED;
   __class_initializer();
 }
@@ -134,7 +134,7 @@ ManuvrMsg::ManuvrMsg(uint16_t code) {
 * Destructor. Clears all Arguments. Memory management is accounted
 *   for in each Argument, so no need to worry about that here.
 */
-ManuvrMsg::~ManuvrMsg(void) {
+ManuvrMsg::~ManuvrMsg() {
   clearArgs();
 }
 
@@ -362,17 +362,18 @@ int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf, bool preserve) {
       case INT8_FM:    // This frightens the compiler. Its fears are unfounded.
       case UINT8_FM:   // This frightens the compiler. Its fears are unfounded.
         return_value = DIG_MSG_ERROR_NO_ERROR;
-        *((uint8_t*) trg_buf) = (uint8_t) (((uint32_t)arg->target_mem) & 0x000000FF);
+        *((uint8_t*) trg_buf) = *((uint8_t*)&arg->target_mem);
         break;
       case INT16_FM:    // This frightens the compiler. Its fears are unfounded.
       case UINT16_FM:   // This frightens the compiler. Its fears are unfounded.
         return_value = DIG_MSG_ERROR_NO_ERROR;
-        *((uint16_t*) trg_buf) = (uint16_t) (((uint32_t)arg->target_mem) & 0x0000FFFF);
+        *((uint16_t*) trg_buf) = *((uint16_t*)&arg->target_mem);
         break;
       case INT32_FM:    // This frightens the compiler. Its fears are unfounded.
       case UINT32_FM:   // This frightens the compiler. Its fears are unfounded.
       case FLOAT_FM:    // This frightens the compiler. Its fears are unfounded.
-
+        return_value = DIG_MSG_ERROR_NO_ERROR;
+        *((uint32_t*) trg_buf) = *((uint32_t*)&arg->target_mem);
 
       case UINT32_PTR_FM:  // These are *pointers* to the indicated types. They
       case UINT16_PTR_FM:  //   therefore take the whole 4 bytes of memory allocated
@@ -389,11 +390,11 @@ int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf, bool preserve) {
       case STR_BUILDER_FM:          // This is a pointer to some StringBuilder. Presumably this is on the heap.
       case STR_FM:                  // This is a pointer to a string constant. Presumably this is stored in flash.
       case BUFFERPIPE_PTR_FM:       // This is a pointer to a BufferPipe/.
-      case SYS_MANUVR_EVENT_PTR_FM: // This is a pointer to ManuvrRunnable.
+      case SYS_RUNNABLE_PTR_FM:     // This is a pointer to ManuvrRunnable.
       case SYS_EVENTRECEIVER_FM:    // This is a pointer to an EventReceiver.
       case SYS_MANUVR_XPORT_FM:     // This is a pointer to a transport.
         return_value = DIG_MSG_ERROR_NO_ERROR;
-        *((uint32_t*) trg_buf) = (uint32_t) arg->target_mem;
+        *((uintptr_t*) trg_buf) = *((uintptr_t*)&arg->target_mem);
         break;
       default:
         return_value = DIG_MSG_ERROR_INVALID_TYPE;
@@ -445,7 +446,7 @@ int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
       case STR_FM:
       case BINARY_FM:
         return_value = DIG_MSG_ERROR_NO_ERROR;
-        *((uint32_t*) arg->target_mem) = *((uint32_t*) trg_buf);
+        *((uintptr_t*) arg->target_mem) = *((uintptr_t*) trg_buf);
         break;
       default:
         return_value = DIG_MSG_ERROR_INVALID_TYPE;

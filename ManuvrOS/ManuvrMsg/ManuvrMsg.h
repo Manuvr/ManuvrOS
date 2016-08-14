@@ -118,35 +118,55 @@ class Argument {
     bool     reap;
 
     Argument();
-    Argument(uint8_t);
-    Argument(uint16_t);
-    Argument(uint32_t);
-    Argument(int8_t);
-    Argument(int16_t);
-    Argument(int32_t);
-    Argument(float);
+    Argument(uint8_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT8_FM)  {};
+    Argument(uint16_t val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT16_FM) {};
+    Argument(uint32_t val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT32_FM) {};
+    Argument(int8_t   val) : Argument((void*)(uintptr_t) val, sizeof(val), INT8_FM)   {};
+    Argument(int16_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), INT16_FM)  {};
+    Argument(int32_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), INT32_FM)  {};
+    Argument(float    val) : Argument((void*)(uintptr_t) val, sizeof(val), FLOAT_FM)  {};
 
-    Argument(uint8_t*);  // The only possible reason to do this is because the target
-    Argument(uint16_t*); // of the pointer is not intended to be reaped.
-    Argument(uint32_t*);
-    Argument(int8_t*);
-    Argument(int16_t*);
-    Argument(int32_t*);
-    Argument(float*);
+    Argument(uint8_t*  val) : Argument((void*) val, sizeof(val), UINT8_PTR_FM)  {};
+    Argument(uint16_t* val) : Argument((void*) val, sizeof(val), UINT16_PTR_FM) {};
+    Argument(uint32_t* val) : Argument((void*) val, sizeof(val), UINT32_PTR_FM) {};
+    Argument(int8_t*   val) : Argument((void*) val, sizeof(val), INT8_PTR_FM)   {};
+    Argument(int16_t*  val) : Argument((void*) val, sizeof(val), INT16_PTR_FM)  {};
+    Argument(int32_t*  val) : Argument((void*) val, sizeof(val), INT32_PTR_FM)  {};
+    Argument(float*    val) : Argument((void*) val, sizeof(val), FLOAT_PTR_FM)  {};
 
-    Argument(Vector3ui16*);
-    Argument(Vector3i16*);
-    Argument(Vector3f*);
-    Argument(Vector4f*);
+    Argument(Vector3ui16* val) : Argument((void*) val, 6,  VECT_3_UINT16) {};
+    Argument(Vector3i16*  val) : Argument((void*) val, 6,  VECT_3_INT16)  {};
+    Argument(Vector3f*    val) : Argument((void*) val, 12, VECT_3_FLOAT)  {};
+    Argument(Vector4f*    val) : Argument((void*) val, 16, VECT_4_FLOAT)  {};
 
-    Argument(const char* val);
+    /*
+    * This is a constant character pointer. Do not reap it.
+    */
+    Argument(const char* val) : Argument((void*) val, (strlen(val)+1), STR_FM) {};
+
+    /*
+    * We typically want references to typeless swaths of memory be left alone at the end of
+    *   the Argument's life cycle. We will specify otherwise when appropriate.
+    */
+    Argument(void* val, uint16_t len) : Argument(val, len, BINARY_FM) {};
+
+    /*
+    * These are system service pointers. Do not reap.
+    */
+    Argument(EventReceiver* val) : Argument((void*) val, sizeof(val), SYS_EVENTRECEIVER_FM) {};
+    Argument(ManuvrXport* val)   : Argument((void*) val, sizeof(val), SYS_MANUVR_XPORT_FM)  {};
+    Argument(BufferPipe* val)    : Argument((void*) val, sizeof(val), BUFFERPIPE_PTR_FM)    {};
+
+    /*
+    * We typically want ManuvrRunnable references to be left alone at the end of
+    *   the Argument's life cycle. We will specify otherwise when appropriate.
+    */
+    Argument(ManuvrRunnable* val) : Argument((void*) val, sizeof(val), SYS_RUNNABLE_PTR_FM) {};
+
+    // These are reapable.
     Argument(char* val);
-    Argument(void*, uint16_t buf_len);
-    Argument(StringBuilder *);
-    Argument(EventReceiver *);
-    Argument(ManuvrXport *);
-    Argument(BufferPipe *);
-    Argument(ManuvrRunnable *);
+    Argument(StringBuilder* val);
+
 
     ~Argument();
 
@@ -156,6 +176,9 @@ class Argument {
 
     static char*    printBinStringToBuffer(unsigned char *str, int len, char *buffer);
 
+
+  protected:
+    Argument(void* ptr, int len, uint8_t code);  // Protected constructor to which we delegate.
 
   private:
     void wipe();

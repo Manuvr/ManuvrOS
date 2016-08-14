@@ -87,15 +87,15 @@ XenoMessage* XenoManuvrMessage::fetchPreallocation(XenoSession* _ses) {
 * @param XenoManuvrMessage* obj is the pointer to the object to be reclaimed.
 */
 void XenoManuvrMessage::reclaimPreallocation(XenoMessage* obj) {
-  uint32_t obj_addr = ((uint32_t) obj);
-  uint32_t pre_min  = ((uint32_t) __prealloc_pool);
-  uint32_t pre_max  = pre_min + (sizeof(XenoManuvrMessage) * XENOMSG_M_PREALLOC_COUNT);
+  uintptr_t obj_addr = ((uintptr_t) obj);
+  uintptr_t pre_min  = ((uintptr_t) __prealloc_pool);
+  uintptr_t pre_max  = pre_min + (sizeof(XenoManuvrMessage) * XENOMSG_M_PREALLOC_COUNT);
 
   if ((obj_addr < pre_max) && (obj_addr >= pre_min)) {
     // If we are in this block, it means obj was preallocated. wipe and reclaim it.
     #ifdef __MANUVR_DEBUG
       StringBuilder local_log;
-      local_log.concatf("reclaim via prealloc. addr: 0x%08x\n", obj_addr);
+      local_log.concatf("reclaim via prealloc. addr: %p\n", obj_addr);
       Kernel::log(&local_log);
     #endif
     obj->wipe();
@@ -103,7 +103,7 @@ void XenoManuvrMessage::reclaimPreallocation(XenoMessage* obj) {
   else {
     #ifdef __MANUVR_DEBUG
       StringBuilder local_log;
-      local_log.concatf("reclaim via delete. addr: 0x%08x\n", obj_addr);
+      local_log.concatf("reclaim via delete. addr: %p\n", obj_addr);
       Kernel::log(&local_log);
     #endif
     // We were created because our prealloc was starved. we are therefore a transient heap object.

@@ -41,7 +41,6 @@ template <class T> class Node{
   public:
     Node<T> *next;
     T data;
-    bool reap;
 };
 
 
@@ -55,8 +54,6 @@ template <class T> class LinkedList {
 		~LinkedList(void);
 
 		int insert(T);                   // Returns the ID of the data, or -1 on failure. Makes only a reference to the payload.
-		int insertWithCopy(T);           // Returns the ID of the data, or -1 on failure. Makes a copy of the data.
-		int insertWithCopy(T, size_t);   // Returns the ID of the data, or -1 on failure. Makes a copy of the data, with size specified.
 
 		int size(void);                  // Returns the number of elements in this list.
 
@@ -116,18 +113,6 @@ template <class T> int LinkedList<T>::clear(void) {
 
 
 /**
-* Inserts the given dataum into the linked list, copying it.
-* TODO: Might cut this member. Seems like a heap-driven nightmare. Not using it, AFAIK.
-*
-* @param  d   The data to copy and insert.
-* @return the position in the list that the data was inserted, or -1 on failure.
-*/
-template <class T> int LinkedList<T>::insertWithCopy(T d) {
-	return insertWithCopy(d, sizeof(T));
-}
-
-
-/**
 * Inserts the given dataum into the linked list.
 *
 * @param  d   The data to copy and insert.
@@ -145,37 +130,9 @@ template <class T> int LinkedList<T>::insert(T d) {
 		current = current->next;
 	}
 	current->next = nullptr;
-	current->reap = false;
 	current->data = d;
 	element_count++;
 	return 1;
-}
-
-
-/**
-* Inserts the given dataum into the linked list, copying it.
-* TODO: Might cut this member. Seems like a heap-driven nightmare. Not using it, AFAIK.
-*
-* @param  d   The data to copy and insert.
-* @return the position in the list that the data was inserted, or -1 on failure.
-*/
-template <class T> int LinkedList<T>::insertWithCopy(T d, size_t len) {
-	Node<T> *current;
-	if (root == nullptr) {
-		root = (Node<T>*) malloc(sizeof(Node<T>));
-		current = root;
-	}
-	else {
-		current = getLast();
-		current->next = (Node<T>*) malloc(sizeof(Node<T>));
-		current = current->next;
-	}
-	current->next = nullptr;
-	current->data = (T) malloc(len);
-	current->reap = true;
-	memcpy(current->data, d, len);
-	element_count++;
-	return (size()-1);
 }
 
 
@@ -260,11 +217,6 @@ template <class T> T LinkedList<T>::remove(int pos) {
 				root = current->next;
 			}
 			return_value = current->data;
-			if (current->data != nullptr) {  // TODO: Strike this. Never use it.
-				if (current->reap) {
-					free(current->data);
-				}
-			}
 			free(current);
 			element_count--;
 			return return_value;

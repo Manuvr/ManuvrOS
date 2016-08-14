@@ -61,12 +61,14 @@ Main demo application.
 #include <Transports/ManuvrSocket/ManuvrUDP.h>
 #include <Transports/ManuvrSocket/ManuvrTCP.h>
 #include <Transports/StandardIO/StandardIO.h>
+#include <Transports/BufferPipes/ManuvrTLS/ManuvrTLS.h>
 
 // We will use MQTT as our concept of "session"...
 #include <XenoSession/MQTT/MQTTSession.h>
 #include <XenoSession/CoAP/CoAPSession.h>
 #include <XenoSession/Console/ManuvrConsole.h>
 
+#include <Platform/Cryptographic.h>
 
 
 /*******************************************************************************
@@ -92,6 +94,15 @@ BufferPipe* _pipe_factory_2(BufferPipe* _n, BufferPipe* _f) {
   ManuvrConsole* _console = new ManuvrConsole(_n);
   kernel->subscribe(_console);
   return (BufferPipe*) _console;
+}
+
+BufferPipe* _pipe_factory_3(BufferPipe* _n, BufferPipe* _f) {
+  ManuvrTLSServer* _tls_server = new ManuvrTLSServer(_n);
+  /*
+  * Until parameters can be passed to pipe's via a stretegy, we configure new
+  *   pipes this way...
+  */
+  return (BufferPipe*) _tls_server;
 }
 
 
@@ -125,10 +136,15 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
+  if (0 != BufferPipe::registerPipe(3, _pipe_factory_3)) {
+    printf("Failed to add TLSServer to the pipe registry.\n");
+    exit(1);
+  }
+
   // Pipe strategy planning...
   const uint8_t pipe_plan_coap[]    = {1, 0};
+  const uint8_t pipe_plan_coaps[]   = {1, 3, 0};
   const uint8_t pipe_plan_console[] = {2, 0};
-
 
   #if defined(__MANUVR_DEBUG)
     // spend time and memory measuring performance.
@@ -256,8 +272,9 @@ int main(int argc, char *argv[]) {
     gpioDefine(14, OUTPUT);
     gpioDefine(15, OUTPUT);
     gpioDefine(18, OUTPUT);
-    //bool pin_14_state = false;
+    bool pin_14_state = false;
   #endif
+
 
   // The main loop. Run forever, as a microcontroller would.
   // Program exit is handled in Platform.

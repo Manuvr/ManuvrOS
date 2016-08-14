@@ -210,16 +210,6 @@ void setPinFxn(uint8_t pin, FunctionPointer fxn) {
 /****************************************************************************************************
 * Misc                                                                                              *
 ****************************************************************************************************/
-/**
-* Sometimes we question the size of the stack.
-*
-* @return the stack pointer at call time.
-*/
-volatile uint32_t getStackPointer() {
-  uint32_t test;  // Important to not do assignment here.
-  test = (uint32_t) &test;  // Store the pointer.
-  return test;
-}
 
 
 /****************************************************************************************************
