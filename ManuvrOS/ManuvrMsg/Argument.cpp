@@ -26,8 +26,6 @@ This class represents our type-abstraction layer. It is the means by which
 #include "ManuvrMsg.h"
 #include <string.h>
 
-static const unsigned long INTEGER_ANVIL = 0;
-
 /****************************************************************************************************
 * Argument class constructors.                                                                      *
 ****************************************************************************************************/

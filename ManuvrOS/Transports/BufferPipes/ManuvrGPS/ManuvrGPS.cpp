@@ -40,6 +40,8 @@ https://github.com/cloudyourcar/minmea
 
 #include "ManuvrGPS.h"
 
+#define MANUVR_MSG_GPS_LOCATION 0x2039
+
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
@@ -62,9 +64,11 @@ https://github.com/cloudyourcar/minmea
 
 ManuvrGPS::ManuvrGPS() : BufferPipe() {
   _bp_set_flag(BPIPE_FLAG_IS_TERMINUS | BPIPE_FLAG_IS_BUFFERED, true);
+  _gps_frame.repurpose(MANUVR_MSG_GPS_LOCATION);
+  _gps_frame.isManaged(true);
 }
 
-ManuvrGPS::ManuvrGPS(BufferPipe* src) : BufferPipe() {
+ManuvrGPS::ManuvrGPS(BufferPipe* src) : ManuvrGPS() {
   _bp_set_flag(BPIPE_FLAG_IS_TERMINUS | BPIPE_FLAG_IS_BUFFERED, true);
   // The near-side will always be feeding us from buffers on the stack. Since
   //   the buffer will vanish after return, we must copy it.
@@ -129,24 +133,8 @@ int8_t ManuvrGPS::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
 * @return A declaration of memory-management responsibility.
 */
 int8_t ManuvrGPS::toCounterparty(StringBuilder* buf, int8_t mm) {
-  switch (mm) {
-    case MEM_MGMT_RESPONSIBLE_CALLER:
-      // NOTE: No break. This might be construed as a way of saying CREATOR.
-    case MEM_MGMT_RESPONSIBLE_CREATOR:
-      /* The system that allocated this buffer either...
-          a) Did so with the intention that it never be free'd, or...
-          b) Has a means of discovering when it is safe to free.  */
-
-    case MEM_MGMT_RESPONSIBLE_BEARER:
-      /* We are now the bearer. That means that by returning non-failure, the
-          caller will expect _us_ to manage this memory.  */
-      // TODO: Freeing the buffer? Let UDP do it?
-
-    default:
-      /* This is more ambiguity than we are willing to bear... */
-      return MEM_MGMT_RESPONSIBLE_ERROR;
-  }
   Kernel::log("ManuvrGPS is Rx-only.\n");
+  buf->clear();
   return MEM_MGMT_RESPONSIBLE_ERROR;
 }
 
@@ -158,29 +146,9 @@ int8_t ManuvrGPS::toCounterparty(StringBuilder* buf, int8_t mm) {
 * @return A declaration of memory-management responsibility.
 */
 int8_t ManuvrGPS::fromCounterparty(StringBuilder* buf, int8_t mm) {
-  switch (mm) {
-    case MEM_MGMT_RESPONSIBLE_CALLER:
-      // NOTE: No break. This might be construed as a way of saying CREATOR.
-    case MEM_MGMT_RESPONSIBLE_CREATOR:
-      /* The system that allocated this buffer either...
-          a) Did so with the intention that it never be free'd, or...
-          b) Has a means of discovering when it is safe to free.  */
-      _accumulator.concatHandoff(buf);
-      _attempt_parse();
-      return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
-
-    case MEM_MGMT_RESPONSIBLE_BEARER:
-      /* We are now the bearer. That means that by returning non-failure, the
-          caller will expect _us_ to manage this memory.  */
-      _accumulator.concatHandoff(buf);
-      _attempt_parse();
-      return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
-
-    default:
-      /* This is more ambiguity than we are willing to bear... */
-      return MEM_MGMT_RESPONSIBLE_ERROR;
-  }
-  return MEM_MGMT_RESPONSIBLE_ERROR;
+  _accumulator.concatHandoff(buf);
+  _attempt_parse();
+  return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
 }
 
 
@@ -190,102 +158,104 @@ int8_t ManuvrGPS::fromCounterparty(StringBuilder* buf, int8_t mm) {
 
 bool ManuvrGPS::_attempt_parse() {
   if (_accumulator.split("\n") == 0) return false;
-
   char* line = nullptr;
+  StringBuilder  _log;
+
   while (_accumulator.count() > 1) {
     line = _accumulator.position(0);
     switch (_sentence_id(line, false)) {
           case MINMEA_SENTENCE_RMC: {
               struct minmea_sentence_rmc frame;
               if (_parse_rmc(&frame, line)) {
-                  printf("$xxRMC: raw coordinates and speed: (%d/%d,%d/%d) %d/%d\n",
+                  _log.concatf("$xxRMC: raw coordinates and speed: (%d/%d,%d/%d) %d/%d\n",
                           frame.latitude.value, frame.latitude.scale,
                           frame.longitude.value, frame.longitude.scale,
                           frame.speed.value, frame.speed.scale);
-                  printf("$xxRMC fixed-point coordinates and speed scaled to three decimal places: (%d,%d) %d\n",
+                  _log.concatf("$xxRMC fixed-point coordinates and speed scaled to three decimal places: (%d,%d) %d\n",
                           minmea_rescale(&frame.latitude, 1000),
                           minmea_rescale(&frame.longitude, 1000),
                           minmea_rescale(&frame.speed, 1000));
-                  printf("$xxRMC floating point degree coordinates and speed: (%f,%f) %f\n",
-                          minmea_tocoord(&frame.latitude),
-                          minmea_tocoord(&frame.longitude),
-                          minmea_tofloat(&frame.speed));
+                  _log.concatf("$xxRMC floating point degree coordinates and speed: (%f,%f) %f\n",
+                          (double) minmea_tocoord(&frame.latitude),
+                          (double) minmea_tocoord(&frame.longitude),
+                          (double) minmea_tofloat(&frame.speed));
               }
               else {
-                  printf("$xxRMC sentence is not parsed\n");
+                  _log.concatf("$xxRMC sentence is not parsed\n");
               }
           } break;
           case MINMEA_SENTENCE_GGA: {
               struct minmea_sentence_gga frame;
               if (_parse_gga(&frame, line)) {
-                  printf("$xxGGA: fix quality: %d\n", frame.fix_quality);
+                  _log.concatf("$xxGGA: fix quality: %d\n", frame.fix_quality);
               }
               else {
-                  printf("$xxGGA sentence is not parsed\n");
+                  _log.concatf("$xxGGA sentence is not parsed\n");
               }
           } break;
           case MINMEA_SENTENCE_GST: {
               struct minmea_sentence_gst frame;
               if (_parse_gst(&frame, line)) {
-                  printf("$xxGST: raw latitude,longitude and altitude error deviation: (%d/%d,%d/%d,%d/%d)\n",
+                  _log.concatf("$xxGST: raw latitude,longitude and altitude error deviation: (%d/%d,%d/%d,%d/%d)\n",
                           frame.latitude_error_deviation.value, frame.latitude_error_deviation.scale,
                           frame.longitude_error_deviation.value, frame.longitude_error_deviation.scale,
                           frame.altitude_error_deviation.value, frame.altitude_error_deviation.scale);
-                  printf("$xxGST fixed point latitude,longitude and altitude error deviation"
+                  _log.concatf("$xxGST fixed point latitude,longitude and altitude error deviation"
                          " scaled to one decimal place: (%d,%d,%d)\n",
                           minmea_rescale(&frame.latitude_error_deviation, 10),
                           minmea_rescale(&frame.longitude_error_deviation, 10),
                           minmea_rescale(&frame.altitude_error_deviation, 10));
-                  printf("$xxGST floating point degree latitude, longitude and altitude error deviation: (%f,%f,%f)",
-                          minmea_tofloat(&frame.latitude_error_deviation),
-                          minmea_tofloat(&frame.longitude_error_deviation),
-                          minmea_tofloat(&frame.altitude_error_deviation));
+                  _log.concatf("$xxGST floating point degree latitude, longitude and altitude error deviation: (%f,%f,%f)",
+                          (double) minmea_tofloat(&frame.latitude_error_deviation),
+                          (double) minmea_tofloat(&frame.longitude_error_deviation),
+                          (double) minmea_tofloat(&frame.altitude_error_deviation));
               }
               else {
-                  printf("$xxGST sentence is not parsed\n");
+                  _log.concatf("$xxGST sentence is not parsed\n");
               }
           } break;
           case MINMEA_SENTENCE_GSV: {
               struct minmea_sentence_gsv frame;
               if (_parse_gsv(&frame, line)) {
-                  printf("$xxGSV: message %d of %d\n", frame.msg_nr, frame.total_msgs);
-                  printf("$xxGSV: sattelites in view: %d\n", frame.total_sats);
+                  _log.concatf("$xxGSV: message %d of %d\n", frame.msg_nr, frame.total_msgs);
+                  _log.concatf("$xxGSV: sattelites in view: %d\n", frame.total_sats);
                   for (int i = 0; i < 4; i++)
-                      printf("$xxGSV: sat nr %d, elevation: %d, azimuth: %d, snr: %d dbm\n",
+                      _log.concatf("$xxGSV: sat nr %d, elevation: %d, azimuth: %d, snr: %d dbm\n",
                           frame.sats[i].nr,
                           frame.sats[i].elevation,
                           frame.sats[i].azimuth,
                           frame.sats[i].snr);
               }
               else {
-                  printf("$xxGSV sentence is not parsed\n");
+                  _log.concatf("$xxGSV sentence is not parsed\n");
               }
           } break;
           case MINMEA_SENTENCE_VTG: {
              struct minmea_sentence_vtg frame;
              if (_parse_vtg(&frame, line)) {
-                  printf("$xxVTG: true track degrees = %f\n",
-                         minmea_tofloat(&frame.true_track_degrees));
-                  printf("        magnetic track degrees = %f\n",
-                         minmea_tofloat(&frame.magnetic_track_degrees));
-                  printf("        speed knots = %f\n",
-                          minmea_tofloat(&frame.speed_knots));
-                  printf("        speed kph = %f\n",
-                          minmea_tofloat(&frame.speed_kph));
+                  _log.concatf("$xxVTG: true track degrees = %f\n",
+                         (double) minmea_tofloat(&frame.true_track_degrees));
+                  _log.concatf("        magnetic track degrees = %f\n",
+                         (double) minmea_tofloat(&frame.magnetic_track_degrees));
+                  _log.concatf("        speed knots = %f\n",
+                          (double) minmea_tofloat(&frame.speed_knots));
+                  _log.concatf("        speed kph = %f\n",
+                          (double) minmea_tofloat(&frame.speed_kph));
              }
              else {
-                  printf("$xxVTG sentence is not parsed\n");
+                  _log.concatf("$xxVTG sentence is not parsed\n");
              }
           } break;
           case MINMEA_INVALID: {
-              printf("$xxxxx sentence is not valid\n");
+              _log.concatf("$xxxxx sentence is not valid\n");
           } break;
           default: {
-              printf("$xxxxx sentence is not parsed\n");
+              _log.concatf("$xxxxx sentence is not parsed\n");
           } break;
     }
     _accumulator.drop_position(0);
   }
+  Kernel::log(&_log);
   return true;
 }
 

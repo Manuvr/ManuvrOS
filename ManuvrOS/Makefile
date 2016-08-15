@@ -22,7 +22,9 @@ CPP_SRCS  += DataStructures/Quaternion.cpp
 CPP_SRCS  += DataStructures/InertialMeasurement.cpp
 
 # Types and encodings
+CPP_SRCS  += Types/TypeTranscriber.cpp
 CPP_SRCS  += Types/ManuvrCBOR/ManuvrCBOR.cpp
+CPP_SRCS  += Types/Avro/Avro.cpp
 
 # Manuvr core
 CPP_SRCS  += ManuvrRunnable.cpp
