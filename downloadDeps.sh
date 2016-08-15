@@ -23,10 +23,9 @@ cp lib/paho.mqtt.embedded-c/MQTTPacket/src/* lib/paho.mqtt.embedded-c/
 
 # TinyCBOR...
 # Note that we do special-handling here to make the build-process smoother...
-rm -rf lib/tinycbor
-git clone https://github.com/01org/tinycbor.git lib/tinycbor
-mkdir -p lib/tinycbor/include
-cp lib/tinycbor/src/*.h lib/tinycbor/include
+rm -rf lib/cbor-cpp
+git clone https://github.com/naphaso/cbor-cpp.git lib/cbor-cpp
+ln -s `pwd`/lib/cbor-cpp/src/ lib/cbor-cpp/include
 
 # Avro. Again, we will shuffle things a bit to make inclusion uniform.
 # Note that Avro requires jansson for JSON support.

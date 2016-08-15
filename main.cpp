@@ -233,13 +233,13 @@ int main(int argc, char *argv[]) {
       debug_msg.specific_target = (EventReceiver*) kernel;
 
       mqtt.subscribe("d", &debug_msg);
+      kernel->subscribe(&tcp_cli);
 
     #else
       ManuvrTCP tcp_srv((const char*) "0.0.0.0", 2319);
       tcp_srv.setPipeStrategy(pipe_plan_console);
       kernel->subscribe(&tcp_srv);
     #endif
-    kernel->subscribe(&tcp_cli);
   #endif
 
   #if defined(MANUVR_SUPPORT_UDP)
@@ -260,10 +260,11 @@ int main(int argc, char *argv[]) {
   // TODO: Horrible hackishness to test TCP...
   #if defined(MANUVR_SUPPORT_TCPSOCKET)
     #if defined(MANUVR_SUPPORT_MQTT)
+      // Attempt to connect to the broker.
+      tcp_cli.connect();
     #else
       tcp_srv.listen();
     #endif
-    tcp_cli.connect();
     //tcp_cli.autoConnect(true);
   #endif
   // TODO: End horrible hackishness.

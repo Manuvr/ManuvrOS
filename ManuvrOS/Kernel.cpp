@@ -1146,7 +1146,6 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
           // If the event came with a StringBuilder, concat it onto the last_user_input.
           StringBuilder* _tmp = nullptr;
           if (0 == active_runnable->getArgAs(&_tmp)) {
-            _tmp->printDebug(&local_log);
             last_user_input.concatHandoff(_tmp);
             _route_console_input();
           }

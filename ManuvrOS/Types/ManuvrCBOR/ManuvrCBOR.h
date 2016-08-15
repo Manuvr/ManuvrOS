@@ -25,7 +25,7 @@ This class is a type-conversion wrapper around TinyCBOR.
 #define __MANUVR_CBOR_H__
 
 #if defined(MANUVR_CBOR)
-  #include "tinycbor/include/cbor.h"
+  #include "cbor-cpp/include/cbor.h"
 #endif
 
 

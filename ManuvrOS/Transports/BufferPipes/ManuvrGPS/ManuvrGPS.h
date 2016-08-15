@@ -258,7 +258,6 @@ class ManuvrGPS : public BufferPipe {
   private:
     uint32_t       _sentences_parsed;
     StringBuilder  _accumulator;
-    StringBuilder  _log;
     ManuvrRunnable _gps_frame;
 
     bool _attempt_parse();

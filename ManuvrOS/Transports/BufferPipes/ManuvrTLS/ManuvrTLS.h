@@ -32,6 +32,7 @@ One class is for the server (listener), and the other for client (initiator),
 #define __MANUVR_TLS_XFORMER_H__
 
 #include <DataStructures/BufferPipe.h>
+#include <Platform/Cryptographic.h>
 
 #if defined(__MANUVR_MBEDTLS)
 
@@ -52,37 +53,6 @@ One class is for the server (listener), and the other for client (initiator),
 
 #define MAX_CIPHERSUITE_COUNT   10
 #define MBEDTLS_DEBUG_LEVEL     5
-
-
-// TODO: This is probably going to be moved into a more-accessible location.
-// TODO: This is probably going to be moved into a more-accessible location.
-// TODO: This is probably going to be moved into a more-accessible location.
-
-enum class IdentityFormats {
-  /*
-  * TODO: Since we wrote this interface against mbedtls, we will use the preprocessor
-  *   defines from that library for normalizing purposes.
-  */
-  CERT_FORMAT_DER,
-  PSK
-};
-
-/*
-* This is the object that is passed on pipe-signal to the session. It allows
-*   the session to validate connected identities and (if necessary) pass policy
-*   into the application layer.
-*/
-class CryptoIdentity {
-  public:
-    char*           handle;         // Human-readable name of this identity.
-    IdentityFormats ident_format;   // What is the nature of this identity?
-    uint8_t*        ident;          // Pointer to the identity.
-    int             ident_length;   // How many bytes does the cert occupy?
-};
-
-// TODO: This is probably going to be moved into a more-accessible location.
-// TODO: This is probably going to be moved into a more-accessible location.
-// TODO: This is probably going to be moved into a more-accessible location.
 
 
 /*

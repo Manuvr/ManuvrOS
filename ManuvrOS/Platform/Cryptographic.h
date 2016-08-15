@@ -31,6 +31,9 @@ If you wish to use another crypto library (OpenSSL? MatrixSSL? uECC?) then
   logic to support them.
 */
 
+#ifndef __MANUVR_CRYPTO_ABSTRACTION_H__
+#define __MANUVR_CRYPTO_ABSTRACTION_H__
+
 #include <Platform/Platform.h>
 
 #if defined(__MANUVR_MBEDTLS)
@@ -76,6 +79,31 @@ If you wish to use another crypto library (OpenSSL? MatrixSSL? uECC?) then
 //  #endif
 //};
 
+
+enum class IdentityFormats {
+  /*
+  * TODO: Since we wrote this interface against mbedtls, we will use the preprocessor
+  *   defines from that library for normalizing purposes.
+  */
+  CERT_FORMAT_DER,
+  PSK
+};
+
+/*
+* This is the object that is passed on pipe-signal to the session. It allows
+*   the session to validate connected identities and (if necessary) pass policy
+*   into the application layer.
+*/
+class CryptoIdentity {
+  public:
+    char*           handle;         // Human-readable name of this identity.
+    IdentityFormats ident_format;   // What is the nature of this identity?
+    uint8_t*        ident;          // Pointer to the identity.
+    int             ident_length;   // How many bytes does the cert occupy?
+};
+
+
+
 /* This stuff needs to be reachable via C-linkage. */
 extern "C" {
 
@@ -96,7 +124,9 @@ int8_t manuvr_hash(uint8_t* in, int in_len, uint8_t* out, int out_len, Hashes h)
 /*******************************************************************************
 * Debug
 *******************************************************************************/
-void printCrpytoOverview(StringBuilder*);
+void printCryptoOverview(StringBuilder*);
 
 
 } // extern "C"
+
+#endif // __MANUVR_CRYPTO_ABSTRACTION_H__
