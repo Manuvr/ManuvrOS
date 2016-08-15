@@ -96,12 +96,16 @@ BufferPipe* _pipe_factory_2(BufferPipe* _n, BufferPipe* _f) {
   return (BufferPipe*) _console;
 }
 
+
 BufferPipe* _pipe_factory_3(BufferPipe* _n, BufferPipe* _f) {
   ManuvrTLSServer* _tls_server = new ManuvrTLSServer(_n);
   /*
   * Until parameters can be passed to pipe's via a stretegy, we configure new
   *   pipes this way...
   */
+  StringBuilder out;
+  _tls_server->printDebug(&out);
+  Kernel::log(&out);
   return (BufferPipe*) _tls_server;
 }
 
@@ -125,7 +129,9 @@ int main(int argc, char *argv[]) {
   // The first thing we should do: Instance a kernel.
   kernel = new Kernel();
 
-
+  /*
+  * Absent a strategy for dynamically-loading strategies...
+  */
   if (0 != BufferPipe::registerPipe(1, _pipe_factory_1)) {
     printf("Failed to add CoAP to the pipe registry.\n");
     exit(1);
@@ -136,15 +142,16 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  if (0 != BufferPipe::registerPipe(3, _pipe_factory_3)) {
-    printf("Failed to add TLSServer to the pipe registry.\n");
-    exit(1);
-  }
-
   // Pipe strategy planning...
-  const uint8_t pipe_plan_coap[]    = {1, 0};
-  const uint8_t pipe_plan_coaps[]   = {1, 3, 0};
   const uint8_t pipe_plan_console[] = {2, 0};
+  const uint8_t pipe_plan_coap[]    = {1, 0};
+  #if defined(__MANUVR_MBEDTLS)
+    const uint8_t pipe_plan_coaps[]   = {1, 3, 0};
+    if (0 != BufferPipe::registerPipe(3, _pipe_factory_3)) {
+      printf("Failed to add TLSServer to the pipe registry.\n");
+      exit(1);
+    }
+  #endif
 
   #if defined(__MANUVR_DEBUG)
     // spend time and memory measuring performance.
@@ -214,6 +221,10 @@ int main(int argc, char *argv[]) {
   // We need at least ONE transport to be useful...
   #if defined(MANUVR_SUPPORT_TCPSOCKET)
     #if defined(MANUVR_SUPPORT_MQTT)
+      /*
+      * If we built support for an MQTT client, we can demo setting up a socket
+      *   as a client.
+      */
       ManuvrTCP tcp_cli((const char*) "127.0.0.1", 1883);
       MQTTSession mqtt(&tcp_cli);
       kernel->subscribe(&mqtt);
@@ -235,21 +246,38 @@ int main(int argc, char *argv[]) {
       mqtt.subscribe("d", &debug_msg);
       kernel->subscribe(&tcp_cli);
 
-    #else
-      ManuvrTCP tcp_srv((const char*) "0.0.0.0", 2319);
-      tcp_srv.setPipeStrategy(pipe_plan_console);
-      kernel->subscribe(&tcp_srv);
     #endif
+
+    /*
+    * Transports that listen need to be given instructions for building software
+    *   pipes up to the application layer.
+    * This is how to use pipe-strategies to instance a console session when a
+    *   TCP client connects. Test by running without "--console" and then...
+    *       nc -t 127.0.0.1 2319nc -t 127.0.0.1 2319
+    */
+    ManuvrTCP tcp_srv((const char*) "0.0.0.0", 2319);
+    tcp_srv.setPipeStrategy(pipe_plan_console);
+    kernel->subscribe(&tcp_srv);
   #endif
 
   #if defined(MANUVR_SUPPORT_UDP)
     #if defined(MANUVR_SUPPORT_COAP)
-      ManuvrUDP udp_srv((const char*) "0.0.0.0", 6053);
+      /*
+      * If we support CoAP, we establish a UDP server with a pipe-strategy to
+      *   instantiate a CoAP session.
+      */
+      ManuvrUDP udp_srv((const char*) "0.0.0.0", 5683);
       kernel->subscribe(&udp_srv);
       udp_srv.setPipeStrategy(pipe_plan_coap);
-    #else
-      ManuvrUDP udp_srv((const char*) "0.0.0.0", 6053);
-      kernel->subscribe(&udp_srv);
+      #if defined(__MANUVR_MBEDTLS)
+        /**
+        * If we have TLS support, open up a separate pipe strategy for secured
+        *   connections.
+        */
+        ManuvrUDP udp_srv_secure((const char*) "0.0.0.0", 5684);
+        kernel->subscribe(&udp_srv_secure);
+        udp_srv.setPipeStrategy(pipe_plan_coaps);
+      #endif
     #endif
   #endif
 
@@ -257,17 +285,24 @@ int main(int argc, char *argv[]) {
   printf("%s: Booting Manuvr Kernel....\n", program_name);
   kernel->bootstrap();
 
-  // TODO: Horrible hackishness to test TCP...
+  while (0 < kernel->procIdleFlags()) {
+    /**
+    * TODO: Concentrate this operation into Kernel::bootstrap()? I have bad
+    *         memories of thiat for some reason....
+    * This is not strictly required, but helps ensure a known-state
+    */
+  }
+
   #if defined(MANUVR_SUPPORT_TCPSOCKET)
     #if defined(MANUVR_SUPPORT_MQTT)
-      // Attempt to connect to the broker.
+      /* Attempt to connect to the MQTT broker. */
       tcp_cli.connect();
-    #else
-      tcp_srv.listen();
+      //tcp_cli.autoConnect(true);
     #endif
-    //tcp_cli.autoConnect(true);
+    /* Fire-up the listener for the console pipe-demo. */
+    tcp_srv.listen();
   #endif
-  // TODO: End horrible hackishness.
+
 
   #if defined(RASPI) || defined(RASPI2)
     gpioDefine(14, OUTPUT);
