@@ -27,9 +27,6 @@ class ManuvrOpt : public Argument {
 
 
   private:
-    ManuvrOpt*  _next;
-    uint16_t    _flags;
-
     ManuvrOpt(const char* k, void* ptr, int len, uint8_t code);
 
     int8_t add(ManuvrOpt*);

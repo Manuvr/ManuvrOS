@@ -207,7 +207,7 @@ class ManuvrMsg {
     */
     int8_t markArgForReap(int idx, bool reap);
 
-    void printDebug(StringBuilder *);
+    void printDebug(StringBuilder*);
 
     const char* getMsgTypeString();
     const char* getArgTypeString(uint8_t idx);
@@ -256,9 +256,9 @@ class ManuvrMsg {
 
 
   private:
-    const MessageTypeDef*  message_def;             // The definition for the message (once it is associated).
-    LinkedList<Argument*> args;     // The optional list of arguments associated with this event.
-    uint16_t event_code;            // The identity of the event (or command).
+    const MessageTypeDef*  message_def; // The definition for the message (once it is associated).
+    Argument* arg;                      // The optional list of arguments associated with this event.
+    uint16_t event_code;                // The identity of the event (or command).
 
     void __class_initializer();
 

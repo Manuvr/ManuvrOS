@@ -305,3 +305,45 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
 
 	return 0;
 }
+
+
+/**
+* @return [description]
+*/
+int8_t Argument::argCount() {
+  return (1 + ((nullptr == _next) ? 0 : _next->argCount()));
+}
+
+
+/**
+* @return [description]
+*/
+int8_t Argument::sumAllLengths() {
+  return (len + ((nullptr == _next) ? 0 : _next->sumAllLengths()));
+}
+
+/**
+* @return [description]
+*/
+Argument* Argument::retrieveArgByIdx(int idx) {
+	if ((0 < idx) && (nullptr != _next)) {
+		return (1 == idx) ? _next : _next->retrieveArgByIdx(idx-1);
+	}
+	else {
+		return this;
+	}
+}
+
+
+/*
+* Warning: call is propagated across entire list.
+*/
+void Argument::printDebug(StringBuilder* out) {
+  out->concatf("\t%s\t%s", getTypeCodeString(typeCode()), (reapValue() ? "(reap)" : "\t"));
+  uint8_t* buf     = (uint8_t*) pointer();
+  uint16_t l_ender = ((len <= 16)) ? len : 16;
+  for (int n = 0; n < l_ender; n++) out->concatf("%02x ", (uint8_t) *(buf + n));
+  out->concat("\n");
+
+  if (_next) _next->printDebug(out);
+}

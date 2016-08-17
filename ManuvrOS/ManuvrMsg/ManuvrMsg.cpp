@@ -172,11 +172,7 @@ int8_t ManuvrMsg::repurpose(uint16_t code) {
 * @return the length (in bytes) of the arguments for this message.
 */
 int ManuvrMsg::argByteCount() {
-  int return_value = 0;
-  for (int i = 0; i < args.size(); i++) {
-    return_value += args.get(i)->length();
-  }
-  return return_value;
+  return ((nullptr == arg) ? 0 : arg->sumAllLengths());
 }
 
 
@@ -289,7 +285,7 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
 
       default:
         // Abort parse. We encountered a type we can't deal with.
-        args.clear();
+        clearArgs();
         return 0;
         break;
     }
@@ -315,8 +311,9 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
 * @return 1 on success, 0 on failure.
 */
 int8_t ManuvrMsg::markArgForReap(int idx, bool reap) {
-  if (args.size() > idx) {
-    args.get(idx)->reapValue(reap);
+  if (nullptr != arg) {
+    Argument* tmp = arg->retrieveArgByIdx(idx);
+    tmp->reapValue(reap);
     return 1;
   }
   return 0;
@@ -331,12 +328,29 @@ int8_t ManuvrMsg::markArgForReap(int idx, bool reap) {
 
 
 /**
+* All of the type-specialized getArgAs() fxns boil down to this. Which is private.
+* The boolean preserve parameter will leave the argument attached (if true), or destroy it (if false).
+*
+* @param  idx      The Argument position
+* @param  trg_buf  A pointer to the place where we should write the result.
+* @return DIG_MSG_ERROR_NO_ERROR or appropriate failure code.
+*/
+int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf) {
+  int8_t return_value = DIG_MSG_ERROR_INVALID_ARG;
+  if (NULL != arg) {
+    return ((0 == idx) ? arg->getValueAs(trg_buf) : arg->getValueAs(idx, trg_buf));
+  }
+  return return_value;
+}
+
+
+/**
 * All of the type-specialized writePointerArgAs() fxns boil down to this.
 * Calls to this fxn are only valid for pointer types.
 *
 * @param  idx      The Argument position
 * @param  trg_buf  A pointer to the place where we should read the Argument from.
-* @return DIG_MSG_ERROR_NO_ERROR or appropriate failure code.
+* @return 0 or appropriate failure code.
 */
 int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
   int8_t return_value = DIG_MSG_ERROR_INVALID_ARG;
@@ -370,16 +384,15 @@ int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
 * Clears the Arguments attached to this Message and reaps their contents, if
 *   the need is indicated. Many subtle memory-related bugs can be caught here.
 *
-* @return DIG_MSG_ERROR_NO_ERROR or appropriate failure code.
+* @return 0 or appropriate failure code.
 */
 int8_t ManuvrMsg::clearArgs() {
-  Argument *arg = NULL;
-  while (args.hasNext()) {
-    arg = args.get();
-    args.remove();
-    delete arg;
+  if (nullptr != arg) {
+    Argument* tmp = arg;
+    arg = nullptr;
+    delete tmp;
   }
-  return DIG_MSG_ERROR_NO_ERROR;
+  return 0;
 }
 
 
@@ -390,9 +403,6 @@ int8_t ManuvrMsg::clearArgs() {
 * @return NOTYPE_FM if the Argument isn't found, and its type code if it is.
 */
 uint8_t ManuvrMsg::getArgumentType(uint8_t idx) {
-  if (args.size() > idx) {
-    return args.get(idx)->typeCode();
-  }
   return NOTYPE_FM;
 }
 
