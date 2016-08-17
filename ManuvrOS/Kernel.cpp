@@ -1182,7 +1182,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
       // String:     Firmware version   (IE: "1.5.4")
       // String:     Hardware version   (IE: "4")
       // String:     Extended detail    (User-defined)
-      if (0 == active_runnable->args.size()) {
+      if (0 == active_runnable->argCount()) {
         // We are being asked to self-describe.
         active_runnable->addArg((uint32_t)    PROTOCOL_MTU);
         active_runnable->addArg((uint32_t)    0);                  // Device flags.

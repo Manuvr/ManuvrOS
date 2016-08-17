@@ -166,17 +166,6 @@ int8_t ManuvrMsg::repurpose(uint16_t code) {
 
 
 /**
-* Allows the caller to count the Args attached to this message.
-* TODO: Inlinable.
-*
-* @return the cardinality of the argument list.
-*/
-int ManuvrMsg::argCount() {
-  return args.size();
-}
-
-
-/**
 * Allows the caller to plan other allocations based on how many bytes this message's
 *   Arguments occupy.
 *

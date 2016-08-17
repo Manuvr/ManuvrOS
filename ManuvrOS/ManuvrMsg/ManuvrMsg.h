@@ -190,7 +190,6 @@ class Argument {
 */
 class ManuvrMsg {
   public:
-    LinkedList<Argument*> args;     // The optional list of arguments associated with this event.
     uint16_t event_code;            // The identity of the event (or command).
 
 
@@ -200,8 +199,14 @@ class ManuvrMsg {
 
     virtual int8_t repurpose(uint16_t code);
 
-    int argCount();
     int argByteCount();
+
+    /**
+    * Allows the caller to count the Args attached to this message.
+    *
+    * @return the cardinality of the argument list.
+    */
+    inline int argCount() {  return args.size();   };
 
 
     inline bool isExportable() {
@@ -376,6 +381,8 @@ class ManuvrMsg {
 
 
   private:
+    LinkedList<Argument*> args;     // The optional list of arguments associated with this event.
+
     void __class_initializer();
 
     int8_t writePointerArgAs(uint32_t dat);

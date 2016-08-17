@@ -754,7 +754,7 @@ int8_t MGC3130::notify(ManuvrRunnable *active_event) {
 
   switch (active_event->event_code) {
     case MANUVR_MSG_SYS_POWER_MODE:
-      if (active_event->args.size() == 1) {
+      if (active_event->argCount() == 1) {
         uint8_t nu_power_mode;
         if (DIG_MSG_ERROR_NO_ERROR == active_event->getArgAs(&nu_power_mode)) {
           if (power_mode != nu_power_mode) {

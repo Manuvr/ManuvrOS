@@ -262,7 +262,7 @@ int8_t LDS8160::notify(ManuvrRunnable *active_event) {
   switch (active_event->event_code) {
 
     case MANUVR_MSG_SYS_POWER_MODE:
-      if (active_event->args.size() == 1) {
+      if (active_event->argCount() == 1) {
         uint8_t nu_power_mode;
         if (DIG_MSG_ERROR_NO_ERROR == active_event->getArgAs(&nu_power_mode)) {
           if (power_mode != nu_power_mode) {
@@ -274,7 +274,7 @@ int8_t LDS8160::notify(ManuvrRunnable *active_event) {
       break;
 
     case DIGITABULUM_MSG_LED_MODE:
-      if (active_event->args.size() >= 1) {
+      if (active_event->argCount() >= 1) {
         if ((EventReceiver*) this != active_event->callback) {   // Only do this if we are not the callback.
           uint8_t  nu_mode;
           if (DIG_MSG_ERROR_NO_ERROR == active_event->getArgAs(&nu_mode)) {
@@ -293,7 +293,7 @@ int8_t LDS8160::notify(ManuvrRunnable *active_event) {
       break;
 
     case DIGITABULUM_MSG_LED_PULSE:
-      if (active_event->args.size() >= 3) {
+      if (active_event->argCount() >= 3) {
         if ((EventReceiver*) this != active_event->callback) {   // Only do this if we are not the callback.
           uint8_t old_val = regValue(LDS8160_CHANNEL_ENABLE);
           uint8_t new_val = old_val;
@@ -304,7 +304,7 @@ int8_t LDS8160::notify(ManuvrRunnable *active_event) {
           active_event->getArgAs(1, &pulse_count);
           local_log.concatf("LDS8160: pulse_period/count\t %d / %d.  LEDs:  ", pulse_period, pulse_count);
 
-          for (uint8_t i = 2; i < active_event->args.size(); i++) {
+          for (uint8_t i = 2; i < active_event->argCount(); i++) {
             active_event->getArgAs(i, &chan);
             local_log.concatf("%d ", chan);
             switch (chan) {
@@ -357,7 +357,7 @@ int8_t LDS8160::notify(ManuvrRunnable *active_event) {
       }
       break;
     case DIGITABULUM_MSG_LED_DIGIT_LEVEL:   // Pertains to the global dimmer.
-      switch (active_event->args.size()) {
+      switch (active_event->argCount()) {
         case 0:        // No args? Asking for dimmer value.
           active_event->addArg((uint8_t) regValue(LDS8160_GLOBAL_PWM_DIM));
           /* If the callback is NULL, make us the callback, as our class is the responsible party for
@@ -399,7 +399,7 @@ int8_t LDS8160::notify(ManuvrRunnable *active_event) {
       break;
     case DIGITABULUM_MSG_LED_DIGIT_ON:
     case DIGITABULUM_MSG_LED_DIGIT_OFF:
-      switch (active_event->args.size()) {
+      switch (active_event->argCount()) {
         case 0:        // No args? Return all values.
           // TODO: need to check for initialization first. Will be a concealed bug from the counterparty perspective.
           active_event->addArg((uint8_t) channel_enabled(0));
@@ -424,7 +424,7 @@ int8_t LDS8160::notify(ManuvrRunnable *active_event) {
             uint8_t new_val = old_val;
             uint8_t chan;
             bool en = (active_event->event_code == DIGITABULUM_MSG_LED_DIGIT_ON);
-            for (uint8_t i = 0; i < active_event->args.size(); i++) {
+            for (uint8_t i = 0; i < active_event->argCount(); i++) {
               active_event->getArgAs(i, &chan);
               new_val = en ? ((1 << chan) | new_val) : (((uint8_t) ~(1 << chan)) & new_val);
             }
