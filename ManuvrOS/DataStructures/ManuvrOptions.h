@@ -17,16 +17,23 @@
 */
 class ManuvrOpt : public Argument {
   public:
+    const char*  _key;
+
     ManuvrOpt();
     ~ManuvrOpt();
-    const char*  _key;
 
     void printDebug(StringBuilder* out);
 
 
+
   private:
-    ManuvrOpt * _next;
+    ManuvrOpt*  _next;
     uint16_t    _flags;
+
+    ManuvrOpt(const char* k, void* ptr, int len, uint8_t code);
+
+    int8_t add(ManuvrOpt*);
+
 
     // TODO: Might-should move this to someplace more accessable?
     static uintptr_t get_const_from_char_ptr(char*);

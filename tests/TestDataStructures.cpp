@@ -11,6 +11,8 @@
 #include "DataStructures/PriorityQueue.h"
 #include "DataStructures/Vector3.h"
 #include "DataStructures/StringBuilder.h"
+#include "DataStructures/BufferPipe.h"
+#include "DataStructures/ManuvrOptions.h"
 
 
 int test_StringBuilder(void) {
@@ -95,10 +97,15 @@ int test_Arguments() {
 }
 
 int test_ManuvrOpts() {
+  const char* key0 = "key0";
+  const char* key1 = "key1";
+  const char* key2 = "key2";
+  // Add some mixed-types...
+
   return 0;
 }
 
-int test_ManuvrOpts() {
+int test_BufferPipe() {
   return 0;
 }
 
@@ -121,6 +128,9 @@ int main(int argc, char *argv[]) {
       if (0 == vector3_float_test(0.7f, 0.8f, 0.01f)) {
         if (0 == test_BufferPipe()) {
           if (0 == test_Arguments()) {
+            printf("**********************************\n");
+            printf("*  DataStructure tests all pass  *\n");
+            printf("**********************************\n");
             exit_value = 0;
           }
           else printTestFailure("Argument");
@@ -133,5 +143,5 @@ int main(int argc, char *argv[]) {
   }
   else printTestFailure("StringBuilder");
 
-  exit exit_value;
+  exit(exit_value);
 }

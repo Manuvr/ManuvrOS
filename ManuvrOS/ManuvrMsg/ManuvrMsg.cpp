@@ -331,66 +331,6 @@ int8_t ManuvrMsg::markArgForReap(int idx, bool reap) {
 
 
 /**
-* All of the type-specialized getArgAs() fxns boil down to this. Which is private.
-* The boolean preserve parameter will leave the argument attached (if true), or destroy it (if false).
-*
-* @param  idx      The Argument position
-* @param  trg_buf  A pointer to the place where we should write the result.
-* @return DIG_MSG_ERROR_NO_ERROR or appropriate failure code.
-*/
-int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf) {
-  int8_t return_value = DIG_MSG_ERROR_INVALID_ARG;
-  Argument* arg = args.get(idx);
-  if (NULL != arg) {
-    switch (arg->typeCode()) {
-      case INT8_FM:    // This frightens the compiler. Its fears are unfounded.
-      case UINT8_FM:   // This frightens the compiler. Its fears are unfounded.
-        return_value = DIG_MSG_ERROR_NO_ERROR;
-        *((uint8_t*) trg_buf) = *((uint8_t*)&arg->target_mem);
-        break;
-      case INT16_FM:    // This frightens the compiler. Its fears are unfounded.
-      case UINT16_FM:   // This frightens the compiler. Its fears are unfounded.
-        return_value = DIG_MSG_ERROR_NO_ERROR;
-        *((uint16_t*) trg_buf) = *((uint16_t*)&arg->target_mem);
-        break;
-      case INT32_FM:    // This frightens the compiler. Its fears are unfounded.
-      case UINT32_FM:   // This frightens the compiler. Its fears are unfounded.
-      case FLOAT_FM:    // This frightens the compiler. Its fears are unfounded.
-        return_value = DIG_MSG_ERROR_NO_ERROR;
-        *((uint32_t*) trg_buf) = *((uint32_t*)&arg->target_mem);
-
-      case UINT32_PTR_FM:  // These are *pointers* to the indicated types. They
-      case UINT16_PTR_FM:  //   therefore take the whole 4 bytes of memory allocated
-      case UINT8_PTR_FM:   //   and can be returned as such.
-      case INT32_PTR_FM:
-      case INT16_PTR_FM:
-      case INT8_PTR_FM:
-
-      case VECT_4_FLOAT:
-      case VECT_3_FLOAT:
-      case VECT_3_UINT16:
-      case VECT_3_INT16:
-
-      case STR_BUILDER_FM:          // This is a pointer to some StringBuilder. Presumably this is on the heap.
-      case STR_FM:                  // This is a pointer to a string constant. Presumably this is stored in flash.
-      case BUFFERPIPE_PTR_FM:       // This is a pointer to a BufferPipe/.
-      case SYS_RUNNABLE_PTR_FM:     // This is a pointer to ManuvrRunnable.
-      case SYS_EVENTRECEIVER_FM:    // This is a pointer to an EventReceiver.
-      case SYS_MANUVR_XPORT_FM:     // This is a pointer to a transport.
-        return_value = DIG_MSG_ERROR_NO_ERROR;
-        *((uintptr_t*) trg_buf) = *((uintptr_t*)&arg->target_mem);
-        break;
-      default:
-        return_value = DIG_MSG_ERROR_INVALID_TYPE;
-        break;
-    }
-  }
-
-  return return_value;
-}
-
-
-/**
 * All of the type-specialized writePointerArgAs() fxns boil down to this.
 * Calls to this fxn are only valid for pointer types.
 *

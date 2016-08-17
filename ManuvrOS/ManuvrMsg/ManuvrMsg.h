@@ -17,41 +17,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-*/
 
-
-/*
-*
-*
-*
-* This class forms the foundation of internal events. It contains the identity of a given message and
-*   its arguments. The idea here is to encapsulate notions of "method" and "argument", regardless of
-*   the nature of its execution parameters.
-*
-*
-*
-*
-*
+This class forms the foundation of internal events. It contains the identity of a given message and
+  its arguments. The idea here is to encapsulate notions of "method" and "argument", regardless of
+  the nature of its execution parameters.
 */
 
 #ifndef __MANUVR_MESSAGE_H__
 #define __MANUVR_MESSAGE_H__
 
-#include "../EnumeratedTypeCodes.h"
 #include "MessageDefs.h"    // This include file contains all of the message codes.
-
-#include <DataStructures/StringBuilder.h>
-#include <DataStructures/BufferPipe.h>
-#include <DataStructures/PriorityQueue.h>
-#include <DataStructures/LightLinkedList.h>
-#include <DataStructures/Vector3.h>
-#include <DataStructures/Quaternion.h>
+#include <DataStructures/Argument.h>
 
 
 #define DIG_MSG_ERROR_NO_ERROR        0
 #define DIG_MSG_ERROR_INVALID_ARG     -1
 #define DIG_MSG_ERROR_INVALID_TYPE    -2
-
 
 
 /*
@@ -68,12 +49,6 @@ typedef struct msg_defin_t {
     const char*           arg_semantics;  // For messages that have arguments, this defines their semantics.
 } MessageTypeDef;
 
-
-
-/*
-* These are flag definitions for Argument.
-*/
-#define ARG_FLAG_REAP_VALUE     0x01      // Should the pointer be freed?
 
 /*
 * These are flag definitions for Message types.
@@ -97,127 +72,14 @@ typedef struct msg_defin_t {
 #define MSG_FLAG_RESERVED_0   0x8000      // Reserved flag.
 
 
-class ManuvrXport;
-class EventReceiver;
-class ManuvrRunnable;
-
-/* This is how we define arguments to messages. */
-class Argument {
-  public:
-    /*
-    * Hackery surrounding this member:
-    * There is no point to storing a pointer to a heap ref to hold data that is not
-    *   bigger than the pointer itself. So rather than malloc()/free() and populate
-    *   this slot with things like int32, we will instead cast the value itself to a
-    *   void* and store it in the pointer slot. When we do this, we need to be sure
-    *   not to mark the pointer for reap.
-    *
-    * Glorious, glorious hackery. Keeping it. But do need to account for (and extend to)
-    *   64-bit pointers.
-    *        ---J. Ian Lindsay   Mon Oct 05 22:55:41 MST 2015
-    */
-    void*   target_mem;
-
-    Argument();
-    Argument(uint8_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT8_FM)  {};
-    Argument(uint16_t val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT16_FM) {};
-    Argument(uint32_t val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT32_FM) {};
-    Argument(int8_t   val) : Argument((void*)(uintptr_t) val, sizeof(val), INT8_FM)   {};
-    Argument(int16_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), INT16_FM)  {};
-    Argument(int32_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), INT32_FM)  {};
-    Argument(float    val) : Argument((void*)(uintptr_t) val, sizeof(val), FLOAT_FM)  {};
-
-    Argument(uint8_t*  val) : Argument((void*) val, sizeof(val), UINT8_PTR_FM)  {};
-    Argument(uint16_t* val) : Argument((void*) val, sizeof(val), UINT16_PTR_FM) {};
-    Argument(uint32_t* val) : Argument((void*) val, sizeof(val), UINT32_PTR_FM) {};
-    Argument(int8_t*   val) : Argument((void*) val, sizeof(val), INT8_PTR_FM)   {};
-    Argument(int16_t*  val) : Argument((void*) val, sizeof(val), INT16_PTR_FM)  {};
-    Argument(int32_t*  val) : Argument((void*) val, sizeof(val), INT32_PTR_FM)  {};
-    Argument(float*    val) : Argument((void*) val, sizeof(val), FLOAT_PTR_FM)  {};
-
-    Argument(Vector3ui16* val) : Argument((void*) val, 6,  VECT_3_UINT16) {};
-    Argument(Vector3i16*  val) : Argument((void*) val, 6,  VECT_3_INT16)  {};
-    Argument(Vector3f*    val) : Argument((void*) val, 12, VECT_3_FLOAT)  {};
-    Argument(Vector4f*    val) : Argument((void*) val, 16, VECT_4_FLOAT)  {};
-
-    /*
-    * Character pointers.
-    */
-    Argument(const char* val) : Argument((void*) val, (strlen(val)+1), STR_FM) {};
-    Argument(char* val)       : Argument((void*) val, (strlen(val)+1), STR_FM) {};
-
-    /*
-    * We typically want references to typeless swaths of memory be left alone at the end of
-    *   the Argument's life cycle. We will specify otherwise when appropriate.
-    */
-    Argument(void* val, uint16_t len) : Argument(val, len, BINARY_FM) {};
-
-    /*
-    * These are system service pointers. Do not reap.
-    */
-    Argument(EventReceiver* val) : Argument((void*) val, sizeof(val), SYS_EVENTRECEIVER_FM) {};
-    Argument(ManuvrXport* val)   : Argument((void*) val, sizeof(val), SYS_MANUVR_XPORT_FM)  {};
-    Argument(BufferPipe* val)    : Argument((void*) val, sizeof(val), BUFFERPIPE_PTR_FM)    {};
-
-    /*
-    * We typically want ManuvrRunnable references to be left alone at the end of
-    *   the Argument's life cycle. We will specify otherwise when appropriate.
-    */
-    Argument(ManuvrRunnable* val) : Argument((void*) val, sizeof(val), SYS_RUNNABLE_PTR_FM) {};
-
-    // TODO: This default behavior changed. Audit usage by commenting addArg(StringBuilder)
-    Argument(StringBuilder* val)  : Argument(val, sizeof(val), STR_BUILDER_FM) {};
-
-
-    ~Argument();
-
-
-    inline void reapValue(bool en) {  _alter_flags(en, ARG_FLAG_REAP_VALUE);    };
-    inline bool reapValue() {         return _check_flags(ARG_FLAG_REAP_VALUE); };
-
-    inline void*    pointer() {           return target_mem; };
-    inline uint8_t  typeCode() {          return type_code;  };
-    inline uint16_t length() {            return len;        };
-
-    // TODO: These will be re-worked to support alternate type-systems.
-    int8_t serialize(StringBuilder*);
-    int8_t serialize_raw(StringBuilder*);
-
-
-    static char*    printBinStringToBuffer(unsigned char *str, int len, char *buffer);
-
-
-
-  protected:
-    uint16_t len;         // This is sometimes not used. It is for data types that are not fixed-length.
-    uint8_t  _flags;
-    uint8_t  type_code;
-
-    Argument(void* ptr, int len, uint8_t code);  // Protected constructor to which we delegate.
-
-
-
-  private:
-    /* Inlines for altering and reading the flags. */
-    inline void _alter_flags(bool en, uint8_t mask) {
-      _flags = (en) ? (_flags | mask) : (_flags & ~mask);
-    };
-    inline bool _check_flags(uint8_t mask) {
-      return (_flags == (_flags & mask));
-    };
-
-    void wipe();
-};
-
-
 /*
 * This is the class that represents a message with an optional ordered set of Arguments.
 */
 class ManuvrMsg {
   public:
-    ManuvrMsg(void);
+    ManuvrMsg();
     ManuvrMsg(uint16_t code);
-    virtual ~ManuvrMsg(void);
+    virtual ~ManuvrMsg();
 
     virtual int8_t repurpose(uint16_t code);
 

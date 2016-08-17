@@ -168,7 +168,6 @@ tests: libs
 	export __MANUVR_LINUX
 	$(MAKE) -C ManuvrOS/
 	$(CXX) -static -g -o dstest tests/TestDataStructures.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
-	$(CXX) -static -g -o bptest tests/BufferPipeTest.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
 
 examples: libs
 	export __MANUVR_LINUX

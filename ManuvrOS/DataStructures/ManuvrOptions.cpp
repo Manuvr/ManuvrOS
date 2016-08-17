@@ -14,8 +14,29 @@ ManuvrOpt::ManuvrOpt() : Argument() {
 }
 
 
-ManuvrOpt::~ManuvrOpt() {
+ManuvrOpt::ManuvrOpt(const char* k, void* ptr, int len, uint8_t code) : Argument(ptr, len, code) {
+  _next   = nullptr;
+  _flags  = 0;
+  _key    = k;
 }
+
+
+ManuvrOpt::~ManuvrOpt() {
+  if (nullptr != _next) delete _next;
+}
+
+
+/**
+* @return [description]
+*/
+int8_t ManuvrOpt::add(ManuvrOpt* nu) {
+  if (nullptr != _next) {
+    nu->_next = _next;
+  }
+  _next = nu;
+  return 0;
+}
+
 
 /*
 * Warning: call is propagated across entire list.

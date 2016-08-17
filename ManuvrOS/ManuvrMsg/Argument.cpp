@@ -32,7 +32,7 @@ This class represents our type-abstraction layer. It is the means by which
 /*
 * Basal constructor.
 */
-Argument::Argument(){
+Argument::Argument() {
 	wipe();
 }
 
@@ -40,7 +40,7 @@ Argument::Argument(){
 * Protected delegate constructor.
 */
 Argument::Argument(void* ptr, int l, uint8_t code) : Argument() {
-	len = l;
+	len        = l;
 	type_code  = code;
 	target_mem = ptr;
 }
@@ -48,9 +48,9 @@ Argument::Argument(void* ptr, int l, uint8_t code) : Argument() {
 
 
 Argument::~Argument() {
-	if (reapValue() && (NULL == target_mem)) {
-		free(target_mem);   // TODO: This is not good. 
-		target_mem = NULL;
+	if (reapValue() && (nullptr != target_mem)) {
+		free(target_mem);   // TODO: This is not good.
+		target_mem = nullptr;
 	}
 }
 
@@ -59,7 +59,83 @@ void Argument::wipe() {
 	type_code  = NOTYPE_FM;
 	len        = 0;
 	_flags     = 0;
-	target_mem = NULL;
+	//_next      = nullptr;
+	target_mem = nullptr;
+}
+
+
+///**
+//* @return [description]
+//*/
+//int8_t Argument::add(Argument* nu) {
+//  if (nullptr != _next) {
+//    nu->_next = _next;
+//  }
+//  _next = nu;
+//  return 0;
+//}
+
+
+/**
+* All of the type-specialized getArgAs() fxns boil down to this. Which is private.
+* The boolean preserve parameter will leave the argument attached (if true), or destroy it (if false).
+*
+* @param  idx      The Argument position
+* @param  trg_buf  A pointer to the place where we should write the result.
+* @return 0 on success or appropriate failure code.
+*/
+int8_t Argument::getValueAs(uint8_t idx, void *trg_buf) {
+  int8_t return_value = -1;
+
+  if (0 < idx) {
+    switch (arg->typeCode()) {
+      case INT8_FM:    // This frightens the compiler. Its fears are unfounded.
+      case UINT8_FM:   // This frightens the compiler. Its fears are unfounded.
+        return_value = 0;
+        *((uint8_t*) trg_buf) = *((uint8_t*)&arg->target_mem);
+        break;
+      case INT16_FM:    // This frightens the compiler. Its fears are unfounded.
+      case UINT16_FM:   // This frightens the compiler. Its fears are unfounded.
+        return_value = 0;
+        *((uint16_t*) trg_buf) = *((uint16_t*)&arg->target_mem);
+        break;
+      case INT32_FM:    // This frightens the compiler. Its fears are unfounded.
+      case UINT32_FM:   // This frightens the compiler. Its fears are unfounded.
+      case FLOAT_FM:    // This frightens the compiler. Its fears are unfounded.
+        return_value = 0;
+        *((uint32_t*) trg_buf) = *((uint32_t*)&arg->target_mem);
+
+      case UINT32_PTR_FM:  // These are *pointers* to the indicated types. They
+      case UINT16_PTR_FM:  //   therefore take the whole 4 bytes of memory allocated
+      case UINT8_PTR_FM:   //   and can be returned as such.
+      case INT32_PTR_FM:
+      case INT16_PTR_FM:
+      case INT8_PTR_FM:
+
+      case VECT_4_FLOAT:
+      case VECT_3_FLOAT:
+      case VECT_3_UINT16:
+      case VECT_3_INT16:
+
+      case STR_BUILDER_FM:          // This is a pointer to some StringBuilder. Presumably this is on the heap.
+      case STR_FM:                  // This is a pointer to a string constant. Presumably this is stored in flash.
+      case BUFFERPIPE_PTR_FM:       // This is a pointer to a BufferPipe/.
+      case SYS_RUNNABLE_PTR_FM:     // This is a pointer to ManuvrRunnable.
+      case SYS_EVENTRECEIVER_FM:    // This is a pointer to an EventReceiver.
+      case SYS_MANUVR_XPORT_FM:     // This is a pointer to a transport.
+        return_value = 0;
+        *((uintptr_t*) trg_buf) = *((uintptr_t*)&arg->target_mem);
+        break;
+      default:
+        return_value = -2;
+        break;
+    }
+  }
+	else if (nullptr != _next) {
+		return_value = _next->getValueAs(idx-1, trg_buf);
+	}
+
+  return return_value;
 }
 
 
@@ -68,7 +144,7 @@ void Argument::wipe() {
 *   over a wire.
 * This is the point at which we will have to translate any pointer types into something concrete.
 *
-* Returns DIG_MSG_ERROR_NO_ERROR (0) on success.
+* Returns 0 (0) on success.
 */
 int8_t Argument::serialize(StringBuilder *out) {
 	if (out == NULL) return -1;
@@ -141,13 +217,13 @@ int8_t Argument::serialize(StringBuilder *out) {
 	  case SYS_EVENTRECEIVER_FM:  // Host can't use our internal system services.
 	  case SYS_MANUVR_XPORT_FM:   // Host can't use our internal system services.
 	  default:
-	    return DIG_MSG_ERROR_INVALID_TYPE;
+	    return -2;
 	}
 
 	*(scratchpad + 0) = type_code;
 	*(scratchpad + 1) = arg_bin_len;
 	out->concat(scratchpad, (arg_bin_len+2));
-	return DIG_MSG_ERROR_NO_ERROR;
+	return 0;
 }
 
 
@@ -157,7 +233,7 @@ int8_t Argument::serialize(StringBuilder *out) {
 *   because we are relying on the parser at the other side to know what the type is.
 * We still have to translate any pointer types into something concrete.
 *
-* Returns DIG_MSG_ERROR_NO_ERROR (0) on success. Also updates the length of data in the offset argument.
+* Returns 0 on success. Also updates the length of data in the offset argument.
 *
 */
 int8_t Argument::serialize_raw(StringBuilder *out) {
@@ -215,8 +291,8 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
 	  case SYS_EVENTRECEIVER_FM:  // Host can't use our internal system services.
 	  case SYS_MANUVR_XPORT_FM:   // Host can't use our internal system services.
 	  default:
-	    return DIG_MSG_ERROR_INVALID_TYPE;
+	    return -2;
 	}
 
-	return DIG_MSG_ERROR_NO_ERROR;
+	return 0;
 }
