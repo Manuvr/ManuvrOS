@@ -228,9 +228,12 @@ void EventReceiver::printDebug(StringBuilder *output) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t EventReceiver::bootComplete() {
-  __kernel = Kernel::getInstance();
-  _mark_boot_complete();
-  return 1;
+  if (!booted()) {
+    __kernel = Kernel::getInstance();
+    _mark_boot_complete();
+    return 1;
+  }
+  return 0;
 }
 
 

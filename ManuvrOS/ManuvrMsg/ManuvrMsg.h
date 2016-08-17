@@ -189,15 +189,15 @@ class Argument {
 
 
   protected:
+    uint16_t len;         // This is sometimes not used. It is for data types that are not fixed-length.
+    uint8_t  _flags;
+    uint8_t  type_code;
+
     Argument(void* ptr, int len, uint8_t code);  // Protected constructor to which we delegate.
 
 
 
   private:
-    uint16_t len;         // This is sometimes not used. It is for data types that are not fixed-length.
-    uint8_t  _flags;
-    uint8_t  type_code;
-
     /* Inlines for altering and reading the flags. */
     inline void _alter_flags(bool en, uint8_t mask) {
       _flags = (en) ? (_flags | mask) : (_flags & ~mask);

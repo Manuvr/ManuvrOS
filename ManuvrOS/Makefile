@@ -18,6 +18,7 @@ LIBS =  -lm
 # Datastructures
 CPP_SRCS   = DataStructures/StringBuilder.cpp
 CPP_SRCS  += DataStructures/BufferPipe.cpp
+CPP_SRCS  += DataStructures/ManuvrOptions.cpp
 CPP_SRCS  += DataStructures/Quaternion.cpp
 CPP_SRCS  += DataStructures/InertialMeasurement.cpp
 

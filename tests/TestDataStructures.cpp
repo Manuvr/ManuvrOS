@@ -89,15 +89,49 @@ int test_PriorityQueue(void) {
   return 0;
 }
 
+
+int test_Arguments() {
+  return 0;
+}
+
+int test_ManuvrOpts() {
+  return 0;
+}
+
+int test_ManuvrOpts() {
+  return 0;
+}
+
+
+void printTestFailure(const char* test) {
+  printf("\n");
+  printf("*********************************************\n");
+  printf("* %s FAILED tests.\n", test);
+  printf("*********************************************\n");
+}
+
 /****************************************************************************************************
 * The main function.                                                                                *
 ****************************************************************************************************/
 int main(int argc, char *argv[]) {
-  printf("\n");
+  int exit_value = 1;   // Failure is the default result.
 
-  test_PriorityQueue();
-  test_StringBuilder();
-  vector3_float_test(0.7f, 0.8f, 0.01f);
+  if (0 == test_StringBuilder()) {
+    if (0 == test_PriorityQueue()) {
+      if (0 == vector3_float_test(0.7f, 0.8f, 0.01f)) {
+        if (0 == test_BufferPipe()) {
+          if (0 == test_Arguments()) {
+            exit_value = 0;
+          }
+          else printTestFailure("Argument");
+        }
+        else printTestFailure("BufferPipe");
+      }
+      else printTestFailure("Vector3");
+    }
+    else printTestFailure("PriorityQueue");
+  }
+  else printTestFailure("StringBuilder");
 
-  return 0;
+  exit exit_value;
 }

@@ -603,10 +603,12 @@ void ManuvrMsg::printDebug(StringBuilder *temp) {
       working_arg = args.get(i);
       temp->concatf("\t\t %d\t%s\t%s ", i, getArgTypeString(i), (working_arg->reapValue() ? "(reap)" : "\t"));
       uint8_t* buf = (uint8_t*) working_arg->target_mem;
+
       uint16_t l_ender = (working_arg->length() < 16 ? working_arg->length() : 16);
-      for (uint8_t n = 0; n < l_ender; n++) {
-        temp->concatf("0x%02x ", (uint8_t) *(buf + n));
+      for (int n = 0; n < l_ender; n++) {
+        temp->concatf("%02x ", (uint8_t) *(buf + n));
       }
+
       temp->concat("\n");
     }
   }
