@@ -70,6 +70,7 @@ Main demo application.
 
 #include <Platform/Cryptographic.h>
 
+#include "cbor-cpp/include/cbor.h"
 
 /*******************************************************************************
 * Globals and defines that make our life easier.                               *
@@ -200,6 +201,35 @@ int main(int argc, char *argv[]) {
         exit(1);
       #endif
     }
+    if (strcasestr(argv[i], "--cbor")) {
+      // Debug. Testing CBOR...
+      cbor::output_dynamic output;
+      { //encoding
+        cbor::encoder encoder(output);
+        encoder.write_array(5);
+        {
+            encoder.write_int(123);
+            encoder.write_string("bar");
+            encoder.write_int(321);
+            encoder.write_int(321);
+            encoder.write_string("foo");
+        }
+      }
+      printf("CBOR encoding occupies %d bytes\n\t", output.size());
+      uint8_t* buf = output.data();
+      for (unsigned int i = 0; i < output.size(); i++) {
+        printf("0x%02x ", *(buf + i));
+      }
+
+      { // decoding
+        cbor::input input(output.data(), output.size());
+        cbor::listener_debug listener;
+        cbor::decoder decoder(input, listener);
+        decoder.run();
+      }
+      printf("\nCBOR test concluded.\n");
+      exit(0);
+    }
     if ((strcasestr(argv[i], "--quit")) || ((argv[i][0] == '-') && (argv[i][1] == 'q'))) {
       // Execute up-to-and-including boot. Then immediately shutdown.
       // This is how you can stack post-boot-operations into the kernel.
@@ -288,7 +318,7 @@ int main(int argc, char *argv[]) {
   while (0 < kernel->procIdleFlags()) {
     /**
     * TODO: Concentrate this operation into Kernel::bootstrap()? I have bad
-    *         memories of thiat for some reason....
+    *         memories of that for some reason....
     * This is not strictly required, but helps ensure a known-state
     */
   }
@@ -323,12 +353,5 @@ int main(int argc, char *argv[]) {
       setPin(14, pin_14_state);
       pin_14_state = !pin_14_state;
     #endif
-
-    if (0 == events_procd) {
-      // This is a resource-saver. How this is handled on a particular platform
-      //   is still out-of-scope. Since we are in a threaded environment, we can
-      //   sleep. Other systems might use ISR hooks or RTC notifications.
-      sleep_millis(20);
-    }
   }
 }

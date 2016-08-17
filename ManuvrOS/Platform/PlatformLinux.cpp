@@ -480,6 +480,17 @@ volatile void reboot() {
 /****************************************************************************************************
 * Platform initialization.                                                                          *
 ****************************************************************************************************/
+void ManuvrPlatform::idleHook() {
+  if (nullptr != _idle_hook) _idle_hook();
+  else printf("No idle_hook member\n");
+}
+
+void ManuvrPlatform::setIdleHook(FunctionPointer nu) {
+  _idle_hook = nu;
+  nu();
+  _idle_hook();
+}
+
 
 /*
 * Init that needs to happen prior to kernel bootstrap().
@@ -487,6 +498,7 @@ volatile void reboot() {
 */
 void platformPreInit() {
   __kernel = (volatile Kernel*) Kernel::getInstance();
+  platform.setIdleHook([]{ sleep_millis(20); });
   gpioSetup();
 }
 

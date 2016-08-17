@@ -55,6 +55,59 @@ This file is meant to contain a set of common functions that are typically platf
 
 class ManuvrRunnable;
 
+#define MANUVR_PLAT_FLAG_BOOT_STAGE_MASK  0x00000007
+#define MANUVR_PLAT_FLAG_HAS_CRYPTO       0x10000000
+#define MANUVR_PLAT_FLAG_INNATE_DATETIME  0x20000000
+#define MANUVR_PLAT_FLAG_HAS_THREADS      0x40000000
+#define MANUVR_PLAT_FLAG_HAS_STORAGE      0x80000000
+
+
+/**
+* This class should form the single reference via which all platform-specific
+*   functions and features are accessed. This will allow us a more natural
+*   means of extension to other platforms while retaining some linguistic
+*   checks and validations.
+*/
+class ManuvrPlatform {
+  public:
+    inline bool hasCryptography() { return _check_flags(MANUVR_PLAT_FLAG_HAS_CRYPTO);  };
+    inline bool hasTimeAndData() {  return _check_flags(MANUVR_PLAT_FLAG_INNATE_DATETIME); };
+    inline bool hasThreads() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_THREADS); };
+    inline bool hasStorage() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_STORAGE); };
+
+    /* These are bootstrap checkpoints. */
+    inline void booted(bool en) { _alter_flags(en, MANUVR_PLAT_FLAG_BOOT_STAGE_MASK);  };
+    inline bool booted() { return _check_flags(MANUVR_PLAT_FLAG_BOOT_STAGE_MASK == bootStage());  };
+
+    inline uint8_t bootStage() {
+      return ((uint8_t) _pflags & MANUVR_PLAT_FLAG_BOOT_STAGE_MASK);
+    };
+
+    /* These are safe function proxies for external callers. */
+    //inline void idleHook() { if (_idle_hook) _idle_hook(); };
+    void idleHook();
+
+    void setIdleHook(FunctionPointer nu);
+
+    void printDebug(StringBuilder* out);
+
+
+  protected:
+
+  private:
+    uint32_t _pflags           = 0;
+    FunctionPointer _idle_hook = nullptr;
+
+    /* Inlines for altering and reading the flags. */
+    inline void _alter_flags(bool en, uint32_t mask) {
+      _pflags = (en) ? (_pflags | mask) : (_pflags & ~mask);
+    };
+    inline bool _check_flags(uint32_t mask) {
+      return (_pflags == (_pflags & mask));
+    };
+};
+
+extern ManuvrPlatform platform;
 
 #if defined (ARDUINO)
   #include <Arduino.h>
@@ -84,7 +137,7 @@ class ManuvrRunnable;
     unsigned long micros();
   }
 #else
-  // We adopt Arduino GPIO access conventions.
+  // We adopt and extend Arduino GPIO access conventions.
   #define HIGH         1
   #define LOW          0
 

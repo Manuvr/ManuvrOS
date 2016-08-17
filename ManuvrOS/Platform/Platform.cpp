@@ -29,9 +29,10 @@ This file is meant to contain a set of common functions that are typically platf
 #include "Platform.h"
 #include <Kernel.h>
 
+
+ManuvrPlatform platform;
+
 extern "C" {
-
-
 
 /****************************************************************************************************
 * Functions that convert from #define codes to something readable by a human...                     *
@@ -142,6 +143,9 @@ void sleep_millis(unsigned long millis) {
 }
 
 
+void ManuvrPlatform::printDebug(StringBuilder* out) {
+  out->concatf("Pratform:  0x%08x \t %p\n", _idle_hook, this);
+}
 
 
 // TODO: I know this is horrid. I'm sick of screwing with the build system today...

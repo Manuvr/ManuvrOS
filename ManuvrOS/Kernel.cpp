@@ -149,6 +149,8 @@ Kernel::Kernel() : EventReceiver() {
   _ms_elapsed          = 0;
 
   _skips_observed      = 0;
+  max_idle_count       = 100;
+  consequtive_idles    = max_idle_count;
 
   for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
     /* We carved out a space in our allocation for a pool of events. Ideally, this would be enough
@@ -823,21 +825,39 @@ int8_t Kernel::procIdleFlags() {
   }
 
   total_loops++;
+  current_event = nullptr;
   profiler_mark_3 = micros();
+  flushLocalLog();
+
   uint32_t runtime_this_loop = max((uint32_t) profiler_mark_3, (uint32_t) profiler_mark) - min((uint32_t) profiler_mark_3, (uint32_t) profiler_mark);
   if (return_value > 0) {
+    // We ran at-least one Runnable.
     micros_occupied += runtime_this_loop;
+    consequtive_idles = max_idle_count;  // Reset the idle loop down-counter.
     max_events_p_loop = max((uint32_t) max_events_p_loop, 0x0000007F & (uint32_t) return_value);
   }
   else if (0 == return_value) {
+    // We did nothing this time.
     max_idle_loop_time = max((uint32_t) max_idle_loop_time, (max((uint32_t) profiler_mark, (uint32_t) profiler_mark_3) - min((uint32_t) profiler_mark, (uint32_t) profiler_mark_3)));
+    switch (consequtive_idles) {
+      case 0:
+        // If we have reached our threshold for idleness, we invoke the plaform
+        //   idle hook. Note that this will be invoked on EVERY LOOP until a new
+        //   Runnable causes action.
+        platform.idleHook();
+        break;
+      case 1:
+        if (getVerbosity() > 5) Kernel::log("Kernel idle.\n");
+        // TODO: This would be the place to implement a CPU freq scaler.
+        // NOTE: No break. Still need to decrement the idle counter.
+      default:
+        consequtive_idles--;
+        break;
+    }
   }
   else {
     // there was a problem. Do nothing.
   }
-
-  flushLocalLog();
-  current_event = nullptr;
   return return_value;
 }
 
@@ -968,6 +988,7 @@ void Kernel::printProfiler(StringBuilder* output) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void Kernel::printPlatformInfo(StringBuilder* output) {
+  platform.printDebug(output);
   output->concatf("-- Hardware version:   %s\n", HW_VERSION_STRING);
   output->concatf("-- Timer resolution:   %d ms\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
   output->concatf("-- Entropy pool size:  %u bytes\n", PLATFORM_RNG_CARRY_CAPACITY * 4);
@@ -1146,8 +1167,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
           // If the event came with a StringBuilder, concat it onto the last_user_input.
           StringBuilder* _tmp = nullptr;
           if (0 == active_runnable->getArgAs(&_tmp)) {
-            last_user_input.concatHandoff(_tmp);
-            _route_console_input();
+            _route_console_input(_tmp);
           }
         }
         return_value++;
@@ -1422,11 +1442,10 @@ int Kernel::serviceSchedules() {
 * Responsible for taking any accumulated console input, doing some basic
 *   error-checking, and routing it to its intended target.
 */
-int8_t Kernel::_route_console_input() {
-  last_user_input.string();
-  StringBuilder _raw_from_console;
+int8_t Kernel::_route_console_input(StringBuilder* last_user_input) {
+  StringBuilder _raw_from_console;  // We do this to avoid leaks.
   // Now we take the data from the buffer so that further input isn't lost. JIC.
-  _raw_from_console.concatHandoff(&last_user_input);
+  _raw_from_console.concatHandoff(last_user_input);
 
   _raw_from_console.split(" ");
   if (_raw_from_console.count() > 0) {
@@ -1551,6 +1570,6 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
   }
 
   flushLocalLog();
-  last_user_input.clear();
+  input->clear();
 }
 #endif  //__MANUVR_CONSOLE_SUPPORT

@@ -629,6 +629,7 @@ volatile void reboot() {
 */
 void platformPreInit() {
   __kernel = (volatile Kernel*) Kernel::getInstance();
+  platform.setIdleHook([]{ sleep_millis(20); });
   gpioSetup();
 }
 

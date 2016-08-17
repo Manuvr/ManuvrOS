@@ -223,8 +223,6 @@ limitations under the License.
       std::map<uint16_t, PriorityQueue<listenerFxnPtr>*> ca_listeners;  // Call-ahead listeners.
       std::map<uint16_t, PriorityQueue<listenerFxnPtr>*> cb_listeners;  // Call-back listeners.
 
-      StringBuilder last_user_input;
-
       uint32_t _ms_elapsed;           // How much time has passed since we serviced our schedules?
 
       // Profiling and logging variables...
@@ -234,6 +232,9 @@ limitations under the License.
       uint32_t total_loops;           // How many times have we looped?
       uint32_t total_events;          // How many events have we proc'd?
       uint32_t total_events_dead;     // How many events have we proc'd that went unacknowledged?
+      uint32_t idle_loops;            // How many idle loops have we run?
+      uint16_t consequtive_idles;     // How many consecutive idle loops?
+      uint16_t max_idle_count;        // How many consecutive idle loops before we act?
 
       uint32_t events_destroyed;      // How many events have we destroyed?
       uint32_t prealloc_starved;      // How many times did we starve the prealloc queue?
@@ -260,7 +261,7 @@ limitations under the License.
       inline void update_maximum_queue_depth() {   max_queue_depth = (exec_queue.size() > (int) max_queue_depth) ? exec_queue.size() : max_queue_depth;   };
 
       #if defined(__MANUVR_CONSOLE_SUPPORT)
-      int8_t _route_console_input();
+      int8_t _route_console_input(StringBuilder*);
       #endif
 
       /*  */
