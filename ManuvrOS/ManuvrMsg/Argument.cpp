@@ -84,27 +84,40 @@ void Argument::wipe() {
 * @param  trg_buf  A pointer to the place where we should write the result.
 * @return 0 on success or appropriate failure code.
 */
-int8_t Argument::getValueAs(uint8_t idx, void *trg_buf) {
-  int8_t return_value = -1;
-
+int8_t Argument::getValueAs(uint8_t idx, void* trg_buf) {
+	int8_t return_value = -1;
   if (0 < idx) {
-    switch (arg->typeCode()) {
+		if (nullptr != _next) {
+			return_value = _next->getValueAs(--idx, trg_buf);
+		}
+	}
+	else {
+		return_value = getValueAs(trg_buf);
+	}
+	return return_value;
+}
+
+
+int8_t Argument::getValueAs(void* trg_buf) {
+  int8_t return_value = -1;
+  if (nullptr != pointer()) {
+    switch (typeCode()) {
       case INT8_FM:    // This frightens the compiler. Its fears are unfounded.
       case UINT8_FM:   // This frightens the compiler. Its fears are unfounded.
         return_value = 0;
-        *((uint8_t*) trg_buf) = *((uint8_t*)&arg->target_mem);
+        *((uint8_t*) trg_buf) = *((uint8_t*)&target_mem);
         break;
       case INT16_FM:    // This frightens the compiler. Its fears are unfounded.
       case UINT16_FM:   // This frightens the compiler. Its fears are unfounded.
         return_value = 0;
-        *((uint16_t*) trg_buf) = *((uint16_t*)&arg->target_mem);
+        *((uint16_t*) trg_buf) = *((uint16_t*)&target_mem);
         break;
       case INT32_FM:    // This frightens the compiler. Its fears are unfounded.
       case UINT32_FM:   // This frightens the compiler. Its fears are unfounded.
       case FLOAT_FM:    // This frightens the compiler. Its fears are unfounded.
         return_value = 0;
-        *((uint32_t*) trg_buf) = *((uint32_t*)&arg->target_mem);
-
+        *((uint32_t*) trg_buf) = *((uint32_t*)&target_mem);
+        break;
       case UINT32_PTR_FM:  // These are *pointers* to the indicated types. They
       case UINT16_PTR_FM:  //   therefore take the whole 4 bytes of memory allocated
       case UINT8_PTR_FM:   //   and can be returned as such.
@@ -124,17 +137,13 @@ int8_t Argument::getValueAs(uint8_t idx, void *trg_buf) {
       case SYS_EVENTRECEIVER_FM:    // This is a pointer to an EventReceiver.
       case SYS_MANUVR_XPORT_FM:     // This is a pointer to a transport.
         return_value = 0;
-        *((uintptr_t*) trg_buf) = *((uintptr_t*)&arg->target_mem);
+        *((uintptr_t*) trg_buf) = *((uintptr_t*)&target_mem);
         break;
       default:
         return_value = -2;
         break;
     }
   }
-	else if (nullptr != _next) {
-		return_value = _next->getValueAs(idx-1, trg_buf);
-	}
-
   return return_value;
 }
 
