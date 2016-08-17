@@ -76,7 +76,7 @@ void printEXTIDef(uint8_t _pin, StringBuilder* output) {
   uint16_t pin_idx   = (_pin % 16);
   const char* _msg_name = "<NONE>";
   if (nullptr != __ext_line_bindings[pin_idx].event) {
-    _msg_name = ManuvrMsg::getMsgTypeString(__ext_line_bindings[pin_idx].event->event_code);
+    _msg_name = ManuvrMsg::getMsgTypeString(__ext_line_bindings[pin_idx].event->eventCode());
   }
   output->concatf("\t---< EXTI Def %d >----------\n", pin_idx);
   output->concatf("\tPin         %d\n", __ext_line_bindings[pin_idx].pin);

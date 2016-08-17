@@ -71,6 +71,11 @@ typedef struct msg_defin_t {
 
 
 /*
+* These are flag definitions for Argument.
+*/
+#define ARG_FLAG_REAP_VALUE     0x01      // Should the pointer be freed?
+
+/*
 * These are flag definitions for Message types.
 */
 #define MSG_FLAG_IDEMPOTENT   0x0001      // Indicates that only one of the given message should be enqueue.
@@ -113,10 +118,6 @@ class Argument {
     */
     void*   target_mem;
 
-    uint16_t len;         // This is sometimes not used. It is for data types that are not fixed-length.
-    uint8_t  type_code;
-    bool     reap;
-
     Argument();
     Argument(uint8_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT8_FM)  {};
     Argument(uint16_t val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT16_FM) {};
@@ -140,9 +141,10 @@ class Argument {
     Argument(Vector4f*    val) : Argument((void*) val, 16, VECT_4_FLOAT)  {};
 
     /*
-    * This is a constant character pointer. Do not reap it.
+    * Character pointers.
     */
     Argument(const char* val) : Argument((void*) val, (strlen(val)+1), STR_FM) {};
+    Argument(char* val)       : Argument((void*) val, (strlen(val)+1), STR_FM) {};
 
     /*
     * We typically want references to typeless swaths of memory be left alone at the end of
@@ -163,12 +165,19 @@ class Argument {
     */
     Argument(ManuvrRunnable* val) : Argument((void*) val, sizeof(val), SYS_RUNNABLE_PTR_FM) {};
 
-    // These are reapable.
-    Argument(char* val);
-    Argument(StringBuilder* val);
+    // TODO: This default behavior changed. Audit usage by commenting addArg(StringBuilder)
+    Argument(StringBuilder* val)  : Argument(val, sizeof(val), STR_BUILDER_FM) {};
 
 
     ~Argument();
+
+
+    inline void reapValue(bool en) {  _alter_flags(en, ARG_FLAG_REAP_VALUE);    };
+    inline bool reapValue() {         return _check_flags(ARG_FLAG_REAP_VALUE); };
+
+    inline void*    pointer() {           return target_mem; };
+    inline uint8_t  typeCode() {          return type_code;  };
+    inline uint16_t length() {            return len;        };
 
     int8_t serialize(StringBuilder*);
     int8_t serialize_raw(StringBuilder*);
@@ -177,10 +186,25 @@ class Argument {
     static char*    printBinStringToBuffer(unsigned char *str, int len, char *buffer);
 
 
+
   protected:
     Argument(void* ptr, int len, uint8_t code);  // Protected constructor to which we delegate.
 
+
+
   private:
+    uint16_t len;         // This is sometimes not used. It is for data types that are not fixed-length.
+    uint8_t  _flags;
+    uint8_t  type_code;
+
+    /* Inlines for altering and reading the flags. */
+    inline void _alter_flags(bool en, uint8_t mask) {
+      _flags = (en) ? (_flags | mask) : (_flags & ~mask);
+    };
+    inline bool _check_flags(uint8_t mask) {
+      return (_flags == (_flags & mask));
+    };
+
     void wipe();
 };
 
@@ -190,9 +214,6 @@ class Argument {
 */
 class ManuvrMsg {
   public:
-    uint16_t event_code;            // The identity of the event (or command).
-
-
     ManuvrMsg(void);
     ManuvrMsg(uint16_t code);
     virtual ~ManuvrMsg(void);
@@ -206,8 +227,9 @@ class ManuvrMsg {
     *
     * @return the cardinality of the argument list.
     */
-    inline int argCount() {  return args.size();   };
+    inline int      argCount() {   return args.size();   };
 
+    inline uint16_t eventCode() {  return event_code;   };
 
     inline bool isExportable() {
       if (NULL == message_def) message_def = lookupMsgDefByCode(event_code);
@@ -331,11 +353,11 @@ class ManuvrMsg {
     */
     int8_t markArgForReap(int idx, bool reap);
 
-
     void printDebug(StringBuilder *);
 
     const char* getMsgTypeString();
     const char* getArgTypeString(uint8_t idx);
+
 
     static const MessageTypeDef* lookupMsgDefByCode(uint16_t msg_code);
     static const MessageTypeDef* lookupMsgDefByLabel(char* label);
@@ -347,11 +369,10 @@ class ManuvrMsg {
     static int8_t getMsgSemantics(MessageTypeDef*, StringBuilder *output);
     #endif
 
+    // TODO: All of this sucks. there-has-to-be-a-better-way.jpg
     static int8_t registerMessage(MessageTypeDef*);
     static int8_t registerMessage(uint16_t, uint16_t, const char*, const unsigned char*, const char*);
-
     static int8_t registerMessages(const MessageTypeDef[], int len);
-
     static const MessageTypeDef message_defs[];
 
 
@@ -374,14 +395,16 @@ class ManuvrMsg {
     static const unsigned char MSG_ARGS_XPORT[];
 
 
-  protected:
-    const MessageTypeDef*  message_def;             // The definition for the message (once it is associated).
 
+  protected:
     int8_t getArgAs(uint8_t idx, void *dat, bool preserve);
 
 
+
   private:
+    const MessageTypeDef*  message_def;             // The definition for the message (once it is associated).
     LinkedList<Argument*> args;     // The optional list of arguments associated with this event.
+    uint16_t event_code;            // The identity of the event (or command).
 
     void __class_initializer();
 
@@ -390,6 +413,7 @@ class ManuvrMsg {
 
     char* is_valid_argument_buffer(int len);
     int   collect_valid_grammatical_forms(int, LinkedList<char*>*);
+
 
     static PriorityQueue<const MessageTypeDef*> message_defs_extended;  // Where runtime-loaded message defs go.
 };

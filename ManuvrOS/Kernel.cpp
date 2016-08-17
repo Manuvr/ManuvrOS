@@ -512,7 +512,7 @@ ManuvrRunnable* Kernel::returnEvent(uint16_t code) {
 */
 int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
   if (nullptr == event) return -1;                                // No NULL events.
-  if (MANUVR_MSG_UNDEFINED == event->event_code) {
+  if (MANUVR_MSG_UNDEFINED == event->eventCode()) {
     return -2;  // No undefined events.
   }
 
@@ -528,7 +528,7 @@ int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
     for (int i = 0; i < exec_queue.size(); i++) {
       // No duplicate idempotent events allowed...
       working = exec_queue.get(i);
-      if ((working) && (working->event_code == event->event_code)) {
+      if ((working) && (working->eventCode() == event->eventCode())) {
         idempotent_blocks++;
         return -3;
       }
@@ -592,7 +592,7 @@ void Kernel::reclaim_event(ManuvrRunnable* active_runnable) {
 // This is the splice into v2's style of event handling (callaheads).
 int8_t Kernel::procCallAheads(ManuvrRunnable *active_runnable) {
   int8_t return_value = 0;
-  PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[active_runnable->event_code];
+  PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[active_runnable->eventCode()];
   if (nullptr != ca_queue) {
     listenerFxnPtr current_fxn;
     for (int i = 0; i < ca_queue->size(); i++) {
@@ -608,7 +608,7 @@ int8_t Kernel::procCallAheads(ManuvrRunnable *active_runnable) {
 // This is the splice into v2's style of event handling (callbacks).
 int8_t Kernel::procCallBacks(ManuvrRunnable *active_runnable) {
   int8_t return_value = 0;
-  PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[active_runnable->event_code];
+  PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[active_runnable->eventCode()];
   if (nullptr != cb_queue) {
     listenerFxnPtr current_fxn;
     for (int i = 0; i < cb_queue->size(); i++) {
@@ -664,7 +664,7 @@ int8_t Kernel::procIdleFlags() {
   /* As long as we have an open event and we aren't yet at our proc ceiling... */
   while (exec_queue.hasNext() && should_run_another_event(return_value, profiler_mark)) {
     active_runnable = exec_queue.dequeue();       // Grab the Event and remove it in the same call.
-    msg_code_local = active_runnable->event_code;  // This gets used after the life of the event.
+    msg_code_local = active_runnable->eventCode();  // This gets used after the life of the event.
 
     current_event = active_runnable;
 
@@ -912,20 +912,23 @@ float Kernel::cpu_usage() {
 * @param   StringBuilder*  The buffer that this fxn will write output into.
 */
 void Kernel::print_type_sizes(StringBuilder* output) {
-  output->concat("---< Type sizes >-----------------------------\nElemental data structures:\n");
-  output->concatf("\t StringBuilder         %u\n", (unsigned long) sizeof(StringBuilder));
-  output->concatf("\t BufferPipe            %u\n", (unsigned long) sizeof(BufferPipe));
-  output->concatf("\t LinkedList<void*>     %u\n", (unsigned long) sizeof(LinkedList<void*>));
-  output->concatf("\t PriorityQueue<void*>  %u\n", (unsigned long) sizeof(PriorityQueue<void*>));
+  output->concat("---< Type sizes >-----------------------------\n-- Elemental data structures:\n");
+  output->concatf("\tStringBuilder         %u\n", (unsigned long) sizeof(StringBuilder));
+  output->concatf("\tBufferPipe            %u\n", (unsigned long) sizeof(BufferPipe));
+  output->concatf("\tLinkedList<void*>     %u\n", (unsigned long) sizeof(LinkedList<void*>));
+  output->concatf("\tPriorityQueue<void*>  %u\n", (unsigned long) sizeof(PriorityQueue<void*>));
+  output->concatf("\tTaskProfilerData      %u\n", (unsigned long) sizeof(TaskProfilerData));
+  //output->concatf("--\tSensorWrapper         %u\n", (unsigned long) sizeof(SensorWrapper));
 
-  output->concat(" Core singletons:\n");
-  output->concatf("\t Kernel                %u\n", (unsigned long) sizeof(Kernel));
+  output->concat("-- Core singletons:\n");
+  output->concatf("\tManuvrPlatform        %u\n", (unsigned long) sizeof(ManuvrPlatform));
+  output->concatf("\tKernel                %u\n", (unsigned long) sizeof(Kernel));
 
-  output->concat(" Messaging components:\n");
-  output->concatf("\t ManuvrRunnable        %u\n", (unsigned long) sizeof(ManuvrRunnable));
-  output->concatf("\t ManuvrMsg             %u\n", (unsigned long) sizeof(ManuvrMsg));
-  output->concatf("\t Argument              %u\n", (unsigned long) sizeof(Argument));
-  output->concatf("\t TaskProfilerData      %u\n", (unsigned long) sizeof(TaskProfilerData));
+  output->concat("-- Messaging components:\n");
+  output->concatf("\tEventReceiver         %u\n", (unsigned long) sizeof(EventReceiver));
+  output->concatf("\tArgument              %u\n", (unsigned long) sizeof(Argument));
+  output->concatf("\tManuvrMsg             %u\n", (unsigned long) sizeof(ManuvrMsg));
+  output->concatf("\tManuvrRunnable        %u\n", (unsigned long) sizeof(ManuvrRunnable));
 }
 #endif
 
@@ -1130,7 +1133,7 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
-  switch (event->event_code) {
+  switch (event->eventCode()) {
     case MANUVR_MSG_SYS_BOOT_COMPLETED:
       if (getVerbosity() > 4) Kernel::log("Boot complete.\n");
       if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
@@ -1160,7 +1163,7 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
 int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
   int8_t return_value = 0;
 
-  switch (active_runnable->event_code) {
+  switch (active_runnable->eventCode()) {
     #if defined(__MANUVR_CONSOLE_SUPPORT)
       case MANUVR_MSG_USER_DEBUG_INPUT:
         if (active_runnable->argCount()) {
@@ -1203,7 +1206,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
       if (0 < active_runnable->argCount()) {
         EventReceiver* er_ptr;
         if (0 == active_runnable->getArgAs(&er_ptr)) {
-          if (MANUVR_MSG_SYS_ADVERTISE_SRVC == active_runnable->event_code) {
+          if (MANUVR_MSG_SYS_ADVERTISE_SRVC == active_runnable->eventCode()) {
             subscribe((EventReceiver*) er_ptr);
             if (booted()) {
               er_ptr->bootComplete();

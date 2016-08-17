@@ -350,7 +350,7 @@ void ManuvrXport::printDebug(StringBuilder *temp) {
 int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
 
-  switch (active_event->event_code) {
+  switch (active_event->eventCode()) {
     case MANUVR_MSG_XPORT_SEND:
       if (connected()) {
         StringBuilder* temp_sb;

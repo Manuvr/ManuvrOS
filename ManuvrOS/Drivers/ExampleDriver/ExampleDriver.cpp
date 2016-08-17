@@ -102,7 +102,7 @@ int8_t ExampleDriver::callback_proc(ManuvrRunnable *event) {
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
-  switch (event->event_code) {
+  switch (event->eventCode()) {
     default:
       break;
   }
@@ -115,7 +115,7 @@ int8_t ExampleDriver::callback_proc(ManuvrRunnable *event) {
 int8_t ExampleDriver::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
 
-  switch (active_event->event_code) {
+  switch (active_event->eventCode()) {
     default:
       return_value += EventReceiver::notify(active_event);
       break;

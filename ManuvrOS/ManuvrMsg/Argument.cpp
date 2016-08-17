@@ -45,36 +45,20 @@ Argument::Argument(void* ptr, int l, uint8_t code) : Argument() {
 	target_mem = ptr;
 }
 
-/*
-* This is a character pointer. Reap.
-*/
-Argument::Argument(char* val) : Argument(val, (strlen(val)+1), STR_FM) {
-	reap = true;
-}
-
-/*
-* This constructor produces reapable Arguments.
-* We typically want StringBuilder references to be reaped at the end of
-*   the Argument's life cycle. We will specify otherwise when appropriate.
-*/
-Argument::Argument(StringBuilder* val) : Argument(val, sizeof(val), STR_BUILDER_FM) {
-	reap = true;
-}
-
 
 
 Argument::~Argument() {
-	if (reap && (NULL == target_mem)) {
-		free(target_mem);
+	if (reapValue() && (NULL == target_mem)) {
+		free(target_mem);   // TODO: This is not good. 
 		target_mem = NULL;
 	}
 }
 
 
 void Argument::wipe() {
-	type_code = NOTYPE_FM;
-	len = 0;
-	reap = false;
+	type_code  = NOTYPE_FM;
+	len        = 0;
+	_flags     = 0;
 	target_mem = NULL;
 }
 

@@ -344,9 +344,8 @@ int main(int argc, char *argv[]) {
 
   // The main loop. Run forever, as a microcontroller would.
   // Program exit is handled in Platform.
-  int events_procd = 0;
   while (1) {
-    events_procd = kernel->procIdleFlags();
+    kernel->procIdleFlags();
     #if defined(RASPI) || defined(RASPI2)
       // Combined with the sleep below, this will give a
       // visual indication of kernel activity.

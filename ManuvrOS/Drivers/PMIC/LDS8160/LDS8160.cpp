@@ -246,7 +246,7 @@ int8_t LDS8160::callback_proc(ManuvrRunnable *event) {
   int8_t return_value = event->KernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
-  switch (event->event_code) {
+  switch (event->eventCode()) {
     default:
       break;
   }
@@ -259,7 +259,7 @@ int8_t LDS8160::callback_proc(ManuvrRunnable *event) {
 int8_t LDS8160::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
 
-  switch (active_event->event_code) {
+  switch (active_event->eventCode()) {
 
     case MANUVR_MSG_SYS_POWER_MODE:
       if (active_event->argCount() == 1) {
@@ -423,7 +423,7 @@ int8_t LDS8160::notify(ManuvrRunnable *active_event) {
             uint8_t old_val = regValue(LDS8160_CHANNEL_ENABLE);
             uint8_t new_val = old_val;
             uint8_t chan;
-            bool en = (active_event->event_code == DIGITABULUM_MSG_LED_DIGIT_ON);
+            bool en = (active_event->eventCode() == DIGITABULUM_MSG_LED_DIGIT_ON);
             for (uint8_t i = 0; i < active_event->argCount(); i++) {
               active_event->getArgAs(i, &chan);
               new_val = en ? ((1 << chan) | new_val) : (((uint8_t) ~(1 << chan)) & new_val);

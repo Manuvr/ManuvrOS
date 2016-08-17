@@ -213,7 +213,7 @@ void XenoManuvrMessage::wipe() {
 void XenoManuvrMessage::provideEvent(ManuvrRunnable *existing_event, uint16_t manual_id) {
   XenoMessage::provideEvent(existing_event);
   unique_id = manual_id;
-  message_code = event->event_code;                //
+  message_code = event->eventCode();                //
 }
 
 
@@ -280,8 +280,8 @@ int XenoManuvrMessage::serialize(StringBuilder* buffer) {
 
     *(prepend_array + 4) = (uint8_t) (unique_id & 0xFF);
     *(prepend_array + 5) = (uint8_t) (unique_id >> 8);
-    *(prepend_array + 6) = (uint8_t) (event->event_code & 0xFF);
-    *(prepend_array + 7) = (uint8_t) (event->event_code >> 8);
+    *(prepend_array + 6) = (uint8_t) (event->eventCode() & 0xFF);
+    *(prepend_array + 7) = (uint8_t) (event->eventCode() >> 8);
 
     // Calculate and append checksum.
     uint8_t checksum_temp = CHECKSUM_PRELOAD_BYTE;
@@ -419,7 +419,7 @@ int XenoManuvrMessage::accumulate(unsigned char* buf, int buf_len){
 
       event = Kernel::returnEvent(message_code);
 
-      if (event->event_code) {
+      if (event->eventCode()) {
         proc_state = XENO_MSG_PROC_STATE_AWAITING_PROC;
         // The event code was found. Do something about it.
         if (temp_len > 0) {
@@ -468,7 +468,7 @@ int XenoManuvrMessage::accumulate(unsigned char* buf, int buf_len){
 */
 bool XenoManuvrMessage::isReply() {
   if (NULL == event) return false;
-  switch (event->event_code) {
+  switch (event->eventCode()) {
     case MANUVR_MSG_REPLY:
     case MANUVR_MSG_REPLY_RETRY:
     case MANUVR_MSG_REPLY_FAIL:

@@ -435,7 +435,7 @@ int8_t AudioRouter::callback_proc(ManuvrEvent *event) {
   int8_t return_value = event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
-  switch (event->event_code) {
+  switch (event->eventCode()) {
     default:
       break;
   }
@@ -451,7 +451,7 @@ int8_t AudioRouter::notify(ManuvrEvent *active_event) {
   StringBuilder *temp_sb;
 
 
-  switch (active_event->event_code) {
+  switch (active_event->eventCode()) {
     case VIAM_SONUS_MSG_DUMP_ROUTER:
       printDebug(&local_log);
       break;
@@ -460,7 +460,7 @@ int8_t AudioRouter::notify(ManuvrEvent *active_event) {
     case VIAM_SONUS_MSG_NAME_OUTPUT_CHAN:
       if (0 == active_event->consumeArgAs(&temp_uint8_0)) {
         if (0 == active_event->getArgAs(&temp_sb)) {
-          int result = (VIAM_SONUS_MSG_NAME_OUTPUT_CHAN == active_event->event_code) ? nameOutput(temp_uint8_0, (char*) temp_sb->string()) : nameInput(temp_uint8_0, (char*) temp_sb->string());
+          int result = (VIAM_SONUS_MSG_NAME_OUTPUT_CHAN == active_event->eventCode()) ? nameOutput(temp_uint8_0, (char*) temp_sb->string()) : nameInput(temp_uint8_0, (char*) temp_sb->string());
           if (AUDIO_ROUTER_ERROR_NO_ERROR != result) {
             local_log.concat("Failed to set channel name.\n");
           }

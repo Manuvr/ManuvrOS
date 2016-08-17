@@ -737,7 +737,7 @@ int8_t MGC3130::callback_proc(ManuvrRunnable *event) {
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
-  switch (event->event_code) {
+  switch (event->eventCode()) {
     case MANUVR_MSG_SENSOR_MGC3130:
       break;
     default:
@@ -752,7 +752,7 @@ int8_t MGC3130::callback_proc(ManuvrRunnable *event) {
 int8_t MGC3130::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
 
-  switch (active_event->event_code) {
+  switch (active_event->eventCode()) {
     case MANUVR_MSG_SYS_POWER_MODE:
       if (active_event->argCount() == 1) {
         uint8_t nu_power_mode;

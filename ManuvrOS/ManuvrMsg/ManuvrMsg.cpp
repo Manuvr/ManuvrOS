@@ -174,7 +174,7 @@ int8_t ManuvrMsg::repurpose(uint16_t code) {
 int ManuvrMsg::argByteCount() {
   int return_value = 0;
   for (int i = 0; i < args.size(); i++) {
-    return_value += args.get(i)->len;
+    return_value += args.get(i)->length();
   }
   return return_value;
 }
@@ -262,32 +262,32 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
         nu_arg = new Argument(new Vector4f(parseFloatFromchars(buffer + 0), parseFloatFromchars(buffer + 4), parseFloatFromchars(buffer + 8), parseFloatFromchars(buffer + 12)));
         len = len - 16;
         buffer += 16;
-        nu_arg->reap = true;
+        nu_arg->reapValue(true);
         break;
       case VECT_3_FLOAT:
         nu_arg = new Argument(new Vector3f(parseFloatFromchars(buffer + 0), parseFloatFromchars(buffer + 4), parseFloatFromchars(buffer + 8)));
         len = len - 12;
         buffer += 12;
-        nu_arg->reap = true;
+        nu_arg->reapValue(true);
         break;
       case VECT_3_UINT16:
         nu_arg = new Argument(new Vector3ui16(parseUint16Fromchars(buffer + 0), parseUint16Fromchars(buffer + 2), parseUint16Fromchars(buffer + 4)));
         len = len - 6;
         buffer += 6;
-        nu_arg->reap = true;
+        nu_arg->reapValue(true);
         break;
       case VECT_3_INT16:
         nu_arg = new Argument(new Vector3i16((int16_t) parseUint16Fromchars(buffer + 0), (int16_t) parseUint16Fromchars(buffer + 2), (int16_t) parseUint16Fromchars(buffer + 4)));
         len = len - 6;
         buffer += 6;
-        nu_arg->reap = true;
+        nu_arg->reapValue(true);
         break;
 
       // Variable-length types...
       case STR_FM:
         nu_arg = new Argument(strdup((const char*) buffer));
-        buffer = buffer + nu_arg->len;
-        len    = len - nu_arg->len;
+        buffer = buffer + nu_arg->length();
+        len    = len - nu_arg->length();
         break;
 
       default:
@@ -319,7 +319,7 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
 */
 int8_t ManuvrMsg::markArgForReap(int idx, bool reap) {
   if (args.size() > idx) {
-    args.get(idx)->reap = reap;
+    args.get(idx)->reapValue(reap);
     return 1;
   }
   return 0;
@@ -344,10 +344,9 @@ int8_t ManuvrMsg::markArgForReap(int idx, bool reap) {
 */
 int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf, bool preserve) {
   int8_t return_value = DIG_MSG_ERROR_INVALID_ARG;
-  Argument* arg = NULL;
-  if (args.size() > idx) {
-    arg = args.get(idx);
-    switch (arg->type_code) {
+  Argument* arg = args.get(idx);
+  if (NULL != arg) {
+    switch (arg->typeCode()) {
       case INT8_FM:    // This frightens the compiler. Its fears are unfounded.
       case UINT8_FM:   // This frightens the compiler. Its fears are unfounded.
         return_value = DIG_MSG_ERROR_NO_ERROR;
@@ -420,10 +419,9 @@ int8_t ManuvrMsg::writePointerArgAs(uint32_t dat) {   return writePointerArgAs(0
 */
 int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
   int8_t return_value = DIG_MSG_ERROR_INVALID_ARG;
-  Argument* arg = NULL;
-  if (args.size() > idx) {
-    arg = args.get(idx);
-    switch (arg->type_code) {
+  Argument* arg = args.get(idx);
+  if (NULL != arg) {
+    switch (arg->typeCode()) {
       case INT8_PTR_FM:
       case INT16_PTR_FM:
       case INT32_PTR_FM:
@@ -474,7 +472,7 @@ int8_t ManuvrMsg::clearArgs() {
 */
 uint8_t ManuvrMsg::getArgumentType(uint8_t idx) {
   if (args.size() > idx) {
-    return args.get(idx)->type_code;
+    return args.get(idx)->typeCode();
   }
   return NOTYPE_FM;
 }
@@ -605,7 +603,7 @@ const MessageTypeDef* ManuvrMsg::lookupMsgDefByLabel(char* label) {
 
 const char* ManuvrMsg::getArgTypeString(uint8_t idx) {
   if (idx < args.size()) {
-    return getTypeCodeString(args.get(idx)->type_code);
+    return getTypeCodeString(args.get(idx)->typeCode());
   }
   return "<INVALID INDEX>";
 }
@@ -634,9 +632,9 @@ void ManuvrMsg::printDebug(StringBuilder *temp) {
     temp->concatf("\t Arguments:      %d\n", ac);
     for (int i = 0; i < ac; i++) {
       working_arg = args.get(i);
-      temp->concatf("\t\t %d\t(%s)\t%s ", i, (working_arg->reap ? "reap" : "no reap"), getArgTypeString(i));
+      temp->concatf("\t\t %d\t%s\t%s ", i, getArgTypeString(i), (working_arg->reapValue() ? "(reap)" : "\t"));
       uint8_t* buf = (uint8_t*) working_arg->target_mem;
-      uint16_t l_ender = (working_arg->len < 16 ? working_arg->len : 16);
+      uint16_t l_ender = (working_arg->length() < 16 ? working_arg->length() : 16);
       for (uint8_t n = 0; n < l_ender; n++) {
         temp->concatf("0x%02x ", (uint8_t) *(buf + n));
       }

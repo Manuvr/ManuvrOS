@@ -92,7 +92,7 @@ int8_t EventReceiver::setVerbosity(int8_t nu_verbosity) {
 */
 int8_t EventReceiver::setVerbosity(ManuvrRunnable* active_event) {
   if (nullptr == active_event) return -1;
-  if (MANUVR_MSG_SYS_LOG_VERBOSITY != active_event->event_code) return -1;
+  if (MANUVR_MSG_SYS_LOG_VERBOSITY != active_event->eventCode()) return -1;
   switch (active_event->argCount()) {
     case 0:
       #ifdef __MANUVR_DEBUG
@@ -254,7 +254,7 @@ int8_t EventReceiver::callback_proc(ManuvrRunnable *event) {
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
-  switch (event->event_code) {
+  switch (event->eventCode()) {
     default:
       break;
   }
@@ -275,7 +275,7 @@ int8_t EventReceiver::callback_proc(ManuvrRunnable *event) {
 * @return the number of actions taken on this event, or -1 on failure.
 */
 int8_t EventReceiver::notify(ManuvrRunnable *active_event) {
-  switch (active_event->event_code) {
+  switch (active_event->eventCode()) {
     case MANUVR_MSG_SYS_RELEASE_CRUFT:   // System is telling us to GC if we can.
       return purgeLogs();
     case MANUVR_MSG_SYS_LOG_VERBOSITY:
