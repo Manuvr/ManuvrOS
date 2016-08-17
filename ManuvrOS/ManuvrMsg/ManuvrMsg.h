@@ -179,6 +179,7 @@ class Argument {
     inline uint8_t  typeCode() {          return type_code;  };
     inline uint16_t length() {            return len;        };
 
+    // TODO: These will be re-worked to support alternate type-systems.
     int8_t serialize(StringBuilder*);
     int8_t serialize_raw(StringBuilder*);
 
@@ -254,7 +255,8 @@ class ManuvrMsg {
     int8_t clearArgs();     // Clear all of the arguments attached to this message, reaping them if necessary.
 
     uint8_t getArgumentType(uint8_t);  // Given a position, return the type code for the Argument.
-    uint8_t getArgumentType();         // Return the type code for Argument 0.
+    inline uint8_t getArgumentType() {   return getArgumentType(0);  };
+
 
     MessageTypeDef* getMsgDef();
 
@@ -299,52 +301,42 @@ class ManuvrMsg {
     * Returns an error code if the types don't match.
     */
     // These accessors treat the (void*) as 4 bytes of data storage.
-    inline int8_t consumeArgAs(int8_t *trg_buf) {       return getArgAs(0, (void*) trg_buf, false);  }
-    inline int8_t consumeArgAs(uint8_t *trg_buf) {      return getArgAs(0, (void*) trg_buf, false);  }
-    inline int8_t consumeArgAs(int16_t *trg_buf) {      return getArgAs(0, (void*) trg_buf, false);  }
-    inline int8_t consumeArgAs(uint16_t *trg_buf) {     return getArgAs(0, (void*) trg_buf, false);  }
-    inline int8_t consumeArgAs(int32_t *trg_buf) {      return getArgAs(0, (void*) trg_buf, false);  }
-    inline int8_t consumeArgAs(uint32_t *trg_buf) {     return getArgAs(0, (void*) trg_buf, false);  }
-    inline int8_t consumeArgAs(float *trg_buf) {        return getArgAs(0, (void*) trg_buf, false);  }
-    inline int8_t consumeArgAs(ManuvrRunnable **trg_buf) {  return getArgAs(0, (void*) trg_buf, false);  }
-    inline int8_t consumeArgAs(StringBuilder **trg_buf) {   return getArgAs(0, (void*) trg_buf, false);  }
+    inline int8_t getArgAs(int8_t *trg_buf) {     return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t *trg_buf) {    return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(int16_t *trg_buf) {    return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint16_t *trg_buf) {   return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(int32_t *trg_buf) {    return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint32_t *trg_buf) {   return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(float *trg_buf) {      return getArgAs(0, (void*) trg_buf);  }
 
-    inline int8_t getArgAs(int8_t *trg_buf) {           return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t *trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(int16_t *trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint16_t *trg_buf) {         return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(int32_t *trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint32_t *trg_buf) {         return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(float *trg_buf) {            return getArgAs(0, (void*) trg_buf, true);  }
-
-    inline int8_t getArgAs(uint8_t idx, uint8_t  *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, uint16_t *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, uint32_t *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, int8_t   *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, int16_t  *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, int32_t  *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, float  *trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, uint8_t  *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, uint16_t *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, uint32_t *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, int8_t   *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, int16_t  *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, int32_t  *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, float  *trg_buf) {            return getArgAs(idx, (void*) trg_buf);  }
 
     // These accessors treat the (void*) as a pointer. These functions are essentially type-casts.
-    inline int8_t getArgAs(Vector3f **trg_buf) {                 return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(Vector3ui16 **trg_buf) {              return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(Vector3i16 **trg_buf) {               return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(const char **trg_buf) {               return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(StringBuilder **trg_buf) {            return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(BufferPipe **trg_buf) {               return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(EventReceiver **trg_buf) {            return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(ManuvrXport **trg_buf) {              return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(ManuvrRunnable **trg_buf) {           return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(Vector3f **trg_buf) {                      return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(Vector3ui16 **trg_buf) {                   return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(Vector3i16 **trg_buf) {                    return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(const char **trg_buf) {                    return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(StringBuilder **trg_buf) {                 return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(BufferPipe **trg_buf) {                    return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(EventReceiver **trg_buf) {                 return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(ManuvrXport **trg_buf) {                   return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(ManuvrRunnable **trg_buf) {                return getArgAs(0, (void*) trg_buf);  }
 
-    inline int8_t getArgAs(uint8_t idx, Vector3f  **trg_buf) {          return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, Vector3ui16  **trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, Vector3i16  **trg_buf) {        return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, const char  **trg_buf) {        return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, StringBuilder  **trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, BufferPipe  **trg_buf) {        return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, EventReceiver  **trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, ManuvrXport  **trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, ManuvrRunnable  **trg_buf) {    return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, Vector3f  **trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, Vector3ui16  **trg_buf) {     return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, Vector3i16  **trg_buf) {      return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, const char  **trg_buf) {      return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, StringBuilder  **trg_buf) {   return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, BufferPipe  **trg_buf) {      return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, EventReceiver  **trg_buf) {   return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, ManuvrXport  **trg_buf) {     return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, ManuvrRunnable  **trg_buf) {  return getArgAs(idx, (void*) trg_buf);  }
 
 
     /*
@@ -397,7 +389,7 @@ class ManuvrMsg {
 
 
   protected:
-    int8_t getArgAs(uint8_t idx, void *dat, bool preserve);
+    int8_t getArgAs(uint8_t idx, void *dat);
 
 
 
@@ -408,7 +400,6 @@ class ManuvrMsg {
 
     void __class_initializer();
 
-    int8_t writePointerArgAs(uint32_t dat);
     int8_t writePointerArgAs(uint8_t idx, void *trg_buf);
 
     char* is_valid_argument_buffer(int len);

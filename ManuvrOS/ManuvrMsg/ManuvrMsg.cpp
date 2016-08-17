@@ -217,9 +217,6 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
       break;
   }
 
-
-
-
   Argument *nu_arg = NULL;
   while ((NULL != arg_mode) & (len > 0)) {
     switch ((unsigned char) *arg_mode) {
@@ -339,10 +336,9 @@ int8_t ManuvrMsg::markArgForReap(int idx, bool reap) {
 *
 * @param  idx      The Argument position
 * @param  trg_buf  A pointer to the place where we should write the result.
-* @param  preserve Should the Argument be removed from this Message following this operation?
 * @return DIG_MSG_ERROR_NO_ERROR or appropriate failure code.
 */
-int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf, bool preserve) {
+int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf) {
   int8_t return_value = DIG_MSG_ERROR_INVALID_ARG;
   Argument* arg = args.get(idx);
   if (NULL != arg) {
@@ -388,25 +384,10 @@ int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf, bool preserve) {
         return_value = DIG_MSG_ERROR_INVALID_TYPE;
         break;
     }
-
-    // Only reap the Argument if the return succeeded.
-    if ((DIG_MSG_ERROR_NO_ERROR == return_value) && (!preserve)) {
-      args.remove(arg);
-      delete arg;
-    }
   }
 
   return return_value;
 }
-
-
-//int8_t ManuvrMsg::writePointerArgAs(uint8_t *dat);
-//int8_t ManuvrMsg::writePointerArgAs(uint16_t *dat);
-int8_t ManuvrMsg::writePointerArgAs(uint32_t dat) {   return writePointerArgAs(0, &dat);   }
-//int8_t ManuvrMsg::writePointerArgAs(int8_t *dat);
-//int8_t ManuvrMsg::writePointerArgAs(int16_t *dat);
-//int8_t ManuvrMsg::writePointerArgAs(int32_t *dat);
-//int8_t ManuvrMsg::writePointerArgAs(float *dat);
 
 
 /**
@@ -445,7 +426,6 @@ int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
 }
 
 
-
 /**
 * Clears the Arguments attached to this Message and reaps their contents, if
 *   the need is indicated. Many subtle memory-related bugs can be caught here.
@@ -463,7 +443,6 @@ int8_t ManuvrMsg::clearArgs() {
 }
 
 
-
 /**
 * Given idx, find the Argument and return its type.
 *
@@ -475,16 +454,6 @@ uint8_t ManuvrMsg::getArgumentType(uint8_t idx) {
     return args.get(idx)->typeCode();
   }
   return NOTYPE_FM;
-}
-
-
-/**
-* Same as above, but assumes Argument 0.
-*
-* @return NOTYPE_FM if the Argument isn't found, and its type code if it is.
-*/
-uint8_t ManuvrMsg::getArgumentType() {
-  return getArgumentType(0);
 }
 
 
