@@ -114,8 +114,6 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
 * Vanilla constructor.
 */
 ManuvrMsg::ManuvrMsg() {
-  event_code = MANUVR_MSG_UNDEFINED;
-  __class_initializer();
 }
 
 
@@ -124,9 +122,8 @@ ManuvrMsg::ManuvrMsg() {
 *
 * @param code   The identity code for the new message.
 */
-ManuvrMsg::ManuvrMsg(uint16_t code) {
-  event_code = code;
-  __class_initializer();
+ManuvrMsg::ManuvrMsg(uint16_t code) : ManuvrMsg() {
+  repurpose(code);
 }
 
 
@@ -140,40 +137,25 @@ ManuvrMsg::~ManuvrMsg() {
 
 
 /**
-* This is here for compatibility with C++ standards that do not allow for definition and declaration
-*   in the header file. Takes no parameters, and returns nothing.
-*
-* The nature of this class makes this a better design, anyhow. Since the same object is often
-*   repurposed many times, doing any sort of init in the constructor should probably be avoided.
-*/
-void ManuvrMsg::__class_initializer() {
-  clearArgs();
-  message_def = lookupMsgDefByCode(event_code);
-}
-
-
-/**
 * Call this member to repurpose this message for an unrelated task. This mechanism
 *   is designed to prevent malloc()/free() thrash where it can be avoided.
 *
 * @param code   The new identity code for the message.
 */
 int8_t ManuvrMsg::repurpose(uint16_t code) {
-  event_code = code;
-  __class_initializer();
+  event_code  = code;
+  message_def = lookupMsgDefByCode(event_code);
   return 0;
 }
 
 
-/**
-* Allows the caller to plan other allocations based on how many bytes this message's
-*   Arguments occupy.
-*
-* @return the length (in bytes) of the arguments for this message.
-*/
-int ManuvrMsg::argByteCount() {
-  return ((nullptr == arg) ? 0 : arg->sumAllLengths());
-}
+int ManuvrMsg::addArg(Argument* nu) {
+  if (nullptr != arg) {
+    return arg->append(nu);
+  }
+  arg = nu;
+  return 0;
+};
 
 
 /**
@@ -290,11 +272,10 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
         break;
     }
 
-    if (nu_arg != NULL) {
-      args.insert(nu_arg);
-      nu_arg = NULL;
-      return_value++;
-    }
+    addArg(nu_arg);
+    nu_arg = NULL;
+    return_value++;
+
     arg_mode++;
   }
   return return_value;
@@ -354,9 +335,9 @@ int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf) {
 */
 int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
   int8_t return_value = DIG_MSG_ERROR_INVALID_ARG;
-  Argument* arg = args.get(idx);
-  if (NULL != arg) {
-    switch (arg->typeCode()) {
+  Argument* a = arg;
+  if (NULL != a) {
+    switch (a->typeCode()) {
       case INT8_PTR_FM:
       case INT16_PTR_FM:
       case INT32_PTR_FM:
@@ -368,7 +349,7 @@ int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
       case STR_FM:
       case BINARY_FM:
         return_value = DIG_MSG_ERROR_NO_ERROR;
-        *((uintptr_t*) arg->target_mem) = *((uintptr_t*) trg_buf);
+        *((uintptr_t*) a->target_mem) = *((uintptr_t*) trg_buf);
         break;
       default:
         return_value = DIG_MSG_ERROR_INVALID_TYPE;
@@ -521,13 +502,11 @@ const MessageTypeDef* ManuvrMsg::lookupMsgDefByLabel(char* label) {
 
 
 const char* ManuvrMsg::getArgTypeString(uint8_t idx) {
-  if (idx < args.size()) {
-    return getTypeCodeString(args.get(idx)->typeCode());
-  }
-  return "<INVALID INDEX>";
+  if (nullptr == arg) return "<INVALID INDEX>";
+  Argument* a = arg->retrieveArgByIdx(idx);
+  if (nullptr == a) return "<INVALID INDEX>";
+  return getTypeCodeString(a->typeCode());
 }
-
-
 
 
 /**
@@ -535,7 +514,7 @@ const char* ManuvrMsg::getArgTypeString(uint8_t idx) {
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
-void ManuvrMsg::printDebug(StringBuilder *temp) {
+void ManuvrMsg::printDebug(StringBuilder* temp) {
   if (NULL == temp) return;
   const MessageTypeDef* type_obj = getMsgDef();
 
@@ -545,22 +524,11 @@ void ManuvrMsg::printDebug(StringBuilder *temp) {
   else {
     temp->concatf("\t Message type:   %s\n", getMsgTypeString());
   }
-  int ac = args.size();
-  if (ac > 0) {
-    Argument *working_arg = NULL;
-    temp->concatf("\t Arguments:      %d\n", ac);
-    for (int i = 0; i < ac; i++) {
-      working_arg = args.get(i);
-      temp->concatf("\t\t %d\t%s\t%s ", i, getArgTypeString(i), (working_arg->reapValue() ? "(reap)" : "\t"));
-      uint8_t* buf = (uint8_t*) working_arg->target_mem;
 
-      uint16_t l_ender = (working_arg->length() < 16 ? working_arg->length() : 16);
-      for (int n = 0; n < l_ender; n++) {
-        temp->concatf("%02x ", (uint8_t) *(buf + n));
-      }
-
-      temp->concat("\n");
-    }
+  if (nullptr != arg) {
+    temp->concatf("\t %d Arguments:\n", arg->argCount());
+    arg->printDebug(temp);
+    temp->concat("\n");
   }
   else {
     temp->concat("\t No arguments.\n");
@@ -575,20 +543,21 @@ void ManuvrMsg::printDebug(StringBuilder *temp) {
 * @param  output  The buffer into which we should write our output.
 * @return the number of Arguments so written, or a negative value on failure.
 */
-int ManuvrMsg::serialize(StringBuilder *output) {
+int ManuvrMsg::serialize(StringBuilder* output) {
   if (output == NULL) return -1;
+  int return_value = 0;
   int delta_len = 0;
-  int arg_count = 0;
-  for (int i = 0; i < args.size(); i++) {
-    delta_len = args.get(i)->serialize_raw(output);
+  Argument* current_arg = arg;
+  while (nullptr != current_arg) {
+    delta_len = current_arg->serialize_raw(output);
     if (delta_len < 0) {
       return delta_len;
     }
     else {
-      arg_count++;
+      return_value++;
     }
   }
-  return arg_count;
+  return return_value;
 }
 
 
@@ -609,7 +578,7 @@ int ManuvrMsg::serialize(StringBuilder *output) {
 * @param  output  The buffer to write results to.
 * @return 0 on failure. 1 on success.
 */
-int8_t ManuvrMsg::getMsgLegend(StringBuilder *output) {
+int8_t ManuvrMsg::getMsgLegend(StringBuilder* output) {
   if (NULL == output) return 0;
 
   int total_elements = sizeof(message_defs) / sizeof(MessageTypeDef);

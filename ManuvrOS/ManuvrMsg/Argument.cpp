@@ -310,7 +310,15 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
 /**
 * @return [description]
 */
-int8_t Argument::argCount() {
+int8_t Argument::append(Argument* arg) {
+  return ((nullptr == _next) ? 0 : _next->append(arg));
+}
+
+
+/**
+* @return [description]
+*/
+int Argument::argCount() {
   return (1 + ((nullptr == _next) ? 0 : _next->argCount()));
 }
 

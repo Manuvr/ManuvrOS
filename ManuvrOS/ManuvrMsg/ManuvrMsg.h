@@ -83,14 +83,22 @@ class ManuvrMsg {
 
     virtual int8_t repurpose(uint16_t code);
 
-    int argByteCount();
+    /**
+    * Allows the caller to plan other allocations based on how many bytes this message's
+    *   Arguments occupy.
+    *
+    * @return the length (in bytes) of the arguments for this message.
+    */
+    int argByteCount() {
+      return ((nullptr == arg) ? 0 : arg->sumAllLengths());
+    }
 
     /**
     * Allows the caller to count the Args attached to this message.
     *
     * @return the cardinality of the argument list.
     */
-    inline int      argCount() {   return args.size();   };
+    inline int      argCount() {   return ((nullptr == arg) ? arg->argCount() : 0);   };
 
     inline uint16_t eventCode() {  return event_code;   };
 
@@ -128,35 +136,36 @@ class ManuvrMsg {
     *   implementation details of Arguments. Might look ugly, but takes the CPU burden off of runtime
     *   and forces the compiler to deal with it.
     */
-    inline int addArg(uint8_t val) {             return args.insert(new Argument(val));   }
-    inline int addArg(uint16_t val) {            return args.insert(new Argument(val));   }
-    inline int addArg(uint32_t val) {            return args.insert(new Argument(val));   }
-    inline int addArg(int8_t val) {              return args.insert(new Argument(val));   }
-    inline int addArg(int16_t val) {             return args.insert(new Argument(val));   }
-    inline int addArg(int32_t val) {             return args.insert(new Argument(val));   }
-    inline int addArg(float val) {               return args.insert(new Argument(val));   }
+    inline int addArg(uint8_t val) {             return addArg(new Argument(val));   }
+    inline int addArg(uint16_t val) {            return addArg(new Argument(val));   }
+    inline int addArg(uint32_t val) {            return addArg(new Argument(val));   }
+    inline int addArg(int8_t val) {              return addArg(new Argument(val));   }
+    inline int addArg(int16_t val) {             return addArg(new Argument(val));   }
+    inline int addArg(int32_t val) {             return addArg(new Argument(val));   }
+    inline int addArg(float val) {               return addArg(new Argument(val));   }
 
-    inline int addArg(uint8_t *val) {            return args.insert(new Argument(val));   }
-    inline int addArg(uint16_t *val) {           return args.insert(new Argument(val));   }
-    inline int addArg(uint32_t *val) {           return args.insert(new Argument(val));   }
-    inline int addArg(int8_t *val) {             return args.insert(new Argument(val));   }
-    inline int addArg(int16_t *val) {            return args.insert(new Argument(val));   }
-    inline int addArg(int32_t *val) {            return args.insert(new Argument(val));   }
-    inline int addArg(float *val) {              return args.insert(new Argument(val));   }
+    inline int addArg(uint8_t *val) {            return addArg(new Argument(val));   }
+    inline int addArg(uint16_t *val) {           return addArg(new Argument(val));   }
+    inline int addArg(uint32_t *val) {           return addArg(new Argument(val));   }
+    inline int addArg(int8_t *val) {             return addArg(new Argument(val));   }
+    inline int addArg(int16_t *val) {            return addArg(new Argument(val));   }
+    inline int addArg(int32_t *val) {            return addArg(new Argument(val));   }
+    inline int addArg(float *val) {              return addArg(new Argument(val));   }
 
-    inline int addArg(Vector3ui16 *val) {        return args.insert(new Argument(val));   }
-    inline int addArg(Vector3i16 *val) {         return args.insert(new Argument(val));   }
-    inline int addArg(Vector3f *val) {           return args.insert(new Argument(val));   }
-    inline int addArg(Vector4f *val) {           return args.insert(new Argument(val));   }
+    inline int addArg(Vector3ui16 *val) {        return addArg(new Argument(val));   }
+    inline int addArg(Vector3i16 *val) {         return addArg(new Argument(val));   }
+    inline int addArg(Vector3f *val) {           return addArg(new Argument(val));   }
+    inline int addArg(Vector4f *val) {           return addArg(new Argument(val));   }
 
-    inline int addArg(void *val, int len) {      return args.insert(new Argument(val, len));   }
-    inline int addArg(const char *val) {         return args.insert(new Argument(val));   }
-    inline int addArg(StringBuilder *val) {      return args.insert(new Argument(val));   }
-    inline int addArg(BufferPipe *val) {         return args.insert(new Argument(val));   }
-    inline int addArg(EventReceiver *val) {      return args.insert(new Argument(val));   }
-    inline int addArg(ManuvrXport *val) {        return args.insert(new Argument(val));   }
-    inline int addArg(ManuvrRunnable *val) {     return args.insert(new Argument(val));   }
+    inline int addArg(void *val, int len) {      return addArg(new Argument(val, len));   }
+    inline int addArg(const char *val) {         return addArg(new Argument(val));   }
+    inline int addArg(StringBuilder *val) {      return addArg(new Argument(val));   }
+    inline int addArg(BufferPipe *val) {         return addArg(new Argument(val));   }
+    inline int addArg(EventReceiver *val) {      return addArg(new Argument(val));   }
+    inline int addArg(ManuvrXport *val) {        return addArg(new Argument(val));   }
+    inline int addArg(ManuvrRunnable *val) {     return addArg(new Argument(val));   }
 
+    int addArg(Argument*);  // The only "real" implementation.
 
     /*
     * Overrides for Argument retreival. Pass in pointer to the type the argument should be retreived as.
@@ -256,11 +265,9 @@ class ManuvrMsg {
 
 
   private:
-    const MessageTypeDef*  message_def; // The definition for the message (once it is associated).
-    Argument* arg;                      // The optional list of arguments associated with this event.
-    uint16_t event_code;                // The identity of the event (or command).
-
-    void __class_initializer();
+    const MessageTypeDef*  message_def;  // The definition for the message (once it is associated).
+    Argument* arg       = nullptr;       // The optional list of arguments associated with this event.
+    uint16_t event_code = MANUVR_MSG_UNDEFINED; // The identity of the event (or command).
 
     int8_t writePointerArgAs(uint8_t idx, void *trg_buf);
 

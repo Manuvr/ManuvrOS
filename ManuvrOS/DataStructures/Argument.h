@@ -86,7 +86,7 @@ class Argument {
     Argument(StringBuilder* val)  : Argument(val, sizeof(val), STR_BUILDER_FM) {};
 
 
-    ~Argument();
+    virtual ~Argument();
 
 
     inline void reapValue(bool en) {  _alter_flags(en, ARG_FLAG_REAP_VALUE);    };
@@ -98,6 +98,7 @@ class Argument {
 
     int8_t getValueAs(void *trg_buf);
     int8_t getValueAs(uint8_t idx, void *trg_buf);
+    int8_t append(Argument* arg);
 
     int    argCount();
     int8_t sumAllLengths();
