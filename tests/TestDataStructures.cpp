@@ -149,7 +149,9 @@ int test_Arguments_KVP() {
 * These tests are meant to test the mechanics of the pointer-hack on PODs.
 */
 int test_Arguments_PODs() {
+  int return_value = 1;
   StringBuilder log("===< Arguments POD >====================================\n");
+  const char* val_base = "This is the base argument";
   uint32_t val0  = 45;
   uint16_t val1  = 44;
   uint8_t  val2  = 43;
@@ -158,9 +160,18 @@ int test_Arguments_PODs() {
   int8_t   val5  = 40;
   float    val6  = 0.523;
 
-  Argument a("This is a test argument");
+  Argument a(val_base);
 
-  log.concat("Adding arguements...\n");
+  int real_size = strlen(val_base)+1;  // We count the null-terminator.
+  real_size += sizeof(val0);
+  real_size += sizeof(val1);
+  real_size += sizeof(val2);
+  real_size += sizeof(val3);
+  real_size += sizeof(val4);
+  real_size += sizeof(val5);
+  real_size += sizeof(val6);
+
+  log.concatf("Adding arguements with a real size of %d bytes...\n", real_size);
 
   a.append(val0);
   a.append(val1);
@@ -170,14 +181,20 @@ int test_Arguments_PODs() {
   a.append(val5);
   a.append(val6);
 
-  log.concatf("Total Arguments:      %d\n", a.argCount());
-  log.concatf("Total payload size:   %d\n", a.sumAllLengths());
-  log.concat("\n");
-  a.printDebug(&log);
-  log.concat("========================================================\n\n");
+  if ((a.argCount() == 8) && (a.sumAllLengths() == real_size)) {
+    log.concatf("Test passes.\n", a.argCount());
+    return_value = 0;
+  }
+  else {
+    log.concatf("Total Arguments:      %d\tExpected 8.\n", a.argCount());
+    log.concatf("Total payload size:   %d\tExpected %d.\n", a.sumAllLengths(), real_size);
+    log.concat("\n");
+    a.printDebug(&log);
+  }
 
+  log.concat("========================================================\n\n");
   printf((const char*) log.string());
-  return 0;
+  return return_value;
 }
 
 
