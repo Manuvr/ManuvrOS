@@ -11,7 +11,12 @@
 /*
 * These are flag definitions for Argument.
 */
-#define ARG_FLAG_REAP_VALUE     0x01      // Should the pointer be freed?
+#define MANUVR_ARG_FLAG_REAP_VALUE     0x01  // Should the pointer be freed?
+#define MANUVR_ARG_FLAG_DIRECT_VALUE   0x02  // The value is NOT a pointer.
+#define MANUVR_ARG_FLAG_REAP_KEY       0x10  //
+#define MANUVR_ARG_FLAG_CLOBBERABLE    0x20  //
+#define MANUVR_ARG_FLAG_CONST_REDUCED  0x40  // Key reduced to const.
+#define MANUVR_ARG_FLAG_REQUIRED       0x80
 
 
 class ManuvrXport;
@@ -33,7 +38,7 @@ class Argument {
     *   64-bit pointers.
     *        ---J. Ian Lindsay   Mon Oct 05 22:55:41 MST 2015
     */
-    void*   target_mem;
+    void*   target_mem = nullptr;
 
     Argument();
     Argument(uint8_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT8_FM)  {};
@@ -86,11 +91,11 @@ class Argument {
     Argument(StringBuilder* val)  : Argument(val, sizeof(val), STR_BUILDER_FM) {};
 
 
-    virtual ~Argument();
+    ~Argument();
 
 
-    inline void reapValue(bool en) {  _alter_flags(en, ARG_FLAG_REAP_VALUE);    };
-    inline bool reapValue() {         return _check_flags(ARG_FLAG_REAP_VALUE); };
+    inline void reapValue(bool en) {  _alter_flags(en, MANUVR_ARG_FLAG_REAP_VALUE);    };
+    inline bool reapValue() {         return _check_flags(MANUVR_ARG_FLAG_REAP_VALUE); };
 
     inline void*    pointer() {           return target_mem; };
     inline uint8_t  typeCode() {          return type_code;  };
@@ -98,26 +103,58 @@ class Argument {
 
     int8_t getValueAs(void *trg_buf);
     int8_t getValueAs(uint8_t idx, void *trg_buf);
-    int8_t append(Argument* arg);
 
     int    argCount();
-    int8_t sumAllLengths();
+    int    sumAllLengths();
     Argument* retrieveArgByIdx(int idx);
+
+    int append(Argument* arg);
+    inline int append(uint8_t val) {             return append(new Argument(val));   }
+    inline int append(uint16_t val) {            return append(new Argument(val));   }
+    inline int append(uint32_t val) {            return append(new Argument(val));   }
+    inline int append(int8_t val) {              return append(new Argument(val));   }
+    inline int append(int16_t val) {             return append(new Argument(val));   }
+    inline int append(int32_t val) {             return append(new Argument(val));   }
+    inline int append(float val) {               return append(new Argument(val));   }
+
+    inline int append(uint8_t *val) {            return append(new Argument(val));   }
+    inline int append(uint16_t *val) {           return append(new Argument(val));   }
+    inline int append(uint32_t *val) {           return append(new Argument(val));   }
+    inline int append(int8_t *val) {             return append(new Argument(val));   }
+    inline int append(int16_t *val) {            return append(new Argument(val));   }
+    inline int append(int32_t *val) {            return append(new Argument(val));   }
+    inline int append(float *val) {              return append(new Argument(val));   }
+
+    inline int append(Vector3ui16 *val) {        return append(new Argument(val));   }
+    inline int append(Vector3i16 *val) {         return append(new Argument(val));   }
+    inline int append(Vector3f *val) {           return append(new Argument(val));   }
+    inline int append(Vector4f *val) {           return append(new Argument(val));   }
+
+    inline int append(void *val, int len) {      return append(new Argument(val, len));   }
+    inline int append(const char *val) {         return append(new Argument(val));   }
+    inline int append(StringBuilder *val) {      return append(new Argument(val));   }
+    inline int append(BufferPipe *val) {         return append(new Argument(val));   }
+    inline int append(EventReceiver *val) {      return append(new Argument(val));   }
+    inline int append(ManuvrXport *val) {        return append(new Argument(val));   }
+    inline int append(ManuvrRunnable *val) {     return append(new Argument(val));   }
+
 
     // TODO: These will be re-worked to support alternate type-systems.
     int8_t serialize(StringBuilder*);
     int8_t serialize_raw(StringBuilder*);
 
-    virtual void printDebug(StringBuilder*);
+    void valToString(StringBuilder*);
+    void printDebug(StringBuilder*);
 
     static char*    printBinStringToBuffer(unsigned char *str, int len, char *buffer);
 
 
   protected:
-    Argument*   _next;
-    uint16_t len;         // This is sometimes not used. It is for data types that are not fixed-length.
-    uint8_t  _flags;
-    uint8_t  type_code;
+    Argument*   _next      = nullptr;
+    const char* _key       = nullptr;
+    uint16_t    len        = 0;
+    uint8_t     _flags     = 0;
+    uint8_t     type_code  = NOTYPE_FM;
 
     Argument(void* ptr, int len, uint8_t code);  // Protected constructor to which we delegate.
 
@@ -129,7 +166,7 @@ class Argument {
       _flags = (en) ? (_flags | mask) : (_flags & ~mask);
     };
     inline bool _check_flags(uint8_t mask) {
-      return (_flags == (_flags & mask));
+      return (mask == (_flags & mask));
     };
 
     void wipe();

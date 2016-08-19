@@ -32,9 +32,7 @@ This class represents our type-abstraction layer. It is the means by which
 /*
 * Basal constructor.
 */
-Argument::Argument() {
-	wipe();
-}
+Argument::Argument() {}
 
 /*
 * Protected delegate constructor.
@@ -43,37 +41,50 @@ Argument::Argument(void* ptr, int l, uint8_t code) : Argument() {
 	len        = l;
 	type_code  = code;
 	target_mem = ptr;
-}
-
-
-
-Argument::~Argument() {
-	if (reapValue() && (nullptr != target_mem)) {
-		free(target_mem);   // TODO: This is not good.
-		target_mem = nullptr;
+	switch (type_code) {
+		// TODO: This does not belong here, and I know it.
+		case INT8_FM:
+		case UINT8_FM:
+		case INT16_FM:
+		case UINT16_FM:
+		case INT32_FM:
+		case UINT32_FM:
+		case FLOAT_FM:
+		case BOOLEAN_FM:
+			_alter_flags(true, MANUVR_ARG_FLAG_DIRECT_VALUE);
+			break;
+		case UINT128_FM:
+		case INT128_FM:
+		case UINT64_FM:
+		case INT64_FM:
+		case DOUBLE_FM:
+		default:
+			break;
 	}
 }
 
 
-void Argument::wipe() {
-	type_code  = NOTYPE_FM;
-	len        = 0;
-	_flags     = 0;
-	//_next      = nullptr;
-	target_mem = nullptr;
+Argument::~Argument() {
+	wipe();
 }
 
 
-///**
-//* @return [description]
-//*/
-//int8_t Argument::add(Argument* nu) {
-//  if (nullptr != _next) {
-//    nu->_next = _next;
-//  }
-//  _next = nu;
-//  return 0;
-//}
+void Argument::wipe() {
+	if (nullptr != _next) {
+		Argument* a = _next;
+		_next       = nullptr;
+		delete a;
+	}
+	if (nullptr != target_mem) {
+		void* p = target_mem;
+		target_mem = nullptr;
+		if (reapValue()) free(p);
+	}
+	_key       = nullptr;
+	type_code  = NOTYPE_FM;
+	len        = 0;
+	_flags     = 0;
+}
 
 
 /**
@@ -308,15 +319,19 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
 
 
 /**
-* @return [description]
+* @return The index of the appended argument.
 */
-int8_t Argument::append(Argument* arg) {
-  return ((nullptr == _next) ? 0 : _next->append(arg));
+int Argument::append(Argument* arg) {
+	if (nullptr == _next) {
+		_next = arg;
+		return 0;
+	}
+	return (1 + _next->append(arg));
 }
 
 
 /**
-* @return [description]
+* @return The number of arguments in this list.
 */
 int Argument::argCount() {
   return (1 + ((nullptr == _next) ? 0 : _next->argCount()));
@@ -326,7 +341,7 @@ int Argument::argCount() {
 /**
 * @return [description]
 */
-int8_t Argument::sumAllLengths() {
+int Argument::sumAllLengths() {
   return (len + ((nullptr == _next) ? 0 : _next->sumAllLengths()));
 }
 
@@ -343,15 +358,45 @@ Argument* Argument::retrieveArgByIdx(int idx) {
 }
 
 
+void Argument::valToString(StringBuilder* out) {
+	uint8_t* buf     = (uint8_t*) pointer();
+	if (_check_flags(MANUVR_ARG_FLAG_DIRECT_VALUE)) {
+		switch (type_code) {
+			case INT8_FM:
+			case UINT8_FM:
+			case INT16_FM:
+			case UINT16_FM:
+			case INT32_FM:
+			case UINT32_FM:
+				out->concatf("%u", (uintptr_t) pointer());
+				break;
+			case FLOAT_FM:
+				out->concatf("%f", (double)(uintptr_t) pointer());
+				break;
+			case BOOLEAN_FM:
+				out->concatf("%s", ((uintptr_t) pointer() ? "true" : "false"));
+				break;
+			default:
+				out->concatf("%p", pointer());
+				break;
+		}
+	}
+	else {
+  	int l_ender = (len < 16) ? len : 16;
+		for (int n = 0; n < l_ender; n++) {
+			out->concatf("%02x ", *((uint8_t*) buf + n));
+		}
+	}
+}
+
+
 /*
 * Warning: call is propagated across entire list.
 */
 void Argument::printDebug(StringBuilder* out) {
   out->concatf("\t%s\t%s", getTypeCodeString(typeCode()), (reapValue() ? "(reap)" : "\t"));
-  uint8_t* buf     = (uint8_t*) pointer();
-  uint16_t l_ender = ((len <= 16)) ? len : 16;
-  for (int n = 0; n < l_ender; n++) out->concatf("%02x ", (uint8_t) *(buf + n));
+	valToString(out);
   out->concat("\n");
 
-  if (_next) _next->printDebug(out);
+  if (nullptr != _next) _next->printDebug(out);
 }

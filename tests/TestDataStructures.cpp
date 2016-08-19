@@ -16,6 +16,7 @@
 
 
 int test_StringBuilder(void) {
+  StringBuilder log("===< StringBuilder >====================================\n");
   StringBuilder *heap_obj = new StringBuilder("This is datas we want to transfer.");
   StringBuilder stack_obj;
   StringBuilder tok_obj;
@@ -26,23 +27,23 @@ int test_StringBuilder(void) {
   stack_obj.string();
 
   tok_obj.concat("This");
-  printf("tok_obj split:   %d\n", tok_obj.split(" "));
-  printf("tok_obj count:   %d\n", tok_obj.count());
+  log.concatf("\t tok_obj split:   %d\n", tok_obj.split(" "));
+  log.concatf("\t tok_obj count:   %d\n", tok_obj.count());
   tok_obj.concat(" This");
-  printf("tok_obj split:   %d\n", tok_obj.split(" "));
-  printf("tok_obj count:   %d\n", tok_obj.count());
+  log.concatf("\t tok_obj split:   %d\n", tok_obj.split(" "));
+  log.concatf("\t tok_obj count:   %d\n", tok_obj.count());
   tok_obj.concat("   This");
-  printf("tok_obj split:   %d\n", tok_obj.split(" "));
-  printf("tok_obj count:   %d\n", tok_obj.count());
+  log.concatf("\t tok_obj split:   %d\n", tok_obj.split(" "));
+  log.concatf("\t tok_obj count:   %d\n", tok_obj.count());
 
-  printf("Heap obj before culling:   %s\n", heap_obj->string());
+  log.concatf("\t Heap obj before culling:   %s\n", heap_obj->string());
 
   while (heap_obj->length() > 10) {
     heap_obj->cull(5);
-    printf("Heap obj during culling:   %s\n", heap_obj->string());
+    log.concatf("\t Heap obj during culling:   %s\n", heap_obj->string());
   }
 
-  printf("Heap obj after culling:   %s\n", heap_obj->string());
+  log.concatf("\t Heap obj after culling:   %s\n", heap_obj->string());
 
   heap_obj->prepend("Meaningless data ");
   heap_obj->concat(" And stuff tackt onto the end.");
@@ -53,8 +54,10 @@ int test_StringBuilder(void) {
 
   stack_obj.split(" ");
 
-  printf("Final Stack obj:          %s\n", stack_obj.string());
+  log.concatf("\t Final Stack obj:          %s\n", stack_obj.string());
 
+  log.concat("========================================================\n\n");
+  printf((const char*) log.string());
   return 0;
 }
 
@@ -65,47 +68,134 @@ Vector3<float> test_vect_0(-0.4f, -0.1f, 0.4f);
 
 
 int vector3_float_test(float x, float y, float z) {
+  StringBuilder log("===< Vector3<float> >===================================\n");
   Vector3<float> test;
   Vector3<float> *test1 = &test_vect_0;
-  printf("--- (test) (%.4f, %.4f, %.4f)\n", (double)(test.x), (double)(test.y), (double)(test.z));
+  log.concatf("\t (test) (%.4f, %.4f, %.4f)\n", (double)(test.x), (double)(test.y), (double)(test.z));
 
 
 
   test(1.0f, 0.5f, 0.24f);
-  printf("--- (test) (%.4f, %.4f, %.4f)\n", (double)(test.x), (double)(test.y), (double)(test.z));
+  log.concatf("\t (test) (%.4f, %.4f, %.4f)\n", (double)(test.x), (double)(test.y), (double)(test.z));
 
   test(test_vect_0.x, test_vect_0.y, test_vect_0.z);
-  printf("--- (test) (%.4f, %.4f, %.4f)\n", (double)(test.x), (double)(test.y), (double)(test.z));
+  log.concatf("\t (test) (%.4f, %.4f, %.4f)\n", (double)(test.x), (double)(test.y), (double)(test.z));
 
   test(test1->x, test1->y, test1->z);
-  printf("--- (test) (%.4f, %.4f, %.4f)\n", (double)(test.x), (double)(test.y), (double)(test.z));
+  log.concatf("\t (test) (%.4f, %.4f, %.4f)\n", (double)(test.x), (double)(test.y), (double)(test.z));
 
   test(x, y, z);
-  printf("--- (test) (%.4f, %.4f, %.4f)\n", (double)(test.x), (double)(test.y), (double)(test.z));
+  log.concatf("\t (test) (%.4f, %.4f, %.4f)\n", (double)(test.x), (double)(test.y), (double)(test.z));
+  log.concat("========================================================\n\n");
+  printf((const char*) log.string());
   return 0;
 }
 
 
 
 int test_PriorityQueue(void) {
+  StringBuilder log("===< PriorityQueue >====================================\n");
+  log.concat("========================================================\n\n");
+  printf((const char*) log.string());
+  return 0;
+}
+
+/*
+* These tests are meant to test the memory-management implications of
+*   the Argument class.
+*/
+int test_Arguments_MEM_MGMT() {
+  return 0;
+}
+
+
+/*
+* These tests are meant to test the mechanics of the pointer-hack on PODs.
+*/
+int test_Arguments_KVP() {
+  StringBuilder log("===< Arguments KVP >====================================\n");
+  Argument a;
+
+  log.concat("Adding arguments...\n\n");
+
+  uint32_t val0  = 45;
+  uint16_t val1  = 44;
+  uint8_t  val2  = 43;
+  int32_t  val3  = 42;
+  int16_t  val4  = 41;
+  int8_t   val5  = 40;
+  float    val6  = 0.523;
+
+  a.append(val0);
+  a.append(val1);
+  a.append(val2);
+  a.append(val3);
+  a.append(val4);
+  a.append(val5);
+  a.append(val6);
+
+  a.printDebug(&log);
+  log.concat("\n");
+
+  log.concatf("Total Arguments:      %d\n", a.argCount());
+  log.concatf("Total payload size:   %d\n", a.sumAllLengths());
+  log.concat("========================================================\n\n");
+  printf((const char*) log.string());
+  return 0;
+}
+
+
+/*
+* These tests are meant to test the mechanics of the pointer-hack on PODs.
+*/
+int test_Arguments_PODs() {
+  StringBuilder log("===< Arguments POD >====================================\n");
+  uint32_t val0  = 45;
+  uint16_t val1  = 44;
+  uint8_t  val2  = 43;
+  int32_t  val3  = 42;
+  int16_t  val4  = 41;
+  int8_t   val5  = 40;
+  float    val6  = 0.523;
+
+  Argument a("This is a test argument");
+
+  log.concat("Adding arguements...\n");
+
+  a.append(val0);
+  a.append(val1);
+  a.append(val2);
+  a.append(val3);
+  a.append(val4);
+  a.append(val5);
+  a.append(val6);
+
+  log.concatf("Total Arguments:      %d\n", a.argCount());
+  log.concatf("Total payload size:   %d\n", a.sumAllLengths());
+  log.concat("\n");
+  a.printDebug(&log);
+  log.concat("========================================================\n\n");
+
+  printf((const char*) log.string());
   return 0;
 }
 
 
 int test_Arguments() {
-  return 0;
+  int return_value = test_Arguments_PODs();
+  if (0 == return_value) {
+    return_value = test_Arguments_MEM_MGMT();
+    if (0 == return_value) {
+    }
+  }
+  return return_value;
 }
 
-int test_ManuvrOpts() {
-  const char* key0 = "key0";
-  const char* key1 = "key1";
-  const char* key2 = "key2";
-  // Add some mixed-types...
-
-  return 0;
-}
 
 int test_BufferPipe() {
+  StringBuilder log("===< BufferPipe >=======================================\n");
+  log.concat("========================================================\n\n");
+  printf((const char*) log.string());
   return 0;
 }
 
