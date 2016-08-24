@@ -439,24 +439,27 @@ void printTypeSizes() {
   output.concat("\n-- Messaging components:\n");
   output.concatf("\tEventReceiver         %u\n", sizeof(EventReceiver));
   output.concatf("\tManuvrMsg             %u\n", sizeof(ManuvrMsg));
-  output.concatf("\tManuvrRunnable        %u\n", sizeof(ManuvrRunnable));
+  output.concatf("\t  ManuvrRunnable      %u\n", sizeof(ManuvrRunnable));
 
   output.concat("\n-- Transports:\n");
   output.concatf("\tManuvrXport           %u\n", sizeof(ManuvrXport));
-  output.concatf("\tStandardIO            %u\n", sizeof(StandardIO));
-  output.concatf("\tManuvrSerial          %u\n", sizeof(ManuvrSerial));
-  output.concatf("\tManuvrSocket          %u\n", sizeof(ManuvrSocket));
-  output.concatf("\tManuvrTCP             %u\n", sizeof(ManuvrTCP));
-  output.concatf("\tManuvrUDP             %u\n", sizeof(ManuvrUDP));
-  output.concatf("\tUDPPipe               %u\n", sizeof(UDPPipe));
+  output.concatf("\t  StandardIO          %u\n", sizeof(StandardIO));
+  output.concatf("\t  ManuvrSerial        %u\n", sizeof(ManuvrSerial));
+  output.concatf("\t  ManuvrSocket        %u\n", sizeof(ManuvrSocket));
+  output.concatf("\t    ManuvrTCP         %u\n", sizeof(ManuvrTCP));
+  output.concatf("\t    ManuvrUDP         %u\n", sizeof(ManuvrUDP));
+  output.concatf("\t      UDPPipe         %u\n", sizeof(UDPPipe));
 
   output.concat("\n-- Sessions:\n");
   output.concatf("\tXenoSession           %u\n", sizeof(XenoSession));
+  output.concatf("\t  ManuvrConsole       %u\n", sizeof(ManuvrConsole));
+  output.concatf("\t  ManuvrSession       %u\n", sizeof(ManuvrSession));
+  output.concatf("\t  CoAPSession         %u\n", sizeof(CoAPSession));
+  output.concatf("\t  MQTTSession         %u\n", sizeof(MQTTSession));
   output.concatf("\tXenoMessage           %u\n", sizeof(XenoMessage));
-  output.concatf("\tManuvrConsole         %u\n", sizeof(ManuvrConsole));
-  output.concatf("\tManuvrSession         %u\n", sizeof(ManuvrSession));
-  output.concatf("\tCoAPSession           %u\n", sizeof(CoAPSession));
-  output.concatf("\tMQTTSession           %u\n", sizeof(MQTTSession));
+  output.concatf("\t  MQTTMessage         %u\n", sizeof(MQTTMessage));
+  output.concatf("\t  CoAPMessage         %u\n", sizeof(CoAPMessage));
+  output.concatf("\t  XenoManuvrMessage   %u\n", sizeof(XenoManuvrMessage));
   printf("%s\n", output.string());
 }
 
