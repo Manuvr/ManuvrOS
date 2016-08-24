@@ -55,11 +55,37 @@ This file is meant to contain a set of common functions that are typically platf
 
 class ManuvrRunnable;
 
-#define MANUVR_PLAT_FLAG_BOOT_STAGE_MASK  0x00000007
+/**
+* Platform init is only considered complete if all of the following
+*   things have been accomplished without errors (in no particular order)
+* 1) RNG init and priming
+* 2) Storage init and default config load.
+* 3) RTC init'd and datetime validity known.
+*/
+
+//#define MANUVR_BOOT_STAGE_PLATFORM_INIT
+//#define MANUVR_BOOT_STAGE_KERNEL_UP
+//#define MANUVR_BOOT_STAGE_READY
+//#define MANUVR_BOOT_STAGE_SHUTDOWN
+
+
+#define MANUVR_PLAT_FLAG_BOOT_STAGE_MASK  0x00000007  // Lowest 3-bits for boot-state.
+#define MANUVR_PLAT_FLAG_HAS_LOCATION     0x08000000  // Platform is locus-aware.
 #define MANUVR_PLAT_FLAG_HAS_CRYPTO       0x10000000
 #define MANUVR_PLAT_FLAG_INNATE_DATETIME  0x20000000
 #define MANUVR_PLAT_FLAG_HAS_THREADS      0x40000000
 #define MANUVR_PLAT_FLAG_HAS_STORAGE      0x80000000
+
+
+typedef struct _init_hooks_struct {
+  FunctionPointer rng_init;
+  FunctionPointer rtc_init;
+  FunctionPointer gpio_init;
+  FunctionPointer sec_init;
+  FunctionPointer storage_init;
+  FunctionPointer plat_pre_init;
+  FunctionPointer plat_post_init;
+} PlatformInitFxns;
 
 
 /**
@@ -70,6 +96,7 @@ class ManuvrRunnable;
 */
 class ManuvrPlatform {
   public:
+    inline bool hasLocation() {     return _check_flags(MANUVR_PLAT_FLAG_HAS_LOCATION);  };
     inline bool hasCryptography() { return _check_flags(MANUVR_PLAT_FLAG_HAS_CRYPTO);  };
     inline bool hasTimeAndData() {  return _check_flags(MANUVR_PLAT_FLAG_INNATE_DATETIME); };
     inline bool hasThreads() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_THREADS); };

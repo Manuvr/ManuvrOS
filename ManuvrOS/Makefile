@@ -21,6 +21,7 @@ CPP_SRCS  += DataStructures/BufferPipe.cpp
 CPP_SRCS  += DataStructures/ManuvrOptions.cpp
 CPP_SRCS  += DataStructures/Quaternion.cpp
 CPP_SRCS  += DataStructures/InertialMeasurement.cpp
+CPP_SRCS  += DataStructures/uuid.cpp
 
 # Types and encodings
 CPP_SRCS  += Types/TypeTranscriber.cpp

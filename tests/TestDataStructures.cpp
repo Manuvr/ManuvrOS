@@ -182,8 +182,12 @@ int test_Arguments_PODs() {
   a.append(val6);
 
   if ((a.argCount() == 8) && (a.sumAllLengths() == real_size)) {
-    log.concatf("Test passes.\n", a.argCount());
-    return_value = 0;
+    a.append("TestKey", new Argument("TestValue"));
+    if (true) {
+      log.concatf("Test passes.\n", a.argCount());
+      a.printDebug(&log);
+      return_value = 0;
+    }
   }
   else {
     log.concatf("Total Arguments:      %d\tExpected 8.\n", a.argCount());
