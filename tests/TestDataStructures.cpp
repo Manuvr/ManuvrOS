@@ -229,6 +229,14 @@ int test_UUID() {
   UUID test0;
   UUID test1;
 
+  for (int i = 0; i < 16; i++) {
+    if (0 != *((uint8_t*) &test0.id[i])) {
+      log.concat("UUID should be initialized to zeros. It was not. Failing...\n");
+      printf((const char*) log.string());
+      return -1;
+    }
+  }
+
   for (int i = 0; i < 10; i++) {
     uuid_gen(&test0);
     temp.concat((uint8_t*) &test0.id, sizeof(test0));

@@ -29,7 +29,7 @@
 
 
 void uuid_from_str(const char *str, UUID *uuid) {
-  int j = 0;
+  uint8_t j = 0;
   uint8_t c = 0;
   uint8_t a = 0;
 
@@ -75,6 +75,12 @@ void uuid_from_str(const char *str, UUID *uuid) {
 
     if (2 <= a) {
       uuid->id[j++] = c;
+      if (16 <= j) {
+        // If we've written 16 bytes to the UUID, it doesn't
+        // matter if there is more string material. It would
+        // be unsafe to process it.
+        return;
+      }
       c = 0;
       a = 0;
     }
@@ -111,8 +117,7 @@ void uuid_gen(UUID *uuid) {
       clock_seq_hi_and_reserved (8th octect) to
       zero and one, respectively.
   */
-  uuid->id[8] &= 0x3f;
-  uuid->id[8] |= 0x40;
+  uuid->id[8] = (uuid->id[8] & 0x3f) | 0x40;
 
   /*  From RFC 4122
       Set the four most significant bits of the
@@ -120,8 +125,7 @@ void uuid_gen(UUID *uuid) {
       4-bit version number from (0 1 0 0 => type 4)
       Section 4.1.3.
   */
-  uuid->id[6] &= 0x0f;
-  uuid->id[6] |= 0x40;
+  uuid->id[6] = (uuid->id[6] & 0x0f) | 0x40;
 }
 
 #ifdef __cplusplus
