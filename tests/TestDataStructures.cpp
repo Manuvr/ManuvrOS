@@ -249,16 +249,7 @@ int test_UUID() {
     printf((const char*) log.string());
     return -1;
   }
-
-  // Generate a whole mess of UUID...
-  for (int i = 0; i < 10; i++) {
-    uuid_gen(&test0);
-    temp.concat((uint8_t*) &test0.id, sizeof(test0));
-    log.concat("temp0 bytes:  ");
-    temp.printDebug(&log);
-    temp.clear();
-  }
-
+  uuid_gen(&test0);
   // Does the comparison function work?
   if (0 == uuid_compare(&test0, &test1)) {
     log.concat("UUID function considers these the same. Failing...\n");
@@ -269,6 +260,32 @@ int test_UUID() {
     temp.printDebug(&log);
     printf((const char*) log.string());
     return -1;
+  }
+
+  // Generate a whole mess of UUID and ensure that they are different.
+  for (int i = 0; i < 10; i++) {
+    temp.concat((uint8_t*) &test0.id, sizeof(test0));
+    log.concat("temp0 bytes:  ");
+    temp.printDebug(&log);
+    temp.clear();
+
+    if (0 == uuid_compare(&test0, &test1)) {
+      log.concat("UUID generator gave us a repeat UUID. Fail...\n");
+      printf((const char*) log.string());
+      return -1;
+    }
+    uuid_copy(&test0, &test1);
+    if (0 != uuid_compare(&test0, &test1)) {
+      log.concat("UUID copy appears to have failed...\n");
+      temp.concat((uint8_t*) &test0.id, sizeof(test0));
+      temp.printDebug(&log);
+      temp.clear();
+      temp.concat((uint8_t*) &test1.id, sizeof(test1));
+      temp.printDebug(&log);
+      printf((const char*) log.string());
+      return -1;
+    }
+    uuid_gen(&test0);
   }
 
   char str_buffer[40] = "";

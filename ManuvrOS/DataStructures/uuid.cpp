@@ -146,6 +146,14 @@ int uuid_compare(UUID *uuid0, UUID *uuid1) {
 }
 
 
+void uuid_copy(UUID* src, UUID* dest) {
+  *((uint32_t*) &dest->id[0])  = *((uint32_t*) &src->id[0]);
+  *((uint32_t*) &dest->id[4])  = *((uint32_t*) &src->id[4]);
+  *((uint32_t*) &dest->id[8])  = *((uint32_t*) &src->id[8]);
+  *((uint32_t*) &dest->id[12]) = *((uint32_t*) &src->id[12]);
+}
+
+
 #ifdef __cplusplus
 }
 #endif

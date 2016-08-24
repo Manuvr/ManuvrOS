@@ -37,6 +37,7 @@ void uuid_from_str(const char *str, UUID*);
 void uuid_to_str(const UUID*, char *buffer, int buflen);
 void uuid_gen(UUID*);
 int  uuid_compare(UUID*, UUID*);
+void uuid_copy(UUID* src, UUID* dest);
 
 
 #ifdef __cplusplus
