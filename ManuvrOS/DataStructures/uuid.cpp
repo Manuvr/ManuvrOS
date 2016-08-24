@@ -33,7 +33,7 @@ void uuid_from_str(const char *str, UUID *uuid) {
   uint8_t c = 0;
   uint8_t a = 0;
 
-  for (int i = 0; i < strlen(str); i++) {
+  for (unsigned int i = 0; i < strlen(str); i++) {
     switch (str[i]) {
       case 0x30:
       case 0x31:

@@ -30,11 +30,6 @@ This class forms the foundation of internal events. It contains the identity of 
 #include <DataStructures/Argument.h>
 
 
-#define DIG_MSG_ERROR_NO_ERROR        0
-#define DIG_MSG_ERROR_INVALID_ARG     -1
-#define DIG_MSG_ERROR_INVALID_TYPE    -2
-
-
 /*
 * Messages are defined by this struct. Note that this amounts to nothing more than definition.
 * Actual instances of messages are held by ManuvrMsg.
@@ -98,7 +93,7 @@ class ManuvrMsg {
     *
     * @return the cardinality of the argument list.
     */
-    inline int      argCount() {   return ((nullptr == arg) ? arg->argCount() : 0);   };
+    inline int      argCount() {   return ((nullptr != arg) ? arg->argCount() : 0);   };
 
     inline uint16_t eventCode() {  return event_code;   };
 

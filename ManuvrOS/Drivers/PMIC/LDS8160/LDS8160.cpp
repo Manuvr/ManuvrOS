@@ -264,7 +264,7 @@ int8_t LDS8160::notify(ManuvrRunnable *active_event) {
     case MANUVR_MSG_SYS_POWER_MODE:
       if (active_event->argCount() == 1) {
         uint8_t nu_power_mode;
-        if (DIG_MSG_ERROR_NO_ERROR == active_event->getArgAs(&nu_power_mode)) {
+        if (0 == active_event->getArgAs(&nu_power_mode)) {
           if (power_mode != nu_power_mode) {
             set_power_mode(nu_power_mode);
             return_value++;
@@ -277,7 +277,7 @@ int8_t LDS8160::notify(ManuvrRunnable *active_event) {
       if (active_event->argCount() >= 1) {
         if ((EventReceiver*) this != active_event->callback) {   // Only do this if we are not the callback.
           uint8_t  nu_mode;
-          if (DIG_MSG_ERROR_NO_ERROR == active_event->getArgAs(&nu_mode)) {
+          if (0 == active_event->getArgAs(&nu_mode)) {
             set_led_mode(nu_mode);
             return_value++;
           }
@@ -383,7 +383,7 @@ int8_t LDS8160::notify(ManuvrRunnable *active_event) {
         case 1:        // One arg? Setting the global dimmer value.
           if ((EventReceiver*) this != active_event->callback) {   // Only do this if we are not the callback.
             uint8_t brightness;
-            if (DIG_MSG_ERROR_NO_ERROR == active_event->getArgAs(&brightness)) {
+            if (0 == active_event->getArgAs(&brightness)) {
               set_brightness(brightness);
               /* If the callback is NULL, make us the callback, as our class is the responsible party for
                  this kind of message.  Follow your shadow. */

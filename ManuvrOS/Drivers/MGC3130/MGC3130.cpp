@@ -756,7 +756,7 @@ int8_t MGC3130::notify(ManuvrRunnable *active_event) {
     case MANUVR_MSG_SYS_POWER_MODE:
       if (active_event->argCount() == 1) {
         uint8_t nu_power_mode;
-        if (DIG_MSG_ERROR_NO_ERROR == active_event->getArgAs(&nu_power_mode)) {
+        if (0 == active_event->getArgAs(&nu_power_mode)) {
           if (power_mode != nu_power_mode) {
             // TODO: We might use this later to put the MGC3130 into a low-power state.
             //set_power_mode(nu_power_mode);

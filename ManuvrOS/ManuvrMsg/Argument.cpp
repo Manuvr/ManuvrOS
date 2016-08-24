@@ -125,9 +125,12 @@ int8_t Argument::getValueAs(void* trg_buf) {
         break;
       case INT32_FM:    // This frightens the compiler. Its fears are unfounded.
       case UINT32_FM:   // This frightens the compiler. Its fears are unfounded.
-      case FLOAT_FM:    // This frightens the compiler. Its fears are unfounded.
         return_value = 0;
         *((uint32_t*) trg_buf) = *((uint32_t*)&target_mem);
+        break;
+      case FLOAT_FM:    // This frightens the compiler. Its fears are unfounded.
+        return_value = 0;
+        *((float*) trg_buf) = *((float*)&target_mem);
         break;
       case UINT32_PTR_FM:  // These are *pointers* to the indicated types. They
       case UINT16_PTR_FM:  //   therefore take the whole 4 bytes of memory allocated

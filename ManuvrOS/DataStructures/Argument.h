@@ -34,8 +34,7 @@ class Argument {
     *   void* and store it in the pointer slot. When we do this, we need to be sure
     *   not to mark the pointer for reap.
     *
-    * Glorious, glorious hackery. Keeping it. But do need to account for (and extend to)
-    *   64-bit pointers.
+    * Glorious, glorious hackery. Keeping it.
     *        ---J. Ian Lindsay   Mon Oct 05 22:55:41 MST 2015
     */
     void*   target_mem = nullptr;
@@ -62,9 +61,7 @@ class Argument {
     Argument(Vector3f*    val) : Argument((void*) val, 12, VECT_3_FLOAT)  {};
     Argument(Vector4f*    val) : Argument((void*) val, 16, VECT_4_FLOAT)  {};
 
-    /*
-    * Character pointers.
-    */
+    /* Character pointers. */
     Argument(const char* val) : Argument((void*) val, (strlen(val)+1), STR_FM) {};
     Argument(char* val)       : Argument((void*) val, (strlen(val)+1), STR_FM) {};
 
@@ -74,9 +71,7 @@ class Argument {
     */
     Argument(void* val, uint16_t len) : Argument(val, len, BINARY_FM) {};
 
-    /*
-    * These are system service pointers. Do not reap.
-    */
+    /* These are system service pointers. Do not reap. */
     Argument(EventReceiver* val) : Argument((void*) val, sizeof(val), SYS_EVENTRECEIVER_FM) {};
     Argument(ManuvrXport* val)   : Argument((void*) val, sizeof(val), SYS_MANUVR_XPORT_FM)  {};
     Argument(BufferPipe* val)    : Argument((void*) val, sizeof(val), BUFFERPIPE_PTR_FM)    {};

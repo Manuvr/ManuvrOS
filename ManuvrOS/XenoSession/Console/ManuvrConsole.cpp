@@ -118,7 +118,7 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
     char* temp_ptr = session_buffer.position(0);
     int temp_len   = strlen(temp_ptr);
     // Begin the cases...
-    #if defined(_GNU_SOURCE)
+    //#if defined(_GNU_SOURCE)
       if (strcasestr(temp_ptr, "QUIT")) {
         ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_REBOOT);
         event->originator = (EventReceiver*) __kernel;
@@ -126,13 +126,15 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
       }
       else if (strcasestr(temp_ptr, "HELP"))  printHelp();      // Show help.
       else
-    #else
-    #endif
+    //#else
+    //#endif
     {
       // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
       // run in idle time.
-      ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
       StringBuilder* dispatched = new StringBuilder((uint8_t*) temp_ptr, temp_len);
+      ManuvrRunnable* event  = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
+      event->specific_target = (EventReceiver*) __kernel;
+      event->originator      = (EventReceiver*) this;
       event->markArgForReap(event->addArg(dispatched), true);
       raiseEvent(event);
     }
@@ -192,9 +194,6 @@ int8_t ManuvrConsole::callback_proc(ManuvrRunnable *event) {
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {
-    case MANUVR_MSG_SELF_DESCRIBE:
-      //sendEvent(event);
-      break;
     default:
       break;
   }

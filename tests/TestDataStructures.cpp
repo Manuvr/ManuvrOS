@@ -110,22 +110,22 @@ int test_Arguments_MEM_MGMT() {
 }
 
 
-/*
-* These tests are meant to test the mechanics of the pointer-hack on PODs.
+/**
+* Test the capability of Arguments to hold KVP data.
+* @return 0 on pass. Non-zero otherwise.
 */
 int test_Arguments_KVP() {
   StringBuilder log("===< Arguments KVP >====================================\n");
   Argument a;
 
-  log.concat("Adding arguments...\n\n");
+  uint32_t val0  = (uint32_t) randomInt();
+  uint16_t val1  = (uint16_t) randomInt();
+  uint8_t  val2  = (uint8_t)  randomInt();
+  int32_t  val3  = (int32_t)  randomInt();
+  int16_t  val4  = (int16_t)  randomInt();
+  int8_t   val5  = (int8_t)   randomInt();
 
-  uint32_t val0  = 45;
-  uint16_t val1  = 44;
-  uint8_t  val2  = 43;
-  int32_t  val3  = 42;
-  int16_t  val4  = 41;
-  int8_t   val5  = 40;
-  float    val6  = 0.523;
+  log.concat("Adding arguments...\n\n");
 
   a.append(val0);
   a.append(val1);
@@ -133,7 +133,6 @@ int test_Arguments_KVP() {
   a.append(val3);
   a.append(val4);
   a.append(val5);
-  a.append(val6);
 
   a.printDebug(&log);
   log.concat("\n");
@@ -143,6 +142,33 @@ int test_Arguments_KVP() {
   log.concat("========================================================\n\n");
   printf((const char*) log.string());
   return 0;
+}
+
+
+/**
+* These tests are for reference handling and proper type-assignment of internal
+*   types.
+* @return 0 on pass. Non-zero otherwise.
+*/
+int test_Arguments_InternalTypes() {
+  int return_value = 1;
+  StringBuilder log("===< Arguments Internal Types >=========================\n");
+  StringBuilder val0("Some string");
+  Argument a(&val0);
+  a.printDebug(&log);
+
+  StringBuilder* ret0 = nullptr;
+
+  if (0 == a.getValueAs(&ret0)) {
+    if (&val0 == ret0) {
+      return_value = 0;
+    }
+    else log.concat("StringBuilder pointer retrieved from Argument is not the same as what went in. Fail...\n");
+  }
+  else log.concat("Failed to retrieve StringBuilder pointer.\n");
+
+  printf((const char*) log.string());
+  return return_value;
 }
 
 
@@ -184,6 +210,7 @@ int test_Arguments_PODs() {
   a.append(val4);
   a.append(val5);
   a.append(val6);
+  a.printDebug(&log);
 
   if ((a.argCount() == 8) && (a.sumAllLengths() == real_size)) {
     uint32_t ret0 = 0;
@@ -199,7 +226,7 @@ int test_Arguments_PODs() {
           if ((0 == a.getValueAs(4, &ret3)) && (ret3 == val3)) {
             if ((0 == a.getValueAs(5, &ret4)) && (ret4 == val4)) {
               if ((0 == a.getValueAs(6, &ret5)) && (ret5 == val5)) {
-                if ((0 == a.getValueAs(7, &ret6)) && (ret6 == val6)) {
+                if ((0 == a.getValueAs(7, (float*) &ret6)) && (ret6 == val6)) {
                   log.concatf("Test passes.\n", a.argCount());
                   a.printDebug(&log);
                   return_value = 0;
@@ -222,7 +249,6 @@ int test_Arguments_PODs() {
     log.concatf("Total Arguments:      %d\tExpected 8.\n", a.argCount());
     log.concatf("Total payload size:   %d\tExpected %d.\n", a.sumAllLengths(), real_size);
     log.concat("\n");
-    a.printDebug(&log);
   }
 
   log.concat("========================================================\n\n");
@@ -232,10 +258,13 @@ int test_Arguments_PODs() {
 
 
 int test_Arguments() {
-  int return_value = test_Arguments_PODs();
+  int return_value = test_Arguments_MEM_MGMT();
   if (0 == return_value) {
-    return_value = test_Arguments_MEM_MGMT();
+    return_value = test_Arguments_InternalTypes();
     if (0 == return_value) {
+      return_value = test_Arguments_PODs();
+      if (0 == return_value) {
+      }
     }
   }
   return return_value;
@@ -349,9 +378,14 @@ void printTestFailure(const char* test) {
 * The main function.                                                                                *
 ****************************************************************************************************/
 int main(int argc, char *argv[]) {
-  init_RNG();
-
   int exit_value = 1;   // Failure is the default result.
+
+  init_RNG();   // Our test fixture needs random numbers.
+  printf("Type sizes on this platform:\n========================================================\n");
+  printf("void*   %u\n", sizeof(void*));
+  printf("Float   %u\n", sizeof(float));
+  printf("Double  %u\n", sizeof(double));
+  printf("\n");
 
   if (0 == test_StringBuilder()) {
     if (0 == test_PriorityQueue()) {

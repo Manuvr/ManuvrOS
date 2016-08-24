@@ -103,7 +103,7 @@ int8_t EventReceiver::setVerbosity(ManuvrRunnable* active_event) {
     case 1:
       {
         int8_t temp_int_8 = 0;
-        if (DIG_MSG_ERROR_NO_ERROR != active_event->getArgAs(&temp_int_8)) return -1;
+        if (0 != active_event->getArgAs(&temp_int_8)) return -1;
         return setVerbosity(temp_int_8);
       }
   }

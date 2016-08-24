@@ -314,10 +314,10 @@ int8_t ManuvrMsg::markArgForReap(int idx, bool reap) {
 *
 * @param  idx      The Argument position
 * @param  trg_buf  A pointer to the place where we should write the result.
-* @return DIG_MSG_ERROR_NO_ERROR or appropriate failure code.
+* @return 0 or appropriate failure code.
 */
 int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf) {
-  int8_t return_value = DIG_MSG_ERROR_INVALID_ARG;
+  int8_t return_value = -1;
   if (NULL != arg) {
     return ((0 == idx) ? arg->getValueAs(trg_buf) : arg->getValueAs(idx, trg_buf));
   }
@@ -334,7 +334,7 @@ int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf) {
 * @return 0 or appropriate failure code.
 */
 int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
-  int8_t return_value = DIG_MSG_ERROR_INVALID_ARG;
+  int8_t return_value = -1;
   Argument* a = arg;
   if (NULL != a) {
     switch (a->typeCode()) {
@@ -348,11 +348,11 @@ int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
       case STR_BUILDER_FM:
       case STR_FM:
       case BINARY_FM:
-        return_value = DIG_MSG_ERROR_NO_ERROR;
+        return_value = 0;
         *((uintptr_t*) a->target_mem) = *((uintptr_t*) trg_buf);
         break;
       default:
-        return_value = DIG_MSG_ERROR_INVALID_TYPE;
+        return_value = -2;
         break;
     }
   }
