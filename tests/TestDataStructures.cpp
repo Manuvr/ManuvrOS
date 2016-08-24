@@ -146,6 +146,14 @@ int test_Arguments_KVP() {
   a.printDebug(&log);
   log.concat("\n");
 
+  StringBuilder key_set;
+  int key_count = a.collectKeys(&key_set);
+  log.concatf("Breadth-first keyset (%d total keys):   ", key_count);
+  for (int i = 0; i < key_count; i++) {
+    log.concatf("%s ", key_set.position(i));
+  }
+  log.concat("\n");
+
   if ((0 == a.getValueAs("value0", &ret0)) && (ret0 == val0)) {
     if ((0 == a.getValueAs("value4", &ret4)) && (ret4 == val4)) {
       if ((0 == a.getValueAs("value5", &ret5)) && (ret5 == val5)) {

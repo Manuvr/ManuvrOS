@@ -87,6 +87,19 @@ void Argument::wipe() {
 }
 
 
+int Argument::collectKeys(StringBuilder* key_set) {
+	int return_value = 0;
+	if (nullptr != _key) {
+		key_set->concat(_key);
+		return_value++;
+	}
+	if (nullptr != _next) {
+		return_value += _next->collectKeys(key_set);
+	}
+	return return_value;
+}
+
+
 /**
 *
 * @param  idx      The Argument position

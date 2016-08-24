@@ -98,6 +98,8 @@ class Argument {
 
     inline void setKey(const char* k) {  _key = k;  };
 
+    int collectKeys(StringBuilder*);
+
     int8_t getValueAs(void *trg_buf);
     int8_t getValueAs(uint8_t idx, void *trg_buf);
     int8_t getValueAs(const char*, void *trg_buf);
