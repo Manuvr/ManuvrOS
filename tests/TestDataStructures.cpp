@@ -13,6 +13,7 @@
 #include "DataStructures/StringBuilder.h"
 #include "DataStructures/BufferPipe.h"
 #include "DataStructures/ManuvrOptions.h"
+#include "DataStructures/uuid.h"
 
 
 int test_StringBuilder(void) {
@@ -182,7 +183,7 @@ int test_Arguments_PODs() {
   a.append(val6);
 
   if ((a.argCount() == 8) && (a.sumAllLengths() == real_size)) {
-    a.append("TestKey", new Argument("TestValue"));
+    //a.append("TestKey", new Argument("TestValue"));
     if (true) {
       log.concatf("Test passes.\n", a.argCount());
       a.printDebug(&log);
@@ -221,6 +222,37 @@ int test_BufferPipe() {
 }
 
 
+
+int test_UUID() {
+  StringBuilder log("===< UUID >=============================================\n");
+  StringBuilder temp;
+  UUID test0;
+  UUID test1;
+
+  for (int i = 0; i < 10; i++) {
+    uuid_gen(&test0);
+    temp.concat((uint8_t*) &test0.id, sizeof(test0));
+    log.concat("temp0 bytes:  ");
+    temp.printDebug(&log);
+    temp.clear();
+  }
+
+  char str_buffer[40] = "";
+  uuid_to_str(&test0, str_buffer, 40);
+  log.concatf("temp0 string: %s\n", str_buffer);
+
+  uuid_from_str(str_buffer, &test1);
+  log.concat("temp1 bytes:  ");
+  temp.concat((uint8_t*) &test1.id, sizeof(test1));
+  temp.printDebug(&log);
+
+  log.concat("========================================================\n\n");
+  printf((const char*) log.string());
+  return 0;
+}
+
+
+
 void printTestFailure(const char* test) {
   printf("\n");
   printf("*********************************************\n");
@@ -232,6 +264,8 @@ void printTestFailure(const char* test) {
 * The main function.                                                                                *
 ****************************************************************************************************/
 int main(int argc, char *argv[]) {
+  init_RNG();
+
   int exit_value = 1;   // Failure is the default result.
 
   if (0 == test_StringBuilder()) {
@@ -239,10 +273,12 @@ int main(int argc, char *argv[]) {
       if (0 == vector3_float_test(0.7f, 0.8f, 0.01f)) {
         if (0 == test_BufferPipe()) {
           if (0 == test_Arguments()) {
-            printf("**********************************\n");
-            printf("*  DataStructure tests all pass  *\n");
-            printf("**********************************\n");
-            exit_value = 0;
+            if (0 == test_UUID()) {
+              printf("**********************************\n");
+              printf("*  DataStructure tests all pass  *\n");
+              printf("**********************************\n");
+              exit_value = 0;
+            }
           }
           else printTestFailure("Argument");
         }

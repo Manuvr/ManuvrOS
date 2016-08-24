@@ -25,12 +25,21 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+ extern "C" {
+#endif
+
 typedef struct {
-  uint8_t id[16];
+  uint8_t id[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 } UUID;
 
-void oc_str_to_uuid(const char *str, UUID* uuid);
-void oc_uuid_to_str(const UUID* uuid, char *buffer, int buflen);
-void oc_gen_uuid(UUID* uuid);
+void uuid_from_str(const char *str, UUID* uuid);
+void uuid_to_str(const UUID* uuid, char *buffer, int buflen);
+void uuid_gen(UUID* uuid);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* OC_UUID_H */

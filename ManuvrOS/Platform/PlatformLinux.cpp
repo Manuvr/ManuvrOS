@@ -35,6 +35,7 @@ This file forms the catch-all for linux platforms that have no support.
 #include <unistd.h>
 #include <signal.h>
 
+#include <DataStructures/uuid.h>
 
 
 /****************************************************************************************************
@@ -210,21 +211,14 @@ void init_RNG() {
 /****************************************************************************************************
 * Identity and serial number                                                                        *
 ****************************************************************************************************/
-#if defined(__MANUVR_UUID)
-  // Under linux, we use the platform UUID library.
-  #include <uuid/uuid.h>
-
-  uuid_t instance_serial_number;  // If we have UUID support.
-#endif
+UUID instance_serial_number;  // If we have UUID support.
 
 void manuvrPlatformInfo(StringBuilder* out) {
   out->concat("Linux ");
-  #if defined(__MANUVR_UUID)
-    char* uuid_str = (char*) alloca(36);
-    bzero(uuid_str, 36);
-    uuid_unparse_lower(instance_serial_number, uuid_str);
-    out->concat(uuid_str);
-  #endif
+  char* uuid_str = (char*) alloca(40);
+  bzero(uuid_str, 40);
+  uuid_to_str(&instance_serial_number, uuid_str, 40);
+  out->concat(uuid_str);
 }
 
 
@@ -235,11 +229,7 @@ void manuvrPlatformInfo(StringBuilder* out) {
 * @return   The length of the serial number on this platform, in terms of bytes.
 */
 int platformSerialNumberSize() {
-  #if defined(__MANUVR_UUID)
-    return 16;
-  #else
-    return 0;
-  #endif
+  return 16;
 }
 
 
@@ -250,12 +240,8 @@ int platformSerialNumberSize() {
 * @return   The number of bytes written.
 */
 int getSerialNumber(uint8_t *buf) {
-  #if defined(__MANUVR_UUID)
-  for (int i = 0; i < 16; i++) *(buf + i) = *(((uint8_t*)instance_serial_number) + i);
+  for (int i = 0; i < 16; i++) *(buf + i) = *(((uint8_t*)&instance_serial_number.id) + i);
   return 16;
-  #else
-  return 0;
-  #endif
 }
 
 
@@ -511,9 +497,7 @@ void platformInit() {
   init_RNG();
   initPlatformRTC();
   __kernel = (volatile Kernel*) Kernel::getInstance();
-  #if defined(__MANUVR_UUID)
-    uuid_generate(instance_serial_number);
-  #endif
+  uuid_gen(&instance_serial_number);
   initSigHandlers();
   set_linux_interval_timer();
 }

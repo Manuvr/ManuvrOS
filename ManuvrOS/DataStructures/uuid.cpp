@@ -23,73 +23,64 @@
 #include "uuid.h"
 #include <Platform/Platform.h>
 
+#ifdef __cplusplus
+ extern "C" {
+#endif
+
 
 void uuid_from_str(const char *str, UUID *uuid) {
   int j = 0;
-  int k = 1;
   uint8_t c = 0;
   uint8_t a = 0;
 
   for (int i = 0; i < strlen(str); i++) {
     switch (str[i]) {
-      case 0:
-      case 1:
-      case 2:
-      case 3:
-      case 4:
-      case 5:
-      case 6:
-      case 7:
-      case 8:
-      case 9:
-        c |= str[i] - 48;
-        a++;
+      case 0x30:
+      case 0x31:
+      case 0x32:
+      case 0x33:
+      case 0x34:
+      case 0x35:
+      case 0x36:
+      case 0x37:
+      case 0x38:
+      case 0x39:
+        c |= ((str[i] - 0x30) << (a++ ? 0 : 4));
         break;
       case 65:
       case 97:
-        c |= 0x0a;
-        a++;
+        c |= (a++ ? 0x0a : 0xa0);
         break;
       case 66:
       case 98:
-        c |= 0x0b;
-        a++;
+        c |= (a++ ? 0x0b : 0xb0);
         break;
       case 67:
       case 99:
-        c |= 0x0c;
-        a++;
+        c |= (a++ ? 0x0c : 0xc0);
         break;
       case 68:
       case 100:
-        c |= 0x0d;
-        a++;
+        c |= (a++ ? 0x0d : 0xd0);
         break;
       case 69:
       case 101:
-        c |= 0x0e;
-        a++;
+        c |= (a++ ? 0x0e : 0xe0);
         break;
       case 70:
       case 102:
-        c |= 0x0f;
-        a++;
+        c |= (a++ ? 0x0f : 0xf0);
         break;
     }
 
-    if (a) {
-      if ((j + 1) * 2 == k) {
-        uuid->id[j++] = c;
-        c = 0;
-      }
-      else {
-        c = c << 4;
-      }
-      k++;
+    if (2 <= a) {
+      uuid->id[j++] = c;
+      c = 0;
       a = 0;
     }
   }
 }
+
 
 void uuid_to_str(const UUID* uuid, char *buffer, int buflen) {
   if (buflen < 37) return;
@@ -109,9 +100,10 @@ void uuid_to_str(const UUID* uuid, char *buffer, int buflen) {
   }
 }
 
+
 void uuid_gen(UUID *uuid) {
   for (int i = 0; i < 4; i++) {
-    *((uint8_t*)&uuid->id[i * 4]) = randomInt();
+    *((uint32_t*) &uuid->id[i * 4]) = randomInt();
   }
 
   /*  From RFC 4122
@@ -131,3 +123,7 @@ void uuid_gen(UUID *uuid) {
   uuid->id[6] &= 0x0f;
   uuid->id[6] |= 0x40;
 }
+
+#ifdef __cplusplus
+}
+#endif
