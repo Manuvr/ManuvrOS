@@ -88,7 +88,7 @@ void Argument::wipe() {
 
 
 /**
-* All of the type-specialized getArgAs() fxns boil down to this. Which is private.
+* All of the type-specialized getValueAs() fxns boil down to this. Which is private.
 * The boolean preserve parameter will leave the argument attached (if true), or destroy it (if false).
 *
 * @param  idx      The Argument position

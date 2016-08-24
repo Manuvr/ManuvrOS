@@ -146,20 +146,23 @@ int test_Arguments_KVP() {
 }
 
 
-/*
+/**
 * These tests are meant to test the mechanics of the pointer-hack on PODs.
+* Failure here might result in segfaults. This also needs to be tested against
+*   both 32/64-bit builds.
+* @return 0 on pass. Non-zero otherwise.
 */
 int test_Arguments_PODs() {
   int return_value = 1;
   StringBuilder log("===< Arguments POD >====================================\n");
   const char* val_base = "This is the base argument";
-  uint32_t val0  = 45;
-  uint16_t val1  = 44;
-  uint8_t  val2  = 43;
-  int32_t  val3  = 42;
-  int16_t  val4  = 41;
-  int8_t   val5  = 40;
-  float    val6  = 0.523;
+  uint32_t val0  = (uint32_t) randomInt();
+  uint16_t val1  = (uint16_t) randomInt();
+  uint8_t  val2  = (uint8_t)  randomInt();
+  int32_t  val3  = (int32_t)  randomInt();
+  int16_t  val4  = (int16_t)  randomInt();
+  int8_t   val5  = (int8_t)   randomInt();
+  float    val6  = (float)    randomInt()/1000000.0f;
 
   Argument a(val_base);
 
@@ -183,12 +186,37 @@ int test_Arguments_PODs() {
   a.append(val6);
 
   if ((a.argCount() == 8) && (a.sumAllLengths() == real_size)) {
-    //a.append("TestKey", new Argument("TestValue"));
-    if (true) {
-      log.concatf("Test passes.\n", a.argCount());
-      a.printDebug(&log);
-      return_value = 0;
+    uint32_t ret0 = 0;
+    uint16_t ret1 = 0;
+    uint8_t  ret2 = 0;
+    int32_t  ret3 = 0;
+    int16_t  ret4 = 0;
+    int8_t   ret5 = 0;
+    float    ret6 = 0.0;
+    if ((0 == a.getValueAs(1, &ret0)) && (ret0 == val0)) {
+      if ((0 == a.getValueAs(2, &ret1)) && (ret1 == val1)) {
+        if ((0 == a.getValueAs(3, &ret2)) && (ret2 == val2)) {
+          if ((0 == a.getValueAs(4, &ret3)) && (ret3 == val3)) {
+            if ((0 == a.getValueAs(5, &ret4)) && (ret4 == val4)) {
+              if ((0 == a.getValueAs(6, &ret5)) && (ret5 == val5)) {
+                if ((0 == a.getValueAs(7, &ret6)) && (ret6 == val6)) {
+                  log.concatf("Test passes.\n", a.argCount());
+                  a.printDebug(&log);
+                  return_value = 0;
+                }
+                else log.concatf("float failed (%f vs %f)...\n", (double) val6, (double) ret6);
+              }
+              else log.concatf("int8_t failed (%d vs %d)...\n", val5, ret5);
+            }
+            else log.concatf("int16_t failed (%d vs %d)...\n", val4, ret4);
+          }
+          else log.concatf("int32_t failed (%d vs %d)...\n", val3, ret3);
+        }
+        else log.concatf("uint8_t failed (%u vs %u)...\n", val2, ret2);
+      }
+      else log.concatf("uint16_t failed (%u vs %u)...\n", val1, ret1);
     }
+    else log.concatf("uint32_t failed (%u vs %u)...\n", val0, ret0);
   }
   else {
     log.concatf("Total Arguments:      %d\tExpected 8.\n", a.argCount());
@@ -222,7 +250,10 @@ int test_BufferPipe() {
 }
 
 
-
+/**
+* UUID battery.
+* @return 0 on pass. Non-zero otherwise.
+*/
 int test_UUID() {
   StringBuilder log("===< UUID >=============================================\n");
   StringBuilder temp;
