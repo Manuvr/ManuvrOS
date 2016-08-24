@@ -135,7 +135,7 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
       ManuvrRunnable* event  = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
       event->specific_target = (EventReceiver*) __kernel;
       event->originator      = (EventReceiver*) this;
-      event->markArgForReap(event->addArg(dispatched), true);
+      event->addArg(dispatched)->reapValue(true);
       raiseEvent(event);
     }
     session_buffer.drop_position(0);

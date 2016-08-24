@@ -88,8 +88,6 @@ void Argument::wipe() {
 
 
 /**
-* All of the type-specialized getValueAs() fxns boil down to this. Which is private.
-* The boolean preserve parameter will leave the argument attached (if true), or destroy it (if false).
 *
 * @param  idx      The Argument position
 * @param  trg_buf  A pointer to the place where we should write the result.
@@ -108,7 +106,37 @@ int8_t Argument::getValueAs(uint8_t idx, void* trg_buf) {
 	return return_value;
 }
 
+/**
+* Get a value by its key.
+*
+* @param  idx      The Argument position
+* @param  trg_buf  A pointer to the place where we should write the result.
+* @return 0 on success or appropriate failure code.
+*/
+int8_t Argument::getValueAs(const char* k, void* trg_buf) {
+  if (nullptr != k) {
+		if (nullptr != _key) {
+			if (_key == k) {
+				// If pointer comparison worked, return the value.
+				return getValueAs(trg_buf);
+			}
+		}
 
+		if (nullptr != _next) {
+			return _next->getValueAs(k, trg_buf);
+		}
+	}
+	return -1;
+}
+
+
+/**
+* All of the type-specialized getValueAs() fxns boil down to this. Which is private.
+* The boolean preserve parameter will leave the argument attached (if true), or destroy it (if false).
+*
+* @param  trg_buf  A pointer to the place where we should write the result.
+* @return 0 on success or appropriate failure code.
+*/
 int8_t Argument::getValueAs(void* trg_buf) {
   int8_t return_value = -1;
   if (nullptr != pointer()) {
@@ -322,14 +350,14 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
 
 
 /**
-* @return The index of the appended argument.
+* @return A pointer to the appended argument.
 */
-int Argument::append(Argument* arg) {
+Argument* Argument::append(Argument* arg) {
 	if (nullptr == _next) {
 		_next = arg;
-		return 0;
+		return arg;
 	}
-	return (1 + _next->append(arg));
+	return _next->append(arg);
 }
 
 
@@ -397,7 +425,11 @@ void Argument::valToString(StringBuilder* out) {
 * Warning: call is propagated across entire list.
 */
 void Argument::printDebug(StringBuilder* out) {
-  out->concatf("\t%s\t%s", getTypeCodeString(typeCode()), (reapValue() ? "(reap)" : "\t"));
+  out->concatf("\t%s\t%s\t%s",
+		(nullptr == _key ? "" : _key),
+		getTypeCodeString(typeCode()),
+		(reapValue() ? "(reap)" : "\t")
+	);
 	valToString(out);
   out->concat("\n");
 

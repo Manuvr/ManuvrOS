@@ -131,36 +131,36 @@ class ManuvrMsg {
     *   implementation details of Arguments. Might look ugly, but takes the CPU burden off of runtime
     *   and forces the compiler to deal with it.
     */
-    inline int addArg(uint8_t val) {             return addArg(new Argument(val));   }
-    inline int addArg(uint16_t val) {            return addArg(new Argument(val));   }
-    inline int addArg(uint32_t val) {            return addArg(new Argument(val));   }
-    inline int addArg(int8_t val) {              return addArg(new Argument(val));   }
-    inline int addArg(int16_t val) {             return addArg(new Argument(val));   }
-    inline int addArg(int32_t val) {             return addArg(new Argument(val));   }
-    inline int addArg(float val) {               return addArg(new Argument(val));   }
+    inline Argument* addArg(uint8_t val) {             return addArg(new Argument(val));   }
+    inline Argument* addArg(uint16_t val) {            return addArg(new Argument(val));   }
+    inline Argument* addArg(uint32_t val) {            return addArg(new Argument(val));   }
+    inline Argument* addArg(int8_t val) {              return addArg(new Argument(val));   }
+    inline Argument* addArg(int16_t val) {             return addArg(new Argument(val));   }
+    inline Argument* addArg(int32_t val) {             return addArg(new Argument(val));   }
+    inline Argument* addArg(float val) {               return addArg(new Argument(val));   }
 
-    inline int addArg(uint8_t *val) {            return addArg(new Argument(val));   }
-    inline int addArg(uint16_t *val) {           return addArg(new Argument(val));   }
-    inline int addArg(uint32_t *val) {           return addArg(new Argument(val));   }
-    inline int addArg(int8_t *val) {             return addArg(new Argument(val));   }
-    inline int addArg(int16_t *val) {            return addArg(new Argument(val));   }
-    inline int addArg(int32_t *val) {            return addArg(new Argument(val));   }
-    inline int addArg(float *val) {              return addArg(new Argument(val));   }
+    inline Argument* addArg(uint8_t *val) {            return addArg(new Argument(val));   }
+    inline Argument* addArg(uint16_t *val) {           return addArg(new Argument(val));   }
+    inline Argument* addArg(uint32_t *val) {           return addArg(new Argument(val));   }
+    inline Argument* addArg(int8_t *val) {             return addArg(new Argument(val));   }
+    inline Argument* addArg(int16_t *val) {            return addArg(new Argument(val));   }
+    inline Argument* addArg(int32_t *val) {            return addArg(new Argument(val));   }
+    inline Argument* addArg(float *val) {              return addArg(new Argument(val));   }
 
-    inline int addArg(Vector3ui16 *val) {        return addArg(new Argument(val));   }
-    inline int addArg(Vector3i16 *val) {         return addArg(new Argument(val));   }
-    inline int addArg(Vector3f *val) {           return addArg(new Argument(val));   }
-    inline int addArg(Vector4f *val) {           return addArg(new Argument(val));   }
+    inline Argument* addArg(Vector3ui16 *val) {        return addArg(new Argument(val));   }
+    inline Argument* addArg(Vector3i16 *val) {         return addArg(new Argument(val));   }
+    inline Argument* addArg(Vector3f *val) {           return addArg(new Argument(val));   }
+    inline Argument* addArg(Vector4f *val) {           return addArg(new Argument(val));   }
 
-    inline int addArg(void *val, int len) {      return addArg(new Argument(val, len));   }
-    inline int addArg(const char *val) {         return addArg(new Argument(val));   }
-    inline int addArg(StringBuilder *val) {      return addArg(new Argument(val));   }
-    inline int addArg(BufferPipe *val) {         return addArg(new Argument(val));   }
-    inline int addArg(EventReceiver *val) {      return addArg(new Argument(val));   }
-    inline int addArg(ManuvrXport *val) {        return addArg(new Argument(val));   }
-    inline int addArg(ManuvrRunnable *val) {     return addArg(new Argument(val));   }
+    inline Argument* addArg(void *val, int len) {      return addArg(new Argument(val, len));   }
+    inline Argument* addArg(const char *val) {         return addArg(new Argument(val));   }
+    inline Argument* addArg(StringBuilder *val) {      return addArg(new Argument(val));   }
+    inline Argument* addArg(BufferPipe *val) {         return addArg(new Argument(val));   }
+    inline Argument* addArg(EventReceiver *val) {      return addArg(new Argument(val));   }
+    inline Argument* addArg(ManuvrXport *val) {        return addArg(new Argument(val));   }
+    inline Argument* addArg(ManuvrRunnable *val) {     return addArg(new Argument(val));   }
 
-    int addArg(Argument*);  // The only "real" implementation.
+    Argument* addArg(Argument*);  // The only "real" implementation.
 
     /*
     * Overrides for Argument retreival. Pass in pointer to the type the argument should be retreived as.
@@ -205,10 +205,6 @@ class ManuvrMsg {
     inline int8_t getArgAs(uint8_t idx, ManuvrRunnable  **trg_buf) {  return getArgAs(idx, (void*) trg_buf);  }
 
 
-    /*
-    * Protip: Think on the stack...
-    * markForReap(addArg(new StringBuilder("Sample data to reap on destruction.")), true);
-    */
     int8_t markArgForReap(int idx, bool reap);
 
     void printDebug(StringBuilder*);

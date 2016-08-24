@@ -149,12 +149,12 @@ int8_t ManuvrMsg::repurpose(uint16_t code) {
 }
 
 
-int ManuvrMsg::addArg(Argument* nu) {
+Argument* ManuvrMsg::addArg(Argument* nu) {
   if (nullptr != arg) {
     return arg->append(nu);
   }
   arg = nu;
-  return 0;
+  return nu;
 };
 
 

@@ -320,7 +320,7 @@ int8_t ManuvrTelehash::read_port() {
 
         event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
         nu_data = new StringBuilder(buf, n);
-        event->markArgForReap(event->addArg(nu_data), true);
+        event->addArg(nu_data))->reapValue(true);
 
         // Do stuff regarding the data we just read...
         if (NULL != session) {
