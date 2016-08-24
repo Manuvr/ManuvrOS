@@ -33,9 +33,10 @@ typedef struct {
   uint8_t id[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 } UUID;
 
-void uuid_from_str(const char *str, UUID* uuid);
-void uuid_to_str(const UUID* uuid, char *buffer, int buflen);
-void uuid_gen(UUID* uuid);
+void uuid_from_str(const char *str, UUID*);
+void uuid_to_str(const UUID*, char *buffer, int buflen);
+void uuid_gen(UUID*);
+int  uuid_compare(UUID*, UUID*);
 
 
 #ifdef __cplusplus

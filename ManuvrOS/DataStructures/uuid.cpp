@@ -128,6 +128,24 @@ void uuid_gen(UUID *uuid) {
   uuid->id[6] = (uuid->id[6] & 0x0f) | 0x40;
 }
 
+
+/*
+* Returns 0 if the given UUIDs are the same value.
+*/
+int uuid_compare(UUID *uuid0, UUID *uuid1) {
+  if (*((uint32_t*) &uuid0->id[0]) == *((uint32_t*) &uuid1->id[0])) {
+    if (*((uint32_t*) &uuid0->id[4]) == *((uint32_t*) &uuid1->id[4])) {
+      if (*((uint32_t*) &uuid0->id[8]) == *((uint32_t*) &uuid1->id[8])) {
+        if (*((uint32_t*) &uuid0->id[12]) == *((uint32_t*) &uuid1->id[12])) {
+          return 0;
+        }
+      }
+    }
+  }
+  return 1;
+}
+
+
 #ifdef __cplusplus
 }
 #endif

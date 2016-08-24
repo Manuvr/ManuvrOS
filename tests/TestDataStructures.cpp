@@ -229,6 +229,7 @@ int test_UUID() {
   UUID test0;
   UUID test1;
 
+  // Do UUID's initialize to zero?
   for (int i = 0; i < 16; i++) {
     if (0 != *((uint8_t*) &test0.id[i])) {
       log.concat("UUID should be initialized to zeros. It was not. Failing...\n");
@@ -237,12 +238,37 @@ int test_UUID() {
     }
   }
 
+  // Does the comparison function work?
+  if (uuid_compare(&test0, &test1)) {
+    log.concat("UUID function considers these distinct. Failing...\n");
+    temp.concat((uint8_t*) &test0.id, sizeof(test0));
+    temp.printDebug(&log);
+    temp.clear();
+    temp.concat((uint8_t*) &test1.id, sizeof(test1));
+    temp.printDebug(&log);
+    printf((const char*) log.string());
+    return -1;
+  }
+
+  // Generate a whole mess of UUID...
   for (int i = 0; i < 10; i++) {
     uuid_gen(&test0);
     temp.concat((uint8_t*) &test0.id, sizeof(test0));
     log.concat("temp0 bytes:  ");
     temp.printDebug(&log);
     temp.clear();
+  }
+
+  // Does the comparison function work?
+  if (0 == uuid_compare(&test0, &test1)) {
+    log.concat("UUID function considers these the same. Failing...\n");
+    temp.concat((uint8_t*) &test0.id, sizeof(test0));
+    temp.printDebug(&log);
+    temp.clear();
+    temp.concat((uint8_t*) &test1.id, sizeof(test1));
+    temp.printDebug(&log);
+    printf((const char*) log.string());
+    return -1;
   }
 
   char str_buffer[40] = "";
@@ -253,6 +279,9 @@ int test_UUID() {
   log.concat("temp1 bytes:  ");
   temp.concat((uint8_t*) &test1.id, sizeof(test1));
   temp.printDebug(&log);
+
+  // TODO: This is the end of the happy-path. Now we should abuse the program
+  // by feeding it garbage and ensure that its behavior is defined.
 
   log.concat("========================================================\n\n");
   printf((const char*) log.string());
