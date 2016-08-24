@@ -156,9 +156,6 @@ limitations under the License.
       void printScheduler(StringBuilder*);
       void printDebug(StringBuilder*);
       inline void printDebug() {        printDebug(&local_log);      };
-      #if defined(__MANUVR_DEBUG)
-        void print_type_sizes(StringBuilder*);   // Prints the memory-costs of various classes.
-      #endif
 
       /* Profiling support.. */
       float cpu_usage();

@@ -905,34 +905,6 @@ float Kernel::cpu_usage() {
 }
 
 
-#if defined(__MANUVR_DEBUG)
-/**
-* Print the type sizes to the kernel log.
-*
-* @param   StringBuilder*  The buffer that this fxn will write output into.
-*/
-void Kernel::print_type_sizes(StringBuilder* output) {
-  output->concat("---< Type sizes >-----------------------------\n-- Elemental data structures:\n");
-  output->concatf("\tStringBuilder         %u\n", (unsigned long) sizeof(StringBuilder));
-  output->concatf("\tBufferPipe            %u\n", (unsigned long) sizeof(BufferPipe));
-  output->concatf("\tLinkedList<void*>     %u\n", (unsigned long) sizeof(LinkedList<void*>));
-  output->concatf("\tPriorityQueue<void*>  %u\n", (unsigned long) sizeof(PriorityQueue<void*>));
-  output->concatf("\tTaskProfilerData      %u\n", (unsigned long) sizeof(TaskProfilerData));
-  //output->concatf("--\tSensorWrapper         %u\n", (unsigned long) sizeof(SensorWrapper));
-
-  output->concat("-- Core singletons:\n");
-  output->concatf("\tManuvrPlatform        %u\n", (unsigned long) sizeof(ManuvrPlatform));
-  output->concatf("\tKernel                %u\n", (unsigned long) sizeof(Kernel));
-
-  output->concat("-- Messaging components:\n");
-  output->concatf("\tEventReceiver         %u\n", (unsigned long) sizeof(EventReceiver));
-  output->concatf("\tArgument              %u\n", (unsigned long) sizeof(Argument));
-  output->concatf("\tManuvrMsg             %u\n", (unsigned long) sizeof(ManuvrMsg));
-  output->concatf("\tManuvrRunnable        %u\n", (unsigned long) sizeof(ManuvrRunnable));
-}
-#endif
-
-
 /**
 * Print the profiler to the provided buffer.
 *
@@ -1557,9 +1529,6 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
           break;
         case 4:
           printScheduler(&local_log);
-          break;
-        case 9:
-          print_type_sizes(&local_log);
           break;
         default:
           printDebug(&local_log);

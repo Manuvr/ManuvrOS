@@ -8,13 +8,28 @@
 #include <fstream>
 #include <iostream>
 
-#include "DataStructures/PriorityQueue.h"
-#include "DataStructures/Vector3.h"
-#include "DataStructures/StringBuilder.h"
-#include "DataStructures/BufferPipe.h"
-#include "DataStructures/ManuvrOptions.h"
-#include "DataStructures/uuid.h"
+#include <DataStructures/PriorityQueue.h>
+#include <DataStructures/Vector3.h>
+#include <DataStructures/Quaternion.h>
+#include <DataStructures/StringBuilder.h>
+#include <DataStructures/BufferPipe.h>
+#include <DataStructures/uuid.h>
 
+#include <Kernel.h>
+#include <Drivers/SensorWrapper/SensorWrapper.h>
+
+#include <XenoSession/XenoSession.h>
+#include <XenoSession/CoAP/CoAPSession.h>
+#include <XenoSession/MQTT/MQTTSession.h>
+#include <XenoSession/Manuvr/ManuvrSession.h>
+#include <XenoSession/Console/ManuvrConsole.h>
+
+#include <Transports/ManuvrSerial/ManuvrSerial.h>
+#include <Transports/StandardIO/StandardIO.h>
+#include <Transports/ManuvrSocket/ManuvrSocket.h>
+#include <Transports/ManuvrSocket/ManuvrUDP.h>
+#include <Transports/ManuvrSocket/ManuvrTCP.h>
+#include <Transports/ManuvrXport.h>
 
 int test_StringBuilder(void) {
   StringBuilder log("===< StringBuilder >====================================\n");
@@ -397,7 +412,53 @@ int test_UUID() {
   return 0;
 }
 
+/**
+* Prints the sizes of various types. Informational only. No test.
+*/
+void printTypeSizes() {
+  StringBuilder output("===< Type sizes >=======================================\n-- Primitives:\n");
+  output.concatf("\tvoid*                 %u\n", sizeof(void*));
+  output.concatf("\tFloat                 %u\n", sizeof(float));
+  output.concatf("\tDouble                %u\n", sizeof(double));
+  output.concat("\n-- Elemental data structures:\n");
+  output.concatf("\tStringBuilder         %u\n", sizeof(StringBuilder));
+  output.concatf("\tVector3<float>        %u\n", sizeof(Vector3<float>));
+  output.concatf("\tQuaternion            %u\n", sizeof(Quaternion));
+  output.concatf("\tBufferPipe            %u\n", sizeof(BufferPipe));
+  output.concatf("\tLinkedList<void*>     %u\n", sizeof(LinkedList<void*>));
+  output.concatf("\tPriorityQueue<void*>  %u\n", sizeof(PriorityQueue<void*>));
+  output.concatf("\tArgument              %u\n", sizeof(Argument));
+  output.concatf("\tUUID                  %u\n", sizeof(UUID));
+  output.concatf("\tTaskProfilerData      %u\n", sizeof(TaskProfilerData));
+  output.concatf("\tSensorWrapper         %u\n", sizeof(SensorWrapper));
 
+  output.concat("\n-- Core singletons:\n");
+  output.concatf("\tManuvrPlatform        %u\n", sizeof(ManuvrPlatform));
+  output.concatf("\tKernel                %u\n", sizeof(Kernel));
+
+  output.concat("\n-- Messaging components:\n");
+  output.concatf("\tEventReceiver         %u\n", sizeof(EventReceiver));
+  output.concatf("\tManuvrMsg             %u\n", sizeof(ManuvrMsg));
+  output.concatf("\tManuvrRunnable        %u\n", sizeof(ManuvrRunnable));
+
+  output.concat("\n-- Transports:\n");
+  output.concatf("\tManuvrXport           %u\n", sizeof(ManuvrXport));
+  output.concatf("\tStandardIO            %u\n", sizeof(StandardIO));
+  output.concatf("\tManuvrSerial          %u\n", sizeof(ManuvrSerial));
+  output.concatf("\tManuvrSocket          %u\n", sizeof(ManuvrSocket));
+  output.concatf("\tManuvrTCP             %u\n", sizeof(ManuvrTCP));
+  output.concatf("\tManuvrUDP             %u\n", sizeof(ManuvrUDP));
+  output.concatf("\tUDPPipe               %u\n", sizeof(UDPPipe));
+
+  output.concat("\n-- Sessions:\n");
+  output.concatf("\tXenoSession           %u\n", sizeof(XenoSession));
+  output.concatf("\tXenoMessage           %u\n", sizeof(XenoMessage));
+  output.concatf("\tManuvrConsole         %u\n", sizeof(ManuvrConsole));
+  output.concatf("\tManuvrSession         %u\n", sizeof(ManuvrSession));
+  output.concatf("\tCoAPSession           %u\n", sizeof(CoAPSession));
+  output.concatf("\tMQTTSession           %u\n", sizeof(MQTTSession));
+  printf("%s\n", output.string());
+}
 
 void printTestFailure(const char* test) {
   printf("\n");
@@ -411,13 +472,9 @@ void printTestFailure(const char* test) {
 ****************************************************************************************************/
 int main(int argc, char *argv[]) {
   int exit_value = 1;   // Failure is the default result.
+  printTypeSizes();
 
   init_RNG();   // Our test fixture needs random numbers.
-  printf("Type sizes on this platform:\n========================================================\n");
-  printf("void*   %u\n", sizeof(void*));
-  printf("Float   %u\n", sizeof(float));
-  printf("Double  %u\n", sizeof(double));
-  printf("\n");
 
   if (0 == test_StringBuilder()) {
     if (0 == test_PriorityQueue()) {
