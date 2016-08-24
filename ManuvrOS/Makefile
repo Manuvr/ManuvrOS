@@ -18,10 +18,10 @@ LIBS =  -lm
 # Datastructures
 CPP_SRCS   = DataStructures/StringBuilder.cpp
 CPP_SRCS  += DataStructures/BufferPipe.cpp
-CPP_SRCS  += DataStructures/ManuvrOptions.cpp
 CPP_SRCS  += DataStructures/Quaternion.cpp
 CPP_SRCS  += DataStructures/InertialMeasurement.cpp
 CPP_SRCS  += DataStructures/uuid.cpp
+CPP_SRCS  += DataStructures/Argument.cpp
 
 # Types and encodings
 CPP_SRCS  += Types/TypeTranscriber.cpp
@@ -34,7 +34,6 @@ CPP_SRCS  += EnumeratedTypeCodes.cpp
 CPP_SRCS  += Kernel.cpp
 CPP_SRCS  += EventReceiver.cpp
 CPP_SRCS  += TaskProfilerData.cpp
-CPP_SRCS  += ManuvrMsg/Argument.cpp
 CPP_SRCS  += ManuvrMsg/ManuvrMsg.cpp
 
 # Concepts of "session" according to various standards...

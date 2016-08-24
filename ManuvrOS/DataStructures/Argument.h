@@ -1,3 +1,5 @@
+#ifndef __MANUVR_ARGUMENT_H__
+#define __MANUVR_ARGUMENT_H__
 
 #include <EnumeratedTypeCodes.h>
 
@@ -149,7 +151,7 @@ class Argument {
     static char*    printBinStringToBuffer(unsigned char *str, int len, char *buffer);
 
 
-  protected:
+  private:
     Argument*   _next      = nullptr;
     const char* _key       = nullptr;
     uint16_t    len        = 0;
@@ -158,9 +160,8 @@ class Argument {
 
     Argument(void* ptr, int len, uint8_t code);  // Protected constructor to which we delegate.
 
+    void wipe();
 
-
-  private:
     /* Inlines for altering and reading the flags. */
     inline void _alter_flags(bool en, uint8_t mask) {
       _flags = (en) ? (_flags | mask) : (_flags & ~mask);
@@ -169,5 +170,8 @@ class Argument {
       return (mask == (_flags & mask));
     };
 
-    void wipe();
+    // TODO: Might-should move this to someplace more accessable?
+    static uintptr_t get_const_from_char_ptr(char*);
 };
+
+#endif  // __MANUVR_ARGUMENT_H__
