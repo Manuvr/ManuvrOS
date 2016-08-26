@@ -152,6 +152,8 @@ class Argument {
 
     static int8_t encodeToCBOR(Argument*, StringBuilder*);
     static Argument* decodeFromCBOR(StringBuilder*);
+    static int8_t encodeToJSON(Argument*, StringBuilder*);
+    static Argument* decodeFromJSON(StringBuilder*);
 
 
   private:

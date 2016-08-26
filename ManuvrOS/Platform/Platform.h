@@ -18,12 +18,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-This file is meant to contain a set of common functions that are typically platform-dependent.
-  The goal is to make a class instance that is pre-processor-selectable for instantiation by the
-  kernel, thereby giving the kernel the ability to...
+This file is meant to contain a set of common functions that are
+  typically platform-dependent. The goal is to make a class instance
+  that is pre-processor-selectable to reflect the platform with an API
+  that is consistent, thereby giving the kernel the ability to...
     * Access the realtime clock (if applicatble)
     * Get definitions for GPIO pins.
     * Access a true RNG (if it exists)
+    * Persist and retrieve data across runtimes.
 */
 
 
@@ -54,6 +56,7 @@ This file is meant to contain a set of common functions that are typically platf
 
 
 class ManuvrRunnable;
+class Kernel;
 
 /**
 * Platform init is only considered complete if all of the following
@@ -77,14 +80,24 @@ class ManuvrRunnable;
 #define MANUVR_PLAT_FLAG_HAS_STORAGE      0x80000000
 
 
+/*
+* Notes regarding hooking into the boot sequence...
+* All of these functions will be invoked in the specified order (if they exist).
+*
+* User code wishing to hook into these calls can do so by modifying this stuct.
+* See main_template.cpp for an example.
+*/
 typedef struct _init_hooks_struct {
-  FunctionPointer rng_init;
-  FunctionPointer rtc_init;
-  FunctionPointer gpio_init;
-  FunctionPointer sec_init;
-  FunctionPointer storage_init;
-  FunctionPointer plat_pre_init;
-  FunctionPointer plat_post_init;
+  FunctionPointer rng_init        = nullptr;
+  FunctionPointer rtc_init        = nullptr;
+  FunctionPointer gpio_init       = nullptr;
+  FunctionPointer sec_init        = nullptr;
+  FunctionPointer storage_init    = nullptr;
+  FunctionPointer plat_pre_init   = nullptr;
+  FunctionPointer plat_post_init  = nullptr;
+  FunctionPointer reboot          = nullptr;
+  FunctionPointer shutdown        = nullptr;
+  FunctionPointer bootloader      = nullptr;
 } PlatformInitFxns;
 
 
@@ -103,8 +116,12 @@ class ManuvrPlatform {
     inline bool hasStorage() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_STORAGE); };
 
     /* These are bootstrap checkpoints. */
+    int8_t bootstrap();
     inline void booted(bool en) { _alter_flags(en, MANUVR_PLAT_FLAG_BOOT_STAGE_MASK);  };
     inline bool booted() { return _check_flags(MANUVR_PLAT_FLAG_BOOT_STAGE_MASK == bootStage());  };
+
+    inline void setKernel(Kernel* k) {   if (nullptr == _kernel) _kernel = k;  };
+    inline Kernel* getKernel() {         return _kernel;  };
 
     inline uint8_t bootStage() {
       return ((uint8_t) _pflags & MANUVR_PLAT_FLAG_BOOT_STAGE_MASK);
@@ -117,12 +134,14 @@ class ManuvrPlatform {
     void setIdleHook(FunctionPointer nu);
 
     void printDebug(StringBuilder* out);
+    void printDebug();
 
 
   protected:
 
   private:
-    uint32_t _pflags           = 0;
+    uint32_t        _pflags    = 0;
+    Kernel*         _kernel    = nullptr;
     FunctionPointer _idle_hook = nullptr;
 
     /* Inlines for altering and reading the flags. */

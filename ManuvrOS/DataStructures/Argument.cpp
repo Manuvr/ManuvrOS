@@ -71,6 +71,14 @@ Argument* Argument::decodeFromCBOR(StringBuilder* src) {
 	return nullptr;
 }
 
+int8_t Argument::encodeToJSON(Argument* src, StringBuilder* out) {
+	return -1;
+}
+
+Argument* Argument::decodeFromJSON(StringBuilder* src) {
+	return nullptr;
+}
+
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _

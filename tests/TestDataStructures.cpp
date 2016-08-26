@@ -526,6 +526,36 @@ int main(int argc, char *argv[]) {
 
   init_RNG();   // Our test fixture needs random numbers.
 
+    //if (strcasestr(argv[i], "--cbor")) {
+      // Debug. Testing CBOR...
+      cbor::output_dynamic output;
+      { //encoding
+        cbor::encoder encoder(output);
+        encoder.write_array(5);
+        {
+            encoder.write_int(123);
+            encoder.write_string("bar");
+            encoder.write_int(321);
+            encoder.write_int(321);
+            encoder.write_string("foo");
+        }
+      }
+      printf("CBOR encoding occupies %d bytes\n\t", output.size());
+      uint8_t* buf = output.data();
+      for (unsigned int i = 0; i < output.size(); i++) {
+        printf("0x%02x ", *(buf + i));
+      }
+
+      { // decoding
+        cbor::input input(output.data(), output.size());
+        cbor::listener_debug listener;
+        cbor::decoder decoder(input, listener);
+        decoder.run();
+      }
+      printf("\nCBOR test concluded.\n");
+    //  exit(0);
+    //}
+
   if (0 == test_StringBuilder()) {
     if (0 == test_PriorityQueue()) {
       if (0 == vector3_float_test(0.7f, 0.8f, 0.01f)) {

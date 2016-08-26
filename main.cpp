@@ -25,66 +25,42 @@ limitations under the License.
 
 Main demo application.
 
+This is a demonstration program, and was meant to be compiled for a
+  linux target.
 */
 
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
-
-#include <ctype.h>
-#include <unistd.h>
-#include <dirent.h>
-
-#include <sys/socket.h>
-#include <fstream>
-#include <iostream>
-
-#include <netinet/in.h>
-#include <fcntl.h>
-#include <termios.h>
-
-#include "FirmwareDefs.h"
-
+/* Mandatory include for Manuvr Kernel.  */
 #include <Kernel.h>
 
-// Drivers particular to this Manuvrable...
+/* Drivers particular to this Manuvrable... */
 #include <Drivers/i2c-adapter/i2c-adapter.h>
 
-// This is ONLY used to expose the GPIO pins to the outside world.
-// It is not required for GPIO usage internally.
+/*
+* This is ONLY used to expose the GPIO pins to the outside world.
+* It is NOT required for GPIO usage internally.
+*/
 #include <Drivers/ManuvrableGPIO/ManuvrableGPIO.h>
 
-// Transports...
+/* Transports... */
 #include <Transports/ManuvrSerial/ManuvrSerial.h>
 #include <Transports/ManuvrSocket/ManuvrUDP.h>
 #include <Transports/ManuvrSocket/ManuvrTCP.h>
 #include <Transports/StandardIO/StandardIO.h>
 #include <Transports/BufferPipes/ManuvrTLS/ManuvrTLS.h>
 
-// We will use MQTT as our concept of "session"...
+/* Concepts of "session"... */
 #include <XenoSession/MQTT/MQTTSession.h>
 #include <XenoSession/CoAP/CoAPSession.h>
 #include <XenoSession/Console/ManuvrConsole.h>
 
-#include <Platform/Cryptographic.h>
 
-#include "cbor-cpp/include/cbor.h"
+/* This global makes this source file read better. */
+Kernel* kernel = nullptr;
 
 /*******************************************************************************
-* Globals and defines that make our life easier.                               *
+* BufferPipe strategies particular to this firmware.                           *
 *******************************************************************************/
-char *program_name  = NULL;
-int __main_pid      = 0;
-Kernel* kernel      = NULL;
-
-void kernelDebugDump() {
-  StringBuilder output;
-  kernel->printDebug(&output);
-  Kernel::log(&output);
-}
-
 BufferPipe* _pipe_factory_1(BufferPipe* _n, BufferPipe* _f) {
   CoAPSession* coap_srv = new CoAPSession(_n);
   kernel->subscribe(coap_srv);
@@ -96,7 +72,6 @@ BufferPipe* _pipe_factory_2(BufferPipe* _n, BufferPipe* _f) {
   kernel->subscribe(_console);
   return (BufferPipe*) _console;
 }
-
 
 BufferPipe* _pipe_factory_3(BufferPipe* _n, BufferPipe* _f) {
   ManuvrTLSServer* _tls_server = new ManuvrTLSServer(_n);
@@ -114,6 +89,12 @@ BufferPipe* _pipe_factory_3(BufferPipe* _n, BufferPipe* _f) {
 /*******************************************************************************
 * Functions that just print things.                                            *
 *******************************************************************************/
+void kernelDebugDump() {
+  StringBuilder output;
+  kernel->printDebug(&output);
+  Kernel::log(&output);
+}
+
 void printHelp() {
   Kernel::log("Help would ordinarily be displayed here.\n");
 }
@@ -122,10 +103,9 @@ void printHelp() {
 /*******************************************************************************
 * The main function.                                                           *
 *******************************************************************************/
-
 int main(int argc, char *argv[]) {
-  program_name = argv[0];  // Name of running binary.
-  __main_pid = getpid();
+  char* program_name = argv[0];   // Name of running binary.
+  int   main_pid     = getpid();  // Our PID.
 
   // The first thing we should do: Instance a kernel.
   kernel = new Kernel();
@@ -200,35 +180,6 @@ int main(int argc, char *argv[]) {
         printf("%s was compiled without serial port support. Exiting...\n", argv[0]);
         exit(1);
       #endif
-    }
-    if (strcasestr(argv[i], "--cbor")) {
-      // Debug. Testing CBOR...
-      cbor::output_dynamic output;
-      { //encoding
-        cbor::encoder encoder(output);
-        encoder.write_array(5);
-        {
-            encoder.write_int(123);
-            encoder.write_string("bar");
-            encoder.write_int(321);
-            encoder.write_int(321);
-            encoder.write_string("foo");
-        }
-      }
-      printf("CBOR encoding occupies %d bytes\n\t", output.size());
-      uint8_t* buf = output.data();
-      for (unsigned int i = 0; i < output.size(); i++) {
-        printf("0x%02x ", *(buf + i));
-      }
-
-      { // decoding
-        cbor::input input(output.data(), output.size());
-        cbor::listener_debug listener;
-        cbor::decoder decoder(input, listener);
-        decoder.run();
-      }
-      printf("\nCBOR test concluded.\n");
-      exit(0);
     }
     if ((strcasestr(argv[i], "--quit")) || ((argv[i][0] == '-') && (argv[i][1] == 'q'))) {
       // Execute up-to-and-including boot. Then immediately shutdown.
@@ -312,7 +263,7 @@ int main(int argc, char *argv[]) {
   #endif
 
   // Once we've loaded up all the goodies we want, we finalize everything thusly...
-  printf("%s: Booting Manuvr Kernel....\n", program_name);
+  printf("%s: Booting Manuvr Kernel (PID %u)....\n", program_name, main_pid);
   kernel->bootstrap();
 
   while (0 < kernel->procIdleFlags()) {

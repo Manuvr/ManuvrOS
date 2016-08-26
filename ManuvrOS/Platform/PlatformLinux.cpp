@@ -468,7 +468,6 @@ volatile void reboot() {
 ****************************************************************************************************/
 void ManuvrPlatform::idleHook() {
   if (nullptr != _idle_hook) _idle_hook();
-  else printf("No idle_hook member\n");
 }
 
 void ManuvrPlatform::setIdleHook(FunctionPointer nu) {
@@ -478,7 +477,7 @@ void ManuvrPlatform::setIdleHook(FunctionPointer nu) {
 }
 
 
-/*
+/**
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
 */

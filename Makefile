@@ -171,7 +171,8 @@ tests: libs
 examples: libs
 	export __MANUVR_LINUX
 	$(MAKE) -C ManuvrOS/
-	$(CXX) -static -g -o gpstest examples/tcp-gps.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O0
+	$(CXX) -static -g -o barebones examples/main_template.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O0
+	$(CXX) -static -g -o gpstest   examples/tcp-gps.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O0
 
 builddir:
 	mkdir -p $(OUTPUT_PATH)
