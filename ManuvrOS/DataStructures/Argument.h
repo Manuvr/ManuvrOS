@@ -40,7 +40,7 @@ class Argument {
     *        ---J. Ian Lindsay   Mon Oct 05 22:55:41 MST 2015
     */
     void*   target_mem = nullptr;
-
+//float f = 10.5f; void *vp = *(uint32_t*) &f;
     Argument();
     Argument(uint8_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT8_FM)  {};
     Argument(uint16_t val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT16_FM) {};
@@ -148,7 +148,10 @@ class Argument {
     void valToString(StringBuilder*);
     void printDebug(StringBuilder*);
 
-    static char*    printBinStringToBuffer(unsigned char *str, int len, char *buffer);
+    static char*  printBinStringToBuffer(unsigned char *str, int len, char *buffer);
+
+    static int8_t encodeToCBOR(Argument*, StringBuilder*);
+    static Argument* decodeFromCBOR(StringBuilder*);
 
 
   private:

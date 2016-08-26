@@ -26,9 +26,60 @@ This class represents our type-abstraction layer. It is the means by which
 #include "Argument.h"
 #include <string.h>
 
-/****************************************************************************************************
-* Argument class constructors.                                                                      *
-****************************************************************************************************/
+#include "cbor-cpp/include/cbor.h"
+
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
+
+int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
+	cbor::output_dynamic output;
+	cbor::encoder encoder(output);
+	while (nullptr != src) {
+		switch(src->typeCode()) {
+			case INT8_FM:
+			case UINT8_FM:
+			case INT16_FM:
+			case UINT16_FM:
+			case INT32_FM:
+			case UINT32_FM:
+				{
+					uint32_t x = 0;
+					if (0 == src->getValueAs(&x)) {
+						encoder.write_int(x);
+					}
+				}
+				break;
+		}
+		src = src->_next;
+	}
+	int final_size = output.size();
+	if (final_size) {
+		out->concat(output.data(), final_size);
+	}
+	return final_size;
+}
+
+Argument* Argument::decodeFromCBOR(StringBuilder* src) {
+	return nullptr;
+}
+
+
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
 /*
 * Basal constructor.
 */
@@ -87,6 +138,13 @@ void Argument::wipe() {
 }
 
 
+/**
+* Takes all the keys in the provided argument chain and for any
+*   that are ID'd by string keys, prints them to the provided buffer.
+*
+* @param  key_set A StringBuilder object that w e will write to.
+* @return         The number of values written.
+*/
 int Argument::collectKeys(StringBuilder* key_set) {
 	int return_value = 0;
 	if (nullptr != _key) {

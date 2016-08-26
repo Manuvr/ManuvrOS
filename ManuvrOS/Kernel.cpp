@@ -1493,6 +1493,11 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       profiler('P' == c);
       break;
 
+    case 'c':
+      // Cryptographic support.
+      printCryptoOverview(&local_log);
+      break;
+
     #if defined(__MANUVR_DEBUG)
     case 'f':  // FPU benchmark
       {

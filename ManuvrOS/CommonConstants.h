@@ -62,4 +62,5 @@ There ought to be no inclusion in this file. It is the bottom.
   /*
   * String constants that don't need to be replicated all over the program...
   */
+  #define STR_KEY_CP_IDENTITY          "CP-Identity"
 #endif

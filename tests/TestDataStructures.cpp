@@ -127,6 +127,50 @@ int test_Arguments_MEM_MGMT() {
 
 
 /**
+* [test_CBOR_Argument description]
+* @return [description]
+*/
+int test_CBOR_Argument() {
+  int return_value = -1;
+  StringBuilder log("===< Arguments CBOR >===================================\n");
+  StringBuilder shuttle;  // We will transport the CBOR encoded-bytes through this.
+
+  Argument a;
+  uint32_t val0  = (uint32_t) randomInt();
+  uint16_t val1  = (uint16_t) randomInt();
+  uint8_t  val2  = (uint8_t)  randomInt();
+  int32_t  val3  = (int32_t)  randomInt();
+  int16_t  val4  = (int16_t)  randomInt();
+  int8_t   val5  = (int8_t)   randomInt();
+
+  a.append(val0)->setKey("value0");
+  a.append(val1)->setKey("value1");
+  a.append(val2);  // NOTE: Mixed in with non-KVP.
+  a.append(val3);
+  a.append(val4)->setKey("value4");
+  a.append(val5)->setKey("value5");
+
+  if (0 <= Argument::encodeToCBOR(&a, &shuttle)) {
+    log.concat("CBOR encoded: ");
+    shuttle.printDebug(&log);
+
+    Argument* reconstructed = Argument::decodeFromCBOR(&shuttle);
+    if (nullptr != reconstructed) {
+      log.concat("CBOR decoded: ");
+      reconstructed->printDebug(&log);
+      return_value = 0;
+    }
+    else log.concat("Failed to decode Argument chain from CBOR...\n");
+  }
+  else log.concat("Failed to encode Argument chain into CBOR...\n");
+
+  log.concat("========================================================\n\n");
+  printf((const char*) log.string());
+  return return_value;
+}
+
+
+/**
 * Test the capability of Arguments to hold KVP data.
 * @return 0 on pass. Non-zero otherwise.
 */
@@ -311,6 +355,9 @@ int test_Arguments() {
     if (0 == return_value) {
       return_value = test_Arguments_PODs();
       if (0 == return_value) {
+        return_value = test_CBOR_Argument();
+        if (0 == return_value) {
+        }
       }
     }
   }
