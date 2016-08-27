@@ -167,8 +167,6 @@ Kernel::Kernel() : EventReceiver() {
   setVerbosity((int8_t) DEFAULT_CLASS_VERBOSITY);
 
   ManuvrMsg::registerMessages(message_defs, sizeof(message_defs) / sizeof(MessageTypeDef));
-
-  platformPreInit();    // Start the pre-bootstrap platform-specific machinery.
 }
 
 /**
@@ -241,20 +239,6 @@ int8_t Kernel::detachFromLogger(BufferPipe* _pipe) {
 /****************************************************************************************************
 * Kernel operation...                                                                               *
 ****************************************************************************************************/
-int8_t Kernel::bootstrap() {
-  platformInit();    // Start the platform-specific machinery.
-
-  ManuvrRunnable *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
-  boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
-  /* Follow your shadow. */
-  Kernel::staticRaiseEvent(boot_completed_ev);
-
-  #if defined (__MANUVR_FREERTOS)
-    //vTaskStartScheduler();
-  #endif
-
-  return 0;
-}
 
 
 /****************************************************************************************************
@@ -1016,7 +1000,7 @@ void Kernel::printDebug(StringBuilder* output) {
 
   output->concatf("-- %s v%s \t Build date: %s %s\n--\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
   output->concat("-- Platform                  ");
-  manuvrPlatformInfo(output);
+  platform.printDebug(output);
   output->concat("\n");
   //output->concatf("-- our_mem_addr:             %p\n", this);
   if (getVerbosity() > 5) {
@@ -1113,15 +1097,15 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
 
     case MANUVR_MSG_SYS_REBOOT:
       if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
-      reboot();
+      platform.reboot();
       break;
     case MANUVR_MSG_SYS_SHUTDOWN:
       if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
-      seppuku();  // TODO: We need to distinguish between this and SYSTEM shutdown for linux.
+      platform.seppuku();  // TODO: We need to distinguish between this and SYSTEM shutdown for linux.
       break;
     case MANUVR_MSG_SYS_BOOTLOADER:
       //if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
-      jumpToBootloader();
+      platform.jumpToBootloader();
       break;
 
     default:

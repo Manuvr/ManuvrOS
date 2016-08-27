@@ -29,6 +29,40 @@ This file is meant to contain a set of common functions that are typically platf
 #include "Platform.h"
 #include <Kernel.h>
 
+#include <DataStructures/uuid.h>
+
+
+// TODO: I know this is horrid. I'm sick of screwing with the build system today...
+#if defined(RASPI) | defined(RASPI2) | defined(RASPI3)
+  #include "./PlatformRaspi.cpp"
+  #include "./Raspi/DieThermometer.cpp"
+  ManuvrPlatform platform;
+#elif defined(__MK20DX256__) | defined(__MK20DX128__)
+  #include "./Teensy3/Teensy3.cpp"
+  ManuvrPlatform platform;
+#elif defined(STM32F4XX)
+  #include "./STM32F4/STM32F4.cpp"
+  ManuvrPlatform platform;
+#elif defined(STM32F7XX) | defined(STM32F746xx)
+  #include "./STM32F7/STM32F7.h"
+  #include "./STM32F7/STM32F7.cpp"
+  ManuvrPlatform platform;
+#elif defined(ARDUINO)
+  #include "./Arduino/Arduino.cpp"
+  ManuvrPlatform platform;
+#elif defined(__MANUVR_PHOTON)
+  #include "./Particle/Photon.cpp"
+  ManuvrPlatform platform;
+#elif defined(__MANUVR_LINUX)
+  //#include "./Linux/Linux.h"
+  #include "./Linux/Linux.cpp"
+  ManuvrPlatform platform;
+#else
+  // Unsupportage.
+  //#include "PlatformUnsupported.cpp"
+#endif
+
+
 
 extern "C" {
 
@@ -141,44 +175,28 @@ void sleep_millis(unsigned long millis) {
 }
 
 
-void ManuvrPlatform::printDebug(StringBuilder* out) {
-  out->concatf("Pratform:  0x%08x \t %p\n", _idle_hook, this);
-}
-
-
-// TODO: I know this is horrid. I'm sick of screwing with the build system today...
-#if defined(RASPI) | defined(RASPI2)
-  #include "PlatformRaspi.cpp"
-  #include "Raspi/DieThermometer.cpp"
-#elif defined(__MK20DX256__) | defined(__MK20DX128__)
-  #include "PlatformTeensy3.cpp"
-#elif defined(STM32F4XX)
-  #include "STM32F4.cpp"
-#elif defined(STM32F7XX) | defined(STM32F746xx)
-  #include "STM32F7.cpp"
-#elif defined(ARDUINO)
-  #include "Arduino.cpp"
-#elif defined(__MANUVR_PHOTON)
-  #include "ParticlePhoton.cpp"
-#elif defined(__MANUVR_LINUX)
-  #include "PlatformLinux.cpp"
-#else
-  // Unsupportage.
-  #include "PlatformUnsupported.cpp"
-#endif
 }  // extern "C"
 
-
-
-ManuvrPlatform platform;
 
 /**
 * This is called by user code to initialize the platform.
 */
 int8_t ManuvrPlatform::bootstrap() {
   _kernel = Kernel::getInstance();
-  _kernel->bootstrap();
+
+  /* Follow your shadow. */
+  ManuvrRunnable *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
+  boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
+  Kernel::staticRaiseEvent(boot_completed_ev);
+
+  while (0 < _kernel->procIdleFlags()) {
+    // TODO: Safety! Need to be able to diagnose infinte loops.
+  }
+
+  return 0;
 }
+
+
 
 /**
 * Prints platform information without necessitating the caller

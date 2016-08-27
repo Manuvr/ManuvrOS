@@ -28,14 +28,9 @@ This file is meant to contain a set of common functions that are typically platf
 This file forms the catch-all for linux platforms that have no support.
 */
 
-#include "Platform.h"
-#include <Kernel.h>
-
 #include <sys/time.h>
 #include <unistd.h>
 #include <signal.h>
-
-#include <DataStructures/uuid.h>
 
 
 /****************************************************************************************************
@@ -75,27 +70,27 @@ void sig_handler(int signo) {
   switch (signo) {
     case SIGINT:
       Kernel::log("Received a SIGINT signal. Closing up shop...");
-      jumpToBootloader();
+      platform.seppuku();
       break;
     case SIGKILL:
       Kernel::log("Received a SIGKILL signal. Something bad must have happened. Exiting hard....");
-      jumpToBootloader();
+      platform.seppuku();
       break;
     case SIGTERM:
       Kernel::log("Received a SIGTERM signal. Closing up shop...");
-      jumpToBootloader();
+      platform.seppuku();
       break;
     case SIGQUIT:
       Kernel::log("Received a SIGQUIT signal. Closing up shop...");
-      jumpToBootloader();
+      platform.seppuku();
       break;
     case SIGHUP:
       Kernel::log("Received a SIGHUP signal. Closing up shop...");
-      jumpToBootloader();
+      platform.seppuku();
       break;
     case SIGSTOP:
       Kernel::log("Received a SIGSTOP signal. Closing up shop...");
-      jumpToBootloader();
+      platform.seppuku();
       break;
     case SIGUSR1:
       break;
@@ -204,7 +199,7 @@ volatile bool provide_random_int(uint32_t nu_rnd) {
 /*
 * Init the RNG. Short and sweet.
 */
-void init_RNG() {
+void init_rng() {
   srand(time(nullptr));          // Seed the PRNG...
 }
 
@@ -213,13 +208,14 @@ void init_RNG() {
 ****************************************************************************************************/
 UUID instance_serial_number;  // If we have UUID support.
 
-void manuvrPlatformInfo(StringBuilder* out) {
+void ManuvrPlatform::printDebug(StringBuilder* out) {
   out->concat("Linux ");
   char* uuid_str = (char*) alloca(40);
   bzero(uuid_str, 40);
   uuid_to_str(&instance_serial_number, uuid_str, 40);
   out->concat(uuid_str);
 }
+
 
 
 /**
@@ -249,11 +245,6 @@ int getSerialNumber(uint8_t *buf) {
 /****************************************************************************************************
 * Data persistence                                                                                  *
 ****************************************************************************************************/
-// Returns true if this platform can store data locally.
-bool persistCapable() {
-  return false;
-}
-
 
 // Returns the number of bytes availible to store data.
 unsigned long persistFree() {
@@ -271,7 +262,7 @@ uint32_t rtc_startup_state = MANUVR_RTC_STARTUP_UNINITED;
 /*
 *
 */
-bool initPlatformRTC() {
+bool init_rtc() {
   rtc_startup_state = MANUVR_RTC_STARTUP_GOOD_UNSET;
   return true;
 }
@@ -344,17 +335,6 @@ unsigned long micros() {
 /****************************************************************************************************
 * GPIO and change-notice                                                                            *
 ****************************************************************************************************/
-/*
-* This fxn should be called once on boot to setup the CPU pins that are not claimed
-*   by other classes. GPIO pins at the command of this-or-that class should be setup
-*   in the class that deals with them.
-* Pending peripheral-level init of pins, we should just enable everything and let
-*   individual classes work out their own requirements.
-*/
-void gpioSetup() {
-}
-
-
 int8_t gpioDefine(uint8_t pin, int mode) {
   return 0;
 }
@@ -429,10 +409,10 @@ void globalIRQDisable() {
 /*
 * Terminate this running process, along with any children it may have forked() off.
 */
-volatile void seppuku() {
+void ManuvrPlatform::seppuku() {
   // Whatever the kernel cared to clean up, it better have done so by this point,
   //   as no other platforms return from this function.
-  printf("\n\njumpToBootloader(): About to exit().\n\n");
+  printf("\nseppuku(): About to exit().\n\n");
   exit(0);
 }
 
@@ -441,9 +421,12 @@ volatile void seppuku() {
 * On linux, we take this to mean: scheule a program restart with the OS,
 *   and then terminate this one.
 */
-volatile void jumpToBootloader() {
+void ManuvrPlatform::jumpToBootloader() {
+  // TODO: Pull binary from a location of firmware's choice.
+  // TODO: Install firmware after validation.
   // TODO: Schedule a program restart.
-  seppuku();
+  printf("\njumpToBootloader(): About to exit().\n\n");
+  exit(0);
 }
 
 
@@ -451,14 +434,17 @@ volatile void jumpToBootloader() {
 * Underlying system control.                                                                        *
 ****************************************************************************************************/
 
-volatile void hardwareShutdown() {
+void ManuvrPlatform::hardwareShutdown() {
   // TODO: Actually shutdown the system.
-  seppuku();
+  printf("\nhardwareShutdown(): About to exit().\n\n");
+  exit(0);
 }
 
-volatile void reboot() {
+
+void ManuvrPlatform::reboot() {
   // TODO: Actually reboot the system.
-  seppuku();
+  printf("\nreboot(): About to exit().\n\n");
+  exit(0);
 }
 
 
@@ -481,22 +467,23 @@ void ManuvrPlatform::setIdleHook(FunctionPointer nu) {
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
 */
-void platformPreInit() {
+int8_t ManuvrPlatform::platformPreInit() {
+  start_time_micros = micros();
+  init_rng();
+  init_rtc();
   __kernel = (volatile Kernel*) Kernel::getInstance();
   platform.setIdleHook([]{ sleep_millis(20); });
-  gpioSetup();
+  initSigHandlers();
+  set_linux_interval_timer();
+  return 0;
 }
 
 
 /*
-* Called as a result of kernels bootstrap() fxn.
+* Called before kernel instantiation. So do the minimum required to ensure
+*   internal system sanity.
 */
-void platformInit() {
-  start_time_micros = micros();
-  init_RNG();
-  initPlatformRTC();
-  __kernel = (volatile Kernel*) Kernel::getInstance();
+int8_t ManuvrPlatform::platformPostInit() {
   uuid_gen(&instance_serial_number);
-  initSigHandlers();
-  set_linux_interval_timer();
+  return 0;
 }

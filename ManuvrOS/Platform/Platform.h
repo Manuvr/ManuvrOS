@@ -72,19 +72,32 @@ class Kernel;
 //#define MANUVR_BOOT_STAGE_SHUTDOWN
 
 
-#define MANUVR_PLAT_FLAG_BOOT_STAGE_MASK  0x00000007  // Lowest 3-bits for boot-state.
-#define MANUVR_PLAT_FLAG_HAS_LOCATION     0x08000000  // Platform is locus-aware.
-#define MANUVR_PLAT_FLAG_HAS_CRYPTO       0x10000000
-#define MANUVR_PLAT_FLAG_INNATE_DATETIME  0x20000000
-#define MANUVR_PLAT_FLAG_HAS_THREADS      0x40000000
+#define MANUVR_PLAT_FLAG_P_STATE_MASK     0x00000007  // Lowest 3-bits for platform-state.
+#define MANUVR_PLAT_FLAG_HAS_LOCATION     0x08000000  // Hardware is locus-aware.
+#define MANUVR_PLAT_FLAG_HAS_CRYPTO       0x10000000  // Platform supports cryptography.
+#define MANUVR_PLAT_FLAG_INNATE_DATETIME  0x20000000  // Can the hardware remember the datetime?
+#define MANUVR_PLAT_FLAG_HAS_THREADS      0x40000000  // Compute carved-up via threads?
 #define MANUVR_PLAT_FLAG_HAS_STORAGE      0x80000000
 
+/* Flags that reflect the state of the platform. */
+#define MANUVR_INIT_STATE_UNINITIALIZED   0
+#define MANUVR_INIT_STATE_RESERVED_0      1
+#define MANUVR_INIT_STATE_PREINIT         2
+#define MANUVR_INIT_STATE_KERNEL_BOOTING  3
+#define MANUVR_INIT_STATE_NOMINAL         4
+#define MANUVR_INIT_STATE_RESERVED_1      5
+#define MANUVR_INIT_STATE_SHUTDOWN        6
+#define MANUVR_INIT_STATE_HALTED          7
 
 /**
 * This class should form the single reference via which all platform-specific
 *   functions and features are accessed. This will allow us a more natural
 *   means of extension to other platforms while retaining some linguistic
 *   checks and validations.
+*
+* TODO: First stage of re-org in-progress. Ultimately, this ought to be made
+*         easy to compose platforms. IE:  (Base --> Linux --> Raspi)
+*       This will not be hard to achieve. But: baby-steps.
 */
 class ManuvrPlatform {
   public:
@@ -96,18 +109,14 @@ class ManuvrPlatform {
     * See main_template.cpp for an example.
     */
     // TODO: These should be protected?
-    virtual int8_t platformPreInit()   =0;
-    virtual int8_t gpio_init()         =0;
-    virtual int8_t rtc_init()          =0;
-    virtual int8_t rng_init()          =0;
-    virtual int8_t storage_init()      =0;
-    virtual int8_t sec_init()          =0;
-    virtual int8_t platformPostInit()  =0;
+    virtual int8_t platformPreInit();
+    virtual int8_t platformPostInit();
 
     /* Platform state-reset functions. */
-    virtual void reboot()              =0;
-    virtual void shutdown()            =0;
-    virtual void bootloader()          =0;
+    virtual void seppuku();           // Simple process termination. Reboots if not implemented.
+    virtual void reboot();
+    virtual void hardwareShutdown();
+    virtual void jumpToBootloader();
 
     /* Accessors for platform capability discovery. */
     inline bool hasLocation() {     return _check_flags(MANUVR_PLAT_FLAG_HAS_LOCATION);  };
@@ -119,14 +128,16 @@ class ManuvrPlatform {
 
     /* These are bootstrap checkpoints. */
     int8_t bootstrap();
-    inline void booted(bool en) { _alter_flags(en, MANUVR_PLAT_FLAG_BOOT_STAGE_MASK);  };
-    inline bool booted() { return _check_flags(MANUVR_PLAT_FLAG_BOOT_STAGE_MASK == bootStage());  };
+    inline void booted(bool en) { _alter_flags(en, MANUVR_PLAT_FLAG_P_STATE_MASK);  };
+    inline bool booted() {
+      return _check_flags(MANUVR_PLAT_FLAG_P_STATE_MASK == platformState());
+    };
 
-    inline void setKernel(Kernel* k) {   if (nullptr == _kernel) _kernel = k;  };
-    inline Kernel* getKernel() {         return _kernel;  };
+    inline void setKernel(Kernel* k) {  if (nullptr == _kernel) _kernel = k;  };
+    inline Kernel* getKernel() {        return _kernel;  };
 
-    inline uint8_t bootStage() {
-      return ((uint8_t) _pflags & MANUVR_PLAT_FLAG_BOOT_STAGE_MASK);
+    inline uint8_t platformState() {
+      return ((uint8_t) _pflags & MANUVR_PLAT_FLAG_P_STATE_MASK);
     };
 
     /* These are safe function proxies for external callers. */
@@ -136,6 +147,7 @@ class ManuvrPlatform {
     void setWakeHook(FunctionPointer nu);
     void wakeHook();
 
+    /* Writes a platform information string to the provided buffer. */
     void printDebug(StringBuilder* out);
     void printDebug();
 
@@ -149,9 +161,6 @@ class ManuvrPlatform {
     */
     int platformSerialNumberSize();    // Returns the length of the serial number on this platform (in bytes).
     int getSerialNumber(uint8_t*);     // Writes the serial number to the indicated buffer.
-
-    /* Writes a platform information string to the provided buffer. */
-    void manuvrPlatformInfo(StringBuilder*);
 
 
   private:
@@ -167,9 +176,11 @@ class ManuvrPlatform {
     inline bool _check_flags(uint32_t mask) {
       return (_pflags == (_pflags & mask));
     };
+    inline void _set_init_state(uint8_t s) {
+      _pflags = ((_pflags & 0xFFFFFFF8) | s);
+    };
 };
 
-extern ManuvrPlatform platform;
 
 #if defined (ARDUINO)
   #include <Arduino.h>
@@ -217,11 +228,11 @@ extern ManuvrPlatform platform;
 #endif
 
 
+extern ManuvrPlatform platform;  // TODO: Awful.
+
 #ifdef __cplusplus
  extern "C" {
 #endif
-
-
 
 typedef struct __platform_gpio_def {
   ManuvrRunnable* event;
@@ -304,4 +315,4 @@ int    readPinAnalog(uint8_t pin);
 }
 #endif
 
-#endif
+#endif  // __PLATFORM_SUPPORT_H__

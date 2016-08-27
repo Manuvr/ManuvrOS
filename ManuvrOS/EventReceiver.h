@@ -135,15 +135,15 @@ limitations under the License.
 
 
       private:
+        uint8_t _class_state;
+        uint8_t _extnd_state;  // This is here for use by the extending class.
         const char* _receiver_name;
+
         #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
           // In threaded environments, we allow resources to enable their own threading
           //   if needed.
           int _thread_id;
         #endif
-
-        uint8_t _class_state;
-        uint8_t _extnd_state;  // This is here for use by the extending class.
 
         int8_t setVerbosity(ManuvrRunnable*);  // Private because it should be set with an Event.
     };

@@ -167,14 +167,14 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
       unsigned long _thread_id;
     #endif
 
-    uint32_t _xport_mtu;      // The largest packet size we handle.
-    uint32_t bytes_sent;
-    uint32_t bytes_received;
-    uint16_t xport_id;
-
     // Can also be used to poll the other side. Implementation is completely at the discretion
     //   any extending class. But generally, this feature is necessary.
     ManuvrRunnable read_abort_event;  // Used to timeout a read operation.
+
+    uint16_t xport_id;
+    uint32_t _xport_mtu;      // The largest packet size we handle.
+    uint32_t bytes_sent;
+    uint32_t bytes_received;
 
     ManuvrXport();
 

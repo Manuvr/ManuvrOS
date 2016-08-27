@@ -107,8 +107,19 @@ int main(int argc, char *argv[]) {
   char* program_name = argv[0];   // Name of running binary.
   int   main_pid     = getpid();  // Our PID.
 
-  // The first thing we should do: Instance a kernel.
-  kernel = new Kernel();
+  /*
+  * The platform object is created on the stack, but takes no action upon
+  *   construction. The first thing that should be done is to call the preinit
+  *   function to setup the defaults of the platform.
+  */
+  platform.platformPreInit();
+
+  /*
+  * Because our persona isn't yet fully-derived from config (and may not ever
+  *   be in some projects), we pull the freshly-instanced (but unbooted) kernel
+  *   from the platform object so we can augment and configure it.
+  */
+  kernel = platform.getKernel();
 
   /*
   * Absent a strategy for dynamically-loading strategies...
@@ -263,16 +274,14 @@ int main(int argc, char *argv[]) {
   #endif
 
   // Once we've loaded up all the goodies we want, we finalize everything thusly...
-  printf("%s: Booting Manuvr Kernel (PID %u)....\n", program_name, main_pid);
-  kernel->bootstrap();
+  printf("%s: Booting Manuvr (PID %u)....\n", program_name, main_pid);
+  platform.bootstrap();
 
-  while (0 < kernel->procIdleFlags()) {
-    /**
-    * TODO: Concentrate this operation into Kernel::bootstrap()? I have bad
-    *         memories of that for some reason....
-    * This is not strictly required, but helps ensure a known-state
-    */
-  }
+  /*
+  * If that function returned 'nominal', we call postInit() to finalize.
+  */
+  platform.platformPostInit();
+
 
   #if defined(MANUVR_SUPPORT_TCPSOCKET)
     #if defined(MANUVR_SUPPORT_MQTT)
