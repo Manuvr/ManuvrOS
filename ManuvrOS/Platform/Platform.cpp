@@ -30,27 +30,6 @@ This file is meant to contain a set of common functions that are typically platf
 #include <Kernel.h>
 
 
-ManuvrPlatform platform;
-
-/**
-* This is called by user code to initialize the platform.
-*/
-int8_t ManuvrPlatform::bootstrap() {
-  _kernel = Kernel::getInstance();
-  _kernel->bootstrap();
-}
-
-/**
-* Prints platform information without necessitating the caller
-*   provide a buffer.
-*/
-void ManuvrPlatform::printDebug() {
-  StringBuilder output;
-  printDebug(&output);
-  Kernel::log(&output);
-}
-
-
 extern "C" {
 
 /****************************************************************************************************
@@ -188,3 +167,25 @@ void ManuvrPlatform::printDebug(StringBuilder* out) {
   #include "PlatformUnsupported.cpp"
 #endif
 }  // extern "C"
+
+
+
+ManuvrPlatform platform;
+
+/**
+* This is called by user code to initialize the platform.
+*/
+int8_t ManuvrPlatform::bootstrap() {
+  _kernel = Kernel::getInstance();
+  _kernel->bootstrap();
+}
+
+/**
+* Prints platform information without necessitating the caller
+*   provide a buffer.
+*/
+void ManuvrPlatform::printDebug() {
+  StringBuilder output;
+  printDebug(&output);
+  Kernel::log(&output);
+}

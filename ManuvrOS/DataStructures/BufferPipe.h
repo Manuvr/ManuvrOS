@@ -138,6 +138,7 @@ enum class ManuvrPipeSignal {
 
 class BufferPipe;
 
+// TODO: Might-should pass arguments as well?
 typedef BufferPipe* (*bpFactory) (BufferPipe*, BufferPipe*);
 
 /*

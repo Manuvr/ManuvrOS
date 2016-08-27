@@ -80,27 +80,6 @@ class Kernel;
 #define MANUVR_PLAT_FLAG_HAS_STORAGE      0x80000000
 
 
-/*
-* Notes regarding hooking into the boot sequence...
-* All of these functions will be invoked in the specified order (if they exist).
-*
-* User code wishing to hook into these calls can do so by modifying this stuct.
-* See main_template.cpp for an example.
-*/
-typedef struct _init_hooks_struct {
-  FunctionPointer rng_init        = nullptr;
-  FunctionPointer rtc_init        = nullptr;
-  FunctionPointer gpio_init       = nullptr;
-  FunctionPointer sec_init        = nullptr;
-  FunctionPointer storage_init    = nullptr;
-  FunctionPointer plat_pre_init   = nullptr;
-  FunctionPointer plat_post_init  = nullptr;
-  FunctionPointer reboot          = nullptr;
-  FunctionPointer shutdown        = nullptr;
-  FunctionPointer bootloader      = nullptr;
-} PlatformInitFxns;
-
-
 /**
 * This class should form the single reference via which all platform-specific
 *   functions and features are accessed. This will allow us a more natural
@@ -109,11 +88,34 @@ typedef struct _init_hooks_struct {
 */
 class ManuvrPlatform {
   public:
+    /*
+    * Notes regarding hooking into init functions...
+    * All of these functions will be invoked in the specified order (if they exist).
+    *
+    * User code wishing to hook into these calls can do so by modifying this stuct.
+    * See main_template.cpp for an example.
+    */
+    // TODO: These should be protected?
+    virtual int8_t platformPreInit()   =0;
+    virtual int8_t gpio_init()         =0;
+    virtual int8_t rtc_init()          =0;
+    virtual int8_t rng_init()          =0;
+    virtual int8_t storage_init()      =0;
+    virtual int8_t sec_init()          =0;
+    virtual int8_t platformPostInit()  =0;
+
+    /* Platform state-reset functions. */
+    virtual void reboot()              =0;
+    virtual void shutdown()            =0;
+    virtual void bootloader()          =0;
+
+    /* Accessors for platform capability discovery. */
     inline bool hasLocation() {     return _check_flags(MANUVR_PLAT_FLAG_HAS_LOCATION);  };
-    inline bool hasCryptography() { return _check_flags(MANUVR_PLAT_FLAG_HAS_CRYPTO);  };
     inline bool hasTimeAndData() {  return _check_flags(MANUVR_PLAT_FLAG_INNATE_DATETIME); };
-    inline bool hasThreads() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_THREADS); };
     inline bool hasStorage() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_STORAGE); };
+    inline bool hasThreads() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_THREADS); };
+    inline bool hasCryptography() { return _check_flags(MANUVR_PLAT_FLAG_HAS_CRYPTO);  };
+
 
     /* These are bootstrap checkpoints. */
     int8_t bootstrap();
@@ -128,21 +130,35 @@ class ManuvrPlatform {
     };
 
     /* These are safe function proxies for external callers. */
-    //inline void idleHook() { if (_idle_hook) _idle_hook(); };
+    void setIdleHook(FunctionPointer nu);
     void idleHook();
 
-    void setIdleHook(FunctionPointer nu);
+    void setWakeHook(FunctionPointer nu);
+    void wakeHook();
 
     void printDebug(StringBuilder* out);
     void printDebug();
 
+    /*
+    * Identity and serial number.
+    * Do be careful exposing this stuff, as any outside knowledge of chip
+    *   serial numbers may compromise crypto that directly-relies on them.
+    * For crypto, it would be best to never use an invariant number like this directly,
+    *   and instead use it as a PRNG seed or some other such approach. Please see the
+    *   security documentation for a deeper discussion of the issues at hand.
+    */
+    int platformSerialNumberSize();    // Returns the length of the serial number on this platform (in bytes).
+    int getSerialNumber(uint8_t*);     // Writes the serial number to the indicated buffer.
 
-  protected:
+    /* Writes a platform information string to the provided buffer. */
+    void manuvrPlatformInfo(StringBuilder*);
+
 
   private:
-    uint32_t        _pflags    = 0;
     Kernel*         _kernel    = nullptr;
+    uint32_t        _pflags    = 0;
     FunctionPointer _idle_hook = nullptr;
+    FunctionPointer _wake_hook = nullptr;
 
     /* Inlines for altering and reading the flags. */
     inline void _alter_flags(bool en, uint32_t mask) {
@@ -224,7 +240,6 @@ const char* getIRQConditionString(int);
 /*
 * Time and date
 */
-bool initPlatformRTC();          // We call this once on bootstrap. Sets up the RTC.
 bool setTimeAndDateStr(char*);   // Takes a string of the form given by RFC-2822: "Mon, 15 Aug 2005 15:52:01 +0000"   https://www.ietf.org/rfc/rfc2822.txt
 bool setTimeAndDate(uint8_t y, uint8_t m, uint8_t d, uint8_t wd, uint8_t h, uint8_t mi, uint8_t s);
 uint32_t epochTime();            // Returns an integer representing the current datetime.
@@ -243,18 +258,6 @@ const char* getRTCStateString(uint32_t code);
 void globalIRQEnable();
 void globalIRQDisable();
 void maskableInterrupts(bool);
-
-/*
-* Process control
-*/
-volatile void jumpToBootloader();
-volatile void seppuku();
-
-/*
-* Underlying system control.
-*/
-volatile void reboot();
-volatile void hardwareShutdown();
 
 /*
 * Threading
@@ -282,27 +285,11 @@ unsigned long persistFree();  // Returns the number of bytes availible to store 
 */
 uint32_t randomInt();                        // Fetches one of the stored randoms and blocks until one is available.
 volatile bool provide_random_int(uint32_t);  // Provides a new random to the pool from the RNG ISR.
-void init_RNG();                             // Fire up the random number generator.
 
-
-/*
-* Identity and serial number.
-* Do be careful exposing this stuff, as any outside knowledge of chip
-*   serial numbers may compromise crypto that directly-relies on them.
-* For crypto, it would be best to never use an invariant number like this directly,
-*   and instead use it as a PRNG seed or some other such approach. Please see the
-*   security documentation for a deeper discussion of the issues at hand.
-*/
-int platformSerialNumberSize();    // Returns the length of the serial number on this platform (in bytes).
-int getSerialNumber(uint8_t*);     // Writes the serial number to the indicated buffer.
-
-/* Writes a platform information string to the provided buffer. */
-void manuvrPlatformInfo(StringBuilder*);
 
 /*
 * GPIO and change-notice.
 */
-void   gpioSetup();        // We call this once on bootstrap. Sets up GPIO not covered by other classes.
 int8_t gpioDefine(uint8_t pin, int mode);
 void   unsetPinIRQ(uint8_t pin);
 int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrRunnable* isr_event);
@@ -311,14 +298,6 @@ int8_t setPin(uint8_t pin, bool high);
 int8_t readPin(uint8_t pin);
 int8_t setPinAnalog(uint8_t pin, int);
 int    readPinAnalog(uint8_t pin);
-
-
-/*
-* Call this once on system init to configure the basics of the platform.
-*/
-void platformPreInit();
-void platformInit();
-
 
 
 #ifdef __cplusplus
