@@ -34,12 +34,11 @@ limitations under the License.
   class Kernel;
 
   #include <inttypes.h>
-  #include "EnumeratedTypeCodes.h"
-  #include "CommonConstants.h"
+  #include <EnumeratedTypeCodes.h>
 
   #include "FirmwareDefs.h"
-  #include "ManuvrRunnable.h"
-  #include "EventReceiver.h"
+  #include <ManuvrRunnable.h>
+  #include <EventReceiver.h>
   #include <DataStructures/BufferPipe.h>
   #include <DataStructures/PriorityQueue.h>
   #include <DataStructures/StringBuilder.h>
@@ -141,21 +140,15 @@ limitations under the License.
       ManuvrRunnable* createSchedule(uint32_t period, int16_t recurrence, bool auto_clear, EventReceiver*  sch_callback);
       bool removeSchedule(ManuvrRunnable*);  // Clears all data relating to the given schedule.
       bool addSchedule(ManuvrRunnable*);
+      void printScheduler(StringBuilder*);
 
 
       /*
       * These are the core functions of the kernel that must be called from outside.
       */
-      int8_t bootstrap(void);                  // Bootstrap the kernel.
       int8_t procIdleFlags(void);              // Execute pending Runnables.
       void advanceScheduler(unsigned int);     // Push all scheduled Runnables forward by one tick.
       inline void advanceScheduler() {   advanceScheduler(MANUVR_PLATFORM_TIMER_PERIOD_MS);  };
-
-      // Logging messages, as well as an override to log locally.
-      void printPlatformInfo(StringBuilder*);
-      void printScheduler(StringBuilder*);
-      void printDebug(StringBuilder*);
-      inline void printDebug() {        printDebug(&local_log);      };
 
       /* Profiling support.. */
       float cpu_usage();
@@ -174,6 +167,7 @@ limitations under the License.
       #if defined(__MANUVR_CONSOLE_SUPPORT)
         void procDirectDebugInstruction(StringBuilder *);
       #endif
+      void printDebug(StringBuilder*);
 
 
       /* These functions deal with logging.*/

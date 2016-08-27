@@ -206,14 +206,65 @@ void init_rng() {
 /****************************************************************************************************
 * Identity and serial number                                                                        *
 ****************************************************************************************************/
-UUID instance_serial_number;  // If we have UUID support.
+void ManuvrPlatform::printDebug(StringBuilder* output) {
+  output->concatf("==< Linux [%s] >=================================\n", getPlatformStateStr());
+  output->concatf("-- %s v%s \t Build date: %s %s\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
+  output->concatf("-- %u-bit", aluWidth());
+  if (8 != aluWidth()) {
+    output->concatf(" %s-endian", bigEndian() ? "Big" : "Little");
+  }
 
-void ManuvrPlatform::printDebug(StringBuilder* out) {
-  out->concat("Linux ");
+  uintptr_t initial_sp = getStackPointer();
+  uintptr_t final_sp   = getStackPointer();
+  output->concatf("\n-- getStackPointer():  %p\n", getStackPointer());
+  output->concatf("-- stack grows %s\n--\n", (final_sp > initial_sp) ? "up" : "down");
+
+  output->concatf("-- Timer resolution:   %d ms\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
+  output->concatf("-- Hardware version:   %s\n", HW_VERSION_STRING);
+  output->concatf("-- Entropy pool size:  %u bytes\n", PLATFORM_RNG_CARRY_CAPACITY * 4);
+  if (_check_flags(MANUVR_PLAT_FLAG_INNATE_DATETIME)) {
+    output->concatf("-- RTC State:          %s\n", getRTCStateString());
+  }
+  output->concatf("\n-- millis()            0x%08x\n", millis());
+  output->concatf("-- micros()            0x%08x\n", micros());
+
+  output->concat("-- Capabilities:\n");
+  if (_check_flags(MANUVR_PLAT_FLAG_HAS_THREADS)) {
+    output->concat("--\t Threads\n");
+  }
+  if (_check_flags(MANUVR_PLAT_FLAG_HAS_CRYPTO)) {
+    output->concat("--\t Crypt\n");
+  }
+  if (_check_flags(MANUVR_PLAT_FLAG_HAS_STORAGE)) {
+    output->concat("--\t Storage\n");
+  }
+  if (_check_flags(MANUVR_PLAT_FLAG_HAS_LOCATION)) {
+    output->concat("--\t Location\n");
+  }
+
+  output->concat("-- Supported protocols: \n");
+  #if defined(__MANUVR_CONSOLE_SUPPORT)
+    output->concat("--\t Console\n");
+  #endif
+  #if defined(MANUVR_OVER_THE_WIRE)
+    output->concat("--\t Manuvr\n");
+  #endif
+  #if defined(MANUVR_SUPPORT_COAP)
+    output->concat("--\t CoAP\n");
+  #endif
+  #if defined(MANUVR_SUPPORT_MQTT)
+    output->concat("--\t MQTT\n");
+  #endif
+  #if defined(MANUVR_SUPPORT_OSC)
+    output->concat("--\t OSC\n");
+  #endif
+
   char* uuid_str = (char*) alloca(40);
   bzero(uuid_str, 40);
   uuid_to_str(&instance_serial_number, uuid_str, 40);
-  out->concat(uuid_str);
+
+  output->concatf("-- Identity source:    %s\n", _check_flags(MANUVR_PLAT_FLAG_HAS_IDENTITY) ? "Generated at runtime" : "Loaded from storage");
+  output->concatf("-- Identity:           %s\n", uuid_str);
 }
 
 
@@ -224,7 +275,7 @@ void ManuvrPlatform::printDebug(StringBuilder* out) {
 *
 * @return   The length of the serial number on this platform, in terms of bytes.
 */
-int platformSerialNumberSize() {
+int ManuvrPlatform::platformSerialNumberSize() {
   return 16;
 }
 
@@ -235,7 +286,7 @@ int platformSerialNumberSize() {
 * @param    A pointer to the target buffer.
 * @return   The number of bytes written.
 */
-int getSerialNumber(uint8_t *buf) {
+int ManuvrPlatform::getSerialNumber(uint8_t *buf) {
   for (int i = 0; i < 16; i++) *(buf + i) = *(((uint8_t*)&instance_serial_number.id) + i);
   return 16;
 }
@@ -256,18 +307,6 @@ unsigned long persistFree() {
 /****************************************************************************************************
 * Time and date                                                                                     *
 ****************************************************************************************************/
-uint32_t rtc_startup_state = MANUVR_RTC_STARTUP_UNINITED;
-
-
-/*
-*
-*/
-bool init_rtc() {
-  rtc_startup_state = MANUVR_RTC_STARTUP_GOOD_UNSET;
-  return true;
-}
-
-
 /*
 */
 bool setTimeAndDate(uint8_t y, uint8_t m, uint8_t d, uint8_t wd, uint8_t h, uint8_t mi, uint8_t s) {
@@ -463,15 +502,67 @@ void ManuvrPlatform::setIdleHook(FunctionPointer nu) {
 }
 
 
+#define  DEFAULT_PLATFORM_FLAGS ( \
+              MANUVR_PLAT_FLAG_HAS_STORAGE     | \
+              MANUVR_PLAT_FLAG_HAS_THREADS     | \
+              MANUVR_PLAT_FLAG_INNATE_DATETIME | \
+              MANUVR_PLAT_FLAG_HAS_CRYPTO      | \
+              MANUVR_PLAT_FLAG_HAS_IDENTITY)
+
 /**
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
 */
 int8_t ManuvrPlatform::platformPreInit() {
+  // TODO: Should we really be setting capabilities this late?
+  uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
+
+  #if defined(__MANUVR_MBEDTLS)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
+  #endif
+  #if defined(MANUVR_GPS_PIPE)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
+  #endif
+
+  // We infer the ALU width by the size of pointers.
+  // TODO: This will not work down to 8-bit because of paging schemes.
+  switch (sizeof(uintptr_t)) {
+    // TODO: There is a way to do this with no conditionals. Figritout.
+    default:
+    case 1:
+      // Default case is 8-bit. Do nothing.
+      break;
+    case 2:
+      default_flags |= (uint32_t) (1 << 13);
+      break;
+    case 4:
+      default_flags |= (uint32_t) (2 << 13);
+      break;
+    case 8:
+      default_flags |= (uint32_t) (3 << 13);
+      break;
+  }
+
+  // Now determine the endianess with a magic number and a pointer dance.
+  if (8 != aluWidth()) {
+    uint16_t test = 0xAA55;
+    if (0xAA == *((uint8_t*) &test)) {
+      default_flags |= MANUVR_PLAT_FLAG_BIG_ENDIAN;
+    }
+  }
+
+  _alter_flags(true, default_flags);
+
   start_time_micros = micros();
   init_rng();
-  init_rtc();
-  __kernel = (volatile Kernel*) Kernel::getInstance();
+  _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
+  _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
+
+  // TODO: Evaluate consequences of choice.
+  _kernel = Kernel::getInstance();
+  __kernel = (volatile Kernel*) _kernel;
+  // TODO: Evaluate consequences of choice.
+
   platform.setIdleHook([]{ sleep_millis(20); });
   initSigHandlers();
   set_linux_interval_timer();

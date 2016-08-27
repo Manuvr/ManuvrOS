@@ -44,6 +44,7 @@ This file is meant to contain a set of common functions that are
 
 #include <CommonConstants.h>
 #include <DataStructures/StringBuilder.h>
+#include <DataStructures/uuid.h>
 
 // Conditional inclusion for different threading models...
 #if defined(__MANUVR_LINUX)
@@ -59,27 +60,33 @@ class ManuvrRunnable;
 class Kernel;
 
 /**
-* Platform init is only considered complete if all of the following
-*   things have been accomplished without errors (in no particular order)
-* 1) RNG init and priming
-* 2) Storage init and default config load.
-* 3) RTC init'd and datetime validity known.
+* These are just lables. We don't really ever care about the *actual* integers
+*   being defined here. Only their consistency.
 */
+#define MANUVR_PLAT_FLAG_P_STATE_MASK     0x00000007  // Bits 0-2: platform-state.
 
-//#define MANUVR_BOOT_STAGE_PLATFORM_INIT
-//#define MANUVR_BOOT_STAGE_KERNEL_UP
-//#define MANUVR_BOOT_STAGE_READY
-//#define MANUVR_BOOT_STAGE_SHUTDOWN
+#define MANUVR_PLAT_FLAG_PRIOR_BOOT       0x00000100  // Do we have memory of a prior boot?
+#define MANUVR_PLAT_FLAG_RNG_READY        0x00000200  // RNG ready?
+#define MANUVR_PLAT_FLAG_RTC_READY        0x00000400  // RTC ready?
+#define MANUVR_PLAT_FLAG_RTC_SET          0x00000800  // RTC trust-worthy?
+#define MANUVR_PLAT_FLAG_BIG_ENDIAN       0x00001000  // Big-endian?
+#define MANUVR_PLAT_FLAG_ALU_WIDTH_MASK   0x00006000  // Bits 13-14: ALU width.
 
-
-#define MANUVR_PLAT_FLAG_P_STATE_MASK     0x00000007  // Lowest 3-bits for platform-state.
+#define MANUVR_PLAT_FLAG_HAS_IDENTITY     0x04000000  // Do we know who we are?
 #define MANUVR_PLAT_FLAG_HAS_LOCATION     0x08000000  // Hardware is locus-aware.
 #define MANUVR_PLAT_FLAG_HAS_CRYPTO       0x10000000  // Platform supports cryptography.
 #define MANUVR_PLAT_FLAG_INNATE_DATETIME  0x20000000  // Can the hardware remember the datetime?
 #define MANUVR_PLAT_FLAG_HAS_THREADS      0x40000000  // Compute carved-up via threads?
 #define MANUVR_PLAT_FLAG_HAS_STORAGE      0x80000000
 
-/* Flags that reflect the state of the platform. */
+/**
+* Flags that reflect the state of the platform.
+* Platform init is only considered complete if all of the following
+*   things have been accomplished without errors (in no particular order)
+* 1) RNG init and priming
+* 2) Storage init and default config load.
+* 3) RTC init'd and datetime validity known.
+*/
 #define MANUVR_INIT_STATE_UNINITIALIZED   0
 #define MANUVR_INIT_STATE_RESERVED_0      1
 #define MANUVR_INIT_STATE_PREINIT         2
@@ -89,99 +96,11 @@ class Kernel;
 #define MANUVR_INIT_STATE_SHUTDOWN        6
 #define MANUVR_INIT_STATE_HALTED          7
 
+
 /**
-* This class should form the single reference via which all platform-specific
-*   functions and features are accessed. This will allow us a more natural
-*   means of extension to other platforms while retaining some linguistic
-*   checks and validations.
-*
-* TODO: First stage of re-org in-progress. Ultimately, this ought to be made
-*         easy to compose platforms. IE:  (Base --> Linux --> Raspi)
-*       This will not be hard to achieve. But: baby-steps.
+* GPIO is a platform issue. Here is a hasty attempt to stack more generality
+*   into the Arduino conventions.
 */
-class ManuvrPlatform {
-  public:
-    /*
-    * Notes regarding hooking into init functions...
-    * All of these functions will be invoked in the specified order (if they exist).
-    *
-    * User code wishing to hook into these calls can do so by modifying this stuct.
-    * See main_template.cpp for an example.
-    */
-    // TODO: These should be protected?
-    virtual int8_t platformPreInit();
-    virtual int8_t platformPostInit();
-
-    /* Platform state-reset functions. */
-    virtual void seppuku();           // Simple process termination. Reboots if not implemented.
-    virtual void reboot();
-    virtual void hardwareShutdown();
-    virtual void jumpToBootloader();
-
-    /* Accessors for platform capability discovery. */
-    inline bool hasLocation() {     return _check_flags(MANUVR_PLAT_FLAG_HAS_LOCATION);  };
-    inline bool hasTimeAndData() {  return _check_flags(MANUVR_PLAT_FLAG_INNATE_DATETIME); };
-    inline bool hasStorage() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_STORAGE); };
-    inline bool hasThreads() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_THREADS); };
-    inline bool hasCryptography() { return _check_flags(MANUVR_PLAT_FLAG_HAS_CRYPTO);  };
-
-
-    /* These are bootstrap checkpoints. */
-    int8_t bootstrap();
-    inline void booted(bool en) { _alter_flags(en, MANUVR_PLAT_FLAG_P_STATE_MASK);  };
-    inline bool booted() {
-      return _check_flags(MANUVR_PLAT_FLAG_P_STATE_MASK == platformState());
-    };
-
-    inline void setKernel(Kernel* k) {  if (nullptr == _kernel) _kernel = k;  };
-    inline Kernel* getKernel() {        return _kernel;  };
-
-    inline uint8_t platformState() {
-      return ((uint8_t) _pflags & MANUVR_PLAT_FLAG_P_STATE_MASK);
-    };
-
-    /* These are safe function proxies for external callers. */
-    void setIdleHook(FunctionPointer nu);
-    void idleHook();
-
-    void setWakeHook(FunctionPointer nu);
-    void wakeHook();
-
-    /* Writes a platform information string to the provided buffer. */
-    void printDebug(StringBuilder* out);
-    void printDebug();
-
-    /*
-    * Identity and serial number.
-    * Do be careful exposing this stuff, as any outside knowledge of chip
-    *   serial numbers may compromise crypto that directly-relies on them.
-    * For crypto, it would be best to never use an invariant number like this directly,
-    *   and instead use it as a PRNG seed or some other such approach. Please see the
-    *   security documentation for a deeper discussion of the issues at hand.
-    */
-    int platformSerialNumberSize();    // Returns the length of the serial number on this platform (in bytes).
-    int getSerialNumber(uint8_t*);     // Writes the serial number to the indicated buffer.
-
-
-  private:
-    Kernel*         _kernel    = nullptr;
-    uint32_t        _pflags    = 0;
-    FunctionPointer _idle_hook = nullptr;
-    FunctionPointer _wake_hook = nullptr;
-
-    /* Inlines for altering and reading the flags. */
-    inline void _alter_flags(bool en, uint32_t mask) {
-      _pflags = (en) ? (_pflags | mask) : (_pflags & ~mask);
-    };
-    inline bool _check_flags(uint32_t mask) {
-      return (_pflags == (_pflags & mask));
-    };
-    inline void _set_init_state(uint8_t s) {
-      _pflags = ((_pflags & 0xFFFFFFF8) | s);
-    };
-};
-
-
 #if defined (ARDUINO)
   #include <Arduino.h>
 #elif defined(STM32F7XX) | defined(STM32F746xx)
@@ -227,13 +146,10 @@ class ManuvrPlatform {
   }
 #endif
 
-
-extern ManuvrPlatform platform;  // TODO: Awful.
-
-#ifdef __cplusplus
- extern "C" {
-#endif
-
+/* This is how we conceptualize a GPIO pin. */
+// TODO: I'm fairly sure this sucks. It's too needlessly memory heavy to
+//         define 60 pins this way. Can't add to a list of const's, so it can't
+//         be both run-time definable AND const.
 typedef struct __platform_gpio_def {
   ManuvrRunnable* event;
   FunctionPointer fxn;
@@ -242,11 +158,123 @@ typedef struct __platform_gpio_def {
   uint16_t        mode;  // Strictly more than needed. Padding structure...
 } PlatformGPIODef;
 
-/*
-* Internal utility function prototypes
-*/
-const char* getIRQConditionString(int);
 
+
+/**
+* This class should form the single reference via which all platform-specific
+*   functions and features are accessed. This will allow us a more natural
+*   means of extension to other platforms while retaining some linguistic
+*   checks and validations.
+*
+* TODO: First stage of re-org in-progress. Ultimately, this ought to be made
+*         easy to compose platforms. IE:  (Base --> Linux --> Raspi)
+*       This will not be hard to achieve. But: baby-steps.
+*/
+class ManuvrPlatform {
+  public:
+    /*
+    * Notes regarding hooking into init functions...
+    * All of these functions will be invoked in the specified order (if they exist).
+    *
+    * User code wishing to hook into these calls can do so by modifying this stuct.
+    * See main_template.cpp for an example.
+    */
+    // TODO: These should be protected?
+    virtual int8_t platformPreInit();
+    virtual int8_t platformPostInit();
+
+    /* Platform state-reset functions. */
+    virtual void seppuku();           // Simple process termination. Reboots if not implemented.
+    virtual void reboot();
+    virtual void hardwareShutdown();
+    virtual void jumpToBootloader();
+
+    /* Accessors for platform capability discovery. */
+    inline bool hasLocation() {     return _check_flags(MANUVR_PLAT_FLAG_HAS_LOCATION);    };
+    inline bool hasTimeAndData() {  return _check_flags(MANUVR_PLAT_FLAG_INNATE_DATETIME); };
+    inline bool hasStorage() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_STORAGE);     };
+    inline bool hasThreads() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_THREADS);     };
+    inline bool hasCryptography() { return _check_flags(MANUVR_PLAT_FLAG_HAS_CRYPTO);      };
+    inline bool bigEndian() {       return _check_flags(MANUVR_PLAT_FLAG_BIG_ENDIAN);      };
+    inline uint8_t aluWidth() {
+      // TODO: This is possible to do without the magic number 13... Figure out how.
+      return (8 << ((_pflags & MANUVR_PLAT_FLAG_ALU_WIDTH_MASK) >> 13));
+    };
+
+    /* These are bootstrap checkpoints. */
+    int8_t bootstrap();
+    inline void booted(bool en) { _alter_flags(en, MANUVR_PLAT_FLAG_P_STATE_MASK);  };
+    inline bool booted() {
+      return _check_flags(MANUVR_PLAT_FLAG_P_STATE_MASK == platformState());
+    };
+
+    inline void setKernel(Kernel* k) {  if (nullptr == _kernel) _kernel = k;  };
+    inline Kernel* getKernel() {        return _kernel;  };
+
+    inline uint8_t platformState() {
+      return ((uint8_t) _pflags & MANUVR_PLAT_FLAG_P_STATE_MASK);
+    };
+
+    /* These are safe function proxies for external callers. */
+    void setIdleHook(FunctionPointer nu);
+    void idleHook();
+
+    void setWakeHook(FunctionPointer nu);
+    void wakeHook();
+
+    /* Writes a platform information string to the provided buffer. */
+    const char* getRTCStateString();
+    const char* getPlatformStateStr();
+    void printDebug(StringBuilder* out);
+    void printDebug();
+
+    /*
+    * TODO: This belongs in "Identity".
+    * Identity and serial number.
+    * Do be careful exposing this stuff, as any outside knowledge of chip
+    *   serial numbers may compromise crypto that directly-relies on them.
+    * For crypto, it would be best to never use an invariant number like this directly,
+    *   and instead use it as a PRNG seed or some other such approach. Please see the
+    *   security documentation for a deeper discussion of the issues at hand.
+    */
+    int platformSerialNumberSize();    // Returns the length of the serial number on this platform (in bytes).
+    int getSerialNumber(uint8_t*);     // Writes the serial number to the indicated buffer.
+
+
+    /*
+    * Performs string conversions for integer codes. Only useful for logging.
+    */
+    static const char* getIRQConditionString(int);
+
+
+
+  private:
+    Kernel*         _kernel    = nullptr;
+    uint32_t        _pflags    = 0;
+    FunctionPointer _idle_hook = nullptr;
+    FunctionPointer _wake_hook = nullptr;
+
+    UUID instance_serial_number;  // TODO: This belongs in "Identity".
+
+    /* Inlines for altering and reading the flags. */
+    inline void _alter_flags(bool en, uint32_t mask) {
+      _pflags = (en) ? (_pflags | mask) : (_pflags & ~mask);
+    };
+    inline bool _check_flags(uint32_t mask) {
+      return (mask == (_pflags & mask));
+    };
+    inline void _set_init_state(uint8_t s) {
+      _pflags = ((_pflags & 0xFFFFFFF8) | s);
+    };
+};
+
+
+extern ManuvrPlatform platform;  // TODO: Awful.
+
+
+#ifdef __cplusplus
+ extern "C" {
+#endif
 
 /*
 * Time and date
@@ -255,9 +283,6 @@ bool setTimeAndDateStr(char*);   // Takes a string of the form given by RFC-2822
 bool setTimeAndDate(uint8_t y, uint8_t m, uint8_t d, uint8_t wd, uint8_t h, uint8_t mi, uint8_t s);
 uint32_t epochTime();            // Returns an integer representing the current datetime.
 void currentDateTime(StringBuilder*);    // Writes a human-readable datetime to the argument.
-
-// Performs string conversion for integer type-code, and is only useful for logging.
-const char* getRTCStateString(uint32_t code);
 
 /*
 * Watchdog timer.
@@ -287,7 +312,6 @@ volatile uintptr_t getStackPointer();   // Returns the value of the stack pointe
 *   formless data to a place on the device to be recalled on a different runtime.
 */
 //int8_t persistData(const char* store_name, uint8_t* data, int length);
-bool persistCapable();        // Returns true if this platform can store data locally.
 unsigned long persistFree();  // Returns the number of bytes availible to store data.
 
 

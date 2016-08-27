@@ -145,14 +145,6 @@ int main(int argc, char *argv[]) {
     }
   #endif
 
-  #if defined(__MANUVR_DEBUG)
-    // spend time and memory measuring performance.
-    kernel->profiler(true);
-
-    // Creating a simple schedule to a void*(void) function...
-    //kernel->createSchedule(1000, -1, false, kernelDebugDump);
-  #endif
-
   /*
   * At this point, we should instantiate whatever specific functionality we
   *   want this Manuvrable to have.
@@ -167,7 +159,7 @@ int main(int argc, char *argv[]) {
     }
     if ((strcasestr(argv[i], "--info")) || ((argv[i][0] == '-') && (argv[i][1] == 'i'))) {
       // Cause the kernel to write a self-report to its own log.
-      kernel->printDebug();
+      platform.printDebug();
     }
     if ((strcasestr(argv[i], "--console")) || ((argv[i][0] == '-') && (argv[i][1] == 'c'))) {
       // The user wants a local stdio "Shell".

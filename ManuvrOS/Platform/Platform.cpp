@@ -29,8 +29,6 @@ This file is meant to contain a set of common functions that are typically platf
 #include "Platform.h"
 #include <Kernel.h>
 
-#include <DataStructures/uuid.h>
-
 
 // TODO: I know this is horrid. I'm sick of screwing with the build system today...
 #if defined(RASPI) | defined(RASPI2) | defined(RASPI3)
@@ -63,27 +61,24 @@ This file is meant to contain a set of common functions that are typically platf
 #endif
 
 
-
-extern "C" {
-
-/****************************************************************************************************
-* Functions that convert from #define codes to something readable by a human...                     *
-****************************************************************************************************/
-const char* getRTCStateString(uint32_t code) {
-  switch (code) {
-    case MANUVR_RTC_STARTUP_UNKNOWN:     return "RTC_UNKNOWN";
-    case MANUVR_RTC_OSC_FAILURE:         return "RTC_OSC_FAIL";
-    case MANUVR_RTC_STARTUP_GOOD_UNSET:  return "RTC_GOOD_UNSET";
-    case MANUVR_RTC_STARTUP_GOOD_SET:    return "RTC_GOOD_SET";
-    default:                             return "RTC_UNDEFINED";
-  }
-}
-
-/*
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
+/**
 * Issue a human-readable string representing the condition that causes an
 *   IRQ to fire.
+*
+* @param  An IRQ condition code.
+* @return A string constant.
 */
-const char* getIRQConditionString(int con_code) {
+const char* ManuvrPlatform::getIRQConditionString(int con_code) {
   switch (con_code) {
     case RISING:   return "RISING";
     case FALLING:  return "FALLING";
@@ -92,7 +87,79 @@ const char* getIRQConditionString(int con_code) {
   }
 }
 
+/**
+* Issue a human-readable string representing the platform state.
+*
+* @return A string constant.
+*/
+const char* ManuvrPlatform::getPlatformStateStr() {
+  switch (platformState()) {
+    default:
+    case MANUVR_INIT_STATE_UNINITIALIZED:   return "UNINITIALIZED";
+    case MANUVR_INIT_STATE_RESERVED_0:      return "RSRVD_0";
+    case MANUVR_INIT_STATE_PREINIT:         return "PREINIT";
+    case MANUVR_INIT_STATE_KERNEL_BOOTING:  return "BOOTING";
+    case MANUVR_INIT_STATE_NOMINAL:         return "NOMINAL";
+    case MANUVR_INIT_STATE_RESERVED_1:      return "RSRVD_1";
+    case MANUVR_INIT_STATE_SHUTDOWN:        return "SHUTDOWN";
+    case MANUVR_INIT_STATE_HALTED:          return "HALTED";
+  }
+}
 
+
+/**
+* Issue a human-readable string representing the state of the RTC
+*
+* @return A string constant.
+*/
+const char* ManuvrPlatform::getRTCStateString() {
+  const uint32_t RTC_MASK = MANUVR_PLAT_FLAG_RTC_SET | MANUVR_PLAT_FLAG_RTC_READY | MANUVR_PLAT_FLAG_INNATE_DATETIME;
+  switch (_pflags & RTC_MASK) {
+    case MANUVR_PLAT_FLAG_INNATE_DATETIME:
+      return "RTC_UNINIT";
+    case MANUVR_PLAT_FLAG_RTC_READY | MANUVR_PLAT_FLAG_INNATE_DATETIME:
+      return "RTC_RDY_UNSET";
+    case RTC_MASK:
+      return "RTC_RDY_SET";
+    default:
+      return "RTC_INVALID";
+  }
+}
+
+
+
+/**
+* This is called by user code to initialize the platform.
+*/
+int8_t ManuvrPlatform::bootstrap() {
+  _kernel = Kernel::getInstance();
+
+  /* Follow your shadow. */
+  ManuvrRunnable *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
+  boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
+  Kernel::staticRaiseEvent(boot_completed_ev);
+
+  while (0 < _kernel->procIdleFlags()) {
+    // TODO: Safety! Need to be able to diagnose infinte loops.
+  }
+
+  return 0;
+}
+
+
+
+/**
+* Prints platform information without necessitating the caller
+*   provide a buffer.
+*/
+void ManuvrPlatform::printDebug() {
+  StringBuilder output;
+  printDebug(&output);
+  Kernel::log(&output);
+}
+
+
+extern "C" {
 
 /*
 * Platform-abstracted function to enable or suspend interrupts. Whatever
@@ -123,9 +190,9 @@ volatile uintptr_t getStackPointer() {
 }
 
 
-/****************************************************************************************************
-* Threading                                                                                         *
-****************************************************************************************************/
+/*******************************************************************************
+* Threading                                                                    *
+*******************************************************************************/
 /**
 * On linux, we support pthreads. On microcontrollers, we support FreeRTOS.
 * This is the wrapper to create a new thread.
@@ -176,34 +243,3 @@ void sleep_millis(unsigned long millis) {
 
 
 }  // extern "C"
-
-
-/**
-* This is called by user code to initialize the platform.
-*/
-int8_t ManuvrPlatform::bootstrap() {
-  _kernel = Kernel::getInstance();
-
-  /* Follow your shadow. */
-  ManuvrRunnable *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
-  boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
-  Kernel::staticRaiseEvent(boot_completed_ev);
-
-  while (0 < _kernel->procIdleFlags()) {
-    // TODO: Safety! Need to be able to diagnose infinte loops.
-  }
-
-  return 0;
-}
-
-
-
-/**
-* Prints platform information without necessitating the caller
-*   provide a buffer.
-*/
-void ManuvrPlatform::printDebug() {
-  StringBuilder output;
-  printDebug(&output);
-  Kernel::log(&output);
-}

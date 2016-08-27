@@ -98,5 +98,10 @@ The testing effort was advanced back into a state of relevance. The DataStructur
   tests are now bearing the code responsible for reporting type sizes.
   Still need to choose a good framework for automated-testing.
 
+       text    data     bss     dec     hex filename
     2031297   16864   51940 2100101  200b85 manuvr   Baseline
     2024893   16864   51876 2093633  1ff241 manuvr   Platform re-org into C++. Hasty.
+    2024813   16864   51876 2093553  1ff1f1 manuvr   More consolidation into ManuvrPlatform.
+    2024781   16864   51876 2093521  1ff1d1 manuvr   Cost of a non-abstracted log flush.
+    2025149   16928   51876 2093953  1ff381 manuvr   Re-introducing ser-num accessors.
+    2025965   16928   51876 2094769  1ff6b1 manuvr   Writing some long-desired platform discovery stuff.

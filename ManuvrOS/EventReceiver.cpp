@@ -188,7 +188,7 @@ int8_t EventReceiver::raiseEvent(ManuvrRunnable* event) {
 /* Override for lazy programmers. */
 void EventReceiver::printDebug() {
   printDebug(&local_log);
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
 }
 
 

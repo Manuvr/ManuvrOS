@@ -41,7 +41,7 @@ This is an example file for building firmware on linux. Anticipated target is a 
 */
 // This is the string that identifies this Manuvrable to other Manuvrables. In MHB's case, this
 //   will select the mEngine.
-#define IDENTITY_STRING           "MHBDebug"    // This will select Manuvr's debug engine in MHB.
+#define IDENTITY_STRING         "ManuvrDemo"    // The name of this firmware.
 
 // This would be the version of the Manuvrable's firmware (this program).
 #define VERSION_STRING               "0.0.1"

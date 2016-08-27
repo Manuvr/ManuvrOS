@@ -25,8 +25,6 @@ limitations under the License.
 #include <Platform/Cryptographic.h>
 
 
-extern uint32_t rtc_startup_state;
-
 /****************************************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
@@ -162,8 +160,12 @@ Kernel::Kernel() : EventReceiver() {
     preallocated.insert(&_preallocation_pool[i]);
   }
 
+  #if defined(__MANUVR_DEBUG)
+    profiler(true);          // spend time and memory measuring performance.
+  #else
+    profiler(false);         // Turn off the profiler.
+  #endif
   subscribe(this);           // We subscribe ourselves to events.
-  profiler(false);           // Turn off the profiler.
   setVerbosity((int8_t) DEFAULT_CLASS_VERBOSITY);
 
   ManuvrMsg::registerMessages(message_defs, sizeof(message_defs) / sizeof(MessageTypeDef));
@@ -946,36 +948,11 @@ void Kernel::printProfiler(StringBuilder* output) {
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
-void Kernel::printPlatformInfo(StringBuilder* output) {
-  platform.printDebug(output);
-  output->concatf("-- Hardware version:   %s\n", HW_VERSION_STRING);
-  output->concatf("-- Timer resolution:   %d ms\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
-  output->concatf("-- Entropy pool size:  %u bytes\n", PLATFORM_RNG_CARRY_CAPACITY * 4);
-  output->concatf("-- RTC State:          %s\n", getRTCStateString(rtc_startup_state));
-  output->concat("-- Supported protocols: \n\t Console\n");
-  #if defined(MANUVR_OVER_THE_WIRE)
-    output->concat("\t Manuvr\n");
-  #endif
-  #if defined(MANUVR_SUPPORT_COAP)
-    output->concat("\t CoAP\n");
-  #endif
-  #if defined(MANUVR_SUPPORT_MQTT)
-    output->concat("\t MQTT\n");
-  #endif
-  #if defined(MANUVR_SUPPORT_OSC)
-    output->concat("\t OSC\n");
-  #endif
-}
-
-/**
-* Debug support method. This fxn is only present in debug builds.
-*
-* @param   StringBuilder* The buffer into which this fxn should write its output.
-*/
 void Kernel::printScheduler(StringBuilder* output) {
   output->concatf("-- Total schedules:    %d\n-- Active schedules:   %d\n\n", schedules.size(), countActiveSchedules());
-  if (lagged_schedules)    output->concatf("-- Lagged schedules:    %u\n", (unsigned long) lagged_schedules);
-  if (_skips_observed)     output->concatf("-- Scheduler skips:     %u\n", (unsigned long) _skips_observed);
+  output->concatf("-- _ms_elapsed         %u\n", (unsigned long) _ms_elapsed);
+  if (lagged_schedules)    output->concatf("-- Lagged schedules:   %u\n", (unsigned long) lagged_schedules);
+  if (_skips_observed)     output->concatf("-- Scheduler skips:    %u\n", (unsigned long) _skips_observed);
   if (_er_flag(MKERNEL_FLAG_SKIP_FAILSAFE)) {
     output->concatf("-- %u skips before fail-to-bootloader.\n", (unsigned long) MAXIMUM_SEQUENTIAL_SKIPS);
   }
@@ -993,27 +970,13 @@ void Kernel::printScheduler(StringBuilder* output) {
 */
 void Kernel::printDebug(StringBuilder* output) {
   if (nullptr == output) return;
-  uintptr_t initial_sp = getStackPointer();
-  uintptr_t final_sp = getStackPointer();
-
   EventReceiver::printDebug(output);
 
-  output->concatf("-- %s v%s \t Build date: %s %s\n--\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
-  output->concat("-- Platform                  ");
-  platform.printDebug(output);
-  output->concat("\n");
   //output->concatf("-- our_mem_addr:             %p\n", this);
   if (getVerbosity() > 5) {
     output->concat("-- Current datetime          ");
     currentDateTime(output);
-    output->concatf("\n-- millis()                  0x%08x\n", millis());
-    output->concatf("-- micros()                  0x%08x\n", micros());
-    output->concatf("-- _ms_elapsed               %u\n", (unsigned long) _ms_elapsed);
-  }
-
-  if (getVerbosity() > 6) {
-    output->concatf("-- getStackPointer()         %p\n", getStackPointer());
-    output->concatf("-- stack grows %s\n--\n", (final_sp > initial_sp) ? "up" : "down");
+    output->concat("\n");
   }
 
   if (getVerbosity() > 4) {
@@ -1033,9 +996,11 @@ void Kernel::printDebug(StringBuilder* output) {
     output->concat("\n");
   }
 
-  if (nullptr != current_event) {
-    output->concat("-- Current Runnable:\n");
-    current_event->printDebug(output);
+  if (getVerbosity() > 6) {
+    if (nullptr != current_event) {
+      output->concat("-- Current Runnable:\n");
+      current_event->printDebug(output);
+    }
   }
 }
 
@@ -1477,11 +1442,6 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       profiler('P' == c);
       break;
 
-    case 'c':
-      // Cryptographic support.
-      printCryptoOverview(&local_log);
-      break;
-
     #if defined(__MANUVR_DEBUG)
     case 'f':  // FPU benchmark
       {
@@ -1504,21 +1464,27 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
 
     case 'i':   // Debug prints.
       switch (temp_int) {
-        case 1:
-          printDebug(&local_log);
-          printProfiler(&local_log);
-          printPlatformInfo(&local_log);
-          printScheduler(&local_log);
-          break;
         case 2:
           printProfiler(&local_log);
           break;
+
         case 3:
-          printPlatformInfo(&local_log);
+          platform.printDebug(&local_log);
           break;
+
         case 4:
+          printCryptoOverview(&local_log);
+          break;
+
+        case 9:
+          platform.printDebug(&local_log);
+          printDebug(&local_log);
+          printProfiler(&local_log);
+          // NOTE: Case fall-through
+        case 5:
           printScheduler(&local_log);
           break;
+
         default:
           printDebug(&local_log);
           break;
@@ -1530,7 +1496,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       break;
   }
 
-  flushLocalLog();
   input->clear();
+  flushLocalLog();
 }
 #endif  //__MANUVR_CONSOLE_SUPPORT
