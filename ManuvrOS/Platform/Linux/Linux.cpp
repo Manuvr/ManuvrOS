@@ -32,6 +32,9 @@ This file forms the catch-all for linux platforms that have no support.
 #include <unistd.h>
 #include <signal.h>
 
+#if defined(MANUVR_STORAGE)
+#include <Platform/Linux/LinuxStorage.h>
+#endif
 
 /****************************************************************************************************
 * The code under this block is special on this platform, and will not be available elsewhere.       *
@@ -185,6 +188,7 @@ uint32_t randomInt() {
   uint32_t return_value = rand();
   return return_value;
 }
+
 
 /**
 * Called by the RNG ISR to provide new random numbers.
@@ -444,7 +448,6 @@ void ManuvrPlatform::reboot() {
 * Platform initialization.                                                                          *
 ****************************************************************************************************/
 #define  DEFAULT_PLATFORM_FLAGS ( \
-              MANUVR_PLAT_FLAG_HAS_STORAGE     | \
               MANUVR_PLAT_FLAG_HAS_THREADS     | \
               MANUVR_PLAT_FLAG_INNATE_DATETIME | \
               MANUVR_PLAT_FLAG_HAS_IDENTITY)
@@ -457,9 +460,16 @@ int8_t ManuvrPlatform::platformPreInit() {
   // TODO: Should we really be setting capabilities this late?
   uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
 
+  #if defined(MANUVR_STORAGE)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_STORAGE;
+    //Argument opts;
+    LinuxStorage* sd = new LinuxStorage(nullptr);
+    _storage_device = (Storage*) sd;
+  #endif
   #if defined(__MANUVR_MBEDTLS)
     default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
   #endif
+
   #if defined(MANUVR_GPS_PIPE)
     default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
   #endif
@@ -476,6 +486,10 @@ int8_t ManuvrPlatform::platformPreInit() {
   _kernel = Kernel::getInstance();
   __kernel = (volatile Kernel*) _kernel;
   // TODO: Evaluate consequences of choice.
+
+  #if defined(MANUVR_STORAGE)
+    _kernel->subscribe((EventReceiver*) sd);
+  #endif
 
   platform.setIdleHook([]{ sleep_millis(20); });
   initSigHandlers();

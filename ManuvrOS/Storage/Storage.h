@@ -28,16 +28,20 @@ This file represents the platform-specific interface to a persistent
 #ifndef __MANUVR_PERSIST_LAYER_H__
 #define __MANUVR_PERSIST_LAYER_H__
 
-#define MANUVR_PL_USES_FILESYSTEM      0x0001  // This storage media is implemented within a filesystem.
+#define MANUVR_PL_USES_FILESYSTEM      0x0001  // Medium contains a filesystem.
 #define MANUVR_PL_BLOCK_ACCESS         0x0002  // I/O operations must occur blockwise.
-#define MANUVR_PL_ENCRYPTED            0x0004  // Data stored in this media is encrypted at rest.
+#define MANUVR_PL_ENCRYPTED            0x0004  // Data stored in this medium is encrypted at rest.
+#define MANUVR_PL_REMOVABLE            0x0008  // Media are removable.
+#define MANUVR_PL_BATTERY_DEPENDENT    0x0010  // Data-retention is contingent on constant current.
+#define MANUVR_PL_MEDIUM_MOUNTED       0x0020  // Medium is ready for use.
 #define MANUVR_PL_BUSY_READ            0x4000  // There is a read operation pending completion.
 #define MANUVR_PL_BUSY_WRITE           0x8000  // There is a write operation pending completion.
 
 
 /**
 * This class is a gateway to I/O. It will almost certainly need to have
-*   some of it's operations run asynchronously or threaded.
+*   some of it's operations run asynchronously or threaded. We leave those
+*   concerns for any implementing class.
 */
 class Storage {
   public:
@@ -49,16 +53,16 @@ class Storage {
 
 
   protected:
-    inline bool _pl_flag(uint8_t _flag) {        return (_pl_flags & _flag);  };
-    inline void _pl_set_flag(uint8_t _flag, bool nu) {
-      _pl_flags = nu ? (_pl_flags |= _flag) : (_pl_flags &= ~_flag);
+    Storage() {};  // Protected constructor.
+
+    inline bool _pl_flag(uint16_t _flag) {        return (_pl_flags & _flag);  };
+    inline void _pl_set_flag(bool nu, uint16_t _flag) {
+      _pl_flags = (nu) ? (_pl_flags | _flag) : (_pl_flags & ~_flag);
     };
 
 
   private:
-    StringBuilder _write_cache;
-    uint16_t      _pl_flags    = 0;
-    uint16_t      _block_size  = 0;
+    uint16_t      _pl_flags = 0;
 };
 
 #endif // __MANUVR_PERSIST_LAYER_H__

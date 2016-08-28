@@ -107,3 +107,4 @@ The testing effort was advanced back into a state of relevance. The DataStructur
     2025149   16928   51876 2093953  1ff381 manuvr   Re-introducing ser-num accessors.
     2025965   16928   51876 2094769  1ff6b1 manuvr   Writing some long-desired platform discovery stuff.
     2026161   16928   51876 2094965  1ff775 manuvr   Made runtime architecture discovery less confusing.
+    2028369   16992   51876 2097237  200055 manuvr   Implementing first storage device on linux platform.

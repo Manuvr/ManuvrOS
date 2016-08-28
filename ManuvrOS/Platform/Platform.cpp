@@ -54,6 +54,7 @@ This file is meant to contain a set of common functions that are typically platf
 #elif defined(__MANUVR_LINUX)
   //#include "./Linux/Linux.h"
   #include "./Linux/Linux.cpp"
+  #include "./Linux/LinuxStorage.cpp"
   ManuvrPlatform platform;
 #else
   // Unsupportage.

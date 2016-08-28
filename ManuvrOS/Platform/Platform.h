@@ -46,6 +46,10 @@ This file is meant to contain a set of common functions that are
 #include <DataStructures/StringBuilder.h>
 #include <DataStructures/uuid.h>
 
+#if defined(MANUVR_STORAGE)
+  #include <Storage/Storage.h>
+#endif
+
 // Conditional inclusion for different threading models...
 #if defined(__MANUVR_LINUX)
   #include <pthread.h>
@@ -209,17 +213,20 @@ class ManuvrPlatform {
     inline void setKernel(Kernel* k) {  if (nullptr == _kernel) _kernel = k;  };
     inline Kernel* getKernel() {        return _kernel;  };
 
+    /* These are storage-realted members. */
+    Storage* fetchStorage(const char*);
+    int8_t   offerStorage(const char*, Storage*);
 
     /* These are safe function proxies for external callers. */
     void setIdleHook(FunctionPointer nu);
     void idleHook();
-
     void setWakeHook(FunctionPointer nu);
     void wakeHook();
 
     /* Writes a platform information string to the provided buffer. */
     const char* getRTCStateString();
     const char* getPlatformStateStr();
+
     void printDebug(StringBuilder* out);
     void printDebug();
 
@@ -235,7 +242,6 @@ class ManuvrPlatform {
     int platformSerialNumberSize();    // Returns the length of the serial number on this platform (in bytes).
     int getSerialNumber(uint8_t*);     // Writes the serial number to the indicated buffer.
 
-
     /*
     * Performs string conversions for integer codes. Only useful for logging.
     */
@@ -246,6 +252,9 @@ class ManuvrPlatform {
 
   private:
     Kernel*         _kernel    = nullptr;
+    #if defined(MANUVR_STORAGE)
+      Storage* _storage_device = nullptr;
+    #endif
     uint32_t        _pflags    = 0;
     FunctionPointer _idle_hook = nullptr;
     FunctionPointer _wake_hook = nullptr;
