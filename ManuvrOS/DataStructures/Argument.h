@@ -4,7 +4,6 @@
 #include <EnumeratedTypeCodes.h>
 
 #include <DataStructures/StringBuilder.h>
-#include <DataStructures/BufferPipe.h>
 #include <DataStructures/PriorityQueue.h>
 #include <DataStructures/LightLinkedList.h>
 #include <DataStructures/Vector3.h>
@@ -21,6 +20,7 @@
 #define MANUVR_ARG_FLAG_REQUIRED       0x80
 
 
+class BufferPipe;
 class ManuvrXport;
 class EventReceiver;
 class ManuvrRunnable;
