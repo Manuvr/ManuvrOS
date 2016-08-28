@@ -24,7 +24,30 @@ limitations under the License.
 
 #include "ManuvrConsole.h"
 
-extern void printHelp();  // TODO: Hack. Remove later.
+
+void printHelp() {
+  // TODO: Hack. Needs to generate help based on context. But since I don't want
+  //         to get mired in building a generalized CLI into this class (yet),
+  //         this will suffice for now.
+  Kernel::log("Help would ordinarily be displayed here.\n");
+}
+
+/*
+* Taken from
+* http://c-for-dummies.com/blog/?p=1359
+*/
+int strcasestr(char *a, char *b) {
+  char c;
+
+  while(*a) {
+    c = toupper(*a) - toupper(*b);
+    if( c != 0 ) return(c);
+    a++;
+    b++;
+  }
+  return(c);
+}
+
 
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...

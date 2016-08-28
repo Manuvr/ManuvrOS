@@ -266,6 +266,9 @@ class ManuvrPlatform {
     inline void _set_init_state(uint8_t s) {
       _pflags = ((_pflags & 0xFFFFFFF8) | s);
     };
+
+
+    void _discoverALUParams();
 };
 
 

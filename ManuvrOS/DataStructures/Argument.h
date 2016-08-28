@@ -150,10 +150,15 @@ class Argument {
 
     static char*  printBinStringToBuffer(unsigned char *str, int len, char *buffer);
 
+    #if defined(MANUVR_CBOR)
     static int8_t encodeToCBOR(Argument*, StringBuilder*);
     static Argument* decodeFromCBOR(StringBuilder*);
+    #endif
+
+    #if defined(MANUVR_JSON)
     static int8_t encodeToJSON(Argument*, StringBuilder*);
     static Argument* decodeFromJSON(StringBuilder*);
+    #endif
 
 
   private:

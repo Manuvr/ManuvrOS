@@ -156,6 +156,11 @@ typedef struct {
   bpFactory   factory;
 } PipeDef;
 
+typedef struct {
+  int         pipe_code;
+  bpFactory   factory;
+} PipeStrategy;
+
 
 /*
 * Here, "far" refers to "farther from the counterparty". That is: closer to our

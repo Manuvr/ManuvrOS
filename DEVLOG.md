@@ -5,6 +5,7 @@ The contents of this file will be periodically archived and purged to keep the l
 
 ---J. Ian Lindsay 2016.08.27
 
+------
 
 ### 2016.08.16
 
@@ -105,3 +106,5 @@ The testing effort was advanced back into a state of relevance. The DataStructur
     2024781   16864   51876 2093521  1ff1d1 manuvr   Cost of a non-abstracted log flush.
     2025149   16928   51876 2093953  1ff381 manuvr   Re-introducing ser-num accessors.
     2025965   16928   51876 2094769  1ff6b1 manuvr   Writing some long-desired platform discovery stuff.
+    2026161   16928   51876 2094965  1ff775 manuvr   Made runtime architecture discovery less confusing.
+    

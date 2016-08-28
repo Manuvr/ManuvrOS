@@ -26,7 +26,6 @@ This class represents our type-abstraction layer. It is the means by which
 #include "Argument.h"
 #include <string.h>
 
-#include "cbor-cpp/include/cbor.h"
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -38,6 +37,8 @@ This class represents our type-abstraction layer. It is the means by which
 *
 * Static members and initializers should be located here.
 *******************************************************************************/
+#if defined(MANUVR_CBOR)
+#include "cbor-cpp/include/cbor.h"
 
 int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
 	cbor::output_dynamic output;
@@ -70,7 +71,9 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
 Argument* Argument::decodeFromCBOR(StringBuilder* src) {
 	return nullptr;
 }
+#endif
 
+#if defined(MANUVR_JSON)
 int8_t Argument::encodeToJSON(Argument* src, StringBuilder* out) {
 	return -1;
 }
@@ -78,7 +81,7 @@ int8_t Argument::encodeToJSON(Argument* src, StringBuilder* out) {
 Argument* Argument::decodeFromJSON(StringBuilder* src) {
 	return nullptr;
 }
-
+#endif
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _

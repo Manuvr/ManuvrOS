@@ -95,11 +95,6 @@ void kernelDebugDump() {
   Kernel::log(&output);
 }
 
-void printHelp() {
-  Kernel::log("Help would ordinarily be displayed here.\n");
-}
-
-
 /*******************************************************************************
 * The main function.                                                           *
 *******************************************************************************/

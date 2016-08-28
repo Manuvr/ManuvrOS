@@ -491,22 +491,10 @@ void ManuvrPlatform::reboot() {
 /****************************************************************************************************
 * Platform initialization.                                                                          *
 ****************************************************************************************************/
-void ManuvrPlatform::idleHook() {
-  if (nullptr != _idle_hook) _idle_hook();
-}
-
-void ManuvrPlatform::setIdleHook(FunctionPointer nu) {
-  _idle_hook = nu;
-  nu();
-  _idle_hook();
-}
-
-
 #define  DEFAULT_PLATFORM_FLAGS ( \
               MANUVR_PLAT_FLAG_HAS_STORAGE     | \
               MANUVR_PLAT_FLAG_HAS_THREADS     | \
               MANUVR_PLAT_FLAG_INNATE_DATETIME | \
-              MANUVR_PLAT_FLAG_HAS_CRYPTO      | \
               MANUVR_PLAT_FLAG_HAS_IDENTITY)
 
 /**
@@ -524,34 +512,8 @@ int8_t ManuvrPlatform::platformPreInit() {
     default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
   #endif
 
-  // We infer the ALU width by the size of pointers.
-  // TODO: This will not work down to 8-bit because of paging schemes.
-  switch (sizeof(uintptr_t)) {
-    // TODO: There is a way to do this with no conditionals. Figritout.
-    default:
-    case 1:
-      // Default case is 8-bit. Do nothing.
-      break;
-    case 2:
-      default_flags |= (uint32_t) (1 << 13);
-      break;
-    case 4:
-      default_flags |= (uint32_t) (2 << 13);
-      break;
-    case 8:
-      default_flags |= (uint32_t) (3 << 13);
-      break;
-  }
-
-  // Now determine the endianess with a magic number and a pointer dance.
-  if (8 != aluWidth()) {
-    uint16_t test = 0xAA55;
-    if (0xAA == *((uint8_t*) &test)) {
-      default_flags |= MANUVR_PLAT_FLAG_BIG_ENDIAN;
-    }
-  }
-
   _alter_flags(true, default_flags);
+  _discoverALUParams();
 
   start_time_micros = micros();
   init_rng();

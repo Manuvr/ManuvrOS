@@ -127,6 +127,38 @@ const char* ManuvrPlatform::getRTCStateString() {
 }
 
 
+void ManuvrPlatform::_discoverALUParams() {
+  // We infer the ALU width by the size of pointers.
+  // TODO: This will not work down to 8-bit because of paging schemes.
+  uint32_t default_flags = 0;
+  switch (sizeof(uintptr_t)) {
+    // TODO: There is a way to do this with no conditionals. Figritout.
+    default:
+    case 1:
+      // Default case is 8-bit. Do nothing.
+      break;
+    case 2:
+      default_flags |= (uint32_t) (1 << 13);
+      break;
+    case 4:
+      default_flags |= (uint32_t) (2 << 13);
+      break;
+    case 8:
+      default_flags |= (uint32_t) (3 << 13);
+      break;
+  }
+  _alter_flags(true, default_flags);
+
+  // Now determine the endianess with a magic number and a pointer dance.
+  if (8 != aluWidth()) {
+    uint16_t test = 0xAA55;
+    if (0xAA == *((uint8_t*) &test)) {
+      _alter_flags(true, MANUVR_PLAT_FLAG_BIG_ENDIAN);
+    }
+  }
+}
+
+
 
 /**
 * This is called by user code to initialize the platform.
@@ -157,6 +189,18 @@ void ManuvrPlatform::printDebug() {
   printDebug(&output);
   Kernel::log(&output);
 }
+
+
+void ManuvrPlatform::idleHook() {
+  if (nullptr != _idle_hook) _idle_hook();
+}
+
+void ManuvrPlatform::setIdleHook(FunctionPointer nu) {
+  _idle_hook = nu;
+  nu();
+  _idle_hook();
+}
+
 
 
 extern "C" {
