@@ -51,6 +51,7 @@ const MessageTypeDef message_defs[] = {
   {  MANUVR_MSG_SYS_BOOTLOADER       , MSG_FLAG_EXPORTABLE,  "SYS_BOOTLOADER"       , MSG_ARGS_NO_ARGS }, // Reboots into the STM32F4 bootloader.
   {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,  "SYS_REBOOT"           , MSG_ARGS_NO_ARGS }, // Reboots into THIS program.
   {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN"         , MSG_ARGS_NO_ARGS }, // Raised when the system is pending complete shutdown.
+  {  MANUVR_MSG_SYS_EXIT             , MSG_FLAG_EXPORTABLE,  "SYS_EXIT"             , MSG_ARGS_NO_ARGS }, // Raised when the process is to exit without shutdown.
 
   {  MANUVR_MSG_DEFERRED_FXN         , 0x0000,               "DEFERRED_FXN",          MSG_ARGS_NO_ARGS }, // Message to allow for deferred fxn calls without an EventReceiver.
 
@@ -262,6 +263,7 @@ int8_t Kernel::subscribe(EventReceiver *client) {
   int8_t return_value = subscribers.insert(client);
   if (booted()) {
     // This subscriber is joining us after bootup. Call its bootComplete() fxn to cause it to init.
+    // TODO: This is suspect....
     client->notify(returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED));
   }
   return ((return_value >= 0) ? 0 : -1);
@@ -1056,6 +1058,7 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {
     case MANUVR_MSG_SYS_BOOT_COMPLETED:
+      // TODO: We should probably recycle the BOOT_COMPLETE until nothing responds to it.
       if (getVerbosity() > 4) Kernel::log("Boot complete.\n");
       if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
       break;

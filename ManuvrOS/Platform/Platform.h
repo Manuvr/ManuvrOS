@@ -91,8 +91,8 @@ class Kernel;
 #define MANUVR_INIT_STATE_RESERVED_0      1
 #define MANUVR_INIT_STATE_PREINIT         2
 #define MANUVR_INIT_STATE_KERNEL_BOOTING  3
-#define MANUVR_INIT_STATE_NOMINAL         4
-#define MANUVR_INIT_STATE_RESERVED_1      5
+#define MANUVR_INIT_STATE_POST_INIT       4
+#define MANUVR_INIT_STATE_NOMINAL         5
 #define MANUVR_INIT_STATE_SHUTDOWN        6
 #define MANUVR_INIT_STATE_HALTED          7
 
@@ -191,10 +191,11 @@ class ManuvrPlatform {
 
     /* Accessors for platform capability discovery. */
     inline bool hasLocation() {     return _check_flags(MANUVR_PLAT_FLAG_HAS_LOCATION);    };
-    inline bool hasTimeAndData() {  return _check_flags(MANUVR_PLAT_FLAG_INNATE_DATETIME); };
+    inline bool hasTimeAndDate() {  return _check_flags(MANUVR_PLAT_FLAG_INNATE_DATETIME); };
     inline bool hasStorage() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_STORAGE);     };
     inline bool hasThreads() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_THREADS);     };
     inline bool hasCryptography() { return _check_flags(MANUVR_PLAT_FLAG_HAS_CRYPTO);      };
+    inline bool booted() {          return (MANUVR_INIT_STATE_NOMINAL == platformState()); };
     inline bool bigEndian() {       return _check_flags(MANUVR_PLAT_FLAG_BIG_ENDIAN);      };
     inline uint8_t aluWidth() {
       // TODO: This is possible to do without the magic number 13... Figure out how.
@@ -203,17 +204,11 @@ class ManuvrPlatform {
 
     /* These are bootstrap checkpoints. */
     int8_t bootstrap();
-    inline void booted(bool en) { _alter_flags(en, MANUVR_PLAT_FLAG_P_STATE_MASK);  };
-    inline bool booted() {
-      return _check_flags(MANUVR_PLAT_FLAG_P_STATE_MASK == platformState());
-    };
+    inline uint8_t platformState() {   return (_pflags & MANUVR_PLAT_FLAG_P_STATE_MASK);  };
 
     inline void setKernel(Kernel* k) {  if (nullptr == _kernel) _kernel = k;  };
     inline Kernel* getKernel() {        return _kernel;  };
 
-    inline uint8_t platformState() {
-      return ((uint8_t) _pflags & MANUVR_PLAT_FLAG_P_STATE_MASK);
-    };
 
     /* These are safe function proxies for external callers. */
     void setIdleHook(FunctionPointer nu);
@@ -245,6 +240,7 @@ class ManuvrPlatform {
     * Performs string conversions for integer codes. Only useful for logging.
     */
     static const char* getIRQConditionString(int);
+    static void printPlatformBasics(StringBuilder*);  // TODO: on the copping-block.
 
 
 
@@ -264,7 +260,7 @@ class ManuvrPlatform {
       return (mask == (_pflags & mask));
     };
     inline void _set_init_state(uint8_t s) {
-      _pflags = ((_pflags & 0xFFFFFFF8) | s);
+      _pflags = ((_pflags & ~MANUVR_PLAT_FLAG_P_STATE_MASK) | s);
     };
 
 
@@ -305,10 +301,6 @@ int createThread(unsigned long*, void*, ThreadFxnPtr, void*);
 int deleteThread(unsigned long*);
 void sleep_millis(unsigned long millis);
 
-/*
-* Misc
-*/
-volatile uintptr_t getStackPointer();   // Returns the value of the stack pointer.
 
 /*
 * Data-persistence functions. This is the API used by anything that wants to write

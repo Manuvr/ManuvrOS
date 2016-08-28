@@ -70,6 +70,7 @@ This file is meant to contain a set of common functions that are typically platf
 * |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
 *
 * Static members and initializers should be located here.
+* Effectively, this entire class is static.
 *******************************************************************************/
 /**
 * Issue a human-readable string representing the condition that causes an
@@ -99,8 +100,8 @@ const char* ManuvrPlatform::getPlatformStateStr() {
     case MANUVR_INIT_STATE_RESERVED_0:      return "RSRVD_0";
     case MANUVR_INIT_STATE_PREINIT:         return "PREINIT";
     case MANUVR_INIT_STATE_KERNEL_BOOTING:  return "BOOTING";
+    case MANUVR_INIT_STATE_POST_INIT:       return "POST_INIT";
     case MANUVR_INIT_STATE_NOMINAL:         return "NOMINAL";
-    case MANUVR_INIT_STATE_RESERVED_1:      return "RSRVD_1";
     case MANUVR_INIT_STATE_SHUTDOWN:        return "SHUTDOWN";
     case MANUVR_INIT_STATE_HALTED:          return "HALTED";
   }
@@ -124,6 +125,60 @@ const char* ManuvrPlatform::getRTCStateString() {
     default:
       return "RTC_INVALID";
   }
+}
+
+
+// TODO: This is only here to ease the transition into polymorphic platform defs.
+void ManuvrPlatform::printPlatformBasics(StringBuilder* output) {
+  output->concatf("-- %s v%s \t Build date: %s %s\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
+  output->concatf("-- %u-bit", platform.aluWidth());
+  if (8 != platform.aluWidth()) {
+    output->concatf(" %s-endian", platform.bigEndian() ? "Big" : "Little");
+  }
+
+  uintptr_t initial_sp = 0;
+  uintptr_t final_sp   = 0;
+  output->concatf("\n-- getStackPointer():  %p\n", &final_sp);
+  output->concatf("-- stack grows %s\n--\n", (&final_sp > &initial_sp) ? "up" : "down");
+  output->concatf("-- Timer resolution:   %d ms\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
+  output->concatf("-- Hardware version:   %s\n", HW_VERSION_STRING);
+  output->concatf("-- Entropy pool size:  %u bytes\n", PLATFORM_RNG_CARRY_CAPACITY * 4);
+  if (platform.hasTimeAndDate()) {
+    output->concatf("-- RTC State:          %s\n", platform.getRTCStateString());
+  }
+  output->concatf("-- millis()            0x%08x\n", millis());
+  output->concatf("-- micros()            0x%08x\n", micros());
+
+  output->concat("--\n-- Capabilities:\n");
+  if (platform.hasThreads()) {
+    output->concat("--\t Threads\n");
+  }
+  if (platform.hasCryptography()) {
+    output->concat("--\t Crypt\n");
+  }
+  if (platform.hasStorage()) {
+    output->concat("--\t Storage\n");
+  }
+  if (platform.hasLocation()) {
+    output->concat("--\t Location\n");
+  }
+
+  output->concat("--\n-- Supported protocols: \n");
+  #if defined(__MANUVR_CONSOLE_SUPPORT)
+    output->concat("--\t Console\n");
+  #endif
+  #if defined(MANUVR_OVER_THE_WIRE)
+    output->concat("--\t Manuvr\n");
+  #endif
+  #if defined(MANUVR_SUPPORT_COAP)
+    output->concat("--\t CoAP\n");
+  #endif
+  #if defined(MANUVR_SUPPORT_MQTT)
+    output->concat("--\t MQTT\n");
+  #endif
+  #if defined(MANUVR_SUPPORT_OSC)
+    output->concat("--\t OSC\n");
+  #endif
 }
 
 
@@ -170,11 +225,12 @@ int8_t ManuvrPlatform::bootstrap() {
   ManuvrRunnable *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
   boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
   Kernel::staticRaiseEvent(boot_completed_ev);
-
+  _set_init_state(MANUVR_INIT_STATE_KERNEL_BOOTING);
   while (0 < _kernel->procIdleFlags()) {
     // TODO: Safety! Need to be able to diagnose infinte loops.
   }
-
+  _set_init_state(MANUVR_INIT_STATE_POST_INIT);
+  platformPostInit();
   return 0;
 }
 
@@ -218,20 +274,6 @@ void maskableInterrupts(bool enable) {
   }
 }
 
-
-/****************************************************************************************************
-* Misc                                                                                              *
-****************************************************************************************************/
-/**
-* Sometimes we question the size of the stack.
-*
-* @return the stack pointer at call time.
-*/
-volatile uintptr_t getStackPointer() {
-  uintptr_t test;  // Important to not do assignment here.
-  test = (uintptr_t) &test;  // Store the pointer.
-  return test;
-}
 
 
 /*******************************************************************************

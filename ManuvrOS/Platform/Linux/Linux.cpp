@@ -203,61 +203,10 @@ void init_rng() {
   srand(time(nullptr));          // Seed the PRNG...
 }
 
-/****************************************************************************************************
-* Identity and serial number                                                                        *
-****************************************************************************************************/
+
 void ManuvrPlatform::printDebug(StringBuilder* output) {
   output->concatf("==< Linux [%s] >=================================\n", getPlatformStateStr());
-  output->concatf("-- %s v%s \t Build date: %s %s\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
-  output->concatf("-- %u-bit", aluWidth());
-  if (8 != aluWidth()) {
-    output->concatf(" %s-endian", bigEndian() ? "Big" : "Little");
-  }
-
-  uintptr_t initial_sp = getStackPointer();
-  uintptr_t final_sp   = getStackPointer();
-  output->concatf("\n-- getStackPointer():  %p\n", getStackPointer());
-  output->concatf("-- stack grows %s\n--\n", (final_sp > initial_sp) ? "up" : "down");
-
-  output->concatf("-- Timer resolution:   %d ms\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
-  output->concatf("-- Hardware version:   %s\n", HW_VERSION_STRING);
-  output->concatf("-- Entropy pool size:  %u bytes\n", PLATFORM_RNG_CARRY_CAPACITY * 4);
-  if (_check_flags(MANUVR_PLAT_FLAG_INNATE_DATETIME)) {
-    output->concatf("-- RTC State:          %s\n", getRTCStateString());
-  }
-  output->concatf("\n-- millis()            0x%08x\n", millis());
-  output->concatf("-- micros()            0x%08x\n", micros());
-
-  output->concat("-- Capabilities:\n");
-  if (_check_flags(MANUVR_PLAT_FLAG_HAS_THREADS)) {
-    output->concat("--\t Threads\n");
-  }
-  if (_check_flags(MANUVR_PLAT_FLAG_HAS_CRYPTO)) {
-    output->concat("--\t Crypt\n");
-  }
-  if (_check_flags(MANUVR_PLAT_FLAG_HAS_STORAGE)) {
-    output->concat("--\t Storage\n");
-  }
-  if (_check_flags(MANUVR_PLAT_FLAG_HAS_LOCATION)) {
-    output->concat("--\t Location\n");
-  }
-
-  output->concat("-- Supported protocols: \n");
-  #if defined(__MANUVR_CONSOLE_SUPPORT)
-    output->concat("--\t Console\n");
-  #endif
-  #if defined(MANUVR_OVER_THE_WIRE)
-    output->concat("--\t Manuvr\n");
-  #endif
-  #if defined(MANUVR_SUPPORT_COAP)
-    output->concat("--\t CoAP\n");
-  #endif
-  #if defined(MANUVR_SUPPORT_MQTT)
-    output->concat("--\t MQTT\n");
-  #endif
-  #if defined(MANUVR_SUPPORT_OSC)
-    output->concat("--\t OSC\n");
-  #endif
+  printPlatformBasics(output);
 
   char* uuid_str = (char*) alloca(40);
   bzero(uuid_str, 40);
@@ -268,6 +217,9 @@ void ManuvrPlatform::printDebug(StringBuilder* output) {
 }
 
 
+/****************************************************************************************************
+* Identity and serial number                                                                        *
+****************************************************************************************************/
 
 /**
 * We sometimes need to know the length of the platform's unique identifier (if any). If this platform

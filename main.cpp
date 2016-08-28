@@ -264,11 +264,6 @@ int main(int argc, char *argv[]) {
   printf("%s: Booting Manuvr (PID %u)....\n", program_name, main_pid);
   platform.bootstrap();
 
-  /*
-  * If that function returned 'nominal', we call postInit() to finalize.
-  */
-  platform.platformPostInit();
-
 
   #if defined(MANUVR_SUPPORT_TCPSOCKET)
     #if defined(MANUVR_SUPPORT_MQTT)

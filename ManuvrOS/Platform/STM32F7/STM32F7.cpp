@@ -177,56 +177,7 @@ void init_RNG() {
 ****************************************************************************************************/
 void ManuvrPlatform::printDebug(StringBuilder* output) {
   output->concatf("==< STM32F7 [%s] >=================================\n", getPlatformStateStr());
-  output->concatf("-- %s v%s \t Build date: %s %s\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
-  output->concatf("-- %u-bit", aluWidth());
-  if (8 != aluWidth()) {
-    output->concatf(" %s-endian", bigEndian() ? "Big" : "Little");
-  }
-
-  uintptr_t initial_sp = getStackPointer();
-  uintptr_t final_sp   = getStackPointer();
-  output->concatf("\n-- getStackPointer():  %p\n", getStackPointer());
-  output->concatf("-- stack grows %s\n--\n", (final_sp > initial_sp) ? "up" : "down");
-
-  output->concatf("-- Timer resolution:   %d ms\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
-  output->concatf("-- Hardware version:   %s\n", HW_VERSION_STRING);
-  output->concatf("-- Entropy pool size:  %u bytes\n", PLATFORM_RNG_CARRY_CAPACITY * 4);
-  if (_check_flags(MANUVR_PLAT_FLAG_INNATE_DATETIME)) {
-    output->concatf("-- RTC State:          %s\n", getRTCStateString());
-  }
-  output->concatf("\n-- millis()            0x%08x\n", millis());
-  output->concatf("-- micros()            0x%08x\n", micros());
-
-  output->concat("-- Capabilities:\n");
-  if (_check_flags(MANUVR_PLAT_FLAG_HAS_THREADS)) {
-    output->concat("--\t Threads\n");
-  }
-  if (_check_flags(MANUVR_PLAT_FLAG_HAS_CRYPTO)) {
-    output->concat("--\t Crypt\n");
-  }
-  if (_check_flags(MANUVR_PLAT_FLAG_HAS_STORAGE)) {
-    output->concat("--\t Storage\n");
-  }
-  if (_check_flags(MANUVR_PLAT_FLAG_HAS_LOCATION)) {
-    output->concat("--\t Location\n");
-  }
-
-  output->concat("-- Supported protocols: \n");
-  #if defined(__MANUVR_CONSOLE_SUPPORT)
-    output->concat("--\t Console\n");
-  #endif
-  #if defined(MANUVR_OVER_THE_WIRE)
-    output->concat("--\t Manuvr\n");
-  #endif
-  #if defined(MANUVR_SUPPORT_COAP)
-    output->concat("--\t CoAP\n");
-  #endif
-  #if defined(MANUVR_SUPPORT_MQTT)
-    output->concat("--\t MQTT\n");
-  #endif
-  #if defined(MANUVR_SUPPORT_OSC)
-    output->concat("--\t OSC\n");
-  #endif
+  printPlatformBasics(output);
 
   char* uuid_str = (char*) alloca(40);
   bzero(uuid_str, 40);
@@ -245,7 +196,7 @@ void ManuvrPlatform::printDebug(StringBuilder* output) {
 *
 * @return   The length of the serial number on this platform, in terms of bytes.
 */
-int platformSerialNumberSize() { return 12; }
+int ManuvrPlatform::platformSerialNumberSize() { return 12; }
 
 
 /**
@@ -254,7 +205,7 @@ int platformSerialNumberSize() { return 12; }
 * @param    A pointer to the target buffer.
 * @return   The number of bytes written.
 */
-int getSerialNumber(uint8_t* buf) {
+int ManuvrPlatform::getSerialNumber(uint8_t* buf) {
   *((uint32_t*)buf + 0) = *((uint32_t*) 0x1FF0F420);
   *((uint32_t*)buf + 4) = *((uint32_t*) 0x1FF0F424);
   *((uint32_t*)buf + 8) = *((uint32_t*) 0x1FF0F428);
