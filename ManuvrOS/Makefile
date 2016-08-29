@@ -25,7 +25,6 @@ CPP_SRCS  += DataStructures/Argument.cpp
 
 # Types and encodings
 CPP_SRCS  += Types/TypeTranscriber.cpp
-CPP_SRCS  += Types/ManuvrCBOR/ManuvrCBOR.cpp
 CPP_SRCS  += Types/Avro/Avro.cpp
 
 # Manuvr core
