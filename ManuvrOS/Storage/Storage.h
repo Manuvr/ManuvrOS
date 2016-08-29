@@ -34,6 +34,8 @@ This file represents the platform-specific interface to a persistent
 #define MANUVR_PL_REMOVABLE            0x0008  // Media are removable.
 #define MANUVR_PL_BATTERY_DEPENDENT    0x0010  // Data-retention is contingent on constant current.
 #define MANUVR_PL_MEDIUM_MOUNTED       0x0020  // Medium is ready for use.
+#define MANUVR_PL_MEDIUM_READABLE      0x0040  // Can be read.
+#define MANUVR_PL_MEDIUM_WRITABLE      0x0080  // Can be written.
 #define MANUVR_PL_BUSY_READ            0x4000  // There is a read operation pending completion.
 #define MANUVR_PL_BUSY_WRITE           0x8000  // There is a write operation pending completion.
 
@@ -45,6 +47,10 @@ This file represents the platform-specific interface to a persistent
 */
 class Storage {
   public:
+    /*
+    * Data-persistence functions. This is the API used by anything that wants to write
+    *   formless data to a place on the device to be recalled on a different runtime.
+    */
     virtual long   freeSpace() =0;  // How many bytes are availible for use?
     virtual int8_t wipe()      =0;  // Call to wipe the data store.
 

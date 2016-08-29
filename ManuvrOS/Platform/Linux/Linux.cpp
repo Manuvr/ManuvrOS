@@ -207,9 +207,16 @@ void init_rng() {
   srand(time(nullptr));          // Seed the PRNG...
 }
 
-
+/*******************************************************************************
+ ___   _           _      ___
+(  _`\(_ )        ( )_  /'___)
+| |_) )| |    _ _ | ,_)| (__   _    _ __   ___ ___
+| ,__/'| |  /'_` )| |  | ,__)/'_`\ ( '__)/' _ ` _ `\
+| |    | | ( (_| || |_ | |  ( (_) )| |   | ( ) ( ) |
+(_)   (___)`\__,_)`\__)(_)  `\___/'(_)   (_) (_) (_)
+*******************************************************************************/
 void ManuvrPlatform::printDebug(StringBuilder* output) {
-  output->concatf("==< Linux [%s] >=================================\n", getPlatformStateStr());
+  output->concatf("==< Linux [%s] >=================================\n", getPlatformStateStr(platformState()));
   printPlatformBasics(output);
 
   char* uuid_str = (char*) alloca(40);
@@ -221,9 +228,9 @@ void ManuvrPlatform::printDebug(StringBuilder* output) {
 }
 
 
-/****************************************************************************************************
-* Identity and serial number                                                                        *
-****************************************************************************************************/
+/*******************************************************************************
+* Identity and serial number                                                   *
+********************************************************************************
 
 /**
 * We sometimes need to know the length of the platform's unique identifier (if any). If this platform
@@ -249,20 +256,14 @@ int ManuvrPlatform::getSerialNumber(uint8_t *buf) {
 
 
 
-/****************************************************************************************************
-* Data persistence                                                                                  *
-****************************************************************************************************/
-
-// Returns the number of bytes availible to store data.
-unsigned long persistFree() {
-  return -1L;
-}
+/*******************************************************************************
+* Data persistence                                                             *
+*******************************************************************************/
 
 
-
-/****************************************************************************************************
-* Time and date                                                                                     *
-****************************************************************************************************/
+/*******************************************************************************
+* Time and date                                                                *
+*******************************************************************************/
 /*
 */
 bool setTimeAndDate(uint8_t y, uint8_t m, uint8_t d, uint8_t wd, uint8_t h, uint8_t mi, uint8_t s) {
@@ -462,8 +463,9 @@ int8_t ManuvrPlatform::platformPreInit() {
 
   #if defined(MANUVR_STORAGE)
     default_flags |= MANUVR_PLAT_FLAG_HAS_STORAGE;
-    //Argument opts;
-    LinuxStorage* sd = new LinuxStorage(nullptr);
+    Argument opts("./manuvr.dat");
+    opts.setKey("filepath");
+    LinuxStorage* sd = new LinuxStorage(&opts);
     _storage_device = (Storage*) sd;
   #endif
   #if defined(__MANUVR_MBEDTLS)

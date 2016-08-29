@@ -27,15 +27,26 @@ Implemented as a JSON object within a single file. This feature therefore
 #if defined(__MANUVR_LINUX) & defined(MANUVR_STORAGE)
 #include <Platform/Linux/LinuxStorage.h>
 
-//#include "jansson/jansson.h"
-
-
+// We want this definition isolated to the compilation unit.
 #define STORAGE_PROPS (MANUVR_PL_USES_FILESYSTEM)
+
+
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
 
 LinuxStorage::LinuxStorage(Argument* opts) : EventReceiver(), Storage() {
   _pl_set_flag(true, STORAGE_PROPS);
   setReceiverName("LinuxStorage");
   if (nullptr != opts) {
+    if (0 == opts->getValueAs("filename", &_filename)) {
+      // If we have a filename option, we can open it.
+    }
   }
 }
 
@@ -44,6 +55,13 @@ LinuxStorage::~LinuxStorage() {
 }
 
 
+/*******************************************************************************
+*  __  ______   ___   ____   ___    ___   ____
+* (( \ | || |  // \\  || \\ // \\  // \\ ||
+*  \\    ||   ((   )) ||_// ||=|| (( ___ ||==
+* \_))   ||    \\_//  || \\ || ||  \\_|| ||___
+* Storage interface.
+********************************************************************************/
 long LinuxStorage::freeSpace() {
   return 0;
 }
@@ -83,8 +101,6 @@ int8_t LinuxStorage::persistentRead(const char*, uint8_t*, int, uint16_t) {
 */
 int8_t LinuxStorage::bootComplete() {
   EventReceiver::bootComplete();
-  //toCounterparty((uint8_t*) temp, strlen(temp), MEM_MGMT_RESPONSIBLE_BEARER);
-  // This is a console. Presumable it should also render log output.
   return 1;
 }
 
@@ -130,10 +146,7 @@ void LinuxStorage::printDebug(StringBuilder *output) {
 
 
 /*
-* This is the override from EventReceiver, but there is a bit of a twist this time.
-* Following the normal processing of the incoming event, this class compares it against
-*   a list of events that it has been instructed to relay to the counterparty. If the event
-*   meets the relay criteria, we serialize it and send it to the transport that we are bound to.
+* This is the override from EventReceiver.
 */
 int8_t LinuxStorage::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
@@ -150,18 +163,11 @@ int8_t LinuxStorage::notify(ManuvrRunnable *active_event) {
 }
 
 
-// We don't bother casing this off for the preprocessor. In this case, it
-//   is a given that we have __MANUVR_CONSOLE_SUPPORT.
-// This may be a strange loop that we might optimize later, but this is
-//   still a valid call target that deals with allowing the console to operate
-//   on itself.
-// TODO: Change local_echo.
-// TODO: Terminal reset.
-// TODO: Terminal forsakes logger.
+#if defined(__MANUVR_CONSOLE_SUPPORT)
 void LinuxStorage::procDirectDebugInstruction(StringBuilder *input) {
   EventReceiver::procDirectDebugInstruction(input);
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-
+#endif   // __MANUVR_CONSOLE_SUPPORT
 
 #endif   // __MANUVR_LINUX & MANUVR_STORAGE

@@ -74,6 +74,8 @@ Argument* Argument::decodeFromCBOR(StringBuilder* src) {
 #endif
 
 #if defined(MANUVR_JSON)
+#include "jansson/include/jansson.h"
+
 int8_t Argument::encodeToJSON(Argument* src, StringBuilder* out) {
 	return -1;
 }

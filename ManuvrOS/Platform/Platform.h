@@ -225,7 +225,6 @@ class ManuvrPlatform {
 
     /* Writes a platform information string to the provided buffer. */
     const char* getRTCStateString();
-    const char* getPlatformStateStr();
 
     void printDebug(StringBuilder* out);
     void printDebug();
@@ -246,6 +245,7 @@ class ManuvrPlatform {
     * Performs string conversions for integer codes. Only useful for logging.
     */
     static const char* getIRQConditionString(int);
+    static const char* getPlatformStateStr(int);
     static void printPlatformBasics(StringBuilder*);  // TODO: on the copping-block.
 
 
@@ -284,6 +284,9 @@ extern ManuvrPlatform platform;  // TODO: Awful.
  extern "C" {
 #endif
 
+// TODO: Everything below this line is being considered for migration into the
+//         Platform class, or eliminated in favor of independent break-outs.
+
 /*
 * Time and date
 */
@@ -309,15 +312,6 @@ void maskableInterrupts(bool);
 int createThread(unsigned long*, void*, ThreadFxnPtr, void*);
 int deleteThread(unsigned long*);
 void sleep_millis(unsigned long millis);
-
-
-/*
-* Data-persistence functions. This is the API used by anything that wants to write
-*   formless data to a place on the device to be recalled on a different runtime.
-*/
-//int8_t persistData(const char* store_name, uint8_t* data, int length);
-unsigned long persistFree();  // Returns the number of bytes availible to store data.
-
 
 /*
 * Randomness

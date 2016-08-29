@@ -73,6 +73,7 @@ This file is meant to contain a set of common functions that are typically platf
 * Static members and initializers should be located here.
 * Effectively, this entire class is static.
 *******************************************************************************/
+
 /**
 * Issue a human-readable string representing the condition that causes an
 *   IRQ to fire.
@@ -94,8 +95,8 @@ const char* ManuvrPlatform::getIRQConditionString(int con_code) {
 *
 * @return A string constant.
 */
-const char* ManuvrPlatform::getPlatformStateStr() {
-  switch (platformState()) {
+const char* ManuvrPlatform::getPlatformStateStr(int state) {
+  switch (state) {
     default:
     case MANUVR_INIT_STATE_UNINITIALIZED:   return "UNINITIALIZED";
     case MANUVR_INIT_STATE_RESERVED_0:      return "RSRVD_0";
