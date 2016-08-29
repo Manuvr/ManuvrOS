@@ -69,11 +69,10 @@ int _load_file(char* nom, StringBuilder* buf) {
     int fd = open(nom, O_RDONLY);
     if (fd >= 0) {
       uint8_t* buffer = (uint8_t*) alloca(128);
-      int r_len;
-      while (r_len = read(fd, buffer, 128)) {
-        if (0 < r_len) {
-          buf->concat(buffer, r_len);
-        }
+      int r_len = read(fd, buffer, 128);
+      while (0 < r_len) {
+        buf->concat(buffer, r_len);
+        r_len = read(fd, buffer, 128);
       }
       close(fd);
       return 0;
@@ -147,11 +146,21 @@ int8_t LinuxStorage::wipe() {
   return -1;
 }
 
-int8_t LinuxStorage::persistentWrite(const char*, uint8_t*, int, uint16_t) {
+int8_t LinuxStorage::flush() {
+  if (nullptr != _filename) {
+    if (0 < _disk_buffer.length()) {
+      return _save_file(_filename, &_disk_buffer);
+    }
+  }
   return 0;
 }
 
-int8_t LinuxStorage::persistentRead(const char*, uint8_t*, int, uint16_t) {
+int8_t LinuxStorage::persistentWrite(const char* key, uint8_t* value, int len, uint16_t ) {
+
+  return 0;
+}
+
+int8_t LinuxStorage::persistentRead(const char* key, uint8_t* value, int len, uint16_t) {
   return 0;
 }
 

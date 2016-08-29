@@ -3,7 +3,7 @@ It is a verbose running commentary with no relationship to versioning.
 File should be read top-to-bottom for chronological order.
 The contents of this file will be periodically archived and purged to keep the log related to the "current events" of the code base.
 
----J. Ian Lindsay 2016.08.27
+_---J. Ian Lindsay 2016.08.27_
 
 ------
 
@@ -108,3 +108,59 @@ The testing effort was advanced back into a state of relevance. The DataStructur
     2025965   16928   51876 2094769  1ff6b1 manuvr   Writing some long-desired platform discovery stuff.
     2026161   16928   51876 2094965  1ff775 manuvr   Made runtime architecture discovery less confusing.
     2028369   16992   51876 2097237  200055 manuvr   Implementing first storage device on linux platform.
+    2030637   16992   51876 2099505  200931 manuvr   Added Storage and Identity.
+    2031685   16928   51876 2100489  200d09 manuvr   Cleanup, more Platform generalization. Abstraction thrust.
+    2032021   16928   51876 2100825  200e59 manuvr   Turning in for the night. Left myself some good breadcrumbs.
+
+  At some point Sunday night during the Identity abstraction, I crossed the binary size that was my former maximum since switching back to 32-bit builds. This is note-worthy because it highlights how much cruft can cost, in terms of features that fit within the same space. There are yet more gains to reap on a later day.
+
+  Today was a mad binge. Turning in for the night.
+
+_---J. Ian Lindsay 2016.08.28 23:17 MST_
+
+
+    -- Elemental data structures:
+            StringBuilder         40
+            Vector3<float>        12
+            Quaternion            16
+            BufferPipe            20
+            LinkedList<void*>     8
+            PriorityQueue<void*>  32
+            Argument              16
+            UUID                  16
+            TaskProfilerData      32
+            SensorWrapper         28
+
+    -- Core singletons:
+            ManuvrPlatform        28
+              Storage             12
+              Identity            20
+                IdentityUUID      36
+            Kernel                2004
+
+    -- Messaging components:
+            EventReceiver         60
+            ManuvrMsg             16
+              ManuvrRunnable      52
+
+    -- Transports:
+            ManuvrXport           160
+              StandardIO          160
+              ManuvrSerial        236
+              ManuvrSocket        192
+                ManuvrTCP         200
+                ManuvrUDP         216
+                  UDPPipe         72
+
+    -- Sessions:
+            XenoSession           228
+              ManuvrConsole       312
+              ManuvrSession       328
+              CoAPSession         320
+              MQTTSession         348
+            XenoMessage           72
+              MQTTMessage         104
+              CoAPMessage         144
+              XenoManuvrMessage   92
+
+------

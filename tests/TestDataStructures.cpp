@@ -15,7 +15,7 @@
 #include <DataStructures/BufferPipe.h>
 #include <DataStructures/uuid.h>
 
-#include <Kernel.h>
+#include <Platform/Platform.h>
 #include <Drivers/SensorWrapper/SensorWrapper.h>
 
 #include <XenoSession/XenoSession.h>
@@ -30,6 +30,10 @@
 #include <Transports/ManuvrSocket/ManuvrUDP.h>
 #include <Transports/ManuvrSocket/ManuvrTCP.h>
 #include <Transports/ManuvrXport.h>
+
+#if defined(MANUVR_CBOR)
+  #include "cbor-cpp/include/cbor.h"
+#endif
 
 int test_StringBuilder(void) {
   StringBuilder log("===< StringBuilder >====================================\n");
@@ -481,6 +485,9 @@ void printTypeSizes() {
 
   output.concat("\n-- Core singletons:\n");
   output.concatf("\tManuvrPlatform        %u\n", sizeof(ManuvrPlatform));
+  output.concatf("\t  Storage             %u\n", sizeof(Storage));
+  output.concatf("\t  Identity            %u\n", sizeof(Identity));
+  output.concatf("\t    IdentityUUID      %u\n", sizeof(IdentityUUID));
   output.concatf("\tKernel                %u\n", sizeof(Kernel));
 
   output.concat("\n-- Messaging components:\n");
@@ -524,9 +531,9 @@ int main(int argc, char *argv[]) {
   int exit_value = 1;   // Failure is the default result.
   printTypeSizes();
 
-  init_RNG();   // Our test fixture needs random numbers.
+  platform.platformPreInit();   // Our test fixture needs random numbers.
 
-    //if (strcasestr(argv[i], "--cbor")) {
+    #if defined(MANUVR_CBOR)
       // Debug. Testing CBOR...
       cbor::output_dynamic output;
       { //encoding
@@ -554,7 +561,7 @@ int main(int argc, char *argv[]) {
       }
       printf("\nCBOR test concluded.\n");
     //  exit(0);
-    //}
+    #endif
 
   if (0 == test_StringBuilder()) {
     if (0 == test_PriorityQueue()) {

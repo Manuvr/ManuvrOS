@@ -208,57 +208,19 @@ void init_rng() {
 }
 
 /*******************************************************************************
- ___   _           _      ___
-(  _`\(_ )        ( )_  /'___)
-| |_) )| |    _ _ | ,_)| (__   _    _ __   ___ ___
-| ,__/'| |  /'_` )| |  | ,__)/'_`\ ( '__)/' _ ` _ `\
-| |    | | ( (_| || |_ | |  ( (_) )| |   | ( ) ( ) |
-(_)   (___)`\__,_)`\__)(_)  `\___/'(_)   (_) (_) (_)
+*  ___   _           _      ___
+* (  _`\(_ )        ( )_  /'___)
+* | |_) )| |    _ _ | ,_)| (__   _    _ __   ___ ___
+* | ,__/'| |  /'_` )| |  | ,__)/'_`\ ( '__)/' _ ` _ `\
+* | |    | | ( (_| || |_ | |  ( (_) )| |   | ( ) ( ) |
+* (_)   (___)`\__,_)`\__)(_)  `\___/'(_)   (_) (_) (_)
+* These are overrides and additions to the platform class.
 *******************************************************************************/
 void ManuvrPlatform::printDebug(StringBuilder* output) {
   output->concatf("==< Linux [%s] >=================================\n", getPlatformStateStr(platformState()));
   printPlatformBasics(output);
-
-  char* uuid_str = (char*) alloca(40);
-  bzero(uuid_str, 40);
-  uuid_to_str(&instance_serial_number, uuid_str, 40);
-
-  output->concatf("-- Identity source:    %s\n", _check_flags(MANUVR_PLAT_FLAG_HAS_IDENTITY) ? "Generated at runtime" : "Loaded from storage");
-  output->concatf("-- Identity:           %s\n", uuid_str);
 }
 
-
-/*******************************************************************************
-* Identity and serial number                                                   *
-********************************************************************************
-
-/**
-* We sometimes need to know the length of the platform's unique identifier (if any). If this platform
-*   is not serialized, this function will return zero.
-*
-* @return   The length of the serial number on this platform, in terms of bytes.
-*/
-int ManuvrPlatform::platformSerialNumberSize() {
-  return 16;
-}
-
-
-/**
-* Writes the serial number to the indicated buffer.
-*
-* @param    A pointer to the target buffer.
-* @return   The number of bytes written.
-*/
-int ManuvrPlatform::getSerialNumber(uint8_t *buf) {
-  for (int i = 0; i < 16; i++) *(buf + i) = *(((uint8_t*)&instance_serial_number.id) + i);
-  return 16;
-}
-
-
-
-/*******************************************************************************
-* Data persistence                                                             *
-*******************************************************************************/
 
 
 /*******************************************************************************
@@ -372,11 +334,6 @@ int readPinAnalog(uint8_t pin) {
 }
 
 
-/****************************************************************************************************
-* Persistent configuration                                                                          *
-****************************************************************************************************/
-
-
 
 /****************************************************************************************************
 * Interrupt-masking                                                                                 *
@@ -398,14 +355,20 @@ void globalIRQDisable() {
 
 
 
-/****************************************************************************************************
-* Process control                                                                                   *
-****************************************************************************************************/
+/*******************************************************************************
+* Process control                                                              *
+*******************************************************************************/
 
 /*
 * Terminate this running process, along with any children it may have forked() off.
 */
 void ManuvrPlatform::seppuku() {
+  #if defined(MANUVR_STORAGE)
+    if (_identity && _identity->isDirty()) {
+      // Save the dirty identity.
+      // TODO: int8_t persistentWrite(const char*, uint8_t*, int, uint16_t);
+    }
+  #endif
   // Whatever the kernel cared to clean up, it better have done so by this point,
   //   as no other platforms return from this function.
   printf("\nseppuku(): About to exit().\n\n");
@@ -426,9 +389,9 @@ void ManuvrPlatform::jumpToBootloader() {
 }
 
 
-/****************************************************************************************************
-* Underlying system control.                                                                        *
-****************************************************************************************************/
+/*******************************************************************************
+* Underlying system control.                                                   *
+*******************************************************************************/
 
 void ManuvrPlatform::hardwareShutdown() {
   // TODO: Actually shutdown the system.
@@ -445,9 +408,9 @@ void ManuvrPlatform::reboot() {
 
 
 
-/****************************************************************************************************
-* Platform initialization.                                                                          *
-****************************************************************************************************/
+/*******************************************************************************
+* Platform initialization.                                                     *
+*******************************************************************************/
 #define  DEFAULT_PLATFORM_FLAGS ( \
               MANUVR_PLAT_FLAG_HAS_THREADS     | \
               MANUVR_PLAT_FLAG_INNATE_DATETIME | \
@@ -505,6 +468,12 @@ int8_t ManuvrPlatform::platformPreInit() {
 *   internal system sanity.
 */
 int8_t ManuvrPlatform::platformPostInit() {
-  uuid_gen(&instance_serial_number);
+  #if defined(MANUVR_STORAGE)
+    if (_storage_device->isMounted()) {
+      // TODO: Read configuration.
+      //int8_t persistentRead(const char*, uint8_t*, int, uint16_t);
+    }
+  #endif
+  _identity = new IdentityUUID(IDENTITY_STRING);
   return 0;
 }

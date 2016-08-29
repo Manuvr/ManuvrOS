@@ -39,6 +39,7 @@ class LinuxStorage : public EventReceiver, public Storage {
     /* Overrides from Storage. */
     unsigned long freeSpace();  // How many bytes are availible for use?
     int8_t wipe();              // Call to wipe the data store.
+    int8_t flush();             // Blocks until commit completes.
     int8_t persistentWrite(const char*, uint8_t*, int, uint16_t);
     int8_t persistentRead(const char*, uint8_t*, int, uint16_t);
 

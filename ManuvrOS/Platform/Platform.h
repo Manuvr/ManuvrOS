@@ -44,7 +44,7 @@ This file is meant to contain a set of common functions that are
 
 #include <CommonConstants.h>
 #include <DataStructures/StringBuilder.h>
-#include <DataStructures/uuid.h>
+#include <Platform/Identity.h>
 
 #if defined(MANUVR_STORAGE)
   #include <Storage/Storage.h>
@@ -252,14 +252,13 @@ class ManuvrPlatform {
 
   private:
     Kernel*         _kernel    = nullptr;
+    Identity*       _identity  = nullptr;
     #if defined(MANUVR_STORAGE)
       Storage* _storage_device = nullptr;
     #endif
     uint32_t        _pflags    = 0;
     FunctionPointer _idle_hook = nullptr;
     FunctionPointer _wake_hook = nullptr;
-
-    UUID instance_serial_number;  // TODO: This belongs in "Identity".
 
     /* Inlines for altering and reading the flags. */
     inline void _alter_flags(bool en, uint32_t mask) {

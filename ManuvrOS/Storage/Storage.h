@@ -55,9 +55,11 @@ class Storage {
     */
     virtual unsigned long freeSpace() =0;  // How many bytes are availible for use?
     virtual int8_t        wipe()      =0;  // Call to wipe the data store.
+    virtual int8_t        flush()     =0;  // Blocks until commit completes.
 
     virtual int8_t persistentWrite(const char*, uint8_t*, int, uint16_t) =0;
     virtual int8_t persistentRead(const char*, uint8_t*, int, uint16_t)  =0;
+
 
     inline bool isMounted() {   return _pl_flag(MANUVR_PL_MEDIUM_MOUNTED);  };
     inline bool isBusy() {

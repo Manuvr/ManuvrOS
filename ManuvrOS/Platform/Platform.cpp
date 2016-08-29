@@ -132,7 +132,16 @@ const char* ManuvrPlatform::getRTCStateString() {
 
 // TODO: This is only here to ease the transition into polymorphic platform defs.
 void ManuvrPlatform::printPlatformBasics(StringBuilder* output) {
-  output->concatf("-- %s v%s \t Build date: %s %s\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
+  if (nullptr != platform._identity) {
+    output->concatf("-- Identity:           %s\t", platform._identity->getHandle());
+    platform._identity->toString(output);
+    output->concat("\n");
+  }
+  else {
+    output->concatf("-- Undifferentiated %s\n", IDENTITY_STRING);
+  }
+  output->concatf("-- Identity source:    %s\n", platform._check_flags(MANUVR_PLAT_FLAG_HAS_IDENTITY) ? "Generated at runtime" : "Loaded from storage");
+  output->concatf("-- Ver/Build date:     %s\t%s %s\n", VERSION_STRING, __DATE__, __TIME__);
   output->concatf("-- %u-bit", platform.aluWidth());
   if (8 != platform.aluWidth()) {
     output->concatf(" %s-endian", platform.bigEndian() ? "Big" : "Little");
@@ -249,17 +258,60 @@ void ManuvrPlatform::printDebug() {
 }
 
 
+/*******************************************************************************
+* Identity and serial number                                                   *
+*******************************************************************************/
+/**
+* We sometimes need to know the length of the platform's unique identifier (if any). If this platform
+*   is not serialized, this function will return zero.
+*
+* @return   The length of the serial number on this platform, in terms of bytes.
+*/
+int ManuvrPlatform::platformSerialNumberSize() {
+  if (nullptr != _identity) {
+    return _identity->length();
+  }
+  return 0;
+}
+
+/**
+* Writes the serial number to the indicated buffer.
+*
+* @param    A pointer to the target buffer.
+* @return   The number of bytes written.
+*/
+int ManuvrPlatform::getSerialNumber(uint8_t* buf) {
+  if (nullptr != _identity) {
+    return _identity->toBuffer(buf);
+  }
+  return 0;
+}
+
+
+
+/*******************************************************************************
+* System hook-points                                                           *
+*******************************************************************************/
 void ManuvrPlatform::idleHook() {
   if (nullptr != _idle_hook) _idle_hook();
 }
 
 void ManuvrPlatform::setIdleHook(FunctionPointer nu) {
   _idle_hook = nu;
-  nu();
-  _idle_hook();
+}
+
+void ManuvrPlatform::wakeHook() {
+  if (nullptr != _wake_hook) _wake_hook();
+}
+
+void ManuvrPlatform::setWakeHook(FunctionPointer nu) {
+  _wake_hook = nu;
 }
 
 
+/*******************************************************************************
+* TODO: Still digesting                                                        *
+*******************************************************************************/
 
 extern "C" {
 
