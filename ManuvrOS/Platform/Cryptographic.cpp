@@ -93,7 +93,7 @@ int8_t __attribute__((weak)) manuvr_hash(uint8_t* in, int in_len, uint8_t* out, 
 }
 
 
-void printCrpytoOverview(StringBuilder* out) {
+void printCryptoOverview(StringBuilder* out) {
   #if defined(__MANUVR_MBEDTLS)
     out->concat("-- Cryptographic support via mbedtls.\n");
     out->concat("-- Supported TLS ciphersuites:\n");

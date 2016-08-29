@@ -159,7 +159,7 @@ int8_t ADCScanner::callback_proc(ManuvrEvent *event) {
   int8_t return_value = event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
-  switch (event->event_code) {
+  switch (event->eventCode()) {
     default:
       break;
   }
@@ -171,7 +171,7 @@ int8_t ADCScanner::callback_proc(ManuvrEvent *event) {
 int8_t ADCScanner::notify(ManuvrEvent *active_event) {
   int8_t return_value = 0;
 
-  switch (active_event->event_code) {
+  switch (active_event->eventCode()) {
     case VIAM_SONUS_MSG_ADC_SCAN:
       if (scan()) {
 

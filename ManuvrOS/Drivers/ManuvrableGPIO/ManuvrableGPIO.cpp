@@ -126,7 +126,7 @@ int8_t ManuvrableGPIO::callback_proc(ManuvrRunnable *event) {
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
-  switch (event->event_code) {
+  switch (event->eventCode()) {
     default:
       break;
   }
@@ -140,7 +140,7 @@ int8_t ManuvrableGPIO::notify(ManuvrRunnable *active_event) {
   uint8_t pin   = 0;
   uint16_t _val = 0;
 
-  switch (active_event->event_code) {
+  switch (active_event->eventCode()) {
     case MANUVR_MSG_DIGITAL_READ:
       if (0 != active_event->getArgAs(0, &pin)) {
         if (0 != active_event->getArgAs(1, &_val)) {

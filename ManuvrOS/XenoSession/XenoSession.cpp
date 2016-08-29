@@ -249,7 +249,7 @@ int8_t XenoSession::callback_proc(ManuvrRunnable *event) {
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
-  switch (event->event_code) {
+  switch (event->eventCode()) {
     case MANUVR_MSG_SESS_HANGUP:
       // It is now safe to destroy this session. By triggering our owner's disconnection
       //   method, we indirectly invoke our own teardown.
@@ -273,7 +273,7 @@ int8_t XenoSession::callback_proc(ManuvrRunnable *event) {
 int8_t XenoSession::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
 
-  switch (active_event->event_code) {
+  switch (active_event->eventCode()) {
     /* General system events */
     case MANUVR_MSG_BT_CONNECTION_LOST:
       mark_session_state(XENOSESSION_STATE_DISCONNECTED);
@@ -329,7 +329,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
   if (active_event->originator != (EventReceiver*) this) {
     if ((XENO_SESSION_IGNORE_NON_EXPORTABLES) && (active_event->isExportable())) {
       /* This is the block that allows the counterparty to intercept events of its choosing. */
-      std::map<uint16_t, MessageTypeDef*>::iterator it = _relay_list.find(active_event->event_code);
+      std::map<uint16_t, MessageTypeDef*>::iterator it = _relay_list.find(active_event->eventCode());
       if (_relay_list.end() == it) {
         // If the relay list doesn't already have the message....
         // If we are in this block, it means we need to serialize the event and send it.

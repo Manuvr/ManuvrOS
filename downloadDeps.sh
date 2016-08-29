@@ -8,8 +8,10 @@
 mkdir lib
 
 # JSON support via jansson...
+# Note that we do special-handling here to make the build-process smoother...
 rm -rf lib/jansson
 git clone https://github.com/akheron/jansson.git lib/jansson
+ln -s `pwd`/lib/jansson/src/ lib/jansson/include
 
 # FreeRTOS...
 rm -rf lib/FreeRTOS_Arduino
@@ -21,12 +23,11 @@ rm -rf lib/paho.mqtt.embedded-c
 git clone https://github.com/eclipse/paho.mqtt.embedded-c.git lib/paho.mqtt.embedded-c
 cp lib/paho.mqtt.embedded-c/MQTTPacket/src/* lib/paho.mqtt.embedded-c/
 
-# TinyCBOR...
+# CBOR...
 # Note that we do special-handling here to make the build-process smoother...
-rm -rf lib/tinycbor
-git clone https://github.com/01org/tinycbor.git lib/tinycbor
-mkdir -p lib/tinycbor/include
-cp lib/tinycbor/src/*.h lib/tinycbor/include
+rm -rf lib/cbor-cpp
+git clone https://github.com/naphaso/cbor-cpp.git lib/cbor-cpp
+ln -s `pwd`/lib/cbor-cpp/src/ lib/cbor-cpp/include
 
 # Avro. Again, we will shuffle things a bit to make inclusion uniform.
 # Note that Avro requires jansson for JSON support.

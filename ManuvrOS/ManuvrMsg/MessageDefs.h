@@ -77,7 +77,7 @@ limitations under the License.
   #define MANUVR_MSG_SYS_BOOTLOADER       0x0021 // Reboots into the bootloader.
   #define MANUVR_MSG_SYS_REBOOT           0x0022 // Reboots into THIS program. IE, software reset.
   #define MANUVR_MSG_SYS_SHUTDOWN         0x0023 // Raised when the system is pending complete shutdown.
-  #define MANUVR_MSG_PROGRAM_START        0x0024 // Starting an application on the receiver. Needs a string.
+  #define MANUVR_MSG_SYS_EXIT             0x0024 // Raised when the process is to exit without shutdown.
   #define MANUVR_MSG_SYS_PREALLOCATION    0x0025 // Any classes that do preallocation should listen for this.
   #define MANUVR_MSG_SYS_ISSUE_LOG_ITEM   0x0026 // Classes emit this to get their log data saved/sent.
   #define MANUVR_MSG_SYS_LOG_VERBOSITY    0x0027 // This tells client classes to adjust their log verbosity.

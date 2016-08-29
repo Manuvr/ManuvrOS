@@ -114,8 +114,6 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
 * Vanilla constructor.
 */
 ManuvrMsg::ManuvrMsg() {
-  event_code = MANUVR_MSG_UNDEFINED;
-  __class_initializer();
 }
 
 
@@ -124,9 +122,8 @@ ManuvrMsg::ManuvrMsg() {
 *
 * @param code   The identity code for the new message.
 */
-ManuvrMsg::ManuvrMsg(uint16_t code) {
-  event_code = code;
-  __class_initializer();
+ManuvrMsg::ManuvrMsg(uint16_t code) : ManuvrMsg() {
+  repurpose(code);
 }
 
 
@@ -140,55 +137,25 @@ ManuvrMsg::~ManuvrMsg() {
 
 
 /**
-* This is here for compatibility with C++ standards that do not allow for definition and declaration
-*   in the header file. Takes no parameters, and returns nothing.
-*
-* The nature of this class makes this a better design, anyhow. Since the same object is often
-*   repurposed many times, doing any sort of init in the constructor should probably be avoided.
-*/
-void ManuvrMsg::__class_initializer() {
-  clearArgs();
-  message_def = lookupMsgDefByCode(event_code);
-}
-
-
-/**
 * Call this member to repurpose this message for an unrelated task. This mechanism
 *   is designed to prevent malloc()/free() thrash where it can be avoided.
 *
 * @param code   The new identity code for the message.
 */
 int8_t ManuvrMsg::repurpose(uint16_t code) {
-  event_code = code;
-  __class_initializer();
+  event_code  = code;
+  message_def = lookupMsgDefByCode(event_code);
   return 0;
 }
 
 
-/**
-* Allows the caller to count the Args attached to this message.
-* TODO: Inlinable.
-*
-* @return the cardinality of the argument list.
-*/
-int ManuvrMsg::argCount() {
-  return args.size();
-}
-
-
-/**
-* Allows the caller to plan other allocations based on how many bytes this message's
-*   Arguments occupy.
-*
-* @return the length (in bytes) of the arguments for this message.
-*/
-int ManuvrMsg::argByteCount() {
-  int return_value = 0;
-  for (int i = 0; i < args.size(); i++) {
-    return_value += args.get(i)->len;
+Argument* ManuvrMsg::addArg(Argument* nu) {
+  if (nullptr != arg) {
+    return arg->append(nu);
   }
-  return return_value;
-}
+  arg = nu;
+  return nu;
+};
 
 
 /**
@@ -227,9 +194,6 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
       }
       break;
   }
-
-
-
 
   Argument *nu_arg = NULL;
   while ((NULL != arg_mode) & (len > 0)) {
@@ -273,46 +237,45 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
         nu_arg = new Argument(new Vector4f(parseFloatFromchars(buffer + 0), parseFloatFromchars(buffer + 4), parseFloatFromchars(buffer + 8), parseFloatFromchars(buffer + 12)));
         len = len - 16;
         buffer += 16;
-        nu_arg->reap = true;
+        nu_arg->reapValue(true);
         break;
       case VECT_3_FLOAT:
         nu_arg = new Argument(new Vector3f(parseFloatFromchars(buffer + 0), parseFloatFromchars(buffer + 4), parseFloatFromchars(buffer + 8)));
         len = len - 12;
         buffer += 12;
-        nu_arg->reap = true;
+        nu_arg->reapValue(true);
         break;
       case VECT_3_UINT16:
         nu_arg = new Argument(new Vector3ui16(parseUint16Fromchars(buffer + 0), parseUint16Fromchars(buffer + 2), parseUint16Fromchars(buffer + 4)));
         len = len - 6;
         buffer += 6;
-        nu_arg->reap = true;
+        nu_arg->reapValue(true);
         break;
       case VECT_3_INT16:
         nu_arg = new Argument(new Vector3i16((int16_t) parseUint16Fromchars(buffer + 0), (int16_t) parseUint16Fromchars(buffer + 2), (int16_t) parseUint16Fromchars(buffer + 4)));
         len = len - 6;
         buffer += 6;
-        nu_arg->reap = true;
+        nu_arg->reapValue(true);
         break;
 
       // Variable-length types...
       case STR_FM:
         nu_arg = new Argument(strdup((const char*) buffer));
-        buffer = buffer + nu_arg->len;
-        len    = len - nu_arg->len;
+        buffer = buffer + nu_arg->length();
+        len    = len - nu_arg->length();
         break;
 
       default:
         // Abort parse. We encountered a type we can't deal with.
-        args.clear();
+        clearArgs();
         return 0;
         break;
     }
 
-    if (nu_arg != NULL) {
-      args.insert(nu_arg);
-      nu_arg = NULL;
-      return_value++;
-    }
+    addArg(nu_arg);
+    nu_arg = NULL;
+    return_value++;
+
     arg_mode++;
   }
   return return_value;
@@ -329,8 +292,9 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
 * @return 1 on success, 0 on failure.
 */
 int8_t ManuvrMsg::markArgForReap(int idx, bool reap) {
-  if (args.size() > idx) {
-    args.get(idx)->reap = reap;
+  if (nullptr != arg) {
+    Argument* tmp = arg->retrieveArgByIdx(idx);
+    tmp->reapValue(reap);
     return 1;
   }
   return 0;
@@ -350,75 +314,15 @@ int8_t ManuvrMsg::markArgForReap(int idx, bool reap) {
 *
 * @param  idx      The Argument position
 * @param  trg_buf  A pointer to the place where we should write the result.
-* @param  preserve Should the Argument be removed from this Message following this operation?
-* @return DIG_MSG_ERROR_NO_ERROR or appropriate failure code.
+* @return 0 or appropriate failure code.
 */
-int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf, bool preserve) {
-  int8_t return_value = DIG_MSG_ERROR_INVALID_ARG;
-  Argument* arg = NULL;
-  if (args.size() > idx) {
-    arg = args.get(idx);
-    switch (arg->type_code) {
-      case INT8_FM:    // This frightens the compiler. Its fears are unfounded.
-      case UINT8_FM:   // This frightens the compiler. Its fears are unfounded.
-        return_value = DIG_MSG_ERROR_NO_ERROR;
-        *((uint8_t*) trg_buf) = *((uint8_t*)&arg->target_mem);
-        break;
-      case INT16_FM:    // This frightens the compiler. Its fears are unfounded.
-      case UINT16_FM:   // This frightens the compiler. Its fears are unfounded.
-        return_value = DIG_MSG_ERROR_NO_ERROR;
-        *((uint16_t*) trg_buf) = *((uint16_t*)&arg->target_mem);
-        break;
-      case INT32_FM:    // This frightens the compiler. Its fears are unfounded.
-      case UINT32_FM:   // This frightens the compiler. Its fears are unfounded.
-      case FLOAT_FM:    // This frightens the compiler. Its fears are unfounded.
-        return_value = DIG_MSG_ERROR_NO_ERROR;
-        *((uint32_t*) trg_buf) = *((uint32_t*)&arg->target_mem);
-
-      case UINT32_PTR_FM:  // These are *pointers* to the indicated types. They
-      case UINT16_PTR_FM:  //   therefore take the whole 4 bytes of memory allocated
-      case UINT8_PTR_FM:   //   and can be returned as such.
-      case INT32_PTR_FM:
-      case INT16_PTR_FM:
-      case INT8_PTR_FM:
-
-      case VECT_4_FLOAT:
-      case VECT_3_FLOAT:
-      case VECT_3_UINT16:
-      case VECT_3_INT16:
-
-      case STR_BUILDER_FM:          // This is a pointer to some StringBuilder. Presumably this is on the heap.
-      case STR_FM:                  // This is a pointer to a string constant. Presumably this is stored in flash.
-      case BUFFERPIPE_PTR_FM:       // This is a pointer to a BufferPipe/.
-      case SYS_RUNNABLE_PTR_FM:     // This is a pointer to ManuvrRunnable.
-      case SYS_EVENTRECEIVER_FM:    // This is a pointer to an EventReceiver.
-      case SYS_MANUVR_XPORT_FM:     // This is a pointer to a transport.
-        return_value = DIG_MSG_ERROR_NO_ERROR;
-        *((uintptr_t*) trg_buf) = *((uintptr_t*)&arg->target_mem);
-        break;
-      default:
-        return_value = DIG_MSG_ERROR_INVALID_TYPE;
-        break;
-    }
-
-    // Only reap the Argument if the return succeeded.
-    if ((DIG_MSG_ERROR_NO_ERROR == return_value) && (!preserve)) {
-      args.remove(arg);
-      delete arg;
-    }
+int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf) {
+  int8_t return_value = -1;
+  if (NULL != arg) {
+    return ((0 == idx) ? arg->getValueAs(trg_buf) : arg->getValueAs(idx, trg_buf));
   }
-
   return return_value;
 }
-
-
-//int8_t ManuvrMsg::writePointerArgAs(uint8_t *dat);
-//int8_t ManuvrMsg::writePointerArgAs(uint16_t *dat);
-int8_t ManuvrMsg::writePointerArgAs(uint32_t dat) {   return writePointerArgAs(0, &dat);   }
-//int8_t ManuvrMsg::writePointerArgAs(int8_t *dat);
-//int8_t ManuvrMsg::writePointerArgAs(int16_t *dat);
-//int8_t ManuvrMsg::writePointerArgAs(int32_t *dat);
-//int8_t ManuvrMsg::writePointerArgAs(float *dat);
 
 
 /**
@@ -427,14 +331,13 @@ int8_t ManuvrMsg::writePointerArgAs(uint32_t dat) {   return writePointerArgAs(0
 *
 * @param  idx      The Argument position
 * @param  trg_buf  A pointer to the place where we should read the Argument from.
-* @return DIG_MSG_ERROR_NO_ERROR or appropriate failure code.
+* @return 0 or appropriate failure code.
 */
 int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
-  int8_t return_value = DIG_MSG_ERROR_INVALID_ARG;
-  Argument* arg = NULL;
-  if (args.size() > idx) {
-    arg = args.get(idx);
-    switch (arg->type_code) {
+  int8_t return_value = -1;
+  Argument* a = arg;
+  if (NULL != a) {
+    switch (a->typeCode()) {
       case INT8_PTR_FM:
       case INT16_PTR_FM:
       case INT32_PTR_FM:
@@ -445,11 +348,11 @@ int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
       case STR_BUILDER_FM:
       case STR_FM:
       case BINARY_FM:
-        return_value = DIG_MSG_ERROR_NO_ERROR;
-        *((uintptr_t*) arg->target_mem) = *((uintptr_t*) trg_buf);
+        return_value = 0;
+        *((uintptr_t*) a->target_mem) = *((uintptr_t*) trg_buf);
         break;
       default:
-        return_value = DIG_MSG_ERROR_INVALID_TYPE;
+        return_value = -2;
         break;
     }
   }
@@ -458,23 +361,20 @@ int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
 }
 
 
-
 /**
 * Clears the Arguments attached to this Message and reaps their contents, if
 *   the need is indicated. Many subtle memory-related bugs can be caught here.
 *
-* @return DIG_MSG_ERROR_NO_ERROR or appropriate failure code.
+* @return 0 or appropriate failure code.
 */
 int8_t ManuvrMsg::clearArgs() {
-  Argument *arg = NULL;
-  while (args.hasNext()) {
-    arg = args.get();
-    args.remove();
-    delete arg;
+  if (nullptr != arg) {
+    Argument* tmp = arg;
+    arg = nullptr;
+    delete tmp;
   }
-  return DIG_MSG_ERROR_NO_ERROR;
+  return 0;
 }
-
 
 
 /**
@@ -484,20 +384,7 @@ int8_t ManuvrMsg::clearArgs() {
 * @return NOTYPE_FM if the Argument isn't found, and its type code if it is.
 */
 uint8_t ManuvrMsg::getArgumentType(uint8_t idx) {
-  if (args.size() > idx) {
-    return args.get(idx)->type_code;
-  }
   return NOTYPE_FM;
-}
-
-
-/**
-* Same as above, but assumes Argument 0.
-*
-* @return NOTYPE_FM if the Argument isn't found, and its type code if it is.
-*/
-uint8_t ManuvrMsg::getArgumentType() {
-  return getArgumentType(0);
 }
 
 
@@ -615,13 +502,11 @@ const MessageTypeDef* ManuvrMsg::lookupMsgDefByLabel(char* label) {
 
 
 const char* ManuvrMsg::getArgTypeString(uint8_t idx) {
-  if (idx < args.size()) {
-    return getTypeCodeString(args.get(idx)->type_code);
-  }
-  return "<INVALID INDEX>";
+  if (nullptr == arg) return "<INVALID INDEX>";
+  Argument* a = arg->retrieveArgByIdx(idx);
+  if (nullptr == a) return "<INVALID INDEX>";
+  return getTypeCodeString(a->typeCode());
 }
-
-
 
 
 /**
@@ -629,7 +514,7 @@ const char* ManuvrMsg::getArgTypeString(uint8_t idx) {
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
-void ManuvrMsg::printDebug(StringBuilder *temp) {
+void ManuvrMsg::printDebug(StringBuilder* temp) {
   if (NULL == temp) return;
   const MessageTypeDef* type_obj = getMsgDef();
 
@@ -639,20 +524,11 @@ void ManuvrMsg::printDebug(StringBuilder *temp) {
   else {
     temp->concatf("\t Message type:   %s\n", getMsgTypeString());
   }
-  int ac = args.size();
-  if (ac > 0) {
-    Argument *working_arg = NULL;
-    temp->concatf("\t Arguments:      %d\n", ac);
-    for (int i = 0; i < ac; i++) {
-      working_arg = args.get(i);
-      temp->concatf("\t\t %d\t(%s)\t%s ", i, (working_arg->reap ? "reap" : "no reap"), getArgTypeString(i));
-      uint8_t* buf = (uint8_t*) working_arg->target_mem;
-      uint16_t l_ender = (working_arg->len < 16 ? working_arg->len : 16);
-      for (uint8_t n = 0; n < l_ender; n++) {
-        temp->concatf("0x%02x ", (uint8_t) *(buf + n));
-      }
-      temp->concat("\n");
-    }
+
+  if (nullptr != arg) {
+    temp->concatf("\t %d Arguments:\n", arg->argCount());
+    arg->printDebug(temp);
+    temp->concat("\n");
   }
   else {
     temp->concat("\t No arguments.\n");
@@ -667,20 +543,21 @@ void ManuvrMsg::printDebug(StringBuilder *temp) {
 * @param  output  The buffer into which we should write our output.
 * @return the number of Arguments so written, or a negative value on failure.
 */
-int ManuvrMsg::serialize(StringBuilder *output) {
+int ManuvrMsg::serialize(StringBuilder* output) {
   if (output == NULL) return -1;
+  int return_value = 0;
   int delta_len = 0;
-  int arg_count = 0;
-  for (int i = 0; i < args.size(); i++) {
-    delta_len = args.get(i)->serialize_raw(output);
+  Argument* current_arg = arg;
+  while (nullptr != current_arg) {
+    delta_len = current_arg->serialize_raw(output);
     if (delta_len < 0) {
       return delta_len;
     }
     else {
-      arg_count++;
+      return_value++;
     }
   }
-  return arg_count;
+  return return_value;
 }
 
 
@@ -701,7 +578,7 @@ int ManuvrMsg::serialize(StringBuilder *output) {
 * @param  output  The buffer to write results to.
 * @return 0 on failure. 1 on success.
 */
-int8_t ManuvrMsg::getMsgLegend(StringBuilder *output) {
+int8_t ManuvrMsg::getMsgLegend(StringBuilder* output) {
   if (NULL == output) return 0;
 
   int total_elements = sizeof(message_defs) / sizeof(MessageTypeDef);

@@ -60,6 +60,7 @@ class ManuvrConsole : public XenoSession {
     */
     StringBuilder session_buffer;
     StringBuilder _log_accumulator;
+    bool _local_echo = false;
 };
 
 

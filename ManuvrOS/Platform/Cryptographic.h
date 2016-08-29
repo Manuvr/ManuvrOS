@@ -31,6 +31,10 @@ If you wish to use another crypto library (OpenSSL? MatrixSSL? uECC?) then
   logic to support them.
 */
 
+#ifndef __MANUVR_CRYPTO_ABSTRACTION_H__
+#define __MANUVR_CRYPTO_ABSTRACTION_H__
+
+#include <Platform/Identity.h>
 #include <Platform/Platform.h>
 
 #if defined(__MANUVR_MBEDTLS)
@@ -39,6 +43,12 @@ If you wish to use another crypto library (OpenSSL? MatrixSSL? uECC?) then
   #include "mbedtls/md_internal.h"
 
   typedef mbedtls_md_type_t Hashes;
+
+#else
+  enum class Hashes {
+    NONE = 0
+  };
+
 #endif
 
 //enum class Hashes {
@@ -70,6 +80,7 @@ If you wish to use another crypto library (OpenSSL? MatrixSSL? uECC?) then
 //  #endif
 //};
 
+
 /* This stuff needs to be reachable via C-linkage. */
 extern "C" {
 
@@ -90,7 +101,9 @@ int8_t manuvr_hash(uint8_t* in, int in_len, uint8_t* out, int out_len, Hashes h)
 /*******************************************************************************
 * Debug
 *******************************************************************************/
-void printCrpytoOverview(StringBuilder*);
+void printCryptoOverview(StringBuilder*);
 
 
 } // extern "C"
+
+#endif // __MANUVR_CRYPTO_ABSTRACTION_H__

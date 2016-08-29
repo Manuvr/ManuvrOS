@@ -24,7 +24,32 @@ limitations under the License.
 
 #include "ManuvrConsole.h"
 
-extern void printHelp();  // TODO: Hack. Remove later.
+
+void printHelp() {
+  // TODO: Hack. Needs to generate help based on context. But since I don't want
+  //         to get mired in building a generalized CLI into this class (yet),
+  //         this will suffice for now.
+  Kernel::log("Help would ordinarily be displayed here.\n");
+}
+
+#if !defined(_GNU_SOURCE)
+/*
+* We might choose to roll-our-own so that we don't bring in enormous dependencies.
+*
+* Taken from
+* http://c-for-dummies.com/blog/?p=1359
+*/
+int strcasestr(char *a, const char *b) {
+  char c;
+  while(*a) {
+    c = toupper(*a) - toupper(*b);
+    if( c != 0 ) return(c);
+    a++;
+    b++;
+  }
+  return(c);
+}
+#endif
 
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
@@ -118,7 +143,7 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
     char* temp_ptr = session_buffer.position(0);
     int temp_len   = strlen(temp_ptr);
     // Begin the cases...
-    #if defined(_GNU_SOURCE)
+    //#if defined(_GNU_SOURCE)
       if (strcasestr(temp_ptr, "QUIT")) {
         ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_REBOOT);
         event->originator = (EventReceiver*) __kernel;
@@ -126,14 +151,16 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
       }
       else if (strcasestr(temp_ptr, "HELP"))  printHelp();      // Show help.
       else
-    #else
-    #endif
+    //#else
+    //#endif
     {
       // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
       // run in idle time.
-      ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
       StringBuilder* dispatched = new StringBuilder((uint8_t*) temp_ptr, temp_len);
-      event->markArgForReap(event->addArg(dispatched), true);
+      ManuvrRunnable* event  = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
+      event->specific_target = (EventReceiver*) __kernel;
+      event->originator      = (EventReceiver*) this;
+      event->addArg(dispatched)->reapValue(true);
       raiseEvent(event);
     }
     session_buffer.drop_position(0);
@@ -191,10 +218,7 @@ int8_t ManuvrConsole::callback_proc(ManuvrRunnable *event) {
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
-  switch (event->event_code) {
-    case MANUVR_MSG_SELF_DESCRIBE:
-      //sendEvent(event);
-      break;
+  switch (event->eventCode()) {
     default:
       break;
   }
@@ -213,6 +237,7 @@ void ManuvrConsole::printDebug(StringBuilder *output) {
 
   int ses_buf_len = session_buffer.length();
   int la_len      = _log_accumulator.length();
+  output->concatf("-- Console echoes:           %s\n", _local_echo ? "yes" : "no");
   if (ses_buf_len > 0) {
     #if defined(__MANUVR_DEBUG)
       output->concatf("-- Session Buffer (%d bytes):  ", ses_buf_len);
@@ -238,7 +263,7 @@ void ManuvrConsole::printDebug(StringBuilder *output) {
 int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
 
-  switch (active_event->event_code) {
+  switch (active_event->eventCode()) {
     /* Things that only this class is likely to care about. */
     case MANUVR_MSG_SESS_HANGUP:
       {
@@ -280,6 +305,9 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
 // This may be a strange loop that we might optimize later, but this is
 //   still a valid call target that deals with allowing the console to operate
 //   on itself.
+// TODO: Change local_echo.
+// TODO: Terminal reset.
+// TODO: Terminal forsakes logger.
 void ManuvrConsole::procDirectDebugInstruction(StringBuilder *input) {
   XenoSession::procDirectDebugInstruction(input);
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }

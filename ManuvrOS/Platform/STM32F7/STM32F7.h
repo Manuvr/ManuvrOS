@@ -31,6 +31,8 @@ limitations under the License.
 
 #define PLATFORM_GPIO_PIN_COUNT   48
 
+#define MANUVR_RTC_STARTUP_GOOD_UNSET  0xA40C131B
+#define MANUVR_RTC_STARTUP_GOOD_SET    0x1529578F
 
 /*
 * External interrupt actions are stored this way in an array, with indecies

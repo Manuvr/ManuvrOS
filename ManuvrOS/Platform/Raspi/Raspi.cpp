@@ -1,5 +1,5 @@
 /*
-File:   PlatformLinux.cpp
+File:   PlatformRaspi.cpp
 Author: J. Ian Lindsay
 Date:   2015.11.01
 
@@ -25,22 +25,48 @@ This file is meant to contain a set of common functions that are typically platf
     * Get definitions for GPIO pins.
     * Access a true RNG (if it exists)
 
-This file forms the catch-all for linux platforms that have no support.
+
+Bits and pieces of low-level GPIO access and discovery code was taken from this library:
+http://abyz.co.uk/rpi/pigpio/
 */
+
+
 
 #include "Platform.h"
 #include <Kernel.h>
 
-#include <sys/time.h>
 #include <unistd.h>
-#include <signal.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
+/* GPIO access macros... */
+#define PI_BANK (pin >> 5)
+#define PI_BIT  (1 << (pin & 0x1F))
+
+#define GPSET0 7
+#define GPSET1 8
+#define GPCLR0 10
+#define GPCLR1 11
+#define GPLEV0 13
+#define GPLEV1 14
 
 
 /****************************************************************************************************
 * The code under this block is special on this platform, and will not be available elsewhere.       *
 ****************************************************************************************************/
 volatile Kernel* __kernel = nullptr;
+
+static volatile unsigned rev = 0;
+static volatile uint32_t piModel      = 0;
+static volatile uint32_t piPeriphBase = 0;
+static volatile uint32_t piBusAddr    = 0;
+
+#define GPIO_LEN  0xB4
+#define SYST_LEN  0x1C
+
+static volatile uint32_t  *gpioReg = (volatile uint32_t*) MAP_FAILED;
+static volatile uint32_t  *systReg = (volatile uint32_t*) MAP_FAILED;
 
 struct itimerval _interval              = {0};
 struct sigaction _signal_action_SIGALRM = {0};
@@ -89,7 +115,7 @@ void sig_handler(int signo) {
       jumpToBootloader();
       break;
     case SIGHUP:
-      Kernel::log("Received a SIGHUP signal. Closing up shop...");
+      printf("Received a SIGHUP signal. Closing up shop...");
       jumpToBootloader();
       break;
     case SIGSTOP:
@@ -103,7 +129,7 @@ void sig_handler(int signo) {
     default:
       #ifdef __MANUVR_DEBUG
       {
-        StringBuilder _log;
+        StringBuilder _log
         _log.concatf("Unhandled signal: %d", signo);
         Kernel::log(&_log);
       }
@@ -164,6 +190,100 @@ int initSigHandlers() {
 }
 
 
+/**
+ * Import an absolute register address so we can access it as-if we were on
+ *   a microcontroller...
+ *
+ * Taken from...
+ * http://abyz.co.uk/rpi/pigpio/
+ */
+static uint32_t* initMapMem(int fd, uint32_t addr, uint32_t len) {
+  return (uint32_t *) mmap(0, len,
+    PROT_READ|PROT_WRITE|PROT_EXEC,
+    MAP_SHARED|MAP_LOCKED,
+    fd, addr);
+}
+
+
+/**
+ * Makes a guess at the version of the RasPi we are running on.
+ *
+ * Taken from...
+ * http://abyz.co.uk/rpi/pigpio/
+ * ...and adapted to fit this file.
+ */
+unsigned gpioHardwareRevision() {
+  if (rev) return rev;
+
+  FILE * filp = fopen("/proc/cpuinfo", "r");
+  if (nullptr != filp) {
+    char buf[512];
+    char term;
+    int chars = 4; /* number of chars in revision string */
+
+    while (fgets(buf, sizeof(buf), filp) != nullptr) {
+      if (0 == piModel) {
+        if (!strncasecmp("model name", buf, 10)) {
+          if (strstr (buf, "ARMv6") != nullptr) {
+            piModel = 1;
+            chars = 4;
+            piPeriphBase = 0x20000000;
+            piBusAddr = 0x40000000;
+            Kernel::log("Found a Raspberry Pi v1.\n");
+          }
+          else if (strstr (buf, "ARMv7") != nullptr) {
+            piModel = 2;
+            chars = 6;
+            piPeriphBase = 0x3F000000;
+            piBusAddr = 0xC0000000;
+            Kernel::log("Found a Raspberry Pi v2.\n");
+          }
+        }
+      }
+      if (!strncasecmp("revision", buf, 8)) {
+        if (sscanf(buf+strlen(buf)-(chars+1), "%x%c", &rev, &term) == 2) {
+          if (term != '\n') {
+            rev = 0;
+          }
+        }
+      }
+    }
+    fclose(filp);
+  }
+  else {
+    Kernel::log("Failed to open /proc/cpuinfo.\n");
+  }
+  return rev;
+}
+
+
+int gpioInitialise() {
+  /* sets piModel, needed for peripherals address */
+  if (0 < gpioHardwareRevision()) {
+    int fd = open("/dev/mem", O_RDWR | O_SYNC) ;
+    if (fd < 0) {
+      Kernel::log("Cannot access /dev/mem. No GPIO functions available.\n");
+      return -1;
+    }
+
+    gpioReg  = initMapMem(fd, (piPeriphBase + 0x200000),  GPIO_LEN);
+    systReg  = initMapMem(fd, (piPeriphBase + 0x003000),  SYST_LEN);
+
+    close(fd);
+
+    if ((gpioReg == MAP_FAILED) || (systReg == MAP_FAILED)) {
+      Kernel::log("mmap failed. No GPIO functions available.\n");
+      return -1;
+    }
+  }
+  else {
+    Kernel::log("Could not determine raspi hardware revision.\n");
+    return -1;
+  }
+  return 0;
+}
+
+
 
 /****************************************************************************************************
 * Watchdog                                                                                          *
@@ -207,27 +327,11 @@ void init_RNG() {
   srand(time(nullptr));          // Seed the PRNG...
 }
 
+
+
 /****************************************************************************************************
 * Identity and serial number                                                                        *
 ****************************************************************************************************/
-#if defined(__MANUVR_UUID)
-  // Under linux, we use the platform UUID library.
-  #include <uuid/uuid.h>
-
-  uuid_t instance_serial_number;  // If we have UUID support.
-#endif
-
-void manuvrPlatformInfo(StringBuilder* out) {
-  out->concat("Linux ");
-  #if defined(__MANUVR_UUID)
-    char* uuid_str = (char*) alloca(36);
-    bzero(uuid_str, 36);
-    uuid_unparse_lower(instance_serial_number, uuid_str);
-    out->concat(uuid_str);
-  #endif
-}
-
-
 /**
 * We sometimes need to know the length of the platform's unique identifier (if any). If this platform
 *   is not serialized, this function will return zero.
@@ -235,27 +339,35 @@ void manuvrPlatformInfo(StringBuilder* out) {
 * @return   The length of the serial number on this platform, in terms of bytes.
 */
 int platformSerialNumberSize() {
-  #if defined(__MANUVR_UUID)
-    return 16;
-  #else
-    return 0;
-  #endif
+  return 0;
 }
 
 
 /**
 * Writes the serial number to the indicated buffer.
+* Thanks, Narishma!
+* https://www.raspberrypi.org/forums/viewtopic.php?f=31&t=18936
 *
 * @param    A pointer to the target buffer.
 * @return   The number of bytes written.
 */
 int getSerialNumber(uint8_t *buf) {
-  #if defined(__MANUVR_UUID)
-  for (int i = 0; i < 16; i++) *(buf + i) = *(((uint8_t*)instance_serial_number) + i);
-  return 16;
-  #else
+  FILE *f = fopen("/proc/cpuinfo", "r");
+  if (!f) return 0;
+
+  char line[256];
+  int serial = 0;
+  while (fgets(line, 256, f)) {
+    if (strncmp(line, "Serial", 6) == 0) {
+      char serial_string[16 + 1];
+      serial = atoi(strcpy(serial_string, strchr(line, ':') + 2));
+      fclose(f);
+      return serial;
+    }
+  }
+
+  fclose(f);
   return 0;
-  #endif
 }
 
 
@@ -273,7 +385,6 @@ bool persistCapable() {
 unsigned long persistFree() {
   return -1L;
 }
-
 
 
 /****************************************************************************************************
@@ -322,6 +433,8 @@ uint32_t currentTimestamp(void) {
 * Writes a human-readable datetime to the argument.
 * Returns ISO 8601 datetime string.
 * 2004-02-12T15:19:21+00:00
+*
+* date -u --iso-8601=s
 */
 void currentDateTime(StringBuilder* target) {
   if (target != nullptr) {
@@ -347,11 +460,14 @@ unsigned long millis() {
 
 /*
 * Not provided elsewhere on a linux platform.
+* Returns the number of microseconds after system boot. Wraps around
+*   after 1 hour 11 minutes 35 seconds.
+*
+* Taken from:
+* http://abyz.co.uk/rpi/pigpio/
 */
 unsigned long micros() {
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  return (ts.tv_sec * 1000000L + ts.tv_nsec / 1000L);
+  return systReg[1];
 }
 
 
@@ -366,11 +482,30 @@ unsigned long micros() {
 *   individual classes work out their own requirements.
 */
 void gpioSetup() {
+  gpioInitialise();
 }
 
-
 int8_t gpioDefine(uint8_t pin, int mode) {
-  return 0;
+  if (piModel) {
+    int reg   = pin / 10;
+    int shift = (pin % 10) * 3;
+
+    gpioReg[reg] = (gpioReg[reg] & ~(7<<shift));
+
+    switch (mode) {
+      case INPUT:
+        break;
+      case INPUT_PULLUP:
+        break;
+      case OUTPUT:
+        gpioReg[reg] = (gpioReg[reg] | (1<<shift));
+        break;
+      default:
+        break;
+    }
+    return 0;
+  }
+  return -1;
 }
 
 
@@ -392,17 +527,24 @@ int8_t setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn) {
 
 
 int8_t setPin(uint8_t pin, bool val) {
-  return 0;
+  if (piModel) {
+    *(gpioReg + (val ? GPSET0 : GPCLR0)) = 1 << pin;
+    return 0;
+  }
+  return -1;
 }
 
 
 int8_t readPin(uint8_t pin) {
-  return 0;
+  if (piModel) {
+    return (((*(gpioReg + GPLEV0 + PI_BANK) & PI_BIT) != 0) ? 1 : 0);
+  }
+  return -1;
 }
 
 
 int8_t setPinAnalog(uint8_t pin, int val) {
-  return 0;
+  return -1;
 }
 
 int readPinAnalog(uint8_t pin) {
@@ -487,6 +629,7 @@ volatile void reboot() {
 */
 void platformPreInit() {
   __kernel = (volatile Kernel*) Kernel::getInstance();
+  platform.setIdleHook([]{ sleep_millis(20); });
   gpioSetup();
 }
 
@@ -499,9 +642,6 @@ void platformInit() {
   init_RNG();
   initPlatformRTC();
   __kernel = (volatile Kernel*) Kernel::getInstance();
-  #if defined(__MANUVR_UUID)
-    uuid_generate(instance_serial_number);
-  #endif
   initSigHandlers();
   set_linux_interval_timer();
 }

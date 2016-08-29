@@ -20,9 +20,12 @@ CPP_SRCS   = DataStructures/StringBuilder.cpp
 CPP_SRCS  += DataStructures/BufferPipe.cpp
 CPP_SRCS  += DataStructures/Quaternion.cpp
 CPP_SRCS  += DataStructures/InertialMeasurement.cpp
+CPP_SRCS  += DataStructures/uuid.cpp
+CPP_SRCS  += DataStructures/Argument.cpp
 
 # Types and encodings
-CPP_SRCS  += Types/ManuvrCBOR/ManuvrCBOR.cpp
+CPP_SRCS  += Types/TypeTranscriber.cpp
+CPP_SRCS  += Types/Avro/Avro.cpp
 
 # Manuvr core
 CPP_SRCS  += ManuvrRunnable.cpp
@@ -30,7 +33,6 @@ CPP_SRCS  += EnumeratedTypeCodes.cpp
 CPP_SRCS  += Kernel.cpp
 CPP_SRCS  += EventReceiver.cpp
 CPP_SRCS  += TaskProfilerData.cpp
-CPP_SRCS  += ManuvrMsg/Argument.cpp
 CPP_SRCS  += ManuvrMsg/ManuvrMsg.cpp
 
 # Concepts of "session" according to various standards...
@@ -111,6 +113,8 @@ CPP_SRCS  += Drivers/INA219/INA219.cpp
 #CPP_SRCS  += Drivers/PMIC/LDS8160/LDS8160.cpp
 
 CPP_SRCS  += Platform/Cryptographic.cpp
+CPP_SRCS  += Platform/Identity.cpp
+CPP_SRCS  += Storage/Storage.cpp
 
 
 OBJS  = $(CPP_SRCS:.cpp=.o)

@@ -9,8 +9,6 @@
 #include <iostream>
 
 #include "DataStructures/BufferPipe.h"
-#include "DataStructures/BufferPipe.h"
-#include "Transports/BufferPipes/XportBridge/XportBridge.h"
 
 
 

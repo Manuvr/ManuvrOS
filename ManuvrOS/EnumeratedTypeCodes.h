@@ -136,6 +136,17 @@ inline float    parseFloatFromchars(unsigned char *input) {   return ((float)   
 inline uint32_t parseUint32Fromchars(unsigned char *input) {  return ((uint32_t) *((uint32_t*) input)); }
 inline uint16_t parseUint16Fromchars(unsigned char *input) {  return ((uint16_t) *((uint16_t*) input)); }
 
+/**
+* Inlines to support erasure of native types...
+*/
+//inline uint8_t pointerTypeCode(float) {       return FLOAT_FM;     };
+//inline uint8_t pointerTypeCode(int8_t) {      return INT8_FM;      };
+//inline uint8_t pointerTypeCode(int16_t) {     return INT16_FM;     };
+//inline uint8_t pointerTypeCode(int32_t) {     return INT32_FM;     };
+//inline uint8_t pointerTypeCode(uint8_t) {     return UINT8_FM;     };
+//inline uint8_t pointerTypeCode(uint16_t) {    return UINT16_FM;    };
+//inline uint8_t pointerTypeCode(uint32_t) {    return UINT32_FM;    };
+
 
 int sizeOfArg(uint8_t typecode);
 int getTypemapSizeAndPointer(const unsigned char **pointer);

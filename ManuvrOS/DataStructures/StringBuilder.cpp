@@ -833,7 +833,11 @@ void StringBuilder::null_term_check() {
   }
 }
 
-
+/**
+* This method prints ASCII representations of the bytes this instance contains.
+* 
+* @param output The StringBuilder object into which output is written.
+*/
 void StringBuilder::printDebug(StringBuilder* output) {
   unsigned char* temp = this->string();
   int temp_len  = this->length();
@@ -842,6 +846,6 @@ void StringBuilder::printDebug(StringBuilder* output) {
     for (int i = 0; i < temp_len; i++) {
       output->concatf("%02x ", *(temp + i));
     }
-    output->concat("\n\n");
+    output->concat("\n");
   }
 }

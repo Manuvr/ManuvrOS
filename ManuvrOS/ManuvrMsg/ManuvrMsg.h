@@ -17,41 +17,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-*/
 
-
-/*
-*
-*
-*
-* This class forms the foundation of internal events. It contains the identity of a given message and
-*   its arguments. The idea here is to encapsulate notions of "method" and "argument", regardless of
-*   the nature of its execution parameters.
-*
-*
-*
-*
-*
+This class forms the foundation of internal events. It contains the identity of a given message and
+  its arguments. The idea here is to encapsulate notions of "method" and "argument", regardless of
+  the nature of its execution parameters.
 */
 
 #ifndef __MANUVR_MESSAGE_H__
 #define __MANUVR_MESSAGE_H__
 
-#include "../EnumeratedTypeCodes.h"
 #include "MessageDefs.h"    // This include file contains all of the message codes.
-
-#include <DataStructures/StringBuilder.h>
-#include <DataStructures/BufferPipe.h>
-#include <DataStructures/PriorityQueue.h>
-#include <DataStructures/LightLinkedList.h>
-#include <DataStructures/Vector3.h>
-#include <DataStructures/Quaternion.h>
-
-
-#define DIG_MSG_ERROR_NO_ERROR        0
-#define DIG_MSG_ERROR_INVALID_ARG     -1
-#define DIG_MSG_ERROR_INVALID_TYPE    -2
-
+#include <DataStructures/Argument.h>
 
 
 /*
@@ -67,7 +43,6 @@ typedef struct msg_defin_t {
     const unsigned char*  arg_modes;      // For messages that have arguments, this defines their possible types.
     const char*           arg_semantics;  // For messages that have arguments, this defines their semantics.
 } MessageTypeDef;
-
 
 
 /*
@@ -92,117 +67,35 @@ typedef struct msg_defin_t {
 #define MSG_FLAG_RESERVED_0   0x8000      // Reserved flag.
 
 
-class ManuvrXport;
-class EventReceiver;
-class ManuvrRunnable;
-
-/* This is how we define arguments to messages. */
-class Argument {
-  public:
-    /*
-    * Hackery surrounding this member:
-    * There is no point to storing a pointer to a heap ref to hold data that is not
-    *   bigger than the pointer itself. So rather than malloc()/free() and populate
-    *   this slot with things like int32, we will instead cast the value itself to a
-    *   void* and store it in the pointer slot. When we do this, we need to be sure
-    *   not to mark the pointer for reap.
-    *
-    * Glorious, glorious hackery. Keeping it. But do need to account for (and extend to)
-    *   64-bit pointers.
-    *        ---J. Ian Lindsay   Mon Oct 05 22:55:41 MST 2015
-    */
-    void*   target_mem;
-
-    uint16_t len;         // This is sometimes not used. It is for data types that are not fixed-length.
-    uint8_t  type_code;
-    bool     reap;
-
-    Argument();
-    Argument(uint8_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT8_FM)  {};
-    Argument(uint16_t val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT16_FM) {};
-    Argument(uint32_t val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT32_FM) {};
-    Argument(int8_t   val) : Argument((void*)(uintptr_t) val, sizeof(val), INT8_FM)   {};
-    Argument(int16_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), INT16_FM)  {};
-    Argument(int32_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), INT32_FM)  {};
-    Argument(float    val) : Argument((void*)(uintptr_t) val, sizeof(val), FLOAT_FM)  {};
-
-    Argument(uint8_t*  val) : Argument((void*) val, sizeof(val), UINT8_PTR_FM)  {};
-    Argument(uint16_t* val) : Argument((void*) val, sizeof(val), UINT16_PTR_FM) {};
-    Argument(uint32_t* val) : Argument((void*) val, sizeof(val), UINT32_PTR_FM) {};
-    Argument(int8_t*   val) : Argument((void*) val, sizeof(val), INT8_PTR_FM)   {};
-    Argument(int16_t*  val) : Argument((void*) val, sizeof(val), INT16_PTR_FM)  {};
-    Argument(int32_t*  val) : Argument((void*) val, sizeof(val), INT32_PTR_FM)  {};
-    Argument(float*    val) : Argument((void*) val, sizeof(val), FLOAT_PTR_FM)  {};
-
-    Argument(Vector3ui16* val) : Argument((void*) val, 6,  VECT_3_UINT16) {};
-    Argument(Vector3i16*  val) : Argument((void*) val, 6,  VECT_3_INT16)  {};
-    Argument(Vector3f*    val) : Argument((void*) val, 12, VECT_3_FLOAT)  {};
-    Argument(Vector4f*    val) : Argument((void*) val, 16, VECT_4_FLOAT)  {};
-
-    /*
-    * This is a constant character pointer. Do not reap it.
-    */
-    Argument(const char* val) : Argument((void*) val, (strlen(val)+1), STR_FM) {};
-
-    /*
-    * We typically want references to typeless swaths of memory be left alone at the end of
-    *   the Argument's life cycle. We will specify otherwise when appropriate.
-    */
-    Argument(void* val, uint16_t len) : Argument(val, len, BINARY_FM) {};
-
-    /*
-    * These are system service pointers. Do not reap.
-    */
-    Argument(EventReceiver* val) : Argument((void*) val, sizeof(val), SYS_EVENTRECEIVER_FM) {};
-    Argument(ManuvrXport* val)   : Argument((void*) val, sizeof(val), SYS_MANUVR_XPORT_FM)  {};
-    Argument(BufferPipe* val)    : Argument((void*) val, sizeof(val), BUFFERPIPE_PTR_FM)    {};
-
-    /*
-    * We typically want ManuvrRunnable references to be left alone at the end of
-    *   the Argument's life cycle. We will specify otherwise when appropriate.
-    */
-    Argument(ManuvrRunnable* val) : Argument((void*) val, sizeof(val), SYS_RUNNABLE_PTR_FM) {};
-
-    // These are reapable.
-    Argument(char* val);
-    Argument(StringBuilder* val);
-
-
-    ~Argument();
-
-    int8_t serialize(StringBuilder*);
-    int8_t serialize_raw(StringBuilder*);
-
-
-    static char*    printBinStringToBuffer(unsigned char *str, int len, char *buffer);
-
-
-  protected:
-    Argument(void* ptr, int len, uint8_t code);  // Protected constructor to which we delegate.
-
-  private:
-    void wipe();
-};
-
-
 /*
 * This is the class that represents a message with an optional ordered set of Arguments.
 */
 class ManuvrMsg {
   public:
-    LinkedList<Argument*> args;     // The optional list of arguments associated with this event.
-    uint16_t event_code;            // The identity of the event (or command).
-
-
-    ManuvrMsg(void);
+    ManuvrMsg();
     ManuvrMsg(uint16_t code);
-    virtual ~ManuvrMsg(void);
+    virtual ~ManuvrMsg();
 
     virtual int8_t repurpose(uint16_t code);
 
-    int argCount();
-    int argByteCount();
+    /**
+    * Allows the caller to plan other allocations based on how many bytes this message's
+    *   Arguments occupy.
+    *
+    * @return the length (in bytes) of the arguments for this message.
+    */
+    int argByteCount() {
+      return ((nullptr == arg) ? 0 : arg->sumAllLengths());
+    }
 
+    /**
+    * Allows the caller to count the Args attached to this message.
+    *
+    * @return the cardinality of the argument list.
+    */
+    inline int      argCount() {   return ((nullptr != arg) ? arg->argCount() : 0);   };
+
+    inline uint16_t eventCode() {  return event_code;   };
 
     inline bool isExportable() {
       if (NULL == message_def) message_def = lookupMsgDefByCode(event_code);
@@ -227,7 +120,8 @@ class ManuvrMsg {
     int8_t clearArgs();     // Clear all of the arguments attached to this message, reaping them if necessary.
 
     uint8_t getArgumentType(uint8_t);  // Given a position, return the type code for the Argument.
-    uint8_t getArgumentType();         // Return the type code for Argument 0.
+    inline uint8_t getArgumentType() {   return getArgumentType(0);  };
+
 
     MessageTypeDef* getMsgDef();
 
@@ -237,100 +131,87 @@ class ManuvrMsg {
     *   implementation details of Arguments. Might look ugly, but takes the CPU burden off of runtime
     *   and forces the compiler to deal with it.
     */
-    inline int addArg(uint8_t val) {             return args.insert(new Argument(val));   }
-    inline int addArg(uint16_t val) {            return args.insert(new Argument(val));   }
-    inline int addArg(uint32_t val) {            return args.insert(new Argument(val));   }
-    inline int addArg(int8_t val) {              return args.insert(new Argument(val));   }
-    inline int addArg(int16_t val) {             return args.insert(new Argument(val));   }
-    inline int addArg(int32_t val) {             return args.insert(new Argument(val));   }
-    inline int addArg(float val) {               return args.insert(new Argument(val));   }
+    inline Argument* addArg(uint8_t val) {             return addArg(new Argument(val));   }
+    inline Argument* addArg(uint16_t val) {            return addArg(new Argument(val));   }
+    inline Argument* addArg(uint32_t val) {            return addArg(new Argument(val));   }
+    inline Argument* addArg(int8_t val) {              return addArg(new Argument(val));   }
+    inline Argument* addArg(int16_t val) {             return addArg(new Argument(val));   }
+    inline Argument* addArg(int32_t val) {             return addArg(new Argument(val));   }
+    inline Argument* addArg(float val) {               return addArg(new Argument(val));   }
 
-    inline int addArg(uint8_t *val) {            return args.insert(new Argument(val));   }
-    inline int addArg(uint16_t *val) {           return args.insert(new Argument(val));   }
-    inline int addArg(uint32_t *val) {           return args.insert(new Argument(val));   }
-    inline int addArg(int8_t *val) {             return args.insert(new Argument(val));   }
-    inline int addArg(int16_t *val) {            return args.insert(new Argument(val));   }
-    inline int addArg(int32_t *val) {            return args.insert(new Argument(val));   }
-    inline int addArg(float *val) {              return args.insert(new Argument(val));   }
+    inline Argument* addArg(uint8_t *val) {            return addArg(new Argument(val));   }
+    inline Argument* addArg(uint16_t *val) {           return addArg(new Argument(val));   }
+    inline Argument* addArg(uint32_t *val) {           return addArg(new Argument(val));   }
+    inline Argument* addArg(int8_t *val) {             return addArg(new Argument(val));   }
+    inline Argument* addArg(int16_t *val) {            return addArg(new Argument(val));   }
+    inline Argument* addArg(int32_t *val) {            return addArg(new Argument(val));   }
+    inline Argument* addArg(float *val) {              return addArg(new Argument(val));   }
 
-    inline int addArg(Vector3ui16 *val) {        return args.insert(new Argument(val));   }
-    inline int addArg(Vector3i16 *val) {         return args.insert(new Argument(val));   }
-    inline int addArg(Vector3f *val) {           return args.insert(new Argument(val));   }
-    inline int addArg(Vector4f *val) {           return args.insert(new Argument(val));   }
+    inline Argument* addArg(Vector3ui16 *val) {        return addArg(new Argument(val));   }
+    inline Argument* addArg(Vector3i16 *val) {         return addArg(new Argument(val));   }
+    inline Argument* addArg(Vector3f *val) {           return addArg(new Argument(val));   }
+    inline Argument* addArg(Vector4f *val) {           return addArg(new Argument(val));   }
 
-    inline int addArg(void *val, int len) {      return args.insert(new Argument(val, len));   }
-    inline int addArg(const char *val) {         return args.insert(new Argument(val));   }
-    inline int addArg(StringBuilder *val) {      return args.insert(new Argument(val));   }
-    inline int addArg(BufferPipe *val) {         return args.insert(new Argument(val));   }
-    inline int addArg(EventReceiver *val) {      return args.insert(new Argument(val));   }
-    inline int addArg(ManuvrXport *val) {        return args.insert(new Argument(val));   }
-    inline int addArg(ManuvrRunnable *val) {     return args.insert(new Argument(val));   }
+    inline Argument* addArg(void *val, int len) {      return addArg(new Argument(val, len));   }
+    inline Argument* addArg(const char *val) {         return addArg(new Argument(val));   }
+    inline Argument* addArg(StringBuilder *val) {      return addArg(new Argument(val));   }
+    inline Argument* addArg(BufferPipe *val) {         return addArg(new Argument(val));   }
+    inline Argument* addArg(EventReceiver *val) {      return addArg(new Argument(val));   }
+    inline Argument* addArg(ManuvrXport *val) {        return addArg(new Argument(val));   }
+    inline Argument* addArg(ManuvrRunnable *val) {     return addArg(new Argument(val));   }
 
+    Argument* addArg(Argument*);  // The only "real" implementation.
 
     /*
     * Overrides for Argument retreival. Pass in pointer to the type the argument should be retreived as.
     * Returns an error code if the types don't match.
     */
     // These accessors treat the (void*) as 4 bytes of data storage.
-    inline int8_t consumeArgAs(int8_t *trg_buf) {       return getArgAs(0, (void*) trg_buf, false);  }
-    inline int8_t consumeArgAs(uint8_t *trg_buf) {      return getArgAs(0, (void*) trg_buf, false);  }
-    inline int8_t consumeArgAs(int16_t *trg_buf) {      return getArgAs(0, (void*) trg_buf, false);  }
-    inline int8_t consumeArgAs(uint16_t *trg_buf) {     return getArgAs(0, (void*) trg_buf, false);  }
-    inline int8_t consumeArgAs(int32_t *trg_buf) {      return getArgAs(0, (void*) trg_buf, false);  }
-    inline int8_t consumeArgAs(uint32_t *trg_buf) {     return getArgAs(0, (void*) trg_buf, false);  }
-    inline int8_t consumeArgAs(float *trg_buf) {        return getArgAs(0, (void*) trg_buf, false);  }
-    inline int8_t consumeArgAs(ManuvrRunnable **trg_buf) {  return getArgAs(0, (void*) trg_buf, false);  }
-    inline int8_t consumeArgAs(StringBuilder **trg_buf) {   return getArgAs(0, (void*) trg_buf, false);  }
+    inline int8_t getArgAs(int8_t *trg_buf) {     return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t *trg_buf) {    return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(int16_t *trg_buf) {    return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint16_t *trg_buf) {   return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(int32_t *trg_buf) {    return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint32_t *trg_buf) {   return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(float *trg_buf) {      return getArgAs(0, (void*) trg_buf);  }
 
-    inline int8_t getArgAs(int8_t *trg_buf) {           return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t *trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(int16_t *trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint16_t *trg_buf) {         return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(int32_t *trg_buf) {          return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint32_t *trg_buf) {         return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(float *trg_buf) {            return getArgAs(0, (void*) trg_buf, true);  }
-
-    inline int8_t getArgAs(uint8_t idx, uint8_t  *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, uint16_t *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, uint32_t *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, int8_t   *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, int16_t  *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, int32_t  *trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, float  *trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, uint8_t  *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, uint16_t *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, uint32_t *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, int8_t   *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, int16_t  *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, int32_t  *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, float  *trg_buf) {            return getArgAs(idx, (void*) trg_buf);  }
 
     // These accessors treat the (void*) as a pointer. These functions are essentially type-casts.
-    inline int8_t getArgAs(Vector3f **trg_buf) {                 return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(Vector3ui16 **trg_buf) {              return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(Vector3i16 **trg_buf) {               return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(const char **trg_buf) {               return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(StringBuilder **trg_buf) {            return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(BufferPipe **trg_buf) {               return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(EventReceiver **trg_buf) {            return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(ManuvrXport **trg_buf) {              return getArgAs(0, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(ManuvrRunnable **trg_buf) {           return getArgAs(0, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(Vector3f **trg_buf) {                      return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(Vector3ui16 **trg_buf) {                   return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(Vector3i16 **trg_buf) {                    return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(const char **trg_buf) {                    return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(StringBuilder **trg_buf) {                 return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(BufferPipe **trg_buf) {                    return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(EventReceiver **trg_buf) {                 return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(ManuvrXport **trg_buf) {                   return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(ManuvrRunnable **trg_buf) {                return getArgAs(0, (void*) trg_buf);  }
 
-    inline int8_t getArgAs(uint8_t idx, Vector3f  **trg_buf) {          return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, Vector3ui16  **trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, Vector3i16  **trg_buf) {        return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, const char  **trg_buf) {        return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, StringBuilder  **trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, BufferPipe  **trg_buf) {        return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, EventReceiver  **trg_buf) {     return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, ManuvrXport  **trg_buf) {       return getArgAs(idx, (void*) trg_buf, true);  }
-    inline int8_t getArgAs(uint8_t idx, ManuvrRunnable  **trg_buf) {    return getArgAs(idx, (void*) trg_buf, true);  }
+    inline int8_t getArgAs(uint8_t idx, Vector3f  **trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, Vector3ui16  **trg_buf) {     return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, Vector3i16  **trg_buf) {      return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, const char  **trg_buf) {      return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, StringBuilder  **trg_buf) {   return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, BufferPipe  **trg_buf) {      return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, EventReceiver  **trg_buf) {   return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, ManuvrXport  **trg_buf) {     return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, ManuvrRunnable  **trg_buf) {  return getArgAs(idx, (void*) trg_buf);  }
 
 
-    /*
-    * Protip: Think on the stack...
-    * markForReap(addArg(new StringBuilder("Sample data to reap on destruction.")), true);
-    */
     int8_t markArgForReap(int idx, bool reap);
 
-
-    void printDebug(StringBuilder *);
+    void printDebug(StringBuilder*);
 
     const char* getMsgTypeString();
     const char* getArgTypeString(uint8_t idx);
+
 
     static const MessageTypeDef* lookupMsgDefByCode(uint16_t msg_code);
     static const MessageTypeDef* lookupMsgDefByLabel(char* label);
@@ -342,11 +223,10 @@ class ManuvrMsg {
     static int8_t getMsgSemantics(MessageTypeDef*, StringBuilder *output);
     #endif
 
+    // TODO: All of this sucks. there-has-to-be-a-better-way.jpg
     static int8_t registerMessage(MessageTypeDef*);
     static int8_t registerMessage(uint16_t, uint16_t, const char*, const unsigned char*, const char*);
-
     static int8_t registerMessages(const MessageTypeDef[], int len);
-
     static const MessageTypeDef message_defs[];
 
 
@@ -369,20 +249,22 @@ class ManuvrMsg {
     static const unsigned char MSG_ARGS_XPORT[];
 
 
-  protected:
-    const MessageTypeDef*  message_def;             // The definition for the message (once it is associated).
 
-    int8_t getArgAs(uint8_t idx, void *dat, bool preserve);
+  protected:
+    int8_t getArgAs(uint8_t idx, void *dat);
+
 
 
   private:
-    void __class_initializer();
+    const MessageTypeDef*  message_def;  // The definition for the message (once it is associated).
+    Argument* arg       = nullptr;       // The optional list of arguments associated with this event.
+    uint16_t event_code = MANUVR_MSG_UNDEFINED; // The identity of the event (or command).
 
-    int8_t writePointerArgAs(uint32_t dat);
     int8_t writePointerArgAs(uint8_t idx, void *trg_buf);
 
     char* is_valid_argument_buffer(int len);
     int   collect_valid_grammatical_forms(int, LinkedList<char*>*);
+
 
     static PriorityQueue<const MessageTypeDef*> message_defs_extended;  // Where runtime-loaded message defs go.
 };

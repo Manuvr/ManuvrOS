@@ -34,12 +34,11 @@ limitations under the License.
   class Kernel;
 
   #include <inttypes.h>
-  #include "EnumeratedTypeCodes.h"
-  #include "CommonConstants.h"
+  #include <EnumeratedTypeCodes.h>
 
   #include "FirmwareDefs.h"
-  #include "ManuvrRunnable.h"
-  #include "EventReceiver.h"
+  #include <ManuvrRunnable.h>
+  #include <EventReceiver.h>
   #include <DataStructures/BufferPipe.h>
   #include <DataStructures/PriorityQueue.h>
   #include <DataStructures/StringBuilder.h>
@@ -141,24 +140,15 @@ limitations under the License.
       ManuvrRunnable* createSchedule(uint32_t period, int16_t recurrence, bool auto_clear, EventReceiver*  sch_callback);
       bool removeSchedule(ManuvrRunnable*);  // Clears all data relating to the given schedule.
       bool addSchedule(ManuvrRunnable*);
+      void printScheduler(StringBuilder*);
 
 
       /*
       * These are the core functions of the kernel that must be called from outside.
       */
-      int8_t bootstrap(void);                  // Bootstrap the kernel.
       int8_t procIdleFlags(void);              // Execute pending Runnables.
       void advanceScheduler(unsigned int);     // Push all scheduled Runnables forward by one tick.
       inline void advanceScheduler() {   advanceScheduler(MANUVR_PLATFORM_TIMER_PERIOD_MS);  };
-
-      // Logging messages, as well as an override to log locally.
-      void printPlatformInfo(StringBuilder*);
-      void printScheduler(StringBuilder*);
-      void printDebug(StringBuilder*);
-      inline void printDebug() {        printDebug(&local_log);      };
-      #if defined(__MANUVR_DEBUG)
-        void print_type_sizes(StringBuilder*);   // Prints the memory-costs of various classes.
-      #endif
 
       /* Profiling support.. */
       float cpu_usage();
@@ -177,6 +167,7 @@ limitations under the License.
       #if defined(__MANUVR_CONSOLE_SUPPORT)
         void procDirectDebugInstruction(StringBuilder *);
       #endif
+      void printDebug(StringBuilder*);
 
 
       /* These functions deal with logging.*/
@@ -223,8 +214,6 @@ limitations under the License.
       std::map<uint16_t, PriorityQueue<listenerFxnPtr>*> ca_listeners;  // Call-ahead listeners.
       std::map<uint16_t, PriorityQueue<listenerFxnPtr>*> cb_listeners;  // Call-back listeners.
 
-      StringBuilder last_user_input;
-
       uint32_t _ms_elapsed;           // How much time has passed since we serviced our schedules?
 
       // Profiling and logging variables...
@@ -234,6 +223,9 @@ limitations under the License.
       uint32_t total_loops;           // How many times have we looped?
       uint32_t total_events;          // How many events have we proc'd?
       uint32_t total_events_dead;     // How many events have we proc'd that went unacknowledged?
+      uint32_t idle_loops;            // How many idle loops have we run?
+      uint16_t consequtive_idles;     // How many consecutive idle loops?
+      uint16_t max_idle_count;        // How many consecutive idle loops before we act?
 
       uint32_t events_destroyed;      // How many events have we destroyed?
       uint32_t prealloc_starved;      // How many times did we starve the prealloc queue?
@@ -260,7 +252,7 @@ limitations under the License.
       inline void update_maximum_queue_depth() {   max_queue_depth = (exec_queue.size() > (int) max_queue_depth) ? exec_queue.size() : max_queue_depth;   };
 
       #if defined(__MANUVR_CONSOLE_SUPPORT)
-      int8_t _route_console_input();
+      int8_t _route_console_input(StringBuilder*);
       #endif
 
       /*  */

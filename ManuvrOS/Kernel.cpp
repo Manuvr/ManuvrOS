@@ -25,9 +25,7 @@ limitations under the License.
 #include <Platform/Cryptographic.h>
 
 
-extern uint32_t rtc_startup_state;
-
-/****************************************************************************************************
+/*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
 *    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
@@ -35,8 +33,8 @@ extern uint32_t rtc_startup_state;
 * .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
 * |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
 *
-* Static members and initializers should be located here. Initializers first, functions second.
-****************************************************************************************************/
+* Static members and initializers should be located here.
+*******************************************************************************/
 Kernel*     Kernel::INSTANCE = nullptr;
 BufferPipe* Kernel::_logger  = nullptr;  // The logger slot.
 PriorityQueue<ManuvrRunnable*> Kernel::isr_exec_queue;
@@ -53,6 +51,7 @@ const MessageTypeDef message_defs[] = {
   {  MANUVR_MSG_SYS_BOOTLOADER       , MSG_FLAG_EXPORTABLE,  "SYS_BOOTLOADER"       , MSG_ARGS_NO_ARGS }, // Reboots into the STM32F4 bootloader.
   {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,  "SYS_REBOOT"           , MSG_ARGS_NO_ARGS }, // Reboots into THIS program.
   {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN"         , MSG_ARGS_NO_ARGS }, // Raised when the system is pending complete shutdown.
+  {  MANUVR_MSG_SYS_EXIT             , MSG_FLAG_EXPORTABLE,  "SYS_EXIT"             , MSG_ARGS_NO_ARGS }, // Raised when the process is to exit without shutdown.
 
   {  MANUVR_MSG_DEFERRED_FXN         , 0x0000,               "DEFERRED_FXN",          MSG_ARGS_NO_ARGS }, // Message to allow for deferred fxn calls without an EventReceiver.
 
@@ -122,14 +121,14 @@ Kernel* Kernel::getInstance() {
 
 
 
-/****************************************************************************************************
+/*******************************************************************************
 *   ___ _              ___      _ _              _      _
 *  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
 * | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
 *  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
 *                                          |_|
 * Constructors/destructors, class initialization functions and so-forth...
-****************************************************************************************************/
+*******************************************************************************/
 
 /**
 * Vanilla constructor.
@@ -149,6 +148,8 @@ Kernel::Kernel() : EventReceiver() {
   _ms_elapsed          = 0;
 
   _skips_observed      = 0;
+  max_idle_count       = 100;
+  consequtive_idles    = max_idle_count;
 
   for (int i = 0; i < EVENT_MANAGER_PREALLOC_COUNT; i++) {
     /* We carved out a space in our allocation for a pool of events. Ideally, this would be enough
@@ -160,13 +161,15 @@ Kernel::Kernel() : EventReceiver() {
     preallocated.insert(&_preallocation_pool[i]);
   }
 
+  #if defined(__MANUVR_DEBUG)
+    profiler(true);          // spend time and memory measuring performance.
+  #else
+    profiler(false);         // Turn off the profiler.
+  #endif
   subscribe(this);           // We subscribe ourselves to events.
-  profiler(false);           // Turn off the profiler.
   setVerbosity((int8_t) DEFAULT_CLASS_VERBOSITY);
 
   ManuvrMsg::registerMessages(message_defs, sizeof(message_defs) / sizeof(MessageTypeDef));
-
-  platformPreInit();    // Start the pre-bootstrap platform-specific machinery.
 }
 
 /**
@@ -239,20 +242,6 @@ int8_t Kernel::detachFromLogger(BufferPipe* _pipe) {
 /****************************************************************************************************
 * Kernel operation...                                                                               *
 ****************************************************************************************************/
-int8_t Kernel::bootstrap() {
-  platformInit();    // Start the platform-specific machinery.
-
-  ManuvrRunnable *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
-  boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
-  /* Follow your shadow. */
-  Kernel::staticRaiseEvent(boot_completed_ev);
-
-  #if defined (__MANUVR_FREERTOS)
-    //vTaskStartScheduler();
-  #endif
-
-  return 0;
-}
 
 
 /****************************************************************************************************
@@ -274,6 +263,7 @@ int8_t Kernel::subscribe(EventReceiver *client) {
   int8_t return_value = subscribers.insert(client);
   if (booted()) {
     // This subscriber is joining us after bootup. Call its bootComplete() fxn to cause it to init.
+    // TODO: This is suspect....
     client->notify(returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED));
   }
   return ((return_value >= 0) ? 0 : -1);
@@ -510,7 +500,7 @@ ManuvrRunnable* Kernel::returnEvent(uint16_t code) {
 */
 int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
   if (nullptr == event) return -1;                                // No NULL events.
-  if (MANUVR_MSG_UNDEFINED == event->event_code) {
+  if (MANUVR_MSG_UNDEFINED == event->eventCode()) {
     return -2;  // No undefined events.
   }
 
@@ -526,7 +516,7 @@ int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
     for (int i = 0; i < exec_queue.size(); i++) {
       // No duplicate idempotent events allowed...
       working = exec_queue.get(i);
-      if ((working) && (working->event_code == event->event_code)) {
+      if ((working) && (working->eventCode() == event->eventCode())) {
         idempotent_blocks++;
         return -3;
       }
@@ -590,7 +580,7 @@ void Kernel::reclaim_event(ManuvrRunnable* active_runnable) {
 // This is the splice into v2's style of event handling (callaheads).
 int8_t Kernel::procCallAheads(ManuvrRunnable *active_runnable) {
   int8_t return_value = 0;
-  PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[active_runnable->event_code];
+  PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[active_runnable->eventCode()];
   if (nullptr != ca_queue) {
     listenerFxnPtr current_fxn;
     for (int i = 0; i < ca_queue->size(); i++) {
@@ -606,7 +596,7 @@ int8_t Kernel::procCallAheads(ManuvrRunnable *active_runnable) {
 // This is the splice into v2's style of event handling (callbacks).
 int8_t Kernel::procCallBacks(ManuvrRunnable *active_runnable) {
   int8_t return_value = 0;
-  PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[active_runnable->event_code];
+  PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[active_runnable->eventCode()];
   if (nullptr != cb_queue) {
     listenerFxnPtr current_fxn;
     for (int i = 0; i < cb_queue->size(); i++) {
@@ -662,7 +652,7 @@ int8_t Kernel::procIdleFlags() {
   /* As long as we have an open event and we aren't yet at our proc ceiling... */
   while (exec_queue.hasNext() && should_run_another_event(return_value, profiler_mark)) {
     active_runnable = exec_queue.dequeue();       // Grab the Event and remove it in the same call.
-    msg_code_local = active_runnable->event_code;  // This gets used after the life of the event.
+    msg_code_local = active_runnable->eventCode();  // This gets used after the life of the event.
 
     current_event = active_runnable;
 
@@ -823,21 +813,39 @@ int8_t Kernel::procIdleFlags() {
   }
 
   total_loops++;
+  current_event = nullptr;
   profiler_mark_3 = micros();
+  flushLocalLog();
+
   uint32_t runtime_this_loop = max((uint32_t) profiler_mark_3, (uint32_t) profiler_mark) - min((uint32_t) profiler_mark_3, (uint32_t) profiler_mark);
   if (return_value > 0) {
+    // We ran at-least one Runnable.
     micros_occupied += runtime_this_loop;
+    consequtive_idles = max_idle_count;  // Reset the idle loop down-counter.
     max_events_p_loop = max((uint32_t) max_events_p_loop, 0x0000007F & (uint32_t) return_value);
   }
   else if (0 == return_value) {
+    // We did nothing this time.
     max_idle_loop_time = max((uint32_t) max_idle_loop_time, (max((uint32_t) profiler_mark, (uint32_t) profiler_mark_3) - min((uint32_t) profiler_mark, (uint32_t) profiler_mark_3)));
+    switch (consequtive_idles) {
+      case 0:
+        // If we have reached our threshold for idleness, we invoke the plaform
+        //   idle hook. Note that this will be invoked on EVERY LOOP until a new
+        //   Runnable causes action.
+        platform.idleHook();
+        break;
+      case 1:
+        if (getVerbosity() > 5) Kernel::log("Kernel idle.\n");
+        // TODO: This would be the place to implement a CPU freq scaler.
+        // NOTE: No break. Still need to decrement the idle counter.
+      default:
+        consequtive_idles--;
+        break;
+    }
   }
   else {
     // there was a problem. Do nothing.
   }
-
-  flushLocalLog();
-  current_event = nullptr;
   return return_value;
 }
 
@@ -883,31 +891,6 @@ void Kernel::profiler(bool enabled) {
 float Kernel::cpu_usage() {
   return (micros_occupied / (float)(millis()*10));
 }
-
-
-#if defined(__MANUVR_DEBUG)
-/**
-* Print the type sizes to the kernel log.
-*
-* @param   StringBuilder*  The buffer that this fxn will write output into.
-*/
-void Kernel::print_type_sizes(StringBuilder* output) {
-  output->concat("---< Type sizes >-----------------------------\nElemental data structures:\n");
-  output->concatf("\t StringBuilder         %u\n", (unsigned long) sizeof(StringBuilder));
-  output->concatf("\t BufferPipe            %u\n", (unsigned long) sizeof(BufferPipe));
-  output->concatf("\t LinkedList<void*>     %u\n", (unsigned long) sizeof(LinkedList<void*>));
-  output->concatf("\t PriorityQueue<void*>  %u\n", (unsigned long) sizeof(PriorityQueue<void*>));
-
-  output->concat(" Core singletons:\n");
-  output->concatf("\t Kernel                %u\n", (unsigned long) sizeof(Kernel));
-
-  output->concat(" Messaging components:\n");
-  output->concatf("\t ManuvrRunnable        %u\n", (unsigned long) sizeof(ManuvrRunnable));
-  output->concatf("\t ManuvrMsg             %u\n", (unsigned long) sizeof(ManuvrMsg));
-  output->concatf("\t Argument              %u\n", (unsigned long) sizeof(Argument));
-  output->concatf("\t TaskProfilerData      %u\n", (unsigned long) sizeof(TaskProfilerData));
-}
-#endif
 
 
 /**
@@ -967,35 +950,11 @@ void Kernel::printProfiler(StringBuilder* output) {
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
-void Kernel::printPlatformInfo(StringBuilder* output) {
-  output->concatf("-- Hardware version:   %s\n", HW_VERSION_STRING);
-  output->concatf("-- Timer resolution:   %d ms\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
-  output->concatf("-- Entropy pool size:  %u bytes\n", PLATFORM_RNG_CARRY_CAPACITY * 4);
-  output->concatf("-- RTC State:          %s\n", getRTCStateString(rtc_startup_state));
-  output->concat("-- Supported protocols: \n\t Console\n");
-  #if defined(MANUVR_OVER_THE_WIRE)
-    output->concat("\t Manuvr\n");
-  #endif
-  #if defined(MANUVR_SUPPORT_COAP)
-    output->concat("\t CoAP\n");
-  #endif
-  #if defined(MANUVR_SUPPORT_MQTT)
-    output->concat("\t MQTT\n");
-  #endif
-  #if defined(MANUVR_SUPPORT_OSC)
-    output->concat("\t OSC\n");
-  #endif
-}
-
-/**
-* Debug support method. This fxn is only present in debug builds.
-*
-* @param   StringBuilder* The buffer into which this fxn should write its output.
-*/
 void Kernel::printScheduler(StringBuilder* output) {
   output->concatf("-- Total schedules:    %d\n-- Active schedules:   %d\n\n", schedules.size(), countActiveSchedules());
-  if (lagged_schedules)    output->concatf("-- Lagged schedules:    %u\n", (unsigned long) lagged_schedules);
-  if (_skips_observed)     output->concatf("-- Scheduler skips:     %u\n", (unsigned long) _skips_observed);
+  output->concatf("-- _ms_elapsed         %u\n", (unsigned long) _ms_elapsed);
+  if (lagged_schedules)    output->concatf("-- Lagged schedules:   %u\n", (unsigned long) lagged_schedules);
+  if (_skips_observed)     output->concatf("-- Scheduler skips:    %u\n", (unsigned long) _skips_observed);
   if (_er_flag(MKERNEL_FLAG_SKIP_FAILSAFE)) {
     output->concatf("-- %u skips before fail-to-bootloader.\n", (unsigned long) MAXIMUM_SEQUENTIAL_SKIPS);
   }
@@ -1013,27 +972,13 @@ void Kernel::printScheduler(StringBuilder* output) {
 */
 void Kernel::printDebug(StringBuilder* output) {
   if (nullptr == output) return;
-  uintptr_t initial_sp = getStackPointer();
-  uintptr_t final_sp = getStackPointer();
-
   EventReceiver::printDebug(output);
 
-  output->concatf("-- %s v%s \t Build date: %s %s\n--\n", IDENTITY_STRING, VERSION_STRING, __DATE__, __TIME__);
-  output->concat("-- Platform                  ");
-  manuvrPlatformInfo(output);
-  output->concat("\n");
   //output->concatf("-- our_mem_addr:             %p\n", this);
   if (getVerbosity() > 5) {
     output->concat("-- Current datetime          ");
     currentDateTime(output);
-    output->concatf("\n-- millis()                  0x%08x\n", millis());
-    output->concatf("-- micros()                  0x%08x\n", micros());
-    output->concatf("-- _ms_elapsed               %u\n", (unsigned long) _ms_elapsed);
-  }
-
-  if (getVerbosity() > 6) {
-    output->concatf("-- getStackPointer()         %p\n", getStackPointer());
-    output->concatf("-- stack grows %s\n--\n", (final_sp > initial_sp) ? "up" : "down");
+    output->concat("\n");
   }
 
   if (getVerbosity() > 4) {
@@ -1053,9 +998,11 @@ void Kernel::printDebug(StringBuilder* output) {
     output->concat("\n");
   }
 
-  if (nullptr != current_event) {
-    output->concat("-- Current Runnable:\n");
-    current_event->printDebug(output);
+  if (getVerbosity() > 6) {
+    if (nullptr != current_event) {
+      output->concat("-- Current Runnable:\n");
+      current_event->printDebug(output);
+    }
   }
 }
 
@@ -1109,23 +1056,24 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
-  switch (event->event_code) {
+  switch (event->eventCode()) {
     case MANUVR_MSG_SYS_BOOT_COMPLETED:
+      // TODO: We should probably recycle the BOOT_COMPLETE until nothing responds to it.
       if (getVerbosity() > 4) Kernel::log("Boot complete.\n");
       if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
       break;
 
     case MANUVR_MSG_SYS_REBOOT:
       if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
-      reboot();
+      platform.reboot();
       break;
     case MANUVR_MSG_SYS_SHUTDOWN:
       if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
-      seppuku();  // TODO: We need to distinguish between this and SYSTEM shutdown for linux.
+      platform.seppuku();  // TODO: We need to distinguish between this and SYSTEM shutdown for linux.
       break;
     case MANUVR_MSG_SYS_BOOTLOADER:
       //if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
-      jumpToBootloader();
+      platform.jumpToBootloader();
       break;
 
     default:
@@ -1139,16 +1087,14 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
 int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
   int8_t return_value = 0;
 
-  switch (active_runnable->event_code) {
+  switch (active_runnable->eventCode()) {
     #if defined(__MANUVR_CONSOLE_SUPPORT)
       case MANUVR_MSG_USER_DEBUG_INPUT:
         if (active_runnable->argCount()) {
           // If the event came with a StringBuilder, concat it onto the last_user_input.
           StringBuilder* _tmp = nullptr;
           if (0 == active_runnable->getArgAs(&_tmp)) {
-            _tmp->printDebug(&local_log);
-            last_user_input.concatHandoff(_tmp);
-            _route_console_input();
+            _route_console_input(_tmp);
           }
         }
         return_value++;
@@ -1163,7 +1109,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
       // String:     Firmware version   (IE: "1.5.4")
       // String:     Hardware version   (IE: "4")
       // String:     Extended detail    (User-defined)
-      if (0 == active_runnable->args.size()) {
+      if (0 == active_runnable->argCount()) {
         // We are being asked to self-describe.
         active_runnable->addArg((uint32_t)    PROTOCOL_MTU);
         active_runnable->addArg((uint32_t)    0);                  // Device flags.
@@ -1184,7 +1130,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
       if (0 < active_runnable->argCount()) {
         EventReceiver* er_ptr;
         if (0 == active_runnable->getArgAs(&er_ptr)) {
-          if (MANUVR_MSG_SYS_ADVERTISE_SRVC == active_runnable->event_code) {
+          if (MANUVR_MSG_SYS_ADVERTISE_SRVC == active_runnable->eventCode()) {
             subscribe((EventReceiver*) er_ptr);
             if (booted()) {
               er_ptr->bootComplete();
@@ -1423,11 +1369,10 @@ int Kernel::serviceSchedules() {
 * Responsible for taking any accumulated console input, doing some basic
 *   error-checking, and routing it to its intended target.
 */
-int8_t Kernel::_route_console_input() {
-  last_user_input.string();
-  StringBuilder _raw_from_console;
+int8_t Kernel::_route_console_input(StringBuilder* last_user_input) {
+  StringBuilder _raw_from_console;  // We do this to avoid leaks.
   // Now we take the data from the buffer so that further input isn't lost. JIC.
-  _raw_from_console.concatHandoff(&last_user_input);
+  _raw_from_console.concatHandoff(last_user_input);
 
   _raw_from_console.split(" ");
   if (_raw_from_console.count() > 0) {
@@ -1522,24 +1467,27 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
 
     case 'i':   // Debug prints.
       switch (temp_int) {
-        case 1:
-          printDebug(&local_log);
-          printProfiler(&local_log);
-          printPlatformInfo(&local_log);
-          printScheduler(&local_log);
-          break;
         case 2:
           printProfiler(&local_log);
           break;
+
         case 3:
-          printPlatformInfo(&local_log);
+          platform.printDebug(&local_log);
           break;
+
         case 4:
+          printCryptoOverview(&local_log);
+          break;
+
+        case 9:
+          platform.printDebug(&local_log);
+          printDebug(&local_log);
+          printProfiler(&local_log);
+          // NOTE: Case fall-through
+        case 5:
           printScheduler(&local_log);
           break;
-        case 9:
-          print_type_sizes(&local_log);
-          break;
+
         default:
           printDebug(&local_log);
           break;
@@ -1551,7 +1499,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       break;
   }
 
+  input->clear();
   flushLocalLog();
-  last_user_input.clear();
 }
 #endif  //__MANUVR_CONSOLE_SUPPORT

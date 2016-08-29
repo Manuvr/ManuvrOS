@@ -26,9 +26,6 @@ This file is meant to contain a set of common functions that are typically platf
     * Access a true RNG (if it exists)
 */
 
-#include "Platform.h"
-#include "STM32F7.h"
-
 #include <unistd.h>
 
 #if defined(ENABLE_USB_VCP)
@@ -43,7 +40,6 @@ This file is meant to contain a set of common functions that are typically platf
 RTC_HandleTypeDef rtc;
 
 unsigned long         start_time_micros  = 0;
-uint32_t rtc_startup_state = MANUVR_RTC_STARTUP_UNINITED;
 
 volatile uint32_t     randomness_pool[PLATFORM_RNG_CARRY_CAPACITY];
 volatile unsigned int _random_pool_r_ptr = 0;
@@ -76,11 +72,11 @@ void printEXTIDef(uint8_t _pin, StringBuilder* output) {
   uint16_t pin_idx   = (_pin % 16);
   const char* _msg_name = "<NONE>";
   if (nullptr != __ext_line_bindings[pin_idx].event) {
-    _msg_name = ManuvrMsg::getMsgTypeString(__ext_line_bindings[pin_idx].event->event_code);
+    _msg_name = ManuvrMsg::getMsgTypeString(__ext_line_bindings[pin_idx].event->eventCode());
   }
   output->concatf("\t---< EXTI Def %d >----------\n", pin_idx);
   output->concatf("\tPin         %d\n", __ext_line_bindings[pin_idx].pin);
-  output->concatf("\tCondition   %d\n", getIRQConditionString(__ext_line_bindings[pin_idx].condition));
+  output->concatf("\tCondition   %d\n", ManuvrPlatform::getIRQConditionString(__ext_line_bindings[pin_idx].condition));
   output->concatf("\tFXN         %p\n", __ext_line_bindings[pin_idx].fxn);
   output->concatf("\tEvent       %s\n\n", _msg_name);
 }
@@ -179,9 +175,37 @@ void init_RNG() {
 /****************************************************************************************************
 * Identity and serial number                                                                        *
 ****************************************************************************************************/
-int platformSerialNumberSize() { return 12; }
+void ManuvrPlatform::printDebug(StringBuilder* output) {
+  output->concatf("==< STM32F7 [%s] >=================================\n", getPlatformStateStr());
+  printPlatformBasics(output);
 
-int getSerialNumber(uint8_t* buf) {
+  char* uuid_str = (char*) alloca(40);
+  bzero(uuid_str, 40);
+  uuid_to_str(&instance_serial_number, uuid_str, 40);
+
+  output->concatf("-- Identity source:    %s\n", _check_flags(MANUVR_PLAT_FLAG_HAS_IDENTITY) ? "Generated at runtime" : "Loaded from storage");
+  output->concatf("-- Identity:           %s\n", uuid_str);
+}
+
+
+
+
+/**
+* We sometimes need to know the length of the platform's unique identifier (if any). If this platform
+*   is not serialized, this function will return zero.
+*
+* @return   The length of the serial number on this platform, in terms of bytes.
+*/
+int ManuvrPlatform::platformSerialNumberSize() { return 12; }
+
+
+/**
+* Writes the serial number to the indicated buffer.
+*
+* @param    A pointer to the target buffer.
+* @return   The number of bytes written.
+*/
+int ManuvrPlatform::getSerialNumber(uint8_t* buf) {
   *((uint32_t*)buf + 0) = *((uint32_t*) 0x1FF0F420);
   *((uint32_t*)buf + 4) = *((uint32_t*) 0x1FF0F424);
   *((uint32_t*)buf + 8) = *((uint32_t*) 0x1FF0F428);
@@ -226,7 +250,7 @@ bool initPlatformRTC() {
 
     RTC_DateTypeDef RTC_DateStructure;
     RTC_TimeTypeDef RTC_TimeStructure;
-    rtc_startup_state = HAL_RTCEx_BKUPRead(&rtc, RTC_BKP_DR31);
+    uint32_t rtc_startup_state = HAL_RTCEx_BKUPRead(&rtc, RTC_BKP_DR31);
 
     switch (rtc_startup_state) {
       case MANUVR_RTC_STARTUP_GOOD_SET:
@@ -618,7 +642,7 @@ void globalIRQDisable() {    asm volatile ("cpsie i");    }
 * Terminate this running process, along with any children it may have forked() off.
 * Never returns.
 */
-volatile void seppuku() {
+void ManuvrPlatform::seppuku() {
   // This means "Halt" on a base-metal build.
   globalIRQDisable();
   HAL_RCC_DeInit();               // Switch to HSI, no PLL
@@ -630,7 +654,7 @@ volatile void seppuku() {
 * Jump to the bootloader.
 * Never returns.
 */
-volatile void jumpToBootloader() {
+void ManuvrPlatform::jumpToBootloader() {
   globalIRQDisable();
   TM_USBD_Stop(TM_USB_FS);    // DeInit() The USB device.
   __set_MSP(0x20001000);      // Set the main stack pointer...
@@ -653,7 +677,7 @@ volatile void jumpToBootloader() {
 * This means "Halt" on a base-metal build.
 * Never returns.
 */
-volatile void hardwareShutdown() {
+void ManuvrPlatform::hardwareShutdown() {
   globalIRQDisable();
   NVIC_SystemReset();
 }
@@ -662,7 +686,7 @@ volatile void hardwareShutdown() {
 * Causes immediate reboot.
 * Never returns.
 */
-volatile void reboot() {
+void ManuvrPlatform::reboot() {
   globalIRQDisable();
   __set_MSP(0x20001000);      // Set the main stack pointer...
   HAL_RCC_DeInit();               // Switch to HSI, no PLL
@@ -677,23 +701,44 @@ volatile void reboot() {
 /****************************************************************************************************
 * Platform initialization.                                                                          *
 ****************************************************************************************************/
+#define  DEFAULT_PLATFORM_FLAGS ( \
+              MANUVR_PLAT_FLAG_INNATE_DATETIME | \
+              MANUVR_PLAT_FLAG_HAS_IDENTITY)
 
 /*
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
 */
-void platformPreInit() {
+int8_t ManuvrPlatform::platformPreInit() {
+  // TODO: Should we really be setting capabilities this late?
+  uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
+
+  #if defined(__MANUVR_MBEDTLS)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
+  #endif
+  #if defined(MANUVR_GPS_PIPE)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
+  #endif
+
+  _alter_flags(true, default_flags);
+  _discoverALUParams();
+
+  start_time_micros = micros();
+
   gpioSetup();
+  init_RNG();
+  initPlatformRTC();
+  return 0;
 }
 
 
 /*
-* Called as a result of kernels bootstrap() fxn.
+* Called before kernel instantiation. So do the minimum required to ensure
+*   internal system sanity.
 */
-void platformInit() {
-  start_time_micros = micros();
-  init_RNG();
-  initPlatformRTC();
+int8_t ManuvrPlatform::platformPostInit() {
+  uuid_gen(&instance_serial_number);
+  return 0;
 }
 
 

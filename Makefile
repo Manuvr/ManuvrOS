@@ -50,7 +50,6 @@ LIBS = -L$(OUTPUT_PATH) -L$(WHERE_I_AM)/lib -lstdc++ -lm -lmanuvr
 # Wrap the include paths into the flags...
 CFLAGS += $(OPTIMIZATION) $(INCLUDES)
 CFLAGS += -fsingle-precision-constant -Wdouble-promotion
-CFLAGS += -fno-rtti -fno-exceptions
 
 
 ###########################################################################
@@ -71,7 +70,7 @@ LBITS = $(shell getconf LONG_BIT)
 ifeq ($(LBITS),64)
 	# This is no longer required on 64-bit platforms. But it is being retained in
 	#   case 32-bit problems need to be debugged.
-  #CFLAGS += -m32
+  CFLAGS += -m32
 endif
 
 
@@ -97,22 +96,27 @@ MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
 # Options that build for certain threading models (if any).
 #MANUVR_OPTIONS += -D__MANUVR_FREERTOS
 MANUVR_OPTIONS += -D__MANUVR_LINUX
-#MANUVR_OPTIONS += -D__MANUVR_UUID
 
-MANUVR_OPTIONS += -DMANUVR_GPS_PIPE
 
 # Wire and session protocols...
 #MANUVR_OPTIONS += -DMANUVR_SUPPORT_OSC
-#MANUVR_OPTIONS += -DMANUVR_OVER_THE_WIRE
-MANUVR_OPTIONS += -DMANUVR_SUPPORT_MQTT
+MANUVR_OPTIONS += -DMANUVR_OVER_THE_WIRE
+#MANUVR_OPTIONS += -DMANUVR_SUPPORT_MQTT
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
 MANUVR_OPTIONS += -D__MANUVR_CONSOLE_SUPPORT
+MANUVR_OPTIONS += -DMANUVR_GPS_PIPE
+
+# Options for various platform features.
+MANUVR_OPTIONS += -DMANUVR_STORAGE
+MANUVR_OPTIONS += -DMANUVR_CBOR
+#MANUVR_OPTIONS += -DMANUVR_JSON
 
 # Framework selections, if any are desired.
 MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT
 
 # Options for various security features.
 MANUVR_OPTIONS += -D__MANUVR_MBEDTLS
+
 
 # mbedTLS will require this in order to use our chosen options.
 MBEDTLS_CONFIG_FILE = $(WHERE_I_AM)/mbedTLS_conf.h
@@ -135,7 +139,8 @@ LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
 # Merge our choices and export them to the downstream Makefiles...
 CFLAGS += $(MANUVR_OPTIONS)
 export CFLAGS
-export CPP_FLAGS = $(CFLAGS)
+export CPP_FLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
+
 
 .PHONY: all
 
@@ -166,13 +171,13 @@ debug: clean libs
 tests: libs
 	export __MANUVR_LINUX
 	$(MAKE) -C ManuvrOS/
-	$(CXX) -static -g -o dstest tests/TestDataStructures.cpp $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
-	$(CXX) -static -g -o bptest tests/BufferPipeTest.cpp $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
+	$(CXX) -static -g -o dstest tests/TestDataStructures.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
 
 examples: libs
 	export __MANUVR_LINUX
 	$(MAKE) -C ManuvrOS/
-	$(CXX) -static -g -o gpstest examples/tcp-gps.cpp $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O0
+	$(CXX) -static -g -o barebones examples/main_template.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O0
+	$(CXX) -static -g -o gpstest   examples/tcp-gps.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O0
 
 builddir:
 	mkdir -p $(OUTPUT_PATH)

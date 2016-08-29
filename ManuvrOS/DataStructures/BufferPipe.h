@@ -61,6 +61,7 @@ See UDPPipe for a case where this matters.
 
 // Our notion of buffer.
 #include <DataStructures/StringBuilder.h>
+#include <DataStructures/Argument.h>
 
 
 /*
@@ -109,6 +110,9 @@ enum class ManuvrPipeSignal {
   FAR_SIDE_ATTACH,     // Far-side informing the near-side of its arrival.
   NEAR_SIDE_ATTACH,    // Near-side informing the far-side of its arrival.
 
+  // These are signals for identity and authentication signals.
+  STRATEGY,            // connect()/connected()
+
   // These are signals for transport-compat. They might be generalized.
   XPORT_CONNECT,       // connect()/connected()
   XPORT_DISCONNECT     // disconnect()/disconnected()
@@ -138,6 +142,7 @@ enum class ManuvrPipeSignal {
 
 class BufferPipe;
 
+// TODO: Might-should pass arguments as well?
 typedef BufferPipe* (*bpFactory) (BufferPipe*, BufferPipe*);
 
 /*
@@ -150,6 +155,11 @@ typedef struct {
   int         pipe_code;
   bpFactory   factory;
 } PipeDef;
+
+typedef struct {
+  int         pipe_code;
+  bpFactory   factory;
+} PipeStrategy;
 
 
 /*
@@ -169,6 +179,8 @@ typedef struct {
 */
 class BufferPipe {
   public:
+    virtual const char* pipeName();
+
     /*
     * Sending signals through pipes...
     */
@@ -183,7 +195,7 @@ class BufferPipe {
     virtual int8_t fromCounterparty(StringBuilder*, int8_t mm);
 
     /*
-    * Override to allow a pointer-length interface.
+    * Allows a pointer-length interface.
     */
     int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
     int8_t fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
@@ -203,14 +215,6 @@ class BufferPipe {
     /* Join the ends of this pipe to one-another. */
     int8_t joinEnds();
 
-    /* Members pertaining to pipe-strategy. */
-    inline const uint8_t* getPipeStrategy()           {  return _pipe_strategy;   };
-    inline void setPipeStrategy(const uint8_t* strat) {  _pipe_strategy = strat;  };
-    inline uint8_t pipeCode() {  return _pipe_code;  };
-
-
-    virtual const char* pipeName();
-
     // These inlines are for convenience of extending classes.
     // TODO: Ought to be private.
     inline bool _bp_flag(uint16_t flag) {        return (_flags & flag);  };
@@ -218,6 +222,11 @@ class BufferPipe {
       if (nu) _flags |= flag;
       else    _flags &= ~flag;
     };
+
+    /* Members pertaining to pipe-strategy. */
+    inline const uint8_t* getPipeStrategy()           {  return _pipe_strategy;   };
+    inline void setPipeStrategy(const uint8_t* strat) {  _pipe_strategy = strat;  };
+    inline uint8_t pipeCode() {  return _pipe_code;  };
 
 
     /*

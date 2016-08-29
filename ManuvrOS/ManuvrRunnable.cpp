@@ -163,29 +163,12 @@ bool ManuvrRunnable::abort() {
 */
 void ManuvrRunnable::printDebug(StringBuilder *output) {
   if (output == nullptr) return;
-  StringBuilder msg_serial;
+  output->concatf("\t Preallocated          %s\n", (returnToPrealloc() ? YES_STR : NO_STR));
+  output->concatf("\t Originator:           %s\n", (nullptr == originator ? NUL_STR : originator->getReceiverName()));
+  output->concatf("\t specific_target:      %s\n", (nullptr == specific_target ? NUL_STR : specific_target->getReceiverName()));
   ManuvrMsg::printDebug(output);
-  int arg_count = serialize(&msg_serial);
-  if (0 <= arg_count) {
-  	  unsigned char* temp_buf = msg_serial.string();
-  	  int temp_buf_len        = msg_serial.length();
-
-  	  output->concatf("\t Preallocated          %s\n", (returnToPrealloc() ? YES_STR : NO_STR));
-  	  output->concatf("\t Originator:           %s\n", (nullptr == originator ? NUL_STR : originator->getReceiverName()));
-  	  output->concatf("\t specific_target:      %s\n", (nullptr == specific_target ? NUL_STR : specific_target->getReceiverName()));
-  	  output->concatf("\t Argument count (ser): %d\n", arg_count);
-  	  output->concatf("\t Bitstream length:     %d\n\t Buffer:  ", temp_buf_len);
-  	  for (int i = 0; i < temp_buf_len; i++) {
-  	    output->concatf("0x%02x ", *(temp_buf + i));
-  	  }
-  	  output->concat("\n\n");
-  }
-  //else {
-  //  output->concatf("Failed to serialize message. Count was (%d).\n", arg_count);
-  //}
 
   output->concatf("\t [%p] Schedule \n\t --------------------------------\n", this);
-
   output->concatf("\t Enabled       \t%s\n", (threadEnabled() ? YES_STR : NO_STR));
   output->concatf("\t Time-till-fire\t%u\n", thread_time_to_wait);
   output->concatf("\t Period        \t%u\n", thread_period);

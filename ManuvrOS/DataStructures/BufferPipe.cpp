@@ -54,6 +54,7 @@ const char* BufferPipe::signalString(ManuvrPipeSignal code) {
     case ManuvrPipeSignal::NEAR_SIDE_DETACH:  return "NEAR_DETACH";
     case ManuvrPipeSignal::FAR_SIDE_ATTACH:   return "FAR_ATTACH";
     case ManuvrPipeSignal::NEAR_SIDE_ATTACH:  return "NEAR_ATTACH";
+    case ManuvrPipeSignal::STRATEGY:          return "STRATEGY";
     case ManuvrPipeSignal::XPORT_CONNECT:     return "XPORT_CONNECT";
     case ManuvrPipeSignal::XPORT_DISCONNECT:  return "XPORT_DISCONNECT";
     case ManuvrPipeSignal::UNDEF:
