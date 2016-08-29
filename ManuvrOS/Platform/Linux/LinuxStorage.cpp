@@ -35,7 +35,8 @@ Implemented as a JSON object within a single file. This feature therefore
 LinuxStorage::LinuxStorage(Argument* opts) : EventReceiver(), Storage() {
   _pl_set_flag(true, STORAGE_PROPS);
   setReceiverName("LinuxStorage");
-  //opts
+  if (nullptr != opts) {
+  }
 }
 
 

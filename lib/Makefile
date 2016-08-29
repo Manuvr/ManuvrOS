@@ -5,6 +5,7 @@ CPP_STANDARD = gnu++11
 # Oh man.... this will be very messy.
 
 INCLUDES    = -iquote. -I./paho.mqtt.embedded-c/MQTTPacket
+INCLUDES   += -I./jansson/src
 
 #SOURCES_MQTT_C  = paho.mqtt.embedded-c/MQTTPacket/src/MQTTConnectServer.c
 SOURCES_MQTT_C  = paho.mqtt.embedded-c/MQTTPacket/src/MQTTConnectClient.c
@@ -24,14 +25,31 @@ SOURCES_CBOR += cbor-cpp/src/listener_debug.cpp
 SOURCES_CBOR += cbor-cpp/src/output_dynamic.cpp
 SOURCES_CBOR += cbor-cpp/src/output_static.cpp
 
+SOURCES_JSON  = jansson_private_config.h
+SOURCES_JSON += jansson/src/strbuffer.c
+SOURCES_JSON += jansson/src/strconv.c
+SOURCES_JSON += jansson/src/error.c
+SOURCES_JSON += jansson/src/hashtable.c
+SOURCES_JSON += jansson/src/hashtable_seed.c
+SOURCES_JSON += jansson/src/load.c
+SOURCES_JSON += jansson/src/memory.c
+SOURCES_JSON += jansson/src/pack_unpack.c
+SOURCES_JSON += jansson/src/utf.c
+SOURCES_JSON += jansson/src/value.c
+SOURCES_JSON += jansson/src/dump.c
+
+JANNSON_FLAGS = -DHAVE_CONFIG_H -I$(shell pwd)
+
+
 SOURCES_C   = $(SOURCES_MQTT_C)
-SOURCES_C  += $(SOURCES_UECC_C)
+SOURCES_C  += $(SOURCES_JSON)
+
 
 SOURCES_CPP = $(SOURCES_CBOR)
 
 FLAGS_LIBMQTT  =
 
-LOCAL_C_FLAGS   = -nostdlib $(FLAGS_LIBMQTT)
+LOCAL_C_FLAGS   = -nostdlib $(FLAGS_LIBMQTT) $(JANNSON_FLAGS)
 LOCAL_CXX_FLAGS = -nostdlib $(CPP_FLAGS)
 
 
