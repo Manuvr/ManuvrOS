@@ -26,9 +26,62 @@ Implemented as a JSON object within a single file. This feature therefore
 
 #if defined(__MANUVR_LINUX) & defined(MANUVR_STORAGE)
 #include <Platform/Linux/LinuxStorage.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 // We want this definition isolated to the compilation unit.
-#define STORAGE_PROPS (MANUVR_PL_USES_FILESYSTEM)
+#define STORAGE_PROPS (MANUVR_PL_USES_FILESYSTEM | MANUVR_PL_BLOCK_ACCESS)
+
+
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
+
+/**
+* Open the file write-only and save the buffer. Clobbering the file's contents.
+*/
+int _save_file(char* nom, StringBuilder* b) {
+  if (nullptr != nom) {
+    int fd = open(nom, O_CREAT | O_WRONLY | O_EXCL | O_TRUNC, S_IRUSR | S_IWUSR);
+    if (fd >= 0) {
+      StringBuilder buf(b->string(), b->length());  // Buffer is now locally-scoped.
+      write(fd, buf.string(), buf.length());
+      close(fd);
+      return 0;
+    }
+  }
+  return -1;
+}
+
+
+/**
+* Open the file read-only and fill the buffer.
+*/
+int _load_file(char* nom, StringBuilder* buf) {
+  if (nullptr != nom) {
+    int fd = open(nom, O_RDONLY);
+    if (fd >= 0) {
+      uint8_t* buffer = (uint8_t*) alloca(128);
+      int r_len;
+      while (r_len = read(fd, buffer, 128)) {
+        if (0 < r_len) {
+          buf->concat(buffer, r_len);
+        }
+      }
+      close(fd);
+      return 0;
+    }
+  }
+  return -1;
+}
+
 
 
 /*******************************************************************************
@@ -44,14 +97,29 @@ LinuxStorage::LinuxStorage(Argument* opts) : EventReceiver(), Storage() {
   _pl_set_flag(true, STORAGE_PROPS);
   setReceiverName("LinuxStorage");
   if (nullptr != opts) {
-    if (0 == opts->getValueAs("filename", &_filename)) {
+    char* str = nullptr;
+    if (0 == opts->getValueAs("filepath", &str)) {
       // If we have a filename option, we can open it.
+      int len = strlen(str) + 1;  // Because: NULL-terminator.
+      _filename = (char*) malloc(len);
+      for (int i = 0; i < len; i++) {
+        *(_filename+i) = *(str+i);
+      }
+      _pl_set_flag(true, MANUVR_PL_BUSY_READ);
+      if (_load_file(_filename, &_disk_buffer)) {
+        _pl_set_flag(true, MANUVR_PL_MEDIUM_MOUNTED | MANUVR_PL_MEDIUM_READABLE);
+      }
+      _pl_set_flag(false, MANUVR_PL_BUSY_READ);
     }
   }
 }
 
 
 LinuxStorage::~LinuxStorage() {
+  if (nullptr != _filename) {
+    free(_filename);
+    _filename = nullptr;
+  }
 }
 
 
@@ -62,12 +130,21 @@ LinuxStorage::~LinuxStorage() {
 * \_))   ||    \\_//  || \\ || ||  \\_|| ||___
 * Storage interface.
 ********************************************************************************/
-long LinuxStorage::freeSpace() {
-  return 0;
+unsigned long LinuxStorage::freeSpace() {
+  // TODO: Need a sophisticated apparatus to find this accurately.
+  // What partition is )_filename on?
+  // How much space free on it?
+  // Cap to arbitrary maximum value for now.
+  return ((2 << 16) - _disk_buffer.length());
 }
 
 int8_t LinuxStorage::wipe() {
-  return 0;
+  if (nullptr != _filename) {
+    _disk_buffer.clear();
+    _disk_buffer.concat('\0');
+    return _save_file(_filename, &_disk_buffer);
+  }
+  return -1;
 }
 
 int8_t LinuxStorage::persistentWrite(const char*, uint8_t*, int, uint16_t) {
@@ -141,7 +218,8 @@ int8_t LinuxStorage::callback_proc(ManuvrRunnable *event) {
 */
 void LinuxStorage::printDebug(StringBuilder *output) {
   EventReceiver::printDebug(output);
-  output->concatf("-- _filename:                %s\n", (nullptr == _filename ? "<unset>" : _filename));
+  output->concatf("-- _filename:           %s\n", (nullptr == _filename ? "<unset>" : _filename));
+  Storage::printDebug(output);
 }
 
 
@@ -165,7 +243,40 @@ int8_t LinuxStorage::notify(ManuvrRunnable *active_event) {
 
 #if defined(__MANUVR_CONSOLE_SUPPORT)
 void LinuxStorage::procDirectDebugInstruction(StringBuilder *input) {
-  EventReceiver::procDirectDebugInstruction(input);
+  char* str = input->position(0);
+
+  switch (*(str)) {
+    case 'w':
+      if (0 == wipe()) {
+        local_log.concatf("Wipe of %s succeeded.\n", _filename);
+      }
+      else {
+        local_log.concat("Wipe failed.\n");
+      }
+      break;
+
+    case 'l':
+      if (0 == _load_file(_filename, &_disk_buffer)) {
+        local_log.concatf("Loaded %u bytes from %s.\n", _disk_buffer.length(), _filename);
+      }
+      else {
+        local_log.concat("Load failed.\n");
+      }
+      break;
+
+    case 's':
+      if (0 == _save_file(_filename, &_disk_buffer)) {
+        local_log.concatf("Saved %s.\n", _filename);
+      }
+      else {
+        local_log.concat("Save failed.\n");
+      }
+      break;
+    default:
+      EventReceiver::procDirectDebugInstruction(input);
+      break;
+  }
+
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 #endif   // __MANUVR_CONSOLE_SUPPORT

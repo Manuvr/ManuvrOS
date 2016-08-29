@@ -114,6 +114,7 @@ CPP_SRCS  += Drivers/INA219/INA219.cpp
 #CPP_SRCS  += Drivers/PMIC/LDS8160/LDS8160.cpp
 
 CPP_SRCS  += Platform/Cryptographic.cpp
+CPP_SRCS  += Storage/Storage.cpp
 
 
 OBJS  = $(CPP_SRCS:.cpp=.o)

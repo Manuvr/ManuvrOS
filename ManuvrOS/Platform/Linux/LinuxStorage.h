@@ -37,8 +37,8 @@ class LinuxStorage : public EventReceiver, public Storage {
     ~LinuxStorage();
 
     /* Overrides from Storage. */
-    long   freeSpace();  // How many bytes are availible for use?
-    int8_t wipe();       // Call to wipe the data store.
+    unsigned long freeSpace();  // How many bytes are availible for use?
+    int8_t wipe();              // Call to wipe the data store.
     int8_t persistentWrite(const char*, uint8_t*, int, uint16_t);
     int8_t persistentRead(const char*, uint8_t*, int, uint16_t);
 
@@ -58,7 +58,8 @@ class LinuxStorage : public EventReceiver, public Storage {
 
 
   private:
-    const char*    _filename   = nullptr;
+    char*          _filename   = nullptr;
+    StringBuilder  _disk_buffer;
 };
 
 #endif // __MANUVR_LINUX_STORAGE_H__

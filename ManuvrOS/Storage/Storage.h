@@ -28,7 +28,9 @@ This file represents the platform-specific interface to a persistent
 #ifndef __MANUVR_PERSIST_LAYER_H__
 #define __MANUVR_PERSIST_LAYER_H__
 
-#define MANUVR_PL_USES_FILESYSTEM      0x0001  // Medium contains a filesystem.
+#include <DataStructures/StringBuilder.h>
+
+#define MANUVR_PL_USES_FILESYSTEM      0x0001  // Medium is on top of a filesystem.
 #define MANUVR_PL_BLOCK_ACCESS         0x0002  // I/O operations must occur blockwise.
 #define MANUVR_PL_ENCRYPTED            0x0004  // Data stored in this medium is encrypted at rest.
 #define MANUVR_PL_REMOVABLE            0x0008  // Media are removable.
@@ -51,24 +53,34 @@ class Storage {
     * Data-persistence functions. This is the API used by anything that wants to write
     *   formless data to a place on the device to be recalled on a different runtime.
     */
-    virtual long   freeSpace() =0;  // How many bytes are availible for use?
-    virtual int8_t wipe()      =0;  // Call to wipe the data store.
+    virtual unsigned long freeSpace() =0;  // How many bytes are availible for use?
+    virtual int8_t        wipe()      =0;  // Call to wipe the data store.
 
     virtual int8_t persistentWrite(const char*, uint8_t*, int, uint16_t) =0;
     virtual int8_t persistentRead(const char*, uint8_t*, int, uint16_t)  =0;
 
+    inline bool isMounted() {   return _pl_flag(MANUVR_PL_MEDIUM_MOUNTED);  };
+    inline bool isBusy() {
+      return (_pl_flags & (MANUVR_PL_BUSY_WRITE | MANUVR_PL_BUSY_READ));
+    };
+
 
   protected:
-    Storage() {};  // Protected constructor.
+    Storage();  // Protected constructor.
 
-    inline bool _pl_flag(uint16_t _flag) {        return (_pl_flags & _flag);  };
+    virtual void printDebug(StringBuilder*);
+
+    inline bool _pl_flag(uint16_t f) {   return ((_pl_flags & f) == f);  };
     inline void _pl_set_flag(bool nu, uint16_t _flag) {
       _pl_flags = (nu) ? (_pl_flags | _flag) : (_pl_flags & ~_flag);
     };
 
+    inline void _report_free_space(unsigned long x) { _free_space = x; };
+
 
   private:
-    uint16_t      _pl_flags = 0;
+    unsigned long _free_space  = 0L;
+    uint16_t      _pl_flags    = 0;
 };
 
 #endif // __MANUVR_PERSIST_LAYER_H__
