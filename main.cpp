@@ -58,6 +58,9 @@ This is a demonstration program, and was meant to be compiled for a
 /* This global makes this source file read better. */
 Kernel* kernel = nullptr;
 
+//TODO: This is for platform. It will not last long.
+char* program_name = nullptr;
+
 /*******************************************************************************
 * BufferPipe strategies particular to this firmware.                           *
 *******************************************************************************/
@@ -99,8 +102,8 @@ void kernelDebugDump() {
 * The main function.                                                           *
 *******************************************************************************/
 int main(int argc, char *argv[]) {
-  char* program_name = argv[0];   // Name of running binary.
   int   main_pid     = getpid();  // Our PID.
+  program_name = argv[0];   // Name of running binary.
 
   /*
   * The platform object is created on the stack, but takes no action upon

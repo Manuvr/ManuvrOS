@@ -46,6 +46,8 @@ This file is meant to contain a set of common functions that are
 #include <DataStructures/StringBuilder.h>
 #include <Platform/Identity.h>
 
+#include <Platform/Cryptographic.h>
+
 #if defined(MANUVR_STORAGE)
   #include <Storage/Storage.h>
 #endif

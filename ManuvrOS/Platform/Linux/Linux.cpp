@@ -34,6 +34,9 @@ This file forms the catch-all for linux platforms that have no support.
 
 #if defined(MANUVR_STORAGE)
 #include <Platform/Linux/LinuxStorage.h>
+#include <unistd.h>     // Needed for integrity checks.
+#include <fcntl.h>      // Needed for integrity checks.
+#include <sys/stat.h>   // Needed for integrity checks.
 #endif
 
 /****************************************************************************************************
@@ -408,6 +411,103 @@ void ManuvrPlatform::reboot() {
 
 
 
+extern char* program_name;// TODO: Yuck
+
+/*
+* Function takes a path and a buffer as arguments. The binary is hashed and the ASCII representation is
+*   placed in the buffer. The number of bytes read is returned on success. 0 is returned on failure.
+*/
+int hashFileByPath(char* path, uint8_t* h_buf) {
+  int8_t return_value = -1;
+  StringBuilder log;
+  if (nullptr != path) {
+    struct stat st;
+    if(-1 != stat(path, &st)) {
+      long self_size = st.st_size;
+      int digest_size = 32;
+      StringBuilder buf;
+
+      int fd = open(path, O_RDONLY);
+      if (fd >= 0) {
+        int r_buf_len = 2 << 15;
+        uint8_t* buffer = (uint8_t*) alloca(r_buf_len);
+        int r_len = read(fd, buffer, r_buf_len);
+        while (0 < r_len) {
+          buf.concat(buffer, r_len);
+          r_len = read(fd, buffer, r_buf_len);
+        }
+        close(fd);
+
+        uint8_t* self_mass = buf.string();
+        log.concatf("%s is %ld bytes.\n", path, self_size);
+
+        // TODO: MBEDTLS_MD_SHA256 is too lib specific.
+        int ret = manuvr_hash(self_mass, self_size, h_buf, digest_size, MBEDTLS_MD_SHA256);
+        if (0 == ret) {
+          StringBuilder hash(h_buf, digest_size);
+          log.concat("This binary's SHA256 fingerprint is ");
+          hash.printDebug(&log);
+          return_value = digest_size;
+        }
+        else {
+          log.concat("Failed to run the hash on the input path.\n");
+        }
+      }
+      else {
+        // Failure to read file.
+        log.concat("Failed to read file.\n");
+      }
+    }
+    else {
+      // Failure to stat file.
+      log.concat("Failed to stat file.\n");
+    }
+  }
+  //Kernel::log(&log);
+  printf((const char*)log.string());
+  return return_value;
+}
+
+
+/*
+* INTERNAL INTEGRITY-CHECKS
+* The first task is to look in the mirror and find our executable's full path.
+*   This will vary by OS, but for now we assume that we are on a linux system..
+*/
+int internal_integrity_check(uint8_t* test_buf, int test_len) {
+    char *exe_path = (char *) alloca(512);   // 512 bytes ought to be enough for our path info...
+    memset(exe_path, 0x00, 512);
+    int exe_path_len = readlink("/proc/self/exe", exe_path, 512);
+    if (!(exe_path_len > 0)) {
+        printf("%s was unable to read its own path from /proc/self/exe. You may be running it on an unsupported operating system, or be running an old kernel. Please discover the cause and retry. Exiting...\n", program_name);
+        return -1;
+    }
+    printf("This binary's path is %s\n", exe_path);
+    int _len = (0 != test_len) ? test_len : 32;
+    uint8_t* h_buf = (uint8_t*) alloca(_len);
+    memset(h_buf, 0x00, _len);
+    int ret = hashFileByPath(exe_path, h_buf);
+    if (0 < ret) {
+      if ((nullptr != test_buf) && (0 < test_len)) {
+        for (int i = 0; i < test_len; i++) {
+          if (*(h_buf+i) != *(test_buf+i)) {
+            printf("Hashing %s yields a different value than expected. Exiting...\n", program_name);
+            return -1;
+          }
+        }
+      }
+      else {
+        // We have no idea what to expect. First boot?
+      }
+    }
+    else {
+      printf("Failed to hash file: %s\n", exe_path);
+      return -1;
+    }
+    return 0;
+}
+
+
 /*******************************************************************************
 * Platform initialization.                                                     *
 *******************************************************************************/
@@ -457,6 +557,8 @@ int8_t ManuvrPlatform::platformPreInit() {
   #endif
 
   platform.setIdleHook([]{ sleep_millis(20); });
+  internal_integrity_check(nullptr, 0);
+
   initSigHandlers();
   set_linux_interval_timer();
   return 0;

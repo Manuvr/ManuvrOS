@@ -46,7 +46,8 @@ If you wish to use another crypto library (OpenSSL? MatrixSSL? uECC?) then
 
 #else
   enum class Hashes {
-    NONE = 0
+    NONE   = 0,
+    SHA256 = MBEDTLS_MD_SHA256
   };
 
 #endif
