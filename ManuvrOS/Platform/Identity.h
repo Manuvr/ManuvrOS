@@ -114,10 +114,12 @@ class IdentityUUID : public Identity {
 };
 
 
+#if defined (MANUVR_OIC)
 class IdentityOCFCred : public Identity {
   UUID subject_uuid;
 
 };
+#endif // MANUVR_OIC
 
 
 class IdentityHash : public Identity {

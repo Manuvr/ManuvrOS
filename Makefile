@@ -27,7 +27,7 @@ WHERE_I_AM     = $(shell pwd)
 export CXX     = $(shell which g++)
 export CC      = $(shell which gcc)
 export SZ      = $(shell which size)
-export MAKE    = make
+export MAKE    = $(shell which make)
 
 export OUTPUT_PATH = $(WHERE_I_AM)/build/
 

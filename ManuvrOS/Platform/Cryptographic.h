@@ -42,44 +42,44 @@ If you wish to use another crypto library (OpenSSL? MatrixSSL? uECC?) then
   #include "mbedtls/md.h"
   #include "mbedtls/md_internal.h"
 
-  typedef mbedtls_md_type_t Hashes;
+  //typedef mbedtls_md_type_t Hashes;
+
+enum class Hashes {
+  #if defined(__MANUVR_MBEDTLS)
+    #if defined(MBEDTLS_MD5_C)
+      MD5 = MBEDTLS_MD_MD5,
+    #endif
+    #if defined(MBEDTLS_SHA1_C)
+      SHA1 = MBEDTLS_MD_SHA1,
+    #endif
+    #if defined(MBEDTLS_SHA224_C)
+      SHA224 = MBEDTLS_MD_SHA224,
+    #endif
+    #if defined(MBEDTLS_SHA256_C)
+      SHA256 = MBEDTLS_MD_SHA256,
+    #endif
+    #if defined(MBEDTLS_SHA384_C)
+      SHA384 = MBEDTLS_MD_SHA384,
+    #endif
+    #if defined(MBEDTLS_SHA512_C)
+      SHA512 = MBEDTLS_MD_SHA512,
+    #endif
+    #if defined(MBEDTLS_RIPEMD160_C)
+      RIPEMD160 = MBEDTLS_MD_RIPEMD160,
+    #endif
+    NONE = MBEDTLS_MD_NONE
+  #else // No MBED support.
+    NONE = 0
+  #endif
+};
 
 #else
   enum class Hashes {
-    NONE   = 0,
-    SHA256 = MBEDTLS_MD_SHA256
+    NONE   = 0
   };
 
 #endif
 
-//enum class Hashes {
-//  #if defined(__MANUVR_MBEDTLS)
-//    #if defined(MBEDTLS_MD5_C)
-//      MD5 = MBEDTLS_MD_MD5,
-//    #endif
-//    #if defined(MBEDTLS_SHA1_C)
-//      SHA1 = MBEDTLS_MD_SHA1,
-//    #endif
-//    #if defined(MBEDTLS_SHA224_C)
-//      SHA224 = MBEDTLS_MD_SHA224,
-//    #endif
-//    #if defined(MBEDTLS_SHA256_C)
-//      SHA256 = MBEDTLS_MD_SHA256,
-//    #endif
-//    #if defined(MBEDTLS_SHA384_C)
-//      SHA384 = MBEDTLS_MD_SHA384,
-//    #endif
-//    #if defined(MBEDTLS_SHA512_C)
-//      SHA512 = MBEDTLS_MD_SHA512,
-//    #endif
-//    #if defined(MBEDTLS_RIPEMD160_C)
-//      RIPEMD160 = MBEDTLS_MD_RIPEMD160,
-//    #endif
-//    NONE = MBEDTLS_MD_NONE
-//  #else // No MBED support.
-//    NONE = 0
-//  #endif
-//};
 
 
 /* This stuff needs to be reachable via C-linkage. */

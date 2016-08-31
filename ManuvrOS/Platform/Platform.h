@@ -215,9 +215,11 @@ class ManuvrPlatform {
     inline void setKernel(Kernel* k) {  if (nullptr == _kernel) _kernel = k;  };
     inline Kernel* getKernel() {        return _kernel;  };
 
-    /* These are storage-realted members. */
-    Storage* fetchStorage(const char*);
-    int8_t   offerStorage(const char*, Storage*);
+    /* These are storage-related members. */
+    #if defined(MANUVR_STORAGE)
+      Storage* fetchStorage(const char*);
+      int8_t   offerStorage(const char*, Storage*);
+    #endif
 
     /* These are safe function proxies for external callers. */
     void setIdleHook(FunctionPointer nu);

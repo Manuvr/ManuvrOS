@@ -46,15 +46,36 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
 	while (nullptr != src) {
 		switch(src->typeCode()) {
 			case INT8_FM:
-			case UINT8_FM:
 			case INT16_FM:
-			case UINT16_FM:
 			case INT32_FM:
+				{
+					int32_t x = 0;
+					if (0 == src->getValueAs(&x)) {
+						encoder.write_int((int)x);
+					}
+				}
+			case INT64_FM:
+				{
+					long long x = 0;
+					if (0 == src->getValueAs(&x)) {
+						encoder.write_int((long long)x);
+					}
+				}
+			case UINT8_FM:
+			case UINT16_FM:
 			case UINT32_FM:
 				{
 					uint32_t x = 0;
 					if (0 == src->getValueAs(&x)) {
-						encoder.write_int(x);
+						encoder.write_int((unsigned int)x);
+					}
+				}
+				break;
+			case UINT64_FM:
+				{
+					unsigned long long x = 0;
+					if (0 == src->getValueAs(&x)) {
+						encoder.write_int((unsigned long long int)x);
 					}
 				}
 				break;

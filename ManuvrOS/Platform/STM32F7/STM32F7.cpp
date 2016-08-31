@@ -176,15 +176,10 @@ void init_RNG() {
 * Identity and serial number                                                                        *
 ****************************************************************************************************/
 void ManuvrPlatform::printDebug(StringBuilder* output) {
-  output->concatf("==< STM32F7 [%s] >=================================\n", getPlatformStateStr());
+  output->concatf("==< STM32F7 [%s] >=================================\n", getPlatformStateStr(platformState()));
   printPlatformBasics(output);
 
-  char* uuid_str = (char*) alloca(40);
-  bzero(uuid_str, 40);
-  uuid_to_str(&instance_serial_number, uuid_str, 40);
-
-  output->concatf("-- Identity source:    %s\n", _check_flags(MANUVR_PLAT_FLAG_HAS_IDENTITY) ? "Generated at runtime" : "Loaded from storage");
-  output->concatf("-- Identity:           %s\n", uuid_str);
+  // TODO: GPIO
 }
 
 
@@ -196,7 +191,7 @@ void ManuvrPlatform::printDebug(StringBuilder* output) {
 *
 * @return   The length of the serial number on this platform, in terms of bytes.
 */
-int ManuvrPlatform::platformSerialNumberSize() { return 12; }
+int platformSerialNumberSize() { return 12; }
 
 
 /**
@@ -205,7 +200,7 @@ int ManuvrPlatform::platformSerialNumberSize() { return 12; }
 * @param    A pointer to the target buffer.
 * @return   The number of bytes written.
 */
-int ManuvrPlatform::getSerialNumber(uint8_t* buf) {
+int getSerialNumber(uint8_t* buf) {
   *((uint32_t*)buf + 0) = *((uint32_t*) 0x1FF0F420);
   *((uint32_t*)buf + 4) = *((uint32_t*) 0x1FF0F424);
   *((uint32_t*)buf + 8) = *((uint32_t*) 0x1FF0F428);
@@ -737,7 +732,6 @@ int8_t ManuvrPlatform::platformPreInit() {
 *   internal system sanity.
 */
 int8_t ManuvrPlatform::platformPostInit() {
-  uuid_gen(&instance_serial_number);
   return 0;
 }
 
