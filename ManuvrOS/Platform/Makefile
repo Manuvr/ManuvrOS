@@ -13,11 +13,25 @@ LOCAL_FLAGS  =  -std=$(CXX_STANDARD) -nostdlib
 SRCS   = Platform.cpp
 
 
+# This Makefile heeds two separate exports:
+ifeq ($(MANUVR_BOARD),RASPI)
+SRCS   += Raspi/DieThermometer/DieThermometer.cpp
+SRCS   += Linux/LinuxStorage.cpp
+SRCS   += Raspi/Raspi.cpp
+# TODO: This should be an independent choice.
+else
+ifeq ($(MANUVR_PLATFORM),LINUX)
+SRCS   += Linux/LinuxStorage.cpp
+SRCS   += Linux/Linux.cpp
+endif
+endif
+
+
 all:
 	@echo ''
 	@echo ''
 	@echo '======================================================'
-	@echo 'Platform compile'
+	@echo 'Platform source files:'
 	@echo $(SRCS)
 	@echo $(LIBS)
 	@echo '======================================================'

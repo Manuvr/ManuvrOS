@@ -19,7 +19,7 @@ limitations under the License.
 
 */
 
-#include <SensorWrapper/SensorWrapper.h>
+#include <Drivers/SensorWrapper/SensorWrapper.h>
 
 
 #ifndef RPI_TEMP_SENSE_H

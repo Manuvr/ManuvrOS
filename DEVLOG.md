@@ -164,3 +164,13 @@ _---J. Ian Lindsay 2016.08.28 23:17 MST_
               XenoManuvrMessage   92
 
 ------
+
+### 2016.08.27:
+Made a big Makefile fix. Wasn't passing optimization params downstream.
+
+       text    data     bss     dec     hex filename
+    1966828   16864   52068 2035760  1f1030 Baseline without debug symbols.
+    2013860   16868   52068 2082796  1fc7ec Baseline with debug symbols.
+
+Fixed raspi platform to conform to new abstraction (prior to extention).
+Numerous build-system fixes and improvements.

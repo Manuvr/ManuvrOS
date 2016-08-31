@@ -31,11 +31,7 @@ This file is meant to contain a set of common functions that are typically platf
 
 
 // TODO: I know this is horrid. I'm sick of screwing with the build system today...
-#if defined(RASPI) | defined(RASPI2) | defined(RASPI3)
-  #include "./PlatformRaspi.cpp"
-  #include "./Raspi/DieThermometer.cpp"
-  ManuvrPlatform platform;
-#elif defined(__MK20DX256__) | defined(__MK20DX128__)
+#if defined(__MK20DX256__) | defined(__MK20DX128__)
   #include "./Teensy3/Teensy3.cpp"
   ManuvrPlatform platform;
 #elif defined(STM32F4XX)
@@ -52,9 +48,6 @@ This file is meant to contain a set of common functions that are typically platf
   #include "./Particle/Photon.cpp"
   ManuvrPlatform platform;
 #elif defined(__MANUVR_LINUX)
-  //#include "./Linux/Linux.h"
-  #include "./Linux/Linux.cpp"
-  #include "./Linux/LinuxStorage.cpp"
   ManuvrPlatform platform;
 #else
   // Unsupportage.

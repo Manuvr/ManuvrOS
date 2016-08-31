@@ -27,6 +27,8 @@ Implemented as a JSON object within a single file. This feature therefore
 #ifndef __MANUVR_LINUX_STORAGE_H__
 #define __MANUVR_LINUX_STORAGE_H__
 
+#include <EventReceiver.h>
+
 #ifndef MANUVR_JSON
   // TODO: Fail the build.
 #endif
@@ -40,8 +42,10 @@ class LinuxStorage : public EventReceiver, public Storage {
     unsigned long freeSpace();  // How many bytes are availible for use?
     int8_t wipe();              // Call to wipe the data store.
     int8_t flush();             // Blocks until commit completes.
+
     int8_t persistentWrite(const char*, uint8_t*, int, uint16_t);
     int8_t persistentRead(const char*, uint8_t*, int, uint16_t);
+    int8_t persistentRead(const char*, StringBuilder*);
 
     /* Overrides from EventReceiver */
     void printDebug(StringBuilder*);

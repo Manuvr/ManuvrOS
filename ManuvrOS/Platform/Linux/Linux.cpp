@@ -34,7 +34,6 @@ This file forms the catch-all for linux platforms that have no support.
 
 #if defined(MANUVR_STORAGE)
 #include <Platform/Linux/LinuxStorage.h>
-#include <unistd.h>     // Needed for integrity checks.
 #include <fcntl.h>      // Needed for integrity checks.
 #include <sys/stat.h>   // Needed for integrity checks.
 #endif
@@ -338,9 +337,9 @@ int readPinAnalog(uint8_t pin) {
 
 
 
-/****************************************************************************************************
-* Interrupt-masking                                                                                 *
-****************************************************************************************************/
+/*******************************************************************************
+* Interrupt-masking                                                            *
+*******************************************************************************/
 
 // Ze interrupts! Zhey do nuhsing!
 // TODO: Perhaps raise the nice value?
@@ -576,6 +575,8 @@ int8_t ManuvrPlatform::platformPostInit() {
       //int8_t persistentRead(const char*, uint8_t*, int, uint16_t);
     }
   #endif
-  _identity = new IdentityUUID(IDENTITY_STRING);
+  if (nullptr == _identity) {
+    _identity = new IdentityUUID(IDENTITY_STRING);
+  }
   return 0;
 }

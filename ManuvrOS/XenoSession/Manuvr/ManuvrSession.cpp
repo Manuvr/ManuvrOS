@@ -556,18 +556,6 @@ int8_t ManuvrSession::notify(ManuvrRunnable *active_event) {
       return_value++;
       break;
 
-    /* Things that only this class is likely to care about. */
-    case MANUVR_MSG_SESS_HANGUP:
-      {
-        int out_purge = purgeOutbound();
-        int in_purge  = purgeInbound();
-        #ifdef __MANUVR_DEBUG
-        if (getVerbosity() > 5) local_log.concatf("%p Purged (%d) msgs from outbound and (%d) from inbound.\n", this, out_purge, in_purge);
-        #endif
-      }
-      return_value++;
-      break;
-
     case MANUVR_MSG_SESS_ORIGINATE_MSG:
       sendSyncPacket();
       return_value++;

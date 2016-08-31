@@ -39,6 +39,12 @@ http://abyz.co.uk/rpi/pigpio/
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include <signal.h>
+
+#if defined(MANUVR_STORAGE)
+#include <Platform/Linux/LinuxStorage.h>
+#endif
 
 /* GPIO access macros... */
 #define PI_BANK (pin >> 5)
@@ -100,27 +106,27 @@ void sig_handler(int signo) {
   switch (signo) {
     case SIGINT:
       Kernel::log("Received a SIGINT signal. Closing up shop...");
-      jumpToBootloader();
+      platform.seppuku();
       break;
     case SIGKILL:
       Kernel::log("Received a SIGKILL signal. Something bad must have happened. Exiting hard....");
-      jumpToBootloader();
+      platform.seppuku();
       break;
     case SIGTERM:
       Kernel::log("Received a SIGTERM signal. Closing up shop...");
-      jumpToBootloader();
+      platform.seppuku();
       break;
     case SIGQUIT:
       Kernel::log("Received a SIGQUIT signal. Closing up shop...");
-      jumpToBootloader();
+      platform.seppuku();
       break;
     case SIGHUP:
       printf("Received a SIGHUP signal. Closing up shop...");
-      jumpToBootloader();
+      platform.seppuku();
       break;
     case SIGSTOP:
       Kernel::log("Received a SIGSTOP signal. Closing up shop...");
-      jumpToBootloader();
+      platform.seppuku();
       break;
     case SIGUSR1:
       break;
@@ -323,85 +329,28 @@ volatile bool provide_random_int(uint32_t nu_rnd) {
 /*
 * Init the RNG. Short and sweet.
 */
-void init_RNG() {
+void init_rng() {
   srand(time(nullptr));          // Seed the PRNG...
 }
 
 
-
-/****************************************************************************************************
-* Identity and serial number                                                                        *
-****************************************************************************************************/
-/**
-* We sometimes need to know the length of the platform's unique identifier (if any). If this platform
-*   is not serialized, this function will return zero.
-*
-* @return   The length of the serial number on this platform, in terms of bytes.
-*/
-int platformSerialNumberSize() {
-  return 0;
+/*******************************************************************************
+*  ___   _           _      ___
+* (  _`\(_ )        ( )_  /'___)
+* | |_) )| |    _ _ | ,_)| (__   _    _ __   ___ ___
+* | ,__/'| |  /'_` )| |  | ,__)/'_`\ ( '__)/' _ ` _ `\
+* | |    | | ( (_| || |_ | |  ( (_) )| |   | ( ) ( ) |
+* (_)   (___)`\__,_)`\__)(_)  `\___/'(_)   (_) (_) (_)
+* These are overrides and additions to the platform class.
+*******************************************************************************/
+void ManuvrPlatform::printDebug(StringBuilder* output) {
+  output->concatf("==< Linux on Raspi [%s] >===========================\n", getPlatformStateStr(platformState()));
+  printPlatformBasics(output);
 }
 
-
-/**
-* Writes the serial number to the indicated buffer.
-* Thanks, Narishma!
-* https://www.raspberrypi.org/forums/viewtopic.php?f=31&t=18936
-*
-* @param    A pointer to the target buffer.
-* @return   The number of bytes written.
-*/
-int getSerialNumber(uint8_t *buf) {
-  FILE *f = fopen("/proc/cpuinfo", "r");
-  if (!f) return 0;
-
-  char line[256];
-  int serial = 0;
-  while (fgets(line, 256, f)) {
-    if (strncmp(line, "Serial", 6) == 0) {
-      char serial_string[16 + 1];
-      serial = atoi(strcpy(serial_string, strchr(line, ':') + 2));
-      fclose(f);
-      return serial;
-    }
-  }
-
-  fclose(f);
-  return 0;
-}
-
-
-
-/****************************************************************************************************
-* Data persistence                                                                                  *
-****************************************************************************************************/
-// Returns true if this platform can store data locally.
-bool persistCapable() {
-  return false;
-}
-
-
-// Returns the number of bytes availible to store data.
-unsigned long persistFree() {
-  return -1L;
-}
-
-
-/****************************************************************************************************
-* Time and date                                                                                     *
-****************************************************************************************************/
-uint32_t rtc_startup_state = MANUVR_RTC_STARTUP_UNINITED;
-
-
-/*
-*
-*/
-bool initPlatformRTC() {
-  rtc_startup_state = MANUVR_RTC_STARTUP_GOOD_UNSET;
-  return true;
-}
-
-
+/*******************************************************************************
+* Time and date                                                                *
+*******************************************************************************/
 /*
 */
 bool setTimeAndDate(uint8_t y, uint8_t m, uint8_t d, uint8_t wd, uint8_t h, uint8_t mi, uint8_t s) {
@@ -433,8 +382,6 @@ uint32_t currentTimestamp(void) {
 * Writes a human-readable datetime to the argument.
 * Returns ISO 8601 datetime string.
 * 2004-02-12T15:19:21+00:00
-*
-* date -u --iso-8601=s
 */
 void currentDateTime(StringBuilder* target) {
   if (target != nullptr) {
@@ -469,6 +416,49 @@ unsigned long millis() {
 unsigned long micros() {
   return systReg[1];
 }
+
+
+/****************************************************************************************************
+* Identity and serial number                                                                        *
+****************************************************************************************************/
+/**
+* We sometimes need to know the length of the platform's unique identifier (if any). If this platform
+*   is not serialized, this function will return zero.
+*
+* @return   The length of the serial number on this platform, in terms of bytes.
+*/
+int platformSerialNumberSize() {
+  return 8;
+}
+
+
+/**
+* Writes the serial number to the indicated buffer.
+* Thanks, Narishma!
+* https://www.raspberrypi.org/forums/viewtopic.php?f=31&t=18936
+*
+* @param    A pointer to the target buffer.
+* @return   The number of bytes written.
+*/
+int getSerialNumber(uint8_t *buf) {
+  FILE *f = fopen("/proc/cpuinfo", "r");
+  if (!f) return 0;
+
+  char line[256];
+  long serial = 0;
+  while (fgets(line, 256, f)) {
+    if (strncmp(line, "Serial", 6) == 0) {
+      char serial_string[16 + 1];
+      serial = atoi(strcpy(serial_string, strchr(line, ':') + 2));
+      fclose(f);
+      return serial;
+    }
+  }
+
+  fclose(f);
+  return 0;
+}
+
 
 
 /****************************************************************************************************
@@ -552,15 +542,11 @@ int readPinAnalog(uint8_t pin) {
 }
 
 
-/****************************************************************************************************
-* Persistent configuration                                                                          *
-****************************************************************************************************/
 
 
-
-/****************************************************************************************************
-* Interrupt-masking                                                                                 *
-****************************************************************************************************/
+/*******************************************************************************
+* Interrupt-masking                                                            *
+*******************************************************************************/
 
 // Ze interrupts! Zhey do nuhsing!
 // TODO: Perhaps raise the nice value?
@@ -578,17 +564,23 @@ void globalIRQDisable() {
 
 
 
-/****************************************************************************************************
-* Process control                                                                                   *
-****************************************************************************************************/
+/*******************************************************************************
+* Process control                                                              *
+*******************************************************************************/
 
 /*
 * Terminate this running process, along with any children it may have forked() off.
 */
-volatile void seppuku() {
+void ManuvrPlatform::seppuku() {
+  #if defined(MANUVR_STORAGE)
+    if (_identity && _identity->isDirty()) {
+      // Save the dirty identity.
+      // TODO: int8_t persistentWrite(const char*, uint8_t*, int, uint16_t);
+    }
+  #endif
   // Whatever the kernel cared to clean up, it better have done so by this point,
   //   as no other platforms return from this function.
-  printf("\n\njumpToBootloader(): About to exit().\n\n");
+  printf("\nseppuku(): About to exit().\n\n");
   exit(0);
 }
 
@@ -597,51 +589,109 @@ volatile void seppuku() {
 * On linux, we take this to mean: scheule a program restart with the OS,
 *   and then terminate this one.
 */
-volatile void jumpToBootloader() {
+void ManuvrPlatform::jumpToBootloader() {
+  // TODO: Pull binary from a location of firmware's choice.
+  // TODO: Install firmware after validation.
   // TODO: Schedule a program restart.
-  seppuku();
+  printf("\njumpToBootloader(): About to exit().\n\n");
+  exit(0);
 }
 
 
-/****************************************************************************************************
-* Underlying system control.                                                                        *
-****************************************************************************************************/
+/*******************************************************************************
+* Underlying system control.                                                   *
+*******************************************************************************/
 
-volatile void hardwareShutdown() {
+void ManuvrPlatform::hardwareShutdown() {
   // TODO: Actually shutdown the system.
-  seppuku();
+  printf("\nhardwareShutdown(): About to exit().\n\n");
+  exit(0);
 }
 
-volatile void reboot() {
+
+void ManuvrPlatform::reboot() {
   // TODO: Actually reboot the system.
-  seppuku();
+  printf("\nreboot(): About to exit().\n\n");
+  exit(0);
 }
 
 
 
-/****************************************************************************************************
-* Platform initialization.                                                                          *
-****************************************************************************************************/
+extern char* program_name;// TODO: Yuck
 
-/*
+
+
+/*******************************************************************************
+* Platform initialization.                                                     *
+*******************************************************************************/
+#define  DEFAULT_PLATFORM_FLAGS ( \
+              MANUVR_PLAT_FLAG_HAS_THREADS     | \
+              MANUVR_PLAT_FLAG_HAS_IDENTITY)
+
+
+/**
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
 */
-void platformPreInit() {
-  __kernel = (volatile Kernel*) Kernel::getInstance();
-  platform.setIdleHook([]{ sleep_millis(20); });
+int8_t ManuvrPlatform::platformPreInit() {
+  // TODO: Should we really be setting capabilities this late?
+  uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
+
+  #if defined(MANUVR_STORAGE)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_STORAGE;
+    Argument opts("./manuvr.dat");
+    opts.setKey("filepath");
+    LinuxStorage* sd = new LinuxStorage(&opts);
+    _storage_device = (Storage*) sd;
+  #endif
+  #if defined(__MANUVR_MBEDTLS)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
+  #endif
+
+  #if defined(MANUVR_GPS_PIPE)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
+  #endif
+
+  _alter_flags(true, default_flags);
+  _discoverALUParams();
+
+  start_time_micros = micros();
   gpioSetup();
+  init_rng();
+  _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
+  _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
+
+  // TODO: Evaluate consequences of choice.
+  _kernel = Kernel::getInstance();
+  __kernel = (volatile Kernel*) _kernel;
+  // TODO: Evaluate consequences of choice.
+
+  #if defined(MANUVR_STORAGE)
+    _kernel->subscribe((EventReceiver*) sd);
+  #endif
+
+  platform.setIdleHook([]{ sleep_millis(20); });
+  //internal_integrity_check(nullptr, 0);  // TODO: soon
+
+  initSigHandlers();
+  set_linux_interval_timer();
+  return 0;
 }
 
 
 /*
-* Called as a result of kernels bootstrap() fxn.
+* Called before kernel instantiation. So do the minimum required to ensure
+*   internal system sanity.
 */
-void platformInit() {
-  start_time_micros = micros();
-  init_RNG();
-  initPlatformRTC();
-  __kernel = (volatile Kernel*) Kernel::getInstance();
-  initSigHandlers();
-  set_linux_interval_timer();
+int8_t ManuvrPlatform::platformPostInit() {
+  #if defined(MANUVR_STORAGE)
+    if (_storage_device->isMounted()) {
+      // TODO: Read configuration.
+      //int8_t persistentRead(const char*, uint8_t*, int, uint16_t);
+    }
+  #endif
+  if (nullptr == _identity) {
+    _identity = new IdentityUUID(IDENTITY_STRING);
+  }
+  return 0;
 }

@@ -121,14 +121,12 @@ OBJS  = $(CPP_SRCS:.cpp=.o)
 LIBNAME = libmanuvr.a
 
 
-all: setenvars $(LIBNAME)
-
-debug: all
+all: $(LIBNAME)
 
 %.o : %.cpp
 	$(CXX) $(INCLUDES) $(CPP_FLAGS) -std=$(CPP_STANDARD) -nostdlib -c $< -o $@
 
-$(LIBNAME): $(OBJS)
+$(LIBNAME): setenvars $(OBJS)
 	$(MAKE) -C Platform/
 	$(AR) -rvs $(OUTPUT_PATH)/$@ $(OBJS) Platform/*.o
 

@@ -301,10 +301,13 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
     case MANUVR_MSG_SESS_HANGUP:
       mark_session_state(XENOSESSION_STATE_PENDING_HANGUP);
       {
+        #ifdef __MANUVR_DEBUG
         int out_purge = purgeOutbound();
         int in_purge  = purgeInbound();
-        #ifdef __MANUVR_DEBUG
         if (getVerbosity() > 5) local_log.concatf("%p Purged (%d) msgs from outbound and (%d) from inbound.\n", this, out_purge, in_purge);
+        #else
+        purgeOutbound();
+        purgeInbound();
         #endif
       }
       return_value++;
@@ -367,7 +370,7 @@ int XenoSession::purgeOutbound() {
       Kernel::log(&local_log);
     }
     #endif
-    _outbound_messages.remove();
+    _outbound_messages.remove(temp);
   }
   return return_value;
 }
@@ -390,7 +393,7 @@ int XenoSession::purgeInbound() {
       Kernel::log(&local_log);
     }
     #endif
-    _inbound_messages.remove();
+    _inbound_messages.remove(temp);
   }
 
   return return_value;

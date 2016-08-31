@@ -11,7 +11,7 @@
 # Used for internal functionality macros. Feel free to rename. Need to
 #   replace this with an autoconf script which I haven't yet learned how to
 #   write.
-OPTIMIZATION       = -O0 -g
+OPTIMIZATION       = -O2
 C_STANDARD         = gnu99
 CPP_STANDARD       = gnu++11
 FIRMWARE_NAME      = manuvr
@@ -83,10 +83,6 @@ endif
 # This project has a single source file.
 CPP_SRCS  = main.cpp
 
-# Debugging options...
-MANUVR_OPTIONS += -D__MANUVR_DEBUG
-MANUVR_OPTIONS += -D__MANUVR_PIPE_DEBUG
-
 # Supported transports...
 MANUVR_OPTIONS += -DMANUVR_STDIO
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_SERIAL
@@ -117,7 +113,6 @@ MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT
 # Options for various security features.
 MANUVR_OPTIONS += -D__MANUVR_MBEDTLS
 
-
 # mbedTLS will require this in order to use our chosen options.
 MBEDTLS_CONFIG_FILE = $(WHERE_I_AM)/mbedTLS_conf.h
 
@@ -129,6 +124,23 @@ LIBS += $(OUTPUT_PATH)/libmbedx509.a
 LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
 
 
+ifeq ($(BOARD),RASPI)
+MANUVR_OPTIONS += -DRASPI
+export MANUVR_BOARD = RASPI
+endif
+
+ifeq ($(DEBUG),1)
+# Debugging options...
+MANUVR_OPTIONS += -D__MANUVR_DEBUG
+MANUVR_OPTIONS += -D__MANUVR_PIPE_DEBUG
+OPTIMIZATION    = -O0 -g
+# Options configured such that you can then...
+# valgrind --tool=callgrind ./manuvr
+# gprof2dot --format=callgrind --output=out.dot callgrind.out.16562
+# dot  -Tpng out.dot -o graph.png
+endif
+MANUVR_OPTIONS += -D__MANUVR_EVENT_PROFILER
+
 ###########################################################################
 # Rules for building the firmware follow...
 #
@@ -137,7 +149,9 @@ LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
 #    aid of valgrind and gdb.
 ###########################################################################
 # Merge our choices and export them to the downstream Makefiles...
-CFLAGS += $(MANUVR_OPTIONS)
+CFLAGS += $(MANUVR_OPTIONS) $(OPTIMIZATION)
+
+export MANUVR_PLATFORM = LINUX
 export CFLAGS
 export CPP_FLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
 
@@ -146,44 +160,23 @@ export CPP_FLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
 
 
 all: clean libs
-	export __MANUVR_LINUX
 	$(MAKE) -C ManuvrOS/
-	$(CXX) -static -g -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
+	$(CXX) -static -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 	$(SZ) $(FIRMWARE_NAME)
-
-raspi: clean libs
-	export RASPI
-	export __MANUVR_LINUX
-	$(MAKE) -C ManuvrOS/
-	$(CXX) -static -g -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -DRASPI -D_GNU_SOURCE -O2
-	$(SZ) $(FIRMWARE_NAME)
-
-debug: clean libs
-	export __MANUVR_LINUX
-	$(MAKE) debug -C ManuvrOS/
-	$(CXX) -static -g -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D__MANUVR_DEBUG -D_GNU_SOURCE -O0
-	$(SZ) $(FIRMWARE_NAME)
-# Options configured such that you can then...
-# valgrind --tool=callgrind ./manuvr
-# gprof2dot --format=callgrind --output=out.dot callgrind.out.16562
-# dot  -Tpng out.dot -o graph.png
 
 tests: libs
-	export __MANUVR_LINUX
-	$(MAKE) -C ManuvrOS/
-	$(CXX) -static -g -o dstest tests/TestDataStructures.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
+	$(CXX) -static -o dstest tests/TestDataStructures.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 
 examples: libs
-	export __MANUVR_LINUX
-	$(MAKE) -C ManuvrOS/
-	$(CXX) -static -g -o barebones examples/main_template.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O0
-	$(CXX) -static -g -o gpstest   examples/tcp-gps.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O0
+	$(CXX) -static -o barebones examples/main_template.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(CXX) -static -o gpstest   examples/tcp-gps.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 
 builddir:
 	mkdir -p $(OUTPUT_PATH)
 
 libs: builddir
 	$(MAKE) -C lib/
+	$(MAKE) -C ManuvrOS/
 
 clean:
 	$(MAKE) clean -C ManuvrOS/

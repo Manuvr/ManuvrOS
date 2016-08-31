@@ -75,7 +75,9 @@ extern "C" {
 ManuvrTLS::ManuvrTLS(BufferPipe* _n, int debug_lvl) : BufferPipe() {
   _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
   // mbedTLS will expect this array to be null-terminated. Zero it all...
-  for (int x = 0; x < MAX_CIPHERSUITE_COUNT; x++) allowed_ciphersuites[x] = 0;
+  for (uint16_t x = 0; x < MAX_CIPHERSUITE_COUNT; x++) {
+    allowed_ciphersuites[x] = 0;
+  }
   mbedtls_ssl_config_init(&_conf);
   mbedtls_x509_crt_init(&_our_cert);
   mbedtls_pk_init(&_pkey);

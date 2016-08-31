@@ -369,15 +369,15 @@ void I2CDeviceWithRegisters::operationCompleteCallback(I2CBusOp* completed) {
       else {
         #ifdef __MANUVR_DEBUG
         temp.concatf("Failed to lookup the register for a callback operation.\n");
-        #endif
         completed->printDebug(&temp);
+        #endif
       }
     }
     else {
       #ifdef __MANUVR_DEBUG
       temp.concatf("i2c operation errored.\n");
-      #endif
       completed->printDebug(&temp);
+      #endif
     }
   }
 

@@ -265,31 +265,6 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
 
   switch (active_event->eventCode()) {
     /* Things that only this class is likely to care about. */
-    case MANUVR_MSG_SESS_HANGUP:
-      {
-        int out_purge = purgeOutbound();
-        int in_purge  = purgeInbound();
-        #ifdef __MANUVR_DEBUG
-        if (getVerbosity() > 5) local_log.concatf("%p Purged (%d) msgs from outbound and (%d) from inbound.\n", this, out_purge, in_purge);
-        #endif
-      }
-      return_value++;
-      break;
-
-    case MANUVR_MSG_SESS_ORIGINATE_MSG:
-      return_value++;
-      break;
-
-    case MANUVR_MSG_XPORT_RECEIVE:
-      {
-        StringBuilder* buf;
-        if (0 == active_event->getArgAs(&buf)) {
-          fromCounterparty(buf, MEM_MGMT_RESPONSIBLE_BEARER);
-        }
-      }
-      return_value++;
-      break;
-
     default:
       return_value += XenoSession::notify(active_event);
       break;
