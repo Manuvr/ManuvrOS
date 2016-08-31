@@ -88,7 +88,7 @@ int8_t __attribute__((weak)) manuvr_hash(uint8_t* in, int in_len, uint8_t* out, 
   }
   #else
   Kernel::log("hash(): No hash implementation.\n");
-  #endif
+  #endif  // __MANUVR_MBEDTLS
   return return_value;
 }
 
@@ -103,5 +103,5 @@ void printCryptoOverview(StringBuilder* out) {
     }
   #else
   out->concat("No cryptographic support.\n");
-  #endif
+  #endif  // __MANUVR_MBEDTLS
 }

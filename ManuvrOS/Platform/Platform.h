@@ -221,6 +221,14 @@ class ManuvrPlatform {
       int8_t   offerStorage(const char*, Storage*);
     #endif
 
+    /*
+    * Systems that want support for dynamic runtime configurations
+    *   can aggregate that config in platform.
+    */
+    int8_t getConfig(const char* key);
+    int8_t persistConfig();
+    int8_t configLoaded();
+
     /* These are safe function proxies for external callers. */
     void setIdleHook(FunctionPointer nu);
     void idleHook();
@@ -230,7 +238,7 @@ class ManuvrPlatform {
     /* Writes a platform information string to the provided buffer. */
     const char* getRTCStateString();
 
-    void printDebug(StringBuilder* out);
+    virtual void printDebug(StringBuilder* out);
     void printDebug();
 
     /*

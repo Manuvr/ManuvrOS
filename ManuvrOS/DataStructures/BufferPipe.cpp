@@ -108,6 +108,7 @@ BufferPipe* BufferPipe::spawnPipe(int _code, BufferPipe* _n, BufferPipe* _f) {
 BufferPipe::BufferPipe() {
   _near            = nullptr;
   _far             = nullptr;
+  _pipe_strategy   = nullptr;
   _flags           = 0;
 }
 

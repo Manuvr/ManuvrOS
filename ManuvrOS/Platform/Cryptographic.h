@@ -42,8 +42,6 @@ If you wish to use another crypto library (OpenSSL? MatrixSSL? uECC?) then
   #include "mbedtls/md.h"
   #include "mbedtls/md_internal.h"
 
-  //typedef mbedtls_md_type_t Hashes;
-
 enum class Hashes {
   #if defined(__MANUVR_MBEDTLS)
     #if defined(MBEDTLS_MD5_C)
@@ -72,12 +70,6 @@ enum class Hashes {
     NONE = 0
   #endif
 };
-
-#else
-  enum class Hashes {
-    NONE   = 0
-  };
-
 #endif
 
 

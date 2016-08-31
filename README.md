@@ -33,17 +33,17 @@ The test-bench consists of these files. It was meant to run on linux with possib
     main.cpp
     Makefile
 
-##### The Raspi version of the test-bench:
-
-    make raspi
-
 ##### Vanilla linux build (no i2c, TTY, or GPIO):
 
     make
 
-##### Or for the linux version with debug symbols:
+##### The Raspi version of the test-bench:
 
-    make debug
+    make BOARD=RASPI
+
+##### You can also enable debugging features:
+
+    make DEBUG=1
 
 ##### The doc can be built with (requires doxygen be installed):
 

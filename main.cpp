@@ -235,7 +235,7 @@ int main(int argc, char *argv[]) {
     *   pipes up to the application layer.
     * This is how to use pipe-strategies to instance a console session when a
     *   TCP client connects. Test by running without "--console" and then...
-    *       nc -t 127.0.0.1 2319nc -t 127.0.0.1 2319
+    *       nc -t 127.0.0.1 2319
     */
     ManuvrTCP tcp_srv((const char*) "0.0.0.0", 2319);
     tcp_srv.setPipeStrategy(pipe_plan_console);

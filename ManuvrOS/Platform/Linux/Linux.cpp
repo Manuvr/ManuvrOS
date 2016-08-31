@@ -441,7 +441,7 @@ int hashFileByPath(char* path, uint8_t* h_buf) {
         log.concatf("%s is %ld bytes.\n", path, self_size);
 
         // TODO: MBEDTLS_MD_SHA256 is too lib specific.
-        int ret = manuvr_hash(self_mass, self_size, h_buf, digest_size, MBEDTLS_MD_SHA256);
+        int ret = manuvr_hash(self_mass, self_size, h_buf, digest_size, Hashes::SHA256);
         if (0 == ret) {
           StringBuilder hash(h_buf, digest_size);
           log.concat("This binary's SHA256 fingerprint is ");

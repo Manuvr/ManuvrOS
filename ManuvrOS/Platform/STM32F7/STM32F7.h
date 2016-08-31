@@ -68,4 +68,24 @@ inline uint16_t _associated_pin(uint8_t _pin) {
   return (1 << (_pin % 16));
 }
 
+
+
+class STM32F7Platform : public ManuvrPlatform {
+  public:
+    virtual int8_t platformPreInit();
+    virtual int8_t platformPostInit();
+
+    /* Platform state-reset functions. */
+    virtual void seppuku();           // Simple process termination. Reboots if not implemented.
+    virtual void reboot();
+    virtual void hardwareShutdown();
+    virtual void jumpToBootloader();
+
+    virtual void printDebug(StringBuilder* out);
+
+
+  protected:
+};
+
+
 #endif  // __PLATFORM_STM32F7_H__
