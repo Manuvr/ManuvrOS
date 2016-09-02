@@ -43,6 +43,12 @@ git clone https://github.com/ARMmbed/mbedtls.git lib/mbedtls
 rm -rf lib/telehash-c
 git clone https://github.com/telehash/telehash-c.git lib/telehash-c
 
+# iotivity-constrained
+rm -rf lib/iotivity
+git clone https://gerrit.iotivity.org/gerrit/p/iotivity-constrained.git lib/iotivity
+# TinyCBOR...
+git clone https://github.com/01org/tinycbor.git lib/iotivity/deps/tinycbor
+
 # Arduino libraries...
 
 # Teensy loader...

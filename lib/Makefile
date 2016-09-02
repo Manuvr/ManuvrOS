@@ -77,3 +77,4 @@ clean:
 	rm -f $(OBJS)
 	rm -f $(OUTPUT_PATH)/$(LIBNAME)
 	$(MAKE) clean -C mbedtls
+	$(MAKE) clean -C iotivity/port/linux
