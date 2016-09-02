@@ -28,6 +28,7 @@ This file is meant to contain a set of common functions that are
     * Persist and retrieve data across runtimes.
 */
 
+
 #ifndef __PLATFORM_VANILLA_LINUX_H__
 #define __PLATFORM_VANILLA_LINUX_H__
 #include <pthread.h>

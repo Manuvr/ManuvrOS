@@ -41,6 +41,8 @@ INCLUDES   += -I$(WHERE_I_AM)/lib
 
 INCLUDES   += -I$(WHERE_I_AM)/lib/paho.mqtt.embedded-c/
 INCLUDES   += -I$(WHERE_I_AM)/lib/mbedtls/include/
+INCLUDES   += -I$(WHERE_I_AM)/lib/iotivity
+INCLUDES   += -I$(WHERE_I_AM)/lib/iotivity/include
 
 # Libraries to link
 # We should be gradually phasing out C++ standard library on linux builds.
@@ -92,7 +94,7 @@ MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
 # Options that build for certain threading models (if any).
 #MANUVR_OPTIONS += -D__MANUVR_FREERTOS
 MANUVR_OPTIONS += -D__MANUVR_LINUX
-
+MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT
 
 # Wire and session protocols...
 #MANUVR_OPTIONS += -DMANUVR_SUPPORT_OSC
@@ -110,27 +112,31 @@ MANUVR_OPTIONS += -DMANUVR_CBOR
 # Framework selections, if any are desired.
 MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT
 
-# Options for various security features.
-MANUVR_OPTIONS += -D__MANUVR_MBEDTLS
-
-# mbedTLS will require this in order to use our chosen options.
-MBEDTLS_CONFIG_FILE = $(WHERE_I_AM)/mbedTLS_conf.h
-
 # Since we are building on linux, we will have threading support via
 # pthreads.
 LIBS += -lpthread $(OUTPUT_PATH)/extraprotocols.a
+
+# Options for various security features.
+ifeq ($(SECURE),1)
+# mbedTLS will require this in order to use our chosen options.
+MBEDTLS_CONFIG_FILE = $(WHERE_I_AM)/mbedTLS_conf.h
 LIBS += $(OUTPUT_PATH)/libmbedtls.a
 LIBS += $(OUTPUT_PATH)/libmbedx509.a
 LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
+MANUVR_OPTIONS += -D__MANUVR_MBEDTLS
+# The remaining lines are to prod header files in libraries.
+MANUVR_OPTIONS += -DOC_SECURITY -DOC_CLIENT
+export SECURE=1
+endif
 
-
+# Support for specific SBC hardware on linux.
 ifeq ($(BOARD),RASPI)
 MANUVR_OPTIONS += -DRASPI
 export MANUVR_BOARD = RASPI
 endif
 
-ifeq ($(DEBUG),1)
 # Debugging options...
+ifeq ($(DEBUG),1)
 MANUVR_OPTIONS += -D__MANUVR_DEBUG
 MANUVR_OPTIONS += -D__MANUVR_PIPE_DEBUG
 OPTIMIZATION    = -O0 -g

@@ -61,6 +61,8 @@ Kernel* kernel = nullptr;
 //TODO: This is for platform. It will not last long.
 char* program_name = nullptr;
 
+#include <Platform/Platform.h>
+
 /*******************************************************************************
 * BufferPipe strategies particular to this firmware.                           *
 *******************************************************************************/
@@ -97,6 +99,14 @@ void kernelDebugDump() {
   kernel->printDebug(&output);
   Kernel::log(&output);
 }
+
+// TODO: Only here to test linkage.
+#if defined(MANUVR_OPENINTERCONNECT)
+  static void app_init(void) {            printf("app_init()\n");           }
+  static void fetch_credentials(void) {   printf("fetch_credentials()\n");  }
+  static void issue_requests(void) {      printf("issue_requests()\n");     }
+#endif
+
 
 /*******************************************************************************
 * The main function.                                                           *
@@ -263,6 +273,19 @@ int main(int argc, char *argv[]) {
     #endif
   #endif
 
+  // TODO: Only here to test linkage.
+  #if defined(MANUVR_OPENINTERCONNECT)
+    // If we have iotivity-constrained, we will assume we are a client for now.
+    oc_handler_t handler = {
+      .init = app_init,
+	    .get_credentials = fetch_credentials,
+	    .requests_entry = issue_requests
+    };
+
+    int init = oc_main_init(&handler);
+    if (init < 0) printf("oc_main_init() failed with %d.\n", init);
+  #endif
+
   // Once we've loaded up all the goodies we want, we finalize everything thusly...
   printf("%s: Booting Manuvr (PID %u)....\n", program_name, main_pid);
   platform.bootstrap();
@@ -297,5 +320,6 @@ int main(int argc, char *argv[]) {
       setPin(14, pin_14_state);
       pin_14_state = !pin_14_state;
     #endif
+    example_main();
   }
 }

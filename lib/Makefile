@@ -56,6 +56,7 @@ LIBNAME = extraprotocols.a
 
 
 all: $(LIBNAME)
+	$(MAKE) client -C iotivity/port/linux
 	$(MAKE) -C mbedtls
 	cp -RP mbedtls/library/libmbedtls.*    $(OUTPUT_PATH)
 	cp -RP mbedtls/library/libmbedx509.*   $(OUTPUT_PATH)

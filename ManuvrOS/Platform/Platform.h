@@ -54,12 +54,27 @@ This file is meant to contain a set of common functions that are
 
 // Conditional inclusion for different threading models...
 #if defined(__MANUVR_LINUX)
-  #include <pthread.h>
-  #include <signal.h>
-  #include <sys/time.h>
 #elif defined(__MANUVR_FREERTOS)
-
 #endif
+
+// TODO: Split OCF off into it's own concern. Right now, it will depend on Linux.
+#if defined(MANUVR_OPENINTERCONNECT)
+extern "C" {
+  // We intend on overlaying iotivity-constrained platform calls into our own.
+  #include "iotivity/include/oc_api.h"
+  #include "iotivity/port/oc_assert.h"
+  #include "iotivity/port/oc_clock.h"
+  #include "iotivity/port/oc_connectivity.h"
+  #include "iotivity/port/oc_storage.h"
+  #include "iotivity/port/oc_random.h"
+  #include "iotivity/port/oc_network_events_mutex.h"
+  #include "iotivity/port/oc_log.h"
+  #include "iotivity/port/oc_signal_main_loop.h"
+
+  int example_main(void);
+}
+#endif   // MANUVR_OPENINTERCONNECT
+
 
 
 class ManuvrRunnable;
@@ -346,6 +361,13 @@ int    readPinAnalog(uint8_t pin);
 
 #ifdef __cplusplus
 }
+#endif
+
+
+// Conditional inclusion for different threading models...
+#if defined(__MANUVR_LINUX)
+  #include <Platform/Linux/Linux.h>
+#elif defined(__MANUVR_FREERTOS)
 #endif
 
 #endif  // __PLATFORM_SUPPORT_H__
