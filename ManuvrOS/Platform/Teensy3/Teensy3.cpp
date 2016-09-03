@@ -26,7 +26,7 @@ This file is meant to contain a set of common functions that are typically platf
     * Access a true RNG (if it exists)
 */
 
-#include "Platform.h"
+#include <Platform/Platform.h>
 
 #include <wiring.h>
 #include <Time/Time.h>
@@ -47,17 +47,17 @@ time_t getTeensy3Time() {   return Teensy3Clock.get();   }
 
 
 
-/****************************************************************************************************
-* Watchdog                                                                                          *
-****************************************************************************************************/
+/*******************************************************************************
+* Watchdog                                                                     *
+*******************************************************************************/
 volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
 volatile uint8_t  watchdog_mark      = 42;
 unsigned long     start_time_micros  = 0;
 
 
-/****************************************************************************************************
-* Randomness                                                                                        *
-****************************************************************************************************/
+/*******************************************************************************
+* Randomness                                                                   *
+*******************************************************************************/
 volatile uint32_t next_random_int[PLATFORM_RNG_CARRY_CAPACITY];
 
 /**
@@ -91,9 +91,24 @@ volatile bool provide_random_int(uint32_t nu_rnd) {
 /*
 * Init the RNG. Short and sweet.
 */
-void init_RNG() {
+void init_rng() {
   for (uint8_t i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) next_random_int[i] = 0;
   srand(Teensy3Clock.get());          // Seed the PRNG...
+}
+
+
+/*******************************************************************************
+*  ___   _           _      ___
+* (  _`\(_ )        ( )_  /'___)
+* | |_) )| |    _ _ | ,_)| (__   _    _ __   ___ ___
+* | ,__/'| |  /'_` )| |  | ,__)/'_`\ ( '__)/' _ ` _ `\
+* | |    | | ( (_| || |_ | |  ( (_) )| |   | ( ) ( ) |
+* (_)   (___)`\__,_)`\__)(_)  `\___/'(_)   (_) (_) (_)
+* These are overrides and additions to the platform class.
+*******************************************************************************/
+void ManuvrPlatform::printDebug(StringBuilder* output) {
+  output->concatf("==< Teensy3 [%s] >================================\n", getPlatformStateStr(platformState()));
+  printPlatformBasics(output);
 }
 
 
@@ -131,23 +146,18 @@ int getSerialNumber(uint8_t *buf) {
 
 
 
-/****************************************************************************************************
-* Time and date                                                                                     *
-****************************************************************************************************/
-uint32_t rtc_startup_state = MANUVR_RTC_STARTUP_UNINITED;
-
-
+/*******************************************************************************
+* Time and date                                                                *
+*******************************************************************************/
 /*
 *
 */
-bool initPlatformRTC() {
+bool init_rtc() {
   setSyncProvider(getTeensy3Time);
   if (timeStatus() != timeSet) {
-    rtc_startup_state = MANUVR_RTC_STARTUP_GOOD_UNSET;
     return false;
   }
   else {
-    rtc_startup_state = MANUVR_RTC_STARTUP_GOOD_SET;
     return true;
   }
 }
@@ -191,9 +201,9 @@ void currentDateTime(StringBuilder* target) {
 
 
 
-/****************************************************************************************************
-* GPIO and change-notice                                                                            *
-****************************************************************************************************/
+/*******************************************************************************
+* GPIO and change-notice                                                       *
+*******************************************************************************/
 /*
 * This structure allows us to keep track of which pins are at our discretion to read/write/set ISRs on.
 */
@@ -267,14 +277,14 @@ int readPinAnalog(uint8_t pin) {
 }
 
 
-/****************************************************************************************************
-* Persistent configuration                                                                          *
-****************************************************************************************************/
+/*******************************************************************************
+* Persistent configuration                                                     *
+*******************************************************************************/
 
 
-/****************************************************************************************************
-* Interrupt-masking                                                                                 *
-****************************************************************************************************/
+/*******************************************************************************
+* Interrupt-masking                                                            *
+*******************************************************************************/
 
 #if defined (__MANUVR_FREERTOS)
   void globalIRQEnable() {     taskENABLE_INTERRUPTS();    }
@@ -285,15 +295,15 @@ int readPinAnalog(uint8_t pin) {
 #endif
 
 
-/****************************************************************************************************
-* Process control                                                                                   *
-****************************************************************************************************/
+/*******************************************************************************
+* Process control                                                              *
+*******************************************************************************/
 
 /*
 * Terminate this running process, along with any children it may have forked() off.
 * Never returns.
 */
-volatile void seppuku() {
+void ManuvrPlatform::seppuku() {
   // This means "Halt" on a base-metal build.
   cli();
   while(true);
@@ -304,21 +314,21 @@ volatile void seppuku() {
 * Jump to the bootloader.
 * Never returns.
 */
-volatile void jumpToBootloader() {
+void ManuvrPlatform::jumpToBootloader() {
   cli();
   _reboot_Teensyduino_();
 }
 
 
-/****************************************************************************************************
-* Underlying system control.                                                                        *
-****************************************************************************************************/
+/*******************************************************************************
+* Underlying system control.                                                   *
+*******************************************************************************/
 
 /*
 * This means "Halt" on a base-metal build.
 * Never returns.
 */
-volatile void hardwareShutdown() {
+void ManuvrPlatform::hardwareShutdown() {
   cli();
   while(true);
 }
@@ -327,30 +337,57 @@ volatile void hardwareShutdown() {
 * Causes immediate reboot.
 * Never returns.
 */
-volatile void reboot() {
+void ManuvrPlatform::reboot() {
   cli();
   *((uint32_t *)0xE000ED0C) = 0x5FA0004;
 }
 
 
 
-/****************************************************************************************************
-* Platform initialization.                                                                          *
-****************************************************************************************************/
+/*******************************************************************************
+* Platform initialization.                                                     *
+*******************************************************************************/
+#define  DEFAULT_PLATFORM_FLAGS ( \
+              MANUVR_PLAT_FLAG_INNATE_DATETIME | \
+              MANUVR_PLAT_FLAG_HAS_IDENTITY)
+
 
 /*
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
 */
-void platformPreInit() {
+int8_t ManuvrPlatform::platformPreInit() {
+  // TODO: Should we really be setting capabilities this late?
+  uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
+  #if defined (__MANUVR_FREERTOS)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_THREADS;
+    platform.setIdleHook([]{ sleep_millis(20); });
+  #endif
+  #if defined(__MANUVR_MBEDTLS)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
+  #endif
+  #if defined(MANUVR_GPS_PIPE)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
+  #endif
+  _alter_flags(true, default_flags);
+
+  _discoverALUParams();
+  start_time_micros = micros();
+  init_rng();
+  _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
+
+  if (init_rtc()) {
+    _alter_flags(true, MANUVR_PLAT_FLAG_RTC_SET);
+  }
+  _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
   gpioSetup();
+
+  _kernel = Kernel::getInstance();
 }
 
 
 /*
 * Called as a result of kernels bootstrap() fxn.
 */
-void platformInit() {
-  start_time_micros = micros();
-  init_RNG();
+int8_t ManuvrPlatform::platformPostInit() {
 }

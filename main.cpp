@@ -66,18 +66,23 @@ char* program_name = nullptr;
 /*******************************************************************************
 * BufferPipe strategies particular to this firmware.                           *
 *******************************************************************************/
+#if defined(MANUVR_SUPPORT_COAP)
 BufferPipe* _pipe_factory_1(BufferPipe* _n, BufferPipe* _f) {
   CoAPSession* coap_srv = new CoAPSession(_n);
   kernel->subscribe(coap_srv);
   return (BufferPipe*) coap_srv;
 }
+#endif
 
+#if defined(__MANUVR_CONSOLE_SUPPORT)
 BufferPipe* _pipe_factory_2(BufferPipe* _n, BufferPipe* _f) {
   ManuvrConsole* _console = new ManuvrConsole(_n);
   kernel->subscribe(_console);
   return (BufferPipe*) _console;
 }
+#endif
 
+#if defined(__MANUVR_MBEDTLS)
 BufferPipe* _pipe_factory_3(BufferPipe* _n, BufferPipe* _f) {
   ManuvrTLSServer* _tls_server = new ManuvrTLSServer(_n);
   /*
@@ -89,7 +94,7 @@ BufferPipe* _pipe_factory_3(BufferPipe* _n, BufferPipe* _f) {
   Kernel::log(&out);
   return (BufferPipe*) _tls_server;
 }
-
+#endif
 
 /*******************************************************************************
 * Functions that just print things.                                            *
@@ -99,13 +104,6 @@ void kernelDebugDump() {
   kernel->printDebug(&output);
   Kernel::log(&output);
 }
-
-// TODO: Only here to test linkage.
-#if defined(MANUVR_OPENINTERCONNECT)
-  static void app_init(void) {            printf("app_init()\n");           }
-  static void fetch_credentials(void) {   printf("fetch_credentials()\n");  }
-  static void issue_requests(void) {      printf("issue_requests()\n");     }
-#endif
 
 
 /*******************************************************************************
@@ -132,15 +130,19 @@ int main(int argc, char *argv[]) {
   /*
   * Absent a strategy for dynamically-loading strategies...
   */
-  if (0 != BufferPipe::registerPipe(1, _pipe_factory_1)) {
-    printf("Failed to add CoAP to the pipe registry.\n");
-    exit(1);
-  }
+  #if defined(MANUVR_SUPPORT_COAP)
+    if (0 != BufferPipe::registerPipe(1, _pipe_factory_1)) {
+      printf("Failed to add CoAP to the pipe registry.\n");
+      exit(1);
+    }
+  #endif
 
-  if (0 != BufferPipe::registerPipe(2, _pipe_factory_2)) {
-    printf("Failed to add console to the pipe registry.\n");
-    exit(1);
-  }
+  #if defined(__MANUVR_CONSOLE_SUPPORT)
+    if (0 != BufferPipe::registerPipe(2, _pipe_factory_2)) {
+      printf("Failed to add console to the pipe registry.\n");
+      exit(1);
+    }
+  #endif
 
   // Pipe strategy planning...
   const uint8_t pipe_plan_console[] = {2, 0};
@@ -320,6 +322,5 @@ int main(int argc, char *argv[]) {
       setPin(14, pin_14_state);
       pin_14_state = !pin_14_state;
     #endif
-    example_main();
   }
 }

@@ -166,17 +166,17 @@ int initSigHandlers() {
 
 
 
-/****************************************************************************************************
-* Watchdog                                                                                          *
-****************************************************************************************************/
+/*******************************************************************************
+* Watchdog                                                                     *
+*******************************************************************************/
 volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
 volatile uint8_t  watchdog_mark      = 42;
 unsigned long     start_time_micros  = 0;
 
 
-/****************************************************************************************************
-* Randomness                                                                                        *
-****************************************************************************************************/
+/*******************************************************************************
+* Randomness                                                                   *
+*******************************************************************************/
 volatile uint32_t next_random_int[PLATFORM_RNG_CARRY_CAPACITY];
 
 /**
@@ -292,9 +292,9 @@ unsigned long micros() {
 }
 
 
-/****************************************************************************************************
-* GPIO and change-notice                                                                            *
-****************************************************************************************************/
+/*******************************************************************************
+* GPIO and change-notice                                                       *
+*******************************************************************************/
 int8_t gpioDefine(uint8_t pin, int mode) {
   return 0;
 }
@@ -580,90 +580,3 @@ int8_t ManuvrPlatform::platformPostInit() {
   }
   return 0;
 }
-
-
-
-// TODO: Split OCF off into it's own concern. Right now, it will depend on Linux.
-// TODO: Wrap our native platform fxns. For now, we are pulling from
-//         iotivity-constrained's linux port.
-#if defined(MANUVR_OPENINTERCONNECT)
-// We intend on overlaying iotivity-constrained platform calls into our own.
-extern "C" {
-  // oc_clock.h
-  //void oc_clock_init(void);
-  //oc_clock_time_t oc_clock_time(void);
-  //unsigned long oc_clock_seconds(void);
-  //void oc_clock_wait(oc_clock_time_t t);
-
-  // oc_connectivity.h
-  //void oc_send_buffer(oc_message_t * message);
-  //int oc_connectivity_init(void);
-  //void oc_connectivity_shutdown(void);
-  //void oc_send_multicast_message(oc_message_t *message);
-  //#ifdef OC_SECURITY
-  //uint16_t oc_connectivity_get_dtls_port(void);
-  //#endif /* OC_SECURITY */
-
-  // oc_storage.h
-  //int oc_storage_config(const char *store);
-  //long oc_storage_read(const char *store, uint8_t *buf, size_t size);
-  //long oc_storage_write(const char *store, uint8_t *buf, size_t size);
-
-  // oc_random.h
-  //void oc_random_init(unsigned short seed);
-  //unsigned short oc_random_rand(void);
-  //void oc_random_destroy(void);
-
-  // oc_network_events_mutex.h
-  //void oc_network_event_handler_mutex_init(void);
-  //void oc_network_event_handler_mutex_lock(void);
-  //void oc_network_event_handler_mutex_unlock(void);
-
-  // oc_signal_main_loop.h
-  //void oc_signal_main_loop(void);
-
-
-  // We intend on overlaying iotivity-constrained platform calls into our own.
-
-  #include "iotivity/port/linux/clock.c"
-  #include "iotivity/port/linux/storage.c"
-  #include "iotivity/port/linux/random.c"
-  //#include "iotivity/port/linux/ipadapter.c"
-
-pthread_mutex_t mutex;
-pthread_cond_t cv;
-struct timespec ts;
-
-void oc_signal_main_loop(void) {   pthread_cond_signal(&cv);  }
-void handle_signal(int signal) {   printf("handle_signal()\n");        }
-
-int example_main() {
-  int init;
-  struct sigaction sa;
-  sigfillset(&sa.sa_mask);
-  sa.sa_flags = 0;
-  sa.sa_handler = handle_signal;
-  sigaction(SIGINT, &sa, NULL);
-
-  oc_clock_time_t next_event;
-
-  //while (quit != 1) {
-    next_event = oc_main_poll();
-    pthread_mutex_lock(&mutex);
-    if (next_event == 0) {
-      pthread_cond_wait(&cv, &mutex);
-    }
-    else {
-      ts.tv_sec = (next_event / OC_CLOCK_SECOND);
-      ts.tv_nsec = (next_event % OC_CLOCK_SECOND) * 1.e09 / OC_CLOCK_SECOND;
-      pthread_cond_timedwait(&cv, &mutex, &ts);
-    }
-    pthread_mutex_unlock(&mutex);
-  //}
-  //oc_main_shutdown();
-  return 0;
-}
-
-
-}  // extern "C"
-#endif   // MANUVR_OPENINTERCONNECT
