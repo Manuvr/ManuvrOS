@@ -28,6 +28,7 @@ Implemented as a JSON object within a single file. This feature therefore
 #define __MANUVR_LINUX_STORAGE_H__
 
 #include <EventReceiver.h>
+#include <Platform/Storage.h>
 
 #ifndef MANUVR_JSON
   // TODO: Fail the build.

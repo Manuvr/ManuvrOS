@@ -34,8 +34,9 @@ If you wish to use another crypto library (OpenSSL? MatrixSSL? uECC?) then
 #ifndef __MANUVR_CRYPTO_ABSTRACTION_H__
 #define __MANUVR_CRYPTO_ABSTRACTION_H__
 
-#include <Platform/Identity.h>
-#include <Platform/Platform.h>
+#include <inttypes.h>
+
+#include <DataStructures/StringBuilder.h>
 
 #if defined(__MANUVR_MBEDTLS)
   #include "mbedtls/ssl.h"

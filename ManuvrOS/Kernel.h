@@ -34,21 +34,15 @@ limitations under the License.
   class Kernel;
 
   #include <inttypes.h>
-  #include <EnumeratedTypeCodes.h>
-
-  #include "FirmwareDefs.h"
-  #include <ManuvrRunnable.h>
-  #include <EventReceiver.h>
-  #include <DataStructures/BufferPipe.h>
-  #include <DataStructures/PriorityQueue.h>
-  #include <DataStructures/StringBuilder.h>
   #include <map>
 
-  #include <MsgProfiler.h>
+  #include <EnumeratedTypeCodes.h>
+  #include "FirmwareDefs.h"
 
-  #if defined (__MANUVR_FREERTOS)
-    #include <FreeRTOS_ARM.h>
-  #endif
+  #include <DataStructures/PriorityQueue.h>
+  #include <DataStructures/StringBuilder.h>
+  #include <ManuvrRunnable.h>
+  #include <EventReceiver.h>
 
   #define EVENT_PRIORITY_HIGHEST            100
   #define EVENT_PRIORITY_DEFAULT              2
@@ -163,7 +157,7 @@ limitations under the License.
       /* Overrides from EventReceiver
          Just gracefully fall into those when needed. */
       int8_t notify(ManuvrRunnable*);
-      int8_t callback_proc(ManuvrRunnable *);
+      int8_t callback_proc(ManuvrRunnable*);
       #if defined(__MANUVR_CONSOLE_SUPPORT)
         void procDirectDebugInstruction(StringBuilder *);
       #endif
@@ -272,5 +266,9 @@ limitations under the License.
   #ifdef __cplusplus
   }
   #endif
+
+
+/* Tail inclusion... */
+#include <DataStructures/BufferPipe.h>
 
 #endif  // __MANUVR_KERNEL_H__

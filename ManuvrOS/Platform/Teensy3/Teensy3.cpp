@@ -361,7 +361,7 @@ int8_t ManuvrPlatform::platformPreInit() {
   uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
   #if defined (__MANUVR_FREERTOS)
     default_flags |= MANUVR_PLAT_FLAG_HAS_THREADS;
-    platform.setIdleHook([]{ sleep_millis(20); });
+    //platform.setIdleHook([]{ sleep_millis(20); });
   #endif
   #if defined(__MANUVR_MBEDTLS)
     default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
@@ -381,8 +381,6 @@ int8_t ManuvrPlatform::platformPreInit() {
   }
   _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
   gpioSetup();
-
-  _kernel = Kernel::getInstance();
 }
 
 

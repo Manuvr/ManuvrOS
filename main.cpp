@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
   *   be in some projects), we pull the freshly-instanced (but unbooted) kernel
   *   from the platform object so we can augment and configure it.
   */
-  kernel = platform.getKernel();
+  kernel = platform.kernel();
 
   /*
   * Absent a strategy for dynamically-loading strategies...
@@ -273,19 +273,6 @@ int main(int argc, char *argv[]) {
         udp_srv.setPipeStrategy(pipe_plan_coaps);
       #endif
     #endif
-  #endif
-
-  // TODO: Only here to test linkage.
-  #if defined(MANUVR_OPENINTERCONNECT)
-    // If we have iotivity-constrained, we will assume we are a client for now.
-    oc_handler_t handler = {
-      .init = app_init,
-	    .get_credentials = fetch_credentials,
-	    .requests_entry = issue_requests
-    };
-
-    int init = oc_main_init(&handler);
-    if (init < 0) printf("oc_main_init() failed with %d.\n", init);
   #endif
 
   // Once we've loaded up all the goodies we want, we finalize everything thusly...

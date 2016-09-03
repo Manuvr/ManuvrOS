@@ -114,7 +114,7 @@ CPP_SRCS  += Drivers/INA219/INA219.cpp
 
 CPP_SRCS  += Platform/Cryptographic.cpp
 CPP_SRCS  += Platform/Identity.cpp
-CPP_SRCS  += Storage/Storage.cpp
+CPP_SRCS  += Platform/Storage.cpp
 
 
 OBJS  = $(CPP_SRCS:.cpp=.o)

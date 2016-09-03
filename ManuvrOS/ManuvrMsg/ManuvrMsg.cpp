@@ -20,9 +20,11 @@ limitations under the License.
 */
 
 
-#include "ManuvrMsg.h"
 #include "FirmwareDefs.h"
+#include <DataStructures/Argument.h>
+#include "ManuvrMsg.h"
 #include <string.h>
+
 
 extern inline double   parseDoubleFromchars(unsigned char *input);
 extern inline float    parseFloatFromchars(unsigned char *input);
@@ -33,7 +35,7 @@ extern inline uint16_t parseUint16Fromchars(unsigned char *input);
 /****************************************************************************************************
 * Static initializers                                                                               *
 ****************************************************************************************************/
-PriorityQueue<const MessageTypeDef*> ManuvrMsg::message_defs_extended;
+std::map<uint16_t, const MessageTypeDef*> ManuvrMsg::message_defs_extended;
 
 const unsigned char ManuvrMsg::MSG_ARGS_NONE[] = {0};      // Generic argument def for a message with no args.
 
@@ -430,13 +432,9 @@ const char* ManuvrMsg::getMsgTypeString(uint16_t code) {
   }
 
   // Didn't find it there. Search in the extended defs...
-  const MessageTypeDef* temp_type_def;
-  total_elements = message_defs_extended.size();
-  for (int i = 0; i < total_elements; i++) {
-    temp_type_def = message_defs_extended.get(i);
-    if (temp_type_def->msg_type_code == code) {
-      return temp_type_def->debug_label;
-    }
+  const MessageTypeDef* temp_type_def = message_defs_extended[code];
+  if (nullptr != temp_type_def) {
+    return temp_type_def->debug_label;
   }
   // If we've come this far, we don't know what the caller is asking for. Return the default.
   return ManuvrMsg::message_defs[0].debug_label;
@@ -458,13 +456,9 @@ const MessageTypeDef* ManuvrMsg::lookupMsgDefByCode(uint16_t code) {
     }
   }
   // Didn't find it there. Search in the extended defs...
-  const MessageTypeDef* temp_type_def;
-  total_elements = message_defs_extended.size();
-  for (int i = 0; i < total_elements; i++) {
-    temp_type_def = message_defs_extended.get(i);
-    if (temp_type_def->msg_type_code == code) {
-      return temp_type_def;
-    }
+  const MessageTypeDef* temp_type_def = message_defs_extended[code];
+  if (nullptr != temp_type_def) {
+    return temp_type_def;
   }
   // If we've come this far, we don't know what the caller is asking for. Return the default.
   return &ManuvrMsg::message_defs[0];
@@ -489,9 +483,9 @@ const MessageTypeDef* ManuvrMsg::lookupMsgDefByLabel(char* label) {
 
   // Didn't find it there. Search in the extended defs...
   const MessageTypeDef* temp_type_def;
-  total_elements = message_defs_extended.size();
-  for (int i = 1; i < total_elements; i++) {
-    temp_type_def = message_defs_extended.get(i);
+	std::map<uint16_t, const MessageTypeDef*>::iterator it;
+	for (it = message_defs_extended.begin(); it != message_defs_extended.end(); it++) {
+    temp_type_def = it->second;
     if (strstr(label, temp_type_def->debug_label)) {
       return temp_type_def;
     }
@@ -499,6 +493,8 @@ const MessageTypeDef* ManuvrMsg::lookupMsgDefByLabel(char* label) {
   // If we've come this far, we don't know what the caller is asking for. Return the default.
   return &ManuvrMsg::message_defs[0];
 }
+
+
 
 
 const char* ManuvrMsg::getArgTypeString(uint8_t idx) {
@@ -603,9 +599,10 @@ int8_t ManuvrMsg::getMsgLegend(StringBuilder* output) {
     }
   }
 
-  total_elements = message_defs_extended.size();
-  for (int i = 1; i < total_elements; i++) {
-    temp_def = message_defs_extended.get(i);
+	std::map<uint16_t, const MessageTypeDef*>::iterator it;
+	for (it = message_defs_extended.begin(); it != message_defs_extended.end(); it++) {
+    temp_def = it->second;
+
     if (isExportable(temp_def)) {
       output->concat((unsigned char*) temp_def, 4);
       // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
@@ -621,6 +618,8 @@ int8_t ManuvrMsg::getMsgLegend(StringBuilder* output) {
       }
       output->concat((unsigned char*) "\0", 1);   // This is the obligatory "NO ARGUMENT" mode.
     }
+
+
   }
   return 1;
 }
@@ -676,9 +675,9 @@ int8_t ManuvrMsg::getMsgSemantics(MessageTypeDef* def, StringBuilder* output) {
       }
     }
 
-    total_elements = message_defs_extended.size();
-    for (int i = 1; i < total_elements; i++) {
-      temp_def = message_defs_extended.get(i);
+  	std::map<uint16_t, const MessageTypeDef*>::iterator it;
+  	for (it = message_defs_extended.begin(); it != message_defs_extended.end(); it++) {
+      temp_def = it->second;
       if (isExportable(temp_def)) {
         //int _set_size = strlen(temp_def->arg_semantics)+1;
         output->concat((unsigned char*) temp_def, 2);
@@ -791,14 +790,15 @@ char* ManuvrMsg::is_valid_argument_buffer(int len) {
 
 int8_t ManuvrMsg::registerMessages(const MessageTypeDef defs[], int mes_count) {
   for (int i = 0; i < mes_count; i++) {
-    message_defs_extended.insert(&defs[i]);
+    message_defs_extended[defs[i].msg_type_code] = &defs[i];
   }
   return 0;
 }
 
 
 int8_t ManuvrMsg::registerMessage(MessageTypeDef* nu_def) {
-  return message_defs_extended.insert(nu_def);
+  message_defs_extended[nu_def->msg_type_code] = nu_def;
+  return 0;
 }
 
 

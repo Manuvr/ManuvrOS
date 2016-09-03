@@ -3,9 +3,6 @@
 
 #include <EnumeratedTypeCodes.h>
 
-#include <DataStructures/StringBuilder.h>
-#include <DataStructures/PriorityQueue.h>
-#include <DataStructures/LightLinkedList.h>
 #include <DataStructures/Vector3.h>
 #include <DataStructures/Quaternion.h>
 
@@ -19,7 +16,7 @@
 #define MANUVR_ARG_FLAG_CONST_REDUCED  0x40  // Key reduced to const.
 #define MANUVR_ARG_FLAG_REQUIRED       0x80
 
-
+class StringBuilder;
 class BufferPipe;
 class ManuvrXport;
 class EventReceiver;

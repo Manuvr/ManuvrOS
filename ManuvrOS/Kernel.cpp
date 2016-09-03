@@ -22,8 +22,14 @@ limitations under the License.
 #include "FirmwareDefs.h"
 #include <Kernel.h>
 #include <Platform/Platform.h>
-#include <Platform/Cryptographic.h>
 
+#include <MsgProfiler.h>
+
+// Conditional inclusion for different threading models...
+#if defined(__MANUVR_LINUX)
+#elif defined(__MANUVR_FREERTOS)
+  #include <FreeRTOS_ARM.h>
+#endif
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.

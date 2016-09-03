@@ -32,8 +32,4 @@ There ought to be no inclusion in this file. It is the bottom.
   #define LOG_NOTICE  5    /* normal but significant condition */
   #define LOG_INFO    6    /* informational */
   #define LOG_DEBUG   7    /* debug-level messages */
-
-  // Function-pointer definitions
-  typedef void  (*FunctionPointer) ();
-  typedef void* (*ThreadFxnPtr)    (void*);
 #endif

@@ -44,7 +44,6 @@ Some functions are #pragma'd to stop the compiler from complaining about nullptr
   #include <FreeRTOS_ARM.h>
 #endif
 
-#include "Platform/Platform.h"
 using namespace std;
 
 /* This is the class that holds a datum in the list. */

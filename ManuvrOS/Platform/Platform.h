@@ -32,8 +32,6 @@ This file is meant to contain a set of common functions that are
 #ifndef __PLATFORM_SUPPORT_H__
 #define __PLATFORM_SUPPORT_H__
 
-#include "FirmwareDefs.h"
-
 // System-level includes.
 #include <inttypes.h>
 #include <stdlib.h>
@@ -43,19 +41,9 @@ This file is meant to contain a set of common functions that are
 #include <stdio.h>
 
 #include <CommonConstants.h>
-#include <DataStructures/StringBuilder.h>
-#include <Platform/Identity.h>
+#include "FirmwareDefs.h"
 
-#include <Platform/Cryptographic.h>
-
-#if defined(MANUVR_STORAGE)
-  #include <Storage/Storage.h>
-#endif
-
-// Conditional inclusion for different threading models...
-#if defined(__MANUVR_LINUX)
-#elif defined(__MANUVR_FREERTOS)
-#endif
+#include <DataStructures/uuid.h>
 
 // TODO: Split OCF off into it's own concern. Right now, it will depend on Linux.
 #if defined(MANUVR_OPENINTERCONNECT)
@@ -75,10 +63,14 @@ extern "C" {
 }
 #endif   // MANUVR_OPENINTERCONNECT
 
+#include <Kernel.h>
 
 
 class ManuvrRunnable;
-class Kernel;
+class Argument;
+class Identity;
+class Storage;
+
 
 /**
 * These are just lables. We don't really ever care about the *actual* integers
@@ -227,8 +219,8 @@ class ManuvrPlatform {
     int8_t bootstrap();
     inline uint8_t platformState() {   return (_pflags & MANUVR_PLAT_FLAG_P_STATE_MASK);  };
 
-    inline void setKernel(Kernel* k) {  if (nullptr == _kernel) _kernel = k;  };
-    inline Kernel* getKernel() {        return _kernel;  };
+    /* This cannot possibly return NULL. */
+    inline Kernel* kernel() {          return &_kernel;  };
 
     /* These are storage-related members. */
     #if defined(MANUVR_STORAGE)
@@ -278,7 +270,7 @@ class ManuvrPlatform {
 
 
   private:
-    Kernel*         _kernel    = nullptr;
+    Kernel          _kernel;
     Identity*       _identity  = nullptr;
     #if defined(MANUVR_STORAGE)
       Storage* _storage_device = nullptr;
@@ -364,10 +356,19 @@ int    readPinAnalog(uint8_t pin);
 #endif
 
 
+
+/* Tail inclusion... */
+#include <DataStructures/Argument.h>
+#include <Platform/Cryptographic.h>
+#include <Platform/Identity.h>
+
 // Conditional inclusion for different threading models...
 #if defined(__MANUVR_LINUX)
   #include <Platform/Linux/Linux.h>
-#elif defined(__MANUVR_FREERTOS)
+#endif
+
+#if defined(MANUVR_STORAGE)
+  #include <Platform/Storage.h>
 #endif
 
 #endif  // __PLATFORM_SUPPORT_H__

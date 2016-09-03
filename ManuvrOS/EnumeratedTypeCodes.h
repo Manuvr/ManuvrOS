@@ -26,6 +26,10 @@ limitations under the License.
 #include <inttypes.h>
 #include <stddef.h>
 
+// Function-pointer definitions
+typedef void  (*FunctionPointer) ();
+typedef void* (*ThreadFxnPtr)    (void*);
+
 
 /**
 * This is the structure with which we define types. These types are used by a variety of

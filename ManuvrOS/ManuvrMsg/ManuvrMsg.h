@@ -26,9 +26,11 @@ This class forms the foundation of internal events. It contains the identity of 
 #ifndef __MANUVR_MESSAGE_H__
 #define __MANUVR_MESSAGE_H__
 
+#include <map>
+
 #include "MessageDefs.h"    // This include file contains all of the message codes.
 #include <DataStructures/Argument.h>
-
+#include <DataStructures/LightLinkedList.h>
 
 /*
 * Messages are defined by this struct. Note that this amounts to nothing more than definition.
@@ -266,7 +268,8 @@ class ManuvrMsg {
     int   collect_valid_grammatical_forms(int, LinkedList<char*>*);
 
 
-    static PriorityQueue<const MessageTypeDef*> message_defs_extended;  // Where runtime-loaded message defs go.
+    // Where runtime-loaded message defs go.
+    static std::map<uint16_t, const MessageTypeDef*> message_defs_extended;
 };
 
 

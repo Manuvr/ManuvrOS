@@ -26,7 +26,7 @@ This file is meant to contain a set of common functions that are typically platf
     * Access a true RNG (if it exists)
 */
 
-#include "Platform.h"
+#include <Platform/Platform.h>
 #include <Kernel.h>
 
 
@@ -223,14 +223,12 @@ void ManuvrPlatform::_discoverALUParams() {
 * This is called by user code to initialize the platform.
 */
 int8_t ManuvrPlatform::bootstrap() {
-  _kernel = Kernel::getInstance();
-
   /* Follow your shadow. */
   ManuvrRunnable *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
   boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
   Kernel::staticRaiseEvent(boot_completed_ev);
   _set_init_state(MANUVR_INIT_STATE_KERNEL_BOOTING);
-  while (0 < _kernel->procIdleFlags()) {
+  while (0 < _kernel.procIdleFlags()) {
     // TODO: Safety! Need to be able to diagnose infinte loops.
   }
   _set_init_state(MANUVR_INIT_STATE_POST_INIT);

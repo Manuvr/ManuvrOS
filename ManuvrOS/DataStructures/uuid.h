@@ -23,7 +23,7 @@
 #ifndef OC_UUID_H
 #define OC_UUID_H
 
-#include <stdint.h>
+#include <inttypes.h>
 
 #ifdef __cplusplus
  extern "C" {

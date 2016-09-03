@@ -32,6 +32,8 @@ This file forms the catch-all for linux platforms that have no support.
 #include <unistd.h>
 #include <signal.h>
 
+#include <Platform/Platform.h>
+
 #if defined(MANUVR_STORAGE)
 #include <Platform/Linux/LinuxStorage.h>
 #include <fcntl.h>      // Needed for integrity checks.
@@ -409,9 +411,9 @@ void ManuvrPlatform::reboot() {
 }
 
 
-
 extern char* program_name;// TODO: Yuck
 
+#if defined(__MANUVR_MBEDTLS)
 /*
 * Function takes a path and a buffer as arguments. The binary is hashed and the ASCII representation is
 *   placed in the buffer. The number of bytes read is returned on success. 0 is returned on failure.
@@ -440,7 +442,6 @@ int hashFileByPath(char* path, uint8_t* h_buf) {
         uint8_t* self_mass = buf.string();
         log.concatf("%s is %ld bytes.\n", path, self_size);
 
-        // TODO: MBEDTLS_MD_SHA256 is too lib specific.
         int ret = manuvr_hash(self_mass, self_size, h_buf, digest_size, Hashes::SHA256);
         if (0 == ret) {
           StringBuilder hash(h_buf, digest_size);
@@ -505,7 +506,7 @@ int internal_integrity_check(uint8_t* test_buf, int test_len) {
     }
     return 0;
 }
-
+#endif  //__MANUVR_MBEDTLS
 
 /*******************************************************************************
 * Platform initialization.                                                     *
@@ -547,16 +548,17 @@ int8_t ManuvrPlatform::platformPreInit() {
   _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
 
   // TODO: Evaluate consequences of choice.
-  _kernel = Kernel::getInstance();
-  __kernel = (volatile Kernel*) _kernel;
+  __kernel = (volatile Kernel*) &_kernel;
   // TODO: Evaluate consequences of choice.
 
   #if defined(MANUVR_STORAGE)
-    _kernel->subscribe((EventReceiver*) sd);
+    _kernel.subscribe((EventReceiver*) sd);
   #endif
 
   platform.setIdleHook([]{ sleep_millis(20); });
+  #if defined(__MANUVR_MBEDTLS)
   internal_integrity_check(nullptr, 0);
+  #endif
 
   initSigHandlers();
   set_linux_interval_timer();

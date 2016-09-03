@@ -23,7 +23,8 @@ limitations under the License.
 #ifndef __MANUVR_RUNNABLE_H__
   #define __MANUVR_RUNNABLE_H__
 
-  #include "ManuvrMsg/ManuvrMsg.h"
+  #include <EnumeratedTypeCodes.h>
+  #include <ManuvrMsg/ManuvrMsg.h>
   #include <MsgProfiler.h>
 
   #define MANUVR_RUNNABLE_FLAG_MEM_MANAGED     0x01  // Set to true to cause the Kernel to not free().
