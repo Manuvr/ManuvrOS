@@ -143,6 +143,9 @@ void ManuvrPlatform::printPlatformBasics(StringBuilder* output) {
   uintptr_t final_sp   = 0;
   output->concatf("\n-- getStackPointer():  %p\n", &final_sp);
   output->concatf("-- stack grows %s\n--\n", (&final_sp > &initial_sp) ? "up" : "down");
+  #if defined(F_CPU)
+    output->concatf("-- CPU frequency:      %lu\n", F_CPU);
+  #endif
   output->concatf("-- Timer resolution:   %d ms\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
   output->concatf("-- Hardware version:   %s\n", HW_VERSION_STRING);
   output->concatf("-- Entropy pool size:  %u bytes\n", PLATFORM_RNG_CARRY_CAPACITY * 4);

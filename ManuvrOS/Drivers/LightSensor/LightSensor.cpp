@@ -54,8 +54,10 @@ LightSensor::~LightSensor() {
 void LightSensor::light_check() {
   uint16_t current_lux_read = readPinAnalog(_analog_pin);
   uint8_t current_lux_bin = current_lux_read >> 2;
-  if (max(current_lux_bin, last_lux_bin) - min(current_lux_bin, last_lux_bin) > 3) {
+  if ((max(current_lux_bin, last_lux_bin) - min(current_lux_bin, last_lux_bin)) > 3) {
     last_lux_bin = current_lux_bin;
+    // This will cause broadcase of our timed event...
+    _periodic_check.specific_target = nullptr;
   }
 }
 
@@ -88,7 +90,8 @@ int8_t LightSensor::bootComplete() {
   // Build some pre-formed Events.
   _periodic_check.repurpose(MANUVR_MSG_AMBIENT_LIGHT_LEVEL);
   _periodic_check.isManaged(true);
-  _periodic_check.originator = (EventReceiver*) this;
+  _periodic_check.specific_target = (EventReceiver*) this;
+  _periodic_check.originator      = (EventReceiver*) this;
 
   _periodic_check.addArg((uint8_t*) &last_lux_bin);
 
@@ -140,6 +143,7 @@ int8_t LightSensor::callback_proc(ManuvrRunnable *event) {
   switch (event->eventCode()) {
     case MANUVR_MSG_AMBIENT_LIGHT_LEVEL:
       // Our event has come back to us after a full cycle. Refresh the reading.
+      _periodic_check.specific_target = (EventReceiver*) this;
       light_check();
       break;
     default:
@@ -154,7 +158,10 @@ int8_t LightSensor::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
-
+    case MANUVR_MSG_AMBIENT_LIGHT_LEVEL:
+      // Our event has come back to us after a full cycle. Refresh the reading.
+      return_value++;
+      break;
     default:
       return_value += EventReceiver::notify(active_event);
       break;

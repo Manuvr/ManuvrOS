@@ -141,16 +141,16 @@ class AudioRouter : public EventReceiver {
 
 
   private:
-    uint8_t i2c_addr_dp_lo;
-    uint8_t i2c_addr_dp_hi;
-    uint8_t i2c_addr_cp_switch;
-
-    CPInputChannel*  inputs[12];
-    CPOutputChannel* outputs[8];
-
     ADG2128 *cp_switch;
     ISL23345 *dp_lo;
     ISL23345 *dp_hi;
+
+    CPInputChannel  inputs[12];
+    CPOutputChannel outputs[8];
+
+    uint8_t i2c_addr_dp_lo;
+    uint8_t i2c_addr_dp_hi;
+    uint8_t i2c_addr_cp_switch;
 
     CPOutputChannel* getOutputByCol(uint8_t);
 

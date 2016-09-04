@@ -70,30 +70,26 @@ AudioRouter::AudioRouter(I2CAdapter* i2c, uint8_t cp_addr, uint8_t dp_lo_addr, u
   i2c->addSlaveDevice(dp_hi);
 
   for (uint8_t i = 0; i < 12; i++) {   // Setup our input channels.
-    inputs[i] = (CPInputChannel*) malloc(sizeof(CPInputChannel));
-    inputs[i]->cp_row   = i;
-    inputs[i]->name     = NULL;
+    inputs[i].cp_row   = i;
+    inputs[i].name     = NULL;
   }
 
   for (uint8_t i = 0; i < 8; i++) {    // Setup our output channels.
-    outputs[i] = (CPOutputChannel*) malloc(sizeof(CPOutputChannel));
-    outputs[i]->cp_column = col_remap[i];
-    outputs[i]->cp_row    = NULL;
-    outputs[i]->name      = NULL;
-    outputs[i]->dp_dev    = (i < 4) ? dp_lo : dp_hi;
-    outputs[i]->dp_reg    = i % 4;
-    outputs[i]->dp_val    = 128;
+    outputs[i].cp_column = col_remap[i];
+    outputs[i].cp_row    = NULL;
+    outputs[i].name      = NULL;
+    outputs[i].dp_dev    = (i < 4) ? dp_lo : dp_hi;
+    outputs[i].dp_reg    = i % 4;
+    outputs[i].dp_val    = 128;
   }
 }
 
 AudioRouter::~AudioRouter() {
     for (uint8_t i = 0; i < 12; i++) {
-      if (NULL != inputs[i]->name) free(inputs[i]->name);
-      free(inputs[i]);
+      if (NULL != inputs[i].name) free(inputs[i].name);
     }
     for (uint8_t i = 0; i < 8; i++) {
-      if (NULL != outputs[i]->name) free(outputs[i]->name);
-      free(outputs[i]);
+      if (NULL != outputs[i].name) free(outputs[i].name);
     }
 
     // Destroy the objects that represeent our hardware. Downstream operations will
@@ -131,16 +127,16 @@ int8_t AudioRouter::init() {
   //   to reflect the state of the hardware. Now to parse that data into structs that
   //   mean something to us at this level...
   for (int i = 0; i < 8; i++) {  // Volumes...
-    outputs[i]->dp_val = outputs[i]->dp_dev->getValue(outputs[i]->dp_reg);
+    outputs[i].dp_val = outputs[i].dp_dev->getValue(outputs[i].dp_reg);
   }
 
   for (int i = 0; i < 12; i++) {  // Routes...
-    uint8_t temp_byte = cp_switch->getValue(inputs[i]->cp_row);
+    uint8_t temp_byte = cp_switch->getValue(inputs[i].cp_row);
     for (int j = 0; j < 8; j++) {
       if (0x01 & temp_byte) {
         CPOutputChannel* temp_output = getOutputByCol(j);
         if (temp_output != NULL) {
-          temp_output->cp_row = inputs[i];
+          temp_output->cp_row = &inputs[i];
         }
       }
       temp_byte = temp_byte >> 1;
@@ -154,8 +150,8 @@ int8_t AudioRouter::init() {
 CPOutputChannel* AudioRouter::getOutputByCol(uint8_t col) {
   if (col > 7)  return NULL;
   for (int j = 0; j < 8; j++) {
-    if (outputs[j]->cp_column == col) {
-      return outputs[j];
+    if (outputs[j].cp_column == col) {
+      return &outputs[j];
     }
   }
   return NULL;
@@ -179,9 +175,9 @@ Fixed.
 int8_t AudioRouter::nameInput(uint8_t row, char* name) {
   if (row > 11) return AUDIO_ROUTER_ERROR_BAD_ROW;
   int len = strlen(name);
-  if (NULL != inputs[row]->name) free(inputs[row]->name);
-  inputs[row]->name = (char *) malloc(len + 1);
-  for (int i = 0; i < len; i++) *(inputs[row]->name + i) = *(name + i);
+  if (NULL != inputs[row].name) free(inputs[row].name);
+  inputs[row].name = (char *) malloc(len + 1);
+  for (int i = 0; i < len; i++) *(inputs[row].name + i) = *(name + i);
   return AUDIO_ROUTER_ERROR_NO_ERROR;
 }
 
@@ -196,9 +192,9 @@ Fixed.
 int8_t AudioRouter::nameOutput(uint8_t col, char* name) {
   if (col > 7) return AUDIO_ROUTER_ERROR_BAD_COLUMN;
   int len = strlen(name);
-  if (NULL != outputs[col]->name) free(outputs[col]->name);
-  outputs[col]->name = (char *) malloc(len + 1);
-  for (int i = 0; i < len; i++) *(outputs[col]->name + i) = *(name + i);
+  if (NULL != outputs[col].name) free(outputs[col].name);
+  outputs[col].name = (char *) malloc(len + 1);
+  for (int i = 0; i < len; i++) *(outputs[col].name + i) = *(name + i);
   return AUDIO_ROUTER_ERROR_NO_ERROR;
 }
 
@@ -207,12 +203,12 @@ int8_t AudioRouter::nameOutput(uint8_t col, char* name) {
 int8_t AudioRouter::unroute(uint8_t col, uint8_t row) {
   if (col > 7)  return AUDIO_ROUTER_ERROR_BAD_COLUMN;
   if (row > 11) return AUDIO_ROUTER_ERROR_BAD_ROW;
-  bool remove_link = (outputs[col]->cp_row == inputs[row]) ? true : false;
+  bool remove_link = (outputs[col].cp_row == &inputs[row]) ? true : false;
   uint8_t return_value = AUDIO_ROUTER_ERROR_NO_ERROR;
-  if (cp_switch->unsetRoute(outputs[col]->cp_column, row) < 0) {
+  if (cp_switch->unsetRoute(outputs[col].cp_column, row) < 0) {
     return AUDIO_ROUTER_ERROR_UNROUTE_FAILED;
   }
-  if (remove_link) outputs[col]->cp_row = NULL;
+  if (remove_link) outputs[col].cp_row = NULL;
   return return_value;
 }
 
@@ -242,11 +238,11 @@ int8_t AudioRouter::route(uint8_t col, uint8_t row) {
   if (col > 7)  return AUDIO_ROUTER_ERROR_BAD_COLUMN;
   if (row > 11) return AUDIO_ROUTER_ERROR_BAD_ROW;
 
-  if (outputs[col]->cp_row != NULL) {
+  if (outputs[col].cp_row != NULL) {
     int8_t result = unroute(col);
     if (result == AUDIO_ROUTER_ERROR_NO_ERROR) {
       return_value = AUDIO_ROUTER_ERROR_INPUT_DISPLACED;
-      outputs[col]->cp_row = NULL;
+      outputs[col].cp_row = NULL;
     }
     else {
       return_value = AUDIO_ROUTER_ERROR_UNROUTE_FAILED;
@@ -254,12 +250,12 @@ int8_t AudioRouter::route(uint8_t col, uint8_t row) {
   }
 
   if (return_value >= 0) {
-    int8_t result = cp_switch->setRoute(outputs[col]->cp_column, row);
+    int8_t result = cp_switch->setRoute(outputs[col].cp_column, row);
     if (result != AUDIO_ROUTER_ERROR_NO_ERROR) {
       return_value = result;
     }
     else {
-      outputs[col]->cp_row = inputs[row];
+      outputs[col].cp_row = &inputs[row];
     }
   }
 
@@ -270,7 +266,7 @@ int8_t AudioRouter::route(uint8_t col, uint8_t row) {
 int8_t AudioRouter::setVolume(uint8_t col, uint8_t vol) {
   int8_t return_value = AUDIO_ROUTER_ERROR_NO_ERROR;
   if (col > 7)  return AUDIO_ROUTER_ERROR_BAD_COLUMN;
-  return_value = outputs[col]->dp_dev->setValue(outputs[col]->dp_reg, vol);
+  return_value = outputs[col].dp_dev->setValue(outputs[col].dp_reg, vol);
   return return_value;
 }
 
@@ -324,23 +320,23 @@ void AudioRouter::dumpOutputChannel(uint8_t chan, StringBuilder* output) {
   }
   output->concatf("Output channel %d\n", chan);
 
-  if (outputs[chan]->name != NULL) output->concatf("%s\n", outputs[chan]->name);
-  output->concatf("Switch column %d\n", outputs[chan]->cp_column);
-  if (outputs[chan]->dp_dev == NULL) {
+  if (outputs[chan].name != NULL) output->concatf("%s\n", outputs[chan].name);
+  output->concatf("Switch column %d\n", outputs[chan].cp_column);
+  if (outputs[chan].dp_dev == NULL) {
     output->concatf("Potentiometer is NULL\n");
   }
   else {
-    uint8_t temp_int = (outputs[chan]->dp_dev == dp_lo) ? 0 : 1;
+    uint8_t temp_int = (outputs[chan].dp_dev == dp_lo) ? 0 : 1;
     output->concatf("Potentiometer:            %d\n", temp_int);
-    output->concatf("Potentiometer register:   %d\n", outputs[chan]->dp_reg);
-    output->concatf("Potentiometer value:      %d\n", outputs[chan]->dp_val);
+    output->concatf("Potentiometer register:   %d\n", outputs[chan].dp_reg);
+    output->concatf("Potentiometer value:      %d\n", outputs[chan].dp_val);
   }
-  if (outputs[chan]->cp_row == NULL) {
+  if (outputs[chan].cp_row == NULL) {
     output->concatf("Output channel %d is presently unbound.\n", chan);
   }
   else {
     output->concatf("Output channel %d is presently bound to the following input...\n", chan);
-    dumpInputChannel(outputs[chan]->cp_row, output);
+    dumpInputChannel(outputs[chan].cp_row, output);
   }
 }
 
@@ -362,8 +358,8 @@ void AudioRouter::dumpInputChannel(uint8_t chan, StringBuilder* output) {
     return;
   }
   output->concatf("Input channel %d\n", chan);
-  if (inputs[chan]->name != NULL) output->concatf("%s\n", inputs[chan]->name);
-  output->concatf("Switch row: %d\n", inputs[chan]->cp_row);
+  if (inputs[chan].name != NULL) output->concatf("%s\n", inputs[chan].name);
+  output->concatf("Switch row: %d\n", inputs[chan].cp_row);
 }
 
 

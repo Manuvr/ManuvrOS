@@ -28,17 +28,22 @@
 #ifndef MANUVRABLE_NEOPIXEL_H
 #define MANUVRABLE_NEOPIXEL_H
 
-  #include <EventReceiver.h>
+#include <EventReceiver.h>
 
-  // 'type' flags for LED pixels (third parameter to constructor):
-  #define NEO_GRB     0x01 // Wired for GRB data order
-  #define NEO_COLMASK 0x01
-  #define NEO_KHZ800  0x02 // 800 KHz datastream
-  #define NEO_SPDMASK 0x02
+// 'type' flags for LED pixels (third parameter to constructor):
+#define NEO_GRB     0x01 // Wired for GRB data order
+#define NEO_COLMASK 0x01
+#define NEO_KHZ800  0x02 // 800 KHz datastream
+#define NEO_SPDMASK 0x02
+
+/*
+* These state flags are hosted by the EventReceiver. This may change in the future.
+* Might be too much convention surrounding their assignment across inherritence.
+*/
+#define NEOPIXEL_FLAG_AUTOBRIGHTNESS     0x01   // Is the device initialized?
 
 
 class ManuvrableNeoPixel : public EventReceiver {
-
   public:
     // Constructor: number of LEDs, pin number, LED type
     ManuvrableNeoPixel(uint16_t n, uint8_t p=6, uint8_t t=NEO_GRB + NEO_KHZ800);
@@ -47,10 +52,7 @@ class ManuvrableNeoPixel : public EventReceiver {
     void colorWipe(uint32_t c, uint8_t wait);
     void rainbow(uint8_t wait);
     void rainbowCycle(uint8_t wait);
-    void theaterChase(uint32_t c, uint8_t wait);
     uint32_t Wheel(uint8_t WheelPos);
-    void theaterChaseRainbow(uint8_t wait);
-
 
     void begin(void);
     void show(void);
@@ -62,7 +64,6 @@ class ManuvrableNeoPixel : public EventReceiver {
     static uint32_t Color(uint8_t r, uint8_t g, uint8_t b);
     uint32_t getPixelColor(uint16_t n) const;
 
-
     /* Overrides from EventReceiver */
     void printDebug(StringBuilder*);
     int8_t notify(ManuvrRunnable*);
@@ -71,8 +72,13 @@ class ManuvrableNeoPixel : public EventReceiver {
       void procDirectDebugInstruction(StringBuilder*);
     #endif  //__MANUVR_CONSOLE_SUPPORT
 
+    inline bool autoBrightness() {         return (_er_flag(NEOPIXEL_FLAG_AUTOBRIGHTNESS));           };
+    inline void autoBrightness(bool nu) {  return (_er_set_flag(NEOPIXEL_FLAG_AUTOBRIGHTNESS, nu));   };
+
+
   protected:
     int8_t bootComplete();
+
 
   private:
     uint32_t endTime;         // Latch timing reference

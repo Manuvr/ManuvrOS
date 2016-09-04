@@ -50,10 +50,9 @@ limitations under the License.
 
 
     private:
-      ManuvrRunnable _periodic_check;
-
       int8_t   adc_list[16];
       uint16_t last_sample[16];
       uint16_t threshold[16];
+      ManuvrRunnable _periodic_check;
   };
 #endif

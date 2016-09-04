@@ -129,6 +129,7 @@ int8_t ADCScanner::bootComplete() {
   // Build some pre-formed Events.
   _periodic_check.repurpose(MANUVR_MSG_ADC_SCAN);
   _periodic_check.isManaged(true);
+  _periodic_check.specific_target = (EventReceiver*) this;
   _periodic_check.originator = (EventReceiver*) this;
 
   _periodic_check.alterScheduleRecurrence(-1);

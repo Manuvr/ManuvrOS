@@ -68,7 +68,6 @@ void ManuvrableNeoPixel::begin(void) {
 
 void ManuvrableNeoPixel::show(void) {
   if(!pixels) return;
-
   // Data latch = 50+ microsecond pause in the output stream.  Rather than
   // put a delay at the end of the function, the ending time is noted and
   // the function will simply hold off (if needed) on issuing the
@@ -238,10 +237,13 @@ void ManuvrableNeoPixel::setBrightness(uint8_t b) {
 // Fill the dots one after the other with a color
 void ManuvrableNeoPixel::colorWipe(uint32_t c, uint8_t wait) {
   for(uint16_t i=0; i<numPixels(); i++) {
-      setPixelColor(i, c);
+    setPixelColor(i, c);
+    if (wait) {
       show();
       sleep_millis(wait);
+    }
   }
+  if (0 == wait) show();
 }
 
 void ManuvrableNeoPixel::rainbow(uint8_t wait) {
@@ -251,76 +253,47 @@ void ManuvrableNeoPixel::rainbow(uint8_t wait) {
     for(i=0; i<numPixels(); i++) {
       setPixelColor(i, Wheel((i+j) & 255));
     }
-    show();
-    sleep_millis(wait);
+    if (wait) {
+      show();
+      sleep_millis(wait);
+    }
   }
+  if (0 == wait) show();
 }
 
 // Slightly different, this makes the rainbow equally distributed throughout
 void ManuvrableNeoPixel::rainbowCycle(uint8_t wait) {
   uint16_t i, j;
 
-  for(j=0; j<256*5; j++) { // 5 cycles of all colors on wheel
+  for(j=0; j<256; j++) { // 5 cycles of all colors on wheel
     for(i=0; i< numPixels(); i++) {
       setPixelColor(i, Wheel(((i * 256 / numPixels()) + j) & 255));
     }
-    show();
-    sleep_millis(wait);
-  }
-}
-
-//Theatre-style crawling lights.
-void ManuvrableNeoPixel::theaterChase(uint32_t c, uint8_t wait) {
-  for (int j=0; j<10; j++) {  //do 10 cycles of chasing
-    for (int q=0; q < 3; q++) {
-      for (int i=0; i < numPixels(); i=i+3) {
-        setPixelColor(i+q, c);    //turn every third pixel on
-      }
+    if (wait) {
       show();
-
       sleep_millis(wait);
-
-      for (int i=0; i < numPixels(); i=i+3) {
-        setPixelColor(i+q, 0);        //turn every third pixel off
-      }
     }
   }
+  if (0 == wait) show();
 }
+
 
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
 uint32_t ManuvrableNeoPixel::Wheel(uint8_t WheelPos) {
   if(WheelPos < 85) {
-   return Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-  } else if(WheelPos < 170) {
-   WheelPos -= 85;
-   return Color(255 - WheelPos * 3, 0, WheelPos * 3);
-  } else {
-   WheelPos -= 170;
-   return Color(0, WheelPos * 3, 255 - WheelPos * 3);
+    return Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  }
+  else if(WheelPos < 170) {
+    WheelPos -= 85;
+    return Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  }
+  else {
+    WheelPos -= 170;
+    return Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
   return 0;
 }
-
-
-//Theatre-style crawling lights with rainbow effect
-void ManuvrableNeoPixel::theaterChaseRainbow(uint8_t wait) {
-  for (int j=0; j < 256; j++) {     // cycle all 256 colors in the wheel
-    for (int q=0; q < 3; q++) {
-        for (int i=0; i < numPixels(); i=i+3) {
-          setPixelColor(i+q, Wheel( (i+j) % 255));    //turn every third pixel on
-        }
-        show();
-
-        sleep_millis(wait);
-
-        for (int i=0; i < numPixels(); i=i+3) {
-          setPixelColor(i+q, 0);        //turn every third pixel off
-        }
-    }
-  }
-}
-
 
 
 
@@ -345,10 +318,14 @@ void ManuvrableNeoPixel::theaterChaseRainbow(uint8_t wait) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void ManuvrableNeoPixel::printDebug(StringBuilder *output) {
-  if (output == NULL) return;
-
   EventReceiver::printDebug(output);
-  output->concat("\n");
+  output->concatf("-- LED count:          %u\n", numLEDs);
+  output->concatf("-- Framebuffer size:   %u\n", numBytes);
+  output->concatf("-- Mode:               %u\n", mode);
+  output->concatf("-- Brightness:         %u\n", brightness);
+  if (autoBrightness()) {
+    output->concatf("-- Auto-brightness:    o%s\n\n", autoBrightness()?"n":"ff");
+  }
 }
 
 
@@ -450,7 +427,7 @@ int8_t ManuvrableNeoPixel::notify(ManuvrRunnable *active_event) {
       break;
 
     case MANUVR_MSG_AMBIENT_LIGHT_LEVEL:
-      if (active_event->argCount() > 0) {
+      if (autoBrightness() && active_event->argCount() > 0) {
         uint8_t brightness;
         if (0 == active_event->getArgAs(&brightness)) {
           setBrightness(brightness);
@@ -474,8 +451,49 @@ int8_t ManuvrableNeoPixel::notify(ManuvrRunnable *active_event) {
 void ManuvrableNeoPixel::procDirectDebugInstruction(StringBuilder *input) {
   const char* str = (char *) input->position(0);
   char c    = *str;
+  int temp_int = 0;
+
+  if (input->count() > 1) {
+    // If there is a second token, we proceed on good-faith that it's an int.
+    temp_int = input->position_as_int(1);
+  }
 
   switch (c) {
+    case 'd':
+    case 'D':
+      // Dynamic brightness adjustment?
+      autoBrightness('D' == c);
+      local_log.concatf("Neopixel: autoBrightness o%s.\n", autoBrightness() ? "n" : "ff");
+      break;
+    case 'b':
+      setBrightness((uint8_t) temp_int);
+      local_log.concatf("Neopixel: brightness %d.\n", (uint8_t) temp_int);
+      show();
+      break;
+    case 'R':
+      colorWipe(Color(255, 0, 0), 0); // Red
+      break;
+    case 'G':
+      colorWipe(Color(0, 255, 0), 0); // Green
+      break;
+    case 'B':
+      colorWipe(Color(0, 0, 255), 0); // Blue
+      break;
+    case 'W':
+      colorWipe(Color((temp_int%255), (temp_int%255), (temp_int%255)), 1); // White
+      break;
+    case 'A':
+      colorWipe(Color(0, 150, 150), 0); // Aqua
+      break;
+    case 'P':
+      colorWipe(Color(150, 150, 0), 0); // Purple
+      break;
+    case 's':
+      rainbow(0);  // Spectrum
+      break;
+    case 'S':
+      rainbowCycle(0);  // Spectrum
+      break;
     default:
       EventReceiver::procDirectDebugInstruction(input);
       break;

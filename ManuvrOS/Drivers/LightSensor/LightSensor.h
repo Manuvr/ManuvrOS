@@ -45,8 +45,8 @@ This is a quick-and-dirty class to support reading a CdS cell from an analog
 
 
     private:
-      ManuvrRunnable _periodic_check;
       int _analog_pin = -1;
+      ManuvrRunnable _periodic_check;
 
       void light_check();
   };
