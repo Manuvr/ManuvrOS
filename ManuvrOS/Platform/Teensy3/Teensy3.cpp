@@ -35,8 +35,16 @@ This file is meant to contain a set of common functions that are typically platf
 #define PLATFORM_GPIO_PIN_COUNT   33
 
 
+ManuvrPlatform platform;
+
+
 #if defined (__MANUVR_FREERTOS)
   #include <FreeRTOS_ARM.h>
+#else
+  #include "IntervalTimer.h"
+
+  IntervalTimer timer0;  // Scheduler
+  void timerCallbackScheduler() {  platform.advanceScheduler();  }
 #endif
 
 
@@ -44,6 +52,7 @@ This file is meant to contain a set of common functions that are typically platf
 * The code under this block is special on this platform, and will not be available elsewhere.       *
 ****************************************************************************************************/
 time_t getTeensy3Time() {   return Teensy3Clock.get();   }
+
 
 
 
@@ -113,9 +122,9 @@ void ManuvrPlatform::printDebug(StringBuilder* output) {
 
 
 
-/****************************************************************************************************
-* Identity and serial number                                                                        *
-****************************************************************************************************/
+/*******************************************************************************
+* Identity and serial number                                                   *
+*******************************************************************************/
 /**
 * We sometimes need to know the length of the platform's unique identifier (if any). If this platform
 *   is not serialized, this function will return zero.
@@ -287,8 +296,10 @@ int readPinAnalog(uint8_t pin) {
 *******************************************************************************/
 
 #if defined (__MANUVR_FREERTOS)
-  void globalIRQEnable() {     taskENABLE_INTERRUPTS();    }
-  void globalIRQDisable() {    taskDISABLE_INTERRUPTS();   }
+  //void globalIRQEnable() {     taskENABLE_INTERRUPTS();    }
+  //void globalIRQDisable() {    taskDISABLE_INTERRUPTS();   }
+  void globalIRQEnable() {         }
+  void globalIRQDisable() {        }
 #else
   void globalIRQEnable() {     sei();    }
   void globalIRQDisable() {    cli();    }
@@ -381,6 +392,7 @@ int8_t ManuvrPlatform::platformPreInit() {
   }
   _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
   gpioSetup();
+  return 0;
 }
 
 
@@ -388,4 +400,11 @@ int8_t ManuvrPlatform::platformPreInit() {
 * Called as a result of kernels bootstrap() fxn.
 */
 int8_t ManuvrPlatform::platformPostInit() {
+  #if defined (__MANUVR_FREERTOS)
+  #else
+  // No threads. We are responsible for pinging our own scheduler.
+  // Turn on the periodic interrupts...
+  timer0.begin(timerCallbackScheduler, MANUVR_PLATFORM_TIMER_PERIOD_MS);
+  #endif
+  return 0;
 }

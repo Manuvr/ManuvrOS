@@ -800,11 +800,11 @@ int8_t Kernel::procIdleFlags() {
       profiler_item->run_time_average = profiler_item->run_time_total / ((profiler_item->executions) ? profiler_item->executions : 1);
 
       #ifdef __MANUVR_DEBUG
-        MessageTypeDef* tmp_msg_def = (MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(msg_code_local);
-        if (getVerbosity() >= 6) {
-          if (profiler_mark_2) local_log.concatf("%s finished.\tTotal time: %5ld uS\tTook %5ld uS to notify.\n", tmp_msg_def->debug_label, (profiler_mark_3 - profiler_mark_0), profiler_item->run_time_last);
-          else                 local_log.concatf("%s finished.\tTotal time: %5ld uS\n", tmp_msg_def->debug_label, (profiler_mark_3 - profiler_mark_0));
-        }
+        //MessageTypeDef* tmp_msg_def = (MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(msg_code_local);
+        //if (getVerbosity() > 6) {
+        //  if (profiler_mark_2) local_log.concatf("%s finished.\tTotal time: %5ld uS\tTook %5ld uS to notify.\n", tmp_msg_def->debug_label, (profiler_mark_3 - profiler_mark_0), profiler_item->run_time_last);
+        //  else                 local_log.concatf("%s finished.\tTotal time: %5ld uS\n", tmp_msg_def->debug_label, (profiler_mark_3 - profiler_mark_0));
+        //}
       #endif
       profiler_mark_2 = 0;  // Reset for next iteration.
     }

@@ -19,16 +19,6 @@ limitations under the License.
 
 
 This driver is designed to give Manuvr platform-abstracted transports.
-
-XenoSessions are optionally established by this class, and broadcast to the
-  rest of the system (MANUVR_MSG_SESS_ESTABLISHED). By the time that has
-  happened, the session ought to have become sync'd, self-identified,
-  authenticated, etc. Therefore, session configuration must be done on a
-  per-transport basis. This means that authentication (for instance) is
-  transport-wide.
-
-If sessions are enabled for a transport, the highest-level of the protocol
-  touched by this class ought to be dealing with sync.
 */
 
 
@@ -163,7 +153,7 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
   protected:
     ManuvrRunnable* _autoconnect_schedule;
     #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
-      // Threaded platforms have a concept of threads...
+      // If we have a concept of threads...
       unsigned long _thread_id;
     #endif
 

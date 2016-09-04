@@ -68,7 +68,24 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
 *   executes under an ISR. Keep it brief...
 *******************************************************************************/
 
-#if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
+#if defined(__MANUVR_FREERTOS)
+  /*
+  * In a threaded environment, we use threads to read ports.
+  */
+  void* xport_read_handler(void* active_xport) {
+    if (NULL != active_xport) {
+      // Wait until boot has ocurred...
+      while (!((ManuvrXport*)active_xport)->booted()) taskYIELD();
+      while (1) {
+        if (0 == ((ManuvrXport*)active_xport)->read_port()) {
+          taskYIELD();
+        }
+      }
+    }
+    return NULL;
+  }
+
+#elif defined(__MANUVR_LINUX)
   /*
   * In a threaded environment, we use threads to read ports.
   */
@@ -78,7 +95,6 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
       while (!((ManuvrXport*)active_xport)->booted()) sleep_millis(50);
       while (1) {
         if (0 == ((ManuvrXport*)active_xport)->read_port()) {
-          // TODO: Concentrate sleep logic here.
           sleep_millis(20);
         }
       }
@@ -86,8 +102,6 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
     return NULL;
   }
 
-#else
-  // Threads are unsupported here.
 #endif
 
 
@@ -377,16 +391,18 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
 
     case MANUVR_MSG_XPORT_RESERVED_0:
     case MANUVR_MSG_XPORT_RESERVED_1:
-    case MANUVR_MSG_XPORT_SET_PARAM:
-    case MANUVR_MSG_XPORT_GET_PARAM:
     case MANUVR_MSG_XPORT_INIT:
     case MANUVR_MSG_XPORT_RESET:
-    case MANUVR_MSG_XPORT_CONNECT:
-    case MANUVR_MSG_XPORT_DISCONNECT:
     case MANUVR_MSG_XPORT_ERROR:
-    case MANUVR_MSG_XPORT_SESSION:
     case MANUVR_MSG_XPORT_QUEUE_RDY:
     case MANUVR_MSG_XPORT_CB_QUEUE_RDY:
+      #ifdef __MANUVR_DEBUG
+      if (getVerbosity() > 3) {
+        local_log.concatf("TransportID %d received an event that was addressed to it, but is not yet handled.\n", xport_id);
+        active_event->printDebug(&local_log);
+      }
+      #endif
+      break;
 
     case MANUVR_MSG_XPORT_IDENTITY:
       #ifdef __MANUVR_DEBUG

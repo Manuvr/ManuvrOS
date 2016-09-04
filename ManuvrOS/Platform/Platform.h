@@ -219,6 +219,8 @@ class ManuvrPlatform {
     int8_t bootstrap();
     inline uint8_t platformState() {   return (_pflags & MANUVR_PLAT_FLAG_P_STATE_MASK);  };
 
+    inline void advanceScheduler() {  _kernel.advanceScheduler();  };
+
     /* This cannot possibly return NULL. */
     inline Kernel* kernel() {          return &_kernel;  };
 

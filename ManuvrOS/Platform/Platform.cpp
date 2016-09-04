@@ -32,8 +32,7 @@ This file is meant to contain a set of common functions that are typically platf
 
 // TODO: I know this is horrid. I'm sick of screwing with the build system today...
 #if defined(__MK20DX256__) | defined(__MK20DX128__)
-  #include "./Teensy3/Teensy3.cpp"
-  ManuvrPlatform platform;
+
 #elif defined(STM32F4XX)
   #include "./STM32F4/STM32F4.cpp"
   ManuvrPlatform platform;
@@ -342,7 +341,7 @@ int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn,
       return 0;
     }
   #endif
-  Kernel::log("Failed to create thread.\n");
+  //Kernel::log("Failed to create thread.\n");
   return -1;
 }
 
@@ -368,7 +367,7 @@ void sleep_millis(unsigned long millis) {
     struct timespec t = {(long) (millis / 1000), (long) ((millis % 1000) * 1000000UL)};
     nanosleep(&t, &t);
   #elif defined(__MANUVR_FREERTOS)
-    vTaskDelay(millis / portTICK_PERIOD_MS);
+    //vTaskDelay(millis / portTICK_PERIOD_MS);
   #endif
 }
 
