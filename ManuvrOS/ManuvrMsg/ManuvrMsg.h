@@ -250,6 +250,8 @@ class ManuvrMsg {
     static const unsigned char MSG_ARGS_BUFFERPIPE[];
     static const unsigned char MSG_ARGS_XPORT[];
 
+    static const unsigned char MSG_ARGS_U8_U8[];
+
 
 
   protected:

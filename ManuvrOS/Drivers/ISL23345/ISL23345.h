@@ -44,7 +44,7 @@ This is the class that represents an ISL23345 digital potentiometer.
 class ISL23345 : public I2CDeviceWithRegisters {
   public:
     ISL23345(uint8_t i2c_addr);
-    ~ISL23345(void);
+    virtual ~ISL23345();
 
     int8_t init(void);                            // Perform bus-related init tasks.
     void preserveOnDestroy(bool);

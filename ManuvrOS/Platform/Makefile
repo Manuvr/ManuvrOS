@@ -1,3 +1,10 @@
+###########################################################################
+# ManuvrOS platform Makefile
+# Author: J. Ian Lindsay
+#
+# This is where we conditionally compile platform-support code.
+###########################################################################
+
 CXX_STANDARD       = gnu++11
 
 # Includes

@@ -100,14 +100,14 @@ int8_t ManuvrAudio::bootComplete() {
 *
 * Depending on class implementations, we might choose to handle the completed Event differently. We
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
-*   ourselves and return DROP. By default, we will return REAP to instruct the EventManager
+*   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
 *   was crafted to not be in the heap in its own allocation, we will return DROP instead.
 *
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t ManuvrAudio::callback_proc(ManuvrEvent *event) {
+int8_t ManuvrAudio::callback_proc(ManuvrRunnable *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -123,7 +123,7 @@ int8_t ManuvrAudio::callback_proc(ManuvrEvent *event) {
 
 
 
-int8_t ManuvrAudio::notify(ManuvrEvent *active_event) {
+int8_t ManuvrAudio::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {

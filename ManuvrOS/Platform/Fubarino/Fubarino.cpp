@@ -240,3 +240,56 @@ volatile void jumpToBootloader(void) {
 volatile void reboot(void) {
   executeSoftReset(ENTER_BOOTLOADER_ON_BOOT);
 }
+
+
+uint32_t timerCallbackScheduler(uint32_t currentTime) {
+  platform.advanceScheduler();
+  return (currentTime + (CORE_TICK_RATE * 1));
+}
+
+
+/*******************************************************************************
+* Platform initialization.                                                     *
+*******************************************************************************/
+#define  DEFAULT_PLATFORM_FLAGS ( \
+              MANUVR_PLAT_FLAG_HAS_IDENTITY)
+
+/**
+* Init that needs to happen prior to kernel bootstrap().
+* This is the final function called by the kernel constructor.
+*/
+int8_t ManuvrPlatform::platformPreInit() {
+  // TODO: Should we really be setting capabilities this late?
+  uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
+
+  #if defined(__MANUVR_MBEDTLS)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
+  #endif
+
+  #if defined(MANUVR_GPS_PIPE)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
+  #endif
+
+  _alter_flags(true, default_flags);
+  _discoverALUParams();
+
+  start_time_micros = micros();
+  init_rng();
+  _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
+
+  return 0;
+}
+
+
+/*
+* Called before kernel instantiation. So do the minimum required to ensure
+*   internal system sanity.
+*/
+int8_t ManuvrPlatform::platformPostInit() {
+  if (nullptr == _identity) {
+    _identity = new IdentityUUID(IDENTITY_STRING);
+  }
+  attachCoreTimerService(timerCallbackScheduler);
+  globalIRQEnable();
+  return 0;
+}

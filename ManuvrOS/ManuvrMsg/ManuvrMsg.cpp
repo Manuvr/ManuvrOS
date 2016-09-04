@@ -49,6 +49,8 @@ const unsigned char ManuvrMsg::MSG_ARGS_STR_BUILDER[] = {STR_BUILDER_FM, 0};
 const unsigned char ManuvrMsg::MSG_ARGS_BUFFERPIPE[]  = {BUFFERPIPE_PTR_FM, 0};
 const unsigned char ManuvrMsg::MSG_ARGS_XPORT[]       = {SYS_MANUVR_XPORT_FM, 0};
 
+const unsigned char ManuvrMsg::MSG_ARGS_U8_U8[]  = {UINT8_FM, UINT8_FM, 0};
+
 /*
 * This is the argument form for messages that either...
 *   a) Need a free-form type that we don't support natively

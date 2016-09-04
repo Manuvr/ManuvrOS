@@ -33,6 +33,11 @@ The test-bench consists of these files. It was meant to run on linux with possib
     main.cpp
     Makefile
 
+##### First, you may want to download the dependencies...
+
+    ./downloadDeps.sh
+
+
 ##### Vanilla linux build (no i2c, TTY, or GPIO):
 
     make

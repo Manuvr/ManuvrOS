@@ -77,9 +77,8 @@ CPP_SRCS  += Drivers/i2c-adapter/i2c-adapter.cpp
 CPP_SRCS  += Drivers/i2c-adapter/I2CDeviceWithRegisters.cpp
 CPP_SRCS  += Drivers/i2c-adapter/I2CBusOp.cpp
 
-# TODO: Bring up to speed WRT Runnable.
-#CPP_SRCS  += Drivers/LightSensor/LightSensor.cpp
-#CPP_SRCS  += Drivers/AudioRouter/AudioRouter.cpp
+CPP_SRCS  += Drivers/LightSensor/LightSensor.cpp
+CPP_SRCS  += Drivers/AudioRouter/AudioRouter.cpp
 
 # TODO: Use GPio abstractions!
 CPP_SRCS  += Drivers/MGC3130/MGC3130.cpp
@@ -90,7 +89,7 @@ CPP_SRCS  += Drivers/ADP8866/ADP8866.cpp
 #CPP_SRCS  += Drivers/ManuvrAudio/ManuvrAudio.cpp
 
 # TODO: Bring up to speed WRT scheduler removal.
-#CPP_SRCS  += Drivers/ADCScanner/ADCScanner.cpp
+CPP_SRCS  += Drivers/ADCScanner/ADCScanner.cpp
 
 # TODO: Full of fail. Arduino abstraction, GPIO, runnable, scheduler, et al...
 #CPP_SRCS  += Drivers/ManuvrableNeoPixel/ManuvrableNeoPixel.cpp

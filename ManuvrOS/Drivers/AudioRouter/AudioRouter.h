@@ -23,10 +23,21 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifndef AUDIO_ROUTER_PCB_H
 #define AUDIO_ROUTER_PCB_H
 
-#include "Drivers/ISL23345/ISL23345.h"
-#include "Drivers/ADG2128/ADG2128.h"
+#include <Drivers/ISL23345/ISL23345.h>
+#include <Drivers/ADG2128/ADG2128.h>
 
-
+/* These are message codes that we will pitch to the kernel. */
+#define VIAM_SONUS_MSG_ENABLE_ROUTING        0x9000 //
+#define VIAM_SONUS_MSG_DISABLE_ROUTING       0x9001 //
+#define VIAM_SONUS_MSG_NAME_INPUT_CHAN       0x9002 //
+#define VIAM_SONUS_MSG_NAME_OUTPUT_CHAN      0x9003 //
+#define VIAM_SONUS_MSG_DUMP_ROUTER           0x9004 //
+#define VIAM_SONUS_MSG_OUTPUT_CHAN_VOL       0x9005 //
+#define VIAM_SONUS_MSG_UNROUTE               0x9006 //
+#define VIAM_SONUS_MSG_ROUTE                 0x9007 //
+#define VIAM_SONUS_MSG_PRESERVE_ROUTES       0x9008 //
+#define VIAM_SONUS_MSG_GROUP_CHANNELS        0x9009 //
+#define VIAM_SONUS_MSG_UNGROUP_CHANNELS      0x900A //
 
 /*
 * We must arbitrarilly assign inputs to rows or columns in the crosspoint switch. Since we don't want to allow
@@ -104,8 +115,8 @@ class AudioRouter : public EventReceiver {
 
     /* Overrides from EventReceiver */
     void printDebug(StringBuilder*);
-    int8_t notify(ManuvrEvent*);
-    int8_t callback_proc(ManuvrEvent *);
+    int8_t notify(ManuvrRunnable*);
+    int8_t callback_proc(ManuvrRunnable *);
     #if defined(__MANUVR_CONSOLE_SUPPORT)
       void procDirectDebugInstruction(StringBuilder*);
     #endif  //__MANUVR_CONSOLE_SUPPORT
