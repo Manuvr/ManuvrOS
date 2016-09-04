@@ -575,12 +575,6 @@ void AudioRouter::procDirectDebugInstruction(StringBuilder *input) {
   char* str = (char*) input->string();
 
   char c = *(str);
-  uint8_t temp_byte = 0;        // Many commands here take a single integer argument.
-
-  if (*(str) != 0) {
-    temp_byte = atoi((char*) str+1);
-  }
-
   StringBuilder parse_mule;
   ManuvrRunnable* event;
 

@@ -368,6 +368,8 @@ void sleep_millis(unsigned long millis) {
     nanosleep(&t, &t);
   #elif defined(__MANUVR_FREERTOS)
     vTaskDelay(millis / portTICK_PERIOD_MS);
+  #elif defined(ARDUINO)
+    delay(millis);  // So wasteful...
   #endif
 }
 

@@ -41,23 +41,28 @@
   -------------------------------------------------------------------------*/
 
 #include "ManuvrableNeoPixel.h"
+#include <Platform/Platform.h>
 
 
-ManuvrableNeoPixel::ManuvrableNeoPixel(uint16_t n, uint8_t p, uint8_t t) : numLEDs(n), numBytes(n * 3), pin(p), pixels(NULL) : EventReceiver() {
+ManuvrableNeoPixel::ManuvrableNeoPixel(uint16_t n, uint8_t p, uint8_t t) : EventReceiver() {
   setReceiverName("NeoPixel");
+  numLEDs = n;
+  numBytes = n * 3;
+  pin = p;
   mode = 0;
-  if((pixels = (uint8_t *)malloc(numBytes))) {
+  pixels = (uint8_t*) malloc(numBytes);
+  if(nullptr != pixels) {
     memset(pixels, 0, numBytes);
   }
 }
 
 ManuvrableNeoPixel::~ManuvrableNeoPixel() {
-  if(pixels) free(pixels);
-  pinMode(pin, INPUT);
+  if (pixels) free(pixels);
+  gpioDefine(pin, INPUT);
 }
 
 void ManuvrableNeoPixel::begin(void) {
-  pinMode(pin, OUTPUT);
+  gpioDefine(pin, OUTPUT);
   setPin(pin, LOW);
 }
 
@@ -85,7 +90,8 @@ void ManuvrableNeoPixel::show(void) {
   // state, computes 'pin high' and 'pin low' values, and writes these back
   // to the PORT register as needed.
 
-  noInterrupts(); // Need 100% focus on instruction timing
+  maskableInterrupts(false); // Need 100% focus on instruction timing
+
 
 #if defined(__MK20DX128__) || defined(__MK20DX256__) // Teensy 3.0 & 3.1
 #define CYCLES_800_T0H  (F_CPU / 2500000)
@@ -123,17 +129,10 @@ void ManuvrableNeoPixel::show(void) {
 
 #endif // end Architecture select
 
-  interrupts();
+  maskableInterrupts(true);
   endTime = micros(); // Save EOD time for latch on next call
 }
 
-// Set the output pin number
-void ManuvrableNeoPixel::setPin(uint8_t p) {
-  pinMode(pin, INPUT);
-  pin = p;
-  pinMode(p, OUTPUT);
-  setPin(p, LOW);
-}
 
 
 // Set pixel color from separate R,G,B components:
@@ -241,7 +240,7 @@ void ManuvrableNeoPixel::colorWipe(uint32_t c, uint8_t wait) {
   for(uint16_t i=0; i<numPixels(); i++) {
       setPixelColor(i, c);
       show();
-      delay(wait);
+      sleep_millis(wait);
   }
 }
 
@@ -253,7 +252,7 @@ void ManuvrableNeoPixel::rainbow(uint8_t wait) {
       setPixelColor(i, Wheel((i+j) & 255));
     }
     show();
-    delay(wait);
+    sleep_millis(wait);
   }
 }
 
@@ -266,7 +265,7 @@ void ManuvrableNeoPixel::rainbowCycle(uint8_t wait) {
       setPixelColor(i, Wheel(((i * 256 / numPixels()) + j) & 255));
     }
     show();
-    delay(wait);
+    sleep_millis(wait);
   }
 }
 
@@ -279,7 +278,7 @@ void ManuvrableNeoPixel::theaterChase(uint32_t c, uint8_t wait) {
       }
       show();
 
-      delay(wait);
+      sleep_millis(wait);
 
       for (int i=0; i < numPixels(); i=i+3) {
         setPixelColor(i+q, 0);        //turn every third pixel off
@@ -290,7 +289,7 @@ void ManuvrableNeoPixel::theaterChase(uint32_t c, uint8_t wait) {
 
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
-uint32_t ManuvrableNeoPixel::Wheel(byte WheelPos) {
+uint32_t ManuvrableNeoPixel::Wheel(uint8_t WheelPos) {
   if(WheelPos < 85) {
    return Color(WheelPos * 3, 255 - WheelPos * 3, 0);
   } else if(WheelPos < 170) {
@@ -313,7 +312,7 @@ void ManuvrableNeoPixel::theaterChaseRainbow(uint8_t wait) {
         }
         show();
 
-        delay(wait);
+        sleep_millis(wait);
 
         for (int i=0; i < numPixels(); i=i+3) {
           setPixelColor(i+q, 0);        //turn every third pixel off
@@ -321,10 +320,6 @@ void ManuvrableNeoPixel::theaterChaseRainbow(uint8_t wait) {
     }
   }
 }
-
-
-
-
 
 
 
@@ -403,7 +398,6 @@ int8_t ManuvrableNeoPixel::callback_proc(ManuvrRunnable *event) {
 
 
 
-
 int8_t ManuvrableNeoPixel::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
 
@@ -475,25 +469,13 @@ int8_t ManuvrableNeoPixel::notify(ManuvrRunnable *active_event) {
 }
 
 
-#ifdef __MANUVR_CONSOLE_SUPPORT
+
+#if defined(__MANUVR_CONSOLE_SUPPORT)
 void ManuvrableNeoPixel::procDirectDebugInstruction(StringBuilder *input) {
   const char* str = (char *) input->position(0);
   char c    = *str;
-  int temp_int = 0;
-
-  if (input->count() > 1) {
-    // If there is a second token, we proceed on good-faith that it's an int.
-    temp_int = input->position_as_int(1);
-  }
-  else if (strlen(str) > 1) {
-    // We allow a short-hand for the sake of short commands that involve a single int.
-    temp_int = atoi(str + 1);
-  }
 
   switch (c) {
-    case '*':
-      break;
-
     default:
       EventReceiver::procDirectDebugInstruction(input);
       break;
@@ -501,4 +483,4 @@ void ManuvrableNeoPixel::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-#endif
+#endif  //__MANUVR_CONSOLE_SUPPORT

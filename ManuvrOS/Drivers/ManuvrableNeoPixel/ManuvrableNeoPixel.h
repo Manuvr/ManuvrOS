@@ -26,9 +26,9 @@
   --------------------------------------------------------------------*/
 
 #ifndef MANUVRABLE_NEOPIXEL_H
-  #define MANUVRABLE_NEOPIXEL_H
+#define MANUVRABLE_NEOPIXEL_H
 
-  #include <Kernel.h>
+  #include <EventReceiver.h>
 
   // 'type' flags for LED pixels (third parameter to constructor):
   #define NEO_GRB     0x01 // Wired for GRB data order
@@ -48,13 +48,12 @@ class ManuvrableNeoPixel : public EventReceiver {
     void rainbow(uint8_t wait);
     void rainbowCycle(uint8_t wait);
     void theaterChase(uint32_t c, uint8_t wait);
-    uint32_t Wheel(byte WheelPos);
+    uint32_t Wheel(uint8_t WheelPos);
     void theaterChaseRainbow(uint8_t wait);
 
 
     void begin(void);
     void show(void);
-    void setPin(uint8_t p);
     void setPixelColor(uint16_t n, uint8_t r, uint8_t g, uint8_t b);
     void setPixelColor(uint16_t n, uint32_t c);
     void setBrightness(uint8_t);
@@ -65,7 +64,6 @@ class ManuvrableNeoPixel : public EventReceiver {
 
 
     /* Overrides from EventReceiver */
-    int8_t bootComplete();
     void printDebug(StringBuilder*);
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);
@@ -73,11 +71,13 @@ class ManuvrableNeoPixel : public EventReceiver {
       void procDirectDebugInstruction(StringBuilder*);
     #endif  //__MANUVR_CONSOLE_SUPPORT
 
+  protected:
+    int8_t bootComplete();
 
   private:
     uint32_t endTime;         // Latch timing reference
-    const uint16_t numLEDs;   // Number of RGB LEDs in strip
-    const uint16_t numBytes;  // Size of 'pixels' buffer below
+    uint16_t numLEDs;   // Number of RGB LEDs in strip
+    uint16_t numBytes;  // Size of 'pixels' buffer below
     uint8_t  mode;
     uint8_t  pin;             // Output pin number
     uint8_t  brightness;

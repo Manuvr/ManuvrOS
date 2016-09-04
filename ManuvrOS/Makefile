@@ -88,11 +88,9 @@ CPP_SRCS  += Drivers/ADP8866/ADP8866.cpp
 # TODO: Only for Teensyduino libs...
 #CPP_SRCS  += Drivers/ManuvrAudio/ManuvrAudio.cpp
 
-# TODO: Bring up to speed WRT scheduler removal.
 CPP_SRCS  += Drivers/ADCScanner/ADCScanner.cpp
 
-# TODO: Full of fail. Arduino abstraction, GPIO, runnable, scheduler, et al...
-#CPP_SRCS  += Drivers/ManuvrableNeoPixel/ManuvrableNeoPixel.cpp
+CPP_SRCS  += Drivers/ManuvrableNeoPixel/ManuvrableNeoPixel.cpp
 
 CPP_SRCS  += Drivers/ExampleDriver/ExampleDriver.cpp
 CPP_SRCS  += Drivers/ISL23345/ISL23345.cpp
