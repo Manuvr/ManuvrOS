@@ -135,7 +135,7 @@ void sig_handler(int signo) {
     default:
       #ifdef __MANUVR_DEBUG
       {
-        StringBuilder _log
+        StringBuilder _log;
         _log.concatf("Unhandled signal: %d", signo);
         Kernel::log(&_log);
       }
@@ -543,27 +543,6 @@ int readPinAnalog(uint8_t pin) {
 
 
 
-
-/*******************************************************************************
-* Interrupt-masking                                                            *
-*******************************************************************************/
-
-// Ze interrupts! Zhey do nuhsing!
-// TODO: Perhaps raise the nice value?
-// At minimum, turn off the periodic timer, since this is what would happen on
-//   other platforms.
-void globalIRQEnable() {
-  // TODO: Need to stack the time remaining.
-  //set_linux_interval_timer();
-}
-
-void globalIRQDisable() {
-  // TODO: Need to unstack the time remaining and fire any schedules.
-  //unset_linux_interval_timer();
-}
-
-
-
 /*******************************************************************************
 * Process control                                                              *
 *******************************************************************************/
@@ -662,12 +641,11 @@ int8_t ManuvrPlatform::platformPreInit() {
   _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
 
   // TODO: Evaluate consequences of choice.
-  _kernel = Kernel::getInstance();
-  __kernel = (volatile Kernel*) _kernel;
+  __kernel = (volatile Kernel*) &_kernel;
   // TODO: Evaluate consequences of choice.
 
   #if defined(MANUVR_STORAGE)
-    _kernel->subscribe((EventReceiver*) sd);
+    _kernel.subscribe((EventReceiver*) sd);
   #endif
 
   platform.setIdleHook([]{ sleep_millis(20); });

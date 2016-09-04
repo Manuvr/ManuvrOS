@@ -367,7 +367,7 @@ void sleep_millis(unsigned long millis) {
     struct timespec t = {(long) (millis / 1000), (long) ((millis % 1000) * 1000000UL)};
     nanosleep(&t, &t);
   #elif defined(__MANUVR_FREERTOS)
-    //vTaskDelay(millis / portTICK_PERIOD_MS);
+    vTaskDelay(millis / portTICK_PERIOD_MS);
   #endif
 }
 

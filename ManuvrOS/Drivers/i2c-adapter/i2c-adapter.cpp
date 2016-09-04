@@ -181,7 +181,6 @@ I2CAdapter::~I2CAdapter() {
 }
 
 
-// TODO: Inline this.
 int8_t I2CAdapter::generateStart() {
   #ifdef __MANUVR_DEBUG
   if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
@@ -209,157 +208,9 @@ int8_t I2CAdapter::generateStop() {
   // TODO: I know this is horrid. I'm sick of screwing with the build system today...
   #include <Platform/STM32F7/i2c-adapter.cpp>
 
-
 #elif defined(__MK20DX256__) | defined(__MK20DX128__)
-
-
-  I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
-    __class_initializer();
-    dev = dev_id;
-
-    if (dev_id == 0) {
-      Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR);
-      Wire.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
-      busOnline(true);
-    }
-    #if defined(__MK20DX256__)
-    else if (dev_id == 1) {
-      Wire1.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR);
-      Wire1.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
-      busOnline(true);
-    }
-    #endif
-    else {
-      // Unsupported
-    }
-  }
-
-
-  I2CAdapter::~I2CAdapter() {
-      busOnline(false);
-      while (dev_list.hasNext()) {
-        dev_list.get()->disassignBusInstance();
-        dev_list.remove();
-      }
-
-      /* TODO: The work_queue destructor will take care of its own cleanup, but
-         We should abort any open transfers prior to deleting this list. */
-  }
-
-
-
-  int8_t I2CAdapter::generateStart() {
-    #ifdef __MANUVR_DEBUG
-    if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
-    #endif
-    if (! busOnline()) return -1;
-    //Wire1.sendTransmission(I2C_STOP);
-    //Wire1.finish(900);   // We allow for 900uS for timeout.
-    return 0;
-  }
-
-
-  int8_t I2CAdapter::generateStop() {
-    #ifdef __MANUVR_DEBUG
-    if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
-    #endif
-    if (! busOnline()) return -1;
-    return 0;
-  }
-
-
-
-  int8_t I2CAdapter::dispatchOperation(I2CBusOp* op) {
-    // TODO: This is awful. Need to ultimately have a direct ref to the class that *is* the adapter.
-    if (0 == dev) {
-      Wire.beginTransmission((uint8_t) (op->dev_addr & 0x00FF));
-      if (op->need_to_send_subaddr()) {
-        Wire.write((uint8_t) (op->sub_addr & 0x00FF));
-        op->advance_operation(1);
-      }
-
-      if (op->get_opcode() == BusOpcode::RX) {
-        Wire.endTransmission(I2C_NOSTOP);
-        Wire.requestFrom(op->dev_addr, op->buf_len, I2C_STOP, 10000);
-        int i = 0;
-        while(Wire.available()) {
-          *(op->buf + i++) = (uint8_t) Wire.readByte();
-        }
-      }
-      else if (op->get_opcode() == BusOpcode::TX) {
-        for(int i = 0; i < op->buf_len; i++) Wire.write(*(op->buf+i));
-        Wire.endTransmission(I2C_STOP, 10000);   // 10ms timeout
-      }
-      else if (op->get_opcode() == BusOpcode::TX_CMD) {
-        Wire.endTransmission(I2C_STOP, 10000);   // 10ms timeout
-      }
-
-      switch (Wire.status()) {
-        case I2C_WAITING:
-          op->markComplete();
-          break;
-        case I2C_ADDR_NAK:
-          op->abort(XferFault::DEV_NOT_FOUND);
-          break;
-        case I2C_DATA_NAK:
-          op->abort(XferFault::DEV_NOT_FOUND);
-          break;
-        case I2C_ARB_LOST:
-          op->abort(XferFault::BUS_BUSY);
-          break;
-        case I2C_TIMEOUT:
-          op->abort(XferFault::TIMEOUT);
-          break;
-      }
-    }
-#if defined(__MK20DX256__)
-  else if (1 == dev) {
-    Wire1.beginTransmission((uint8_t) (op->dev_addr & 0x00FF));
-    if (op->need_to_send_subaddr()) {
-      Wire1.write((uint8_t) (op->sub_addr & 0x00FF));
-      op->advance_operation(1);
-    }
-
-    if (op->get_opcode() == BusOpcode::RX) {
-      Wire1.endTransmission(I2C_NOSTOP);
-      Wire1.requestFrom(op->dev_addr, op->buf_len, I2C_STOP, 10000);
-      int i = 0;
-      while(Wire1.available()) {
-        *(op->buf + i++) = (uint8_t) Wire1.readByte();
-      }
-    }
-    else if (op->get_opcode() == BusOpcode::TX) {
-      for(int i = 0; i < op->buf_len; i++) Wire1.write(*(op->buf+i));
-      Wire1.endTransmission(I2C_STOP, 10000);   // 10ms timeout
-    }
-    else if (op->get_opcode() == BusOpcode::TX_CMD) {
-      Wire1.endTransmission(I2C_STOP, 10000);   // 10ms timeout
-    }
-
-    switch (Wire1.status()) {
-      case I2C_WAITING:
-        op->markComplete();
-        break;
-      case I2C_ADDR_NAK:
-        op->abort(XferFault::DEV_NOT_FOUND);
-        break;
-      case I2C_DATA_NAK:
-        op->abort(XferFault::DEV_NOT_FOUND);
-        break;
-      case I2C_ARB_LOST:
-        op->abort(XferFault::BUS_BUSY);
-        break;
-      case I2C_TIMEOUT:
-        op->abort(XferFault::TIMEOUT);
-        break;
-    }
-  }
-#endif
-  else {
-  }
-  return 0;
-}
-
+  // TODO: I know this is horrid. I'm sick of screwing with the build system today...
+  #include <Platform/Teensy3/i2c-adapter.cpp>
 
 #elif defined(_BOARD_FUBARINO_MINI_)    // Perhaps this is an arduino-style env?
 
@@ -461,64 +312,8 @@ int8_t I2CAdapter::generateStop() {
 
 
 #elif defined(__MANUVR_LINUX)  // Assuming a linux system...
-
-I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
-  __class_initializer();
-  dev = dev_id;
-
-  char *filename = (char *) alloca(24);
-  *filename = 0;
-  if (sprintf(filename, "/dev/i2c-%d", dev_id) > 0) {
-    dev = open(filename, O_RDWR);
-    if (dev < 0) {
-      #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 2) {
-        local_log.concatf("Failed to open the i2c bus represented by %s.\n", filename);
-        Kernel::log(&local_log);
-      }
-      #endif
-    }
-  }
-  else {
-    #ifdef __MANUVR_DEBUG
-    if (getVerbosity() > 2) {
-      local_log.concatf("Somehow we failed to sprintf and build a filename to open i2c bus %d.\n", dev_id);
-      Kernel::log(&local_log);
-    }
-    #endif
-  }
-}
-
-
-
-I2CAdapter::~I2CAdapter() {
-    if (dev >= 0) {
-      #ifdef __MANUVR_DEBUG
-      Kernel::log("Closing the open i2c bus...\n");
-      #endif
-      close(dev);
-    }
-    while (dev_list.hasNext()) {
-      dev_list.get()->disassignBusInstance();
-      dev_list.remove();
-    }
-
-    /* TODO: The work_queue destructor will take care of its own cleanup, but
-       We should abort any open transfers prior to deleting this list. */
-}
-
-
-
-// TODO: Inline this.
-int8_t I2CAdapter::generateStart() {
-  return 0;
-}
-
-
-// TODO: Inline this.
-int8_t I2CAdapter::generateStop() {
-  return 0;
-}
+  // TODO: I know this is horrid. I'm sick of screwing with the build system today...
+  #include <Platform/Linux/i2c-adapter.cpp>
 
 #else
   // No support.

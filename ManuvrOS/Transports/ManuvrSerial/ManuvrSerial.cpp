@@ -407,8 +407,10 @@ int8_t ManuvrSerial::bootComplete() {
   read_abort_event.alterSchedulePeriod(30);
   read_abort_event.autoClear(false);
   read_abort_event.enableSchedule(true);
+  #if !defined (__MANUVR_FREERTOS) && !defined (__MANUVR_LINUX)
   __kernel->addSchedule(&read_abort_event);
-
+  #endif
+  
   reset();
   return 1;
 }

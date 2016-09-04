@@ -296,10 +296,10 @@ int readPinAnalog(uint8_t pin) {
 *******************************************************************************/
 
 #if defined (__MANUVR_FREERTOS)
-  //void globalIRQEnable() {     taskENABLE_INTERRUPTS();    }
-  //void globalIRQDisable() {    taskDISABLE_INTERRUPTS();   }
-  void globalIRQEnable() {         }
-  void globalIRQDisable() {        }
+  void globalIRQEnable() {     taskENABLE_INTERRUPTS();    }
+  void globalIRQDisable() {    taskDISABLE_INTERRUPTS();   }
+  //void globalIRQEnable() {         }
+  //void globalIRQDisable() {        }
 #else
   void globalIRQEnable() {     sei();    }
   void globalIRQDisable() {    cli();    }
