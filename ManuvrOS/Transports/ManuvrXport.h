@@ -79,6 +79,10 @@ This driver is designed to give Manuvr platform-abstracted transports.
 
 #define XPORT_DEFAULT_AUTOCONNECT_PERIOD 15000  // In ms. Unless otherwise specified...
 
+/* Defs for global transport flags. */
+// TODO: Would prefer a better way to track if message_defs have been loaded...
+#define MANUVR_MSG_DEFS_LOADED         0x00000001
+
 
 class XenoSession;
 
@@ -187,6 +191,9 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     inline void mark_connected(bool en) {
       _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_CONNECTED) : (_xport_flags & ~(MANUVR_XPORT_FLAG_CONNECTED));
     };
+
+
+    static uint32_t _global_flags;
 };
 
 #endif   // __MANUVR_XPORT_H__

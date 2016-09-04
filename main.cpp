@@ -42,6 +42,9 @@ This is a demonstration program, and was meant to be compiled for a
 */
 #include <Drivers/ManuvrableGPIO/ManuvrableGPIO.h>
 
+#include <Drivers/LightSensor/LightSensor.h>
+#include <Drivers/ADCScanner/ADCScanner.h>
+
 /* Transports... */
 #include <Transports/ManuvrSerial/ManuvrSerial.h>
 #include <Transports/ManuvrSocket/ManuvrUDP.h>
@@ -297,7 +300,6 @@ int main(int argc, char *argv[]) {
     gpioDefine(18, OUTPUT);
     bool pin_14_state = false;
   #endif
-
 
   // The main loop. Run forever, as a microcontroller would.
   // Program exit is handled in Platform.

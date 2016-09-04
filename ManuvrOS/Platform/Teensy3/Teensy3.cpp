@@ -404,7 +404,7 @@ int8_t ManuvrPlatform::platformPostInit() {
   #else
   // No threads. We are responsible for pinging our own scheduler.
   // Turn on the periodic interrupts...
-  timer0.begin(timerCallbackScheduler, MANUVR_PLATFORM_TIMER_PERIOD_MS);
+  timer0.begin(timerCallbackScheduler, 1000/MANUVR_PLATFORM_TIMER_PERIOD_MS);
   #endif
   return 0;
 }

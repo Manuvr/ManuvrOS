@@ -25,7 +25,7 @@ limitations under the License.
 
 // These are only here until they are migrated to each receiver that deals with them.
 const MessageTypeDef message_defs_adc_scanner[] = {
-  {  MANUVR_MSG_ADC_SCAN,    MSG_FLAG_IDEMPOTENT,  "ADC_SCAN",   ManuvrMsg::MSG_ARGS_NONE }, // It is time to scan the ADC channels.
+  {  MANUVR_MSG_ADC_SCAN,   0x0000,  "ADC_SCAN",  ManuvrMsg::MSG_ARGS_NONE }, // It is time to scan the ADC channels.
 };
 
 

@@ -32,7 +32,7 @@ uint8_t  last_lux_bin  = 0;
 
 // These are only here until they are migrated to each receiver that deals with them.
 const MessageTypeDef message_defs_light_sensor[] = {
-  {  MANUVR_MSG_AMBIENT_LIGHT_LEVEL  , MSG_FLAG_IDEMPOTENT,  "LIGHT_LEVEL"          , ManuvrMsg::MSG_ARGS_U8  }, // Unitless light-level report.
+  {  MANUVR_MSG_AMBIENT_LIGHT_LEVEL,  MSG_FLAG_EXPORTABLE,  "LIGHT_LEVEL",  ManuvrMsg::MSG_ARGS_U8  }, // Unitless light-level report.
 };
 
 

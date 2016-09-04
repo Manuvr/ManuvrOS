@@ -61,8 +61,6 @@ const MessageTypeDef message_defs[] = {
 
   {  MANUVR_MSG_DEFERRED_FXN         , 0x0000,               "DEFERRED_FXN",          MSG_ARGS_NO_ARGS }, // Message to allow for deferred fxn calls without an EventReceiver.
 
-  {  MANUVR_MSG_XPORT_SEND           , MSG_FLAG_IDEMPOTENT,  "XPORT_SEND"           , ManuvrMsg::MSG_ARGS_STR_BUILDER }, //
-
   {  MANUVR_MSG_SYS_FAULT_REPORT     , 0x0000,               "SYS_FAULT"            , ManuvrMsg::MSG_ARGS_U32 }, //
 
   {  MANUVR_MSG_SYS_DATETIME_CHANGED , MSG_FLAG_EXPORTABLE,  "SYS_DATETIME_CHANGED" , ManuvrMsg::MSG_ARGS_NONE }, // Raised when the system time changes.
@@ -364,8 +362,6 @@ int8_t Kernel::registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFx
 * @return -1 on failure, and 0 on success.
 */
 int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* ori) {
-  int8_t return_value = 0;
-
   // We are creating a new Event. Try to snatch a prealloc'd one and fall back to malloc if needed.
   ManuvrRunnable* nu = INSTANCE->preallocated.dequeue();
   if (nu == nullptr) {
@@ -377,28 +373,8 @@ int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* ori) {
     nu->originator = ori;
   }
 
-  if (0 == INSTANCE->validate_insertion(nu)) {
-    INSTANCE->exec_queue.insert(nu);
-    INSTANCE->update_maximum_queue_depth();   // Check the queue depth
-    #if defined (__MANUVR_FREERTOS)
-      //if (kernel_pid) unblockThread(kernel_pid);
-    #endif
-  }
-  else {
-    if (INSTANCE->getVerbosity() > 4) {
-      #ifdef __MANUVR_DEBUG
-      StringBuilder output("raiseEvent():\tvalidate_insertion() failed:\n");
-      output.concat(ManuvrMsg::getMsgTypeString(code));
-      Kernel::log(&output);
-      #endif
-      INSTANCE->insertion_denials++;
-    }
-    INSTANCE->reclaim_event(nu);
-    return_value = -1;
-  }
-  return return_value;
+  return staticRaiseEvent(nu);
 }
-
 
 
 /**
@@ -409,26 +385,49 @@ int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* ori) {
 * @param   event  The event to be inserted into the idle queue.
 * @return  -1 on failure, and 0 on success.
 */
-int8_t Kernel::staticRaiseEvent(ManuvrRunnable* event) {
-  int8_t return_value = 0;
-  if (0 == INSTANCE->validate_insertion(event)) {
-    INSTANCE->exec_queue.insert(event, event->priority);
-    //INSTANCE->update_maximum_queue_depth();   // Check the queue depth
+int8_t Kernel::staticRaiseEvent(ManuvrRunnable* active_runnable) {
+  int8_t return_value = INSTANCE->validate_insertion(active_runnable);
+  if (0 == return_value) {
+    INSTANCE->update_maximum_queue_depth();   // Check the queue depth
     #if defined (__MANUVR_FREERTOS)
       //if (kernel_pid) unblockThread(kernel_pid);
     #endif
+    return return_value;
   }
-  else {
+  INSTANCE->insertion_denials++;
+
+  if (-1 == return_value) {
+    // We can't discover anything about a NULL event. Serious problems upstream.
+    return return_value;
+  }
+
+  #ifdef __MANUVR_DEBUG
     if (INSTANCE->getVerbosity() > 4) {
-      #ifdef __MANUVR_DEBUG
-      StringBuilder output("staticRaiseEvent():\tvalidate_insertion() failed:\n");
-      event->printDebug(&output);;
+      StringBuilder output;
+      output.concatf(
+        "Kernel::validate_insertion() failed (%d) for MSG code %s\n",
+        return_value,
+        ManuvrMsg::getMsgTypeString(active_runnable->eventCode())
+      );
+      if (INSTANCE->getVerbosity() > 6) {
+        active_runnable->printDebug(&output);
+      }
       Kernel::log(&output);
-      #endif
-      INSTANCE->insertion_denials++;
     }
-    INSTANCE->reclaim_event(event);
-    return_value = -1;
+  #endif
+
+  switch (return_value) {
+    case 0:    // Clear for insertion.
+      break;
+    case -1:   // NULL runnable! How?!?!
+    case -3:   // Pointer idempotency. THIS EXACT runnable is already enqueue.
+      // So don't reclaim it.
+      break;
+    case -2:   // UNDEFINED event. This shall not stand, man....
+    case -4:   // DEPRECATED: Message-level idempotency.
+    default:   // Should never occur.
+      INSTANCE->reclaim_event(active_runnable);
+      break;
   }
   return return_value;
 }
@@ -518,16 +517,21 @@ int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
 
   // Those are the basic checks. Now for the advanced functionality...
   if (event->isIdempotent()) {
+    /* TODO: This seems ill-conceived in hindsight. FAR too heavy...
+               Event idempotency in this manner is deprecated.
+                       ---J. Ian Lindsay 2016.09.04 */
     ManuvrRunnable* working;
     for (int i = 0; i < exec_queue.size(); i++) {
       // No duplicate idempotent events allowed...
       working = exec_queue.get(i);
       if ((working) && (working->eventCode() == event->eventCode())) {
         idempotent_blocks++;
-        return -3;
+        return -4;   // Distinct failure vs pointer-value idenpotency (-3).
       }
     }
   }
+  // Go ahead and insert.
+  INSTANCE->exec_queue.insert(event, event->priority);
   return 0;
 }
 
@@ -646,10 +650,18 @@ int8_t Kernel::procIdleFlags() {
   while (isr_exec_queue.size() > 0) {
     active_runnable = isr_exec_queue.dequeue();
 
-    if (0 == validate_insertion(active_runnable)) {
-      exec_queue.insertIfAbsent(active_runnable, active_runnable->priority);
+    switch (validate_insertion(active_runnable)) {
+      case 0:    // Clear for insertion.
+        break;
+      case -1:   // NULL runnable! How?!?!
+        break;
+      case -2:   // UNDEFINED event. This shall not stand, man....
+        break;
+      case -3:   // Pointer idempotency. THIS EXACT runnable is already enqueue.
+        break;
+      default:   // Should never occur.
+        break;
     }
-    else reclaim_event(active_runnable);
   }
   globalIRQEnable();
 
@@ -677,7 +689,7 @@ int8_t Kernel::procIdleFlags() {
 
     if (nullptr != active_runnable->schedule_callback) {
       // TODO: This is hold-over from the scheduler. Need to modernize it.
-      active_runnable->printDebug(&local_log);
+      //active_runnable->printDebug(&local_log);
       ((FunctionPointer) active_runnable->schedule_callback)();   // Call the schedule's service function.
       if (_profiler_enabled()) profiler_mark_2 = micros();
       activity_count++;
@@ -734,10 +746,17 @@ int8_t Kernel::procIdleFlags() {
           #ifdef __MANUVR_DEBUG
           if (getVerbosity() > 6) local_log.concatf("Recycling %s.\n", active_runnable->getMsgTypeString());
           #endif
-          if (0 == validate_insertion(active_runnable)) {
-            exec_queue.insert(active_runnable, active_runnable->priority);
-            // This is the one case where we do NOT want the event reclaimed.
-            clean_up_active_runnable = false;
+          switch (validate_insertion(active_runnable)) {
+            case 0:    // Clear for insertion.
+              exec_queue.insert(active_runnable, active_runnable->priority);
+              clean_up_active_runnable = false;
+              break;
+            case -1:   // NULL runnable! How?!?!
+              break;
+            case -2:   // UNDEFINED event. This shall not stand, man....
+              break;
+            case -3:   // Pointer idempotency. THIS EXACT runnable is already enqueue.
+              break;
           }
           break;
         case EVENT_CALLBACK_RETURN_ERROR:       // Something went wrong. Should never occur.
@@ -841,7 +860,9 @@ int8_t Kernel::procIdleFlags() {
         platform.idleHook();
         break;
       case 1:
-        if (getVerbosity() > 5) Kernel::log("Kernel idle.\n");
+        #ifdef __MANUVR_DEBUG
+          if (getVerbosity() > 6) Kernel::log("Kernel idle.\n");
+        #endif
         // TODO: This would be the place to implement a CPU freq scaler.
         // NOTE: No break. Still need to decrement the idle counter.
       default:
@@ -1037,7 +1058,6 @@ void Kernel::printDebug(StringBuilder* output) {
 */
 int8_t Kernel::bootComplete() {
   EventReceiver::bootComplete();
-  maskableInterrupts(true);  // Now configure interrupts, lift interrupt masks, and let the madness begin.
   return 1;
 }
 
@@ -1065,6 +1085,7 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
   switch (event->eventCode()) {
     case MANUVR_MSG_SYS_BOOT_COMPLETED:
       // TODO: We should probably recycle the BOOT_COMPLETE until nothing responds to it.
+      maskableInterrupts(true);  // Now configure interrupts, lift interrupt masks, and let the madness begin.
       if (getVerbosity() > 4) Kernel::log("Boot complete.\n");
       if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
       break;
@@ -1221,14 +1242,24 @@ unsigned int Kernel::countActiveSchedules() {
 *  Call this function to create a new schedule with the given period, a given number of repititions, and with a given function call.
 *
 *  Will automatically set the schedule active, provided the input conditions are met.
-*  Returns the newly-created PID on success, or 0 on failure.
+*  Returns the newly-created Runnable on success, or 0 on failure.
 */
 ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FunctionPointer sch_callback) {
   ManuvrRunnable* return_value = nullptr;
   if (sch_period > 1) {
-    if (sch_callback != nullptr) {
-      return_value = new ManuvrRunnable(recurrence, sch_period, ac, sch_callback);
-      if (return_value != nullptr) {  // Did we actually malloc() successfully?
+    if (nullptr != sch_callback) {
+      if (ac) {
+        // If the schedule is supposed to auto-clear, we will pull it from our
+        //   preallocation pool, since we know that it will eventually expire.
+        // TODO: Make it happen.
+        return_value = new ManuvrRunnable(recurrence, sch_period, ac, sch_callback);
+      }
+      else {
+        // Without that assurance, we heap it. It may never be returned.
+        return_value = new ManuvrRunnable(recurrence, sch_period, ac, sch_callback);
+      }
+
+      if (nullptr != return_value) {  // Did we actually malloc() successfully?
         return_value->isScheduled(true);
         schedules.insert(return_value);
       }
@@ -1248,7 +1279,7 @@ ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, 
   ManuvrRunnable* return_value = nullptr;
   if (sch_period > 1) {
     return_value = new ManuvrRunnable(recurrence, sch_period, ac, ori);
-    if (return_value != nullptr) {  // Did we actually malloc() successfully?
+    if (nullptr != return_value) {  // Did we actually malloc() successfully?
       return_value->isScheduled(true);
       schedules.insert(return_value);
     }
@@ -1438,8 +1469,8 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
   switch (c) {
     case 'B':
     case 'b':
-      if (temp_int == 128) {
-        Kernel::raiseEvent(('B' == c ? MANUVR_MSG_SYS_BOOTLOADER : MANUVR_MSG_SYS_REBOOT), nullptr);
+      if (128 == temp_int) {
+        Kernel::raiseEvent(('B' == c ? MANUVR_MSG_SYS_BOOTLOADER : MANUVR_MSG_SYS_REBOOT), this);
       }
       else {
         local_log.concatf("Will only %s if the number '128' follows the command.\n", ('B' == c) ? "jump to bootloader" : "reboot");
