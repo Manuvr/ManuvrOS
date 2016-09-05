@@ -326,6 +326,11 @@ void ManuvrableNeoPixel::printDebug(StringBuilder *output) {
   if (autoBrightness()) {
     output->concatf("-- Auto-brightness:    o%s\n\n", autoBrightness()?"n":"ff");
   }
+  output->concatf("-- FB contents\n");
+  for (int i = 0; i < numLEDs; i++) {
+    output->concatf("-- \t%d:  (%02x,%02x,%02x) ", i, *(pixels+(i*3)), *(pixels+1+(i*3)), *(pixels+2+(i*3)));
+    output->concat("\n");
+  }
 }
 
 

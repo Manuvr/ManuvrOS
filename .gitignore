@@ -2,3 +2,17 @@
 *.gch
 *.o
 *.a
+
+bptest
+dstest
+gpstest
+lib/FreeRTOS_Arduino/
+lib/avro/
+lib/cbor-cpp/
+lib/config.h
+lib/iotivity/
+lib/jansson/
+lib/mbedtls/
+lib/paho.mqtt.embedded-c/
+lib/telehash-c/
+lib/tinycbor/

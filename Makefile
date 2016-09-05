@@ -47,10 +47,10 @@ INCLUDES   += -I$(WHERE_I_AM)/lib/iotivity/include
 # Libraries to link
 # We should be gradually phasing out C++ standard library on linux builds.
 # TODO: Advance this goal.
-LIBS = -L$(OUTPUT_PATH) -L$(WHERE_I_AM)/lib -lstdc++ -lm -lmanuvr
+LIBS = -L$(OUTPUT_PATH) -lstdc++ -lm
 
 # Wrap the include paths into the flags...
-CFLAGS += $(OPTIMIZATION) $(INCLUDES)
+CFLAGS += $(INCLUDES)
 CFLAGS += -fsingle-precision-constant -Wdouble-promotion
 
 
@@ -113,18 +113,18 @@ MANUVR_OPTIONS += -DMANUVR_CBOR
 
 # Since we are building on linux, we will have threading support via
 # pthreads.
-LIBS += -lpthread $(OUTPUT_PATH)/extraprotocols.a
+LIBS += $(OUTPUT_PATH)libextras.a -lpthread
 
 # Options for various security features.
 ifeq ($(SECURE),1)
-# mbedTLS will require this in order to use our chosen options.
-MBEDTLS_CONFIG_FILE = $(WHERE_I_AM)/mbedTLS_conf.h
-LIBS += $(OUTPUT_PATH)/libmbedtls.a
-LIBS += $(OUTPUT_PATH)/libmbedx509.a
-LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
 MANUVR_OPTIONS += -D__MANUVR_MBEDTLS
 # The remaining lines are to prod header files in libraries.
 MANUVR_OPTIONS += -DOC_SECURITY -DOC_CLIENT
+LIBS += $(OUTPUT_PATH)/libmbedtls.a
+LIBS += $(OUTPUT_PATH)/libmbedx509.a
+LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
+# mbedTLS will require this in order to use our chosen options.
+export MBEDTLS_CONFIG_FILE = $(WHERE_I_AM)/mbedTLS_conf.h
 export SECURE=1
 endif
 
@@ -165,8 +165,7 @@ export CPP_FLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
 
 
 all: libs
-	$(MAKE) -C ManuvrOS/
-	$(CXX) -static -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(CXX) -static -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) -lmanuvr $(LIBS) -D_GNU_SOURCE
 	$(SZ) $(FIRMWARE_NAME)
 
 tests: libs
