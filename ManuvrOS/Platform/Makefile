@@ -3,6 +3,11 @@
 # Author: J. Ian Lindsay
 #
 # This is where we conditionally compile platform-support code.
+#
+# TODO:
+# It was intended that this be open-ended enough to allow others to easilly
+#   implement other arbitrary platforms. It might be better to ultimately
+#   re-work this to use platformIO.
 ###########################################################################
 
 CXX_STANDARD       = gnu++11

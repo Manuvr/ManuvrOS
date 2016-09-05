@@ -197,10 +197,10 @@ class ManuvrPlatform {
     virtual int8_t platformPostInit();
 
     /* Platform state-reset functions. */
-    virtual void seppuku();           // Simple process termination. Reboots if not implemented.
-    virtual void reboot();
-    virtual void hardwareShutdown();
-    virtual void jumpToBootloader();
+    virtual void seppuku();    // Simple process termination. Reboots if not implemented.
+    virtual void reboot();     // Simple reboot. Should be possible on any platform.
+    virtual void hardwareShutdown();  // For platforms that support it. Reboot if not.
+    virtual void jumpToBootloader();  // For platforms that support it. Reboot if not.
 
     /* Accessors for platform capability discovery. */
     inline bool hasLocation() {     return _check_flags(MANUVR_PLAT_FLAG_HAS_LOCATION);    };
@@ -271,7 +271,7 @@ class ManuvrPlatform {
 
 
 
-  private:
+  protected:
     Kernel          _kernel;
     Identity*       _identity  = nullptr;
     #if defined(MANUVR_STORAGE)
@@ -292,12 +292,12 @@ class ManuvrPlatform {
       _pflags = ((_pflags & ~MANUVR_PLAT_FLAG_P_STATE_MASK) | s);
     };
 
-
     void _discoverALUParams();
+
+
+  private:
 };
 
-
-extern ManuvrPlatform platform;  // TODO: Awful.
 
 
 #ifdef __cplusplus
@@ -372,5 +372,34 @@ int    readPinAnalog(uint8_t pin);
 #if defined(MANUVR_STORAGE)
   #include <Platform/Storage.h>
 #endif
+
+
+
+extern ManuvrPlatform platform;
+//// TODO: I know this is horrid. but it is in preparation for ultimately-better
+////         resolution of this issue.
+//#if defined(__MK20DX256__) | defined(__MK20DX128__)
+//  #include <Platform/Teensy3/Teensy3.h>
+//  extern Teensy3 platform;  // TODO: Awful.
+//#elif defined(STM32F7XX) | defined(STM32F746xx)
+//  #include <Platform/STM32F7/STM32F7.h>
+//  extern STM32F7 platform;  // TODO: Awful.
+//#elif defined(STM32F4XX)
+//  // Not yet converted
+//#elif defined(ARDUINO)
+//  // Not yet converted
+//#elif defined(__MANUVR_PHOTON)
+//  // Not yet converted
+//#elif defined(__MANUVR_LINUX)
+//  #include <Platform/Raspi/Raspi.h>
+//  Raspi platform;
+//#elif defined(__MANUVR_LINUX)
+//  #include <Platform/Linux/Linux.h>
+//  extern LinuxPlatform platform;
+//#else
+//  // Unsupportage.
+//  // TODO: Fail the build.
+//#endif
+
 
 #endif  // __PLATFORM_SUPPORT_H__

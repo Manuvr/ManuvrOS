@@ -35,7 +35,6 @@ This file is meant to contain a set of common functions that are
 #include <signal.h>
 #include <sys/time.h>
 
-
 class Teensy3 : public ManuvrPlatform {
   public:
     virtual int8_t platformPreInit();

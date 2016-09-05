@@ -4,6 +4,9 @@
 #
 # Note... This is supposed to be called from an upstream Makefile where
 #   platform-specific build options are defined.
+#
+# TODO: I've written a lot of code. Use makefile defines to trim down the
+#         compile. It's getting large.
 ###########################################################################
 CPP_STANDARD       = gnu++11
 
@@ -80,7 +83,6 @@ CPP_SRCS  += Drivers/i2c-adapter/I2CBusOp.cpp
 CPP_SRCS  += Drivers/LightSensor/LightSensor.cpp
 CPP_SRCS  += Drivers/AudioRouter/AudioRouter.cpp
 
-# TODO: Use GPio abstractions!
 CPP_SRCS  += Drivers/MGC3130/MGC3130.cpp
 CPP_SRCS  += Drivers/MCP73833/MCP73833.cpp
 CPP_SRCS  += Drivers/ADP8866/ADP8866.cpp

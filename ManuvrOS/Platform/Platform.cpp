@@ -32,7 +32,7 @@ This file is meant to contain a set of common functions that are typically platf
 
 // TODO: I know this is horrid. I'm sick of screwing with the build system today...
 #if defined(__MK20DX256__) | defined(__MK20DX128__)
-
+  // TODO: We still need to do this to avoid bringing in Arduino,
 #elif defined(STM32F4XX)
   #include "./STM32F4/STM32F4.cpp"
   ManuvrPlatform platform;
@@ -124,6 +124,7 @@ const char* ManuvrPlatform::getRTCStateString() {
 
 // TODO: This is only here to ease the transition into polymorphic platform defs.
 void ManuvrPlatform::printPlatformBasics(StringBuilder* output) {
+  output->concatf("-- Ver/Build date:     %s   %s %s\n", VERSION_STRING, __DATE__, __TIME__);
   if (nullptr != platform._identity) {
     output->concatf("-- Identity:           %s\t", platform._identity->getHandle());
     platform._identity->toString(output);
@@ -133,7 +134,12 @@ void ManuvrPlatform::printPlatformBasics(StringBuilder* output) {
     output->concatf("-- Undifferentiated %s\n", IDENTITY_STRING);
   }
   output->concatf("-- Identity source:    %s\n", platform._check_flags(MANUVR_PLAT_FLAG_HAS_IDENTITY) ? "Generated at runtime" : "Loaded from storage");
-  output->concatf("-- Ver/Build date:     %s\t%s %s\n", VERSION_STRING, __DATE__, __TIME__);
+  #if defined(HW_VERSION_STRING)
+    output->concatf("-- Hardware version:   %s\n", HW_VERSION_STRING);
+  #endif
+  #if defined(F_CPU)
+    output->concatf("-- CPU frequency:      %lu\n", F_CPU);
+  #endif
   output->concatf("-- %u-bit", platform.aluWidth());
   if (8 != platform.aluWidth()) {
     output->concatf(" %s-endian", platform.bigEndian() ? "Big" : "Little");
@@ -143,17 +149,16 @@ void ManuvrPlatform::printPlatformBasics(StringBuilder* output) {
   uintptr_t final_sp   = 0;
   output->concatf("\n-- getStackPointer():  %p\n", &final_sp);
   output->concatf("-- stack grows %s\n--\n", (&final_sp > &initial_sp) ? "up" : "down");
-  #if defined(F_CPU)
-    output->concatf("-- CPU frequency:      %lu\n", F_CPU);
-  #endif
+  output->concatf("-- millis()            0x%08x\n", millis());
+  output->concatf("-- micros()            0x%08x\n", micros());
   output->concatf("-- Timer resolution:   %d ms\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
-  output->concatf("-- Hardware version:   %s\n", HW_VERSION_STRING);
   output->concatf("-- Entropy pool size:  %u bytes\n", PLATFORM_RNG_CARRY_CAPACITY * 4);
   if (platform.hasTimeAndDate()) {
     output->concatf("-- RTC State:          %s\n", platform.getRTCStateString());
+    output->concat("-- Current datetime:   ");
+    currentDateTime(output);
+    output->concat("\n");
   }
-  output->concatf("-- millis()            0x%08x\n", millis());
-  output->concatf("-- micros()            0x%08x\n", micros());
 
   output->concat("--\n-- Capabilities:\n");
   if (platform.hasThreads()) {

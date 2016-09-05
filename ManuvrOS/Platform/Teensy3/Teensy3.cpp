@@ -315,9 +315,7 @@ int readPinAnalog(uint8_t pin) {
 * Never returns.
 */
 void ManuvrPlatform::seppuku() {
-  // This means "Halt" on a base-metal build.
-  cli();
-  while(true);
+  reboot();
 }
 
 

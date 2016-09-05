@@ -1002,12 +1002,6 @@ void Kernel::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
 
   //output->concatf("-- our_mem_addr:             %p\n", this);
-  if (getVerbosity() > 5) {
-    output->concat("-- Current datetime          ");
-    currentDateTime(output);
-    output->concat("\n");
-  }
-
   if (getVerbosity() > 4) {
     output->concatf("-- Queue depth:              %d\n", exec_queue.size());
     output->concatf("-- Preallocation depth:      %d\n", preallocated.size());

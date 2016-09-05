@@ -33,7 +33,7 @@ This file is meant to contain a set of common functions that are
 #include <Platform/Linux/Linux.h>
 
 
-class RaspiPlatform : public LinuxPlatform {
+class Raspi : public LinuxPlatform {
   public:
     virtual int8_t platformPreInit();
     virtual int8_t platformPostInit();
