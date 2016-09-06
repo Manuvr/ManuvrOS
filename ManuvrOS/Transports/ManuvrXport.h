@@ -19,16 +19,6 @@ limitations under the License.
 
 
 This driver is designed to give Manuvr platform-abstracted transports.
-
-XenoSessions are optionally established by this class, and broadcast to the
-  rest of the system (MANUVR_MSG_SESS_ESTABLISHED). By the time that has
-  happened, the session ought to have become sync'd, self-identified,
-  authenticated, etc. Therefore, session configuration must be done on a
-  per-transport basis. This means that authentication (for instance) is
-  transport-wide.
-
-If sessions are enabled for a transport, the highest-level of the protocol
-  touched by this class ought to be dealing with sync.
 */
 
 
@@ -88,6 +78,10 @@ If sessions are enabled for a transport, the highest-level of the protocol
 */
 
 #define XPORT_DEFAULT_AUTOCONNECT_PERIOD 15000  // In ms. Unless otherwise specified...
+
+/* Defs for global transport flags. */
+// TODO: Would prefer a better way to track if message_defs have been loaded...
+#define MANUVR_MSG_DEFS_LOADED         0x00000001
 
 
 class XenoSession;
@@ -163,7 +157,7 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
   protected:
     ManuvrRunnable* _autoconnect_schedule;
     #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
-      // Threaded platforms have a concept of threads...
+      // If we have a concept of threads...
       unsigned long _thread_id;
     #endif
 
@@ -197,6 +191,9 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     inline void mark_connected(bool en) {
       _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_CONNECTED) : (_xport_flags & ~(MANUVR_XPORT_FLAG_CONNECTED));
     };
+
+
+    static uint32_t _global_flags;
 };
 
 #endif   // __MANUVR_XPORT_H__

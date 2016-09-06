@@ -33,7 +33,8 @@ There ought to be no inclusion in this file. It is the bottom.
   #define LOG_INFO    6    /* informational */
   #define LOG_DEBUG   7    /* debug-level messages */
 
-  // Function-pointer definitions
-  typedef void  (*FunctionPointer) ();
-  typedef void* (*ThreadFxnPtr)    (void*);
+
+  #if defined(MANUVR_CONF_FILE_PATH)
+    #include MANUVR_CONF_FILE_PATH
+  #endif
 #endif

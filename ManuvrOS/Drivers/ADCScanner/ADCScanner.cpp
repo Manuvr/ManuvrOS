@@ -21,14 +21,19 @@ limitations under the License.
 
 
 #include "ADCScanner.h"
+#include <Platform/Platform.h>
 
-#if defined(ARDUiNO)
-  #include "Arduino.h"
-#endif
+// These are only here until they are migrated to each receiver that deals with them.
+const MessageTypeDef message_defs_adc_scanner[] = {
+  {  MANUVR_MSG_ADC_SCAN,   0x0000,  "ADC_SCAN",  ManuvrMsg::MSG_ARGS_NONE }, // It is time to scan the ADC channels.
+};
+
+
 
 ADCScanner::ADCScanner() : EventReceiver() {
   setReceiverName("ADCScanner");
-  pid_adc_check = 0;
+  int mes_count = sizeof(message_defs_adc_scanner) / sizeof(MessageTypeDef);
+  ManuvrMsg::registerMessages(message_defs_adc_scanner, mes_count);
   for (int i = 0; i < 16; i++) {
     adc_list[i] = -1;
     last_sample[i] = 0;
@@ -38,6 +43,8 @@ ADCScanner::ADCScanner() : EventReceiver() {
 
 
 ADCScanner::~ADCScanner() {
+  _periodic_check.enableSchedule(false);
+  __kernel->removeSchedule(&_periodic_check);
 }
 
 
@@ -119,8 +126,17 @@ int8_t ADCScanner::scan() {
 int8_t ADCScanner::bootComplete() {
   EventReceiver::bootComplete();
 
-  ManuvrEvent *event = new ManuvrEvent(VIAM_SONUS_MSG_ADC_SCAN);
-  pid_adc_check = scheduler->createSchedule(50, -1, false, this, event);
+  // Build some pre-formed Events.
+  _periodic_check.repurpose(MANUVR_MSG_ADC_SCAN);
+  _periodic_check.isManaged(true);
+  _periodic_check.specific_target = (EventReceiver*) this;
+  _periodic_check.originator = (EventReceiver*) this;
+
+  _periodic_check.alterScheduleRecurrence(-1);
+  _periodic_check.alterSchedulePeriod(50);
+  _periodic_check.autoClear(false);
+  _periodic_check.enableSchedule(true);
+  __kernel->addSchedule(&_periodic_check);
   return 1;
 }
 
@@ -131,8 +147,6 @@ int8_t ADCScanner::bootComplete() {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void ADCScanner::printDebug(StringBuilder *output) {
-  if (output == NULL) return;
-
   EventReceiver::printDebug(output);
   output->concat("\n");
 }
@@ -146,17 +160,17 @@ void ADCScanner::printDebug(StringBuilder *output) {
 *
 * Depending on class implementations, we might choose to handle the completed Event differently. We
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
-*   ourselves and return DROP. By default, we will return REAP to instruct the EventManager
+*   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
 *   was crafted to not be in the heap in its own allocation, we will return DROP instead.
 *
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t ADCScanner::callback_proc(ManuvrEvent *event) {
+int8_t ADCScanner::callback_proc(ManuvrRunnable *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
-  int8_t return_value = event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
+  int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {
@@ -168,11 +182,11 @@ int8_t ADCScanner::callback_proc(ManuvrEvent *event) {
 }
 
 
-int8_t ADCScanner::notify(ManuvrEvent *active_event) {
+int8_t ADCScanner::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
-    case VIAM_SONUS_MSG_ADC_SCAN:
+    case MANUVR_MSG_ADC_SCAN:
       if (scan()) {
 
       }

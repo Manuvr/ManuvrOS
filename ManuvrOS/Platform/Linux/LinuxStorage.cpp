@@ -26,6 +26,7 @@ Implemented as a JSON object within a single file. This feature therefore
 
 #if defined(__MANUVR_LINUX) & defined(MANUVR_STORAGE)
 #include <Platform/Linux/LinuxStorage.h>
+#include <Platform/Platform.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -48,16 +49,19 @@ Implemented as a JSON object within a single file. This feature therefore
 * Open the file write-only and save the buffer. Clobbering the file's contents.
 */
 int _save_file(char* nom, StringBuilder* b) {
+  int return_value = -1;  // Fail by default.
   if (nullptr != nom) {
     int fd = open(nom, O_CREAT | O_WRONLY | O_EXCL | O_TRUNC, S_IRUSR | S_IWUSR);
     if (fd >= 0) {
-      StringBuilder buf(b->string(), b->length());  // Buffer is now locally-scoped.
-      write(fd, buf.string(), buf.length());
+      int len = b->length();
+      StringBuilder buf(b->string(), len);  // Buffer is now locally-scoped.
+      if (len == write(fd, buf.string(), len)) {
+        return_value = 0;
+      }
       close(fd);
-      return 0;
     }
   }
-  return -1;
+  return return_value;
 }
 
 
@@ -155,12 +159,17 @@ int8_t LinuxStorage::flush() {
   return 0;
 }
 
-int8_t LinuxStorage::persistentWrite(const char* key, uint8_t* value, int len, uint16_t ) {
+int LinuxStorage::persistentWrite(const char* key, uint8_t* value, unsigned int len, uint16_t ) {
 
   return 0;
 }
 
-int8_t LinuxStorage::persistentRead(const char* key, uint8_t* value, int len, uint16_t) {
+int LinuxStorage::persistentRead(const char* key, uint8_t* value, unsigned int len, uint16_t) {
+  return 0;
+}
+
+
+int8_t persistentRead(const char*, StringBuilder*) {
   return 0;
 }
 
@@ -256,12 +265,7 @@ void LinuxStorage::procDirectDebugInstruction(StringBuilder *input) {
 
   switch (*(str)) {
     case 'w':
-      if (0 == wipe()) {
-        local_log.concatf("Wipe of %s succeeded.\n", _filename);
-      }
-      else {
-        local_log.concat("Wipe failed.\n");
-      }
+      local_log.concatf("Wipe of %s %s.\n", _filename, (0 == wipe()) ? "succeeded" : "failed");
       break;
 
     case 'l':

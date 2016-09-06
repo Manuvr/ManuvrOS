@@ -42,6 +42,9 @@ This is a demonstration program, and was meant to be compiled for a
 */
 #include <Drivers/ManuvrableGPIO/ManuvrableGPIO.h>
 
+#include <Drivers/LightSensor/LightSensor.h>
+#include <Drivers/ADCScanner/ADCScanner.h>
+
 /* Transports... */
 #include <Transports/ManuvrSerial/ManuvrSerial.h>
 #include <Transports/ManuvrSocket/ManuvrUDP.h>
@@ -58,21 +61,31 @@ This is a demonstration program, and was meant to be compiled for a
 /* This global makes this source file read better. */
 Kernel* kernel = nullptr;
 
+//TODO: This is for platform. It will not last long.
+char* program_name = nullptr;
+
+#include <Platform/Platform.h>
+
 /*******************************************************************************
 * BufferPipe strategies particular to this firmware.                           *
 *******************************************************************************/
+#if defined(MANUVR_SUPPORT_COAP)
 BufferPipe* _pipe_factory_1(BufferPipe* _n, BufferPipe* _f) {
   CoAPSession* coap_srv = new CoAPSession(_n);
   kernel->subscribe(coap_srv);
   return (BufferPipe*) coap_srv;
 }
+#endif
 
+#if defined(__MANUVR_CONSOLE_SUPPORT)
 BufferPipe* _pipe_factory_2(BufferPipe* _n, BufferPipe* _f) {
   ManuvrConsole* _console = new ManuvrConsole(_n);
   kernel->subscribe(_console);
   return (BufferPipe*) _console;
 }
+#endif
 
+#if defined(__MANUVR_MBEDTLS)
 BufferPipe* _pipe_factory_3(BufferPipe* _n, BufferPipe* _f) {
   ManuvrTLSServer* _tls_server = new ManuvrTLSServer(_n);
   /*
@@ -84,7 +97,7 @@ BufferPipe* _pipe_factory_3(BufferPipe* _n, BufferPipe* _f) {
   Kernel::log(&out);
   return (BufferPipe*) _tls_server;
 }
-
+#endif
 
 /*******************************************************************************
 * Functions that just print things.                                            *
@@ -95,12 +108,13 @@ void kernelDebugDump() {
   Kernel::log(&output);
 }
 
+
 /*******************************************************************************
 * The main function.                                                           *
 *******************************************************************************/
 int main(int argc, char *argv[]) {
-  char* program_name = argv[0];   // Name of running binary.
   int   main_pid     = getpid();  // Our PID.
+  program_name = argv[0];   // Name of running binary.
 
   /*
   * The platform object is created on the stack, but takes no action upon
@@ -114,20 +128,24 @@ int main(int argc, char *argv[]) {
   *   be in some projects), we pull the freshly-instanced (but unbooted) kernel
   *   from the platform object so we can augment and configure it.
   */
-  kernel = platform.getKernel();
+  kernel = platform.kernel();
 
   /*
   * Absent a strategy for dynamically-loading strategies...
   */
-  if (0 != BufferPipe::registerPipe(1, _pipe_factory_1)) {
-    printf("Failed to add CoAP to the pipe registry.\n");
-    exit(1);
-  }
+  #if defined(MANUVR_SUPPORT_COAP)
+    if (0 != BufferPipe::registerPipe(1, _pipe_factory_1)) {
+      printf("Failed to add CoAP to the pipe registry.\n");
+      exit(1);
+    }
+  #endif
 
-  if (0 != BufferPipe::registerPipe(2, _pipe_factory_2)) {
-    printf("Failed to add console to the pipe registry.\n");
-    exit(1);
-  }
+  #if defined(__MANUVR_CONSOLE_SUPPORT)
+    if (0 != BufferPipe::registerPipe(2, _pipe_factory_2)) {
+      printf("Failed to add console to the pipe registry.\n");
+      exit(1);
+    }
+  #endif
 
   // Pipe strategy planning...
   const uint8_t pipe_plan_console[] = {2, 0};
@@ -232,7 +250,7 @@ int main(int argc, char *argv[]) {
     *   pipes up to the application layer.
     * This is how to use pipe-strategies to instance a console session when a
     *   TCP client connects. Test by running without "--console" and then...
-    *       nc -t 127.0.0.1 2319nc -t 127.0.0.1 2319
+    *       nc -t 127.0.0.1 2319
     */
     ManuvrTCP tcp_srv((const char*) "0.0.0.0", 2319);
     tcp_srv.setPipeStrategy(pipe_plan_console);
@@ -282,7 +300,6 @@ int main(int argc, char *argv[]) {
     gpioDefine(18, OUTPUT);
     bool pin_14_state = false;
   #endif
-
 
   // The main loop. Run forever, as a microcontroller would.
   // Program exit is handled in Platform.

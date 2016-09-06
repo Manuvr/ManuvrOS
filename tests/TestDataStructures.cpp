@@ -32,7 +32,7 @@
 #include <Transports/ManuvrXport.h>
 
 #if defined(MANUVR_CBOR)
-  #include "cbor-cpp/include/cbor.h"
+  #include <Types/cbor-cpp/cbor.h>
 #endif
 
 int test_StringBuilder(void) {
@@ -139,35 +139,71 @@ int test_CBOR_Argument() {
   StringBuilder log("===< Arguments CBOR >===================================\n");
   StringBuilder shuttle;  // We will transport the CBOR encoded-bytes through this.
 
-  Argument a;
-  uint32_t val0  = (uint32_t) randomInt();
-  uint16_t val1  = (uint16_t) randomInt();
-  uint8_t  val2  = (uint8_t)  randomInt();
-  int32_t  val3  = (int32_t)  randomInt();
-  int16_t  val4  = (int16_t)  randomInt();
-  int8_t   val5  = (int8_t)   randomInt();
+  int32_t  val0  = (int32_t)  randomInt();
+  int16_t  val1  = (int16_t)  randomInt();
+  int8_t   val2  = (int8_t)   randomInt();
+  uint32_t val3  = (uint32_t) randomInt();
+  uint16_t val4  = (uint16_t) randomInt();
+  uint8_t  val5  = (uint8_t)  randomInt();
 
-  a.append(val0)->setKey("value0");
+  int32_t  ret0 = 0;
+  int16_t  ret1 = 0;
+  int8_t   ret2 = 0;
+  uint32_t ret3 = 0;
+  uint16_t ret4 = 0;
+  uint8_t  ret5 = 0;
+  Argument a(val0);
+
+  a.setKey("value0");
   a.append(val1)->setKey("value1");
-  a.append(val2);  // NOTE: Mixed in with non-KVP.
+  a.append(val2)->setKey("value");;  // NOTE: Mixed in with non-KVP.
   a.append(val3);
   a.append(val4)->setKey("value4");
   a.append(val5)->setKey("value5");
 
-  if (0 <= Argument::encodeToCBOR(&a, &shuttle)) {
-    log.concat("CBOR encoded: ");
-    shuttle.printDebug(&log);
+  a.printDebug(&log);
 
-    Argument* reconstructed = Argument::decodeFromCBOR(&shuttle);
-    if (nullptr != reconstructed) {
-      log.concat("CBOR decoded: ");
-      reconstructed->printDebug(&log);
-      return_value = 0;
+  if (0 <= Argument::encodeToCBOR(&a, &shuttle)) {
+    log.concatf("CBOR encoding occupies %d bytes\n\t", shuttle.length());
+    shuttle.printDebug(&log);
+    log.concat("\n");
+
+    Argument* r = Argument::decodeFromCBOR(&shuttle);
+    if (nullptr != r) {
+      log.concat("CBOR decoded:\n");
+      r->printDebug(&log);
+
+      log.concat("\n");
+      if ((0 == r->getValueAs((uint8_t) 0, &ret0)) && (ret0 == val0)) {
+        if ((0 == r->getValueAs((uint8_t) 1, &ret1)) && (ret1 == val1)) {
+          if ((0 == r->getValueAs((uint8_t) 2, &ret2)) && (ret2 == val2)) {
+            if ((0 == r->getValueAs((uint8_t) 3, &ret3)) && (ret3 == val3)) {
+              if ((0 == r->getValueAs((uint8_t) 4, &ret4)) && (ret4 == val4)) {
+                if ((0 == r->getValueAs((uint8_t) 5, &ret5)) && (ret5 == val5)) {
+                  if (r->argCount() == a.argCount()) {
+                    return_value = 0;
+                  }
+                  else log.concatf("Arg counts don't match: %d vs %d\n", r->argCount(), a.argCount());
+                }
+                else log.concatf("Failed to vet key 'value5'... %u vs %u\n", ret5, val5);
+              }
+              else log.concatf("Failed to vet key 'value4'... %u vs %u\n", ret4, val4);
+            }
+            else log.concatf("Failed to vet key 'value3'... %u vs %u\n", ret3, val3);
+          }
+          else log.concatf("Failed to vet key 'value2'... %u vs %u\n", ret2, val2);
+        }
+        else log.concatf("Failed to vet key 'value1'... %u vs %u\n", ret1, val1);
+      }
+      else log.concatf("Failed to vet key 'value0'... %u vs %u\n", ret0, val0);
     }
     else log.concat("Failed to decode Argument chain from CBOR...\n");
   }
   else log.concat("Failed to encode Argument chain into CBOR...\n");
 
+  if (return_value) {
+    a.printDebug(&log);
+  }
   log.concat("========================================================\n\n");
   printf((const char*) log.string());
   return return_value;
@@ -359,9 +395,12 @@ int test_Arguments() {
     if (0 == return_value) {
       return_value = test_Arguments_PODs();
       if (0 == return_value) {
+      #if defined(MANUVR_CBOR)
         return_value = test_CBOR_Argument();
         if (0 == return_value) {
+
         }
+      #endif
       }
     }
   }
@@ -532,36 +571,6 @@ int main(int argc, char *argv[]) {
   printTypeSizes();
 
   platform.platformPreInit();   // Our test fixture needs random numbers.
-
-    #if defined(MANUVR_CBOR)
-      // Debug. Testing CBOR...
-      cbor::output_dynamic output;
-      { //encoding
-        cbor::encoder encoder(output);
-        encoder.write_array(5);
-        {
-            encoder.write_int(123);
-            encoder.write_string("bar");
-            encoder.write_int(321);
-            encoder.write_int(321);
-            encoder.write_string("foo");
-        }
-      }
-      printf("CBOR encoding occupies %d bytes\n\t", output.size());
-      uint8_t* buf = output.data();
-      for (unsigned int i = 0; i < output.size(); i++) {
-        printf("0x%02x ", *(buf + i));
-      }
-
-      { // decoding
-        cbor::input input(output.data(), output.size());
-        cbor::listener_debug listener;
-        cbor::decoder decoder(input, listener);
-        decoder.run();
-      }
-      printf("\nCBOR test concluded.\n");
-    //  exit(0);
-    #endif
 
   if (0 == test_StringBuilder()) {
     if (0 == test_PriorityQueue()) {

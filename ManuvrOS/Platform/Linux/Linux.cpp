@@ -32,8 +32,12 @@ This file forms the catch-all for linux platforms that have no support.
 #include <unistd.h>
 #include <signal.h>
 
+#include <Platform/Platform.h>
+
 #if defined(MANUVR_STORAGE)
 #include <Platform/Linux/LinuxStorage.h>
+#include <fcntl.h>      // Needed for integrity checks.
+#include <sys/stat.h>   // Needed for integrity checks.
 #endif
 
 /****************************************************************************************************
@@ -164,17 +168,17 @@ int initSigHandlers() {
 
 
 
-/****************************************************************************************************
-* Watchdog                                                                                          *
-****************************************************************************************************/
+/*******************************************************************************
+* Watchdog                                                                     *
+*******************************************************************************/
 volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
 volatile uint8_t  watchdog_mark      = 42;
 unsigned long     start_time_micros  = 0;
 
 
-/****************************************************************************************************
-* Randomness                                                                                        *
-****************************************************************************************************/
+/*******************************************************************************
+* Randomness                                                                   *
+*******************************************************************************/
 volatile uint32_t next_random_int[PLATFORM_RNG_CARRY_CAPACITY];
 
 /**
@@ -290,9 +294,9 @@ unsigned long micros() {
 }
 
 
-/****************************************************************************************************
-* GPIO and change-notice                                                                            *
-****************************************************************************************************/
+/*******************************************************************************
+* GPIO and change-notice                                                       *
+*******************************************************************************/
 int8_t gpioDefine(uint8_t pin, int mode) {
   return 0;
 }
@@ -334,10 +338,20 @@ int readPinAnalog(uint8_t pin) {
 }
 
 
+/*******************************************************************************
+* Persistent configuration                                                     *
+*******************************************************************************/
+#if defined(MANUVR_STORAGE)
+  // Called during boot to load configuration.
+  int8_t ManuvrPlatform::_load_config() {
+    return -1;
+  }
+#endif
 
-/****************************************************************************************************
-* Interrupt-masking                                                                                 *
-****************************************************************************************************/
+
+/*******************************************************************************
+* Interrupt-masking                                                            *
+*******************************************************************************/
 
 // Ze interrupts! Zhey do nuhsing!
 // TODO: Perhaps raise the nice value?
@@ -407,6 +421,102 @@ void ManuvrPlatform::reboot() {
 }
 
 
+extern char* program_name;// TODO: Yuck
+
+#if defined(__MANUVR_MBEDTLS)
+/*
+* Function takes a path and a buffer as arguments. The binary is hashed and the ASCII representation is
+*   placed in the buffer. The number of bytes read is returned on success. 0 is returned on failure.
+*/
+int hashFileByPath(char* path, uint8_t* h_buf) {
+  int8_t return_value = -1;
+  StringBuilder log;
+  if (nullptr != path) {
+    struct stat st;
+    if(-1 != stat(path, &st)) {
+      long self_size = st.st_size;
+      int digest_size = 32;
+      StringBuilder buf;
+
+      int fd = open(path, O_RDONLY);
+      if (fd >= 0) {
+        int r_buf_len = 2 << 15;
+        uint8_t* buffer = (uint8_t*) alloca(r_buf_len);
+        int r_len = read(fd, buffer, r_buf_len);
+        while (0 < r_len) {
+          buf.concat(buffer, r_len);
+          r_len = read(fd, buffer, r_buf_len);
+        }
+        close(fd);
+
+        uint8_t* self_mass = buf.string();
+        log.concatf("%s is %ld bytes.\n", path, self_size);
+
+        int ret = manuvr_hash(self_mass, self_size, h_buf, digest_size, Hashes::SHA256);
+        if (0 == ret) {
+          StringBuilder hash(h_buf, digest_size);
+          log.concat("This binary's SHA256 fingerprint is ");
+          hash.printDebug(&log);
+          return_value = digest_size;
+        }
+        else {
+          log.concat("Failed to run the hash on the input path.\n");
+        }
+      }
+      else {
+        // Failure to read file.
+        log.concat("Failed to read file.\n");
+      }
+    }
+    else {
+      // Failure to stat file.
+      log.concat("Failed to stat file.\n");
+    }
+  }
+  //Kernel::log(&log);
+  printf((const char*)log.string());
+  return return_value;
+}
+
+
+/*
+* INTERNAL INTEGRITY-CHECKS
+* The first task is to look in the mirror and find our executable's full path.
+*   This will vary by OS, but for now we assume that we are on a linux system..
+*/
+int internal_integrity_check(uint8_t* test_buf, int test_len) {
+    char *exe_path = (char *) alloca(512);   // 512 bytes ought to be enough for our path info...
+    memset(exe_path, 0x00, 512);
+    int exe_path_len = readlink("/proc/self/exe", exe_path, 512);
+    if (!(exe_path_len > 0)) {
+        printf("%s was unable to read its own path from /proc/self/exe. You may be running it on an unsupported operating system, or be running an old kernel. Please discover the cause and retry. Exiting...\n", program_name);
+        return -1;
+    }
+    printf("This binary's path is %s\n", exe_path);
+    int _len = (0 != test_len) ? test_len : 32;
+    uint8_t* h_buf = (uint8_t*) alloca(_len);
+    memset(h_buf, 0x00, _len);
+    int ret = hashFileByPath(exe_path, h_buf);
+    if (0 < ret) {
+      if ((nullptr != test_buf) && (0 < test_len)) {
+        for (int i = 0; i < test_len; i++) {
+          if (*(h_buf+i) != *(test_buf+i)) {
+            printf("Hashing %s yields a different value than expected. Exiting...\n", program_name);
+            return -1;
+          }
+        }
+      }
+      else {
+        // We have no idea what to expect. First boot?
+      }
+    }
+    else {
+      printf("Failed to hash file: %s\n", exe_path);
+      return -1;
+    }
+    return 0;
+}
+#endif  //__MANUVR_MBEDTLS
 
 /*******************************************************************************
 * Platform initialization.                                                     *
@@ -420,7 +530,7 @@ void ManuvrPlatform::reboot() {
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
 */
-int8_t ManuvrPlatform::platformPreInit() {
+int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   // TODO: Should we really be setting capabilities this late?
   uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
 
@@ -448,15 +558,18 @@ int8_t ManuvrPlatform::platformPreInit() {
   _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
 
   // TODO: Evaluate consequences of choice.
-  _kernel = Kernel::getInstance();
-  __kernel = (volatile Kernel*) _kernel;
+  __kernel = (volatile Kernel*) &_kernel;
   // TODO: Evaluate consequences of choice.
 
   #if defined(MANUVR_STORAGE)
-    _kernel->subscribe((EventReceiver*) sd);
+    _kernel.subscribe((EventReceiver*) sd);
   #endif
 
   platform.setIdleHook([]{ sleep_millis(20); });
+  #if defined(__MANUVR_MBEDTLS)
+  internal_integrity_check(nullptr, 0);
+  #endif
+
   initSigHandlers();
   set_linux_interval_timer();
   return 0;
@@ -468,12 +581,5 @@ int8_t ManuvrPlatform::platformPreInit() {
 *   internal system sanity.
 */
 int8_t ManuvrPlatform::platformPostInit() {
-  #if defined(MANUVR_STORAGE)
-    if (_storage_device->isMounted()) {
-      // TODO: Read configuration.
-      //int8_t persistentRead(const char*, uint8_t*, int, uint16_t);
-    }
-  #endif
-  _identity = new IdentityUUID(IDENTITY_STRING);
   return 0;
 }

@@ -24,7 +24,7 @@ The common message-profiling container.
 #ifndef __MANUVR_MSG_PROFILER_H__
   #define __MANUVR_MSG_PROFILER_H__
 
-  #include <DataStructures/StringBuilder.h>
+  class StringBuilder;
 
   class TaskProfilerData {
     public:
@@ -40,8 +40,8 @@ The common message-profiling container.
       uint32_t executions;       // How many times has this task been used?
       bool     profiling_active;
 
-      void printDebug(StringBuilder *);
-      static void printDebugHeader(StringBuilder *);
+      void printDebug(StringBuilder*);
+      static void printDebugHeader(StringBuilder*);
   };
 
 #endif

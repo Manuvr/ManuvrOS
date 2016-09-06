@@ -32,7 +32,6 @@ This might be better-viewed as a data structure. Notions of identity should
 #define MANUVR_IDENT_FLAG_DIRTY           0x8000  // This ID will be lost if not persisted.
 
 
-
 enum class IdentFormat {
   /*
   * TODO: Since we wrote this interface against mbedtls, we will use the preprocessor
@@ -46,6 +45,19 @@ enum class IdentFormat {
   PSK                   // Pre-shared symmetric key.
 };
 
+
+enum class OCFCredType {
+  /*
+  * TODO: Since we wrote this interface against mbedtls, we will use the preprocessor
+  *   defines from that library for normalizing purposes.
+  */
+  UNDEF = 0x00,    // Nothing here.
+  PAIRWISE_SYM,    // Pairwise symmetric
+  GROUP_SYM,       // Group symmetric
+  ASYM_AUTH,       // Asymmetric authenticated
+  CERT,            // Certificate
+  PASSWD,          // Pin/Password
+};
 
 
 /*
@@ -81,6 +93,7 @@ class Identity {
 
 
   private:
+    //Identity* _next = nullptr;  // TODO: Chaining is probably better than flatness in this case.
     // TODO: Expiration.
     uint16_t _ident_flags = 0;
 };
@@ -99,6 +112,15 @@ class IdentityUUID : public Identity {
   private:
     UUID uuid;
 };
+
+
+#if defined (MANUVR_OIC)
+class IdentityOCFCred : public Identity {
+  UUID subject_uuid;
+
+};
+#endif // MANUVR_OIC
+
 
 class IdentityHash : public Identity {
   public:
@@ -119,6 +141,7 @@ class IdentityCert : public Identity {
 
 
   protected:
+    IdentityCert* _issuer  = nullptr;
 
 };
 

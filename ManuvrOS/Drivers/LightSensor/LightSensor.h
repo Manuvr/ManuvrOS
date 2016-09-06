@@ -27,17 +27,17 @@ This is a quick-and-dirty class to support reading a CdS cell from an analog
 #ifndef ANALOG_LIGHT_SENSOR_H
   #define ANALOG_LIGHT_SENSOR_H
 
-  #include <Kernel.h>
+  #include <EventReceiver.h>
 
   class LightSensor : public EventReceiver {
     public:
-      LightSensor();
+      LightSensor(int analog_pin);
       virtual ~LightSensor();
 
       /* Overrides from EventReceiver */
       void printDebug(StringBuilder*);
-      int8_t notify(ManuvrEvent*);
-      int8_t callback_proc(ManuvrEvent *);
+      int8_t notify(ManuvrRunnable*);
+      int8_t callback_proc(ManuvrRunnable *);
 
 
     protected:
@@ -45,6 +45,9 @@ This is a quick-and-dirty class to support reading a CdS cell from an analog
 
 
     private:
-      uint32_t  pid_light_level_check;
+      int _analog_pin = -1;
+      ManuvrRunnable _periodic_check;
+
+      void light_check();
   };
 #endif

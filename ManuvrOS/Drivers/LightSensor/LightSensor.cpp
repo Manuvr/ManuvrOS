@@ -25,35 +25,39 @@ This is a quick-and-dirty class to support reading a CdS cell from an analog
 
 
 #include "LightSensor.h"
+#include <Platform/Platform.h>
 
 uint16_t last_lux_read = 0;
 uint8_t  last_lux_bin  = 0;
 
+// These are only here until they are migrated to each receiver that deals with them.
+const MessageTypeDef message_defs_light_sensor[] = {
+  {  MANUVR_MSG_AMBIENT_LIGHT_LEVEL,  MSG_FLAG_EXPORTABLE,  "LIGHT_LEVEL",  ManuvrMsg::MSG_ARGS_U8  }, // Unitless light-level report.
+};
 
-LightSensor::LightSensor() : EventReceiver() {
+
+
+LightSensor::LightSensor(int analog_pin) : EventReceiver() {
+  _analog_pin = analog_pin;
   setReceiverName("LightSensor");
-  pid_light_level_check = 0;
+  int mes_count = sizeof(message_defs_light_sensor) / sizeof(MessageTypeDef);
+  ManuvrMsg::registerMessages(message_defs_light_sensor, mes_count);
 }
 
 
 LightSensor::~LightSensor() {
+  _periodic_check.enableSchedule(false);
+  __kernel->removeSchedule(&_periodic_check);
 }
 
 
-void light_check() {
-  uint16_t current_lux_read = readPinAnalog(A0);
+void LightSensor::light_check() {
+  uint16_t current_lux_read = readPinAnalog(_analog_pin);
   uint8_t current_lux_bin = current_lux_read >> 2;
-  if (max(current_lux_bin, last_lux_bin) - min(current_lux_bin, last_lux_bin) > 3) {
+  if ((max(current_lux_bin, last_lux_bin) - min(current_lux_bin, last_lux_bin)) > 3) {
     last_lux_bin = current_lux_bin;
-
-    ManuvrEvent* event = EventManager::returnEvent(MANUVR_MSG_AMBIENT_LIGHT_LEVEL);
-    event->addArg((uint8_t) current_lux_bin);
-    EventManager::staticRaiseEvent(event);
-    StringBuilder local_log;
-    //if (getVerbosity() > 5) {
-    //  local_log.concatf("Lux bin is now %u\n", current_lux_bin);
-    //  Kernel::log(&local_log);
-    //}
+    // This will cause broadcase of our timed event...
+    _periodic_check.specific_target = nullptr;
   }
 }
 
@@ -81,8 +85,22 @@ void light_check() {
 */
 int8_t LightSensor::bootComplete() {
   EventReceiver::bootComplete();
+  light_check();
 
-  pid_light_level_check = scheduler->createSchedule(501, -1, false, light_check);
+  // Build some pre-formed Events.
+  _periodic_check.repurpose(MANUVR_MSG_AMBIENT_LIGHT_LEVEL);
+  _periodic_check.isManaged(true);
+  _periodic_check.specific_target = (EventReceiver*) this;
+  _periodic_check.originator      = (EventReceiver*) this;
+
+  _periodic_check.addArg((uint8_t*) &last_lux_bin);
+
+  _periodic_check.alterScheduleRecurrence(-1);
+  _periodic_check.alterSchedulePeriod(501);
+  _periodic_check.autoClear(false);
+  _periodic_check.enableSchedule(true);
+  __kernel->addSchedule(&_periodic_check);
+
   return 1;
 }
 
@@ -109,20 +127,25 @@ void LightSensor::printDebug(StringBuilder *output) {
 *
 * Depending on class implementations, we might choose to handle the completed Event differently. We
 *   might add values to event's Argument chain and return RECYCLE. We may also free() the event
-*   ourselves and return DROP. By default, we will return REAP to instruct the EventManager
+*   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
 *   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
 *   was crafted to not be in the heap in its own allocation, we will return DROP instead.
 *
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t LightSensor::callback_proc(ManuvrEvent *event) {
+int8_t LightSensor::callback_proc(ManuvrRunnable *event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
-  int8_t return_value = event->eventManagerShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
+  int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {
+    case MANUVR_MSG_AMBIENT_LIGHT_LEVEL:
+      // Our event has come back to us after a full cycle. Refresh the reading.
+      _periodic_check.specific_target = (EventReceiver*) this;
+      light_check();
+      break;
     default:
       break;
   }
@@ -131,11 +154,14 @@ int8_t LightSensor::callback_proc(ManuvrEvent *event) {
 }
 
 
-int8_t LightSensor::notify(ManuvrEvent *active_event) {
+int8_t LightSensor::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
-
+    case MANUVR_MSG_AMBIENT_LIGHT_LEVEL:
+      // Our event has come back to us after a full cycle. Refresh the reading.
+      return_value++;
+      break;
     default:
       return_value += EventReceiver::notify(active_event);
       break;

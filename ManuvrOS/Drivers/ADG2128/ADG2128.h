@@ -35,7 +35,7 @@ limitations under the License.
 class ADG2128 : public I2CDevice {
   public:
     ADG2128(uint8_t i2c_addr);
-    ~ADG2128(void);
+    virtual ~ADG2128();
 
     int8_t init(void);                            // Perform bus-related init tasks.
     void preserveOnDestroy(bool);

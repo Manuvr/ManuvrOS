@@ -34,21 +34,15 @@ limitations under the License.
   class Kernel;
 
   #include <inttypes.h>
-  #include <EnumeratedTypeCodes.h>
-
-  #include "FirmwareDefs.h"
-  #include <ManuvrRunnable.h>
-  #include <EventReceiver.h>
-  #include <DataStructures/BufferPipe.h>
-  #include <DataStructures/PriorityQueue.h>
-  #include <DataStructures/StringBuilder.h>
   #include <map>
 
-  #include <MsgProfiler.h>
+  #include <EnumeratedTypeCodes.h>
+  #include "FirmwareDefs.h"
 
-  #if defined (__MANUVR_FREERTOS)
-    #include <FreeRTOS_ARM.h>
-  #endif
+  #include <DataStructures/PriorityQueue.h>
+  #include <DataStructures/StringBuilder.h>
+  #include <ManuvrRunnable.h>
+  #include <EventReceiver.h>
 
   #define EVENT_PRIORITY_HIGHEST            100
   #define EVENT_PRIORITY_DEFAULT              2
@@ -67,7 +61,7 @@ limitations under the License.
 
   #if defined(__MANUVR_CONSOLE_SUPPORT) || defined(__MANUVR_DEBUG)
     #ifdef __MANUVR_DEBUG
-      #define DEFAULT_CLASS_VERBOSITY    7
+      #define DEFAULT_CLASS_VERBOSITY    6
     #else
       #define DEFAULT_CLASS_VERBOSITY    4
     #endif
@@ -163,9 +157,9 @@ limitations under the License.
       /* Overrides from EventReceiver
          Just gracefully fall into those when needed. */
       int8_t notify(ManuvrRunnable*);
-      int8_t callback_proc(ManuvrRunnable *);
+      int8_t callback_proc(ManuvrRunnable*);
       #if defined(__MANUVR_CONSOLE_SUPPORT)
-        void procDirectDebugInstruction(StringBuilder *);
+        void procDirectDebugInstruction(StringBuilder*);
       #endif
       void printDebug(StringBuilder*);
 
@@ -272,5 +266,9 @@ limitations under the License.
   #ifdef __cplusplus
   }
   #endif
+
+
+/* Tail inclusion... */
+#include <DataStructures/BufferPipe.h>
 
 #endif  // __MANUVR_KERNEL_H__

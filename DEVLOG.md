@@ -164,3 +164,53 @@ _---J. Ian Lindsay 2016.08.28 23:17 MST_
               XenoManuvrMessage   92
 
 ------
+
+### 2016.08.27:
+Made a big Makefile fix. Wasn't passing optimization params downstream.
+
+       text    data     bss     dec     hex filename
+    1966828   16864   52068 2035760  1f1030 Baseline without debug symbols.
+    2013860   16868   52068 2082796  1fc7ec Baseline with debug symbols.
+
+Fixed raspi platform to conform to new abstraction (prior to extension).
+Numerous build-system fixes and improvements.
+
+------
+
+### 2016.09.05:
+Much thankless grind this weekend. Driver modernization, Teensy3 support. Followed
+  that up with storage implementation on Teensy3, and moved into CBOR support.
+
+While including CBOR for Viam Sonus, I ran up against the fact that my microcontroller
+  builds do not include the C standard library. I still haven't sorted out how to handle it,
+  but I found a gem while I was working the problem.
+
+Adding gc-sections to my linker directives caused this:
+       text    data     bss     dec     hex filename
+    2008463   16860   53988 2079311  1fba4f manuvr
+    1743591   12160   50148 1805899  1b8e4b manuvr
+
+I am now using Viam Sonus as my IoT desk lamp, as it is the only source of light
+  in the room apart from my monitors.
+
+Update: I am handling the linker issue by hard-forking cbor-cpp, and mod'ing it
+  to not depend on srt:string. This represented a needless addition of ~50KB to
+  Viam Souns (~50% increase!). As long as I've forked it in this manner, I can
+  safely add the parse-in-place stuff that makes such an enormous memory
+  difference.
+
+Finally moved the remaining message definitions out of the CPP file that handles their logic.
+  They now reside in the kernel, where they will be scrutinized in the near future.
+  This resolved a bug I've been having since the conversion of the Kernel to stack
+  allocation along with platform. The problem was centered around the order-of-exec
+  for static intializers.
+
+CBOR loop closes tighter. Test is correct, and massively-extended. Simple map
+  support. It will be enough to write the next phase of the storage API. Commit...
+
+       Linux, 32-bit: DEBUG=1 SECURE=1
+       text    data     bss     dec     hex filename
+    1743583   12160   50148 1805891  1b8e43 New baseline
+
+What a monster weekend....
+_---J. Ian Lindsay_

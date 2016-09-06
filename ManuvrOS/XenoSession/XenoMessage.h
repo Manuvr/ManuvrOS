@@ -56,12 +56,22 @@ XenoMessage is the class that unifies our counterparty's message format
 * These are the enumerations of the protocols we intend to support.
 */
 enum Protos {
-  PROTO_RAW       = 0,   // Raw has no format and no session except that which the transport imposes (if any).
+  #if defined(MANUVR_OVER_THE_WIRE)
   PROTO_MANUVR    = 1,   // Manuvr's protocol.
+  #endif
+  #if defined(MANUVR_SUPPORT_MQTT)
   PROTO_MQTT      = 2,   // MQTT
-  PROTO_COAP      = 3,   // TODO: CoAP
-  PROTO_OSC       = 4,   // TODO: OSC
-  PROTO_CONSOLE   = 0xFF // TODO: A user with a text console and keyboard.
+  #endif
+  #if defined(MANUVR_SUPPORT_COAP)
+  PROTO_COAP      = 3,   // CoAP
+  #endif
+  #if defined(MANUVR_SUPPORT_OSC)
+  PROTO_OSC       = 4,   // OSC
+  #endif
+  #if defined(__MANUVR_CONSOLE_SUPPORT)
+  PROTO_CONSOLE   = 0xFF, // TODO: A user with a text console and keyboard.
+  #endif
+  PROTO_RAW       = 0    // Raw has no format and no session except that which the transport imposes (if any).
 };
 
 /**

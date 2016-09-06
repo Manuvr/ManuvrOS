@@ -20,7 +20,7 @@ limitations under the License.
 */
 
 #include "DieThermometer.h"
-#include <StringBuilder/StringBuilder.h>
+#include <DataStructures/StringBuilder.h>
 
 #if defined(RASPI) | defined(RASPI2)
 
@@ -80,14 +80,14 @@ int8_t RaspiTempSensor::readSensor(void) {
                 updateDatum(0, temperature);
             }
             else {
-                Kernel::log("Failed to parse the data from the file: %s\n", buf);
+                Kernel::log("Failed to parse the data from the temperature file.\n");
                 return SensorWrapper::SENSOR_ERROR_ABSENT;
             }
         }
         fclose(temperature_file);
     }
     else {
-        Kernel::log("Failed to open file for reading: %s\n", RaspiTempSensor::RASPI_TEMPERATURE_FILE);
+        Kernel::log("Failed to open the temperature file for reading.\n");
         return SensorWrapper::SENSOR_ERROR_ABSENT;
     }
     return SensorWrapper::SENSOR_ERROR_NO_ERROR;

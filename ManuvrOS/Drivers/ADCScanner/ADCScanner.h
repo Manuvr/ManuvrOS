@@ -21,7 +21,9 @@ limitations under the License.
 
 
 #ifndef ADC_SCANNER_H
-  #define ADC_SCANNER_H_H
+#define ADC_SCANNER_H_H
+
+  #define MANUVR_MSG_ADC_SCAN              0x9040
 
   #include <Kernel.h>
 
@@ -39,8 +41,8 @@ limitations under the License.
 
       /* Overrides from EventReceiver */
       void printDebug(StringBuilder*);
-      int8_t notify(ManuvrEvent*);
-      int8_t callback_proc(ManuvrEvent *);
+      int8_t notify(ManuvrRunnable*);
+      int8_t callback_proc(ManuvrRunnable *);
 
 
     protected:
@@ -48,10 +50,9 @@ limitations under the License.
 
 
     private:
-      uint32_t  pid_adc_check;
-
       int8_t   adc_list[16];
       uint16_t last_sample[16];
       uint16_t threshold[16];
+      ManuvrRunnable _periodic_check;
   };
 #endif

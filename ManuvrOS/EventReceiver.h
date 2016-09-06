@@ -17,6 +17,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
+
+Lifecycle:
+  0) Instantiation  // Constructor
+  1) Subscription   // Subscription to Kernel.
+  2) Startup        // Kernel activates class when boot completes.
+  2) Teardown       // Either by event or direct call.
+  3) Unsubscription
+  4) Destruction
 */
 
 

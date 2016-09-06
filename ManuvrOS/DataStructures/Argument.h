@@ -3,11 +3,12 @@
 
 #include <EnumeratedTypeCodes.h>
 
-#include <DataStructures/StringBuilder.h>
-#include <DataStructures/PriorityQueue.h>
-#include <DataStructures/LightLinkedList.h>
 #include <DataStructures/Vector3.h>
 #include <DataStructures/Quaternion.h>
+
+#if defined(MANUVR_CBOR)
+  #include <Types/cbor-cpp/cbor.h>
+#endif
 
 /*
 * These are flag definitions for Argument.
@@ -19,7 +20,7 @@
 #define MANUVR_ARG_FLAG_CONST_REDUCED  0x40  // Key reduced to const.
 #define MANUVR_ARG_FLAG_REQUIRED       0x80
 
-
+class StringBuilder;
 class BufferPipe;
 class ManuvrXport;
 class EventReceiver;
@@ -91,6 +92,8 @@ class Argument {
     ~Argument();
 
 
+    inline void reapKey(bool en) {    _alter_flags(en, MANUVR_ARG_FLAG_REAP_KEY);      };
+    inline bool reapKey() {           return _check_flags(MANUVR_ARG_FLAG_REAP_KEY);   };
     inline void reapValue(bool en) {  _alter_flags(en, MANUVR_ARG_FLAG_REAP_VALUE);    };
     inline bool reapValue() {         return _check_flags(MANUVR_ARG_FLAG_REAP_VALUE); };
 
@@ -98,7 +101,8 @@ class Argument {
     inline uint8_t  typeCode() {          return type_code;  };
     inline uint16_t length() {            return len;        };
 
-    inline void setKey(const char* k) {  _key = k;  };
+    inline const char* getKey() {         return _key;  };
+    inline void setKey(const char* k) {      _key = k;  };
 
     int collectKeys(StringBuilder*);
 
@@ -152,7 +156,10 @@ class Argument {
 
     #if defined(MANUVR_CBOR)
     static int8_t encodeToCBOR(Argument*, StringBuilder*);
-    static Argument* decodeFromCBOR(StringBuilder*);
+    static Argument* decodeFromCBOR(uint8_t*, unsigned int);
+    static inline Argument* decodeFromCBOR(StringBuilder* buf) {
+      return decodeFromCBOR(buf->string(), buf->length());
+    };
     #endif
 
     #if defined(MANUVR_JSON)
@@ -183,5 +190,40 @@ class Argument {
     // TODO: Might-should move this to someplace more accessable?
     static uintptr_t get_const_from_char_ptr(char*);
 };
+
+
+
+#if defined(MANUVR_CBOR)
+/* If we have CBOR support, we define a helper class to assist decomposition. */
+class CBORArgListener : public cbor::listener {
+  public:
+    CBORArgListener(Argument**);
+    ~CBORArgListener();
+
+    void on_integer(int value);
+    void on_bytes(unsigned char* data, int size);
+    void on_string(char* str);
+    void on_array(int size);
+    void on_map(int size);
+    void on_tag(unsigned int tag);
+    void on_special(unsigned int code);
+    void on_error(const char* error);
+
+    void on_extra_integer(unsigned long long value, int sign);
+    void on_extra_tag(unsigned long long tag);
+    void on_extra_special(unsigned long long tag);
+
+  private:
+    Argument** built = nullptr;
+    char*  _wait     = nullptr;
+    int _wait_map    = 0;
+    int _wait_array  = 0;
+
+    /* Please forgive the stupid name. */
+    void _caaa(Argument*);
+};
+#endif
+
+
 
 #endif  // __MANUVR_ARGUMENT_H__

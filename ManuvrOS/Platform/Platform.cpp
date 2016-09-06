@@ -26,18 +26,13 @@ This file is meant to contain a set of common functions that are typically platf
     * Access a true RNG (if it exists)
 */
 
-#include "Platform.h"
+#include <Platform/Platform.h>
 #include <Kernel.h>
 
 
 // TODO: I know this is horrid. I'm sick of screwing with the build system today...
-#if defined(RASPI) | defined(RASPI2) | defined(RASPI3)
-  #include "./PlatformRaspi.cpp"
-  #include "./Raspi/DieThermometer.cpp"
-  ManuvrPlatform platform;
-#elif defined(__MK20DX256__) | defined(__MK20DX128__)
-  #include "./Teensy3/Teensy3.cpp"
-  ManuvrPlatform platform;
+#if defined(__MK20DX256__) | defined(__MK20DX128__)
+  // TODO: We still need to do this to avoid bringing in Arduino,
 #elif defined(STM32F4XX)
   #include "./STM32F4/STM32F4.cpp"
   ManuvrPlatform platform;
@@ -52,9 +47,6 @@ This file is meant to contain a set of common functions that are typically platf
   #include "./Particle/Photon.cpp"
   ManuvrPlatform platform;
 #elif defined(__MANUVR_LINUX)
-  //#include "./Linux/Linux.h"
-  #include "./Linux/Linux.cpp"
-  #include "./Linux/LinuxStorage.cpp"
   ManuvrPlatform platform;
 #else
   // Unsupportage.
@@ -132,17 +124,22 @@ const char* ManuvrPlatform::getRTCStateString() {
 
 // TODO: This is only here to ease the transition into polymorphic platform defs.
 void ManuvrPlatform::printPlatformBasics(StringBuilder* output) {
+  output->concatf("-- Ver/Build date:     %s   %s %s\n", VERSION_STRING, __DATE__, __TIME__);
   if (nullptr != platform._identity) {
     output->concatf("-- Identity:           %s\t", platform._identity->getHandle());
     platform._identity->toString(output);
     output->concat("\n");
   }
-  else {
-    output->concatf("-- Undifferentiated %s\n", IDENTITY_STRING);
-  }
   output->concatf("-- Identity source:    %s\n", platform._check_flags(MANUVR_PLAT_FLAG_HAS_IDENTITY) ? "Generated at runtime" : "Loaded from storage");
-  output->concatf("-- Ver/Build date:     %s\t%s %s\n", VERSION_STRING, __DATE__, __TIME__);
-  output->concatf("-- %u-bit", platform.aluWidth());
+  output->concat("-- Hardware:\n");
+  #if defined(HW_VERSION_STRING)
+    output->concatf("--\t version:        %s\n", HW_VERSION_STRING);
+
+  #endif
+  #if defined(F_CPU)
+    output->concatf("--\t CPU frequency:  %.2f MHz\n", (double) F_CPU/1000000.0);
+  #endif
+  output->concatf("--\t %u-bit", platform.aluWidth());
   if (8 != platform.aluWidth()) {
     output->concatf(" %s-endian", platform.bigEndian() ? "Big" : "Little");
   }
@@ -151,16 +148,21 @@ void ManuvrPlatform::printPlatformBasics(StringBuilder* output) {
   uintptr_t final_sp   = 0;
   output->concatf("\n-- getStackPointer():  %p\n", &final_sp);
   output->concatf("-- stack grows %s\n--\n", (&final_sp > &initial_sp) ? "up" : "down");
+  output->concatf("-- millis()            0x%08x\n", millis());
+  output->concatf("-- micros()            0x%08x\n", micros());
   output->concatf("-- Timer resolution:   %d ms\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
-  output->concatf("-- Hardware version:   %s\n", HW_VERSION_STRING);
   output->concatf("-- Entropy pool size:  %u bytes\n", PLATFORM_RNG_CARRY_CAPACITY * 4);
   if (platform.hasTimeAndDate()) {
     output->concatf("-- RTC State:          %s\n", platform.getRTCStateString());
+    output->concat("-- Current datetime:   ");
+    currentDateTime(output);
+    output->concat("\n");
   }
-  output->concatf("-- millis()            0x%08x\n", millis());
-  output->concatf("-- micros()            0x%08x\n", micros());
 
   output->concat("--\n-- Capabilities:\n");
+  #if defined(__MANUVR_DEBUG)
+    output->concat("--\t DEBUG build\n");
+  #endif
   if (platform.hasThreads()) {
     output->concat("--\t Threads\n");
   }
@@ -190,6 +192,16 @@ void ManuvrPlatform::printPlatformBasics(StringBuilder* output) {
   #if defined(MANUVR_SUPPORT_OSC)
     output->concat("--\t OSC\n");
   #endif
+  output->concat("--\n");
+  platform.printConfig(output);
+}
+
+
+void ManuvrPlatform::printConfig(StringBuilder* output) {
+  if (nullptr != _config) {
+    output->concat("-- Loaded configuration:\n");
+    _config->printDebug(output);
+  }
 }
 
 
@@ -230,18 +242,23 @@ void ManuvrPlatform::_discoverALUParams() {
 * This is called by user code to initialize the platform.
 */
 int8_t ManuvrPlatform::bootstrap() {
-  _kernel = Kernel::getInstance();
-
   /* Follow your shadow. */
   ManuvrRunnable *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
   boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
   Kernel::staticRaiseEvent(boot_completed_ev);
   _set_init_state(MANUVR_INIT_STATE_KERNEL_BOOTING);
-  while (0 < _kernel->procIdleFlags()) {
+  while (0 < _kernel.procIdleFlags()) {
     // TODO: Safety! Need to be able to diagnose infinte loops.
   }
+  #if defined(MANUVR_STORAGE)
+    _load_config();
+  #endif
   _set_init_state(MANUVR_INIT_STATE_POST_INIT);
   platformPostInit();
+  if (nullptr == _identity) {
+    _identity = new IdentityUUID(IDENTITY_STRING);
+  }
+  _set_init_state(MANUVR_INIT_STATE_NOMINAL);
   return 0;
 }
 
@@ -310,6 +327,11 @@ void ManuvrPlatform::setWakeHook(FunctionPointer nu) {
 
 
 /*******************************************************************************
+* Persistent configuration                                                     *
+*******************************************************************************/
+
+
+/*******************************************************************************
 * TODO: Still digesting                                                        *
 *******************************************************************************/
 
@@ -351,7 +373,7 @@ int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn,
       return 0;
     }
   #endif
-  Kernel::log("Failed to create thread.\n");
+  //Kernel::log("Failed to create thread.\n");
   return -1;
 }
 
@@ -378,8 +400,9 @@ void sleep_millis(unsigned long millis) {
     nanosleep(&t, &t);
   #elif defined(__MANUVR_FREERTOS)
     vTaskDelay(millis / portTICK_PERIOD_MS);
+  #elif defined(ARDUINO)
+    delay(millis);  // So wasteful...
   #endif
 }
-
 
 }  // extern "C"

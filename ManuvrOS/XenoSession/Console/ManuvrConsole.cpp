@@ -35,13 +35,13 @@ void printHelp() {
 #if !defined(_GNU_SOURCE)
 /*
 * We might choose to roll-our-own so that we don't bring in enormous dependencies.
-*
+* TODO: This is buggy.
 * Taken from
 * http://c-for-dummies.com/blog/?p=1359
 */
 int strcasestr(char *a, const char *b) {
   char c;
-  while(*a) {
+  while(*a && *b) {
     c = toupper(*a) - toupper(*b);
     if( c != 0 ) return(c);
     a++;
@@ -143,7 +143,7 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
     char* temp_ptr = session_buffer.position(0);
     int temp_len   = strlen(temp_ptr);
     // Begin the cases...
-    //#if defined(_GNU_SOURCE)
+    #if defined(_GNU_SOURCE)
       if (strcasestr(temp_ptr, "QUIT")) {
         ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_REBOOT);
         event->originator = (EventReceiver*) __kernel;
@@ -151,8 +151,7 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
       }
       else if (strcasestr(temp_ptr, "HELP"))  printHelp();      // Show help.
       else
-    //#else
-    //#endif
+    #endif
     {
       // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
       // run in idle time.
@@ -265,31 +264,6 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
 
   switch (active_event->eventCode()) {
     /* Things that only this class is likely to care about. */
-    case MANUVR_MSG_SESS_HANGUP:
-      {
-        int out_purge = purgeOutbound();
-        int in_purge  = purgeInbound();
-        #ifdef __MANUVR_DEBUG
-        if (getVerbosity() > 5) local_log.concatf("%p Purged (%d) msgs from outbound and (%d) from inbound.\n", this, out_purge, in_purge);
-        #endif
-      }
-      return_value++;
-      break;
-
-    case MANUVR_MSG_SESS_ORIGINATE_MSG:
-      return_value++;
-      break;
-
-    case MANUVR_MSG_XPORT_RECEIVE:
-      {
-        StringBuilder* buf;
-        if (0 == active_event->getArgAs(&buf)) {
-          fromCounterparty(buf, MEM_MGMT_RESPONSIBLE_BEARER);
-        }
-      }
-      return_value++;
-      break;
-
     default:
       return_value += XenoSession::notify(active_event);
       break;

@@ -40,7 +40,6 @@ Platforms that require it should be able to extend this driver for specific
 
 #if defined (STM32F4XX)        // STM32F4
 
-
 #elif defined(__MK20DX256__) | defined(__MK20DX128__)  // Teensy3.0/3.1
 
 #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
@@ -54,11 +53,6 @@ Platforms that require it should be able to extend this driver for specific
   // No special globals needed for this platform.
 #endif
 
-
-#if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
-  // Threaded platforms will need this to compensate for a loss of ISR.
-  extern void* xport_read_handler(void* active_xport);
-#endif
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -129,8 +123,7 @@ void ManuvrSerial::__class_initializer() {
   read_abort_event.isManaged(true);
   read_abort_event.specific_target = (EventReceiver*) this;
   read_abort_event.originator      = (EventReceiver*) this;
-  read_abort_event.priority        = 5;
-  read_abort_event.addArg(xport_id);  // Add our assigned transport ID to our pre-baked argument.
+  read_abort_event.priority        = 2;
 }
 
 
@@ -182,7 +175,8 @@ int8_t ManuvrSerial::init() {
 
   #if defined (STM32F4XX)        // STM32F4
 
-  #elif defined (__MK20DX128__) || defined (__MK20DX256__)  // Teensy3.x
+  #elif defined (__MK20DX128__) || defined (__MK20DX256__) || defined (ARDUINO)
+    // Arduino, Teensyduino, chipKIT, etc
     if (nullptr == _addr) {
       if (getVerbosity() > 1) {
         local_log.concatf("No serial port ID supplied.\n", *_addr);
@@ -206,8 +200,6 @@ int8_t ManuvrSerial::init() {
     initialized(true);
     connected(true);
     listening(true);
-
-  #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
   #elif defined (__MANUVR_LINUX) // Linux environment
     if (_sock) {
@@ -291,49 +283,40 @@ int8_t ManuvrSerial::reset() {
 
 
 int8_t ManuvrSerial::read_port() {
+  int8_t return_value = 0;
   if (connected()) {
     unsigned char *buf = (unsigned char *) alloca(255);
     int n = 0;
     #if defined (STM32F4XX)        // STM32F4
 
     #elif defined (__MK20DX128__) || defined (__MK20DX256__) // Teensy3.x
-      while (connected()) {
         if (Serial.available()) {
           while (Serial.available()) {
             *(buf + n++) = Serial.read();
           }
           bytes_received += n;
+          *(buf + n) = '\0';  // NULL-terminate, JIC
           BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
-          for (int i = 0; i < 255; i++) *(buf+i) = 0;
-          n = 0;
+          return_value = 1;
         }
-        else {
-          sleep_millis(50);
-        }
-      }
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
 
     #elif defined (__MANUVR_LINUX) // Linux with pthreads...
-      while (connected()) {
         n = read(_sock, buf, 255);
         if (n > 0) {
           bytes_received += n;
           BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
+          return_value = 1;
         }
-        else {
-          sleep_millis(50);
-        }
-      }
     #endif
   }
   else {
     #ifdef __MANUVR_DEBUG
-    if (getVerbosity() > 1) local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
+    if (getVerbosity() > 5) local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
+    flushLocalLog();
     #endif
   }
-
-  flushLocalLog();
-  return 0;
+  return return_value;
 }
 
 
@@ -423,10 +406,11 @@ int8_t ManuvrSerial::bootComplete() {
   read_abort_event.alterScheduleRecurrence(0);
   read_abort_event.alterSchedulePeriod(30);
   read_abort_event.autoClear(false);
-  read_abort_event.enableSchedule(false);
-  read_abort_event.enableSchedule(false);
+  read_abort_event.enableSchedule(true);
+  #if !defined (__MANUVR_FREERTOS) && !defined (__MANUVR_LINUX)
   __kernel->addSchedule(&read_abort_event);
-
+  #endif
+  
   reset();
   return 1;
 }
@@ -468,8 +452,8 @@ int8_t ManuvrSerial::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
-    case MANUVR_MSG_XPORT_DEBUG:
-      printDebug(&local_log);
+    case MANUVR_MSG_XPORT_QUEUE_RDY:
+      read_port();
       return_value++;
       break;
 

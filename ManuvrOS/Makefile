@@ -4,6 +4,9 @@
 #
 # Note... This is supposed to be called from an upstream Makefile where
 #   platform-specific build options are defined.
+#
+# TODO: I've written a lot of code. Use makefile defines to trim down the
+#         compile. It's getting large.
 ###########################################################################
 CPP_STANDARD       = gnu++11
 
@@ -24,6 +27,13 @@ CPP_SRCS  += DataStructures/uuid.cpp
 CPP_SRCS  += DataStructures/Argument.cpp
 
 # Types and encodings
+SOURCES_CBOR  = Types/cbor-cpp/encoder.cpp
+SOURCES_CBOR += Types/cbor-cpp/decoder.cpp
+SOURCES_CBOR += Types/cbor-cpp/input.cpp
+SOURCES_CBOR += Types/cbor-cpp/output_dynamic.cpp
+SOURCES_CBOR += Types/cbor-cpp/output_static.cpp
+
+CPP_SRCS  += $(SOURCES_CBOR)
 CPP_SRCS  += Types/TypeTranscriber.cpp
 CPP_SRCS  += Types/Avro/Avro.cpp
 
@@ -77,11 +87,9 @@ CPP_SRCS  += Drivers/i2c-adapter/i2c-adapter.cpp
 CPP_SRCS  += Drivers/i2c-adapter/I2CDeviceWithRegisters.cpp
 CPP_SRCS  += Drivers/i2c-adapter/I2CBusOp.cpp
 
-# TODO: Bring up to speed WRT Runnable.
-#CPP_SRCS  += Drivers/LightSensor/LightSensor.cpp
-#CPP_SRCS  += Drivers/AudioRouter/AudioRouter.cpp
+CPP_SRCS  += Drivers/LightSensor/LightSensor.cpp
+CPP_SRCS  += Drivers/AudioRouter/AudioRouter.cpp
 
-# TODO: Use GPio abstractions!
 CPP_SRCS  += Drivers/MGC3130/MGC3130.cpp
 CPP_SRCS  += Drivers/MCP73833/MCP73833.cpp
 CPP_SRCS  += Drivers/ADP8866/ADP8866.cpp
@@ -89,11 +97,9 @@ CPP_SRCS  += Drivers/ADP8866/ADP8866.cpp
 # TODO: Only for Teensyduino libs...
 #CPP_SRCS  += Drivers/ManuvrAudio/ManuvrAudio.cpp
 
-# TODO: Bring up to speed WRT scheduler removal.
-#CPP_SRCS  += Drivers/ADCScanner/ADCScanner.cpp
+CPP_SRCS  += Drivers/ADCScanner/ADCScanner.cpp
 
-# TODO: Full of fail. Arduino abstraction, GPIO, runnable, scheduler, et al...
-#CPP_SRCS  += Drivers/ManuvrableNeoPixel/ManuvrableNeoPixel.cpp
+CPP_SRCS  += Drivers/ManuvrableNeoPixel/ManuvrableNeoPixel.cpp
 
 CPP_SRCS  += Drivers/ExampleDriver/ExampleDriver.cpp
 CPP_SRCS  += Drivers/ISL23345/ISL23345.cpp
@@ -114,21 +120,19 @@ CPP_SRCS  += Drivers/INA219/INA219.cpp
 
 CPP_SRCS  += Platform/Cryptographic.cpp
 CPP_SRCS  += Platform/Identity.cpp
-CPP_SRCS  += Storage/Storage.cpp
+CPP_SRCS  += Platform/Storage.cpp
 
 
 OBJS  = $(CPP_SRCS:.cpp=.o)
 LIBNAME = libmanuvr.a
 
 
-all: setenvars $(LIBNAME)
-
-debug: all
+all: $(LIBNAME)
 
 %.o : %.cpp
 	$(CXX) $(INCLUDES) $(CPP_FLAGS) -std=$(CPP_STANDARD) -nostdlib -c $< -o $@
 
-$(LIBNAME): $(OBJS)
+$(LIBNAME): setenvars $(OBJS)
 	$(MAKE) -C Platform/
 	$(AR) -rvs $(OUTPUT_PATH)/$@ $(OBJS) Platform/*.o
 

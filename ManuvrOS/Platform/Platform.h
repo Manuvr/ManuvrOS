@@ -32,8 +32,6 @@ This file is meant to contain a set of common functions that are
 #ifndef __PLATFORM_SUPPORT_H__
 #define __PLATFORM_SUPPORT_H__
 
-#include "FirmwareDefs.h"
-
 // System-level includes.
 #include <inttypes.h>
 #include <stdlib.h>
@@ -43,25 +41,36 @@ This file is meant to contain a set of common functions that are
 #include <stdio.h>
 
 #include <CommonConstants.h>
-#include <DataStructures/StringBuilder.h>
-#include <Platform/Identity.h>
+#include "FirmwareDefs.h"
 
-#if defined(MANUVR_STORAGE)
-  #include <Storage/Storage.h>
-#endif
+#include <DataStructures/uuid.h>
 
-// Conditional inclusion for different threading models...
-#if defined(__MANUVR_LINUX)
-  #include <pthread.h>
-  #include <signal.h>
-  #include <sys/time.h>
-#elif defined(__MANUVR_FREERTOS)
+// TODO: Split OCF off into it's own concern. Right now, it will depend on Linux.
+#if defined(MANUVR_OPENINTERCONNECT)
+extern "C" {
+  // We intend on overlaying iotivity-constrained platform calls into our own.
+  #include "iotivity/include/oc_api.h"
+  #include "iotivity/port/oc_assert.h"
+  #include "iotivity/port/oc_clock.h"
+  #include "iotivity/port/oc_connectivity.h"
+  #include "iotivity/port/oc_storage.h"
+  #include "iotivity/port/oc_random.h"
+  #include "iotivity/port/oc_network_events_mutex.h"
+  #include "iotivity/port/oc_log.h"
+  #include "iotivity/port/oc_signal_main_loop.h"
 
-#endif
+  int example_main(void);
+}
+#endif   // MANUVR_OPENINTERCONNECT
+
+#include <Kernel.h>
 
 
 class ManuvrRunnable;
-class Kernel;
+class Argument;
+class Identity;
+class Storage;
+
 
 /**
 * These are just lables. We don't really ever care about the *actual* integers
@@ -183,15 +192,14 @@ class ManuvrPlatform {
     * User code wishing to hook into these calls can do so by modifying this stuct.
     * See main_template.cpp for an example.
     */
-    // TODO: These should be protected?
-    virtual int8_t platformPreInit();
-    virtual int8_t platformPostInit();
+    inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
+    virtual int8_t platformPreInit(Argument*);
 
     /* Platform state-reset functions. */
-    virtual void seppuku();           // Simple process termination. Reboots if not implemented.
-    virtual void reboot();
-    virtual void hardwareShutdown();
-    virtual void jumpToBootloader();
+    virtual void seppuku();    // Simple process termination. Reboots if not implemented.
+    virtual void reboot();     // Simple reboot. Should be possible on any platform.
+    virtual void hardwareShutdown();  // For platforms that support it. Reboot if not.
+    virtual void jumpToBootloader();  // For platforms that support it. Reboot if not.
 
     /* Accessors for platform capability discovery. */
     inline bool hasLocation() {     return _check_flags(MANUVR_PLAT_FLAG_HAS_LOCATION);    };
@@ -210,12 +218,25 @@ class ManuvrPlatform {
     int8_t bootstrap();
     inline uint8_t platformState() {   return (_pflags & MANUVR_PLAT_FLAG_P_STATE_MASK);  };
 
-    inline void setKernel(Kernel* k) {  if (nullptr == _kernel) _kernel = k;  };
-    inline Kernel* getKernel() {        return _kernel;  };
+    inline void advanceScheduler() {  _kernel.advanceScheduler();  };
 
-    /* These are storage-realted members. */
-    Storage* fetchStorage(const char*);
-    int8_t   offerStorage(const char*, Storage*);
+    /* This cannot possibly return NULL. */
+    inline Kernel* kernel() {          return &_kernel;  };
+
+    /* These are storage-related members. */
+    #if defined(MANUVR_STORAGE)
+      Storage* fetchStorage(const char*);
+      int8_t   offerStorage(const char*, Storage*);
+      virtual int8_t _load_config();
+    #endif
+
+    /*
+    * Systems that want support for dynamic runtime configurations
+    *   can aggregate that config in platform.
+    */
+    int8_t getConfig(const char* key);
+    int8_t persistConfig();
+    int8_t configLoaded();
 
     /* These are safe function proxies for external callers. */
     void setIdleHook(FunctionPointer nu);
@@ -226,7 +247,8 @@ class ManuvrPlatform {
     /* Writes a platform information string to the provided buffer. */
     const char* getRTCStateString();
 
-    void printDebug(StringBuilder* out);
+    void printConfig(StringBuilder* out);
+    virtual void printDebug(StringBuilder* out);
     void printDebug();
 
     /*
@@ -250,15 +272,12 @@ class ManuvrPlatform {
 
 
 
-  private:
-    Kernel*         _kernel    = nullptr;
+  protected:
+    Kernel          _kernel;
     Identity*       _identity  = nullptr;
     #if defined(MANUVR_STORAGE)
       Storage* _storage_device = nullptr;
     #endif
-    uint32_t        _pflags    = 0;
-    FunctionPointer _idle_hook = nullptr;
-    FunctionPointer _wake_hook = nullptr;
 
     /* Inlines for altering and reading the flags. */
     inline void _alter_flags(bool en, uint32_t mask) {
@@ -271,12 +290,23 @@ class ManuvrPlatform {
       _pflags = ((_pflags & ~MANUVR_PLAT_FLAG_P_STATE_MASK) | s);
     };
 
+    virtual int8_t platformPostInit();
+
+    #if defined(MANUVR_STORAGE)
+      // Called during boot to load configuration.
+      //virtual int8_t _load_config();
+    #endif
+
+
+  private:
+    uint32_t        _pflags    = 0;
+    FunctionPointer _idle_hook = nullptr;
+    FunctionPointer _wake_hook = nullptr;
+    Argument*       _config    = nullptr;
 
     void _discoverALUParams();
 };
 
-
-extern ManuvrPlatform platform;  // TODO: Awful.
 
 
 #ifdef __cplusplus
@@ -335,5 +365,50 @@ int    readPinAnalog(uint8_t pin);
 #ifdef __cplusplus
 }
 #endif
+
+
+
+/* Tail inclusion... */
+#include <DataStructures/Argument.h>
+#include <Platform/Cryptographic.h>
+#include <Platform/Identity.h>
+
+// Conditional inclusion for different threading models...
+#if defined(__MANUVR_LINUX)
+  #include <Platform/Linux/Linux.h>
+#endif
+
+#if defined(MANUVR_STORAGE)
+  #include <Platform/Storage.h>
+#endif
+
+
+
+extern ManuvrPlatform platform;
+//// TODO: I know this is horrid. but it is in preparation for ultimately-better
+////         resolution of this issue.
+//#if defined(__MK20DX256__) | defined(__MK20DX128__)
+//  #include <Platform/Teensy3/Teensy3.h>
+//  extern Teensy3 platform;  // TODO: Awful.
+//#elif defined(STM32F7XX) | defined(STM32F746xx)
+//  #include <Platform/STM32F7/STM32F7.h>
+//  extern STM32F7 platform;  // TODO: Awful.
+//#elif defined(STM32F4XX)
+//  // Not yet converted
+//#elif defined(ARDUINO)
+//  // Not yet converted
+//#elif defined(__MANUVR_PHOTON)
+//  // Not yet converted
+//#elif defined(__MANUVR_LINUX)
+//  #include <Platform/Raspi/Raspi.h>
+//  Raspi platform;
+//#elif defined(__MANUVR_LINUX)
+//  #include <Platform/Linux/Linux.h>
+//  extern LinuxPlatform platform;
+//#else
+//  // Unsupportage.
+//  // TODO: Fail the build.
+//#endif
+
 
 #endif  // __PLATFORM_SUPPORT_H__

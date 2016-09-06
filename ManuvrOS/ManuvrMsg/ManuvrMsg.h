@@ -26,9 +26,11 @@ This class forms the foundation of internal events. It contains the identity of 
 #ifndef __MANUVR_MESSAGE_H__
 #define __MANUVR_MESSAGE_H__
 
+#include <map>
+
 #include "MessageDefs.h"    // This include file contains all of the message codes.
 #include <DataStructures/Argument.h>
-
+#include <DataStructures/LightLinkedList.h>
 
 /*
 * Messages are defined by this struct. Note that this amounts to nothing more than definition.
@@ -227,8 +229,6 @@ class ManuvrMsg {
     static int8_t registerMessage(MessageTypeDef*);
     static int8_t registerMessage(uint16_t, uint16_t, const char*, const unsigned char*, const char*);
     static int8_t registerMessages(const MessageTypeDef[], int len);
-    static const MessageTypeDef message_defs[];
-
 
     static bool isExportable(const MessageTypeDef* message_def) {
       return (message_def->msg_type_flags & MSG_FLAG_EXPORTABLE);
@@ -248,6 +248,11 @@ class ManuvrMsg {
     static const unsigned char MSG_ARGS_BUFFERPIPE[];
     static const unsigned char MSG_ARGS_XPORT[];
 
+    static const unsigned char MSG_ARGS_U8_U8[];
+
+    static const MessageTypeDef message_defs[];
+    static const uint16_t TOTAL_MSG_DEFS;
+
 
 
   protected:
@@ -266,7 +271,8 @@ class ManuvrMsg {
     int   collect_valid_grammatical_forms(int, LinkedList<char*>*);
 
 
-    static PriorityQueue<const MessageTypeDef*> message_defs_extended;  // Where runtime-loaded message defs go.
+    // Where runtime-loaded message defs go.
+    static std::map<uint16_t, const MessageTypeDef*> message_defs_extended;
 };
 
 

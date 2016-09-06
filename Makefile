@@ -11,7 +11,7 @@
 # Used for internal functionality macros. Feel free to rename. Need to
 #   replace this with an autoconf script which I haven't yet learned how to
 #   write.
-OPTIMIZATION       = -O0 -g
+OPTIMIZATION       = -O2
 C_STANDARD         = gnu99
 CPP_STANDARD       = gnu++11
 FIRMWARE_NAME      = manuvr
@@ -27,7 +27,7 @@ WHERE_I_AM     = $(shell pwd)
 export CXX     = $(shell which g++)
 export CC      = $(shell which gcc)
 export SZ      = $(shell which size)
-export MAKE    = make
+export MAKE    = $(shell which make)
 
 export OUTPUT_PATH = $(WHERE_I_AM)/build/
 
@@ -41,14 +41,16 @@ INCLUDES   += -I$(WHERE_I_AM)/lib
 
 INCLUDES   += -I$(WHERE_I_AM)/lib/paho.mqtt.embedded-c/
 INCLUDES   += -I$(WHERE_I_AM)/lib/mbedtls/include/
+INCLUDES   += -I$(WHERE_I_AM)/lib/iotivity
+INCLUDES   += -I$(WHERE_I_AM)/lib/iotivity/include
 
 # Libraries to link
 # We should be gradually phasing out C++ standard library on linux builds.
 # TODO: Advance this goal.
-LIBS = -L$(OUTPUT_PATH) -L$(WHERE_I_AM)/lib -lstdc++ -lm -lmanuvr
+LIBS = -L$(OUTPUT_PATH) -lstdc++ -lm
 
 # Wrap the include paths into the flags...
-CFLAGS += $(OPTIMIZATION) $(INCLUDES)
+CFLAGS += $(INCLUDES)
 CFLAGS += -fsingle-precision-constant -Wdouble-promotion
 
 
@@ -83,10 +85,6 @@ endif
 # This project has a single source file.
 CPP_SRCS  = main.cpp
 
-# Debugging options...
-MANUVR_OPTIONS += -D__MANUVR_DEBUG
-MANUVR_OPTIONS += -D__MANUVR_PIPE_DEBUG
-
 # Supported transports...
 MANUVR_OPTIONS += -DMANUVR_STDIO
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_SERIAL
@@ -97,12 +95,11 @@ MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
 #MANUVR_OPTIONS += -D__MANUVR_FREERTOS
 MANUVR_OPTIONS += -D__MANUVR_LINUX
 
-
 # Wire and session protocols...
 #MANUVR_OPTIONS += -DMANUVR_SUPPORT_OSC
 MANUVR_OPTIONS += -DMANUVR_OVER_THE_WIRE
 #MANUVR_OPTIONS += -DMANUVR_SUPPORT_MQTT
-MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
+#MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
 MANUVR_OPTIONS += -D__MANUVR_CONSOLE_SUPPORT
 MANUVR_OPTIONS += -DMANUVR_GPS_PIPE
 
@@ -112,22 +109,42 @@ MANUVR_OPTIONS += -DMANUVR_CBOR
 #MANUVR_OPTIONS += -DMANUVR_JSON
 
 # Framework selections, if any are desired.
-MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT
-
-# Options for various security features.
-MANUVR_OPTIONS += -D__MANUVR_MBEDTLS
-
-
-# mbedTLS will require this in order to use our chosen options.
-MBEDTLS_CONFIG_FILE = $(WHERE_I_AM)/mbedTLS_conf.h
+#MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT
 
 # Since we are building on linux, we will have threading support via
 # pthreads.
-LIBS += -lpthread $(OUTPUT_PATH)/extraprotocols.a
+LIBS +=  -lmanuvr $(OUTPUT_PATH)libextras.a -lpthread
+
+# Options for various security features.
+ifeq ($(SECURE),1)
+MANUVR_OPTIONS += -D__MANUVR_MBEDTLS
+# The remaining lines are to prod header files in libraries.
+MANUVR_OPTIONS += -DOC_SECURITY -DOC_CLIENT
 LIBS += $(OUTPUT_PATH)/libmbedtls.a
 LIBS += $(OUTPUT_PATH)/libmbedx509.a
 LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
+# mbedTLS will require this in order to use our chosen options.
+export MBEDTLS_CONFIG_FILE = $(WHERE_I_AM)/mbedTLS_conf.h
+export SECURE=1
+endif
 
+# Support for specific SBC hardware on linux.
+ifeq ($(BOARD),RASPI)
+MANUVR_OPTIONS += -DRASPI
+export MANUVR_BOARD = RASPI
+endif
+
+# Debugging options...
+ifeq ($(DEBUG),1)
+MANUVR_OPTIONS += -D__MANUVR_DEBUG
+MANUVR_OPTIONS += -D__MANUVR_PIPE_DEBUG
+OPTIMIZATION    = -O0 -g
+# Options configured such that you can then...
+# valgrind --tool=callgrind ./manuvr
+# gprof2dot --format=callgrind --output=out.dot callgrind.out.16562
+# dot  -Tpng out.dot -o graph.png
+endif
+MANUVR_OPTIONS += -D__MANUVR_EVENT_PROFILER
 
 ###########################################################################
 # Rules for building the firmware follow...
@@ -137,7 +154,9 @@ LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
 #    aid of valgrind and gdb.
 ###########################################################################
 # Merge our choices and export them to the downstream Makefiles...
-CFLAGS += $(MANUVR_OPTIONS)
+CFLAGS += $(MANUVR_OPTIONS) $(OPTIMIZATION)
+
+export MANUVR_PLATFORM = LINUX
 export CFLAGS
 export CPP_FLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
 
@@ -145,45 +164,23 @@ export CPP_FLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
 .PHONY: all
 
 
-all: clean libs
-	export __MANUVR_LINUX
-	$(MAKE) -C ManuvrOS/
-	$(CXX) -static -g -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
+all: libs
+	$(CXX) -Wl,--gc-sections -static -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 	$(SZ) $(FIRMWARE_NAME)
-
-raspi: clean libs
-	export RASPI
-	export __MANUVR_LINUX
-	$(MAKE) -C ManuvrOS/
-	$(CXX) -static -g -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -DRASPI -D_GNU_SOURCE -O2
-	$(SZ) $(FIRMWARE_NAME)
-
-debug: clean libs
-	export __MANUVR_LINUX
-	$(MAKE) debug -C ManuvrOS/
-	$(CXX) -static -g -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D__MANUVR_DEBUG -D_GNU_SOURCE -O0
-	$(SZ) $(FIRMWARE_NAME)
-# Options configured such that you can then...
-# valgrind --tool=callgrind ./manuvr
-# gprof2dot --format=callgrind --output=out.dot callgrind.out.16562
-# dot  -Tpng out.dot -o graph.png
 
 tests: libs
-	export __MANUVR_LINUX
-	$(MAKE) -C ManuvrOS/
-	$(CXX) -static -g -o dstest tests/TestDataStructures.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O2
+	$(CXX) -static -o dstest tests/TestDataStructures.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 
 examples: libs
-	export __MANUVR_LINUX
-	$(MAKE) -C ManuvrOS/
-	$(CXX) -static -g -o barebones examples/main_template.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O0
-	$(CXX) -static -g -o gpstest   examples/tcp-gps.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE -O0
+	$(CXX) -static -o barebones examples/main_template.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(CXX) -static -o gpstest   examples/tcp-gps.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 
 builddir:
 	mkdir -p $(OUTPUT_PATH)
 
 libs: builddir
 	$(MAKE) -C lib/
+	$(MAKE) -C ManuvrOS/
 
 clean:
 	$(MAKE) clean -C ManuvrOS/

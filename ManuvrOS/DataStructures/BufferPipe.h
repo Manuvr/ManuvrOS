@@ -244,9 +244,9 @@ class BufferPipe {
 
 
   protected:
-    const uint8_t* _pipe_strategy;  // See notes.
-    BufferPipe* _near;  // These two members create a double-linked-list.
-    BufferPipe* _far;   // Need such topology for bi-directional pipe.
+    const uint8_t* _pipe_strategy = nullptr;  // See notes.
+    BufferPipe* _near = nullptr;  // These two members create a double-linked-list.
+    BufferPipe* _far  = nullptr;  // Need such topology for bi-directional pipe.
 
     BufferPipe();           // Protected constructor with no params for class init.
     virtual ~BufferPipe();  // Protected destructor.
@@ -260,8 +260,8 @@ class BufferPipe {
 
 
   private:
-    uint16_t _flags;
-    uint8_t  _pipe_code;
+    uint16_t _flags      = 0;
+    uint8_t  _pipe_code  = 0;
 };
 
 #endif   // __MANUVR_BUFFER_PIPE_H__

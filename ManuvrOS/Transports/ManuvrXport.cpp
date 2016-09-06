@@ -56,7 +56,15 @@ For debuggability, the transport has a special mode for acting as a debug
 * Static members and initializers should be located here.
 *******************************************************************************/
 uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
+uint32_t ManuvrXport::_global_flags     = 0x00000000;
 
+// These are only here until they are migrated to each receiver that deals with them.
+const MessageTypeDef message_defs_xport[] = {
+  {  MANUVR_MSG_XPORT_SEND,         0x0000,  "XPORT_SEND"           , ManuvrMsg::MSG_ARGS_STR_BUILDER }, //
+  {  MANUVR_MSG_XPORT_RECEIVE,      0x0000,  "XPORT_REC"            , ManuvrMsg::MSG_ARGS_STR_BUILDER }, //
+  {  MANUVR_MSG_XPORT_QUEUE_RDY,    0x0000,  "XPORT_Q"              , ManuvrMsg::MSG_ARGS_STR_BUILDER }, //
+  {  MANUVR_MSG_XPORT_CB_QUEUE_RDY, 0x0000,  "XPORT_CB_Q"           , ManuvrMsg::MSG_ARGS_NONE } //
+};
 
 /*******************************************************************************
 * .-. .----..----.    .-.     .--.  .-. .-..----.
@@ -68,7 +76,24 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
 *   executes under an ISR. Keep it brief...
 *******************************************************************************/
 
-#if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
+#if defined(__MANUVR_FREERTOS)
+  /*
+  * In a threaded environment, we use threads to read ports.
+  */
+  void* xport_read_handler(void* active_xport) {
+    if (NULL != active_xport) {
+      // Wait until boot has ocurred...
+      while (!((ManuvrXport*)active_xport)->booted()) taskYIELD();
+      while (1) {
+        if (0 == ((ManuvrXport*)active_xport)->read_port()) {
+          taskYIELD();
+        }
+      }
+    }
+    return NULL;
+  }
+
+#elif defined(__MANUVR_LINUX)
   /*
   * In a threaded environment, we use threads to read ports.
   */
@@ -78,7 +103,6 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
       while (!((ManuvrXport*)active_xport)->booted()) sleep_millis(50);
       while (1) {
         if (0 == ((ManuvrXport*)active_xport)->read_port()) {
-          // TODO: Concentrate sleep logic here.
           sleep_millis(20);
         }
       }
@@ -86,9 +110,8 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
     return NULL;
   }
 
-#else
-  // Threads are unsupported here.
 #endif
+
 
 
 /*******************************************************************************
@@ -105,6 +128,13 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
 ManuvrXport::ManuvrXport() : EventReceiver(), BufferPipe() {
   // No need to burden a client class with this.
   setReceiverName("ManuvrXport");
+
+  if (0 == (_global_flags & MANUVR_MSG_DEFS_LOADED)) {
+    // TODO: This sucks, and you know it.
+    int mes_count = sizeof(message_defs_xport) / sizeof(MessageTypeDef);
+    ManuvrMsg::registerMessages(message_defs_xport, mes_count);
+    _global_flags |= MANUVR_MSG_DEFS_LOADED;
+  }
 
   // Transports are all terminal.
   _bp_set_flag(BPIPE_FLAG_IS_TERMINUS, true);
@@ -377,16 +407,18 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
 
     case MANUVR_MSG_XPORT_RESERVED_0:
     case MANUVR_MSG_XPORT_RESERVED_1:
-    case MANUVR_MSG_XPORT_SET_PARAM:
-    case MANUVR_MSG_XPORT_GET_PARAM:
     case MANUVR_MSG_XPORT_INIT:
     case MANUVR_MSG_XPORT_RESET:
-    case MANUVR_MSG_XPORT_CONNECT:
-    case MANUVR_MSG_XPORT_DISCONNECT:
     case MANUVR_MSG_XPORT_ERROR:
-    case MANUVR_MSG_XPORT_SESSION:
     case MANUVR_MSG_XPORT_QUEUE_RDY:
     case MANUVR_MSG_XPORT_CB_QUEUE_RDY:
+      #ifdef __MANUVR_DEBUG
+      if (getVerbosity() > 3) {
+        local_log.concatf("TransportID %d received an event that was addressed to it, but is not yet handled.\n", xport_id);
+        active_event->printDebug(&local_log);
+      }
+      #endif
+      break;
 
     case MANUVR_MSG_XPORT_IDENTITY:
       #ifdef __MANUVR_DEBUG
