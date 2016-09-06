@@ -55,6 +55,7 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
 						encoder.write_int((int)x);
 					}
 				}
+				break;
 			case INT64_FM:
 				{
 					long long x = 0;
@@ -62,6 +63,7 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
 						encoder.write_int((long long)x);
 					}
 				}
+				break;
 			case UINT8_FM:
 			case UINT16_FM:
 			case UINT32_FM:
@@ -123,7 +125,7 @@ Argument* Argument::decodeFromCBOR(uint8_t* src, unsigned int len) {
   cbor::input input(src, len);
   cbor::decoder decoder(input, listener);
   decoder.run();
-	return nullptr;
+	return return_value;
 }
 
 
@@ -182,6 +184,16 @@ Argument::Argument(void* ptr, int l, uint8_t code) : Argument() {
 			break;
 	}
 }
+
+Argument::Argument(char* val) {
+	len        = strlen(val)+1;
+	type_code  = STR_FM;
+	target_mem = malloc(len);
+	if (nullptr != target_mem) {
+		memcpy(target_mem, val, len);
+		_alter_flags(true, MANUVR_ARG_FLAG_REAP_VALUE);
+	}
+};
 
 
 Argument::~Argument() {

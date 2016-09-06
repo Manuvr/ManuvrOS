@@ -229,8 +229,6 @@ class ManuvrMsg {
     static int8_t registerMessage(MessageTypeDef*);
     static int8_t registerMessage(uint16_t, uint16_t, const char*, const unsigned char*, const char*);
     static int8_t registerMessages(const MessageTypeDef[], int len);
-    static const MessageTypeDef message_defs[];
-
 
     static bool isExportable(const MessageTypeDef* message_def) {
       return (message_def->msg_type_flags & MSG_FLAG_EXPORTABLE);
@@ -251,6 +249,9 @@ class ManuvrMsg {
     static const unsigned char MSG_ARGS_XPORT[];
 
     static const unsigned char MSG_ARGS_U8_U8[];
+
+    static const MessageTypeDef message_defs[];
+    static const uint16_t TOTAL_MSG_DEFS;
 
 
 

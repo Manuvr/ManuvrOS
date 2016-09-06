@@ -69,51 +69,6 @@ const unsigned char ManuvrMsg::MSG_ARGS_SELF_DESC[] = {
 const unsigned char ManuvrMsg::MSG_ARGS_MSG_FORWARD[] = {  STR_FM, BINARY_FM, 0};
 
 
-
-/*
-* These are the hard-coded message types that the program knows about.
-* This is where we decide what kind of arguments each message is capable of carrying.
-*
-* Until someone does something smarter, there is no enforcemnt of types in this definition. Only
-*   cardinality. Trying to get the type as something incompatible should return an error, but this
-*   leaves type definition as a negotiable-matter between the code that wrote the message, and the
-*   code reading it. We can also add a type string, as I had in BridgeBox, but this can also be
-*   dynamically built.
-*/
-const MessageTypeDef ManuvrMsg::message_defs[] = {
-  /* Reserved codes */
-  {  MANUVR_MSG_UNDEFINED            , 0x0000,               "<UNDEF>"          , MSG_ARGS_NONE }, // This should be the first entry for failure cases.
-
-  /* Protocol basics. */
-  #if defined(MANUVR_OVER_THE_WIRE)
-  {  MANUVR_MSG_REPLY_FAIL           , MSG_FLAG_EXPORTABLE,               "REPLY_FAIL"           , MSG_ARGS_NONE }, //  This reply denotes that the packet failed to parse (despite passing checksum).
-  {  MANUVR_MSG_REPLY_RETRY          , MSG_FLAG_EXPORTABLE,               "REPLY_RETRY"          , MSG_ARGS_NONE }, //  This reply asks for a reply of the given Unique ID.
-  {  MANUVR_MSG_REPLY                , MSG_FLAG_EXPORTABLE,               "REPLY"                , MSG_ARGS_NONE }, //  This reply is for success-case.
-  {  MANUVR_MSG_SELF_DESCRIBE        , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SELF_DESCRIBE"        , MSG_ARGS_SELF_DESC }, // Starting an application on the receiver. Needs a string.
-  {  MANUVR_MSG_SYNC_KEEPALIVE       , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "KA"                  , MSG_ARGS_NONE }, //  A keep-alive message to be ack'd.
-  {  MANUVR_MSG_LEGEND_TYPES         , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_TYPES"         , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
-  {  MANUVR_MSG_LEGEND_MESSAGES      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_MESSAGES"      , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
-  {  MANUVR_MSG_LEGEND_SEMANTIC      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_SEMANTIC"      , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
-  #endif
-
-  {  MANUVR_MSG_SESS_ESTABLISHED     , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_ESTABLISHED"     , MSG_ARGS_NONE }, // Session established.
-  {  MANUVR_MSG_SESS_HANGUP          , MSG_FLAG_EXPORTABLE,                        "SESS_HANGUP"          , MSG_ARGS_NONE }, // Session hangup.
-  {  MANUVR_MSG_SESS_AUTH_CHALLENGE  , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_AUTH_CHALLENGE"  , MSG_ARGS_NONE }, // A code for challenge-response authentication.
-
-  {  MANUVR_MSG_MSG_FORWARD          , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "MSG_FORWARD"          , MSG_ARGS_MSG_FORWARD }, // No args? Asking for this legend. One arg: Legend provided.
-
-  /*
-    For messages that have arguments, we have the option of defining inline lables for each parameter.
-    This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
-    compile time.
-  */
-  #if defined (__ENABLE_MSG_SEMANTICS)
-  #else
-  #endif
-};
-
-
-
 /**
 * Vanilla constructor.
 */
@@ -426,8 +381,7 @@ const char* ManuvrMsg::getMsgTypeString() {
 * @return a pointer to the human-readable label for this Message class. Never NULL.
 */
 const char* ManuvrMsg::getMsgTypeString(uint16_t code) {
-  int total_elements = sizeof(ManuvrMsg::message_defs) / sizeof(MessageTypeDef);
-  for (int i = 0; i < total_elements; i++) {
+  for (int i = 0; i < TOTAL_MSG_DEFS; i++) {
     if (ManuvrMsg::message_defs[i].msg_type_code == code) {
       return ManuvrMsg::message_defs[i].debug_label;
     }
@@ -451,8 +405,7 @@ const char* ManuvrMsg::getMsgTypeString(uint16_t code) {
 * @return a pointer to the MessageTypeDef that identifies this class of Message. Never NULL.
 */
 const MessageTypeDef* ManuvrMsg::lookupMsgDefByCode(uint16_t code) {
-  int total_elements = sizeof(ManuvrMsg::message_defs) / sizeof(MessageTypeDef);
-  for (int i = 0; i < total_elements; i++) {
+  for (int i = 0; i < TOTAL_MSG_DEFS; i++) {
     if (ManuvrMsg::message_defs[i].msg_type_code == code) {
       return &ManuvrMsg::message_defs[i];
     }
@@ -475,8 +428,7 @@ const MessageTypeDef* ManuvrMsg::lookupMsgDefByCode(uint16_t code) {
 * @return a pointer to the MessageTypeDef that identifies this class of Message. Never NULL.
 */
 const MessageTypeDef* ManuvrMsg::lookupMsgDefByLabel(char* label) {
-  int total_elements = sizeof(ManuvrMsg::message_defs) / sizeof(MessageTypeDef);
-  for (int i = 1; i < total_elements; i++) {
+  for (int i = 1; i < TOTAL_MSG_DEFS; i++) {
     // TODO: Yuck... have to import string.h for JUST THIS. Re-implement inline....
     if (strstr(label, ManuvrMsg::message_defs[i].debug_label)) {
       return &ManuvrMsg::message_defs[i];
@@ -579,9 +531,8 @@ int ManuvrMsg::serialize(StringBuilder* output) {
 int8_t ManuvrMsg::getMsgLegend(StringBuilder* output) {
   if (NULL == output) return 0;
 
-  int total_elements = sizeof(message_defs) / sizeof(MessageTypeDef);
   const MessageTypeDef *temp_def = NULL;
-  for (int i = 1; i < total_elements; i++) {
+  for (int i = 1; i < TOTAL_MSG_DEFS; i++) {
     temp_def = (const MessageTypeDef *) &(message_defs[i]);
 
     if (isExportable(temp_def)) {
@@ -655,9 +606,8 @@ int8_t ManuvrMsg::getMsgSemantics(MessageTypeDef* def, StringBuilder* output) {
   int8_t return_value = 1;
   if ((NULL != def) && (NULL != output)) {
 
-    int total_elements = sizeof(message_defs) / sizeof(MessageTypeDef);
     const MessageTypeDef *temp_def = NULL;
-    for (int i = 1; i < total_elements; i++) {
+    for (int i = 1; i < TOTAL_MSG_DEFS; i++) {
       temp_def = (const MessageTypeDef *) &(message_defs[i]);
 
       if (isExportable(temp_def)) {

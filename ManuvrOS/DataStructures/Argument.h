@@ -66,7 +66,7 @@ class Argument {
 
     /* Character pointers. */
     Argument(const char* val) : Argument((void*) val, (strlen(val)+1), STR_FM) {};
-    Argument(char* val)       : Argument((void*) val, (strlen(val)+1), STR_FM) {};
+    Argument(char* val);
 
     /*
     * We typically want references to typeless swaths of memory be left alone at the end of

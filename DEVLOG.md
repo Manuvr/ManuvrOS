@@ -198,4 +198,8 @@ Update: I am handling the linker issue by hard-forking cbor-cpp, and mod'ing it
   safely add the parse-in-place stuff that makes such an enormous memory
   difference.
 
-  
+Finally moves the remaining message definitions out of the CPP file that handles their logic.
+  They now reside in the kernel, where they will be scrutinized in the near future.
+  This resolved a bug I've been having since the conversion of the Kernel to stack
+  allocation along with platform. The problem was centered around the order-of-exec
+  for static intializers.

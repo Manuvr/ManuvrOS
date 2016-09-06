@@ -72,7 +72,7 @@ LBITS = $(shell getconf LONG_BIT)
 ifeq ($(LBITS),64)
 	# This is no longer required on 64-bit platforms. But it is being retained in
 	#   case 32-bit problems need to be debugged.
-  CFLAGS += -m32
+  #CFLAGS += -m32
 endif
 
 
@@ -113,7 +113,7 @@ MANUVR_OPTIONS += -DMANUVR_CBOR
 
 # Since we are building on linux, we will have threading support via
 # pthreads.
-LIBS += $(OUTPUT_PATH)libextras.a -lpthread
+LIBS +=  -lmanuvr $(OUTPUT_PATH)libextras.a -lpthread
 
 # Options for various security features.
 ifeq ($(SECURE),1)
@@ -165,7 +165,7 @@ export CPP_FLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
 
 
 all: libs
-	$(CXX) -Wl,--gc-sections -static -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) -lmanuvr $(LIBS) -D_GNU_SOURCE
+	$(CXX) -Wl,--gc-sections -static -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 	$(SZ) $(FIRMWARE_NAME)
 
 tests: libs
