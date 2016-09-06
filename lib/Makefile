@@ -29,13 +29,6 @@ SOURCES_MQTT_C += paho.mqtt.embedded-c/MQTTPacket/src/MQTTSubscribeServer.c
 SOURCES_MQTT_C += paho.mqtt.embedded-c/MQTTPacket/src/MQTTUnsubscribeClient.c
 SOURCES_MQTT_C += paho.mqtt.embedded-c/MQTTPacket/src/MQTTUnsubscribeServer.c
 
-SOURCES_CBOR  = cbor-cpp/src/encoder.cpp
-SOURCES_CBOR += cbor-cpp/src/decoder.cpp
-SOURCES_CBOR += cbor-cpp/src/input.cpp
-SOURCES_CBOR += cbor-cpp/src/listener_debug.cpp
-SOURCES_CBOR += cbor-cpp/src/output_dynamic.cpp
-SOURCES_CBOR += cbor-cpp/src/output_static.cpp
-
 SOURCES_JSON  = jansson/src/strbuffer.c
 SOURCES_JSON += jansson/src/strconv.c
 SOURCES_JSON += jansson/src/error.c
@@ -62,10 +55,6 @@ LIBS_TO_BUILD += mbedtls
 
 #ifdef $(MANUVR_OPENINTERCONNECT)
 #LIBS_TO_BUILD += iotivity/port/linux
-#endif
-
-#ifdef $(MANUVR_CBOR)
-SOURCES_CPP += $(SOURCES_CBOR)
 #endif
 
 FLAGS_LIBMQTT  =

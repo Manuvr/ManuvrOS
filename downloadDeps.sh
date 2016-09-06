@@ -23,12 +23,6 @@ rm -rf lib/paho.mqtt.embedded-c
 git clone https://github.com/eclipse/paho.mqtt.embedded-c.git lib/paho.mqtt.embedded-c
 cp lib/paho.mqtt.embedded-c/MQTTPacket/src/* lib/paho.mqtt.embedded-c/
 
-# CBOR...
-# Note that we do special-handling here to make the build-process smoother...
-rm -rf lib/cbor-cpp
-git clone https://github.com/naphaso/cbor-cpp.git lib/cbor-cpp
-ln -s `pwd`/lib/cbor-cpp/src/ lib/cbor-cpp/include
-
 # Avro. Again, we will shuffle things a bit to make inclusion uniform.
 # Note that Avro requires jansson for JSON support.
 rm -rf lib/avro

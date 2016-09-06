@@ -27,6 +27,13 @@ CPP_SRCS  += DataStructures/uuid.cpp
 CPP_SRCS  += DataStructures/Argument.cpp
 
 # Types and encodings
+SOURCES_CBOR  = Types/cbor-cpp/encoder.cpp
+SOURCES_CBOR += Types/cbor-cpp/decoder.cpp
+SOURCES_CBOR += Types/cbor-cpp/input.cpp
+SOURCES_CBOR += Types/cbor-cpp/output_dynamic.cpp
+SOURCES_CBOR += Types/cbor-cpp/output_static.cpp
+
+CPP_SRCS  += $(SOURCES_CBOR)
 CPP_SRCS  += Types/TypeTranscriber.cpp
 CPP_SRCS  += Types/Avro/Avro.cpp
 

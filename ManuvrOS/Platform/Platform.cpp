@@ -242,6 +242,9 @@ int8_t ManuvrPlatform::bootstrap() {
     // TODO: Safety! Need to be able to diagnose infinte loops.
   }
   _set_init_state(MANUVR_INIT_STATE_POST_INIT);
+  #if defined(MANUVR_STORAGE)
+    _load_config();
+  #endif
   platformPostInit();
   return 0;
 }
@@ -308,6 +311,11 @@ void ManuvrPlatform::wakeHook() {
 void ManuvrPlatform::setWakeHook(FunctionPointer nu) {
   _wake_hook = nu;
 }
+
+
+/*******************************************************************************
+* Persistent configuration                                                     *
+*******************************************************************************/
 
 
 /*******************************************************************************

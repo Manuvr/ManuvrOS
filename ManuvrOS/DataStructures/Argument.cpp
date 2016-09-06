@@ -39,7 +39,7 @@ This class represents our type-abstraction layer. It is the means by which
 * Static members and initializers should be located here.
 *******************************************************************************/
 #if defined(MANUVR_CBOR)
-#include "cbor-cpp/include/cbor.h"
+
 
 int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
 	cbor::output_dynamic output;
@@ -90,9 +90,43 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
 	return final_size;
 }
 
-Argument* Argument::decodeFromCBOR(StringBuilder* src) {
+
+
+CBORArgListener::CBORArgListener(Argument** target) {		built = target;		}
+
+void CBORArgListener::_caaa(Argument* nu) {
+	if ((nullptr != built) && (nullptr != *built)) {
+		(*built)->append(nu);
+	}
+	else {
+		*built = nu;
+	}
+}
+
+void CBORArgListener::on_integer(int val) {		_caaa(new Argument((int32_t) val));   };
+void CBORArgListener::on_bytes(unsigned char* data, int size) {		_caaa(new Argument(data, size));   };
+void CBORArgListener::on_string(char* val) {		_caaa(new Argument(val));   };
+void CBORArgListener::on_array(int size) {		_caaa(new Argument((int32_t) size));   };
+void CBORArgListener::on_map(int size) {		_caaa(new Argument((int32_t) size));   };
+void CBORArgListener::on_tag(unsigned int tag) {		_caaa(new Argument((uint32_t) tag));   };
+void CBORArgListener::on_special(unsigned int code) {		_caaa(new Argument((uint32_t) code));   };
+void CBORArgListener::on_error(const char* error) {		_caaa(new Argument(error));   };
+
+void CBORArgListener::on_extra_integer(unsigned long long value, int sign) {}
+void CBORArgListener::on_extra_tag(unsigned long long tag) {}
+void CBORArgListener::on_extra_special(unsigned long long tag) {}
+
+
+Argument* Argument::decodeFromCBOR(uint8_t* src, unsigned int len) {
+	Argument* return_value = nullptr;
+	CBORArgListener listener(&return_value);
+  cbor::input input(src, len);
+  cbor::decoder decoder(input, listener);
+  decoder.run();
 	return nullptr;
 }
+
+
 #endif
 
 #if defined(MANUVR_JSON)

@@ -310,6 +310,21 @@ int readPinAnalog(uint8_t pin) {
 /*******************************************************************************
 * Persistent configuration                                                     *
 *******************************************************************************/
+#if defined(MANUVR_STORAGE)
+  // Called during boot to load configuration.
+  int8_t ManuvrPlatform::_load_config() {
+    if (nullptr != _storage_device) {
+      if (_storage_device->isMounted()) {
+        uint8_t raw[2044];
+        int len = _storage_device->persistentRead(NULL, raw, 2044, 0);
+        _config = Argument::decodeFromCBOR(raw, len);
+        return 0;
+      }
+    }
+    return -1;
+  }
+#endif
+
 
 
 /*******************************************************************************
@@ -385,7 +400,7 @@ void ManuvrPlatform::reboot() {
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
 */
-int8_t ManuvrPlatform::platformPreInit() {
+int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   // TODO: Should we really be setting capabilities this late?
   uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
   #if defined (__MANUVR_FREERTOS)

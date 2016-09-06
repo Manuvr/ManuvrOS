@@ -8,7 +8,6 @@ dstest
 gpstest
 lib/FreeRTOS_Arduino/
 lib/avro/
-lib/cbor-cpp/
 lib/config.h
 lib/iotivity/
 lib/jansson/

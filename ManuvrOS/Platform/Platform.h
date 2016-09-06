@@ -192,8 +192,10 @@ class ManuvrPlatform {
     * User code wishing to hook into these calls can do so by modifying this stuct.
     * See main_template.cpp for an example.
     */
-    // TODO: These should be protected?
-    virtual int8_t platformPreInit();
+    inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
+    virtual int8_t platformPreInit(Argument*);
+
+    // TODO: This should be protected?
     virtual int8_t platformPostInit();
 
     /* Platform state-reset functions. */
@@ -277,9 +279,6 @@ class ManuvrPlatform {
     #if defined(MANUVR_STORAGE)
       Storage* _storage_device = nullptr;
     #endif
-    uint32_t        _pflags    = 0;
-    FunctionPointer _idle_hook = nullptr;
-    FunctionPointer _wake_hook = nullptr;
 
     /* Inlines for altering and reading the flags. */
     inline void _alter_flags(bool en, uint32_t mask) {
@@ -292,10 +291,19 @@ class ManuvrPlatform {
       _pflags = ((_pflags & ~MANUVR_PLAT_FLAG_P_STATE_MASK) | s);
     };
 
-    void _discoverALUParams();
+    #if defined(MANUVR_STORAGE)
+      // Called during boot to load configuration.
+      virtual int8_t _load_config();
+    #endif
 
 
   private:
+    uint32_t        _pflags    = 0;
+    FunctionPointer _idle_hook = nullptr;
+    FunctionPointer _wake_hook = nullptr;
+    Argument*       _config    = nullptr;
+
+    void _discoverALUParams();
 };
 
 

@@ -159,12 +159,12 @@ int8_t LinuxStorage::flush() {
   return 0;
 }
 
-int8_t LinuxStorage::persistentWrite(const char* key, uint8_t* value, int len, uint16_t ) {
+int LinuxStorage::persistentWrite(const char* key, uint8_t* value, unsigned int len, uint16_t ) {
 
   return 0;
 }
 
-int8_t LinuxStorage::persistentRead(const char* key, uint8_t* value, int len, uint16_t) {
+int LinuxStorage::persistentRead(const char* key, uint8_t* value, unsigned int len, uint16_t) {
   return 0;
 }
 

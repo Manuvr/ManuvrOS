@@ -38,7 +38,7 @@ This file is meant to contain a set of common functions that are
 
 class LinuxPlatform : public ManuvrPlatform {
   public:
-    virtual int8_t platformPreInit();
+    virtual int8_t platformPreInit(Argument*);
     virtual int8_t platformPostInit();
 
     /* Platform state-reset functions. */

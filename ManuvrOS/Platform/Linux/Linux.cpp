@@ -338,6 +338,15 @@ int readPinAnalog(uint8_t pin) {
 }
 
 
+/*******************************************************************************
+* Persistent configuration                                                     *
+*******************************************************************************/
+#if defined(MANUVR_STORAGE)
+  // Called during boot to load configuration.
+  int8_t ManuvrPlatform::_load_config() {
+  }
+#endif
+
 
 /*******************************************************************************
 * Interrupt-masking                                                            *
@@ -520,7 +529,7 @@ int internal_integrity_check(uint8_t* test_buf, int test_len) {
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
 */
-int8_t ManuvrPlatform::platformPreInit() {
+int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   // TODO: Should we really be setting capabilities this late?
   uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
 

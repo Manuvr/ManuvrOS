@@ -41,9 +41,9 @@ class TeensyStorage : public EventReceiver, public Storage {
     int8_t wipe();              // Call to wipe the data store.
     int8_t flush();             // Blocks until commit completes.
 
-    int8_t persistentWrite(const char*, uint8_t*, int, uint16_t);
-    int8_t persistentRead(const char*, uint8_t*, int, uint16_t);
-    int8_t persistentRead(const char*, StringBuilder*);
+    int persistentWrite(const char*, uint8_t*, unsigned int, uint16_t);
+    int persistentRead(const char*, uint8_t*, unsigned int, uint16_t);
+    int persistentRead(const char*, StringBuilder*);
 
     /* Overrides from EventReceiver */
     void printDebug(StringBuilder*);

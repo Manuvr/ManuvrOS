@@ -174,3 +174,28 @@ Made a big Makefile fix. Wasn't passing optimization params downstream.
 
 Fixed raspi platform to conform to new abstraction (prior to extention).
 Numerous build-system fixes and improvements.
+
+
+### 2016.09.05:
+Much thankless grind this weekend. Driver modernization, Teensy3 support. Followed
+  that up with storage implementation on Teensy3, and moved into CBOR support.
+
+While including CBOR for Viam Sonus, I ran up against the fact that my microcontroller
+  builds do not include the C standard library. I still haven't sorted out how to handle it,
+  but I found a gem while I was working the problem.
+
+Adding gc-sections to my linker directives caused this:
+       text    data     bss     dec     hex filename
+    2008463   16860   53988 2079311  1fba4f manuvr
+    1743591   12160   50148 1805899  1b8e4b manuvr
+
+I am now using Viam Sonus as my IoT desk lamp, as it is the only source of light
+  in the room apart from my monitors.
+
+Update: I am handling the linker issue by hard-forking cbor-cpp, and mod'ing it
+  to not depend on srt:string. This represented a needless addition of ~50KB to
+  Viam Souns (~50% increase!). As long as I've forked it in this manner, I can
+  safely add the parse-in-place stuff that makes such an enormous memory
+  difference.
+
+  

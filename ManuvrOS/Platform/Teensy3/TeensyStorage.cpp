@@ -43,18 +43,6 @@ CBOR data begins at offset 4. The first uint32 is broken up this way:
 
 
 /*******************************************************************************
-*      _______.___________.    ___   .___________. __    ______     _______.
-*     /       |           |   /   \  |           ||  |  /      |   /       |
-*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
-*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
-* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
-* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
-*
-* Static members and initializers should be located here.
-*******************************************************************************/
-
-
-/*******************************************************************************
 *   ___ _              ___      _ _              _      _
 *  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
 * | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
@@ -66,8 +54,6 @@ CBOR data begins at offset 4. The first uint32 is broken up this way:
 TeensyStorage::TeensyStorage(Argument* opts) : EventReceiver(), Storage() {
   _pl_set_flag(true, STORAGE_PROPS);
   setReceiverName("TeensyStorage");
-  if (nullptr != opts) {
-  }
 }
 
 
@@ -101,17 +87,45 @@ int8_t TeensyStorage::flush() {
   return 0;
 }
 
-int8_t TeensyStorage::persistentWrite(const char* key, uint8_t* value, int len, uint16_t ) {
-  return 0;
+int TeensyStorage::persistentWrite(const char* key, uint8_t* buf, unsigned int len, uint16_t ) {
+  if (len < 2044) {
+    int written = 0;
+    for (unsigned int i = 0; i < len; i++) {
+      EEPROM.update(i+4, *(buf+i));  // NOTE: +4 because of magic number.
+      written++;
+    }
+    _free_space = 2044 - len;
+    EEPROM.update(0, (uint8_t) (0xFF & len));
+    EEPROM.update(1, (uint8_t) (0x0F & (len >> 8)));
+    return written;
+  }
+  return -1;
 }
 
-int8_t TeensyStorage::persistentRead(const char* key, uint8_t* value, int len, uint16_t) {
-  return 0;
+int TeensyStorage::persistentRead(const char* key, uint8_t* buf, unsigned int len, uint16_t) {
+  if (len < 2044) {
+    unsigned int max_l = (2044 - _free_space);
+    unsigned int r_len = (max_l > len) ? len : max_l;
+    for (unsigned int i = 0; i < r_len; i++) {
+      *(buf+i) = EEPROM.read(i+4);  // NOTE: +4 because of magic number.
+    }
+    for (unsigned int i = r_len; i < len; i++) {
+      *(buf+i) = 0;  // Zero the  unused buffer, for safety.
+    }
+    return r_len;
+  }
+  return -1;
 }
 
 
-int8_t persistentRead(const char*, StringBuilder*) {
-  return 0;
+int TeensyStorage::persistentRead(const char*, StringBuilder* out) {
+    int r_len = (2044 - _free_space);
+    uint8_t buf[r_len];
+    for (int i = 0; i < r_len; i++) {
+      *(buf+i) = EEPROM.read(i+4);  // NOTE: +4 because of magic number.
+    }
+    out->concat(buf, r_len);
+    return r_len;
 }
 
 
@@ -132,6 +146,7 @@ int8_t persistentRead(const char*, StringBuilder*) {
 ****************************************************************************************************/
 /**
 * Boot done finished-up.
+* Check to ensure that our storage apparatus is initialized.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
@@ -148,7 +163,8 @@ int8_t TeensyStorage::bootComplete() {
   }
 
   if (!_pl_flag(MANUVR_PL_MEDIUM_MOUNTED)) {
-    wipe();
+    // Try to wipe and set status.
+    _pl_set_flag((0 == wipe()), MANUVR_PL_MEDIUM_MOUNTED);
   }
 
   return 1;

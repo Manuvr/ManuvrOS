@@ -6,6 +6,10 @@
 #include <DataStructures/Vector3.h>
 #include <DataStructures/Quaternion.h>
 
+#if defined(MANUVR_CBOR)
+  #include <Types/cbor-cpp/cbor.h>
+#endif
+
 /*
 * These are flag definitions for Argument.
 */
@@ -149,7 +153,10 @@ class Argument {
 
     #if defined(MANUVR_CBOR)
     static int8_t encodeToCBOR(Argument*, StringBuilder*);
-    static Argument* decodeFromCBOR(StringBuilder*);
+    static Argument* decodeFromCBOR(uint8_t*, unsigned int);
+    static inline Argument* decodeFromCBOR(StringBuilder* buf) {
+      return decodeFromCBOR(buf->string(), buf->length());
+    };
     #endif
 
     #if defined(MANUVR_JSON)
@@ -180,5 +187,36 @@ class Argument {
     // TODO: Might-should move this to someplace more accessable?
     static uintptr_t get_const_from_char_ptr(char*);
 };
+
+
+
+#if defined(MANUVR_CBOR)
+/* If we have CBOR support, we define a helper class to assist decomposition. */
+class CBORArgListener : public cbor::listener {
+  public:
+    CBORArgListener(Argument**);
+
+    void on_integer(int value);
+    void on_bytes(unsigned char* data, int size);
+    void on_string(char* str);
+    void on_array(int size);
+    void on_map(int size);
+    void on_tag(unsigned int tag);
+    void on_special(unsigned int code);
+    void on_error(const char* error);
+
+    void on_extra_integer(unsigned long long value, int sign);
+    void on_extra_tag(unsigned long long tag);
+    void on_extra_special(unsigned long long tag);
+
+  private:
+    Argument** built = nullptr;
+
+    /* Please forgive the stupid name. */
+    void _caaa(Argument*);
+};
+#endif
+
+
 
 #endif  // __MANUVR_ARGUMENT_H__
