@@ -318,7 +318,9 @@ int readPinAnalog(uint8_t pin) {
         uint8_t raw[2044];
         int len = _storage_device->persistentRead(NULL, raw, 2044, 0);
         _config = Argument::decodeFromCBOR(raw, len);
-        return 0;
+        if (nullptr != _config) {
+          return 0;
+        }
       }
     }
     return -1;

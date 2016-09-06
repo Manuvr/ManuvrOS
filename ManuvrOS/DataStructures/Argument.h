@@ -66,7 +66,7 @@ class Argument {
 
     /* Character pointers. */
     Argument(const char* val) : Argument((void*) val, (strlen(val)+1), STR_FM) {};
-    Argument(char* val);
+    Argument(char* val)       : Argument((void*) val, (strlen(val)+1), STR_FM) {};
 
     /*
     * We typically want references to typeless swaths of memory be left alone at the end of
@@ -92,6 +92,8 @@ class Argument {
     ~Argument();
 
 
+    inline void reapKey(bool en) {    _alter_flags(en, MANUVR_ARG_FLAG_REAP_KEY);      };
+    inline bool reapKey() {           return _check_flags(MANUVR_ARG_FLAG_REAP_KEY);   };
     inline void reapValue(bool en) {  _alter_flags(en, MANUVR_ARG_FLAG_REAP_VALUE);    };
     inline bool reapValue() {         return _check_flags(MANUVR_ARG_FLAG_REAP_VALUE); };
 
@@ -99,7 +101,8 @@ class Argument {
     inline uint8_t  typeCode() {          return type_code;  };
     inline uint16_t length() {            return len;        };
 
-    inline void setKey(const char* k) {  _key = k;  };
+    inline const char* getKey() {         return _key;  };
+    inline void setKey(const char* k) {      _key = k;  };
 
     int collectKeys(StringBuilder*);
 
@@ -195,6 +198,7 @@ class Argument {
 class CBORArgListener : public cbor::listener {
   public:
     CBORArgListener(Argument**);
+    ~CBORArgListener();
 
     void on_integer(int value);
     void on_bytes(unsigned char* data, int size);
@@ -211,6 +215,9 @@ class CBORArgListener : public cbor::listener {
 
   private:
     Argument** built = nullptr;
+    char*  _wait     = nullptr;
+    int _wait_map    = 0;
+    int _wait_array  = 0;
 
     /* Please forgive the stupid name. */
     void _caaa(Argument*);

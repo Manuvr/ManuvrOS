@@ -28,7 +28,7 @@ CBOR data begins at offset 4. The first uint32 is broken up this way:
   0       | Magic number (0x7A)
   1       | Magic number (0xB7)
   2       | Bits[7..4] Zero
-          | Bits[3..0] MSB of free-space (max, 2044)
+          | Bits[3..0] LSB of free-space (max, 2044)
   3       | LSB of free-space (max, 2044)
 */
 
@@ -88,22 +88,22 @@ int8_t TeensyStorage::flush() {
 }
 
 int TeensyStorage::persistentWrite(const char* key, uint8_t* buf, unsigned int len, uint16_t ) {
-  if (len < 2044) {
+  if (isMounted() && len < 2044) {
     int written = 0;
     for (unsigned int i = 0; i < len; i++) {
       EEPROM.update(i+4, *(buf+i));  // NOTE: +4 because of magic number.
       written++;
     }
     _free_space = 2044 - len;
-    EEPROM.update(0, (uint8_t) (0xFF & len));
-    EEPROM.update(1, (uint8_t) (0x0F & (len >> 8)));
+    EEPROM.update(2, (uint8_t) (0x0F & (len >> 8)));
+    EEPROM.update(3, (uint8_t) (0xFF & len));
     return written;
   }
   return -1;
 }
 
 int TeensyStorage::persistentRead(const char* key, uint8_t* buf, unsigned int len, uint16_t) {
-  if (len < 2044) {
+  if (len <= 2044) {
     unsigned int max_l = (2044 - _free_space);
     unsigned int r_len = (max_l > len) ? len : max_l;
     for (unsigned int i = 0; i < r_len; i++) {
@@ -155,8 +155,9 @@ int8_t TeensyStorage::bootComplete() {
   if (0x7A == EEPROM.read(0)) {
     if (0xB7 == EEPROM.read(1)) {
       uint8_t len_msb = EEPROM.read(2);
+      uint8_t len_lsb = EEPROM.read(3);
       if (0x0F >= len_msb) {
-        _free_space = 2044 - (EEPROM.read(3) + (len_msb * 256));
+        _free_space = 2044 - (len_lsb + (len_msb * 256));
         _pl_set_flag(true, MANUVR_PL_MEDIUM_MOUNTED);
       }
     }
@@ -239,11 +240,21 @@ void TeensyStorage::procDirectDebugInstruction(StringBuilder *input) {
       break;
 
     case 'l':
-      local_log.concat("Load failed.\n");
+      local_log.concatf("Load config %s.\n", (0 == platform._load_config()) ? "succeeded" : "failed");
       break;
 
     case 's':
-      local_log.concat("Save failed.\n");
+      if (isMounted()) {
+        Argument a(randomInt());
+        a.setKey("random_number");
+        a.append((int8_t) 64)->setKey("number_64");
+        StringBuilder shuttle;
+        if (0 <= Argument::encodeToCBOR(&a, &shuttle)) {
+          if (0 < persistentWrite(nullptr, shuttle.string(), shuttle.length(), 0)) {
+            local_log.concat("Save succeeded.\n");
+          }
+        }
+      }
       break;
 
     #if defined(__MANUVR_DEBUG)

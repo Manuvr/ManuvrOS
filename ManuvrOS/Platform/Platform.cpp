@@ -130,17 +130,16 @@ void ManuvrPlatform::printPlatformBasics(StringBuilder* output) {
     platform._identity->toString(output);
     output->concat("\n");
   }
-  else {
-    output->concatf("-- Undifferentiated %s\n", IDENTITY_STRING);
-  }
   output->concatf("-- Identity source:    %s\n", platform._check_flags(MANUVR_PLAT_FLAG_HAS_IDENTITY) ? "Generated at runtime" : "Loaded from storage");
+  output->concat("-- Hardware:\n");
   #if defined(HW_VERSION_STRING)
-    output->concatf("-- Hardware version:   %s\n", HW_VERSION_STRING);
+    output->concatf("--\t version:        %s\n", HW_VERSION_STRING);
+
   #endif
   #if defined(F_CPU)
-    output->concatf("-- CPU frequency:      %lu\n", F_CPU);
+    output->concatf("--\t CPU frequency:  %.2f MHz\n", (double) F_CPU/1000000.0);
   #endif
-  output->concatf("-- %u-bit", platform.aluWidth());
+  output->concatf("--\t %u-bit", platform.aluWidth());
   if (8 != platform.aluWidth()) {
     output->concatf(" %s-endian", platform.bigEndian() ? "Big" : "Little");
   }
@@ -193,6 +192,16 @@ void ManuvrPlatform::printPlatformBasics(StringBuilder* output) {
   #if defined(MANUVR_SUPPORT_OSC)
     output->concat("--\t OSC\n");
   #endif
+  output->concat("--\n");
+  platform.printConfig(output);
+}
+
+
+void ManuvrPlatform::printConfig(StringBuilder* output) {
+  if (nullptr != _config) {
+    output->concat("-- Loaded configuration:\n");
+    _config->printDebug(output);
+  }
 }
 
 
@@ -241,11 +250,15 @@ int8_t ManuvrPlatform::bootstrap() {
   while (0 < _kernel.procIdleFlags()) {
     // TODO: Safety! Need to be able to diagnose infinte loops.
   }
-  _set_init_state(MANUVR_INIT_STATE_POST_INIT);
   #if defined(MANUVR_STORAGE)
     _load_config();
   #endif
+  _set_init_state(MANUVR_INIT_STATE_POST_INIT);
   platformPostInit();
+  if (nullptr == _identity) {
+    _identity = new IdentityUUID(IDENTITY_STRING);
+  }
+  _set_init_state(MANUVR_INIT_STATE_NOMINAL);
   return 0;
 }
 

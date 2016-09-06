@@ -344,6 +344,7 @@ int readPinAnalog(uint8_t pin) {
 #if defined(MANUVR_STORAGE)
   // Called during boot to load configuration.
   int8_t ManuvrPlatform::_load_config() {
+    return -1;
   }
 #endif
 
@@ -580,14 +581,5 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
 *   internal system sanity.
 */
 int8_t ManuvrPlatform::platformPostInit() {
-  #if defined(MANUVR_STORAGE)
-    if (_storage_device->isMounted()) {
-      // TODO: Read configuration.
-      //int8_t persistentRead(const char*, uint8_t*, int, uint16_t);
-    }
-  #endif
-  if (nullptr == _identity) {
-    _identity = new IdentityUUID(IDENTITY_STRING);
-  }
   return 0;
 }

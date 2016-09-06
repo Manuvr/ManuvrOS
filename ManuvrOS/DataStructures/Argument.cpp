@@ -42,90 +42,140 @@ This class represents our type-abstraction layer. It is the means by which
 
 
 int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
-	cbor::output_dynamic output;
-	cbor::encoder encoder(output);
-	while (nullptr != src) {
-		switch(src->typeCode()) {
-			case INT8_FM:
-			case INT16_FM:
-			case INT32_FM:
-				{
-					int32_t x = 0;
-					if (0 == src->getValueAs(&x)) {
-						encoder.write_int((int)x);
-					}
-				}
-				break;
-			case INT64_FM:
-				{
-					long long x = 0;
-					if (0 == src->getValueAs(&x)) {
-						encoder.write_int((long long)x);
-					}
-				}
-				break;
-			case UINT8_FM:
-			case UINT16_FM:
-			case UINT32_FM:
-				{
-					uint32_t x = 0;
-					if (0 == src->getValueAs(&x)) {
-						encoder.write_int((unsigned int)x);
-					}
-				}
-				break;
-			case UINT64_FM:
-				{
-					unsigned long long x = 0;
-					if (0 == src->getValueAs(&x)) {
-						encoder.write_int((unsigned long long int)x);
-					}
-				}
-				break;
-		}
-		src = src->_next;
-	}
-	int final_size = output.size();
-	if (final_size) {
-		out->concat(output.data(), final_size);
-	}
-	return final_size;
+  cbor::output_dynamic output;
+  cbor::encoder encoder(output);
+  while (nullptr != src) {
+    if (nullptr != src->getKey()) {
+      // This is a map.
+      encoder.write_map(1);
+      encoder.write_string(src->getKey());
+    }
+    switch(src->typeCode()) {
+      case INT8_FM:
+      case INT16_FM:
+      case INT32_FM:
+        {
+          int32_t x = 0;
+          if (0 == src->getValueAs(&x)) {
+            encoder.write_int((int)x);
+          }
+        }
+        break;
+      case INT64_FM:
+        {
+          long long x = 0;
+          if (0 == src->getValueAs(&x)) {
+            encoder.write_int((long long)x);
+          }
+        }
+        break;
+      case UINT8_FM:
+      case UINT16_FM:
+      case UINT32_FM:
+        {
+          uint32_t x = 0;
+          if (0 == src->getValueAs(&x)) {
+            encoder.write_int((unsigned int)x);
+          }
+        }
+        break;
+      case UINT64_FM:
+        {
+          unsigned long long x = 0;
+          if (0 == src->getValueAs(&x)) {
+            encoder.write_int((unsigned long long int)x);
+          }
+        }
+        break;
+    }
+    src = src->_next;
+  }
+  int final_size = output.size();
+  if (final_size) {
+    out->concat(output.data(), final_size);
+  }
+  return final_size;
 }
 
 
 
-CBORArgListener::CBORArgListener(Argument** target) {		built = target;		}
+CBORArgListener::CBORArgListener(Argument** target) {    built = target;    }
+
+CBORArgListener::~CBORArgListener() {
+	// JIC...
+	if (nullptr != _wait) {
+		free(_wait);
+		_wait = nullptr;
+	}
+}
 
 void CBORArgListener::_caaa(Argument* nu) {
-	if ((nullptr != built) && (nullptr != *built)) {
-		(*built)->append(nu);
+	if (nullptr != _wait) {
+		nu->setKey(_wait);
+		_wait = nullptr;
+		nu->reapKey(true);
 	}
-	else {
-		*built = nu;
-	}
+
+  if ((nullptr != built) && (nullptr != *built)) {
+    (*built)->append(nu);
+  }
+  else {
+    *built = nu;
+  }
+
+	if (0 < _wait_map)   _wait_map--;
+	if (0 < _wait_array) _wait_array--;
 }
 
-void CBORArgListener::on_integer(int val) {		_caaa(new Argument((int32_t) val));   };
-void CBORArgListener::on_bytes(unsigned char* data, int size) {		_caaa(new Argument(data, size));   };
-void CBORArgListener::on_string(char* val) {		_caaa(new Argument(val));   };
-void CBORArgListener::on_array(int size) {		_caaa(new Argument((int32_t) size));   };
-void CBORArgListener::on_map(int size) {		_caaa(new Argument((int32_t) size));   };
-void CBORArgListener::on_tag(unsigned int tag) {		_caaa(new Argument((uint32_t) tag));   };
-void CBORArgListener::on_special(unsigned int code) {		_caaa(new Argument((uint32_t) code));   };
-void CBORArgListener::on_error(const char* error) {		_caaa(new Argument(error));   };
 
+void CBORArgListener::on_string(char* val) {
+	if (nullptr == _wait) {
+		// We need to copy the string. It will be the key for the Argument
+		//   who's value is forthcoming.
+		int len = strlen(val);
+		_wait = (char*) malloc(len+1);
+		if (nullptr != _wait) {
+			memcpy(_wait, val, len+1);
+		}
+	}
+	else {
+		// There is a key assignment waiting. This must be the value.
+		_caaa(new Argument(val));
+	}
+};
+
+void CBORArgListener::on_bytes(uint8_t* data, int size) { _caaa(new Argument(data, size));      };
+void CBORArgListener::on_integer(int val) {               _caaa(new Argument((int32_t) val));   };
+void CBORArgListener::on_tag(unsigned int tag) {          _caaa(new Argument((uint32_t) tag));  };
+void CBORArgListener::on_special(unsigned int code) {     _caaa(new Argument((uint32_t) code)); };
+
+void CBORArgListener::on_array(int size) {
+	_wait_array = (int32_t) size;
+};
+
+void CBORArgListener::on_map(int size) {
+	_wait_map   = (int32_t) size;
+
+	if (nullptr != _wait) {
+		// Flush so we can discover problems.
+		free(_wait);
+		_wait = nullptr;
+	}
+};
+
+void CBORArgListener::on_error(const char* error) {    _caaa(new Argument(error));   };
 void CBORArgListener::on_extra_integer(unsigned long long value, int sign) {}
 void CBORArgListener::on_extra_tag(unsigned long long tag) {}
 void CBORArgListener::on_extra_special(unsigned long long tag) {}
 
 
 Argument* Argument::decodeFromCBOR(uint8_t* src, unsigned int len) {
-	Argument* return_value = nullptr;
-	CBORArgListener listener(&return_value);
+  Argument* return_value = nullptr;
+  CBORArgListener listener(&return_value);
   cbor::input input(src, len);
   cbor::decoder decoder(input, listener);
   decoder.run();
-	return return_value;
+  return return_value;
 }
 
 
@@ -135,13 +185,14 @@ Argument* Argument::decodeFromCBOR(uint8_t* src, unsigned int len) {
 #include "jansson/include/jansson.h"
 
 int8_t Argument::encodeToJSON(Argument* src, StringBuilder* out) {
-	return -1;
+  return -1;
 }
 
 Argument* Argument::decodeFromJSON(StringBuilder* src) {
-	return nullptr;
+  return nullptr;
 }
 #endif
+
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -160,62 +211,56 @@ Argument::Argument() {}
 * Protected delegate constructor.
 */
 Argument::Argument(void* ptr, int l, uint8_t code) : Argument() {
-	len        = l;
-	type_code  = code;
-	target_mem = ptr;
-	switch (type_code) {
-		// TODO: This does not belong here, and I know it.
-		case INT8_FM:
-		case UINT8_FM:
-		case INT16_FM:
-		case UINT16_FM:
-		case INT32_FM:
-		case UINT32_FM:
-		case FLOAT_FM:
-		case BOOLEAN_FM:
-			_alter_flags(true, MANUVR_ARG_FLAG_DIRECT_VALUE);
-			break;
-		case UINT128_FM:
-		case INT128_FM:
-		case UINT64_FM:
-		case INT64_FM:
-		case DOUBLE_FM:
-		default:
-			break;
-	}
+  len        = l;
+  type_code  = code;
+  target_mem = ptr;
+  switch (type_code) {
+    // TODO: This does not belong here, and I know it.
+    case INT8_FM:
+    case UINT8_FM:
+    case INT16_FM:
+    case UINT16_FM:
+    case INT32_FM:
+    case UINT32_FM:
+    case FLOAT_FM:
+    case BOOLEAN_FM:
+      _alter_flags(true, MANUVR_ARG_FLAG_DIRECT_VALUE);
+      break;
+    case UINT128_FM:
+    case INT128_FM:
+    case UINT64_FM:
+    case INT64_FM:
+    case DOUBLE_FM:
+    default:
+      break;
+  }
 }
-
-Argument::Argument(char* val) {
-	len        = strlen(val)+1;
-	type_code  = STR_FM;
-	target_mem = malloc(len);
-	if (nullptr != target_mem) {
-		memcpy(target_mem, val, len);
-		_alter_flags(true, MANUVR_ARG_FLAG_REAP_VALUE);
-	}
-};
 
 
 Argument::~Argument() {
-	wipe();
+  wipe();
 }
 
 
 void Argument::wipe() {
-	if (nullptr != _next) {
-		Argument* a = _next;
-		_next       = nullptr;
-		delete a;
+  if (nullptr != _next) {
+    Argument* a = _next;
+    _next       = nullptr;
+    delete a;
+  }
+  if (nullptr != target_mem) {
+    void* p = target_mem;
+    target_mem = nullptr;
+    if (reapValue()) free(p);
+  }
+	if (nullptr != _key) {
+    char* k = (char*) _key;
+    _key = nullptr;
+    if (reapKey()) free(k);
 	}
-	if (nullptr != target_mem) {
-		void* p = target_mem;
-		target_mem = nullptr;
-		if (reapValue()) free(p);
-	}
-	_key       = nullptr;
-	type_code  = NOTYPE_FM;
-	len        = 0;
-	_flags     = 0;
+  type_code  = NOTYPE_FM;
+  len        = 0;
+  _flags     = 0;
 }
 
 
@@ -227,15 +272,15 @@ void Argument::wipe() {
 * @return         The number of values written.
 */
 int Argument::collectKeys(StringBuilder* key_set) {
-	int return_value = 0;
-	if (nullptr != _key) {
-		key_set->concat(_key);
-		return_value++;
-	}
-	if (nullptr != _next) {
-		return_value += _next->collectKeys(key_set);
-	}
-	return return_value;
+  int return_value = 0;
+  if (nullptr != _key) {
+    key_set->concat(_key);
+    return_value++;
+  }
+  if (nullptr != _next) {
+    return_value += _next->collectKeys(key_set);
+  }
+  return return_value;
 }
 
 
@@ -246,16 +291,16 @@ int Argument::collectKeys(StringBuilder* key_set) {
 * @return 0 on success or appropriate failure code.
 */
 int8_t Argument::getValueAs(uint8_t idx, void* trg_buf) {
-	int8_t return_value = -1;
+  int8_t return_value = -1;
   if (0 < idx) {
-		if (nullptr != _next) {
-			return_value = _next->getValueAs(--idx, trg_buf);
-		}
-	}
-	else {
-		return_value = getValueAs(trg_buf);
-	}
-	return return_value;
+    if (nullptr != _next) {
+      return_value = _next->getValueAs(--idx, trg_buf);
+    }
+  }
+  else {
+    return_value = getValueAs(trg_buf);
+  }
+  return return_value;
 }
 
 /**
@@ -267,18 +312,18 @@ int8_t Argument::getValueAs(uint8_t idx, void* trg_buf) {
 */
 int8_t Argument::getValueAs(const char* k, void* trg_buf) {
   if (nullptr != k) {
-		if (nullptr != _key) {
-			if (_key == k) {
-				// If pointer comparison worked, return the value.
-				return getValueAs(trg_buf);
-			}
-		}
+    if (nullptr != _key) {
+      if (_key == k) {
+        // If pointer comparison worked, return the value.
+        return getValueAs(trg_buf);
+      }
+    }
 
-		if (nullptr != _next) {
-			return _next->getValueAs(k, trg_buf);
-		}
-	}
-	return -1;
+    if (nullptr != _next) {
+      return _next->getValueAs(k, trg_buf);
+    }
+  }
+  return -1;
 }
 
 
@@ -350,83 +395,83 @@ int8_t Argument::getValueAs(void* trg_buf) {
 * Returns 0 (0) on success.
 */
 int8_t Argument::serialize(StringBuilder *out) {
-	if (out == NULL) return -1;
+  if (out == NULL) return -1;
 
-	unsigned char *temp_str = (unsigned char *) target_mem;   // Just a general use pointer.
+  unsigned char *temp_str = (unsigned char *) target_mem;   // Just a general use pointer.
 
-	unsigned char *scratchpad = (unsigned char *) alloca(258);  // This is the maximum size for an argument.
-	unsigned char *sp_index   = (scratchpad + 2);
-	uint16_t arg_bin_len       = len;
+  unsigned char *scratchpad = (unsigned char *) alloca(258);  // This is the maximum size for an argument.
+  unsigned char *sp_index   = (scratchpad + 2);
+  uint16_t arg_bin_len       = len;
 
-	switch (type_code) {
-	  /* These are hard types that we can send as-is. */
-	  case INT8_FM:
-	  case UINT8_FM:   // This frightens the compiler. Its fears are unfounded.
-	    arg_bin_len = 1;
-	    *((uint8_t*) sp_index) = *((uint8_t*)& target_mem);
-	    break;
-	  case INT16_FM:
-	  case UINT16_FM:   // This frightens the compiler. Its fears are unfounded.
-	    arg_bin_len = 2;
-			*((uint16_t*) sp_index) = *((uint16_t*)& target_mem);
-	    break;
-	  case INT32_FM:
-	  case UINT32_FM:   // This frightens the compiler. Its fears are unfounded.
-	  case FLOAT_FM:   // This frightens the compiler. Its fears are unfounded.
-	    arg_bin_len = 4;
-			*((uint32_t*) sp_index) = *((uint32_t*)& target_mem);
-	    break;
+  switch (type_code) {
+    /* These are hard types that we can send as-is. */
+    case INT8_FM:
+    case UINT8_FM:   // This frightens the compiler. Its fears are unfounded.
+      arg_bin_len = 1;
+      *((uint8_t*) sp_index) = *((uint8_t*)& target_mem);
+      break;
+    case INT16_FM:
+    case UINT16_FM:   // This frightens the compiler. Its fears are unfounded.
+      arg_bin_len = 2;
+      *((uint16_t*) sp_index) = *((uint16_t*)& target_mem);
+      break;
+    case INT32_FM:
+    case UINT32_FM:   // This frightens the compiler. Its fears are unfounded.
+    case FLOAT_FM:   // This frightens the compiler. Its fears are unfounded.
+      arg_bin_len = 4;
+      *((uint32_t*) sp_index) = *((uint32_t*)& target_mem);
+      break;
 
-	  /* These are pointer types to data that can be sent as-is. Remember: LITTLE ENDIAN */
-	  case INT8_PTR_FM:
-	  case UINT8_PTR_FM:
-	    arg_bin_len = 1;
-	    *((uint8_t*) sp_index) = *((uint8_t*) target_mem);
-	    break;
-	  case INT16_PTR_FM:
-	  case UINT16_PTR_FM:
-	    arg_bin_len = 2;
-	    *((uint16_t*) sp_index) = *((uint16_t*) target_mem);
-	    break;
-	  case INT32_PTR_FM:
-	  case UINT32_PTR_FM:
-	  case FLOAT_PTR_FM:
-	    arg_bin_len = 4;
-	    //*((uint32_t*) sp_index) = *((uint32_t*) target_mem);
+    /* These are pointer types to data that can be sent as-is. Remember: LITTLE ENDIAN */
+    case INT8_PTR_FM:
+    case UINT8_PTR_FM:
+      arg_bin_len = 1;
+      *((uint8_t*) sp_index) = *((uint8_t*) target_mem);
+      break;
+    case INT16_PTR_FM:
+    case UINT16_PTR_FM:
+      arg_bin_len = 2;
+      *((uint16_t*) sp_index) = *((uint16_t*) target_mem);
+      break;
+    case INT32_PTR_FM:
+    case UINT32_PTR_FM:
+    case FLOAT_PTR_FM:
+      arg_bin_len = 4;
+      //*((uint32_t*) sp_index) = *((uint32_t*) target_mem);
       for (int i = 0; i < 4; i++) {
         *((uint8_t*) sp_index + i) = *((uint8_t*) target_mem + i);
-	    }
-	    break;
+      }
+      break;
 
-	  /* These are pointer types that require conversion. */
-	  case STR_BUILDER_FM:     // This is a pointer to some StringBuilder. Presumably this is on the heap.
-	  case URL_FM:             // This is a pointer to some StringBuilder. Presumably this is on the heap.
-	    temp_str    = ((StringBuilder*) target_mem)->string();
+    /* These are pointer types that require conversion. */
+    case STR_BUILDER_FM:     // This is a pointer to some StringBuilder. Presumably this is on the heap.
+    case URL_FM:             // This is a pointer to some StringBuilder. Presumably this is on the heap.
+      temp_str    = ((StringBuilder*) target_mem)->string();
       arg_bin_len = ((StringBuilder*) target_mem)->length();
-	  case VECT_4_FLOAT:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
-	  case VECT_3_FLOAT:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
-	  case VECT_3_UINT16: // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
-	  case VECT_3_INT16:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
-	  case BINARY_FM:
+    case VECT_4_FLOAT:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
+    case VECT_3_FLOAT:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
+    case VECT_3_UINT16: // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
+    case VECT_3_INT16:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
+    case BINARY_FM:
       for (int i = 0; i < arg_bin_len; i++) {
         *(sp_index + i) = *(temp_str + i);
-	    }
-	    break;
+      }
+      break;
 
-	  /* These are pointer types that will not make sense to the host. They should be dropped. */
-	  case RSRVD_FM:              // Reserved code is meaningless to us. How did this happen?
-	  case NOTYPE_FM:             // No type isn't valid ANYWHERE in this system. How did this happen?
-		case BUFFERPIPE_PTR_FM:     // This would not be an actual buffer. Just it's pipe.
-	  case SYS_EVENTRECEIVER_FM:  // Host can't use our internal system services.
-	  case SYS_MANUVR_XPORT_FM:   // Host can't use our internal system services.
-	  default:
-	    return -2;
-	}
+    /* These are pointer types that will not make sense to the host. They should be dropped. */
+    case RSRVD_FM:              // Reserved code is meaningless to us. How did this happen?
+    case NOTYPE_FM:             // No type isn't valid ANYWHERE in this system. How did this happen?
+    case BUFFERPIPE_PTR_FM:     // This would not be an actual buffer. Just it's pipe.
+    case SYS_EVENTRECEIVER_FM:  // Host can't use our internal system services.
+    case SYS_MANUVR_XPORT_FM:   // Host can't use our internal system services.
+    default:
+      return -2;
+  }
 
-	*(scratchpad + 0) = type_code;
-	*(scratchpad + 1) = arg_bin_len;
-	out->concat(scratchpad, (arg_bin_len+2));
-	return 0;
+  *(scratchpad + 0) = type_code;
+  *(scratchpad + 1) = arg_bin_len;
+  out->concat(scratchpad, (arg_bin_len+2));
+  return 0;
 }
 
 
@@ -440,64 +485,64 @@ int8_t Argument::serialize(StringBuilder *out) {
 *
 */
 int8_t Argument::serialize_raw(StringBuilder *out) {
-	if (out == NULL) return -1;
+  if (out == NULL) return -1;
 
-	switch (type_code) {
-	  /* These are hard types that we can send as-is. */
-	  case INT8_FM:
-	  case UINT8_FM:
-	    out->concat((unsigned char*) &target_mem, 1);
-	    break;
-	  case INT16_FM:
-	  case UINT16_FM:
-	    out->concat((unsigned char*) &target_mem, 2);
-	    break;
-	  case INT32_FM:
-	  case UINT32_FM:
-	  case FLOAT_FM:
-	    out->concat((unsigned char*) &target_mem, 4);
-	    break;
+  switch (type_code) {
+    /* These are hard types that we can send as-is. */
+    case INT8_FM:
+    case UINT8_FM:
+      out->concat((unsigned char*) &target_mem, 1);
+      break;
+    case INT16_FM:
+    case UINT16_FM:
+      out->concat((unsigned char*) &target_mem, 2);
+      break;
+    case INT32_FM:
+    case UINT32_FM:
+    case FLOAT_FM:
+      out->concat((unsigned char*) &target_mem, 4);
+      break;
 
-	  /* These are pointer types to data that can be sent as-is. Remember: LITTLE ENDIAN */
-	  case INT8_PTR_FM:
-	  case UINT8_PTR_FM:
-	    out->concat((unsigned char*) *((unsigned char**)target_mem), 1);
-	    break;
-	  case INT16_PTR_FM:
-	  case UINT16_PTR_FM:
-	    out->concat((unsigned char*) *((unsigned char**)target_mem), 2);
-	    break;
-	  case INT32_PTR_FM:
-	  case UINT32_PTR_FM:
-	  case FLOAT_PTR_FM:
-	    out->concat((unsigned char*) *((unsigned char**)target_mem), 4);
-	    break;
+    /* These are pointer types to data that can be sent as-is. Remember: LITTLE ENDIAN */
+    case INT8_PTR_FM:
+    case UINT8_PTR_FM:
+      out->concat((unsigned char*) *((unsigned char**)target_mem), 1);
+      break;
+    case INT16_PTR_FM:
+    case UINT16_PTR_FM:
+      out->concat((unsigned char*) *((unsigned char**)target_mem), 2);
+      break;
+    case INT32_PTR_FM:
+    case UINT32_PTR_FM:
+    case FLOAT_PTR_FM:
+      out->concat((unsigned char*) *((unsigned char**)target_mem), 4);
+      break;
 
-	  /* These are pointer types that require conversion. */
-	  case STR_BUILDER_FM:     // This is a pointer to some StringBuilder. Presumably this is on the heap.
-	  case URL_FM:             // This is a pointer to some StringBuilder. Presumably this is on the heap.
+    /* These are pointer types that require conversion. */
+    case STR_BUILDER_FM:     // This is a pointer to some StringBuilder. Presumably this is on the heap.
+    case URL_FM:             // This is a pointer to some StringBuilder. Presumably this is on the heap.
       out->concat((StringBuilder*) target_mem);
-	    break;
-	  case STR_FM:
-	  case VECT_4_FLOAT:
-	  case VECT_3_FLOAT:
-	  case VECT_3_UINT16:
-	  case VECT_3_INT16:
-	  case BINARY_FM:     // This is a pointer to a big binary blob.
+      break;
+    case STR_FM:
+    case VECT_4_FLOAT:
+    case VECT_3_FLOAT:
+    case VECT_3_UINT16:
+    case VECT_3_INT16:
+    case BINARY_FM:     // This is a pointer to a big binary blob.
       out->concat((unsigned char*) target_mem, len);
-	    break;
+      break;
 
-	  /* These are pointer types that will not make sense to the host. They should be dropped. */
-	  case RSRVD_FM:              // Reserved code is meaningless to us. How did this happen?
-	  case NOTYPE_FM:             // No type isn't valid ANYWHERE in this system. How did this happen?
-		case BUFFERPIPE_PTR_FM:     // This would not be an actual buffer. Just it's pipe.
-	  case SYS_EVENTRECEIVER_FM:  // Host can't use our internal system services.
-	  case SYS_MANUVR_XPORT_FM:   // Host can't use our internal system services.
-	  default:
-	    return -2;
-	}
+    /* These are pointer types that will not make sense to the host. They should be dropped. */
+    case RSRVD_FM:              // Reserved code is meaningless to us. How did this happen?
+    case NOTYPE_FM:             // No type isn't valid ANYWHERE in this system. How did this happen?
+    case BUFFERPIPE_PTR_FM:     // This would not be an actual buffer. Just it's pipe.
+    case SYS_EVENTRECEIVER_FM:  // Host can't use our internal system services.
+    case SYS_MANUVR_XPORT_FM:   // Host can't use our internal system services.
+    default:
+      return -2;
+  }
 
-	return 0;
+  return 0;
 }
 
 
@@ -505,11 +550,11 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
 * @return A pointer to the appended argument.
 */
 Argument* Argument::append(Argument* arg) {
-	if (nullptr == _next) {
-		_next = arg;
-		return arg;
-	}
-	return _next->append(arg);
+  if (nullptr == _next) {
+    _next = arg;
+    return arg;
+  }
+  return _next->append(arg);
 }
 
 
@@ -532,44 +577,44 @@ int Argument::sumAllLengths() {
 * @return [description]
 */
 Argument* Argument::retrieveArgByIdx(int idx) {
-	if ((0 < idx) && (nullptr != _next)) {
-		return (1 == idx) ? _next : _next->retrieveArgByIdx(idx-1);
-	}
-	else {
-		return this;
-	}
+  if ((0 < idx) && (nullptr != _next)) {
+    return (1 == idx) ? _next : _next->retrieveArgByIdx(idx-1);
+  }
+  else {
+    return this;
+  }
 }
 
 
 void Argument::valToString(StringBuilder* out) {
-	uint8_t* buf     = (uint8_t*) pointer();
-	if (_check_flags(MANUVR_ARG_FLAG_DIRECT_VALUE)) {
-		switch (type_code) {
-			case INT8_FM:
-			case UINT8_FM:
-			case INT16_FM:
-			case UINT16_FM:
-			case INT32_FM:
-			case UINT32_FM:
-				out->concatf("%u", (uintptr_t) pointer());
-				break;
-			case FLOAT_FM:
-				out->concatf("%f", (double)(uintptr_t) pointer());
-				break;
-			case BOOLEAN_FM:
-				out->concatf("%s", ((uintptr_t) pointer() ? "true" : "false"));
-				break;
-			default:
-				out->concatf("%p", pointer());
-				break;
-		}
-	}
-	else {
-  	int l_ender = (len < 16) ? len : 16;
-		for (int n = 0; n < l_ender; n++) {
-			out->concatf("%02x ", *((uint8_t*) buf + n));
-		}
-	}
+  uint8_t* buf     = (uint8_t*) pointer();
+  if (_check_flags(MANUVR_ARG_FLAG_DIRECT_VALUE)) {
+    switch (type_code) {
+      case INT8_FM:
+      case UINT8_FM:
+      case INT16_FM:
+      case UINT16_FM:
+      case INT32_FM:
+      case UINT32_FM:
+        out->concatf("%u", (uintptr_t) pointer());
+        break;
+      case FLOAT_FM:
+        out->concatf("%f", (double)(uintptr_t) pointer());
+        break;
+      case BOOLEAN_FM:
+        out->concatf("%s", ((uintptr_t) pointer() ? "true" : "false"));
+        break;
+      default:
+        out->concatf("%p", pointer());
+        break;
+    }
+  }
+  else {
+    int l_ender = (len < 16) ? len : 16;
+    for (int n = 0; n < l_ender; n++) {
+      out->concatf("%02x ", *((uint8_t*) buf + n));
+    }
+  }
 }
 
 
@@ -578,11 +623,11 @@ void Argument::valToString(StringBuilder* out) {
 */
 void Argument::printDebug(StringBuilder* out) {
   out->concatf("\t%s\t%s\t%s",
-		(nullptr == _key ? "" : _key),
-		getTypeCodeString(typeCode()),
-		(reapValue() ? "(reap)" : "\t")
-	);
-	valToString(out);
+    (nullptr == _key ? "" : _key),
+    getTypeCodeString(typeCode()),
+    (reapValue() ? "(reap)" : "\t")
+  );
+  valToString(out);
   out->concat("\n");
 
   if (nullptr != _next) _next->printDebug(out);

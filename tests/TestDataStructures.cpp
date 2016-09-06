@@ -161,6 +161,8 @@ int test_CBOR_Argument() {
   a.append(val4)->setKey("value4");
   a.append(val5)->setKey("value5");
 
+  a.printDebug(&log);
+
   if (0 <= Argument::encodeToCBOR(&a, &shuttle)) {
     log.concatf("CBOR encoding occupies %d bytes\n\t", shuttle.length());
     shuttle.printDebug(&log);

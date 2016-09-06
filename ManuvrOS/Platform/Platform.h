@@ -195,9 +195,6 @@ class ManuvrPlatform {
     inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
     virtual int8_t platformPreInit(Argument*);
 
-    // TODO: This should be protected?
-    virtual int8_t platformPostInit();
-
     /* Platform state-reset functions. */
     virtual void seppuku();    // Simple process termination. Reboots if not implemented.
     virtual void reboot();     // Simple reboot. Should be possible on any platform.
@@ -230,6 +227,7 @@ class ManuvrPlatform {
     #if defined(MANUVR_STORAGE)
       Storage* fetchStorage(const char*);
       int8_t   offerStorage(const char*, Storage*);
+      virtual int8_t _load_config();
     #endif
 
     /*
@@ -249,6 +247,7 @@ class ManuvrPlatform {
     /* Writes a platform information string to the provided buffer. */
     const char* getRTCStateString();
 
+    void printConfig(StringBuilder* out);
     virtual void printDebug(StringBuilder* out);
     void printDebug();
 
@@ -291,9 +290,11 @@ class ManuvrPlatform {
       _pflags = ((_pflags & ~MANUVR_PLAT_FLAG_P_STATE_MASK) | s);
     };
 
+    virtual int8_t platformPostInit();
+
     #if defined(MANUVR_STORAGE)
       // Called during boot to load configuration.
-      virtual int8_t _load_config();
+      //virtual int8_t _load_config();
     #endif
 
 

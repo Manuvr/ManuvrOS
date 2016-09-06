@@ -172,9 +172,10 @@ Made a big Makefile fix. Wasn't passing optimization params downstream.
     1966828   16864   52068 2035760  1f1030 Baseline without debug symbols.
     2013860   16868   52068 2082796  1fc7ec Baseline with debug symbols.
 
-Fixed raspi platform to conform to new abstraction (prior to extention).
+Fixed raspi platform to conform to new abstraction (prior to extension).
 Numerous build-system fixes and improvements.
 
+------
 
 ### 2016.09.05:
 Much thankless grind this weekend. Driver modernization, Teensy3 support. Followed
@@ -198,8 +199,18 @@ Update: I am handling the linker issue by hard-forking cbor-cpp, and mod'ing it
   safely add the parse-in-place stuff that makes such an enormous memory
   difference.
 
-Finally moves the remaining message definitions out of the CPP file that handles their logic.
+Finally moved the remaining message definitions out of the CPP file that handles their logic.
   They now reside in the kernel, where they will be scrutinized in the near future.
   This resolved a bug I've been having since the conversion of the Kernel to stack
   allocation along with platform. The problem was centered around the order-of-exec
   for static intializers.
+
+CBOR loop closes tighter. Test is correct, and massively-extended. Simple map
+  support. It will be enough to write the next phase of the storage API. Commit...
+
+       Linux, 32-bit: DEBUG=1 SECURE=1
+       text    data     bss     dec     hex filename
+    1743583   12160   50148 1805891  1b8e43 New baseline
+
+What a monster weekend....
+_---J. Ian Lindsay_
