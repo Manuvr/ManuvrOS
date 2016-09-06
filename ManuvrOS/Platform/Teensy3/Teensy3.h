@@ -31,9 +31,6 @@ This file is meant to contain a set of common functions that are
 
 #ifndef __PLATFORM_TEENSY3_H__
 #define __PLATFORM_TEENSY3_H__
-#include <pthread.h>
-#include <signal.h>
-#include <sys/time.h>
 
 class Teensy3 : public ManuvrPlatform {
   public:

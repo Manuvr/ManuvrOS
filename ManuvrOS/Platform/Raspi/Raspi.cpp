@@ -299,6 +299,26 @@ volatile uint8_t  watchdog_mark      = 42;
 unsigned long     start_time_micros  = 0;
 
 
+/*******************************************************************************
+* Interrupt-masking                                                            *
+*******************************************************************************/
+
+// Ze interrupts! Zhey do nuhsing!
+// TODO: Perhaps raise the nice value?
+// At minimum, turn off the periodic timer, since this is what would happen on
+//   other platforms.
+void globalIRQEnable() {
+  // TODO: Need to stack the time remaining.
+  //set_linux_interval_timer();
+}
+
+void globalIRQDisable() {
+  // TODO: Need to unstack the time remaining and fire any schedules.
+  //unset_linux_interval_timer();
+}
+
+
+
 /****************************************************************************************************
 * Randomness                                                                                        *
 ****************************************************************************************************/

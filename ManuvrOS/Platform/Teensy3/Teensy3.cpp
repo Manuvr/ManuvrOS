@@ -28,9 +28,12 @@ This file is meant to contain a set of common functions that are typically platf
 
 #include <Platform/Platform.h>
 
+#if defined(MANUVR_STORAGE)
+#include <Platform/Teensy3/TeensyStorage.h>
+#endif
+
 #include <wiring.h>
 #include <Time/Time.h>
-#include <unistd.h>
 
 #define PLATFORM_GPIO_PIN_COUNT   33
 
@@ -52,6 +55,10 @@ ManuvrPlatform platform;
 * The code under this block is special on this platform, and will not be available elsewhere.       *
 ****************************************************************************************************/
 time_t getTeensy3Time() {   return Teensy3Clock.get();   }
+
+#if defined(MANUVR_STORAGE)
+TeensyStorage _t_storage(nullptr);
+#endif
 
 
 
@@ -158,16 +165,20 @@ int getSerialNumber(uint8_t *buf) {
 /*******************************************************************************
 * Time and date                                                                *
 *******************************************************************************/
+
 /*
 *
 */
 bool init_rtc() {
   setSyncProvider(getTeensy3Time);
-  if (timeStatus() != timeSet) {
-    return false;
-  }
-  else {
-    return true;
+  setSyncInterval(60);  // Re-sync the internal clock every minute.
+  switch (timeStatus()) {
+    case timeSet:
+      return true;
+    case timeNotSet:
+    case timeNeedsSync:
+    default:
+      return false;
   }
 }
 
@@ -184,6 +195,16 @@ bool setTimeAndDateStr(char* nu_date_time) {
 /*
 */
 bool setTimeAndDate(uint8_t y, uint8_t m, uint8_t d, uint8_t wd, uint8_t h, uint8_t mi, uint8_t s) {
+  TimeElements tm;
+  tm.Second = s;
+  tm.Minute = mi;
+  tm.Hour   = h;
+  tm.Wday   = wd;
+  tm.Day    = d;
+  tm.Month  = m;
+  tm.Year   = y;
+  time_t t = makeTime(tm);
+  setTime(t);
   return false;
 }
 
@@ -360,7 +381,6 @@ void ManuvrPlatform::reboot() {
               MANUVR_PLAT_FLAG_INNATE_DATETIME | \
               MANUVR_PLAT_FLAG_HAS_IDENTITY)
 
-
 /*
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
@@ -390,6 +410,12 @@ int8_t ManuvrPlatform::platformPreInit() {
   }
   _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
   gpioSetup();
+
+  #if defined(MANUVR_STORAGE)
+    _alter_flags(true, MANUVR_PLAT_FLAG_HAS_STORAGE);
+    _storage_device = (Storage*) &_t_storage;
+    _kernel.subscribe((EventReceiver*) &_t_storage);
+  #endif
   return 0;
 }
 
