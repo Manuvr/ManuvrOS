@@ -40,7 +40,6 @@ This class represents our type-abstraction layer. It is the means by which
 *******************************************************************************/
 #if defined(MANUVR_CBOR)
 
-
 int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
   cbor::output_dynamic output;
   cbor::encoder encoder(output);
@@ -99,76 +98,6 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
 
 
 
-CBORArgListener::CBORArgListener(Argument** target) {    built = target;    }
-
-CBORArgListener::~CBORArgListener() {
-	// JIC...
-	if (nullptr != _wait) {
-		free(_wait);
-		_wait = nullptr;
-	}
-}
-
-void CBORArgListener::_caaa(Argument* nu) {
-	if (nullptr != _wait) {
-		nu->setKey(_wait);
-		_wait = nullptr;
-		nu->reapKey(true);
-	}
-
-  if ((nullptr != built) && (nullptr != *built)) {
-    (*built)->append(nu);
-  }
-  else {
-    *built = nu;
-  }
-
-	if (0 < _wait_map)   _wait_map--;
-	if (0 < _wait_array) _wait_array--;
-}
-
-
-void CBORArgListener::on_string(char* val) {
-	if (nullptr == _wait) {
-		// We need to copy the string. It will be the key for the Argument
-		//   who's value is forthcoming.
-		int len = strlen(val);
-		_wait = (char*) malloc(len+1);
-		if (nullptr != _wait) {
-			memcpy(_wait, val, len+1);
-		}
-	}
-	else {
-		// There is a key assignment waiting. This must be the value.
-		_caaa(new Argument(val));
-	}
-};
-
-void CBORArgListener::on_bytes(uint8_t* data, int size) { _caaa(new Argument(data, size));      };
-void CBORArgListener::on_integer(int val) {               _caaa(new Argument((int32_t) val));   };
-void CBORArgListener::on_tag(unsigned int tag) {          _caaa(new Argument((uint32_t) tag));  };
-void CBORArgListener::on_special(unsigned int code) {     _caaa(new Argument((uint32_t) code)); };
-
-void CBORArgListener::on_array(int size) {
-	_wait_array = (int32_t) size;
-};
-
-void CBORArgListener::on_map(int size) {
-	_wait_map   = (int32_t) size;
-
-	if (nullptr != _wait) {
-		// Flush so we can discover problems.
-		free(_wait);
-		_wait = nullptr;
-	}
-};
-
-void CBORArgListener::on_error(const char* error) {    _caaa(new Argument(error));   };
-void CBORArgListener::on_extra_integer(unsigned long long value, int sign) {}
-void CBORArgListener::on_extra_tag(unsigned long long tag) {}
-void CBORArgListener::on_extra_special(unsigned long long tag) {}
-
-
 Argument* Argument::decodeFromCBOR(uint8_t* src, unsigned int len) {
   Argument* return_value = nullptr;
   CBORArgListener listener(&return_value);
@@ -177,9 +106,8 @@ Argument* Argument::decodeFromCBOR(uint8_t* src, unsigned int len) {
   decoder.run();
   return return_value;
 }
+#endif  // MANUVR_CBOR
 
-
-#endif
 
 #if defined(MANUVR_JSON)
 #include "jansson/include/jansson.h"

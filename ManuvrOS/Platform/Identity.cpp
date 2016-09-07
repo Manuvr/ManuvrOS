@@ -18,10 +18,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-Data-persistence layer for linux.
-Implemented as a JSON object within a single file. This feature therefore
-  requires MANUVR_JSON. In the future, it may be made to operate on some
-  other encoding, be run through a cryptographic pipe, etc.
+Basic machinery of Identity objects.
 */
 
 #include "Identity.h"
@@ -29,35 +26,10 @@ Implemented as a JSON object within a single file. This feature therefore
 
 
 
-IdentityUUID::IdentityUUID(const char* nom) {
-  format = IdentFormat::UUID;
-  _ident_len = sizeof(UUID);
+Identity::Identity(const char* nom, IdentFormat _f) {
   _handle = (char*) nom;   // TODO: Copy?
-  uuid_gen(&uuid);
-  _ident_set_flag(true, MANUVR_IDENT_FLAG_DIRTY | MANUVR_IDENT_FLAG_ORIG_GEN);
-}
-
-IdentityUUID::IdentityUUID(const char* nom, char* uuid_str) {
-  format = IdentFormat::UUID;
-  _ident_len = sizeof(UUID);
-  _handle = (char*) nom;   // TODO: Copy?
-  uuid_from_str(uuid_str, &uuid);
 }
 
 
-IdentityUUID::~IdentityUUID() {
-}
-
-
-void IdentityUUID::toString(StringBuilder* output) {
-  char* uuid_str = (char*) alloca(40);
-  bzero(uuid_str, 40);
-  uuid_to_str(&uuid, uuid_str, 40);
-  output->concatf(uuid_str);
-}
-
-
-int IdentityUUID::toBuffer(uint8_t* buf) {
-  for (int i = 0; i < 16; i++) *(buf + i) = *(((uint8_t*)&uuid.id) + i);
-  return 16;
+Identity::~Identity() {
 }

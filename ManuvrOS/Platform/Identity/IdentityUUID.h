@@ -27,7 +27,7 @@ This might be better-viewed as a data structure. Notions of identity should
 
 #include <DataStructures/StringBuilder.h>
 #include <DataStructures/uuid.h>
-#include <DataStructures/Argument.h>
+
 
 #define MANUVR_IDENT_FLAG_DIRTY        0x8000  // This ID will be lost if not persisted.
 #define MANUVR_IDENT_FLAG_OUR_OWN      0x4000  // This is our own identity.
@@ -103,7 +103,7 @@ enum class OCFCredType {
 */
 class Identity {
   public:
-    virtual ~Identity();
+    IdentFormat format = IdentFormat::UNDETERMINED;   // What is the nature of this identity?
 
     /* Provides concise representations... */
     virtual void toString(StringBuilder*) =0;   // For readability.
@@ -111,14 +111,16 @@ class Identity {
 
     // TODO: int8_t serialize();
     inline int   length() {     return _ident_len;  };
-    inline bool  isDirty() {    return _ident_flag(MANUVR_IDENT_FLAG_DIRTY);  };
     inline char* getHandle() {  return (nullptr == _handle ? (char*) "unnamed":_handle);  };
+
+    inline bool isDirty() {     return _ident_flag(MANUVR_IDENT_FLAG_DIRTY);  };
+
 
 
   protected:
-    uint16_t _ident_len  = 0;        // How many bytes does the identity occupy in storage.
+    uint16_t _ident_len   = 0;        // How many bytes does the identity occupy?
 
-    Identity(const char*, IdentFormat);
+    char*      _handle     = nullptr;  // Human-readable name of this identity.
 
     inline bool _ident_flag(uint16_t f) {   return ((_ident_flags & f) == f);  };
     inline void _ident_set_flag(bool nu, uint16_t _flag) {
@@ -127,12 +129,10 @@ class Identity {
 
 
   private:
+    //Identity* _next = nullptr;  // TODO: Chaining is probably better than flatness in this case.
+    // TODO: Expiration.
     uint16_t _ident_flags = 0;
-    char*       _handle = nullptr;  // Human-readable name of this identity.
-    Identity*   _next   = nullptr;  // TODO: Chaining is probably better than flatness in this case.
-    IdentFormat format  = IdentFormat::UNDETERMINED;   // What is the nature of this identity?
 };
-
 
 
 class IdentityUUID : public Identity {
@@ -145,16 +145,14 @@ class IdentityUUID : public Identity {
     int  toBuffer(uint8_t*);
 
 
-  protected:
+  private:
     UUID uuid;
 };
 
 
 #if defined (MANUVR_OIC)
-class IdentityOCFCred : public IdentityUUID {
-    IdentityOCFCred(const char* nom);
-    IdentityOCFCred(const char* nom, char* uuid_str);
-    ~IdentityOCFCred();
+class IdentityOCFCred : public Identity {
+  UUID subject_uuid;
 
 };
 #endif // MANUVR_OIC
@@ -168,7 +166,6 @@ class IdentityHash : public Identity {
   protected:
 
 };
-
 
 class IdentityCert : public Identity {
   public:
