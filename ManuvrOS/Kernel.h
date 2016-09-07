@@ -37,7 +37,7 @@ limitations under the License.
   #include <map>
 
   #include <EnumeratedTypeCodes.h>
-  #include "FirmwareDefs.h"
+  #include <CommonConstants.h>
 
   #include <DataStructures/PriorityQueue.h>
   #include <DataStructures/StringBuilder.h>

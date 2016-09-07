@@ -25,7 +25,6 @@ StandardIO is the transport driver for wrapping POSIX-style STDIN/STDOUT/STDERR.
 #if defined(__MANUVR_LINUX) && defined(MANUVR_STDIO)
 
 #include "StandardIO.h"
-#include "FirmwareDefs.h"
 #include <XenoSession/XenoSession.h>
 #include <XenoSession/Console/ManuvrConsole.h>
 

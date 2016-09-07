@@ -26,7 +26,7 @@ This is basically only for linux for now.
 #if defined(MANUVR_SUPPORT_TCPSOCKET)
 
 #include "ManuvrTCP.h"
-#include "FirmwareDefs.h"
+#include <CommonConstants.h>
 
 #include <Kernel.h>
 

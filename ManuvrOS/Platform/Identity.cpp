@@ -34,7 +34,7 @@ IdentityUUID::IdentityUUID(const char* nom) {
   _ident_len = sizeof(UUID);
   _handle = (char*) nom;   // TODO: Copy?
   uuid_gen(&uuid);
-  _ident_set_flag(true, MANUVR_IDENT_FLAG_DIRTY);
+  _ident_set_flag(true, MANUVR_IDENT_FLAG_DIRTY | MANUVR_IDENT_FLAG_ORIG_GEN);
 }
 
 IdentityUUID::IdentityUUID(const char* nom, char* uuid_str) {

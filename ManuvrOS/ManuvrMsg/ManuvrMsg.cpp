@@ -20,7 +20,7 @@ limitations under the License.
 */
 
 
-#include "FirmwareDefs.h"
+#include <CommonConstants.h>
 #include <DataStructures/Argument.h>
 #include "ManuvrMsg.h"
 #include <string.h>

@@ -40,7 +40,6 @@ For debuggability, the transport has a special mode for acting as a debug
 
 
 #include "ManuvrXport.h"
-#include "FirmwareDefs.h"
 #include <XenoSession/XenoSession.h>
 #include <XenoSession/Manuvr/ManuvrSession.h>
 

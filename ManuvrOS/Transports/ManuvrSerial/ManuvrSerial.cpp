@@ -31,7 +31,7 @@ Platforms that require it should be able to extend this driver for specific
 
 
 #include "ManuvrSerial.h"
-#include "FirmwareDefs.h"
+#include <CommonConstants.h>
 
 #include <Kernel.h>
 #include <Platform/Platform.h>
@@ -410,7 +410,7 @@ int8_t ManuvrSerial::bootComplete() {
   #if !defined (__MANUVR_FREERTOS) && !defined (__MANUVR_LINUX)
   __kernel->addSchedule(&read_abort_event);
   #endif
-  
+
   reset();
   return 1;
 }

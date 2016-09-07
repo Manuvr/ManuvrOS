@@ -34,7 +34,7 @@ using namespace std;
 
 #include <Kernel.h>
 
-#include "FirmwareDefs.h"
+#include <CommonConstants.h>
 
 
 /**************************************************************************

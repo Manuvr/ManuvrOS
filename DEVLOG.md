@@ -212,5 +212,7 @@ CBOR loop closes tighter. Test is correct, and massively-extended. Simple map
        text    data     bss     dec     hex filename
     1743583   12160   50148 1805891  1b8e43 New baseline
 
+81 files changed, 3718 insertions(+), 1398 deletions(-)
 What a monster weekend....
+
 _---J. Ian Lindsay_

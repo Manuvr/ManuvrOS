@@ -34,7 +34,13 @@ There ought to be no inclusion in this file. It is the bottom.
   #define LOG_DEBUG   7    /* debug-level messages */
 
 
-  #if defined(MANUVR_CONF_FILE_PATH)
-    #include MANUVR_CONF_FILE_PATH
+  #if defined(MANUVR_CONF_FILE)
+    #include MANUVR_CONF_FILE
+  #else
+    #include "ManuvrConf.h"
   #endif
+
+  /* These are defines for const char* that are commonly used. */
+  #define MANUVR_CONST_STR_WHOAMI           "_whoami"
+  #define MANUVR_CONST_STR_PLATFORM_CONF    "_pconf"
 #endif

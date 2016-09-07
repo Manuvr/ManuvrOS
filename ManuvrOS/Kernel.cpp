@@ -19,7 +19,7 @@ limitations under the License.
 */
 
 
-#include "FirmwareDefs.h"
+#include <CommonConstants.h>
 #include <Kernel.h>
 #include <Platform/Platform.h>
 
@@ -1155,30 +1155,6 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
         return_value++;
         break;
     #endif  // __MANUVR_CONSOLE_SUPPORT
-
-    case MANUVR_MSG_SELF_DESCRIBE:
-      // Field order: 1 uint32, 4 required null-terminated strings, 1 optional.
-      // uint32:     MTU                (in terms of bytes)
-      // String:     Protocol version   (IE: "0.0.1")
-      // String:     Identity           (IE: "Digitabulum") Generally the name of the Manuvrable.
-      // String:     Firmware version   (IE: "1.5.4")
-      // String:     Hardware version   (IE: "4")
-      // String:     Extended detail    (User-defined)
-      if (0 == active_runnable->argCount()) {
-        // We are being asked to self-describe.
-        active_runnable->addArg((uint32_t)    PROTOCOL_MTU);
-        active_runnable->addArg((uint32_t)    0);                  // Device flags.
-        active_runnable->addArg((const char*) PROTOCOL_VERSION);
-        active_runnable->addArg((const char*) IDENTITY_STRING);
-        active_runnable->addArg((const char*) VERSION_STRING);
-        active_runnable->addArg((const char*) HW_VERSION_STRING);
-        active_runnable->addArg((uint32_t)    0);                  // Optional serial number.
-        #ifdef EXTENDED_DETAIL_STRING
-          active_runnable->addArg((const char*) EXTENDED_DETAIL_STRING);
-        #endif
-        return_value++;
-      }
-      break;
 
     case MANUVR_MSG_SYS_ADVERTISE_SRVC:  // Some service is annoucing its arrival.
     case MANUVR_MSG_SYS_RETRACT_SRVC:    // Some service is annoucing its departure.

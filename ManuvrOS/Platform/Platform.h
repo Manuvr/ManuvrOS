@@ -41,8 +41,6 @@ This file is meant to contain a set of common functions that are
 #include <stdio.h>
 
 #include <CommonConstants.h>
-#include "FirmwareDefs.h"
-
 #include <DataStructures/uuid.h>
 
 // TODO: Split OCF off into it's own concern. Right now, it will depend on Linux.
@@ -227,7 +225,6 @@ class ManuvrPlatform {
     #if defined(MANUVR_STORAGE)
       Storage* fetchStorage(const char*);
       int8_t   offerStorage(const char*, Storage*);
-      virtual int8_t _load_config();
     #endif
 
     /*
@@ -294,7 +291,7 @@ class ManuvrPlatform {
 
     #if defined(MANUVR_STORAGE)
       // Called during boot to load configuration.
-      //virtual int8_t _load_config();
+      int8_t _load_config();
     #endif
 
 
@@ -407,7 +404,7 @@ extern ManuvrPlatform platform;
 //  extern LinuxPlatform platform;
 //#else
 //  // Unsupportage.
-//  // TODO: Fail the build.
+//  #error Unsupported platform.
 //#endif
 
 

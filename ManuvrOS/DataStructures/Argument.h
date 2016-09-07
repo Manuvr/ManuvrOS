@@ -97,9 +97,9 @@ class Argument {
     inline void reapValue(bool en) {  _alter_flags(en, MANUVR_ARG_FLAG_REAP_VALUE);    };
     inline bool reapValue() {         return _check_flags(MANUVR_ARG_FLAG_REAP_VALUE); };
 
-    inline void*    pointer() {           return target_mem; };
-    inline uint8_t  typeCode() {          return type_code;  };
-    inline uint16_t length() {            return len;        };
+    inline void*    pointer() {       return target_mem; };
+    inline uint8_t  typeCode() {      return type_code;  };
+    inline uint16_t length() {        return len;        };
 
     inline const char* getKey() {         return _key;  };
     inline void setKey(const char* k) {      _key = k;  };
