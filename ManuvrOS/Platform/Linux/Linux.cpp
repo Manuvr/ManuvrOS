@@ -40,6 +40,10 @@ This file forms the catch-all for linux platforms that have no support.
 #include <sys/stat.h>   // Needed for integrity checks.
 #endif
 
+#if defined(MANUVR_OPENINTERCONNECT)
+#include <Frameworks/OIC/ManuvrOIC.h>
+#endif
+
 /****************************************************************************************************
 * The code under this block is special on this platform, and will not be available elsewhere.       *
 ****************************************************************************************************/
@@ -572,6 +576,10 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
 
   initSigHandlers();
   set_linux_interval_timer();
+
+  #if defined(MANUVR_OPENINTERCONNECT)
+  ManuvrOIC* oic = new ManuvrOIC();
+  #endif
   return 0;
 }
 

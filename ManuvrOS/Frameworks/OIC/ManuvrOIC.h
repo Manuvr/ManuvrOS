@@ -32,6 +32,7 @@ Target is OIC v1.1.
 #include <EventReceiver.h>
 #include <map>
 
+
 class ManuvrOIC : public EventReceiver {
   public:
     ManuvrOIC();

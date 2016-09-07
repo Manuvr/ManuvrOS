@@ -67,24 +67,20 @@ This might be better-viewed as a data structure. Notions of identity should
 */
 
 enum class IdentFormat {
-  /*
-  * TODO: Since we wrote this interface against mbedtls, we will use the preprocessor
-  *   defines from that library for normalizing purposes.
-  */
   UNDETERMINED    = 0x00,  // Nothing here.
   SERIAL_NUM      = 0x01,  // Nearly universal.
   UUID            = 0x02,  // Low-grade. Easy.
   HASH            = 0x03,  // Open-ended.
   CERT_FORMAT_DER = 0x04,  // Certificate in DER format.
   PSK_ASYM        = 0x05,  // Pre-shared asymmetric key.
-  PSK_SYM         = 0x06   // Pre-shared symmetric key.
+  PSK_SYM         = 0x06,  // Pre-shared symmetric key.
+  ONE_ID          = 0x10   // OneID asymemetric key strategey.
 };
 
 
 enum class OCFCredType {
   /*
-  * TODO: Since we wrote this interface against mbedtls, we will use the preprocessor
-  *   defines from that library for normalizing purposes.
+  * These defs were pulled from the OIC1.1 draft.
   */
   UNDEF = 0x00,    // Nothing here.
   PAIRWISE_SYM,    // Pairwise symmetric

@@ -19,8 +19,8 @@ limitations under the License.
 
 
 Data-persistence layer for linux.
-Implemented as a JSON object within a single file. This feature therefore
-  requires MANUVR_JSON. In the future, it may be made to operate on some
+Implemented as a CBOR object within a single file. This feature therefore
+  requires MANUVR_CBOR. In the future, it may be made to operate on some
   other encoding, be run through a cryptographic pipe, etc.
 */
 
@@ -30,8 +30,8 @@ Implemented as a JSON object within a single file. This feature therefore
 #include <EventReceiver.h>
 #include <Platform/Storage.h>
 
-#ifndef MANUVR_JSON
-  // TODO: Fail the build.
+#ifndef MANUVR_CBOR
+  #error The LinuxStorage class requires MANUVR_CBOR be enabled.
 #endif
 
 class LinuxStorage : public EventReceiver, public Storage {

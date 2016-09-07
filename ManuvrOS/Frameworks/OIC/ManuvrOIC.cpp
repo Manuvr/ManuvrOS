@@ -16,11 +16,95 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+
+This is an attempt to wrap iotivity-constrained.
+As of this date (2016-09-07), building against it has not provided sufficient
+  functionality, and attempts to integrate it via Manuvr's Platform abstraction
+  failed as well (but might in principle succeed).
+
+Our goal here will be to provide all the platform-mandatory hooks required
+  by iotivity, and implement them as shunts into our platform.
 */
 
 #if defined(MANUVR_OPENINTERCONNECT)
 
+// TODO: Until some platform gripes are resolved, this cannot be avoided.
+#if defined(__MANUVR_LINUX)
+
 #include "ManuvrOIC.h"
+#include <Platform/Platform.h>
+
+/*
+* These are C functions that we must provide to iotivity-constrained
+* for the sake of giving it a platform.
+*/
+extern "C" {
+#include "oc_api.h"
+#include "port/oc_signal_main_loop.h"
+
+int oc_storage_config(const char *store);
+long oc_storage_read(const char *store, uint8_t *buf, size_t size);
+long oc_storage_write(const char *store, uint8_t *buf, size_t size);
+
+void oc_signal_main_loop(void) {
+}
+
+/*
+ * Initialize the pseudo-random generator.
+ *
+ */
+void oc_random_init(unsigned short seed) {
+  // Manuvr has already handled the RNG. And we will not re-seed for
+  // IoTivity's benefit. A TRNG would likely ignore this value anyhow.
+  // Do nothing.
+}
+
+
+/*
+ * Calculate a pseudo random number between 0 and 65535.
+ *
+ * \return A pseudo-random number between 0 and 65535.
+ */
+unsigned short oc_random_rand() {
+  return (uint16_t)randomInt();
+}
+
+void oc_random_destroy() {
+  // Manuvr never tears down it's RNG... Why would you do this?
+  // Do nothing.
+}
+
+
+void oc_network_event_handler_mutex_init(void);
+
+void oc_network_event_handler_mutex_lock(void);
+
+void oc_network_event_handler_mutex_unlock(void);
+
+void oc_send_buffer(oc_message_t * message);
+
+#ifdef OC_SECURITY
+uint16_t oc_connectivity_get_dtls_port(void);
+#endif /* OC_SECURITY */
+
+int oc_connectivity_init(void);
+
+void oc_connectivity_shutdown(void);
+
+void oc_send_multicast_message(oc_message_t *message);
+
+
+void oc_clock_init(void) {
+  // Manuvr deals with this.
+  // Do nothing.
+}
+
+oc_clock_time_t oc_clock_time(void);
+unsigned long oc_clock_seconds(void);
+void oc_clock_wait(oc_clock_time_t t);
+}
+
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -32,6 +116,23 @@ limitations under the License.
 *
 * Static members and initializers should be located here.
 *******************************************************************************/
+static void app_init() {
+  printf("OIC: app_init()\n");
+  oc_init_platform("Apple", NULL, NULL);
+  oc_add_device("/oic/d", "oic.d.phone", "Kishen's IPhone", "1.0", "1.0", NULL, NULL);
+}
+
+#ifdef OC_SECURITY
+static void fetch_credentials() {
+  printf("OIC: fetch_credentials()\n");
+  oc_storage_config("./creds");
+}
+#endif
+
+
+static void issue_requests() {
+  printf("OIC: issue_requests()\n");
+}
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -51,8 +152,8 @@ ManuvrOIC::ManuvrOIC() {
   setReceiverName("oic");
 
   // We will have these, at minimum.
-  _uri_map["/oic/p"] = NULL;
-  _uri_map["/oic/d"] = NULL;
+  _uri_map["/oic/p"]   = NULL;
+  _uri_map["/oic/d"]   = NULL;
   _uri_map["/oic/res"] = NULL;
 }
 
@@ -87,6 +188,15 @@ ManuvrOIC::~ManuvrOIC() {
 */
 int8_t ManuvrOIC::bootComplete() {
   EventReceiver::bootComplete();
+  oc_handler_t handler = {
+    .init = app_init,
+    #ifdef OC_SECURITY
+		  .get_credentials = fetch_credentials,
+    #endif /* OC_SECURITY */
+		.requests_entry = issue_requests
+  };
+
+  int init = oc_main_init(&handler);
   return 1;
 }
 
@@ -157,4 +267,5 @@ void ManuvrOIC::procDirectDebugInstruction(StringBuilder *input) {
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 #endif  // __MANUVR_CONSOLE_SUPPORT
+#endif  // __MANUVR_LINUX
 #endif  // MANUVR_OPENINTERCONNECT

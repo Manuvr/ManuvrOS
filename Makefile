@@ -72,7 +72,7 @@ LBITS = $(shell getconf LONG_BIT)
 ifeq ($(LBITS),64)
 	# This is no longer required on 64-bit platforms. But it is being retained in
 	#   case 32-bit problems need to be debugged.
-  CFLAGS += -m32
+  #CFLAGS += -m32
 endif
 
 
@@ -109,7 +109,7 @@ MANUVR_OPTIONS += -DMANUVR_CBOR
 #MANUVR_OPTIONS += -DMANUVR_JSON
 
 # Framework selections, if any are desired.
-#MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT
+MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT
 
 # Since we are building on linux, we will have threading support via
 # pthreads.

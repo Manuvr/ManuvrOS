@@ -21,6 +21,9 @@ limitations under the License.
 This is the base class for a type transcriber.
 */
 
+#ifndef __MANUVR_TYPE_TRANSCRIBER_H__
+#define __MANUVR_TYPE_TRANSCRIBER_H__
+
 #if defined(MANUVR_CBOR)
   #include <Types/cbor-cpp/cbor.h>
 
@@ -54,4 +57,7 @@ This is the base class for a type transcriber.
       /* Please forgive the stupid name. */
       void _caaa(Argument*);
   };
-#endif
+#endif  // MANUVR_CBOR
+
+
+#endif  // __MANUVR_TYPE_TRANSCRIBER_H__
