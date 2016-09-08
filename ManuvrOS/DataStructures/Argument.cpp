@@ -86,6 +86,14 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
           }
         }
         break;
+      case BINARY_FM:
+        {
+          uint8_t* buf;
+          if (0 == src->getValueAs(&buf)) {
+            encoder.write_bytes(buf, src->length());
+          }
+        }
+        break;
     }
     src = src->_next;
   }
@@ -517,7 +525,7 @@ Argument* Argument::retrieveArgByIdx(int idx) {
 /**
 * @return [description]
 */
-Argument* Argument::retrieveArgByKey(char* _k) {
+Argument* Argument::retrieveArgByKey(const char* _k) {
   // TODO: Pointer comparison won't work here.
   if (nullptr != _key) {
     if (_k == _key) {
@@ -529,6 +537,7 @@ Argument* Argument::retrieveArgByKey(char* _k) {
   }
   return nullptr;
 }
+
 
 
 void Argument::valToString(StringBuilder* out) {

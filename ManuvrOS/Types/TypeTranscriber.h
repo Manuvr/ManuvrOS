@@ -35,7 +35,9 @@ This is the base class for a type transcriber.
       CBORArgListener(Argument**);
       ~CBORArgListener();
 
+      void on_integer(unsigned int value);
       void on_integer(int value);
+      void on_float32(float value);
       void on_bytes(unsigned char* data, int size);
       void on_string(char* str);
       void on_array(int size);

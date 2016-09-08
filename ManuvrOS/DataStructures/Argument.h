@@ -114,7 +114,7 @@ class Argument {
     int    argCount();
     int    sumAllLengths();
     Argument* retrieveArgByIdx(int idx);
-    Argument* retrieveArgByKey(char*);
+    Argument* retrieveArgByKey(const char*);
 
     Argument* append(Argument* arg);
     inline Argument* append(uint8_t val) {             return append(new Argument(val));   }

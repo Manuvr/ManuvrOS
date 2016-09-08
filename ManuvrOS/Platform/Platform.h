@@ -205,7 +205,8 @@ class ManuvrPlatform {
     inline bool hasStorage() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_STORAGE);     };
     inline bool hasThreads() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_THREADS);     };
     inline bool hasCryptography() { return _check_flags(MANUVR_PLAT_FLAG_HAS_CRYPTO);      };
-    inline bool booted() {          return (MANUVR_INIT_STATE_NOMINAL == platformState()); };
+    inline bool booted() {          return (MANUVR_INIT_STATE_NOMINAL == platformState()); };  // TODO: Painful name. Cut.
+    inline bool nominalState() {    return (MANUVR_INIT_STATE_NOMINAL == platformState()); };
     inline bool bigEndian() {       return _check_flags(MANUVR_PLAT_FLAG_BIG_ENDIAN);      };
     inline uint8_t aluWidth() {
       // TODO: This is possible to do without the magic number 13... Figure out how.

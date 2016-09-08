@@ -71,9 +71,38 @@ void CBORArgListener::on_string(char* val) {
 };
 
 void CBORArgListener::on_bytes(uint8_t* data, int size) { _caaa(new Argument(data, size));      };
-void CBORArgListener::on_integer(int val) {               _caaa(new Argument((int32_t) val));   };
-void CBORArgListener::on_tag(unsigned int tag) {          _caaa(new Argument((uint32_t) tag));  };
-void CBORArgListener::on_special(unsigned int code) {     _caaa(new Argument((uint32_t) code)); };
+
+
+void CBORArgListener::on_integer(unsigned int val) {
+	// TODO: Deal with this in the CBOR library.
+	if (val < 256) {
+		_caaa(new Argument((uint8_t) val));
+	}
+	else if (val < 65536) {
+		_caaa(new Argument((uint16_t) val));
+	}
+	else {
+		_caaa(new Argument((uint32_t) val));
+	}
+};
+
+void CBORArgListener::on_integer(int val) {
+	// TODO: Deal with this in the CBOR library.
+	int magnitude = (val >= 0) ? val : (val * -1);
+	if (magnitude < 256) {
+		_caaa(new Argument((int8_t) val));
+	}
+	else if (magnitude < 65536) {
+		_caaa(new Argument((int16_t) val));
+	}
+	else {
+		_caaa(new Argument((int32_t) val));
+	}
+};
+
+void CBORArgListener::on_float32(float f) {            _caaa(new Argument(f));               };
+void CBORArgListener::on_tag(unsigned int tag) {       _caaa(new Argument((uint32_t) tag));  };
+void CBORArgListener::on_special(unsigned int code) {  _caaa(new Argument((uint32_t) code)); };
 
 void CBORArgListener::on_array(int size) {
 	_wait_array = (int32_t) size;

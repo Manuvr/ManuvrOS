@@ -578,7 +578,9 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   set_linux_interval_timer();
 
   #if defined(MANUVR_OPENINTERCONNECT)
-  ManuvrOIC* oic = new ManuvrOIC();
+    // Framework? Add it...
+    ManuvrOIC* oic = new ManuvrOIC();
+    _kernel.subscribe((EventReceiver*) oic);
   #endif
   return 0;
 }

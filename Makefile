@@ -53,7 +53,6 @@ LIBS = -L$(OUTPUT_PATH) -lstdc++ -lm
 CFLAGS += $(INCLUDES)
 CFLAGS += -fsingle-precision-constant -Wdouble-promotion
 
-
 ###########################################################################
 # Are we on a 64-bit system? If so, we'll need to specify
 #   that we want a 32-bit build...
@@ -109,7 +108,7 @@ MANUVR_OPTIONS += -DMANUVR_CBOR
 #MANUVR_OPTIONS += -DMANUVR_JSON
 
 # Framework selections, if any are desired.
-MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT
+MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT -DOC_CLIENT
 
 # Since we are building on linux, we will have threading support via
 # pthreads.
@@ -119,7 +118,7 @@ LIBS +=  -lmanuvr $(OUTPUT_PATH)libextras.a -lpthread
 ifeq ($(SECURE),1)
 MANUVR_OPTIONS += -D__MANUVR_MBEDTLS
 # The remaining lines are to prod header files in libraries.
-MANUVR_OPTIONS += -DOC_SECURITY -DOC_CLIENT
+MANUVR_OPTIONS += -DOC_SECURITY
 LIBS += $(OUTPUT_PATH)/libmbedtls.a
 LIBS += $(OUTPUT_PATH)/libmbedx509.a
 LIBS += $(OUTPUT_PATH)/libmbedcrypto.a

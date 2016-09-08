@@ -82,9 +82,10 @@ DTLSFLAGS = -DDTLSV12 -DWITH_SHA256 -DDTLS_CHECK_CONTENTTYPE -DWITH_OCF -I../../
 
 IOTIVITY_SRC  = $(wildcard iotivity/util/*.c) ${CBOR_SRC}
 IOTIVITY_SRC += $(wildcard iotivity/messaging/coap/*.c iotivity/api/*.c)
+IOTIVITY_SRC += iotivity/port/linux/ipadapter.c
 VPATH = iotivity/messaging/coap/:iotivity/util/:iotivity/api/:iotivity/deps/tinycbor/src/:iotivity/include/
 
-IOTIVITY_FLAGS = -DOC_CLIENT
+FLAGS_IOTIVITY = -DOC_CLIENT
 
 
 ###########################################################################
