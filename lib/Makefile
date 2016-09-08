@@ -4,7 +4,7 @@
 ###########################################################################
 
 # Build all libraries
-C_STANDARD   = c99
+C_STANDARD   = gnu99
 CPP_STANDARD = gnu++11
 
 SOURCES_C      =
