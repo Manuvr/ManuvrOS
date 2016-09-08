@@ -112,7 +112,6 @@ const MessageTypeDef message_defs_xport[] = {
 #endif
 
 
-
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
 *  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
@@ -154,7 +153,10 @@ ManuvrXport::ManuvrXport() : EventReceiver(), BufferPipe() {
 */
 ManuvrXport::~ManuvrXport() {
   #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
-    // TODO: Tear down the thread.
+    if (_thread_id > 0) {
+      _thread_id = 0;
+      pthread_cancel(_thread_id);
+    }
     listening(false);
   #endif
 

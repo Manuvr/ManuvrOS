@@ -38,28 +38,56 @@ Our goal here will be to provide all the platform-mandatory hooks required
 /*
 * These are C functions that we must provide to iotivity-constrained
 * for the sake of giving it a platform.
+* Much of this was lifted from iotivity-constrained demo code until
+*   the interface with that package can be formalized. Right now, I am
+*   working by braile.            ---J. Ian Lindsay  2016.09.07
 */
 extern "C" {
 #include "oc_api.h"
 #include "port/oc_signal_main_loop.h"
 
-int oc_storage_config(const char *store);
-long oc_storage_read(const char *store, uint8_t *buf, size_t size);
-long oc_storage_write(const char *store, uint8_t *buf, size_t size);
+static pthread_cond_t cv;
 
-void oc_signal_main_loop(void) {
+
+int oc_storage_config(const char *store) {
+  // We already handle storage in Manuvr.
+  // Do nothing.
 }
 
-/*
- * Initialize the pseudo-random generator.
- *
- */
+long oc_storage_read(const char *store, uint8_t *buf, size_t size) {
+  Argument *res = platform.getConfKey(store);
+  if (nullptr != res) {
+    int temp_len = res->length();
+    if (temp_len > 0) {
+      uint8_t* temp = alloca(temp_len);
+      if (0 == res->getValueAs(0, &temp)) {
+        memcpy(buf, temp, temp_len);
+        return 1;
+      }
+    }
+  }
+  return 0;
+}
+
+
+long oc_storage_write(const char *store, uint8_t *buf, size_t size) {
+  Argument *res = new Argument((void*) buf, len);
+  res->setKey(store);
+  res->reapValue(false);  // TODO: Probably wrong.
+  if (nullptr != res) {
+    return platform.setConfKey(res);
+  }
+  return 0;
+}
+
+
+void oc_signal_main_loop(void) {  pthread_cond_signal(&cv); }
+
 void oc_random_init(unsigned short seed) {
   // Manuvr has already handled the RNG. And we will not re-seed for
   // IoTivity's benefit. A TRNG would likely ignore this value anyhow.
   // Do nothing.
 }
-
 
 /*
  * Calculate a pseudo random number between 0 and 65535.
@@ -75,34 +103,147 @@ void oc_random_destroy() {
   // Do nothing.
 }
 
-
 void oc_network_event_handler_mutex_init(void);
-
 void oc_network_event_handler_mutex_lock(void);
-
 void oc_network_event_handler_mutex_unlock(void);
 
 void oc_send_buffer(oc_message_t * message);
 
 #ifdef OC_SECURITY
-uint16_t oc_connectivity_get_dtls_port(void);
+uint16_t oc_connectivity_get_dtls_port(void) {
+  // TODO: Derive from preprocessor options.
+  return 5684;
+}
 #endif /* OC_SECURITY */
 
-int oc_connectivity_init(void);
+int oc_connectivity_init() {
+  memset(&mcast, 0, sizeof(struct sockaddr_storage));
+  memset(&server, 0, sizeof(struct sockaddr_storage));
 
-void oc_connectivity_shutdown(void);
+  struct sockaddr_in6 *m = (struct sockaddr_in6*)&mcast;
+  m->sin6_family = AF_INET6;
+  m->sin6_port = htons(COAP_PORT_UNSECURED);
+  m->sin6_addr = in6addr_any;
 
-void oc_send_multicast_message(oc_message_t *message);
+  struct sockaddr_in6 *l = (struct sockaddr_in6*)&server;
+  l->sin6_family = AF_INET6;
+  l->sin6_addr = in6addr_any;
+  l->sin6_port = 0;
 
+#ifdef OC_SECURITY
+  memset(&secure, 0, sizeof(struct sockaddr_storage));
+  struct sockaddr_in6 *sm = (struct sockaddr_in6*)&secure;
+  sm->sin6_family = AF_INET6;
+  sm->sin6_port = 0;
+  sm->sin6_addr = in6addr_any;
+#endif /* OC_SECURITY */
 
-void oc_clock_init(void) {
-  // Manuvr deals with this.
-  // Do nothing.
+  server_sock = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+  mcast_sock = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+
+  if(server_sock < 0 || mcast_sock < 0) {
+    LOG("ERROR creating server sockets\n");
+    return -1;
+  }
+
+#ifdef OC_SECURITY
+  secure_sock = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+  if (secure_sock < 0) {
+    LOG("ERROR creating secure socket\n");
+    return -1;
+  }
+#endif /* OC_SECURITY */
+
+  if(bind(server_sock, (struct sockaddr*)&server, sizeof(server)) == -1) {
+    LOG("ERROR binding server socket %d\n", errno);
+    return -1;
+  }
+
+  struct ipv6_mreq mreq;
+  memset(&mreq, 0, sizeof(mreq));
+  if(inet_pton(AF_INET6, ALL_COAP_NODES_V6, (void*)&mreq.ipv6mr_multiaddr)
+     != 1) {
+    LOG("ERROR setting mcast addr\n");
+    return -1;
+  }
+  mreq.ipv6mr_interface = 0;
+  if(setsockopt(mcast_sock, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, &mreq,
+    sizeof(mreq)) == -1) {
+    LOG("ERROR setting mcast join option %d\n", errno);
+    return -1;
+  }
+  int reuse = 1;
+  if(setsockopt(mcast_sock, SOL_SOCKET, SO_REUSEADDR, &reuse,
+    sizeof(reuse)) == -1) {
+    LOG("ERROR setting reuseaddr option %d\n", errno);
+    return -1;
+  }
+  if(bind(mcast_sock, (struct sockaddr*)&mcast, sizeof(mcast)) == -1) {
+    LOG("ERROR binding mcast socket %d\n", errno);
+    return -1;
+  }
+
+#ifdef OC_SECURITY
+  if(setsockopt(secure_sock, SOL_SOCKET, SO_REUSEADDR, &reuse,
+    sizeof(reuse)) == -1) {
+    LOG("ERROR setting reuseaddr option %d\n", errno);
+    return -1;
+  }
+  if(bind(secure_sock, (struct sockaddr*)&secure, sizeof(secure)) == -1) {
+    LOG("ERROR binding smcast socket %d\n", errno);
+    return -1;
+  }
+
+  socklen_t socklen = sizeof(secure);
+  if (getsockname(secure_sock,
+      (struct sockaddr*)&secure,
+      &socklen) == -1) {
+    LOG("ERROR obtaining secure socket information %d\n", errno);
+    return -1;
+  }
+
+  dtls_port = ntohs(sm->sin6_port);
+#endif /* OC_SECURITY */
+
+  if (pthread_create(&event_thread, NULL, &network_event_thread, NULL)
+      != 0) {
+    LOG("ERROR creating network polling thread\n");
+    return -1;
+  }
+
+  LOG("Successfully initialized connectivity\n");
+
+  return 0;
 }
 
-oc_clock_time_t oc_clock_time(void);
-unsigned long oc_clock_seconds(void);
-void oc_clock_wait(oc_clock_time_t t);
+  void oc_connectivity_shutdown() {
+    close(server_sock);
+    close(mcast_sock);
+    #ifdef OC_SECURITY
+      close(secure_sock);
+    #endif /* OC_SECURITY */
+
+    pthread_cancel(event_thread);
+    Kernel::log("oc_connectivity_shutdown\n");
+  }
+
+  void oc_send_multicast_message(oc_message_t *message);
+
+  void oc_clock_init() {
+    // Manuvr deals with this.
+  }
+
+  oc_clock_time_t oc_clock_time(void) {
+    return millis();
+  }
+
+  unsigned long oc_clock_seconds(void) {
+    return (millis() / 1000);
+  }
+
+  void oc_clock_wait(oc_clock_time_t t) {
+    sleep_millis(t);
+  }
 }
 
 
@@ -162,6 +303,12 @@ ManuvrOIC::ManuvrOIC() {
 * Unlike many of the other EventReceivers, THIS one needs to be able to be torn down.
 */
 ManuvrOIC::~ManuvrOIC() {
+  #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+    if (_thread_id > 0) {
+      _thread_id = 0;
+      pthread_cancel(_thread_id);
+    }
+  #endif
 }
 
 
@@ -191,9 +338,9 @@ int8_t ManuvrOIC::bootComplete() {
   oc_handler_t handler = {
     .init = app_init,
     #ifdef OC_SECURITY
-		  .get_credentials = fetch_credentials,
+      .get_credentials = fetch_credentials,
     #endif /* OC_SECURITY */
-		.requests_entry = issue_requests
+    .requests_entry = issue_requests
   };
 
   int init = oc_main_init(&handler);

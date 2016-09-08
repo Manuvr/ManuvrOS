@@ -225,15 +225,17 @@ class ManuvrPlatform {
     #if defined(MANUVR_STORAGE)
       Storage* fetchStorage(const char*);
       int8_t   offerStorage(const char*, Storage*);
+
+
     #endif
 
     /*
     * Systems that want support for dynamic runtime configurations
     *   can aggregate that config in platform.
     */
-    int8_t getConfig(const char* key);
-    int8_t persistConfig();
-    int8_t configLoaded();
+    Argument* getConfKey(const char* key);
+    int8_t setConfKey(Argument*);
+    inline int8_t configLoaded() {   return (nullptr == _config) ? 0 : 1;  };
 
     /* These are safe function proxies for external callers. */
     void setIdleHook(FunctionPointer nu);

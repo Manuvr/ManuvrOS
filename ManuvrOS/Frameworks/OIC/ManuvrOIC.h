@@ -52,6 +52,10 @@ class ManuvrOIC : public EventReceiver {
 
 
   private:
+    #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+      // If we have a concept of threads...
+      unsigned long _thread_id = 0;
+    #endif
     /* This maps URIs to resources. */
     std::map<const char*, listenerFxnPtr> _uri_map;
 

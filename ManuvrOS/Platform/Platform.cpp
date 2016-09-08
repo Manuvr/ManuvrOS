@@ -329,6 +329,26 @@ void ManuvrPlatform::setWakeHook(FunctionPointer nu) {
 /*******************************************************************************
 * Persistent configuration                                                     *
 *******************************************************************************/
+Argument* ManuvrPlatform::getConfKey(const char* key) {
+  return (nullptr == _config) ? nullptr : _config->retrieveArgByKey(key);
+}
+
+
+int8_t ManuvrPlatform::setConfKey(Argument* nu) {
+  if (nullptr == _config) {
+    _config = nu;
+  }
+  else {
+    _config->append(nu);
+  }
+  #if defined(MANUVR_STORAGE)
+  if (nullptr == _storage_device) {
+    if (_storage_device->isMounted()) {
+      // Persist config...
+    }
+  }
+  #endif
+}
 
 
 /*******************************************************************************

@@ -73,7 +73,7 @@ class Argument {
     * We typically want references to typeless swaths of memory be left alone at the end of
     *   the Argument's life cycle. We will specify otherwise when appropriate.
     */
-    Argument(void* val, uint16_t len) : Argument(val, len, BINARY_FM) {};
+    Argument(void* val, size_t len) : Argument(val, len, BINARY_FM) {};
 
     /* These are system service pointers. Do not reap. */
     Argument(EventReceiver* val) : Argument((void*) val, sizeof(val), SYS_EVENTRECEIVER_FM) {};
@@ -114,6 +114,7 @@ class Argument {
     int    argCount();
     int    sumAllLengths();
     Argument* retrieveArgByIdx(int idx);
+    Argument* retrieveArgByKey(char*);
 
     Argument* append(Argument* arg);
     inline Argument* append(uint8_t val) {             return append(new Argument(val));   }

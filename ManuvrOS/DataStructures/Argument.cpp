@@ -514,6 +514,23 @@ Argument* Argument::retrieveArgByIdx(int idx) {
 }
 
 
+/**
+* @return [description]
+*/
+Argument* Argument::retrieveArgByKey(char* _k) {
+  // TODO: Pointer comparison won't work here.
+  if (nullptr != _key) {
+    if (_k == _key) {
+      return this;
+    }
+  }
+  else if (nullptr != _next) {
+    return _next->retrieveArgByKey(_k);
+  }
+  return nullptr;
+}
+
+
 void Argument::valToString(StringBuilder* out) {
   uint8_t* buf     = (uint8_t*) pointer();
   if (_check_flags(MANUVR_ARG_FLAG_DIRECT_VALUE)) {

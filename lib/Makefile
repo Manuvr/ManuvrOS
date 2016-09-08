@@ -93,7 +93,7 @@ IOTIVITY_FLAGS = -DOC_CLIENT
 ifeq ($(SECURE),1)
 	FLAGS_IOTIVITY += -DOC_SECURITY ${DTLSFLAGS}
 	VPATH += ../../security/:../../deps/tinydtls/:../../deps/tinydtls/aes/:../../deps/tinydtls/sha2/:../../deps/tinydtls/ecc/:
-	IOTIVITY_SRC += $(DTLS_SRC)
+	IOTIVITY_SRC += $(DTLS_SRC) $(wildcard iotivity/security/*.c)
 	INCLUDES   += -I./iotivity/deps/tinydtls
 endif
 
