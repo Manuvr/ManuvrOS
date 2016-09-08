@@ -214,7 +214,9 @@ Kernel::Kernel() : EventReceiver() {
 * Destructor. Should probably never be called.
 */
 Kernel::~Kernel() {
-  while (schedules.hasNext()) {  delete schedules.dequeue();   }
+  while (schedules.hasNext()) {
+    reclaim_event(schedules.dequeue());
+  }
 }
 
 
