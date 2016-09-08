@@ -172,10 +172,19 @@ void oc_random_destroy() {
 *
 * Static members and initializers should be located here.
 *******************************************************************************/
+static void set_device_custom_property(void *data) {
+  // TODO: There *has* to be a better way.
+  setPin(14, !readPin(14));
+}
+
 static void app_init() {
   printf("OIC: app_init()\n");
-  oc_init_platform("Apple", NULL, NULL);
-  oc_add_device("/oic/d", "oic.d.phone", "Kishen's IPhone", "1.0", "1.0", NULL, NULL);
+  oc_init_platform(IDENTITY_STRING, NULL, NULL);
+  #if defined(OC_CLIENT)
+    oc_add_device("/oic/d", "oic.d.phone", "ManuvrClient", "1.0", "1.0", NULL, NULL);
+  #elif defined(OC_SERVER)
+    oc_add_device("/oic/d", "oic.d.light", "ManuvrServer", "1.0", "1.0", set_device_custom_property, NULL);
+  #endif
 }
 
 #ifdef OC_SECURITY
@@ -187,6 +196,7 @@ static void fetch_credentials() {
 
 #define MAX_URI_LENGTH  128
 static char temp_uri[MAX_URI_LENGTH];
+static bool light_state = false;
 
 oc_discovery_flags_t discovery(const char *di, const char *uri,
               oc_string_array_t types, oc_interface_mask_t interfaces,
@@ -208,11 +218,73 @@ oc_discovery_flags_t discovery(const char *di, const char *uri,
   return OC_CONTINUE_DISCOVERY;
 }
 
-
-static void issue_requests() {
-  Kernel::log("OIC: issue_requests()\n");
-  oc_do_ip_discovery("oic.r.light", &discovery);
+static void get_light(oc_request_t *request, oc_interface_mask_t interface) {
+  Kernel::log("GET_light:\n");
+  // TODO: Strip and re-write all use of macros to executable code.
+  //       Debugging preprocessor macros is a waste of life.
+  CborEncoder g_encoder, _rmap;
+  CborError g_err;
+  cbor_encoder_create_map(&g_encoder, &_rmap, CborIndefiniteLength);
+  switch (interface) {
+    case OC_IF_BASELINE:
+      oc_process_baseline_interface(request->resource);
+    case OC_IF_RW:
+      cbor_encode_text_string(&_rmap, "state", strlen("state"));
+      cbor_encode_boolean(&_rmap, light_state);
+      break;
+    default:
+      break;
+  }
+  oc_send_response(request, OC_STATUS_OK);
+  Kernel::log(light_state ? "Light: ON\n" : "Light: OFF\n");
 }
+
+static void put_light(oc_request_t *request, oc_interface_mask_t interface) {
+  Kernel::log("PUT_light:\n");
+  bool state = false;
+  oc_rep_t *rep = request->request_payload;
+  while(rep != NULL) {
+    PRINT("key: %s ", oc_string(rep->name));
+    switch(rep->type) {
+      case BOOL:
+        state = rep->value_boolean;
+        break;
+      default:
+        oc_send_response(request, OC_STATUS_BAD_REQUEST);
+        return;
+        break;
+    }
+    rep = rep->next;
+  }
+  light_state = state;
+  Kernel::log(light_state ? "value: ON\n" : "value: OFF\n");
+  setPin(14, light_state);
+  oc_send_response(request, OC_STATUS_CHANGED);
+}
+
+static void register_resources() {
+  oc_resource_t *res = oc_new_resource("/light/1", 1, 0);
+  oc_resource_bind_resource_type(res, "oic.r.light");
+  oc_resource_bind_resource_interface(res, OC_IF_RW);
+  oc_resource_set_default_interface(res, OC_IF_RW);
+
+  #ifdef OC_SECURITY
+    oc_resource_make_secure(res);
+  #endif
+
+  oc_resource_set_discoverable(res);
+  oc_resource_set_periodic_observable(res, 1);
+  oc_resource_set_request_handler(res, OC_GET, get_light);
+  oc_resource_set_request_handler(res, OC_PUT, put_light);
+  oc_add_resource(res);
+}
+
+#if defined(OC_CLIENT)
+  static void issue_requests() {
+    Kernel::log("OIC: issue_requests()\n");
+    oc_do_ip_discovery("oic.r.light", &discovery);
+  }
+  #endif
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -279,7 +351,12 @@ int8_t ManuvrOIC::bootComplete() {
     #ifdef OC_SECURITY
       .get_credentials = fetch_credentials,
     #endif /* OC_SECURITY */
-    .requests_entry = issue_requests
+
+    #if defined(OC_SERVER)
+      .register_resources = register_resources
+    #elif defined(OC_CLIENT)
+      .requests_entry = issue_requests
+    #endif
   };
 
   int init = oc_main_init(&handler);

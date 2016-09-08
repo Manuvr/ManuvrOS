@@ -85,8 +85,6 @@ IOTIVITY_SRC += $(wildcard iotivity/messaging/coap/*.c iotivity/api/*.c)
 IOTIVITY_SRC += iotivity/port/linux/ipadapter.c
 VPATH = iotivity/messaging/coap/:iotivity/util/:iotivity/api/:iotivity/deps/tinycbor/src/:iotivity/include/
 
-FLAGS_IOTIVITY = -DOC_CLIENT
-
 
 ###########################################################################
 # Option conditionals

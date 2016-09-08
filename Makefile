@@ -107,12 +107,17 @@ MANUVR_OPTIONS += -DMANUVR_STORAGE
 MANUVR_OPTIONS += -DMANUVR_CBOR
 #MANUVR_OPTIONS += -DMANUVR_JSON
 
-# Framework selections, if any are desired.
-MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT -DOC_CLIENT
-
 # Since we are building on linux, we will have threading support via
 # pthreads.
 LIBS +=  -lmanuvr $(OUTPUT_PATH)libextras.a -lpthread
+
+
+# Framework selections, if any are desired.
+ifeq ($(OIC_SERVER),1)
+	MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT -DOC_SERVER
+else ifeq ($(OIC_CLIENT),1)
+	MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT -DOC_CLIENT
+endif
 
 # Options for various security features.
 ifeq ($(SECURE),1)
