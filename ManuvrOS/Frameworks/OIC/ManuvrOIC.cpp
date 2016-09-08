@@ -91,13 +91,12 @@ long oc_storage_write(const char *store, uint8_t *buf, size_t size) {
 
 
 void oc_signal_main_loop() {
-  printf("oc_signal_main_loop()\n");
+  Kernel::log("oc_signal_main_loop()\n");
   pthread_cond_signal(&cv);
 }
 
 
 void oc_random_init(unsigned short seed) {
-  printf("oc_random_init()\n");
   // Manuvr has already handled the RNG. And we will not re-seed for
   // IoTivity's benefit. A TRNG would likely ignore this value anyhow.
   // Do nothing.
@@ -114,7 +113,6 @@ unsigned short oc_random_rand() {
 }
 
 void oc_random_destroy() {
-  printf("oc_random_destroy()\n");
   // Manuvr never tears down it's RNG.
   // Do nothing.
 }
@@ -204,11 +202,13 @@ oc_discovery_flags_t discovery(const char *di, const char *uri,
       strncpy(temp_uri, uri, uri_len);
       temp_uri[uri_len] = '\0';
       Kernel::log("OIC: GET request\n\n");
-      return OC_STOP_DISCOVERY;
+      //return OC_STOP_DISCOVERY;
     }
   }
   return OC_CONTINUE_DISCOVERY;
 }
+
+
 static void issue_requests() {
   Kernel::log("OIC: issue_requests()\n");
   oc_do_ip_discovery("oic.r.light", &discovery);
@@ -283,7 +283,7 @@ int8_t ManuvrOIC::bootComplete() {
   };
 
   int init = oc_main_init(&handler);
-  if (init < 0) {
+  if (init <= 0) {
     #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
       if (0 == _thread_id) {
         // If we are in a threaded environment, we will want a thread if there isn't one already.

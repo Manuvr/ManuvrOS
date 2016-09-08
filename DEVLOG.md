@@ -216,3 +216,30 @@ CBOR loop closes tighter. Test is correct, and massively-extended. Simple map
 What a monster weekend....
 
 _---J. Ian Lindsay_
+
+------
+
+### 2016.09.07:
+I finally found the crash on program exit, that was specific to linux. It was
+  in the kernel destructor. This has been a problem for a LONG time (at least
+  8-months), but never surfaced because the kernel was never torn down. After
+  the recent platform abstraction improvements, the linux build exits naturally
+  and therefore invokes the kernel destructor as it leaves scope.
+For technical reasons, microcontroller programs simply halt, or hard-jump to a
+  bootloader, debug, or reset vector.
+
+Much OIC wrapper. Such ugly. But it will make a great toy very soon. If it
+  works out, I'll clean up the bindings to iotivity-constrained, and make
+  it integrate more naturally. Right now, it's lifted demo code.
+
+  Linux, 32-bit: DEBUG=1 SECURE=1
+  1910674   12740   66404 1989818  1e5cba With OIC support via iotivity-constrained.
+
+Lots of redundant crap in that build. Two of everything.
+Two DTLS stacks. Two IP adapters. Two CBOR implementations. Two CoAP PDU parsers/packers.
+EVERYTHING.
+
+It won't stay this way, and ALL of that redundancy is due to the hasty graft of
+  another wide-scope package. Commit. Sleep.
+
+_---J. Ian Lindsay_
