@@ -51,95 +51,77 @@ extern "C" {
 #include "port/oc_connectivity.h"
 
 
-static pthread_cond_t cv;
+  static pthread_cond_t cv;
+  static pthread_mutex_t mutex;
+  struct timespec ts;
 
-
-int oc_storage_config(const char *store) {
-  printf("oc_storage_config(%s)\n", store);
-  // We already handle storage in Manuvr.
-  // Do nothing.
-  return 0;
-}
-
-long oc_storage_read(const char *store, uint8_t *buf, size_t size) {
-  printf("oc_storage_read(%s, %u)\n", store, size);
-  Argument *res = platform.getConfKey(store);
-  if (nullptr != res) {
-    int temp_len = res->length();
-    if (temp_len > 0) {
-      uint8_t* temp = (uint8_t*) alloca(temp_len);
-      if (0 == res->getValueAs((uint8_t)0, &temp)) {
-        memcpy(buf, temp, temp_len);
-        return 1;
-      }
-    }
-  }
-  return 0;
-}
-
-
-long oc_storage_write(const char *store, uint8_t *buf, size_t size) {
-  printf("oc_storage_write(%s, %u)\n", store, size);
-  Argument *res = new Argument((void*) buf, size);
-  res->setKey(store);
-  res->reapValue(false);  // TODO: Probably wrong.
-  if (nullptr != res) {
-    return platform.setConfKey(res);
-  }
-  return 0;
-}
-
-
-void oc_signal_main_loop() {
-  Kernel::log("oc_signal_main_loop()\n");
-  pthread_cond_signal(&cv);
-}
-
-
-void oc_random_init(unsigned short seed) {
-  // Manuvr has already handled the RNG. And we will not re-seed for
-  // IoTivity's benefit. A TRNG would likely ignore this value anyhow.
-  // Do nothing.
-}
-
-/*
- * Calculate a pseudo random number between 0 and 65535.
- *
- * \return A pseudo-random number between 0 and 65535.
- */
-unsigned short oc_random_rand() {
-  // Down-cast our innate random fxn's output...
-  return (uint16_t)randomInt();
-}
-
-void oc_random_destroy() {
-  // Manuvr never tears down it's RNG.
-  // Do nothing.
-}
-
-//void oc_send_buffer(oc_message_t * message);
-
-#ifdef OC_SECURITY
-#endif /* OC_SECURITY */
-
-
-  void oc_clock_init() {
-    // Manuvr deals with this.
+  // These are things that are already handled by Manuvr's platform, and we
+  // should either do nothing, or provide a shunt.
+  void oc_random_destroy() {}
+  void oc_random_init(unsigned short seed) {}
+  unsigned short oc_random_rand() {
+    // Down-cast our innate random fxn's output...
+    // Hopefully it isn't important that the number be pseudorandom
+    //   because we are ignoring the seed value.
+    return (uint16_t) randomInt();
   }
 
-  // super-basic stuff that should be inlined.
+  int oc_storage_config(const char *store) {
+    return 0;   // Return no error.
+  }
+
+  void oc_clock_init() {}
   oc_clock_time_t oc_clock_time(void) {    return millis();           }
   unsigned long oc_clock_seconds(void) {   return (millis() / 1000);  }
   void oc_clock_wait(oc_clock_time_t t) {  sleep_millis(t);           }
 
 
-  pthread_mutex_t mutex;
-  struct timespec ts;
+  // Now we start to get into territory where we take non-trivial steps
+  //   to either wrap iotivities threading-assumption, or fill in gaps
+  //   that it doesn't address.
+  void oc_signal_main_loop() {
+    Kernel::log("oc_signal_main_loop()\n");
+    #if defined(__MANUVR_LINUX)
+      pthread_cond_signal(&cv);
+    #else
+      #error No support for unthreadedness yet.
+    #endif
+  }
+
+
+  long oc_storage_read(const char *store, uint8_t *buf, size_t size) {
+    printf("oc_storage_read(%s, %u)\n", store, size);
+    Argument *res = platform.getConfKey(store);
+    if (nullptr != res) {
+      int temp_len = res->length();
+      if (temp_len > 0) {
+        uint8_t* temp = (uint8_t*) alloca(temp_len);
+        if (0 == res->getValueAs((uint8_t)0, &temp)) {
+          memcpy(buf, temp, temp_len);
+          return 1;
+        }
+      }
+    }
+    return 0;
+  }
+
+
+  long oc_storage_write(const char *store, uint8_t *buf, size_t size) {
+    printf("oc_storage_write(%s, %u)\n", store, size);
+    Argument *res = new Argument((void*) buf, size);
+    res->setKey(store);
+    res->reapValue(false);  // TODO: Probably wrong.
+    if (nullptr != res) {
+      return platform.setConfKey(res);
+    }
+    return 0;
+  }
+
 
   static void* main_OIC_loop(void* args) {
     printf("main_OIC_loop()\n");
     while (!platform.nominalState()) sleep_millis(80);  // ...Rush
-    printf("main_OIC_loop() finds nominal state. Commencing...\n");
+    Kernel::log("main_OIC_loop() finds nominal state. Commencing...\n");
 
     int next_event;
 
@@ -172,19 +154,24 @@ void oc_random_destroy() {
 *
 * Static members and initializers should be located here.
 *******************************************************************************/
+
+ManuvrOIC* ManuvrOIC::INSTANCE = nullptr;
+
+
 static void set_device_custom_property(void *data) {
   // TODO: There *has* to be a better way.
   setPin(14, !readPin(14));
 }
 
-static void app_init() {
-  printf("OIC: app_init()\n");
+void ManuvrOIC::app_init_hook() {
+  Kernel::log("OIC: app_init()\n");
   oc_init_platform(IDENTITY_STRING, NULL, NULL);
   #if defined(OC_CLIENT)
     oc_add_device("/oic/d", "oic.d.phone", "ManuvrClient", "1.0", "1.0", NULL, NULL);
   #elif defined(OC_SERVER)
     oc_add_device("/oic/d", "oic.d.light", "ManuvrServer", "1.0", "1.0", set_device_custom_property, NULL);
   #endif
+  if (nullptr != INSTANCE) INSTANCE->frameworkReady(true);
 }
 
 #ifdef OC_SECURITY
@@ -194,8 +181,7 @@ static void fetch_credentials() {
 }
 #endif
 
-#define MAX_URI_LENGTH  128
-static char temp_uri[MAX_URI_LENGTH];
+static char temp_uri[OIC_MAX_URI_LENGTH];
 static bool light_state = false;
 
 oc_discovery_flags_t discovery(const char *di, const char *uri,
@@ -203,7 +189,7 @@ oc_discovery_flags_t discovery(const char *di, const char *uri,
               oc_server_handle_t* server) {
   unsigned int i;
   int uri_len = strlen(uri);
-  uri_len = (uri_len >= MAX_URI_LENGTH)?MAX_URI_LENGTH-1:uri_len;
+  uri_len = (uri_len >= OIC_MAX_URI_LENGTH)?OIC_MAX_URI_LENGTH-1:uri_len;
   printf("oc_discovery_flags_t(%s, %s)\n", di, uri);
 
   for (i = 0; i < oc_string_array_get_allocated_size(types); i++) {
@@ -212,11 +198,11 @@ oc_discovery_flags_t discovery(const char *di, const char *uri,
       strncpy(temp_uri, uri, uri_len);
       temp_uri[uri_len] = '\0';
       Kernel::log("OIC: GET request\n\n");
-      //return OC_STOP_DISCOVERY;
     }
   }
-  return OC_CONTINUE_DISCOVERY;
+  return ManuvrOIC::INSTANCE->isDiscovering() ? OC_CONTINUE_DISCOVERY : OC_STOP_DISCOVERY;
 }
+
 
 static void get_light(oc_request_t *request, oc_interface_mask_t interface) {
   Kernel::log("GET_light:\n");
@@ -262,6 +248,7 @@ static void put_light(oc_request_t *request, oc_interface_mask_t interface) {
   oc_send_response(request, OC_STATUS_CHANGED);
 }
 
+#if defined(OC_SERVER)
 static void register_resources() {
   oc_resource_t *res = oc_new_resource("/light/1", 1, 0);
   oc_resource_bind_resource_type(res, "oic.r.light");
@@ -278,13 +265,15 @@ static void register_resources() {
   oc_resource_set_request_handler(res, OC_PUT, put_light);
   oc_add_resource(res);
 }
+#endif
 
-#if defined(OC_CLIENT)
-  static void issue_requests() {
-    Kernel::log("OIC: issue_requests()\n");
-    oc_do_ip_discovery("oic.r.light", &discovery);
-  }
+void ManuvrOIC::issue_requests_hook() {
+  Kernel::log("OIC: issue_requests()\n");
+  #if defined(OC_CLIENT)
+  oc_do_ip_discovery("oic.r.light", &discovery);
   #endif
+}
+
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -300,8 +289,19 @@ static void register_resources() {
 * @param   BufferPipe* All sessions must have one (and only one) transport.
 */
 ManuvrOIC::ManuvrOIC() {
+  INSTANCE = this;
   // NOTE: This is lower-cased due-to its usage in URIs.
-  setReceiverName("oic");
+  setReceiverName("OIC");
+  uint8_t _default_flags = 0;
+
+  #if defined(OC_CLIENT)
+    _default_flags |= OIC_FLAG_SUPPORT_CLIENT;
+  #endif
+
+  #if defined(OC_SERVER)
+    _default_flags |= OIC_FLAG_SUPPORT_SERVER;
+  #endif
+  _er_set_flag(_default_flags, true);
 
   // We will have these, at minimum.
   _uri_map["/oic/p"]   = NULL;
@@ -321,6 +321,41 @@ ManuvrOIC::~ManuvrOIC() {
     }
   #endif
 }
+
+
+/*******************************************************************************
+* iotivity-constrained wrapper.
+*******************************************************************************/
+
+/**
+* Make this device (presumably a server) discoverable or not.
+*
+* @param  Discoverable?.
+* @return 0 on success, -1 on failure.
+*/
+int8_t ManuvrOIC::makeDiscoverable(bool en) {
+  if (frameworkReady()) {
+    #if defined(OC_SERVER)
+    #endif
+  }
+  return -1;
+}
+
+
+/**
+* Make this device (presumably a server) discoverable or not.
+*
+* @param  Discoverable?.
+* @return 0 on success, -1 on failure.
+*/
+int8_t ManuvrOIC::discoverOthers(bool en) {
+  if (frameworkReady()) {
+    #if defined(OC_CLIENT)
+    #endif
+  }
+  return -1;
+}
+
 
 
 
@@ -347,7 +382,7 @@ ManuvrOIC::~ManuvrOIC() {
 int8_t ManuvrOIC::bootComplete() {
   EventReceiver::bootComplete();
   oc_handler_t handler = {
-    .init = app_init,
+    .init = app_init_hook,
     #ifdef OC_SECURITY
       .get_credentials = fetch_credentials,
     #endif /* OC_SECURITY */
@@ -355,7 +390,7 @@ int8_t ManuvrOIC::bootComplete() {
     #if defined(OC_SERVER)
       .register_resources = register_resources
     #elif defined(OC_CLIENT)
-      .requests_entry = issue_requests
+      .requests_entry = issue_requests_hook
     #endif
   };
 
@@ -424,20 +459,40 @@ int8_t ManuvrOIC::notify(ManuvrRunnable *active_event) {
 */
 void ManuvrOIC::printDebug(StringBuilder *output) {
   EventReceiver::printDebug(output);
+  output->concatf("-- IoTivity status:     %s\n", (frameworkReady() ? "ready" : "stalled"));
+  output->concatf("-- Discoverable:        %s\n", (isDiscoverable() ? "yes" : "no"));
+  output->concatf("-- Discovering:         %s\n", (isDiscovering() ? "yes" : "no"));
+
+  #if defined(OC_CLIENT)
+    output->concatf("-- Client support:\n");
+  #endif
+
+  #if defined(OC_SERVER)
+    output->concatf("-- Server support:\n");
+  #endif
 }
 
 
 #if defined(__MANUVR_CONSOLE_SUPPORT)
 void ManuvrOIC::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
+  char c    = *(str);
 
-  switch (*(str)) {
+  switch (c) {
+    case 'D':   // Turn discovery on and off.
+    case 'd':
+      #if defined(OC_SERVER)
+        local_log.concatf("makeDiscoverable(%d) returns %s\n", ('D' == c ? 1:0), makeDiscoverable('D' == c));
+      #elif defined(OC_CLIENT)
+        local_log.concatf("discoverOthers(%d) returns %s\n", ('D' == c ? 1:0), discoverOthers('D' == c));
+      #endif
+      break;
     default:
       EventReceiver::procDirectDebugInstruction(input);
       break;
   }
 
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
 }
 #endif  // __MANUVR_CONSOLE_SUPPORT
 #endif  // __MANUVR_LINUX

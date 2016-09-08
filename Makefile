@@ -189,9 +189,10 @@ libs: builddir
 clean:
 	$(MAKE) clean -C ManuvrOS/
 	rm -f *.o *.su *~ testbench $(FIRMWARE_NAME)
-	rm -rf $(OUTPUT_PATH)
 
 fullclean: clean
+	rm -rf $(OUTPUT_PATH)
+	export SECURE=1
 	$(MAKE) clean -C lib/
 	rm -rf doc/doxygen
 
