@@ -22,7 +22,7 @@ StandardIO is the transport driver for wrapping POSIX-style STDIN/STDOUT/STDERR.
 */
 
 
-#if defined(__MANUVR_LINUX) && defined(MANUVR_STDIO)
+#if defined(__MANUVR_LINUX)
 
 #include "StandardIO.h"
 #include <XenoSession/XenoSession.h>
@@ -286,4 +286,4 @@ int8_t StandardIO::notify(ManuvrRunnable *active_event) {
   return return_value;
 }
 
-#endif  // __MANUVR_LINUX && MANUVR_STDIO
+#endif  // __MANUVR_LINUX

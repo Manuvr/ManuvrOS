@@ -93,15 +93,19 @@ extern "C" {
     printf("oc_storage_read(%s, %u)\n", store, size);
     Argument *res = platform.getConfKey(store);
     if (nullptr != res) {
+      printf("oc_storage_read() ALIVE 2\n");
       int temp_len = res->length();
       if (temp_len > 0) {
+        printf("oc_storage_read() ALIVE 3\n");
         uint8_t* temp = (uint8_t*) alloca(temp_len);
         if (0 == res->getValueAs((uint8_t)0, &temp)) {
+          printf("oc_storage_read() ALIVE 4\n");
           memcpy(buf, temp, temp_len);
-          return 1;
+          return temp_len;
         }
       }
     }
+    printf("oc_storage_read() returns 0\n");
     return 0;
   }
 
@@ -350,8 +354,15 @@ int8_t ManuvrOIC::makeDiscoverable(bool en) {
 */
 int8_t ManuvrOIC::discoverOthers(bool en) {
   if (frameworkReady()) {
-    #if defined(OC_CLIENT)
-    #endif
+    if (en ^ isDiscovering()) {
+      #if defined(OC_CLIENT)
+        isDiscovering(en);
+        if (en) {
+          oc_do_ip_discovery("oic.r.light", &discovery);
+        }
+        return 0;
+      #endif
+    }
   }
   return -1;
 }
@@ -395,6 +406,7 @@ int8_t ManuvrOIC::bootComplete() {
   };
 
   int init = oc_main_init(&handler);
+  printf("OIC: bootComplete()\n");
   if (init <= 0) {
     #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
       if (0 == _thread_id) {
@@ -482,9 +494,9 @@ void ManuvrOIC::procDirectDebugInstruction(StringBuilder *input) {
     case 'D':   // Turn discovery on and off.
     case 'd':
       #if defined(OC_SERVER)
-        local_log.concatf("makeDiscoverable(%d) returns %s\n", ('D' == c ? 1:0), makeDiscoverable('D' == c));
+        local_log.concatf("makeDiscoverable(%d) returns %d\n", ('D' == c ? 1:0), makeDiscoverable('D' == c));
       #elif defined(OC_CLIENT)
-        local_log.concatf("discoverOthers(%d) returns %s\n", ('D' == c ? 1:0), discoverOthers('D' == c));
+        local_log.concatf("discoverOthers(%d) returns %d\n", ('D' == c ? 1:0), discoverOthers('D' == c));
       #endif
       break;
     default:

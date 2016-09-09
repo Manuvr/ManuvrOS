@@ -24,8 +24,9 @@ MANUVR_OPTIONS     =
 SHELL          = /bin/sh
 WHERE_I_AM     = $(shell pwd)
 
-export CXX     = $(shell which g++)
 export CC      = $(shell which gcc)
+export CXX     = $(shell which g++)
+export AR      = $(shell which ar)
 export SZ      = $(shell which size)
 export MAKE    = $(shell which make)
 
@@ -47,7 +48,7 @@ INCLUDES   += -I$(WHERE_I_AM)/lib/iotivity/include
 # Libraries to link
 # We should be gradually phasing out C++ standard library on linux builds.
 # TODO: Advance this goal.
-LIBS = -L$(OUTPUT_PATH) -lstdc++ -lm
+LIBS = -L$(OUTPUT_PATH) -L$(WHERE_I_AM)/lib -lstdc++ -lm
 
 # Wrap the include paths into the flags...
 CFLAGS += $(INCLUDES)
@@ -109,7 +110,7 @@ MANUVR_OPTIONS += -DMANUVR_CBOR
 
 # Since we are building on linux, we will have threading support via
 # pthreads.
-LIBS +=  -lmanuvr $(OUTPUT_PATH)libextras.a -lpthread
+LIBS +=  -lmanuvr -lextras -lpthread
 
 
 # Framework selections, if any are desired.
@@ -152,10 +153,6 @@ MANUVR_OPTIONS += -D__MANUVR_EVENT_PROFILER
 
 ###########################################################################
 # Rules for building the firmware follow...
-#
-# 'make raspi' will build a sample firmware for the original Raspberry Pi.
-#    The idea is to be able to quickly iterate on a design idea with the
-#    aid of valgrind and gdb.
 ###########################################################################
 # Merge our choices and export them to the downstream Makefiles...
 CFLAGS += $(MANUVR_OPTIONS) $(OPTIMIZATION)
@@ -169,7 +166,7 @@ export CPP_FLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
 
 
 all: libs
-	$(CXX) -Wl,--gc-sections -static -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(CXX) -Wl,--gc-sections -static -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 	$(SZ) $(FIRMWARE_NAME)
 
 tests: libs
