@@ -66,9 +66,9 @@ extern "C" {
     return (uint16_t) randomInt();
   }
 
-  int oc_storage_config(const char *store) {
-    return 0;   // Return no error.
-  }
+//  int oc_storage_config(const char *store) {
+//    return 0;   // Return no error.
+//  }
 
   void oc_clock_init() {}
   oc_clock_time_t oc_clock_time(void) {    return millis();           }
@@ -89,37 +89,37 @@ extern "C" {
   }
 
 
-  long oc_storage_read(const char *store, uint8_t *buf, size_t size) {
-    printf("oc_storage_read(%s, %u)\n", store, size);
-    Argument *res = platform.getConfKey(store);
-    if (nullptr != res) {
-      printf("oc_storage_read() ALIVE 2\n");
-      int temp_len = res->length();
-      if (temp_len > 0) {
-        printf("oc_storage_read() ALIVE 3\n");
-        uint8_t* temp = (uint8_t*) alloca(temp_len);
-        if (0 == res->getValueAs((uint8_t)0, &temp)) {
-          printf("oc_storage_read() ALIVE 4\n");
-          memcpy(buf, temp, temp_len);
-          return temp_len;
-        }
-      }
-    }
-    printf("oc_storage_read() returns 0\n");
-    return 0;
-  }
-
-
-  long oc_storage_write(const char *store, uint8_t *buf, size_t size) {
-    printf("oc_storage_write(%s, %u)\n", store, size);
-    Argument *res = new Argument((void*) buf, size);
-    res->setKey(store);
-    res->reapValue(false);  // TODO: Probably wrong.
-    if (nullptr != res) {
-      return platform.setConfKey(res);
-    }
-    return 0;
-  }
+//  long oc_storage_read(const char *store, uint8_t *buf, size_t size) {
+//    printf("oc_storage_read(%s, %u)\n", store, size);
+//    Argument *res = platform.getConfKey(store);
+//    if (nullptr != res) {
+//      printf("oc_storage_read() ALIVE 2\n");
+//      int temp_len = res->length();
+//      if (temp_len > 0) {
+//        printf("oc_storage_read() ALIVE 3\n");
+//        uint8_t* temp = (uint8_t*) alloca(temp_len);
+//        if (0 == res->getValueAs((uint8_t)0, &temp)) {
+//          printf("oc_storage_read() ALIVE 4\n");
+//          memcpy(buf, temp, temp_len);
+//          return temp_len;
+//        }
+//      }
+//    }
+//    printf("oc_storage_read() returns 0\n");
+//    return 0;
+//  }
+//
+//
+//  long oc_storage_write(const char *store, uint8_t *buf, size_t size) {
+//    printf("oc_storage_write(%s, %u)\n", store, size);
+//    Argument *res = new Argument((void*) buf, size);
+//    res->setKey(store);
+//    res->reapValue(false);  // TODO: Probably wrong.
+//    if (nullptr != res) {
+//      return platform.setConfKey(res);
+//    }
+//    return 0;
+//  }
 
 
   static void* main_OIC_loop(void* args) {
@@ -161,26 +161,25 @@ extern "C" {
 
 ManuvrOIC* ManuvrOIC::INSTANCE = nullptr;
 
-
+extern "C" {
 static void set_device_custom_property(void *data) {
   // TODO: There *has* to be a better way.
   setPin(14, !readPin(14));
 }
 
-void ManuvrOIC::app_init_hook() {
+void app_init_hook() {
   Kernel::log("OIC: app_init()\n");
   oc_init_platform(IDENTITY_STRING, NULL, NULL);
   #if defined(OC_CLIENT)
-    oc_add_device("/oic/d", "oic.d.phone", "ManuvrClient", "1.0", "1.0", NULL, NULL);
+    oc_add_device("/oic/d", "oic.d.phone", "Client", "1.0", "1.0", NULL, NULL);
   #elif defined(OC_SERVER)
-    oc_add_device("/oic/d", "oic.d.light", "ManuvrServer", "1.0", "1.0", set_device_custom_property, NULL);
+    oc_add_device("/oic/d", "oic.d.light", "Light", "1.0", "1.0", set_device_custom_property, NULL);
   #endif
-  if (nullptr != INSTANCE) INSTANCE->frameworkReady(true);
+  if (nullptr != ManuvrOIC::INSTANCE) ManuvrOIC::INSTANCE->frameworkReady(true);
 }
 
-#ifdef OC_SECURITY
+#if defined(OC_SECURITY)
 static void fetch_credentials() {
-  printf("OIC: fetch_credentials()\n");
   oc_storage_config("./creds");
 }
 #endif
@@ -278,6 +277,8 @@ void ManuvrOIC::issue_requests_hook() {
   #endif
 }
 
+}  // extern "C"
+
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -368,8 +369,6 @@ int8_t ManuvrOIC::discoverOthers(bool en) {
 }
 
 
-
-
 /****************************************************************************************************
 *  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
@@ -392,18 +391,20 @@ int8_t ManuvrOIC::discoverOthers(bool en) {
 */
 int8_t ManuvrOIC::bootComplete() {
   EventReceiver::bootComplete();
-  oc_handler_t handler = {
-    .init = app_init_hook,
-    #ifdef OC_SECURITY
-      .get_credentials = fetch_credentials,
-    #endif /* OC_SECURITY */
 
-    #if defined(OC_SERVER)
-      .register_resources = register_resources
-    #elif defined(OC_CLIENT)
-      .requests_entry = issue_requests_hook
-    #endif
-  };
+  oc_handler_t handler;
+  handler.init = app_init_hook;
+  #if defined(OC_SECURITY)
+  handler.get_credentials = fetch_credentials;
+  #endif /* OC_SECURITY */
+
+  #if defined(OC_SERVER)
+    handler.register_resources = register_resources;
+  #endif
+
+  #if defined(OC_CLIENT)
+    handler.requests_entry = issue_requests_hook;
+  #endif
 
   int init = oc_main_init(&handler);
   printf("OIC: bootComplete()\n");

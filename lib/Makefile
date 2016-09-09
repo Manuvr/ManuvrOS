@@ -105,8 +105,6 @@ SOURCES_C  += $(SOURCES_MQTT_C)
 SOURCES_C  += $(IOTIVITY_SRC)
 #SOURCES_C  += $(SOURCES_JSON)
 
-LIBS_TO_BUILD += mbedtls
-
 LOCAL_C_FLAGS   = -nostdlib $(CFLAGS) $(FLAGS_LIBMQTT) $(FLAGS_IOTIVITY)
 LOCAL_CXX_FLAGS = -nostdlib $(CPP_FLAGS)
 
@@ -129,10 +127,10 @@ $(LIBNAME): externals $(OBJS)
 
 
 externals:
-	$(MAKE) -C $(LIBS_TO_BUILD)
-	#$(MAKE) -C telehash-c
+	$(MAKE) lib -C mbedtls/
+
 
 clean:
 	rm -f $(OBJS)
 	rm -f $(OUTPUT_PATH)/$(LIBNAME)
-	$(MAKE) clean -C mbedtls
+	$(MAKE) clean -C mbedtls/

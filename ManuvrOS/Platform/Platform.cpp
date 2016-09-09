@@ -348,6 +348,7 @@ int8_t ManuvrPlatform::setConfKey(Argument* nu) {
     }
   }
   #endif
+  return 0;
 }
 
 

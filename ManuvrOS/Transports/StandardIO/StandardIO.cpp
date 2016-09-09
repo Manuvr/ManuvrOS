@@ -39,6 +39,8 @@ StandardIO is the transport driver for wrapping POSIX-style STDIN/STDOUT/STDERR.
 extern void* xport_read_handler(void* active_xport);
 
 
+extern char* program_name;  // TODO: Eliminate.
+
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
@@ -116,7 +118,7 @@ int8_t StandardIO::toCounterparty(StringBuilder* buf, int8_t mm) {
     }
 
     // TODO: This prompt ought to be in the console session.
-    printf("\n%c[36mManuvr> %c[39m", 0x1B, 0x1B);
+    printf("\n%c[36m%s> %c[39m", 0x1B, program_name, 0x1B);
     fflush(stdout);
     return MEM_MGMT_RESPONSIBLE_BEARER;
   }

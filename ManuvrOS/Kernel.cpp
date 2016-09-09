@@ -206,7 +206,7 @@ Kernel::Kernel() : EventReceiver() {
   #else
     profiler(false);         // Turn off the profiler.
   #endif
-  subscribe(this);           // We subscribe ourselves to events.
+  subscribe(this, 200);      // We subscribe ourselves to events.
   setVerbosity((int8_t) DEFAULT_CLASS_VERBOSITY);
 }
 

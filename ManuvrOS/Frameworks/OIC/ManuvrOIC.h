@@ -65,18 +65,18 @@ class ManuvrOIC : public EventReceiver {
     inline bool isDiscoverable() {  return _er_flag(OIC_FLAG_DISCOVERABLE);   };
     inline bool isDiscovering() {   return _er_flag(OIC_FLAG_DISCOVERING);    };
     inline bool frameworkReady() {  return _er_flag(OIC_FLAG_IOTIVITY_READY); };
+    inline void frameworkReady(bool nu) {  _er_set_flag(OIC_FLAG_IOTIVITY_READY, nu);  };
 
 
     static ManuvrOIC* INSTANCE;
 
-    static void app_init_hook();
+    //static void app_init_hook();
     static void issue_requests_hook();
 
 
   protected:
     int8_t bootComplete();
 
-    inline void frameworkReady(bool nu) {  _er_set_flag(OIC_FLAG_IOTIVITY_READY, nu);  };
     inline void isDiscoverable(bool nu) {  _er_set_flag(OIC_FLAG_DISCOVERABLE, nu);  };
     inline void isDiscovering(bool nu) {   _er_set_flag(OIC_FLAG_DISCOVERING, nu);   };
 
