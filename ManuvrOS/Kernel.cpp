@@ -75,6 +75,9 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_LEGEND_SEMANTIC      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_SEMANTIC"      , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
   #endif
 
+  #if defined(MANUVR_STORAGE)
+  #endif
+
   {  MANUVR_MSG_SESS_ESTABLISHED     , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_ESTABLISHED"     , MSG_ARGS_NONE }, // Session established.
   {  MANUVR_MSG_SESS_HANGUP          , MSG_FLAG_EXPORTABLE,                        "SESS_HANGUP"          , MSG_ARGS_NONE }, // Session hangup.
   {  MANUVR_MSG_SESS_AUTH_CHALLENGE  , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_AUTH_CHALLENGE"  , MSG_ARGS_NONE }, // A code for challenge-response authentication.
@@ -83,6 +86,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
 
 
   {  MANUVR_MSG_SYS_BOOT_COMPLETED   , 0x0000,               "BOOT_COMPLETED"   , MSG_ARGS_NO_ARGS }, // Raised when bootstrap is finished.
+  {  MANUVR_MSG_SYS_CONF_LOAD        , 0x0000,               "CONF_LOAD"        , MSG_ARGS_NO_ARGS }, // Recipients will comb arguments for config and apply it.
 
   {  MANUVR_MSG_SYS_ADVERTISE_SRVC   , 0x0000,               "ADVERTISE_SRVC"       , MSG_ARGS_EVENTRECEIVER }, // A system service might feel the need to advertise it's arrival.
   {  MANUVR_MSG_SYS_RETRACT_SRVC     , 0x0000,               "RETRACT_SRVC"         , MSG_ARGS_EVENTRECEIVER }, // A system service sends this to tell others to stop using it.
@@ -158,6 +162,17 @@ Kernel* Kernel::getInstance() {
   // And that is how the singleton do...
   return (Kernel*) Kernel::INSTANCE;
 }
+
+
+void Kernel::nextTick(BufferPipe* p) {
+  INSTANCE->_pipe_io_pend.insert(p);
+  INSTANCE->_pending_pipes(true);
+}
+
+//void Kernel::nextTick(FxnPointer* p) {
+//  INSTANCE->_pipe_io_pend.insert(p);
+//  INSTANCE->_pending_pipes(true);
+//}
 
 
 
@@ -726,7 +741,7 @@ int8_t Kernel::procIdleFlags() {
     if (nullptr != active_runnable->schedule_callback) {
       // TODO: This is hold-over from the scheduler. Need to modernize it.
       //active_runnable->printDebug(&local_log);
-      ((FunctionPointer) active_runnable->schedule_callback)();   // Call the schedule's service function.
+      ((FxnPointer) active_runnable->schedule_callback)();   // Call the schedule's service function.
       if (_profiler_enabled()) profiler_mark_2 = micros();
       activity_count++;
     }
@@ -871,6 +886,15 @@ int8_t Kernel::procIdleFlags() {
     }
 
     return_value++;   // We just serviced an Event.
+  }
+
+  if (_pending_pipes()) {
+    BufferPipe* _temp_io = _pipe_io_pend.dequeue();
+    while (nullptr != _temp_io) {
+      _temp_io->asyncCallback();
+      _temp_io = _pipe_io_pend.dequeue();
+    }
+    _pending_pipes(false);
   }
 
   total_loops++;
@@ -1250,7 +1274,7 @@ unsigned int Kernel::countActiveSchedules() {
 *  Will automatically set the schedule active, provided the input conditions are met.
 *  Returns the newly-created Runnable on success, or 0 on failure.
 */
-ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FunctionPointer sch_callback) {
+ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FxnPointer sch_callback) {
   ManuvrRunnable* return_value = nullptr;
   if (sch_period > 1) {
     if (nullptr != sch_callback) {

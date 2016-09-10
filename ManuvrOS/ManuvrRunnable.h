@@ -45,7 +45,7 @@ limitations under the License.
     public:
       EventReceiver*  originator;        // This is an optional ref to the class that raised this runnable.
       EventReceiver*  specific_target;   // If the runnable is meant for a single class, put a pointer to it here.
-      FunctionPointer schedule_callback; // Pointers to the schedule service function.
+      FxnPointer schedule_callback; // Pointers to the schedule service function.
 
       int32_t         priority;          // Set the default priority for this Runnable
 
@@ -55,7 +55,7 @@ limitations under the License.
       int16_t  thread_recurs;            // See Note 2.
       // End ScheduleItem
 
-      ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, FunctionPointer sch_callback);
+      ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, FxnPointer sch_callback);
       ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver*  originator);
       ManuvrRunnable(uint16_t msg_code, EventReceiver* originator);
       ManuvrRunnable(uint16_t msg_code);
@@ -89,8 +89,8 @@ limitations under the License.
       /* These are accessors to formerly-public members of ScheduleItem. */
       bool alterScheduleRecurrence(int16_t recurrence);
       bool alterSchedulePeriod(uint32_t nu_period);
-      bool alterSchedule(FunctionPointer sch_callback);
-      bool alterSchedule(uint32_t sch_period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
+      bool alterSchedule(FxnPointer sch_callback);
+      bool alterSchedule(uint32_t sch_period, int16_t recurrence, bool auto_clear, FxnPointer sch_callback);
       bool enableSchedule(bool enable);      // Re-enable a previously-disabled schedule.
       bool removeSchedule();                 // Clears all data relating to the given schedule.
       bool willRunAgain();                   // Returns true if the indicated schedule will fire again.

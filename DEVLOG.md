@@ -243,3 +243,24 @@ It won't stay this way, and ALL of that redundancy is due to the hasty graft of
   another wide-scope package. Commit. Sleep.
 
 _---J. Ian Lindsay_
+
+------
+
+### 2016.09.09:
+
+Alright... I've been putting this off.
+
+##### Today's situation:
+BufferPipes have been thread/mem safe to this point because they are synchronous.
+Although state might mutate in an unsafe manner within the objects that extend
+BufferPipe, the fate of the memory was not at risk of being in-question.
+
+##### The issue is this:
+This causes deeeeep call stacks. Here is a recent callgrind graph. Task was parsing CoAP packets and dumping results to kernel log (StandardIO).
+2016.09.09-callgrind.png
+
+This is _fine_ for a linux build. But will start to cause problems in tight-spaces.
+
+So....
+I now have to implement some simple next_tick() style functionality to cause an
+automatic synchronicity-break for transfers that desire it.

@@ -24,7 +24,6 @@ This class represents our type-abstraction layer. It is the means by which
 
 
 #include "Argument.h"
-#include <string.h>
 
 #include <DataStructures/PriorityQueue.h>
 

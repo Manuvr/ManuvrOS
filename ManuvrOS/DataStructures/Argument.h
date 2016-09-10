@@ -1,6 +1,8 @@
 #ifndef __MANUVR_ARGUMENT_H__
 #define __MANUVR_ARGUMENT_H__
 
+#include <string.h>
+
 #include <EnumeratedTypeCodes.h>
 #include <Types/TypeTranscriber.h>
 

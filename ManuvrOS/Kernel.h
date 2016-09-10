@@ -57,6 +57,8 @@ limitations under the License.
   #define MKERNEL_FLAG_PROFILING     0x01    // Should we spend time profiling this component?
   #define MKERNEL_FLAG_SKIP_DETECT   0x02    // Set in advanceScheduler(), cleared in serviceSchedules().
   #define MKERNEL_FLAG_SKIP_FAILSAFE 0x04    // Too many skips will send us to the bootloader.
+  #define MKERNEL_FLAG_PENDING_PIPE  0x08    // There is Pipe I/O pending.
+
 
 
   #if defined(__MANUVR_CONSOLE_SUPPORT) || defined(__MANUVR_DEBUG)
@@ -96,8 +98,8 @@ limitations under the License.
   */
   class Kernel : public EventReceiver {
     public:
-      Kernel(void);
-      ~Kernel(void);
+      Kernel();
+      ~Kernel();
 
       /*
       * Functions for adding to, removing from, and retrieving modules from the kernel.
@@ -130,12 +132,11 @@ limitations under the License.
        * auto_clear      When recurrence reaches 0, should the schedule be reaped?
        * sch_callback    The service function. Must be a pointer to a (void fxn(void)).
        */
-      ManuvrRunnable* createSchedule(uint32_t period, int16_t recurrence, bool auto_clear, FunctionPointer sch_callback);
+      ManuvrRunnable* createSchedule(uint32_t period, int16_t recurrence, bool auto_clear, FxnPointer sch_callback);
       ManuvrRunnable* createSchedule(uint32_t period, int16_t recurrence, bool auto_clear, EventReceiver*  sch_callback);
       bool removeSchedule(ManuvrRunnable*);  // Clears all data relating to the given schedule.
       bool addSchedule(ManuvrRunnable*);
       void printScheduler(StringBuilder*);
-
 
       /*
       * These are the core functions of the kernel that must be called from outside.
@@ -165,18 +166,19 @@ limitations under the License.
 
 
       /* These functions deal with logging.*/
-      volatile static void log(int severity, const char *str);                             // Pass-through to the logger class, whatever that happens to be.
-      volatile static void log(const char *str);                                           // Pass-through to the logger class, whatever that happens to be.
-      volatile static void log(char *str);                                           // Pass-through to the logger class, whatever that happens to be.
+      volatile static void log(int severity, const char *str);  // Pass-through to the logger class, whatever that happens to be.
+      volatile static void log(const char *str);                // Pass-through to the logger class, whatever that happens to be.
+      volatile static void log(char *str);                      // Pass-through to the logger class, whatever that happens to be.
       volatile static void log(StringBuilder *str);
       static int8_t attachToLogger(BufferPipe*);
       static int8_t detachFromLogger(BufferPipe*);
 
-      static Kernel* getInstance(void);
+      static Kernel* getInstance();
       static int8_t  raiseEvent(uint16_t event_code, EventReceiver* data);
       static int8_t  staticRaiseEvent(ManuvrRunnable* event);
       static bool    abortEvent(ManuvrRunnable* event);
       static int8_t  isrRaiseEvent(ManuvrRunnable* event);
+      static void    nextTick(BufferPipe*);
 
       #if defined (__MANUVR_FREERTOS)
         static uint32_t logger_pid;
@@ -202,6 +204,7 @@ limitations under the License.
       PriorityQueue<ManuvrRunnable*>   exec_queue;    // Runnables that are pending execution.
       PriorityQueue<ManuvrRunnable*>   schedules;     // These are Runnables scheduled to be run.
       PriorityQueue<ManuvrRunnable*>   preallocated;  // This is the listing of pre-allocated Runnables.
+      PriorityQueue<BufferPipe*>       _pipe_io_pend; // Pending BufferPipe transfers that wish to be async.
       PriorityQueue<TaskProfilerData*> event_costs;   // Message code is the priority. Calculates average cost in uS.
 
       PriorityQueue<EventReceiver*>    subscribers;   // Our manifest of EventReceivers we service.
@@ -252,10 +255,12 @@ limitations under the License.
       /*  */
       inline bool should_run_another_event(int8_t loops, uint32_t begin) {     return (max_events_per_loop ? ((int8_t) max_events_per_loop > loops) : ((micros() - begin) < 1200));   };
 
-      inline bool _profiler_enabled() {         return (_er_flag(MKERNEL_FLAG_PROFILING));           };
-      inline void _profiler_enabled(bool nu) {  return (_er_set_flag(MKERNEL_FLAG_PROFILING, nu));   };
-      inline bool _skip_detected() {            return (_er_flag(MKERNEL_FLAG_SKIP_DETECT));         };
-      inline void _skip_detected(bool nu) {     return (_er_set_flag(MKERNEL_FLAG_SKIP_DETECT, nu)); };
+      inline bool _profiler_enabled() {         return (_er_flag(MKERNEL_FLAG_PROFILING));            };
+      inline void _profiler_enabled(bool nu) {  return (_er_set_flag(MKERNEL_FLAG_PROFILING, nu));    };
+      inline bool _skip_detected() {            return (_er_flag(MKERNEL_FLAG_SKIP_DETECT));          };
+      inline void _skip_detected(bool nu) {     return (_er_set_flag(MKERNEL_FLAG_SKIP_DETECT, nu));  };
+      inline bool _pending_pipes() {            return (_er_flag(MKERNEL_FLAG_PENDING_PIPE));         };
+      inline void _pending_pipes(bool nu) {     return (_er_set_flag(MKERNEL_FLAG_PENDING_PIPE, nu)); };
 
       static Kernel*     INSTANCE;
       static PriorityQueue<ManuvrRunnable*> isr_exec_queue;   // Events that have been raised from ISRs.

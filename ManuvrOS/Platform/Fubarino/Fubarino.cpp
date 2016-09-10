@@ -192,7 +192,7 @@ void setPinEvent(uint8_t pin, uint8_t condition, ManuvrRunnable* isr_event) {
 /*
 * Pass the function pointer
 */
-void setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn) {
+void setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn) {
   attachInterrupt(pin, condition, fxn);
 }
 

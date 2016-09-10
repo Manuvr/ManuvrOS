@@ -26,12 +26,26 @@ This file is meant to contain a set of common functions that are typically platf
     * Access a true RNG (if it exists)
 */
 
+#include <Platform/Platform.h>
+#include <Platform/STM32F7/STM32F7.h>
+
+#if defined(MANUVR_STORAGE)
+// No storage support yet.
+// RTC backup ram?
+#endif
+
 #include <unistd.h>
 
 #if defined(ENABLE_USB_VCP)
   #include "tm_stm32_usb_device.h"
   #include "tm_stm32_usb_device_cdc.h"
 #endif
+
+#if defined (__MANUVR_FREERTOS)
+  #include <FreeRTOS_ARM.h>
+#endif
+
+ManuvrPlatform platform;
 
 
 /****************************************************************************************************
@@ -519,7 +533,7 @@ int8_t setPinEvent(uint8_t _pin, uint8_t condition, ManuvrRunnable* isr_event) {
 /*
 * Pass the function pointer
 */
-int8_t setPinFxn(uint8_t _pin, uint8_t condition, FunctionPointer fxn) {
+int8_t setPinFxn(uint8_t _pin, uint8_t condition, FxnPointer fxn) {
   uint16_t pin_idx   = (_pin % 16);
 
   if (0 == __ext_line_bindings[pin_idx].condition) {

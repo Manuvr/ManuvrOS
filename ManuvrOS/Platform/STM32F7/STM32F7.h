@@ -42,7 +42,7 @@ limitations under the License.
 */
 typedef struct __platform_exti_def {
   ManuvrRunnable* event;
-  FunctionPointer fxn;
+  FxnPointer fxn;
   uint8_t         pin;
   uint8_t         condition;
 } PlatformEXTIDef;

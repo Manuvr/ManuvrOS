@@ -42,6 +42,10 @@ SRCS   += Teensy3/Teensy3.cpp
 SRCS   += Teensy3/TeensyStorage.cpp
 endif
 
+ifeq ($(MANUVR_PLATFORM),STM32F7)
+SRCS   += STM32F7/STM32F7.cpp
+#SRCS   += STM32F7/STM32F7Storage.cpp
+endif
 
 all:
 	@echo ''

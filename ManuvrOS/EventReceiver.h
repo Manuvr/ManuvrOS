@@ -106,7 +106,7 @@ Lifecycle:
 
         /**
         *
-        * @return  true if the class has been booted.
+        * @return  1 if action was taken, 0 if not, -1 on error.
         */
         virtual int8_t bootComplete();        // This is called from the base notify().
 

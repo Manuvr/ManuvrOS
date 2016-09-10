@@ -198,7 +198,7 @@ void setPinEvent(uint8_t pin, ManuvrRunnable* isr_event) {
 /*
 * Pass the function pointer
 */
-void setPinFxn(uint8_t pin, FunctionPointer fxn) {
+void setPinFxn(uint8_t pin, FxnPointer fxn) {
 }
 
 

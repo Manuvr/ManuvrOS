@@ -65,9 +65,9 @@ ManuvrRunnable::ManuvrRunnable(uint16_t code) : ManuvrMsg(code) {
 * @param recurrence   How many times should this schedule run?
 * @param sch_period   How often should this schedule run (in milliseconds).
 * @param ac           Should the scheduler autoclear this schedule when it finishes running?
-* @param sch_callback A FunctionPointer to the callback. Useful for some general things.
+* @param sch_callback A FxnPointer to the callback. Useful for some general things.
 */
-ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, FunctionPointer sch_callback) : ManuvrMsg(MANUVR_MSG_DEFERRED_FXN) {
+ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, FxnPointer sch_callback) : ManuvrMsg(MANUVR_MSG_DEFERRED_FXN) {
   __class_initializer();
   threadEnabled(true);
   autoClear(ac);
@@ -86,7 +86,7 @@ ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac,
 * @param recurrence   How many times should this schedule run?
 * @param sch_period   How often should this schedule run (in milliseconds).
 * @param ac           Should the scheduler autoclear this schedule when it finishes running?
-* @param sch_callback A FunctionPointer to the callback. Useful for some general things.
+* @param sch_callback A FxnPointer to the callback. Useful for some general things.
 * @param ev           A pointer to an Event that we will periodically raise.
 */
 ManuvrRunnable::ManuvrRunnable(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver* ori) {
@@ -270,7 +270,7 @@ bool ManuvrRunnable::alterScheduleRecurrence(int16_t recurrence) {
 *
 * Will not set the schedule active, but will clear any pending executions for this schedule, as well as reset the timer for it.
 */
-bool ManuvrRunnable::alterSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FunctionPointer sch_callback) {
+bool ManuvrRunnable::alterSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FxnPointer sch_callback) {
   bool return_value  = false;
   if (sch_period > 1) {
     if (sch_callback != nullptr) {

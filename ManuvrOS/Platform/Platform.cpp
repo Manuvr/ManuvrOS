@@ -33,12 +33,11 @@ This file is meant to contain a set of common functions that are typically platf
 // TODO: I know this is horrid. I'm sick of screwing with the build system today...
 #if defined(__MK20DX256__) | defined(__MK20DX128__)
   // TODO: We still need to do this to avoid bringing in Arduino,
+#elif defined(STM32F7XX) | defined(STM32F746xx)
+#elif defined(__MANUVR_LINUX)
+  ManuvrPlatform platform;
 #elif defined(STM32F4XX)
   #include "./STM32F4/STM32F4.cpp"
-  ManuvrPlatform platform;
-#elif defined(STM32F7XX) | defined(STM32F746xx)
-  #include "./STM32F7/STM32F7.h"
-  #include "./STM32F7/STM32F7.cpp"
   ManuvrPlatform platform;
 #elif defined(ARDUINO)
   #include "./Arduino/Arduino.cpp"
@@ -46,11 +45,9 @@ This file is meant to contain a set of common functions that are typically platf
 #elif defined(__MANUVR_PHOTON)
   #include "./Particle/Photon.cpp"
   ManuvrPlatform platform;
-#elif defined(__MANUVR_LINUX)
-  ManuvrPlatform platform;
 #else
   // Unsupportage.
-  //#include "PlatformUnsupported.cpp"
+  #error Unsupported platform.
 #endif
 
 
@@ -243,7 +240,7 @@ void ManuvrPlatform::_discoverALUParams() {
 */
 int8_t ManuvrPlatform::bootstrap() {
   /* Follow your shadow. */
-  ManuvrRunnable *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
+  ManuvrRunnable* boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
   boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
   Kernel::staticRaiseEvent(boot_completed_ev);
   _set_init_state(MANUVR_INIT_STATE_KERNEL_BOOTING);
@@ -251,7 +248,12 @@ int8_t ManuvrPlatform::bootstrap() {
     // TODO: Safety! Need to be able to diagnose infinte loops.
   }
   #if defined(MANUVR_STORAGE)
-    _load_config();
+    if (0 == _load_config()) {
+      // If the config loaded, broadcast it.
+      ManuvrRunnable* conf_ev = Kernel::returnEvent(MANUVR_MSG_SYS_CONF_LOAD);
+      // ???Necessary???  conf_ev->addArg(_config);
+      Kernel::staticRaiseEvent(conf_ev);
+    }
   #endif
   _set_init_state(MANUVR_INIT_STATE_POST_INIT);
   platformPostInit();
@@ -313,7 +315,7 @@ void ManuvrPlatform::idleHook() {
   if (nullptr != _idle_hook) _idle_hook();
 }
 
-void ManuvrPlatform::setIdleHook(FunctionPointer nu) {
+void ManuvrPlatform::setIdleHook(FxnPointer nu) {
   _idle_hook = nu;
 }
 
@@ -321,7 +323,7 @@ void ManuvrPlatform::wakeHook() {
   if (nullptr != _wake_hook) _wake_hook();
 }
 
-void ManuvrPlatform::setWakeHook(FunctionPointer nu) {
+void ManuvrPlatform::setWakeHook(FxnPointer nu) {
   _wake_hook = nu;
 }
 
@@ -400,8 +402,11 @@ int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn,
 
 int deleteThread(unsigned long* _thread_id) {
   #if defined(__MANUVR_LINUX)
+  return pthread_cancel(*_thread_id);
   #elif defined(__MANUVR_FREERTOS)
+  // TODO: Why didn't this work?
   //vTaskDelete(&_thread_id);
+  return 0;
   #endif
   return -1;
 }

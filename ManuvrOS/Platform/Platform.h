@@ -163,7 +163,7 @@ class Storage;
 //         be both run-time definable AND const.
 typedef struct __platform_gpio_def {
   ManuvrRunnable* event;
-  FunctionPointer fxn;
+  FxnPointer fxn;
   uint8_t         pin;
   uint8_t         flags;
   uint16_t        mode;  // Strictly more than needed. Padding structure...
@@ -239,9 +239,9 @@ class ManuvrPlatform {
     inline int8_t configLoaded() {   return (nullptr == _config) ? 0 : 1;  };
 
     /* These are safe function proxies for external callers. */
-    void setIdleHook(FunctionPointer nu);
+    void setIdleHook(FxnPointer nu);
     void idleHook();
-    void setWakeHook(FunctionPointer nu);
+    void setWakeHook(FxnPointer nu);
     void wakeHook();
 
     /* Writes a platform information string to the provided buffer. */
@@ -300,8 +300,8 @@ class ManuvrPlatform {
 
   private:
     uint32_t        _pflags    = 0;
-    FunctionPointer _idle_hook = nullptr;
-    FunctionPointer _wake_hook = nullptr;
+    FxnPointer _idle_hook = nullptr;
+    FxnPointer _wake_hook = nullptr;
     Argument*       _config    = nullptr;
 
     void _discoverALUParams();
@@ -355,7 +355,7 @@ volatile bool provide_random_int(uint32_t);  // Provides a new random to the poo
 int8_t gpioDefine(uint8_t pin, int mode);
 void   unsetPinIRQ(uint8_t pin);
 int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrRunnable* isr_event);
-int8_t setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn);
+int8_t setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn);
 int8_t setPin(uint8_t pin, bool high);
 int8_t readPin(uint8_t pin);
 int8_t setPinAnalog(uint8_t pin, int);

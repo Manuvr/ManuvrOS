@@ -165,6 +165,8 @@ const char* getTypeCodeString(uint8_t typecode) {
     case VECT_3_FLOAT:          return "VECT_3_FLOAT";
     case VECT_3_INT16:          return "VECT_3_INT16";
     case VECT_3_UINT16:         return "VECT_3_UINT16";
+    case STR_BUILDER_FM:        return "STR_BLDR";
+    case ARGUMENT_PTR_FM:       return "ARGUMENT";
     case BUFFERPIPE_PTR_FM:     return "BUFFER_PIPE";
     case SYS_MANUVR_XPORT_FM:   return "MANUVR_XPORT";
     case SYS_EVENTRECEIVER_FM:  return "EVENTRECEIVER";
@@ -184,8 +186,8 @@ const char* getTypeCodeString(uint8_t typecode) {
     case STR_FM:                return "STR";
     case URL_FM:                return "URL";
     case BINARY_FM:             return "BINARY";
-    case STR_BUILDER_FM:        return "STR_BLDR";
     case JSON_FM:               return "JSON";
+    case CBOR_FM:               return "CBOR";
     default:                    return "<UNSUPPORTED>";
   }
 }
