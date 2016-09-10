@@ -248,7 +248,9 @@ int8_t Argument::getValueAs(uint8_t idx, void* trg_buf) {
 int8_t Argument::getValueAs(const char* k, void* trg_buf) {
   if (nullptr != k) {
     if (nullptr != _key) {
-      if (_key == k) {
+      //if (_key == k) {
+      // TODO: Awful. Hash map? pointer-comparisons?
+      if (0 == strcmp(_key, k)) {
         // If pointer comparison worked, return the value.
         return getValueAs(trg_buf);
       }
@@ -330,8 +332,6 @@ int8_t Argument::getValueAs(void* trg_buf) {
 * Returns 0 (0) on success.
 */
 int8_t Argument::serialize(StringBuilder *out) {
-  if (out == NULL) return -1;
-
   unsigned char *temp_str = (unsigned char *) target_mem;   // Just a general use pointer.
 
   unsigned char *scratchpad = (unsigned char *) alloca(258);  // This is the maximum size for an argument.
@@ -521,22 +521,28 @@ Argument* Argument::retrieveArgByIdx(int idx) {
 }
 
 
-/**
-* @return [description]
+/*
+* Does an Argument in our rank have the given key?
+*
+* Returns nullptr if the answer is 'no'. Otherwise, ptr to the first matching key.
 */
-Argument* Argument::retrieveArgByKey(const char* _k) {
-  // TODO: Pointer comparison won't work here.
-  if (nullptr != _key) {
-    if (_k == _key) {
-      return this;
+Argument* Argument::retrieveArgByKey(const char* k) {
+  if (nullptr != k) {
+    if (nullptr != _key) {
+      //if (_key == k) {
+      // TODO: Awful. Hash map? pointer-comparisons?
+      if (0 == strcmp(_key, k)) {
+        // If pointer comparison worked, we win.
+        return this;
+      }
     }
-  }
-  else if (nullptr != _next) {
-    return _next->retrieveArgByKey(_k);
+
+    if (nullptr != _next) {
+      return _next->retrieveArgByKey(k);
+    }
   }
   return nullptr;
 }
-
 
 
 void Argument::valToString(StringBuilder* out) {

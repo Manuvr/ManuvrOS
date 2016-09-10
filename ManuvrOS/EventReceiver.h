@@ -49,7 +49,7 @@ Lifecycle:
   #define MANUVR_ER_FLAG_EVENT_PENDING      0x10  // Set when the ER has an event waiting for service.
   #define MANUVR_ER_FLAG_HIDDEN_FROM_DISCOV 0x20  // Setting this indicates that the ER should not expose itself to discovery.
   #define MANUVR_ER_FLAG_THREADED           0x40  // This ER is maintaining its own thread.
-  #define MANUVR_ER_FLAG_RESERVED_0         0x80  // Reserved
+  #define MANUVR_ER_FLAG_CONF_DIRTY         0x80  // Our configuration should be persisted.
 
   class Kernel;
   class ManuvrRunnable;
@@ -115,7 +115,14 @@ Lifecycle:
         *
         * @return  true if the class has been booted.
         */
-        inline bool   booted() {         return (0 != (_class_state & MANUVR_ER_FLAG_BOOT_COMPLETE)); };
+        inline bool   booted() {       return (0 != (_class_state & MANUVR_ER_FLAG_BOOT_COMPLETE)); };
+
+        /**
+        * Does this ER's configuration need to be persisted?
+        *
+        * @return  true if the class has been booted.
+        */
+        inline bool   dirtyConf() {    return (0 != (_class_state & MANUVR_ER_FLAG_CONF_DIRTY));    };
 
 
       protected:

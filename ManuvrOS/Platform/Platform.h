@@ -97,6 +97,9 @@ class Storage;
 * 1) RNG init and priming
 * 2) Storage init and default config load.
 * 3) RTC init'd and datetime validity known.
+*
+* Any correspondence with *nix init levels is a co-incidence, but serves
+*   a similar function.
 */
 #define MANUVR_INIT_STATE_UNINITIALIZED   0
 #define MANUVR_INIT_STATE_RESERVED_0      1
@@ -235,7 +238,7 @@ class ManuvrPlatform {
     *   can aggregate that config in platform.
     */
     Argument* getConfKey(const char* key);
-    int8_t setConfKey(Argument*);
+    int8_t setConf(Argument*);
     inline int8_t configLoaded() {   return (nullptr == _config) ? 0 : 1;  };
 
     /* These are safe function proxies for external callers. */

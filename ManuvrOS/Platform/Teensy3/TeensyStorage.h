@@ -28,7 +28,7 @@ Data-persistence layer for Teensy.
 #include <Platform/Storage.h>
 
 #ifndef MANUVR_CBOR
-  // TODO: Fail the build.
+  #error The TeensyStorage class requires MANUVR_CBOR be enabled.
 #endif
 
 class TeensyStorage : public EventReceiver, public Storage {

@@ -44,6 +44,10 @@ This file forms the catch-all for linux platforms that have no support.
 #include <Frameworks/OIC/ManuvrOIC.h>
 #endif
 
+#include <Transports/StandardIO/StandardIO.h>
+#include <XenoSession/Console/ManuvrConsole.h>
+
+
 /****************************************************************************************************
 * The code under this block is special on this platform, and will not be available elsewhere.       *
 ****************************************************************************************************/
@@ -52,6 +56,8 @@ volatile Kernel* __kernel = nullptr;
 struct itimerval _interval              = {0};
 struct sigaction _signal_action_SIGALRM = {0};
 
+char* _binary_name = nullptr;
+static int   _main_pid    = 0;
 
 bool set_linux_interval_timer() {
   _interval.it_value.tv_sec      = 0;
@@ -168,6 +174,45 @@ int initSigHandlers() {
   }
 
   return return_value;
+}
+
+
+
+/*
+* Parse through all the command line arguments and flags.
+* Return an Argument object.
+*/
+Argument* parseFromArgCV(int argc, const char* argv[]) {
+  Argument*   _args    = new Argument(argv[0]);
+  _args->setKey("binary_name");
+  const char* last_key = nullptr;
+  for (int i = 1; i < argc; i++) {
+    if ((strcasestr(argv[i], "--version")) || ((argv[i][0] == '-') && (argv[i][1] == 'v'))) {
+      // Print the version and quit.
+      printf("%s v%s\n\n", argv[0], VERSION_STRING);
+      exit(0);
+    }
+
+    else if (((argv[i][0] == '-') && (argv[i][1] == '-'))) {
+      if (last_key) {
+        _args->append(new Argument((uint8_t) 1))->setKey(last_key);
+      }
+      last_key = (const char*) &argv[i][2];
+    }
+    else {
+      Argument* nu = new Argument(argv[i]);
+      if (last_key) {
+        nu->setKey(last_key);
+        last_key = nullptr;
+      }
+      _args->append(nu);
+    }
+  }
+
+  if (last_key) {
+    _args->append(new Argument((uint8_t) 1))->setKey(last_key);
+  }
+  return _args;
 }
 
 
@@ -348,6 +393,16 @@ int readPinAnalog(uint8_t pin) {
 #if defined(MANUVR_STORAGE)
   // Called during boot to load configuration.
   int8_t ManuvrPlatform::_load_config() {
+    if (nullptr != _storage_device) {
+      if (_storage_device->isMounted()) {
+        uint8_t raw[2048];
+        int len = _storage_device->persistentRead(NULL, raw, 2048, 0);
+        _config = Argument::decodeFromCBOR(raw, len);
+        if (nullptr != _config) {
+          return 0;
+        }
+      }
+    }
     return -1;
   }
 #endif
@@ -537,12 +592,16 @@ int internal_integrity_check(uint8_t* test_buf, int test_len) {
 int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   // TODO: Should we really be setting capabilities this late?
   uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
+  _main_pid = getpid();  // Our PID.
+
+  if (root_config) {
+    // If 'binary_name' is absent, nothing will be done to _binary_name.
+    root_config->getValueAs("binary_name", &_binary_name);
+  }
 
   #if defined(MANUVR_STORAGE)
     default_flags |= MANUVR_PLAT_FLAG_HAS_STORAGE;
-    Argument opts("./manuvr.dat");
-    opts.setKey("filepath");
-    LinuxStorage* sd = new LinuxStorage(&opts);
+    LinuxStorage* sd = new LinuxStorage(root_config);
     _storage_device = (Storage*) sd;
   #endif
   #if defined(__MANUVR_MBEDTLS)
@@ -581,6 +640,15 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
     // Framework? Add it...
     ManuvrOIC* oic = new ManuvrOIC();
     _kernel.subscribe((EventReceiver*) oic);
+  #endif
+
+  #if defined(__MANUVR_CONSOLE_SUPPORT)
+    if (root_config->retrieveArgByKey("console")) {
+      StandardIO* _console_xport = new StandardIO();
+      ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_xport);
+      _kernel.subscribe((EventReceiver*) _console);
+      _kernel.subscribe((EventReceiver*) _console_xport);
+    }
   #endif
   return 0;
 }

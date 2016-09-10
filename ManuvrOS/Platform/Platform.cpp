@@ -332,25 +332,26 @@ void ManuvrPlatform::setWakeHook(FxnPointer nu) {
 * Persistent configuration                                                     *
 *******************************************************************************/
 Argument* ManuvrPlatform::getConfKey(const char* key) {
-  return (nullptr == _config) ? nullptr : _config->retrieveArgByKey(key);
+  return (_config) ? _config->retrieveArgByKey(key) : nullptr;
 }
 
 
-int8_t ManuvrPlatform::setConfKey(Argument* nu) {
-  if (nullptr == _config) {
-    _config = nu;
-  }
-  else {
-    _config->append(nu);
-  }
+int8_t ManuvrPlatform::setConf(Argument* nu) {
   #if defined(MANUVR_STORAGE)
-  if (nullptr == _storage_device) {
+  if ((nu) && (_storage_device)) {
     if (_storage_device->isMounted()) {
       // Persist config...
+      StringBuilder shuttle;
+      if (0 <= Argument::encodeToCBOR(nu, &shuttle)) {
+        // TODO: Now would be a good time to persist any dirty identities.
+        if (0 < _storage_device->persistentWrite(nullptr, shuttle.string(), shuttle.length(), 0)) {
+          return 0;
+        }
+      }
     }
   }
   #endif
-  return 0;
+  return -1;
 }
 
 

@@ -206,6 +206,7 @@ class ManuvrMsg {
     inline int8_t getArgAs(uint8_t idx, ManuvrXport  **trg_buf) {     return getArgAs(idx, (void*) trg_buf);  }
     inline int8_t getArgAs(uint8_t idx, ManuvrRunnable  **trg_buf) {  return getArgAs(idx, (void*) trg_buf);  }
 
+    inline Argument* getArgs() {  return arg;  }
 
     int8_t markArgForReap(int idx, bool reap);
 

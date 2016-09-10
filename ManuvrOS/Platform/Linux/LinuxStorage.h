@@ -66,6 +66,9 @@ class LinuxStorage : public EventReceiver, public Storage {
   private:
     char*          _filename   = nullptr;
     StringBuilder  _disk_buffer;
+
+    int _save_file(StringBuilder* b);
+    int _load_file(StringBuilder* b);
 };
 
 #endif // __MANUVR_LINUX_STORAGE_H__

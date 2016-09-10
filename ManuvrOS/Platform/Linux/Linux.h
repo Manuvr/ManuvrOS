@@ -35,22 +35,23 @@ This file is meant to contain a set of common functions that are
 #include <signal.h>
 #include <sys/time.h>
 
+Argument* parseFromArgCV(int argc, const char* argv[]);
 
-class LinuxPlatform : public ManuvrPlatform {
-  public:
-    virtual int8_t platformPreInit(Argument*);
-    virtual int8_t platformPostInit();
-
-    /* Platform state-reset functions. */
-    virtual void seppuku();           // Simple process termination. Reboots if not implemented.
-    virtual void reboot();
-    virtual void hardwareShutdown();
-    virtual void jumpToBootloader();
-
-    virtual void printDebug(StringBuilder* out);
-
-
-  protected:
-};
+//class LinuxPlatform : public ManuvrPlatform {
+//  public:
+//    virtual int8_t platformPreInit(Argument*);
+//    virtual int8_t platformPostInit();
+//
+//    /* Platform state-reset functions. */
+//    virtual void seppuku();           // Simple process termination. Reboots if not implemented.
+//    virtual void reboot();
+//    virtual void hardwareShutdown();
+//    virtual void jumpToBootloader();
+//
+//    virtual void printDebug(StringBuilder* out);
+//
+//
+//  protected:
+//};
 
 #endif  // __PLATFORM_VANILLA_LINUX_H__

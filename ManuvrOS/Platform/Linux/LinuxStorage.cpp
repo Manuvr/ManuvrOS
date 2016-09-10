@@ -45,47 +45,6 @@ Implemented as a JSON object within a single file. This feature therefore
 * Static members and initializers should be located here.
 *******************************************************************************/
 
-/**
-* Open the file write-only and save the buffer. Clobbering the file's contents.
-*/
-int _save_file(char* nom, StringBuilder* b) {
-  int return_value = -1;  // Fail by default.
-  if (nullptr != nom) {
-    int fd = open(nom, O_CREAT | O_WRONLY | O_EXCL | O_TRUNC, S_IRUSR | S_IWUSR);
-    if (fd >= 0) {
-      int len = b->length();
-      StringBuilder buf(b->string(), len);  // Buffer is now locally-scoped.
-      if (len == write(fd, buf.string(), len)) {
-        return_value = 0;
-      }
-      close(fd);
-    }
-  }
-  return return_value;
-}
-
-
-/**
-* Open the file read-only and fill the buffer.
-*/
-int _load_file(char* nom, StringBuilder* buf) {
-  if (nullptr != nom) {
-    int fd = open(nom, O_RDONLY);
-    if (fd >= 0) {
-      uint8_t* buffer = (uint8_t*) alloca(128);
-      int r_len = read(fd, buffer, 128);
-      while (0 < r_len) {
-        buf->concat(buffer, r_len);
-        r_len = read(fd, buffer, 128);
-      }
-      close(fd);
-      return 0;
-    }
-  }
-  return -1;
-}
-
-
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -101,7 +60,7 @@ LinuxStorage::LinuxStorage(Argument* opts) : EventReceiver(), Storage() {
   setReceiverName("LinuxStorage");
   if (nullptr != opts) {
     char* str = nullptr;
-    if (0 == opts->getValueAs("filepath", &str)) {
+    if (0 == opts->getValueAs("store_path", &str)) {
       // If we have a filename option, we can open it.
       int len = strlen(str) + 1;  // Because: NULL-terminator.
       _filename = (char*) malloc(len);
@@ -109,8 +68,12 @@ LinuxStorage::LinuxStorage(Argument* opts) : EventReceiver(), Storage() {
         *(_filename+i) = *(str+i);
       }
       _pl_set_flag(true, MANUVR_PL_BUSY_READ);
-      if (_load_file(_filename, &_disk_buffer)) {
+      if (0 == _load_file(&_disk_buffer)) {
         _pl_set_flag(true, MANUVR_PL_MEDIUM_MOUNTED | MANUVR_PL_MEDIUM_READABLE);
+      }
+      else {
+        // Attempt to create the file.
+        wipe();
       }
       _pl_set_flag(false, MANUVR_PL_BUSY_READ);
     }
@@ -142,36 +105,103 @@ unsigned long LinuxStorage::freeSpace() {
 }
 
 int8_t LinuxStorage::wipe() {
-  if (nullptr != _filename) {
-    _disk_buffer.clear();
-    _disk_buffer.concat('\0');
-    return _save_file(_filename, &_disk_buffer);
-  }
-  return -1;
+  _disk_buffer.clear();
+  _disk_buffer.concat('\0');
+  return _save_file(&_disk_buffer);
 }
 
 int8_t LinuxStorage::flush() {
   if (nullptr != _filename) {
     if (0 < _disk_buffer.length()) {
-      return _save_file(_filename, &_disk_buffer);
+      return _save_file(&_disk_buffer);
     }
   }
   return 0;
 }
 
-int LinuxStorage::persistentWrite(const char* key, uint8_t* value, unsigned int len, uint16_t ) {
 
-  return 0;
+int LinuxStorage::persistentWrite(const char* key, uint8_t* buf, unsigned int len, uint16_t ) {
+  if (isMounted()) {
+    StringBuilder _disk_buffer_w;
+    _disk_buffer_w.concat(buf, len);
+    return _save_file(&_disk_buffer_w);
+  }
+  return -1;
 }
 
-int LinuxStorage::persistentRead(const char* key, uint8_t* value, unsigned int len, uint16_t) {
-  return 0;
+
+int LinuxStorage::persistentRead(const char* key, uint8_t* buf, unsigned int len, uint16_t) {
+  if (isMounted()) {
+    unsigned int max_l = _disk_buffer.length();
+    if (len <= max_l) {
+      unsigned int r_len = (max_l > len) ? len : max_l;
+      uint8_t* d_buf = _disk_buffer.string();
+      for (unsigned int i = 0; i < r_len; i++) {
+        *(buf+i) = *(d_buf+i);
+      }
+      for (unsigned int i = r_len; i < len; i++) {
+        *(buf+i) = 0;  // Zero the  unused buffer, for safety.
+      }
+      return r_len;
+    }
+  }
+  return -1;
 }
 
 
-int8_t persistentRead(const char*, StringBuilder*) {
-  return 0;
+int LinuxStorage::persistentRead(const char*, StringBuilder* out) {
+  if (isMounted()) {
+    out->concat(&_disk_buffer);
+    return _disk_buffer.length();
+  }
+  return -1;
 }
+
+
+/**
+* Open the file write-only and save the buffer. Clobbering the file's contents.
+*/
+int LinuxStorage::_save_file(StringBuilder* b) {
+  int return_value = -1;  // Fail by default.
+  if (nullptr != _filename) {
+    int fd = open(_filename, O_CREAT | O_WRONLY | O_EXCL | O_TRUNC, S_IRUSR | S_IWUSR);
+    if (fd >= 0) {
+      int len = b->length();
+      StringBuilder buf(b->string(), len);  // Buffer is now locally-scoped.
+      if (len == write(fd, buf.string(), len)) {
+        // Evidence-based conclusion.
+        _pl_set_flag(true, MANUVR_PL_MEDIUM_WRITABLE);
+        return_value = 0;
+      }
+      close(fd);
+    }
+  }
+  return return_value;
+}
+
+
+/**
+* Open the file read-only and fill the buffer.
+*/
+int LinuxStorage::_load_file(StringBuilder* buf) {
+  if (nullptr != _filename) {
+    int fd = open(_filename, O_RDONLY);
+    if (fd >= 0) {
+      uint8_t* buffer = (uint8_t*) alloca(128);
+      int r_len = read(fd, buffer, 128);
+      while (0 < r_len) {
+        buf->concat(buffer, r_len);
+        r_len = read(fd, buffer, 128);
+        // Evidence-based conclusion.
+        _pl_set_flag(true, MANUVR_PL_MEDIUM_READABLE);
+      }
+      close(fd);
+      return 0;
+    }
+  }
+  return -1;
+}
+
 
 
 /****************************************************************************************************
@@ -196,6 +226,9 @@ int8_t persistentRead(const char*, StringBuilder*) {
 */
 int8_t LinuxStorage::bootComplete() {
   EventReceiver::bootComplete();
+  if (!isMounted() && _filename) {
+    wipe();
+  }
   return 1;
 }
 
@@ -269,7 +302,7 @@ void LinuxStorage::procDirectDebugInstruction(StringBuilder *input) {
       break;
 
     case 'l':
-      if (0 == _load_file(_filename, &_disk_buffer)) {
+      if (0 == _load_file(&_disk_buffer)) {
         local_log.concatf("Loaded %u bytes from %s.\n", _disk_buffer.length(), _filename);
       }
       else {
@@ -278,7 +311,7 @@ void LinuxStorage::procDirectDebugInstruction(StringBuilder *input) {
       break;
 
     case 's':
-      if (0 == _save_file(_filename, &_disk_buffer)) {
+      if (0 == _save_file(&_disk_buffer)) {
         local_log.concatf("Saved %s.\n", _filename);
       }
       else {

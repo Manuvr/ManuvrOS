@@ -87,6 +87,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
 
   {  MANUVR_MSG_SYS_BOOT_COMPLETED   , 0x0000,               "BOOT_COMPLETED"   , MSG_ARGS_NO_ARGS }, // Raised when bootstrap is finished.
   {  MANUVR_MSG_SYS_CONF_LOAD        , 0x0000,               "CONF_LOAD"        , MSG_ARGS_NO_ARGS }, // Recipients will comb arguments for config and apply it.
+  {  MANUVR_MSG_SYS_CONF_SAVE        , 0x0000,               "CONF_SAVE"        , MSG_ARGS_NO_ARGS }, // Recipients will attach their persistable data.
 
   {  MANUVR_MSG_SYS_ADVERTISE_SRVC   , 0x0000,               "ADVERTISE_SRVC"       , MSG_ARGS_EVENTRECEIVER }, // A system service might feel the need to advertise it's arrival.
   {  MANUVR_MSG_SYS_RETRACT_SRVC     , 0x0000,               "RETRACT_SRVC"         , MSG_ARGS_EVENTRECEIVER }, // A system service sends this to tell others to stop using it.
@@ -1144,6 +1145,9 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
       if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
       break;
 
+    case MANUVR_MSG_SYS_CONF_SAVE:
+      platform.setConf(event->getArgs());
+      break;
     case MANUVR_MSG_SYS_REBOOT:
       if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
       platform.reboot();
@@ -1215,6 +1219,11 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
         // We may be receiving a message definition message from another party.
         // For now, we've decided to handle this in XenoSession.
       }
+      break;
+
+    case MANUVR_MSG_SYS_CONF_LOAD:
+      break;
+    case MANUVR_MSG_SYS_CONF_SAVE:
       break;
 
     case MANUVR_MSG_SYS_ISSUE_LOG_ITEM:
@@ -1511,6 +1520,13 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       local_log.concatf("Kernel profiling %sabled.\n", ('P' == c) ? "en" : "dis");
       profiler('P' == c);
       break;
+
+    #if defined(MANUVR_STORAGE)
+      case 'S':
+        local_log.concat("Attempting configuration save...\n");
+        Kernel::raiseEvent(MANUVR_MSG_SYS_CONF_SAVE, this);
+        break;
+    #endif // MANUVR_STORAGE
 
     #if defined(__MANUVR_DEBUG)
     case 'f':  // FPU benchmark
