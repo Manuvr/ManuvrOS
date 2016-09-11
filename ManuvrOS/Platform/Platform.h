@@ -387,7 +387,7 @@ int    readPinAnalog(uint8_t pin);
   typedef Teensy3 Platform;
 #elif defined(STM32F7XX) | defined(STM32F746xx)
   #include <Platform/STM32F7/STM32F7.h>
-  typedef STM32F7 Platform;
+  typedef STM32F7Platform Platform;
 #elif defined(STM32F4XX)
   // Not yet converted
 #elif defined(ARDUINO)

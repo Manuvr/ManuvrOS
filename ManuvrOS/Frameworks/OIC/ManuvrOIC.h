@@ -49,6 +49,7 @@ Target is OIC v1.1.
 class ManuvrOIC : public EventReceiver {
   public:
     ManuvrOIC();
+    ManuvrOIC(Argument*);
     virtual ~ManuvrOIC();
 
     /* Overrides from EventReceiver */

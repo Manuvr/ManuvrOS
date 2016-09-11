@@ -289,11 +289,9 @@ void ManuvrOIC::issue_requests_hook() {
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
 /**
-* When a connectable class gets a connection, we get instantiated to handle the protocol...
-*
-* @param   BufferPipe* All sessions must have one (and only one) transport.
+* Vanilla constructor.
 */
-ManuvrOIC::ManuvrOIC() {
+ManuvrOIC::ManuvrOIC() : EventReceiver() {
   INSTANCE = this;
   // NOTE: This is lower-cased due-to its usage in URIs.
   setReceiverName("OIC");
@@ -307,7 +305,15 @@ ManuvrOIC::ManuvrOIC() {
     _default_flags |= OIC_FLAG_SUPPORT_SERVER;
   #endif
   _er_set_flag(_default_flags, true);
+}
 
+
+/**
+* Constructor. Takes arguments.
+*
+* @param   Argument* root_config
+*/
+ManuvrOIC::ManuvrOIC(Argument* root_config) : ManuvrOIC() {
   // We will have these, at minimum.
   _uri_map["/oic/p"]   = NULL;
   _uri_map["/oic/d"]   = NULL;

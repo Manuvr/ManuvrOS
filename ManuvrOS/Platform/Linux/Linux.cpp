@@ -40,10 +40,6 @@ This file forms the catch-all for linux platforms that have no support.
 #include <sys/stat.h>   // Needed for integrity checks.
 #endif
 
-#if defined(MANUVR_OPENINTERCONNECT)
-#include <Frameworks/OIC/ManuvrOIC.h>
-#endif
-
 #include <Transports/StandardIO/StandardIO.h>
 #include <XenoSession/Console/ManuvrConsole.h>
 

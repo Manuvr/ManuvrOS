@@ -45,13 +45,33 @@ This file is meant to contain a set of common functions that are typically platf
   #include <FreeRTOS_ARM.h>
 #endif
 
-ManuvrPlatform platform;
-
 
 /****************************************************************************************************
 * The code under this block is special on this platform, and will not be available elsewhere.       *
 ****************************************************************************************************/
 RTC_HandleTypeDef rtc;
+
+
+/*
+* For the STM32 parts, we will treat pins as being the linear sequence of ports
+*   and pins. This incurs a slight performance hit as we need to shift and divide
+*   each time we call a pin by its 8-bit identifier. But this is the cost of
+*   uniformity across platforms.
+*/
+static GPIO_TypeDef* _port_assoc[] = {
+  GPIOA, GPIOB, GPIOC, GPIOD, GPIOE, GPIOF,
+  GPIOG, GPIOH, GPIOI, GPIOJ, GPIOK
+};
+
+inline GPIO_TypeDef* _associated_port(uint8_t _pin) {
+  return _port_assoc[_pin >> 4];
+};
+inline uint16_t _associated_pin(uint8_t _pin) {
+  return (1 << (_pin % 16));
+};
+
+
+
 
 unsigned long         start_time_micros  = 0;
 
@@ -131,9 +151,9 @@ unsigned long micros(void) {
 
 
 
-/****************************************************************************************************
-* Randomness                                                                                        *
-****************************************************************************************************/
+/*******************************************************************************
+* Randomness                                                                   *
+*******************************************************************************/
 /**
 * Dead-simple interface to the RNG. Despite the fact that it is interrupt-driven, we may resort
 *   to polling if random demand exceeds random supply. So this may block until a random number
@@ -189,10 +209,9 @@ void init_RNG() {
 /****************************************************************************************************
 * Identity and serial number                                                                        *
 ****************************************************************************************************/
-void ManuvrPlatform::printDebug(StringBuilder* output) {
+void STM32F7Platform::printDebug(StringBuilder* output) {
   output->concatf("==< STM32F7 [%s] >=================================\n", getPlatformStateStr(platformState()));
-  printPlatformBasics(output);
-
+  ManuvrPlatform::printDebug(output);
   // TODO: GPIO
 }
 
@@ -222,10 +241,9 @@ int getSerialNumber(uint8_t* buf) {
 }
 
 
-/****************************************************************************************************
-* Time and date                                                                                     *
-****************************************************************************************************/
-
+/*******************************************************************************
+* Time and date                                                                *
+*******************************************************************************/
 /*
 * Setup the realtime clock module.
 * Informed by code here:
@@ -362,10 +380,9 @@ void currentDateTime(StringBuilder* target) {
 
 
 
-/****************************************************************************************************
-* GPIO and change-notice                                                                            *
-****************************************************************************************************/
-
+/*******************************************************************************
+* GPIO and change-notice                                                       *
+*******************************************************************************/
 /*
 *
 */
@@ -627,31 +644,26 @@ int readPinAnalog(uint8_t pin) {
 }
 
 
-/****************************************************************************************************
-* Persistent configuration                                                                          *
-****************************************************************************************************/
+/*******************************************************************************
+* Persistent configuration                                                     *
+*******************************************************************************/
 
-
-
-
-/****************************************************************************************************
-* Interrupt-masking                                                                                 *
-****************************************************************************************************/
-
+/*******************************************************************************
+* Interrupt-masking                                                            *
+*******************************************************************************/
 void globalIRQEnable() {     asm volatile ("cpsid i");    }
 void globalIRQDisable() {    asm volatile ("cpsie i");    }
 
 
-
-/****************************************************************************************************
-* Process control                                                                                   *
-****************************************************************************************************/
+/*******************************************************************************
+* Process control                                                              *
+*******************************************************************************/
 
 /*
 * Terminate this running process, along with any children it may have forked() off.
 * Never returns.
 */
-void ManuvrPlatform::seppuku() {
+void STM32F7Platform::seppuku() {
   // This means "Halt" on a base-metal build.
   globalIRQDisable();
   HAL_RCC_DeInit();               // Switch to HSI, no PLL
@@ -663,7 +675,7 @@ void ManuvrPlatform::seppuku() {
 * Jump to the bootloader.
 * Never returns.
 */
-void ManuvrPlatform::jumpToBootloader() {
+void STM32F7Platform::jumpToBootloader() {
   globalIRQDisable();
   TM_USBD_Stop(TM_USB_FS);    // DeInit() The USB device.
   __set_MSP(0x20001000);      // Set the main stack pointer...
@@ -678,15 +690,15 @@ void ManuvrPlatform::jumpToBootloader() {
 }
 
 
-/****************************************************************************************************
-* Underlying system control.                                                                        *
-****************************************************************************************************/
+/*******************************************************************************
+* Underlying system control.                                                   *
+*******************************************************************************/
 
 /*
 * This means "Halt" on a base-metal build.
 * Never returns.
 */
-void ManuvrPlatform::hardwareShutdown() {
+void STM32F7Platform::hardwareShutdown() {
   globalIRQDisable();
   NVIC_SystemReset();
 }
@@ -695,7 +707,7 @@ void ManuvrPlatform::hardwareShutdown() {
 * Causes immediate reboot.
 * Never returns.
 */
-void ManuvrPlatform::reboot() {
+void STM32F7Platform::reboot() {
   globalIRQDisable();
   __set_MSP(0x20001000);      // Set the main stack pointer...
   HAL_RCC_DeInit();               // Switch to HSI, no PLL
@@ -707,9 +719,9 @@ void ManuvrPlatform::reboot() {
 
 
 
-/****************************************************************************************************
-* Platform initialization.                                                                          *
-****************************************************************************************************/
+/*******************************************************************************
+* Platform initialization.                                                     *
+*******************************************************************************/
 #define  DEFAULT_PLATFORM_FLAGS ( \
               MANUVR_PLAT_FLAG_INNATE_DATETIME | \
               MANUVR_PLAT_FLAG_HAS_IDENTITY)
@@ -718,22 +730,10 @@ void ManuvrPlatform::reboot() {
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
 */
-int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
-  // TODO: Should we really be setting capabilities this late?
-  uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
-
-  #if defined(__MANUVR_MBEDTLS)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
-  #endif
-  #if defined(MANUVR_GPS_PIPE)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
-  #endif
-
-  _alter_flags(true, default_flags);
-  _discoverALUParams();
-
+int8_t STM32F7Platform::platformPreInit(Argument* root_config) {
+  ManuvrPlatform::platformPreInit(root_config);
+  _alter_flags(true, DEFAULT_PLATFORM_FLAGS);
   start_time_micros = micros();
-
   gpioSetup();
   init_RNG();
   initPlatformRTC();
@@ -745,7 +745,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
 * Called before kernel instantiation. So do the minimum required to ensure
 *   internal system sanity.
 */
-int8_t ManuvrPlatform::platformPostInit() {
+int8_t STM32F7Platform::platformPostInit() {
   return 0;
 }
 

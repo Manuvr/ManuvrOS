@@ -234,9 +234,9 @@ int getSerialNumber(uint8_t *buf) {
 
 
 
-/****************************************************************************************************
-* GPIO and change-notice                                                                            *
-****************************************************************************************************/
+/*******************************************************************************
+* GPIO and change-notice                                                       *
+*******************************************************************************/
 /*
 * This fxn should be called once on boot to setup the CPU pins that are not claimed
 *   by other classes. GPIO pins at the command of this-or-that class should be setup

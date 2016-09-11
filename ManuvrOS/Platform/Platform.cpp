@@ -29,6 +29,12 @@ This file is meant to contain a set of common functions that are typically platf
 #include <Platform/Platform.h>
 #include <Kernel.h>
 
+
+#if defined(MANUVR_OPENINTERCONNECT)
+#include <Frameworks/OIC/ManuvrOIC.h>
+#endif
+
+
 Platform platform;
 
 /*******************************************************************************
