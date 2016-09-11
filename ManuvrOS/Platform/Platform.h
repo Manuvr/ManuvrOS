@@ -83,6 +83,7 @@ class Storage;
 #define MANUVR_PLAT_FLAG_BIG_ENDIAN       0x00001000  // Big-endian?
 #define MANUVR_PLAT_FLAG_ALU_WIDTH_MASK   0x00006000  // Bits 13-14: ALU width.
 
+#define MANUVR_PLAT_FLAG_SERIALED         0x02000000  // Do we have a serial number?
 #define MANUVR_PLAT_FLAG_HAS_IDENTITY     0x04000000  // Do we know who we are?
 #define MANUVR_PLAT_FLAG_HAS_LOCATION     0x08000000  // Hardware is locus-aware.
 #define MANUVR_PLAT_FLAG_HAS_CRYPTO       0x10000000  // Platform supports cryptography.
@@ -203,6 +204,8 @@ class ManuvrPlatform {
     virtual void jumpToBootloader();  // For platforms that support it. Reboot if not.
 
     /* Accessors for platform capability discovery. */
+
+    inline bool hasSerialNumber() { return _check_flags(MANUVR_PLAT_FLAG_SERIALED);        };
     inline bool hasLocation() {     return _check_flags(MANUVR_PLAT_FLAG_HAS_LOCATION);    };
     inline bool hasTimeAndDate() {  return _check_flags(MANUVR_PLAT_FLAG_INNATE_DATETIME); };
     inline bool hasStorage() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_STORAGE);     };
@@ -255,7 +258,6 @@ class ManuvrPlatform {
     void printDebug();
 
     /*
-    * TODO: This belongs in "Identity".
     * Identity and serial number.
     * Do be careful exposing this stuff, as any outside knowledge of chip
     *   serial numbers may compromise crypto that directly-relies on them.
@@ -277,7 +279,8 @@ class ManuvrPlatform {
 
   protected:
     Kernel          _kernel;
-    Identity*       _identity  = nullptr;
+    Identity*       _self    = nullptr;
+    Identity*       _others  = nullptr;
     #if defined(MANUVR_STORAGE)
       Storage* _storage_device = nullptr;
     #endif

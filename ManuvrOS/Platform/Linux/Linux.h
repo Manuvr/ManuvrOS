@@ -35,6 +35,7 @@ This file is meant to contain a set of common functions that are
 #include <signal.h>
 #include <sys/time.h>
 
+/* Used to build an Argument chain from parameters passed to main(). */
 Argument* parseFromArgCV(int argc, const char* argv[]);
 
 //class LinuxPlatform : public ManuvrPlatform {

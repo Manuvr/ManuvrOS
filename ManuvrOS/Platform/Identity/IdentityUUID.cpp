@@ -28,14 +28,22 @@ Simple form of identity. Implementable of devices that cannot handle
 
 
 IdentityUUID::IdentityUUID(const char* nom) : Identity(nom, IdentFormat::UUID) {
-  _ident_len = sizeof(UUID);
+  _ident_len += sizeof(UUID);
   uuid_gen(&uuid);
   _ident_set_flag(true, MANUVR_IDENT_FLAG_DIRTY | MANUVR_IDENT_FLAG_ORIG_GEN);
 }
 
 IdentityUUID::IdentityUUID(const char* nom, char* uuid_str) : Identity(nom, IdentFormat::UUID) {
-  _ident_len = sizeof(UUID);
+  _ident_len += sizeof(UUID);
   uuid_from_str(uuid_str, &uuid);
+}
+
+
+IdentityUUID::IdentityUUID(uint8_t* buf, uint16_t len) : Identity((const char*) buf, IdentFormat::UUID) {
+  if (len >= 17) {
+    for (int i = 0; i < 16; i++) *(((uint8_t*)&uuid.id) + i) = *(buf + i + _ident_len);
+  }
+  _ident_len += 16;
 }
 
 
@@ -50,8 +58,12 @@ void IdentityUUID::toString(StringBuilder* output) {
   output->concatf(uuid_str);
 }
 
-
-int IdentityUUID::toBuffer(uint8_t* buf) {
-  for (int i = 0; i < 16; i++) *(buf + i) = *(((uint8_t*)&uuid.id) + i);
+/*
+* Only the persistable particulars of this instance. All the base class and
+*   error-checking are done upstream.
+*/
+int IdentityUUID::toBuffer(uint8_t* buf, uint16_t len) {
+  int offset = Identity::toBuffer(buf, len);
+  memcpy((buf + offset), (uint8_t*)&uuid.id, 16);
   return 16;
 }

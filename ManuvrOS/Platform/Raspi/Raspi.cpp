@@ -572,7 +572,7 @@ int readPinAnalog(uint8_t pin) {
 */
 void ManuvrPlatform::seppuku() {
   #if defined(MANUVR_STORAGE)
-    if (_identity && _identity->isDirty()) {
+    if (_self && _self->isDirty()) {
       // Save the dirty identity.
       // TODO: int8_t persistentWrite(const char*, uint8_t*, int, uint16_t);
     }
@@ -625,6 +625,7 @@ extern char* program_name;// TODO: Yuck
 *******************************************************************************/
 #define  DEFAULT_PLATFORM_FLAGS ( \
               MANUVR_PLAT_FLAG_HAS_THREADS     | \
+              MANUVR_PLAT_FLAG_SERIALED | \
               MANUVR_PLAT_FLAG_HAS_IDENTITY)
 
 
@@ -688,8 +689,8 @@ int8_t ManuvrPlatform::platformPostInit() {
       //int8_t persistentRead(const char*, uint8_t*, int, uint16_t);
     }
   #endif
-  if (nullptr == _identity) {
-    _identity = new IdentityUUID(IDENTITY_STRING);
+  if (nullptr == _self) {
+    _self = new IdentityUUID(IDENTITY_STRING);
   }
   return 0;
 }

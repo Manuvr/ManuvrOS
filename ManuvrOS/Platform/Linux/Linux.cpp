@@ -437,7 +437,7 @@ void globalIRQDisable() {
 */
 void ManuvrPlatform::seppuku() {
   #if defined(MANUVR_STORAGE)
-    if (_identity && _identity->isDirty()) {
+    if (_self && _self->isDirty()) {
       // Save the dirty identity.
       // TODO: int8_t persistentWrite(const char*, uint8_t*, int, uint16_t);
     }

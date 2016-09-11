@@ -122,9 +122,9 @@ const char* ManuvrPlatform::getRTCStateString() {
 // TODO: This is only here to ease the transition into polymorphic platform defs.
 void ManuvrPlatform::printPlatformBasics(StringBuilder* output) {
   output->concatf("-- Ver/Build date:     %s   %s %s\n", VERSION_STRING, __DATE__, __TIME__);
-  if (nullptr != platform._identity) {
-    output->concatf("-- Identity:           %s\t", platform._identity->getHandle());
-    platform._identity->toString(output);
+  if (nullptr != platform._self) {
+    output->concatf("-- Identity:           %s\t", platform._self->getHandle());
+    platform._self->toString(output);
     output->concat("\n");
   }
   output->concatf("-- Identity source:    %s\n", platform._check_flags(MANUVR_PLAT_FLAG_HAS_IDENTITY) ? "Generated at runtime" : "Loaded from storage");
@@ -257,8 +257,8 @@ int8_t ManuvrPlatform::bootstrap() {
   #endif
   _set_init_state(MANUVR_INIT_STATE_POST_INIT);
   platformPostInit();
-  if (nullptr == _identity) {
-    _identity = new IdentityUUID(IDENTITY_STRING);
+  if (nullptr == _self) {
+    _self = new IdentityUUID(IDENTITY_STRING);
   }
   _set_init_state(MANUVR_INIT_STATE_NOMINAL);
   return 0;
@@ -280,31 +280,6 @@ void ManuvrPlatform::printDebug() {
 /*******************************************************************************
 * Identity and serial number                                                   *
 *******************************************************************************/
-/**
-* We sometimes need to know the length of the platform's unique identifier (if any). If this platform
-*   is not serialized, this function will return zero.
-*
-* @return   The length of the serial number on this platform, in terms of bytes.
-*/
-int ManuvrPlatform::platformSerialNumberSize() {
-  if (nullptr != _identity) {
-    return _identity->length();
-  }
-  return 0;
-}
-
-/**
-* Writes the serial number to the indicated buffer.
-*
-* @param    A pointer to the target buffer.
-* @return   The number of bytes written.
-*/
-int ManuvrPlatform::getSerialNumber(uint8_t* buf) {
-  if (nullptr != _identity) {
-    return _identity->toBuffer(buf);
-  }
-  return 0;
-}
 
 
 
@@ -338,6 +313,7 @@ Argument* ManuvrPlatform::getConfKey(const char* key) {
 
 int8_t ManuvrPlatform::setConf(Argument* nu) {
   #if defined(MANUVR_STORAGE)
+  // Persist any open configuration...
   if ((nu) && (_storage_device)) {
     if (_storage_device->isMounted()) {
       // Persist config...

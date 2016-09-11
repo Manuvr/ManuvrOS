@@ -286,8 +286,8 @@ int8_t ManuvrPlatform::platformPreInit() {
 *   internal system sanity.
 */
 int8_t ManuvrPlatform::platformPostInit() {
-  if (nullptr == _identity) {
-    _identity = new IdentityUUID(IDENTITY_STRING);
+  if (nullptr == _self) {
+    _self = new IdentityUUID(IDENTITY_STRING);
   }
   attachCoreTimerService(timerCallbackScheduler);
   globalIRQEnable();

@@ -42,9 +42,6 @@ This is a demonstration program, and was meant to be compiled for a
 */
 #include <Drivers/ManuvrableGPIO/ManuvrableGPIO.h>
 
-#include <Drivers/LightSensor/LightSensor.h>
-#include <Drivers/ADCScanner/ADCScanner.h>
-
 /* Transports... */
 #include <Transports/ManuvrSerial/ManuvrSerial.h>
 #include <Transports/ManuvrSocket/ManuvrUDP.h>
@@ -109,7 +106,6 @@ void kernelDebugDump() {
 * The main function.                                                           *
 *******************************************************************************/
 int main(int argc, const char *argv[]) {
-  int   main_pid     = getpid();  // Our PID.
   Argument* opts = parseFromArgCV(argc, argv);
 
   if (opts) {

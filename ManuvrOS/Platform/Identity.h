@@ -26,7 +26,6 @@ This might be better-viewed as a data structure. Notions of identity should
 #define __MANUVR_IDENTITY_H__
 
 #include <DataStructures/StringBuilder.h>
-#include <DataStructures/uuid.h>
 #include <DataStructures/Argument.h>
 
 #define MANUVR_IDENT_FLAG_DIRTY        0x8000  // This ID will be lost if not persisted.
@@ -63,9 +62,11 @@ This might be better-viewed as a data structure. Notions of identity should
 * When the non-isolated behavior is desired, the program should set BOTH
 *   flags. Certain kinds of identity may not be valid for either, in which
 *   case both flags should be cleared (default condition).
+*
 * TODO: This is covered by an RFC that I forget the name/number for. Dig.
+*         Just code against the enum, and as long as the data is not persisted
+*         everything will transition smoothly.
 */
-
 enum class IdentFormat {
   UNDETERMINED    = 0x00,  // Nothing here.
   SERIAL_NUM      = 0x01,  // Nearly universal.
@@ -103,16 +104,18 @@ class Identity {
 
     /* Provides concise representations... */
     virtual void toString(StringBuilder*) =0;   // For readability.
-    virtual int  toBuffer(uint8_t*)       =0;   // For an algorithm.
+    virtual int  toBuffer(uint8_t*, uint16_t len);   // For storage.
 
     // TODO: int8_t serialize();
     inline int   length() {     return _ident_len;  };
     inline bool  isDirty() {    return _ident_flag(MANUVR_IDENT_FLAG_DIRTY);  };
     inline char* getHandle() {  return (nullptr == _handle ? (char*) "unnamed":_handle);  };
 
+    static Identity* fromBuffer(uint8_t*, int len);   // From storage.
+
 
   protected:
-    uint16_t _ident_len  = 0;        // How many bytes does the identity occupy in storage.
+    uint16_t _ident_len  = 0;  // How many bytes does the identity occupy in storage?
 
     Identity(const char*, IdentFormat);
 
@@ -129,21 +132,7 @@ class Identity {
     IdentFormat format  = IdentFormat::UNDETERMINED;   // What is the nature of this identity?
 };
 
-
-
-class IdentityUUID : public Identity {
-  public:
-    IdentityUUID(const char* nom);
-    IdentityUUID(const char* nom, char* uuid_str);
-    ~IdentityUUID();
-
-    void toString(StringBuilder*);
-    int  toBuffer(uint8_t*);
-
-
-  protected:
-    UUID uuid;
-};
+#include <Platform/Identity/IdentityUUID.h>
 
 
 #if defined (MANUVR_OIC)

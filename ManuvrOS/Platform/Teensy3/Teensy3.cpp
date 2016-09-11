@@ -396,6 +396,7 @@ void ManuvrPlatform::reboot() {
 *******************************************************************************/
 #define  DEFAULT_PLATFORM_FLAGS ( \
               MANUVR_PLAT_FLAG_INNATE_DATETIME | \
+              MANUVR_PLAT_FLAG_SERIALED | \
               MANUVR_PLAT_FLAG_HAS_IDENTITY)
 
 /*
@@ -427,6 +428,9 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   }
   _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
   gpioSetup();
+
+  if (_root_config) {
+  }
 
   #if defined(MANUVR_STORAGE)
     _alter_flags(true, MANUVR_PLAT_FLAG_HAS_STORAGE);
