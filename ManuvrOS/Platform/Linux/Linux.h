@@ -35,24 +35,35 @@ This file is meant to contain a set of common functions that are
 #include <signal.h>
 #include <sys/time.h>
 
+#if defined(MANUVR_STORAGE)
+#include <Platform/Linux/LinuxStorage.h>
+#endif
+
 /* Used to build an Argument chain from parameters passed to main(). */
 Argument* parseFromArgCV(int argc, const char* argv[]);
 
-//class LinuxPlatform : public ManuvrPlatform {
-//  public:
-//    virtual int8_t platformPreInit(Argument*);
-//    virtual int8_t platformPostInit();
-//
-//    /* Platform state-reset functions. */
-//    virtual void seppuku();           // Simple process termination. Reboots if not implemented.
-//    virtual void reboot();
-//    virtual void hardwareShutdown();
-//    virtual void jumpToBootloader();
-//
-//    virtual void printDebug(StringBuilder* out);
-//
-//
-//  protected:
-//};
+
+class LinuxPlatform : public ManuvrPlatform {
+  public:
+    inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
+    virtual int8_t platformPreInit(Argument*);
+    virtual void   printDebug(StringBuilder* out);
+
+    /* Platform state-reset functions. */
+    virtual void seppuku();           // Simple process termination. Reboots if not implemented.
+    virtual void reboot();
+    virtual void hardwareShutdown();
+    virtual void jumpToBootloader();
+
+
+  protected:
+    const char* _board_name = "Generic";
+    virtual int8_t platformPostInit();
+
+    #if defined(MANUVR_STORAGE)
+      // Called during boot to load configuration.
+      int8_t _load_config();
+    #endif
+};
 
 #endif  // __PLATFORM_VANILLA_LINUX_H__

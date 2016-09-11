@@ -198,10 +198,10 @@ class ManuvrPlatform {
     virtual int8_t platformPreInit(Argument*);
 
     /* Platform state-reset functions. */
-    virtual void seppuku();    // Simple process termination. Reboots if not implemented.
-    virtual void reboot();     // Simple reboot. Should be possible on any platform.
-    virtual void hardwareShutdown();  // For platforms that support it. Reboot if not.
-    virtual void jumpToBootloader();  // For platforms that support it. Reboot if not.
+    virtual void seppuku() =0;    // Simple process termination. Reboots if not implemented.
+    virtual void reboot()  =0;    // Simple reboot. Should be possible on any platform.
+    virtual void hardwareShutdown() =0;  // For platforms that support it. Reboot if not.
+    virtual void jumpToBootloader() =0;  // For platforms that support it. Reboot if not.
 
     /* Accessors for platform capability discovery. */
 
@@ -232,8 +232,6 @@ class ManuvrPlatform {
     #if defined(MANUVR_STORAGE)
       Storage* fetchStorage(const char*);
       int8_t   offerStorage(const char*, Storage*);
-
-
     #endif
 
     /*
@@ -249,9 +247,6 @@ class ManuvrPlatform {
     void idleHook();
     void setWakeHook(FxnPointer nu);
     void wakeHook();
-
-    /* Writes a platform information string to the provided buffer. */
-    const char* getRTCStateString();
 
     void printConfig(StringBuilder* out);
     virtual void printDebug(StringBuilder* out);
@@ -271,16 +266,18 @@ class ManuvrPlatform {
     /*
     * Performs string conversions for integer codes. Only useful for logging.
     */
+    const char* getRTCStateString();
+
     static const char* getIRQConditionString(int);
     static const char* getPlatformStateStr(int);
-    static void printPlatformBasics(StringBuilder*);  // TODO: on the copping-block.
 
 
 
   protected:
     Kernel          _kernel;
-    Identity*       _self    = nullptr;
-    Identity*       _others  = nullptr;
+    Argument*       _config    = nullptr;
+    Identity*       _self      = nullptr;
+    Identity*       _identity  = nullptr;
     #if defined(MANUVR_STORAGE)
       Storage* _storage_device = nullptr;
     #endif
@@ -296,11 +293,11 @@ class ManuvrPlatform {
       _pflags = ((_pflags & ~MANUVR_PLAT_FLAG_P_STATE_MASK) | s);
     };
 
-    virtual int8_t platformPostInit();
+    virtual int8_t platformPostInit() =0;
 
     #if defined(MANUVR_STORAGE)
       // Called during boot to load configuration.
-      int8_t _load_config();
+      virtual int8_t _load_config() =0;
     #endif
 
 
@@ -308,7 +305,6 @@ class ManuvrPlatform {
     uint32_t        _pflags    = 0;
     FxnPointer _idle_hook = nullptr;
     FxnPointer _wake_hook = nullptr;
-    Argument*       _config    = nullptr;
 
     void _discoverALUParams();
 };
@@ -379,42 +375,36 @@ int    readPinAnalog(uint8_t pin);
 #include <Platform/Cryptographic.h>
 #include <Platform/Identity.h>
 
-// Conditional inclusion for different threading models...
-#if defined(__MANUVR_LINUX)
-  #include <Platform/Linux/Linux.h>
-#endif
-
 #if defined(MANUVR_STORAGE)
   #include <Platform/Storage.h>
 #endif
 
 
+// TODO: I know this is horrid. but it is in preparation for ultimately-better
+//         resolution of this issue.
+#if defined(__MK20DX256__) | defined(__MK20DX128__)
+  #include <Platform/Teensy3/Teensy3.h>
+  typedef Teensy3 Platform;
+#elif defined(STM32F7XX) | defined(STM32F746xx)
+  #include <Platform/STM32F7/STM32F7.h>
+  typedef STM32F7 Platform;
+#elif defined(STM32F4XX)
+  // Not yet converted
+#elif defined(ARDUINO)
+  // Not yet converted
+#elif defined(__MANUVR_PHOTON)
+  // Not yet converted
+#elif defined(RASPI)
+  #include <Platform/Raspi/Raspi.h>
+  typedef Raspi Platform;
+#elif defined(__MANUVR_LINUX)
+  #include <Platform/Linux/Linux.h>
+  typedef LinuxPlatform Platform;
+#else
+  // Unsupportage.
+  #error Unsupported platform.
+#endif
 
-extern ManuvrPlatform platform;
-//// TODO: I know this is horrid. but it is in preparation for ultimately-better
-////         resolution of this issue.
-//#if defined(__MK20DX256__) | defined(__MK20DX128__)
-//  #include <Platform/Teensy3/Teensy3.h>
-//  extern Teensy3 platform;  // TODO: Awful.
-//#elif defined(STM32F7XX) | defined(STM32F746xx)
-//  #include <Platform/STM32F7/STM32F7.h>
-//  extern STM32F7 platform;  // TODO: Awful.
-//#elif defined(STM32F4XX)
-//  // Not yet converted
-//#elif defined(ARDUINO)
-//  // Not yet converted
-//#elif defined(__MANUVR_PHOTON)
-//  // Not yet converted
-//#elif defined(__MANUVR_LINUX)
-//  #include <Platform/Raspi/Raspi.h>
-//  Raspi platform;
-//#elif defined(__MANUVR_LINUX)
-//  #include <Platform/Linux/Linux.h>
-//  extern LinuxPlatform platform;
-//#else
-//  // Unsupportage.
-//  #error Unsupported platform.
-//#endif
-
+extern Platform platform;
 
 #endif  // __PLATFORM_SUPPORT_H__

@@ -269,9 +269,13 @@ void init_rng() {
 * (_)   (___)`\__,_)`\__)(_)  `\___/'(_)   (_) (_) (_)
 * These are overrides and additions to the platform class.
 *******************************************************************************/
-void ManuvrPlatform::printDebug(StringBuilder* output) {
-  output->concatf("==< Linux [%s] >=================================\n", getPlatformStateStr(platformState()));
-  printPlatformBasics(output);
+void LinuxPlatform::printDebug(StringBuilder* output) {
+  output->concatf(
+    "==< %s Linux [%s] >=============================\n",
+    _board_name,
+    getPlatformStateStr(platformState())
+  );
+  ManuvrPlatform::printDebug(output);
 }
 
 
@@ -333,66 +337,12 @@ unsigned long millis() {
 }
 
 
-/*
-* Not provided elsewhere on a linux platform.
-*/
-unsigned long micros() {
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  return (ts.tv_sec * 1000000L + ts.tv_nsec / 1000L);
-}
-
-
-/*******************************************************************************
-* GPIO and change-notice                                                       *
-*******************************************************************************/
-int8_t gpioDefine(uint8_t pin, int mode) {
-  return 0;
-}
-
-
-void unsetPinIRQ(uint8_t pin) {
-}
-
-
-int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrRunnable* isr_event) {
-  return 0;
-}
-
-
-/*
-* Pass the function pointer
-*/
-int8_t setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn) {
-  return 0;
-}
-
-
-int8_t setPin(uint8_t pin, bool val) {
-  return 0;
-}
-
-
-int8_t readPin(uint8_t pin) {
-  return 0;
-}
-
-
-int8_t setPinAnalog(uint8_t pin, int val) {
-  return 0;
-}
-
-int readPinAnalog(uint8_t pin) {
-  return -1;
-}
-
-
 /*******************************************************************************
 * Persistent configuration                                                     *
 *******************************************************************************/
 #if defined(MANUVR_STORAGE)
   // Called during boot to load configuration.
-  int8_t ManuvrPlatform::_load_config() {
+  int8_t LinuxPlatform::_load_config() {
     if (_storage_device) {
       if (_storage_device->isMounted()) {
         uint8_t raw[2048];
@@ -435,7 +385,7 @@ void globalIRQDisable() {
 /*
 * Terminate this running process, along with any children it may have forked() off.
 */
-void ManuvrPlatform::seppuku() {
+void LinuxPlatform::seppuku() {
   #if defined(MANUVR_STORAGE)
     if (_self && _self->isDirty()) {
       // Save the dirty identity.
@@ -453,7 +403,7 @@ void ManuvrPlatform::seppuku() {
 * On linux, we take this to mean: scheule a program restart with the OS,
 *   and then terminate this one.
 */
-void ManuvrPlatform::jumpToBootloader() {
+void LinuxPlatform::jumpToBootloader() {
   // TODO: Pull binary from a location of firmware's choice.
   // TODO: Install firmware after validation.
   // TODO: Schedule a program restart.
@@ -466,21 +416,19 @@ void ManuvrPlatform::jumpToBootloader() {
 * Underlying system control.                                                   *
 *******************************************************************************/
 
-void ManuvrPlatform::hardwareShutdown() {
+void LinuxPlatform::hardwareShutdown() {
   // TODO: Actually shutdown the system.
   printf("\nhardwareShutdown(): About to exit().\n\n");
   exit(0);
 }
 
 
-void ManuvrPlatform::reboot() {
+void LinuxPlatform::reboot() {
   // TODO: Actually reboot the system.
   printf("\nreboot(): About to exit().\n\n");
   exit(0);
 }
 
-
-extern char* program_name;// TODO: Yuck
 
 #if defined(__MANUVR_MBEDTLS)
 /*
@@ -548,7 +496,7 @@ int internal_integrity_check(uint8_t* test_buf, int test_len) {
     memset(exe_path, 0x00, 512);
     int exe_path_len = readlink("/proc/self/exe", exe_path, 512);
     if (!(exe_path_len > 0)) {
-        printf("%s was unable to read its own path from /proc/self/exe. You may be running it on an unsupported operating system, or be running an old kernel. Please discover the cause and retry. Exiting...\n", program_name);
+        printf("%s was unable to read its own path from /proc/self/exe. You may be running it on an unsupported operating system, or be running an old kernel. Please discover the cause and retry. Exiting...\n", _binary_name);
         return -1;
     }
     printf("This binary's path is %s\n", exe_path);
@@ -560,7 +508,7 @@ int internal_integrity_check(uint8_t* test_buf, int test_len) {
       if ((nullptr != test_buf) && (0 < test_len)) {
         for (int i = 0; i < test_len; i++) {
           if (*(h_buf+i) != *(test_buf+i)) {
-            printf("Hashing %s yields a different value than expected. Exiting...\n", program_name);
+            printf("Hashing %s yields a different value than expected. Exiting...\n", _binary_name);
             return -1;
           }
         }
@@ -581,7 +529,6 @@ int internal_integrity_check(uint8_t* test_buf, int test_len) {
 * Platform initialization.                                                     *
 *******************************************************************************/
 #define  DEFAULT_PLATFORM_FLAGS ( \
-              MANUVR_PLAT_FLAG_HAS_THREADS     | \
               MANUVR_PLAT_FLAG_INNATE_DATETIME | \
               MANUVR_PLAT_FLAG_HAS_IDENTITY)
 
@@ -589,8 +536,8 @@ int internal_integrity_check(uint8_t* test_buf, int test_len) {
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
 */
-int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
-  // TODO: Should we really be setting capabilities this late?
+int8_t LinuxPlatform::platformPreInit(Argument* root_config) {
+  ManuvrPlatform::platformPreInit(root_config);
   uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
   _main_pid = getpid();  // Our PID.
 
@@ -599,16 +546,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
     root_config->getValueAs("binary_name", &_binary_name);
   }
 
-  #if defined(__MANUVR_MBEDTLS)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
-  #endif
-
-  #if defined(MANUVR_GPS_PIPE)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
-  #endif
-
   _alter_flags(true, default_flags);
-  _discoverALUParams();
 
   start_time_micros = micros();
   init_rng();
@@ -622,22 +560,13 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   #if defined(MANUVR_STORAGE)
     LinuxStorage* sd = new LinuxStorage(root_config);
     _storage_device = (Storage*) sd;
-    _alter_flags(true, MANUVR_PLAT_FLAG_HAS_STORAGE);
     _kernel.subscribe((EventReceiver*) sd);
   #endif
 
-  platform.setIdleHook([]{ sleep_millis(20); });
+  initSigHandlers();
+
   #if defined(__MANUVR_MBEDTLS)
   internal_integrity_check(nullptr, 0);
-  #endif
-
-  initSigHandlers();
-  set_linux_interval_timer();
-
-  #if defined(MANUVR_OPENINTERCONNECT)
-    // Framework? Add it...
-    ManuvrOIC* oic = new ManuvrOIC();
-    _kernel.subscribe((EventReceiver*) oic);
   #endif
 
   #if defined(__MANUVR_CONSOLE_SUPPORT)
@@ -648,6 +577,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
       _kernel.subscribe((EventReceiver*) _console_xport);
     }
   #endif
+
   return 0;
 }
 
@@ -656,6 +586,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
 * Called before kernel instantiation. So do the minimum required to ensure
 *   internal system sanity.
 */
-int8_t ManuvrPlatform::platformPostInit() {
+int8_t LinuxPlatform::platformPostInit() {
+  set_linux_interval_timer();
   return 0;
 }

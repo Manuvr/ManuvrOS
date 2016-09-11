@@ -29,27 +29,7 @@ This file is meant to contain a set of common functions that are typically platf
 #include <Platform/Platform.h>
 #include <Kernel.h>
 
-
-// TODO: I know this is horrid. I'm sick of screwing with the build system today...
-#if defined(__MK20DX256__) | defined(__MK20DX128__)
-  // TODO: We still need to do this to avoid bringing in Arduino,
-#elif defined(STM32F7XX) | defined(STM32F746xx)
-#elif defined(__MANUVR_LINUX)
-  ManuvrPlatform platform;
-#elif defined(STM32F4XX)
-  #include "./STM32F4/STM32F4.cpp"
-  ManuvrPlatform platform;
-#elif defined(ARDUINO)
-  #include "./Arduino/Arduino.cpp"
-  ManuvrPlatform platform;
-#elif defined(__MANUVR_PHOTON)
-  #include "./Particle/Photon.cpp"
-  ManuvrPlatform platform;
-#else
-  // Unsupportage.
-  #error Unsupported platform.
-#endif
-
+Platform platform;
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -119,8 +99,53 @@ const char* ManuvrPlatform::getRTCStateString() {
 }
 
 
-// TODO: This is only here to ease the transition into polymorphic platform defs.
-void ManuvrPlatform::printPlatformBasics(StringBuilder* output) {
+/*******************************************************************************
+*  ___   _           _      ___
+* (  _`\(_ )        ( )_  /'___)
+* | |_) )| |    _ _ | ,_)| (__   _    _ __   ___ ___
+* | ,__/'| |  /'_` )| |  | ,__)/'_`\ ( '__)/' _ ` _ `\
+* | |    | | ( (_| || |_ | |  ( (_) )| |   | ( ) ( ) |
+* (_)   (___)`\__,_)`\__)(_)  `\___/'(_)   (_) (_) (_)
+* These are overrides and additions to the platform class.
+*******************************************************************************/
+/**
+* Init that needs to happen prior to kernel bootstrap().
+* This is the final function called by the kernel constructor.
+*/
+int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
+  // TODO: Should we really be setting capabilities this late?
+  uint32_t default_flags = 0;
+
+  #if defined(__MANUVR_MBEDTLS)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
+  #endif
+
+  #if defined(MANUVR_GPS_PIPE)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
+  #endif
+
+  #if defined(MANUVR_STORAGE)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_STORAGE;
+  #endif
+
+  #if defined (__MANUVR_LINUX) || defined (__MANUVR_FREERTOS)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_THREADS;
+    platform.setIdleHook([]{ sleep_millis(20); });
+  #endif
+
+  _alter_flags(true, default_flags);
+  _discoverALUParams();
+
+  #if defined(MANUVR_OPENINTERCONNECT)
+    // Framework? Add it...
+    ManuvrOIC* oic = new ManuvrOIC(root_config);
+    _kernel.subscribe((EventReceiver*) oic);
+  #endif
+  return 0;
+}
+
+
+void ManuvrPlatform::printDebug(StringBuilder* output) {
   output->concatf("-- Ver/Build date:     %s   %s %s\n", VERSION_STRING, __DATE__, __TIME__);
   if (nullptr != platform._self) {
     output->concatf("-- Identity:           %s\t", platform._self->getHandle());
@@ -199,7 +224,6 @@ void ManuvrPlatform::printConfig(StringBuilder* output) {
     _config->printDebug(output);
   }
 }
-
 
 void ManuvrPlatform::_discoverALUParams() {
   // We infer the ALU width by the size of pointers.

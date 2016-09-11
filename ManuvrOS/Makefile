@@ -74,7 +74,6 @@ CPP_SRCS  += Transports/ManuvrSocket/ManuvrSocket.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrTCP.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrUDP.cpp
 CPP_SRCS  += Transports/ManuvrSocket/UDPPipe.cpp
-CPP_SRCS  += Drivers/BusQueue/BusQueue.cpp
 # TODO: Case-off for socket/TCP/Pipe support...
 #CPP_SRCS  += Transports/ManuvrTelehash/ManuvrTelehash.cpp
 
@@ -82,6 +81,7 @@ CPP_SRCS  += Drivers/BusQueue/BusQueue.cpp
 CPP_SRCS  += Frameworks/OIC/ManuvrOIC.cpp
 
 # i2c apparatus...
+CPP_SRCS  += Drivers/BusQueue/BusQueue.cpp
 CPP_SRCS  += Drivers/i2c-adapter/I2CDevice.cpp
 CPP_SRCS  += Drivers/i2c-adapter/i2c-adapter.cpp
 CPP_SRCS  += Drivers/i2c-adapter/I2CDeviceWithRegisters.cpp

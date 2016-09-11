@@ -35,19 +35,13 @@ This file is meant to contain a set of common functions that are
 
 class Raspi : public LinuxPlatform {
   public:
-    virtual int8_t platformPreInit();
-    virtual int8_t platformPostInit();
-
-    /* Platform state-reset functions. */
-    virtual void seppuku();           // Simple process termination. Reboots if not implemented.
-    virtual void reboot();
-    virtual void hardwareShutdown();
-    virtual void jumpToBootloader();
-
+    inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
+    virtual int8_t platformPreInit(Argument*);
     virtual void printDebug(StringBuilder* out);
 
 
   protected:
+    virtual int8_t platformPostInit();
 };
 
 #endif  // __PLATFORM_RASPI_H__

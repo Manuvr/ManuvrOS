@@ -264,3 +264,5 @@ This is _fine_ for a linux build. But will start to cause problems in tight-spac
 So....
 I now have to implement some simple next_tick() style functionality to cause an
 automatic synchronicity-break for transfers that desire it.
+
+Full platform polymorphism achieved.
