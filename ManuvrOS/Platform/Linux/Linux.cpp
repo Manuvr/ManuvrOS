@@ -393,12 +393,12 @@ int readPinAnalog(uint8_t pin) {
 #if defined(MANUVR_STORAGE)
   // Called during boot to load configuration.
   int8_t ManuvrPlatform::_load_config() {
-    if (nullptr != _storage_device) {
+    if (_storage_device) {
       if (_storage_device->isMounted()) {
         uint8_t raw[2048];
         int len = _storage_device->persistentRead(NULL, raw, 2048, 0);
         _config = Argument::decodeFromCBOR(raw, len);
-        if (nullptr != _config) {
+        if (_config) {
           return 0;
         }
       }
@@ -599,11 +599,6 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
     root_config->getValueAs("binary_name", &_binary_name);
   }
 
-  #if defined(MANUVR_STORAGE)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_STORAGE;
-    LinuxStorage* sd = new LinuxStorage(root_config);
-    _storage_device = (Storage*) sd;
-  #endif
   #if defined(__MANUVR_MBEDTLS)
     default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
   #endif
@@ -625,6 +620,9 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   // TODO: Evaluate consequences of choice.
 
   #if defined(MANUVR_STORAGE)
+    LinuxStorage* sd = new LinuxStorage(root_config);
+    _storage_device = (Storage*) sd;
+    _alter_flags(true, MANUVR_PLAT_FLAG_HAS_STORAGE);
     _kernel.subscribe((EventReceiver*) sd);
   #endif
 

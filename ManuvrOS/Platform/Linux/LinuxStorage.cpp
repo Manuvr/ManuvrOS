@@ -67,15 +67,6 @@ LinuxStorage::LinuxStorage(Argument* opts) : EventReceiver(), Storage() {
       for (int i = 0; i < len; i++) {
         *(_filename+i) = *(str+i);
       }
-      _pl_set_flag(true, MANUVR_PL_BUSY_READ);
-      if (0 == _load_file(&_disk_buffer)) {
-        _pl_set_flag(true, MANUVR_PL_MEDIUM_MOUNTED | MANUVR_PL_MEDIUM_READABLE);
-      }
-      else {
-        // Attempt to create the file.
-        wipe();
-      }
-      _pl_set_flag(false, MANUVR_PL_BUSY_READ);
     }
   }
 }
@@ -111,7 +102,7 @@ int8_t LinuxStorage::wipe() {
 }
 
 int8_t LinuxStorage::flush() {
-  if (nullptr != _filename) {
+  if (_filename) {
     if (0 < _disk_buffer.length()) {
       return _save_file(&_disk_buffer);
     }
@@ -122,9 +113,9 @@ int8_t LinuxStorage::flush() {
 
 int LinuxStorage::persistentWrite(const char* key, uint8_t* buf, unsigned int len, uint16_t ) {
   if (isMounted()) {
-    StringBuilder _disk_buffer_w;
-    _disk_buffer_w.concat(buf, len);
-    return _save_file(&_disk_buffer_w);
+    _disk_buffer.clear();
+    _disk_buffer.concat(buf, len);
+    return _save_file(&_disk_buffer);
   }
   return -1;
 }
@@ -133,17 +124,15 @@ int LinuxStorage::persistentWrite(const char* key, uint8_t* buf, unsigned int le
 int LinuxStorage::persistentRead(const char* key, uint8_t* buf, unsigned int len, uint16_t) {
   if (isMounted()) {
     unsigned int max_l = _disk_buffer.length();
-    if (len <= max_l) {
-      unsigned int r_len = (max_l > len) ? len : max_l;
-      uint8_t* d_buf = _disk_buffer.string();
-      for (unsigned int i = 0; i < r_len; i++) {
-        *(buf+i) = *(d_buf+i);
-      }
-      for (unsigned int i = r_len; i < len; i++) {
-        *(buf+i) = 0;  // Zero the  unused buffer, for safety.
-      }
-      return r_len;
+    unsigned int r_len = (max_l > len) ? len : max_l;
+    uint8_t* d_buf = _disk_buffer.string();
+    for (unsigned int i = 0; i < r_len; i++) {
+      *(buf+i) = *(d_buf+i);
     }
+    for (unsigned int i = r_len; i < len; i++) {
+      *(buf+i) = 0;  // Zero the  unused buffer, for safety.
+    }
+    return r_len;
   }
   return -1;
 }
@@ -163,17 +152,18 @@ int LinuxStorage::persistentRead(const char*, StringBuilder* out) {
 */
 int LinuxStorage::_save_file(StringBuilder* b) {
   int return_value = -1;  // Fail by default.
-  if (nullptr != _filename) {
-    int fd = open(_filename, O_CREAT | O_WRONLY | O_EXCL | O_TRUNC, S_IRUSR | S_IWUSR);
+  if (_filename) {
+    int fd = open(_filename, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
     if (fd >= 0) {
+      _pl_set_flag(true, MANUVR_PL_BUSY_WRITE);
       int len = b->length();
       StringBuilder buf(b->string(), len);  // Buffer is now locally-scoped.
-      if (len == write(fd, buf.string(), len)) {
-        // Evidence-based conclusion.
-        _pl_set_flag(true, MANUVR_PL_MEDIUM_WRITABLE);
-        return_value = 0;
+      int q = write(fd, buf.string(), len);
+      if (len == q) {
+        return_value = len;
       }
       close(fd);
+      _pl_set_flag(false, MANUVR_PL_BUSY_WRITE);
     }
   }
   return return_value;
@@ -184,19 +174,22 @@ int LinuxStorage::_save_file(StringBuilder* b) {
 * Open the file read-only and fill the buffer.
 */
 int LinuxStorage::_load_file(StringBuilder* buf) {
-  if (nullptr != _filename) {
+  if (_filename) {
     int fd = open(_filename, O_RDONLY);
     if (fd >= 0) {
-      uint8_t* buffer = (uint8_t*) alloca(128);
-      int r_len = read(fd, buffer, 128);
+      int total_read = 0;
+      _pl_set_flag(true, MANUVR_PL_BUSY_READ);
+      uint8_t* buffer = (uint8_t*) alloca(2048);
+      int r_len = read(fd, buffer, 2048);
       while (0 < r_len) {
         buf->concat(buffer, r_len);
-        r_len = read(fd, buffer, 128);
-        // Evidence-based conclusion.
-        _pl_set_flag(true, MANUVR_PL_MEDIUM_READABLE);
+        total_read += r_len;
+        r_len = read(fd, buffer, 2048);
       }
       close(fd);
-      return 0;
+      _pl_set_flag(false, MANUVR_PL_BUSY_READ);
+      _pl_set_flag(true, MANUVR_PL_MEDIUM_MOUNTED | MANUVR_PL_MEDIUM_READABLE | MANUVR_PL_MEDIUM_WRITABLE);
+      return total_read;
     }
   }
   return -1;
@@ -226,8 +219,12 @@ int LinuxStorage::_load_file(StringBuilder* buf) {
 */
 int8_t LinuxStorage::bootComplete() {
   EventReceiver::bootComplete();
-  if (!isMounted() && _filename) {
+  if (0 <= _load_file(&_disk_buffer)) {
+  }
+  else {
+    // Attempt to create the file.
     wipe();
+    if (0 == wipe()) _load_file(&_disk_buffer);
   }
   return 1;
 }
@@ -298,7 +295,12 @@ void LinuxStorage::procDirectDebugInstruction(StringBuilder *input) {
 
   switch (*(str)) {
     case 'w':
-      local_log.concatf("Wipe of %s %s.\n", _filename, (0 == wipe()) ? "succeeded" : "failed");
+      if (_filename) {
+        local_log.concatf("Wipe of %s %s.\n", _filename, (0 == wipe()) ? "succeeded" : "failed");
+      }
+      else {
+        local_log.concat("Filename not set.\n");
+      }
       break;
 
     case 'l':
@@ -311,13 +313,26 @@ void LinuxStorage::procDirectDebugInstruction(StringBuilder *input) {
       break;
 
     case 's':
-      if (0 == _save_file(&_disk_buffer)) {
-        local_log.concatf("Saved %s.\n", _filename);
-      }
-      else {
-        local_log.concat("Save failed.\n");
+      if (isMounted()) {
+        Argument a(randomInt());
+        a.setKey("random_number");
+        a.append((int8_t) 64)->setKey("number_64");
+        StringBuilder shuttle;
+        if (0 <= Argument::encodeToCBOR(&a, &shuttle)) {
+          if (0 < persistentWrite(nullptr, shuttle.string(), shuttle.length(), 0)) {
+            local_log.concat("Save succeeded.\n");
+          }
+        }
       }
       break;
+
+    #if defined(__MANUVR_DEBUG)
+      case 'B':   // Dump binary representation.
+        local_log.concat("Dump:\n");
+        _disk_buffer.printDebug(&local_log);
+        break;
+    #endif
+
     default:
       EventReceiver::procDirectDebugInstruction(input);
       break;

@@ -2,7 +2,9 @@
 *.gch
 *.o
 *.a
+*.cbor
 
+manuvr
 bptest
 dstest
 gpstest

@@ -23,8 +23,8 @@ Basic machinery of Identity objects.
 
 #include "Identity.h"
 #include <alloca.h>
-
-
+#include <Platform/Identity/IdentityUUID.h>
+#include <stdlib.h>
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -36,9 +36,6 @@ Basic machinery of Identity objects.
 *
 * Static members and initializers should be located here.
 *******************************************************************************/
-
-#include <Platform/Identity/IdentityUUID.h>
-
 
 /**
 * This is an abstract factory function for re-constituting identities from
@@ -84,7 +81,6 @@ Identity* Identity::fromBuffer(uint8_t* buf, int len) {
   }
   return nullptr;
 }
-
 
 
 

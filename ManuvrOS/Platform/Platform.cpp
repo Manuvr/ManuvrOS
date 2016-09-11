@@ -189,14 +189,13 @@ void ManuvrPlatform::printPlatformBasics(StringBuilder* output) {
   #if defined(MANUVR_SUPPORT_OSC)
     output->concat("--\t OSC\n");
   #endif
-  output->concat("--\n");
   platform.printConfig(output);
 }
 
 
 void ManuvrPlatform::printConfig(StringBuilder* output) {
-  if (nullptr != _config) {
-    output->concat("-- Loaded configuration:\n");
+  if (_config) {
+    output->concat("--\n-- Loaded configuration:\n");
     _config->printDebug(output);
   }
 }

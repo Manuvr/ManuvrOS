@@ -313,12 +313,12 @@ int readPinAnalog(uint8_t pin) {
 #if defined(MANUVR_STORAGE)
   // Called during boot to load configuration.
   int8_t ManuvrPlatform::_load_config() {
-    if (nullptr != _storage_device) {
+    if (_storage_device) {
       if (_storage_device->isMounted()) {
         uint8_t raw[2044];
         int len = _storage_device->persistentRead(NULL, raw, 2044, 0);
         _config = Argument::decodeFromCBOR(raw, len);
-        if (nullptr != _config) {
+        if (_config) {
           return 0;
         }
       }
@@ -429,7 +429,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
   gpioSetup();
 
-  if (_root_config) {
+  if (root_config) {
   }
 
   #if defined(MANUVR_STORAGE)
