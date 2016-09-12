@@ -83,6 +83,11 @@ class Argument {
     Argument(ManuvrXport* val)   : Argument((void*) val, sizeof(val), SYS_MANUVR_XPORT_FM)  {};
     Argument(BufferPipe* val)    : Argument((void*) val, sizeof(val), BUFFERPIPE_PTR_FM)    {};
 
+    Argument(FxnPointer* val)     : Argument((void*) val, sizeof(val), SYS_FXN_PTR_FM)        {};
+    Argument(ThreadFxnPtr* val)   : Argument((void*) val, sizeof(val), SYS_THREAD_FXN_PTR_FM) {};
+    Argument(ArgumentFxnPtr* val) : Argument((void*) val, sizeof(val), SYS_ARG_FXN_PTR_FM)    {};
+    Argument(PipeIOCallback* val) : Argument((void*) val, sizeof(val), SYS_PIPE_FXN_PTR_FM)   {};
+
     /*
     * We typically want ManuvrRunnable references to be left alone at the end of
     *   the Argument's life cycle. We will specify otherwise when appropriate.
@@ -151,6 +156,11 @@ class Argument {
     inline Argument* append(EventReceiver *val) {   return _append(new Argument(val));   }
     inline Argument* append(ManuvrXport *val) {     return _append(new Argument(val));   }
     inline Argument* append(ManuvrRunnable *val) {  return _append(new Argument(val));   }
+
+    inline Argument* append(FxnPointer *val) {      return _append(new Argument(val));   }
+    inline Argument* append(ThreadFxnPtr *val) {    return _append(new Argument(val));   }
+    inline Argument* append(ArgumentFxnPtr *val) {  return _append(new Argument(val));   }
+    inline Argument* append(PipeIOCallback *val) {  return _append(new Argument(val));   }
 
 
     // TODO: These will be re-worked to support alternate type-systems.

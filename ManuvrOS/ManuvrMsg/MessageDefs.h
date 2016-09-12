@@ -120,6 +120,13 @@ limitations under the License.
   // Codes that are only meaningful with firmware running FreeRTOS.
 
 
+  // Codes that are only meaningful with firmware using OIC framework.
+  #define MANUVR_MSG_OIC_READY            0x00F0 // Framework came online.
+  #define MANUVR_MSG_OIC_DISCOVERY        0x00FD // A device was found.
+  #define MANUVR_MSG_OIC_DISCOVER_OFF     0x00FE // Turns off discoverability.
+  #define MANUVR_MSG_OIC_DISCOVER_PING    0x00FF // Pings the world.
+
+
   // Scheduler
   #define MANUVR_MSG_DEFERRED_FXN         0x0100 // Message to allow for deferred fxn calls without an EventReceiver.
 //  #define MANUVR_MSG_SCHED_DISABLE_BY_PID 0x0101 // The given PID is being disabled.

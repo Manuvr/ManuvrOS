@@ -87,7 +87,6 @@ Lifecycle:
         int8_t raiseEvent(ManuvrRunnable* event);
 
         inline const char* getReceiverName() {   return _receiver_name;  }
-        int purgeLogs();
 
         /**
         * Call to set the log verbosity for this class. 7 is most verbose. 0 will disable logging altogether.
@@ -109,6 +108,13 @@ Lifecycle:
         * @return  1 if action was taken, 0 if not, -1 on error.
         */
         virtual int8_t bootComplete();        // This is called from the base notify().
+
+        /**
+        * Called for runtime configuration changes mid-lifecycle.
+        *
+        * @return  1 if action was taken, 0 if not, -1 on error.
+        */
+        virtual int8_t erConfigure(Argument*); // This is called from the base notify().
 
         /**
         * Has the class been boot-strapped?
@@ -146,7 +152,6 @@ Lifecycle:
           if (nu) _extnd_state |= _flag;
           else    _extnd_state &= ~_flag;
         };
-
 
 
       private:

@@ -46,6 +46,7 @@ Target is OIC v1.1.
 #define OIC_MAX_URI_LENGTH  128
 
 
+
 class ManuvrOIC : public EventReceiver {
   public:
     ManuvrOIC();
@@ -56,7 +57,8 @@ class ManuvrOIC : public EventReceiver {
     void procDirectDebugInstruction(StringBuilder*);
     void printDebug(StringBuilder*);
     int8_t notify(ManuvrRunnable*);
-    int8_t callback_proc(ManuvrRunnable *);
+    int8_t callback_proc(ManuvrRunnable*);
+    int8_t erConfigure(Argument*);
 
     int8_t makeDiscoverable(bool);
     int8_t discoverOthers(bool);
@@ -87,6 +89,11 @@ class ManuvrOIC : public EventReceiver {
       // If we have a concept of threads...
       unsigned long _thread_id = 0;
     #endif
+
+    /* Scheduled callbacks and events precipitataed from the worker thread.*/
+    ManuvrRunnable _discovery_timeout;
+    ManuvrRunnable _discovery_ping;
+
     /* This maps URIs to resources. */
     std::map<const char*, listenerFxnPtr> _uri_map;
 };

@@ -312,7 +312,7 @@ class ManuvrPlatform {
 
 
 #ifdef __cplusplus
- extern "C" {
+extern "C" {
 #endif
 
 // TODO: Everything below this line is being considered for migration into the

@@ -66,10 +66,6 @@ extern "C" {
     return (uint16_t) randomInt();
   }
 
-//  int oc_storage_config(const char *store) {
-//    return 0;   // Return no error.
-//  }
-
   void oc_clock_init() {}
   oc_clock_time_t oc_clock_time(void) {    return millis();           }
   unsigned long oc_clock_seconds(void) {   return (millis() / 1000);  }
@@ -88,7 +84,13 @@ extern "C" {
     #endif
   }
 
-
+// TODO: Eventually, we will wrap this into a map cordoning-off the framework's
+//       options in a map that can be re-configured and persisted independently.
+//  int oc_storage_config(const char *store) {
+//    return 0;   // Return no error.
+//  }
+//
+//
 //  long oc_storage_read(const char *store, uint8_t *buf, size_t size) {
 //    printf("oc_storage_read(%s, %u)\n", store, size);
 //    Argument *res = platform.getConfKey(store);
@@ -121,7 +123,9 @@ extern "C" {
 //    return 0;
 //  }
 
-
+  /*
+  * This is the worker thread that holds the iotivity-constrained main-loop.
+  */
   static void* main_OIC_loop(void* args) {
     printf("main_OIC_loop()\n");
     while (!platform.nominalState()) sleep_millis(80);  // ...Rush
@@ -132,11 +136,11 @@ extern "C" {
     while (platform.nominalState()) {
       next_event = oc_main_poll();
       pthread_mutex_lock(&mutex);
-      if (next_event == 0) {
+      if (0 == next_event) {
         pthread_cond_wait(&cv, &mutex);
       }
       else {
-        ts.tv_sec = (next_event / OC_CLOCK_SECOND);
+        ts.tv_sec  = (next_event / OC_CLOCK_SECOND);
         ts.tv_nsec = (next_event % OC_CLOCK_SECOND) * 1.e09 / OC_CLOCK_SECOND;
         pthread_cond_timedwait(&cv, &mutex, &ts);
       }
@@ -161,6 +165,7 @@ extern "C" {
 
 ManuvrOIC* ManuvrOIC::INSTANCE = nullptr;
 
+
 extern "C" {
 static void set_device_custom_property(void *data) {
   // TODO: There *has* to be a better way.
@@ -168,14 +173,12 @@ static void set_device_custom_property(void *data) {
 }
 
 void app_init_hook() {
-  Kernel::log("OIC: app_init()\n");
   oc_init_platform(IDENTITY_STRING, NULL, NULL);
-  #if defined(OC_CLIENT)
-    oc_add_device("/oic/d", "oic.d.phone", "Client", "1.0", "1.0", NULL, NULL);
-  #elif defined(OC_SERVER)
+  #if defined(OC_SERVER)
     oc_add_device("/oic/d", "oic.d.light", "Light", "1.0", "1.0", set_device_custom_property, NULL);
   #endif
-  if (ManuvrOIC::INSTANCE) ManuvrOIC::INSTANCE->frameworkReady(true);
+  ManuvrOIC::INSTANCE->frameworkReady(true);
+  Kernel::raiseEvent(MANUVR_MSG_OIC_READY, (EventReceiver*) ManuvrOIC::INSTANCE);
 }
 
 #if defined(OC_SECURITY)
@@ -191,18 +194,24 @@ oc_discovery_flags_t discovery(const char *di, const char *uri,
               oc_string_array_t types, oc_interface_mask_t interfaces,
               oc_server_handle_t* server) {
   unsigned int i;
+  ManuvrRunnable* disc_ev = Kernel::returnEvent(MANUVR_MSG_OIC_DISCOVERY);
+  StringBuilder* summary = new StringBuilder();
+  disc_ev->addArg(summary)->reapValue(true);
+
   int uri_len = strlen(uri);
   uri_len = (uri_len >= OIC_MAX_URI_LENGTH)?OIC_MAX_URI_LENGTH-1:uri_len;
-  printf("oc_discovery_flags_t(%s, %s)\n", di, uri);
+  summary->concatf("oc_discovery_flags_t(%s, %s)\n", di, uri);
 
   for (i = 0; i < oc_string_array_get_allocated_size(types); i++) {
     char *t = oc_string_array_get_item(types, i);
+    summary->concatf("\t%s\n", t);
     if (strlen(t) == 10 && strncmp(t, "core.light", 10) == 0) {
       strncpy(temp_uri, uri, uri_len);
       temp_uri[uri_len] = '\0';
       Kernel::log("OIC: GET request\n\n");
     }
   }
+  ManuvrOIC::INSTANCE->raiseEvent(disc_ev);
   return ManuvrOIC::INSTANCE->isDiscovering() ? OC_CONTINUE_DISCOVERY : OC_STOP_DISCOVERY;
 }
 
@@ -293,7 +302,6 @@ void ManuvrOIC::issue_requests_hook() {
 */
 ManuvrOIC::ManuvrOIC() : EventReceiver() {
   INSTANCE = this;
-  // NOTE: This is lower-cased due-to its usage in URIs.
   setReceiverName("OIC");
   uint8_t _default_flags = 0;
 
@@ -304,6 +312,7 @@ ManuvrOIC::ManuvrOIC() : EventReceiver() {
   #if defined(OC_SERVER)
     _default_flags |= OIC_FLAG_SUPPORT_SERVER;
   #endif
+
   _er_set_flag(_default_flags, true);
 }
 
@@ -325,6 +334,8 @@ ManuvrOIC::ManuvrOIC(Argument* root_config) : ManuvrOIC() {
 * Unlike many of the other EventReceivers, THIS one needs to be able to be torn down.
 */
 ManuvrOIC::~ManuvrOIC() {
+  __kernel->removeSchedule(&_discovery_ping);
+  __kernel->removeSchedule(&_discovery_timeout);
   #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
     if (_thread_id > 0) {
       _thread_id = 0;
@@ -346,8 +357,13 @@ ManuvrOIC::~ManuvrOIC() {
 */
 int8_t ManuvrOIC::makeDiscoverable(bool en) {
   if (frameworkReady()) {
-    #if defined(OC_SERVER)
-    #endif
+    if (en ^ isDiscoverable()) {
+      #if defined(OC_SERVER)
+        _discovery_timeout.enableSchedule(en);
+        isDiscoverable(en);
+        return 0;
+      #endif
+    }
   }
   return -1;
 }
@@ -362,13 +378,12 @@ int8_t ManuvrOIC::makeDiscoverable(bool en) {
 int8_t ManuvrOIC::discoverOthers(bool en) {
   if (frameworkReady()) {
     if (en ^ isDiscovering()) {
-      #if defined(OC_CLIENT)
-        isDiscovering(en);
-        if (en) {
-          oc_do_ip_discovery("oic.r.light", &discovery);
-        }
-        return 0;
-      #endif
+      _discovery_ping.enableSchedule(en);
+      isDiscovering(en);
+      if (en) {
+        _discovery_ping.fireNow();
+      }
+      return 0;
     }
   }
   return -1;
@@ -398,6 +413,29 @@ int8_t ManuvrOIC::discoverOthers(bool en) {
 int8_t ManuvrOIC::bootComplete() {
   EventReceiver::bootComplete();
 
+  // Discovery runs for 120 seconds, and repeats forever by default.
+  _discovery_ping.repurpose(MANUVR_MSG_OIC_DISCOVER_PING);
+  _discovery_ping.isManaged(true);
+  _discovery_ping.alterSchedule(120000, -1, false, issue_requests_hook);
+  _discovery_ping.enableSchedule(false);
+  __kernel->addSchedule(&_discovery_ping);
+
+  _discovery_timeout.repurpose(MANUVR_MSG_OIC_DISCOVER_OFF);
+  _discovery_timeout.isManaged(true);
+  _discovery_timeout.specific_target = (EventReceiver*) this;
+  _discovery_timeout.originator      = (EventReceiver*) this;
+  _discovery_timeout.priority        = 1;
+
+  // Discovery runs for 30 seconds by default.
+  _discovery_timeout.alterScheduleRecurrence(0);
+  _discovery_timeout.alterSchedulePeriod(30000);
+  _discovery_timeout.autoClear(false);
+  _discovery_timeout.enableSchedule(false);
+  __kernel->addSchedule(&_discovery_timeout);
+
+
+
+
   oc_handler_t handler;
   handler.init = app_init_hook;
   #if defined(OC_SECURITY)
@@ -426,6 +464,38 @@ int8_t ManuvrOIC::bootComplete() {
   }
   return 1;
 }
+
+
+/**
+* We are being configured.
+*
+* @return 0 on no action, 1 on action, -1 on failure.
+*/
+int8_t ManuvrOIC::erConfigure(Argument* opts) {
+  int8_t return_value = 0;
+  Argument* temp = opts->retrieveArgByKey("discovery_period");
+  if (temp) {
+    /* By specifying a discovery period, we are also asking for discovery. */
+    // TODO: Need a better way to do this.
+    uint32_t val = 0;
+    if ((0 == temp->getValueAs(&val)) && (0 != val)) {
+      _discovery_ping.alterSchedulePeriod(val);
+      _discovery_ping.enableSchedule(true);
+      return_value++;
+    }
+  }
+  temp = opts->retrieveArgByKey("discovery_timeout");
+  if (temp) {
+    /* How long should we ourselves be discoverable? */
+    // TODO: Need a better way to do this.
+    uint32_t val = 0;
+    if ((0 == temp->getValueAs(&val)) && (0 != val)) {
+      return_value++;
+    }
+  }
+  return return_value;
+}
+
 
 
 /**
@@ -461,6 +531,11 @@ int8_t ManuvrOIC::notify(ManuvrRunnable *active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
+    case MANUVR_MSG_OIC_DISCOVER_OFF:
+      isDiscoverable(false);
+      if (getVerbosity() > 3) local_log.concat("Discoverable window exired.\n");
+      return_value++;
+      break;
     default:
       return_value += EventReceiver::notify(active_event);
       break;
@@ -479,8 +554,14 @@ int8_t ManuvrOIC::notify(ManuvrRunnable *active_event) {
 void ManuvrOIC::printDebug(StringBuilder *output) {
   EventReceiver::printDebug(output);
   output->concatf("-- IoTivity status:     %s\n", (frameworkReady() ? "ready" : "stalled"));
-  output->concatf("-- Discoverable:        %s\n", (isDiscoverable() ? "yes" : "no"));
-  output->concatf("-- Discovering:         %s\n", (isDiscovering() ? "yes" : "no"));
+  output->concatf("-- Discoverable:        %s  (%ums window)\n",
+    (isDiscoverable() ? "yes" : "no"),
+    _discovery_timeout.schedulePeriod()
+  );
+  output->concatf("-- Discovering:         %s  (%ums period)\n",
+    (isDiscovering() ? "yes" : "no"),
+    _discovery_ping.schedulePeriod()
+  );
 
   #if defined(OC_CLIENT)
     output->concatf("-- Client support:\n");

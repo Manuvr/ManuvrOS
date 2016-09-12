@@ -111,6 +111,12 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SESS_UNSUBCRIBE      , MSG_FLAG_EXPORTABLE,  "SESS_UNSUBCRIBE"      , ManuvrMsg::MSG_ARGS_NONE }, // Used to unsubscribe this session from other events.
   {  MANUVR_MSG_SESS_ORIGINATE_MSG   , MSG_FLAG_IDEMPOTENT,  "SESS_ORIGINATE_MSG"   , ManuvrMsg::MSG_ARGS_NONE }, //
   {  MANUVR_MSG_SESS_SERVICE         , 0x0000             ,  "SESS_SERVICE"         , ManuvrMsg::MSG_ARGS_NONE }, //
+  #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
+  {  MANUVR_MSG_OIC_READY            , 0x0000,  "OIC_READY"        , ManuvrMsg::MSG_ARGS_NONE },  //
+  {  MANUVR_MSG_OIC_DISCOVERY        , 0x0000,  "OIC_DISCOVERY"    , ManuvrMsg::MSG_ARGS_NONE },  //
+  {  MANUVR_MSG_OIC_DISCOVER_OFF     , 0x0000,  "OIC_DISCOVER_OFF" , ManuvrMsg::MSG_ARGS_NONE },  //
+  {  MANUVR_MSG_OIC_DISCOVER_PING    , 0x0000,  "OIC_PING"         , ManuvrMsg::MSG_ARGS_NONE },  //
+  #endif
 
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
     // These are messages that are only present under some sort of threading model. They are meant
@@ -1519,6 +1525,15 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
     case 'p':
       local_log.concatf("Kernel profiling %sabled.\n", ('P' == c) ? "en" : "dis");
       profiler('P' == c);
+      break;
+
+    case 'y':    // Power mode.
+      {
+        ManuvrRunnable* event = returnEvent(MANUVR_MSG_SYS_POWER_MODE);
+        event->addArg((uint8_t) temp_int);
+        EventReceiver::raiseEvent(event);
+        local_log.concatf("Power mode is now %d.\n", temp_int);
+      }
       break;
 
     #if defined(MANUVR_STORAGE)

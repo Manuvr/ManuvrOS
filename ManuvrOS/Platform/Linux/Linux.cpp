@@ -52,10 +52,13 @@ volatile Kernel* __kernel = nullptr;
 struct itimerval _interval              = {0};
 struct sigaction _signal_action_SIGALRM = {0};
 
+static unsigned long _last_millis = 0;
+
 char* _binary_name = nullptr;
 static int   _main_pid    = 0;
 
 bool set_linux_interval_timer() {
+  _last_millis = millis();
   _interval.it_value.tv_sec      = 0;
   _interval.it_value.tv_usec     = MANUVR_PLATFORM_TIMER_PERIOD_MS * 1000;
   _interval.it_interval.tv_sec   = 0;
@@ -126,9 +129,10 @@ void sig_handler(int signo) {
   //}
 }
 
-
 void linux_timer_handler(int sig_num) {
-  ((Kernel*)__kernel)->advanceScheduler(MANUVR_PLATFORM_TIMER_PERIOD_MS);
+  unsigned long _this_millis = millis();
+  ((Kernel*)__kernel)->advanceScheduler(_this_millis - _last_millis);
+  _last_millis = _this_millis;
 }
 
 
@@ -545,6 +549,7 @@ int8_t LinuxPlatform::platformPreInit(Argument* root_config) {
   _alter_flags(true, default_flags);
 
   start_time_micros = micros();
+
   init_rng();
   _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
   _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);

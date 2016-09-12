@@ -266,3 +266,9 @@ I now have to implement some simple next_tick() style functionality to cause an
 automatic synchronicity-break for transfers that desire it.
 
 Full platform polymorphism achieved.
+
+The next_tick() idea was implemented, but no tests written yet. So I'll have a fun surprise later. More identity and CBOR extension...
+
+_---J. Ian Lindsay_
+
+------

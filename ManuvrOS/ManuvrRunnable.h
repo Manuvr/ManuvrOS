@@ -123,6 +123,11 @@ limitations under the License.
         _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_SCHEDULED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_SCHEDULED));
       };
 
+      /* Schedule member accessors. */
+      inline uint32_t schedulePeriod() { return thread_period; };
+
+
+
       /**
       * Was this event preallocated?
       * Preallocation implies no reap.

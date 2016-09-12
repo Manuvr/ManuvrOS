@@ -87,6 +87,23 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
           }
         }
         break;
+
+      case STR_FM:
+        {
+          char* buf;
+          if (0 == src->getValueAs(&buf)) {
+            encoder.write_string(buf);
+          }
+        }
+        break;
+      case STR_BUILDER_FM:
+        {
+          StringBuilder* buf;
+          if (0 == src->getValueAs(&buf)) {
+            encoder.write_string((char*) buf->string());
+          }
+        }
+        break;
       case BINARY_FM:
         {
           uint8_t* buf;
