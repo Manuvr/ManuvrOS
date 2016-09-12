@@ -120,6 +120,7 @@ typedef struct typecode_def_t {
 *   the data so passed is not itself a pointer, and therefore makes sense as-is to other
 *   devices.
 */
+#define IDENTITY_FM    0x21    // Identity.
 #define CBOR_FM        0x20    // A CBOR object.
 #define RELAYED_MSG_FM 0x19    // A serialized message that is being stored or relayed.
 #define CHAIN_FM       0x18    // An event chain.

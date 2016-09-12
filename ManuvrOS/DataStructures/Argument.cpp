@@ -27,6 +27,8 @@ This class represents our type-abstraction layer. It is the means by which
 
 #include <DataStructures/PriorityQueue.h>
 
+#include <Platform/Identity.h>
+
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
@@ -90,6 +92,32 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
           uint8_t* buf;
           if (0 == src->getValueAs(&buf)) {
             encoder.write_bytes(buf, src->length());
+          }
+        }
+        break;
+      case IDENTITY_FM:
+        {
+          Identity* ident;
+          if (0 == src->getValueAs(&ident)) {
+            uint16_t i_len = ident->length();
+            uint8_t buf[i_len];
+            if (ident->toBuffer(buf)) {
+              encoder.write_tag(IDENTITY_FM);
+              encoder.write_bytes(buf, i_len);
+            }
+          }
+        }
+        break;
+      case ARGUMENT_PTR_FM:
+        {
+          StringBuilder intermediary;
+          Argument *subj;
+          if (0 == src->getValueAs(&subj)) {
+            // NOTE: Recursion.
+            if (Argument::encodeToCBOR(subj, &intermediary)) {
+              encoder.write_tag(ARGUMENT_PTR_FM);
+              encoder.write_bytes(intermediary.string(), intermediary.length());
+            }
           }
         }
         break;
@@ -484,7 +512,7 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
 /**
 * @return A pointer to the appended argument.
 */
-Argument* Argument::append(Argument* arg) {
+Argument* Argument::_append(Argument* arg) {
   if (nullptr == _next) {
     _next = arg;
     return arg;

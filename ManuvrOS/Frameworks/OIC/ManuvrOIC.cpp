@@ -175,7 +175,7 @@ void app_init_hook() {
   #elif defined(OC_SERVER)
     oc_add_device("/oic/d", "oic.d.light", "Light", "1.0", "1.0", set_device_custom_property, NULL);
   #endif
-  if (nullptr != ManuvrOIC::INSTANCE) ManuvrOIC::INSTANCE->frameworkReady(true);
+  if (ManuvrOIC::INSTANCE) ManuvrOIC::INSTANCE->frameworkReady(true);
 }
 
 #if defined(OC_SECURITY)

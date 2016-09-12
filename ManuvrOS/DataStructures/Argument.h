@@ -27,6 +27,7 @@ class StringBuilder;
 class BufferPipe;
 class ManuvrXport;
 class EventReceiver;
+class Identity;
 class ManuvrRunnable;
 
 /* This is how we define arguments to messages. */
@@ -89,7 +90,9 @@ class Argument {
     Argument(ManuvrRunnable* val) : Argument((void*) val, sizeof(val), SYS_RUNNABLE_PTR_FM) {};
 
     // TODO: This default behavior changed. Audit usage by commenting addArg(StringBuilder)
-    Argument(StringBuilder* val)  : Argument(val, sizeof(val), STR_BUILDER_FM) {};
+    Argument(StringBuilder* val)  : Argument(val, sizeof(val), STR_BUILDER_FM)          {};
+    Argument(Argument* val)       : Argument((void*) val, sizeof(val), ARGUMENT_PTR_FM) {};
+    Argument(Identity* val)       : Argument((void*) val, sizeof(val), IDENTITY_FM)     {};
 
 
     ~Argument();
@@ -118,35 +121,36 @@ class Argument {
     Argument* retrieveArgByIdx(int idx);
     Argument* retrieveArgByKey(const char*);
 
-    Argument* append(Argument* arg);
-    inline Argument* append(uint8_t val) {             return append(new Argument(val));   }
-    inline Argument* append(uint16_t val) {            return append(new Argument(val));   }
-    inline Argument* append(uint32_t val) {            return append(new Argument(val));   }
-    inline Argument* append(int8_t val) {              return append(new Argument(val));   }
-    inline Argument* append(int16_t val) {             return append(new Argument(val));   }
-    inline Argument* append(int32_t val) {             return append(new Argument(val));   }
-    inline Argument* append(float val) {               return append(new Argument(val));   }
+    inline Argument* append(uint8_t val) {          return _append(new Argument(val));   }
+    inline Argument* append(uint16_t val) {         return _append(new Argument(val));   }
+    inline Argument* append(uint32_t val) {         return _append(new Argument(val));   }
+    inline Argument* append(int8_t val) {           return _append(new Argument(val));   }
+    inline Argument* append(int16_t val) {          return _append(new Argument(val));   }
+    inline Argument* append(int32_t val) {          return _append(new Argument(val));   }
+    inline Argument* append(float val) {            return _append(new Argument(val));   }
 
-    inline Argument* append(uint8_t *val) {            return append(new Argument(val));   }
-    inline Argument* append(uint16_t *val) {           return append(new Argument(val));   }
-    inline Argument* append(uint32_t *val) {           return append(new Argument(val));   }
-    inline Argument* append(int8_t *val) {             return append(new Argument(val));   }
-    inline Argument* append(int16_t *val) {            return append(new Argument(val));   }
-    inline Argument* append(int32_t *val) {            return append(new Argument(val));   }
-    inline Argument* append(float *val) {              return append(new Argument(val));   }
+    inline Argument* append(uint8_t *val) {         return _append(new Argument(val));   }
+    inline Argument* append(uint16_t *val) {        return _append(new Argument(val));   }
+    inline Argument* append(uint32_t *val) {        return _append(new Argument(val));   }
+    inline Argument* append(int8_t *val) {          return _append(new Argument(val));   }
+    inline Argument* append(int16_t *val) {         return _append(new Argument(val));   }
+    inline Argument* append(int32_t *val) {         return _append(new Argument(val));   }
+    inline Argument* append(float *val) {           return _append(new Argument(val));   }
 
-    inline Argument* append(Vector3ui16 *val) {        return append(new Argument(val));   }
-    inline Argument* append(Vector3i16 *val) {         return append(new Argument(val));   }
-    inline Argument* append(Vector3f *val) {           return append(new Argument(val));   }
-    inline Argument* append(Vector4f *val) {           return append(new Argument(val));   }
+    inline Argument* append(Vector3ui16 *val) {     return _append(new Argument(val));   }
+    inline Argument* append(Vector3i16 *val) {      return _append(new Argument(val));   }
+    inline Argument* append(Vector3f *val) {        return _append(new Argument(val));   }
+    inline Argument* append(Vector4f *val) {        return _append(new Argument(val));   }
 
-    inline Argument* append(void *val, int len) {      return append(new Argument(val, len));   }
-    inline Argument* append(const char *val) {         return append(new Argument(val));   }
-    inline Argument* append(StringBuilder *val) {      return append(new Argument(val));   }
-    inline Argument* append(BufferPipe *val) {         return append(new Argument(val));   }
-    inline Argument* append(EventReceiver *val) {      return append(new Argument(val));   }
-    inline Argument* append(ManuvrXport *val) {        return append(new Argument(val));   }
-    inline Argument* append(ManuvrRunnable *val) {     return append(new Argument(val));   }
+    inline Argument* append(void *val, int len) {   return _append(new Argument(val, len));   }
+    inline Argument* append(const char *val) {      return _append(new Argument(val));   }
+    inline Argument* append(StringBuilder *val) {   return _append(new Argument(val));   }
+    inline Argument* append(Argument *val) {        return _append(new Argument(val));   }
+    inline Argument* append(Identity *val) {        return _append(new Argument(val));   }
+    inline Argument* append(BufferPipe *val) {      return _append(new Argument(val));   }
+    inline Argument* append(EventReceiver *val) {   return _append(new Argument(val));   }
+    inline Argument* append(ManuvrXport *val) {     return _append(new Argument(val));   }
+    inline Argument* append(ManuvrRunnable *val) {  return _append(new Argument(val));   }
 
 
     // TODO: These will be re-worked to support alternate type-systems.
@@ -180,6 +184,8 @@ class Argument {
     uint8_t     type_code  = NOTYPE_FM;
 
     Argument(void* ptr, int len, uint8_t code);  // Protected constructor to which we delegate.
+
+    Argument* _append(Argument* arg);
 
     void wipe();
 
