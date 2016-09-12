@@ -122,6 +122,7 @@ limitations under the License.
 
   // Codes that are only meaningful with firmware using OIC framework.
   #define MANUVR_MSG_OIC_READY            0x00F0 // Framework came online.
+  #define MANUVR_MSG_OIC_REG_RESOURCES    0x00F1 // Framework is calling for resource registration.
   #define MANUVR_MSG_OIC_DISCOVERY        0x00FD // A device was found.
   #define MANUVR_MSG_OIC_DISCOVER_OFF     0x00FE // Turns off discoverability.
   #define MANUVR_MSG_OIC_DISCOVER_PING    0x00FF // Pings the world.

@@ -165,30 +165,20 @@ extern "C" {
 
 ManuvrOIC* ManuvrOIC::INSTANCE = nullptr;
 
-
 extern "C" {
-static void set_device_custom_property(void *data) {
-  // TODO: There *has* to be a better way.
-  setPin(14, !readPin(14));
-}
 
 void app_init_hook() {
   oc_init_platform(IDENTITY_STRING, NULL, NULL);
-  #if defined(OC_SERVER)
-    oc_add_device("/oic/d", "oic.d.light", "Light", "1.0", "1.0", set_device_custom_property, NULL);
-  #endif
   ManuvrOIC::INSTANCE->frameworkReady(true);
   Kernel::raiseEvent(MANUVR_MSG_OIC_READY, (EventReceiver*) ManuvrOIC::INSTANCE);
 }
 
-#if defined(OC_SECURITY)
+
 static void fetch_credentials() {
   oc_storage_config("./creds");
 }
-#endif
 
 static char temp_uri[OIC_MAX_URI_LENGTH];
-static bool light_state = false;
 
 oc_discovery_flags_t discovery(const char *di, const char *uri,
               oc_string_array_t types, oc_interface_mask_t interfaces,
@@ -197,6 +187,9 @@ oc_discovery_flags_t discovery(const char *di, const char *uri,
   ManuvrRunnable* disc_ev = Kernel::returnEvent(MANUVR_MSG_OIC_DISCOVERY);
   StringBuilder* summary = new StringBuilder();
   disc_ev->addArg(summary)->reapValue(true);
+
+  summary->concatf("Flags:     0x%02x\n", server->endpoint.flags);
+  summary->concatf("IPv6 port: %u\n", server->endpoint.ipv6_addr.port);
 
   int uri_len = strlen(uri);
   uri_len = (uri_len >= OIC_MAX_URI_LENGTH)?OIC_MAX_URI_LENGTH-1:uri_len;
@@ -216,73 +209,16 @@ oc_discovery_flags_t discovery(const char *di, const char *uri,
 }
 
 
-static void get_light(oc_request_t *request, oc_interface_mask_t interface) {
-  Kernel::log("GET_light:\n");
-  // TODO: Strip and re-write all use of macros to executable code.
-  //       Debugging preprocessor macros is a waste of life.
-  CborEncoder g_encoder, _rmap;
-  CborError g_err;
-  cbor_encoder_create_map(&g_encoder, &_rmap, CborIndefiniteLength);
-  switch (interface) {
-    case OC_IF_BASELINE:
-      oc_process_baseline_interface(request->resource);
-    case OC_IF_RW:
-      cbor_encode_text_string(&_rmap, "state", strlen("state"));
-      cbor_encode_boolean(&_rmap, light_state);
-      break;
-    default:
-      break;
-  }
-  oc_send_response(request, OC_STATUS_OK);
-  Kernel::log(light_state ? "Light: ON\n" : "Light: OFF\n");
-}
-
-static void put_light(oc_request_t *request, oc_interface_mask_t interface) {
-  Kernel::log("PUT_light:\n");
-  bool state = false;
-  oc_rep_t *rep = request->request_payload;
-  while(rep != NULL) {
-    PRINT("key: %s ", oc_string(rep->name));
-    switch(rep->type) {
-      case BOOL:
-        state = rep->value_boolean;
-        break;
-      default:
-        oc_send_response(request, OC_STATUS_BAD_REQUEST);
-        return;
-        break;
-    }
-    rep = rep->next;
-  }
-  light_state = state;
-  Kernel::log(light_state ? "value: ON\n" : "value: OFF\n");
-  setPin(14, light_state);
-  oc_send_response(request, OC_STATUS_CHANGED);
-}
-
 #if defined(OC_SERVER)
 static void register_resources() {
-  oc_resource_t *res = oc_new_resource("/light/1", 1, 0);
-  oc_resource_bind_resource_type(res, "oic.r.light");
-  oc_resource_bind_resource_interface(res, OC_IF_RW);
-  oc_resource_set_default_interface(res, OC_IF_RW);
-
-  #ifdef OC_SECURITY
-    oc_resource_make_secure(res);
-  #endif
-
-  oc_resource_set_discoverable(res);
-  oc_resource_set_periodic_observable(res, 1);
-  oc_resource_set_request_handler(res, OC_GET, get_light);
-  oc_resource_set_request_handler(res, OC_PUT, put_light);
-  oc_add_resource(res);
+  Kernel::raiseEvent(MANUVR_MSG_OIC_REG_RESOURCES, (EventReceiver*) ManuvrOIC::INSTANCE);
 }
 #endif
 
 void ManuvrOIC::issue_requests_hook() {
   Kernel::log("OIC: issue_requests()\n");
   #if defined(OC_CLIENT)
-  oc_do_ip_discovery("oic.r.light", &discovery);
+    oc_do_ip_discovery("oic.r.light", &discovery);
   #endif
 }
 
@@ -434,13 +370,9 @@ int8_t ManuvrOIC::bootComplete() {
   __kernel->addSchedule(&_discovery_timeout);
 
 
-
-
   oc_handler_t handler;
   handler.init = app_init_hook;
-  #if defined(OC_SECURITY)
   handler.get_credentials = fetch_credentials;
-  #endif /* OC_SECURITY */
 
   #if defined(OC_SERVER)
     handler.register_resources = register_resources;

@@ -45,7 +45,9 @@ Target is OIC v1.1.
 
 #define OIC_MAX_URI_LENGTH  128
 
-
+#if !defined(OC_SECURITY)
+  #error There is no support for building OIC without security (OC_SECURITY).
+#endif
 
 class ManuvrOIC : public EventReceiver {
   public:

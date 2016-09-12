@@ -113,6 +113,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SESS_SERVICE         , 0x0000             ,  "SESS_SERVICE"         , ManuvrMsg::MSG_ARGS_NONE }, //
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
   {  MANUVR_MSG_OIC_READY            , 0x0000,  "OIC_READY"        , ManuvrMsg::MSG_ARGS_NONE },  //
+  {  MANUVR_MSG_OIC_REG_RESOURCES    , 0x0000,  "OIC_REG_RESRCS"   , ManuvrMsg::MSG_ARGS_NONE },  //
   {  MANUVR_MSG_OIC_DISCOVERY        , 0x0000,  "OIC_DISCOVERY"    , ManuvrMsg::MSG_ARGS_NONE },  //
   {  MANUVR_MSG_OIC_DISCOVER_OFF     , 0x0000,  "OIC_DISCOVER_OFF" , ManuvrMsg::MSG_ARGS_NONE },  //
   {  MANUVR_MSG_OIC_DISCOVER_PING    , 0x0000,  "OIC_PING"         , ManuvrMsg::MSG_ARGS_NONE },  //
