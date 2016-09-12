@@ -188,6 +188,9 @@ oc_discovery_flags_t discovery(const char *di, const char *uri,
   StringBuilder* summary = new StringBuilder();
   disc_ev->addArg(summary)->reapValue(true);
 
+  if (server->endpoint.flags & 0x10) {  // TODO: Should use their namespace.
+    summary->concatf("Secured!\n", server->endpoint.flags);
+  }
   summary->concatf("Flags:     0x%02x\n", server->endpoint.flags);
   summary->concatf("IPv6 port: %u\n", server->endpoint.ipv6_addr.port);
 
