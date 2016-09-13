@@ -216,6 +216,60 @@ Argument* parseFromArgCV(int argc, const char* argv[]) {
 }
 
 
+/*
+* Function takes a path and a buffer as arguments. The binary is hashed and the ASCII representation is
+*   placed in the buffer. The number of bytes read is returned on success. 0 is returned on failure.
+*/
+static int hashFileByPath(char* path, uint8_t* h_buf) {
+  int8_t return_value = -1;
+  #if defined(__MANUVR_MBEDTLS)
+  StringBuilder log;
+  if (nullptr != path) {
+    struct stat st;
+    if(-1 != stat(path, &st)) {
+      long self_size = st.st_size;
+      int digest_size = 32;
+      StringBuilder buf;
+
+      int fd = open(path, O_RDONLY);
+      if (fd >= 0) {
+        int r_buf_len = 2 << 15;
+        uint8_t* buffer = (uint8_t*) alloca(r_buf_len);
+        int r_len = read(fd, buffer, r_buf_len);
+        while (0 < r_len) {
+          buf.concat(buffer, r_len);
+          r_len = read(fd, buffer, r_buf_len);
+        }
+        close(fd);
+
+        uint8_t* self_mass = buf.string();
+        log.concatf("%s is %ld bytes.\n", path, self_size);
+
+        int ret = manuvr_hash(self_mass, self_size, h_buf, digest_size, Hashes::SHA256);
+        if (0 == ret) {
+          return_value = digest_size;
+        }
+        else {
+          log.concat("Failed to run the hash on the input path.\n");
+        }
+      }
+      else {
+        // Failure to read file.
+        log.concat("Failed to read file.\n");
+      }
+    }
+    else {
+      // Failure to stat file.
+      log.concat("Failed to stat file.\n");
+    }
+  }
+  //Kernel::log(&log);
+  printf((const char*)log.string());
+  #endif  // __MANUVR_MBEDTLS
+  return return_value;
+}
+
+
 
 /*******************************************************************************
 * Watchdog                                                                     *
@@ -276,6 +330,20 @@ void LinuxPlatform::printDebug(StringBuilder* output) {
     getPlatformStateStr(platformState())
   );
   ManuvrPlatform::printDebug(output);
+  #if defined(__MANUVR_MBEDTLS)
+    output->concatf("-- Binary hash         %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+      _binary_hash[0],  _binary_hash[1],  _binary_hash[2],  _binary_hash[3],
+      _binary_hash[4],  _binary_hash[5],  _binary_hash[6],  _binary_hash[7],
+      _binary_hash[8],  _binary_hash[9],  _binary_hash[10], _binary_hash[11],
+      _binary_hash[12], _binary_hash[13], _binary_hash[14], _binary_hash[15]
+    );
+    output->concatf("%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",
+      _binary_hash[16], _binary_hash[17], _binary_hash[18], _binary_hash[19],
+      _binary_hash[20], _binary_hash[21], _binary_hash[22], _binary_hash[23],
+      _binary_hash[24], _binary_hash[25], _binary_hash[26], _binary_hash[27],
+      _binary_hash[28], _binary_hash[29], _binary_hash[30], _binary_hash[31]
+    );
+  #endif
 }
 
 
@@ -430,100 +498,58 @@ void LinuxPlatform::reboot() {
 }
 
 
-#if defined(__MANUVR_MBEDTLS)
-/*
-* Function takes a path and a buffer as arguments. The binary is hashed and the ASCII representation is
-*   placed in the buffer. The number of bytes read is returned on success. 0 is returned on failure.
-*/
-int hashFileByPath(char* path, uint8_t* h_buf) {
-  int8_t return_value = -1;
-  StringBuilder log;
-  if (nullptr != path) {
-    struct stat st;
-    if(-1 != stat(path, &st)) {
-      long self_size = st.st_size;
-      int digest_size = 32;
-      StringBuilder buf;
+/*******************************************************************************
+* INTERNAL INTEGRITY-CHECKS                                                    *
+*******************************************************************************/
 
-      int fd = open(path, O_RDONLY);
-      if (fd >= 0) {
-        int r_buf_len = 2 << 15;
-        uint8_t* buffer = (uint8_t*) alloca(r_buf_len);
-        int r_len = read(fd, buffer, r_buf_len);
-        while (0 < r_len) {
-          buf.concat(buffer, r_len);
-          r_len = read(fd, buffer, r_buf_len);
-        }
-        close(fd);
-
-        uint8_t* self_mass = buf.string();
-        log.concatf("%s is %ld bytes.\n", path, self_size);
-
-        int ret = manuvr_hash(self_mass, self_size, h_buf, digest_size, Hashes::SHA256);
-        if (0 == ret) {
-          StringBuilder hash(h_buf, digest_size);
-          log.concat("This binary's SHA256 fingerprint is ");
-          hash.printDebug(&log);
-          return_value = digest_size;
-        }
-        else {
-          log.concat("Failed to run the hash on the input path.\n");
-        }
-      }
-      else {
-        // Failure to read file.
-        log.concat("Failed to read file.\n");
-      }
-    }
-    else {
-      // Failure to stat file.
-      log.concat("Failed to stat file.\n");
-    }
-  }
-  //Kernel::log(&log);
-  printf((const char*)log.string());
-  return return_value;
-}
-
-
-/*
-* INTERNAL INTEGRITY-CHECKS
-* The first task is to look in the mirror and find our executable's full path.
-*   This will vary by OS, but for now we assume that we are on a linux system..
-*/
-int internal_integrity_check(uint8_t* test_buf, int test_len) {
-    char *exe_path = (char *) alloca(512);   // 512 bytes ought to be enough for our path info...
-    memset(exe_path, 0x00, 512);
-    int exe_path_len = readlink("/proc/self/exe", exe_path, 512);
-    if (!(exe_path_len > 0)) {
-        printf("%s was unable to read its own path from /proc/self/exe. You may be running it on an unsupported operating system, or be running an old kernel. Please discover the cause and retry. Exiting...\n", _binary_name);
+int8_t LinuxPlatform::internal_integrity_check(uint8_t* test_buf, int test_len) {
+  #if defined(__MANUVR_MBEDTLS)
+  if ((nullptr != test_buf) && (0 < test_len)) {
+    for (int i = 0; i < test_len; i++) {
+      if (*(test_buf+i) != _binary_hash[i]) {
+        printf("Hashing %s yields a different value than expected. Exiting...\n", _binary_name);
         return -1;
-    }
-    printf("This binary's path is %s\n", exe_path);
-    int _len = (0 != test_len) ? test_len : 32;
-    uint8_t* h_buf = (uint8_t*) alloca(_len);
-    memset(h_buf, 0x00, _len);
-    int ret = hashFileByPath(exe_path, h_buf);
-    if (0 < ret) {
-      if ((nullptr != test_buf) && (0 < test_len)) {
-        for (int i = 0; i < test_len; i++) {
-          if (*(h_buf+i) != *(test_buf+i)) {
-            printf("Hashing %s yields a different value than expected. Exiting...\n", _binary_name);
-            return -1;
-          }
-        }
       }
-      else {
-        // We have no idea what to expect. First boot?
-      }
-    }
-    else {
-      printf("Failed to hash file: %s\n", exe_path);
-      return -1;
     }
     return 0;
+  }
+  else {
+    // We have no idea what to expect. First boot?
+  }
+  #endif  //__MANUVR_MBEDTLS
+  return -1;
 }
-#endif  //__MANUVR_MBEDTLS
+
+
+/**
+* Look in the mirror and find our executable's full path.
+* Then, read the full contents and hash them. Store the result in
+*   local private member _binary_hash.
+*
+* @return 0 on success.
+*/
+int8_t LinuxPlatform::hash_self() {
+  #if defined(__MANUVR_MBEDTLS)
+  char *exe_path = (char *) alloca(300);   // 300 bytes ought to be enough for our path info...
+  memset(exe_path, 0x00, 300);
+  int exe_path_len = readlink("/proc/self/exe", exe_path, 300);
+  if (!(exe_path_len > 0)) {
+    printf("%s was unable to read its own path from /proc/self/exe. You may be running it on an unsupported operating system, or be running an old kernel. Please discover the cause and retry. Exiting...\n", _binary_name);
+    return -1;
+  }
+  printf("This binary's path is %s\n", exe_path);
+  memset(_binary_hash, 0x00, 32);
+  int ret = hashFileByPath(exe_path, _binary_hash);
+  if (0 < ret) {
+    return 0;
+  }
+  else {
+    printf("Failed to hash file: %s\n", exe_path);
+  }
+  #endif  //__MANUVR_MBEDTLS
+  return -1;
+}
+
 
 /*******************************************************************************
 * Platform initialization.                                                     *
@@ -540,12 +566,11 @@ int8_t LinuxPlatform::platformPreInit(Argument* root_config) {
   ManuvrPlatform::platformPreInit(root_config);
   uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
   _main_pid = getpid();  // Our PID.
-
+  Argument* temp = nullptr;
   if (root_config) {
     // If 'binary_name' is absent, nothing will be done to _binary_name.
     root_config->getValueAs("binary_name", &_binary_name);
   }
-
   _alter_flags(true, default_flags);
 
   start_time_micros = micros();
@@ -554,9 +579,8 @@ int8_t LinuxPlatform::platformPreInit(Argument* root_config) {
   _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
   _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
 
-  // TODO: Evaluate consequences of choice.
+  // Used for timer and signal callbacks.
   __kernel = (volatile Kernel*) &_kernel;
-  // TODO: Evaluate consequences of choice.
 
   #if defined(MANUVR_STORAGE)
     LinuxStorage* sd = new LinuxStorage(root_config);
@@ -567,11 +591,12 @@ int8_t LinuxPlatform::platformPreInit(Argument* root_config) {
   initSigHandlers();
 
   #if defined(__MANUVR_MBEDTLS)
-  internal_integrity_check(nullptr, 0);
+  hash_self();
+  //internal_integrity_check(nullptr, 0);
   #endif
 
   #if defined(__MANUVR_CONSOLE_SUPPORT)
-    if (root_config->retrieveArgByKey("console")) {
+    if (root_config && root_config->retrieveArgByKey("console")) {
       StandardIO* _console_xport = new StandardIO();
       ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_xport);
       _kernel.subscribe((EventReceiver*) _console);

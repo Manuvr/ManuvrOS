@@ -337,6 +337,18 @@ int8_t ManuvrMsg::clearArgs() {
 
 
 /**
+* Returns the Argument* we carry, and then we placidly forget about it.
+*
+* @return 0 or appropriate failure code.
+*/
+Argument* ManuvrMsg::takeArgs() {
+  Argument* ret = arg;
+  arg = nullptr;
+  return ret;
+}
+
+
+/**
 * Given idx, find the Argument and return its type.
 *
 * @param  idx      The Argument position

@@ -64,6 +64,13 @@ class LinuxPlatform : public ManuvrPlatform {
       // Called during boot to load configuration.
       int8_t _load_config();
     #endif
+
+
+  private:
+    uint8_t _binary_hash[32];
+
+    int8_t internal_integrity_check(uint8_t* test_buf, int test_len);
+    int8_t hash_self();
 };
 
 #endif  // __PLATFORM_VANILLA_LINUX_H__

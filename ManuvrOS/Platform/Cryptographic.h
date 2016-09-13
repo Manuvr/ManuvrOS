@@ -42,6 +42,7 @@ If you wish to use another crypto library (OpenSSL? MatrixSSL? uECC?) then
   #include "mbedtls/ssl.h"
   #include "mbedtls/md.h"
   #include "mbedtls/md_internal.h"
+  #include "mbedtls/base64.h"
 #endif
 
 enum class Hashes {

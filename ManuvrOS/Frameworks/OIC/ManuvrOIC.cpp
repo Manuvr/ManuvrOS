@@ -185,27 +185,34 @@ oc_discovery_flags_t discovery(const char *di, const char *uri,
               oc_server_handle_t* server) {
   unsigned int i;
   ManuvrRunnable* disc_ev = Kernel::returnEvent(MANUVR_MSG_OIC_DISCOVERY);
-  StringBuilder* summary = new StringBuilder();
-  disc_ev->addArg(summary)->reapValue(true);
 
   if (server->endpoint.flags & 0x10) {  // TODO: Should use their namespace.
-    summary->concatf("Secured!\n", server->endpoint.flags);
+    disc_ev->addArg((uint8_t) 1)->setKey("secure");
   }
-  summary->concatf("Flags:     0x%02x\n", server->endpoint.flags);
-  summary->concatf("IPv6 port: %u\n", server->endpoint.ipv6_addr.port);
+  disc_ev->addArg((uint8_t) server->endpoint.flags)->setKey("r_flags");
+  disc_ev->addArg((uint16_t) server->endpoint.ipv6_addr.port)->setKey("ip6_port");
 
-  int uri_len = strlen(uri);
-  uri_len = (uri_len >= OIC_MAX_URI_LENGTH)?OIC_MAX_URI_LENGTH-1:uri_len;
-  summary->concatf("oc_discovery_flags_t(%s, %s)\n", di, uri);
+  StringBuilder* ip6_addr = new StringBuilder(server->endpoint.ipv6_addr.address, 16);
+  Argument* ip6_addr_arg  = disc_ev->addArg(ip6_addr);
+  ip6_addr_arg->setKey("ip6_addr");
+  ip6_addr_arg->reapValue(true);
+
+  StringBuilder* di_str = new StringBuilder((char*) di);
+  Argument* di_arg  = disc_ev->addArg(di_str);
+  di_arg->setKey("di");
+  di_arg->reapValue(true);
+
+  StringBuilder* uri_str = new StringBuilder((char*) uri);
+  Argument* uri_arg  = disc_ev->addArg(uri_str);
+  di_arg->setKey("uri");
+  di_arg->reapValue(true);
 
   for (i = 0; i < oc_string_array_get_allocated_size(types); i++) {
     char *t = oc_string_array_get_item(types, i);
-    summary->concatf("\t%s\n", t);
-    if (strlen(t) == 10 && strncmp(t, "core.light", 10) == 0) {
-      strncpy(temp_uri, uri, uri_len);
-      temp_uri[uri_len] = '\0';
-      Kernel::log("OIC: GET request\n\n");
-    }
+    StringBuilder* t_str = new StringBuilder(t);
+    Argument* t_arg = disc_ev->addArg(t_str);
+    uri_arg->setKey("r_type");
+    uri_arg->reapValue(true);
   }
   ManuvrOIC::INSTANCE->raiseEvent(disc_ev);
   return ManuvrOIC::INSTANCE->isDiscovering() ? OC_CONTINUE_DISCOVERY : OC_STOP_DISCOVERY;

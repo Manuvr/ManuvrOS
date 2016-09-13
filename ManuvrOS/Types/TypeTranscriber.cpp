@@ -44,7 +44,7 @@ void CBORArgListener::_caaa(Argument* nu) {
 	}
 
   if ((nullptr != built) && (nullptr != *built)) {
-    (*built)->append(nu);
+    (*built)->link(nu);
   }
   else {
     *built = nu;

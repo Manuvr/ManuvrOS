@@ -245,6 +245,26 @@ void Argument::wipe() {
 
 
 /**
+* Given an Argument pointer, finds that pointer and drops it from the list.
+*
+* @param  drop  The Argument to drop.
+* @return       0 on success. 1 on warning, -1 on "not found".
+*/
+int8_t Argument::dropArg(Argument** root, Argument* drop) {
+  if (*root == drop) {
+    // Re-write the root parameter.
+    root = &_next; // NOTE: may be null. Who cares.
+    return 0;
+  }
+  else if (_next && _next == drop) {
+    _next = _next->_next; // NOTE: may be null. Who cares.
+    return 0;
+  }
+  return (_next) ? _next->dropArg(root, drop) : -1;
+}
+
+
+/**
 * Takes all the keys in the provided argument chain and for any
 *   that are ID'd by string keys, prints them to the provided buffer.
 *
@@ -527,14 +547,14 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
 
 
 /**
-* @return A pointer to the appended argument.
+* @return A pointer to the linked argument.
 */
-Argument* Argument::_append(Argument* arg) {
+Argument* Argument::link(Argument* arg) {
   if (nullptr == _next) {
     _next = arg;
     return arg;
   }
-  return _next->append(arg);
+  return _next->link(arg);
 }
 
 
