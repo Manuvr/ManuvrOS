@@ -197,22 +197,19 @@ oc_discovery_flags_t discovery(const char *di, const char *uri,
   ip6_addr_arg->setKey("ip6_addr");
   ip6_addr_arg->reapValue(true);
 
-  StringBuilder* di_str = new StringBuilder((char*) di);
-  Argument* di_arg  = disc_ev->addArg(di_str);
+  Argument* di_arg  = disc_ev->addArg(new StringBuilder((char*) di));
   di_arg->setKey("di");
   di_arg->reapValue(true);
 
-  StringBuilder* uri_str = new StringBuilder((char*) uri);
-  Argument* uri_arg  = disc_ev->addArg(uri_str);
-  di_arg->setKey("uri");
-  di_arg->reapValue(true);
+  Argument* uri_arg  = disc_ev->addArg(new StringBuilder((char*) uri));
+  uri_arg->setKey("uri");
+  uri_arg->reapValue(true);
 
   for (i = 0; i < oc_string_array_get_allocated_size(types); i++) {
     char *t = oc_string_array_get_item(types, i);
-    StringBuilder* t_str = new StringBuilder(t);
-    Argument* t_arg = disc_ev->addArg(t_str);
-    uri_arg->setKey("r_type");
-    uri_arg->reapValue(true);
+    Argument* t_arg = disc_ev->addArg(new StringBuilder(t));
+    t_arg->setKey("r_type");
+    t_arg->reapValue(true);
   }
   ManuvrOIC::INSTANCE->raiseEvent(disc_ev);
   return ManuvrOIC::INSTANCE->isDiscovering() ? OC_CONTINUE_DISCOVERY : OC_STOP_DISCOVERY;

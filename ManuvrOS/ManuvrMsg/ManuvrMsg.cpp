@@ -110,7 +110,7 @@ int8_t ManuvrMsg::repurpose(uint16_t code) {
 
 Argument* ManuvrMsg::addArg(Argument* nu) {
   if (nullptr != arg) {
-    return arg->append(nu);
+    return arg->link(nu);
   }
   arg = nu;
   return nu;

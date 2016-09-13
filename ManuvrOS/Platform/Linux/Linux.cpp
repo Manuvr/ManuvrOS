@@ -195,7 +195,7 @@ Argument* parseFromArgCV(int argc, const char* argv[]) {
 
     else if (((argv[i][0] == '-') && (argv[i][1] == '-'))) {
       if (last_key) {
-        _args->append(new Argument((uint8_t) 1))->setKey(last_key);
+        _args->link(new Argument((uint8_t) 1))->setKey(last_key);
       }
       last_key = (const char*) &argv[i][2];
     }
@@ -205,12 +205,12 @@ Argument* parseFromArgCV(int argc, const char* argv[]) {
         nu->setKey(last_key);
         last_key = nullptr;
       }
-      _args->append(nu);
+      _args->link(nu);
     }
   }
 
   if (last_key) {
-    _args->append(new Argument((uint8_t) 1))->setKey(last_key);
+    _args->link(new Argument((uint8_t) 1))->setKey(last_key);
   }
   return _args;
 }
