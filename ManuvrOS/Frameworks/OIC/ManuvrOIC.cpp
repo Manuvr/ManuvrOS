@@ -178,7 +178,6 @@ static void fetch_credentials() {
   oc_storage_config("./creds");
 }
 
-static char temp_uri[OIC_MAX_URI_LENGTH];
 
 oc_discovery_flags_t discovery(const char *di, const char *uri,
               oc_string_array_t types, oc_interface_mask_t interfaces,
@@ -189,13 +188,15 @@ oc_discovery_flags_t discovery(const char *di, const char *uri,
   if (server->endpoint.flags & 0x10) {  // TODO: Should use their namespace.
     disc_ev->addArg((uint8_t) 1)->setKey("secure");
   }
-  disc_ev->addArg((uint8_t) server->endpoint.flags)->setKey("r_flags");
-  disc_ev->addArg((uint16_t) server->endpoint.ipv6_addr.port)->setKey("ip6_port");
 
-  StringBuilder* ip6_addr = new StringBuilder(server->endpoint.ipv6_addr.address, 16);
-  Argument* ip6_addr_arg  = disc_ev->addArg(ip6_addr);
-  ip6_addr_arg->setKey("ip6_addr");
-  ip6_addr_arg->reapValue(true);
+  int srv_len = sizeof(oc_server_handle_t);
+  uint8_t* server_ep = (uint8_t*) malloc(srv_len);
+  memcpy(server_ep, server, srv_len);
+
+  Argument* ep_arg = new Argument(server_ep, srv_len);
+  ep_arg->setKey("server");
+  ep_arg->reapValue(true);
+  disc_ev->addArg(ep_arg);
 
   Argument* di_arg  = disc_ev->addArg(new StringBuilder((char*) di));
   di_arg->setKey("di");

@@ -61,8 +61,8 @@ void IdentityOIC::toString(StringBuilder* output) {
 * Only the persistable particulars of this instance. All the base class and
 *   error-checking are done upstream.
 */
-int IdentityOIC::toBuffer(uint8_t* buf, uint16_t len) {
-  int offset = Identity::toBuffer(buf, len);
+int IdentityOIC::serialize(uint8_t* buf, uint16_t len) {
+  int offset = Identity::_serialize(buf, len);
   memcpy((buf + offset), (uint8_t*)&uuid.id, 16);
   return 16;
 }

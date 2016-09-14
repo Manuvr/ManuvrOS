@@ -377,11 +377,9 @@ int8_t Argument::getValueAs(void* trg_buf) {
       case SYS_RUNNABLE_PTR_FM:     // This is a pointer to ManuvrRunnable.
       case SYS_EVENTRECEIVER_FM:    // This is a pointer to an EventReceiver.
       case SYS_MANUVR_XPORT_FM:     // This is a pointer to a transport.
+      default:
         return_value = 0;
         *((uintptr_t*) trg_buf) = *((uintptr_t*)&target_mem);
-        break;
-      default:
-        return_value = -2;
         break;
     }
   }

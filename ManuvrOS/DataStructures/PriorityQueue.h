@@ -126,7 +126,11 @@ template <class T> PriorityQueue<T>::PriorityQueue() {
   root = nullptr;
   element_count = 0;
   #ifdef __MANUVR_LINUX
+    #if defined (PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
     _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+    #else
+    _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
+    #endif
   #elif defined(__MANUVR_FREERTOS)
 //    _mutex = xSemaphoreCreateRecursiveMutex();
   #endif

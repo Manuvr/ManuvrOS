@@ -43,7 +43,11 @@ StringBuilder::StringBuilder() {
   this->col_length = 0;
   this->preserve_ll = false;
   #if defined(__MANUVR_LINUX)
+    #if defined (PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
     _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+    #else
+    _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
+    #endif
   #elif defined(__MANUVR_FREERTOS)
     //_mutex = xSemaphoreCreateRecursiveMutex();
   #endif
@@ -835,7 +839,7 @@ void StringBuilder::null_term_check() {
 
 /**
 * This method prints ASCII representations of the bytes this instance contains.
-* 
+*
 * @param output The StringBuilder object into which output is written.
 */
 void StringBuilder::printDebug(StringBuilder* output) {
