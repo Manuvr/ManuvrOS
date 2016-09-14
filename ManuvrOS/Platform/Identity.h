@@ -75,22 +75,12 @@ enum class IdentFormat {
   CERT_FORMAT_DER = 0x04,  // Certificate in DER format.
   PSK_ASYM        = 0x05,  // Pre-shared asymmetric key.
   PSK_SYM         = 0x06,  // Pre-shared symmetric key.
+  OIC_CRED        = 0x07,  // OIC credential.
   ONE_ID          = 0x10   // OneID asymemetric key strategey.
 };
 
-
-enum class OCFCredType {
-  /*
-  * These defs were pulled from the OIC1.1 draft.
-  */
-  UNDEF = 0x00,    // Nothing here.
-  PAIRWISE_SYM,    // Pairwise symmetric
-  GROUP_SYM,       // Group symmetric
-  ASYM_AUTH,       // Asymmetric authenticated
-  CERT,            // Certificate
-  PASSWD,          // Pin/Password
-};
-
+// This is the minimum size of or base identity class.
+#define IDENTITY_BASE_PERSIST_LENGTH    6
 
 /*
 * This is our manner of grappling with the concept of "identity". The issue is
@@ -103,10 +93,10 @@ class Identity {
     virtual ~Identity();
 
     /* Provides concise representations... */
-    virtual void toString(StringBuilder*) =0;   // For readability.
-    virtual int  toBuffer(uint8_t*, uint16_t len);   // For storage.
+    virtual void toString(StringBuilder*)  =0;   // For readability.
+    virtual int  serialize(uint8_t*, uint16_t len) =0;   // For storage.
     inline  int  toBuffer(uint8_t* buf) {
-      return toBuffer(buf, _ident_len);
+      return _serialize(buf, _ident_len);
     };
 
     // TODO: int8_t serialize();
@@ -122,6 +112,8 @@ class Identity {
 
     Identity(const char*, IdentFormat);
 
+    int  _serialize(uint8_t*, uint16_t len);   // For storage.
+
     inline bool _ident_flag(uint16_t f) {   return ((_ident_flags & f) == f);  };
     inline void _ident_set_flag(bool nu, uint16_t _flag) {
       _ident_flags = (nu) ? (_ident_flags | _flag) : (_ident_flags & ~_flag);
@@ -133,29 +125,11 @@ class Identity {
     char*       _handle = nullptr;  // Human-readable name of this identity.
     Identity*   _next   = nullptr;  // TODO: Chaining is probably better than flatness in this case.
     IdentFormat format  = IdentFormat::UNDETERMINED;   // What is the nature of this identity?
+
 };
 
 #include <Platform/Identity/IdentityUUID.h>
 
-
-#if defined (MANUVR_OIC)
-class IdentityOCFCred : public IdentityUUID {
-    IdentityOCFCred(const char* nom);
-    IdentityOCFCred(const char* nom, char* uuid_str);
-    ~IdentityOCFCred();
-
-};
-#endif // MANUVR_OIC
-
-
-class IdentityHash : public Identity {
-  public:
-    IdentityHash();
-    ~IdentityHash();
-
-  protected:
-
-};
 
 
 class IdentityCert : public Identity {

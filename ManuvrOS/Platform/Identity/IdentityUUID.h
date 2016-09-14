@@ -36,7 +36,7 @@ class IdentityUUID : public Identity {
     ~IdentityUUID();
 
     void toString(StringBuilder*);
-    int  toBuffer(uint8_t*, uint16_t);
+    int  serialize(uint8_t*, uint16_t);
 
 
   private:

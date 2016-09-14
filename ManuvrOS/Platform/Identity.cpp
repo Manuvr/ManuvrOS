@@ -40,14 +40,19 @@ Basic machinery of Identity objects.
 /**
 * This is an abstract factory function for re-constituting identities from
 *   storage. It sets flags to reflect origins, and handles casting and so-forth.
+* Buffer is formatted like so...
+*   /--------------------------------------------------------------------------\
+*   | Len MSB | Len LSB | Flgs MSB | Flgs LSB | Format | null-term str | extra |
+*   \--------------------------------------------------------------------------/
+*
+* The "extra" field contains the class-specific data remaining in the buffer.
 *
 * @param buf
 * @param len
 * @return An identity chain on success, or nullptr on failure.
 */
 Identity* Identity::fromBuffer(uint8_t* buf, int len) {
-  const int BASIC_SIZE = 2 + 2 + 1 + 1;  // Minimum size.
-  if (len > BASIC_SIZE) {
+  if (len > IDENTITY_BASE_PERSIST_LENGTH) {
     uint16_t ident_len = (((uint16_t) *(buf+0)) << 8) + *(buf+1);
     uint16_t ident_flg = (((uint16_t) *(buf+2)) << 8) + *(buf+3);
     IdentFormat fmt = (IdentFormat) *(buf+4);
@@ -72,8 +77,14 @@ Identity* Identity::fromBuffer(uint8_t* buf, int len) {
         break;
       case IdentFormat::PSK_SYM:
         break;
-      case IdentFormat::ONE_ID:
-        break;
+      #if defined (MANUVR_OPENINTERCONNECT)
+        case IdentFormat::OIC_CRED:
+          break;
+      #endif
+      #if defined (MANUVR_ONEID)
+        case IdentFormat::ONE_ID:
+          break;
+      #endif
       case IdentFormat::UNDETERMINED:
       default:
         break;
@@ -94,10 +105,12 @@ Identity* Identity::fromBuffer(uint8_t* buf, int len) {
 *******************************************************************************/
 
 Identity::Identity(const char* nom, IdentFormat _f) {
-  _ident_len = strlen(nom) + 1;   // TODO: Scary....
-  _handle = (char*) malloc(_ident_len);
+  format = _f;
+  _ident_len = strlen(nom);   // TODO: Scary....
+  _handle = (char*) malloc(_ident_len + 1);
   // Also copies the required null-terminator.
-  for (int i = 0; i < _ident_len; i++) *(_handle + i) = *(nom+i);
+  for (int i = 0; i < _ident_len+1; i++) *(_handle + i) = *(nom+i);
+  _ident_len += IDENTITY_BASE_PERSIST_LENGTH;
 }
 
 
@@ -113,9 +126,8 @@ Identity::~Identity() {
 * Only the persistable particulars of this instance. All the base class and
 *   error-checking are done upstream.
 */
-int Identity::toBuffer(uint8_t* buf, uint16_t len) {
-  const int BASIC_SIZE = 2 + 2 + 1 + 1;  // Minimum size.
-  if (len > BASIC_SIZE) {
+int Identity::_serialize(uint8_t* buf, uint16_t len) {
+  if (len > IDENTITY_BASE_PERSIST_LENGTH) {
     *(buf+0) = (uint8_t) (_ident_len >> 8) & 0xFF;
     *(buf+1) = (uint8_t) _ident_len & 0xFF;
     *(buf+2) = (uint8_t) (_ident_flags >> 8) & 0xFF;
@@ -124,20 +136,18 @@ int Identity::toBuffer(uint8_t* buf, uint16_t len) {
     len -= 5;
     buf += 5;
 
-    int str_bytes = 1;
+    int str_bytes = 0;
     if (_handle) {
-      str_bytes = strlen((const char*) buf) + 1;
-      for (int i = 0; i < str_bytes; i++) *(buf + i) = *(_handle + i);
-      buf += str_bytes;
-      len -= str_bytes;
+      str_bytes = strlen((const char*) _handle);
+      if (str_bytes < len) {
+        memcpy(buf, _handle, str_bytes + 1);
+      }
     }
     else {
       *(buf+5) = '\0';
-      buf++;
     }
 
-    len -= str_bytes;
-    return str_bytes;
+    return str_bytes + IDENTITY_BASE_PERSIST_LENGTH;
   }
   return 0;
 }
