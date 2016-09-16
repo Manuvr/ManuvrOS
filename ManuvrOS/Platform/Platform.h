@@ -239,7 +239,7 @@ class ManuvrPlatform {
     *   can aggregate that config in platform.
     */
     Argument* getConfKey(const char* key);
-    int8_t setConf(Argument*);
+    int8_t storeConf(Argument*);
     inline int8_t configLoaded() {   return (nullptr == _config) ? 0 : 1;  };
 
     /* These are safe function proxies for external callers. */
@@ -247,6 +247,8 @@ class ManuvrPlatform {
     void idleHook();
     void setWakeHook(FxnPointer nu);
     void wakeHook();
+
+    void forsakeMain();
 
     void printConfig(StringBuilder* out);
     virtual void printDebug(StringBuilder* out);

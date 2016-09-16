@@ -267,10 +267,6 @@ ManuvrOIC::ManuvrOIC() : EventReceiver() {
 * @param   Argument* root_config
 */
 ManuvrOIC::ManuvrOIC(Argument* root_config) : ManuvrOIC() {
-  // We will have these, at minimum.
-  _uri_map["/oic/p"]   = NULL;
-  _uri_map["/oic/d"]   = NULL;
-  _uri_map["/oic/res"] = NULL;
 }
 
 

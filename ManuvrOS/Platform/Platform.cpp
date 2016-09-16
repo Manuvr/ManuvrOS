@@ -340,7 +340,14 @@ Argument* ManuvrPlatform::getConfKey(const char* key) {
 }
 
 
-int8_t ManuvrPlatform::setConf(Argument* nu) {
+/**
+ * Calling this function with a chain of Arguments will cause the store to be
+ *   clobbered with the Argument contents.
+ *
+ * @param  nu The new configuration data to persist.
+ * @return    0 on success. Non-zero otherwise.
+ */
+int8_t ManuvrPlatform::storeConf(Argument* nu) {
   #if defined(MANUVR_STORAGE)
   // Persist any open configuration...
   if ((nu) && (_storage_device)) {
@@ -435,6 +442,20 @@ void sleep_millis(unsigned long millis) {
   #elif defined(ARDUINO)
     delay(millis);  // So wasteful...
   #endif
+}
+
+
+/**
+* This is given as a convenience function. The programmer of an application could
+*   call this as a last-act in the main function. This function never returns.
+* NOTE: Unless inlined, this convenience will one additional stack-frame's worth of
+*   memory. Probably not worth the convenience in most cases.  -Wl --gc-sections
+*/
+void ManuvrPlatform::forsakeMain() {
+  while (1) {
+    // Run forever.
+    kernel.procIdleFlags();
+  }
 }
 
 }  // extern "C"

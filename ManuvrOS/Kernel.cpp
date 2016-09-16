@@ -1153,7 +1153,7 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
       break;
 
     case MANUVR_MSG_SYS_CONF_SAVE:
-      platform.setConf(event->getArgs());
+      platform.storeConf(event->getArgs());
       break;
     case MANUVR_MSG_SYS_REBOOT:
       if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
