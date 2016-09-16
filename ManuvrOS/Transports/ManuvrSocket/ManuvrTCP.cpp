@@ -136,25 +136,22 @@ This is basically only for linux for now.
 /**
 * Constructor.
 */
-ManuvrTCP::ManuvrTCP(const char* addr, int port) : ManuvrSocket(addr, port, 0) {
-  setReceiverName("ManuvrTCP");
-  set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED | MANUVR_XPORT_FLAG_HAS_MULTICAST);
-}
-
-
 ManuvrTCP::ManuvrTCP(const char* addr, int port, uint32_t opts) : ManuvrSocket(addr, port, opts) {
   setReceiverName("ManuvrTCP");
-  set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED | MANUVR_XPORT_FLAG_HAS_MULTICAST);
+  set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED);
 }
 
+/**
+* Constructor.
+*/
+ManuvrTCP::ManuvrTCP(const char* addr, int port) : ManuvrTCP(addr, port, 0) {
+}
 
 /**
 * This constructor is called by a listening instance of ManuvrTCP.
 */
 // TODO: This is very ugly.... Might need a better way of fractioning into new threads...
-ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in* nu_sockaddr) : ManuvrSocket(listening_instance->_addr, listening_instance->_port_number, 0) {
-  setReceiverName("ManuvrTCP");
-  set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED | MANUVR_XPORT_FLAG_HAS_MULTICAST);
+ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in* nu_sockaddr) : ManuvrTCP(listening_instance->_addr, listening_instance->_port_number, 0) {
   _sock          = sock;
   _options       = listening_instance->_options;
 

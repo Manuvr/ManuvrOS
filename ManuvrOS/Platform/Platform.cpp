@@ -454,7 +454,7 @@ void sleep_millis(unsigned long millis) {
 void ManuvrPlatform::forsakeMain() {
   while (1) {
     // Run forever.
-    kernel.procIdleFlags();
+    _kernel.procIdleFlags();
   }
 }
 
