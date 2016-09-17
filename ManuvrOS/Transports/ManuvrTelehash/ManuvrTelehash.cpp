@@ -434,10 +434,7 @@ void ManuvrTelehash::printDebug(StringBuilder *temp) {
 
 
 /**
-* TODO: Until I do something smarter...
-* We are obliged to call the ManuvrXport's version of bootComplete(), which in turn
-*   will call the EventReceiver version of that fxn.
-* ---J. Ian Lindsay   Thu Dec 03 03:25:48 MST 2015
+* Boot done finished-up.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */

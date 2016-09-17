@@ -36,7 +36,6 @@ volatile Kernel* __kernel = nullptr;
 ****************************************************************************************************/
 volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
 volatile uint8_t  watchdog_mark      = 42;
-unsigned long     start_time_micros  = 0;
 
 
 /****************************************************************************************************
@@ -264,18 +263,19 @@ volatile void reboot() {
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
 */
-void platformPreInit() {
-  __kernel = (volatile Kernel*) Kernel::getInstance();
+int8_t platformPreInit(Argument* root_opts) {
+  __kernel = (volatile Kernel*) &_kernel;
+  _start_micros = micros();
   gpioSetup();
+  init_RNG();
+  initPlatformRTC();
+  return 0;
 }
 
 
 /*
 * Called as a result of kernels bootstrap() fxn.
 */
-void platformInit() {
-  start_time_micros = micros();
-  init_RNG();
-  initPlatformRTC();
-  __kernel = (volatile Kernel*) Kernel::getInstance();
+int8_t platformPostInit() {
+  return 0;
 }

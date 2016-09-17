@@ -35,8 +35,6 @@ This file is meant to contain a set of common functions that are typically platf
 #endif
 
 
-Platform platform;
-
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
@@ -48,6 +46,12 @@ Platform platform;
 * Static members and initializers should be located here.
 * Effectively, this entire class is static.
 *******************************************************************************/
+/* NOTE: There is magic here... We did a typedef dance in Platform.h to achieve
+   a sort of "casting" of the stack-allocated platform instance.  */
+Platform platform;
+
+unsigned long ManuvrPlatform::_start_micros = 0;
+unsigned long ManuvrPlatform::_boot_micros  = 0;
 
 /**
 * Issue a human-readable string representing the condition that causes an
@@ -178,8 +182,10 @@ void ManuvrPlatform::printDebug(StringBuilder* output) {
   output->concatf("-- stack grows %s\n--\n", (&final_sp > &initial_sp) ? "up" : "down");
   output->concatf("-- millis()            0x%08x\n", millis());
   output->concatf("-- micros()            0x%08x\n", micros());
-  output->concatf("-- Timer resolution:   %d ms\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
-  output->concatf("-- Entropy pool size:  %u bytes\n", PLATFORM_RNG_CARRY_CAPACITY * 4);
+  output->concatf("-- start_micros        0x%08x\n", _start_micros);
+  output->concatf("-- boot_micros         0x%08x\n", _boot_micros);
+  output->concatf("-- Timer resolution    %d ms\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
+  output->concatf("-- Entropy pool size   %u bytes\n", PLATFORM_RNG_CARRY_CAPACITY * 4);
   if (platform.hasTimeAndDate()) {
     output->concatf("-- RTC State:          %s\n", platform.getRTCStateString());
     output->concat("-- Current datetime:   ");
@@ -285,11 +291,15 @@ int8_t ManuvrPlatform::bootstrap() {
     }
   #endif
   _set_init_state(MANUVR_INIT_STATE_POST_INIT);
-  platformPostInit();
+
+  platformPostInit();    // Hook for platform-specific post-boot operations.
+
   if (nullptr == _self) {
+    // If we have no other conception of "self", invent one.
     _self = new IdentityUUID(IDENTITY_STRING);
   }
-  _set_init_state(MANUVR_INIT_STATE_NOMINAL);
+  _boot_micros = micros() - _start_micros;    // Note how long boot took.
+  _set_init_state(MANUVR_INIT_STATE_NOMINAL); // Mark booted.
   return 0;
 }
 

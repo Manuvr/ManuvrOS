@@ -65,7 +65,6 @@ TeensyStorage _t_storage(nullptr);
 *******************************************************************************/
 volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
 volatile uint8_t  watchdog_mark      = 42;
-unsigned long     start_time_micros  = 0;
 
 
 /*******************************************************************************
@@ -404,7 +403,7 @@ int8_t Teensy3::platformPreInit(Argument* root_config) {
   ManuvrPlatform::platformPreInit(root_config);
   _alter_flags(true, DEFAULT_PLATFORM_FLAGS);
 
-  start_time_micros = micros();
+  _start_micros = micros();
   init_rng();
   _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
 

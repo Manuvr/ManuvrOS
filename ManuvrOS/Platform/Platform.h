@@ -71,8 +71,7 @@ class Storage;
 
 
 /**
-* These are just lables. We don't really ever care about the *actual* integers
-*   being defined here. Only their consistency.
+* These are _pflags definitions.
 */
 #define MANUVR_PLAT_FLAG_P_STATE_MASK     0x00000007  // Bits 0-2: platform-state.
 
@@ -82,6 +81,7 @@ class Storage;
 #define MANUVR_PLAT_FLAG_RTC_SET          0x00000800  // RTC trust-worthy?
 #define MANUVR_PLAT_FLAG_BIG_ENDIAN       0x00001000  // Big-endian?
 #define MANUVR_PLAT_FLAG_ALU_WIDTH_MASK   0x00006000  // Bits 13-14: ALU width.
+#define MANUVR_PLAT_FLAG_RESERVED_0       0x00008000  //
 
 #define MANUVR_PLAT_FLAG_SERIALED         0x02000000  // Do we have a serial number?
 #define MANUVR_PLAT_FLAG_HAS_IDENTITY     0x04000000  // Do we know who we are?
@@ -161,6 +161,7 @@ class Storage;
   }
 #endif
 
+
 /* This is how we conceptualize a GPIO pin. */
 // TODO: I'm fairly sure this sucks. It's too needlessly memory heavy to
 //         define 60 pins this way. Can't add to a list of const's, so it can't
@@ -174,16 +175,13 @@ typedef struct __platform_gpio_def {
 } PlatformGPIODef;
 
 
-
 /**
 * This class should form the single reference via which all platform-specific
 *   functions and features are accessed. This will allow us a more natural
 *   means of extension to other platforms while retaining some linguistic
 *   checks and validations.
 *
-* TODO: First stage of re-org in-progress. Ultimately, this ought to be made
-*         easy to compose platforms. IE:  (Base --> Linux --> Raspi)
-*       This will not be hard to achieve. But: baby-steps.
+* This is base platform support. It is a pure virtual.
 */
 class ManuvrPlatform {
   public:
@@ -282,7 +280,9 @@ class ManuvrPlatform {
     Identity*       _identity  = nullptr;
     #if defined(MANUVR_STORAGE)
       Storage* _storage_device = nullptr;
+      // TODO: Ultimately, there will be a similar object for the crypto module.
     #endif
+
 
     /* Inlines for altering and reading the flags. */
     inline void _alter_flags(bool en, uint32_t mask) {
@@ -302,6 +302,9 @@ class ManuvrPlatform {
       virtual int8_t _load_config() =0;
     #endif
 
+    static unsigned long _start_micros;
+    static unsigned long _boot_micros;
+
 
   private:
     uint32_t        _pflags    = 0;
@@ -310,6 +313,11 @@ class ManuvrPlatform {
 
     void _discoverALUParams();
 };
+
+
+
+
+
 
 
 

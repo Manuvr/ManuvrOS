@@ -59,10 +59,6 @@ ManuvrSession::ManuvrSession(ManuvrXport* _xport) : XenoSession(_xport) {
   tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
   tapMessageType(MANUVR_MSG_SESS_HANGUP);
   tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
-
-  if (_xport->booted()) {
-    bootComplete();   // Because we are instantiated well after boot, we call this on construction.
-  }
 }
 
 

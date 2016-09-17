@@ -43,10 +43,6 @@ ManuvrConsole::ManuvrConsole(BufferPipe* _near_side) : XenoSession(_near_side) {
   Kernel::attachToLogger((BufferPipe*) this);
   mark_session_state(XENOSESSION_STATE_ESTABLISHED);
   _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
-
-  if (Kernel::getInstance()->booted()) {
-    bootComplete();   // Because we are instantiated well after boot, we call this on construction.
-  }
 }
 
 

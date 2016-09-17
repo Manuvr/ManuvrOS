@@ -46,7 +46,6 @@ Fallback to Arduino support...
 ****************************************************************************************************/
 volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
 volatile uint8_t  watchdog_mark      = 42;
-unsigned long     start_time_micros  = 0;
 
 
 /****************************************************************************************************
@@ -333,6 +332,6 @@ void platformPreInit() {
 * Called as a result of kernels bootstrap() fxn.
 */
 void platformInit() {
-  start_time_micros = micros();
+  _start_micros = micros();
   init_RNG();
 }

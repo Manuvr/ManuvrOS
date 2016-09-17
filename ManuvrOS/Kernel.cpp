@@ -154,24 +154,6 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
 const uint16_t ManuvrMsg::TOTAL_MSG_DEFS = sizeof(ManuvrMsg::message_defs) / sizeof(MessageTypeDef);
 
 
-/*
-* All external access to Kernel's non-static members should obtain it's reference via this fxn...
-*   Note that services that are dependant on us during the bootstrap phase should have a reference
-*   passed into their constructors, rather than forcing them to call this and risking an infinite
-*   recursion.
-*/
-Kernel* Kernel::getInstance() {
-  if (INSTANCE == nullptr) {
-    // This is a valid means of instantiating the kernel. Typically, user code
-    //   would have the Kernel on the stack, but if they want to live in the heap,
-    //   that's fine by us. Oblige...
-    Kernel::INSTANCE = new Kernel();
-  }
-  // And that is how the singleton do...
-  return (Kernel*) Kernel::INSTANCE;
-}
-
-
 void Kernel::nextTick(BufferPipe* p) {
   INSTANCE->_pipe_io_pend.insert(p);
   INSTANCE->_pending_pipes(true);
@@ -198,8 +180,8 @@ void Kernel::nextTick(BufferPipe* p) {
 */
 Kernel::Kernel() : EventReceiver() {
   setReceiverName("Kernel");
-  INSTANCE           = this;  // For singleton reference. TODO: Will not parallelize.
-  __kernel           = this;  // We extend EventReceiver. So we populate this.
+  INSTANCE             = this;  // For singleton reference. TODO: Will not parallelize.
+  __kernel             = this;  // We extend EventReceiver. So we populate this.
 
   current_event        = nullptr;
   max_queue_depth      = 0;
@@ -302,14 +284,10 @@ int8_t Kernel::detachFromLogger(BufferPipe* _pipe) {
 }
 
 
-/****************************************************************************************************
-* Kernel operation...                                                                               *
-****************************************************************************************************/
 
-
-/****************************************************************************************************
-* Subscriptions and client management fxns.                                                         *
-****************************************************************************************************/
+/*******************************************************************************
+* Subscriptions and client management fxns.                                    *
+*******************************************************************************/
 
 /**
 * A class calls this to subscribe to events. After calling this, the class will have its notify()
@@ -326,8 +304,7 @@ int8_t Kernel::subscribe(EventReceiver *client) {
   int8_t return_value = subscribers.insert(client);
   if (booted()) {
     // This subscriber is joining us after bootup. Call its bootComplete() fxn to cause it to init.
-    // TODO: This is suspect....
-    client->notify(returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED));
+    client->bootComplete();
   }
   return ((return_value >= 0) ? 0 : -1);
 }
@@ -645,6 +622,9 @@ void Kernel::reclaim_event(ManuvrRunnable* active_runnable) {
 }
 
 
+/*******************************************************************************
+* Kernel operation...                                                          *
+*******************************************************************************/
 
 // This is the splice into v2's style of event handling (callaheads).
 int8_t Kernel::procCallAheads(ManuvrRunnable *active_runnable) {
@@ -995,6 +975,15 @@ float Kernel::cpu_usage() {
 */
 void Kernel::printProfiler(StringBuilder* output) {
   if (nullptr == output) return;
+  if (getVerbosity() > 4) {
+    output->concatf("-- Queue depth        \t%d\n", exec_queue.size());
+    output->concatf("-- Preallocation depth\t%d\n", preallocated.size());
+    output->concatf("-- Prealloc starves   \t%u\n", (unsigned long) prealloc_starved);
+    output->concatf("-- events_destroyed   \t%u\n", (unsigned long) events_destroyed);
+    output->concatf("-- specificity burden \t%u\n", (unsigned long) burden_of_specific);
+    output->concatf("-- idempotent_blocks  \t%u\n", (unsigned long) idempotent_blocks);
+  }
+
   output->concatf("-- total_events       \t%u\n", (unsigned long) total_events);
   output->concatf("-- total_events_dead  \t%u\n", (unsigned long) total_events_dead);
   output->concatf("-- max_queue_depth    \t%u\n", (unsigned long) max_queue_depth);
@@ -1070,15 +1059,6 @@ void Kernel::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
 
   //output->concatf("-- our_mem_addr:             %p\n", this);
-  if (getVerbosity() > 4) {
-    output->concatf("-- Queue depth:              %d\n", exec_queue.size());
-    output->concatf("-- Preallocation depth:      %d\n", preallocated.size());
-    output->concatf("-- Prealloc starves:         %u\n", (unsigned long) prealloc_starved);
-    output->concatf("-- events_destroyed:         %u\n", (unsigned long) events_destroyed);
-    output->concatf("-- burden_of_being_specific  %u\n", (unsigned long) burden_of_specific);
-    output->concatf("-- idempotent_blocks         %u\n", (unsigned long) idempotent_blocks);
-  }
-
   if (subscribers.size() > 0) {
     output->concatf("-- Subscribers: (%d total):\n", subscribers.size());
     for (int i = 0; i < subscribers.size(); i++) {
@@ -1200,9 +1180,6 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
         if (0 == active_runnable->getArgAs(&er_ptr)) {
           if (MANUVR_MSG_SYS_ADVERTISE_SRVC == active_runnable->eventCode()) {
             subscribe((EventReceiver*) er_ptr);
-            if (booted()) {
-              er_ptr->bootComplete();
-            }
           }
           else {
             unsubscribe((EventReceiver*) er_ptr);

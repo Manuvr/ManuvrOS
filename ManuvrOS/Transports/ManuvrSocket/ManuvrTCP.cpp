@@ -162,7 +162,6 @@ ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in
     *((uint8_t *) &_sockaddr + i) = *(((uint8_t*)nu_sockaddr) + i);
   }
 
-  bootComplete();
   connected(true);  // TODO: Possibly not true....
 }
 
@@ -399,14 +398,11 @@ void ManuvrTCP::printDebug(StringBuilder *temp) {
 
 
 /**
-* TODO: Until I do something smarter...
-* We are obliged to call the ManuvrXport's version of bootComplete(), which in turn
-*   will call the EventReceiver version of that fxn.
-* ---J. Ian Lindsay   Thu Dec 03 03:25:48 MST 2015
+* Boot done finished-up.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t ManuvrTCP::bootComplete() {   // ?? TODO ??
+int8_t ManuvrTCP::bootComplete() {
   EventReceiver::bootComplete();
 
   // We will suffer a 300ms latency if the platform's networking stack doesn't flush

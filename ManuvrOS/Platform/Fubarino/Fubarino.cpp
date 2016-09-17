@@ -39,7 +39,6 @@ This file is meant to contain a set of common functions that are typically platf
 ****************************************************************************************************/
 volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
 volatile uint8_t  watchdog_mark      = 42;
-unsigned long     start_time_micros  = 0;
 
 
 /****************************************************************************************************
@@ -228,7 +227,7 @@ int readPinAnalog(uint8_t pin) {
 ****************************************************************************************************/
 
 void platformInit() {
-  start_time_micros = micros();
+  _start_micros = micros();
   init_RNG();
 }
 
@@ -273,7 +272,7 @@ int8_t ManuvrPlatform::platformPreInit() {
   _alter_flags(true, default_flags);
   _discoverALUParams();
 
-  start_time_micros = micros();
+  _start_micros = micros();
   init_rng();
   _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
 

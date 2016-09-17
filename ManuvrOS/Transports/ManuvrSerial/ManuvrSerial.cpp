@@ -79,19 +79,6 @@ Platforms that require it should be able to extend this driver for specific
 *
 * @param  tty_path  Path to the TTY.
 * @param  b_rate    The port baud rate.
-*/
-ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate) : ManuvrXport() {
-  __class_initializer();
-  _addr      = tty_path;
-  _baud_rate = b_rate;
-  _options   = 0;
-}
-
-/**
-* Constructor.
-*
-* @param  tty_path  Path to the TTY.
-* @param  b_rate    The port baud rate.
 * @param  opts      Options to the underlying implementation.
 */
 ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate, uint32_t opts) : ManuvrXport() {
@@ -99,6 +86,15 @@ ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate, uint32_t opts) : Ma
   _addr     = tty_path;
   _baud_rate = b_rate;
   _options  = opts;
+}
+
+/**
+* Constructor.
+*
+* @param  tty_path  Path to the TTY.
+* @param  b_rate    The port baud rate.
+*/
+ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate) : ManuvrSerial(tty_path, b_rate, 0) {
 }
 
 /**

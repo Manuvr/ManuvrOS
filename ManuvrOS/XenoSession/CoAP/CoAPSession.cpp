@@ -68,10 +68,6 @@ CoAPSession::CoAPSession(BufferPipe* _near_side) : XenoSession(_near_side) {
   _ping_timer.alterSchedulePeriod(4000);
   _ping_timer.autoClear(false);
   _ping_timer.enableSchedule(false);
-
-  if (Kernel::getInstance()->booted()) {
-    bootComplete();   // Because we are instantiated well after boot, we call this on construction.
-  }
 }
 
 

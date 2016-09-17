@@ -445,12 +445,6 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
 }
 
 
-//int8_t ManuvrXport::bootComplete() {
-//}
-//int8_t ManuvrXport::callback_proc(ManuvrRunnable *) {
-//}
-
-
 #if defined(__MANUVR_CONSOLE_SUPPORT)
 /**
 * This is a base-level debug function that takes direct input from a user.

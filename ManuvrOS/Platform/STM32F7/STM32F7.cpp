@@ -71,10 +71,6 @@ inline uint16_t _associated_pin(uint8_t _pin) {
 };
 
 
-
-
-unsigned long         start_time_micros  = 0;
-
 volatile uint32_t     randomness_pool[PLATFORM_RNG_CARRY_CAPACITY];
 volatile unsigned int _random_pool_r_ptr = 0;
 volatile unsigned int _random_pool_w_ptr = 0;
@@ -733,9 +729,9 @@ void STM32F7Platform::reboot() {
 int8_t STM32F7Platform::platformPreInit(Argument* root_config) {
   ManuvrPlatform::platformPreInit(root_config);
   _alter_flags(true, DEFAULT_PLATFORM_FLAGS);
-  start_time_micros = micros();
-  gpioSetup();
+  _start_micros = micros();
   init_RNG();
+  gpioSetup();
   initPlatformRTC();
   return 0;
 }

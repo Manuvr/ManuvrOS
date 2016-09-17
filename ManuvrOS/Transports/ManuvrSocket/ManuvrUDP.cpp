@@ -500,15 +500,13 @@ void ManuvrUDP::printDebug(StringBuilder* output) {
 }
 
 
-
 /**
-* There is a NULL-check performed upstream for the scheduler member. So no need
-*   to do it again here.
+* Boot done finished-up.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t ManuvrUDP::bootComplete() {
-  EventReceiver::bootComplete();   // Call up to get scheduler ref and class init.
+  EventReceiver::bootComplete();
   // Because this is not a stream-oriented transport, the timeout value is used
   //   to periodically flush our connection cache.
   read_abort_event.alterScheduleRecurrence(0);
