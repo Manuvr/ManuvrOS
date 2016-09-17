@@ -33,6 +33,9 @@ limitations under the License.
   #include <FreeRTOS_ARM.h>
 #endif
 
+#if !defined(_GNU_SOURCE)
+int strcasestr(char *a, const char *b);
+#endif
 
 /*
 *	This is a linked-list that is castable as a string.

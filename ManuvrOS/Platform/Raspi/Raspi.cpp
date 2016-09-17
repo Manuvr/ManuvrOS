@@ -134,33 +134,6 @@ unsigned gpioHardwareRevision() {
 }
 
 
-int gpioInitialise() {
-  /* sets piModel, needed for peripherals address */
-  if (0 < gpioHardwareRevision()) {
-    int fd = open("/dev/mem", O_RDWR | O_SYNC) ;
-    if (fd < 0) {
-      Kernel::log("Cannot access /dev/mem. No GPIO functions available.\n");
-      return -1;
-    }
-
-    gpioReg  = initMapMem(fd, (piPeriphBase + 0x200000),  GPIO_LEN);
-    systReg  = initMapMem(fd, (piPeriphBase + 0x003000),  SYST_LEN);
-
-    close(fd);
-
-    if ((gpioReg == MAP_FAILED) || (systReg == MAP_FAILED)) {
-      Kernel::log("mmap failed. No GPIO functions available.\n");
-      return -1;
-    }
-  }
-  else {
-    Kernel::log("Could not determine raspi hardware revision.\n");
-    return -1;
-  }
-  return 0;
-}
-
-
 /*******************************************************************************
 *  ___   _           _      ___
 * (  _`\(_ )        ( )_  /'___)
@@ -244,9 +217,32 @@ int getSerialNumber(uint8_t *buf) {
 * Pending peripheral-level init of pins, we should just enable everything and let
 *   individual classes work out their own requirements.
 */
-void gpioSetup() {
-  gpioInitialise();
+int gpioSetup() {
+  /* sets piModel, needed for peripherals address */
+  if (0 < gpioHardwareRevision()) {
+    int fd = open("/dev/mem", O_RDWR | O_SYNC) ;
+    if (fd < 0) {
+      printf("Cannot access /dev/mem. Permissions?.\n");
+      exit(-1);
+    }
+
+    gpioReg  = initMapMem(fd, (piPeriphBase + 0x200000),  GPIO_LEN);
+    systReg  = initMapMem(fd, (piPeriphBase + 0x003000),  SYST_LEN);
+
+    close(fd);
+
+    if ((gpioReg == MAP_FAILED) || (systReg == MAP_FAILED)) {
+      printf("mmap failed. No GPIO functions available.\n");
+      exit(-1);
+    }
+  }
+  else {
+    printf("Could not determine raspi hardware revision.\n");
+    exit(-1);
+  }
+  return 0;
 }
+
 
 int8_t gpioDefine(uint8_t pin, int mode) {
   if (piModel) {
@@ -323,13 +319,14 @@ int readPinAnalog(uint8_t pin) {
 * This is the final function called by the kernel constructor.
 */
 int8_t Raspi::platformPreInit(Argument* root_config) {
+  gpioSetup();   // We must do this first if we want micros() to work.
   LinuxPlatform::platformPreInit(root_config);
   _board_name = "Raspi";
   _alter_flags(true,  MANUVR_PLAT_FLAG_SERIALED);
+
+  // These things are not true on the raspi.
   _alter_flags(false, MANUVR_PLAT_FLAG_INNATE_DATETIME);
   _alter_flags(false, MANUVR_PLAT_FLAG_RTC_READY);
-
-  gpioSetup();
 
   return 0;
 }

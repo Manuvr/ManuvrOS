@@ -32,24 +32,6 @@ void printHelp() {
   Kernel::log("Help would ordinarily be displayed here.\n");
 }
 
-#if !defined(_GNU_SOURCE)
-/*
-* We might choose to roll-our-own so that we don't bring in enormous dependencies.
-* TODO: This is buggy.
-* Taken from
-* http://c-for-dummies.com/blog/?p=1359
-*/
-int strcasestr(char *a, const char *b) {
-  char c;
-  while(*a && *b) {
-    c = toupper(*a) - toupper(*b);
-    if( c != 0 ) return(c);
-    a++;
-    b++;
-  }
-  return(c);
-}
-#endif
 
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
