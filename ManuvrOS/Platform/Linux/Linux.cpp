@@ -572,8 +572,6 @@ int8_t LinuxPlatform::platformPreInit(Argument* root_config) {
   }
   _alter_flags(true, default_flags);
 
-  _start_micros = micros();
-
   init_rng();
   _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
   _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);

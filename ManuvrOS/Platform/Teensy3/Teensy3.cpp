@@ -403,7 +403,6 @@ int8_t Teensy3::platformPreInit(Argument* root_config) {
   ManuvrPlatform::platformPreInit(root_config);
   _alter_flags(true, DEFAULT_PLATFORM_FLAGS);
 
-  _start_micros = micros();
   init_rng();
   _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
 

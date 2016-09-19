@@ -73,6 +73,7 @@ volatile bool provide_random_int(uint32_t nu_rnd) {
 */
 void init_RNG() {
   srand(time(nullptr));          // Seed the PRNG...
+  _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
 }
 
 
@@ -226,11 +227,6 @@ int readPinAnalog(uint8_t pin) {
 * Misc                                                                                              *
 ****************************************************************************************************/
 
-void platformInit() {
-  _start_micros = micros();
-  init_RNG();
-}
-
 volatile void jumpToBootloader(void) {
   executeSoftReset(0);
 }
@@ -257,25 +253,12 @@ uint32_t timerCallbackScheduler(uint32_t currentTime) {
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
 */
-int8_t ManuvrPlatform::platformPreInit() {
-  // TODO: Should we really be setting capabilities this late?
+int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
+  ManuvrPlatform::platformPreInit(root_config);
   uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
+  _alter_flags(true, DEFAULT_PLATFORM_FLAGS);
 
-  #if defined(__MANUVR_MBEDTLS)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
-  #endif
-
-  #if defined(MANUVR_GPS_PIPE)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
-  #endif
-
-  _alter_flags(true, default_flags);
-  _discoverALUParams();
-
-  _start_micros = micros();
-  init_rng();
-  _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
-
+  init_RNG();
   return 0;
 }
 

@@ -1,7 +1,0 @@
-## EventReceiver
-
-## ManuvrRunnable
-
-## Argument
-
-## XenoMessage

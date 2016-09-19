@@ -36,11 +36,6 @@ This file is meant to contain a set of common functions that are typically platf
 
 #include <unistd.h>
 
-#if defined(ENABLE_USB_VCP)
-  #include "tm_stm32_usb_device.h"
-  #include "tm_stm32_usb_device_cdc.h"
-#endif
-
 #if defined (__MANUVR_FREERTOS)
   #include <FreeRTOS_ARM.h>
 #endif
@@ -673,7 +668,6 @@ void STM32F7Platform::seppuku() {
 */
 void STM32F7Platform::jumpToBootloader() {
   globalIRQDisable();
-  TM_USBD_Stop(TM_USB_FS);    // DeInit() The USB device.
   __set_MSP(0x20001000);      // Set the main stack pointer...
   HAL_RCC_DeInit();               // Switch to HSI, no PLL
 
@@ -729,10 +723,9 @@ void STM32F7Platform::reboot() {
 int8_t STM32F7Platform::platformPreInit(Argument* root_config) {
   ManuvrPlatform::platformPreInit(root_config);
   _alter_flags(true, DEFAULT_PLATFORM_FLAGS);
-  _start_micros = micros();
   init_RNG();
   gpioSetup();
-  initPlatformRTC();
+  //initPlatformRTC();
   return 0;
 }
 
@@ -755,203 +748,206 @@ int8_t STM32F7Platform::platformPostInit() {
 * Interrupt service routine support functions. Everything in this block
 *   executes under an ISR. Keep it brief...
 *******************************************************************************/
+extern "C" {
+  /* The ISR for the hardware RNG subsystem. Adds to entropy buffer. */
+  void RNG_IRQHandler() {
+    uint32_t sr = RNG->SR;
+    if (sr & (RNG_SR_SEIS | RNG_SR_CEIS)) {
+      // RNG fault? Clear the flags. Log?
+      RNG->SR &= ~(RNG_SR_SEIS | RNG_SR_CEIS);
+    }
 
-/* The ISR for the hardware RNG subsystem. Adds to entropy buffer. */
-void RNG_IRQHandler() {
-  uint32_t sr = RNG->SR;
-  if (sr & (RNG_SR_SEIS | RNG_SR_CEIS)) {
-    // RNG fault? Clear the flags. Log?
-    RNG->SR &= ~(RNG_SR_SEIS | RNG_SR_CEIS);
+    if (sr & RNG_SR_DRDY) {
+      unsigned int _w_ptr = _random_pool_w_ptr % PLATFORM_RNG_CARRY_CAPACITY;
+      randomness_pool[_w_ptr] = RNG->DR;
+      _random_pool_w_ptr++;   // Concurrency...
+
+      if ((_random_pool_w_ptr - _random_pool_r_ptr) >= PLATFORM_RNG_CARRY_CAPACITY) {
+        // We have filled our entropy pool. Turn off the interrupts...
+        RNG->CR &= ~(RNG_CR_IE);
+        // ...and the RNG.
+        RNG->CR &= ~(RNG_CR_RNGEN);
+      }
+    }
   }
 
-  if (sr & RNG_SR_DRDY) {
-    unsigned int _w_ptr = _random_pool_w_ptr % PLATFORM_RNG_CARRY_CAPACITY;
-    randomness_pool[_w_ptr] = RNG->DR;
-    _random_pool_w_ptr++;   // Concurrency...
+  /*
+  *
+  */
+  void EXTI0_IRQHandler(void) {
+    if (EXTI->PR & (EXTI_PR_PR0)) {
+      EXTI->PR = EXTI_PR_PR0;   // Clear service bit.
+      //Kernel::log("EXTI 0\n");
+      if (nullptr != __ext_line_bindings[0].fxn) {
+        __ext_line_bindings[0].fxn();
+      }
+      if (nullptr != __ext_line_bindings[0].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[0].event);
+      }
+    }
+  }
 
-    if ((_random_pool_w_ptr - _random_pool_r_ptr) >= PLATFORM_RNG_CARRY_CAPACITY) {
-      // We have filled our entropy pool. Turn off the interrupts...
-      RNG->CR &= ~(RNG_CR_IE);
-      // ...and the RNG.
-      RNG->CR &= ~(RNG_CR_RNGEN);
+  /*
+  *
+  */
+  void EXTI1_IRQHandler(void) {
+    if (EXTI->PR & (EXTI_PR_PR1)) {
+      EXTI->PR = EXTI_PR_PR1;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[1].fxn) {
+        __ext_line_bindings[1].fxn();
+      }
+      if (nullptr != __ext_line_bindings[1].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[1].event);
+      }
     }
   }
-}
 
-/*
-*
-*/
-void EXTI0_IRQHandler(void) {
-  if (EXTI->PR & (EXTI_PR_PR0)) {
-    EXTI->PR = EXTI_PR_PR0;   // Clear service bit.
-    //Kernel::log("EXTI 0\n");
-    if (nullptr != __ext_line_bindings[0].fxn) {
-      __ext_line_bindings[0].fxn();
-    }
-    if (nullptr != __ext_line_bindings[0].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[0].event);
+  /*
+  *
+  */
+  void EXTI2_IRQHandler(void) {
+    if (EXTI->PR & (EXTI_PR_PR2)) {
+      EXTI->PR = EXTI_PR_PR2;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[2].fxn) {
+        __ext_line_bindings[2].fxn();
+      }
+      if (nullptr != __ext_line_bindings[2].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[2].event);
+      }
     }
   }
-}
 
-/*
-*
-*/
-void EXTI1_IRQHandler(void) {
-  if (EXTI->PR & (EXTI_PR_PR1)) {
-    EXTI->PR = EXTI_PR_PR1;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[1].fxn) {
-      __ext_line_bindings[1].fxn();
-    }
-    if (nullptr != __ext_line_bindings[1].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[1].event);
+  /*
+  *
+  */
+  void EXTI3_IRQHandler(void) {
+    if (EXTI->PR & (EXTI_PR_PR3)) {
+      EXTI->PR = EXTI_PR_PR3;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[3].fxn) {
+        __ext_line_bindings[3].fxn();
+      }
+      if (nullptr != __ext_line_bindings[3].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[3].event);
+      }
     }
   }
-}
 
-/*
-*
-*/
-void EXTI2_IRQHandler(void) {
-  if (EXTI->PR & (EXTI_PR_PR2)) {
-    EXTI->PR = EXTI_PR_PR2;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[2].fxn) {
-      __ext_line_bindings[2].fxn();
-    }
-    if (nullptr != __ext_line_bindings[2].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[2].event);
+  /*
+  *
+  */
+  void EXTI4_IRQHandler(void) {
+    if (EXTI->PR & (EXTI_PR_PR4)) {
+      EXTI->PR = EXTI_PR_PR4;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[4].fxn) {
+        __ext_line_bindings[4].fxn();
+      }
+      if (nullptr != __ext_line_bindings[4].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[4].event);
+      }
     }
   }
-}
 
-/*
-*
-*/
-void EXTI3_IRQHandler(void) {
-  if (EXTI->PR & (EXTI_PR_PR3)) {
-    EXTI->PR = EXTI_PR_PR3;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[3].fxn) {
-      __ext_line_bindings[3].fxn();
+  /*
+  *
+  */
+  void EXTI9_5_IRQHandler(void) {
+    if (EXTI->PR & (EXTI_PR_PR5)) {
+      EXTI->PR = EXTI_PR_PR5;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[5].fxn) {
+        __ext_line_bindings[5].fxn();
+      }
+      if (nullptr != __ext_line_bindings[5].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[5].event);
+      }
     }
-    if (nullptr != __ext_line_bindings[3].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[3].event);
+    if (EXTI->PR & (EXTI_PR_PR6)) {
+      EXTI->PR = EXTI_PR_PR6;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[6].fxn) {
+        __ext_line_bindings[6].fxn();
+      }
+      if (nullptr != __ext_line_bindings[6].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[6].event);
+      }
+    }
+    if (EXTI->PR & (EXTI_PR_PR7)) {
+      EXTI->PR = EXTI_PR_PR7;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[7].fxn) {
+        __ext_line_bindings[7].fxn();
+      }
+      if (nullptr != __ext_line_bindings[7].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[7].event);
+      }
+    }
+    if (EXTI->PR & (EXTI_PR_PR8)) {
+      EXTI->PR = EXTI_PR_PR8;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[8].fxn) {
+        __ext_line_bindings[8].fxn();
+      }
+      if (nullptr != __ext_line_bindings[8].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[8].event);
+      }
+    }
+    if (EXTI->PR & (EXTI_PR_PR9)) {
+      EXTI->PR = EXTI_PR_PR9;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[9].fxn) {
+        __ext_line_bindings[9].fxn();
+      }
+      if (nullptr != __ext_line_bindings[9].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[9].event);
+      }
     }
   }
-}
 
-/*
-*
-*/
-void EXTI4_IRQHandler(void) {
-  if (EXTI->PR & (EXTI_PR_PR4)) {
-    EXTI->PR = EXTI_PR_PR4;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[4].fxn) {
-      __ext_line_bindings[4].fxn();
+  /*
+  *
+  */
+  void EXTI15_10_IRQHandler(void) {
+    if (EXTI->PR & (EXTI_PR_PR11)) {
+      EXTI->PR = EXTI_PR_PR11;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[11].fxn) {
+        __ext_line_bindings[11].fxn();
+      }
+      if (nullptr != __ext_line_bindings[11].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[11].event);
+      }
     }
-    if (nullptr != __ext_line_bindings[4].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[4].event);
+    if (EXTI->PR & (EXTI_PR_PR12)) {
+      EXTI->PR = EXTI_PR_PR12;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[12].fxn) {
+        __ext_line_bindings[12].fxn();
+      }
+      if (nullptr != __ext_line_bindings[12].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[12].event);
+      }
+    }
+    if (EXTI->PR & (EXTI_PR_PR13)) {
+      EXTI->PR = EXTI_PR_PR13;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[13].fxn) {
+        __ext_line_bindings[13].fxn();
+      }
+      if (nullptr != __ext_line_bindings[13].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[13].event);
+      }
+    }
+    if (EXTI->PR & (EXTI_PR_PR14)) {
+      EXTI->PR = EXTI_PR_PR14;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[14].fxn) {
+        __ext_line_bindings[14].fxn();
+      }
+      if (nullptr != __ext_line_bindings[14].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[14].event);
+      }
+    }
+    if (EXTI->PR & (EXTI_PR_PR15)) {
+      EXTI->PR = EXTI_PR_PR15;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[15].fxn) {
+        __ext_line_bindings[15].fxn();
+      }
+      if (nullptr != __ext_line_bindings[15].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[15].event);
+      }
     }
   }
-}
 
-/*
-*
-*/
-void EXTI9_5_IRQHandler(void) {
-  if (EXTI->PR & (EXTI_PR_PR5)) {
-    EXTI->PR = EXTI_PR_PR5;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[5].fxn) {
-      __ext_line_bindings[5].fxn();
-    }
-    if (nullptr != __ext_line_bindings[5].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[5].event);
-    }
-  }
-  if (EXTI->PR & (EXTI_PR_PR6)) {
-    EXTI->PR = EXTI_PR_PR6;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[6].fxn) {
-      __ext_line_bindings[6].fxn();
-    }
-    if (nullptr != __ext_line_bindings[6].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[6].event);
-    }
-  }
-  if (EXTI->PR & (EXTI_PR_PR7)) {
-    EXTI->PR = EXTI_PR_PR7;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[7].fxn) {
-      __ext_line_bindings[7].fxn();
-    }
-    if (nullptr != __ext_line_bindings[7].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[7].event);
-    }
-  }
-  if (EXTI->PR & (EXTI_PR_PR8)) {
-    EXTI->PR = EXTI_PR_PR8;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[8].fxn) {
-      __ext_line_bindings[8].fxn();
-    }
-    if (nullptr != __ext_line_bindings[8].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[8].event);
-    }
-  }
-  if (EXTI->PR & (EXTI_PR_PR9)) {
-    EXTI->PR = EXTI_PR_PR9;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[9].fxn) {
-      __ext_line_bindings[9].fxn();
-    }
-    if (nullptr != __ext_line_bindings[9].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[9].event);
-    }
-  }
-}
 
-/*
-*
-*/
-void EXTI15_10_IRQHandler(void) {
-  if (EXTI->PR & (EXTI_PR_PR11)) {
-    EXTI->PR = EXTI_PR_PR11;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[11].fxn) {
-      __ext_line_bindings[11].fxn();
-    }
-    if (nullptr != __ext_line_bindings[11].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[11].event);
-    }
-  }
-  if (EXTI->PR & (EXTI_PR_PR12)) {
-    EXTI->PR = EXTI_PR_PR12;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[12].fxn) {
-      __ext_line_bindings[12].fxn();
-    }
-    if (nullptr != __ext_line_bindings[12].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[12].event);
-    }
-  }
-  if (EXTI->PR & (EXTI_PR_PR13)) {
-    EXTI->PR = EXTI_PR_PR13;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[13].fxn) {
-      __ext_line_bindings[13].fxn();
-    }
-    if (nullptr != __ext_line_bindings[13].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[13].event);
-    }
-  }
-  if (EXTI->PR & (EXTI_PR_PR14)) {
-    EXTI->PR = EXTI_PR_PR14;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[14].fxn) {
-      __ext_line_bindings[14].fxn();
-    }
-    if (nullptr != __ext_line_bindings[14].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[14].event);
-    }
-  }
-  if (EXTI->PR & (EXTI_PR_PR15)) {
-    EXTI->PR = EXTI_PR_PR15;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[15].fxn) {
-      __ext_line_bindings[15].fxn();
-    }
-    if (nullptr != __ext_line_bindings[15].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[15].event);
-    }
-  }
-}
+}  // extern "C"

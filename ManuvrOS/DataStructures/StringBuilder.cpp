@@ -270,7 +270,7 @@ unsigned char* StringBuilder::position(int pos, int *pos_len) {
   }
   StrLL *current = this->root;
   int i = 0;
-  while ((i != pos) & (current != nullptr)){
+  while ((i != pos) && (current != nullptr)){
     current = current->next;
     i++;
   }
@@ -310,7 +310,7 @@ bool StringBuilder::drop_position(unsigned int pos) {
   StrLL *current = this->root;
   StrLL *prior = nullptr;
   unsigned int i = 0;
-  while ((i != pos) & (current != nullptr)){
+  while ((i != pos) && (current != nullptr)){
     prior = current;
     current = current->next;
     i++;

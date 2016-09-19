@@ -324,14 +324,7 @@ volatile void reboot() {
 * This is the final function called by the kernel constructor.
 */
 void platformPreInit() {
+  ManuvrPlatform::platformPreInit(root_config);
   gpioSetup();
-}
-
-
-/*
-* Called as a result of kernels bootstrap() fxn.
-*/
-void platformInit() {
-  _start_micros = micros();
   init_RNG();
 }

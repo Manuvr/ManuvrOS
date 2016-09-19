@@ -112,7 +112,7 @@ int8_t ManuvrConsole::toCounterparty(StringBuilder* buf, int8_t mm) {
 */
 int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
   if (!(buf->contains('\n') || buf->contains('\r'))) {
-    // If the console doesn't see a CR, it will not register a command.
+    // If the console doesn't see a CR OR LF, it will not register a command.
     session_buffer.concatHandoff(buf);  // buf check will fail if the precedes it.
     return MEM_MGMT_RESPONSIBLE_BEARER;
   }

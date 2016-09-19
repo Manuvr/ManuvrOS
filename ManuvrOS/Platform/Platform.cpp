@@ -123,7 +123,7 @@ const char* ManuvrPlatform::getRTCStateString() {
 * This is the final function called by the kernel constructor.
 */
 int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
-  // TODO: Should we really be setting capabilities this late?
+  _start_micros = micros();
   uint32_t default_flags = 0;
 
   #if defined(__MANUVR_MBEDTLS)
