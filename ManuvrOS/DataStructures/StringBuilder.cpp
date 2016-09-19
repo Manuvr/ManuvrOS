@@ -447,6 +447,12 @@ void StringBuilder::prepend(unsigned char *nu, int len) {
       nu_element->next = this->root;
       this->root = nu_element;
     }
+    else {
+      // We were able to malloc the slot for the string, but not the buffer for
+      // the string itself. We should free() the slot before failing or we will
+      // exacerbate an already-present memory crunch.
+      free(nu_element);
+    }
   }
 }
 
