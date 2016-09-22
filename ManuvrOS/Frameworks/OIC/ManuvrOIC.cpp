@@ -277,10 +277,17 @@ ManuvrOIC::~ManuvrOIC() {
   __kernel->removeSchedule(&_discovery_ping);
   __kernel->removeSchedule(&_discovery_timeout);
   #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+    #if defined(__MACH__) && defined(__APPLE__)
+      if (_thread_id > 0) {
+        _thread_id = 0;
+        pthread_cancel(_thread_id);
+      }
+    #else
     if (_thread_id > 0) {
       _thread_id = 0;
       pthread_cancel(_thread_id);
     }
+    #endif
   #endif
 }
 
