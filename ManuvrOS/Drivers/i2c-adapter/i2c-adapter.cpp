@@ -69,8 +69,6 @@ This file is the tortured result of growing pains since the beginning of
 #endif
 
 
-using namespace std;
-
 extern "C" {
   volatile I2CAdapter* i2c = NULL;
 }
@@ -828,7 +826,7 @@ void I2CAdapter::printDebug(StringBuilder *temp) {
 
   if (work_queue.size() > 0) {
     temp->concatf("\nQueue Listing (top 3 of %d total)\n", work_queue.size());
-    for (int i = 0; i < min(work_queue.size(), I2CADAPTER_MAX_QUEUE_PRINT); i++) {
+    for (int i = 0; i < std::min(work_queue.size(), I2CADAPTER_MAX_QUEUE_PRINT); i++) {
       work_queue.get(i)->printDebug(temp);
     }
     temp->concat("\n");

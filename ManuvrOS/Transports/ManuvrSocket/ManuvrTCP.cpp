@@ -388,8 +388,6 @@ bool ManuvrTCP::write_port(unsigned char* out, int out_len) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void ManuvrTCP::printDebug(StringBuilder *temp) {
-  if (temp == NULL) return;
-
   ManuvrXport::printDebug(temp);
   temp->concatf("-- _addr           %s:%d\n",  _addr, _port_number);
   temp->concatf("-- _options        0x%08x\n", _options);

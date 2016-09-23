@@ -851,9 +851,9 @@ int8_t Kernel::procIdleFlags() {
         event_costs.incrementPriority(profiler_item);
       }
       profiler_item->executions++;
-      profiler_item->run_time_last    = max((unsigned long) profiler_mark_2, (unsigned long) profiler_mark_1) - min((unsigned long) profiler_mark_2, (unsigned long) profiler_mark_1);
-      profiler_item->run_time_best    = min((unsigned long) profiler_item->run_time_best, (unsigned long) profiler_item->run_time_last);
-      profiler_item->run_time_worst   = max((unsigned long) profiler_item->run_time_worst, (unsigned long) profiler_item->run_time_last);
+      profiler_item->run_time_last    = std::max((unsigned long) profiler_mark_2, (unsigned long) profiler_mark_1) - std::min((unsigned long) profiler_mark_2, (unsigned long) profiler_mark_1);
+      profiler_item->run_time_best    = std::min((unsigned long) profiler_item->run_time_best, (unsigned long) profiler_item->run_time_last);
+      profiler_item->run_time_worst   = std::max((unsigned long) profiler_item->run_time_worst, (unsigned long) profiler_item->run_time_last);
       profiler_item->run_time_total  += profiler_item->run_time_last;
       profiler_item->run_time_average = profiler_item->run_time_total / ((profiler_item->executions) ? profiler_item->executions : 1);
 
@@ -890,16 +890,16 @@ int8_t Kernel::procIdleFlags() {
   profiler_mark_3 = micros();
   flushLocalLog();
 
-  uint32_t runtime_this_loop = max((uint32_t) profiler_mark_3, (uint32_t) profiler_mark) - min((uint32_t) profiler_mark_3, (uint32_t) profiler_mark);
+  uint32_t runtime_this_loop = std::max((uint32_t) profiler_mark_3, (uint32_t) profiler_mark) - std::min((uint32_t) profiler_mark_3, (uint32_t) profiler_mark);
   if (return_value > 0) {
     // We ran at-least one Runnable.
     micros_occupied += runtime_this_loop;
     consequtive_idles = max_idle_count;  // Reset the idle loop down-counter.
-    max_events_p_loop = max((uint32_t) max_events_p_loop, 0x0000007F & (uint32_t) return_value);
+    max_events_p_loop = std::max((uint32_t) max_events_p_loop, 0x0000007F & (uint32_t) return_value);
   }
   else if (0 == return_value) {
     // We did nothing this time.
-    max_idle_loop_time = max((uint32_t) max_idle_loop_time, (max((uint32_t) profiler_mark, (uint32_t) profiler_mark_3) - min((uint32_t) profiler_mark, (uint32_t) profiler_mark_3)));
+    max_idle_loop_time = std::max((uint32_t) max_idle_loop_time, (std::max((uint32_t) profiler_mark, (uint32_t) profiler_mark_3) - std::min((uint32_t) profiler_mark, (uint32_t) profiler_mark_3)));
     switch (consequtive_idles) {
       case 0:
         // If we have reached our threshold for idleness, we invoke the plaform

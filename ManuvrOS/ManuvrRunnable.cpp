@@ -226,9 +226,9 @@ void ManuvrRunnable::clearProfilingData() {
 void ManuvrRunnable::noteExecutionTime(uint32_t profile_start_time, uint32_t profile_stop_time) {
   if (nullptr != prof_data) {
     profile_stop_time = micros();
-    prof_data->run_time_last    = max(profile_start_time, profile_stop_time) - min(profile_start_time, profile_stop_time);  // Rollover invarient.
-    prof_data->run_time_best    = min(prof_data->run_time_best,  prof_data->run_time_last);
-    prof_data->run_time_worst   = max(prof_data->run_time_worst, prof_data->run_time_last);
+    prof_data->run_time_last    = std::max(profile_start_time, profile_stop_time) - std::min(profile_start_time, profile_stop_time);  // Rollover invarient.
+    prof_data->run_time_best    = std::min(prof_data->run_time_best,  prof_data->run_time_last);
+    prof_data->run_time_worst   = std::max(prof_data->run_time_worst, prof_data->run_time_last);
     prof_data->run_time_total  += prof_data->run_time_last;
     prof_data->run_time_average = prof_data->run_time_total / ((prof_data->executions) ? prof_data->executions : 1);
     prof_data->executions++;

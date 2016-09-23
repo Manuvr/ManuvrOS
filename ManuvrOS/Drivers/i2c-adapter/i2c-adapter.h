@@ -34,8 +34,6 @@ This file is the tortured result of growing pains since the beginning of
 #ifndef I2C_ABSTRACTION_LAYER_ADAPTER         // This is meant to prevent double-inclusion.
   #define I2C_ABSTRACTION_LAYER_ADAPTER 1
 
-  using namespace std;
-
   #include <inttypes.h>
   #include <stdint.h>
   #include <stdarg.h>

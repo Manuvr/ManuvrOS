@@ -33,9 +33,6 @@ Template for a linked list.
   #include <stdlib.h>
 //#endif
 
-
-using namespace std;
-
 /* This is the class that holds a datum in the list. */
 template <class T> class Node{
   public:

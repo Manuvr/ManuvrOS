@@ -22,8 +22,6 @@ limitations under the License.
 #ifndef __INA219_DRIVER_H__
 #define __INA219_DRIVER_H__
 
-using namespace std;
-
 #include "Drivers/i2c-adapter/i2c-adapter.h"
 #include "Drivers/SensorWrapper/SensorWrapper.h"
 

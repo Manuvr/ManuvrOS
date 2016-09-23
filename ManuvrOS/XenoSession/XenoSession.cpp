@@ -469,7 +469,7 @@ void XenoSession::printDebug(StringBuilder *output) {
   int x = _outbound_messages.size();
   if (x > 0) {
     output->concatf("\n-- Outbound Queue %d total, showing top %d ------------\n", x, XENO_SESSION_MAX_QUEUE_PRINT);
-    for (int i = 0; i < min(x, XENO_SESSION_MAX_QUEUE_PRINT); i++) {
+    for (int i = 0; i < std::min(x, XENO_SESSION_MAX_QUEUE_PRINT); i++) {
         _outbound_messages.get(i)->printDebug(output);
     }
   }
@@ -477,7 +477,7 @@ void XenoSession::printDebug(StringBuilder *output) {
   x = _inbound_messages.size();
   if (x > 0) {
     output->concatf("\n-- Inbound Queue %d total, showing top %d -------------\n", x, XENO_SESSION_MAX_QUEUE_PRINT);
-    for (int i = 0; i < min(x, XENO_SESSION_MAX_QUEUE_PRINT); i++) {
+    for (int i = 0; i < std::min(x, XENO_SESSION_MAX_QUEUE_PRINT); i++) {
       _inbound_messages.get(i)->printDebug(output);
     }
   }
