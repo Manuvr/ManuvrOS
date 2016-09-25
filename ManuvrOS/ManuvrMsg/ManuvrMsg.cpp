@@ -68,7 +68,7 @@ ManuvrMsg::ManuvrMsg() {
   priority            = EVENT_PRIORITY_DEFAULT;
   _sched_recurs       = 0;
   _sched_period       = 0;
-  thread_time_to_wait = 0;
+  _sched_ttw = 0;
 }
 
 /**
@@ -102,7 +102,7 @@ ManuvrMsg::ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, FxnPointe
   autoClear(ac);
   _sched_recurs       = recurrence;
   _sched_period       = sch_period;
-  thread_time_to_wait = sch_period;
+  _sched_ttw = sch_period;
 
   schedule_callback   = sch_callback;    // This constructor uses the legacy callback.
 }
@@ -122,7 +122,7 @@ ManuvrMsg::ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, EventRece
   autoClear(ac);
   _sched_recurs       = recurrence;
   _sched_period       = sch_period;
-  thread_time_to_wait = sch_period;
+  _sched_ttw = sch_period;
 
   originator          = ori;   // This constructor uses the EventReceiver callback...
 }
@@ -882,7 +882,7 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
   if (isScheduled()) {
     output->concatf("\t [%p] Schedule \n\t --------------------------------\n", this);
     output->concatf("\t Enabled       \t%s\n", (scheduleEnabled() ? YES_STR : NO_STR));
-    output->concatf("\t Time-till-fire\t%u\n", thread_time_to_wait);
+    output->concatf("\t Time-till-fire\t%u\n", _sched_ttw);
     output->concatf("\t Period        \t%u\n", _sched_period);
     output->concatf("\t Recurs?       \t%d\n", _sched_recurs);
     output->concatf("\t Exec pending: \t%s\n", (shouldFire() ? YES_STR : NO_STR));
@@ -959,7 +959,7 @@ void ManuvrMsg::noteExecutionTime(uint32_t profile_start_time, uint32_t profile_
 
 void ManuvrMsg::fireNow(bool nu) {
   shouldFire(nu);
-  thread_time_to_wait = _sched_period;
+  _sched_ttw = _sched_period;
 }
 
 
@@ -968,7 +968,7 @@ bool ManuvrMsg::alterSchedulePeriod(uint32_t nu_period) {
   bool return_value  = false;
   if (nu_period > 1) {
     _sched_period       = nu_period;
-    thread_time_to_wait = nu_period;
+    _sched_ttw = nu_period;
     return_value  = true;
   }
   return return_value;
@@ -995,7 +995,7 @@ bool ManuvrMsg::alterSchedule(uint32_t sch_period, int16_t recurrence, bool ac, 
       autoClear(ac);
       _sched_recurs       = recurrence;
       _sched_period       = sch_period;
-      thread_time_to_wait = sch_period;
+      _sched_ttw = sch_period;
       schedule_callback   = sch_callback;
       return_value  = true;
     }
@@ -1018,15 +1018,54 @@ bool ManuvrMsg::willRunAgain() {
 }
 
 
+int8_t ManuvrMsg::applyTime(uint32_t mse) {
+  int8_t return_value = 0;
+  if (scheduleEnabled()) {
+    if (_sched_ttw > mse) {
+      _sched_ttw -= mse;
+    }
+    else {
+      // The schedule should execute this time.
+      uint32_t adjusted_ttw = (mse - _sched_ttw);
+      if (adjusted_ttw > _sched_period) {
+        // TODO: Possible error-case? Too many clicks passed. We have schedule jitter...
+        // For now, we'll just throw away the difference.
+        adjusted_ttw = 0;
+        Kernel::lagged_schedules++;
+      }
+      _sched_ttw = _sched_period - adjusted_ttw;
+      switch (_sched_recurs) {
+        default:
+          // If we are on a fixed execution-count, but will run again.
+          _sched_recurs--;
+        case -1:
+          // We run until stopped.
+          return_value = 1;
+          break;
+        case 0:
+          // We aren't supposed to run again.
+          return_value = -1;
+          break;
+      }
+      fireNow(false);          // ...mark it as serviced.
+    }
+  }
+  return return_value;  // Kernel will take no action.
+}
+
+
 /**
 * Call to (en/dis)able a given schedule.
-*  Will reset the time_to_wait so that if the schedule is re-enabled, it doesn't fire sooner than expected.
-*  Returns true on success and false on failure.
+* Will reset the time_to_wait such that if the schedule is re-enabled,
+*   it doesn't fire sooner than expected.
+*
+* @param   bool Should this schedule be enabled?
+* @return  true, always.
 */
 bool ManuvrMsg::enableSchedule(bool en) {
   fireNow(en);
   if (en) {
-    thread_time_to_wait = _sched_period;
+    _sched_ttw = _sched_period;
   }
   scheduleEnabled(en);
   return true;
@@ -1036,9 +1075,12 @@ bool ManuvrMsg::enableSchedule(bool en) {
 /**
 * Causes a given schedule's TTW (time-to-wait) to be set to the value we provide (this time only).
 * If the schedule wasn't enabled before, it will be when we return.
+*
+* @param   uint32_t The number of ms to delay (this time only).
+* @return  true, always.
 */
 bool ManuvrMsg::delaySchedule(uint32_t by_ms) {
-  thread_time_to_wait = by_ms;
+  _sched_ttw = by_ms;
   scheduleEnabled(true);
   return true;
 }
@@ -1049,6 +1091,12 @@ bool ManuvrMsg::delaySchedule(uint32_t by_ms) {
 * Actually execute this runnable.                                              *
 *******************************************************************************/
 
+/**
+* Causes this Message to inform its originator (if any) that it has fully-traversed
+*   the kernel's broadcast cycle.
+*
+* @return  An event callback return code.
+*/
 int8_t ManuvrMsg::callbackOriginator() {
   if (originator) {
     /* If the event has a valid originator, do the callback dance and take instruction

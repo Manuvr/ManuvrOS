@@ -1371,7 +1371,7 @@ bool Kernel::addSchedule(ManuvrRunnable *obj) {
   return false;
 }
 
-
+uint32_t Kernel::lagged_schedules = 0;
 
 /**
 * This is the function that is called from the main loop to offload big
@@ -1391,22 +1391,19 @@ int Kernel::serviceSchedules() {
   for (int i = 0; i < x; i++) {
     current = schedules.recycle();
     if (current->scheduleEnabled()) {
-      if ((current->scheduleTimeToWait() > mse) && (!current->shouldFire())){
-        current->setTimeToWait(current->scheduleTimeToWait() - mse);
-      }
-      else {
-        uint32_t adjusted_ttw = (mse - current->scheduleTimeToWait());
-        if (adjusted_ttw <= current->schedulePeriod()) {
-          current->setTimeToWait(current->schedulePeriod() - adjusted_ttw);
-        }
-        else {
-          // TODO: Possible error-case? Too many clicks passed. We have schedule jitter...
-          // For now, we'll just throw away the difference.
-          current->setTimeToWait(current->schedulePeriod());
-          lagged_schedules++;
-        }
-        current->fireNow(false);          // ...mark it as serviced.
-        Kernel::staticRaiseEvent(current);
+      switch (current->applyTime(mse)) {
+        case 1:   // Schedule should be exec'd and retained.
+          Kernel::staticRaiseEvent(current);
+          break;
+        case -1:  // Schedule should be dropped and executed.
+          Kernel::staticRaiseEvent(current);
+        case -2:  // Schedule should be dropped without execution.
+          removeSchedule(current);
+          x--;
+          break;
+        case 0:   // Nominal outcome. No action.
+        default:  // Nonsense.
+          break;
       }
     }
   }

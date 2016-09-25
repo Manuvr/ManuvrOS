@@ -285,7 +285,7 @@ Linux, 32-bit: DEBUG=1 SECURE=1
 1743923   12160   50020 1806103  1b8f17 More scope-tightening.
 1743907   12160   49892 1805959  1b8e87 Struct padding fix.
 1743971   12160   49892 1806023  1b8ec7 More encapsulation.
-
+1743907   12160   49892 1805959  1b8e87 Re-working scheduler responsibilities.
 
 
 Messages need to do these things...

@@ -187,7 +187,8 @@ limitations under the License.
       /* Factory method. Returns a preallocated Event. */
       static ManuvrRunnable* returnEvent(uint16_t event_code);
 
-      static BufferPipe* _logger;       // The log pipe.
+      static BufferPipe* _logger;        // The log pipe.
+      static uint32_t lagged_schedules;  // How many schedules were skipped? Ideally this is zero.
 
 
     protected:
@@ -209,7 +210,6 @@ limitations under the License.
       uint32_t _ms_elapsed;           // How much time has passed since we serviced our schedules?
 
       // Profiling and logging variables...
-      uint32_t lagged_schedules;      // How many schedules were skipped? Ideally this is zero.
       uint32_t micros_occupied;       // How many micros have we spent procing Runnables?
       uint32_t max_idle_loop_time;    // How many uS does it take to run an idle loop?
       uint32_t total_loops;           // How many times have we looped?

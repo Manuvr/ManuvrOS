@@ -48,7 +48,6 @@ This class forms the foundation of internal events. It contains the identity of 
 
 class EventReceiver;
 
-
 /*
 * Messages are defined by this struct. Note that this amounts to nothing more than definition.
 * Actual instances of messages are held by ManuvrMsg.
@@ -329,8 +328,11 @@ class ManuvrMsg {
       /* Schedule member accessors. */
       inline int16_t  scheduleRecurs() { return _sched_recurs; };
       inline uint32_t schedulePeriod() { return _sched_period; };
-      inline uint32_t scheduleTimeToWait() { return thread_time_to_wait; };
-      inline void setTimeToWait(uint32_t nu) { thread_time_to_wait = nu; };  // TODO: Sloppy. Kill with fire.
+      inline uint32_t scheduleTimeToWait() { return _sched_ttw; };
+      inline void setTimeToWait(uint32_t nu) { _sched_ttw = nu; };  // TODO: Sloppy. Kill with fire.
+
+      // Applies time to the schedule, bringing it closer to execution.
+      int8_t applyTime(uint32_t ms);
 
 
       inline void setOriginator(EventReceiver* er) { originator = er; };
@@ -381,7 +383,7 @@ class ManuvrMsg {
 
     int16_t  _sched_recurs;            // See Note 2.
     uint32_t _sched_period;            // How often does this schedule execute?
-    uint32_t thread_time_to_wait;      // How much longer until the schedule fires?
+    uint32_t _sched_ttw;      // How much longer until the schedule fires?
 
     #if defined(__MANUVR_EVENT_PROFILER)
     TaskProfilerData* prof_data = nullptr;  // If this schedule is being profiled, the ref will be here.
