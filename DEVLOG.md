@@ -287,6 +287,8 @@ Linux, 32-bit: DEBUG=1 SECURE=1
 1743971   12160   49892 1806023  1b8ec7 More encapsulation.
 1743939   12160   49892 1805991  1b8ea7 Re-working scheduler responsibilities.
 1744051   12160   49892 1806103  1b8f17 Legacy fxn ptr is now private for first time.
+1743987   12160   49892 1806039  1b8ed7 Turning in for the night.
+
 
 Messages need to do these things...
 * Pack/parse for transport.

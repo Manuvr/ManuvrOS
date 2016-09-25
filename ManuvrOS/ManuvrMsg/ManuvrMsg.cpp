@@ -810,30 +810,6 @@ char* ManuvrMsg::is_valid_argument_buffer(int len) {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-bool ManuvrMsg::abort() {
-  return Kernel::abortEvent(this);
-}
-
 #if defined(__MANUVR_DEBUG)
 /**
 * Debug support method. This fxn is only present in debug builds.
@@ -940,6 +916,9 @@ void ManuvrMsg::noteExecutionTime(uint32_t profile_start_time, uint32_t profile_
 /*******************************************************************************
 * Pertaining to deferred execution and scheduling....                          *
 *******************************************************************************/
+bool ManuvrMsg::abort() {
+  return Kernel::abortEvent(this);
+}
 
 void ManuvrMsg::fireNow(bool nu) {
   shouldFire(nu);
