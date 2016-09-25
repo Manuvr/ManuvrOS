@@ -89,9 +89,9 @@ class ManuvrMsg {
   public:
     ManuvrMsg();
     ManuvrMsg(uint16_t code);
-    ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, FxnPointer sch_callback);
-    ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver*  originator);
     ManuvrMsg(uint16_t msg_code, EventReceiver* originator);
+    ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, FxnPointer sch_callback);
+    ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver* originator);
     ~ManuvrMsg();
 
 
@@ -279,8 +279,7 @@ class ManuvrMsg {
       int8_t callbackOriginator();
 
       void printDebug();
-      void printDebug(StringBuilder *);
-      void printProfilerData(StringBuilder *);
+      void printDebug(StringBuilder*);
 
       /* Functions for pinging the profiler data. */
       void noteExecutionTime(uint32_t start, uint32_t stop);
@@ -352,36 +351,39 @@ class ManuvrMsg {
         _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_MEM_MANAGED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_MEM_MANAGED));
       };
 
+      /* If this runnable is scheduled, aborts it. Returns true if the schedule was aborted. */
+      bool abort();
+
+//GRAFT
+    #if defined(__MANUVR_EVENT_PROFILER)
       /**
       * Asks if this schedule is being profiled...
       *  Returns true if so, and false if not.
       */
       inline bool profilingEnabled() {       return (prof_data != nullptr); };
 
-      /* If this runnable is scheduled, aborts it. Returns true if the schedule was aborted. */
-      bool abort();
-
+      void printProfilerData(StringBuilder*);
       void profilingEnabled(bool enabled);
       void clearProfilingData();           // Clears profiling data associated with the given schedule.
-
-
-//GRAFT
+    #endif
 
 
 
   private:
     const MessageTypeDef*  message_def;  // The definition for the message (once it is associated).
+    EventReceiver*  originator;        // This is an optional ref to the class that raised this runnable.
     Argument* arg       = nullptr;       // The optional list of arguments associated with this event.
     uint16_t event_code = MANUVR_MSG_UNDEFINED; // The identity of the event (or command).
-
-
-    EventReceiver*  originator;        // This is an optional ref to the class that raised this runnable.
+    uint16_t  _flags;             // Optional flags that might be important for a runnable.
 
       // The things below were pulled in from ScheduleItem.
+      int16_t  thread_recurs;            // See Note 2.
       uint32_t thread_time_to_wait;      // How much longer until the schedule fires?
       uint32_t thread_period;            // How often does this schedule execute?
-      int16_t  thread_recurs;            // See Note 2.
       // End ScheduleItem
+    #if defined(__MANUVR_EVENT_PROFILER)
+    TaskProfilerData* prof_data = nullptr;  // If this schedule is being profiled, the ref will be here.
+    #endif
 
     int8_t getArgAs(uint8_t idx, void *dat);
     int8_t writePointerArgAs(uint8_t idx, void *trg_buf);
@@ -389,16 +391,12 @@ class ManuvrMsg {
     char* is_valid_argument_buffer(int len);
     int   collect_valid_grammatical_forms(int, LinkedList<char*>*);
 
-//GRAFT
-    TaskProfilerData* prof_data;  // If this schedule is being profiled, the ref will be here.
-    uint8_t  _flags;              // Optional flags that might be important for a runnable.
-//GRAFT
 
 
     // Where runtime-loaded message defs go.
     static std::map<uint16_t, const MessageTypeDef*> message_defs_extended;
 };
 
-typedef ManuvrMsg ManuvrRunnable;
+typedef ManuvrMsg ManuvrRunnable;  // TODO: Only here until class merger is finished.
 
 #endif

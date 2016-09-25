@@ -33,13 +33,29 @@ extern inline uint32_t parseUint32Fromchars(unsigned char *input);
 extern inline uint16_t parseUint16Fromchars(unsigned char *input);
 
 
-/****************************************************************************************************
-* Static initializers                                                                               *
-****************************************************************************************************/
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
 std::map<uint16_t, const MessageTypeDef*> ManuvrMsg::message_defs_extended;
 
-const unsigned char ManuvrMsg::MSG_ARGS_NONE[] = {0};      // Generic argument def for a message with no args.
+const unsigned char ManuvrMsg::MSG_ARGS_NONE[] = {0};  // Generic argument def for a message with no args.
 
+
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
 
 /**
 * Vanilla constructor.
@@ -48,14 +64,12 @@ ManuvrMsg::ManuvrMsg() {
   _flags              = 0;
   originator          = nullptr;
   specific_target     = nullptr;
-  prof_data           = nullptr;
   schedule_callback   = nullptr;
   priority            = EVENT_PRIORITY_DEFAULT;
   thread_recurs       = 0;
   thread_period       = 0;
   thread_time_to_wait = 0;
 }
-
 
 /**
 * Constructor that specifies the identity.
@@ -116,17 +130,18 @@ ManuvrMsg::ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, EventRece
 }
 
 
-
-
-
 /**
 * Destructor. Clears all Arguments. Memory management is accounted
 *   for in each Argument, so no need to worry about that here.
 */
 ManuvrMsg::~ManuvrMsg() {
+  #if defined(__MANUVR_EVENT_PROFILER)
   clearProfilingData();
+  #endif
   clearArgs();
 }
+
+
 
 
 /**
@@ -873,7 +888,9 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
   output->concatf("\t Recurs?       \t%d\n", thread_recurs);
   output->concatf("\t Exec pending: \t%s\n", (shouldFire() ? YES_STR : NO_STR));
   output->concatf("\t Autoclear     \t%s\n", (autoClear() ? YES_STR : NO_STR));
-  output->concatf("\t Profiling?    \t%s\n", (profilingEnabled() ? YES_STR : NO_STR));
+  #if defined(__MANUVR_EVENT_PROFILER)
+    output->concatf("\t Profiling?    \t%s\n", (profilingEnabled() ? YES_STR : NO_STR));
+  #endif
 
   if (nullptr != schedule_callback) {
     output->concat("\t Legacy callback\n");
@@ -881,14 +898,14 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
 }
 
 
+/*******************************************************************************
+* Functions dealing with profiling this particular Runnable.                   *
+*******************************************************************************/
+#if defined(__MANUVR_EVENT_PROFILER)
+
 void ManuvrMsg::printProfilerData(StringBuilder *output) {
-  if (nullptr != prof_data) output->concatf("\t %p  %9u  %9u  %9u  %9u  %9u  %9u %s\n", this, prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last, (threadEnabled() ? " " : "(INACTIVE)"));
+  if (prof_data) output->concatf("\t %p  %9u  %9u  %9u  %9u  %9u  %9u %s\n", this, prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last, (threadEnabled() ? " " : "(INACTIVE)"));
 }
-
-
-/****************************************************************************************************
-* Functions dealing with profiling this particular Runnable.                                        *
-****************************************************************************************************/
 
 /**
 * Any schedule that has a TaskProfilerData object in the appropriate slot will be profiled.
@@ -913,7 +930,7 @@ void ManuvrMsg::profilingEnabled(bool enabled) {
 * Destroys whatever profiling data might be stored in this Runnable.
 */
 void ManuvrMsg::clearProfilingData() {
-  if (nullptr != prof_data) {
+  if (prof_data) {
     prof_data->profiling_active = false;
     delete prof_data;
     prof_data = nullptr;
@@ -932,11 +949,13 @@ void ManuvrMsg::noteExecutionTime(uint32_t profile_start_time, uint32_t profile_
     prof_data->executions++;
   }
 }
+#endif // __MANUVR_EVENT_PROFILER
 
 
-/****************************************************************************************************
-* Pertaining to deferred execution and scheduling....                                               *
-****************************************************************************************************/
+
+/*******************************************************************************
+* Pertaining to deferred execution and scheduling....                          *
+*******************************************************************************/
 
 void ManuvrMsg::fireNow(bool nu) {
   shouldFire(nu);

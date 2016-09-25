@@ -282,8 +282,8 @@ Linux, 32-bit: DEBUG=1 SECURE=1
 1743487   12160   50020 1805667  1b8d63 Cut class_initializer().
 1743423   12160   50020 1805603  1b8d23 Cut arg form statics.
 1743651   12160   50020 1805831  1b8e07 Msg scope tightening with addition of accessors.
-
-
+1743923   12160   50020 1806103  1b8f17 More scope-tightening.
+1743907   12160   49892 1805959  1b8e87 Struct padding fix.
 
 
 

@@ -767,7 +767,9 @@ int8_t Kernel::procIdleFlags() {
 
     procCallBacks(active_runnable);
 
-    active_runnable->noteExecutionTime(profiler_mark_0, micros());
+    #if defined(__MANUVR_EVENT_PROFILER)
+      active_runnable->noteExecutionTime(profiler_mark_0, micros());
+    #endif  //__MANUVR_EVENT_PROFILER
 
     if (0 == activity_count) {
       #ifdef __MANUVR_DEBUG
@@ -821,45 +823,40 @@ int8_t Kernel::procIdleFlags() {
 
     total_events++;
 
-    // This is a stat-gathering block.
-    if (_profiler_enabled()) {
-      profiler_mark_3 = micros();
+    #if defined(__MANUVR_EVENT_PROFILER)
+      // This is a stat-gathering block.
+      if (_profiler_enabled()) {
+        profiler_mark_3 = micros();
 
-      TaskProfilerData* profiler_item = nullptr;
-      int cost_size = event_costs.size();
-      int i = 0;
-      while ((nullptr == profiler_item) && (i < cost_size)) {
-        if (event_costs.get(i)->msg_code == msg_code_local) {
-          profiler_item = event_costs.get(i);
+        TaskProfilerData* profiler_item = nullptr;
+        int cost_size = event_costs.size();
+        int i = 0;
+        while ((nullptr == profiler_item) && (i < cost_size)) {
+          if (event_costs.get(i)->msg_code == msg_code_local) {
+            profiler_item = event_costs.get(i);
+          }
+          i++;
         }
-        i++;
-      }
-      if (nullptr == profiler_item) {
-        // If we don't yet have a profiler item for this message type...
-        profiler_item = new TaskProfilerData();    // ...create one...
-        profiler_item->msg_code = msg_code_local;   // ...assign the code...
-        event_costs.insert(profiler_item, 1);       // ...and insert it for the future.
-      }
-      else {
-        // If we already have a profiler item for this code...
-        event_costs.incrementPriority(profiler_item);
-      }
-      profiler_item->executions++;
-      profiler_item->run_time_last    = std::max((unsigned long) profiler_mark_2, (unsigned long) profiler_mark_1) - std::min((unsigned long) profiler_mark_2, (unsigned long) profiler_mark_1);
-      profiler_item->run_time_best    = std::min((unsigned long) profiler_item->run_time_best, (unsigned long) profiler_item->run_time_last);
-      profiler_item->run_time_worst   = std::max((unsigned long) profiler_item->run_time_worst, (unsigned long) profiler_item->run_time_last);
-      profiler_item->run_time_total  += profiler_item->run_time_last;
-      profiler_item->run_time_average = profiler_item->run_time_total / ((profiler_item->executions) ? profiler_item->executions : 1);
+        if (nullptr == profiler_item) {
+          // If we don't yet have a profiler item for this message type...
+          profiler_item = new TaskProfilerData();    // ...create one...
+          profiler_item->msg_code = msg_code_local;   // ...assign the code...
+          event_costs.insert(profiler_item, 1);       // ...and insert it for the future.
+        }
+        else {
+          // If we already have a profiler item for this code...
+          event_costs.incrementPriority(profiler_item);
+        }
+        profiler_item->executions++;
+        profiler_item->run_time_last    = std::max((unsigned long) profiler_mark_2, (unsigned long) profiler_mark_1) - std::min((unsigned long) profiler_mark_2, (unsigned long) profiler_mark_1);
+        profiler_item->run_time_best    = std::min((unsigned long) profiler_item->run_time_best, (unsigned long) profiler_item->run_time_last);
+        profiler_item->run_time_worst   = std::max((unsigned long) profiler_item->run_time_worst, (unsigned long) profiler_item->run_time_last);
+        profiler_item->run_time_total  += profiler_item->run_time_last;
+        profiler_item->run_time_average = profiler_item->run_time_total / ((profiler_item->executions) ? profiler_item->executions : 1);
 
-      #ifdef __MANUVR_DEBUG
-        //MessageTypeDef* tmp_msg_def = (MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(msg_code_local);
-        //if (getVerbosity() > 6) {
-        //  if (profiler_mark_2) local_log.concatf("%s finished.\tTotal time: %5ld uS\tTook %5ld uS to notify.\n", tmp_msg_def->debug_label, (profiler_mark_3 - profiler_mark_0), profiler_item->run_time_last);
-        //  else                 local_log.concatf("%s finished.\tTotal time: %5ld uS\n", tmp_msg_def->debug_label, (profiler_mark_3 - profiler_mark_0));
-        //}
-      #endif
-      profiler_mark_2 = 0;  // Reset for next iteration.
-    }
+        profiler_mark_2 = 0;  // Reset for next iteration.
+      }
+    #endif  //__MANUVR_EVENT_PROFILER
 
     if (exec_queue.size() > 30) {
       #ifdef __MANUVR_DEBUG
@@ -951,7 +948,9 @@ void Kernel::profiler(bool enabled) {
   idempotent_blocks  = 0;
   insertion_denials  = 0;
 
-  while (event_costs.hasNext()) delete event_costs.dequeue();
+  #if defined(__MANUVR_EVENT_PROFILER)
+    while (event_costs.hasNext()) delete event_costs.dequeue();
+  #endif   // __MANUVR_EVENT_PROFILER
 }
 
 
@@ -992,34 +991,37 @@ void Kernel::printProfiler(StringBuilder* output) {
     }
     output->concatf("   CPU use by clock: %f\n", (double)cpu_usage());
 
-    TaskProfilerData *profiler_item;
-    int stat_mode = event_costs.getPriority(0);
-    int x = event_costs.size();
+    #if defined(__MANUVR_EVENT_PROFILER)
+      TaskProfilerData *profiler_item;
+      int stat_mode = event_costs.getPriority(0);
+      int x = event_costs.size();
 
-    TaskProfilerData::printDebugHeader(output);
-    for (int i = 0; i < x; i++) {
-      profiler_item = event_costs.get(i);
-      stat_mode     = event_costs.getPriority(i);
-      output->concatf("\t (%10d)\t", stat_mode);
-      profiler_item->printDebug(output);
-    }
+      TaskProfilerData::printDebugHeader(output);
+      for (int i = 0; i < x; i++) {
+        profiler_item = event_costs.get(i);
+        stat_mode     = event_costs.getPriority(i);
+        output->concatf("\t (%10d)\t", stat_mode);
+        profiler_item->printDebug(output);
+      }
+    #endif   // __MANUVR_EVENT_PROFILER
   }
   else {
     output->concat("-- Kernel profiler disabled.\n\n");
   }
 
+  #if defined(__MANUVR_EVENT_PROFILER)
+    if (schedules.size() > 0) {
+      ManuvrRunnable *current;
+      output->concat("\n\t PID         Execd      total us   average    worst      best       last\n\t -----------------------------------------------------------------------------\n");
 
-  if (schedules.size() > 0) {
-    ManuvrRunnable *current;
-    output->concat("\n\t PID         Execd      total us   average    worst      best       last\n\t -----------------------------------------------------------------------------\n");
-
-    for (int i = 0; i < schedules.size(); i++) {
-      current = schedules.get(i);
-      if (current->profilingEnabled()) {
-        current->printProfilerData(output);
+      for (int i = 0; i < schedules.size(); i++) {
+        current = schedules.get(i);
+        if (current->profilingEnabled()) {
+          current->printProfilerData(output);
+        }
       }
     }
-  }
+  #endif   // __MANUVR_EVENT_PROFILER
 }
 
 
