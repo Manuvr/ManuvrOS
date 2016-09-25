@@ -82,10 +82,9 @@ XenoSession::XenoSession(BufferPipe* _near_side) : EventReceiver(), BufferPipe()
     _near_side->setFar((BufferPipe*) this);
   }
 
-  _session_service.repurpose(MANUVR_MSG_SESS_SERVICE);
+  _session_service.repurpose(MANUVR_MSG_SESS_SERVICE, (EventReceiver*) this);
   _session_service.isManaged(true);
   _session_service.specific_target = (EventReceiver*) this;
-  _session_service.originator      = (EventReceiver*) this;
 
   working            = nullptr;
   session_state      = XENOSESSION_STATE_UNINITIALIZED;
@@ -329,7 +328,7 @@ int8_t XenoSession::notify(ManuvrRunnable *active_event) {
   }
 
   /* We don't want to resonate... Don't react to Events that have us as the originator. */
-  if (active_event->originator != (EventReceiver*) this) {
+  if (active_event->isOriginator((EventReceiver*) this)) {
     if ((XENO_SESSION_IGNORE_NON_EXPORTABLES) && (active_event->isExportable())) {
       /* This is the block that allows the counterparty to intercept events of its choosing. */
       std::map<uint16_t, MessageTypeDef*>::iterator it = _relay_list.find(active_event->eventCode());

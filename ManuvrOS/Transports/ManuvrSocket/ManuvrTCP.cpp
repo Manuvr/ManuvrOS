@@ -405,10 +405,9 @@ int8_t ManuvrTCP::bootComplete() {
 
   // We will suffer a 300ms latency if the platform's networking stack doesn't flush
   //   its buffer in time.
-  read_abort_event.repurpose(MANUVR_MSG_XPORT_RECEIVE);
+  read_abort_event.repurpose(MANUVR_MSG_XPORT_RECEIVE, (EventReceiver*) this);
   read_abort_event.isManaged(true);
   read_abort_event.specific_target = (EventReceiver*) this;
-  read_abort_event.originator      = (EventReceiver*) this;
   read_abort_event.alterScheduleRecurrence(0);
   read_abort_event.alterSchedulePeriod(300);
   read_abort_event.autoClear(false);

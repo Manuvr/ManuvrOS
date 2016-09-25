@@ -55,15 +55,7 @@ For debuggability, the transport has a special mode for acting as a debug
 * Static members and initializers should be located here.
 *******************************************************************************/
 uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
-uint32_t ManuvrXport::_global_flags     = 0x00000000;
 
-// These are only here until they are migrated to each receiver that deals with them.
-const MessageTypeDef message_defs_xport[] = {
-  {  MANUVR_MSG_XPORT_SEND,         0x0000,  "XPORT_SEND"           , ManuvrMsg::MSG_ARGS_STR_BUILDER }, //
-  {  MANUVR_MSG_XPORT_RECEIVE,      0x0000,  "XPORT_REC"            , ManuvrMsg::MSG_ARGS_STR_BUILDER }, //
-  {  MANUVR_MSG_XPORT_QUEUE_RDY,    0x0000,  "XPORT_Q"              , ManuvrMsg::MSG_ARGS_STR_BUILDER }, //
-  {  MANUVR_MSG_XPORT_CB_QUEUE_RDY, 0x0000,  "XPORT_CB_Q"           , ManuvrMsg::MSG_ARGS_NONE } //
-};
 
 /*******************************************************************************
 * .-. .----..----.    .-.     .--.  .-. .-..----.
@@ -126,13 +118,6 @@ const MessageTypeDef message_defs_xport[] = {
 ManuvrXport::ManuvrXport() : EventReceiver(), BufferPipe() {
   // No need to burden a client class with this.
   setReceiverName("ManuvrXport");
-
-  if (0 == (_global_flags & MANUVR_MSG_DEFS_LOADED)) {
-    // TODO: This sucks, and you know it.
-    int mes_count = sizeof(message_defs_xport) / sizeof(MessageTypeDef);
-    ManuvrMsg::registerMessages(message_defs_xport, mes_count);
-    _global_flags |= MANUVR_MSG_DEFS_LOADED;
-  }
 
   // Transports are all terminal.
   _bp_set_flag(BPIPE_FLAG_IS_TERMINUS, true);
@@ -268,9 +253,8 @@ void ManuvrXport::autoConnect(bool en, uint32_t _ac_period) {
       _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_AUTO_CONNECT) : (_xport_flags & ~(MANUVR_XPORT_FLAG_AUTO_CONNECT));
       if (NULL == _autoconnect_schedule) {
         // If we don't already have a ref to a schedule for this purpose.
-        _autoconnect_schedule = new ManuvrRunnable(MANUVR_MSG_XPORT_CONNECT);
+        _autoconnect_schedule = new ManuvrRunnable(MANUVR_MSG_XPORT_CONNECT, (EventReceiver*) this);
         _autoconnect_schedule->isManaged(true);
-        _autoconnect_schedule->originator      = (EventReceiver*) this;
         _autoconnect_schedule->specific_target = (EventReceiver*) this;
         _autoconnect_schedule->alterScheduleRecurrence(-1);
         _autoconnect_schedule->alterSchedulePeriod(_ac_period);

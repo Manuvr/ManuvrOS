@@ -63,8 +63,6 @@ extern "C" {
 
 #include <Kernel.h>
 
-
-class ManuvrRunnable;
 class Argument;
 class Identity;
 class Storage;

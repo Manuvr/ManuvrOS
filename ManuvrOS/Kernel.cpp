@@ -45,9 +45,6 @@ Kernel*     Kernel::INSTANCE = nullptr;
 BufferPipe* Kernel::_logger  = nullptr;  // The logger slot.
 PriorityQueue<ManuvrRunnable*> Kernel::isr_exec_queue;
 
-const unsigned char MSG_ARGS_EVENTRECEIVER[] = {SYS_EVENTRECEIVER_FM, 0, 0};
-const unsigned char MSG_ARGS_NO_ARGS[] = {0};
-
 
 /*
 * These are the hard-coded message types that the program knows about.
@@ -61,45 +58,45 @@ const unsigned char MSG_ARGS_NO_ARGS[] = {0};
 */
 const MessageTypeDef ManuvrMsg::message_defs[] = {
   /* Reserved codes */
-  {  MANUVR_MSG_UNDEFINED            , 0x0000,               "<UNDEF>"          , MSG_ARGS_NONE }, // This should be the first entry for failure cases.
+  {  MANUVR_MSG_UNDEFINED            , 0x0000,               "<UNDEF>"          , ManuvrMsg::MSG_ARGS_NONE }, // This should be the first entry for failure cases.
 
   /* Protocol basics. */
   #if defined(MANUVR_OVER_THE_WIRE)
-  {  MANUVR_MSG_REPLY_FAIL           , MSG_FLAG_EXPORTABLE,               "REPLY_FAIL"           , MSG_ARGS_NONE }, //  This reply denotes that the packet failed to parse (despite passing checksum).
-  {  MANUVR_MSG_REPLY_RETRY          , MSG_FLAG_EXPORTABLE,               "REPLY_RETRY"          , MSG_ARGS_NONE }, //  This reply asks for a reply of the given Unique ID.
-  {  MANUVR_MSG_REPLY                , MSG_FLAG_EXPORTABLE,               "REPLY"                , MSG_ARGS_NONE }, //  This reply is for success-case.
-  {  MANUVR_MSG_SELF_DESCRIBE        , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SELF_DESCRIBE"        , MSG_ARGS_SELF_DESC }, // Starting an application on the receiver. Needs a string.
-  {  MANUVR_MSG_SYNC_KEEPALIVE       , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "KA"                  , MSG_ARGS_NONE }, //  A keep-alive message to be ack'd.
-  {  MANUVR_MSG_LEGEND_TYPES         , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_TYPES"         , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
-  {  MANUVR_MSG_LEGEND_MESSAGES      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_MESSAGES"      , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
-  {  MANUVR_MSG_LEGEND_SEMANTIC      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_SEMANTIC"      , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
+  {  MANUVR_MSG_REPLY_FAIL           , MSG_FLAG_EXPORTABLE,               "REPLY_FAIL"           , ManuvrMsg::MSG_ARGS_NONE }, //  This reply denotes that the packet failed to parse (despite passing checksum).
+  {  MANUVR_MSG_REPLY_RETRY          , MSG_FLAG_EXPORTABLE,               "REPLY_RETRY"          , ManuvrMsg::MSG_ARGS_NONE }, //  This reply asks for a reply of the given Unique ID.
+  {  MANUVR_MSG_REPLY                , MSG_FLAG_EXPORTABLE,               "REPLY"                , ManuvrMsg::MSG_ARGS_NONE }, //  This reply is for success-case.
+  {  MANUVR_MSG_SELF_DESCRIBE        , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SELF_DESCRIBE"        , ManuvrMsg::MSG_ARGS_NONE }, // Starting an application on the receiver. Needs a string.
+  {  MANUVR_MSG_SYNC_KEEPALIVE       , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "KA"                   , ManuvrMsg::MSG_ARGS_NONE }, //  A keep-alive message to be ack'd.
+  {  MANUVR_MSG_LEGEND_TYPES         , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_TYPES"         , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
+  {  MANUVR_MSG_LEGEND_MESSAGES      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_MESSAGES"      , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
+  {  MANUVR_MSG_LEGEND_SEMANTIC      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_SEMANTIC"      , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
   #endif
 
   #if defined(MANUVR_STORAGE)
   #endif
 
-  {  MANUVR_MSG_SESS_ESTABLISHED     , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_ESTABLISHED"     , MSG_ARGS_NONE }, // Session established.
-  {  MANUVR_MSG_SESS_HANGUP          , MSG_FLAG_EXPORTABLE,                        "SESS_HANGUP"          , MSG_ARGS_NONE }, // Session hangup.
-  {  MANUVR_MSG_SESS_AUTH_CHALLENGE  , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_AUTH_CHALLENGE"  , MSG_ARGS_NONE }, // A code for challenge-response authentication.
+  {  MANUVR_MSG_SESS_ESTABLISHED     , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_ESTABLISHED"     , ManuvrMsg::MSG_ARGS_NONE }, // Session established.
+  {  MANUVR_MSG_SESS_HANGUP          , MSG_FLAG_EXPORTABLE,                        "SESS_HANGUP"          , ManuvrMsg::MSG_ARGS_NONE }, // Session hangup.
+  {  MANUVR_MSG_SESS_AUTH_CHALLENGE  , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_AUTH_CHALLENGE"  , ManuvrMsg::MSG_ARGS_NONE }, // A code for challenge-response authentication.
 
-  {  MANUVR_MSG_MSG_FORWARD          , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "MSG_FORWARD"          , MSG_ARGS_MSG_FORWARD }, // No args? Asking for this legend. One arg: Legend provided.
+  {  MANUVR_MSG_MSG_FORWARD          , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "MSG_FORWARD"          , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
 
 
-  {  MANUVR_MSG_SYS_BOOT_COMPLETED   , 0x0000,               "BOOT_COMPLETED"   , MSG_ARGS_NO_ARGS }, // Raised when bootstrap is finished.
-  {  MANUVR_MSG_SYS_CONF_LOAD        , 0x0000,               "CONF_LOAD"        , MSG_ARGS_NO_ARGS }, // Recipients will comb arguments for config and apply it.
-  {  MANUVR_MSG_SYS_CONF_SAVE        , 0x0000,               "CONF_SAVE"        , MSG_ARGS_NO_ARGS }, // Recipients will attach their persistable data.
+  {  MANUVR_MSG_SYS_BOOT_COMPLETED   , 0x0000,               "BOOT_COMPLETED"   , ManuvrMsg::MSG_ARGS_NONE }, // Raised when bootstrap is finished.
+  {  MANUVR_MSG_SYS_CONF_LOAD        , 0x0000,               "CONF_LOAD"        , ManuvrMsg::MSG_ARGS_NONE }, // Recipients will comb arguments for config and apply it.
+  {  MANUVR_MSG_SYS_CONF_SAVE        , 0x0000,               "CONF_SAVE"        , ManuvrMsg::MSG_ARGS_NONE }, // Recipients will attach their persistable data.
 
-  {  MANUVR_MSG_SYS_ADVERTISE_SRVC   , 0x0000,               "ADVERTISE_SRVC"       , MSG_ARGS_EVENTRECEIVER }, // A system service might feel the need to advertise it's arrival.
-  {  MANUVR_MSG_SYS_RETRACT_SRVC     , 0x0000,               "RETRACT_SRVC"         , MSG_ARGS_EVENTRECEIVER }, // A system service sends this to tell others to stop using it.
+  {  MANUVR_MSG_SYS_ADVERTISE_SRVC   , 0x0000,               "ADVERTISE_SRVC"       , ManuvrMsg::MSG_ARGS_NONE }, // A system service might feel the need to advertise it's arrival.
+  {  MANUVR_MSG_SYS_RETRACT_SRVC     , 0x0000,               "RETRACT_SRVC"         , ManuvrMsg::MSG_ARGS_NONE }, // A system service sends this to tell others to stop using it.
 
-  {  MANUVR_MSG_SYS_BOOTLOADER       , MSG_FLAG_EXPORTABLE,  "SYS_BOOTLOADER"       , MSG_ARGS_NO_ARGS }, // Reboots into the STM32F4 bootloader.
-  {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,  "SYS_REBOOT"           , MSG_ARGS_NO_ARGS }, // Reboots into THIS program.
-  {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN"         , MSG_ARGS_NO_ARGS }, // Raised when the system is pending complete shutdown.
-  {  MANUVR_MSG_SYS_EXIT             , MSG_FLAG_EXPORTABLE,  "SYS_EXIT"             , MSG_ARGS_NO_ARGS }, // Raised when the process is to exit without shutdown.
+  {  MANUVR_MSG_SYS_BOOTLOADER       , MSG_FLAG_EXPORTABLE,  "SYS_BOOTLOADER"       , ManuvrMsg::MSG_ARGS_NONE }, // Reboots into the STM32F4 bootloader.
+  {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,  "SYS_REBOOT"           , ManuvrMsg::MSG_ARGS_NONE }, // Reboots into THIS program.
+  {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN"         , ManuvrMsg::MSG_ARGS_NONE }, // Raised when the system is pending complete shutdown.
+  {  MANUVR_MSG_SYS_EXIT             , MSG_FLAG_EXPORTABLE,  "SYS_EXIT"             , ManuvrMsg::MSG_ARGS_NONE }, // Raised when the process is to exit without shutdown.
 
-  {  MANUVR_MSG_DEFERRED_FXN         , 0x0000,               "DEFERRED_FXN",          MSG_ARGS_NO_ARGS }, // Message to allow for deferred fxn calls without an EventReceiver.
+  {  MANUVR_MSG_DEFERRED_FXN         , 0x0000,               "DEFERRED_FXN",          ManuvrMsg::MSG_ARGS_NONE }, // Message to allow for deferred fxn calls without an EventReceiver.
 
-  {  MANUVR_MSG_SYS_FAULT_REPORT     , 0x0000,               "SYS_FAULT"            , ManuvrMsg::MSG_ARGS_U32 }, //
+  {  MANUVR_MSG_SYS_FAULT_REPORT     , 0x0000,               "SYS_FAULT"            , ManuvrMsg::MSG_ARGS_NONE }, //
 
   {  MANUVR_MSG_SYS_DATETIME_CHANGED , MSG_FLAG_EXPORTABLE,  "SYS_DATETIME_CHANGED" , ManuvrMsg::MSG_ARGS_NONE }, // Raised when the system time changes.
   {  MANUVR_MSG_SYS_SET_DATETIME     , MSG_FLAG_EXPORTABLE,  "SYS_SET_DATETIME"     , ManuvrMsg::MSG_ARGS_NONE }, //
@@ -111,6 +108,12 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SESS_UNSUBCRIBE      , MSG_FLAG_EXPORTABLE,  "SESS_UNSUBCRIBE"      , ManuvrMsg::MSG_ARGS_NONE }, // Used to unsubscribe this session from other events.
   {  MANUVR_MSG_SESS_ORIGINATE_MSG   , MSG_FLAG_IDEMPOTENT,  "SESS_ORIGINATE_MSG"   , ManuvrMsg::MSG_ARGS_NONE }, //
   {  MANUVR_MSG_SESS_SERVICE         , 0x0000             ,  "SESS_SERVICE"         , ManuvrMsg::MSG_ARGS_NONE }, //
+
+  {  MANUVR_MSG_XPORT_SEND,         0x0000,  "XPORT_TX"           , ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_XPORT_RECEIVE,      0x0000,  "XPORT_RX"           , ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_XPORT_QUEUE_RDY,    0x0000,  "XPORT_Q"            , ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_XPORT_CB_QUEUE_RDY, 0x0000,  "XPORT_CB_Q"         , ManuvrMsg::MSG_ARGS_NONE }, //
+
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
   {  MANUVR_MSG_OIC_READY            , 0x0000,  "OIC_READY"        , ManuvrMsg::MSG_ARGS_NONE },  //
   {  MANUVR_MSG_OIC_REG_RESOURCES    , 0x0000,  "OIC_REG_RESRCS"   , ManuvrMsg::MSG_ARGS_NONE },  //
@@ -122,9 +125,9 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
     // These are messages that are only present under some sort of threading model. They are meant
     //   to faciliate task hand-off, IPC, and concurrency protection.
-    {  MANUVR_MSG_CREATED_THREAD_ID,    0x0000,              "CREATED_THREAD_ID",     ManuvrMsg::MSG_ARGS_U32 },
-    {  MANUVR_MSG_DESTROYED_THREAD_ID,  0x0000,              "DESTROYED_THREAD_ID",   ManuvrMsg::MSG_ARGS_U32 },
-    {  MANUVR_MSG_UNBLOCK_THREAD,       0x0000,              "UNBLOCK_THREAD",        ManuvrMsg::MSG_ARGS_U32 },
+    {  MANUVR_MSG_CREATED_THREAD_ID,    0x0000,              "CREATED_THREAD_ID",     ManuvrMsg::MSG_ARGS_NONE },
+    {  MANUVR_MSG_DESTROYED_THREAD_ID,  0x0000,              "DESTROYED_THREAD_ID",   ManuvrMsg::MSG_ARGS_NONE },
+    {  MANUVR_MSG_UNBLOCK_THREAD,       0x0000,              "UNBLOCK_THREAD",        ManuvrMsg::MSG_ARGS_NONE },
     #if defined (__MANUVR_FREERTOS)
     #endif
 
@@ -138,15 +141,15 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
     compile time.
   */
   #if defined (__ENABLE_MSG_SEMANTICS)
-  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_STR_BUILDER, "Command\0\0" }, //
-  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_STR_BUILDER, "Body\0\0" }, // Classes emit this to get their log data saved/sent.
-  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_U8, "Power Mode\0\0" }, //
-  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_U8, "Level\0\0"      },   // This tells client classes to adjust their log verbosity.
+  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_NONE, "Command\0\0" }, //
+  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_NONE, "Body\0\0" }, // Classes emit this to get their log data saved/sent.
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_NONE, "Power Mode\0\0" }, //
+  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_NONE, "Level\0\0"      },   // This tells client classes to adjust their log verbosity.
   #else
-  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_STR_BUILDER, nullptr }, //
-  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_STR_BUILDER, nullptr }, // Classes emit this to get their log data saved/sent.
-  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_U8, nullptr }, //
-  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_U8, nullptr },   // This tells client classes to adjust their log verbosity.
+  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_NONE, nullptr }, //
+  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_NONE, nullptr }, // Classes emit this to get their log data saved/sent.
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_NONE, nullptr }, //
+  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_NONE, nullptr },   // This tells client classes to adjust their log verbosity.
   #endif
 };
 
@@ -394,7 +397,7 @@ int8_t Kernel::registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFx
 * Used to add an event to the idle queue. Use this for simple events that don't need args.
 *
 * @param  code  The identity code of the event to be raised.
-* @param  ori   An optional originator pointer to be called when this event is finished.
+* @param  ori   An optional  pointer to be called when this event is finished.
 * @return -1 on failure, and 0 on success.
 */
 int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* ori) {
@@ -406,7 +409,7 @@ int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* ori) {
   }
   else {
     nu->repurpose(code);
-    nu->originator = ori;
+    nu->setOriginator(ori);
   }
 
   return staticRaiseEvent(nu);
@@ -523,8 +526,7 @@ ManuvrRunnable* Kernel::returnEvent(uint16_t code) {
     return_value = new ManuvrRunnable(code, (EventReceiver*) INSTANCE);
   }
   else {
-    return_value->repurpose(code);
-    return_value->originator = (EventReceiver*) INSTANCE;
+    return_value->repurpose(code, (EventReceiver*) INSTANCE);
   }
   return return_value;
 }
@@ -776,49 +778,41 @@ int8_t Kernel::procIdleFlags() {
 
     /* Should we clean up the Event? */
     bool clean_up_active_runnable = true;  // Defaults to 'yes'.
-    if (nullptr != active_runnable->originator) {
-      /* If the event has a valid originator, do the callback dance and take instruction
-         from the return value. */
-      //   if (verbosity >=7) output.concatf("specific_event_callback returns %d\n", active_runnable->originator->callback_proc(active_runnable));
-      switch (active_runnable->originator->callback_proc(active_runnable)) {
-        case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
-          #ifdef __MANUVR_DEBUG
-          if (getVerbosity() > 6) local_log.concatf("Recycling %s.\n", active_runnable->getMsgTypeString());
-          #endif
-          switch (validate_insertion(active_runnable)) {
-            case 0:    // Clear for insertion.
-              exec_queue.insert(active_runnable, active_runnable->priority);
-              clean_up_active_runnable = false;
-              break;
-            case -1:   // NULL runnable! How?!?!
-              break;
-            case -2:   // UNDEFINED event. This shall not stand, man....
-              break;
-            case -3:   // Pointer idempotency. THIS EXACT runnable is already enqueue.
-              break;
-          }
-          break;
-        case EVENT_CALLBACK_RETURN_ERROR:       // Something went wrong. Should never occur.
-        case EVENT_CALLBACK_RETURN_UNDEFINED:   // The originating class doesn't care what we do with the event.
-          //if (verbosity > 1) local_log.concatf("Kernel found a possible mistake. Unexpected return case from callback_proc.\n");
-          // NOTE: No break;
-        case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
-          #ifdef __MANUVR_DEBUG
-          //if (getVerbosity() > 6) local_log.concatf("Dropping %s after running.\n", active_runnable->getMsgTypeString());
-          #endif
-          // NOTE: No break;
-        case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
-          // NOTE: No break;
-        default:
-          //if (verbosity > 0) local_log.concatf("Event %s has no cleanup case.\n", active_runnable->getMsgTypeString());
-          break;
-      }
+
+    switch (active_runnable->callbackOriginator()) {
+      case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
+        #ifdef __MANUVR_DEBUG
+        if (getVerbosity() > 6) local_log.concatf("Recycling %s.\n", active_runnable->getMsgTypeString());
+        #endif
+        switch (validate_insertion(active_runnable)) {
+          case 0:    // Clear for insertion.
+            exec_queue.insert(active_runnable, active_runnable->priority);
+            clean_up_active_runnable = false;
+            break;
+          case -1:   // NULL runnable! How?!?!
+            break;
+          case -2:   // UNDEFINED event. This shall not stand, man....
+            break;
+          case -3:   // Pointer idempotency. THIS EXACT runnable is already enqueue.
+            break;
+        }
+        break;
+      case EVENT_CALLBACK_RETURN_ERROR:       // Something went wrong. Should never occur.
+      case EVENT_CALLBACK_RETURN_UNDEFINED:   // The originating class doesn't care what we do with the event.
+        //if (verbosity > 1) local_log.concatf("Kernel found a possible mistake. Unexpected return case from callback_proc.\n");
+        // NOTE: No break;
+      case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
+        #ifdef __MANUVR_DEBUG
+        //if (getVerbosity() > 6) local_log.concatf("Dropping %s after running.\n", active_runnable->getMsgTypeString());
+        #endif
+        // NOTE: No break;
+      case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
+        // NOTE: No break;
+      default:
+        //if (verbosity > 0) local_log.concatf("Event %s has no cleanup case.\n", active_runnable->getMsgTypeString());
+        break;
     }
-    else {
-      /* If there is no originator specified for the Event, we rely on the flags in the Event itself to
-         decide if it should be reaped. If its memory is being managed by some other class, the reclaim_event()
-         fxn will simply remove it from the exec_queue and consider the matter closed. */
-    }
+
 
     // All of the logic above ultimately informs this choice.
     if (clean_up_active_runnable) {
@@ -1129,22 +1123,22 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
       // TODO: We should probably recycle the BOOT_COMPLETE until nothing responds to it.
       maskableInterrupts(true);  // Now configure interrupts, lift interrupt masks, and let the madness begin.
       if (getVerbosity() > 4) Kernel::log("Boot complete.\n");
-      if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
+      if (_logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
       break;
 
     case MANUVR_MSG_SYS_CONF_SAVE:
       platform.storeConf(event->getArgs());
       break;
     case MANUVR_MSG_SYS_REBOOT:
-      if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
+      if (_logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
       platform.reboot();
       break;
     case MANUVR_MSG_SYS_SHUTDOWN:
-      if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
+      if (_logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
       platform.seppuku();  // TODO: We need to distinguish between this and SYSTEM shutdown for linux.
       break;
     case MANUVR_MSG_SYS_BOOTLOADER:
-      //if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
+      //if (_logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
       platform.jumpToBootloader();
       break;
 
@@ -1160,6 +1154,13 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
   int8_t return_value = 0;
 
   switch (active_runnable->eventCode()) {
+    case MANUVR_MSG_SYS_REBOOT:
+    case MANUVR_MSG_SYS_SHUTDOWN:
+    case MANUVR_MSG_SYS_BOOTLOADER:
+      // These messages codes, we will capture the callback.
+      active_runnable->setOriginator(this);
+      break;
+
     #if defined(__MANUVR_CONSOLE_SUPPORT)
       case MANUVR_MSG_USER_DEBUG_INPUT:
         if (active_runnable->argCount()) {
@@ -1354,7 +1355,7 @@ bool Kernel::removeSchedule(ManuvrRunnable *obj) {
     }
     else {
       obj->autoClear(true);
-      obj->thread_recurs = 0;
+      obj->alterScheduleRecurrence(0);
     }
     return true;
   }
@@ -1390,18 +1391,18 @@ int Kernel::serviceSchedules() {
   for (int i = 0; i < x; i++) {
     current = schedules.recycle();
     if (current->threadEnabled()) {
-      if ((current->thread_time_to_wait > _ms_elapsed) && (!current->shouldFire())){
-        current->thread_time_to_wait -= _ms_elapsed;
+      if ((current->scheduleTimeToWait() > _ms_elapsed) && (!current->shouldFire())){
+        current->setTimeToWait(current->scheduleTimeToWait() - _ms_elapsed);
       }
       else {
-        uint32_t adjusted_ttw = (_ms_elapsed - current->thread_time_to_wait);
-        if (adjusted_ttw <= current->thread_period) {
-          current->thread_time_to_wait = current->thread_period - adjusted_ttw;
+        uint32_t adjusted_ttw = (_ms_elapsed - current->scheduleTimeToWait());
+        if (adjusted_ttw <= current->schedulePeriod()) {
+          current->setTimeToWait(current->schedulePeriod() - adjusted_ttw);
         }
         else {
           // TODO: Possible error-case? Too many clicks passed. We have schedule jitter...
           // For now, we'll just throw away the difference.
-          current->thread_time_to_wait = current->thread_period;
+          current->setTimeToWait(current->schedulePeriod());
           lagged_schedules++;
         }
         current->fireNow(false);          // ...mark it as serviced.

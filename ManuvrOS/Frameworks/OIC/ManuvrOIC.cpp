@@ -367,10 +367,9 @@ int8_t ManuvrOIC::bootComplete() {
   _discovery_ping.enableSchedule(false);
   __kernel->addSchedule(&_discovery_ping);
 
-  _discovery_timeout.repurpose(MANUVR_MSG_OIC_DISCOVER_OFF);
+  _discovery_timeout.repurpose(MANUVR_MSG_OIC_DISCOVER_OFF, (EventReceiver*) this);
   _discovery_timeout.isManaged(true);
   _discovery_timeout.specific_target = (EventReceiver*) this;
-  _discovery_timeout.originator      = (EventReceiver*) this;
   _discovery_timeout.priority        = 1;
 
   // Discovery runs for 30 seconds by default.

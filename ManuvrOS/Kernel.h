@@ -41,12 +41,7 @@ limitations under the License.
 
   #include <DataStructures/PriorityQueue.h>
   #include <DataStructures/StringBuilder.h>
-  #include <ManuvrRunnable.h>
   #include <EventReceiver.h>
-
-  #define EVENT_PRIORITY_HIGHEST            100
-  #define EVENT_PRIORITY_DEFAULT              2
-  #define EVENT_PRIORITY_LOWEST               0
 
   #define SCHEDULER_MAX_SKIP_BEFORE_RESET    10  // Skipping this many loops will cause us to reboot.
 

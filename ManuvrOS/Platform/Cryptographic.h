@@ -74,7 +74,11 @@ enum class Hashes {
   #endif
 };
 
+enum class CryptoKey {
+};
 
+enum class Cipher {
+};
 
 
 
@@ -90,6 +94,13 @@ int8_t manuvr_hash(uint8_t* in, int in_len, uint8_t* out, int out_len, Hashes h)
 /*******************************************************************************
 * Cipher/decipher
 *******************************************************************************/
+int8_t manuvr_block_encrypt(uint8_t* in, int in_len, uint8_t* out, int out_len, Cipher);
+int8_t manuvr_block_decrypt(uint8_t* in, int in_len, uint8_t* out, int out_len, Cipher);
+
+int8_t manuvr_sign(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes, Cipher, CryptoKey private_key);
+int8_t manuvr_verify(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes, Cipher, CryptoKey public_key);
+
+
 
 /*******************************************************************************
 * Randomness

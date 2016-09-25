@@ -68,9 +68,8 @@ MQTTSession::MQTTSession(ManuvrXport* _xport) : XenoSession(_xport) {
 	working   = NULL;
 	_next_packetid = 1;
 
-  _ping_timer.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG);
+  _ping_timer.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG, (EventReceiver*) this);
   _ping_timer.isManaged(true);
-  _ping_timer.originator      = (EventReceiver*) this;
   _ping_timer.specific_target = (EventReceiver*) this;
   _ping_timer.alterScheduleRecurrence(-1);
   _ping_timer.alterSchedulePeriod(4000);

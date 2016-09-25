@@ -28,7 +28,7 @@ class BufferPipe;
 class ManuvrXport;
 class EventReceiver;
 class Identity;
-class ManuvrRunnable;
+class ManuvrMsg;
 
 /* This is how we define arguments to messages. */
 class Argument {
@@ -89,10 +89,10 @@ class Argument {
     Argument(PipeIOCallback* val) : Argument((void*) val, sizeof(val), SYS_PIPE_FXN_PTR_FM)   {};
 
     /*
-    * We typically want ManuvrRunnable references to be left alone at the end of
+    * We typically want ManuvrMsg references to be left alone at the end of
     *   the Argument's life cycle. We will specify otherwise when appropriate.
     */
-    Argument(ManuvrRunnable* val) : Argument((void*) val, sizeof(val), SYS_RUNNABLE_PTR_FM) {};
+    Argument(ManuvrMsg* val) : Argument((void*) val, sizeof(val), SYS_RUNNABLE_PTR_FM) {};
 
     // TODO: This default behavior changed. Audit usage by commenting addArg(StringBuilder)
     Argument(StringBuilder* val)  : Argument(val, sizeof(val), STR_BUILDER_FM)          {};
@@ -158,7 +158,7 @@ class Argument {
     inline Argument* append(BufferPipe *val) {      return link(new Argument(val));   }
     inline Argument* append(EventReceiver *val) {   return link(new Argument(val));   }
     inline Argument* append(ManuvrXport *val) {     return link(new Argument(val));   }
-    inline Argument* append(ManuvrRunnable *val) {  return link(new Argument(val));   }
+    inline Argument* append(ManuvrMsg *val) {  return link(new Argument(val));   }
 
     inline Argument* append(FxnPointer *val) {      return link(new Argument(val));   }
     inline Argument* append(ThreadFxnPtr *val) {    return link(new Argument(val));   }

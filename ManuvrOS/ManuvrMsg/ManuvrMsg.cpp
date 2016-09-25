@@ -24,6 +24,7 @@ limitations under the License.
 #include <DataStructures/Argument.h>
 #include "ManuvrMsg.h"
 #include <string.h>
+#include "Kernel.h"
 
 
 extern inline double   parseDoubleFromchars(unsigned char *input);
@@ -39,40 +40,20 @@ std::map<uint16_t, const MessageTypeDef*> ManuvrMsg::message_defs_extended;
 
 const unsigned char ManuvrMsg::MSG_ARGS_NONE[] = {0};      // Generic argument def for a message with no args.
 
-// Generics for messages that have one arg of a single type, or no args.
-const unsigned char ManuvrMsg::MSG_ARGS_U8[]  = {UINT8_FM,  0};
-const unsigned char ManuvrMsg::MSG_ARGS_U16[] = {UINT16_FM, 0};
-const unsigned char ManuvrMsg::MSG_ARGS_U32[] = {UINT32_FM, 0};
-
-const unsigned char ManuvrMsg::MSG_ARGS_STR_BUILDER[] = {STR_BUILDER_FM, 0};
-
-const unsigned char ManuvrMsg::MSG_ARGS_BUFFERPIPE[]  = {BUFFERPIPE_PTR_FM, 0};
-const unsigned char ManuvrMsg::MSG_ARGS_XPORT[]       = {SYS_MANUVR_XPORT_FM, 0};
-
-const unsigned char ManuvrMsg::MSG_ARGS_U8_U8[]  = {UINT8_FM, UINT8_FM, 0};
-
-/*
-* This is the argument form for messages that either...
-*   a) Need a free-form type that we don't support natively
-*   b) Are special-cases (REPLY) that will have their args cast after validation.
-*/
-const unsigned char ManuvrMsg::MSG_ARGS_BINBLOB[] = {  BINARY_FM, 0};
-
-const unsigned char ManuvrMsg::MSG_ARGS_SELF_DESC[] = {
-  UINT32_FM, UINT32_FM, STR_FM, STR_FM, STR_FM, STR_FM, STR_FM, STR_FM, 0, // All fields.
-};                                                                         // 0 bytes: Request for self-description.
-
-/*
-* This code is used for forwarding messages between Manuvrables.
-* Implementation of this code is not required, but the ability to understand it is.
-*/
-const unsigned char ManuvrMsg::MSG_ARGS_MSG_FORWARD[] = {  STR_FM, BINARY_FM, 0};
-
 
 /**
 * Vanilla constructor.
 */
 ManuvrMsg::ManuvrMsg() {
+  _flags              = 0;
+  originator          = nullptr;
+  specific_target     = nullptr;
+  prof_data           = nullptr;
+  schedule_callback   = nullptr;
+  priority            = EVENT_PRIORITY_DEFAULT;
+  thread_recurs       = 0;
+  thread_period       = 0;
+  thread_time_to_wait = 0;
 }
 
 
@@ -85,12 +66,65 @@ ManuvrMsg::ManuvrMsg(uint16_t code) : ManuvrMsg() {
   repurpose(code);
 }
 
+/**
+* Constructor that specifies the message code, and a callback.
+*
+* @param code  The message id code.
+* @param cb    A pointer to the EventReceiver that should be notified about completion of this event.
+*/
+ManuvrMsg::ManuvrMsg(uint16_t code, EventReceiver* cb) : ManuvrMsg() {
+  repurpose(code, cb);
+}
+
+/**
+* Constructor. Takes a void fxn(void) as a callback (Legacy).
+*
+* @param recurrence   How many times should this schedule run?
+* @param sch_period   How often should this schedule run (in milliseconds).
+* @param ac           Should the scheduler autoclear this schedule when it finishes running?
+* @param sch_callback A FxnPointer to the callback. Useful for some general things.
+*/
+ManuvrMsg::ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, FxnPointer sch_callback) : ManuvrMsg(MANUVR_MSG_DEFERRED_FXN) {
+  threadEnabled(true);
+  autoClear(ac);
+  thread_recurs       = recurrence;
+  thread_period       = sch_period;
+  thread_time_to_wait = sch_period;
+
+  schedule_callback   = sch_callback;    // This constructor uses the legacy callback.
+}
+
+/**
+* Constructor. Takes an EventReceiver* as an originator.
+* We need to deal with memory management of the Event. For a recurring schedule, we can't allow the
+*   Kernel to reap the event. So it is very important to mark the event appropriately.
+*
+* @param recurrence   How many times should this schedule run?
+* @param sch_period   How often should this schedule run (in milliseconds).
+* @param ac           Should the scheduler autoclear this schedule when it finishes running?
+* @param sch_callback A FxnPointer to the callback. Useful for some general things.
+* @param ev           A pointer to an Event that we will periodically raise.
+*/
+ManuvrMsg::ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver* ori) : ManuvrMsg(MANUVR_MSG_DEFERRED_FXN) {
+  threadEnabled(true);
+  autoClear(ac);
+  thread_recurs       = recurrence;
+  thread_period       = sch_period;
+  thread_time_to_wait = sch_period;
+
+  originator          = ori;   // This constructor uses the EventReceiver callback...
+}
+
+
+
+
 
 /**
 * Destructor. Clears all Arguments. Memory management is accounted
 *   for in each Argument, so no need to worry about that here.
 */
 ManuvrMsg::~ManuvrMsg() {
+  clearProfilingData();
   clearArgs();
 }
 
@@ -100,12 +134,37 @@ ManuvrMsg::~ManuvrMsg() {
 *   is designed to prevent malloc()/free() thrash where it can be avoided.
 *
 * @param code   The new identity code for the message.
+* @return 0 on success, or appropriate failure code.
 */
 int8_t ManuvrMsg::repurpose(uint16_t code) {
+  // These things have implications for memory management, which is why repurpose() doesn't touch them.
+  uint8_t _persist_mask = MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_PREALLOCD | MANUVR_RUNNABLE_FLAG_SCHEDULED;
+  _flags              = _flags & _persist_mask;
+
+  originator          = nullptr;
+  specific_target     = nullptr;
+  schedule_callback   = nullptr;
+  priority            = EVENT_PRIORITY_DEFAULT;
+
   event_code  = code;
   message_def = lookupMsgDefByCode(event_code);
   return 0;
 }
+
+/**
+* Call this member to repurpose this message for an unrelated task. This mechanism
+*   is designed to prevent malloc()/free() thrash where it can be avoided.
+*
+* @param code   The new identity code for the message.
+* @param code   The EventReceiver that should be called-back on completion.
+* @return 0 on success, or appropriate failure code.
+*/
+int8_t ManuvrMsg::repurpose(uint16_t code, EventReceiver* cb) {
+  repurpose(code);
+  originator          = cb;
+  return 0;
+}
+
 
 
 Argument* ManuvrMsg::addArg(Argument* nu) {
@@ -129,11 +188,11 @@ Argument* ManuvrMsg::addArg(Argument* nu) {
 */
 uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
   int return_value = 0;
-  if ((NULL == buffer) || (0 == len)) {
+  if ((nullptr == buffer) || (0 == len)) {
     return 0;
   }
 
-  char* arg_mode = NULL;
+  char* arg_mode = nullptr;
   LinkedList<char*> possible_forms;
   int r = 0;
   switch (collect_valid_grammatical_forms(len, &possible_forms)) {
@@ -154,8 +213,8 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
       break;
   }
 
-  Argument *nu_arg = NULL;
-  while ((NULL != arg_mode) & (len > 0)) {
+  Argument *nu_arg = nullptr;
+  while ((nullptr != arg_mode) & (len > 0)) {
     switch ((unsigned char) *arg_mode) {
       case INT8_FM:
         nu_arg = new Argument((int8_t) *(buffer));
@@ -232,7 +291,7 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
     }
 
     addArg(nu_arg);
-    nu_arg = NULL;
+    nu_arg = nullptr;
     return_value++;
 
     arg_mode++;
@@ -277,7 +336,7 @@ int8_t ManuvrMsg::markArgForReap(int idx, bool reap) {
 */
 int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf) {
   int8_t return_value = -1;
-  if (NULL != arg) {
+  if (nullptr != arg) {
     return ((0 == idx) ? arg->getValueAs(trg_buf) : arg->getValueAs(idx, trg_buf));
   }
   return return_value;
@@ -295,7 +354,7 @@ int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf) {
 int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
   int8_t return_value = -1;
   Argument* a = arg;
-  if (NULL != a) {
+  if (nullptr != a) {
     switch (a->typeCode()) {
       case INT8_PTR_FM:
       case INT16_PTR_FM:
@@ -367,7 +426,7 @@ uint8_t ManuvrMsg::getArgumentType(uint8_t idx) {
 * @return a pointer to the MessageTypeDef that identifies this class of Message. Never NULL.
 */
 MessageTypeDef* ManuvrMsg::getMsgDef() {
-  if (NULL == message_def) {
+  if (nullptr == message_def) {
     message_def = lookupMsgDefByCode(event_code);
   }
   return (MessageTypeDef*) message_def;
@@ -390,7 +449,7 @@ const char* ManuvrMsg::getMsgTypeString() {
 * TODO: Debug stuff. Need to be able to case-off stuff like this in the pre-processor.
 *
 * @param  code  The message identity code in question.
-* @return a pointer to the human-readable label for this Message class. Never NULL.
+* @return a pointer to the human-readable label for this Message class. Never nullptr.
 */
 const char* ManuvrMsg::getMsgTypeString(uint16_t code) {
   for (int i = 0; i < TOTAL_MSG_DEFS; i++) {
@@ -472,33 +531,6 @@ const char* ManuvrMsg::getArgTypeString(uint8_t idx) {
 
 
 /**
-* Debug support method. This fxn is only present in debug builds.
-*
-* @param   StringBuilder* The buffer into which this fxn should write its output.
-*/
-void ManuvrMsg::printDebug(StringBuilder* temp) {
-  if (NULL == temp) return;
-  const MessageTypeDef* type_obj = getMsgDef();
-
-  if (&ManuvrMsg::message_defs[0] == type_obj) {
-    temp->concatf("\t Message type:   <UNDEFINED (Code 0x%04x)>\n", event_code);
-  }
-  else {
-    temp->concatf("\t Message type:   %s\n", getMsgTypeString());
-  }
-
-  if (nullptr != arg) {
-    temp->concatf("\t %d Arguments:\n", arg->argCount());
-    arg->printDebug(temp);
-    temp->concat("\n");
-  }
-  else {
-    temp->concat("\t No arguments.\n");
-  }
-}
-
-
-/**
 * This fxn takes all of the Arguments attached to this Message and writes them, along
 *   with their types, to the provided StringBuilder as an unsigned charater stream.
 *
@@ -506,7 +538,7 @@ void ManuvrMsg::printDebug(StringBuilder* temp) {
 * @return the number of Arguments so written, or a negative value on failure.
 */
 int ManuvrMsg::serialize(StringBuilder* output) {
-  if (output == NULL) return -1;
+  if (output == nullptr) return -1;
   int return_value = 0;
   int delta_len = 0;
   Argument* current_arg = arg;
@@ -541,9 +573,9 @@ int ManuvrMsg::serialize(StringBuilder* output) {
 * @return 0 on failure. 1 on success.
 */
 int8_t ManuvrMsg::getMsgLegend(StringBuilder* output) {
-  if (NULL == output) return 0;
+  if (nullptr == output) return 0;
 
-  const MessageTypeDef *temp_def = NULL;
+  const MessageTypeDef *temp_def = nullptr;
   for (int i = 1; i < TOTAL_MSG_DEFS; i++) {
     temp_def = (const MessageTypeDef *) &(message_defs[i]);
 
@@ -616,9 +648,9 @@ int8_t ManuvrMsg::getMsgLegend(StringBuilder* output) {
 int8_t ManuvrMsg::getMsgSemantics(MessageTypeDef* def, StringBuilder* output) {
   // TODO: def parameter is being ignored for now.
   int8_t return_value = 1;
-  if ((NULL != def) && (NULL != output)) {
+  if ((nullptr != def) && (nullptr != output)) {
 
-    const MessageTypeDef *temp_def = NULL;
+    const MessageTypeDef *temp_def = nullptr;
     for (int i = 1; i < TOTAL_MSG_DEFS; i++) {
       temp_def = (const MessageTypeDef *) &(message_defs[i]);
 
@@ -675,8 +707,8 @@ int8_t ManuvrMsg::getMsgSemantics(MessageTypeDef* def, StringBuilder* output) {
 * @return The number of possibly-valid grammatical forms the given length buffer.
 */
 int ManuvrMsg::collect_valid_grammatical_forms(int len, LinkedList<char*>* return_modes) {
-  if (NULL == message_def) getMsgDef();
-  if (NULL == message_def) return 0;     // Case (b)
+  if (nullptr == message_def) getMsgDef();
+  if (nullptr == message_def) return 0;     // Case (b)
 
   int return_value = 0;
   char* mode = (char*) message_def->arg_modes;
@@ -713,30 +745,30 @@ int ManuvrMsg::collect_valid_grammatical_forms(int len, LinkedList<char*>* retur
 * @return A pointer to the type-code sequence, or NULL on failure.
 */
 char* ManuvrMsg::is_valid_argument_buffer(int len) {
-  if (NULL == message_def) getMsgDef();
-  if (NULL == message_def) return NULL;
+  if (nullptr == message_def) getMsgDef();
+  if (nullptr == message_def) return nullptr;
 
-  char* return_value = NULL;
+  char* return_value = nullptr;
   char* mode = (char*) message_def->arg_modes;
   int arg_mode_len = strlen((const char*) mode);
   int temp = 0;
   while (arg_mode_len > 0) {
     temp = getMinimumSizeByTypeString(mode);
     if (len == temp) {
-      if (NULL != return_value) {
+      if (nullptr != return_value) {
         // This is case (b) above. If this happens, it means the grammatical forms
         //   for this argument were poorly chosen. There is nothing we can do to help
         //   this at runtime. Failure...
-        return NULL;
+        return nullptr;
       }
       else {
         return_value = mode;
       }
     }
     else if (len > temp) {
-      if (NULL != return_value) {
+      if (nullptr != return_value) {
         // TODO: incorrect. No variable-length types...
-        return NULL;
+        return nullptr;
       }
       else {
         return_value = mode;
@@ -780,4 +812,236 @@ int8_t ManuvrMsg::registerMessage(uint16_t tc, uint16_t tf, const char* lab, con
     // Misfortune.
   }
   return -1;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+bool ManuvrMsg::abort() {
+  return Kernel::abortEvent(this);
+}
+
+/**
+* Debug support method. This fxn is only present in debug builds.
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
+void ManuvrMsg::printDebug(StringBuilder *output) {
+  const MessageTypeDef* type_obj = getMsgDef();
+
+  if (&ManuvrMsg::message_defs[0] == type_obj) {
+    output->concatf("\t Message type:   <UNDEFINED (Code 0x%04x)>\n", event_code);
+  }
+  else {
+    output->concatf("\t Message type:   %s\n", getMsgTypeString());
+  }
+
+  if (nullptr != arg) {
+    output->concatf("\t %d Arguments:\n", arg->argCount());
+    arg->printDebug(output);
+    output->concat("\n");
+  }
+  else {
+    output->concat("\t No arguments.\n");
+  }
+
+  output->concatf("\t Preallocated          %s\n", (returnToPrealloc() ? YES_STR : NO_STR));
+  output->concatf("\t Originator:           %s\n", (nullptr == originator ? NUL_STR : originator->getReceiverName()));
+  output->concatf("\t specific_target:      %s\n", (nullptr == specific_target ? NUL_STR : specific_target->getReceiverName()));
+
+  output->concatf("\t [%p] Schedule \n\t --------------------------------\n", this);
+  output->concatf("\t Enabled       \t%s\n", (threadEnabled() ? YES_STR : NO_STR));
+  output->concatf("\t Time-till-fire\t%u\n", thread_time_to_wait);
+  output->concatf("\t Period        \t%u\n", thread_period);
+  output->concatf("\t Recurs?       \t%d\n", thread_recurs);
+  output->concatf("\t Exec pending: \t%s\n", (shouldFire() ? YES_STR : NO_STR));
+  output->concatf("\t Autoclear     \t%s\n", (autoClear() ? YES_STR : NO_STR));
+  output->concatf("\t Profiling?    \t%s\n", (profilingEnabled() ? YES_STR : NO_STR));
+
+  if (nullptr != schedule_callback) {
+    output->concat("\t Legacy callback\n");
+  }
+}
+
+
+void ManuvrMsg::printProfilerData(StringBuilder *output) {
+  if (nullptr != prof_data) output->concatf("\t %p  %9u  %9u  %9u  %9u  %9u  %9u %s\n", this, prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last, (threadEnabled() ? " " : "(INACTIVE)"));
+}
+
+
+/****************************************************************************************************
+* Functions dealing with profiling this particular Runnable.                                        *
+****************************************************************************************************/
+
+/**
+* Any schedule that has a TaskProfilerData object in the appropriate slot will be profiled.
+*  So to begin profiling a schedule, simply instance the appropriate struct into place.
+*/
+void ManuvrMsg::profilingEnabled(bool enabled) {
+  if (nullptr == prof_data) {
+    // Profiler data does not exist. If enabled == false, do nothing.
+    if (enabled) {
+      prof_data = new TaskProfilerData();
+      prof_data->profiling_active  = true;
+    }
+  }
+  else {
+    // Profiler data exists.
+    prof_data->profiling_active  = enabled;
+  }
+}
+
+
+/**
+* Destroys whatever profiling data might be stored in this Runnable.
+*/
+void ManuvrMsg::clearProfilingData() {
+  if (nullptr != prof_data) {
+    prof_data->profiling_active = false;
+    delete prof_data;
+    prof_data = nullptr;
+  }
+}
+
+
+void ManuvrMsg::noteExecutionTime(uint32_t profile_start_time, uint32_t profile_stop_time) {
+  if (nullptr != prof_data) {
+    profile_stop_time = micros();
+    prof_data->run_time_last    = std::max(profile_start_time, profile_stop_time) - std::min(profile_start_time, profile_stop_time);  // Rollover invarient.
+    prof_data->run_time_best    = std::min(prof_data->run_time_best,  prof_data->run_time_last);
+    prof_data->run_time_worst   = std::max(prof_data->run_time_worst, prof_data->run_time_last);
+    prof_data->run_time_total  += prof_data->run_time_last;
+    prof_data->run_time_average = prof_data->run_time_total / ((prof_data->executions) ? prof_data->executions : 1);
+    prof_data->executions++;
+  }
+}
+
+
+/****************************************************************************************************
+* Pertaining to deferred execution and scheduling....                                               *
+****************************************************************************************************/
+
+void ManuvrMsg::fireNow(bool nu) {
+  shouldFire(nu);
+  thread_time_to_wait = thread_period;
+}
+
+
+
+bool ManuvrMsg::alterSchedulePeriod(uint32_t nu_period) {
+  bool return_value  = false;
+  if (nu_period > 1) {
+    thread_period       = nu_period;
+    thread_time_to_wait = nu_period;
+    return_value  = true;
+  }
+  return return_value;
+}
+
+bool ManuvrMsg::alterScheduleRecurrence(int16_t recurrence) {
+  fireNow(false);
+  thread_recurs = recurrence;
+  return true;
+}
+
+
+/**
+* Call this function to alter a given schedule. Set with the given period, a given number of times, with a given function call.
+*  Returns true on success or false if the given PID is not found, or there is a problem with the parameters.
+*
+* Will not set the schedule active, but will clear any pending executions for this schedule, as well as reset the timer for it.
+*/
+bool ManuvrMsg::alterSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FxnPointer sch_callback) {
+  bool return_value  = false;
+  if (sch_period > 1) {
+    if (sch_callback != nullptr) {
+      fireNow(false);
+      autoClear(ac);
+      thread_recurs       = recurrence;
+      thread_period       = sch_period;
+      thread_time_to_wait = sch_period;
+      schedule_callback   = sch_callback;
+      return_value  = true;
+    }
+  }
+  return return_value;
+}
+
+
+/**
+* Returns true if...
+* A) The schedule exists
+*    AND
+* B) The schedule is enabled, and has at least one more runtime before it *might* be auto-reaped.
+*/
+bool ManuvrMsg::willRunAgain() {
+  if (threadEnabled()) {
+    if ((thread_recurs == -1) || (thread_recurs > 0)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+
+/**
+* Call to (en/dis)able a given schedule.
+*  Will reset the time_to_wait so that if the schedule is re-enabled, it doesn't fire sooner than expected.
+*  Returns true on success and false on failure.
+*/
+bool ManuvrMsg::enableSchedule(bool en) {
+  threadEnabled(en);
+  fireNow(en);
+  if (en) {
+    thread_time_to_wait = thread_period;
+  }
+  return true;
+}
+
+
+/**
+* Causes a given schedule's TTW (time-to-wait) to be set to the value we provide (this time only).
+* If the schedule wasn't enabled before, it will be when we return.
+*/
+bool ManuvrMsg::delaySchedule(uint32_t by_ms) {
+  thread_time_to_wait = by_ms;
+  threadEnabled(true);
+  return true;
+}
+
+
+
+/*******************************************************************************
+* Actually execute this runnable.                                              *
+*******************************************************************************/
+
+int8_t ManuvrMsg::callbackOriginator() {
+  if (originator) {
+    /* If the event has a valid originator, do the callback dance and take instruction
+       from the return value. */
+    return originator->callback_proc(this);
+  }
+  else {
+    /* If there is no originator specified for the Event, we rely on the flags in the Event itself to
+     decide if it should be reaped. If its memory is being managed by some other class, the reclaim_event()
+     fxn will simply remove it from the exec_queue and consider the matter closed. */
+  }
+  return EVENT_CALLBACK_RETURN_UNDEFINED;
 }

@@ -121,7 +121,7 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
       #if defined(_GNU_SOURCE)
         if (strcasestr(temp_ptr, "QUIT")) {
           ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_REBOOT);
-          event->originator = (EventReceiver*) __kernel;
+          event->setOriginator((EventReceiver*) __kernel);
           Kernel::staticRaiseEvent(event);
         }
         else if (strcasestr(temp_ptr, "HELP"))  printHelp();      // Show help.
@@ -133,7 +133,7 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
         StringBuilder* dispatched = new StringBuilder((uint8_t*) temp_ptr, temp_len);
         ManuvrRunnable* event  = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
         event->specific_target = (EventReceiver*) __kernel;
-        event->originator      = (EventReceiver*) this;
+        event->setOriginator((EventReceiver*) this);
         event->addArg(dispatched)->reapValue(true);
         raiseEvent(event);
       }

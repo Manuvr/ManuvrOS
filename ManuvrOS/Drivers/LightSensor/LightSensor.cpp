@@ -32,7 +32,7 @@ uint8_t  last_lux_bin  = 0;
 
 // These are only here until they are migrated to each receiver that deals with them.
 const MessageTypeDef message_defs_light_sensor[] = {
-  {  MANUVR_MSG_AMBIENT_LIGHT_LEVEL,  MSG_FLAG_EXPORTABLE,  "LIGHT_LEVEL",  ManuvrMsg::MSG_ARGS_U8  }, // Unitless light-level report.
+  {  MANUVR_MSG_AMBIENT_LIGHT_LEVEL,  MSG_FLAG_EXPORTABLE,  "LIGHT_LEVEL",  ManuvrMsg::MSG_ARGS_NONE  }, // Unitless light-level report.
 };
 
 
@@ -88,10 +88,9 @@ int8_t LightSensor::bootComplete() {
   light_check();
 
   // Build some pre-formed Events.
-  _periodic_check.repurpose(MANUVR_MSG_AMBIENT_LIGHT_LEVEL);
+  _periodic_check.repurpose(MANUVR_MSG_AMBIENT_LIGHT_LEVEL, (EventReceiver*) this);
   _periodic_check.isManaged(true);
   _periodic_check.specific_target = (EventReceiver*) this;
-  _periodic_check.originator      = (EventReceiver*) this;
 
   _periodic_check.addArg((uint8_t*) &last_lux_bin);
 

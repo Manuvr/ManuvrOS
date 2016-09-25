@@ -60,9 +60,8 @@ CoAPSession::CoAPSession(BufferPipe* _near_side) : XenoSession(_near_side) {
 		_bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
 	}
 
-  _ping_timer.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG);
+  _ping_timer.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG, (EventReceiver*) this);
   _ping_timer.isManaged(true);
-  _ping_timer.originator      = (EventReceiver*) this;
   _ping_timer.specific_target = (EventReceiver*) this;
   _ping_timer.alterScheduleRecurrence(-1);
   _ping_timer.alterSchedulePeriod(4000);

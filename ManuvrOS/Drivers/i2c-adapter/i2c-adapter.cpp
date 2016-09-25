@@ -100,10 +100,9 @@ void I2CAdapter::__class_initializer() {
   int mes_count = sizeof(i2c_message_defs) / sizeof(MessageTypeDef);
   ManuvrMsg::registerMessages(i2c_message_defs, mes_count);
 
-  _periodic_i2c_debug.repurpose(0x5051);
+  _periodic_i2c_debug.repurpose(0x5051, (EventReceiver*) this);
   _periodic_i2c_debug.isManaged(true);
   _periodic_i2c_debug.specific_target = (EventReceiver*) this;
-  _periodic_i2c_debug.originator      = (EventReceiver*) this;
   _periodic_i2c_debug.priority        = 1;
   _periodic_i2c_debug.alterSchedulePeriod(100);
   _periodic_i2c_debug.alterScheduleRecurrence(-1);

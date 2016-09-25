@@ -114,8 +114,8 @@ MGC3130::MGC3130(int ts, int rst, uint8_t addr) : EventReceiver() {
   _reset_pin = (uint8_t) rst;
 
   _isr_read_event.specific_target = this;
-  _isr_read_event.originator      = this;
   _isr_read_event.priority        = 3;
+  _isr_read_event.setOriginator((EventReceiver*) this);
   _isr_read_event.isManaged(true);
 
   // TODO: Formallize this for build targets other than Arduino. Use the abstracted Manuvr

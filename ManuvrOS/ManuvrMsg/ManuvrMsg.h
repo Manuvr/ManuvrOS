@@ -32,6 +32,19 @@ This class forms the foundation of internal events. It contains the identity of 
 #include <DataStructures/Argument.h>
 #include <DataStructures/LightLinkedList.h>
 
+#include <EnumeratedTypeCodes.h>
+#include <MsgProfiler.h>
+
+#define MANUVR_RUNNABLE_FLAG_MEM_MANAGED     0x01  // Set to true to cause the Kernel to not free().
+#define MANUVR_RUNNABLE_FLAG_PREALLOCD       0x02  // Set to true to cause the Kernel to return this runnable to its prealloc.
+#define MANUVR_RUNNABLE_FLAG_AUTOCLEAR       0x04  // If true, this schedule will be removed after its last execution.
+#define MANUVR_RUNNABLE_FLAG_THREAD_ENABLED  0x08  // Is the schedule running?
+#define MANUVR_RUNNABLE_FLAG_SCHEDULED       0x10  // Set to true to cause the Kernel to not free().
+#define MANUVR_RUNNABLE_FLAG_PENDING_EXEC    0x20  // This schedule is pending execution.
+
+class EventReceiver;
+
+
 /*
 * Messages are defined by this struct. Note that this amounts to nothing more than definition.
 * Actual instances of messages are held by ManuvrMsg.
@@ -76,9 +89,14 @@ class ManuvrMsg {
   public:
     ManuvrMsg();
     ManuvrMsg(uint16_t code);
-    virtual ~ManuvrMsg();
+    ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, FxnPointer sch_callback);
+    ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver*  originator);
+    ManuvrMsg(uint16_t msg_code, EventReceiver* originator);
+    ~ManuvrMsg();
 
-    virtual int8_t repurpose(uint16_t code);
+
+    int8_t repurpose(uint16_t code);
+    int8_t repurpose(uint16_t code, EventReceiver* cb);
 
     /**
     * Allows the caller to plan other allocations based on how many bytes this message's
@@ -160,7 +178,6 @@ class ManuvrMsg {
     inline Argument* addArg(BufferPipe *val) {         return addArg(new Argument(val));   }
     inline Argument* addArg(EventReceiver *val) {      return addArg(new Argument(val));   }
     inline Argument* addArg(ManuvrXport *val) {        return addArg(new Argument(val));   }
-    inline Argument* addArg(ManuvrRunnable *val) {     return addArg(new Argument(val));   }
 
     Argument* addArg(Argument*);  // The only "real" implementation.
 
@@ -194,7 +211,7 @@ class ManuvrMsg {
     inline int8_t getArgAs(BufferPipe **trg_buf) {                    return getArgAs(0, (void*) trg_buf);  }
     inline int8_t getArgAs(EventReceiver **trg_buf) {                 return getArgAs(0, (void*) trg_buf);  }
     inline int8_t getArgAs(ManuvrXport **trg_buf) {                   return getArgAs(0, (void*) trg_buf);  }
-    inline int8_t getArgAs(ManuvrRunnable **trg_buf) {                return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(ManuvrMsg **trg_buf) {                return getArgAs(0, (void*) trg_buf);  }
 
     inline int8_t getArgAs(uint8_t idx, Vector3f  **trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
     inline int8_t getArgAs(uint8_t idx, Vector3ui16  **trg_buf) {     return getArgAs(idx, (void*) trg_buf);  }
@@ -204,14 +221,12 @@ class ManuvrMsg {
     inline int8_t getArgAs(uint8_t idx, BufferPipe  **trg_buf) {      return getArgAs(idx, (void*) trg_buf);  }
     inline int8_t getArgAs(uint8_t idx, EventReceiver  **trg_buf) {   return getArgAs(idx, (void*) trg_buf);  }
     inline int8_t getArgAs(uint8_t idx, ManuvrXport  **trg_buf) {     return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, ManuvrRunnable  **trg_buf) {  return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, ManuvrMsg  **trg_buf) {  return getArgAs(idx, (void*) trg_buf);  }
 
     inline Argument* getArgs() {   return arg;  };
     Argument* takeArgs();
 
     int8_t markArgForReap(int idx, bool reap);
-
-    void printDebug(StringBuilder*);
 
     const char* getMsgTypeString();
     const char* getArgTypeString(uint8_t idx);
@@ -238,27 +253,119 @@ class ManuvrMsg {
 
     /* Required argument forms */
     static const unsigned char MSG_ARGS_NONE[];
-    static const unsigned char MSG_ARGS_U8[];
-    static const unsigned char MSG_ARGS_U16[];
-    static const unsigned char MSG_ARGS_U32[];
-    static const unsigned char MSG_ARGS_STR_BUILDER[];
-    static const unsigned char MSG_ARGS_BINBLOB[];
-
-    static const unsigned char MSG_ARGS_SELF_DESC[];
-    static const unsigned char MSG_ARGS_MSG_FORWARD[];
-
-    static const unsigned char MSG_ARGS_BUFFERPIPE[];
-    static const unsigned char MSG_ARGS_XPORT[];
-
-    static const unsigned char MSG_ARGS_U8_U8[];
 
     static const MessageTypeDef message_defs[];
     static const uint16_t TOTAL_MSG_DEFS;
 
 
+//GRAFT
+      EventReceiver*  specific_target;   // If the runnable is meant for a single class, put a pointer to it here.
+      FxnPointer schedule_callback; // Pointers to the schedule service function.
 
-  protected:
-    int8_t getArgAs(uint8_t idx, void *dat);
+      int32_t         priority;          // Set the default priority for this Runnable
+
+      /**
+      * If the memory isn't managed explicitly by some other class, this will tell the Kernel to delete
+      *   the completed event.
+      * Preallocation implies no reap.
+      *
+      * @return true if the Kernel ought to free() this Event. False otherwise.
+      */
+      inline bool kernelShouldReap() {
+        return (0 == (MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_PREALLOCD | MANUVR_RUNNABLE_FLAG_SCHEDULED));
+      };
+
+      int8_t execute();
+      int8_t callbackOriginator();
+
+      void printDebug();
+      void printDebug(StringBuilder *);
+      void printProfilerData(StringBuilder *);
+
+      /* Functions for pinging the profiler data. */
+      void noteExecutionTime(uint32_t start, uint32_t stop);
+
+
+      //TODO: /* These are accessors to concurrency-sensitive members. */
+      /* These are accessors to formerly-public members of ScheduleItem. */
+      bool alterScheduleRecurrence(int16_t recurrence);
+      bool alterSchedulePeriod(uint32_t nu_period);
+      bool alterSchedule(FxnPointer sch_callback);
+      bool alterSchedule(uint32_t sch_period, int16_t recurrence, bool auto_clear, FxnPointer sch_callback);
+      bool enableSchedule(bool enable);      // Re-enable a previously-disabled schedule.
+      bool removeSchedule();                 // Clears all data relating to the given schedule.
+      bool willRunAgain();                   // Returns true if the indicated schedule will fire again.
+      void fireNow(bool nu);
+      inline void fireNow() {               fireNow(true);           }
+      bool delaySchedule(uint32_t by_ms);    // Set the schedule's TTW to the given value this execution only.
+      inline bool delaySchedule() {         return delaySchedule(thread_period);  }  // Reset the given schedule to its period and enable it.
+
+      /* Any required setup finished without problems? */
+      inline bool shouldFire() { return (_flags & MANUVR_RUNNABLE_FLAG_PENDING_EXEC); };
+      inline void shouldFire(bool en) {
+        _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_PENDING_EXEC) : (_flags & ~(MANUVR_RUNNABLE_FLAG_PENDING_EXEC));
+      };
+
+      /* Any required setup finished without problems? */
+      inline bool threadEnabled() { return (_flags & MANUVR_RUNNABLE_FLAG_THREAD_ENABLED); };
+      inline void threadEnabled(bool en) {
+        _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_THREAD_ENABLED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_THREAD_ENABLED));
+      };
+
+      /* Any required setup finished without problems? */
+      inline bool autoClear() { return (_flags & MANUVR_RUNNABLE_FLAG_AUTOCLEAR); };
+      inline void autoClear(bool en) {
+        _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_AUTOCLEAR) : (_flags & ~(MANUVR_RUNNABLE_FLAG_AUTOCLEAR));
+      };
+
+      /* Any required setup finished without problems? */
+      inline bool isScheduled() { return (_flags & MANUVR_RUNNABLE_FLAG_SCHEDULED); };
+      inline void isScheduled(bool en) {
+        _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_SCHEDULED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_SCHEDULED));
+      };
+
+      /* Schedule member accessors. */
+      inline int16_t  scheduleRecurs() { return thread_recurs; };
+      inline uint32_t schedulePeriod() { return thread_period; };
+      inline uint32_t scheduleTimeToWait() { return thread_time_to_wait; };
+      inline void setTimeToWait(uint32_t nu) { thread_time_to_wait = nu; };  // TODO: Sloppy. Kill with fire.
+
+
+      inline void setOriginator(EventReceiver* er) { originator = er; };
+      inline bool isOriginator(EventReceiver* er) { return (er == originator); };
+
+      /**
+      * Was this event preallocated?
+      * Preallocation implies no reap.
+      *
+      * @param  nu_val Pass true to cause this event to be marked as part of a preallocation pool.
+      * @return true if the Kernel ought to return this event to its preallocation queue.
+      */
+      inline bool returnToPrealloc() { return (_flags & MANUVR_RUNNABLE_FLAG_PREALLOCD); };
+      inline void returnToPrealloc(bool en) {
+        _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_PREALLOCD) : (_flags & ~(MANUVR_RUNNABLE_FLAG_PREALLOCD));
+      };
+
+      /* If some other class is managing this memory, this should return 'true'. */
+      inline bool isManaged() { return (_flags & MANUVR_RUNNABLE_FLAG_MEM_MANAGED); };
+      inline void isManaged(bool en) {
+        _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_MEM_MANAGED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_MEM_MANAGED));
+      };
+
+      /**
+      * Asks if this schedule is being profiled...
+      *  Returns true if so, and false if not.
+      */
+      inline bool profilingEnabled() {       return (prof_data != nullptr); };
+
+      /* If this runnable is scheduled, aborts it. Returns true if the schedule was aborted. */
+      bool abort();
+
+      void profilingEnabled(bool enabled);
+      void clearProfilingData();           // Clears profiling data associated with the given schedule.
+
+
+//GRAFT
 
 
 
@@ -267,15 +374,31 @@ class ManuvrMsg {
     Argument* arg       = nullptr;       // The optional list of arguments associated with this event.
     uint16_t event_code = MANUVR_MSG_UNDEFINED; // The identity of the event (or command).
 
+
+    EventReceiver*  originator;        // This is an optional ref to the class that raised this runnable.
+
+      // The things below were pulled in from ScheduleItem.
+      uint32_t thread_time_to_wait;      // How much longer until the schedule fires?
+      uint32_t thread_period;            // How often does this schedule execute?
+      int16_t  thread_recurs;            // See Note 2.
+      // End ScheduleItem
+
+    int8_t getArgAs(uint8_t idx, void *dat);
     int8_t writePointerArgAs(uint8_t idx, void *trg_buf);
 
     char* is_valid_argument_buffer(int len);
     int   collect_valid_grammatical_forms(int, LinkedList<char*>*);
+
+//GRAFT
+    TaskProfilerData* prof_data;  // If this schedule is being profiled, the ref will be here.
+    uint8_t  _flags;              // Optional flags that might be important for a runnable.
+//GRAFT
 
 
     // Where runtime-loaded message defs go.
     static std::map<uint16_t, const MessageTypeDef*> message_defs_extended;
 };
 
+typedef ManuvrMsg ManuvrRunnable;
 
 #endif

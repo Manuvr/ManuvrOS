@@ -159,7 +159,7 @@ void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
 */
 int8_t EventReceiver::raiseEvent(ManuvrRunnable* event) {
   if (event != nullptr) {
-    event->originator = (EventReceiver*) this;
+    event->setOriginator(this);
     return Kernel::staticRaiseEvent(event);
   }
   else {

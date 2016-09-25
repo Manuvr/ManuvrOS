@@ -272,3 +272,28 @@ The next_tick() idea was implemented, but no tests written yet. So I'll have a f
 _---J. Ian Lindsay_
 
 ------
+
+### 2016.09.25:
+
+Linux, 32-bit: DEBUG=1 SECURE=1
+1744195   12160   50148 1806503  1b90a7 Tonight's baseline....
+1744179   12160   50148 1806487  1b9097 First step of Msg/Runnable condensation.
+1743551   12160   50020 1805731  1b8da3 Runnable and Msg smash-merged.
+1743487   12160   50020 1805667  1b8d63 Cut class_initializer().
+1743423   12160   50020 1805603  1b8d23 Cut arg form statics.
+1743651   12160   50020 1805831  1b8e07 Msg scope tightening with addition of accessors.
+
+
+
+
+
+Messages need to do these things...
+* Pack/parse for transport.
+* Convey asynchronous events internally
+* Carry context-specific arguments
+* Carry knowledge of their GC policy
+* Be passed uniformly
+* Be bridged with outbound transport messages. IE, be locked and held by modules.
+* Be statically-allocated.
+* Be schedulable by the kernel.
+* Carry callback pointers as either a class or fxn*.
