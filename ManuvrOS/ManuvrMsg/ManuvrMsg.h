@@ -117,7 +117,7 @@ class ManuvrMsg {
     * @return the length (in bytes) of the arguments for this message.
     */
     inline int argByteCount() {
-      return ((nullptr == arg) ? 0 : arg->sumAllLengths());
+      return ((nullptr == _args) ? 0 : _args->sumAllLengths());
     }
 
     /**
@@ -125,7 +125,7 @@ class ManuvrMsg {
     *
     * @return the cardinality of the argument list.
     */
-    inline int      argCount() {   return ((nullptr != arg) ? arg->argCount() : 0);   };
+    inline int      argCount() {   return ((nullptr != _args) ? _args->argCount() : 0);   };
 
     inline bool isExportable() {
       if (NULL == message_def) message_def = lookupMsgDefByCode(_code);
@@ -233,7 +233,7 @@ class ManuvrMsg {
     inline int8_t getArgAs(uint8_t idx, ManuvrXport  **trg_buf) {     return getArgAs(idx, (void*) trg_buf);  }
     inline int8_t getArgAs(uint8_t idx, ManuvrMsg  **trg_buf) {  return getArgAs(idx, (void*) trg_buf);  }
 
-    inline Argument* getArgs() {   return arg;  };
+    inline Argument* getArgs() {   return _args;  };
 
     Argument* takeArgs();
 
@@ -369,7 +369,7 @@ class ManuvrMsg {
     const MessageTypeDef*  message_def = nullptr;  // The definition for the message (once it is associated).
     FxnPointer       schedule_callback = nullptr;  // Pointers to the schedule service function.
     EventReceiver* _origin = nullptr;    // This is an optional ref to the class that raised this runnable.
-    Argument* arg   = nullptr;       // The optional list of arguments associated with this event.
+    Argument* _args   = nullptr;       // The optional list of arguments associated with this event.
     uint16_t _code  = MANUVR_MSG_UNDEFINED; // The identity of the event (or command).
     uint16_t _flags = 0;                    // Optional flags that might be important for a runnable.
 

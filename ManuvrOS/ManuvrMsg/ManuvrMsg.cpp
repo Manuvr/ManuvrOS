@@ -422,10 +422,10 @@ int8_t ManuvrMsg::repurpose(uint16_t code, EventReceiver* cb) {
 
 
 Argument* ManuvrMsg::addArg(Argument* nu) {
-  if (nullptr != arg) {
-    return arg->link(nu);
+  if (nullptr != _args) {
+    return _args->link(nu);
   }
-  arg = nu;
+  _args = nu;
   return nu;
 };
 
@@ -564,8 +564,8 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
 * @return 1 on success, 0 on failure.
 */
 int8_t ManuvrMsg::markArgForReap(int idx, bool reap) {
-  if (nullptr != arg) {
-    Argument* tmp = arg->retrieveArgByIdx(idx);
+  if (nullptr != _args) {
+    Argument* tmp = _args->retrieveArgByIdx(idx);
     tmp->reapValue(reap);
     return 1;
   }
@@ -590,8 +590,8 @@ int8_t ManuvrMsg::markArgForReap(int idx, bool reap) {
 */
 int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf) {
   int8_t return_value = -1;
-  if (nullptr != arg) {
-    return ((0 == idx) ? arg->getValueAs(trg_buf) : arg->getValueAs(idx, trg_buf));
+  if (_args) {
+    return ((0 == idx) ? _args->getValueAs(trg_buf) : _args->getValueAs(idx, trg_buf));
   }
   return return_value;
 }
@@ -607,9 +607,8 @@ int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf) {
 */
 int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
   int8_t return_value = -1;
-  Argument* a = arg;
-  if (nullptr != a) {
-    switch (a->typeCode()) {
+  if (_args) {
+    switch (_args->typeCode()) {
       case INT8_PTR_FM:
       case INT16_PTR_FM:
       case INT32_PTR_FM:
@@ -621,7 +620,7 @@ int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
       case STR_FM:
       case BINARY_FM:
         return_value = 0;
-        *((uintptr_t*) a->target_mem) = *((uintptr_t*) trg_buf);
+        *((uintptr_t*) _args->target_mem) = *((uintptr_t*) trg_buf);
         break;
       default:
         return_value = -2;
@@ -640,9 +639,9 @@ int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
 * @return 0 or appropriate failure code.
 */
 int8_t ManuvrMsg::clearArgs() {
-  if (nullptr != arg) {
-    Argument* tmp = arg;
-    arg = nullptr;
+  if (_args) {
+    Argument* tmp = _args;
+    _args = nullptr;
     delete tmp;
   }
   return 0;
@@ -655,8 +654,8 @@ int8_t ManuvrMsg::clearArgs() {
 * @return 0 or appropriate failure code.
 */
 Argument* ManuvrMsg::takeArgs() {
-  Argument* ret = arg;
-  arg = nullptr;
+  Argument* ret = _args;
+  _args = nullptr;
   return ret;
 }
 
@@ -700,8 +699,8 @@ const char* ManuvrMsg::getMsgTypeString() {
 
 
 const char* ManuvrMsg::getArgTypeString(uint8_t idx) {
-  if (nullptr == arg) return "<INVALID INDEX>";
-  Argument* a = arg->retrieveArgByIdx(idx);
+  if (nullptr == _args) return "<INVALID INDEX>";
+  Argument* a = _args->retrieveArgByIdx(idx);
   if (nullptr == a) return "<INVALID INDEX>";
   return getTypeCodeString(a->typeCode());
 }
@@ -718,7 +717,7 @@ int ManuvrMsg::serialize(StringBuilder* output) {
   if (output == nullptr) return -1;
   int return_value = 0;
   int delta_len = 0;
-  Argument* current_arg = arg;
+  Argument* current_arg = _args;
   while (nullptr != current_arg) {
     delta_len = current_arg->serialize_raw(output);
     if (delta_len < 0) {
@@ -857,9 +856,9 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
     output->concatf("\t Message type:   %s\n", getMsgTypeString());
   }
 
-  if (arg) {
-    output->concatf("\t %d Arguments:\n", arg->argCount());
-    arg->printDebug(output);
+  if (_args) {
+    output->concatf("\t %d Arguments:\n", _args->argCount());
+    _args->printDebug(output);
     output->concat("\n");
   }
   else {
