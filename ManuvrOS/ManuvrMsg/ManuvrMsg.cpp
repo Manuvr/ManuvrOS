@@ -66,8 +66,8 @@ ManuvrMsg::ManuvrMsg() {
   specific_target     = nullptr;
   schedule_callback   = nullptr;
   priority            = EVENT_PRIORITY_DEFAULT;
-  thread_recurs       = 0;
-  thread_period       = 0;
+  _sched_recurs       = 0;
+  _sched_period       = 0;
   thread_time_to_wait = 0;
 }
 
@@ -99,10 +99,9 @@ ManuvrMsg::ManuvrMsg(uint16_t code, EventReceiver* cb) : ManuvrMsg() {
 * @param sch_callback A FxnPointer to the callback. Useful for some general things.
 */
 ManuvrMsg::ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, FxnPointer sch_callback) : ManuvrMsg(MANUVR_MSG_DEFERRED_FXN) {
-  threadEnabled(true);
   autoClear(ac);
-  thread_recurs       = recurrence;
-  thread_period       = sch_period;
+  _sched_recurs       = recurrence;
+  _sched_period       = sch_period;
   thread_time_to_wait = sch_period;
 
   schedule_callback   = sch_callback;    // This constructor uses the legacy callback.
@@ -120,10 +119,9 @@ ManuvrMsg::ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, FxnPointe
 * @param ev           A pointer to an Event that we will periodically raise.
 */
 ManuvrMsg::ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver* ori) : ManuvrMsg(MANUVR_MSG_DEFERRED_FXN) {
-  threadEnabled(true);
   autoClear(ac);
-  thread_recurs       = recurrence;
-  thread_period       = sch_period;
+  _sched_recurs       = recurrence;
+  _sched_period       = sch_period;
   thread_time_to_wait = sch_period;
 
   originator          = ori;   // This constructor uses the EventReceiver callback...
@@ -881,13 +879,15 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
   output->concatf("\t Originator:           %s\n", (nullptr == originator ? NUL_STR : originator->getReceiverName()));
   output->concatf("\t specific_target:      %s\n", (nullptr == specific_target ? NUL_STR : specific_target->getReceiverName()));
 
-  output->concatf("\t [%p] Schedule \n\t --------------------------------\n", this);
-  output->concatf("\t Enabled       \t%s\n", (threadEnabled() ? YES_STR : NO_STR));
-  output->concatf("\t Time-till-fire\t%u\n", thread_time_to_wait);
-  output->concatf("\t Period        \t%u\n", thread_period);
-  output->concatf("\t Recurs?       \t%d\n", thread_recurs);
-  output->concatf("\t Exec pending: \t%s\n", (shouldFire() ? YES_STR : NO_STR));
-  output->concatf("\t Autoclear     \t%s\n", (autoClear() ? YES_STR : NO_STR));
+  if (isScheduled()) {
+    output->concatf("\t [%p] Schedule \n\t --------------------------------\n", this);
+    output->concatf("\t Enabled       \t%s\n", (scheduleEnabled() ? YES_STR : NO_STR));
+    output->concatf("\t Time-till-fire\t%u\n", thread_time_to_wait);
+    output->concatf("\t Period        \t%u\n", _sched_period);
+    output->concatf("\t Recurs?       \t%d\n", _sched_recurs);
+    output->concatf("\t Exec pending: \t%s\n", (shouldFire() ? YES_STR : NO_STR));
+    output->concatf("\t Autoclear     \t%s\n", (autoClear() ? YES_STR : NO_STR));
+  }
   #if defined(__MANUVR_EVENT_PROFILER)
     output->concatf("\t Profiling?    \t%s\n", (profilingEnabled() ? YES_STR : NO_STR));
   #endif
@@ -904,7 +904,7 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
 #if defined(__MANUVR_EVENT_PROFILER)
 
 void ManuvrMsg::printProfilerData(StringBuilder *output) {
-  if (prof_data) output->concatf("\t %p  %9u  %9u  %9u  %9u  %9u  %9u %s\n", this, prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last, (threadEnabled() ? " " : "(INACTIVE)"));
+  if (prof_data) output->concatf("\t %p  %9u  %9u  %9u  %9u  %9u  %9u %s\n", this, prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last, (isScheduled() ? " " : "(INACTIVE)"));
 }
 
 /**
@@ -939,7 +939,7 @@ void ManuvrMsg::clearProfilingData() {
 
 
 void ManuvrMsg::noteExecutionTime(uint32_t profile_start_time, uint32_t profile_stop_time) {
-  if (nullptr != prof_data) {
+  if (prof_data) {
     profile_stop_time = micros();
     prof_data->run_time_last    = std::max(profile_start_time, profile_stop_time) - std::min(profile_start_time, profile_stop_time);  // Rollover invarient.
     prof_data->run_time_best    = std::min(prof_data->run_time_best,  prof_data->run_time_last);
@@ -959,7 +959,7 @@ void ManuvrMsg::noteExecutionTime(uint32_t profile_start_time, uint32_t profile_
 
 void ManuvrMsg::fireNow(bool nu) {
   shouldFire(nu);
-  thread_time_to_wait = thread_period;
+  thread_time_to_wait = _sched_period;
 }
 
 
@@ -967,7 +967,7 @@ void ManuvrMsg::fireNow(bool nu) {
 bool ManuvrMsg::alterSchedulePeriod(uint32_t nu_period) {
   bool return_value  = false;
   if (nu_period > 1) {
-    thread_period       = nu_period;
+    _sched_period       = nu_period;
     thread_time_to_wait = nu_period;
     return_value  = true;
   }
@@ -976,7 +976,7 @@ bool ManuvrMsg::alterSchedulePeriod(uint32_t nu_period) {
 
 bool ManuvrMsg::alterScheduleRecurrence(int16_t recurrence) {
   fireNow(false);
-  thread_recurs = recurrence;
+  _sched_recurs = recurrence;
   return true;
 }
 
@@ -993,8 +993,8 @@ bool ManuvrMsg::alterSchedule(uint32_t sch_period, int16_t recurrence, bool ac, 
     if (sch_callback != nullptr) {
       fireNow(false);
       autoClear(ac);
-      thread_recurs       = recurrence;
-      thread_period       = sch_period;
+      _sched_recurs       = recurrence;
+      _sched_period       = sch_period;
       thread_time_to_wait = sch_period;
       schedule_callback   = sch_callback;
       return_value  = true;
@@ -1011,10 +1011,8 @@ bool ManuvrMsg::alterSchedule(uint32_t sch_period, int16_t recurrence, bool ac, 
 * B) The schedule is enabled, and has at least one more runtime before it *might* be auto-reaped.
 */
 bool ManuvrMsg::willRunAgain() {
-  if (threadEnabled()) {
-    if ((thread_recurs == -1) || (thread_recurs > 0)) {
-      return true;
-    }
+  if (isScheduled() & scheduleEnabled()) {
+    return (0 != _sched_recurs);
   }
   return false;
 }
@@ -1026,11 +1024,11 @@ bool ManuvrMsg::willRunAgain() {
 *  Returns true on success and false on failure.
 */
 bool ManuvrMsg::enableSchedule(bool en) {
-  threadEnabled(en);
   fireNow(en);
   if (en) {
-    thread_time_to_wait = thread_period;
+    thread_time_to_wait = _sched_period;
   }
+  scheduleEnabled(en);
   return true;
 }
 
@@ -1041,7 +1039,7 @@ bool ManuvrMsg::enableSchedule(bool en) {
 */
 bool ManuvrMsg::delaySchedule(uint32_t by_ms) {
   thread_time_to_wait = by_ms;
-  threadEnabled(true);
+  scheduleEnabled(true);
   return true;
 }
 

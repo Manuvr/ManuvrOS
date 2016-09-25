@@ -35,12 +35,16 @@ This class forms the foundation of internal events. It contains the identity of 
 #include <EnumeratedTypeCodes.h>
 #include <MsgProfiler.h>
 
-#define MANUVR_RUNNABLE_FLAG_MEM_MANAGED     0x01  // Set to true to cause the Kernel to not free().
-#define MANUVR_RUNNABLE_FLAG_PREALLOCD       0x02  // Set to true to cause the Kernel to return this runnable to its prealloc.
-#define MANUVR_RUNNABLE_FLAG_AUTOCLEAR       0x04  // If true, this schedule will be removed after its last execution.
-#define MANUVR_RUNNABLE_FLAG_THREAD_ENABLED  0x08  // Is the schedule running?
-#define MANUVR_RUNNABLE_FLAG_SCHEDULED       0x10  // Set to true to cause the Kernel to not free().
-#define MANUVR_RUNNABLE_FLAG_PENDING_EXEC    0x20  // This schedule is pending execution.
+
+/*
+* These are flag definitions for Message types.
+*/
+#define MANUVR_RUNNABLE_FLAG_MEM_MANAGED     0x0100  // Set to true to cause the Kernel to not free().
+#define MANUVR_RUNNABLE_FLAG_PREALLOCD       0x0200  // Set to true to cause the Kernel to return this runnable to its prealloc.
+#define MANUVR_RUNNABLE_FLAG_AUTOCLEAR       0x0400  // If true, this schedule will be removed after its last execution.
+#define MANUVR_RUNNABLE_FLAG_SCHED_ENABLED   0x0800  // Is the schedule running?
+#define MANUVR_RUNNABLE_FLAG_SCHEDULED       0x1000  // Set to true to cause the Kernel to not free().
+#define MANUVR_RUNNABLE_FLAG_PENDING_EXEC    0x2000  // This schedule is pending execution.
 
 class EventReceiver;
 
@@ -62,6 +66,8 @@ typedef struct msg_defin_t {
 
 /*
 * These are flag definitions for Message types.
+* They are constant for a given message type, and are not related to those
+*   stored in the _flags member.
 */
 #define MSG_FLAG_IDEMPOTENT   0x0001      // Indicates that only one of the given message should be enqueue.
 #define MSG_FLAG_EXPORTABLE   0x0002      // Indicates that the message might be sent between systems.
@@ -98,13 +104,15 @@ class ManuvrMsg {
     int8_t repurpose(uint16_t code);
     int8_t repurpose(uint16_t code, EventReceiver* cb);
 
+    inline uint16_t eventCode() {  return event_code;   };
+
     /**
     * Allows the caller to plan other allocations based on how many bytes this message's
     *   Arguments occupy.
     *
     * @return the length (in bytes) of the arguments for this message.
     */
-    int argByteCount() {
+    inline int argByteCount() {
       return ((nullptr == arg) ? 0 : arg->sumAllLengths());
     }
 
@@ -114,8 +122,6 @@ class ManuvrMsg {
     * @return the cardinality of the argument list.
     */
     inline int      argCount() {   return ((nullptr != arg) ? arg->argCount() : 0);   };
-
-    inline uint16_t eventCode() {  return event_code;   };
 
     inline bool isExportable() {
       if (NULL == message_def) message_def = lookupMsgDefByCode(event_code);
@@ -224,6 +230,7 @@ class ManuvrMsg {
     inline int8_t getArgAs(uint8_t idx, ManuvrMsg  **trg_buf) {  return getArgAs(idx, (void*) trg_buf);  }
 
     inline Argument* getArgs() {   return arg;  };
+
     Argument* takeArgs();
 
     int8_t markArgForReap(int idx, bool reap);
@@ -292,12 +299,11 @@ class ManuvrMsg {
       bool alterSchedule(FxnPointer sch_callback);
       bool alterSchedule(uint32_t sch_period, int16_t recurrence, bool auto_clear, FxnPointer sch_callback);
       bool enableSchedule(bool enable);      // Re-enable a previously-disabled schedule.
-      bool removeSchedule();                 // Clears all data relating to the given schedule.
       bool willRunAgain();                   // Returns true if the indicated schedule will fire again.
       void fireNow(bool nu);
       inline void fireNow() {               fireNow(true);           }
       bool delaySchedule(uint32_t by_ms);    // Set the schedule's TTW to the given value this execution only.
-      inline bool delaySchedule() {         return delaySchedule(thread_period);  }  // Reset the given schedule to its period and enable it.
+      inline bool delaySchedule() {         return delaySchedule(_sched_period);  }  // Reset the given schedule to its period and enable it.
 
       /* Any required setup finished without problems? */
       inline bool shouldFire() { return (_flags & MANUVR_RUNNABLE_FLAG_PENDING_EXEC); };
@@ -306,10 +312,7 @@ class ManuvrMsg {
       };
 
       /* Any required setup finished without problems? */
-      inline bool threadEnabled() { return (_flags & MANUVR_RUNNABLE_FLAG_THREAD_ENABLED); };
-      inline void threadEnabled(bool en) {
-        _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_THREAD_ENABLED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_THREAD_ENABLED));
-      };
+      inline bool scheduleEnabled() { return (_flags & MANUVR_RUNNABLE_FLAG_SCHED_ENABLED); };
 
       /* Any required setup finished without problems? */
       inline bool autoClear() { return (_flags & MANUVR_RUNNABLE_FLAG_AUTOCLEAR); };
@@ -324,8 +327,8 @@ class ManuvrMsg {
       };
 
       /* Schedule member accessors. */
-      inline int16_t  scheduleRecurs() { return thread_recurs; };
-      inline uint32_t schedulePeriod() { return thread_period; };
+      inline int16_t  scheduleRecurs() { return _sched_recurs; };
+      inline uint32_t schedulePeriod() { return _sched_period; };
       inline uint32_t scheduleTimeToWait() { return thread_time_to_wait; };
       inline void setTimeToWait(uint32_t nu) { thread_time_to_wait = nu; };  // TODO: Sloppy. Kill with fire.
 
@@ -376,11 +379,10 @@ class ManuvrMsg {
     uint16_t event_code = MANUVR_MSG_UNDEFINED; // The identity of the event (or command).
     uint16_t  _flags;             // Optional flags that might be important for a runnable.
 
-      // The things below were pulled in from ScheduleItem.
-      int16_t  thread_recurs;            // See Note 2.
-      uint32_t thread_time_to_wait;      // How much longer until the schedule fires?
-      uint32_t thread_period;            // How often does this schedule execute?
-      // End ScheduleItem
+    int16_t  _sched_recurs;            // See Note 2.
+    uint32_t _sched_period;            // How often does this schedule execute?
+    uint32_t thread_time_to_wait;      // How much longer until the schedule fires?
+
     #if defined(__MANUVR_EVENT_PROFILER)
     TaskProfilerData* prof_data = nullptr;  // If this schedule is being profiled, the ref will be here.
     #endif
@@ -390,6 +392,10 @@ class ManuvrMsg {
 
     char* is_valid_argument_buffer(int len);
     int   collect_valid_grammatical_forms(int, LinkedList<char*>*);
+
+    inline void scheduleEnabled(bool en) {
+      _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_SCHED_ENABLED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_SCHED_ENABLED));
+    };
 
 
 

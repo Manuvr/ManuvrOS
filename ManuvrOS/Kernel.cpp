@@ -716,10 +716,6 @@ int8_t Kernel::procIdleFlags() {
     current_event = active_runnable;
 
     // Chat and measure.
-    #ifdef __MANUVR_DEBUG
-    //if (getVerbosity() > 6) local_log.concatf("Servicing: %s\n", active_runnable->getMsgTypeString());
-    #endif
-
     profiler_mark_0 = micros();
 
     procCallAheads(active_runnable);
@@ -1255,7 +1251,7 @@ unsigned int Kernel::countActiveSchedules() {
   ManuvrRunnable *current;
   for (int i = 0; i < schedules.size(); i++) {
     current = schedules.get(i);
-    if (current->threadEnabled()) {
+    if (current->scheduleEnabled()) {
       return_value++;
     }
   }
@@ -1273,7 +1269,7 @@ unsigned int Kernel::countActiveSchedules() {
 ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FxnPointer sch_callback) {
   ManuvrRunnable* return_value = nullptr;
   if (sch_period > 1) {
-    if (nullptr != sch_callback) {
+    if (sch_callback) {
       if (ac) {
         // If the schedule is supposed to auto-clear, we will pull it from our
         //   preallocation pool, since we know that it will eventually expire.
@@ -1305,7 +1301,7 @@ ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, 
   ManuvrRunnable* return_value = nullptr;
   if (sch_period > 1) {
     return_value = new ManuvrRunnable(recurrence, sch_period, ac, ori);
-    if (nullptr != return_value) {  // Did we actually malloc() successfully?
+    if (return_value) {  // Did we actually malloc() successfully?
       return_value->isScheduled(true);
       schedules.insert(return_value);
     }
@@ -1350,7 +1346,7 @@ void Kernel::advanceScheduler(unsigned int ms_elapsed) {
 * @return true on success and false on failure.
 */
 bool Kernel::removeSchedule(ManuvrRunnable *obj) {
-  if (obj != nullptr) {
+  if (obj) {
     if (obj != current_event) {
       obj->isScheduled(false);
       schedules.remove(obj);
@@ -1365,7 +1361,7 @@ bool Kernel::removeSchedule(ManuvrRunnable *obj) {
 }
 
 bool Kernel::addSchedule(ManuvrRunnable *obj) {
-  if (obj != nullptr) {
+  if (obj) {
     if (!schedules.contains(obj)) {
       obj->isScheduled(true);
       schedules.insert(obj);
@@ -1384,20 +1380,22 @@ bool Kernel::addSchedule(ManuvrRunnable *obj) {
 *  latency-sensitive.
 */
 int Kernel::serviceSchedules() {
-  if (!booted()) return -1;
+  if (!booted() || (0 == _ms_elapsed)) return -1;
   int return_value = 0;
+  uint32_t mse = _ms_elapsed;  // Concurrency....
+  _ms_elapsed = 0;
 
   int x = schedules.size();
   ManuvrRunnable *current;
 
   for (int i = 0; i < x; i++) {
     current = schedules.recycle();
-    if (current->threadEnabled()) {
-      if ((current->scheduleTimeToWait() > _ms_elapsed) && (!current->shouldFire())){
-        current->setTimeToWait(current->scheduleTimeToWait() - _ms_elapsed);
+    if (current->scheduleEnabled()) {
+      if ((current->scheduleTimeToWait() > mse) && (!current->shouldFire())){
+        current->setTimeToWait(current->scheduleTimeToWait() - mse);
       }
       else {
-        uint32_t adjusted_ttw = (_ms_elapsed - current->scheduleTimeToWait());
+        uint32_t adjusted_ttw = (mse - current->scheduleTimeToWait());
         if (adjusted_ttw <= current->schedulePeriod()) {
           current->setTimeToWait(current->schedulePeriod() - adjusted_ttw);
         }
@@ -1417,7 +1415,6 @@ int Kernel::serviceSchedules() {
   _skip_detected(false);
   _skips_observed = 0;
 
-  _ms_elapsed = 0;
   return return_value;
 }
 

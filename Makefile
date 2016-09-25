@@ -149,7 +149,7 @@ OPTIMIZATION    = -O0 -g
 # gprof2dot --format=callgrind --output=out.dot callgrind.out.16562
 # dot  -Tpng out.dot -o graph.png
 endif
-#MANUVR_OPTIONS += -D__MANUVR_EVENT_PROFILER
+MANUVR_OPTIONS += -D__MANUVR_EVENT_PROFILER
 
 ###########################################################################
 # Rules for building the firmware follow...
