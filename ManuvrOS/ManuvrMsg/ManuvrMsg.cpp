@@ -573,13 +573,6 @@ int8_t ManuvrMsg::markArgForReap(int idx, bool reap) {
 }
 
 
-/****************************************************************************************************
-* These are only here for the sake of convenience and comprehensibility elsewhere.                  *
-* Prevents client classes from having to do casting and type manipulation.                          *
-* TODO: Would like to see these inlined. Not sure how without throwing the linker into a rage.      *
-****************************************************************************************************/
-
-
 /**
 * All of the type-specialized getArgAs() fxns boil down to this. Which is private.
 * The boolean preserve parameter will leave the argument attached (if true), or destroy it (if false).
@@ -841,6 +834,7 @@ bool ManuvrMsg::abort() {
   return Kernel::abortEvent(this);
 }
 
+#if defined(__MANUVR_DEBUG)
 /**
 * Debug support method. This fxn is only present in debug builds.
 *
@@ -886,7 +880,7 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
     output->concat("\t Legacy callback\n");
   }
 }
-
+#endif  // __MANUVR_DEBUG
 
 /*******************************************************************************
 * Functions dealing with profiling this particular Runnable.                   *

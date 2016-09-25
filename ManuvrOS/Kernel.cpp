@@ -440,7 +440,7 @@ int8_t Kernel::staticRaiseEvent(ManuvrRunnable* active_runnable) {
     return return_value;
   }
 
-  #ifdef __MANUVR_DEBUG
+  #if defined(__MANUVR_DEBUG)
     if (INSTANCE->getVerbosity() > 4) {
       StringBuilder output;
       output.concatf(
@@ -448,6 +448,7 @@ int8_t Kernel::staticRaiseEvent(ManuvrRunnable* active_runnable) {
         return_value,
         ManuvrMsg::getMsgTypeString(active_runnable->eventCode())
       );
+
       if (INSTANCE->getVerbosity() > 6) {
         active_runnable->printDebug(&output);
       }
@@ -1017,9 +1018,11 @@ void Kernel::printScheduler(StringBuilder* output) {
     output->concatf("-- %u skips before fail-to-bootloader.\n", (unsigned long) MAXIMUM_SEQUENTIAL_SKIPS);
   }
 
+  #if defined(__MANUVR_DEBUG)
   for (int i = 0; i < schedules.size(); i++) {
     schedules.recycle()->printDebug(output);
   }
+  #endif
 }
 
 
@@ -1039,13 +1042,6 @@ void Kernel::printDebug(StringBuilder* output) {
       output->concatf("\t %d: %s\n", i, subscribers.get(i)->getReceiverName());
     }
     output->concat("\n");
-  }
-
-  if (getVerbosity() > 6) {
-    if (nullptr != current_event) {
-      output->concat("-- Current Runnable:\n");
-      current_event->printDebug(output);
-    }
   }
 }
 
