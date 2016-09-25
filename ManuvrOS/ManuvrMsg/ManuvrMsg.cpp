@@ -48,6 +48,254 @@ std::map<uint16_t, const MessageTypeDef*> ManuvrMsg::message_defs_extended;
 const unsigned char ManuvrMsg::MSG_ARGS_NONE[] = {0};  // Generic argument def for a message with no args.
 
 
+int8_t ManuvrMsg::registerMessages(const MessageTypeDef defs[], int mes_count) {
+  for (int i = 0; i < mes_count; i++) {
+    message_defs_extended[defs[i].msg_type_code] = &defs[i];
+  }
+  return 0;
+}
+
+
+int8_t ManuvrMsg::registerMessage(MessageTypeDef* nu_def) {
+  message_defs_extended[nu_def->msg_type_code] = nu_def;
+  return 0;
+}
+
+
+int8_t ManuvrMsg::registerMessage(uint16_t tc, uint16_t tf, const char* lab, const unsigned char* forms, const char* sem) {
+  MessageTypeDef *nu_def = (MessageTypeDef*) malloc(sizeof(MessageTypeDef));
+  if (nu_def) {
+    nu_def->msg_type_code  = tc;
+    nu_def->msg_type_flags = tf;
+    nu_def->debug_label    = lab;
+    nu_def->arg_modes      = forms;
+    nu_def->arg_semantics  = sem;
+    return registerMessage(nu_def);
+  }
+  else {
+    // Misfortune.
+  }
+  return -1;
+}
+
+
+/**
+* Debug support fxn. This is the static version of this method.
+* TODO: Debug stuff. Need to be able to case-off stuff like this in the pre-processor.
+*
+* @param  code  The message identity code in question.
+* @return a pointer to the human-readable label for this Message class. Never nullptr.
+*/
+const char* ManuvrMsg::getMsgTypeString(uint16_t code) {
+  for (int i = 0; i < TOTAL_MSG_DEFS; i++) {
+    if (ManuvrMsg::message_defs[i].msg_type_code == code) {
+      return ManuvrMsg::message_defs[i].debug_label;
+    }
+  }
+
+  // Didn't find it there. Search in the extended defs...
+  const MessageTypeDef* temp_type_def = message_defs_extended[code];
+  if (nullptr != temp_type_def) {
+    return temp_type_def->debug_label;
+  }
+  // If we've come this far, we don't know what the caller is asking for. Return the default.
+  return ManuvrMsg::message_defs[0].debug_label;
+}
+
+
+/**
+* This will never return NULL. It will at least return the defintion for the UNDEFINED class.
+* This is the static version of this method.
+*
+* @param  code  The message identity code in question.
+* @return a pointer to the MessageTypeDef that identifies this class of Message. Never NULL.
+*/
+const MessageTypeDef* ManuvrMsg::lookupMsgDefByCode(uint16_t code) {
+  for (int i = 0; i < TOTAL_MSG_DEFS; i++) {
+    if (ManuvrMsg::message_defs[i].msg_type_code == code) {
+      return &ManuvrMsg::message_defs[i];
+    }
+  }
+  // Didn't find it there. Search in the extended defs...
+  const MessageTypeDef* temp_type_def = message_defs_extended[code];
+  if (nullptr != temp_type_def) {
+    return temp_type_def;
+  }
+  // If we've come this far, we don't know what the caller is asking for. Return the default.
+  return &ManuvrMsg::message_defs[0];
+}
+
+
+/**
+* This will never return NULL. It will at least return the defintion for the UNDEFINED class.
+* TODO: Debug stuff. Need to be able to case-off stuff like this in the pre-processor.
+*
+* @param  label  The message label by which to lookup the message identity.
+* @return a pointer to the MessageTypeDef that identifies this class of Message. Never NULL.
+*/
+const MessageTypeDef* ManuvrMsg::lookupMsgDefByLabel(char* label) {
+  for (int i = 1; i < TOTAL_MSG_DEFS; i++) {
+    // TODO: Yuck... have to import string.h for JUST THIS. Re-implement inline....
+    if (strstr(label, ManuvrMsg::message_defs[i].debug_label)) {
+      return &ManuvrMsg::message_defs[i];
+    }
+  }
+
+  // Didn't find it there. Search in the extended defs...
+  const MessageTypeDef* temp_type_def;
+	std::map<uint16_t, const MessageTypeDef*>::iterator it;
+	for (it = message_defs_extended.begin(); it != message_defs_extended.end(); it++) {
+    temp_type_def = it->second;
+    if (strstr(label, temp_type_def->debug_label)) {
+      return temp_type_def;
+    }
+  }
+  // If we've come this far, we don't know what the caller is asking for. Return the default.
+  return &ManuvrMsg::message_defs[0];
+}
+
+
+/**
+* This is usually called because some other system is needing to know our message map.
+* Format is binary with a variable length.
+* Broken out into a format that a greedy parser can cope with:
+*   |-------------------------------------------------|  /---------------\ |-----|
+*   | Message Code | Flags | Label (null-term string) |  | Several NTSs  | |  0  |
+*   |-------------------------------------------------|  \---------------/ |-----|
+*           2          2               x                         y            1     <---- Bytes
+*
+* Since the counterparty can't know how big any given definition might be, we need to
+*   take care to bake our null-terminators into the output so that the parser on the
+*   other side can take the condition "a zero-length string" to signify the end of a message
+*   definition, and can move on to the next entry.
+*
+* @param  output  The buffer to write results to.
+* @return 0 on failure. 1 on success.
+*/
+int8_t ManuvrMsg::getMsgLegend(StringBuilder* output) {
+  if (nullptr == output) return 0;
+
+  const MessageTypeDef *temp_def = nullptr;
+  for (int i = 1; i < TOTAL_MSG_DEFS; i++) {
+    temp_def = (const MessageTypeDef *) &(message_defs[i]);
+
+    if (isExportable(temp_def)) {
+      output->concat((unsigned char*) temp_def, 4);
+      // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
+      output->concat((unsigned char*) temp_def->debug_label, strlen(temp_def->debug_label)+1);
+
+      // Now to capture the argument modes...
+      unsigned char* mode = (unsigned char*) temp_def->arg_modes;
+      int arg_mode_len = strlen((const char*) mode);
+      while (arg_mode_len > 0) {
+        output->concat((unsigned char*) mode, arg_mode_len+1);
+        mode += arg_mode_len + 1;
+        arg_mode_len = strlen((const char*) mode);
+      }
+      output->concat((unsigned char*) "\0", 1);   // This is the obligatory "NO ARGUMENT" mode.
+    }
+  }
+
+	std::map<uint16_t, const MessageTypeDef*>::iterator it;
+	for (it = message_defs_extended.begin(); it != message_defs_extended.end(); it++) {
+    temp_def = it->second;
+
+    if (isExportable(temp_def)) {
+      output->concat((unsigned char*) temp_def, 4);
+      // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
+      output->concat((unsigned char*) temp_def->debug_label, strlen(temp_def->debug_label)+1);
+
+      // Now to capture the argument modes...
+      unsigned char* mode = (unsigned char*) temp_def->arg_modes;
+      int arg_mode_len = strlen((const char*) mode);
+      while (arg_mode_len > 0) {
+        output->concat((unsigned char*) mode, arg_mode_len+1);
+        mode += arg_mode_len + 1;
+        arg_mode_len = strlen((const char*) mode);
+      }
+      output->concat((unsigned char*) "\0", 1);   // This is the obligatory "NO ARGUMENT" mode.
+    }
+
+
+  }
+  return 1;
+}
+
+
+/**
+* This is called when a counterparty wants annotations to our message map.
+* Format is binary with a variable length.
+* Broken out into a format that a greedy parser can cope with:
+*   |--------------|  /---------------\ |-----|
+*   | Message Code |  | Several NTSs  | |  0  |
+*   |--------------|  \---------------/ |-----|
+*           2                 y            1     <---- Bytes
+*
+* Since the counterparty can't know how big any given definition might be, we need to
+*   take care to bake our null-terminators into the output so that the parser on the
+*   other side can take the condition "a zero-length string" to signify the end of a message
+*   definition, and can move on to the next entry.
+*
+* Because these definitions might be much larger than their corrosponding MESSAGE_LEGEND entries,
+*   it is expected that they will be sent piece-wise to the counterparty so that neither side is
+*   expected to hold the entire definition set at once in a single message.
+*
+* @param  output  The buffer to write results to.
+* @return 0 on failure. 1 on success.
+*/
+#if defined (__ENABLE_MSG_SEMANTICS)
+int8_t ManuvrMsg::getMsgSemantics(MessageTypeDef* def, StringBuilder* output) {
+  // TODO: def parameter is being ignored for now.
+  int8_t return_value = 1;
+  if ((nullptr != def) && (nullptr != output)) {
+
+    const MessageTypeDef *temp_def = nullptr;
+    for (int i = 1; i < TOTAL_MSG_DEFS; i++) {
+      temp_def = (const MessageTypeDef *) &(message_defs[i]);
+
+      if (isExportable(temp_def)) {
+        //int _set_size = strlen(temp_def->arg_semantics)+1;
+        output->concat((unsigned char*) temp_def, 2);
+
+        // Now to capture the argument modes...
+        // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
+        unsigned char* mode = (unsigned char*) temp_def->arg_semantics;
+        int arg_mode_len = strlen((const char*) mode);
+        while (arg_mode_len > 0) {
+          output->concat((unsigned char*) mode, arg_mode_len+1);
+          mode += arg_mode_len + 1;
+          arg_mode_len = strlen((const char*) mode);
+        }
+        output->concat((unsigned char*) "\0", 1);   // This is the obligatory "NO ARGUMENT" mode.
+      }
+    }
+
+  	std::map<uint16_t, const MessageTypeDef*>::iterator it;
+  	for (it = message_defs_extended.begin(); it != message_defs_extended.end(); it++) {
+      temp_def = it->second;
+      if (isExportable(temp_def)) {
+        //int _set_size = strlen(temp_def->arg_semantics)+1;
+        output->concat((unsigned char*) temp_def, 2);
+
+        // Now to capture the argument modes...
+        // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
+        unsigned char* mode = (unsigned char*) temp_def->arg_semantics;
+        int arg_mode_len = strlen((const char*) mode);
+        while (arg_mode_len > 0) {
+          output->concat((unsigned char*) mode, arg_mode_len+1);
+          mode += arg_mode_len + 1;
+          arg_mode_len = strlen((const char*) mode);
+        }
+        output->concat((unsigned char*) "\0", 1);   // This is the obligatory "NO ARGUMENT" mode.
+      }
+    }
+  }
+  return return_value;
+}
+#endif
+
+
+
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
 *  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
@@ -61,14 +309,9 @@ const unsigned char ManuvrMsg::MSG_ARGS_NONE[] = {0};  // Generic argument def f
 * Vanilla constructor.
 */
 ManuvrMsg::ManuvrMsg() {
-  _flags              = 0;
-  originator          = nullptr;
-  specific_target     = nullptr;
-  schedule_callback   = nullptr;
-  priority            = EVENT_PRIORITY_DEFAULT;
-  _sched_recurs       = 0;
-  _sched_period       = 0;
-  _sched_ttw = 0;
+  _origin           = nullptr;
+  specific_target   = nullptr;
+  schedule_callback = nullptr;
 }
 
 /**
@@ -100,15 +343,14 @@ ManuvrMsg::ManuvrMsg(uint16_t code, EventReceiver* cb) : ManuvrMsg() {
 */
 ManuvrMsg::ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, FxnPointer sch_callback) : ManuvrMsg(MANUVR_MSG_DEFERRED_FXN) {
   autoClear(ac);
-  _sched_recurs       = recurrence;
-  _sched_period       = sch_period;
-  _sched_ttw = sch_period;
-
-  schedule_callback   = sch_callback;    // This constructor uses the legacy callback.
+  _sched_recurs  = recurrence;
+  _sched_period  = sch_period;
+  _sched_ttw     = sch_period;
+  schedule_callback = sch_callback;    // This constructor uses the legacy callback.
 }
 
 /**
-* Constructor. Takes an EventReceiver* as an originator.
+* Constructor. Takes an EventReceiver* as an _origin.
 * We need to deal with memory management of the Event. For a recurring schedule, we can't allow the
 *   Kernel to reap the event. So it is very important to mark the event appropriately.
 *
@@ -120,11 +362,10 @@ ManuvrMsg::ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, FxnPointe
 */
 ManuvrMsg::ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver* ori) : ManuvrMsg(MANUVR_MSG_DEFERRED_FXN) {
   autoClear(ac);
-  _sched_recurs       = recurrence;
-  _sched_period       = sch_period;
-  _sched_ttw = sch_period;
-
-  originator          = ori;   // This constructor uses the EventReceiver callback...
+  _sched_recurs  = recurrence;
+  _sched_period  = sch_period;
+  _sched_ttw     = sch_period;
+  _origin        = ori;
 }
 
 
@@ -151,16 +392,16 @@ ManuvrMsg::~ManuvrMsg() {
 */
 int8_t ManuvrMsg::repurpose(uint16_t code) {
   // These things have implications for memory management, which is why repurpose() doesn't touch them.
-  uint8_t _persist_mask = MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_PREALLOCD | MANUVR_RUNNABLE_FLAG_SCHEDULED;
+  uint16_t _persist_mask = MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_PREALLOCD | MANUVR_RUNNABLE_FLAG_SCHEDULED;
   _flags              = _flags & _persist_mask;
 
-  originator          = nullptr;
+  _origin          = nullptr;
   specific_target     = nullptr;
   schedule_callback   = nullptr;
   priority            = EVENT_PRIORITY_DEFAULT;
 
-  event_code  = code;
-  message_def = lookupMsgDefByCode(event_code);
+  _code  = code;
+  message_def = lookupMsgDefByCode(_code);
   return 0;
 }
 
@@ -174,7 +415,7 @@ int8_t ManuvrMsg::repurpose(uint16_t code) {
 */
 int8_t ManuvrMsg::repurpose(uint16_t code, EventReceiver* cb) {
   repurpose(code);
-  originator          = cb;
+  _origin = cb;
   return 0;
 }
 
@@ -440,7 +681,7 @@ uint8_t ManuvrMsg::getArgumentType(uint8_t idx) {
 */
 MessageTypeDef* ManuvrMsg::getMsgDef() {
   if (nullptr == message_def) {
-    message_def = lookupMsgDefByCode(event_code);
+    message_def = lookupMsgDefByCode(_code);
   }
   return (MessageTypeDef*) message_def;
 }
@@ -455,83 +696,6 @@ const char* ManuvrMsg::getMsgTypeString() {
   MessageTypeDef* mes_type = getMsgDef();
   return mes_type->debug_label;
 }
-
-
-/**
-* Debug support fxn. This is the static version of this method.
-* TODO: Debug stuff. Need to be able to case-off stuff like this in the pre-processor.
-*
-* @param  code  The message identity code in question.
-* @return a pointer to the human-readable label for this Message class. Never nullptr.
-*/
-const char* ManuvrMsg::getMsgTypeString(uint16_t code) {
-  for (int i = 0; i < TOTAL_MSG_DEFS; i++) {
-    if (ManuvrMsg::message_defs[i].msg_type_code == code) {
-      return ManuvrMsg::message_defs[i].debug_label;
-    }
-  }
-
-  // Didn't find it there. Search in the extended defs...
-  const MessageTypeDef* temp_type_def = message_defs_extended[code];
-  if (nullptr != temp_type_def) {
-    return temp_type_def->debug_label;
-  }
-  // If we've come this far, we don't know what the caller is asking for. Return the default.
-  return ManuvrMsg::message_defs[0].debug_label;
-}
-
-
-/**
-* This will never return NULL. It will at least return the defintion for the UNDEFINED class.
-* This is the static version of this method.
-*
-* @param  code  The message identity code in question.
-* @return a pointer to the MessageTypeDef that identifies this class of Message. Never NULL.
-*/
-const MessageTypeDef* ManuvrMsg::lookupMsgDefByCode(uint16_t code) {
-  for (int i = 0; i < TOTAL_MSG_DEFS; i++) {
-    if (ManuvrMsg::message_defs[i].msg_type_code == code) {
-      return &ManuvrMsg::message_defs[i];
-    }
-  }
-  // Didn't find it there. Search in the extended defs...
-  const MessageTypeDef* temp_type_def = message_defs_extended[code];
-  if (nullptr != temp_type_def) {
-    return temp_type_def;
-  }
-  // If we've come this far, we don't know what the caller is asking for. Return the default.
-  return &ManuvrMsg::message_defs[0];
-}
-
-
-/**
-* This will never return NULL. It will at least return the defintion for the UNDEFINED class.
-* TODO: Debug stuff. Need to be able to case-off stuff like this in the pre-processor.
-*
-* @param  label  The message label by which to lookup the message identity.
-* @return a pointer to the MessageTypeDef that identifies this class of Message. Never NULL.
-*/
-const MessageTypeDef* ManuvrMsg::lookupMsgDefByLabel(char* label) {
-  for (int i = 1; i < TOTAL_MSG_DEFS; i++) {
-    // TODO: Yuck... have to import string.h for JUST THIS. Re-implement inline....
-    if (strstr(label, ManuvrMsg::message_defs[i].debug_label)) {
-      return &ManuvrMsg::message_defs[i];
-    }
-  }
-
-  // Didn't find it there. Search in the extended defs...
-  const MessageTypeDef* temp_type_def;
-	std::map<uint16_t, const MessageTypeDef*>::iterator it;
-	for (it = message_defs_extended.begin(); it != message_defs_extended.end(); it++) {
-    temp_type_def = it->second;
-    if (strstr(label, temp_type_def->debug_label)) {
-      return temp_type_def;
-    }
-  }
-  // If we've come this far, we don't know what the caller is asking for. Return the default.
-  return &ManuvrMsg::message_defs[0];
-}
-
 
 
 
@@ -566,148 +730,6 @@ int ManuvrMsg::serialize(StringBuilder* output) {
   }
   return return_value;
 }
-
-
-/**
-* This is usually called because some other system is needing to know our message map.
-* Format is binary with a variable length.
-* Broken out into a format that a greedy parser can cope with:
-*   |-------------------------------------------------|  /---------------\ |-----|
-*   | Message Code | Flags | Label (null-term string) |  | Several NTSs  | |  0  |
-*   |-------------------------------------------------|  \---------------/ |-----|
-*           2          2               x                         y            1     <---- Bytes
-*
-* Since the counterparty can't know how big any given definition might be, we need to
-*   take care to bake our null-terminators into the output so that the parser on the
-*   other side can take the condition "a zero-length string" to signify the end of a message
-*   definition, and can move on to the next entry.
-*
-* @param  output  The buffer to write results to.
-* @return 0 on failure. 1 on success.
-*/
-int8_t ManuvrMsg::getMsgLegend(StringBuilder* output) {
-  if (nullptr == output) return 0;
-
-  const MessageTypeDef *temp_def = nullptr;
-  for (int i = 1; i < TOTAL_MSG_DEFS; i++) {
-    temp_def = (const MessageTypeDef *) &(message_defs[i]);
-
-    if (isExportable(temp_def)) {
-      output->concat((unsigned char*) temp_def, 4);
-      // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
-      output->concat((unsigned char*) temp_def->debug_label, strlen(temp_def->debug_label)+1);
-
-      // Now to capture the argument modes...
-      unsigned char* mode = (unsigned char*) temp_def->arg_modes;
-      int arg_mode_len = strlen((const char*) mode);
-      while (arg_mode_len > 0) {
-        output->concat((unsigned char*) mode, arg_mode_len+1);
-        mode += arg_mode_len + 1;
-        arg_mode_len = strlen((const char*) mode);
-      }
-      output->concat((unsigned char*) "\0", 1);   // This is the obligatory "NO ARGUMENT" mode.
-    }
-  }
-
-	std::map<uint16_t, const MessageTypeDef*>::iterator it;
-	for (it = message_defs_extended.begin(); it != message_defs_extended.end(); it++) {
-    temp_def = it->second;
-
-    if (isExportable(temp_def)) {
-      output->concat((unsigned char*) temp_def, 4);
-      // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
-      output->concat((unsigned char*) temp_def->debug_label, strlen(temp_def->debug_label)+1);
-
-      // Now to capture the argument modes...
-      unsigned char* mode = (unsigned char*) temp_def->arg_modes;
-      int arg_mode_len = strlen((const char*) mode);
-      while (arg_mode_len > 0) {
-        output->concat((unsigned char*) mode, arg_mode_len+1);
-        mode += arg_mode_len + 1;
-        arg_mode_len = strlen((const char*) mode);
-      }
-      output->concat((unsigned char*) "\0", 1);   // This is the obligatory "NO ARGUMENT" mode.
-    }
-
-
-  }
-  return 1;
-}
-
-
-
-/**
-* This is called when a counterparty wants annotations to our message map.
-* Format is binary with a variable length.
-* Broken out into a format that a greedy parser can cope with:
-*   |--------------|  /---------------\ |-----|
-*   | Message Code |  | Several NTSs  | |  0  |
-*   |--------------|  \---------------/ |-----|
-*           2                 y            1     <---- Bytes
-*
-* Since the counterparty can't know how big any given definition might be, we need to
-*   take care to bake our null-terminators into the output so that the parser on the
-*   other side can take the condition "a zero-length string" to signify the end of a message
-*   definition, and can move on to the next entry.
-*
-* Because these definitions might be much larger than their corrosponding MESSAGE_LEGEND entries,
-*   it is expected that they will be sent piece-wise to the counterparty so that neither side is
-*   expected to hold the entire definition set at once in a single message.
-*
-* @param  output  The buffer to write results to.
-* @return 0 on failure. 1 on success.
-*/
-#if defined (__ENABLE_MSG_SEMANTICS)
-int8_t ManuvrMsg::getMsgSemantics(MessageTypeDef* def, StringBuilder* output) {
-  // TODO: def parameter is being ignored for now.
-  int8_t return_value = 1;
-  if ((nullptr != def) && (nullptr != output)) {
-
-    const MessageTypeDef *temp_def = nullptr;
-    for (int i = 1; i < TOTAL_MSG_DEFS; i++) {
-      temp_def = (const MessageTypeDef *) &(message_defs[i]);
-
-      if (isExportable(temp_def)) {
-        //int _set_size = strlen(temp_def->arg_semantics)+1;
-        output->concat((unsigned char*) temp_def, 2);
-
-        // Now to capture the argument modes...
-        // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
-        unsigned char* mode = (unsigned char*) temp_def->arg_semantics;
-        int arg_mode_len = strlen((const char*) mode);
-        while (arg_mode_len > 0) {
-          output->concat((unsigned char*) mode, arg_mode_len+1);
-          mode += arg_mode_len + 1;
-          arg_mode_len = strlen((const char*) mode);
-        }
-        output->concat((unsigned char*) "\0", 1);   // This is the obligatory "NO ARGUMENT" mode.
-      }
-    }
-
-  	std::map<uint16_t, const MessageTypeDef*>::iterator it;
-  	for (it = message_defs_extended.begin(); it != message_defs_extended.end(); it++) {
-      temp_def = it->second;
-      if (isExportable(temp_def)) {
-        //int _set_size = strlen(temp_def->arg_semantics)+1;
-        output->concat((unsigned char*) temp_def, 2);
-
-        // Now to capture the argument modes...
-        // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
-        unsigned char* mode = (unsigned char*) temp_def->arg_semantics;
-        int arg_mode_len = strlen((const char*) mode);
-        while (arg_mode_len > 0) {
-          output->concat((unsigned char*) mode, arg_mode_len+1);
-          mode += arg_mode_len + 1;
-          arg_mode_len = strlen((const char*) mode);
-        }
-        output->concat((unsigned char*) "\0", 1);   // This is the obligatory "NO ARGUMENT" mode.
-      }
-    }
-  }
-  return return_value;
-}
-#endif
-
 
 
 /**
@@ -797,37 +819,6 @@ char* ManuvrMsg::is_valid_argument_buffer(int len) {
 
 
 
-int8_t ManuvrMsg::registerMessages(const MessageTypeDef defs[], int mes_count) {
-  for (int i = 0; i < mes_count; i++) {
-    message_defs_extended[defs[i].msg_type_code] = &defs[i];
-  }
-  return 0;
-}
-
-
-int8_t ManuvrMsg::registerMessage(MessageTypeDef* nu_def) {
-  message_defs_extended[nu_def->msg_type_code] = nu_def;
-  return 0;
-}
-
-
-int8_t ManuvrMsg::registerMessage(uint16_t tc, uint16_t tf, const char* lab, const unsigned char* forms, const char* sem) {
-  MessageTypeDef *nu_def = (MessageTypeDef*) malloc(sizeof(MessageTypeDef));
-  if (nu_def) {
-    nu_def->msg_type_code  = tc;
-    nu_def->msg_type_flags = tf;
-    nu_def->debug_label    = lab;
-    nu_def->arg_modes      = forms;
-    nu_def->arg_semantics  = sem;
-    return registerMessage(nu_def);
-  }
-  else {
-    // Misfortune.
-  }
-  return -1;
-}
-
-
 
 
 
@@ -860,13 +851,13 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
   const MessageTypeDef* type_obj = getMsgDef();
 
   if (&ManuvrMsg::message_defs[0] == type_obj) {
-    output->concatf("\t Message type:   <UNDEFINED (Code 0x%04x)>\n", event_code);
+    output->concatf("\t Message type:   <UNDEFINED (Code 0x%04x)>\n", _code);
   }
   else {
     output->concatf("\t Message type:   %s\n", getMsgTypeString());
   }
 
-  if (nullptr != arg) {
+  if (arg) {
     output->concatf("\t %d Arguments:\n", arg->argCount());
     arg->printDebug(output);
     output->concat("\n");
@@ -876,7 +867,7 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
   }
 
   output->concatf("\t Preallocated          %s\n", (returnToPrealloc() ? YES_STR : NO_STR));
-  output->concatf("\t Originator:           %s\n", (nullptr == originator ? NUL_STR : originator->getReceiverName()));
+  output->concatf("\t Originator:           %s\n", (nullptr == _origin ? NUL_STR : _origin->getReceiverName()));
   output->concatf("\t specific_target:      %s\n", (nullptr == specific_target ? NUL_STR : specific_target->getReceiverName()));
 
   if (isScheduled()) {
@@ -892,7 +883,7 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
     output->concatf("\t Profiling?    \t%s\n", (profilingEnabled() ? YES_STR : NO_STR));
   #endif
 
-  if (nullptr != schedule_callback) {
+  if (schedule_callback) {
     output->concat("\t Legacy callback\n");
   }
 }
@@ -1021,7 +1012,7 @@ bool ManuvrMsg::willRunAgain() {
 int8_t ManuvrMsg::applyTime(uint32_t mse) {
   int8_t return_value = 0;
   if (scheduleEnabled()) {
-    if (_sched_ttw > mse) {
+    if ((_sched_ttw > mse) && (!shouldFire())) {
       _sched_ttw -= mse;
     }
     else {
@@ -1044,10 +1035,11 @@ int8_t ManuvrMsg::applyTime(uint32_t mse) {
           break;
         case 0:
           // We aren't supposed to run again.
-          return_value = -1;
+          scheduleEnabled(false);
+          return_value = autoClear() ? -1 : 1;
           break;
       }
-      fireNow(false);          // ...mark it as serviced.
+      shouldFire(false);    // ...mark it as serviced.
     }
   }
   return return_value;  // Kernel will take no action.
@@ -1092,21 +1084,36 @@ bool ManuvrMsg::delaySchedule(uint32_t by_ms) {
 *******************************************************************************/
 
 /**
-* Causes this Message to inform its originator (if any) that it has fully-traversed
+* Causes this Message to inform its _origin (if any) that it has fully-traversed
 *   the kernel's broadcast cycle.
 *
 * @return  An event callback return code.
 */
 int8_t ManuvrMsg::callbackOriginator() {
-  if (originator) {
-    /* If the event has a valid originator, do the callback dance and take instruction
+  if (_origin) {
+    /* If the event has a valid _origin, do the callback dance and take instruction
        from the return value. */
-    return originator->callback_proc(this);
+    return _origin->callback_proc(this);
   }
   else {
-    /* If there is no originator specified for the Event, we rely on the flags in the Event itself to
+    /* If there is no _origin specified for the Event, we rely on the flags in the Event itself to
      decide if it should be reaped. If its memory is being managed by some other class, the reclaim_event()
      fxn will simply remove it from the exec_queue and consider the matter closed. */
   }
   return EVENT_CALLBACK_RETURN_UNDEFINED;
+}
+
+
+
+int8_t ManuvrMsg::execute() {
+  if (schedule_callback) {
+    // TODO: This is hold-over from the scheduler. Need to modernize it.
+    //active_runnable->printDebug(&local_log);
+    ((FxnPointer) schedule_callback)();   // Call the schedule's service function.
+    return 1;
+  }
+  else if (specific_target) {
+    return specific_target->notify(this);
+  }
+  return 0;
 }

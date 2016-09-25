@@ -92,18 +92,23 @@ typedef struct msg_defin_t {
 */
 class ManuvrMsg {
   public:
+    EventReceiver*  specific_target = nullptr;  // If the runnable is meant for a single class, put a pointer to it here.
+    int32_t priority = EVENT_PRIORITY_DEFAULT;  // Set the default priority for this Runnable
+
     ManuvrMsg();
     ManuvrMsg(uint16_t code);
-    ManuvrMsg(uint16_t msg_code, EventReceiver* originator);
+    ManuvrMsg(uint16_t msg_code, EventReceiver* _origin);
     ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, FxnPointer sch_callback);
-    ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver* originator);
+    ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver* _origin);
     ~ManuvrMsg();
 
 
     int8_t repurpose(uint16_t code);
     int8_t repurpose(uint16_t code, EventReceiver* cb);
 
-    inline uint16_t eventCode() {  return event_code;   };
+    inline uint16_t eventCode() {  return _code;   };
+
+    void printDebug(StringBuilder*);
 
     /**
     * Allows the caller to plan other allocations based on how many bytes this message's
@@ -123,19 +128,19 @@ class ManuvrMsg {
     inline int      argCount() {   return ((nullptr != arg) ? arg->argCount() : 0);   };
 
     inline bool isExportable() {
-      if (NULL == message_def) message_def = lookupMsgDefByCode(event_code);
+      if (NULL == message_def) message_def = lookupMsgDefByCode(_code);
       return (message_def->msg_type_flags & MSG_FLAG_EXPORTABLE);
     }
 
 
     inline bool demandsACK() {
-      if (NULL == message_def) message_def = lookupMsgDefByCode(event_code);
+      if (NULL == message_def) message_def = lookupMsgDefByCode(_code);
       return (message_def->msg_type_flags & MSG_FLAG_DEMAND_ACK);
     }
 
 
     inline bool isIdempotent() {
-      if (NULL == message_def) message_def = lookupMsgDefByCode(event_code);
+      if (NULL == message_def) message_def = lookupMsgDefByCode(_code);
       return (message_def->msg_type_flags & MSG_FLAG_IDEMPOTENT);
     }
 
@@ -265,11 +270,6 @@ class ManuvrMsg {
 
 
 //GRAFT
-      EventReceiver*  specific_target;   // If the runnable is meant for a single class, put a pointer to it here.
-      FxnPointer schedule_callback; // Pointers to the schedule service function.
-
-      int32_t         priority;          // Set the default priority for this Runnable
-
       /**
       * If the memory isn't managed explicitly by some other class, this will tell the Kernel to delete
       *   the completed event.
@@ -281,14 +281,7 @@ class ManuvrMsg {
         return (0 == (MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_PREALLOCD | MANUVR_RUNNABLE_FLAG_SCHEDULED));
       };
 
-      int8_t execute();
       int8_t callbackOriginator();
-
-      void printDebug();
-      void printDebug(StringBuilder*);
-
-      /* Functions for pinging the profiler data. */
-      void noteExecutionTime(uint32_t start, uint32_t stop);
 
 
       //TODO: /* These are accessors to concurrency-sensitive members. */
@@ -304,11 +297,8 @@ class ManuvrMsg {
       bool delaySchedule(uint32_t by_ms);    // Set the schedule's TTW to the given value this execution only.
       inline bool delaySchedule() {         return delaySchedule(_sched_period);  }  // Reset the given schedule to its period and enable it.
 
-      /* Any required setup finished without problems? */
+      /* Is the schedule pending execution next tick? */
       inline bool shouldFire() { return (_flags & MANUVR_RUNNABLE_FLAG_PENDING_EXEC); };
-      inline void shouldFire(bool en) {
-        _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_PENDING_EXEC) : (_flags & ~(MANUVR_RUNNABLE_FLAG_PENDING_EXEC));
-      };
 
       /* Any required setup finished without problems? */
       inline bool scheduleEnabled() { return (_flags & MANUVR_RUNNABLE_FLAG_SCHED_ENABLED); };
@@ -320,23 +310,21 @@ class ManuvrMsg {
       };
 
       /* Any required setup finished without problems? */
+      inline bool singleTarget() { return (schedule_callback || specific_target); };
+      int8_t execute();
+
+      /* Any required setup finished without problems? */
       inline bool isScheduled() { return (_flags & MANUVR_RUNNABLE_FLAG_SCHEDULED); };
       inline void isScheduled(bool en) {
         _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_SCHEDULED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_SCHEDULED));
       };
 
-      /* Schedule member accessors. */
-      inline int16_t  scheduleRecurs() { return _sched_recurs; };
-      inline uint32_t schedulePeriod() { return _sched_period; };
-      inline uint32_t scheduleTimeToWait() { return _sched_ttw; };
-      inline void setTimeToWait(uint32_t nu) { _sched_ttw = nu; };  // TODO: Sloppy. Kill with fire.
-
-      // Applies time to the schedule, bringing it closer to execution.
+      /* Applies time to the schedule, bringing it closer to execution. */
       int8_t applyTime(uint32_t ms);
 
 
-      inline void setOriginator(EventReceiver* er) { originator = er; };
-      inline bool isOriginator(EventReceiver* er) { return (er == originator); };
+      inline void setOriginator(EventReceiver* er) { _origin = er; };
+      inline bool isOriginator(EventReceiver* er) { return (er == _origin); };
 
       /**
       * Was this event preallocated?
@@ -370,20 +358,24 @@ class ManuvrMsg {
       void printProfilerData(StringBuilder*);
       void profilingEnabled(bool enabled);
       void clearProfilingData();           // Clears profiling data associated with the given schedule.
+
+      /* Function for pinging the profiler data. */
+      void noteExecutionTime(uint32_t start, uint32_t stop);
     #endif
 
 
 
   private:
-    const MessageTypeDef*  message_def;  // The definition for the message (once it is associated).
-    EventReceiver*  originator;        // This is an optional ref to the class that raised this runnable.
-    Argument* arg       = nullptr;       // The optional list of arguments associated with this event.
-    uint16_t event_code = MANUVR_MSG_UNDEFINED; // The identity of the event (or command).
-    uint16_t  _flags;             // Optional flags that might be important for a runnable.
+    const MessageTypeDef*  message_def = nullptr;  // The definition for the message (once it is associated).
+    FxnPointer       schedule_callback = nullptr;  // Pointers to the schedule service function.
+    EventReceiver* _origin = nullptr;    // This is an optional ref to the class that raised this runnable.
+    Argument* arg   = nullptr;       // The optional list of arguments associated with this event.
+    uint16_t _code  = MANUVR_MSG_UNDEFINED; // The identity of the event (or command).
+    uint16_t _flags = 0;                    // Optional flags that might be important for a runnable.
 
-    int16_t  _sched_recurs;            // See Note 2.
-    uint32_t _sched_period;            // How often does this schedule execute?
-    uint32_t _sched_ttw;      // How much longer until the schedule fires?
+    int16_t  _sched_recurs =  0;    // See Note 2.
+    uint32_t _sched_period =  0;    // How often does this schedule execute?
+    uint32_t _sched_ttw    =  0;    // How much longer until the schedule fires?
 
     #if defined(__MANUVR_EVENT_PROFILER)
     TaskProfilerData* prof_data = nullptr;  // If this schedule is being profiled, the ref will be here.
@@ -397,6 +389,9 @@ class ManuvrMsg {
 
     inline void scheduleEnabled(bool en) {
       _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_SCHED_ENABLED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_SCHED_ENABLED));
+    };
+    inline void shouldFire(bool en) {
+      _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_PENDING_EXEC) : (_flags & ~(MANUVR_RUNNABLE_FLAG_PENDING_EXEC));
     };
 
 

@@ -724,42 +724,24 @@ int8_t Kernel::procIdleFlags() {
     EventReceiver *subscriber;   // No need to assign.
     if (_profiler_enabled()) profiler_mark_1 = micros();
 
-    if (nullptr != active_runnable->schedule_callback) {
-      // TODO: This is hold-over from the scheduler. Need to modernize it.
-      //active_runnable->printDebug(&local_log);
-      ((FxnPointer) active_runnable->schedule_callback)();   // Call the schedule's service function.
-      if (_profiler_enabled()) profiler_mark_2 = micros();
-      activity_count++;
-    }
-    else if (nullptr != active_runnable->specific_target) {
-      subscriber = active_runnable->specific_target;
-      switch (subscriber->notify(active_runnable)) {
-        case 0:   // The nominal case. No response.
-          break;
-        case -1:  // The subscriber choked. Figure out why. Technically, this is action. Case fall-through...
-          subscriber->printDebug(&local_log);
-        default:   // The subscriber acted.
-          activity_count++;
-          if (_profiler_enabled()) profiler_mark_2 = micros();
-          break;
-      }
+    if (active_runnable->singleTarget()) {
+      activity_count += active_runnable->execute();
     }
     else {
       for (int i = 0; i < subscribers.size(); i++) {
         subscriber = subscribers.get(i);
 
         switch (subscriber->notify(active_runnable)) {
-          case 0:   // The nominal case. No response.
-            break;
           case -1:  // The subscriber choked. Figure out why. Technically, this is action. Case fall-through...
             subscriber->printDebug(&local_log);
           default:   // The subscriber acted.
             activity_count++;
-            if (_profiler_enabled()) profiler_mark_2 = micros();
+          case 0:   // The nominal case. No response.
             break;
         }
       }
     }
+    if (_profiler_enabled()) profiler_mark_2 = micros();
 
     procCallBacks(active_runnable);
 
