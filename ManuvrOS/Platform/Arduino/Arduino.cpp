@@ -27,13 +27,8 @@ Fallback to Arduino support...
 #include <Time/Time.h>
 #include <unistd.h>
 
-#define PLATFORM_GPIO_PIN_COUNT   33
+#define PLATFORM_GPIO_PIN_COUNT   16
 
-
-
-#if defined (__MANUVR_FREERTOS)
-  #include <FreeRTOS_ARM.h>
-#endif
 
 
 /****************************************************************************************************
@@ -45,13 +40,6 @@ Fallback to Arduino support...
 * Watchdog                                                                                          *
 ****************************************************************************************************/
 volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
-volatile uint8_t  watchdog_mark      = 42;
-
-
-/****************************************************************************************************
-* Randomness                                                                                        *
-****************************************************************************************************/
-volatile uint32_t next_random_int[PLATFORM_RNG_CARRY_CAPACITY];
 
 /**
 * Dead-simple interface to the RNG. Despite the fact that it is interrupt-driven, we may resort
@@ -65,27 +53,11 @@ uint32_t randomInt() {
   return return_value;
 }
 
-/**
-* Called by the RNG ISR to provide new random numbers.
-*
-* @param    nu_rnd The supplied random number.
-* @return   True if the RNG should continue supplying us, false if it should take a break until we need more.
-*/
-volatile bool provide_random_int(uint32_t nu_rnd) {
-  for (uint8_t i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) {
-    if (next_random_int[i] == 0) {
-      next_random_int[i] = nu_rnd;
-      return (i == PLATFORM_RNG_CARRY_CAPACITY-1) ? false : true;
-    }
-  }
-  return false;
-}
 
 /*
 * Init the RNG. Short and sweet.
 */
 void init_RNG() {
-  for (uint8_t i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) next_random_int[i] = 0;
   srand(Teensy3Clock.get());          // Seed the PRNG...
 }
 
@@ -130,15 +102,6 @@ uint32_t rtc_startup_state = MANUVR_RTC_STARTUP_UNINITED;
 *
 */
 bool initPlatformRTC() {
-  setSyncProvider(getTeensy3Time);
-  if (timeStatus() != timeSet) {
-    rtc_startup_state = MANUVR_RTC_STARTUP_GOOD_UNSET;
-    return false;
-  }
-  else {
-    rtc_startup_state = MANUVR_RTC_STARTUP_GOOD_SET;
-    return true;
-  }
 }
 
 /*
@@ -157,6 +120,7 @@ bool setTimeAndDate(char* nu_date_time) {
 * Returns an integer representing the current datetime.
 */
 uint32_t epochTime(void) {
+  return 0;
 }
 
 
@@ -194,13 +158,6 @@ void pin_isr_pitch_event() {
 *   individual classes work out their own requirements.
 */
 void gpioSetup() {
-  // Null-out all the pin definitions in preparation for assignment.
-  for (uint8_t i = 0; i < PLATFORM_GPIO_PIN_COUNT; i++) {
-    gpio_pins[i].event = 0;      // No event assigned.
-    gpio_pins[i].fxn   = 0;      // No function pointer.
-    gpio_pins[i].mode  = INPUT;  // All pins begin as inputs.
-    gpio_pins[i].pin   = i;      // The pin number.
-  }
 }
 
 
@@ -289,6 +246,7 @@ volatile void seppuku() {
 */
 volatile void jumpToBootloader() {
   cli();
+  while(true);
 }
 
 
@@ -311,6 +269,7 @@ volatile void hardwareShutdown() {
 */
 volatile void reboot() {
   cli();
+  while(true);
 }
 
 

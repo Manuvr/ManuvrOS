@@ -467,4 +467,21 @@ void ManuvrPlatform::forsakeMain() {
   }
 }
 
+
+int8_t random_fill(uint8_t* buf, int len) {
+  int written_len = 0;
+  while (4 <= (len - written_len)) {
+    // If we have slots for them, just up-cast and write 4-at-a-time.
+    *((uint32_t*) (buf + written_len)) = randomInt();
+    written_len += 4;
+  }
+  uint32_t slack = randomInt();
+  while (0 < (len - written_len)) {
+    *(buf + written_len) = (uint8_t) 0xFF & slack;
+    slack = slack >> 8;
+    written_len++;
+  }
+  return 0;
+}
+
 }  // extern "C"

@@ -23,6 +23,71 @@ limitations under the License.
 #include <Kernel.h>
 
 
+/*******************************************************************************
+* Meta                                                                         *
+*******************************************************************************/
+
+void printCryptoOverview(StringBuilder* out) {
+  #if defined(__MANUVR_MBEDTLS)
+    out->concat("-- Cryptographic support via mbedtls.\n");
+    out->concat("-- Supported TLS ciphersuites:\n");
+    const int* ciphersuites = mbedtls_ssl_list_ciphersuites();
+    while (0 != *(ciphersuites)) {
+      out->concatf("\t %s\n", mbedtls_ssl_get_ciphersuite_name(*(ciphersuites++)));
+    }
+  #else
+  out->concat("No cryptographic support.\n");
+  #endif  // __MANUVR_MBEDTLS
+}
+
+int get_digest_output_length(Hashes h) {
+  switch (h) {
+    case Hashes::NONE:      return 0;
+    case Hashes::MD5:       return 16;
+    case Hashes::SHA1:      return 20;
+    case Hashes::RIPEMD160: return 20;
+    //case Hashes::SHA224:    return 28;
+    case Hashes::SHA256:    return 32;
+    //case Hashes::SHA384:    return 48;
+    case Hashes::SHA512:    return 64;
+    default:                return -1;
+  }
+}
+
+
+bool manuvr_is_cipher_symmetric(Cipher ci) {
+  switch (ci) {
+    case Cipher::SYM_NULL:
+    case Cipher::SYM_AES:
+    case Cipher::SYM_DES:
+    case Cipher::SYM_3DES:
+    case Cipher::SYM_CAMELLIA:
+    case Cipher::SYM_BLOWFISH:
+    case Cipher::SYM_ARC:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool manuvr_is_cipher_asymmetric(Cipher ci) {
+  switch (ci) {
+    case Cipher::ASYM_RSA:
+    case Cipher::ASYM_ECKEY:
+    case Cipher::ASYM_ECKEY_DH:
+    case Cipher::ASYM_ECDSA:
+    case Cipher::ASYM_RSA_ALT:
+    case Cipher::ASYM_RSASSA_PSS:
+      return true;
+    default:
+      return false;
+  }
+}
+
+
+/*******************************************************************************
+* Message digest and Hash                                                      *
+*******************************************************************************/
 
 /**
 * General interface to message digest functions. Isolates caller from knowledge
@@ -93,15 +158,36 @@ int8_t __attribute__((weak)) manuvr_hash(uint8_t* in, int in_len, uint8_t* out, 
 }
 
 
-void printCryptoOverview(StringBuilder* out) {
-  #if defined(__MANUVR_MBEDTLS)
-    out->concat("-- Cryptographic support via mbedtls.\n");
-    out->concat("-- Supported TLS ciphersuites:\n");
-    const int* ciphersuites = mbedtls_ssl_list_ciphersuites();
-    while (0 != *(ciphersuites)) {
-      out->concatf("\t %s\n", mbedtls_ssl_get_ciphersuite_name(*(ciphersuites++)));
-    }
-  #else
-  out->concat("No cryptographic support.\n");
-  #endif  // __MANUVR_MBEDTLS
+
+/*******************************************************************************
+* Symmetric ciphers                                                            *
+*******************************************************************************/
+
+int8_t __attribute__((weak)) manuvr_block_encrypt(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher ci) {
+  mbedtls_aes_context aes;
+  mbedtls_aes_setkey_enc(&aes, key, key_len);
+  int8_t ret = mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_ENCRYPT, in_len, iv, in, out);
+  mbedtls_aes_free(&aes);
+  return ret;
+}
+
+
+int8_t __attribute__((weak)) manuvr_block_decrypt(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher ci) {
+  mbedtls_aes_context aes;
+  mbedtls_aes_setkey_enc(&aes, key, key_len);
+  int8_t ret = mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_DECRYPT, in_len, iv, in, out);
+  mbedtls_aes_free(&aes);
+  return ret;
+}
+
+
+
+/*******************************************************************************
+* Asymmetric ciphers                                                           *
+*******************************************************************************/
+int8_t __attribute__((weak)) manuvr_sign(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes h, Cipher ci, CryptoKey private_key) {
+}
+
+
+int8_t __attribute__((weak)) manuvr_verify(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes h, Cipher ci, CryptoKey public_key) {
 }

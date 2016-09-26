@@ -43,6 +43,7 @@ If you wish to use another crypto library (OpenSSL? MatrixSSL? uECC?) then
   #include "mbedtls/md.h"
   #include "mbedtls/md_internal.h"
   #include "mbedtls/base64.h"
+  #include "mbedtls/aes.h"
 #endif
 
 enum class Hashes {
@@ -78,11 +79,25 @@ enum class CryptoKey {
 };
 
 enum class Cipher {
+  ASYM_RSA        = MBEDTLS_PK_RSA,
+  ASYM_ECKEY      = MBEDTLS_PK_ECKEY,
+  ASYM_ECKEY_DH   = MBEDTLS_PK_ECKEY_DH,
+  ASYM_ECDSA      = MBEDTLS_PK_ECDSA,
+  ASYM_RSA_ALT    = MBEDTLS_PK_RSA_ALT,
+  ASYM_RSASSA_PSS = MBEDTLS_PK_RSASSA_PSS,
+  SYM_NONE        = MBEDTLS_CIPHER_ID_NONE,
+  SYM_NULL        = MBEDTLS_CIPHER_ID_NULL,
+  SYM_AES         = MBEDTLS_CIPHER_ID_AES,
+  SYM_DES         = MBEDTLS_CIPHER_ID_DES,
+  SYM_3DES        = MBEDTLS_CIPHER_ID_3DES,
+  SYM_CAMELLIA    = MBEDTLS_CIPHER_ID_CAMELLIA,
+  SYM_BLOWFISH    = MBEDTLS_CIPHER_ID_BLOWFISH,
+  SYM_ARC         = MBEDTLS_CIPHER_ID_ARC4,
+  NONE            = MBEDTLS_PK_NONE
 };
 
 
-
-/* This stuff needs to be reachable via C-linkage. */
+/* This stuff needs to be reachable via C-linkage. That means ugly names. :-) */
 extern "C" {
 
 /*******************************************************************************
@@ -94,8 +109,8 @@ int8_t manuvr_hash(uint8_t* in, int in_len, uint8_t* out, int out_len, Hashes h)
 /*******************************************************************************
 * Cipher/decipher
 *******************************************************************************/
-int8_t manuvr_block_encrypt(uint8_t* in, int in_len, uint8_t* out, int out_len, Cipher);
-int8_t manuvr_block_decrypt(uint8_t* in, int in_len, uint8_t* out, int out_len, Cipher);
+int8_t manuvr_block_encrypt(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher);
+int8_t manuvr_block_decrypt(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher);
 
 int8_t manuvr_sign(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes, Cipher, CryptoKey private_key);
 int8_t manuvr_verify(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes, Cipher, CryptoKey public_key);
@@ -103,14 +118,16 @@ int8_t manuvr_verify(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes
 
 
 /*******************************************************************************
-* Randomness
+* Randomness                                                                   *
 *******************************************************************************/
+int8_t manuvr_random_fill(uint8_t* buf, int len);
+
 
 /*******************************************************************************
-* Debug
+* Meta                                                                         *
 *******************************************************************************/
+int  get_digest_output_length(Hashes);
 void printCryptoOverview(StringBuilder*);
-
 
 } // extern "C"
 

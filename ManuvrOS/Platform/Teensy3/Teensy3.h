@@ -18,14 +18,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-This file is meant to contain a set of common functions that are
-  typically platform-dependent. The goal is to make a class instance
-  that is pre-processor-selectable to reflect the platform with an API
-  that is consistent, thereby giving the kernel the ability to...
-    * Access the realtime clock (if applicatble)
-    * Get definitions for GPIO pins.
-    * Access a true RNG (if it exists)
-    * Persist and retrieve data across runtimes.
+Despite being an Arduino-ish environment, Teensyduino is largely an
+  API relationship with no phylogenic relationship to Arduino's
+  hardware support.
+Moreover, Teensyduino's code base is well-maintained and full-featured.
+  So we will use it outright.
+
+Many of the libraries that ultimately became ManuvrOS were developed
+  on a Teensy3.0, and this platform represents a "hard-floor" for
+  general support.
 */
 
 
@@ -54,4 +55,4 @@ class Teensy3 : public ManuvrPlatform {
     #endif
 };
 
-#endif  // __PLATFORM_VANILLA_LINUX_H__
+#endif  // __PLATFORM_TEENSY3_H__

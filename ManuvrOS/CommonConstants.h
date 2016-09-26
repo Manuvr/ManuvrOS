@@ -38,20 +38,6 @@ Apart from including the user-suppied configuration header, there
   #define LOG_INFO    6    /* informational */
   #define LOG_DEBUG   7    /* debug-level messages */
 
-  /* These are defines for const char* that are commonly used. */
-  #define MANUVR_CONST_STR_WHOAMI           "_whoami"
-  #define MANUVR_CONST_STR_PLATFORM_CONF    "_pconf"
-  #define NUL_STR   "NULL"
-  #define YES_STR   "Yes"
-  #define NO_STR    "No"
-
-
-  #if defined(MANUVR_CONF_FILE)
-    #include MANUVR_CONF_FILE
-  #else
-    #include "ManuvrConf.h"
-  #endif
-
   /*
   * These are defines for const char* that are commonly used.
   * We are collecting them here so that future additions to the
@@ -59,4 +45,13 @@ Apart from including the user-suppied configuration header, there
   */
   #define MANUVR_CONST_STR_WHOAMI           "_whoami"
   #define MANUVR_CONST_STR_PLATFORM_CONF    "_pconf"
+  #define NUL_STR   "NULL"
+  #define YES_STR   "Yes"
+  #define NO_STR    "No"
+
+  #if defined(MANUVR_CONF_FILE)
+    #include MANUVR_CONF_FILE
+  #else
+    #include "ManuvrConf.h"
+  #endif
 #endif

@@ -13,6 +13,9 @@ LOCAL_CXX_FLAGS  = $(CPP_FLAGS)
 
 LIBS  = -L$(OUTPUT_PATH) -L$(WHERE_I_AM)/lib -lstdc++ -lm
 LIBS += -lmanuvr -lextras -lpthread
+LIBS += $(OUTPUT_PATH)/libmbedtls.a
+LIBS += $(OUTPUT_PATH)/libmbedx509.a
+LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
 
 ###########################################################################
 # Option conditionals
@@ -30,6 +33,7 @@ all:
 	$(CXX) -static -o dstest TestDataStructures.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 	$(CXX) -static -o identtest IdentityTest.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 	$(CXX) -static -o schedtest SchedulerTest.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(CXX) -static -o cryptotest CryptoTest.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 
 clean:
 	rm -f dstest identtest schedtest
