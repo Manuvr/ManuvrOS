@@ -119,6 +119,7 @@ int TeensyStorage::persistentRead(const char* key, uint8_t* buf, unsigned int le
 
 
 int TeensyStorage::persistentRead(const char*, StringBuilder* out) {
+  if (isMounted()) {
     int r_len = (2044 - _free_space);
     uint8_t buf[r_len];
     for (int i = 0; i < r_len; i++) {
@@ -126,6 +127,8 @@ int TeensyStorage::persistentRead(const char*, StringBuilder* out) {
     }
     out->concat(buf, r_len);
     return r_len;
+  }
+  return -1;
 }
 
 
@@ -237,10 +240,6 @@ void TeensyStorage::procDirectDebugInstruction(StringBuilder *input) {
   switch (*(str)) {
     case 'w':
       local_log.concatf("Wipe %s.\n", (0 == wipe()) ? "succeeded" : "failed");
-      break;
-
-    case 'l':
-      local_log.concatf("Load config %s.\n", (0 == platform._load_config()) ? "succeeded" : "failed");
       break;
 
     case 's':

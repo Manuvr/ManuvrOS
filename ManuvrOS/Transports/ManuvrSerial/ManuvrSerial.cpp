@@ -31,7 +31,7 @@ Platforms that require it should be able to extend this driver for specific
 
 
 #include "ManuvrSerial.h"
-#include "FirmwareDefs.h"
+#include <CommonConstants.h>
 
 #include <Kernel.h>
 #include <Platform/Platform.h>
@@ -79,19 +79,6 @@ Platforms that require it should be able to extend this driver for specific
 *
 * @param  tty_path  Path to the TTY.
 * @param  b_rate    The port baud rate.
-*/
-ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate) : ManuvrXport() {
-  __class_initializer();
-  _addr      = tty_path;
-  _baud_rate = b_rate;
-  _options   = 0;
-}
-
-/**
-* Constructor.
-*
-* @param  tty_path  Path to the TTY.
-* @param  b_rate    The port baud rate.
 * @param  opts      Options to the underlying implementation.
 */
 ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate, uint32_t opts) : ManuvrXport() {
@@ -99,6 +86,15 @@ ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate, uint32_t opts) : Ma
   _addr     = tty_path;
   _baud_rate = b_rate;
   _options  = opts;
+}
+
+/**
+* Constructor.
+*
+* @param  tty_path  Path to the TTY.
+* @param  b_rate    The port baud rate.
+*/
+ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate) : ManuvrSerial(tty_path, b_rate, 0) {
 }
 
 /**
@@ -119,10 +115,9 @@ void ManuvrSerial::__class_initializer() {
   #endif
 
   // Build some pre-formed Events.
-  read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
+  read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY, (EventReceiver*) this);
   read_abort_event.isManaged(true);
   read_abort_event.specific_target = (EventReceiver*) this;
-  read_abort_event.originator      = (EventReceiver*) this;
   read_abort_event.priority        = 2;
 }
 
@@ -410,7 +405,7 @@ int8_t ManuvrSerial::bootComplete() {
   #if !defined (__MANUVR_FREERTOS) && !defined (__MANUVR_LINUX)
   __kernel->addSchedule(&read_abort_event);
   #endif
-  
+
   reset();
   return 1;
 }

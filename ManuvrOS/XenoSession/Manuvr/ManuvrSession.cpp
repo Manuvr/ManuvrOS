@@ -59,10 +59,6 @@ ManuvrSession::ManuvrSession(ManuvrXport* _xport) : XenoSession(_xport) {
   tapMessageType(MANUVR_MSG_SESS_ESTABLISHED);
   tapMessageType(MANUVR_MSG_SESS_HANGUP);
   tapMessageType(MANUVR_MSG_LEGEND_MESSAGES);
-
-  if (_xport->booted()) {
-    bootComplete();   // Because we are instantiated well after boot, we call this on construction.
-  }
 }
 
 
@@ -482,7 +478,7 @@ const char* ManuvrSession::getSessionSyncString() {
 int8_t ManuvrSession::bootComplete() {
   EventReceiver::bootComplete();
 
-  sync_event.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG);
+  sync_event.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG, (EventReceiver*) this);
   sync_event.isManaged(true);
   sync_event.specific_target = (EventReceiver*) this;
   sync_event.alterScheduleRecurrence(XENOSESSION_INITIAL_SYNC_COUNT);

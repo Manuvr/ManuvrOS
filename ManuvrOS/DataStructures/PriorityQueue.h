@@ -44,8 +44,6 @@ Some functions are #pragma'd to stop the compiler from complaining about nullptr
   #include <FreeRTOS_ARM.h>
 #endif
 
-using namespace std;
-
 /* This is the class that holds a datum in the list. */
 template <class T> class PriorityNode{
   public:
@@ -126,7 +124,11 @@ template <class T> PriorityQueue<T>::PriorityQueue() {
   root = nullptr;
   element_count = 0;
   #ifdef __MANUVR_LINUX
+    #if defined (PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
     _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+    #else
+    _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
+    #endif
   #elif defined(__MANUVR_FREERTOS)
 //    _mutex = xSemaphoreCreateRecursiveMutex();
   #endif

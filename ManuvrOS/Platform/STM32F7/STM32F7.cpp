@@ -26,11 +26,18 @@ This file is meant to contain a set of common functions that are typically platf
     * Access a true RNG (if it exists)
 */
 
+#include <Platform/Platform.h>
+#include <Platform/STM32F7/STM32F7.h>
+
+#if defined(MANUVR_STORAGE)
+// No storage support yet.
+// RTC backup ram?
+#endif
+
 #include <unistd.h>
 
-#if defined(ENABLE_USB_VCP)
-  #include "tm_stm32_usb_device.h"
-  #include "tm_stm32_usb_device_cdc.h"
+#if defined (__MANUVR_FREERTOS)
+  #include <FreeRTOS_ARM.h>
 #endif
 
 
@@ -39,7 +46,25 @@ This file is meant to contain a set of common functions that are typically platf
 ****************************************************************************************************/
 RTC_HandleTypeDef rtc;
 
-unsigned long         start_time_micros  = 0;
+
+/*
+* For the STM32 parts, we will treat pins as being the linear sequence of ports
+*   and pins. This incurs a slight performance hit as we need to shift and divide
+*   each time we call a pin by its 8-bit identifier. But this is the cost of
+*   uniformity across platforms.
+*/
+static GPIO_TypeDef* _port_assoc[] = {
+  GPIOA, GPIOB, GPIOC, GPIOD, GPIOE, GPIOF,
+  GPIOG, GPIOH, GPIOI, GPIOJ, GPIOK
+};
+
+inline GPIO_TypeDef* _associated_port(uint8_t _pin) {
+  return _port_assoc[_pin >> 4];
+};
+inline uint16_t _associated_pin(uint8_t _pin) {
+  return (1 << (_pin % 16));
+};
+
 
 volatile uint32_t     randomness_pool[PLATFORM_RNG_CARRY_CAPACITY];
 volatile unsigned int _random_pool_r_ptr = 0;
@@ -117,9 +142,9 @@ unsigned long micros(void) {
 
 
 
-/****************************************************************************************************
-* Randomness                                                                                        *
-****************************************************************************************************/
+/*******************************************************************************
+* Randomness                                                                   *
+*******************************************************************************/
 /**
 * Dead-simple interface to the RNG. Despite the fact that it is interrupt-driven, we may resort
 *   to polling if random demand exceeds random supply. So this may block until a random number
@@ -175,10 +200,9 @@ void init_RNG() {
 /****************************************************************************************************
 * Identity and serial number                                                                        *
 ****************************************************************************************************/
-void ManuvrPlatform::printDebug(StringBuilder* output) {
+void STM32F7Platform::printDebug(StringBuilder* output) {
   output->concatf("==< STM32F7 [%s] >=================================\n", getPlatformStateStr(platformState()));
-  printPlatformBasics(output);
-
+  ManuvrPlatform::printDebug(output);
   // TODO: GPIO
 }
 
@@ -208,10 +232,9 @@ int getSerialNumber(uint8_t* buf) {
 }
 
 
-/****************************************************************************************************
-* Time and date                                                                                     *
-****************************************************************************************************/
-
+/*******************************************************************************
+* Time and date                                                                *
+*******************************************************************************/
 /*
 * Setup the realtime clock module.
 * Informed by code here:
@@ -348,10 +371,9 @@ void currentDateTime(StringBuilder* target) {
 
 
 
-/****************************************************************************************************
-* GPIO and change-notice                                                                            *
-****************************************************************************************************/
-
+/*******************************************************************************
+* GPIO and change-notice                                                       *
+*******************************************************************************/
 /*
 *
 */
@@ -519,7 +541,7 @@ int8_t setPinEvent(uint8_t _pin, uint8_t condition, ManuvrRunnable* isr_event) {
 /*
 * Pass the function pointer
 */
-int8_t setPinFxn(uint8_t _pin, uint8_t condition, FunctionPointer fxn) {
+int8_t setPinFxn(uint8_t _pin, uint8_t condition, FxnPointer fxn) {
   uint16_t pin_idx   = (_pin % 16);
 
   if (0 == __ext_line_bindings[pin_idx].condition) {
@@ -613,31 +635,26 @@ int readPinAnalog(uint8_t pin) {
 }
 
 
-/****************************************************************************************************
-* Persistent configuration                                                                          *
-****************************************************************************************************/
+/*******************************************************************************
+* Persistent configuration                                                     *
+*******************************************************************************/
 
-
-
-
-/****************************************************************************************************
-* Interrupt-masking                                                                                 *
-****************************************************************************************************/
-
+/*******************************************************************************
+* Interrupt-masking                                                            *
+*******************************************************************************/
 void globalIRQEnable() {     asm volatile ("cpsid i");    }
 void globalIRQDisable() {    asm volatile ("cpsie i");    }
 
 
-
-/****************************************************************************************************
-* Process control                                                                                   *
-****************************************************************************************************/
+/*******************************************************************************
+* Process control                                                              *
+*******************************************************************************/
 
 /*
 * Terminate this running process, along with any children it may have forked() off.
 * Never returns.
 */
-void ManuvrPlatform::seppuku() {
+void STM32F7Platform::seppuku() {
   // This means "Halt" on a base-metal build.
   globalIRQDisable();
   HAL_RCC_DeInit();               // Switch to HSI, no PLL
@@ -649,9 +666,8 @@ void ManuvrPlatform::seppuku() {
 * Jump to the bootloader.
 * Never returns.
 */
-void ManuvrPlatform::jumpToBootloader() {
+void STM32F7Platform::jumpToBootloader() {
   globalIRQDisable();
-  TM_USBD_Stop(TM_USB_FS);    // DeInit() The USB device.
   __set_MSP(0x20001000);      // Set the main stack pointer...
   HAL_RCC_DeInit();               // Switch to HSI, no PLL
 
@@ -664,15 +680,15 @@ void ManuvrPlatform::jumpToBootloader() {
 }
 
 
-/****************************************************************************************************
-* Underlying system control.                                                                        *
-****************************************************************************************************/
+/*******************************************************************************
+* Underlying system control.                                                   *
+*******************************************************************************/
 
 /*
 * This means "Halt" on a base-metal build.
 * Never returns.
 */
-void ManuvrPlatform::hardwareShutdown() {
+void STM32F7Platform::hardwareShutdown() {
   globalIRQDisable();
   NVIC_SystemReset();
 }
@@ -681,7 +697,7 @@ void ManuvrPlatform::hardwareShutdown() {
 * Causes immediate reboot.
 * Never returns.
 */
-void ManuvrPlatform::reboot() {
+void STM32F7Platform::reboot() {
   globalIRQDisable();
   __set_MSP(0x20001000);      // Set the main stack pointer...
   HAL_RCC_DeInit();               // Switch to HSI, no PLL
@@ -693,9 +709,9 @@ void ManuvrPlatform::reboot() {
 
 
 
-/****************************************************************************************************
-* Platform initialization.                                                                          *
-****************************************************************************************************/
+/*******************************************************************************
+* Platform initialization.                                                     *
+*******************************************************************************/
 #define  DEFAULT_PLATFORM_FLAGS ( \
               MANUVR_PLAT_FLAG_INNATE_DATETIME | \
               MANUVR_PLAT_FLAG_HAS_IDENTITY)
@@ -704,25 +720,12 @@ void ManuvrPlatform::reboot() {
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
 */
-int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
-  // TODO: Should we really be setting capabilities this late?
-  uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
-
-  #if defined(__MANUVR_MBEDTLS)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
-  #endif
-  #if defined(MANUVR_GPS_PIPE)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
-  #endif
-
-  _alter_flags(true, default_flags);
-  _discoverALUParams();
-
-  start_time_micros = micros();
-
-  gpioSetup();
+int8_t STM32F7Platform::platformPreInit(Argument* root_config) {
+  ManuvrPlatform::platformPreInit(root_config);
+  _alter_flags(true, DEFAULT_PLATFORM_FLAGS);
   init_RNG();
-  initPlatformRTC();
+  gpioSetup();
+  //initPlatformRTC();
   return 0;
 }
 
@@ -731,7 +734,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
 * Called before kernel instantiation. So do the minimum required to ensure
 *   internal system sanity.
 */
-int8_t ManuvrPlatform::platformPostInit() {
+int8_t STM32F7Platform::platformPostInit() {
   return 0;
 }
 
@@ -745,203 +748,206 @@ int8_t ManuvrPlatform::platformPostInit() {
 * Interrupt service routine support functions. Everything in this block
 *   executes under an ISR. Keep it brief...
 *******************************************************************************/
+extern "C" {
+  /* The ISR for the hardware RNG subsystem. Adds to entropy buffer. */
+  void RNG_IRQHandler() {
+    uint32_t sr = RNG->SR;
+    if (sr & (RNG_SR_SEIS | RNG_SR_CEIS)) {
+      // RNG fault? Clear the flags. Log?
+      RNG->SR &= ~(RNG_SR_SEIS | RNG_SR_CEIS);
+    }
 
-/* The ISR for the hardware RNG subsystem. Adds to entropy buffer. */
-void RNG_IRQHandler() {
-  uint32_t sr = RNG->SR;
-  if (sr & (RNG_SR_SEIS | RNG_SR_CEIS)) {
-    // RNG fault? Clear the flags. Log?
-    RNG->SR &= ~(RNG_SR_SEIS | RNG_SR_CEIS);
+    if (sr & RNG_SR_DRDY) {
+      unsigned int _w_ptr = _random_pool_w_ptr % PLATFORM_RNG_CARRY_CAPACITY;
+      randomness_pool[_w_ptr] = RNG->DR;
+      _random_pool_w_ptr++;   // Concurrency...
+
+      if ((_random_pool_w_ptr - _random_pool_r_ptr) >= PLATFORM_RNG_CARRY_CAPACITY) {
+        // We have filled our entropy pool. Turn off the interrupts...
+        RNG->CR &= ~(RNG_CR_IE);
+        // ...and the RNG.
+        RNG->CR &= ~(RNG_CR_RNGEN);
+      }
+    }
   }
 
-  if (sr & RNG_SR_DRDY) {
-    unsigned int _w_ptr = _random_pool_w_ptr % PLATFORM_RNG_CARRY_CAPACITY;
-    randomness_pool[_w_ptr] = RNG->DR;
-    _random_pool_w_ptr++;   // Concurrency...
+  /*
+  *
+  */
+  void EXTI0_IRQHandler(void) {
+    if (EXTI->PR & (EXTI_PR_PR0)) {
+      EXTI->PR = EXTI_PR_PR0;   // Clear service bit.
+      //Kernel::log("EXTI 0\n");
+      if (nullptr != __ext_line_bindings[0].fxn) {
+        __ext_line_bindings[0].fxn();
+      }
+      if (nullptr != __ext_line_bindings[0].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[0].event);
+      }
+    }
+  }
 
-    if ((_random_pool_w_ptr - _random_pool_r_ptr) >= PLATFORM_RNG_CARRY_CAPACITY) {
-      // We have filled our entropy pool. Turn off the interrupts...
-      RNG->CR &= ~(RNG_CR_IE);
-      // ...and the RNG.
-      RNG->CR &= ~(RNG_CR_RNGEN);
+  /*
+  *
+  */
+  void EXTI1_IRQHandler(void) {
+    if (EXTI->PR & (EXTI_PR_PR1)) {
+      EXTI->PR = EXTI_PR_PR1;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[1].fxn) {
+        __ext_line_bindings[1].fxn();
+      }
+      if (nullptr != __ext_line_bindings[1].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[1].event);
+      }
     }
   }
-}
 
-/*
-*
-*/
-void EXTI0_IRQHandler(void) {
-  if (EXTI->PR & (EXTI_PR_PR0)) {
-    EXTI->PR = EXTI_PR_PR0;   // Clear service bit.
-    //Kernel::log("EXTI 0\n");
-    if (nullptr != __ext_line_bindings[0].fxn) {
-      __ext_line_bindings[0].fxn();
-    }
-    if (nullptr != __ext_line_bindings[0].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[0].event);
+  /*
+  *
+  */
+  void EXTI2_IRQHandler(void) {
+    if (EXTI->PR & (EXTI_PR_PR2)) {
+      EXTI->PR = EXTI_PR_PR2;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[2].fxn) {
+        __ext_line_bindings[2].fxn();
+      }
+      if (nullptr != __ext_line_bindings[2].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[2].event);
+      }
     }
   }
-}
 
-/*
-*
-*/
-void EXTI1_IRQHandler(void) {
-  if (EXTI->PR & (EXTI_PR_PR1)) {
-    EXTI->PR = EXTI_PR_PR1;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[1].fxn) {
-      __ext_line_bindings[1].fxn();
-    }
-    if (nullptr != __ext_line_bindings[1].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[1].event);
+  /*
+  *
+  */
+  void EXTI3_IRQHandler(void) {
+    if (EXTI->PR & (EXTI_PR_PR3)) {
+      EXTI->PR = EXTI_PR_PR3;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[3].fxn) {
+        __ext_line_bindings[3].fxn();
+      }
+      if (nullptr != __ext_line_bindings[3].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[3].event);
+      }
     }
   }
-}
 
-/*
-*
-*/
-void EXTI2_IRQHandler(void) {
-  if (EXTI->PR & (EXTI_PR_PR2)) {
-    EXTI->PR = EXTI_PR_PR2;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[2].fxn) {
-      __ext_line_bindings[2].fxn();
-    }
-    if (nullptr != __ext_line_bindings[2].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[2].event);
+  /*
+  *
+  */
+  void EXTI4_IRQHandler(void) {
+    if (EXTI->PR & (EXTI_PR_PR4)) {
+      EXTI->PR = EXTI_PR_PR4;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[4].fxn) {
+        __ext_line_bindings[4].fxn();
+      }
+      if (nullptr != __ext_line_bindings[4].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[4].event);
+      }
     }
   }
-}
 
-/*
-*
-*/
-void EXTI3_IRQHandler(void) {
-  if (EXTI->PR & (EXTI_PR_PR3)) {
-    EXTI->PR = EXTI_PR_PR3;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[3].fxn) {
-      __ext_line_bindings[3].fxn();
+  /*
+  *
+  */
+  void EXTI9_5_IRQHandler(void) {
+    if (EXTI->PR & (EXTI_PR_PR5)) {
+      EXTI->PR = EXTI_PR_PR5;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[5].fxn) {
+        __ext_line_bindings[5].fxn();
+      }
+      if (nullptr != __ext_line_bindings[5].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[5].event);
+      }
     }
-    if (nullptr != __ext_line_bindings[3].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[3].event);
+    if (EXTI->PR & (EXTI_PR_PR6)) {
+      EXTI->PR = EXTI_PR_PR6;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[6].fxn) {
+        __ext_line_bindings[6].fxn();
+      }
+      if (nullptr != __ext_line_bindings[6].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[6].event);
+      }
+    }
+    if (EXTI->PR & (EXTI_PR_PR7)) {
+      EXTI->PR = EXTI_PR_PR7;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[7].fxn) {
+        __ext_line_bindings[7].fxn();
+      }
+      if (nullptr != __ext_line_bindings[7].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[7].event);
+      }
+    }
+    if (EXTI->PR & (EXTI_PR_PR8)) {
+      EXTI->PR = EXTI_PR_PR8;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[8].fxn) {
+        __ext_line_bindings[8].fxn();
+      }
+      if (nullptr != __ext_line_bindings[8].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[8].event);
+      }
+    }
+    if (EXTI->PR & (EXTI_PR_PR9)) {
+      EXTI->PR = EXTI_PR_PR9;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[9].fxn) {
+        __ext_line_bindings[9].fxn();
+      }
+      if (nullptr != __ext_line_bindings[9].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[9].event);
+      }
     }
   }
-}
 
-/*
-*
-*/
-void EXTI4_IRQHandler(void) {
-  if (EXTI->PR & (EXTI_PR_PR4)) {
-    EXTI->PR = EXTI_PR_PR4;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[4].fxn) {
-      __ext_line_bindings[4].fxn();
+  /*
+  *
+  */
+  void EXTI15_10_IRQHandler(void) {
+    if (EXTI->PR & (EXTI_PR_PR11)) {
+      EXTI->PR = EXTI_PR_PR11;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[11].fxn) {
+        __ext_line_bindings[11].fxn();
+      }
+      if (nullptr != __ext_line_bindings[11].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[11].event);
+      }
     }
-    if (nullptr != __ext_line_bindings[4].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[4].event);
+    if (EXTI->PR & (EXTI_PR_PR12)) {
+      EXTI->PR = EXTI_PR_PR12;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[12].fxn) {
+        __ext_line_bindings[12].fxn();
+      }
+      if (nullptr != __ext_line_bindings[12].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[12].event);
+      }
+    }
+    if (EXTI->PR & (EXTI_PR_PR13)) {
+      EXTI->PR = EXTI_PR_PR13;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[13].fxn) {
+        __ext_line_bindings[13].fxn();
+      }
+      if (nullptr != __ext_line_bindings[13].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[13].event);
+      }
+    }
+    if (EXTI->PR & (EXTI_PR_PR14)) {
+      EXTI->PR = EXTI_PR_PR14;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[14].fxn) {
+        __ext_line_bindings[14].fxn();
+      }
+      if (nullptr != __ext_line_bindings[14].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[14].event);
+      }
+    }
+    if (EXTI->PR & (EXTI_PR_PR15)) {
+      EXTI->PR = EXTI_PR_PR15;   // Clear service bit.
+      if (nullptr != __ext_line_bindings[15].fxn) {
+        __ext_line_bindings[15].fxn();
+      }
+      if (nullptr != __ext_line_bindings[15].event) {
+        Kernel::isrRaiseEvent(__ext_line_bindings[15].event);
+      }
     }
   }
-}
 
-/*
-*
-*/
-void EXTI9_5_IRQHandler(void) {
-  if (EXTI->PR & (EXTI_PR_PR5)) {
-    EXTI->PR = EXTI_PR_PR5;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[5].fxn) {
-      __ext_line_bindings[5].fxn();
-    }
-    if (nullptr != __ext_line_bindings[5].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[5].event);
-    }
-  }
-  if (EXTI->PR & (EXTI_PR_PR6)) {
-    EXTI->PR = EXTI_PR_PR6;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[6].fxn) {
-      __ext_line_bindings[6].fxn();
-    }
-    if (nullptr != __ext_line_bindings[6].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[6].event);
-    }
-  }
-  if (EXTI->PR & (EXTI_PR_PR7)) {
-    EXTI->PR = EXTI_PR_PR7;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[7].fxn) {
-      __ext_line_bindings[7].fxn();
-    }
-    if (nullptr != __ext_line_bindings[7].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[7].event);
-    }
-  }
-  if (EXTI->PR & (EXTI_PR_PR8)) {
-    EXTI->PR = EXTI_PR_PR8;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[8].fxn) {
-      __ext_line_bindings[8].fxn();
-    }
-    if (nullptr != __ext_line_bindings[8].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[8].event);
-    }
-  }
-  if (EXTI->PR & (EXTI_PR_PR9)) {
-    EXTI->PR = EXTI_PR_PR9;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[9].fxn) {
-      __ext_line_bindings[9].fxn();
-    }
-    if (nullptr != __ext_line_bindings[9].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[9].event);
-    }
-  }
-}
 
-/*
-*
-*/
-void EXTI15_10_IRQHandler(void) {
-  if (EXTI->PR & (EXTI_PR_PR11)) {
-    EXTI->PR = EXTI_PR_PR11;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[11].fxn) {
-      __ext_line_bindings[11].fxn();
-    }
-    if (nullptr != __ext_line_bindings[11].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[11].event);
-    }
-  }
-  if (EXTI->PR & (EXTI_PR_PR12)) {
-    EXTI->PR = EXTI_PR_PR12;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[12].fxn) {
-      __ext_line_bindings[12].fxn();
-    }
-    if (nullptr != __ext_line_bindings[12].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[12].event);
-    }
-  }
-  if (EXTI->PR & (EXTI_PR_PR13)) {
-    EXTI->PR = EXTI_PR_PR13;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[13].fxn) {
-      __ext_line_bindings[13].fxn();
-    }
-    if (nullptr != __ext_line_bindings[13].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[13].event);
-    }
-  }
-  if (EXTI->PR & (EXTI_PR_PR14)) {
-    EXTI->PR = EXTI_PR_PR14;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[14].fxn) {
-      __ext_line_bindings[14].fxn();
-    }
-    if (nullptr != __ext_line_bindings[14].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[14].event);
-    }
-  }
-  if (EXTI->PR & (EXTI_PR_PR15)) {
-    EXTI->PR = EXTI_PR_PR15;   // Clear service bit.
-    if (nullptr != __ext_line_bindings[15].fxn) {
-      __ext_line_bindings[15].fxn();
-    }
-    if (nullptr != __ext_line_bindings[15].event) {
-      Kernel::isrRaiseEvent(__ext_line_bindings[15].event);
-    }
-  }
-}
+}  // extern "C"

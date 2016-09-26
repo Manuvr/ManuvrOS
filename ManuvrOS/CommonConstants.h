@@ -24,6 +24,10 @@ There ought to be no inclusion in this file. It is the bottom.
 #ifndef __MANUVR_COMMON_CONSTANTS_H__
   #define __MANUVR_COMMON_CONSTANTS_H__
 
+  #define EVENT_PRIORITY_HIGHEST            100
+  #define EVENT_PRIORITY_DEFAULT              2
+  #define EVENT_PRIORITY_LOWEST               0
+
   #define LOG_EMERG   0    /* system is unusable */
   #define LOG_ALERT   1    /* action must be taken immediately */
   #define LOG_CRIT    2    /* critical conditions */
@@ -33,8 +37,17 @@ There ought to be no inclusion in this file. It is the bottom.
   #define LOG_INFO    6    /* informational */
   #define LOG_DEBUG   7    /* debug-level messages */
 
+  /* These are defines for const char* that are commonly used. */
+  #define MANUVR_CONST_STR_WHOAMI           "_whoami"
+  #define MANUVR_CONST_STR_PLATFORM_CONF    "_pconf"
+  #define NUL_STR   "NULL"
+  #define YES_STR   "Yes"
+  #define NO_STR    "No"
 
-  #if defined(MANUVR_CONF_FILE_PATH)
-    #include MANUVR_CONF_FILE_PATH
+
+  #if defined(MANUVR_CONF_FILE)
+    #include MANUVR_CONF_FILE
+  #else
+    #include "ManuvrConf.h"
   #endif
 #endif

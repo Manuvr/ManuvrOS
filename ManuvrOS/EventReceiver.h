@@ -38,6 +38,8 @@ Lifecycle:
   #include <DataStructures/PriorityQueue.h>
   #include <DataStructures/StringBuilder.h>
 
+  #include <ManuvrMsg/ManuvrMsg.h>
+
   #define EVENT_CALLBACK_RETURN_ERROR       -1 // Horrible things happened in the originating class. This should never happen.
   #define EVENT_CALLBACK_RETURN_UNDEFINED   0  // Illegal return code. Kernel will reap events whose callbacks return this.
   #define EVENT_CALLBACK_RETURN_REAP        1  // The callback fxn has specifically told us to reap this event.
@@ -49,11 +51,9 @@ Lifecycle:
   #define MANUVR_ER_FLAG_EVENT_PENDING      0x10  // Set when the ER has an event waiting for service.
   #define MANUVR_ER_FLAG_HIDDEN_FROM_DISCOV 0x20  // Setting this indicates that the ER should not expose itself to discovery.
   #define MANUVR_ER_FLAG_THREADED           0x40  // This ER is maintaining its own thread.
-  #define MANUVR_ER_FLAG_RESERVED_0         0x80  // Reserved
+  #define MANUVR_ER_FLAG_CONF_DIRTY         0x80  // Our configuration should be persisted.
 
   class Kernel;
-  class ManuvrRunnable;
-
 
   extern "C" {
     /**
@@ -87,7 +87,6 @@ Lifecycle:
         int8_t raiseEvent(ManuvrRunnable* event);
 
         inline const char* getReceiverName() {   return _receiver_name;  }
-        int purgeLogs();
 
         /**
         * Call to set the log verbosity for this class. 7 is most verbose. 0 will disable logging altogether.
@@ -106,16 +105,30 @@ Lifecycle:
 
         /**
         *
-        * @return  true if the class has been booted.
+        * @return  1 if action was taken, 0 if not, -1 on error.
         */
         virtual int8_t bootComplete();        // This is called from the base notify().
+
+        /**
+        * Called for runtime configuration changes mid-lifecycle.
+        *
+        * @return  1 if action was taken, 0 if not, -1 on error.
+        */
+        virtual int8_t erConfigure(Argument*); // This is called from the base notify().
 
         /**
         * Has the class been boot-strapped?
         *
         * @return  true if the class has been booted.
         */
-        inline bool   booted() {         return (0 != (_class_state & MANUVR_ER_FLAG_BOOT_COMPLETE)); };
+        inline bool   booted() {       return (0 != (_class_state & MANUVR_ER_FLAG_BOOT_COMPLETE)); };
+
+        /**
+        * Does this ER's configuration need to be persisted?
+        *
+        * @return  true if the class has been booted.
+        */
+        inline bool   dirtyConf() {    return (0 != (_class_state & MANUVR_ER_FLAG_CONF_DIRTY));    };
 
 
       protected:
@@ -139,7 +152,6 @@ Lifecycle:
           if (nu) _extnd_state |= _flag;
           else    _extnd_state &= ~_flag;
         };
-
 
 
       private:

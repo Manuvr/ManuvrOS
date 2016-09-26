@@ -30,6 +30,25 @@ limitations under the License.
 #endif
 
 
+#if !defined(_GNU_SOURCE)
+/*
+* We might choose to roll-our-own so that we don't bring in enormous dependencies.
+* TODO: This is buggy.
+* Taken from
+* http://c-for-dummies.com/blog/?p=1359
+*/
+int strcasestr(char *a, const char *b) {
+  char c;
+  while(*a && *b) {
+    c = toupper(*a) - toupper(*b);
+    if( c != 0 ) return(c);
+    a++;
+    b++;
+  }
+  return(c);
+}
+#endif
+
 /****************************************************************************************************
 * Class management....                                                                              *
 ****************************************************************************************************/
@@ -43,7 +62,11 @@ StringBuilder::StringBuilder() {
   this->col_length = 0;
   this->preserve_ll = false;
   #if defined(__MANUVR_LINUX)
+    #if defined (PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
     _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+    #else
+    _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
+    #endif
   #elif defined(__MANUVR_FREERTOS)
     //_mutex = xSemaphoreCreateRecursiveMutex();
   #endif
@@ -247,7 +270,7 @@ unsigned char* StringBuilder::position(int pos, int *pos_len) {
   }
   StrLL *current = this->root;
   int i = 0;
-  while ((i != pos) & (current != nullptr)){
+  while ((i != pos) && (current != nullptr)){
     current = current->next;
     i++;
   }
@@ -287,7 +310,7 @@ bool StringBuilder::drop_position(unsigned int pos) {
   StrLL *current = this->root;
   StrLL *prior = nullptr;
   unsigned int i = 0;
-  while ((i != pos) & (current != nullptr)){
+  while ((i != pos) && (current != nullptr)){
     prior = current;
     current = current->next;
     i++;
@@ -423,6 +446,12 @@ void StringBuilder::prepend(unsigned char *nu, int len) {
       memcpy(nu_element->str, nu, len);
       nu_element->next = this->root;
       this->root = nu_element;
+    }
+    else {
+      // We were able to malloc the slot for the string, but not the buffer for
+      // the string itself. We should free() the slot before failing or we will
+      // exacerbate an already-present memory crunch.
+      free(nu_element);
     }
   }
 }
@@ -835,7 +864,7 @@ void StringBuilder::null_term_check() {
 
 /**
 * This method prints ASCII representations of the bytes this instance contains.
-* 
+*
 * @param output The StringBuilder object into which output is written.
 */
 void StringBuilder::printDebug(StringBuilder* output) {

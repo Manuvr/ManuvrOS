@@ -20,7 +20,7 @@ limitations under the License.
 */
 
 
-#include <Kernel.h>
+#include <Platform/Platform.h>
 
 
 EventReceiver::EventReceiver() {
@@ -111,26 +111,10 @@ int8_t EventReceiver::setVerbosity(ManuvrRunnable* active_event) {
 }
 
 
-/*
-* Returns the number of bytes freed.
+/**
+* If the local_log is not empty, forward the logs to the Kernel.
+* This alieviates us of the responsibility of freeing the log.
 */
-int EventReceiver::purgeLogs() {
-  int return_value = 0;
-  int lll = local_log.length();
-  if (lll > 0) {
-    if (getVerbosity() > 4) {
-      Kernel::log(&local_log);
-    }
-    local_log.clear();
-    #ifdef __MANUVR_DEBUG
-    local_log.concatf("%s GCd %d bytes.\n", getReceiverName(), lll);  // TODO: This never happens.
-    Kernel::log(&local_log);
-    #endif
-  }
-  return return_value;
-}
-
-
 void EventReceiver::flushLocalLog() {
   if (local_log.length() > 0) Kernel::log(&local_log);
 }
@@ -159,12 +143,12 @@ void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
       break;
     default:
       #ifdef __MANUVR_DEBUG
-      local_log.concatf("%s: No comprende.\n", getReceiverName());
+      local_log.concatf("%s: No comprendo.\n", getReceiverName());
       #endif
       break;
   }
 
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
 }
 #endif  // __MANUVR_CONSOLE_SUPPORT
 
@@ -175,7 +159,7 @@ void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
 */
 int8_t EventReceiver::raiseEvent(ManuvrRunnable* event) {
   if (event != nullptr) {
-    event->originator = (EventReceiver*) this;
+    event->setOriginator(this);
     return Kernel::staticRaiseEvent(event);
   }
   else {
@@ -203,22 +187,17 @@ void EventReceiver::printDebug(StringBuilder *output) {
 
 
 
-/****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
-* ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
-* ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+/*******************************************************************************
+* ######## ##     ## ######## ##    ## ########  ######
+* ##       ##     ## ##       ###   ##    ##    ##    ##
+* ##       ##     ## ##       ####  ##    ##    ##
+* ######   ##     ## ######   ## ## ##    ##     ######
+* ##        ##   ##  ##       ##  ####    ##          ##
+* ##         ## ##   ##       ##   ###    ##    ##    ##
+* ########    ###    ######## ##    ##    ##     ######
 *
 * These are overrides from EventReceiver interface...
-****************************************************************************************************/
-
+*******************************************************************************/
 
 /**
 * Events that have a calllback value that is not null will have this fxn called
@@ -229,10 +208,22 @@ void EventReceiver::printDebug(StringBuilder *output) {
 */
 int8_t EventReceiver::bootComplete() {
   if (!booted()) {
-    __kernel = Kernel::getInstance();
+    __kernel = platform.kernel();
     _mark_boot_complete();
     return 1;
   }
+  return 0;
+}
+
+
+/**
+* Events that have a calllback value that is not null will have this fxn called
+*   immediately following Event completion.
+* Your shadow can bite.
+*
+* @return 0 on no action, 1 on action, -1 on failure.
+*/
+int8_t EventReceiver::erConfigure(Argument*) {
   return 0;
 }
 
@@ -278,13 +269,23 @@ int8_t EventReceiver::callback_proc(ManuvrRunnable *event) {
 * @return the number of actions taken on this event, or -1 on failure.
 */
 int8_t EventReceiver::notify(ManuvrRunnable *active_event) {
-  switch (active_event->eventCode()) {
-    case MANUVR_MSG_SYS_RELEASE_CRUFT:   // System is telling us to GC if we can.
-      return purgeLogs();
-    case MANUVR_MSG_SYS_LOG_VERBOSITY:
-      return setVerbosity(active_event);
-    case MANUVR_MSG_SYS_BOOT_COMPLETED:
-      return bootComplete();
+  if (active_event) {
+    switch (active_event->eventCode()) {
+      case MANUVR_MSG_SYS_RELEASE_CRUFT:   // System is telling us to GC if we can.
+        flushLocalLog();
+        return 1;
+      case MANUVR_MSG_SYS_LOG_VERBOSITY:
+        return setVerbosity(active_event);
+      case MANUVR_MSG_SYS_BOOT_COMPLETED:
+        return bootComplete();
+      case MANUVR_MSG_SYS_CONF_LOAD:
+        if (active_event->getArgs()) {
+          return erConfigure(active_event->getArgs());
+        }
+        break;
+      default:
+        break;
+    }
   }
   return 0;
 }

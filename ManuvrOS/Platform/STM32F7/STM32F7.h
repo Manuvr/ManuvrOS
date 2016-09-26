@@ -42,38 +42,18 @@ limitations under the License.
 */
 typedef struct __platform_exti_def {
   ManuvrRunnable* event;
-  FunctionPointer fxn;
+  FxnPointer fxn;
   uint8_t         pin;
   uint8_t         condition;
 } PlatformEXTIDef;
 
 
-/*
-* For the STM32 parts, we will treat pins as being the linear sequence of ports
-*   and pins. This incurs a slight performance hit as we need to shift and divide
-*   each time we call a pin by its 8-bit identifier. But this is the cost of
-*   uniformity across platforms.
-*/
-GPIO_TypeDef* _port_assoc[] = {
-  GPIOA,  GPIOB,  GPIOC,  GPIOD,  GPIOE,
-  GPIOF,  GPIOG,  GPIOH,  GPIOI,  GPIOJ,
-  GPIOK
-};
-
-inline GPIO_TypeDef* _associated_port(uint8_t _pin) {
-  return _port_assoc[_pin >> 4];
-}
-
-inline uint16_t _associated_pin(uint8_t _pin) {
-  return (1 << (_pin % 16));
-}
-
-
 
 class STM32F7Platform : public ManuvrPlatform {
   public:
-    virtual int8_t platformPreInit();
-    virtual int8_t platformPostInit();
+    inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
+    virtual int8_t platformPreInit(Argument*);
+    virtual void   printDebug(StringBuilder* out);
 
     /* Platform state-reset functions. */
     virtual void seppuku();           // Simple process termination. Reboots if not implemented.
@@ -81,10 +61,10 @@ class STM32F7Platform : public ManuvrPlatform {
     virtual void hardwareShutdown();
     virtual void jumpToBootloader();
 
-    virtual void printDebug(StringBuilder* out);
-
 
   protected:
+    virtual int8_t platformPostInit();
+
 };
 
 

@@ -328,7 +328,7 @@ int8_t ManuvrUDP::read_port() {
         _open_replies[cli_addr.sin_port] = related_pipe;
         ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
         // Because we allocated the pipe, we must clean it up if it is not taken.
-        event->originator = (EventReceiver*) this;
+        event->setOriginator((EventReceiver*) this);
         //event->addArg(related_pipe);   // Add the newly-minted pipe.
         // Convey the transport. This is optional, but helps downstream classes
         //   make choices about binding to the BufferPipe.
@@ -500,15 +500,13 @@ void ManuvrUDP::printDebug(StringBuilder* output) {
 }
 
 
-
 /**
-* There is a NULL-check performed upstream for the scheduler member. So no need
-*   to do it again here.
+* Boot done finished-up.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t ManuvrUDP::bootComplete() {
-  EventReceiver::bootComplete();   // Call up to get scheduler ref and class init.
+  EventReceiver::bootComplete();
   // Because this is not a stream-oriented transport, the timeout value is used
   //   to periodically flush our connection cache.
   read_abort_event.alterScheduleRecurrence(0);
@@ -546,7 +544,7 @@ int8_t ManuvrUDP::callback_proc(ManuvrRunnable *event) {
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {
     case MANUVR_MSG_XPORT_RECEIVE:
-      if (event->originator == (EventReceiver*) this) {
+      if (event->isOriginator((EventReceiver*) this)) {
         // If we originated this message, it means we attached a BufferPipe that
         //   we allocated. If it is still attached to the event, it means it was
         //   not joined to any other pipe. Clean it up.

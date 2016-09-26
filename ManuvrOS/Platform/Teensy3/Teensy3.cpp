@@ -38,9 +38,6 @@ This file is meant to contain a set of common functions that are typically platf
 #define PLATFORM_GPIO_PIN_COUNT   33
 
 
-ManuvrPlatform platform;
-
-
 #if defined (__MANUVR_FREERTOS)
   #include <FreeRTOS_ARM.h>
 #else
@@ -68,7 +65,6 @@ TeensyStorage _t_storage(nullptr);
 *******************************************************************************/
 volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
 volatile uint8_t  watchdog_mark      = 42;
-unsigned long     start_time_micros  = 0;
 
 
 /*******************************************************************************
@@ -122,9 +118,9 @@ void init_rng() {
 * (_)   (___)`\__,_)`\__)(_)  `\___/'(_)   (_) (_) (_)
 * These are overrides and additions to the platform class.
 *******************************************************************************/
-void ManuvrPlatform::printDebug(StringBuilder* output) {
+void Teensy3::printDebug(StringBuilder* output) {
   output->concatf("==< Teensy3 [%s] >================================\n", getPlatformStateStr(platformState()));
-  printPlatformBasics(output);
+  ManuvrPlatform::printDebug(output);
 }
 
 
@@ -280,7 +276,7 @@ int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrRunnable* isr_event) {
 /*
 * Pass the function pointer
 */
-int8_t setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn) {
+int8_t setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn) {
   attachInterrupt(pin, fxn, condition);
   return 0;
 }
@@ -312,13 +308,13 @@ int readPinAnalog(uint8_t pin) {
 *******************************************************************************/
 #if defined(MANUVR_STORAGE)
   // Called during boot to load configuration.
-  int8_t ManuvrPlatform::_load_config() {
-    if (nullptr != _storage_device) {
+  int8_t Teensy3::_load_config() {
+    if (_storage_device) {
       if (_storage_device->isMounted()) {
         uint8_t raw[2044];
         int len = _storage_device->persistentRead(NULL, raw, 2044, 0);
         _config = Argument::decodeFromCBOR(raw, len);
-        if (nullptr != _config) {
+        if (_config) {
           return 0;
         }
       }
@@ -352,7 +348,7 @@ int readPinAnalog(uint8_t pin) {
 * Terminate this running process, along with any children it may have forked() off.
 * Never returns.
 */
-void ManuvrPlatform::seppuku() {
+void Teensy3::seppuku() {
   reboot();
 }
 
@@ -361,7 +357,7 @@ void ManuvrPlatform::seppuku() {
 * Jump to the bootloader.
 * Never returns.
 */
-void ManuvrPlatform::jumpToBootloader() {
+void Teensy3::jumpToBootloader() {
   cli();
   _reboot_Teensyduino_();
 }
@@ -375,7 +371,7 @@ void ManuvrPlatform::jumpToBootloader() {
 * This means "Halt" on a base-metal build.
 * Never returns.
 */
-void ManuvrPlatform::hardwareShutdown() {
+void Teensy3::hardwareShutdown() {
   cli();
   while(true);
 }
@@ -384,7 +380,7 @@ void ManuvrPlatform::hardwareShutdown() {
 * Causes immediate reboot.
 * Never returns.
 */
-void ManuvrPlatform::reboot() {
+void Teensy3::reboot() {
   cli();
   *((uint32_t *)0xE000ED0C) = 0x5FA0004;
 }
@@ -396,29 +392,17 @@ void ManuvrPlatform::reboot() {
 *******************************************************************************/
 #define  DEFAULT_PLATFORM_FLAGS ( \
               MANUVR_PLAT_FLAG_INNATE_DATETIME | \
+              MANUVR_PLAT_FLAG_SERIALED | \
               MANUVR_PLAT_FLAG_HAS_IDENTITY)
 
 /*
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
 */
-int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
-  // TODO: Should we really be setting capabilities this late?
-  uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
-  #if defined (__MANUVR_FREERTOS)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_THREADS;
-    //platform.setIdleHook([]{ sleep_millis(20); });
-  #endif
-  #if defined(__MANUVR_MBEDTLS)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
-  #endif
-  #if defined(MANUVR_GPS_PIPE)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
-  #endif
-  _alter_flags(true, default_flags);
+int8_t Teensy3::platformPreInit(Argument* root_config) {
+  ManuvrPlatform::platformPreInit(root_config);
+  _alter_flags(true, DEFAULT_PLATFORM_FLAGS);
 
-  _discoverALUParams();
-  start_time_micros = micros();
   init_rng();
   _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
 
@@ -428,8 +412,10 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
   gpioSetup();
 
+  if (root_config) {
+  }
+
   #if defined(MANUVR_STORAGE)
-    _alter_flags(true, MANUVR_PLAT_FLAG_HAS_STORAGE);
     _storage_device = (Storage*) &_t_storage;
     _kernel.subscribe((EventReceiver*) &_t_storage);
   #endif
@@ -440,7 +426,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
 /*
 * Called as a result of kernels bootstrap() fxn.
 */
-int8_t ManuvrPlatform::platformPostInit() {
+int8_t Teensy3::platformPostInit() {
   #if defined (__MANUVR_FREERTOS)
   #else
   // No threads. We are responsible for pinging our own scheduler.

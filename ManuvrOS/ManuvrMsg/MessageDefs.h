@@ -84,6 +84,8 @@ limitations under the License.
   #define MANUVR_MSG_SYS_ADVERTISE_SRVC   0x0028 // A system service might feel the need to advertise it's arrival.
   #define MANUVR_MSG_SYS_RETRACT_SRVC     0x0029 // A system service sends this to tell others to stop using it.
   #define MANUVR_MSG_SYS_FAULT_REPORT     0x002A // Something in the system soft-errored.
+  #define MANUVR_MSG_SYS_CONF_LOAD        0x002B // Recipients will comb arguments for config and apply it.
+  #define MANUVR_MSG_SYS_CONF_SAVE        0x002C // Recipients will attached their persistable data.
 
   #define MANUVR_MSG_SYS_RELEASE_CRUFT    0x002F // The system is asking EventReceivers to GC if we can.
 
@@ -116,6 +118,14 @@ limitations under the License.
   // Codes that are only meaningful with firmware running Linux.
 
   // Codes that are only meaningful with firmware running FreeRTOS.
+
+
+  // Codes that are only meaningful with firmware using OIC framework.
+  #define MANUVR_MSG_OIC_READY            0x00F0 // Framework came online.
+  #define MANUVR_MSG_OIC_REG_RESOURCES    0x00F1 // Framework is calling for resource registration.
+  #define MANUVR_MSG_OIC_DISCOVERY        0x00FD // A device was found.
+  #define MANUVR_MSG_OIC_DISCOVER_OFF     0x00FE // Turns off discoverability.
+  #define MANUVR_MSG_OIC_DISCOVER_PING    0x00FF // Pings the world.
 
 
   // Scheduler

@@ -39,9 +39,7 @@ tcp-gps demo application.
 #include <fcntl.h>
 #include <termios.h>
 
-#include "FirmwareDefs.h"
-
-#include <Kernel.h>
+#include <Platform/Platform.h>
 
 // Transports...
 #include <Transports/ManuvrSocket/ManuvrTCP.h>

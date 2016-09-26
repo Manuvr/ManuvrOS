@@ -42,14 +42,10 @@ This is a demonstration program, and was meant to be compiled for a
 */
 #include <Drivers/ManuvrableGPIO/ManuvrableGPIO.h>
 
-#include <Drivers/LightSensor/LightSensor.h>
-#include <Drivers/ADCScanner/ADCScanner.h>
-
 /* Transports... */
 #include <Transports/ManuvrSerial/ManuvrSerial.h>
 #include <Transports/ManuvrSocket/ManuvrUDP.h>
 #include <Transports/ManuvrSocket/ManuvrTCP.h>
-#include <Transports/StandardIO/StandardIO.h>
 #include <Transports/BufferPipes/ManuvrTLS/ManuvrTLS.h>
 
 /* Concepts of "session"... */
@@ -60,9 +56,6 @@ This is a demonstration program, and was meant to be compiled for a
 
 /* This global makes this source file read better. */
 Kernel* kernel = nullptr;
-
-//TODO: This is for platform. It will not last long.
-char* program_name = nullptr;
 
 #include <Platform/Platform.h>
 
@@ -112,16 +105,21 @@ void kernelDebugDump() {
 /*******************************************************************************
 * The main function.                                                           *
 *******************************************************************************/
-int main(int argc, char *argv[]) {
-  int   main_pid     = getpid();  // Our PID.
-  program_name = argv[0];   // Name of running binary.
+int main(int argc, const char *argv[]) {
+  Argument* opts = parseFromArgCV(argc, argv);
+
+  if (opts) {
+    StringBuilder log;
+    opts->printDebug(&log);
+    printf("%s\n\n\n", (char*) log.string());
+  }
 
   /*
   * The platform object is created on the stack, but takes no action upon
   *   construction. The first thing that should be done is to call the preinit
   *   function to setup the defaults of the platform.
   */
-  platform.platformPreInit();
+  platform.platformPreInit(opts);
 
   /*
   * Because our persona isn't yet fully-derived from config (and may not ever
@@ -162,48 +160,13 @@ int main(int argc, char *argv[]) {
   * At this point, we should instantiate whatever specific functionality we
   *   want this Manuvrable to have.
   */
-  // Parse through all the command line arguments and flags...
-  // Please note that the order matters. Put all the most-general matches at the bottom of the loop.
-  for (int i = 1; i < argc; i++) {
-    if ((strcasestr(argv[i], "--version")) || ((argv[i][0] == '-') && (argv[i][1] == 'v'))) {
-      // Print the version and quit.
-      printf("%s v%s\n\n", argv[0], VERSION_STRING);
-      exit(0);
-    }
-    if ((strcasestr(argv[i], "--info")) || ((argv[i][0] == '-') && (argv[i][1] == 'i'))) {
-      // Cause the kernel to write a self-report to its own log.
-      platform.printDebug();
-    }
-    if ((strcasestr(argv[i], "--console")) || ((argv[i][0] == '-') && (argv[i][1] == 'c'))) {
-      // The user wants a local stdio "Shell".
-      #if defined(__MANUVR_CONSOLE_SUPPORT)
-        // TODO: Until smarter idea is finished, manually patch the transport
-        //         into a console session.
-        StandardIO* _console_xport = new StandardIO();
-        ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_xport);
-        kernel->subscribe((EventReceiver*) _console);
-        kernel->subscribe((EventReceiver*) _console_xport);
-      #else
-        printf("%s was compiled without any console support. Ignoring directive...\n", argv[0]);
-      #endif
-    }
-    if ((strcasestr(argv[i], "--serial")) && (argc > (i-2))) {
-      // The user wants us to listen to the given serial port.
-      #if defined (MANUVR_SUPPORT_SERIAL)
-        ManuvrSerial* ser = new ManuvrSerial((const char*) argv[++i], 9600);
-        kernel->subscribe(ser);
-      #else
-        printf("%s was compiled without serial port support. Exiting...\n", argv[0]);
-        exit(1);
-      #endif
-    }
-    if ((strcasestr(argv[i], "--quit")) || ((argv[i][0] == '-') && (argv[i][1] == 'q'))) {
-      // Execute up-to-and-including boot. Then immediately shutdown.
-      // This is how you can stack post-boot-operations into the kernel.
-      // They will execute following the BOOT_COMPLETE message.
-      Kernel::raiseEvent(MANUVR_MSG_SYS_SHUTDOWN, NULL);
-    }
-  }
+  #if defined (MANUVR_SUPPORT_SERIAL)
+    //if ((strcasestr(argv[i], "--serial")) && (argc > (i-2))) {
+    //// The user wants us to listen to the given serial port.
+    //  ManuvrSerial* ser = new ManuvrSerial((const char*) argv[++i], 9600);
+    //  kernel->subscribe(ser);
+    //}
+  #endif
 
   #if defined(RASPI) || defined(RASPI2)
     // If we are running on a RasPi, let's try to fire up the i2c that is almost
@@ -279,7 +242,7 @@ int main(int argc, char *argv[]) {
   #endif
 
   // Once we've loaded up all the goodies we want, we finalize everything thusly...
-  printf("%s: Booting Manuvr (PID %u)....\n", program_name, main_pid);
+  printf("%s: Booting Manuvr (PID %u)....\n", argv[0], getpid());
   platform.bootstrap();
 
 

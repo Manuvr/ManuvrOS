@@ -195,6 +195,13 @@ class BufferPipe {
     virtual int8_t fromCounterparty(StringBuilder*, int8_t mm);
 
     /*
+    * Used by pipes that wish to force asynchronicity WRT to their
+    *   buffer movements. It is at discretion of the over-riding class how
+    *   to handle this. Returns nothing.
+    */
+    virtual void asyncCallback() {};
+
+    /*
     * Allows a pointer-length interface.
     */
     int8_t toCounterparty(uint8_t* buf, unsigned int len, int8_t mm);
@@ -214,6 +221,7 @@ class BufferPipe {
 
     /* Join the ends of this pipe to one-another. */
     int8_t joinEnds();
+
 
     // These inlines are for convenience of extending classes.
     // TODO: Ought to be private.

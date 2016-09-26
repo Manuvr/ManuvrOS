@@ -26,10 +26,9 @@ TODO: It does not do this. Need to finish addressing issues with the build
 
 
 #include "ManuvrSocket.h"
-#include "FirmwareDefs.h"
-#include <ManuvrOS/XenoSession/XenoSession.h>
+#include <XenoSession/XenoSession.h>
 
-#include <ManuvrOS/Kernel.h>
+#include <Platform/Platform.h>
 
 #if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
   #include <arpa/inet.h>
@@ -172,10 +171,9 @@ void ManuvrTelehash::__class_initializer() {
 
 
   // Build some pre-formed Events.
-  read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
+  read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY, (EventReceiver*) this);
   read_abort_event.isManaged(true);
   read_abort_event.specific_target = (EventReceiver*) this;
-  read_abort_event.originator      = (EventReceiver*) this;
   read_abort_event.priority        = 5;
   read_abort_event.addArg(xport_id);  // Add our assigned transport ID to our pre-baked argument.
 
@@ -435,10 +433,7 @@ void ManuvrTelehash::printDebug(StringBuilder *temp) {
 
 
 /**
-* TODO: Until I do something smarter...
-* We are obliged to call the ManuvrXport's version of bootComplete(), which in turn
-*   will call the EventReceiver version of that fxn.
-* ---J. Ian Lindsay   Thu Dec 03 03:25:48 MST 2015
+* Boot done finished-up.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */

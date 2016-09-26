@@ -39,7 +39,6 @@ This file is meant to contain a set of common functions that are typically platf
 ****************************************************************************************************/
 volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
 volatile uint8_t  watchdog_mark      = 42;
-unsigned long     start_time_micros  = 0;
 
 
 /****************************************************************************************************
@@ -74,6 +73,7 @@ volatile bool provide_random_int(uint32_t nu_rnd) {
 */
 void init_RNG() {
   srand(time(nullptr));          // Seed the PRNG...
+  _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
 }
 
 
@@ -192,7 +192,7 @@ void setPinEvent(uint8_t pin, uint8_t condition, ManuvrRunnable* isr_event) {
 /*
 * Pass the function pointer
 */
-void setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn) {
+void setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn) {
   attachInterrupt(pin, condition, fxn);
 }
 
@@ -227,11 +227,6 @@ int readPinAnalog(uint8_t pin) {
 * Misc                                                                                              *
 ****************************************************************************************************/
 
-void platformInit() {
-  start_time_micros = micros();
-  init_RNG();
-}
-
 volatile void jumpToBootloader(void) {
   executeSoftReset(0);
 }
@@ -258,25 +253,12 @@ uint32_t timerCallbackScheduler(uint32_t currentTime) {
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
 */
-int8_t ManuvrPlatform::platformPreInit() {
-  // TODO: Should we really be setting capabilities this late?
+int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
+  ManuvrPlatform::platformPreInit(root_config);
   uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
+  _alter_flags(true, DEFAULT_PLATFORM_FLAGS);
 
-  #if defined(__MANUVR_MBEDTLS)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
-  #endif
-
-  #if defined(MANUVR_GPS_PIPE)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
-  #endif
-
-  _alter_flags(true, default_flags);
-  _discoverALUParams();
-
-  start_time_micros = micros();
-  init_rng();
-  _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
-
+  init_RNG();
   return 0;
 }
 
@@ -286,8 +268,8 @@ int8_t ManuvrPlatform::platformPreInit() {
 *   internal system sanity.
 */
 int8_t ManuvrPlatform::platformPostInit() {
-  if (nullptr == _identity) {
-    _identity = new IdentityUUID(IDENTITY_STRING);
+  if (nullptr == _self) {
+    _self = new IdentityUUID(IDENTITY_STRING);
   }
   attachCoreTimerService(timerCallbackScheduler);
   globalIRQEnable();

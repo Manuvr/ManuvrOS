@@ -24,9 +24,10 @@ This class represents our type-abstraction layer. It is the means by which
 
 
 #include "Argument.h"
-#include <string.h>
 
 #include <DataStructures/PriorityQueue.h>
+
+#include <Platform/Identity.h>
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -39,7 +40,6 @@ This class represents our type-abstraction layer. It is the means by which
 * Static members and initializers should be located here.
 *******************************************************************************/
 #if defined(MANUVR_CBOR)
-
 
 int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
   cbor::output_dynamic output;
@@ -87,6 +87,57 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
           }
         }
         break;
+
+      case STR_FM:
+        {
+          char* buf;
+          if (0 == src->getValueAs(&buf)) {
+            encoder.write_string(buf);
+          }
+        }
+        break;
+      case STR_BUILDER_FM:
+        {
+          StringBuilder* buf;
+          if (0 == src->getValueAs(&buf)) {
+            encoder.write_string((char*) buf->string());
+          }
+        }
+        break;
+      case BINARY_FM:
+        {
+          uint8_t* buf;
+          if (0 == src->getValueAs(&buf)) {
+            encoder.write_bytes(buf, src->length());
+          }
+        }
+        break;
+      case IDENTITY_FM:
+        {
+          Identity* ident;
+          if (0 == src->getValueAs(&ident)) {
+            uint16_t i_len = ident->length();
+            uint8_t buf[i_len];
+            if (ident->toBuffer(buf)) {
+              encoder.write_tag(IDENTITY_FM);
+              encoder.write_bytes(buf, i_len);
+            }
+          }
+        }
+        break;
+      case ARGUMENT_PTR_FM:
+        {
+          StringBuilder intermediary;
+          Argument *subj;
+          if (0 == src->getValueAs(&subj)) {
+            // NOTE: Recursion.
+            if (Argument::encodeToCBOR(subj, &intermediary)) {
+              encoder.write_tag(ARGUMENT_PTR_FM);
+              encoder.write_bytes(intermediary.string(), intermediary.length());
+            }
+          }
+        }
+        break;
     }
     src = src->_next;
   }
@@ -99,76 +150,6 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
 
 
 
-CBORArgListener::CBORArgListener(Argument** target) {    built = target;    }
-
-CBORArgListener::~CBORArgListener() {
-	// JIC...
-	if (nullptr != _wait) {
-		free(_wait);
-		_wait = nullptr;
-	}
-}
-
-void CBORArgListener::_caaa(Argument* nu) {
-	if (nullptr != _wait) {
-		nu->setKey(_wait);
-		_wait = nullptr;
-		nu->reapKey(true);
-	}
-
-  if ((nullptr != built) && (nullptr != *built)) {
-    (*built)->append(nu);
-  }
-  else {
-    *built = nu;
-  }
-
-	if (0 < _wait_map)   _wait_map--;
-	if (0 < _wait_array) _wait_array--;
-}
-
-
-void CBORArgListener::on_string(char* val) {
-	if (nullptr == _wait) {
-		// We need to copy the string. It will be the key for the Argument
-		//   who's value is forthcoming.
-		int len = strlen(val);
-		_wait = (char*) malloc(len+1);
-		if (nullptr != _wait) {
-			memcpy(_wait, val, len+1);
-		}
-	}
-	else {
-		// There is a key assignment waiting. This must be the value.
-		_caaa(new Argument(val));
-	}
-};
-
-void CBORArgListener::on_bytes(uint8_t* data, int size) { _caaa(new Argument(data, size));      };
-void CBORArgListener::on_integer(int val) {               _caaa(new Argument((int32_t) val));   };
-void CBORArgListener::on_tag(unsigned int tag) {          _caaa(new Argument((uint32_t) tag));  };
-void CBORArgListener::on_special(unsigned int code) {     _caaa(new Argument((uint32_t) code)); };
-
-void CBORArgListener::on_array(int size) {
-	_wait_array = (int32_t) size;
-};
-
-void CBORArgListener::on_map(int size) {
-	_wait_map   = (int32_t) size;
-
-	if (nullptr != _wait) {
-		// Flush so we can discover problems.
-		free(_wait);
-		_wait = nullptr;
-	}
-};
-
-void CBORArgListener::on_error(const char* error) {    _caaa(new Argument(error));   };
-void CBORArgListener::on_extra_integer(unsigned long long value, int sign) {}
-void CBORArgListener::on_extra_tag(unsigned long long tag) {}
-void CBORArgListener::on_extra_special(unsigned long long tag) {}
-
-
 Argument* Argument::decodeFromCBOR(uint8_t* src, unsigned int len) {
   Argument* return_value = nullptr;
   CBORArgListener listener(&return_value);
@@ -177,9 +158,8 @@ Argument* Argument::decodeFromCBOR(uint8_t* src, unsigned int len) {
   decoder.run();
   return return_value;
 }
+#endif  // MANUVR_CBOR
 
-
-#endif
 
 #if defined(MANUVR_JSON)
 #include "jansson/include/jansson.h"
@@ -265,6 +245,26 @@ void Argument::wipe() {
 
 
 /**
+* Given an Argument pointer, finds that pointer and drops it from the list.
+*
+* @param  drop  The Argument to drop.
+* @return       0 on success. 1 on warning, -1 on "not found".
+*/
+int8_t Argument::dropArg(Argument** root, Argument* drop) {
+  if (*root == drop) {
+    // Re-write the root parameter.
+    root = &_next; // NOTE: may be null. Who cares.
+    return 0;
+  }
+  else if (_next && _next == drop) {
+    _next = _next->_next; // NOTE: may be null. Who cares.
+    return 0;
+  }
+  return (_next) ? _next->dropArg(root, drop) : -1;
+}
+
+
+/**
 * Takes all the keys in the provided argument chain and for any
 *   that are ID'd by string keys, prints them to the provided buffer.
 *
@@ -313,7 +313,9 @@ int8_t Argument::getValueAs(uint8_t idx, void* trg_buf) {
 int8_t Argument::getValueAs(const char* k, void* trg_buf) {
   if (nullptr != k) {
     if (nullptr != _key) {
-      if (_key == k) {
+      //if (_key == k) {
+      // TODO: Awful. Hash map? pointer-comparisons?
+      if (0 == strcmp(_key, k)) {
         // If pointer comparison worked, return the value.
         return getValueAs(trg_buf);
       }
@@ -372,14 +374,12 @@ int8_t Argument::getValueAs(void* trg_buf) {
       case STR_BUILDER_FM:          // This is a pointer to some StringBuilder. Presumably this is on the heap.
       case STR_FM:                  // This is a pointer to a string constant. Presumably this is stored in flash.
       case BUFFERPIPE_PTR_FM:       // This is a pointer to a BufferPipe/.
-      case SYS_RUNNABLE_PTR_FM:     // This is a pointer to ManuvrRunnable.
+      case SYS_RUNNABLE_PTR_FM:     // This is a pointer to ManuvrMsg.
       case SYS_EVENTRECEIVER_FM:    // This is a pointer to an EventReceiver.
       case SYS_MANUVR_XPORT_FM:     // This is a pointer to a transport.
+      default:
         return_value = 0;
         *((uintptr_t*) trg_buf) = *((uintptr_t*)&target_mem);
-        break;
-      default:
-        return_value = -2;
         break;
     }
   }
@@ -395,8 +395,6 @@ int8_t Argument::getValueAs(void* trg_buf) {
 * Returns 0 (0) on success.
 */
 int8_t Argument::serialize(StringBuilder *out) {
-  if (out == NULL) return -1;
-
   unsigned char *temp_str = (unsigned char *) target_mem;   // Just a general use pointer.
 
   unsigned char *scratchpad = (unsigned char *) alloca(258);  // This is the maximum size for an argument.
@@ -547,14 +545,14 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
 
 
 /**
-* @return A pointer to the appended argument.
+* @return A pointer to the linked argument.
 */
-Argument* Argument::append(Argument* arg) {
+Argument* Argument::link(Argument* arg) {
   if (nullptr == _next) {
     _next = arg;
     return arg;
   }
-  return _next->append(arg);
+  return _next->link(arg);
 }
 
 
@@ -583,6 +581,30 @@ Argument* Argument::retrieveArgByIdx(int idx) {
   else {
     return this;
   }
+}
+
+
+/*
+* Does an Argument in our rank have the given key?
+*
+* Returns nullptr if the answer is 'no'. Otherwise, ptr to the first matching key.
+*/
+Argument* Argument::retrieveArgByKey(const char* k) {
+  if (nullptr != k) {
+    if (nullptr != _key) {
+      //if (_key == k) {
+      // TODO: Awful. Hash map? pointer-comparisons?
+      if (0 == strcmp(_key, k)) {
+        // If pointer comparison worked, we win.
+        return this;
+      }
+    }
+
+    if (nullptr != _next) {
+      return _next->retrieveArgByKey(k);
+    }
+  }
+  return nullptr;
 }
 
 

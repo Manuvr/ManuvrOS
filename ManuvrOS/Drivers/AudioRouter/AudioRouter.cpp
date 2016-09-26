@@ -40,12 +40,12 @@ const MessageTypeDef message_defs_viam_sonus[] = {
   {  VIAM_SONUS_MSG_NAME_INPUT_CHAN,   MSG_FLAG_EXPORTABLE,     "NAME_INPUT_CHAN",   ManuvrMsg::MSG_ARGS_NONE }, //
   {  VIAM_SONUS_MSG_NAME_OUTPUT_CHAN,  MSG_FLAG_EXPORTABLE,     "NAME_OUTPUT_CHAN",  ManuvrMsg::MSG_ARGS_NONE }, //
   {  VIAM_SONUS_MSG_DUMP_ROUTER,       MSG_FLAG_EXPORTABLE,     "DUMP_ROUTER",       ManuvrMsg::MSG_ARGS_NONE }, //
-  {  VIAM_SONUS_MSG_OUTPUT_CHAN_VOL,   MSG_FLAG_EXPORTABLE,     "OUTPUT_CHAN_VOL",   ManuvrMsg::MSG_ARGS_U8_U8 }, // Either takes a global volume, or a volume and a specific channel.
-  {  VIAM_SONUS_MSG_UNROUTE,           MSG_FLAG_EXPORTABLE,     "UNROUTE",           ManuvrMsg::MSG_ARGS_U8   },  // Unroutes the given channel, or all channels.
-  {  VIAM_SONUS_MSG_ROUTE,             MSG_FLAG_EXPORTABLE,     "ROUTE",             ManuvrMsg::MSG_ARGS_U8_U8 }, // Routes the input to the output.
-  {  VIAM_SONUS_MSG_PRESERVE_ROUTES,   MSG_FLAG_EXPORTABLE,     "PRESERVE_ROUTES",   ManuvrMsg::MSG_ARGS_NONE },  //
-  {  VIAM_SONUS_MSG_GROUP_CHANNELS,    MSG_FLAG_EXPORTABLE,     "GROUP_CHANNELS",    ManuvrMsg::MSG_ARGS_U8_U8 }, // Pass two output channels to group them (stereo).
-  {  VIAM_SONUS_MSG_UNGROUP_CHANNELS,  MSG_FLAG_EXPORTABLE,     "UNGROUP_CHANNELS",  ManuvrMsg::MSG_ARGS_NONE }   // Pass a group ID to free the channels it contains, or no args to ungroup everything.
+  {  VIAM_SONUS_MSG_OUTPUT_CHAN_VOL,   MSG_FLAG_EXPORTABLE,     "OUTPUT_CHAN_VOL",   ManuvrMsg::MSG_ARGS_NONE }, // Either takes a global volume, or a volume and a specific channel.
+  {  VIAM_SONUS_MSG_UNROUTE,           MSG_FLAG_EXPORTABLE,     "UNROUTE",           ManuvrMsg::MSG_ARGS_NONE }, // Unroutes the given channel, or all channels.
+  {  VIAM_SONUS_MSG_ROUTE,             MSG_FLAG_EXPORTABLE,     "ROUTE",             ManuvrMsg::MSG_ARGS_NONE }, // Routes the input to the output.
+  {  VIAM_SONUS_MSG_PRESERVE_ROUTES,   MSG_FLAG_EXPORTABLE,     "PRESERVE_ROUTES",   ManuvrMsg::MSG_ARGS_NONE }, //
+  {  VIAM_SONUS_MSG_GROUP_CHANNELS,    MSG_FLAG_EXPORTABLE,     "GROUP_CHANNELS",    ManuvrMsg::MSG_ARGS_NONE }, // Pass two output channels to group them (stereo).
+  {  VIAM_SONUS_MSG_UNGROUP_CHANNELS,  MSG_FLAG_EXPORTABLE,     "UNGROUP_CHANNELS",  ManuvrMsg::MSG_ARGS_NONE }  // Pass a group ID to free the channels it contains, or no args to ungroup everything.
 };
 
 

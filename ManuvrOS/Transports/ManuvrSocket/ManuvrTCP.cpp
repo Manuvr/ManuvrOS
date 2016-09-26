@@ -26,7 +26,7 @@ This is basically only for linux for now.
 #if defined(MANUVR_SUPPORT_TCPSOCKET)
 
 #include "ManuvrTCP.h"
-#include "FirmwareDefs.h"
+#include <CommonConstants.h>
 
 #include <Kernel.h>
 
@@ -136,25 +136,22 @@ This is basically only for linux for now.
 /**
 * Constructor.
 */
-ManuvrTCP::ManuvrTCP(const char* addr, int port) : ManuvrSocket(addr, port, 0) {
-  setReceiverName("ManuvrTCP");
-  set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED | MANUVR_XPORT_FLAG_HAS_MULTICAST);
-}
-
-
 ManuvrTCP::ManuvrTCP(const char* addr, int port, uint32_t opts) : ManuvrSocket(addr, port, opts) {
   setReceiverName("ManuvrTCP");
-  set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED | MANUVR_XPORT_FLAG_HAS_MULTICAST);
+  set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED);
 }
 
+/**
+* Constructor.
+*/
+ManuvrTCP::ManuvrTCP(const char* addr, int port) : ManuvrTCP(addr, port, 0) {
+}
 
 /**
 * This constructor is called by a listening instance of ManuvrTCP.
 */
 // TODO: This is very ugly.... Might need a better way of fractioning into new threads...
-ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in* nu_sockaddr) : ManuvrSocket(listening_instance->_addr, listening_instance->_port_number, 0) {
-  setReceiverName("ManuvrTCP");
-  set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED | MANUVR_XPORT_FLAG_HAS_MULTICAST);
+ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in* nu_sockaddr) : ManuvrTCP(listening_instance->_addr, listening_instance->_port_number, 0) {
   _sock          = sock;
   _options       = listening_instance->_options;
 
@@ -165,7 +162,6 @@ ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in
     *((uint8_t *) &_sockaddr + i) = *(((uint8_t*)nu_sockaddr) + i);
   }
 
-  bootComplete();
   connected(true);  // TODO: Possibly not true....
 }
 
@@ -392,8 +388,6 @@ bool ManuvrTCP::write_port(unsigned char* out, int out_len) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void ManuvrTCP::printDebug(StringBuilder *temp) {
-  if (temp == NULL) return;
-
   ManuvrXport::printDebug(temp);
   temp->concatf("-- _addr           %s:%d\n",  _addr, _port_number);
   temp->concatf("-- _options        0x%08x\n", _options);
@@ -402,22 +396,18 @@ void ManuvrTCP::printDebug(StringBuilder *temp) {
 
 
 /**
-* TODO: Until I do something smarter...
-* We are obliged to call the ManuvrXport's version of bootComplete(), which in turn
-*   will call the EventReceiver version of that fxn.
-* ---J. Ian Lindsay   Thu Dec 03 03:25:48 MST 2015
+* Boot done finished-up.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t ManuvrTCP::bootComplete() {   // ?? TODO ??
+int8_t ManuvrTCP::bootComplete() {
   EventReceiver::bootComplete();
 
   // We will suffer a 300ms latency if the platform's networking stack doesn't flush
   //   its buffer in time.
-  read_abort_event.repurpose(MANUVR_MSG_XPORT_RECEIVE);
+  read_abort_event.repurpose(MANUVR_MSG_XPORT_RECEIVE, (EventReceiver*) this);
   read_abort_event.isManaged(true);
   read_abort_event.specific_target = (EventReceiver*) this;
-  read_abort_event.originator      = (EventReceiver*) this;
   read_abort_event.alterScheduleRecurrence(0);
   read_abort_event.alterSchedulePeriod(300);
   read_abort_event.autoClear(false);

@@ -33,7 +33,7 @@ Platforms that require it should be able to extend this driver for specific
 #if defined(MANUVR_SUPPORT_TCPSOCKET) | defined(MANUVR_SUPPORT_UDP)
 
 #include "ManuvrSocket.h"
-#include "FirmwareDefs.h"
+#include <CommonConstants.h>
 
 #include <Kernel.h>
 #include <Platform/Platform.h>
@@ -101,10 +101,9 @@ void ManuvrSocket::__class_initializer() {
   #endif
 
   // Build some pre-formed Events.
-  read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
+  read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY, (EventReceiver*) this);
   read_abort_event.isManaged(true);
   read_abort_event.specific_target = (EventReceiver*) this;
-  read_abort_event.originator      = (EventReceiver*) this;
   read_abort_event.addArg(xport_id);  // Add our assigned transport ID to our pre-baked argument.
 }
 

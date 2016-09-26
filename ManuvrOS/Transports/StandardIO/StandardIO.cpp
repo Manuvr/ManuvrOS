@@ -22,10 +22,9 @@ StandardIO is the transport driver for wrapping POSIX-style STDIN/STDOUT/STDERR.
 */
 
 
-#if defined(__MANUVR_LINUX) && defined(MANUVR_STDIO)
+#if defined(__MANUVR_LINUX)
 
 #include "StandardIO.h"
-#include "FirmwareDefs.h"
 #include <XenoSession/XenoSession.h>
 #include <XenoSession/Console/ManuvrConsole.h>
 
@@ -39,6 +38,8 @@ StandardIO is the transport driver for wrapping POSIX-style STDIN/STDOUT/STDERR.
 // Threaded platforms will need this to compensate for a loss of ISR.
 extern void* xport_read_handler(void* active_xport);
 
+
+extern char* _binary_name;  // TODO: Eliminate. One more step.
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -82,10 +83,9 @@ StandardIO::~StandardIO() {
 void StandardIO::__class_initializer() {
   setReceiverName("StandardIO");
   // Build some pre-formed Events.
-  read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY);
+  read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY, (EventReceiver*) this);
   read_abort_event.isManaged(true);
   read_abort_event.specific_target = (EventReceiver*) this;
-  read_abort_event.originator      = (EventReceiver*) this;
   read_abort_event.priority        = 5;
   read_abort_event.addArg(xport_id);  // Add our assigned transport ID to our pre-baked argument.
   _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
@@ -117,7 +117,7 @@ int8_t StandardIO::toCounterparty(StringBuilder* buf, int8_t mm) {
     }
 
     // TODO: This prompt ought to be in the console session.
-    printf("\n%c[36mManuvr> %c[39m", 0x1B, 0x1B);
+    printf("\n%c[36m%s> %c[39m", 0x1B, _binary_name, 0x1B);
     fflush(stdout);
     return MEM_MGMT_RESPONSIBLE_BEARER;
   }
@@ -287,4 +287,4 @@ int8_t StandardIO::notify(ManuvrRunnable *active_event) {
   return return_value;
 }
 
-#endif  // __MANUVR_LINUX && MANUVR_STDIO
+#endif  // __MANUVR_LINUX

@@ -17,8 +17,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
+
 */
 
+// TODO: Might-should adopt some IANA standard code-spaces here? Is there a
+//   painless way to get better inter-op? Dig...
+
+// TODO: Also... this entire file is ugly-as-hell.
+// TODO: Re-work it as enum class, or struct or ANYTHING else.
 
 #ifndef __ENUMERATED_TYPE_CODES_H__
 #define __ENUMERATED_TYPE_CODES_H__
@@ -26,10 +32,29 @@ limitations under the License.
 #include <inttypes.h>
 #include <stddef.h>
 
-// Function-pointer definitions
-typedef void  (*FunctionPointer) ();
-typedef void* (*ThreadFxnPtr)    (void*);
+class BufferPipe;
+class Argument;
 
+/*******************************************************************************
+* Function-pointer definitions.                                                *
+* These are typedefs to accomodate different types of callbacks.               *
+*******************************************************************************/
+/* Vanilla. */
+typedef void  (*FxnPointer)();
+
+/* A unifying type for different threading models. */
+typedef void* (*ThreadFxnPtr)(void*);
+
+/* Takes an Argument list and returns a code. */
+typedef int (*ArgumentFxnPtr)(Argument*);
+
+/*
+* Used in Async BufferPipes to move data in idle-time.
+* if direction is negative, buffer will flush toward counterparty.
+* if direction is positive, buffer will flush toward application.
+* if direction is zero, buffer will purge with no transfer.
+*/
+typedef void  (*PipeIOCallback)(BufferPipe*, int direction);
 
 /**
 * This is the structure with which we define types. These types are used by a variety of
@@ -58,25 +83,26 @@ typedef struct typecode_def_t {
 #define TYPE_CODE_FLAG_RESERVED_1          0b01000000   // Reserved for future use.
 #define TYPE_CODE_FLAG_RESERVED_0          0b10000000   // Reserved for future use.
 
-
 /**
 * Special cases.
 */
-#define RSRVD_FM       0xFF    // This type is reserved because it might be used for other things by other libraries.
 #define NOTYPE_FM      0x00    // This is usually an indication of a failure to init.
+#define RSRVD_FM       0xFF    // This type is reserved because it might be used for other things by other libraries.
 
 /**
 * Pointer types. These do not require a malloc() but they will not make sense to any
 *   software running outside of our memory-scope. The values, therefore, will require
 *   translation into one of the hard types before being sent.
 */
-#define UINT32_PTR_FM     0xA0 // A pointer to a StringBuilder.
-#define UINT16_PTR_FM     0xA1 // Unsigned 16-bit integer
-#define UINT8_PTR_FM      0xA2 // Unsigned 8-bit integer
-#define INT32_PTR_FM      0xA3 // 32-bit integer
-#define INT16_PTR_FM      0xA4 // 16-bit integer
-#define INT8_PTR_FM       0xA5 // 8-bit integer
-#define FLOAT_PTR_FM      0xA6 // A float
+#define UINT32_PTR_FM     0xA0 // A pointer to an unsigned 32-bit integer
+#define UINT16_PTR_FM     0xA1 // A pointer to an unsigned 16-bit integer
+#define UINT8_PTR_FM      0xA2 // A pointer to an unsigned 8-bit integer
+#define INT32_PTR_FM      0xA3 // A pointer to a signed 32-bit integer
+#define INT16_PTR_FM      0xA4 // A pointer to a signed 16-bit integer
+#define INT8_PTR_FM       0xA5 // A pointer to a signed 8-bit integer
+#define FLOAT_PTR_FM      0xA6 // A pointer to a float
+
+#define ARGUMENT_PTR_FM   0xA7 // A pointer to an Argument.
 #define CHAIN_PTR_FM      0xAD // A pointer to a Chain.
 #define BUFFERPIPE_PTR_FM 0xAE // A pointer to a BufferPipe.
 #define STR_BUILDER_FM    0xAF // A pointer to a StringBuilder.
@@ -89,7 +115,12 @@ typedef struct typecode_def_t {
 
 #define SYS_EVENTRECEIVER_FM    0xE0 // A pointer to an EventReceiver.
 #define SYS_MANUVR_XPORT_FM     0xE1 // A pointer to a ManuvrXport.
-#define SYS_RUNNABLE_PTR_FM     0xE2 // A pointer to a ManuvrRunnable..
+#define SYS_RUNNABLE_PTR_FM     0xE2 // A pointer to a ManuvrRunnable.
+
+#define SYS_FXN_PTR_FM          0xEC // FxnPointer
+#define SYS_THREAD_FXN_PTR_FM   0xED // ThreadFxnPtr
+#define SYS_ARG_FXN_PTR_FM      0xEE // ArgumentFxnPtr
+#define SYS_PIPE_FXN_PTR_FM     0xEF // PipeIOCallback
 
 
 /**
@@ -97,6 +128,8 @@ typedef struct typecode_def_t {
 *   the data so passed is not itself a pointer, and therefore makes sense as-is to other
 *   devices.
 */
+#define IDENTITY_FM    0x21    // Identity.
+#define CBOR_FM        0x20    // A CBOR object.
 #define RELAYED_MSG_FM 0x19    // A serialized message that is being stored or relayed.
 #define CHAIN_FM       0x18    // An event chain.
 #define URL_FM         0x17    // An alias of string that carries the semantic 'URL'.
@@ -115,20 +148,19 @@ typedef struct typecode_def_t {
 #define UINT64_FM      0x09    // Unsigned 64-bit integer
 #define UINT128_FM     0x0A    // Unsigned 128-bit integer
 
-
 /**
 * These are small enough to be cast into a pointer's space. They are therefore
 *   "pass-by-value" for classes that interchange them.
 * Cheap because: no malloc()/free() cycle.
 */
-#define BOOLEAN_FM     0x0B   // A boolean
-#define FLOAT_FM       0x0C   // A float
 #define INT8_FM        0x01   // 8-bit integer
 #define INT16_FM       0x02   // 16-bit integer
 #define INT32_FM       0x03   // 32-bit integer
 #define UINT8_FM       0x06   // Unsigned 8-bit integer
 #define UINT16_FM      0x07   // Unsigned 16-bit integer
 #define UINT32_FM      0x08   // Unsigned 32-bit integer
+#define BOOLEAN_FM     0x0B   // A boolean
+#define FLOAT_FM       0x0C   // A float
 
 
 /**

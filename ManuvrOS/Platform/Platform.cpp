@@ -30,27 +30,8 @@ This file is meant to contain a set of common functions that are typically platf
 #include <Kernel.h>
 
 
-// TODO: I know this is horrid. I'm sick of screwing with the build system today...
-#if defined(__MK20DX256__) | defined(__MK20DX128__)
-  // TODO: We still need to do this to avoid bringing in Arduino,
-#elif defined(STM32F4XX)
-  #include "./STM32F4/STM32F4.cpp"
-  ManuvrPlatform platform;
-#elif defined(STM32F7XX) | defined(STM32F746xx)
-  #include "./STM32F7/STM32F7.h"
-  #include "./STM32F7/STM32F7.cpp"
-  ManuvrPlatform platform;
-#elif defined(ARDUINO)
-  #include "./Arduino/Arduino.cpp"
-  ManuvrPlatform platform;
-#elif defined(__MANUVR_PHOTON)
-  #include "./Particle/Photon.cpp"
-  ManuvrPlatform platform;
-#elif defined(__MANUVR_LINUX)
-  ManuvrPlatform platform;
-#else
-  // Unsupportage.
-  //#include "PlatformUnsupported.cpp"
+#if defined(MANUVR_OPENINTERCONNECT)
+#include <Frameworks/OIC/ManuvrOIC.h>
 #endif
 
 
@@ -65,6 +46,12 @@ This file is meant to contain a set of common functions that are typically platf
 * Static members and initializers should be located here.
 * Effectively, this entire class is static.
 *******************************************************************************/
+/* NOTE: There is magic here... We did a typedef dance in Platform.h to achieve
+   a sort of "casting" of the stack-allocated platform instance.  */
+Platform platform;
+
+unsigned long ManuvrPlatform::_start_micros = 0;
+unsigned long ManuvrPlatform::_boot_micros  = 0;
 
 /**
 * Issue a human-readable string representing the condition that causes an
@@ -122,12 +109,57 @@ const char* ManuvrPlatform::getRTCStateString() {
 }
 
 
-// TODO: This is only here to ease the transition into polymorphic platform defs.
-void ManuvrPlatform::printPlatformBasics(StringBuilder* output) {
+/*******************************************************************************
+*  ___   _           _      ___
+* (  _`\(_ )        ( )_  /'___)
+* | |_) )| |    _ _ | ,_)| (__   _    _ __   ___ ___
+* | ,__/'| |  /'_` )| |  | ,__)/'_`\ ( '__)/' _ ` _ `\
+* | |    | | ( (_| || |_ | |  ( (_) )| |   | ( ) ( ) |
+* (_)   (___)`\__,_)`\__)(_)  `\___/'(_)   (_) (_) (_)
+* These are overrides and additions to the platform class.
+*******************************************************************************/
+/**
+* Init that needs to happen prior to kernel bootstrap().
+* This is the final function called by the kernel constructor.
+*/
+int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
+  _start_micros = micros();
+  uint32_t default_flags = 0;
+
+  #if defined(__MANUVR_MBEDTLS)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
+  #endif
+
+  #if defined(MANUVR_GPS_PIPE)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
+  #endif
+
+  #if defined(MANUVR_STORAGE)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_STORAGE;
+  #endif
+
+  #if defined (__MANUVR_LINUX) || defined (__MANUVR_FREERTOS)
+    default_flags |= MANUVR_PLAT_FLAG_HAS_THREADS;
+    platform.setIdleHook([]{ sleep_millis(20); });
+  #endif
+
+  _alter_flags(true, default_flags);
+  _discoverALUParams();
+
+  #if defined(MANUVR_OPENINTERCONNECT)
+    // Framework? Add it...
+    ManuvrOIC* oic = new ManuvrOIC(root_config);
+    _kernel.subscribe((EventReceiver*) oic);
+  #endif
+  return 0;
+}
+
+
+void ManuvrPlatform::printDebug(StringBuilder* output) {
   output->concatf("-- Ver/Build date:     %s   %s %s\n", VERSION_STRING, __DATE__, __TIME__);
-  if (nullptr != platform._identity) {
-    output->concatf("-- Identity:           %s\t", platform._identity->getHandle());
-    platform._identity->toString(output);
+  if (nullptr != platform._self) {
+    output->concatf("-- Identity:           %s\t", platform._self->getHandle());
+    platform._self->toString(output);
     output->concat("\n");
   }
   output->concatf("-- Identity source:    %s\n", platform._check_flags(MANUVR_PLAT_FLAG_HAS_IDENTITY) ? "Generated at runtime" : "Loaded from storage");
@@ -150,8 +182,10 @@ void ManuvrPlatform::printPlatformBasics(StringBuilder* output) {
   output->concatf("-- stack grows %s\n--\n", (&final_sp > &initial_sp) ? "up" : "down");
   output->concatf("-- millis()            0x%08x\n", millis());
   output->concatf("-- micros()            0x%08x\n", micros());
-  output->concatf("-- Timer resolution:   %d ms\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
-  output->concatf("-- Entropy pool size:  %u bytes\n", PLATFORM_RNG_CARRY_CAPACITY * 4);
+  output->concatf("-- start_micros        0x%08x\n", _start_micros);
+  output->concatf("-- boot_micros         0x%08x\n", _boot_micros);
+  output->concatf("-- Timer resolution    %d ms\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
+  output->concatf("-- Entropy pool size   %u bytes\n", PLATFORM_RNG_CARRY_CAPACITY * 4);
   if (platform.hasTimeAndDate()) {
     output->concatf("-- RTC State:          %s\n", platform.getRTCStateString());
     output->concat("-- Current datetime:   ");
@@ -192,18 +226,16 @@ void ManuvrPlatform::printPlatformBasics(StringBuilder* output) {
   #if defined(MANUVR_SUPPORT_OSC)
     output->concat("--\t OSC\n");
   #endif
-  output->concat("--\n");
   platform.printConfig(output);
 }
 
 
 void ManuvrPlatform::printConfig(StringBuilder* output) {
-  if (nullptr != _config) {
-    output->concat("-- Loaded configuration:\n");
+  if (_config) {
+    output->concat("--\n-- Loaded configuration:\n");
     _config->printDebug(output);
   }
 }
-
 
 void ManuvrPlatform::_discoverALUParams() {
   // We infer the ALU width by the size of pointers.
@@ -243,7 +275,7 @@ void ManuvrPlatform::_discoverALUParams() {
 */
 int8_t ManuvrPlatform::bootstrap() {
   /* Follow your shadow. */
-  ManuvrRunnable *boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
+  ManuvrRunnable* boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
   boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
   Kernel::staticRaiseEvent(boot_completed_ev);
   _set_init_state(MANUVR_INIT_STATE_KERNEL_BOOTING);
@@ -251,14 +283,23 @@ int8_t ManuvrPlatform::bootstrap() {
     // TODO: Safety! Need to be able to diagnose infinte loops.
   }
   #if defined(MANUVR_STORAGE)
-    _load_config();
+    if (0 == _load_config()) {
+      // If the config loaded, broadcast it.
+      ManuvrRunnable* conf_ev = Kernel::returnEvent(MANUVR_MSG_SYS_CONF_LOAD);
+      // ???Necessary???  conf_ev->addArg(_config);
+      Kernel::staticRaiseEvent(conf_ev);
+    }
   #endif
   _set_init_state(MANUVR_INIT_STATE_POST_INIT);
-  platformPostInit();
-  if (nullptr == _identity) {
-    _identity = new IdentityUUID(IDENTITY_STRING);
+
+  platformPostInit();    // Hook for platform-specific post-boot operations.
+
+  if (nullptr == _self) {
+    // If we have no other conception of "self", invent one.
+    _self = new IdentityUUID(IDENTITY_STRING);
   }
-  _set_init_state(MANUVR_INIT_STATE_NOMINAL);
+  _boot_micros = micros() - _start_micros;    // Note how long boot took.
+  _set_init_state(MANUVR_INIT_STATE_NOMINAL); // Mark booted.
   return 0;
 }
 
@@ -278,31 +319,6 @@ void ManuvrPlatform::printDebug() {
 /*******************************************************************************
 * Identity and serial number                                                   *
 *******************************************************************************/
-/**
-* We sometimes need to know the length of the platform's unique identifier (if any). If this platform
-*   is not serialized, this function will return zero.
-*
-* @return   The length of the serial number on this platform, in terms of bytes.
-*/
-int ManuvrPlatform::platformSerialNumberSize() {
-  if (nullptr != _identity) {
-    return _identity->length();
-  }
-  return 0;
-}
-
-/**
-* Writes the serial number to the indicated buffer.
-*
-* @param    A pointer to the target buffer.
-* @return   The number of bytes written.
-*/
-int ManuvrPlatform::getSerialNumber(uint8_t* buf) {
-  if (nullptr != _identity) {
-    return _identity->toBuffer(buf);
-  }
-  return 0;
-}
 
 
 
@@ -313,7 +329,7 @@ void ManuvrPlatform::idleHook() {
   if (nullptr != _idle_hook) _idle_hook();
 }
 
-void ManuvrPlatform::setIdleHook(FunctionPointer nu) {
+void ManuvrPlatform::setIdleHook(FxnPointer nu) {
   _idle_hook = nu;
 }
 
@@ -321,7 +337,7 @@ void ManuvrPlatform::wakeHook() {
   if (nullptr != _wake_hook) _wake_hook();
 }
 
-void ManuvrPlatform::setWakeHook(FunctionPointer nu) {
+void ManuvrPlatform::setWakeHook(FxnPointer nu) {
   _wake_hook = nu;
 }
 
@@ -329,6 +345,36 @@ void ManuvrPlatform::setWakeHook(FunctionPointer nu) {
 /*******************************************************************************
 * Persistent configuration                                                     *
 *******************************************************************************/
+Argument* ManuvrPlatform::getConfKey(const char* key) {
+  return (_config) ? _config->retrieveArgByKey(key) : nullptr;
+}
+
+
+/**
+ * Calling this function with a chain of Arguments will cause the store to be
+ *   clobbered with the Argument contents.
+ *
+ * @param  nu The new configuration data to persist.
+ * @return    0 on success. Non-zero otherwise.
+ */
+int8_t ManuvrPlatform::storeConf(Argument* nu) {
+  #if defined(MANUVR_STORAGE)
+  // Persist any open configuration...
+  if ((nu) && (_storage_device)) {
+    if (_storage_device->isMounted()) {
+      // Persist config...
+      StringBuilder shuttle;
+      if (0 <= Argument::encodeToCBOR(nu, &shuttle)) {
+        // TODO: Now would be a good time to persist any dirty identities.
+        if (0 < _storage_device->persistentWrite(nullptr, shuttle.string(), shuttle.length(), 0)) {
+          return 0;
+        }
+      }
+    }
+  }
+  #endif
+  return -1;
+}
 
 
 /*******************************************************************************
@@ -379,8 +425,11 @@ int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn,
 
 int deleteThread(unsigned long* _thread_id) {
   #if defined(__MANUVR_LINUX)
+  return pthread_cancel(*_thread_id);
   #elif defined(__MANUVR_FREERTOS)
+  // TODO: Why didn't this work?
   //vTaskDelete(&_thread_id);
+  return 0;
   #endif
   return -1;
 }
@@ -403,6 +452,20 @@ void sleep_millis(unsigned long millis) {
   #elif defined(ARDUINO)
     delay(millis);  // So wasteful...
   #endif
+}
+
+
+/**
+* This is given as a convenience function. The programmer of an application could
+*   call this as a last-act in the main function. This function never returns.
+* NOTE: Unless inlined, this convenience will one additional stack-frame's worth of
+*   memory. Probably not worth the convenience in most cases.  -Wl --gc-sections
+*/
+void ManuvrPlatform::forsakeMain() {
+  while (1) {
+    // Run forever.
+    _kernel.procIdleFlags();
+  }
 }
 
 }  // extern "C"

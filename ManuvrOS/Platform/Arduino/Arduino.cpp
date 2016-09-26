@@ -46,7 +46,6 @@ Fallback to Arduino support...
 ****************************************************************************************************/
 volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
 volatile uint8_t  watchdog_mark      = 42;
-unsigned long     start_time_micros  = 0;
 
 
 /****************************************************************************************************
@@ -224,7 +223,7 @@ int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrRunnable* isr_event) {
 /*
 * Pass the function pointer
 */
-int8_t setPinFxn(uint8_t pin, uint8_t condition, FunctionPointer fxn) {
+int8_t setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn) {
   attachInterrupt(pin, fxn, condition);
   return 0;
 }
@@ -325,14 +324,7 @@ volatile void reboot() {
 * This is the final function called by the kernel constructor.
 */
 void platformPreInit() {
+  ManuvrPlatform::platformPreInit(root_config);
   gpioSetup();
-}
-
-
-/*
-* Called as a result of kernels bootstrap() fxn.
-*/
-void platformInit() {
-  start_time_micros = micros();
   init_RNG();
 }

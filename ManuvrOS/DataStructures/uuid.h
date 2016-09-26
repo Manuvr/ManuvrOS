@@ -20,8 +20,8 @@
 // limitations under the License.
 */
 
-#ifndef OC_UUID_H
-#define OC_UUID_H
+#ifndef OC_UUID_CPP_H
+#define OC_UUID_CPP_H
 
 #include <inttypes.h>
 
@@ -44,4 +44,4 @@ void uuid_copy(UUID* src, UUID* dest);
 }
 #endif
 
-#endif /* OC_UUID_H */
+#endif /* OC_UUID_CPP_H */

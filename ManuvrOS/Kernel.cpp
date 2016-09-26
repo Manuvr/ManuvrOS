@@ -19,7 +19,7 @@ limitations under the License.
 */
 
 
-#include "FirmwareDefs.h"
+#include <CommonConstants.h>
 #include <Kernel.h>
 #include <Platform/Platform.h>
 
@@ -45,9 +45,6 @@ Kernel*     Kernel::INSTANCE = nullptr;
 BufferPipe* Kernel::_logger  = nullptr;  // The logger slot.
 PriorityQueue<ManuvrRunnable*> Kernel::isr_exec_queue;
 
-const unsigned char MSG_ARGS_EVENTRECEIVER[] = {SYS_EVENTRECEIVER_FM, 0, 0};
-const unsigned char MSG_ARGS_NO_ARGS[] = {0};
-
 
 /*
 * These are the hard-coded message types that the program knows about.
@@ -61,40 +58,45 @@ const unsigned char MSG_ARGS_NO_ARGS[] = {0};
 */
 const MessageTypeDef ManuvrMsg::message_defs[] = {
   /* Reserved codes */
-  {  MANUVR_MSG_UNDEFINED            , 0x0000,               "<UNDEF>"          , MSG_ARGS_NONE }, // This should be the first entry for failure cases.
+  {  MANUVR_MSG_UNDEFINED            , 0x0000,               "<UNDEF>"          , ManuvrMsg::MSG_ARGS_NONE }, // This should be the first entry for failure cases.
 
   /* Protocol basics. */
   #if defined(MANUVR_OVER_THE_WIRE)
-  {  MANUVR_MSG_REPLY_FAIL           , MSG_FLAG_EXPORTABLE,               "REPLY_FAIL"           , MSG_ARGS_NONE }, //  This reply denotes that the packet failed to parse (despite passing checksum).
-  {  MANUVR_MSG_REPLY_RETRY          , MSG_FLAG_EXPORTABLE,               "REPLY_RETRY"          , MSG_ARGS_NONE }, //  This reply asks for a reply of the given Unique ID.
-  {  MANUVR_MSG_REPLY                , MSG_FLAG_EXPORTABLE,               "REPLY"                , MSG_ARGS_NONE }, //  This reply is for success-case.
-  {  MANUVR_MSG_SELF_DESCRIBE        , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SELF_DESCRIBE"        , MSG_ARGS_SELF_DESC }, // Starting an application on the receiver. Needs a string.
-  {  MANUVR_MSG_SYNC_KEEPALIVE       , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "KA"                  , MSG_ARGS_NONE }, //  A keep-alive message to be ack'd.
-  {  MANUVR_MSG_LEGEND_TYPES         , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_TYPES"         , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
-  {  MANUVR_MSG_LEGEND_MESSAGES      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_MESSAGES"      , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
-  {  MANUVR_MSG_LEGEND_SEMANTIC      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_SEMANTIC"      , MSG_ARGS_BINBLOB }, // No args? Asking for this legend. One arg: Legend provided.
+  {  MANUVR_MSG_REPLY_FAIL           , MSG_FLAG_EXPORTABLE,               "REPLY_FAIL"           , ManuvrMsg::MSG_ARGS_NONE }, //  This reply denotes that the packet failed to parse (despite passing checksum).
+  {  MANUVR_MSG_REPLY_RETRY          , MSG_FLAG_EXPORTABLE,               "REPLY_RETRY"          , ManuvrMsg::MSG_ARGS_NONE }, //  This reply asks for a reply of the given Unique ID.
+  {  MANUVR_MSG_REPLY                , MSG_FLAG_EXPORTABLE,               "REPLY"                , ManuvrMsg::MSG_ARGS_NONE }, //  This reply is for success-case.
+  {  MANUVR_MSG_SELF_DESCRIBE        , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SELF_DESCRIBE"        , ManuvrMsg::MSG_ARGS_NONE }, // Starting an application on the receiver. Needs a string.
+  {  MANUVR_MSG_SYNC_KEEPALIVE       , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "KA"                   , ManuvrMsg::MSG_ARGS_NONE }, //  A keep-alive message to be ack'd.
+  {  MANUVR_MSG_LEGEND_TYPES         , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_TYPES"         , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
+  {  MANUVR_MSG_LEGEND_MESSAGES      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_MESSAGES"      , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
+  {  MANUVR_MSG_LEGEND_SEMANTIC      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_SEMANTIC"      , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
   #endif
 
-  {  MANUVR_MSG_SESS_ESTABLISHED     , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_ESTABLISHED"     , MSG_ARGS_NONE }, // Session established.
-  {  MANUVR_MSG_SESS_HANGUP          , MSG_FLAG_EXPORTABLE,                        "SESS_HANGUP"          , MSG_ARGS_NONE }, // Session hangup.
-  {  MANUVR_MSG_SESS_AUTH_CHALLENGE  , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_AUTH_CHALLENGE"  , MSG_ARGS_NONE }, // A code for challenge-response authentication.
+  #if defined(MANUVR_STORAGE)
+  #endif
 
-  {  MANUVR_MSG_MSG_FORWARD          , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "MSG_FORWARD"          , MSG_ARGS_MSG_FORWARD }, // No args? Asking for this legend. One arg: Legend provided.
+  {  MANUVR_MSG_SESS_ESTABLISHED     , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_ESTABLISHED"     , ManuvrMsg::MSG_ARGS_NONE }, // Session established.
+  {  MANUVR_MSG_SESS_HANGUP          , MSG_FLAG_EXPORTABLE,                        "SESS_HANGUP"          , ManuvrMsg::MSG_ARGS_NONE }, // Session hangup.
+  {  MANUVR_MSG_SESS_AUTH_CHALLENGE  , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_AUTH_CHALLENGE"  , ManuvrMsg::MSG_ARGS_NONE }, // A code for challenge-response authentication.
+
+  {  MANUVR_MSG_MSG_FORWARD          , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "MSG_FORWARD"          , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
 
 
-  {  MANUVR_MSG_SYS_BOOT_COMPLETED   , 0x0000,               "BOOT_COMPLETED"   , MSG_ARGS_NO_ARGS }, // Raised when bootstrap is finished.
+  {  MANUVR_MSG_SYS_BOOT_COMPLETED   , 0x0000,               "BOOT_COMPLETED"   , ManuvrMsg::MSG_ARGS_NONE }, // Raised when bootstrap is finished.
+  {  MANUVR_MSG_SYS_CONF_LOAD        , 0x0000,               "CONF_LOAD"        , ManuvrMsg::MSG_ARGS_NONE }, // Recipients will comb arguments for config and apply it.
+  {  MANUVR_MSG_SYS_CONF_SAVE        , 0x0000,               "CONF_SAVE"        , ManuvrMsg::MSG_ARGS_NONE }, // Recipients will attach their persistable data.
 
-  {  MANUVR_MSG_SYS_ADVERTISE_SRVC   , 0x0000,               "ADVERTISE_SRVC"       , MSG_ARGS_EVENTRECEIVER }, // A system service might feel the need to advertise it's arrival.
-  {  MANUVR_MSG_SYS_RETRACT_SRVC     , 0x0000,               "RETRACT_SRVC"         , MSG_ARGS_EVENTRECEIVER }, // A system service sends this to tell others to stop using it.
+  {  MANUVR_MSG_SYS_ADVERTISE_SRVC   , 0x0000,               "ADVERTISE_SRVC"       , ManuvrMsg::MSG_ARGS_NONE }, // A system service might feel the need to advertise it's arrival.
+  {  MANUVR_MSG_SYS_RETRACT_SRVC     , 0x0000,               "RETRACT_SRVC"         , ManuvrMsg::MSG_ARGS_NONE }, // A system service sends this to tell others to stop using it.
 
-  {  MANUVR_MSG_SYS_BOOTLOADER       , MSG_FLAG_EXPORTABLE,  "SYS_BOOTLOADER"       , MSG_ARGS_NO_ARGS }, // Reboots into the STM32F4 bootloader.
-  {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,  "SYS_REBOOT"           , MSG_ARGS_NO_ARGS }, // Reboots into THIS program.
-  {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN"         , MSG_ARGS_NO_ARGS }, // Raised when the system is pending complete shutdown.
-  {  MANUVR_MSG_SYS_EXIT             , MSG_FLAG_EXPORTABLE,  "SYS_EXIT"             , MSG_ARGS_NO_ARGS }, // Raised when the process is to exit without shutdown.
+  {  MANUVR_MSG_SYS_BOOTLOADER       , MSG_FLAG_EXPORTABLE,  "SYS_BOOTLOADER"       , ManuvrMsg::MSG_ARGS_NONE }, // Reboots into the STM32F4 bootloader.
+  {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,  "SYS_REBOOT"           , ManuvrMsg::MSG_ARGS_NONE }, // Reboots into THIS program.
+  {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN"         , ManuvrMsg::MSG_ARGS_NONE }, // Raised when the system is pending complete shutdown.
+  {  MANUVR_MSG_SYS_EXIT             , MSG_FLAG_EXPORTABLE,  "SYS_EXIT"             , ManuvrMsg::MSG_ARGS_NONE }, // Raised when the process is to exit without shutdown.
 
-  {  MANUVR_MSG_DEFERRED_FXN         , 0x0000,               "DEFERRED_FXN",          MSG_ARGS_NO_ARGS }, // Message to allow for deferred fxn calls without an EventReceiver.
+  {  MANUVR_MSG_DEFERRED_FXN         , 0x0000,               "DEFERRED_FXN",          ManuvrMsg::MSG_ARGS_NONE }, // Message to allow for deferred fxn calls without an EventReceiver.
 
-  {  MANUVR_MSG_SYS_FAULT_REPORT     , 0x0000,               "SYS_FAULT"            , ManuvrMsg::MSG_ARGS_U32 }, //
+  {  MANUVR_MSG_SYS_FAULT_REPORT     , 0x0000,               "SYS_FAULT"            , ManuvrMsg::MSG_ARGS_NONE }, //
 
   {  MANUVR_MSG_SYS_DATETIME_CHANGED , MSG_FLAG_EXPORTABLE,  "SYS_DATETIME_CHANGED" , ManuvrMsg::MSG_ARGS_NONE }, // Raised when the system time changes.
   {  MANUVR_MSG_SYS_SET_DATETIME     , MSG_FLAG_EXPORTABLE,  "SYS_SET_DATETIME"     , ManuvrMsg::MSG_ARGS_NONE }, //
@@ -104,15 +106,28 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
 
   {  MANUVR_MSG_SESS_SUBCRIBE        , MSG_FLAG_EXPORTABLE,  "SESS_SUBCRIBE"        , ManuvrMsg::MSG_ARGS_NONE }, // Used to subscribe this session to other events.
   {  MANUVR_MSG_SESS_UNSUBCRIBE      , MSG_FLAG_EXPORTABLE,  "SESS_UNSUBCRIBE"      , ManuvrMsg::MSG_ARGS_NONE }, // Used to unsubscribe this session from other events.
-  {  MANUVR_MSG_SESS_ORIGINATE_MSG   , MSG_FLAG_IDEMPOTENT,  "SESS_ORIGINATE_MSG"   , ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_SESS_SERVICE         , 0x0000             ,  "SESS_SERVICE"         , ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_SESS_ORIGINATE_MSG   , 0x0000,               "SESS_ORIGINATE_MSG"   , ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_SESS_SERVICE         , 0x0000,               "SESS_SERVICE"         , ManuvrMsg::MSG_ARGS_NONE }, //
+
+  {  MANUVR_MSG_XPORT_SEND,         0x0000,  "XPORT_TX"           , ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_XPORT_RECEIVE,      0x0000,  "XPORT_RX"           , ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_XPORT_QUEUE_RDY,    0x0000,  "XPORT_Q"            , ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_XPORT_CB_QUEUE_RDY, 0x0000,  "XPORT_CB_Q"         , ManuvrMsg::MSG_ARGS_NONE }, //
+
+  #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
+  {  MANUVR_MSG_OIC_READY            , 0x0000,  "OIC_READY"        , ManuvrMsg::MSG_ARGS_NONE },  //
+  {  MANUVR_MSG_OIC_REG_RESOURCES    , 0x0000,  "OIC_REG_RESRCS"   , ManuvrMsg::MSG_ARGS_NONE },  //
+  {  MANUVR_MSG_OIC_DISCOVERY        , 0x0000,  "OIC_DISCOVERY"    , ManuvrMsg::MSG_ARGS_NONE },  //
+  {  MANUVR_MSG_OIC_DISCOVER_OFF     , 0x0000,  "OIC_DISCOVER_OFF" , ManuvrMsg::MSG_ARGS_NONE },  //
+  {  MANUVR_MSG_OIC_DISCOVER_PING    , 0x0000,  "OIC_PING"         , ManuvrMsg::MSG_ARGS_NONE },  //
+  #endif
 
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
     // These are messages that are only present under some sort of threading model. They are meant
     //   to faciliate task hand-off, IPC, and concurrency protection.
-    {  MANUVR_MSG_CREATED_THREAD_ID,    0x0000,              "CREATED_THREAD_ID",     ManuvrMsg::MSG_ARGS_U32 },
-    {  MANUVR_MSG_DESTROYED_THREAD_ID,  0x0000,              "DESTROYED_THREAD_ID",   ManuvrMsg::MSG_ARGS_U32 },
-    {  MANUVR_MSG_UNBLOCK_THREAD,       0x0000,              "UNBLOCK_THREAD",        ManuvrMsg::MSG_ARGS_U32 },
+    {  MANUVR_MSG_CREATED_THREAD_ID,    0x0000,              "CREATED_THREAD_ID",     ManuvrMsg::MSG_ARGS_NONE },
+    {  MANUVR_MSG_DESTROYED_THREAD_ID,  0x0000,              "DESTROYED_THREAD_ID",   ManuvrMsg::MSG_ARGS_NONE },
+    {  MANUVR_MSG_UNBLOCK_THREAD,       0x0000,              "UNBLOCK_THREAD",        ManuvrMsg::MSG_ARGS_NONE },
     #if defined (__MANUVR_FREERTOS)
     #endif
 
@@ -126,15 +141,15 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
     compile time.
   */
   #if defined (__ENABLE_MSG_SEMANTICS)
-  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_STR_BUILDER, "Command\0\0" }, //
-  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_STR_BUILDER, "Body\0\0" }, // Classes emit this to get their log data saved/sent.
-  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_U8, "Power Mode\0\0" }, //
-  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_U8, "Level\0\0"      },   // This tells client classes to adjust their log verbosity.
+  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_NONE, "Command\0\0" }, //
+  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_NONE, "Body\0\0" }, // Classes emit this to get their log data saved/sent.
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_NONE, "Power Mode\0\0" }, //
+  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_NONE, "Level\0\0"      },   // This tells client classes to adjust their log verbosity.
   #else
-  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_STR_BUILDER, nullptr }, //
-  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_STR_BUILDER, nullptr }, // Classes emit this to get their log data saved/sent.
-  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_U8, nullptr }, //
-  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_U8, nullptr },   // This tells client classes to adjust their log verbosity.
+  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_NONE, nullptr }, //
+  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_NONE, nullptr }, // Classes emit this to get their log data saved/sent.
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_NONE, nullptr }, //
+  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_NONE, nullptr },   // This tells client classes to adjust their log verbosity.
   #endif
 };
 
@@ -142,22 +157,15 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
 const uint16_t ManuvrMsg::TOTAL_MSG_DEFS = sizeof(ManuvrMsg::message_defs) / sizeof(MessageTypeDef);
 
 
-/*
-* All external access to Kernel's non-static members should obtain it's reference via this fxn...
-*   Note that services that are dependant on us during the bootstrap phase should have a reference
-*   passed into their constructors, rather than forcing them to call this and risking an infinite
-*   recursion.
-*/
-Kernel* Kernel::getInstance() {
-  if (INSTANCE == nullptr) {
-    // This is a valid means of instantiating the kernel. Typically, user code
-    //   would have the Kernel on the stack, but if they want to live in the heap,
-    //   that's fine by us. Oblige...
-    Kernel::INSTANCE = new Kernel();
-  }
-  // And that is how the singleton do...
-  return (Kernel*) Kernel::INSTANCE;
+void Kernel::nextTick(BufferPipe* p) {
+  INSTANCE->_pipe_io_pend.insert(p);
+  INSTANCE->_pending_pipes(true);
 }
+
+//void Kernel::nextTick(FxnPointer* p) {
+//  INSTANCE->_pipe_io_pend.insert(p);
+//  INSTANCE->_pending_pipes(true);
+//}
 
 
 
@@ -175,8 +183,8 @@ Kernel* Kernel::getInstance() {
 */
 Kernel::Kernel() : EventReceiver() {
   setReceiverName("Kernel");
-  INSTANCE           = this;  // For singleton reference. TODO: Will not parallelize.
-  __kernel           = this;  // We extend EventReceiver. So we populate this.
+  INSTANCE             = this;  // For singleton reference. TODO: Will not parallelize.
+  __kernel             = this;  // We extend EventReceiver. So we populate this.
 
   current_event        = nullptr;
   max_queue_depth      = 0;
@@ -206,7 +214,7 @@ Kernel::Kernel() : EventReceiver() {
   #else
     profiler(false);         // Turn off the profiler.
   #endif
-  subscribe(this);           // We subscribe ourselves to events.
+  subscribe(this, 200);      // We subscribe ourselves to events.
   setVerbosity((int8_t) DEFAULT_CLASS_VERBOSITY);
 }
 
@@ -214,7 +222,9 @@ Kernel::Kernel() : EventReceiver() {
 * Destructor. Should probably never be called.
 */
 Kernel::~Kernel() {
-  while (schedules.hasNext()) {  delete schedules.dequeue();   }
+  while (schedules.hasNext()) {
+    reclaim_event(schedules.dequeue());
+  }
 }
 
 
@@ -277,14 +287,10 @@ int8_t Kernel::detachFromLogger(BufferPipe* _pipe) {
 }
 
 
-/****************************************************************************************************
-* Kernel operation...                                                                               *
-****************************************************************************************************/
 
-
-/****************************************************************************************************
-* Subscriptions and client management fxns.                                                         *
-****************************************************************************************************/
+/*******************************************************************************
+* Subscriptions and client management fxns.                                    *
+*******************************************************************************/
 
 /**
 * A class calls this to subscribe to events. After calling this, the class will have its notify()
@@ -301,8 +307,7 @@ int8_t Kernel::subscribe(EventReceiver *client) {
   int8_t return_value = subscribers.insert(client);
   if (booted()) {
     // This subscriber is joining us after bootup. Call its bootComplete() fxn to cause it to init.
-    // TODO: This is suspect....
-    client->notify(returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED));
+    client->bootComplete();
   }
   return ((return_value >= 0) ? 0 : -1);
 }
@@ -392,7 +397,7 @@ int8_t Kernel::registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFx
 * Used to add an event to the idle queue. Use this for simple events that don't need args.
 *
 * @param  code  The identity code of the event to be raised.
-* @param  ori   An optional originator pointer to be called when this event is finished.
+* @param  ori   An optional  pointer to be called when this event is finished.
 * @return -1 on failure, and 0 on success.
 */
 int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* ori) {
@@ -404,7 +409,7 @@ int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* ori) {
   }
   else {
     nu->repurpose(code);
-    nu->originator = ori;
+    nu->setOriginator(ori);
   }
 
   return staticRaiseEvent(nu);
@@ -435,7 +440,7 @@ int8_t Kernel::staticRaiseEvent(ManuvrRunnable* active_runnable) {
     return return_value;
   }
 
-  #ifdef __MANUVR_DEBUG
+  #if defined(__MANUVR_DEBUG)
     if (INSTANCE->getVerbosity() > 4) {
       StringBuilder output;
       output.concatf(
@@ -443,6 +448,7 @@ int8_t Kernel::staticRaiseEvent(ManuvrRunnable* active_runnable) {
         return_value,
         ManuvrMsg::getMsgTypeString(active_runnable->eventCode())
       );
+
       if (INSTANCE->getVerbosity() > 6) {
         active_runnable->printDebug(&output);
       }
@@ -521,8 +527,7 @@ ManuvrRunnable* Kernel::returnEvent(uint16_t code) {
     return_value = new ManuvrRunnable(code, (EventReceiver*) INSTANCE);
   }
   else {
-    return_value->repurpose(code);
-    return_value->originator = (EventReceiver*) INSTANCE;
+    return_value->repurpose(code, (EventReceiver*) INSTANCE);
   }
   return return_value;
 }
@@ -549,21 +554,6 @@ int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
     return -3;
   }
 
-  // Those are the basic checks. Now for the advanced functionality...
-  if (event->isIdempotent()) {
-    /* TODO: This seems ill-conceived in hindsight. FAR too heavy...
-               Event idempotency in this manner is deprecated.
-                       ---J. Ian Lindsay 2016.09.04 */
-    ManuvrRunnable* working;
-    for (int i = 0; i < exec_queue.size(); i++) {
-      // No duplicate idempotent events allowed...
-      working = exec_queue.get(i);
-      if ((working) && (working->eventCode() == event->eventCode())) {
-        idempotent_blocks++;
-        return -4;   // Distinct failure vs pointer-value idenpotency (-3).
-      }
-    }
-  }
   // Go ahead and insert.
   INSTANCE->exec_queue.insert(event, event->priority);
   return 0;
@@ -620,6 +610,9 @@ void Kernel::reclaim_event(ManuvrRunnable* active_runnable) {
 }
 
 
+/*******************************************************************************
+* Kernel operation...                                                          *
+*******************************************************************************/
 
 // This is the splice into v2's style of event handling (callaheads).
 int8_t Kernel::procCallAheads(ManuvrRunnable *active_runnable) {
@@ -709,10 +702,6 @@ int8_t Kernel::procIdleFlags() {
     current_event = active_runnable;
 
     // Chat and measure.
-    #ifdef __MANUVR_DEBUG
-    //if (getVerbosity() > 6) local_log.concatf("Servicing: %s\n", active_runnable->getMsgTypeString());
-    #endif
-
     profiler_mark_0 = micros();
 
     procCallAheads(active_runnable);
@@ -721,46 +710,30 @@ int8_t Kernel::procIdleFlags() {
     EventReceiver *subscriber;   // No need to assign.
     if (_profiler_enabled()) profiler_mark_1 = micros();
 
-    if (nullptr != active_runnable->schedule_callback) {
-      // TODO: This is hold-over from the scheduler. Need to modernize it.
-      //active_runnable->printDebug(&local_log);
-      ((FunctionPointer) active_runnable->schedule_callback)();   // Call the schedule's service function.
-      if (_profiler_enabled()) profiler_mark_2 = micros();
-      activity_count++;
-    }
-    else if (nullptr != active_runnable->specific_target) {
-      subscriber = active_runnable->specific_target;
-      switch (subscriber->notify(active_runnable)) {
-        case 0:   // The nominal case. No response.
-          break;
-        case -1:  // The subscriber choked. Figure out why. Technically, this is action. Case fall-through...
-          subscriber->printDebug(&local_log);
-        default:   // The subscriber acted.
-          activity_count++;
-          if (_profiler_enabled()) profiler_mark_2 = micros();
-          break;
-      }
+    if (active_runnable->singleTarget()) {
+      activity_count += active_runnable->execute();
     }
     else {
       for (int i = 0; i < subscribers.size(); i++) {
         subscriber = subscribers.get(i);
 
         switch (subscriber->notify(active_runnable)) {
-          case 0:   // The nominal case. No response.
-            break;
           case -1:  // The subscriber choked. Figure out why. Technically, this is action. Case fall-through...
             subscriber->printDebug(&local_log);
           default:   // The subscriber acted.
             activity_count++;
-            if (_profiler_enabled()) profiler_mark_2 = micros();
+          case 0:   // The nominal case. No response.
             break;
         }
       }
     }
+    if (_profiler_enabled()) profiler_mark_2 = micros();
 
     procCallBacks(active_runnable);
 
-    active_runnable->noteExecutionTime(profiler_mark_0, micros());
+    #if defined(__MANUVR_EVENT_PROFILER)
+      active_runnable->noteExecutionTime(profiler_mark_0, micros());
+    #endif  //__MANUVR_EVENT_PROFILER
 
     if (0 == activity_count) {
       #ifdef __MANUVR_DEBUG
@@ -771,49 +744,41 @@ int8_t Kernel::procIdleFlags() {
 
     /* Should we clean up the Event? */
     bool clean_up_active_runnable = true;  // Defaults to 'yes'.
-    if (nullptr != active_runnable->originator) {
-      /* If the event has a valid originator, do the callback dance and take instruction
-         from the return value. */
-      //   if (verbosity >=7) output.concatf("specific_event_callback returns %d\n", active_runnable->originator->callback_proc(active_runnable));
-      switch (active_runnable->originator->callback_proc(active_runnable)) {
-        case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
-          #ifdef __MANUVR_DEBUG
-          if (getVerbosity() > 6) local_log.concatf("Recycling %s.\n", active_runnable->getMsgTypeString());
-          #endif
-          switch (validate_insertion(active_runnable)) {
-            case 0:    // Clear for insertion.
-              exec_queue.insert(active_runnable, active_runnable->priority);
-              clean_up_active_runnable = false;
-              break;
-            case -1:   // NULL runnable! How?!?!
-              break;
-            case -2:   // UNDEFINED event. This shall not stand, man....
-              break;
-            case -3:   // Pointer idempotency. THIS EXACT runnable is already enqueue.
-              break;
-          }
-          break;
-        case EVENT_CALLBACK_RETURN_ERROR:       // Something went wrong. Should never occur.
-        case EVENT_CALLBACK_RETURN_UNDEFINED:   // The originating class doesn't care what we do with the event.
-          //if (verbosity > 1) local_log.concatf("Kernel found a possible mistake. Unexpected return case from callback_proc.\n");
-          // NOTE: No break;
-        case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
-          #ifdef __MANUVR_DEBUG
-          //if (getVerbosity() > 6) local_log.concatf("Dropping %s after running.\n", active_runnable->getMsgTypeString());
-          #endif
-          // NOTE: No break;
-        case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
-          // NOTE: No break;
-        default:
-          //if (verbosity > 0) local_log.concatf("Event %s has no cleanup case.\n", active_runnable->getMsgTypeString());
-          break;
-      }
+
+    switch (active_runnable->callbackOriginator()) {
+      case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
+        #ifdef __MANUVR_DEBUG
+        if (getVerbosity() > 6) local_log.concatf("Recycling %s.\n", active_runnable->getMsgTypeString());
+        #endif
+        switch (validate_insertion(active_runnable)) {
+          case 0:    // Clear for insertion.
+            exec_queue.insert(active_runnable, active_runnable->priority);
+            clean_up_active_runnable = false;
+            break;
+          case -1:   // NULL runnable! How?!?!
+            break;
+          case -2:   // UNDEFINED event. This shall not stand, man....
+            break;
+          case -3:   // Pointer idempotency. THIS EXACT runnable is already enqueue.
+            break;
+        }
+        break;
+      case EVENT_CALLBACK_RETURN_ERROR:       // Something went wrong. Should never occur.
+      case EVENT_CALLBACK_RETURN_UNDEFINED:   // The originating class doesn't care what we do with the event.
+        //if (verbosity > 1) local_log.concatf("Kernel found a possible mistake. Unexpected return case from callback_proc.\n");
+        // NOTE: No break;
+      case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
+        #ifdef __MANUVR_DEBUG
+        //if (getVerbosity() > 6) local_log.concatf("Dropping %s after running.\n", active_runnable->getMsgTypeString());
+        #endif
+        // NOTE: No break;
+      case EVENT_CALLBACK_RETURN_REAP:        // The originating class is explicitly telling us to reap the event.
+        // NOTE: No break;
+      default:
+        //if (verbosity > 0) local_log.concatf("Event %s has no cleanup case.\n", active_runnable->getMsgTypeString());
+        break;
     }
-    else {
-      /* If there is no originator specified for the Event, we rely on the flags in the Event itself to
-         decide if it should be reaped. If its memory is being managed by some other class, the reclaim_event()
-         fxn will simply remove it from the exec_queue and consider the matter closed. */
-    }
+
 
     // All of the logic above ultimately informs this choice.
     if (clean_up_active_runnable) {
@@ -822,45 +787,40 @@ int8_t Kernel::procIdleFlags() {
 
     total_events++;
 
-    // This is a stat-gathering block.
-    if (_profiler_enabled()) {
-      profiler_mark_3 = micros();
+    #if defined(__MANUVR_EVENT_PROFILER)
+      // This is a stat-gathering block.
+      if (_profiler_enabled()) {
+        profiler_mark_3 = micros();
 
-      TaskProfilerData* profiler_item = nullptr;
-      int cost_size = event_costs.size();
-      int i = 0;
-      while ((nullptr == profiler_item) && (i < cost_size)) {
-        if (event_costs.get(i)->msg_code == msg_code_local) {
-          profiler_item = event_costs.get(i);
+        TaskProfilerData* profiler_item = nullptr;
+        int cost_size = event_costs.size();
+        int i = 0;
+        while ((nullptr == profiler_item) && (i < cost_size)) {
+          if (event_costs.get(i)->msg_code == msg_code_local) {
+            profiler_item = event_costs.get(i);
+          }
+          i++;
         }
-        i++;
-      }
-      if (nullptr == profiler_item) {
-        // If we don't yet have a profiler item for this message type...
-        profiler_item = new TaskProfilerData();    // ...create one...
-        profiler_item->msg_code = msg_code_local;   // ...assign the code...
-        event_costs.insert(profiler_item, 1);       // ...and insert it for the future.
-      }
-      else {
-        // If we already have a profiler item for this code...
-        event_costs.incrementPriority(profiler_item);
-      }
-      profiler_item->executions++;
-      profiler_item->run_time_last    = max((unsigned long) profiler_mark_2, (unsigned long) profiler_mark_1) - min((unsigned long) profiler_mark_2, (unsigned long) profiler_mark_1);
-      profiler_item->run_time_best    = min((unsigned long) profiler_item->run_time_best, (unsigned long) profiler_item->run_time_last);
-      profiler_item->run_time_worst   = max((unsigned long) profiler_item->run_time_worst, (unsigned long) profiler_item->run_time_last);
-      profiler_item->run_time_total  += profiler_item->run_time_last;
-      profiler_item->run_time_average = profiler_item->run_time_total / ((profiler_item->executions) ? profiler_item->executions : 1);
+        if (nullptr == profiler_item) {
+          // If we don't yet have a profiler item for this message type...
+          profiler_item = new TaskProfilerData();    // ...create one...
+          profiler_item->msg_code = msg_code_local;   // ...assign the code...
+          event_costs.insert(profiler_item, 1);       // ...and insert it for the future.
+        }
+        else {
+          // If we already have a profiler item for this code...
+          event_costs.incrementPriority(profiler_item);
+        }
+        profiler_item->executions++;
+        profiler_item->run_time_last    = std::max((unsigned long) profiler_mark_2, (unsigned long) profiler_mark_1) - std::min((unsigned long) profiler_mark_2, (unsigned long) profiler_mark_1);
+        profiler_item->run_time_best    = std::min((unsigned long) profiler_item->run_time_best, (unsigned long) profiler_item->run_time_last);
+        profiler_item->run_time_worst   = std::max((unsigned long) profiler_item->run_time_worst, (unsigned long) profiler_item->run_time_last);
+        profiler_item->run_time_total  += profiler_item->run_time_last;
+        profiler_item->run_time_average = profiler_item->run_time_total / ((profiler_item->executions) ? profiler_item->executions : 1);
 
-      #ifdef __MANUVR_DEBUG
-        //MessageTypeDef* tmp_msg_def = (MessageTypeDef*) ManuvrMsg::lookupMsgDefByCode(msg_code_local);
-        //if (getVerbosity() > 6) {
-        //  if (profiler_mark_2) local_log.concatf("%s finished.\tTotal time: %5ld uS\tTook %5ld uS to notify.\n", tmp_msg_def->debug_label, (profiler_mark_3 - profiler_mark_0), profiler_item->run_time_last);
-        //  else                 local_log.concatf("%s finished.\tTotal time: %5ld uS\n", tmp_msg_def->debug_label, (profiler_mark_3 - profiler_mark_0));
-        //}
-      #endif
-      profiler_mark_2 = 0;  // Reset for next iteration.
-    }
+        profiler_mark_2 = 0;  // Reset for next iteration.
+      }
+    #endif  //__MANUVR_EVENT_PROFILER
 
     if (exec_queue.size() > 30) {
       #ifdef __MANUVR_DEBUG
@@ -871,21 +831,30 @@ int8_t Kernel::procIdleFlags() {
     return_value++;   // We just serviced an Event.
   }
 
+  if (_pending_pipes()) {
+    BufferPipe* _temp_io = _pipe_io_pend.dequeue();
+    while (nullptr != _temp_io) {
+      _temp_io->asyncCallback();
+      _temp_io = _pipe_io_pend.dequeue();
+    }
+    _pending_pipes(false);
+  }
+
   total_loops++;
   current_event = nullptr;
   profiler_mark_3 = micros();
   flushLocalLog();
 
-  uint32_t runtime_this_loop = max((uint32_t) profiler_mark_3, (uint32_t) profiler_mark) - min((uint32_t) profiler_mark_3, (uint32_t) profiler_mark);
+  uint32_t runtime_this_loop = std::max((uint32_t) profiler_mark_3, (uint32_t) profiler_mark) - std::min((uint32_t) profiler_mark_3, (uint32_t) profiler_mark);
   if (return_value > 0) {
     // We ran at-least one Runnable.
     micros_occupied += runtime_this_loop;
     consequtive_idles = max_idle_count;  // Reset the idle loop down-counter.
-    max_events_p_loop = max((uint32_t) max_events_p_loop, 0x0000007F & (uint32_t) return_value);
+    max_events_p_loop = std::max((uint32_t) max_events_p_loop, 0x0000007F & (uint32_t) return_value);
   }
   else if (0 == return_value) {
     // We did nothing this time.
-    max_idle_loop_time = max((uint32_t) max_idle_loop_time, (max((uint32_t) profiler_mark, (uint32_t) profiler_mark_3) - min((uint32_t) profiler_mark, (uint32_t) profiler_mark_3)));
+    max_idle_loop_time = std::max((uint32_t) max_idle_loop_time, (std::max((uint32_t) profiler_mark, (uint32_t) profiler_mark_3) - std::min((uint32_t) profiler_mark, (uint32_t) profiler_mark_3)));
     switch (consequtive_idles) {
       case 0:
         // If we have reached our threshold for idleness, we invoke the plaform
@@ -940,10 +909,11 @@ void Kernel::profiler(bool enabled) {
   events_destroyed   = 0;
   prealloc_starved   = 0;
   burden_of_specific = 0;
-  idempotent_blocks  = 0;
   insertion_denials  = 0;
 
-  while (event_costs.hasNext()) delete event_costs.dequeue();
+  #if defined(__MANUVR_EVENT_PROFILER)
+    while (event_costs.hasNext()) delete event_costs.dequeue();
+  #endif   // __MANUVR_EVENT_PROFILER
 }
 
 
@@ -961,6 +931,14 @@ float Kernel::cpu_usage() {
 */
 void Kernel::printProfiler(StringBuilder* output) {
   if (nullptr == output) return;
+  if (getVerbosity() > 4) {
+    output->concatf("-- Queue depth        \t%d\n", exec_queue.size());
+    output->concatf("-- Preallocation depth\t%d\n", preallocated.size());
+    output->concatf("-- Prealloc starves   \t%u\n", (unsigned long) prealloc_starved);
+    output->concatf("-- events_destroyed   \t%u\n", (unsigned long) events_destroyed);
+    output->concatf("-- specificity burden \t%u\n", (unsigned long) burden_of_specific);
+  }
+
   output->concatf("-- total_events       \t%u\n", (unsigned long) total_events);
   output->concatf("-- total_events_dead  \t%u\n", (unsigned long) total_events_dead);
   output->concatf("-- max_queue_depth    \t%u\n", (unsigned long) max_queue_depth);
@@ -975,34 +953,37 @@ void Kernel::printProfiler(StringBuilder* output) {
     }
     output->concatf("   CPU use by clock: %f\n", (double)cpu_usage());
 
-    TaskProfilerData *profiler_item;
-    int stat_mode = event_costs.getPriority(0);
-    int x = event_costs.size();
+    #if defined(__MANUVR_EVENT_PROFILER)
+      TaskProfilerData *profiler_item;
+      int stat_mode = event_costs.getPriority(0);
+      int x = event_costs.size();
 
-    TaskProfilerData::printDebugHeader(output);
-    for (int i = 0; i < x; i++) {
-      profiler_item = event_costs.get(i);
-      stat_mode     = event_costs.getPriority(i);
-      output->concatf("\t (%10d)\t", stat_mode);
-      profiler_item->printDebug(output);
-    }
+      TaskProfilerData::printDebugHeader(output);
+      for (int i = 0; i < x; i++) {
+        profiler_item = event_costs.get(i);
+        stat_mode     = event_costs.getPriority(i);
+        output->concatf("\t (%10d)\t", stat_mode);
+        profiler_item->printDebug(output);
+      }
+    #endif   // __MANUVR_EVENT_PROFILER
   }
   else {
     output->concat("-- Kernel profiler disabled.\n\n");
   }
 
+  #if defined(__MANUVR_EVENT_PROFILER)
+    if (schedules.size() > 0) {
+      ManuvrRunnable *current;
+      output->concat("\n\t PID         Execd      total us   average    worst      best       last\n\t -----------------------------------------------------------------------------\n");
 
-  if (schedules.size() > 0) {
-    ManuvrRunnable *current;
-    output->concat("\n\t PID         Execd      total us   average    worst      best       last\n\t -----------------------------------------------------------------------------\n");
-
-    for (int i = 0; i < schedules.size(); i++) {
-      current = schedules.get(i);
-      if (current->profilingEnabled()) {
-        current->printProfilerData(output);
+      for (int i = 0; i < schedules.size(); i++) {
+        current = schedules.get(i);
+        if (current->profilingEnabled()) {
+          current->printProfilerData(output);
+        }
       }
     }
-  }
+  #endif   // __MANUVR_EVENT_PROFILER
 }
 
 
@@ -1020,9 +1001,11 @@ void Kernel::printScheduler(StringBuilder* output) {
     output->concatf("-- %u skips before fail-to-bootloader.\n", (unsigned long) MAXIMUM_SEQUENTIAL_SKIPS);
   }
 
+  #if defined(__MANUVR_DEBUG)
   for (int i = 0; i < schedules.size(); i++) {
     schedules.recycle()->printDebug(output);
   }
+  #endif
 }
 
 
@@ -1036,28 +1019,12 @@ void Kernel::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
 
   //output->concatf("-- our_mem_addr:             %p\n", this);
-  if (getVerbosity() > 4) {
-    output->concatf("-- Queue depth:              %d\n", exec_queue.size());
-    output->concatf("-- Preallocation depth:      %d\n", preallocated.size());
-    output->concatf("-- Prealloc starves:         %u\n", (unsigned long) prealloc_starved);
-    output->concatf("-- events_destroyed:         %u\n", (unsigned long) events_destroyed);
-    output->concatf("-- burden_of_being_specific  %u\n", (unsigned long) burden_of_specific);
-    output->concatf("-- idempotent_blocks         %u\n", (unsigned long) idempotent_blocks);
-  }
-
   if (subscribers.size() > 0) {
     output->concatf("-- Subscribers: (%d total):\n", subscribers.size());
     for (int i = 0; i < subscribers.size(); i++) {
       output->concatf("\t %d: %s\n", i, subscribers.get(i)->getReceiverName());
     }
     output->concat("\n");
-  }
-
-  if (getVerbosity() > 6) {
-    if (nullptr != current_event) {
-      output->concat("-- Current Runnable:\n");
-      current_event->printDebug(output);
-    }
   }
 }
 
@@ -1115,19 +1082,22 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
       // TODO: We should probably recycle the BOOT_COMPLETE until nothing responds to it.
       maskableInterrupts(true);  // Now configure interrupts, lift interrupt masks, and let the madness begin.
       if (getVerbosity() > 4) Kernel::log("Boot complete.\n");
-      if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
+      if (_logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
       break;
 
+    case MANUVR_MSG_SYS_CONF_SAVE:
+      platform.storeConf(event->getArgs());
+      break;
     case MANUVR_MSG_SYS_REBOOT:
-      if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
+      if (_logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
       platform.reboot();
       break;
     case MANUVR_MSG_SYS_SHUTDOWN:
-      if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
+      if (_logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
       platform.seppuku();  // TODO: We need to distinguish between this and SYSTEM shutdown for linux.
       break;
     case MANUVR_MSG_SYS_BOOTLOADER:
-      //if (nullptr != _logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
+      //if (_logger) _logger->toCounterparty(ManuvrPipeSignal::FLUSH, nullptr);
       platform.jumpToBootloader();
       break;
 
@@ -1143,6 +1113,13 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
   int8_t return_value = 0;
 
   switch (active_runnable->eventCode()) {
+    case MANUVR_MSG_SYS_REBOOT:
+    case MANUVR_MSG_SYS_SHUTDOWN:
+    case MANUVR_MSG_SYS_BOOTLOADER:
+      // These messages codes, we will capture the callback.
+      active_runnable->setOriginator(this);
+      break;
+
     #if defined(__MANUVR_CONSOLE_SUPPORT)
       case MANUVR_MSG_USER_DEBUG_INPUT:
         if (active_runnable->argCount()) {
@@ -1156,30 +1133,6 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
         break;
     #endif  // __MANUVR_CONSOLE_SUPPORT
 
-    case MANUVR_MSG_SELF_DESCRIBE:
-      // Field order: 1 uint32, 4 required null-terminated strings, 1 optional.
-      // uint32:     MTU                (in terms of bytes)
-      // String:     Protocol version   (IE: "0.0.1")
-      // String:     Identity           (IE: "Digitabulum") Generally the name of the Manuvrable.
-      // String:     Firmware version   (IE: "1.5.4")
-      // String:     Hardware version   (IE: "4")
-      // String:     Extended detail    (User-defined)
-      if (0 == active_runnable->argCount()) {
-        // We are being asked to self-describe.
-        active_runnable->addArg((uint32_t)    PROTOCOL_MTU);
-        active_runnable->addArg((uint32_t)    0);                  // Device flags.
-        active_runnable->addArg((const char*) PROTOCOL_VERSION);
-        active_runnable->addArg((const char*) IDENTITY_STRING);
-        active_runnable->addArg((const char*) VERSION_STRING);
-        active_runnable->addArg((const char*) HW_VERSION_STRING);
-        active_runnable->addArg((uint32_t)    0);                  // Optional serial number.
-        #ifdef EXTENDED_DETAIL_STRING
-          active_runnable->addArg((const char*) EXTENDED_DETAIL_STRING);
-        #endif
-        return_value++;
-      }
-      break;
-
     case MANUVR_MSG_SYS_ADVERTISE_SRVC:  // Some service is annoucing its arrival.
     case MANUVR_MSG_SYS_RETRACT_SRVC:    // Some service is annoucing its departure.
       if (0 < active_runnable->argCount()) {
@@ -1187,9 +1140,6 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
         if (0 == active_runnable->getArgAs(&er_ptr)) {
           if (MANUVR_MSG_SYS_ADVERTISE_SRVC == active_runnable->eventCode()) {
             subscribe((EventReceiver*) er_ptr);
-            if (booted()) {
-              er_ptr->bootComplete();
-            }
           }
           else {
             unsubscribe((EventReceiver*) er_ptr);
@@ -1213,6 +1163,11 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
         // We may be receiving a message definition message from another party.
         // For now, we've decided to handle this in XenoSession.
       }
+      break;
+
+    case MANUVR_MSG_SYS_CONF_LOAD:
+      break;
+    case MANUVR_MSG_SYS_CONF_SAVE:
       break;
 
     case MANUVR_MSG_SYS_ISSUE_LOG_ITEM:
@@ -1257,7 +1212,7 @@ unsigned int Kernel::countActiveSchedules() {
   ManuvrRunnable *current;
   for (int i = 0; i < schedules.size(); i++) {
     current = schedules.get(i);
-    if (current->threadEnabled()) {
+    if (current->scheduleEnabled()) {
       return_value++;
     }
   }
@@ -1272,10 +1227,10 @@ unsigned int Kernel::countActiveSchedules() {
 *  Will automatically set the schedule active, provided the input conditions are met.
 *  Returns the newly-created Runnable on success, or 0 on failure.
 */
-ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FunctionPointer sch_callback) {
+ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FxnPointer sch_callback) {
   ManuvrRunnable* return_value = nullptr;
   if (sch_period > 1) {
-    if (nullptr != sch_callback) {
+    if (sch_callback) {
       if (ac) {
         // If the schedule is supposed to auto-clear, we will pull it from our
         //   preallocation pool, since we know that it will eventually expire.
@@ -1307,7 +1262,7 @@ ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, 
   ManuvrRunnable* return_value = nullptr;
   if (sch_period > 1) {
     return_value = new ManuvrRunnable(recurrence, sch_period, ac, ori);
-    if (nullptr != return_value) {  // Did we actually malloc() successfully?
+    if (return_value) {  // Did we actually malloc() successfully?
       return_value->isScheduled(true);
       schedules.insert(return_value);
     }
@@ -1352,14 +1307,14 @@ void Kernel::advanceScheduler(unsigned int ms_elapsed) {
 * @return true on success and false on failure.
 */
 bool Kernel::removeSchedule(ManuvrRunnable *obj) {
-  if (obj != nullptr) {
+  if (obj) {
     if (obj != current_event) {
       obj->isScheduled(false);
       schedules.remove(obj);
     }
     else {
       obj->autoClear(true);
-      obj->thread_recurs = 0;
+      obj->alterScheduleRecurrence(0);
     }
     return true;
   }
@@ -1367,7 +1322,7 @@ bool Kernel::removeSchedule(ManuvrRunnable *obj) {
 }
 
 bool Kernel::addSchedule(ManuvrRunnable *obj) {
-  if (obj != nullptr) {
+  if (obj) {
     if (!schedules.contains(obj)) {
       obj->isScheduled(true);
       schedules.insert(obj);
@@ -1377,7 +1332,7 @@ bool Kernel::addSchedule(ManuvrRunnable *obj) {
   return false;
 }
 
-
+uint32_t Kernel::lagged_schedules = 0;
 
 /**
 * This is the function that is called from the main loop to offload big
@@ -1386,31 +1341,30 @@ bool Kernel::addSchedule(ManuvrRunnable *obj) {
 *  latency-sensitive.
 */
 int Kernel::serviceSchedules() {
-  if (!booted()) return -1;
+  if (!booted() || (0 == _ms_elapsed)) return -1;
   int return_value = 0;
+  uint32_t mse = _ms_elapsed;  // Concurrency....
+  _ms_elapsed = 0;
 
   int x = schedules.size();
   ManuvrRunnable *current;
 
   for (int i = 0; i < x; i++) {
     current = schedules.recycle();
-    if (current->threadEnabled()) {
-      if ((current->thread_time_to_wait > _ms_elapsed) && (!current->shouldFire())){
-        current->thread_time_to_wait -= _ms_elapsed;
-      }
-      else {
-        uint32_t adjusted_ttw = (_ms_elapsed - current->thread_time_to_wait);
-        if (adjusted_ttw <= current->thread_period) {
-          current->thread_time_to_wait = current->thread_period - adjusted_ttw;
-        }
-        else {
-          // TODO: Possible error-case? Too many clicks passed. We have schedule jitter...
-          // For now, we'll just throw away the difference.
-          current->thread_time_to_wait = current->thread_period;
-          lagged_schedules++;
-        }
-        current->fireNow(false);          // ...mark it as serviced.
-        Kernel::staticRaiseEvent(current);
+    if (current->scheduleEnabled()) {
+      switch (current->applyTime(mse)) {
+        case 1:   // Schedule should be exec'd and retained.
+          Kernel::staticRaiseEvent(current);
+          break;
+        case -1:  // Schedule should be dropped and executed.
+          Kernel::staticRaiseEvent(current);
+        case -2:  // Schedule should be dropped without execution.
+          removeSchedule(current);
+          x--;
+          break;
+        case 0:   // Nominal outcome. No action.
+        default:  // Nonsense.
+          break;
       }
     }
   }
@@ -1419,7 +1373,6 @@ int Kernel::serviceSchedules() {
   _skip_detected(false);
   _skips_observed = 0;
 
-  _ms_elapsed = 0;
   return return_value;
 }
 
@@ -1509,6 +1462,22 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       local_log.concatf("Kernel profiling %sabled.\n", ('P' == c) ? "en" : "dis");
       profiler('P' == c);
       break;
+
+    case 'y':    // Power mode.
+      {
+        ManuvrRunnable* event = returnEvent(MANUVR_MSG_SYS_POWER_MODE);
+        event->addArg((uint8_t) temp_int);
+        EventReceiver::raiseEvent(event);
+        local_log.concatf("Power mode is now %d.\n", temp_int);
+      }
+      break;
+
+    #if defined(MANUVR_STORAGE)
+      case 'S':
+        local_log.concat("Attempting configuration save...\n");
+        Kernel::raiseEvent(MANUVR_MSG_SYS_CONF_SAVE, this);
+        break;
+    #endif // MANUVR_STORAGE
 
     #if defined(__MANUVR_DEBUG)
     case 'f':  // FPU benchmark

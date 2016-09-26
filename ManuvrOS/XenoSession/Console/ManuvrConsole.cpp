@@ -32,24 +32,6 @@ void printHelp() {
   Kernel::log("Help would ordinarily be displayed here.\n");
 }
 
-#if !defined(_GNU_SOURCE)
-/*
-* We might choose to roll-our-own so that we don't bring in enormous dependencies.
-* TODO: This is buggy.
-* Taken from
-* http://c-for-dummies.com/blog/?p=1359
-*/
-int strcasestr(char *a, const char *b) {
-  char c;
-  while(*a && *b) {
-    c = toupper(*a) - toupper(*b);
-    if( c != 0 ) return(c);
-    a++;
-    b++;
-  }
-  return(c);
-}
-#endif
 
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
@@ -61,10 +43,6 @@ ManuvrConsole::ManuvrConsole(BufferPipe* _near_side) : XenoSession(_near_side) {
   Kernel::attachToLogger((BufferPipe*) this);
   mark_session_state(XENOSESSION_STATE_ESTABLISHED);
   _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
-
-  if (Kernel::getInstance()->booted()) {
-    bootComplete();   // Because we are instantiated well after boot, we call this on construction.
-  }
 }
 
 
@@ -133,36 +111,34 @@ int8_t ManuvrConsole::toCounterparty(StringBuilder* buf, int8_t mm) {
 * @return A declaration of memory-management responsibility.
 */
 int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
-  if (!(buf->contains('\n') || buf->contains('\r'))) {
-    // If the console doesn't see a CR, it will not register a command.
-    session_buffer.concatHandoff(buf);  // buf check will fail if the precedes it.
-    return MEM_MGMT_RESPONSIBLE_BEARER;
-  }
-  session_buffer.concatHandoff(buf);
-  for (int toks = session_buffer.split("\n"); toks > 0; toks--) {
-    char* temp_ptr = session_buffer.position(0);
-    int temp_len   = strlen(temp_ptr);
-    // Begin the cases...
-    #if defined(_GNU_SOURCE)
-      if (strcasestr(temp_ptr, "QUIT")) {
-        ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_REBOOT);
-        event->originator = (EventReceiver*) __kernel;
-        Kernel::staticRaiseEvent(event);
+  session_buffer.concatHandoff(buf);  // buf check will fail if the precedes it.
+  // If the console doesn't see a CR OR LF, it will not register a command.
+  if ((session_buffer.contains('\n') || session_buffer.contains('\r'))) {
+    for (int toks = session_buffer.split("\n"); toks > 0; toks--) {
+      char* temp_ptr = session_buffer.position(0);
+      int temp_len   = strlen(temp_ptr);
+      // Begin the cases...
+      #if defined(_GNU_SOURCE)
+        if (strcasestr(temp_ptr, "QUIT")) {
+          ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_REBOOT);
+          event->setOriginator((EventReceiver*) __kernel);
+          Kernel::staticRaiseEvent(event);
+        }
+        else if (strcasestr(temp_ptr, "HELP"))  printHelp();      // Show help.
+        else
+      #endif
+      {
+        // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
+        // run in idle time.
+        StringBuilder* dispatched = new StringBuilder((uint8_t*) temp_ptr, temp_len);
+        ManuvrRunnable* event  = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
+        event->specific_target = (EventReceiver*) __kernel;
+        event->setOriginator((EventReceiver*) this);
+        event->addArg(dispatched)->reapValue(true);
+        raiseEvent(event);
       }
-      else if (strcasestr(temp_ptr, "HELP"))  printHelp();      // Show help.
-      else
-    #endif
-    {
-      // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
-      // run in idle time.
-      StringBuilder* dispatched = new StringBuilder((uint8_t*) temp_ptr, temp_len);
-      ManuvrRunnable* event  = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
-      event->specific_target = (EventReceiver*) __kernel;
-      event->originator      = (EventReceiver*) this;
-      event->addArg(dispatched)->reapValue(true);
-      raiseEvent(event);
+      session_buffer.drop_position(0);
     }
-    session_buffer.drop_position(0);
   }
   return MEM_MGMT_RESPONSIBLE_BEARER;
 }
@@ -284,7 +260,7 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
 // TODO: Terminal forsakes logger.
 void ManuvrConsole::procDirectDebugInstruction(StringBuilder *input) {
   XenoSession::procDirectDebugInstruction(input);
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
 }
 
 #endif  // MANUVR_CONSOLE_SESSION  &  __MANUVR_CONSOLE_SUPPORT

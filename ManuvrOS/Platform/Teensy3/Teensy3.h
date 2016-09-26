@@ -34,8 +34,9 @@ This file is meant to contain a set of common functions that are
 
 class Teensy3 : public ManuvrPlatform {
   public:
-    virtual int8_t platformPreInit();
-    virtual int8_t platformPostInit();
+    inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
+    virtual int8_t platformPreInit(Argument*);
+    virtual void   printDebug(StringBuilder* out);
 
     /* Platform state-reset functions. */
     void seppuku();           // Simple process termination. Reboots if not implemented.
@@ -43,10 +44,14 @@ class Teensy3 : public ManuvrPlatform {
     void hardwareShutdown();
     void jumpToBootloader();
 
-    virtual void printDebug(StringBuilder* out);
 
 
   protected:
+    virtual int8_t platformPostInit();
+    #if defined(MANUVR_STORAGE)
+      // Called during boot to load configuration.
+      int8_t _load_config();
+    #endif
 };
 
 #endif  // __PLATFORM_VANILLA_LINUX_H__

@@ -186,6 +186,7 @@ While including CBOR for Viam Sonus, I ran up against the fact that my microcont
   but I found a gem while I was working the problem.
 
 Adding gc-sections to my linker directives caused this:
+
        text    data     bss     dec     hex filename
     2008463   16860   53988 2079311  1fba4f manuvr
     1743591   12160   50148 1805899  1b8e4b manuvr
@@ -212,5 +213,109 @@ CBOR loop closes tighter. Test is correct, and massively-extended. Simple map
        text    data     bss     dec     hex filename
     1743583   12160   50148 1805891  1b8e43 New baseline
 
+81 files changed, 3718 insertions(+), 1398 deletions(-)
 What a monster weekend....
+
+_---J. Ian Lindsay_
+
+------
+
+### 2016.09.07:
+I finally found the crash on program exit, that was specific to linux. It was
+  in the kernel destructor. This has been a problem for a LONG time (at least
+  8-months), but never surfaced because the kernel was never torn down. After
+  the recent platform abstraction improvements, the linux build exits naturally
+  and therefore invokes the kernel destructor as it leaves scope.
+For technical reasons, microcontroller programs simply halt, or hard-jump to a
+  bootloader, debug, or reset vector.
+
+Much OIC wrapper. Such ugly. But it will make a great toy very soon. If it
+  works out, I'll clean up the bindings to iotivity-constrained, and make
+  it integrate more naturally. Right now, it's lifted demo code.
+
+    Linux, 32-bit: DEBUG=1 SECURE=1
+    1910674   12740   66404 1989818  1e5cba With OIC support via iotivity-constrained.
+
+Lots of redundant crap in that build. Two of everything.
+Two DTLS stacks. Two IP adapters. Two CBOR implementations. Two CoAP PDU parsers/packers.
+EVERYTHING.
+
+It won't stay this way, and ALL of that redundancy is due to the hasty graft of
+  another wide-scope package. Commit. Sleep.
+
+_---J. Ian Lindsay_
+
+------
+
+### 2016.09.09:
+
+Alright... I've been putting this off.
+
+##### Today's situation:
+BufferPipes have been thread/mem safe to this point because they are synchronous.
+Although state might mutate in an unsafe manner within the objects that extend
+BufferPipe, the fate of the memory was not at risk of being in-question.
+
+##### The issue is this:
+This causes deeeeep call stacks. Here is a recent callgrind graph. Task was parsing CoAP packets and dumping results to kernel log (StandardIO).
+2016.09.09-callgrind.png
+
+This is _fine_ for a linux build. But will start to cause problems in tight-spaces.
+
+So....
+I now have to implement some simple next_tick() style functionality to cause an
+automatic synchronicity-break for transfers that desire it.
+
+Full platform polymorphism achieved.
+
+The next_tick() idea was implemented, but no tests written yet. So I'll have a fun surprise later. More identity and CBOR extension...
+
+_---J. Ian Lindsay_
+
+------
+
+### 2016.09.25:
+
+**Messages need to do these things...**
+
+  * Pack/parse for transport.
+  * Convey asynchronous events internally
+  * Carry context-specific arguments
+  * Carry knowledge of their GC policy
+  * Be passed uniformly
+  * Be bridged with outbound transport messages. IE, be locked and held by modules.
+  * Be statically-allocated.
+  * Be schedulable by the kernel.
+  * Carry callback pointers as either a class or fxn*.
+
+
+    Linux, 32-bit: DEBUG=1 SECURE=1
+    1744195   12160   50148 1806503  1b90a7 Tonight's baseline....
+    1744179   12160   50148 1806487  1b9097 First step of Msg/Runnable condensation.
+    1743551   12160   50020 1805731  1b8da3 Runnable and Msg smash-merged.
+    1743487   12160   50020 1805667  1b8d63 Cut class_initializer().
+    1743423   12160   50020 1805603  1b8d23 Cut arg form statics.
+    1743651   12160   50020 1805831  1b8e07 Msg scope tightening with addition of accessors.
+    1743923   12160   50020 1806103  1b8f17 More scope-tightening.
+    1743907   12160   49892 1805959  1b8e87 Struct padding fix.
+    1743971   12160   49892 1806023  1b8ec7 More encapsulation.
+    1743939   12160   49892 1805991  1b8ea7 Re-working scheduler responsibilities.
+    1744051   12160   49892 1806103  1b8f17 Legacy fxn ptr is now private for first time.
+    1743987   12160   49892 1806039  1b8ed7 Turning in for the night.
+    1743971   12160   49892 1806023  1b8ec7 Shaving a few more needless public members.
+    1743583   12160   49892 1805635  1b8d43 Finally dropped messages soft-idempotency.
+    1743503   12160   49892 1805555  1b8cf3 Shaved a few more redundancies. Doc cleanup.
+
+
+**Review:**
+
+  * Merged ManuvrRunnable down into ManuvrMsg. The merger is not yet complete. There is presently a namespace-stitch being performed by a typedef.
+  * Some much-needed cruft-removal was done. Scheduler has been reworked a bit to enhance safety, readability, consistency. General "best-practices" work.
+  * Wrote a set of stubs for testing schedules. Nothing filled in yet. Makefile break-out for tests.
+  * Finished the preprocessor case-offs to allow building without the profiler. It's a special class of debugging tool that will never find a place in production builds.
+  * Finally lost a bad idea (soft-idempotency).
+  * Doxygen conformance audit in ManuvrMsg.
+
+  Looks like my re-work shaved 256-bytes of resting memory load and ~900 bytes of flash. But it also saved a number of heavily-trafficked virtual execution pathways.
+
 _---J. Ian Lindsay_

@@ -46,8 +46,8 @@ This is an example file for building firmware on linux. Anticipated target is a 
 // This would be the version of the Manuvrable's firmware (this program).
 #define VERSION_STRING               "0.0.1"
 
-// Hardware is versioned. Manuvrables that are strictly-software should say -1 here.
-#define HW_VERSION_STRING               "-1"
+// Hardware is versioned. Manuvrables that are strictly-software should comment this.
+//#define HW_VERSION_STRING               "rev4"
 
 // The version of Manuvr's protocol we are using.
 #define PROTOCOL_VERSION             "0.0.1"

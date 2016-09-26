@@ -11,7 +11,7 @@
 # Used for internal functionality macros. Feel free to rename. Need to
 #   replace this with an autoconf script which I haven't yet learned how to
 #   write.
-OPTIMIZATION       = -O2
+OPTIMIZATION       = -O1
 C_STANDARD         = gnu99
 CPP_STANDARD       = gnu++11
 FIRMWARE_NAME      = manuvr
@@ -24,8 +24,9 @@ MANUVR_OPTIONS     =
 SHELL          = /bin/sh
 WHERE_I_AM     = $(shell pwd)
 
-export CXX     = $(shell which g++)
 export CC      = $(shell which gcc)
+export CXX     = $(shell which g++)
+export AR      = $(shell which ar)
 export SZ      = $(shell which size)
 export MAKE    = $(shell which make)
 
@@ -47,12 +48,11 @@ INCLUDES   += -I$(WHERE_I_AM)/lib/iotivity/include
 # Libraries to link
 # We should be gradually phasing out C++ standard library on linux builds.
 # TODO: Advance this goal.
-LIBS = -L$(OUTPUT_PATH) -lstdc++ -lm
+LIBS = -L$(OUTPUT_PATH) -L$(WHERE_I_AM)/lib -lstdc++ -lm
 
 # Wrap the include paths into the flags...
 CFLAGS += $(INCLUDES)
 CFLAGS += -fsingle-precision-constant -Wdouble-promotion
-
 
 ###########################################################################
 # Are we on a 64-bit system? If so, we'll need to specify
@@ -108,18 +108,23 @@ MANUVR_OPTIONS += -DMANUVR_STORAGE
 MANUVR_OPTIONS += -DMANUVR_CBOR
 #MANUVR_OPTIONS += -DMANUVR_JSON
 
-# Framework selections, if any are desired.
-#MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT
-
 # Since we are building on linux, we will have threading support via
 # pthreads.
-LIBS +=  -lmanuvr $(OUTPUT_PATH)libextras.a -lpthread
+LIBS +=  -lmanuvr -lextras -lpthread
+
+
+# Framework selections, if any are desired.
+ifeq ($(OIC_SERVER),1)
+	MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT -DOC_SERVER
+else ifeq ($(OIC_CLIENT),1)
+	MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT -DOC_CLIENT
+endif
 
 # Options for various security features.
 ifeq ($(SECURE),1)
 MANUVR_OPTIONS += -D__MANUVR_MBEDTLS
 # The remaining lines are to prod header files in libraries.
-MANUVR_OPTIONS += -DOC_SECURITY -DOC_CLIENT
+MANUVR_OPTIONS += -DOC_SECURITY
 LIBS += $(OUTPUT_PATH)/libmbedtls.a
 LIBS += $(OUTPUT_PATH)/libmbedx509.a
 LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
@@ -148,10 +153,6 @@ MANUVR_OPTIONS += -D__MANUVR_EVENT_PROFILER
 
 ###########################################################################
 # Rules for building the firmware follow...
-#
-# 'make raspi' will build a sample firmware for the original Raspberry Pi.
-#    The idea is to be able to quickly iterate on a design idea with the
-#    aid of valgrind and gdb.
 ###########################################################################
 # Merge our choices and export them to the downstream Makefiles...
 CFLAGS += $(MANUVR_OPTIONS) $(OPTIMIZATION)
@@ -165,11 +166,11 @@ export CPP_FLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
 
 
 all: libs
-	$(CXX) -Wl,--gc-sections -static -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(CXX) -Wl,--gc-sections -static -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 	$(SZ) $(FIRMWARE_NAME)
 
 tests: libs
-	$(CXX) -static -o dstest tests/TestDataStructures.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(MAKE) -C tests/
 
 examples: libs
 	$(CXX) -static -o barebones examples/main_template.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
@@ -184,16 +185,21 @@ libs: builddir
 
 clean:
 	$(MAKE) clean -C ManuvrOS/
+	$(MAKE) clean -C tests/
 	rm -f *.o *.su *~ testbench $(FIRMWARE_NAME)
-	rm -rf $(OUTPUT_PATH)
 
 fullclean: clean
+	rm -rf $(OUTPUT_PATH)
+	export SECURE=1
 	$(MAKE) clean -C lib/
+	$(MAKE) clean -C tests/
 	rm -rf doc/doxygen
 
 
 docs:
 	doxygen Doxyfile
+	mkdir -p doc/doxygen/html/doc/
+	ln -s ../../../3d-logo.png doc/doxygen/html/doc/3d-logo.png
 
 stats:
 	find ./ManuvrOS -type f \( -name \*.cpp -o -name \*.h \) -exec wc -l {} +

@@ -50,7 +50,6 @@ This file is meant to contain a set of common functions that are typically platf
 ****************************************************************************************************/
 volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
 volatile uint8_t  watchdog_mark      = 42;
-unsigned long     start_time_micros  = 0;
 
 
 /****************************************************************************************************
@@ -198,7 +197,7 @@ void setPinEvent(uint8_t pin, ManuvrRunnable* isr_event) {
 /*
 * Pass the function pointer
 */
-void setPinFxn(uint8_t pin, FunctionPointer fxn) {
+void setPinFxn(uint8_t pin, FxnPointer fxn) {
 }
 
 
@@ -298,18 +297,10 @@ volatile void reboot() {
 * This is the final function called by the kernel constructor.
 */
 void platformPreInit() {
+  ManuvrPlatform::platformPreInit(root_config);
   gpioSetup();
-}
-
-
-/*
-* Called as a result of kernels bootstrap() fxn.
-*/
-void platformInit() {
-  start_time_micros = micros();
   init_RNG();
 }
-
 
 
 #ifdef __cplusplus

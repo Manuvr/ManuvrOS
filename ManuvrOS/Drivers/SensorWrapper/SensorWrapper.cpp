@@ -434,7 +434,11 @@ bool SensorWrapper::defineDatum(int vid, const char* desc, const char* units, ui
         insert_datum(nu);
         return true;
     }
-
+    else {
+      // We allocated a slot, but no data to put in it. Since we do not want to leak,
+      // we must free the slot that we are edeclining to track.
+      free(nu);
+    }
   }
   return false;
 }

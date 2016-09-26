@@ -1,7 +1,10 @@
 #ifndef __MANUVR_ARGUMENT_H__
 #define __MANUVR_ARGUMENT_H__
 
+#include <string.h>
+
 #include <EnumeratedTypeCodes.h>
+#include <Types/TypeTranscriber.h>
 
 #include <DataStructures/Vector3.h>
 #include <DataStructures/Quaternion.h>
@@ -24,7 +27,8 @@ class StringBuilder;
 class BufferPipe;
 class ManuvrXport;
 class EventReceiver;
-class ManuvrRunnable;
+class Identity;
+class ManuvrMsg;
 
 /* This is how we define arguments to messages. */
 class Argument {
@@ -72,34 +76,43 @@ class Argument {
     * We typically want references to typeless swaths of memory be left alone at the end of
     *   the Argument's life cycle. We will specify otherwise when appropriate.
     */
-    Argument(void* val, uint16_t len) : Argument(val, len, BINARY_FM) {};
+    Argument(void* val, size_t len) : Argument(val, len, BINARY_FM) {};
 
     /* These are system service pointers. Do not reap. */
     Argument(EventReceiver* val) : Argument((void*) val, sizeof(val), SYS_EVENTRECEIVER_FM) {};
     Argument(ManuvrXport* val)   : Argument((void*) val, sizeof(val), SYS_MANUVR_XPORT_FM)  {};
     Argument(BufferPipe* val)    : Argument((void*) val, sizeof(val), BUFFERPIPE_PTR_FM)    {};
 
+    Argument(FxnPointer* val)     : Argument((void*) val, sizeof(val), SYS_FXN_PTR_FM)        {};
+    Argument(ThreadFxnPtr* val)   : Argument((void*) val, sizeof(val), SYS_THREAD_FXN_PTR_FM) {};
+    Argument(ArgumentFxnPtr* val) : Argument((void*) val, sizeof(val), SYS_ARG_FXN_PTR_FM)    {};
+    Argument(PipeIOCallback* val) : Argument((void*) val, sizeof(val), SYS_PIPE_FXN_PTR_FM)   {};
+
     /*
-    * We typically want ManuvrRunnable references to be left alone at the end of
+    * We typically want ManuvrMsg references to be left alone at the end of
     *   the Argument's life cycle. We will specify otherwise when appropriate.
     */
-    Argument(ManuvrRunnable* val) : Argument((void*) val, sizeof(val), SYS_RUNNABLE_PTR_FM) {};
+    Argument(ManuvrMsg* val) : Argument((void*) val, sizeof(val), SYS_RUNNABLE_PTR_FM) {};
 
     // TODO: This default behavior changed. Audit usage by commenting addArg(StringBuilder)
-    Argument(StringBuilder* val)  : Argument(val, sizeof(val), STR_BUILDER_FM) {};
+    Argument(StringBuilder* val)  : Argument(val, sizeof(val), STR_BUILDER_FM)          {};
+    Argument(Argument* val)       : Argument((void*) val, sizeof(val), ARGUMENT_PTR_FM) {};
+    Argument(Identity* val)       : Argument((void*) val, sizeof(val), IDENTITY_FM)     {};
 
 
     ~Argument();
 
+
+    int8_t dropArg(Argument**, Argument*);
 
     inline void reapKey(bool en) {    _alter_flags(en, MANUVR_ARG_FLAG_REAP_KEY);      };
     inline bool reapKey() {           return _check_flags(MANUVR_ARG_FLAG_REAP_KEY);   };
     inline void reapValue(bool en) {  _alter_flags(en, MANUVR_ARG_FLAG_REAP_VALUE);    };
     inline bool reapValue() {         return _check_flags(MANUVR_ARG_FLAG_REAP_VALUE); };
 
-    inline void*    pointer() {           return target_mem; };
-    inline uint8_t  typeCode() {          return type_code;  };
-    inline uint16_t length() {            return len;        };
+    inline void*    pointer() {       return target_mem; };
+    inline uint8_t  typeCode() {      return type_code;  };
+    inline uint16_t length() {        return len;        };
 
     inline const char* getKey() {         return _key;  };
     inline void setKey(const char* k) {      _key = k;  };
@@ -113,36 +126,44 @@ class Argument {
     int    argCount();
     int    sumAllLengths();
     Argument* retrieveArgByIdx(int idx);
+    Argument* retrieveArgByKey(const char*);
 
-    Argument* append(Argument* arg);
-    inline Argument* append(uint8_t val) {             return append(new Argument(val));   }
-    inline Argument* append(uint16_t val) {            return append(new Argument(val));   }
-    inline Argument* append(uint32_t val) {            return append(new Argument(val));   }
-    inline Argument* append(int8_t val) {              return append(new Argument(val));   }
-    inline Argument* append(int16_t val) {             return append(new Argument(val));   }
-    inline Argument* append(int32_t val) {             return append(new Argument(val));   }
-    inline Argument* append(float val) {               return append(new Argument(val));   }
+    Argument* link(Argument* arg);
+    inline Argument* append(uint8_t val) {          return link(new Argument(val));   }
+    inline Argument* append(uint16_t val) {         return link(new Argument(val));   }
+    inline Argument* append(uint32_t val) {         return link(new Argument(val));   }
+    inline Argument* append(int8_t val) {           return link(new Argument(val));   }
+    inline Argument* append(int16_t val) {          return link(new Argument(val));   }
+    inline Argument* append(int32_t val) {          return link(new Argument(val));   }
+    inline Argument* append(float val) {            return link(new Argument(val));   }
 
-    inline Argument* append(uint8_t *val) {            return append(new Argument(val));   }
-    inline Argument* append(uint16_t *val) {           return append(new Argument(val));   }
-    inline Argument* append(uint32_t *val) {           return append(new Argument(val));   }
-    inline Argument* append(int8_t *val) {             return append(new Argument(val));   }
-    inline Argument* append(int16_t *val) {            return append(new Argument(val));   }
-    inline Argument* append(int32_t *val) {            return append(new Argument(val));   }
-    inline Argument* append(float *val) {              return append(new Argument(val));   }
+    inline Argument* append(uint8_t *val) {         return link(new Argument(val));   }
+    inline Argument* append(uint16_t *val) {        return link(new Argument(val));   }
+    inline Argument* append(uint32_t *val) {        return link(new Argument(val));   }
+    inline Argument* append(int8_t *val) {          return link(new Argument(val));   }
+    inline Argument* append(int16_t *val) {         return link(new Argument(val));   }
+    inline Argument* append(int32_t *val) {         return link(new Argument(val));   }
+    inline Argument* append(float *val) {           return link(new Argument(val));   }
 
-    inline Argument* append(Vector3ui16 *val) {        return append(new Argument(val));   }
-    inline Argument* append(Vector3i16 *val) {         return append(new Argument(val));   }
-    inline Argument* append(Vector3f *val) {           return append(new Argument(val));   }
-    inline Argument* append(Vector4f *val) {           return append(new Argument(val));   }
+    inline Argument* append(Vector3ui16 *val) {     return link(new Argument(val));   }
+    inline Argument* append(Vector3i16 *val) {      return link(new Argument(val));   }
+    inline Argument* append(Vector3f *val) {        return link(new Argument(val));   }
+    inline Argument* append(Vector4f *val) {        return link(new Argument(val));   }
 
-    inline Argument* append(void *val, int len) {      return append(new Argument(val, len));   }
-    inline Argument* append(const char *val) {         return append(new Argument(val));   }
-    inline Argument* append(StringBuilder *val) {      return append(new Argument(val));   }
-    inline Argument* append(BufferPipe *val) {         return append(new Argument(val));   }
-    inline Argument* append(EventReceiver *val) {      return append(new Argument(val));   }
-    inline Argument* append(ManuvrXport *val) {        return append(new Argument(val));   }
-    inline Argument* append(ManuvrRunnable *val) {     return append(new Argument(val));   }
+    inline Argument* append(void *val, int len) {   return link(new Argument(val, len));   }
+    inline Argument* append(const char *val) {      return link(new Argument(val));   }
+    inline Argument* append(StringBuilder *val) {   return link(new Argument(val));   }
+    inline Argument* append(Argument *val) {        return link(new Argument(val));   }
+    inline Argument* append(Identity *val) {        return link(new Argument(val));   }
+    inline Argument* append(BufferPipe *val) {      return link(new Argument(val));   }
+    inline Argument* append(EventReceiver *val) {   return link(new Argument(val));   }
+    inline Argument* append(ManuvrXport *val) {     return link(new Argument(val));   }
+    inline Argument* append(ManuvrMsg *val) {  return link(new Argument(val));   }
+
+    inline Argument* append(FxnPointer *val) {      return link(new Argument(val));   }
+    inline Argument* append(ThreadFxnPtr *val) {    return link(new Argument(val));   }
+    inline Argument* append(ArgumentFxnPtr *val) {  return link(new Argument(val));   }
+    inline Argument* append(PipeIOCallback *val) {  return link(new Argument(val));   }
 
 
     // TODO: These will be re-worked to support alternate type-systems.
@@ -190,40 +211,5 @@ class Argument {
     // TODO: Might-should move this to someplace more accessable?
     static uintptr_t get_const_from_char_ptr(char*);
 };
-
-
-
-#if defined(MANUVR_CBOR)
-/* If we have CBOR support, we define a helper class to assist decomposition. */
-class CBORArgListener : public cbor::listener {
-  public:
-    CBORArgListener(Argument**);
-    ~CBORArgListener();
-
-    void on_integer(int value);
-    void on_bytes(unsigned char* data, int size);
-    void on_string(char* str);
-    void on_array(int size);
-    void on_map(int size);
-    void on_tag(unsigned int tag);
-    void on_special(unsigned int code);
-    void on_error(const char* error);
-
-    void on_extra_integer(unsigned long long value, int sign);
-    void on_extra_tag(unsigned long long tag);
-    void on_extra_special(unsigned long long tag);
-
-  private:
-    Argument** built = nullptr;
-    char*  _wait     = nullptr;
-    int _wait_map    = 0;
-    int _wait_array  = 0;
-
-    /* Please forgive the stupid name. */
-    void _caaa(Argument*);
-};
-#endif
-
-
 
 #endif  // __MANUVR_ARGUMENT_H__

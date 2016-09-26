@@ -33,8 +33,8 @@ This class is a driver for Microchip's MGC3130 e-field gesture sensor. It is mea
 
 
 const MessageTypeDef mgc3130_message_defs[] = {
-  {  MANUVR_MSG_SENSOR_MGC3130            , MSG_FLAG_IDEMPOTENT,  "MGC3130",                   ManuvrMsg::MSG_ARGS_NONE, NULL }, //
-  {  MANUVR_MSG_SENSOR_MGC3130_INIT       , MSG_FLAG_IDEMPOTENT,  "MGC3130_INIT",              ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_SENSOR_MGC3130            , 0x0000,  "MGC3130",                   ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_SENSOR_MGC3130_INIT       , 0x0000,  "MGC3130_INIT",              ManuvrMsg::MSG_ARGS_NONE, NULL }, //
 
   /*
     For messages that have arguments, we have the option of defining inline lables for each parameter.
@@ -114,8 +114,8 @@ MGC3130::MGC3130(int ts, int rst, uint8_t addr) : EventReceiver() {
   _reset_pin = (uint8_t) rst;
 
   _isr_read_event.specific_target = this;
-  _isr_read_event.originator      = this;
   _isr_read_event.priority        = 3;
+  _isr_read_event.setOriginator((EventReceiver*) this);
   _isr_read_event.isManaged(true);
 
   // TODO: Formallize this for build targets other than Arduino. Use the abstracted Manuvr

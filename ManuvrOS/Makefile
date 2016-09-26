@@ -38,7 +38,6 @@ CPP_SRCS  += Types/TypeTranscriber.cpp
 CPP_SRCS  += Types/Avro/Avro.cpp
 
 # Manuvr core
-CPP_SRCS  += ManuvrRunnable.cpp
 CPP_SRCS  += EnumeratedTypeCodes.cpp
 CPP_SRCS  += Kernel.cpp
 CPP_SRCS  += EventReceiver.cpp
@@ -74,7 +73,6 @@ CPP_SRCS  += Transports/ManuvrSocket/ManuvrSocket.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrTCP.cpp
 CPP_SRCS  += Transports/ManuvrSocket/ManuvrUDP.cpp
 CPP_SRCS  += Transports/ManuvrSocket/UDPPipe.cpp
-CPP_SRCS  += Drivers/BusQueue/BusQueue.cpp
 # TODO: Case-off for socket/TCP/Pipe support...
 #CPP_SRCS  += Transports/ManuvrTelehash/ManuvrTelehash.cpp
 
@@ -82,6 +80,7 @@ CPP_SRCS  += Drivers/BusQueue/BusQueue.cpp
 CPP_SRCS  += Frameworks/OIC/ManuvrOIC.cpp
 
 # i2c apparatus...
+CPP_SRCS  += Drivers/BusQueue/BusQueue.cpp
 CPP_SRCS  += Drivers/i2c-adapter/I2CDevice.cpp
 CPP_SRCS  += Drivers/i2c-adapter/i2c-adapter.cpp
 CPP_SRCS  += Drivers/i2c-adapter/I2CDeviceWithRegisters.cpp
@@ -120,6 +119,7 @@ CPP_SRCS  += Drivers/INA219/INA219.cpp
 
 CPP_SRCS  += Platform/Cryptographic.cpp
 CPP_SRCS  += Platform/Identity.cpp
+CPP_SRCS  += Platform/Identity/IdentityUUID.cpp
 CPP_SRCS  += Platform/Storage.cpp
 
 
