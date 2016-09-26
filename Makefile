@@ -170,8 +170,7 @@ all: libs
 	$(SZ) $(FIRMWARE_NAME)
 
 tests: libs
-	$(CXX) -static -o dstest tests/TestDataStructures.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
-	$(CXX) -static -o identtest tests/IdentityTest.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(MAKE) -C tests/
 
 examples: libs
 	$(CXX) -static -o barebones examples/main_template.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
@@ -186,12 +185,14 @@ libs: builddir
 
 clean:
 	$(MAKE) clean -C ManuvrOS/
+	$(MAKE) clean -C tests/
 	rm -f *.o *.su *~ testbench $(FIRMWARE_NAME)
 
 fullclean: clean
 	rm -rf $(OUTPUT_PATH)
 	export SECURE=1
 	$(MAKE) clean -C lib/
+	$(MAKE) clean -C tests/
 	rm -rf doc/doxygen
 
 

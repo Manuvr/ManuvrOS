@@ -5,9 +5,11 @@
 *.cbor
 
 manuvr
-bptest
-dstest
-gpstest
+tests/bptest
+tests/dstest
+tests/gpstest
+tests/identtest
+tests/schedtest
 lib/FreeRTOS_Arduino/
 lib/avro/
 lib/config.h
