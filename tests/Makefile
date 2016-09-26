@@ -35,11 +35,10 @@ TESTS  = $(SOURCES_CPP:.cpp=)
 .PHONY: all
 
 all: $(TESTS)
-	@echo 'Built tests:  '
-	@echo $(TESTS)
+	@echo 'Built tests:  $(TESTS)'
 
 % : %.cpp
 	$(CXX) -static -o $@ $< $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS)
 
 clean:
-	rm -f dstest identtest schedtest
+	rm -f $(TESTS) CryptoTest
