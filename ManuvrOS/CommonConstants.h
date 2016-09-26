@@ -18,7 +18,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-There ought to be no inclusion in this file. It is the bottom.
+Apart from including the user-suppied configuration header, there
+  ought to be no inclusion in this file. It is the bottom.
 */
 
 #ifndef __MANUVR_COMMON_CONSTANTS_H__
@@ -40,7 +41,11 @@ There ought to be no inclusion in this file. It is the bottom.
     #include "ManuvrConf.h"
   #endif
 
-  /* These are defines for const char* that are commonly used. */
+  /*
+  * These are defines for const char* that are commonly used.
+  * We are collecting them here so that future additions to the
+  *   platform can provide a macro to keep them flash-resident.
+  */
   #define MANUVR_CONST_STR_WHOAMI           "_whoami"
   #define MANUVR_CONST_STR_PLATFORM_CONF    "_pconf"
 #endif

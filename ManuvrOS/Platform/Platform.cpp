@@ -269,7 +269,6 @@ void ManuvrPlatform::_discoverALUParams() {
 }
 
 
-
 /**
 * This is called by user code to initialize the platform.
 */

@@ -1,3 +1,19 @@
+## How platform support is organized
+
+There exist a number of common operations for a program that are (by necessity) platform-dependent for some reason. In Manuvr's notion of platform, the following platform-specific things are abstracted into provincial structures or classes because they either (imply hardware-access) or (have differential implementations that do the same thing).
+  1. Random numbers
+  2. Trans-runtime data persistence (File/EEPROM/Flash I/O)
+  3. Platform state control (Reset, reboot, shutdown, bootloader entry)
+  4. Process state control (Sleeping/delay, threading, interrupt suspension)
+  5. Date and time
+  6. Cryptographic implementation (which falls-back on software)
+  7. GPI/O pins
+  8. Watchdog, COP, deadman switch (failsafe timers)
+
+In addition, there are points in the platform life-cycle where features (ALU width and endianness) and environment are discovered at runtime, and made available to the rest of the firmware. This eliminates the need to replicate this functionality (#include <net/htons.h>), or bake-in these parameters at runtime (which doesn't always work, because some CPUs exhibit dual-endianness.
+
+-----
+
 ## Boot sequence
 Platform has no constructor. It is statically-allocated on the stack prior to main() invocation, and is accessible anywhere that Platform/Platform.h is included.
 
@@ -100,5 +116,3 @@ Configuration structure (loaded by platform) should result in a map that has thi
       |--"_conf": The root of runtime configuration data.
       |
       |--"_pipe": Any runtime-defined pipe strategies.
-
------
