@@ -8,12 +8,11 @@ manuvr
 
 doc/doxygen/
 
-tests/bptest
-tests/dstest
-tests/gpstest
-tests/identtest
-tests/schedtest
-tests/cryptotest
+tests/TestDataStructures
+tests/IdentityTest
+tests/BufferPipeTest
+tests/SchedulerTest
+tests/CryptoTest
 
 lib/FreeRTOS_Arduino/
 lib/avro/
