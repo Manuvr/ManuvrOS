@@ -302,6 +302,10 @@ _---J. Ian Lindsay_
     1743939   12160   49892 1805991  1b8ea7 Re-working scheduler responsibilities.
     1744051   12160   49892 1806103  1b8f17 Legacy fxn ptr is now private for first time.
     1743987   12160   49892 1806039  1b8ed7 Turning in for the night.
+    1743971   12160   49892 1806023  1b8ec7 Shaving a few more needless public members.
+    1743583   12160   49892 1805635  1b8d43 Finally dropped messages soft-idempotency.
+    1743503   12160   49892 1805555  1b8cf3 Shaved a few more redundancies. Doc cleanup.
+
 
 **Review:**
 
@@ -309,7 +313,9 @@ _---J. Ian Lindsay_
   * Some much-needed cruft-removal was done. Scheduler has been reworked a bit to enhance safety, readability, consistency. General "best-practices" work.
   * Wrote a set of stubs for testing schedules. Nothing filled in yet. Makefile break-out for tests.
   * Finished the preprocessor case-offs to allow building without the profiler. It's a special class of debugging tool that will never find a place in production builds.
+  * Finally lost a bad idea (soft-idempotency).
+  * Doxygen conformance audit in ManuvrMsg.
 
-  Looks like my re-work shaved 256-bytes of resting memory load and ~500 bytes of flash. But it also saved a number of heavily-trafficked virtual execution pathways.
+  Looks like my re-work shaved 256-bytes of resting memory load and ~900 bytes of flash. But it also saved a number of heavily-trafficked virtual execution pathways.
 
 _---J. Ian Lindsay_

@@ -33,8 +33,8 @@ This class is a driver for Microchip's MGC3130 e-field gesture sensor. It is mea
 
 
 const MessageTypeDef mgc3130_message_defs[] = {
-  {  MANUVR_MSG_SENSOR_MGC3130            , MSG_FLAG_IDEMPOTENT,  "MGC3130",                   ManuvrMsg::MSG_ARGS_NONE, NULL }, //
-  {  MANUVR_MSG_SENSOR_MGC3130_INIT       , MSG_FLAG_IDEMPOTENT,  "MGC3130_INIT",              ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_SENSOR_MGC3130            , 0x0000,  "MGC3130",                   ManuvrMsg::MSG_ARGS_NONE, NULL }, //
+  {  MANUVR_MSG_SENSOR_MGC3130_INIT       , 0x0000,  "MGC3130_INIT",              ManuvrMsg::MSG_ARGS_NONE, NULL }, //
 
   /*
     For messages that have arguments, we have the option of defining inline lables for each parameter.

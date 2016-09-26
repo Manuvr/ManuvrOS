@@ -106,8 +106,8 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
 
   {  MANUVR_MSG_SESS_SUBCRIBE        , MSG_FLAG_EXPORTABLE,  "SESS_SUBCRIBE"        , ManuvrMsg::MSG_ARGS_NONE }, // Used to subscribe this session to other events.
   {  MANUVR_MSG_SESS_UNSUBCRIBE      , MSG_FLAG_EXPORTABLE,  "SESS_UNSUBCRIBE"      , ManuvrMsg::MSG_ARGS_NONE }, // Used to unsubscribe this session from other events.
-  {  MANUVR_MSG_SESS_ORIGINATE_MSG   , MSG_FLAG_IDEMPOTENT,  "SESS_ORIGINATE_MSG"   , ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_SESS_SERVICE         , 0x0000             ,  "SESS_SERVICE"         , ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_SESS_ORIGINATE_MSG   , 0x0000,               "SESS_ORIGINATE_MSG"   , ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_SESS_SERVICE         , 0x0000,               "SESS_SERVICE"         , ManuvrMsg::MSG_ARGS_NONE }, //
 
   {  MANUVR_MSG_XPORT_SEND,         0x0000,  "XPORT_TX"           , ManuvrMsg::MSG_ARGS_NONE }, //
   {  MANUVR_MSG_XPORT_RECEIVE,      0x0000,  "XPORT_RX"           , ManuvrMsg::MSG_ARGS_NONE }, //
@@ -554,21 +554,6 @@ int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
     return -3;
   }
 
-  // Those are the basic checks. Now for the advanced functionality...
-  if (event->isIdempotent()) {
-    /* TODO: This seems ill-conceived in hindsight. FAR too heavy...
-               Event idempotency in this manner is deprecated.
-                       ---J. Ian Lindsay 2016.09.04 */
-    ManuvrRunnable* working;
-    for (int i = 0; i < exec_queue.size(); i++) {
-      // No duplicate idempotent events allowed...
-      working = exec_queue.get(i);
-      if ((working) && (working->eventCode() == event->eventCode())) {
-        idempotent_blocks++;
-        return -4;   // Distinct failure vs pointer-value idenpotency (-3).
-      }
-    }
-  }
   // Go ahead and insert.
   INSTANCE->exec_queue.insert(event, event->priority);
   return 0;
@@ -924,7 +909,6 @@ void Kernel::profiler(bool enabled) {
   events_destroyed   = 0;
   prealloc_starved   = 0;
   burden_of_specific = 0;
-  idempotent_blocks  = 0;
   insertion_denials  = 0;
 
   #if defined(__MANUVR_EVENT_PROFILER)
@@ -953,7 +937,6 @@ void Kernel::printProfiler(StringBuilder* output) {
     output->concatf("-- Prealloc starves   \t%u\n", (unsigned long) prealloc_starved);
     output->concatf("-- events_destroyed   \t%u\n", (unsigned long) events_destroyed);
     output->concatf("-- specificity burden \t%u\n", (unsigned long) burden_of_specific);
-    output->concatf("-- idempotent_blocks  \t%u\n", (unsigned long) idempotent_blocks);
   }
 
   output->concatf("-- total_events       \t%u\n", (unsigned long) total_events);

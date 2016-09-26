@@ -222,7 +222,6 @@ limitations under the License.
       uint32_t events_destroyed;      // How many events have we destroyed?
       uint32_t prealloc_starved;      // How many times did we starve the prealloc queue?
       uint32_t burden_of_specific;    // How many events have we reaped?
-      uint32_t idempotent_blocks;     // How many times has the idempotent flag prevented a raiseEvent()?
       uint32_t insertion_denials;     // How many times have we rejected events?
       uint32_t max_queue_depth;       // What is the deepest point the queue has reached?
 

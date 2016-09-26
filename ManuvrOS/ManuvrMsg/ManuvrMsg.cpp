@@ -43,11 +43,30 @@ extern inline uint16_t parseUint16Fromchars(unsigned char *input);
 *
 * Static members and initializers should be located here.
 *******************************************************************************/
+// Runtime manifest of Msg definitions.
 std::map<uint16_t, const MessageTypeDef*> ManuvrMsg::message_defs_extended;
 
-const unsigned char ManuvrMsg::MSG_ARGS_NONE[] = {0};  // Generic argument def for a message with no args.
+// Generic argument def for a message with no args.
+const unsigned char ManuvrMsg::MSG_ARGS_NONE[] = {0};
 
+/**
+* This function is needed as a static.
+* Is this message exportable over the network?
+*
+* @return true if so.
+*/
+bool ManuvrMsg::isExportable(const MessageTypeDef* message_def) {
+  return (message_def->msg_type_flags & MSG_FLAG_EXPORTABLE);
+}
 
+/**
+* Called by other classes to add their event definitions to the runtime
+*   manifest.
+*
+* @param  MessageTypeDef[]  An array of MessageTypeDefs to add.
+* @param  int  The number of MessageTypeDefs in the array.
+* @return 0 on success. Non-zero otherwise.
+*/
 int8_t ManuvrMsg::registerMessages(const MessageTypeDef defs[], int mes_count) {
   for (int i = 0; i < mes_count; i++) {
     message_defs_extended[defs[i].msg_type_code] = &defs[i];
@@ -55,13 +74,29 @@ int8_t ManuvrMsg::registerMessages(const MessageTypeDef defs[], int mes_count) {
   return 0;
 }
 
-
+/**
+* Called by other classes to add their event definitions to the runtime
+*   manifest.
+*
+* @param  MessageTypeDef*  A single MessageTypeDef to add.
+* @return 0 on success. Non-zero otherwise.
+*/
 int8_t ManuvrMsg::registerMessage(MessageTypeDef* nu_def) {
   message_defs_extended[nu_def->msg_type_code] = nu_def;
   return 0;
 }
 
-
+/**
+* Called by other classes to add their event definitions to the runtime
+*   manifest.
+*
+* @param  uint16_t     Msg code
+* @param  uint16_t     Msg flags
+* @param  const char*  Msg label
+* @param  const unsigned char*  Valid grammatical forms for the Msg.
+* @param  const char*  Semantic markings for the Msg.
+* @return 0 on success. Non-zero otherwise.
+*/
 int8_t ManuvrMsg::registerMessage(uint16_t tc, uint16_t tf, const char* lab, const unsigned char* forms, const char* sem) {
   MessageTypeDef *nu_def = (MessageTypeDef*) malloc(sizeof(MessageTypeDef));
   if (nu_def) {
@@ -80,11 +115,10 @@ int8_t ManuvrMsg::registerMessage(uint16_t tc, uint16_t tf, const char* lab, con
 
 
 /**
-* Debug support fxn. This is the static version of this method.
-* TODO: Debug stuff. Need to be able to case-off stuff like this in the pre-processor.
+* Given a Msg code, return the corrosponding label.
 *
-* @param  code  The message identity code in question.
-* @return a pointer to the human-readable label for this Message class. Never nullptr.
+* @param  uint16_t  The message identity code in question.
+* @return a pointer to the human-readable label for this Msg code. Never nullptr.
 */
 const char* ManuvrMsg::getMsgTypeString(uint16_t code) {
   for (int i = 0; i < TOTAL_MSG_DEFS; i++) {
@@ -95,7 +129,7 @@ const char* ManuvrMsg::getMsgTypeString(uint16_t code) {
 
   // Didn't find it there. Search in the extended defs...
   const MessageTypeDef* temp_type_def = message_defs_extended[code];
-  if (nullptr != temp_type_def) {
+  if ( temp_type_def) {
     return temp_type_def->debug_label;
   }
   // If we've come this far, we don't know what the caller is asking for. Return the default.
@@ -107,8 +141,8 @@ const char* ManuvrMsg::getMsgTypeString(uint16_t code) {
 * This will never return NULL. It will at least return the defintion for the UNDEFINED class.
 * This is the static version of this method.
 *
-* @param  code  The message identity code in question.
-* @return a pointer to the MessageTypeDef that identifies this class of Message. Never NULL.
+* @param  uint16_t  The message identity code in question.
+* @return a pointer to the MessageTypeDef for this Msg code. Never nullptr.
 */
 const MessageTypeDef* ManuvrMsg::lookupMsgDefByCode(uint16_t code) {
   for (int i = 0; i < TOTAL_MSG_DEFS; i++) {
@@ -118,7 +152,7 @@ const MessageTypeDef* ManuvrMsg::lookupMsgDefByCode(uint16_t code) {
   }
   // Didn't find it there. Search in the extended defs...
   const MessageTypeDef* temp_type_def = message_defs_extended[code];
-  if (nullptr != temp_type_def) {
+  if (temp_type_def) {
     return temp_type_def;
   }
   // If we've come this far, we don't know what the caller is asking for. Return the default.
@@ -127,11 +161,11 @@ const MessageTypeDef* ManuvrMsg::lookupMsgDefByCode(uint16_t code) {
 
 
 /**
-* This will never return NULL. It will at least return the defintion for the UNDEFINED class.
-* TODO: Debug stuff. Need to be able to case-off stuff like this in the pre-processor.
+* This will never return NULL. It will at least return the defintion for the
+*   UNDEFINED Msg.
 *
-* @param  label  The message label by which to lookup the message identity.
-* @return a pointer to the MessageTypeDef that identifies this class of Message. Never NULL.
+* @param  char*  The message label by which to lookup the message identity.
+* @return a pointer to the MessageTypeDef for this Msg code. Never nullptr.
 */
 const MessageTypeDef* ManuvrMsg::lookupMsgDefByLabel(char* label) {
   for (int i = 1; i < TOTAL_MSG_DEFS; i++) {
@@ -169,7 +203,7 @@ const MessageTypeDef* ManuvrMsg::lookupMsgDefByLabel(char* label) {
 *   other side can take the condition "a zero-length string" to signify the end of a message
 *   definition, and can move on to the next entry.
 *
-* @param  output  The buffer to write results to.
+* @param  StringBuilder*  The buffer to write results to.
 * @return 0 on failure. 1 on success.
 */
 int8_t ManuvrMsg::getMsgLegend(StringBuilder* output) {
@@ -240,7 +274,8 @@ int8_t ManuvrMsg::getMsgLegend(StringBuilder* output) {
 *   it is expected that they will be sent piece-wise to the counterparty so that neither side is
 *   expected to hold the entire definition set at once in a single message.
 *
-* @param  output  The buffer to write results to.
+* @param  MessageTypeDef* The message definition containing semantics to serialize.
+* @param  StringBuilder* The buffer to write results to.
 * @return 0 on failure. 1 on success.
 */
 #if defined (__ENABLE_MSG_SEMANTICS)
@@ -315,31 +350,31 @@ ManuvrMsg::ManuvrMsg() {
 }
 
 /**
-* Constructor that specifies the identity.
+* Second-order constructor that specifies the identity.
 *
-* @param code   The identity code for the new message.
+* @param uint16_t   The identity code for the new message.
 */
 ManuvrMsg::ManuvrMsg(uint16_t code) : ManuvrMsg() {
   repurpose(code);
 }
 
 /**
-* Constructor that specifies the message code, and a callback.
+* Second-order constructor that specifies the message code, and a callback.
 *
-* @param code  The message id code.
-* @param cb    A pointer to the EventReceiver that should be notified about completion of this event.
+* @param uint16_t  The message id code.
+* @param EventReceiver*  A pointer to the EventReceiver to be notified about completion of this event.
 */
 ManuvrMsg::ManuvrMsg(uint16_t code, EventReceiver* cb) : ManuvrMsg() {
   repurpose(code, cb);
 }
 
 /**
-* Constructor. Takes a void fxn(void) as a callback (Legacy).
+* Third-order constructor. Takes a void fxn(void) as a callback (Legacy).
 *
-* @param recurrence   How many times should this schedule run?
-* @param sch_period   How often should this schedule run (in milliseconds).
-* @param ac           Should the scheduler autoclear this schedule when it finishes running?
-* @param sch_callback A FxnPointer to the callback. Useful for some general things.
+* @param int16_t    How many times should this schedule run?
+* @param uint32_t   How often should this schedule run (in milliseconds).
+* @param bool       Should the scheduler autoclear this schedule when it finishes running?
+* @param FxnPointer A FxnPointer to the service routine. Useful for some general things.
 */
 ManuvrMsg::ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, FxnPointer sch_callback) : ManuvrMsg(MANUVR_MSG_DEFERRED_FXN) {
   autoClear(ac);
@@ -350,15 +385,14 @@ ManuvrMsg::ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, FxnPointe
 }
 
 /**
-* Constructor. Takes an EventReceiver* as an _origin.
+* Third-order constructor. Takes an EventReceiver* as an _origin.
 * We need to deal with memory management of the Event. For a recurring schedule, we can't allow the
 *   Kernel to reap the event. So it is very important to mark the event appropriately.
 *
-* @param recurrence   How many times should this schedule run?
-* @param sch_period   How often should this schedule run (in milliseconds).
-* @param ac           Should the scheduler autoclear this schedule when it finishes running?
-* @param sch_callback A FxnPointer to the callback. Useful for some general things.
-* @param ev           A pointer to an Event that we will periodically raise.
+* @param int16_t         How many times should this schedule run?
+* @param uint32_t        How often should this schedule run (in milliseconds).
+* @param bool            Should the scheduler autoclear this schedule when it finishes running?
+* @param EventReceiver*  A pointer to an Event that we will periodically raise.
 */
 ManuvrMsg::ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, EventReceiver* ori) : ManuvrMsg(MANUVR_MSG_DEFERRED_FXN) {
   autoClear(ac);
@@ -381,27 +415,23 @@ ManuvrMsg::~ManuvrMsg() {
 }
 
 
-
-
 /**
 * Call this member to repurpose this message for an unrelated task. This mechanism
 *   is designed to prevent malloc()/free() thrash where it can be avoided.
 *
-* @param code   The new identity code for the message.
+* @param uint16_t The new identity code for the message.
 * @return 0 on success, or appropriate failure code.
 */
 int8_t ManuvrMsg::repurpose(uint16_t code) {
   // These things have implications for memory management, which is why repurpose() doesn't touch them.
   uint16_t _persist_mask = MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_PREALLOCD | MANUVR_RUNNABLE_FLAG_SCHEDULED;
-  _flags              = _flags & _persist_mask;
-
-  _origin          = nullptr;
-  specific_target     = nullptr;
-  schedule_callback   = nullptr;
-  priority            = EVENT_PRIORITY_DEFAULT;
-
-  _code  = code;
-  message_def = lookupMsgDefByCode(_code);
+  _flags            = _flags & _persist_mask;
+  _origin           = nullptr;
+  specific_target   = nullptr;
+  schedule_callback = nullptr;
+  priority          = EVENT_PRIORITY_DEFAULT;
+  _code             = code;
+  message_def       = lookupMsgDefByCode(_code);
   return 0;
 }
 
@@ -409,8 +439,8 @@ int8_t ManuvrMsg::repurpose(uint16_t code) {
 * Call this member to repurpose this message for an unrelated task. This mechanism
 *   is designed to prevent malloc()/free() thrash where it can be avoided.
 *
-* @param code   The new identity code for the message.
-* @param code   The EventReceiver that should be called-back on completion.
+* @param uint16_t The new identity code for the message.
+* @param EventReceiver* The EventReceiver that should be called-back on completion.
 * @return 0 on success, or appropriate failure code.
 */
 int8_t ManuvrMsg::repurpose(uint16_t code, EventReceiver* cb) {
@@ -420,9 +450,19 @@ int8_t ManuvrMsg::repurpose(uint16_t code, EventReceiver* cb) {
 }
 
 
+/*******************************************************************************
+* Argument manipulation...                                                     *
+*******************************************************************************/
 
+/**
+* Call this member to repurpose this message for an unrelated task. This mechanism
+*   is designed to prevent malloc()/free() thrash where it can be avoided.
+*
+* @param Argument* The fully-formed argument to attach to this Msg.
+* @return nullptr on failure, or Argument passed as a parameter on success.
+*/
 Argument* ManuvrMsg::addArg(Argument* nu) {
-  if (nullptr != _args) {
+  if (_args) {
     return _args->link(nu);
   }
   _args = nu;
@@ -435,12 +475,11 @@ Argument* ManuvrMsg::addArg(Argument* nu) {
 *   pointer doesn't make sense. This means that an argument mode that contains a non-exportable
 *   pointer type will not produce the expected result. It might even asplode.
 *
-*
-* @param   a buffer containing the byte-stream containing the data.
-* @param   int length of the buffer
+* @param  uint8_t* A buffer containing the byte-stream containing the data.
+* @param  int Length of the buffer
 * @return  the number of Arguments extracted and instantiated from the buffer.
 */
-uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
+uint8_t ManuvrMsg::inflateArgumentsFromBuffer(uint8_t* buffer, int len) {
   int return_value = 0;
   if ((nullptr == buffer) || (0 == len)) {
     return 0;
@@ -559,12 +598,12 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(unsigned char *buffer, int len) {
 * Marks the given Argument as reapable or not. This is useful to avoid a malloc/copy/free cycle
 *   for constants or flash-resident strings.
 *
-* @param  idx   The Argument position
-* @param  reap  True if the Argument should be reaped with the message, false if it should be retained.
+* @param  uint8_t The Argument position
+* @param  bool  True if the Argument should be reaped with the message, false if it should be retained.
 * @return 1 on success, 0 on failure.
 */
-int8_t ManuvrMsg::markArgForReap(int idx, bool reap) {
-  if (nullptr != _args) {
+int8_t ManuvrMsg::markArgForReap(uint8_t idx, bool reap) {
+  if (_args) {
     Argument* tmp = _args->retrieveArgByIdx(idx);
     tmp->reapValue(reap);
     return 1;
@@ -577,11 +616,11 @@ int8_t ManuvrMsg::markArgForReap(int idx, bool reap) {
 * All of the type-specialized getArgAs() fxns boil down to this. Which is private.
 * The boolean preserve parameter will leave the argument attached (if true), or destroy it (if false).
 *
-* @param  idx      The Argument position
-* @param  trg_buf  A pointer to the place where we should write the result.
+* @param  uint8_t The Argument position
+* @param  void*  A pointer to the place where we should write the result.
 * @return 0 or appropriate failure code.
 */
-int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf) {
+int8_t ManuvrMsg::getArgAs(uint8_t idx, void* trg_buf) {
   int8_t return_value = -1;
   if (_args) {
     return ((0 == idx) ? _args->getValueAs(trg_buf) : _args->getValueAs(idx, trg_buf));
@@ -594,11 +633,11 @@ int8_t ManuvrMsg::getArgAs(uint8_t idx, void *trg_buf) {
 * All of the type-specialized writePointerArgAs() fxns boil down to this.
 * Calls to this fxn are only valid for pointer types.
 *
-* @param  idx      The Argument position
+* @param  uint8_t  The Argument position
 * @param  trg_buf  A pointer to the place where we should read the Argument from.
 * @return 0 or appropriate failure code.
 */
-int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void *trg_buf) {
+int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void* trg_buf) {
   int8_t return_value = -1;
   if (_args) {
     switch (_args->typeCode()) {
@@ -644,7 +683,7 @@ int8_t ManuvrMsg::clearArgs() {
 /**
 * Returns the Argument* we carry, and then we placidly forget about it.
 *
-* @return 0 or appropriate failure code.
+* @return nullptr if there were no Arguments, or the Arguments if there were.
 */
 Argument* ManuvrMsg::takeArgs() {
   Argument* ret = _args;
@@ -656,7 +695,7 @@ Argument* ManuvrMsg::takeArgs() {
 /**
 * Given idx, find the Argument and return its type.
 *
-* @param  idx      The Argument position
+* @param  uint8_t The Argument position
 * @return NOTYPE_FM if the Argument isn't found, and its type code if it is.
 */
 uint8_t ManuvrMsg::getArgumentType(uint8_t idx) {
@@ -690,7 +729,12 @@ const char* ManuvrMsg::getMsgTypeString() {
 }
 
 
-
+/**
+* Given idx, find the Argument and return its type.
+*
+* @param  uint8_t The Argument index.
+* @return The human-readable label for the type of the Argument at given index.
+*/
 const char* ManuvrMsg::getArgTypeString(uint8_t idx) {
   if (nullptr == _args) return "<INVALID INDEX>";
   Argument* a = _args->retrieveArgByIdx(idx);
@@ -703,7 +747,7 @@ const char* ManuvrMsg::getArgTypeString(uint8_t idx) {
 * This fxn takes all of the Arguments attached to this Message and writes them, along
 *   with their types, to the provided StringBuilder as an unsigned charater stream.
 *
-* @param  output  The buffer into which we should write our output.
+* @param  StringBuilder* The buffer into which we should write our output.
 * @return the number of Arguments so written, or a negative value on failure.
 */
 int ManuvrMsg::serialize(StringBuilder* output) {
@@ -711,7 +755,7 @@ int ManuvrMsg::serialize(StringBuilder* output) {
   int return_value = 0;
   int delta_len = 0;
   Argument* current_arg = _args;
-  while (nullptr != current_arg) {
+  while (current_arg) {
     delta_len = current_arg->serialize_raw(output);
     if (delta_len < 0) {
       return delta_len;
@@ -730,7 +774,7 @@ int ManuvrMsg::serialize(StringBuilder* output) {
 *   a) there is no valid argument sequence with the given length
 *   b) there is no record of the message type represented by this object.
 *
-* @param  len  The length of the argument buffer.
+* @param  int  The length of the argument buffer.
 * @return The number of possibly-valid grammatical forms the given length buffer.
 */
 int ManuvrMsg::collect_valid_grammatical_forms(int len, LinkedList<char*>* return_modes) {
@@ -768,7 +812,7 @@ int ManuvrMsg::collect_valid_grammatical_forms(int len, LinkedList<char*>* retur
 *   b) there is more than one valid sequence
 *   c) there is no record of the message type represented by this object.
 *
-* @param  len  The length of the input buffer.
+* @param  int  The length of the input buffer.
 * @return A pointer to the type-code sequence, or NULL on failure.
 */
 char* ManuvrMsg::is_valid_argument_buffer(int len) {
@@ -782,7 +826,7 @@ char* ManuvrMsg::is_valid_argument_buffer(int len) {
   while (arg_mode_len > 0) {
     temp = getMinimumSizeByTypeString(mode);
     if (len == temp) {
-      if (nullptr != return_value) {
+      if (return_value) {
         // This is case (b) above. If this happens, it means the grammatical forms
         //   for this argument were poorly chosen. There is nothing we can do to help
         //   this at runtime. Failure...
@@ -858,18 +902,26 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
 }
 #endif  // __MANUVR_DEBUG
 
+
 /*******************************************************************************
 * Functions dealing with profiling this particular Runnable.                   *
 *******************************************************************************/
 #if defined(__MANUVR_EVENT_PROFILER)
 
-void ManuvrMsg::printProfilerData(StringBuilder *output) {
+/**
+* Prints details about the profiler data.
+*
+* @param  StringBuilder* The buffer to output into.
+*/
+void ManuvrMsg::printProfilerData(StringBuilder* output) {
   if (prof_data) output->concatf("\t %p  %9u  %9u  %9u  %9u  %9u  %9u %s\n", this, prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last, (isScheduled() ? " " : "(INACTIVE)"));
 }
 
 /**
 * Any schedule that has a TaskProfilerData object in the appropriate slot will be profiled.
 *  So to begin profiling a schedule, simply instance the appropriate struct into place.
+*
+* @param  bool  Enables or disables Msg profiling.
 */
 void ManuvrMsg::profilingEnabled(bool enabled) {
   if (nullptr == prof_data) {
@@ -898,6 +950,12 @@ void ManuvrMsg::clearProfilingData() {
 }
 
 
+/**
+* Function for pinging the profiler data.
+*
+* @param  uint32_t  The time (in uS) that the Msg entered execution.
+* @param  uint32_t  The time (in uS) that the Msg exited execution.
+*/
 void ManuvrMsg::noteExecutionTime(uint32_t profile_start_time, uint32_t profile_stop_time) {
   if (prof_data) {
     profile_stop_time = micros();
@@ -916,17 +974,20 @@ void ManuvrMsg::noteExecutionTime(uint32_t profile_start_time, uint32_t profile_
 /*******************************************************************************
 * Pertaining to deferred execution and scheduling....                          *
 *******************************************************************************/
+/**
+* Safely aborts a schedule that is queued to execute.
+*
+* @return  true if the schedule was aborted.
+*/
 bool ManuvrMsg::abort() {
   return Kernel::abortEvent(this);
 }
 
-void ManuvrMsg::fireNow(bool nu) {
-  shouldFire(nu);
-  _sched_ttw = _sched_period;
-}
 
-
-
+/**
+* @param  uint32_t  The desired period (in mS) for this schedule.
+* @return  true if the schedule alteraction succeeded.
+*/
 bool ManuvrMsg::alterSchedulePeriod(uint32_t nu_period) {
   bool return_value  = false;
   if (nu_period > 1) {
@@ -937,8 +998,13 @@ bool ManuvrMsg::alterSchedulePeriod(uint32_t nu_period) {
   return return_value;
 }
 
+
+/**
+* @param  int16_t  The desired repetition conut for this schedule.
+* @return  true if the schedule alteraction succeeded.
+*/
 bool ManuvrMsg::alterScheduleRecurrence(int16_t recurrence) {
-  fireNow(false);
+  shouldFire(false);
   _sched_recurs = recurrence;
   return true;
 }
@@ -949,18 +1015,24 @@ bool ManuvrMsg::alterScheduleRecurrence(int16_t recurrence) {
 *  Returns true on success or false if the given PID is not found, or there is a problem with the parameters.
 *
 * Will not set the schedule active, but will clear any pending executions for this schedule, as well as reset the timer for it.
+*
+* @param  uint32_t  The desired period (in mS) for this schedule.
+* @param  int16_t   The desired repetition conut for this schedule.
+* @param  bool      Should the scheduler autoclear this schedule when it finishes running?
+* @param FxnPointer A FxnPointer to the service routine. Useful for some general things.
+* @return  true if the schedule alteraction succeeded.
 */
-bool ManuvrMsg::alterSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FxnPointer sch_callback) {
+bool ManuvrMsg::alterSchedule(uint32_t sch_p, int16_t sch_r, bool ac, FxnPointer sch_cb) {
   bool return_value  = false;
-  if (sch_period > 1) {
-    if (sch_callback != nullptr) {
-      fireNow(false);
+  if (sch_p > 1) {
+    if (sch_cb) {
+      shouldFire(false);
       autoClear(ac);
-      _sched_recurs       = recurrence;
-      _sched_period       = sch_period;
-      _sched_ttw = sch_period;
-      schedule_callback   = sch_callback;
-      return_value  = true;
+      _sched_recurs     = sch_r;
+      _sched_period     = sch_p;
+      _sched_ttw        = sch_p;
+      schedule_callback = sch_cb;
+      return_value      = true;
     }
   }
   return return_value;
@@ -972,6 +1044,8 @@ bool ManuvrMsg::alterSchedule(uint32_t sch_period, int16_t recurrence, bool ac, 
 * A) The schedule exists
 *    AND
 * B) The schedule is enabled, and has at least one more runtime before it *might* be auto-reaped.
+*
+* @return  true if the above conditions are met. False otherwise.
 */
 bool ManuvrMsg::willRunAgain() {
   if (isScheduled() & scheduleEnabled()) {
@@ -981,6 +1055,12 @@ bool ManuvrMsg::willRunAgain() {
 }
 
 
+/**
+* Applies time to the schedule, bringing it closer to execution.
+*
+* @param  uint32_t The number of milliseconds to drop from the schedule.
+* @return  an integer code directing the kernel how to procede.
+*/
 int8_t ManuvrMsg::applyTime(uint32_t mse) {
   int8_t return_value = 0;
   if (scheduleEnabled()) {
@@ -1027,7 +1107,7 @@ int8_t ManuvrMsg::applyTime(uint32_t mse) {
 * @return  true, always.
 */
 bool ManuvrMsg::enableSchedule(bool en) {
-  fireNow(en);
+  shouldFire(en);
   if (en) {
     _sched_ttw = _sched_period;
   }
@@ -1054,7 +1134,6 @@ bool ManuvrMsg::delaySchedule(uint32_t by_ms) {
 /*******************************************************************************
 * Actually execute this runnable.                                              *
 *******************************************************************************/
-
 /**
 * Causes this Message to inform its _origin (if any) that it has fully-traversed
 *   the kernel's broadcast cycle.
@@ -1076,7 +1155,14 @@ int8_t ManuvrMsg::callbackOriginator() {
 }
 
 
-
+/**
+* If the parameters of the event are such that this class can handle its
+*   execution unaided, there is a performance and encapsulation advantage
+*   to allowing it to do so.
+* If singleTarget is true, the kernel calls this to proc the event.
+*
+* @return the notify() equivilent int reflecting how many actions were taken.
+*/
 int8_t ManuvrMsg::execute() {
   if (schedule_callback) {
     // TODO: This is hold-over from the scheduler. Need to modernize it.
