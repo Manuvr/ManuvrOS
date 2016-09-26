@@ -198,6 +198,8 @@ fullclean: clean
 
 docs:
 	doxygen Doxyfile
+	mkdir -p doc/doxygen/html/doc/
+	ln -s ../../../3d-logo.png doc/doxygen/html/doc/3d-logo.png
 
 stats:
 	find ./ManuvrOS -type f \( -name \*.cpp -o -name \*.h \) -exec wc -l {} +
