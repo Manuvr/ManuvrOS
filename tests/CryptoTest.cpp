@@ -40,6 +40,7 @@ This tests the cryptographic system under whatever build options
 * Tests to ensure we have support for what we are about to test.
 */
 int CRYPTO_TEST_INIT() {
+  printf("===< CRYPTO_TEST_INIT >=================================\n");
   if (platform.hasCryptography()) {
     // This is a good start....
     return 0;
@@ -53,6 +54,8 @@ int CRYPTO_TEST_INIT() {
 *   a known-answer test.
 */
 int CRYPTO_TEST_HASHES() {
+  printf("===< CRYPTO_TEST_HASHES >=================================\n");
+
   const char* hash_in0  = "";
   uint8_t* hash_in1  = (uint8_t*) alloca(1524);
   random_fill(hash_in1, 1524);
@@ -97,6 +100,7 @@ int CRYPTO_TEST_HASHES() {
 * Symmetric algorthms.
 */
 int CRYPTO_TEST_SYMMETRIC() {
+  printf("===< CRYPTO_TEST_SYMMETRIC >=================================\n");
   const char* plaintext_in  = "Uniform input text. Two blocks.";
 
   Cipher algs_to_test[] = {
@@ -110,9 +114,9 @@ int CRYPTO_TEST_SYMMETRIC() {
   int idx = 0;
   while (Cipher::NONE != algs_to_test[idx]) {
     int o_len = strlen(plaintext_in) + 1;
-    if (0 != o_len % 16) {
-      o_len += (16 - (o_len % 16));
-    }
+    //if (0 != o_len % 16) {
+    //  o_len += (16 - (o_len % 16));
+    //}
     uint8_t* ciphertext    = (uint8_t*) alloca(o_len);
     uint8_t* plaintext_out = (uint8_t*) alloca(o_len);
     uint8_t iv[16];
@@ -158,7 +162,7 @@ int CRYPTO_TEST_SYMMETRIC() {
         return -1;
       }
     }
-
+    printf("\n");
     idx++;
   }
   return 0;
@@ -169,6 +173,7 @@ int CRYPTO_TEST_SYMMETRIC() {
 * Asymmetric algorthms.
 */
 int CRYPTO_TEST_ASYMMETRIC() {
+  printf("===< CRYPTO_TEST_ASYMMETRIC >=================================\n");
   return -1;
 }
 

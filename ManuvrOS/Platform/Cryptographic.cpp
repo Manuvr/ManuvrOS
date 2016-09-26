@@ -174,7 +174,7 @@ int8_t __attribute__((weak)) manuvr_block_encrypt(uint8_t* in, int in_len, uint8
 
 int8_t __attribute__((weak)) manuvr_block_decrypt(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher ci) {
   mbedtls_aes_context aes;
-  mbedtls_aes_setkey_enc(&aes, key, key_len);
+  mbedtls_aes_setkey_dec(&aes, key, key_len);
   int8_t ret = mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_DECRYPT, in_len, iv, in, out);
   mbedtls_aes_free(&aes);
   return ret;

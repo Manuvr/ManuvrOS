@@ -13,6 +13,7 @@ tests/dstest
 tests/gpstest
 tests/identtest
 tests/schedtest
+tests/cryptotest
 
 lib/FreeRTOS_Arduino/
 lib/avro/
