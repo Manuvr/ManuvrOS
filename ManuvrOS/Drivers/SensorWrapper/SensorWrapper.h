@@ -26,8 +26,6 @@ This class is a generic interface to a sensor. That sensor might measure many th
 #ifndef SENSOR_WRAPPER_H
 #define SENSOR_WRAPPER_H
 
-using namespace std;
-
 #include <inttypes.h>
 #include <string.h>
 #include "DataStructures/StringBuilder.h"

@@ -38,7 +38,6 @@ CPP_SRCS  += Types/TypeTranscriber.cpp
 CPP_SRCS  += Types/Avro/Avro.cpp
 
 # Manuvr core
-CPP_SRCS  += ManuvrRunnable.cpp
 CPP_SRCS  += EnumeratedTypeCodes.cpp
 CPP_SRCS  += Kernel.cpp
 CPP_SRCS  += EventReceiver.cpp

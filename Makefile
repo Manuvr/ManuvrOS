@@ -72,7 +72,7 @@ LBITS = $(shell getconf LONG_BIT)
 ifeq ($(LBITS),64)
 	# This is no longer required on 64-bit platforms. But it is being retained in
 	#   case 32-bit problems need to be debugged.
-  #CFLAGS += -m32
+  CFLAGS += -m32
 endif
 
 
@@ -170,8 +170,7 @@ all: libs
 	$(SZ) $(FIRMWARE_NAME)
 
 tests: libs
-	$(CXX) -static -o dstest tests/TestDataStructures.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
-	$(CXX) -static -o identtest tests/IdentityTest.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(MAKE) -C tests/
 
 examples: libs
 	$(CXX) -static -o barebones examples/main_template.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
@@ -186,17 +185,21 @@ libs: builddir
 
 clean:
 	$(MAKE) clean -C ManuvrOS/
+	$(MAKE) clean -C tests/
 	rm -f *.o *.su *~ testbench $(FIRMWARE_NAME)
 
 fullclean: clean
 	rm -rf $(OUTPUT_PATH)
 	export SECURE=1
 	$(MAKE) clean -C lib/
+	$(MAKE) clean -C tests/
 	rm -rf doc/doxygen
 
 
 docs:
 	doxygen Doxyfile
+	mkdir -p doc/doxygen/html/doc/
+	ln -s ../../../3d-logo.png doc/doxygen/html/doc/3d-logo.png
 
 stats:
 	find ./ManuvrOS -type f \( -name \*.cpp -o -name \*.h \) -exec wc -l {} +

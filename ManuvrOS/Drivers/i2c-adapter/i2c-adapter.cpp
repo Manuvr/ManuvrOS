@@ -69,15 +69,13 @@ This file is the tortured result of growing pains since the beginning of
 #endif
 
 
-using namespace std;
-
 extern "C" {
   volatile I2CAdapter* i2c = NULL;
 }
 
   // We need some internal events to allow communication back from the ISR.
 const MessageTypeDef i2c_message_defs[] = {
-  { MANUVR_MSG_I2C_QUEUE_READY, MSG_FLAG_IDEMPOTENT,  "I2C_QUEUE_READY", ManuvrMsg::MSG_ARGS_NONE }  // The i2c queue is ready for attention.
+  { MANUVR_MSG_I2C_QUEUE_READY, 0x0000,  "I2C_QUEUE_READY", ManuvrMsg::MSG_ARGS_NONE }  // The i2c queue is ready for attention.
 };
 
 
@@ -102,10 +100,9 @@ void I2CAdapter::__class_initializer() {
   int mes_count = sizeof(i2c_message_defs) / sizeof(MessageTypeDef);
   ManuvrMsg::registerMessages(i2c_message_defs, mes_count);
 
-  _periodic_i2c_debug.repurpose(0x5051);
+  _periodic_i2c_debug.repurpose(0x5051, (EventReceiver*) this);
   _periodic_i2c_debug.isManaged(true);
   _periodic_i2c_debug.specific_target = (EventReceiver*) this;
-  _periodic_i2c_debug.originator      = (EventReceiver*) this;
   _periodic_i2c_debug.priority        = 1;
   _periodic_i2c_debug.alterSchedulePeriod(100);
   _periodic_i2c_debug.alterScheduleRecurrence(-1);
@@ -828,7 +825,7 @@ void I2CAdapter::printDebug(StringBuilder *temp) {
 
   if (work_queue.size() > 0) {
     temp->concatf("\nQueue Listing (top 3 of %d total)\n", work_queue.size());
-    for (int i = 0; i < min(work_queue.size(), I2CADAPTER_MAX_QUEUE_PRINT); i++) {
+    for (int i = 0; i < std::min(work_queue.size(), I2CADAPTER_MAX_QUEUE_PRINT); i++) {
       work_queue.get(i)->printDebug(temp);
     }
     temp->concat("\n");

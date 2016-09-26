@@ -38,6 +38,8 @@ Lifecycle:
   #include <DataStructures/PriorityQueue.h>
   #include <DataStructures/StringBuilder.h>
 
+  #include <ManuvrMsg/ManuvrMsg.h>
+
   #define EVENT_CALLBACK_RETURN_ERROR       -1 // Horrible things happened in the originating class. This should never happen.
   #define EVENT_CALLBACK_RETURN_UNDEFINED   0  // Illegal return code. Kernel will reap events whose callbacks return this.
   #define EVENT_CALLBACK_RETURN_REAP        1  // The callback fxn has specifically told us to reap this event.
@@ -52,8 +54,6 @@ Lifecycle:
   #define MANUVR_ER_FLAG_CONF_DIRTY         0x80  // Our configuration should be persisted.
 
   class Kernel;
-  class ManuvrRunnable;
-
 
   extern "C" {
     /**

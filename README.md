@@ -1,15 +1,14 @@
 /* \mainpage ManuvrOS Documentation
 
+A cross-platform real-time, event-driven "Operating System" for asynchronous applications. It was intended to make it easier to write asynchronous, cross-platform IoT applications. Despite the name, ManuvrOS was intended to abstract threading and platform-related differences, and can be used on top of another operating system (as is the case on linux).
+
         __  ___                             ____  _____
        /  |/  /___ _____  __  ___   _______/ __ \/ ___/
       / /|_/ / __ `/ __ \/ / / / | / / ___/ / / /\__ \  
      / /  / / /_/ / / / / /_/ /| |/ / /  / /_/ /___/ /  
     /_/  /_/\__,_/_/ /_/\__,_/ |___/_/   \____//____/   
 
-
 ![ManuvrOS](doc/3d-logo.png)
-
-A cross-platform real-time, event-driven "Operating System" for asynchronous applications. It was intended to make it easier to write asynchronous, cross-platform IoT applications. Despite the name, ManuvrOS was intended to abstract threading and platform-related differences, and can be used on top of another operating system (as is the case on linux).
 
 ----------------------
 #### What is in this repository:

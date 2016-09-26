@@ -45,7 +45,14 @@ limitations under the License.
 
 
   void TaskProfilerData::printDebug(StringBuilder *output) {
-    output->concatf("%18s  %9u %9u %9u %9u %9u\n", ManuvrMsg::getMsgTypeString(msg_code), (unsigned long) run_time_total, (unsigned long) run_time_average, (unsigned long) run_time_worst, (unsigned long) run_time_best, (unsigned long) run_time_last);
+    output->concatf("%18s  %9u %9u %9u %9u %9u\n",
+      ManuvrMsg::getMsgTypeString(msg_code),
+      (unsigned long) run_time_total,
+      (unsigned long) run_time_average,
+      (unsigned long) run_time_worst,
+      (unsigned long) run_time_best,
+      (unsigned long) run_time_last
+    );
   }
 
 

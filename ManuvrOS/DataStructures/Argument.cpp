@@ -374,7 +374,7 @@ int8_t Argument::getValueAs(void* trg_buf) {
       case STR_BUILDER_FM:          // This is a pointer to some StringBuilder. Presumably this is on the heap.
       case STR_FM:                  // This is a pointer to a string constant. Presumably this is stored in flash.
       case BUFFERPIPE_PTR_FM:       // This is a pointer to a BufferPipe/.
-      case SYS_RUNNABLE_PTR_FM:     // This is a pointer to ManuvrRunnable.
+      case SYS_RUNNABLE_PTR_FM:     // This is a pointer to ManuvrMsg.
       case SYS_EVENTRECEIVER_FM:    // This is a pointer to an EventReceiver.
       case SYS_MANUVR_XPORT_FM:     // This is a pointer to a transport.
       default:

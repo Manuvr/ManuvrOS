@@ -41,12 +41,7 @@ limitations under the License.
 
   #include <DataStructures/PriorityQueue.h>
   #include <DataStructures/StringBuilder.h>
-  #include <ManuvrRunnable.h>
   #include <EventReceiver.h>
-
-  #define EVENT_PRIORITY_HIGHEST            100
-  #define EVENT_PRIORITY_DEFAULT              2
-  #define EVENT_PRIORITY_LOWEST               0
 
   #define SCHEDULER_MAX_SKIP_BEFORE_RESET    10  // Skipping this many loops will cause us to reboot.
 
@@ -192,7 +187,8 @@ limitations under the License.
       /* Factory method. Returns a preallocated Event. */
       static ManuvrRunnable* returnEvent(uint16_t event_code);
 
-      static BufferPipe* _logger;       // The log pipe.
+      static BufferPipe* _logger;        // The log pipe.
+      static uint32_t lagged_schedules;  // How many schedules were skipped? Ideally this is zero.
 
 
     protected:
@@ -214,7 +210,6 @@ limitations under the License.
       uint32_t _ms_elapsed;           // How much time has passed since we serviced our schedules?
 
       // Profiling and logging variables...
-      uint32_t lagged_schedules;      // How many schedules were skipped? Ideally this is zero.
       uint32_t micros_occupied;       // How many micros have we spent procing Runnables?
       uint32_t max_idle_loop_time;    // How many uS does it take to run an idle loop?
       uint32_t total_loops;           // How many times have we looped?
@@ -227,7 +222,6 @@ limitations under the License.
       uint32_t events_destroyed;      // How many events have we destroyed?
       uint32_t prealloc_starved;      // How many times did we starve the prealloc queue?
       uint32_t burden_of_specific;    // How many events have we reaped?
-      uint32_t idempotent_blocks;     // How many times has the idempotent flag prevented a raiseEvent()?
       uint32_t insertion_denials;     // How many times have we rejected events?
       uint32_t max_queue_depth;       // What is the deepest point the queue has reached?
 

@@ -55,7 +55,7 @@ const MessageTypeDef gpio_message_defs[] = {
 ManuvrableGPIO::ManuvrableGPIO() : EventReceiver() {
   setReceiverName("GPIO");
   _gpio_notice.isManaged(true);
-  _gpio_notice.originator  = (EventReceiver*) this;
+  _gpio_notice.setOriginator((EventReceiver*) this);
   // Inform the Kernel of the codes we will be using...
   ManuvrMsg::registerMessages(gpio_message_defs, sizeof(gpio_message_defs) / sizeof(MessageTypeDef));
 }
