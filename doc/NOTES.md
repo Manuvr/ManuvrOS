@@ -14,6 +14,48 @@ In addition, there are points in the platform life-cycle where features (ALU wid
 
 -----
 
+## Cryptographic wrappers
+
+As always, your security situation will dictate your choices.
+
+All linkage to cryptographic wrappers is "C-style".
+
+Cryptography.h provides the interface to platform-abstracted cryptographic implementations. It is also responsible for normalizing cryptographic preprocessor definitions across back-ends. 
+
+The base functions are implemented as weak references to allow specific hardware support to clobber the software implementations at link-time, should that be desirable.
+
+### Classes of cryptographic support
+
+Cryptographic providers and supported ciphers/digests are itemizable at run-time to facilitate software choices regarding algorithms.
+
+These functions can be used to determine how a given algorithm is implemented:
+
+    // Is the algorithm implemented in hardware?
+    bool digest_hardware_backed(Hashes);
+    bool cipher_hardware_backed(Cipher);
+
+    // Is the algorithm provided by the default implementation?
+    bool digest_deferred_handling(Hashes);
+    bool cipher_deferred_handling(Cipher);
+
+
+A somewhat softer approach would see user code that deals with its own wrappers, and completely ignores Cryptography.h, while leaving it intact for the framework's other (presumably less-critical) purposes.
+
+Another approach might prefer to override software implementations at a more-granular level. For instance, most AES hardware only handles a restricted set of parameters (only AES-128-CBC, for example). In these cases, user code can provide an override at runtime while retaining the software support as a fall-back (if it was built at all). This carries a slightly-higher run-time overhead, but will allow arbitrary-levels of cryptographic support opportunistically intermixed with hardware, when/where available.
+
+The softest condition is no cryptography at all.
+
+### Supported back-ends
+
+The cryptographic back-end is selected at compile-time by the preprocessor. It is not presently possible to mix software back-ends.
+
+Initial support was written against mbedTLS.
+
+Hardware back-ends are universally more-specific, and override is done at runtime.
+
+
+-----
+
 ## Boot sequence
 Platform has no constructor. It is statically-allocated on the stack prior to main() invocation, and is accessible anywhere that Platform/Platform.h is included.
 

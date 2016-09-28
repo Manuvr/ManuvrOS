@@ -276,6 +276,7 @@ class ManuvrMsg {
 
     //TODO: /* These are accessors to concurrency-sensitive members. */
     /* These are accessors to formerly-public members of ScheduleItem. */
+    inline uint32_t schedulePeriod() { return _sched_period; };
     bool alterScheduleRecurrence(int16_t recurrence);
     bool alterSchedulePeriod(uint32_t nu_period);
     bool alterSchedule(FxnPointer sch_callback);
