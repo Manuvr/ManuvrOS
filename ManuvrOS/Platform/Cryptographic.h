@@ -44,7 +44,12 @@ If you wish to use another crypto library (OpenSSL? MatrixSSL? uECC?) then
   #include "mbedtls/md_internal.h"
   #include "mbedtls/base64.h"
   #include "mbedtls/aes.h"
+  #include "mbedtls/blowfish.h"
 #endif
+
+typedef struct {
+} CryptOpt;
+
 
 enum class Hashes {
   #if defined(__MANUVR_MBEDTLS)
@@ -78,23 +83,97 @@ enum class Hashes {
 enum class CryptoKey {
 };
 
+/* Some ciphers have nuances like block-mode (AES), */
+enum class CipherMode {
+};
+
+
+
 enum class Cipher {
+  NONE            = 0,
   ASYM_RSA        = MBEDTLS_PK_RSA,
   ASYM_ECKEY      = MBEDTLS_PK_ECKEY,
   ASYM_ECKEY_DH   = MBEDTLS_PK_ECKEY_DH,
   ASYM_ECDSA      = MBEDTLS_PK_ECDSA,
   ASYM_RSA_ALT    = MBEDTLS_PK_RSA_ALT,
   ASYM_RSASSA_PSS = MBEDTLS_PK_RSASSA_PSS,
-  SYM_NONE        = MBEDTLS_CIPHER_ID_NONE,
-  SYM_NULL        = MBEDTLS_CIPHER_ID_NULL,
-  SYM_AES         = MBEDTLS_CIPHER_ID_AES,
-  SYM_DES         = MBEDTLS_CIPHER_ID_DES,
-  SYM_3DES        = MBEDTLS_CIPHER_ID_3DES,
-  SYM_CAMELLIA    = MBEDTLS_CIPHER_ID_CAMELLIA,
-  SYM_BLOWFISH    = MBEDTLS_CIPHER_ID_BLOWFISH,
-  SYM_ARC         = MBEDTLS_CIPHER_ID_ARC4,
-  NONE            = MBEDTLS_PK_NONE
+  SYM_BF_CBC      = MBEDTLS_CIPHER_ID_BLOWFISH,
+  ASYM_NONE       = MBEDTLS_PK_NONE,
+
+  SYM_NULL                  = MBEDTLS_CIPHER_NULL,
+  SYM_AES_128_ECB           = MBEDTLS_CIPHER_AES_128_ECB,
+  SYM_AES_192_ECB           = MBEDTLS_CIPHER_AES_192_ECB,
+  SYM_AES_256_ECB           = MBEDTLS_CIPHER_AES_256_ECB,
+  SYM_AES_128_CBC           = MBEDTLS_CIPHER_AES_128_CBC,
+  SYM_AES_192_CBC           = MBEDTLS_CIPHER_AES_192_CBC,
+  SYM_AES_256_CBC           = MBEDTLS_CIPHER_AES_256_CBC,
+  SYM_AES_128_CFB128        = MBEDTLS_CIPHER_AES_128_CFB128,
+  SYM_AES_192_CFB128        = MBEDTLS_CIPHER_AES_192_CFB128,
+  SYM_AES_256_CFB128        = MBEDTLS_CIPHER_AES_256_CFB128,
+  SYM_AES_128_CTR           = MBEDTLS_CIPHER_AES_128_CTR,
+  SYM_AES_192_CTR           = MBEDTLS_CIPHER_AES_192_CTR,
+  SYM_AES_256_CTR           = MBEDTLS_CIPHER_AES_256_CTR,
+  SYM_AES_128_GCM           = MBEDTLS_CIPHER_AES_128_GCM,
+  SYM_AES_192_GCM           = MBEDTLS_CIPHER_AES_192_GCM,
+  SYM_AES_256_GCM           = MBEDTLS_CIPHER_AES_256_GCM,
+  SYM_CAMELLIA_128_ECB      = MBEDTLS_CIPHER_CAMELLIA_128_ECB,
+  SYM_CAMELLIA_192_ECB      = MBEDTLS_CIPHER_CAMELLIA_192_ECB,
+  SYM_CAMELLIA_256_ECB      = MBEDTLS_CIPHER_CAMELLIA_256_ECB,
+  SYM_CAMELLIA_128_CBC      = MBEDTLS_CIPHER_CAMELLIA_128_CBC,
+  SYM_CAMELLIA_192_CBC      = MBEDTLS_CIPHER_CAMELLIA_192_CBC,
+  SYM_CAMELLIA_256_CBC      = MBEDTLS_CIPHER_CAMELLIA_256_CBC,
+  SYM_CAMELLIA_128_CFB128   = MBEDTLS_CIPHER_CAMELLIA_128_CFB128,
+  SYM_CAMELLIA_192_CFB128   = MBEDTLS_CIPHER_CAMELLIA_192_CFB128,
+  SYM_CAMELLIA_256_CFB128   = MBEDTLS_CIPHER_CAMELLIA_256_CFB128,
+  SYM_CAMELLIA_128_CTR      = MBEDTLS_CIPHER_CAMELLIA_128_CTR,
+  SYM_CAMELLIA_192_CTR      = MBEDTLS_CIPHER_CAMELLIA_192_CTR,
+  SYM_CAMELLIA_256_CTR      = MBEDTLS_CIPHER_CAMELLIA_256_CTR,
+  SYM_CAMELLIA_128_GCM      = MBEDTLS_CIPHER_CAMELLIA_128_GCM,
+  SYM_CAMELLIA_192_GCM      = MBEDTLS_CIPHER_CAMELLIA_192_GCM,
+  SYM_CAMELLIA_256_GCM      = MBEDTLS_CIPHER_CAMELLIA_256_GCM,
+  SYM_DES_ECB               = MBEDTLS_CIPHER_DES_ECB,
+  SYM_DES_CBC               = MBEDTLS_CIPHER_DES_CBC,
+  SYM_DES_EDE_ECB           = MBEDTLS_CIPHER_DES_EDE_ECB,
+  SYM_DES_EDE_CBC           = MBEDTLS_CIPHER_DES_EDE_CBC,
+  SYM_DES_EDE3_ECB          = MBEDTLS_CIPHER_DES_EDE3_ECB,
+  SYM_DES_EDE3_CBC          = MBEDTLS_CIPHER_DES_EDE3_CBC,
+  SYM_BLOWFISH_ECB          = MBEDTLS_CIPHER_BLOWFISH_ECB,
+  SYM_BLOWFISH_CBC          = MBEDTLS_CIPHER_BLOWFISH_CBC,
+  SYM_BLOWFISH_CFB64        = MBEDTLS_CIPHER_BLOWFISH_CFB64,
+  SYM_BLOWFISH_CTR          = MBEDTLS_CIPHER_BLOWFISH_CTR,
+  SYM_ARC4_128              = MBEDTLS_CIPHER_ARC4_128,
+  SYM_AES_128_CCM           = MBEDTLS_CIPHER_AES_128_CCM,
+  SYM_AES_192_CCM           = MBEDTLS_CIPHER_AES_192_CCM,
+  SYM_AES_256_CCM           = MBEDTLS_CIPHER_AES_256_CCM,
+  SYM_CAMELLIA_128_CCM      = MBEDTLS_CIPHER_CAMELLIA_128_CCM,
+  SYM_CAMELLIA_192_CCM      = MBEDTLS_CIPHER_CAMELLIA_192_CCM,
+  SYM_CAMELLIA_256_CCM      = MBEDTLS_CIPHER_CAMELLIA_256_CCM,
+  SYM_NONE                  = MBEDTLS_CIPHER_NONE
 };
+
+
+
+
+typedef int8_t (*wrapped_sym_operation)(
+  uint8_t* in,
+  int in_len,
+  uint8_t* out,
+  int out_len,
+  uint8_t* key,
+  int key_len,
+  uint8_t* iv,
+  Cipher ci
+);
+
+typedef int8_t (*wrapped_asym_operation)(
+  uint8_t* in,
+  int in_len,
+  uint8_t* out,
+  int out_len,
+  Hashes h,
+  Cipher ci,
+  CryptoKey key
+);
 
 
 /* This stuff needs to be reachable via C-linkage. That means ugly names. :-) */
@@ -103,17 +182,24 @@ extern "C" {
 /*******************************************************************************
 * Message digest (Hashing)
 *******************************************************************************/
+const int get_digest_output_length(Hashes);
+const char* get_digest_label(Hashes);
 int8_t manuvr_hash(uint8_t* in, int in_len, uint8_t* out, int out_len, Hashes h);
 
 
 /*******************************************************************************
 * Cipher/decipher
 *******************************************************************************/
-int8_t manuvr_block_encrypt(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher);
-int8_t manuvr_block_decrypt(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher);
+const int get_cipher_block_size(Cipher);
+const int get_cipher_key_length(Cipher);
+int get_cipher_aligned_size(Cipher, int len);
+const char* get_cipher_label(Cipher);
+int8_t manuvr_sym_encrypt(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher);
+int8_t manuvr_sym_decrypt(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher);
 
-int8_t manuvr_sign(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes, Cipher, CryptoKey private_key);
-int8_t manuvr_verify(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes, Cipher, CryptoKey public_key);
+int8_t manuvr_asym_keygen(Cipher, int key_len, uint8_t* pub, int pub_len, uint8_t* priv, int priv_len);
+int8_t manuvr_asym_encrypt(uint8_t* in, int in_len, uint8_t* out, int* out_len, Hashes, Cipher, CryptoKey private_key);
+int8_t manuvr_asym_decrypt(uint8_t* in, int in_len, uint8_t* out, int* out_len, Hashes, Cipher, CryptoKey public_key);
 
 
 
@@ -126,8 +212,9 @@ int8_t manuvr_random_fill(uint8_t* buf, int len);
 /*******************************************************************************
 * Meta                                                                         *
 *******************************************************************************/
-int  get_digest_output_length(Hashes);
 void printCryptoOverview(StringBuilder*);
+
+
 
 } // extern "C"
 

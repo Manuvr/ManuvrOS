@@ -40,7 +40,7 @@ This tests the cryptographic system under whatever build options
 * Tests to ensure we have support for what we are about to test.
 */
 int CRYPTO_TEST_INIT() {
-  printf("===< CRYPTO_TEST_INIT >=================================\n");
+  printf("===< CRYPTO_TEST_INIT >==========================================\n");
   if (platform.hasCryptography()) {
     // This is a good start....
     return 0;
@@ -54,7 +54,7 @@ int CRYPTO_TEST_INIT() {
 *   a known-answer test.
 */
 int CRYPTO_TEST_HASHES() {
-  printf("===< CRYPTO_TEST_HASHES >=================================\n");
+  printf("===< CRYPTO_TEST_HASHES >========================================\n");
 
   const char* hash_in0  = "";
   uint8_t* hash_in1  = (uint8_t*) alloca(1524);
@@ -72,6 +72,9 @@ int CRYPTO_TEST_HASHES() {
   int idx = 0;
   while (Hashes::NONE != algs_to_test[idx]) {
     int o_len = get_digest_output_length(algs_to_test[idx]);
+    printf("Testing %-14s  %3d-byte block\n--------------------------------------\n",
+        get_digest_label(algs_to_test[idx]),
+        o_len);
 
     uint8_t* hash_out0 = (uint8_t*) alloca(o_len);
     uint8_t* hash_out1 = (uint8_t*) alloca(o_len);
@@ -100,41 +103,54 @@ int CRYPTO_TEST_HASHES() {
 * Symmetric algorthms.
 */
 int CRYPTO_TEST_SYMMETRIC() {
-  printf("===< CRYPTO_TEST_SYMMETRIC >=================================\n");
-  const char* plaintext_in  = "Uniform input text. Two blocks.";
+  printf("===< CRYPTO_TEST_SYMMETRIC >=====================================\n");
+  int i_len = 30;
 
   Cipher algs_to_test[] = {
+    Cipher::SYM_AES_128_CBC,
+    Cipher::SYM_AES_192_CBC,
+    Cipher::SYM_AES_256_CBC,
+    Cipher::SYM_BLOWFISH_CBC,
     Cipher::SYM_NULL,
-    Cipher::SYM_AES,
-    Cipher::SYM_BLOWFISH,
     Cipher::NONE
   };
 
   int ret = 0;
   int idx = 0;
   while (Cipher::NONE != algs_to_test[idx]) {
-    int o_len = strlen(plaintext_in) + 1;
-    //if (0 != o_len % 16) {
-    //  o_len += (16 - (o_len % 16));
-    //}
+    const int block_size = get_cipher_block_size(algs_to_test[idx]);
+    const int key_size   = get_cipher_key_length(algs_to_test[idx]);
+    int o_len = get_cipher_aligned_size(algs_to_test[idx], i_len);
+    uint8_t* plaintext_in  = (uint8_t*) alloca(o_len);
+    random_fill(plaintext_in, o_len);
+
+    printf("Testing %-14s  %3d-byte block, %4d-bit key\n----------------------------------------------------\n",
+        get_cipher_label(algs_to_test[idx]),
+        block_size,
+        key_size);
+
+    if (0 != o_len % block_size) {
+      o_len += (block_size - (o_len % block_size));
+    }
+
     uint8_t* ciphertext    = (uint8_t*) alloca(o_len);
     uint8_t* plaintext_out = (uint8_t*) alloca(o_len);
     uint8_t iv[16];
-    uint8_t key[32];
+    uint8_t key[(key_size>>3)];
     bzero(iv, 16);
     bzero(ciphertext, o_len);
     bzero(plaintext_out, o_len);
-    random_fill(key, 32);
+    random_fill(key, (key_size>>3));
 
     printf("Key:           ");
-    for (uint8_t i = 0; i < 32; i++) printf("%02x", *(key + i));
-    printf("\t(%d bits)\n", 32*8);
+    for (uint8_t i = 0; i < (key_size>>3); i++) printf("%02x", *(key + i));
+    printf("\n");
 
     printf("Plaintext in:  ");
-    for (uint8_t i = 0; i < o_len; i++) printf("%02x", *(plaintext_in + i));
-    printf("\t(%d bytes)\n", o_len);
+    for (uint8_t i = 0; i < i_len; i++) printf("%02x", *(plaintext_in + i));
+    printf("\t(%d bytes)\n", i_len);
 
-    ret = manuvr_block_encrypt((uint8_t*) plaintext_in, 1+ strlen(plaintext_in), ciphertext, o_len, key, 256, iv, algs_to_test[idx]);
+    ret = manuvr_sym_encrypt((uint8_t*) plaintext_in, o_len, ciphertext, o_len, key, key_size, iv, algs_to_test[idx]);
     if (ret) {
       printf("Failed to encrypt. Error %d\n", ret);
       return -1;
@@ -145,7 +161,7 @@ int CRYPTO_TEST_SYMMETRIC() {
     printf("\t(%d bytes)\n", o_len);
 
     bzero(iv, 16);
-    ret = manuvr_block_decrypt(ciphertext, o_len, plaintext_out, o_len, key, 256, iv, algs_to_test[idx]);
+    ret = manuvr_sym_decrypt(ciphertext, o_len, plaintext_out, o_len, key, key_size, iv, algs_to_test[idx]);
     if (ret) {
       printf("Failed to decrypt. Error %d\n", ret);
       return -1;
@@ -156,7 +172,7 @@ int CRYPTO_TEST_SYMMETRIC() {
     printf("\t(%d bytes)\n", o_len);
 
     // Now check that the plaintext versions match...
-    for (uint8_t i = 0; i < (strlen(plaintext_in) + 1); i++) {
+    for (uint8_t i = 0; i < i_len; i++) {
       if (*(plaintext_in + i) != *(plaintext_out + i)) {
         printf("Plaintext mismatch. Test fails.\n");
         return -1;
@@ -173,7 +189,7 @@ int CRYPTO_TEST_SYMMETRIC() {
 * Asymmetric algorthms.
 */
 int CRYPTO_TEST_ASYMMETRIC() {
-  printf("===< CRYPTO_TEST_ASYMMETRIC >=================================\n");
+  printf("===< CRYPTO_TEST_ASYMMETRIC >====================================\n");
   return -1;
 }
 
