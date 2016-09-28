@@ -1,7 +1,7 @@
 /*
-File:   Linux.h
+File:   Arduino.h
 Author: J. Ian Lindsay
-Date:   2016.08.31
+Date:   2016.09.25
 
 Copyright 2016 Manuvr, Inc
 
@@ -18,22 +18,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-Despite being an Arduino-ish environment, Teensyduino is largely an
-  API relationship with no phylogenic relationship to Arduino's
-  hardware support.
-Moreover, Teensyduino's code base is well-maintained and full-featured.
-  So we will use it outright.
+ManuvrOS has an on-again, off-again relationship WRT Arduino support.
 
-Many of the libraries that ultimately became ManuvrOS were developed
-  on a Teensy3.0, and this platform represents a "hard-floor" for
-  general support.
+At first, ManuvrOS was a library that was loaded into the Arduino
+  environment. But this quickly became untenable because of the
+  need to include libraries within libraries.
+
+Rather than subject ourselves to the Arduino IDE and its nerfed usage
+  of autotools, we will ask the user to either clone Arduino libraries
+  into ManuvrOS' build tree, or require that the user provide a path
+  to vis locally-installed copy.
+
+Other platforms might inherrit from this API, so keep it general.
+
+Specific hardware targets using Arduino's API should probably fork
+  this platform, and use direct hardware features where practical.
 */
 
 
-#ifndef __PLATFORM_TEENSY3_H__
-#define __PLATFORM_TEENSY3_H__
+#ifndef __PLATFORM_ARDUINO_H__
+#define __PLATFORM_ARDUINO_H__
 
-class Teensy3 : public ManuvrPlatform {
+class Arduino : public ManuvrPlatform {
   public:
     inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
     virtual int8_t platformPreInit(Argument*);
@@ -55,4 +61,4 @@ class Teensy3 : public ManuvrPlatform {
     #endif
 };
 
-#endif  // __PLATFORM_TEENSY3_H__
+#endif  // __PLATFORM_ARDUINO_H__

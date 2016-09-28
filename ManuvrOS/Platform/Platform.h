@@ -179,7 +179,9 @@ typedef struct __platform_gpio_def {
 *   means of extension to other platforms while retaining some linguistic
 *   checks and validations.
 *
-* This is base platform support. It is a pure virtual.
+* This is base platform support. It is a pure virtual, so only funtions that
+*   are infrequently-called ought to be called directly as class members. Otherwise,
+*   performance will suffer.
 */
 class ManuvrPlatform {
   public:
@@ -356,6 +358,7 @@ void sleep_millis(unsigned long millis);
 * Randomness
 */
 uint32_t randomInt();                        // Fetches one of the stored randoms and blocks until one is available.
+int8_t random_fill(uint8_t* buf, int len);
 volatile bool provide_random_int(uint32_t);  // Provides a new random to the pool from the RNG ISR.
 
 
@@ -387,9 +390,8 @@ int    readPinAnalog(uint8_t pin);
   #include <Platform/Storage.h>
 #endif
 
-
-// TODO: I know this is horrid. but it is in preparation for ultimately-better
-//         resolution of this issue.
+// TODO: Until the final-step of the build system rework, this is how we
+//         selectively support specific platforms.
 #if defined(__MK20DX256__) | defined(__MK20DX128__)
   #include <Platform/Teensy3/Teensy3.h>
   typedef Teensy3 Platform;
@@ -399,7 +401,8 @@ int    readPinAnalog(uint8_t pin);
 #elif defined(STM32F4XX)
   // Not yet converted
 #elif defined(ARDUINO)
-  // Not yet converted
+  #include <Platform/Arduino/Arduino.h>
+  typedef ArduinoPlatform Platform;
 #elif defined(__MANUVR_PHOTON)
   // Not yet converted
 #elif defined(RASPI)
@@ -408,6 +411,9 @@ int    readPinAnalog(uint8_t pin);
 #elif defined(__MANUVR_LINUX)
   #include <Platform/Linux/Linux.h>
   typedef LinuxPlatform Platform;
+#elif defined(__APPLE__)
+  #include <Platform/AppleOSX/AppleOSX.h>
+  typedef ApplePlatform Platform;
 #else
   // Unsupportage.
   #error Unsupported platform.

@@ -1,3 +1,61 @@
+## How platform support is organized
+
+There exist a number of common operations for a program that are (by necessity) platform-dependent for some reason. In Manuvr's notion of platform, the following platform-specific things are abstracted into provincial structures or classes because they either (imply hardware-access) or (have differential implementations that do the same thing).
+  1. Random numbers
+  2. Trans-runtime data persistence (File/EEPROM/Flash I/O)
+  3. Platform state control (Reset, reboot, shutdown, bootloader entry)
+  4. Process state control (Sleeping/delay, threading, interrupt suspension)
+  5. Date and time
+  6. Cryptographic implementation (which falls-back on software)
+  7. GPI/O pins
+  8. Watchdog, COP, deadman switch (failsafe timers)
+
+In addition, there are points in the platform life-cycle where features (ALU width and endianness) and environment are discovered at runtime, and made available to the rest of the firmware. This eliminates the need to replicate this functionality (#include <net/htons.h>), or bake-in these parameters at runtime (which doesn't always work, because some CPUs exhibit dual-endianness.
+
+-----
+
+## Cryptographic wrappers
+
+As always, your security situation will dictate your choices.
+
+All linkage to cryptographic wrappers is "C-style".
+
+Cryptography.h provides the interface to platform-abstracted cryptographic implementations. It is also responsible for normalizing cryptographic preprocessor definitions across back-ends. 
+
+The base functions are implemented as weak references to allow specific hardware support to clobber the software implementations at link-time, should that be desirable.
+
+### Classes of cryptographic support
+
+Cryptographic providers and supported ciphers/digests are itemizable at run-time to facilitate software choices regarding algorithms.
+
+These functions can be used to determine how a given algorithm is implemented:
+
+    // Is the algorithm implemented in hardware?
+    bool digest_hardware_backed(Hashes);
+    bool cipher_hardware_backed(Cipher);
+
+    // Is the algorithm provided by the default implementation?
+    bool digest_deferred_handling(Hashes);
+    bool cipher_deferred_handling(Cipher);
+
+
+A somewhat softer approach would see user code that deals with its own wrappers, and completely ignores Cryptography.h, while leaving it intact for the framework's other (presumably less-critical) purposes.
+
+Another approach might prefer to override software implementations at a more-granular level. For instance, most AES hardware only handles a restricted set of parameters (only AES-128-CBC, for example). In these cases, user code can provide an override at runtime while retaining the software support as a fall-back (if it was built at all). This carries a slightly-higher run-time overhead, but will allow arbitrary-levels of cryptographic support opportunistically intermixed with hardware, when/where available.
+
+The softest condition is no cryptography at all.
+
+### Supported back-ends
+
+The cryptographic back-end is selected at compile-time by the preprocessor. It is not presently possible to mix software back-ends.
+
+Initial support was written against mbedTLS.
+
+Hardware back-ends are universally more-specific, and override is done at runtime.
+
+
+-----
+
 ## Boot sequence
 Platform has no constructor. It is statically-allocated on the stack prior to main() invocation, and is accessible anywhere that Platform/Platform.h is included.
 
@@ -100,5 +158,3 @@ Configuration structure (loaded by platform) should result in a map that has thi
       |--"_conf": The root of runtime configuration data.
       |
       |--"_pipe": Any runtime-defined pipe strategies.
-
------

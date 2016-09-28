@@ -5,11 +5,12 @@
 C_STANDARD   = gnu99
 CPP_STANDARD = gnu++11
 
-SOURCES_C      =
-SOURCES_CPP    =
+SOURCES_CPP    = TestDataStructures.cpp
+SOURCES_CPP   += IdentityTest.cpp
+SOURCES_CPP   += SchedulerTest.cpp
+#SOURCES_CPP   += BufferPipeTest.cpp
 
-LOCAL_C_FLAGS    = $(CFLAGS)
-LOCAL_CXX_FLAGS  = $(CPP_FLAGS)
+LOCAL_CXX_FLAGS  = $(CPP_FLAGS) -D_GNU_SOURCE
 
 LIBS  = -L$(OUTPUT_PATH) -L$(WHERE_I_AM)/lib -lstdc++ -lm
 LIBS += -lmanuvr -lextras -lpthread
@@ -18,18 +19,26 @@ LIBS += -lmanuvr -lextras -lpthread
 # Option conditionals
 ###########################################################################
 ifeq ($(SECURE),1)
+	LIBS += $(OUTPUT_PATH)/libmbedtls.a
+	LIBS += $(OUTPUT_PATH)/libmbedx509.a
+	LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
+
+	SOURCES_CPP   += CryptoTest.cpp
 endif
 
-
+TESTS  = $(SOURCES_CPP:.cpp=)
 
 ###########################################################################
 # Parameter unification and make targets
 ###########################################################################
 
-all:
-	$(CXX) -static -o dstest TestDataStructures.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
-	$(CXX) -static -o identtest IdentityTest.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
-	$(CXX) -static -o schedtest SchedulerTest.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+.PHONY: all
+
+all: $(TESTS)
+	@echo 'Built tests:  $(TESTS)'
+
+% : %.cpp
+	$(CXX) -static -o $@ $< $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS)
 
 clean:
-	rm -f dstest identtest schedtest
+	rm -f $(TESTS) CryptoTest
