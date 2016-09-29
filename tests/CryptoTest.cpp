@@ -79,11 +79,11 @@ int CRYPTO_TEST_HASHES() {
     uint8_t* hash_out0 = (uint8_t*) alloca(o_len);
     uint8_t* hash_out1 = (uint8_t*) alloca(o_len);
 
-    if (manuvr_hash((uint8_t*) hash_in0, strlen(hash_in0), hash_out0, o_len, algs_to_test[idx])) {
+    if (manuvr_hash((uint8_t*) hash_in0, strlen(hash_in0), hash_out0, algs_to_test[idx])) {
       printf("Failed to hash.\n");
       return -1;
     }
-    if (manuvr_hash((uint8_t*) hash_in1, 1524, hash_out1, o_len, algs_to_test[idx])) {
+    if (manuvr_hash((uint8_t*) hash_in1, 1524, hash_out1, algs_to_test[idx])) {
       printf("Failed to hash.\n");
       return -1;
     }
@@ -150,7 +150,7 @@ int CRYPTO_TEST_SYMMETRIC() {
     for (uint8_t i = 0; i < i_len; i++) printf("%02x", *(plaintext_in + i));
     printf("\t(%d bytes)\n", i_len);
 
-    ret = manuvr_sym_encrypt((uint8_t*) plaintext_in, o_len, ciphertext, o_len, key, key_size, iv, algs_to_test[idx]);
+    ret = manuvr_sym_cipher((uint8_t*) plaintext_in, o_len, ciphertext, o_len, key, key_size, iv, algs_to_test[idx], MANUVR_ENCRYPT);
     if (ret) {
       printf("Failed to encrypt. Error %d\n", ret);
       return -1;
@@ -161,7 +161,7 @@ int CRYPTO_TEST_SYMMETRIC() {
     printf("\t(%d bytes)\n", o_len);
 
     bzero(iv, 16);
-    ret = manuvr_sym_decrypt(ciphertext, o_len, plaintext_out, o_len, key, key_size, iv, algs_to_test[idx]);
+    ret = manuvr_sym_cipher(ciphertext, o_len, plaintext_out, o_len, key, key_size, iv, algs_to_test[idx], MANUVR_DECRYPT);
     if (ret) {
       printf("Failed to decrypt. Error %d\n", ret);
       return -1;

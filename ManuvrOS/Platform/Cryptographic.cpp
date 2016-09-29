@@ -21,6 +21,7 @@ limitations under the License.
 
 #include "Cryptographic.h"
 #include <Kernel.h>
+#include <map>
 
 /* Privately prototypes. */
 const bool manuvr_is_cipher_symmetric(Cipher);
@@ -220,6 +221,9 @@ const bool manuvr_is_cipher_symmetric(Cipher ci) {
     case Cipher::SYM_AES_128_GCM:
     case Cipher::SYM_AES_192_GCM:
     case Cipher::SYM_AES_256_GCM:
+    case Cipher::SYM_AES_128_CCM:
+    case Cipher::SYM_AES_192_CCM:
+    case Cipher::SYM_AES_256_CCM:
     case Cipher::SYM_CAMELLIA_128_ECB:
     case Cipher::SYM_CAMELLIA_192_ECB:
     case Cipher::SYM_CAMELLIA_256_ECB:
@@ -246,9 +250,6 @@ const bool manuvr_is_cipher_symmetric(Cipher ci) {
     case Cipher::SYM_BLOWFISH_CFB64:
     case Cipher::SYM_BLOWFISH_CTR:
     case Cipher::SYM_ARC4_128:
-    case Cipher::SYM_AES_128_CCM:
-    case Cipher::SYM_AES_192_CCM:
-    case Cipher::SYM_AES_256_CCM:
     case Cipher::SYM_CAMELLIA_128_CCM:
     case Cipher::SYM_CAMELLIA_192_CCM:
     case Cipher::SYM_CAMELLIA_256_CCM:
@@ -274,6 +275,54 @@ const bool manuvr_is_cipher_asymmetric(Cipher ci) {
   }
 }
 
+/* Privately scoped. */
+const bool manuvr_valid_cipher_params(Cipher ci) {
+  switch (ci) {
+    case Cipher::ASYM_RSA:
+    case Cipher::ASYM_ECKEY:
+    case Cipher::ASYM_ECKEY_DH:
+    case Cipher::ASYM_ECDSA:
+    case Cipher::ASYM_RSA_ALT:
+    case Cipher::ASYM_RSASSA_PSS:
+      return true;
+    default:
+      return false;
+  }
+}
+
+const int _cipher_opcode(Cipher ci, uint32_t opts) {
+  switch (ci) {
+    case Cipher::SYM_AES_128_ECB:
+    case Cipher::SYM_AES_192_ECB:
+    case Cipher::SYM_AES_256_ECB:
+    case Cipher::SYM_AES_128_CBC:
+    case Cipher::SYM_AES_192_CBC:
+    case Cipher::SYM_AES_256_CBC:
+    case Cipher::SYM_AES_128_CFB128:
+    case Cipher::SYM_AES_192_CFB128:
+    case Cipher::SYM_AES_256_CFB128:
+    case Cipher::SYM_AES_128_CTR:
+    case Cipher::SYM_AES_192_CTR:
+    case Cipher::SYM_AES_256_CTR:
+    case Cipher::SYM_AES_128_GCM:
+    case Cipher::SYM_AES_192_GCM:
+    case Cipher::SYM_AES_256_GCM:
+    case Cipher::SYM_AES_128_CCM:
+    case Cipher::SYM_AES_192_CCM:
+    case Cipher::SYM_AES_256_CCM:
+      return (opts & MANUVR_ENCRYPT) ? MBEDTLS_AES_ENCRYPT : MBEDTLS_AES_DECRYPT;
+    case Cipher::SYM_BLOWFISH_ECB:
+    case Cipher::SYM_BLOWFISH_CBC:
+    case Cipher::SYM_BLOWFISH_CFB64:
+    case Cipher::SYM_BLOWFISH_CTR:
+      return (opts & MANUVR_ENCRYPT) ? MBEDTLS_BLOWFISH_ENCRYPT : MBEDTLS_BLOWFISH_DECRYPT;
+    default:
+      return 0;  // TODO: Sketchy....
+  }
+};
+
+
+
 
 
 /*******************************************************************************
@@ -283,6 +332,7 @@ const bool manuvr_is_cipher_asymmetric(Cipher ci) {
 /**
 * General interface to message digest functions. Isolates caller from knowledge
 *   of hashing context. Blocks thread until complete.
+* NOTE: We assume that the caller has the foresight to allocate a large-enough output buffer.
 *
 * @return 0 on success. Non-zero otherwise.
 */
@@ -297,50 +347,44 @@ const bool manuvr_is_cipher_asymmetric(Cipher ci) {
 //  else {
 //    printf("Failed to hash.\n");
 //  }
-int8_t __attribute__((weak)) manuvr_hash(uint8_t* in, int in_len, uint8_t* out, int out_len, Hashes h) {
+int8_t __attribute__((weak)) manuvr_hash(uint8_t* in, int in_len, uint8_t* out, Hashes h) {
   int8_t return_value = -1;
   #if defined(__MANUVR_MBEDTLS)
   const mbedtls_md_info_t* md_info = mbedtls_md_info_from_type((mbedtls_md_type_t)h);
 
   if (NULL != md_info) {
-    if (out_len >= md_info->size) {
-      mbedtls_md_context_t ctx;
-      mbedtls_md_init(&ctx);
-
-      switch (mbedtls_md_setup(&ctx, md_info, 0)) {
-        case 0:
-          if (0 == mbedtls_md_starts(&ctx)) {
-            // Start feeding data...
-            if (0 == mbedtls_md_update(&ctx, in, in_len)) {
-              if (0 == mbedtls_md_finish(&ctx, out)) {
-                return_value = 0;
-              }
-              else {
-                Kernel::log("hash(): Failed during finish.\n");
-              }
+    mbedtls_md_context_t ctx;
+    mbedtls_md_init(&ctx);
+    switch (mbedtls_md_setup(&ctx, md_info, 0)) {
+      case 0:
+        if (0 == mbedtls_md_starts(&ctx)) {
+          // Start feeding data...
+          if (0 == mbedtls_md_update(&ctx, in, in_len)) {
+            if (0 == mbedtls_md_finish(&ctx, out)) {
+              return_value = 0;
             }
             else {
-              Kernel::log("hash(): Failed during digest.\n");
+              Kernel::log("hash(): Failed during finish.\n");
             }
           }
           else {
-            Kernel::log("hash(): Bad input data.\n");
+            Kernel::log("hash(): Failed during digest.\n");
           }
-          break;
-        case MBEDTLS_ERR_MD_BAD_INPUT_DATA:
-          Kernel::log("hash(): Bad parameters.\n");
-          break;
-        case MBEDTLS_ERR_MD_ALLOC_FAILED:
-          Kernel::log("hash(): Allocation failure.\n");
-          break;
-        default:
-          break;
-      }
-      mbedtls_md_free(&ctx);
+        }
+        else {
+          Kernel::log("hash(): Bad input data.\n");
+        }
+        break;
+      case MBEDTLS_ERR_MD_BAD_INPUT_DATA:
+        Kernel::log("hash(): Bad parameters.\n");
+        break;
+      case MBEDTLS_ERR_MD_ALLOC_FAILED:
+        Kernel::log("hash(): Allocation failure.\n");
+        break;
+      default:
+        break;
     }
-    else {
-      Kernel::log("hash(): Inadequately-sized output buffer.\n");
-    }
+    mbedtls_md_free(&ctx);
   }
   #else
   Kernel::log("hash(): No hash implementation.\n");
@@ -351,9 +395,10 @@ int8_t __attribute__((weak)) manuvr_hash(uint8_t* in, int in_len, uint8_t* out, 
 /*******************************************************************************
 * Pluggable crypto modules...                                                  *
 *******************************************************************************/
-
-wrapped_sym_operation wrapped_sym_encrypt = nullptr;
-wrapped_sym_operation wrapped_sym_decrypt = nullptr;
+// TODO: I don't like using std::map. Still need to decide on a replacement.
+std::map<Cipher, wrapped_sym_operation>  _sym_overrides;   // Symmetric runtime overrides.
+std::map<Cipher, wrapped_asym_operation> _asym_overrides;  // Asymmetric runtime overrides.
+std::map<Hashes, wrapped_hash_operation> _hash_overrides;  // Digest runtime overrides.
 
 
 /**
@@ -362,30 +407,16 @@ wrapped_sym_operation wrapped_sym_decrypt = nullptr;
 * @param Cipher The cipher to test for deferral.
 * @return true if the root function ought to defer.
 */
-int crypt_wrapper_defers_cipher(Cipher ci) {
-  if (manuvr_is_cipher_symmetric(ci)) {
-    switch (ci) {
-      case Cipher::SYM_AES_256_CBC:
-      case Cipher::SYM_AES_192_CBC:
-      case Cipher::SYM_AES_128_CBC:
-        if ((wrapped_sym_decrypt) && (wrapped_sym_encrypt)) {
-          return true;
-        }
-      default:
-        return false;
-    }
-  }
-  else {
-    switch (ci) {
-      case Cipher::SYM_AES_256_CBC:
-      case Cipher::SYM_AES_192_CBC:
-      case Cipher::SYM_AES_128_CBC:
-        if ((wrapped_sym_decrypt) && (wrapped_sym_encrypt)) {
-          return true;
-        }
-      default:
-        return false;
-    }
+bool cipher_deferred_handling(Cipher ci) {
+  switch (ci) {
+    case Cipher::SYM_AES_256_CBC:
+    case Cipher::SYM_AES_192_CBC:
+    case Cipher::SYM_AES_128_CBC:
+      if (_sym_overrides[ci]) {
+        return true;
+      }
+    default:
+      return false;
   }
 }
 
@@ -395,7 +426,7 @@ int crypt_wrapper_defers_cipher(Cipher ci) {
 * @param Hashes The hash to test for deferral.
 * @return true if the root function ought to defer.
 */
-int crypt_wrapper_defers_digest(Hashes h) {
+bool digest_deferred_handling(Hashes h) {
   switch (h) {
     default:
       return false;
@@ -407,7 +438,7 @@ int crypt_wrapper_defers_digest(Hashes h) {
 * Symmetric ciphers                                                            *
 *******************************************************************************/
 /**
-* Block symmetric encryption.
+* Block symmetric ciphers.
 * Please note that linker-override is possible, but dynamic override is generally
 *   preferable to avoid clobbering all symmetric support.
 *
@@ -419,12 +450,13 @@ int crypt_wrapper_defers_digest(Hashes h) {
 * @param int      Length of the key, in bits.
 * @param uint8_t* IV. Caller's responsibility to use correct size.
 * @param Cipher   The cipher by which to encrypt.
+* @param uint32_t Options to the optionation.
 * @return true if the root function ought to defer.
 */
-int8_t __attribute__((weak)) manuvr_sym_encrypt(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher ci) {
-  if (crypt_wrapper_defers_cipher(ci)) {
+int8_t __attribute__((weak)) manuvr_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher ci, uint32_t opts) {
+  if (cipher_deferred_handling(ci)) {
     // If overriden by user implementation.
-    return wrapped_sym_encrypt(in, in_len, out, out_len, key, key_len, iv, ci);
+    return _sym_overrides[ci](in, in_len, out, out_len, key, key_len, iv, ci, opts);
   }
   int8_t ret = -1;
   switch (ci) {
@@ -433,8 +465,13 @@ int8_t __attribute__((weak)) manuvr_sym_encrypt(uint8_t* in, int in_len, uint8_t
     case Cipher::SYM_AES_128_CBC:
       {
         mbedtls_aes_context ctx;
-        mbedtls_aes_setkey_enc(&ctx, key, key_len);
-        ret = mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, in_len, iv, in, out);
+        if (opts & MANUVR_ENCRYPT) {
+          mbedtls_aes_setkey_enc(&ctx, key, key_len);
+        }
+        else {
+          mbedtls_aes_setkey_dec(&ctx, key, key_len);
+        }
+        ret = mbedtls_aes_crypt_cbc(&ctx, _cipher_opcode(ci, opts), in_len, iv, in, out);
         mbedtls_aes_free(&ctx);
       }
       break;
@@ -442,58 +479,7 @@ int8_t __attribute__((weak)) manuvr_sym_encrypt(uint8_t* in, int in_len, uint8_t
       {
         mbedtls_blowfish_context ctx;
         mbedtls_blowfish_setkey(&ctx, key, key_len);
-        ret = mbedtls_blowfish_crypt_cbc(&ctx, MBEDTLS_BLOWFISH_ENCRYPT, in_len, iv, in, out);
-        mbedtls_blowfish_free(&ctx);
-      }
-      break;
-    case Cipher::SYM_NULL:
-      memcpy(out, in, in_len);
-      ret = 0;
-      break;
-    default:
-      break;
-  }
-  return ret;
-}
-
-
-/**
-* Block symmetric decryption.
-* Please note that linker-override is possible, but dynamic override is generally
-*   preferable to avoid clobbering all symmetric support.
-*
-* @param uint8_t* Buffer containing plaintext.
-* @param int      Length of plaintext.
-* @param uint8_t* Target buffer for ciphertext.
-* @param int      Length of output.
-* @param uint8_t* Buffer containing the symmetric key.
-* @param int      Length of the key, in bits.
-* @param uint8_t* IV. Caller's responsibility to use correct size.
-* @param Cipher   The cipher by which to encrypt.
-* @return true if the root function ought to defer.
-*/
-int8_t __attribute__((weak)) manuvr_sym_decrypt(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher ci) {
-  if (crypt_wrapper_defers_cipher(ci)) {
-    return wrapped_sym_decrypt(in, in_len, out, out_len, key, key_len, iv, ci);
-  }
-
-  int8_t ret = -1;
-  switch (ci) {
-    case Cipher::SYM_AES_256_CBC:
-    case Cipher::SYM_AES_192_CBC:
-    case Cipher::SYM_AES_128_CBC:
-      {
-        mbedtls_aes_context ctx;
-        mbedtls_aes_setkey_dec(&ctx, key, key_len);
-        ret = mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, in_len, iv, in, out);
-        mbedtls_aes_free(&ctx);
-      }
-      break;
-    case Cipher::SYM_BLOWFISH_CBC:
-      {
-        mbedtls_blowfish_context ctx;
-        mbedtls_blowfish_setkey(&ctx, key, key_len);
-        ret = mbedtls_blowfish_crypt_cbc(&ctx, MBEDTLS_BLOWFISH_DECRYPT, in_len, iv, in, out);
+        ret = mbedtls_blowfish_crypt_cbc(&ctx, _cipher_opcode(ci, opts), in_len, iv, in, out);
         mbedtls_blowfish_free(&ctx);
       }
       break;
@@ -517,11 +503,6 @@ int8_t __attribute__((weak)) manuvr_asym_keygen(Cipher, int key_len, uint8_t* pu
 }
 
 
-int8_t __attribute__((weak)) manuvr_asym_encrypt(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes h, Cipher ci, CryptoKey private_key) {
-  return -1;
-}
-
-
-int8_t __attribute__((weak)) manuvr_asym_decrypt(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes h, Cipher ci, CryptoKey public_key) {
+int8_t __attribute__((weak)) manuvr_asym_cipher(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes h, Cipher ci, CryptoKey private_key, uint32_t opts) {
   return -1;
 }

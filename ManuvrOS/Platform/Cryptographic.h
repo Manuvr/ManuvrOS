@@ -47,6 +47,9 @@ If you wish to use another crypto library (OpenSSL? MatrixSSL? uECC?) then
   #include "mbedtls/blowfish.h"
 #endif
 
+#define MANUVR_ENCRYPT 0x00000001
+#define MANUVR_DECRYPT 0x00000002
+
 typedef struct {
 } CryptOpt;
 
@@ -162,7 +165,8 @@ typedef int8_t (*wrapped_sym_operation)(
   uint8_t* key,
   int key_len,
   uint8_t* iv,
-  Cipher ci
+  Cipher ci,
+  uint32_t opts
 );
 
 typedef int8_t (*wrapped_asym_operation)(
@@ -172,7 +176,15 @@ typedef int8_t (*wrapped_asym_operation)(
   int out_len,
   Hashes h,
   Cipher ci,
-  CryptoKey key
+  CryptoKey key,
+  uint32_t opts
+);
+
+typedef int8_t (*wrapped_hash_operation)(
+  uint8_t* in,
+  int in_len,
+  uint8_t* out,
+  Hashes h
 );
 
 
@@ -184,7 +196,7 @@ extern "C" {
 *******************************************************************************/
 const int get_digest_output_length(Hashes);
 const char* get_digest_label(Hashes);
-int8_t manuvr_hash(uint8_t* in, int in_len, uint8_t* out, int out_len, Hashes h);
+int8_t manuvr_hash(uint8_t* in, int in_len, uint8_t* out, Hashes h);
 
 
 /*******************************************************************************
@@ -194,12 +206,10 @@ const int get_cipher_block_size(Cipher);
 const int get_cipher_key_length(Cipher);
 int get_cipher_aligned_size(Cipher, int len);
 const char* get_cipher_label(Cipher);
-int8_t manuvr_sym_encrypt(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher);
-int8_t manuvr_sym_decrypt(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher);
+int8_t manuvr_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher, uint32_t opts);
 
 int8_t manuvr_asym_keygen(Cipher, int key_len, uint8_t* pub, int pub_len, uint8_t* priv, int priv_len);
-int8_t manuvr_asym_encrypt(uint8_t* in, int in_len, uint8_t* out, int* out_len, Hashes, Cipher, CryptoKey private_key);
-int8_t manuvr_asym_decrypt(uint8_t* in, int in_len, uint8_t* out, int* out_len, Hashes, Cipher, CryptoKey public_key);
+int8_t manuvr_asym_cipher(uint8_t* in, int in_len, uint8_t* out, int* out_len, Hashes, Cipher, CryptoKey private_key, uint32_t opts);
 
 
 
@@ -214,8 +224,16 @@ int8_t manuvr_random_fill(uint8_t* buf, int len);
 *******************************************************************************/
 void printCryptoOverview(StringBuilder*);
 
+// Is the algorithm implemented in hardware?
+bool digest_hardware_backed(Hashes);
+bool cipher_hardware_backed(Cipher);
 
+// Is the algorithm provided by the default implementation?
+bool digest_deferred_handling(Hashes);
+bool cipher_deferred_handling(Cipher);
 
 } // extern "C"
+
+const int _cipher_opcode(uint32_t opts);
 
 #endif // __MANUVR_CRYPTO_ABSTRACTION_H__

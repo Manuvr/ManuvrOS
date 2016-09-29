@@ -20,7 +20,7 @@ As always, your security situation will dictate your choices.
 
 All linkage to cryptographic wrappers is "C-style".
 
-Cryptography.h provides the interface to platform-abstracted cryptographic implementations. It is also responsible for normalizing cryptographic preprocessor definitions across back-ends. 
+Cryptography.h provides the interface to platform-abstracted cryptographic implementations. It is also responsible for normalizing cryptographic preprocessor definitions across back-ends.
 
 The base functions are implemented as weak references to allow specific hardware support to clobber the software implementations at link-time, should that be desirable.
 
@@ -79,7 +79,7 @@ Control is then returned to the main thread.
     int main(void) {
       platform.platformPreInit();
       platform.bootstrap();
-      platform.forsakeMain()
+      platform.forsakeMain();
     }
 
 Alternatively, one that accepts command-line arguments (on linux, generally).
@@ -88,7 +88,7 @@ Alternatively, one that accepts command-line arguments (on linux, generally).
       Argument* opts = parseFromArgCV(argc, argv);
       platform.platformPreInit(opts);
       platform.bootstrap();
-      platform.forsakeMain()
+      platform.forsakeMain();
     }
 
 #### What happens behind the scenes
