@@ -87,10 +87,10 @@ int CRYPTO_TEST_HASHES() {
       printf("Failed to hash.\n");
       return -1;
     }
-    printf("hash_out0:  ");
+    printf("0-length: ");
     for (uint8_t i = 0; i < o_len; i++) printf("%02x", *(hash_out0 + i));
     printf("\n");
-    printf("hash_out1:  ");
+    printf("hash_out: ");
     for (uint8_t i = 0; i < o_len; i++) printf("%02x", *(hash_out1 + i));
     printf("\n");
     idx++;
@@ -209,6 +209,9 @@ int main(int argc, char *argv[]) {
   int exit_value = 1;   // Failure is the default result.
 
   platform.platformPreInit();   // Our test fixture needs random numbers.
+  StringBuilder log;
+  printCryptoOverview(&log);
+  printf("%s\n", (const char*) log.string());
 
   if (0 == CRYPTO_TEST_INIT()) {
     if (0 == CRYPTO_TEST_HASHES()) {

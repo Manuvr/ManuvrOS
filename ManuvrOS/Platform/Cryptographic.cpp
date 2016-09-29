@@ -132,18 +132,26 @@ int get_cipher_aligned_size(Cipher c, int base_len) {
 void printCryptoOverview(StringBuilder* out) {
   #if defined(__MANUVR_MBEDTLS)
     out->concat("-- Cryptographic support via mbedtls.\n");
-    out->concat("-- Supported TLS ciphersuites:\n");
+    out->concat("-- Supported TLS ciphersuites:");
+    int idx = 0;
     const int* list = mbedtls_ssl_list_ciphersuites();
     while (0 != *(list)) {
-      out->concatf("\t %s\n", mbedtls_ssl_get_ciphersuite_name(*(list++)));
+      if ((0 == idx++ % 2) && (0 != *(list))) out->concat("\n--\t");
+      out->concatf("\t%-40s", mbedtls_ssl_get_ciphersuite_name(*(list++)));
     }
+    out->concat("\n-- Supported ciphers:");
+    idx = 0;
     list = mbedtls_cipher_list();
     while (0 != *(list)) {
-      out->concatf("\t %s\n", get_cipher_label((Cipher) *(list++)));
+      if ((0 == idx++ % 4) && (0 != *(list))) out->concat("\n--\t");
+      out->concatf("\t%-18s", get_cipher_label((Cipher) *(list++)));
     }
+    out->concat("\n-- Supported digests:");
+    idx = 0;
     list = mbedtls_md_list();
     while (0 != *(list)) {
-      out->concatf("\t %s\n", get_digest_label((Hashes) *(list++)));
+      if ((0 == idx++ % 6) && (0 != *(list))) out->concat("\n--\t");
+      out->concatf("\t%-10s", get_digest_label((Hashes) *(list++)));
     }
   #else
   out->concat("No cryptographic support.\n");
