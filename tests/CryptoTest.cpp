@@ -33,8 +33,8 @@ This tests the cryptographic system under whatever build options
 #include <iostream>
 
 #include <DataStructures/StringBuilder.h>
-
 #include <Platform/Platform.h>
+
 
 /*
 * Tests to ensure we have support for what we are about to test.
@@ -57,14 +57,17 @@ int CRYPTO_TEST_HASHES() {
   printf("===< CRYPTO_TEST_HASHES >========================================\n");
 
   const char* hash_in0  = "";
-  uint8_t* hash_in1  = (uint8_t*) alloca(1524);
-  random_fill(hash_in1, 1524);
+  int i_len = 1524;
+  uint8_t* hash_in1  = (uint8_t*) alloca(i_len);
+  random_fill(hash_in1, i_len);
 
   Hashes algs_to_test[] = {
     Hashes::MD5,
     Hashes::SHA1,
     Hashes::RIPEMD160,
+    //Hashes::SHA224,
     Hashes::SHA256,
+    //Hashes::SHA384,
     Hashes::SHA512,
     Hashes::NONE
   };
@@ -83,7 +86,7 @@ int CRYPTO_TEST_HASHES() {
       printf("Failed to hash.\n");
       return -1;
     }
-    if (manuvr_hash((uint8_t*) hash_in1, 1524, hash_out1, algs_to_test[idx])) {
+    if (manuvr_hash((uint8_t*) hash_in1, i_len, hash_out1, algs_to_test[idx])) {
       printf("Failed to hash.\n");
       return -1;
     }
@@ -92,7 +95,7 @@ int CRYPTO_TEST_HASHES() {
     printf("\n");
     printf("hash_out: ");
     for (uint8_t i = 0; i < o_len; i++) printf("%02x", *(hash_out1 + i));
-    printf("\n");
+    printf("\n\n");
     idx++;
   }
   return 0;
@@ -194,13 +197,13 @@ int CRYPTO_TEST_ASYMMETRIC() {
 }
 
 
-
 void printTestFailure(const char* test) {
   printf("\n");
   printf("*********************************************\n");
   printf("* %s FAILED tests.\n", test);
   printf("*********************************************\n");
 }
+
 
 /****************************************************************************************************
 * The main function.                                                                                *

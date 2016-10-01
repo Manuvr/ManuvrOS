@@ -43,12 +43,18 @@ If you wish to use another crypto library (OpenSSL? MatrixSSL? uECC?) then
   #include "mbedtls/md.h"
   #include "mbedtls/md_internal.h"
   #include "mbedtls/base64.h"
+  #include "mbedtls/pk.h"
+  #include "mbedtls/pk_internal.h"
   #include "mbedtls/aes.h"
   #include "mbedtls/blowfish.h"
 #endif
 
 #define MANUVR_ENCRYPT 0x00000001
 #define MANUVR_DECRYPT 0x00000002
+
+#if defined(__MANUVR_MBEDTLS) || defined(__MANUVR_OPENSSL)
+#define __MANUVR_HAS_CRYPTO 1
+#endif
 
 typedef struct {
 } CryptOpt;

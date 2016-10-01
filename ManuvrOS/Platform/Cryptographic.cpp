@@ -60,6 +60,11 @@ const int get_cipher_key_length(Cipher c) {
     }
   }
   else {
+    const mbedtls_pk_info_t* info = mbedtls_pk_info_from_type((mbedtls_pk_type_t)c);
+    if (info) {
+      //return info->key_bitlen;
+    }
+    //mbedtls_pk_get_bitlen
   }
   return 0;
 }
@@ -113,14 +118,6 @@ int get_cipher_aligned_size(Cipher c, int base_len) {
 
 
 
-
-
-
-
-
-
-
-
 /*******************************************************************************
 * String lookup and debug...                                                   *
 *******************************************************************************/
@@ -137,21 +134,35 @@ void printCryptoOverview(StringBuilder* out) {
     int idx = 0;
     const int* list = mbedtls_ssl_list_ciphersuites();
     while (0 != *(list)) {
-      if ((0 == idx++ % 2) && (0 != *(list))) out->concat("\n--\t");
+      if (0 == idx++ % 2) out->concat("\n--\t");
       out->concatf("\t%-40s", mbedtls_ssl_get_ciphersuite_name(*(list++)));
     }
     out->concat("\n-- Supported ciphers:");
     idx = 0;
     list = mbedtls_cipher_list();
     while (0 != *(list)) {
-      if ((0 == idx++ % 4) && (0 != *(list))) out->concat("\n--\t");
-      out->concatf("\t%-18s", get_cipher_label((Cipher) *(list++)));
+      if (0 == idx++ % 4) out->concat("\n--\t");
+      out->concatf("\t%-20s", get_cipher_label((Cipher) *(list++)));
     }
+    //list = mbedtls_cipher_list();
+    //while (0 != *(list)) {
+    //  if ((0 == idx++ % 4) && (0 != *(list))) out->concat("\n--\t");
+    //  out->concatf("\t%-18s", get_cipher_label((Cipher) *(list++)));
+    //}
+
+    out->concat("\n-- Supported ECC curves:");
+    const mbedtls_ecp_curve_info* c_list = mbedtls_ecp_curve_list();
+    idx = 0;
+    while (c_list[idx].name) {
+      if (0 == idx % 4) out->concat("\n--\t");
+      out->concatf("\t%-20s", c_list[idx++].name);
+    }
+
     out->concat("\n-- Supported digests:");
     idx = 0;
     list = mbedtls_md_list();
     while (0 != *(list)) {
-      if ((0 == idx++ % 6) && (0 != *(list))) out->concat("\n--\t");
+      if (0 == idx++ % 6) out->concat("\n--\t");
       out->concatf("\t%-10s", get_digest_label((Hashes) *(list++)));
     }
   #else
@@ -192,6 +203,10 @@ const char* get_cipher_label(Cipher c) {
     }
   }
   else {
+    const mbedtls_pk_info_t* info = mbedtls_pk_info_from_type((mbedtls_pk_type_t)c);
+    if (info) {
+      return info->name;
+    }
   }
   return "<UNKNOWN>";
 }

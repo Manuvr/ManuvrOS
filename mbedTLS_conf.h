@@ -116,7 +116,9 @@
 
 #define MBEDTLS_RIPEMD160_C
 #define MBEDTLS_SHA1_C
+#define MBEDTLS_SHA224_C
 #define MBEDTLS_SHA256_C
+#define MBEDTLS_SHA384_C
 #define MBEDTLS_SHA512_C   // TODO: Why does enablement cause failures?
 
 #define MBEDTLS_SSL_COOKIE_C
