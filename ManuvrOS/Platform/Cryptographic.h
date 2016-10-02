@@ -376,7 +376,7 @@ int get_cipher_aligned_size(Cipher, int len);
 const char* get_cipher_label(Cipher);
 int8_t manuvr_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher, uint32_t opts);
 
-int manuvr_asym_keygen(CryptoKey, uint8_t* pub, int pub_len, uint8_t* priv, int priv_len);
+int manuvr_asym_keygen(Cipher c, CryptoKey, uint8_t* pub, int* pub_len, uint8_t* priv, int* priv_len);
 int manuvr_asym_cipher(uint8_t* in, int in_len, uint8_t* out, int* out_len, Hashes, Cipher, CryptoKey private_key, uint32_t opts);
 
 // Now some inline definitions to mask the back-end API where it can be done

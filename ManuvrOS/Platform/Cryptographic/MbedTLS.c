@@ -353,7 +353,7 @@ int8_t __attribute__((weak)) manuvr_sym_cipher(uint8_t* in, int in_len, uint8_t*
 /*******************************************************************************
 * Asymmetric ciphers                                                           *
 *******************************************************************************/
-int __attribute__((weak)) manuvr_asym_keygen(CryptoKey key_type, uint8_t* pub, int pub_len, uint8_t* priv, int priv_len) {
+int __attribute__((weak)) manuvr_asym_keygen(Cipher c, CryptoKey key_type, uint8_t* pub, int* pub_len, uint8_t* priv, int* priv_len) {
   mbedtls_ctr_drbg_context ctr_drbg;
   mbedtls_ctr_drbg_init(&ctr_drbg);
 
@@ -367,11 +367,9 @@ int __attribute__((weak)) manuvr_asym_keygen(CryptoKey key_type, uint8_t* pub, i
     (const uint8_t*) &pers, 4
   );
   if (0 == ret) {
-    switch (key_type) {
+    switch (c) {
       #if defined(WRAPPED_ASYM_RSA)
-        case CryptoKey::RSA_1024:
-        case CryptoKey::RSA_2048:
-        case CryptoKey::RSA_4096:
+        case Cipher::ASYM_RSA:
           {
             ret = mbedtls_pk_setup(&key, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
             if (0 == ret) {
@@ -382,11 +380,17 @@ int __attribute__((weak)) manuvr_asym_keygen(CryptoKey key_type, uint8_t* pub, i
                 (int) key_type, 65537
               );
               if (0 == ret) {
-                memset(pub,  0, pub_len);
-                memset(priv, 0, priv_len);
-                ret = mbedtls_pk_write_key_der(&key, priv, priv_len);
-                if (0 == ret) {
-                  ret = mbedtls_pk_write_pubkey_der(&key, pub, pub_len);
+                ret--;
+                memset(pub,  0, *pub_len);
+                memset(priv, 0, *priv_len);
+                int written = mbedtls_pk_write_pubkey_der(&key, pub, *pub_len);
+                if (0 < written) {
+                  *pub_len = written;
+                  written = mbedtls_pk_write_key_der(&key, priv, *priv_len);
+                  if (0 < written) {
+                    *priv_len = written;
+                    ret = 0;
+                  }
                 }
               }
             }
@@ -394,44 +398,31 @@ int __attribute__((weak)) manuvr_asym_keygen(CryptoKey key_type, uint8_t* pub, i
           break;
       #endif
       #if defined(MBEDTLS_ECP_C)
-        // If we have ECP, we assume we have at least *one* curve...
-        #if defined(WRAPPED_PK_OPT_SECP192R1)
-          case CryptoKey::ECC_SECP192R1:
-        #endif
-        #if defined(WRAPPED_PK_OPT_SECP224R1)
-          case CryptoKey::ECC_SECP224R1:
-        #endif
-        #if defined(WRAPPED_PK_OPT_SECP256R1)
-          case CryptoKey::ECC_SECP256R1:
-        #endif
-        #if defined(WRAPPED_PK_OPT_SECP384R1)
-          case CryptoKey::ECC_SECP384R1:
-        #endif
-        #if defined(WRAPPED_PK_OPT_SECP521R1)
-          case CryptoKey::ECC_SECP521R1:
-        #endif
-        #if defined(WRAPPED_PK_OPT_SECP192K1)
-          case CryptoKey::ECC_SECP192K1:
-        #endif
-        #if defined(WRAPPED_PK_OPT_SECP224K1)
-          case CryptoKey::ECC_SECP224K1:
-        #endif
-        #if defined(WRAPPED_PK_OPT_SECP256K1)
-          case CryptoKey::ECC_SECP256K1:
-        #endif
-        #if defined(WRAPPED_PK_OPT_BP256R1)
-          case CryptoKey::ECC_BP256R1:
-        #endif
-        #if defined(WRAPPED_PK_OPT_BP384R1)
-          case CryptoKey::ECC_BP384R1:
-        #endif
-        #if defined(WRAPPED_PK_OPT_BP512R1)
-          case CryptoKey::ECC_BP512R1:
-        #endif
-        #if defined(WRAPPED_PK_OPT_CURVE25519)
-          case CryptoKey::ECC_CURVE25519:
-        #endif
+        case Cipher::ASYM_ECKEY:
           {
+            ret = mbedtls_pk_setup(&key, mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY));
+            if (0 == ret) {
+              mbedtls_ecp_keypair* ec_kp = mbedtls_pk_ec(key);
+              ret = mbedtls_ecp_gen_key(
+                (mbedtls_ecp_group_id) key_type,
+                ec_kp,
+                mbedtls_ctr_drbg_random, &ctr_drbg
+              );
+              if (0 == ret) {
+                ret--;
+                memset(pub,  0, *pub_len);
+                memset(priv, 0, *priv_len);
+                int written = mbedtls_pk_write_pubkey_der(&key, pub, *pub_len);
+                if (0 < written) {
+                  *pub_len = written;
+                  written = mbedtls_pk_write_key_der(&key, priv, *priv_len);
+                  if (0 < written) {
+                    *priv_len = written;
+                    ret = 0;
+                  }
+                }
+              }
+            }
           }
           break;
       #endif

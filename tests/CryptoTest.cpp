@@ -214,22 +214,32 @@ int CRYPTO_TEST_SYMMETRIC() {
 */
 int CRYPTO_TEST_ASYMMETRIC() {
   printf("===< CRYPTO_TEST_ASYMMETRIC >====================================\n");
-  uint8_t* rsa_public_buf  = (uint8_t*) alloca(1024);
-  uint8_t* rsa_privat_buf  = (uint8_t*) alloca(1024);
-  uint8_t* ecc_public_buf  = (uint8_t*) alloca(1024);
-  uint8_t* ecc_privat_buf  = (uint8_t*) alloca(1024);
-  int ret = manuvr_asym_keygen(CryptoKey::RSA_2048, rsa_public_buf, 1024, rsa_privat_buf, 1024);
+  uint8_t* rsa_public_buf  = (uint8_t*) alloca(2048);
+  uint8_t* rsa_privat_buf  = (uint8_t*) alloca(2048);
+  uint8_t* ecc_public_buf  = (uint8_t*) alloca(2048);
+  uint8_t* ecc_privat_buf  = (uint8_t*) alloca(2048);
+
+  int rsa_public_len  = 2048;
+  int rsa_privat_len  = 2048;
+  int ecc_public_len  = 2048;
+  int ecc_privat_len  = 2048;
+
+
+  int ret = manuvr_asym_keygen(Cipher::ASYM_RSA, CryptoKey::RSA_2048, rsa_public_buf, &rsa_public_len, rsa_privat_buf, &rsa_privat_len);
   if (0 == ret) {
-    ret = manuvr_asym_keygen(CryptoKey::ECC_SECP384R1, ecc_public_buf, 1024, ecc_privat_buf, 1024);
+    printf("RSA keygen succeeded:   %d / %d (pub/priv bytes)\n", rsa_public_len, rsa_privat_len);
+
+    ret = manuvr_asym_keygen(Cipher::ASYM_ECKEY, CryptoKey::ECC_SECP384R1, ecc_public_buf, &ecc_public_len, ecc_privat_buf, &ecc_privat_len);
     if (0 == ret) {
+      printf("ECC keygen succeeded:   %d / %d (pub/priv bytes)\n", ecc_public_len, ecc_privat_len);
       return 0;
     }
     else {
-      printf("ECC keygen failed with code %d.\n", ret);
+      printf("ECC keygen failed with code 0x%04x.\n", ret);
     }
   }
   else {
-    printf("RSA keygen failed with code %d.\n", ret);
+    printf("RSA keygen failed with code 0x%04x.\n", ret);
   }
   return -1;
 }
