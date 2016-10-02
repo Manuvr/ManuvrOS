@@ -61,16 +61,7 @@ int CRYPTO_TEST_HASHES() {
   uint8_t* hash_in1  = (uint8_t*) alloca(i_len);
   random_fill(hash_in1, i_len);
 
-  Hashes algs_to_test[] = {
-    Hashes::MD5,
-    Hashes::SHA1,
-    Hashes::RIPEMD160,
-    //Hashes::SHA224,
-    Hashes::SHA256,
-    //Hashes::SHA384,
-    Hashes::SHA512,
-    Hashes::NONE
-  };
+  Hashes* algs_to_test = list_supported_digests();
 
   int idx = 0;
   while (Hashes::NONE != algs_to_test[idx]) {
