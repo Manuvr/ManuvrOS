@@ -48,6 +48,35 @@ int CRYPTO_TEST_INIT() {
   return -1;
 }
 
+
+/*
+* Tests to ensure the RNG works.
+*/
+int CRYPTO_TEST_RNG() {
+  printf("===< CRYPTO_TEST_RNG >===========================================\n");
+  uint8_t* result  = (uint8_t*) alloca(PLATFORM_RNG_CARRY_CAPACITY*2);
+  int idx = 0;
+
+  size_t size_tests[] = {
+    (PLATFORM_RNG_CARRY_CAPACITY/2),
+    (PLATFORM_RNG_CARRY_CAPACITY),
+    (PLATFORM_RNG_CARRY_CAPACITY),
+    0
+  };
+
+  while (size_tests[idx] != 0) {
+    size_t r_len = size_tests[idx];
+    printf("Requesting %d random bytes...\n\t", r_len);
+    random_fill(result, r_len);
+    for (uint8_t i = 0; i < r_len; i++) printf("%02x", *(result + i));
+    printf("\n");
+    idx++;
+  }
+
+  return 0;
+}
+
+
 /*
 * Digest algortithm tests.
 * Because these are not reversible, this will take the form of
@@ -175,6 +204,7 @@ int CRYPTO_TEST_SYMMETRIC() {
     printf("\n");
     idx++;
   }
+
   return 0;
 }
 
@@ -184,6 +214,7 @@ int CRYPTO_TEST_SYMMETRIC() {
 */
 int CRYPTO_TEST_ASYMMETRIC() {
   printf("===< CRYPTO_TEST_ASYMMETRIC >====================================\n");
+
   return -1;
 }
 
@@ -203,24 +234,29 @@ int main(int argc, char *argv[]) {
   int exit_value = 1;   // Failure is the default result.
 
   platform.platformPreInit();   // Our test fixture needs random numbers.
+  platform.bootstrap();
+  
   StringBuilder log;
   printCryptoOverview(&log);
   printf("%s\n", (const char*) log.string());
 
   if (0 == CRYPTO_TEST_INIT()) {
-    if (0 == CRYPTO_TEST_HASHES()) {
-      if (0 == CRYPTO_TEST_SYMMETRIC()) {
-        if (0 == CRYPTO_TEST_ASYMMETRIC()) {
-          printf("**********************************\n");
-          printf("*  Cryptography tests all pass   *\n");
-          printf("**********************************\n");
-          exit_value = 0;
+    if (0 == CRYPTO_TEST_RNG()) {
+      if (0 == CRYPTO_TEST_HASHES()) {
+        if (0 == CRYPTO_TEST_SYMMETRIC()) {
+          if (0 == CRYPTO_TEST_ASYMMETRIC()) {
+            printf("**********************************\n");
+            printf("*  Cryptography tests all pass   *\n");
+            printf("**********************************\n");
+            exit_value = 0;
+          }
+          else printTestFailure("CRYPTO_TEST_ASYMMETRIC");
         }
-        else printTestFailure("CRYPTO_TEST_ASYMMETRIC");
+        else printTestFailure("CRYPTO_TEST_SYMMETRIC");
       }
-      else printTestFailure("CRYPTO_TEST_SYMMETRIC");
+      else printTestFailure("CRYPTO_TEST_HASHES");
     }
-    else printTestFailure("CRYPTO_TEST_HASHES");
+    else printTestFailure("CRYPTO_TEST_RNG");
   }
   else printTestFailure("CRYPTO_TEST_INIT");
 

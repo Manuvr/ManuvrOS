@@ -79,7 +79,11 @@ enum class Hashes {
   NONE = WRAPPED_HASH_NONE
 };
 
+
 enum class CryptoKey {
+  #if defined(WRAPPED_KEY_)
+    RIPEMD160 = WRAPPED_HASH_RIPEMD160,
+  #endif
 };
 
 /* Some ciphers have nuances like block-mode (AES), */
@@ -351,6 +355,7 @@ inline Cipher* list_supported_ciphers() {
 /*******************************************************************************
 * Randomness                                                                   *
 *******************************************************************************/
+int cryptographic_rng_init();
 int8_t manuvr_random_fill(uint8_t* buf, int len);
 
 
@@ -373,15 +378,22 @@ bool provide_cipher_handler(Cipher);
 
 } // extern "C"
 
-const int _cipher_opcode(Cipher ci, uint32_t opts);
 
 
+/*******************************************************************************
+* These things are privately-scoped, and are intended for internal use only.   *
+*******************************************************************************/
 
 // TODO: I don't like using std::map. Still need to decide on a replacement.
 static std::map<Cipher, wrapped_sym_operation>    _sym_overrides;    // Symmetric runtime overrides.
 static std::map<Cipher, wrapped_sauth_operation>  _sauth_overrides;  // Symmetric/auth runtime overrides.
 static std::map<Cipher, wrapped_asym_operation>   _asym_overrides;   // Asymmetric runtime overrides.
 static std::map<Hashes, wrapped_hash_operation>   _hash_overrides;   // Digest runtime overrides.
+
+const bool _is_cipher_symmetric(Cipher);
+const bool _is_cipher_authenticated(Cipher);
+const bool _is_cipher_asymmetric(Cipher);
+const bool _valid_cipher_params(Cipher);
 
 
 #endif // __MANUVR_CRYPTO_ABSTRACTION_H__

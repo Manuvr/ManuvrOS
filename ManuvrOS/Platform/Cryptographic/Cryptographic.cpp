@@ -35,87 +35,6 @@ const bool manuvr_is_cipher_asymmetric(Cipher);
 * Meta                                                                         *
 *******************************************************************************/
 
-/**
-* Given the identifier for the hash algorithm return the output size.
-*
-* @param Hashes The hash algorithm in question.
-* @return The size of the buffer (in bytes) required to hold the digest output.
-*/
-const int get_digest_output_length(Hashes h) {
-  const mbedtls_md_info_t* info = mbedtls_md_info_from_type((mbedtls_md_type_t)h);
-  if (info) {
-    return info->size;
-  }
-  return 0;
-}
-
-/**
-* Given the identifier for the cipher algorithm return the key size.
-*
-* @param Cipher The cipher algorithm in question.
-* @return The size of the buffer (in bytes) required to hold the cipher key.
-*/
-const int get_cipher_key_length(Cipher c) {
-  if (manuvr_is_cipher_symmetric(c)) {
-    const mbedtls_cipher_info_t* info = mbedtls_cipher_info_from_type((mbedtls_cipher_type_t)c);
-    if (info) {
-      return info->key_bitlen;
-    }
-  }
-  else {
-    const mbedtls_pk_info_t* info = mbedtls_pk_info_from_type((mbedtls_pk_type_t)c);
-    if (info) {
-      //return info->key_bitlen;
-    }
-    //mbedtls_pk_get_bitlen
-  }
-  return 0;
-}
-
-
-/**
-* Given the identifier for the cipher algorithm return the block size.
-*
-* @param Cipher The cipher algorithm in question.
-* @return The modulus of the buffer (in bytes) required for this cipher.
-*/
-const int get_cipher_block_size(Cipher c) {
-  if (manuvr_is_cipher_symmetric(c)) {
-    const mbedtls_cipher_info_t* info = mbedtls_cipher_info_from_type((mbedtls_cipher_type_t)c);
-    if (info) {
-      return info->block_size;
-    }
-  }
-  else {
-  }
-  return 0;
-}
-
-
-/**
-* Given the identifier for the cipher algorithm return the block size.
-*
-* @param Cipher The cipher algorithm in question.
-* @param int The starting length of the input data.
-* @return The modulus of the buffer (in bytes) required for this cipher.
-*/
-int get_cipher_aligned_size(Cipher c, int base_len) {
-  if (manuvr_is_cipher_symmetric(c)) {
-    const mbedtls_cipher_info_t* info = mbedtls_cipher_info_from_type((mbedtls_cipher_type_t)c);
-    if (info) {
-      int len = base_len;
-      if (0 != len % info->block_size) {
-        len += (info->block_size - (len % info->block_size));
-      }
-      return len;
-    }
-  }
-  else {
-  }
-  return base_len;
-}
-
-
 
 
 /*******************************************************************************
@@ -129,7 +48,7 @@ int get_cipher_aligned_size(Cipher c, int base_len) {
 */
 void printCryptoOverview(StringBuilder* out) {
   #if defined(__MANUVR_MBEDTLS)
-    out->concat("-- Cryptographic support via mbedtls.\n");
+    out->concatf("-- Cryptographic support via %s.\n", __CRYPTO_BACKEND);
     out->concat("-- Supported TLS ciphersuites:");
     int idx = 0;
     const int* cs_list = mbedtls_ssl_list_ciphersuites();
@@ -166,51 +85,13 @@ void printCryptoOverview(StringBuilder* out) {
 }
 
 
-/**
-* Given the indirected identifier for the hash algorithm return its label.
-*
-* @param Hashes The hash algorithm in question.
-* @return The size of the buffer (in bytes) required to hold the digest output.
-*/
-const char* get_digest_label(Hashes h) {
-  const mbedtls_md_info_t* info = mbedtls_md_info_from_type((mbedtls_md_type_t)h);
-  if (info) {
-    return info->name;
-  }
-  return "<UNKNOWN>";
-}
-
-
-/**
-* Given the indirected identifier for the hash algorithm return its label.
-*
-* @param Hashes The hash algorithm in question.
-* @return The size of the buffer (in bytes) required to hold the digest output.
-*/
-const char* get_cipher_label(Cipher c) {
-  if (manuvr_is_cipher_symmetric(c)) {
-    const mbedtls_cipher_info_t* info = mbedtls_cipher_info_from_type((mbedtls_cipher_type_t)c);
-    if (info) {
-      return info->name;
-    }
-  }
-  else {
-    const mbedtls_pk_info_t* info = mbedtls_pk_info_from_type((mbedtls_pk_type_t)c);
-    if (info) {
-      return info->name;
-    }
-  }
-  return "<UNKNOWN>";
-}
-
-
 
 
 /*******************************************************************************
 * Parameter compatibility checking matricies...                                *
 *******************************************************************************/
 /* Privately scoped. */
-const bool manuvr_is_cipher_symmetric(Cipher ci) {
+const bool _is_cipher_symmetric(Cipher ci) {
   switch (ci) {
     #if defined(WRAPPED_SYM_NULL)
       case Cipher::SYM_NULL:
@@ -270,7 +151,7 @@ const bool manuvr_is_cipher_symmetric(Cipher ci) {
 }
 
 /* Privately scoped. */
-const bool manuvr_is_cipher_authenticated(Cipher ci) {
+const bool _is_cipher_authenticated(Cipher ci) {
   switch (ci) {
     #if defined(WRAPPED_SYM_AES_128_GCM)
       case Cipher::SYM_AES_128_GCM:           return true;
@@ -316,12 +197,12 @@ const bool manuvr_is_cipher_authenticated(Cipher ci) {
 }
 
 /* Privately scoped. */
-const bool manuvr_is_cipher_asymmetric(Cipher ci) {
+const bool _is_cipher_asymmetric(Cipher ci) {
   switch (ci) {
-    case Cipher::ASYM_RSA:
     case Cipher::ASYM_ECKEY:
     case Cipher::ASYM_ECKEY_DH:
     case Cipher::ASYM_ECDSA:
+    case Cipher::ASYM_RSA:
     case Cipher::ASYM_RSA_ALT:
     case Cipher::ASYM_RSASSA_PSS:
       return true;
@@ -331,12 +212,12 @@ const bool manuvr_is_cipher_asymmetric(Cipher ci) {
 }
 
 /* Privately scoped. */
-const bool manuvr_valid_cipher_params(Cipher ci) {
+const bool _valid_cipher_params(Cipher ci) {
   switch (ci) {
-    case Cipher::ASYM_RSA:
     case Cipher::ASYM_ECKEY:
     case Cipher::ASYM_ECKEY_DH:
     case Cipher::ASYM_ECDSA:
+    case Cipher::ASYM_RSA:
     case Cipher::ASYM_RSA_ALT:
     case Cipher::ASYM_RSASSA_PSS:
       return true;
@@ -377,75 +258,6 @@ const int _cipher_opcode(Cipher ci, uint32_t opts) {
 }
 
 
-
-
-
-/*******************************************************************************
-* Message digest and Hash                                                      *
-*******************************************************************************/
-
-/**
-* General interface to message digest functions. Isolates caller from knowledge
-*   of hashing context. Blocks thread until complete.
-* NOTE: We assume that the caller has the foresight to allocate a large-enough output buffer.
-*
-* @return 0 on success. Non-zero otherwise.
-*/
-// Usage example:
-//  char* hash_in  = "Uniform input text";
-//  uint8_t* hash_out = (uint8_t*) alloca(64);
-//  if (0 == manuvr_hash((uint8_t*) hash_in, strlen(hash_in), hash_out, 32, Hashes::MBEDTLS_MD_SHA256)) {
-//    printf("Hash value:  ");
-//    for (uint8_t i = 0; i < 32; i++) printf("0x%02x ", *(hash_out + i));
-//    printf("\n");
-//  }
-//  else {
-//    printf("Failed to hash.\n");
-//  }
-int8_t __attribute__((weak)) manuvr_hash(uint8_t* in, int in_len, uint8_t* out, Hashes h) {
-  int8_t return_value = -1;
-  #if defined(__MANUVR_MBEDTLS)
-  const mbedtls_md_info_t* md_info = mbedtls_md_info_from_type((mbedtls_md_type_t)h);
-
-  if (NULL != md_info) {
-    mbedtls_md_context_t ctx;
-    mbedtls_md_init(&ctx);
-    switch (mbedtls_md_setup(&ctx, md_info, 0)) {
-      case 0:
-        if (0 == mbedtls_md_starts(&ctx)) {
-          // Start feeding data...
-          if (0 == mbedtls_md_update(&ctx, in, in_len)) {
-            if (0 == mbedtls_md_finish(&ctx, out)) {
-              return_value = 0;
-            }
-            else {
-              Kernel::log("hash(): Failed during finish.\n");
-            }
-          }
-          else {
-            Kernel::log("hash(): Failed during digest.\n");
-          }
-        }
-        else {
-          Kernel::log("hash(): Bad input data.\n");
-        }
-        break;
-      case MBEDTLS_ERR_MD_BAD_INPUT_DATA:
-        Kernel::log("hash(): Bad parameters.\n");
-        break;
-      case MBEDTLS_ERR_MD_ALLOC_FAILED:
-        Kernel::log("hash(): Allocation failure.\n");
-        break;
-      default:
-        break;
-    }
-    mbedtls_md_free(&ctx);
-  }
-  #else
-  Kernel::log("hash(): No hash implementation.\n");
-  #endif  // __MANUVR_MBEDTLS
-  return return_value;
-}
 
 /*******************************************************************************
 * Pluggable crypto modules...                                                  *

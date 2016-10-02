@@ -126,7 +126,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   _start_micros = micros();
   uint32_t default_flags = 0;
 
-  #if defined(__MANUVR_MBEDTLS)
+  #if defined(__MANUVR_HAS_CRYPTO)
     default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
   #endif
 
@@ -290,6 +290,11 @@ int8_t ManuvrPlatform::bootstrap() {
     }
   #endif
   _set_init_state(MANUVR_INIT_STATE_POST_INIT);
+
+  #if defined(__MANUVR_HAS_CRYPTO)
+    // If we built-in cryptographic support, init the RNG.
+    cryptographic_rng_init();
+  #endif
 
   platformPostInit();    // Hook for platform-specific post-boot operations.
 
@@ -468,7 +473,7 @@ void ManuvrPlatform::forsakeMain() {
 }
 
 
-int8_t random_fill(uint8_t* buf, int len) {
+int8_t random_fill(uint8_t* buf, size_t len) {
   int written_len = 0;
   while (4 <= (len - written_len)) {
     // If we have slots for them, just up-cast and write 4-at-a-time.

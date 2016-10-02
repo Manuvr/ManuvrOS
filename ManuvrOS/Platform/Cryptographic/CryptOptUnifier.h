@@ -33,15 +33,19 @@ Note that this represents a maximum scope-of-support regarding cryptographic
 #if defined(__MANUVR_MBEDTLS)
 /* MbedTLS support assumes that we have a local copy of the mbedTLS source tree
      at <build-root>/lib/mbedtls. See the downloadDeps.sh script. */
-  #define __MANUVR_HAS_CRYPTO 1
+  #define __MANUVR_HAS_CRYPTO   1
+  #define __CRYPTO_BACKEND      "mbedTLS"
   #include "mbedtls/ssl.h"
   #include "mbedtls/md.h"
   #include "mbedtls/md_internal.h"
   #include "mbedtls/base64.h"
   #include "mbedtls/pk.h"
+  #include "mbedtls/rsa.h"
   #include "mbedtls/pk_internal.h"
   #include "mbedtls/aes.h"
   #include "mbedtls/blowfish.h"
+  #include "mbedtls/entropy.h"
+  #include "mbedtls/ctr_drbg.h"
 
   // Now we are going to re-assign some defines to make our base-wrapper. All
   //   code everywhere in this framework ought to code against these defs.
@@ -208,7 +212,8 @@ Note that this represents a maximum scope-of-support regarding cryptographic
 #elif defined(__MANUVR_OPENSSL)
 /* OpenSSL support will use the library on the host building the binary. If the
      host cannot supply a static version of OpenSSL, this will fail to build. */
-  #define __MANUVR_HAS_CRYPTO 1
+  #define __MANUVR_HAS_CRYPTO   1
+  #define __CRYPTO_BACKEND      "OpenSSL"
   #include <openssl/evp.h>
   #include <openssl/aes.h>
   #include <openssl/bn.h>
@@ -290,7 +295,8 @@ Note that this represents a maximum scope-of-support regarding cryptographic
      granular run-time override.
    Note that platform-level drivers can do this as well to provide hooks into
      such things as TPMs and microcontroller cryptographic peripherals. */
-  #define __MANUVR_HAS_CRYPTO 1
+  #define __MANUVR_HAS_CRYPTO   1
+  #define __CRYPTO_BACKEND      "Blind"
 
   // We will unquestioningly provide definition and support for all manner of
   //   elemental algorithm. We have no way of predicting what will be added at

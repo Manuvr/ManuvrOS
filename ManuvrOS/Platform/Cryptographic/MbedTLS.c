@@ -21,8 +21,242 @@ limitations under the License.
 
 #if defined(__MANUVR_MBEDTLS)
 
+
 #include "Cryptographic.h"
-#include <Kernel.h>
+#include <Platform/Platform.h>
+
+
+const int _cipher_opcode(Cipher ci, uint32_t opts);
+
+
+/*******************************************************************************
+* Meta                                                                         *
+*******************************************************************************/
+
+/**
+* Given the identifier for the hash algorithm return the output size.
+*
+* @param Hashes The hash algorithm in question.
+* @return The size of the buffer (in bytes) required to hold the digest output.
+*/
+const int get_digest_output_length(Hashes h) {
+  const mbedtls_md_info_t* info = mbedtls_md_info_from_type((mbedtls_md_type_t)h);
+  if (info) {
+    return info->size;
+  }
+  return 0;
+}
+
+/**
+* Given the identifier for the cipher algorithm return the key size.
+*
+* @param Cipher The cipher algorithm in question.
+* @return The size of the buffer (in bytes) required to hold the cipher key.
+*/
+const int get_cipher_key_length(Cipher c) {
+  if (_is_cipher_symmetric(c)) {
+    const mbedtls_cipher_info_t* info = mbedtls_cipher_info_from_type((mbedtls_cipher_type_t)c);
+    if (info) {
+      return info->key_bitlen;
+    }
+  }
+  else {
+    const mbedtls_pk_info_t* info = mbedtls_pk_info_from_type((mbedtls_pk_type_t)c);
+    if (info) {
+      //return info->key_bitlen;
+    }
+    //mbedtls_pk_get_bitlen
+  }
+  return 0;
+}
+
+
+/**
+* Given the identifier for the cipher algorithm return the block size.
+*
+* @param Cipher The cipher algorithm in question.
+* @return The modulus of the buffer (in bytes) required for this cipher.
+*/
+const int get_cipher_block_size(Cipher c) {
+  if (_is_cipher_symmetric(c)) {
+    const mbedtls_cipher_info_t* info = mbedtls_cipher_info_from_type((mbedtls_cipher_type_t)c);
+    if (info) {
+      return info->block_size;
+    }
+  }
+  else {
+  }
+  return 0;
+}
+
+
+/**
+* Given the identifier for the cipher algorithm return the block size.
+*
+* @param Cipher The cipher algorithm in question.
+* @param int The starting length of the input data.
+* @return The modulus of the buffer (in bytes) required for this cipher.
+*/
+int get_cipher_aligned_size(Cipher c, int base_len) {
+  if (_is_cipher_symmetric(c)) {
+    const mbedtls_cipher_info_t* info = mbedtls_cipher_info_from_type((mbedtls_cipher_type_t)c);
+    if (info) {
+      int len = base_len;
+      if (0 != len % info->block_size) {
+        len += (info->block_size - (len % info->block_size));
+      }
+      return len;
+    }
+  }
+  else {
+  }
+  return base_len;
+}
+
+
+/*******************************************************************************
+* String lookup and debug...                                                   *
+*******************************************************************************/
+
+/**
+* Given the indirected identifier for the hash algorithm return its label.
+*
+* @param Hashes The hash algorithm in question.
+* @return The size of the buffer (in bytes) required to hold the digest output.
+*/
+const char* get_digest_label(Hashes h) {
+  const mbedtls_md_info_t* info = mbedtls_md_info_from_type((mbedtls_md_type_t)h);
+  if (info) {
+    return info->name;
+  }
+  return "<UNKNOWN>";
+}
+
+
+/**
+* Given the indirected identifier for the hash algorithm return its label.
+*
+* @param Hashes The hash algorithm in question.
+* @return The size of the buffer (in bytes) required to hold the digest output.
+*/
+const char* get_cipher_label(Cipher c) {
+  if (_is_cipher_symmetric(c)) {
+    const mbedtls_cipher_info_t* info = mbedtls_cipher_info_from_type((mbedtls_cipher_type_t)c);
+    if (info) {
+      return info->name;
+    }
+  }
+  else {
+    const mbedtls_pk_info_t* info = mbedtls_pk_info_from_type((mbedtls_pk_type_t)c);
+    if (info) {
+      return info->name;
+    }
+  }
+  return "<UNKNOWN>";
+}
+
+
+/*******************************************************************************
+* Randomness                                                                   *
+*******************************************************************************/
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+mbedtls_entropy_context ctr_drbg;
+
+int entropy_poll(void* data, unsigned char* buf, size_t len, size_t *olen){
+  random_fill((uint8_t*) buf, len);
+  *olen = len;
+  return 0;
+}
+
+#ifdef __cplusplus
+}
+#endif
+
+
+int cryptographic_rng_init() {
+  mbedtls_entropy_init(&ctr_drbg);
+  int ret = mbedtls_entropy_add_source(
+    &ctr_drbg,
+    entropy_poll,
+    NULL,
+    PLATFORM_RNG_CARRY_CAPACITY,
+    MBEDTLS_ENTROPY_SOURCE_STRONG
+  );
+  return ret;
+}
+
+
+
+/*******************************************************************************
+* Message digest and Hash                                                      *
+*******************************************************************************/
+
+/**
+* General interface to message digest functions. Isolates caller from knowledge
+*   of hashing context. Blocks thread until complete.
+* NOTE: We assume that the caller has the foresight to allocate a large-enough output buffer.
+*
+* @return 0 on success. Non-zero otherwise.
+*/
+// Usage example:
+//  char* hash_in  = "Uniform input text";
+//  uint8_t* hash_out = (uint8_t*) alloca(64);
+//  if (0 == manuvr_hash((uint8_t*) hash_in, strlen(hash_in), hash_out, 32, Hashes::MBEDTLS_MD_SHA256)) {
+//    printf("Hash value:  ");
+//    for (uint8_t i = 0; i < 32; i++) printf("0x%02x ", *(hash_out + i));
+//    printf("\n");
+//  }
+//  else {
+//    printf("Failed to hash.\n");
+//  }
+int8_t __attribute__((weak)) manuvr_hash(uint8_t* in, int in_len, uint8_t* out, Hashes h) {
+  int8_t return_value = -1;
+  #if defined(__MANUVR_MBEDTLS)
+  const mbedtls_md_info_t* md_info = mbedtls_md_info_from_type((mbedtls_md_type_t)h);
+
+  if (NULL != md_info) {
+    mbedtls_md_context_t ctx;
+    mbedtls_md_init(&ctx);
+    switch (mbedtls_md_setup(&ctx, md_info, 0)) {
+      case 0:
+        if (0 == mbedtls_md_starts(&ctx)) {
+          // Start feeding data...
+          if (0 == mbedtls_md_update(&ctx, in, in_len)) {
+            if (0 == mbedtls_md_finish(&ctx, out)) {
+              return_value = 0;
+            }
+            else {
+              Kernel::log("hash(): Failed during finish.\n");
+            }
+          }
+          else {
+            Kernel::log("hash(): Failed during digest.\n");
+          }
+        }
+        else {
+          Kernel::log("hash(): Bad input data.\n");
+        }
+        break;
+      case MBEDTLS_ERR_MD_BAD_INPUT_DATA:
+        Kernel::log("hash(): Bad parameters.\n");
+        break;
+      case MBEDTLS_ERR_MD_ALLOC_FAILED:
+        Kernel::log("hash(): Allocation failure.\n");
+        break;
+      default:
+        break;
+    }
+    mbedtls_md_free(&ctx);
+  }
+  #else
+  Kernel::log("hash(): No hash implementation.\n");
+  #endif  // __MANUVR_MBEDTLS
+  return return_value;
+}
+
 
 
 /*******************************************************************************
@@ -44,9 +278,6 @@ limitations under the License.
 * @param uint32_t Options to the optionation.
 * @return true if the root function ought to defer.
 */
-
-
-
 int8_t __attribute__((weak)) manuvr_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher ci, uint32_t opts) {
   if (cipher_deferred_handling(ci)) {
     // If overriden by user implementation.
@@ -68,6 +299,23 @@ int8_t __attribute__((weak)) manuvr_sym_cipher(uint8_t* in, int in_len, uint8_t*
           }
           ret = mbedtls_aes_crypt_cbc(&ctx, _cipher_opcode(ci, opts), in_len, iv, in, out);
           mbedtls_aes_free(&ctx);
+        }
+        break;
+    #endif
+
+    #if defined(MBEDTLS_RSA_C)
+      case Cipher::ASYM_RSA:
+        {
+          size_t olen = 0;
+          mbedtls_pk_context ctx;
+          mbedtls_pk_init(&ctx);
+          if (opts & MANUVR_ENCRYPT) {
+            ret = mbedtls_pk_encrypt(&ctx, in, in_len, out, &olen, out_len, mbedtls_ctr_drbg_random, &ctr_drbg);
+          }
+          else {
+            ret = mbedtls_pk_decrypt(&ctx, in, in_len, out, &olen, out_len, mbedtls_ctr_drbg_random, &ctr_drbg);
+          }
+          mbedtls_pk_free(&ctx);
         }
         break;
     #endif

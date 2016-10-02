@@ -49,6 +49,7 @@ This file forms the catch-all for linux platforms that have no support.
 ****************************************************************************************************/
 volatile Kernel* __kernel = nullptr;
 
+
 struct itimerval _interval              = {0};
 struct sigaction _signal_action_SIGALRM = {0};
 
@@ -222,7 +223,7 @@ Argument* parseFromArgCV(int argc, const char* argv[]) {
 */
 static int hashFileByPath(char* path, uint8_t* h_buf) {
   int8_t return_value = -1;
-  #if defined(__MANUVR_MBEDTLS)
+  #if defined(__MANUVR_HAS_CRYPTO)
   StringBuilder log;
   if (nullptr != path) {
     struct stat st;
@@ -265,7 +266,7 @@ static int hashFileByPath(char* path, uint8_t* h_buf) {
   }
   //Kernel::log(&log);
   printf((const char*)log.string());
-  #endif  // __MANUVR_MBEDTLS
+  #endif  // __MANUVR_HAS_CRYPTO
   return return_value;
 }
 
@@ -281,7 +282,57 @@ volatile uint8_t  watchdog_mark      = 42;
 /*******************************************************************************
 * Randomness                                                                   *
 *******************************************************************************/
-volatile uint32_t next_random_int[PLATFORM_RNG_CARRY_CAPACITY];
+volatile uint32_t randomness_pool[PLATFORM_RNG_CARRY_CAPACITY];
+volatile unsigned int _random_pool_r_ptr = 0;
+volatile unsigned int _random_pool_w_ptr = 0;
+
+long unsigned int rng_thread_id = 0;
+
+/**
+* This is a thread to keep the randomness pool flush.
+*/
+static void* dev_urandom_reader(void*) {
+  FILE* ur_file = fopen("/dev/urandom", "rb");
+  unsigned int rng_level    = 0;
+  unsigned int needed_count = 0;
+
+  if (ur_file) {
+    while (platform.platformState() <= MANUVR_INIT_STATE_NOMINAL) {
+      rng_level = _random_pool_w_ptr - _random_pool_r_ptr;
+      if (rng_level == PLATFORM_RNG_CARRY_CAPACITY) {
+        // We have filled our entropy pool. Sleep.
+        sleep_millis(35);
+      }
+      else {
+        // We continue feeding the entropy pool as demanded until the platform
+        //   leaves its nominal state. Don't write past the wrap-point.
+        unsigned int _w_ptr = _random_pool_w_ptr % PLATFORM_RNG_CARRY_CAPACITY;
+        unsigned int _delta_to_wrap = PLATFORM_RNG_CARRY_CAPACITY - _w_ptr;
+        unsigned int _delta_to_fill = PLATFORM_RNG_CARRY_CAPACITY - rng_level;
+
+        needed_count = ((_delta_to_fill < _delta_to_wrap) ? _delta_to_fill : _delta_to_wrap);
+        size_t ret = fread((void*)&randomness_pool[_w_ptr], sizeof(uint32_t), needed_count, ur_file);
+        //printf("Read %d uint32's from /dev/urandom.\n", ret);
+        if((ret > 0) && !ferror(ur_file)) {
+          _random_pool_w_ptr += ret;
+        }
+        else {
+          fclose(ur_file);
+          printf("Failed to read /dev/urandom.\n");
+          return NULL;
+        }
+      }
+    }
+    fclose(ur_file);
+  }
+  else {
+    printf("Failed to open /dev/urandom.\n");
+  }
+  printf("Exiting random thread.....\n");
+  return NULL;
+}
+
+
 
 /**
 * Dead-simple interface to the RNG. Despite the fact that it is interrupt-driven, we may resort
@@ -291,26 +342,32 @@ volatile uint32_t next_random_int[PLATFORM_RNG_CARRY_CAPACITY];
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
 uint32_t randomInt() {
-  uint32_t return_value = rand();
-  return return_value;
+  // Preferably, we'd shunt to a PRNG at this point. For now we block.
+  while (_random_pool_w_ptr <= _random_pool_r_ptr) {
+  }
+  return randomness_pool[_random_pool_r_ptr++ % PLATFORM_RNG_CARRY_CAPACITY];
 }
 
 
 /**
-* Called by the RNG ISR to provide new random numbers.
-*
-* @param    nu_rnd The supplied random number.
-* @return   True if the RNG should continue supplying us, false if it should take a break until we need more.
-*/
-volatile bool provide_random_int(uint32_t nu_rnd) {
-  return false;
-}
-
-/*
 * Init the RNG. Short and sweet.
 */
-void init_rng() {
+void LinuxPlatform::init_rng() {
   srand(time(nullptr));          // Seed the PRNG...
+  if (createThread(&rng_thread_id, nullptr, dev_urandom_reader, nullptr)) {
+    printf("Failed to create RNG thread.\n");
+    exit(-1);
+  }
+  int t_out = 30;
+  while ((_random_pool_w_ptr < PLATFORM_RNG_CARRY_CAPACITY) && (t_out > 0)) {
+    sleep_millis(20);
+    t_out--;
+  }
+  if (0 == t_out) {
+    printf("Failed to fill the RNG pool.\n");
+    exit(-1);
+  }
+  _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
 }
 
 /*******************************************************************************
@@ -322,6 +379,10 @@ void init_rng() {
 * (_)   (___)`\__,_)`\__)(_)  `\___/'(_)   (_) (_) (_)
 * These are overrides and additions to the platform class.
 *******************************************************************************/
+LinuxPlatform::~LinuxPlatform() {
+  _close_open_threads();
+}
+
 void LinuxPlatform::printDebug(StringBuilder* output) {
   output->concatf(
     "==< %s Linux [%s] >=============================\n",
@@ -329,7 +390,7 @@ void LinuxPlatform::printDebug(StringBuilder* output) {
     getPlatformStateStr(platformState())
   );
   ManuvrPlatform::printDebug(output);
-  #if defined(__MANUVR_MBEDTLS)
+  #if defined(__MANUVR_HAS_CRYPTO)
     output->concatf("-- Binary hash         %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
       _binary_hash[0],  _binary_hash[1],  _binary_hash[2],  _binary_hash[3],
       _binary_hash[4],  _binary_hash[5],  _binary_hash[6],  _binary_hash[7],
@@ -448,6 +509,15 @@ void globalIRQDisable() {
 /*******************************************************************************
 * Process control                                                              *
 *******************************************************************************/
+void LinuxPlatform::_close_open_threads() {
+  _set_init_state(MANUVR_INIT_STATE_HALTED);
+  if (rng_thread_id) {
+    if (0 == deleteThread(&rng_thread_id)) {
+    }
+  }
+  sleep_millis(100);
+}
+
 
 /*
 * Terminate this running process, along with any children it may have forked() off.
@@ -459,6 +529,7 @@ void LinuxPlatform::seppuku() {
       // TODO: int8_t persistentWrite(const char*, uint8_t*, int, uint16_t);
     }
   #endif
+  _close_open_threads();
   // Whatever the kernel cared to clean up, it better have done so by this point,
   //   as no other platforms return from this function.
   printf("\nseppuku(): About to exit().\n\n");
@@ -474,6 +545,7 @@ void LinuxPlatform::jumpToBootloader() {
   // TODO: Pull binary from a location of firmware's choice.
   // TODO: Install firmware after validation.
   // TODO: Schedule a program restart.
+  _close_open_threads();
   printf("\njumpToBootloader(): About to exit().\n\n");
   exit(0);
 }
@@ -485,6 +557,7 @@ void LinuxPlatform::jumpToBootloader() {
 
 void LinuxPlatform::hardwareShutdown() {
   // TODO: Actually shutdown the system.
+  _close_open_threads();
   printf("\nhardwareShutdown(): About to exit().\n\n");
   exit(0);
 }
@@ -492,6 +565,7 @@ void LinuxPlatform::hardwareShutdown() {
 
 void LinuxPlatform::reboot() {
   // TODO: Actually reboot the system.
+  _close_open_threads();
   printf("\nreboot(): About to exit().\n\n");
   exit(0);
 }
@@ -502,7 +576,7 @@ void LinuxPlatform::reboot() {
 *******************************************************************************/
 
 int8_t LinuxPlatform::internal_integrity_check(uint8_t* test_buf, int test_len) {
-  #if defined(__MANUVR_MBEDTLS)
+  #if defined(__MANUVR_HAS_CRYPTO)
   if ((nullptr != test_buf) && (0 < test_len)) {
     for (int i = 0; i < test_len; i++) {
       if (*(test_buf+i) != _binary_hash[i]) {
@@ -515,7 +589,7 @@ int8_t LinuxPlatform::internal_integrity_check(uint8_t* test_buf, int test_len) 
   else {
     // We have no idea what to expect. First boot?
   }
-  #endif  //__MANUVR_MBEDTLS
+  #endif  //__MANUVR_HAS_CRYPTO
   return -1;
 }
 
@@ -528,7 +602,7 @@ int8_t LinuxPlatform::internal_integrity_check(uint8_t* test_buf, int test_len) 
 * @return 0 on success.
 */
 int8_t LinuxPlatform::hash_self() {
-  #if defined(__MANUVR_MBEDTLS)
+  #if defined(__MANUVR_HAS_CRYPTO)
   char *exe_path = (char *) alloca(300);   // 300 bytes ought to be enough for our path info...
   memset(exe_path, 0x00, 300);
   int exe_path_len = readlink("/proc/self/exe", exe_path, 300);
@@ -545,7 +619,7 @@ int8_t LinuxPlatform::hash_self() {
   else {
     printf("Failed to hash file: %s\n", exe_path);
   }
-  #endif  //__MANUVR_MBEDTLS
+  #endif  //__MANUVR_HAS_CRYPTO
   return -1;
 }
 
@@ -563,6 +637,9 @@ int8_t LinuxPlatform::hash_self() {
 */
 int8_t LinuxPlatform::platformPreInit(Argument* root_config) {
   ManuvrPlatform::platformPreInit(root_config);
+  // Used for timer and signal callbacks.
+  __kernel = (volatile Kernel*) &_kernel;
+
   uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
   _main_pid = getpid();  // Our PID.
   Argument* temp = nullptr;
@@ -574,10 +651,6 @@ int8_t LinuxPlatform::platformPreInit(Argument* root_config) {
 
   init_rng();
   _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
-  _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
-
-  // Used for timer and signal callbacks.
-  __kernel = (volatile Kernel*) &_kernel;
 
   #if defined(MANUVR_STORAGE)
     LinuxStorage* sd = new LinuxStorage(root_config);
@@ -587,7 +660,7 @@ int8_t LinuxPlatform::platformPreInit(Argument* root_config) {
 
   initSigHandlers();
 
-  #if defined(__MANUVR_MBEDTLS)
+  #if defined(__MANUVR_HAS_CRYPTO)
   hash_self();
   //internal_integrity_check(nullptr, 0);
   #endif

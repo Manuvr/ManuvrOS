@@ -1118,6 +1118,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
     case MANUVR_MSG_SYS_BOOTLOADER:
       // These messages codes, we will capture the callback.
       active_runnable->setOriginator(this);
+      return_value++;
       break;
 
     #if defined(__MANUVR_CONSOLE_SUPPORT)
