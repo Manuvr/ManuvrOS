@@ -41,6 +41,7 @@ See CryptOptUnifier.h for more information.
 #define __MANUVR_CRYPTO_ABSTRACTION_H__
 
 #include <inttypes.h>
+#include <map>   // TODO: Remove dependency.
 
 // Try to contain wrapped header concerns in here, pl0x...
 #include "Cryptographic/CryptOptUnifier.h"
@@ -54,32 +55,28 @@ See CryptOptUnifier.h for more information.
 
 
 enum class Hashes {
-  #if defined(__MANUVR_MBEDTLS)
-    #if defined(MBEDTLS_MD5_C)
-      MD5 = MBEDTLS_MD_MD5,
-    #endif
-    #if defined(MBEDTLS_SHA1_C)
-      SHA1 = MBEDTLS_MD_SHA1,
-    #endif
-    #if defined(MBEDTLS_SHA224_C)
-      SHA224 = MBEDTLS_MD_SHA224,
-    #endif
-    #if defined(MBEDTLS_SHA256_C)
-      SHA256 = MBEDTLS_MD_SHA256,
-    #endif
-    #if defined(MBEDTLS_SHA384_C)
-      SHA384 = MBEDTLS_MD_SHA384,
-    #endif
-    #if defined(MBEDTLS_SHA512_C)
-      SHA512 = MBEDTLS_MD_SHA512,
-    #endif
-    #if defined(MBEDTLS_RIPEMD160_C)
-      RIPEMD160 = MBEDTLS_MD_RIPEMD160,
-    #endif
-    NONE = MBEDTLS_MD_NONE
-  #else // No MBED support.
-    NONE = 0
+  #if defined(WRAPPED_HASH_MD5)
+    MD5 = WRAPPED_HASH_MD5,
   #endif
+  #if defined(WRAPPED_HASH_SHA1)
+    SHA1 = WRAPPED_HASH_SHA1,
+  #endif
+  #if defined(WRAPPED_HASH_SHA224)
+    SHA224 = WRAPPED_HASH_SHA224,
+  #endif
+  #if defined(WRAPPED_HASH_SHA256)
+    SHA256 = WRAPPED_HASH_SHA256,
+  #endif
+  #if defined(WRAPPED_HASH_SHA384)
+    SHA384 = WRAPPED_HASH_SHA384,
+  #endif
+  #if defined(WRAPPED_HASH_SHA512)
+    SHA512 = WRAPPED_HASH_SHA512,
+  #endif
+  #if defined(WRAPPED_HASH_RIPEMD160)
+    RIPEMD160 = WRAPPED_HASH_RIPEMD160,
+  #endif
+  NONE = WRAPPED_HASH_NONE
 };
 
 enum class CryptoKey {
@@ -90,67 +87,183 @@ enum class CipherMode {
 };
 
 
-
+/*
+*
+* This is obnoxious to read, but it is essential for mating the library-support
+*   options to the semantic checks of the compiler, and then THAT to run-time
+*   behavior.
+*/
 enum class Cipher {
   NONE                    =  WRAPPED_NONE,
-  ASYM_RSA                =  WRAPPED_ASYM_RSA,
-  ASYM_ECKEY              =  WRAPPED_ASYM_ECKEY,
-  ASYM_ECKEY_DH           =  WRAPPED_ASYM_ECKEY_DH,
-  ASYM_ECDSA              =  WRAPPED_ASYM_ECDSA,
-  ASYM_RSA_ALT            =  WRAPPED_ASYM_RSA_ALT,
-  ASYM_RSASSA_PSS         =  WRAPPED_ASYM_RSASSA_PSS,
-  ASYM_NONE               =  WRAPPED_ASYM_NONE,
-  SYM_NULL                =  WRAPPED_SYM_NULL,
-  SYM_AES_128_ECB         =  WRAPPED_SYM_AES_128_ECB,
-  SYM_AES_192_ECB         =  WRAPPED_SYM_AES_192_ECB,
-  SYM_AES_256_ECB         =  WRAPPED_SYM_AES_256_ECB,
-  SYM_AES_128_CBC         =  WRAPPED_SYM_AES_128_CBC,
-  SYM_AES_192_CBC         =  WRAPPED_SYM_AES_192_CBC,
-  SYM_AES_256_CBC         =  WRAPPED_SYM_AES_256_CBC,
-  SYM_AES_128_CFB128      =  WRAPPED_SYM_AES_128_CFB128,
-  SYM_AES_192_CFB128      =  WRAPPED_SYM_AES_192_CFB128,
-  SYM_AES_256_CFB128      =  WRAPPED_SYM_AES_256_CFB128,
-  SYM_AES_128_CTR         =  WRAPPED_SYM_AES_128_CTR,
-  SYM_AES_192_CTR         =  WRAPPED_SYM_AES_192_CTR,
-  SYM_AES_256_CTR         =  WRAPPED_SYM_AES_256_CTR,
-  SYM_AES_128_GCM         =  WRAPPED_SYM_AES_128_GCM,
-  SYM_AES_192_GCM         =  WRAPPED_SYM_AES_192_GCM,
-  SYM_AES_256_GCM         =  WRAPPED_SYM_AES_256_GCM,
-  SYM_CAMELLIA_128_ECB    =  WRAPPED_SYM_CAMELLIA_128_ECB,
-  SYM_CAMELLIA_192_ECB    =  WRAPPED_SYM_CAMELLIA_192_ECB,
-  SYM_CAMELLIA_256_ECB    =  WRAPPED_SYM_CAMELLIA_256_ECB,
-  SYM_CAMELLIA_128_CBC    =  WRAPPED_SYM_CAMELLIA_128_CBC,
-  SYM_CAMELLIA_192_CBC    =  WRAPPED_SYM_CAMELLIA_192_CBC,
-  SYM_CAMELLIA_256_CBC    =  WRAPPED_SYM_CAMELLIA_256_CBC,
-  SYM_CAMELLIA_128_CFB128 =  WRAPPED_SYM_CAMELLIA_128_CFB128,
-  SYM_CAMELLIA_192_CFB128 =  WRAPPED_SYM_CAMELLIA_192_CFB128,
-  SYM_CAMELLIA_256_CFB128 =  WRAPPED_SYM_CAMELLIA_256_CFB128,
-  SYM_CAMELLIA_128_CTR    =  WRAPPED_SYM_CAMELLIA_128_CTR,
-  SYM_CAMELLIA_192_CTR    =  WRAPPED_SYM_CAMELLIA_192_CTR,
-  SYM_CAMELLIA_256_CTR    =  WRAPPED_SYM_CAMELLIA_256_CTR,
-  SYM_CAMELLIA_128_GCM    =  WRAPPED_SYM_CAMELLIA_128_GCM,
-  SYM_CAMELLIA_192_GCM    =  WRAPPED_SYM_CAMELLIA_192_GCM,
-  SYM_CAMELLIA_256_GCM    =  WRAPPED_SYM_CAMELLIA_256_GCM,
-  SYM_DES_ECB             =  WRAPPED_SYM_DES_ECB,
-  SYM_DES_CBC             =  WRAPPED_SYM_DES_CBC,
-  SYM_DES_EDE_ECB         =  WRAPPED_SYM_DES_EDE_ECB,
-  SYM_DES_EDE_CBC         =  WRAPPED_SYM_DES_EDE_CBC,
-  SYM_DES_EDE3_ECB        =  WRAPPED_SYM_DES_EDE3_ECB,
-  SYM_DES_EDE3_CBC        =  WRAPPED_SYM_DES_EDE3_CBC,
-  SYM_BLOWFISH_ECB        =  WRAPPED_SYM_BLOWFISH_ECB,
-  SYM_BLOWFISH_CBC        =  WRAPPED_SYM_BLOWFISH_CBC,
-  SYM_BLOWFISH_CFB64      =  WRAPPED_SYM_BLOWFISH_CFB64,
-  SYM_BLOWFISH_CTR        =  WRAPPED_SYM_BLOWFISH_CTR,
-  SYM_ARC4_128            =  WRAPPED_SYM_ARC4_128,
-  SYM_AES_128_CCM         =  WRAPPED_SYM_AES_128_CCM,
-  SYM_AES_192_CCM         =  WRAPPED_SYM_AES_192_CCM,
-  SYM_AES_256_CCM         =  WRAPPED_SYM_AES_256_CCM,
-  SYM_CAMELLIA_128_CCM    =  WRAPPED_SYM_CAMELLIA_128_CCM,
-  SYM_CAMELLIA_192_CCM    =  WRAPPED_SYM_CAMELLIA_192_CCM,
-  SYM_CAMELLIA_256_CCM    =  WRAPPED_SYM_CAMELLIA_256_CCM,
-  SYM_NONE                =  WRAPPED_SYM_NONE,
+  #if defined(WRAPPED_ASYM_RSA)
+    ASYM_RSA                =  WRAPPED_ASYM_RSA,
+  #endif
+  #if defined(WRAPPED_ASYM_ECKEY)
+    ASYM_ECKEY              =  WRAPPED_ASYM_ECKEY,
+  #endif
+  #if defined(WRAPPED_ASYM_ECKEY_DH)
+    ASYM_ECKEY_DH           =  WRAPPED_ASYM_ECKEY_DH,
+  #endif
+  #if defined(WRAPPED_ASYM_ECDSA)
+    ASYM_ECDSA              =  WRAPPED_ASYM_ECDSA,
+  #endif
+  #if defined(WRAPPED_ASYM_RSA_ALT)
+    ASYM_RSA_ALT            =  WRAPPED_ASYM_RSA_ALT,
+  #endif
+  #if defined(WRAPPED_ASYM_RSASSA_PSS)
+    ASYM_RSASSA_PSS         =  WRAPPED_ASYM_RSASSA_PSS,
+  #endif
+  #if defined(WRAPPED_ASYM_NONE)
+    ASYM_NONE               =  WRAPPED_ASYM_NONE,
+  #endif
+  #if defined(WRAPPED_SYM_NULL)
+    SYM_NULL                =  WRAPPED_SYM_NULL,
+  #endif
+  #if defined(WRAPPED_SYM_AES_128_ECB)
+    SYM_AES_128_ECB         =  WRAPPED_SYM_AES_128_ECB,
+  #endif
+  #if defined(WRAPPED_SYM_AES_192_ECB)
+    SYM_AES_192_ECB         =  WRAPPED_SYM_AES_192_ECB,
+  #endif
+  #if defined(WRAPPED_SYM_AES_256_ECB)
+    SYM_AES_256_ECB         =  WRAPPED_SYM_AES_256_ECB,
+  #endif
+  #if defined(WRAPPED_SYM_AES_128_CBC)
+    SYM_AES_128_CBC         =  WRAPPED_SYM_AES_128_CBC,
+  #endif
+  #if defined(WRAPPED_SYM_AES_192_CBC)
+    SYM_AES_192_CBC         =  WRAPPED_SYM_AES_192_CBC,
+  #endif
+  #if defined(WRAPPED_SYM_AES_256_CBC)
+    SYM_AES_256_CBC         =  WRAPPED_SYM_AES_256_CBC,
+  #endif
+  #if defined(WRAPPED_SYM_AES_128_CFB128)
+    SYM_AES_128_CFB128      =  WRAPPED_SYM_AES_128_CFB128,
+  #endif
+  #if defined(WRAPPED_SYM_AES_192_CFB128)
+    SYM_AES_192_CFB128      =  WRAPPED_SYM_AES_192_CFB128,
+  #endif
+  #if defined(WRAPPED_SYM_AES_256_CFB128)
+    SYM_AES_256_CFB128      =  WRAPPED_SYM_AES_256_CFB128,
+  #endif
+  #if defined(WRAPPED_SYM_AES_128_CTR)
+    SYM_AES_128_CTR         =  WRAPPED_SYM_AES_128_CTR,
+  #endif
+  #if defined(WRAPPED_SYM_AES_192_CTR)
+    SYM_AES_192_CTR         =  WRAPPED_SYM_AES_192_CTR,
+  #endif
+  #if defined(WRAPPED_SYM_AES_256_CTR)
+    SYM_AES_256_CTR         =  WRAPPED_SYM_AES_256_CTR,
+  #endif
+  #if defined(WRAPPED_SYM_AES_128_GCM)
+    SYM_AES_128_GCM         =  WRAPPED_SYM_AES_128_GCM,
+  #endif
+  #if defined(WRAPPED_SYM_AES_192_GCM)
+    SYM_AES_192_GCM         =  WRAPPED_SYM_AES_192_GCM,
+  #endif
+  #if defined(WRAPPED_SYM_AES_256_GCM)
+    SYM_AES_256_GCM         =  WRAPPED_SYM_AES_256_GCM,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_128_ECB)
+    SYM_CAMELLIA_128_ECB    =  WRAPPED_SYM_CAMELLIA_128_ECB,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_192_ECB)
+    SYM_CAMELLIA_192_ECB    =  WRAPPED_SYM_CAMELLIA_192_ECB,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_256_ECB)
+    SYM_CAMELLIA_256_ECB    =  WRAPPED_SYM_CAMELLIA_256_ECB,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_128_CBC)
+    SYM_CAMELLIA_128_CBC    =  WRAPPED_SYM_CAMELLIA_128_CBC,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_192_CBC)
+    SYM_CAMELLIA_192_CBC    =  WRAPPED_SYM_CAMELLIA_192_CBC,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_256_CBC)
+    SYM_CAMELLIA_256_CBC    =  WRAPPED_SYM_CAMELLIA_256_CBC,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_128_CFB128)
+    SYM_CAMELLIA_128_CFB128 =  WRAPPED_SYM_CAMELLIA_128_CFB128,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_192_CFB128)
+    SYM_CAMELLIA_192_CFB128 =  WRAPPED_SYM_CAMELLIA_192_CFB128,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_256_CFB128)
+    SYM_CAMELLIA_256_CFB128 =  WRAPPED_SYM_CAMELLIA_256_CFB128,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_128_CTR)
+    SYM_CAMELLIA_128_CTR    =  WRAPPED_SYM_CAMELLIA_128_CTR,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_192_CTR)
+    SYM_CAMELLIA_192_CTR    =  WRAPPED_SYM_CAMELLIA_192_CTR,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_256_CTR)
+    SYM_CAMELLIA_256_CTR    =  WRAPPED_SYM_CAMELLIA_256_CTR,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_128_GCM)
+    SYM_CAMELLIA_128_GCM    =  WRAPPED_SYM_CAMELLIA_128_GCM,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_192_GCM)
+    SYM_CAMELLIA_192_GCM    =  WRAPPED_SYM_CAMELLIA_192_GCM,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_256_GCM)
+    SYM_CAMELLIA_256_GCM    =  WRAPPED_SYM_CAMELLIA_256_GCM,
+  #endif
+  #if defined(WRAPPED_SYM_DES_ECB)
+    SYM_DES_ECB             =  WRAPPED_SYM_DES_ECB,
+  #endif
+  #if defined(WRAPPED_SYM_DES_CBC)
+    SYM_DES_CBC             =  WRAPPED_SYM_DES_CBC,
+  #endif
+  #if defined(WRAPPED_SYM_DES_EDE_ECB)
+    SYM_DES_EDE_ECB         =  WRAPPED_SYM_DES_EDE_ECB,
+  #endif
+  #if defined(WRAPPED_SYM_DES_EDE_CBC)
+    SYM_DES_EDE_CBC         =  WRAPPED_SYM_DES_EDE_CBC,
+  #endif
+  #if defined(WRAPPED_SYM_DES_EDE3_ECB)
+    SYM_DES_EDE3_ECB        =  WRAPPED_SYM_DES_EDE3_ECB,
+  #endif
+  #if defined(WRAPPED_SYM_DES_EDE3_CBC)
+    SYM_DES_EDE3_CBC        =  WRAPPED_SYM_DES_EDE3_CBC,
+  #endif
+  #if defined(WRAPPED_SYM_BLOWFISH_ECB)
+    SYM_BLOWFISH_ECB        =  WRAPPED_SYM_BLOWFISH_ECB,
+  #endif
+  #if defined(WRAPPED_SYM_BLOWFISH_CBC)
+    SYM_BLOWFISH_CBC        =  WRAPPED_SYM_BLOWFISH_CBC,
+  #endif
+  #if defined(WRAPPED_SYM_BLOWFISH_CFB64)
+    SYM_BLOWFISH_CFB64      =  WRAPPED_SYM_BLOWFISH_CFB64,
+  #endif
+  #if defined(WRAPPED_SYM_BLOWFISH_CTR)
+    SYM_BLOWFISH_CTR        =  WRAPPED_SYM_BLOWFISH_CTR,
+  #endif
+  #if defined(WRAPPED_SYM_ARC4_128)
+    SYM_ARC4_128            =  WRAPPED_SYM_ARC4_128,
+  #endif
+  #if defined(WRAPPED_SYM_AES_128_CCM)
+    SYM_AES_128_CCM         =  WRAPPED_SYM_AES_128_CCM,
+  #endif
+  #if defined(WRAPPED_SYM_AES_192_CCM)
+    SYM_AES_192_CCM         =  WRAPPED_SYM_AES_192_CCM,
+  #endif
+  #if defined(WRAPPED_SYM_AES_256_CCM)
+    SYM_AES_256_CCM         =  WRAPPED_SYM_AES_256_CCM,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_128_CCM)
+    SYM_CAMELLIA_128_CCM    =  WRAPPED_SYM_CAMELLIA_128_CCM,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_192_CCM)
+    SYM_CAMELLIA_192_CCM    =  WRAPPED_SYM_CAMELLIA_192_CCM,
+  #endif
+  #if defined(WRAPPED_SYM_CAMELLIA_256_CCM)
+    SYM_CAMELLIA_256_CCM    =  WRAPPED_SYM_CAMELLIA_256_CCM,
+  #endif
+  #if defined(WRAPPED_SYM_NONE)
+    SYM_NONE                =  WRAPPED_SYM_NONE,
+  #endif
 };
-
 
 
 
@@ -207,6 +320,13 @@ const int get_digest_output_length(Hashes);
 const char* get_digest_label(Hashes);
 int8_t manuvr_hash(uint8_t* in, int in_len, uint8_t* out, Hashes h);
 
+// Now some inline definitions to mask the back-end API where it can be done
+//   transparently...
+inline Hashes* list_supported_digests() {
+  return ((Hashes*) mbedtls_md_list());
+};
+
+
 
 /*******************************************************************************
 * Cipher/decipher
@@ -219,6 +339,12 @@ int8_t manuvr_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uin
 
 int8_t manuvr_asym_keygen(Cipher, int key_len, uint8_t* pub, int pub_len, uint8_t* priv, int priv_len);
 int8_t manuvr_asym_cipher(uint8_t* in, int in_len, uint8_t* out, int* out_len, Hashes, Cipher, CryptoKey private_key, uint32_t opts);
+
+// Now some inline definitions to mask the back-end API where it can be done
+//   transparently...
+inline Cipher* list_supported_ciphers() {
+  return ((Cipher*) mbedtls_cipher_list());
+};
 
 
 
@@ -247,6 +373,15 @@ bool provide_cipher_handler(Cipher);
 
 } // extern "C"
 
-const int _cipher_opcode(uint32_t opts);
+const int _cipher_opcode(Cipher ci, uint32_t opts);
+
+
+
+// TODO: I don't like using std::map. Still need to decide on a replacement.
+static std::map<Cipher, wrapped_sym_operation>    _sym_overrides;    // Symmetric runtime overrides.
+static std::map<Cipher, wrapped_sauth_operation>  _sauth_overrides;  // Symmetric/auth runtime overrides.
+static std::map<Cipher, wrapped_asym_operation>   _asym_overrides;   // Asymmetric runtime overrides.
+static std::map<Hashes, wrapped_hash_operation>   _hash_overrides;   // Digest runtime overrides.
+
 
 #endif // __MANUVR_CRYPTO_ABSTRACTION_H__

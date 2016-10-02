@@ -103,8 +103,6 @@
 #define MBEDTLS_ENTROPY_C
 #define MBEDTLS_GCM_C
 #define MBEDTLS_HMAC_DRBG_C
-#define MBEDTLS_MD_C
-#define MBEDTLS_MD5_C
 #define MBEDTLS_OID_C
 #define MBEDTLS_PEM_PARSE_C
 #define MBEDTLS_PEM_WRITE_C
@@ -114,12 +112,14 @@
 
 #define MBEDTLS_PLATFORM_C
 
+#define MBEDTLS_MD_C
+#define MBEDTLS_MD5_C
 #define MBEDTLS_RIPEMD160_C
 #define MBEDTLS_SHA1_C
 #define MBEDTLS_SHA224_C
 #define MBEDTLS_SHA256_C
 #define MBEDTLS_SHA384_C
-#define MBEDTLS_SHA512_C   // TODO: Why does enablement cause failures?
+#define MBEDTLS_SHA512_C
 
 #define MBEDTLS_SSL_COOKIE_C
 //#define MBEDTLS_SSL_TICKET_C

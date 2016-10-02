@@ -21,7 +21,6 @@ limitations under the License.
 
 #include "Cryptographic.h"
 #include <Kernel.h>
-#include <map>   // TODO: Remove dependency.
 
 
 #if defined(__MANUVR_HAS_CRYPTO)
@@ -86,9 +85,6 @@ const int get_cipher_block_size(Cipher c) {
     if (info) {
       return info->block_size;
     }
-    else if (Cipher::SYM_NULL == c) {
-      return 1;
-    }
   }
   else {
   }
@@ -136,23 +132,18 @@ void printCryptoOverview(StringBuilder* out) {
     out->concat("-- Cryptographic support via mbedtls.\n");
     out->concat("-- Supported TLS ciphersuites:");
     int idx = 0;
-    const int* list = mbedtls_ssl_list_ciphersuites();
-    while (0 != *(list)) {
+    const int* cs_list = mbedtls_ssl_list_ciphersuites();
+    while (0 != *(cs_list)) {
       if (0 == idx++ % 2) out->concat("\n--\t");
-      out->concatf("\t%-40s", mbedtls_ssl_get_ciphersuite_name(*(list++)));
+      out->concatf("\t%-40s", mbedtls_ssl_get_ciphersuite_name(*(cs_list++)));
     }
     out->concat("\n-- Supported ciphers:");
     idx = 0;
-    list = mbedtls_cipher_list();
-    while (0 != *(list)) {
+    Cipher* list = list_supported_ciphers();
+    while (Cipher::NONE != *(list)) {
       if (0 == idx++ % 4) out->concat("\n--\t");
       out->concatf("\t%-20s", get_cipher_label((Cipher) *(list++)));
     }
-    //list = mbedtls_cipher_list();
-    //while (0 != *(list)) {
-    //  if ((0 == idx++ % 4) && (0 != *(list))) out->concat("\n--\t");
-    //  out->concatf("\t%-18s", get_cipher_label((Cipher) *(list++)));
-    //}
 
     out->concat("\n-- Supported ECC curves:");
     const mbedtls_ecp_curve_info* c_list = mbedtls_ecp_curve_list();
@@ -164,10 +155,10 @@ void printCryptoOverview(StringBuilder* out) {
 
     out->concat("\n-- Supported digests:");
     idx = 0;
-    list = mbedtls_md_list();
-    while (0 != *(list)) {
+    Hashes* h_list = list_supported_digests();
+    while (Hashes::NONE != *(h_list)) {
       if (0 == idx++ % 6) out->concat("\n--\t");
-      out->concatf("\t%-10s", get_digest_label((Hashes) *(list++)));
+      out->concatf("\t%-10s", get_digest_label((Hashes) *(h_list++)));
     }
   #else
   out->concat("No cryptographic support.\n");
@@ -202,9 +193,6 @@ const char* get_cipher_label(Cipher c) {
     if (info) {
       return info->name;
     }
-    else if (Cipher::SYM_NULL == c) {
-      return "SYM-NULL";
-    }
   }
   else {
     const mbedtls_pk_info_t* info = mbedtls_pk_info_from_type((mbedtls_pk_type_t)c);
@@ -224,7 +212,9 @@ const char* get_cipher_label(Cipher c) {
 /* Privately scoped. */
 const bool manuvr_is_cipher_symmetric(Cipher ci) {
   switch (ci) {
-    case Cipher::SYM_NULL:
+    #if defined(WRAPPED_SYM_NULL)
+      case Cipher::SYM_NULL:
+    #endif
     case Cipher::SYM_AES_128_ECB:
     case Cipher::SYM_AES_192_ECB:
     case Cipher::SYM_AES_256_ECB:
@@ -282,13 +272,44 @@ const bool manuvr_is_cipher_symmetric(Cipher ci) {
 /* Privately scoped. */
 const bool manuvr_is_cipher_authenticated(Cipher ci) {
   switch (ci) {
-    case Cipher::SYM_AES_128_GCM:
-    case Cipher::SYM_AES_192_GCM:
-    case Cipher::SYM_AES_256_GCM:
-    case Cipher::SYM_AES_128_CCM:
-    case Cipher::SYM_AES_192_CCM:
-    case Cipher::SYM_AES_256_CCM:
-      return true;
+    #if defined(WRAPPED_SYM_AES_128_GCM)
+      case Cipher::SYM_AES_128_GCM:           return true;
+    #endif
+    #if defined(WRAPPED_SYM_AES_192_GCM)
+      case Cipher::SYM_AES_192_GCM:           return true;
+    #endif
+    #if defined(WRAPPED_SYM_AES_256_GCM)
+      case Cipher::SYM_AES_256_GCM:           return true;
+    #endif
+    #if defined(WRAPPED_SYM_AES_128_CCM)
+      case Cipher::SYM_AES_128_CCM:           return true;
+    #endif
+    #if defined(WRAPPED_SYM_AES_192_CCM)
+      case Cipher::SYM_AES_192_CCM:           return true;
+    #endif
+    #if defined(WRAPPED_SYM_AES_256_CCM)
+      case Cipher::SYM_AES_256_CCM:           return true;
+    #endif
+
+    #if defined(WRAPPED_SYM_CAMELLIA_128_GCM)
+      case Cipher::SYM_CAMELLIA_128_GCM:      return true;
+    #endif
+    #if defined(WRAPPED_SYM_CAMELLIA_192_GCM)
+      case Cipher::SYM_CAMELLIA_192_GCM:      return true;
+    #endif
+    #if defined(WRAPPED_SYM_CAMELLIA_256_GCM)
+      case Cipher::SYM_CAMELLIA_256_GCM:      return true;
+    #endif
+    #if defined(WRAPPED_SYM_CAMELLIA_128_CCM)
+      case Cipher::SYM_CAMELLIA_128_CCM:      return true;
+    #endif
+    #if defined(WRAPPED_SYM_CAMELLIA_192_CCM)
+      case Cipher::SYM_CAMELLIA_192_CCM:      return true;
+    #endif
+    #if defined(WRAPPED_SYM_CAMELLIA_256_CCM)
+      case Cipher::SYM_CAMELLIA_256_CCM:      return true;
+    #endif
+
     default:
       return false;
   }
@@ -429,12 +450,6 @@ int8_t __attribute__((weak)) manuvr_hash(uint8_t* in, int in_len, uint8_t* out, 
 /*******************************************************************************
 * Pluggable crypto modules...                                                  *
 *******************************************************************************/
-// TODO: I don't like using std::map. Still need to decide on a replacement.
-std::map<Cipher, wrapped_sym_operation>    _sym_overrides;    // Symmetric runtime overrides.
-std::map<Cipher, wrapped_sauth_operation>  _sauth_overrides;  // Symmetric/auth runtime overrides.
-std::map<Cipher, wrapped_asym_operation>   _asym_overrides;   // Asymmetric runtime overrides.
-std::map<Hashes, wrapped_hash_operation>   _hash_overrides;   // Digest runtime overrides.
-
 
 /**
 * Tests for an implementation-specific deferral for the given cipher.
@@ -476,80 +491,6 @@ bool provide_digest_handler(Hashes h, wrapped_hash_operation fxn) {
   return false;
 }
 
-
-
-/*******************************************************************************
-* Symmetric ciphers                                                            *
-*******************************************************************************/
-/**
-* Block symmetric ciphers.
-* Please note that linker-override is possible, but dynamic override is generally
-*   preferable to avoid clobbering all symmetric support.
-*
-* @param uint8_t* Buffer containing plaintext.
-* @param int      Length of plaintext.
-* @param uint8_t* Target buffer for ciphertext.
-* @param int      Length of output.
-* @param uint8_t* Buffer containing the symmetric key.
-* @param int      Length of the key, in bits.
-* @param uint8_t* IV. Caller's responsibility to use correct size.
-* @param Cipher   The cipher by which to encrypt.
-* @param uint32_t Options to the optionation.
-* @return true if the root function ought to defer.
-*/
-int8_t __attribute__((weak)) manuvr_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher ci, uint32_t opts) {
-  if (cipher_deferred_handling(ci)) {
-    // If overriden by user implementation.
-    return _sym_overrides[ci](in, in_len, out, out_len, key, key_len, iv, ci, opts);
-  }
-  int8_t ret = -1;
-  switch (ci) {
-    case Cipher::SYM_AES_256_CBC:
-    case Cipher::SYM_AES_192_CBC:
-    case Cipher::SYM_AES_128_CBC:
-      {
-        mbedtls_aes_context ctx;
-        if (opts & MANUVR_ENCRYPT) {
-          mbedtls_aes_setkey_enc(&ctx, key, key_len);
-        }
-        else {
-          mbedtls_aes_setkey_dec(&ctx, key, key_len);
-        }
-        ret = mbedtls_aes_crypt_cbc(&ctx, _cipher_opcode(ci, opts), in_len, iv, in, out);
-        mbedtls_aes_free(&ctx);
-      }
-      break;
-    case Cipher::SYM_BLOWFISH_CBC:
-      {
-        mbedtls_blowfish_context ctx;
-        mbedtls_blowfish_setkey(&ctx, key, key_len);
-        ret = mbedtls_blowfish_crypt_cbc(&ctx, _cipher_opcode(ci, opts), in_len, iv, in, out);
-        mbedtls_blowfish_free(&ctx);
-      }
-      break;
-    case Cipher::SYM_NULL:
-      memcpy(out, in, in_len);
-      ret = 0;
-      break;
-    default:
-      break;
-  }
-  return ret;
-}
-
-
-
-/*******************************************************************************
-* Asymmetric ciphers                                                           *
-*******************************************************************************/
-int8_t __attribute__((weak)) manuvr_asym_keygen(Cipher, int key_len, uint8_t* pub, int pub_len, uint8_t* priv, int priv_len) {
-  return -1;
-}
-
-
-int8_t __attribute__((weak)) manuvr_asym_cipher(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes h, Cipher ci, CryptoKey private_key, uint32_t opts) {
-  return -1;
-}
 
 
 #endif  // __MANUVR_HAS_CRYPTO

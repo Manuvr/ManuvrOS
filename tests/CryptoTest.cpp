@@ -114,7 +114,7 @@ int CRYPTO_TEST_SYMMETRIC() {
     Cipher::SYM_AES_192_CBC,
     Cipher::SYM_AES_256_CBC,
     Cipher::SYM_BLOWFISH_CBC,
-    Cipher::SYM_NULL,
+    //Cipher::SYM_NULL,
     Cipher::NONE
   };
 
