@@ -29,6 +29,12 @@ Baseline support will be via mbedtls, but certain platforms will have hardware
 If you wish to use another crypto library (OpenSSL? MatrixSSL? uECC?) then
   the weak-reference functions in question should be extended with preprocessor
   logic to support them.
+
+Try to resist re-coding structs and such that the back-ends have already
+  provided. Ultimately, many of the wrapped algos will have parameter-accessors
+  that are strictly inlines. Some faculty like this must exist, however for
+  providing wrappers around (possibly) concurrent software and hardware support.
+See CryptOptUnifier.h for more information.
 */
 
 #ifndef __MANUVR_CRYPTO_ABSTRACTION_H__
@@ -36,28 +42,15 @@ If you wish to use another crypto library (OpenSSL? MatrixSSL? uECC?) then
 
 #include <inttypes.h>
 
+// Try to contain wrapped header concerns in here, pl0x...
+#include "Cryptographic/CryptOptUnifier.h"
+
 #include <DataStructures/StringBuilder.h>
 
-#if defined(__MANUVR_MBEDTLS)
-  #include "mbedtls/ssl.h"
-  #include "mbedtls/md.h"
-  #include "mbedtls/md_internal.h"
-  #include "mbedtls/base64.h"
-  #include "mbedtls/pk.h"
-  #include "mbedtls/pk_internal.h"
-  #include "mbedtls/aes.h"
-  #include "mbedtls/blowfish.h"
-#endif
 
 #define MANUVR_ENCRYPT 0x00000001
 #define MANUVR_DECRYPT 0x00000002
 
-#if defined(__MANUVR_MBEDTLS) || defined(__MANUVR_OPENSSL)
-#define __MANUVR_HAS_CRYPTO 1
-#endif
-
-typedef struct {
-} CryptOpt;
 
 
 enum class Hashes {
@@ -99,71 +92,81 @@ enum class CipherMode {
 
 
 enum class Cipher {
-  NONE            = 0,
-  ASYM_RSA        = MBEDTLS_PK_RSA,
-  ASYM_ECKEY      = MBEDTLS_PK_ECKEY,
-  ASYM_ECKEY_DH   = MBEDTLS_PK_ECKEY_DH,
-  ASYM_ECDSA      = MBEDTLS_PK_ECDSA,
-  ASYM_RSA_ALT    = MBEDTLS_PK_RSA_ALT,
-  ASYM_RSASSA_PSS = MBEDTLS_PK_RSASSA_PSS,
-  SYM_BF_CBC      = MBEDTLS_CIPHER_ID_BLOWFISH,
-  ASYM_NONE       = MBEDTLS_PK_NONE,
-
-  SYM_NULL                  = MBEDTLS_CIPHER_NULL,
-  SYM_AES_128_ECB           = MBEDTLS_CIPHER_AES_128_ECB,
-  SYM_AES_192_ECB           = MBEDTLS_CIPHER_AES_192_ECB,
-  SYM_AES_256_ECB           = MBEDTLS_CIPHER_AES_256_ECB,
-  SYM_AES_128_CBC           = MBEDTLS_CIPHER_AES_128_CBC,
-  SYM_AES_192_CBC           = MBEDTLS_CIPHER_AES_192_CBC,
-  SYM_AES_256_CBC           = MBEDTLS_CIPHER_AES_256_CBC,
-  SYM_AES_128_CFB128        = MBEDTLS_CIPHER_AES_128_CFB128,
-  SYM_AES_192_CFB128        = MBEDTLS_CIPHER_AES_192_CFB128,
-  SYM_AES_256_CFB128        = MBEDTLS_CIPHER_AES_256_CFB128,
-  SYM_AES_128_CTR           = MBEDTLS_CIPHER_AES_128_CTR,
-  SYM_AES_192_CTR           = MBEDTLS_CIPHER_AES_192_CTR,
-  SYM_AES_256_CTR           = MBEDTLS_CIPHER_AES_256_CTR,
-  SYM_AES_128_GCM           = MBEDTLS_CIPHER_AES_128_GCM,
-  SYM_AES_192_GCM           = MBEDTLS_CIPHER_AES_192_GCM,
-  SYM_AES_256_GCM           = MBEDTLS_CIPHER_AES_256_GCM,
-  SYM_CAMELLIA_128_ECB      = MBEDTLS_CIPHER_CAMELLIA_128_ECB,
-  SYM_CAMELLIA_192_ECB      = MBEDTLS_CIPHER_CAMELLIA_192_ECB,
-  SYM_CAMELLIA_256_ECB      = MBEDTLS_CIPHER_CAMELLIA_256_ECB,
-  SYM_CAMELLIA_128_CBC      = MBEDTLS_CIPHER_CAMELLIA_128_CBC,
-  SYM_CAMELLIA_192_CBC      = MBEDTLS_CIPHER_CAMELLIA_192_CBC,
-  SYM_CAMELLIA_256_CBC      = MBEDTLS_CIPHER_CAMELLIA_256_CBC,
-  SYM_CAMELLIA_128_CFB128   = MBEDTLS_CIPHER_CAMELLIA_128_CFB128,
-  SYM_CAMELLIA_192_CFB128   = MBEDTLS_CIPHER_CAMELLIA_192_CFB128,
-  SYM_CAMELLIA_256_CFB128   = MBEDTLS_CIPHER_CAMELLIA_256_CFB128,
-  SYM_CAMELLIA_128_CTR      = MBEDTLS_CIPHER_CAMELLIA_128_CTR,
-  SYM_CAMELLIA_192_CTR      = MBEDTLS_CIPHER_CAMELLIA_192_CTR,
-  SYM_CAMELLIA_256_CTR      = MBEDTLS_CIPHER_CAMELLIA_256_CTR,
-  SYM_CAMELLIA_128_GCM      = MBEDTLS_CIPHER_CAMELLIA_128_GCM,
-  SYM_CAMELLIA_192_GCM      = MBEDTLS_CIPHER_CAMELLIA_192_GCM,
-  SYM_CAMELLIA_256_GCM      = MBEDTLS_CIPHER_CAMELLIA_256_GCM,
-  SYM_DES_ECB               = MBEDTLS_CIPHER_DES_ECB,
-  SYM_DES_CBC               = MBEDTLS_CIPHER_DES_CBC,
-  SYM_DES_EDE_ECB           = MBEDTLS_CIPHER_DES_EDE_ECB,
-  SYM_DES_EDE_CBC           = MBEDTLS_CIPHER_DES_EDE_CBC,
-  SYM_DES_EDE3_ECB          = MBEDTLS_CIPHER_DES_EDE3_ECB,
-  SYM_DES_EDE3_CBC          = MBEDTLS_CIPHER_DES_EDE3_CBC,
-  SYM_BLOWFISH_ECB          = MBEDTLS_CIPHER_BLOWFISH_ECB,
-  SYM_BLOWFISH_CBC          = MBEDTLS_CIPHER_BLOWFISH_CBC,
-  SYM_BLOWFISH_CFB64        = MBEDTLS_CIPHER_BLOWFISH_CFB64,
-  SYM_BLOWFISH_CTR          = MBEDTLS_CIPHER_BLOWFISH_CTR,
-  SYM_ARC4_128              = MBEDTLS_CIPHER_ARC4_128,
-  SYM_AES_128_CCM           = MBEDTLS_CIPHER_AES_128_CCM,
-  SYM_AES_192_CCM           = MBEDTLS_CIPHER_AES_192_CCM,
-  SYM_AES_256_CCM           = MBEDTLS_CIPHER_AES_256_CCM,
-  SYM_CAMELLIA_128_CCM      = MBEDTLS_CIPHER_CAMELLIA_128_CCM,
-  SYM_CAMELLIA_192_CCM      = MBEDTLS_CIPHER_CAMELLIA_192_CCM,
-  SYM_CAMELLIA_256_CCM      = MBEDTLS_CIPHER_CAMELLIA_256_CCM,
-  SYM_NONE                  = MBEDTLS_CIPHER_NONE
+  NONE                    =  WRAPPED_NONE,
+  ASYM_RSA                =  WRAPPED_ASYM_RSA,
+  ASYM_ECKEY              =  WRAPPED_ASYM_ECKEY,
+  ASYM_ECKEY_DH           =  WRAPPED_ASYM_ECKEY_DH,
+  ASYM_ECDSA              =  WRAPPED_ASYM_ECDSA,
+  ASYM_RSA_ALT            =  WRAPPED_ASYM_RSA_ALT,
+  ASYM_RSASSA_PSS         =  WRAPPED_ASYM_RSASSA_PSS,
+  ASYM_NONE               =  WRAPPED_ASYM_NONE,
+  SYM_NULL                =  WRAPPED_SYM_NULL,
+  SYM_AES_128_ECB         =  WRAPPED_SYM_AES_128_ECB,
+  SYM_AES_192_ECB         =  WRAPPED_SYM_AES_192_ECB,
+  SYM_AES_256_ECB         =  WRAPPED_SYM_AES_256_ECB,
+  SYM_AES_128_CBC         =  WRAPPED_SYM_AES_128_CBC,
+  SYM_AES_192_CBC         =  WRAPPED_SYM_AES_192_CBC,
+  SYM_AES_256_CBC         =  WRAPPED_SYM_AES_256_CBC,
+  SYM_AES_128_CFB128      =  WRAPPED_SYM_AES_128_CFB128,
+  SYM_AES_192_CFB128      =  WRAPPED_SYM_AES_192_CFB128,
+  SYM_AES_256_CFB128      =  WRAPPED_SYM_AES_256_CFB128,
+  SYM_AES_128_CTR         =  WRAPPED_SYM_AES_128_CTR,
+  SYM_AES_192_CTR         =  WRAPPED_SYM_AES_192_CTR,
+  SYM_AES_256_CTR         =  WRAPPED_SYM_AES_256_CTR,
+  SYM_AES_128_GCM         =  WRAPPED_SYM_AES_128_GCM,
+  SYM_AES_192_GCM         =  WRAPPED_SYM_AES_192_GCM,
+  SYM_AES_256_GCM         =  WRAPPED_SYM_AES_256_GCM,
+  SYM_CAMELLIA_128_ECB    =  WRAPPED_SYM_CAMELLIA_128_ECB,
+  SYM_CAMELLIA_192_ECB    =  WRAPPED_SYM_CAMELLIA_192_ECB,
+  SYM_CAMELLIA_256_ECB    =  WRAPPED_SYM_CAMELLIA_256_ECB,
+  SYM_CAMELLIA_128_CBC    =  WRAPPED_SYM_CAMELLIA_128_CBC,
+  SYM_CAMELLIA_192_CBC    =  WRAPPED_SYM_CAMELLIA_192_CBC,
+  SYM_CAMELLIA_256_CBC    =  WRAPPED_SYM_CAMELLIA_256_CBC,
+  SYM_CAMELLIA_128_CFB128 =  WRAPPED_SYM_CAMELLIA_128_CFB128,
+  SYM_CAMELLIA_192_CFB128 =  WRAPPED_SYM_CAMELLIA_192_CFB128,
+  SYM_CAMELLIA_256_CFB128 =  WRAPPED_SYM_CAMELLIA_256_CFB128,
+  SYM_CAMELLIA_128_CTR    =  WRAPPED_SYM_CAMELLIA_128_CTR,
+  SYM_CAMELLIA_192_CTR    =  WRAPPED_SYM_CAMELLIA_192_CTR,
+  SYM_CAMELLIA_256_CTR    =  WRAPPED_SYM_CAMELLIA_256_CTR,
+  SYM_CAMELLIA_128_GCM    =  WRAPPED_SYM_CAMELLIA_128_GCM,
+  SYM_CAMELLIA_192_GCM    =  WRAPPED_SYM_CAMELLIA_192_GCM,
+  SYM_CAMELLIA_256_GCM    =  WRAPPED_SYM_CAMELLIA_256_GCM,
+  SYM_DES_ECB             =  WRAPPED_SYM_DES_ECB,
+  SYM_DES_CBC             =  WRAPPED_SYM_DES_CBC,
+  SYM_DES_EDE_ECB         =  WRAPPED_SYM_DES_EDE_ECB,
+  SYM_DES_EDE_CBC         =  WRAPPED_SYM_DES_EDE_CBC,
+  SYM_DES_EDE3_ECB        =  WRAPPED_SYM_DES_EDE3_ECB,
+  SYM_DES_EDE3_CBC        =  WRAPPED_SYM_DES_EDE3_CBC,
+  SYM_BLOWFISH_ECB        =  WRAPPED_SYM_BLOWFISH_ECB,
+  SYM_BLOWFISH_CBC        =  WRAPPED_SYM_BLOWFISH_CBC,
+  SYM_BLOWFISH_CFB64      =  WRAPPED_SYM_BLOWFISH_CFB64,
+  SYM_BLOWFISH_CTR        =  WRAPPED_SYM_BLOWFISH_CTR,
+  SYM_ARC4_128            =  WRAPPED_SYM_ARC4_128,
+  SYM_AES_128_CCM         =  WRAPPED_SYM_AES_128_CCM,
+  SYM_AES_192_CCM         =  WRAPPED_SYM_AES_192_CCM,
+  SYM_AES_256_CCM         =  WRAPPED_SYM_AES_256_CCM,
+  SYM_CAMELLIA_128_CCM    =  WRAPPED_SYM_CAMELLIA_128_CCM,
+  SYM_CAMELLIA_192_CCM    =  WRAPPED_SYM_CAMELLIA_192_CCM,
+  SYM_CAMELLIA_256_CCM    =  WRAPPED_SYM_CAMELLIA_256_CCM,
+  SYM_NONE                =  WRAPPED_SYM_NONE,
 };
 
 
 
 
 typedef int8_t (*wrapped_sym_operation)(
+  uint8_t* in,
+  int in_len,
+  uint8_t* out,
+  int out_len,
+  uint8_t* key,
+  int key_len,
+  uint8_t* iv,
+  Cipher ci,
+  uint32_t opts
+);
+
+typedef int8_t (*wrapped_sauth_operation)(
   uint8_t* in,
   int in_len,
   uint8_t* out,
@@ -237,6 +240,10 @@ bool cipher_hardware_backed(Cipher);
 // Is the algorithm provided by the default implementation?
 bool digest_deferred_handling(Hashes);
 bool cipher_deferred_handling(Cipher);
+
+// Over-ride or provide implementations on an algo-by-algo basis.
+bool provide_digest_handler(Hashes);
+bool provide_cipher_handler(Cipher);
 
 } // extern "C"
 

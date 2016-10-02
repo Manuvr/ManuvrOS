@@ -21,10 +21,14 @@ limitations under the License.
 
 #include "Cryptographic.h"
 #include <Kernel.h>
-#include <map>
+#include <map>   // TODO: Remove dependency.
 
-/* Privately prototypes. */
+
+#if defined(__MANUVR_HAS_CRYPTO)
+
+/* Privately scoped prototypes. */
 const bool manuvr_is_cipher_symmetric(Cipher);
+const bool manuvr_is_cipher_authenticated(Cipher);
 const bool manuvr_is_cipher_asymmetric(Cipher);
 
 
@@ -276,6 +280,21 @@ const bool manuvr_is_cipher_symmetric(Cipher ci) {
 }
 
 /* Privately scoped. */
+const bool manuvr_is_cipher_authenticated(Cipher ci) {
+  switch (ci) {
+    case Cipher::SYM_AES_128_GCM:
+    case Cipher::SYM_AES_192_GCM:
+    case Cipher::SYM_AES_256_GCM:
+    case Cipher::SYM_AES_128_CCM:
+    case Cipher::SYM_AES_192_CCM:
+    case Cipher::SYM_AES_256_CCM:
+      return true;
+    default:
+      return false;
+  }
+}
+
+/* Privately scoped. */
 const bool manuvr_is_cipher_asymmetric(Cipher ci) {
   switch (ci) {
     case Cipher::ASYM_RSA:
@@ -334,7 +353,7 @@ const int _cipher_opcode(Cipher ci, uint32_t opts) {
     default:
       return 0;  // TODO: Sketchy....
   }
-};
+}
 
 
 
@@ -411,9 +430,10 @@ int8_t __attribute__((weak)) manuvr_hash(uint8_t* in, int in_len, uint8_t* out, 
 * Pluggable crypto modules...                                                  *
 *******************************************************************************/
 // TODO: I don't like using std::map. Still need to decide on a replacement.
-std::map<Cipher, wrapped_sym_operation>  _sym_overrides;   // Symmetric runtime overrides.
-std::map<Cipher, wrapped_asym_operation> _asym_overrides;  // Asymmetric runtime overrides.
-std::map<Hashes, wrapped_hash_operation> _hash_overrides;  // Digest runtime overrides.
+std::map<Cipher, wrapped_sym_operation>    _sym_overrides;    // Symmetric runtime overrides.
+std::map<Cipher, wrapped_sauth_operation>  _sauth_overrides;  // Symmetric/auth runtime overrides.
+std::map<Cipher, wrapped_asym_operation>   _asym_overrides;   // Asymmetric runtime overrides.
+std::map<Hashes, wrapped_hash_operation>   _hash_overrides;   // Digest runtime overrides.
 
 
 /**
@@ -423,16 +443,8 @@ std::map<Hashes, wrapped_hash_operation> _hash_overrides;  // Digest runtime ove
 * @return true if the root function ought to defer.
 */
 bool cipher_deferred_handling(Cipher ci) {
-  switch (ci) {
-    case Cipher::SYM_AES_256_CBC:
-    case Cipher::SYM_AES_192_CBC:
-    case Cipher::SYM_AES_128_CBC:
-      if (_sym_overrides[ci]) {
-        return true;
-      }
-    default:
-      return false;
-  }
+  // TODO: Slow. Ugly.
+  return (_sym_overrides[ci] || _sauth_overrides[ci] || _asym_overrides[ci]);
 }
 
 /**
@@ -442,11 +454,28 @@ bool cipher_deferred_handling(Cipher ci) {
 * @return true if the root function ought to defer.
 */
 bool digest_deferred_handling(Hashes h) {
-  switch (h) {
-    default:
-      return false;
-  }
+  return ((bool)(_hash_overrides[h]));
 }
+
+
+
+bool provide_cipher_handler(Cipher c, wrapped_sym_operation fxn) {
+  if (!cipher_deferred_handling(c)) {
+    _sym_overrides[c] = fxn;
+    return true;
+  }
+  return false;
+}
+
+
+bool provide_digest_handler(Hashes h, wrapped_hash_operation fxn) {
+  if (!digest_deferred_handling(h)) {
+    _hash_overrides[h] = fxn;
+    return true;
+  }
+  return false;
+}
+
 
 
 /*******************************************************************************
@@ -521,3 +550,6 @@ int8_t __attribute__((weak)) manuvr_asym_keygen(Cipher, int key_len, uint8_t* pu
 int8_t __attribute__((weak)) manuvr_asym_cipher(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes h, Cipher ci, CryptoKey private_key, uint32_t opts) {
   return -1;
 }
+
+
+#endif  // __MANUVR_HAS_CRYPTO
