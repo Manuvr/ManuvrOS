@@ -473,6 +473,14 @@ void ManuvrPlatform::forsakeMain() {
 }
 
 
+/**
+* Fills the given buffer with random bytes.
+* Blocks if there is nothing random available. 
+*
+* @param uint8_t* The buffer to fill.
+* @param size_t The number of bytes to write to the buffer.
+* @return 0, always.
+*/
 int8_t random_fill(uint8_t* buf, size_t len) {
   int written_len = 0;
   while (4 <= (len - written_len)) {

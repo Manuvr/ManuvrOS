@@ -36,16 +36,27 @@ Note that this represents a maximum scope-of-support regarding cryptographic
   #define __MANUVR_HAS_CRYPTO   1
   #define __CRYPTO_BACKEND      "mbedTLS"
   #include "mbedtls/ssl.h"
+  #include "mbedtls/entropy.h"
+  #include "mbedtls/ctr_drbg.h"
   #include "mbedtls/md.h"
   #include "mbedtls/md_internal.h"
   #include "mbedtls/base64.h"
-  #include "mbedtls/pk.h"
-  #include "mbedtls/rsa.h"
-  #include "mbedtls/pk_internal.h"
-  #include "mbedtls/aes.h"
-  #include "mbedtls/blowfish.h"
-  #include "mbedtls/entropy.h"
-  #include "mbedtls/ctr_drbg.h"
+  #if defined(MBEDTLS_PK_C)
+    #include "mbedtls/pk.h"
+    #include "mbedtls/pk_internal.h"
+  #endif
+  #if defined(MBEDTLS_AES_C)
+    #include "mbedtls/aes.h"
+  #endif
+  #if defined(MBEDTLS_BLOWFISH_C)
+    #include "mbedtls/blowfish.h"
+  #endif
+  #if defined(MBEDTLS_RSA_C)
+    #include "mbedtls/rsa.h"
+  #endif
+  #if defined(MBEDTLS_ECP_C)
+    #include "mbedtls/ecp.h"
+  #endif
 
   // Now we are going to re-assign some defines to make our base-wrapper. All
   //   code everywhere in this framework ought to code against these defs.
@@ -179,6 +190,7 @@ Note that this represents a maximum scope-of-support regarding cryptographic
   #endif
 
 
+  // Discover and wrap hash support.
   #define WRAPPED_HASH_NONE       MBEDTLS_MD_NONE
   #if defined(MBEDTLS_MD5_C)
     #define WRAPPED_HASH_MD5        MBEDTLS_MD_MD5
@@ -203,9 +215,44 @@ Note that this represents a maximum scope-of-support regarding cryptographic
   #endif
 
 
-  // Your function must be called \c mbedtls_hardware_poll(), have the same
-  // prototype as declared in entropy_poll.h, and accept NULL as first argument.
-  #define MBEDTLS_ENTROPY_HARDWARE_ALT  // We will provide _something_.
+  // Domain parameters and key-sizes for the PK layer.
+  #if defined(MBEDTLS_ECP_DP_SECP192R1_ENABLED)
+    #define WRAPPED_PK_OPT_SECP192R1  MBEDTLS_ECP_DP_SECP192R1
+  #endif
+  #if defined(MBEDTLS_ECP_DP_SECP224R1_ENABLED)
+    #define WRAPPED_PK_OPT_SECP224R1  MBEDTLS_ECP_DP_SECP224R1
+  #endif
+  #if defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
+    #define WRAPPED_PK_OPT_SECP256R1  MBEDTLS_ECP_DP_SECP256R1
+  #endif
+  #if defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED)
+    #define WRAPPED_PK_OPT_SECP384R1  MBEDTLS_ECP_DP_SECP384R1
+  #endif
+  #if defined(MBEDTLS_ECP_DP_SECP521R1_ENABLED)
+    #define WRAPPED_PK_OPT_SECP521R1  MBEDTLS_ECP_DP_SECP521R1
+  #endif
+  #if defined(MBEDTLS_ECP_DP_SECP192K1_ENABLED)
+    #define WRAPPED_PK_OPT_SECP192K1  MBEDTLS_ECP_DP_SECP192K1
+  #endif
+  #if defined(MBEDTLS_ECP_DP_SECP224K1_ENABLED)
+    #define WRAPPED_PK_OPT_SECP224K1  MBEDTLS_ECP_DP_SECP224K1
+  #endif
+  #if defined(MBEDTLS_ECP_DP_SECP256K1_ENABLED)
+    #define WRAPPED_PK_OPT_SECP256K1  MBEDTLS_ECP_DP_SECP256K1
+  #endif
+  #if defined(MBEDTLS_ECP_DP_BP256R1_ENABLED)
+    #define WRAPPED_PK_OPT_BP256R1  MBEDTLS_ECP_DP_BP256R1
+  #endif
+  #if defined(MBEDTLS_ECP_DP_BP384R1_ENABLED)
+    #define WRAPPED_PK_OPT_BP384R1  MBEDTLS_ECP_DP_BP384R1
+  #endif
+  #if defined(MBEDTLS_ECP_DP_BP512R1_ENABLED)
+    #define WRAPPED_PK_OPT_BP512R1  MBEDTLS_ECP_DP_BP512R1
+  #endif
+  #if defined(MBEDTLS_ECP_DP_CURVE25519_ENABLED)
+    #define WRAPPED_PK_OPT_CURVE25519  MBEDTLS_ECP_DP_CURVE25519
+  #endif
+
 
 
 

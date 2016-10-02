@@ -301,6 +301,7 @@ static void* dev_urandom_reader(void*) {
       rng_level = _random_pool_w_ptr - _random_pool_r_ptr;
       if (rng_level == PLATFORM_RNG_CARRY_CAPACITY) {
         // We have filled our entropy pool. Sleep.
+        // TODO: Implement wakeThread() and this can go way higher.
         sleep_millis(35);
       }
       else {

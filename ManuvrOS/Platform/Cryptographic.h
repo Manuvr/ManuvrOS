@@ -81,13 +81,48 @@ enum class Hashes {
 
 
 enum class CryptoKey {
-  #if defined(WRAPPED_KEY_)
-    RIPEMD160 = WRAPPED_HASH_RIPEMD160,
+  #if defined(WRAPPED_ASYM_RSA)
+    RSA_1024    = 1024,
+    RSA_2048    = 2048,
+    RSA_4096    = 4096,
   #endif
-};
-
-/* Some ciphers have nuances like block-mode (AES), */
-enum class CipherMode {
+  #if defined(WRAPPED_PK_OPT_SECP192R1)
+    ECC_SECP192R1   = WRAPPED_PK_OPT_SECP192R1,
+  #endif
+  #if defined(WRAPPED_PK_OPT_SECP224R1)
+    ECC_SECP224R1   = WRAPPED_PK_OPT_SECP224R1,
+  #endif
+  #if defined(WRAPPED_PK_OPT_SECP256R1)
+    ECC_SECP256R1   = WRAPPED_PK_OPT_SECP256R1,
+  #endif
+  #if defined(WRAPPED_PK_OPT_SECP384R1)
+    ECC_SECP384R1   = WRAPPED_PK_OPT_SECP384R1,
+  #endif
+  #if defined(WRAPPED_PK_OPT_SECP521R1)
+    ECC_SECP521R1   = WRAPPED_PK_OPT_SECP521R1,
+  #endif
+  #if defined(WRAPPED_PK_OPT_SECP192K1)
+    ECC_SECP192K1   = WRAPPED_PK_OPT_SECP192K1,
+  #endif
+  #if defined(WRAPPED_PK_OPT_SECP224K1)
+    ECC_SECP224K1   = WRAPPED_PK_OPT_SECP224K1,
+  #endif
+  #if defined(WRAPPED_PK_OPT_SECP256K1)
+    ECC_SECP256K1   = WRAPPED_PK_OPT_SECP256K1,
+  #endif
+  #if defined(WRAPPED_PK_OPT_BP256R1)
+    ECC_BP256R1     = WRAPPED_PK_OPT_BP256R1,
+  #endif
+  #if defined(WRAPPED_PK_OPT_BP384R1)
+    ECC_BP384R1     = WRAPPED_PK_OPT_BP384R1,
+  #endif
+  #if defined(WRAPPED_PK_OPT_BP512R1)
+    ECC_BP512R1     = WRAPPED_PK_OPT_BP512R1,
+  #endif
+  #if defined(WRAPPED_PK_OPT_CURVE25519)
+    ECC_CURVE25519  = WRAPPED_PK_OPT_CURVE25519,
+  #endif
+  NONE = 0
 };
 
 
@@ -341,8 +376,8 @@ int get_cipher_aligned_size(Cipher, int len);
 const char* get_cipher_label(Cipher);
 int8_t manuvr_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher, uint32_t opts);
 
-int8_t manuvr_asym_keygen(Cipher, int key_len, uint8_t* pub, int pub_len, uint8_t* priv, int priv_len);
-int8_t manuvr_asym_cipher(uint8_t* in, int in_len, uint8_t* out, int* out_len, Hashes, Cipher, CryptoKey private_key, uint32_t opts);
+int manuvr_asym_keygen(CryptoKey, uint8_t* pub, int pub_len, uint8_t* priv, int priv_len);
+int manuvr_asym_cipher(uint8_t* in, int in_len, uint8_t* out, int* out_len, Hashes, Cipher, CryptoKey private_key, uint32_t opts);
 
 // Now some inline definitions to mask the back-end API where it can be done
 //   transparently...

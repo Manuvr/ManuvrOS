@@ -214,7 +214,23 @@ int CRYPTO_TEST_SYMMETRIC() {
 */
 int CRYPTO_TEST_ASYMMETRIC() {
   printf("===< CRYPTO_TEST_ASYMMETRIC >====================================\n");
-
+  uint8_t* rsa_public_buf  = (uint8_t*) alloca(1024);
+  uint8_t* rsa_privat_buf  = (uint8_t*) alloca(1024);
+  uint8_t* ecc_public_buf  = (uint8_t*) alloca(1024);
+  uint8_t* ecc_privat_buf  = (uint8_t*) alloca(1024);
+  int ret = manuvr_asym_keygen(CryptoKey::RSA_2048, rsa_public_buf, 1024, rsa_privat_buf, 1024);
+  if (0 == ret) {
+    ret = manuvr_asym_keygen(CryptoKey::ECC_SECP384R1, ecc_public_buf, 1024, ecc_privat_buf, 1024);
+    if (0 == ret) {
+      return 0;
+    }
+    else {
+      printf("ECC keygen failed with code %d.\n", ret);
+    }
+  }
+  else {
+    printf("RSA keygen failed with code %d.\n", ret);
+  }
   return -1;
 }
 
@@ -235,7 +251,7 @@ int main(int argc, char *argv[]) {
 
   platform.platformPreInit();   // Our test fixture needs random numbers.
   platform.bootstrap();
-  
+
   StringBuilder log;
   printCryptoOverview(&log);
   printf("%s\n", (const char*) log.string());

@@ -163,13 +163,15 @@ const char* get_cipher_label(Cipher c) {
 #ifdef __cplusplus
 extern "C" {
 #endif
-mbedtls_entropy_context ctr_drbg;
+mbedtls_entropy_context entropy;
 
-int entropy_poll(void* data, unsigned char* buf, size_t len, size_t *olen){
+
+int mbedtls_hardware_poll(void* data, unsigned char* buf, size_t len, size_t *olen) {
   random_fill((uint8_t*) buf, len);
   *olen = len;
   return 0;
 }
+
 
 #ifdef __cplusplus
 }
@@ -177,12 +179,12 @@ int entropy_poll(void* data, unsigned char* buf, size_t len, size_t *olen){
 
 
 int cryptographic_rng_init() {
-  mbedtls_entropy_init(&ctr_drbg);
+  mbedtls_entropy_init(&entropy);
   int ret = mbedtls_entropy_add_source(
-    &ctr_drbg,
-    entropy_poll,
+    &entropy,
+    mbedtls_hardware_poll,
     NULL,
-    PLATFORM_RNG_CARRY_CAPACITY,
+    PLATFORM_RNG_CARRY_CAPACITY * sizeof(uint32_t),
     MBEDTLS_ENTROPY_SOURCE_STRONG
   );
   return ret;
@@ -306,6 +308,8 @@ int8_t __attribute__((weak)) manuvr_sym_cipher(uint8_t* in, int in_len, uint8_t*
     #if defined(MBEDTLS_RSA_C)
       case Cipher::ASYM_RSA:
         {
+          mbedtls_ctr_drbg_context ctr_drbg;
+          mbedtls_ctr_drbg_init(&ctr_drbg);
           size_t olen = 0;
           mbedtls_pk_context ctx;
           mbedtls_pk_init(&ctx);
@@ -349,12 +353,99 @@ int8_t __attribute__((weak)) manuvr_sym_cipher(uint8_t* in, int in_len, uint8_t*
 /*******************************************************************************
 * Asymmetric ciphers                                                           *
 *******************************************************************************/
-int8_t __attribute__((weak)) manuvr_asym_keygen(Cipher, int key_len, uint8_t* pub, int pub_len, uint8_t* priv, int priv_len) {
-  return -1;
+int __attribute__((weak)) manuvr_asym_keygen(CryptoKey key_type, uint8_t* pub, int pub_len, uint8_t* priv, int priv_len) {
+  mbedtls_ctr_drbg_context ctr_drbg;
+  mbedtls_ctr_drbg_init(&ctr_drbg);
+
+  mbedtls_pk_context key;
+  mbedtls_pk_init(&key);
+
+  uint32_t pers = randomInt();
+
+  int ret = mbedtls_ctr_drbg_seed(
+    &ctr_drbg, mbedtls_entropy_func, &entropy,
+    (const uint8_t*) &pers, 4
+  );
+  if (0 == ret) {
+    switch (key_type) {
+      #if defined(WRAPPED_ASYM_RSA)
+        case CryptoKey::RSA_1024:
+        case CryptoKey::RSA_2048:
+        case CryptoKey::RSA_4096:
+          {
+            ret = mbedtls_pk_setup(&key, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
+            if (0 == ret) {
+              mbedtls_rsa_context* rsa = mbedtls_pk_rsa(key);
+              ret = mbedtls_rsa_gen_key(
+                rsa,
+                mbedtls_ctr_drbg_random, &ctr_drbg,
+                (int) key_type, 65537
+              );
+              if (0 == ret) {
+                memset(pub,  0, pub_len);
+                memset(priv, 0, priv_len);
+                ret = mbedtls_pk_write_key_der(&key, priv, priv_len);
+                if (0 == ret) {
+                  ret = mbedtls_pk_write_pubkey_der(&key, pub, pub_len);
+                }
+              }
+            }
+          }
+          break;
+      #endif
+      #if defined(MBEDTLS_ECP_C)
+        // If we have ECP, we assume we have at least *one* curve...
+        #if defined(WRAPPED_PK_OPT_SECP192R1)
+          case CryptoKey::ECC_SECP192R1:
+        #endif
+        #if defined(WRAPPED_PK_OPT_SECP224R1)
+          case CryptoKey::ECC_SECP224R1:
+        #endif
+        #if defined(WRAPPED_PK_OPT_SECP256R1)
+          case CryptoKey::ECC_SECP256R1:
+        #endif
+        #if defined(WRAPPED_PK_OPT_SECP384R1)
+          case CryptoKey::ECC_SECP384R1:
+        #endif
+        #if defined(WRAPPED_PK_OPT_SECP521R1)
+          case CryptoKey::ECC_SECP521R1:
+        #endif
+        #if defined(WRAPPED_PK_OPT_SECP192K1)
+          case CryptoKey::ECC_SECP192K1:
+        #endif
+        #if defined(WRAPPED_PK_OPT_SECP224K1)
+          case CryptoKey::ECC_SECP224K1:
+        #endif
+        #if defined(WRAPPED_PK_OPT_SECP256K1)
+          case CryptoKey::ECC_SECP256K1:
+        #endif
+        #if defined(WRAPPED_PK_OPT_BP256R1)
+          case CryptoKey::ECC_BP256R1:
+        #endif
+        #if defined(WRAPPED_PK_OPT_BP384R1)
+          case CryptoKey::ECC_BP384R1:
+        #endif
+        #if defined(WRAPPED_PK_OPT_BP512R1)
+          case CryptoKey::ECC_BP512R1:
+        #endif
+        #if defined(WRAPPED_PK_OPT_CURVE25519)
+          case CryptoKey::ECC_CURVE25519:
+        #endif
+          {
+          }
+          break;
+      #endif
+      default:
+        break;
+    }
+  }
+  mbedtls_pk_free(&key);
+  mbedtls_ctr_drbg_free(&ctr_drbg);
+  return ret;
 }
 
 
-int8_t __attribute__((weak)) manuvr_asym_cipher(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes h, Cipher ci, CryptoKey private_key, uint32_t opts) {
+int __attribute__((weak)) manuvr_asym_cipher(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes h, Cipher ci, CryptoKey private_key, uint32_t opts) {
   return -1;
 }
 
