@@ -102,11 +102,11 @@ int CRYPTO_TEST_HASHES() {
     uint8_t* hash_out0 = (uint8_t*) alloca(o_len);
     uint8_t* hash_out1 = (uint8_t*) alloca(o_len);
 
-    if (manuvr_hash((uint8_t*) hash_in0, strlen(hash_in0), hash_out0, algs_to_test[idx])) {
+    if (wrapped_hash((uint8_t*) hash_in0, strlen(hash_in0), hash_out0, algs_to_test[idx])) {
       printf("Failed to hash.\n");
       return -1;
     }
-    if (manuvr_hash((uint8_t*) hash_in1, i_len, hash_out1, algs_to_test[idx])) {
+    if (wrapped_hash((uint8_t*) hash_in1, i_len, hash_out1, algs_to_test[idx])) {
       printf("Failed to hash.\n");
       return -1;
     }
@@ -173,7 +173,7 @@ int CRYPTO_TEST_SYMMETRIC() {
     for (int i = 0; i < i_len; i++) printf("%02x", *(plaintext_in + i));
     printf("\t(%d bytes)\n", i_len);
 
-    ret = manuvr_sym_cipher((uint8_t*) plaintext_in, o_len, ciphertext, o_len, key, key_size, iv, algs_to_test[idx], MANUVR_ENCRYPT);
+    ret = wrapped_sym_cipher((uint8_t*) plaintext_in, o_len, ciphertext, o_len, key, key_size, iv, algs_to_test[idx], OP_ENCRYPT);
     if (ret) {
       printf("Failed to encrypt. Error %d\n", ret);
       return -1;
@@ -184,7 +184,7 @@ int CRYPTO_TEST_SYMMETRIC() {
     printf("\t(%d bytes)\n", o_len);
 
     bzero(iv, 16);
-    ret = manuvr_sym_cipher(ciphertext, o_len, plaintext_out, o_len, key, key_size, iv, algs_to_test[idx], MANUVR_DECRYPT);
+    ret = wrapped_sym_cipher(ciphertext, o_len, plaintext_out, o_len, key, key_size, iv, algs_to_test[idx], OP_DECRYPT);
     if (ret) {
       printf("Failed to decrypt. Error %d\n", ret);
       return -1;
@@ -226,7 +226,7 @@ int CRYPTO_TEST_ASYMMETRIC() {
   int ecc_privat_len  = 2048;
 
 
-  int ret = manuvr_asym_keygen(Cipher::ASYM_RSA, CryptoKey::RSA_2048, rsa_public_buf, &rsa_public_len, rsa_privat_buf, &rsa_privat_len);
+  int ret = wrapped_asym_keygen(Cipher::ASYM_RSA, CryptoKey::RSA_2048, rsa_public_buf, &rsa_public_len, rsa_privat_buf, &rsa_privat_len);
   if (0 == ret) {
     printf("RSA keygen succeeded:\n");
     printf("Public:  ");
@@ -235,7 +235,7 @@ int CRYPTO_TEST_ASYMMETRIC() {
     for (int i = BASE_BUFFER_LEN-rsa_privat_len; i < BASE_BUFFER_LEN; i++) printf("%02x", *(rsa_privat_buf + i));
     printf("\t(%d bytes)\n\n", rsa_privat_len);
 
-    ret = manuvr_asym_keygen(Cipher::ASYM_ECKEY, CryptoKey::ECC_SECP384R1, ecc_public_buf, &ecc_public_len, ecc_privat_buf, &ecc_privat_len);
+    ret = wrapped_asym_keygen(Cipher::ASYM_ECKEY, CryptoKey::ECC_SECP384R1, ecc_public_buf, &ecc_public_len, ecc_privat_buf, &ecc_privat_len);
     if (0 == ret) {
       printf("ECC keygen succeeded:\n");
       printf("Public:  ");

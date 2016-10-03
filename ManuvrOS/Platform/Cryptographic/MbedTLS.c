@@ -17,6 +17,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
+
+Implements cryptography via mbedTLS.
+
+MbedTLS support assumes that we have a local copy of the mbedTLS source tree
+  at <build-root>/lib/mbedtls. See the downloadDeps.sh script. 
 */
 
 #if defined(WITH_MBEDTLS)
@@ -206,7 +211,7 @@ int cryptographic_rng_init() {
 // Usage example:
 //  char* hash_in  = "Uniform input text";
 //  uint8_t* hash_out = (uint8_t*) alloca(64);
-//  if (0 == manuvr_hash((uint8_t*) hash_in, strlen(hash_in), hash_out, 32, Hashes::MBEDTLS_MD_SHA256)) {
+//  if (0 == wrapped_hash((uint8_t*) hash_in, strlen(hash_in), hash_out, 32, Hashes::MBEDTLS_MD_SHA256)) {
 //    printf("Hash value:  ");
 //    for (uint8_t i = 0; i < 32; i++) printf("0x%02x ", *(hash_out + i));
 //    printf("\n");
@@ -214,7 +219,7 @@ int cryptographic_rng_init() {
 //  else {
 //    printf("Failed to hash.\n");
 //  }
-int8_t __attribute__((weak)) manuvr_hash(uint8_t* in, int in_len, uint8_t* out, Hashes h) {
+int8_t __attribute__((weak)) wrapped_hash(uint8_t* in, int in_len, uint8_t* out, Hashes h) {
   int8_t return_value = -1;
   const mbedtls_md_info_t* md_info = mbedtls_md_info_from_type((mbedtls_md_type_t)h);
 
@@ -276,7 +281,7 @@ int8_t __attribute__((weak)) manuvr_hash(uint8_t* in, int in_len, uint8_t* out, 
 * @param uint32_t Options to the optionation.
 * @return true if the root function ought to defer.
 */
-int8_t __attribute__((weak)) manuvr_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher ci, uint32_t opts) {
+int8_t __attribute__((weak)) wrapped_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher ci, uint32_t opts) {
   if (cipher_deferred_handling(ci)) {
     // If overriden by user implementation.
     return _sym_overrides[ci](in, in_len, out, out_len, key, key_len, iv, ci, opts);
@@ -289,7 +294,7 @@ int8_t __attribute__((weak)) manuvr_sym_cipher(uint8_t* in, int in_len, uint8_t*
       case Cipher::SYM_AES_128_CBC:
         {
           mbedtls_aes_context ctx;
-          if (opts & MANUVR_ENCRYPT) {
+          if (opts & OP_ENCRYPT) {
             mbedtls_aes_setkey_enc(&ctx, key, key_len);
           }
           else {
@@ -309,7 +314,7 @@ int8_t __attribute__((weak)) manuvr_sym_cipher(uint8_t* in, int in_len, uint8_t*
           size_t olen = 0;
           mbedtls_pk_context ctx;
           mbedtls_pk_init(&ctx);
-          if (opts & MANUVR_ENCRYPT) {
+          if (opts & OP_ENCRYPT) {
             ret = mbedtls_pk_encrypt(&ctx, in, in_len, out, &olen, out_len, mbedtls_ctr_drbg_random, &ctr_drbg);
           }
           else {
@@ -349,7 +354,7 @@ int8_t __attribute__((weak)) manuvr_sym_cipher(uint8_t* in, int in_len, uint8_t*
 /*******************************************************************************
 * Asymmetric ciphers                                                           *
 *******************************************************************************/
-int __attribute__((weak)) manuvr_asym_keygen(Cipher c, CryptoKey key_type, uint8_t* pub, int* pub_len, uint8_t* priv, int* priv_len) {
+int __attribute__((weak)) wrapped_asym_keygen(Cipher c, CryptoKey key_type, uint8_t* pub, int* pub_len, uint8_t* priv, int* priv_len) {
   mbedtls_ctr_drbg_context ctr_drbg;
   mbedtls_ctr_drbg_init(&ctr_drbg);
 
@@ -432,7 +437,7 @@ int __attribute__((weak)) manuvr_asym_keygen(Cipher c, CryptoKey key_type, uint8
 }
 
 
-int __attribute__((weak)) manuvr_asym_cipher(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes h, Cipher ci, CryptoKey private_key, uint32_t opts) {
+int __attribute__((weak)) wrapped_asym_cipher(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes h, Cipher ci, CryptoKey private_key, uint32_t opts) {
   return -1;
 }
 

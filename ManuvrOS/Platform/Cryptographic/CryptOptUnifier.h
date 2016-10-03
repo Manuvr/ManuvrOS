@@ -256,7 +256,7 @@ Note that this represents a maximum scope-of-support regarding cryptographic
 
 
 
-#elif defined(__MANUVR_OPENSSL)
+#elif defined(WITH_OPENSSL)
 /* OpenSSL support will use the library on the host building the binary. If the
      host cannot supply a static version of OpenSSL, this will fail to build. */
   #define __HAS_CRYPT_WRAPPER   1

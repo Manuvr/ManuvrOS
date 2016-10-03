@@ -37,8 +37,8 @@ Try to resist re-coding structs and such that the back-ends have already
 See CryptOptUnifier.h for more information.
 */
 
-#ifndef __MANUVR_CRYPTO_ABSTRACTION_H__
-#define __MANUVR_CRYPTO_ABSTRACTION_H__
+#ifndef __CRYPTO_ABSTRACTION_H__
+#define __CRYPTO_ABSTRACTION_H__
 
 #include <inttypes.h>
 #include <map>   // TODO: Remove dependency.
@@ -50,8 +50,8 @@ See CryptOptUnifier.h for more information.
 
 #if defined(__HAS_CRYPT_WRAPPER)
 
-#define MANUVR_ENCRYPT 0x00000001
-#define MANUVR_DECRYPT 0x00000002
+#define OP_ENCRYPT 0x00000001
+#define OP_DECRYPT 0x00000002
 
 
 
@@ -359,7 +359,7 @@ extern "C" {
 *******************************************************************************/
 const int get_digest_output_length(Hashes);
 const char* get_digest_label(Hashes);
-int8_t manuvr_hash(uint8_t* in, int in_len, uint8_t* out, Hashes h);
+int8_t wrapped_hash(uint8_t* in, int in_len, uint8_t* out, Hashes h);
 
 // Now some inline definitions to mask the back-end API where it can be done
 //   transparently...
@@ -376,10 +376,10 @@ const int get_cipher_block_size(Cipher);
 const int get_cipher_key_length(Cipher);
 int get_cipher_aligned_size(Cipher, int len);
 const char* get_cipher_label(Cipher);
-int8_t manuvr_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher, uint32_t opts);
+int8_t wrapped_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher, uint32_t opts);
 
-int manuvr_asym_keygen(Cipher c, CryptoKey, uint8_t* pub, int* pub_len, uint8_t* priv, int* priv_len);
-int manuvr_asym_cipher(uint8_t* in, int in_len, uint8_t* out, int* out_len, Hashes, Cipher, CryptoKey private_key, uint32_t opts);
+int wrapped_asym_keygen(Cipher c, CryptoKey, uint8_t* pub, int* pub_len, uint8_t* priv, int* priv_len);
+int wrapped_asym_cipher(uint8_t* in, int in_len, uint8_t* out, int* out_len, Hashes, Cipher, CryptoKey private_key, uint32_t opts);
 
 // Now some inline definitions to mask the back-end API where it can be done
 //   transparently...
@@ -393,7 +393,7 @@ inline Cipher* list_supported_ciphers() {
 * Randomness                                                                   *
 *******************************************************************************/
 int cryptographic_rng_init();
-int8_t manuvr_random_fill(uint8_t* buf, int len);
+int8_t wrapped_random_fill(uint8_t* buf, int len);
 
 
 /*******************************************************************************
@@ -433,4 +433,4 @@ const bool _is_cipher_asymmetric(Cipher);
 const bool _valid_cipher_params(Cipher);
 
 #endif // __HAS_CRYPT_WRAPPER
-#endif // __MANUVR_CRYPTO_ABSTRACTION_H__
+#endif // __CRYPTO_ABSTRACTION_H__

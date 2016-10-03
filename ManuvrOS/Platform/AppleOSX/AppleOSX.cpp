@@ -245,7 +245,7 @@ static int hashFileByPath(char* path, uint8_t* h_buf) {
         uint8_t* self_mass = buf.string();
         log.concatf("%s is %ld bytes.\n", path, self_size);
 
-        int ret = manuvr_hash(self_mass, self_size, h_buf, digest_size, Hashes::SHA256);
+        int ret = wrapped_hash(self_mass, self_size, h_buf, digest_size, Hashes::SHA256);
         if (0 == ret) {
           return_value = digest_size;
         }
