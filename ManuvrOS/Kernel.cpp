@@ -1118,6 +1118,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
     case MANUVR_MSG_SYS_BOOTLOADER:
       // These messages codes, we will capture the callback.
       active_runnable->setOriginator(this);
+      return_value++;
       break;
 
     #if defined(__MANUVR_CONSOLE_SUPPORT)
@@ -1509,9 +1510,11 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
           platform.printDebug(&local_log);
           break;
 
-        case 4:
-          printCryptoOverview(&local_log);
-          break;
+        #if defined(__HAS_CRYPT_WRAPPER)
+          case 4:
+            printCryptoOverview(&local_log);
+            break;
+        #endif
 
         case 9:
           platform.printDebug(&local_log);

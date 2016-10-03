@@ -50,6 +50,8 @@ Argument* parseFromArgCV(int argc, const char* argv[]);
 
 class LinuxPlatform : public ManuvrPlatform {
   public:
+    ~LinuxPlatform();
+
     inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
     virtual int8_t platformPreInit(Argument*);
     virtual void   printDebug(StringBuilder* out);
@@ -72,10 +74,13 @@ class LinuxPlatform : public ManuvrPlatform {
 
 
   private:
-    uint8_t _binary_hash[32];
-
-    int8_t internal_integrity_check(uint8_t* test_buf, int test_len);
-    int8_t hash_self();
+    #if defined(__HAS_CRYPT_WRAPPER)
+      uint8_t _binary_hash[32];
+      int8_t internal_integrity_check(uint8_t* test_buf, int test_len);
+      int8_t hash_self();
+    #endif
+    void   init_rng();
+    void _close_open_threads();
 };
 
 #endif  // __PLATFORM_VANILLA_LINUX_H__

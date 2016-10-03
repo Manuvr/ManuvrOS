@@ -33,8 +33,8 @@ This tests the cryptographic system under whatever build options
 #include <iostream>
 
 #include <DataStructures/StringBuilder.h>
-
 #include <Platform/Platform.h>
+
 
 /*
 * Tests to ensure we have support for what we are about to test.
@@ -48,6 +48,35 @@ int CRYPTO_TEST_INIT() {
   return -1;
 }
 
+
+/*
+* Tests to ensure the RNG works.
+*/
+int CRYPTO_TEST_RNG() {
+  printf("===< CRYPTO_TEST_RNG >===========================================\n");
+  uint8_t* result  = (uint8_t*) alloca(PLATFORM_RNG_CARRY_CAPACITY*2);
+  int idx = 0;
+
+  size_t size_tests[] = {
+    (PLATFORM_RNG_CARRY_CAPACITY/2),
+    (PLATFORM_RNG_CARRY_CAPACITY),
+    (PLATFORM_RNG_CARRY_CAPACITY),
+    0
+  };
+
+  while (size_tests[idx] != 0) {
+    size_t r_len = size_tests[idx];
+    printf("Requesting %d random bytes...\n\t", r_len);
+    random_fill(result, r_len);
+    for (unsigned int i = 0; i < r_len; i++) printf("%02x", *(result + i));
+    printf("\n");
+    idx++;
+  }
+
+  return 0;
+}
+
+
 /*
 * Digest algortithm tests.
 * Because these are not reversible, this will take the form of
@@ -57,17 +86,11 @@ int CRYPTO_TEST_HASHES() {
   printf("===< CRYPTO_TEST_HASHES >========================================\n");
 
   const char* hash_in0  = "";
-  uint8_t* hash_in1  = (uint8_t*) alloca(1524);
-  random_fill(hash_in1, 1524);
+  int i_len = 1524;
+  uint8_t* hash_in1  = (uint8_t*) alloca(i_len);
+  random_fill(hash_in1, i_len);
 
-  Hashes algs_to_test[] = {
-    Hashes::MD5,
-    Hashes::SHA1,
-    Hashes::RIPEMD160,
-    Hashes::SHA256,
-    Hashes::SHA512,
-    Hashes::NONE
-  };
+  Hashes* algs_to_test = list_supported_digests();
 
   int idx = 0;
   while (Hashes::NONE != algs_to_test[idx]) {
@@ -79,20 +102,20 @@ int CRYPTO_TEST_HASHES() {
     uint8_t* hash_out0 = (uint8_t*) alloca(o_len);
     uint8_t* hash_out1 = (uint8_t*) alloca(o_len);
 
-    if (manuvr_hash((uint8_t*) hash_in0, strlen(hash_in0), hash_out0, o_len, algs_to_test[idx])) {
+    if (wrapped_hash((uint8_t*) hash_in0, strlen(hash_in0), hash_out0, algs_to_test[idx])) {
       printf("Failed to hash.\n");
       return -1;
     }
-    if (manuvr_hash((uint8_t*) hash_in1, 1524, hash_out1, o_len, algs_to_test[idx])) {
+    if (wrapped_hash((uint8_t*) hash_in1, i_len, hash_out1, algs_to_test[idx])) {
       printf("Failed to hash.\n");
       return -1;
     }
-    printf("hash_out0:  ");
-    for (uint8_t i = 0; i < o_len; i++) printf("%02x", *(hash_out0 + i));
+    printf("0-length: ");
+    for (int i = 0; i < o_len; i++) printf("%02x", *(hash_out0 + i));
     printf("\n");
-    printf("hash_out1:  ");
-    for (uint8_t i = 0; i < o_len; i++) printf("%02x", *(hash_out1 + i));
-    printf("\n");
+    printf("hash_out: ");
+    for (int i = 0; i < o_len; i++) printf("%02x", *(hash_out1 + i));
+    printf("\n\n");
     idx++;
   }
   return 0;
@@ -111,7 +134,7 @@ int CRYPTO_TEST_SYMMETRIC() {
     Cipher::SYM_AES_192_CBC,
     Cipher::SYM_AES_256_CBC,
     Cipher::SYM_BLOWFISH_CBC,
-    Cipher::SYM_NULL,
+    //Cipher::SYM_NULL,
     Cipher::NONE
   };
 
@@ -143,36 +166,36 @@ int CRYPTO_TEST_SYMMETRIC() {
     random_fill(key, (key_size>>3));
 
     printf("Key:           ");
-    for (uint8_t i = 0; i < (key_size>>3); i++) printf("%02x", *(key + i));
+    for (int i = 0; i < (key_size>>3); i++) printf("%02x", *(key + i));
     printf("\n");
 
     printf("Plaintext in:  ");
-    for (uint8_t i = 0; i < i_len; i++) printf("%02x", *(plaintext_in + i));
+    for (int i = 0; i < i_len; i++) printf("%02x", *(plaintext_in + i));
     printf("\t(%d bytes)\n", i_len);
 
-    ret = manuvr_sym_encrypt((uint8_t*) plaintext_in, o_len, ciphertext, o_len, key, key_size, iv, algs_to_test[idx]);
+    ret = wrapped_sym_cipher((uint8_t*) plaintext_in, o_len, ciphertext, o_len, key, key_size, iv, algs_to_test[idx], OP_ENCRYPT);
     if (ret) {
       printf("Failed to encrypt. Error %d\n", ret);
       return -1;
     }
 
     printf("Ciphertext:    ");
-    for (uint8_t i = 0; i < o_len; i++) printf("%02x", *(ciphertext + i));
+    for (int i = 0; i < o_len; i++) printf("%02x", *(ciphertext + i));
     printf("\t(%d bytes)\n", o_len);
 
     bzero(iv, 16);
-    ret = manuvr_sym_decrypt(ciphertext, o_len, plaintext_out, o_len, key, key_size, iv, algs_to_test[idx]);
+    ret = wrapped_sym_cipher(ciphertext, o_len, plaintext_out, o_len, key, key_size, iv, algs_to_test[idx], OP_DECRYPT);
     if (ret) {
       printf("Failed to decrypt. Error %d\n", ret);
       return -1;
     }
 
     printf("Plaintext out: ");
-    for (uint8_t i = 0; i < o_len; i++) printf("%02x", *(plaintext_out + i));
+    for (int i = 0; i < o_len; i++) printf("%02x", *(plaintext_out + i));
     printf("\t(%d bytes)\n", o_len);
 
     // Now check that the plaintext versions match...
-    for (uint8_t i = 0; i < i_len; i++) {
+    for (int i = 0; i < i_len; i++) {
       if (*(plaintext_in + i) != *(plaintext_out + i)) {
         printf("Plaintext mismatch. Test fails.\n");
         return -1;
@@ -181,6 +204,7 @@ int CRYPTO_TEST_SYMMETRIC() {
     printf("\n");
     idx++;
   }
+
   return 0;
 }
 
@@ -190,9 +214,46 @@ int CRYPTO_TEST_SYMMETRIC() {
 */
 int CRYPTO_TEST_ASYMMETRIC() {
   printf("===< CRYPTO_TEST_ASYMMETRIC >====================================\n");
+  const int BASE_BUFFER_LEN = 2048;
+  uint8_t* rsa_public_buf  = (uint8_t*) alloca(2048);
+  uint8_t* rsa_privat_buf  = (uint8_t*) alloca(2048);
+  uint8_t* ecc_public_buf  = (uint8_t*) alloca(2048);
+  uint8_t* ecc_privat_buf  = (uint8_t*) alloca(2048);
+
+  int rsa_public_len  = 2048;
+  int rsa_privat_len  = 2048;
+  int ecc_public_len  = 2048;
+  int ecc_privat_len  = 2048;
+
+
+  int ret = wrapped_asym_keygen(Cipher::ASYM_RSA, CryptoKey::RSA_2048, rsa_public_buf, &rsa_public_len, rsa_privat_buf, &rsa_privat_len);
+  if (0 == ret) {
+    printf("RSA keygen succeeded:\n");
+    printf("Public:  ");
+    for (int i = BASE_BUFFER_LEN-rsa_public_len; i < BASE_BUFFER_LEN; i++) printf("%02x", *(rsa_public_buf + i));
+    printf("\t(%d bytes)\nPrivate: ", rsa_public_len);
+    for (int i = BASE_BUFFER_LEN-rsa_privat_len; i < BASE_BUFFER_LEN; i++) printf("%02x", *(rsa_privat_buf + i));
+    printf("\t(%d bytes)\n\n", rsa_privat_len);
+
+    ret = wrapped_asym_keygen(Cipher::ASYM_ECKEY, CryptoKey::ECC_SECP384R1, ecc_public_buf, &ecc_public_len, ecc_privat_buf, &ecc_privat_len);
+    if (0 == ret) {
+      printf("ECC keygen succeeded:\n");
+      printf("Public:  ");
+      for (int i = BASE_BUFFER_LEN-ecc_public_len; i < BASE_BUFFER_LEN; i++) printf("%02x", *(ecc_public_buf + i));
+      printf("\t(%d bytes)\nPrivate: ", ecc_public_len);
+      for (int i = BASE_BUFFER_LEN-ecc_privat_len; i < BASE_BUFFER_LEN; i++) printf("%02x", *(ecc_privat_buf + i));
+      printf("\t(%d bytes)\n\n", ecc_privat_len);
+      return 0;
+    }
+    else {
+      printf("ECC keygen failed with code 0x%04x.\n", ret);
+    }
+  }
+  else {
+    printf("RSA keygen failed with code 0x%04x.\n", ret);
+  }
   return -1;
 }
-
 
 
 void printTestFailure(const char* test) {
@@ -202,6 +263,7 @@ void printTestFailure(const char* test) {
   printf("*********************************************\n");
 }
 
+
 /****************************************************************************************************
 * The main function.                                                                                *
 ****************************************************************************************************/
@@ -209,21 +271,29 @@ int main(int argc, char *argv[]) {
   int exit_value = 1;   // Failure is the default result.
 
   platform.platformPreInit();   // Our test fixture needs random numbers.
+  platform.bootstrap();
+
+  StringBuilder log;
+  printCryptoOverview(&log);
+  printf("%s\n", (const char*) log.string());
 
   if (0 == CRYPTO_TEST_INIT()) {
-    if (0 == CRYPTO_TEST_HASHES()) {
-      if (0 == CRYPTO_TEST_SYMMETRIC()) {
-        if (0 == CRYPTO_TEST_ASYMMETRIC()) {
-          printf("**********************************\n");
-          printf("*  Cryptography tests all pass   *\n");
-          printf("**********************************\n");
-          exit_value = 0;
+    if (0 == CRYPTO_TEST_RNG()) {
+      if (0 == CRYPTO_TEST_HASHES()) {
+        if (0 == CRYPTO_TEST_SYMMETRIC()) {
+          if (0 == CRYPTO_TEST_ASYMMETRIC()) {
+            printf("**********************************\n");
+            printf("*  Cryptography tests all pass   *\n");
+            printf("**********************************\n");
+            exit_value = 0;
+          }
+          else printTestFailure("CRYPTO_TEST_ASYMMETRIC");
         }
-        else printTestFailure("CRYPTO_TEST_ASYMMETRIC");
+        else printTestFailure("CRYPTO_TEST_SYMMETRIC");
       }
-      else printTestFailure("CRYPTO_TEST_SYMMETRIC");
+      else printTestFailure("CRYPTO_TEST_HASHES");
     }
-    else printTestFailure("CRYPTO_TEST_HASHES");
+    else printTestFailure("CRYPTO_TEST_RNG");
   }
   else printTestFailure("CRYPTO_TEST_INIT");
 

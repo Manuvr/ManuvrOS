@@ -122,7 +122,7 @@ endif
 
 # Options for various security features.
 ifeq ($(SECURE),1)
-MANUVR_OPTIONS += -D__MANUVR_MBEDTLS
+MANUVR_OPTIONS += -DWITH_MBEDTLS
 # The remaining lines are to prod header files in libraries.
 MANUVR_OPTIONS += -DOC_SECURITY
 LIBS += $(OUTPUT_PATH)/libmbedtls.a
