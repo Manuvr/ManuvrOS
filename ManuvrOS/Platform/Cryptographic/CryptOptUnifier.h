@@ -29,6 +29,8 @@ Note that this represents a maximum scope-of-support regarding cryptographic
 //         be extended to other libraries (OpenSSL, uECC, etc...).
 */
 
+#ifndef __CRYPTO_ABSTRACTION_H__
+#define __CRYPTO_ABSTRACTION_H__
 
 #if defined(WITH_MBEDTLS)
 /* MbedTLS support assumes that we have a local copy of the mbedTLS source tree
@@ -410,3 +412,5 @@ Note that this represents a maximum scope-of-support regarding cryptographic
 #else
   // There is no cryptographic support.
 #endif
+
+#endif  // __CRYPTO_ABSTRACTION_H__

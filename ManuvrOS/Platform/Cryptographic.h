@@ -37,16 +37,14 @@ Try to resist re-coding structs and such that the back-ends have already
 See CryptOptUnifier.h for more information.
 */
 
-#ifndef __CRYPTO_ABSTRACTION_H__
-#define __CRYPTO_ABSTRACTION_H__
+#ifndef __CRYPTO_WRAPPER_H__
+#define __CRYPTO_WRAPPER_H__
 
 #include <inttypes.h>
 #include <map>   // TODO: Remove dependency.
 
 // Try to contain wrapped header concerns in here, pl0x...
 #include "Cryptographic/CryptOptUnifier.h"
-
-#include <DataStructures/StringBuilder.h>
 
 #if defined(__HAS_CRYPT_WRAPPER)
 
@@ -350,6 +348,22 @@ typedef int8_t (*wrapped_hash_operation)(
   Hashes h
 );
 
+typedef int8_t (*wrapped_sv_operation)(
+  uint8_t* in,
+  int in_len,
+  uint8_t* out,
+  Hashes h
+);
+
+typedef int8_t (*wrapped_keygen_operation)(
+  Cipher,
+  CryptoKey,
+  uint8_t* pub,
+  int* pub_len,
+  uint8_t* priv,
+  int* priv_len
+);
+
 
 /* This stuff needs to be reachable via C-linkage. That means ugly names. :-) */
 extern "C" {
@@ -400,17 +414,23 @@ int8_t wrapped_random_fill(uint8_t* buf, int len);
 * Meta                                                                         *
 *******************************************************************************/
 // Is the algorithm implemented in hardware?
-bool digest_hardware_backed(Hashes);
-bool cipher_hardware_backed(Cipher);
+bool hardware_backed_digest(Hashes);
+bool hardware_backed_cipher(Cipher);
+bool hardware_backed_sign_verify(CryptoKey);
+bool hardware_backed_keygen(CryptoKey);
+bool hardware_backed_rng();
 
 // Is the algorithm provided by the default implementation?
 bool digest_deferred_handling(Hashes);
 bool cipher_deferred_handling(Cipher);
+bool sign_verify_deferred_handling(CryptoKey k);
+bool keygen_deferred_handling(CryptoKey k);
 
 // Over-ride or provide implementations on an algo-by-algo basis.
-bool provide_digest_handler(Hashes);
-bool provide_cipher_handler(Cipher);
-
+bool provide_digest_handler(Hashes, wrapped_hash_operation);
+bool provide_cipher_handler(Cipher, wrapped_sym_operation);
+bool provide_sign_verify_handler(CryptoKey, wrapped_sv_operation);
+bool provide_keygen_handler(CryptoKey, wrapped_keygen_operation);
 } // extern "C"
 
 
@@ -425,10 +445,13 @@ static std::map<Cipher, wrapped_sauth_operation>  _sauth_overrides;  // Symmetri
 static std::map<Cipher, wrapped_asym_operation>   _asym_overrides;   // Asymmetric runtime overrides.
 static std::map<Hashes, wrapped_hash_operation>   _hash_overrides;   // Digest runtime overrides.
 
+static std::map<CryptoKey, wrapped_sv_operation>  _s_v_overrides;
+static std::map<CryptoKey, wrapped_keygen_operation>   _keygen_overrides;
+
 const bool _is_cipher_symmetric(Cipher);
 const bool _is_cipher_authenticated(Cipher);
 const bool _is_cipher_asymmetric(Cipher);
 const bool _valid_cipher_params(Cipher);
 
 #endif // __HAS_CRYPT_WRAPPER
-#endif // __CRYPTO_ABSTRACTION_H__
+#endif // __CRYPTO_WRAPPER_H__

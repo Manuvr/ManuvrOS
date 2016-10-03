@@ -21,7 +21,7 @@ limitations under the License.
 Implements cryptography via mbedTLS.
 
 MbedTLS support assumes that we have a local copy of the mbedTLS source tree
-  at <build-root>/lib/mbedtls. See the downloadDeps.sh script. 
+  at <build-root>/lib/mbedtls. See the downloadDeps.sh script.
 */
 
 #if defined(WITH_MBEDTLS)
