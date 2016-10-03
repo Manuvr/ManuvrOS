@@ -23,3 +23,6 @@ Implements cryptography via OpenSSL.
 OpenSSL support will use the library on the host building the binary. If the
   host cannot supply a static version of OpenSSL, this will fail to build.
 */
+
+#if defined(WITH_OPENSSL)
+#endif   // WITH_OPENSSL
