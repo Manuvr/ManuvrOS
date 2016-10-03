@@ -222,7 +222,7 @@ Argument* parseFromArgCV(int argc, const char* argv[]) {
 */
 static int hashFileByPath(char* path, uint8_t* h_buf) {
   int8_t return_value = -1;
-  #if defined(__MANUVR_MBEDTLS)
+  #if defined(__HAS_CRYPT_WRAPPER)
   StringBuilder log;
   if (nullptr != path) {
     struct stat st;
@@ -265,7 +265,7 @@ static int hashFileByPath(char* path, uint8_t* h_buf) {
   }
   //Kernel::log(&log);
   printf((const char*)log.string());
-  #endif  // __MANUVR_MBEDTLS
+  #endif  // __HAS_CRYPT_WRAPPER
   return return_value;
 }
 
@@ -329,7 +329,7 @@ void ApplePlatform::printDebug(StringBuilder* output) {
     getPlatformStateStr(platformState())
   );
   ManuvrPlatform::printDebug(output);
-  #if defined(__MANUVR_MBEDTLS)
+  #if defined(__HAS_CRYPT_WRAPPER)
     output->concatf("-- Binary hash         %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
       _binary_hash[0],  _binary_hash[1],  _binary_hash[2],  _binary_hash[3],
       _binary_hash[4],  _binary_hash[5],  _binary_hash[6],  _binary_hash[7],
@@ -502,7 +502,7 @@ void ApplePlatform::reboot() {
 *******************************************************************************/
 
 int8_t ApplePlatform::internal_integrity_check(uint8_t* test_buf, int test_len) {
-  #if defined(__MANUVR_MBEDTLS)
+  #if defined(__HAS_CRYPT_WRAPPER)
   if ((nullptr != test_buf) && (0 < test_len)) {
     for (int i = 0; i < test_len; i++) {
       if (*(test_buf+i) != _binary_hash[i]) {
@@ -515,7 +515,7 @@ int8_t ApplePlatform::internal_integrity_check(uint8_t* test_buf, int test_len) 
   else {
     // We have no idea what to expect. First boot?
   }
-  #endif  //__MANUVR_MBEDTLS
+  #endif  //__HAS_CRYPT_WRAPPER
   return -1;
 }
 
@@ -528,7 +528,7 @@ int8_t ApplePlatform::internal_integrity_check(uint8_t* test_buf, int test_len) 
 * @return 0 on success.
 */
 int8_t ApplePlatform::hash_self() {
-  #if defined(__MANUVR_MBEDTLS)
+  #if defined(__HAS_CRYPT_WRAPPER)
   char *exe_path = (char *) alloca(300);   // 300 bytes ought to be enough for our path info...
   memset(exe_path, 0x00, 300);
   int exe_path_len = readlink("/proc/self/exe", exe_path, 300);
@@ -545,7 +545,7 @@ int8_t ApplePlatform::hash_self() {
   else {
     printf("Failed to hash file: %s\n", exe_path);
   }
-  #endif  //__MANUVR_MBEDTLS
+  #endif  //__HAS_CRYPT_WRAPPER
   return -1;
 }
 
@@ -587,7 +587,7 @@ int8_t ApplePlatform::platformPreInit(Argument* root_config) {
 
   initSigHandlers();
 
-  #if defined(__MANUVR_MBEDTLS)
+  #if defined(__HAS_CRYPT_WRAPPER)
   hash_self();
   //internal_integrity_check(nullptr, 0);
   #endif

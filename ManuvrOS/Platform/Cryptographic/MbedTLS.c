@@ -19,7 +19,7 @@ limitations under the License.
 
 */
 
-#if defined(__MANUVR_MBEDTLS)
+#if defined(WITH_MBEDTLS)
 
 
 #include "Cryptographic.h"
@@ -216,7 +216,6 @@ int cryptographic_rng_init() {
 //  }
 int8_t __attribute__((weak)) manuvr_hash(uint8_t* in, int in_len, uint8_t* out, Hashes h) {
   int8_t return_value = -1;
-  #if defined(__MANUVR_MBEDTLS)
   const mbedtls_md_info_t* md_info = mbedtls_md_info_from_type((mbedtls_md_type_t)h);
 
   if (NULL != md_info) {
@@ -253,9 +252,6 @@ int8_t __attribute__((weak)) manuvr_hash(uint8_t* in, int in_len, uint8_t* out, 
     }
     mbedtls_md_free(&ctx);
   }
-  #else
-  Kernel::log("hash(): No hash implementation.\n");
-  #endif  // __MANUVR_MBEDTLS
   return return_value;
 }
 
@@ -441,4 +437,4 @@ int __attribute__((weak)) manuvr_asym_cipher(uint8_t* in, int in_len, uint8_t* s
 }
 
 
-#endif   // __MANUVR_MBEDTLS
+#endif   // WITH_MBEDTLS

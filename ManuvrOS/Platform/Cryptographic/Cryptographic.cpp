@@ -23,12 +23,7 @@ limitations under the License.
 #include <Kernel.h>
 
 
-#if defined(__MANUVR_HAS_CRYPTO)
-
-/* Privately scoped prototypes. */
-const bool manuvr_is_cipher_symmetric(Cipher);
-const bool manuvr_is_cipher_authenticated(Cipher);
-const bool manuvr_is_cipher_asymmetric(Cipher);
+#if defined(__HAS_CRYPT_WRAPPER)
 
 
 /*******************************************************************************
@@ -47,7 +42,7 @@ const bool manuvr_is_cipher_asymmetric(Cipher);
 * @param  StringBuilder* The buffer to output into.
 */
 void printCryptoOverview(StringBuilder* out) {
-  #if defined(__MANUVR_MBEDTLS)
+  #if defined(WITH_MBEDTLS)
     out->concatf("-- Cryptographic support via %s.\n", __CRYPTO_BACKEND);
     out->concat("-- Supported TLS ciphersuites:");
     int idx = 0;
@@ -81,7 +76,7 @@ void printCryptoOverview(StringBuilder* out) {
     }
   #else
   out->concat("No cryptographic support.\n");
-  #endif  // __MANUVR_MBEDTLS
+  #endif  // WITH_MBEDTLS
 }
 
 
@@ -305,4 +300,4 @@ bool provide_digest_handler(Hashes h, wrapped_hash_operation fxn) {
 
 
 
-#endif  // __MANUVR_HAS_CRYPTO
+#endif  // __HAS_CRYPT_WRAPPER

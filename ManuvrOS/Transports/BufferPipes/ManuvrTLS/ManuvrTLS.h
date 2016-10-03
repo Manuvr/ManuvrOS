@@ -34,7 +34,7 @@ One class is for the server (listener), and the other for client (initiator),
 #include <DataStructures/BufferPipe.h>
 #include <Platform/Cryptographic.h>
 
-#if defined(__MANUVR_MBEDTLS)
+#if defined(WITH_MBEDTLS)
 
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
@@ -147,4 +147,4 @@ class ManuvrTLSClient : public ManuvrTLS {
 };
 #endif   // __MANUVR_TLS_XFORMER_H__
 
-#endif  // __MANUVR_MBEDTLS
+#endif  // WITH_MBEDTLS

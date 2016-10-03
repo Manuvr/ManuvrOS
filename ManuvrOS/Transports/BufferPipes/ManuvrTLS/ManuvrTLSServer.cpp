@@ -25,7 +25,7 @@ Initial implentation is via mbedTLS.
 #include "ManuvrTLS.h"
 #include <Kernel.h>
 
-#if defined(__MANUVR_MBEDTLS)
+#if defined(WITH_MBEDTLS)
 
 
 /*******************************************************************************

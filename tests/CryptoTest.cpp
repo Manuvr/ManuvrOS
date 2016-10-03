@@ -68,7 +68,7 @@ int CRYPTO_TEST_RNG() {
     size_t r_len = size_tests[idx];
     printf("Requesting %d random bytes...\n\t", r_len);
     random_fill(result, r_len);
-    for (uint8_t i = 0; i < r_len; i++) printf("%02x", *(result + i));
+    for (unsigned int i = 0; i < r_len; i++) printf("%02x", *(result + i));
     printf("\n");
     idx++;
   }
@@ -111,10 +111,10 @@ int CRYPTO_TEST_HASHES() {
       return -1;
     }
     printf("0-length: ");
-    for (uint8_t i = 0; i < o_len; i++) printf("%02x", *(hash_out0 + i));
+    for (int i = 0; i < o_len; i++) printf("%02x", *(hash_out0 + i));
     printf("\n");
     printf("hash_out: ");
-    for (uint8_t i = 0; i < o_len; i++) printf("%02x", *(hash_out1 + i));
+    for (int i = 0; i < o_len; i++) printf("%02x", *(hash_out1 + i));
     printf("\n\n");
     idx++;
   }
@@ -166,11 +166,11 @@ int CRYPTO_TEST_SYMMETRIC() {
     random_fill(key, (key_size>>3));
 
     printf("Key:           ");
-    for (uint8_t i = 0; i < (key_size>>3); i++) printf("%02x", *(key + i));
+    for (int i = 0; i < (key_size>>3); i++) printf("%02x", *(key + i));
     printf("\n");
 
     printf("Plaintext in:  ");
-    for (uint8_t i = 0; i < i_len; i++) printf("%02x", *(plaintext_in + i));
+    for (int i = 0; i < i_len; i++) printf("%02x", *(plaintext_in + i));
     printf("\t(%d bytes)\n", i_len);
 
     ret = manuvr_sym_cipher((uint8_t*) plaintext_in, o_len, ciphertext, o_len, key, key_size, iv, algs_to_test[idx], MANUVR_ENCRYPT);
@@ -180,7 +180,7 @@ int CRYPTO_TEST_SYMMETRIC() {
     }
 
     printf("Ciphertext:    ");
-    for (uint8_t i = 0; i < o_len; i++) printf("%02x", *(ciphertext + i));
+    for (int i = 0; i < o_len; i++) printf("%02x", *(ciphertext + i));
     printf("\t(%d bytes)\n", o_len);
 
     bzero(iv, 16);
@@ -191,11 +191,11 @@ int CRYPTO_TEST_SYMMETRIC() {
     }
 
     printf("Plaintext out: ");
-    for (uint8_t i = 0; i < o_len; i++) printf("%02x", *(plaintext_out + i));
+    for (int i = 0; i < o_len; i++) printf("%02x", *(plaintext_out + i));
     printf("\t(%d bytes)\n", o_len);
 
     // Now check that the plaintext versions match...
-    for (uint8_t i = 0; i < i_len; i++) {
+    for (int i = 0; i < i_len; i++) {
       if (*(plaintext_in + i) != *(plaintext_out + i)) {
         printf("Plaintext mismatch. Test fails.\n");
         return -1;
@@ -214,6 +214,7 @@ int CRYPTO_TEST_SYMMETRIC() {
 */
 int CRYPTO_TEST_ASYMMETRIC() {
   printf("===< CRYPTO_TEST_ASYMMETRIC >====================================\n");
+  const int BASE_BUFFER_LEN = 2048;
   uint8_t* rsa_public_buf  = (uint8_t*) alloca(2048);
   uint8_t* rsa_privat_buf  = (uint8_t*) alloca(2048);
   uint8_t* ecc_public_buf  = (uint8_t*) alloca(2048);
@@ -227,11 +228,21 @@ int CRYPTO_TEST_ASYMMETRIC() {
 
   int ret = manuvr_asym_keygen(Cipher::ASYM_RSA, CryptoKey::RSA_2048, rsa_public_buf, &rsa_public_len, rsa_privat_buf, &rsa_privat_len);
   if (0 == ret) {
-    printf("RSA keygen succeeded:   %d / %d (pub/priv bytes)\n", rsa_public_len, rsa_privat_len);
+    printf("RSA keygen succeeded:\n");
+    printf("Public:  ");
+    for (int i = BASE_BUFFER_LEN-rsa_public_len; i < BASE_BUFFER_LEN; i++) printf("%02x", *(rsa_public_buf + i));
+    printf("\t(%d bytes)\nPrivate: ", rsa_public_len);
+    for (int i = BASE_BUFFER_LEN-rsa_privat_len; i < BASE_BUFFER_LEN; i++) printf("%02x", *(rsa_privat_buf + i));
+    printf("\t(%d bytes)\n\n", rsa_privat_len);
 
     ret = manuvr_asym_keygen(Cipher::ASYM_ECKEY, CryptoKey::ECC_SECP384R1, ecc_public_buf, &ecc_public_len, ecc_privat_buf, &ecc_privat_len);
     if (0 == ret) {
-      printf("ECC keygen succeeded:   %d / %d (pub/priv bytes)\n", ecc_public_len, ecc_privat_len);
+      printf("ECC keygen succeeded:\n");
+      printf("Public:  ");
+      for (int i = BASE_BUFFER_LEN-ecc_public_len; i < BASE_BUFFER_LEN; i++) printf("%02x", *(ecc_public_buf + i));
+      printf("\t(%d bytes)\nPrivate: ", ecc_public_len);
+      for (int i = BASE_BUFFER_LEN-ecc_privat_len; i < BASE_BUFFER_LEN; i++) printf("%02x", *(ecc_privat_buf + i));
+      printf("\t(%d bytes)\n\n", ecc_privat_len);
       return 0;
     }
     else {

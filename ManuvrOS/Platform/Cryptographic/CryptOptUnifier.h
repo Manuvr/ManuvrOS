@@ -30,10 +30,10 @@ Note that this represents a maximum scope-of-support regarding cryptographic
 */
 
 
-#if defined(__MANUVR_MBEDTLS)
+#if defined(WITH_MBEDTLS)
 /* MbedTLS support assumes that we have a local copy of the mbedTLS source tree
      at <build-root>/lib/mbedtls. See the downloadDeps.sh script. */
-  #define __MANUVR_HAS_CRYPTO   1
+  #define __HAS_CRYPT_WRAPPER   1
   #define __CRYPTO_BACKEND      "mbedTLS"
   #include "mbedtls/ssl.h"
   #include "mbedtls/entropy.h"
@@ -259,7 +259,7 @@ Note that this represents a maximum scope-of-support regarding cryptographic
 #elif defined(__MANUVR_OPENSSL)
 /* OpenSSL support will use the library on the host building the binary. If the
      host cannot supply a static version of OpenSSL, this will fail to build. */
-  #define __MANUVR_HAS_CRYPTO   1
+  #define __HAS_CRYPT_WRAPPER   1
   #define __CRYPTO_BACKEND      "OpenSSL"
   #include <openssl/evp.h>
   #include <openssl/aes.h>
@@ -335,14 +335,14 @@ Note that this represents a maximum scope-of-support regarding cryptographic
 
 
 
-#elif defined(__MANUVR_BLIND_CRYPTO)
+#elif defined(WITH_BLIND_CRYPTO)
 /* "Blind" means we are going to assume we support a whole mess of crpytographic
      algorithms without any specific plan for doing so. It is then the job of
      drivers to clobber our default functions at link-time, or use the more
      granular run-time override.
    Note that platform-level drivers can do this as well to provide hooks into
      such things as TPMs and microcontroller cryptographic peripherals. */
-  #define __MANUVR_HAS_CRYPTO   1
+  #define __HAS_CRYPT_WRAPPER   1
   #define __CRYPTO_BACKEND      "Blind"
 
   // We will unquestioningly provide definition and support for all manner of

@@ -1510,9 +1510,11 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
           platform.printDebug(&local_log);
           break;
 
-        case 4:
-          printCryptoOverview(&local_log);
-          break;
+        #if defined(__HAS_CRYPT_WRAPPER)
+          case 4:
+            printCryptoOverview(&local_log);
+            break;
+        #endif
 
         case 9:
           platform.printDebug(&local_log);

@@ -74,10 +74,11 @@ class LinuxPlatform : public ManuvrPlatform {
 
 
   private:
-    uint8_t _binary_hash[32];
-
-    int8_t internal_integrity_check(uint8_t* test_buf, int test_len);
-    int8_t hash_self();
+    #if defined(__HAS_CRYPT_WRAPPER)
+      uint8_t _binary_hash[32];
+      int8_t internal_integrity_check(uint8_t* test_buf, int test_len);
+      int8_t hash_self();
+    #endif
     void   init_rng();
     void _close_open_threads();
 };

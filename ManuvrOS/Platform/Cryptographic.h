@@ -48,6 +48,7 @@ See CryptOptUnifier.h for more information.
 
 #include <DataStructures/StringBuilder.h>
 
+#if defined(__HAS_CRYPT_WRAPPER)
 
 #define MANUVR_ENCRYPT 0x00000001
 #define MANUVR_DECRYPT 0x00000002
@@ -76,6 +77,7 @@ enum class Hashes {
   #if defined(WRAPPED_HASH_RIPEMD160)
     RIPEMD160 = WRAPPED_HASH_RIPEMD160,
   #endif
+
   NONE = WRAPPED_HASH_NONE
 };
 
@@ -430,5 +432,5 @@ const bool _is_cipher_authenticated(Cipher);
 const bool _is_cipher_asymmetric(Cipher);
 const bool _valid_cipher_params(Cipher);
 
-
+#endif // __HAS_CRYPT_WRAPPER
 #endif // __MANUVR_CRYPTO_ABSTRACTION_H__

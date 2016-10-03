@@ -319,3 +319,15 @@ _---J. Ian Lindsay_
   Looks like my re-work shaved 256-bytes of resting memory load and ~900 bytes of flash. But it also saved a number of heavily-trafficked virtual execution pathways.
 
 _---J. Ian Lindsay_
+
+------
+
+### 2016.10.02:
+
+Massive amounts of work in the cryptographic wrappers this week. About to pull
+mbedtls completely out as *the* dependency for cryptography.
+
+    Linux, 32-bit: DEBUG=1 SECURE=1
+    1777199   12204   52324 1841727  1c1a3f New baseline.
+
+_---J. Ian Lindsay_

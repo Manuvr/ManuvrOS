@@ -126,7 +126,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   _start_micros = micros();
   uint32_t default_flags = 0;
 
-  #if defined(__MANUVR_HAS_CRYPTO)
+  #if defined(__HAS_CRYPT_WRAPPER)
     default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
   #endif
 
@@ -291,7 +291,7 @@ int8_t ManuvrPlatform::bootstrap() {
   #endif
   _set_init_state(MANUVR_INIT_STATE_POST_INIT);
 
-  #if defined(__MANUVR_HAS_CRYPTO)
+  #if defined(__HAS_CRYPT_WRAPPER)
     // If we built-in cryptographic support, init the RNG.
     cryptographic_rng_init();
   #endif
