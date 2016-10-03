@@ -399,8 +399,6 @@ int8_t wrapped_random_fill(uint8_t* buf, int len);
 /*******************************************************************************
 * Meta                                                                         *
 *******************************************************************************/
-void printCryptoOverview(StringBuilder*);
-
 // Is the algorithm implemented in hardware?
 bool digest_hardware_backed(Hashes);
 bool cipher_hardware_backed(Cipher);

@@ -29,9 +29,9 @@ C_SRCS     =
 CPP_SRCS   = Platform.cpp
 
 ifeq ($(SECURE),1)
-CPP_SRCS   += Cryptographic/Cryptographic.cpp
-C_SRCS     += Cryptographic/MbedTLS.c
-C_SRCS     += Cryptographic/OpenSSL.c
+C_SRCS   += Cryptographic/Cryptographic.c
+C_SRCS   += Cryptographic/MbedTLS.c
+C_SRCS   += Cryptographic/OpenSSL.c
 endif
 
 # This Makefile heeds two separate exports:

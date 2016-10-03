@@ -274,7 +274,7 @@ int main(int argc, char *argv[]) {
   platform.bootstrap();
 
   StringBuilder log;
-  printCryptoOverview(&log);
+  platform.printCryptoOverview(&log);
   printf("%s\n", (const char*) log.string());
 
   if (0 == CRYPTO_TEST_INIT()) {

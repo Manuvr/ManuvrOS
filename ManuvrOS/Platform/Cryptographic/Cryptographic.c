@@ -1,5 +1,5 @@
 /*
-File:   Cryptographic.cpp
+File:   Cryptographic.c
 Author: J. Ian Lindsay
 Date:   2016.08.13
 
@@ -20,8 +20,6 @@ limitations under the License.
 */
 
 #include "Cryptographic.h"
-#include <Kernel.h>
-
 
 #if defined(__HAS_CRYPT_WRAPPER)
 
@@ -29,56 +27,6 @@ limitations under the License.
 /*******************************************************************************
 * Meta                                                                         *
 *******************************************************************************/
-
-
-
-/*******************************************************************************
-* String lookup and debug...                                                   *
-*******************************************************************************/
-
-/**
-* Prints details about the cryptographic situation on the platform.
-*
-* @param  StringBuilder* The buffer to output into.
-*/
-void printCryptoOverview(StringBuilder* out) {
-  #if defined(WITH_MBEDTLS)
-    out->concatf("-- Cryptographic support via %s.\n", __CRYPTO_BACKEND);
-    out->concat("-- Supported TLS ciphersuites:");
-    int idx = 0;
-    const int* cs_list = mbedtls_ssl_list_ciphersuites();
-    while (0 != *(cs_list)) {
-      if (0 == idx++ % 2) out->concat("\n--\t");
-      out->concatf("\t%-40s", mbedtls_ssl_get_ciphersuite_name(*(cs_list++)));
-    }
-    out->concat("\n-- Supported ciphers:");
-    idx = 0;
-    Cipher* list = list_supported_ciphers();
-    while (Cipher::NONE != *(list)) {
-      if (0 == idx++ % 4) out->concat("\n--\t");
-      out->concatf("\t%-20s", get_cipher_label((Cipher) *(list++)));
-    }
-
-    out->concat("\n-- Supported ECC curves:");
-    const mbedtls_ecp_curve_info* c_list = mbedtls_ecp_curve_list();
-    idx = 0;
-    while (c_list[idx].name) {
-      if (0 == idx % 4) out->concat("\n--\t");
-      out->concatf("\t%-20s", c_list[idx++].name);
-    }
-
-    out->concat("\n-- Supported digests:");
-    idx = 0;
-    Hashes* h_list = list_supported_digests();
-    while (Hashes::NONE != *(h_list)) {
-      if (0 == idx++ % 6) out->concat("\n--\t");
-      out->concatf("\t%-10s", get_digest_label((Hashes) *(h_list++)));
-    }
-  #else
-  out->concat("No cryptographic support.\n");
-  #endif  // WITH_MBEDTLS
-}
-
 
 
 

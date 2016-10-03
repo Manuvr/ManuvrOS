@@ -248,6 +248,7 @@ class ManuvrPlatform {
 
     void forsakeMain();
 
+    void printCryptoOverview(StringBuilder*);
     void printConfig(StringBuilder* out);
     virtual void printDebug(StringBuilder* out);
     void printDebug();
