@@ -36,6 +36,9 @@ This tests the cryptographic system under whatever build options
 #include <Platform/Platform.h>
 
 
+static char* err_buf[128] = {0};
+
+
 /*
 * Tests to ensure we have support for what we are about to test.
 */
@@ -246,6 +249,10 @@ int CRYPTO_TEST_ASYMMETRIC_RSA() {
     );
 
     if (0 == ret) {
+      printf("Signing operation succeeded. Sig is %d bytes.\n\t", sig_buffer_len);
+      for (int i = 0; i < sig_buffer_len; i++) printf("%02x", *(sig_buffer + i));
+      printf("\n");
+
       ret = wrapped_sign_verify(
         Cipher::ASYM_RSA, CryptoKey::RSA_2048, Hashes::SHA256,
         test_message, MSG_BUFFER_LEN,
@@ -256,19 +263,18 @@ int CRYPTO_TEST_ASYMMETRIC_RSA() {
       if (0 == ret) {
       }
       else {
-        char* err_buf = (char*) alloca(128);
-        mbedtls_strerror(ret, err_buf, 128);
-        printf("RSA verify failed with err %s (code 0x%04x).\n", err_buf, ret);
+        crypt_error_string(ret, (char*)&err_buf, 128);
+        printf("RSA verify failed with err %s (code 0x%04x).\n", (char*)&err_buf, ret);
       }
     }
     else {
-      char* err_buf = (char*) alloca(128);
-      mbedtls_strerror(ret, err_buf, 128);
-      printf("RSA signing failed with err %s (code 0x%04x).\n", err_buf, ret);
+      crypt_error_string(ret, (char*)&err_buf, 128);
+      printf("RSA signing failed with err %s (code 0x%04x).\n", (char*)&err_buf, ret);
     }
   }
   else {
-    printf("RSA keygen failed with code 0x%04x.\n", ret);
+    crypt_error_string(ret, (char*)&err_buf, 128);
+    printf("RSA keygen failed with err %s (code 0x%04x).\n", (char*)&err_buf, ret);
   }
   return ret;
 }
@@ -295,7 +301,7 @@ int CRYPTO_TEST_ASYMMETRIC_ECP() {
 
   int ret = wrapped_asym_keygen(Cipher::ASYM_ECKEY, CryptoKey::ECC_SECP384R1, ecc_public_buf, &ecc_public_len, ecc_privat_buf, &ecc_privat_len);
   if (0 == ret) {
-    printf("ECC keygen succeeded:\n");
+    printf("ECP keygen succeeded:\n");
     printf("Public:  ");
     for (int i = BASE_BUFFER_LEN-ecc_public_len; i < BASE_BUFFER_LEN; i++) printf("%02x", *(ecc_public_buf + i));
     printf("\t(%d bytes)\nPrivate: ", ecc_public_len);
@@ -311,6 +317,10 @@ int CRYPTO_TEST_ASYMMETRIC_ECP() {
     );
 
     if (0 == ret) {
+      printf("Signing operation succeeded. Sig is %d bytes.\n\t", sig_buffer_len);
+      for (int i = 0; i < sig_buffer_len; i++) printf("%02x", *(sig_buffer + i));
+      printf("\n");
+
       ret = wrapped_sign_verify(
         Cipher::ASYM_ECKEY, CryptoKey::ECC_SECP384R1, Hashes::SHA256,
         test_message, MSG_BUFFER_LEN,
@@ -321,15 +331,18 @@ int CRYPTO_TEST_ASYMMETRIC_ECP() {
       if (0 == ret) {
       }
       else {
-        printf("ECC verify failed with code 0x%04x.\n", ret);
+        crypt_error_string(ret, (char*)&err_buf, 128);
+        printf("ECP verify failed with err %s (code 0x%04x).\n", (char*)&err_buf, ret);
       }
     }
     else {
-      printf("ECC sign failed with code 0x%04x.\n", ret);
+      crypt_error_string(ret, (char*)&err_buf, 128);
+      printf("ECP signing failed with err %s (code 0x%04x).\n", (char*)&err_buf, ret);
     }
   }
   else {
-    printf("ECC keygen failed with code 0x%04x.\n", ret);
+    crypt_error_string(ret, (char*)&err_buf, 128);
+    printf("ECP keygen failed with err %s (code 0x%04x).\n", (char*)&err_buf, ret);
   }
   return ret;
 }
@@ -339,8 +352,8 @@ int CRYPTO_TEST_ASYMMETRIC_ECP() {
 * Asymmetric algorthms.
 */
 int CRYPTO_TEST_ASYMMETRIC() {
-  if (0 == CRYPTO_TEST_ASYMMETRIC_ECP()) {
-    if (0 == CRYPTO_TEST_ASYMMETRIC_RSA()) {
+  if (0 == CRYPTO_TEST_ASYMMETRIC_RSA()) {
+    if (0 == CRYPTO_TEST_ASYMMETRIC_ECP()) {
       return 0;
     }
   }

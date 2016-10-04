@@ -31,7 +31,40 @@ MbedTLS support assumes that we have a local copy of the mbedTLS source tree
 #include <Platform/Platform.h>
 
 
-const int _cipher_opcode(Cipher ci, uint32_t opts);
+/*******************************************************************************
+* These things are privately-scoped, and are intended for internal use only.   *
+*******************************************************************************/
+
+const int _cipher_opcode(Cipher ci, uint32_t opts) {
+  switch (ci) {
+    case Cipher::SYM_AES_128_ECB:
+    case Cipher::SYM_AES_192_ECB:
+    case Cipher::SYM_AES_256_ECB:
+    case Cipher::SYM_AES_128_CBC:
+    case Cipher::SYM_AES_192_CBC:
+    case Cipher::SYM_AES_256_CBC:
+    case Cipher::SYM_AES_128_CFB128:
+    case Cipher::SYM_AES_192_CFB128:
+    case Cipher::SYM_AES_256_CFB128:
+    case Cipher::SYM_AES_128_CTR:
+    case Cipher::SYM_AES_192_CTR:
+    case Cipher::SYM_AES_256_CTR:
+    case Cipher::SYM_AES_128_GCM:
+    case Cipher::SYM_AES_192_GCM:
+    case Cipher::SYM_AES_256_GCM:
+    case Cipher::SYM_AES_128_CCM:
+    case Cipher::SYM_AES_192_CCM:
+    case Cipher::SYM_AES_256_CCM:
+      return (opts & OP_ENCRYPT) ? MBEDTLS_AES_ENCRYPT : MBEDTLS_AES_DECRYPT;
+    case Cipher::SYM_BLOWFISH_ECB:
+    case Cipher::SYM_BLOWFISH_CBC:
+    case Cipher::SYM_BLOWFISH_CFB64:
+    case Cipher::SYM_BLOWFISH_CTR:
+      return (opts & OP_ENCRYPT) ? MBEDTLS_BLOWFISH_ENCRYPT : MBEDTLS_BLOWFISH_DECRYPT;
+    default:
+      return 0;  // TODO: Sketchy....
+  }
+}
 
 
 /*******************************************************************************
@@ -122,6 +155,11 @@ int get_cipher_aligned_size(Cipher c, int base_len) {
 /*******************************************************************************
 * String lookup and debug...                                                   *
 *******************************************************************************/
+
+void crypt_error_string(int errnum, char* buffer, size_t buflen) {
+  mbedtls_strerror(errnum, buffer, buflen);
+}
+
 
 /**
 * Given the indirected identifier for the hash algorithm return its label.
@@ -499,9 +537,10 @@ int __attribute__((weak)) wrapped_sign_verify(Cipher c, CryptoKey k, Hashes h, u
       switch (c) {
         #if defined(WRAPPED_ASYM_RSA)
           case Cipher::ASYM_RSA:
-            ret = mbedtls_pk_setup(&k_ctx, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
-            if (0 == ret) {
-              if (opts & OP_SIGN) {
+            //ret = mbedtls_pk_setup(&k_ctx, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
+            if (opts & OP_SIGN) {
+              ret = mbedtls_pk_setup(&k_ctx, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
+              if (0 == ret) {
                 ret = mbedtls_pk_parse_key(&k_ctx, key, key_len, nullptr, 0);
                 if (0 == ret) {
                   ret = mbedtls_pk_sign(
@@ -512,24 +551,24 @@ int __attribute__((weak)) wrapped_sign_verify(Cipher c, CryptoKey k, Hashes h, u
                   );
                 }
               }
-              else {
-                ret = mbedtls_pk_parse_public_key(&k_ctx, key, key_len);
-                if (0 == ret) {
-                  ret = mbedtls_pk_verify(
-                    &k_ctx,
-                    (mbedtls_md_type_t) h, hash, hashlen,
-                    sig, *sig_len
-                  );
-                }
+            }
+            else {
+              ret = mbedtls_pk_parse_public_key(&k_ctx, key, key_len);
+              if (0 == ret) {
+                ret = mbedtls_pk_verify(
+                  &k_ctx,
+                  (mbedtls_md_type_t) h, hash, hashlen,
+                  sig, *sig_len
+                );
               }
             }
             break;
         #endif
         #if defined(MBEDTLS_ECP_C)
           case Cipher::ASYM_ECKEY:
-            ret = mbedtls_pk_setup(&k_ctx, mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY));
-            if (0 == ret) {
-              if (opts & OP_SIGN) {
+            if (opts & OP_SIGN) {
+              ret = mbedtls_pk_setup(&k_ctx, mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY));
+              if (0 == ret) {
                 ret = mbedtls_pk_parse_key(&k_ctx, key, key_len, nullptr, 0);
                 if (0 == ret) {
                   ret = mbedtls_pk_sign(
@@ -540,15 +579,15 @@ int __attribute__((weak)) wrapped_sign_verify(Cipher c, CryptoKey k, Hashes h, u
                   );
                 }
               }
-              else {
-                ret = mbedtls_pk_parse_public_key(&k_ctx, key, key_len);
-                if (0 == ret) {
-                  ret = mbedtls_pk_verify(
-                    &k_ctx,
-                    (mbedtls_md_type_t) h, hash, hashlen,
-                    sig, *sig_len
-                  );
-                }
+            }
+            else {
+              ret = mbedtls_pk_parse_public_key(&k_ctx, key, key_len);
+              if (0 == ret) {
+                ret = mbedtls_pk_verify(
+                  &k_ctx,
+                  (mbedtls_md_type_t) h, hash, hashlen,
+                  sig, *sig_len
+                );
               }
             }
             break;

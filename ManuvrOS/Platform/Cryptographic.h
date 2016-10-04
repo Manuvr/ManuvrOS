@@ -135,7 +135,6 @@ enum class CryptoKey {
 *   behavior.
 */
 enum class Cipher {
-  NONE                    =  WRAPPED_NONE,
   #if defined(WRAPPED_ASYM_RSA)
     ASYM_RSA                =  WRAPPED_ASYM_RSA,
   #endif
@@ -304,8 +303,14 @@ enum class Cipher {
   #if defined(WRAPPED_SYM_NONE)
     SYM_NONE                =  WRAPPED_SYM_NONE,
   #endif
+  NONE                    =  WRAPPED_NONE
 };
 
+
+/* This stuff needs to be reachable via C-linkage. That means ugly names. :-) */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 
 typedef int (*wrapped_sym_operation)(
@@ -373,9 +378,6 @@ typedef int (*wrapped_keygen_operation)(
 );
 
 
-/* This stuff needs to be reachable via C-linkage. That means ugly names. :-) */
-extern "C" {
-
 /*******************************************************************************
 * Message digest (Hashing)
 *******************************************************************************/
@@ -433,8 +435,8 @@ bool hardware_backed_rng();
 // Is the algorithm provided by the default implementation?
 bool digest_deferred_handling(Hashes);
 bool cipher_deferred_handling(Cipher);
-bool sign_verify_deferred_handling(CryptoKey k);
-bool keygen_deferred_handling(CryptoKey k);
+bool sign_verify_deferred_handling(CryptoKey);
+bool keygen_deferred_handling(CryptoKey);
 
 // Over-ride or provide implementations on an algo-by-algo basis.
 bool provide_digest_handler(Hashes, wrapped_hash_operation);
@@ -443,8 +445,7 @@ bool provide_sign_verify_handler(CryptoKey, wrapped_sv_operation);
 bool provide_keygen_handler(CryptoKey, wrapped_keygen_operation);
 
 
-} // extern "C"
-
+void crypt_error_string(int errnum, char *buffer, size_t buflen);
 
 
 /*******************************************************************************
@@ -463,6 +464,11 @@ const bool _is_cipher_symmetric(Cipher);
 const bool _is_cipher_authenticated(Cipher);
 const bool _is_cipher_asymmetric(Cipher);
 const bool _valid_cipher_params(Cipher);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __HAS_CRYPT_WRAPPER
 #endif // __CRYPTO_WRAPPER_H__

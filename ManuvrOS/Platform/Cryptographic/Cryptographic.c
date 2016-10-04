@@ -169,38 +169,6 @@ const bool _valid_cipher_params(Cipher ci) {
   }
 }
 
-const int _cipher_opcode(Cipher ci, uint32_t opts) {
-  switch (ci) {
-    case Cipher::SYM_AES_128_ECB:
-    case Cipher::SYM_AES_192_ECB:
-    case Cipher::SYM_AES_256_ECB:
-    case Cipher::SYM_AES_128_CBC:
-    case Cipher::SYM_AES_192_CBC:
-    case Cipher::SYM_AES_256_CBC:
-    case Cipher::SYM_AES_128_CFB128:
-    case Cipher::SYM_AES_192_CFB128:
-    case Cipher::SYM_AES_256_CFB128:
-    case Cipher::SYM_AES_128_CTR:
-    case Cipher::SYM_AES_192_CTR:
-    case Cipher::SYM_AES_256_CTR:
-    case Cipher::SYM_AES_128_GCM:
-    case Cipher::SYM_AES_192_GCM:
-    case Cipher::SYM_AES_256_GCM:
-    case Cipher::SYM_AES_128_CCM:
-    case Cipher::SYM_AES_192_CCM:
-    case Cipher::SYM_AES_256_CCM:
-      return (opts & OP_ENCRYPT) ? MBEDTLS_AES_ENCRYPT : MBEDTLS_AES_DECRYPT;
-    case Cipher::SYM_BLOWFISH_ECB:
-    case Cipher::SYM_BLOWFISH_CBC:
-    case Cipher::SYM_BLOWFISH_CFB64:
-    case Cipher::SYM_BLOWFISH_CTR:
-      return (opts & OP_ENCRYPT) ? MBEDTLS_BLOWFISH_ENCRYPT : MBEDTLS_BLOWFISH_DECRYPT;
-    default:
-      return 0;  // TODO: Sketchy....
-  }
-}
-
-
 
 /*******************************************************************************
 * Pluggable crypto modules...                                                  *
