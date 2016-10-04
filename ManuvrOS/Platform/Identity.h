@@ -130,20 +130,8 @@ class Identity {
 
 #include <Platform/Identity/IdentityUUID.h>
 
-
-
-class IdentityCert : public Identity {
-  public:
-    IdentityCert();
-    ~IdentityCert();
-
-    virtual int8_t sign() =0;
-    virtual int8_t validate() =0;
-
-
-  protected:
-    IdentityCert* _issuer  = nullptr;
-
-};
+#if defined(__HAS_CRYPT_WRAPPER)
+  #include <Platform/Identity/IdentityCrypto.h>
+#endif
 
 #endif // __MANUVR_IDENTITY_H__
