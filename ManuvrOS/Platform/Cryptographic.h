@@ -337,17 +337,6 @@ typedef int (*wrapped_sauth_operation)(
   uint32_t opts
 );
 
-typedef int (*wrapped_asym_operation)(
-  uint8_t* in,
-  int in_len,
-  uint8_t* out,
-  int out_len,
-  Hashes h,
-  Cipher ci,
-  CryptoKey key,
-  uint32_t opts
-);
-
 typedef int (*wrapped_hash_operation)(
   uint8_t* in,
   int in_len,
@@ -378,6 +367,28 @@ typedef int (*wrapped_keygen_operation)(
 );
 
 
+/*
+* Hardware involvement in the cryptographic process demands asynchronicity.
+* This is one of the rare case when hardware support is typically slower than
+*   a software-equivalent. We can't afford to stall.
+*
+* Some tasks will involve chains of operations in sequence, and because we are
+*   potentially dealing with large amounts of memory, we need the ability to
+*   inform the caller of completion-with-error states. And in the "happy-path",
+*   we still need to dynamically chain operations to minimize IPC traffic.
+*
+* One final note for now: The processing-end of this operation might be running
+*   in a trusted execution environment, or hardware (separate threads). So this
+*   structure will ultimately be the focal-point of concurrency-control measures
+*   and operation status.
+*
+* TODO: This is another platform anchor.
+* TODO: Define callback structure and state-machine.
+*/
+typedef struct _async_crypt_op {
+} AsyncCryptOpt;
+
+
 /*******************************************************************************
 * Message digest (Hashing)
 *******************************************************************************/
@@ -400,15 +411,19 @@ const int get_cipher_block_size(Cipher);
 const int get_cipher_key_length(Cipher);
 int get_cipher_aligned_size(Cipher, int len);
 const char* get_cipher_label(Cipher);
-int8_t wrapped_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher, uint32_t opts);
-
+int wrapped_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher, uint32_t opts);
 int wrapped_asym_keygen(Cipher c, CryptoKey, uint8_t* pub, int* pub_len, uint8_t* priv, int* priv_len);
-int wrapped_asym_cipher(uint8_t* in, int in_len, uint8_t* out, int* out_len, Hashes, Cipher, CryptoKey private_key, uint32_t opts);
 
 // Now some inline definitions to mask the back-end API where it can be done
 //   transparently...
 inline Cipher* list_supported_ciphers() {
   return ((Cipher*) mbedtls_cipher_list());
+};
+
+const char* get_pk_label(CryptoKey);
+
+inline CryptoKey* list_supported_curves() {
+  return ((CryptoKey*) mbedtls_ecp_grp_id_list());
 };
 
 
@@ -425,14 +440,11 @@ int8_t wrapped_random_fill(uint8_t* buf, int len);
 /*******************************************************************************
 * Meta                                                                         *
 *******************************************************************************/
-// Is the algorithm implemented in hardware?
-bool hardware_backed_digest(Hashes);
-bool hardware_backed_cipher(Cipher);
-bool hardware_backed_sign_verify(CryptoKey);
-bool hardware_backed_keygen(CryptoKey);
-bool hardware_backed_rng();
+bool hardware_backed_rng();         // TODO: Only the platform can answer this.
 
 // Is the algorithm provided by the default implementation?
+// TODO: Might simply handle all operation calls from a map-like structure and clobber fxn ptrs.
+// TODO: Make this a struct for the sake of tracking providers, (hard|soft)ware, etc...
 bool digest_deferred_handling(Hashes);
 bool cipher_deferred_handling(Cipher);
 bool sign_verify_deferred_handling(CryptoKey);
@@ -455,7 +467,6 @@ void crypt_error_string(int errnum, char *buffer, size_t buflen);
 // TODO: I don't like using std::map. Still need to decide on a replacement.
 static std::map<Cipher, wrapped_sym_operation>    _sym_overrides;    // Symmetric runtime overrides.
 static std::map<Cipher, wrapped_sauth_operation>  _sauth_overrides;  // Symmetric/auth runtime overrides.
-static std::map<Cipher, wrapped_asym_operation>   _asym_overrides;   // Asymmetric runtime overrides.
 static std::map<Hashes, wrapped_hash_operation>   _hash_overrides;   // Digest runtime overrides.
 static std::map<CryptoKey, wrapped_sv_operation>  _s_v_overrides;
 static std::map<CryptoKey, wrapped_keygen_operation>   _keygen_overrides;

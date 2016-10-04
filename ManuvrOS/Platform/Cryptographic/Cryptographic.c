@@ -182,7 +182,7 @@ const bool _valid_cipher_params(Cipher ci) {
 */
 bool cipher_deferred_handling(Cipher ci) {
   // TODO: Slow. Ugly.
-  return (_sym_overrides[ci] || _sauth_overrides[ci] || _asym_overrides[ci]);
+  return (_sym_overrides[ci] || _sauth_overrides[ci]);
 }
 
 /**

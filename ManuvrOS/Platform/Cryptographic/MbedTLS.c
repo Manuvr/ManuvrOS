@@ -165,7 +165,7 @@ void crypt_error_string(int errnum, char* buffer, size_t buflen) {
 * Given the indirected identifier for the hash algorithm return its label.
 *
 * @param Hashes The hash algorithm in question.
-* @return The size of the buffer (in bytes) required to hold the digest output.
+* @return The label for the digest.
 */
 const char* get_digest_label(Hashes h) {
   const mbedtls_md_info_t* info = mbedtls_md_info_from_type((mbedtls_md_type_t)h);
@@ -177,10 +177,10 @@ const char* get_digest_label(Hashes h) {
 
 
 /**
-* Given the indirected identifier for the hash algorithm return its label.
+* Given the indirected identifier for the cipher algorithm return its label.
 *
-* @param Hashes The hash algorithm in question.
-* @return The size of the buffer (in bytes) required to hold the digest output.
+* @param Cipher The cipher algorithm in question.
+* @return The label for the cipher.
 */
 const char* get_cipher_label(Cipher c) {
   if (_is_cipher_symmetric(c)) {
@@ -194,6 +194,69 @@ const char* get_cipher_label(Cipher c) {
     if (info) {
       return info->name;
     }
+  }
+  return "<UNKNOWN>";
+}
+
+
+/**
+* Given the indirected identifier for the PK type return its label.
+*
+* @param CryptoKey The PK type and params in question.
+* @return The label for the key type.
+*/
+const char* get_pk_label(CryptoKey k) {
+  switch (k) {
+    #if defined(WRAPPED_ASYM_ECKEY)
+      #if defined(WRAPPED_PK_OPT_SECP192R1)
+        case CryptoKey::ECC_SECP192R1:
+      #endif
+      #if defined(WRAPPED_PK_OPT_SECP224R1)
+        case CryptoKey::ECC_SECP224R1:
+      #endif
+      #if defined(WRAPPED_PK_OPT_SECP256R1)
+        case CryptoKey::ECC_SECP256R1:
+      #endif
+      #if defined(WRAPPED_PK_OPT_SECP384R1)
+        case CryptoKey::ECC_SECP384R1:
+      #endif
+      #if defined(WRAPPED_PK_OPT_SECP521R1)
+        case CryptoKey::ECC_SECP521R1:
+      #endif
+      #if defined(WRAPPED_PK_OPT_SECP192K1)
+        case CryptoKey::ECC_SECP192K1:
+      #endif
+      #if defined(WRAPPED_PK_OPT_SECP224K1)
+        case CryptoKey::ECC_SECP224K1:
+      #endif
+      #if defined(WRAPPED_PK_OPT_SECP256K1)
+        case CryptoKey::ECC_SECP256K1:
+      #endif
+      #if defined(WRAPPED_PK_OPT_BP256R1)
+        case CryptoKey::ECC_BP256R1:
+      #endif
+      #if defined(WRAPPED_PK_OPT_BP384R1)
+        case CryptoKey::ECC_BP384R1:
+      #endif
+      #if defined(WRAPPED_PK_OPT_BP512R1)
+        case CryptoKey::ECC_BP512R1:
+      #endif
+      #if defined(WRAPPED_PK_OPT_CURVE25519)
+        case CryptoKey::ECC_CURVE25519:
+      #endif
+      {
+        const mbedtls_ecp_curve_info* info = mbedtls_ecp_curve_info_from_grp_id((mbedtls_ecp_group_id)k);
+        if (info) return info->name;
+      }
+      break;
+    #endif  // WRAPPED_ASYM_ECKEY
+    #if defined(WRAPPED_ASYM_RSA)
+    case CryptoKey::RSA_1024: return "RSA-1024";
+    case CryptoKey::RSA_2048: return "RSA-2048";
+    case CryptoKey::RSA_4096: return "RSA-4096";
+    #endif  // WRAPPED_ASYM_ECKEY
+
+    case CryptoKey::NONE:     return "NONE";
   }
   return "<UNKNOWN>";
 }
@@ -319,7 +382,7 @@ int8_t __attribute__((weak)) wrapped_hash(uint8_t* in, int in_len, uint8_t* out,
 * @param uint32_t Options to the optionation.
 * @return true if the root function ought to defer.
 */
-int8_t __attribute__((weak)) wrapped_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher ci, uint32_t opts) {
+int __attribute__((weak)) wrapped_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher ci, uint32_t opts) {
   if (cipher_deferred_handling(ci)) {
     // If overriden by user implementation.
     return _sym_overrides[ci](in, in_len, out, out_len, key, key_len, iv, ci, opts);
@@ -476,11 +539,6 @@ int __attribute__((weak)) wrapped_asym_keygen(Cipher c, CryptoKey key_type, uint
   mbedtls_pk_free(&key);
   mbedtls_ctr_drbg_free(&ctr_drbg);
   return ret;
-}
-
-
-int __attribute__((weak)) wrapped_asym_cipher(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes h, Cipher ci, CryptoKey private_key, uint32_t opts) {
-  return -1;
 }
 
 

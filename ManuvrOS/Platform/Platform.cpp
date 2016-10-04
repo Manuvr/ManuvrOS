@@ -254,15 +254,19 @@ void ManuvrPlatform::printConfig(StringBuilder* output) {
 * @param  StringBuilder* The buffer to output into.
 */
 void ManuvrPlatform::printCryptoOverview(StringBuilder* out) {
-  #if defined(WITH_MBEDTLS)
+  #if defined(__HAS_CRYPT_WRAPPER)
     out->concatf("-- Cryptographic support via %s.\n", __CRYPTO_BACKEND);
-    out->concat("-- Supported TLS ciphersuites:");
-    int idx = 0;
-    const int* cs_list = mbedtls_ssl_list_ciphersuites();
-    while (0 != *(cs_list)) {
-      if (0 == idx++ % 2) out->concat("\n--\t");
-      out->concatf("\t%-40s", mbedtls_ssl_get_ciphersuite_name(*(cs_list++)));
-    }
+    #if defined(WITH_MBEDTLS)
+      out->concat("-- Supported TLS ciphersuites:");
+      int idx = 0;
+      const int* cs_list = mbedtls_ssl_list_ciphersuites();
+      while (0 != *(cs_list)) {
+        if (0 == idx++ % 2) out->concat("\n--\t");
+        out->concatf("\t%-40s", mbedtls_ssl_get_ciphersuite_name(*(cs_list++)));
+      }
+
+    #endif
+
     out->concat("\n-- Supported ciphers:");
     idx = 0;
     Cipher* list = list_supported_ciphers();
@@ -272,11 +276,11 @@ void ManuvrPlatform::printCryptoOverview(StringBuilder* out) {
     }
 
     out->concat("\n-- Supported ECC curves:");
-    const mbedtls_ecp_curve_info* c_list = mbedtls_ecp_curve_list();
+    CryptoKey* k_list = list_supported_curves();
     idx = 0;
-    while (c_list[idx].name) {
-      if (0 == idx % 4) out->concat("\n--\t");
-      out->concatf("\t%-20s", c_list[idx++].name);
+    while (CryptoKey::NONE != *(k_list)) {
+      if (0 == idx++ % 4) out->concat("\n--\t");
+      out->concatf("\t%-20s", get_pk_label((CryptoKey) *(k_list++)));
     }
 
     out->concat("\n-- Supported digests:");
