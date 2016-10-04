@@ -303,7 +303,7 @@ int CRYPTO_TEST_ASYMMETRIC_ECP() {
     printf("\t(%d bytes)\n\n", ecc_privat_len);
 
     ret = wrapped_sign_verify(
-      Cipher::ASYM_RSA, CryptoKey::RSA_2048, Hashes::SHA256,
+      Cipher::ASYM_ECKEY, CryptoKey::ECC_SECP384R1, Hashes::SHA256,
       test_message, MSG_BUFFER_LEN,
       sig_buffer, &sig_buffer_len,
       ecc_privat_buf + (BASE_BUFFER_LEN-ecc_privat_len), ecc_privat_len,
@@ -312,7 +312,7 @@ int CRYPTO_TEST_ASYMMETRIC_ECP() {
 
     if (0 == ret) {
       ret = wrapped_sign_verify(
-        Cipher::ASYM_RSA, CryptoKey::RSA_2048, Hashes::SHA256,
+        Cipher::ASYM_ECKEY, CryptoKey::ECC_SECP384R1, Hashes::SHA256,
         test_message, MSG_BUFFER_LEN,
         sig_buffer, &sig_buffer_len,
         ecc_public_buf + (BASE_BUFFER_LEN-ecc_public_len), ecc_public_len,
