@@ -37,6 +37,7 @@ Note that this represents a maximum scope-of-support regarding cryptographic
      at <build-root>/lib/mbedtls. See the downloadDeps.sh script. */
   #define __HAS_CRYPT_WRAPPER   1
   #define __CRYPTO_BACKEND      "mbedTLS"
+  #include "mbedtls/error.h"
   #include "mbedtls/ssl.h"
   #include "mbedtls/entropy.h"
   #include "mbedtls/ctr_drbg.h"

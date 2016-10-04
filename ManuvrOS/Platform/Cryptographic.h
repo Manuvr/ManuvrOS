@@ -48,8 +48,10 @@ See CryptOptUnifier.h for more information.
 
 #if defined(__HAS_CRYPT_WRAPPER)
 
+#define OP_DECRYPT 0x00000000
 #define OP_ENCRYPT 0x00000001
-#define OP_DECRYPT 0x00000002
+#define OP_VERIFY  OP_DECRYPT
+#define OP_SIGN    OP_ENCRYPT
 
 
 
@@ -306,7 +308,7 @@ enum class Cipher {
 
 
 
-typedef int8_t (*wrapped_sym_operation)(
+typedef int (*wrapped_sym_operation)(
   uint8_t* in,
   int in_len,
   uint8_t* out,
@@ -318,7 +320,7 @@ typedef int8_t (*wrapped_sym_operation)(
   uint32_t opts
 );
 
-typedef int8_t (*wrapped_sauth_operation)(
+typedef int (*wrapped_sauth_operation)(
   uint8_t* in,
   int in_len,
   uint8_t* out,
@@ -330,7 +332,7 @@ typedef int8_t (*wrapped_sauth_operation)(
   uint32_t opts
 );
 
-typedef int8_t (*wrapped_asym_operation)(
+typedef int (*wrapped_asym_operation)(
   uint8_t* in,
   int in_len,
   uint8_t* out,
@@ -341,27 +343,33 @@ typedef int8_t (*wrapped_asym_operation)(
   uint32_t opts
 );
 
-typedef int8_t (*wrapped_hash_operation)(
+typedef int (*wrapped_hash_operation)(
   uint8_t* in,
   int in_len,
   uint8_t* out,
   Hashes h
 );
 
-typedef int8_t (*wrapped_sv_operation)(
-  uint8_t* in,
-  int in_len,
-  uint8_t* out,
-  Hashes h
+typedef int (*wrapped_sv_operation)(
+  Cipher,           // Algorithm class
+  CryptoKey,        // Key parameters
+  Hashes,           // Digest alg to use.
+  uint8_t* msg,     // Buffer to be signed/verified...
+  int msg_len,      // ...and its length.
+  uint8_t* sig,     // Buffer to hold signature...
+  size_t* sig_len,  // ...and its length.
+  uint8_t* key,     // Buffer holding the key...
+  int key_len,      // ...and its length.
+  uint32_t opts     // Options to the operations.
 );
 
-typedef int8_t (*wrapped_keygen_operation)(
-  Cipher,
-  CryptoKey,
-  uint8_t* pub,
-  int* pub_len,
-  uint8_t* priv,
-  int* priv_len
+typedef int (*wrapped_keygen_operation)(
+  Cipher,         // Algorithm class
+  CryptoKey,      // Key parameters
+  uint8_t* pub,   // Buffer to hold public key.
+  int* pub_len,   // Length of buffer. Modified to reflect written length.
+  uint8_t* priv,  // Buffer to hold private key.
+  int* priv_len   // Length of buffer. Modified to reflect written length.
 );
 
 
@@ -402,6 +410,8 @@ inline Cipher* list_supported_ciphers() {
 };
 
 
+int wrapped_sign_verify(Cipher, CryptoKey, Hashes, uint8_t* msg, int msg_len, uint8_t* sig, size_t* sig_len, uint8_t* key, int key_len, uint32_t opts);
+
 
 /*******************************************************************************
 * Randomness                                                                   *
@@ -431,6 +441,8 @@ bool provide_digest_handler(Hashes, wrapped_hash_operation);
 bool provide_cipher_handler(Cipher, wrapped_sym_operation);
 bool provide_sign_verify_handler(CryptoKey, wrapped_sv_operation);
 bool provide_keygen_handler(CryptoKey, wrapped_keygen_operation);
+
+
 } // extern "C"
 
 
@@ -444,7 +456,6 @@ static std::map<Cipher, wrapped_sym_operation>    _sym_overrides;    // Symmetri
 static std::map<Cipher, wrapped_sauth_operation>  _sauth_overrides;  // Symmetric/auth runtime overrides.
 static std::map<Cipher, wrapped_asym_operation>   _asym_overrides;   // Asymmetric runtime overrides.
 static std::map<Hashes, wrapped_hash_operation>   _hash_overrides;   // Digest runtime overrides.
-
 static std::map<CryptoKey, wrapped_sv_operation>  _s_v_overrides;
 static std::map<CryptoKey, wrapped_keygen_operation>   _keygen_overrides;
 

@@ -239,6 +239,17 @@ bool sign_verify_deferred_handling(CryptoKey k) {
 }
 
 
+/**
+* Tests for an implementation-specific deferral for key generation using the given algorithm.
+*
+* @param CryptoKey The key type to test for deferral.
+* @return true if the root function ought to defer.
+*/
+bool keygen_deferred_handling(CryptoKey k) {
+  return ((bool)(_keygen_overrides[k]));
+}
+
+
 
 bool provide_cipher_handler(Cipher c, wrapped_sym_operation fxn) {
   if (!cipher_deferred_handling(c)) {
@@ -268,10 +279,10 @@ bool provide_sign_verify_handler(CryptoKey k, wrapped_sv_operation fxn) {
 
 
 bool provide_keygen_handler(CryptoKey k, wrapped_keygen_operation fxn) {
-  //if (!keygen_deferred_handling(k)) {
-  //  _keygen_overrides[k] = fxn;
-  //  return true;
-  //}
+  if (!keygen_deferred_handling(k)) {
+    _keygen_overrides[k] = fxn;
+    return true;
+  }
   return false;
 }
 

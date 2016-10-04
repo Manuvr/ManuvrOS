@@ -355,15 +355,19 @@ int8_t __attribute__((weak)) wrapped_sym_cipher(uint8_t* in, int in_len, uint8_t
 * Asymmetric ciphers                                                           *
 *******************************************************************************/
 int __attribute__((weak)) wrapped_asym_keygen(Cipher c, CryptoKey key_type, uint8_t* pub, int* pub_len, uint8_t* priv, int* priv_len) {
-  mbedtls_ctr_drbg_context ctr_drbg;
-  mbedtls_ctr_drbg_init(&ctr_drbg);
+  if (keygen_deferred_handling(key_type)) {
+    // If overriden by user implementation.
+    return _keygen_overrides[key_type](c, key_type, pub, pub_len, priv, priv_len);
+  }
+  int ret = -1;
 
   mbedtls_pk_context key;
   mbedtls_pk_init(&key);
 
   uint32_t pers = randomInt();
-
-  int ret = mbedtls_ctr_drbg_seed(
+  mbedtls_ctr_drbg_context ctr_drbg;
+  mbedtls_ctr_drbg_init(&ctr_drbg);
+  ret = mbedtls_ctr_drbg_seed(
     &ctr_drbg, mbedtls_entropy_func, &entropy,
     (const uint8_t*) &pers, 4
   );
@@ -440,6 +444,125 @@ int __attribute__((weak)) wrapped_asym_keygen(Cipher c, CryptoKey key_type, uint
 int __attribute__((weak)) wrapped_asym_cipher(uint8_t* in, int in_len, uint8_t* sig, int* out_len, Hashes h, Cipher ci, CryptoKey private_key, uint32_t opts) {
   return -1;
 }
+
+
+/**
+* Wrapper for sign-verify operations.
+*
+* @param Cipher     Algorithm class
+* @param CryptoKey  Key parameters
+* @param Hashes     Digest alg to use.
+* @param uint8_t*   Buffer to be signed/verified...
+* @param int        ...and its length.
+* @param uint8_t*   Buffer to hold signature...
+* @param int*       ...and its length.
+* @param uint8_t*   Buffer holding the key...
+* @param int        ...and its length.
+* @param uint32_t   Options to the operations.
+* @return 0 if the operation completed successfully.
+*/
+int __attribute__((weak)) wrapped_sign_verify(Cipher c, CryptoKey k, Hashes h, uint8_t* msg, int msg_len, uint8_t* sig, size_t* sig_len, uint8_t* key, int key_len, uint32_t opts) {
+  if (keygen_deferred_handling(k)) {
+    // If overriden by user implementation.
+    return _s_v_overrides[k](c, k, h, msg, msg_len, sig, sig_len, key, key_len, opts);
+  }
+  int ret = -1;   // Failure by default.
+
+  uint8_t* hash;
+  int hashlen;
+  if (Hashes::NONE != h) {
+    hashlen = get_digest_output_length(h);
+    hash    = (uint8_t*) alloca(hashlen);
+    if (hash) {
+      ret = wrapped_hash(msg, msg_len, hash, h);
+    }
+  }
+  else {
+    // This is the no-digest case.
+    hashlen = msg_len;
+    hash    = msg;
+    ret     = 0;   // TODO: Fail if size is greater than the maximum input length for the Key type.
+  }
+
+  if (0 == ret) {
+    // If we are here, the hashing operation worked. Now we case-off on key/algo.
+    mbedtls_pk_context k_ctx;
+    mbedtls_pk_init(&k_ctx);
+    uint32_t pers = randomInt();
+    mbedtls_ctr_drbg_context ctr_drbg;
+    mbedtls_ctr_drbg_init(&ctr_drbg);
+    ret = mbedtls_ctr_drbg_seed(
+      &ctr_drbg, mbedtls_entropy_func, &entropy,
+      (const uint8_t*) &pers, 4
+    );
+    if (0 == ret) {
+      switch (c) {
+        #if defined(WRAPPED_ASYM_RSA)
+          case Cipher::ASYM_RSA:
+            ret = mbedtls_pk_setup(&k_ctx, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
+            if (0 == ret) {
+              if (opts & OP_SIGN) {
+                ret = mbedtls_pk_parse_key(&k_ctx, key, key_len, nullptr, 0);
+                if (0 == ret) {
+                  ret = mbedtls_pk_sign(
+                    &k_ctx,
+                    (mbedtls_md_type_t) h, hash, hashlen,
+                    sig, sig_len,
+                    mbedtls_ctr_drbg_random, &ctr_drbg
+                  );
+                }
+              }
+              else {
+                ret = mbedtls_pk_parse_public_key(&k_ctx, key, key_len);
+                if (0 == ret) {
+                  ret = mbedtls_pk_verify(
+                    &k_ctx,
+                    (mbedtls_md_type_t) h, hash, hashlen,
+                    sig, *sig_len
+                  );
+                }
+              }
+            }
+            break;
+        #endif
+        #if defined(MBEDTLS_ECP_C)
+          case Cipher::ASYM_ECKEY:
+            ret = mbedtls_pk_setup(&k_ctx, mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY));
+            if (0 == ret) {
+              if (opts & OP_SIGN) {
+                ret = mbedtls_pk_parse_key(&k_ctx, key, key_len, nullptr, 0);
+                if (0 == ret) {
+                  ret = mbedtls_pk_sign(
+                    &k_ctx,
+                    (mbedtls_md_type_t) h, hash, hashlen,
+                    sig, sig_len,
+                    mbedtls_ctr_drbg_random, &ctr_drbg
+                  );
+                }
+              }
+              else {
+                ret = mbedtls_pk_parse_public_key(&k_ctx, key, key_len);
+                if (0 == ret) {
+                  ret = mbedtls_pk_verify(
+                    &k_ctx,
+                    (mbedtls_md_type_t) h, hash, hashlen,
+                    sig, *sig_len
+                  );
+                }
+              }
+            }
+            break;
+        #endif
+        default:
+          break;
+      }
+    }
+  }
+
+  return ret;
+}
+
+
 
 
 #endif   // WITH_MBEDTLS
