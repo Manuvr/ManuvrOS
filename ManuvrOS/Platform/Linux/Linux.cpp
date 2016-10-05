@@ -228,7 +228,7 @@ static int hashFileByPath(char* path, uint8_t* h_buf) {
   if (nullptr != path) {
     struct stat st;
     if(-1 != stat(path, &st)) {
-      long self_size = st.st_size;
+      size_t self_size = st.st_size;
       int digest_size = 32;
       StringBuilder buf;
 
@@ -301,7 +301,7 @@ static void* dev_urandom_reader(void*) {
       if (rng_level == PLATFORM_RNG_CARRY_CAPACITY) {
         // We have filled our entropy pool. Sleep.
         // TODO: Implement wakeThread() and this can go way higher.
-        sleep_millis(35);
+        sleep_millis(10);
       }
       else {
         // We continue feeding the entropy pool as demanded until the platform
@@ -403,6 +403,7 @@ void LinuxPlatform::printDebug(StringBuilder* output) {
       _binary_hash[24], _binary_hash[25], _binary_hash[26], _binary_hash[27],
       _binary_hash[28], _binary_hash[29], _binary_hash[30], _binary_hash[31]
     );
+    randomArt(_binary_hash, 32, "SHA256", output);
   #endif
 }
 

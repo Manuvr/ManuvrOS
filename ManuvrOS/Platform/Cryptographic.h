@@ -40,13 +40,15 @@ See CryptOptUnifier.h for more information.
 #ifndef __CRYPTO_WRAPPER_H__
 #define __CRYPTO_WRAPPER_H__
 
-#include <inttypes.h>
-#include <map>   // TODO: Remove dependency.
-
 // Try to contain wrapped header concerns in here, pl0x...
 #include "Cryptographic/CryptOptUnifier.h"
 
 #if defined(__HAS_CRYPT_WRAPPER)
+
+#include <inttypes.h>
+#include <map>   // TODO: Remove dependency.
+
+class StringBuilder;
 
 #define OP_DECRYPT 0x00000000
 #define OP_ENCRYPT 0x00000001
@@ -339,7 +341,7 @@ typedef int (*wrapped_sauth_operation)(
 
 typedef int (*wrapped_hash_operation)(
   uint8_t* in,
-  int in_len,
+  size_t in_len,
   uint8_t* out,
   Hashes h
 );
@@ -358,12 +360,12 @@ typedef int (*wrapped_sv_operation)(
 );
 
 typedef int (*wrapped_keygen_operation)(
-  Cipher,         // Algorithm class
-  CryptoKey,      // Key parameters
-  uint8_t* pub,   // Buffer to hold public key.
-  int* pub_len,   // Length of buffer. Modified to reflect written length.
-  uint8_t* priv,  // Buffer to hold private key.
-  int* priv_len   // Length of buffer. Modified to reflect written length.
+  Cipher,           // Algorithm class
+  CryptoKey,        // Key parameters
+  uint8_t* pub,     // Buffer to hold public key.
+  size_t* pub_len,  // Length of buffer. Modified to reflect written length.
+  uint8_t* priv,    // Buffer to hold private key.
+  size_t* priv_len  // Length of buffer. Modified to reflect written length.
 );
 
 
@@ -394,7 +396,7 @@ typedef struct _async_crypt_op {
 *******************************************************************************/
 const int get_digest_output_length(Hashes);
 const char* get_digest_label(Hashes);
-int8_t wrapped_hash(uint8_t* in, int in_len, uint8_t* out, Hashes h);
+int8_t wrapped_hash(uint8_t* in, size_t in_len, uint8_t* out, Hashes h);
 
 // Now some inline definitions to mask the back-end API where it can be done
 //   transparently...
@@ -412,7 +414,7 @@ const int get_cipher_key_length(Cipher);
 int get_cipher_aligned_size(Cipher, int len);
 const char* get_cipher_label(Cipher);
 int wrapped_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher, uint32_t opts);
-int wrapped_asym_keygen(Cipher c, CryptoKey, uint8_t* pub, int* pub_len, uint8_t* priv, int* priv_len);
+int wrapped_asym_keygen(Cipher c, CryptoKey, uint8_t* pub, size_t* pub_len, uint8_t* priv, size_t* priv_len);
 
 // Now some inline definitions to mask the back-end API where it can be done
 //   transparently...
@@ -456,6 +458,7 @@ bool provide_cipher_handler(Cipher, wrapped_sym_operation);
 bool provide_sign_verify_handler(CryptoKey, wrapped_sv_operation);
 bool provide_keygen_handler(CryptoKey, wrapped_keygen_operation);
 
+bool estimate_pk_size_requirements(CryptoKey, size_t* pub, size_t* priv, size_t* sig);
 
 void crypt_error_string(int errnum, char *buffer, size_t buflen);
 
@@ -480,6 +483,9 @@ const bool _valid_cipher_params(Cipher);
 #ifdef __cplusplus
 }
 #endif
+
+int randomArt(uint8_t* dgst_raw, unsigned int dgst_raw_len, const char* key_type, StringBuilder* output);
+
 
 #endif // __HAS_CRYPT_WRAPPER
 #endif // __CRYPTO_WRAPPER_H__

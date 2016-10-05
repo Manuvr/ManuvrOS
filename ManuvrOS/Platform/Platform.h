@@ -240,6 +240,8 @@ class ManuvrPlatform {
     int8_t storeConf(Argument*);
     inline int8_t configLoaded() {   return (nullptr == _config) ? 0 : 1;  };
 
+    inline Identity* selfIdentity() {   return _self;  };
+
     /* These are safe function proxies for external callers. */
     void setIdleHook(FxnPointer nu);
     void idleHook();

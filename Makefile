@@ -164,7 +164,7 @@ export CPP_FLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
 
 .PHONY: all
 
-all: libs
+all: tests
 	$(CXX) -Wl,--gc-sections -static -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 	$(SZ) $(FIRMWARE_NAME)
 

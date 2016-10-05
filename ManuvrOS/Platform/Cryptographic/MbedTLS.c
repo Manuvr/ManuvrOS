@@ -320,7 +320,7 @@ int cryptographic_rng_init() {
 //  else {
 //    printf("Failed to hash.\n");
 //  }
-int8_t __attribute__((weak)) wrapped_hash(uint8_t* in, int in_len, uint8_t* out, Hashes h) {
+int8_t __attribute__((weak)) wrapped_hash(uint8_t* in, size_t in_len, uint8_t* out, Hashes h) {
   int8_t return_value = -1;
   const mbedtls_md_info_t* md_info = mbedtls_md_info_from_type((mbedtls_md_type_t)h);
 
@@ -455,7 +455,7 @@ int __attribute__((weak)) wrapped_sym_cipher(uint8_t* in, int in_len, uint8_t* o
 /*******************************************************************************
 * Asymmetric ciphers                                                           *
 *******************************************************************************/
-int __attribute__((weak)) wrapped_asym_keygen(Cipher c, CryptoKey key_type, uint8_t* pub, int* pub_len, uint8_t* priv, int* priv_len) {
+int __attribute__((weak)) wrapped_asym_keygen(Cipher c, CryptoKey key_type, uint8_t* pub, size_t* pub_len, uint8_t* priv, size_t* priv_len) {
   if (keygen_deferred_handling(key_type)) {
     // If overriden by user implementation.
     return _keygen_overrides[key_type](c, key_type, pub, pub_len, priv, priv_len);

@@ -37,6 +37,45 @@ Basic machinery of Identity objects.
 * Static members and initializers should be located here.
 *******************************************************************************/
 
+// TODO: These preprocessor breakouts are not granular enough.
+/*
+* Given in orderr of preference.
+*/
+const IdentFormat Identity::supported_notions[] = {
+  #if defined(__HAS_CRYPT_WRAPPER)
+  IdentFormat::CERT_FORMAT_DER,
+  IdentFormat::PSK_ASYM,
+  #endif
+  #if defined(MANUVR_OPENINTERCONNECT)
+  IdentFormat::OIC_CRED,
+  #endif
+  IdentFormat::UUID,
+  IdentFormat::SERIAL_NUM,
+  IdentFormat::UNDETERMINED   // 0. Null-terminated.
+};
+
+
+const IdentFormat* Identity::supportedNotions() {
+  return supported_notions;
+}
+
+const char* Identity::identityTypeString(IdentFormat fmt) {
+  switch (fmt) {
+    #if defined(__HAS_CRYPT_WRAPPER)
+    case IdentFormat::CERT_FORMAT_DER:  return "CERT";
+    case IdentFormat::PSK_ASYM:         return "ASYM";
+    case IdentFormat::PSK_SYM:          return "PSK";
+    #endif
+    #if defined(MANUVR_OPENINTERCONNECT)
+    case IdentFormat::OIC_CRED:         return "OIC_CRED";
+    #endif
+    case IdentFormat::UUID:             return "UUID";
+    case IdentFormat::SERIAL_NUM:       return "SERIAL_NUM";
+    case IdentFormat::UNDETERMINED:     return "UNDETERMINED";
+  }
+  return "UNDEF";
+}
+
 /**
 * This is an abstract factory function for re-constituting identities from
 *   storage. It sets flags to reflect origins, and handles casting and so-forth.
@@ -93,6 +132,20 @@ Identity* Identity::fromBuffer(uint8_t* buf, int len) {
   return nullptr;
 }
 
+
+void Identity::staticToString(Identity* ident, StringBuilder* output) {
+  output->concatf(
+    "%s:%14s\t(%s)\n",
+    ident->getHandle(),
+    Identity::identityTypeString(ident->format),
+    (ident->isDirty() ? "Dirty" : "Persisted")
+  );
+  ident->toString(output);
+  if (ident->_next) {
+    Identity::staticToString(ident, output);
+  }
+  output->concat("\n");
+}
 
 
 /*******************************************************************************

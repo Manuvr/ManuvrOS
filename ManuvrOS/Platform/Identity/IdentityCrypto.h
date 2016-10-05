@@ -46,7 +46,7 @@ class IdentityCert : public Identity {
 
 class IdentityPubKey : public Identity {
   public:
-    IdentityPubKey(const char* nom, CryptoKey);
+    IdentityPubKey(const char* nom, Cipher, CryptoKey);
     IdentityPubKey(uint8_t* buf, uint16_t len);
     ~IdentityPubKey();
 
@@ -58,7 +58,12 @@ class IdentityPubKey : public Identity {
 
 
   protected:
-    CryptoKey key_type;
+    uint8_t*  _pub         = nullptr;
+    uint8_t*  _priv        = nullptr;
+    uint16_t  _pub_size    = 0;
+    uint16_t  _priv_size   = 0;
+    CryptoKey _key_type    = CryptoKey::NONE;
+    Cipher    _cipher      = Cipher::NONE;
 };
 
 

@@ -28,6 +28,124 @@ limitations under the License.
 * Meta                                                                         *
 *******************************************************************************/
 
+/*
+* Assumption: DER encoding.
+* TODO: These numbers were gathered empirically and fudged upward somewhat.
+*         There is likely a scientific means of arriving at the correct size.
+* This should only be used to allocate scratch buffers.
+*/
+bool estimate_pk_size_requirements(CryptoKey k, size_t* pub, size_t* priv, size_t* sig) {
+  switch (k) {
+    #if defined(WRAPPED_ASYM_ECKEY)
+      #if defined(WRAPPED_PK_OPT_SECP192R1)
+        case CryptoKey::ECC_SECP192R1:
+          *pub  = 76;
+          *priv = 100;
+          *sig  = 56;
+          break;
+      #endif
+      #if defined(WRAPPED_PK_OPT_SECP192K1)
+        case CryptoKey::ECC_SECP192K1:
+          *pub  = 76;
+          *priv = 96;
+          *sig  = 56;
+          break;
+      #endif
+      #if defined(WRAPPED_PK_OPT_SECP224R1)
+        case CryptoKey::ECC_SECP224R1:
+          *pub  = 84;
+          *priv = 112;
+          *sig  = 64;
+          break;
+      #endif
+      #if defined(WRAPPED_PK_OPT_SECP224K1)
+        case CryptoKey::ECC_SECP224K1:
+          *pub  = 80;
+          *priv = 108;
+          *sig  = 64;
+          break;
+      #endif
+      #if defined(WRAPPED_PK_OPT_SECP256R1)
+        case CryptoKey::ECC_SECP256R1:
+          *pub  = 92;
+          *priv = 124;
+          *sig  = 72;
+          break;
+      #endif
+      #if defined(WRAPPED_PK_OPT_SECP256K1)
+        case CryptoKey::ECC_SECP256K1:
+          *pub  = 92;
+          *priv = 124;
+          *sig  = 72;
+          break;
+      #endif
+      #if defined(WRAPPED_PK_OPT_BP256R1)
+        case CryptoKey::ECC_BP256R1:
+          *pub  = 96;
+          *priv = 128;
+          *sig  = 72;
+          break;
+      #endif
+      #if defined(WRAPPED_PK_OPT_SECP384R1)
+        case CryptoKey::ECC_SECP384R1:
+          *pub  = 124;
+          *priv = 172;
+          *sig  = 104;
+          break;
+      #endif
+      #if defined(WRAPPED_PK_OPT_BP384R1)
+        case CryptoKey::ECC_BP384R1:
+          *pub  = 128;
+          *priv = 176;
+          *sig  = 104;
+          break;
+      #endif
+      #if defined(WRAPPED_PK_OPT_SECP521R1)
+        case CryptoKey::ECC_SECP521R1:
+          *pub  = 160;
+          *priv = 224;
+          *sig  = 140;
+          break;
+      #endif
+      #if defined(WRAPPED_PK_OPT_BP512R1)
+        case CryptoKey::ECC_BP512R1:
+          *pub  = 160;
+          *priv = 224;
+          *sig  = 140;
+          break;
+      #endif
+      #if defined(WRAPPED_PK_OPT_CURVE25519)
+        case CryptoKey::ECC_CURVE25519:
+          *pub  = 172;
+          *priv = 240;
+          *sig  = 180;
+          break;
+      #endif
+    #endif  // WRAPPED_ASYM_ECKEY
+    #if defined(WRAPPED_ASYM_RSA)
+      case CryptoKey::RSA_1024:
+        *pub  = 156;
+        *priv = 652;
+        *sig  = 128;
+        break;
+      case CryptoKey::RSA_2048:
+        *pub  = 296;
+        *priv = 1196;
+        *sig  = 256;
+        break;
+      case CryptoKey::RSA_4096:
+        *pub  = 552;
+        *priv = 2352;
+        *sig  = 512;
+        break;
+    #endif  // WRAPPED_ASYM_ECKEY
+    case CryptoKey::NONE:
+    default:
+      return false;
+  }
+
+  return ((0 < *priv) && (0 < *pub));
+}
 
 
 /*******************************************************************************

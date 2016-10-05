@@ -27,6 +27,7 @@ This might be better-viewed as a data structure. Notions of identity should
 
 #include <DataStructures/StringBuilder.h>
 #include <DataStructures/Argument.h>
+#include <Platform/Cryptographic/CryptOptUnifier.h>
 
 #define MANUVR_IDENT_FLAG_DIRTY        0x8000  // This ID will be lost if not persisted.
 #define MANUVR_IDENT_FLAG_OUR_OWN      0x4000  // This is our own identity.
@@ -72,10 +73,14 @@ enum class IdentFormat {
   SERIAL_NUM      = 0x01,  // Nearly universal.
   UUID            = 0x02,  // Low-grade. Easy.
   HASH            = 0x03,  // Open-ended.
+  #if defined(__HAS_CRYPT_WRAPPER)
   CERT_FORMAT_DER = 0x04,  // Certificate in DER format.
   PSK_ASYM        = 0x05,  // Pre-shared asymmetric key.
   PSK_SYM         = 0x06,  // Pre-shared symmetric key.
+  #endif
+  #if defined(MANUVR_OPENINTERCONNECT)
   OIC_CRED        = 0x07,  // OIC credential.
+  #endif
   ONE_ID          = 0x10   // OneID asymemetric key strategey.
 };
 
@@ -105,6 +110,9 @@ class Identity {
     inline char* getHandle() {  return (nullptr == _handle ? (char*) "unnamed":_handle);  };
 
     static Identity* fromBuffer(uint8_t*, int len);   // From storage.
+    static void staticToString(Identity*, StringBuilder*);
+    static const char* identityTypeString(IdentFormat);
+    static const IdentFormat* supportedNotions();
 
 
   protected:
@@ -123,8 +131,10 @@ class Identity {
   private:
     uint16_t _ident_flags = 0;
     char*       _handle = nullptr;  // Human-readable name of this identity.
-    Identity*   _next   = nullptr;  // TODO: Chaining is probably better than flatness in this case.
+    Identity*   _next   = nullptr;  // Chaining is probably better than flatness in this case.
     IdentFormat format  = IdentFormat::UNDETERMINED;   // What is the nature of this identity?
+
+    static const IdentFormat supported_notions[];
 
 };
 

@@ -1500,6 +1500,20 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       }
       break;
 
+    case 'I':
+      {
+        //Identity* ident = nullptr;
+        switch (temp_int) {
+          case 1:
+            break;
+          case 0:
+            break;
+          default:
+            break;
+        }
+      }
+      break;
+
     case 'i':   // Debug prints.
       switch (temp_int) {
         case 2:
@@ -1516,13 +1530,21 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
             break;
         #endif
 
-        case 9:
-          platform.printDebug(&local_log);
-          printDebug(&local_log);
-          printProfiler(&local_log);
-          // NOTE: Case fall-through
         case 5:
           printScheduler(&local_log);
+          break;
+
+        case 6:
+          {
+            const IdentFormat* ident_types = Identity::supportedNotions();
+            local_log.concat("-- Supported notions of identity: \n");
+            while (IdentFormat::UNDETERMINED != *ident_types) {
+              local_log.concatf("\t %s\n", Identity::identityTypeString(*ident_types++));
+            }
+          }
+          break;
+        case 7:
+          Identity::staticToString(platform.selfIdentity(), &local_log);
           break;
 
         default:
