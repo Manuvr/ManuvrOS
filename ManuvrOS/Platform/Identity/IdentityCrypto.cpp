@@ -28,7 +28,11 @@ Cryptographically-backed identities.
 #include <alloca.h>
 
 
+//private_log_shunt
+
+
 IdentityPubKey::IdentityPubKey(const char* nom, Cipher c, CryptoKey k) : Identity(nom, IdentFormat::PSK_ASYM) {
+  _ident_set_flag(true, MANUVR_IDENT_FLAG_DIRTY | MANUVR_IDENT_FLAG_ORIG_GEN);
   size_t tmp_public_len  = 0;
   size_t tmp_privat_len  = 0;
   size_t tmp_sig_len     = 0;
@@ -46,9 +50,17 @@ IdentityPubKey::IdentityPubKey(const char* nom, Cipher c, CryptoKey k) : Identit
         _priv_size = (uint16_t) (0xFFFF & tmp_privat_len);
         memcpy(_pub,  tmp_pub, _pub_size);
         memcpy(_priv, tmp_prv, _priv_size);
-        _ident_set_flag(true, MANUVR_IDENT_FLAG_DIRTY | MANUVR_IDENT_FLAG_ORIG_GEN);
         _ident_len += sizeof(CryptoKey) + sizeof(Cipher) + _pub_size + _priv_size;
+        _ident_set_flag(true, MANUVR_IDENT_FLAG_VALID);
       }
+    }
+    else {
+      // TODO: Need logging for failures?
+      //char* err_buf[128] = {0};
+      //crypt_error_string(ret, (char*)&err_buf, 128);
+      //StringBuilder log("Failure to generate: ");
+      //log.concat((char*)&err_buf);
+      //printf((const char*) log.string());
     }
   }
 }
@@ -68,13 +80,35 @@ IdentityPubKey::~IdentityPubKey() {
 }
 
 
+/*
+* We shouldn't trust that keypairs loaded from any given source are *actually pairs*.
+*   This function will test them against one another to ensure that they are truely paired.
+* This would be the proper place to do things like key-pinning.
+* Note that this is not a "go/no-go" situation. We might see keys that the platform owns,
+*  and therefore only have the public component (despite it possibly being a self-identity).
+*  Communication with the cryptographic and platform layers may be required to give a
+*  sensible answer.
+*
+* @return 0 if the intentity sanity-checks, negative on error, and positive if trusted.
+*/
+int8_t IdentityPubKey::sanity_check() {
+  if (_ident_flag(MANUVR_IDENT_FLAG_VALID)) {
+    // TODO: Actually test signing? Check for HSM ownership?
+    return 0;
+  }
+  return -1;
+}
+
+
 void IdentityPubKey::toString(StringBuilder* output) {
   Hashes* biggest_hash = list_supported_digests();
   size_t hash_len = get_digest_output_length(*biggest_hash);
   uint8_t* hash = (uint8_t*) alloca(hash_len);
 
-  if (0 == wrapped_hash((uint8_t*) _pub, _pub_size, hash, *biggest_hash)) {
-    randomArt(hash, hash_len, get_pk_label(_key_type), output);
+  if (_pub_size) {
+    if (0 == wrapped_hash((uint8_t*) _pub, _pub_size, hash, *biggest_hash)) {
+      randomArt(hash, hash_len, get_pk_label(_key_type), output);
+    }
   }
 }
 

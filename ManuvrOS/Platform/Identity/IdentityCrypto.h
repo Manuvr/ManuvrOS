@@ -33,7 +33,9 @@ class IdentityCert : public Identity {
     ~IdentityCert();
 
     int8_t sign();
-    int8_t validate();
+    int8_t verify();
+
+    int8_t sanity_check();
 
     void toString(StringBuilder*);
     int  serialize(uint8_t*, uint16_t);
@@ -51,7 +53,9 @@ class IdentityPubKey : public Identity {
     ~IdentityPubKey();
 
     int8_t sign();
-    int8_t validate();
+    int8_t verify();
+
+    int8_t sanity_check();
 
     void toString(StringBuilder*);
     int  serialize(uint8_t*, uint16_t);
@@ -74,7 +78,7 @@ class IdentityPSK : public Identity {
     ~IdentityPSK();
 
     int8_t sign();
-    int8_t validate();
+    int8_t verify();
 
     void toString(StringBuilder*);
     int  serialize(uint8_t*, uint16_t);

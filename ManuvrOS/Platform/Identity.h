@@ -37,9 +37,9 @@ This might be better-viewed as a data structure. Notions of identity should
 #define MANUVR_IDENT_FLAG_ORIG_EXTER   0x0400  // Came from outside. Usually from TLS.
 #define MANUVR_IDENT_FLAG_ORIG_HSM     0x0200  // Came from an HSM, local or not.
 #define MANUVR_IDENT_FLAG_ORIG_PKI     0x0100  // Imparted by a PKI.
-#define MANUVR_IDENT_FLAG_RESERVED_2   0x0080  //
+#define MANUVR_IDENT_FLAG_RESERVED_0   0x0080  //
 #define MANUVR_IDENT_FLAG_RESERVED_1   0x0040  //
-#define MANUVR_IDENT_FLAG_RESERVED_0   0x0020  //
+#define MANUVR_IDENT_FLAG_VALID        0x0020  // Identity is valid and ready-for-use.
 #define MANUVR_IDENT_FLAG_3RD_PARTY_CA 0x0010  // This is an intermediary or CA cert.
 #define MANUVR_IDENT_FLAG_REVOKED      0x0008  // This identity is no longer valid.
 #define MANUVR_IDENT_FLAG_REVOKABLE    0x0004  // This identity can be revoked.
@@ -47,9 +47,9 @@ This might be better-viewed as a data structure. Notions of identity should
 #define MANUVR_IDENT_FLAG_NET_ACCEPT   0x0001  // Is acceptable for the network layer.
 
 /* These flags should not be persisted. */
-#define MANUVR_IDENT_FLAG_PERSIST_MASK (MANUVR_IDENT_FLAG_RESERVED_0 | \
+#define MANUVR_IDENT_FLAG_PERSIST_MASK (MANUVR_IDENT_FLAG_VALID | \
+                                        MANUVR_IDENT_FLAG_RESERVED_0 | \
                                         MANUVR_IDENT_FLAG_RESERVED_1 | \
-                                        MANUVR_IDENT_FLAG_RESERVED_2 | \
                                         MANUVR_IDENT_FLAG_DIRTY)
 /*
 * Note on NET_ACCEPT / APP_ACCEPT:
