@@ -40,10 +40,21 @@ const size_t IdentityOneID::_SERIALIZED_LEN = ONEID_PUB_KEY_MAX_LEN*3;
 
 IdentityOneID::IdentityOneID(const char* nom) : IdentityPubKey(nom, Cipher::ASYM_ECDSA, CryptoKey::ECC_SECP256R1, Hashes::SHA256) {
   _clobber_format(IdentFormat::ONE_ID);
+  _ident_len += _SERIALIZED_LEN;
 }
 
 
 IdentityOneID::IdentityOneID(uint8_t* buf, uint16_t len) : IdentityPubKey(buf, len) {
+  int offset = _ident_len-5;
+  if ((len - offset) >= _SERIALIZED_LEN) {
+    memcpy((uint8_t*) &_oneid_project_key, (buf + offset), ONEID_PUB_KEY_MAX_LEN);
+    offset += ONEID_PUB_KEY_MAX_LEN;
+    memcpy((uint8_t*) &_oneid_server_key, (buf + offset), ONEID_PUB_KEY_MAX_LEN);
+    offset += ONEID_PUB_KEY_MAX_LEN;
+    memcpy((uint8_t*) &_oneid_reset_key, (buf + offset), ONEID_PUB_KEY_MAX_LEN);
+    offset += ONEID_PUB_KEY_MAX_LEN;
+  }
+  _ident_len += _SERIALIZED_LEN;
 }
 
 
