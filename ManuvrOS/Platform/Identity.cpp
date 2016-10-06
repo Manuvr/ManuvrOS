@@ -44,7 +44,7 @@ Basic machinery of Identity objects.
 const IdentFormat Identity::supported_notions[] = {
   #if defined(__HAS_CRYPT_WRAPPER)
     IdentFormat::CERT_FORMAT_DER,
-    IdentFormat::PSK_ASYM,
+    IdentFormat::PK,
     #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
       IdentFormat::ONE_ID,
     #endif
@@ -66,8 +66,11 @@ const char* Identity::identityTypeString(IdentFormat fmt) {
   switch (fmt) {
     #if defined(__HAS_CRYPT_WRAPPER)
     case IdentFormat::CERT_FORMAT_DER:  return "CERT";
-    case IdentFormat::PSK_ASYM:         return "ASYM";
+    case IdentFormat::PK:               return "ASYM";
     case IdentFormat::PSK_SYM:          return "PSK";
+    #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
+      case IdentFormat::ONE_ID:         return "oneID";
+    #endif
     #endif
     #if defined(MANUVR_OPENINTERCONNECT)
     case IdentFormat::OIC_CRED:         return "OIC_CRED";
@@ -98,36 +101,47 @@ Identity* Identity::fromBuffer(uint8_t* buf, int len) {
     uint16_t ident_len = (((uint16_t) *(buf+0)) << 8) + *(buf+1);
     uint16_t ident_flg = (((uint16_t) *(buf+2)) << 8) + *(buf+3);
     IdentFormat fmt = (IdentFormat) *(buf+4);
-    len -= 5;
-    buf += 5;
 
-    switch (fmt) {
-      case IdentFormat::UUID:
-        if (ident_len >= len) {
-          IdentityUUID* ret = new IdentityUUID(buf, (uint16_t) len);
-          ret->_ident_flags = ident_flg;
-          return (Identity*)ret;
-        }
-      case IdentFormat::SERIAL_NUM:
-        // TODO: Ill-conceived? Why persist a hardware serial number???
-        break;
-      case IdentFormat::CERT_FORMAT_DER:
-        break;
-      case IdentFormat::PSK_ASYM:
-        break;
-      case IdentFormat::PSK_SYM:
-        break;
-      #if defined (MANUVR_OPENINTERCONNECT)
-        case IdentFormat::OIC_CRED:
+    if (ident_len <= len) {
+      len -= (IDENTITY_BASE_PERSIST_LENGTH - 1);  // Incur deficit for null-term.
+      buf += (IDENTITY_BASE_PERSIST_LENGTH - 1);  // Incur deficit for null-term.
+
+      switch (fmt) {
+        case IdentFormat::UUID:
+          {
+            IdentityUUID* ret = new IdentityUUID(buf, (uint16_t) len);
+            ret->_ident_flags = ident_flg;
+            return (Identity*)ret;
+          }
+        case IdentFormat::SERIAL_NUM:
+          // TODO: Ill-conceived? Why persist a hardware serial number???
           break;
-      #endif
-      #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
-        case IdentFormat::ONE_ID:
+        case IdentFormat::CERT_FORMAT_DER:
           break;
-      #endif
-      case IdentFormat::UNDETERMINED:
-      default:
-        break;
+        case IdentFormat::PK:
+          {
+            IdentityPubKey* ret = new IdentityPubKey(buf, (uint16_t) len);
+            printf("unserialize. %d >= %d\n", ident_len, len);
+            ret->_ident_flags = ident_flg;
+            //if (ret->isValid()) {
+              return (Identity*)ret;
+            //}
+          }
+          break;
+        case IdentFormat::PSK_SYM:
+          break;
+        #if defined (MANUVR_OPENINTERCONNECT)
+          case IdentFormat::OIC_CRED:
+            break;
+        #endif
+        #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
+          case IdentFormat::ONE_ID:
+            break;
+        #endif
+        case IdentFormat::UNDETERMINED:
+        default:
+          break;
+      }
     }
   }
   return nullptr;
@@ -162,8 +176,10 @@ Identity::Identity(const char* nom, IdentFormat _f) {
   format = _f;
   _ident_len = strlen(nom);   // TODO: Scary....
   _handle = (char*) malloc(_ident_len + 1);
-  // Also copies the required null-terminator.
-  for (int i = 0; i < _ident_len+1; i++) *(_handle + i) = *(nom+i);
+  if (_handle) {
+    // Also copies the required null-terminator.
+    for (int i = 0; i < _ident_len+1; i++) *(_handle + i) = *(nom+i);
+  }
   _ident_len += IDENTITY_BASE_PERSIST_LENGTH;
 }
 
@@ -181,11 +197,12 @@ Identity::~Identity() {
 *   error-checking are done upstream.
 */
 int Identity::_serialize(uint8_t* buf, uint16_t len) {
+  uint16_t i_flags = _ident_flags & ~(MANUVR_IDENT_FLAG_PERSIST_MASK);
   if (len > IDENTITY_BASE_PERSIST_LENGTH) {
     *(buf+0) = (uint8_t) (_ident_len >> 8) & 0xFF;
     *(buf+1) = (uint8_t) _ident_len & 0xFF;
-    *(buf+2) = (uint8_t) (_ident_flags >> 8) & 0xFF;
-    *(buf+3) = (uint8_t) _ident_flags & 0xFF;
+    *(buf+2) = (uint8_t) (i_flags >> 8) & 0xFF;
+    *(buf+3) = (uint8_t) i_flags & 0xFF;
     *(buf+4) = (uint8_t) format;
     len -= 5;
     buf += 5;

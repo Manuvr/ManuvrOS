@@ -368,6 +368,9 @@ typedef int (*wrapped_keygen_operation)(
 );
 
 
+/*******************************************************************************
+* Asynchronous operations
+*******************************************************************************/
 /*
 * Hardware involvement in the cryptographic process demands asynchronicity.
 * This is one of the rare case when hardware support is typically slower than
@@ -386,8 +389,24 @@ typedef int (*wrapped_keygen_operation)(
 * TODO: This is another platform anchor.
 * TODO: Define callback structure and state-machine.
 */
+#define CRYPT_ASYNC_OP_DIGEST        0x80
+#define CRYPT_ASYNC_OP_CIPHER        0x40
+#define CRYPT_ASYNC_OP_SIGN_VER      0x20
+#define CRYPT_ASYNC_OP_AUTH_CIPHER   0x10
+#define CRYPT_ASYNC_OP_KEYGEN        0x08
+
+typedef int (*crypt_op_callback)(
+  Cipher,           // Algorithm class
+  CryptoKey,        // Key parameters
+  uint8_t* pub,     // Buffer to hold public key.
+  size_t* pub_len,  // Length of buffer. Modified to reflect written length.
+  uint8_t* priv,    // Buffer to hold private key.
+  size_t* priv_len  // Length of buffer. Modified to reflect written length.
+);
+
 typedef struct _async_crypt_op {
 } AsyncCryptOpt;
+
 
 
 /*******************************************************************************

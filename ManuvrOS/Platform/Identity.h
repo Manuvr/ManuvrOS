@@ -71,7 +71,7 @@ This might be better-viewed as a data structure. Notions of identity should
 enum class IdentFormat {
   #if defined(__HAS_CRYPT_WRAPPER)
     CERT_FORMAT_DER = 0x04,  // Certificate in DER format.
-    PSK_ASYM        = 0x05,  // Pre-shared asymmetric key.
+    PK              = 0x05,  // Pre-shared asymmetric key.
     PSK_SYM         = 0x06,  // Pre-shared symmetric key.
     #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
       ONE_ID        = 0x10,  // OneID asymemetric key strategey.
@@ -105,9 +105,10 @@ class Identity {
       return _serialize(buf, _ident_len);
     };
 
-    // TODO: int8_t serialize();
     inline int   length() {     return _ident_len;  };
     inline bool  isDirty() {    return _ident_flag(MANUVR_IDENT_FLAG_DIRTY);  };
+    inline bool  isValid() {    return _ident_flag(MANUVR_IDENT_FLAG_VALID);  };
+
     inline char* getHandle() {  return (nullptr == _handle ? (char*) "unnamed":_handle);  };
 
     static Identity* fromBuffer(uint8_t*, int len);   // From storage.

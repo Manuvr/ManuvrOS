@@ -36,7 +36,7 @@ This tests the cryptographic system under whatever build options
 #include <Platform/Platform.h>
 
 
-struct Trips {
+struct Trips {  // <---- Check 'em
   size_t deltas[3];
 };
 

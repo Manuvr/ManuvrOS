@@ -26,6 +26,7 @@ limitations under the License.
 
 #include <Platform/Cryptographic.h>
 
+
 class IdentityCert : public Identity {
   public:
     IdentityCert(const char* nom);
@@ -49,6 +50,7 @@ class IdentityCert : public Identity {
 class IdentityPubKey : public Identity {
   public:
     IdentityPubKey(const char* nom, Cipher, CryptoKey);
+    IdentityPubKey(const char* nom, Cipher, CryptoKey, Hashes);
     IdentityPubKey(uint8_t* buf, uint16_t len);
     ~IdentityPubKey();
 
@@ -68,6 +70,7 @@ class IdentityPubKey : public Identity {
     uint16_t  _priv_size   = 0;
     CryptoKey _key_type    = CryptoKey::NONE;
     Cipher    _cipher      = Cipher::NONE;
+    Hashes    _digest      = Hashes::NONE;
 };
 
 
