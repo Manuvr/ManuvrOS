@@ -110,7 +110,7 @@ Identity* Identity::fromBuffer(uint8_t* buf, int len) {
         case IdentFormat::UUID:
           {
             IdentityUUID* ret = new IdentityUUID(buf, (uint16_t) len);
-            ret->_ident_flags = ident_flg;
+            ret->_flags = ident_flg;
             return (Identity*)ret;
           }
         case IdentFormat::SERIAL_NUM:
@@ -122,7 +122,7 @@ Identity* Identity::fromBuffer(uint8_t* buf, int len) {
           {
             IdentityPubKey* ret = new IdentityPubKey(buf, (uint16_t) len);
             printf("unserialize. %d >= %d\n", ident_len, len);
-            ret->_ident_flags = ident_flg;
+            ret->_flags = ident_flg;
             //if (ret->isValid()) {
               return (Identity*)ret;
             //}
@@ -152,7 +152,7 @@ void Identity::staticToString(Identity* ident, StringBuilder* output) {
   output->concatf(
     "%s:%14s\t(%s)\n",
     ident->getHandle(),
-    Identity::identityTypeString(ident->format),
+    Identity::identityTypeString(ident->_format),
     (ident->isDirty() ? "Dirty" : "Persisted")
   );
   ident->toString(output);
@@ -173,7 +173,7 @@ void Identity::staticToString(Identity* ident, StringBuilder* output) {
 *******************************************************************************/
 
 Identity::Identity(const char* nom, IdentFormat _f) {
-  format = _f;
+  _format = _f;
   _ident_len = strlen(nom);   // TODO: Scary....
   _handle = (char*) malloc(_ident_len + 1);
   if (_handle) {
@@ -192,18 +192,30 @@ Identity::~Identity() {
 }
 
 
+/*******************************************************************************
+* _________ ______   _______  _       ___________________________
+* \__   __/(  __  \ (  ____ \( (    /|\__   __/\__   __/\__   __/|\     /|
+*    ) (   | (  \  )| (    \/|  \  ( |   ) (      ) (      ) (   ( \   / )
+*    | |   | |   ) || (__    |   \ | |   | |      | |      | |    \ (_) /
+*    | |   | |   | ||  __)   | (\ \) |   | |      | |      | |     \   /
+*    | |   | |   ) || (      | | \   |   | |      | |      | |      ) (
+* ___) (___| (__/  )| (____/\| )  \  |   | |   ___) (___   | |      | |
+* \_______/(______/ (_______/|/    )_)   )_(   \_______/   )_(      \_/
+* Functions to support the concept of identity.
+*******************************************************************************/
+
 /*
 * Only the persistable particulars of this instance. All the base class and
 *   error-checking are done upstream.
 */
 int Identity::_serialize(uint8_t* buf, uint16_t len) {
-  uint16_t i_flags = _ident_flags & ~(MANUVR_IDENT_FLAG_PERSIST_MASK);
+  uint16_t i_flags = _flags & ~(MANUVR_IDENT_FLAG_PERSIST_MASK);
   if (len > IDENTITY_BASE_PERSIST_LENGTH) {
     *(buf+0) = (uint8_t) (_ident_len >> 8) & 0xFF;
     *(buf+1) = (uint8_t) _ident_len & 0xFF;
     *(buf+2) = (uint8_t) (i_flags >> 8) & 0xFF;
     *(buf+3) = (uint8_t) i_flags & 0xFF;
-    *(buf+4) = (uint8_t) format;
+    *(buf+4) = (uint8_t) _format;
     len -= 5;
     buf += 5;
 
@@ -221,4 +233,47 @@ int Identity::_serialize(uint8_t* buf, uint16_t len) {
     return str_bytes + IDENTITY_BASE_PERSIST_LENGTH;
   }
   return 0;
+}
+
+
+
+/*******************************************************************************
+* Linked-list fxns
+*******************************************************************************/
+/**
+* Call to get a specific identity of a given type.
+* ONLY searches this chain.
+*
+* @param  fmt The notion of identity sought by the caller.
+* @return     An instance of Identity that is of the given format.
+*/
+Identity* Identity::getIdentity(IdentFormat fmt) {
+  if (fmt == _format) {
+    return this;
+  }
+  else if (_next) {
+    return _next->getIdentity(fmt);
+  }
+  else {
+    return nullptr;
+  }
+}
+
+/**
+* Call to get a specific identity by its name.
+* ONLY searches this chain.
+*
+* @param  fmt The notion of identity sought by the caller.
+* @return     An instance of Identity that is of the given format.
+*/
+Identity* Identity::getIdentity(const char* nom) {
+  if (nom == _handle) {  // TODO: Direct comparison won't work here.
+    return this;
+  }
+  else if (_next) {
+    return _next->getIdentity(nom);
+  }
+  else {
+    return nullptr;
+  }
 }

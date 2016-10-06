@@ -26,6 +26,14 @@ Simple form of identity. Implementable of devices that cannot handle
 #include <alloca.h>
 
 
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
 
 IdentityUUID::IdentityUUID(const char* nom) : Identity(nom, IdentFormat::UUID) {
   _ident_len += sizeof(UUID);
@@ -55,6 +63,18 @@ IdentityUUID::IdentityUUID(uint8_t* buf, uint16_t len) : Identity((const char*) 
 IdentityUUID::~IdentityUUID() {
 }
 
+
+/*******************************************************************************
+* _________ ______   _______  _       ___________________________
+* \__   __/(  __  \ (  ____ \( (    /|\__   __/\__   __/\__   __/|\     /|
+*    ) (   | (  \  )| (    \/|  \  ( |   ) (      ) (      ) (   ( \   / )
+*    | |   | |   ) || (__    |   \ | |   | |      | |      | |    \ (_) /
+*    | |   | |   | ||  __)   | (\ \) |   | |      | |      | |     \   /
+*    | |   | |   ) || (      | | \   |   | |      | |      | |      ) (
+* ___) (___| (__/  )| (____/\| )  \  |   | |   ___) (___   | |      | |
+* \_______/(______/ (_______/|/    )_)   )_(   \_______/   )_(      \_/
+* Functions to support the concept of identity.
+*******************************************************************************/
 
 void IdentityUUID::toString(StringBuilder* output) {
   char* uuid_str = (char*) alloca(40);

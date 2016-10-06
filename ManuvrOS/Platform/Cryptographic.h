@@ -476,7 +476,7 @@ bool provide_cipher_handler(Cipher, wrapped_sym_operation);
 bool provide_sign_verify_handler(CryptoKey, wrapped_sv_operation);
 bool provide_keygen_handler(CryptoKey, wrapped_keygen_operation);
 
-bool estimate_pk_size_requirements(CryptoKey, size_t* pub, size_t* priv, size_t* sig);
+bool estimate_pk_size_requirements(CryptoKey, size_t* pub, size_t* priv, uint16_t* sig);
 
 void crypt_error_string(int errnum, char *buffer, size_t buflen);
 

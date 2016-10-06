@@ -26,30 +26,24 @@ This represents tentative support. This should ultimately be distilled-down
 #ifndef __MANUVR_IDENTITY_ONEID_H__
 #define __MANUVR_IDENTITY_ONEID_H__
 
+// OneID's chosen curve is this big.
+#define ONEID_PUB_KEY_MAX_LEN     92
 
 
-class IdentityOneID : public Identity {
+class IdentityOneID : public IdentityPubKey {
   public:
     IdentityOneID(const char* nom);
     IdentityOneID(uint8_t* buf, uint16_t len);
     ~IdentityOneID();
 
-    int8_t sign();
-    int8_t verify();
-
-    int8_t sanity_check();
-
     void toString(StringBuilder*);
     int  serialize(uint8_t*, uint16_t);
 
 
-  protected:
-    uint8_t*  _pub         = nullptr;
-    uint8_t*  _priv        = nullptr;
-    uint16_t  _pub_size    = 0;
-    uint16_t  _priv_size   = 0;
-    CryptoKey _key_type    = CryptoKey::ECC_SECP256R1;
-    Cipher    _cipher      = Cipher::ASYM_ECDSA;
+  private:
+    uint8_t _oneid_project_key[ONEID_PUB_KEY_MAX_LEN];
+    uint8_t _oneid_server_key[ONEID_PUB_KEY_MAX_LEN];
+    uint8_t _oneid_reset_key[ONEID_PUB_KEY_MAX_LEN];
 };
 
 

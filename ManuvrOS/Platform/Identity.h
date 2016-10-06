@@ -110,6 +110,8 @@ class Identity {
     inline bool  isValid() {    return _ident_flag(MANUVR_IDENT_FLAG_VALID);  };
 
     inline char* getHandle() {  return (nullptr == _handle ? (char*) "unnamed":_handle);  };
+    Identity* getIdentity(IdentFormat);
+    Identity* getIdentity(const char*);
 
     static Identity* fromBuffer(uint8_t*, int len);   // From storage.
     static void staticToString(Identity*, StringBuilder*);
@@ -123,23 +125,36 @@ class Identity {
     Identity(const char*, IdentFormat);
 
     int  _serialize(uint8_t*, uint16_t len);   // For storage.
+    inline void _clobber_format(IdentFormat f) {  _format = f;  };
 
-    inline bool _ident_flag(uint16_t f) {   return ((_ident_flags & f) == f);  };
+    inline bool _ident_flag(uint16_t f) {   return ((_flags & f) == f);  };
     inline void _ident_set_flag(bool nu, uint16_t _flag) {
-      _ident_flags = (nu) ? (_ident_flags | _flag) : (_ident_flags & ~_flag);
+      _flags = (nu) ? (_flags | _flag) : (_flags & ~_flag);
     };
 
 
   private:
-    uint16_t _ident_flags = 0;
+    uint16_t    _flags  = 0;
     char*       _handle = nullptr;  // Human-readable name of this identity.
-    Identity*   _next   = nullptr;  // Chaining is probably better than flatness in this case.
-    IdentFormat format  = IdentFormat::UNDETERMINED;   // What is the nature of this identity?
+    Identity*   _next   = nullptr;  // See notes.
+    IdentFormat _format = IdentFormat::UNDETERMINED;   // What is the nature of this identity?
 
     static const IdentFormat supported_notions[];
-
 };
 
+
+/**
+* Note regarding the linked-list aspect of the Identity class:
+* Chaining is probably better than flatness in this case. The problem is that we need to
+*   be able to sustain identities that are not self-contained (PKI, suppose). By chaining
+*   identities (in-order of relevance where possible), we allow for features like
+*   authentication chains, PKI caching, and multiple-self-identity.
+*/
+
+// Tail-inclusion allows us to both keep the headers abstracted, and allows conditional
+//   build support. There might be a better means to achieve this.
+
+/* UUID support is cheap, and many other notions of identity depend upon it. */
 #include <Platform/Identity/IdentityUUID.h>
 
 #if defined(__HAS_CRYPT_WRAPPER)

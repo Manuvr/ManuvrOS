@@ -34,7 +34,7 @@ limitations under the License.
 *         There is likely a scientific means of arriving at the correct size.
 * This should only be used to allocate scratch buffers.
 */
-bool estimate_pk_size_requirements(CryptoKey k, size_t* pub, size_t* priv, size_t* sig) {
+bool estimate_pk_size_requirements(CryptoKey k, size_t* pub, size_t* priv, uint16_t* sig) {
   switch (k) {
     #if defined(WRAPPED_ASYM_ECKEY)
       #if defined(WRAPPED_PK_OPT_SECP192R1)

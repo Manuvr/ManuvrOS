@@ -29,10 +29,29 @@ Cryptographically-backed identities.
 
 
 //private_log_shunt
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
 
 /* This is the fixed size of this class of identity. */
 static const size_t IDENT_PK_FIXED_SIZE = sizeof(CryptoKey) + sizeof(Cipher) + sizeof(Hashes) + 4;
 
+
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
 
 IdentityPubKey::IdentityPubKey(const char* nom, Cipher c, CryptoKey k) : IdentityPubKey(nom, c, k, Hashes::NONE) {
 }
@@ -43,9 +62,8 @@ IdentityPubKey::IdentityPubKey(const char* nom, Cipher c, CryptoKey k, Hashes h)
   _ident_set_flag(true, MANUVR_IDENT_FLAG_DIRTY | MANUVR_IDENT_FLAG_ORIG_GEN);
   size_t tmp_public_len  = 0;
   size_t tmp_privat_len  = 0;
-  size_t tmp_sig_len     = 0;
   _key_type = k;
-  if (estimate_pk_size_requirements(k, &tmp_public_len, &tmp_privat_len, &tmp_sig_len)) {
+  if (estimate_pk_size_requirements(k, &tmp_public_len, &tmp_privat_len, &_sig_size)) {
     uint8_t* tmp_pub = (uint8_t*) alloca(tmp_public_len);
     uint8_t* tmp_prv = (uint8_t*) alloca(tmp_privat_len);
 
@@ -111,26 +129,18 @@ IdentityPubKey::~IdentityPubKey() {
 }
 
 
-/*
-* We shouldn't trust that keypairs loaded from any given source are *actually pairs*.
-*   This function will test them against one another to ensure that they are truely paired.
-* This would be the proper place to do things like key-pinning.
-* Note that this is not a "go/no-go" situation. We might see keys that the platform owns,
-*  and therefore only have the public component (despite it possibly being a self-identity).
-*  Communication with the cryptographic and platform layers may be required to give a
-*  sensible answer.
-*
-* @return 0 if the intentity sanity-checks, negative on error, and positive if trusted.
-*/
-int8_t IdentityPubKey::sanity_check() {
-  if (_ident_flag(MANUVR_IDENT_FLAG_VALID)) {
-    // TODO: Actually test signing? Check for HSM ownership?
-    return 0;
-  }
-  return -1;
-}
 
-
+/*******************************************************************************
+* _________ ______   _______  _       ___________________________
+* \__   __/(  __  \ (  ____ \( (    /|\__   __/\__   __/\__   __/|\     /|
+*    ) (   | (  \  )| (    \/|  \  ( |   ) (      ) (      ) (   ( \   / )
+*    | |   | |   ) || (__    |   \ | |   | |      | |      | |    \ (_) /
+*    | |   | |   | ||  __)   | (\ \) |   | |      | |      | |     \   /
+*    | |   | |   ) || (      | | \   |   | |      | |      | |      ) (
+* ___) (___| (__/  )| (____/\| )  \  |   | |   ___) (___   | |      | |
+* \_______/(______/ (_______/|/    )_)   )_(   \_______/   )_(      \_/
+* Functions to support the concept of identity.
+*******************************************************************************/
 void IdentityPubKey::toString(StringBuilder* output) {
   Hashes* biggest_hash = list_supported_digests();
   size_t hash_len = get_digest_output_length(*biggest_hash);
@@ -171,6 +181,39 @@ int IdentityPubKey::serialize(uint8_t* buf, uint16_t len) {
   }
   return offset;
 }
+
+
+
+/*
+* We shouldn't trust that keypairs loaded from any given source are *actually pairs*.
+*   This function will test them against one another to ensure that they are truely paired.
+* This would be the proper place to do things like key-pinning.
+* Note that this is not a "go/no-go" situation. We might see keys that the platform owns,
+*  and therefore only have the public component (despite it possibly being a self-identity).
+*  Communication with the cryptographic and platform layers may be required to give a
+*  sensible answer.
+*
+* @return 0 if the intentity sanity-checks, negative on error, and positive if trusted.
+*/
+int8_t IdentityPubKey::sanity_check() {
+  if (_ident_flag(MANUVR_IDENT_FLAG_VALID)) {
+    // TODO: Actually test signing? Check for HSM ownership?
+    return 0;
+  }
+  return -1;
+}
+
+
+int8_t IdentityPubKey::sign(uint8_t* in, size_t in_len, uint8_t* out, size_t* out_len) {
+  return -1;
+}
+
+
+int8_t IdentityPubKey::verify(uint8_t* in, size_t in_len, uint8_t* out, size_t* out_len) {
+  return -1;
+}
+
+
 
 
 #endif  // __HAS_CRYPT_WRAPPER

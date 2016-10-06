@@ -97,7 +97,7 @@ int CRYPTO_IDENT_TESTS() {
   // Create identities from nothing...
 
   IdentityPubKey ident_rsa("TesIdentRSA", Cipher::ASYM_RSA,   CryptoKey::RSA_2048);
-  IdentityPubKey ident_ecp("TesIdentECP", Cipher::ASYM_ECKEY, CryptoKey::ECC_SECP192R1);
+  IdentityPubKey ident_ecp("TesIdentECP", Cipher::ASYM_ECDSA, CryptoKey::ECC_SECP256R1);
 
   Identity::staticToString(&ident_rsa, &log);
   Identity::staticToString(&ident_ecp, &log);
@@ -115,41 +115,17 @@ int CRYPTO_IDENT_TESTS() {
         log.concatf("\t Unserialized successfully. Length is %d\n", ecp_restored->length());
         Identity::staticToString(ecp_restored, &log);
       }
+      else {
+        log.concatf("Failed to deserialize.\n");
+      }
+    }
+    else {
+      log.concatf("Failed to serialize.\n");
     }
   }
-
-
-  // Create identities from serialized representations.
-  //uint8_t buf[] = {0, 23, 0, 0, (uint8_t) IdentFormat::UUID, 65, 0,   1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
-  //IdentityUUID* ident0 = (IdentityUUID*) Identity::fromBuffer(buf, sizeof(buf));
-  //if (ident0) {
-  //  ident0->toString(&log);
-  //  log.concat("\n");
-  //  // Serialize identity.
-  //  int rep_len = ident0->length();
-  //  if (rep_len == sizeof(buf)) {
-  //    uint8_t* buf0 = (uint8_t*) alloca(rep_len);
-  //    int ser_len = ident0->serialize(buf0, rep_len);
-  //    if (ser_len == rep_len) {
-  //      return_value = 0;
-  //      for (int i = 0; i < ser_len; i++) {
-  //        if (buf[i] != buf0[i]) {
-  //          log.concatf("Index %d mismatch. Found 0x%02x, expected 0x%02x.\n", i, buf0[i], buf[i]);
-  //          return_value = -1;
-  //        }
-  //      }
-  //    }
-  //    else {
-  //      log.concatf("Serialized length is %d bytes. Should be %d bytes.\n", ser_len, rep_len);
-  //    }
-  //  }
-  //  else {
-  //    log.concatf("Reported length is %d bytes. Should be %d bytes.\n", rep_len, sizeof(buf));
-  //  }
-  //}
-  //else {
-  //  log.concatf("Failed to deserialize.\n");
-  //}
+  else {
+    log.concatf("Failed to create specified identity.\n");
+  }
 
   log.concat("========================================================\n\n");
   printf((const char*) log.string());

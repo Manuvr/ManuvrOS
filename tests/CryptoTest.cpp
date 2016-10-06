@@ -236,12 +236,12 @@ int CRYPTO_TEST_ASYMMETRIC_SET(Cipher c, CryptoKey* pks) {
   random_fill(test_message, MSG_BUFFER_LEN);
 
   while (CryptoKey::NONE != *pks) {
-    size_t public_estimate = 0;
-    size_t privat_estimate = 0;
-    size_t sigbuf_estimate = 0;
-    size_t public_len      = 0;
-    size_t privat_len      = 0;
-    size_t sigbuf_len      = 0;
+    size_t   public_estimate = 0;
+    size_t   privat_estimate = 0;
+    uint16_t sigbuf_estimate = 0;
+    size_t   public_len      = 0;
+    size_t   privat_len      = 0;
+    size_t   sigbuf_len      = 0;
     if (!estimate_pk_size_requirements(*pks, &public_estimate, &privat_estimate, &sigbuf_estimate)) {
       printf("\t Failed to estimate buffer requirements for %s.\n", get_pk_label(*pks));
       return -1;
