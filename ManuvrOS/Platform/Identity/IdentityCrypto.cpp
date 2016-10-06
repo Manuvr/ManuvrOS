@@ -206,11 +206,27 @@ int8_t IdentityPubKey::sanity_check() {
 
 
 int8_t IdentityPubKey::sign(uint8_t* in, size_t in_len, uint8_t* out, size_t* out_len) {
+  if (_sig_size && out_len && (_sig_size <= *out_len)) {
+    int ret = wrapped_sign_verify(_cipher, _key_type, _digest,
+      in, in_len, out, out_len, _priv, _priv_size, OP_SIGN
+    );
+    if (0 == ret) {
+      return 0;
+    }
+  }
   return -1;
 }
 
 
 int8_t IdentityPubKey::verify(uint8_t* in, size_t in_len, uint8_t* out, size_t* out_len) {
+  if (_sig_size && out_len && (_sig_size <= *out_len)) {
+    int ret = wrapped_sign_verify(_cipher, _key_type, _digest,
+      in, in_len, out, out_len, _pub, _pub_size, OP_VERIFY
+    );
+    if (0 == ret) {
+      return 0;
+    }
+  }
   return -1;
 }
 
