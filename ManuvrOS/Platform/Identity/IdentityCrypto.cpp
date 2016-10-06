@@ -28,7 +28,6 @@ Cryptographically-backed identities.
 #include <alloca.h>
 
 
-//private_log_shunt
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
@@ -142,12 +141,11 @@ IdentityPubKey::~IdentityPubKey() {
 * Functions to support the concept of identity.
 *******************************************************************************/
 void IdentityPubKey::toString(StringBuilder* output) {
-  Hashes* biggest_hash = list_supported_digests();
-  size_t hash_len = get_digest_output_length(*biggest_hash);
+  size_t hash_len = get_digest_output_length(_digest);
   uint8_t* hash = (uint8_t*) alloca(hash_len);
 
   if (_pub_size) {
-    if (0 == wrapped_hash((uint8_t*) _pub, _pub_size, hash, *biggest_hash)) {
+    if (0 == wrapped_hash((uint8_t*) _pub, _pub_size, hash, _digest)) {
       randomArt(hash, hash_len, get_pk_label(_key_type), output);
     }
   }

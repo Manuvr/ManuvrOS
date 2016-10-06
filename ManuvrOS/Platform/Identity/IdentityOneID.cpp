@@ -75,15 +75,7 @@ IdentityOneID::~IdentityOneID() {
 *******************************************************************************/
 
 void IdentityOneID::toString(StringBuilder* output) {
-  Hashes* biggest_hash = list_supported_digests();
-  size_t hash_len = get_digest_output_length(*biggest_hash);
-  uint8_t* hash = (uint8_t*) alloca(hash_len);
-
-  if (_pub_size) {
-    if (0 == wrapped_hash((uint8_t*) _pub, _pub_size, hash, *biggest_hash)) {
-      randomArt(hash, hash_len, get_pk_label(_key_type), output);
-    }
-  }
+  IdentityPubKey::toString(output);
 }
 
 

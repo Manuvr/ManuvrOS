@@ -23,7 +23,6 @@ Basic machinery of Identity objects.
 
 #include "Identity.h"
 #include <alloca.h>
-#include <Platform/Identity/IdentityUUID.h>
 #include <stdlib.h>
 
 /*******************************************************************************
