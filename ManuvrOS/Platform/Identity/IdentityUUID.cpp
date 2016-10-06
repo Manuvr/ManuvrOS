@@ -38,7 +38,7 @@ Simple form of identity. Implementable of devices that cannot handle
 IdentityUUID::IdentityUUID(const char* nom) : Identity(nom, IdentFormat::UUID) {
   _ident_len += sizeof(UUID);
   uuid_gen(&uuid);
-  _ident_set_flag(true, MANUVR_IDENT_FLAG_DIRTY | MANUVR_IDENT_FLAG_ORIG_GEN);
+  _ident_set_flag(true, MANUVR_IDENT_FLAG_VALID | MANUVR_IDENT_FLAG_DIRTY | MANUVR_IDENT_FLAG_ORIG_GEN);
 }
 
 IdentityUUID::IdentityUUID(const char* nom, char* uuid_str) : Identity(nom, IdentFormat::UUID) {
@@ -89,6 +89,9 @@ void IdentityUUID::toString(StringBuilder* output) {
 */
 int IdentityUUID::serialize(uint8_t* buf, uint16_t len) {
   int offset = Identity::_serialize(buf, len);
-  memcpy((buf + offset), (uint8_t*)&uuid.id, 16);
-  return offset + 16;
+  if ((len - offset) >= 16) {
+    memcpy((buf + offset), (uint8_t*)&uuid.id, 16);
+    return offset + 16;
+  }
+  return 0;
 }

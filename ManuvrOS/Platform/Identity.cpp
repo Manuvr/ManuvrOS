@@ -97,6 +97,7 @@ const char* Identity::identityTypeString(IdentFormat fmt) {
 * @return An identity chain on success, or nullptr on failure.
 */
 Identity* Identity::fromBuffer(uint8_t* buf, int len) {
+  Identity* return_value = nullptr;
   if (len > IDENTITY_BASE_PERSIST_LENGTH) {
     uint16_t ident_len = (((uint16_t) *(buf+0)) << 8) + *(buf+1);
     uint16_t ident_flg = (((uint16_t) *(buf+2)) << 8) + *(buf+3);
@@ -108,43 +109,40 @@ Identity* Identity::fromBuffer(uint8_t* buf, int len) {
 
       switch (fmt) {
         case IdentFormat::UUID:
-          {
-            IdentityUUID* ret = new IdentityUUID(buf, (uint16_t) len);
-            ret->_flags = ident_flg;
-            return (Identity*)ret;
-          }
+          return_value = (Identity*) new IdentityUUID(buf, (uint16_t) len);
+          break;
         case IdentFormat::SERIAL_NUM:
           // TODO: Ill-conceived? Why persist a hardware serial number???
           break;
-        case IdentFormat::CERT_FORMAT_DER:
-          break;
-        case IdentFormat::PK:
-          {
-            IdentityPubKey* ret = new IdentityPubKey(buf, (uint16_t) len);
-            printf("unserialize. %d >= %d\n", ident_len, len);
-            ret->_flags = ident_flg;
-            //if (ret->isValid()) {
-              return (Identity*)ret;
-            //}
-          }
-          break;
-        case IdentFormat::PSK_SYM:
-          break;
+        #if defined(__HAS_CRYPT_WRAPPER)
+          case IdentFormat::CERT_FORMAT_DER:
+            break;
+          case IdentFormat::PSK_SYM:
+            break;
+          case IdentFormat::PK:
+            return_value = (Identity*) new IdentityPubKey(buf, (uint16_t) len);
+            break;
+
+          #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
+            case IdentFormat::ONE_ID:
+              return_value = (Identity*) new IdentityOneID(buf, (uint16_t) len);
+              break;
+          #endif
+        #endif
+
         #if defined (MANUVR_OPENINTERCONNECT)
           case IdentFormat::OIC_CRED:
             break;
         #endif
-        #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
-          case IdentFormat::ONE_ID:
-            break;
-        #endif
+
         case IdentFormat::UNDETERMINED:
         default:
           break;
       }
     }
+    if (return_value) return_value->_flags = ident_flg;
   }
-  return nullptr;
+  return return_value;
 }
 
 

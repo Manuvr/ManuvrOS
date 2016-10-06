@@ -57,6 +57,9 @@ class IdentityPubKey : public Identity {
     CryptoKey _key_type    = CryptoKey::NONE;
     Cipher    _cipher      = Cipher::NONE;
     Hashes    _digest      = Hashes::NONE;
+
+  private:
+    static const size_t _SERIALIZED_LEN;
 };
 
 

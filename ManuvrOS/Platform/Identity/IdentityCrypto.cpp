@@ -41,7 +41,7 @@ Cryptographically-backed identities.
 *******************************************************************************/
 
 /* This is the fixed size of this class of identity. */
-static const size_t IDENT_PK_FIXED_SIZE = sizeof(CryptoKey) + sizeof(Cipher) + sizeof(Hashes) + 4;
+const size_t IdentityPubKey::_SERIALIZED_LEN = sizeof(CryptoKey) + sizeof(Cipher) + sizeof(Hashes) + 4;
 
 
 /*******************************************************************************
@@ -76,7 +76,7 @@ IdentityPubKey::IdentityPubKey(const char* nom, Cipher c, CryptoKey k, Hashes h)
         _priv_size = (uint16_t) (0xFFFF & tmp_privat_len);
         memcpy(_pub,  tmp_pub, _pub_size);
         memcpy(_priv, tmp_prv, _priv_size);
-        _ident_len += IDENT_PK_FIXED_SIZE + _pub_size + _priv_size;
+        _ident_len += _SERIALIZED_LEN + _pub_size + _priv_size;
         _ident_set_flag(true, MANUVR_IDENT_FLAG_VALID);
       }
     }
@@ -94,7 +94,7 @@ IdentityPubKey::IdentityPubKey(const char* nom, Cipher c, CryptoKey k, Hashes h)
 
 IdentityPubKey::IdentityPubKey(uint8_t* buf, uint16_t len) : Identity((const char*) buf, IdentFormat::PK) {
   int offset = _ident_len-5;
-  if ((len - offset) >= IDENT_PK_FIXED_SIZE) {
+  if ((len - offset) >= _SERIALIZED_LEN) {
     memcpy((uint8_t*) &_pub_size, (buf + offset), sizeof(_pub_size));
     offset += sizeof(_pub_size);
     memcpy((uint8_t*) &_priv_size, (buf + offset), sizeof(_priv_size));
@@ -120,7 +120,7 @@ IdentityPubKey::IdentityPubKey(uint8_t* buf, uint16_t len) : Identity((const cha
         offset += _priv_size;
       }
     }
-    _ident_len += IDENT_PK_FIXED_SIZE + _pub_size + _priv_size;
+    _ident_len += _SERIALIZED_LEN + _pub_size + _priv_size;
   }
 }
 
@@ -160,26 +160,29 @@ void IdentityPubKey::toString(StringBuilder* output) {
 */
 int IdentityPubKey::serialize(uint8_t* buf, uint16_t len) {
   int offset = Identity::_serialize(buf, len);
-  memcpy((buf + offset), (uint8_t*) &_pub_size, sizeof(_pub_size));
-  offset += sizeof(_pub_size);
-  memcpy((buf + offset), (uint8_t*) &_priv_size, sizeof(_priv_size));
-  offset += sizeof(_priv_size);
-  memcpy((buf + offset), (uint8_t*) &_key_type, sizeof(_key_type));
-  offset += sizeof(_key_type);
-  memcpy((buf + offset), (uint8_t*) &_cipher, sizeof(_cipher));
-  offset += sizeof(_cipher);
-  memcpy((buf + offset), (uint8_t*) &_digest, sizeof(_digest));
-  offset += sizeof(_digest);
+  if ((len - offset) >= (_SERIALIZED_LEN + _pub_size + _priv_size)) {
+    memcpy((buf + offset), (uint8_t*) &_pub_size, sizeof(_pub_size));
+    offset += sizeof(_pub_size);
+    memcpy((buf + offset), (uint8_t*) &_priv_size, sizeof(_priv_size));
+    offset += sizeof(_priv_size);
+    memcpy((buf + offset), (uint8_t*) &_key_type, sizeof(_key_type));
+    offset += sizeof(_key_type);
+    memcpy((buf + offset), (uint8_t*) &_cipher, sizeof(_cipher));
+    offset += sizeof(_cipher);
+    memcpy((buf + offset), (uint8_t*) &_digest, sizeof(_digest));
+    offset += sizeof(_digest);
 
-  if (_pub_size) {
-    memcpy((buf + offset), _pub, _pub_size);
-    offset += _pub_size;
+    if (_pub_size) {
+      memcpy((buf + offset), _pub, _pub_size);
+      offset += _pub_size;
+    }
+    if (_priv_size) {
+      memcpy((buf + offset), _priv, _priv_size);
+      offset += _priv_size;
+    }
+    return offset;
   }
-  if (_priv_size) {
-    memcpy((buf + offset), _priv, _priv_size);
-    offset += _priv_size;
-  }
-  return offset;
+  return 0;
 }
 
 

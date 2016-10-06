@@ -27,7 +27,7 @@ limitations under the License.
 
 #include <Platform/Identity.h>
 
-//private_log_shunt
+const size_t IdentityOneID::_SERIALIZED_LEN = ONEID_PUB_KEY_MAX_LEN*3;
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -81,26 +81,28 @@ void IdentityOneID::toString(StringBuilder* output) {
 *   error-checking are done upstream.
 */
 int IdentityOneID::serialize(uint8_t* buf, uint16_t len) {
-  int offset = Identity::_serialize(buf, len);
-  memcpy((buf + offset), (uint8_t*) &_pub_size, sizeof(_pub_size));
-  offset += sizeof(_pub_size);
-  memcpy((buf + offset), (uint8_t*) &_priv_size, sizeof(_priv_size));
-  offset += sizeof(_priv_size);
-  memcpy((buf + offset), (uint8_t*) &_key_type, sizeof(_key_type));
-  offset += sizeof(_key_type);
-  memcpy((buf + offset), (uint8_t*) &_cipher, sizeof(_cipher));
-  offset += sizeof(_cipher);
-
-  if (_pub_size) {
-    memcpy((buf + offset), _pub, _pub_size);
-    offset += _pub_size;
+  int offset = IdentityPubKey::serialize(buf, len);
+  if ((len - offset) >= _SERIALIZED_LEN) {
+    memcpy((buf + offset), (uint8_t*) &_oneid_project_key, ONEID_PUB_KEY_MAX_LEN);
+    offset += ONEID_PUB_KEY_MAX_LEN;
+    memcpy((buf + offset), (uint8_t*) &_oneid_server_key, ONEID_PUB_KEY_MAX_LEN);
+    offset += ONEID_PUB_KEY_MAX_LEN;
+    memcpy((buf + offset), (uint8_t*) &_oneid_reset_key, ONEID_PUB_KEY_MAX_LEN);
+    offset += ONEID_PUB_KEY_MAX_LEN;
+    return offset;
   }
-  if (_priv_size) {
-    memcpy((buf + offset), _priv, _priv_size);
-    offset += _priv_size;
-  }
-  return offset + 16;
+  return 0;
 }
+
+
+/*******************************************************************************
+* Cryptographic-layer functions...
+*******************************************************************************/
+
+int8_t IdentityOneID::verify(uint8_t* in, size_t in_len, uint8_t* out, size_t* out_len) {
+  return -1;
+}
+
 
 
 #endif  // WRAPPED_PK_OPT_SECP256R1 && WRAPPED_ASYM_ECDSA

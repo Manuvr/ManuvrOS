@@ -36,6 +36,10 @@ class IdentityOneID : public IdentityPubKey {
     IdentityOneID(uint8_t* buf, uint16_t len);
     ~IdentityOneID();
 
+    // We let IdentityPubKey handle signing, but OneID's verification must be
+    //   handled differently.
+    int8_t verify(uint8_t* in, size_t in_len, uint8_t* out, size_t* out_len);
+
     void toString(StringBuilder*);
     int  serialize(uint8_t*, uint16_t);
 
@@ -44,6 +48,8 @@ class IdentityOneID : public IdentityPubKey {
     uint8_t _oneid_project_key[ONEID_PUB_KEY_MAX_LEN];
     uint8_t _oneid_server_key[ONEID_PUB_KEY_MAX_LEN];
     uint8_t _oneid_reset_key[ONEID_PUB_KEY_MAX_LEN];
+
+    static const size_t _SERIALIZED_LEN;
 };
 
 
