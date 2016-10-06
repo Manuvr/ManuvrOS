@@ -17,8 +17,7 @@
 #define YLIM 9
 #define ARSZ (XLIM * YLIM)
 
-static const char* ra_symbols = " .:-+=*BoOX@&#^SE";
-
+static const char* ra_symbols = " .-:+=R^v<>*&#XoO";
 
 uint8_t ra_new_position(uint8_t *pos, uint8_t direction) {
   uint8_t newpos;
