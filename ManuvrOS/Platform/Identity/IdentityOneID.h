@@ -26,4 +26,31 @@ This represents tentative support. This should ultimately be distilled-down
 #ifndef __MANUVR_IDENTITY_ONEID_H__
 #define __MANUVR_IDENTITY_ONEID_H__
 
+
+
+class IdentityOneID : public Identity {
+  public:
+    IdentityOneID(const char* nom);
+    IdentityOneID(uint8_t* buf, uint16_t len);
+    ~IdentityOneID();
+
+    int8_t sign();
+    int8_t verify();
+
+    int8_t sanity_check();
+
+    void toString(StringBuilder*);
+    int  serialize(uint8_t*, uint16_t);
+
+
+  protected:
+    uint8_t*  _pub         = nullptr;
+    uint8_t*  _priv        = nullptr;
+    uint16_t  _pub_size    = 0;
+    uint16_t  _priv_size   = 0;
+    CryptoKey _key_type    = CryptoKey::ECC_SECP256R1;
+    Cipher    _cipher      = Cipher::ASYM_ECDSA;
+};
+
+
 #endif // __MANUVR_IDENTITY_ONEID_H__

@@ -480,10 +480,37 @@ int __attribute__((weak)) wrapped_asym_keygen(Cipher c, CryptoKey key_type, uint
             ret = mbedtls_pk_setup(&key, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
             if (0 == ret) {
               mbedtls_rsa_context* rsa = mbedtls_pk_rsa(key);
-              ret = mbedtls_rsa_gen_key(
-                rsa,
+              ret = mbedtls_rsa_gen_key(rsa,
                 mbedtls_ctr_drbg_random, &ctr_drbg,
                 (int) key_type, 65537
+              );
+              if (0 == ret) {
+                ret--;
+                memset(pub,  0, *pub_len);
+                memset(priv, 0, *priv_len);
+                int written = mbedtls_pk_write_pubkey_der(&key, pub, *pub_len);
+                if (0 < written) {
+                  *pub_len = written;
+                  written = mbedtls_pk_write_key_der(&key, priv, *priv_len);
+                  if (0 < written) {
+                    *priv_len = written;
+                    ret = 0;
+                  }
+                }
+              }
+            }
+          }
+          break;
+      #endif
+      #if defined(MBEDTLS_ECDSA_C)
+        case Cipher::ASYM_ECDSA:
+          {
+            ret = mbedtls_pk_setup(&key, mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY));
+            if (0 == ret) {
+              mbedtls_ecp_keypair* ec_kp = mbedtls_pk_ec(key);
+              ret = mbedtls_ecdsa_genkey(ec_kp,
+                (mbedtls_ecp_group_id) key_type,
+                mbedtls_ctr_drbg_random, &ctr_drbg
               );
               if (0 == ret) {
                 ret--;
@@ -598,6 +625,34 @@ int __attribute__((weak)) wrapped_sign_verify(Cipher c, CryptoKey k, Hashes h, u
             //ret = mbedtls_pk_setup(&k_ctx, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
             if (opts & OP_SIGN) {
               ret = mbedtls_pk_setup(&k_ctx, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
+              if (0 == ret) {
+                ret = mbedtls_pk_parse_key(&k_ctx, key, key_len, nullptr, 0);
+                if (0 == ret) {
+                  ret = mbedtls_pk_sign(
+                    &k_ctx,
+                    (mbedtls_md_type_t) h, hash, hashlen,
+                    sig, sig_len,
+                    mbedtls_ctr_drbg_random, &ctr_drbg
+                  );
+                }
+              }
+            }
+            else {
+              ret = mbedtls_pk_parse_public_key(&k_ctx, key, key_len);
+              if (0 == ret) {
+                ret = mbedtls_pk_verify(
+                  &k_ctx,
+                  (mbedtls_md_type_t) h, hash, hashlen,
+                  sig, *sig_len
+                );
+              }
+            }
+            break;
+        #endif
+        #if defined(MBEDTLS_ECDSA_C)
+          case Cipher::ASYM_ECDSA:
+            if (opts & OP_SIGN) {
+              ret = mbedtls_pk_setup(&k_ctx, mbedtls_pk_info_from_type(MBEDTLS_PK_ECDSA));
               if (0 == ret) {
                 ret = mbedtls_pk_parse_key(&k_ctx, key, key_len, nullptr, 0);
                 if (0 == ret) {

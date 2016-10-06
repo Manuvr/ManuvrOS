@@ -43,11 +43,14 @@ Basic machinery of Identity objects.
 */
 const IdentFormat Identity::supported_notions[] = {
   #if defined(__HAS_CRYPT_WRAPPER)
-  IdentFormat::CERT_FORMAT_DER,
-  IdentFormat::PSK_ASYM,
+    IdentFormat::CERT_FORMAT_DER,
+    IdentFormat::PSK_ASYM,
+    #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
+      IdentFormat::ONE_ID,
+    #endif
   #endif
   #if defined(MANUVR_OPENINTERCONNECT)
-  IdentFormat::OIC_CRED,
+    IdentFormat::OIC_CRED,
   #endif
   IdentFormat::UUID,
   IdentFormat::SERIAL_NUM,
@@ -108,8 +111,6 @@ Identity* Identity::fromBuffer(uint8_t* buf, int len) {
       case IdentFormat::SERIAL_NUM:
         // TODO: Ill-conceived? Why persist a hardware serial number???
         break;
-      case IdentFormat::HASH:
-        break;
       case IdentFormat::CERT_FORMAT_DER:
         break;
       case IdentFormat::PSK_ASYM:
@@ -120,7 +121,7 @@ Identity* Identity::fromBuffer(uint8_t* buf, int len) {
         case IdentFormat::OIC_CRED:
           break;
       #endif
-      #if defined (MANUVR_ONEID)
+      #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
         case IdentFormat::ONE_ID:
           break;
       #endif

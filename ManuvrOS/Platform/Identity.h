@@ -69,19 +69,20 @@ This might be better-viewed as a data structure. Notions of identity should
 *         everything will transition smoothly.
 */
 enum class IdentFormat {
-  UNDETERMINED    = 0x00,  // Nothing here.
-  SERIAL_NUM      = 0x01,  // Nearly universal.
-  UUID            = 0x02,  // Low-grade. Easy.
-  HASH            = 0x03,  // Open-ended.
   #if defined(__HAS_CRYPT_WRAPPER)
-  CERT_FORMAT_DER = 0x04,  // Certificate in DER format.
-  PSK_ASYM        = 0x05,  // Pre-shared asymmetric key.
-  PSK_SYM         = 0x06,  // Pre-shared symmetric key.
+    CERT_FORMAT_DER = 0x04,  // Certificate in DER format.
+    PSK_ASYM        = 0x05,  // Pre-shared asymmetric key.
+    PSK_SYM         = 0x06,  // Pre-shared symmetric key.
+    #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
+      ONE_ID        = 0x10,  // OneID asymemetric key strategey.
+    #endif
   #endif
   #if defined(MANUVR_OPENINTERCONNECT)
-  OIC_CRED        = 0x07,  // OIC credential.
+    OIC_CRED        = 0x07,  // OIC credential.
   #endif
-  ONE_ID          = 0x10   // OneID asymemetric key strategey.
+  SERIAL_NUM      = 0x01,  // Nearly universal.
+  UUID            = 0x02,  // Low-grade. Easy.
+  UNDETERMINED    = 0x00   // Nothing here.
 };
 
 // This is the minimum size of or base identity class.
@@ -142,6 +143,9 @@ class Identity {
 
 #if defined(__HAS_CRYPT_WRAPPER)
   #include <Platform/Identity/IdentityCrypto.h>
+  #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
+    #include <Platform/Identity/IdentityOneID.h>
+  #endif
 #endif
 
 #endif // __MANUVR_IDENTITY_H__

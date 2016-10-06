@@ -47,18 +47,21 @@ Note that this represents a maximum scope-of-support regarding cryptographic
   #if defined(MBEDTLS_PK_C)
     #include "mbedtls/pk.h"
     #include "mbedtls/pk_internal.h"
+    #if defined(MBEDTLS_RSA_C)
+      #include "mbedtls/rsa.h"
+    #endif
+    #if defined(MBEDTLS_ECP_C)
+      #include "mbedtls/ecp.h"
+    #endif
+    #if defined(MBEDTLS_ECDSA_C)
+      #include "mbedtls/ecdsa.h"
+    #endif
   #endif
   #if defined(MBEDTLS_AES_C)
     #include "mbedtls/aes.h"
   #endif
   #if defined(MBEDTLS_BLOWFISH_C)
     #include "mbedtls/blowfish.h"
-  #endif
-  #if defined(MBEDTLS_RSA_C)
-    #include "mbedtls/rsa.h"
-  #endif
-  #if defined(MBEDTLS_ECP_C)
-    #include "mbedtls/ecp.h"
   #endif
 
   // Now we are going to re-assign some defines to make our base-wrapper. All

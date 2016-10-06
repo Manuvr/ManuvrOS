@@ -331,11 +331,14 @@ int CRYPTO_TEST_ASYMMETRIC() {
   CryptoKey _pks[] = {CryptoKey::RSA_2048, CryptoKey::RSA_4096, CryptoKey::NONE};
 
   for (int i = 0; i < 1; i++) {
-    printf("===< CRYPTO_TEST_ASYMMETRIC_RSA >================================\n");
-    if (CRYPTO_TEST_ASYMMETRIC_SET(Cipher::ASYM_RSA, &_pks[0]))  return -1;
+    printf("===< CRYPTO_TEST_ASYMMETRIC_ECDSA >==============================\n");
+    if (CRYPTO_TEST_ASYMMETRIC_SET(Cipher::ASYM_ECDSA, list_supported_curves())) return -1;
 
     printf("===< CRYPTO_TEST_ASYMMETRIC_ECP >================================\n");
     if (CRYPTO_TEST_ASYMMETRIC_SET(Cipher::ASYM_ECKEY, list_supported_curves())) return -1;
+
+    printf("===< CRYPTO_TEST_ASYMMETRIC_RSA >================================\n");
+    if (CRYPTO_TEST_ASYMMETRIC_SET(Cipher::ASYM_RSA, &_pks[0]))  return -1;
   }
 
   // Print the estimate differentials.

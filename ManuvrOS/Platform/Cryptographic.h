@@ -129,7 +129,6 @@ enum class CryptoKey {
   NONE = 0
 };
 
-
 /*
 *
 * This is obnoxious to read, but it is essential for mating the library-support
