@@ -55,4 +55,6 @@ Apart from including the user-suppied configuration header, there
   #else
     #include "ManuvrConf.h"
   #endif
+
+  #include <Rationalizer.h>
 #endif

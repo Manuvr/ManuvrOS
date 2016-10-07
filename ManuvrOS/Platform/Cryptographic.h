@@ -41,6 +41,7 @@ See CryptOptUnifier.h for more information.
 #define __CRYPTO_WRAPPER_H__
 
 // Try to contain wrapped header concerns in here, pl0x...
+#include <Rationalizer.h>
 #include "Cryptographic/CryptOptUnifier.h"
 
 #if defined(__HAS_CRYPT_WRAPPER)
