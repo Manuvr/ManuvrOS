@@ -43,20 +43,17 @@ IdentityUUID::IdentityUUID(const char* nom) : Identity(nom, IdentFormat::UUID) {
 
 IdentityUUID::IdentityUUID(const char* nom, char* uuid_str) : Identity(nom, IdentFormat::UUID) {
   _ident_len += sizeof(UUID);
-  printf("CTOR-IdentityUUID-new: %d\n\n", _ident_len);
   uuid_from_str(uuid_str, &uuid);
 }
 
 
 IdentityUUID::IdentityUUID(uint8_t* buf, uint16_t len) : Identity((const char*) buf, IdentFormat::UUID) {
   const int offset = _ident_len-5;
-  printf("CTOR-IdentityUUID-buffer-0: %d\n\n", _ident_len);
   if ((len - offset) >= 16) {
     // If there are at least 16 non-string bytes left in the buffer...
     for (int i = 0; i < 16; i++) *(((uint8_t*)&uuid.id) + i) = *(buf + i + offset);
   }
   _ident_len += 16;
-  printf("CTOR-IdentityUUID-buffer-1: %d\n\n", _ident_len);
 }
 
 

@@ -825,7 +825,8 @@ void I2CAdapter::printDebug(StringBuilder *temp) {
 
   if (work_queue.size() > 0) {
     temp->concatf("\nQueue Listing (top 3 of %d total)\n", work_queue.size());
-    for (int i = 0; i < std::min(work_queue.size(), I2CADAPTER_MAX_QUEUE_PRINT); i++) {
+    int m_q_p = (I2CADAPTER_MAX_QUEUE_PRINT >= work_queue.size()) ? work_queue.size() : I2CADAPTER_MAX_QUEUE_PRINT;
+    for (int i = 0; i < m_q_p; i++) {
       work_queue.get(i)->printDebug(temp);
     }
     temp->concat("\n");

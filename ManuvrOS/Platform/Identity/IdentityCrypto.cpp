@@ -26,6 +26,7 @@ Cryptographically-backed identities.
 #if defined(__HAS_CRYPT_WRAPPER)
 #include <Platform/Identity.h>
 #include <alloca.h>
+#include <stdlib.h>   // TODO: Remove dependency.
 
 
 /*******************************************************************************
@@ -158,6 +159,7 @@ void IdentityPubKey::toString(StringBuilder* output) {
 */
 int IdentityPubKey::serialize(uint8_t* buf, uint16_t len) {
   int offset = Identity::_serialize(buf, len);
+  // TODO: Signed/unsigned. Level this out.
   if ((len - offset) >= (_SERIALIZED_LEN + _pub_size + _priv_size)) {
     memcpy((buf + offset), (uint8_t*) &_pub_size, sizeof(_pub_size));
     offset += sizeof(_pub_size);

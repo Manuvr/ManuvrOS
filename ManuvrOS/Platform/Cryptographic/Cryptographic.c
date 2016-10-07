@@ -190,17 +190,19 @@ const bool _is_cipher_symmetric(Cipher ci) {
     case Cipher::SYM_CAMELLIA_128_GCM:
     case Cipher::SYM_CAMELLIA_192_GCM:
     case Cipher::SYM_CAMELLIA_256_GCM:
-    case Cipher::SYM_DES_ECB:
-    case Cipher::SYM_DES_CBC:
-    case Cipher::SYM_DES_EDE_ECB:
-    case Cipher::SYM_DES_EDE_CBC:
-    case Cipher::SYM_DES_EDE3_ECB:
-    case Cipher::SYM_DES_EDE3_CBC:
+    //case Cipher::SYM_DES_ECB:
+    //case Cipher::SYM_DES_CBC:
+    //case Cipher::SYM_DES_EDE_ECB:
+    //case Cipher::SYM_DES_EDE_CBC:
+    //case Cipher::SYM_DES_EDE3_ECB:
+    //case Cipher::SYM_DES_EDE3_CBC:
     case Cipher::SYM_BLOWFISH_ECB:
     case Cipher::SYM_BLOWFISH_CBC:
     case Cipher::SYM_BLOWFISH_CFB64:
     case Cipher::SYM_BLOWFISH_CTR:
-    case Cipher::SYM_ARC4_128:
+    #if defined(WRAPPED_SYM_ARC4_128)
+      case Cipher::SYM_ARC4_128:
+    #endif
     case Cipher::SYM_CAMELLIA_128_CCM:
     case Cipher::SYM_CAMELLIA_192_CCM:
     case Cipher::SYM_CAMELLIA_256_CCM:
@@ -260,30 +262,50 @@ const bool _is_cipher_authenticated(Cipher ci) {
 /* Privately scoped. */
 const bool _is_cipher_asymmetric(Cipher ci) {
   switch (ci) {
-    case Cipher::ASYM_ECKEY:
-    case Cipher::ASYM_ECKEY_DH:
-    case Cipher::ASYM_ECDSA:
-    case Cipher::ASYM_RSA:
-    case Cipher::ASYM_RSA_ALT:
-    case Cipher::ASYM_RSASSA_PSS:
-      return true;
-    default:
-      return false;
+    #if defined(WRAPPED_ASYM_ECKEY)
+      case Cipher::ASYM_ECKEY:        return true;
+    #endif
+    #if defined(WRAPPED_ASYM_ECKEY_DH)
+      case Cipher::ASYM_ECKEY_DH:     return true;
+    #endif
+    #if defined(WRAPPED_ASYM_ECDSA)
+      case Cipher::ASYM_ECDSA:        return true;
+    #endif
+    #if defined(WRAPPED_ASYM_RSA)
+      case Cipher::ASYM_RSA:          return true;
+    #endif
+    #if defined(WRAPPED_ASYM_RSA_ALT)
+      case Cipher::ASYM_RSA_ALT:      return true;
+    #endif
+    #if defined(WRAPPED_ASYM_RSASSA_PSS)
+      case Cipher::ASYM_RSASSA_PSS:   return true;
+    #endif
+    default:                          return false;
   }
 }
 
 /* Privately scoped. */
 const bool _valid_cipher_params(Cipher ci) {
   switch (ci) {
-    case Cipher::ASYM_ECKEY:
-    case Cipher::ASYM_ECKEY_DH:
-    case Cipher::ASYM_ECDSA:
-    case Cipher::ASYM_RSA:
-    case Cipher::ASYM_RSA_ALT:
-    case Cipher::ASYM_RSASSA_PSS:
-      return true;
-    default:
-      return false;
+    #if defined(WRAPPED_ASYM_ECKEY)
+      case Cipher::ASYM_ECKEY:        return true;
+    #endif
+    #if defined(WRAPPED_ASYM_ECKEY_DH)
+      case Cipher::ASYM_ECKEY_DH:     return true;
+    #endif
+    #if defined(WRAPPED_ASYM_ECDSA)
+      case Cipher::ASYM_ECDSA:        return true;
+    #endif
+    #if defined(WRAPPED_ASYM_RSA)
+      case Cipher::ASYM_RSA:          return true;
+    #endif
+    #if defined(WRAPPED_ASYM_RSA_ALT)
+      case Cipher::ASYM_RSA_ALT:      return true;
+    #endif
+    #if defined(WRAPPED_ASYM_RSASSA_PSS)
+      case Cipher::ASYM_RSASSA_PSS:   return true;
+    #endif
+    default:                          return false;
   }
 }
 

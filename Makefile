@@ -129,7 +129,7 @@ LIBS += $(OUTPUT_PATH)/libmbedtls.a
 LIBS += $(OUTPUT_PATH)/libmbedx509.a
 LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
 # mbedTLS will require this in order to use our chosen options.
-export MBEDTLS_CONFIG_FILE = $(WHERE_I_AM)/mbedTLS_conf.h
+MANUVR_OPTIONS += -DMBEDTLS_CONFIG_FILE='<mbedTLS_conf.h>'
 export SECURE=1
 endif
 

@@ -86,7 +86,7 @@ int UUID_IDENT_TESTS() {
     log.concatf("Failed to deserialize.\n");
   }
 
-  log.concat("========================================================\n\n");
+  log.concat("\n\n");
   printf((const char*) log.string());
   return return_value;
 }
@@ -134,7 +134,7 @@ int CRYPTO_IDENT_TESTS() {
     log.concatf("Failed to create specified identity.\n");
   }
 
-  log.concat("========================================================\n\n");
+  log.concat("\n\n");
   printf((const char*) log.string());
   return return_value;
 }
@@ -177,7 +177,7 @@ int ONEID_IDENT_TESTS() {
     log.concatf("Failed to create specified identity.\n");
   }
 
-  log.concat("========================================================\n\n");
+  log.concat("\n\n");
   printf((const char*) log.string());
   return return_value;
 }

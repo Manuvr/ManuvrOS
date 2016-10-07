@@ -54,7 +54,9 @@ LightSensor::~LightSensor() {
 void LightSensor::light_check() {
   uint16_t current_lux_read = readPinAnalog(_analog_pin);
   uint8_t current_lux_bin = current_lux_read >> 2;
-  if ((std::max(current_lux_bin, last_lux_bin) - std::min(current_lux_bin, last_lux_bin)) > 3) {
+
+  uint8_t lux_delta = (last_lux_bin > current_lux_bin) ? (last_lux_bin - current_lux_bin) : (current_lux_bin - last_lux_bin);
+  if (lux_delta > 3) {
     last_lux_bin = current_lux_bin;
     // This will cause broadcase of our timed event...
     _periodic_check.specific_target = nullptr;

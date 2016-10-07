@@ -30,9 +30,18 @@ This represents tentative support. This should ultimately be distilled-down
 #define ONEID_PUB_KEY_MAX_LEN     92
 
 
+typedef struct oneid_provisioning_bundle_t {
+  uint8_t project_key[ONEID_PUB_KEY_MAX_LEN];
+  uint8_t server_key[ONEID_PUB_KEY_MAX_LEN];
+  uint8_t reset_key[ONEID_PUB_KEY_MAX_LEN];
+} ProvBundle;
+
+
+
 class IdentityOneID : public IdentityPubKey {
   public:
     IdentityOneID(const char* nom);
+    //IdentityOneID(const char* nom, ProvBundle*);
     IdentityOneID(uint8_t* buf, uint16_t len);
     ~IdentityOneID();
 

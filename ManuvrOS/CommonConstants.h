@@ -49,6 +49,7 @@ Apart from including the user-suppied configuration header, there
   #define YES_STR   "Yes"
   #define NO_STR    "No"
 
+
   #if defined(MANUVR_CONF_FILE)
     #include MANUVR_CONF_FILE
   #else

@@ -157,6 +157,7 @@ class Storage;
     unsigned long millis();
     unsigned long micros();
   }
+
 #endif
 
 
