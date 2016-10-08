@@ -33,11 +33,10 @@ limitations under the License.
 
   class Kernel;
 
-  #include <inttypes.h>
   #include <map>
 
-  #include <EnumeratedTypeCodes.h>
   #include <CommonConstants.h>
+  #include <EnumeratedTypeCodes.h>
 
   #include <DataStructures/PriorityQueue.h>
   #include <DataStructures/StringBuilder.h>

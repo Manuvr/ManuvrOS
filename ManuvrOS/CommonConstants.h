@@ -22,6 +22,9 @@ Apart from including the user-suppied configuration header, there
   ought to be no inclusion in this file. It is the bottom.
 */
 
+#include <inttypes.h>
+#include <stddef.h>  // TODO: Only needed for size_t
+
 #ifndef __MANUVR_COMMON_CONSTANTS_H__
   #define __MANUVR_COMMON_CONSTANTS_H__
 
@@ -60,6 +63,7 @@ Apart from including the user-suppied configuration header, there
 
 
 // TODO: Function defs do not belong here. This area under re-org.
+int wrapped_base64_decode(uint8_t* dst, size_t dlen, size_t* olen, const uint8_t* src, size_t slen);
 // Everytime you macro a function, baby Jesus cries.
 inline float    strict_max(float    a, float    b) {  return (a > b) ? a : b; };
 inline uint32_t strict_max(uint32_t a, uint32_t b) {  return (a > b) ? a : b; };

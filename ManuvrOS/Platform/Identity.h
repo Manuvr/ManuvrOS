@@ -164,4 +164,8 @@ class Identity {
   #endif
 #endif
 
+#if defined(MANUVR_OPENINTERCONNECT)
+  #include <Platform/Identity/IdentityOIC.h>
+#endif
+
 #endif // __MANUVR_IDENTITY_H__

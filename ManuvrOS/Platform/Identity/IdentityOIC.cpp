@@ -24,6 +24,7 @@ OIC credentials.
 
 #if defined (MANUVR_OPENINTERCONNECT)
 
+#include <DataStructures/uuid.h>
 #include <Platform/Identity.h>
 #include <alloca.h>
 
@@ -37,8 +38,9 @@ IdentityOIC::IdentityOIC(const char* nom) : Identity(nom, IdentFormat::OIC_CRED)
   _ident_set_flag(true, MANUVR_IDENT_FLAG_DIRTY | MANUVR_IDENT_FLAG_ORIG_GEN);
 }
 
-IdentityOIC::IdentityOIC(const char* nom, char* subj) : IdentityOIC(nom) {
+IdentityOIC::IdentityOIC(const char* nom, char* uuid_str) : IdentityOIC(nom) {
   uuid_from_str(uuid_str, &_subject);
+  _ident_set_flag(true, MANUVR_IDENT_FLAG_DIRTY | MANUVR_IDENT_FLAG_ORIG_GEN);
 }
 
 
@@ -53,7 +55,7 @@ IdentityOIC::~IdentityOIC() {
 void IdentityOIC::toString(StringBuilder* output) {
   char* uuid_str = (char*) alloca(40);
   bzero(uuid_str, 40);
-  uuid_to_str(&uuid, uuid_str, 40);
+  uuid_to_str(&_subject, uuid_str, 40);
   output->concatf(uuid_str);
 }
 
@@ -63,7 +65,7 @@ void IdentityOIC::toString(StringBuilder* output) {
 */
 int IdentityOIC::serialize(uint8_t* buf, uint16_t len) {
   int offset = Identity::_serialize(buf, len);
-  memcpy((buf + offset), (uint8_t*)&uuid.id, 16);
+  memcpy((buf + offset), (uint8_t*)&_subject.id, 16);
   return 16;
 }
 

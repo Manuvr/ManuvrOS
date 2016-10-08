@@ -31,14 +31,14 @@ uint8_t ra_new_position(uint8_t *pos, uint8_t direction) {
   if (x1 < 0) {
     x1 = 0;
   }
-	else if (x1 >= XLIM) {
+  else if (x1 >= XLIM) {
     x1 = XLIM - 1;
   }
 
   if (y1 < 0) {
     y1 = 0;
   }
-	else if (y1 >= YLIM) {
+  else if (y1 >= YLIM) {
     y1 = YLIM - 1;
   }
 
@@ -47,7 +47,7 @@ uint8_t ra_new_position(uint8_t *pos, uint8_t direction) {
   if (newpos == *pos) {
     upd = 0;
   }
-	else {
+  else {
     *pos = newpos;
   }
   return upd;
@@ -59,7 +59,7 @@ int randomArt(uint8_t* dgst_raw, unsigned int dgst_raw_len, const char* title, S
     return -1;
   }
   uint8_t array[ARSZ];
-	bzero(&array, ARSZ);
+  bzero(&array, ARSZ);
   uint8_t pos = 76;
 
   for (uint16_t idx = 0; idx < dgst_raw_len; idx++) {
@@ -75,19 +75,26 @@ int randomArt(uint8_t* dgst_raw, unsigned int dgst_raw_len, const char* title, S
 
   StringBuilder temp;
   temp.concatf("+--[%10s ]--+\n", title);
-	char line_buf[21];
-	line_buf[0]  = '|';
-	line_buf[18] = '|';
-	line_buf[19] = '\n';
-	line_buf[20] = '\0';
+  char line_buf[21];
+  line_buf[0]  = '|';
+  line_buf[18] = '|';
+  line_buf[19] = '\n';
+  line_buf[20] = '\0';
   for (uint8_t i = 0; i < YLIM; i++) {
-		for (uint8_t j = 0; j < XLIM; j++) {
-			*(line_buf + j + 1) = *(ra_symbols + array[j + (XLIM * i)] % 18);
-		}
-		temp.concatf(line_buf);
+    for (uint8_t j = 0; j < XLIM; j++) {
+      *(line_buf + j + 1) = *(ra_symbols + array[j + (XLIM * i)] % 18);
+    }
+    temp.concatf(line_buf);
   }
   temp.concat("+-----------------+\n");
   temp.string();
   output->concatHandoff(&temp);
   return 0;
 }
+
+#if defined(WITH_MBEDTLS)
+#include "mbedtls/base64.h"
+int wrapped_base64_decode(uint8_t* dst, size_t dlen, size_t* olen, const uint8_t* src, size_t slen) {
+  return mbedtls_base64_decode(dst, dlen, olen, src, slen);
+}
+#endif
