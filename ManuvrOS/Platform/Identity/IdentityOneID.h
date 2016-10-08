@@ -41,7 +41,7 @@ typedef struct oneid_provisioning_bundle_t {
 class IdentityOneID : public IdentityPubKey {
   public:
     IdentityOneID(const char* nom);
-    //IdentityOneID(const char* nom, ProvBundle*);
+    IdentityOneID(const char* nom, ProvBundle*);
     IdentityOneID(uint8_t* buf, uint16_t len);
     ~IdentityOneID();
 

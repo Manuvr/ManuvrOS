@@ -26,7 +26,13 @@ https://tools.ietf.org/html/rfc7515
 
 #include <Platform/Identity.h>
 
+#define ONEID_CONSTANT_FEATURES MANUVR_IDENT_FLAG_ORIG_PKI | \
+                                MANUVR_IDENT_FLAG_REVOKABLE | \
+                                MANUVR_IDENT_FLAG_NET_ACCEPT | \
+                                MANUVR_IDENT_FLAG_APP_ACCEPT
+
 const size_t IdentityOneID::_SERIALIZED_LEN = ONEID_PUB_KEY_MAX_LEN*3;
+
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -40,6 +46,14 @@ const size_t IdentityOneID::_SERIALIZED_LEN = ONEID_PUB_KEY_MAX_LEN*3;
 IdentityOneID::IdentityOneID(const char* nom) : IdentityPubKey(nom, Cipher::ASYM_ECDSA, CryptoKey::ECC_SECP256R1, Hashes::SHA256) {
   _clobber_format(IdentFormat::ONE_ID);
   _ident_len += _SERIALIZED_LEN;
+  _ident_set_flag(true, ONEID_CONSTANT_FEATURES | MANUVR_IDENT_FLAG_DIRTY);
+}
+
+
+IdentityOneID::IdentityOneID(const char* nom, ProvBundle* prov) : IdentityPubKey(nom, Cipher::ASYM_ECDSA, CryptoKey::ECC_SECP256R1, Hashes::SHA256) {
+  _clobber_format(IdentFormat::ONE_ID);
+  _ident_len += _SERIALIZED_LEN;
+  _ident_set_flag(true, ONEID_CONSTANT_FEATURES | MANUVR_IDENT_FLAG_DIRTY);
 }
 
 

@@ -666,7 +666,7 @@ int8_t Kernel::procIdleFlags() {
   uint32_t profiler_mark_1 = 0;   // Profiling requests...
   uint32_t profiler_mark_2 = 0;   // Profiling requests...
   uint32_t profiler_mark_3 = 0;   // Profiling requests...
-  int8_t return_value      = 0;   // Number of Events we've processed this call.
+  int8_t   return_value    = 0;   // Number of Events we've processed this call.
   uint16_t msg_code_local  = 0;
 
   serviceSchedules();
@@ -813,9 +813,9 @@ int8_t Kernel::procIdleFlags() {
           event_costs.incrementPriority(profiler_item);
         }
         profiler_item->executions++;
-        profiler_item->run_time_last    = (profiler_mark_2 > profiler_mark_1) ? (profiler_mark_2 - profiler_mark_1) : (profiler_mark_1, profiler_mark_2);
-        profiler_item->run_time_best    = (profiler_item->run_time_best > profiler_item->run_time_last) ? profiler_item->run_time_last : profiler_item->run_time_best;
-        profiler_item->run_time_worst   = (profiler_item->run_time_worst < profiler_item->run_time_last) ? profiler_item->run_time_last : profiler_item->run_time_worst;
+        profiler_item->run_time_last    = wrap_accounted_delta(profiler_mark_2, profiler_mark_1);
+        profiler_item->run_time_best    = strict_min(profiler_item->run_time_last, profiler_item->run_time_best);
+        profiler_item->run_time_worst   = strict_max(profiler_item->run_time_last, profiler_item->run_time_worst);
         profiler_item->run_time_total  += profiler_item->run_time_last;
         profiler_item->run_time_average = profiler_item->run_time_total / ((profiler_item->executions) ? profiler_item->executions : 1);
 
@@ -846,7 +846,7 @@ int8_t Kernel::procIdleFlags() {
   profiler_mark_3 = micros();
   flushLocalLog();
 
-  uint32_t runtime_this_loop = (profiler_mark > profiler_mark_3) ? (profiler_mark - profiler_mark_3) : (profiler_mark_3 - profiler_mark);
+  uint32_t runtime_this_loop = wrap_accounted_delta(profiler_mark, profiler_mark_3);
   if (return_value > 0) {
     // We ran at-least one Runnable.
     micros_occupied += runtime_this_loop;
@@ -857,7 +857,7 @@ int8_t Kernel::procIdleFlags() {
   }
   else if (0 == return_value) {
     // We did nothing this time.
-    uint32_t this_idle_time = (profiler_mark > profiler_mark_3) ? (profiler_mark - profiler_mark_3) : (profiler_mark_3 - profiler_mark);
+    uint32_t this_idle_time = wrap_accounted_delta(profiler_mark, profiler_mark_3);
     if (this_idle_time > max_idle_loop_time) {
       max_idle_loop_time = this_idle_time;
     }
@@ -888,7 +888,7 @@ int8_t Kernel::procIdleFlags() {
 
 
 
-/****************************************************************************************************
+/*******************************************************************************
 *  ▄▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄   ▄         ▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░▌       ▐░▌▐░░░░░░░░░░░▌
 * ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀
@@ -900,7 +900,7 @@ int8_t Kernel::procIdleFlags() {
 * ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌
 * ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
 *  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀
-****************************************************************************************************/
+*******************************************************************************/
 
 /**
 * Turns the profiler on or off. Clears its collected stats regardless.

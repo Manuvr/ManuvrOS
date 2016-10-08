@@ -53,7 +53,6 @@ uint8_t ra_new_position(uint8_t *pos, uint8_t direction) {
   return upd;
 }
 
-#include <stdio.h>
 
 int randomArt(uint8_t* dgst_raw, unsigned int dgst_raw_len, const char* title, StringBuilder* output) {
   if (0 >= dgst_raw_len) {

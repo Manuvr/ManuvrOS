@@ -38,7 +38,7 @@ EventReceiver::~EventReceiver() {
   if (nullptr != __kernel) {
     __kernel->unsubscribe(this);
   }
-  #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+  #if defined(__BUILD_HAS_THREADS)
     if (_thread_id > -1) {
       // TODO: Clean up any threads we may have fired up.
     }
@@ -181,8 +181,7 @@ void EventReceiver::printDebug() {
 *   to do it again here.
 */
 void EventReceiver::printDebug(StringBuilder *output) {
-  output->concatf("\n==< %s >===================================\n", getReceiverName());
-  output->concatf("-- Booted \t\t%s\n", booted() ? "yes" : "no");
+  output->concatf("\n==< %-16s (%ATTACHED) >============\n", getReceiverName(), (booted() ? "UN" : ""));
 }
 
 
@@ -271,9 +270,6 @@ int8_t EventReceiver::callback_proc(ManuvrRunnable *event) {
 int8_t EventReceiver::notify(ManuvrRunnable *active_event) {
   if (active_event) {
     switch (active_event->eventCode()) {
-      case MANUVR_MSG_SYS_RELEASE_CRUFT:   // System is telling us to GC if we can.
-        flushLocalLog();
-        return 1;
       case MANUVR_MSG_SYS_LOG_VERBOSITY:
         return setVerbosity(active_event);
       case MANUVR_MSG_SYS_BOOT_COMPLETED:
@@ -287,5 +283,6 @@ int8_t EventReceiver::notify(ManuvrRunnable *active_event) {
         break;
     }
   }
+  flushLocalLog();
   return 0;
 }

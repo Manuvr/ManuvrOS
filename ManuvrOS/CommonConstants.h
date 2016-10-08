@@ -57,4 +57,24 @@ Apart from including the user-suppied configuration header, there
   #endif
 
   #include <Rationalizer.h>
+
+
+// TODO: Function defs do not belong here. This area under re-org.
+// Everytime you macro a function, baby Jesus cries.
+inline float    strict_max(float    a, float    b) {  return (a > b) ? a : b; };
+inline uint32_t strict_max(uint32_t a, uint32_t b) {  return (a > b) ? a : b; };
+inline uint16_t strict_max(uint16_t a, uint16_t b) {  return (a > b) ? a : b; };
+inline int32_t  strict_max(int32_t  a, int32_t  b) {  return (a > b) ? a : b; };
+inline int16_t  strict_max(int16_t  a, int16_t  b) {  return (a > b) ? a : b; };
+
+inline float    strict_min(float    a, float    b) {  return (a < b) ? a : b; };
+inline uint32_t strict_min(uint32_t a, uint32_t b) {  return (a < b) ? a : b; };
+inline uint16_t strict_min(uint16_t a, uint16_t b) {  return (a < b) ? a : b; };
+inline int32_t  strict_min(int32_t  a, int32_t  b) {  return (a < b) ? a : b; };
+inline int16_t  strict_min(int16_t  a, int16_t  b) {  return (a < b) ? a : b; };
+
+inline uint32_t wrap_accounted_delta(uint32_t a, uint32_t b) {
+  return (a > b) ? (a - b) : (b - a);
+};
+
 #endif

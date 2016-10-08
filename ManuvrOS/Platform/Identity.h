@@ -25,9 +25,10 @@ This might be better-viewed as a data structure. Notions of identity should
 #ifndef __MANUVR_IDENTITY_H__
 #define __MANUVR_IDENTITY_H__
 
+#include <Rationalizer.h>
 #include <DataStructures/StringBuilder.h>
 #include <DataStructures/Argument.h>
-#include <Platform/Cryptographic/CryptOptUnifier.h>
+
 
 #define MANUVR_IDENT_FLAG_DIRTY        0x8000  // This ID will be lost if not persisted.
 #define MANUVR_IDENT_FLAG_OUR_OWN      0x4000  // This is our own identity.
@@ -38,7 +39,7 @@ This might be better-viewed as a data structure. Notions of identity should
 #define MANUVR_IDENT_FLAG_ORIG_HSM     0x0200  // Came from an HSM, local or not.
 #define MANUVR_IDENT_FLAG_ORIG_PKI     0x0100  // Imparted by a PKI.
 #define MANUVR_IDENT_FLAG_RESERVED_0   0x0080  //
-#define MANUVR_IDENT_FLAG_RESERVED_1   0x0040  //
+#define MANUVR_IDENT_FLAG_CRYPT_BACKED 0x0040  // Identity is cryptographically supported.
 #define MANUVR_IDENT_FLAG_VALID        0x0020  // Identity is valid and ready-for-use.
 #define MANUVR_IDENT_FLAG_3RD_PARTY_CA 0x0010  // This is an intermediary or CA cert.
 #define MANUVR_IDENT_FLAG_REVOKED      0x0008  // This identity is no longer valid.
@@ -49,7 +50,6 @@ This might be better-viewed as a data structure. Notions of identity should
 /* These flags should not be persisted. */
 #define MANUVR_IDENT_FLAG_PERSIST_MASK (MANUVR_IDENT_FLAG_VALID | \
                                         MANUVR_IDENT_FLAG_RESERVED_0 | \
-                                        MANUVR_IDENT_FLAG_RESERVED_1 | \
                                         MANUVR_IDENT_FLAG_DIRTY)
 /*
 * Note on NET_ACCEPT / APP_ACCEPT:
@@ -69,13 +69,13 @@ This might be better-viewed as a data structure. Notions of identity should
 *         everything will transition smoothly.
 */
 enum class IdentFormat {
-  #if defined(__HAS_CRYPT_WRAPPER)
+  #if defined(__HAS_IDENT_CERT)
     CERT_FORMAT_DER = 0x04,  // Certificate in DER format.
     PK              = 0x05,  // Pre-shared asymmetric key.
     PSK_SYM         = 0x06,  // Pre-shared symmetric key.
-    #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
-      ONE_ID        = 0x10,  // OneID asymemetric key strategey.
-    #endif
+  #endif
+  #if defined(__HAS_IDENT_ONEID)
+    ONE_ID          = 0x10,  // OneID asymemetric key strategey.
   #endif
   #if defined(MANUVR_OPENINTERCONNECT)
     OIC_CRED        = 0x07,  // OIC credential.

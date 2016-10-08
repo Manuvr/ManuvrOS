@@ -40,6 +40,8 @@ Cryptographically-backed identities.
 * Static members and initializers should be located here.
 *******************************************************************************/
 
+#define IDENT_PUBKEY_CONSTANT_FEATURES MANUVR_IDENT_FLAG_CRYPT_BACKED
+
 /* This is the fixed size of this class of identity. */
 const size_t IdentityPubKey::_SERIALIZED_LEN = sizeof(CryptoKey) + sizeof(Cipher) + sizeof(Hashes) + 4;
 
@@ -59,7 +61,10 @@ IdentityPubKey::IdentityPubKey(const char* nom, Cipher c, CryptoKey k) : Identit
 
 IdentityPubKey::IdentityPubKey(const char* nom, Cipher c, CryptoKey k, Hashes h) : Identity(nom, IdentFormat::PK) {
   _digest = (Hashes::NONE != h) ? h : *(list_supported_digests());
-  _ident_set_flag(true, MANUVR_IDENT_FLAG_DIRTY | MANUVR_IDENT_FLAG_ORIG_GEN);
+  _ident_set_flag(true,
+    MANUVR_IDENT_FLAG_DIRTY |
+    MANUVR_IDENT_FLAG_CRYPT_BACKED |
+    MANUVR_IDENT_FLAG_ORIG_GEN);
   size_t tmp_public_len  = 0;
   size_t tmp_privat_len  = 0;
   _key_type = k;

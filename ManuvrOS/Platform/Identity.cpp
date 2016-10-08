@@ -147,11 +147,40 @@ Identity* Identity::fromBuffer(uint8_t* buf, int len) {
 
 void Identity::staticToString(Identity* ident, StringBuilder* output) {
   output->concatf(
-    "%s:%14s\t(%s)\n",
+    "++ Identity: %s %14s  (%s) %s\n++ Acceptable for %s %s\n",
     ident->getHandle(),
     Identity::identityTypeString(ident->_format),
-    (ident->isDirty() ? "Dirty" : "Persisted")
+    (ident->isDirty() ? "Dirty" : "Persisted"),
+    (ident->_ident_flag(MANUVR_IDENT_FLAG_REVOKABLE) ? "(Revokable)" : ""),
+    (ident->_ident_flag(MANUVR_IDENT_FLAG_NET_ACCEPT) ? "Network" : ""),
+    (ident->_ident_flag(MANUVR_IDENT_FLAG_APP_ACCEPT) ? "Policy" : "")
   );
+  output->concatf("++ Validity checks pass:         %s\n", (ident->_ident_flag(MANUVR_IDENT_FLAG_VALID) ? "YES":"NO"));
+  if (ident->_ident_flag(MANUVR_IDENT_FLAG_REVOKED | MANUVR_IDENT_FLAG_REVOKABLE)) {
+    output->concat("++ REVOKED\n");
+  }
+
+  const char* o_str = "someone else.\n";
+  if (ident->_ident_flag(MANUVR_IDENT_FLAG_OUR_OWN)) {
+    o_str = "us.";
+  }
+  else if (ident->_ident_flag(MANUVR_IDENT_FLAG_LOCAL_CHAIN)) {
+    o_str = "our alibi.";
+  }
+  if (ident->_ident_flag(MANUVR_IDENT_FLAG_3RD_PARTY_CA)) {
+    o_str = "a CA.";
+  }
+  output->concatf("++ Belongs to %s\n", o_str);
+
+  output->concatf(
+    "++ Origin flags:    %s %s %s\n",
+    (ident->_ident_flag(MANUVR_IDENT_FLAG_ORIG_PERSIST) ? "(Loaded from storage) " : ""),
+    (ident->_ident_flag(MANUVR_IDENT_FLAG_ORIG_EXTER) ? "(Came from outside) " : ""),
+    (ident->_ident_flag(MANUVR_IDENT_FLAG_ORIG_GEN) ? "(Generated locally) " : ""),
+    (ident->_ident_flag(MANUVR_IDENT_FLAG_ORIG_PKI) ? "(Imparted by a PKI) " : ""),
+    (ident->_ident_flag(MANUVR_IDENT_FLAG_ORIG_HSM) ? "(Shadowed in an HSM) " : "")
+  );
+
   ident->toString(output);
   if (ident->_next) {
     Identity::staticToString(ident, output);
