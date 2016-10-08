@@ -354,43 +354,21 @@ bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
 
 
 
-/****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
-* ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
-* ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+/*******************************************************************************
+* ######## ##     ## ######## ##    ## ########  ######
+* ##       ##     ## ##       ###   ##    ##    ##    ##
+* ##       ##     ## ##       ####  ##    ##    ##
+* ######   ##     ## ######   ## ## ##    ##     ######
+* ##        ##   ##  ##       ##  ####    ##          ##
+* ##         ## ##   ##       ##   ###    ##    ##    ##
+* ########    ###    ######## ##    ##    ##     ######
 *
 * These are overrides from EventReceiver interface...
-****************************************************************************************************/
-/**
-* Debug support method. This fxn is only present in debug builds.
-*
-* @param   StringBuilder* The buffer into which this fxn should write its output.
-*/
-void ManuvrSerial::printDebug(StringBuilder *temp) {
-  if (temp == NULL) return;
-
-  ManuvrXport::printDebug(temp);
-  temp->concatf("-- _addr           %s\n",     _addr);
-  temp->concatf("-- _options        0x%08x\n", _options);
-  #if defined(__MANUVR_LINUX)
-    temp->concatf("-- _sock           0x%08x\n", _sock);
-  #endif
-  temp->concatf("-- Baud            %d\n",     _baud_rate);
-  temp->concatf("-- Class size      %d\n",     sizeof(ManuvrSerial));
-}
-
+*******************************************************************************/
 
 /**
-* There is a NULL-check performed upstream for the scheduler member. So no need
-*   to do it again here.
+* This is called when the kernel attaches the module.
+* This is the first time the class can be expected to have kernel access.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
@@ -408,6 +386,25 @@ int8_t ManuvrSerial::attached() {
 
   reset();
   return 1;
+}
+
+
+/**
+* Debug support method. This fxn is only present in debug builds.
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
+void ManuvrSerial::printDebug(StringBuilder *temp) {
+  if (temp == NULL) return;
+
+  ManuvrXport::printDebug(temp);
+  temp->concatf("-- _addr           %s\n",     _addr);
+  temp->concatf("-- _options        0x%08x\n", _options);
+  #if defined(__MANUVR_LINUX)
+    temp->concatf("-- _sock           0x%08x\n", _sock);
+  #endif
+  temp->concatf("-- Baud            %d\n",     _baud_rate);
+  temp->concatf("-- Class size      %d\n",     sizeof(ManuvrSerial));
 }
 
 

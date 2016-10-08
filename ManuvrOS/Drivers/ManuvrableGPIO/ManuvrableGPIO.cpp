@@ -65,21 +65,30 @@ ManuvrableGPIO::~ManuvrableGPIO() {
 
 
 
-/****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
-* ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
-* ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+/*******************************************************************************
+* ######## ##     ## ######## ##    ## ########  ######
+* ##       ##     ## ##       ###   ##    ##    ##    ##
+* ##       ##     ## ##       ####  ##    ##    ##
+* ######   ##     ## ######   ## ## ##    ##     ######
+* ##        ##   ##  ##       ##  ####    ##          ##
+* ##         ## ##   ##       ##   ###    ##    ##    ##
+* ########    ###    ######## ##    ##    ##     ######
 *
 * These are overrides from EventReceiver interface...
-****************************************************************************************************/
+*******************************************************************************/
+
+/**
+* This is called when the kernel attaches the module.
+* This is the first time the class can be expected to have kernel access.
+*
+* @return 0 on no action, 1 on action, -1 on failure.
+*/
+int8_t ManuvrableGPIO::attached() {
+  EventReceiver::attached();
+  return 0;
+}
+
+
 /**
 * Debug support method. This fxn is only present in debug builds.
 *
@@ -90,19 +99,6 @@ void ManuvrableGPIO::printDebug(StringBuilder *output) {
 
   EventReceiver::printDebug(output);
   output->concat("\n");
-}
-
-
-
-/**
-* Some peripherals and operations need a bit of time to complete. This function is called from a
-*   one-shot schedule and performs all of the cleanup for latent consequences of bootstrap().
-*
-* @return non-zero if action was taken. Zero otherwise.
-*/
-int8_t ManuvrableGPIO::attached() {
-  EventReceiver::attached();
-  return 0;
 }
 
 

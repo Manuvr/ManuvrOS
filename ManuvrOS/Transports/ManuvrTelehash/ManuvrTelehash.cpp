@@ -402,38 +402,21 @@ bool ManuvrTelehash::write_port(int sock, unsigned char* out, int out_len) {
 
 
 
-/****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
-* ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
-* ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+/*******************************************************************************
+* ######## ##     ## ######## ##    ## ########  ######
+* ##       ##     ## ##       ###   ##    ##    ##    ##
+* ##       ##     ## ##       ####  ##    ##    ##
+* ######   ##     ## ######   ## ## ##    ##     ######
+* ##        ##   ##  ##       ##  ####    ##          ##
+* ##         ## ##   ##       ##   ###    ##    ##    ##
+* ########    ###    ######## ##    ##    ##     ######
 *
 * These are overrides from EventReceiver interface...
-****************************************************************************************************/
-/**
-* Debug support method. This fxn is only present in debug builds.
-*
-* @param   StringBuilder* The buffer into which this fxn should write its output.
-*/
-void ManuvrTelehash::printDebug(StringBuilder *temp) {
-  if (temp == NULL) return;
-
-  ManuvrXport::printDebug(temp);
-  temp->concatf("-- _addr           %s:%d\n",  _addr, _port_number);
-  temp->concatf("-- _options        0x%08x\n", _options);
-  temp->concatf("-- _sock           0x%08x\n", _sock);
-}
-
+*******************************************************************************/
 
 /**
-* Boot done finished-up.
+* This is called when the kernel attaches the module.
+* This is the first time the class can be expected to have kernel access.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
@@ -452,6 +435,22 @@ int8_t ManuvrTelehash::attached() {   // ?? TODO ??
   reset();
   return 1;
 }
+
+
+/**
+* Debug support method. This fxn is only present in debug builds.
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
+void ManuvrTelehash::printDebug(StringBuilder *temp) {
+  if (temp == NULL) return;
+
+  ManuvrXport::printDebug(temp);
+  temp->concatf("-- _addr           %s:%d\n",  _addr, _port_number);
+  temp->concatf("-- _options        0x%08x\n", _options);
+  temp->concatf("-- _sock           0x%08x\n", _sock);
+}
+
 
 
 /**

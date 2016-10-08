@@ -195,35 +195,21 @@ int8_t StandardIO::read_port() {
 
 
 
-/****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
-* ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
-* ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+/*******************************************************************************
+* ######## ##     ## ######## ##    ## ########  ######
+* ##       ##     ## ##       ###   ##    ##    ##    ##
+* ##       ##     ## ##       ####  ##    ##    ##
+* ######   ##     ## ######   ## ## ##    ##     ######
+* ##        ##   ##  ##       ##  ####    ##          ##
+* ##         ## ##   ##       ##   ###    ##    ##    ##
+* ########    ###    ######## ##    ##    ##     ######
 *
 * These are overrides from EventReceiver interface...
-****************************************************************************************************/
-/**
-* Debug support method. This fxn is only present in debug builds.
-*
-* @param   StringBuilder* The buffer into which this fxn should write its output.
-*/
-void StandardIO::printDebug(StringBuilder *temp) {
-  if (temp == NULL) return;
-  ManuvrXport::printDebug(temp);
-  temp->concatf("-- Class size      %d\n",     sizeof(StandardIO));
-}
-
+*******************************************************************************/
 
 /**
-* The Kernel is booting, or has-booted prior to our being instanced.
+* This is called when the kernel attaches the module.
+* This is the first time the class can be expected to have kernel access.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
@@ -239,6 +225,18 @@ int8_t StandardIO::attached() {
   reset();
 
   return 1;
+}
+
+
+/**
+* Debug support method. This fxn is only present in debug builds.
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
+void StandardIO::printDebug(StringBuilder *temp) {
+  if (temp == NULL) return;
+  ManuvrXport::printDebug(temp);
+  temp->concatf("-- Class size      %d\n",     sizeof(StandardIO));
 }
 
 

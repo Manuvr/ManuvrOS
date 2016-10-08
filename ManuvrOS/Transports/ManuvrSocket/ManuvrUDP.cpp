@@ -464,21 +464,40 @@ int8_t ManuvrUDP::udpPipeDestroyCallback(UDPPipe* _dead_walking) {
 
 
 
-/****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
-* ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
-* ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+/*******************************************************************************
+* ######## ##     ## ######## ##    ## ########  ######
+* ##       ##     ## ##       ###   ##    ##    ##    ##
+* ##       ##     ## ##       ####  ##    ##    ##
+* ######   ##     ## ######   ## ## ##    ##     ######
+* ##        ##   ##  ##       ##  ####    ##          ##
+* ##         ## ##   ##       ##   ###    ##    ##    ##
+* ########    ###    ######## ##    ##    ##     ######
 *
 * These are overrides from EventReceiver interface...
-****************************************************************************************************/
+*******************************************************************************/
+
+/**
+* This is called when the kernel attaches the module.
+* This is the first time the class can be expected to have kernel access.
+*
+* @return 0 on no action, 1 on action, -1 on failure.
+*/
+int8_t ManuvrUDP::attached() {
+  EventReceiver::attached();
+  // Because this is not a stream-oriented transport, the timeout value is used
+  //   to periodically flush our connection cache.
+  read_abort_event.alterScheduleRecurrence(0);
+  read_abort_event.alterSchedulePeriod(300);
+  read_abort_event.autoClear(false);
+  read_abort_event.enableSchedule(false);
+  read_abort_event.enableSchedule(false);
+  //__kernel->addSchedule(&read_abort_event);
+
+  listen();
+  return 1;
+}
+
+
 /**
 * Debug support function.
 *
@@ -498,28 +517,6 @@ void ManuvrUDP::printDebug(StringBuilder* output) {
 	}
   output->concat("\n");
 }
-
-
-/**
-* Boot done finished-up.
-*
-* @return 0 on no action, 1 on action, -1 on failure.
-*/
-int8_t ManuvrUDP::attached() {
-  EventReceiver::attached();
-  // Because this is not a stream-oriented transport, the timeout value is used
-  //   to periodically flush our connection cache.
-  read_abort_event.alterScheduleRecurrence(0);
-  read_abort_event.alterSchedulePeriod(300);
-  read_abort_event.autoClear(false);
-  read_abort_event.enableSchedule(false);
-  read_abort_event.enableSchedule(false);
-  //__kernel->addSchedule(&read_abort_event);
-
-  listen();
-  return 1;
-}
-
 
 
 /**

@@ -297,21 +297,34 @@ uint32_t ManuvrableNeoPixel::Wheel(uint8_t WheelPos) {
 
 
 
-/****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
-* ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
-* ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+/*******************************************************************************
+* ######## ##     ## ######## ##    ## ########  ######
+* ##       ##     ## ##       ###   ##    ##    ##    ##
+* ##       ##     ## ##       ####  ##    ##    ##
+* ######   ##     ## ######   ## ## ##    ##     ######
+* ##        ##   ##  ##       ##  ####    ##          ##
+* ##         ## ##   ##       ##   ###    ##    ##    ##
+* ########    ###    ######## ##    ##    ##     ######
 *
 * These are overrides from EventReceiver interface...
-****************************************************************************************************/
+*******************************************************************************/
+
+/**
+* This is called when the kernel attaches the module.
+* This is the first time the class can be expected to have kernel access.
+*
+* @return 0 on no action, 1 on action, -1 on failure.
+*/
+int8_t ManuvrableNeoPixel::attached() {
+  EventReceiver::attached();
+
+  begin();
+  show(); // Initialize all pixels to 'off'
+
+  return 0;
+}
+
+
 /**
 * Debug support method. This fxn is only present in debug builds.
 *
@@ -331,22 +344,6 @@ void ManuvrableNeoPixel::printDebug(StringBuilder *output) {
     output->concatf("-- \t%d:  (%02x,%02x,%02x) ", i, *(pixels+(i*3)), *(pixels+1+(i*3)), *(pixels+2+(i*3)));
     output->concat("\n");
   }
-}
-
-
-/**
-* Some peripherals and operations need a bit of time to complete. This function is called from a
-*   one-shot schedule and performs all of the cleanup for latent consequences of bootstrap().
-*
-* @return non-zero if action was taken. Zero otherwise.
-*/
-int8_t ManuvrableNeoPixel::attached() {
-  EventReceiver::attached();
-
-  begin();
-  show(); // Initialize all pixels to 'off'
-
-  return 0;
 }
 
 
