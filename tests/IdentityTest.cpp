@@ -48,13 +48,16 @@ int UUID_IDENT_TESTS() {
   int return_value = -1;
   StringBuilder log("===< UUID_IDENT_TESTS >=================================\n");
   // Create identities from nothing...
-  IdentityUUID id_uuid("UUID_ident");
+  IdentityUUID id_uuid("testUUID");
+  log.concat("\t Creating a new identity...\n");
+  Identity::staticToString(&id_uuid, &log);
+  log.concat("\n\t Loading from buffer...\n");
 
   // Create identities from serialized representations.
-  uint8_t buf[] = {0, 23, 0, 0, (uint8_t) IdentFormat::UUID, 65, 0,   1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
+  uint8_t buf[] = {0, 24, 0, 0, (uint8_t) IdentFormat::UUID, 65, 65, 0,   1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
   IdentityUUID* ident0 = (IdentityUUID*) Identity::fromBuffer(buf, sizeof(buf));
   if (ident0) {
-    ident0->toString(&log);
+    Identity::staticToString(ident0, &log);
     log.concat("\n");
     // Serialize identity.
     int rep_len = ident0->length();
@@ -66,9 +69,10 @@ int UUID_IDENT_TESTS() {
         for (int i = 0; i < ser_len; i++) {
           if (buf[i] != buf0[i]) {
             log.concatf("Index %d mismatch. Found 0x%02x, expected 0x%02x.\n", i, buf0[i], buf[i]);
-            return_value = -1;
+            return return_value;
           }
         }
+        return_value = 0;  // PASS
       }
       else {
         log.concatf("Serialized length is %d bytes. Should be %d bytes.\n", ser_len, rep_len);
@@ -82,7 +86,98 @@ int UUID_IDENT_TESTS() {
     log.concatf("Failed to deserialize.\n");
   }
 
-  log.concat("========================================================\n\n");
+  log.concat("\n\n");
+  printf((const char*) log.string());
+  return return_value;
+}
+
+
+int CRYPTO_IDENT_TESTS() {
+  int return_value = -1;
+  StringBuilder log("===< CRYPTO_IDENT_TESTS >===============================\n");
+  // Create identities from nothing...
+
+  IdentityPubKey ident_rsa("TesIdentRSA", Cipher::ASYM_RSA,   CryptoKey::RSA_2048);
+  IdentityPubKey ident_ecp("TesIdentECP", Cipher::ASYM_ECDSA, CryptoKey::ECC_SECP256R1);
+
+  Identity::staticToString(&ident_rsa, &log);
+  Identity::staticToString(&ident_ecp, &log);
+
+  if (ident_ecp.isValid()) {
+    uint16_t len = ident_ecp.length();
+    uint8_t* ser_buf = (uint8_t*) alloca(len);
+    if (ser_buf) {
+      log.concatf("\t Serialized successfully. Length is %d\n", len);
+      len = ident_ecp.serialize(ser_buf, len);
+      if (len) {
+        for (int i = 0; i < len; i++) log.concatf("%02x", *(ser_buf + i));
+        log.concat("\n");
+        IdentityPubKey* ecp_restored = (IdentityPubKey*) Identity::fromBuffer(ser_buf, len);
+        if (ecp_restored) {
+          log.concatf("\t Unserialized successfully. Length is %d\n", ecp_restored->length());
+          Identity::staticToString(ecp_restored, &log);
+          return_value = 0;  // PASS
+        }
+        else {
+          log.concatf("Failed to deserialize.\n");
+        }
+      }
+      else {
+        log.concatf("Failed to serialize.\n");
+      }
+    }
+    else {
+      log.concatf("Failed to allocate for serialization.\n");
+    }
+  }
+  else {
+    log.concatf("Failed to create specified identity.\n");
+  }
+
+  log.concat("\n\n");
+  printf((const char*) log.string());
+  return return_value;
+}
+
+
+int ONEID_IDENT_TESTS() {
+  int return_value = -1;
+  StringBuilder log("===< ONEID_IDENT_TESTS >================================\n");
+  // Create identities from nothing...
+  IdentityOneID ident("OneID-identity");
+
+  Identity::staticToString(&ident, &log);
+
+  if (ident.isValid()) {
+    uint16_t len = ident.length();
+    uint8_t* ser_buf = (uint8_t*) alloca(len);
+    if (ser_buf) {
+      len = ident.serialize(ser_buf, len);
+      if (len) {
+        log.concatf("\t Serialized successfully. Length is %d\n\n", len);
+        IdentityOneID* ident_restored = (IdentityOneID*) Identity::fromBuffer(ser_buf, len);
+        if (ident_restored) {
+          log.concatf("\t Unserialized successfully. Length is %d\n", ident_restored->length());
+          Identity::staticToString(ident_restored, &log);
+          return_value = 0;  // PASS
+        }
+        else {
+          log.concatf("Failed to deserialize.\n");
+        }
+      }
+      else {
+        log.concatf("Failed to serialize.\n");
+      }
+    }
+    else {
+      log.concatf("Failed to allocate for serialization.\n");
+    }
+  }
+  else {
+    log.concatf("Failed to create specified identity.\n");
+  }
+
+  log.concat("\n\n");
   printf((const char*) log.string());
   return return_value;
 }
@@ -102,12 +197,19 @@ int main(int argc, char *argv[]) {
   int exit_value = 1;   // Failure is the default result.
 
   platform.platformPreInit();   // Our test fixture needs random numbers.
+  platform.bootstrap();   // Our test fixture needs random numbers.
 
   if (0 == UUID_IDENT_TESTS()) {
-    printf("**********************************\n");
-    printf("*  Identity tests all pass       *\n");
-    printf("**********************************\n");
-    exit_value = 0;
+    if (0 == CRYPTO_IDENT_TESTS()) {
+      if (0 == ONEID_IDENT_TESTS()) {
+        printf("**********************************\n");
+        printf("*  Identity tests all pass       *\n");
+        printf("**********************************\n");
+        exit_value = 0;
+      }
+      else printTestFailure("ONEID_IDENT_TESTS");
+    }
+    else printTestFailure("CRYPTO_IDENT_TESTS");
   }
   else printTestFailure("UUID_IDENT_TESTS");
 

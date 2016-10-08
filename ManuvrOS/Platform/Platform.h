@@ -84,10 +84,10 @@ class Storage;
 #define MANUVR_PLAT_FLAG_SERIALED         0x02000000  // Do we have a serial number?
 #define MANUVR_PLAT_FLAG_HAS_IDENTITY     0x04000000  // Do we know who we are?
 #define MANUVR_PLAT_FLAG_HAS_LOCATION     0x08000000  // Hardware is locus-aware.
-#define MANUVR_PLAT_FLAG_HAS_CRYPTO       0x10000000  // Platform supports cryptography.
+#define MANUVR_PLAT_FLAG_RESERVED_1       0x10000000  //
 #define MANUVR_PLAT_FLAG_INNATE_DATETIME  0x20000000  // Can the hardware remember the datetime?
-#define MANUVR_PLAT_FLAG_HAS_THREADS      0x40000000  // Compute carved-up via threads?
-#define MANUVR_PLAT_FLAG_HAS_STORAGE      0x80000000
+#define MANUVR_PLAT_FLAG_RESERVED_2       0x40000000  //
+#define MANUVR_PLAT_FLAG_HAS_STORAGE      0x80000000  // 
 
 /**
 * Flags that reflect the state of the platform.
@@ -157,6 +157,7 @@ class Storage;
     unsigned long millis();
     unsigned long micros();
   }
+
 #endif
 
 
@@ -202,13 +203,20 @@ class ManuvrPlatform {
     virtual void jumpToBootloader() =0;  // For platforms that support it. Reboot if not.
 
     /* Accessors for platform capability discovery. */
-
+    #if defined(__BUILD_HAS_THREADS)
+      inline bool hasThreads() {        return true;     };
+    #else
+      inline bool hasThreads() {        return false;    };
+    #endif
+    #if defined(__HAS_CRYPT_WRAPPER)
+      inline bool hasCryptography() {   return true;     };
+    #else
+      inline bool hasCryptography() {   return false;    };
+    #endif
     inline bool hasSerialNumber() { return _check_flags(MANUVR_PLAT_FLAG_SERIALED);        };
     inline bool hasLocation() {     return _check_flags(MANUVR_PLAT_FLAG_HAS_LOCATION);    };
     inline bool hasTimeAndDate() {  return _check_flags(MANUVR_PLAT_FLAG_INNATE_DATETIME); };
     inline bool hasStorage() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_STORAGE);     };
-    inline bool hasThreads() {      return _check_flags(MANUVR_PLAT_FLAG_HAS_THREADS);     };
-    inline bool hasCryptography() { return _check_flags(MANUVR_PLAT_FLAG_HAS_CRYPTO);      };
     inline bool booted() {          return (MANUVR_INIT_STATE_NOMINAL == platformState()); };  // TODO: Painful name. Cut.
     inline bool nominalState() {    return (MANUVR_INIT_STATE_NOMINAL == platformState()); };
     inline bool bigEndian() {       return _check_flags(MANUVR_PLAT_FLAG_BIG_ENDIAN);      };
@@ -240,6 +248,8 @@ class ManuvrPlatform {
     int8_t storeConf(Argument*);
     inline int8_t configLoaded() {   return (nullptr == _config) ? 0 : 1;  };
 
+    inline Identity* selfIdentity() {   return _self;  };
+
     /* These are safe function proxies for external callers. */
     void setIdleHook(FxnPointer nu);
     void idleHook();
@@ -248,6 +258,7 @@ class ManuvrPlatform {
 
     void forsakeMain();
 
+    void printCryptoOverview(StringBuilder*);
     void printConfig(StringBuilder* out);
     virtual void printDebug(StringBuilder* out);
     void printDebug();

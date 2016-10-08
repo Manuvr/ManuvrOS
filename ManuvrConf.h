@@ -84,8 +84,8 @@ This is an example file for building firmware on linux. Anticipated target is a 
 //   typically only useful for debugging firmware.
 // If you don't want console support, comment the line below.
 // NOTE: If your Makefile passes the __MANUVR_DEBUG option, this will be enabled regardless.
-#if defined(__MANUVR_DEBUG) && !defined(__MANUVR_CONSOLE_SUPPORT)
-  #define __MANUVR_CONSOLE_SUPPORT
+#if defined(__MANUVR_DEBUG) && !defined(MANUVR_CONSOLE_SUPPORT)
+  #define MANUVR_CONSOLE_SUPPORT
 #endif
 
 // If another Manuverable asks, we will send them semantic definitions for our messages.

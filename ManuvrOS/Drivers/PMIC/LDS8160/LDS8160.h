@@ -91,7 +91,7 @@ class LDS8160 : public I2CDeviceWithRegisters, public EventReceiver {
 
 
   protected:
-    int8_t bootComplete();
+    int8_t attached();
 
 
   private:

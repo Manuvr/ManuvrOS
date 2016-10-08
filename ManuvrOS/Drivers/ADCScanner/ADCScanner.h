@@ -46,7 +46,7 @@ limitations under the License.
 
 
     protected:
-      int8_t bootComplete();
+      int8_t attached();
 
 
     private:

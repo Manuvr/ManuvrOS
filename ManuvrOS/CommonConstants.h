@@ -22,6 +22,9 @@ Apart from including the user-suppied configuration header, there
   ought to be no inclusion in this file. It is the bottom.
 */
 
+#include <inttypes.h>
+#include <stddef.h>  // TODO: Only needed for size_t
+
 #ifndef __MANUVR_COMMON_CONSTANTS_H__
   #define __MANUVR_COMMON_CONSTANTS_H__
 
@@ -49,9 +52,33 @@ Apart from including the user-suppied configuration header, there
   #define YES_STR   "Yes"
   #define NO_STR    "No"
 
+
   #if defined(MANUVR_CONF_FILE)
     #include MANUVR_CONF_FILE
   #else
     #include "ManuvrConf.h"
   #endif
+
+  #include <Rationalizer.h>
+
+
+// TODO: Function defs do not belong here. This area under re-org.
+int wrapped_base64_decode(uint8_t* dst, size_t dlen, size_t* olen, const uint8_t* src, size_t slen);
+// Everytime you macro a function, baby Jesus cries.
+inline float    strict_max(float    a, float    b) {  return (a > b) ? a : b; };
+inline uint32_t strict_max(uint32_t a, uint32_t b) {  return (a > b) ? a : b; };
+inline uint16_t strict_max(uint16_t a, uint16_t b) {  return (a > b) ? a : b; };
+inline int32_t  strict_max(int32_t  a, int32_t  b) {  return (a > b) ? a : b; };
+inline int16_t  strict_max(int16_t  a, int16_t  b) {  return (a > b) ? a : b; };
+
+inline float    strict_min(float    a, float    b) {  return (a < b) ? a : b; };
+inline uint32_t strict_min(uint32_t a, uint32_t b) {  return (a < b) ? a : b; };
+inline uint16_t strict_min(uint16_t a, uint16_t b) {  return (a < b) ? a : b; };
+inline int32_t  strict_min(int32_t  a, int32_t  b) {  return (a < b) ? a : b; };
+inline int16_t  strict_min(int16_t  a, int16_t  b) {  return (a < b) ? a : b; };
+
+inline uint32_t wrap_accounted_delta(uint32_t a, uint32_t b) {
+  return (a > b) ? (a - b) : (b - a);
+};
+
 #endif

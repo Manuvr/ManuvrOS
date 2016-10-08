@@ -41,7 +41,7 @@ This is a quick-and-dirty class to support reading a CdS cell from an analog
 
 
     protected:
-      int8_t bootComplete();
+      int8_t attached();
 
 
     private:

@@ -23,7 +23,6 @@ Basic machinery of Identity objects.
 
 #include "Identity.h"
 #include <alloca.h>
-#include <Platform/Identity/IdentityUUID.h>
 #include <stdlib.h>
 
 /*******************************************************************************
@@ -36,6 +35,51 @@ Basic machinery of Identity objects.
 *
 * Static members and initializers should be located here.
 *******************************************************************************/
+
+// TODO: These preprocessor breakouts are not granular enough.
+/*
+* Given in orderr of preference.
+*/
+const IdentFormat Identity::supported_notions[] = {
+  #if defined(__HAS_CRYPT_WRAPPER)
+    IdentFormat::CERT_FORMAT_DER,
+    IdentFormat::PK,
+    #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
+      IdentFormat::ONE_ID,
+    #endif
+  #endif
+  #if defined(MANUVR_OPENINTERCONNECT)
+    IdentFormat::OIC_CRED,
+  #endif
+  IdentFormat::UUID,
+  IdentFormat::SERIAL_NUM,
+  IdentFormat::UNDETERMINED   // 0. Null-terminated.
+};
+
+
+const IdentFormat* Identity::supportedNotions() {
+  return supported_notions;
+}
+
+const char* Identity::identityTypeString(IdentFormat fmt) {
+  switch (fmt) {
+    #if defined(__HAS_CRYPT_WRAPPER)
+    case IdentFormat::CERT_FORMAT_DER:  return "CERT";
+    case IdentFormat::PK:               return "ASYM";
+    case IdentFormat::PSK_SYM:          return "PSK";
+    #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
+      case IdentFormat::ONE_ID:         return "oneID";
+    #endif
+    #endif
+    #if defined(MANUVR_OPENINTERCONNECT)
+    case IdentFormat::OIC_CRED:         return "OIC_CRED";
+    #endif
+    case IdentFormat::UUID:             return "UUID";
+    case IdentFormat::SERIAL_NUM:       return "SERIAL_NUM";
+    case IdentFormat::UNDETERMINED:     return "UNDETERMINED";
+  }
+  return "UNDEF";
+}
 
 /**
 * This is an abstract factory function for re-constituting identities from
@@ -52,47 +96,97 @@ Basic machinery of Identity objects.
 * @return An identity chain on success, or nullptr on failure.
 */
 Identity* Identity::fromBuffer(uint8_t* buf, int len) {
+  Identity* return_value = nullptr;
   if (len > IDENTITY_BASE_PERSIST_LENGTH) {
     uint16_t ident_len = (((uint16_t) *(buf+0)) << 8) + *(buf+1);
     uint16_t ident_flg = (((uint16_t) *(buf+2)) << 8) + *(buf+3);
     IdentFormat fmt = (IdentFormat) *(buf+4);
-    len -= 5;
-    buf += 5;
 
-    switch (fmt) {
-      case IdentFormat::UUID:
-        if (ident_len >= len) {
-          IdentityUUID* ret = new IdentityUUID(buf, (uint16_t) len);
-          ret->_ident_flags = ident_flg;
-          return (Identity*)ret;
-        }
-      case IdentFormat::SERIAL_NUM:
-        // TODO: Ill-conceived? Why persist a hardware serial number???
-        break;
-      case IdentFormat::HASH:
-        break;
-      case IdentFormat::CERT_FORMAT_DER:
-        break;
-      case IdentFormat::PSK_ASYM:
-        break;
-      case IdentFormat::PSK_SYM:
-        break;
-      #if defined (MANUVR_OPENINTERCONNECT)
-        case IdentFormat::OIC_CRED:
+    if (ident_len <= len) {
+      len -= (IDENTITY_BASE_PERSIST_LENGTH - 1);  // Incur deficit for null-term.
+      buf += (IDENTITY_BASE_PERSIST_LENGTH - 1);  // Incur deficit for null-term.
+
+      switch (fmt) {
+        case IdentFormat::UUID:
+          return_value = (Identity*) new IdentityUUID(buf, (uint16_t) len);
           break;
-      #endif
-      #if defined (MANUVR_ONEID)
-        case IdentFormat::ONE_ID:
+        case IdentFormat::SERIAL_NUM:
+          // TODO: Ill-conceived? Why persist a hardware serial number???
           break;
-      #endif
-      case IdentFormat::UNDETERMINED:
-      default:
-        break;
+        #if defined(__HAS_CRYPT_WRAPPER)
+          case IdentFormat::CERT_FORMAT_DER:
+            break;
+          case IdentFormat::PSK_SYM:
+            break;
+          case IdentFormat::PK:
+            return_value = (Identity*) new IdentityPubKey(buf, (uint16_t) len);
+            break;
+
+          #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
+            case IdentFormat::ONE_ID:
+              return_value = (Identity*) new IdentityOneID(buf, (uint16_t) len);
+              break;
+          #endif
+        #endif
+
+        #if defined (MANUVR_OPENINTERCONNECT)
+          case IdentFormat::OIC_CRED:
+            break;
+        #endif
+
+        case IdentFormat::UNDETERMINED:
+        default:
+          break;
+      }
     }
+    if (return_value) return_value->_flags = ident_flg;
   }
-  return nullptr;
+  return return_value;
 }
 
+
+void Identity::staticToString(Identity* ident, StringBuilder* output) {
+  output->concatf(
+    "++ Identity: %s %14s  (%s) %s\n++ Acceptable for %s %s\n",
+    ident->getHandle(),
+    Identity::identityTypeString(ident->_format),
+    (ident->isDirty() ? "Dirty" : "Persisted"),
+    (ident->_ident_flag(MANUVR_IDENT_FLAG_REVOKABLE) ? "(Revokable)" : ""),
+    (ident->_ident_flag(MANUVR_IDENT_FLAG_NET_ACCEPT) ? "Network" : ""),
+    (ident->_ident_flag(MANUVR_IDENT_FLAG_APP_ACCEPT) ? "Policy" : "")
+  );
+  output->concatf("++ Validity checks pass:         %s\n", (ident->_ident_flag(MANUVR_IDENT_FLAG_VALID) ? "YES":"NO"));
+  if (ident->_ident_flag(MANUVR_IDENT_FLAG_REVOKED | MANUVR_IDENT_FLAG_REVOKABLE)) {
+    output->concat("++ REVOKED\n");
+  }
+
+  const char* o_str = "someone else.\n";
+  if (ident->_ident_flag(MANUVR_IDENT_FLAG_OUR_OWN)) {
+    o_str = "us.";
+  }
+  else if (ident->_ident_flag(MANUVR_IDENT_FLAG_LOCAL_CHAIN)) {
+    o_str = "our alibi.";
+  }
+  if (ident->_ident_flag(MANUVR_IDENT_FLAG_3RD_PARTY_CA)) {
+    o_str = "a CA.";
+  }
+  output->concatf("++ Belongs to %s\n", o_str);
+
+  output->concatf(
+    "++ Origin flags:    %s %s %s\n",
+    (ident->_ident_flag(MANUVR_IDENT_FLAG_ORIG_PERSIST) ? "(Loaded from storage) " : ""),
+    (ident->_ident_flag(MANUVR_IDENT_FLAG_ORIG_EXTER) ? "(Came from outside) " : ""),
+    (ident->_ident_flag(MANUVR_IDENT_FLAG_ORIG_GEN) ? "(Generated locally) " : ""),
+    (ident->_ident_flag(MANUVR_IDENT_FLAG_ORIG_PKI) ? "(Imparted by a PKI) " : ""),
+    (ident->_ident_flag(MANUVR_IDENT_FLAG_ORIG_HSM) ? "(Shadowed in an HSM) " : "")
+  );
+
+  ident->toString(output);
+  if (ident->_next) {
+    Identity::staticToString(ident, output);
+  }
+  output->concat("\n");
+}
 
 
 /*******************************************************************************
@@ -105,11 +199,13 @@ Identity* Identity::fromBuffer(uint8_t* buf, int len) {
 *******************************************************************************/
 
 Identity::Identity(const char* nom, IdentFormat _f) {
-  format = _f;
+  _format = _f;
   _ident_len = strlen(nom);   // TODO: Scary....
   _handle = (char*) malloc(_ident_len + 1);
-  // Also copies the required null-terminator.
-  for (int i = 0; i < _ident_len+1; i++) *(_handle + i) = *(nom+i);
+  if (_handle) {
+    // Also copies the required null-terminator.
+    for (int i = 0; i < _ident_len+1; i++) *(_handle + i) = *(nom+i);
+  }
   _ident_len += IDENTITY_BASE_PERSIST_LENGTH;
 }
 
@@ -122,17 +218,30 @@ Identity::~Identity() {
 }
 
 
+/*******************************************************************************
+* _________ ______   _______  _       ___________________________
+* \__   __/(  __  \ (  ____ \( (    /|\__   __/\__   __/\__   __/|\     /|
+*    ) (   | (  \  )| (    \/|  \  ( |   ) (      ) (      ) (   ( \   / )
+*    | |   | |   ) || (__    |   \ | |   | |      | |      | |    \ (_) /
+*    | |   | |   | ||  __)   | (\ \) |   | |      | |      | |     \   /
+*    | |   | |   ) || (      | | \   |   | |      | |      | |      ) (
+* ___) (___| (__/  )| (____/\| )  \  |   | |   ___) (___   | |      | |
+* \_______/(______/ (_______/|/    )_)   )_(   \_______/   )_(      \_/
+* Functions to support the concept of identity.
+*******************************************************************************/
+
 /*
 * Only the persistable particulars of this instance. All the base class and
 *   error-checking are done upstream.
 */
 int Identity::_serialize(uint8_t* buf, uint16_t len) {
+  uint16_t i_flags = _flags & ~(MANUVR_IDENT_FLAG_PERSIST_MASK);
   if (len > IDENTITY_BASE_PERSIST_LENGTH) {
     *(buf+0) = (uint8_t) (_ident_len >> 8) & 0xFF;
     *(buf+1) = (uint8_t) _ident_len & 0xFF;
-    *(buf+2) = (uint8_t) (_ident_flags >> 8) & 0xFF;
-    *(buf+3) = (uint8_t) _ident_flags & 0xFF;
-    *(buf+4) = (uint8_t) format;
+    *(buf+2) = (uint8_t) (i_flags >> 8) & 0xFF;
+    *(buf+3) = (uint8_t) i_flags & 0xFF;
+    *(buf+4) = (uint8_t) _format;
     len -= 5;
     buf += 5;
 
@@ -150,4 +259,47 @@ int Identity::_serialize(uint8_t* buf, uint16_t len) {
     return str_bytes + IDENTITY_BASE_PERSIST_LENGTH;
   }
   return 0;
+}
+
+
+
+/*******************************************************************************
+* Linked-list fxns
+*******************************************************************************/
+/**
+* Call to get a specific identity of a given type.
+* ONLY searches this chain.
+*
+* @param  fmt The notion of identity sought by the caller.
+* @return     An instance of Identity that is of the given format.
+*/
+Identity* Identity::getIdentity(IdentFormat fmt) {
+  if (fmt == _format) {
+    return this;
+  }
+  else if (_next) {
+    return _next->getIdentity(fmt);
+  }
+  else {
+    return nullptr;
+  }
+}
+
+/**
+* Call to get a specific identity by its name.
+* ONLY searches this chain.
+*
+* @param  fmt The notion of identity sought by the caller.
+* @return     An instance of Identity that is of the given format.
+*/
+Identity* Identity::getIdentity(const char* nom) {
+  if (nom == _handle) {  // TODO: Direct comparison won't work here.
+    return this;
+  }
+  else if (_next) {
+    return _next->getIdentity(nom);
+  }
+  else {
+    return nullptr;
+  }
 }

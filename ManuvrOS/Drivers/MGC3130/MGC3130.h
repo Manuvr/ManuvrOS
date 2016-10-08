@@ -105,7 +105,7 @@ class MGC3130 : public I2CDevice, public EventReceiver {
 
 
   protected:
-    int8_t bootComplete();
+    int8_t attached();
 
 
   private:

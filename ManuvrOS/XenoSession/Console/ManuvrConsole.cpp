@@ -20,7 +20,7 @@ limitations under the License.
 
 */
 
-#if defined(__MANUVR_DEBUG) || defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(__MANUVR_DEBUG) || defined(MANUVR_CONSOLE_SUPPORT)
 
 #include "ManuvrConsole.h"
 
@@ -97,7 +97,7 @@ int8_t ManuvrConsole::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
 */
 int8_t ManuvrConsole::toCounterparty(StringBuilder* buf, int8_t mm) {
   _log_accumulator.concatHandoff(buf);
-  if (isConnected() && booted()) {
+  if (isConnected() && erAttached()) {
     BufferPipe::toCounterparty(&_log_accumulator, MEM_MGMT_RESPONSIBLE_BEARER);
   }
   return MEM_MGMT_RESPONSIBLE_BEARER;
@@ -145,28 +145,26 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
 
 
 
-/****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
-* ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
-* ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+/*******************************************************************************
+* ######## ##     ## ######## ##    ## ########  ######
+* ##       ##     ## ##       ###   ##    ##    ##    ##
+* ##       ##     ## ##       ####  ##    ##    ##
+* ######   ##     ## ######   ## ## ##    ##     ######
+* ##        ##   ##  ##       ##  ####    ##          ##
+* ##         ## ##   ##       ##   ###    ##    ##    ##
+* ########    ###    ######## ##    ##    ##     ######
 *
 * These are overrides from EventReceiver interface...
-****************************************************************************************************/
+*******************************************************************************/
+
 /**
-* Boot done finished-up.
+* This is called when the kernel attaches the module.
+* This is the first time the class can be expected to have kernel access.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t ManuvrConsole::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t ManuvrConsole::attached() {
+  EventReceiver::attached();
   //toCounterparty((uint8_t*) temp, strlen(temp), MEM_MGMT_RESPONSIBLE_BEARER);
   // This is a console. Presumable it should also render log output.
   return 1;
@@ -251,7 +249,7 @@ int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
 
 
 // We don't bother casing this off for the preprocessor. In this case, it
-//   is a given that we have __MANUVR_CONSOLE_SUPPORT.
+//   is a given that we have MANUVR_CONSOLE_SUPPORT.
 // This may be a strange loop that we might optimize later, but this is
 //   still a valid call target that deals with allowing the console to operate
 //   on itself.
@@ -263,4 +261,4 @@ void ManuvrConsole::procDirectDebugInstruction(StringBuilder *input) {
   flushLocalLog();
 }
 
-#endif  // MANUVR_CONSOLE_SESSION  &  __MANUVR_CONSOLE_SUPPORT
+#endif  // MANUVR_CONSOLE_SESSION  &  MANUVR_CONSOLE_SUPPORT

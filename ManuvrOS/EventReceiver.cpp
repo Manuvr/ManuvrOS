@@ -28,7 +28,7 @@ EventReceiver::EventReceiver() {
   __kernel       = nullptr;
   _class_state   = (DEFAULT_CLASS_VERBOSITY & MANUVR_ER_FLAG_VERBOSITY_MASK);
   _extnd_state   = 0;
-  #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+  #if defined(__BUILD_HAS_THREADS)
     _thread_id = -1;
   #endif
 }
@@ -38,7 +38,7 @@ EventReceiver::~EventReceiver() {
   if (nullptr != __kernel) {
     __kernel->unsubscribe(this);
   }
-  #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+  #if defined(__BUILD_HAS_THREADS)
     if (_thread_id > -1) {
       // TODO: Clean up any threads we may have fired up.
     }
@@ -120,7 +120,7 @@ void EventReceiver::flushLocalLog() {
 }
 
 
-#ifdef __MANUVR_CONSOLE_SUPPORT
+#ifdef MANUVR_CONSOLE_SUPPORT
 /**
 * This is a base-level debug function that takes direct input from a user.
 *
@@ -150,7 +150,7 @@ void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
 
   flushLocalLog();
 }
-#endif  // __MANUVR_CONSOLE_SUPPORT
+#endif  // MANUVR_CONSOLE_SUPPORT
 
 
 /**
@@ -181,8 +181,11 @@ void EventReceiver::printDebug() {
 *   to do it again here.
 */
 void EventReceiver::printDebug(StringBuilder *output) {
-  output->concatf("\n==< %s >===================================\n", getReceiverName());
-  output->concatf("-- Booted \t\t%s\n", booted() ? "yes" : "no");
+  #if defined(__BUILD_HAS_THREADS)
+  output->concatf("\n==< %s %s  Thread %d >=======\n", getReceiverName(), (erAttached() ? "   (UNATTACHED) " : ""), _thread_id);
+  #else
+  output->concatf("\n==< %s %s>======================\n", getReceiverName(), (erAttached() ? "   (UNATTACHED) " : ""));
+  #endif
 }
 
 
@@ -200,16 +203,15 @@ void EventReceiver::printDebug(StringBuilder *output) {
 *******************************************************************************/
 
 /**
-* Events that have a calllback value that is not null will have this fxn called
-*   immediately following Event completion.
-* Your shadow can bite.
+* This is called when the kernel attaches the module.
+* This is the first time the class can be expected to have kernel access.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t EventReceiver::bootComplete() {
-  if (!booted()) {
+int8_t EventReceiver::attached() {
+  if (!erAttached()) {
     __kernel = platform.kernel();
-    _mark_boot_complete();
+    _mark_attached();
     return 1;
   }
   return 0;
@@ -271,13 +273,10 @@ int8_t EventReceiver::callback_proc(ManuvrRunnable *event) {
 int8_t EventReceiver::notify(ManuvrRunnable *active_event) {
   if (active_event) {
     switch (active_event->eventCode()) {
-      case MANUVR_MSG_SYS_RELEASE_CRUFT:   // System is telling us to GC if we can.
-        flushLocalLog();
-        return 1;
       case MANUVR_MSG_SYS_LOG_VERBOSITY:
         return setVerbosity(active_event);
       case MANUVR_MSG_SYS_BOOT_COMPLETED:
-        return bootComplete();
+        return attached();
       case MANUVR_MSG_SYS_CONF_LOAD:
         if (active_event->getArgs()) {
           return erConfigure(active_event->getArgs());
@@ -287,5 +286,6 @@ int8_t EventReceiver::notify(ManuvrRunnable *active_event) {
         break;
     }
   }
+  flushLocalLog();
   return 0;
 }

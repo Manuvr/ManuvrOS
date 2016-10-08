@@ -50,7 +50,7 @@ class StandardIO : public ManuvrXport {
     virtual int8_t toCounterparty(StringBuilder*, int8_t mm);
 
     /* Overrides from EventReceiver */
-    int8_t bootComplete();
+    int8_t attached();
     void printDebug(StringBuilder *);
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable*);

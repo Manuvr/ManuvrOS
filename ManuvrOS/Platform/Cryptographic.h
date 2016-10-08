@@ -37,21 +37,24 @@ Try to resist re-coding structs and such that the back-ends have already
 See CryptOptUnifier.h for more information.
 */
 
-#ifndef __CRYPTO_ABSTRACTION_H__
-#define __CRYPTO_ABSTRACTION_H__
+#ifndef __CRYPTO_WRAPPER_H__
+#define __CRYPTO_WRAPPER_H__
+
+// Try to contain wrapped header concerns in here, pl0x...
+#include <Rationalizer.h>
+#include "Cryptographic/CryptOptUnifier.h"
+
+#if defined(__HAS_CRYPT_WRAPPER)
 
 #include <inttypes.h>
 #include <map>   // TODO: Remove dependency.
 
-// Try to contain wrapped header concerns in here, pl0x...
-#include "Cryptographic/CryptOptUnifier.h"
+class StringBuilder;
 
-#include <DataStructures/StringBuilder.h>
-
-#if defined(__HAS_CRYPT_WRAPPER)
-
+#define OP_DECRYPT 0x00000000
 #define OP_ENCRYPT 0x00000001
-#define OP_DECRYPT 0x00000002
+#define OP_VERIFY  OP_DECRYPT
+#define OP_SIGN    OP_ENCRYPT
 
 
 
@@ -127,7 +130,6 @@ enum class CryptoKey {
   NONE = 0
 };
 
-
 /*
 *
 * This is obnoxious to read, but it is essential for mating the library-support
@@ -135,7 +137,6 @@ enum class CryptoKey {
 *   behavior.
 */
 enum class Cipher {
-  NONE                    =  WRAPPED_NONE,
   #if defined(WRAPPED_ASYM_RSA)
     ASYM_RSA                =  WRAPPED_ASYM_RSA,
   #endif
@@ -304,11 +305,17 @@ enum class Cipher {
   #if defined(WRAPPED_SYM_NONE)
     SYM_NONE                =  WRAPPED_SYM_NONE,
   #endif
+  NONE                    =  WRAPPED_NONE
 };
 
 
+/* This stuff needs to be reachable via C-linkage. That means ugly names. :-) */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-typedef int8_t (*wrapped_sym_operation)(
+
+typedef int (*wrapped_sym_operation)(
   uint8_t* in,
   int in_len,
   uint8_t* out,
@@ -320,7 +327,7 @@ typedef int8_t (*wrapped_sym_operation)(
   uint32_t opts
 );
 
-typedef int8_t (*wrapped_sauth_operation)(
+typedef int (*wrapped_sauth_operation)(
   uint8_t* in,
   int in_len,
   uint8_t* out,
@@ -332,34 +339,83 @@ typedef int8_t (*wrapped_sauth_operation)(
   uint32_t opts
 );
 
-typedef int8_t (*wrapped_asym_operation)(
+typedef int (*wrapped_hash_operation)(
   uint8_t* in,
-  int in_len,
-  uint8_t* out,
-  int out_len,
-  Hashes h,
-  Cipher ci,
-  CryptoKey key,
-  uint32_t opts
-);
-
-typedef int8_t (*wrapped_hash_operation)(
-  uint8_t* in,
-  int in_len,
+  size_t in_len,
   uint8_t* out,
   Hashes h
 );
 
+typedef int (*wrapped_sv_operation)(
+  Cipher,           // Algorithm class
+  CryptoKey,        // Key parameters
+  Hashes,           // Digest alg to use.
+  uint8_t* msg,     // Buffer to be signed/verified...
+  int msg_len,      // ...and its length.
+  uint8_t* sig,     // Buffer to hold signature...
+  size_t* sig_len,  // ...and its length.
+  uint8_t* key,     // Buffer holding the key...
+  int key_len,      // ...and its length.
+  uint32_t opts     // Options to the operations.
+);
 
-/* This stuff needs to be reachable via C-linkage. That means ugly names. :-) */
-extern "C" {
+typedef int (*wrapped_keygen_operation)(
+  Cipher,           // Algorithm class
+  CryptoKey,        // Key parameters
+  uint8_t* pub,     // Buffer to hold public key.
+  size_t* pub_len,  // Length of buffer. Modified to reflect written length.
+  uint8_t* priv,    // Buffer to hold private key.
+  size_t* priv_len  // Length of buffer. Modified to reflect written length.
+);
+
+
+/*******************************************************************************
+* Asynchronous operations
+*******************************************************************************/
+/*
+* Hardware involvement in the cryptographic process demands asynchronicity.
+* This is one of the rare case when hardware support is typically slower than
+*   a software-equivalent. We can't afford to stall.
+*
+* Some tasks will involve chains of operations in sequence, and because we are
+*   potentially dealing with large amounts of memory, we need the ability to
+*   inform the caller of completion-with-error states. And in the "happy-path",
+*   we still need to dynamically chain operations to minimize IPC traffic.
+*
+* One final note for now: The processing-end of this operation might be running
+*   in a trusted execution environment, or hardware (separate threads). So this
+*   structure will ultimately be the focal-point of concurrency-control measures
+*   and operation status.
+*
+* TODO: This is another platform anchor.
+* TODO: Define callback structure and state-machine.
+*/
+#define CRYPT_ASYNC_OP_DIGEST        0x80
+#define CRYPT_ASYNC_OP_CIPHER        0x40
+#define CRYPT_ASYNC_OP_SIGN_VER      0x20
+#define CRYPT_ASYNC_OP_AUTH_CIPHER   0x10
+#define CRYPT_ASYNC_OP_KEYGEN        0x08
+
+typedef int (*crypt_op_callback)(
+  Cipher,           // Algorithm class
+  CryptoKey,        // Key parameters
+  uint8_t* pub,     // Buffer to hold public key.
+  size_t* pub_len,  // Length of buffer. Modified to reflect written length.
+  uint8_t* priv,    // Buffer to hold private key.
+  size_t* priv_len  // Length of buffer. Modified to reflect written length.
+);
+
+typedef struct _async_crypt_op {
+} AsyncCryptOpt;
+
+
 
 /*******************************************************************************
 * Message digest (Hashing)
 *******************************************************************************/
 const int get_digest_output_length(Hashes);
 const char* get_digest_label(Hashes);
-int8_t wrapped_hash(uint8_t* in, int in_len, uint8_t* out, Hashes h);
+int8_t wrapped_hash(uint8_t* in, size_t in_len, uint8_t* out, Hashes h);
 
 // Now some inline definitions to mask the back-end API where it can be done
 //   transparently...
@@ -376,10 +432,8 @@ const int get_cipher_block_size(Cipher);
 const int get_cipher_key_length(Cipher);
 int get_cipher_aligned_size(Cipher, int len);
 const char* get_cipher_label(Cipher);
-int8_t wrapped_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher, uint32_t opts);
-
-int wrapped_asym_keygen(Cipher c, CryptoKey, uint8_t* pub, int* pub_len, uint8_t* priv, int* priv_len);
-int wrapped_asym_cipher(uint8_t* in, int in_len, uint8_t* out, int* out_len, Hashes, Cipher, CryptoKey private_key, uint32_t opts);
+int wrapped_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher, uint32_t opts);
+int wrapped_asym_keygen(Cipher c, CryptoKey, uint8_t* pub, size_t* pub_len, uint8_t* priv, size_t* priv_len);
 
 // Now some inline definitions to mask the back-end API where it can be done
 //   transparently...
@@ -387,6 +441,14 @@ inline Cipher* list_supported_ciphers() {
   return ((Cipher*) mbedtls_cipher_list());
 };
 
+const char* get_pk_label(CryptoKey);
+
+inline CryptoKey* list_supported_curves() {
+  return ((CryptoKey*) mbedtls_ecp_grp_id_list());
+};
+
+
+int wrapped_sign_verify(Cipher, CryptoKey, Hashes, uint8_t* msg, int msg_len, uint8_t* sig, size_t* sig_len, uint8_t* key, int key_len, uint32_t opts);
 
 
 /*******************************************************************************
@@ -399,22 +461,25 @@ int8_t wrapped_random_fill(uint8_t* buf, int len);
 /*******************************************************************************
 * Meta                                                                         *
 *******************************************************************************/
-void printCryptoOverview(StringBuilder*);
-
-// Is the algorithm implemented in hardware?
-bool digest_hardware_backed(Hashes);
-bool cipher_hardware_backed(Cipher);
+bool hardware_backed_rng();         // TODO: Only the platform can answer this.
 
 // Is the algorithm provided by the default implementation?
+// TODO: Might simply handle all operation calls from a map-like structure and clobber fxn ptrs.
+// TODO: Make this a struct for the sake of tracking providers, (hard|soft)ware, etc...
 bool digest_deferred_handling(Hashes);
 bool cipher_deferred_handling(Cipher);
+bool sign_verify_deferred_handling(CryptoKey);
+bool keygen_deferred_handling(CryptoKey);
 
 // Over-ride or provide implementations on an algo-by-algo basis.
-bool provide_digest_handler(Hashes);
-bool provide_cipher_handler(Cipher);
+bool provide_digest_handler(Hashes, wrapped_hash_operation);
+bool provide_cipher_handler(Cipher, wrapped_sym_operation);
+bool provide_sign_verify_handler(CryptoKey, wrapped_sv_operation);
+bool provide_keygen_handler(CryptoKey, wrapped_keygen_operation);
 
-} // extern "C"
+bool estimate_pk_size_requirements(CryptoKey, size_t* pub, size_t* priv, uint16_t* sig);
 
+void crypt_error_string(int errnum, char *buffer, size_t buflen);
 
 
 /*******************************************************************************
@@ -424,13 +489,22 @@ bool provide_cipher_handler(Cipher);
 // TODO: I don't like using std::map. Still need to decide on a replacement.
 static std::map<Cipher, wrapped_sym_operation>    _sym_overrides;    // Symmetric runtime overrides.
 static std::map<Cipher, wrapped_sauth_operation>  _sauth_overrides;  // Symmetric/auth runtime overrides.
-static std::map<Cipher, wrapped_asym_operation>   _asym_overrides;   // Asymmetric runtime overrides.
 static std::map<Hashes, wrapped_hash_operation>   _hash_overrides;   // Digest runtime overrides.
+static std::map<CryptoKey, wrapped_sv_operation>  _s_v_overrides;
+static std::map<CryptoKey, wrapped_keygen_operation>   _keygen_overrides;
 
 const bool _is_cipher_symmetric(Cipher);
 const bool _is_cipher_authenticated(Cipher);
 const bool _is_cipher_asymmetric(Cipher);
 const bool _valid_cipher_params(Cipher);
 
+
+#ifdef __cplusplus
+}
+#endif
+
+int randomArt(uint8_t* dgst_raw, unsigned int dgst_raw_len, const char* key_type, StringBuilder* output);
+
+
 #endif // __HAS_CRYPT_WRAPPER
-#endif // __CRYPTO_ABSTRACTION_H__
+#endif // __CRYPTO_WRAPPER_H__

@@ -80,14 +80,14 @@ class ManuvrOIC : public EventReceiver {
 
 
   protected:
-    int8_t bootComplete();
+    int8_t attached();
 
     inline void isDiscoverable(bool nu) {  _er_set_flag(OIC_FLAG_DISCOVERABLE, nu);  };
     inline void isDiscovering(bool nu) {   _er_set_flag(OIC_FLAG_DISCOVERING, nu);   };
 
 
   private:
-    #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+    #if defined(__BUILD_HAS_THREADS)
       // If we have a concept of threads...
       unsigned long _thread_id = 0;
     #endif

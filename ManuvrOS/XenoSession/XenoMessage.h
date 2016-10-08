@@ -68,7 +68,7 @@ enum Protos {
   #if defined(MANUVR_SUPPORT_OSC)
   PROTO_OSC       = 4,   // OSC
   #endif
-  #if defined(__MANUVR_CONSOLE_SUPPORT)
+  #if defined(MANUVR_CONSOLE_SUPPORT)
   PROTO_CONSOLE   = 0xFF, // TODO: A user with a text console and keyboard.
   #endif
   PROTO_RAW       = 0    // Raw has no format and no session except that which the transport imposes (if any).

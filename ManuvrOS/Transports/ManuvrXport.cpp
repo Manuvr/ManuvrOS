@@ -74,7 +74,7 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
   void* xport_read_handler(void* active_xport) {
     if (NULL != active_xport) {
       // Wait until boot has ocurred...
-      while (!((ManuvrXport*)active_xport)->booted()) taskYIELD();
+      while (!((ManuvrXport*)active_xport)->erAttached()) taskYIELD();
       while (1) {
         if (0 == ((ManuvrXport*)active_xport)->read_port()) {
           taskYIELD();
@@ -91,7 +91,7 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
   void* xport_read_handler(void* active_xport) {
     if (NULL != active_xport) {
       // Wait until boot has ocurred...
-      while (!((ManuvrXport*)active_xport)->booted()) sleep_millis(50);
+      while (!((ManuvrXport*)active_xport)->erAttached()) sleep_millis(50);
       while (1) {
         if (0 == ((ManuvrXport*)active_xport)->read_port()) {
           sleep_millis(20);
@@ -137,7 +137,7 @@ ManuvrXport::ManuvrXport() : EventReceiver(), BufferPipe() {
 * Destructor.
 */
 ManuvrXport::~ManuvrXport() {
-  #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+  #if defined(__BUILD_HAS_THREADS)
     if (_thread_id > 0) {
       _thread_id = 0;
       pthread_cancel(_thread_id);
@@ -327,21 +327,17 @@ void ManuvrXport::listening(bool en) {
 
 
 
-/****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
-* ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
-* ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+/*******************************************************************************
+* ######## ##     ## ######## ##    ## ########  ######
+* ##       ##     ## ##       ###   ##    ##    ##    ##
+* ##       ##     ## ##       ####  ##    ##    ##
+* ######   ##     ## ######   ## ## ##    ##     ######
+* ##        ##   ##  ##       ##  ####    ##          ##
+* ##         ## ##   ##       ##   ###    ##    ##    ##
+* ########    ###    ######## ##    ##    ##     ######
 *
 * These are overrides from EventReceiver interface...
-****************************************************************************************************/
+*******************************************************************************/
 
 /**
 * Debug support method. This fxn is only present in debug builds.
@@ -429,7 +425,7 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
 }
 
 
-#if defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SUPPORT)
 /**
 * This is a base-level debug function that takes direct input from a user.
 *
@@ -459,4 +455,4 @@ void ManuvrXport::procDirectDebugInstruction(StringBuilder *input) {
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 
-#endif  // __MANUVR_CONSOLE_SUPPORT
+#endif  // MANUVR_CONSOLE_SUPPORT

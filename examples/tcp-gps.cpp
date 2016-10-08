@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if ((strcasestr(argv[i], "--console")) || ((argv[i][0] == '-') && (argv[i][1] == 'c'))) {
       // The user wants a local stdio "Shell".
-      #if defined(__MANUVR_CONSOLE_SUPPORT)
+      #if defined(MANUVR_CONSOLE_SUPPORT)
         // TODO: Until smarter idea is finished, manually patch the transport
         //         into a console session.
         StandardIO* _console_xport = new StandardIO();

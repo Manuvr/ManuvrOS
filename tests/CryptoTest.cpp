@@ -36,6 +36,24 @@ This tests the cryptographic system under whatever build options
 #include <Platform/Platform.h>
 
 
+struct Trips {  // <---- Check 'em
+  size_t deltas[3];
+};
+
+static std::map<CryptoKey, Trips*>  asym_estimate_deltas;
+
+static char* err_buf[128] = {0};
+
+
+#ifndef max
+#define max(a,b)            (((a) > (b)) ? (a) : (b))
+#endif
+
+#ifndef min
+#define min(a,b)            (((a) < (b)) ? (a) : (b))
+#endif
+
+
 /*
 * Tests to ensure we have support for what we are about to test.
 */
@@ -212,47 +230,126 @@ int CRYPTO_TEST_SYMMETRIC() {
 /*
 * Asymmetric algorthms.
 */
-int CRYPTO_TEST_ASYMMETRIC() {
-  printf("===< CRYPTO_TEST_ASYMMETRIC >====================================\n");
-  const int BASE_BUFFER_LEN = 2048;
-  uint8_t* rsa_public_buf  = (uint8_t*) alloca(2048);
-  uint8_t* rsa_privat_buf  = (uint8_t*) alloca(2048);
-  uint8_t* ecc_public_buf  = (uint8_t*) alloca(2048);
-  uint8_t* ecc_privat_buf  = (uint8_t*) alloca(2048);
+int CRYPTO_TEST_ASYMMETRIC_SET(Cipher c, CryptoKey* pks) {
+  const int MSG_BUFFER_LEN  = 700;
+  uint8_t* test_message     = (uint8_t*) alloca(MSG_BUFFER_LEN);
+  random_fill(test_message, MSG_BUFFER_LEN);
 
-  int rsa_public_len  = 2048;
-  int rsa_privat_len  = 2048;
-  int ecc_public_len  = 2048;
-  int ecc_privat_len  = 2048;
+  while (CryptoKey::NONE != *pks) {
+    size_t   public_estimate = 0;
+    size_t   privat_estimate = 0;
+    uint16_t sigbuf_estimate = 0;
+    size_t   public_len      = 0;
+    size_t   privat_len      = 0;
+    size_t   sigbuf_len      = 0;
+    if (!estimate_pk_size_requirements(*pks, &public_estimate, &privat_estimate, &sigbuf_estimate)) {
+      printf("\t Failed to estimate buffer requirements for %s.\n", get_pk_label(*pks));
+      return -1;
+    }
+    uint8_t* public_buf  = (uint8_t*) alloca(public_estimate);
+    uint8_t* privat_buf  = (uint8_t*) alloca(privat_estimate);
+    uint8_t* sig_buffer  = (uint8_t*) alloca(sigbuf_estimate);
+    public_len = public_estimate;
+    privat_len = privat_estimate;
+    sigbuf_len = sigbuf_estimate;
 
-
-  int ret = wrapped_asym_keygen(Cipher::ASYM_RSA, CryptoKey::RSA_2048, rsa_public_buf, &rsa_public_len, rsa_privat_buf, &rsa_privat_len);
-  if (0 == ret) {
-    printf("RSA keygen succeeded:\n");
-    printf("Public:  ");
-    for (int i = BASE_BUFFER_LEN-rsa_public_len; i < BASE_BUFFER_LEN; i++) printf("%02x", *(rsa_public_buf + i));
-    printf("\t(%d bytes)\nPrivate: ", rsa_public_len);
-    for (int i = BASE_BUFFER_LEN-rsa_privat_len; i < BASE_BUFFER_LEN; i++) printf("%02x", *(rsa_privat_buf + i));
-    printf("\t(%d bytes)\n\n", rsa_privat_len);
-
-    ret = wrapped_asym_keygen(Cipher::ASYM_ECKEY, CryptoKey::ECC_SECP384R1, ecc_public_buf, &ecc_public_len, ecc_privat_buf, &ecc_privat_len);
+    int ret = wrapped_asym_keygen(c, *pks, public_buf, &public_len, privat_buf, &privat_len);
     if (0 == ret) {
-      printf("ECC keygen succeeded:\n");
-      printf("Public:  ");
-      for (int i = BASE_BUFFER_LEN-ecc_public_len; i < BASE_BUFFER_LEN; i++) printf("%02x", *(ecc_public_buf + i));
-      printf("\t(%d bytes)\nPrivate: ", ecc_public_len);
-      for (int i = BASE_BUFFER_LEN-ecc_privat_len; i < BASE_BUFFER_LEN; i++) printf("%02x", *(ecc_privat_buf + i));
-      printf("\t(%d bytes)\n\n", ecc_privat_len);
-      return 0;
+      public_buf += (public_estimate - public_len);
+      privat_buf += (privat_estimate - privat_len);
+
+      printf("\t Keygen for %s succeeds. Sizes:  %d / %d (pub/priv)\n", get_pk_label(*pks), public_len, privat_len);
+      printf("\t Public:  (%d bytes)\n", public_len);
+      printf("\t Private: (%d bytes)\n", privat_len);
+
+      ret = wrapped_sign_verify(
+        c, *pks, Hashes::SHA256,
+        test_message, MSG_BUFFER_LEN,
+        sig_buffer, &sigbuf_len,
+        privat_buf, privat_len,
+        OP_SIGN
+      );
+
+      if (0 == ret) {
+        printf("\t Signing operation succeeded. Sig is %d bytes.\n", sigbuf_len);
+
+        ret = wrapped_sign_verify(
+          c, *pks, Hashes::SHA256,
+          test_message, MSG_BUFFER_LEN,
+          sig_buffer, &sigbuf_len,
+          public_buf, public_len,
+          OP_VERIFY
+        );
+        if (0 == ret) {
+          printf("\t Verify operation succeeded.\n");
+          printf(
+            "\t Size estimate deltas:\t%d / %d / %d  (pub/priv/sig)\n\n",
+            (public_estimate - public_len),
+            (privat_estimate - privat_len),
+            (sigbuf_estimate - sigbuf_len)
+          );
+          if (nullptr != asym_estimate_deltas[*pks]) {
+            asym_estimate_deltas[*pks]->deltas[0] = (min(asym_estimate_deltas[*pks]->deltas[0], (public_estimate - public_len)));
+            asym_estimate_deltas[*pks]->deltas[1] = (min(asym_estimate_deltas[*pks]->deltas[1], (privat_estimate - privat_len)));
+            asym_estimate_deltas[*pks]->deltas[2] = (min(asym_estimate_deltas[*pks]->deltas[2], (sigbuf_estimate - sigbuf_len)));
+          }
+          else {
+            asym_estimate_deltas[*pks] = new Trips;
+            asym_estimate_deltas[*pks]->deltas[0] = (public_estimate - public_len);
+            asym_estimate_deltas[*pks]->deltas[1] = (privat_estimate - privat_len);
+            asym_estimate_deltas[*pks]->deltas[2] = (sigbuf_estimate - sigbuf_len);
+          }
+        }
+        else {
+          crypt_error_string(ret, (char*)&err_buf, 128);
+          printf("\t Verify for %s failed with err %s (code 0x%04x).\n", get_pk_label(*pks), (char*)&err_buf, ret);
+          return -1;
+        }
+      }
+      else {
+        crypt_error_string(ret, (char*)&err_buf, 128);
+        printf("\t Signing for %s failed with err %s (code 0x%04x).\n", get_pk_label(*pks), (char*)&err_buf, ret);
+        return -1;
+      }
     }
     else {
-      printf("ECC keygen failed with code 0x%04x.\n", ret);
+      crypt_error_string(ret, (char*)&err_buf, 128);
+      printf("\t Keygen for %s failed with err %s (code 0x%04x).\n", get_pk_label(*pks), (char*)&err_buf, ret);
+      return -1;
     }
+    pks++;
   }
-  else {
-    printf("RSA keygen failed with code 0x%04x.\n", ret);
+  return 0;
+}
+
+
+
+/*
+* Asymmetric algorthms.
+*/
+int CRYPTO_TEST_ASYMMETRIC() {
+  CryptoKey _pks[] = {CryptoKey::RSA_2048, CryptoKey::RSA_4096, CryptoKey::NONE};
+
+  for (int i = 0; i < 1; i++) {
+    printf("===< CRYPTO_TEST_ASYMMETRIC_ECDSA >==============================\n");
+    if (CRYPTO_TEST_ASYMMETRIC_SET(Cipher::ASYM_ECDSA, list_supported_curves())) return -1;
+
+    printf("===< CRYPTO_TEST_ASYMMETRIC_ECP >================================\n");
+    if (CRYPTO_TEST_ASYMMETRIC_SET(Cipher::ASYM_ECKEY, list_supported_curves())) return -1;
+
+    printf("===< CRYPTO_TEST_ASYMMETRIC_RSA >================================\n");
+    if (CRYPTO_TEST_ASYMMETRIC_SET(Cipher::ASYM_RSA, &_pks[0]))  return -1;
   }
-  return -1;
+
+  // Print the estimate differentials.
+	std::map<CryptoKey, Trips*>::iterator it;
+  for (it = asym_estimate_deltas.begin(); it != asym_estimate_deltas.end(); it++) {
+    printf("\t %s\n", get_pk_label(it->first));
+    printf("\t Public:  %d\n", it->second->deltas[0]);
+    printf("\t Private: %d\n", it->second->deltas[1]);
+    printf("\t Sig:     %d\n\n", it->second->deltas[2]);
+  }
+  return 0;
 }
 
 
@@ -274,7 +371,7 @@ int main(int argc, char *argv[]) {
   platform.bootstrap();
 
   StringBuilder log;
-  printCryptoOverview(&log);
+  platform.printCryptoOverview(&log);
   printf("%s\n", (const char*) log.string());
 
   if (0 == CRYPTO_TEST_INIT()) {
@@ -296,6 +393,11 @@ int main(int argc, char *argv[]) {
     else printTestFailure("CRYPTO_TEST_RNG");
   }
   else printTestFailure("CRYPTO_TEST_INIT");
+
+	std::map<CryptoKey, Trips*>::iterator it;
+  for (it = asym_estimate_deltas.begin(); it != asym_estimate_deltas.end(); it++) {
+    delete it->second;
+  }
 
   exit(exit_value);
 }

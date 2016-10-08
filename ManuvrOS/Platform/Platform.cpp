@@ -126,10 +126,6 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   _start_micros = micros();
   uint32_t default_flags = 0;
 
-  #if defined(__HAS_CRYPT_WRAPPER)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
-  #endif
-
   #if defined(MANUVR_GPS_PIPE)
     default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
   #endif
@@ -138,8 +134,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
     default_flags |= MANUVR_PLAT_FLAG_HAS_STORAGE;
   #endif
 
-  #if defined (__MANUVR_LINUX) || defined (__MANUVR_FREERTOS)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_THREADS;
+  #if defined(__BUILD_HAS_THREADS)
     platform.setIdleHook([]{ sleep_millis(20); });
   #endif
 
@@ -155,13 +150,13 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
 }
 
 
+/**
+* Prints details about this platform.
+*
+* @param  StringBuilder* The buffer to output into.
+*/
 void ManuvrPlatform::printDebug(StringBuilder* output) {
   output->concatf("-- Ver/Build date:     %s   %s %s\n", VERSION_STRING, __DATE__, __TIME__);
-  if (nullptr != platform._self) {
-    output->concatf("-- Identity:           %s\t", platform._self->getHandle());
-    platform._self->toString(output);
-    output->concat("\n");
-  }
   output->concatf("-- Identity source:    %s\n", platform._check_flags(MANUVR_PLAT_FLAG_HAS_IDENTITY) ? "Generated at runtime" : "Loaded from storage");
   output->concat("-- Hardware:\n");
   #if defined(HW_VERSION_STRING)
@@ -211,7 +206,7 @@ void ManuvrPlatform::printDebug(StringBuilder* output) {
   }
 
   output->concat("--\n-- Supported protocols: \n");
-  #if defined(__MANUVR_CONSOLE_SUPPORT)
+  #if defined(MANUVR_CONSOLE_SUPPORT)
     output->concat("--\t Console\n");
   #endif
   #if defined(MANUVR_OVER_THE_WIRE)
@@ -230,12 +225,66 @@ void ManuvrPlatform::printDebug(StringBuilder* output) {
 }
 
 
+/**
+* Prints the platform's presently-loaded configuration.
+*
+* @param  StringBuilder* The buffer to output into.
+*/
 void ManuvrPlatform::printConfig(StringBuilder* output) {
   if (_config) {
     output->concat("--\n-- Loaded configuration:\n");
     _config->printDebug(output);
   }
 }
+
+
+/**
+* Prints details about the cryptographic situation on the platform.
+*
+* @param  StringBuilder* The buffer to output into.
+*/
+void ManuvrPlatform::printCryptoOverview(StringBuilder* out) {
+  #if defined(__HAS_CRYPT_WRAPPER)
+    out->concatf("-- Cryptographic support via %s.\n", __CRYPTO_BACKEND);
+    #if defined(WITH_MBEDTLS)
+      out->concat("-- Supported TLS ciphersuites:");
+      int idx = 0;
+      const int* cs_list = mbedtls_ssl_list_ciphersuites();
+      while (0 != *(cs_list)) {
+        if (0 == idx++ % 2) out->concat("\n--\t");
+        out->concatf("\t%-40s", mbedtls_ssl_get_ciphersuite_name(*(cs_list++)));
+      }
+
+    #endif
+
+    out->concat("\n-- Supported ciphers:");
+    idx = 0;
+    Cipher* list = list_supported_ciphers();
+    while (Cipher::NONE != *(list)) {
+      if (0 == idx++ % 4) out->concat("\n--\t");
+      out->concatf("\t%-20s", get_cipher_label((Cipher) *(list++)));
+    }
+
+    out->concat("\n-- Supported ECC curves:");
+    CryptoKey* k_list = list_supported_curves();
+    idx = 0;
+    while (CryptoKey::NONE != *(k_list)) {
+      if (0 == idx++ % 4) out->concat("\n--\t");
+      out->concatf("\t%-20s", get_pk_label((CryptoKey) *(k_list++)));
+    }
+
+    out->concat("\n-- Supported digests:");
+    idx = 0;
+    Hashes* h_list = list_supported_digests();
+    while (Hashes::NONE != *(h_list)) {
+      if (0 == idx++ % 6) out->concat("\n--\t");
+      out->concatf("\t%-10s", get_digest_label((Hashes) *(h_list++)));
+    }
+  #else
+  out->concat("No cryptographic support.\n");
+  #endif  // WITH_MBEDTLS
+}
+
 
 void ManuvrPlatform::_discoverALUParams() {
   // We infer the ALU width by the size of pointers.
@@ -475,7 +524,7 @@ void ManuvrPlatform::forsakeMain() {
 
 /**
 * Fills the given buffer with random bytes.
-* Blocks if there is nothing random available. 
+* Blocks if there is nothing random available.
 *
 * @param uint8_t* The buffer to fill.
 * @param size_t The number of bytes to write to the buffer.

@@ -164,15 +164,15 @@ class ManuvrSession : public XenoSession {
     void printDebug(StringBuilder*);
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);
-    #if defined(__MANUVR_CONSOLE_SUPPORT)
+    #if defined(MANUVR_CONSOLE_SUPPORT)
       void procDirectDebugInstruction(StringBuilder*);
-    #endif  //__MANUVR_CONSOLE_SUPPORT
+    #endif  //MANUVR_CONSOLE_SUPPORT
 
 
   protected:
     XenoManuvrMessage* working;         // If we are in the middle of receiving a message,
 
-    int8_t bootComplete();
+    int8_t attached();
 
 
   private:

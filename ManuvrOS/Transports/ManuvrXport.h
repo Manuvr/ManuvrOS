@@ -139,9 +139,9 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     //    choice.  Calltimes? vtable size? alignment? Fragility? Dig.
     virtual void   printDebug(StringBuilder *);
     virtual int8_t notify(ManuvrRunnable*);
-    #if defined(__MANUVR_CONSOLE_SUPPORT)
+    #if defined(MANUVR_CONSOLE_SUPPORT)
       virtual void   procDirectDebugInstruction(StringBuilder*);
-    #endif  //__MANUVR_CONSOLE_SUPPORT
+    #endif  //MANUVR_CONSOLE_SUPPORT
 
     // We can have up-to 65535 transport instances concurrently. This well-exceeds
     //   the configured limits of most linux installations, so it should be enough.
@@ -151,7 +151,7 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
 
   protected:
     ManuvrRunnable* _autoconnect_schedule;
-    #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+    #if defined(__BUILD_HAS_THREADS)
       // If we have a concept of threads...
       unsigned long _thread_id;
     #endif
@@ -167,7 +167,7 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
 
     ManuvrXport();
 
-    virtual int8_t bootComplete() =0;
+    virtual int8_t attached() =0;
     const char* pipeName();
 
     // TODO: Should be private. provide_session() / reset() are the blockers.

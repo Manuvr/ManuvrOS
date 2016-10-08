@@ -100,7 +100,7 @@ MANUVR_OPTIONS += -D__MANUVR_LINUX
 MANUVR_OPTIONS += -DMANUVR_OVER_THE_WIRE
 #MANUVR_OPTIONS += -DMANUVR_SUPPORT_MQTT
 #MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
-MANUVR_OPTIONS += -D__MANUVR_CONSOLE_SUPPORT
+MANUVR_OPTIONS += -DMANUVR_CONSOLE_SUPPORT
 MANUVR_OPTIONS += -DMANUVR_GPS_PIPE
 
 # Options for various platform features.
@@ -129,7 +129,7 @@ LIBS += $(OUTPUT_PATH)/libmbedtls.a
 LIBS += $(OUTPUT_PATH)/libmbedx509.a
 LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
 # mbedTLS will require this in order to use our chosen options.
-export MBEDTLS_CONFIG_FILE = $(WHERE_I_AM)/mbedTLS_conf.h
+MANUVR_OPTIONS += -DMBEDTLS_CONFIG_FILE='<mbedTLS_conf.h>'
 export SECURE=1
 endif
 
@@ -164,7 +164,7 @@ export CPP_FLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
 
 .PHONY: all
 
-all: libs
+all: tests
 	$(CXX) -Wl,--gc-sections -static -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 	$(SZ) $(FIRMWARE_NAME)
 

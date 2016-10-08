@@ -276,7 +276,7 @@ ManuvrOIC::ManuvrOIC(Argument* root_config) : ManuvrOIC() {
 ManuvrOIC::~ManuvrOIC() {
   __kernel->removeSchedule(&_discovery_ping);
   __kernel->removeSchedule(&_discovery_timeout);
-  #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+  #if defined(__BUILD_HAS_THREADS)
     #if defined(__MACH__) && defined(__APPLE__)
       if (_thread_id > 0) {
         _thread_id = 0;
@@ -337,28 +337,25 @@ int8_t ManuvrOIC::discoverOthers(bool en) {
 }
 
 
-/****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
-* ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
-* ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+/*******************************************************************************
+* ######## ##     ## ######## ##    ## ########  ######
+* ##       ##     ## ##       ###   ##    ##    ##    ##
+* ##       ##     ## ##       ####  ##    ##    ##
+* ######   ##     ## ######   ## ## ##    ##     ######
+* ##        ##   ##  ##       ##  ####    ##          ##
+* ##         ## ##   ##       ##   ###    ##    ##    ##
+* ########    ###    ######## ##    ##    ##     ######
 *
 * These are overrides from EventReceiver interface...
-****************************************************************************************************/
+*******************************************************************************/
+
 /**
 * The Kernel is booting, or has-booted prior to our being instanced.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t ManuvrOIC::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t ManuvrOIC::attached() {
+  EventReceiver::attached();
 
   // Discovery runs for 120 seconds, and repeats forever by default.
   _discovery_ping.repurpose(MANUVR_MSG_OIC_DISCOVER_PING);
@@ -393,7 +390,7 @@ int8_t ManuvrOIC::bootComplete() {
   #endif
 
   int init = oc_main_init(&handler);
-  printf("OIC: bootComplete()\n");
+  printf("OIC: attached()\n");
   if (init <= 0) {
     #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
       if (0 == _thread_id) {
@@ -515,7 +512,7 @@ void ManuvrOIC::printDebug(StringBuilder *output) {
 }
 
 
-#if defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SUPPORT)
 void ManuvrOIC::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
   char c    = *(str);
@@ -536,6 +533,6 @@ void ManuvrOIC::procDirectDebugInstruction(StringBuilder *input) {
 
   flushLocalLog();
 }
-#endif  // __MANUVR_CONSOLE_SUPPORT
+#endif  // MANUVR_CONSOLE_SUPPORT
 #endif  // __MANUVR_LINUX
 #endif  // MANUVR_OPENINTERCONNECT

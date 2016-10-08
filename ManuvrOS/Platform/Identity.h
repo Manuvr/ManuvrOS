@@ -25,8 +25,10 @@ This might be better-viewed as a data structure. Notions of identity should
 #ifndef __MANUVR_IDENTITY_H__
 #define __MANUVR_IDENTITY_H__
 
+#include <Rationalizer.h>
 #include <DataStructures/StringBuilder.h>
 #include <DataStructures/Argument.h>
+
 
 #define MANUVR_IDENT_FLAG_DIRTY        0x8000  // This ID will be lost if not persisted.
 #define MANUVR_IDENT_FLAG_OUR_OWN      0x4000  // This is our own identity.
@@ -36,9 +38,9 @@ This might be better-viewed as a data structure. Notions of identity should
 #define MANUVR_IDENT_FLAG_ORIG_EXTER   0x0400  // Came from outside. Usually from TLS.
 #define MANUVR_IDENT_FLAG_ORIG_HSM     0x0200  // Came from an HSM, local or not.
 #define MANUVR_IDENT_FLAG_ORIG_PKI     0x0100  // Imparted by a PKI.
-#define MANUVR_IDENT_FLAG_RESERVED_2   0x0080  //
-#define MANUVR_IDENT_FLAG_RESERVED_1   0x0040  //
-#define MANUVR_IDENT_FLAG_RESERVED_0   0x0020  //
+#define MANUVR_IDENT_FLAG_RESERVED_0   0x0080  //
+#define MANUVR_IDENT_FLAG_CRYPT_BACKED 0x0040  // Identity is cryptographically supported.
+#define MANUVR_IDENT_FLAG_VALID        0x0020  // Identity is valid and ready-for-use.
 #define MANUVR_IDENT_FLAG_3RD_PARTY_CA 0x0010  // This is an intermediary or CA cert.
 #define MANUVR_IDENT_FLAG_REVOKED      0x0008  // This identity is no longer valid.
 #define MANUVR_IDENT_FLAG_REVOKABLE    0x0004  // This identity can be revoked.
@@ -46,9 +48,8 @@ This might be better-viewed as a data structure. Notions of identity should
 #define MANUVR_IDENT_FLAG_NET_ACCEPT   0x0001  // Is acceptable for the network layer.
 
 /* These flags should not be persisted. */
-#define MANUVR_IDENT_FLAG_PERSIST_MASK (MANUVR_IDENT_FLAG_RESERVED_0 | \
-                                        MANUVR_IDENT_FLAG_RESERVED_1 | \
-                                        MANUVR_IDENT_FLAG_RESERVED_2 | \
+#define MANUVR_IDENT_FLAG_PERSIST_MASK (MANUVR_IDENT_FLAG_VALID | \
+                                        MANUVR_IDENT_FLAG_RESERVED_0 | \
                                         MANUVR_IDENT_FLAG_DIRTY)
 /*
 * Note on NET_ACCEPT / APP_ACCEPT:
@@ -68,15 +69,20 @@ This might be better-viewed as a data structure. Notions of identity should
 *         everything will transition smoothly.
 */
 enum class IdentFormat {
-  UNDETERMINED    = 0x00,  // Nothing here.
+  #if defined(__HAS_IDENT_CERT)
+    CERT_FORMAT_DER = 0x04,  // Certificate in DER format.
+    PK              = 0x05,  // Pre-shared asymmetric key.
+    PSK_SYM         = 0x06,  // Pre-shared symmetric key.
+  #endif
+  #if defined(__HAS_IDENT_ONEID)
+    ONE_ID          = 0x10,  // OneID asymemetric key strategey.
+  #endif
+  #if defined(MANUVR_OPENINTERCONNECT)
+    OIC_CRED        = 0x07,  // OIC credential.
+  #endif
   SERIAL_NUM      = 0x01,  // Nearly universal.
   UUID            = 0x02,  // Low-grade. Easy.
-  HASH            = 0x03,  // Open-ended.
-  CERT_FORMAT_DER = 0x04,  // Certificate in DER format.
-  PSK_ASYM        = 0x05,  // Pre-shared asymmetric key.
-  PSK_SYM         = 0x06,  // Pre-shared symmetric key.
-  OIC_CRED        = 0x07,  // OIC credential.
-  ONE_ID          = 0x10   // OneID asymemetric key strategey.
+  UNDETERMINED    = 0x00   // Nothing here.
 };
 
 // This is the minimum size of or base identity class.
@@ -99,12 +105,18 @@ class Identity {
       return _serialize(buf, _ident_len);
     };
 
-    // TODO: int8_t serialize();
     inline int   length() {     return _ident_len;  };
     inline bool  isDirty() {    return _ident_flag(MANUVR_IDENT_FLAG_DIRTY);  };
+    inline bool  isValid() {    return _ident_flag(MANUVR_IDENT_FLAG_VALID);  };
+
     inline char* getHandle() {  return (nullptr == _handle ? (char*) "unnamed":_handle);  };
+    Identity* getIdentity(IdentFormat);
+    Identity* getIdentity(const char*);
 
     static Identity* fromBuffer(uint8_t*, int len);   // From storage.
+    static void staticToString(Identity*, StringBuilder*);
+    static const char* identityTypeString(IdentFormat);
+    static const IdentFormat* supportedNotions();
 
 
   protected:
@@ -113,37 +125,47 @@ class Identity {
     Identity(const char*, IdentFormat);
 
     int  _serialize(uint8_t*, uint16_t len);   // For storage.
+    inline void _clobber_format(IdentFormat f) {  _format = f;  };
 
-    inline bool _ident_flag(uint16_t f) {   return ((_ident_flags & f) == f);  };
+    inline bool _ident_flag(uint16_t f) {   return ((_flags & f) == f);  };
     inline void _ident_set_flag(bool nu, uint16_t _flag) {
-      _ident_flags = (nu) ? (_ident_flags | _flag) : (_ident_flags & ~_flag);
+      _flags = (nu) ? (_flags | _flag) : (_flags & ~_flag);
     };
 
 
   private:
-    uint16_t _ident_flags = 0;
+    uint16_t    _flags  = 0;
     char*       _handle = nullptr;  // Human-readable name of this identity.
-    Identity*   _next   = nullptr;  // TODO: Chaining is probably better than flatness in this case.
-    IdentFormat format  = IdentFormat::UNDETERMINED;   // What is the nature of this identity?
+    Identity*   _next   = nullptr;  // See notes.
+    IdentFormat _format = IdentFormat::UNDETERMINED;   // What is the nature of this identity?
 
+    static const IdentFormat supported_notions[];
 };
 
+
+/**
+* Note regarding the linked-list aspect of the Identity class:
+* Chaining is probably better than flatness in this case. The problem is that we need to
+*   be able to sustain identities that are not self-contained (PKI, suppose). By chaining
+*   identities (in-order of relevance where possible), we allow for features like
+*   authentication chains, PKI caching, and multiple-self-identity.
+*/
+
+// Tail-inclusion allows us to both keep the headers abstracted, and allows conditional
+//   build support. There might be a better means to achieve this.
+
+/* UUID support is cheap, and many other notions of identity depend upon it. */
 #include <Platform/Identity/IdentityUUID.h>
 
+#if defined(__HAS_CRYPT_WRAPPER)
+  #include <Platform/Identity/IdentityCrypto.h>
+  #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
+    #include <Platform/Identity/IdentityOneID.h>
+  #endif
+#endif
 
-
-class IdentityCert : public Identity {
-  public:
-    IdentityCert();
-    ~IdentityCert();
-
-    virtual int8_t sign() =0;
-    virtual int8_t validate() =0;
-
-
-  protected:
-    IdentityCert* _issuer  = nullptr;
-
-};
+#if defined(MANUVR_OPENINTERCONNECT)
+  #include <Platform/Identity/IdentityOIC.h>
+#endif
 
 #endif // __MANUVR_IDENTITY_H__

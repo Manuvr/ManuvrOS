@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  #if defined(__MANUVR_CONSOLE_SUPPORT)
+  #if defined(MANUVR_CONSOLE_SUPPORT)
     /*
     * The user wants a local stdio "Shell".
     * StandardIO is a linux-specific thing, but the Console can be patched

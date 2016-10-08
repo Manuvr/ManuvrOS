@@ -99,7 +99,7 @@ class XenoSession : public EventReceiver, public BufferPipe {
     virtual void printDebug(StringBuilder*);
     virtual int8_t notify(ManuvrRunnable*);
     virtual int8_t callback_proc(ManuvrRunnable *);
-    #if defined(__MANUVR_CONSOLE_SUPPORT)
+    #if defined(MANUVR_CONSOLE_SUPPORT)
       virtual void procDirectDebugInstruction(StringBuilder *);
     #endif
 
@@ -111,7 +111,7 @@ class XenoSession : public EventReceiver, public BufferPipe {
   protected:
     XenoMessage* working;         // If we are in the middle of receiving a message,
 
-    virtual int8_t bootComplete() =0;
+    virtual int8_t attached() =0;
     const char* pipeName();
 
     /**

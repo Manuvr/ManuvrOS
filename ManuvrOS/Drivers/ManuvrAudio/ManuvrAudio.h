@@ -552,7 +552,7 @@ class ManuvrAudio : public EventReceiver {
 
 
   protected:
-    int8_t bootComplete();
+    int8_t attached();
 
 
   private:

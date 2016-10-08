@@ -29,12 +29,15 @@ Note that this represents a maximum scope-of-support regarding cryptographic
 //         be extended to other libraries (OpenSSL, uECC, etc...).
 */
 
+#ifndef __CRYPTO_ABSTRACTION_H__
+#define __CRYPTO_ABSTRACTION_H__
 
 #if defined(WITH_MBEDTLS)
 /* MbedTLS support assumes that we have a local copy of the mbedTLS source tree
      at <build-root>/lib/mbedtls. See the downloadDeps.sh script. */
   #define __HAS_CRYPT_WRAPPER   1
   #define __CRYPTO_BACKEND      "mbedTLS"
+  #include "mbedtls/error.h"
   #include "mbedtls/ssl.h"
   #include "mbedtls/entropy.h"
   #include "mbedtls/ctr_drbg.h"
@@ -44,18 +47,21 @@ Note that this represents a maximum scope-of-support regarding cryptographic
   #if defined(MBEDTLS_PK_C)
     #include "mbedtls/pk.h"
     #include "mbedtls/pk_internal.h"
+    #if defined(MBEDTLS_RSA_C)
+      #include "mbedtls/rsa.h"
+    #endif
+    #if defined(MBEDTLS_ECP_C)
+      #include "mbedtls/ecp.h"
+    #endif
+    #if defined(MBEDTLS_ECDSA_C)
+      #include "mbedtls/ecdsa.h"
+    #endif
   #endif
   #if defined(MBEDTLS_AES_C)
     #include "mbedtls/aes.h"
   #endif
   #if defined(MBEDTLS_BLOWFISH_C)
     #include "mbedtls/blowfish.h"
-  #endif
-  #if defined(MBEDTLS_RSA_C)
-    #include "mbedtls/rsa.h"
-  #endif
-  #if defined(MBEDTLS_ECP_C)
-    #include "mbedtls/ecp.h"
   #endif
 
   // Now we are going to re-assign some defines to make our base-wrapper. All
@@ -410,3 +416,5 @@ Note that this represents a maximum scope-of-support regarding cryptographic
 #else
   // There is no cryptographic support.
 #endif
+
+#endif  // __CRYPTO_ABSTRACTION_H__

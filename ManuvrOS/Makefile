@@ -42,6 +42,7 @@ CPP_SRCS  += EnumeratedTypeCodes.cpp
 CPP_SRCS  += Kernel.cpp
 CPP_SRCS  += EventReceiver.cpp
 CPP_SRCS  += TaskProfilerData.cpp
+CPP_SRCS  += Utilities.cpp
 CPP_SRCS  += ManuvrMsg/ManuvrMsg.cpp
 
 # Concepts of "session" according to various standards...
@@ -119,6 +120,9 @@ CPP_SRCS  += Drivers/INA219/INA219.cpp
 
 CPP_SRCS  += Platform/Identity.cpp
 CPP_SRCS  += Platform/Identity/IdentityUUID.cpp
+CPP_SRCS  += Platform/Identity/IdentityCrypto.cpp
+CPP_SRCS  += Platform/Identity/IdentityOIC.cpp
+CPP_SRCS  += Platform/Identity/IdentityOneID.cpp
 CPP_SRCS  += Platform/Storage.cpp
 
 

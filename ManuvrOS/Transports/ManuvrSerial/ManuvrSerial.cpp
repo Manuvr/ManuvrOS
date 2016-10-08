@@ -354,21 +354,41 @@ bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
 
 
 
-/****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
-* ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
-* ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+/*******************************************************************************
+* ######## ##     ## ######## ##    ## ########  ######
+* ##       ##     ## ##       ###   ##    ##    ##    ##
+* ##       ##     ## ##       ####  ##    ##    ##
+* ######   ##     ## ######   ## ## ##    ##     ######
+* ##        ##   ##  ##       ##  ####    ##          ##
+* ##         ## ##   ##       ##   ###    ##    ##    ##
+* ########    ###    ######## ##    ##    ##     ######
 *
 * These are overrides from EventReceiver interface...
-****************************************************************************************************/
+*******************************************************************************/
+
+/**
+* This is called when the kernel attaches the module.
+* This is the first time the class can be expected to have kernel access.
+*
+* @return 0 on no action, 1 on action, -1 on failure.
+*/
+int8_t ManuvrSerial::attached() {
+  EventReceiver::attached();
+
+  // Tolerate 30ms of latency on the line before flushing the buffer.
+  read_abort_event.alterScheduleRecurrence(0);
+  read_abort_event.alterSchedulePeriod(30);
+  read_abort_event.autoClear(false);
+  read_abort_event.enableSchedule(true);
+  #if !defined (__MANUVR_FREERTOS) && !defined (__MANUVR_LINUX)
+  __kernel->addSchedule(&read_abort_event);
+  #endif
+
+  reset();
+  return 1;
+}
+
+
 /**
 * Debug support method. This fxn is only present in debug builds.
 *
@@ -385,29 +405,6 @@ void ManuvrSerial::printDebug(StringBuilder *temp) {
   #endif
   temp->concatf("-- Baud            %d\n",     _baud_rate);
   temp->concatf("-- Class size      %d\n",     sizeof(ManuvrSerial));
-}
-
-
-/**
-* There is a NULL-check performed upstream for the scheduler member. So no need
-*   to do it again here.
-*
-* @return 0 on no action, 1 on action, -1 on failure.
-*/
-int8_t ManuvrSerial::bootComplete() {
-  EventReceiver::bootComplete();
-
-  // Tolerate 30ms of latency on the line before flushing the buffer.
-  read_abort_event.alterScheduleRecurrence(0);
-  read_abort_event.alterSchedulePeriod(30);
-  read_abort_event.autoClear(false);
-  read_abort_event.enableSchedule(true);
-  #if !defined (__MANUVR_FREERTOS) && !defined (__MANUVR_LINUX)
-  __kernel->addSchedule(&read_abort_event);
-  #endif
-
-  reset();
-  return 1;
 }
 
 

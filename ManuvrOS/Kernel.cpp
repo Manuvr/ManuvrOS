@@ -31,6 +31,7 @@ limitations under the License.
   #include <FreeRTOS_ARM.h>
 #endif
 
+
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
@@ -305,9 +306,9 @@ int8_t Kernel::subscribe(EventReceiver *client) {
 
   client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
   int8_t return_value = subscribers.insert(client);
-  if (booted()) {
-    // This subscriber is joining us after bootup. Call its bootComplete() fxn to cause it to init.
-    client->bootComplete();
+  if (erAttached()) {
+    // This subscriber is joining us after bootup. Call its attached() fxn to cause it to init.
+    client->attached();
   }
   return ((return_value >= 0) ? 0 : -1);
 }
@@ -329,9 +330,9 @@ int8_t Kernel::subscribe(EventReceiver *client, uint8_t priority) {
 
   client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
   int8_t return_value = subscribers.insert(client, priority);
-  if (booted()) {
-    // This subscriber is joining us after bootup. Call its bootComplete() fxn to cause it to init.
-    //client.bootComplete();
+  if (erAttached()) {
+    // This subscriber is joining us after bootup. Call its attached() fxn to cause it to init.
+    //client.attached();
   }
   return ((return_value >= 0) ? 0 : -1);
 }
@@ -665,7 +666,7 @@ int8_t Kernel::procIdleFlags() {
   uint32_t profiler_mark_1 = 0;   // Profiling requests...
   uint32_t profiler_mark_2 = 0;   // Profiling requests...
   uint32_t profiler_mark_3 = 0;   // Profiling requests...
-  int8_t return_value      = 0;   // Number of Events we've processed this call.
+  int8_t   return_value    = 0;   // Number of Events we've processed this call.
   uint16_t msg_code_local  = 0;
 
   serviceSchedules();
@@ -812,9 +813,9 @@ int8_t Kernel::procIdleFlags() {
           event_costs.incrementPriority(profiler_item);
         }
         profiler_item->executions++;
-        profiler_item->run_time_last    = std::max((unsigned long) profiler_mark_2, (unsigned long) profiler_mark_1) - std::min((unsigned long) profiler_mark_2, (unsigned long) profiler_mark_1);
-        profiler_item->run_time_best    = std::min((unsigned long) profiler_item->run_time_best, (unsigned long) profiler_item->run_time_last);
-        profiler_item->run_time_worst   = std::max((unsigned long) profiler_item->run_time_worst, (unsigned long) profiler_item->run_time_last);
+        profiler_item->run_time_last    = wrap_accounted_delta(profiler_mark_2, profiler_mark_1);
+        profiler_item->run_time_best    = strict_min(profiler_item->run_time_last, profiler_item->run_time_best);
+        profiler_item->run_time_worst   = strict_max(profiler_item->run_time_last, profiler_item->run_time_worst);
         profiler_item->run_time_total  += profiler_item->run_time_last;
         profiler_item->run_time_average = profiler_item->run_time_total / ((profiler_item->executions) ? profiler_item->executions : 1);
 
@@ -845,16 +846,22 @@ int8_t Kernel::procIdleFlags() {
   profiler_mark_3 = micros();
   flushLocalLog();
 
-  uint32_t runtime_this_loop = std::max((uint32_t) profiler_mark_3, (uint32_t) profiler_mark) - std::min((uint32_t) profiler_mark_3, (uint32_t) profiler_mark);
+  uint32_t runtime_this_loop = wrap_accounted_delta(profiler_mark, profiler_mark_3);
   if (return_value > 0) {
     // We ran at-least one Runnable.
     micros_occupied += runtime_this_loop;
     consequtive_idles = max_idle_count;  // Reset the idle loop down-counter.
-    max_events_p_loop = std::max((uint32_t) max_events_p_loop, 0x0000007F & (uint32_t) return_value);
+    if (max_events_p_loop < (uint8_t) return_value) {
+      max_events_p_loop = (uint8_t) return_value;
+    }
   }
   else if (0 == return_value) {
     // We did nothing this time.
-    max_idle_loop_time = std::max((uint32_t) max_idle_loop_time, (std::max((uint32_t) profiler_mark, (uint32_t) profiler_mark_3) - std::min((uint32_t) profiler_mark, (uint32_t) profiler_mark_3)));
+    uint32_t this_idle_time = wrap_accounted_delta(profiler_mark, profiler_mark_3);
+    if (this_idle_time > max_idle_loop_time) {
+      max_idle_loop_time = this_idle_time;
+    }
+
     switch (consequtive_idles) {
       case 0:
         // If we have reached our threshold for idleness, we invoke the plaform
@@ -881,7 +888,7 @@ int8_t Kernel::procIdleFlags() {
 
 
 
-/****************************************************************************************************
+/*******************************************************************************
 *  ▄▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄   ▄         ▄  ▄▄▄▄▄▄▄▄▄▄▄
 * ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░▌       ▐░▌▐░░░░░░░░░░░▌
 * ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀
@@ -893,7 +900,7 @@ int8_t Kernel::procIdleFlags() {
 * ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌
 * ▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
 *  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀
-****************************************************************************************************/
+*******************************************************************************/
 
 /**
 * Turns the profiler on or off. Clears its collected stats regardless.
@@ -1030,29 +1037,25 @@ void Kernel::printDebug(StringBuilder* output) {
 
 
 
-/****************************************************************************************************
-*  ▄▄▄▄▄▄▄▄▄▄▄  ▄               ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌▐░▌             ▐░▌▐░░░░░░░░░░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀  ▐░▌           ▐░▌ ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀
-* ▐░▌            ▐░▌         ▐░▌  ▐░▌          ▐░▌▐░▌    ▐░▌     ▐░▌     ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄    ▐░▌       ▐░▌   ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌   ▐░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄
-* ▐░░░░░░░░░░░▌    ▐░▌     ▐░▌    ▐░░░░░░░░░░░▌▐░▌  ▐░▌  ▐░▌     ▐░▌     ▐░░░░░░░░░░░▌
-* ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌   ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░▌   ▐░▌ ▐░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌
-* ▐░▌                ▐░▌ ▐░▌      ▐░▌          ▐░▌    ▐░▌▐░▌     ▐░▌               ▐░▌
-* ▐░█▄▄▄▄▄▄▄▄▄        ▐░▐░▌       ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌     ▐░▌      ▄▄▄▄▄▄▄▄▄█░▌
-* ▐░░░░░░░░░░░▌        ▐░▌        ▐░░░░░░░░░░░▌▐░▌      ▐░░▌     ▐░▌     ▐░░░░░░░░░░░▌
-*  ▀▀▀▀▀▀▀▀▀▀▀          ▀          ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀
+/*******************************************************************************
+* ######## ##     ## ######## ##    ## ########  ######
+* ##       ##     ## ##       ###   ##    ##    ##    ##
+* ##       ##     ## ##       ####  ##    ##    ##
+* ######   ##     ## ######   ## ## ##    ##     ######
+* ##        ##   ##  ##       ##  ####    ##          ##
+* ##         ## ##   ##       ##   ###    ##    ##    ##
+* ########    ###    ######## ##    ##    ##     ######
 *
 * These are overrides from EventReceiver interface...
-****************************************************************************************************/
+*******************************************************************************/
 
 /**
 * Boot done finished-up.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t Kernel::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t Kernel::attached() {
+  EventReceiver::attached();
   return 1;
 }
 
@@ -1121,7 +1124,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
       return_value++;
       break;
 
-    #if defined(__MANUVR_CONSOLE_SUPPORT)
+    #if defined(MANUVR_CONSOLE_SUPPORT)
       case MANUVR_MSG_USER_DEBUG_INPUT:
         if (active_runnable->argCount()) {
           // If the event came with a StringBuilder, concat it onto the last_user_input.
@@ -1132,7 +1135,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
         }
         return_value++;
         break;
-    #endif  // __MANUVR_CONSOLE_SUPPORT
+    #endif  // MANUVR_CONSOLE_SUPPORT
 
     case MANUVR_MSG_SYS_ADVERTISE_SRVC:  // Some service is annoucing its arrival.
     case MANUVR_MSG_SYS_RETRACT_SRVC:    // Some service is annoucing its departure.
@@ -1342,7 +1345,7 @@ uint32_t Kernel::lagged_schedules = 0;
 *  latency-sensitive.
 */
 int Kernel::serviceSchedules() {
-  if (!booted() || (0 == _ms_elapsed)) return -1;
+  if (!platform.booted() || (0 == _ms_elapsed)) return -1;
   int return_value = 0;
   uint32_t mse = _ms_elapsed;  // Concurrency....
   _ms_elapsed = 0;
@@ -1382,7 +1385,7 @@ int Kernel::serviceSchedules() {
 * The code below is related to accepting and parsing user input. It is only relevant if console     *
 *   support is enabled.                                                                             *
 ****************************************************************************************************/
-#if defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SUPPORT)
 
 /**
 * Responsible for taking any accumulated console input, doing some basic
@@ -1500,6 +1503,20 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       }
       break;
 
+    case 'I':
+      {
+        Identity* ident = nullptr;
+        switch (temp_int) {
+          case 1:
+            break;
+          case 0:
+            break;
+          default:
+            break;
+        }
+      }
+      break;
+
     case 'i':   // Debug prints.
       switch (temp_int) {
         case 2:
@@ -1512,17 +1529,25 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
 
         #if defined(__HAS_CRYPT_WRAPPER)
           case 4:
-            printCryptoOverview(&local_log);
+            platform.printCryptoOverview(&local_log);
             break;
         #endif
 
-        case 9:
-          platform.printDebug(&local_log);
-          printDebug(&local_log);
-          printProfiler(&local_log);
-          // NOTE: Case fall-through
         case 5:
           printScheduler(&local_log);
+          break;
+
+        case 6:
+          {
+            const IdentFormat* ident_types = Identity::supportedNotions();
+            local_log.concat("-- Supported notions of identity: \n");
+            while (IdentFormat::UNDETERMINED != *ident_types) {
+              local_log.concatf("\t %s\n", Identity::identityTypeString(*ident_types++));
+            }
+          }
+          break;
+        case 7:
+          Identity::staticToString(platform.selfIdentity(), &local_log);
           break;
 
         default:
@@ -1539,4 +1564,4 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
   input->clear();
   flushLocalLog();
 }
-#endif  //__MANUVR_CONSOLE_SUPPORT
+#endif  //MANUVR_CONSOLE_SUPPORT
