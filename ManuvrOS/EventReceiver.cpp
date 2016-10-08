@@ -28,7 +28,7 @@ EventReceiver::EventReceiver() {
   __kernel       = nullptr;
   _class_state   = (DEFAULT_CLASS_VERBOSITY & MANUVR_ER_FLAG_VERBOSITY_MASK);
   _extnd_state   = 0;
-  #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+  #if defined(__BUILD_HAS_THREADS)
     _thread_id = -1;
   #endif
 }

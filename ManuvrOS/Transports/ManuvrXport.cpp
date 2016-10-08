@@ -137,7 +137,7 @@ ManuvrXport::ManuvrXport() : EventReceiver(), BufferPipe() {
 * Destructor.
 */
 ManuvrXport::~ManuvrXport() {
-  #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+  #if defined(__BUILD_HAS_THREADS)
     if (_thread_id > 0) {
       _thread_id = 0;
       pthread_cancel(_thread_id);

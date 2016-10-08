@@ -18,12 +18,12 @@
 
 /* Threading models... */
 #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
-  #define __BUILD_HAS_THREADS
-#endif
   // None
   // pthreads   // Each of these exist independently of platform.
-  //#pragma message "Threading provided by pthreads."
   // freeRTOS   // Each of these exist independently of platform.
+  #define __BUILD_HAS_THREADS
+  //#pragma message "Building with thread support."
+#endif
 
 
 /* Encodings... */

@@ -276,7 +276,7 @@ ManuvrOIC::ManuvrOIC(Argument* root_config) : ManuvrOIC() {
 ManuvrOIC::~ManuvrOIC() {
   __kernel->removeSchedule(&_discovery_ping);
   __kernel->removeSchedule(&_discovery_timeout);
-  #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+  #if defined(__BUILD_HAS_THREADS)
     #if defined(__MACH__) && defined(__APPLE__)
       if (_thread_id > 0) {
         _thread_id = 0;

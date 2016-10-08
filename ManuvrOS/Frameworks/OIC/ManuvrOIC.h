@@ -87,7 +87,7 @@ class ManuvrOIC : public EventReceiver {
 
 
   private:
-    #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+    #if defined(__BUILD_HAS_THREADS)
       // If we have a concept of threads...
       unsigned long _thread_id = 0;
     #endif

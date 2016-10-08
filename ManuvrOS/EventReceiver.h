@@ -159,7 +159,7 @@ Lifecycle:
         uint8_t _extnd_state;  // This is here for use by the extending class.
         const char* _receiver_name;
 
-        #if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
+        #if defined(__BUILD_HAS_THREADS)
           // In threaded environments, we allow resources to enable their own threading
           //   if needed.
           int _thread_id;

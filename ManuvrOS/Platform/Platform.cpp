@@ -126,10 +126,6 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   _start_micros = micros();
   uint32_t default_flags = 0;
 
-  #if defined(__HAS_CRYPT_WRAPPER)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_CRYPTO;
-  #endif
-
   #if defined(MANUVR_GPS_PIPE)
     default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
   #endif
@@ -138,8 +134,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
     default_flags |= MANUVR_PLAT_FLAG_HAS_STORAGE;
   #endif
 
-  #if defined (__MANUVR_LINUX) || defined (__MANUVR_FREERTOS)
-    default_flags |= MANUVR_PLAT_FLAG_HAS_THREADS;
+  #if defined(__BUILD_HAS_THREADS)
     platform.setIdleHook([]{ sleep_millis(20); });
   #endif
 
