@@ -123,8 +123,8 @@ int8_t ADCScanner::scan() {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t ADCScanner::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t ADCScanner::attached() {
+  EventReceiver::attached();
 
   // Build some pre-formed Events.
   _periodic_check.repurpose(MANUVR_MSG_ADC_SCAN, (EventReceiver*) this);

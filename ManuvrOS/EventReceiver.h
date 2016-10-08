@@ -32,8 +32,8 @@ Lifecycle:
   #define __MANUVR_MSG_MANAGER_H__
 
   #include <inttypes.h>
-  #include <EnumeratedTypeCodes.h>
   #include <CommonConstants.h>
+  #include <EnumeratedTypeCodes.h>
 
   #include <DataStructures/PriorityQueue.h>
   #include <DataStructures/StringBuilder.h>
@@ -47,7 +47,7 @@ Lifecycle:
   #define EVENT_CALLBACK_RETURN_DROP        3  // The callback class is telling Kernel that it should dequeue
 
   #define MANUVR_ER_FLAG_VERBOSITY_MASK     0x07  // The bottom 3 bits are for the verbosity value.
-  #define MANUVR_ER_FLAG_BOOT_COMPLETE      0x08  // Has the class been bootstrapped?
+  #define MANUVR_ER_FLAG_ATTACHED           0x08  // Has the class been bootstrapped?
   #define MANUVR_ER_FLAG_EVENT_PENDING      0x10  // Set when the ER has an event waiting for service.
   #define MANUVR_ER_FLAG_HIDDEN_FROM_DISCOV 0x20  // Setting this indicates that the ER should not expose itself to discovery.
   #define MANUVR_ER_FLAG_THREADED           0x40  // This ER is maintaining its own thread.
@@ -78,12 +78,14 @@ Lifecycle:
         */
         void         printDebug();
         virtual void printDebug(StringBuilder*);
-        #ifdef __MANUVR_CONSOLE_SUPPORT
+        #ifdef MANUVR_CONSOLE_SUPPORT
           virtual void procDirectDebugInstruction(StringBuilder *input);
         #endif
 
         /* These are intended to be overridden. */
         virtual int8_t callback_proc(ManuvrRunnable *);
+
+        /* Raises an event, marking us as the return callback. */
         int8_t raiseEvent(ManuvrRunnable* event);
 
         inline const char* getReceiverName() {   return _receiver_name;  }
@@ -107,7 +109,7 @@ Lifecycle:
         *
         * @return  1 if action was taken, 0 if not, -1 on error.
         */
-        virtual int8_t bootComplete();        // This is called from the base notify().
+        virtual int8_t attached();        // This is called from the base notify().
 
         /**
         * Called for runtime configuration changes mid-lifecycle.
@@ -121,7 +123,7 @@ Lifecycle:
         *
         * @return  true if the class has been booted.
         */
-        inline bool   booted() {       return (0 != (_class_state & MANUVR_ER_FLAG_BOOT_COMPLETE)); };
+        inline bool erAttached() {   return (0 != (_class_state & MANUVR_ER_FLAG_ATTACHED)); };
 
         /**
         * Does this ER's configuration need to be persisted?
@@ -137,7 +139,7 @@ Lifecycle:
 
         EventReceiver();
 
-        inline void _mark_boot_complete() {   _class_state |= MANUVR_ER_FLAG_BOOT_COMPLETE;  };
+        inline void _mark_attached() {   _class_state |= MANUVR_ER_FLAG_ATTACHED;  };
 
         inline void setReceiverName(const char* nom) {  _receiver_name = nom;  }
         void flushLocalLog();
@@ -162,7 +164,7 @@ Lifecycle:
         #if defined(__BUILD_HAS_THREADS)
           // In threaded environments, we allow resources to enable their own threading
           //   if needed.
-          int _thread_id;
+          int _thread_id  = -1;
         #endif
 
         int8_t setVerbosity(ManuvrRunnable*);  // Private because it should be set with an Event.

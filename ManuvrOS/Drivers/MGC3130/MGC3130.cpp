@@ -700,8 +700,8 @@ bool MGC3130::operationCallahead(I2CBusOp* op) {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t MGC3130::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t MGC3130::attached() {
+  EventReceiver::attached();
   init();
   ManuvrRunnable* init_runnable = Kernel::returnEvent(MANUVR_MSG_SENSOR_MGC3130_INIT);
 
@@ -790,7 +790,7 @@ int8_t MGC3130::notify(ManuvrRunnable *active_event) {
 }
 
 
-#if defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SUPPORT)
 void MGC3130::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
 
@@ -804,4 +804,4 @@ void MGC3130::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-#endif  // __MANUVR_CONSOLE_SUPPORT
+#endif  // MANUVR_CONSOLE_SUPPORT

@@ -404,8 +404,8 @@ int8_t AudioRouter::status(StringBuilder* output) {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t AudioRouter::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t AudioRouter::attached() {
+  EventReceiver::attached();
   if (init() != AUDIO_ROUTER_ERROR_NO_ERROR) {
     Kernel::log("Tried to init AudioRouter and failed.\n");
   }
@@ -566,7 +566,7 @@ int8_t AudioRouter::notify(ManuvrRunnable *active_event) {
 
 
 
-#if defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SUPPORT)
 void AudioRouter::procDirectDebugInstruction(StringBuilder *input) {
   char* str = (char*) input->string();
 
@@ -634,4 +634,4 @@ void AudioRouter::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-#endif  //__MANUVR_CONSOLE_SUPPORT
+#endif  //MANUVR_CONSOLE_SUPPORT

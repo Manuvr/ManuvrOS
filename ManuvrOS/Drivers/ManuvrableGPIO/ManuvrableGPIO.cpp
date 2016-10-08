@@ -100,8 +100,8 @@ void ManuvrableGPIO::printDebug(StringBuilder *output) {
 *
 * @return non-zero if action was taken. Zero otherwise.
 */
-int8_t ManuvrableGPIO::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t ManuvrableGPIO::attached() {
+  EventReceiver::attached();
   return 0;
 }
 
@@ -195,7 +195,7 @@ int8_t ManuvrableGPIO::notify(ManuvrRunnable *active_event) {
 }
 
 
-#if defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SUPPORT)
 void ManuvrableGPIO::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
   uint8_t  _pin = (input->count() > 1) ? input->position_as_int(1) : 0;
@@ -223,4 +223,4 @@ void ManuvrableGPIO::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-#endif  // __MANUVR_CONSOLE_SUPPORT
+#endif  // MANUVR_CONSOLE_SUPPORT

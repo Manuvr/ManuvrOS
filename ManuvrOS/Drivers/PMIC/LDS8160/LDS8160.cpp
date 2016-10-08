@@ -197,8 +197,8 @@ void LDS8160::printDebug(StringBuilder* temp) {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t LDS8160::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t LDS8160::attached() {
+  EventReceiver::attached();
 
 /* TODO: This class was never ported to ManuvrOS's October 2015 refactor.
   pid_channel_0 = scheduler->createSchedule(100,  0, false, lds8160_chan_0);
@@ -450,7 +450,7 @@ int8_t LDS8160::notify(ManuvrRunnable *active_event) {
 }
 
 
-#if defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SUPPORT)
 void LDS8160::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
   ManuvrRunnable *event = NULL;  // Pitching events is a common thing in this fxn...
@@ -551,7 +551,7 @@ void LDS8160::procDirectDebugInstruction(StringBuilder *input) {
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
 
-#endif  // __MANUVR_CONSOLE_SUPPORT
+#endif  // MANUVR_CONSOLE_SUPPORT
 
 
 /****************************************************************************************************

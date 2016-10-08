@@ -49,13 +49,13 @@ class TeensyStorage : public EventReceiver, public Storage {
     void printDebug(StringBuilder*);
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable*);
-    #if defined(__MANUVR_CONSOLE_SUPPORT)
+    #if defined(MANUVR_CONSOLE_SUPPORT)
       void procDirectDebugInstruction(StringBuilder*);
     #endif
 
 
   protected:
-    int8_t bootComplete();
+    int8_t attached();
 
 
   private:

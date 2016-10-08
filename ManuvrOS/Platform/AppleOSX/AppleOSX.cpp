@@ -592,7 +592,7 @@ int8_t ApplePlatform::platformPreInit(Argument* root_config) {
   //internal_integrity_check(nullptr, 0);
   #endif
 
-  #if defined(__MANUVR_CONSOLE_SUPPORT)
+  #if defined(MANUVR_CONSOLE_SUPPORT)
     if (root_config && root_config->retrieveArgByKey("console")) {
       StandardIO* _console_xport = new StandardIO();
       ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_xport);

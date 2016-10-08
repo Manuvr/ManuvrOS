@@ -58,7 +58,7 @@ class ManuvrTelehash : public ManuvrXport {
     ~ManuvrTelehash();
 
     /* Overrides from EventReceiver */
-    int8_t bootComplete();
+    int8_t attached();
     void printDebug(StringBuilder *);
     int8_t notify(ManuvrRunnable*);
     int8_t callback_proc(ManuvrRunnable *);

@@ -206,7 +206,7 @@ void ManuvrPlatform::printDebug(StringBuilder* output) {
   }
 
   output->concat("--\n-- Supported protocols: \n");
-  #if defined(__MANUVR_CONSOLE_SUPPORT)
+  #if defined(MANUVR_CONSOLE_SUPPORT)
     output->concat("--\t Console\n");
   #endif
   #if defined(MANUVR_OVER_THE_WIRE)

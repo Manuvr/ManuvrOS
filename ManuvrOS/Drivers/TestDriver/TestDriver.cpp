@@ -68,8 +68,8 @@ void TestDriver::printDebug(StringBuilder* output) {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t TestDriver::bootComplete() {
-  EventReceiver::bootComplete();   // Call up to get scheduler ref and class init.
+int8_t TestDriver::attached() {
+  EventReceiver::attached();   // Call up to get scheduler ref and class init.
   return 0;
 }
 
@@ -120,7 +120,7 @@ int8_t TestDriver::notify(ManuvrRunnable *active_event) {
 
 
 
-#ifdef __MANUVR_CONSOLE_SUPPORT
+#ifdef MANUVR_CONSOLE_SUPPORT
 void TestDriver::procDirectDebugInstruction(StringBuilder *input) {
   const char* str = (char *) input->position(0);
   char c    = *str;

@@ -306,9 +306,9 @@ int8_t Kernel::subscribe(EventReceiver *client) {
 
   client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
   int8_t return_value = subscribers.insert(client);
-  if (booted()) {
-    // This subscriber is joining us after bootup. Call its bootComplete() fxn to cause it to init.
-    client->bootComplete();
+  if (erAttached()) {
+    // This subscriber is joining us after bootup. Call its attached() fxn to cause it to init.
+    client->attached();
   }
   return ((return_value >= 0) ? 0 : -1);
 }
@@ -330,9 +330,9 @@ int8_t Kernel::subscribe(EventReceiver *client, uint8_t priority) {
 
   client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
   int8_t return_value = subscribers.insert(client, priority);
-  if (booted()) {
-    // This subscriber is joining us after bootup. Call its bootComplete() fxn to cause it to init.
-    //client.bootComplete();
+  if (erAttached()) {
+    // This subscriber is joining us after bootup. Call its attached() fxn to cause it to init.
+    //client.attached();
   }
   return ((return_value >= 0) ? 0 : -1);
 }
@@ -1058,8 +1058,8 @@ void Kernel::printDebug(StringBuilder* output) {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t Kernel::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t Kernel::attached() {
+  EventReceiver::attached();
   return 1;
 }
 
@@ -1128,7 +1128,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
       return_value++;
       break;
 
-    #if defined(__MANUVR_CONSOLE_SUPPORT)
+    #if defined(MANUVR_CONSOLE_SUPPORT)
       case MANUVR_MSG_USER_DEBUG_INPUT:
         if (active_runnable->argCount()) {
           // If the event came with a StringBuilder, concat it onto the last_user_input.
@@ -1139,7 +1139,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
         }
         return_value++;
         break;
-    #endif  // __MANUVR_CONSOLE_SUPPORT
+    #endif  // MANUVR_CONSOLE_SUPPORT
 
     case MANUVR_MSG_SYS_ADVERTISE_SRVC:  // Some service is annoucing its arrival.
     case MANUVR_MSG_SYS_RETRACT_SRVC:    // Some service is annoucing its departure.
@@ -1349,7 +1349,7 @@ uint32_t Kernel::lagged_schedules = 0;
 *  latency-sensitive.
 */
 int Kernel::serviceSchedules() {
-  if (!booted() || (0 == _ms_elapsed)) return -1;
+  if (!platform.booted() || (0 == _ms_elapsed)) return -1;
   int return_value = 0;
   uint32_t mse = _ms_elapsed;  // Concurrency....
   _ms_elapsed = 0;
@@ -1389,7 +1389,7 @@ int Kernel::serviceSchedules() {
 * The code below is related to accepting and parsing user input. It is only relevant if console     *
 *   support is enabled.                                                                             *
 ****************************************************************************************************/
-#if defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SUPPORT)
 
 /**
 * Responsible for taking any accumulated console input, doing some basic
@@ -1568,4 +1568,4 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
   input->clear();
   flushLocalLog();
 }
-#endif  //__MANUVR_CONSOLE_SUPPORT
+#endif  //MANUVR_CONSOLE_SUPPORT

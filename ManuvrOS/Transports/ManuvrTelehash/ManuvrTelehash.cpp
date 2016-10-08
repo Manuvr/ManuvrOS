@@ -146,7 +146,7 @@ ManuvrTelehash::ManuvrTelehash(ManuvrTelehash* listening_instance, int sock, str
     *((uint8_t *) &_sockaddr + i) = *(((uint8_t*)nu_sockaddr) + i);
   }
 
-  bootComplete();
+  attached();
   connected(true);  // TODO: Possibly not true....
 }
 
@@ -437,8 +437,8 @@ void ManuvrTelehash::printDebug(StringBuilder *temp) {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t ManuvrTelehash::bootComplete() {   // ?? TODO ??
-  EventReceiver::bootComplete();
+int8_t ManuvrTelehash::attached() {   // ?? TODO ??
+  EventReceiver::attached();
 
   // We will suffer a 300ms latency if the platform's networking stack doesn't flush
   //   its buffer in time.

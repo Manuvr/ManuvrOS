@@ -388,8 +388,8 @@ void ADP8866::printDebug(StringBuilder* temp) {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t ADP8866::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t ADP8866::attached() {
+  EventReceiver::attached();
   setPin(reset_pin, true);   // Release the reset pin.
 
   // If this read comes back the way we think it should,
@@ -451,7 +451,7 @@ int8_t ADP8866::notify(ManuvrRunnable *active_event) {
 }
 
 
-#if defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SUPPORT)
 
 void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
   const char* str = (char *) input->position(0);
@@ -507,7 +507,7 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-#endif  //__MANUVR_CONSOLE_SUPPORT
+#endif  //MANUVR_CONSOLE_SUPPORT
 
 
 

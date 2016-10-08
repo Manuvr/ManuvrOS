@@ -120,7 +120,7 @@ void EventReceiver::flushLocalLog() {
 }
 
 
-#ifdef __MANUVR_CONSOLE_SUPPORT
+#ifdef MANUVR_CONSOLE_SUPPORT
 /**
 * This is a base-level debug function that takes direct input from a user.
 *
@@ -150,7 +150,7 @@ void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
 
   flushLocalLog();
 }
-#endif  // __MANUVR_CONSOLE_SUPPORT
+#endif  // MANUVR_CONSOLE_SUPPORT
 
 
 /**
@@ -181,7 +181,11 @@ void EventReceiver::printDebug() {
 *   to do it again here.
 */
 void EventReceiver::printDebug(StringBuilder *output) {
-  output->concatf("\n==< %-16s (%ATTACHED) >============\n", getReceiverName(), (booted() ? "UN" : ""));
+  #if defined(__BUILD_HAS_THREADS)
+  output->concatf("\n==< %s %s  Thread %d >=======\n", getReceiverName(), (erAttached() ? "   (UNATTACHED) " : ""), _thread_id);
+  #else
+  output->concatf("\n==< %s %s>======================\n", getReceiverName(), (erAttached() ? "   (UNATTACHED) " : ""));
+  #endif
 }
 
 
@@ -199,16 +203,15 @@ void EventReceiver::printDebug(StringBuilder *output) {
 *******************************************************************************/
 
 /**
-* Events that have a calllback value that is not null will have this fxn called
-*   immediately following Event completion.
-* Your shadow can bite.
+* This is called when the kernel attaches the module.
+* This is the first time the class can be expected to have kernel access.
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t EventReceiver::bootComplete() {
-  if (!booted()) {
+int8_t EventReceiver::attached() {
+  if (!erAttached()) {
     __kernel = platform.kernel();
-    _mark_boot_complete();
+    _mark_attached();
     return 1;
   }
   return 0;
@@ -273,7 +276,7 @@ int8_t EventReceiver::notify(ManuvrRunnable *active_event) {
       case MANUVR_MSG_SYS_LOG_VERBOSITY:
         return setVerbosity(active_event);
       case MANUVR_MSG_SYS_BOOT_COMPLETED:
-        return bootComplete();
+        return attached();
       case MANUVR_MSG_SYS_CONF_LOAD:
         if (active_event->getArgs()) {
           return erConfigure(active_event->getArgs());

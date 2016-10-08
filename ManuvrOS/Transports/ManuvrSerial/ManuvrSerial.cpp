@@ -394,8 +394,8 @@ void ManuvrSerial::printDebug(StringBuilder *temp) {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t ManuvrSerial::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t ManuvrSerial::attached() {
+  EventReceiver::attached();
 
   // Tolerate 30ms of latency on the line before flushing the buffer.
   read_abort_event.alterScheduleRecurrence(0);

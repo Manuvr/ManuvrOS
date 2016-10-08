@@ -499,8 +499,8 @@ int MQTTSession::process_inbound() {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t MQTTSession::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t MQTTSession::attached() {
+  EventReceiver::attached();
   __kernel->addSchedule(&_ping_timer);
 
   //if (owner->connected()) {
@@ -596,7 +596,7 @@ int8_t MQTTSession::notify(ManuvrRunnable *active_event) {
 
 
 
-#if defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SUPPORT)
 void MQTTSession::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
 
@@ -654,7 +654,7 @@ void MQTTSession::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-#endif  // __MANUVR_CONSOLE_SUPPORT
+#endif  // MANUVR_CONSOLE_SUPPORT
 
 
 /**

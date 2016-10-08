@@ -182,9 +182,9 @@ This file is the tortured result of growing pains since the beginning of
       /* Overrides from EventReceiver */
       int8_t notify(ManuvrRunnable*);
       int8_t callback_proc(ManuvrRunnable*);
-      #if defined(__MANUVR_CONSOLE_SUPPORT)
+      #if defined(MANUVR_CONSOLE_SUPPORT)
         void procDirectDebugInstruction(StringBuilder*);
-      #endif  //__MANUVR_CONSOLE_SUPPORT
+      #endif  //MANUVR_CONSOLE_SUPPORT
 
 
       // These are meant to be called from the bus jobs. They deal with specific bus functions
@@ -203,7 +203,7 @@ This file is the tortured result of growing pains since the beginning of
 
 
     protected:
-      int8_t bootComplete();      // This is called from the base notify().
+      int8_t attached();      // This is called from the base notify().
 
 
     private:

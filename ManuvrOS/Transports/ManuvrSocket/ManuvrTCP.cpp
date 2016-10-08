@@ -400,8 +400,8 @@ void ManuvrTCP::printDebug(StringBuilder *temp) {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t ManuvrTCP::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t ManuvrTCP::attached() {
+  EventReceiver::attached();
 
   // We will suffer a 300ms latency if the platform's networking stack doesn't flush
   //   its buffer in time.

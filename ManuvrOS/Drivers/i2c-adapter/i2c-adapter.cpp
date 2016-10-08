@@ -348,8 +348,8 @@ void I2CAdapter::gpioSetup() {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t I2CAdapter::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t I2CAdapter::attached() {
+  EventReceiver::attached();
 
   if (dev >= 0) busOnline(true);
   if (busOnline()) {
@@ -837,7 +837,7 @@ void I2CAdapter::printDebug(StringBuilder *temp) {
 }
 
 
-#if defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SUPPORT)
 void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
   char c = *(str);
@@ -958,4 +958,4 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-#endif  //__MANUVR_CONSOLE_SUPPORT
+#endif  //MANUVR_CONSOLE_SUPPORT

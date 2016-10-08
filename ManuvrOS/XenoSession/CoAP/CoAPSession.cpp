@@ -183,8 +183,8 @@ int8_t CoAPSession::sendEvent(ManuvrRunnable *active_event) {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t CoAPSession::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t CoAPSession::attached() {
+  EventReceiver::attached();
 
   __kernel->addSchedule(&_ping_timer);
 
@@ -281,7 +281,7 @@ int8_t CoAPSession::notify(ManuvrRunnable *active_event) {
 
 
 
-#if defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SUPPORT)
 void CoAPSession::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
 
@@ -293,7 +293,7 @@ void CoAPSession::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-#endif  // __MANUVR_CONSOLE_SUPPORT
+#endif  // MANUVR_CONSOLE_SUPPORT
 
 
 /**

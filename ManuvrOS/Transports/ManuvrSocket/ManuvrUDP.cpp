@@ -505,8 +505,8 @@ void ManuvrUDP::printDebug(StringBuilder* output) {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t ManuvrUDP::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t ManuvrUDP::attached() {
+  EventReceiver::attached();
   // Because this is not a stream-oriented transport, the timeout value is used
   //   to periodically flush our connection cache.
   read_abort_event.alterScheduleRecurrence(0);
@@ -593,7 +593,7 @@ int8_t ManuvrUDP::notify(ManuvrRunnable *active_event) {
 }
 
 
-#if defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SUPPORT)
 void ManuvrUDP::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
 
@@ -607,6 +607,6 @@ void ManuvrUDP::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-#endif  // __MANUVR_CONSOLE_SUPPORT
+#endif  // MANUVR_CONSOLE_SUPPORT
 
 #endif  // UDP support

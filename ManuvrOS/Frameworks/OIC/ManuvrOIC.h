@@ -80,7 +80,7 @@ class ManuvrOIC : public EventReceiver {
 
 
   protected:
-    int8_t bootComplete();
+    int8_t attached();
 
     inline void isDiscoverable(bool nu) {  _er_set_flag(OIC_FLAG_DISCOVERABLE, nu);  };
     inline void isDiscovering(bool nu) {   _er_set_flag(OIC_FLAG_DISCOVERING, nu);   };

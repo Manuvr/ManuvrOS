@@ -56,7 +56,7 @@ limitations under the License.
 
 
 
-  #if defined(__MANUVR_CONSOLE_SUPPORT) || defined(__MANUVR_DEBUG)
+  #if defined(MANUVR_CONSOLE_SUPPORT) || defined(__MANUVR_DEBUG)
     #ifdef __MANUVR_DEBUG
       #define DEFAULT_CLASS_VERBOSITY    6
     #else
@@ -154,7 +154,7 @@ limitations under the License.
          Just gracefully fall into those when needed. */
       int8_t notify(ManuvrRunnable*);
       int8_t callback_proc(ManuvrRunnable*);
-      #if defined(__MANUVR_CONSOLE_SUPPORT)
+      #if defined(MANUVR_CONSOLE_SUPPORT)
         void procDirectDebugInstruction(StringBuilder*);
       #endif
       void printDebug(StringBuilder*);
@@ -192,7 +192,7 @@ limitations under the License.
 
 
     protected:
-      int8_t bootComplete();
+      int8_t attached();
 
 
     private:
@@ -242,7 +242,7 @@ limitations under the License.
       void reclaim_event(ManuvrRunnable*);
       inline void update_maximum_queue_depth() {   max_queue_depth = (exec_queue.size() > (int) max_queue_depth) ? exec_queue.size() : max_queue_depth;   };
 
-      #if defined(__MANUVR_CONSOLE_SUPPORT)
+      #if defined(MANUVR_CONSOLE_SUPPORT)
       int8_t _route_console_input(StringBuilder*);
       #endif
 

@@ -217,8 +217,8 @@ int LinuxStorage::_load_file(StringBuilder* buf) {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t LinuxStorage::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t LinuxStorage::attached() {
+  EventReceiver::attached();
   if (0 <= _load_file(&_disk_buffer)) {
   }
   else {
@@ -289,7 +289,7 @@ int8_t LinuxStorage::notify(ManuvrRunnable *active_event) {
 }
 
 
-#if defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SUPPORT)
 void LinuxStorage::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
 
@@ -340,6 +340,6 @@ void LinuxStorage::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-#endif   // __MANUVR_CONSOLE_SUPPORT
+#endif   // MANUVR_CONSOLE_SUPPORT
 
 #endif   // __MANUVR_LINUX & MANUVR_STORAGE

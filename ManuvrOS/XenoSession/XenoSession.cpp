@@ -490,7 +490,7 @@ void XenoSession::printDebug(StringBuilder *output) {
 }
 
 
-#ifdef __MANUVR_CONSOLE_SUPPORT
+#ifdef MANUVR_CONSOLE_SUPPORT
 
 void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
@@ -526,4 +526,4 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-#endif  // __MANUVR_CONSOLE_SUPPORT
+#endif  // MANUVR_CONSOLE_SUPPORT

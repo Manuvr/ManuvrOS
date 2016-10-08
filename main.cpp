@@ -70,7 +70,7 @@ BufferPipe* _pipe_factory_1(BufferPipe* _n, BufferPipe* _f) {
 }
 #endif
 
-#if defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SUPPORT)
 BufferPipe* _pipe_factory_2(BufferPipe* _n, BufferPipe* _f) {
   ManuvrConsole* _console = new ManuvrConsole(_n);
   kernel->subscribe(_console);
@@ -138,7 +138,7 @@ int main(int argc, const char *argv[]) {
     }
   #endif
 
-  #if defined(__MANUVR_CONSOLE_SUPPORT)
+  #if defined(MANUVR_CONSOLE_SUPPORT)
     if (0 != BufferPipe::registerPipe(2, _pipe_factory_2)) {
       printf("Failed to add console to the pipe registry.\n");
       exit(1);

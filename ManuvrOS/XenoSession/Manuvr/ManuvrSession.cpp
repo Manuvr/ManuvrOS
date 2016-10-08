@@ -475,8 +475,8 @@ const char* ManuvrSession::getSessionSyncString() {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t ManuvrSession::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t ManuvrSession::attached() {
+  EventReceiver::attached();
 
   sync_event.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG, (EventReceiver*) this);
   sync_event.isManaged(true);
@@ -576,7 +576,7 @@ int8_t ManuvrSession::notify(ManuvrRunnable *active_event) {
   return return_value;
 }
 
-#if defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SUPPORT)
 void ManuvrSession::procDirectDebugInstruction(StringBuilder *input) {
   uint8_t temp_byte = 0;
 
@@ -611,6 +611,6 @@ void ManuvrSession::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-#endif  //__MANUVR_CONSOLE_SUPPORT
+#endif  //MANUVR_CONSOLE_SUPPORT
 
 #endif // MANUVR_OVER_THE_WIRE

@@ -85,8 +85,8 @@ void LightSensor::light_check() {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t LightSensor::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t LightSensor::attached() {
+  EventReceiver::attached();
   light_check();
 
   // Build some pre-formed Events.

@@ -340,8 +340,8 @@ void ManuvrableNeoPixel::printDebug(StringBuilder *output) {
 *
 * @return non-zero if action was taken. Zero otherwise.
 */
-int8_t ManuvrableNeoPixel::bootComplete() {
-  EventReceiver::bootComplete();
+int8_t ManuvrableNeoPixel::attached() {
+  EventReceiver::attached();
 
   begin();
   show(); // Initialize all pixels to 'off'
@@ -452,7 +452,7 @@ int8_t ManuvrableNeoPixel::notify(ManuvrRunnable *active_event) {
 
 
 
-#if defined(__MANUVR_CONSOLE_SUPPORT)
+#if defined(MANUVR_CONSOLE_SUPPORT)
 void ManuvrableNeoPixel::procDirectDebugInstruction(StringBuilder *input) {
   const char* str = (char *) input->position(0);
   char c    = *str;
@@ -506,4 +506,4 @@ void ManuvrableNeoPixel::procDirectDebugInstruction(StringBuilder *input) {
 
   if (local_log.length() > 0) {    Kernel::log(&local_log);  }
 }
-#endif  //__MANUVR_CONSOLE_SUPPORT
+#endif  //MANUVR_CONSOLE_SUPPORT

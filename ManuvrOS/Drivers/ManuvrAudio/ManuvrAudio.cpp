@@ -85,8 +85,8 @@ void ManuvrAudio::printDebug(StringBuilder* output) {
 *
 * @return 0 on no action, 1 on action, -1 on failure.
 */
-int8_t ManuvrAudio::bootComplete() {
-  EventReceiver::bootComplete();   // Call up to get scheduler ref and class init.
+int8_t ManuvrAudio::attached() {
+  EventReceiver::attached();   // Call up to get scheduler ref and class init.
   //scheduler->createSchedule(1200, 0, true, this, event);
   return 1;
 }
@@ -142,7 +142,7 @@ int8_t ManuvrAudio::notify(ManuvrRunnable *active_event) {
 
 
 void ManuvrAudio::procDirectDebugInstruction(StringBuilder *input) {
-#ifdef __MANUVR_CONSOLE_SUPPORT
+#ifdef MANUVR_CONSOLE_SUPPORT
   char* str = input->position(0);
 
   uint8_t temp_byte = 0;
