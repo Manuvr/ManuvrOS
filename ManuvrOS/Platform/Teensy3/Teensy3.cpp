@@ -26,6 +26,8 @@ This file is meant to contain a set of common functions that are typically platf
     * Access a true RNG (if it exists)
 */
 
+
+#include <CommonConstants.h>
 #include <Platform/Platform.h>
 
 #if defined(MANUVR_STORAGE)

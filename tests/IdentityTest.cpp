@@ -93,6 +93,7 @@ int UUID_IDENT_TESTS() {
 
 
 int CRYPTO_IDENT_TESTS() {
+  #if defined(__HAS_CRYPT_WRAPPER)
   int return_value = -1;
   StringBuilder log("===< CRYPTO_IDENT_TESTS >===============================\n");
   // Create identities from nothing...
@@ -137,10 +138,14 @@ int CRYPTO_IDENT_TESTS() {
   log.concat("\n\n");
   printf((const char*) log.string());
   return return_value;
+  #else
+  return 0;
+  #endif //__HAS_IDENT_ONEID
 }
 
 
 int ONEID_IDENT_TESTS() {
+  #if defined(__HAS_IDENT_ONEID)
   int return_value = -1;
   StringBuilder log("===< ONEID_IDENT_TESTS >================================\n");
   // Create identities from nothing...
@@ -180,6 +185,9 @@ int ONEID_IDENT_TESTS() {
   log.concat("\n\n");
   printf((const char*) log.string());
   return return_value;
+  #else
+  return 0;
+  #endif //__HAS_IDENT_ONEID
 }
 
 

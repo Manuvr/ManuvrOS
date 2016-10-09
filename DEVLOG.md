@@ -330,4 +330,11 @@ mbedtls completely out as *the* dependency for cryptography.
     Linux, 32-bit: DEBUG=1 SECURE=1
     1777199   12204   52324 1841727  1c1a3f New baseline.
 
+------
+
+### 2016.10.07:
+
+    Linux, 32-bit: DEBUG=1 SECURE=1
+    1544566   12024   43940 1600530  186c12 Following semantic_args excision.
+
 _---J. Ian Lindsay_

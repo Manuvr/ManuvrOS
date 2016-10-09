@@ -59,7 +59,6 @@ typedef struct msg_defin_t {
     uint16_t              msg_type_flags; // Optional flags to describe nuances of this message type.
     const char*           debug_label;    // This is a pointer to a const that represents this message code as a string.
     const unsigned char*  arg_modes;      // For messages that have arguments, this defines their possible types.
-    const char*           arg_semantics;  // For messages that have arguments, this defines their semantics.
 } MessageTypeDef;
 
 
@@ -389,9 +388,6 @@ class ManuvrMsg {
 
 
     static int8_t getMsgLegend(StringBuilder *output);
-    #if defined (__ENABLE_MSG_SEMANTICS)
-    static int8_t getMsgSemantics(MessageTypeDef*, StringBuilder *output);
-    #endif
 
     static const MessageTypeDef* lookupMsgDefByCode(uint16_t msg_code);
     static const MessageTypeDef* lookupMsgDefByLabel(char* label);

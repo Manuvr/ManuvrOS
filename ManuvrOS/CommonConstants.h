@@ -63,7 +63,9 @@ Apart from including the user-suppied configuration header, there
 
 
 // TODO: Function defs do not belong here. This area under re-org.
+#if defined(__BUILD_HAS_BASE64)
 int wrapped_base64_decode(uint8_t* dst, size_t dlen, size_t* olen, const uint8_t* src, size_t slen);
+#endif
 // Everytime you macro a function, baby Jesus cries.
 inline float    strict_max(float    a, float    b) {  return (a > b) ? a : b; };
 inline uint32_t strict_max(uint32_t a, uint32_t b) {  return (a > b) ? a : b; };

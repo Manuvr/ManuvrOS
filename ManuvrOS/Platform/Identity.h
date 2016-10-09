@@ -105,9 +105,12 @@ class Identity {
       return _serialize(buf, _ident_len);
     };
 
-    inline int   length() {     return _ident_len;  };
-    inline bool  isDirty() {    return _ident_flag(MANUVR_IDENT_FLAG_DIRTY);  };
-    inline bool  isValid() {    return _ident_flag(MANUVR_IDENT_FLAG_VALID);  };
+    inline int   length() {   return _ident_len;  };
+    inline bool  isDirty() {  return _ident_flag(MANUVR_IDENT_FLAG_DIRTY);   };
+    inline bool  isValid() {  return _ident_flag(MANUVR_IDENT_FLAG_VALID);   };
+    inline bool  isSelf() {   return _ident_flag(MANUVR_IDENT_FLAG_OUR_OWN); };
+
+    inline void  isSelf(bool x) {  _ident_set_flag(x, MANUVR_IDENT_FLAG_OUR_OWN); };
 
     inline char* getHandle() {  return (nullptr == _handle ? (char*) "unnamed":_handle);  };
     Identity* getIdentity(IdentFormat);

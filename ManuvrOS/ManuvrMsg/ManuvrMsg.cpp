@@ -26,14 +26,6 @@ limitations under the License.
 #include <string.h>
 #include <Kernel.h>
 
-#ifndef max
-  #define max(a,b)  std::max(a,b)
-#endif
-
-#ifndef min
-  #define min(a,b)  std::min(a,b)
-#endif
-
 extern inline double   parseDoubleFromchars(unsigned char *input);
 extern inline float    parseFloatFromchars(unsigned char *input);
 extern inline uint32_t parseUint32Fromchars(unsigned char *input);
@@ -111,7 +103,6 @@ int8_t ManuvrMsg::registerMessage(uint16_t tc, uint16_t tf, const char* lab, con
     nu_def->msg_type_flags = tf;
     nu_def->debug_label    = lab;
     nu_def->arg_modes      = forms;
-    nu_def->arg_semantics  = sem;
     return registerMessage(nu_def);
   }
   else {
@@ -261,81 +252,6 @@ int8_t ManuvrMsg::getMsgLegend(StringBuilder* output) {
   }
   return 1;
 }
-
-
-/**
-* This is called when a counterparty wants annotations to our message map.
-* Format is binary with a variable length.
-* Broken out into a format that a greedy parser can cope with:
-*   |--------------|  /---------------\ |-----|
-*   | Message Code |  | Several NTSs  | |  0  |
-*   |--------------|  \---------------/ |-----|
-*           2                 y            1     <---- Bytes
-*
-* Since the counterparty can't know how big any given definition might be, we need to
-*   take care to bake our null-terminators into the output so that the parser on the
-*   other side can take the condition "a zero-length string" to signify the end of a message
-*   definition, and can move on to the next entry.
-*
-* Because these definitions might be much larger than their corrosponding MESSAGE_LEGEND entries,
-*   it is expected that they will be sent piece-wise to the counterparty so that neither side is
-*   expected to hold the entire definition set at once in a single message.
-*
-* @param  MessageTypeDef* The message definition containing semantics to serialize.
-* @param  StringBuilder* The buffer to write results to.
-* @return 0 on failure. 1 on success.
-*/
-#if defined (__ENABLE_MSG_SEMANTICS)
-int8_t ManuvrMsg::getMsgSemantics(MessageTypeDef* def, StringBuilder* output) {
-  // TODO: def parameter is being ignored for now.
-  int8_t return_value = 1;
-  if ((nullptr != def) && (nullptr != output)) {
-
-    const MessageTypeDef *temp_def = nullptr;
-    for (int i = 1; i < TOTAL_MSG_DEFS; i++) {
-      temp_def = (const MessageTypeDef *) &(message_defs[i]);
-
-      if (isExportable(temp_def)) {
-        //int _set_size = strlen(temp_def->arg_semantics)+1;
-        output->concat((unsigned char*) temp_def, 2);
-
-        // Now to capture the argument modes...
-        // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
-        unsigned char* mode = (unsigned char*) temp_def->arg_semantics;
-        int arg_mode_len = strlen((const char*) mode);
-        while (arg_mode_len > 0) {
-          output->concat((unsigned char*) mode, arg_mode_len+1);
-          mode += arg_mode_len + 1;
-          arg_mode_len = strlen((const char*) mode);
-        }
-        output->concat((unsigned char*) "\0", 1);   // This is the obligatory "NO ARGUMENT" mode.
-      }
-    }
-
-  	std::map<uint16_t, const MessageTypeDef*>::iterator it;
-  	for (it = message_defs_extended.begin(); it != message_defs_extended.end(); it++) {
-      temp_def = it->second;
-      if (isExportable(temp_def)) {
-        //int _set_size = strlen(temp_def->arg_semantics)+1;
-        output->concat((unsigned char*) temp_def, 2);
-
-        // Now to capture the argument modes...
-        // Capture the null-terminator in the concats. Otherwise, the counterparty can't see where strings end.
-        unsigned char* mode = (unsigned char*) temp_def->arg_semantics;
-        int arg_mode_len = strlen((const char*) mode);
-        while (arg_mode_len > 0) {
-          output->concat((unsigned char*) mode, arg_mode_len+1);
-          mode += arg_mode_len + 1;
-          arg_mode_len = strlen((const char*) mode);
-        }
-        output->concat((unsigned char*) "\0", 1);   // This is the obligatory "NO ARGUMENT" mode.
-      }
-    }
-  }
-  return return_value;
-}
-#endif
-
 
 
 /*******************************************************************************
@@ -966,9 +882,9 @@ void ManuvrMsg::clearProfilingData() {
 void ManuvrMsg::noteExecutionTime(uint32_t profile_start_time, uint32_t profile_stop_time) {
   if (prof_data) {
     profile_stop_time = micros();
-    prof_data->run_time_last    = max(profile_start_time, profile_stop_time) - min(profile_start_time, profile_stop_time);  // Rollover invarient.
-    prof_data->run_time_best    = min(prof_data->run_time_best,  prof_data->run_time_last);
-    prof_data->run_time_worst   = max(prof_data->run_time_worst, prof_data->run_time_last);
+    prof_data->run_time_last    = wrap_accounted_delta(profile_start_time, profile_stop_time);  // Rollover invarient.
+    prof_data->run_time_best    = strict_min(prof_data->run_time_best,  prof_data->run_time_last);
+    prof_data->run_time_worst   = strict_max(prof_data->run_time_worst, prof_data->run_time_last);
     prof_data->run_time_total  += prof_data->run_time_last;
     prof_data->run_time_average = prof_data->run_time_total / ((prof_data->executions) ? prof_data->executions : 1);
     prof_data->executions++;

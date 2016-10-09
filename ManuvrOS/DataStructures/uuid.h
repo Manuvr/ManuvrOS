@@ -31,7 +31,9 @@
 
 typedef struct {
   uint8_t id[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-} UUID;
+} UUID __attribute__ ((aligned (4)));
+
+
 
 void uuid_from_str(const char *str, UUID*);
 void uuid_to_str(const UUID*, char *buffer, int buflen);

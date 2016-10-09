@@ -350,6 +350,9 @@ int8_t ManuvrPlatform::bootstrap() {
   if (nullptr == _self) {
     // If we have no other conception of "self", invent one.
     _self = new IdentityUUID(IDENTITY_STRING);
+    if (_self) {
+      _self->isSelf(true);
+    }
   }
   _boot_micros = micros() - _start_micros;    // Note how long boot took.
   _set_init_state(MANUVR_INIT_STATE_NOMINAL); // Mark booted.
@@ -497,11 +500,17 @@ int deleteThread(unsigned long* _thread_id) {
 *   probably use interrupts instead.
 */
 void sleep_millis(unsigned long millis) {
-  #if defined(__MANUVR_LINUX)
+  #if defined(__MANUVR_LINUX) | defined(__MANUVR_APPLE)
     struct timespec t = {(long) (millis / 1000), (long) ((millis % 1000) * 1000000UL)};
     nanosleep(&t, &t);
   #elif defined(__MANUVR_FREERTOS)
-    vTaskDelay(millis / portTICK_PERIOD_MS);
+    if (platform.booted()) {
+      vTaskDelay(millis / portTICK_PERIOD_MS);
+    }
+    else {
+      // For some reason we need to delay prior to threads being operational.
+      delay(millis);
+    }
   #elif defined(ARDUINO)
     delay(millis);  // So wasteful...
   #endif

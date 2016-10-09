@@ -30,8 +30,8 @@ Platforms that require it should be able to extend this driver for specific
 */
 
 
-#include "ManuvrSerial.h"
 #include <CommonConstants.h>
+#include "ManuvrSerial.h"
 
 #include <Kernel.h>
 #include <Platform/Platform.h>
@@ -295,6 +295,16 @@ int8_t ManuvrSerial::read_port() {
           return_value = 1;
         }
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
+        if (Serial.available()) {
+          while (Serial.available()) {
+            *(buf + n++) = Serial.read();
+          }
+          bytes_received += n;
+          *(buf + n) = '\0';  // NULL-terminate, JIC
+          BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
+          Serial.print((char*) buf);
+          return_value = 1;
+        }
 
     #elif defined (__MANUVR_LINUX) // Linux with pthreads...
         n = read(_sock, buf, 255);

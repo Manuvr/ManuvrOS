@@ -182,9 +182,9 @@ void EventReceiver::printDebug() {
 */
 void EventReceiver::printDebug(StringBuilder *output) {
   #if defined(__BUILD_HAS_THREADS)
-  output->concatf("\n==< %s %s  Thread %d >=======\n", getReceiverName(), (erAttached() ? "   (UNATTACHED) " : ""), _thread_id);
+  output->concatf("\n==< %s %s  Thread %d >=======\n", getReceiverName(), (erAttached() ? "" : "   (UNATTACHED) "), _thread_id);
   #else
-  output->concatf("\n==< %s %s>======================\n", getReceiverName(), (erAttached() ? "   (UNATTACHED) " : ""));
+  output->concatf("\n==< %s %s>======================\n", getReceiverName(), (erAttached() ? "" : "   (UNATTACHED) "));
   #endif
 }
 

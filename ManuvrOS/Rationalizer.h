@@ -31,6 +31,11 @@
   // JSON
   // Base64 (URL-Safe?)
 
+#if defined(WITH_MBEDTLS) && defined(MBEDTLS_BASE64_C)
+  #define __BUILD_HAS_BASE64
+#endif
+
+
 
 /* BufferPipe support... */
 
@@ -59,15 +64,6 @@
     #define __HAS_IDENT_ONEID     // We support OneID's asymmetric identities.
   #endif
 #endif   // __HAS_CRYPT_WRAPPER
-
-
-
-
-
-
-
-
-
 
 
 #endif // __MANUVR_OPTION_RATIONALIZER_H__

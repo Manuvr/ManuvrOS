@@ -12,7 +12,7 @@ SOURCES_CPP   += SchedulerTest.cpp
 
 LOCAL_CXX_FLAGS  = $(CPP_FLAGS) -D_GNU_SOURCE
 
-LIBS  = -L$(OUTPUT_PATH) -L$(WHERE_I_AM)/lib -lstdc++ -lm
+LIBS  = -L$(OUTPUT_PATH) -L$(BUILD_ROOT)/lib -lstdc++ -lm
 LIBS += -lmanuvr -lextras -lpthread
 
 ###########################################################################
