@@ -176,7 +176,7 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
 
 
   private:
-    uint32_t _xport_flags;
+    uint32_t _xport_flags = 0;;
 
     /* Connection/Listen states */
     inline void mark_connected(bool en) {

@@ -304,7 +304,7 @@ void TeensyStorage::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
 
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
 }
 #endif   // MANUVR_CONSOLE_SUPPORT
 

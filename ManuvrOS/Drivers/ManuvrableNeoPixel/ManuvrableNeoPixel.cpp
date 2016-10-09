@@ -443,7 +443,7 @@ int8_t ManuvrableNeoPixel::notify(ManuvrRunnable *active_event) {
       return_value += EventReceiver::notify(active_event);
       break;
   }
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
   return return_value;
 }
 
@@ -501,6 +501,6 @@ void ManuvrableNeoPixel::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
 
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
 }
 #endif  //MANUVR_CONSOLE_SUPPORT

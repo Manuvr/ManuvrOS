@@ -344,7 +344,7 @@ void ADP8866::operationCompleteCallback(I2CBusOp* completed) {
         temp_reg->unread = false;
         break;
   }
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
 }
 
 
@@ -437,7 +437,7 @@ int8_t ADP8866::notify(ManuvrRunnable *active_event) {
       break;
   }
 
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
   return return_value;
 }
 
@@ -496,7 +496,7 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
 
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
 }
 #endif  //MANUVR_CONSOLE_SUPPORT
 

@@ -2,8 +2,6 @@
 # Makefile for libraries
 # Author: J. Ian Lindsay
 ###########################################################################
-
-# Build all libraries
 C_STANDARD   = gnu99
 CPP_STANDARD = gnu++11
 

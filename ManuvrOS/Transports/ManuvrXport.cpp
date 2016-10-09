@@ -72,7 +72,7 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
   * In a threaded environment, we use threads to read ports.
   */
   void* xport_read_handler(void* active_xport) {
-    if (NULL != active_xport) {
+    if (active_xport) {
       // Wait until boot has ocurred...
       while (!((ManuvrXport*)active_xport)->erAttached()) taskYIELD();
       while (1) {
@@ -81,7 +81,7 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
         }
       }
     }
-    return NULL;
+    return nullptr;
   }
 
 #elif defined(__MANUVR_LINUX)
@@ -89,7 +89,7 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
   * In a threaded environment, we use threads to read ports.
   */
   void* xport_read_handler(void* active_xport) {
-    if (NULL != active_xport) {
+    if (active_xport) {
       // Wait until boot has ocurred...
       while (!((ManuvrXport*)active_xport)->erAttached()) sleep_millis(50);
       while (1) {
@@ -98,7 +98,7 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
         }
       }
     }
-    return NULL;
+    return nullptr;
   }
 
 #endif
@@ -125,7 +125,7 @@ ManuvrXport::ManuvrXport() : EventReceiver(), BufferPipe() {
   xport_id              = ManuvrXport::TRANSPORT_ID_POOL++;
   _xport_flags          = 0;
   _xport_mtu            = PROTOCOL_MTU;
-  _autoconnect_schedule = NULL;
+  _autoconnect_schedule = nullptr;
   bytes_sent            = 0;
   bytes_received        = 0;
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
@@ -137,19 +137,13 @@ ManuvrXport::ManuvrXport() : EventReceiver(), BufferPipe() {
 * Destructor.
 */
 ManuvrXport::~ManuvrXport() {
-  #if defined(__BUILD_HAS_THREADS)
-    if (_thread_id > 0) {
-      _thread_id = 0;
-      pthread_cancel(_thread_id);
-    }
-    listening(false);
-  #endif
+  listening(false);
 
   // Cleanup any schedules...
-  if (NULL != _autoconnect_schedule) {
+  if (nullptr != _autoconnect_schedule) {
     _autoconnect_schedule->enableSchedule(false);
     platform.kernel()->removeSchedule(_autoconnect_schedule);
-    _autoconnect_schedule = NULL;
+    _autoconnect_schedule = nullptr;
     delete _autoconnect_schedule;
   }
 }
@@ -230,11 +224,11 @@ int8_t ManuvrXport::disconnect() {
 */
 void ManuvrXport::alwaysConnected(bool en) {
   _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_ALWAYS_CONNECTED) : (_xport_flags & ~(MANUVR_XPORT_FLAG_ALWAYS_CONNECTED));
-  if (NULL != _autoconnect_schedule) {
+  if (nullptr != _autoconnect_schedule) {
     // If we have a reconnection schedule (we should not), free it.
     _autoconnect_schedule->enableSchedule(false);
     platform.kernel()->removeSchedule(_autoconnect_schedule);
-    _autoconnect_schedule = NULL;
+    _autoconnect_schedule = nullptr;
     delete _autoconnect_schedule;
   }
 }
@@ -251,7 +245,7 @@ void ManuvrXport::autoConnect(bool en, uint32_t _ac_period) {
     if (!alwaysConnected()) {
       // Autoconnection only makes sense if the transport is not always connected.
       _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_AUTO_CONNECT) : (_xport_flags & ~(MANUVR_XPORT_FLAG_AUTO_CONNECT));
-      if (NULL == _autoconnect_schedule) {
+      if (nullptr == _autoconnect_schedule) {
         // If we don't already have a ref to a schedule for this purpose.
         _autoconnect_schedule = new ManuvrRunnable(MANUVR_MSG_XPORT_CONNECT, (EventReceiver*) this);
         _autoconnect_schedule->isManaged(true);
@@ -265,11 +259,11 @@ void ManuvrXport::autoConnect(bool en, uint32_t _ac_period) {
     }
   }
   else {
-    if (NULL != _autoconnect_schedule) {
+    if (_autoconnect_schedule) {
       _autoconnect_schedule->enableSchedule(false);
       platform.kernel()->removeSchedule(_autoconnect_schedule);
       delete _autoconnect_schedule;
-      _autoconnect_schedule = NULL;
+      _autoconnect_schedule = nullptr;
     }
   }
 }
@@ -291,12 +285,12 @@ void ManuvrXport::connected(bool en) {
     // This will put it into the Event system so that auth and such can be handled cleanly.
     // Once the session sets up, it will broadcast itself as having done so.
 
-    if (nullptr != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(false);
+    if (_autoconnect_schedule) _autoconnect_schedule->enableSchedule(false);
   }
   else {
     // This is a disconnection event. We might want to cleanup all of our sessions
     // that are outstanding.
-    if (nullptr != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(true);
+    if (_autoconnect_schedule) _autoconnect_schedule->enableSchedule(true);
   }
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
     if (0 == _thread_id) {
@@ -452,7 +446,7 @@ void ManuvrXport::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
 
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
 }
 
 #endif  // MANUVR_CONSOLE_SUPPORT

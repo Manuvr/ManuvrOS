@@ -622,7 +622,7 @@ int8_t Kernel::procCallAheads(ManuvrRunnable *active_runnable) {
 int8_t Kernel::procCallBacks(ManuvrRunnable *active_runnable) {
   int8_t return_value = 0;
   PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[active_runnable->eventCode()];
-  if (nullptr != cb_queue) {
+  if (cb_queue) {
     listenerFxnPtr current_fxn;
     for (int i = 0; i < cb_queue->size(); i++) {
       current_fxn = cb_queue->recycle();  // TODO: This is ugly for many reasons.

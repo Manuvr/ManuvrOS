@@ -548,15 +548,17 @@ int8_t AudioRouter::notify(ManuvrRunnable *active_event) {
 
     case VIAM_SONUS_MSG_GROUP_CHANNELS:
     case VIAM_SONUS_MSG_UNGROUP_CHANNELS:
-      local_log.concat("Was passed an event that we should be handling, but are not yet:\n");
-      active_event->printDebug(&local_log);
+      #ifdef __MANUVR_DEBUG
+        local_log.concat("Was passed an event that we should be handling, but are not yet:\n");
+        active_event->printDebug(&local_log);
+      #endif
       break;
 
     default:
       return_value += EventReceiver::notify(active_event);
       break;
   }
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
   return return_value;
 }
 
@@ -628,6 +630,6 @@ void AudioRouter::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
 
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
 }
 #endif  //MANUVR_CONSOLE_SUPPORT
