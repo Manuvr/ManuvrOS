@@ -346,4 +346,13 @@ Binged on cleaning up technical debt in the build system. The goal of separating
     1544102   12024   43940 1600066  186a42 Excision of xport_id. It is no longer needed.
     1544070   12024   43940 1600034  186a22 Class member re-arrangement.
 
+The ManuvrRunnable namespace died at 03:59 PST on 2016.10.09. A brief re-cap of its evolution feels appropriate.
+
+In the beginning, there was ScheduleItem, ManuvrMsg, and Event (which was the child of ManuvrMsg). Each did its own specific job, and for a time, it was good.
+
+Then, much complexity was built around scheduling events. Darkness settled over the code base. Dissatisfied with the uneasy truce between ScheduleItem and Event, the monarch forged the two into one hasty blob and named it ManuvrRunnable (which still extended ManuvrMsg).
+
+This worked for awhile, but was only a thin veneer over the disharmony between the two original houses. True resolution of the split happened gradually over many ages (about twelve months).  The final battle was waged today between ManuvrMsg and ManuvrRunnable on the battlefield of "Namespace". ManuvrMsg was the victor.
+
+
 _---J. Ian Lindsay_
