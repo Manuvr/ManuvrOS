@@ -79,9 +79,6 @@ This driver is designed to give Manuvr platform-abstracted transports.
 
 #define XPORT_DEFAULT_AUTOCONNECT_PERIOD 15000  // In ms. Unless otherwise specified...
 
-class XenoSession;
-
-
 class ManuvrXport : public EventReceiver, public BufferPipe {
   public:
     virtual ~ManuvrXport();
@@ -143,22 +140,16 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
       virtual void   procDirectDebugInstruction(StringBuilder*);
     #endif  //MANUVR_CONSOLE_SUPPORT
 
-    // We can have up-to 65535 transport instances concurrently. This well-exceeds
-    //   the configured limits of most linux installations, so it should be enough.
-    static uint16_t TRANSPORT_ID_POOL;
-
-
 
   protected:
+    uint32_t _xport_mtu;      // The largest packet size we handle.
+    uint32_t bytes_sent      = 0;
+    uint32_t bytes_received  = 0;
     ManuvrRunnable* _autoconnect_schedule = nullptr;
 
     // Can also be used to poll the other side. Implementation is completely at the discretion
     //   any extending class. But generally, this feature is necessary.
     ManuvrRunnable read_abort_event;  // Used to timeout a read operation.
-
-    uint32_t _xport_mtu;      // The largest packet size we handle.
-    uint32_t bytes_sent      = 0;
-    uint32_t bytes_received  = 0;
 
     ManuvrXport();
 

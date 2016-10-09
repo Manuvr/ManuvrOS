@@ -344,6 +344,6 @@ Binged on cleaning up technical debt in the build system. The goal of separating
     Linux, 32-bit: DEBUG=1 SECURE=1
     1544474   12024   43940 1600438  186bb6 New baseline.
     1544102   12024   43940 1600066  186a42 Excision of xport_id. It is no longer needed.
-
+    1544070   12024   43940 1600034  186a22 Class member re-arrangement.
 
 _---J. Ian Lindsay_

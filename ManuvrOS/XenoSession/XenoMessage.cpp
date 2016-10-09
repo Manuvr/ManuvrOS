@@ -23,10 +23,19 @@ XenoMessage is the class that unifies our counterparty's message format
 */
 
 #include "XenoMessage.h"
-#include <Kernel.h>
 #include <Platform/Platform.h>
 
 
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
 
 /**
 * @param   uint8_t The integer code that represents message state.
@@ -47,7 +56,6 @@ const char* XenoMessage::getMessageStateString(uint8_t _s_code) {
     default:                                        return "<UNKNOWN>";
   }
 }
-
 
 
 
