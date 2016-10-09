@@ -35,7 +35,7 @@ extern "C" {
   }
 
   void unsetPinIRQ(uint8_t pin) {}
-  int8_t setPinEvent(uint8_t, uint8_t, ManuvrRunnable*) {  return 0;  }
+  int8_t setPinEvent(uint8_t, uint8_t, ManuvrMsg*) {  return 0;  }
   int8_t setPinFxn(uint8_t, uint8_t, FxnPointer) {         return 0;  }
   int8_t gpioDefine(uint8_t pin, int mode) {               return 0;  }
   int8_t setPin(uint8_t pin, bool val) {                   return 0;  }

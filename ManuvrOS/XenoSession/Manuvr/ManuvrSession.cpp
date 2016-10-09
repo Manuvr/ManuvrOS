@@ -406,7 +406,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
 *               ---J. Ian Lindsay   Tue Aug 04 23:12:55 MST 2015
 */
 int8_t ManuvrSession::sendKeepAlive() {
-  ManuvrRunnable* ka_event = Kernel::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE);
+  ManuvrMsg* ka_event = Kernel::returnEvent(MANUVR_MSG_SYNC_KEEPALIVE);
   sendEvent(ka_event);
   return 0;
 }
@@ -509,7 +509,7 @@ int8_t ManuvrSession::attached() {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t ManuvrSession::callback_proc(ManuvrRunnable *event) {
+int8_t ManuvrSession::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -533,7 +533,7 @@ int8_t ManuvrSession::callback_proc(ManuvrRunnable *event) {
 *   a list of events that it has been instructed to relay to the counterparty. If the event
 *   meets the relay criteria, we serialize it and send it to the transport that we are bound to.
 */
-int8_t ManuvrSession::notify(ManuvrRunnable *active_event) {
+int8_t ManuvrSession::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {

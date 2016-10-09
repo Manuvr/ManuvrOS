@@ -183,7 +183,7 @@ oc_discovery_flags_t discovery(const char *di, const char *uri,
               oc_string_array_t types, oc_interface_mask_t interfaces,
               oc_server_handle_t* server) {
   unsigned int i;
-  ManuvrRunnable* disc_ev = Kernel::returnEvent(MANUVR_MSG_OIC_DISCOVERY);
+  ManuvrMsg* disc_ev = Kernel::returnEvent(MANUVR_MSG_OIC_DISCOVERY);
 
   if (server->endpoint.flags & 0x10) {  // TODO: Should use their namespace.
     disc_ev->addArg((uint8_t) 1)->setKey("secure");
@@ -451,7 +451,7 @@ int8_t ManuvrOIC::erConfigure(Argument* opts) {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t ManuvrOIC::callback_proc(ManuvrRunnable *event) {
+int8_t ManuvrOIC::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -466,7 +466,7 @@ int8_t ManuvrOIC::callback_proc(ManuvrRunnable *event) {
 }
 
 
-int8_t ManuvrOIC::notify(ManuvrRunnable *active_event) {
+int8_t ManuvrOIC::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {

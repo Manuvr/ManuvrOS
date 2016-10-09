@@ -76,14 +76,14 @@ limitations under the License.
 
 
 /**
-* This class is a special extension of ManuvrRunnable that is intended for communication with
-*   outside devices. This is the abstraction between our internal Runnables and the messaging
+* This class is a special extension of ManuvrMsg that is intended for communication with
+*   outside devices. This is the abstraction between our internal Msgs and the messaging
 *   system of our counterparty.
 */
 class XenoManuvrMessage : public XenoMessage {
   public:
     XenoManuvrMessage();                  // Typical use: building an inbound XemoMessage.
-    XenoManuvrMessage(ManuvrRunnable*);   // Create a new XenoMessage with the given event as source data.
+    XenoManuvrMessage(ManuvrMsg*);   // Create a new XenoMessage with the given event as source data.
 
     ~XenoManuvrMessage() {};
 
@@ -99,8 +99,8 @@ class XenoManuvrMessage : public XenoMessage {
     int serialize(StringBuilder*);       // Returns the number of bytes resulting.
     int accumulate(unsigned char*, int); // Returns the number of bytes consumed.
 
-    void provideEvent(ManuvrRunnable*, uint16_t);  // Call to make this XenoMessage outbound.
-    inline void provideEvent(ManuvrRunnable* runnable) {    // Override to support laziness.
+    void provideEvent(ManuvrMsg*, uint16_t);  // Call to make this XenoMessage outbound.
+    inline void provideEvent(ManuvrMsg* runnable) {    // Override to support laziness.
       provideEvent(runnable, (uint16_t) randomInt());
     };
 
@@ -162,8 +162,8 @@ class ManuvrSession : public XenoSession {
 
     /* Overrides from EventReceiver */
     void printDebug(StringBuilder*);
-    int8_t notify(ManuvrRunnable*);
-    int8_t callback_proc(ManuvrRunnable *);
+    int8_t notify(ManuvrMsg*);
+    int8_t callback_proc(ManuvrMsg*);
     #if defined(MANUVR_CONSOLE_SUPPORT)
       void procDirectDebugInstruction(StringBuilder*);
     #endif  //MANUVR_CONSOLE_SUPPORT
@@ -176,7 +176,7 @@ class ManuvrSession : public XenoSession {
 
 
   private:
-    ManuvrRunnable sync_event;
+    ManuvrMsg sync_event;
 
     /*
     * A buffer for holding inbound stream until enough has arrived to parse. This eliminates

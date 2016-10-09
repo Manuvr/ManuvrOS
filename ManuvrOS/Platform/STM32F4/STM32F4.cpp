@@ -190,7 +190,7 @@ void unsetPinIRQ(uint8_t pin) {
 }
 
 
-void setPinEvent(uint8_t pin, ManuvrRunnable* isr_event) {
+void setPinEvent(uint8_t pin, ManuvrMsg* isr_event) {
 }
 
 

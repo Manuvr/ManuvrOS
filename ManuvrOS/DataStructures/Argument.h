@@ -92,7 +92,7 @@ class Argument {
     * We typically want ManuvrMsg references to be left alone at the end of
     *   the Argument's life cycle. We will specify otherwise when appropriate.
     */
-    Argument(ManuvrMsg* val) : Argument((void*) val, sizeof(val), SYS_RUNNABLE_PTR_FM) {};
+    Argument(ManuvrMsg* val) : Argument((void*) val, sizeof(val), SYS_MANUVRMSG_FM) {};
 
     // TODO: This default behavior changed. Audit usage by commenting addArg(StringBuilder)
     Argument(StringBuilder* val)  : Argument(val, sizeof(val), STR_BUILDER_FM)          {};
@@ -158,7 +158,7 @@ class Argument {
     inline Argument* append(BufferPipe *val) {      return link(new Argument(val));   }
     inline Argument* append(EventReceiver *val) {   return link(new Argument(val));   }
     inline Argument* append(ManuvrXport *val) {     return link(new Argument(val));   }
-    inline Argument* append(ManuvrMsg *val) {  return link(new Argument(val));   }
+    inline Argument* append(ManuvrMsg* val) {  return link(new Argument(val));   }
 
     inline Argument* append(FxnPointer *val) {      return link(new Argument(val));   }
     inline Argument* append(ThreadFxnPtr *val) {    return link(new Argument(val));   }

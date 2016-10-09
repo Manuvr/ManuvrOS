@@ -237,7 +237,7 @@ void ManuvrXport::autoConnect(bool en, uint32_t _ac_period) {
       _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_AUTO_CONNECT) : (_xport_flags & ~(MANUVR_XPORT_FLAG_AUTO_CONNECT));
       if (nullptr == _autoconnect_schedule) {
         // If we don't already have a ref to a schedule for this purpose.
-        _autoconnect_schedule = new ManuvrRunnable(MANUVR_MSG_XPORT_CONNECT, (EventReceiver*) this);
+        _autoconnect_schedule = new ManuvrMsg(MANUVR_MSG_XPORT_CONNECT, (EventReceiver*) this);
         _autoconnect_schedule->isManaged(true);
         _autoconnect_schedule->specific_target = (EventReceiver*) this;
         _autoconnect_schedule->alterScheduleRecurrence(-1);
@@ -341,7 +341,7 @@ void ManuvrXport::printDebug(StringBuilder *temp) {
 }
 
 
-int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
+int8_t ManuvrXport::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {

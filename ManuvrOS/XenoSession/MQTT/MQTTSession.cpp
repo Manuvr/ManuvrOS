@@ -120,8 +120,8 @@ int8_t MQTTSession::fromCounterparty(StringBuilder* buf, int8_t mm) {
 /****************************************************************************************************
 * Subscription management.                                                                          *
 ****************************************************************************************************/
-int8_t MQTTSession::subscribe(const char* topic, ManuvrRunnable* runnable) {
-  std::map<const char*, ManuvrRunnable*>::iterator it = _subscriptions.find(topic);
+int8_t MQTTSession::subscribe(const char* topic, ManuvrMsg* runnable) {
+  std::map<const char*, ManuvrMsg*>::iterator it = _subscriptions.find(topic);
   if (_subscriptions.end() == it) {
     // If the list doesn't already have the topic....
 		runnable->originator  = (EventReceiver*) this;
@@ -133,7 +133,7 @@ int8_t MQTTSession::subscribe(const char* topic, ManuvrRunnable* runnable) {
 
 
 int8_t MQTTSession::unsubscribe(const char* topic) {
-  std::map<const char*, ManuvrRunnable*>::iterator it = _subscriptions.find(topic);
+  std::map<const char*, ManuvrMsg*>::iterator it = _subscriptions.find(topic);
   if (_subscriptions.end() != it) {
     // TODO: We need to clean up the runnable. For now, we'll assume it is handled elsewhere.
 		// delete it->second;
@@ -146,7 +146,7 @@ int8_t MQTTSession::unsubscribe(const char* topic) {
 
 int8_t MQTTSession::resubscribeAll() {
 	if (isEstablished()) {
-		std::map<const char*, ManuvrRunnable*>::iterator it;
+		std::map<const char*, ManuvrMsg*>::iterator it;
   	for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
 			if (!sendSub(it->first, QOS1)) {   // TODO: Make QoS dynmaic.
 				return -1;
@@ -158,7 +158,7 @@ int8_t MQTTSession::resubscribeAll() {
 
 int8_t MQTTSession::unsubscribeAll() {
 	if (isEstablished()) {
-		std::map<const char*, ManuvrRunnable*>::iterator it;
+		std::map<const char*, ManuvrMsg*>::iterator it;
   	for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
 			if (sendUnsub(it->first)) {
 				_subscriptions.erase(it->first);
@@ -231,7 +231,7 @@ int8_t MQTTSession::connection_callback(bool _con) {
 * Passing an Event into this fxn will cause the Event to be serialized and sent to our counter-party.
 * This is the point at which choices are made about what happens to the event's life-cycle.
 */
-int8_t MQTTSession::sendEvent(ManuvrRunnable *active_event) {
+int8_t MQTTSession::sendEvent(ManuvrMsg* active_event) {
   //XenoMessage* nu_outbound_msg = XenoMessage::fetchPreallocation(this);
   //nu_outbound_msg->provideEvent(active_event);
 
@@ -245,7 +245,7 @@ int8_t MQTTSession::sendEvent(ManuvrRunnable *active_event) {
   //}
 
   // We are about to pass a message across the transport.
-  //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
+  //ManuvrMsg* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
   //event->originator      = this;   // We want the callback and the only receiver of this
   //event->specific_target = owner;  //   event to be the transport that instantiated us.
   //raiseEvent(event);
@@ -350,7 +350,7 @@ bool MQTTSession::sendDisconnectPacket() {
 }
 
 
-bool MQTTSession::sendPublish(ManuvrRunnable* _msg) {
+bool MQTTSession::sendPublish(ManuvrMsg* _msg) {
 	if (isEstablished()) {
 		enum QoS _qos = _msg->demandsACK() ? QOS1 : QOS0;
 		int _msg_id = 0;
@@ -394,7 +394,7 @@ int MQTTSession::proc_publish(MQTTMessage* nu) {
 	int return_value = nu->decompose_publish();
 
 	if (return_value >= 0) {
-  	std::map<const char*, ManuvrRunnable*>::iterator it = _subscriptions.find(nu->topic);
+  	std::map<const char*, ManuvrMsg*>::iterator it = _subscriptions.find(nu->topic);
 		for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
 			if (0 == strcmp((const char*) nu->topic, it->first)) {
 				if (0 < nu->argumentBytes()) {
@@ -522,7 +522,7 @@ int8_t MQTTSession::attached() {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t MQTTSession::callback_proc(ManuvrRunnable *event) {
+int8_t MQTTSession::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -544,7 +544,7 @@ int8_t MQTTSession::callback_proc(ManuvrRunnable *event) {
 *   a list of events that it has been instructed to relay to the counterparty. If the event
 *   meets the relay criteria, we serialize it and send it to the transport that we are bound to.
 */
-int8_t MQTTSession::notify(ManuvrRunnable *active_event) {
+int8_t MQTTSession::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
@@ -625,7 +625,7 @@ void MQTTSession::procDirectDebugInstruction(StringBuilder *input) {
 
 		case 'p':
 			{
-				ManuvrRunnable mr = ManuvrRunnable(MANUVR_MSG_SESS_ORIGINATE_MSG);
+				ManuvrMsg mr = ManuvrMsg(MANUVR_MSG_SESS_ORIGINATE_MSG);
 				if (sendPublish(&mr) == -1) {
 					local_log.concat("Failed to send MQTT publish packet.");
 				}
@@ -665,7 +665,7 @@ void MQTTSession::printDebug(StringBuilder *output) {
   if (_ping_outstanding()) output->concat("-- EXPIRED PING\n");
   output->concat("-- Subscribed topics\n");
 
-	std::map<const char*, ManuvrRunnable*>::iterator it;
+	std::map<const char*, ManuvrMsg*>::iterator it;
   for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
     output->concatf("--\t%s\t~~~~> %s\n", it->first, it->second->getMsgDef()->debug_label);
   }

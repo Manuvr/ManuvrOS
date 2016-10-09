@@ -74,8 +74,8 @@ class LDS8160 : public I2CDeviceWithRegisters, public EventReceiver {
     void printDebug(StringBuilder*);
 
     /* Overrides from EventReceiver */
-    int8_t notify(ManuvrRunnable*);
-    int8_t callback_proc(ManuvrRunnable *);
+    int8_t notify(ManuvrMsg*);
+    int8_t callback_proc(ManuvrMsg*);
     void procDirectDebugInstruction(StringBuilder *);
 
     /* Direct channel manipulation. */

@@ -161,7 +161,7 @@ void ADCScanner::printDebug(StringBuilder *output) {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t ADCScanner::callback_proc(ManuvrRunnable *event) {
+int8_t ADCScanner::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -176,7 +176,7 @@ int8_t ADCScanner::callback_proc(ManuvrRunnable *event) {
 }
 
 
-int8_t ADCScanner::notify(ManuvrRunnable *active_event) {
+int8_t ADCScanner::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {

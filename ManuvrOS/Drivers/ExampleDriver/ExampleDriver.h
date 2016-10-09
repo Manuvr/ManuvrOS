@@ -38,8 +38,8 @@ class ExampleDriver : public EventReceiver {
     ~ExampleDriver();
 
     /* Overrides from EventReceiver */
-    int8_t notify(ManuvrRunnable*);
-    int8_t callback_proc(ManuvrRunnable *);
+    int8_t notify(ManuvrMsg*);
+    int8_t callback_proc(ManuvrMsg*);
     void printDebug(StringBuilder*);
     #if defined(MANUVR_CONSOLE_SUPPORT)
       void procDirectDebugInstruction(StringBuilder*);

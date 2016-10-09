@@ -323,7 +323,7 @@ void ManuvrPlatform::_discoverALUParams() {
 */
 int8_t ManuvrPlatform::bootstrap() {
   /* Follow your shadow. */
-  ManuvrRunnable* boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
+  ManuvrMsg* boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
   boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
   Kernel::staticRaiseEvent(boot_completed_ev);
   _set_init_state(MANUVR_INIT_STATE_KERNEL_BOOTING);
@@ -333,7 +333,7 @@ int8_t ManuvrPlatform::bootstrap() {
   #if defined(MANUVR_STORAGE)
     if (0 == _load_config()) {
       // If the config loaded, broadcast it.
-      ManuvrRunnable* conf_ev = Kernel::returnEvent(MANUVR_MSG_SYS_CONF_LOAD);
+      ManuvrMsg* conf_ev = Kernel::returnEvent(MANUVR_MSG_SYS_CONF_LOAD);
       // ???Necessary???  conf_ev->addArg(_config);
       Kernel::staticRaiseEvent(conf_ev);
     }

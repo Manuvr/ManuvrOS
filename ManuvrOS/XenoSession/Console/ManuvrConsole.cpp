@@ -120,7 +120,7 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
       // Begin the cases...
       #if defined(_GNU_SOURCE)
         if (strcasestr(temp_ptr, "QUIT")) {
-          ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_REBOOT);
+          ManuvrMsg* event = Kernel::returnEvent(MANUVR_MSG_SYS_REBOOT);
           event->setOriginator((EventReceiver*) platform.kernel());
           Kernel::staticRaiseEvent(event);
         }
@@ -131,7 +131,7 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
         // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
         // run in idle time.
         StringBuilder* dispatched = new StringBuilder((uint8_t*) temp_ptr, temp_len);
-        ManuvrRunnable* event  = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
+        ManuvrMsg* event  = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
         event->specific_target = (EventReceiver*) platform.kernel();
         event->setOriginator((EventReceiver*) this);
         event->addArg(dispatched)->reapValue(true);
@@ -185,7 +185,7 @@ int8_t ManuvrConsole::attached() {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t ManuvrConsole::callback_proc(ManuvrRunnable *event) {
+int8_t ManuvrConsole::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -233,7 +233,7 @@ void ManuvrConsole::printDebug(StringBuilder *output) {
 *   a list of events that it has been instructed to relay to the counterparty. If the event
 *   meets the relay criteria, we serialize it and send it to the transport that we are bound to.
 */
-int8_t ManuvrConsole::notify(ManuvrRunnable *active_event) {
+int8_t ManuvrConsole::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {

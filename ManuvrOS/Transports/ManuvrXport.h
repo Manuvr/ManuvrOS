@@ -135,7 +135,7 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     // TODO: I'm not sure I've evaluated the full impact of this sort of
     //    choice.  Calltimes? vtable size? alignment? Fragility? Dig.
     virtual void   printDebug(StringBuilder *);
-    virtual int8_t notify(ManuvrRunnable*);
+    virtual int8_t notify(ManuvrMsg*);
     #if defined(MANUVR_CONSOLE_SUPPORT)
       virtual void   procDirectDebugInstruction(StringBuilder*);
     #endif  //MANUVR_CONSOLE_SUPPORT
@@ -145,11 +145,11 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     uint32_t _xport_mtu;      // The largest packet size we handle.
     uint32_t bytes_sent      = 0;
     uint32_t bytes_received  = 0;
-    ManuvrRunnable* _autoconnect_schedule = nullptr;
+    ManuvrMsg* _autoconnect_schedule = nullptr;
 
     // Can also be used to poll the other side. Implementation is completely at the discretion
     //   any extending class. But generally, this feature is necessary.
-    ManuvrRunnable read_abort_event;  // Used to timeout a read operation.
+    ManuvrMsg read_abort_event;  // Used to timeout a read operation.
 
     ManuvrXport();
 

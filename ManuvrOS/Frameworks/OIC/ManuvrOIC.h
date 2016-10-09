@@ -58,8 +58,8 @@ class ManuvrOIC : public EventReceiver {
     /* Overrides from EventReceiver */
     void procDirectDebugInstruction(StringBuilder*);
     void printDebug(StringBuilder*);
-    int8_t notify(ManuvrRunnable*);
-    int8_t callback_proc(ManuvrRunnable*);
+    int8_t notify(ManuvrMsg*);
+    int8_t callback_proc(ManuvrMsg*);
     int8_t erConfigure(Argument*);
 
     int8_t makeDiscoverable(bool);
@@ -88,8 +88,8 @@ class ManuvrOIC : public EventReceiver {
 
   private:
     /* Scheduled callbacks and events precipitataed from the worker thread.*/
-    ManuvrRunnable _discovery_timeout;
-    ManuvrRunnable _discovery_ping;
+    ManuvrMsg _discovery_timeout;
+    ManuvrMsg _discovery_ping;
 
     /* This maps URIs to resources. */
     std::map<const char*, listenerFxnPtr> _uri_map;

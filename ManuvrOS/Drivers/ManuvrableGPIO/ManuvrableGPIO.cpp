@@ -105,7 +105,7 @@ void ManuvrableGPIO::printDebug(StringBuilder *output) {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t ManuvrableGPIO::callback_proc(ManuvrRunnable *event) {
+int8_t ManuvrableGPIO::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -120,7 +120,7 @@ int8_t ManuvrableGPIO::callback_proc(ManuvrRunnable *event) {
 }
 
 
-int8_t ManuvrableGPIO::notify(ManuvrRunnable *active_event) {
+int8_t ManuvrableGPIO::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
   uint8_t pin   = 0;
   uint16_t _val = 0;
@@ -163,7 +163,7 @@ int8_t ManuvrableGPIO::notify(ManuvrRunnable *active_event) {
       break;
 
     case MANUVR_MSG_EVENT_ON_INTERRUPT:
-      //int8_t setPinEvent(uint8_t pin, ManuvrRunnable* isr_event);
+      //int8_t setPinEvent(uint8_t pin, ManuvrMsg* isr_event);
       return_value++;
       break;
 

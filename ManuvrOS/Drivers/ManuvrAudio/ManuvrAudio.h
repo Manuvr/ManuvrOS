@@ -543,8 +543,8 @@ class ManuvrAudio : public EventReceiver {
     virtual ~ManuvrAudio();
 
     /* Overrides from EventReceiver */
-    int8_t notify(ManuvrRunnable*);
-    int8_t callback_proc(ManuvrRunnable *);
+    int8_t notify(ManuvrMsg*);
+    int8_t callback_proc(ManuvrMsg*);
     void procDirectDebugInstruction(StringBuilder *);
     void printDebug(StringBuilder*);
 

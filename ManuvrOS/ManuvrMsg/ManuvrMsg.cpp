@@ -827,7 +827,7 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
 
 
 /*******************************************************************************
-* Functions dealing with profiling this particular Runnable.                   *
+* Functions dealing with profiling this particular Msg.                   *
 *******************************************************************************/
 #if defined(__MANUVR_EVENT_PROFILER)
 
@@ -862,7 +862,7 @@ void ManuvrMsg::profilingEnabled(bool enabled) {
 
 
 /**
-* Destroys whatever profiling data might be stored in this Runnable.
+* Destroys whatever profiling data might be stored in this Msg.
 */
 void ManuvrMsg::clearProfilingData() {
   if (prof_data) {

@@ -239,7 +239,7 @@ int8_t XenoSession::untapAll() {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t XenoSession::callback_proc(ManuvrRunnable *event) {
+int8_t XenoSession::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -266,7 +266,7 @@ int8_t XenoSession::callback_proc(ManuvrRunnable *event) {
 *   a list of events that it has been instructed to relay to the counterparty. If the event
 *   meets the relay criteria, we serialize it and send it to the transport that we are bound to.
 */
-int8_t XenoSession::notify(ManuvrRunnable *active_event) {
+int8_t XenoSession::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
@@ -401,7 +401,7 @@ int XenoSession::purgeInbound() {
 * Passing an Event into this fxn will cause the Event to be serialized and sent to our counter-party.
 * This is the point at which choices are made about what happens to the event's life-cycle.
 */
-int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
+int8_t XenoSession::sendEvent(ManuvrMsg* active_event) {
   //XenoMessage* nu_outbound_msg = XenoMessage::fetchPreallocation(this);
   //nu_outbound_msg->provideEvent(active_event);
 
@@ -415,7 +415,7 @@ int8_t XenoSession::sendEvent(ManuvrRunnable *active_event) {
   //}
 
   // We are about to pass a message across the transport.
-  //ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
+  //ManuvrMsg* event = Kernel::returnEvent(MANUVR_MSG_XPORT_SEND);
   //event->originator      = this;   // We want the callback and the only receiver of this
   //event->specific_target = owner;  //   event to be the transport that instantiated us.
   //raiseEvent(event);

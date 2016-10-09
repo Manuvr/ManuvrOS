@@ -18,7 +18,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-XenoManuvrMessage is the class that is the interface between ManuvrRunnables and
+XenoManuvrMessage is the class that is the interface between ManuvrMsgs and
   XenoSessions.
      ---J. Ian Lindsay
 */
@@ -173,7 +173,7 @@ XenoManuvrMessage::XenoManuvrMessage() : XenoMessage() {
 }
 
 
-XenoManuvrMessage::XenoManuvrMessage(ManuvrRunnable* existing_event) : XenoMessage(existing_event) {
+XenoManuvrMessage::XenoManuvrMessage(ManuvrMsg* existing_event) : XenoMessage(existing_event) {
   wipe();
   // Should maybe set a flag in the event to indicate that we are now responsible
   //   for memory upkeep? Don't want it to get jerked out from under us and cause a crash.
@@ -207,10 +207,10 @@ void XenoManuvrMessage::wipe() {
 *   calling the constructor with an Event argument.
 * TODO: For safety's sake, the Event is not retained. This has caused us some grief. Re-evaluate...
 *
-* @param   ManuvrRunnable* The Event that is to be communicated.
+* @param   ManuvrMsg* The Event that is to be communicated.
 * @param   uint16_t          An explicitly-provided unique_id so that a dialog can be perpetuated.
 */
-void XenoManuvrMessage::provideEvent(ManuvrRunnable *existing_event, uint16_t manual_id) {
+void XenoManuvrMessage::provideEvent(ManuvrMsg* existing_event, uint16_t manual_id) {
   XenoMessage::provideEvent(existing_event);
   unique_id = manual_id;
   message_code = event->eventCode();                //
@@ -224,7 +224,7 @@ void XenoManuvrMessage::provideEvent(ManuvrRunnable *existing_event, uint16_t ma
 * @return  nonzero if there was a problem.
 */
 int8_t XenoManuvrMessage::ack() {
-  ManuvrRunnable temp_event(MANUVR_MSG_REPLY);
+  ManuvrMsg temp_event(MANUVR_MSG_REPLY);
   provideEvent(&temp_event, unique_id);
   awaitingSend(true);
   return 0;
@@ -237,7 +237,7 @@ int8_t XenoManuvrMessage::ack() {
 * @return  nonzero if there was a problem.
 */
 int8_t XenoManuvrMessage::retry() {
-  ManuvrRunnable temp_event(MANUVR_MSG_REPLY_RETRY);
+  ManuvrMsg temp_event(MANUVR_MSG_REPLY_RETRY);
   provideEvent(&temp_event, unique_id);
   awaitingSend(true);
   retries++;
@@ -252,7 +252,7 @@ int8_t XenoManuvrMessage::retry() {
 * @return  nonzero if there was a problem.
 */
 int8_t XenoManuvrMessage::fail() {
-  ManuvrRunnable temp_event(MANUVR_MSG_REPLY_FAIL);
+  ManuvrMsg temp_event(MANUVR_MSG_REPLY_FAIL);
   provideEvent(&temp_event, unique_id);
   awaitingSend(true);
   return 0;

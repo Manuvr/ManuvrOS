@@ -295,10 +295,10 @@ class CoAPSession : public XenoSession {
     CoAPSession(BufferPipe*);
     ~CoAPSession();
 
-    int8_t sendEvent(ManuvrRunnable*);
+    int8_t sendEvent(ManuvrMsg*);
 
     /* Management of subscriptions... */
-    int8_t subscribe(const char*, ManuvrRunnable*);  // Start getting broadcasts about a given message type.
+    int8_t subscribe(const char*, ManuvrMsg*);  // Start getting broadcasts about a given message type.
     int8_t unsubscribe(const char*);                 // Stop getting broadcasts about a given message type.
     int8_t resubscribeAll();
     int8_t unsubscribeAll();
@@ -311,8 +311,8 @@ class CoAPSession : public XenoSession {
     /* Overrides from EventReceiver */
     void procDirectDebugInstruction(StringBuilder*);
     void printDebug(StringBuilder*);
-    int8_t notify(ManuvrRunnable*);
-    int8_t callback_proc(ManuvrRunnable *);
+    int8_t notify(ManuvrMsg*);
+    int8_t callback_proc(ManuvrMsg*);
 
 
   protected:
@@ -323,7 +323,7 @@ class CoAPSession : public XenoSession {
     CoAPMessage* working;
 
     PriorityQueue<CoAPMessage*> _pending_coap_messages;      // Valid CoAP messages that have arrived.
-    ManuvrRunnable _ping_timer;    // Periodic KA ping.
+    ManuvrMsg _ping_timer;    // Periodic KA ping.
 
     unsigned int _next_packetid;
 

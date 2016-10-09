@@ -80,7 +80,7 @@ int8_t EventReceiver::setVerbosity(int8_t nu_verbosity) {
 * @param   active_event  An event bearing the code for "set verbosity".
 * @return  -1 on failure, and 0 on no change, and 1 on success.
 */
-int8_t EventReceiver::setVerbosity(ManuvrRunnable* active_event) {
+int8_t EventReceiver::setVerbosity(ManuvrMsg* active_event) {
   if (nullptr == active_event) return -1;
   if (MANUVR_MSG_SYS_LOG_VERBOSITY != active_event->eventCode()) return -1;
   switch (active_event->argCount()) {
@@ -147,7 +147,7 @@ void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
 * This is a convenience method for posting an event when we want a callback. If there is not
 *   already an originator specified, add ourselves as the originator.
 */
-int8_t EventReceiver::raiseEvent(ManuvrRunnable* event) {
+int8_t EventReceiver::raiseEvent(ManuvrMsg* event) {
   if (event != nullptr) {
     event->setOriginator(this);
     return Kernel::staticRaiseEvent(event);
@@ -233,7 +233,7 @@ int8_t EventReceiver::erConfigure(Argument*) {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t EventReceiver::callback_proc(ManuvrRunnable *event) {
+int8_t EventReceiver::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -259,7 +259,7 @@ int8_t EventReceiver::callback_proc(ManuvrRunnable *event) {
 * @param active_event is the event being broadcast.
 * @return the number of actions taken on this event, or -1 on failure.
 */
-int8_t EventReceiver::notify(ManuvrRunnable *active_event) {
+int8_t EventReceiver::notify(ManuvrMsg* active_event) {
   if (active_event) {
     switch (active_event->eventCode()) {
       case MANUVR_MSG_SYS_LOG_VERBOSITY:

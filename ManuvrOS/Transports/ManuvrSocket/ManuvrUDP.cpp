@@ -326,7 +326,7 @@ int8_t ManuvrUDP::read_port() {
         //   a system-wide message if mem-mgmt responsibility for the buffer was
         //   accepted by the bearer.
         _open_replies[cli_addr.sin_port] = related_pipe;
-        ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
+        ManuvrMsg* event = Kernel::returnEvent(MANUVR_MSG_XPORT_RECEIVE);
         // Because we allocated the pipe, we must clean it up if it is not taken.
         event->setOriginator((EventReceiver*) this);
         //event->addArg(related_pipe);   // Add the newly-minted pipe.
@@ -533,7 +533,7 @@ void ManuvrUDP::printDebug(StringBuilder* output) {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t ManuvrUDP::callback_proc(ManuvrRunnable *event) {
+int8_t ManuvrUDP::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -571,7 +571,7 @@ int8_t ManuvrUDP::callback_proc(ManuvrRunnable *event) {
 
 
 
-int8_t ManuvrUDP::notify(ManuvrRunnable *active_event) {
+int8_t ManuvrUDP::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {

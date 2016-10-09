@@ -41,8 +41,8 @@ limitations under the License.
 
       /* Overrides from EventReceiver */
       void printDebug(StringBuilder*);
-      int8_t notify(ManuvrRunnable*);
-      int8_t callback_proc(ManuvrRunnable *);
+      int8_t notify(ManuvrMsg*);
+      int8_t callback_proc(ManuvrMsg*);
 
 
     protected:
@@ -53,6 +53,6 @@ limitations under the License.
       int8_t   adc_list[16];
       uint16_t last_sample[16];
       uint16_t threshold[16];
-      ManuvrRunnable _periodic_check;
+      ManuvrMsg _periodic_check;
   };
 #endif

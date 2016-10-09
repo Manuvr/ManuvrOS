@@ -68,7 +68,7 @@ Lifecycle:
         *   zero for no action taken, and non-zero if the event needs to be re-evaluated
         *   before being passed on to the next subscriber.
         */
-        virtual int8_t notify(ManuvrRunnable*);
+        virtual int8_t notify(ManuvrMsg*);
 
         /*
         * These have no reason to be here other than to enforce some discipline while
@@ -83,10 +83,10 @@ Lifecycle:
         #endif
 
         /* These are intended to be overridden. */
-        virtual int8_t callback_proc(ManuvrRunnable *);
+        virtual int8_t callback_proc(ManuvrMsg*);
 
         /* Raises an event, marking us as the return callback. */
-        int8_t raiseEvent(ManuvrRunnable* event);
+        int8_t raiseEvent(ManuvrMsg* event);
 
         inline const char* getReceiverName() {   return _receiver_name;  }
 
@@ -166,7 +166,7 @@ Lifecycle:
         uint8_t     _extnd_state   = 0;  // This is here for use by the extending class.
         const char* _receiver_name = "EventReceiver";
 
-        int8_t setVerbosity(ManuvrRunnable*);  // Private because it should be set with an Event.
+        int8_t setVerbosity(ManuvrMsg*);  // Private because it should be set with an Event.
     };
   }
 

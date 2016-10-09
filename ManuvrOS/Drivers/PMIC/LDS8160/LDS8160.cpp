@@ -237,7 +237,7 @@ int8_t LDS8160::attached() {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t LDS8160::callback_proc(ManuvrRunnable *event) {
+int8_t LDS8160::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->KernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -253,7 +253,7 @@ int8_t LDS8160::callback_proc(ManuvrRunnable *event) {
 
 
 
-int8_t LDS8160::notify(ManuvrRunnable *active_event) {
+int8_t LDS8160::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
@@ -450,7 +450,7 @@ int8_t LDS8160::notify(ManuvrRunnable *active_event) {
 #if defined(MANUVR_CONSOLE_SUPPORT)
 void LDS8160::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
-  ManuvrRunnable *event = NULL;  // Pitching events is a common thing in this fxn...
+  ManuvrMsg *event = NULL;  // Pitching events is a common thing in this fxn...
 
   uint8_t temp_byte = 0;
   if (*(str) != 0) {

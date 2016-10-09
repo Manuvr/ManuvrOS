@@ -67,8 +67,8 @@ class ManuvrSerial : public ManuvrXport {
     /* Overrides from EventReceiver */
     int8_t attached();
     void printDebug(StringBuilder *);
-    int8_t notify(ManuvrRunnable*);
-    int8_t callback_proc(ManuvrRunnable *);
+    int8_t notify(ManuvrMsg*);
+    int8_t callback_proc(ManuvrMsg*);
 
 
     int8_t connect();

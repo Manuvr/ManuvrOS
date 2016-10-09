@@ -36,8 +36,8 @@ This is a quick-and-dirty class to support reading a CdS cell from an analog
 
       /* Overrides from EventReceiver */
       void printDebug(StringBuilder*);
-      int8_t notify(ManuvrRunnable*);
-      int8_t callback_proc(ManuvrRunnable *);
+      int8_t notify(ManuvrMsg*);
+      int8_t callback_proc(ManuvrMsg*);
 
 
     protected:
@@ -46,7 +46,7 @@ This is a quick-and-dirty class to support reading a CdS cell from an analog
 
     private:
       int _analog_pin = -1;
-      ManuvrRunnable _periodic_check;
+      ManuvrMsg _periodic_check;
 
       void light_check();
   };

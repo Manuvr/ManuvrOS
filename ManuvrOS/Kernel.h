@@ -59,7 +59,7 @@ limitations under the License.
   extern "C" {
   #endif
 
-  typedef int (*listenerFxnPtr) (ManuvrRunnable*);
+  typedef int (*listenerFxnPtr) (ManuvrMsg*);
 
   extern unsigned long micros();  // TODO: Only needed for a single inline fxn. Retain?
 
@@ -115,17 +115,17 @@ limitations under the License.
        * auto_clear      When recurrence reaches 0, should the schedule be reaped?
        * sch_callback    The service function. Must be a pointer to a (void fxn(void)).
        */
-      ManuvrRunnable* createSchedule(uint32_t period, int16_t recurrence, bool auto_clear, FxnPointer sch_callback);
-      ManuvrRunnable* createSchedule(uint32_t period, int16_t recurrence, bool auto_clear, EventReceiver*  sch_callback);
-      bool removeSchedule(ManuvrRunnable*);  // Clears all data relating to the given schedule.
-      bool addSchedule(ManuvrRunnable*);
+      ManuvrMsg* createSchedule(uint32_t period, int16_t recurrence, bool auto_clear, FxnPointer sch_callback);
+      ManuvrMsg* createSchedule(uint32_t period, int16_t recurrence, bool auto_clear, EventReceiver*  sch_callback);
+      bool removeSchedule(ManuvrMsg*);  // Clears all data relating to the given schedule.
+      bool addSchedule(ManuvrMsg*);
       void printScheduler(StringBuilder*);
 
       /*
       * These are the core functions of the kernel that must be called from outside.
       */
-      int8_t procIdleFlags(void);              // Execute pending Runnables.
-      void advanceScheduler(unsigned int);     // Push all scheduled Runnables forward by one tick.
+      int8_t procIdleFlags(void);              // Execute pending Msgs.
+      void advanceScheduler(unsigned int);     // Push all scheduled Msgs forward by one tick.
       inline void advanceScheduler() {   advanceScheduler(MANUVR_PLATFORM_TIMER_PERIOD_MS);  };
 
       /* Profiling support.. */
@@ -136,12 +136,12 @@ limitations under the License.
       inline void maxEventsPerLoop(int8_t nu) { max_events_per_loop = (nu > 0) ? nu : 1; }
       inline int8_t maxEventsPerLoop() {        return max_events_per_loop; }
       inline int queueSize() {                  return INSTANCE->exec_queue.size();     }
-      inline bool containsPreformedEvent(ManuvrRunnable* event) {   return exec_queue.contains(event);  };
+      inline bool containsPreformedEvent(ManuvrMsg* event) {   return exec_queue.contains(event);  };
 
       /* Overrides from EventReceiver
          Just gracefully fall into those when needed. */
-      int8_t notify(ManuvrRunnable*);
-      int8_t callback_proc(ManuvrRunnable*);
+      int8_t notify(ManuvrMsg*);
+      int8_t callback_proc(ManuvrMsg*);
       #if defined(MANUVR_CONSOLE_SUPPORT)
         void procDirectDebugInstruction(StringBuilder*);
       #endif
@@ -158,9 +158,9 @@ limitations under the License.
 
       static Kernel* getInstance();
       static int8_t  raiseEvent(uint16_t event_code, EventReceiver* data);
-      static int8_t  staticRaiseEvent(ManuvrRunnable* event);
-      static bool    abortEvent(ManuvrRunnable* event);
-      static int8_t  isrRaiseEvent(ManuvrRunnable* event);
+      static int8_t  staticRaiseEvent(ManuvrMsg* event);
+      static bool    abortEvent(ManuvrMsg* event);
+      static int8_t  isrRaiseEvent(ManuvrMsg* event);
       static void    nextTick(BufferPipe*);
 
       #if defined (__MANUVR_FREERTOS)
@@ -173,7 +173,7 @@ limitations under the License.
       #endif
 
       /* Factory method. Returns a preallocated Event. */
-      static ManuvrRunnable* returnEvent(uint16_t event_code);
+      static ManuvrMsg* returnEvent(uint16_t event_code);
 
       static BufferPipe* _logger;        // The log pipe.
       static uint32_t lagged_schedules;  // How many schedules were skipped? Ideally this is zero.
@@ -184,10 +184,10 @@ limitations under the License.
 
 
     private:
-      ManuvrRunnable*                  current_event; // The presently-executing event.
-      PriorityQueue<ManuvrRunnable*>   exec_queue;    // Runnables that are pending execution.
-      PriorityQueue<ManuvrRunnable*>   schedules;     // These are Runnables scheduled to be run.
-      PriorityQueue<ManuvrRunnable*>   preallocated;  // This is the listing of pre-allocated Runnables.
+      ManuvrMsg*                  current_event; // The presently-executing event.
+      PriorityQueue<ManuvrMsg*>   exec_queue;    // Msgs that are pending execution.
+      PriorityQueue<ManuvrMsg*>   schedules;     // These are Msgs scheduled to be run.
+      PriorityQueue<ManuvrMsg*>   preallocated;  // This is the listing of pre-allocated Msgs.
       PriorityQueue<BufferPipe*>       _pipe_io_pend; // Pending BufferPipe transfers that wish to be async.
       PriorityQueue<TaskProfilerData*> event_costs;   // Message code is the priority. Calculates average cost in uS.
 
@@ -198,7 +198,7 @@ limitations under the License.
       uint32_t _ms_elapsed;           // How much time has passed since we serviced our schedules?
 
       // Profiling and logging variables...
-      uint32_t micros_occupied;       // How many micros have we spent procing Runnables?
+      uint32_t micros_occupied;       // How many micros have we spent procing Msgs?
       uint32_t max_idle_loop_time;    // How many uS does it take to run an idle loop?
       uint32_t total_loops;           // How many times have we looped?
       uint32_t total_events;          // How many events have we proc'd?
@@ -215,19 +215,19 @@ limitations under the License.
 
       uint32_t _skips_observed;       // How many sequential scheduler skips have we noticed?
 
-      ManuvrRunnable _preallocation_pool[EVENT_MANAGER_PREALLOC_COUNT];
+      ManuvrMsg _preallocation_pool[EVENT_MANAGER_PREALLOC_COUNT];
 
       uint8_t  max_events_p_loop;     // What is the most events we've handled in a single loop?
       int8_t   max_events_per_loop;
 
-      int8_t procCallAheads(ManuvrRunnable *active_event);
-      int8_t procCallBacks(ManuvrRunnable *active_event);
+      int8_t procCallAheads(ManuvrMsg* active_event);
+      int8_t procCallBacks(ManuvrMsg* active_event);
 
       unsigned int countActiveSchedules(void);  // How many active schedules are present?
       int serviceSchedules(void);         // Prep any schedules that have come due for exec.
 
-      int8_t validate_insertion(ManuvrRunnable*);
-      void reclaim_event(ManuvrRunnable*);
+      int8_t validate_insertion(ManuvrMsg*);
+      void reclaim_event(ManuvrMsg*);
       inline void update_maximum_queue_depth() {   max_queue_depth = (exec_queue.size() > (int) max_queue_depth) ? exec_queue.size() : max_queue_depth;   };
 
       #if defined(MANUVR_CONSOLE_SUPPORT)
@@ -245,7 +245,7 @@ limitations under the License.
       inline void _pending_pipes(bool nu) {     return (_er_set_flag(MKERNEL_FLAG_PENDING_PIPE, nu)); };
 
       static Kernel*     INSTANCE;
-      static PriorityQueue<ManuvrRunnable*> isr_exec_queue;   // Events that have been raised from ISRs.
+      static PriorityQueue<ManuvrMsg*> isr_exec_queue;   // Events that have been raised from ISRs.
   };
 
 

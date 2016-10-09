@@ -49,8 +49,8 @@ class ManuvrConsole : public XenoSession {
     void procDirectDebugInstruction(StringBuilder*);
     void printDebug(StringBuilder*);
     int8_t attached();
-    int8_t notify(ManuvrRunnable*);
-    int8_t callback_proc(ManuvrRunnable *);
+    int8_t notify(ManuvrMsg*);
+    int8_t callback_proc(ManuvrMsg*);
 
 
   private:
