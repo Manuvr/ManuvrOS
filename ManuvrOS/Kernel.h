@@ -31,13 +31,9 @@ limitations under the License.
 #ifndef __MANUVR_KERNEL_H__
   #define __MANUVR_KERNEL_H__
 
-  class Kernel;
-
   #include <map>
-
   #include <CommonConstants.h>
   #include <EnumeratedTypeCodes.h>
-
   #include <DataStructures/PriorityQueue.h>
   #include <DataStructures/StringBuilder.h>
   #include <EventReceiver.h>
@@ -54,15 +50,11 @@ limitations under the License.
   #define MKERNEL_FLAG_PENDING_PIPE  0x08    // There is Pipe I/O pending.
 
 
-
   #ifdef __cplusplus
   extern "C" {
   #endif
 
-  typedef int (*listenerFxnPtr) (ManuvrMsg*);
-
-  extern unsigned long micros();  // TODO: Only needed for a single inline fxn. Retain?
-
+  extern unsigned long micros();  // Prevents circular-inclusion with Platform.h
 
 
   /****************************************************************************************************
@@ -148,6 +140,9 @@ limitations under the License.
       void printDebug(StringBuilder*);
 
 
+      static BufferPipe* _logger;        // The log pipe.
+      static uint32_t lagged_schedules;  // How many schedules were skipped? Ideally this is zero.
+
       /* These functions deal with logging.*/
       volatile static void log(int severity, const char *str);  // Pass-through to the logger class, whatever that happens to be.
       volatile static void log(const char *str);                // Pass-through to the logger class, whatever that happens to be.
@@ -156,27 +151,14 @@ limitations under the License.
       static int8_t attachToLogger(BufferPipe*);
       static int8_t detachFromLogger(BufferPipe*);
 
-      static Kernel* getInstance();
-      static int8_t  raiseEvent(uint16_t event_code, EventReceiver* data);
-      static int8_t  staticRaiseEvent(ManuvrMsg* event);
-      static bool    abortEvent(ManuvrMsg* event);
-      static int8_t  isrRaiseEvent(ManuvrMsg* event);
-      static void    nextTick(BufferPipe*);
+      static int8_t raiseEvent(uint16_t event_code, EventReceiver* data);
+      static int8_t staticRaiseEvent(ManuvrMsg* event);
+      static bool   abortEvent(ManuvrMsg* event);
+      static int8_t isrRaiseEvent(ManuvrMsg* event);
+      static void   nextTick(BufferPipe*);
 
-      #if defined (__MANUVR_FREERTOS)
-        static uint32_t logger_pid;
-        static uint32_t kernel_pid;
-
-        void provideKernelPID(TaskHandle_t pid){   kernel_pid = (uint32_t) pid; }
-        void provideLoggerPID(TaskHandle_t pid){   logger_pid = (uint32_t) pid; }
-        static void unblockThread(uint32_t pid){   vTaskResume((TaskHandle_t) pid); }
-      #endif
-
-      /* Factory method. Returns a preallocated Event. */
+      /* Returns a preallocated ManuvrMsg. */
       static ManuvrMsg* returnEvent(uint16_t event_code);
-
-      static BufferPipe* _logger;        // The log pipe.
-      static uint32_t lagged_schedules;  // How many schedules were skipped? Ideally this is zero.
 
 
     protected:
@@ -184,36 +166,33 @@ limitations under the License.
 
 
     private:
-      ManuvrMsg*                  current_event; // The presently-executing event.
-      PriorityQueue<ManuvrMsg*>   exec_queue;    // Msgs that are pending execution.
-      PriorityQueue<ManuvrMsg*>   schedules;     // These are Msgs scheduled to be run.
-      PriorityQueue<ManuvrMsg*>   preallocated;  // This is the listing of pre-allocated Msgs.
+      ManuvrMsg* current_event = nullptr;  // The presently-executing event.
+      PriorityQueue<ManuvrMsg*>        exec_queue;    // Msgs that are pending execution.
+      PriorityQueue<ManuvrMsg*>        schedules;     // These are Msgs scheduled to be run.
+      PriorityQueue<ManuvrMsg*>        preallocated;  // This is the listing of pre-allocated Msgs.
       PriorityQueue<BufferPipe*>       _pipe_io_pend; // Pending BufferPipe transfers that wish to be async.
       PriorityQueue<TaskProfilerData*> event_costs;   // Message code is the priority. Calculates average cost in uS.
-
       PriorityQueue<EventReceiver*>    subscribers;   // Our manifest of EventReceivers we service.
       std::map<uint16_t, PriorityQueue<listenerFxnPtr>*> ca_listeners;  // Call-ahead listeners.
       std::map<uint16_t, PriorityQueue<listenerFxnPtr>*> cb_listeners;  // Call-back listeners.
 
-      uint32_t _ms_elapsed;           // How much time has passed since we serviced our schedules?
+      uint32_t _ms_elapsed        = 0; // How much time has passed since we serviced our schedules?
+      uint32_t _skips_observed    = 0; // How many sequential scheduler skips have we noticed?
+      /* Profiling and logging variables... */
+      uint32_t micros_occupied    = 0; // How many micros have we spent procing Msgs?
+      uint32_t total_loops        = 0; // How many times have we looped?
+      uint32_t total_events       = 0; // How many events have we proc'd?
+      uint32_t total_events_dead  = 0; // How many events have we proc'd that went unacknowledged?
+      uint32_t max_queue_depth    = 0; // What is the deepest point the queue has reached?
+      uint32_t max_idle_loop_time;     // How many uS does it take to run an idle loop?
+      uint32_t idle_loops;             // How many idle loops have we run?
+      uint16_t consequtive_idles;      // How many consecutive idle loops?
+      uint16_t max_idle_count;         // How many consecutive idle loops before we act?
 
-      // Profiling and logging variables...
-      uint32_t micros_occupied;       // How many micros have we spent procing Msgs?
-      uint32_t max_idle_loop_time;    // How many uS does it take to run an idle loop?
-      uint32_t total_loops;           // How many times have we looped?
-      uint32_t total_events;          // How many events have we proc'd?
-      uint32_t total_events_dead;     // How many events have we proc'd that went unacknowledged?
-      uint32_t idle_loops;            // How many idle loops have we run?
-      uint16_t consequtive_idles;     // How many consecutive idle loops?
-      uint16_t max_idle_count;        // How many consecutive idle loops before we act?
-
-      uint32_t events_destroyed;      // How many events have we destroyed?
-      uint32_t prealloc_starved;      // How many times did we starve the prealloc queue?
-      uint32_t burden_of_specific;    // How many events have we reaped?
-      uint32_t insertion_denials;     // How many times have we rejected events?
-      uint32_t max_queue_depth;       // What is the deepest point the queue has reached?
-
-      uint32_t _skips_observed;       // How many sequential scheduler skips have we noticed?
+      uint32_t events_destroyed;       // How many events have we destroyed?
+      uint32_t prealloc_starved;       // How many times did we starve the prealloc queue?
+      uint32_t burden_of_specific;     // How many events have we reaped?
+      uint32_t insertion_denials;      // How many times have we rejected events?
 
       ManuvrMsg _preallocation_pool[EVENT_MANAGER_PREALLOC_COUNT];
 

@@ -42,10 +42,10 @@ limitations under the License.
 *
 * Static members and initializers should be located here.
 *******************************************************************************/
-Kernel*     Kernel::INSTANCE = nullptr;
-BufferPipe* Kernel::_logger  = nullptr;  // The logger slot.
+uint32_t    Kernel::lagged_schedules = 0;
+Kernel*     Kernel::INSTANCE         = nullptr;
+BufferPipe* Kernel::_logger          = nullptr;  // The logger slot.
 PriorityQueue<ManuvrMsg*> Kernel::isr_exec_queue;
-
 
 /*
 * These are the hard-coded message types that the program knows about.
@@ -172,18 +172,9 @@ void Kernel::nextTick(BufferPipe* p) {
 */
 Kernel::Kernel() : EventReceiver() {
   setReceiverName("Kernel");
-  INSTANCE             = this;  // For singleton reference. TODO: Will not parallelize.
-
+  INSTANCE             = this;  // For singleton reference.
   current_event        = nullptr;
-  max_queue_depth      = 0;
-  total_events         = 0;
-  total_events_dead    = 0;
-  micros_occupied      = 0;
   max_events_per_loop  = 2;
-  lagged_schedules     = 0;
-  _ms_elapsed          = 0;
-
-  _skips_observed      = 0;
   max_idle_count       = 100;
   consequtive_idles    = max_idle_count;
 
@@ -220,11 +211,6 @@ Kernel::~Kernel() {
 /****************************************************************************************************
 * Logging members...                                                                                *
 ****************************************************************************************************/
-
-#if defined (__MANUVR_FREERTOS)
-  uint32_t Kernel::kernel_pid = 0;
-#endif
-
 /*
 * Logger pass-through functions. Please mind the variadics...
 */
@@ -416,8 +402,8 @@ int8_t Kernel::staticRaiseEvent(ManuvrMsg* active_runnable) {
   int8_t return_value = INSTANCE->validate_insertion(active_runnable);
   if (0 == return_value) {
     INSTANCE->update_maximum_queue_depth();   // Check the queue depth
-    #if defined (__MANUVR_FREERTOS)
-      //if (kernel_pid) unblockThread(kernel_pid);
+    #if defined (__BUILD_HAS_THREADS)
+      if (INSTANCE->_thread_id) wakeThread(&INSTANCE->_thread_id);
     #endif
     return return_value;
   }
@@ -489,8 +475,8 @@ int8_t Kernel::isrRaiseEvent(ManuvrMsg* event) {
   maskableInterrupts(false);
   return_value = isr_exec_queue.insertIfAbsent(event, event->priority);
   maskableInterrupts(true);
-  #if defined (__MANUVR_FREERTOS)
-    //if (kernel_pid) unblockThread(kernel_pid);
+  #if defined (__BUILD_HAS_THREADS)
+    if (INSTANCE->_thread_id) wakeThread(&INSTANCE->_thread_id);
   #endif
   return return_value;
 }
@@ -1323,7 +1309,6 @@ bool Kernel::addSchedule(ManuvrMsg* obj) {
   return false;
 }
 
-uint32_t Kernel::lagged_schedules = 0;
 
 /**
 * This is the function that is called from the main loop to offload big

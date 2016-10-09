@@ -491,6 +491,16 @@ int deleteThread(unsigned long* _thread_id) {
 }
 
 
+int wakeThread(unsigned long* _thread_id) {
+  #if defined(__MANUVR_LINUX)
+  #elif defined(__MANUVR_FREERTOS)
+  vTaskResume(_thread_id);
+  return 0;
+  #endif
+  return -1;
+}
+
+
 /**
 * Wrapper for causing threads to sleep. This is NOT intended to be used as a delay
 *   mechanism, although that use-case will work. It is more for the sake of not
