@@ -330,4 +330,32 @@ mbedtls completely out as *the* dependency for cryptography.
     Linux, 32-bit: DEBUG=1 SECURE=1
     1777199   12204   52324 1841727  1c1a3f New baseline.
 
+------
+
+### 2016.10.07:
+
+    Linux, 32-bit: DEBUG=1 SECURE=1
+    1544566   12024   43940 1600530  186c12 Following semantic_args excision.
+    1544566   12024   43940 1600530  186c12 Removal of redundant thread_id member had no effect.
+    1544586   12024   43940 1600550  186c26 Removal of kernel pointer from ER (safety).
+
+Binged on cleaning up technical debt in the build system. The goal of separating threading concerns from platform was advanced. More crypto-wrapper sanity-checking.
+
+    Linux, 32-bit: DEBUG=1 SECURE=1
+    1544474   12024   43940 1600438  186bb6 New baseline.
+    1544102   12024   43940 1600066  186a42 Excision of xport_id. It is no longer needed.
+    1544070   12024   43940 1600034  186a22 Class member re-arrangement.
+    1544086   12024   43940 1600050  186a32 Kernel cleanup.
+    1544198   12024   43940 1600162  186aa2 Reintroducing wakeThread() for Kernel.
+
+
+The ManuvrRunnable namespace died at 03:59 PST on 2016.10.09. A brief re-cap of its evolution feels appropriate.
+
+In the beginning, there was ScheduleItem, ManuvrMsg, and Event (which was the child of ManuvrMsg). Each did its own specific job, and for a time, it was good.
+
+Then, much complexity was built around scheduling events. Darkness settled over the code base. Dissatisfied with the uneasy truce between ScheduleItem and Event, the monarch forged the two into one hasty blob and named it ManuvrRunnable (which still extended ManuvrMsg).
+
+This worked for awhile, but was only a thin veneer over the disharmony between the two original houses. True resolution of the split happened gradually over many ages (about twelve months).  The final battle was waged today between ManuvrMsg and ManuvrRunnable on the battlefield of "Namespace". ManuvrMsg was the victor.
+
+
 _---J. Ian Lindsay_

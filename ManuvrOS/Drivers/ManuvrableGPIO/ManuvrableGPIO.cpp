@@ -24,8 +24,6 @@ The idea here is not to provide any manner of abstraction for GPIO. Our
 
 #include "ManuvrableGPIO.h"
 
-const unsigned char MSG_ARGS_U8_U16[] = {UINT8_FM, UINT16_FM, 0};
-
 
 const MessageTypeDef gpio_message_defs[] = {
   /*
@@ -33,21 +31,12 @@ const MessageTypeDef gpio_message_defs[] = {
     This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
     compile time.
   */
-  #if defined (__ENABLE_MSG_SEMANTICS)
   {  MANUVR_MSG_GPIO_LEGEND       , MSG_FLAG_EXPORTABLE,  "GPIO_LEGEND",         ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_DIGITAL_READ      , MSG_FLAG_EXPORTABLE,  "DIGITAL_READ",        MSG_ARGS_U8_U16 }, //
-  {  MANUVR_MSG_DIGITAL_WRITE     , MSG_FLAG_EXPORTABLE,  "DIGITAL_WRITE",       MSG_ARGS_U8_U16 }, //
-  {  MANUVR_MSG_ANALOG_READ       , MSG_FLAG_EXPORTABLE,  "ANALOG_READ",         MSG_ARGS_U8_U16 }, //
-  {  MANUVR_MSG_ANALOG_WRITE      , MSG_FLAG_EXPORTABLE,  "ANALOG_WRITE",        MSG_ARGS_U8_U16 }, //
+  {  MANUVR_MSG_DIGITAL_READ      , MSG_FLAG_EXPORTABLE,  "DIGITAL_READ",        ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_DIGITAL_WRITE     , MSG_FLAG_EXPORTABLE,  "DIGITAL_WRITE",       ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_ANALOG_READ       , MSG_FLAG_EXPORTABLE,  "ANALOG_READ",         ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_ANALOG_WRITE      , MSG_FLAG_EXPORTABLE,  "ANALOG_WRITE",        ManuvrMsg::MSG_ARGS_NONE }, //
   {  MANUVR_MSG_EVENT_ON_INTERRUPT, MSG_FLAG_EXPORTABLE,  "EVENT_ON_INTERRUPT",  ManuvrMsg::MSG_ARGS_NONE }, //
-  #else
-  {  MANUVR_MSG_GPIO_LEGEND       , MSG_FLAG_EXPORTABLE,  "GPIO_LEGEND",         ManuvrMsg::MSG_ARGS_NONE, NULL }, //
-  {  MANUVR_MSG_DIGITAL_READ      , MSG_FLAG_EXPORTABLE,  "DIGITAL_READ",        MSG_ARGS_U8_U16, NULL }, //
-  {  MANUVR_MSG_DIGITAL_WRITE     , MSG_FLAG_EXPORTABLE,  "DIGITAL_WRITE",       MSG_ARGS_U8_U16, NULL }, //
-  {  MANUVR_MSG_ANALOG_READ       , MSG_FLAG_EXPORTABLE,  "ANALOG_READ",         MSG_ARGS_U8_U16, NULL }, //
-  {  MANUVR_MSG_ANALOG_WRITE      , MSG_FLAG_EXPORTABLE,  "ANALOG_WRITE",        MSG_ARGS_U8_U16, NULL }, //
-  {  MANUVR_MSG_EVENT_ON_INTERRUPT, MSG_FLAG_EXPORTABLE,  "EVENT_ON_INTERRUPT",  ManuvrMsg::MSG_ARGS_NONE, NULL }, //
-  #endif
 };
 
 
@@ -116,7 +105,7 @@ void ManuvrableGPIO::printDebug(StringBuilder *output) {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t ManuvrableGPIO::callback_proc(ManuvrRunnable *event) {
+int8_t ManuvrableGPIO::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -131,7 +120,7 @@ int8_t ManuvrableGPIO::callback_proc(ManuvrRunnable *event) {
 }
 
 
-int8_t ManuvrableGPIO::notify(ManuvrRunnable *active_event) {
+int8_t ManuvrableGPIO::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
   uint8_t pin   = 0;
   uint16_t _val = 0;
@@ -174,7 +163,7 @@ int8_t ManuvrableGPIO::notify(ManuvrRunnable *active_event) {
       break;
 
     case MANUVR_MSG_EVENT_ON_INTERRUPT:
-      //int8_t setPinEvent(uint8_t pin, ManuvrRunnable* isr_event);
+      //int8_t setPinEvent(uint8_t pin, ManuvrMsg* isr_event);
       return_value++;
       break;
 
@@ -186,7 +175,7 @@ int8_t ManuvrableGPIO::notify(ManuvrRunnable *active_event) {
       return_value += EventReceiver::notify(active_event);
       break;
   }
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
   return return_value;
 }
 
@@ -217,6 +206,6 @@ void ManuvrableGPIO::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
 
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
 }
 #endif  // MANUVR_CONSOLE_SUPPORT

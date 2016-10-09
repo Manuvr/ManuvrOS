@@ -94,7 +94,7 @@ This is basically only for linux for now.
           ManuvrTCP* nu_connection = new ManuvrTCP(listening_inst, cli_sock, &cli_addr);
           nu_connection->setPipeStrategy(listening_inst->getPipeStrategy());
 
-          ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
+          ManuvrMsg* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
           event->addArg((EventReceiver*) nu_connection);
           Kernel::staticRaiseEvent(event);
 
@@ -397,7 +397,7 @@ int8_t ManuvrTCP::attached() {
   read_abort_event.alterSchedulePeriod(300);
   read_abort_event.autoClear(false);
   read_abort_event.enableSchedule(false);
-  __kernel->addSchedule(&read_abort_event);
+  platform.kernel()->addSchedule(&read_abort_event);
 
   reset();
   return 1;
@@ -431,7 +431,7 @@ void ManuvrTCP::printDebug(StringBuilder *temp) {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t ManuvrTCP::callback_proc(ManuvrRunnable *event) {
+int8_t ManuvrTCP::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -450,7 +450,7 @@ int8_t ManuvrTCP::callback_proc(ManuvrRunnable *event) {
 
 
 
-int8_t ManuvrTCP::notify(ManuvrRunnable *active_event) {
+int8_t ManuvrTCP::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {

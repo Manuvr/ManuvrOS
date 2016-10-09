@@ -183,7 +183,7 @@ oc_discovery_flags_t discovery(const char *di, const char *uri,
               oc_string_array_t types, oc_interface_mask_t interfaces,
               oc_server_handle_t* server) {
   unsigned int i;
-  ManuvrRunnable* disc_ev = Kernel::returnEvent(MANUVR_MSG_OIC_DISCOVERY);
+  ManuvrMsg* disc_ev = Kernel::returnEvent(MANUVR_MSG_OIC_DISCOVERY);
 
   if (server->endpoint.flags & 0x10) {  // TODO: Should use their namespace.
     disc_ev->addArg((uint8_t) 1)->setKey("secure");
@@ -274,8 +274,8 @@ ManuvrOIC::ManuvrOIC(Argument* root_config) : ManuvrOIC() {
 * Unlike many of the other EventReceivers, THIS one needs to be able to be torn down.
 */
 ManuvrOIC::~ManuvrOIC() {
-  __kernel->removeSchedule(&_discovery_ping);
-  __kernel->removeSchedule(&_discovery_timeout);
+  platform.kernel()->removeSchedule(&_discovery_ping);
+  platform.kernel()->removeSchedule(&_discovery_timeout);
   #if defined(__BUILD_HAS_THREADS)
     #if defined(__MACH__) && defined(__APPLE__)
       if (_thread_id > 0) {
@@ -362,7 +362,7 @@ int8_t ManuvrOIC::attached() {
   _discovery_ping.isManaged(true);
   _discovery_ping.alterSchedule(120000, -1, false, issue_requests_hook);
   _discovery_ping.enableSchedule(false);
-  __kernel->addSchedule(&_discovery_ping);
+  platform.kernel()->addSchedule(&_discovery_ping);
 
   _discovery_timeout.repurpose(MANUVR_MSG_OIC_DISCOVER_OFF, (EventReceiver*) this);
   _discovery_timeout.isManaged(true);
@@ -374,7 +374,7 @@ int8_t ManuvrOIC::attached() {
   _discovery_timeout.alterSchedulePeriod(30000);
   _discovery_timeout.autoClear(false);
   _discovery_timeout.enableSchedule(false);
-  __kernel->addSchedule(&_discovery_timeout);
+  platform.kernel()->addSchedule(&_discovery_timeout);
 
 
   oc_handler_t handler;
@@ -451,7 +451,7 @@ int8_t ManuvrOIC::erConfigure(Argument* opts) {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t ManuvrOIC::callback_proc(ManuvrRunnable *event) {
+int8_t ManuvrOIC::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -466,7 +466,7 @@ int8_t ManuvrOIC::callback_proc(ManuvrRunnable *event) {
 }
 
 
-int8_t ManuvrOIC::notify(ManuvrRunnable *active_event) {
+int8_t ManuvrOIC::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {

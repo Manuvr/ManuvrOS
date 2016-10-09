@@ -52,8 +52,8 @@ class StandardIO : public ManuvrXport {
     /* Overrides from EventReceiver */
     int8_t attached();
     void printDebug(StringBuilder *);
-    int8_t notify(ManuvrRunnable*);
-    int8_t callback_proc(ManuvrRunnable*);
+    int8_t notify(ManuvrMsg*);
+    int8_t callback_proc(ManuvrMsg*);
 
     /* Overrides from ManuvrXport */
     int8_t connect();

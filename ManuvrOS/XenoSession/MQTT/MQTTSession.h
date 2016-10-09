@@ -89,10 +89,10 @@ class MQTTSession : public XenoSession {
     MQTTSession(ManuvrXport*);
     virtual ~MQTTSession();
 
-    int8_t sendEvent(ManuvrRunnable*);
+    int8_t sendEvent(ManuvrMsg*);
 
     /* Management of subscriptions... */
-    int8_t subscribe(const char*, ManuvrRunnable*);  // Start getting broadcasts about a given message type.
+    int8_t subscribe(const char*, ManuvrMsg*);  // Start getting broadcasts about a given message type.
     int8_t unsubscribe(const char*);                 // Stop getting broadcasts about a given message type.
     int8_t resubscribeAll();
     int8_t unsubscribeAll();
@@ -105,8 +105,8 @@ class MQTTSession : public XenoSession {
     /* Overrides from EventReceiver */
     void procDirectDebugInstruction(StringBuilder*);
     void printDebug(StringBuilder*);
-    int8_t notify(ManuvrRunnable*);
-    int8_t callback_proc(ManuvrRunnable *);
+    int8_t notify(ManuvrMsg*);
+    int8_t callback_proc(ManuvrMsg*);
 
 
   protected:
@@ -116,9 +116,9 @@ class MQTTSession : public XenoSession {
   private:
     MQTTMessage* working;
 
-    std::map<const char*, ManuvrRunnable*> _subscriptions;   // Topics we are subscribed to, and the events they trigger.
+    std::map<const char*, ManuvrMsg*> _subscriptions;   // Topics we are subscribed to, and the events they trigger.
     PriorityQueue<MQTTMessage*> _pending_mqtt_messages;      // Valid MQTT messages that have arrived.
-    ManuvrRunnable _ping_timer;    // Periodic KA ping.
+    ManuvrMsg _ping_timer;    // Periodic KA ping.
 
     unsigned int _next_packetid;
     unsigned int command_timeout_ms;
@@ -140,7 +140,7 @@ class MQTTSession : public XenoSession {
     bool sendKeepAlive();
     bool sendConnectPacket();
     bool sendDisconnectPacket();
-    bool sendPublish(ManuvrRunnable*);
+    bool sendPublish(ManuvrMsg*);
 
     int proc_publish(MQTTMessage*);
     int process_inbound();

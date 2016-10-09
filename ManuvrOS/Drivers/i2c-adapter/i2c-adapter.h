@@ -149,7 +149,7 @@ This file is the tortured result of growing pains since the beginning of
     private:
       int8_t init_dma();
 
-      static ManuvrRunnable event_queue_ready;
+      static ManuvrMsg event_queue_ready;
   };
 
 
@@ -180,8 +180,8 @@ This file is the tortured result of growing pains since the beginning of
       void printDevs(StringBuilder*, uint8_t dev_num);
 
       /* Overrides from EventReceiver */
-      int8_t notify(ManuvrRunnable*);
-      int8_t callback_proc(ManuvrRunnable*);
+      int8_t notify(ManuvrMsg*);
+      int8_t callback_proc(ManuvrMsg*);
       #if defined(MANUVR_CONSOLE_SUPPORT)
         void procDirectDebugInstruction(StringBuilder*);
       #endif  //MANUVR_CONSOLE_SUPPORT
@@ -209,7 +209,7 @@ This file is the tortured result of growing pains since the beginning of
     private:
       LinkedList<I2CBusOp*>  work_queue;  // A work queue to keep transactions in order.
       LinkedList<I2CDevice*> dev_list;    // A list of active slaves on this bus.
-      ManuvrRunnable _periodic_i2c_debug;
+      ManuvrMsg _periodic_i2c_debug;
 
       int8_t ping_map[128];
       int8_t last_used_bus_addr;

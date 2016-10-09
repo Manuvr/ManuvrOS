@@ -464,7 +464,7 @@ void unsetPinIRQ(uint8_t pin) {
 }
 
 
-int8_t setPinEvent(uint8_t _pin, uint8_t condition, ManuvrRunnable* isr_event) {
+int8_t setPinEvent(uint8_t _pin, uint8_t condition, ManuvrMsg* isr_event) {
   uint16_t pin_idx   = (_pin % 16);
 
   if (0 == __ext_line_bindings[pin_idx].condition) {

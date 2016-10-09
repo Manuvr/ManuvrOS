@@ -54,7 +54,6 @@ For debuggability, the transport has a special mode for acting as a debug
 *
 * Static members and initializers should be located here.
 *******************************************************************************/
-uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
 
 
 /*******************************************************************************
@@ -72,7 +71,7 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
   * In a threaded environment, we use threads to read ports.
   */
   void* xport_read_handler(void* active_xport) {
-    if (NULL != active_xport) {
+    if (active_xport) {
       // Wait until boot has ocurred...
       while (!((ManuvrXport*)active_xport)->erAttached()) taskYIELD();
       while (1) {
@@ -81,7 +80,7 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
         }
       }
     }
-    return NULL;
+    return nullptr;
   }
 
 #elif defined(__MANUVR_LINUX)
@@ -89,7 +88,7 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
   * In a threaded environment, we use threads to read ports.
   */
   void* xport_read_handler(void* active_xport) {
-    if (NULL != active_xport) {
+    if (active_xport) {
       // Wait until boot has ocurred...
       while (!((ManuvrXport*)active_xport)->erAttached()) sleep_millis(50);
       while (1) {
@@ -98,7 +97,7 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
         }
       }
     }
-    return NULL;
+    return nullptr;
   }
 
 #endif
@@ -118,38 +117,23 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
 ManuvrXport::ManuvrXport() : EventReceiver(), BufferPipe() {
   // No need to burden a client class with this.
   setReceiverName("ManuvrXport");
+  _xport_mtu = PROTOCOL_MTU;
 
   // Transports are all terminal.
   _bp_set_flag(BPIPE_FLAG_IS_TERMINUS, true);
-
-  xport_id              = ManuvrXport::TRANSPORT_ID_POOL++;
-  _xport_flags          = 0;
-  _xport_mtu            = PROTOCOL_MTU;
-  _autoconnect_schedule = NULL;
-  bytes_sent            = 0;
-  bytes_received        = 0;
-  #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
-    _thread_id       = 0;
-  #endif
 }
 
 /**
 * Destructor.
 */
 ManuvrXport::~ManuvrXport() {
-  #if defined(__BUILD_HAS_THREADS)
-    if (_thread_id > 0) {
-      _thread_id = 0;
-      pthread_cancel(_thread_id);
-    }
-    listening(false);
-  #endif
+  listening(false);
 
   // Cleanup any schedules...
-  if (NULL != _autoconnect_schedule) {
+  if (nullptr != _autoconnect_schedule) {
     _autoconnect_schedule->enableSchedule(false);
-    __kernel->removeSchedule(_autoconnect_schedule);
-    _autoconnect_schedule = NULL;
+    platform.kernel()->removeSchedule(_autoconnect_schedule);
+    _autoconnect_schedule = nullptr;
     delete _autoconnect_schedule;
   }
 }
@@ -230,11 +214,11 @@ int8_t ManuvrXport::disconnect() {
 */
 void ManuvrXport::alwaysConnected(bool en) {
   _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_ALWAYS_CONNECTED) : (_xport_flags & ~(MANUVR_XPORT_FLAG_ALWAYS_CONNECTED));
-  if (NULL != _autoconnect_schedule) {
+  if (nullptr != _autoconnect_schedule) {
     // If we have a reconnection schedule (we should not), free it.
     _autoconnect_schedule->enableSchedule(false);
-    __kernel->removeSchedule(_autoconnect_schedule);
-    _autoconnect_schedule = NULL;
+    platform.kernel()->removeSchedule(_autoconnect_schedule);
+    _autoconnect_schedule = nullptr;
     delete _autoconnect_schedule;
   }
 }
@@ -251,25 +235,25 @@ void ManuvrXport::autoConnect(bool en, uint32_t _ac_period) {
     if (!alwaysConnected()) {
       // Autoconnection only makes sense if the transport is not always connected.
       _xport_flags = (en) ? (_xport_flags | MANUVR_XPORT_FLAG_AUTO_CONNECT) : (_xport_flags & ~(MANUVR_XPORT_FLAG_AUTO_CONNECT));
-      if (NULL == _autoconnect_schedule) {
+      if (nullptr == _autoconnect_schedule) {
         // If we don't already have a ref to a schedule for this purpose.
-        _autoconnect_schedule = new ManuvrRunnable(MANUVR_MSG_XPORT_CONNECT, (EventReceiver*) this);
+        _autoconnect_schedule = new ManuvrMsg(MANUVR_MSG_XPORT_CONNECT, (EventReceiver*) this);
         _autoconnect_schedule->isManaged(true);
         _autoconnect_schedule->specific_target = (EventReceiver*) this;
         _autoconnect_schedule->alterScheduleRecurrence(-1);
         _autoconnect_schedule->alterSchedulePeriod(_ac_period);
         _autoconnect_schedule->autoClear(false);
         _autoconnect_schedule->enableSchedule(!connected());
-        __kernel->addSchedule(_autoconnect_schedule);
+        platform.kernel()->addSchedule(_autoconnect_schedule);
       }
     }
   }
   else {
-    if (NULL != _autoconnect_schedule) {
+    if (_autoconnect_schedule) {
       _autoconnect_schedule->enableSchedule(false);
-      __kernel->removeSchedule(_autoconnect_schedule);
+      platform.kernel()->removeSchedule(_autoconnect_schedule);
       delete _autoconnect_schedule;
-      _autoconnect_schedule = NULL;
+      _autoconnect_schedule = nullptr;
     }
   }
 }
@@ -291,12 +275,12 @@ void ManuvrXport::connected(bool en) {
     // This will put it into the Event system so that auth and such can be handled cleanly.
     // Once the session sets up, it will broadcast itself as having done so.
 
-    if (nullptr != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(false);
+    if (_autoconnect_schedule) _autoconnect_schedule->enableSchedule(false);
   }
   else {
     // This is a disconnection event. We might want to cleanup all of our sessions
     // that are outstanding.
-    if (nullptr != _autoconnect_schedule) _autoconnect_schedule->enableSchedule(true);
+    if (_autoconnect_schedule) _autoconnect_schedule->enableSchedule(true);
   }
   #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
     if (0 == _thread_id) {
@@ -349,7 +333,6 @@ void ManuvrXport::printDebug(StringBuilder *temp) {
   BufferPipe::printDebug(temp);
   temp->concatf("--\n-- %s-oriented transport\n--\n", (streamOriented() ? "stream" : "message"));
   temp->concatf("-- _xport_flags    0x%08x\n", _xport_flags);
-  temp->concatf("-- xport_id        0x%04x\n", xport_id);
   temp->concatf("-- bytes sent      %u\n", bytes_sent);
   temp->concatf("-- bytes received  %u\n--\n", bytes_received);
   temp->concatf("-- initialized     %s\n", (initialized() ? "yes" : "no"));
@@ -358,7 +341,7 @@ void ManuvrXport::printDebug(StringBuilder *temp) {
 }
 
 
-int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
+int8_t ManuvrXport::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
@@ -393,18 +376,10 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
     case MANUVR_MSG_XPORT_ERROR:
     case MANUVR_MSG_XPORT_QUEUE_RDY:
     case MANUVR_MSG_XPORT_CB_QUEUE_RDY:
-      #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 3) {
-        local_log.concatf("TransportID %d received an event that was addressed to it, but is not yet handled.\n", xport_id);
-        active_event->printDebug(&local_log);
-      }
-      #endif
-      break;
-
     case MANUVR_MSG_XPORT_IDENTITY:
       #ifdef __MANUVR_DEBUG
       if (getVerbosity() > 3) {
-        local_log.concatf("TransportID %d received an event that was addressed to it, but is not yet handled.\n", xport_id);
+        local_log.concatf("Transport %s received an event that was addressed to it, but is not yet handled.\n", getReceiverName());
         active_event->printDebug(&local_log);
       }
       #endif
@@ -436,15 +411,15 @@ void ManuvrXport::procDirectDebugInstruction(StringBuilder *input) {
 
   switch (*(str)) {
     case 'C':
-      local_log.concatf("Transport 0x%04x: Connect...\n", xport_id);
+      local_log.concatf("%s: Connect...\n", getReceiverName());
       connect();
       break;
     case 'D':  // Force a state change with no underlying physical reason. Abuse test...
-      local_log.concatf("Transport 0x%04x: Disconnect...\n", xport_id);
+      local_log.concatf("%s: Disconnect...\n", getReceiverName());
       disconnect();
       break;
     case 'R':
-      local_log.concatf("Transport 0x%04x: Resetting...\n", xport_id);
+      local_log.concatf("%s: Resetting...\n", getReceiverName());
       reset();
       break;
     default:
@@ -452,7 +427,7 @@ void ManuvrXport::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
 
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
 }
 
 #endif  // MANUVR_CONSOLE_SUPPORT

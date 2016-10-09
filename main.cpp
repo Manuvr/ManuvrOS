@@ -190,7 +190,7 @@ int main(int argc, const char *argv[]) {
       kernel->subscribe(&mqtt);
 
       #if defined(RASPI) || defined(RASPI2)
-        ManuvrRunnable gpio_write(MANUVR_MSG_DIGITAL_WRITE);
+        ManuvrMsg gpio_write(MANUVR_MSG_DIGITAL_WRITE);
         gpio_write.isManaged(true);
         gpio_write.specific_target = &gpio;
         mqtt.subscribe("gw", &gpio_write);
@@ -199,7 +199,7 @@ int main(int argc, const char *argv[]) {
         mqtt.tapMessageType(MANUVR_MSG_DIGITAL_READ);
       #endif
 
-      ManuvrRunnable debug_msg(MANUVR_MSG_USER_DEBUG_INPUT);
+      ManuvrMsg debug_msg(MANUVR_MSG_USER_DEBUG_INPUT);
       debug_msg.isManaged(true);
       debug_msg.specific_target = (EventReceiver*) kernel;
 

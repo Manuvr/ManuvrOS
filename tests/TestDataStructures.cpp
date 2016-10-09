@@ -555,7 +555,7 @@ void printTypeSizes() {
   output.concat("\n-- Messaging components:\n");
   output.concatf("\tEventReceiver         %u\n", sizeof(EventReceiver));
   output.concatf("\tManuvrMsg             %u\n", sizeof(ManuvrMsg));
-  output.concatf("\t  ManuvrRunnable      %u\n", sizeof(ManuvrRunnable));
+  output.concatf("\t  ManuvrMsg      %u\n", sizeof(ManuvrMsg));
 
   output.concat("\n-- Transports:\n");
   output.concatf("\tManuvrXport           %u\n", sizeof(ManuvrXport));

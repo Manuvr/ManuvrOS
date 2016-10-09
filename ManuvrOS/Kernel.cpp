@@ -42,10 +42,10 @@ limitations under the License.
 *
 * Static members and initializers should be located here.
 *******************************************************************************/
-Kernel*     Kernel::INSTANCE = nullptr;
-BufferPipe* Kernel::_logger  = nullptr;  // The logger slot.
-PriorityQueue<ManuvrRunnable*> Kernel::isr_exec_queue;
-
+uint32_t    Kernel::lagged_schedules = 0;
+Kernel*     Kernel::INSTANCE         = nullptr;
+BufferPipe* Kernel::_logger          = nullptr;  // The logger slot.
+PriorityQueue<ManuvrMsg*> Kernel::isr_exec_queue;
 
 /*
 * These are the hard-coded message types that the program knows about.
@@ -115,7 +115,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_XPORT_QUEUE_RDY,    0x0000,  "XPORT_Q"            , ManuvrMsg::MSG_ARGS_NONE }, //
   {  MANUVR_MSG_XPORT_CB_QUEUE_RDY, 0x0000,  "XPORT_CB_Q"         , ManuvrMsg::MSG_ARGS_NONE }, //
 
-  #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
+  #if defined (MANUVR_OPENINTERCONNECT)
   {  MANUVR_MSG_OIC_READY            , 0x0000,  "OIC_READY"        , ManuvrMsg::MSG_ARGS_NONE },  //
   {  MANUVR_MSG_OIC_REG_RESOURCES    , 0x0000,  "OIC_REG_RESRCS"   , ManuvrMsg::MSG_ARGS_NONE },  //
   {  MANUVR_MSG_OIC_DISCOVERY        , 0x0000,  "OIC_DISCOVERY"    , ManuvrMsg::MSG_ARGS_NONE },  //
@@ -123,17 +123,12 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_OIC_DISCOVER_PING    , 0x0000,  "OIC_PING"         , ManuvrMsg::MSG_ARGS_NONE },  //
   #endif
 
-  #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
+  #if defined (__BUILD_HAS_THREADS)
     // These are messages that are only present under some sort of threading model. They are meant
     //   to faciliate task hand-off, IPC, and concurrency protection.
     {  MANUVR_MSG_CREATED_THREAD_ID,    0x0000,              "CREATED_THREAD_ID",     ManuvrMsg::MSG_ARGS_NONE },
     {  MANUVR_MSG_DESTROYED_THREAD_ID,  0x0000,              "DESTROYED_THREAD_ID",   ManuvrMsg::MSG_ARGS_NONE },
     {  MANUVR_MSG_UNBLOCK_THREAD,       0x0000,              "UNBLOCK_THREAD",        ManuvrMsg::MSG_ARGS_NONE },
-    #if defined (__MANUVR_FREERTOS)
-    #endif
-
-    #if defined (__MANUVR_LINUX)
-    #endif
   #endif
 
   /*
@@ -141,17 +136,10 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
     This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
     compile time.
   */
-  #if defined (__ENABLE_MSG_SEMANTICS)
-  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_NONE, "Command\0\0" }, //
-  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_NONE, "Body\0\0" }, // Classes emit this to get their log data saved/sent.
-  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_NONE, "Power Mode\0\0" }, //
-  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_NONE, "Level\0\0"      },   // This tells client classes to adjust their log verbosity.
-  #else
-  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_NONE, nullptr }, //
-  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_NONE, nullptr }, // Classes emit this to get their log data saved/sent.
-  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_NONE, nullptr }, //
-  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_NONE, nullptr },   // This tells client classes to adjust their log verbosity.
-  #endif
+  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_NONE }, // Classes emit this to get their log data saved/sent.
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_NONE },   // This tells client classes to adjust their log verbosity.
 };
 
 
@@ -184,19 +172,9 @@ void Kernel::nextTick(BufferPipe* p) {
 */
 Kernel::Kernel() : EventReceiver() {
   setReceiverName("Kernel");
-  INSTANCE             = this;  // For singleton reference. TODO: Will not parallelize.
-  __kernel             = this;  // We extend EventReceiver. So we populate this.
-
+  INSTANCE             = this;  // For singleton reference.
   current_event        = nullptr;
-  max_queue_depth      = 0;
-  total_events         = 0;
-  total_events_dead    = 0;
-  micros_occupied      = 0;
   max_events_per_loop  = 2;
-  lagged_schedules     = 0;
-  _ms_elapsed          = 0;
-
-  _skips_observed      = 0;
   max_idle_count       = 100;
   consequtive_idles    = max_idle_count;
 
@@ -233,11 +211,6 @@ Kernel::~Kernel() {
 /****************************************************************************************************
 * Logging members...                                                                                *
 ****************************************************************************************************/
-
-#if defined (__MANUVR_FREERTOS)
-  uint32_t Kernel::kernel_pid = 0;
-#endif
-
 /*
 * Logger pass-through functions. Please mind the variadics...
 */
@@ -403,10 +376,10 @@ int8_t Kernel::registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFx
 */
 int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* ori) {
   // We are creating a new Event. Try to snatch a prealloc'd one and fall back to malloc if needed.
-  ManuvrRunnable* nu = INSTANCE->preallocated.dequeue();
+  ManuvrMsg* nu = INSTANCE->preallocated.dequeue();
   if (nu == nullptr) {
     INSTANCE->prealloc_starved++;
-    nu = new ManuvrRunnable(code, ori);
+    nu = new ManuvrMsg(code, ori);
   }
   else {
     nu->repurpose(code);
@@ -425,12 +398,12 @@ int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* ori) {
 * @param   event  The event to be inserted into the idle queue.
 * @return  -1 on failure, and 0 on success.
 */
-int8_t Kernel::staticRaiseEvent(ManuvrRunnable* active_runnable) {
+int8_t Kernel::staticRaiseEvent(ManuvrMsg* active_runnable) {
   int8_t return_value = INSTANCE->validate_insertion(active_runnable);
   if (0 == return_value) {
     INSTANCE->update_maximum_queue_depth();   // Check the queue depth
-    #if defined (__MANUVR_FREERTOS)
-      //if (kernel_pid) unblockThread(kernel_pid);
+    #if defined (__BUILD_HAS_THREADS)
+      if (INSTANCE->_thread_id) wakeThread(&INSTANCE->_thread_id);
     #endif
     return return_value;
   }
@@ -482,7 +455,7 @@ int8_t Kernel::staticRaiseEvent(ManuvrRunnable* active_runnable) {
 * @param   event  The event to be removed from the idle queue.
 * @return  true if the given event was aborted, false otherwise.
 */
-bool Kernel::abortEvent(ManuvrRunnable* event) {
+bool Kernel::abortEvent(ManuvrMsg* event) {
   if (!INSTANCE->exec_queue.remove(event)) {
     // Didn't find it? Check  the isr_queue...
     if (!INSTANCE->isr_exec_queue.remove(event)) {
@@ -497,13 +470,13 @@ bool Kernel::abortEvent(ManuvrRunnable* event) {
 //       That way, we could check for it here, and have the (probable) possibility of not incurring
 //       the cost for merging these two queues if we don't have to.
 //             ---J. Ian Lindsay   Fri Jul 03 16:54:14 MST 2015
-int8_t Kernel::isrRaiseEvent(ManuvrRunnable* event) {
+int8_t Kernel::isrRaiseEvent(ManuvrMsg* event) {
   int return_value = -1;
   maskableInterrupts(false);
   return_value = isr_exec_queue.insertIfAbsent(event, event->priority);
   maskableInterrupts(true);
-  #if defined (__MANUVR_FREERTOS)
-    //if (kernel_pid) unblockThread(kernel_pid);
+  #if defined (__BUILD_HAS_THREADS)
+    if (INSTANCE->_thread_id) wakeThread(&INSTANCE->_thread_id);
   #endif
   return return_value;
 }
@@ -520,12 +493,12 @@ int8_t Kernel::isrRaiseEvent(ManuvrRunnable* event) {
 * @param  code  The desired identity code of the event.
 * @return A pointer to the prepared event. Will not return NULL unless we are out of memory.
 */
-ManuvrRunnable* Kernel::returnEvent(uint16_t code) {
+ManuvrMsg* Kernel::returnEvent(uint16_t code) {
   // We are creating a new Event. Try to snatch a prealloc'd one and fall back to malloc if needed.
-  ManuvrRunnable* return_value = INSTANCE->preallocated.dequeue();
+  ManuvrMsg* return_value = INSTANCE->preallocated.dequeue();
   if (return_value == nullptr) {
     INSTANCE->prealloc_starved++;
-    return_value = new ManuvrRunnable(code, (EventReceiver*) INSTANCE);
+    return_value = new ManuvrMsg(code, (EventReceiver*) INSTANCE);
   }
   else {
     return_value->repurpose(code, (EventReceiver*) INSTANCE);
@@ -543,7 +516,7 @@ ManuvrRunnable* Kernel::returnEvent(uint16_t code) {
 * @param event The inbound event that we need to evaluate.
 * @return 0 if the event is good-to-go. Otherwise, an appropriate failure code.
 */
-int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
+int8_t Kernel::validate_insertion(ManuvrMsg* event) {
   if (nullptr == event) return -1;                                // No NULL events.
   if (MANUVR_MSG_UNDEFINED == event->eventCode()) {
     return -2;  // No undefined events.
@@ -568,13 +541,13 @@ int8_t Kernel::validate_insertion(ManuvrRunnable* event) {
 *
 * @param active_runnable The event that has reached the end of its life-cycle.
 */
-void Kernel::reclaim_event(ManuvrRunnable* active_runnable) {
+void Kernel::reclaim_event(ManuvrMsg* active_runnable) {
   if (nullptr == active_runnable) {
     return;
   }
 
   if (schedules.contains(active_runnable)) {
-    // This Runnable is still in the scheduler queue. Do not reclaim it.
+    // This Msg is still in the scheduler queue. Do not reclaim it.
     return;
   }
 
@@ -616,7 +589,7 @@ void Kernel::reclaim_event(ManuvrRunnable* active_runnable) {
 *******************************************************************************/
 
 // This is the splice into v2's style of event handling (callaheads).
-int8_t Kernel::procCallAheads(ManuvrRunnable *active_runnable) {
+int8_t Kernel::procCallAheads(ManuvrMsg* active_runnable) {
   int8_t return_value = 0;
   PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[active_runnable->eventCode()];
   if (nullptr != ca_queue) {
@@ -632,10 +605,10 @@ int8_t Kernel::procCallAheads(ManuvrRunnable *active_runnable) {
 }
 
 // This is the splice into v2's style of event handling (callbacks).
-int8_t Kernel::procCallBacks(ManuvrRunnable *active_runnable) {
+int8_t Kernel::procCallBacks(ManuvrMsg* active_runnable) {
   int8_t return_value = 0;
   PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[active_runnable->eventCode()];
-  if (nullptr != cb_queue) {
+  if (cb_queue) {
     listenerFxnPtr current_fxn;
     for (int i = 0; i < cb_queue->size(); i++) {
       current_fxn = cb_queue->recycle();  // TODO: This is ugly for many reasons.
@@ -671,7 +644,7 @@ int8_t Kernel::procIdleFlags() {
 
   serviceSchedules();
 
-  ManuvrRunnable *active_runnable = nullptr;  // Our short-term focus.
+  ManuvrMsg *active_runnable = nullptr;  // Our short-term focus.
   uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
 
   globalIRQDisable();
@@ -848,7 +821,7 @@ int8_t Kernel::procIdleFlags() {
 
   uint32_t runtime_this_loop = wrap_accounted_delta(profiler_mark, profiler_mark_3);
   if (return_value > 0) {
-    // We ran at-least one Runnable.
+    // We ran at-least one Msg.
     micros_occupied += runtime_this_loop;
     consequtive_idles = max_idle_count;  // Reset the idle loop down-counter.
     if (max_events_p_loop < (uint8_t) return_value) {
@@ -866,7 +839,7 @@ int8_t Kernel::procIdleFlags() {
       case 0:
         // If we have reached our threshold for idleness, we invoke the plaform
         //   idle hook. Note that this will be invoked on EVERY LOOP until a new
-        //   Runnable causes action.
+        //   Msg causes action.
         platform.idleHook();
         break;
       case 1:
@@ -980,7 +953,7 @@ void Kernel::printProfiler(StringBuilder* output) {
 
   #if defined(__MANUVR_EVENT_PROFILER)
     if (schedules.size() > 0) {
-      ManuvrRunnable *current;
+      ManuvrMsg *current;
       output->concat("\n\t PID         Execd      total us   average    worst      best       last\n\t -----------------------------------------------------------------------------\n");
 
       for (int i = 0; i < schedules.size(); i++) {
@@ -1074,7 +1047,7 @@ int8_t Kernel::attached() {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t Kernel::callback_proc(ManuvrRunnable *event) {
+int8_t Kernel::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -1112,7 +1085,7 @@ int8_t Kernel::callback_proc(ManuvrRunnable *event) {
 
 
 
-int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
+int8_t Kernel::notify(ManuvrMsg* active_runnable) {
   int8_t return_value = 0;
 
   switch (active_runnable->eventCode()) {
@@ -1205,7 +1178,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
 
 
 /****************************************************************************************************
-* These are functions that help us manage scheduled Runnables...                                    *
+* These are functions that help us manage scheduled Msgs...                                    *
 ****************************************************************************************************/
 
 /**
@@ -1213,7 +1186,7 @@ int8_t Kernel::notify(ManuvrRunnable *active_runnable) {
 */
 unsigned int Kernel::countActiveSchedules() {
   unsigned int return_value = 0;
-  ManuvrRunnable *current;
+  ManuvrMsg *current;
   for (int i = 0; i < schedules.size(); i++) {
     current = schedules.get(i);
     if (current->scheduleEnabled()) {
@@ -1229,21 +1202,21 @@ unsigned int Kernel::countActiveSchedules() {
 *  Call this function to create a new schedule with the given period, a given number of repititions, and with a given function call.
 *
 *  Will automatically set the schedule active, provided the input conditions are met.
-*  Returns the newly-created Runnable on success, or 0 on failure.
+*  Returns the newly-created Msg on success, or 0 on failure.
 */
-ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FxnPointer sch_callback) {
-  ManuvrRunnable* return_value = nullptr;
+ManuvrMsg* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, FxnPointer sch_callback) {
+  ManuvrMsg* return_value = nullptr;
   if (sch_period > 1) {
     if (sch_callback) {
       if (ac) {
         // If the schedule is supposed to auto-clear, we will pull it from our
         //   preallocation pool, since we know that it will eventually expire.
         // TODO: Make it happen.
-        return_value = new ManuvrRunnable(recurrence, sch_period, ac, sch_callback);
+        return_value = new ManuvrMsg(recurrence, sch_period, ac, sch_callback);
       }
       else {
         // Without that assurance, we heap it. It may never be returned.
-        return_value = new ManuvrRunnable(recurrence, sch_period, ac, sch_callback);
+        return_value = new ManuvrMsg(recurrence, sch_period, ac, sch_callback);
       }
 
       if (nullptr != return_value) {  // Did we actually malloc() successfully?
@@ -1262,10 +1235,10 @@ ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, 
 *  Will automatically set the schedule active, provided the input conditions are met.
 *  Returns the newly-created PID on success, or 0 on failure.
 */
-ManuvrRunnable* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, EventReceiver* ori) {
-  ManuvrRunnable* return_value = nullptr;
+ManuvrMsg* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, EventReceiver* ori) {
+  ManuvrMsg* return_value = nullptr;
   if (sch_period > 1) {
-    return_value = new ManuvrRunnable(recurrence, sch_period, ac, ori);
+    return_value = new ManuvrMsg(recurrence, sch_period, ac, ori);
     if (return_value) {  // Did we actually malloc() successfully?
       return_value->isScheduled(true);
       schedules.insert(return_value);
@@ -1310,7 +1283,7 @@ void Kernel::advanceScheduler(unsigned int ms_elapsed) {
 * @param  A pointer to the schedule item to be removed.
 * @return true on success and false on failure.
 */
-bool Kernel::removeSchedule(ManuvrRunnable *obj) {
+bool Kernel::removeSchedule(ManuvrMsg* obj) {
   if (obj) {
     if (obj != current_event) {
       obj->isScheduled(false);
@@ -1325,7 +1298,7 @@ bool Kernel::removeSchedule(ManuvrRunnable *obj) {
   return false;
 }
 
-bool Kernel::addSchedule(ManuvrRunnable *obj) {
+bool Kernel::addSchedule(ManuvrMsg* obj) {
   if (obj) {
     if (!schedules.contains(obj)) {
       obj->isScheduled(true);
@@ -1336,7 +1309,6 @@ bool Kernel::addSchedule(ManuvrRunnable *obj) {
   return false;
 }
 
-uint32_t Kernel::lagged_schedules = 0;
 
 /**
 * This is the function that is called from the main loop to offload big
@@ -1351,7 +1323,7 @@ int Kernel::serviceSchedules() {
   _ms_elapsed = 0;
 
   int x = schedules.size();
-  ManuvrRunnable *current;
+  ManuvrMsg *current;
 
   for (int i = 0; i < x; i++) {
     current = schedules.recycle();
@@ -1469,7 +1441,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
 
     case 'y':    // Power mode.
       {
-        ManuvrRunnable* event = returnEvent(MANUVR_MSG_SYS_POWER_MODE);
+        ManuvrMsg* event = returnEvent(MANUVR_MSG_SYS_POWER_MODE);
         event->addArg((uint8_t) temp_int);
         EventReceiver::raiseEvent(event);
         local_log.concatf("Power mode is now %d.\n", temp_int);

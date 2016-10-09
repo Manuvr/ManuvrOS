@@ -34,6 +34,7 @@ limitations under the License.
 
 class BufferPipe;
 class Argument;
+class ManuvrMsg;
 
 /*******************************************************************************
 * Function-pointer definitions.                                                *
@@ -48,13 +49,15 @@ typedef void* (*ThreadFxnPtr)(void*);
 /* Takes an Argument list and returns a code. */
 typedef int (*ArgumentFxnPtr)(Argument*);
 
+typedef int (*listenerFxnPtr)(ManuvrMsg*);
+
 /*
 * Used in Async BufferPipes to move data in idle-time.
 * if direction is negative, buffer will flush toward counterparty.
 * if direction is positive, buffer will flush toward application.
 * if direction is zero, buffer will purge with no transfer.
 */
-typedef void  (*PipeIOCallback)(BufferPipe*, int direction);
+typedef void (*PipeIOCallback)(BufferPipe*, int direction);
 
 /**
 * This is the structure with which we define types. These types are used by a variety of
@@ -115,7 +118,7 @@ typedef struct typecode_def_t {
 
 #define SYS_EVENTRECEIVER_FM    0xE0 // A pointer to an EventReceiver.
 #define SYS_MANUVR_XPORT_FM     0xE1 // A pointer to a ManuvrXport.
-#define SYS_RUNNABLE_PTR_FM     0xE2 // A pointer to a ManuvrRunnable.
+#define SYS_MANUVRMSG_FM        0xE2 // A pointer to a ManuvrMsg.
 
 #define SYS_FXN_PTR_FM          0xEC // FxnPointer
 #define SYS_THREAD_FXN_PTR_FM   0xED // ThreadFxnPtr

@@ -41,6 +41,18 @@ Apart from including the user-suppied configuration header, there
   #define LOG_INFO    6    /* informational */
   #define LOG_DEBUG   7    /* debug-level messages */
 
+
+  #if defined(MANUVR_CONSOLE_SUPPORT)
+    #if defined(__MANUVR_DEBUG)
+      #define DEFAULT_CLASS_VERBOSITY    6
+    #else
+      #define DEFAULT_CLASS_VERBOSITY    4
+    #endif
+  #else
+    #define DEFAULT_CLASS_VERBOSITY      0
+  #endif
+
+
   /*
   * These are defines for const char* that are commonly used.
   * We are collecting them here so that future additions to the
@@ -63,19 +75,25 @@ Apart from including the user-suppied configuration header, there
 
 
 // TODO: Function defs do not belong here. This area under re-org.
+#if defined(__BUILD_HAS_BASE64)
 int wrapped_base64_decode(uint8_t* dst, size_t dlen, size_t* olen, const uint8_t* src, size_t slen);
+#endif
 // Everytime you macro a function, baby Jesus cries.
 inline float    strict_max(float    a, float    b) {  return (a > b) ? a : b; };
 inline uint32_t strict_max(uint32_t a, uint32_t b) {  return (a > b) ? a : b; };
 inline uint16_t strict_max(uint16_t a, uint16_t b) {  return (a > b) ? a : b; };
+inline uint8_t  strict_max(uint8_t  a, uint8_t  b) {  return (a > b) ? a : b; };
 inline int32_t  strict_max(int32_t  a, int32_t  b) {  return (a > b) ? a : b; };
 inline int16_t  strict_max(int16_t  a, int16_t  b) {  return (a > b) ? a : b; };
+inline int8_t   strict_max(int8_t   a, int8_t   b) {  return (a > b) ? a : b; };
 
 inline float    strict_min(float    a, float    b) {  return (a < b) ? a : b; };
 inline uint32_t strict_min(uint32_t a, uint32_t b) {  return (a < b) ? a : b; };
 inline uint16_t strict_min(uint16_t a, uint16_t b) {  return (a < b) ? a : b; };
+inline uint8_t  strict_min(uint8_t  a, uint8_t  b) {  return (a < b) ? a : b; };
 inline int32_t  strict_min(int32_t  a, int32_t  b) {  return (a < b) ? a : b; };
 inline int16_t  strict_min(int16_t  a, int16_t  b) {  return (a < b) ? a : b; };
+inline int8_t   strict_min(int8_t   a, int8_t   b) {  return (a < b) ? a : b; };
 
 inline uint32_t wrap_accounted_delta(uint32_t a, uint32_t b) {
   return (a > b) ? (a - b) : (b - a);

@@ -26,6 +26,8 @@ This file is meant to contain a set of common functions that are typically platf
     * Access a true RNG (if it exists)
 */
 
+
+#include <CommonConstants.h>
 #include <Platform/Platform.h>
 
 #if defined(MANUVR_STORAGE)
@@ -268,7 +270,7 @@ void unsetPinIRQ(uint8_t pin) {
 }
 
 
-int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrRunnable* isr_event) {
+int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrMsg* isr_event) {
   return 0;
 }
 

@@ -23,10 +23,19 @@ XenoMessage is the class that unifies our counterparty's message format
 */
 
 #include "XenoMessage.h"
-#include <Kernel.h>
 #include <Platform/Platform.h>
 
 
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
 
 /**
 * @param   uint8_t The integer code that represents message state.
@@ -50,7 +59,6 @@ const char* XenoMessage::getMessageStateString(uint8_t _s_code) {
 
 
 
-
 /****************************************************************************************************
 *   ___ _              ___      _ _              _      _
 *  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
@@ -65,7 +73,7 @@ XenoMessage::XenoMessage() {
 }
 
 
-XenoMessage::XenoMessage(ManuvrRunnable* existing_event) {
+XenoMessage::XenoMessage(ManuvrMsg* existing_event) {
   wipe();
   // Should maybe set a flag in the event to indicate that we are now responsible
   //   for memory upkeep? Don't want it to get jerked out from under us and cause a crash.
@@ -93,10 +101,10 @@ void XenoMessage::wipe() {
 *   calling the constructor with an Event argument.
 * TODO: For safety's sake, the Event is not retained. This has caused us some grief. Re-evaluate...
 *
-* @param   ManuvrRunnable* The Event that is to be communicated.
+* @param   ManuvrMsg* The Event that is to be communicated.
 * @param   uint16_t          An explicitly-provided unique_id so that a dialog can be perpetuated.
 */
-void XenoMessage::provideEvent(ManuvrRunnable *existing_event) {
+void XenoMessage::provideEvent(ManuvrMsg* existing_event) {
   event = existing_event;  // TODO: Has memory implications...
   proc_state = XENO_MSG_PROC_STATE_AWAITING_SEND;  // Implies we are sending.
 }
@@ -114,6 +122,6 @@ void XenoMessage::printDebug(StringBuilder *output) {
   output->concatf("\t bytes_total     %d\n", bytes_total);
   output->concatf("\t bytes_received  %d\n", bytes_received);
   if (NULL != event) {
-    output->concatf("\t Runnable type   %s\n", event->getMsgTypeString());
+    output->concatf("\t Msg type   %s\n", event->getMsgTypeString());
   }
 }

@@ -136,7 +136,7 @@ int8_t I2CBusOp::abort(XferFault er) {
 */
 void I2CBusOp::markComplete() {
 	xfer_state = XferState::COMPLETE;
-	ManuvrRunnable* q_rdy = Kernel::returnEvent(MANUVR_MSG_I2C_QUEUE_READY);
+	ManuvrMsg* q_rdy = Kernel::returnEvent(MANUVR_MSG_I2C_QUEUE_READY);
 	q_rdy->specific_target = device;
   Kernel::isrRaiseEvent(q_rdy);   // Raise an event
 }

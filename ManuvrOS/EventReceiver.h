@@ -68,7 +68,7 @@ Lifecycle:
         *   zero for no action taken, and non-zero if the event needs to be re-evaluated
         *   before being passed on to the next subscriber.
         */
-        virtual int8_t notify(ManuvrRunnable*);
+        virtual int8_t notify(ManuvrMsg*);
 
         /*
         * These have no reason to be here other than to enforce some discipline while
@@ -83,10 +83,10 @@ Lifecycle:
         #endif
 
         /* These are intended to be overridden. */
-        virtual int8_t callback_proc(ManuvrRunnable *);
+        virtual int8_t callback_proc(ManuvrMsg*);
 
         /* Raises an event, marking us as the return callback. */
-        int8_t raiseEvent(ManuvrRunnable* event);
+        int8_t raiseEvent(ManuvrMsg* event);
 
         inline const char* getReceiverName() {   return _receiver_name;  }
 
@@ -134,7 +134,12 @@ Lifecycle:
 
 
       protected:
-        Kernel* __kernel;
+        #if defined(__BUILD_HAS_THREADS)
+          // In threaded environments, we allow resources to enable their own threading
+          //   if needed.
+          unsigned long _thread_id  = 0;
+        #endif
+
         StringBuilder local_log;
 
         EventReceiver();
@@ -157,17 +162,11 @@ Lifecycle:
 
 
       private:
-        uint8_t _class_state;
-        uint8_t _extnd_state;  // This is here for use by the extending class.
-        const char* _receiver_name;
+        uint8_t     _class_state   = (DEFAULT_CLASS_VERBOSITY & MANUVR_ER_FLAG_VERBOSITY_MASK);
+        uint8_t     _extnd_state   = 0;  // This is here for use by the extending class.
+        const char* _receiver_name = "EventReceiver";
 
-        #if defined(__BUILD_HAS_THREADS)
-          // In threaded environments, we allow resources to enable their own threading
-          //   if needed.
-          int _thread_id  = -1;
-        #endif
-
-        int8_t setVerbosity(ManuvrRunnable*);  // Private because it should be set with an Event.
+        int8_t setVerbosity(ManuvrMsg*);  // Private because it should be set with an Event.
     };
   }
 

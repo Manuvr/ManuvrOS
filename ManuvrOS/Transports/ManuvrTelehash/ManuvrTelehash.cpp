@@ -67,7 +67,7 @@ TODO: It does not do this. Need to finish addressing issues with the build
         else {
           ManuvrTelehash* nu_connection = new ManuvrTelehash(listening_inst, cli_sock, &cli_addr);
 
-          ManuvrRunnable* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
+          ManuvrMsg* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
           event->addArg((EventReceiver*) nu_connection);
           Kernel::staticRaiseEvent(event);
 
@@ -175,7 +175,6 @@ void ManuvrTelehash::__class_initializer() {
   read_abort_event.isManaged(true);
   read_abort_event.specific_target = (EventReceiver*) this;
   read_abort_event.priority        = 5;
-  read_abort_event.addArg(xport_id);  // Add our assigned transport ID to our pre-baked argument.
 
   /*
   TODO: Wrap this up into the efficiency blog...
@@ -308,7 +307,7 @@ int8_t ManuvrTelehash::read_port() {
   if (connected()) {
     unsigned char *buf = (unsigned char *) alloca(256);
     int n;
-    ManuvrRunnable *event    = NULL;
+    ManuvrMsg *event    = NULL;
     StringBuilder  *nu_data  = NULL;
 
     while (connected()) {
@@ -430,7 +429,7 @@ int8_t ManuvrTelehash::attached() {   // ?? TODO ??
   read_abort_event.autoClear(false);
   read_abort_event.enableSchedule(false);
   read_abort_event.enableSchedule(false);
-  __kernel->addSchedule(&read_abort_event);
+  platform.kernel()->addSchedule(&read_abort_event);
 
   reset();
   return 1;
@@ -467,7 +466,7 @@ void ManuvrTelehash::printDebug(StringBuilder *temp) {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t ManuvrTelehash::callback_proc(ManuvrRunnable *event) {
+int8_t ManuvrTelehash::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -486,7 +485,7 @@ int8_t ManuvrTelehash::callback_proc(ManuvrRunnable *event) {
 
 
 
-int8_t ManuvrTelehash::notify(ManuvrRunnable *active_event) {
+int8_t ManuvrTelehash::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {

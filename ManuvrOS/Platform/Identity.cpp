@@ -160,7 +160,7 @@ void Identity::staticToString(Identity* ident, StringBuilder* output) {
     output->concat("++ REVOKED\n");
   }
 
-  const char* o_str = "someone else.\n";
+  const char* o_str = "someone else.";
   if (ident->_ident_flag(MANUVR_IDENT_FLAG_OUR_OWN)) {
     o_str = "us.";
   }

@@ -26,9 +26,11 @@ XenoMessage is the class that unifies our counterparty's message format
 #ifndef __XENOMESSAGE_H__
 #define __XENOMESSAGE_H__
 
-#include <Kernel.h>
+#include <CommonConstants.h>
 #include <EnumeratedTypeCodes.h>
-#include <Transports/ManuvrXport.h>
+#include <ManuvrMsg/ManuvrMsg.h>
+
+class XenoSession;
 
 #include <map>
 
@@ -88,20 +90,20 @@ enum TypeFormats {
 
 
 /**
-* This class is a special extension of ManuvrRunnable that is intended for communication with
-*   outside devices. This is the abstraction between our internal Runnables and the messaging
+* This class is a special extension of ManuvrMsg that is intended for communication with
+*   outside devices. This is the abstraction between our internal Msgs and the messaging
 *   system of our counterparty.
 */
 class XenoMessage {
   public:
     XenoMessage();                  // Typical use: building an inbound XemoMessage.
-    XenoMessage(ManuvrRunnable*);   // Create a new XenoMessage with the given event as source data.
+    XenoMessage(ManuvrMsg*);   // Create a new XenoMessage with the given event as source data.
 
     virtual ~XenoMessage() {};
 
     virtual void wipe();            // Call this to put this object into a fresh state (avoid a free/malloc).
     virtual void printDebug(StringBuilder*);
-    virtual void provideEvent(ManuvrRunnable*);
+    virtual void provideEvent(ManuvrMsg*);
 
     // Mandatory overrides
     virtual int serialize(StringBuilder*) =0;       // Returns the number of bytes resulting.
@@ -124,8 +126,8 @@ class XenoMessage {
   protected:
     uint32_t  bytes_received;  // How many bytes of this command have we received? Meaningless for the sender.
     uint32_t  bytes_total;     // How many bytes does this message occupy on the wire?
-    ManuvrRunnable* event;     // Associates this XenoMessage to an event.
-    ManuvrRunnable  _timeout;    // Occasionally, we must let a defunct message die on the wire...
+    ManuvrMsg* event;     // Associates this XenoMessage to an event.
+    ManuvrMsg  _timeout;    // Occasionally, we must let a defunct message die on the wire...
     uint8_t         proc_state;  // Where are we in the flow of this message? See XENO_MSG_PROC_STATES
 
 

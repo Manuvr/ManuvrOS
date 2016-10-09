@@ -444,7 +444,7 @@ void AudioRouter::printDebug(StringBuilder *output) {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t AudioRouter::callback_proc(ManuvrRunnable *event) {
+int8_t AudioRouter::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -459,7 +459,7 @@ int8_t AudioRouter::callback_proc(ManuvrRunnable *event) {
 }
 
 
-int8_t AudioRouter::notify(ManuvrRunnable *active_event) {
+int8_t AudioRouter::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
   uint8_t temp_uint8_0;
   uint8_t temp_uint8_1;
@@ -548,15 +548,17 @@ int8_t AudioRouter::notify(ManuvrRunnable *active_event) {
 
     case VIAM_SONUS_MSG_GROUP_CHANNELS:
     case VIAM_SONUS_MSG_UNGROUP_CHANNELS:
-      local_log.concat("Was passed an event that we should be handling, but are not yet:\n");
-      active_event->printDebug(&local_log);
+      #ifdef __MANUVR_DEBUG
+        local_log.concat("Was passed an event that we should be handling, but are not yet:\n");
+        active_event->printDebug(&local_log);
+      #endif
       break;
 
     default:
       return_value += EventReceiver::notify(active_event);
       break;
   }
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
   return return_value;
 }
 
@@ -568,7 +570,7 @@ void AudioRouter::procDirectDebugInstruction(StringBuilder *input) {
 
   char c = *(str);
   StringBuilder parse_mule;
-  ManuvrRunnable* event;
+  ManuvrMsg* event;
 
   switch (c) {
     // AudioRouter debugging cases....
@@ -583,7 +585,7 @@ void AudioRouter::procDirectDebugInstruction(StringBuilder *input) {
       parse_mule.split(" ");
       parse_mule.drop_position(0);
 
-      event = new ManuvrRunnable((c == 'r') ? VIAM_SONUS_MSG_ROUTE : VIAM_SONUS_MSG_UNROUTE);
+      event = new ManuvrMsg((c == 'r') ? VIAM_SONUS_MSG_ROUTE : VIAM_SONUS_MSG_UNROUTE);
       switch (parse_mule.count()) {
         case 2:
           event->addArg((uint8_t) parse_mule.position_as_int(0));
@@ -600,7 +602,7 @@ void AudioRouter::procDirectDebugInstruction(StringBuilder *input) {
       parse_mule.concat(str);
       parse_mule.split(" ");
       parse_mule.drop_position(0);
-      event = new ManuvrRunnable(VIAM_SONUS_MSG_OUTPUT_CHAN_VOL);
+      event = new ManuvrMsg(VIAM_SONUS_MSG_OUTPUT_CHAN_VOL);
       switch (parse_mule.count()) {
         case 2:
           event->addArg((uint8_t) parse_mule.position_as_int(0));
@@ -628,6 +630,6 @@ void AudioRouter::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
 
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
 }
 #endif  //MANUVR_CONSOLE_SUPPORT

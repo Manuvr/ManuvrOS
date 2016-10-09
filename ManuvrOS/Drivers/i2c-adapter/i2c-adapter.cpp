@@ -68,6 +68,7 @@ This file is the tortured result of growing pains since the beginning of
   // TODO: Migrate case-off code to platform directory.
 #endif
 
+#include <Platform/Platform.h>
 
 extern "C" {
   volatile I2CAdapter* i2c = NULL;
@@ -351,7 +352,7 @@ int8_t I2CAdapter::attached() {
   if (busOnline()) {
     advance_work_queue();
   }
-  __kernel->addSchedule(&_periodic_i2c_debug);
+  platform.kernel()->addSchedule(&_periodic_i2c_debug);
   return 1;
 }
 
@@ -370,7 +371,7 @@ int8_t I2CAdapter::attached() {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t I2CAdapter::callback_proc(ManuvrRunnable *event) {
+int8_t I2CAdapter::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -386,7 +387,7 @@ int8_t I2CAdapter::callback_proc(ManuvrRunnable *event) {
 
 
 
-int8_t I2CAdapter::notify(ManuvrRunnable *active_event) {
+int8_t I2CAdapter::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
@@ -952,6 +953,6 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
 
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
 }
 #endif  //MANUVR_CONSOLE_SUPPORT

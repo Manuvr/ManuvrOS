@@ -166,7 +166,7 @@ class Storage;
 //         define 60 pins this way. Can't add to a list of const's, so it can't
 //         be both run-time definable AND const.
 typedef struct __platform_gpio_def {
-  ManuvrRunnable* event;
+  ManuvrMsg* event;
   FxnPointer fxn;
   uint8_t         pin;
   uint8_t         flags;
@@ -379,7 +379,7 @@ volatile bool provide_random_int(uint32_t);  // Provides a new random to the poo
 */
 int8_t gpioDefine(uint8_t pin, int mode);
 void   unsetPinIRQ(uint8_t pin);
-int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrRunnable* isr_event);
+int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrMsg* isr_event);
 int8_t setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn);
 int8_t setPin(uint8_t pin, bool high);
 int8_t readPin(uint8_t pin);

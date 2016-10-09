@@ -30,8 +30,8 @@ Platforms that require it should be able to extend this driver for specific
 */
 
 
-#include "ManuvrSerial.h"
 #include <CommonConstants.h>
+#include "ManuvrSerial.h"
 
 #include <Kernel.h>
 #include <Platform/Platform.h>
@@ -295,6 +295,16 @@ int8_t ManuvrSerial::read_port() {
           return_value = 1;
         }
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
+        if (Serial.available()) {
+          while (Serial.available()) {
+            *(buf + n++) = Serial.read();
+          }
+          bytes_received += n;
+          *(buf + n) = '\0';  // NULL-terminate, JIC
+          BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
+          Serial.print((char*) buf);
+          return_value = 1;
+        }
 
     #elif defined (__MANUVR_LINUX) // Linux with pthreads...
         n = read(_sock, buf, 255);
@@ -380,8 +390,8 @@ int8_t ManuvrSerial::attached() {
   read_abort_event.alterSchedulePeriod(30);
   read_abort_event.autoClear(false);
   read_abort_event.enableSchedule(true);
-  #if !defined (__MANUVR_FREERTOS) && !defined (__MANUVR_LINUX)
-  __kernel->addSchedule(&read_abort_event);
+  #if !defined (__BUILD_HAS_THREADS)
+  platform.kernel()->addSchedule(&read_abort_event);
   #endif
 
   reset();
@@ -422,7 +432,7 @@ void ManuvrSerial::printDebug(StringBuilder *temp) {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t ManuvrSerial::callback_proc(ManuvrRunnable *event) {
+int8_t ManuvrSerial::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -440,7 +450,7 @@ int8_t ManuvrSerial::callback_proc(ManuvrRunnable *event) {
 }
 
 
-int8_t ManuvrSerial::notify(ManuvrRunnable *active_event) {
+int8_t ManuvrSerial::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {

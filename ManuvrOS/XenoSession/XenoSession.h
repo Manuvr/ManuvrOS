@@ -74,7 +74,7 @@ class XenoSession : public EventReceiver, public BufferPipe {
     int8_t untapMessageType(uint16_t code);   // Stop getting broadcasts about a given message type.
     int8_t untapAll();
 
-    virtual int8_t sendEvent(ManuvrRunnable*);
+    virtual int8_t sendEvent(ManuvrMsg*);
 
     /* Returns and isolates the lifecycle phase bits. */
     inline uint8_t getPhase() {      return (session_state & 0x00FF);    };
@@ -97,8 +97,8 @@ class XenoSession : public EventReceiver, public BufferPipe {
 
     /* Overrides from EventReceiver */
     virtual void printDebug(StringBuilder*);
-    virtual int8_t notify(ManuvrRunnable*);
-    virtual int8_t callback_proc(ManuvrRunnable *);
+    virtual int8_t notify(ManuvrMsg*);
+    virtual int8_t callback_proc(ManuvrMsg*);
     #if defined(MANUVR_CONSOLE_SUPPORT)
       virtual void procDirectDebugInstruction(StringBuilder *);
     #endif
@@ -136,7 +136,7 @@ class XenoSession : public EventReceiver, public BufferPipe {
     LinkedList<XenoMessage*> _outbound_messages;   // Messages that are bound for the counterparty.
     LinkedList<XenoMessage*> _inbound_messages;    // Messages that came from the counterparty.
 
-    ManuvrRunnable _session_service;
+    ManuvrMsg _session_service;
 
     std::map<uint16_t, MessageTypeDef*> _relay_list;     // Which message codes will we relay to the counterparty?
     std::map<uint16_t, XenoMessage*>    _pending_exec;   // Messages pending execution (waiting on us).

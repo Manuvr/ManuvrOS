@@ -75,7 +75,7 @@ CoAPSession::CoAPSession(BufferPipe* _near_side) : XenoSession(_near_side) {
 */
 CoAPSession::~CoAPSession() {
   _ping_timer.enableSchedule(false);
-  __kernel->removeSchedule(&_ping_timer);
+  platform.kernel()->removeSchedule(&_ping_timer);
 
 	if (NULL != working) {
 		delete working;
@@ -155,7 +155,7 @@ int8_t CoAPSession::connection_callback(bool _con) {
 * Passing an Event into this fxn will cause the Event to be serialized and sent to our counter-party.
 * This is the point at which choices are made about what happens to the event's life-cycle.
 */
-int8_t CoAPSession::sendEvent(ManuvrRunnable *active_event) {
+int8_t CoAPSession::sendEvent(ManuvrMsg* active_event) {
   return 0;
 }
 
@@ -182,7 +182,7 @@ int8_t CoAPSession::sendEvent(ManuvrRunnable *active_event) {
 int8_t CoAPSession::attached() {
   EventReceiver::attached();
 
-  __kernel->addSchedule(&_ping_timer);
+  platform.kernel()->addSchedule(&_ping_timer);
 
   //if (owner->connected()) {
     // Are we connected right now?
@@ -206,7 +206,7 @@ int8_t CoAPSession::attached() {
 * @param  event  The event for which service has been completed.
 * @return A callback return code.
 */
-int8_t CoAPSession::callback_proc(ManuvrRunnable *event) {
+int8_t CoAPSession::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
   int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
@@ -228,7 +228,7 @@ int8_t CoAPSession::callback_proc(ManuvrRunnable *event) {
 *   a list of events that it has been instructed to relay to the counterparty. If the event
 *   meets the relay criteria, we serialize it and send it to the transport that we are bound to.
 */
-int8_t CoAPSession::notify(ManuvrRunnable *active_event) {
+int8_t CoAPSession::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
@@ -287,7 +287,7 @@ void CoAPSession::procDirectDebugInstruction(StringBuilder *input) {
       break;
   }
 
-  if (local_log.length() > 0) {    Kernel::log(&local_log);  }
+  flushLocalLog();
 }
 #endif  // MANUVR_CONSOLE_SUPPORT
 

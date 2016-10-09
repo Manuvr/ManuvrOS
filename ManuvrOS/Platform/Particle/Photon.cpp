@@ -28,8 +28,6 @@ Particle Photon support...
 /****************************************************************************************************
 * The code under this block is special on this platform, and will not be available elsewhere.       *
 ****************************************************************************************************/
-volatile Kernel* __kernel = nullptr;
-
 
 /****************************************************************************************************
 * Watchdog                                                                                          *
@@ -265,7 +263,6 @@ volatile void reboot() {
 */
 int8_t platformPreInit(Argument* root_opts) {
   ManuvrPlatform::platformPreInit(root_config);
-  __kernel = (volatile Kernel*) &_kernel;
   gpioSetup();
   init_RNG();
   initPlatformRTC();

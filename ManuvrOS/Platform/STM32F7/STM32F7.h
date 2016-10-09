@@ -38,10 +38,10 @@ limitations under the License.
 * External interrupt actions are stored this way in an array, with indecies
 *   corresponding to the EXTI source.
 * If both values are non-NULL, they will both be proc'd, with the function call
-*   preceeding Runnable insertion to the Kernel's ISR queue.
+*   preceeding Msg insertion to the Kernel's ISR queue.
 */
 typedef struct __platform_exti_def {
-  ManuvrRunnable* event;
+  ManuvrMsg* event;
   FxnPointer fxn;
   uint8_t         pin;
   uint8_t         condition;

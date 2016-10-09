@@ -59,7 +59,6 @@ typedef struct msg_defin_t {
     uint16_t              msg_type_flags; // Optional flags to describe nuances of this message type.
     const char*           debug_label;    // This is a pointer to a const that represents this message code as a string.
     const unsigned char*  arg_modes;      // For messages that have arguments, this defines their possible types.
-    const char*           arg_semantics;  // For messages that have arguments, this defines their semantics.
 } MessageTypeDef;
 
 
@@ -93,7 +92,7 @@ typedef struct msg_defin_t {
 class ManuvrMsg {
   public:
     EventReceiver*  specific_target = nullptr;  // If the runnable is meant for a single class, put a pointer to it here.
-    int32_t priority = EVENT_PRIORITY_DEFAULT;  // Set the default priority for this Runnable
+    int32_t priority = EVENT_PRIORITY_DEFAULT;  // Set the default priority for this Msg
 
     ManuvrMsg();
     ManuvrMsg(uint16_t code);
@@ -235,7 +234,7 @@ class ManuvrMsg {
     inline int8_t getArgAs(BufferPipe **trg_buf) {                    return getArgAs(0, (void*) trg_buf);  }
     inline int8_t getArgAs(EventReceiver **trg_buf) {                 return getArgAs(0, (void*) trg_buf);  }
     inline int8_t getArgAs(ManuvrXport **trg_buf) {                   return getArgAs(0, (void*) trg_buf);  }
-    inline int8_t getArgAs(ManuvrMsg **trg_buf) {                return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(ManuvrMsg* *trg_buf) {                return getArgAs(0, (void*) trg_buf);  }
 
     inline int8_t getArgAs(uint8_t idx, Vector3f  **trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
     inline int8_t getArgAs(uint8_t idx, Vector3ui16  **trg_buf) {     return getArgAs(idx, (void*) trg_buf);  }
@@ -389,9 +388,6 @@ class ManuvrMsg {
 
 
     static int8_t getMsgLegend(StringBuilder *output);
-    #if defined (__ENABLE_MSG_SEMANTICS)
-    static int8_t getMsgSemantics(MessageTypeDef*, StringBuilder *output);
-    #endif
 
     static const MessageTypeDef* lookupMsgDefByCode(uint16_t msg_code);
     static const MessageTypeDef* lookupMsgDefByLabel(char* label);
@@ -439,7 +435,5 @@ class ManuvrMsg {
     // Where runtime-loaded message defs go.
     static std::map<uint16_t, const MessageTypeDef*> message_defs_extended;
 };
-
-typedef ManuvrMsg ManuvrRunnable;  // TODO: Only here until class merger is finished.
 
 #endif

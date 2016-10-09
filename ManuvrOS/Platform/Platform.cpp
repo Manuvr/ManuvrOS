@@ -323,7 +323,7 @@ void ManuvrPlatform::_discoverALUParams() {
 */
 int8_t ManuvrPlatform::bootstrap() {
   /* Follow your shadow. */
-  ManuvrRunnable* boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
+  ManuvrMsg* boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
   boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
   Kernel::staticRaiseEvent(boot_completed_ev);
   _set_init_state(MANUVR_INIT_STATE_KERNEL_BOOTING);
@@ -333,7 +333,7 @@ int8_t ManuvrPlatform::bootstrap() {
   #if defined(MANUVR_STORAGE)
     if (0 == _load_config()) {
       // If the config loaded, broadcast it.
-      ManuvrRunnable* conf_ev = Kernel::returnEvent(MANUVR_MSG_SYS_CONF_LOAD);
+      ManuvrMsg* conf_ev = Kernel::returnEvent(MANUVR_MSG_SYS_CONF_LOAD);
       // ???Necessary???  conf_ev->addArg(_config);
       Kernel::staticRaiseEvent(conf_ev);
     }
@@ -350,6 +350,9 @@ int8_t ManuvrPlatform::bootstrap() {
   if (nullptr == _self) {
     // If we have no other conception of "self", invent one.
     _self = new IdentityUUID(IDENTITY_STRING);
+    if (_self) {
+      _self->isSelf(true);
+    }
   }
   _boot_micros = micros() - _start_micros;    // Note how long boot took.
   _set_init_state(MANUVR_INIT_STATE_NOMINAL); // Mark booted.
@@ -488,6 +491,16 @@ int deleteThread(unsigned long* _thread_id) {
 }
 
 
+int wakeThread(unsigned long* _thread_id) {
+  #if defined(__MANUVR_LINUX)
+  #elif defined(__MANUVR_FREERTOS)
+  vTaskResume(_thread_id);
+  return 0;
+  #endif
+  return -1;
+}
+
+
 /**
 * Wrapper for causing threads to sleep. This is NOT intended to be used as a delay
 *   mechanism, although that use-case will work. It is more for the sake of not
@@ -497,11 +510,17 @@ int deleteThread(unsigned long* _thread_id) {
 *   probably use interrupts instead.
 */
 void sleep_millis(unsigned long millis) {
-  #if defined(__MANUVR_LINUX)
+  #if defined(__MANUVR_LINUX) | defined(__MANUVR_APPLE)
     struct timespec t = {(long) (millis / 1000), (long) ((millis % 1000) * 1000000UL)};
     nanosleep(&t, &t);
   #elif defined(__MANUVR_FREERTOS)
-    vTaskDelay(millis / portTICK_PERIOD_MS);
+    if (platform.booted()) {
+      vTaskDelay(millis / portTICK_PERIOD_MS);
+    }
+    else {
+      // For some reason we need to delay prior to threads being operational.
+      delay(millis);
+    }
   #elif defined(ARDUINO)
     delay(millis);  // So wasteful...
   #endif
