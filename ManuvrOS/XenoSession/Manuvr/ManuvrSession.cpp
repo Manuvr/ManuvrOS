@@ -67,7 +67,7 @@ ManuvrSession::ManuvrSession(ManuvrXport* _xport) : XenoSession(_xport) {
 */
 ManuvrSession::~ManuvrSession() {
   sync_event.enableSchedule(false);
-  __kernel->removeSchedule(&sync_event);
+  platform.kernel()->removeSchedule(&sync_event);
 }
 
 
@@ -483,7 +483,7 @@ int8_t ManuvrSession::attached() {
   sync_event.autoClear(false);
   sync_event.enableSchedule(false);
 
-  __kernel->addSchedule(&sync_event);
+  platform.kernel()->addSchedule(&sync_event);
 
   if (isConnected()) {
     // If we've been instanced because of a connetion, start the sync process...

@@ -83,7 +83,7 @@ MQTTSession::MQTTSession(ManuvrXport* _xport) : XenoSession(_xport) {
 */
 MQTTSession::~MQTTSession() {
   _ping_timer.enableSchedule(false);
-  __kernel->removeSchedule(&_ping_timer);
+  platform.kernel()->removeSchedule(&_ping_timer);
 
 	if (NULL != working) {
 		delete working;
@@ -498,7 +498,7 @@ int MQTTSession::process_inbound() {
 */
 int8_t MQTTSession::attached() {
   EventReceiver::attached();
-  __kernel->addSchedule(&_ping_timer);
+  platform.kernel()->addSchedule(&_ping_timer);
 
   //if (owner->connected()) {
   //  // Are we connected right now?

@@ -55,19 +55,8 @@ limitations under the License.
 
 
 
-  #if defined(MANUVR_CONSOLE_SUPPORT) || defined(__MANUVR_DEBUG)
-    #ifdef __MANUVR_DEBUG
-      #define DEFAULT_CLASS_VERBOSITY    6
-    #else
-      #define DEFAULT_CLASS_VERBOSITY    4
-    #endif
-  #else
-    #define DEFAULT_CLASS_VERBOSITY      0
-  #endif
-
-
   #ifdef __cplusplus
-   extern "C" {
+  extern "C" {
   #endif
 
   typedef int (*listenerFxnPtr) (ManuvrRunnable*);

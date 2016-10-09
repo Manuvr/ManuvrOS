@@ -47,7 +47,7 @@ LightSensor::LightSensor(int analog_pin) : EventReceiver() {
 
 LightSensor::~LightSensor() {
   _periodic_check.enableSchedule(false);
-  __kernel->removeSchedule(&_periodic_check);
+  platform.kernel()->removeSchedule(&_periodic_check);
 }
 
 
@@ -98,7 +98,7 @@ int8_t LightSensor::attached() {
   _periodic_check.alterSchedulePeriod(501);
   _periodic_check.autoClear(false);
   _periodic_check.enableSchedule(true);
-  __kernel->addSchedule(&_periodic_check);
+  platform.kernel()->addSchedule(&_periodic_check);
 
   return 1;
 }

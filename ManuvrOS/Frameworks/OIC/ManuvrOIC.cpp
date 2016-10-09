@@ -274,8 +274,8 @@ ManuvrOIC::ManuvrOIC(Argument* root_config) : ManuvrOIC() {
 * Unlike many of the other EventReceivers, THIS one needs to be able to be torn down.
 */
 ManuvrOIC::~ManuvrOIC() {
-  __kernel->removeSchedule(&_discovery_ping);
-  __kernel->removeSchedule(&_discovery_timeout);
+  platform.kernel()->removeSchedule(&_discovery_ping);
+  platform.kernel()->removeSchedule(&_discovery_timeout);
   #if defined(__BUILD_HAS_THREADS)
     #if defined(__MACH__) && defined(__APPLE__)
       if (_thread_id > 0) {
@@ -362,7 +362,7 @@ int8_t ManuvrOIC::attached() {
   _discovery_ping.isManaged(true);
   _discovery_ping.alterSchedule(120000, -1, false, issue_requests_hook);
   _discovery_ping.enableSchedule(false);
-  __kernel->addSchedule(&_discovery_ping);
+  platform.kernel()->addSchedule(&_discovery_ping);
 
   _discovery_timeout.repurpose(MANUVR_MSG_OIC_DISCOVER_OFF, (EventReceiver*) this);
   _discovery_timeout.isManaged(true);
@@ -374,7 +374,7 @@ int8_t ManuvrOIC::attached() {
   _discovery_timeout.alterSchedulePeriod(30000);
   _discovery_timeout.autoClear(false);
   _discovery_timeout.enableSchedule(false);
-  __kernel->addSchedule(&_discovery_timeout);
+  platform.kernel()->addSchedule(&_discovery_timeout);
 
 
   oc_handler_t handler;

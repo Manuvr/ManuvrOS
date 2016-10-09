@@ -134,7 +134,12 @@ Lifecycle:
 
 
       protected:
-        Kernel* __kernel;
+        #if defined(__BUILD_HAS_THREADS)
+          // In threaded environments, we allow resources to enable their own threading
+          //   if needed.
+          unsigned long _thread_id  = 0;
+        #endif
+
         StringBuilder local_log;
 
         EventReceiver();
@@ -157,15 +162,9 @@ Lifecycle:
 
 
       private:
-        uint8_t _class_state;
-        uint8_t _extnd_state;  // This is here for use by the extending class.
-        const char* _receiver_name;
-
-        #if defined(__BUILD_HAS_THREADS)
-          // In threaded environments, we allow resources to enable their own threading
-          //   if needed.
-          int _thread_id  = -1;
-        #endif
+        uint8_t     _class_state   = (DEFAULT_CLASS_VERBOSITY & MANUVR_ER_FLAG_VERBOSITY_MASK);
+        uint8_t     _extnd_state   = 0;  // This is here for use by the extending class.
+        const char* _receiver_name = "EventReceiver";
 
         int8_t setVerbosity(ManuvrRunnable*);  // Private because it should be set with an Event.
     };

@@ -173,7 +173,6 @@ void Kernel::nextTick(BufferPipe* p) {
 Kernel::Kernel() : EventReceiver() {
   setReceiverName("Kernel");
   INSTANCE             = this;  // For singleton reference. TODO: Will not parallelize.
-  __kernel             = this;  // We extend EventReceiver. So we populate this.
 
   current_event        = nullptr;
   max_queue_depth      = 0;

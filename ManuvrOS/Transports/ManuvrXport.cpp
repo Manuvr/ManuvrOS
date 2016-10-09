@@ -148,7 +148,7 @@ ManuvrXport::~ManuvrXport() {
   // Cleanup any schedules...
   if (NULL != _autoconnect_schedule) {
     _autoconnect_schedule->enableSchedule(false);
-    __kernel->removeSchedule(_autoconnect_schedule);
+    platform.kernel()->removeSchedule(_autoconnect_schedule);
     _autoconnect_schedule = NULL;
     delete _autoconnect_schedule;
   }
@@ -233,7 +233,7 @@ void ManuvrXport::alwaysConnected(bool en) {
   if (NULL != _autoconnect_schedule) {
     // If we have a reconnection schedule (we should not), free it.
     _autoconnect_schedule->enableSchedule(false);
-    __kernel->removeSchedule(_autoconnect_schedule);
+    platform.kernel()->removeSchedule(_autoconnect_schedule);
     _autoconnect_schedule = NULL;
     delete _autoconnect_schedule;
   }
@@ -260,14 +260,14 @@ void ManuvrXport::autoConnect(bool en, uint32_t _ac_period) {
         _autoconnect_schedule->alterSchedulePeriod(_ac_period);
         _autoconnect_schedule->autoClear(false);
         _autoconnect_schedule->enableSchedule(!connected());
-        __kernel->addSchedule(_autoconnect_schedule);
+        platform.kernel()->addSchedule(_autoconnect_schedule);
       }
     }
   }
   else {
     if (NULL != _autoconnect_schedule) {
       _autoconnect_schedule->enableSchedule(false);
-      __kernel->removeSchedule(_autoconnect_schedule);
+      platform.kernel()->removeSchedule(_autoconnect_schedule);
       delete _autoconnect_schedule;
       _autoconnect_schedule = NULL;
     }

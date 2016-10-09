@@ -87,11 +87,6 @@ class ManuvrOIC : public EventReceiver {
 
 
   private:
-    #if defined(__BUILD_HAS_THREADS)
-      // If we have a concept of threads...
-      unsigned long _thread_id = 0;
-    #endif
-
     /* Scheduled callbacks and events precipitataed from the worker thread.*/
     ManuvrRunnable _discovery_timeout;
     ManuvrRunnable _discovery_ping;

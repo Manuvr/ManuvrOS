@@ -23,24 +23,14 @@ limitations under the License.
 #include <Platform/Platform.h>
 
 
-EventReceiver::EventReceiver() {
-  _receiver_name = "EventReceiver";
-  __kernel       = nullptr;
-  _class_state   = (DEFAULT_CLASS_VERBOSITY & MANUVR_ER_FLAG_VERBOSITY_MASK);
-  _extnd_state   = 0;
-  #if defined(__BUILD_HAS_THREADS)
-    _thread_id = -1;
-  #endif
-}
+EventReceiver::EventReceiver() {}
 
 
 EventReceiver::~EventReceiver() {
-  if (nullptr != __kernel) {
-    __kernel->unsubscribe(this);
-  }
+  platform.kernel()->unsubscribe(this);
   #if defined(__BUILD_HAS_THREADS)
-    if (_thread_id > -1) {
-      // TODO: Clean up any threads we may have fired up.
+    if (_thread_id > 0) {
+      deleteThread(&_thread_id);
     }
   #endif
   Kernel::log(&local_log);  // Clears the local_log.
@@ -210,7 +200,6 @@ void EventReceiver::printDebug(StringBuilder *output) {
 */
 int8_t EventReceiver::attached() {
   if (!erAttached()) {
-    __kernel = platform.kernel();
     _mark_attached();
     return 1;
   }

@@ -336,5 +336,6 @@ mbedtls completely out as *the* dependency for cryptography.
 
     Linux, 32-bit: DEBUG=1 SECURE=1
     1544566   12024   43940 1600530  186c12 Following semantic_args excision.
-
+    1544566   12024   43940 1600530  186c12 Removal of redundant thread_id member had no effect.
+    1544586   12024   43940 1600550  186c26 Removal of kernel pointer from ER (safety).
 _---J. Ian Lindsay_

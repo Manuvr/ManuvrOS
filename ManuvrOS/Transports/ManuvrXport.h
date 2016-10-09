@@ -151,10 +151,6 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
 
   protected:
     ManuvrRunnable* _autoconnect_schedule;
-    #if defined(__BUILD_HAS_THREADS)
-      // If we have a concept of threads...
-      unsigned long _thread_id;
-    #endif
 
     // Can also be used to poll the other side. Implementation is completely at the discretion
     //   any extending class. But generally, this feature is necessary.

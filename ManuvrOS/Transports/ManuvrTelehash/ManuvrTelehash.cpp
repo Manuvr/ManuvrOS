@@ -430,7 +430,7 @@ int8_t ManuvrTelehash::attached() {   // ?? TODO ??
   read_abort_event.autoClear(false);
   read_abort_event.enableSchedule(false);
   read_abort_event.enableSchedule(false);
-  __kernel->addSchedule(&read_abort_event);
+  platform.kernel()->addSchedule(&read_abort_event);
 
   reset();
   return 1;

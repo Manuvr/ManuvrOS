@@ -697,7 +697,7 @@ int8_t MGC3130::attached() {
   init_runnable->autoClear(true);
   init_runnable->enableSchedule(true);
 
-  __kernel->addSchedule(init_runnable);
+  platform.kernel()->addSchedule(init_runnable);
   return 1;
 }
 

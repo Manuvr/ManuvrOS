@@ -397,7 +397,7 @@ int8_t ManuvrTCP::attached() {
   read_abort_event.alterSchedulePeriod(300);
   read_abort_event.autoClear(false);
   read_abort_event.enableSchedule(false);
-  __kernel->addSchedule(&read_abort_event);
+  platform.kernel()->addSchedule(&read_abort_event);
 
   reset();
   return 1;

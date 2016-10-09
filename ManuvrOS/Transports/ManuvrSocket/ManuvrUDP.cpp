@@ -491,7 +491,7 @@ int8_t ManuvrUDP::attached() {
   read_abort_event.autoClear(false);
   read_abort_event.enableSchedule(false);
   read_abort_event.enableSchedule(false);
-  //__kernel->addSchedule(&read_abort_event);
+  //platform.kernel()->addSchedule(&read_abort_event);
 
   listen();
   return 1;

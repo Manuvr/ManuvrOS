@@ -75,7 +75,7 @@ CoAPSession::CoAPSession(BufferPipe* _near_side) : XenoSession(_near_side) {
 */
 CoAPSession::~CoAPSession() {
   _ping_timer.enableSchedule(false);
-  __kernel->removeSchedule(&_ping_timer);
+  platform.kernel()->removeSchedule(&_ping_timer);
 
 	if (NULL != working) {
 		delete working;
@@ -182,7 +182,7 @@ int8_t CoAPSession::sendEvent(ManuvrRunnable *active_event) {
 int8_t CoAPSession::attached() {
   EventReceiver::attached();
 
-  __kernel->addSchedule(&_ping_timer);
+  platform.kernel()->addSchedule(&_ping_timer);
 
   //if (owner->connected()) {
     // Are we connected right now?

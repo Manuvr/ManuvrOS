@@ -68,6 +68,7 @@ This file is the tortured result of growing pains since the beginning of
   // TODO: Migrate case-off code to platform directory.
 #endif
 
+#include <Platform/Platform.h>
 
 extern "C" {
   volatile I2CAdapter* i2c = NULL;
@@ -351,7 +352,7 @@ int8_t I2CAdapter::attached() {
   if (busOnline()) {
     advance_work_queue();
   }
-  __kernel->addSchedule(&_periodic_i2c_debug);
+  platform.kernel()->addSchedule(&_periodic_i2c_debug);
   return 1;
 }
 
