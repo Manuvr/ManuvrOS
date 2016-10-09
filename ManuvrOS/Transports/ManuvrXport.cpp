@@ -54,7 +54,6 @@ For debuggability, the transport has a special mode for acting as a debug
 *
 * Static members and initializers should be located here.
 *******************************************************************************/
-uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
 
 
 /*******************************************************************************
@@ -118,19 +117,10 @@ uint16_t ManuvrXport::TRANSPORT_ID_POOL = 1;
 ManuvrXport::ManuvrXport() : EventReceiver(), BufferPipe() {
   // No need to burden a client class with this.
   setReceiverName("ManuvrXport");
+  _xport_mtu = PROTOCOL_MTU;
 
   // Transports are all terminal.
   _bp_set_flag(BPIPE_FLAG_IS_TERMINUS, true);
-
-  xport_id              = ManuvrXport::TRANSPORT_ID_POOL++;
-  _xport_flags          = 0;
-  _xport_mtu            = PROTOCOL_MTU;
-  _autoconnect_schedule = nullptr;
-  bytes_sent            = 0;
-  bytes_received        = 0;
-  #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
-    _thread_id       = 0;
-  #endif
 }
 
 /**
@@ -343,7 +333,6 @@ void ManuvrXport::printDebug(StringBuilder *temp) {
   BufferPipe::printDebug(temp);
   temp->concatf("--\n-- %s-oriented transport\n--\n", (streamOriented() ? "stream" : "message"));
   temp->concatf("-- _xport_flags    0x%08x\n", _xport_flags);
-  temp->concatf("-- xport_id        0x%04x\n", xport_id);
   temp->concatf("-- bytes sent      %u\n", bytes_sent);
   temp->concatf("-- bytes received  %u\n--\n", bytes_received);
   temp->concatf("-- initialized     %s\n", (initialized() ? "yes" : "no"));
@@ -387,18 +376,10 @@ int8_t ManuvrXport::notify(ManuvrRunnable *active_event) {
     case MANUVR_MSG_XPORT_ERROR:
     case MANUVR_MSG_XPORT_QUEUE_RDY:
     case MANUVR_MSG_XPORT_CB_QUEUE_RDY:
-      #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 3) {
-        local_log.concatf("TransportID %d received an event that was addressed to it, but is not yet handled.\n", xport_id);
-        active_event->printDebug(&local_log);
-      }
-      #endif
-      break;
-
     case MANUVR_MSG_XPORT_IDENTITY:
       #ifdef __MANUVR_DEBUG
       if (getVerbosity() > 3) {
-        local_log.concatf("TransportID %d received an event that was addressed to it, but is not yet handled.\n", xport_id);
+        local_log.concatf("Transport %s received an event that was addressed to it, but is not yet handled.\n", getReceiverName());
         active_event->printDebug(&local_log);
       }
       #endif
@@ -430,15 +411,15 @@ void ManuvrXport::procDirectDebugInstruction(StringBuilder *input) {
 
   switch (*(str)) {
     case 'C':
-      local_log.concatf("Transport 0x%04x: Connect...\n", xport_id);
+      local_log.concatf("%s: Connect...\n", getReceiverName());
       connect();
       break;
     case 'D':  // Force a state change with no underlying physical reason. Abuse test...
-      local_log.concatf("Transport 0x%04x: Disconnect...\n", xport_id);
+      local_log.concatf("%s: Disconnect...\n", getReceiverName());
       disconnect();
       break;
     case 'R':
-      local_log.concatf("Transport 0x%04x: Resetting...\n", xport_id);
+      local_log.concatf("%s: Resetting...\n", getReceiverName());
       reset();
       break;
     default:

@@ -338,4 +338,12 @@ mbedtls completely out as *the* dependency for cryptography.
     1544566   12024   43940 1600530  186c12 Following semantic_args excision.
     1544566   12024   43940 1600530  186c12 Removal of redundant thread_id member had no effect.
     1544586   12024   43940 1600550  186c26 Removal of kernel pointer from ER (safety).
+
+Binged on cleaning up technical debt in the build system. The goal of separating threading concerns from platform was advanced. More crypto-wrapper sanity-checking.
+
+    Linux, 32-bit: DEBUG=1 SECURE=1
+    1544474   12024   43940 1600438  186bb6 New baseline.
+    1544102   12024   43940 1600066  186a42 Excision of xport_id. It is no longer needed.
+
+
 _---J. Ian Lindsay_

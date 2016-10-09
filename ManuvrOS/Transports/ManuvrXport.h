@@ -150,16 +150,15 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
 
 
   protected:
-    ManuvrRunnable* _autoconnect_schedule;
+    ManuvrRunnable* _autoconnect_schedule = nullptr;
 
     // Can also be used to poll the other side. Implementation is completely at the discretion
     //   any extending class. But generally, this feature is necessary.
     ManuvrRunnable read_abort_event;  // Used to timeout a read operation.
 
-    uint16_t xport_id;
     uint32_t _xport_mtu;      // The largest packet size we handle.
-    uint32_t bytes_sent;
-    uint32_t bytes_received;
+    uint32_t bytes_sent      = 0;
+    uint32_t bytes_received  = 0;
 
     ManuvrXport();
 
@@ -176,7 +175,7 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
 
 
   private:
-    uint32_t _xport_flags = 0;;
+    uint32_t _xport_flags = 0;
 
     /* Connection/Listen states */
     inline void mark_connected(bool en) {
