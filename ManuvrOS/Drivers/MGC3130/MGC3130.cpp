@@ -687,18 +687,18 @@ bool MGC3130::operationCallahead(I2CBusOp* op) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t MGC3130::attached() {
-  EventReceiver::attached();
-  init();
-  ManuvrMsg* init_runnable = Kernel::returnEvent(MANUVR_MSG_SENSOR_MGC3130_INIT);
-
-  init_runnable->specific_target = (EventReceiver*) this;
-  init_runnable->alterScheduleRecurrence(0);
-  init_runnable->alterSchedulePeriod(1200);
-  init_runnable->autoClear(true);
-  init_runnable->enableSchedule(true);
-
-  platform.kernel()->addSchedule(init_runnable);
-  return 1;
+  if (EventReceiver::attached()) {
+    init();
+    ManuvrMsg* init_runnable = Kernel::returnEvent(MANUVR_MSG_SENSOR_MGC3130_INIT);
+    init_runnable->specific_target = (EventReceiver*) this;
+    init_runnable->alterScheduleRecurrence(0);
+    init_runnable->alterSchedulePeriod(1200);
+    init_runnable->autoClear(true);
+    init_runnable->enableSchedule(true);
+    platform.kernel()->addSchedule(init_runnable);
+    return 1;
+  }
+  return 0;
 }
 
 

@@ -497,14 +497,15 @@ int MQTTSession::process_inbound() {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t MQTTSession::attached() {
-  EventReceiver::attached();
-  platform.kernel()->addSchedule(&_ping_timer);
-
-  //if (owner->connected()) {
-  //  // Are we connected right now?
-  //  sendConnectPacket();
-  //}
-  return 1;
+  if (EventReceiver::attached()) {
+		platform.kernel()->addSchedule(&_ping_timer);
+  	//if (owner->connected()) {
+  	//  // Are we connected right now?
+  	//  sendConnectPacket();
+  	//}
+    return 1;
+  }
+  return 0;
 }
 
 

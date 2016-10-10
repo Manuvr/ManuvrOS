@@ -380,18 +380,19 @@ void ADP8866::printDebug(StringBuilder* temp) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t ADP8866::attached() {
-  EventReceiver::attached();
-  setPin(reset_pin, true);   // Release the reset pin.
+  if (EventReceiver::attached()) {
+    setPin(reset_pin, true);   // Release the reset pin.
 
-  // If this read comes back the way we think it should,
-  //   we will init() the chip.
-  readRegister((uint8_t) ADP8866_MANU_DEV_ID);
+    // If this read comes back the way we think it should,
+    //   we will init() the chip.
+    readRegister((uint8_t) ADP8866_MANU_DEV_ID);
 
-  if (irq_pin > 0) {
-    setPinFxn(irq_pin, FALLING, ADP8866_ISR);
+    if (irq_pin > 0) {
+      setPinFxn(irq_pin, FALLING, ADP8866_ISR);
+    }
+    return 1;
   }
-
-  return 1;
+  return 0;
 }
 
 

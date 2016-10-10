@@ -70,9 +70,11 @@ ManuvrAudio::~ManuvrAudio() {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t ManuvrAudio::attached() {
-  EventReceiver::attached();   // Call up to get scheduler ref and class init.
-  //scheduler->createSchedule(1200, 0, true, this, event);
-  return 1;
+  if (EventReceiver::attached()) {
+    //scheduler->createSchedule(1200, 0, true, this, event);
+    return 1;
+  }
+  return 0;
 }
 
 

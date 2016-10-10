@@ -807,7 +807,7 @@ int8_t Kernel::procIdleFlags() {
 
   if (_pending_pipes()) {
     BufferPipe* _temp_io = _pipe_io_pend.dequeue();
-    while (nullptr != _temp_io) {
+    while (_temp_io) {
       _temp_io->asyncCallback();
       _temp_io = _pipe_io_pend.dequeue();
     }
@@ -925,6 +925,7 @@ void Kernel::printProfiler(StringBuilder* output) {
   output->concatf("-- total_loops        \t%u\n", (unsigned long) total_loops);
   output->concatf("-- max_idle_loop_time \t%u\n", (unsigned long) max_idle_loop_time);
   output->concatf("-- max_events_p_loop  \t%u\n", (unsigned long) max_events_p_loop);
+  output->concatf("-- Pending pipes:     \t%d\n", _pipe_io_pend.size());
 
   if (_profiler_enabled()) {
     output->concat("-- Profiler:\n");
@@ -1028,8 +1029,7 @@ void Kernel::printDebug(StringBuilder* output) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t Kernel::attached() {
-  EventReceiver::attached();
-  return 1;
+  return EventReceiver::attached();
 }
 
 
@@ -1156,15 +1156,13 @@ int8_t Kernel::notify(ManuvrMsg* active_runnable) {
       }
       break;
 
-    #if defined (__MANUVR_FREERTOS)
-    case MANUVR_MSG_CREATED_THREAD_ID:
-      break;
-
-    case MANUVR_MSG_DESTROYED_THREAD_ID:
-      break;
-
-    case MANUVR_MSG_UNBLOCK_THREAD:
-      break;
+    #if defined (__BUILD_HAS_THREADS)
+      case MANUVR_MSG_CREATED_THREAD_ID:
+        break;
+      case MANUVR_MSG_DESTROYED_THREAD_ID:
+        break;
+      case MANUVR_MSG_UNBLOCK_THREAD:
+        break;
     #endif
 
     default:
@@ -1173,7 +1171,6 @@ int8_t Kernel::notify(ManuvrMsg* active_runnable) {
   }
   return return_value;
 }
-
 
 
 

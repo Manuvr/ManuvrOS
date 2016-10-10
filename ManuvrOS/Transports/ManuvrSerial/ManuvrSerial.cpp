@@ -82,7 +82,8 @@ Platforms that require it should be able to extend this driver for specific
 * @param  opts      Options to the underlying implementation.
 */
 ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate, uint32_t opts) : ManuvrXport() {
-  __class_initializer();
+  setReceiverName("ManuvrSerial");
+  set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED);
   _addr     = tty_path;
   _baud_rate = b_rate;
   _options  = opts;
@@ -101,24 +102,6 @@ ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate) : ManuvrSerial(tty_
 * Destructor
 */
 ManuvrSerial::~ManuvrSerial() {
-}
-
-/**
-* This is here for compatibility with C++ standards that do not allow for definition and declaration
-*   in the header file. Takes no parameters, and returns nothing.
-*/
-void ManuvrSerial::__class_initializer() {
-  setReceiverName("ManuvrSerial");
-  _options           = 0;
-  #if defined(__MANUVR_LINUX)
-    _sock            = 0;
-  #endif
-
-  // Build some pre-formed Events.
-  read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY, (EventReceiver*) this);
-  read_abort_event.isManaged(true);
-  read_abort_event.specific_target = (EventReceiver*) this;
-  read_abort_event.priority        = 2;
 }
 
 
@@ -280,20 +263,27 @@ int8_t ManuvrSerial::reset() {
 int8_t ManuvrSerial::read_port() {
   int8_t return_value = 0;
   if (connected()) {
-    unsigned char *buf = (unsigned char *) alloca(255);
+    uint8_t* buf;
     int n = 0;
     #if defined (STM32F4XX)        // STM32F4
 
     #elif defined (__MK20DX128__) || defined (__MK20DX256__) // Teensy3.x
-        if (Serial.available()) {
-          while (Serial.available()) {
+      int available = Serial.available();
+
+      if (available) {
+        buf = (uint8_t*) malloc(available + 1);
+        if (buf) {
+          for (n = 0; n < available; n++) {
             *(buf + n++) = Serial.read();
           }
           bytes_received += n;
-          *(buf + n) = '\0';  // NULL-terminate, JIC
-          BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
-          return_value = 1;
         }
+        *(buf + n) = '\0';  // NULL-terminate, JIC
+        StringBuilder temp;
+        temp.concatHandoff(buf, available);
+        BufferPipe::fromCounterparty(&temp, MEM_MGMT_RESPONSIBLE_BEARER);
+        return_value = 1;
+      }
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
         if (Serial.available()) {
           while (Serial.available()) {
@@ -302,7 +292,6 @@ int8_t ManuvrSerial::read_port() {
           bytes_received += n;
           *(buf + n) = '\0';  // NULL-terminate, JIC
           BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
-          Serial.print((char*) buf);
           return_value = 1;
         }
 
@@ -383,19 +372,25 @@ bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t ManuvrSerial::attached() {
-  EventReceiver::attached();
-
-  // Tolerate 30ms of latency on the line before flushing the buffer.
-  read_abort_event.alterScheduleRecurrence(0);
-  read_abort_event.alterSchedulePeriod(30);
-  read_abort_event.autoClear(false);
-  read_abort_event.enableSchedule(true);
-  #if !defined (__BUILD_HAS_THREADS)
-  platform.kernel()->addSchedule(&read_abort_event);
-  #endif
-
-  reset();
-  return 1;
+  if (EventReceiver::attached()) {
+    read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY, (EventReceiver*) this);
+    read_abort_event.isManaged(true);
+    read_abort_event.specific_target = (EventReceiver*) this;
+    read_abort_event.priority        = 2;
+    // Tolerate 30ms of latency on the line before flushing the buffer.
+    read_abort_event.alterSchedulePeriod(30);
+    read_abort_event.autoClear(false);
+    #if !defined (__BUILD_HAS_THREADS)
+      read_abort_event.enableSchedule(true);
+      read_abort_event.alterScheduleRecurrence(-1);
+      platform.kernel()->addSchedule(&read_abort_event);
+    #else
+      read_abort_event.alterScheduleRecurrence(0);
+    #endif
+    reset();
+    return 1;
+  }
+  return 0;
 }
 
 

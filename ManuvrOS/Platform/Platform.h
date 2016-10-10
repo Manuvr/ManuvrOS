@@ -87,7 +87,7 @@ class Storage;
 #define MANUVR_PLAT_FLAG_RESERVED_1       0x10000000  //
 #define MANUVR_PLAT_FLAG_INNATE_DATETIME  0x20000000  // Can the hardware remember the datetime?
 #define MANUVR_PLAT_FLAG_RESERVED_2       0x40000000  //
-#define MANUVR_PLAT_FLAG_HAS_STORAGE      0x80000000  // 
+#define MANUVR_PLAT_FLAG_HAS_STORAGE      0x80000000  //
 
 /**
 * Flags that reflect the state of the platform.
@@ -285,10 +285,10 @@ class ManuvrPlatform {
 
 
   protected:
-    Kernel          _kernel;
-    Argument*       _config    = nullptr;
-    Identity*       _self      = nullptr;
-    Identity*       _identity  = nullptr;
+    Kernel      _kernel;
+    Argument*   _config    = nullptr;
+    Identity*   _self      = nullptr;
+    Identity*   _identity  = nullptr;
     #if defined(MANUVR_STORAGE)
       Storage* _storage_device = nullptr;
       // TODO: Ultimately, there will be a similar object for the crypto module.
@@ -318,7 +318,7 @@ class ManuvrPlatform {
 
 
   private:
-    uint32_t        _pflags    = 0;
+    uint32_t   _pflags    = 0;
     FxnPointer _idle_hook = nullptr;
     FxnPointer _wake_hook = nullptr;
 
@@ -423,7 +423,7 @@ int    readPinAnalog(uint8_t pin);
 #elif defined(__MANUVR_LINUX)
   #include <Platform/Linux/Linux.h>
   typedef LinuxPlatform Platform;
-#elif defined(__APPLE__)
+#elif defined(__MANUVR_APPLE)
   #include <Platform/AppleOSX/AppleOSX.h>
   typedef ApplePlatform Platform;
 #else

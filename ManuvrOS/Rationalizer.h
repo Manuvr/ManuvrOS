@@ -16,13 +16,20 @@
 #define __MANUVR_OPTION_RATIONALIZER_H__
 
 
-/* Threading models... */
-#if defined(__MANUVR_LINUX) | defined(__MANUVR_FREERTOS)
-  // None
-  // pthreads   // Each of these exist independently of platform.
-  // freeRTOS   // Each of these exist independently of platform.
+/*
+* Threading models...
+* Threading choice exists independently of platform.
+*/
+#if defined(__MANUVR_LINUX) | defined(__MANUVR_APPLE)
+  //#pragma message "Building with pthread support."
   #define __BUILD_HAS_THREADS
-  //#pragma message "Building with thread support."
+  #define __BUILD_HAS_PTHREADS
+#elif defined(__MANUVR_FREERTOS)
+  //#pragma message "Building with freeRTOS support."
+  #define __BUILD_HAS_THREADS
+  #define __BUILD_HAS_FREERTOS
+#else
+  //#pragma message "Building with no threading support."
 #endif
 
 

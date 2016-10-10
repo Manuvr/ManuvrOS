@@ -138,7 +138,7 @@ enum class ManuvrPipeSignal {
 */
 
 // Hopefully, this will be enough until we think of something smarter.
-#define MAXIMUM_PIPE_DIVERSITY  16
+#define MAXIMUM_PIPE_DIVERSITY  8
 
 class BufferPipe;
 

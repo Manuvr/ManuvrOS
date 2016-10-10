@@ -70,7 +70,6 @@ class ManuvrSerial : public ManuvrXport {
     int8_t notify(ManuvrMsg*);
     int8_t callback_proc(ManuvrMsg*);
 
-
     int8_t connect();
     int8_t disconnect();
     int8_t listen();
@@ -80,17 +79,12 @@ class ManuvrSerial : public ManuvrXport {
     bool   write_port(unsigned char* out, int out_len);
 
 
-
-  protected:
-    void __class_initializer();
-
-
   private:
     const char* _addr;
     uint32_t    _options;
     int         _baud_rate;
     #if defined(__MANUVR_LINUX)
-      int         _sock;
+      int         _sock = 0;
       struct termios termAttr;
     #endif
 

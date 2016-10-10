@@ -346,14 +346,15 @@ void I2CAdapter::gpioSetup() {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t I2CAdapter::attached() {
-  EventReceiver::attached();
-
-  if (dev >= 0) busOnline(true);
-  if (busOnline()) {
-    advance_work_queue();
+  if (EventReceiver::attached()) {
+    if (dev >= 0) busOnline(true);
+    if (busOnline()) {
+      advance_work_queue();
+    }
+    platform.kernel()->addSchedule(&_periodic_i2c_debug);
+    return 1;
   }
-  platform.kernel()->addSchedule(&_periodic_i2c_debug);
-  return 1;
+  return 0;
 }
 
 

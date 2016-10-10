@@ -119,19 +119,20 @@ int8_t ADCScanner::scan() {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t ADCScanner::attached() {
-  EventReceiver::attached();
+  if (EventReceiver::attached()) {
+    // Build some pre-formed Events.
+    _periodic_check.repurpose(MANUVR_MSG_ADC_SCAN, (EventReceiver*) this);
+    _periodic_check.isManaged(true);
+    _periodic_check.specific_target = (EventReceiver*) this;
 
-  // Build some pre-formed Events.
-  _periodic_check.repurpose(MANUVR_MSG_ADC_SCAN, (EventReceiver*) this);
-  _periodic_check.isManaged(true);
-  _periodic_check.specific_target = (EventReceiver*) this;
-
-  _periodic_check.alterScheduleRecurrence(-1);
-  _periodic_check.alterSchedulePeriod(50);
-  _periodic_check.autoClear(false);
-  _periodic_check.enableSchedule(true);
-  platform.kernel()->addSchedule(&_periodic_check);
-  return 1;
+    _periodic_check.alterScheduleRecurrence(-1);
+    _periodic_check.alterSchedulePeriod(50);
+    _periodic_check.autoClear(false);
+    _periodic_check.enableSchedule(true);
+    platform.kernel()->addSchedule(&_periodic_check);
+    return 1;
+  }
+  return 0;
 }
 
 

@@ -355,53 +355,54 @@ int8_t ManuvrOIC::discoverOthers(bool en) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t ManuvrOIC::attached() {
-  EventReceiver::attached();
+  if (EventReceiver::attached()) {
+    // Discovery runs for 120 seconds, and repeats forever by default.
+    _discovery_ping.repurpose(MANUVR_MSG_OIC_DISCOVER_PING);
+    _discovery_ping.isManaged(true);
+    _discovery_ping.alterSchedule(120000, -1, false, issue_requests_hook);
+    _discovery_ping.enableSchedule(false);
+    platform.kernel()->addSchedule(&_discovery_ping);
 
-  // Discovery runs for 120 seconds, and repeats forever by default.
-  _discovery_ping.repurpose(MANUVR_MSG_OIC_DISCOVER_PING);
-  _discovery_ping.isManaged(true);
-  _discovery_ping.alterSchedule(120000, -1, false, issue_requests_hook);
-  _discovery_ping.enableSchedule(false);
-  platform.kernel()->addSchedule(&_discovery_ping);
+    _discovery_timeout.repurpose(MANUVR_MSG_OIC_DISCOVER_OFF, (EventReceiver*) this);
+    _discovery_timeout.isManaged(true);
+    _discovery_timeout.specific_target = (EventReceiver*) this;
+    _discovery_timeout.priority        = 1;
 
-  _discovery_timeout.repurpose(MANUVR_MSG_OIC_DISCOVER_OFF, (EventReceiver*) this);
-  _discovery_timeout.isManaged(true);
-  _discovery_timeout.specific_target = (EventReceiver*) this;
-  _discovery_timeout.priority        = 1;
-
-  // Discovery runs for 30 seconds by default.
-  _discovery_timeout.alterScheduleRecurrence(0);
-  _discovery_timeout.alterSchedulePeriod(30000);
-  _discovery_timeout.autoClear(false);
-  _discovery_timeout.enableSchedule(false);
-  platform.kernel()->addSchedule(&_discovery_timeout);
+    // Discovery runs for 30 seconds by default.
+    _discovery_timeout.alterScheduleRecurrence(0);
+    _discovery_timeout.alterSchedulePeriod(30000);
+    _discovery_timeout.autoClear(false);
+    _discovery_timeout.enableSchedule(false);
+    platform.kernel()->addSchedule(&_discovery_timeout);
 
 
-  oc_handler_t handler;
-  handler.init = app_init_hook;
-  handler.get_credentials = fetch_credentials;
+    oc_handler_t handler;
+    handler.init = app_init_hook;
+    handler.get_credentials = fetch_credentials;
 
-  #if defined(OC_SERVER)
-    handler.register_resources = register_resources;
-  #endif
-
-  #if defined(OC_CLIENT)
-    handler.requests_entry = issue_requests_hook;
-  #endif
-
-  int init = oc_main_init(&handler);
-  printf("OIC: attached()\n");
-  if (init <= 0) {
-    #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
-      if (0 == _thread_id) {
-        // If we are in a threaded environment, we will want a thread if there isn't one already.
-        if (createThread(&_thread_id, nullptr, main_OIC_loop, (void*) this)) {
-          Kernel::log("Failed to create iotivity-constrained thread.\n");
-        }
-      }
+    #if defined(OC_SERVER)
+      handler.register_resources = register_resources;
     #endif
+
+    #if defined(OC_CLIENT)
+      handler.requests_entry = issue_requests_hook;
+    #endif
+
+    int init = oc_main_init(&handler);
+    printf("OIC: attached()\n");
+    if (init <= 0) {
+      #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
+        if (0 == _thread_id) {
+          // If we are in a threaded environment, we will want a thread if there isn't one already.
+          if (createThread(&_thread_id, nullptr, main_OIC_loop, (void*) this)) {
+            Kernel::log("Failed to create iotivity-constrained thread.\n");
+          }
+        }
+      #endif
+    }
+    return 1;
   }
-  return 1;
+  return 0;
 }
 
 
