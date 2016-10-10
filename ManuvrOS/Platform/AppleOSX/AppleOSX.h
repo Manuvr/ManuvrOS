@@ -43,8 +43,6 @@ This file is meant to contain a set of common functions that are
   #error Presently, only El Capitan and above are supported.
 #endif
 
-#define __MANUVR_APPLE
-
 /* Used to build an Argument chain from parameters passed to main(). */
 Argument* parseFromArgCV(int argc, const char* argv[]);
 

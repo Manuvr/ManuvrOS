@@ -164,10 +164,12 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t ManuvrConsole::attached() {
-  EventReceiver::attached();
-  //toCounterparty((uint8_t*) temp, strlen(temp), MEM_MGMT_RESPONSIBLE_BEARER);
-  // This is a console. Presumable it should also render log output.
-  return 1;
+  if (EventReceiver::attached()) {
+    //toCounterparty((uint8_t*) temp, strlen(temp), MEM_MGMT_RESPONSIBLE_BEARER);
+    // This is a console. Presumable it should also render log output.
+    return 1;
+  }
+  return 0;
 }
 
 

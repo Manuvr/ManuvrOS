@@ -357,5 +357,7 @@ Then, much complexity was built around scheduling events. Darkness settled over 
 
 This worked for awhile, but was only a thin veneer over the disharmony between the two original houses. True resolution of the split happened gradually over many ages (about twelve months).  The final battle was waged today between ManuvrMsg and ManuvrRunnable on the battlefield of "Namespace". ManuvrMsg was the victor.
 
+    Linux, 32-bit: DEBUG=1 SECURE=1
+    1544182   12024   43940 1600146  186a92 New baseline.
 
 _---J. Ian Lindsay_

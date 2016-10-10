@@ -195,31 +195,32 @@ void LDS8160::printDebug(StringBuilder* temp) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t LDS8160::attached() {
-  EventReceiver::attached();
-
-/* TODO: This class was never ported to ManuvrOS's October 2015 refactor.
-  pid_channel_0 = scheduler->createSchedule(100,  0, false, lds8160_chan_0);
-  pid_channel_1 = scheduler->createSchedule(100,  0, false, lds8160_chan_1);
-  pid_channel_2 = scheduler->createSchedule(100,  0, false, lds8160_chan_2);
-  pid_channel_3 = scheduler->createSchedule(100,  0, false, lds8160_chan_3);
-  pid_channel_4 = scheduler->createSchedule(100,  0, false, lds8160_chan_4);
-  pid_channel_5 = scheduler->createSchedule(100,  0, false, lds8160_chan_5);
-  pid_intensity = scheduler->createSchedule(1500, 0, false, lds8160_intensity);
-  scheduler->disableSchedule(pid_channel_0);
-  scheduler->disableSchedule(pid_channel_1);
-  scheduler->disableSchedule(pid_channel_2);
-  scheduler->disableSchedule(pid_channel_3);
-  scheduler->disableSchedule(pid_channel_4);
-  scheduler->disableSchedule(pid_channel_5);
-  scheduler->disableSchedule(pid_intensity);
-*/
-  //enable_channel(0, false);
-  //enable_channel(1, false);
-  //enable_channel(2, false);
-  //enable_channel(3, false);
-  //enable_channel(4, false);
-  //writeDirtyRegisters();  // If i2c is broken, this will hang the boot process...
-  return 1;
+  if (EventReceiver::attached()) {
+    /* TODO: This class was never ported to ManuvrOS's October 2015 refactor.
+    pid_channel_0 = scheduler->createSchedule(100,  0, false, lds8160_chan_0);
+    pid_channel_1 = scheduler->createSchedule(100,  0, false, lds8160_chan_1);
+    pid_channel_2 = scheduler->createSchedule(100,  0, false, lds8160_chan_2);
+    pid_channel_3 = scheduler->createSchedule(100,  0, false, lds8160_chan_3);
+    pid_channel_4 = scheduler->createSchedule(100,  0, false, lds8160_chan_4);
+    pid_channel_5 = scheduler->createSchedule(100,  0, false, lds8160_chan_5);
+    pid_intensity = scheduler->createSchedule(1500, 0, false, lds8160_intensity);
+    scheduler->disableSchedule(pid_channel_0);
+    scheduler->disableSchedule(pid_channel_1);
+    scheduler->disableSchedule(pid_channel_2);
+    scheduler->disableSchedule(pid_channel_3);
+    scheduler->disableSchedule(pid_channel_4);
+    scheduler->disableSchedule(pid_channel_5);
+    scheduler->disableSchedule(pid_intensity);
+    */
+    //enable_channel(0, false);
+    //enable_channel(1, false);
+    //enable_channel(2, false);
+    //enable_channel(3, false);
+    //enable_channel(4, false);
+    //writeDirtyRegisters();  // If i2c is broken, this will hang the boot process...
+    return 1;
+  }
+  return 0;
 }
 
 

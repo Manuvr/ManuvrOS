@@ -134,12 +134,12 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
     default_flags |= MANUVR_PLAT_FLAG_HAS_STORAGE;
   #endif
 
+  _alter_flags(true, default_flags);
+  _discoverALUParams();
+
   #if defined(__BUILD_HAS_THREADS)
     platform.setIdleHook([]{ sleep_millis(20); });
   #endif
-
-  _alter_flags(true, default_flags);
-  _discoverALUParams();
 
   #if defined(MANUVR_OPENINTERCONNECT)
     // Framework? Add it...
@@ -246,15 +246,14 @@ void ManuvrPlatform::printConfig(StringBuilder* output) {
 void ManuvrPlatform::printCryptoOverview(StringBuilder* out) {
   #if defined(__HAS_CRYPT_WRAPPER)
     out->concatf("-- Cryptographic support via %s.\n", __CRYPTO_BACKEND);
-    #if defined(WITH_MBEDTLS)
+    int idx = 0;
+    #if defined(WITH_MBEDTLS) & defined(MBEDTLS_SSL_TLS_C)
       out->concat("-- Supported TLS ciphersuites:");
-      int idx = 0;
       const int* cs_list = mbedtls_ssl_list_ciphersuites();
       while (0 != *(cs_list)) {
         if (0 == idx++ % 2) out->concat("\n--\t");
         out->concatf("\t%-40s", mbedtls_ssl_get_ciphersuite_name(*(cs_list++)));
       }
-
     #endif
 
     out->concat("\n-- Supported ciphers:");
@@ -327,8 +326,9 @@ int8_t ManuvrPlatform::bootstrap() {
   boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
   Kernel::staticRaiseEvent(boot_completed_ev);
   _set_init_state(MANUVR_INIT_STATE_KERNEL_BOOTING);
-  while (0 < _kernel.procIdleFlags()) {
-    // TODO: Safety! Need to be able to diagnose infinte loops.
+  uint8_t boot_passes = 100;
+  while ((0 < _kernel.procIdleFlags()) && boot_passes) {
+    boot_passes--;
   }
   #if defined(MANUVR_STORAGE)
     if (0 == _load_config()) {
@@ -382,7 +382,7 @@ void ManuvrPlatform::printDebug() {
 * System hook-points                                                           *
 *******************************************************************************/
 void ManuvrPlatform::idleHook() {
-  if (nullptr != _idle_hook) _idle_hook();
+  if (_idle_hook) _idle_hook();
 }
 
 void ManuvrPlatform::setIdleHook(FxnPointer nu) {

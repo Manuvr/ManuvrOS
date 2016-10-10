@@ -473,24 +473,25 @@ const char* ManuvrSession::getSessionSyncString() {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t ManuvrSession::attached() {
-  EventReceiver::attached();
+  if (EventReceiver::attached()) {
+    sync_event.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG, (EventReceiver*) this);
+    sync_event.isManaged(true);
+    sync_event.specific_target = (EventReceiver*) this;
+    sync_event.alterScheduleRecurrence(XENOSESSION_INITIAL_SYNC_COUNT);
+    sync_event.alterSchedulePeriod(30);
+    sync_event.autoClear(false);
+    sync_event.enableSchedule(false);
 
-  sync_event.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG, (EventReceiver*) this);
-  sync_event.isManaged(true);
-  sync_event.specific_target = (EventReceiver*) this;
-  sync_event.alterScheduleRecurrence(XENOSESSION_INITIAL_SYNC_COUNT);
-  sync_event.alterSchedulePeriod(30);
-  sync_event.autoClear(false);
-  sync_event.enableSchedule(false);
+    platform.kernel()->addSchedule(&sync_event);
 
-  platform.kernel()->addSchedule(&sync_event);
-
-  if (isConnected()) {
-    // If we've been instanced because of a connetion, start the sync process...
-    // But only if we can take the transport at its word...
-    mark_session_desync(XENOSESSION_STATE_SYNC_INITIATOR);
+    if (isConnected()) {
+      // If we've been instanced because of a connetion, start the sync process...
+      // But only if we can take the transport at its word...
+      mark_session_desync(XENOSESSION_STATE_SYNC_INITIATOR);
+    }
+    return 1;
   }
-  return 1;
+  return 0;
 }
 
 

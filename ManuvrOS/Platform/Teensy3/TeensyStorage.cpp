@@ -152,24 +152,24 @@ int TeensyStorage::persistentRead(const char*, StringBuilder* out) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t TeensyStorage::attached() {
-  EventReceiver::attached();
-  if (0x7A == EEPROM.read(0)) {
-    if (0xB7 == EEPROM.read(1)) {
-      uint8_t len_msb = EEPROM.read(2);
-      uint8_t len_lsb = EEPROM.read(3);
-      if (0x0F >= len_msb) {
-        _free_space = 2044 - (len_lsb + (len_msb * 256));
-        _pl_set_flag(true, MANUVR_PL_MEDIUM_MOUNTED);
+  if (EventReceiver::attached()) {
+    if (0x7A == EEPROM.read(0)) {
+      if (0xB7 == EEPROM.read(1)) {
+        uint8_t len_msb = EEPROM.read(2);
+        uint8_t len_lsb = EEPROM.read(3);
+        if (0x0F >= len_msb) {
+          _free_space = 2044 - (len_lsb + (len_msb * 256));
+          _pl_set_flag(true, MANUVR_PL_MEDIUM_MOUNTED);
+        }
       }
     }
+    if (!_pl_flag(MANUVR_PL_MEDIUM_MOUNTED)) {
+      // Try to wipe and set status.
+      _pl_set_flag((0 == wipe()), MANUVR_PL_MEDIUM_MOUNTED);
+    }
+    return 1;
   }
-
-  if (!_pl_flag(MANUVR_PL_MEDIUM_MOUNTED)) {
-    // Try to wipe and set status.
-    _pl_set_flag((0 == wipe()), MANUVR_PL_MEDIUM_MOUNTED);
-  }
-
-  return 1;
+  return 0;
 }
 
 

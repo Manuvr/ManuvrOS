@@ -84,23 +84,21 @@ void LightSensor::light_check() {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t LightSensor::attached() {
-  EventReceiver::attached();
-  light_check();
-
-  // Build some pre-formed Events.
-  _periodic_check.repurpose(MANUVR_MSG_AMBIENT_LIGHT_LEVEL, (EventReceiver*) this);
-  _periodic_check.isManaged(true);
-  _periodic_check.specific_target = (EventReceiver*) this;
-
-  _periodic_check.addArg((uint8_t*) &last_lux_bin);
-
-  _periodic_check.alterScheduleRecurrence(-1);
-  _periodic_check.alterSchedulePeriod(501);
-  _periodic_check.autoClear(false);
-  _periodic_check.enableSchedule(true);
-  platform.kernel()->addSchedule(&_periodic_check);
-
-  return 1;
+  if (EventReceiver::attached()) {
+    light_check();
+    // Build some pre-formed Events.
+    _periodic_check.repurpose(MANUVR_MSG_AMBIENT_LIGHT_LEVEL, (EventReceiver*) this);
+    _periodic_check.isManaged(true);
+    _periodic_check.specific_target = (EventReceiver*) this;
+    _periodic_check.addArg((uint8_t*) &last_lux_bin);
+    _periodic_check.alterScheduleRecurrence(-1);
+    _periodic_check.alterSchedulePeriod(501);
+    _periodic_check.autoClear(false);
+    _periodic_check.enableSchedule(true);
+    platform.kernel()->addSchedule(&_periodic_check);
+    return 1;
+  }
+  return 0;
 }
 
 

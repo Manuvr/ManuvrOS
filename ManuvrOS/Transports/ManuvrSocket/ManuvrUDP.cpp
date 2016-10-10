@@ -483,18 +483,19 @@ int8_t ManuvrUDP::udpPipeDestroyCallback(UDPPipe* _dead_walking) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t ManuvrUDP::attached() {
-  EventReceiver::attached();
-  // Because this is not a stream-oriented transport, the timeout value is used
-  //   to periodically flush our connection cache.
-  read_abort_event.alterScheduleRecurrence(0);
-  read_abort_event.alterSchedulePeriod(300);
-  read_abort_event.autoClear(false);
-  read_abort_event.enableSchedule(false);
-  read_abort_event.enableSchedule(false);
-  //platform.kernel()->addSchedule(&read_abort_event);
-
-  listen();
-  return 1;
+  if (EventReceiver::attached()) {
+    // Because this is not a stream-oriented transport, the timeout value is used
+    //   to periodically flush our connection cache.
+    read_abort_event.alterScheduleRecurrence(0);
+    read_abort_event.alterSchedulePeriod(300);
+    read_abort_event.autoClear(false);
+    read_abort_event.enableSchedule(false);
+    read_abort_event.enableSchedule(false);
+    //platform.kernel()->addSchedule(&read_abort_event);
+    listen();
+    return 1;
+  }
+  return 0;
 }
 
 

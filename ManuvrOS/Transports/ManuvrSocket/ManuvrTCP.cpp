@@ -386,21 +386,21 @@ bool ManuvrTCP::write_port(unsigned char* out, int out_len) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t ManuvrTCP::attached() {
-  EventReceiver::attached();
-
-  // We will suffer a 300ms latency if the platform's networking stack doesn't flush
-  //   its buffer in time.
-  read_abort_event.repurpose(MANUVR_MSG_XPORT_RECEIVE, (EventReceiver*) this);
-  read_abort_event.isManaged(true);
-  read_abort_event.specific_target = (EventReceiver*) this;
-  read_abort_event.alterScheduleRecurrence(0);
-  read_abort_event.alterSchedulePeriod(300);
-  read_abort_event.autoClear(false);
-  read_abort_event.enableSchedule(false);
-  platform.kernel()->addSchedule(&read_abort_event);
-
-  reset();
-  return 1;
+  if (EventReceiver::attached()) {
+    // We will suffer a 300ms latency if the platform's networking stack doesn't flush
+    //   its buffer in time.
+    read_abort_event.repurpose(MANUVR_MSG_XPORT_RECEIVE, (EventReceiver*) this);
+    read_abort_event.isManaged(true);
+    read_abort_event.specific_target = (EventReceiver*) this;
+    read_abort_event.alterScheduleRecurrence(0);
+    read_abort_event.alterSchedulePeriod(300);
+    read_abort_event.autoClear(false);
+    read_abort_event.enableSchedule(false);
+    platform.kernel()->addSchedule(&read_abort_event);
+    reset();
+    return 1;
+  }
+  return 0;
 }
 
 

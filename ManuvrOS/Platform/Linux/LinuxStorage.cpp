@@ -216,15 +216,17 @@ int LinuxStorage::_load_file(StringBuilder* buf) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t LinuxStorage::attached() {
-  EventReceiver::attached();
-  if (0 <= _load_file(&_disk_buffer)) {
+  if (EventReceiver::attached()) {
+    if (0 <= _load_file(&_disk_buffer)) {
+    }
+    else {
+      // Attempt to create the file.
+      wipe();
+      if (0 == wipe()) _load_file(&_disk_buffer);
+    }
+    return 1;
   }
-  else {
-    // Attempt to create the file.
-    wipe();
-    if (0 == wipe()) _load_file(&_disk_buffer);
-  }
-  return 1;
+  return 0;
 }
 
 

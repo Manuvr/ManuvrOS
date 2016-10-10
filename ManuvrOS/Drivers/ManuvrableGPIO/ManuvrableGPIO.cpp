@@ -73,7 +73,9 @@ ManuvrableGPIO::~ManuvrableGPIO() {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t ManuvrableGPIO::attached() {
-  EventReceiver::attached();
+  if (EventReceiver::attached()) {
+    return 1;
+  }
   return 0;
 }
 

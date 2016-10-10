@@ -54,7 +54,9 @@ TestDriver::~TestDriver() {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t TestDriver::attached() {
-  EventReceiver::attached();   // Call up to get scheduler ref and class init.
+  if (EventReceiver::attached()) {
+    return 1;
+  }
   return 0;
 }
 
