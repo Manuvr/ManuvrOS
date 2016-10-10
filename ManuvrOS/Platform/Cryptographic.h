@@ -63,6 +63,10 @@ class StringBuilder;
 extern "C" {
 #endif
 
+
+/*******************************************************************************
+* Message digest (Hashing)
+*******************************************************************************/
 #if defined(__BUILD_HAS_DIGEST)
 enum class Hashes {
   #if defined(WRAPPED_HASH_MD5)
@@ -95,6 +99,17 @@ typedef int (*wrapped_hash_operation)(
   uint8_t* out,
   Hashes h
 );
+
+const int get_digest_output_length(Hashes);
+const char* get_digest_label(Hashes);
+int8_t wrapped_hash(uint8_t* in, size_t in_len, uint8_t* out, Hashes h);
+
+// Now some inline definitions to mask the back-end API where it can be done
+//   transparently...
+inline Hashes* list_supported_digests() {
+  return ((Hashes*) mbedtls_md_list());
+};
+
 #endif  //__BUILD_HAS_DIGEST
 
 
@@ -378,6 +393,11 @@ typedef int (*wrapped_keygen_operation)(
   uint8_t* priv,    // Buffer to hold private key.
   size_t* priv_len  // Length of buffer. Modified to reflect written length.
 );
+
+
+const char* get_pk_label(CryptoKey);
+bool estimate_pk_size_requirements(CryptoKey, size_t* pub, size_t* priv, uint16_t* sig);
+
 #endif  //__BUILD_HAS_ASYMMETRIC
 
 
@@ -423,20 +443,6 @@ typedef struct _async_crypt_op {
 
 
 
-/*******************************************************************************
-* Message digest (Hashing)
-*******************************************************************************/
-const int get_digest_output_length(Hashes);
-const char* get_digest_label(Hashes);
-int8_t wrapped_hash(uint8_t* in, size_t in_len, uint8_t* out, Hashes h);
-
-// Now some inline definitions to mask the back-end API where it can be done
-//   transparently...
-inline Hashes* list_supported_digests() {
-  return ((Hashes*) mbedtls_md_list());
-};
-
-
 
 /*******************************************************************************
 * Cipher/decipher
@@ -453,8 +459,6 @@ int wrapped_asym_keygen(Cipher c, CryptoKey, uint8_t* pub, size_t* pub_len, uint
 inline Cipher* list_supported_ciphers() {
   return ((Cipher*) mbedtls_cipher_list());
 };
-
-const char* get_pk_label(CryptoKey);
 
 inline CryptoKey* list_supported_curves() {
   return ((CryptoKey*) mbedtls_ecp_grp_id_list());
@@ -490,8 +494,6 @@ bool provide_cipher_handler(Cipher, wrapped_sym_operation);
 bool provide_sign_verify_handler(CryptoKey, wrapped_sv_operation);
 bool provide_keygen_handler(CryptoKey, wrapped_keygen_operation);
 
-bool estimate_pk_size_requirements(CryptoKey, size_t* pub, size_t* priv, uint16_t* sig);
-
 void crypt_error_string(int errnum, char *buffer, size_t buflen);
 
 
@@ -499,11 +501,11 @@ void crypt_error_string(int errnum, char *buffer, size_t buflen);
 * These things are privately-scoped, and are intended for internal use only.   *
 *******************************************************************************/
 
-static std::map<Cipher, wrapped_sym_operation>    _sym_overrides;    // Symmetric runtime overrides.
-static std::map<Cipher, wrapped_sauth_operation>  _sauth_overrides;  // Symmetric/auth runtime overrides.
-static std::map<Hashes, wrapped_hash_operation>   _hash_overrides;   // Digest runtime overrides.
-static std::map<CryptoKey, wrapped_sv_operation>  _s_v_overrides;
-static std::map<CryptoKey, wrapped_keygen_operation>   _keygen_overrides;
+static std::map<Cipher, wrapped_sym_operation>        _sym_overrides;
+static std::map<Cipher, wrapped_sauth_operation>      _sauth_overrides;
+static std::map<Hashes, wrapped_hash_operation>       _hash_overrides;
+static std::map<CryptoKey, wrapped_sv_operation>      _s_v_overrides;
+static std::map<CryptoKey, wrapped_keygen_operation>  _keygen_overrides;
 
 #if defined(__BUILD_HAS_SYMMETRIC) || defined(__BUILD_HAS_ASYMMETRIC)
   // If we have Cipher support at all, we need these...

@@ -125,7 +125,6 @@ endif
 ifeq ($(SECURE),1)
 MANUVR_OPTIONS += -DWITH_MBEDTLS
 # The remaining lines are to prod header files in libraries.
-MANUVR_OPTIONS += -DOC_SECURITY
 LIBS += $(OUTPUT_PATH)/libmbedtls.a
 LIBS += $(OUTPUT_PATH)/libmbedx509.a
 LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
@@ -162,6 +161,8 @@ export MANUVR_PLATFORM = LINUX
 export CFLAGS
 export CPP_FLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
 
+
+export JSON=1
 
 .PHONY: all
 
