@@ -69,197 +69,207 @@ Note that this represents a maximum scope-of-support regarding cryptographic
   // We rely on comparable checks by mbedTLS on it's config.h file. We are using
   //   the end-results of that output, so we can be sure it is valid.
   #define WRAPPED_NONE                      0
+
+  /* Asymmetric algorithm support. */
   #if defined(MBEDTLS_PK_C)
-    #define WRAPPED_ASYM_NONE                 MBEDTLS_PK_NONE
+    #define __BUILD_HAS_ASYMMETRIC
+    #define WRAPPED_ASYM_NONE                   MBEDTLS_PK_NONE
+
+    #if defined(MBEDTLS_PK_RSA_ALT_SUPPORT)
+      #define WRAPPED_ASYM_RSA_ALT              MBEDTLS_PK_RSA_ALT
+    #endif
+    #if defined(MBEDTLS_RSA_C)
+      #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
+        #define WRAPPED_ASYM_RSASSA_PSS         MBEDTLS_PK_RSASSA_PSS
+      #endif
+      #define WRAPPED_ASYM_RSA                  MBEDTLS_PK_RSA
+    #endif
+
+    #if defined(MBEDTLS_ECP_C)
+      #define WRAPPED_ASYM_ECKEY                MBEDTLS_PK_ECKEY
+      #if defined(MBEDTLS_ECDSA_C)
+        #define WRAPPED_ASYM_ECDSA              MBEDTLS_PK_ECDSA
+      #endif
+      #if defined(MBEDTLS_ECDH_C)
+        #define WRAPPED_ASYM_ECKEY_DH           MBEDTLS_PK_ECKEY_DH
+      #endif
+
+      // Domain parameters and key-sizes for the PK layer.
+      #if defined(MBEDTLS_ECP_DP_SECP192R1_ENABLED)
+        #define WRAPPED_PK_OPT_SECP192R1      MBEDTLS_ECP_DP_SECP192R1
+      #endif
+      #if defined(MBEDTLS_ECP_DP_SECP224R1_ENABLED)
+        #define WRAPPED_PK_OPT_SECP224R1      MBEDTLS_ECP_DP_SECP224R1
+      #endif
+      #if defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
+        #define WRAPPED_PK_OPT_SECP256R1      MBEDTLS_ECP_DP_SECP256R1
+      #endif
+      #if defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED)
+        #define WRAPPED_PK_OPT_SECP384R1      MBEDTLS_ECP_DP_SECP384R1
+      #endif
+      #if defined(MBEDTLS_ECP_DP_SECP521R1_ENABLED)
+        #define WRAPPED_PK_OPT_SECP521R1      MBEDTLS_ECP_DP_SECP521R1
+      #endif
+      #if defined(MBEDTLS_ECP_DP_SECP192K1_ENABLED)
+        #define WRAPPED_PK_OPT_SECP192K1      MBEDTLS_ECP_DP_SECP192K1
+      #endif
+      #if defined(MBEDTLS_ECP_DP_SECP224K1_ENABLED)
+        #define WRAPPED_PK_OPT_SECP224K1      MBEDTLS_ECP_DP_SECP224K1
+      #endif
+      #if defined(MBEDTLS_ECP_DP_SECP256K1_ENABLED)
+        #define WRAPPED_PK_OPT_SECP256K1      MBEDTLS_ECP_DP_SECP256K1
+      #endif
+      #if defined(MBEDTLS_ECP_DP_BP256R1_ENABLED)
+        #define WRAPPED_PK_OPT_BP256R1        MBEDTLS_ECP_DP_BP256R1
+      #endif
+      #if defined(MBEDTLS_ECP_DP_BP384R1_ENABLED)
+        #define WRAPPED_PK_OPT_BP384R1        MBEDTLS_ECP_DP_BP384R1
+      #endif
+      #if defined(MBEDTLS_ECP_DP_BP512R1_ENABLED)
+        #define WRAPPED_PK_OPT_BP512R1        MBEDTLS_ECP_DP_BP512R1
+      #endif
+      #if defined(MBEDTLS_ECP_DP_CURVE25519_ENABLED)
+        #define WRAPPED_PK_OPT_CURVE25519     MBEDTLS_ECP_DP_CURVE25519
+      #endif
+    #endif
+
   #endif
+
+
+  /* Symmetric algorithm support. */
   #if defined(MBEDTLS_CIPHER_C)
-    #define WRAPPED_SYM_NONE                  MBEDTLS_CIPHER_NONE
-  #endif
-  #if defined(MBEDTLS_CIPHER_NULL_CIPHER)
-    #define WRAPPED_SYM_NULL                  MBEDTLS_CIPHER_NULL
-  #endif
+    #define __BUILD_HAS_SYMMETRIC
+    #define WRAPPED_SYM_NONE                    MBEDTLS_CIPHER_NONE
 
-  #if defined(MBEDTLS_PK_RSA_ALT_SUPPORT)
-    #define WRAPPED_ASYM_RSA_ALT              MBEDTLS_PK_RSA_ALT
-  #endif
-  #if defined(MBEDTLS_RSA_C)
-    #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
-      #define WRAPPED_ASYM_RSASSA_PSS           MBEDTLS_PK_RSASSA_PSS
+    #if defined(MBEDTLS_CIPHER_NULL_CIPHER)
+      #define WRAPPED_SYM_NULL                  MBEDTLS_CIPHER_NULL
     #endif
-    #define WRAPPED_ASYM_RSA                  MBEDTLS_PK_RSA
-  #endif
 
-  #if defined(MBEDTLS_ECP_C)
-    #if defined(MBEDTLS_ECDSA_C)
-      #define WRAPPED_ASYM_ECDSA                MBEDTLS_PK_ECDSA
-    #endif
-    #if defined(MBEDTLS_ECDH_C)
-      #define WRAPPED_ASYM_ECKEY_DH             MBEDTLS_PK_ECKEY_DH
-    #endif
-    #define WRAPPED_ASYM_ECKEY                MBEDTLS_PK_ECKEY
-  #endif
-
-  #if defined(MBEDTLS_AES_C)
-    #define WRAPPED_SYM_AES_128_ECB           MBEDTLS_CIPHER_AES_128_ECB
-    #define WRAPPED_SYM_AES_192_ECB           MBEDTLS_CIPHER_AES_192_ECB
-    #define WRAPPED_SYM_AES_256_ECB           MBEDTLS_CIPHER_AES_256_ECB
-  #endif
-
-  #if defined(MBEDTLS_CAMELLIA_C)
-    #define WRAPPED_SYM_CAMELLIA_128_ECB      MBEDTLS_CIPHER_CAMELLIA_128_ECB
-    #define WRAPPED_SYM_CAMELLIA_192_ECB      MBEDTLS_CIPHER_CAMELLIA_192_ECB
-    #define WRAPPED_SYM_CAMELLIA_256_ECB      MBEDTLS_CIPHER_CAMELLIA_256_ECB
-  #endif
-
-  #if defined(MBEDTLS_CIPHER_MODE_CBC)
     #if defined(MBEDTLS_AES_C)
-      #define WRAPPED_SYM_AES_128_CBC           MBEDTLS_CIPHER_AES_128_CBC
-      #define WRAPPED_SYM_AES_192_CBC           MBEDTLS_CIPHER_AES_192_CBC
-      #define WRAPPED_SYM_AES_256_CBC           MBEDTLS_CIPHER_AES_256_CBC
+      #define WRAPPED_SYM_AES_128_ECB           MBEDTLS_CIPHER_AES_128_ECB
+      #define WRAPPED_SYM_AES_192_ECB           MBEDTLS_CIPHER_AES_192_ECB
+      #define WRAPPED_SYM_AES_256_ECB           MBEDTLS_CIPHER_AES_256_ECB
     #endif
+
     #if defined(MBEDTLS_CAMELLIA_C)
-      #define WRAPPED_SYM_CAMELLIA_128_CBC      MBEDTLS_CIPHER_CAMELLIA_128_CBC
-      #define WRAPPED_SYM_CAMELLIA_192_CBC      MBEDTLS_CIPHER_CAMELLIA_192_CBC
-      #define WRAPPED_SYM_CAMELLIA_256_CBC      MBEDTLS_CIPHER_CAMELLIA_256_CBC
+      #define WRAPPED_SYM_CAMELLIA_128_ECB      MBEDTLS_CIPHER_CAMELLIA_128_ECB
+      #define WRAPPED_SYM_CAMELLIA_192_ECB      MBEDTLS_CIPHER_CAMELLIA_192_ECB
+      #define WRAPPED_SYM_CAMELLIA_256_ECB      MBEDTLS_CIPHER_CAMELLIA_256_ECB
     #endif
-    #if defined(MBEDTLS_DES_C)
-      #define WRAPPED_SYM_DES_CBC               MBEDTLS_CIPHER_DES_CBC
-      #define WRAPPED_SYM_DES_ECB               MBEDTLS_CIPHER_DES_ECB
-      #define WRAPPED_SYM_DES_EDE_ECB           MBEDTLS_CIPHER_DES_EDE_ECB
-      #define WRAPPED_SYM_DES_EDE_CBC           MBEDTLS_CIPHER_DES_EDE_CBC
-      #define WRAPPED_SYM_DES_EDE3_ECB          MBEDTLS_CIPHER_DES_EDE3_ECB
-      #define WRAPPED_SYM_DES_EDE3_CBC          MBEDTLS_CIPHER_DES_EDE3_CBC
+
+    #if defined(MBEDTLS_CIPHER_MODE_CBC)
+      #if defined(MBEDTLS_AES_C)
+        #define WRAPPED_SYM_AES_128_CBC         MBEDTLS_CIPHER_AES_128_CBC
+        #define WRAPPED_SYM_AES_192_CBC         MBEDTLS_CIPHER_AES_192_CBC
+        #define WRAPPED_SYM_AES_256_CBC         MBEDTLS_CIPHER_AES_256_CBC
+      #endif
+      #if defined(MBEDTLS_CAMELLIA_C)
+        #define WRAPPED_SYM_CAMELLIA_128_CBC    MBEDTLS_CIPHER_CAMELLIA_128_CBC
+        #define WRAPPED_SYM_CAMELLIA_192_CBC    MBEDTLS_CIPHER_CAMELLIA_192_CBC
+        #define WRAPPED_SYM_CAMELLIA_256_CBC    MBEDTLS_CIPHER_CAMELLIA_256_CBC
+      #endif
+      #if defined(MBEDTLS_DES_C)
+        #define WRAPPED_SYM_DES_CBC             MBEDTLS_CIPHER_DES_CBC
+        #define WRAPPED_SYM_DES_ECB             MBEDTLS_CIPHER_DES_ECB
+        #define WRAPPED_SYM_DES_EDE_ECB         MBEDTLS_CIPHER_DES_EDE_ECB
+        #define WRAPPED_SYM_DES_EDE_CBC         MBEDTLS_CIPHER_DES_EDE_CBC
+        #define WRAPPED_SYM_DES_EDE3_ECB        MBEDTLS_CIPHER_DES_EDE3_ECB
+        #define WRAPPED_SYM_DES_EDE3_CBC        MBEDTLS_CIPHER_DES_EDE3_CBC
+      #endif
+    #endif
+
+    #if defined(MBEDTLS_GCM_C)
+      #if defined(MBEDTLS_AES_C)
+        #define WRAPPED_SYM_AES_128_GCM         MBEDTLS_CIPHER_AES_128_GCM
+        #define WRAPPED_SYM_AES_192_GCM         MBEDTLS_CIPHER_AES_192_GCM
+        #define WRAPPED_SYM_AES_256_GCM         MBEDTLS_CIPHER_AES_256_GCM
+      #endif
+      #if defined(MBEDTLS_CAMELLIA_C)
+        #define WRAPPED_SYM_CAMELLIA_128_GCM    MBEDTLS_CIPHER_CAMELLIA_128_GCM
+        #define WRAPPED_SYM_CAMELLIA_192_GCM    MBEDTLS_CIPHER_CAMELLIA_192_GCM
+        #define WRAPPED_SYM_CAMELLIA_256_GCM    MBEDTLS_CIPHER_CAMELLIA_256_GCM
+      #endif
+    #endif
+
+    #if defined(MBEDTLS_CIPHER_MODE_CFB)
+      #if defined(MBEDTLS_AES_C)
+        #define WRAPPED_SYM_AES_128_CFB128      MBEDTLS_CIPHER_AES_128_CFB128
+        #define WRAPPED_SYM_AES_192_CFB128      MBEDTLS_CIPHER_AES_192_CFB128
+        #define WRAPPED_SYM_AES_256_CFB128      MBEDTLS_CIPHER_AES_256_CFB128
+      #endif
+      #if defined(MBEDTLS_CAMELLIA_C)
+        #define WRAPPED_SYM_CAMELLIA_128_CFB128 MBEDTLS_CIPHER_CAMELLIA_128_CFB128
+        #define WRAPPED_SYM_CAMELLIA_192_CFB128 MBEDTLS_CIPHER_CAMELLIA_192_CFB128
+        #define WRAPPED_SYM_CAMELLIA_256_CFB128 MBEDTLS_CIPHER_CAMELLIA_256_CFB128
+      #endif
+    #endif
+
+    #if defined(MBEDTLS_CIPHER_MODE_CTR)
+      #if defined(MBEDTLS_AES_C)
+        #define WRAPPED_SYM_AES_128_CTR         MBEDTLS_CIPHER_AES_128_CTR
+        #define WRAPPED_SYM_AES_192_CTR         MBEDTLS_CIPHER_AES_192_CTR
+        #define WRAPPED_SYM_AES_256_CTR         MBEDTLS_CIPHER_AES_256_CTR
+      #endif
+      #if defined(MBEDTLS_CAMELLIA_C)
+        #define WRAPPED_SYM_CAMELLIA_128_CTR    MBEDTLS_CIPHER_CAMELLIA_128_CTR
+        #define WRAPPED_SYM_CAMELLIA_192_CTR    MBEDTLS_CIPHER_CAMELLIA_192_CTR
+        #define WRAPPED_SYM_CAMELLIA_256_CTR    MBEDTLS_CIPHER_CAMELLIA_256_CTR
+      #endif
+    #endif
+
+    #if defined(MBEDTLS_BLOWFISH_C)
+      #define WRAPPED_SYM_BLOWFISH_ECB          MBEDTLS_CIPHER_BLOWFISH_ECB
+      #define WRAPPED_SYM_BLOWFISH_CBC          MBEDTLS_CIPHER_BLOWFISH_CBC
+      #define WRAPPED_SYM_BLOWFISH_CFB64        MBEDTLS_CIPHER_BLOWFISH_CFB64
+      #define WRAPPED_SYM_BLOWFISH_CTR          MBEDTLS_CIPHER_BLOWFISH_CTR
+    #endif
+
+    #if defined(MBEDTLS_ARC4_C)
+      #define WRAPPED_SYM_ARC4_128              MBEDTLS_CIPHER_ARC4_128
+    #endif
+
+    #if defined(MBEDTLS_CCM_C)
+      #if defined(MBEDTLS_AES_C)
+        #define WRAPPED_SYM_AES_128_CCM         MBEDTLS_CIPHER_AES_128_CCM
+        #define WRAPPED_SYM_AES_192_CCM         MBEDTLS_CIPHER_AES_192_CCM
+        #define WRAPPED_SYM_AES_256_CCM         MBEDTLS_CIPHER_AES_256_CCM
+      #endif
+      #if defined(MBEDTLS_CAMELLIA_C)
+        #define WRAPPED_SYM_CAMELLIA_128_CCM    MBEDTLS_CIPHER_CAMELLIA_128_CCM
+        #define WRAPPED_SYM_CAMELLIA_192_CCM    MBEDTLS_CIPHER_CAMELLIA_192_CCM
+        #define WRAPPED_SYM_CAMELLIA_256_CCM    MBEDTLS_CIPHER_CAMELLIA_256_CCM
+      #endif
     #endif
   #endif
 
-  #if defined(MBEDTLS_GCM_C)
-    #if defined(MBEDTLS_AES_C)
-      #define WRAPPED_SYM_AES_128_GCM           MBEDTLS_CIPHER_AES_128_GCM
-      #define WRAPPED_SYM_AES_192_GCM           MBEDTLS_CIPHER_AES_192_GCM
-      #define WRAPPED_SYM_AES_256_GCM           MBEDTLS_CIPHER_AES_256_GCM
-    #endif
-    #if defined(MBEDTLS_CAMELLIA_C)
-      #define WRAPPED_SYM_CAMELLIA_128_GCM      MBEDTLS_CIPHER_CAMELLIA_128_GCM
-      #define WRAPPED_SYM_CAMELLIA_192_GCM      MBEDTLS_CIPHER_CAMELLIA_192_GCM
-      #define WRAPPED_SYM_CAMELLIA_256_GCM      MBEDTLS_CIPHER_CAMELLIA_256_GCM
-    #endif
-  #endif
 
-  #if defined(MBEDTLS_CIPHER_MODE_CFB)
-    #if defined(MBEDTLS_AES_C)
-      #define WRAPPED_SYM_AES_128_CFB128        MBEDTLS_CIPHER_AES_128_CFB128
-      #define WRAPPED_SYM_AES_192_CFB128        MBEDTLS_CIPHER_AES_192_CFB128
-      #define WRAPPED_SYM_AES_256_CFB128        MBEDTLS_CIPHER_AES_256_CFB128
-    #endif
-    #if defined(MBEDTLS_CAMELLIA_C)
-      #define WRAPPED_SYM_CAMELLIA_128_CFB128   MBEDTLS_CIPHER_CAMELLIA_128_CFB128
-      #define WRAPPED_SYM_CAMELLIA_192_CFB128   MBEDTLS_CIPHER_CAMELLIA_192_CFB128
-      #define WRAPPED_SYM_CAMELLIA_256_CFB128   MBEDTLS_CIPHER_CAMELLIA_256_CFB128
-    #endif
-  #endif
+  /* Hash algorithm support. */
+  #if defined(MBEDTLS_MD_C)
+    #define __BUILD_HAS_DIGEST
+    #define WRAPPED_HASH_NONE         MBEDTLS_MD_NONE
 
-  #if defined(MBEDTLS_CIPHER_MODE_CTR)
-    #if defined(MBEDTLS_AES_C)
-      #define WRAPPED_SYM_AES_128_CTR           MBEDTLS_CIPHER_AES_128_CTR
-      #define WRAPPED_SYM_AES_192_CTR           MBEDTLS_CIPHER_AES_192_CTR
-      #define WRAPPED_SYM_AES_256_CTR           MBEDTLS_CIPHER_AES_256_CTR
+    #if defined(MBEDTLS_MD5_C)
+      #define WRAPPED_HASH_MD5        MBEDTLS_MD_MD5
     #endif
-    #if defined(MBEDTLS_CAMELLIA_C)
-      #define WRAPPED_SYM_CAMELLIA_128_CTR      MBEDTLS_CIPHER_CAMELLIA_128_CTR
-      #define WRAPPED_SYM_CAMELLIA_192_CTR      MBEDTLS_CIPHER_CAMELLIA_192_CTR
-      #define WRAPPED_SYM_CAMELLIA_256_CTR      MBEDTLS_CIPHER_CAMELLIA_256_CTR
+    #if defined(MBEDTLS_SHA1_C)
+      #define WRAPPED_HASH_SHA1       MBEDTLS_MD_SHA1
+    #endif
+    #if defined(MBEDTLS_SHA224_C)
+      #define WRAPPED_HASH_SHA224     MBEDTLS_MD_SHA224
+    #endif
+    #if defined(MBEDTLS_SHA256_C)
+      #define WRAPPED_HASH_SHA256     MBEDTLS_MD_SHA256
+    #endif
+    #if defined(MBEDTLS_SHA384_C)
+      #define WRAPPED_HASH_SHA384     MBEDTLS_MD_SHA384
+    #endif
+    #if defined(MBEDTLS_SHA512_C)
+      #define WRAPPED_HASH_SHA512     MBEDTLS_MD_SHA512
+    #endif
+    #if defined(MBEDTLS_RIPEMD160_C)
+      #define WRAPPED_HASH_RIPEMD160  MBEDTLS_MD_RIPEMD160
     #endif
   #endif
-
-  #if defined(MBEDTLS_BLOWFISH_C)
-    #define WRAPPED_SYM_BLOWFISH_ECB          MBEDTLS_CIPHER_BLOWFISH_ECB
-    #define WRAPPED_SYM_BLOWFISH_CBC          MBEDTLS_CIPHER_BLOWFISH_CBC
-    #define WRAPPED_SYM_BLOWFISH_CFB64        MBEDTLS_CIPHER_BLOWFISH_CFB64
-    #define WRAPPED_SYM_BLOWFISH_CTR          MBEDTLS_CIPHER_BLOWFISH_CTR
-  #endif
-
-  #if defined(MBEDTLS_ARC4_C)
-    #define WRAPPED_SYM_ARC4_128              MBEDTLS_CIPHER_ARC4_128
-  #endif
-
-  #if defined(MBEDTLS_CCM_C)
-    #if defined(MBEDTLS_AES_C)
-      #define WRAPPED_SYM_AES_128_CCM           MBEDTLS_CIPHER_AES_128_CCM
-      #define WRAPPED_SYM_AES_192_CCM           MBEDTLS_CIPHER_AES_192_CCM
-      #define WRAPPED_SYM_AES_256_CCM           MBEDTLS_CIPHER_AES_256_CCM
-    #endif
-    #if defined(MBEDTLS_CAMELLIA_C)
-      #define WRAPPED_SYM_CAMELLIA_128_CCM      MBEDTLS_CIPHER_CAMELLIA_128_CCM
-      #define WRAPPED_SYM_CAMELLIA_192_CCM      MBEDTLS_CIPHER_CAMELLIA_192_CCM
-      #define WRAPPED_SYM_CAMELLIA_256_CCM      MBEDTLS_CIPHER_CAMELLIA_256_CCM
-    #endif
-  #endif
-
-
-  // Discover and wrap hash support.
-  #define WRAPPED_HASH_NONE       MBEDTLS_MD_NONE
-  #if defined(MBEDTLS_MD5_C)
-    #define WRAPPED_HASH_MD5        MBEDTLS_MD_MD5
-  #endif
-  #if defined(MBEDTLS_SHA1_C)
-    #define WRAPPED_HASH_SHA1       MBEDTLS_MD_SHA1
-  #endif
-  #if defined(MBEDTLS_SHA224_C)
-    #define WRAPPED_HASH_SHA224     MBEDTLS_MD_SHA224
-  #endif
-  #if defined(MBEDTLS_SHA256_C)
-    #define WRAPPED_HASH_SHA256     MBEDTLS_MD_SHA256
-  #endif
-  #if defined(MBEDTLS_SHA384_C)
-    #define WRAPPED_HASH_SHA384     MBEDTLS_MD_SHA384
-  #endif
-  #if defined(MBEDTLS_SHA512_C)
-    #define WRAPPED_HASH_SHA512     MBEDTLS_MD_SHA512
-  #endif
-  #if defined(MBEDTLS_RIPEMD160_C)
-    #define WRAPPED_HASH_RIPEMD160  MBEDTLS_MD_RIPEMD160
-  #endif
-
-
-  // Domain parameters and key-sizes for the PK layer.
-  #if defined(MBEDTLS_ECP_DP_SECP192R1_ENABLED)
-    #define WRAPPED_PK_OPT_SECP192R1  MBEDTLS_ECP_DP_SECP192R1
-  #endif
-  #if defined(MBEDTLS_ECP_DP_SECP224R1_ENABLED)
-    #define WRAPPED_PK_OPT_SECP224R1  MBEDTLS_ECP_DP_SECP224R1
-  #endif
-  #if defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
-    #define WRAPPED_PK_OPT_SECP256R1  MBEDTLS_ECP_DP_SECP256R1
-  #endif
-  #if defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED)
-    #define WRAPPED_PK_OPT_SECP384R1  MBEDTLS_ECP_DP_SECP384R1
-  #endif
-  #if defined(MBEDTLS_ECP_DP_SECP521R1_ENABLED)
-    #define WRAPPED_PK_OPT_SECP521R1  MBEDTLS_ECP_DP_SECP521R1
-  #endif
-  #if defined(MBEDTLS_ECP_DP_SECP192K1_ENABLED)
-    #define WRAPPED_PK_OPT_SECP192K1  MBEDTLS_ECP_DP_SECP192K1
-  #endif
-  #if defined(MBEDTLS_ECP_DP_SECP224K1_ENABLED)
-    #define WRAPPED_PK_OPT_SECP224K1  MBEDTLS_ECP_DP_SECP224K1
-  #endif
-  #if defined(MBEDTLS_ECP_DP_SECP256K1_ENABLED)
-    #define WRAPPED_PK_OPT_SECP256K1  MBEDTLS_ECP_DP_SECP256K1
-  #endif
-  #if defined(MBEDTLS_ECP_DP_BP256R1_ENABLED)
-    #define WRAPPED_PK_OPT_BP256R1  MBEDTLS_ECP_DP_BP256R1
-  #endif
-  #if defined(MBEDTLS_ECP_DP_BP384R1_ENABLED)
-    #define WRAPPED_PK_OPT_BP384R1  MBEDTLS_ECP_DP_BP384R1
-  #endif
-  #if defined(MBEDTLS_ECP_DP_BP512R1_ENABLED)
-    #define WRAPPED_PK_OPT_BP512R1  MBEDTLS_ECP_DP_BP512R1
-  #endif
-  #if defined(MBEDTLS_ECP_DP_CURVE25519_ENABLED)
-    #define WRAPPED_PK_OPT_CURVE25519  MBEDTLS_ECP_DP_CURVE25519
-  #endif
-
-
 
 
 #elif defined(WITH_OPENSSL)
@@ -353,7 +363,7 @@ Note that this represents a maximum scope-of-support regarding cryptographic
 
   // We will unquestioningly provide definition and support for all manner of
   //   elemental algorithm. We have no way of predicting what will be added at
-  //   run-time.
+  //   run-time. But this list constrains it.
   #define WRAPPED_NONE                      0
   #define WRAPPED_ASYM_NONE                 1
   #define WRAPPED_ASYM_RSA                  2
@@ -379,38 +389,38 @@ Note that this represents a maximum scope-of-support regarding cryptographic
   #define WRAPPED_SYM_AES_128_GCM           22
   #define WRAPPED_SYM_AES_192_GCM           23
   #define WRAPPED_SYM_AES_256_GCM           24
-  #define WRAPPED_SYM_CAMELLIA_128_ECB      25
-  #define WRAPPED_SYM_CAMELLIA_192_ECB      26
-  #define WRAPPED_SYM_CAMELLIA_256_ECB      27
-  #define WRAPPED_SYM_CAMELLIA_128_CBC      28
-  #define WRAPPED_SYM_CAMELLIA_192_CBC      29
-  #define WRAPPED_SYM_CAMELLIA_256_CBC      30
-  #define WRAPPED_SYM_CAMELLIA_128_CFB128   31
-  #define WRAPPED_SYM_CAMELLIA_192_CFB128   32
-  #define WRAPPED_SYM_CAMELLIA_256_CFB128   33
-  #define WRAPPED_SYM_CAMELLIA_128_CTR      34
-  #define WRAPPED_SYM_CAMELLIA_192_CTR      35
-  #define WRAPPED_SYM_CAMELLIA_256_CTR      36
-  #define WRAPPED_SYM_CAMELLIA_128_GCM      37
-  #define WRAPPED_SYM_CAMELLIA_192_GCM      38
-  #define WRAPPED_SYM_CAMELLIA_256_GCM      39
-  #define WRAPPED_SYM_DES_ECB               40
-  #define WRAPPED_SYM_DES_CBC               41
-  #define WRAPPED_SYM_DES_EDE_ECB           42
-  #define WRAPPED_SYM_DES_EDE_CBC           43
-  #define WRAPPED_SYM_DES_EDE3_ECB          44
-  #define WRAPPED_SYM_DES_EDE3_CBC          45
-  #define WRAPPED_SYM_BLOWFISH_ECB          46
-  #define WRAPPED_SYM_BLOWFISH_CBC          47
-  #define WRAPPED_SYM_BLOWFISH_CFB64        48
-  #define WRAPPED_SYM_BLOWFISH_CTR          49
-  #define WRAPPED_SYM_ARC4_128              50
+  //#define WRAPPED_SYM_CAMELLIA_128_ECB      25
+  //#define WRAPPED_SYM_CAMELLIA_192_ECB      26
+  //#define WRAPPED_SYM_CAMELLIA_256_ECB      27
+  //#define WRAPPED_SYM_CAMELLIA_128_CBC      28
+  //#define WRAPPED_SYM_CAMELLIA_192_CBC      29
+  //#define WRAPPED_SYM_CAMELLIA_256_CBC      30
+  //#define WRAPPED_SYM_CAMELLIA_128_CFB128   31
+  //#define WRAPPED_SYM_CAMELLIA_192_CFB128   32
+  //#define WRAPPED_SYM_CAMELLIA_256_CFB128   33
+  //#define WRAPPED_SYM_CAMELLIA_128_CTR      34
+  //#define WRAPPED_SYM_CAMELLIA_192_CTR      35
+  //#define WRAPPED_SYM_CAMELLIA_256_CTR      36
+  //#define WRAPPED_SYM_CAMELLIA_128_GCM      37
+  //#define WRAPPED_SYM_CAMELLIA_192_GCM      38
+  //#define WRAPPED_SYM_CAMELLIA_256_GCM      39
+  //#define WRAPPED_SYM_DES_ECB               40
+  //#define WRAPPED_SYM_DES_CBC               41
+  //#define WRAPPED_SYM_DES_EDE_ECB           42
+  //#define WRAPPED_SYM_DES_EDE_CBC           43
+  //#define WRAPPED_SYM_DES_EDE3_ECB          44
+  //#define WRAPPED_SYM_DES_EDE3_CBC          45
+  //#define WRAPPED_SYM_BLOWFISH_ECB          46
+  //#define WRAPPED_SYM_BLOWFISH_CBC          47
+  //#define WRAPPED_SYM_BLOWFISH_CFB64        48
+  //#define WRAPPED_SYM_BLOWFISH_CTR          49
+  //#define WRAPPED_SYM_ARC4_128              50
   #define WRAPPED_SYM_AES_128_CCM           51
   #define WRAPPED_SYM_AES_192_CCM           52
   #define WRAPPED_SYM_AES_256_CCM           53
-  #define WRAPPED_SYM_CAMELLIA_128_CCM      54
-  #define WRAPPED_SYM_CAMELLIA_192_CCM      55
-  #define WRAPPED_SYM_CAMELLIA_256_CCM      56
+  //#define WRAPPED_SYM_CAMELLIA_128_CCM      54
+  //#define WRAPPED_SYM_CAMELLIA_192_CCM      55
+  //#define WRAPPED_SYM_CAMELLIA_256_CCM      56
 
 
 #else
