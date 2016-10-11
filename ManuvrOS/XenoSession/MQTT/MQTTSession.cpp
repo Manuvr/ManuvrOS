@@ -124,7 +124,7 @@ int8_t MQTTSession::subscribe(const char* topic, ManuvrMsg* runnable) {
   std::map<const char*, ManuvrMsg*>::iterator it = _subscriptions.find(topic);
   if (_subscriptions.end() == it) {
     // If the list doesn't already have the topic....
-		runnable->originator  = (EventReceiver*) this;
+		runnable->setOriginator((EventReceiver*)this);
     _subscriptions[topic] = runnable;
 		return sendSub(topic, QOS1);   // TODO: make dynamic
   }
