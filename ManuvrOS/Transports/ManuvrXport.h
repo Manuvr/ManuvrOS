@@ -94,6 +94,8 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
 
     /*
     * State imperatives.
+    * TODO: This is fragile, and has been a PITA to maintain. Migrate some of this to Pipe
+    *         signals, and leave inlines as public-facing members.
     */
     virtual int8_t connect()    = 0;
     virtual int8_t disconnect();

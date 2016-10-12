@@ -32,6 +32,7 @@ ifeq ($(SECURE),1)
 C_SRCS   += Cryptographic/Cryptographic.c
 C_SRCS   += Cryptographic/MbedTLS.c
 C_SRCS   += Cryptographic/OpenSSL.c
+C_SRCS   += Cryptographic/Blind.c
 endif
 
 # This Makefile heeds two separate exports:

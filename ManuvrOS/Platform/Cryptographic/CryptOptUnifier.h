@@ -351,6 +351,8 @@ Note that this represents a maximum scope-of-support regarding cryptographic
 
 
 
+// TODO: This ought to be an independant conditional. Blind support needs to
+//   coexist with software support.
 #elif defined(WITH_BLIND_CRYPTO)
 /* "Blind" means we are going to assume we support a whole mess of crpytographic
      algorithms without any specific plan for doing so. It is then the job of

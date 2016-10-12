@@ -36,22 +36,12 @@ This tests the cryptographic system under whatever build options
 #include <Platform/Platform.h>
 
 
+
 struct Trips {  // <---- Check 'em
   size_t deltas[3];
 };
 
-static std::map<CryptoKey, Trips*>  asym_estimate_deltas;
-
 static char* err_buf[128] = {0};
-
-
-#ifndef max
-#define max(a,b)            (((a) > (b)) ? (a) : (b))
-#endif
-
-#ifndef min
-#define min(a,b)            (((a) < (b)) ? (a) : (b))
-#endif
 
 
 /*
@@ -69,6 +59,7 @@ int CRYPTO_TEST_INIT() {
 
 /*
 * Tests to ensure the RNG works.
+* All implementations are expected to have this most-basic capability.
 */
 int CRYPTO_TEST_RNG() {
   printf("===< CRYPTO_TEST_RNG >===========================================\n");
@@ -95,6 +86,7 @@ int CRYPTO_TEST_RNG() {
 }
 
 
+#if defined(__BUILD_HAS_DIGEST)
 /*
 * Digest algortithm tests.
 * Because these are not reversible, this will take the form of
@@ -138,8 +130,16 @@ int CRYPTO_TEST_HASHES() {
   }
   return 0;
 }
+#else
+int CRYPTO_TEST_HASHES() {
+  // Build doesn't have asymmetric support.
+  printf("Build doesn't have digest support. Skipping tests...\n");
+  return 0;
+}
+#endif // __BUILD_HAS_DIGEST
 
 
+#if defined(__BUILD_HAS_SYMMETRIC)
 /*
 * Symmetric algorthms.
 */
@@ -225,7 +225,17 @@ int CRYPTO_TEST_SYMMETRIC() {
 
   return 0;
 }
+#else
+int CRYPTO_TEST_SYMMETRIC() {
+  // Build doesn't have asymmetric support.
+  printf("Build doesn't have symmetric support. Skipping tests...\n");
+  return 0;
+}
+#endif // __BUILD_HAS_ASYMMETRIC
 
+
+#if defined(__BUILD_HAS_ASYMMETRIC)
+static std::map<CryptoKey, Trips*>  asym_estimate_deltas;
 
 /*
 * Asymmetric algorthms.
@@ -289,9 +299,9 @@ int CRYPTO_TEST_ASYMMETRIC_SET(Cipher c, CryptoKey* pks) {
             (sigbuf_estimate - sigbuf_len)
           );
           if (nullptr != asym_estimate_deltas[*pks]) {
-            asym_estimate_deltas[*pks]->deltas[0] = (min(asym_estimate_deltas[*pks]->deltas[0], (public_estimate - public_len)));
-            asym_estimate_deltas[*pks]->deltas[1] = (min(asym_estimate_deltas[*pks]->deltas[1], (privat_estimate - privat_len)));
-            asym_estimate_deltas[*pks]->deltas[2] = (min(asym_estimate_deltas[*pks]->deltas[2], (sigbuf_estimate - sigbuf_len)));
+            asym_estimate_deltas[*pks]->deltas[0] = (strict_min(asym_estimate_deltas[*pks]->deltas[0], (public_estimate - public_len)));
+            asym_estimate_deltas[*pks]->deltas[1] = (strict_min(asym_estimate_deltas[*pks]->deltas[1], (privat_estimate - privat_len)));
+            asym_estimate_deltas[*pks]->deltas[2] = (strict_min(asym_estimate_deltas[*pks]->deltas[2], (sigbuf_estimate - sigbuf_len)));
           }
           else {
             asym_estimate_deltas[*pks] = new Trips;
@@ -323,7 +333,6 @@ int CRYPTO_TEST_ASYMMETRIC_SET(Cipher c, CryptoKey* pks) {
 }
 
 
-
 /*
 * Asymmetric algorthms.
 */
@@ -351,6 +360,13 @@ int CRYPTO_TEST_ASYMMETRIC() {
   }
   return 0;
 }
+#else
+int CRYPTO_TEST_ASYMMETRIC() {
+  // Build doesn't have asymmetric support.
+  printf("Build doesn't have asymmetric support. Skipping tests...\n");
+  return 0;
+}
+#endif  // __BUILD_HAS_ASYMMETRIC
 
 
 void printTestFailure(const char* test) {
@@ -394,10 +410,11 @@ int main(int argc, char *argv[]) {
   }
   else printTestFailure("CRYPTO_TEST_INIT");
 
-	std::map<CryptoKey, Trips*>::iterator it;
+  #if defined(__BUILD_HAS_ASYMMETRIC)
+  std::map<CryptoKey, Trips*>::iterator it;
   for (it = asym_estimate_deltas.begin(); it != asym_estimate_deltas.end(); it++) {
     delete it->second;
   }
-
+  #endif
   exit(exit_value);
 }
