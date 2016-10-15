@@ -787,11 +787,12 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
   const MessageTypeDef* type_obj = getMsgDef();
 
   if (&ManuvrMsg::message_defs[0] == type_obj) {
-    output->concatf("\t Message type:   <UNDEFINED (Code 0x%04x)>\n", _code);
+    output->concatf("    ---< UNDEFINED (0x%04x) >-------------\n", _code);
   }
   else {
-    output->concatf("\t Message type:   %s\n", getMsgTypeString());
+    output->concatf("    ---< %s >-----------------------------\n", getMsgTypeString());
   }
+
 
   if (_args) {
     output->concatf("\t %d Arguments:\n", _args->argCount());
@@ -802,9 +803,21 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
     output->concat("\t No arguments.\n");
   }
 
-  output->concatf("\t Preallocated          %s\n", (returnToPrealloc() ? YES_STR : NO_STR));
+  output->concatf(
+    "\t Flags:\t%s%s%s\n",
+    (returnToPrealloc() ? "PreAlloc  " : ""),
+    (isManaged()        ? "MemManaged  " : ""),
+    (profilingEnabled() ? "Profiling  " : "")
+  );
+
   output->concatf("\t Originator:           %s\n", (nullptr == _origin ? NUL_STR : _origin->getReceiverName()));
-  output->concatf("\t specific_target:      %s\n", (nullptr == specific_target ? NUL_STR : specific_target->getReceiverName()));
+
+  if (specific_target) {
+    output->concatf("\t specific_target:      %s\n", (nullptr == specific_target ? NUL_STR : specific_target->getReceiverName()));
+  }
+  else {
+    output->concat("\t Broadcast\n");
+  }
 
   if (isScheduled()) {
     output->concatf("\t [%p] Schedule \n\t --------------------------------\n", this);
@@ -815,13 +828,11 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
     output->concatf("\t Exec pending: \t%s\n", (shouldFire() ? YES_STR : NO_STR));
     output->concatf("\t Autoclear     \t%s\n", (autoClear() ? YES_STR : NO_STR));
   }
-  #if defined(__MANUVR_EVENT_PROFILER)
-    output->concatf("\t Profiling?    \t%s\n", (profilingEnabled() ? YES_STR : NO_STR));
-  #endif
 
   if (schedule_callback) {
     output->concat("\t Legacy callback\n");
   }
+  output->concat("\n");
 }
 #endif  // __MANUVR_DEBUG
 

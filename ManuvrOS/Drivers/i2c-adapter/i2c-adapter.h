@@ -158,7 +158,7 @@ This file is the tortured result of growing pains since the beginning of
   */
   class I2CAdapter : public EventReceiver {
     public:
-      I2CBusOp* current_queue_item;
+      I2CBusOp* current_queue_item = nullptr;
 
       I2CAdapter(uint8_t dev_id = 1);  // Constructor takes a bus ID as an argument.
       virtual ~I2CAdapter();           // Destructor
@@ -212,8 +212,8 @@ This file is the tortured result of growing pains since the beginning of
       ManuvrMsg _periodic_i2c_debug;
 
       int8_t ping_map[128];
-      int8_t last_used_bus_addr;
-      int dev;
+      int8_t last_used_bus_addr = 0;
+      int    dev = -1;
 
       void __class_initializer();
       void gpioSetup();

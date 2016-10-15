@@ -361,3 +361,7 @@ This worked for awhile, but was only a thin veneer over the disharmony between t
     1544182   12024   43940 1600146  186a92 New baseline.
 
 _---J. Ian Lindsay_
+
+------
+
+### 2016.10.14:

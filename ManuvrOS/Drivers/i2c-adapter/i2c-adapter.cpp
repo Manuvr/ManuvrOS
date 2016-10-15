@@ -87,9 +87,6 @@ const MessageTypeDef i2c_message_defs[] = {
 void I2CAdapter::__class_initializer() {
   setReceiverName("I2CAdapter");
 
-  current_queue_item = NULL;
-  last_used_bus_addr = 0;
-
   _er_clear_flag(I2C_BUS_FLAG_BUS_ERROR | I2C_BUS_FLAG_BUS_ONLINE);
   _er_clear_flag(I2C_BUS_FLAG_PING_RUN  | I2C_BUS_FLAG_PINGING);
 

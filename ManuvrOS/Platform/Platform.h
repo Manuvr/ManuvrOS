@@ -329,9 +329,6 @@ class ManuvrPlatform {
 
 
 
-
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif
