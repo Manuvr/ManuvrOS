@@ -184,7 +184,6 @@ Kernel::Kernel() : EventReceiver() {
         meet demand, new Events will be created on the heap. But the events that we are dealing
         with here are special. They should remain circulating (or in standby) for the lifetime of
         this class. */
-    _preallocation_pool[i].returnToPrealloc(true);
     preallocated.insert(&_preallocation_pool[i]);
   }
 
@@ -534,6 +533,20 @@ int8_t Kernel::validate_insertion(ManuvrMsg* event) {
 }
 
 
+bool Kernel::returnToPrealloc(ManuvrMsg* obj) {
+  uintptr_t obj_addr = ((uintptr_t) obj);
+  uintptr_t pre_min  = ((uintptr_t) _preallocation_pool);
+  uintptr_t pre_max  = pre_min + (sizeof(ManuvrMsg) * EVENT_MANAGER_PREALLOC_COUNT);
+
+  if ((obj_addr < pre_max) && (obj_addr >= pre_min)) {
+    // If we are in this block, it means obj was preallocated...
+    obj->clearArgs();         // Wipe the Msg...
+    preallocated.insert(obj); // ...and return it to the preallocate queue.
+    return true;              // Inform caller of act.
+  }
+  return false;
+}
+
 
 /**
 * This is where events go to die. This function should inspect the Event and send it
@@ -568,18 +581,15 @@ void Kernel::reclaim_event(ManuvrMsg* active_runnable) {
   else {                                      // If we are NOT to reap this event...
     if (active_runnable->isManaged()) {
     }
-    else if (active_runnable->returnToPrealloc()) {   // ...is it because we preallocated it?
-      active_runnable->clearArgs();              // If so, wipe the Event...
-      preallocated.insert(active_runnable);      // ...and return it to the preallocate queue.
-    }                                         // Otherwise, we let it drop and trust some other class is managing it.
-    #ifdef __MANUVR_DEBUG
-    else {
-      if (getVerbosity() > 6) {
-        local_log.concat("Kernel::reclaim_event(): Doing nothing. Hope its managed elsewhere.\n");
-        Kernel::log(&local_log);
-      }
+    else if (!returnToPrealloc(active_runnable)) {
+      // ...if we preallocated it, let it drop and trust some other class is managing it.
+      #ifdef __MANUVR_DEBUG
+        if (getVerbosity() > 6) {
+          local_log.concat("Kernel::reclaim_event(): Doing nothing. Hope its managed elsewhere.\n");
+          Kernel::log(&local_log);
+        }
+      #endif // __MANUVR_DEBUG
     }
-    #endif // __MANUVR_DEBUG
   }
 }
 
@@ -974,8 +984,8 @@ void Kernel::printProfiler(StringBuilder* output) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void Kernel::printScheduler(StringBuilder* output) {
-  output->concatf("-- Total schedules:    %d\n-- Active schedules:   %d\n\n", schedules.size(), countActiveSchedules());
   output->concatf("-- _ms_elapsed         %u\n", (unsigned long) _ms_elapsed);
+  output->concatf("-- Total schedules:    %d\n-- Active schedules:   %d\n\n", schedules.size(), countActiveSchedules());
   if (lagged_schedules)    output->concatf("-- Lagged schedules:   %u\n", (unsigned long) lagged_schedules);
   if (_skips_observed)     output->concatf("-- Scheduler skips:    %u\n", (unsigned long) _skips_observed);
   if (_er_flag(MKERNEL_FLAG_SKIP_FAILSAFE)) {

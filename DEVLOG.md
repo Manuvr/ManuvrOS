@@ -378,3 +378,18 @@ Expansion of flags member and consequent alignment fixes...
     ManuvrMsg storage size is 40 bytes.
     Digitabulum DEBUG=1
     281376    2800    9660  293836   47bcc
+
+Dropping the Msg-borne preallocation flag in favor of my own advice from last year, which I will reproduce below.
+
+    /*
+    * At present, our criteria for preallocation is if the pointer address passed in
+    *   falls within the range of our __prealloc array. I see nothing "non-portable"
+    *   about this, it doesn't require a flag or class member, and it is fast to check.
+    *                                 ---J. Ian Lindsay   Mon Apr 13 10:51:54 MST 2015
+    */
+
+Not to mention, FAR safer.
+
+    ManuvrMsg storage size is 40 bytes.
+    Digitabulum DEBUG=1
+    281320    2800    9660  293780   47b94

@@ -344,32 +344,19 @@ ManuvrMsg::~ManuvrMsg() {
 *   is designed to prevent malloc()/free() thrash where it can be avoided.
 *
 * @param uint16_t The new identity code for the message.
+* @param EventReceiver* The EventReceiver that should be called-back on completion.
 * @return 0 on success, or appropriate failure code.
 */
-int8_t ManuvrMsg::repurpose(uint16_t code) {
+int8_t ManuvrMsg::repurpose(uint16_t code, EventReceiver* cb) {
   // These things have implications for memory management, which is why repurpose() doesn't touch them.
-  uint32_t _persist_mask = MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_PREALLOCD | MANUVR_RUNNABLE_FLAG_SCHEDULED;
+  uint32_t _persist_mask = MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_SCHEDULED;
   _flags            = _flags & _persist_mask;
-  _origin           = nullptr;
+  _origin           = cb;
   specific_target   = nullptr;
   schedule_callback = nullptr;
   priority(EVENT_PRIORITY_DEFAULT);
   _code             = code;
   message_def       = lookupMsgDefByCode(_code);
-  return 0;
-}
-
-/**
-* Call this member to repurpose this message for an unrelated task. This mechanism
-*   is designed to prevent malloc()/free() thrash where it can be avoided.
-*
-* @param uint16_t The new identity code for the message.
-* @param EventReceiver* The EventReceiver that should be called-back on completion.
-* @return 0 on success, or appropriate failure code.
-*/
-int8_t ManuvrMsg::repurpose(uint16_t code, EventReceiver* cb) {
-  repurpose(code);
-  _origin = cb;
   return 0;
 }
 
@@ -622,9 +609,9 @@ Argument* ManuvrMsg::takeArgs() {
 * @param  uint8_t The Argument position
 * @return NOTYPE_FM if the Argument isn't found, and its type code if it is.
 */
-uint8_t ManuvrMsg::getArgumentType(uint8_t idx) {
-  return NOTYPE_FM;
-}
+//uint8_t ManuvrMsg::getArgumentType(uint8_t idx) {
+//  return NOTYPE_FM;
+//}
 
 
 /**
@@ -805,10 +792,11 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
   }
 
   output->concatf(
-    "\t Flags:\t%s%s%s\n",
-    (returnToPrealloc() ? "PreAlloc  " : ""),
+    "\t Flags:\t%s%s\n\t Priority:\t%u\n\t Refs:\t%u\n",
     (isManaged()        ? "MemManaged  " : ""),
-    (profilingEnabled() ? "Profiling  " : "")
+    (profilingEnabled() ? "Profiling  " : ""),
+    priority(),
+    refCount()
   );
 
   output->concatf("\t Originator:           %s\n", (nullptr == _origin ? NUL_STR : _origin->getReceiverName()));

@@ -206,6 +206,7 @@ limitations under the License.
       int serviceSchedules(void);         // Prep any schedules that have come due for exec.
 
       int8_t validate_insertion(ManuvrMsg*);
+      bool returnToPrealloc(ManuvrMsg*);
       void reclaim_event(ManuvrMsg*);
       inline void update_maximum_queue_depth() {   max_queue_depth = (exec_queue.size() > (int) max_queue_depth) ? exec_queue.size() : max_queue_depth;   };
 

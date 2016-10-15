@@ -40,7 +40,6 @@ This class forms the foundation of internal events. It contains the identity of 
 * These are flag definitions that might apply to an instance of a Msg.
 */
 #define MANUVR_RUNNABLE_FLAG_MEM_MANAGED     0x0100  // Set to true to cause the Kernel to not free().
-#define MANUVR_RUNNABLE_FLAG_PREALLOCD       0x0200  // Set to true to cause the Kernel to return this runnable to its prealloc.
 #define MANUVR_RUNNABLE_FLAG_AUTOCLEAR       0x0400  // If true, this schedule will be removed after its last execution.
 #define MANUVR_RUNNABLE_FLAG_SCHED_ENABLED   0x0800  // Is the schedule running?
 #define MANUVR_RUNNABLE_FLAG_SCHEDULED       0x1000  // Set to true to cause the Kernel to not free().
@@ -51,7 +50,6 @@ This class forms the foundation of internal events. It contains the identity of 
 * These are flag definitions that might apply to an instance of a Msg.
 */
 #define MANUVR_MSG_FLAG_MEM_MANAGED     0x01000000  // Set to true to cause the Kernel to not free().
-#define MANUVR_MSG_FLAG_PREALLOCD       0x02000000  // Set to true to cause the Kernel to return this runnable to its prealloc.
 #define MANUVR_MSG_FLAG_AUTOCLEAR       0x04000000  // If true, this schedule will be removed after its last execution.
 #define MANUVR_MSG_FLAG_SCHED_ENABLED   0x08000000  // Is the schedule running?
 #define MANUVR_MSG_FLAG_SCHEDULED       0x10000000  // Set to true to cause the Kernel to not free().
@@ -116,9 +114,8 @@ class ManuvrMsg {
     ~ManuvrMsg();
 
 
-    // TODO: Might be better to use placement new?
-    int8_t repurpose(uint16_t code);
     int8_t repurpose(uint16_t code, EventReceiver* cb);
+    inline int8_t repurpose(uint16_t code) { return repurpose(code, nullptr); };
 
     void printDebug(StringBuilder*);
 
@@ -346,26 +343,13 @@ class ManuvrMsg {
     };
 
     /**
-    * If the memory isn't managed explicitly by some other class, this will tell the Kernel to delete
-    *   the completed event.
-    * Preallocation implies no reap.
+    * If the memory isn't managed explicitly by some other class, this
+    *   will tell the Kernel to GC the completed event.
     *
-    * @return true if the Kernel ought to free() this Event. False otherwise.
+    * @return true if the Kernel ought to GC this Event. False otherwise.
     */
     inline bool kernelShouldReap() {
-      return (0 == (MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_PREALLOCD | MANUVR_RUNNABLE_FLAG_SCHEDULED));
-    };
-
-    /**
-    * Was this event preallocated?
-    * Preallocation implies no reap.
-    *
-    * @param  nu_val Pass true to cause this event to be marked as part of a preallocation pool.
-    * @return true if the Kernel ought to return this event to its preallocation queue.
-    */
-    inline bool returnToPrealloc() { return (_flags & MANUVR_RUNNABLE_FLAG_PREALLOCD); };
-    inline void returnToPrealloc(bool en) {
-      _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_PREALLOCD) : (_flags & ~(MANUVR_RUNNABLE_FLAG_PREALLOCD));
+      return (0 == (MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_SCHEDULED));
     };
 
     /**
@@ -378,6 +362,7 @@ class ManuvrMsg {
       _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_MEM_MANAGED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_MEM_MANAGED));
     };
 
+
     inline uint8_t refCount() {  return (_flags & MANUVR_MSG_FLAG_REF_COUNT_MASK); };
     inline bool    decRefs() {   return (0 == --_flags);  };
     inline void    incRefs() {   _flags++;  };
@@ -386,7 +371,6 @@ class ManuvrMsg {
     inline void    priority(uint8_t pri) {
       _flags = (_flags & ~(MANUVR_MSG_FLAG_PRIORITY_MASK)) + (pri << 8);
     };
-
 
 
     #if defined(__MANUVR_EVENT_PROFILER)
