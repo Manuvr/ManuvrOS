@@ -42,10 +42,12 @@ limitations under the License.
 *
 * Static members and initializers should be located here.
 *******************************************************************************/
+uintptr_t   Kernel::_prealloc_max    = 0;
 uint32_t    Kernel::lagged_schedules = 0;
 Kernel*     Kernel::INSTANCE         = nullptr;
 BufferPipe* Kernel::_logger          = nullptr;  // The logger slot.
 PriorityQueue<ManuvrMsg*> Kernel::isr_exec_queue;
+
 
 /*
 * These are the hard-coded message types that the program knows about.
@@ -173,6 +175,7 @@ void Kernel::nextTick(BufferPipe* p) {
 Kernel::Kernel() : EventReceiver() {
   setReceiverName("Kernel");
   INSTANCE             = this;  // For singleton reference.
+  _prealloc_max        = ((uintptr_t) _preallocation_pool) + (sizeof(ManuvrMsg) * EVENT_MANAGER_PREALLOC_COUNT);
   current_event        = nullptr;
   max_events_per_loop  = 2;
   max_idle_count       = 100;
@@ -207,9 +210,9 @@ Kernel::~Kernel() {
 
 
 
-/****************************************************************************************************
-* Logging members...                                                                                *
-****************************************************************************************************/
+/*******************************************************************************
+* Logging members...                                                           *
+*******************************************************************************/
 /*
 * Logger pass-through functions. Please mind the variadics...
 */
@@ -334,9 +337,9 @@ EventReceiver* Kernel::getSubscriberByName(const char* search_str) {
 }
 
 
-/****************************************************************************************************
-* Code related to event definition and management...                                                *
-****************************************************************************************************/
+/*******************************************************************************
+* Code related to event definition and management...                           *
+*******************************************************************************/
 
 int8_t Kernel::registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFxnPtr cb, uint32_t options) {
   if (ca != nullptr) {
@@ -362,9 +365,9 @@ int8_t Kernel::registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFx
 
 
 
-/****************************************************************************************************
-* Static member functions for posting events.                                                       *
-****************************************************************************************************/
+/*******************************************************************************
+* Static member functions for posting events.                                  *
+*******************************************************************************/
 
 /**
 * Used to add an event to the idle queue. Use this for simple events that don't need args.
@@ -535,10 +538,8 @@ int8_t Kernel::validate_insertion(ManuvrMsg* event) {
 
 bool Kernel::returnToPrealloc(ManuvrMsg* obj) {
   uintptr_t obj_addr = ((uintptr_t) obj);
-  uintptr_t pre_min  = ((uintptr_t) _preallocation_pool);
-  uintptr_t pre_max  = pre_min + (sizeof(ManuvrMsg) * EVENT_MANAGER_PREALLOC_COUNT);
 
-  if ((obj_addr < pre_max) && (obj_addr >= pre_min)) {
+  if ((obj_addr < _prealloc_max) && (obj_addr >= ((uintptr_t) _preallocation_pool))) {
     // If we are in this block, it means obj was preallocated...
     obj->clearArgs();         // Wipe the Msg...
     preallocated.insert(obj); // ...and return it to the preallocate queue.
@@ -585,7 +586,7 @@ void Kernel::reclaim_event(ManuvrMsg* active_runnable) {
       // ...if we preallocated it, let it drop and trust some other class is managing it.
       #ifdef __MANUVR_DEBUG
         if (getVerbosity() > 6) {
-          local_log.concat("Kernel::reclaim_event(): Doing nothing. Hope its managed elsewhere.\n");
+          local_log.concat("Kernel::reclaim_event(): Doing nothing. Hope it's managed elsewhere.\n");
           Kernel::log(&local_log);
         }
       #endif // __MANUVR_DEBUG
@@ -1184,9 +1185,9 @@ int8_t Kernel::notify(ManuvrMsg* active_runnable) {
 
 
 
-/****************************************************************************************************
-* These are functions that help us manage scheduled Msgs...                                    *
-****************************************************************************************************/
+/*******************************************************************************
+* These are functions that help us manage scheduled Msgs...                    *
+*******************************************************************************/
 
 /**
 * Returns the number of schedules presently active.

@@ -224,6 +224,7 @@ limitations under the License.
       inline bool _pending_pipes() {            return (_er_flag(MKERNEL_FLAG_PENDING_PIPE));         };
       inline void _pending_pipes(bool nu) {     return (_er_set_flag(MKERNEL_FLAG_PENDING_PIPE, nu)); };
 
+      static uintptr_t   _prealloc_max;
       static Kernel*     INSTANCE;
       static PriorityQueue<ManuvrMsg*> isr_exec_queue;   // Events that have been raised from ISRs.
   };
