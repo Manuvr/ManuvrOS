@@ -174,7 +174,7 @@ void ManuvrTelehash::__class_initializer() {
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY, (EventReceiver*) this);
   read_abort_event.isManaged(true);
   read_abort_event.specific_target = (EventReceiver*) this;
-  read_abort_event.priority        = 5;
+  read_abort_event.priority(5);
 
   /*
   TODO: Wrap this up into the efficiency blog...

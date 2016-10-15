@@ -37,7 +37,7 @@ This class forms the foundation of internal events. It contains the identity of 
 
 
 /*
-* These are flag definitions for Message types.
+* These are flag definitions that might apply to an instance of a Msg.
 */
 #define MANUVR_RUNNABLE_FLAG_MEM_MANAGED     0x0100  // Set to true to cause the Kernel to not free().
 #define MANUVR_RUNNABLE_FLAG_PREALLOCD       0x0200  // Set to true to cause the Kernel to return this runnable to its prealloc.
@@ -45,6 +45,21 @@ This class forms the foundation of internal events. It contains the identity of 
 #define MANUVR_RUNNABLE_FLAG_SCHED_ENABLED   0x0800  // Is the schedule running?
 #define MANUVR_RUNNABLE_FLAG_SCHEDULED       0x1000  // Set to true to cause the Kernel to not free().
 #define MANUVR_RUNNABLE_FLAG_PENDING_EXEC    0x2000  // This schedule is pending execution.
+
+
+/*
+* These are flag definitions that might apply to an instance of a Msg.
+*/
+#define MANUVR_MSG_FLAG_MEM_MANAGED     0x01000000  // Set to true to cause the Kernel to not free().
+#define MANUVR_MSG_FLAG_PREALLOCD       0x02000000  // Set to true to cause the Kernel to return this runnable to its prealloc.
+#define MANUVR_MSG_FLAG_AUTOCLEAR       0x04000000  // If true, this schedule will be removed after its last execution.
+#define MANUVR_MSG_FLAG_SCHED_ENABLED   0x08000000  // Is the schedule running?
+#define MANUVR_MSG_FLAG_SCHEDULED       0x10000000  // Set to true to cause the Kernel to not free().
+#define MANUVR_MSG_FLAG_PENDING_EXEC    0x20000000  // This schedule is pending execution.
+
+#define MANUVR_MSG_FLAG_PRIORITY_MASK   0x0000FF00
+#define MANUVR_MSG_FLAG_REF_COUNT_MASK  0x0000007F
+
 
 class EventReceiver;
 
@@ -92,7 +107,6 @@ typedef struct msg_defin_t {
 class ManuvrMsg {
   public:
     EventReceiver*  specific_target = nullptr;  // If the runnable is meant for a single class, put a pointer to it here.
-    int32_t priority = EVENT_PRIORITY_DEFAULT;  // Set the default priority for this Msg
 
     ManuvrMsg();
     ManuvrMsg(uint16_t code);
@@ -364,6 +378,17 @@ class ManuvrMsg {
       _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_MEM_MANAGED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_MEM_MANAGED));
     };
 
+    inline uint8_t refCount() {  return (_flags & MANUVR_MSG_FLAG_REF_COUNT_MASK); };
+    inline bool    decRefs() {   return (0 == --_flags);  };
+    inline void    incRefs() {   _flags++;  };
+
+    inline uint8_t priority() {  return ((_flags & MANUVR_MSG_FLAG_PRIORITY_MASK) >> 8); };
+    inline void    priority(uint8_t pri) {
+      _flags = (_flags & ~(MANUVR_MSG_FLAG_PRIORITY_MASK)) + (pri << 8);
+    };
+
+
+
     #if defined(__MANUVR_EVENT_PROFILER)
       /**
       * Asks if this schedule is being profiled...
@@ -402,16 +427,15 @@ class ManuvrMsg {
 
 
   private:
-    const MessageTypeDef*  message_def = nullptr;  // The definition for the message (once it is associated).
-    FxnPointer       schedule_callback = nullptr;  // Pointers to the schedule service function.
-    EventReceiver* _origin = nullptr;    // This is an optional ref to the class that raised this runnable.
-    Argument* _args   = nullptr;       // The optional list of arguments associated with this event.
-    uint16_t _flags = 0;                    // Optional flags that might be important for a runnable.
-    uint16_t _code  = MANUVR_MSG_UNDEFINED; // The identity of the event (or command). TODO: Probably redundant.
-
-    int16_t  _sched_recurs =  0;    // See Note 2.
-    uint32_t _sched_period =  0;    // How often does this schedule execute?
-    uint32_t _sched_ttw    =  0;    // How much longer until the schedule fires?
+    const MessageTypeDef* message_def  = nullptr;  // The definition for the message (once it is associated).
+    FxnPointer     schedule_callback   = nullptr;  // Pointers to the schedule service function.
+    EventReceiver* _origin             = nullptr;  // This is an optional ref to the class that raised this runnable.
+    Argument*      _args               = nullptr;  // The optional list of arguments associated with this event.
+    uint32_t       _flags              = 0;        // Optional flags that might be important for a runnable.
+    uint16_t       _code  = MANUVR_MSG_UNDEFINED;  // The identity of the event (or command).
+    int16_t        _sched_recurs       = 0;        // See Note 2.
+    uint32_t       _sched_period       = 0;        // How often does this schedule execute?
+    uint32_t       _sched_ttw          = 0;        // How much longer until the schedule fires?
 
     #if defined(__MANUVR_EVENT_PROFILER)
     TaskProfilerData* prof_data = nullptr;  // If this schedule is being profiled, the ref will be here.

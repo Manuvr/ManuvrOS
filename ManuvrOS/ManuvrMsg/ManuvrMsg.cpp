@@ -267,6 +267,7 @@ int8_t ManuvrMsg::getMsgLegend(StringBuilder* output) {
 * Vanilla constructor.
 */
 ManuvrMsg::ManuvrMsg() {
+  priority(EVENT_PRIORITY_DEFAULT);  // Set the default priority for this Msg
   _origin           = nullptr;
   specific_target   = nullptr;
   schedule_callback = nullptr;
@@ -347,12 +348,12 @@ ManuvrMsg::~ManuvrMsg() {
 */
 int8_t ManuvrMsg::repurpose(uint16_t code) {
   // These things have implications for memory management, which is why repurpose() doesn't touch them.
-  uint16_t _persist_mask = MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_PREALLOCD | MANUVR_RUNNABLE_FLAG_SCHEDULED;
+  uint32_t _persist_mask = MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_PREALLOCD | MANUVR_RUNNABLE_FLAG_SCHEDULED;
   _flags            = _flags & _persist_mask;
   _origin           = nullptr;
   specific_target   = nullptr;
   schedule_callback = nullptr;
-  priority          = EVENT_PRIORITY_DEFAULT;
+  priority(EVENT_PRIORITY_DEFAULT);
   _code             = code;
   message_def       = lookupMsgDefByCode(_code);
   return 0;

@@ -365,3 +365,16 @@ _---J. Ian Lindsay_
 ------
 
 ### 2016.10.14:
+Beginning the final pass over ManuvrMsg to finally unify all of the different memory management strategies into a single reference-counter. Using Digitabulum for this comparison for other reasons...
+
+Before the adventure....
+
+    ManuvrMsg storage size is 44 bytes.
+    Digitabulum DEBUG=1
+    281376    2800    9700  293876   47bf4
+
+Expansion of flags member and consequent alignment fixes...
+
+    ManuvrMsg storage size is 40 bytes.
+    Digitabulum DEBUG=1
+    281376    2800    9660  293836   47bcc

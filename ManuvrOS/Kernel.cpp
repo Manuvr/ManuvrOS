@@ -473,7 +473,7 @@ bool Kernel::abortEvent(ManuvrMsg* event) {
 int8_t Kernel::isrRaiseEvent(ManuvrMsg* event) {
   int return_value = -1;
   maskableInterrupts(false);
-  return_value = isr_exec_queue.insertIfAbsent(event, event->priority);
+  return_value = isr_exec_queue.insertIfAbsent(event, event->priority());
   maskableInterrupts(true);
   #if defined (__BUILD_HAS_THREADS)
     if (INSTANCE->_thread_id) wakeThread(&INSTANCE->_thread_id);
@@ -529,7 +529,7 @@ int8_t Kernel::validate_insertion(ManuvrMsg* event) {
   }
 
   // Go ahead and insert.
-  INSTANCE->exec_queue.insert(event, event->priority);
+  INSTANCE->exec_queue.insert(event, event->priority());
   return 0;
 }
 
@@ -726,7 +726,7 @@ int8_t Kernel::procIdleFlags() {
         #endif
         switch (validate_insertion(active_runnable)) {
           case 0:    // Clear for insertion.
-            exec_queue.insert(active_runnable, active_runnable->priority);
+            exec_queue.insert(active_runnable, active_runnable->priority());
             clean_up_active_runnable = false;
             break;
           case -1:   // NULL runnable! How?!?!

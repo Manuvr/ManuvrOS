@@ -325,7 +325,7 @@ void ManuvrPlatform::_discoverALUParams() {
 int8_t ManuvrPlatform::bootstrap() {
   /* Follow your shadow. */
   ManuvrMsg* boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
-  boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
+  boot_completed_ev->priority(EVENT_PRIORITY_HIGHEST);
   Kernel::staticRaiseEvent(boot_completed_ev);
   _set_init_state(MANUVR_INIT_STATE_KERNEL_BOOTING);
   uint8_t boot_passes = 100;

@@ -66,7 +66,13 @@ extern char* _binary_name;  // TODO: Eliminate. One more step.
 *
 */
 StandardIO::StandardIO() : ManuvrXport() {
-  __class_initializer();
+  setReceiverName("StandardIO");
+  // Build some pre-formed Events.
+  read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY, (EventReceiver*) this);
+  read_abort_event.isManaged(true);
+  read_abort_event.specific_target = (EventReceiver*) this;
+  read_abort_event.priority(5);
+  _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
   _xport_mtu = 255;
 }
 
@@ -74,20 +80,6 @@ StandardIO::StandardIO() : ManuvrXport() {
 * Destructor
 */
 StandardIO::~StandardIO() {
-}
-
-/**
-* This is here for compatibility with C++ standards that do not allow for definition and declaration
-*   in the header file. Takes no parameters, and returns nothing.
-*/
-void StandardIO::__class_initializer() {
-  setReceiverName("StandardIO");
-  // Build some pre-formed Events.
-  read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY, (EventReceiver*) this);
-  read_abort_event.isManaged(true);
-  read_abort_event.specific_target = (EventReceiver*) this;
-  read_abort_event.priority        = 5;
-  _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
 }
 
 

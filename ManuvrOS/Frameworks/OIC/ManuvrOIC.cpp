@@ -366,7 +366,7 @@ int8_t ManuvrOIC::attached() {
     _discovery_timeout.repurpose(MANUVR_MSG_OIC_DISCOVER_OFF, (EventReceiver*) this);
     _discovery_timeout.isManaged(true);
     _discovery_timeout.specific_target = (EventReceiver*) this;
-    _discovery_timeout.priority        = 1;
+    _discovery_timeout.priority(1);
 
     // Discovery runs for 30 seconds by default.
     _discovery_timeout.alterScheduleRecurrence(0);

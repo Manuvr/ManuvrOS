@@ -65,7 +65,6 @@ class StandardIO : public ManuvrXport {
 
 
   private:
-    void __class_initializer();
 };
 
 #endif   // __MANUVR_STANDARD_IO_H__

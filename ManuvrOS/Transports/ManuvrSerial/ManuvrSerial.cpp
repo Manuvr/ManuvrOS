@@ -376,7 +376,7 @@ int8_t ManuvrSerial::attached() {
     read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY, (EventReceiver*) this);
     read_abort_event.isManaged(true);
     read_abort_event.specific_target = (EventReceiver*) this;
-    read_abort_event.priority        = 2;
+    read_abort_event.priority(2);
     // Tolerate 30ms of latency on the line before flushing the buffer.
     read_abort_event.alterSchedulePeriod(30);
     read_abort_event.autoClear(false);
