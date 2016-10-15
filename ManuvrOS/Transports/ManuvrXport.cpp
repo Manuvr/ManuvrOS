@@ -238,7 +238,7 @@ void ManuvrXport::autoConnect(bool en, uint32_t _ac_period) {
       if (nullptr == _autoconnect_schedule) {
         // If we don't already have a ref to a schedule for this purpose.
         _autoconnect_schedule = new ManuvrMsg(MANUVR_MSG_XPORT_CONNECT, (EventReceiver*) this);
-        _autoconnect_schedule->isManaged(true);
+        _autoconnect_schedule->incRefs();
         _autoconnect_schedule->specific_target = (EventReceiver*) this;
         _autoconnect_schedule->alterScheduleRecurrence(-1);
         _autoconnect_schedule->alterSchedulePeriod(_ac_period);

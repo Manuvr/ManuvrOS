@@ -349,7 +349,7 @@ ManuvrMsg::~ManuvrMsg() {
 */
 int8_t ManuvrMsg::repurpose(uint16_t code, EventReceiver* cb) {
   // These things have implications for memory management, which is why repurpose() doesn't touch them.
-  uint32_t _persist_mask = MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_SCHEDULED;
+  uint32_t _persist_mask = MANUVR_RUNNABLE_FLAG_SCHEDULED;
   _flags            = _flags & _persist_mask;
   _origin           = cb;
   specific_target   = nullptr;
@@ -781,7 +781,6 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
     output->concatf("    ---< %s >-----------------------------\n", getMsgTypeString());
   }
 
-
   if (_args) {
     output->concatf("\t %d Arguments:\n", _args->argCount());
     _args->printDebug(output);
@@ -792,9 +791,8 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
   }
 
   output->concatf(
-    "\t Flags:\t%s%s\n\t Priority:\t%u\n\t Refs:\t%u\n",
-    (isManaged()        ? "MemManaged  " : ""),
-    (profilingEnabled() ? "Profiling  " : ""),
+    "\t Profiling:\t%s\n\t Priority:\t%u\n\t Refs:\t%u\n",
+    (profilingEnabled() ? YES_STR : NO_STR),
     priority(),
     refCount()
   );

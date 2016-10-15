@@ -203,8 +203,11 @@ Kernel::Kernel() : EventReceiver() {
 * Destructor. Should probably never be called.
 */
 Kernel::~Kernel() {
-  while (schedules.hasNext()) {
-    reclaim_event(schedules.dequeue());
+  ManuvrMsg* temp = schedules.dequeue();
+  while (temp) {
+    temp->decRefs();
+    reclaim_event(temp);
+    temp = schedules.dequeue();
   }
 }
 
@@ -538,7 +541,6 @@ int8_t Kernel::validate_insertion(ManuvrMsg* event) {
 
 bool Kernel::returnToPrealloc(ManuvrMsg* obj) {
   uintptr_t obj_addr = ((uintptr_t) obj);
-
   if ((obj_addr < _prealloc_max) && (obj_addr >= ((uintptr_t) _preallocation_pool))) {
     // If we are in this block, it means obj was preallocated...
     obj->clearArgs();         // Wipe the Msg...
@@ -556,40 +558,14 @@ bool Kernel::returnToPrealloc(ManuvrMsg* obj) {
 * @param active_runnable The event that has reached the end of its life-cycle.
 */
 void Kernel::reclaim_event(ManuvrMsg* active_runnable) {
-  if (nullptr == active_runnable) {
-    return;
-  }
-
-  if (schedules.contains(active_runnable)) {
-    // This Msg is still in the scheduler queue. Do not reclaim it.
-    return;
-  }
-
-  bool reap_current_event = active_runnable->kernelShouldReap();
-
-  #ifdef __MANUVR_DEBUG
-  //if (getVerbosity() > 5) {
-  //  local_log.concatf("We will%s be reaping %s.\n", (reap_current_event ? "":" not"), active_runnable->getMsgTypeString());
-  //  Kernel::log(&local_log);
-  //}
-  #endif // __MANUVR_DEBUG
-
-  if (reap_current_event) {                   // If we are to reap this event...
-    delete active_runnable;                      // ...free() it...
-    events_destroyed++;
-    burden_of_specific++;                     // ...and note the incident.
-  }
-  else {                                      // If we are NOT to reap this event...
-    if (active_runnable->isManaged()) {
-    }
-    else if (!returnToPrealloc(active_runnable)) {
-      // ...if we preallocated it, let it drop and trust some other class is managing it.
-      #ifdef __MANUVR_DEBUG
-        if (getVerbosity() > 6) {
-          local_log.concat("Kernel::reclaim_event(): Doing nothing. Hope it's managed elsewhere.\n");
-          Kernel::log(&local_log);
-        }
-      #endif // __MANUVR_DEBUG
+  if (active_runnable) {
+    if (0 == active_runnable->refCount()) {
+      // No outstanding references.
+      if (!returnToPrealloc(active_runnable)) {
+        delete active_runnable;  // If we are to free() this msg...
+        events_destroyed++;      // ...and note the incident.
+        burden_of_specific++;
+      }
     }
   }
 }
@@ -968,8 +944,9 @@ void Kernel::printProfiler(StringBuilder* output) {
       ManuvrMsg *current;
       output->concat("\n\t PID         Execd      total us   average    worst      best       last\n\t -----------------------------------------------------------------------------\n");
 
-      for (int i = 0; i < schedules.size(); i++) {
-        current = schedules.get(i);
+      int sched_it_count = schedules.size();
+      for (int i = 0; i < sched_it_count; i++) {
+        current = schedules.recycle();   // TODO: Still awful.
         if (current->profilingEnabled()) {
           current->printProfilerData(output);
         }
@@ -994,7 +971,8 @@ void Kernel::printScheduler(StringBuilder* output) {
   }
 
   #if defined(__MANUVR_DEBUG)
-  for (int i = 0; i < schedules.size(); i++) {
+  int sched_it_count = schedules.size();
+  for (int i = 0; i < sched_it_count; i++) {
     schedules.recycle()->printDebug(output);
   }
   #endif
@@ -1034,15 +1012,6 @@ void Kernel::printDebug(StringBuilder* output) {
 * These are overrides from EventReceiver interface...
 *******************************************************************************/
 
-/**
-* Boot done finished-up.
-*
-* @return 0 on no action, 1 on action, -1 on failure.
-*/
-int8_t Kernel::attached() {
-  return EventReceiver::attached();
-}
-
 
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
@@ -1061,7 +1030,7 @@ int8_t Kernel::attached() {
 int8_t Kernel::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
-  int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
+  int8_t return_value = (0 == event->refCount()) ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {
@@ -1195,8 +1164,9 @@ int8_t Kernel::notify(ManuvrMsg* active_runnable) {
 unsigned int Kernel::countActiveSchedules() {
   unsigned int return_value = 0;
   ManuvrMsg *current;
-  for (int i = 0; i < schedules.size(); i++) {
-    current = schedules.get(i);
+  int sched_it_count = schedules.size();
+  for (int i = 0; i < sched_it_count; i++) {
+    current = schedules.recycle();
     if (current->scheduleEnabled()) {
       return_value++;
     }
@@ -1229,6 +1199,7 @@ ManuvrMsg* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool 
 
       if (nullptr != return_value) {  // Did we actually malloc() successfully?
         return_value->isScheduled(true);
+        return_value->incRefs();
         schedules.insert(return_value);
       }
     }
@@ -1249,6 +1220,7 @@ ManuvrMsg* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool 
     return_value = new ManuvrMsg(recurrence, sch_period, ac, ori);
     if (return_value) {  // Did we actually malloc() successfully?
       return_value->isScheduled(true);
+      return_value->incRefs();
       schedules.insert(return_value);
     }
   }
@@ -1295,7 +1267,9 @@ bool Kernel::removeSchedule(ManuvrMsg* obj) {
   if (obj) {
     if (obj != current_event) {
       obj->isScheduled(false);
+      obj->decRefs();
       schedules.remove(obj);
+      reclaim_event(obj);
     }
     else {
       obj->autoClear(true);
@@ -1310,6 +1284,7 @@ bool Kernel::addSchedule(ManuvrMsg* obj) {
   if (obj) {
     if (!schedules.contains(obj)) {
       obj->isScheduled(true);
+      obj->incRefs();
       schedules.insert(obj);
     }
     return true;

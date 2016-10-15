@@ -161,9 +161,6 @@ limitations under the License.
       static ManuvrMsg* returnEvent(uint16_t event_code);
 
 
-    protected:
-      int8_t attached();
-
 
     private:
       ManuvrMsg* current_event = nullptr;  // The presently-executing event.

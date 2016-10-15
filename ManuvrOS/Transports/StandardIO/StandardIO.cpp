@@ -69,7 +69,7 @@ StandardIO::StandardIO() : ManuvrXport() {
   setReceiverName("StandardIO");
   // Build some pre-formed Events.
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY, (EventReceiver*) this);
-  read_abort_event.isManaged(true);
+  read_abort_event.incRefs();
   read_abort_event.specific_target = (EventReceiver*) this;
   read_abort_event.priority(5);
   _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
@@ -247,7 +247,7 @@ void StandardIO::printDebug(StringBuilder *temp) {
 int8_t StandardIO::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
-  int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
+  int8_t return_value = (0 == event->refCount()) ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {

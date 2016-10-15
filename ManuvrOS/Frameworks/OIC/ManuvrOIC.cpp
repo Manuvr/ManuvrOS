@@ -358,13 +358,13 @@ int8_t ManuvrOIC::attached() {
   if (EventReceiver::attached()) {
     // Discovery runs for 120 seconds, and repeats forever by default.
     _discovery_ping.repurpose(MANUVR_MSG_OIC_DISCOVER_PING);
-    _discovery_ping.isManaged(true);
+    _discovery_ping.incRefs();
     _discovery_ping.alterSchedule(120000, -1, false, issue_requests_hook);
     _discovery_ping.enableSchedule(false);
     platform.kernel()->addSchedule(&_discovery_ping);
 
     _discovery_timeout.repurpose(MANUVR_MSG_OIC_DISCOVER_OFF, (EventReceiver*) this);
-    _discovery_timeout.isManaged(true);
+    _discovery_timeout.incRefs();
     _discovery_timeout.specific_target = (EventReceiver*) this;
     _discovery_timeout.priority(1);
 
@@ -455,7 +455,7 @@ int8_t ManuvrOIC::erConfigure(Argument* opts) {
 int8_t ManuvrOIC::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
-  int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
+  int8_t return_value = (0 == event->refCount()) ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {

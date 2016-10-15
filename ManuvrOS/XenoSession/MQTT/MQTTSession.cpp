@@ -69,7 +69,7 @@ MQTTSession::MQTTSession(ManuvrXport* _xport) : XenoSession(_xport) {
 	_next_packetid = 1;
 
   _ping_timer.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG, (EventReceiver*) this);
-  _ping_timer.isManaged(true);
+  _ping_timer.incRefs();
   _ping_timer.specific_target = (EventReceiver*) this;
   _ping_timer.alterScheduleRecurrence(-1);
   _ping_timer.alterSchedulePeriod(4000);
@@ -526,7 +526,7 @@ int8_t MQTTSession::attached() {
 int8_t MQTTSession::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
-  int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
+  int8_t return_value = (0 == event->refCount()) ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {

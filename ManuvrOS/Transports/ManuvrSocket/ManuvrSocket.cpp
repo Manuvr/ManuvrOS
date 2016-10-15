@@ -89,7 +89,7 @@ ManuvrSocket::ManuvrSocket(const char* addr, int port, uint32_t opts) : ManuvrXp
 
   // Build some pre-formed Events.
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY, (EventReceiver*) this);
-  read_abort_event.isManaged(true);
+  read_abort_event.incRefs();
   read_abort_event.specific_target = (EventReceiver*) this;
 }
 

@@ -99,7 +99,7 @@ void I2CAdapter::__class_initializer() {
   ManuvrMsg::registerMessages(i2c_message_defs, mes_count);
 
   _periodic_i2c_debug.repurpose(0x5051, (EventReceiver*) this);
-  _periodic_i2c_debug.isManaged(true);
+  _periodic_i2c_debug.incRefs();
   _periodic_i2c_debug.specific_target = (EventReceiver*) this;
   _periodic_i2c_debug.priority(1);
   _periodic_i2c_debug.alterSchedulePeriod(100);
@@ -372,7 +372,7 @@ int8_t I2CAdapter::attached() {
 int8_t I2CAdapter::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
-  int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
+  int8_t return_value = (0 == event->refCount()) ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {
