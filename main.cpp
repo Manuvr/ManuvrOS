@@ -191,7 +191,7 @@ int main(int argc, const char *argv[]) {
 
       #if defined(RASPI) || defined(RASPI2)
         ManuvrMsg gpio_write(MANUVR_MSG_DIGITAL_WRITE);
-        gpio_write.isManaged(true);
+        gpio_write.incRefs();
         gpio_write.specific_target = &gpio;
         mqtt.subscribe("gw", &gpio_write);
 
@@ -200,7 +200,7 @@ int main(int argc, const char *argv[]) {
       #endif
 
       ManuvrMsg debug_msg(MANUVR_MSG_USER_DEBUG_INPUT);
-      debug_msg.isManaged(true);
+      debug_msg.incRefs();
       debug_msg.specific_target = (EventReceiver*) kernel;
 
       mqtt.subscribe("d", &debug_msg);

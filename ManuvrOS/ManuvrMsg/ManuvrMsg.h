@@ -341,26 +341,6 @@ class ManuvrMsg {
       _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_SCHEDULED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_SCHEDULED));
     };
 
-    /**
-    * If the memory isn't managed explicitly by some other class, this
-    *   will tell the Kernel to GC the completed event.
-    *
-    * @return true if the Kernel ought to GC this Event. False otherwise.
-    */
-    //inline bool kernelShouldReap() {
-    //  return (isScheduled() || (0 < refCount()));
-    //};
-
-    /**
-    * If some other class is managing this memory, this should return 'true'.
-    *
-    * @return true if the Kernel should NOT reap this ManuvrMsg.
-    */
-    //inline bool isManaged() { return (_flags & MANUVR_RUNNABLE_FLAG_MEM_MANAGED); };
-    //inline void isManaged(bool en) {
-    //  _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_MEM_MANAGED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_MEM_MANAGED));
-    //};
-
 
     inline uint8_t refCount() {  return (_flags & MANUVR_MSG_FLAG_REF_COUNT_MASK); };
     inline bool    decRefs() {   return (0 == --_flags);  };

@@ -20,6 +20,8 @@ limitations under the License.
 
 This program runs tests on Scheduler reliability and resilience in the
   face of unlikely, but inevitable, problems..
+We assume that the scheduler is being driven from a valid time source. Since we
+  have to abuse that time source at run-time, this test must run on linux.
 */
 
 #include <cstdio>
@@ -33,15 +35,43 @@ This program runs tests on Scheduler reliability and resilience in the
 #include <iostream>
 
 #include <DataStructures/StringBuilder.h>
-
 #include <Platform/Platform.h>
+
+
+
+/*
+* Globals.
+*/
+ManuvrMsg  schedule_0;
+ManuvrMsg  schedule_1;
+ManuvrMsg* schedule_2 = nullptr;
+ManuvrMsg* schedule_3 = nullptr;
+
+int count_0 = 0;
+
+void sched_0_cb() {
+  printf("\t sched_0_cb(): %d \t willRunAgain() = %s\n",
+    (schedule_0.willRunAgain() ? "true":"false"),
+    count_0++
+  );
+}
+
+void sched_1_cb() {
+}
+
+void sched_2_cb() {
+}
+
+void sched_3_cb() {
+}
 
 
 /*
 *
 */
 int SCHEDULER_INIT_STATE() {
-  return -1;
+  printf("===< SCHEDULER_INIT_STATE >======================================\n");
+  return 0;
 }
 
 
@@ -49,6 +79,19 @@ int SCHEDULER_INIT_STATE() {
 *
 */
 int SCHEDULER_CREATE_SCHEDULES() {
+  printf("===< SCHEDULER_CREATE_SCHEDULES >================================\n");
+  schedule_0.repurpose(MANUVR_MSG_DEFERRED_FXN);
+  schedule_1.repurpose(MANUVR_MSG_DEFERRED_FXN);
+  schedule_0.incRefs();
+  schedule_1.incRefs();
+
+  if (schedule_0.alterSchedulePeriod(100)) {
+    if (schedule_0.alterScheduleRecurrence(50)) {
+      if (schedule_0.alterSchedule(sched_0_cb)) {
+        platform.kernel()->addSchedule(&schedule_0);
+      }
+    }
+  }
   return -1;
 }
 
@@ -57,6 +100,7 @@ int SCHEDULER_CREATE_SCHEDULES() {
 *
 */
 int SCHEDULER_EXEC_SCHEDULES() {
+  printf("===< SCHEDULER_EXEC_SCHEDULES >==================================\n");
   return -1;
 }
 
@@ -65,6 +109,7 @@ int SCHEDULER_EXEC_SCHEDULES() {
 *
 */
 int SCHEDULER_HANG() {
+  printf("===< SCHEDULER_HANG >============================================\n");
   return -1;
 }
 
@@ -73,6 +118,7 @@ int SCHEDULER_HANG() {
 *
 */
 int SCHEDULER_COMPARE_AGAINST_RTC() {
+  printf("===< SCHEDULER_COMPARE_AGAINST_RTC >=============================\n");
   return -1;
 }
 
@@ -81,6 +127,7 @@ int SCHEDULER_COMPARE_AGAINST_RTC() {
 *
 */
 int SCHEDULER_DESTROY_SCHEDULES() {
+  printf("===< SCHEDULER_DESTROY_SCHEDULES >===============================\n");
   return -1;
 }
 
@@ -89,6 +136,7 @@ int SCHEDULER_DESTROY_SCHEDULES() {
 *
 */
 int SCHEDULER_COMPARE_RESULTS() {
+  printf("===< SCHEDULER_COMPARE_RESULTS >=================================\n");
   return -1;
 }
 
@@ -107,11 +155,12 @@ void printTestFailure(const char* test) {
 int main(int argc, char *argv[]) {
   int exit_value = 1;   // Failure is the default result.
 
+  platform.platformPreInit();   // Our test fixture needs random numbers.
+  platform.bootstrap();
+
   printf("EVENT_MANAGER_PREALLOC_COUNT     %d\n", EVENT_MANAGER_PREALLOC_COUNT);
   printf("MANUVR_PLATFORM_TIMER_PERIOD_MS  %d\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
   printf("MAXIMUM_SEQUENTIAL_SKIPS         %d\n", MAXIMUM_SEQUENTIAL_SKIPS);
-
-  platform.platformPreInit();   // Our test fixture needs random numbers.
 
   if (0 == SCHEDULER_INIT_STATE()) {
     if (0 == SCHEDULER_CREATE_SCHEDULES()) {

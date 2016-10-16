@@ -383,7 +383,7 @@ Dropping the Msg-borne preallocation flag in favor of my own advice from last ye
 
     /*
     * At present, our criteria for preallocation is if the pointer address passed in
-    *   falls within the range of our __prealloc array. I see nothing "non-portable"
+    *   falls within the range of our prealloc array. I see nothing "non-portable"
     *   about this, it doesn't require a flag or class member, and it is fast to check.
     *                                 ---J. Ian Lindsay   Mon Apr 13 10:51:54 MST 2015
     */
@@ -393,3 +393,9 @@ Not to mention, FAR safer.
     ManuvrMsg storage size is 40 bytes.
     Digitabulum DEBUG=1
     281320    2800    9660  293780   47b94
+
+After removing the last mem-mgmt flag.
+
+    ManuvrMsg storage size is 40 bytes.
+    Digitabulum DEBUG=1
+    281288    2800    9664  293752   47b78

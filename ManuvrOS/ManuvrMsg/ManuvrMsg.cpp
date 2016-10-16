@@ -609,9 +609,15 @@ Argument* ManuvrMsg::takeArgs() {
 * @param  uint8_t The Argument position
 * @return NOTYPE_FM if the Argument isn't found, and its type code if it is.
 */
-//uint8_t ManuvrMsg::getArgumentType(uint8_t idx) {
-//  return NOTYPE_FM;
-//}
+uint8_t ManuvrMsg::getArgumentType(uint8_t idx) {
+  if (_args) {
+    Argument* a = _args->retrieveArgByIdx(idx);
+    if (a) {
+      return a->typeCode();
+    }
+  }
+  return NOTYPE_FM;
+}
 
 
 /**
@@ -955,6 +961,25 @@ bool ManuvrMsg::alterSchedule(uint32_t sch_p, int16_t sch_r, bool ac, FxnPointer
       schedule_callback = sch_cb;
       return_value      = true;
     }
+  }
+  return return_value;
+}
+
+
+/**
+* Call this function to alter a given schedule. Set with the given period, a given number of times, with a given function call.
+*  Returns true on success or false if the given PID is not found, or there is a problem with the parameters.
+*
+* Will not set the schedule active, but will clear any pending executions for this schedule, as well as reset the timer for it.
+*
+* @param FxnPointer A FxnPointer to the service routine. Useful for some general things.
+* @return  true if the schedule alteraction succeeded.
+*/
+bool ManuvrMsg::alterSchedule(FxnPointer sch_cb) {
+  bool return_value  = false;
+  if (sch_cb) {
+    schedule_callback = sch_cb;
+    return_value      = true;
   }
   return return_value;
 }

@@ -50,7 +50,7 @@ This class implements a crude UDP connector.
 *   executes under an ISR. Keep it brief...
 *******************************************************************************/
 
-#if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
+#if defined(__BUILD_HAS_THREADS)
 
   /*
   * Since listening for connections on this transport involves blocking, we have a

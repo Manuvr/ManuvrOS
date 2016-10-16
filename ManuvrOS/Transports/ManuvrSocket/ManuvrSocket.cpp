@@ -70,8 +70,9 @@ ManuvrSocket::ManuvrSocket(const char* addr, int port, uint32_t opts) : ManuvrXp
   if (addr) {
     size_t addr_len = strlen(addr);
     if (0 < addr_len) {
-      _addr = (char*) malloc(addr_len);
+      _addr = (char*) malloc(addr_len+1);
       if (_addr) {
+        *(_addr + addr_len) = 0;
         for (size_t i = 0; i < addr_len; i++) {
           *(_addr + i) = *(addr + i);
         }
