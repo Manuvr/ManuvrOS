@@ -51,8 +51,8 @@ int count_0 = 0;
 
 void sched_0_cb() {
   printf("\t sched_0_cb(): %d \t willRunAgain() = %s\n",
-    (schedule_0.willRunAgain() ? "true":"false"),
-    count_0++
+    count_0++,
+    (schedule_0.willRunAgain() ? "true":"false")
   );
 }
 

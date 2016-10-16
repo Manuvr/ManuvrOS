@@ -167,7 +167,7 @@ int main(int argc, const char *argv[]) {
     if (temp_arg) {
       // The user wants us to listen to the given serial port.
       char* val = nullptr;
-      if ((0 == temp->getValueAs(&val)) && (0 != val)) {
+      if ((0 == temp_arg->getValueAs(&val)) && (0 != val)) {
         ManuvrSerial* ser = new ManuvrSerial((const char*) val, 9600);
         kernel->subscribe(ser);
         #if defined(MANUVR_GPS_PIPE)
@@ -177,12 +177,14 @@ int main(int argc, const char *argv[]) {
     }
   #endif
 
-  #if defined(RASPI) || defined(RASPI2)
+  #if defined(MANUVR_SUPPORT_I2C)
     // If we are running on a RasPi, let's try to fire up the i2c that is almost
     //   certainly present.
     I2CAdapter i2c(1);
     kernel->subscribe(&i2c);
+  #endif
 
+  #if defined(RASPI) || defined(RASPI2)
     ManuvrableGPIO gpio;
     kernel->subscribe(&gpio);
   #endif
