@@ -39,6 +39,7 @@ endif
 ifeq ($(MANUVR_PLATFORM),LINUX)
 CPP_SRCS   += Linux/LinuxStorage.cpp
 CPP_SRCS   += Linux/Linux.cpp
+CPP_SRCS   += Linux/i2c-adapter.cpp
 ifeq ($(MANUVR_BOARD),RASPI)
 CPP_SRCS   += Raspi/DieThermometer/DieThermometer.cpp
 CPP_SRCS   += Raspi/Raspi.cpp
@@ -50,6 +51,12 @@ endif  # linux
 ifeq ($(MANUVR_PLATFORM),TEENSY3)
 CPP_SRCS   += Teensy3/Teensy3.cpp
 CPP_SRCS   += Teensy3/TeensyStorage.cpp
+CPP_SRCS   += Teensy3/i2c-adapter.cpp
+endif
+
+ifeq ($(MANUVR_PLATFORM),ARDUINO)
+CPP_SRCS   += Arduino/Arduino.cpp
+CPP_SRCS   += Arduino/i2c-adapter.cpp
 endif
 
 ifeq ($(MANUVR_PLATFORM),STM32F7)

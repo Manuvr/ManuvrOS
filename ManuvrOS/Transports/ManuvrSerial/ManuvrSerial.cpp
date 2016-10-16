@@ -320,7 +320,9 @@ int8_t ManuvrSerial::read_port() {
         n = read(_sock, buf, 255);
         if (n > 0) {
           bytes_received += n;
-          BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
+          StringBuilder temp;
+          temp.concatHandoff(buf, n);
+          BufferPipe::fromCounterparty(&temp, MEM_MGMT_RESPONSIBLE_BEARER);
           return_value = 1;
         }
     #endif

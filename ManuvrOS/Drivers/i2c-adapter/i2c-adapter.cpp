@@ -31,29 +31,12 @@ This file is the tortured result of growing pains since the beginning of
 
 #include "i2c-adapter.h"
 
-#if defined(__MK20DX256__) | defined(__MK20DX128__)
-  #include <i2c_t3/i2c_t3.h>
-#elif defined(STM32F4XX)
+#if defined(STM32F4XX)
   #include <stm32f4xx.h>
   #include <stm32f4xx_i2c.h>
   #include <stm32f4xx_gpio.h>
   #include "stm32f4xx_it.h"
 
-#elif defined(ARDUINO)
-  #include <Wire/Wire.h>
-#elif defined(__MANUVR_LINUX)
-  // Unsupported platform? Try using the linux i2c library and cross fingers...
-  #include <stdlib.h>
-  #include <unistd.h>
-  #include <linux/i2c-dev.h>
-  #include <sys/types.h>
-  #include <sys/ioctl.h>
-  #include <sys/stat.h>
-  #include <fstream>
-  #include <iostream>
-  #include <fcntl.h>
-  #include <inttypes.h>
-  #include <ctype.h>
 #elif defined(STM32F7XX) | defined(STM32F746xx)
   // TODO: This is bad, and I know it. Need support ahead of a better abstraction strategy.
   extern "C" {
@@ -203,10 +186,6 @@ int8_t I2CAdapter::generateStop() {
   // TODO: I know this is horrid. I'm sick of screwing with the build system today...
   #include <Platform/STM32F7/i2c-adapter.cpp>
 
-#elif defined(__MK20DX256__) | defined(__MK20DX128__)
-  // TODO: I know this is horrid. I'm sick of screwing with the build system today...
-  #include <Platform/Teensy3/i2c-adapter.cpp>
-
 #elif defined(_BOARD_FUBARINO_MINI_)    // Perhaps this is an arduino-style env?
 
 
@@ -256,60 +235,6 @@ int8_t I2CAdapter::generateStop() {
   return 0;
 }
 
-
-
-
-#elif defined(ARDUINO)    // Perhaps this is an arduino-style env?
-
-I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
-  __class_initializer();
-  dev = dev_id;
-
-  if (dev_id == 1) {
-    //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400);
-    busOnline(true);
-  }
-}
-
-
-I2CAdapter::~I2CAdapter() {
-    busOnline(false);
-    while (dev_list.hasNext()) {
-      dev_list.get()->disassignBusInstance();
-      dev_list.remove();
-    }
-
-    /* TODO: The work_queue destructor will take care of its own cleanup, but
-       We should abort any open transfers prior to deleting this list. */
-}
-
-
-// TODO: Inline this.
-int8_t I2CAdapter::generateStart() {
-  #ifdef __MANUVR_DEBUG
-  if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
-  #endif
-  if (! busOnline()) return -1;
-  //Wire1.sendTransmission(I2C_STOP);
-  //Wire1.finish(900);   // We allow for 900uS for timeout.
-
-  return 0;
-}
-
-// TODO: Inline this.
-int8_t I2CAdapter::generateStop() {
-  #ifdef __MANUVR_DEBUG
-  if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
-  #endif
-  if (! busOnline()) return -1;
-  return 0;
-}
-
-
-#elif defined(__MANUVR_LINUX)  // Assuming a linux system...
-  // TODO: I know this is horrid. I'm sick of screwing with the build system today...
-  #include <Platform/Linux/i2c-adapter.cpp>
-
 #else
   // No support.
 #endif  // Platform case-offs
@@ -344,7 +269,6 @@ void I2CAdapter::gpioSetup() {
 */
 int8_t I2CAdapter::attached() {
   if (EventReceiver::attached()) {
-    if (dev >= 0) busOnline(true);
     if (busOnline()) {
       advance_work_queue();
     }
@@ -503,69 +427,6 @@ int I2CAdapter::get_slave_dev_by_addr(uint8_t search_addr) {
 /**************************************************************************
 * Workflow management functions...                                        *
 **************************************************************************/
-
-/*
-* Private function that will switch the addressed i2c device via ioctl. This
-*   function is meaningless on anything but a linux system, in which case it
-*   will always return true;
-* On a linux system, this will only return true if the ioctl call succeeded.
-*/
-bool I2CAdapter::switch_device(uint8_t nu_addr) {
-#ifdef ARDUINO
-  bool return_value = true;
-#elif defined(STM32F4XX)
-  bool return_value = true;
-
-#elif defined(__MANUVR_LINUX)   // Assuming a linux environment.
-  bool return_value = false;
-  unsigned short timeout = 10000;
-  if (nu_addr != last_used_bus_addr) {
-    if (dev < 0) {
-      // If the bus is either uninitiallized or not idle, decline
-      // to switch the device. Return false;
-      #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 1) {
-        Kernel::log("i2c bus is not online, so won't switch device. Failing....\n");
-      }
-      #endif
-      return return_value;
-    }
-    else {
-      while (busError() && (timeout > 0)) { timeout--; }
-      if (busError()) {
-        #ifdef __MANUVR_DEBUG
-        if (getVerbosity() > 1) {
-          Kernel::log("i2c bus was held for too long. Failing....\n");
-        }
-        #endif
-        return return_value;
-      }
-
-      if (ioctl(dev, I2C_SLAVE, nu_addr) >= 0) {
-        last_used_bus_addr = nu_addr;
-        return_value = true;
-      }
-      else {
-        #ifdef __MANUVR_DEBUG
-        if (getVerbosity() > 1) {
-          local_log.concatf("Failed to acquire bus access and/or talk to slave at %d.\n", nu_addr);
-          Kernel::log(&local_log);
-        }
-        #endif
-        busError(true);
-      }
-    }
-  }
-  else {
-      return_value = true;
-  }
-#else
-  // No support
-  bool return_value = false;
-#endif
-  return return_value;
-}
-
 
 
 /*
