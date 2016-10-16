@@ -80,9 +80,9 @@ class ManuvrSerial : public ManuvrXport {
 
 
   private:
-    const char* _addr;
-    uint32_t    _options;
-    int         _baud_rate;
+    char*     _addr;
+    uint32_t  _options;
+    int       _baud_rate;
     #if defined(__MANUVR_LINUX)
       int         _sock = 0;
       struct termios termAttr;

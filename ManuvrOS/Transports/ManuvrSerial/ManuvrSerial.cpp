@@ -113,6 +113,12 @@ ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate) : ManuvrSerial(tty_
 * Destructor
 */
 ManuvrSerial::~ManuvrSerial() {
+  #if defined (__MANUVR_LINUX)
+    if (_sock) {
+      close(_sock);  // Close the socket.
+      _sock = 0;
+    }
+  #endif
   if (_addr) {
     free(_addr);
     _addr = nullptr;
