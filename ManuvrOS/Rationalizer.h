@@ -78,7 +78,7 @@
 #if defined(MANUVR_JSON)
   #define __BUILD_HAS_JSON
   // We do this to prevent the Makefile having to do it....
-  #define HAS_CONFIG
+  #define HAVE_CONFIG_H
 #endif
 
 // Base64. The wrapper can only route a single implementation.
