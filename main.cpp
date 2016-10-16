@@ -47,6 +47,7 @@ This is a demonstration program, and was meant to be compiled for a
 #include <Transports/ManuvrSocket/ManuvrUDP.h>
 #include <Transports/ManuvrSocket/ManuvrTCP.h>
 #include <Transports/BufferPipes/ManuvrTLS/ManuvrTLS.h>
+#include <Transports/BufferPipes/ManuvrGPS/ManuvrGPS.h>
 
 /* Concepts of "session"... */
 #include <XenoSession/MQTT/MQTTSession.h>
@@ -107,6 +108,7 @@ void kernelDebugDump() {
 *******************************************************************************/
 int main(int argc, const char *argv[]) {
   Argument* opts = parseFromArgCV(argc, argv);
+  Argument* temp_arg = nullptr;
 
   if (opts) {
     StringBuilder log;
@@ -161,13 +163,17 @@ int main(int argc, const char *argv[]) {
   *   want this Manuvrable to have.
   */
   #if defined (MANUVR_SUPPORT_SERIAL)
-    if ((strcasestr(argv[i], "--serial")) && (argc > (i-2))) {
-    //// The user wants us to listen to the given serial port.
-      ManuvrSerial* ser = new ManuvrSerial((const char*) argv[++i], 9600);
-      kernel->subscribe(ser);
-      #if defined(MANUVR_GPS_PIPE)
-        ManuvrGPS* gps = new ManuvrGPS(ser);
-      #endif
+    temp_arg = opts->retrieveArgByKey("serial");
+    if (temp_arg) {
+      // The user wants us to listen to the given serial port.
+      char* val = nullptr;
+      if ((0 == temp->getValueAs(&val)) && (0 != val)) {
+        ManuvrSerial* ser = new ManuvrSerial((const char*) argv[++i], 9600);
+        kernel->subscribe(ser);
+        #if defined(MANUVR_GPS_PIPE)
+          ManuvrGPS* gps = new ManuvrGPS(ser);
+        #endif
+      }
     }
   #endif
 

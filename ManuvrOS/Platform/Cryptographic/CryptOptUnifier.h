@@ -64,6 +64,16 @@ Note that this represents a maximum scope-of-support regarding cryptographic
     #include "mbedtls/blowfish.h"
   #endif
 
+  #if defined(MBEDTLS_SSL_TLS_C)
+    #define __BUILD_HAS_TLS
+    #if defined(MBEDTLS_SSL_CLI_C)
+      #define __BUILD_HAS_TLS_CLIENT
+    #endif
+    #if defined(MBEDTLS_SSL_SRV_C)
+      #define __BUILD_HAS_TLS_SERVER
+    #endif
+  #endif
+
   // Now we are going to re-assign some defines to make our base-wrapper. All
   //   code everywhere in this framework ought to code against these defs.
   // We rely on comparable checks by mbedTLS on it's config.h file. We are using
