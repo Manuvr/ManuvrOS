@@ -84,7 +84,18 @@ Platforms that require it should be able to extend this driver for specific
 ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate, uint32_t opts) : ManuvrXport() {
   setReceiverName("ManuvrSerial");
   set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED);
-  _addr     = tty_path;
+  if (tty_path) {
+    size_t addr_len = strlen(tty_path);
+    if (0 < addr_len) {
+      _addr = (char*) malloc(addr_len+1);
+      if (_addr) {
+        *(_addr + addr_len) = 0;
+        for (size_t i = 0; i < addr_len; i++) {
+          *(_addr + i) = *(tty_path + i);
+        }
+      }
+    }
+  }
   _baud_rate = b_rate;
   _options  = opts;
 }
@@ -102,6 +113,10 @@ ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate) : ManuvrSerial(tty_
 * Destructor
 */
 ManuvrSerial::~ManuvrSerial() {
+  if (_addr) {
+    free(_addr);
+    _addr = nullptr;
+  }
 }
 
 

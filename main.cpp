@@ -168,7 +168,7 @@ int main(int argc, const char *argv[]) {
       // The user wants us to listen to the given serial port.
       char* val = nullptr;
       if ((0 == temp->getValueAs(&val)) && (0 != val)) {
-        ManuvrSerial* ser = new ManuvrSerial((const char*) argv[++i], 9600);
+        ManuvrSerial* ser = new ManuvrSerial((const char*) val, 9600);
         kernel->subscribe(ser);
         #if defined(MANUVR_GPS_PIPE)
           ManuvrGPS* gps = new ManuvrGPS(ser);
