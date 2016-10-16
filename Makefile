@@ -156,11 +156,14 @@ endif
 ###########################################################################
 # Merge our choices and export them to the downstream Makefiles...
 CFLAGS += $(MANUVR_OPTIONS) $(OPTIMIZATION)
+ANALYZER_FLAGS  = $(MANUVR_OPTIONS) $(INCLUDES)
+ANALYZER_FLAGS +=  --std=c++11 --report-progress --force -j6
 
 export MANUVR_PLATFORM = LINUX
+export ANALYZER_FLAGS
+
 export CFLAGS
 export CPP_FLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
-
 
 export JSON=1
 
@@ -201,5 +204,5 @@ docs:
 	mkdir -p doc/doxygen/html/doc/
 	ln -s ../../../3d-logo.png doc/doxygen/html/doc/3d-logo.png
 
-stats:
-	find ./ManuvrOS -type f \( -name \*.cpp -o -name \*.h \) -exec wc -l {} +
+check:
+	$(MAKE) check -C ManuvrOS/

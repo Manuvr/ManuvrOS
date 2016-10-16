@@ -157,7 +157,10 @@ setenvars:
 
 
 fullclean: clean
-	rm -rf doc/doxygen
 
-docs:
-	doxygen Doxyfile
+# If cppcheck is installed, we can do some simple static analysis. It is worth
+#   noting that MANUVR_OPTIONS and ROOT_INCLUDES are not normally exported. They
+#   are only valid here.
+check:
+	find ./ -type f \( -name \*.cpp -o -name \*.h \) -exec wc -l {} +
+	cppcheck $(CPP_SRCS) $(ANALYZER_FLAGS)
