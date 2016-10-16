@@ -75,6 +75,11 @@
 // CBOR
 
 // JSON
+#if defined(MANUVR_JSON)
+  #define __BUILD_HAS_JSON
+  // We do this to prevent the Makefile having to do it....
+  #define HAS_CONFIG
+#endif
 
 // Base64. The wrapper can only route a single implementation.
 //   so we case-off exclusively, in order of preference. If we
