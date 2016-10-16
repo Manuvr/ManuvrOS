@@ -161,11 +161,14 @@ int main(int argc, const char *argv[]) {
   *   want this Manuvrable to have.
   */
   #if defined (MANUVR_SUPPORT_SERIAL)
-    //if ((strcasestr(argv[i], "--serial")) && (argc > (i-2))) {
+    if ((strcasestr(argv[i], "--serial")) && (argc > (i-2))) {
     //// The user wants us to listen to the given serial port.
-    //  ManuvrSerial* ser = new ManuvrSerial((const char*) argv[++i], 9600);
-    //  kernel->subscribe(ser);
-    //}
+      ManuvrSerial* ser = new ManuvrSerial((const char*) argv[++i], 9600);
+      kernel->subscribe(ser);
+      #if defined(MANUVR_GPS_PIPE)
+        ManuvrGPS* gps = new ManuvrGPS(ser);
+      #endif
+    }
   #endif
 
   #if defined(RASPI) || defined(RASPI2)
