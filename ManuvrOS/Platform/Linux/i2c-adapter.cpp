@@ -28,10 +28,10 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
         local_log.concatf("Failed to open the i2c bus represented by %s.\n", filename);
         Kernel::log(&local_log);
       }
-      else {
-        busOnline(true);
-      }
       #endif
+    }
+    else {
+      busOnline(true);
     }
   }
   else {

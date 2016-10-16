@@ -238,7 +238,6 @@ int8_t I2CBusOp::init_dma() {
       return -1;
     }
   }
-
   else if (opcode == BusOpcode::TX) {
     uint8_t buffer[buf_len + 1];
     buffer[0] = (uint8_t) (sub_addr & 0x00FF);
@@ -246,6 +245,17 @@ int8_t I2CBusOp::init_dma() {
     for (int i = 0; i < buf_len; i++) buffer[i + 1] = *(buf + i);
 
     if (write(device->getDevId(), &buffer, buf_len+1) == buf_len+1) {
+      markComplete();
+    }
+    else {
+      abort();
+      return -1;
+    }
+  }
+  else if (opcode == BusOpcode::TX_CMD) {
+    uint8_t buffer[buf_len + 1];
+    buffer[0] = (uint8_t) (sub_addr & 0x00FF);
+    if (write(device->getDevId(), &buffer, 1) == 1) {
       markComplete();
     }
     else {

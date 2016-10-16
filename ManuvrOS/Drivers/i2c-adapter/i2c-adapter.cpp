@@ -519,6 +519,7 @@ void I2CAdapter::printDevs(StringBuilder *temp) {
 void I2CAdapter::printDebug(StringBuilder *temp) {
   EventReceiver::printDebug(temp);
   temp->concatf("-- bus_online              %s\n", (busOnline() ? "yes" : "no"));
+  temp->concatf("-- bus_error               %s\n", (busError()  ? "yes" : "no"));
   #if defined(STM32F7XX) | defined(STM32F746xx)
     temp->concatf("-- State                   %u\n", hi2c1.State);
     temp->concatf("-- ErrorCode               %u\n", hi2c1.ErrorCode);
@@ -540,10 +541,10 @@ void I2CAdapter::printDebug(StringBuilder *temp) {
   else {
     temp->concat("Nothing being serviced.\n\n");
   }
-
-  if (work_queue.size() > 0) {
-    temp->concatf("\nQueue Listing (top 3 of %d total)\n", work_queue.size());
-    int m_q_p = (I2CADAPTER_MAX_QUEUE_PRINT >= work_queue.size()) ? work_queue.size() : I2CADAPTER_MAX_QUEUE_PRINT;
+  int w_q_s = work_queue.size();
+  if (w_q_s > 0) {
+    temp->concatf("\nQueue Listing (top 3 of %d total)\n", w_q_s);
+    int m_q_p = strict_min(I2CADAPTER_MAX_QUEUE_PRINT, w_q_s);
     for (int i = 0; i < m_q_p; i++) {
       work_queue.get(i)->printDebug(temp);
     }
