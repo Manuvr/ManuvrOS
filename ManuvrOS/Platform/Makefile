@@ -61,8 +61,16 @@ endif
 
 ifeq ($(MANUVR_PLATFORM),STM32F7)
 CPP_SRCS   += STM32F7/STM32F7.cpp
+CPP_SRCS   += STM32F7/i2c-adapter.cpp
 #SRCS   += STM32F7/STM32F7Storage.cpp
 endif
+
+ifeq ($(MANUVR_PLATFORM),STM32F4)
+CPP_SRCS   += STM32F4/STM32F4.cpp
+CPP_SRCS   += STM32F4/i2c-adapter.cpp
+#SRCS   += STM32F7/STM32F7Storage.cpp
+endif
+
 
 all:
 	@echo ''

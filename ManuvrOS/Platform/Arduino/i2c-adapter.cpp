@@ -7,22 +7,16 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
   __class_initializer();
   dev = dev_id;
 
-  if (dev_id == 1) {
+  //if (dev_id == 1) {
     //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400);
+    Wire.begin();
     busOnline(true);
-  }
+  //}
 }
 
 
 I2CAdapter::~I2CAdapter() {
-    busOnline(false);
-    while (dev_list.hasNext()) {
-      dev_list.get()->disassignBusInstance();
-      dev_list.remove();
-    }
-
-    /* TODO: The work_queue destructor will take care of its own cleanup, but
-       We should abort any open transfers prior to deleting this list. */
+  __class_teardown();
 }
 
 
@@ -35,7 +29,7 @@ int8_t I2CAdapter::generateStart() {
   //Wire1.sendTransmission(I2C_STOP);
   //Wire1.finish(900);   // We allow for 900uS for timeout.
 
-  return 0;
+  return busOnline() ? 0 : -1;
 }
 
 // TODO: Inline this.
@@ -43,8 +37,7 @@ int8_t I2CAdapter::generateStop() {
   #ifdef __MANUVR_DEBUG
   if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
   #endif
-  if (! busOnline()) return -1;
-  return 0;
+  return busOnline() ? 0 : -1;
 }
 
 

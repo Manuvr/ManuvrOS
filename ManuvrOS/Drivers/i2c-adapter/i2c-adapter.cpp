@@ -31,26 +31,6 @@ This file is the tortured result of growing pains since the beginning of
 
 #include "i2c-adapter.h"
 
-#if defined(STM32F4XX)
-  #include <stm32f4xx.h>
-  #include <stm32f4xx_i2c.h>
-  #include <stm32f4xx_gpio.h>
-  #include "stm32f4xx_it.h"
-
-#elif defined(STM32F7XX) | defined(STM32F746xx)
-  // TODO: This is bad, and I know it. Need support ahead of a better abstraction strategy.
-  extern "C" {
-    #include <stm32f7xx_hal.h>
-    #include <stm32f7xx_hal_gpio.h>
-    #include <stm32f7xx_hal_i2c.h>
-    I2C_HandleTypeDef hi2c1;
-  }
-
-#else
-  // Unsupported. Much ugly case-off should not be in this file.
-  // TODO: Migrate case-off code to platform directory.
-#endif
-
 #include <Platform/Platform.h>
 
 extern "C" {
@@ -59,6 +39,7 @@ extern "C" {
 
   // We need some internal events to allow communication back from the ISR.
 const MessageTypeDef i2c_message_defs[] = {
+  { MANUVR_MSG_I2C_DEBUG, 0x0000,  "I2C_DEBUG", ManuvrMsg::MSG_ARGS_NONE },  // TODO: This needs to go away.
   { MANUVR_MSG_I2C_QUEUE_READY, 0x0000,  "I2C_QUEUE_READY", ManuvrMsg::MSG_ARGS_NONE }  // The i2c queue is ready for attention.
 };
 
@@ -81,7 +62,7 @@ void I2CAdapter::__class_initializer() {
   int mes_count = sizeof(i2c_message_defs) / sizeof(MessageTypeDef);
   ManuvrMsg::registerMessages(i2c_message_defs, mes_count);
 
-  _periodic_i2c_debug.repurpose(0x5051, (EventReceiver*) this);
+  _periodic_i2c_debug.repurpose(MANUVR_MSG_I2C_DEBUG, (EventReceiver*) this);
   _periodic_i2c_debug.incRefs();
   _periodic_i2c_debug.specific_target = (EventReceiver*) this;
   _periodic_i2c_debug.priority(1);
@@ -92,153 +73,36 @@ void I2CAdapter::__class_initializer() {
 }
 
 
-#ifdef STM32F4XX
-I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
-  __class_initializer();
-  dev = dev_id;
-
-  // This init() fxn was patterned after the STM32F4x7 library example.
-  if (dev_id == 1) {
-    //I2C_DeInit(I2C1);		//Deinit and reset the I2C to avoid it locking up
-
-    GPIO_InitTypeDef GPIO_InitStruct;
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);    // enable APB1 peripheral clock for I2C1
-
-    RCC_APB1PeriphResetCmd(RCC_APB1Periph_I2C1, ENABLE);
-    RCC_APB1PeriphResetCmd(RCC_APB1Periph_I2C1, DISABLE);
-    I2C_DeInit(I2C1);
-
-    /* Reset I2Cx IP */
-
-    /* Release reset signal of I2Cx IP */
-    //RCC_APB1PeriphResetCmd(RCC_APB1Periph_I2C1, DISABLE);
-
-    /* setup SCL and SDA pins
-     * You can connect the I2C1 functions to two different
-     * pins:
-     * 1. SCL on PB6
-     * 2. SDA on PB7
-     */
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7; // we are going to use PB6 and PB7
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;           // set pins to alternate function
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;      // set GPIO speed
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;         // set output to open drain --> the line has to be only pulled low, not driven high
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;       // enable pull up resistors
-    GPIO_Init(GPIOB, &GPIO_InitStruct);                 // init GPIOB
-
-    // Connect I2C1 pins to AF
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_I2C1);    // SCL
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_I2C1);    // SDA
-
-    I2C_InitTypeDef I2C_InitStruct;
-
-    // configure I2C1
-    I2C_InitStruct.I2C_ClockSpeed = 400000;          // 400kHz
-    I2C_InitStruct.I2C_Mode = I2C_Mode_I2C;          // I2C mode
-    I2C_InitStruct.I2C_DutyCycle = I2C_DutyCycle_2;  // 50% duty cycle --> standard
-    I2C_InitStruct.I2C_OwnAddress1 = 0x00;           // own address, not relevant in master mode
-    //I2C_InitStruct.I2C_Ack = I2C_Ack_Disable;         // disable acknowledge when reading (can be changed later on)
-    I2C_InitStruct.I2C_Ack = I2C_Ack_Enable;
-    I2C_InitStruct.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit; // set address length to 7 bit addresses
-    I2C_Init(I2C1, &I2C_InitStruct);                 // init I2C1
-    I2C_Cmd(I2C1, ENABLE);       // enable I2C1
+void I2CAdapter::__class_teardown() {
+  busOnline(false);
+  while (dev_list.hasNext()) {
+    dev_list.get()->disassignBusInstance();
+    dev_list.remove();
   }
+
+  /* TODO: The work_queue destructor will take care of its own cleanup, but
+     We should abort any open transfers prior to deleting this list. */
+
+  _er_clear_flag(I2C_BUS_FLAG_BUS_ERROR | I2C_BUS_FLAG_BUS_ONLINE);
+  _er_clear_flag(I2C_BUS_FLAG_PING_RUN  | I2C_BUS_FLAG_PINGING);
+
+  for (uint16_t i = 0; i < 128; i++) ping_map[i] = 0;   // Zero the ping map.
+
+  // Set a globalized refernece so we can hit the proper adapter from an ISR.
+  i2c = this;
+
+  int mes_count = sizeof(i2c_message_defs) / sizeof(MessageTypeDef);
+  ManuvrMsg::registerMessages(i2c_message_defs, mes_count);
+
+  _periodic_i2c_debug.repurpose(MANUVR_MSG_I2C_DEBUG, (EventReceiver*) this);
+  _periodic_i2c_debug.incRefs();
+  _periodic_i2c_debug.specific_target = (EventReceiver*) this;
+  _periodic_i2c_debug.priority(1);
+  _periodic_i2c_debug.alterSchedulePeriod(100);
+  _periodic_i2c_debug.alterScheduleRecurrence(-1);
+  _periodic_i2c_debug.autoClear(false);
+  _periodic_i2c_debug.enableSchedule(false);
 }
-
-
-I2CAdapter::~I2CAdapter() {
-    I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, DISABLE);   // Shelve the interrupts.
-    I2C_DeInit(I2C1);   // De-init
-    while (dev_list.hasNext()) {
-      dev_list.get()->disassignBusInstance();
-      dev_list.remove();
-    }
-
-    /* TODO: The work_queue destructor will take care of its own cleanup, but
-       We should abort any open transfers prior to deleting this list. */
-}
-
-
-int8_t I2CAdapter::generateStart() {
-  #ifdef __MANUVR_DEBUG
-  if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
-  #endif
-  if (! busOnline()) return -1;
-  I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, ENABLE);      //Enable EVT and ERR interrupts
-  I2C_GenerateSTART(I2C1, ENABLE);   // Doing this will take us back to the ISR.
-  return 0;
-}
-
-// TODO: Inline this.
-int8_t I2CAdapter::generateStop() {
-  #ifdef __MANUVR_DEBUG
-  if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
-  #endif
-  if (! busOnline()) return -1;
-  DMA_ITConfig(DMA1_Stream0, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE | DMA_IT_DME, DISABLE);
-  I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, DISABLE);
-  I2C_GenerateSTOP(I2C1, ENABLE);
-  return 0;
-}
-
-
-#elif defined(STM32F7XX) | defined(STM32F746xx)
-  // TODO: I know this is horrid. I'm sick of screwing with the build system today...
-  #include <Platform/STM32F7/i2c-adapter.cpp>
-
-#elif defined(_BOARD_FUBARINO_MINI_)    // Perhaps this is an arduino-style env?
-
-
-I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
-  __class_initializer();
-  dev = dev_id;
-
-  if (dev_id == 0) {
-    Wire.begin();
-    busOnline(true);
-  }
-  else {
-    // Unsupported.
-  }
-}
-
-
-I2CAdapter::~I2CAdapter() {
-    busOnline(false);
-    while (dev_list.hasNext()) {
-      dev_list.get()->disassignBusInstance();
-      dev_list.remove();
-    }
-
-    /* TODO: The work_queue destructor will take care of its own cleanup, but
-       We should abort any open transfers prior to deleting this list. */
-}
-
-
-int8_t I2CAdapter::generateStart() {
-  #ifdef __MANUVR_DEBUG
-  if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
-  #endif
-  if (! busOnline()) return -1;
-  //Wire1.sendTransmission(I2C_STOP);
-  //Wire1.finish(900);   // We allow for 900uS for timeout.
-
-  return 0;
-}
-
-// TODO: Inline this.
-int8_t I2CAdapter::generateStop() {
-  #ifdef __MANUVR_DEBUG
-  if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
-  #endif
-  if (! busOnline()) return -1;
-  return 0;
-}
-
-#else
-  // No support.
-#endif  // Platform case-offs
-
 
 
 /**
@@ -300,6 +164,7 @@ int8_t I2CAdapter::callback_proc(ManuvrMsg* event) {
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {
+    case MANUVR_MSG_I2C_QUEUE_READY:
     default:
       break;
   }
@@ -313,7 +178,6 @@ int8_t I2CAdapter::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
-    case MANUVR_MSG_INTERRUPTS_MASKED:
     case MANUVR_MSG_SYS_REBOOT:
     case MANUVR_MSG_SYS_BOOTLOADER:
       break;
@@ -326,7 +190,7 @@ int8_t I2CAdapter::notify(ManuvrMsg* active_event) {
 
     #if defined(STM32F7XX) | defined(STM32F746xx)
     // TODO: This is a debugging aid while I sort out i2c on the STM32F7.
-    case 0x5051:
+    case MANUVR_MSG_I2C_DEBUG:
       {
         I2CBusOp* nu = new I2CBusOp(BusOpcode::RX, 0x27, (int16_t) 0, &_debug_scratch, 1);
         //nu->requester = this;
@@ -653,8 +517,6 @@ void I2CAdapter::printDevs(StringBuilder *temp) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void I2CAdapter::printDebug(StringBuilder *temp) {
-  if (temp == NULL) return;
-
   EventReceiver::printDebug(temp);
   temp->concatf("-- bus_online              %s\n", (busOnline() ? "yes" : "no"));
   #if defined(STM32F7XX) | defined(STM32F746xx)

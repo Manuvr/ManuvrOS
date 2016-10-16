@@ -47,19 +47,13 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
 
 
 I2CAdapter::~I2CAdapter() {
+  __class_teardown();
     if (dev >= 0) {
       #ifdef __MANUVR_DEBUG
       Kernel::log("Closing the open i2c bus...\n");
       #endif
       close(dev);
     }
-    while (dev_list.hasNext()) {
-      dev_list.get()->disassignBusInstance();
-      dev_list.remove();
-    }
-
-    /* TODO: The work_queue destructor will take care of its own cleanup, but
-       We should abort any open transfers prior to deleting this list. */
 }
 
 

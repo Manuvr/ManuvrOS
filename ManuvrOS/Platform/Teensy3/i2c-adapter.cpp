@@ -26,14 +26,7 @@
 
 
   I2CAdapter::~I2CAdapter() {
-      busOnline(false);
-      while (dev_list.hasNext()) {
-        dev_list.get()->disassignBusInstance();
-        dev_list.remove();
-      }
-
-      /* TODO: The work_queue destructor will take care of its own cleanup, but
-         We should abort any open transfers prior to deleting this list. */
+    __class_teardown();
   }
 
 

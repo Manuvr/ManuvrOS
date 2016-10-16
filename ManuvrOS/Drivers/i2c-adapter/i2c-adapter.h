@@ -216,6 +216,7 @@ This file is the tortured result of growing pains since the beginning of
       int    dev = -1;
 
       void __class_initializer();
+      void __class_teardown();
       void gpioSetup();
 
       void advance_work_queue();           // Called from the ISR via Event. Advances the bus.
@@ -344,21 +345,5 @@ This file is the tortured result of growing pains since the beginning of
       int8_t writeRegister(DeviceRegister* reg);
       int8_t readRegister(DeviceRegister* reg);
   };
-
-
-
-#if defined(__MANUVR_LINUX)
-  #include <stdlib.h>
-  #include <unistd.h>
-  #include <linux/i2c-dev.h>
-  #include <sys/types.h>
-  #include <sys/ioctl.h>
-  #include <sys/stat.h>
-  #include <fstream>
-  #include <iostream>
-  #include <fcntl.h>
-  #include <inttypes.h>
-  #include <ctype.h>
-#endif
 
 #endif  //I2C_ABSTRACTION_LAYER_ADAPTER
