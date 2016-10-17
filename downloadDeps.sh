@@ -7,8 +7,7 @@
 # JSON support via jansson...
 # Note that we do special-handling here to make the build-process smoother...
 rm -rf lib/jansson
-git clone https://github.com/jspark311/jansson.git lib/jansson
-#git clone https://github.com/akheron/jansson.git lib/jansson
+git clone https://github.com/akheron/jansson.git lib/jansson
 ln -s `pwd`/lib/jansson/src/ lib/jansson/include
 
 # FreeRTOS...
