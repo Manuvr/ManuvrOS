@@ -333,6 +333,7 @@ int8_t ManuvrSerial::read_port() {
         }
 
     #elif defined (__MANUVR_LINUX) // Linux with pthreads...
+        buf = (uint8_t*) alloca(255);
         n = read(_sock, buf, 255);
         if (n > 0) {
           bytes_received += n;
@@ -419,6 +420,7 @@ int8_t ManuvrSerial::attached() {
     // Tolerate 30ms of latency on the line before flushing the buffer.
     read_abort_event.alterSchedulePeriod(30);
     read_abort_event.autoClear(false);
+    reset();
     #if !defined (__BUILD_HAS_THREADS)
       read_abort_event.enableSchedule(true);
       read_abort_event.alterScheduleRecurrence(-1);
@@ -427,7 +429,6 @@ int8_t ManuvrSerial::attached() {
       read_abort_event.alterScheduleRecurrence(0);
       createThread(&_thread_id, NULL, xport_read_handler, (void*) this);
     #endif
-    reset();
     return 1;
   }
   return 0;
