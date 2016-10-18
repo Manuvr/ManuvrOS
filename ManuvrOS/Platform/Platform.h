@@ -55,7 +55,6 @@ extern "C" {
   #include "iotivity/port/oc_random.h"
   #include "iotivity/port/oc_network_events_mutex.h"
   #include "iotivity/port/oc_log.h"
-  #include "iotivity/port/oc_signal_main_loop.h"
 
   int example_main(void);
 }

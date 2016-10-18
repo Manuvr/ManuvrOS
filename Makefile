@@ -118,8 +118,10 @@ LIBS +=  -lmanuvr -lextras -lpthread
 # Framework selections, if any are desired.
 ifeq ($(OIC_SERVER),1)
 	MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT -DOC_SERVER
+	MANUVR_OPTIONS += -DOC_SECURITY
 else ifeq ($(OIC_CLIENT),1)
 	MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT -DOC_CLIENT
+	MANUVR_OPTIONS += -DOC_SECURITY
 endif
 
 # Options for various security features.
