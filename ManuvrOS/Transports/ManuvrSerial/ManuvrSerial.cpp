@@ -65,6 +65,22 @@ Platforms that require it should be able to extend this driver for specific
 * Static members and initializers should be located here.
 *******************************************************************************/
 
+/*******************************************************************************
+* .-. .----..----.    .-.     .--.  .-. .-..----.
+* | |{ {__  | {}  }   | |    / {} \ |  `| || {}  \
+* | |.-._} }| .-. \   | `--./  /\  \| |\  ||     /
+* `-'`----' `-' `-'   `----'`-'  `-'`-' `-'`----'
+*
+* Interrupt service routine support functions. Everything in this block
+*   executes under an ISR. Keep it brief...
+*******************************************************************************/
+
+#if defined(__BUILD_HAS_THREADS)
+  // Threaded platforms will need this to compensate for a loss of ISR.
+  extern void* xport_read_handler(void* active_xport);
+
+#endif
+
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -409,6 +425,7 @@ int8_t ManuvrSerial::attached() {
       platform.kernel()->addSchedule(&read_abort_event);
     #else
       read_abort_event.alterScheduleRecurrence(0);
+      createThread(&_thread_id, NULL, xport_read_handler, (void*) this);
     #endif
     reset();
     return 1;
