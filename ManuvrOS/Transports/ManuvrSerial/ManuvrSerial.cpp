@@ -306,7 +306,6 @@ int8_t ManuvrSerial::read_port() {
 
     #elif defined (__MK20DX128__) || defined (__MK20DX256__) // Teensy3.x
       int available = Serial.available();
-
       if (available) {
         buf = (uint8_t*) malloc(available + 1);
         if (buf) {
@@ -322,26 +321,30 @@ int8_t ManuvrSerial::read_port() {
         return_value = 1;
       }
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
-        if (Serial.available()) {
-          while (Serial.available()) {
+      int available = Serial.available();
+      if (available) {
+        buf = (uint8_t*) malloc(available + 1);
+        if (buf) {
+          for (n = 0; n < available; n++) {
             *(buf + n++) = Serial.read();
           }
           bytes_received += n;
-          *(buf + n) = '\0';  // NULL-terminate, JIC
-          BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
-          return_value = 1;
         }
-
+        *(buf + n) = '\0';  // NULL-terminate, JIC
+        StringBuilder temp;
+        temp.concatHandoff(buf, available);
+        BufferPipe::fromCounterparty(&temp, MEM_MGMT_RESPONSIBLE_BEARER);
+        return_value = 1;
+      }
     #elif defined (__MANUVR_LINUX) // Linux with pthreads...
-        buf = (uint8_t*) alloca(255);
-        n = read(_sock, buf, 255);
-        if (n > 0) {
-          bytes_received += n;
-          StringBuilder temp;
-          temp.concatHandoff(buf, n);
-          BufferPipe::fromCounterparty(&temp, MEM_MGMT_RESPONSIBLE_BEARER);
-          return_value = 1;
-        }
+      buf = (uint8_t*) alloca(255);
+      n = read(_sock, buf, 255);
+      if (n > 0) {
+        bytes_received += n;
+        StringBuilder temp(buf, n);
+        BufferPipe::fromCounterparty(&temp, MEM_MGMT_RESPONSIBLE_BEARER);
+        return_value = 1;
+      }
     #endif
   }
   else {
