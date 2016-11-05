@@ -538,18 +538,6 @@ int8_t ManuvrSession::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
-    /* General system events */
-    case MANUVR_MSG_BT_CONNECTION_LOST:
-      mark_session_state(XENOSESSION_STATE_DISCONNECTED);
-      purgeInbound();
-      purgeOutbound();
-      session_buffer.clear();   // Also purge whatever hanging RX buffer we may have had.
-      #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 3) local_log.concatf("%p Session is now in state %s.\n", this, sessionPhaseString(getPhase()));
-      #endif
-      return_value++;
-      break;
-
     case MANUVR_MSG_SESS_ORIGINATE_MSG:
       sendSyncPacket();
       return_value++;

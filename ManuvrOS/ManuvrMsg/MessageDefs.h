@@ -239,13 +239,3 @@ limitations under the License.
   #define MANUVR_MSG_SENSOR_INA219        0x0550 // The current sensor has something to say.
   #define MANUVR_MSG_SENSOR_MGC3130       0x0556 // MGC3130 is declaring it has new data.
   #define MANUVR_MSG_SENSOR_MGC3130_INIT  0x0557 // MGC3130 is (re)initializing itself.
-
-
-
-  /* Roving Networks Bluetooth radio codes */
-  #define MANUVR_MSG_BT_CONNECTION_LOST   0x1000 //
-  #define MANUVR_MSG_BT_CONNECTION_GAINED 0x1001 //
-
-  #define MANUVR_MSG_BT_RX_BUF_NOT_EMPTY  0x1004 // The host sent us data without indication of an end.
-  #define MANUVR_MSG_BT_ENTERED_CMD_MODE  0x1005 // The module entered command mode.
-  #define MANUVR_MSG_BT_EXITED_CMD_MODE   0x1006 // The module exited command mode.

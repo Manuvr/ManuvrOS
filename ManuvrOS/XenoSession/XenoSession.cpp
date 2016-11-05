@@ -271,17 +271,6 @@ int8_t XenoSession::notify(ManuvrMsg* active_event) {
 
   switch (active_event->eventCode()) {
     /* General system events */
-    case MANUVR_MSG_BT_CONNECTION_LOST:
-      mark_session_state(XENOSESSION_STATE_DISCONNECTED);
-      //_relay_list.clear();
-      purgeInbound();
-      purgeOutbound();
-      #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 3) local_log.concatf("%p Session is now in state %s.\n", this, sessionPhaseString(getPhase()));
-      #endif
-      return_value++;
-      break;
-
     case MANUVR_MSG_SESS_SERVICE:
       // If we ever see this, it means the class that extended us isn't reacting appropriately
       //   to its own requests-for-service. Pitch a warning.
@@ -425,6 +414,12 @@ int8_t XenoSession::sendEvent(ManuvrMsg* active_event) {
 
 int8_t XenoSession::connection_callback(bool _con) {
   mark_session_state(_con ? XENOSESSION_STATE_PENDING_SETUP : XENOSESSION_STATE_DISCONNECTED);
+  //_relay_list.clear();
+  purgeInbound();
+  purgeOutbound();
+  #ifdef __MANUVR_DEBUG
+    if (getVerbosity() > 3) local_log.concatf("%p Session is now in state %s.\n", this, sessionPhaseString(getPhase()));
+  #endif
   return 0;
 }
 
