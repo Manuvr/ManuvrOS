@@ -44,6 +44,12 @@ const MessageTypeDef i2c_message_defs[] = {
 };
 
 
+// TODO: Ugly. Stuck with it until more technical debt is paid.
+#if defined(STM32F7XX) | defined(STM32F746xx)
+  extern I2C_HandleTypeDef hi2c1;
+#endif
+
+
 /**************************************************************************
 * Constructors / Destructors                                              *
 **************************************************************************/
@@ -192,9 +198,9 @@ int8_t I2CAdapter::notify(ManuvrMsg* active_event) {
     // TODO: This is a debugging aid while I sort out i2c on the STM32F7.
     case MANUVR_MSG_I2C_DEBUG:
       {
-        I2CBusOp* nu = new I2CBusOp(BusOpcode::RX, 0x27, (int16_t) 0, &_debug_scratch, 1);
-        //nu->requester = this;
-        insert_work_item(nu);
+        //I2CBusOp* nu = new I2CBusOp(BusOpcode::RX, 0x27, (int16_t) 0, &_debug_scratch, 1);
+        ////nu->requester = this;
+        //insert_work_item(nu);
       }
       break;
     #endif
@@ -544,7 +550,7 @@ void I2CAdapter::printDebug(StringBuilder *temp) {
   int w_q_s = work_queue.size();
   if (w_q_s > 0) {
     temp->concatf("\nQueue Listing (top 3 of %d total)\n", w_q_s);
-    int m_q_p = strict_min(I2CADAPTER_MAX_QUEUE_PRINT, w_q_s);
+    int m_q_p = strict_min(I2CADAPTER_MAX_QUEUE_PRINT, (int32_t) w_q_s);
     for (int i = 0; i < m_q_p; i++) {
       work_queue.get(i)->printDebug(temp);
     }
@@ -599,9 +605,9 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
     #if defined(STM32F7XX) | defined(STM32F746xx)
     case '3':
       {
-        I2CBusOp* nu = new I2CBusOp(BusOpcode::RX, 0x27, (int16_t) 0, &_debug_scratch, 1);
-        //nu->requester = this;
-        insert_work_item(nu);
+        //I2CBusOp* nu = new I2CBusOp(BusOpcode::RX, 0x27, (int16_t) 0, &_debug_scratch, 1);
+        ////nu->requester = this;
+        //insert_work_item(nu);
       }
       break;
 
@@ -619,10 +625,10 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       break;
 
     case 't':
-      I2C1->CR1 &= ~((uint32_t) I2C_CR1_PE);
-      while(I2C1->CR1 & I2C_CR1_PE) {}
-      busOnline(_stm32f7_timing_reinit(&hi2c1, temp_int));
-      local_log.concat("i2c timing set.\n");
+      //I2C1->CR1 &= ~((uint32_t) I2C_CR1_PE);
+      //while(I2C1->CR1 & I2C_CR1_PE) {}
+      //busOnline(_stm32f7_timing_reinit(&hi2c1, temp_int));
+      //local_log.concat("i2c timing set.\n");
       break;
     #endif
 

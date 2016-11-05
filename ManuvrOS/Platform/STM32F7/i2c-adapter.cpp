@@ -1,5 +1,7 @@
 #include <Drivers/i2c-adapter/i2c-adapter.h>
 
+extern volatile I2CAdapter* i2c;
+
 #if defined(MANUVR_SUPPORT_I2C)
 extern "C" {
   #include <stm32f7xx_hal.h>
@@ -10,7 +12,6 @@ extern "C" {
 
 
 uint8_t _debug_scratch = 0;
-
 static uint32_t val = 0;
 
 bool _stm32f7_timing_reinit(I2C_HandleTypeDef *hi2c, uint32_t val) {

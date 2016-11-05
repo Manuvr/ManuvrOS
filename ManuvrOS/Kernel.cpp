@@ -420,7 +420,7 @@ int8_t Kernel::staticRaiseEvent(ManuvrMsg* active_runnable) {
   }
 
   #if defined(__MANUVR_DEBUG)
-    if (INSTANCE->getVerbosity() > 4) {
+    if (INSTANCE->getVerbosity() > 5) {
       StringBuilder output;
       output.concatf(
         "Kernel::validate_insertion() failed (%d) for MSG code %s\n",

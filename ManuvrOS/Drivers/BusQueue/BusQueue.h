@@ -31,19 +31,20 @@ limitations under the License.
 */
 enum class XferState {
   /* These are start states. */
-  UNDEF,      // Freshly instanced (or wiped, if preallocated).
-  IDLE,       // Bus op is allocated and waiting somewhere outside of the queue.
+  UNDEF    = 0,  // Freshly instanced (or wiped, if preallocated).
+  IDLE     = 1,  // Bus op is allocated and waiting somewhere outside of the queue.
 
   /* These states are unstable and should decay into a "finish" state. */
-  QUEUED,     // Bus op is idle and waiting for its turn. No bus control.
-  INITIATE,   // Waiting for initiation phase.
-  ADDR,       // Addressing phase. Sending the address.
-  IO_WAIT,    // I/O operation in-progress.
-  STOP,       // I/O operation in cleanup phase.
+  QUEUED   = 2,  // Bus op is idle and waiting for its turn. No bus control.
+  INITIATE = 3,  // Waiting for initiation phase.
+  ADDR     = 5,  // Addressing phase. Sending the address.
+  TX_WAIT  = 7,  // I/O operation in-progress.
+  RX_WAIT  = 8,  // I/O operation in-progress.
+  STOP     = 10,  // I/O operation in cleanup phase.
 
   /* These are finish states. */
-  COMPLETE,   // I/O op complete with no problems.
-  FAULT       // Fault condition.
+  COMPLETE = 14, // I/O op complete with no problems.
+  FAULT    = 15  // Fault condition.
 };
 
 
@@ -83,7 +84,7 @@ enum class XferFault {
 
 
 /*
-* This class represents a single transaction on the bus, but is dewvoid of
+* This class represents a single transaction on the bus, but is devoid of
 *   implementation details. This is an interface class that should be extended
 *   by classes that require hardware-level specificity.
 *
@@ -91,7 +92,7 @@ enum class XferFault {
 *   conventions. That is, state-bearing members in this interface are ok, but
 *   there should be no function members that are not pure virtuals or inlines.
 *
-* Note also, that a class is not required to inherrit from this ddefinition of
+* Note also, that a class is not required to inherrit from this definition of
 *   a bus operation to use the enums defined above, with their associated static
 *   support functions.
 */
@@ -116,7 +117,7 @@ class BusOp {
     */
     inline bool has_bus_control() {
       return (
-        (xfer_state == XferState::STOP) | (xfer_state == XferState::IO_WAIT) | \
+        (xfer_state == XferState::STOP) | inIOWait() | \
         (xfer_state == XferState::INITIATE) | (xfer_state == XferState::ADDR)
       );
     };
@@ -124,7 +125,21 @@ class BusOp {
     /**
     * @return true if this operation completed without problems.
     */
-    inline bool isComplete() {   return (XferState::COMPLETE == xfer_state);  };
+    inline bool isComplete() {   return (XferState::COMPLETE <= xfer_state);  };
+
+    /**
+    * @return true if this operation is waiting for IO to complete.
+    */
+    inline bool inIOWait() {
+      return (XferState::RX_WAIT == xfer_state) || (XferState::TX_WAIT == xfer_state);
+    };
+
+    /**
+    * @return true if this operation has been intiated, but is not yet complete.
+    */
+    inline bool inProgress() {
+      return (XferState::INITIATE <= xfer_state) && (XferState::COMPLETE > xfer_state);
+    };
 
     /**
     * @return true if this operation experienced any abnormal condition.
