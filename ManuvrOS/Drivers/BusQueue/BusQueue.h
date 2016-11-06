@@ -128,6 +128,12 @@ class BusOp {
     inline bool isComplete() {   return (XferState::COMPLETE <= xfer_state);  };
 
     /**
+    * @return true if this operation is enqueued and inert.
+    */
+    inline bool isQueued() {     return (XferState::QUEUED == xfer_state);    };
+    inline void markQueued() {   set_state(XferState::QUEUED);                };
+
+    /**
     * @return true if this operation is waiting for IO to complete.
     */
     inline bool inIOWait() {
