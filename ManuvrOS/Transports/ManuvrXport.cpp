@@ -332,12 +332,13 @@ void ManuvrXport::printDebug(StringBuilder *temp) {
   EventReceiver::printDebug(temp);
   BufferPipe::printDebug(temp);
   temp->concatf("--\n-- %s-oriented transport\n--\n", (streamOriented() ? "stream" : "message"));
-  temp->concatf("-- _xport_flags    0x%08x\n", _xport_flags);
-  temp->concatf("-- bytes sent      %u\n", bytes_sent);
-  temp->concatf("-- bytes received  %u\n--\n", bytes_received);
-  temp->concatf("-- initialized     %s\n", (initialized() ? "yes" : "no"));
-  temp->concatf("-- connected       %s\n", (connected() ? "yes" : "no"));
-  temp->concatf("-- listening       %s\n", (listening() ? "yes" : "no"));
+  temp->concatf("-- _xport_flags:   0x%08x\n", _xport_flags);
+  temp->concatf("-- bytes sent:     %u\n", bytes_sent);
+  temp->concatf("-- bytes received: %u\n--\n", bytes_received);
+  temp->concatf("-- initialized:    %s\n", (initialized() ? "yes" : "no"));
+  temp->concatf("-- connected:      %s\n", (connected() ? "yes" : "no"));
+  temp->concatf("-- listening:      %s\n", (listening() ? "yes" : "no"));
+  temp->concatf("-- autoconnect:    %s\n", (autoConnect() ? "yes" : "no"));
 }
 
 

@@ -116,7 +116,9 @@ class ManuvrMsg {
     int8_t repurpose(uint16_t code, EventReceiver* cb);
     inline int8_t repurpose(uint16_t code) { return repurpose(code, nullptr); };
 
-    void printDebug(StringBuilder*);
+    #if defined(__MANUVR_DEBUG)
+      void printDebug(StringBuilder*);
+    #endif
 
     /**
     * For outside callers to read the private message code.
