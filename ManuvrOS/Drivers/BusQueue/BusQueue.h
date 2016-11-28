@@ -25,6 +25,7 @@ limitations under the License.
 #define __MANUVR_BUS_QUEUE_H__
 
 #include <inttypes.h>
+#include <DataStructures/PriorityQueue.h>
 
 /*
 * These are possible transfer states.
@@ -181,22 +182,6 @@ class BusOp {
   private:
 };
 
-/*
-* This class represents a generic bus adapter. We are not so concerned with
-*   performance and memory overhead in this class, because there is typically
-*   only a handful of such classes, and they have low turnover rates.
-*/
-class BusAdapter {
-  public:
-    /* Mandatory overrides... */
-    virtual int8_t insert_work_item()   =0;
-    virtual void   advance_work_queue() =0;
-
-  protected:
-
-  private:
-};
-
 
 /*
 * This is an interface class that implements a callback path for I/O operations.
@@ -212,6 +197,31 @@ class BusOpCallback {
     */
     virtual int8_t queue_io_job(BusOp*) =0;
 
+};
+
+
+/*
+* This class represents a generic bus adapter. We are not so concerned with
+*   performance and memory overhead in this class, because there is typically
+*   only a handful of such classes, and they have low turnover rates.
+*/
+template <class T> class BusAdapter : public BusOpCallback {
+  public:
+    /* Mandatory overrides... */
+    virtual int8_t advance_work_queue()          =0;
+    virtual T* new_op()                          =0;
+    virtual T* new_op(BusOpcode, BusOpCallback*) =0;
+
+
+  protected:
+    const uint16_t MAX_Q_DEPTH;
+    uint16_t _prealloc_misses = 0;  // How many times have we starved the preallocation queue?
+    PriorityQueue<T*> work_queue;
+    PriorityQueue<T*> preallocated;
+
+    BusAdapter(uint16_t max) : MAX_Q_DEPTH(max) {};
+
+  private:
 };
 
 #endif  // __MANUVR_BUS_QUEUE_H__
