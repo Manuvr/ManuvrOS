@@ -374,11 +374,6 @@ void currentDateTime(StringBuilder* target) {
 /*******************************************************************************
 * GPIO and change-notice                                                       *
 *******************************************************************************/
-/*
-*
-*/
-volatile PlatformGPIODef gpio_pins[PLATFORM_GPIO_PIN_COUNT];
-
 
 /*
 * This fxn should be called once on boot to setup the CPU pins that are not claimed
@@ -389,12 +384,6 @@ volatile PlatformGPIODef gpio_pins[PLATFORM_GPIO_PIN_COUNT];
 */
 void gpioSetup() {
   // Null-out all the pin definitions in preparation for assignment.
-  for (uint8_t i = 0; i < PLATFORM_GPIO_PIN_COUNT; i++) {
-    gpio_pins[i].event = 0;      // No event assigned.
-    gpio_pins[i].fxn   = 0;      // No function pointer.
-    gpio_pins[i].mode  = INPUT;  // All pins begin as inputs.
-    gpio_pins[i].pin   = i;      // The pin number.
-  }
   for (uint8_t i = 0; i < 16; i++) {
     /* Zero all the EXTI definitions */
     __ext_line_bindings[i].event     = 0;
