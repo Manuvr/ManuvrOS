@@ -521,7 +521,7 @@ void sleep_millis(unsigned long millis) {
     }
     else {
       // For some reason we need to delay prior to threads being operational.
-      delay(millis);
+      //delay(millis);
     }
   #elif defined(ARDUINO)
     delay(millis);  // So wasteful...
@@ -536,10 +536,12 @@ void sleep_millis(unsigned long millis) {
 *   memory. Probably not worth the convenience in most cases.  -Wl --gc-sections
 */
 void ManuvrPlatform::forsakeMain() {
-  while (1) {
+  #if defined (__MANUVR_FREERTOS)
+    // FreeRTOS requires that we explicitly yield control.
+  #else
     // Run forever.
-    _kernel.procIdleFlags();
-  }
+    while (1) {  _kernel.procIdleFlags();  }
+  #endif
 }
 
 

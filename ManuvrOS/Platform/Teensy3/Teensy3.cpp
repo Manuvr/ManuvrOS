@@ -40,9 +40,7 @@ This file is meant to contain a set of common functions that are typically platf
 #define PLATFORM_GPIO_PIN_COUNT   33
 
 
-#if defined (__MANUVR_FREERTOS)
-  #include <FreeRTOS_ARM.h>
-#else
+#if !defined (__MANUVR_FREERTOS)
   #include "IntervalTimer.h"
 
   IntervalTimer timer0;  // Scheduler
