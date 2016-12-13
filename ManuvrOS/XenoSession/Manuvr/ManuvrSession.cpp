@@ -50,8 +50,9 @@ limitations under the License.
 *
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
-ManuvrSession::ManuvrSession(ManuvrXport* _xport) : XenoSession(_xport) {
+ManuvrSession::ManuvrSession(BufferPipe* _near_side) : XenoSession(_near_side) {
   setReceiverName("ManuvrSession");
+  _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
   _seq_parse_failures = MANUVR_MAX_PARSE_FAILURES;
   _seq_ack_failures   = MANUVR_MAX_ACK_FAILURES;
 
@@ -475,7 +476,7 @@ const char* ManuvrSession::getSessionSyncString() {
 int8_t ManuvrSession::attached() {
   if (EventReceiver::attached()) {
     sync_event.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG, (EventReceiver*) this);
-    sync_event.isManaged(true);
+    sync_event.incRefs();
     sync_event.specific_target = (EventReceiver*) this;
     sync_event.alterScheduleRecurrence(XENOSESSION_INITIAL_SYNC_COUNT);
     sync_event.alterSchedulePeriod(30);
@@ -513,7 +514,7 @@ int8_t ManuvrSession::attached() {
 int8_t ManuvrSession::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
-  int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
+  int8_t return_value = (0 < event->refCount()) ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {
@@ -538,18 +539,6 @@ int8_t ManuvrSession::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
-    /* General system events */
-    case MANUVR_MSG_BT_CONNECTION_LOST:
-      mark_session_state(XENOSESSION_STATE_DISCONNECTED);
-      purgeInbound();
-      purgeOutbound();
-      session_buffer.clear();   // Also purge whatever hanging RX buffer we may have had.
-      #ifdef __MANUVR_DEBUG
-      if (getVerbosity() > 3) local_log.concatf("%p Session is now in state %s.\n", this, sessionPhaseString(getPhase()));
-      #endif
-      return_value++;
-      break;
-
     case MANUVR_MSG_SESS_ORIGINATE_MSG:
       sendSyncPacket();
       return_value++;

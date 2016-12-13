@@ -25,7 +25,7 @@ Initial implentation is via mbedTLS.
 #include "ManuvrTLS.h"
 #include <Kernel.h>
 
-#if defined(WITH_MBEDTLS) & defined(MBEDTLS_SSL_CLI_C)
+#if defined(__BUILD_HAS_TLS_CLIENT)
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -211,4 +211,4 @@ void ManuvrTLSClient::printDebug(StringBuilder* output) {
   BufferPipe::printDebug(output);
 }
 
-#endif
+#endif   // __BUILD_HAS_TLS_CLIENT

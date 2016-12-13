@@ -27,10 +27,11 @@ limitations under the License.
 #include <stdarg.h>
 #include <string.h>
 
-#if defined(__MANUVR_LINUX)
+#if defined(__BUILD_HAS_PTHREADS)
   #include <pthread.h>
 #elif defined(__MANUVR_FREERTOS)
-  #include <FreeRTOS_ARM.h>
+  #include <FreeRTOS.h>
+  #include <semphr.h>
 #endif
 
 #if !defined(_GNU_SOURCE)
@@ -144,7 +145,7 @@ class StringBuilder {
     unsigned char *str;  // The collapsed string.
     bool preserve_ll;    // If true, do not reap the linked list in the destructor.
 
-    #if defined(__MANUVR_LINUX)
+    #if defined(__BUILD_HAS_PTHREADS)
       // If we are on linux, we control for concurrency with a mutex...
       pthread_mutex_t _mutex;
     #elif defined(__MANUVR_FREERTOS)

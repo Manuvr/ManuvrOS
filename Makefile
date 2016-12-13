@@ -89,6 +89,7 @@ CPP_SRCS  = main.cpp
 # Supported transports...
 MANUVR_OPTIONS += -DMANUVR_STDIO
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_SERIAL
+MANUVR_OPTIONS += -DMANUVR_SUPPORT_I2C
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_UDP
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
 
@@ -100,14 +101,14 @@ MANUVR_OPTIONS += -D__MANUVR_LINUX
 #MANUVR_OPTIONS += -DMANUVR_SUPPORT_OSC
 MANUVR_OPTIONS += -DMANUVR_OVER_THE_WIRE
 #MANUVR_OPTIONS += -DMANUVR_SUPPORT_MQTT
-#MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
+MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
 MANUVR_OPTIONS += -DMANUVR_CONSOLE_SUPPORT
 MANUVR_OPTIONS += -DMANUVR_GPS_PIPE
 
 # Options for various platform features.
 MANUVR_OPTIONS += -DMANUVR_STORAGE
 MANUVR_OPTIONS += -DMANUVR_CBOR
-#MANUVR_OPTIONS += -DMANUVR_JSON
+MANUVR_OPTIONS += -DMANUVR_JSON
 
 # Since we are building on linux, we will have threading support via
 # pthreads.
@@ -117,15 +118,16 @@ LIBS +=  -lmanuvr -lextras -lpthread
 # Framework selections, if any are desired.
 ifeq ($(OIC_SERVER),1)
 	MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT -DOC_SERVER
+	MANUVR_OPTIONS += -DOC_SECURITY
 else ifeq ($(OIC_CLIENT),1)
 	MANUVR_OPTIONS += -DMANUVR_OPENINTERCONNECT -DOC_CLIENT
+	MANUVR_OPTIONS += -DOC_SECURITY
 endif
 
 # Options for various security features.
 ifeq ($(SECURE),1)
 MANUVR_OPTIONS += -DWITH_MBEDTLS
 # The remaining lines are to prod header files in libraries.
-MANUVR_OPTIONS += -DOC_SECURITY
 LIBS += $(OUTPUT_PATH)/libmbedtls.a
 LIBS += $(OUTPUT_PATH)/libmbedx509.a
 LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
@@ -157,11 +159,16 @@ endif
 ###########################################################################
 # Merge our choices and export them to the downstream Makefiles...
 CFLAGS += $(MANUVR_OPTIONS) $(OPTIMIZATION)
+ANALYZER_FLAGS  = $(MANUVR_OPTIONS) $(INCLUDES)
+ANALYZER_FLAGS +=  --std=c++11 --report-progress --force -j6
 
 export MANUVR_PLATFORM = LINUX
+export ANALYZER_FLAGS
+
 export CFLAGS
 export CPP_FLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
 
+export JSON=1
 
 .PHONY: all
 
@@ -200,5 +207,5 @@ docs:
 	mkdir -p doc/doxygen/html/doc/
 	ln -s ../../../3d-logo.png doc/doxygen/html/doc/3d-logo.png
 
-stats:
-	find ./ManuvrOS -type f \( -name \*.cpp -o -name \*.h \) -exec wc -l {} +
+check:
+	$(MAKE) check -C ManuvrOS/

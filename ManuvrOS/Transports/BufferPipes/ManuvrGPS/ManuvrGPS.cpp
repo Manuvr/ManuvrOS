@@ -65,7 +65,7 @@ https://github.com/cloudyourcar/minmea
 ManuvrGPS::ManuvrGPS() : BufferPipe() {
   _bp_set_flag(BPIPE_FLAG_IS_TERMINUS | BPIPE_FLAG_IS_BUFFERED, true);
   _gps_frame.repurpose(MANUVR_MSG_GPS_LOCATION);
-  _gps_frame.isManaged(true);
+  _gps_frame.incRefs();
 }
 
 ManuvrGPS::ManuvrGPS(BufferPipe* src) : ManuvrGPS() {

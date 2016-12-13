@@ -267,6 +267,7 @@ int8_t ManuvrMsg::getMsgLegend(StringBuilder* output) {
 * Vanilla constructor.
 */
 ManuvrMsg::ManuvrMsg() {
+  priority(EVENT_PRIORITY_DEFAULT);  // Set the default priority for this Msg
   _origin           = nullptr;
   specific_target   = nullptr;
   schedule_callback = nullptr;
@@ -343,32 +344,19 @@ ManuvrMsg::~ManuvrMsg() {
 *   is designed to prevent malloc()/free() thrash where it can be avoided.
 *
 * @param uint16_t The new identity code for the message.
-* @return 0 on success, or appropriate failure code.
-*/
-int8_t ManuvrMsg::repurpose(uint16_t code) {
-  // These things have implications for memory management, which is why repurpose() doesn't touch them.
-  uint16_t _persist_mask = MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_PREALLOCD | MANUVR_RUNNABLE_FLAG_SCHEDULED;
-  _flags            = _flags & _persist_mask;
-  _origin           = nullptr;
-  specific_target   = nullptr;
-  schedule_callback = nullptr;
-  priority          = EVENT_PRIORITY_DEFAULT;
-  _code             = code;
-  message_def       = lookupMsgDefByCode(_code);
-  return 0;
-}
-
-/**
-* Call this member to repurpose this message for an unrelated task. This mechanism
-*   is designed to prevent malloc()/free() thrash where it can be avoided.
-*
-* @param uint16_t The new identity code for the message.
 * @param EventReceiver* The EventReceiver that should be called-back on completion.
 * @return 0 on success, or appropriate failure code.
 */
 int8_t ManuvrMsg::repurpose(uint16_t code, EventReceiver* cb) {
-  repurpose(code);
-  _origin = cb;
+  // These things have implications for memory management, which is why repurpose() doesn't touch them.
+  uint32_t _persist_mask = MANUVR_RUNNABLE_FLAG_SCHEDULED;
+  _flags            = _flags & _persist_mask;
+  _origin           = cb;
+  specific_target   = nullptr;
+  schedule_callback = nullptr;
+  priority(EVENT_PRIORITY_DEFAULT);
+  _code             = code;
+  message_def       = lookupMsgDefByCode(_code);
   return 0;
 }
 
@@ -622,6 +610,12 @@ Argument* ManuvrMsg::takeArgs() {
 * @return NOTYPE_FM if the Argument isn't found, and its type code if it is.
 */
 uint8_t ManuvrMsg::getArgumentType(uint8_t idx) {
+  if (_args) {
+    Argument* a = _args->retrieveArgByIdx(idx);
+    if (a) {
+      return a->typeCode();
+    }
+  }
   return NOTYPE_FM;
 }
 
@@ -787,10 +781,10 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
   const MessageTypeDef* type_obj = getMsgDef();
 
   if (&ManuvrMsg::message_defs[0] == type_obj) {
-    output->concatf("\t Message type:   <UNDEFINED (Code 0x%04x)>\n", _code);
+    output->concatf("    ---< UNDEFINED (0x%04x) >-------------\n", _code);
   }
   else {
-    output->concatf("\t Message type:   %s\n", getMsgTypeString());
+    output->concatf("    ---< %s >-----------------------------\n", getMsgTypeString());
   }
 
   if (_args) {
@@ -802,9 +796,21 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
     output->concat("\t No arguments.\n");
   }
 
-  output->concatf("\t Preallocated          %s\n", (returnToPrealloc() ? YES_STR : NO_STR));
+  output->concatf(
+    "\t Profiling:\t%s\n\t Priority:\t%u\n\t Refs:\t%u\n",
+    (profilingEnabled() ? YES_STR : NO_STR),
+    priority(),
+    refCount()
+  );
+
   output->concatf("\t Originator:           %s\n", (nullptr == _origin ? NUL_STR : _origin->getReceiverName()));
-  output->concatf("\t specific_target:      %s\n", (nullptr == specific_target ? NUL_STR : specific_target->getReceiverName()));
+
+  if (specific_target) {
+    output->concatf("\t specific_target:      %s\n", (nullptr == specific_target ? NUL_STR : specific_target->getReceiverName()));
+  }
+  else {
+    output->concat("\t Broadcast\n");
+  }
 
   if (isScheduled()) {
     output->concatf("\t [%p] Schedule \n\t --------------------------------\n", this);
@@ -815,13 +821,11 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
     output->concatf("\t Exec pending: \t%s\n", (shouldFire() ? YES_STR : NO_STR));
     output->concatf("\t Autoclear     \t%s\n", (autoClear() ? YES_STR : NO_STR));
   }
-  #if defined(__MANUVR_EVENT_PROFILER)
-    output->concatf("\t Profiling?    \t%s\n", (profilingEnabled() ? YES_STR : NO_STR));
-  #endif
 
   if (schedule_callback) {
     output->concat("\t Legacy callback\n");
   }
+  output->concat("\n");
 }
 #endif  // __MANUVR_DEBUG
 
@@ -957,6 +961,25 @@ bool ManuvrMsg::alterSchedule(uint32_t sch_p, int16_t sch_r, bool ac, FxnPointer
       schedule_callback = sch_cb;
       return_value      = true;
     }
+  }
+  return return_value;
+}
+
+
+/**
+* Call this function to alter a given schedule. Set with the given period, a given number of times, with a given function call.
+*  Returns true on success or false if the given PID is not found, or there is a problem with the parameters.
+*
+* Will not set the schedule active, but will clear any pending executions for this schedule, as well as reset the timer for it.
+*
+* @param FxnPointer A FxnPointer to the service routine. Useful for some general things.
+* @return  true if the schedule alteraction succeeded.
+*/
+bool ManuvrMsg::alterSchedule(FxnPointer sch_cb) {
+  bool return_value  = false;
+  if (sch_cb) {
+    schedule_callback = sch_cb;
+    return_value      = true;
   }
   return return_value;
 }

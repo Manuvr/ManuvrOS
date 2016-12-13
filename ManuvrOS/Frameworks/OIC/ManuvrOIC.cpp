@@ -47,7 +47,6 @@ See commentary in Platform/Linux.cpp
 */
 extern "C" {
 #include "oc_api.h"
-#include "port/oc_signal_main_loop.h"
 #include "port/oc_connectivity.h"
 
 
@@ -58,12 +57,10 @@ extern "C" {
   // These are things that are already handled by Manuvr's platform, and we
   // should either do nothing, or provide a shunt.
   void oc_random_destroy() {}
-  void oc_random_init(unsigned short seed) {}
-  unsigned short oc_random_rand() {
-    // Down-cast our innate random fxn's output...
-    // Hopefully it isn't important that the number be pseudorandom
-    //   because we are ignoring the seed value.
-    return (uint16_t) randomInt();
+  void oc_random_init() {}
+
+  unsigned int oc_random_value() {
+    return randomInt();
   }
 
   void oc_clock_init() {}
@@ -75,8 +72,8 @@ extern "C" {
   // Now we start to get into territory where we take non-trivial steps
   //   to either wrap iotivities threading-assumption, or fill in gaps
   //   that it doesn't address.
-  void oc_signal_main_loop() {
-    Kernel::log("oc_signal_main_loop()\n");
+  void signal_event_loop() {
+    Kernel::log("signal_event_loop()\n");
     #if defined(__MANUVR_LINUX)
       pthread_cond_signal(&cv);
     #else
@@ -86,42 +83,39 @@ extern "C" {
 
 // TODO: Eventually, we will wrap this into a map cordoning-off the framework's
 //       options in a map that can be re-configured and persisted independently.
-//  int oc_storage_config(const char *store) {
-//    return 0;   // Return no error.
-//  }
-//
-//
-//  long oc_storage_read(const char *store, uint8_t *buf, size_t size) {
-//    printf("oc_storage_read(%s, %u)\n", store, size);
-//    Argument *res = platform.getConfKey(store);
-//    if (nullptr != res) {
-//      printf("oc_storage_read() ALIVE 2\n");
-//      int temp_len = res->length();
-//      if (temp_len > 0) {
-//        printf("oc_storage_read() ALIVE 3\n");
-//        uint8_t* temp = (uint8_t*) alloca(temp_len);
-//        if (0 == res->getValueAs((uint8_t)0, &temp)) {
-//          printf("oc_storage_read() ALIVE 4\n");
-//          memcpy(buf, temp, temp_len);
-//          return temp_len;
-//        }
-//      }
-//    }
-//    printf("oc_storage_read() returns 0\n");
-//    return 0;
-//  }
-//
-//
-//  long oc_storage_write(const char *store, uint8_t *buf, size_t size) {
-//    printf("oc_storage_write(%s, %u)\n", store, size);
-//    Argument *res = new Argument((void*) buf, size);
-//    res->setKey(store);
-//    res->reapValue(false);  // TODO: Probably wrong.
-//    if (nullptr != res) {
-//      return platform.setConfKey(res);
-//    }
-//    return 0;
-//  }
+  int oc_storage_config(const char *store) {
+    return 0;   // Return no error.
+  }
+
+
+  long oc_storage_read(const char *store, uint8_t *buf, size_t size) {
+    printf("oc_storage_read(%s, %u)\n", store, size);
+    Argument *res = platform.getConfKey(store);
+    if (res) {
+      int temp_len = res->length();
+      if (temp_len > 0) {
+        uint8_t* temp = (uint8_t*) alloca(temp_len);
+        if (0 == res->getValueAs((uint8_t)0, &temp)) {
+          memcpy(buf, temp, temp_len);
+          return temp_len;
+        }
+      }
+    }
+    printf("oc_storage_read() returns 0\n");
+    return 0;
+  }
+
+
+  long oc_storage_write(const char *store, uint8_t *buf, size_t size) {
+    printf("oc_storage_write(%s, %u)\n", store, size);
+    //Argument *res = new Argument((void*) buf, size);
+    //res->setKey(store);
+    //res->reapValue(false);  // TODO: Probably wrong.
+    //if (nullptr != res) {
+    //  return platform.setConfKey(res);
+    //}
+    return 0;
+  }
 
   /*
   * This is the worker thread that holds the iotivity-constrained main-loop.
@@ -174,14 +168,9 @@ void app_init_hook() {
 }
 
 
-static void fetch_credentials() {
-  oc_storage_config("./creds");
-}
-
-
 oc_discovery_flags_t discovery(const char *di, const char *uri,
               oc_string_array_t types, oc_interface_mask_t interfaces,
-              oc_server_handle_t* server) {
+              oc_server_handle_t* server, void*) {
   unsigned int i;
   ManuvrMsg* disc_ev = Kernel::returnEvent(MANUVR_MSG_OIC_DISCOVERY);
 
@@ -226,7 +215,7 @@ static void register_resources() {
 void ManuvrOIC::issue_requests_hook() {
   Kernel::log("OIC: issue_requests()\n");
   #if defined(OC_CLIENT)
-    oc_do_ip_discovery("oic.r.light", &discovery);
+    oc_do_ip_discovery("oic.r.light", &discovery, NULL);
   #endif
 }
 
@@ -358,15 +347,15 @@ int8_t ManuvrOIC::attached() {
   if (EventReceiver::attached()) {
     // Discovery runs for 120 seconds, and repeats forever by default.
     _discovery_ping.repurpose(MANUVR_MSG_OIC_DISCOVER_PING);
-    _discovery_ping.isManaged(true);
+    _discovery_ping.incRefs();
     _discovery_ping.alterSchedule(120000, -1, false, issue_requests_hook);
     _discovery_ping.enableSchedule(false);
     platform.kernel()->addSchedule(&_discovery_ping);
 
     _discovery_timeout.repurpose(MANUVR_MSG_OIC_DISCOVER_OFF, (EventReceiver*) this);
-    _discovery_timeout.isManaged(true);
+    _discovery_timeout.incRefs();
     _discovery_timeout.specific_target = (EventReceiver*) this;
-    _discovery_timeout.priority        = 1;
+    _discovery_timeout.priority(1);
 
     // Discovery runs for 30 seconds by default.
     _discovery_timeout.alterScheduleRecurrence(0);
@@ -378,7 +367,6 @@ int8_t ManuvrOIC::attached() {
 
     oc_handler_t handler;
     handler.init = app_init_hook;
-    handler.get_credentials = fetch_credentials;
 
     #if defined(OC_SERVER)
       handler.register_resources = register_resources;
@@ -391,7 +379,7 @@ int8_t ManuvrOIC::attached() {
     int init = oc_main_init(&handler);
     printf("OIC: attached()\n");
     if (init <= 0) {
-      #if defined (__MANUVR_FREERTOS) | defined (__MANUVR_LINUX)
+      #if defined (__BUILD_HAS_THREADS)
         if (0 == _thread_id) {
           // If we are in a threaded environment, we will want a thread if there isn't one already.
           if (createThread(&_thread_id, nullptr, main_OIC_loop, (void*) this)) {
@@ -455,7 +443,7 @@ int8_t ManuvrOIC::erConfigure(Argument* opts) {
 int8_t ManuvrOIC::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
-  int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
+  int8_t return_value = (0 == event->refCount()) ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {

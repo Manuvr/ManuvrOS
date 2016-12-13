@@ -184,6 +184,7 @@ limitations under the License.
     #define MANUVR_MSG_IRDA_CONFIG          0x0211 // IRDa configuration parameters are being passed.
     // i2c
     #define MANUVR_MSG_I2C_QUEUE_READY      0x0220 // The i2c queue is ready for attention.
+    #define MANUVR_MSG_I2C_DEBUG            0x0221 // TODO: This needs to go away.
 
     // USB VCP stuff...
     #define MANUVR_MSG_SYS_USB_CONNECT      0x0250 // Something was plugged into our USB port.
@@ -238,14 +239,3 @@ limitations under the License.
   #define MANUVR_MSG_SENSOR_INA219        0x0550 // The current sensor has something to say.
   #define MANUVR_MSG_SENSOR_MGC3130       0x0556 // MGC3130 is declaring it has new data.
   #define MANUVR_MSG_SENSOR_MGC3130_INIT  0x0557 // MGC3130 is (re)initializing itself.
-
-
-
-  /* Roving Networks Bluetooth radio codes */
-  #define MANUVR_MSG_BT_CONNECTION_LOST   0x1000 //
-  #define MANUVR_MSG_BT_CONNECTION_GAINED 0x1001 //
-
-  #define MANUVR_MSG_BT_QUEUE_READY       0x1003 // There is action possible in the bluetooth queue.
-  #define MANUVR_MSG_BT_RX_BUF_NOT_EMPTY  0x1004 // The host sent us data without indication of an end.
-  #define MANUVR_MSG_BT_ENTERED_CMD_MODE  0x1005 // The module entered command mode.
-  #define MANUVR_MSG_BT_EXITED_CMD_MODE   0x1006 // The module exited command mode.

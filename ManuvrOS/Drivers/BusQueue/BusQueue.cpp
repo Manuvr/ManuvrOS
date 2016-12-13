@@ -23,7 +23,7 @@ limitations under the License.
 #include "BusQueue.h"
 
 
-/****************************************************************************************************
+/*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
 *    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
@@ -31,8 +31,8 @@ limitations under the License.
 * .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
 * |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
 *
-* Static members and initializers should be located here. Initializers first, functions second.
-****************************************************************************************************/
+* Static members and initializers should be located here.
+*******************************************************************************/
 
 int BusOp::next_txn_id = 0;
 
@@ -47,7 +47,8 @@ const char* BusOp::getStateString(XferState state) {
     case XferState::QUEUED:      return "QUEUED";
     case XferState::INITIATE:    return "INITIATE";
     case XferState::ADDR:        return "ADDR";
-    case XferState::IO_WAIT:     return "IO-WAIT";
+    case XferState::RX_WAIT:     return "RX-WAIT";
+    case XferState::TX_WAIT:     return "TX-WAIT";
     case XferState::STOP:        return "STOP";
     case XferState::COMPLETE:    return "COMPLETE";
     case XferState::FAULT:       return "FAULT";

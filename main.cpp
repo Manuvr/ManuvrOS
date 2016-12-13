@@ -47,6 +47,7 @@ This is a demonstration program, and was meant to be compiled for a
 #include <Transports/ManuvrSocket/ManuvrUDP.h>
 #include <Transports/ManuvrSocket/ManuvrTCP.h>
 #include <Transports/BufferPipes/ManuvrTLS/ManuvrTLS.h>
+#include <Transports/BufferPipes/ManuvrGPS/ManuvrGPS.h>
 
 /* Concepts of "session"... */
 #include <XenoSession/MQTT/MQTTSession.h>
@@ -107,6 +108,7 @@ void kernelDebugDump() {
 *******************************************************************************/
 int main(int argc, const char *argv[]) {
   Argument* opts = parseFromArgCV(argc, argv);
+  Argument* temp_arg = nullptr;
 
   if (opts) {
     StringBuilder log;
@@ -161,19 +163,28 @@ int main(int argc, const char *argv[]) {
   *   want this Manuvrable to have.
   */
   #if defined (MANUVR_SUPPORT_SERIAL)
-    //if ((strcasestr(argv[i], "--serial")) && (argc > (i-2))) {
-    //// The user wants us to listen to the given serial port.
-    //  ManuvrSerial* ser = new ManuvrSerial((const char*) argv[++i], 9600);
-    //  kernel->subscribe(ser);
-    //}
+    temp_arg = opts->retrieveArgByKey("serial");
+    if (temp_arg) {
+      // The user wants us to listen to the given serial port.
+      char* val = nullptr;
+      if ((0 == temp_arg->getValueAs(&val)) && (0 != val)) {
+        ManuvrSerial* ser = new ManuvrSerial((const char*) val, 9600);
+        kernel->subscribe(ser);
+        #if defined(MANUVR_GPS_PIPE)
+          ManuvrGPS* gps = new ManuvrGPS(ser);
+        #endif
+      }
+    }
   #endif
 
-  #if defined(RASPI) || defined(RASPI2)
+  #if defined(MANUVR_SUPPORT_I2C)
     // If we are running on a RasPi, let's try to fire up the i2c that is almost
     //   certainly present.
     I2CAdapter i2c(1);
     kernel->subscribe(&i2c);
+  #endif
 
+  #if defined(RASPI) || defined(RASPI2)
     ManuvrableGPIO gpio;
     kernel->subscribe(&gpio);
   #endif
@@ -191,7 +202,7 @@ int main(int argc, const char *argv[]) {
 
       #if defined(RASPI) || defined(RASPI2)
         ManuvrMsg gpio_write(MANUVR_MSG_DIGITAL_WRITE);
-        gpio_write.isManaged(true);
+        gpio_write.incRefs();
         gpio_write.specific_target = &gpio;
         mqtt.subscribe("gw", &gpio_write);
 
@@ -200,7 +211,7 @@ int main(int argc, const char *argv[]) {
       #endif
 
       ManuvrMsg debug_msg(MANUVR_MSG_USER_DEBUG_INPUT);
-      debug_msg.isManaged(true);
+      debug_msg.incRefs();
       debug_msg.specific_target = (EventReceiver*) kernel;
 
       mqtt.subscribe("d", &debug_msg);

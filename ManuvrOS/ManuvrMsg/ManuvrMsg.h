@@ -37,14 +37,26 @@ This class forms the foundation of internal events. It contains the identity of 
 
 
 /*
-* These are flag definitions for Message types.
+* These are flag definitions that might apply to an instance of a Msg.
 */
-#define MANUVR_RUNNABLE_FLAG_MEM_MANAGED     0x0100  // Set to true to cause the Kernel to not free().
-#define MANUVR_RUNNABLE_FLAG_PREALLOCD       0x0200  // Set to true to cause the Kernel to return this runnable to its prealloc.
+//#define MANUVR_RUNNABLE_FLAG_MEM_MANAGED     0x0100  // Set to true to cause the Kernel to not free().
 #define MANUVR_RUNNABLE_FLAG_AUTOCLEAR       0x0400  // If true, this schedule will be removed after its last execution.
 #define MANUVR_RUNNABLE_FLAG_SCHED_ENABLED   0x0800  // Is the schedule running?
 #define MANUVR_RUNNABLE_FLAG_SCHEDULED       0x1000  // Set to true to cause the Kernel to not free().
 #define MANUVR_RUNNABLE_FLAG_PENDING_EXEC    0x2000  // This schedule is pending execution.
+
+
+/*
+* These are flag definitions that might apply to an instance of a Msg.
+*/
+#define MANUVR_MSG_FLAG_AUTOCLEAR       0x04000000  // If true, this schedule will be removed after its last execution.
+#define MANUVR_MSG_FLAG_SCHED_ENABLED   0x08000000  // Is the schedule running?
+#define MANUVR_MSG_FLAG_SCHEDULED       0x10000000  // Set to true to cause the Kernel to not free().
+#define MANUVR_MSG_FLAG_PENDING_EXEC    0x20000000  // This schedule is pending execution.
+
+#define MANUVR_MSG_FLAG_PRIORITY_MASK   0x0000FF00
+#define MANUVR_MSG_FLAG_REF_COUNT_MASK  0x0000007F
+
 
 class EventReceiver;
 
@@ -92,7 +104,6 @@ typedef struct msg_defin_t {
 class ManuvrMsg {
   public:
     EventReceiver*  specific_target = nullptr;  // If the runnable is meant for a single class, put a pointer to it here.
-    int32_t priority = EVENT_PRIORITY_DEFAULT;  // Set the default priority for this Msg
 
     ManuvrMsg();
     ManuvrMsg(uint16_t code);
@@ -102,11 +113,12 @@ class ManuvrMsg {
     ~ManuvrMsg();
 
 
-    // TODO: Might be better to use placement new?
-    int8_t repurpose(uint16_t code);
     int8_t repurpose(uint16_t code, EventReceiver* cb);
+    inline int8_t repurpose(uint16_t code) { return repurpose(code, nullptr); };
 
-    void printDebug(StringBuilder*);
+    #if defined(__MANUVR_DEBUG)
+      void printDebug(StringBuilder*);
+    #endif
 
     /**
     * For outside callers to read the private message code.
@@ -170,33 +182,33 @@ class ManuvrMsg {
     *   implementation details of Arguments. Might look ugly, but takes the CPU burden off of runtime
     *   and forces the compiler to deal with it.
     */
-    inline Argument* addArg(uint8_t val) {             return addArg(new Argument(val));   }
-    inline Argument* addArg(uint16_t val) {            return addArg(new Argument(val));   }
-    inline Argument* addArg(uint32_t val) {            return addArg(new Argument(val));   }
-    inline Argument* addArg(int8_t val) {              return addArg(new Argument(val));   }
-    inline Argument* addArg(int16_t val) {             return addArg(new Argument(val));   }
-    inline Argument* addArg(int32_t val) {             return addArg(new Argument(val));   }
-    inline Argument* addArg(float val) {               return addArg(new Argument(val));   }
+    inline Argument* addArg(uint8_t val) {         return addArg(new Argument(val));  }
+    inline Argument* addArg(uint16_t val) {        return addArg(new Argument(val));  }
+    inline Argument* addArg(uint32_t val) {        return addArg(new Argument(val));  }
+    inline Argument* addArg(int8_t val) {          return addArg(new Argument(val));  }
+    inline Argument* addArg(int16_t val) {         return addArg(new Argument(val));  }
+    inline Argument* addArg(int32_t val) {         return addArg(new Argument(val));  }
+    inline Argument* addArg(float val) {           return addArg(new Argument(val));  }
 
-    inline Argument* addArg(uint8_t *val) {            return addArg(new Argument(val));   }
-    inline Argument* addArg(uint16_t *val) {           return addArg(new Argument(val));   }
-    inline Argument* addArg(uint32_t *val) {           return addArg(new Argument(val));   }
-    inline Argument* addArg(int8_t *val) {             return addArg(new Argument(val));   }
-    inline Argument* addArg(int16_t *val) {            return addArg(new Argument(val));   }
-    inline Argument* addArg(int32_t *val) {            return addArg(new Argument(val));   }
-    inline Argument* addArg(float *val) {              return addArg(new Argument(val));   }
+    inline Argument* addArg(uint8_t *val) {        return addArg(new Argument(val));  }
+    inline Argument* addArg(uint16_t *val) {       return addArg(new Argument(val));  }
+    inline Argument* addArg(uint32_t *val) {       return addArg(new Argument(val));  }
+    inline Argument* addArg(int8_t *val) {         return addArg(new Argument(val));  }
+    inline Argument* addArg(int16_t *val) {        return addArg(new Argument(val));  }
+    inline Argument* addArg(int32_t *val) {        return addArg(new Argument(val));  }
+    inline Argument* addArg(float *val) {          return addArg(new Argument(val));  }
 
-    inline Argument* addArg(Vector3ui16 *val) {        return addArg(new Argument(val));   }
-    inline Argument* addArg(Vector3i16 *val) {         return addArg(new Argument(val));   }
-    inline Argument* addArg(Vector3f *val) {           return addArg(new Argument(val));   }
-    inline Argument* addArg(Vector4f *val) {           return addArg(new Argument(val));   }
+    inline Argument* addArg(Vector3ui16 *val) {    return addArg(new Argument(val));  }
+    inline Argument* addArg(Vector3i16 *val) {     return addArg(new Argument(val));  }
+    inline Argument* addArg(Vector3f *val) {       return addArg(new Argument(val));  }
+    inline Argument* addArg(Vector4f *val) {       return addArg(new Argument(val));  }
 
-    inline Argument* addArg(void *val, int len) {      return addArg(new Argument(val, len));   }
-    inline Argument* addArg(const char *val) {         return addArg(new Argument(val));   }
-    inline Argument* addArg(StringBuilder *val) {      return addArg(new Argument(val));   }
-    inline Argument* addArg(BufferPipe *val) {         return addArg(new Argument(val));   }
-    inline Argument* addArg(EventReceiver *val) {      return addArg(new Argument(val));   }
-    inline Argument* addArg(ManuvrXport *val) {        return addArg(new Argument(val));   }
+    inline Argument* addArg(void *val, int len) {  return addArg(new Argument(val, len));  }
+    inline Argument* addArg(const char *val) {     return addArg(new Argument(val));  }
+    inline Argument* addArg(StringBuilder *val) {  return addArg(new Argument(val));  }
+    inline Argument* addArg(BufferPipe *val) {     return addArg(new Argument(val));  }
+    inline Argument* addArg(EventReceiver *val) {  return addArg(new Argument(val));  }
+    inline Argument* addArg(ManuvrXport *val) {    return addArg(new Argument(val));  }
 
     Argument* addArg(Argument*);  // The only "real" implementation.
     int8_t    clearArgs();        // Clear all arguments attached to us, reaping if necessary.
@@ -217,34 +229,34 @@ class ManuvrMsg {
     inline int8_t getArgAs(uint32_t *trg_buf) {   return getArgAs(0, (void*) trg_buf);  }
     inline int8_t getArgAs(float *trg_buf) {      return getArgAs(0, (void*) trg_buf);  }
 
-    inline int8_t getArgAs(uint8_t idx, uint8_t  *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, uint16_t *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, uint32_t *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, int8_t   *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, int16_t  *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, int32_t  *trg_buf) {          return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, float  *trg_buf) {            return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, uint8_t  *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, uint16_t *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, uint32_t *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, int8_t   *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, int16_t  *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, int32_t  *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, float    *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
 
     // These accessors treat the (void*) as a pointer. These functions are essentially type-casts.
-    inline int8_t getArgAs(Vector3f **trg_buf) {                      return getArgAs(0, (void*) trg_buf);  }
-    inline int8_t getArgAs(Vector3ui16 **trg_buf) {                   return getArgAs(0, (void*) trg_buf);  }
-    inline int8_t getArgAs(Vector3i16 **trg_buf) {                    return getArgAs(0, (void*) trg_buf);  }
-    inline int8_t getArgAs(const char **trg_buf) {                    return getArgAs(0, (void*) trg_buf);  }
-    inline int8_t getArgAs(StringBuilder **trg_buf) {                 return getArgAs(0, (void*) trg_buf);  }
-    inline int8_t getArgAs(BufferPipe **trg_buf) {                    return getArgAs(0, (void*) trg_buf);  }
-    inline int8_t getArgAs(EventReceiver **trg_buf) {                 return getArgAs(0, (void*) trg_buf);  }
-    inline int8_t getArgAs(ManuvrXport **trg_buf) {                   return getArgAs(0, (void*) trg_buf);  }
-    inline int8_t getArgAs(ManuvrMsg* *trg_buf) {                return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(Vector3f **trg_buf) {                    return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(Vector3ui16 **trg_buf) {                 return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(Vector3i16 **trg_buf) {                  return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(const char **trg_buf) {                  return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(StringBuilder **trg_buf) {               return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(BufferPipe **trg_buf) {                  return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(EventReceiver **trg_buf) {               return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(ManuvrXport **trg_buf) {                 return getArgAs(0, (void*) trg_buf);  }
+    inline int8_t getArgAs(ManuvrMsg* *trg_buf) {                   return getArgAs(0, (void*) trg_buf);  }
 
-    inline int8_t getArgAs(uint8_t idx, Vector3f  **trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, Vector3ui16  **trg_buf) {     return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, Vector3i16  **trg_buf) {      return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, const char  **trg_buf) {      return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, StringBuilder  **trg_buf) {   return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, BufferPipe  **trg_buf) {      return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, EventReceiver  **trg_buf) {   return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, ManuvrXport  **trg_buf) {     return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, ManuvrMsg  **trg_buf) {  return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, Vector3f  **trg_buf) {      return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, Vector3ui16  **trg_buf) {   return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, Vector3i16  **trg_buf) {    return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, const char  **trg_buf) {    return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, StringBuilder  **trg_buf) { return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, BufferPipe  **trg_buf) {    return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, EventReceiver  **trg_buf) { return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, ManuvrXport  **trg_buf) {   return getArgAs(idx, (void*) trg_buf);  }
+    inline int8_t getArgAs(uint8_t idx, ManuvrMsg  **trg_buf) {     return getArgAs(idx, (void*) trg_buf);  }
 
     /**
     * If the parameters of the event are such that this class can handle its
@@ -331,38 +343,16 @@ class ManuvrMsg {
       _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_SCHEDULED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_SCHEDULED));
     };
 
-    /**
-    * If the memory isn't managed explicitly by some other class, this will tell the Kernel to delete
-    *   the completed event.
-    * Preallocation implies no reap.
-    *
-    * @return true if the Kernel ought to free() this Event. False otherwise.
-    */
-    inline bool kernelShouldReap() {
-      return (0 == (MANUVR_RUNNABLE_FLAG_MEM_MANAGED | MANUVR_RUNNABLE_FLAG_PREALLOCD | MANUVR_RUNNABLE_FLAG_SCHEDULED));
+
+    inline uint8_t refCount() {  return (_flags & MANUVR_MSG_FLAG_REF_COUNT_MASK); };
+    inline bool    decRefs() {   return (0 == --_flags);  };
+    inline void    incRefs() {   _flags++;  };
+
+    inline uint8_t priority() {  return ((_flags & MANUVR_MSG_FLAG_PRIORITY_MASK) >> 8); };
+    inline void    priority(uint8_t pri) {
+      _flags = (_flags & ~(MANUVR_MSG_FLAG_PRIORITY_MASK)) + (pri << 8);
     };
 
-    /**
-    * Was this event preallocated?
-    * Preallocation implies no reap.
-    *
-    * @param  nu_val Pass true to cause this event to be marked as part of a preallocation pool.
-    * @return true if the Kernel ought to return this event to its preallocation queue.
-    */
-    inline bool returnToPrealloc() { return (_flags & MANUVR_RUNNABLE_FLAG_PREALLOCD); };
-    inline void returnToPrealloc(bool en) {
-      _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_PREALLOCD) : (_flags & ~(MANUVR_RUNNABLE_FLAG_PREALLOCD));
-    };
-
-    /**
-    * If some other class is managing this memory, this should return 'true'.
-    *
-    * @return true if the Kernel should NOT reap this ManuvrMsg.
-    */
-    inline bool isManaged() { return (_flags & MANUVR_RUNNABLE_FLAG_MEM_MANAGED); };
-    inline void isManaged(bool en) {
-      _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_MEM_MANAGED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_MEM_MANAGED));
-    };
 
     #if defined(__MANUVR_EVENT_PROFILER)
       /**
@@ -402,16 +392,15 @@ class ManuvrMsg {
 
 
   private:
-    const MessageTypeDef*  message_def = nullptr;  // The definition for the message (once it is associated).
-    FxnPointer       schedule_callback = nullptr;  // Pointers to the schedule service function.
-    EventReceiver* _origin = nullptr;    // This is an optional ref to the class that raised this runnable.
-    Argument* _args   = nullptr;       // The optional list of arguments associated with this event.
-    uint16_t _flags = 0;                    // Optional flags that might be important for a runnable.
-    uint16_t _code  = MANUVR_MSG_UNDEFINED; // The identity of the event (or command). TODO: Probably redundant.
-
-    int16_t  _sched_recurs =  0;    // See Note 2.
-    uint32_t _sched_period =  0;    // How often does this schedule execute?
-    uint32_t _sched_ttw    =  0;    // How much longer until the schedule fires?
+    const MessageTypeDef* message_def  = nullptr;  // The definition for the message (once it is associated).
+    FxnPointer     schedule_callback   = nullptr;  // Pointers to the schedule service function.
+    EventReceiver* _origin             = nullptr;  // This is an optional ref to the class that raised this runnable.
+    Argument*      _args               = nullptr;  // The optional list of arguments associated with this event.
+    uint32_t       _flags              = 0;        // Optional flags that might be important for a runnable.
+    uint16_t       _code  = MANUVR_MSG_UNDEFINED;  // The identity of the event (or command).
+    int16_t        _sched_recurs       = 0;        // See Note 2.
+    uint32_t       _sched_period       = 0;        // How often does this schedule execute?
+    uint32_t       _sched_ttw          = 0;        // How much longer until the schedule fires?
 
     #if defined(__MANUVR_EVENT_PROFILER)
     TaskProfilerData* prof_data = nullptr;  // If this schedule is being profiled, the ref will be here.

@@ -217,7 +217,7 @@ Argument* parseFromArgCV(int argc, const char* argv[]) {
 }
 
 
-#if defined(__HAS_CRYPT_WRAPPER)
+#if defined(__BUILD_HAS_DIGEST)
 /*
 * Function takes a path and a buffer as arguments. The binary is hashed and the ASCII representation is
 *   placed in the buffer. The number of bytes read is returned on success. 0 is returned on failure.

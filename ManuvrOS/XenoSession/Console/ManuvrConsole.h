@@ -36,7 +36,6 @@ If you want this feature, you must define MANUVR_CONSOLE_SUPPORT in the
 
 class ManuvrConsole : public XenoSession {
   public:
-    ManuvrConsole(ManuvrXport*);
     ManuvrConsole(BufferPipe*);
     ~ManuvrConsole();
 

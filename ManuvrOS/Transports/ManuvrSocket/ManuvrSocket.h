@@ -61,10 +61,10 @@ class ManuvrSocket : public ManuvrXport {
 
 
   protected:
-    const char* _addr;
-    int         _port_number;
-    uint32_t    _options;
-    int         _sock;
+    char*    _addr        = nullptr;
+    int      _port_number = 0;
+    uint32_t _options     = 0;
+    int      _sock        = 0;
 
     #if defined(__MANUVR_LINUX)
       struct sockaddr_in _sockaddr;
@@ -74,7 +74,6 @@ class ManuvrSocket : public ManuvrXport {
 
 
   private:
-    void __class_initializer();
 };
 
 #endif  // Header guard __MANUVR_SOCKET_H__

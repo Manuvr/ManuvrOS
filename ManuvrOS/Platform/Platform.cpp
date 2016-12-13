@@ -157,6 +157,8 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
 */
 void ManuvrPlatform::printDebug(StringBuilder* output) {
   output->concatf("-- Ver/Build date:     %s   %s %s\n", VERSION_STRING, __DATE__, __TIME__);
+  output->concatf("-- Manuvr version:     %d.%d.%d\n", MANUVR_SEMVER_MAJOR, MANUVR_SEMVER_MINOR, MANUVR_SEMVER_PATCH);
+
   output->concatf("-- Identity source:    %s\n", platform._check_flags(MANUVR_PLAT_FLAG_HAS_IDENTITY) ? "Generated at runtime" : "Loaded from storage");
   output->concat("-- Hardware:\n");
   #if defined(HW_VERSION_STRING)
@@ -323,7 +325,7 @@ void ManuvrPlatform::_discoverALUParams() {
 int8_t ManuvrPlatform::bootstrap() {
   /* Follow your shadow. */
   ManuvrMsg* boot_completed_ev = Kernel::returnEvent(MANUVR_MSG_SYS_BOOT_COMPLETED);
-  boot_completed_ev->priority = EVENT_PRIORITY_HIGHEST;
+  boot_completed_ev->priority(EVENT_PRIORITY_HIGHEST);
   Kernel::staticRaiseEvent(boot_completed_ev);
   _set_init_state(MANUVR_INIT_STATE_KERNEL_BOOTING);
   uint8_t boot_passes = 100;
@@ -519,7 +521,7 @@ void sleep_millis(unsigned long millis) {
     }
     else {
       // For some reason we need to delay prior to threads being operational.
-      delay(millis);
+      //delay(millis);
     }
   #elif defined(ARDUINO)
     delay(millis);  // So wasteful...
@@ -534,10 +536,12 @@ void sleep_millis(unsigned long millis) {
 *   memory. Probably not worth the convenience in most cases.  -Wl --gc-sections
 */
 void ManuvrPlatform::forsakeMain() {
-  while (1) {
+  #if defined (__MANUVR_FREERTOS)
+    // FreeRTOS requires that we explicitly yield control.
+  #else
     // Run forever.
-    _kernel.procIdleFlags();
-  }
+    while (1) {  _kernel.procIdleFlags();  }
+  #endif
 }
 
 

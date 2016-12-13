@@ -32,12 +32,6 @@ limitations under the License.
 
 const MessageTypeDef adp8866_message_defs[] = {
   {  MANUVR_MSG_ADP8866_IRQ, 0x0000,  "ADP8866_IRQ",  ManuvrMsg::MSG_ARGS_NONE },  //
-
-  /*
-    For messages that have arguments, we have the option of defining inline lables for each parameter.
-    This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
-    compile time.
-  */
   {  MANUVR_MSG_ADP8866_CHAN_ENABLED, MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_ENABLED", ManuvrMsg::MSG_ARGS_NONE }, //
   {  MANUVR_MSG_ADP8866_CHAN_LEVEL,   MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_LEVEL",   ManuvrMsg::MSG_ARGS_NONE }, //
   {  MANUVR_MSG_ADP8866_ASSIGN_BL,    MSG_FLAG_EXPORTABLE,  "ADP8866_ASSIGN_BL",    ManuvrMsg::MSG_ARGS_NONE }  //
@@ -67,32 +61,19 @@ void ADP8866::_isr_fxn(void) {
 */
 
 
-/**
-* This is here for compatibility with C++ standards that do not allow for definition and declaration
-*   in the header file. Takes no parameters, and returns nothing.
-*/
-void ADP8866::__class_initializer() {
-  setReceiverName("ADP8866");
-  ADP8866::INSTANCE = this;
-
-  reset_pin         = 0;
-  irq_pin           = 0;
-  stored_dimmer_val = 0;
-  class_mode        = 0;
-  power_mode        = 0;
-
-  _er_clear_flag(ADP8866_FLAG_INIT_COMPLETE);
-
-  int mes_count = sizeof(adp8866_message_defs) / sizeof(MessageTypeDef);
-  ManuvrMsg::registerMessages(adp8866_message_defs, mes_count);
-}
-
 
 /*
 * Constructor. Takes i2c address as argument.
 */
 ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : EventReceiver(), I2CDeviceWithRegisters() {
-  __class_initializer();
+  setReceiverName("ADP8866");
+  _er_clear_flag(ADP8866_FLAG_INIT_COMPLETE);
+  if (ADP8866::INSTANCE) {
+    ADP8866::INSTANCE = this;
+    int mes_count = sizeof(adp8866_message_defs) / sizeof(MessageTypeDef);
+    ManuvrMsg::registerMessages(adp8866_message_defs, mes_count);
+  }
+
   _dev_addr = addr;
 
   reset_pin = _reset_pin;
@@ -413,7 +394,7 @@ int8_t ADP8866::attached() {
 int8_t ADP8866::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
-  int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
+  int8_t return_value = (0 == event->refCount()) ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {

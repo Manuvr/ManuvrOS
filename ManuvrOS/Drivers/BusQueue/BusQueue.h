@@ -25,25 +25,27 @@ limitations under the License.
 #define __MANUVR_BUS_QUEUE_H__
 
 #include <inttypes.h>
+#include <DataStructures/PriorityQueue.h>
 
 /*
 * These are possible transfer states.
 */
 enum class XferState {
   /* These are start states. */
-  UNDEF,      // Freshly instanced (or wiped, if preallocated).
-  IDLE,       // Bus op is allocated and waiting somewhere outside of the queue.
+  UNDEF    = 0,  // Freshly instanced (or wiped, if preallocated).
+  IDLE     = 1,  // Bus op is allocated and waiting somewhere outside of the queue.
 
   /* These states are unstable and should decay into a "finish" state. */
-  QUEUED,     // Bus op is idle and waiting for its turn. No bus control.
-  INITIATE,   // Waiting for initiation phase.
-  ADDR,       // Addressing phase. Sending the address.
-  IO_WAIT,    // I/O operation in-progress.
-  STOP,       // I/O operation in cleanup phase.
+  QUEUED   = 2,  // Bus op is idle and waiting for its turn. No bus control.
+  INITIATE = 3,  // Waiting for initiation phase.
+  ADDR     = 5,  // Addressing phase. Sending the address.
+  TX_WAIT  = 7,  // I/O operation in-progress.
+  RX_WAIT  = 8,  // I/O operation in-progress.
+  STOP     = 10,  // I/O operation in cleanup phase.
 
   /* These are finish states. */
-  COMPLETE,   // I/O op complete with no problems.
-  FAULT       // Fault condition.
+  COMPLETE = 14, // I/O op complete with no problems.
+  FAULT    = 15  // Fault condition.
 };
 
 
@@ -83,7 +85,7 @@ enum class XferFault {
 
 
 /*
-* This class represents a single transaction on the bus, but is dewvoid of
+* This class represents a single transaction on the bus, but is devoid of
 *   implementation details. This is an interface class that should be extended
 *   by classes that require hardware-level specificity.
 *
@@ -91,7 +93,7 @@ enum class XferFault {
 *   conventions. That is, state-bearing members in this interface are ok, but
 *   there should be no function members that are not pure virtuals or inlines.
 *
-* Note also, that a class is not required to inherrit from this ddefinition of
+* Note also, that a class is not required to inherrit from this definition of
 *   a bus operation to use the enums defined above, with their associated static
 *   support functions.
 */
@@ -116,7 +118,7 @@ class BusOp {
     */
     inline bool has_bus_control() {
       return (
-        (xfer_state == XferState::STOP) | (xfer_state == XferState::IO_WAIT) | \
+        (xfer_state == XferState::STOP) | inIOWait() | \
         (xfer_state == XferState::INITIATE) | (xfer_state == XferState::ADDR)
       );
     };
@@ -124,7 +126,27 @@ class BusOp {
     /**
     * @return true if this operation completed without problems.
     */
-    inline bool isComplete() {   return (XferState::COMPLETE == xfer_state);  };
+    inline bool isComplete() {   return (XferState::COMPLETE <= xfer_state);  };
+
+    /**
+    * @return true if this operation is enqueued and inert.
+    */
+    inline bool isQueued() {     return (XferState::QUEUED == xfer_state);    };
+    inline void markQueued() {   set_state(XferState::QUEUED);                };
+
+    /**
+    * @return true if this operation is waiting for IO to complete.
+    */
+    inline bool inIOWait() {
+      return (XferState::RX_WAIT == xfer_state) || (XferState::TX_WAIT == xfer_state);
+    };
+
+    /**
+    * @return true if this operation has been intiated, but is not yet complete.
+    */
+    inline bool inProgress() {
+      return (XferState::INITIATE <= xfer_state) && (XferState::COMPLETE > xfer_state);
+    };
 
     /**
     * @return true if this operation experienced any abnormal condition.
@@ -160,22 +182,6 @@ class BusOp {
   private:
 };
 
-/*
-* This class represents a generic bus adapter. We are not so concerned with
-*   performance and memory overhead in this class, because there is typically
-*   only a handful of such classes, and they have low turnover rates.
-*/
-class BusAdapter {
-  public:
-    /* Mandatory overrides... */
-    virtual int8_t insert_work_item()   =0;
-    virtual void   advance_work_queue() =0;
-
-  protected:
-
-  private:
-};
-
 
 /*
 * This is an interface class that implements a callback path for I/O operations.
@@ -191,6 +197,31 @@ class BusOpCallback {
     */
     virtual int8_t queue_io_job(BusOp*) =0;
 
+};
+
+
+/*
+* This class represents a generic bus adapter. We are not so concerned with
+*   performance and memory overhead in this class, because there is typically
+*   only a handful of such classes, and they have low turnover rates.
+*/
+template <class T> class BusAdapter : public BusOpCallback {
+  public:
+    /* Mandatory overrides... */
+    virtual int8_t advance_work_queue()          =0;
+    virtual T* new_op()                          =0;
+    virtual T* new_op(BusOpcode, BusOpCallback*) =0;
+
+
+  protected:
+    const uint16_t MAX_Q_DEPTH;
+    uint16_t _prealloc_misses = 0;  // How many times have we starved the preallocation queue?
+    PriorityQueue<T*> work_queue;
+    PriorityQueue<T*> preallocated;
+
+    BusAdapter(uint16_t max) : MAX_Q_DEPTH(max) {};
+
+  private:
 };
 
 #endif  // __MANUVR_BUS_QUEUE_H__

@@ -16,7 +16,6 @@ tests/CryptoTest
 
 lib/FreeRTOS_Arduino/
 lib/avro/
-lib/config.h
 lib/iotivity/
 lib/jansson/
 lib/mbedtls/

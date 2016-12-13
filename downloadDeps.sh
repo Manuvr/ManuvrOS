@@ -4,9 +4,6 @@
 #   ManuvrOS has been written against. None of this is strictly required for a basic build,
 #   but most real-world applications will want at least one of them.
 
-# Make the lib directory...
-mkdir lib
-
 # JSON support via jansson...
 # Note that we do special-handling here to make the build-process smoother...
 rm -rf lib/jansson

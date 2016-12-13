@@ -32,12 +32,14 @@ ifeq ($(SECURE),1)
 C_SRCS   += Cryptographic/Cryptographic.c
 C_SRCS   += Cryptographic/MbedTLS.c
 C_SRCS   += Cryptographic/OpenSSL.c
+C_SRCS   += Cryptographic/Blind.c
 endif
 
 # This Makefile heeds two separate exports:
 ifeq ($(MANUVR_PLATFORM),LINUX)
 CPP_SRCS   += Linux/LinuxStorage.cpp
 CPP_SRCS   += Linux/Linux.cpp
+CPP_SRCS   += Linux/i2c-adapter.cpp
 ifeq ($(MANUVR_BOARD),RASPI)
 CPP_SRCS   += Raspi/DieThermometer/DieThermometer.cpp
 CPP_SRCS   += Raspi/Raspi.cpp
@@ -49,12 +51,26 @@ endif  # linux
 ifeq ($(MANUVR_PLATFORM),TEENSY3)
 CPP_SRCS   += Teensy3/Teensy3.cpp
 CPP_SRCS   += Teensy3/TeensyStorage.cpp
+CPP_SRCS   += Teensy3/i2c-adapter.cpp
+endif
+
+ifeq ($(MANUVR_PLATFORM),ARDUINO)
+CPP_SRCS   += Arduino/Arduino.cpp
+CPP_SRCS   += Arduino/i2c-adapter.cpp
 endif
 
 ifeq ($(MANUVR_PLATFORM),STM32F7)
 CPP_SRCS   += STM32F7/STM32F7.cpp
+CPP_SRCS   += STM32F7/i2c-adapter.cpp
 #SRCS   += STM32F7/STM32F7Storage.cpp
 endif
+
+ifeq ($(MANUVR_PLATFORM),STM32F4)
+CPP_SRCS   += STM32F4/STM32F4.cpp
+CPP_SRCS   += STM32F4/i2c-adapter.cpp
+#SRCS   += STM32F7/STM32F7Storage.cpp
+endif
+
 
 all:
 	@echo ''

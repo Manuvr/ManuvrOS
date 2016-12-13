@@ -1,5 +1,17 @@
-uint8_t _debug_scratch = 0;
+#include <Drivers/i2c-adapter/i2c-adapter.h>
 
+extern volatile I2CAdapter* i2c;
+
+#if defined(MANUVR_SUPPORT_I2C)
+extern "C" {
+  #include <stm32f7xx_hal.h>
+  #include <stm32f7xx_hal_gpio.h>
+  #include <stm32f7xx_hal_i2c.h>
+  I2C_HandleTypeDef hi2c1;
+}
+
+
+uint8_t _debug_scratch = 0;
 static uint32_t val = 0;
 
 bool _stm32f7_timing_reinit(I2C_HandleTypeDef *hi2c, uint32_t val) {
@@ -56,11 +68,7 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
 
 
 I2CAdapter::~I2CAdapter() {
-  busOnline(false);
-  while (dev_list.hasNext()) {
-    dev_list.get()->disassignBusInstance();
-    dev_list.remove();
-  }
+  __class_teardown();
 
   /* TODO: The work_queue destructor will take care of its own cleanup, but
        We should abort any open transfers prior to deleting this list. */
@@ -75,8 +83,7 @@ int8_t I2CAdapter::generateStart() {
   //#ifdef __MANUVR_DEBUG
   //if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
   //#endif
-  if (! busOnline()) return -1;
-  return 0;
+  return busOnline() ? 0 : -1;
 }
 
 
@@ -84,8 +91,7 @@ int8_t I2CAdapter::generateStop() {
   //#ifdef __MANUVR_DEBUG
   //if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
   //#endif
-  if (! busOnline()) return -1;
-  return 0;
+  return busOnline() ? 0 : -1;
 }
 
 
@@ -340,4 +346,6 @@ extern "C" {
       i2c->current_queue_item->abort(XferFault::HUNG_IRQ);
     }
   }
-}
+}   // extern "C"
+
+#endif   // MANUVR_SUPPORT_I2C

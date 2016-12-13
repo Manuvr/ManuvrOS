@@ -1,3 +1,8 @@
+#include <Drivers/i2c-adapter/i2c-adapter.h>
+
+#if defined(MANUVR_SUPPORT_I2C)
+  #include <i2c_t3/i2c_t3.h>
+
   I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
     __class_initializer();
     dev = dev_id;
@@ -21,14 +26,7 @@
 
 
   I2CAdapter::~I2CAdapter() {
-      busOnline(false);
-      while (dev_list.hasNext()) {
-        dev_list.get()->disassignBusInstance();
-        dev_list.remove();
-      }
-
-      /* TODO: The work_queue destructor will take care of its own cleanup, but
-         We should abort any open transfers prior to deleting this list. */
+    __class_teardown();
   }
 
 
@@ -134,3 +132,17 @@
   }
   return 0;
 }
+
+
+
+/*
+* Private function that will switch the addressed i2c device via ioctl. This
+*   function is meaningless on anything but a linux system, in which case it
+*   will always return true;
+* On a linux system, this will only return true if the ioctl call succeeded.
+*/
+bool I2CAdapter::switch_device(uint8_t nu_addr) {
+  return true;
+}
+
+#endif  // MANUVR_SUPPORT_I2C

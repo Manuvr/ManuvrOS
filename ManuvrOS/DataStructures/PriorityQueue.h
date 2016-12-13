@@ -41,7 +41,7 @@ Some functions are #pragma'd to stop the compiler from complaining about nullptr
 #ifdef __MANUVR_LINUX
   #include <pthread.h>
 #elif defined(__MANUVR_FREERTOS)
-  #include <FreeRTOS_ARM.h>
+  #include <FreeRTOS.h>
 #endif
 
 /* This is the class that holds a datum in the list. */

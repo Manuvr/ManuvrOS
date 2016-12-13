@@ -238,7 +238,6 @@ int8_t I2CBusOp::init_dma() {
       return -1;
     }
   }
-
   else if (opcode == BusOpcode::TX) {
     uint8_t buffer[buf_len + 1];
     buffer[0] = (uint8_t) (sub_addr & 0x00FF);
@@ -246,6 +245,17 @@ int8_t I2CBusOp::init_dma() {
     for (int i = 0; i < buf_len; i++) buffer[i + 1] = *(buf + i);
 
     if (write(device->getDevId(), &buffer, buf_len+1) == buf_len+1) {
+      markComplete();
+    }
+    else {
+      abort();
+      return -1;
+    }
+  }
+  else if (opcode == BusOpcode::TX_CMD) {
+    uint8_t buffer[buf_len + 1];
+    buffer[0] = (uint8_t) (sub_addr & 0x00FF);
+    if (write(device->getDevId(), &buffer, 1) == 1) {
       markComplete();
     }
     else {
@@ -288,7 +298,8 @@ int8_t I2CBusOp::init_dma() {
         markComplete();  // TODO: As long as we are using the HAL driver....
         break;
 
-      case XferState::IO_WAIT:   // Main transfer.
+      case XferState::RX_WAIT:   // Main transfer.
+      case XferState::TX_WAIT:   // Main transfer.
         break;
 
       case XferState::STOP:      // We need to send a STOP condition.
@@ -375,22 +386,25 @@ int8_t I2CBusOp::init_dma() {
         }
         break;
       case I2C_XFER_STATE_BODY:      // We need to start the body of our transfer.
-        xfer_state = XferState::IO_WAIT;
         if (opcode == BusOpcode::TX) {
+          xfer_state = XferState::TX_WAIT;
           DMA_Cmd(DMA1_Stream7, ENABLE);
           I2C_DMACmd(I2C1, ENABLE);
         }
         else if (opcode == BusOpcode::RX) {
+          xfer_state = XferState::RX_WAIT;
           DMA_Cmd(DMA1_Stream0, ENABLE);
           I2C_DMACmd(I2C1, ENABLE);
         }
         else if (opcode == BusOpcode::TX_CMD) {
+          xfer_state = XferState::TX_WAIT;
           // Pinging...
           markComplete();
           device->generateStop();
         }
         break;
-      case XferState::IO_WAIT:
+      case XferState::RX_WAIT:
+      case XferState::TX_WAIT:
         break;
       case XferState::STOP:      // We need to send a STOP condition.
         if (opcode == BusOpcode::TX) {

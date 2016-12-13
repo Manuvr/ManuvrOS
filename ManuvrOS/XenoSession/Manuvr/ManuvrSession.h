@@ -154,7 +154,7 @@ class XenoManuvrMessage : public XenoMessage {
 
 class ManuvrSession : public XenoSession {
   public:
-    ManuvrSession(ManuvrXport*);
+    ManuvrSession(BufferPipe*);
     virtual ~ManuvrSession();
 
     /* Override from BufferPipe. */

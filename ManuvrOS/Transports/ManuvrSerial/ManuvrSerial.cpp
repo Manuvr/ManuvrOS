@@ -65,6 +65,22 @@ Platforms that require it should be able to extend this driver for specific
 * Static members and initializers should be located here.
 *******************************************************************************/
 
+/*******************************************************************************
+* .-. .----..----.    .-.     .--.  .-. .-..----.
+* | |{ {__  | {}  }   | |    / {} \ |  `| || {}  \
+* | |.-._} }| .-. \   | `--./  /\  \| |\  ||     /
+* `-'`----' `-' `-'   `----'`-'  `-'`-' `-'`----'
+*
+* Interrupt service routine support functions. Everything in this block
+*   executes under an ISR. Keep it brief...
+*******************************************************************************/
+
+#if defined(__BUILD_HAS_THREADS)
+  // Threaded platforms will need this to compensate for a loss of ISR.
+  extern void* xport_read_handler(void* active_xport);
+
+#endif
+
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -84,7 +100,18 @@ Platforms that require it should be able to extend this driver for specific
 ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate, uint32_t opts) : ManuvrXport() {
   setReceiverName("ManuvrSerial");
   set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED);
-  _addr     = tty_path;
+  if (tty_path) {
+    size_t addr_len = strlen(tty_path);
+    if (0 < addr_len) {
+      _addr = (char*) malloc(addr_len+1);
+      if (_addr) {
+        *(_addr + addr_len) = 0;
+        for (size_t i = 0; i < addr_len; i++) {
+          *(_addr + i) = *(tty_path + i);
+        }
+      }
+    }
+  }
   _baud_rate = b_rate;
   _options  = opts;
 }
@@ -102,6 +129,16 @@ ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate) : ManuvrSerial(tty_
 * Destructor
 */
 ManuvrSerial::~ManuvrSerial() {
+  #if defined (__MANUVR_LINUX)
+    if (_sock) {
+      close(_sock);  // Close the socket.
+      _sock = 0;
+    }
+  #endif
+  if (_addr) {
+    free(_addr);
+    _addr = nullptr;
+  }
 }
 
 
@@ -269,7 +306,6 @@ int8_t ManuvrSerial::read_port() {
 
     #elif defined (__MK20DX128__) || defined (__MK20DX256__) // Teensy3.x
       int available = Serial.available();
-
       if (available) {
         buf = (uint8_t*) malloc(available + 1);
         if (buf) {
@@ -285,23 +321,30 @@ int8_t ManuvrSerial::read_port() {
         return_value = 1;
       }
     #elif defined (ARDUINO)        // Fall-through case for basic Arduino support.
-        if (Serial.available()) {
-          while (Serial.available()) {
+      int available = Serial.available();
+      if (available) {
+        buf = (uint8_t*) malloc(available + 1);
+        if (buf) {
+          for (n = 0; n < available; n++) {
             *(buf + n++) = Serial.read();
           }
           bytes_received += n;
-          *(buf + n) = '\0';  // NULL-terminate, JIC
-          BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
-          return_value = 1;
         }
-
+        *(buf + n) = '\0';  // NULL-terminate, JIC
+        StringBuilder temp;
+        temp.concatHandoff(buf, available);
+        BufferPipe::fromCounterparty(&temp, MEM_MGMT_RESPONSIBLE_BEARER);
+        return_value = 1;
+      }
     #elif defined (__MANUVR_LINUX) // Linux with pthreads...
-        n = read(_sock, buf, 255);
-        if (n > 0) {
-          bytes_received += n;
-          BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
-          return_value = 1;
-        }
+      buf = (uint8_t*) alloca(255);
+      n = read(_sock, buf, 255);
+      if (n > 0) {
+        bytes_received += n;
+        StringBuilder temp(buf, n);
+        BufferPipe::fromCounterparty(&temp, MEM_MGMT_RESPONSIBLE_BEARER);
+        return_value = 1;
+      }
     #endif
   }
   else {
@@ -374,20 +417,21 @@ bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
 int8_t ManuvrSerial::attached() {
   if (EventReceiver::attached()) {
     read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY, (EventReceiver*) this);
-    read_abort_event.isManaged(true);
+    read_abort_event.incRefs();
     read_abort_event.specific_target = (EventReceiver*) this;
-    read_abort_event.priority        = 2;
+    read_abort_event.priority(2);
     // Tolerate 30ms of latency on the line before flushing the buffer.
     read_abort_event.alterSchedulePeriod(30);
     read_abort_event.autoClear(false);
+    reset();
     #if !defined (__BUILD_HAS_THREADS)
       read_abort_event.enableSchedule(true);
       read_abort_event.alterScheduleRecurrence(-1);
       platform.kernel()->addSchedule(&read_abort_event);
     #else
       read_abort_event.alterScheduleRecurrence(0);
+      createThread(&_thread_id, NULL, xport_read_handler, (void*) this);
     #endif
-    reset();
     return 1;
   }
   return 0;
@@ -430,7 +474,7 @@ void ManuvrSerial::printDebug(StringBuilder *temp) {
 int8_t ManuvrSerial::callback_proc(ManuvrMsg* event) {
   /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
      Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
-  int8_t return_value = event->kernelShouldReap() ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
+  int8_t return_value = (0 == event->refCount()) ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {

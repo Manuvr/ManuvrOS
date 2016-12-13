@@ -63,34 +63,22 @@ Platforms that require it should be able to extend this driver for specific
 * Constructor.
 */
 ManuvrSocket::ManuvrSocket(const char* addr, int port, uint32_t opts) : ManuvrXport() {
-  __class_initializer();
-  _port_number = port;
-  _addr        = addr;
-
-  // These will vary across UDP/WS/TCP.
-  _options     = opts;
-}
-
-
-/**
-* Destructor
-*/
-ManuvrSocket::~ManuvrSocket() {
-  if (_sock) {
-    close(_sock);  // Close the socket.
-    _sock = 0;
-  }
-}
-
-
-/**
-* This is here for compatibility with C++ standards that do not allow for definition and declaration
-*   in the header file. Takes no parameters, and returns nothing.
-*/
-void ManuvrSocket::__class_initializer() {
   setReceiverName("ManuvrSocket");
-  _options           = 0;
-  _port_number       = 0;
+  _port_number = port;
+  _options     = opts;     // These will vary across UDP/WS/TCP.
+
+  if (addr) {
+    size_t addr_len = strlen(addr);
+    if (0 < addr_len) {
+      _addr = (char*) malloc(addr_len+1);
+      if (_addr) {
+        *(_addr + addr_len) = 0;
+        for (size_t i = 0; i < addr_len; i++) {
+          *(_addr + i) = *(addr + i);
+        }
+      }
+    }
+  }
 
   #if defined(__MANUVR_LINUX)
     _sock              = 0;
@@ -102,8 +90,23 @@ void ManuvrSocket::__class_initializer() {
 
   // Build some pre-formed Events.
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY, (EventReceiver*) this);
-  read_abort_event.isManaged(true);
+  read_abort_event.incRefs();
   read_abort_event.specific_target = (EventReceiver*) this;
+}
+
+
+/**
+* Destructor
+*/
+ManuvrSocket::~ManuvrSocket() {
+  if (_sock) {
+    close(_sock);  // Close the socket.
+    _sock = 0;
+  }
+  if (_addr) {
+    free(_addr);
+    _addr = nullptr;
+  }
 }
 
 

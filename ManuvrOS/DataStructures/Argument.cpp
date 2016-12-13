@@ -171,7 +171,7 @@ int8_t Argument::encodeToJSON(Argument* src, StringBuilder* out) {
 Argument* Argument::decodeFromJSON(StringBuilder* src) {
   return nullptr;
 }
-#endif
+#endif //MANUVR_JSON
 
 
 /*******************************************************************************

@@ -43,6 +43,15 @@ This file is meant to contain a set of common functions that are
 #include <CommonConstants.h>
 #include <DataStructures/uuid.h>
 
+#if defined(__BUILD_HAS_PTHREADS)
+  #include <pthread.h>
+#elif defined(__MANUVR_FREERTOS)
+  extern "C" {
+    #include <FreeRTOS.h>
+    #include <task.h>
+  }
+#endif
+
 // TODO: Split OCF off into it's own concern. Right now, it will depend on Linux.
 #if defined(MANUVR_OPENINTERCONNECT)
 extern "C" {
@@ -55,7 +64,6 @@ extern "C" {
   #include "iotivity/port/oc_random.h"
   #include "iotivity/port/oc_network_events_mutex.h"
   #include "iotivity/port/oc_log.h"
-  #include "iotivity/port/oc_signal_main_loop.h"
 
   int example_main(void);
 }
@@ -324,9 +332,6 @@ class ManuvrPlatform {
 
     void _discoverALUParams();
 };
-
-
-
 
 
 
