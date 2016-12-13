@@ -161,6 +161,7 @@ This file is the tortured result of growing pains since the beginning of
       I2CBusOp* current_queue_item = nullptr;
 
       I2CAdapter(uint8_t dev_id = 1);  // Constructor takes a bus ID as an argument.
+      I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl);  // Constructor takes a bus ID and pins as arguments.
       virtual ~I2CAdapter();           // Destructor
 
 

@@ -72,7 +72,7 @@ extern "C" {
   // Now we start to get into territory where we take non-trivial steps
   //   to either wrap iotivities threading-assumption, or fill in gaps
   //   that it doesn't address.
-  void signal_event_loop() {
+  static void signal_event_loop() {
     Kernel::log("signal_event_loop()\n");
     #if defined(__MANUVR_LINUX)
       pthread_cond_signal(&cv);
@@ -160,6 +160,8 @@ extern "C" {
 ManuvrOIC* ManuvrOIC::INSTANCE = nullptr;
 
 extern "C" {
+
+static oc_handler_t handler;
 
 void app_init_hook() {
   oc_init_platform(IDENTITY_STRING, NULL, NULL);
@@ -365,8 +367,8 @@ int8_t ManuvrOIC::attached() {
     platform.kernel()->addSchedule(&_discovery_timeout);
 
 
-    oc_handler_t handler;
     handler.init = app_init_hook;
+    handler.signal_event_loop = signal_event_loop;
 
     #if defined(OC_SERVER)
       handler.register_resources = register_resources;
