@@ -108,6 +108,7 @@ CPP_SRCS  += Drivers/ADG2128/ADG2128.cpp
 CPP_SRCS  += Drivers/TMP006/TMP006.cpp
 CPP_SRCS  += Drivers/ISL29033/ISL29033.cpp
 CPP_SRCS  += Drivers/Sensors/LPS331/LPS331.cpp
+CPP_SRCS  += Drivers/Sensors/TSL2561/TSL2561.cpp
 CPP_SRCS  += Drivers/TLC5947/TLC5947.cpp
 #CPP_SRCS  += Drivers/LSMD9S1/LSMD9S1.cpp
 CPP_SRCS  += Drivers/SensorWrapper/SensorWrapper.cpp
