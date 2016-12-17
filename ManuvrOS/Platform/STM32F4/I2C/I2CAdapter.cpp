@@ -1,4 +1,4 @@
-#include <Drivers/i2c-adapter/i2c-adapter.h>
+#include <Platform/Peripherals/I2C/I2CAdapter.h>
 
 #if defined(MANUVR_SUPPORT_I2C)
 extern "C" {

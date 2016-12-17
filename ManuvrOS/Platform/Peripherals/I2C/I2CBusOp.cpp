@@ -20,7 +20,7 @@ limitations under the License.
 */
 
 
-#include "i2c-adapter.h"
+#include <Platform/Peripherals/I2C/I2CAdapter.h>
 
 #if defined(__MK20DX256__) | defined(__MK20DX128__)
   #include <i2c_t3/i2c_t3.h>
@@ -170,7 +170,7 @@ int8_t I2CBusOp::begin() {
 
 //http://tech.munts.com/MCU/Frameworks/ARM/stm32f4/libs/STM32F4xx_DSP_StdPeriph_Lib_V1.1.0/Project/STM32F4xx_StdPeriph_Examples/I2C/I2C_TwoBoards/I2C_DataExchangeDMA/main.c
 // TODO: should check length > 0 before doing DMA init.
-// TODO: should migrate this into i2c-adapter???
+// TODO: should migrate this into I2CAdapter???
 int8_t I2CBusOp::init_dma() {
   int return_value = 0;
 

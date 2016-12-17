@@ -34,7 +34,7 @@ This is a demonstration program, and was meant to be compiled for a
 #include <Kernel.h>
 
 /* Drivers particular to this Manuvrable... */
-#include <Drivers/i2c-adapter/i2c-adapter.h>
+#include <Platform/Peripherals/I2C/I2CAdapter.h>
 
 /*
 * This is ONLY used to expose the GPIO pins to the outside world.

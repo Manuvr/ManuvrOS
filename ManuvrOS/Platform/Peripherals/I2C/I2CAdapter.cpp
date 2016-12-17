@@ -1,5 +1,5 @@
 /*
-File:   i2c-adapter.cpp
+File:   I2CAdapter.cpp
 Author: J. Ian Lindsay
 Date:   2014.03.10
 
@@ -29,7 +29,7 @@ This file is the tortured result of growing pains since the beginning of
 */
 
 
-#include "i2c-adapter.h"
+#include <Platform/Peripherals/I2C/I2CAdapter.h>
 
 #include <Platform/Platform.h>
 

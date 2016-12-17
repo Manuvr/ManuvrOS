@@ -1,5 +1,5 @@
 /*
-File:   i2c-adapter.h
+File:   I2CAdapter.h
 Author: J. Ian Lindsay
 Date:   2014.03.10
 

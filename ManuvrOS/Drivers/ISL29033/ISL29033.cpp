@@ -259,7 +259,7 @@ void ISL29033::printDebug(StringBuilder* temp) {
 **************************************************************************/
 
 /*
-* Actually makes the call to the i2c-adapter to set light level thresholds.
+* Actually makes the call to the I2CAdapter to set light level thresholds.
 */
 int8_t ISL29033::setThresholds(void) {
   int8_t return_value = SensorWrapper::SENSOR_ERROR_BUS_ERROR;
@@ -277,7 +277,7 @@ int8_t ISL29033::setThresholds(void) {
 
 
 /*
-* Actually makes the call to the i2c-adapter to set res and range.
+* Actually makes the call to the I2CAdapter to set res and range.
 */
 int8_t ISL29033::setResRange(void) {
   int8_t return_value = SensorWrapper::SENSOR_ERROR_BUS_ERROR;

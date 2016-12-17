@@ -1,4 +1,4 @@
-#include <Drivers/i2c-adapter/i2c-adapter.h>
+#include <Platform/Peripherals/I2C/I2CAdapter.h>
 
 extern volatile I2CAdapter* i2c;
 

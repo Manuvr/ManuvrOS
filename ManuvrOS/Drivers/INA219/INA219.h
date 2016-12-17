@@ -22,7 +22,7 @@ limitations under the License.
 #ifndef __INA219_DRIVER_H__
 #define __INA219_DRIVER_H__
 
-#include "Drivers/i2c-adapter/i2c-adapter.h"
+#include "Platform/Peripherals/I2C/I2CAdapter.h"
 #include "Drivers/SensorWrapper/SensorWrapper.h"
 
 

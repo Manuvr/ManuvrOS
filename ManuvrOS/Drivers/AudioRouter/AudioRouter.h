@@ -91,7 +91,7 @@ typedef struct cps_output_channel_t {
 
 class AudioRouter : public EventReceiver {
   public:
-    AudioRouter(I2CAdapter*, uint8_t, uint8_t, uint8_t); // Constructor needs the i2c-adapter, and addresses of the three chips on the PCB.
+    AudioRouter(I2CAdapter*, uint8_t, uint8_t, uint8_t); // Constructor needs the I2CAdapter, and addresses of the three chips on the PCB.
     ~AudioRouter(void);
 
     int8_t init(void);

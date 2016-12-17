@@ -27,7 +27,7 @@ This is the class that represents an ISL23345 digital potentiometer.
 
 #include <inttypes.h>
 #include "DataStructures/StringBuilder.h"
-#include "Drivers/i2c-adapter/i2c-adapter.h"
+#include "Platform/Peripherals/I2C/I2CAdapter.h"
 
 
 #define ISL23345_REG_ACR        0x10

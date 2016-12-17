@@ -20,7 +20,7 @@ limitations under the License.
 */
 
 
-#include "i2c-adapter.h"
+#include <Platform/Peripherals/I2C/I2CAdapter.h>
 
 /*
 * Constructor takes a pointer to the bus we are going to be using, and the slave
