@@ -31,7 +31,7 @@ Driver supports daisy-chaining by passing constructor parameter.
 #include <DataStructures/StringBuilder.h>
 #include <Drivers/DeviceWithRegisters/DeviceRegister.h>
 #include <Platform/Platform.h>
-#include <Platform/Peripherals/SPI/SPIBusOp.h>
+#include <Platform/Peripherals/SPI/SPIAdapter.h>
 
 /*
 * This class represents one or more TLC5947 chips daisy-chained on the given
@@ -39,7 +39,7 @@ Driver supports daisy-chaining by passing constructor parameter.
 */
 class TLC5947 : public BusOpCallback {
   public:
-    TLC5947(uint8_t count, BusAdapter<SPIBusOp>*, uint8_t cs_pin, uint8_t oe_pin);
+    TLC5947(uint8_t count, SPIAdapter*, uint8_t cs_pin, uint8_t oe_pin);
     ~TLC5947();
 
     /* Overrides from the SPICallback interface */
@@ -60,7 +60,7 @@ class TLC5947 : public BusOpCallback {
 
 
   private:
-    BusAdapter<SPIBusOp>* _bus = nullptr;
+    SPIAdapter* _bus = nullptr;
     uint8_t _cs_pin    = 0;
     uint8_t _oe_pin    = 0;
     uint8_t _chain_len = 0;

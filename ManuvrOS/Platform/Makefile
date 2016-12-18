@@ -52,7 +52,7 @@ ifeq ($(MANUVR_PLATFORM),TEENSY3)
 CPP_SRCS   += Teensy3/Teensy3.cpp
 CPP_SRCS   += Teensy3/TeensyStorage.cpp
 CPP_SRCS   += Teensy3/I2C/I2CAdapter.cpp
-CPP_SRCS   += Teensy3/SPI/SPIMaster.cpp
+CPP_SRCS   += Teensy3/SPI/SPIAdapter.cpp
 endif
 
 ifeq ($(MANUVR_PLATFORM),ARDUINO)
@@ -69,7 +69,7 @@ endif
 ifeq ($(MANUVR_PLATFORM),STM32F4)
 CPP_SRCS   += STM32F4/STM32F4.cpp
 CPP_SRCS   += STM32F4/I2C/I2CAdapter.cpp
-#SRCS   += STM32F7/STM32F7Storage.cpp
+#SRCS   += STM32F4/STM32F4Storage.cpp
 endif
 
 

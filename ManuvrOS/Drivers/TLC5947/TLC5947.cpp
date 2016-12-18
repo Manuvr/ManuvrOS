@@ -26,7 +26,7 @@ Driver supports daisy-chaining by passing constructor parameter.
 #include "TLC5947.h"
 
 
-TLC5947::TLC5947(uint8_t count, BusAdapter<SPIBusOp>* b, uint8_t cs, uint8_t oe) {
+TLC5947::TLC5947(uint8_t count, SPIAdapter* b, uint8_t cs, uint8_t oe) {
   _cs_pin    = cs;
   _oe_pin    = oe;
   _bus       = b;
@@ -43,7 +43,10 @@ TLC5947::TLC5947(uint8_t count, BusAdapter<SPIBusOp>* b, uint8_t cs, uint8_t oe)
 
 
 TLC5947::~TLC5947() {
-  // TODO: Recall any outstanding bus operations.
+  // Recall outstanding bus operations.
+  // Turn off the chip's outputs.
+  // Free buffer memory.
+  _bus->purge_queued_work_by_dev(this);
   blank(true);
   if (_buffer) {
     free(_buffer);
@@ -53,13 +56,9 @@ TLC5947::~TLC5947() {
 
 
 void TLC5947::refresh() {
-  //// Make the bus sing.
-  //for (int i = 0; i < 36; i++) {
-  //  SPI.transfer(*(_buffer + i));
-  //}
-  //setPin(_cs_pin, true);
-  //setPin(_cs_pin, false);
-  //_buf_dirty = false;
+  SPIBusOp* op = _bus->new_op(BusOpcode::TX, this);
+  op->setBuffer(_buffer, bufLen());
+  queue_io_job(op);
 }
 
 
@@ -118,3 +117,48 @@ uint16_t TLC5947::getChannel(uint8_t c) {
   }
   return -1;
 };
+
+
+/*
+* Ultimately, all bus access this class does passes to this function as its last-stop
+*   before becoming folded into the SPI bus queue.
+*/
+int8_t TLC5947::queue_io_job(BusOp* _op) {
+  if (nullptr == _op) return -1;   // This should never happen.
+  SPIBusOp* op = (SPIBusOp*) _op;
+  op->callback = (BusOpCallback*) this;         // Notify us of the results.
+  op->setCSPin(_cs_pin);
+  return _bus->queue_io_job(op);     // Pass it to the adapter for bus access.
+}
+
+
+/*
+* All notifications of bus activity enter the class here. This is probably where
+*   we should act on data coming in.
+*/
+int8_t TLC5947::io_op_callback(BusOp* _op) {
+  SPIBusOp* op = (SPIBusOp*) _op;
+  int8_t return_value = SPI_CALLBACK_NOMINAL;
+
+  // There is zero chance this object will be a null pointer unless it was done on purpose.
+  if (op->hasFault()) {
+    StringBuilder local_log;
+    local_log.concat("~~~~~~~~TLC5947::io_op_callback   (ERROR CASE -1)\n");
+    op->printDebug(&local_log);
+    Kernel::log(&local_log);
+
+    // TODO: Should think carefully, and...   return_value = SPI_CALLBACK_RECYCLE;   // Re-run the job.
+    return SPI_CALLBACK_ERROR;
+  }
+
+  /* Our first choice is: Did we just finish a WRITE or a READ? */
+  /* READ Case-offs */
+  if (BusOpcode::RX == op->get_opcode()) {
+  }
+  /* WRITE Case-offs */
+  else if (BusOpcode::TX == op->get_opcode()) {
+    _buf_dirty = false;
+  }
+
+  return return_value;
+}

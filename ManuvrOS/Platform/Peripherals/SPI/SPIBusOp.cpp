@@ -22,8 +22,7 @@ limitations under the License.
 
 
 #include "SPIBusOp.h"
-#include "CPLDDriver.h"
-
+#include <Platform/Platform.h>
 
 /*******************************************************************************
 * Out-of-class                                                                 +
@@ -68,15 +67,14 @@ SPIBusOp::SPIBusOp() {
 * Constructor that does setup by parameters.
 *
 * @param  nu_op The opcode that dictates the bus operation we use
-* @param  addr       The address of the target on the SPI bus.
-* @param  buf        The place where the transaction data is to be stored.
-* @param  len        The length of the transaction.
 * @param  requester  The object to be notified when the bus operation completes with success.
+* @param  cs         The pin number for the device's chip-select signal.
+* @param  ah         True for an active-high chip-select.
 */
-SPIBusOp::SPIBusOp(BusOpcode nu_op, BusOpCallback* requester) {
-  wipe();
+SPIBusOp::SPIBusOp(BusOpcode nu_op, BusOpCallback* requester, uint8_t cs, bool ah) : SPIBusOp() {
   this->opcode = nu_op;
   callback     = requester;
+  csActiveHigh(ah);
 }
 
 
@@ -103,96 +101,80 @@ SPIBusOp::~SPIBusOp() {
 * @param  buf The transfer buffer.
 * @param  len The length of the buffer.
 */
-void SPIBusOp::setBuffer(uint8_t *buf, uint8_t len) {
+void SPIBusOp::setBuffer(uint8_t *buf, unsigned int len) {
   this->buf     = buf;
   this->buf_len = len;
 }
 
 
 /**
-* This set of parameters is used for IMU access.
+* Some devices require transfer parameters that are in non-contiguous memory
+*   with-respect-to the payload buffer.
 *
-* @param  _dev_addr  The first CPLD transfer parameter.
-* @param  _xfer_len  The second CPLD transfer parameter.
-* @param  _dev_count The third CPLD transfer parameter.
-* @param  _reg_addr  The fourth CPLD transfer parameter.
+* @param  p0 The first transfer parameter.
+* @param  p1 The second transfer parameter.
+* @param  p2 The third transfer parameter.
+* @param  p3 The fourth transfer parameter.
 */
-void SPIBusOp::setParams(uint8_t _dev_addr, uint8_t _xfer_len, uint8_t _dev_count, uint8_t _reg_addr) {
+void SPIBusOp::setParams(uint8_t p0, uint8_t p1, uint8_t p2, uint8_t p3) {
   _param_len     = 4;
-  xfer_params[0] = _dev_addr;
-  xfer_params[1] = _xfer_len;
-  xfer_params[2] = _dev_count;
-  xfer_params[3] = _reg_addr;
+  xfer_params[0] = p0;
+  xfer_params[1] = p1;
+  xfer_params[2] = p2;
+  xfer_params[3] = p3;
 }
 
 
 /**
-* This set of parameters is used for internal CPLD register access.
+* Some devices require transfer parameters that are in non-contiguous memory
+*   with-respect-to the payload buffer.
 *
-* @param  _reg_addr The first CPLD transfer parameter.
-* @param  _val      The second CPLD transfer parameter.
+* @param  p0 The first transfer parameter.
+* @param  p1 The second transfer parameter.
+* @param  p2 The third transfer parameter.
+* @param  p3 The fourth transfer parameter.
 */
-void SPIBusOp::setParams(uint8_t _reg_addr, uint8_t _val) {
+void SPIBusOp::setParams(uint8_t p0, uint8_t p1, uint8_t p2) {
+  _param_len     = 3;
+  xfer_params[0] = p0;
+  xfer_params[1] = p1;
+  xfer_params[2] = p2;
+  xfer_params[3] = 0;
+}
+
+/**
+* Some devices require transfer parameters that are in non-contiguous memory
+*   with-respect-to the payload buffer.
+*
+* @param  p0 The first transfer parameter.
+* @param  p1 The second transfer parameter.
+* @param  p2 The third transfer parameter.
+* @param  p3 The fourth transfer parameter.
+*/
+void SPIBusOp::setParams(uint8_t p0, uint8_t p1) {
   _param_len     = 2;
-  xfer_params[0] = _reg_addr;
-  xfer_params[1] = _val;
+  xfer_params[0] = p0;
+  xfer_params[1] = p1;
   xfer_params[2] = 0;
   xfer_params[3] = 0;
-  this->buf      = NULL;
-  this->buf_len  = 0;
 }
 
 
 /**
-* Mutate the predefined DMA init structs to be specific to this particular operation.
+* Some devices require transfer parameters that are in non-contiguous memory
+*   with-respect-to the payload buffer.
 *
-* @return 0 on success, or non-zero on failure.
+* @param  p0 The first transfer parameter.
+* @param  p1 The second transfer parameter.
+* @param  p2 The third transfer parameter.
+* @param  p3 The fourth transfer parameter.
 */
-int8_t SPIBusOp::init_dma() {
-//  if (HAL_DMA_GetState(&_dma_w) != HAL_DMA_STATE_RESET) __HAL_DMA_DISABLE(&_dma_w);
-//  if (HAL_DMA_GetState(&_dma_r) != HAL_DMA_STATE_RESET) __HAL_DMA_DISABLE(&_dma_r);
-//
-//  uint32_t _origin_buf = 0;
-//  uint32_t _target_buf = 0;
-//
-//  if (opcode == BusOpcode::RX) {
-//    _dma_r.Init.MemInc = DMA_MINC_DISABLE;
-//    _dma_w.Init.MemInc = DMA_MINC_DISABLE;
-//
-//    //DMA_InitStructure_Read.DMA_Memory0BaseAddr    = (uint32_t) buf;
-//
-//    // We still need a transmit DMA operation to send the transfer parameters.
-//    //DMA_InitStructure_Write.DMA_Memory0BaseAddr   = (uint32_t) &STATIC_ZERO;
-//  }
-//  else if (opcode == BusOpcode::TX) {
-//    _dma_r.Init.MemInc = DMA_MINC_DISABLE;
-//    _dma_w.Init.MemInc = DMA_MINC_ENABLE;
-//
-//    //DMA_InitStructure_Write.DMA_Memory0BaseAddr   = (uint32_t) buf;
-//
-//    // For now, we are reliant on the Rx DMA IRQ. Tx IRQ is never used. So when
-//    // transmitting, we need to sink the read bytes until we do something smarter.
-//    //DMA_InitStructure_Read.DMA_Memory0BaseAddr    = (uint32_t) &STATIC_ZERO;
-//  }
-//  else {
-//    return -1;
-//  }
-//
-//  while (HAL_DMA_GetState(&_dma_w) != HAL_DMA_STATE_RESET) {}  // TODO: Might-could cut this.
-//  HAL_DMA_Init(&_dma_w);
-//
-//  while (HAL_DMA_GetState(&_dma_r) != HAL_DMA_STATE_RESET) {}  // TODO: Might-could cut this.
-//  HAL_DMA_Init(&_dma_r);
-//
-//  if (opcode == BusOpcode::RX) {
-//    HAL_DMA_Start_IT(&_dma_r, (uint32_t) hspi1.pRxBuffPtr, (uint32_t) buf, (uint32_t) buf_len);
-//    HAL_DMA_Start_IT(&_dma_w, (uint32_t) buf, (uint32_t) hspi1.pTxBuffPtr, (uint32_t) buf_len);
-//  }
-//  else if (opcode == BusOpcode::TX) {
-//    HAL_DMA_Start_IT(&_dma_w, (uint32_t) buf, (uint32_t) hspi1.pTxBuffPtr, (uint32_t) buf_len);
-//  }
-//
-  return 0;
+void SPIBusOp::setParams(uint8_t p0) {
+  _param_len     = 1;
+  xfer_params[0] = p0;
+  xfer_params[1] = 0;
+  xfer_params[2] = 0;
+  xfer_params[3] = 0;
 }
 
 
@@ -203,14 +185,14 @@ int8_t SPIBusOp::init_dma() {
 void SPIBusOp::wipe() {
   set_state(XferState::IDLE);
   // We need to preserve flags that deal with memory management.
-  flags       = flags & (SPI_XFER_FLAG_NO_FREE | SPI_XFER_FLAG_PREALLOCATE_Q);
+  _flags      = _flags & (SPI_XFER_FLAG_NO_FREE | SPI_XFER_FLAG_PREALLOCATE_Q);
   xfer_fault  = XferFault::NONE;
   opcode      = BusOpcode::UNDEF;
   buf_len     = 0;
-  buf         = NULL;
-  callback    = NULL;
-
-  _param_len     = 0;
+  buf         = nullptr;
+  callback    = nullptr;
+  _cs_pin     = 255;
+  _param_len  = 0;
   xfer_params[0] = 0;
   xfer_params[1] = 0;
   xfer_params[2] = 0;
@@ -219,6 +201,27 @@ void SPIBusOp::wipe() {
   profile(false);
 }
 
+/*
+*
+* P A D | C L*   // P: Pin asserted (not logic level!)
+* ------|-----   // A: Active high
+* 0 0 0 | 0  1   // D: Desired assertion state
+* 0 0 1 | 1  0   // C: Pin changed
+* 0 1 0 | 0  0   // L: Pin logic level
+* 0 1 1 | 1  1
+* 1 0 0 | 1  1   // Therefore...
+* 1 0 1 | 0  0   // L  = !(A ^ D)
+* 1 1 0 | 1  0   // C  = (P ^ D)
+* 1 1 1 | 0  1
+*/
+int8_t SPIBusOp::_assert_cs(bool asrt) {
+  if (csAsserted() ^ asrt) {
+    csAsserted(asrt);
+    setPin(_cs_pin, !(asrt ^ csActiveHigh()));
+    return 0;
+  }
+  return -1;
+}
 
 /*******************************************************************************
 *     8                  eeeeee
@@ -240,18 +243,9 @@ void SPIBusOp::wipe() {
 * @return 0 on success. Non-zero on failure.
 */
 int8_t SPIBusOp::markComplete() {
-  if (has_bus_control() || (CPLDDriver::current_queue_item == this) ) {
+  if (csAsserted()) {
     // If this job has bus control, we need to release the bus and tidy up IRQs.
-    setPin(30, false);
-    if (buf_len > 1) {
-      // We have DMA cruft to clean.
-      enableSPI_DMA(false);
-      //__HAL_DMA_DISABLE(&_dma_r);
-      //__HAL_DMA_CLEAR_FLAG(&_dma_r, DMA_FLAG_TCIF2_6 | DMA_FLAG_HTIF2_6 | DMA_FLAG_TEIF2_6 | DMA_FLAG_DMEIF2_6 | DMA_FLAG_FEIF2_6);
-
-      //__HAL_DMA_DISABLE(&_dma_w);
-      //__HAL_DMA_CLEAR_FLAG(&_dma_w, DMA_FLAG_TCIF3_7 | DMA_FLAG_HTIF3_7 | DMA_FLAG_TEIF3_7 | DMA_FLAG_DMEIF3_7 | DMA_FLAG_FEIF3_7);
-    }
+    _assert_cs(false);
   }
 
   //time_ended = micros();
@@ -291,8 +285,8 @@ int8_t SPIBusOp::abort(XferFault cause) {
 * @return true if the bus manager class should free() this object. False otherwise.
 */
 bool SPIBusOp::shouldReap(bool nu_reap_state) {
-  flags = (nu_reap_state) ? (flags & (uint8_t) ~SPI_XFER_FLAG_NO_FREE) : (flags | SPI_XFER_FLAG_NO_FREE);
-  return ((flags & SPI_XFER_FLAG_NO_FREE) == 0);
+  _flags = (nu_reap_state) ? (_flags & (uint8_t) ~SPI_XFER_FLAG_NO_FREE) : (_flags | SPI_XFER_FLAG_NO_FREE);
+  return ((_flags & SPI_XFER_FLAG_NO_FREE) == 0);
 }
 
 /**
@@ -308,9 +302,9 @@ bool SPIBusOp::shouldReap(bool nu_reap_state) {
 * @return true if the bus manager class should return this object to its preallocation queue.
 */
 bool SPIBusOp::returnToPrealloc(bool nu_prealloc_state) {
-  flags = (!nu_prealloc_state) ? (flags & (uint8_t) ~SPI_XFER_FLAG_PREALLOCATE_Q) : (flags | SPI_XFER_FLAG_PREALLOCATE_Q);
+  _flags = (!nu_prealloc_state) ? (_flags & (uint8_t) ~SPI_XFER_FLAG_PREALLOCATE_Q) : (_flags | SPI_XFER_FLAG_PREALLOCATE_Q);
   shouldReap(!nu_prealloc_state);
-  return (flags & SPI_XFER_FLAG_PREALLOCATE_Q);
+  return (_flags & SPI_XFER_FLAG_PREALLOCATE_Q);
 }
 
 /**
@@ -323,8 +317,8 @@ bool SPIBusOp::returnToPrealloc(bool nu_prealloc_state) {
 * @return true if the bus manager class should free() this object. False otherwise.
 */
 bool SPIBusOp::devRegisterAdvance(bool _reg_advance) {
-  flags = (_reg_advance) ? (flags | SPI_XFER_FLAG_DEVICE_REG_INC) : (flags & (uint8_t) ~SPI_XFER_FLAG_DEVICE_REG_INC);
-  return ((flags & SPI_XFER_FLAG_DEVICE_REG_INC) == 0);
+  _flags = (_reg_advance) ? (_flags | SPI_XFER_FLAG_DEVICE_REG_INC) : (_flags & (uint8_t) ~SPI_XFER_FLAG_DEVICE_REG_INC);
+  return ((_flags & SPI_XFER_FLAG_DEVICE_REG_INC) == 0);
 }
 
 

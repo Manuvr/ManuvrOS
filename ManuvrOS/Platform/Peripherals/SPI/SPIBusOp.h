@@ -37,6 +37,8 @@ This is the class that is used to keep bus operations on the SPI atomic.
   #define SPI_XFER_FLAG_NO_FLAGS        0x00   // By default, there are no flags set.
   #define SPI_XFER_FLAG_NO_FREE         0x01   // If set in a transaction's flags field, it will not be free()'d.
   #define SPI_XFER_FLAG_PREALLOCATE_Q   0x02   // If set, indicates this object should be returned to the prealloc queue.
+  #define SPI_XFER_FLAG_DEVICE_CS_ASSRT 0x10   // CS pin is presently asserted.
+  #define SPI_XFER_FLAG_DEVICE_CS_AH    0x20   // CS pin for device is active-high.
   #define SPI_XFER_FLAG_DEVICE_REG_INC  0x40   // If set, indicates this operation advances addresses in the target device.
   #define SPI_XFER_FLAG_PROFILE         0x80   // If set, this bus operation shall be profiled.
 
@@ -57,20 +59,21 @@ class SPIBusOp : public BusOp {
     //uint32_t time_ended    = 0;   // This is the time when bus access stops (or is aborted).
 
     SPIBusOp();
-    SPIBusOp(BusOpcode nu_op, BusOpCallback* requester);
+    SPIBusOp(BusOpcode nu_op, BusOpCallback* requester, uint8_t cs, bool ah = false);
     ~SPIBusOp();
 
     /* Job control functions. */
     int8_t begin();
     int8_t markComplete();
 
-    void setBuffer(uint8_t *buf, uint8_t len);
+    void setBuffer(uint8_t *buf, unsigned int len);
 
-    void setParams(uint8_t _dev_addr, uint8_t _xfer_len, uint8_t _dev_count, uint8_t _reg_addr);
-    void setParams(uint8_t _reg_addr, uint8_t _val);
-    inline void setParams(uint8_t _reg_addr) {  setParams(_reg_addr, 0);  }
+    void setParams(uint8_t p0, uint8_t p1, uint8_t p2, uint8_t p3);
+    void setParams(uint8_t p0, uint8_t p1, uint8_t p2);
+    void setParams(uint8_t p0, uint8_t p1);
+    void setParams(uint8_t p0);
 
-    inline uint8_t getTransferParam(int x) {  return xfer_params[x]; }
+    inline void setCSPin(uint8_t pin) {   _cs_pin = pin;  };
 
     /**
     * This will mark the bus operation complete with a given error code.
@@ -96,7 +99,7 @@ class SPIBusOp : public BusOp {
     *
     * @return true if the bus manager class should return this object to its preallocation queue.
     */
-    inline bool returnToPrealloc() {  return (flags & SPI_XFER_FLAG_PREALLOCATE_Q);  }
+    inline bool returnToPrealloc() {  return (_flags & SPI_XFER_FLAG_PREALLOCATE_Q);  }
 
     /**
     * The bus manager calls this fxn to decide if it ought to return this object to the preallocation
@@ -104,10 +107,32 @@ class SPIBusOp : public BusOp {
     *
     * @return true if this bus operation is being profiled.
     */
-    inline bool profile() {         return (flags & SPI_XFER_FLAG_PROFILE);  }
+    inline bool profile() {         return (_flags & SPI_XFER_FLAG_PROFILE);  }
     inline void profile(bool en) {
-      flags = (en) ? (flags | SPI_XFER_FLAG_PROFILE) : (flags & ~(SPI_XFER_FLAG_PROFILE));
+      _flags = (en) ? (_flags | SPI_XFER_FLAG_PROFILE) : (_flags & ~(SPI_XFER_FLAG_PROFILE));
     };
+
+    /**
+    * Is the chip select pin presently asserted?
+    *
+    * @return true if the CS pin is active.
+    */
+    inline bool csAsserted() {         return (_flags & SPI_XFER_FLAG_DEVICE_CS_ASSRT);  }
+    inline void csAsserted(bool en) {
+      _flags = (en) ? (_flags | SPI_XFER_FLAG_DEVICE_CS_ASSRT) : (_flags & ~(SPI_XFER_FLAG_DEVICE_CS_ASSRT));
+    };
+
+    /**
+    * Is the chip select pin supposed to be active high?
+    *
+    * @return true if the CS pin is active.
+    */
+    inline bool csActiveHigh() {         return (_flags & SPI_XFER_FLAG_DEVICE_CS_AH);  }
+    inline void csActiveHigh(bool en) {
+      _flags = (en) ? (_flags | SPI_XFER_FLAG_DEVICE_CS_AH) : (_flags & ~(SPI_XFER_FLAG_DEVICE_CS_AH));
+    };
+
+
 
     /**
     * The bus manager calls this fxn to decide if it ought to return this object to the preallocation
@@ -115,21 +140,14 @@ class SPIBusOp : public BusOp {
     *
     * @return true if the bus manager class should return this object to its preallocation queue.
     */
-    inline bool devRegisterAdvance() {  return (flags & SPI_XFER_FLAG_DEVICE_REG_INC);  }
-
-    /**
-    * @return The address of the internal register this operation addresses.
-    */
-    inline uint8_t getRegAddr() {
-      return ((4 == _param_len) ? xfer_params[3] : xfer_params[0] );
-    };
+    inline bool devRegisterAdvance() {  return (_flags & SPI_XFER_FLAG_DEVICE_REG_INC);  }
 
     /**
     * The bus manager calls this fxn to decide if it ought to free this object after completion.
     *
     * @return true if the bus manager class should free() this object. False otherwise.
     */
-    inline bool shouldReap() {        return ((flags & SPI_XFER_FLAG_NO_FREE) == 0);   }
+    inline bool shouldReap() {        return ((_flags & SPI_XFER_FLAG_NO_FREE) == 0);   }
 
     void printDebug(StringBuilder *);
 
@@ -141,16 +159,15 @@ class SPIBusOp : public BusOp {
 
 
   private:
-    uint8_t  xfer_params[4];  // The address transfer lengths, preamble, etc...
-    uint8_t  _param_len = 0;  // The length of transfer parameters to send.
-    uint8_t  flags      = 0;  // No flags set.
+    uint8_t xfer_params[4] = {0, 0, 0, 0};
+    uint8_t  _param_len    = 0;
+    uint8_t  _cs_pin       = 255;  // Chip-select pin.
+    uint8_t  _flags        = 0;    // No flags set.
 
-    int8_t init_dma();
+    int8_t _assert_cs(bool);
 
     /* Members related to the work queue... */
     inline void step_queues(){  Kernel::isrRaiseEvent(&event_spi_queue_ready); }
-
-    static void enableSPI_DMA(bool enable);
 };
 
 #endif  // __SPI_BUS_OP_H__
