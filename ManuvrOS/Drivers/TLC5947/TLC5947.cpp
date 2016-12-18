@@ -86,7 +86,7 @@ int TLC5947::setChannel(uint8_t c, uint16_t val) {
         // Even channels start byte-aligned.
         uint8_t temp = *(_buffer + byte_offset + 1) & 0x0F;
         *(_buffer + (byte_offset + 0)) = (uint8_t) ((val >> 4) & 0x00FF);
-        *(_buffer + (byte_offset + 1)) = (uint8_t) (temp | (uint8_t) (val << 8));
+        *(_buffer + (byte_offset + 1)) = (uint8_t) (temp | (uint8_t) (val << 4));
       }
       _buf_dirty = true;
       return 0;

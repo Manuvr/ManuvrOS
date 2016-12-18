@@ -488,6 +488,11 @@ int8_t SPIAdapter::callback_proc(ManuvrMsg* event) {
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {
+    case MANUVR_MSG_SPI_CB_QUEUE_READY:
+      if (callback_queue.size()) {
+        return EVENT_CALLBACK_RETURN_RECYCLE;
+      }
+      break;
     default:
       break;
   }
@@ -501,12 +506,12 @@ int8_t SPIAdapter::notify(ManuvrMsg* active_event) {
 
   switch (active_event->eventCode()) {
     case MANUVR_MSG_SPI_QUEUE_READY:
-      if (0 == advance_work_queue()) {
-        return_value++;
-      }
+      advance_work_queue();
+      return_value++;
       break;
     case MANUVR_MSG_SPI_CB_QUEUE_READY:
-      return_value += service_callback_queue();
+      service_callback_queue();
+      return_value++;
       break;
     default:
       return_value += EventReceiver::notify(active_event);

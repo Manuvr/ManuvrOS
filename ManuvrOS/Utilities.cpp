@@ -93,6 +93,7 @@ int randomArt(uint8_t* dgst_raw, unsigned int dgst_raw_len, const char* title, S
   return 0;
 }
 
+
 #if defined(__BUILD_HAS_BASE64)
 #include "mbedtls/base64.h"
 int wrapped_base64_decode(uint8_t* dst, size_t dlen, size_t* olen, const uint8_t* src, size_t slen) {
