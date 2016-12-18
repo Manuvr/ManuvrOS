@@ -159,7 +159,7 @@ int8_t SPIAdapter::queue_io_job(BusOp* _op) {
       // If the queue is empty, fire the operation now.
       current_queue_item = op;
       advance_work_queue();
-      if (bus_timeout_millis) event_spi_timeout.delaySchedule(bus_timeout_millis);  // Punch the timeout schedule.
+      //if (bus_timeout_millis) event_spi_timeout.delaySchedule(bus_timeout_millis);  // Punch the timeout schedule.
     }
     else {    // If there is something already in progress, queue up.
       if (_er_flag(SPI_FLAG_QUEUE_GUARD) && (SPI_MAX_Q_DEPTH <= work_queue.size())) {
@@ -457,6 +457,10 @@ void SPIAdapter::purge_stalled_job() {
 */
 int8_t SPIAdapter::attached() {
   if (EventReceiver::attached()) {
+    // We should init the SPI library...
+    SPI.begin();
+    SPI.setDataMode(SPI_MODE0);
+    SPI.setClockDivider(SPI_CLOCK_DIV32);
     return 1;
   }
   return 0;
@@ -496,6 +500,14 @@ int8_t SPIAdapter::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
+    case MANUVR_MSG_SPI_QUEUE_READY:
+      if (0 == advance_work_queue()) {
+        return_value++;
+      }
+      break;
+    case MANUVR_MSG_SPI_CB_QUEUE_READY:
+      return_value += service_callback_queue();
+      break;
     default:
       return_value += EventReceiver::notify(active_event);
       break;
@@ -513,6 +525,32 @@ int8_t SPIAdapter::notify(ManuvrMsg* active_event) {
 */
 void SPIAdapter::printDebug(StringBuilder *output) {
   EventReceiver::printDebug(output);
+  if (getVerbosity() > 2) {
+    output->concatf("-- Guarding queue      %s\n",       (_er_flag(SPI_FLAG_QUEUE_GUARD)?"yes":"no"));
+    output->concatf("-- spi_cb_per_event    %d\n--\n",   spi_cb_per_event);
+  }
+  output->concatf("-- prealloc queue size %d\n",     preallocated.size());
+  output->concatf("-- prealloc_misses     %u\n",     (unsigned long) _prealloc_misses);
+  output->concatf("-- total_transfers     %u\n",     (unsigned long) SPIBusOp::total_transfers);
+  output->concatf("-- failed_transfers    %u\n",     (unsigned long) SPIBusOp::failed_transfers);
+
+  output->concatf("-- bus queue depth:    %d\n-- callback q depth    %d\n\n", work_queue.size(), callback_queue.size());
+
+  if (getVerbosity() > 3) {
+    if (current_queue_item != NULL) {
+      output->concat("\tCurrently being serviced:\n");
+      current_queue_item->printDebug(output);
+    }
+
+    if (work_queue.size() > 0) {
+      unsigned int print_depth = strict_min((uint8_t) 3, (uint8_t) SPI_MAX_QUEUE_PRINT);
+      output->concatf("\nQueue Listing (top %d of %d total)\n", print_depth, work_queue.size());
+      for (unsigned int i = 0; i < print_depth; i++) {
+        work_queue.get(i)->printDebug(output);
+      }
+      output->concat("\n");
+    }
+  }
 }
 
 
@@ -522,9 +560,19 @@ void SPIAdapter::procDirectDebugInstruction(StringBuilder *input) {
   char c    = *(str);
 
   switch (c) {
-    case 'c':   // Bind or unbind to the current time.
-    case 'C':
+    case 'g':     // SPI1 queue-guard (overflow protection).
+      _er_flip_flag(SPI_FLAG_QUEUE_GUARD);
+      local_log.concatf("SPI queue overflow guard?  %s\n", _er_flag(SPI_FLAG_QUEUE_GUARD)?"yes":"no");
       break;
+    case 'p':     // Purge the SPI1 work queue.
+      purge_queued_work();
+      local_log.concat("SPI queue purged.\n");
+      break;
+    case '&':
+      local_log.concatf("Advanced CPLD SPI work queue.\n");
+      Kernel::raiseEvent(MANUVR_MSG_SPI_QUEUE_READY, nullptr);   // Raise an event
+      break;
+
     default:
       EventReceiver::procDirectDebugInstruction(input);
       break;

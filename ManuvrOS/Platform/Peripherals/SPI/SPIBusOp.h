@@ -149,7 +149,7 @@ class SPIBusOp : public BusOp {
     */
     inline bool shouldReap() {        return ((_flags & SPI_XFER_FLAG_NO_FREE) == 0);   }
 
-    void printDebug(StringBuilder *);
+    void printDebug(StringBuilder*);
 
 
     static uint32_t  total_transfers;

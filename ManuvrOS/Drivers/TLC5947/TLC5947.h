@@ -59,12 +59,15 @@ class TLC5947 : public BusOpCallback {
     inline uint8_t* buffer() {    return _buffer;           };
 
 
-  private:
-    SPIAdapter* _bus = nullptr;
+  protected:
     uint8_t _cs_pin    = 0;
     uint8_t _oe_pin    = 0;
     uint8_t _chain_len = 0;
     bool    _buf_dirty = false;
+
+
+  private:
+    SPIAdapter* _bus = nullptr;
 
     /* Register memory */
     uint8_t* _buffer = nullptr;  // TODO: Should be stack allocated.
