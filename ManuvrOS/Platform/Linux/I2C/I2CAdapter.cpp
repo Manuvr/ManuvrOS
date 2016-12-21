@@ -45,6 +45,12 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
 }
 
 
+I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : I2CAdapter(dev_id) {
+  // This platform handles this for us.
+  sda_pin = 255;
+  scl_pin = 255;
+}
+
 
 I2CAdapter::~I2CAdapter() {
   __class_teardown();
@@ -56,6 +62,10 @@ I2CAdapter::~I2CAdapter() {
     }
 }
 
+
+void I2CAdapter::printHardwareState(StringBuilder* output) {
+  output->concatf("-- I2C%d (%sline) --------------------\n", dev, (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
+}
 
 
 // TODO: Inline this.

@@ -185,6 +185,7 @@ This file is the tortured result of growing pains since the beginning of
       int8_t callback_proc(ManuvrMsg*);
       #if defined(MANUVR_CONSOLE_SUPPORT)
         void procDirectDebugInstruction(StringBuilder*);
+        void printHardwareState(StringBuilder*);
       #endif  //MANUVR_CONSOLE_SUPPORT
 
 
@@ -212,9 +213,11 @@ This file is the tortured result of growing pains since the beginning of
       LinkedList<I2CDevice*> dev_list;    // A list of active slaves on this bus.
       ManuvrMsg _periodic_i2c_debug;
 
-      int8_t ping_map[128];
-      int8_t last_used_bus_addr = 0;
-      int    dev = -1;
+      uint8_t scl_pin = 255;
+      uint8_t sda_pin = 255;
+      int8_t  last_used_bus_addr = 0;
+      int8_t  dev = -1;
+      int8_t  ping_map[128];
 
       void __class_initializer();
       void __class_teardown();
