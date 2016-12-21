@@ -132,7 +132,6 @@ void SPIBusOp::setParams(uint8_t p0, uint8_t p1, uint8_t p2, uint8_t p3) {
 * @param  p0 The first transfer parameter.
 * @param  p1 The second transfer parameter.
 * @param  p2 The third transfer parameter.
-* @param  p3 The fourth transfer parameter.
 */
 void SPIBusOp::setParams(uint8_t p0, uint8_t p1, uint8_t p2) {
   _param_len     = 3;
@@ -148,8 +147,6 @@ void SPIBusOp::setParams(uint8_t p0, uint8_t p1, uint8_t p2) {
 *
 * @param  p0 The first transfer parameter.
 * @param  p1 The second transfer parameter.
-* @param  p2 The third transfer parameter.
-* @param  p3 The fourth transfer parameter.
 */
 void SPIBusOp::setParams(uint8_t p0, uint8_t p1) {
   _param_len     = 2;
@@ -165,9 +162,6 @@ void SPIBusOp::setParams(uint8_t p0, uint8_t p1) {
 *   with-respect-to the payload buffer.
 *
 * @param  p0 The first transfer parameter.
-* @param  p1 The second transfer parameter.
-* @param  p2 The third transfer parameter.
-* @param  p3 The fourth transfer parameter.
 */
 void SPIBusOp::setParams(uint8_t p0) {
   _param_len     = 1;
