@@ -1,4 +1,4 @@
-#include <Drivers/i2c-adapter/i2c-adapter.h>
+#include <Platform/Peripherals/I2C/I2CAdapter.h>
 
 #if defined(MANUVR_SUPPORT_I2C)
 extern "C" {
@@ -63,6 +63,13 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
 }
 
 
+I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : I2CAdapter(dev_id) {
+  // This platform handles this for us.
+  sda_pin = 255;
+  scl_pin = 255;
+}
+
+
 I2CAdapter::~I2CAdapter() {
     I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, DISABLE);   // Shelve the interrupts.
     I2C_DeInit(I2C1);   // De-init
@@ -73,6 +80,11 @@ I2CAdapter::~I2CAdapter() {
 
     /* TODO: The work_queue destructor will take care of its own cleanup, but
        We should abort any open transfers prior to deleting this list. */
+}
+
+
+void I2CAdapter::printHardwareState(StringBuilder* output) {
+  output->concatf("-- I2C%d (%sline) --------------------\n", dev, (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
 }
 
 

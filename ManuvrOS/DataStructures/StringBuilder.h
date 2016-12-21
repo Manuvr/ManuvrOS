@@ -138,6 +138,8 @@ class StringBuilder {
 
 		void printDebug(StringBuilder*);
 
+    static void printBuffer(StringBuilder* output, uint8_t* buf, unsigned int len, const char* indent);
+
 
 	private:
     StrLL *root;         // The root of the linked-list.

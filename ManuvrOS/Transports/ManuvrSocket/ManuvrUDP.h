@@ -92,7 +92,6 @@ class UDPPipe : public BufferPipe {
     /* Override from BufferPipe. */
     virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
     virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
-    const char* pipeName();
 
     void printDebug(StringBuilder*);
     int takeAccumulator(StringBuilder*);
@@ -107,6 +106,7 @@ class UDPPipe : public BufferPipe {
 
 
   protected:
+    const char* pipeName();
 
 
   private:

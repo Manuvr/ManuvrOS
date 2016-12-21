@@ -82,10 +82,14 @@ CPP_SRCS  += Frameworks/OIC/ManuvrOIC.cpp
 
 # i2c apparatus...
 CPP_SRCS  += Drivers/BusQueue/BusQueue.cpp
-CPP_SRCS  += Drivers/i2c-adapter/I2CDevice.cpp
-CPP_SRCS  += Drivers/i2c-adapter/i2c-adapter.cpp
-CPP_SRCS  += Drivers/i2c-adapter/I2CDeviceWithRegisters.cpp
-CPP_SRCS  += Drivers/i2c-adapter/I2CBusOp.cpp
+CPP_SRCS  += Platform/Peripherals/I2C/I2CDevice.cpp
+CPP_SRCS  += Platform/Peripherals/I2C/I2CAdapter.cpp
+CPP_SRCS  += Platform/Peripherals/I2C/I2CDeviceWithRegisters.cpp
+CPP_SRCS  += Platform/Peripherals/I2C/I2CBusOp.cpp
+
+# SPI apparatus...
+CPP_SRCS  += Platform/Peripherals/SPI/SPIBusOp.cpp
+
 
 CPP_SRCS  += Drivers/LightSensor/LightSensor.cpp
 CPP_SRCS  += Drivers/AudioRouter/AudioRouter.cpp
@@ -108,6 +112,8 @@ CPP_SRCS  += Drivers/ADG2128/ADG2128.cpp
 CPP_SRCS  += Drivers/TMP006/TMP006.cpp
 CPP_SRCS  += Drivers/ISL29033/ISL29033.cpp
 CPP_SRCS  += Drivers/Sensors/LPS331/LPS331.cpp
+CPP_SRCS  += Drivers/Sensors/TSL2561/TSL2561.cpp
+CPP_SRCS  += Drivers/TLC5947/TLC5947.cpp
 #CPP_SRCS  += Drivers/LSMD9S1/LSMD9S1.cpp
 CPP_SRCS  += Drivers/SensorWrapper/SensorWrapper.cpp
 CPP_SRCS  += Drivers/DeviceWithRegisters/DeviceWithRegisters.cpp
@@ -122,7 +128,6 @@ CPP_SRCS  += Platform/Identity.cpp
 CPP_SRCS  += Platform/Identity/IdentityUUID.cpp
 CPP_SRCS  += Platform/Identity/IdentityCrypto.cpp
 CPP_SRCS  += Platform/Identity/IdentityOIC.cpp
-CPP_SRCS  += Platform/Identity/IdentityOneID.cpp
 CPP_SRCS  += Platform/Storage.cpp
 
 

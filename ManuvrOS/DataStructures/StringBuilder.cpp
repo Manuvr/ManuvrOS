@@ -49,6 +49,52 @@ int strcasestr(char *a, const char *b) {
 }
 #endif
 
+
+/* Static utility function for dumping buffers for humans to read. */
+void StringBuilder::printBuffer(StringBuilder* output, uint8_t* buf, unsigned int len, const char* indent) {
+  if (buf) {
+    const char* ind = (indent) ? indent : "\t";
+    unsigned int i = 0;
+    for (i = 0; i < (len - 16); i+=16) {
+      output->concatf("%s0x%04x: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+        ind,
+        i,
+        *(buf + i +  0),
+        *(buf + i +  1),
+        *(buf + i +  2),
+        *(buf + i +  3),
+        *(buf + i +  4),
+        *(buf + i +  5),
+        *(buf + i +  6),
+        *(buf + i +  7),
+        *(buf + i +  8),
+        *(buf + i +  9),
+        *(buf + i + 10),
+        *(buf + i + 11),
+        *(buf + i + 12),
+        *(buf + i + 13),
+        *(buf + i + 14),
+        *(buf + i + 15)
+      );
+    }
+    if (i < len) {
+      output->concatf("%s0x%04x: ", ind, i);
+      for (; i < len; i++) {
+        output->concatf("%02x ", *(buf + i));
+      }
+      output->concat("\n");
+    }
+  }
+  else {
+    if (indent) {
+      output->concat(indent);
+    }
+    output->concat("(NULL BUFFER)\n");
+  }
+}
+
+
+
 /****************************************************************************************************
 * Class management....                                                                              *
 ****************************************************************************************************/

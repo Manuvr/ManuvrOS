@@ -23,7 +23,7 @@ limitations under the License.
 #define __ISL29033_DRIVER_H__
 
 #include "Drivers/SensorWrapper/SensorWrapper.h"
-#include "Drivers/i2c-adapter/i2c-adapter.h"
+#include "Platform/Peripherals/I2C/I2CAdapter.h"
 
 /* Hardware-defined registers */
 #define ISL29033_REG_COMMAND_1        0x00

@@ -32,7 +32,7 @@ This class is a driver for Microchip's MGC3130 e-field gesture sensor. It is mea
 #include <inttypes.h>
 #include <stdint.h>
 #include <Kernel.h>
-#include "Drivers/i2c-adapter/i2c-adapter.h"
+#include "Platform/Peripherals/I2C/I2CAdapter.h"
 
 #define MGC3130_ISR_MARKER_TS 0x01
 #define MGC3130_ISR_MARKER_G0 0x80

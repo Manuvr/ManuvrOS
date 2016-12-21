@@ -1,5 +1,5 @@
 /*
-File:   i2c-adapter.cpp
+File:   I2CAdapter.cpp
 Author: J. Ian Lindsay
 Date:   2014.03.10
 
@@ -29,11 +29,11 @@ This file is the tortured result of growing pains since the beginning of
 */
 
 
-#include "i2c-adapter.h"
-
+#include "I2CAdapter.h"
 #include <Platform/Platform.h>
 
 extern "C" {
+  // TODO: This is hurting us, and is probably no longer required.
   volatile I2CAdapter* i2c = NULL;
 }
 
@@ -42,12 +42,6 @@ const MessageTypeDef i2c_message_defs[] = {
   { MANUVR_MSG_I2C_DEBUG, 0x0000,  "I2C_DEBUG", ManuvrMsg::MSG_ARGS_NONE },  // TODO: This needs to go away.
   { MANUVR_MSG_I2C_QUEUE_READY, 0x0000,  "I2C_QUEUE_READY", ManuvrMsg::MSG_ARGS_NONE }  // The i2c queue is ready for attention.
 };
-
-
-// TODO: Ugly. Stuck with it until more technical debt is paid.
-#if defined(STM32F7XX) | defined(STM32F746xx)
-  extern I2C_HandleTypeDef hi2c1;
-#endif
 
 
 /**************************************************************************
@@ -92,22 +86,9 @@ void I2CAdapter::__class_teardown() {
   _er_clear_flag(I2C_BUS_FLAG_BUS_ERROR | I2C_BUS_FLAG_BUS_ONLINE);
   _er_clear_flag(I2C_BUS_FLAG_PING_RUN  | I2C_BUS_FLAG_PINGING);
 
-  for (uint16_t i = 0; i < 128; i++) ping_map[i] = 0;   // Zero the ping map.
-
-  // Set a globalized refernece so we can hit the proper adapter from an ISR.
-  i2c = this;
-
-  int mes_count = sizeof(i2c_message_defs) / sizeof(MessageTypeDef);
-  ManuvrMsg::registerMessages(i2c_message_defs, mes_count);
-
-  _periodic_i2c_debug.repurpose(MANUVR_MSG_I2C_DEBUG, (EventReceiver*) this);
-  _periodic_i2c_debug.incRefs();
-  _periodic_i2c_debug.specific_target = (EventReceiver*) this;
-  _periodic_i2c_debug.priority(1);
-  _periodic_i2c_debug.alterSchedulePeriod(100);
-  _periodic_i2c_debug.alterScheduleRecurrence(-1);
-  _periodic_i2c_debug.autoClear(false);
   _periodic_i2c_debug.enableSchedule(false);
+  platform.kernel()->removeSchedule(&_periodic_i2c_debug);
+  _periodic_i2c_debug.decRefs();
 }
 
 
@@ -524,23 +505,11 @@ void I2CAdapter::printDevs(StringBuilder *temp) {
 */
 void I2CAdapter::printDebug(StringBuilder *temp) {
   EventReceiver::printDebug(temp);
-  temp->concatf("-- bus_online              %s\n", (busOnline() ? "yes" : "no"));
-  temp->concatf("-- bus_error               %s\n", (busError()  ? "yes" : "no"));
-  #if defined(STM32F7XX) | defined(STM32F746xx)
-    temp->concatf("-- State                   %u\n", hi2c1.State);
-    temp->concatf("-- ErrorCode               %u\n", hi2c1.ErrorCode);
-    temp->concatf("-- pBuffPtr                %p\n", hi2c1.pBuffPtr);
-    temp->concatf("-- XferSize                %d\n", hi2c1.XferSize);
-    temp->concatf("-- XferCount               %u\n", hi2c1.XferCount);
-    temp->concatf("-- CR1                     0x%08x\n", I2C1->CR1);
-    temp->concatf("-- CR2                     0x%08x\n", I2C1->CR2);
-    temp->concatf("-- TIMINGR                 0x%08x\n", I2C1->TIMINGR);
-    temp->concatf("-- ISR                     0x%08x\n", I2C1->ISR);
-    temp->concatf("-- RxDR                    0x%08x\n", I2C1->RXDR);
-  #endif
-  printPingMap(temp);
+  printHardwareState(temp);
+  temp->concatf("-- sda/scl     %u/%u\n", sda_pin, scl_pin);
+  temp->concatf("-- bus_error   %s\n", (busError()  ? "yes" : "no"));
 
-  if (current_queue_item != NULL) {
+  if (current_queue_item) {
     temp->concat("Currently being serviced:\n");
     current_queue_item->printDebug(temp);
   }
@@ -585,10 +554,13 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
           printDebug(&local_log);
           break;
         case 1:
-          printPingMap(&local_log);
+          printHardwareState(&local_log);
           break;
         case 2:
           printDevs(&local_log);
+          break;
+        case 3:
+          printPingMap(&local_log);
           break;
       }
       break;
@@ -623,14 +595,7 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       _periodic_i2c_debug.enableSchedule(*(str) == 'Z');
       local_log.concatf("%s periodic reader.\n", (*(str) == 'Z' ? "Starting" : "Stopping"));
       break;
-
-    case 't':
-      //I2C1->CR1 &= ~((uint32_t) I2C_CR1_PE);
-      //while(I2C1->CR1 & I2C_CR1_PE) {}
-      //busOnline(_stm32f7_timing_reinit(&hi2c1, temp_int));
-      //local_log.concat("i2c timing set.\n");
-      break;
-    #endif
+    #endif   // defined(STM32F7XX) | defined(STM32F746xx)
 
     case 'r':
       #ifdef STM32F4XX

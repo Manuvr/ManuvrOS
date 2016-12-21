@@ -24,7 +24,7 @@ limitations under the License.
 
 #include <inttypes.h>
 #include "DataStructures/StringBuilder.h"
-#include "Drivers/i2c-adapter/i2c-adapter.h"
+#include "Platform/Peripherals/I2C/I2CAdapter.h"
 
 
 /*

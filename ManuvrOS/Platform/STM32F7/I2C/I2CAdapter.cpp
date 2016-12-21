@@ -1,4 +1,4 @@
-#include <Drivers/i2c-adapter/i2c-adapter.h>
+#include <Platform/Peripherals/I2C/I2CAdapter.h>
 
 extern volatile I2CAdapter* i2c;
 
@@ -32,38 +32,52 @@ bool _stm32f7_timing_reinit(I2C_HandleTypeDef *hi2c, uint32_t val) {
 }
 
 
-I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
+I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : EventReceiver() {
   __class_initializer();
   dev = dev_id;
 
-  if (dev_id == 1) {
-    GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.Pin       = GPIO_PIN_7|GPIO_PIN_6;
-    GPIO_InitStruct.Mode      = GPIO_MODE_AF_OD;
-    GPIO_InitStruct.Pull      = GPIO_PULLUP;
-    GPIO_InitStruct.Speed     = GPIO_SPEED_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-    __HAL_RCC_I2C1_CLK_ENABLE();
+  switch (dev_id) {
+    case 1:
+      if (((23 == sda) || (25 == sda)) && ((22 == scl) || (24 == scl))) {
+        // Valid pins:      SCL: B6, B8  (22, 24)     SDA: B7, B9  (23, 25)
+        sda_pin = sda;
+        scl_pin = scl;
+        GPIO_InitTypeDef GPIO_InitStruct;
+        GPIO_InitStruct.Pin       = (1 << (sda % 16)) | (1 << (scl % 16));
+        GPIO_InitStruct.Mode      = GPIO_MODE_AF_OD;
+        GPIO_InitStruct.Pull      = GPIO_PULLUP;
+        GPIO_InitStruct.Speed     = GPIO_SPEED_HIGH;
+        GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
+        HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+        __HAL_RCC_I2C1_CLK_ENABLE();
 
-    hi2c1.Instance              = I2C1;
+        hi2c1.Instance = I2C1;
+        if (_stm32f7_timing_reinit(&hi2c1, 0x7022E0E0)) {
+          //HAL_I2CEx_ConfigAnalogFilter(&hi2c1, I2C_ANALOGFILTER_DISABLE);
+          //busOnline(HAL_OK == HAL_I2CEx_ConfigDigitalFilter(&hi2c1, 6));
+          busOnline(true);
+          HAL_NVIC_SetPriority(I2C1_EV_IRQn, 1, 0);
+          HAL_NVIC_SetPriority(I2C1_ER_IRQn, 0, 0);
+          HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
+          HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);
+        }
+        else {
+          Kernel::log("I2CAdapter failed to init.\n");
+        }
+      }
+      break;
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+    case 6:
+      Kernel::log("I2CAdapter unsupported.\n");
+      break;
+  }
+}
 
-    if (_stm32f7_timing_reinit(&hi2c1, 0x7022E0E0)) {
-      //HAL_I2CEx_ConfigAnalogFilter(&hi2c1, I2C_ANALOGFILTER_DISABLE);
-      //busOnline(HAL_OK == HAL_I2CEx_ConfigDigitalFilter(&hi2c1, 6));
-      busOnline(true);
-      HAL_NVIC_SetPriority(I2C1_EV_IRQn, 1, 0);
-      HAL_NVIC_SetPriority(I2C1_ER_IRQn, 0, 0);
-      HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
-      HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);
-    }
-    else {
-      Kernel::log("I2CAdapter failed to init.\n");
-    }
-  }
-  else {
-    // Unsupported
-  }
+
+I2CAdapter::I2CAdapter(uint8_t dev_id) : I2CAdapter(1, 22, 23) {
 }
 
 
@@ -77,6 +91,21 @@ I2CAdapter::~I2CAdapter() {
   HAL_I2C_DeInit(&hi2c1);
 }
 
+
+
+void I2CAdapter::printHardwareState(StringBuilder* output) {
+  output->concatf("-- I2C%d (%sline) --------------------\n", dev, (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
+  output->concatf("-- State       %u\n", hi2c1.State);
+  output->concatf("-- ErrorCode   %u\n", hi2c1.ErrorCode);
+  output->concatf("-- pBuffPtr    %p\n", hi2c1.pBuffPtr);
+  output->concatf("-- XferSize    %d\n", hi2c1.XferSize);
+  output->concatf("-- XferCount   %u\n", hi2c1.XferCount);
+  output->concatf("-- CR1         0x%08x\n", I2C1->CR1);
+  output->concatf("-- CR2         0x%08x\n", I2C1->CR2);
+  output->concatf("-- TIMINGR     0x%08x\n", I2C1->TIMINGR);
+  output->concatf("-- ISR         0x%08x\n", I2C1->ISR);
+  output->concatf("-- RxDR        0x%08x\n\n", I2C1->RXDR);
+}
 
 
 int8_t I2CAdapter::generateStart() {
