@@ -67,16 +67,15 @@ limitations under the License.
 class LPS331 : public I2CDeviceWithRegisters, public SensorWrapper {
   public:
     LPS331(uint8_t addr = LPS331_I2CADDR);
-    ~LPS331(void);
+    ~LPS331();
 
-    void gpioSetup(void);
+    void gpioSetup();
 
     /* Overrides from SensorWrapper */
-    int8_t init(void);
-    int8_t readSensor(void);
-
-    int8_t setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
-    int8_t getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
+    SensorError init();
+    SensorError readSensor();
+    SensorError setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
+    SensorError getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
 
     /* Overrides from I2CDeviceWithRegisters... */
     void operationCompleteCallback(I2CBusOp*);
@@ -89,8 +88,7 @@ class LPS331 : public I2CDeviceWithRegisters, public SensorWrapper {
 
     bool calculate_temperature();
     bool calculate_pressure();
-
-    void set_power_mode(uint8_t);
+    SensorError set_power_mode(uint8_t);
 
 };
 

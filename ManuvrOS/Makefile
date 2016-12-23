@@ -116,6 +116,7 @@ CPP_SRCS  += Drivers/Sensors/TSL2561/TSL2561.cpp
 CPP_SRCS  += Drivers/TLC5947/TLC5947.cpp
 #CPP_SRCS  += Drivers/LSMD9S1/LSMD9S1.cpp
 CPP_SRCS  += Drivers/SensorWrapper/SensorWrapper.cpp
+CPP_SRCS  += Drivers/SensorWrapper/SensorDatum.cpp
 CPP_SRCS  += Drivers/DeviceWithRegisters/DeviceWithRegisters.cpp
 CPP_SRCS  += Drivers/DeviceWithRegisters/DeviceRegister.cpp
 CPP_SRCS  += Drivers/ManuvrableGPIO/ManuvrableGPIO.cpp

@@ -68,11 +68,10 @@ class ISL29033 : public I2CDeviceWithRegisters, public SensorWrapper {
     void gpioSetup();
 
     /* Overrides from SensorWrapper */
-    int8_t init(void);
-    int8_t readSensor(void);
-
-    int8_t setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
-    int8_t getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
+    SensorError init();
+    SensorError readSensor();
+    SensorError setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
+    SensorError getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
 
     /* Overrides from I2CDevice... */
     void operationCompleteCallback(I2CBusOp*);
@@ -91,12 +90,11 @@ class ISL29033 : public I2CDeviceWithRegisters, public SensorWrapper {
     uint16_t threshold_lo;
     uint16_t threshold_hi;
 
-    int8_t setResRange(void);
-    int8_t setThresholds(void);
-    int8_t setCommandReg(void);
-    uint8_t getCommandReg(void);
-
-    bool calculateLux(void);
+    SensorError setResRange();
+    SensorError setThresholds();
+    SensorError setCommandReg();
+    uint8_t     getCommandReg();
+    bool        calculateLux();
 };
 
 #endif

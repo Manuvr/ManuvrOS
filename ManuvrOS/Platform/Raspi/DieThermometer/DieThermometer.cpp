@@ -28,7 +28,7 @@ limitations under the License.
 
 
 RaspiTempSensor::RaspiTempSensor() : SensorWrapper() {
-  this->defineDatum("RasPi Temperature", SensorWrapper::COMMON_UNITS_C, FLOAT_FM);
+  this->defineDatum("RasPi Temperature", COMMON_UNITS_C, FLOAT_FM);
   this->s_id = "009c4b32a55ee286f335c20bfe94975d";
   this->name = this->datum_list->description;
 }
@@ -46,13 +46,13 @@ RaspiTempSensor::~RaspiTempSensor() {
 * In this case, the only way to know if the sensor is present or not is to
 *   attempt to read it.
 */
-int8_t RaspiTempSensor::init(void) {
-  if (readSensor() == SensorWrapper::SENSOR_ERROR_NO_ERROR) {
+SensorError RaspiTempSensor::init() {
+  if (readSensor() == SensorError::NO_ERROR) {
     this->sensor_active = true;
-    return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+    return SensorError::NO_ERROR;
   }
   else {
-    return SensorWrapper::SENSOR_ERROR_ABSENT;
+    return SensorError::ABSENT;
   }
 }
 
@@ -64,7 +64,7 @@ int8_t RaspiTempSensor::init(void) {
 * Reads that file, does the appropriate rounding and division, and updates
 *   its only datum.
 */
-int8_t RaspiTempSensor::readSensor(void) {
+SensorError RaspiTempSensor::readSensor() {
     FILE* temperature_file = fopen(RaspiTempSensor::RASPI_TEMPERATURE_FILE, "r");
     if (temperature_file != NULL) {
         char *buf = (char*) alloca(1000);
@@ -81,26 +81,26 @@ int8_t RaspiTempSensor::readSensor(void) {
             }
             else {
                 Kernel::log("Failed to parse the data from the temperature file.\n");
-                return SensorWrapper::SENSOR_ERROR_ABSENT;
+                return SensorError::ABSENT;
             }
         }
         fclose(temperature_file);
     }
     else {
         Kernel::log("Failed to open the temperature file for reading.\n");
-        return SensorWrapper::SENSOR_ERROR_ABSENT;
+        return SensorError::ABSENT;
     }
-    return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+    return SensorError::NO_ERROR;
 }
 
 
-int8_t RaspiTempSensor::setParameter(uint16_t reg, int len, uint8_t*) {
-  return SensorWrapper::SENSOR_ERROR_INVALID_PARAM_ID;
+SensorError RaspiTempSensor::setParameter(uint16_t reg, int len, uint8_t*) {
+  return SensorError::INVALID_PARAM_ID;
 }
 
 
-int8_t RaspiTempSensor::getParameter(uint16_t reg, int len, uint8_t*) {
-  return SensorWrapper::SENSOR_ERROR_INVALID_PARAM_ID;
+SensorError RaspiTempSensor::getParameter(uint16_t reg, int len, uint8_t*) {
+  return SensorError::INVALID_PARAM_ID;
 }
 
 #endif // defined(RASPI) | defined(RASPI2)

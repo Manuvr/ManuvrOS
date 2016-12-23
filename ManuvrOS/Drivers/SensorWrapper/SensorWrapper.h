@@ -71,9 +71,17 @@ This class is a generic interface to a sensor. That sensor might measure many th
 typedef void (*SensorCallBack) (char*, int8_t);
 
 
+#define SENSE_DATUM_FLAG_DIRTY         0x80
+#define SENSE_DATUM_FLAG_HARDWARE      0x40
+#define SENSE_DATUM_FLAG_REPORT_READ   0x20
+#define SENSE_DATUM_FLAG_REPORT_CHANGE 0x10
+
+#define SENSE_DATUM_FLAG_REPORT_MASK   0x30
+
+
 /*
-* This struct helps us present and manage the unique data that comes out of each sensor.
-* Every instance of this class should have at least one of these defined for it.
+* This class helps us present and manage the unique data that comes out of each sensor.
+* Every instance of SensorWrapper should have at least one of these defined for it.
 *
 * Regarding the memory cost associated with tracking a datum, the analysis below is ONLY overhead. It does not
 *   take the size of the actual data into consideration. It also assumes 32-bit pointers. So if we have a sensor
@@ -82,19 +90,71 @@ typedef void (*SensorCallBack) (char*, int8_t);
 *
 *   This might seem wasteful for data types whose size is <= 4 bytes, but that is the cost of abstraction.
 */
-typedef struct datum_list_t {
-  const char*    description;   // A brief description of the datum for humans.                                        4 bytes
-  const char*    units;         // Real-world units that this datum measures.                                          4 bytes
-  uint8_t        autoreport;    // Auto-reporting setting. Only meaningful if ar_callback is non-null.                 1 byte
-  SensorCallBack ar_callback;   // The pointer to the callback function used for autoreporting.                        4 bytes
-  int8_t         v_id;          // This datum ID within the sensor object.                                             1 byte
-  bool           is_dirty;      // Is this datum dirty (IE, the last operation was a write)?                           1 byte
-  void*          data;          // The actual data returned from the sensor.                                           4 bytes
-  uint8_t        type_id;       // The type of the data member.                                                        1 byte
-  int32_t        data_len;      // The length of the data member.                                                      4 bytes
-  datum_list_t*  next;          // Linked-list. This is the ref to the next datum, if there is one.                    4 bytes
-} SensorDatum;                  //                                                       Total memory use per-datum:  28 bytes
+class SensorDatum {
+  public:
+    const char*    description = nullptr;  // A brief description of the datum for humans.
+    const char*    units       = nullptr;  // Real-world units that this datum measures.
+    SensorDatum*   next        = nullptr;  // Linked-list. This is the ref to the next datum, if there is one.
+    SensorCallBack ar_callback = nullptr;  // The pointer to the callback function used for autoreporting.
+    void*          data        = nullptr;  // The actual data returned from the sensor.
+    int32_t        data_len    = 0;        // The length of the data member.
+    int8_t         v_id        = 0;        // This datum ID within the sensor object.
+    uint8_t        type_id     = 0;        // The type of the data member.
 
+    SensorDatum();
+    ~SensorDatum();
+
+    /* Is this datum dirty (IE, the last operation was a write)? */
+    inline bool dirty() {        return (SENSE_DATUM_FLAG_DIRTY == (_flags & SENSE_DATUM_FLAG_DIRTY));  };
+    inline void dirty(bool x) {  _flags &= ~SENSE_DATUM_FLAG_DIRTY;   };
+
+    /* Auto-reporting setting. Only meaningful if ar_callback is non-null. */
+    inline bool autoreport() {     return (_flags & SENSE_DATUM_FLAG_REPORT_MASK);   };
+    inline void reportsOff() {     _flags &= ~SENSE_DATUM_FLAG_REPORT_MASK;   };
+    inline void reportAll() {      _flags |= SENSE_DATUM_FLAG_REPORT_READ;    };
+    inline void reportChanges() {  _flags |= SENSE_DATUM_FLAG_REPORT_CHANGE;  };
+
+  private:
+    uint8_t        _flags      = 0;        // Dirty, autoreport, hardware basis, etc...
+};
+
+
+
+#define MANUVR_SENSOR_FLAG_DIRTY         0x80
+#define MANUVR_SENSOR_FLAG_ACTIVE        0x40
+#define MANUVR_SENSOR_FLAG_AUTOREPORT    0x20
+
+/* Sensors can automatically report their values. */
+enum class SensorReporting {
+  OFF        = 0,
+  NEW_VALUE  = 1,
+  EVERY_READ = 2
+};
+
+
+/* These are possible error codes. */
+enum class SensorError {
+  NO_ERROR           =    0,   // There was no error.
+  ABSENT             =   -1,   // We failed to talk to the sensor.
+  OUT_OF_MEMORY      =   -2,   // Couldn't allocate memory for some sensor-related task.
+  WRONG_IDENTITY     =   -3,   // Some sensors come with ID markers in them. If we get one wrong, this happens.
+  NOT_LOCAL          =   -4,   // If we try to read or change parameters of a sensor that isn't attached to us.
+  INVALID_PARAM_ID   =   -5,   // If we try to read or change a sensor parameter that isn't supported.
+  INVALID_PARAM      =   -6,   // If we try to set a sensor parameter to something invalid for an extant register.
+  NOT_CALIBRATED     =   -7,   // If we try to read a sensor that is uncalibrated. Not all sensors require this.
+  INVALID_DATUM      =   -8,   // If we try to do an operation on a datum that doesn't exist for this sensor.
+  UNHANDLED_TYPE     =   -9,   // Issued when we ask for a string conversion that we don't support.
+  NULL_POINTER       =  -10,   // What happens when we try to do I/O on a null pointer.
+  BUS_ERROR          =  -11,   // If there was some generic bus error that we otherwise can't pinpoint.
+  BUS_ABSENT         =  -12,   // If the requested bus is not accessible.
+  NOT_WRITABLE       =  -13,   // If we try to write to a read-only register.
+  REG_NOT_DEFINED    =  -14,   // If we try to do I/O on a non-existent register.
+  DATA_EXHAUSTED     =  -15,   // If we try to poll sensor data faster than the sensor can produce it.
+  BAD_TYPE_CONVERT   =  -16,   // If we ask the class to convert types in a way that isn't possible.
+  MISSING_CONF       =  -17,   // If we ask the sensor class to perform an operation on parameters that it doesn't have.
+  NOT_INITIALIZED    =  -18,   //
+  UNDEFINED_ERR      = -128,   // If we try to set a sensor parameter to something invalid for an extant register.
+};
 
 
 
@@ -105,29 +165,29 @@ class SensorWrapper {
     bool isHardware;      // Is this sensor a piece of hardware?
     bool sensor_active;   // Is this sensor able to be read? IE: Did it init() correctly?
 
-    SensorWrapper(void);
-    ~SensorWrapper(void);
+    SensorWrapper();
+    ~SensorWrapper();
 
     void setSensorId(const char *);
 
-    long lastUpdate(void);                                 // Datetime stamp from the last update.
-    bool isDirty(uint8_t);                                 // Is the given particular datum dirty?
-    bool isDirty(void);                                    // Is ANYTHING in this sensor dirty?
-    void setAutoReporting(uint8_t);                        // Sets all data in this sensor to the given autoreporting state.
-    int8_t setAutoReporting(uint8_t, uint8_t);             // Sets a given datum in this sensor to the given autoreporting state.
-    void setAutoReportCallback(SensorCallBack);            // Sets a callback function for all data in this sensor.
-    int8_t setAutoReportCallback(uint8_t, SensorCallBack); // Sets a callback function for a given datum in this sensor.
-    int8_t markClean(void);                                // Marks all data in the sensor clean.
-    int8_t markClean(uint8_t);                             // Marks all data in the sensor clean.
+    long lastUpdate();                                      // Datetime stamp from the last update.
+    bool isDirty(uint8_t);                                  // Is the given particular datum dirty?
+    bool isDirty();                                         // Is ANYTHING in this sensor dirty?
+    void setAutoReporting(SensorReporting);                 // Sets all data in this sensor to the given autoreporting state.
+    SensorError setAutoReporting(uint8_t, SensorReporting); // Sets a given datum in this sensor to the given autoreporting state.
+    void setAutoReportCallback(SensorCallBack);             // Sets a callback function for all data in this sensor.
+    SensorError setAutoReportCallback(uint8_t, SensorCallBack); // Sets a callback function for a given datum in this sensor.
+    SensorError markClean();                                    // Marks all data in the sensor clean.
+    SensorError markClean(uint8_t);                             // Marks all data in the sensor clean.
 
-    int8_t readAsString(StringBuilder*);                   // Returns the sensor read as a string.
-    int8_t readAsString(uint8_t, StringBuilder*);          // Returns the given datum read as a string.
+    SensorError readAsString(StringBuilder*);                   // Returns the sensor read as a string.
+    SensorError readAsString(uint8_t, StringBuilder*);          // Returns the given datum read as a string.
 
     // Virtual functions. These MUST be overridden by the extending class.
-    virtual int8_t init(void) =0;                                    // Call this to initialize the sensor.
-    virtual int8_t readSensor(void) =0;                              // Actually read the sensor. Returns an error-code.
-    virtual int8_t setParameter(uint16_t reg, int len, uint8_t*) =0; // Used to set operational parameters for the sensor.
-    virtual int8_t getParameter(uint16_t reg, int len, uint8_t*) =0; // Used to read operational parameters from the sensor.
+    virtual SensorError init() =0;                                        // Call this to initialize the sensor.
+    virtual SensorError readSensor() =0;                                  // Actually read the sensor. Returns an error-code.
+    virtual SensorError setParameter(uint16_t reg, int len, uint8_t*) =0; // Used to set operational parameters for the sensor.
+    virtual SensorError getParameter(uint16_t reg, int len, uint8_t*) =0; // Used to read operational parameters from the sensor.
     /* A quick note about how setParameter() should be implemented....
     The idea behind this was to work like common i2c sensors in that sensor classes have
     software "registers" that are written to to control operational aspects of the represented sensor.
@@ -145,34 +205,7 @@ class SensorWrapper {
 #ifndef ARDUINO
     static long millis();
 #endif
-    // Sensors can automatically report their values when something in the sensor changes...
-    static const uint8_t SENSOR_REPORTING_OFF;
-    static const uint8_t SENSOR_REPORTING_NEW_VALUE;
-    static const uint8_t SENSOR_REPORTING_EVERY_READ;
 
-    // These are possible error codes...
-    static const int8_t SENSOR_ERROR_NO_ERROR;         // There was no error.
-    static const int8_t SENSOR_ERROR_ABSENT;           // We failed to talk to the sensor.
-    static const int8_t SENSOR_ERROR_OUT_OF_MEMORY;    // Couldn't allocate memory for some sensor-related task.
-    static const int8_t SENSOR_ERROR_WRONG_IDENTITY;   // Some sensors come with ID markers in them. If we get one wrong, this happens.
-    static const int8_t SENSOR_ERROR_NOT_LOCAL;        // If we try to read or change parameters of a sensor that isn't attached to us.
-    static const int8_t SENSOR_ERROR_INVALID_PARAM_ID; // If we try to read or change a sensor parameter that isn't supported.
-    static const int8_t SENSOR_ERROR_INVALID_PARAM;    // If we try to set a sensor parameter to something invalid for an extant register.
-    static const int8_t SENSOR_ERROR_NOT_CALIBRATED;   // If we try to read a sensor that is uncalibrated. Not all sensors require this.
-    static const int8_t SENSOR_ERROR_INVALID_DATUM;    // If we try to do an operation on a datum that doesn't exist for this sensor.
-    static const int8_t SENSOR_ERROR_UNHANDLED_TYPE;   // Issued when we ask for a string conversion that we don't support.
-    static const int8_t SENSOR_ERROR_NULL_POINTER;     // What happens when we try to do I/O on a null pointer.
-    static const int8_t SENSOR_ERROR_BUS_ERROR;        // If there was some generic bus error that we otherwise can't pinpoint.
-    static const int8_t SENSOR_ERROR_BUS_ABSENT;       // If the requested bus is not accessible.
-    static const int8_t SENSOR_ERROR_NOT_WRITABLE;     // If we try to write to a read-only register.
-    static const int8_t SENSOR_ERROR_REG_NOT_DEFINED;  // If we try to do I/O on a non-existent register.
-    static const int8_t SENSOR_ERROR_DATA_EXHAUSTED;   // If we try to poll sensor data faster than the sensor can produce it.
-    static const int8_t SENSOR_ERROR_BAD_TYPE_CONVERT; // If we ask the class to convert types in a way that isn't possible.
-    static const int8_t SENSOR_ERROR_MISSING_CONF;     // If we ask the sensor class to perform an operation on parameters that it doesn't have.
-    static const int8_t SENSOR_ERROR_NOT_INITIALIZED;  //
-    static const int8_t SENSOR_ERROR_UNDEFINED_ERR;    // If we try to set a sensor parameter to something invalid for an extant register.
-
-    static const char* SENSOR_DATUM_NOT_FOUND;
 
 
   protected:
@@ -182,55 +215,37 @@ class SensorWrapper {
     bool     is_dirty;          // Has the sensor been updated?
 
     bool defineDatum(const char*, const char*, uint8_t);
-    bool defineDatum(int, const char*, const char*, uint8_t, uint8_t);
+    bool defineDatum(int, const char*, const char*, SensorReporting, uint8_t);
     SensorDatum* get_datum(uint8_t);
 
     /* These are inlines that we define for ease-of-use from extending classes. If we didn't do this, we
          would need to cast all sensor readings to void* wherever we updateDatum(). All wind up at the
          same place. */
-    inline int8_t updateDatum(uint8_t dat, double val) {         return updateDatum(dat, (void*) &val); }
-    inline int8_t updateDatum(uint8_t dat, float val) {          return updateDatum(dat, (void*) &val); }
-    inline int8_t updateDatum(uint8_t dat, int val) {            return updateDatum(dat, (void*) &val); }
-    inline int8_t updateDatum(uint8_t dat, unsigned int val) {   return updateDatum(dat, (void*) &val); }
-    inline int8_t updateDatum(uint8_t dat, char* val) {          return updateDatum(dat, (void*) val); }
-    inline int8_t updateDatum(uint8_t dat, unsigned char* val) { return updateDatum(dat, (void*) val); }
-    int8_t updateDatum(uint8_t, void*);   // This is the actual implementation.
+    inline SensorError updateDatum(uint8_t dat, double val) {         return updateDatum(dat, (void*) &val); }
+    inline SensorError updateDatum(uint8_t dat, float val) {          return updateDatum(dat, (void*) &val); }
+    inline SensorError updateDatum(uint8_t dat, int val) {            return updateDatum(dat, (void*) &val); }
+    inline SensorError updateDatum(uint8_t dat, unsigned int val) {   return updateDatum(dat, (void*) &val); }
+    inline SensorError updateDatum(uint8_t dat, char* val) {          return updateDatum(dat, (void*) val); }
+    inline SensorError updateDatum(uint8_t dat, unsigned char* val) { return updateDatum(dat, (void*) val); }
+    SensorError updateDatum(uint8_t, void*);   // This is the actual implementation.
 
-    inline int8_t readDatumRaw(uint8_t dat, double *val) {         return readDatumRaw(dat, (void*) &val); }
-    inline int8_t readDatumRaw(uint8_t dat, float *val) {          return readDatumRaw(dat, (void*) &val); }
-    inline int8_t readDatumRaw(uint8_t dat, int *val) {            return readDatumRaw(dat, (void*) &val); }
-    inline int8_t readDatumRaw(uint8_t dat, unsigned int *val) {   return readDatumRaw(dat, (void*) &val); }
-    inline int8_t readDatumRaw(uint8_t dat, char** val) {          return readDatumRaw(dat, (void*) &val); }
-    inline int8_t readDatumRaw(uint8_t dat, unsigned char** val) { return readDatumRaw(dat, (void*) &val); }
-    int8_t readDatumRaw(uint8_t, void*);   // This is the actual implementation.
-
-    // Some constants for units...
-    static const char* COMMON_UNITS_DEGREES;
-    static const char* COMMON_UNITS_DEG_SEC;
-    static const char* COMMON_UNITS_C;
-    static const char* COMMON_UNITS_ONOFF;
-    static const char* COMMON_UNITS_LUX;
-    static const char* COMMON_UNITS_METERS;
-    static const char* COMMON_UNITS_GAUSS;
-    static const char* COMMON_UNITS_MET_SEC;
-    static const char* COMMON_UNITS_ACCEL;
-    static const char* COMMON_UNITS_EPOCH;
-    static const char* COMMON_UNITS_PRESSURE;
-    static const char* COMMON_UNITS_VOLTS;
-    static const char* COMMON_UNITS_U_VOLTS;
-    static const char* COMMON_UNITS_AMPS;
-    static const char* COMMON_UNITS_WATTS;
-    static const char* COMMON_UNITS_PERCENT;
-    static const char* COMMON_UNITS_U_TESLA;
+    inline SensorError readDatumRaw(uint8_t dat, double *val) {         return readDatumRaw(dat, (void*) &val); }
+    inline SensorError readDatumRaw(uint8_t dat, float *val) {          return readDatumRaw(dat, (void*) &val); }
+    inline SensorError readDatumRaw(uint8_t dat, int *val) {            return readDatumRaw(dat, (void*) &val); }
+    inline SensorError readDatumRaw(uint8_t dat, unsigned int *val) {   return readDatumRaw(dat, (void*) &val); }
+    inline SensorError readDatumRaw(uint8_t dat, char** val) {          return readDatumRaw(dat, (void*) &val); }
+    inline SensorError readDatumRaw(uint8_t dat, unsigned char** val) { return readDatumRaw(dat, (void*) &val); }
+    SensorError readDatumRaw(uint8_t, void*);   // This is the actual implementation.
 
 
   private:
+    uint8_t _flags = 0;      // Holds elementary state and capability info.
     void insert_datum(SensorDatum*);
     void clear_data(SensorDatum*);
-    int8_t writeDatumDataToSB(SensorDatum*, StringBuilder*);
+    SensorError writeDatumDataToSB(SensorDatum*, StringBuilder*);
 
-    int8_t mark_dirty(void);      // Marks this sensor dirty.
-    int8_t mark_dirty(uint8_t);   // Marks a specific datum in this sensor as dirty.
+    SensorError mark_dirty();          // Marks this sensor dirty.
+    SensorError mark_dirty(uint8_t);   // Marks a specific datum in this sensor as dirty.
 };
 
 #endif

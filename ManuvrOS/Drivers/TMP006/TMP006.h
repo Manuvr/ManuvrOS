@@ -75,10 +75,10 @@ class TMP006 : public I2CDeviceWithRegisters, public SensorWrapper {
     TMP006(uint8_t addr = TMP006_I2CADDR);
 
     /* Overrides from SensorWrapper */
-    int8_t init(void);
-    int8_t readSensor(void);
-    int8_t setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
-    int8_t getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
+    SensorError init();
+    SensorError readSensor();
+    SensorError setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
+    SensorError getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
 
     /* Overrides from I2CDeviceWithRegisters... */
     void operationCompleteCallback(I2CBusOp*);
@@ -87,8 +87,8 @@ class TMP006 : public I2CDeviceWithRegisters, public SensorWrapper {
 
   private:
     /* Class-specific */
-    int8_t check_identity(void);
-    int8_t check_data(void);        // If all the data required is fresh, updates derived data.
+    SensorError check_identity();
+    SensorError check_data();        // If all the data required is fresh, updates derived data.
 
 };
 

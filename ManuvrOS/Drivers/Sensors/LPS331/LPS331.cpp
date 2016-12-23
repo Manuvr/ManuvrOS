@@ -28,9 +28,9 @@ limitations under the License.
 LPS331::LPS331(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
   _dev_addr = addr;
   this->isHardware = true;
-  this->defineDatum("Barometric pressure", SensorWrapper::COMMON_UNITS_PRESSURE, FLOAT_FM);
-  this->defineDatum("Air temperature", SensorWrapper::COMMON_UNITS_C, FLOAT_FM);
-  this->defineDatum("Inferred altitude", SensorWrapper::COMMON_UNITS_METERS, FLOAT_FM);
+  this->defineDatum("Barometric pressure", COMMON_UNITS_PRESSURE, FLOAT_FM);
+  this->defineDatum("Air temperature", COMMON_UNITS_C, FLOAT_FM);
+  this->defineDatum("Inferred altitude", COMMON_UNITS_METERS, FLOAT_FM);
   this->s_id = "32f9b0436dc76d77de116814263409fe";
   this->name = "LPS331";
   gpioSetup();
@@ -60,14 +60,14 @@ LPS331::LPS331(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
 /*
 * Destructor.
 */
-LPS331::~LPS331(void) {
+LPS331::~LPS331() {
 }
 
 
 /*
 * Setup GPIO pins and their bindings to on-chip peripherals, if required.
 */
-void LPS331::gpioSetup(void) {
+void LPS331::gpioSetup() {
 // TODO: This class was never fully ported back from Digitabulum. No GPIO change-over...
 //	GPIO_InitTypeDef GPIO_InitStruct;
 //
@@ -90,39 +90,39 @@ void LPS331::gpioSetup(void) {
 * Overrides...                                                            *
 **************************************************************************/
 
-int8_t LPS331::init() {
+SensorError LPS331::init() {
   if (readRegister(LPS331_REG_WHO_AM_I) == I2C_ERR_CODE_NO_ERROR) {
-    return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+    return SensorError::NO_ERROR;
   }
   else {
-    return SensorWrapper::SENSOR_ERROR_BUS_ERROR;
+    return SensorError::BUS_ERROR;
   }
 }
 
 
-int8_t LPS331::setParameter(uint16_t reg, int len, uint8_t *data) {
-  return SensorWrapper::SENSOR_ERROR_INVALID_PARAM_ID;
+SensorError LPS331::setParameter(uint16_t reg, int len, uint8_t *data) {
+  return SensorError::INVALID_PARAM_ID;
 }
 
 
-int8_t LPS331::getParameter(uint16_t reg, int len, uint8_t*) {
-  return SensorWrapper::SENSOR_ERROR_INVALID_PARAM_ID;
+SensorError LPS331::getParameter(uint16_t reg, int len, uint8_t*) {
+  return SensorError::INVALID_PARAM_ID;
 }
 
 
-int8_t LPS331::readSensor(void) {
+SensorError LPS331::readSensor() {
   if (readRegister(LPS331_REG_PRS_OUT_HI) == I2C_ERR_CODE_NO_ERROR) {
     if (readRegister(LPS331_REG_PRS_OUT_LO) == I2C_ERR_CODE_NO_ERROR) {
       if (readRegister(LPS331_REG_PRS_P_OUT_XL) == I2C_ERR_CODE_NO_ERROR) {
         if (readRegister(LPS331_REG_TEMP_OUT_LO) == I2C_ERR_CODE_NO_ERROR) {
           if (readRegister(LPS331_REG_TEMP_OUT_HI) == I2C_ERR_CODE_NO_ERROR) {
-            return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+            return SensorError::NO_ERROR;
           }
         }
       }
     }
   }
-  return SensorWrapper::SENSOR_ERROR_BUS_ERROR;
+  return SensorError::BUS_ERROR;
 }
 
 
@@ -224,7 +224,7 @@ bool LPS331::calculate_pressure() {
 
 
 
-void LPS331::set_power_mode(uint8_t nu_power_mode) {
+SensorError LPS331::set_power_mode(uint8_t nu_power_mode) {
   power_mode = nu_power_mode;
   switch (power_mode) {
     case 0:
@@ -248,4 +248,5 @@ void LPS331::set_power_mode(uint8_t nu_power_mode) {
   #if defined(__MANUVR_DEBUG)
     Kernel::log("LPS331 Power mode set. \n");
   #endif
+  return SensorError::NO_ERROR;
 }

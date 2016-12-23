@@ -399,3 +399,15 @@ After removing the last mem-mgmt flag.
     ManuvrMsg storage size is 40 bytes.
     Digitabulum DEBUG=1
     281288    2800    9664  293752   47b78
+
+
+_---J. Ian Lindsay_
+
+------
+
+### 2016.12.23:
+
+    Linux, 32-bit: DEBUG=1
+    1856805   22964   23716 1903485  1d0b7d  Baseline before SensorWrapper simplifications.
+    1867041   22964   23716 1913721  1d3379  Phase 1: Adding flag members.
+    1867173   22900   23716 1913789  1d33bd  Took a moment to modernize some old code.

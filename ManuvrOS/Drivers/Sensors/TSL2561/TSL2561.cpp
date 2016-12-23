@@ -32,8 +32,8 @@ TSL2561::TSL2561(uint8_t addr, uint8_t irq) : TSL2561(addr) {
 TSL2561::TSL2561(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
   _dev_addr = addr;
   this->isHardware = true;
-  this->defineDatum("Vis-IR Intensity", SensorWrapper::COMMON_UNITS_PRESSURE, FLOAT_FM);
-  this->defineDatum("IR Intensity", SensorWrapper::COMMON_UNITS_C, FLOAT_FM);
+  this->defineDatum("Vis-IR Intensity", COMMON_UNITS_PRESSURE, FLOAT_FM);
+  this->defineDatum("IR Intensity", COMMON_UNITS_C, FLOAT_FM);
   this->s_id = "32f9b0436dc76d77de116814263409fe";
   this->name = "TSL2561";
 
@@ -60,33 +60,33 @@ TSL2561::~TSL2561() {
 * Overrides...                                                            *
 **************************************************************************/
 
-int8_t TSL2561::init() {
+SensorError TSL2561::init() {
   if (readRegister(TSL2561_REG_ID) == I2C_ERR_CODE_NO_ERROR) {
-    return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+    return SensorError::NO_ERROR;
   }
   else {
-    return SensorWrapper::SENSOR_ERROR_BUS_ERROR;
+    return SensorError::BUS_ERROR;
   }
 }
 
 
-int8_t TSL2561::setParameter(uint16_t reg, int len, uint8_t *data) {
-  return SensorWrapper::SENSOR_ERROR_INVALID_PARAM_ID;
+SensorError TSL2561::setParameter(uint16_t reg, int len, uint8_t *data) {
+  return SensorError::INVALID_PARAM_ID;
 }
 
 
-int8_t TSL2561::getParameter(uint16_t reg, int len, uint8_t*) {
-  return SensorWrapper::SENSOR_ERROR_INVALID_PARAM_ID;
+SensorError TSL2561::getParameter(uint16_t reg, int len, uint8_t*) {
+  return SensorError::INVALID_PARAM_ID;
 }
 
 
-int8_t TSL2561::readSensor() {
+SensorError TSL2561::readSensor() {
   if (readRegister(TSL2561_REG_DATA0) == I2C_ERR_CODE_NO_ERROR) {
     if (readRegister(TSL2561_REG_DATA1) == I2C_ERR_CODE_NO_ERROR) {
-      return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+      return SensorError::NO_ERROR;
     }
   }
-  return SensorWrapper::SENSOR_ERROR_BUS_ERROR;
+  return SensorError::BUS_ERROR;
 }
 
 
@@ -163,7 +163,7 @@ bool TSL2561::calculate_lux() {
 
 
 
-void TSL2561::set_power_mode(uint8_t nu__pwr_mode) {
+SensorError TSL2561::set_power_mode(uint8_t nu__pwr_mode) {
   _pwr_mode = nu__pwr_mode;
   switch (_pwr_mode) {
     case 0:
@@ -178,4 +178,5 @@ void TSL2561::set_power_mode(uint8_t nu__pwr_mode) {
   #if defined(__MANUVR_DEBUG)
     Kernel::log("TSL2561 Power mode set. \n");
   #endif
+  return SensorError::NO_ERROR;
 }
