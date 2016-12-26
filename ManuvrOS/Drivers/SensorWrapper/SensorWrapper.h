@@ -197,10 +197,6 @@ class SensorWrapper {
 
 
   protected:
-    SensorCallBack ar_callback = nullptr; // The pointer to the callback function used for autoreporting.
-    SensorDatum*   datum_list  = nullptr; // Linked list of data that this sensor might carry.
-    long           updated_at  = 0;       // When was the last update?
-
     SensorError defineDatum(const DatumDef*, SensorReporting);
     SensorDatum* get_datum(uint8_t);
 
@@ -229,9 +225,12 @@ class SensorWrapper {
 
 
   private:
-    const char* name;   // This is the name of the sensor.
     UUID uuid;          // A cross-platform unique ID for this sensor.
-    uint8_t _flags = 0; // Holds elementary state and capability info.
+    const char* name;   // This is the name of the sensor.
+    SensorDatum*   datum_list  = nullptr; // Linked list of data that this sensor might carry.
+    SensorCallBack ar_callback = nullptr; // The pointer to the callback function used for autoreporting.
+    long           updated_at  = 0;       // When was the last update?
+    uint8_t        _flags      = 0;       // Holds elementary state and capability info.
 
     void insert_datum(SensorDatum*);
     SensorError mark_dirty(uint8_t);   // Marks a specific datum in this sensor as dirty.
