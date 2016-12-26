@@ -269,8 +269,8 @@ SensorError SensorWrapper::updateDatum(uint8_t dat, void *reading) {
 * ar:      Autoreporting behavior.
 * Returns an error code.
 */
-SensorError SensorWrapper::defineDatum(const DatumDef* def, SensorReporting ar) {
-  SensorDatum* nu = new SensorDatum(def, ar);
+SensorError SensorWrapper::define_datum(const DatumDef* def) {
+  SensorDatum* nu = new SensorDatum(def);
   if (nu) {
     if (nu->mem_ready()) {
       insert_datum(nu);

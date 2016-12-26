@@ -53,20 +53,23 @@ limitations under the License.
 * It is worth re-iterating here, that this class ought to never malloc() or free() the buf member. That should be
 *   under the exclusive control of the caller.
 */
-I2CBusOp::I2CBusOp(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len) {
-  this->xfer_state      = XferState::IDLE;
-  this->xfer_fault      = XferFault::NONE;
-  this->opcode          = nu_op;
-  this->subaddr_sent    = (sub_addr >= 0) ? false : true;
-  this->dev_addr        = dev_addr;
-  this->sub_addr        = sub_addr;
-  this->buf             = buf;
-  this->buf_len         = len;
-  this->txn_id          = BusOp::next_txn_id++;
-  this->device          = NULL;
-  this->requester       = NULL;
-  this->subaddr_sent    = false;
-  verbosity = 0;
+I2CBusOp::I2CBusOp() {
+  txn_id       = BusOp::next_txn_id++;
+};
+
+
+/*
+* It is worth re-iterating here, that this class ought to never malloc() or free() the buf member. That should be
+*   under the exclusive control of the caller.
+*/
+I2CBusOp::I2CBusOp(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len) : I2CBusOp() {
+  xfer_state   = XferState::IDLE;
+  opcode       = nu_op;
+  dev_addr     = dev_addr;
+  sub_addr     = sub_addr;
+  buf          = buf;
+  buf_len      = len;
+  subaddr_sent((sub_addr >= 0) ? false : true);
 };
 
 
@@ -81,9 +84,9 @@ I2CBusOp::~I2CBusOp() {
 /*
 * Dump this item to the dev log.
 */
-void I2CBusOp::printDebug(void) {
+void I2CBusOp::printDebug() {
 	StringBuilder temp;
-	this->printDebug(&temp);
+	printDebug(&temp);
 	Kernel::log(&temp);
 }
 
@@ -100,22 +103,15 @@ void I2CBusOp::printDebug(StringBuilder* temp) {
     temp->concatf("\tdevice:          0x%02x\n", dev_addr);
 
     if (sub_addr >= 0x00) {
-      temp->concatf("\tsubaddress:      0x%02x (%ssent)\n", sub_addr, (subaddr_sent ? "" : "un"));
+      temp->concatf("\tsubaddress:      0x%02x (%ssent)\n", sub_addr, (subaddr_sent() ? "" : "un"));
     }
     temp->concatf("\txfer_state:      %s\n", getStateString());
     temp->concatf("\tFault:           %s\n", getErrorString());
     temp->concatf("\tbuf_len:         %d\n\t", buf_len);
-    if (buf_len > 0) {
-      temp->concatf( "*(0x%p):   ", buf);
-      for (uint8_t i = 0; i < buf_len; i++) {
-        temp->concatf("0x%02x ", (uint8_t) *(buf + i));
-      }
-    }
+    StringBuilder::printBuffer(temp, buf, buf_len, "\t");
     temp->concat("\n");
   }
 }
-
-
 
 
 
@@ -129,7 +125,6 @@ int8_t I2CBusOp::abort(XferFault er) {
   xfer_fault = er;
   return 0;
 }
-
 
 /*
 *
@@ -148,12 +143,12 @@ void I2CBusOp::markComplete() {
 */
 
 int8_t I2CBusOp::begin() {
-  if (NULL == device) {
+  if (nullptr == device) {
     abort(XferFault::DEV_NOT_FOUND);
     return -1;
   }
 
-  if ((NULL != requester) && !requester->operationCallahead(this)) {
+  if ((nullptr != callback) && !callback->operationCallahead(this)) {
     abort(XferFault::IO_RECALL);
     return -1;
   }

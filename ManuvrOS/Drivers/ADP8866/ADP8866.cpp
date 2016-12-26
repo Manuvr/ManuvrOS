@@ -65,7 +65,7 @@ void ADP8866::_isr_fxn(void) {
 /*
 * Constructor. Takes i2c address as argument.
 */
-ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : EventReceiver(), I2CDeviceWithRegisters() {
+ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : EventReceiver(), I2CDeviceWithRegisters(addr) {
   setReceiverName("ADP8866");
   _er_clear_flag(ADP8866_FLAG_INIT_COMPLETE);
   if (ADP8866::INSTANCE) {
@@ -73,8 +73,6 @@ ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : EventRece
     int mes_count = sizeof(adp8866_message_defs) / sizeof(MessageTypeDef);
     ManuvrMsg::registerMessages(adp8866_message_defs, mes_count);
   }
-
-  _dev_addr = addr;
 
   reset_pin = _reset_pin;
   irq_pin   = _irq_pin;

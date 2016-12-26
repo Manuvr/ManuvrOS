@@ -53,7 +53,7 @@ This is the class that is used to keep bus operations on the SPI atomic.
 */
 class SPIBusOp : public BusOp {
   public:
-    BusOpCallback* callback = NULL;  // Which class gets pinged when we've finished?
+    BusOpCallback* callback = nullptr;  // Which class gets pinged when we've finished?
 
     //uint32_t time_began    = 0;   // This is the time when bus access begins.
     //uint32_t time_ended    = 0;   // This is the time when bus access stops (or is aborted).

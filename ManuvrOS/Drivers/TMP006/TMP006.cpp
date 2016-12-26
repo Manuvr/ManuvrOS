@@ -43,10 +43,9 @@ const DatumDef datum_defs[] = {
 };
 
 
-TMP006::TMP006(uint8_t i2caddr) : I2CDeviceWithRegisters(), SensorWrapper("TMP006") {
-  _dev_addr = i2caddr;
-  defineDatum(&datum_defs[0], SensorReporting::OFF);
-  defineDatum(&datum_defs[1], SensorReporting::OFF);
+TMP006::TMP006(uint8_t addr) : I2CDeviceWithRegisters(addr), SensorWrapper("TMP006") {
+  define_datum(&datum_defs[0]);
+  define_datum(&datum_defs[1]);
 
   defineRegister(TMP006_REG_VOBJ,   (uint16_t) 0x0000, false, false, false);
   defineRegister(TMP006_REG_TAMB,   (uint16_t) 0x0000, false, false, false);

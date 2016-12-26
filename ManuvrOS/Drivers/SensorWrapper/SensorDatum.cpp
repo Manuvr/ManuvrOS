@@ -61,11 +61,6 @@ SensorDatum::SensorDatum(const DatumDef* d) {
 }
 
 
-SensorDatum::SensorDatum(const DatumDef* d, SensorReporting ar) : SensorDatum(d) {
-  autoreport(ar);
-}
-
-
 SensorDatum::~SensorDatum() {
   if (next) {
     delete next;

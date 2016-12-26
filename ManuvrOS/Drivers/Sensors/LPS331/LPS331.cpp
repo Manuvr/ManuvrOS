@@ -47,11 +47,10 @@ const DatumDef datum_defs[] = {
 /*
 * Constructor. Takes i2c address as argument.
 */
-LPS331::LPS331(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper("LPS331") {
-  _dev_addr = addr;
-  defineDatum(&datum_defs[0], SensorReporting::OFF);
-  defineDatum(&datum_defs[1], SensorReporting::OFF);
-  defineDatum(&datum_defs[2], SensorReporting::OFF);
+LPS331::LPS331(uint8_t addr) : I2CDeviceWithRegisters(addr), SensorWrapper("LPS331") {
+  define_datum(&datum_defs[0]);
+  define_datum(&datum_defs[1]);
+  define_datum(&datum_defs[2]);
   gpioSetup();
 
   // Now we should give them initial definitions. This is our chance to set default configs.

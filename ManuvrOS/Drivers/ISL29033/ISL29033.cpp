@@ -41,9 +41,8 @@ const DatumDef datum_defs[] = {
 /*
 * Constructor. Takes i2c address as argument.
 */
-ISL29033::ISL29033(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper("ISL29033") {
-  _dev_addr = addr;
-  defineDatum(&datum_defs[0], SensorReporting::OFF);
+ISL29033::ISL29033(uint8_t addr) : I2CDeviceWithRegisters(addr), SensorWrapper("ISL29033") {
+  define_datum(&datum_defs[0]);
   gpioSetup();
 
   // Default state: Maximum range and maximum resolution.

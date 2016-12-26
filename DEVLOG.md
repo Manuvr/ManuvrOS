@@ -419,3 +419,8 @@ _---J. Ian Lindsay_
     1867501   22900   23716 1914117  Removal of crufty json fxns.
     1867401   22900   23716 1914017  Circling potential cuts.
     1867309   22900   23716 1913925  More member removal.
+    1867197   22900   23716 1913813  More datum simplification and scope-restriction.
+    1867189   22900   23716 1913805  Changed I2CDevice API slightly. More to come.
+    1867101   22900   23716 1913717  I2C internal re-arrangements.
+    1868645   22904   23908 1915457  I2C likely broken. Fully-adopting BusQueue.
+    

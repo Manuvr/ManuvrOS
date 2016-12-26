@@ -24,12 +24,12 @@ limitations under the License.
 
 
 
-I2CDeviceWithRegisters::I2CDeviceWithRegisters(void) : I2CDevice() {
+I2CDeviceWithRegisters::I2CDeviceWithRegisters(uint8_t addr) : I2CDevice(addr) {
   multi_access_support = false;
 }
 
 
-I2CDeviceWithRegisters::~I2CDeviceWithRegisters(void) {
+I2CDeviceWithRegisters::~I2CDeviceWithRegisters() {
   DeviceRegister *temp = NULL;
   while (reg_defs.hasNext()) {
     temp = reg_defs.get();
@@ -50,7 +50,7 @@ I2CDeviceWithRegisters::~I2CDeviceWithRegisters(void) {
 
 
 
-bool I2CDeviceWithRegisters::sync(void) {
+bool I2CDeviceWithRegisters::sync() {
   bool return_value = (syncRegisters() == I2C_ERR_CODE_NO_ERROR);
   return return_value;
 }

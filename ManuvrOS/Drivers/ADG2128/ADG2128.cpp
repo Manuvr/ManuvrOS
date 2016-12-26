@@ -33,14 +33,12 @@ const int8_t ADG2128::ADG2128_ERROR_BAD_ROW          = -4;   // Row was out-of-b
 /*
 * Constructor. Takes the i2c address of this device as sole argument.
 */
-ADG2128::ADG2128(uint8_t i2caddr) : I2CDevice() {
-  _dev_addr = i2caddr;
-
+ADG2128::ADG2128(uint8_t addr) : I2CDevice(addr) {
   preserve_state_on_destroy = false;
   dev_init = false;
 }
 
-ADG2128::~ADG2128(void) {
+ADG2128::~ADG2128() {
   if (!preserve_state_on_destroy) {
     reset();
   }
@@ -50,7 +48,7 @@ ADG2128::~ADG2128(void) {
 /*
 *
 */
-int8_t ADG2128::init(void) {
+int8_t ADG2128::init() {
   for (int i = 0; i < 12; i++) {
     if (readback(i) != ADG2128_ERROR_NO_ERROR) {
       dev_init = false;

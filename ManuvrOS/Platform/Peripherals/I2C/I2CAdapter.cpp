@@ -32,21 +32,40 @@ This file is the tortured result of growing pains since the beginning of
 #include "I2CAdapter.h"
 #include <Platform/Platform.h>
 
+
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
+
 extern "C" {
   // TODO: This is hurting us, and is probably no longer required.
-  volatile I2CAdapter* i2c = NULL;
+  volatile I2CAdapter* i2c = nullptr;
 }
+
+I2CBusOp I2CAdapter::preallocated_bus_jobs[PREALLOCATED_I2C_JOBS];
 
   // We need some internal events to allow communication back from the ISR.
 const MessageTypeDef i2c_message_defs[] = {
-  { MANUVR_MSG_I2C_DEBUG, 0x0000,  "I2C_DEBUG", ManuvrMsg::MSG_ARGS_NONE },  // TODO: This needs to go away.
-  { MANUVR_MSG_I2C_QUEUE_READY, 0x0000,  "I2C_QUEUE_READY", ManuvrMsg::MSG_ARGS_NONE }  // The i2c queue is ready for attention.
+  { MANUVR_MSG_I2C_DEBUG,       0x0000,  "I2C_DEBUG", ManuvrMsg::MSG_ARGS_NONE },  // TODO: This needs to go away.
+  { MANUVR_MSG_I2C_QUEUE_READY, 0x0000,  "I2C_Q_RDY", ManuvrMsg::MSG_ARGS_NONE }  // The i2c queue is ready for attention.
 };
 
 
-/**************************************************************************
-* Constructors / Destructors                                              *
-**************************************************************************/
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
 
 void I2CAdapter::__class_initializer() {
   setReceiverName("I2CAdapter");
@@ -96,6 +115,37 @@ void I2CAdapter::__class_teardown() {
 * Setup GPIO pins and their bindings to on-chip peripherals, if required.
 */
 void I2CAdapter::gpioSetup() {
+}
+
+
+/**
+* Return a vacant SPIBusOp to the caller, allocating if necessary.
+*
+* @return an SPIBusOp to be used. Only NULL if out-of-mem.
+*/
+I2CBusOp* I2CAdapter::new_op() {
+  I2CBusOp* return_value = preallocated.dequeue();
+  if (nullptr == return_value) {
+    _prealloc_misses++;
+    return_value = new I2CBusOp();
+    //if (getVerbosity() > 5) Kernel::log("new_op(): Fresh allocation!\n");
+  }
+  return return_value;
+}
+
+
+/**
+* Return a vacant SPIBusOp to the caller, allocating if necessary.
+*
+* @param  _op   The desired bus operation.
+* @param  _req  The device pointer that is requesting the job.
+* @return an CPLDBusOp to be used. Only NULL if out-of-mem.
+*/
+I2CBusOp* I2CAdapter::new_op(BusOpcode _op, BusOpCallback* _req) {
+  I2CBusOp* return_value = new_op();
+  return_value->set_opcode(_op);
+  return_value->callback = (I2CDevice*) _req;
+  return return_value;
 }
 
 
@@ -180,8 +230,8 @@ int8_t I2CAdapter::notify(ManuvrMsg* active_event) {
     case MANUVR_MSG_I2C_DEBUG:
       {
         //I2CBusOp* nu = new I2CBusOp(BusOpcode::RX, 0x27, (int16_t) 0, &_debug_scratch, 1);
-        ////nu->requester = this;
-        //insert_work_item(nu);
+        ////nu->callback = this;
+        //queue_io_job(nu);
       }
       break;
     #endif
@@ -278,16 +328,34 @@ int I2CAdapter::get_slave_dev_by_addr(uint8_t search_addr) {
 /**************************************************************************
 * Workflow management functions...                                        *
 **************************************************************************/
+/**
+* When a bus operation completes, it is passed back to its issuing class.
+*
+* @param  _op  The bus operation that was completed.
+* @return SPI_CALLBACK_NOMINAL on success, or appropriate error code.
+*/
+int8_t I2CAdapter::io_op_callback(BusOp* _op) {
+  I2CBusOp* op = (I2CBusOp*) _op;
+  // There is zero chance this object will be a null pointer unless it was done on purpose.
+  if (getVerbosity() > 2) {
+    local_log.concatf("Probably shouldn't be in the default callback case...\n");
+    op->printDebug(&local_log);
+  }
+
+  flushLocalLog();
+  return 0;
+}
 
 
 /*
 * This is the function that should be called to queue-up a bus operation.
 * It may or may not be started immediately.
 */
-bool I2CAdapter::insert_work_item(I2CBusOp *nu) {
-  nu->verbosity = getVerbosity();
+int8_t I2CAdapter::queue_io_job(BusOp* op) {
+  I2CBusOp* nu = (I2CBusOp*) op;
+  nu->setVerbosity(getVerbosity());
   nu->device = this;
-	if (current_queue_item != NULL) {
+	if (current_queue_item) {
 		// Something is already going on with the bus. Queue...
 		work_queue.insert(nu);
 	}
@@ -302,17 +370,17 @@ bool I2CAdapter::insert_work_item(I2CBusOp *nu) {
 		  }
 		}
 		else {
-		  Kernel::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, NULL);   // Raise an event
+		  Kernel::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, nullptr);   // Raise an event
 		}
 	}
-	return true;
+	return 0;
 }
 
 
 /*
 * This function needs to be called to move the queue forward.
 */
-void I2CAdapter::advance_work_queue(void) {
+int8_t I2CAdapter::advance_work_queue() {
 	if (current_queue_item != NULL) {
 		if (current_queue_item->isComplete()) {
 			if (!current_queue_item->hasFault()) {
@@ -328,9 +396,9 @@ void I2CAdapter::advance_work_queue(void) {
 			// Hand this completed operation off to the class that requested it. That class will
 			//   take what it wants from the buffer and, when we return to execution here, we will
 			//   be at liberty to clean the operation up.
-			if (current_queue_item->requester != NULL) {
+			if (current_queue_item->callback) {
 				// TODO: need some minor reorg to make this not so obtuse...
-				current_queue_item->requester->operationCompleteCallback(current_queue_item);
+				current_queue_item->callback->io_op_callback(current_queue_item);
 			}
 			else if (current_queue_item->get_opcode() == BusOpcode::TX_CMD) {
 				if (!current_queue_item->hasFault()) {
@@ -409,7 +477,7 @@ void I2CAdapter::purge_queued_work() {
   while (work_queue.hasNext()) {
     current = work_queue.get();
     current_queue_item->abort();
-    if (NULL != current->requester) current->requester->operationCompleteCallback(current);
+    if (NULL != current->callback) current->callback->io_op_callback(current);
     work_queue.remove();
     delete current;   // Delete the queued work AND its buffer.
   }
@@ -419,7 +487,7 @@ void I2CAdapter::purge_queued_work() {
 void I2CAdapter::purge_stalled_job() {
   if (current_queue_item != NULL) {
     current_queue_item->abort();
-    if (NULL != current_queue_item->requester) current_queue_item->requester->operationCompleteCallback(current_queue_item);
+    if (NULL != current_queue_item->callback) current_queue_item->callback->io_op_callback(current_queue_item);
     delete current_queue_item;
     current_queue_item = NULL;
 #ifdef STM32F4XX
@@ -435,7 +503,7 @@ void I2CAdapter::purge_stalled_job() {
 */
 void I2CAdapter::ping_slave_addr(uint8_t addr) {
     I2CBusOp* nu = new I2CBusOp(BusOpcode::TX_CMD, addr, (int16_t) -1, NULL, 0);
-    insert_work_item(nu);
+    queue_io_job(nu);
     _er_set_flag(I2C_BUS_FLAG_PING_RUN);
 }
 
@@ -578,8 +646,8 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
     case '3':
       {
         //I2CBusOp* nu = new I2CBusOp(BusOpcode::RX, 0x27, (int16_t) 0, &_debug_scratch, 1);
-        ////nu->requester = this;
-        //insert_work_item(nu);
+        ////nu->callback = this;
+        //queue_io_job(nu);
       }
       break;
 

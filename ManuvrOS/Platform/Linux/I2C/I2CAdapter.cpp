@@ -14,7 +14,7 @@
 #include <ctype.h>
 
 
-I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
+I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver(), BusAdapter(12) {
   __class_initializer();
   dev = dev_id;
 

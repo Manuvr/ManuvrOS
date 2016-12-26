@@ -3,7 +3,7 @@
 #if defined(MANUVR_SUPPORT_I2C)
 #include <i2c_t3/i2c_t3.h>
 
-I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : EventReceiver() {
+I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : EventReceiver(), BusAdapter(12) {
   __class_initializer();
   dev = dev_id;
 
@@ -11,7 +11,7 @@ I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : EventReceiver
     case 0:
       if (((18 == sda) && (19 == scl)) || ((17 == sda) && (16 == scl))) {
         Wire.begin(I2C_MASTER, 0x00,
-          (17 == sda) ? I2C_PINS_16_17 : I2C_PINS_18_19, 
+          (17 == sda) ? I2C_PINS_16_17 : I2C_PINS_18_19,
           I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR);
         Wire.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
         busOnline(true);

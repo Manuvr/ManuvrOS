@@ -122,7 +122,6 @@ class SensorDatum {
     int32_t         data_len  = 0;        // The length of the data member.
 
     SensorDatum(const DatumDef*);
-    SensorDatum(const DatumDef*, SensorReporting);
     ~SensorDatum();
 
     void autoreport(SensorReporting);
@@ -197,7 +196,6 @@ class SensorWrapper {
 
 
   protected:
-    SensorError defineDatum(const DatumDef*, SensorReporting);
     SensorDatum* get_datum(uint8_t);
 
     /* These are inlines that we define for ease-of-use from extending classes. If we didn't do this, we
@@ -223,6 +221,7 @@ class SensorWrapper {
       _flags = (x) ? (_flags | MANUVR_SENSOR_FLAG_ACTIVE) : (_flags & ~MANUVR_SENSOR_FLAG_ACTIVE);
     };
 
+    SensorError define_datum(const DatumDef*);
 
   private:
     UUID uuid;          // A cross-platform unique ID for this sensor.

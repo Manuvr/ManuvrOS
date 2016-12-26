@@ -190,13 +190,8 @@ class BusOp {
 */
 class BusOpCallback {
   public:
-    // The SPI driver will call this fxn when the bus op finishes.
     virtual int8_t io_op_callback(BusOp*) =0;
-
-    /*
-    */
     virtual int8_t queue_io_job(BusOp*) =0;
-
 };
 
 

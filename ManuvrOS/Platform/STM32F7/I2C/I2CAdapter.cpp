@@ -32,7 +32,7 @@ bool _stm32f7_timing_reinit(I2C_HandleTypeDef *hi2c, uint32_t val) {
 }
 
 
-I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : EventReceiver() {
+I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : EventReceiver(), BusAdapter(12) {
   __class_initializer();
   dev = dev_id;
 

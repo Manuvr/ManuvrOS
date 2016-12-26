@@ -44,6 +44,9 @@ This file is the tortured result of growing pains since the beginning of
   #include <Kernel.h>
 
   #define I2CADAPTER_MAX_QUEUE_PRINT 3
+  #ifndef PREALLOCATED_I2C_JOBS
+    #define PREALLOCATED_I2C_JOBS 4
+  #endif
 
   /*
   * These are used as function-return codes, and have nothing to do with bus
@@ -85,6 +88,11 @@ This file is the tortured result of growing pains since the beginning of
   #define I2C_BUS_FLAG_PING_RUN   0x04    // Have we run a full bus discovery?
   #define I2C_BUS_FLAG_PINGING    0x08    // Are we running a full ping?
 
+
+  /* These are transfer flags specific to I2C. */
+  #define I2C_BUSOP_FLAG_SUBADDR         0x80    // Send a sub-address?
+  #define I2C_BUSOP_FLAG_VERBOSITY_MASK  0x07    // Low three bits store verbosity.
+
   // Forward declaration. Definition order in this file is very important.
   class I2CDevice;
   class I2CAdapter;
@@ -95,34 +103,32 @@ This file is the tortured result of growing pains since the beginning of
   */
   class I2CBusOp : public BusOp {
     public:
-      I2CDevice  *requester;
-      I2CAdapter *device;
-
-      int16_t sub_addr;
-
+      I2CDevice* callback = nullptr;  // Which class gets pinged when we've finished?
+      I2CAdapter *device      = nullptr;
       int       txn_id;        // How are we going to keep track of this item?
+      int16_t sub_addr = -1;
+      uint8_t dev_addr =  0;
 
-      int8_t verbosity;
-      uint8_t dev_addr;
-
-      bool      subaddr_sent;    // Have the subaddress been sent yet?
-
-
+      I2CBusOp();
       I2CBusOp(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len);
       ~I2CBusOp();
-
 
       /*
       * This queue item can begin executing. This is where any bus access should be initiated.
       */
-      int8_t begin(void);
+      int8_t begin();
 
       /**
       * Decide if we need to send a subaddress.
       *
       * @return true if we do. False otherwise.
       */
-      inline bool need_to_send_subaddr(void) {	return ((sub_addr != -1) && !subaddr_sent);  }
+      inline bool need_to_send_subaddr() {	return ((sub_addr != -1) && !subaddr_sent());  }
+
+      inline int8_t getVerbosity() {   return (_flags & I2C_BUSOP_FLAG_VERBOSITY_MASK);   };
+      inline void setVerbosity(int8_t v) {
+        _flags = (v & I2C_BUSOP_FLAG_VERBOSITY_MASK) | (_flags & ~I2C_BUSOP_FLAG_VERBOSITY_MASK);
+      };
 
       /*
       * Called from the ISR to advance this operation on the bus.
@@ -130,7 +136,7 @@ This file is the tortured result of growing pains since the beginning of
       int8_t advance_operation(uint32_t status_reg);
 
       /* Call to mark something completed that may not be. */
-      void markComplete(void);
+      void markComplete();
 
       /**
       * This will mark the bus operation complete with a given error code.
@@ -142,12 +148,19 @@ This file is the tortured result of growing pains since the beginning of
       int8_t abort(XferFault);
 
       /* Debug aides */
-      void printDebug(void);
+      void printDebug();
       void printDebug(StringBuilder*);
 
 
     private:
+      uint8_t  _flags        = 0;    // No flags set.
+
       int8_t init_dma();
+      inline bool subaddr_sent() {  return (_flags & I2C_BUSOP_FLAG_SUBADDR);  };
+      inline void subaddr_sent(bool en) {
+        _flags = (en) ? (_flags | I2C_BUSOP_FLAG_SUBADDR) : (_flags & ~(I2C_BUSOP_FLAG_SUBADDR));
+      };
+
 
       static ManuvrMsg event_queue_ready;
   };
@@ -156,7 +169,7 @@ This file is the tortured result of growing pains since the beginning of
   /*
   * This is the class that represents the actual i2c peripheral (master).
   */
-  class I2CAdapter : public EventReceiver {
+  class I2CAdapter : public EventReceiver, public BusAdapter<I2CBusOp> {
     public:
       I2CBusOp* current_queue_item = nullptr;
 
@@ -164,15 +177,19 @@ This file is the tortured result of growing pains since the beginning of
       I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl);  // Constructor takes a bus ID and pins as arguments.
       virtual ~I2CAdapter();           // Destructor
 
+      /* Overrides from the BusAdapter interface */
+      virtual int8_t io_op_callback(BusOp*);
+      virtual int8_t queue_io_job(BusOp*);
+      int8_t advance_work_queue();
+      I2CBusOp* new_op();
+      I2CBusOp* new_op(BusOpcode, BusOpCallback*);
+
 
       // Builds a special bus transaction that does nothing but test for the presence or absence of a slave device.
       void ping_slave_addr(uint8_t);
 
       int8_t addSlaveDevice(I2CDevice*);     // Adds a new device to the bus.
       int8_t removeSlaveDevice(I2CDevice*);  // Removes a device from the bus.
-
-      // This is the fxn that is called to do I/O on the bus.
-      bool insert_work_item(I2CBusOp*);
 
       /* Debug aides */
       void printPingMap(StringBuilder*);
@@ -223,12 +240,13 @@ This file is the tortured result of growing pains since the beginning of
       void __class_teardown();
       void gpioSetup();
 
-      void advance_work_queue();           // Called from the ISR via Event. Advances the bus.
-
       int get_slave_dev_by_addr(uint8_t search_addr);
       void purge_queued_work_by_dev(I2CDevice *dev);
       void purge_queued_work();
       void purge_stalled_job();
+
+
+      static I2CBusOp preallocated_bus_jobs[PREALLOCATED_I2C_JOBS];
   };
 
 
@@ -241,18 +259,19 @@ This file is the tortured result of growing pains since the beginning of
   * Since the platform we are coding for uses an interrupt-driven i2c implementation,
   *   we will need to have callbacks.
   */
-  class I2CDevice {
+  class I2CDevice : public BusOpCallback {
     public:
-      uint8_t _dev_addr;
+      const uint8_t _dev_addr;
 
       /*
       * Constructor
       */
-      I2CDevice(void);
-      ~I2CDevice(void);
+      I2CDevice(uint8_t); // Takes device address.
+      ~I2CDevice();
 
       // Callback for requested operation completion.
-      virtual void operationCompleteCallback(I2CBusOp*);
+      virtual int8_t io_op_callback(BusOp*);
+      virtual int8_t queue_io_job(BusOp*);
 
       /* If your device needs something to happen immediately prior to bus I/O... */
       virtual bool operationCallahead(I2CBusOp*);
@@ -260,7 +279,7 @@ This file is the tortured result of growing pains since the beginning of
       bool assignBusInstance(I2CAdapter*);               // Needs to be called by the i2c class during insertion.
       bool assignBusInstance(volatile I2CAdapter* bus);  // Trivial override.
 
-      bool disassignBusInstance(void);                   // This is to be called from the adapter's unassignment function.
+      bool disassignBusInstance();                   // This is to be called from the adapter's unassignment function.
 
       /* Debug aides */
       virtual void printDebug(StringBuilder*);
@@ -277,14 +296,14 @@ This file is the tortured result of growing pains since the beginning of
       bool write16(int sub_addr, uint16_t dat);
 
       // Convenience functions for reading bytes from a given i2c address/sub-address...
-      bool read8(void);
+      bool read8();
       bool read8(int sub_addr);
       bool read16(int sub_addr);
-      bool read16(void);
+      bool read16();
 
 
     private:
-      I2CAdapter* _bus;
+      I2CAdapter* _bus = nullptr;
 };
 
 
@@ -295,10 +314,10 @@ This file is the tortured result of growing pains since the beginning of
   */
   class I2CDeviceWithRegisters : public I2CDevice {
     public:
-      I2CDeviceWithRegisters(void);
-      ~I2CDeviceWithRegisters(void);
+      I2CDeviceWithRegisters(uint8_t); // Takes device address.
+      ~I2CDeviceWithRegisters();
 
-      bool sync(void);
+      bool sync();
 
 
     protected:
@@ -326,10 +345,10 @@ This file is the tortured result of growing pains since the beginning of
       int8_t writeIndirect(uint8_t base_addr, uint8_t val);
       int8_t writeIndirect(uint8_t base_addr, uint8_t val, bool defer);
 
-      int8_t writeDirtyRegisters(void);   // Automatically writes all registers marked as dirty.
+      int8_t writeDirtyRegisters();   // Automatically writes all registers marked as dirty.
 
       // Sync the given list of registers. And an override that syncs all registers.
-      int8_t syncRegisters(void);
+      int8_t syncRegisters();
 
       /* Low-level stuff. These are the ONLY fxns in this ENTIRE class that should care */
       /*   about ACTUAL register addresses. Everything else ought to be using the index */

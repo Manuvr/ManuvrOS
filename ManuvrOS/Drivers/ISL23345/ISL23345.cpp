@@ -35,9 +35,7 @@ const int8_t ISL23345::ISL23345_ERROR_INVALID_POT      = -5;   // The ISL23345 o
 /*
 * Constructor. Takes the i2c address of this device as sole argument.
 */
-ISL23345::ISL23345(uint8_t i2caddr) : I2CDeviceWithRegisters() {
-	_dev_addr = i2caddr;
-
+ISL23345::ISL23345(uint8_t addr) : I2CDeviceWithRegisters(addr) {
 	dev_enabled = false;
 	dev_init    = false;
 	preserve_state_on_destroy = false;
