@@ -89,7 +89,6 @@ class TMP006 : public I2CDeviceWithRegisters, public SensorWrapper {
     /* Class-specific */
     SensorError check_identity();
     SensorError check_data();        // If all the data required is fresh, updates derived data.
-
 };
 
 #endif

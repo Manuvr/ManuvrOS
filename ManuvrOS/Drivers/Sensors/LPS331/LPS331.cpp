@@ -22,17 +22,38 @@ limitations under the License.
 #include "LPS331.h"
 
 
+const DatumDef datum_defs[] = {
+  {
+    .desc    = "Barometric pressure",
+    .units   = COMMON_UNITS_PRESSURE,
+    .type_id = FLOAT_FM,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "Air temperature",
+    .units   = COMMON_UNITS_C,
+    .type_id = FLOAT_FM,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "Inferred altitude",
+    .units   = COMMON_UNITS_METERS,
+    .type_id = FLOAT_FM,
+    .flgs    = 0x00
+  }
+};
+
+
 /*
 * Constructor. Takes i2c address as argument.
 */
 LPS331::LPS331(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
   _dev_addr = addr;
-  this->isHardware = true;
-  this->defineDatum("Barometric pressure", COMMON_UNITS_PRESSURE, FLOAT_FM);
-  this->defineDatum("Air temperature", COMMON_UNITS_C, FLOAT_FM);
-  this->defineDatum("Inferred altitude", COMMON_UNITS_METERS, FLOAT_FM);
-  this->s_id = "32f9b0436dc76d77de116814263409fe";
-  this->name = "LPS331";
+  defineDatum(&datum_defs[0], SensorReporting::OFF);
+  defineDatum(&datum_defs[1], SensorReporting::OFF);
+  defineDatum(&datum_defs[2], SensorReporting::OFF);
+  s_id = "32f9b0436dc76d77de116814263409fe";
+  name = "LPS331";
   gpioSetup();
 
   // Now we should give them initial definitions. This is our chance to set default configs.
@@ -139,14 +160,14 @@ void LPS331::operationCompleteCallback(I2CBusOp* completed) {
 		switch (temp_reg->addr) {
 		  case LPS331_REG_WHO_AM_I:
 		    temp_reg->unread = false;
-		    if (!sensor_active) {
-		      sensor_active = (0xBB == *(temp_reg->val));
-		      if (sensor_active) {
+		    if (!isActive()) {
+		      isActive(0xBB == *(temp_reg->val));
+		      if (isActive()) {
 		        writeDirtyRegisters();
 		      }
 		    }
 		    else {
-		      sensor_active = (0xBB == *(temp_reg->val));
+		      isActive(0xBB == *(temp_reg->val));
 		    }
 		    break;
 
@@ -182,7 +203,7 @@ void LPS331::operationCompleteCallback(I2CBusOp* completed) {
 void LPS331::printDebug(StringBuilder* temp) {
   if (NULL == temp) return;
   //SensorWrapper::issue_json_map(temp, this);
-  temp->concatf("Baro sensor (LPS331)\t%snitialized\n---------------------------------------------------\n", (sensor_active ? "I": "Uni"));
+  temp->concatf("Baro sensor (LPS331)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
   I2CDeviceWithRegisters::printDebug(temp);
   temp->concatf("\n");
 }

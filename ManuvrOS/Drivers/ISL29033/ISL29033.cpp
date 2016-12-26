@@ -28,15 +28,24 @@ const float ISL29033::res_range_precalc[4][4] = {{7.8125,       31.25,        12
                                                  {0.0305175781, 0.1220703125, 0.48828125,   1.953125},
                                                  {0.0019073486, 0.0076293945, 0.0305175781, 0.1220703125}};
 
+const DatumDef datum_defs[] = {
+  {
+    .desc    = "Light level",
+    .units   = COMMON_UNITS_LUX,
+    .type_id = FLOAT_FM,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  }
+};
+
+
 /*
 * Constructor. Takes i2c address as argument.
 */
 ISL29033::ISL29033(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
   _dev_addr = addr;
-  this->isHardware = true;
-  this->defineDatum("Light level", COMMON_UNITS_LUX, FLOAT_FM);
-  this->s_id = "10899cd83f9ab1218c7cec2bbd589d91";
-  this->name = "ISL29033";
+  s_id = "10899cd83f9ab1218c7cec2bbd589d91";
+  name = "ISL29033";
+  defineDatum(&datum_defs[0], SensorReporting::OFF);
   gpioSetup();
 
   // Default state: Maximum range and maximum resolution.
@@ -92,7 +101,7 @@ void ISL29033::gpioSetup() {
 **************************************************************************/
 SensorError ISL29033::init() {
   if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
-    sensor_active = true;
+    isActive(true);
     setCommandReg();
     setResRange();
     setThresholds();
@@ -167,7 +176,7 @@ SensorError ISL29033::getParameter(uint16_t reg, int len, uint8_t*) {
 
 
 SensorError ISL29033::readSensor() {
-  if (sensor_active) {
+  if (isActive()) {
     if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) ISL29033_REG_DATA_LSB)) {
       if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) ISL29033_REG_DATA_MSB)) {
         return SensorError::NO_ERROR;
@@ -244,7 +253,7 @@ void ISL29033::operationCompleteCallback(I2CBusOp* completed) {
 */
 void ISL29033::printDebug(StringBuilder* temp) {
   if (temp) {
-    temp->concatf("Lux sensor (ISL29033)\t%snitialized\n---------------------------------------------------\n", (sensor_active ? "I": "Uni"));
+    temp->concatf("Lux sensor (ISL29033)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
     I2CDeviceWithRegisters::printDebug(temp);
     //SensorWrapper::issue_json_map(temp, this);
     temp->concatf("\n");

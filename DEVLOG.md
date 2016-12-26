@@ -408,6 +408,9 @@ _---J. Ian Lindsay_
 ### 2016.12.23:
 
     Linux, 32-bit: DEBUG=1
-    1856805   22964   23716 1903485  1d0b7d  Baseline before SensorWrapper simplifications.
-    1867041   22964   23716 1913721  1d3379  Phase 1: Adding flag members.
-    1867173   22900   23716 1913789  1d33bd  Took a moment to modernize some old code.
+    1856805   22964   23716 1903485  Baseline before SensorWrapper simplifications.
+    1867041   22964   23716 1913721  Phase 1: Adding flag members.
+    1867173   22900   23716 1913789  Took a moment to modernize some old code.
+    1867029   22900   23716 1913645  Imparting sanity to sensor dirty.
+    1867833   22904   23716 1914453  Major upending of SensorDatum.
+    1868317   22904   23716 1914937  Adding a debug aid.

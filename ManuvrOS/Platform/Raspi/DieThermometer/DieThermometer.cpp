@@ -26,11 +26,20 @@ limitations under the License.
 
 #include <stdio.h>
 
+const DatumDef datum_defs[] = {
+  {
+    .desc    = "Temperature",
+    .units   = COMMON_UNITS_C,
+    .type_id = FLOAT_FM,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  }
+};
+
 
 RaspiTempSensor::RaspiTempSensor() : SensorWrapper() {
-  this->defineDatum("RasPi Temperature", COMMON_UNITS_C, FLOAT_FM);
-  this->s_id = "009c4b32a55ee286f335c20bfe94975d";
-  this->name = this->datum_list->description;
+  defineDatum(&datum_defs[0], SensorReporting::OFF);
+  s_id = "009c4b32a55ee286f335c20bfe94975d";
+  name = "CPU";
 }
 
 
@@ -48,7 +57,7 @@ RaspiTempSensor::~RaspiTempSensor() {
 */
 SensorError RaspiTempSensor::init() {
   if (readSensor() == SensorError::NO_ERROR) {
-    this->sensor_active = true;
+    isActive(true);
     return SensorError::NO_ERROR;
   }
   else {

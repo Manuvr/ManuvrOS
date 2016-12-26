@@ -23,8 +23,60 @@ limitations under the License.
 #include "SensorWrapper.h"
 
 
-SensorDatum::SensorDatum() {
+SensorDatum::SensorDatum(const DatumDef* d) {
+  def = d;
+  _flags = def->flgs & SENSE_DATUM_FLAG_PRELOAD_MASK;
+  switch (def->type_id) {
+  	// TODO: Needs to handle strings and other pointer types.
+    case INT8_FM:
+    case UINT8_FM:
+    case BOOLEAN_FM:
+      data_len = 1;
+      break;
+    case INT16_FM:
+    case UINT16_FM:
+      data_len = 2;
+      break;
+    case INT32_FM:
+    case UINT32_FM:
+    case FLOAT_FM:
+      data_len = 4;
+      break;
+    case INT64_FM:
+    case UINT64_FM:
+    case DOUBLE_FM:
+      data_len = 8;
+      break;
+    default:
+      break;
+  }
+
+  if (data_len) {
+    data = malloc(4);
+    if (data) {
+      memset(data, 0x00, data_len);
+      mem_ready(true);
+    }
+  }
+}
+
+SensorDatum::SensorDatum(const DatumDef* d, SensorReporting ar) : SensorDatum(d) {
+  autoreport(ar);
 }
 
 SensorDatum::~SensorDatum() {
+}
+
+
+void SensorDatum::autoreport(SensorReporting ar) {
+  switch (ar) {
+    case SensorReporting::OFF:
+      break;
+    case SensorReporting::EVERY_READ:
+      reportAll();
+      break;
+    case SensorReporting::NEW_VALUE:
+      reportChanges();
+      break;
+  }
 }

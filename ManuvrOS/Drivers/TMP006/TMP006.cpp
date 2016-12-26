@@ -27,16 +27,29 @@ I have adapted it for ManuvrOS.
 
 #include "TMP006.h"
 
+const DatumDef datum_defs[] = {
+  {
+    .desc    = "Object Temperature",
+    .units   = COMMON_UNITS_C,
+    .type_id = FLOAT_FM,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "Die Temperature",
+    .units   = COMMON_UNITS_C,
+    .type_id = FLOAT_FM,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  }
+};
 
 
 TMP006::TMP006(uint8_t i2caddr) : I2CDeviceWithRegisters(), SensorWrapper() {
   _dev_addr = i2caddr;
-  this->isHardware = true;
-  this->defineDatum("TMP006 Object Temperature", COMMON_UNITS_C, FLOAT_FM);
-  this->defineDatum("TMP006 Die Temperature", COMMON_UNITS_C, FLOAT_FM);
-  this->s_id = "857fd6d1a5eda4ec0f2eb32aea518f6c";
-  this->name = "TMP006 Thermopile";
-  this->sensor_active = false;
+  //this->isHardware = true;
+  defineDatum(&datum_defs[0], SensorReporting::OFF);
+  defineDatum(&datum_defs[1], SensorReporting::OFF);
+  s_id = "857fd6d1a5eda4ec0f2eb32aea518f6c";
+  name = "TMP006 Thermopile";
 
   defineRegister(TMP006_REG_VOBJ,   (uint16_t) 0x0000, false, false, false);
   defineRegister(TMP006_REG_TAMB,   (uint16_t) 0x0000, false, false, false);
@@ -104,9 +117,9 @@ void TMP006::operationCompleteCallback(I2CBusOp* completed) {
     switch (temp_reg->addr) {
       case TMP006_REG_MANID:
       case TMP006_REG_DEVID:
-		    if (!sensor_active) {
+		    if (!isActive()) {
 		      check_identity();
-		      if (sensor_active) {
+		      if (isActive()) {
 		        writeDirtyRegisters();
 		      }
 		    }
@@ -138,7 +151,7 @@ void TMP006::operationCompleteCallback(I2CBusOp* completed) {
 * Dump this item to the dev log.
 */
 void TMP006::printDebug(StringBuilder* temp) {
-  temp->concatf("Thermopile sensor (TMP006)\t%snitialized\n---------------------------------------------------\n", (sensor_active ? "I": "Uni"));
+  temp->concatf("Thermopile sensor (TMP006)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
   I2CDeviceWithRegisters::printDebug(temp);
   //SensorWrapper::issue_json_map(temp, this);
   temp->concatf("\n");
@@ -152,7 +165,7 @@ void TMP006::printDebug(StringBuilder* temp) {
 
 SensorError TMP006::check_identity() {
   if ((regValue(TMP006_REG_DEVID) == 0x67) && (regValue(TMP006_REG_MANID) == 0x5449)) {
-    sensor_active = true;
+    isActive(true);
     markRegRead(TMP006_REG_DEVID);
     markRegRead(TMP006_REG_MANID);
 
@@ -163,7 +176,7 @@ SensorError TMP006::check_identity() {
 
 
 SensorError TMP006::check_data() {
-  if (sensor_active) {
+  if (isActive()) {
     if (regUpdated(TMP006_REG_TAMB) && regUpdated(TMP006_REG_VOBJ)) {
       float raw_die_temp = (float) (regValue(TMP006_REG_TAMB) >> 2);
       raw_die_temp *= 0.03125; // Convert to celsius

@@ -23,17 +23,38 @@ limitations under the License.
 
 const V_Cap_Point* batt_capacity_curves[6] = {chem_index_0, chem_index_1, chem_index_2, chem_index_3, chem_index_4, chem_index_5};  // Ten points on the curve ought to be enough for reliable interpolation.
 
+const DatumDef datum_defs[] = {
+  {
+    .desc    = "Instantaneous Current",
+    .units   = COMMON_UNITS_AMPS,
+    .type_id = FLOAT_FM,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "Instantaneous Voltage",
+    .units   = COMMON_UNITS_VOLTS,
+    .type_id = FLOAT_FM,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "Instantaneous Power",
+    .units   = COMMON_UNITS_WATTS,
+    .type_id = FLOAT_FM,
+    .flgs    = 0x00
+  }
+};
+
+
 /*
 * Constructor. Takes i2c address as argument.
 */
 INA219::INA219(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
   _dev_addr = addr;
-  this->isHardware = true;
-  this->defineDatum("Instantaneous Current", COMMON_UNITS_AMPS, FLOAT_FM);
-  this->defineDatum("Instantaneous Voltage", COMMON_UNITS_VOLTS, FLOAT_FM);
-  this->defineDatum("Instantaneous Power",   COMMON_UNITS_WATTS, FLOAT_FM);
-  this->s_id = "e1671797c52e15f763380b45e841ec32";
-  this->name = "INA219";
+  defineDatum(&datum_defs[0], SensorReporting::OFF);
+  defineDatum(&datum_defs[1], SensorReporting::OFF);
+  defineDatum(&datum_defs[2], SensorReporting::OFF);
+  s_id = "e1671797c52e15f763380b45e841ec32";
+  name = "INA219";
   //batt_min_v         = 0;  // We will be unable to init() with these values.
   //batt_max_v         = 0;  // We will be unable to init() with these values.
   //batt_capacity      = 0;  // We will be unable to init() with these values.
@@ -95,7 +116,7 @@ SensorError INA219::init() {
   writeIndirect(INA219_REG_CALIBRATION, cal_value, true);
   writeIndirect(INA219_REG_CONFIGURATION, cfg_value);
   //if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
-    sensor_active = true;
+    isActive(true);
     return SensorError::NO_ERROR;
   //}
   //else {
@@ -147,7 +168,7 @@ SensorError INA219::getParameter(uint16_t reg, int len, uint8_t*) {
 
 
 SensorError INA219::readSensor() {
-  if (sensor_active && init_complete) {
+  if (isActive() && init_complete) {
     if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) INA219_REG_SHUNT_VOLTAGE)) {
       if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) INA219_REG_BUS_VOLTAGE)) {
         if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) INA219_REG_POWER)) {
@@ -205,7 +226,7 @@ void INA219::operationCompleteCallback(I2CBusOp* completed) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void INA219::printDebug(StringBuilder* temp) {
-  temp->concatf("Current sensor (INA219)\t%snitialized\n---------------------------------------------------\n", (sensor_active ? "I": "Uni"));
+  temp->concatf("Current sensor (INA219)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
   I2CDeviceWithRegisters::printDebug(temp);
   //SensorWrapper::issue_json_map(temp, this);
   //temp->concatf("\n");

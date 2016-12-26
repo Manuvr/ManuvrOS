@@ -22,6 +22,22 @@ limitations under the License.
 #include "TSL2561.h"
 
 
+const DatumDef datum_defs[] = {
+  {
+    .desc    = "Vis-IR Intensity",
+    .units   = COMMON_UNITS_LUX,
+    .type_id = FLOAT_FM,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "IR Intensity",
+    .units   = COMMON_UNITS_LUX,
+    .type_id = FLOAT_FM,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  }
+};
+
+
 TSL2561::TSL2561(uint8_t addr, uint8_t irq) : TSL2561(addr) {
   _irq_pin  = irq;
 }
@@ -31,11 +47,10 @@ TSL2561::TSL2561(uint8_t addr, uint8_t irq) : TSL2561(addr) {
 */
 TSL2561::TSL2561(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
   _dev_addr = addr;
-  this->isHardware = true;
-  this->defineDatum("Vis-IR Intensity", COMMON_UNITS_PRESSURE, FLOAT_FM);
-  this->defineDatum("IR Intensity", COMMON_UNITS_C, FLOAT_FM);
-  this->s_id = "32f9b0436dc76d77de116814263409fe";
-  this->name = "TSL2561";
+  defineDatum(&datum_defs[0], SensorReporting::OFF);
+  defineDatum(&datum_defs[1], SensorReporting::OFF);
+  s_id = "32f9b0436dc76d77de116814263409fe";
+  name = "TSL2561";
 
   // Now we should give them initial definitions. This is our chance to set default configs.
   defineRegister(TSL2561_REG_CONTROL,    (uint8_t)  0b00000000, false, false, true);
@@ -103,14 +118,14 @@ void TSL2561::operationCompleteCallback(I2CBusOp* completed) {
 		switch (temp_reg->addr) {
 		  case TSL2561_REG_ID:
 		    temp_reg->unread = false;
-		    if (!sensor_active) {
-		      sensor_active = (0xBB == *(temp_reg->val));
-		      if (sensor_active) {
+		    if (!isActive()) {
+		      isActive(0xBB == *(temp_reg->val));
+		      if (isActive()) {
 		        writeDirtyRegisters();
 		      }
 		    }
 		    else {
-		      sensor_active = (0xBB == *(temp_reg->val));
+		      isActive(0xBB == *(temp_reg->val));
 		    }
 		    break;
 
@@ -144,7 +159,7 @@ void TSL2561::operationCompleteCallback(I2CBusOp* completed) {
 void TSL2561::printDebug(StringBuilder* temp) {
   if (NULL == temp) return;
   //SensorWrapper::issue_json_map(temp, this);
-  temp->concatf("Lux sensor (TSL2561)\t%snitialized\n---------------------------------------------------\n", (sensor_active ? "I": "Uni"));
+  temp->concatf("Lux sensor (TSL2561)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
   I2CDeviceWithRegisters::printDebug(temp);
   temp->concatf("\n");
 }
