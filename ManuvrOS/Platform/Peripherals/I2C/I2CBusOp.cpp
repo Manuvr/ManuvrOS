@@ -196,7 +196,7 @@ int8_t I2CBusOp::init_dma() {
     DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;   // Receive
     DMA_ITConfig(DMA1_Stream0, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE | DMA_IT_DME, ENABLE);
     DMA_Init(DMA1_Stream0, &DMA_InitStructure);
-    //if (verbosity > 5) local_log.concatf("init_dma():\ttxn_id: 0x%08x\tBuffer address: 0x%08x\n", txn_id, (uint32_t) buf);
+    //if (getVerbosity() > 5) local_log.concatf("init_dma():\ttxn_id: 0x%08x\tBuffer address: 0x%08x\n", txn_id, (uint32_t) buf);
     I2C_DMALastTransferCmd(I2C1, ENABLE);
   }
   else if (opcode == BusOpcode::TX) {
@@ -205,7 +205,7 @@ int8_t I2CBusOp::init_dma() {
     DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;   // Transmit
     DMA_ITConfig(DMA1_Stream7, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE | DMA_IT_DME, ENABLE);
     DMA_Init(DMA1_Stream7, &DMA_InitStructure);
-    //if (verbosity > 5) local_log.concatf("init_dma():\ttxn_id: 0x%08x\tBuffer address: 0x%08x\n", txn_id, (uint32_t) buf);
+    //if (getVerbosity() > 5) local_log.concatf("init_dma():\ttxn_id: 0x%08x\tBuffer address: 0x%08x\n", txn_id, (uint32_t) buf);
     I2C_DMALastTransferCmd(I2C1, DISABLE);
   }
   else {
@@ -280,7 +280,7 @@ int8_t I2CBusOp::init_dma() {
   int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
     StringBuilder output;
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 6) output.concatf("I2CBusOp::advance_operation(0x%08x): \t %s\t", status_reg, BusOp::getStateString(xfer_state));
+    if (getVerbosity() > 6) output.concatf("I2CBusOp::advance_operation(0x%08x): \t %s\t", status_reg, BusOp::getStateString(xfer_state));
     #endif
     switch (xfer_state) {
       case XferState::QUEUED:     // These are states we should not be in at this point...
@@ -301,7 +301,7 @@ int8_t I2CBusOp::init_dma() {
         break;
 
       case XferState::COMPLETE:  // This operation is comcluded.
-        if (verbosity > 5) {
+        if (getVerbosity() > 5) {
           #ifdef __MANUVR_DEBUG
           output.concatf("\t--- Interrupt following job (0x%08x)\n", status_reg);
           #endif
@@ -312,14 +312,14 @@ int8_t I2CBusOp::init_dma() {
       case XferState::FAULT:     // Something asploded.
       default:
         #ifdef __MANUVR_DEBUG
-        if (verbosity > 1) output.concatf("\t--- Something is bad wrong. Our xfer_state is %s\n", BusOp::getStateString(xfer_state));
+        if (getVerbosity() > 1) output.concatf("\t--- Something is bad wrong. Our xfer_state is %s\n", BusOp::getStateString(xfer_state));
         #endif
         abort();
         break;
     }
 
-    if (verbosity > 4) {
-      if (verbosity > 6) printDebug(&output);
+    if (getVerbosity() > 4) {
+      if (getVerbosity() > 6) printDebug(&output);
       #ifdef __MANUVR_DEBUG
       output.concatf("---> %s\n", BusOp::getStateString(xfer_state));
       #endif
@@ -338,7 +338,7 @@ int8_t I2CBusOp::init_dma() {
   int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
     StringBuilder output;
     #ifdef __MANUVR_DEBUG
-    if (verbosity > 6) output.concatf("I2CBusOp::advance_operation(0x%08x): \t %s\t", status_reg, BusOp::getStateString(xfer_state));
+    if (getVerbosity() > 6) output.concatf("I2CBusOp::advance_operation(0x%08x): \t %s\t", status_reg, BusOp::getStateString(xfer_state));
     #endif
     switch (xfer_state) {
       case XferState::INITIATE:     // We need to send a START condition.
@@ -417,7 +417,7 @@ int8_t I2CBusOp::init_dma() {
         }
         break;
       case XferState::COMPLETE:  // This operation is comcluded.
-        if (verbosity > 5) {
+        if (getVerbosity() > 5) {
           #ifdef __MANUVR_DEBUG
           output.concatf("\t--- Interrupt following job (0x%08x)\n", status_reg);
           #endif
@@ -428,14 +428,14 @@ int8_t I2CBusOp::init_dma() {
         break;
       default:
         #ifdef __MANUVR_DEBUG
-        if (verbosity > 1) output.concatf("\t--- Something is bad wrong. Our xfer_state is %s\n", BusOp::getStateString(xfer_state));
+        if (getVerbosity() > 1) output.concatf("\t--- Something is bad wrong. Our xfer_state is %s\n", BusOp::getStateString(xfer_state));
         #endif
         abort(I2C_ERR_CODE_DEF_CASE);
         break;
     }
 
-    if (verbosity > 4) {
-      if (verbosity > 6) printDebug(&output);
+    if (getVerbosity() > 4) {
+      if (getVerbosity() > 6) printDebug(&output);
       #ifdef __MANUVR_DEBUG
       output.concatf("---> %s\n", BusOp::getStateString(xfer_state));
       #endif
@@ -454,7 +454,7 @@ int8_t I2CBusOp::init_dma() {
   int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
     switch (status_reg) {
       case 1:
-        subaddr_sent = true;
+        subaddr_sent(true);
         break;
     }
     return 0;
