@@ -45,12 +45,10 @@ TSL2561::TSL2561(uint8_t addr, uint8_t irq) : TSL2561(addr) {
 /*
 * Constructor. Takes i2c address as argument.
 */
-TSL2561::TSL2561(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
+TSL2561::TSL2561(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper("TSL2561") {
   _dev_addr = addr;
   defineDatum(&datum_defs[0], SensorReporting::OFF);
   defineDatum(&datum_defs[1], SensorReporting::OFF);
-  s_id = "32f9b0436dc76d77de116814263409fe";
-  name = "TSL2561";
 
   // Now we should give them initial definitions. This is our chance to set default configs.
   defineRegister(TSL2561_REG_CONTROL,    (uint8_t)  0b00000000, false, false, true);

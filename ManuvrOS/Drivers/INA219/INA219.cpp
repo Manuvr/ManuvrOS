@@ -48,13 +48,11 @@ const DatumDef datum_defs[] = {
 /*
 * Constructor. Takes i2c address as argument.
 */
-INA219::INA219(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
+INA219::INA219(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper("INA219") {
   _dev_addr = addr;
   defineDatum(&datum_defs[0], SensorReporting::OFF);
   defineDatum(&datum_defs[1], SensorReporting::OFF);
   defineDatum(&datum_defs[2], SensorReporting::OFF);
-  s_id = "e1671797c52e15f763380b45e841ec32";
-  name = "INA219";
   //batt_min_v         = 0;  // We will be unable to init() with these values.
   //batt_max_v         = 0;  // We will be unable to init() with these values.
   //batt_capacity      = 0;  // We will be unable to init() with these values.

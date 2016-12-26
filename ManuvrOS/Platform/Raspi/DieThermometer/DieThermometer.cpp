@@ -36,10 +36,8 @@ const DatumDef datum_defs[] = {
 };
 
 
-RaspiTempSensor::RaspiTempSensor() : SensorWrapper() {
+RaspiTempSensor::RaspiTempSensor() : SensorWrapper("CPU") {
   defineDatum(&datum_defs[0], SensorReporting::OFF);
-  s_id = "009c4b32a55ee286f335c20bfe94975d";
-  name = "CPU";
 }
 
 

@@ -414,3 +414,8 @@ _---J. Ian Lindsay_
     1867029   22900   23716 1913645  Imparting sanity to sensor dirty.
     1867833   22904   23716 1914453  Major upending of SensorDatum.
     1868317   22904   23716 1914937  Adding a debug aid.
+    1868257   22904   23716 1914877  Taking back some slack.
+    1868041   22900   23716 1914657  More slack removal and bug fixes.
+    1867501   22900   23716 1914117  Removal of crufty json fxns.
+    1867401   22900   23716 1914017  Circling potential cuts.
+    1867309   22900   23716 1913925  More member removal.

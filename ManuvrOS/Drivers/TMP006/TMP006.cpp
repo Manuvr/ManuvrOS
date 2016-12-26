@@ -43,13 +43,10 @@ const DatumDef datum_defs[] = {
 };
 
 
-TMP006::TMP006(uint8_t i2caddr) : I2CDeviceWithRegisters(), SensorWrapper() {
+TMP006::TMP006(uint8_t i2caddr) : I2CDeviceWithRegisters(), SensorWrapper("TMP006") {
   _dev_addr = i2caddr;
-  //this->isHardware = true;
   defineDatum(&datum_defs[0], SensorReporting::OFF);
   defineDatum(&datum_defs[1], SensorReporting::OFF);
-  s_id = "857fd6d1a5eda4ec0f2eb32aea518f6c";
-  name = "TMP006 Thermopile";
 
   defineRegister(TMP006_REG_VOBJ,   (uint16_t) 0x0000, false, false, false);
   defineRegister(TMP006_REG_TAMB,   (uint16_t) 0x0000, false, false, false);

@@ -25,6 +25,8 @@
 
 #include <inttypes.h>
 
+class StringBuilder;
+
 #ifdef __cplusplus
  extern "C" {
 #endif
@@ -37,6 +39,7 @@ typedef struct {
 
 void uuid_from_str(const char *str, UUID*);
 void uuid_to_str(const UUID*, char *buffer, int buflen);
+void uuid_to_sb(const UUID*, StringBuilder*);
 void uuid_gen(UUID*);
 int  uuid_compare(UUID*, UUID*);
 void uuid_copy(UUID* src, UUID* dest);

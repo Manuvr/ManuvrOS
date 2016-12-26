@@ -53,19 +53,23 @@ const char* SensorWrapper::errorString(SensorError err) {
 
 
 /* Constructor */
-SensorWrapper::SensorWrapper() {
-  datum_list    = nullptr;
-  name          = nullptr;
-  s_id          = nullptr;
-  ar_callback   = nullptr;
-  data_count    = 0;
-  updated_at    = 0;
+SensorWrapper::SensorWrapper(const char* n, const char* uid_str) {
+  name = n;
+  uuid_from_str(uid_str, &uuid);
+}
+
+/* Constructor */
+SensorWrapper::SensorWrapper(const char* n) {
+  name = n;
+  uuid_gen(&uuid);
 }
 
 
 /* Destructor */
 SensorWrapper::~SensorWrapper() {
-  clear_data(datum_list);
+  if (datum_list) {
+    delete datum_list;
+  }
 }
 
 
@@ -73,8 +77,8 @@ SensorWrapper::~SensorWrapper() {
 * Fxns that deal with sensor representation...                                                      *
 ****************************************************************************************************/
 
-void SensorWrapper::setSensorId(const char *nu_s_id) {
-	s_id = nu_s_id;
+void SensorWrapper::setSensorId(const char *uid_str) {
+	uuid_from_str(uid_str, &uuid);
 }
 
 
@@ -98,22 +102,15 @@ bool SensorWrapper::isDirty() {
   return false;
 }
 
-/* Is the given datum in this sensor dirty? */
-bool SensorWrapper::isDirty(uint8_t dat) {
-  if (dat > data_count) {
-    return get_datum(dat)->dirty();
-  }
-  return false;
-}
-
 
 /*
 * Mark a given datum in the sensor as having been updated.
 * Also marks the sensor-as-a-whole as having been updated.
 */
 SensorError SensorWrapper::mark_dirty(uint8_t dat) {
-  if (dat < data_count) {
-    (get_datum(dat))->dirty(true);
+  SensorDatum* current = get_datum(dat);
+  if (current) {
+    current->dirty(true);
     updated_at = micros();
     return SensorError::NO_ERROR;
   }
@@ -150,21 +147,6 @@ SensorError SensorWrapper::markClean() {
 
 
 /*
-* Mark a given datum in this sensor as having been read.
-*/
-SensorError SensorWrapper::markClean(uint8_t dat) {
-  SensorDatum* current = get_datum(dat);
-  if (current) {
-    current->dirty(false);
-  }
-  else {
-    return SensorError::INVALID_DATUM;
-  }
-  return SensorError::NO_ERROR;
-}
-
-
-/*
 * Sets all data in this sensor to the given autoreporting state.
 */
 void SensorWrapper::setAutoReporting(SensorReporting nu_ar_state) {
@@ -179,13 +161,12 @@ void SensorWrapper::setAutoReporting(SensorReporting nu_ar_state) {
 * Sets a given datum in this sensor to the given autoreporting state.
 */
 SensorError SensorWrapper::setAutoReporting(uint8_t dat, SensorReporting nu_ar_state) {
-  if (dat > data_count) {
-    get_datum(dat)->autoreport(nu_ar_state);
+  SensorDatum* current = get_datum(dat);
+  if (current) {
+    current->autoreport(nu_ar_state);
+    return SensorError::NO_ERROR;
   }
-  else {
-    return SensorError::INVALID_DATUM;
-  }
-  return SensorError::NO_ERROR;
+  return SensorError::INVALID_DATUM;
 }
 
 
@@ -193,43 +174,6 @@ SensorError SensorWrapper::setAutoReporting(uint8_t dat, SensorReporting nu_ar_s
 /****************************************************************************************************
 * Functions that generate string outputs.                                                           *
 ****************************************************************************************************/
-
-/*
-* This function takes two pointers as arguments. The datum is read, and written to
-* the StringBuilder.
-*/
-SensorError SensorWrapper::writeDatumDataToSB(SensorDatum* current, StringBuilder* buffer) {
-  switch (current->def->type_id) {
-    case INT8_FM:
-    case INT16_FM:
-    case INT32_FM:
-    case INT64_FM:
-      buffer->concat(*((int *) current->data));
-      break;
-    case UINT8_FM:
-    case UINT16_FM:
-    case UINT32_FM:
-    case UINT64_FM:
-      buffer->concat(*((unsigned int *) current->data));
-      break;
-    case BOOLEAN_FM:
-      buffer->concat((*((bool *) current->data) == 0) ? "false":"true");
-      break;
-    case FLOAT_FM:
-      buffer->concat(*((float *) current->data));
-      break;
-    case DOUBLE_FM:
-      buffer->concat(*((double *) current->data));
-      break;
-    case STR_FM:
-      buffer->concat((char*) current->data);
-      break;
-    default:
-      return SensorError::UNHANDLED_TYPE;
-  }
-  return SensorError::NO_ERROR;
-}
-
 
 SensorError SensorWrapper::readAsString(StringBuilder* buffer) {
   return SensorError::NO_ERROR;
@@ -244,17 +188,9 @@ SensorError SensorWrapper::readAsString(uint8_t dat, StringBuilder* buffer) {
   SensorDatum* current = get_datum(dat);
   if (current) {
     current->dirty(false);
-    if (writeDatumDataToSB(current, buffer) == SensorError::NO_ERROR) {
-      buffer->concatf(" %s", current->def->units);
-    }
-    else {
-      return SensorError::UNHANDLED_TYPE;
-    }
+    return current->printValue(buffer);
   }
-  else {
-    return SensorError::INVALID_DATUM;
-  }
-  return SensorError::NO_ERROR;
+  return SensorError::INVALID_DATUM;
 }
 
 
@@ -345,25 +281,10 @@ SensorError SensorWrapper::defineDatum(const DatumDef* def, SensorReporting ar) 
 
 
 /*
-* Frees the memory associated with the given datum. Please note that this does not change the
-*   IDs of datums that were added after the given datum.
-*/
-void SensorWrapper::clear_data(SensorDatum* current) {
-  if (current) {
-    clear_data(current->next);
-    if (current->data) {
-      free(current->data);
-    }
-    delete current;
-  }
-}
-
-
-/*
 * Private function that inserts the freshly-formed datum into the linked-list of data in this sensor.
 */
 void SensorWrapper::insert_datum(SensorDatum* nu) {
-  if (datum_list == NULL) {
+  if (nullptr == datum_list) {
     datum_list = nu;
   }
   else {
@@ -373,11 +294,6 @@ void SensorWrapper::insert_datum(SensorDatum* nu) {
     }
     current->next = nu;
   }
-
-  if (nu->v_id == -1) {
-    nu->v_id = data_count;
-  }
-  data_count++;
 }
 
 
@@ -386,13 +302,11 @@ void SensorWrapper::insert_datum(SensorDatum* nu) {
 */
 SensorDatum* SensorWrapper::get_datum(uint8_t idx) {
   SensorDatum* current = datum_list;
-  while (current) {
-    if (current->v_id == idx) {
-      return current;
-    }
+  uint8_t i = 0;
+  while ((current) && (i++ < idx)) {
     current = current->next;
   }
-  return nullptr;
+  return current;
 }
 
 
@@ -401,31 +315,34 @@ SensorDatum* SensorWrapper::get_datum(uint8_t idx) {
 * Static functions live below this block...                                                         *
 ****************************************************************************************************/
 
+#if defined(__BUILD_HAS_JSON)
+#include <jansson.h>
+
 /*
 * Static function that takes a SensorWrapper and returns a JSON object that constitutes its definition.
 */
-void SensorWrapper::issue_json_map(StringBuilder* provided_buffer, SensorWrapper* sw) {
-  provided_buffer->concatf("\"%s\":{\"name\":\"%s\",\"hardware\":%s,\"data\":{", sw->s_id, sw->name, ((sw->isHardware()) ? "true" : "false"));
-  SensorDatum* current = sw->datum_list;
-  while (current) {
-  	provided_buffer->concatf("\"%d\":{\"desc\":\"%s\",\"unit\":\"%s\",\"autoreport\":\"%s\"%s", current->v_id, current->def->desc, current->def->units, current->autoreport() ? "yes" : "no", ((nullptr == current->next) ? "}" : "},"));
-  	current = current->next;
-  }
-  provided_buffer->concat("}}");
+void SensorWrapper::issue_json_map(json_t* obj, SensorWrapper* sw) {
+  //provided_buffer->concatf("\"%s\":{\"name\":\"%s\",\"hardware\":%s,\"data\":{", sw->s_id, sw->name, ((sw->isHardware()) ? "true" : "false"));
+  //SensorDatum* current = sw->datum_list;
+  //while (current) {
+  //	provided_buffer->concatf("\"%d\":{\"desc\":\"%s\",\"unit\":\"%s\",\"autoreport\":\"%s\"%s", current->v_id, current->def->desc, current->def->units, current->autoreport() ? "yes" : "no", ((nullptr == current->next) ? "}" : "},"));
+  //	current = current->next;
+  //}
+  //provided_buffer->concat("}}");
 }
 
 
 /*
 * Static function that takes a SensorWrapper and returns a JSON object that contains all of its values.
 */
-void SensorWrapper::issue_json_value(StringBuilder* provided_buffer, SensorWrapper* sw) {
-  provided_buffer->concatf("{\"%s\":{\"value\":{", sw->s_id);
-  for (uint8_t i = 0; i < sw->data_count; i++) {
-  	  provided_buffer->concatf("\"%d\":\"", i);
-      sw->readAsString(i, provided_buffer);
-      provided_buffer->concat((i == sw->data_count) ? "\"" : "\",");
-  }
-  provided_buffer->concatf("},\"updated_at\":%d}}", (unsigned int)sw->updated_at);
+void SensorWrapper::issue_json_value(json_t* obj, SensorWrapper* sw) {
+  //provided_buffer->concatf("{\"%s\":{\"value\":{", sw->s_id);
+  //for (uint8_t i = 0; i < sw->data_count; i++) {
+  //	  provided_buffer->concatf("\"%d\":\"", i);
+  //    sw->readAsString(i, provided_buffer);
+  //    provided_buffer->concat((i == sw->data_count) ? "\"" : "\",");
+  //}
+  //provided_buffer->concatf("},\"updated_at\":%d}}", (unsigned int)sw->updated_at);
 }
 
 
@@ -434,12 +351,14 @@ void SensorWrapper::issue_json_value(StringBuilder* provided_buffer, SensorWrapp
 *   the value that is specified. If the value is out of range, returns an empty set
 *   where we would otherwise expect to find values.
 */
-void SensorWrapper::issue_json_value(StringBuilder* provided_buffer, SensorWrapper* sw, uint8_t dat) {
-  provided_buffer->concatf("{\"%s\":{\"value\":{", sw->s_id);
-  if (dat > sw->data_count) {
-  	  provided_buffer->concatf("\"%d\":\"", dat);
-      sw->readAsString(dat, provided_buffer);
-      provided_buffer->concat("\"");
-  }
-  provided_buffer->concatf("},\"updated_at\":%d}}", (unsigned int)sw->updated_at);
+void SensorWrapper::issue_json_value(json_t* obj, SensorWrapper* sw, uint8_t dat) {
+  //provided_buffer->concatf("{\"%s\":{\"value\":{", sw->s_id);
+  //if (dat > sw->data_count) {
+  //	  provided_buffer->concatf("\"%d\":\"", dat);
+  //    sw->readAsString(dat, provided_buffer);
+  //    provided_buffer->concat("\"");
+  //}
+  //provided_buffer->concatf("},\"updated_at\":%d}}", (unsigned int)sw->updated_at);
 }
+
+#endif   //__BUILD_HAS_JSON

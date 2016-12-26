@@ -52,19 +52,28 @@ SensorDatum::SensorDatum(const DatumDef* d) {
   }
 
   if (data_len) {
-    data = malloc(4);
+    data = malloc(data_len);
     if (data) {
       memset(data, 0x00, data_len);
-      mem_ready(true);
+      _flags |= SENSE_DATUM_FLAG_MEM_ALLOC;
     }
   }
 }
+
 
 SensorDatum::SensorDatum(const DatumDef* d, SensorReporting ar) : SensorDatum(d) {
   autoreport(ar);
 }
 
+
 SensorDatum::~SensorDatum() {
+  if (next) {
+    delete next;
+  }
+  if (data) {
+    data_len = 0;
+    free(data);
+  }
 }
 
 
@@ -79,4 +88,42 @@ void SensorDatum::autoreport(SensorReporting ar) {
       reportChanges();
       break;
   }
+}
+
+
+SensorError SensorDatum::printValue(StringBuilder* output) {
+  switch (def->type_id) {
+    case INT8_FM:
+    case INT16_FM:
+    case INT32_FM:
+    case INT64_FM:
+      output->concat(*((int*) data));
+      break;
+    case UINT8_FM:
+    case UINT16_FM:
+    case UINT32_FM:
+    case UINT64_FM:
+      output->concat(*((unsigned int*) data));
+      break;
+    case BOOLEAN_FM:
+      output->concat((*((bool*) data) == 0) ? "false":"true");
+      break;
+    case FLOAT_FM:
+      output->concat(*((float*) data));
+      break;
+    case DOUBLE_FM:
+      output->concat(*((double*) data));
+      break;
+    case STR_FM:
+      output->concat((char*) data);
+      break;
+    default:
+      return SensorError::UNHANDLED_TYPE;
+  }
+  if (def->units) output->concatf(" %s", def->units);
+  return SensorError::NO_ERROR;
+}
+
+
+void SensorDatum::printDebug(StringBuilder* output) {
 }
