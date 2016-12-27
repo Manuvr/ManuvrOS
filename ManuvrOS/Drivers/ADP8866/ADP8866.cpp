@@ -197,8 +197,8 @@ int8_t ADP8866::init() {
 * These are overrides from I2CDeviceWithRegisters.                                                  *
 ****************************************************************************************************/
 
-void ADP8866::operationCompleteCallback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::operationCompleteCallback(completed);
+int8_t ADP8866::io_op_callback(I2CBusOp* completed) {
+  I2CDeviceWithRegisters::io_op_callback(completed);
 
   DeviceRegister *temp_reg = getRegisterByBaseAddress(completed->sub_addr);
   switch (completed->sub_addr) {
@@ -324,6 +324,7 @@ void ADP8866::operationCompleteCallback(I2CBusOp* completed) {
         break;
   }
   flushLocalLog();
+  return 0;
 }
 
 

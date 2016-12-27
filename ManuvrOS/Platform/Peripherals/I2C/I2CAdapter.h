@@ -327,7 +327,7 @@ This file is the tortured result of growing pains since the beginning of
 
 
       // Callback for requested operation completion.
-      virtual void operationCompleteCallback(I2CBusOp*);
+      virtual int8_t io_op_callback(I2CBusOp*);
       /* If your device needs something to happen immediately prior to bus I/O... */
       virtual bool operationCallahead(I2CBusOp*);
 

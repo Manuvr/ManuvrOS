@@ -70,7 +70,7 @@ class LDS8160 : public I2CDeviceWithRegisters, public EventReceiver {
 
 
     /* Overrides from I2CDeviceWithRegisters... */
-    void operationCompleteCallback(I2CBusOp*);
+    int8_t io_op_callback(I2CBusOp*);
     void printDebug(StringBuilder*);
 
     /* Overrides from EventReceiver */

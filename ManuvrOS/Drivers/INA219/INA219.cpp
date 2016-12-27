@@ -184,8 +184,8 @@ SensorError INA219::readSensor() {
 * These are overrides from I2CDeviceWithRegisters.                                                  *
 ****************************************************************************************************/
 
-void INA219::operationCompleteCallback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::operationCompleteCallback(completed);
+int8_t INA219::io_op_callback(I2CBusOp* completed) {
+  I2CDeviceWithRegisters::io_op_callback(completed);
   int i = 0;
   DeviceRegister *temp_reg = reg_defs.get(i++);
   while (temp_reg != NULL) {
@@ -214,6 +214,7 @@ void INA219::operationCompleteCallback(I2CBusOp* completed) {
     }
     temp_reg = reg_defs.get(i++);
   }
+  return 0;
 }
 
 

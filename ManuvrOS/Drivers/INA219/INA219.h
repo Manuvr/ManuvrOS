@@ -191,7 +191,7 @@ class INA219 : public I2CDeviceWithRegisters, public SensorWrapper {
     SensorError getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
 
     /* Overrides from I2CDevice... */
-    void operationCompleteCallback(I2CBusOp*);
+    int8_t io_op_callback(I2CBusOp*);
     void printDebug(StringBuilder*);
 
 

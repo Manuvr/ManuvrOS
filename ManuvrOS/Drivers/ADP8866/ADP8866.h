@@ -117,7 +117,7 @@ class ADP8866 : public EventReceiver, I2CDeviceWithRegisters {
     int8_t init();
 
     /* Overrides from I2CDeviceWithRegisters... */
-    void operationCompleteCallback(I2CBusOp*);
+    int8_t io_op_callback(I2CBusOp*);
     void printDebug(StringBuilder*);
 
     /* Overrides from EventReceiver */

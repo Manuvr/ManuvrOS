@@ -189,8 +189,8 @@ SensorError ISL29033::readSensor() {
 * These are overrides from I2CDevice.                                                               *
 ****************************************************************************************************/
 
-void ISL29033::operationCompleteCallback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::operationCompleteCallback(completed);
+int8_t ISL29033::io_op_callback(I2CBusOp* completed) {
+  I2CDeviceWithRegisters::io_op_callback(completed);
   if (completed) {
     switch (completed->get_opcode()) {
       case BusOpcode::RX:
@@ -242,6 +242,7 @@ void ISL29033::operationCompleteCallback(I2CBusOp* completed) {
   else {
     Kernel::log("SENSOR_ERROR_WRONG_IDENTITY");
   }
+  return 0;
 }
 
 

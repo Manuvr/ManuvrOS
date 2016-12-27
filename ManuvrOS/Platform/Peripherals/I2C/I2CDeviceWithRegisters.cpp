@@ -341,7 +341,7 @@ int8_t I2CDeviceWithRegisters::writeDirtyRegisters(void) {
 }
 
 
-void I2CDeviceWithRegisters::operationCompleteCallback(I2CBusOp* completed) {
+int8_t I2CDeviceWithRegisters::io_op_callback(I2CBusOp* completed) {
   #ifdef __MANUVR_DEBUG
   StringBuilder temp; //("Default callback for registers!\n");
   #endif

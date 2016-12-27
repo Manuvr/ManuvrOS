@@ -156,13 +156,13 @@ uint8_t ADG2128::getValue(uint8_t row) {
 * These are overrides from I2CDevice                                                                *
 ****************************************************************************************************/
 
-void ADG2128::operationCompleteCallback(I2CBusOp* completed) {
+int8_t ADG2128::io_op_callback(I2CBusOp* completed) {
   if (completed->hasFault()) {
     StringBuilder output;
     output.concat("An i2c operation requested by the ADG2128 came back failed.\n");
     completed->printDebug(&output);
     Kernel::log(&output);
-    return;
+    return -1;
   }
   switch (completed->get_opcode()) {
     case BusOpcode::RX:
@@ -202,6 +202,7 @@ void ADG2128::operationCompleteCallback(I2CBusOp* completed) {
     default:
       break;
   }
+  return 0;
 }
 
 

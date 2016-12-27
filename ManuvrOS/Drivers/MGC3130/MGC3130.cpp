@@ -486,7 +486,7 @@ void MGC3130::dispatchGestureEvents() {
 * These are overrides from I2CDevice.                                                               *
 ****************************************************************************************************/
 
-void MGC3130::operationCompleteCallback(I2CBusOp* completed) {
+int8_t MGC3130::io_op_callback(I2CBusOp* completed) {
   gpioDefine(_ts_pin, INPUT_PULLUP);
   are_we_holding_ts(false);
   setPinFxn(_ts_pin, FALLING, mgc3130_isr_check);
@@ -519,7 +519,7 @@ void MGC3130::operationCompleteCallback(I2CBusOp* completed) {
             break;
           case 2:   // Sequence number
             if (data == last_seq_num) {
-              return;
+              return 0;
             }
             last_seq_num = data;
             break;
@@ -651,6 +651,7 @@ void MGC3130::operationCompleteCallback(I2CBusOp* completed) {
     }
     #endif
   }
+  return 0;
 }
 
 

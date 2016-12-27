@@ -156,11 +156,11 @@ uint16_t ISL23345::getRange(void) {    return 0x00FF;       }  // Trivial. Retur
 * These are overrides from I2CDeviceWithRegisters.                                                  *
 ****************************************************************************************************/
 
-void ISL23345::operationCompleteCallback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::operationCompleteCallback(completed);
+int8_t ISL23345::io_op_callback(I2CBusOp* completed) {
+  I2CDeviceWithRegisters::io_op_callback(completed);
 
   if (completed->hasFault()) {
-    return;
+    return -1;
   }
 
   dev_init = true;
@@ -181,6 +181,7 @@ void ISL23345::operationCompleteCallback(I2CBusOp* completed) {
     default:
       break;
   }
+	return 0;
 }
 
 

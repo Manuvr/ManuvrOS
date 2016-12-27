@@ -128,8 +128,8 @@ int8_t LDS8160::init() {
 * These are overrides from I2CDeviceWithRegisters.                                                  *
 ****************************************************************************************************/
 
-void LDS8160::operationCompleteCallback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::operationCompleteCallback(completed);
+int8_t LDS8160::io_op_callback(I2CBusOp* completed) {
+  I2CDeviceWithRegisters::io_op_callback(completed);
 
   int i = 0;
   DeviceRegister *temp_reg = reg_defs.get(i++);
@@ -141,6 +141,7 @@ void LDS8160::operationCompleteCallback(I2CBusOp* completed) {
     }
     temp_reg = reg_defs.get(i++);
   }
+  return 0;
 }
 
 /*
