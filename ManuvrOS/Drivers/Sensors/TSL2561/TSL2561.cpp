@@ -31,7 +31,7 @@ const DatumDef datum_defs[] = {
   },
   {
     .desc    = "IR Intensity",
-    .units   = COMMON_UNITS_LUX,
+    .units   = COMMON_UNITS_MW_PER_SQCM,
     .type_id = FLOAT_FM,
     .flgs    = SENSE_DATUM_FLAG_HARDWARE
   }

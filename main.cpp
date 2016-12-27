@@ -35,8 +35,8 @@ This is a demonstration program, and was meant to be compiled for a
 
 /* Drivers particular to this Manuvrable... */
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
-#include <Drivers/TMP006/TMP006.h>
-#include <Drivers/INA219/INA219.h>
+#include <Drivers/Sensors/TMP006/TMP006.h>
+#include <Drivers/Sensors/INA219/INA219.h>
 
 /*
 * This is ONLY used to expose the GPIO pins to the outside world.

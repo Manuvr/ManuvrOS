@@ -55,6 +55,15 @@ TMP006::TMP006(uint8_t addr) : I2CDeviceWithRegisters(addr), SensorWrapper("TMP0
 }
 
 
+TMP006::TMP006(uint8_t addr, uint8_t pin) : TMP006(addr) {
+  irq_pin = pin;
+}
+
+
+TMP006::~TMP006() {
+}
+
+
 /**************************************************************************
 * Overrides...                                                            *
 **************************************************************************/
@@ -63,20 +72,7 @@ SensorError TMP006::init() {
   if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
     return SensorError::NO_ERROR;
   }
-  else {
-    return SensorError::BUS_ERROR;
-  }
-//  if (check_identity() == SensorError::NO_ERROR) {
-//    if (write16(TMP006_CONFIG, TMP006_CFG_MODEON | TMP006_CFG_DRDYEN | TMP006_CFG_16SAMPLE)) {
-//      return SensorError::NO_ERROR;
-//    }
-//  }
-//  else if (read16((uint8_t) TMP006_MANID)) {
-//    if (read16((uint8_t) TMP006_DEVID)) {
-//      return SensorError::NO_ERROR;
-//    }
-//  }
-//  return SensorError::BUS_ERROR;
+  return SensorError::BUS_ERROR;
 }
 
 

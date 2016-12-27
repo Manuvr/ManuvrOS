@@ -94,7 +94,6 @@ CPP_SRCS  += Platform/Peripherals/SPI/SPIBusOp.cpp
 CPP_SRCS  += Drivers/LightSensor/LightSensor.cpp
 CPP_SRCS  += Drivers/AudioRouter/AudioRouter.cpp
 
-CPP_SRCS  += Drivers/MGC3130/MGC3130.cpp
 CPP_SRCS  += Drivers/MCP73833/MCP73833.cpp
 CPP_SRCS  += Drivers/ADP8866/ADP8866.cpp
 
@@ -109,20 +108,24 @@ CPP_SRCS  += Drivers/ExampleDriver/ExampleDriver.cpp
 CPP_SRCS  += Drivers/ISL23345/ISL23345.cpp
 CPP_SRCS  += Drivers/Bluetooth/RN4020/RN4020.cpp
 CPP_SRCS  += Drivers/ADG2128/ADG2128.cpp
-CPP_SRCS  += Drivers/TMP006/TMP006.cpp
-CPP_SRCS  += Drivers/ISL29033/ISL29033.cpp
-CPP_SRCS  += Drivers/Sensors/LPS331/LPS331.cpp
-CPP_SRCS  += Drivers/Sensors/TSL2561/TSL2561.cpp
-CPP_SRCS  += Drivers/TLC5947/TLC5947.cpp
-#CPP_SRCS  += Drivers/LSMD9S1/LSMD9S1.cpp
+
 CPP_SRCS  += Drivers/SensorWrapper/SensorWrapper.cpp
 CPP_SRCS  += Drivers/SensorWrapper/SensorDatum.cpp
+CPP_SRCS  += Drivers/Sensors/INA219/INA219.cpp
+CPP_SRCS  += Drivers/Sensors/VEML6070/VEML6070.cpp
+CPP_SRCS  += Drivers/Sensors/TMP006/TMP006.cpp
+CPP_SRCS  += Drivers/Sensors/ISL29033/ISL29033.cpp
+CPP_SRCS  += Drivers/Sensors/LPS331/LPS331.cpp
+CPP_SRCS  += Drivers/Sensors/TSL2561/TSL2561.cpp
+CPP_SRCS  += Drivers/Sensors/MGC3130/MGC3130.cpp
+
+CPP_SRCS  += Drivers/TLC5947/TLC5947.cpp
+#CPP_SRCS  += Drivers/LSMD9S1/LSMD9S1.cpp
 CPP_SRCS  += Drivers/DeviceWithRegisters/DeviceWithRegisters.cpp
 CPP_SRCS  += Drivers/DeviceWithRegisters/DeviceRegister.cpp
 CPP_SRCS  += Drivers/ManuvrableGPIO/ManuvrableGPIO.cpp
 
 # Power-management ICs and modules...
-CPP_SRCS  += Drivers/INA219/INA219.cpp
 #CPP_SRCS  += Drivers/PMIC/LDS8160/LDS8160.cpp
 
 CPP_SRCS  += Platform/Identity.cpp

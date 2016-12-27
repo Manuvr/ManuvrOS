@@ -82,6 +82,7 @@ Apart from including the user-suppied configuration header, there
   #define COMMON_UNITS_WATTS       "W"
   #define COMMON_UNITS_PERCENT     "%"
   #define COMMON_UNITS_U_TESLA     "uT"
+  #define COMMON_UNITS_MW_PER_SQCM "mW/cm^2"
 
   #define SENSOR_DATUM_NOT_FOUND   "Sensor datum not found"
 

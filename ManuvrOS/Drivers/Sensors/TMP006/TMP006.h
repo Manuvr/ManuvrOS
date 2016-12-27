@@ -29,11 +29,10 @@ I have adapted it for ManuvrOS.
 #ifndef TMP006_H
 #define TMP006_H
 
-#include "Drivers/SensorWrapper/SensorWrapper.h"
-#include "math.h"
-#include "DataStructures/StringBuilder.h"
-#include "Platform/Peripherals/I2C/I2CAdapter.h"
-
+#include <math.h>
+#include <DataStructures/StringBuilder.h>
+#include <Drivers/SensorWrapper/SensorWrapper.h>
+#include <Platform/Peripherals/I2C/I2CAdapter.h>
 
 
 #define TMP006_B0 -0.0000294
@@ -44,10 +43,6 @@ I have adapted it for ManuvrOS.
 #define TMP006_A2 -0.00001678
 #define TMP006_A1 0.00175
 #define TMP006_S0 6.4  // * 10^-14
-
-#if (ARDUINO >= 100)
-  #include "Arduino.h"
-#endif
 
 
 #define TMP006_CFG_RESET    0x8000
@@ -73,6 +68,8 @@ I have adapted it for ManuvrOS.
 class TMP006 : public I2CDeviceWithRegisters, public SensorWrapper {
   public:
     TMP006(uint8_t addr = TMP006_I2CADDR);
+    TMP006(uint8_t addr, uint8_t pin);
+    ~TMP006();
 
     /* Overrides from SensorWrapper */
     SensorError init();
@@ -80,13 +77,14 @@ class TMP006 : public I2CDeviceWithRegisters, public SensorWrapper {
     SensorError setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
     SensorError getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
 
-    /* Overrides from I2CDeviceWithRegisters... */
+    /* Overrides from I2CDevice... */
     int8_t io_op_callback(I2CBusOp*);
     void printDebug(StringBuilder*);
 
 
   private:
     /* Class-specific */
+    uint8_t irq_pin = 255;
     SensorError check_identity();
     SensorError check_data();        // If all the data required is fresh, updates derived data.
 };
