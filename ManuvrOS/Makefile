@@ -111,6 +111,7 @@ CPP_SRCS  += Drivers/ADG2128/ADG2128.cpp
 
 CPP_SRCS  += Drivers/SensorWrapper/SensorWrapper.cpp
 CPP_SRCS  += Drivers/SensorWrapper/SensorDatum.cpp
+CPP_SRCS  += Drivers/Sensors/Si7021/Si7021.cpp
 CPP_SRCS  += Drivers/Sensors/INA219/INA219.cpp
 CPP_SRCS  += Drivers/Sensors/VEML6070/VEML6070.cpp
 CPP_SRCS  += Drivers/Sensors/TMP006/TMP006.cpp
