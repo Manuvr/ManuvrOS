@@ -104,14 +104,13 @@ This file is the tortured result of growing pains since the beginning of
   class I2CBusOp : public BusOp {
     public:
       I2CDevice* callback = nullptr;  // Which class gets pinged when we've finished?
-      I2CAdapter *device      = nullptr;
-      int       txn_id;        // How are we going to keep track of this item?
+      I2CAdapter* device  = nullptr;
       int16_t sub_addr = -1;
       uint8_t dev_addr =  0;
 
       I2CBusOp();
       I2CBusOp(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len);
-      ~I2CBusOp();
+      virtual ~I2CBusOp();
 
       void wipe();
 

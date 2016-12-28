@@ -327,9 +327,6 @@ void SPIBusOp::printDebug(StringBuilder *output) {
   BusOp::printBusOp("SPIBusOp", this, output);
   if (shouldReap())       output->concat("\t Will reap\n");
   if (returnToPrealloc()) output->concat("\t Returns to prealloc\n");
-  //if (XferState::COMPLETE == xfer_state) {
-  //  output->concatf("\t completed (uS)   %u\n",   (unsigned long) time_ended - time_began);
-  //}
   output->concatf("\t param_len         %d\n", _param_len);
   output->concat("\t params            ");
 

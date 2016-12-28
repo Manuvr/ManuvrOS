@@ -384,6 +384,7 @@ int8_t I2CDeviceWithRegisters::io_op_callback(I2CBusOp* completed) {
   #ifdef __MANUVR_DEBUG
     if (temp.length() > 0) {    Kernel::log(&temp);  }
   #endif
+  return 0;
 }
 
 

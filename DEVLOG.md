@@ -429,4 +429,5 @@ _---J. Ian Lindsay_
     1869497   22904   23908 1916309  Consolidating BusOp common debug output.
     1869313   22904   23908 1916125  Starting to reap gains.
     1869425   22904   23908 1916237  More consolidation.
+    1869733   22904   23908 1916545  Gave back some binary size gains to templates.
     

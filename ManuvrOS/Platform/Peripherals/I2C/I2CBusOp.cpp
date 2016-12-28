@@ -54,7 +54,6 @@ limitations under the License.
 *   under the exclusive control of the caller.
 */
 I2CBusOp::I2CBusOp() {
-  txn_id       = BusOp::next_txn_id++;
 };
 
 
@@ -114,7 +113,6 @@ void I2CBusOp::printDebug() {
 */
 void I2CBusOp::printDebug(StringBuilder* output) {
   BusOp::printBusOp("I2COp", this, output);
-  output->concatf("\t txn_id          0x%08x\n", txn_id);
   output->concatf("\t device          0x%02x\n", dev_addr);
 
   if (sub_addr >= 0x00) {

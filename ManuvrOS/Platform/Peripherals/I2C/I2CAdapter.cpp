@@ -414,14 +414,13 @@ int8_t I2CAdapter::queue_io_job(BusOp* op) {
 int8_t I2CAdapter::advance_work_queue() {
 	if (current_queue_item) {
 		if (current_queue_item->isComplete()) {
-			if (!current_queue_item->hasFault()) {
-			  //temp.concatf("Destroying successful job 0x%08x.\n", current_queue_item->txn_id);
-			}
-			else {
+			if (current_queue_item->hasFault()) {
 			  #ifdef __MANUVR_DEBUG
-			  if (getVerbosity() > 3) local_log.concatf("Destroying failed job 0x%08x.\n", current_queue_item->txn_id);
+			  if (getVerbosity() > 3) {
+          local_log.concatf("Destroying failed job.\n");
+          if (getVerbosity() > 4) current_queue_item->printDebug(&local_log);
+        }
 			  #endif
-			  if (getVerbosity() > 6) current_queue_item->printDebug(&local_log);
 			}
 
 			// Hand this completed operation off to the class that requested it. That class will
@@ -469,6 +468,7 @@ int8_t I2CAdapter::advance_work_queue() {
 	}
 
 	flushLocalLog();
+  return 0;
 }
 
 
@@ -602,30 +602,31 @@ void I2CAdapter::printDevs(StringBuilder *temp) {
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
-void I2CAdapter::printDebug(StringBuilder *temp) {
-  EventReceiver::printDebug(temp);
-  printHardwareState(temp);
-  temp->concatf("-- sda/scl     %u/%u\n", sda_pin, scl_pin);
-  temp->concatf("-- bus_error   %s\n", (busError()  ? "yes" : "no"));
+void I2CAdapter::printDebug(StringBuilder *output) {
+  EventReceiver::printDebug(output);
+  BusAdapter::printAdapter((BusAdapter*)this, output);
+  printHardwareState(output);
+  output->concatf("-- sda/scl     %u/%u\n", sda_pin, scl_pin);
+  output->concatf("-- bus_error   %s\n", (busError()  ? "yes" : "no"));
 
   if (current_queue_item) {
-    temp->concat("Currently being serviced:\n");
-    current_queue_item->printDebug(temp);
+    output->concat("Currently being serviced:\n");
+    current_queue_item->printDebug(output);
   }
   else {
-    temp->concat("Nothing being serviced.\n\n");
+    output->concat("Nothing being serviced.\n\n");
   }
   int w_q_s = work_queue.size();
   if (w_q_s > 0) {
-    temp->concatf("\nQueue Listing (top 3 of %d total)\n", w_q_s);
+    output->concatf("\nQueue Listing (top 3 of %d total)\n", w_q_s);
     int m_q_p = strict_min(I2CADAPTER_MAX_QUEUE_PRINT, (int32_t) w_q_s);
     for (int i = 0; i < m_q_p; i++) {
-      work_queue.get(i)->printDebug(temp);
+      work_queue.get(i)->printDebug(output);
     }
-    temp->concat("\n");
+    output->concat("\n");
   }
   else {
-    temp->concat("Empty queue.\n\n");
+    output->concat("Empty queue.\n\n");
   }
 }
 

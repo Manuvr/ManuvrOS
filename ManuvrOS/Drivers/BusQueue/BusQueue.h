@@ -103,7 +103,6 @@ class BusOp {
     uint16_t buf_len        = 0;        // How large is the above buffer?
     //uint32_t time_began     = 0;        // This is the time when bus access begins.
     //uint32_t time_ended     = 0;        // This is the time when bus access stops (or is aborted).
-    //uint16_t txn_id;                    // How are we going to keep track of this item?
 
     /* Mandatory overrides for this interface... */
     virtual XferFault begin() =0;
@@ -169,12 +168,10 @@ class BusOp {
     inline const char* getErrorString() {   return BusOp::getErrorString(xfer_fault);  };
 
 
-    static int next_txn_id;  // TODO: Sucks. Cut.
     static const char* getStateString(XferState);
     static const char* getOpcodeString(BusOpcode);
     static const char* getErrorString(XferFault);
-
-    static void printBusOp(const char*, BusOp*, StringBuilder*);
+    static void        printBusOp(const char*, BusOp*, StringBuilder*);
 
 
   protected:
@@ -226,7 +223,14 @@ template <class T> class BusAdapter : public BusOpCallback {
 
     BusAdapter(uint16_t max) : MAX_Q_DEPTH(max) {};
 
-    static void printAdapter(BusAdapter*, StringBuilder*);
+    static void printAdapter(BusAdapter* adapter, StringBuilder* output) {
+      output->concatf("-- prealloc pool size  %u\n",  adapter->MAX_Q_DEPTH);
+      output->concatf("-- prealloc queue size %d\n",  adapter->preallocated.size());
+      output->concatf("-- prealloc_misses     %u\n",  adapter->_prealloc_misses);
+      output->concatf("-- heap_frees          %u\n",  adapter->_heap_frees);
+      output->concatf("-- work_queue depth    %d\n",  adapter->work_queue.size());
+      output->concatf("-- Xfers (fail/total): (%u/%u)\n",  adapter->_failed_xfers, adapter->_total_xfers);
+    };
 
   private:
 };

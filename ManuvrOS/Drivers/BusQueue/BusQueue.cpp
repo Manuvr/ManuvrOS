@@ -34,8 +34,6 @@ limitations under the License.
 * Static members and initializers should be located here.
 *******************************************************************************/
 
-int BusOp::next_txn_id = 0;
-
 /**
 * Debug and logging support.
 *
@@ -100,21 +98,16 @@ const char* BusOp::getErrorString(XferFault code) {
 
 void BusOp::printBusOp(const char* print_name, BusOp* op, StringBuilder* output) {
   output->concatf("\t---[ %s %p %s ]---\n", print_name, (uintptr_t) op, op->getOpcodeString());
-  output->concatf("\t xfer_state        %s\n\t err               %s\n", op->getStateString(), op->getErrorString());
+  output->concatf("\t xfer_state        %s\n", BusOp::getStateString(op->xfer_state));
+  if (XferFault::NONE != op->xfer_fault) {
+    output->concatf("\t xfer_fault        %s\n", BusOp::getErrorString(op->xfer_fault));
+  }
+  //if (XferState::COMPLETE == xfer_state) {
+  //  output->concatf("\t completed (uS)   %u\n",   (unsigned long) time_ended - time_began);
+  //}
 
   output->concatf("\t buf *(%p): (%u bytes)\n", (uintptr_t) op->buf, op->buf_len);
   if (op->buf_len > 0) {
     StringBuilder::printBuffer(output, op->buf, op->buf_len, "\t ");
   }
-}
-
-
-
-template <class T> void BusAdapter<T>::printAdapter(BusAdapter<T>* adapter, StringBuilder* output) {
-  output->concatf("-- prealloc pool size  %u\n",  adapter->MAX_Q_DEPTH);
-  output->concatf("-- prealloc queue size %d\n",  adapter->preallocated.size());
-  output->concatf("-- prealloc_misses     %u\n",  adapter->_prealloc_misses);
-  output->concatf("-- heap_frees          %u\n",  adapter->_heap_frees);
-  output->concatf("-- work_queue depth    %d\n",  adapter->work_queue.size());
-  output->concatf("-- Xfers (fail/total): (%u/%u)\n",  adapter->_failed_xfers, adapter->_total_xfers);
 }

@@ -57,6 +57,7 @@ int8_t I2CDevice::io_op_callback(BusOp* op) {
 		completed->printDebug(&temp);
 	}
 	if (temp.length() > 0) Kernel::log(&temp);
+  return 0;
 }
 
 /* If your device needs something to happen immediately prior to bus I/O... */
@@ -173,8 +174,6 @@ bool I2CDevice::writeX(int sub_addr, uint16_t byte_count, uint8_t *buf) {
     nu->callback = this;
     return _bus->queue_io_job(nu);
 }
-
-
 
 
 

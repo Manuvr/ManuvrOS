@@ -55,7 +55,7 @@ class SPIBusOp : public BusOp {
   public:
     SPIBusOp();
     SPIBusOp(BusOpcode nu_op, BusOpCallback* requester, uint8_t cs, bool ah = false);
-    ~SPIBusOp();
+    virtual ~SPIBusOp();
 
     /* Job control functions. */
     XferFault begin();
@@ -68,6 +68,7 @@ class SPIBusOp : public BusOp {
     void setParams(uint8_t p0, uint8_t p1, uint8_t p2);
     void setParams(uint8_t p0, uint8_t p1);
     void setParams(uint8_t p0);
+    inline uint8_t getTransferParam(int x) {  return xfer_params[x]; }
 
     inline void setCSPin(uint8_t pin) {   _cs_pin = pin;  };
 
@@ -125,8 +126,6 @@ class SPIBusOp : public BusOp {
     inline void csActiveHigh(bool en) {
       _flags = (en) ? (_flags | SPI_XFER_FLAG_DEVICE_CS_AH) : (_flags & ~(SPI_XFER_FLAG_DEVICE_CS_AH));
     };
-
-
 
     /**
     * The bus manager calls this fxn to decide if it ought to return this object to the preallocation
