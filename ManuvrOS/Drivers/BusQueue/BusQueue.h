@@ -26,6 +26,8 @@ limitations under the License.
 
 #include <inttypes.h>
 #include <DataStructures/PriorityQueue.h>
+#include <DataStructures/StringBuilder.h>
+
 
 /*
 * These are possible transfer states.
@@ -211,10 +213,13 @@ template <class T> class BusAdapter : public BusOpCallback {
   protected:
     const uint16_t MAX_Q_DEPTH;
     uint16_t _prealloc_misses = 0;  // How many times have we starved the preallocation queue?
-    PriorityQueue<T*> work_queue;
+    uint16_t _heap_frees      = 0;  // How many times have we freed a BusOp?
+    PriorityQueue<T*> work_queue;   // A work queue to keep transactions in order.
     PriorityQueue<T*> preallocated;
 
     BusAdapter(uint16_t max) : MAX_Q_DEPTH(max) {};
+
+    static void printAdapter(BusAdapter*, StringBuilder*);
 
   private:
 };

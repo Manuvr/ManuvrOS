@@ -113,6 +113,8 @@ This file is the tortured result of growing pains since the beginning of
       I2CBusOp(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len);
       ~I2CBusOp();
 
+      void wipe();
+
       /*
       * This queue item can begin executing. This is where any bus access should be initiated.
       */
@@ -226,7 +228,6 @@ This file is the tortured result of growing pains since the beginning of
 
 
     private:
-      LinkedList<I2CBusOp*>  work_queue;  // A work queue to keep transactions in order.
       LinkedList<I2CDevice*> dev_list;    // A list of active slaves on this bus.
       ManuvrMsg _periodic_i2c_debug;
 
@@ -241,15 +242,16 @@ This file is the tortured result of growing pains since the beginning of
       void gpioSetup();
 
       int get_slave_dev_by_addr(uint8_t search_addr);
+      void reclaim_queue_item(I2CBusOp*);
       void purge_queued_work_by_dev(I2CDevice *dev);
       void purge_queued_work();
       void purge_stalled_job();
 
 
-      static I2CBusOp preallocated_bus_jobs[PREALLOCATED_I2C_JOBS];
+      static I2CBusOp __prealloc_pool[PREALLOCATED_I2C_JOBS];
+      static I2CBusOp* fetchPreallocation();
+      static void reclaimPreallocation(I2CBusOp*);
   };
-
-
 
 
   /*
@@ -304,7 +306,7 @@ This file is the tortured result of growing pains since the beginning of
 
     private:
       I2CAdapter* _bus = nullptr;
-};
+  };
 
 
   /*

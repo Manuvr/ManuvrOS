@@ -49,7 +49,7 @@ extern "C" {
   volatile I2CAdapter* i2c = nullptr;
 }
 
-I2CBusOp I2CAdapter::preallocated_bus_jobs[PREALLOCATED_I2C_JOBS];
+I2CBusOp I2CAdapter::__prealloc_pool[PREALLOCATED_I2C_JOBS];
 
   // We need some internal events to allow communication back from the ISR.
 const MessageTypeDef i2c_message_defs[] = {
@@ -146,6 +146,37 @@ I2CBusOp* I2CAdapter::new_op(BusOpcode _op, BusOpCallback* _req) {
   return_value->set_opcode(_op);
   return_value->callback = (I2CDevice*) _req;
   return return_value;
+}
+
+
+/**
+* This fxn will either free() the memory associated with the SPIBusOp object, or it
+*   will return it to the preallocation queue.
+*
+* @param item The SPIBusOp to be reclaimed.
+*/
+void I2CAdapter::reclaim_queue_item(I2CBusOp* op) {
+  uintptr_t obj_addr = ((uintptr_t) op);
+  uintptr_t pre_min  = ((uintptr_t) __prealloc_pool);
+  uintptr_t pre_max  = pre_min + (sizeof(I2CBusOp) * PREALLOCATED_I2C_JOBS);
+
+  if (op->hasFault() && (getVerbosity() > 1)) {    // Print failures.
+    op->printDebug(&local_log);
+  }
+
+  if ((obj_addr < pre_max) && (obj_addr >= pre_min)) {
+    // If we are in this block, it means obj was preallocated. wipe and reclaim it.
+    op->wipe();
+    preallocated.insert(op);
+  }
+  else {
+    // We were created because our prealloc was starved. we are therefore a transient heap object.
+    //if (getVerbosity() > 6) local_log.concatf("I2CAdapter::reclaim_queue_item(): \t About to reap.\n");
+    _heap_frees++;
+    delete op;
+  }
+
+  flushLocalLog();
 }
 
 
@@ -381,7 +412,7 @@ int8_t I2CAdapter::queue_io_job(BusOp* op) {
 * This function needs to be called to move the queue forward.
 */
 int8_t I2CAdapter::advance_work_queue() {
-	if (current_queue_item != NULL) {
+	if (current_queue_item) {
 		if (current_queue_item->isComplete()) {
 			if (!current_queue_item->hasFault()) {
 			  //temp.concatf("Destroying successful job 0x%08x.\n", current_queue_item->txn_id);
@@ -422,18 +453,16 @@ int8_t I2CAdapter::advance_work_queue() {
 			}
 
 			delete current_queue_item;
-			current_queue_item = work_queue.get();
-			if (current_queue_item != NULL) work_queue.remove();
+			current_queue_item = work_queue.dequeue();
 		}
 	}
 	else {
 		// If there is nothing presently being serviced, we should promote an operation from the
 		//   queue into the active slot and initiate it in the block below.
-		current_queue_item = work_queue.get();
-		if (current_queue_item != NULL) work_queue.remove();
+		current_queue_item = work_queue.dequeue();
 	}
 
-	if (current_queue_item != NULL) {
+	if (current_queue_item) {
 		if (!current_queue_item->has_bus_control()) {
 			current_queue_item->begin();
 		}
@@ -473,13 +502,15 @@ void I2CAdapter::purge_queued_work_by_dev(I2CDevice *dev) {
 * Purges only the work_queue. Leaves the currently-executing job.
 */
 void I2CAdapter::purge_queued_work() {
-  I2CBusOp* current = NULL;
-  while (work_queue.hasNext()) {
+  I2CBusOp* current = work_queue.dequeue();
+  while (current) {
     current = work_queue.get();
     current_queue_item->abort();
-    if (NULL != current->callback) current->callback->io_op_callback(current);
-    work_queue.remove();
+    if (current->callback) {
+      current->callback->io_op_callback(current);
+    }
     delete current;   // Delete the queued work AND its buffer.
+    current = work_queue.dequeue();
   }
 }
 

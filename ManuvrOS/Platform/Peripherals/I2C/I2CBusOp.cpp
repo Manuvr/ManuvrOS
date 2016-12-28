@@ -77,6 +77,22 @@ I2CBusOp::~I2CBusOp() {
 }
 
 
+
+/**
+* Wipes this bus operation so it can be reused.
+* Be careful not to blow away the flags that prevent us from being reaped.
+*/
+void I2CBusOp::wipe() {
+  set_state(XferState::IDLE);
+  // We need to preserve flags that deal with memory management.
+  xfer_fault  = XferFault::NONE;
+  opcode      = BusOpcode::UNDEF;
+  buf_len     = 0;
+  buf         = nullptr;
+  callback    = nullptr;
+}
+
+
 /****************************************************************************************************
 * These functions are for logging support.                                                          *
 ****************************************************************************************************/

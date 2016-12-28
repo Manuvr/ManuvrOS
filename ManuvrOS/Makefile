@@ -88,6 +88,7 @@ CPP_SRCS  += Platform/Peripherals/I2C/I2CDeviceWithRegisters.cpp
 CPP_SRCS  += Platform/Peripherals/I2C/I2CBusOp.cpp
 
 # SPI apparatus...
+CPP_SRCS  += Platform/Peripherals/SPI/SPIAdapter.cpp
 CPP_SRCS  += Platform/Peripherals/SPI/SPIBusOp.cpp
 
 

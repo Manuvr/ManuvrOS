@@ -424,4 +424,6 @@ _---J. Ian Lindsay_
     1867101   22900   23716 1913717  I2C internal re-arrangements.
     1868645   22904   23908 1915457  I2C likely broken. Fully-adopting BusQueue.
     1868649   22904   23908 1915461  I2C is a hot mess. Fixing it...
+    1868829   22904   23908 1915641  Adding a few driver stubs.
+    1869245   22904   23908 1916057  Prepping i2c for another round of consolidation.
     

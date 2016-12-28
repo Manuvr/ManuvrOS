@@ -96,3 +96,13 @@ const char* BusOp::getErrorString(XferFault code) {
     default:                         return "<UNDEF>";
   }
 }
+
+
+
+
+
+
+template <class T> void BusAdapter<T>::printAdapter(BusAdapter<T>* adapter, StringBuilder* output) {
+  output->concatf("-- prealloc queue size %d\n",  adapter->preallocated.size());
+  output->concatf("-- prealloc_misses     %u\n",  adapter->_prealloc_misses);
+}
