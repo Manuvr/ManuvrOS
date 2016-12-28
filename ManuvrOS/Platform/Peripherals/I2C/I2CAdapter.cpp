@@ -616,18 +616,7 @@ void I2CAdapter::printDebug(StringBuilder *output) {
   else {
     output->concat("Nothing being serviced.\n\n");
   }
-  int w_q_s = work_queue.size();
-  if (w_q_s > 0) {
-    output->concatf("\nQueue Listing (top 3 of %d total)\n", w_q_s);
-    int m_q_p = strict_min(I2CADAPTER_MAX_QUEUE_PRINT, (int32_t) w_q_s);
-    for (int i = 0; i < m_q_p; i++) {
-      work_queue.get(i)->printDebug(output);
-    }
-    output->concat("\n");
-  }
-  else {
-    output->concat("Empty queue.\n\n");
-  }
+  BusAdapter::printWorkQueue((BusAdapter*)this, output, I2CADAPTER_MAX_QUEUE_PRINT);
 }
 
 

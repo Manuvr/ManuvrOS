@@ -24,7 +24,7 @@ limitations under the License.
 #ifndef __MANUVR_BUS_QUEUE_H__
 #define __MANUVR_BUS_QUEUE_H__
 
-#include <inttypes.h>
+#include <CommonConstants.h>
 #include <DataStructures/PriorityQueue.h>
 #include <DataStructures/StringBuilder.h>
 
@@ -230,6 +230,19 @@ template <class T> class BusAdapter : public BusOpCallback {
       output->concatf("-- heap_frees          %u\n",  adapter->_heap_frees);
       output->concatf("-- work_queue depth    %d\n",  adapter->work_queue.size());
       output->concatf("-- Xfers (fail/total): (%u/%u)\n",  adapter->_failed_xfers, adapter->_total_xfers);
+    };
+
+    static void printWorkQueue(BusAdapter* adapter, StringBuilder* output, uint8_t max_print) {
+      if (adapter->work_queue.size() > 0) {
+        unsigned int print_depth = strict_min((uint8_t) adapter->work_queue.size(), max_print);
+        output->concatf("-- Queue Listing (top %d of %d total)\n", print_depth, adapter->work_queue.size());
+        for (unsigned int i = 0; i < print_depth; i++) {
+          adapter->work_queue.get(i)->printDebug(output);
+        }
+      }
+      else {
+        output->concat("-- Empty queue.\n");
+      }
     };
 
   private:

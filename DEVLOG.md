@@ -430,4 +430,9 @@ _---J. Ian Lindsay_
     1869313   22904   23908 1916125  Starting to reap gains.
     1869425   22904   23908 1916237  More consolidation.
     1869733   22904   23908 1916545  Gave back some binary size gains to templates.
-    
+
+Going to go bring Digitabulum up-to-speed.
+
+_---J. Ian Lindsay_
+
+------
