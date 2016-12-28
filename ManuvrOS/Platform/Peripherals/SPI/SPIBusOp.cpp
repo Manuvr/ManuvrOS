@@ -66,12 +66,23 @@ SPIBusOp::SPIBusOp() {
 *
 * @param  nu_op The opcode that dictates the bus operation we use
 * @param  requester  The object to be notified when the bus operation completes with success.
+*/
+SPIBusOp::SPIBusOp(BusOpcode nu_op, BusOpCallback* requester) : SPIBusOp() {
+  opcode   = nu_op;
+  callback = requester;
+}
+
+
+/**
+* Constructor that does setup by parameters.
+*
+* @param  nu_op The opcode that dictates the bus operation we use
+* @param  requester  The object to be notified when the bus operation completes with success.
 * @param  cs         The pin number for the device's chip-select signal.
 * @param  ah         True for an active-high chip-select.
 */
-SPIBusOp::SPIBusOp(BusOpcode nu_op, BusOpCallback* requester, uint8_t cs, bool ah) : SPIBusOp() {
-  opcode   = nu_op;
-  callback = requester;
+SPIBusOp::SPIBusOp(BusOpcode nu_op, BusOpCallback* requester, uint8_t cs, bool ah) : SPIBusOp(nu_op, requester) {
+  _cs_pin = cs;
   csActiveHigh(ah);
 }
 

@@ -50,6 +50,7 @@ extern "C" {
 }
 
 I2CBusOp I2CAdapter::__prealloc_pool[PREALLOCATED_I2C_JOBS];
+//template<> PriorityQueue<I2CBusOp*> BusAdapter<I2CBusOp>::preallocated;
 
   // We need some internal events to allow communication back from the ISR.
 const MessageTypeDef i2c_message_defs[] = {

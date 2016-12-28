@@ -54,6 +54,7 @@ This is the class that is used to keep bus operations on the SPI atomic.
 class SPIBusOp : public BusOp {
   public:
     SPIBusOp();
+    SPIBusOp(BusOpcode nu_op, BusOpCallback* requester);
     SPIBusOp(BusOpcode nu_op, BusOpCallback* requester, uint8_t cs, bool ah = false);
     virtual ~SPIBusOp();
 

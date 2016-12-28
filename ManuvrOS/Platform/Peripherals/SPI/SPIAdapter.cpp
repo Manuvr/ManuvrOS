@@ -40,6 +40,7 @@ volatile static bool timeout_punch = false;
 
 SPIBusOp  SPIAdapter::preallocated_bus_jobs[PREALLOCATED_SPI_JOBS];
 SPIBusOp* SPIAdapter::current_queue_item = nullptr;
+//template<> PriorityQueue<SPIBusOp*> BusAdapter<SPIBusOp>::preallocated;
 
 const MessageTypeDef spi_message_defs[] = {
   {  MANUVR_MSG_SPI_QUEUE_READY,    0x0000,  "SPI_Q_RDY",  ManuvrMsg::MSG_ARGS_NONE }, //
@@ -413,7 +414,7 @@ SPIBusOp* SPIAdapter::new_op() {
 *
 * @param  _op   The desired bus operation.
 * @param  _req  The device pointer that is requesting the job.
-* @return an CPLDBusOp to be used. Only NULL if out-of-mem.
+* @return an SPIBusOp to be used. Only NULL if out-of-mem.
 */
 SPIBusOp* SPIAdapter::new_op(BusOpcode _op, BusOpCallback* _req) {
   SPIBusOp* return_value = new_op();

@@ -208,8 +208,6 @@ template <class T> class BusAdapter : public BusOpCallback {
   public:
     /* Mandatory overrides... */
     virtual int8_t advance_work_queue()          =0;
-    virtual T* new_op()                          =0;
-    virtual T* new_op(BusOpcode, BusOpCallback*) =0;
 
 
   protected:
@@ -218,10 +216,38 @@ template <class T> class BusAdapter : public BusOpCallback {
     uint16_t _prealloc_misses = 0;  // How many times have we starved the preallocation queue?
     uint16_t _heap_frees      = 0;  // How many times have we freed a BusOp?
     PriorityQueue<T*> work_queue;   // A work queue to keep transactions in order.
-    PriorityQueue<T*> preallocated; // A list of available BusOps.
+    PriorityQueue<T*> preallocated; // TODO: Should be static (as the pool is).
     const uint16_t MAX_Q_DEPTH;     // Maximum tolerable queue depth.
 
     BusAdapter(uint16_t max) : MAX_Q_DEPTH(max) {};
+
+
+    ///**
+    //* Return a vacant BusOp to the caller, allocating if necessary.
+    //*
+    //* @return an BusOp to be used. Only NULL if out-of-mem.
+    //*/
+    //T* new_op() {
+    //  T* return_value = preallocated.dequeue();
+    //  if (nullptr == return_value) {
+    //    _prealloc_misses++;
+    //    return_value = new T();
+    //  }
+    //  return return_value;
+    //}
+
+    ///**
+    //* Return a vacant BusOp to the caller, allocating if necessary.
+    //*
+    //* @param  _op   The desired bus operation.
+    //* @param  _req  The device pointer that is requesting the job.
+    //* @return an BusOp to be used. Only NULL if out-of-mem.
+    //*/
+    //T* new_op(BusOpcode _op, BusOpCallback* _req) {
+    //  T* return_value = new T(_op, _req);
+    //  return return_value;
+    //}
+
 
     static void printAdapter(BusAdapter* adapter, StringBuilder* output) {
       output->concatf("-- prealloc pool size  %u\n",  adapter->MAX_Q_DEPTH);

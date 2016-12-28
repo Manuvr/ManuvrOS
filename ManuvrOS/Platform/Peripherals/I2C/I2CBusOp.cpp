@@ -54,6 +54,18 @@ limitations under the License.
 *   under the exclusive control of the caller.
 */
 I2CBusOp::I2CBusOp() {
+  xfer_state   = XferState::IDLE;
+};
+
+
+/*
+* It is worth re-iterating here, that this class ought to never malloc() or free() the buf member. That should be
+*   under the exclusive control of the caller.
+*/
+I2CBusOp::I2CBusOp(BusOpcode nu_op, BusOpCallback* requester) : I2CBusOp() {
+  opcode       = nu_op;
+  callback     = requester;
+  subaddr_sent((sub_addr >= 0) ? false : true);
 };
 
 
@@ -156,7 +168,7 @@ XferFault I2CBusOp::begin() {
     return XferFault::DEV_NOT_FOUND;
   }
 
-  if ((nullptr != callback) && !callback->operationCallahead(this)) {
+  if ((nullptr != callback) && !((I2CDevice*)callback)->operationCallahead(this)) {
     abort(XferFault::IO_RECALL);
     return XferFault::IO_RECALL;
   }
