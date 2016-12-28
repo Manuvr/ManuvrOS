@@ -118,7 +118,7 @@ This file is the tortured result of growing pains since the beginning of
       /*
       * This queue item can begin executing. This is where any bus access should be initiated.
       */
-      int8_t begin();
+      XferFault begin();
 
       /**
       * Decide if we need to send a subaddress.
@@ -155,8 +155,6 @@ This file is the tortured result of growing pains since the beginning of
 
 
     private:
-      uint8_t  _flags        = 0;    // No flags set.
-
       int8_t init_dma();
       inline bool subaddr_sent() {  return (_flags & I2C_BUSOP_FLAG_SUBADDR);  };
       inline void subaddr_sent(bool en) {

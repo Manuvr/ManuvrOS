@@ -65,7 +65,6 @@ class SPIAdapter : public EventReceiver, public BusAdapter<SPIBusOp> {
     /* List of pending callbacks for bus transactions. */
     PriorityQueue<SPIBusOp*> callback_queue;
     uint32_t  bus_timeout_millis = 5;  // How long to spend in IO_WAIT?
-    uint32_t  specificity_burden = 0;  // How many queue items have been deleted?
     uint8_t   spi_cb_per_event   = 3;  // Limit the number of callbacks processed per event.
 
     void purge_queued_work();     // Flush the work queue.

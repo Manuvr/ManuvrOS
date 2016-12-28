@@ -152,15 +152,15 @@ void I2CBusOp::markComplete() {
 * TODO: Needs to be doing bus-checks.
 */
 
-int8_t I2CBusOp::begin() {
+XferFault I2CBusOp::begin() {
   if (nullptr == device) {
     abort(XferFault::DEV_NOT_FOUND);
-    return -1;
+    return XferFault::DEV_NOT_FOUND;
   }
 
   if ((nullptr != callback) && !callback->operationCallahead(this)) {
     abort(XferFault::IO_RECALL);
-    return -1;
+    return XferFault::IO_RECALL;
   }
 
   xfer_state = XferState::ADDR;
@@ -168,9 +168,9 @@ int8_t I2CBusOp::begin() {
   if (device->generateStart()) {
     // Failure to generate START condition.
     abort(XferFault::BUS_BUSY);
-    return -1;
+    return XferFault::BUS_BUSY;
   }
-  return 0;
+  return XferFault::NONE;
 }
 
 //http://tech.munts.com/MCU/Frameworks/ARM/stm32f4/libs/STM32F4xx_DSP_StdPeriph_Lib_V1.1.0/Project/STM32F4xx_StdPeriph_Examples/I2C/I2C_TwoBoards/I2C_DataExchangeDMA/main.c

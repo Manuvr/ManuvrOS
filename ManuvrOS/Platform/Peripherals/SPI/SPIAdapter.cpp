@@ -241,17 +241,17 @@ int8_t SPIAdapter::advance_work_queue() {
        case XferState::IDLE:
        case XferState::INITIATE:
          switch (current_queue_item->begin()) {
-           case 0:     // Nominal outcome. Transfer started with no problens...
+           case XferFault::NONE:     // Nominal outcome. Transfer started with no problens...
              break;
-           case -1:    // Bus appears to be in-use. State did not change.
+           case XferFault::BUS_BUSY:    // Bus appears to be in-use. State did not change.
              // Re-throw queue_ready event and try again later.
              if (getVerbosity() > 2) local_log.concat("  advance_work_queue() tried to clobber an existing transfer on chain.\n");
              //Kernel::staticRaiseEvent(&event_spi_queue_ready);  // Bypass our method. Jump right to the target.
              break;
-           case -2:    // Began the transfer, and it barffed... was aborted.
+           default:    // Began the transfer, and it barffed... was aborted.
              if (getVerbosity() > 3) local_log.concat("SPIAdapter::advance_work_queue():\t Failed to begin transfer after starting.\n");
              callback_queue.insert(current_queue_item);
-             current_queue_item = NULL;
+             current_queue_item = nullptr;
              if (callback_queue.size() == 1) Kernel::staticRaiseEvent(&event_spi_callback_ready);
              break;
          }
@@ -274,7 +274,7 @@ int8_t SPIAdapter::advance_work_queue() {
     current_queue_item = work_queue.dequeue();
     // Begin the bus operation.
     if (current_queue_item) {
-      if (current_queue_item->begin()) {
+      if (XferFault::NONE != current_queue_item->begin()) {
         if (getVerbosity() > 2) local_log.concatf("advance_work_queue() tried to clobber an existing transfer on the pick-up.\n");
         Kernel::staticRaiseEvent(&SPIBusOp::event_spi_queue_ready);  // Bypass our method. Jump right to the target.
       }
@@ -378,7 +378,7 @@ void SPIAdapter::reclaim_queue_item(SPIBusOp* op) {
   else if (op->shouldReap()) {
     //if (getVerbosity() > 6) local_log.concatf("SPIAdapter::reclaim_queue_item(): \t About to reap.\n");
     delete op;
-    specificity_burden++;
+    _heap_frees++;
   }
   else {
     /* If we are here, it must mean that some other class fed us a const SPIBusOp,
@@ -517,10 +517,7 @@ void SPIAdapter::printDebug(StringBuilder *output) {
     output->concatf("-- spi_cb_per_event    %d\n--\n",   spi_cb_per_event);
   }
   BusAdapter::printAdapter(this, output);
-  output->concatf("-- total_transfers     %u\n",     (unsigned long) SPIBusOp::total_transfers);
-  output->concatf("-- failed_transfers    %u\n",     (unsigned long) SPIBusOp::failed_transfers);
-
-  output->concatf("-- bus queue depth:    %d\n-- callback q depth    %d\n\n", work_queue.size(), callback_queue.size());
+  output->concatf("-- callback q depth    %d\n\n", callback_queue.size());
 
   if (getVerbosity() > 3) {
     if (current_queue_item != NULL) {

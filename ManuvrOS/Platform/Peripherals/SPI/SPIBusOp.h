@@ -53,17 +53,13 @@ This is the class that is used to keep bus operations on the SPI atomic.
 */
 class SPIBusOp : public BusOp {
   public:
-    BusOpCallback* callback = nullptr;  // Which class gets pinged when we've finished?
-
-    //uint32_t time_began    = 0;   // This is the time when bus access begins.
-    //uint32_t time_ended    = 0;   // This is the time when bus access stops (or is aborted).
-
     SPIBusOp();
     SPIBusOp(BusOpcode nu_op, BusOpCallback* requester, uint8_t cs, bool ah = false);
     ~SPIBusOp();
 
     /* Job control functions. */
-    int8_t begin();
+    XferFault begin();
+    void wipe();
     int8_t markComplete();
 
     void setBuffer(uint8_t *buf, unsigned int len);
@@ -85,8 +81,6 @@ class SPIBusOp : public BusOp {
     int8_t abort(XferFault);
 
     int8_t advance_operation(uint32_t status_reg, uint8_t data_reg);
-
-    void wipe();
 
     /* Flag management fxns... */
     bool shouldReap(bool);    // Override to set the reap behavior.
@@ -152,8 +146,6 @@ class SPIBusOp : public BusOp {
     void printDebug(StringBuilder*);
 
 
-    static uint32_t  total_transfers;
-    static uint32_t  failed_transfers;
     static uint16_t  spi_wait_timeout;   // In microseconds. Per-byte.
     static ManuvrMsg event_spi_queue_ready;
 
@@ -162,7 +154,6 @@ class SPIBusOp : public BusOp {
     uint8_t xfer_params[4] = {0, 0, 0, 0};
     uint8_t  _param_len    = 0;
     uint8_t  _cs_pin       = 255;  // Chip-select pin.
-    uint8_t  _flags        = 0;    // No flags set.
 
     int8_t _assert_cs(bool);
 

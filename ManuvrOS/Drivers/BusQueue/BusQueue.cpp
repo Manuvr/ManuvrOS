@@ -111,6 +111,10 @@ void BusOp::printBusOp(const char* print_name, BusOp* op, StringBuilder* output)
 
 
 template <class T> void BusAdapter<T>::printAdapter(BusAdapter<T>* adapter, StringBuilder* output) {
+  output->concatf("-- prealloc pool size  %u\n",  adapter->MAX_Q_DEPTH);
   output->concatf("-- prealloc queue size %d\n",  adapter->preallocated.size());
   output->concatf("-- prealloc_misses     %u\n",  adapter->_prealloc_misses);
+  output->concatf("-- heap_frees          %u\n",  adapter->_heap_frees);
+  output->concatf("-- work_queue depth    %d\n",  adapter->work_queue.size());
+  output->concatf("-- Xfers (fail/total): (%u/%u)\n",  adapter->_failed_xfers, adapter->_total_xfers);
 }

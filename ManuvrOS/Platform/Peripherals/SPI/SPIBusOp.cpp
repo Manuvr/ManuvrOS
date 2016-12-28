@@ -40,8 +40,6 @@ StringBuilder debug_log;   // TODO: Relocate this to a static member.
 *
 * Static members and initializers should be located here.
 *******************************************************************************/
-uint32_t SPIBusOp::total_transfers  = 0;  // How many total SPI transfers have we seen?
-uint32_t SPIBusOp::failed_transfers = 0;  // How many failed SPI transfers have we seen?
 uint16_t SPIBusOp::spi_wait_timeout = 20; // In microseconds. Per-byte.
 ManuvrMsg SPIBusOp::event_spi_queue_ready;
 
@@ -72,8 +70,8 @@ SPIBusOp::SPIBusOp() {
 * @param  ah         True for an active-high chip-select.
 */
 SPIBusOp::SPIBusOp(BusOpcode nu_op, BusOpCallback* requester, uint8_t cs, bool ah) : SPIBusOp() {
-  this->opcode = nu_op;
-  callback     = requester;
+  opcode   = nu_op;
+  callback = requester;
   csActiveHigh(ah);
 }
 
@@ -102,8 +100,8 @@ SPIBusOp::~SPIBusOp() {
 * @param  len The length of the buffer.
 */
 void SPIBusOp::setBuffer(uint8_t *buf, unsigned int len) {
-  this->buf     = buf;
-  this->buf_len = len;
+  buf     = buf;
+  buf_len = len;
 }
 
 
@@ -243,7 +241,6 @@ int8_t SPIBusOp::markComplete() {
   }
 
   //time_ended = micros();
-  total_transfers++;
   xfer_state = XferState::COMPLETE;
   step_queues();
   return 0;
@@ -257,7 +254,6 @@ int8_t SPIBusOp::markComplete() {
 * @return 0 on success. Non-zero on failure.
 */
 int8_t SPIBusOp::abort(XferFault cause) {
-  SPIBusOp::failed_transfers++;
   xfer_fault = cause;
   debug_log.concatf("SPI job aborted at state %s. Cause: %s.\n", getStateString(), getErrorString());
   printDebug(&debug_log);

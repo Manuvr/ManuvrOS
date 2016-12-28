@@ -84,7 +84,8 @@ enum class XferFault {
   QUEUE_FLUSH      // The work queue was flushed and this was a casualty.
 };
 
-
+/* Forward declarations. */
+class BusOpCallback;
 
 /*
 * This class represents a single transaction on the bus, but is devoid of
@@ -94,20 +95,19 @@ enum class XferFault {
 * Since C++ has no formal means of declaring an interface, we will use Java's
 *   conventions. That is, state-bearing members in this interface are ok, but
 *   there should be no function members that are not pure virtuals or inlines.
-*
-* Note also, that a class is not required to inherrit from this definition of
-*   a bus operation to use the enums defined above, with their associated static
-*   support functions.
 */
 class BusOp {
   public:
-    uint8_t* buf         = 0;                  // Pointer to the data buffer for the transaction.
-    //uint16_t txn_id;        // How are we going to keep track of this item?
-    uint16_t buf_len     = 0;                  // How large is the above buffer?
+    BusOpCallback* callback = nullptr;  // Which class gets pinged when we've finished?
+    uint8_t* buf            = 0;        // Pointer to the data buffer for the transaction.
+    uint16_t buf_len        = 0;        // How large is the above buffer?
+    //uint32_t time_began     = 0;        // This is the time when bus access begins.
+    //uint32_t time_ended     = 0;        // This is the time when bus access stops (or is aborted).
+    //uint16_t txn_id;                    // How are we going to keep track of this item?
 
-    /* Mandatory overrides... */
-    //virtual void wipe()  =0;
-    //virtual void begin() =0;
+    /* Mandatory overrides for this interface... */
+    virtual XferFault begin() =0;
+    virtual void wipe()  =0;
 
     /**
     * @return true if this operation is idle.
@@ -169,7 +169,7 @@ class BusOp {
     inline const char* getErrorString() {   return BusOp::getErrorString(xfer_fault);  };
 
 
-    static int next_txn_id;
+    static int next_txn_id;  // TODO: Sucks. Cut.
     static const char* getStateString(XferState);
     static const char* getOpcodeString(BusOpcode);
     static const char* getErrorString(XferFault);
@@ -178,9 +178,10 @@ class BusOp {
 
 
   protected:
-    BusOpcode opcode     = BusOpcode::UNDEF;   // What is the particular operation being done?
-    XferState xfer_state = XferState::UNDEF;   // What state is this transfer in?
-    XferFault xfer_fault = XferFault::NONE;    // Fault code.
+    uint8_t   _flags     = 0;                 // Specifics are left to the extending class.
+    BusOpcode opcode     = BusOpcode::UNDEF;  // What is the particular operation being done?
+    XferState xfer_state = XferState::UNDEF;  // What state is this transfer in?
+    XferFault xfer_fault = XferFault::NONE;   // Fault code.
     // TODO: Call-ahead, call-back
 
   private:
@@ -191,6 +192,8 @@ class BusOp {
 * This is an interface class that implements a callback path for I/O operations.
 * If a class wants to put operations into the SPI queue, it must either implement this
 *   interface, or delegate its callback duties to a class that does.
+* Generally-speaking, this will be a device that transacts on the bus, but is
+*   not itself the bus adapter.
 */
 class BusOpCallback {
   public:
@@ -213,11 +216,13 @@ template <class T> class BusAdapter : public BusOpCallback {
 
 
   protected:
-    const uint16_t MAX_Q_DEPTH;
+    uint32_t _total_xfers     = 0;  // Transfer stats.
+    uint32_t _failed_xfers    = 0;  // Transfer stats.
     uint16_t _prealloc_misses = 0;  // How many times have we starved the preallocation queue?
     uint16_t _heap_frees      = 0;  // How many times have we freed a BusOp?
     PriorityQueue<T*> work_queue;   // A work queue to keep transactions in order.
-    PriorityQueue<T*> preallocated;
+    PriorityQueue<T*> preallocated; // A list of available BusOps.
+    const uint16_t MAX_Q_DEPTH;     // Maximum tolerable queue depth.
 
     BusAdapter(uint16_t max) : MAX_Q_DEPTH(max) {};
 

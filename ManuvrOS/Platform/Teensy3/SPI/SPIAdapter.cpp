@@ -60,18 +60,18 @@ int8_t SPIAdapter::attached() {
 *
 * @return 0 on success, or non-zero on failure.
 */
-int8_t SPIBusOp::begin() {
+XferFault SPIBusOp::begin() {
   //time_began    = micros();
   //if (0 == _param_len) {
   //  // Obvious invalidity. We must have at least one transfer parameter.
   //  abort(XferFault::BAD_PARAM);
-  //  return -1;
+  //  return XferFault::BAD_PARAM;
   //}
 
   //if (SPI1->SR & SPI_FLAG_BSY) {
   //  Kernel::log("SPI op aborted before taking bus control.\n");
   //  abort(XferFault::BUS_BUSY);
-  //  return -1;
+  //  return XferFault::BUS_BUSY;
   //}
 
   set_state(XferState::INITIATE);  // Indicate that we now have bus control.
@@ -93,7 +93,7 @@ int8_t SPIBusOp::begin() {
   }
 
   markComplete();
-  return 0;
+  return XferFault::NONE;
 }
 
 
