@@ -102,6 +102,7 @@ enum class XferFault {
 class BusOp {
   public:
     uint8_t* buf         = 0;                  // Pointer to the data buffer for the transaction.
+    //uint16_t txn_id;        // How are we going to keep track of this item?
     uint16_t buf_len     = 0;                  // How large is the above buffer?
 
     /* Mandatory overrides... */
@@ -173,6 +174,7 @@ class BusOp {
     static const char* getOpcodeString(BusOpcode);
     static const char* getErrorString(XferFault);
 
+    static void printBusOp(const char*, BusOp*, StringBuilder*);
 
 
   protected:

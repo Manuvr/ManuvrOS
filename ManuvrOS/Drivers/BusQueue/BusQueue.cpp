@@ -98,7 +98,15 @@ const char* BusOp::getErrorString(XferFault code) {
 }
 
 
+void BusOp::printBusOp(const char* print_name, BusOp* op, StringBuilder* output) {
+  output->concatf("\t---[ %s %p %s ]---\n", print_name, (uintptr_t) op, op->getOpcodeString());
+  output->concatf("\t xfer_state        %s\n\t err               %s\n", op->getStateString(), op->getErrorString());
 
+  output->concatf("\t buf *(%p): (%u bytes)\n", (uintptr_t) op->buf, op->buf_len);
+  if (op->buf_len > 0) {
+    StringBuilder::printBuffer(output, op->buf, op->buf_len, "\t ");
+  }
+}
 
 
 

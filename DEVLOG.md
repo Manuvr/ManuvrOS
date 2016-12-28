@@ -426,4 +426,6 @@ _---J. Ian Lindsay_
     1868649   22904   23908 1915461  I2C is a hot mess. Fixing it...
     1868829   22904   23908 1915641  Adding a few driver stubs.
     1869245   22904   23908 1916057  Prepping i2c for another round of consolidation.
+    1869497   22904   23908 1916309  Consolidating BusOp common debug output.
+    1869313   22904   23908 1916125  Starting to reap gains.
     

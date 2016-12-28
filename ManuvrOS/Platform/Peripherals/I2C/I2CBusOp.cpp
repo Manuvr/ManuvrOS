@@ -112,21 +112,15 @@ void I2CBusOp::printDebug() {
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
-void I2CBusOp::printDebug(StringBuilder* temp) {
-  if (temp != NULL) {
-    temp->concatf("\n---[ I2CQueueOperation  0x%08x ]---\n", txn_id);
-    temp->concatf("\topcode:          %s\n", getOpcodeString());
-    temp->concatf("\tdevice:          0x%02x\n", dev_addr);
+void I2CBusOp::printDebug(StringBuilder* output) {
+  BusOp::printBusOp("I2COp", this, output);
+  output->concatf("\t txn_id          0x%08x\n", txn_id);
+  output->concatf("\t device          0x%02x\n", dev_addr);
 
-    if (sub_addr >= 0x00) {
-      temp->concatf("\tsubaddress:      0x%02x (%ssent)\n", sub_addr, (subaddr_sent() ? "" : "un"));
-    }
-    temp->concatf("\txfer_state:      %s\n", getStateString());
-    temp->concatf("\tFault:           %s\n", getErrorString());
-    temp->concatf("\tbuf_len:         %d\n\t", buf_len);
-    StringBuilder::printBuffer(temp, buf, buf_len, "\t");
-    temp->concat("\n");
+  if (sub_addr >= 0x00) {
+    output->concatf("\t subaddress      0x%02x (%ssent)\n", sub_addr, (subaddr_sent() ? "" : "un"));
   }
+  output->concat("\n\n");
 }
 
 

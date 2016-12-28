@@ -328,30 +328,17 @@ bool SPIBusOp::devRegisterAdvance(bool _reg_advance) {
 */
 void SPIBusOp::printDebug(StringBuilder *output) {
   if (NULL == output) return;
-  output->concatf("-----SPIBusOp %p (%s)------------\n", (uintptr_t) this, getOpcodeString());
+  BusOp::printBusOp("SPIBusOp", this, output);
   if (shouldReap())       output->concat("\t Will reap\n");
   if (returnToPrealloc()) output->concat("\t Returns to prealloc\n");
-  output->concatf("\t xfer_state        %s\n\t err               %s\n", getStateString(), getErrorString());
   //if (XferState::COMPLETE == xfer_state) {
   //  output->concatf("\t completed (uS)   %u\n",   (unsigned long) time_ended - time_began);
   //}
   output->concatf("\t param_len         %d\n", _param_len);
   output->concat("\t params            ");
 
-  if (_param_len > 0) {
-    for (uint8_t i = 0; i < _param_len; i++) {
-      output->concatf("0x%02x ", xfer_params[i]);
-    }
-  }
-
-  output->concatf("\n\t buf_len           %d\n", buf_len);
-
-  if (buf_len > 0) {
-    output->concatf("\t buf *(%p) ", (uintptr_t) buf);
-    //for (uint8_t i = 0; i < buf_len; i++) {
-    for (uint8_t i = 0; i < buf_len; i++) {
-      output->concatf("0x%02x ", (uint8_t) *(buf + i));
-    }
+  for (uint8_t i = 0; i < _param_len; i++) {
+    output->concatf("0x%02x ", xfer_params[i]);
   }
 
   output->concat("\n\n");
