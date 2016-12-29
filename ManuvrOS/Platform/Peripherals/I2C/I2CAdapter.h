@@ -177,10 +177,11 @@ This file is the tortured result of growing pains since the beginning of
       virtual ~I2CAdapter();           // Destructor
 
       /* Overrides from the BusAdapter interface */
-      virtual int8_t io_op_callback(BusOp*);
-      virtual int8_t queue_io_job(BusOp*);
+      int8_t io_op_callback(BusOp*);
+      int8_t queue_io_job(BusOp*);
       int8_t advance_work_queue();
-      I2CBusOp* new_op();
+      int8_t bus_init();
+      int8_t bus_deinit();
       I2CBusOp* new_op(BusOpcode, BusOpCallback*);
 
 
@@ -236,7 +237,6 @@ This file is the tortured result of growing pains since the beginning of
 
       void __class_initializer();
       void __class_teardown();
-      void gpioSetup();
 
       int get_slave_dev_by_addr(uint8_t search_addr);
       void reclaim_queue_item(I2CBusOp*);
@@ -246,7 +246,6 @@ This file is the tortured result of growing pains since the beginning of
 
 
       static I2CBusOp __prealloc_pool[PREALLOCATED_I2C_JOBS];
-      static I2CBusOp* fetchPreallocation();
       static void reclaimPreallocation(I2CBusOp*);
   };
 

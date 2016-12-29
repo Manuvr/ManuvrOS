@@ -81,7 +81,7 @@ SPIAdapter::SPIAdapter(uint8_t idx, uint8_t d_in, uint8_t d_out, uint8_t clk) : 
     preallocated.insert(&preallocated_bus_jobs[i]);
   }
 
-  current_queue_item = NULL;
+  current_queue_item = nullptr;
   _er_set_flag(SPI_FLAG_QUEUE_IDLE);
 }
 
@@ -373,8 +373,7 @@ void SPIAdapter::reclaim_queue_item(SPIBusOp* op) {
 
   if (op->returnToPrealloc()) {
     //if (getVerbosity() > 6) local_log.concatf("SPIAdapter::reclaim_queue_item(): \t About to wipe.\n");
-    op->wipe();
-    preallocated.insert(op);
+    BusAdapter::return_op_to_pool(op);
   }
   else if (op->shouldReap()) {
     //if (getVerbosity() > 6) local_log.concatf("SPIAdapter::reclaim_queue_item(): \t About to reap.\n");
@@ -393,19 +392,12 @@ void SPIAdapter::reclaim_queue_item(SPIBusOp* op) {
 }
 
 
-/**
-* Return a vacant SPIBusOp to the caller, allocating if necessary.
-*
-* @return an SPIBusOp to be used. Only NULL if out-of-mem.
-*/
-SPIBusOp* SPIAdapter::new_op() {
-  SPIBusOp* return_value = preallocated.dequeue();
-  if (nullptr == return_value) {
-    _prealloc_misses++;
-    return_value = new SPIBusOp();
-    //if (getVerbosity() > 5) Kernel::log("new_op(): Fresh allocation!\n");
-  }
-  return return_value;
+int8_t SPIAdapter::bus_init() {
+  return 0;
+}
+
+int8_t SPIAdapter::bus_deinit() {
+  return 0;
 }
 
 
@@ -417,7 +409,7 @@ SPIBusOp* SPIAdapter::new_op() {
 * @return an SPIBusOp to be used. Only NULL if out-of-mem.
 */
 SPIBusOp* SPIAdapter::new_op(BusOpcode _op, BusOpCallback* _req) {
-  SPIBusOp* return_value = new_op();
+  SPIBusOp* return_value = BusAdapter::new_op();
   return_value->set_opcode(_op);
   return_value->callback = _req;
   return return_value;

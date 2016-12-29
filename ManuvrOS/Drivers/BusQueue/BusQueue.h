@@ -106,12 +106,13 @@ class BusOp {
 
     /* Mandatory overrides for this interface... */
     virtual XferFault begin() =0;
+    //virtual XferFault advance() =0;
     virtual void wipe()  =0;
 
     /**
     * @return true if this operation is idle.
     */
-    inline bool isIdle() {       return (XferState::IDLE     == xfer_state);  };
+    inline bool isIdle() {       return (XferState::IDLE == xfer_state);  };
 
     /**
     * This only works because of careful defines. Tread lightly.
@@ -206,8 +207,6 @@ class BusOpCallback {
 */
 template <class T> class BusAdapter : public BusOpCallback {
   public:
-    /* Mandatory overrides... */
-    virtual int8_t advance_work_queue()          =0;
 
 
   protected:
@@ -222,20 +221,29 @@ template <class T> class BusAdapter : public BusOpCallback {
 
     BusAdapter(uint16_t max) : MAX_Q_DEPTH(max) {};
 
+    /* Mandatory overrides... */
+    virtual int8_t advance_work_queue() =0;  // The nature of the bus dictates this implementation.
+    virtual int8_t bus_init()           =0;  // Hardware-specifics.
+    virtual int8_t bus_deinit()         =0;  // Hardware-specifics.
 
-    ///**
-    //* Return a vacant BusOp to the caller, allocating if necessary.
-    //*
-    //* @return an BusOp to be used. Only NULL if out-of-mem.
-    //*/
-    //T* new_op() {
-    //  T* return_value = preallocated.dequeue();
-    //  if (nullptr == return_value) {
-    //    _prealloc_misses++;
-    //    return_value = new T();
-    //  }
-    //  return return_value;
-    //}
+    void return_op_to_pool(T* obj) {
+      obj->wipe();
+      preallocated.insert(obj);
+    };
+
+    /**
+    * Return a vacant BusOp to the caller, allocating if necessary.
+    *
+    * @return an BusOp to be used. Only NULL if out-of-mem.
+    */
+    T* new_op() {
+      T* return_value = preallocated.dequeue();
+      if (nullptr == return_value) {
+        _prealloc_misses++;
+        return_value = new T();
+      }
+      return return_value;
+    };
 
     ///**
     //* Return a vacant BusOp to the caller, allocating if necessary.
@@ -247,7 +255,7 @@ template <class T> class BusAdapter : public BusOpCallback {
     //T* new_op(BusOpcode _op, BusOpCallback* _req) {
     //  T* return_value = new T(_op, _req);
     //  return return_value;
-    //}
+    //};
 
     /* Convenience function for guarding against queue floods. */
     inline bool roomInQueue() {    return !(work_queue.size() < MAX_Q_DEPTH);  }

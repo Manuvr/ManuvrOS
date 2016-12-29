@@ -63,7 +63,6 @@ class SPIAdapter : public EventReceiver, public BusAdapter<SPIBusOp> {
     int8_t io_op_callback(BusOp*);
     int8_t queue_io_job(BusOp*);
     int8_t advance_work_queue();
-    SPIBusOp* new_op();
     SPIBusOp* new_op(BusOpcode, BusOpCallback*);
 
     void purge_queued_work_by_dev(BusOpCallback *dev);   // Flush the work queue by callback match
@@ -79,6 +78,12 @@ class SPIAdapter : public EventReceiver, public BusAdapter<SPIBusOp> {
     #endif  //MANUVR_CONSOLE_SUPPORT
 
     static SPIBusOp* current_queue_item;
+
+
+  protected:
+    /* Overrides from the BusAdapter interface */
+    int8_t bus_init();
+    int8_t bus_deinit();
 
 
   private:

@@ -112,38 +112,25 @@ void I2CAdapter::__class_teardown() {
 }
 
 
-/**
-* Setup GPIO pins and their bindings to on-chip peripherals, if required.
-*/
-void I2CAdapter::gpioSetup() {
+
+int8_t I2CAdapter::bus_init() {
+  return 0;
+}
+
+int8_t I2CAdapter::bus_deinit() {
+  return 0;
 }
 
 
 /**
-* Return a vacant SPIBusOp to the caller, allocating if necessary.
-*
-* @return an SPIBusOp to be used. Only NULL if out-of-mem.
-*/
-I2CBusOp* I2CAdapter::new_op() {
-  I2CBusOp* return_value = preallocated.dequeue();
-  if (nullptr == return_value) {
-    _prealloc_misses++;
-    return_value = new I2CBusOp();
-    //if (getVerbosity() > 5) Kernel::log("new_op(): Fresh allocation!\n");
-  }
-  return return_value;
-}
-
-
-/**
-* Return a vacant SPIBusOp to the caller, allocating if necessary.
+* Return a vacant I2CBusOp to the caller, allocating if necessary.
 *
 * @param  _op   The desired bus operation.
 * @param  _req  The device pointer that is requesting the job.
-* @return an CPLDBusOp to be used. Only NULL if out-of-mem.
+* @return an I2CBusOp to be used. Only NULL if out-of-mem.
 */
 I2CBusOp* I2CAdapter::new_op(BusOpcode _op, BusOpCallback* _req) {
-  I2CBusOp* return_value = new_op();
+  I2CBusOp* return_value = BusAdapter::new_op();
   return_value->set_opcode(_op);
   return_value->callback = (I2CDevice*) _req;
   return return_value;
@@ -151,10 +138,10 @@ I2CBusOp* I2CAdapter::new_op(BusOpcode _op, BusOpCallback* _req) {
 
 
 /**
-* This fxn will either free() the memory associated with the SPIBusOp object, or it
+* This fxn will either free() the memory associated with the I2CBusOp object, or it
 *   will return it to the preallocation queue.
 *
-* @param item The SPIBusOp to be reclaimed.
+* @param item The I2CBusOp to be reclaimed.
 */
 void I2CAdapter::reclaim_queue_item(I2CBusOp* op) {
   uintptr_t obj_addr = ((uintptr_t) op);
@@ -167,8 +154,7 @@ void I2CAdapter::reclaim_queue_item(I2CBusOp* op) {
 
   if ((obj_addr < pre_max) && (obj_addr >= pre_min)) {
     // If we are in this block, it means obj was preallocated. wipe and reclaim it.
-    op->wipe();
-    preallocated.insert(op);
+    BusAdapter::return_op_to_pool(op);
   }
   else {
     // We were created because our prealloc was starved. we are therefore a transient heap object.
@@ -660,7 +646,7 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       break;
 
     case '1':
-      gpioSetup();
+      bus_init();
       local_log.concat("i2c GPIO reset.\n");
       break;
 
