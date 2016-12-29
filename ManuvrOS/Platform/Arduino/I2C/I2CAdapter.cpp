@@ -3,28 +3,20 @@
 #if defined(MANUVR_SUPPORT_I2C)
 #include <Wire/Wire.h>
 
-I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
-  __class_initializer();
-  dev = dev_id;
-
+int8_t I2CAdapter::bus_init() {
   //if (dev_id == 1) {
     //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400);
     Wire.begin();
     busOnline(true);
   //}
+  return 0;
 }
 
-
-I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : I2CAdapter(dev_id) {
-  // This platform handles this for us.
-  sda_pin = 255;
-  scl_pin = 255;
+int8_t I2CAdapter::bus_deinit() {
+  // TODO: This.
+  return 0;
 }
 
-
-I2CAdapter::~I2CAdapter() {
-  __class_teardown();
-}
 
 
 void I2CAdapter::printHardwareState(StringBuilder* output) {

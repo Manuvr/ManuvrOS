@@ -32,10 +32,8 @@ bool _stm32f7_timing_reinit(I2C_HandleTypeDef *hi2c, uint32_t val) {
 }
 
 
-I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : EventReceiver(), BusAdapter(12) {
-  __class_initializer();
-  dev = dev_id;
-
+//I2CAdapter::I2CAdapter(uint8_t dev_id) : I2CAdapter(1, 22, 23) {}
+int8_t I2CAdapter::bus_init() {
   switch (dev_id) {
     case 1:
       if (((23 == sda) || (25 == sda)) && ((22 == scl) || (24 == scl))) {
@@ -74,21 +72,16 @@ I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : EventReceiver
       Kernel::log("I2CAdapter unsupported.\n");
       break;
   }
+
+  return (busOnline() ? 0 : -1);
 }
 
 
-I2CAdapter::I2CAdapter(uint8_t dev_id) : I2CAdapter(1, 22, 23) {
-}
-
-
-I2CAdapter::~I2CAdapter() {
-  __class_teardown();
-
-  /* TODO: The work_queue destructor will take care of its own cleanup, but
-       We should abort any open transfers prior to deleting this list. */
+int8_t I2CAdapter::bus_deinit() {
   __HAL_RCC_I2C1_CLK_DISABLE();
   HAL_GPIO_DeInit(GPIOB, GPIO_PIN_7|GPIO_PIN_6);
   HAL_I2C_DeInit(&hi2c1);
+  return 0;
 }
 
 

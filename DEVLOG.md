@@ -436,3 +436,8 @@ Going to go bring Digitabulum up-to-speed.
 _---J. Ian Lindsay_
 
 ------
+
+### 2016.12.28:
+
+    Linux, 32-bit: DEBUG=1
+    1869741   22904   23908 1916553  New baseline before the dust settles on i2c.

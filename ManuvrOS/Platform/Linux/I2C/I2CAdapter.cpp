@@ -13,16 +13,15 @@
 #include <inttypes.h>
 #include <ctype.h>
 
+//TODO: This is a hack. Re-work it.
+int open_bus_handle = -1;
 
-I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver(), BusAdapter(12) {
-  __class_initializer();
-  dev = dev_id;
-
+int8_t I2CAdapter::bus_init() {
   char *filename = (char *) alloca(24);
   *filename = 0;
-  if (sprintf(filename, "/dev/i2c-%d", dev_id) > 0) {
-    dev = open(filename, O_RDWR);
-    if (dev < 0) {
+  if (sprintf(filename, "/dev/i2c-%d", dev) > 0) {
+    open_bus_handle = open(filename, O_RDWR);
+    if (open_bus_handle < 0) {
       #ifdef __MANUVR_DEBUG
       if (getVerbosity() > 2) {
         local_log.concatf("Failed to open the i2c bus represented by %s.\n", filename);
@@ -34,32 +33,24 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver(), BusAdapter(12) {
       busOnline(true);
     }
   }
-  else {
-    #ifdef __MANUVR_DEBUG
-    if (getVerbosity() > 2) {
-      local_log.concatf("Somehow we failed to sprintf and build a filename to open i2c bus %d.\n", dev_id);
-      Kernel::log(&local_log);
-    }
-    #endif
+  #if defined(__MANUVR_DEBUG)
+  else if (getVerbosity() > 2) {
+    local_log.concatf("Somehow we failed to sprintf and build a filename to open i2c bus %d.\n", dev);
+    Kernel::log(&local_log);
   }
+  #endif
+  return (busOnline() ? 0:-1);
 }
 
 
-I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : I2CAdapter(dev_id) {
-  // This platform handles this for us.
-  sda_pin = 255;
-  scl_pin = 255;
-}
-
-
-I2CAdapter::~I2CAdapter() {
-  __class_teardown();
-    if (dev >= 0) {
-      #ifdef __MANUVR_DEBUG
-      Kernel::log("Closing the open i2c bus...\n");
-      #endif
-      close(dev);
-    }
+int8_t I2CAdapter::bus_deinit() {
+  if (open_bus_handle >= 0) {
+    #ifdef __MANUVR_DEBUG
+    Kernel::log("Closing the open i2c bus...\n");
+    #endif
+    close(open_bus_handle);
+  }
+  return 0;
 }
 
 
@@ -90,7 +81,7 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
   bool return_value = false;
   unsigned short timeout = 10000;
   if (nu_addr != last_used_bus_addr) {
-    if (dev < 0) {
+    if (open_bus_handle < 0) {
       // If the bus is either uninitiallized or not idle, decline
       // to switch the device. Return false;
       #ifdef __MANUVR_DEBUG
@@ -111,7 +102,7 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
         return return_value;
       }
 
-      if (ioctl(dev, I2C_SLAVE, nu_addr) >= 0) {
+      if (ioctl(open_bus_handle, I2C_SLAVE, nu_addr) >= 0) {
         last_used_bus_addr = nu_addr;
         return_value = true;
       }

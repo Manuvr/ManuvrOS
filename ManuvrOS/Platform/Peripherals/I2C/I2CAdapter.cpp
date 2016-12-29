@@ -68,8 +68,16 @@ const MessageTypeDef i2c_message_defs[] = {
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
 
-void I2CAdapter::__class_initializer() {
+I2CAdapter::I2CAdapter(uint8_t dev_id) : I2CAdapter(dev_id, 255, 255) {
+  // This should result in the platform-default for the given bus id.
+  // Some platforms (linux) will ignore pin-assignment values completely.
+}
+
+I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : EventReceiver(), BusAdapter(12) {
   setReceiverName("I2CAdapter");
+  dev     = dev_id;
+  sda_pin = sda;
+  scl_pin = scl;
 
   _er_clear_flag(I2C_BUS_FLAG_BUS_ERROR | I2C_BUS_FLAG_BUS_ONLINE);
   _er_clear_flag(I2C_BUS_FLAG_PING_RUN  | I2C_BUS_FLAG_PINGING);
@@ -77,7 +85,7 @@ void I2CAdapter::__class_initializer() {
   for (uint16_t i = 0; i < 128; i++) ping_map[i] = 0;   // Zero the ping map.
 
   // Set a globalized refernece so we can hit the proper adapter from an ISR.
-  i2c = this;
+  i2c = this;   // TODO: Handcuffs. Kill it.
 
   int mes_count = sizeof(i2c_message_defs) / sizeof(MessageTypeDef);
   ManuvrMsg::registerMessages(i2c_message_defs, mes_count);
@@ -93,7 +101,7 @@ void I2CAdapter::__class_initializer() {
 }
 
 
-void I2CAdapter::__class_teardown() {
+I2CAdapter::~I2CAdapter() {
   busOnline(false);
   while (dev_list.hasNext()) {
     dev_list.get()->disassignBusInstance();
@@ -109,17 +117,9 @@ void I2CAdapter::__class_teardown() {
   _periodic_i2c_debug.enableSchedule(false);
   platform.kernel()->removeSchedule(&_periodic_i2c_debug);
   _periodic_i2c_debug.decRefs();
+  bus_deinit();
 }
 
-
-
-int8_t I2CAdapter::bus_init() {
-  return 0;
-}
-
-int8_t I2CAdapter::bus_deinit() {
-  return 0;
-}
 
 
 /**
@@ -188,6 +188,7 @@ void I2CAdapter::reclaim_queue_item(I2CBusOp* op) {
 */
 int8_t I2CAdapter::attached() {
   if (EventReceiver::attached()) {
+    bus_init();
     if (busOnline()) {
       advance_work_queue();
     }
@@ -235,6 +236,8 @@ int8_t I2CAdapter::notify(ManuvrMsg* active_event) {
   switch (active_event->eventCode()) {
     case MANUVR_MSG_SYS_REBOOT:
     case MANUVR_MSG_SYS_BOOTLOADER:
+      bus_deinit();
+      return_value++;
       break;
 
     /* Things that only this class is likely to care about. */

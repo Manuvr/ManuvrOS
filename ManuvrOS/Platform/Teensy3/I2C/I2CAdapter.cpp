@@ -3,30 +3,25 @@
 #if defined(MANUVR_SUPPORT_I2C)
 #include <i2c_t3/i2c_t3.h>
 
-I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : EventReceiver(), BusAdapter(12) {
-  __class_initializer();
-  dev = dev_id;
 
-  switch (dev_id) {
+int8_t I2CAdapter::bus_init() {
+  switch (dev) {
     case 0:
-      if (((18 == sda) && (19 == scl)) || ((17 == sda) && (16 == scl))) {
+      if (((18 == sda_pin) && (19 == scl_pin)) || ((17 == sda_pin) && (16 == scl_pin))) {
         Wire.begin(I2C_MASTER, 0x00,
-          (17 == sda) ? I2C_PINS_16_17 : I2C_PINS_18_19,
-          I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR);
+          (17 == sda_pin) ? I2C_PINS_16_17 : I2C_PINS_18_19,
+          I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR
+        );
         Wire.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
         busOnline(true);
-        sda_pin = sda;
-        scl_pin = scl;
       }
       break;
     #if defined(__MK20DX256__)
     case 1:
-      if ((30 == sda) && (29 == scl)) {
+      if ((30 == sda_pin) && (29 == scl_pin)) {
         Wire1.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR);
         Wire1.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
         busOnline(true);
-        sda_pin = sda;
-        scl_pin = scl;
       }
       break;
     #endif  //__MK20DX256__
@@ -34,16 +29,15 @@ I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : EventReceiver
       Kernel::log("I2CAdapter unsupported.\n");
       break;
   }
+  return (busOnline() ? 0:-1);
 }
 
 
-I2CAdapter::I2CAdapter(uint8_t dev_id) : I2CAdapter(dev_id, 18, 17) {
+int8_t I2CAdapter::bus_deinit() {
+  // TODO: This.
+  return 0;
 }
 
-
-I2CAdapter::~I2CAdapter() {
-  __class_teardown();
-}
 
 
 void I2CAdapter::printHardwareState(StringBuilder* output) {

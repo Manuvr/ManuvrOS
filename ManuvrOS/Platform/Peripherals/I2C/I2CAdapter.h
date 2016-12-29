@@ -172,7 +172,7 @@ This file is the tortured result of growing pains since the beginning of
     public:
       I2CBusOp* current_queue_item = nullptr;
 
-      I2CAdapter(uint8_t dev_id = 1);  // Constructor takes a bus ID as an argument.
+      I2CAdapter(uint8_t dev_id);    // Constructor takes a bus ID as an argument.
       I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl);  // Constructor takes a bus ID and pins as arguments.
       virtual ~I2CAdapter();           // Destructor
 
@@ -234,9 +234,6 @@ This file is the tortured result of growing pains since the beginning of
       int8_t  last_used_bus_addr = 0;
       int8_t  dev = -1;
       int8_t  ping_map[128];
-
-      void __class_initializer();
-      void __class_teardown();
 
       int get_slave_dev_by_addr(uint8_t search_addr);
       void reclaim_queue_item(I2CBusOp*);
