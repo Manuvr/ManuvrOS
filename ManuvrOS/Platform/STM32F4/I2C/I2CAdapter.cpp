@@ -10,12 +10,9 @@ extern "C" {
 }
 
 
-I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
-  __class_initializer();
-  dev = dev_id;
-
+int8_t I2CAdapter::bus_init() {
   // This init() fxn was patterned after the STM32F4x7 library example.
-  if (dev_id == 1) {
+  if (dev == 1) {
     //I2C_DeInit(I2C1);		//Deinit and reset the I2C to avoid it locking up
 
     GPIO_InitTypeDef GPIO_InitStruct;
@@ -60,26 +57,15 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
     I2C_Init(I2C1, &I2C_InitStruct);                 // init I2C1
     I2C_Cmd(I2C1, ENABLE);       // enable I2C1
   }
+
+  return (busOnline() ? 0 : -1);
 }
 
 
-I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : I2CAdapter(dev_id) {
-  // This platform handles this for us.
-  sda_pin = 255;
-  scl_pin = 255;
-}
 
-
-I2CAdapter::~I2CAdapter() {
-    I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, DISABLE);   // Shelve the interrupts.
-    I2C_DeInit(I2C1);   // De-init
-    while (dev_list.hasNext()) {
-      dev_list.get()->disassignBusInstance();
-      dev_list.remove();
-    }
-
-    /* TODO: The work_queue destructor will take care of its own cleanup, but
-       We should abort any open transfers prior to deleting this list. */
+int8_t I2CAdapter::bus_deinit() {
+  I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, DISABLE);   // Shelve the interrupts.
+  I2C_DeInit(I2C1);   // De-init
 }
 
 

@@ -182,12 +182,14 @@ int main(int argc, const char *argv[]) {
   #if defined(MANUVR_SUPPORT_I2C)
     // If we are running on a RasPi, let's try to fire up the i2c that is almost
     //   certainly present.
-    I2CAdapter i2c(1);
+    I2CAdapter i2c(1, 23, 26);
     kernel->subscribe(&i2c);
 
     // TODO: Temporary addition to test the SensorWrapper build size.
     TMP006 tmp006;
     INA219 ina219;
+    //i2c.addSlaveDevice(&tmp006);
+    //i2c.addSlaveDevice(&ina219);
   #endif
 
   #if defined(RASPI) || defined(RASPI2)

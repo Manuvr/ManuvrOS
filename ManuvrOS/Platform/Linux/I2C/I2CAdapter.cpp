@@ -13,8 +13,9 @@
 #include <inttypes.h>
 #include <ctype.h>
 
-//TODO: This is a hack. Re-work it.
-int open_bus_handle = -1;
+
+int open_bus_handle = -1;        //TODO: This is a hack. Re-work it.
+int8_t  last_used_bus_addr = 0;  //TODO: This is a hack. Re-work it.
 
 int8_t I2CAdapter::bus_init() {
   char *filename = (char *) alloca(24);
@@ -123,5 +124,90 @@ bool I2CAdapter::switch_device(uint8_t nu_addr) {
   return return_value;
 }
 
+
+
+
+
+XferFault I2CBusOp::begin() {
+  if (nullptr == device) {
+    abort(XferFault::DEV_NOT_FOUND);
+    return XferFault::DEV_NOT_FOUND;
+  }
+
+  if ((nullptr != callback) && !((I2CDevice*)callback)->operationCallahead(this)) {
+    abort(XferFault::IO_RECALL);
+    return XferFault::IO_RECALL;
+  }
+
+  xfer_state = XferState::ADDR;
+  if (device->generateStart()) {
+    // Failure to generate START condition.
+    abort(XferFault::BUS_BUSY);
+    return XferFault::BUS_BUSY;
+  }
+
+  if (!device->switch_device(dev_addr)) {
+    abort(XferFault::BUS_FAULT);
+    return XferFault::BUS_FAULT;
+  }
+
+  if (opcode == BusOpcode::RX) {
+    uint8_t sa = (uint8_t) (sub_addr & 0x00FF);
+
+    if (write(open_bus_handle, &sa, 1) == 1) {
+      if (read(open_bus_handle, buf, buf_len) == buf_len) {
+        markComplete();
+      }
+      else {
+        abort(XferFault::BUS_FAULT);
+        return XferFault::BUS_FAULT;
+      }
+    }
+    else {
+      abort(XferFault::BUS_FAULT);
+      return XferFault::BUS_FAULT;
+    }
+  }
+  else if (opcode == BusOpcode::TX) {
+    uint8_t buffer[buf_len + 1];
+    buffer[0] = (uint8_t) (sub_addr & 0x00FF);
+
+    for (int i = 0; i < buf_len; i++) buffer[i + 1] = *(buf + i);
+
+    if (write(open_bus_handle, &buffer, buf_len+1) == buf_len+1) {
+      markComplete();
+    }
+    else {
+      abort(XferFault::BUS_FAULT);
+      return XferFault::BUS_FAULT;
+    }
+  }
+  else if (opcode == BusOpcode::TX_CMD) {
+    uint8_t buffer[buf_len + 1];
+    buffer[0] = (uint8_t) (sub_addr & 0x00FF);
+    if (write(open_bus_handle, &buffer, 1) == 1) {
+      markComplete();
+    }
+    else {
+      abort(XferFault::BUS_FAULT);
+      return XferFault::BUS_FAULT;
+    }
+  }
+  else {
+    abort(XferFault::BUS_FAULT);
+    return XferFault::BUS_FAULT;
+  }
+
+  return XferFault::NONE;
+}
+
+
+/*
+* Linux doesn't have a concept of interrupt, but we might call this
+*   from an I/O thread.
+*/
+int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
+  return 0;
+}
 
 #endif  // MANUVR_SUPPORT_I2C

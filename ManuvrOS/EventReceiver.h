@@ -143,6 +143,7 @@ Lifecycle:
         StringBuilder local_log;
 
         EventReceiver();
+        EventReceiver(const char* nom);
 
         inline void _mark_attached() {   _class_state |= MANUVR_ER_FLAG_ATTACHED;  };
 

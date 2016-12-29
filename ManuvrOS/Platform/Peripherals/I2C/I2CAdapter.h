@@ -170,18 +170,21 @@ This file is the tortured result of growing pains since the beginning of
   */
   class I2CAdapter : public EventReceiver, public BusAdapter<I2CBusOp> {
     public:
-      I2CBusOp* current_queue_item = nullptr;
-
       I2CAdapter(uint8_t dev_id);    // Constructor takes a bus ID as an argument.
       I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl);  // Constructor takes a bus ID and pins as arguments.
       virtual ~I2CAdapter();           // Destructor
 
+      /* Overrides from EventReceiver */
+      int8_t notify(ManuvrMsg*);
+      int8_t callback_proc(ManuvrMsg*);
+      #if defined(MANUVR_CONSOLE_SUPPORT)
+        void procDirectDebugInstruction(StringBuilder*);
+        void printHardwareState(StringBuilder*);
+      #endif  //MANUVR_CONSOLE_SUPPORT
+
       /* Overrides from the BusAdapter interface */
       int8_t io_op_callback(BusOp*);
       int8_t queue_io_job(BusOp*);
-      int8_t advance_work_queue();
-      int8_t bus_init();
-      int8_t bus_deinit();
       I2CBusOp* new_op(BusOpcode, BusOpCallback*);
 
 
@@ -196,14 +199,6 @@ This file is the tortured result of growing pains since the beginning of
       void printDebug(StringBuilder*);
       void printDevs(StringBuilder*);
       void printDevs(StringBuilder*, uint8_t dev_num);
-
-      /* Overrides from EventReceiver */
-      int8_t notify(ManuvrMsg*);
-      int8_t callback_proc(ManuvrMsg*);
-      #if defined(MANUVR_CONSOLE_SUPPORT)
-        void procDirectDebugInstruction(StringBuilder*);
-        void printHardwareState(StringBuilder*);
-      #endif  //MANUVR_CONSOLE_SUPPORT
 
 
       // These are meant to be called from the bus jobs. They deal with specific bus functions
@@ -224,16 +219,22 @@ This file is the tortured result of growing pains since the beginning of
     protected:
       int8_t attached();      // This is called from the base notify().
 
+      /* Overrides from the BusAdapter interface */
+      int8_t advance_work_queue();
+      int8_t bus_init();      // This must be provided on a per-platform basis.
+      int8_t bus_deinit();    // This must be provided on a per-platform basis.
+
 
     private:
+      int8_t  ping_map[128];
+      int     dev = -1;
+      uint8_t scl_pin = 255;
+      uint8_t sda_pin = 255;
+
+      I2CBusOp* current_queue_item = nullptr;
       LinkedList<I2CDevice*> dev_list;    // A list of active slaves on this bus.
       ManuvrMsg _periodic_i2c_debug;
 
-      uint8_t scl_pin = 255;
-      uint8_t sda_pin = 255;
-      int8_t  last_used_bus_addr = 0;
-      int8_t  dev = -1;
-      int8_t  ping_map[128];
 
       int get_slave_dev_by_addr(uint8_t search_addr);
       void reclaim_queue_item(I2CBusOp*);
@@ -243,7 +244,6 @@ This file is the tortured result of growing pains since the beginning of
 
 
       static I2CBusOp __prealloc_pool[PREALLOCATED_I2C_JOBS];
-      static void reclaimPreallocation(I2CBusOp*);
   };
 
 

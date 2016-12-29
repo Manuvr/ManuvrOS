@@ -29,23 +29,6 @@ limitations under the License.
   #include <stm32f4xx_i2c.h>
   #include <stm32f4xx_gpio.h>
   #include "stm32f4xx_it.h"
-#elif defined(ARDUINO)
-  #include <Wire/Wire.h>
-#elif defined(__MANUVR_LINUX)
-  #include <stdlib.h>
-  #include <unistd.h>
-  #include <linux/i2c-dev.h>
-  #include <sys/types.h>
-  #include <sys/ioctl.h>
-  #include <sys/stat.h>
-  #include <fstream>
-  #include <iostream>
-  #include <fcntl.h>
-  #include <inttypes.h>
-  #include <ctype.h>
-#elif defined(STM32F7XX) | defined(STM32F746xx)
-#else
-  // Unsupported platform
 #endif
 
 
@@ -161,27 +144,26 @@ void I2CBusOp::markComplete() {
 * This queue item can begin executing. This is where any bus access should be initiated.
 * TODO: Needs to be doing bus-checks.
 */
-
-XferFault I2CBusOp::begin() {
-  if (nullptr == device) {
-    abort(XferFault::DEV_NOT_FOUND);
-    return XferFault::DEV_NOT_FOUND;
-  }
-
-  if ((nullptr != callback) && !((I2CDevice*)callback)->operationCallahead(this)) {
-    abort(XferFault::IO_RECALL);
-    return XferFault::IO_RECALL;
-  }
-
-  xfer_state = XferState::ADDR;
-  init_dma();
-  if (device->generateStart()) {
-    // Failure to generate START condition.
-    abort(XferFault::BUS_BUSY);
-    return XferFault::BUS_BUSY;
-  }
-  return XferFault::NONE;
-}
+//XferFault I2CBusOp::begin() {
+//  if (nullptr == device) {
+//    abort(XferFault::DEV_NOT_FOUND);
+//    return XferFault::DEV_NOT_FOUND;
+//  }
+//
+//  if ((nullptr != callback) && !((I2CDevice*)callback)->operationCallahead(this)) {
+//    abort(XferFault::IO_RECALL);
+//    return XferFault::IO_RECALL;
+//  }
+//
+//  xfer_state = XferState::ADDR;
+//  init_dma();
+//  if (device->generateStart()) {
+//    // Failure to generate START condition.
+//    abort(XferFault::BUS_BUSY);
+//    return XferFault::BUS_BUSY;
+//  }
+//  return XferFault::NONE;
+//}
 
 //http://tech.munts.com/MCU/Frameworks/ARM/stm32f4/libs/STM32F4xx_DSP_StdPeriph_Lib_V1.1.0/Project/STM32F4xx_StdPeriph_Examples/I2C/I2C_TwoBoards/I2C_DataExchangeDMA/main.c
 // TODO: should check length > 0 before doing DMA init.
@@ -234,55 +216,6 @@ int8_t I2CBusOp::init_dma() {
 
 #elif defined(STM32F7XX) | defined(STM32F746xx)
   device->dispatchOperation(this);
-
-#elif defined(__MANUVR_LINUX)   // Linux land...
-  if (!device->switch_device(dev_addr)) return -1;
-
-  if (opcode == BusOpcode::RX) {
-    uint8_t sa = (uint8_t) (sub_addr & 0x00FF);
-
-    if (write(device->getDevId(), &sa, 1) == 1) {
-      return_value = read(device->getDevId(), buf, buf_len);
-      if (return_value == buf_len) {
-        markComplete();
-      }
-      else return -1;
-    }
-    else {
-      abort();
-      return -1;
-    }
-  }
-  else if (opcode == BusOpcode::TX) {
-    uint8_t buffer[buf_len + 1];
-    buffer[0] = (uint8_t) (sub_addr & 0x00FF);
-
-    for (int i = 0; i < buf_len; i++) buffer[i + 1] = *(buf + i);
-
-    if (write(device->getDevId(), &buffer, buf_len+1) == buf_len+1) {
-      markComplete();
-    }
-    else {
-      abort();
-      return -1;
-    }
-  }
-  else if (opcode == BusOpcode::TX_CMD) {
-    uint8_t buffer[buf_len + 1];
-    buffer[0] = (uint8_t) (sub_addr & 0x00FF);
-    if (write(device->getDevId(), &buffer, 1) == 1) {
-      markComplete();
-    }
-    else {
-      abort();
-      return -1;
-    }
-  }
-  else {
-    abort();
-    return -1;
-  }
-
 #else
   // No support
 #endif
@@ -480,22 +413,8 @@ int8_t I2CBusOp::init_dma() {
     return 0;
   }
 
-#elif defined(__MANUVR_LINUX)
-
-  /*
-  * Linux doesn't have a concept of interrupt, but we might call this
-  *   from an I/O thread.
-  */
-  int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
-    return 0;
-  }
-
 #elif defined(ARDUiNO)
 
-  /*
-  * Linux doesn't have a concept of interrupt, but we might call this
-  *   from an I/O thread.
-  */
   int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
     return 0;
   }

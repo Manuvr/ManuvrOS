@@ -44,11 +44,6 @@ This file is the tortured result of growing pains since the beginning of
 * Static members and initializers should be located here.
 *******************************************************************************/
 
-extern "C" {
-  // TODO: This is hurting us, and is probably no longer required.
-  volatile I2CAdapter* i2c = nullptr;
-}
-
 I2CBusOp I2CAdapter::__prealloc_pool[PREALLOCATED_I2C_JOBS];
 //template<> PriorityQueue<I2CBusOp*> BusAdapter<I2CBusOp>::preallocated;
 
@@ -68,24 +63,15 @@ const MessageTypeDef i2c_message_defs[] = {
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
 
-I2CAdapter::I2CAdapter(uint8_t dev_id) : I2CAdapter(dev_id, 255, 255) {
+I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver("I2CAdapter"), BusAdapter(12) {
   // This should result in the platform-default for the given bus id.
   // Some platforms (linux) will ignore pin-assignment values completely.
-}
-
-I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : EventReceiver(), BusAdapter(12) {
-  setReceiverName("I2CAdapter");
   dev     = dev_id;
-  sda_pin = sda;
-  scl_pin = scl;
 
   _er_clear_flag(I2C_BUS_FLAG_BUS_ERROR | I2C_BUS_FLAG_BUS_ONLINE);
   _er_clear_flag(I2C_BUS_FLAG_PING_RUN  | I2C_BUS_FLAG_PINGING);
 
   for (uint16_t i = 0; i < 128; i++) ping_map[i] = 0;   // Zero the ping map.
-
-  // Set a globalized refernece so we can hit the proper adapter from an ISR.
-  i2c = this;   // TODO: Handcuffs. Kill it.
 
   int mes_count = sizeof(i2c_message_defs) / sizeof(MessageTypeDef);
   ManuvrMsg::registerMessages(i2c_message_defs, mes_count);
@@ -98,6 +84,12 @@ I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : EventReceiver
   _periodic_i2c_debug.alterScheduleRecurrence(-1);
   _periodic_i2c_debug.autoClear(false);
   _periodic_i2c_debug.enableSchedule(false);
+}
+
+
+I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : I2CAdapter(dev_id)  {
+  sda_pin = sda;
+  scl_pin = scl;
 }
 
 
@@ -594,17 +586,17 @@ void I2CAdapter::printDevs(StringBuilder *temp) {
 */
 void I2CAdapter::printDebug(StringBuilder *output) {
   EventReceiver::printDebug(output);
-  BusAdapter::printAdapter((BusAdapter*)this, output);
   printHardwareState(output);
   output->concatf("-- sda/scl     %u/%u\n", sda_pin, scl_pin);
   output->concatf("-- bus_error   %s\n", (busError()  ? "yes" : "no"));
+  BusAdapter::printAdapter((BusAdapter*)this, output);
 
   if (current_queue_item) {
-    output->concat("Currently being serviced:\n");
+    output->concat("-- Currently being serviced:\n");
     current_queue_item->printDebug(output);
   }
   else {
-    output->concat("Nothing being serviced.\n\n");
+    output->concat("-- Nothing being serviced.\n\n");
   }
   BusAdapter::printWorkQueue((BusAdapter*)this, output, I2CADAPTER_MAX_QUEUE_PRINT);
 }

@@ -219,7 +219,9 @@ template <class T> class BusAdapter : public BusOpCallback {
     PriorityQueue<T*> work_queue;   // A work queue to keep transactions in order.
     PriorityQueue<T*> preallocated; // TODO: Should be static (as the pool is).
 
-    BusAdapter(uint16_t max) : MAX_Q_DEPTH(max) {};
+    BusAdapter(uint16_t max) : MAX_Q_DEPTH(max) {
+      
+    };
 
     /* Mandatory overrides... */
     virtual int8_t advance_work_queue() =0;  // The nature of the bus dictates this implementation.

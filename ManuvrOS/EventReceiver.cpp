@@ -25,6 +25,9 @@ limitations under the License.
 
 EventReceiver::EventReceiver() {}
 
+EventReceiver::EventReceiver(const char* nom) {
+  _receiver_name = nom;
+}
 
 EventReceiver::~EventReceiver() {
   platform.kernel()->unsubscribe(this);
