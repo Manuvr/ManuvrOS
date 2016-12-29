@@ -215,9 +215,10 @@ template <class T> class BusAdapter : public BusOpCallback {
     uint32_t _failed_xfers    = 0;  // Transfer stats.
     uint16_t _prealloc_misses = 0;  // How many times have we starved the preallocation queue?
     uint16_t _heap_frees      = 0;  // How many times have we freed a BusOp?
+    uint16_t _queue_floods    = 0;  // How many times has the queue rejected work?
+    const uint16_t MAX_Q_DEPTH;     // Maximum tolerable queue depth.
     PriorityQueue<T*> work_queue;   // A work queue to keep transactions in order.
     PriorityQueue<T*> preallocated; // TODO: Should be static (as the pool is).
-    const uint16_t MAX_Q_DEPTH;     // Maximum tolerable queue depth.
 
     BusAdapter(uint16_t max) : MAX_Q_DEPTH(max) {};
 
@@ -248,14 +249,16 @@ template <class T> class BusAdapter : public BusOpCallback {
     //  return return_value;
     //}
 
+    /* Convenience function for guarding against queue floods. */
+    inline bool roomInQueue() {    return !(work_queue.size() < MAX_Q_DEPTH);  }
 
     static void printAdapter(BusAdapter* adapter, StringBuilder* output) {
-      output->concatf("-- prealloc pool size  %u\n",  adapter->MAX_Q_DEPTH);
-      output->concatf("-- prealloc queue size %d\n",  adapter->preallocated.size());
-      output->concatf("-- prealloc_misses     %u\n",  adapter->_prealloc_misses);
-      output->concatf("-- heap_frees          %u\n",  adapter->_heap_frees);
-      output->concatf("-- work_queue depth    %d\n",  adapter->work_queue.size());
-      output->concatf("-- Xfers (fail/total): (%u/%u)\n",  adapter->_failed_xfers, adapter->_total_xfers);
+      output->concatf("-- Xfers (fail/total)  (%u/%u)\n", adapter->_failed_xfers, adapter->_total_xfers);
+      output->concat("-- Prealloc:\n");
+      output->concatf("--    available        %d\n",  adapter->preallocated.size());
+      output->concatf("--    misses/frees     %u\n",  adapter->_prealloc_misses, adapter->_heap_frees);
+      output->concatf("-- work_queue depth    (%d/%u)\n", adapter->work_queue.size(), adapter->MAX_Q_DEPTH);
+      output->concatf("-- floods              %u\n",  adapter->_queue_floods);
     };
 
     static void printWorkQueue(BusAdapter* adapter, StringBuilder* output, uint8_t max_print) {

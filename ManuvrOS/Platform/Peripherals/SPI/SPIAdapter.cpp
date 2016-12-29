@@ -428,10 +428,10 @@ SPIBusOp* SPIAdapter::new_op(BusOpcode _op, BusOpCallback* _req) {
 * Purges a stalled job from the active slot.
 */
 void SPIAdapter::purge_stalled_job() {
-  if (current_queue_item != NULL) {
+  if (current_queue_item) {
     current_queue_item->abort(XferFault::QUEUE_FLUSH);
     reclaim_queue_item(current_queue_item);
-    current_queue_item = NULL;
+    current_queue_item = nullptr;
   }
 }
 
