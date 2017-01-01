@@ -172,8 +172,7 @@ void Kernel::nextTick(BufferPipe* p) {
 /**
 * Vanilla constructor.
 */
-Kernel::Kernel() : EventReceiver() {
-  setReceiverName("Kernel");
+Kernel::Kernel() : EventReceiver("Kernel") {
   INSTANCE             = this;  // For singleton reference.
   _prealloc_max        = ((uintptr_t) _preallocation_pool) + (sizeof(ManuvrMsg) * EVENT_MANAGER_PREALLOC_COUNT);
   current_event        = nullptr;

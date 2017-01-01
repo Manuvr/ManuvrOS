@@ -65,8 +65,7 @@ extern char* _binary_name;  // TODO: Eliminate. One more step.
 * Constructor.
 *
 */
-StandardIO::StandardIO() : ManuvrXport() {
-  setReceiverName("StandardIO");
+StandardIO::StandardIO() : ManuvrXport("StandardIO") {
   // Build some pre-formed Events.
   read_abort_event.repurpose(MANUVR_MSG_XPORT_QUEUE_RDY, (EventReceiver*) this);
   read_abort_event.incRefs();

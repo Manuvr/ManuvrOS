@@ -37,9 +37,8 @@ const MessageTypeDef message_defs_light_sensor[] = {
 
 
 
-LightSensor::LightSensor(int analog_pin) : EventReceiver() {
+LightSensor::LightSensor(int analog_pin) : EventReceiver("LightSensor") {
   _analog_pin = analog_pin;
-  setReceiverName("LightSensor");
   int mes_count = sizeof(message_defs_light_sensor) / sizeof(MessageTypeDef);
   ManuvrMsg::registerMessages(message_defs_light_sensor, mes_count);
 }

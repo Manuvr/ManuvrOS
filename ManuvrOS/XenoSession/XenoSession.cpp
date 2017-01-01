@@ -71,8 +71,7 @@ const char* XenoSession::sessionPhaseString(uint16_t state_code) {
 *
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
-XenoSession::XenoSession(BufferPipe* _near_side) : EventReceiver(), BufferPipe() {
-  setReceiverName("XenoSession");
+XenoSession::XenoSession(const char* nom, BufferPipe* _near_side) : EventReceiver(nom), BufferPipe() {
   _bp_set_flag(BPIPE_FLAG_IS_TERMINUS, true);
 
   // TODO: Audit implications of this....

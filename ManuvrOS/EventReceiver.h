@@ -88,6 +88,7 @@ Lifecycle:
         /* Raises an event, marking us as the return callback. */
         int8_t raiseEvent(ManuvrMsg* event);
 
+        //inline const char* getReceiverName() {   return _receiver_name;  }
         inline const char* getReceiverName() {   return _receiver_name;  }
 
         /**
@@ -142,12 +143,10 @@ Lifecycle:
 
         StringBuilder local_log;
 
-        EventReceiver();
         EventReceiver(const char* nom);
 
         inline void _mark_attached() {   _class_state |= MANUVR_ER_FLAG_ATTACHED;  };
 
-        inline void setReceiverName(const char* nom) {  _receiver_name = nom;  }
         void flushLocalLog();
 
         // These inlines are for convenience of extending classes.
@@ -163,9 +162,9 @@ Lifecycle:
 
 
       private:
+        char const* const _receiver_name;
         uint8_t     _class_state   = (DEFAULT_CLASS_VERBOSITY & MANUVR_ER_FLAG_VERBOSITY_MASK);
         uint8_t     _extnd_state   = 0;  // This is here for use by the extending class.
-        const char* _receiver_name = "EventReceiver";
 
         int8_t setVerbosity(ManuvrMsg*);  // Private because it should be set with an Event.
     };

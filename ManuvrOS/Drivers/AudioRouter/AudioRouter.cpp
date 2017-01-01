@@ -52,8 +52,7 @@ const MessageTypeDef message_defs_viam_sonus[] = {
 /*
 * Constructor. Here is all of the setup work. Takes the i2c addresses of the hardware as arguments.
 */
-AudioRouter::AudioRouter(I2CAdapter* i2c, uint8_t cp_addr, uint8_t dp_lo_addr, uint8_t dp_hi_addr) : EventReceiver() {
-  setReceiverName("AudioRouter");
+AudioRouter::AudioRouter(I2CAdapter* i2c, uint8_t cp_addr, uint8_t dp_lo_addr, uint8_t dp_hi_addr) : EventReceiver("AudioRouter") {
   i2c_addr_cp_switch = cp_addr;
   i2c_addr_dp_lo = dp_lo_addr;
   i2c_addr_dp_hi = dp_hi_addr;

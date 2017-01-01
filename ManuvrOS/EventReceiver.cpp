@@ -23,10 +23,8 @@ limitations under the License.
 #include <Platform/Platform.h>
 
 
-EventReceiver::EventReceiver() {}
-
-EventReceiver::EventReceiver(const char* nom) {
-  _receiver_name = nom;
+EventReceiver::EventReceiver(const char* nom) : _receiver_name(nom) {
+  printf("### Creating %s. %p\n", _receiver_name, (uintptr_t) _receiver_name);
 }
 
 EventReceiver::~EventReceiver() {

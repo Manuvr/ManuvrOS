@@ -30,8 +30,7 @@ const MessageTypeDef message_defs_adc_scanner[] = {
 
 
 
-ADCScanner::ADCScanner() : EventReceiver() {
-  setReceiverName("ADCScanner");
+ADCScanner::ADCScanner() : EventReceiver("ADCScanner") {
   int mes_count = sizeof(message_defs_adc_scanner) / sizeof(MessageTypeDef);
   ManuvrMsg::registerMessages(message_defs_adc_scanner, mes_count);
   for (int i = 0; i < 16; i++) {

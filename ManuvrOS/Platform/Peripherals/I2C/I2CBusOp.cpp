@@ -22,9 +22,7 @@ limitations under the License.
 
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
 
-#if defined(__MK20DX256__) | defined(__MK20DX128__)
-  #include <i2c_t3/i2c_t3.h>
-#elif defined(STM32F4XX)
+#if defined(STM32F4XX)
   #include <stm32f4xx.h>
   #include <stm32f4xx_i2c.h>
   #include <stm32f4xx_gpio.h>
@@ -140,40 +138,13 @@ void I2CBusOp::markComplete() {
 }
 
 
-/*
-* This queue item can begin executing. This is where any bus access should be initiated.
-* TODO: Needs to be doing bus-checks.
-*/
-//XferFault I2CBusOp::begin() {
-//  if (nullptr == device) {
-//    abort(XferFault::DEV_NOT_FOUND);
-//    return XferFault::DEV_NOT_FOUND;
-//  }
-//
-//  if ((nullptr != callback) && !((I2CDevice*)callback)->operationCallahead(this)) {
-//    abort(XferFault::IO_RECALL);
-//    return XferFault::IO_RECALL;
-//  }
-//
-//  xfer_state = XferState::ADDR;
-//  init_dma();
-//  if (device->generateStart()) {
-//    // Failure to generate START condition.
-//    abort(XferFault::BUS_BUSY);
-//    return XferFault::BUS_BUSY;
-//  }
-//  return XferFault::NONE;
-//}
-
 //http://tech.munts.com/MCU/Frameworks/ARM/stm32f4/libs/STM32F4xx_DSP_StdPeriph_Lib_V1.1.0/Project/STM32F4xx_StdPeriph_Examples/I2C/I2C_TwoBoards/I2C_DataExchangeDMA/main.c
 // TODO: should check length > 0 before doing DMA init.
 // TODO: should migrate this into I2CAdapter???
 int8_t I2CBusOp::init_dma() {
   int return_value = 0;
 
-#if defined(__MK20DX256__) | defined(__MK20DX128__)
-  device->dispatchOperation(this);
-#elif defined(ARDUINO)
+#if defined(ARDUINO)
 
 #elif defined(STM32F4XX)
   DMA_InitTypeDef DMA_InitStructure;
@@ -395,21 +366,6 @@ int8_t I2CBusOp::init_dma() {
     }
 
     if (output.length() > 0) Kernel::log(&output);
-    return 0;
-  }
-
-#elif defined(__MK20DX256__) | defined(__MK20DX128__)
-
-  /*
-  * Called from the ISR to advance this operation on the bus.
-  * Still required for DMA because of subaddresses, START/STOP, etc...
-  */
-  int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
-    switch (status_reg) {
-      case 1:
-        subaddr_sent(true);
-        break;
-    }
     return 0;
   }
 

@@ -62,8 +62,7 @@ MQTTOpts opts = {
 *
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
-MQTTSession::MQTTSession(ManuvrXport* _xport) : XenoSession(_xport) {
-	setReceiverName("MQTTSession");
+MQTTSession::MQTTSession(ManuvrXport* _xport) : XenoSession("MQTTSession", _xport) {
 	_ping_outstanding(false);
 	working   = NULL;
 	_next_packetid = 1;

@@ -136,8 +136,7 @@ This is basically only for linux for now.
 /**
 * Constructor.
 */
-ManuvrTCP::ManuvrTCP(const char* addr, int port, uint32_t opts) : ManuvrSocket(addr, port, opts) {
-  setReceiverName("ManuvrTCP");
+ManuvrTCP::ManuvrTCP(const char* addr, int port, uint32_t opts) : ManuvrSocket("ManuvrTCP", addr, port, opts) {
   set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED);
 }
 

@@ -55,9 +55,8 @@ Implemented as a JSON object within a single file. This feature therefore
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
 
-LinuxStorage::LinuxStorage(Argument* opts) : EventReceiver(), Storage() {
+LinuxStorage::LinuxStorage(Argument* opts) : EventReceiver("LinuxStorage"), Storage() {
   _pl_set_flag(true, STORAGE_PROPS);
-  setReceiverName("LinuxStorage");
   if (nullptr != opts) {
     char* str = nullptr;
     if (0 == opts->getValueAs("store_path", &str)) {

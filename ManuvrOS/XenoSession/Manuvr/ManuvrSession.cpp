@@ -50,8 +50,7 @@ limitations under the License.
 *
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
-ManuvrSession::ManuvrSession(BufferPipe* _near_side) : XenoSession(_near_side) {
-  setReceiverName("ManuvrSession");
+ManuvrSession::ManuvrSession(BufferPipe* _near_side) : XenoSession("ManuvrSession", _near_side) {
   _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
   _seq_parse_failures = MANUVR_MAX_PARSE_FAILURES;
   _seq_ack_failures   = MANUVR_MAX_ACK_FAILURES;

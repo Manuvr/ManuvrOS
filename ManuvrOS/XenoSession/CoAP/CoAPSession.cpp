@@ -48,8 +48,7 @@ limitations under the License.
 *
 * @param   BufferPipe* All sessions must have one (and only one) transport.
 */
-CoAPSession::CoAPSession(BufferPipe* _near_side) : XenoSession(_near_side) {
-	setReceiverName("CoAPSession");
+CoAPSession::CoAPSession(BufferPipe* _near_side) : XenoSession("CoAPSession", _near_side) {
 	working   = nullptr;
 	_next_packetid = 1;
   _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);

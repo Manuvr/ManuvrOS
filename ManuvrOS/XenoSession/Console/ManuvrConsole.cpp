@@ -38,8 +38,7 @@ void printHelp() {
 *
 * @param   BufferPipe* All sessions must have one (and only one) transport.
 */
-ManuvrConsole::ManuvrConsole(BufferPipe* _near_side) : XenoSession(_near_side) {
-  setReceiverName("Console");
+ManuvrConsole::ManuvrConsole(BufferPipe* _near_side) : XenoSession("Console", _near_side) {
   Kernel::attachToLogger((BufferPipe*) this);
   mark_session_state(XENOSESSION_STATE_ESTABLISHED);
   _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);

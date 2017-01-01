@@ -45,15 +45,5 @@ int8_t I2CAdapter::generateStop() {
 }
 
 
-/*
-* Private function that will switch the addressed i2c device via ioctl. This
-*   function is meaningless on anything but a linux system, in which case it
-*   will always return true;
-* On a linux system, this will only return true if the ioctl call succeeded.
-*/
-bool I2CAdapter::switch_device(uint8_t nu_addr) {
-  return true;
-}
-
 
 #endif  // MANUVR_SUPPORT_I2C

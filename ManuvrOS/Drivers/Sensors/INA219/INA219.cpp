@@ -112,7 +112,7 @@ SensorError INA219::init() {
 
   writeIndirect(INA219_REG_CALIBRATION, cal_value, true);
   writeIndirect(INA219_REG_CONFIGURATION, cfg_value);
-  //if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
+  //if (syncRegisters() == I2C_ERR_SLAVE_NO_ERROR) {
     isActive(true);
     return SensorError::NO_ERROR;
   //}
@@ -166,10 +166,10 @@ SensorError INA219::getParameter(uint16_t reg, int len, uint8_t*) {
 
 SensorError INA219::readSensor() {
   if (isActive() && init_complete) {
-    if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) INA219_REG_SHUNT_VOLTAGE)) {
-      if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) INA219_REG_BUS_VOLTAGE)) {
-        if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) INA219_REG_POWER)) {
-          if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) INA219_REG_CURRENT)) {
+    if (I2C_ERR_SLAVE_NO_ERROR == readRegister((uint8_t) INA219_REG_SHUNT_VOLTAGE)) {
+      if (I2C_ERR_SLAVE_NO_ERROR == readRegister((uint8_t) INA219_REG_BUS_VOLTAGE)) {
+        if (I2C_ERR_SLAVE_NO_ERROR == readRegister((uint8_t) INA219_REG_POWER)) {
+          if (I2C_ERR_SLAVE_NO_ERROR == readRegister((uint8_t) INA219_REG_CURRENT)) {
             return SensorError::NO_ERROR;
           }
         }

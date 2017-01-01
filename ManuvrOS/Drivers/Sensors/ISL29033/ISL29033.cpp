@@ -97,7 +97,7 @@ void ISL29033::gpioSetup() {
 * Overrides...                                                            *
 **************************************************************************/
 SensorError ISL29033::init() {
-  if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
+  if (syncRegisters() == I2C_ERR_SLAVE_NO_ERROR) {
     isActive(true);
     setCommandReg();
     setResRange();
@@ -174,8 +174,8 @@ SensorError ISL29033::getParameter(uint16_t reg, int len, uint8_t*) {
 
 SensorError ISL29033::readSensor() {
   if (isActive()) {
-    if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) ISL29033_REG_DATA_LSB)) {
-      if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) ISL29033_REG_DATA_MSB)) {
+    if (I2C_ERR_SLAVE_NO_ERROR == readRegister((uint8_t) ISL29033_REG_DATA_LSB)) {
+      if (I2C_ERR_SLAVE_NO_ERROR == readRegister((uint8_t) ISL29033_REG_DATA_MSB)) {
         return SensorError::NO_ERROR;
       }
     }

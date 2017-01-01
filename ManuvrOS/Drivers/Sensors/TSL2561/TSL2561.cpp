@@ -73,7 +73,7 @@ TSL2561::~TSL2561() {
 **************************************************************************/
 
 SensorError TSL2561::init() {
-  if (readRegister(TSL2561_REG_ID) == I2C_ERR_CODE_NO_ERROR) {
+  if (readRegister(TSL2561_REG_ID) == I2C_ERR_SLAVE_NO_ERROR) {
     return SensorError::NO_ERROR;
   }
   else {
@@ -93,8 +93,8 @@ SensorError TSL2561::getParameter(uint16_t reg, int len, uint8_t*) {
 
 
 SensorError TSL2561::readSensor() {
-  if (readRegister(TSL2561_REG_DATA0) == I2C_ERR_CODE_NO_ERROR) {
-    if (readRegister(TSL2561_REG_DATA1) == I2C_ERR_CODE_NO_ERROR) {
+  if (readRegister(TSL2561_REG_DATA0) == I2C_ERR_SLAVE_NO_ERROR) {
+    if (readRegister(TSL2561_REG_DATA1) == I2C_ERR_SLAVE_NO_ERROR) {
       return SensorError::NO_ERROR;
     }
   }

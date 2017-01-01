@@ -51,7 +51,7 @@ I2CDeviceWithRegisters::~I2CDeviceWithRegisters() {
 
 
 bool I2CDeviceWithRegisters::sync() {
-  bool return_value = (syncRegisters() == I2C_ERR_CODE_NO_ERROR);
+  bool return_value = (syncRegisters() == I2C_ERR_SLAVE_NO_ERROR);
   return return_value;
 }
 
@@ -183,7 +183,7 @@ int8_t I2CDeviceWithRegisters::writeIndirect(uint8_t base_addr, uint8_t val, boo
   if (!defer) {
     writeDirtyRegisters();
   }
-  return I2C_ERR_CODE_NO_ERROR;
+  return I2C_ERR_SLAVE_NO_ERROR;
 }
 
 
@@ -196,9 +196,9 @@ int8_t I2CDeviceWithRegisters::writeRegister(uint8_t base_addr) {
     #ifdef __MANUVR_DEBUG
     Kernel::log("Bus error while writing device.\n");
     #endif
-    return I2C_ERR_CODE_BUS_FAULT;
+    return I2C_ERR_SLAVE_BUS_FAULT;
   }
-  return I2C_ERR_CODE_NO_ERROR;
+  return I2C_ERR_SLAVE_NO_ERROR;
 }
 
 int8_t I2CDeviceWithRegisters::writeRegister(DeviceRegister *reg) {
@@ -212,9 +212,9 @@ int8_t I2CDeviceWithRegisters::writeRegister(DeviceRegister *reg) {
     #ifdef __MANUVR_DEBUG
     Kernel::log("Bus error while writing device.\n");
     #endif
-    return I2C_ERR_CODE_BUS_FAULT;
+    return I2C_ERR_SLAVE_BUS_FAULT;
   }
-  return I2C_ERR_CODE_NO_ERROR;
+  return I2C_ERR_SLAVE_NO_ERROR;
 }
 
 
@@ -231,9 +231,9 @@ int8_t I2CDeviceWithRegisters::readRegister(uint8_t base_addr) {
     #ifdef __MANUVR_DEBUG
     Kernel::log("Bus error while reading device.\n");
     #endif
-    return I2C_ERR_CODE_BUS_FAULT;
+    return I2C_ERR_SLAVE_BUS_FAULT;
   }
-  return I2C_ERR_CODE_NO_ERROR;
+  return I2C_ERR_SLAVE_NO_ERROR;
 }
 
 int8_t I2CDeviceWithRegisters::readRegister(DeviceRegister *reg) {
@@ -244,9 +244,9 @@ int8_t I2CDeviceWithRegisters::readRegister(DeviceRegister *reg) {
     #ifdef __MANUVR_DEBUG
     Kernel::log("Bus error while reading device.\n");
     #endif
-    return I2C_ERR_CODE_BUS_FAULT;
+    return I2C_ERR_SLAVE_BUS_FAULT;
   }
-  return I2C_ERR_CODE_NO_ERROR;
+  return I2C_ERR_SLAVE_NO_ERROR;
 }
 
 
@@ -283,7 +283,7 @@ void I2CDeviceWithRegisters::printDebug(StringBuilder* temp) {
 */
 int8_t I2CDeviceWithRegisters::syncRegisters(void) {
   DeviceRegister *temp = nullptr;
-  int8_t return_value = I2C_ERR_CODE_NO_ERROR;
+  int8_t return_value = I2C_ERR_SLAVE_NO_ERROR;
   uint8_t count = reg_defs.size();
   for (int i = 0; i < count; i++) {
 
@@ -294,7 +294,7 @@ int8_t I2CDeviceWithRegisters::syncRegisters(void) {
     }
 
     return_value = readRegister(temp);
-    if (return_value != I2C_ERR_CODE_NO_ERROR) {
+    if (return_value != I2C_ERR_SLAVE_NO_ERROR) {
       #ifdef __MANUVR_DEBUG
       StringBuilder output;
       output.concatf("Failed to read from register %d\n", temp->addr);
@@ -311,14 +311,14 @@ int8_t I2CDeviceWithRegisters::syncRegisters(void) {
 * Any registers marked dirty will be written to the device if the register is also marked wriatable.
 */
 int8_t I2CDeviceWithRegisters::writeDirtyRegisters(void) {
-  int8_t return_value = I2C_ERR_CODE_NO_ERROR;
+  int8_t return_value = I2C_ERR_SLAVE_NO_ERROR;
   DeviceRegister *temp = nullptr;
   for (int i = 0; i < reg_defs.size(); i++) {
     temp = reg_defs.get(i);
     if (temp->dirty) {
       if (temp->writable) {
         return_value = writeRegister(temp);
-        if (return_value != I2C_ERR_CODE_NO_ERROR) {
+        if (return_value != I2C_ERR_SLAVE_NO_ERROR) {
           #ifdef __MANUVR_DEBUG
           StringBuilder output;
           output.concatf("Failed to write dirty register %d with code(%d). The dropped data was (%d). Aborting...\n", temp->addr, return_value, temp->val);

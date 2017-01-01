@@ -72,9 +72,7 @@ void lds8160_chan_5(void) {
 /*
 * Constructor. Takes i2c address as argument.
 */
-LDS8160::LDS8160(uint8_t addr) : EventReceiver(), I2CDeviceWithRegisters(addr) {
-  setReceiverName("LDS8160");
-
+LDS8160::LDS8160(uint8_t addr) : EventReceiver("LDS8160"), I2CDeviceWithRegisters(addr) {
   init_complete = false;
   defineRegister(LDS8160_BANK_A_CURRENT,     (uint8_t) 0x90, true,  false, true);
   defineRegister(LDS8160_BANK_B_CURRENT,     (uint8_t) 0x90, true,  false, true);
@@ -103,7 +101,7 @@ LDS8160::~LDS8160(void) {
 
 
 int8_t LDS8160::init() {
-  if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
+  if (syncRegisters() == I2C_ERR_SLAVE_NO_ERROR) {
     writeIndirect(LDS8160_BANK_A_CURRENT,  0x90, true);
     writeIndirect(LDS8160_BANK_B_CURRENT,  0x90, true);
     writeIndirect(LDS8160_BANK_C_CURRENT,  0x90, true);

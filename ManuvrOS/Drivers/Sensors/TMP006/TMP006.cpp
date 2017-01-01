@@ -69,7 +69,7 @@ TMP006::~TMP006() {
 **************************************************************************/
 
 SensorError TMP006::init() {
-  if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
+  if (syncRegisters() == I2C_ERR_SLAVE_NO_ERROR) {
     return SensorError::NO_ERROR;
   }
   return SensorError::BUS_ERROR;
@@ -77,8 +77,8 @@ SensorError TMP006::init() {
 
 
 SensorError TMP006::readSensor() {
-  if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) TMP006_REG_TAMB)) {
-    if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) TMP006_REG_VOBJ)) {
+  if (I2C_ERR_SLAVE_NO_ERROR == readRegister((uint8_t) TMP006_REG_TAMB)) {
+    if (I2C_ERR_SLAVE_NO_ERROR == readRegister((uint8_t) TMP006_REG_VOBJ)) {
       return SensorError::NO_ERROR;
     }
   }

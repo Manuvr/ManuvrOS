@@ -30,9 +30,8 @@ limitations under the License.
 //volatile ExampleDriver* ExampleDriver::INSTANCE = NULL;
 
 
-ExampleDriver::ExampleDriver() : EventReceiver() {
+ExampleDriver::ExampleDriver() : EventReceiver("ExampleDriver") {
   //INSTANCE = this;
-  setReceiverName("ExampleDriver");
 }
 
 

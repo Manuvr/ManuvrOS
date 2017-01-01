@@ -109,7 +109,7 @@ void LPS331::gpioSetup() {
 **************************************************************************/
 
 SensorError LPS331::init() {
-  if (readRegister(LPS331_REG_WHO_AM_I) == I2C_ERR_CODE_NO_ERROR) {
+  if (readRegister(LPS331_REG_WHO_AM_I) == I2C_ERR_SLAVE_NO_ERROR) {
     return SensorError::NO_ERROR;
   }
   else {
@@ -129,11 +129,11 @@ SensorError LPS331::getParameter(uint16_t reg, int len, uint8_t*) {
 
 
 SensorError LPS331::readSensor() {
-  if (readRegister(LPS331_REG_PRS_OUT_HI) == I2C_ERR_CODE_NO_ERROR) {
-    if (readRegister(LPS331_REG_PRS_OUT_LO) == I2C_ERR_CODE_NO_ERROR) {
-      if (readRegister(LPS331_REG_PRS_P_OUT_XL) == I2C_ERR_CODE_NO_ERROR) {
-        if (readRegister(LPS331_REG_TEMP_OUT_LO) == I2C_ERR_CODE_NO_ERROR) {
-          if (readRegister(LPS331_REG_TEMP_OUT_HI) == I2C_ERR_CODE_NO_ERROR) {
+  if (readRegister(LPS331_REG_PRS_OUT_HI) == I2C_ERR_SLAVE_NO_ERROR) {
+    if (readRegister(LPS331_REG_PRS_OUT_LO) == I2C_ERR_SLAVE_NO_ERROR) {
+      if (readRegister(LPS331_REG_PRS_P_OUT_XL) == I2C_ERR_SLAVE_NO_ERROR) {
+        if (readRegister(LPS331_REG_TEMP_OUT_LO) == I2C_ERR_SLAVE_NO_ERROR) {
+          if (readRegister(LPS331_REG_TEMP_OUT_HI) == I2C_ERR_SLAVE_NO_ERROR) {
             return SensorError::NO_ERROR;
           }
         }

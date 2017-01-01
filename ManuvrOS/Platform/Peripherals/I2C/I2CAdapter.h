@@ -43,7 +43,12 @@ This file is the tortured result of growing pains since the beginning of
   #include <Drivers/DeviceWithRegisters/DeviceRegister.h>
   #include <Kernel.h>
 
-  #define I2CADAPTER_MAX_QUEUE_PRINT 3
+  #ifndef I2CADAPTER_MAX_QUEUE_PRINT
+    #define I2CADAPTER_MAX_QUEUE_PRINT 3
+  #endif
+  #ifndef I2CADAPTER_MAX_QUEUE
+    #define I2CADAPTER_MAX_QUEUE 12
+  #endif
   #ifndef PREALLOCATED_I2C_JOBS
     #define PREALLOCATED_I2C_JOBS 4
   #endif
@@ -52,18 +57,7 @@ This file is the tortured result of growing pains since the beginning of
   * These are used as function-return codes, and have nothing to do with bus
   *   operations.
   */
-  #define I2C_ERR_CODE_NO_ERROR    0
-  #define I2C_ERR_CODE_NO_CASE     -1
-  #define I2C_ERR_CODE_NO_REASON   -2
-  #define I2C_ERR_CODE_BUS_FAULT   -3
-  #define I2C_ERR_CODE_DEF_CASE    -4
-  #define I2C_ERR_CODE_ADDR_2TX    -5   // We were told to send an i2c address twice in a row.
-  #define I2C_ERR_CODE_BAD_OP      -6
-  #define I2C_ERR_CODE_NO_DEVICE   -7   // A transfer was aborted because there was no pointer to the device.
-  #define I2C_ERR_CODE_TIMEOUT     -8
-  #define I2C_ERR_CODE_CLASS_ABORT -9
-  #define I2C_ERR_CODE_BUS_BUSY    -10
-
+  #define I2C_ERR_SLAVE_NO_ERROR      0   // No error.
   #define I2C_ERR_SLAVE_BUS_FAULT    -3   // The bus failed us.
   #define I2C_ERR_SLAVE_NOT_FOUND   -11   // When a slave device we expected to find is not found.
   #define I2C_ERR_SLAVE_EXISTS      -12   // When we try to add a slave device that has already been added.
@@ -168,11 +162,16 @@ This file is the tortured result of growing pains since the beginning of
   /*
   * This is the class that represents the actual i2c peripheral (master).
   */
-  class I2CAdapter : public EventReceiver, public BusAdapter<I2CBusOp> {
+  class I2CAdapter : public BusAdapter<I2CBusOp>, public EventReceiver {
     public:
       I2CAdapter(uint8_t dev_id);    // Constructor takes a bus ID as an argument.
       I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl);  // Constructor takes a bus ID and pins as arguments.
-      virtual ~I2CAdapter();           // Destructor
+      ~I2CAdapter();           // Destructor
+
+      /* Overrides from the BusAdapter interface */
+      int8_t io_op_callback(BusOp*);
+      int8_t queue_io_job(BusOp*);
+      I2CBusOp* new_op(BusOpcode, BusOpCallback*);
 
       /* Overrides from EventReceiver */
       int8_t notify(ManuvrMsg*);
@@ -181,11 +180,6 @@ This file is the tortured result of growing pains since the beginning of
         void procDirectDebugInstruction(StringBuilder*);
         void printHardwareState(StringBuilder*);
       #endif  //MANUVR_CONSOLE_SUPPORT
-
-      /* Overrides from the BusAdapter interface */
-      int8_t io_op_callback(BusOp*);
-      int8_t queue_io_job(BusOp*);
-      I2CBusOp* new_op(BusOpcode, BusOpCallback*);
 
 
       // Builds a special bus transaction that does nothing but test for the presence or absence of a slave device.
@@ -205,8 +199,6 @@ This file is the tortured result of growing pains since the beginning of
       //   that may or may not be present on a given platform.
       int8_t generateStart();    // Generate a start condition on the bus.
       int8_t generateStop();     // Generate a stahp condition on the bus.
-      int8_t dispatchOperation(I2CBusOp*);   // Start the given operation on the bus.
-      bool switch_device(uint8_t nu_addr);
 
       inline bool busError() {          return (_er_flag(I2C_BUS_FLAG_BUS_ERROR));  };
       inline bool busOnline() {         return (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)); };
@@ -271,10 +263,8 @@ This file is the tortured result of growing pains since the beginning of
       /* If your device needs something to happen immediately prior to bus I/O... */
       virtual bool operationCallahead(I2CBusOp*);
 
-      bool assignBusInstance(I2CAdapter*);               // Needs to be called by the i2c class during insertion.
-      bool assignBusInstance(volatile I2CAdapter* bus);  // Trivial override.
-
-      bool disassignBusInstance();                   // This is to be called from the adapter's unassignment function.
+      bool assignBusInstance(I2CAdapter*);   // Needs to be called by the i2c class during insertion.
+      bool disassignBusInstance();           // This is to be called from the adapter's unassignment function.
 
       /* Debug aides */
       virtual void printDebug(StringBuilder*);

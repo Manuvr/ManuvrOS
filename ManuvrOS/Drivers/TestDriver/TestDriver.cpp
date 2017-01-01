@@ -25,8 +25,7 @@ limitations under the License.
 
 
 
-TestDriver::TestDriver() : EventReceiver() {
-  setReceiverName("TestDriver");
+TestDriver::TestDriver() : EventReceiver("TestDriver") {
 }
 
 

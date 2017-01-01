@@ -60,8 +60,7 @@ const MessageTypeDef spi_message_defs[] = {
 /**
 * Constructor. Also populates the global pointer reference.
 */
-SPIAdapter::SPIAdapter(uint8_t idx, uint8_t d_in, uint8_t d_out, uint8_t clk) : EventReceiver(), BusAdapter(PREALLOCATED_SPI_JOBS) {
-  setReceiverName("SPIAdapter");
+SPIAdapter::SPIAdapter(uint8_t idx, uint8_t d_in, uint8_t d_out, uint8_t clk) : EventReceiver("SPIAdapter"), BusAdapter(PREALLOCATED_SPI_JOBS) {
   ManuvrMsg::registerMessages(spi_message_defs, sizeof(spi_message_defs) / sizeof(MessageTypeDef));
 
   // Build some pre-formed Events.

@@ -63,7 +63,9 @@ const MessageTypeDef i2c_message_defs[] = {
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
 
-I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver("I2CAdapter"), BusAdapter(12) {
+I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver("I2CAdapter"), BusAdapter(I2CADAPTER_MAX_QUEUE) {
+  printf("### getReceiverName %s. %p\n", getReceiverName(), (uintptr_t) getReceiverName());
+  //printf("### getReceiverName()0 %s.\n", getReceiverName());
   // This should result in the platform-default for the given bus id.
   // Some platforms (linux) will ignore pin-assignment values completely.
   dev     = dev_id;
@@ -179,6 +181,7 @@ void I2CAdapter::reclaim_queue_item(I2CBusOp* op) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t I2CAdapter::attached() {
+  printf("### attached %s. %p\n", getReceiverName(), (uintptr_t) getReceiverName());
   if (EventReceiver::attached()) {
     bus_init();
     if (busOnline()) {
@@ -268,7 +271,7 @@ int8_t I2CAdapter::notify(ManuvrMsg* active_event) {
 * Adds a new device to the bus.
 */
 int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
-	int8_t return_value = I2C_ERR_CODE_NO_ERROR;
+	int8_t return_value = I2C_ERR_SLAVE_NO_ERROR;
 	if (slave == nullptr) {
 	  #if defined(__MANUVR_DEBUG)
 		Kernel::log("Slave is invalid.\n");
@@ -317,7 +320,7 @@ int8_t I2CAdapter::removeSlaveDevice(I2CDevice* slave) {
 	if (dev_list.remove(slave)) {
 		slave->disassignBusInstance();
 		purge_queued_work_by_dev(slave);
-		return_value = I2C_ERR_CODE_NO_ERROR;
+		return_value = I2C_ERR_SLAVE_NO_ERROR;
 	}
 	return return_value;
 }

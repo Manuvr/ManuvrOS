@@ -40,9 +40,8 @@
 volatile ManuvrAudio* ManuvrAudio::INSTANCE = nullptr;
 
 
-ManuvrAudio::ManuvrAudio() : EventReceiver() {
+ManuvrAudio::ManuvrAudio() : EventReceiver("PJRCAudio") {
   INSTANCE = this;
-  setReceiverName("PJRCAudio");
 }
 
 

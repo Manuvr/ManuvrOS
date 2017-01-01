@@ -62,8 +62,7 @@ Platforms that require it should be able to extend this driver for specific
 /**
 * Constructor.
 */
-ManuvrSocket::ManuvrSocket(const char* addr, int port, uint32_t opts) : ManuvrXport() {
-  setReceiverName("ManuvrSocket");
+ManuvrSocket::ManuvrSocket(const char* nom, const char* addr, int port, uint32_t opts) : ManuvrXport(nom) {
   _port_number = port;
   _options     = opts;     // These will vary across UDP/WS/TCP.
 

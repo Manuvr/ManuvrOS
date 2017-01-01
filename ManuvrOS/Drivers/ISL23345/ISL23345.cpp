@@ -63,7 +63,7 @@ ISL23345::~ISL23345(void) {
 int8_t ISL23345::init(void) {
 	int8_t return_value = ISL23345_ERROR_NO_ERROR;
 
-	if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
+	if (syncRegisters() == I2C_ERR_SLAVE_NO_ERROR) {
 		//return_value = ISL23345_ERROR_ABSENT;
 	}
 	return return_value;
@@ -82,7 +82,7 @@ void ISL23345::preserveOnDestroy(bool x) {
 */
 int8_t ISL23345::enable() {
 	int8_t return_value = ISL23345::ISL23345_ERROR_NO_ERROR;
-	if (I2C_ERR_CODE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, 0x40)) {
+	if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, 0x40)) {
 		return_value = ISL23345::ISL23345_ERROR_ABSENT;
 	}
 	return return_value;
@@ -96,7 +96,7 @@ int8_t ISL23345::enable() {
 int8_t ISL23345::disable() {
 	int8_t return_value = ISL23345::ISL23345_ERROR_NO_ERROR;
 
-	if (I2C_ERR_CODE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, 0x00)) {
+	if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, 0x00)) {
 		return_value = ISL23345::ISL23345_ERROR_ABSENT;
 	}
 	return return_value;
@@ -111,7 +111,7 @@ int8_t ISL23345::setValue(uint8_t pot, uint8_t val) {
 	if (!dev_init)  return ISL23345::ISL23345_ERROR_DEVICE_DISABLED;
 
 	int8_t return_value = ISL23345::ISL23345_ERROR_NO_ERROR;
-	if (I2C_ERR_CODE_NO_ERROR != writeIndirect(pot, val)) {
+	if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(pot, val)) {
 		return_value = ISL23345::ISL23345_ERROR_ABSENT;
 	}
 	return return_value;

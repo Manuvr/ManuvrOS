@@ -94,8 +94,7 @@ void gest_3() {
 
 
 
-MGC3130::MGC3130(int ts, int rst, uint8_t addr) : I2CDevice(addr), EventReceiver() {
-  setReceiverName("MGC3130");
+MGC3130::MGC3130(int ts, int rst, uint8_t addr) : I2CDevice(addr), EventReceiver("MGC3130") {
   _ts_pin    = (uint8_t) ts;
   _isr_ts_pin = ts;
   _reset_pin = (uint8_t) rst;

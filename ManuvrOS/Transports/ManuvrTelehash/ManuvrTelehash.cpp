@@ -109,7 +109,7 @@ TODO: It does not do this. Need to finish addressing issues with the build
 /**
 * Constructor.
 */
-ManuvrTelehash::ManuvrTelehash(const char* addr, int port) : ManuvrXport() {
+ManuvrTelehash::ManuvrTelehash(const char* addr, int port) : ManuvrXport("Telehash") {
   __class_initializer();
   _port_number = port;
   _addr        = addr;
@@ -119,7 +119,7 @@ ManuvrTelehash::ManuvrTelehash(const char* addr, int port) : ManuvrXport() {
 }
 
 
-ManuvrTelehash::ManuvrTelehash(const char* addr, int port, uint32_t opts) : ManuvrXport() {
+ManuvrTelehash::ManuvrTelehash(const char* addr, int port, uint32_t opts) : ManuvrXport("Telehash") {
   __class_initializer();
   _port_number = port;
   _addr        = addr;
@@ -132,7 +132,7 @@ ManuvrTelehash::ManuvrTelehash(const char* addr, int port, uint32_t opts) : Manu
 /**
 * This constructor is called by a listening instance of ManuvrTelehash.
 */
-ManuvrTelehash::ManuvrTelehash(ManuvrTelehash* listening_instance, int sock, struct sockaddr_in* nu_sockaddr) : ManuvrXport() {
+ManuvrTelehash::ManuvrTelehash(ManuvrTelehash* listening_instance, int sock, struct sockaddr_in* nu_sockaddr) : ManuvrXport("Telehash") {
   __class_initializer();
   _sock          = sock;
   _addr          = listening_instance->_addr;
@@ -164,7 +164,6 @@ ManuvrTelehash::~ManuvrTelehash() {
 *   in the header file. Takes no parameters, and returns nothing.
 */
 void ManuvrTelehash::__class_initializer() {
-  setReceiverName("ManuvrTelehash");
   _options           = 0;
   _port_number       = 0;
   _sock              = 0;
