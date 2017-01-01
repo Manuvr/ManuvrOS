@@ -69,7 +69,7 @@ bool switch_device(I2CAdapter* adapter, uint8_t nu_addr) {
 int8_t I2CAdapter::bus_init() {
   char *filename = (char *) alloca(24);
   *filename = 0;
-  if (sprintf(filename, "/dev/i2c-%d", dev) > 0) {
+  if (sprintf(filename, "/dev/i2c-%d", getAdapterId()) > 0) {
     open_bus_handle = open(filename, O_RDWR);
     if (open_bus_handle < 0) {
       #ifdef __MANUVR_DEBUG
@@ -85,7 +85,7 @@ int8_t I2CAdapter::bus_init() {
   }
   #if defined(__MANUVR_DEBUG)
   else if (getVerbosity() > 2) {
-    local_log.concatf("Somehow we failed to sprintf and build a filename to open i2c bus %d.\n", dev);
+    local_log.concatf("Somehow we failed to sprintf and build a filename to open i2c bus %d.\n", getAdapterId());
     Kernel::log(&local_log);
   }
   #endif
@@ -105,7 +105,7 @@ int8_t I2CAdapter::bus_deinit() {
 
 
 void I2CAdapter::printHardwareState(StringBuilder* output) {
-  output->concatf("-- I2C%d (%sline) --------------------\n", dev, (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
+  output->concatf("-- I2C%d (%sline) --------------------\n", getAdapterId(), (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
 }
 
 

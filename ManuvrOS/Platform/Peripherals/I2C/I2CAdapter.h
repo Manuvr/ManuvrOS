@@ -38,19 +38,24 @@ This file is the tortured result of growing pains since the beginning of
   #include <stdint.h>
   #include <stdarg.h>
   #include <DataStructures/LightLinkedList.h>
-  #include <DataStructures/StringBuilder.h>
+  //#include <DataStructures/StringBuilder.h>
+  #include <Platform/Platform.h>
+  //#include <Kernel.h>
   #include <Drivers/BusQueue/BusQueue.h>
   #include <Drivers/DeviceWithRegisters/DeviceRegister.h>
-  #include <Kernel.h>
 
+  /* Compile-time bounds on memory usage. */
   #ifndef I2CADAPTER_MAX_QUEUE_PRINT
+    // How many queue items should we print for debug?
     #define I2CADAPTER_MAX_QUEUE_PRINT 3
   #endif
-  #ifndef I2CADAPTER_MAX_QUEUE
-    #define I2CADAPTER_MAX_QUEUE 12
+  #ifndef I2CADAPTER_MAX_QUEUE_DEPTH
+    // How deep should the queue be allowed to become before rejecting work?
+    #define I2CADAPTER_MAX_QUEUE_DEPTH 12
   #endif
-  #ifndef PREALLOCATED_I2C_JOBS
-    #define PREALLOCATED_I2C_JOBS 4
+  #ifndef I2CADAPTER_PREALLOC_COUNT
+    // How many queue items should we have on-tap?
+    #define I2CADAPTER_PREALLOC_COUNT 4
   #endif
 
   /*
@@ -90,6 +95,23 @@ This file is the tortured result of growing pains since the beginning of
   // Forward declaration. Definition order in this file is very important.
   class I2CDevice;
   class I2CAdapter;
+
+
+  class I2CAdapterOptions {
+    public:
+      I2CAdapterOptions() {};
+      I2CAdapterOptions(uint8_t a, uint8_t d, uint8_t c) {
+        adapter = a;
+        sda_pin = d;
+        scl_pin = c;
+        def_flags = 0;
+      };
+
+      int8_t  adapter;
+      uint8_t sda_pin;
+      uint8_t scl_pin;
+      uint8_t def_flags;
+  };
 
 
   /*
@@ -162,15 +184,17 @@ This file is the tortured result of growing pains since the beginning of
   /*
   * This is the class that represents the actual i2c peripheral (master).
   */
-  class I2CAdapter : public BusAdapter<I2CBusOp>, public EventReceiver {
+  class I2CAdapter : public EventReceiver, public BusAdapter<I2CBusOp> {
     public:
-      I2CAdapter(uint8_t dev_id);    // Constructor takes a bus ID as an argument.
-      I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl);  // Constructor takes a bus ID and pins as arguments.
+      I2CAdapter(const I2CAdapterOptions*);  // Constructor takes a bus ID and pins as arguments.
       ~I2CAdapter();           // Destructor
 
       /* Overrides from the BusAdapter interface */
       int8_t io_op_callback(BusOp*);
       int8_t queue_io_job(BusOp*);
+      int8_t advance_work_queue();
+      int8_t bus_init();      // This must be provided on a per-platform basis.
+      int8_t bus_deinit();    // This must be provided on a per-platform basis.
       I2CBusOp* new_op(BusOpcode, BusOpCallback*);
 
       /* Overrides from EventReceiver */
@@ -178,7 +202,13 @@ This file is the tortured result of growing pains since the beginning of
       int8_t callback_proc(ManuvrMsg*);
       #if defined(MANUVR_CONSOLE_SUPPORT)
         void procDirectDebugInstruction(StringBuilder*);
+        void printDebug(StringBuilder*);
+
+        /* Debug aides */
         void printHardwareState(StringBuilder*);
+        void printPingMap(StringBuilder*);
+        void printDevs(StringBuilder*);
+        void printDevs(StringBuilder*, uint8_t dev_num);
       #endif  //MANUVR_CONSOLE_SUPPORT
 
 
@@ -187,12 +217,6 @@ This file is the tortured result of growing pains since the beginning of
 
       int8_t addSlaveDevice(I2CDevice*);     // Adds a new device to the bus.
       int8_t removeSlaveDevice(I2CDevice*);  // Removes a device from the bus.
-
-      /* Debug aides */
-      void printPingMap(StringBuilder*);
-      void printDebug(StringBuilder*);
-      void printDevs(StringBuilder*);
-      void printDevs(StringBuilder*, uint8_t dev_num);
 
 
       // These are meant to be called from the bus jobs. They deal with specific bus functions
@@ -205,25 +229,19 @@ This file is the tortured result of growing pains since the beginning of
       inline void busError(bool nu) {   _er_set_flag(I2C_BUS_FLAG_BUS_ERROR, nu);   };
       inline void busOnline(bool nu) {  _er_set_flag(I2C_BUS_FLAG_BUS_ONLINE, nu);  };
 
-      inline int getDevId() {  return(dev);  };
+      inline int8_t getAdapterId() {  return(_bus_opts.adapter);  };
 
 
     protected:
       int8_t attached();      // This is called from the base notify().
 
       /* Overrides from the BusAdapter interface */
-      int8_t advance_work_queue();
-      int8_t bus_init();      // This must be provided on a per-platform basis.
-      int8_t bus_deinit();    // This must be provided on a per-platform basis.
 
 
     private:
       int8_t  ping_map[128];
-      int     dev = -1;
-      uint8_t scl_pin = 255;
-      uint8_t sda_pin = 255;
+      I2CAdapterOptions _bus_opts;
 
-      I2CBusOp* current_queue_item = nullptr;
       LinkedList<I2CDevice*> dev_list;    // A list of active slaves on this bus.
       ManuvrMsg _periodic_i2c_debug;
 
@@ -235,7 +253,7 @@ This file is the tortured result of growing pains since the beginning of
       void purge_stalled_job();
 
 
-      static I2CBusOp __prealloc_pool[PREALLOCATED_I2C_JOBS];
+      static I2CBusOp __prealloc_pool[I2CADAPTER_PREALLOC_COUNT];
   };
 
 

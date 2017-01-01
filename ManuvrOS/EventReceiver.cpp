@@ -24,7 +24,6 @@ limitations under the License.
 
 
 EventReceiver::EventReceiver(const char* nom) : _receiver_name(nom) {
-  printf("### Creating %s. %p\n", _receiver_name, (uintptr_t) _receiver_name);
 }
 
 EventReceiver::~EventReceiver() {

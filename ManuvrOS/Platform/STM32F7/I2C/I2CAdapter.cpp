@@ -34,12 +34,10 @@ bool _stm32f7_timing_reinit(I2C_HandleTypeDef *hi2c, uint32_t val) {
 int8_t I2CAdapter::bus_init() {
   switch (dev_id) {
     case 1:
-      if (((23 == sda) || (25 == sda)) && ((22 == scl) || (24 == scl))) {
+      if (((23 == _bus_opts.sda_pin) || (25 == _bus_opts.sda_pin)) && ((22 == _bus_opts.scl_pin) || (24 == _bus_opts.scl_pin))) {
         // Valid pins:      SCL: B6, B8  (22, 24)     SDA: B7, B9  (23, 25)
-        sda_pin = sda;
-        scl_pin = scl;
         GPIO_InitTypeDef GPIO_InitStruct;
-        GPIO_InitStruct.Pin       = (1 << (sda % 16)) | (1 << (scl % 16));
+        GPIO_InitStruct.Pin       = (1 << (_bus_opts.sda_pin % 16)) | (1 << (_bus_opts.scl_pin % 16));
         GPIO_InitStruct.Mode      = GPIO_MODE_AF_OD;
         GPIO_InitStruct.Pull      = GPIO_PULLUP;
         GPIO_InitStruct.Speed     = GPIO_SPEED_HIGH;
@@ -335,9 +333,9 @@ extern "C" {
   void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
     StringBuilder debug_log;
     debug_log.concatf("HAL_I2C_MasterTxCpltCallback    (0x%08x, 0x%08x, 0x%08x)\n\tstatus: 0x%04x\n", I2C1->CR1, I2C1->CR2, I2C1->ISR, (unsigned long) hi2c1.State);
-    if (i2c->current_queue_item != NULL) {
-      i2c->current_queue_item->markComplete();
-      //i2c->current_queue_item->advance_operation(1);
+    if (i2c->current_job != NULL) {
+      i2c->current_job->markComplete();
+      //i2c->current_job->advance_operation(1);
     }
   }
 
@@ -347,11 +345,11 @@ extern "C" {
   void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
     StringBuilder debug_log;
     debug_log.concatf("HAL_I2C_MasterRxCpltCallback    (0x%08x, 0x%08x, 0x%08x)\n\tstatus: 0x%04x\n", I2C1->CR1, I2C1->CR2, I2C1->ISR, (unsigned long) hi2c1.State);
-    if (i2c->current_queue_item != NULL) {
-      i2c->current_queue_item->markComplete();
-      //i2c->current_queue_item->advance_operation(1);
+    if (i2c->current_job != NULL) {
+      i2c->current_job->markComplete();
+      //i2c->current_job->advance_operation(1);
     }
-    if (0x53 == *(i2c->current_queue_item->buf)) {
+    if (0x53 == *(i2c->current_job->buf)) {
 
     }
   }
@@ -362,8 +360,8 @@ extern "C" {
   void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c) {
     StringBuilder debug_log;
     debug_log.concatf("HAL_I2C_ErrorCallback    (0x%08x, 0x%08x, 0x%08x)\n\tstatus: 0x%04x\n", I2C1->CR1, I2C1->CR2, I2C1->ISR, (unsigned long) hi2c1.State);
-    if (i2c->current_queue_item != NULL) {
-      i2c->current_queue_item->abort(XferFault::HUNG_IRQ);
+    if (i2c->current_job != NULL) {
+      i2c->current_job->abort(XferFault::HUNG_IRQ);
     }
   }
 }   // extern "C"

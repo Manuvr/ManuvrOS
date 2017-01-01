@@ -28,9 +28,9 @@ This file is the tortured result of growing pains since the beginning of
   apart into a more-portable platform-abstraction strategy.
 */
 
+#if defined(MANUVR_SUPPORT_I2C)
 
-#include "I2CAdapter.h"
-#include <Platform/Platform.h>
+#include <Platform/Peripherals/I2C/I2CAdapter.h>
 
 
 /*******************************************************************************
@@ -44,7 +44,7 @@ This file is the tortured result of growing pains since the beginning of
 * Static members and initializers should be located here.
 *******************************************************************************/
 
-I2CBusOp I2CAdapter::__prealloc_pool[PREALLOCATED_I2C_JOBS];
+I2CBusOp I2CAdapter::__prealloc_pool[I2CADAPTER_PREALLOC_COUNT];
 //template<> PriorityQueue<I2CBusOp*> BusAdapter<I2CBusOp>::preallocated;
 
   // We need some internal events to allow communication back from the ISR.
@@ -63,12 +63,9 @@ const MessageTypeDef i2c_message_defs[] = {
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
 
-I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver("I2CAdapter"), BusAdapter(I2CADAPTER_MAX_QUEUE) {
-  printf("### getReceiverName %s. %p\n", getReceiverName(), (uintptr_t) getReceiverName());
-  //printf("### getReceiverName()0 %s.\n", getReceiverName());
-  // This should result in the platform-default for the given bus id.
+I2CAdapter::I2CAdapter(const I2CAdapterOptions* o) : EventReceiver("I2CAdapter"), BusAdapter(I2CADAPTER_MAX_QUEUE_DEPTH) {
   // Some platforms (linux) will ignore pin-assignment values completely.
-  dev     = dev_id;
+  memcpy(&_bus_opts, o, sizeof(I2CAdapterOptions));
 
   _er_clear_flag(I2C_BUS_FLAG_BUS_ERROR | I2C_BUS_FLAG_BUS_ONLINE);
   _er_clear_flag(I2C_BUS_FLAG_PING_RUN  | I2C_BUS_FLAG_PINGING);
@@ -77,21 +74,6 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver("I2CAdapter"), BusAdapter
   ManuvrMsg::registerMessages(i2c_message_defs, mes_count);
 
   for (uint16_t i = 0; i < 128; i++) ping_map[i] = 0;   // Zero the ping map.
-
-  _periodic_i2c_debug.repurpose(MANUVR_MSG_I2C_DEBUG, (EventReceiver*) this);
-  _periodic_i2c_debug.incRefs();
-  _periodic_i2c_debug.specific_target = (EventReceiver*) this;
-  _periodic_i2c_debug.priority(1);
-  _periodic_i2c_debug.alterSchedulePeriod(100);
-  _periodic_i2c_debug.alterScheduleRecurrence(-1);
-  _periodic_i2c_debug.autoClear(false);
-  _periodic_i2c_debug.enableSchedule(false);
-}
-
-
-I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : I2CAdapter(dev_id)  {
-  sda_pin = sda;
-  scl_pin = scl;
 }
 
 
@@ -140,7 +122,7 @@ I2CBusOp* I2CAdapter::new_op(BusOpcode _op, BusOpCallback* _req) {
 void I2CAdapter::reclaim_queue_item(I2CBusOp* op) {
   uintptr_t obj_addr = ((uintptr_t) op);
   uintptr_t pre_min  = ((uintptr_t) __prealloc_pool);
-  uintptr_t pre_max  = pre_min + (sizeof(I2CBusOp) * PREALLOCATED_I2C_JOBS);
+  uintptr_t pre_max  = pre_min + (sizeof(I2CBusOp) * I2CADAPTER_PREALLOC_COUNT);
 
   if (op->hasFault() && (getVerbosity() > 1)) {    // Print failures.
     op->printDebug(&local_log);
@@ -181,13 +163,20 @@ void I2CAdapter::reclaim_queue_item(I2CBusOp* op) {
 * @return 0 on no action, 1 on action, -1 on failure.
 */
 int8_t I2CAdapter::attached() {
-  printf("### attached %s. %p\n", getReceiverName(), (uintptr_t) getReceiverName());
   if (EventReceiver::attached()) {
+    _periodic_i2c_debug.repurpose(MANUVR_MSG_I2C_DEBUG, (EventReceiver*) this);
+    _periodic_i2c_debug.incRefs();
+    _periodic_i2c_debug.specific_target = (EventReceiver*) this;
+    _periodic_i2c_debug.priority(1);
+    _periodic_i2c_debug.alterSchedulePeriod(100);
+    _periodic_i2c_debug.alterScheduleRecurrence(-1);
+    _periodic_i2c_debug.autoClear(false);
+    _periodic_i2c_debug.enableSchedule(false);
+    platform.kernel()->addSchedule(&_periodic_i2c_debug);
     bus_init();
     if (busOnline()) {
       advance_work_queue();
     }
-    platform.kernel()->addSchedule(&_periodic_i2c_debug);
     return 1;
   }
   return 0;
@@ -285,7 +274,7 @@ int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
 		return_value = I2C_ERR_SLAVE_EXISTS;
 	}
 	else if (get_slave_dev_by_addr(slave->_dev_addr) == I2C_ERR_SLAVE_NOT_FOUND) {
-		if (slave->assignBusInstance(this)) {
+		if (slave->assignBusInstance((I2CAdapter*) this)) {
 			int slave_index = dev_list.insert(slave);
 			if (slave_index == -1) {
 			  #if defined(__MANUVR_DEBUG)
@@ -370,15 +359,15 @@ int8_t I2CAdapter::io_op_callback(BusOp* _op) {
 int8_t I2CAdapter::queue_io_job(BusOp* op) {
   I2CBusOp* nu = (I2CBusOp*) op;
   nu->setVerbosity(getVerbosity());
-  nu->device = this;
-	if (current_queue_item) {
+  nu->device = (I2CAdapter*)this;
+	if (current_job) {
 		// Something is already going on with the bus. Queue...
 		work_queue.insert(nu);
 	}
 	else {
 		// Bus is idle. Put this work item in the active slot and start the bus operations...
-		current_queue_item = nu;
-		if ((dev >= 0) && busOnline()) {
+		current_job = nu;
+		if ((getAdapterId() >= 0) && busOnline()) {
 		  nu->begin();
 		  if (getVerbosity() > 6) {
 		    nu->printDebug(&local_log);
@@ -398,13 +387,13 @@ int8_t I2CAdapter::queue_io_job(BusOp* op) {
 */
 int8_t I2CAdapter::advance_work_queue() {
   if (!busOnline()) return -1;
-	if (current_queue_item) {
-		if (current_queue_item->isComplete()) {
-			if (current_queue_item->hasFault()) {
+	if (current_job) {
+		if (current_job->isComplete()) {
+			if (current_job->hasFault()) {
 			  #if defined(__MANUVR_DEBUG)
 			  if (getVerbosity() > 3) {
           local_log.concatf("Destroying failed job.\n");
-          if (getVerbosity() > 4) current_queue_item->printDebug(&local_log);
+          if (getVerbosity() > 4) current_job->printDebug(&local_log);
         }
 			  #endif
 			}
@@ -412,21 +401,21 @@ int8_t I2CAdapter::advance_work_queue() {
 			// Hand this completed operation off to the class that requested it. That class will
 			//   take what it wants from the buffer and, when we return to execution here, we will
 			//   be at liberty to clean the operation up.
-			if (current_queue_item->callback) {
+			if (current_job->callback) {
 				// TODO: need some minor reorg to make this not so obtuse...
-				current_queue_item->callback->io_op_callback(current_queue_item);
+				current_job->callback->io_op_callback(current_job);
 			}
-			else if (current_queue_item->get_opcode() == BusOpcode::TX_CMD) {
-				if (!current_queue_item->hasFault()) {
-					ping_map[current_queue_item->dev_addr % 128] = 1;
+			else if (current_job->get_opcode() == BusOpcode::TX_CMD) {
+				if (!current_job->hasFault()) {
+					ping_map[current_job->dev_addr % 128] = 1;
 				}
 				else {
-					ping_map[current_queue_item->dev_addr % 128] = -1;
+					ping_map[current_job->dev_addr % 128] = -1;
 				}
 
 				if (_er_flag(I2C_BUS_FLAG_PINGING)) {
-				  if ((current_queue_item->dev_addr & 0x00FF) < 127) {
-				    ping_slave_addr(current_queue_item->dev_addr + 1);
+				  if ((current_job->dev_addr & 0x00FF) < 127) {
+				    ping_slave_addr(current_job->dev_addr + 1);
 				  }
 				  else {
 				    #if defined(__MANUVR_DEBUG)
@@ -437,19 +426,19 @@ int8_t I2CAdapter::advance_work_queue() {
 				}
 			}
 
-			delete current_queue_item;
-			current_queue_item = work_queue.dequeue();
+			reclaim_queue_item(current_job);   // Delete the queued work AND its buffer.
+			current_job = work_queue.dequeue();
 		}
 	}
 	else {
 		// If there is nothing presently being serviced, we should promote an operation from the
 		//   queue into the active slot and initiate it in the block below.
-		current_queue_item = work_queue.dequeue();
+		current_job = work_queue.dequeue();
 	}
 
-	if (current_queue_item) {
-		if (!current_queue_item->has_bus_control()) {
-			current_queue_item->begin();
+	if (current_job) {
+		if (!current_job->has_bus_control()) {
+			current_job->begin();
 		}
 	}
 
@@ -471,7 +460,7 @@ void I2CAdapter::purge_queued_work_by_dev(I2CDevice *dev) {
       current = work_queue.get(i);
       if (current->dev_addr == dev->_dev_addr) {
         work_queue.remove(current);
-        delete current;   // Delete the queued work AND its buffer.
+        reclaim_queue_item(current);   // Delete the queued work AND its buffer.
       }
     }
   }
@@ -491,24 +480,24 @@ void I2CAdapter::purge_queued_work() {
   I2CBusOp* current = work_queue.dequeue();
   while (current) {
     current = work_queue.get();
-    current_queue_item->abort();
+    current->abort(XferFault::QUEUE_FLUSH);
     if (current->callback) {
       current->callback->io_op_callback(current);
     }
-    delete current;   // Delete the queued work AND its buffer.
+    reclaim_queue_item(current);   // Delete the queued work AND its buffer.
     current = work_queue.dequeue();
   }
 }
 
 
 void I2CAdapter::purge_stalled_job() {
-  if (current_queue_item) {
-    current_queue_item->abort();
-    if (current_queue_item->callback) {
-      current_queue_item->callback->io_op_callback(current_queue_item);
+  if (current_job) {
+    current_job->abort(XferFault::QUEUE_FLUSH);
+    if (current_job->callback) {
+      current_job->callback->io_op_callback(current_job);
     }
-    delete current_queue_item;
-    current_queue_item = nullptr;
+    delete current_job;
+    current_job = nullptr;
 #ifdef STM32F4XX
     I2C_GenerateSTOP(I2C1, ENABLE);   // This may not be sufficient...
 #endif
@@ -593,13 +582,13 @@ void I2CAdapter::printDevs(StringBuilder *temp) {
 void I2CAdapter::printDebug(StringBuilder *output) {
   EventReceiver::printDebug(output);
   printHardwareState(output);
-  output->concatf("-- sda/scl     %u/%u\n", sda_pin, scl_pin);
+  output->concatf("-- sda/scl     %u/%u\n", _bus_opts.sda_pin, _bus_opts.scl_pin);
   output->concatf("-- bus_error   %s\n", (busError()  ? "yes" : "no"));
   BusAdapter::printAdapter((BusAdapter*)this, output);
 
-  if (current_queue_item) {
+  if (current_job) {
     output->concat("-- Currently being serviced:\n");
-    current_queue_item->printDebug(output);
+    current_job->printDebug(output);
   }
   else {
     output->concat("-- Nothing being serviced.\n\n");
@@ -726,3 +715,6 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
   flushLocalLog();
 }
 #endif  //MANUVR_CONSOLE_SUPPORT
+
+
+#endif  // MANUVR_SUPPORT_I2C

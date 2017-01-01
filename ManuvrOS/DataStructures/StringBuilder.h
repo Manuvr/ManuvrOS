@@ -116,10 +116,10 @@ class StringBuilder {
 		void cull(int offset, int length);       // Use to throw away all but the specified range of this string.
 		void cull(int length);                   // Use to discard the first X characters from the string.
 
-		void trim(void);                         // Trim whitespace off the ends of the string.
+		void trim();                             // Trim whitespace off the ends of the string.
     bool contains(char);                     // Does the buffer contain the given character.
 
-		void clear(void);                        // Clears the string and frees the memory that was used to hold it.
+		void clear();                            // Clears the string and frees the memory that was used to hold it.
 
 		/* The functions below are meant to aid basic tokenization. They all consider the collapsed
 		   root string (if present) to be index zero. This detail is concealed from client classes. */
@@ -132,7 +132,7 @@ class StringBuilder {
 		bool drop_position(unsigned int pos);    // And use this to reap the tokens that you've used.
 		// Trim the whitespace from the end of the input string.
 
-		unsigned short count(void);              // Count the tokens.
+		unsigned short count();                  // Count the tokens.
 
 		int cmpBinString(unsigned char *unknown, int len);
 
@@ -144,7 +144,7 @@ class StringBuilder {
 	private:
     StrLL *root;         // The root of the linked-list.
     int col_length;      // The length of the collapsed string.
-    unsigned char *str;  // The collapsed string.
+    unsigned char* str;  // The collapsed string.
     bool preserve_ll;    // If true, do not reap the linked list in the destructor.
 
     #if defined(__BUILD_HAS_PTHREADS)
@@ -159,7 +159,7 @@ class StringBuilder {
 		StrLL* stackStrOntoList(StrLL *nu);
 		void collapseIntoBuffer();
 		void destroyStrLL(StrLL *r_node);
-		void null_term_check(void);
-		StrLL* promote_collapsed_into_ll(void);
+		void null_term_check();
+		StrLL* promote_collapsed_into_ll();
 };
 #endif

@@ -448,7 +448,12 @@ _---J. Ian Lindsay_
 
 ### 2016.12.31:
 
+Logging these changes in Manuvr, because they are in fact, Manuvr re-orgs. Digitabulum is convenient because it uses all three classes under merger.
+
     Digitabulum-emulator, 32-bit: DEBUG=1
     1998805   40764   86136 2125705  Lost a whole day to Spirit airlines. Ahead of NULL removals.
     1998805   40764   86136 2125705  No net size delta. Static analysis benefits only.
     1944223   22768   59844 2026835  Paying down technical debt. I2C still broken.
+    1944163   22768   59844 2026775  More member consolidation into BusAdapter.
+    1944163   22768   59844 2026775  WTF is wrong with i2c?!?!
+    1943815   22768   59812 2026395  Problem turned out to be inclusion order somehow.

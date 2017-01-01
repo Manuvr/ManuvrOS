@@ -28,11 +28,20 @@ limitations under the License.
 #include <Platform/Platform.h>
 
 
-#define SPI_MAX_QUEUE_PRINT       3  // How many SPI queue items should we print for debug?
+/* Compile-time bounds on memory usage. */
+#ifndef SPIADAPTER_MAX_QUEUE_PRINT
+  // How many queue items should we print for debug?
+  #define SPIADAPTER_MAX_QUEUE_PRINT 3
+#endif
+#ifndef SPIADAPTER_MAX_QUEUE_DEPTH
+  // How deep should the queue be allowed to become before rejecting work?
+  #define SPIADAPTER_MAX_QUEUE_DEPTH 12
+#endif
+#ifndef SPIADAPTER_PREALLOC_COUNT
+  // How many queue items should we have on-tap?
+  #define SPIADAPTER_PREALLOC_COUNT  10
+#endif
 
-// TODO: This should be migrated to the firmware conf.
-#define PREALLOCATED_SPI_JOBS    10  // How many SPI queue items should we have on-tap?
-#define SPI_MAX_Q_DEPTH          14
 
 #define MANUVR_MSG_SPI_QUEUE_READY      0x0230 // There is a new job in the SPI bus queue.
 #define MANUVR_MSG_SPI_CB_QUEUE_READY   0x0231 // There is something ready in the callback queue.
@@ -77,8 +86,6 @@ class SPIAdapter : public EventReceiver, public BusAdapter<SPIBusOp> {
       void printHardwareState(StringBuilder*);
     #endif  //MANUVR_CONSOLE_SUPPORT
 
-    static SPIBusOp* current_queue_item;
-
 
   protected:
     /* Overrides from the BusAdapter interface */
@@ -105,7 +112,7 @@ class SPIAdapter : public EventReceiver, public BusAdapter<SPIBusOp> {
     void init_spi(uint8_t cpol, uint8_t cpha);
 
 
-    static SPIBusOp preallocated_bus_jobs[PREALLOCATED_SPI_JOBS];// __attribute__ ((section(".ccm")));
+    static SPIBusOp preallocated_bus_jobs[SPIADAPTER_PREALLOC_COUNT];// __attribute__ ((section(".ccm")));
 };
 
 #endif  // __SPI_DRIVER_TEMPLATE_H__

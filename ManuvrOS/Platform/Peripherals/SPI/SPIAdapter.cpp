@@ -38,8 +38,7 @@ This is the platform-invariant implementation of a peripheral wraspper
 /* Used to minimize software burden incurred by timeout support. */
 volatile static bool timeout_punch = false;
 
-SPIBusOp  SPIAdapter::preallocated_bus_jobs[PREALLOCATED_SPI_JOBS];
-SPIBusOp* SPIAdapter::current_queue_item = nullptr;
+SPIBusOp  SPIAdapter::preallocated_bus_jobs[SPIADAPTER_PREALLOC_COUNT];
 //template<> PriorityQueue<SPIBusOp*> BusAdapter<SPIBusOp>::preallocated;
 
 const MessageTypeDef spi_message_defs[] = {
@@ -60,7 +59,7 @@ const MessageTypeDef spi_message_defs[] = {
 /**
 * Constructor. Also populates the global pointer reference.
 */
-SPIAdapter::SPIAdapter(uint8_t idx, uint8_t d_in, uint8_t d_out, uint8_t clk) : EventReceiver("SPIAdapter"), BusAdapter(PREALLOCATED_SPI_JOBS) {
+SPIAdapter::SPIAdapter(uint8_t idx, uint8_t d_in, uint8_t d_out, uint8_t clk) : EventReceiver("SPIAdapter"), BusAdapter(SPIADAPTER_PREALLOC_COUNT) {
   ManuvrMsg::registerMessages(spi_message_defs, sizeof(spi_message_defs) / sizeof(MessageTypeDef));
 
   // Build some pre-formed Events.
@@ -75,12 +74,12 @@ SPIAdapter::SPIAdapter(uint8_t idx, uint8_t d_in, uint8_t d_out, uint8_t clk) : 
   SPIBusOp::event_spi_queue_ready.priority(5);
 
   // Mark all of our preallocated SPI jobs as "No Reap" and pass them into the prealloc queue.
-  for (uint8_t i = 0; i < PREALLOCATED_SPI_JOBS; i++) {
+  for (uint8_t i = 0; i < SPIADAPTER_PREALLOC_COUNT; i++) {
     preallocated_bus_jobs[i].returnToPrealloc(true);     // Implies SHOuLD_REAP = false.
     preallocated.insert(&preallocated_bus_jobs[i]);
   }
 
-  current_queue_item = nullptr;
+  current_job = nullptr;
   _er_set_flag(SPI_FLAG_QUEUE_IDLE);
 }
 
@@ -134,14 +133,14 @@ int8_t SPIAdapter::queue_io_job(BusOp* _op) {
       return -4;
     }
 
-    if ((nullptr == current_queue_item) && (work_queue.size() == 0)){
+    if ((nullptr == current_job) && (work_queue.size() == 0)){
       // If the queue is empty, fire the operation now.
-      current_queue_item = op;
+      current_job = op;
       advance_work_queue();
       //if (bus_timeout_millis) event_spi_timeout.delaySchedule(bus_timeout_millis);  // Punch the timeout schedule.
     }
     else {    // If there is something already in progress, queue up.
-      if (_er_flag(SPI_FLAG_QUEUE_GUARD) && (SPI_MAX_Q_DEPTH <= work_queue.size())) {
+      if (_er_flag(SPI_FLAG_QUEUE_GUARD) && (SPIADAPTER_MAX_QUEUE_DEPTH <= work_queue.size())) {
         if (getVerbosity() > 3) Kernel::log("SPIAdapter::queue_io_job(): \t Bus queue at max size. Dropping transaction.\n");
         op->abort(XferFault::QUEUE_FLUSH);
         callback_queue.insertIfAbsent(op);
@@ -219,20 +218,20 @@ int8_t SPIAdapter::advance_work_queue() {
   int8_t return_value = 0;
 
   timeout_punch = false;
-  if (current_queue_item) {
-    switch (current_queue_item->get_state()) {
+  if (current_job) {
+    switch (current_job->get_state()) {
        case XferState::TX_WAIT:
        case XferState::RX_WAIT:
-         if (current_queue_item->hasFault()) {
+         if (current_job->hasFault()) {
            if (getVerbosity() > 3) local_log.concat("SPIAdapter::advance_work_queue():\t Failed at IO_WAIT.\n");
          }
          else {
-           current_queue_item->markComplete();
+           current_job->markComplete();
          }
          // NOTE: No break on purpose.
        case XferState::COMPLETE:
-         callback_queue.insert(current_queue_item);
-         current_queue_item = nullptr;
+         callback_queue.insert(current_job);
+         current_job = nullptr;
          if (callback_queue.size() == 1) {
            Kernel::staticRaiseEvent(&event_spi_callback_ready);
          }
@@ -240,7 +239,7 @@ int8_t SPIAdapter::advance_work_queue() {
 
        case XferState::IDLE:
        case XferState::INITIATE:
-         switch (current_queue_item->begin()) {
+         switch (current_job->begin()) {
            case XferFault::NONE:     // Nominal outcome. Transfer started with no problens...
              break;
            case XferFault::BUS_BUSY:    // Bus appears to be in-use. State did not change.
@@ -250,8 +249,8 @@ int8_t SPIAdapter::advance_work_queue() {
              break;
            default:    // Began the transfer, and it barffed... was aborted.
              if (getVerbosity() > 3) local_log.concat("SPIAdapter::advance_work_queue():\t Failed to begin transfer after starting.\n");
-             callback_queue.insert(current_queue_item);
-             current_queue_item = nullptr;
+             callback_queue.insert(current_job);
+             current_job = nullptr;
              if (callback_queue.size() == 1) Kernel::staticRaiseEvent(&event_spi_callback_ready);
              break;
          }
@@ -259,7 +258,7 @@ int8_t SPIAdapter::advance_work_queue() {
 
        /* Cases below ought to be handled by ISR flow... */
        case XferState::ADDR:
-         current_queue_item->advance_operation(0, 0);
+         current_job->advance_operation(0, 0);
        case XferState::STOP:
          if (getVerbosity() > 5) local_log.concatf("State might be corrupted if we tried to advance_queue(). \n");
          break;
@@ -270,11 +269,11 @@ int8_t SPIAdapter::advance_work_queue() {
   }
 
 
-  if (nullptr == current_queue_item) {
-    current_queue_item = work_queue.dequeue();
+  if (nullptr == current_job) {
+    current_job = work_queue.dequeue();
     // Begin the bus operation.
-    if (current_queue_item) {
-      if (XferFault::NONE != current_queue_item->begin()) {
+    if (current_job) {
+      if (XferFault::NONE != current_job->begin()) {
         if (getVerbosity() > 2) local_log.concatf("advance_work_queue() tried to clobber an existing transfer on the pick-up.\n");
         Kernel::staticRaiseEvent(&SPIBusOp::event_spi_queue_ready);  // Bypass our method. Jump right to the target.
       }
@@ -419,10 +418,10 @@ SPIBusOp* SPIAdapter::new_op(BusOpcode _op, BusOpCallback* _req) {
 * Purges a stalled job from the active slot.
 */
 void SPIAdapter::purge_stalled_job() {
-  if (current_queue_item) {
-    current_queue_item->abort(XferFault::QUEUE_FLUSH);
-    reclaim_queue_item(current_queue_item);
-    current_queue_item = nullptr;
+  if (current_job) {
+    current_job->abort(XferFault::QUEUE_FLUSH);
+    reclaim_queue_item(current_job);
+    current_job = nullptr;
   }
 }
 
@@ -512,11 +511,11 @@ void SPIAdapter::printDebug(StringBuilder *output) {
   output->concatf("-- callback q depth    %d\n\n", callback_queue.size());
 
   if (getVerbosity() > 3) {
-    if (current_queue_item != NULL) {
+    if (current_job != NULL) {
       output->concat("\tCurrently being serviced:\n");
-      current_queue_item->printDebug(output);
+      current_job->printDebug(output);
     }
-    BusAdapter::printWorkQueue((BusAdapter*)this, output, SPI_MAX_QUEUE_PRINT);
+    BusAdapter::printWorkQueue((BusAdapter*)this, output, SPIADAPTER_MAX_QUEUE_PRINT);
   }
 }
 

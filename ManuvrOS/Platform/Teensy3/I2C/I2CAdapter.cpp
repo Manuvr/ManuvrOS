@@ -5,11 +5,11 @@
 
 
 int8_t I2CAdapter::bus_init() {
-  switch (dev) {
+  switch (getAdapterId()) {
     case 0:
-      if (((18 == sda_pin) && (19 == scl_pin)) || ((17 == sda_pin) && (16 == scl_pin))) {
+      if (((18 == _bus_opts.sda_pin) && (19 == _bus_opts.scl_pin)) || ((17 == _bus_opts.sda_pin) && (16 == _bus_opts.scl_pin))) {
         Wire.begin(I2C_MASTER, 0x00,
-          (17 == sda_pin) ? I2C_PINS_16_17 : I2C_PINS_18_19,
+          (17 == _bus_opts.sda_pin) ? I2C_PINS_16_17 : I2C_PINS_18_19,
           I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR
         );
         Wire.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
@@ -18,7 +18,7 @@ int8_t I2CAdapter::bus_init() {
       break;
     #if defined(__MK20DX256__)
     case 1:
-      if ((30 == sda_pin) && (29 == scl_pin)) {
+      if ((30 == _bus_opts.sda_pin) && (29 == _bus_opts.scl_pin)) {
         Wire1.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR);
         Wire1.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
         busOnline(true);
@@ -41,7 +41,7 @@ int8_t I2CAdapter::bus_deinit() {
 
 
 void I2CAdapter::printHardwareState(StringBuilder* output) {
-  output->concatf("-- I2C%d (%sline) --------------------\n", dev, (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
+  output->concatf("-- I2C%d (%sline) --------------------\n", getAdapterId(), (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
 }
 
 
@@ -77,7 +77,7 @@ XferFault I2CBusOp::begin() {
 
   int wire_status = -1;
   int i = 0;
-  if (0 == device->getDevId()) {
+  if (0 == device->getAdapterId()) {
     Wire.beginTransmission((uint8_t) (dev_addr & 0x00FF));
     if (need_to_send_subaddr()) {
       Wire.write((uint8_t) (sub_addr & 0x00FF));
@@ -106,7 +106,7 @@ XferFault I2CBusOp::begin() {
     wire_status = Wire.status();
   }
   #if defined(__MK20DX256__)
-  else if (1 == device->getDevId()) {
+  else if (1 == device->getAdapterId()) {
     Wire1.beginTransmission((uint8_t) (dev_addr & 0x00FF));
     if (need_to_send_subaddr()) {
       Wire1.write((uint8_t) (sub_addr & 0x00FF));

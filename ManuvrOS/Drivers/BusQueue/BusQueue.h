@@ -21,6 +21,26 @@ limitations under the License.
 */
 
 
+
+/*******************************************************************************
+* ___     _
+*  |   / / \ o    /\   _|  _. ._ _|_  _  ._
+* _|_ /  \_/ o   /--\ (_| (_| |_) |_ (/_ |
+******************************|************************************************/
+
+/*******************************************************************************
+* ___     _       _
+*  |   / / \ o   | \  _     o  _  _
+* _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_
+*******************************************************************************/
+
+/*******************************************************************************
+* ___     _
+*  |   / / \ o     |  _  |_
+* _|_ /  \_/ o   \_| (_) |_)
+*******************************************************************************/
+
+
 #ifndef __MANUVR_BUS_QUEUE_H__
 #define __MANUVR_BUS_QUEUE_H__
 
@@ -210,18 +230,19 @@ template <class T> class BusAdapter : public BusOpCallback {
 
 
   protected:
+    T*       current_job      = nullptr;
     uint32_t _total_xfers     = 0;  // Transfer stats.
     uint32_t _failed_xfers    = 0;  // Transfer stats.
     uint16_t _prealloc_misses = 0;  // How many times have we starved the preallocation queue?
     uint16_t _heap_frees      = 0;  // How many times have we freed a BusOp?
     uint16_t _queue_floods    = 0;  // How many times has the queue rejected work?
     const uint16_t MAX_Q_DEPTH;     // Maximum tolerable queue depth.
+    //TODO: const uint8_t  MAX_Q_PRINT;     // Maximum tolerable queue depth.
+    //TODO: const uint8_t  PREALLOC_SIZE;   // Maximum tolerable queue depth.
     PriorityQueue<T*> work_queue;   // A work queue to keep transactions in order.
     PriorityQueue<T*> preallocated; // TODO: Should be static (as the pool is).
 
-    BusAdapter(uint16_t max) : MAX_Q_DEPTH(max) {
-      
-    };
+    BusAdapter(uint16_t max) : MAX_Q_DEPTH(max) {};
 
     /* Mandatory overrides... */
     virtual int8_t advance_work_queue() =0;  // The nature of the bus dictates this implementation.
@@ -258,6 +279,22 @@ template <class T> class BusAdapter : public BusOpCallback {
     //  T* return_value = new T(_op, _req);
     //  return return_value;
     //};
+
+    ///*
+    //* Purges only the work_queue. Leaves the currently-executing job.
+    //*/
+    //void purge_queued_work() {
+    //  T* current = work_queue.dequeue();
+    //  while (current) {
+    //    current->abort(XferFault::QUEUE_FLUSH);
+    //    if (current->callback) {
+    //      current->callback->io_op_callback(current);
+    //    }
+    //    reclaim_queue_item(current);
+    //    current = work_queue.dequeue();
+    //  }
+    //};
+
 
     /* Convenience function for guarding against queue floods. */
     inline bool roomInQueue() {    return !(work_queue.size() < MAX_Q_DEPTH);  }

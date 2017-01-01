@@ -103,10 +103,10 @@ void StringBuilder::printBuffer(StringBuilder* output, uint8_t* buf, unsigned in
 * Vanilla constructor.
 */
 StringBuilder::StringBuilder() {
-  this->root   = nullptr;
-  this->str    = nullptr;
-  this->col_length = 0;
-  this->preserve_ll = false;
+  root        = nullptr;
+  str         = nullptr;
+  col_length  = 0;
+  preserve_ll = false;
   #if defined(__BUILD_HAS_PTHREADS)
     #if defined (PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
     _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
@@ -118,16 +118,16 @@ StringBuilder::StringBuilder() {
   #endif
 }
 
-StringBuilder::StringBuilder(char *initial) : StringBuilder() {
+StringBuilder::StringBuilder(char* initial) : StringBuilder() {
   this->concat(initial);
 }
 
-StringBuilder::StringBuilder(uint8_t*initial, int len) : StringBuilder() {
+StringBuilder::StringBuilder(uint8_t* initial, int len) : StringBuilder() {
   this->concat(initial, len);
 }
 
 
-StringBuilder::StringBuilder(const char *initial) : StringBuilder() {
+StringBuilder::StringBuilder(const char* initial) : StringBuilder() {
   this->concat(initial);
 }
 
