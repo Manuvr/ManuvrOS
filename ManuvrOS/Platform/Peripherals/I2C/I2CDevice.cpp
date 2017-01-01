@@ -98,7 +98,7 @@ bool I2CDevice::disassignBusInstance() {
 */
 int8_t I2CDevice::queue_io_job(BusOp* _op) {
   I2CBusOp* op = (I2CBusOp*) _op;
-  if (NULL == op->callback) {
+  if (nullptr == op->callback) {
     op->callback = this;
   }
   return _bus->queue_io_job(op);
@@ -109,7 +109,7 @@ int8_t I2CDevice::queue_io_job(BusOp* _op) {
   This function sends the MSB first.
 */
 bool I2CDevice::write16(int sub_addr, uint16_t dat) {
-    if (_bus == NULL) {
+    if (_bus == nullptr) {
       #ifdef __MANUVR_DEBUG
       StringBuilder _log;
       _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
@@ -127,7 +127,7 @@ bool I2CDevice::write16(int sub_addr, uint16_t dat) {
 
 
 bool I2CDevice::write8(uint8_t dat) {
-    if (_bus == NULL) {
+    if (_bus == nullptr) {
       #ifdef __MANUVR_DEBUG
       StringBuilder _log;
       _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
@@ -144,7 +144,7 @@ bool I2CDevice::write8(uint8_t dat) {
 
 
 bool I2CDevice::write8(int sub_addr, uint8_t dat) {
-    if (_bus == NULL) {
+    if (_bus == nullptr) {
       #ifdef __MANUVR_DEBUG
       StringBuilder _log;
       _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
@@ -162,7 +162,7 @@ bool I2CDevice::write8(int sub_addr, uint8_t dat) {
 
 
 bool I2CDevice::writeX(int sub_addr, uint16_t byte_count, uint8_t *buf) {
-    if (_bus == NULL) {
+    if (_bus == nullptr) {
       #ifdef __MANUVR_DEBUG
       StringBuilder _log;
       _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
@@ -178,7 +178,7 @@ bool I2CDevice::writeX(int sub_addr, uint16_t byte_count, uint8_t *buf) {
 
 
 bool I2CDevice::readX(int sub_addr, uint8_t len, uint8_t *buf) {
-    if (_bus == NULL) {
+    if (_bus == nullptr) {
       #ifdef __MANUVR_DEBUG
       StringBuilder _log;
       _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
@@ -194,7 +194,7 @@ bool I2CDevice::readX(int sub_addr, uint8_t len, uint8_t *buf) {
 
 
 bool I2CDevice::read8(int sub_addr) {
-    if (_bus == NULL) {
+    if (_bus == nullptr) {
       #ifdef __MANUVR_DEBUG
       StringBuilder _log;
       _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
@@ -211,7 +211,7 @@ bool I2CDevice::read8(int sub_addr) {
 
 
 bool I2CDevice::read8(void) {
-    if (_bus == NULL) {
+    if (_bus == nullptr) {
       #ifdef __MANUVR_DEBUG
       StringBuilder _log;
       _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
@@ -231,7 +231,7 @@ bool I2CDevice::read8(void) {
   This function assumes the MSB is being read first.
 */
 bool I2CDevice::read16(int sub_addr) {
-    if (_bus == NULL) {
+    if (_bus == nullptr) {
       #ifdef __MANUVR_DEBUG
       StringBuilder _log;
       _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
@@ -252,7 +252,7 @@ bool I2CDevice::read16(int sub_addr) {
   This function assumes the MSB is being read first.
 */
 bool I2CDevice::read16() {
-    if (_bus == NULL) {
+    if (_bus == nullptr) {
       #ifdef __MANUVR_DEBUG
       StringBuilder _log;
       _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
@@ -281,7 +281,7 @@ bool I2CDevice::read16() {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void I2CDevice::printDebug(StringBuilder* temp) {
-  if (temp != NULL) {
-    temp->concatf("\n+++ I2CDevice  0x%02x ++++ Bus %sassigned +++++++++++++++++++++++++++\n", _dev_addr, (_bus == NULL ? "un" : ""));
+  if (temp) {
+    temp->concatf("\n+++ I2CDevice  0x%02x ++++ Bus %sassigned +++++++++++++++++++++++++++\n", _dev_addr, (_bus == nullptr ? "un" : ""));
   }
 }

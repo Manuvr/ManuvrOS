@@ -187,7 +187,7 @@ XenoManuvrMessage::XenoManuvrMessage(ManuvrMsg* existing_event) : XenoMessage(ex
 */
 void XenoManuvrMessage::wipe() {
   XenoMessage::wipe();
-  session         = NULL;
+  session         = nullptr;
   checksum_c      = CHECKSUM_PRELOAD_BYTE;     // The checksum of the data that we calculate.
   retries         = 0;     // How many times have we retried this packet?
   arg_count       = 0;
@@ -268,7 +268,7 @@ int8_t XenoManuvrMessage::fail() {
 *            or -1 if something went wrong.
 */
 int XenoManuvrMessage::serialize(StringBuilder* buffer) {
-  if (NULL == event) {
+  if (nullptr == event) {
     return 0;
   }
 
@@ -315,7 +315,7 @@ int XenoManuvrMessage::serialize(StringBuilder* buffer) {
 * @return  The number of bytes consumed, or a negative value on failure.
 */
 int XenoManuvrMessage::feedBuffer(StringBuilder *sb_buf) {
-  if (NULL == sb_buf) return 0;
+  if (nullptr == sb_buf) return 0;
   return accumulate((uint8_t*) sb_buf->string(), sb_buf->length());
 }
 
@@ -411,7 +411,7 @@ int XenoManuvrMessage::accumulate(unsigned char* buf, int buf_len){
 
     if (checksum_c == checksum_i) {
       // Checksum passes. Build the event.
-      if (event != NULL) {
+      if (event) {
         #ifdef __MANUVR_DEBUG
         output.concat("XenoManuvrMessage::feedBuffer(): Ooops. Clobbered a runnable pointer. Expect leaks...\n");
         #endif
@@ -467,7 +467,7 @@ int XenoManuvrMessage::accumulate(unsigned char* buf, int buf_len){
 * @return  true if this message is a reply to a prior message.
 */
 bool XenoManuvrMessage::isReply() {
-  if (NULL == event) return false;
+  if (nullptr == event) return false;
   switch (event->eventCode()) {
     case MANUVR_MSG_REPLY:
     case MANUVR_MSG_REPLY_RETRY:
@@ -485,7 +485,7 @@ bool XenoManuvrMessage::isReply() {
 * @return  true if this message demands an ACK.
 */
 bool XenoManuvrMessage::expectsACK() {
-  if (NULL != event) {
+  if (event) {
     return event->demandsACK();
   }
   return false;

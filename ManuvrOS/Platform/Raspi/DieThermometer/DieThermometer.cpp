@@ -73,12 +73,12 @@ SensorError RaspiTempSensor::init() {
 */
 SensorError RaspiTempSensor::readSensor() {
     FILE* temperature_file = fopen(RaspiTempSensor::RASPI_TEMPERATURE_FILE, "r");
-    if (temperature_file != NULL) {
+    if (temperature_file) {
         char *buf = (char*) alloca(1000);
         memset(buf, 0x00, 1000);
         char *res = fgets(buf, 1000, temperature_file);
-        if (res != NULL) {
-            long temp_temp = strtol(buf, (char **) NULL, 10);
+        if (res) {
+            long temp_temp = strtol(buf, (char **) nullptr, 10);
             if (temp_temp != 0) {
                 // We got a good read from the file. Now while it is still an integer, we should
                 // round it...

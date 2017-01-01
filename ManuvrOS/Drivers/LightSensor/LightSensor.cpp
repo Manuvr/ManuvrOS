@@ -108,7 +108,7 @@ int8_t LightSensor::attached() {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void LightSensor::printDebug(StringBuilder *output) {
-  if (output == NULL) return;
+  if (output == nullptr) return;
 
   EventReceiver::printDebug(output);
   output->concat("\n");

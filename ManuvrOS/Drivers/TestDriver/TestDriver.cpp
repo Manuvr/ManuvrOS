@@ -67,7 +67,7 @@ int8_t TestDriver::attached() {
 * @param A pointer to a StringBuffer object to receive the output.
 */
 void TestDriver::printDebug(StringBuilder* output) {
-  if (NULL == output) return;
+  if (nullptr == output) return;
   EventReceiver::printDebug(output);
 }
 

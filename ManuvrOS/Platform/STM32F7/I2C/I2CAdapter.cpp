@@ -1,7 +1,5 @@
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
 
-extern volatile I2CAdapter* i2c;
-
 #if defined(MANUVR_SUPPORT_I2C)
 extern "C" {
   #include <stm32f7xx_hal.h>

@@ -249,7 +249,7 @@ int8_t XenoSession::callback_proc(ManuvrMsg* event) {
     case MANUVR_MSG_SESS_HANGUP:
       // It is now safe to destroy this session. By triggering our owner's disconnection
       //   method, we indirectly invoke our own teardown.
-      BufferPipe::toCounterparty(ManuvrPipeSignal::XPORT_DISCONNECT, NULL);
+      BufferPipe::toCounterparty(ManuvrPipeSignal::XPORT_DISCONNECT, nullptr);
       mark_session_state(XENOSESSION_STATE_HUNGUP);
       break;
     default:
@@ -444,7 +444,7 @@ int8_t XenoSession::connection_callback(bool _con) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void XenoSession::printDebug(StringBuilder *output) {
-  if (NULL == output) return;
+  if (nullptr == output) return;
   EventReceiver::printDebug(output);
   BufferPipe::printDebug(output);
 
@@ -475,7 +475,7 @@ void XenoSession::printDebug(StringBuilder *output) {
     }
   }
 
-  if (NULL != working) {
+  if (working) {
     output->concat("\n-- XenoMessage in process  ----------------------------\n");
     working->printDebug(output);
   }

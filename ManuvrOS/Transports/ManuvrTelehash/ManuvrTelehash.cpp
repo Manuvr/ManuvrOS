@@ -42,7 +42,7 @@ TODO: It does not do this. Need to finish addressing issues with the build
   *   thread dedicated to the task...
   */
   void* socket_listener_loop(void* active_xport) {
-    if (NULL != active_xport) {
+    if (active_xport) {
       sigset_t set;
       sigemptyset(&set);
       //sigaddset(&set, SIGIO);
@@ -51,7 +51,7 @@ TODO: It does not do this. Need to finish addressing issues with the build
       sigaddset(&set, SIGTERM);
       sigaddset(&set, SIGVTALRM);
       sigaddset(&set, SIGINT);
-      int s = pthread_sigmask(SIG_BLOCK, &set, NULL);
+      int s = pthread_sigmask(SIG_BLOCK, &set, nullptr);
 
       ManuvrTelehash* listening_inst = (ManuvrTelehash*) active_xport;
       StringBuilder output;
@@ -89,7 +89,7 @@ TODO: It does not do this. Need to finish addressing issues with the build
       Kernel::log("Tried to listen with a NULL transport.");
     }
 
-    return NULL;
+    return nullptr;
   }
 
 #else
@@ -286,7 +286,7 @@ int8_t ManuvrTelehash::listen() {
   }
 
   initialized(true);
-  createThread(&_thread_id, NULL, socket_listener_loop, (void*) this);
+  createThread(&_thread_id, nullptr, socket_listener_loop, (void*) this);
 
   listening(true);
   local_log.concatf("TCP Now listening at %s:%d.\n", _addr, _port_number);
@@ -307,8 +307,8 @@ int8_t ManuvrTelehash::read_port() {
   if (connected()) {
     unsigned char *buf = (unsigned char *) alloca(256);
     int n;
-    ManuvrMsg *event    = NULL;
-    StringBuilder  *nu_data  = NULL;
+    ManuvrMsg* event       = nullptr;
+    StringBuilder* nu_data = nullptr;
 
     while (connected()) {
       n = read(_sock, buf, 255);
@@ -320,7 +320,7 @@ int8_t ManuvrTelehash::read_port() {
         event->addArg(nu_data))->reapValue(true);
 
         // Do stuff regarding the data we just read...
-        if (NULL != session) {
+        if (session) {
           session->notify(event);
         }
         else {
@@ -442,7 +442,7 @@ int8_t ManuvrTelehash::attached() {   // ?? TODO ??
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void ManuvrTelehash::printDebug(StringBuilder *temp) {
-  if (temp == NULL) return;
+  if (temp == nullptr) return;
 
   ManuvrXport::printDebug(temp);
   temp->concatf("-- _addr           %s:%d\n",  _addr, _port_number);

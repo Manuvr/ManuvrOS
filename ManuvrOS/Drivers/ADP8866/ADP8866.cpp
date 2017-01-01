@@ -37,13 +37,13 @@ const MessageTypeDef adp8866_message_defs[] = {
   {  MANUVR_MSG_ADP8866_ASSIGN_BL,    MSG_FLAG_EXPORTABLE,  "ADP8866_ASSIGN_BL",    ManuvrMsg::MSG_ARGS_NONE }  //
 };
 
-ADP8866* ADP8866::INSTANCE = NULL;
+ADP8866* ADP8866::INSTANCE = nullptr;
 
 /*
 * This is the ISR for the interrupt pin (if provided).
 */
 void ADP8866_ISR(void) {
-  if (NULL != ADP8866::INSTANCE) {
+  if (ADP8866::INSTANCE) {
     ADP8866::INSTANCE->_isr_fxn();
   }
 }
@@ -332,7 +332,7 @@ int8_t ADP8866::io_op_callback(I2CBusOp* completed) {
 * Dump this item to the dev log.
 */
 void ADP8866::printDebug(StringBuilder* temp) {
-  if (NULL == temp) return;
+  if (nullptr == temp) return;
   EventReceiver::printDebug(temp);
   I2CDeviceWithRegisters::printDebug(temp);
   temp->concatf("\tinit_complete:      %s\n", _er_flag(ADP8866_FLAG_INIT_COMPLETE) ? "yes" :"no");

@@ -441,3 +441,13 @@ _---J. Ian Lindsay_
 
     Linux, 32-bit: DEBUG=1
     1869741   22904   23908 1916553  New baseline before the dust settles on i2c.
+
+_---J. Ian Lindsay_
+
+------
+
+### 2016.12.31:
+
+    Digitabulum-emulator, 32-bit: DEBUG=1
+    1998805   40764   86136 2125705  Lost a whole day to Spirit airlines. Ahead of NULL removals.
+    1998805   40764   86136 2125705  No net size delta. Static analysis benefits only.

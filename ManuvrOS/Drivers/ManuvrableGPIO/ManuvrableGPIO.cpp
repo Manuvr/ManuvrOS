@@ -86,7 +86,7 @@ int8_t ManuvrableGPIO::attached() {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void ManuvrableGPIO::printDebug(StringBuilder *output) {
-  if (output == NULL) return;
+  if (output == nullptr) return;
 
   EventReceiver::printDebug(output);
   output->concat("\n");

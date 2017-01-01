@@ -99,7 +99,7 @@ StandardIO::~StandardIO() {
 */
 int8_t StandardIO::toCounterparty(StringBuilder* buf, int8_t mm) {
   if (connected()) {
-    char* working_chunk = NULL;
+    char* working_chunk = nullptr;
     while (buf->count()) {
       working_chunk = buf->position(0);
       printf("%s", (const char*) working_chunk);
@@ -168,7 +168,7 @@ int8_t StandardIO::read_port() {
 
   while (connected()) {
     bzero(input_text, getMTU());
-    if (fgets(input_text, getMTU(), stdin) != NULL) {
+    if (fgets(input_text, getMTU(), stdin) != nullptr) {
       read_len = strlen(input_text);
       if (read_len) {
         bytes_received += read_len;
@@ -224,7 +224,7 @@ int8_t StandardIO::attached() {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void StandardIO::printDebug(StringBuilder *temp) {
-  if (temp == NULL) return;
+  if (temp == nullptr) return;
   ManuvrXport::printDebug(temp);
   temp->concatf("-- Class size      %d\n",     sizeof(StandardIO));
 }

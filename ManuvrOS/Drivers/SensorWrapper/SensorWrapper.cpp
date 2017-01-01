@@ -203,7 +203,7 @@ SensorError SensorWrapper::readDatumRaw(uint8_t dat, void* void_buffer) {
   uint8_t* buffer = (uint8_t*) void_buffer;   // Done to avoid compiler warnings.
   SensorDatum* current = get_datum(dat);
   if (current) {
-    if ((current->data == NULL) || (buffer == NULL)) {
+    if ((current->data == nullptr) || (buffer == nullptr)) {
       for (int i = 0; i < current->data_len; i++) {
         *(uint8_t*)(buffer + i) = *((uint8_t*)current->data + i);
       }
@@ -227,9 +227,9 @@ SensorError SensorWrapper::readDatumRaw(uint8_t dat, void* void_buffer) {
 SensorError SensorWrapper::updateDatum(uint8_t dat, void *reading) {
   SensorDatum* current = get_datum(dat);
   if (current) {
-    if (current->data == NULL) {
+    if (current->data == nullptr) {
       current->data = malloc(current->data_len);
-      if (current->data == NULL) {
+      if (current->data == nullptr) {
         return SensorError::OUT_OF_MEMORY;
       }
     }

@@ -430,7 +430,7 @@ int8_t ManuvrSerial::attached() {
       platform.kernel()->addSchedule(&read_abort_event);
     #else
       read_abort_event.alterScheduleRecurrence(0);
-      createThread(&_thread_id, NULL, xport_read_handler, (void*) this);
+      createThread(&_thread_id, nullptr, xport_read_handler, (void*) this);
     #endif
     return 1;
   }
@@ -444,7 +444,7 @@ int8_t ManuvrSerial::attached() {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void ManuvrSerial::printDebug(StringBuilder *temp) {
-  if (temp == NULL) return;
+  if (temp == nullptr) return;
 
   ManuvrXport::printDebug(temp);
   temp->concatf("-- _addr           %s\n",     _addr);

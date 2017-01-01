@@ -377,7 +377,7 @@ int8_t I2CBusOp::init_dma() {
           printDebug(&output);
         }
         //markComplete();
-        //Kernel::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, NULL);   // Raise an event
+        //Kernel::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, nullptr);   // Raise an event
         break;
       default:
         #ifdef __MANUVR_DEBUG

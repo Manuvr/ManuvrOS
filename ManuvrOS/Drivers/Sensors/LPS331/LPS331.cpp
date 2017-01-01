@@ -153,7 +153,7 @@ int8_t LPS331::io_op_callback(I2CBusOp* completed) {
   I2CDeviceWithRegisters::io_op_callback(completed);
 	int i = 0;
 	DeviceRegister *temp_reg = reg_defs.get(i++);
-	while (temp_reg != NULL) {
+	while (temp_reg) {
 		switch (temp_reg->addr) {
 		  case LPS331_REG_WHO_AM_I:
 		    temp_reg->unread = false;
@@ -199,7 +199,7 @@ int8_t LPS331::io_op_callback(I2CBusOp* completed) {
 * Dump this item to the dev log.
 */
 void LPS331::printDebug(StringBuilder* temp) {
-  if (NULL == temp) return;
+  if (nullptr == temp) return;
   //SensorWrapper::issue_json_map(temp, this);
   temp->concatf("Baro sensor (LPS331)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
   I2CDeviceWithRegisters::printDebug(temp);

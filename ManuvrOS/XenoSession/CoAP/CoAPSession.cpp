@@ -50,7 +50,7 @@ limitations under the License.
 */
 CoAPSession::CoAPSession(BufferPipe* _near_side) : XenoSession(_near_side) {
 	setReceiverName("CoAPSession");
-	working   = NULL;
+	working   = nullptr;
 	_next_packetid = 1;
   _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
 
@@ -77,9 +77,9 @@ CoAPSession::~CoAPSession() {
   _ping_timer.enableSchedule(false);
   platform.kernel()->removeSchedule(&_ping_timer);
 
-	if (NULL != working) {
+	if (nullptr != working) {
 		delete working;
-		working = NULL;
+		working = nullptr;
 	}
 
 	while (_pending_coap_messages.hasNext()) {
@@ -301,7 +301,7 @@ void CoAPSession::printDebug(StringBuilder *output) {
   XenoSession::printDebug(output);
   output->concatf("-- Next Packet ID       0x%08x\n", (uint32_t) _next_packetid);
 
-	if (NULL != working) {
+	if (nullptr != working) {
 		output->concat("--\n-- Incomplete inbound message:\n");
 		working->printDebug(output);
 	}

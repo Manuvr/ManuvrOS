@@ -57,7 +57,7 @@ This class implements a crude UDP connector.
   *   thread dedicated to the task...
   */
   void* _udp_socket_listener_loop(void* active_xport) {
-    if (NULL != active_xport) {
+    if (active_xport) {
       sigset_t set;
       sigemptyset(&set);
       //sigaddset(&set, SIGIO);
@@ -66,7 +66,7 @@ This class implements a crude UDP connector.
       sigaddset(&set, SIGTERM);
       sigaddset(&set, SIGVTALRM);
       sigaddset(&set, SIGINT);
-      int s = pthread_sigmask(SIG_BLOCK, &set, NULL);
+      int s = pthread_sigmask(SIG_BLOCK, &set, nullptr);
       ManuvrUDP* listening_inst = (ManuvrUDP*) active_xport;
 
       if (0 == s) {
@@ -89,7 +89,7 @@ This class implements a crude UDP connector.
       Kernel::log("Tried to listen with a NULL transport.");
     }
 
-    return NULL;
+    return nullptr;
   }
 #else
   // Threads are unsupported here.
@@ -277,7 +277,7 @@ int8_t ManuvrUDP::listen() {
   }
 
   //initialized(true);
-  createThread(&_thread_id, NULL, _udp_socket_listener_loop, (void*) this);
+  createThread(&_thread_id, nullptr, _udp_socket_listener_loop, (void*) this);
   listening(true);
   local_log.concatf("UDP Now listening at %s:%d.\n", _addr, _port_number);
 
@@ -314,7 +314,7 @@ int8_t ManuvrUDP::read_port() {
       local_log.concatf("UDP read %d bytes from counterparty (%s).\n", n, (const char*) inet_ntoa(cli_addr.sin_addr));
     }
     UDPPipe* related_pipe = _open_replies[cli_addr.sin_port];
-    if (NULL == related_pipe) {
+    if (nullptr == related_pipe) {
       // Non-existence. Create...
       related_pipe = new UDPPipe(this, cli_addr.sin_addr.s_addr, cli_addr.sin_port);
       if (_pipe_strategy) related_pipe->setPipeStrategy(_pipe_strategy);
@@ -423,7 +423,7 @@ bool ManuvrUDP::write_datagram(unsigned char* out, int out_len, uint32_t addr, i
       bytes_sent += result;
 
       UDPPipe* related_pipe = _open_replies[_tmp_sockaddr.sin_port];
-      if (NULL == related_pipe) {
+      if (nullptr == related_pipe) {
         // Non-existence. Create...
         related_pipe = new UDPPipe(this, _tmp_sockaddr.sin_addr.s_addr, _tmp_sockaddr.sin_port);
         _open_replies[_tmp_sockaddr.sin_port] = related_pipe;
@@ -432,7 +432,7 @@ bool ManuvrUDP::write_datagram(unsigned char* out, int out_len, uint32_t addr, i
       // TODO: We must receive from the socket before we can send again...
       char buffer[_xport_mtu];
       buffer[0] = '\0';
-      int _rec_bytes = recvfrom(_client_sock, buffer, _xport_mtu, 0, NULL, NULL);
+      int _rec_bytes = recvfrom(_client_sock, buffer, _xport_mtu, 0, nullptr, nullptr);
       Kernel::log(buffer);
       return_value = true;
     }
@@ -546,7 +546,7 @@ int8_t ManuvrUDP::callback_proc(ManuvrMsg* event) {
         // If we originated this message, it means we attached a BufferPipe that
         //   we allocated. If it is still attached to the event, it means it was
         //   not joined to any other pipe. Clean it up.
-        BufferPipe* tmp_pipe = NULL;
+        BufferPipe* tmp_pipe = nullptr;
         switch (event->getArgumentType(0)) {
           case BUFFERPIPE_PTR_FM:
             // The pipe was NOT taken. Clean it up.

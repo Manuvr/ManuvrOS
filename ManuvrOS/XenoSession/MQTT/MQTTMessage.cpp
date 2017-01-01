@@ -29,8 +29,8 @@ MQTTMessage::MQTTMessage() : XenoMessage() {
 	_parse_stage = 0;
 	_header.byte = 0;
 	_multiplier  = 1;
-	payload      = NULL;
-	topic        = NULL;
+	payload      = nullptr;
+	topic        = nullptr;
 	qos          = QOS0;
 	unique_id    = 0;
 	retained     = 0;
@@ -38,13 +38,13 @@ MQTTMessage::MQTTMessage() : XenoMessage() {
 }
 
 MQTTMessage::~MQTTMessage() {
-	if (NULL != payload) {
+	if (payload) {
 		free(payload);
-		payload = NULL;
+		payload = nullptr;
 	}
-	if (NULL != topic) {
+	if (topic) {
 		free(topic);
-		topic = NULL;
+		topic = nullptr;
 	}
 }
 
@@ -57,7 +57,7 @@ MQTTMessage::~MQTTMessage() {
 *            or -1 if something went wrong.
 */
 int MQTTMessage::serialize(StringBuilder* buffer) {
-  if (NULL == event) {
+  if (nullptr == event) {
     return 0;
   }
 
@@ -93,7 +93,7 @@ int MQTTMessage::accumulate(unsigned char* _buf, int _len) {
 				if (0 == (_tmp & 128)) {
 					if (bytes_total > 0) {
 						payload = malloc(bytes_total);
-						if (NULL == payload) {
+						if (nullptr == payload) {
 							// Not enough memory.
 							bytes_total = 0;
 							return -1;
@@ -159,7 +159,7 @@ int MQTTMessage::decompose_publish() {
 	// Now we should clean up as much dynamic memory as we can.
 	if (i < bytes_total) {
 		void* _tmp_args = (void*) malloc(_topic_len+1);
-		if (NULL == _tmp_args) {
+		if (nullptr == _tmp_args) {
 			// Bailout if the malloc() failed...
 			return -1;
 		}
@@ -178,7 +178,7 @@ int MQTTMessage::decompose_publish() {
 		// If the payload only contained the fields we just extracted, free it without
 		//   any replacement. There is no more data for it to hold.
 		free(payload);
-		payload = NULL;
+		payload = nullptr;
 		bytes_total = 0;
 		bytes_received = 0;
 	}
@@ -194,11 +194,11 @@ int MQTTMessage::decompose_publish() {
 */
 void MQTTMessage::printDebug(StringBuilder *output) {
   XenoMessage::printDebug(output);
-  if (NULL != topic) output->concatf("\t topic           %s\n", topic);
+  if (topic) output->concatf("\t topic           %s\n", topic);
   output->concatf("\t unique_id       0x%04x\n", unique_id);
   output->concatf("\t Packet type     0x%02x\n", packetType());
 	output->concatf("\t Parse complete  %s\n", parseComplete() ? "yes":"no");
-	if ((bytes_total > 0) && (NULL != payload)) {
+	if ((bytes_total > 0) && (nullptr != payload)) {
 		output->concat("\t Payload contents:\t");
 		for (uint32_t i = 0; i < bytes_total; i++) {
 			output->concatf("0x%02x ", *((uint8_t*)payload + i));

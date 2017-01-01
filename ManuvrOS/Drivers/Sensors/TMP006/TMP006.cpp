@@ -105,7 +105,7 @@ int8_t TMP006::io_op_callback(I2CBusOp* completed) {
   I2CDeviceWithRegisters::io_op_callback(completed);
   int i = 0;
   DeviceRegister *temp_reg = reg_defs.get(i++);
-  while (temp_reg != NULL) {
+  while (temp_reg) {
     switch (temp_reg->addr) {
       case TMP006_REG_MANID:
       case TMP006_REG_DEVID:
@@ -123,7 +123,7 @@ int8_t TMP006::io_op_callback(I2CBusOp* completed) {
       case TMP006_REG_VOBJ:
       case TMP006_REG_TAMB:
         if (SensorError::NO_ERROR == check_data()) {
-          Kernel::raiseEvent(MANUVR_MSG_SENSOR_TMP006, NULL);
+          Kernel::raiseEvent(MANUVR_MSG_SENSOR_TMP006, nullptr);
         }
         break;
 

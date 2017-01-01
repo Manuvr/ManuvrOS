@@ -188,14 +188,14 @@ int8_t INA219::io_op_callback(I2CBusOp* completed) {
   I2CDeviceWithRegisters::io_op_callback(completed);
   int i = 0;
   DeviceRegister *temp_reg = reg_defs.get(i++);
-  while (temp_reg != NULL) {
+  while (temp_reg) {
     switch (temp_reg->addr) {
       case INA219_REG_SHUNT_VOLTAGE:
       case INA219_REG_BUS_VOLTAGE:
       case INA219_REG_CURRENT:
       case INA219_REG_POWER:
         if (process_read_data()) {
-          //Kernel::raiseEvent(MANUVR_MSG_SENSOR_INA219, NULL);   // Raise an event
+          //Kernel::raiseEvent(MANUVR_MSG_SENSOR_INA219, nullptr);   // Raise an event
         }
         break;
       case INA219_REG_CONFIGURATION:

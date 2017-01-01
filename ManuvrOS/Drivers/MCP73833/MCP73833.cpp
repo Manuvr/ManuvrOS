@@ -32,7 +32,7 @@ This class was coded with the assumption that there would only be one such
 #include <Platform/Platform.h>
 
 
-volatile MCP73833* MCP73833::INSTANCE = NULL;
+volatile MCP73833* MCP73833::INSTANCE = nullptr;
 
 
 /*

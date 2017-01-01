@@ -111,7 +111,7 @@ int8_t TSL2561::io_op_callback(I2CBusOp* completed) {
   I2CDeviceWithRegisters::io_op_callback(completed);
 	int i = 0;
 	DeviceRegister *temp_reg = reg_defs.get(i++);
-	while (temp_reg != NULL) {
+	while (temp_reg) {
 		switch (temp_reg->addr) {
 		  case TSL2561_REG_ID:
 		    temp_reg->unread = false;
@@ -155,7 +155,7 @@ int8_t TSL2561::io_op_callback(I2CBusOp* completed) {
 * Dump this item to the dev log.
 */
 void TSL2561::printDebug(StringBuilder* temp) {
-  if (NULL == temp) return;
+  if (nullptr == temp) return;
   //SensorWrapper::issue_json_map(temp, this);
   temp->concatf("Lux sensor (TSL2561)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
   I2CDeviceWithRegisters::printDebug(temp);

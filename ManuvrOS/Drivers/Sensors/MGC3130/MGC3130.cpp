@@ -73,7 +73,7 @@ void mgc3130_isr_check() {
 * Some of you will recognize this design pattern for classes that are bound to an interrupt pin.
 *   This is perfectly alright as long as we don't try to put more than one such chip in your project.
 */
-volatile MGC3130* MGC3130::INSTANCE = NULL;
+volatile MGC3130* MGC3130::INSTANCE = nullptr;
 
 
 void gest_0() {
@@ -321,7 +321,7 @@ const char* MGC3130::getTouchTapString(uint8_t eventByte) {
 
 
 void MGC3130::printDebug(StringBuilder* output) {
-  if (NULL == output) return;
+  if (nullptr == output) return;
   EventReceiver::printDebug(output);
   I2CDevice::printDebug(output);
   output->concatf("\t TS Pin:      %d \n\t MCLR Pin:   %d\n", _ts_pin, _reset_pin);
@@ -371,7 +371,7 @@ void MGC3130::printDebug(StringBuilder* output) {
 */
 
 void MGC3130::dispatchGestureEvents() {
-  ManuvrMsg* event = NULL;
+  ManuvrMsg* event = nullptr;
 
   if (isPositionDirty()) {
     // We don't want to spam the Kernel. We need to rate-limit.

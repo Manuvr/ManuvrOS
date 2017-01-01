@@ -37,7 +37,7 @@
 
 
 
-volatile ManuvrAudio* ManuvrAudio::INSTANCE = NULL;
+volatile ManuvrAudio* ManuvrAudio::INSTANCE = nullptr;
 
 
 ManuvrAudio::ManuvrAudio() : EventReceiver() {
@@ -84,7 +84,7 @@ int8_t ManuvrAudio::attached() {
 * @param A pointer to a StringBuffer object to receive the output.
 */
 void ManuvrAudio::printDebug(StringBuilder* output) {
-  if (NULL == output) return;
+  if (nullptr == output) return;
   EventReceiver::printDebug(output);
 }
 

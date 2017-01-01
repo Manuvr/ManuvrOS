@@ -71,10 +71,10 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver("I2CAdapter"), BusAdapter
   _er_clear_flag(I2C_BUS_FLAG_BUS_ERROR | I2C_BUS_FLAG_BUS_ONLINE);
   _er_clear_flag(I2C_BUS_FLAG_PING_RUN  | I2C_BUS_FLAG_PINGING);
 
-  for (uint16_t i = 0; i < 128; i++) ping_map[i] = 0;   // Zero the ping map.
-
   int mes_count = sizeof(i2c_message_defs) / sizeof(MessageTypeDef);
   ManuvrMsg::registerMessages(i2c_message_defs, mes_count);
+
+  for (uint16_t i = 0; i < 128; i++) ping_map[i] = 0;   // Zero the ping map.
 
   _periodic_i2c_debug.repurpose(MANUVR_MSG_I2C_DEBUG, (EventReceiver*) this);
   _periodic_i2c_debug.incRefs();
@@ -269,14 +269,14 @@ int8_t I2CAdapter::notify(ManuvrMsg* active_event) {
 */
 int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
 	int8_t return_value = I2C_ERR_CODE_NO_ERROR;
-	if (slave == NULL) {
-	  #ifdef __MANUVR_DEBUG
+	if (slave == nullptr) {
+	  #if defined(__MANUVR_DEBUG)
 		Kernel::log("Slave is invalid.\n");
 		#endif
 		return_value = I2C_ERR_SLAVE_INVALID;
 	}
 	if (dev_list.contains(slave)) {    // Check for pointer eqivillence.
-	  #ifdef __MANUVR_DEBUG
+	  #if defined(__MANUVR_DEBUG)
 		Kernel::log("Slave device exists.\n");
 		#endif
 		return_value = I2C_ERR_SLAVE_EXISTS;
@@ -285,7 +285,7 @@ int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
 		if (slave->assignBusInstance(this)) {
 			int slave_index = dev_list.insert(slave);
 			if (slave_index == -1) {
-			  #ifdef __MANUVR_DEBUG
+			  #if defined(__MANUVR_DEBUG)
 				Kernel::log("Failed to insert somehow. Disassigning...\n");
 				#endif
 				slave->disassignBusInstance();
@@ -293,14 +293,14 @@ int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
 			}
 		}
 		else {
-		  #ifdef __MANUVR_DEBUG
+		  #if defined(__MANUVR_DEBUG)
 			Kernel::log("Op would clobber bus instance.\n");
 			#endif
 			return_value = I2C_ERR_SLAVE_ASSIGN_CLOB;
 		}
 	}
 	else {
-	  #ifdef __MANUVR_DEBUG
+	  #if defined(__MANUVR_DEBUG)
 		Kernel::log("Op would cause address collision with another slave device.\n");
 		#endif
 		return_value = I2C_ERR_SLAVE_COLLISION;
@@ -351,7 +351,7 @@ int8_t I2CAdapter::io_op_callback(BusOp* _op) {
   I2CBusOp* op = (I2CBusOp*) _op;
   // There is zero chance this object will be a null pointer unless it was done on purpose.
   if (getVerbosity() > 2) {
-    local_log.concatf("Probably shouldn't be in the default callback case...\n");
+    local_log.concat("Probably shouldn't be in the default callback case...\n");
     op->printDebug(&local_log);
   }
 
@@ -394,10 +394,11 @@ int8_t I2CAdapter::queue_io_job(BusOp* op) {
 * This function needs to be called to move the queue forward.
 */
 int8_t I2CAdapter::advance_work_queue() {
+  if (!busOnline()) return -1;
 	if (current_queue_item) {
 		if (current_queue_item->isComplete()) {
 			if (current_queue_item->hasFault()) {
-			  #ifdef __MANUVR_DEBUG
+			  #if defined(__MANUVR_DEBUG)
 			  if (getVerbosity() > 3) {
           local_log.concatf("Destroying failed job.\n");
           if (getVerbosity() > 4) current_queue_item->printDebug(&local_log);
@@ -425,7 +426,7 @@ int8_t I2CAdapter::advance_work_queue() {
 				    ping_slave_addr(current_queue_item->dev_addr + 1);
 				  }
 				  else {
-				    #ifdef __MANUVR_DEBUG
+				    #if defined(__MANUVR_DEBUG)
 				    if (getVerbosity() > 3) local_log.concat("Concluded i2c ping sweep.");
 				    #endif
 				    _er_clear_flag(I2C_BUS_FLAG_PINGING);
@@ -460,7 +461,7 @@ int8_t I2CAdapter::advance_work_queue() {
 *   went bad.
 */
 void I2CAdapter::purge_queued_work_by_dev(I2CDevice *dev) {
-  I2CBusOp* current = NULL;
+  I2CBusOp* current = nullptr;
 
   if (work_queue.size() > 0) {
     for (int i = 0; i < work_queue.size(); i++) {
@@ -498,11 +499,13 @@ void I2CAdapter::purge_queued_work() {
 
 
 void I2CAdapter::purge_stalled_job() {
-  if (current_queue_item != NULL) {
+  if (current_queue_item) {
     current_queue_item->abort();
-    if (NULL != current_queue_item->callback) current_queue_item->callback->io_op_callback(current_queue_item);
+    if (current_queue_item->callback) {
+      current_queue_item->callback->io_op_callback(current_queue_item);
+    }
     delete current_queue_item;
-    current_queue_item = NULL;
+    current_queue_item = nullptr;
 #ifdef STM32F4XX
     I2C_GenerateSTOP(I2C1, ENABLE);   // This may not be sufficient...
 #endif
@@ -515,7 +518,7 @@ void I2CAdapter::purge_stalled_job() {
 *   to discover if a device is active on the bus and addressable.
 */
 void I2CAdapter::ping_slave_addr(uint8_t addr) {
-    I2CBusOp* nu = new I2CBusOp(BusOpcode::TX_CMD, addr, (int16_t) -1, NULL, 0);
+    I2CBusOp* nu = new I2CBusOp(BusOpcode::TX_CMD, addr, (int16_t) -1, nullptr, 0);
     queue_io_job(nu);
     _er_set_flag(I2C_BUS_FLAG_PING_RUN);
 }
@@ -525,7 +528,7 @@ void I2CAdapter::ping_slave_addr(uint8_t addr) {
 * Debug fxn to print the ping map.
 */
 void I2CAdapter::printPingMap(StringBuilder *temp) {
-  if (temp != NULL) {
+  if (temp) {
     temp->concat("\n\n\tPing Map\n\t      0 1 2 3 4 5 6 7 8 9 A B C D E F\n");
     // TODO: This is needlessly-extravagent of memory. Do it this way instead...
     //char str_buf[];
@@ -557,9 +560,9 @@ void I2CAdapter::printPingMap(StringBuilder *temp) {
 
 
 void I2CAdapter::printDevs(StringBuilder *temp, uint8_t dev_num) {
-  if (temp == NULL) return;
+  if (temp == nullptr) return;
 
-  if (dev_list.get(dev_num) != NULL) {
+  if (dev_list.get(dev_num) != nullptr) {
     temp->concat("\n\n");
     dev_list.get(dev_num)->printDebug(temp);
   }
@@ -569,7 +572,7 @@ void I2CAdapter::printDevs(StringBuilder *temp, uint8_t dev_num) {
 }
 
 void I2CAdapter::printDevs(StringBuilder *temp) {
-  if (temp == NULL) return;
+  if (temp == nullptr) return;
 
   EventReceiver::printDebug(temp);
   for (int i = 0; i < dev_list.size(); i++) {
@@ -709,7 +712,7 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       break;
     case ']':
       local_log.concatf("Advanced i2c work queue.\n");
-      Kernel::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, NULL);   // Raise an event
+      Kernel::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, nullptr);   // Raise an event
       break;
 
     default:
