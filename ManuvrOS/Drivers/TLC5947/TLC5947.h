@@ -43,6 +43,7 @@ class TLC5947 : public BusOpCallback {
     ~TLC5947();
 
     /* Overrides from the SPICallback interface */
+    virtual int8_t io_op_callahead(BusOp*);
     int8_t io_op_callback(BusOp*);
     int8_t queue_io_job(BusOp*);
 

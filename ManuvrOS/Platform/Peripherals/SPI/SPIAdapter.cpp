@@ -88,6 +88,7 @@ SPIAdapter::SPIAdapter(uint8_t idx, uint8_t d_in, uint8_t d_out, uint8_t clk) : 
 * Destructor. Should never be called.
 */
 SPIAdapter::~SPIAdapter() {
+  bus_deinit();
   purge_queued_work();
 }
 
@@ -105,6 +106,22 @@ SPIAdapter::~SPIAdapter() {
 * ▐░░░░░░░░░░░▌▐░▌          ▐░░░░░░░░░░░▌    parameters don't have address
 *  ▀▀▀▀▀▀▀▀▀▀▀  ▀            ▀▀▀▀▀▀▀▀▀▀▀     phases.
 *******************************************************************************/
+
+/**
+* Called prior to the given bus operation beginning.
+* Returning 0 will allow the operation to continue.
+* Returning anything else will fail the operation with IO_RECALL.
+*   Operations failed this way will have their callbacks invoked as normal.
+*
+* @param  _op  The bus operation that was completed.
+* @return 0 to run the op, or non-zero to cancel it.
+*/
+int8_t SPIAdapter::io_op_callahead(BusOp* _op) {
+  // Bus adapters don't typically do anything here, other
+  //   than permit the transfer.
+  return 0;
+}
+
 
 /**
 * This is what we call when this class wants to conduct a transaction on the SPI bus.
