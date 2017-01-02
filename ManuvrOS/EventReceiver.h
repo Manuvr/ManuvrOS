@@ -70,40 +70,8 @@ Lifecycle:
         */
         virtual int8_t notify(ManuvrMsg*);
 
-        /*
-        * These have no reason to be here other than to enforce some discipline while
-        *   writing things. Eventually, they ought to be cased off by the preprocessor
-        *   so that production builds don't get cluttered by debugging junk that won't
-        *   see use.
-        */
-        void         printDebug();
-        virtual void printDebug(StringBuilder*);
-        #ifdef MANUVR_CONSOLE_SUPPORT
-          virtual void procDirectDebugInstruction(StringBuilder *input);
-        #endif
-
         /* These are intended to be overridden. */
         virtual int8_t callback_proc(ManuvrMsg*);
-
-        /* Raises an event, marking us as the return callback. */
-        int8_t raiseEvent(ManuvrMsg* event);
-
-        inline const char* getReceiverName() {   return _receiver_name;  }
-
-        /**
-        * Call to set the log verbosity for this class. 7 is most verbose. 0 will disable logging altogether.
-        *
-        * @param   nu_verbosity  The desired verbosity of this class.
-        * @return  -1 on failure, and 0 on no change, and 1 on success.
-        */
-        int8_t setVerbosity(int8_t);
-
-        /**
-        * What is this ER's present verbosity level?
-        *
-        * @return  An integer [0-7]. Larger values reflect chattier classes.
-        */
-        inline int8_t getVerbosity() {   return (_class_state & MANUVR_ER_FLAG_VERBOSITY_MASK);       };
 
         /**
         *
@@ -117,6 +85,41 @@ Lifecycle:
         * @return  1 if action was taken, 0 if not, -1 on error.
         */
         virtual int8_t erConfigure(Argument*); // This is called from the base notify().
+
+        /*
+        * These have no reason to be here other than to enforce some discipline while
+        *   writing things. Eventually, they ought to be cased off by the preprocessor
+        *   so that production builds don't get cluttered by debugging junk that won't
+        *   see use.
+        */
+        virtual void printDebug(StringBuilder*);
+        #ifdef MANUVR_CONSOLE_SUPPORT
+          virtual void procDirectDebugInstruction(StringBuilder *input);
+        #endif
+
+        /* Raises an event, marking us as the return callback. */
+        int8_t raiseEvent(ManuvrMsg* event);
+        void   printDebug();
+
+        /**
+        * Call to set the log verbosity for this class. 7 is most verbose. 0 will disable logging altogether.
+        *
+        * @param   nu_verbosity  The desired verbosity of this class.
+        * @return  -1 on failure, and 0 on no change, and 1 on success.
+        */
+        int8_t setVerbosity(int8_t);
+
+        // TODO: Mystery... Suspect this fails because address isn't known at
+        //   compile time. But how does CPLDDriver work? This seems to work for some reason.
+        inline const char* getReceiverName() {   return _receiver_name;  }
+        //const char* getReceiverName();
+
+        /**
+        * What is this ER's present verbosity level?
+        *
+        * @return  An integer [0-7]. Larger values reflect chattier classes.
+        */
+        inline int8_t getVerbosity() {   return (_class_state & MANUVR_ER_FLAG_VERBOSITY_MASK);       };
 
         /**
         * Has the class been boot-strapped?
@@ -142,11 +145,9 @@ Lifecycle:
 
         StringBuilder local_log;
 
-        EventReceiver();
+        EventReceiver(const char* nom);
 
-        inline void _mark_attached() {   _class_state |= MANUVR_ER_FLAG_ATTACHED;  };
 
-        inline void setReceiverName(const char* nom) {  _receiver_name = nom;  }
         void flushLocalLog();
 
         // These inlines are for convenience of extending classes.
@@ -162,11 +163,13 @@ Lifecycle:
 
 
       private:
+        char const* const _receiver_name;
         uint8_t     _class_state   = (DEFAULT_CLASS_VERBOSITY & MANUVR_ER_FLAG_VERBOSITY_MASK);
         uint8_t     _extnd_state   = 0;  // This is here for use by the extending class.
-        const char* _receiver_name = "EventReceiver";
 
         int8_t setVerbosity(ManuvrMsg*);  // Private because it should be set with an Event.
+
+        inline void _mark_attached() {   _class_state |= MANUVR_ER_FLAG_ATTACHED;  };
     };
   }
 

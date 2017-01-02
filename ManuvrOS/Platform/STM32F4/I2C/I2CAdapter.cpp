@@ -10,12 +10,9 @@ extern "C" {
 }
 
 
-I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
-  __class_initializer();
-  dev = dev_id;
-
+int8_t I2CAdapter::bus_init() {
   // This init() fxn was patterned after the STM32F4x7 library example.
-  if (dev_id == 1) {
+  if (dev == 1) {
     //I2C_DeInit(I2C1);		//Deinit and reset the I2C to avoid it locking up
 
     GPIO_InitTypeDef GPIO_InitStruct;
@@ -60,26 +57,63 @@ I2CAdapter::I2CAdapter(uint8_t dev_id) : EventReceiver() {
     I2C_Init(I2C1, &I2C_InitStruct);                 // init I2C1
     I2C_Cmd(I2C1, ENABLE);       // enable I2C1
   }
+
+  return (busOnline() ? 0 : -1);
 }
 
 
-I2CAdapter::I2CAdapter(uint8_t dev_id, uint8_t sda, uint8_t scl) : I2CAdapter(dev_id) {
-  // This platform handles this for us.
-  sda_pin = 255;
-  scl_pin = 255;
+//http://tech.munts.com/MCU/Frameworks/ARM/stm32f4/libs/STM32F4xx_DSP_StdPeriph_Lib_V1.1.0/Project/STM32F4xx_StdPeriph_Examples/I2C/I2C_TwoBoards/I2C_DataExchangeDMA/main.c
+// TODO: should check length > 0 before doing DMA init.
+// TODO: should migrate this into I2CAdapter???
+int8_t I2CBusOp::init_dma() {
+  int return_value = 0;
+
+  DMA_InitTypeDef DMA_InitStructure;
+  DMA_InitStructure.DMA_Channel            = DMA_Channel_1;
+  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  DMA_InitStructure.DMA_MemoryDataSize     = DMA_MemoryDataSize_Byte;
+  DMA_InitStructure.DMA_Priority           = DMA_Priority_High;
+  DMA_InitStructure.DMA_FIFOMode           = DMA_FIFOMode_Enable;  // Required for differnt access-widths.
+  DMA_InitStructure.DMA_FIFOThreshold      = DMA_FIFOThreshold_Full;
+  DMA_InitStructure.DMA_MemoryBurst        = DMA_MemoryBurst_Single;
+  DMA_InitStructure.DMA_PeripheralBurst    = DMA_PeripheralBurst_Single;
+  DMA_InitStructure.DMA_PeripheralInc      = DMA_PeripheralInc_Disable;
+  DMA_InitStructure.DMA_MemoryInc          = DMA_MemoryInc_Enable;
+  DMA_InitStructure.DMA_Mode               = DMA_Mode_Normal;
+  DMA_InitStructure.DMA_BufferSize         = (uint16_t) buf_len;   // Why did clive1 have (len-1)??
+  DMA_InitStructure.DMA_Memory0BaseAddr    = (uint32_t) buf;
+  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t) &I2C1->DR;
+
+  if (opcode == BusOpcode::RX) {
+    DMA_Cmd(DMA1_Stream0, DISABLE);
+    DMA_DeInit(DMA1_Stream0);
+    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;   // Receive
+    DMA_ITConfig(DMA1_Stream0, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE | DMA_IT_DME, ENABLE);
+    DMA_Init(DMA1_Stream0, &DMA_InitStructure);
+    //if (getVerbosity() > 5) local_log.concatf("init_dma():\ttxn_id: 0x%08x\tBuffer address: 0x%08x\n", txn_id, (uint32_t) buf);
+    I2C_DMALastTransferCmd(I2C1, ENABLE);
+  }
+  else if (opcode == BusOpcode::TX) {
+    DMA_Cmd(DMA1_Stream7, DISABLE);
+    DMA_DeInit(DMA1_Stream7);
+    DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;   // Transmit
+    DMA_ITConfig(DMA1_Stream7, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE | DMA_IT_DME, ENABLE);
+    DMA_Init(DMA1_Stream7, &DMA_InitStructure);
+    //if (getVerbosity() > 5) local_log.concatf("init_dma():\ttxn_id: 0x%08x\tBuffer address: 0x%08x\n", txn_id, (uint32_t) buf);
+    I2C_DMALastTransferCmd(I2C1, DISABLE);
+  }
+  else {
+    return -1;
+  }
+
+  //if (local_log.length() > 0) Kernel::log(&local_log);
+  return return_value;
 }
 
 
-I2CAdapter::~I2CAdapter() {
-    I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, DISABLE);   // Shelve the interrupts.
-    I2C_DeInit(I2C1);   // De-init
-    while (dev_list.hasNext()) {
-      dev_list.get()->disassignBusInstance();
-      dev_list.remove();
-    }
-
-    /* TODO: The work_queue destructor will take care of its own cleanup, but
-       We should abort any open transfers prior to deleting this list. */
+int8_t I2CAdapter::bus_deinit() {
+  I2C_ITConfig(I2C1, I2C_IT_EVT|I2C_IT_ERR, DISABLE);   // Shelve the interrupts.
+  I2C_DeInit(I2C1);   // De-init
 }
 
 
@@ -108,5 +142,121 @@ int8_t I2CAdapter::generateStop() {
   I2C_GenerateSTOP(I2C1, ENABLE);
   return 0;
 }
+
+
+
+  /*
+  * Called from the ISR to advance this operation on the bus.
+  * Still required for DMA because of subaddresses, START/STOP, etc...
+  */
+  int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
+    StringBuilder output;
+    #ifdef __MANUVR_DEBUG
+    if (getVerbosity() > 6) output.concatf("I2CBusOp::advance_operation(0x%08x): \t %s\t", status_reg, BusOp::getStateString(xfer_state));
+    #endif
+    switch (xfer_state) {
+      case XferState::INITIATE:     // We need to send a START condition.
+        xfer_state = XferState::ADDR; // Need to send slave ADDR following a RESTART.
+        device->generateStart();
+        break;
+
+      case XferState::ADDR:      // We need to send the 7-bit address.
+        if (0x00000001 & status_reg) {
+          // If we see a ping at this point, it means the ping succeeded. Mark it finished.
+          if (opcode == BusOpcode::TX_CMD) {
+            markComplete();
+            device->generateStop();
+            if (output.length() > 0) Kernel::log(&output);
+            return 0;
+          }
+          // We are ready to send the address...
+          // If we need to send a subaddress, we will need to be in transmit mode. Even if our end-goal is to read.
+          uint8_t temp_dir_code = ((opcode == BusOpcode::TX || need_to_send_subaddr()) ? BusOpcode::TX : BusOpcode::RX);
+          I2C_Send7bitAddress(I2C1, (dev_addr << 1), temp_dir_code);
+          if (need_to_send_subaddr()) {
+            xfer_state = I2C_XFER_STATE_SUBADDR;
+          }
+          else {
+            xfer_state = I2C_XFER_STATE_BODY;
+            I2C_DMACmd(I2C1, ENABLE);
+          }
+        }
+        else if (0x00000002 & status_reg) {
+          abort(I2C_ERR_CODE_ADDR_2TX);
+        }
+        break;
+      case I2C_XFER_STATE_SUBADDR:   // We need to send a subaddress.
+        if (0x00000002 & status_reg) {  // If the dev addr was sent...
+          I2C_SendData(I2C1, (uint8_t) (sub_addr & 0x00FF));   // ...send subaddress.
+          subaddr_sent = true;  // We've sent this already. Don't do it again.
+          //xfer_state = XferState::ADDR; // Need to send slave ADDR following a RESTART.
+          //I2C_GenerateSTART(I2C1, ENABLE);  // Start condition is proc'd after BUSY flag disasserts.
+          xfer_state = XferState::INITIATE;
+        }
+        break;
+      case I2C_XFER_STATE_BODY:      // We need to start the body of our transfer.
+        if (opcode == BusOpcode::TX) {
+          xfer_state = XferState::TX_WAIT;
+          DMA_Cmd(DMA1_Stream7, ENABLE);
+          I2C_DMACmd(I2C1, ENABLE);
+        }
+        else if (opcode == BusOpcode::RX) {
+          xfer_state = XferState::RX_WAIT;
+          DMA_Cmd(DMA1_Stream0, ENABLE);
+          I2C_DMACmd(I2C1, ENABLE);
+        }
+        else if (opcode == BusOpcode::TX_CMD) {
+          xfer_state = XferState::TX_WAIT;
+          // Pinging...
+          markComplete();
+          device->generateStop();
+        }
+        break;
+      case XferState::RX_WAIT:
+      case XferState::TX_WAIT:
+        break;
+      case XferState::STOP:      // We need to send a STOP condition.
+        if (opcode == BusOpcode::TX) {
+          if (0x00000004 & status_reg) {  // Byte transfer finished?
+            device->generateStop();
+            markComplete();
+          }
+        }
+        else if (opcode == BusOpcode::RX) {
+          device->generateStop();
+          markComplete();
+        }
+        else {
+          abort();
+        }
+        break;
+      case XferState::COMPLETE:  // This operation is comcluded.
+        if (getVerbosity() > 5) {
+          #ifdef __MANUVR_DEBUG
+          output.concatf("\t--- Interrupt following job (0x%08x)\n", status_reg);
+          #endif
+          printDebug(&output);
+        }
+        //markComplete();
+        //Kernel::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, nullptr);   // Raise an event
+        break;
+      default:
+        #ifdef __MANUVR_DEBUG
+        if (getVerbosity() > 1) output.concatf("\t--- Something is bad wrong. Our xfer_state is %s\n", BusOp::getStateString(xfer_state));
+        #endif
+        abort(I2C_ERR_CODE_DEF_CASE);
+        break;
+    }
+
+    if (getVerbosity() > 4) {
+      if (getVerbosity() > 6) printDebug(&output);
+      #ifdef __MANUVR_DEBUG
+      output.concatf("---> %s\n", BusOp::getStateString(xfer_state));
+      #endif
+    }
+
+    if (output.length() > 0) Kernel::log(&output);
+    return 0;
+  }
 
 #endif   // MANUVR_SUPPORT_I2C

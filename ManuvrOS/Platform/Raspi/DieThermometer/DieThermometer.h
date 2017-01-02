@@ -33,10 +33,10 @@ class RaspiTempSensor : public SensorWrapper {
         ~RaspiTempSensor();
 
         /* Overrides from SensorWrapper */
-        int8_t init(void);                                     // Needs to be called once on reset.
-        int8_t readSensor(void);                               // Read the sensor.
-        int8_t setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
-        int8_t getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
+        SensorError init();                                         // Needs to be called once on reset.
+        SensorError readSensor();                                   // Read the sensor.
+        SensorError setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
+        SensorError getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
 
     private:
         static constexpr const char* RASPI_TEMPERATURE_FILE = "/sys/class/thermal/thermal_zone0/temp";

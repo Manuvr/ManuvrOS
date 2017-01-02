@@ -25,12 +25,12 @@ limitations under the License.
 
 DeviceWithRegisters::DeviceWithRegisters(uint8_t r_count) {
   reg_count = r_count;
-  reg_defs = (reg_count > 0) ? (DeviceRegister*) malloc(sizeof(DeviceRegister) * reg_count) : NULL;
+  reg_defs = (reg_count > 0) ? (DeviceRegister*) malloc(sizeof(DeviceRegister) * reg_count) : nullptr;
 }
 
 DeviceWithRegisters::~DeviceWithRegisters() {
-  if (NULL != reg_defs) free(reg_defs);
-  reg_defs = NULL;
+  if (nullptr != reg_defs) free(reg_defs);
+  reg_defs = nullptr;
   // TODO: We should purge the bus of any of our operations and mask our IRQs prior to doing this.
 }
 
@@ -102,7 +102,7 @@ void DeviceWithRegisters::mark_it_zero() {
 
 
 void DeviceWithRegisters::dumpDevRegs(StringBuilder* output) {
-  if (NULL == output) return;
+  if (nullptr == output) return;
   for (int i = 0; i < reg_count; i++) {
     switch (reg_defs[i].len) {
       case 4:

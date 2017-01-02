@@ -97,8 +97,7 @@ Platforms that require it should be able to extend this driver for specific
 * @param  b_rate    The port baud rate.
 * @param  opts      Options to the underlying implementation.
 */
-ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate, uint32_t opts) : ManuvrXport() {
-  setReceiverName("ManuvrSerial");
+ManuvrSerial::ManuvrSerial(const char* tty_path, int b_rate, uint32_t opts) : ManuvrXport("ManuvrSerial") {
   set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED);
   if (tty_path) {
     size_t addr_len = strlen(tty_path);
@@ -430,7 +429,7 @@ int8_t ManuvrSerial::attached() {
       platform.kernel()->addSchedule(&read_abort_event);
     #else
       read_abort_event.alterScheduleRecurrence(0);
-      createThread(&_thread_id, NULL, xport_read_handler, (void*) this);
+      createThread(&_thread_id, nullptr, xport_read_handler, (void*) this);
     #endif
     return 1;
   }
@@ -444,7 +443,7 @@ int8_t ManuvrSerial::attached() {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void ManuvrSerial::printDebug(StringBuilder *temp) {
-  if (temp == NULL) return;
+  if (temp == nullptr) return;
 
   ManuvrXport::printDebug(temp);
   temp->concatf("-- _addr           %s\n",     _addr);

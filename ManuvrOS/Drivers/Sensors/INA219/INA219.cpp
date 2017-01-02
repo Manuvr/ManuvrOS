@@ -23,17 +23,35 @@ limitations under the License.
 
 const V_Cap_Point* batt_capacity_curves[6] = {chem_index_0, chem_index_1, chem_index_2, chem_index_3, chem_index_4, chem_index_5};  // Ten points on the curve ought to be enough for reliable interpolation.
 
+const DatumDef datum_defs[] = {
+  {
+    .desc    = "Instantaneous Current",
+    .units   = COMMON_UNITS_AMPS,
+    .type_id = FLOAT_FM,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "Instantaneous Voltage",
+    .units   = COMMON_UNITS_VOLTS,
+    .type_id = FLOAT_FM,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "Instantaneous Power",
+    .units   = COMMON_UNITS_WATTS,
+    .type_id = FLOAT_FM,
+    .flgs    = 0x00
+  }
+};
+
+
 /*
 * Constructor. Takes i2c address as argument.
 */
-INA219::INA219(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
-  _dev_addr = addr;
-  this->isHardware = true;
-  this->defineDatum("Instantaneous Current", SensorWrapper::COMMON_UNITS_AMPS, FLOAT_FM);
-  this->defineDatum("Instantaneous Voltage", SensorWrapper::COMMON_UNITS_VOLTS, FLOAT_FM);
-  this->defineDatum("Instantaneous Power",   SensorWrapper::COMMON_UNITS_WATTS, FLOAT_FM);
-  this->s_id = "e1671797c52e15f763380b45e841ec32";
-  this->name = "INA219";
+INA219::INA219(uint8_t addr) : I2CDeviceWithRegisters(addr), SensorWrapper("INA219") {
+  define_datum(&datum_defs[0]);
+  define_datum(&datum_defs[1]);
+  define_datum(&datum_defs[2]);
   //batt_min_v         = 0;  // We will be unable to init() with these values.
   //batt_max_v         = 0;  // We will be unable to init() with these values.
   //batt_capacity      = 0;  // We will be unable to init() with these values.
@@ -68,7 +86,7 @@ INA219::~INA219(void) {
 /**************************************************************************
 * Overrides...                                                            *
 **************************************************************************/
-int8_t INA219::init() {
+SensorError INA219::init() {
   if (batt_max_v > 0) {
     max_voltage_delta = (batt_max_v >= 16) ? 32 : 16;
   }
@@ -94,17 +112,17 @@ int8_t INA219::init() {
 
   writeIndirect(INA219_REG_CALIBRATION, cal_value, true);
   writeIndirect(INA219_REG_CONFIGURATION, cfg_value);
-  //if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
-    sensor_active = true;
-    return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+  //if (syncRegisters() == I2C_ERR_SLAVE_NO_ERROR) {
+    isActive(true);
+    return SensorError::NO_ERROR;
   //}
   //else {
-  //  return SensorWrapper::SENSOR_ERROR_BUS_ERROR;
+  //  return SensorError::BUS_ERROR;
   //}
 }
 
 
-int8_t INA219::setParameter(uint16_t reg, int len, uint8_t *data) {
+SensorError INA219::setParameter(uint16_t reg, int len, uint8_t *data) {
   switch (reg) {
     case INA219_REG_CLASS_MODE:
       { uint8_t nu = *(data);
@@ -127,38 +145,38 @@ int8_t INA219::setParameter(uint16_t reg, int len, uint8_t *data) {
           uint8_t nu = *(data);
           if (nu <= 5) {
               batt_chemistry = nu;
-              return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+              return SensorError::NO_ERROR;
           }
           else {
-              return SensorWrapper::SENSOR_ERROR_INVALID_PARAM;
+              return SensorError::INVALID_PARAM;
           }
       }
       break;
     default:
       break;
   }
-  return SensorWrapper::SENSOR_ERROR_INVALID_PARAM_ID;
+  return SensorError::INVALID_PARAM_ID;
 }
 
 
-int8_t INA219::getParameter(uint16_t reg, int len, uint8_t*) {
-  return SensorWrapper::SENSOR_ERROR_INVALID_PARAM_ID;
+SensorError INA219::getParameter(uint16_t reg, int len, uint8_t*) {
+  return SensorError::INVALID_PARAM_ID;
 }
 
 
-int8_t INA219::readSensor(void) {
-  if (sensor_active && init_complete) {
-    if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) INA219_REG_SHUNT_VOLTAGE)) {
-      if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) INA219_REG_BUS_VOLTAGE)) {
-        if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) INA219_REG_POWER)) {
-          if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) INA219_REG_CURRENT)) {
-            return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+SensorError INA219::readSensor() {
+  if (isActive() && init_complete) {
+    if (I2C_ERR_SLAVE_NO_ERROR == readRegister((uint8_t) INA219_REG_SHUNT_VOLTAGE)) {
+      if (I2C_ERR_SLAVE_NO_ERROR == readRegister((uint8_t) INA219_REG_BUS_VOLTAGE)) {
+        if (I2C_ERR_SLAVE_NO_ERROR == readRegister((uint8_t) INA219_REG_POWER)) {
+          if (I2C_ERR_SLAVE_NO_ERROR == readRegister((uint8_t) INA219_REG_CURRENT)) {
+            return SensorError::NO_ERROR;
           }
         }
       }
     }
   }
-  return SensorWrapper::SENSOR_ERROR_BUS_ERROR;
+  return SensorError::BUS_ERROR;
 }
 
 
@@ -166,18 +184,18 @@ int8_t INA219::readSensor(void) {
 * These are overrides from I2CDeviceWithRegisters.                                                  *
 ****************************************************************************************************/
 
-void INA219::operationCompleteCallback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::operationCompleteCallback(completed);
+int8_t INA219::io_op_callback(I2CBusOp* completed) {
+  I2CDeviceWithRegisters::io_op_callback(completed);
   int i = 0;
   DeviceRegister *temp_reg = reg_defs.get(i++);
-  while (temp_reg != NULL) {
+  while (temp_reg) {
     switch (temp_reg->addr) {
       case INA219_REG_SHUNT_VOLTAGE:
       case INA219_REG_BUS_VOLTAGE:
       case INA219_REG_CURRENT:
       case INA219_REG_POWER:
         if (process_read_data()) {
-          //Kernel::raiseEvent(MANUVR_MSG_SENSOR_INA219, NULL);   // Raise an event
+          //Kernel::raiseEvent(MANUVR_MSG_SENSOR_INA219, nullptr);   // Raise an event
         }
         break;
       case INA219_REG_CONFIGURATION:
@@ -196,6 +214,7 @@ void INA219::operationCompleteCallback(I2CBusOp* completed) {
     }
     temp_reg = reg_defs.get(i++);
   }
+  return 0;
 }
 
 
@@ -205,7 +224,7 @@ void INA219::operationCompleteCallback(I2CBusOp* completed) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void INA219::printDebug(StringBuilder* temp) {
-  temp->concatf("Current sensor (INA219)\t%snitialized\n---------------------------------------------------\n", (sensor_active ? "I": "Uni"));
+  temp->concatf("Current sensor (INA219)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
   I2CDeviceWithRegisters::printDebug(temp);
   //SensorWrapper::issue_json_map(temp, this);
   //temp->concatf("\n");
@@ -220,7 +239,7 @@ void INA219::printDebug(StringBuilder* temp) {
 /*
 * Returns true if it did its job. Returns false if we are still missing some data.
 */
-bool INA219::process_read_data(void) {
+bool INA219::process_read_data() {
   if (regUpdated(INA219_REG_POWER) && regUpdated(INA219_REG_CURRENT) && regUpdated(INA219_REG_BUS_VOLTAGE) && regUpdated(INA219_REG_SHUNT_VOLTAGE)) {
     float local_shunt   = (float) ((((int16_t) regValue(INA219_REG_SHUNT_VOLTAGE)) >> 3) * 0.004f);   // So many mV.
     float local_bus     = (float) ((((int16_t) regValue(INA219_REG_BUS_VOLTAGE))   >> 3) * 0.004f);   // So many mV.
@@ -289,7 +308,7 @@ bool INA219::process_read_data(void) {
 * Pass true to set the battery mode on. False to turn it off.
 * The only benefit to leaving battery mode off is CPU.
 */
-int8_t INA219::setBatteryMode(bool nu_mode) {
+SensorError INA219::setBatteryMode(bool nu_mode) {
   if (batt_min_v != 0) {
     if (batt_max_v != 0) {
       if (batt_capacity != 0) {
@@ -298,9 +317,9 @@ int8_t INA219::setBatteryMode(bool nu_mode) {
         else {
           battery_monitor = true;
         }
-        return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+        return SensorError::NO_ERROR;
       }
     }
   }
-  return SensorWrapper::SENSOR_ERROR_MISSING_CONF;
+  return SensorError::MISSING_CONF;
 }

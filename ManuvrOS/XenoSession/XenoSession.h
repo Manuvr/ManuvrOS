@@ -66,7 +66,7 @@ XenoSession is the class that manages dialog with other systems via some
 */
 class XenoSession : public EventReceiver, public BufferPipe {
   public:
-    XenoSession(BufferPipe*);
+    XenoSession(const char*, BufferPipe*);
     virtual ~XenoSession();
 
     /* Functions that are indirectly called by counterparty requests for subscription. */

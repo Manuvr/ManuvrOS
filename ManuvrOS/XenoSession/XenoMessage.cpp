@@ -88,9 +88,9 @@ void XenoMessage::wipe() {
   bytes_received  = 0;     // How many bytes of this command have we received? Meaningless for the sender.
   bytes_total     = 0;     // How many bytes does this message occupy?
 
-  if (NULL != event) {
+  if (event) {
     // TODO: Now we are worried about this.
-    event = NULL;
+    event = nullptr;
   }
 }
 
@@ -121,7 +121,7 @@ void XenoMessage::printDebug(StringBuilder *output) {
   output->concatf("\t Message state   %s\n", getMessageStateString(proc_state));
   output->concatf("\t bytes_total     %d\n", bytes_total);
   output->concatf("\t bytes_received  %d\n", bytes_received);
-  if (NULL != event) {
+  if (event) {
     output->concatf("\t Msg type   %s\n", event->getMsgTypeString());
   }
 }

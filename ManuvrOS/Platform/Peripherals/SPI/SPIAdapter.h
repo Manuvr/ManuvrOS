@@ -1,3 +1,26 @@
+/*
+File:   SPIAdapter.h
+Author: J. Ian Lindsay
+Date:   2016.12.17
+
+Copyright 2016 Manuvr, Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+
+*/
+
+
 #ifndef __SPI_DRIVER_TEMPLATE_H__
 #define __SPI_DRIVER_TEMPLATE_H__
 
@@ -5,11 +28,20 @@
 #include <Platform/Platform.h>
 
 
-#define SPI_MAX_QUEUE_PRINT       3  // How many SPI queue items should we print for debug?
+/* Compile-time bounds on memory usage. */
+#ifndef SPIADAPTER_MAX_QUEUE_PRINT
+  // How many queue items should we print for debug?
+  #define SPIADAPTER_MAX_QUEUE_PRINT 3
+#endif
+#ifndef SPIADAPTER_MAX_QUEUE_DEPTH
+  // How deep should the queue be allowed to become before rejecting work?
+  #define SPIADAPTER_MAX_QUEUE_DEPTH 12
+#endif
+#ifndef SPIADAPTER_PREALLOC_COUNT
+  // How many queue items should we have on-tap?
+  #define SPIADAPTER_PREALLOC_COUNT  10
+#endif
 
-// TODO: This should be migrated to the firmware conf.
-#define PREALLOCATED_SPI_JOBS    10  // How many SPI queue items should we have on-tap?
-#define SPI_MAX_Q_DEPTH          14
 
 #define MANUVR_MSG_SPI_QUEUE_READY      0x0230 // There is a new job in the SPI bus queue.
 #define MANUVR_MSG_SPI_CB_QUEUE_READY   0x0231 // There is something ready in the callback queue.
@@ -37,10 +69,10 @@ class SPIAdapter : public EventReceiver, public BusAdapter<SPIBusOp> {
     ~SPIAdapter();
 
     /* Overrides from the BusAdapter interface */
+    int8_t io_op_callahead(BusOp*);
     int8_t io_op_callback(BusOp*);
     int8_t queue_io_job(BusOp*);
     int8_t advance_work_queue();
-    SPIBusOp* new_op();
     SPIBusOp* new_op(BusOpcode, BusOpCallback*);
 
     void purge_queued_work_by_dev(BusOpCallback *dev);   // Flush the work queue by callback match
@@ -55,7 +87,11 @@ class SPIAdapter : public EventReceiver, public BusAdapter<SPIBusOp> {
       void printHardwareState(StringBuilder*);
     #endif  //MANUVR_CONSOLE_SUPPORT
 
-    static SPIBusOp* current_queue_item;
+
+  protected:
+    /* Overrides from the BusAdapter interface */
+    int8_t bus_init();
+    int8_t bus_deinit();
 
 
   private:
@@ -65,7 +101,6 @@ class SPIAdapter : public EventReceiver, public BusAdapter<SPIBusOp> {
     /* List of pending callbacks for bus transactions. */
     PriorityQueue<SPIBusOp*> callback_queue;
     uint32_t  bus_timeout_millis = 5;  // How long to spend in IO_WAIT?
-    uint32_t  specificity_burden = 0;  // How many queue items have been deleted?
     uint8_t   spi_cb_per_event   = 3;  // Limit the number of callbacks processed per event.
 
     void purge_queued_work();     // Flush the work queue.
@@ -78,7 +113,7 @@ class SPIAdapter : public EventReceiver, public BusAdapter<SPIBusOp> {
     void init_spi(uint8_t cpol, uint8_t cpha);
 
 
-    static SPIBusOp preallocated_bus_jobs[PREALLOCATED_SPI_JOBS];// __attribute__ ((section(".ccm")));
+    static SPIBusOp preallocated_bus_jobs[SPIADAPTER_PREALLOC_COUNT];// __attribute__ ((section(".ccm")));
 };
 
 #endif  // __SPI_DRIVER_TEMPLATE_H__

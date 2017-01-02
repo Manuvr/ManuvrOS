@@ -73,7 +73,7 @@ void mgc3130_isr_check() {
 * Some of you will recognize this design pattern for classes that are bound to an interrupt pin.
 *   This is perfectly alright as long as we don't try to put more than one such chip in your project.
 */
-volatile MGC3130* MGC3130::INSTANCE = NULL;
+volatile MGC3130* MGC3130::INSTANCE = nullptr;
 
 
 void gest_0() {
@@ -94,9 +94,7 @@ void gest_3() {
 
 
 
-MGC3130::MGC3130(int ts, int rst, uint8_t addr) : EventReceiver() {
-  setReceiverName("MGC3130");
-  _dev_addr  = addr;
+MGC3130::MGC3130(int ts, int rst, uint8_t addr) : I2CDevice(addr), EventReceiver("MGC3130") {
   _ts_pin    = (uint8_t) ts;
   _isr_ts_pin = ts;
   _reset_pin = (uint8_t) rst;
@@ -322,7 +320,7 @@ const char* MGC3130::getTouchTapString(uint8_t eventByte) {
 
 
 void MGC3130::printDebug(StringBuilder* output) {
-  if (NULL == output) return;
+  if (nullptr == output) return;
   EventReceiver::printDebug(output);
   I2CDevice::printDebug(output);
   output->concatf("\t TS Pin:      %d \n\t MCLR Pin:   %d\n", _ts_pin, _reset_pin);
@@ -372,7 +370,7 @@ void MGC3130::printDebug(StringBuilder* output) {
 */
 
 void MGC3130::dispatchGestureEvents() {
-  ManuvrMsg* event = NULL;
+  ManuvrMsg* event = nullptr;
 
   if (isPositionDirty()) {
     // We don't want to spam the Kernel. We need to rate-limit.
@@ -487,7 +485,7 @@ void MGC3130::dispatchGestureEvents() {
 * These are overrides from I2CDevice.                                                               *
 ****************************************************************************************************/
 
-void MGC3130::operationCompleteCallback(I2CBusOp* completed) {
+int8_t MGC3130::io_op_callback(I2CBusOp* completed) {
   gpioDefine(_ts_pin, INPUT_PULLUP);
   are_we_holding_ts(false);
   setPinFxn(_ts_pin, FALLING, mgc3130_isr_check);
@@ -520,7 +518,7 @@ void MGC3130::operationCompleteCallback(I2CBusOp* completed) {
             break;
           case 2:   // Sequence number
             if (data == last_seq_num) {
-              return;
+              return 0;
             }
             last_seq_num = data;
             break;
@@ -652,6 +650,7 @@ void MGC3130::operationCompleteCallback(I2CBusOp* completed) {
     }
     #endif
   }
+  return 0;
 }
 
 

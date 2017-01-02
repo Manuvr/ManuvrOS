@@ -28,15 +28,21 @@ const float ISL29033::res_range_precalc[4][4] = {{7.8125,       31.25,        12
                                                  {0.0305175781, 0.1220703125, 0.48828125,   1.953125},
                                                  {0.0019073486, 0.0076293945, 0.0305175781, 0.1220703125}};
 
+const DatumDef datum_defs[] = {
+  {
+    .desc    = "Light level",
+    .units   = COMMON_UNITS_LUX,
+    .type_id = FLOAT_FM,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  }
+};
+
+
 /*
 * Constructor. Takes i2c address as argument.
 */
-ISL29033::ISL29033(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
-  _dev_addr = addr;
-  this->isHardware = true;
-  this->defineDatum("Light level", SensorWrapper::COMMON_UNITS_LUX, FLOAT_FM);
-  this->s_id = "10899cd83f9ab1218c7cec2bbd589d91";
-  this->name = "ISL29033";
+ISL29033::ISL29033(uint8_t addr) : I2CDeviceWithRegisters(addr), SensorWrapper("ISL29033") {
+  define_datum(&datum_defs[0]);
   gpioSetup();
 
   // Default state: Maximum range and maximum resolution.
@@ -61,14 +67,14 @@ ISL29033::ISL29033(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
 /*
 * Destructor.
 */
-ISL29033::~ISL29033(void) {
+ISL29033::~ISL29033() {
 }
 
 
 /*
 * Setup GPIO pins and their bindings to on-chip peripherals, if required.
 */
-void ISL29033::gpioSetup(void) {
+void ISL29033::gpioSetup() {
 #if defined(STM32F4XX)
   GPIO_InitTypeDef GPIO_InitStruct;
 
@@ -90,26 +96,26 @@ void ISL29033::gpioSetup(void) {
 /**************************************************************************
 * Overrides...                                                            *
 **************************************************************************/
-int8_t ISL29033::init() {
-  if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
-    sensor_active = true;
+SensorError ISL29033::init() {
+  if (syncRegisters() == I2C_ERR_SLAVE_NO_ERROR) {
+    isActive(true);
     setCommandReg();
     setResRange();
     setThresholds();
-    return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+    return SensorError::NO_ERROR;
   }
   else {
-    return SensorWrapper::SENSOR_ERROR_BUS_ERROR;
+    return SensorError::BUS_ERROR;
   }
 }
 
 
-int8_t ISL29033::setParameter(uint16_t reg, int len, uint8_t *data) {
-  int8_t return_value = SensorWrapper::SENSOR_ERROR_INVALID_PARAM_ID;
+SensorError ISL29033::setParameter(uint16_t reg, int len, uint8_t *data) {
+  SensorError return_value = SensorError::INVALID_PARAM_ID;
   switch (reg) {
     case ISL29033_REG_AUTORANGE:
       autorange    = ((bool) *(data)) ? true : false;
-      return_value = SensorWrapper::SENSOR_ERROR_NO_ERROR;
+      return_value = SensorError::NO_ERROR;
       break;
     case ISL29033_REG_RANGE:
       if ((uint8_t) *(data) < 4) { // Only four bits allowed here.
@@ -117,7 +123,7 @@ int8_t ISL29033::setParameter(uint16_t reg, int len, uint8_t *data) {
         return_value = setResRange();
       }
       else {
-        return_value = SensorWrapper::SENSOR_ERROR_INVALID_PARAM;
+        return_value = SensorError::INVALID_PARAM;
       }
       break;
     case ISL29033_REG_RESOLUTION:
@@ -126,25 +132,25 @@ int8_t ISL29033::setParameter(uint16_t reg, int len, uint8_t *data) {
         return_value = setResRange();
       }
       else {
-        return_value = SensorWrapper::SENSOR_ERROR_INVALID_PARAM;
+        return_value = SensorError::INVALID_PARAM;
       }
       break;
     case ISL29033_REG_THRESHOLD_LO:
-      return_value = SensorWrapper::SENSOR_ERROR_INVALID_PARAM;
+      return_value = SensorError::INVALID_PARAM;
       if (len == 2) {
         threshold_lo = (uint16_t) (*data);
         return_value = setThresholds();
       }
       break;
     case ISL29033_REG_THRESHOLD_HI:
-      return_value = SensorWrapper::SENSOR_ERROR_INVALID_PARAM;
+      return_value = SensorError::INVALID_PARAM;
       if (len == 2) {
         threshold_hi = (uint16_t) (*data);
         return_value = setThresholds();
       }
       break;
     case ISL29033_REG_POWER_STATE:
-      return_value = SensorWrapper::SENSOR_ERROR_INVALID_PARAM;
+      return_value = SensorError::INVALID_PARAM;
       if (len == 1) {
         uint8_t temp_mode = (uint8_t) (*data);
         if ((temp_mode == ISL29033_POWER_MODE_OFF) || (temp_mode == ISL29033_POWER_MODE_ALS) || (temp_mode == ISL29033_POWER_MODE_IR)) {
@@ -161,20 +167,20 @@ int8_t ISL29033::setParameter(uint16_t reg, int len, uint8_t *data) {
 
 
 
-int8_t ISL29033::getParameter(uint16_t reg, int len, uint8_t*) {
-  return SensorWrapper::SENSOR_ERROR_INVALID_PARAM_ID;
+SensorError ISL29033::getParameter(uint16_t reg, int len, uint8_t*) {
+  return SensorError::INVALID_PARAM_ID;
 }
 
 
-int8_t ISL29033::readSensor(void) {
-  if (sensor_active) {
-    if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) ISL29033_REG_DATA_LSB)) {
-      if (I2C_ERR_CODE_NO_ERROR == readRegister((uint8_t) ISL29033_REG_DATA_MSB)) {
-        return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+SensorError ISL29033::readSensor() {
+  if (isActive()) {
+    if (I2C_ERR_SLAVE_NO_ERROR == readRegister((uint8_t) ISL29033_REG_DATA_LSB)) {
+      if (I2C_ERR_SLAVE_NO_ERROR == readRegister((uint8_t) ISL29033_REG_DATA_MSB)) {
+        return SensorError::NO_ERROR;
       }
     }
   }
-  return SensorWrapper::SENSOR_ERROR_BUS_ERROR;
+  return SensorError::BUS_ERROR;
 }
 
 
@@ -183,9 +189,9 @@ int8_t ISL29033::readSensor(void) {
 * These are overrides from I2CDevice.                                                               *
 ****************************************************************************************************/
 
-void ISL29033::operationCompleteCallback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::operationCompleteCallback(completed);
-  if (completed != NULL) {
+int8_t ISL29033::io_op_callback(I2CBusOp* completed) {
+  I2CDeviceWithRegisters::io_op_callback(completed);
+  if (completed) {
     switch (completed->get_opcode()) {
       case BusOpcode::RX:
         switch (completed->sub_addr) {
@@ -196,7 +202,7 @@ void ISL29033::operationCompleteCallback(I2CBusOp* completed) {
           case ISL29033_REG_DATA_LSB:
           case ISL29033_REG_DATA_MSB:
             if (calculateLux()) {
-              Kernel::raiseEvent(MANUVR_MSG_SENSOR_ISL29033, NULL);   // Raise an event
+              Kernel::raiseEvent(MANUVR_MSG_SENSOR_ISL29033, nullptr);   // Raise an event
             }
             break;
           case ISL29033_REG_INT_LT_LSB:
@@ -236,6 +242,7 @@ void ISL29033::operationCompleteCallback(I2CBusOp* completed) {
   else {
     Kernel::log("SENSOR_ERROR_WRONG_IDENTITY");
   }
+  return 0;
 }
 
 
@@ -243,8 +250,8 @@ void ISL29033::operationCompleteCallback(I2CBusOp* completed) {
 * Dump this item to the dev log.
 */
 void ISL29033::printDebug(StringBuilder* temp) {
-  if (temp != NULL) {
-    temp->concatf("Lux sensor (ISL29033)\t%snitialized\n---------------------------------------------------\n", (sensor_active ? "I": "Uni"));
+  if (temp) {
+    temp->concatf("Lux sensor (ISL29033)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
     I2CDeviceWithRegisters::printDebug(temp);
     //SensorWrapper::issue_json_map(temp, this);
     temp->concatf("\n");
@@ -261,45 +268,42 @@ void ISL29033::printDebug(StringBuilder* temp) {
 /*
 * Actually makes the call to the I2CAdapter to set light level thresholds.
 */
-int8_t ISL29033::setThresholds(void) {
-  int8_t return_value = SensorWrapper::SENSOR_ERROR_BUS_ERROR;
+SensorError ISL29033::setThresholds() {
   if (writeIndirect(ISL29033_REG_INT_LT_LSB, (threshold_lo & 0x00FF), true)) {
     if (writeIndirect(ISL29033_REG_INT_LT_MSB, (threshold_lo >> 8), true)) {
       if (writeIndirect(ISL29033_REG_INT_HT_LSB, (threshold_hi & 0x00FF), true)) {
         if (writeIndirect(ISL29033_REG_INT_HT_MSB, (threshold_hi >> 8)))  {
-          return_value = SensorWrapper::SENSOR_ERROR_NO_ERROR;
+          return SensorError::NO_ERROR;
         }
       }
     }
   }
-  return return_value;
+  return SensorError::BUS_ERROR;
 }
 
 
 /*
 * Actually makes the call to the I2CAdapter to set res and range.
 */
-int8_t ISL29033::setResRange(void) {
-  int8_t return_value = SensorWrapper::SENSOR_ERROR_BUS_ERROR;
+SensorError ISL29033::setResRange() {
   uint8_t temp_val = (0x0F & ((res << 2) + range));
   if (writeIndirect(ISL29033_REG_COMMAND_2, temp_val)) {
-    return_value = SensorWrapper::SENSOR_ERROR_NO_ERROR;
+    return SensorError::NO_ERROR;
   }
-  return return_value;
+  return SensorError::BUS_ERROR;
 }
 
 
-int8_t ISL29033::setCommandReg(void) {
-  int8_t return_value = SensorWrapper::SENSOR_ERROR_BUS_ERROR;
+SensorError ISL29033::setCommandReg() {
   uint8_t temp_val = (0xE3 & ((mode << 5) + irq_persist));
   if (writeIndirect(ISL29033_REG_COMMAND_1, temp_val)) {
-    return_value = SensorWrapper::SENSOR_ERROR_NO_ERROR;
+    return SensorError::NO_ERROR;
   }
-  return return_value;
+  return SensorError::BUS_ERROR;
 }
 
 
-uint8_t ISL29033::getCommandReg(void) {
+uint8_t ISL29033::getCommandReg() {
   uint8_t return_value = read8(ISL29033_REG_COMMAND_1);
   return return_value;
 }
@@ -308,7 +312,7 @@ uint8_t ISL29033::getCommandReg(void) {
 /*
 * Given a raw sensor read, converts result into a lux value and updates the datum.
 */
-bool ISL29033::calculateLux(void) {
+bool ISL29033::calculateLux() {
   if (regUpdated(ISL29033_REG_DATA_LSB) && regUpdated(ISL29033_REG_DATA_MSB)) {
     int16_t raw_read = (int16_t) (regValue(ISL29033_REG_DATA_LSB) + (regValue(ISL29033_REG_DATA_MSB) << 8));
     float result = raw_read * ISL29033::res_range_precalc[res][range];

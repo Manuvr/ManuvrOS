@@ -37,9 +37,8 @@ const MessageTypeDef message_defs_light_sensor[] = {
 
 
 
-LightSensor::LightSensor(int analog_pin) : EventReceiver() {
+LightSensor::LightSensor(int analog_pin) : EventReceiver("LightSensor") {
   _analog_pin = analog_pin;
-  setReceiverName("LightSensor");
   int mes_count = sizeof(message_defs_light_sensor) / sizeof(MessageTypeDef);
   ManuvrMsg::registerMessages(message_defs_light_sensor, mes_count);
 }
@@ -108,7 +107,7 @@ int8_t LightSensor::attached() {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void LightSensor::printDebug(StringBuilder *output) {
-  if (output == NULL) return;
+  if (output == nullptr) return;
 
   EventReceiver::printDebug(output);
   output->concat("\n");

@@ -25,8 +25,7 @@ limitations under the License.
 
 
 
-TestDriver::TestDriver() : EventReceiver() {
-  setReceiverName("TestDriver");
+TestDriver::TestDriver() : EventReceiver("TestDriver") {
 }
 
 
@@ -67,7 +66,7 @@ int8_t TestDriver::attached() {
 * @param A pointer to a StringBuffer object to receive the output.
 */
 void TestDriver::printDebug(StringBuilder* output) {
-  if (NULL == output) return;
+  if (nullptr == output) return;
   EventReceiver::printDebug(output);
 }
 

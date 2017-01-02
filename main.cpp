@@ -35,6 +35,8 @@ This is a demonstration program, and was meant to be compiled for a
 
 /* Drivers particular to this Manuvrable... */
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <Drivers/Sensors/TMP006/TMP006.h>
+#include <Drivers/Sensors/INA219/INA219.h>
 
 /*
 * This is ONLY used to expose the GPIO pins to the outside world.
@@ -59,6 +61,9 @@ This is a demonstration program, and was meant to be compiled for a
 Kernel* kernel = nullptr;
 
 #include <Platform/Platform.h>
+
+
+
 
 /*******************************************************************************
 * BufferPipe strategies particular to this firmware.                           *
@@ -178,10 +183,21 @@ int main(int argc, const char *argv[]) {
   #endif
 
   #if defined(MANUVR_SUPPORT_I2C)
+    const I2CAdapterOptions i2c_opts(
+      1,   // Device number
+      255, // sda
+      255  // scl
+    );
     // If we are running on a RasPi, let's try to fire up the i2c that is almost
     //   certainly present.
-    I2CAdapter i2c(1);
+    I2CAdapter i2c(&i2c_opts);
     kernel->subscribe(&i2c);
+
+    // TODO: Temporary addition to test the SensorWrapper build size.
+    TMP006 tmp006;
+    INA219 ina219;
+    i2c.addSlaveDevice(&tmp006);
+    i2c.addSlaveDevice(&ina219);
   #endif
 
   #if defined(RASPI) || defined(RASPI2)
@@ -277,6 +293,10 @@ int main(int argc, const char *argv[]) {
 
   // The main loop. Run forever, as a microcontroller would.
   // Program exit is handled in Platform.
+  tmp006.init();
+  ina219.init();
+  tmp006.readSensor();
+  ina219.readSensor();
   while (1) {
     kernel->procIdleFlags();
     #if defined(RASPI) || defined(RASPI2)

@@ -58,7 +58,7 @@ DeviceRegister::DeviceRegister(uint16_t nu_addr, uint32_t nu_val, uint8_t* buf, 
 DeviceRegister::DeviceRegister() {
   len      = 0;
   addr     = 0;
-  val      = NULL;
+  val      = nullptr;
   dirty    = false;
   unread   = false;
   writable = false;

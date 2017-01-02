@@ -70,7 +70,7 @@ class ManuvrSocket : public ManuvrXport {
       struct sockaddr_in _sockaddr;
     #endif
 
-    ManuvrSocket(const char* addr, int port, uint32_t opts);
+    ManuvrSocket(const char* nom, const char* addr, int port, uint32_t opts);
 
 
   private:

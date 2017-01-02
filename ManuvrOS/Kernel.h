@@ -91,10 +91,10 @@ limitations under the License.
       */
       int8_t registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFxnPtr cb, uint32_t options);
       inline int8_t before(uint16_t msgCode, listenerFxnPtr ca, uint32_t options) {
-        return registerCallbacks(msgCode, ca, NULL, options);
+        return registerCallbacks(msgCode, ca, nullptr, options);
       };
       inline int8_t on(uint16_t msgCode, listenerFxnPtr cb, uint32_t options) {
-        return registerCallbacks(msgCode, NULL, cb, options);
+        return registerCallbacks(msgCode, nullptr, cb, options);
       };
 
 

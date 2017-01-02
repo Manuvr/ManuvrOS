@@ -55,27 +55,29 @@ void StringBuilder::printBuffer(StringBuilder* output, uint8_t* buf, unsigned in
   if (buf) {
     const char* ind = (indent) ? indent : "\t";
     unsigned int i = 0;
-    for (i = 0; i < (len - 16); i+=16) {
-      output->concatf("%s0x%04x: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
-        ind,
-        i,
-        *(buf + i +  0),
-        *(buf + i +  1),
-        *(buf + i +  2),
-        *(buf + i +  3),
-        *(buf + i +  4),
-        *(buf + i +  5),
-        *(buf + i +  6),
-        *(buf + i +  7),
-        *(buf + i +  8),
-        *(buf + i +  9),
-        *(buf + i + 10),
-        *(buf + i + 11),
-        *(buf + i + 12),
-        *(buf + i + 13),
-        *(buf + i + 14),
-        *(buf + i + 15)
-      );
+    if (len >= 16) {
+      for (i = 0; i < (len - 16); i+=16) {
+        output->concatf("%s0x%04x: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+          ind,
+          i,
+          *(buf + i +  0),
+          *(buf + i +  1),
+          *(buf + i +  2),
+          *(buf + i +  3),
+          *(buf + i +  4),
+          *(buf + i +  5),
+          *(buf + i +  6),
+          *(buf + i +  7),
+          *(buf + i +  8),
+          *(buf + i +  9),
+          *(buf + i + 10),
+          *(buf + i + 11),
+          *(buf + i + 12),
+          *(buf + i + 13),
+          *(buf + i + 14),
+          *(buf + i + 15)
+        );
+      }
     }
     if (i < len) {
       output->concatf("%s0x%04x: ", ind, i);
@@ -103,10 +105,10 @@ void StringBuilder::printBuffer(StringBuilder* output, uint8_t* buf, unsigned in
 * Vanilla constructor.
 */
 StringBuilder::StringBuilder() {
-  this->root   = nullptr;
-  this->str    = nullptr;
-  this->col_length = 0;
-  this->preserve_ll = false;
+  root        = nullptr;
+  str         = nullptr;
+  col_length  = 0;
+  preserve_ll = false;
   #if defined(__BUILD_HAS_PTHREADS)
     #if defined (PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
     _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
@@ -118,16 +120,16 @@ StringBuilder::StringBuilder() {
   #endif
 }
 
-StringBuilder::StringBuilder(char *initial) : StringBuilder() {
+StringBuilder::StringBuilder(char* initial) : StringBuilder() {
   this->concat(initial);
 }
 
-StringBuilder::StringBuilder(uint8_t*initial, int len) : StringBuilder() {
+StringBuilder::StringBuilder(uint8_t* initial, int len) : StringBuilder() {
   this->concat(initial, len);
 }
 
 
-StringBuilder::StringBuilder(const char *initial) : StringBuilder() {
+StringBuilder::StringBuilder(const char* initial) : StringBuilder() {
   this->concat(initial);
 }
 

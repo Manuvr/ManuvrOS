@@ -235,9 +235,8 @@ void ManuvrOIC::issue_requests_hook() {
 /**
 * Vanilla constructor.
 */
-ManuvrOIC::ManuvrOIC() : EventReceiver() {
+ManuvrOIC::ManuvrOIC() : EventReceiver("OIC") {
   INSTANCE = this;
-  setReceiverName("OIC");
   uint8_t _default_flags = 0;
 
   #if defined(OC_CLIENT)

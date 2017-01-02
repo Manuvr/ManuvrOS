@@ -153,7 +153,7 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     //   any extending class. But generally, this feature is necessary.
     ManuvrMsg read_abort_event;  // Used to timeout a read operation.
 
-    ManuvrXport();
+    ManuvrXport(const char*);
 
     virtual int8_t attached() =0;
     const char* pipeName();

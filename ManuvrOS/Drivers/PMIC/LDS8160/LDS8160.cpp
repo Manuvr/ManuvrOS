@@ -26,43 +26,43 @@ limitations under the License.
 ****************************************************************************************************/
 /* TODO: This class was never ported to ManuvrOS's October 2015 refactor.
 void lds8160_intensity(void) {
-  if (NULL != ld) {
+  if (nullptr != ld) {
     ld->toggle_brightness();
   }
 }
 
 void lds8160_chan_0(void) {
-  if (NULL != ld) {
+  if (nullptr != ld) {
     ld->enable_channel(0, !ld->channel_enabled(0));
   }
 }
 
 void lds8160_chan_1(void) {
-  if (NULL != ld) {
+  if (nullptr != ld) {
     ld->enable_channel(1, !ld->channel_enabled(1));
   }
 }
 
 void lds8160_chan_2(void) {
-  if (NULL != ld) {
+  if (nullptr != ld) {
     ld->enable_channel(2, !ld->channel_enabled(2));
   }
 }
 
 void lds8160_chan_3(void) {
-  if (NULL != ld) {
+  if (nullptr != ld) {
     ld->enable_channel(3, !ld->channel_enabled(3));
   }
 }
 
 void lds8160_chan_4(void) {
-  if (NULL != ld) {
+  if (nullptr != ld) {
     ld->enable_channel(4, !ld->channel_enabled(4));
   }
 }
 
 void lds8160_chan_5(void) {
-  if (NULL != ld) {
+  if (nullptr != ld) {
     ld->enable_channel(5, !ld->channel_enabled(5));
   }
 }
@@ -72,10 +72,7 @@ void lds8160_chan_5(void) {
 /*
 * Constructor. Takes i2c address as argument.
 */
-LDS8160::LDS8160(uint8_t addr) : EventReceiver(), I2CDeviceWithRegisters() {
-  setReceiverName("LDS8160");
-  _dev_addr = addr;
-
+LDS8160::LDS8160(uint8_t addr) : EventReceiver("LDS8160"), I2CDeviceWithRegisters(addr) {
   init_complete = false;
   defineRegister(LDS8160_BANK_A_CURRENT,     (uint8_t) 0x90, true,  false, true);
   defineRegister(LDS8160_BANK_B_CURRENT,     (uint8_t) 0x90, true,  false, true);
@@ -104,7 +101,7 @@ LDS8160::~LDS8160(void) {
 
 
 int8_t LDS8160::init() {
-  if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
+  if (syncRegisters() == I2C_ERR_SLAVE_NO_ERROR) {
     writeIndirect(LDS8160_BANK_A_CURRENT,  0x90, true);
     writeIndirect(LDS8160_BANK_B_CURRENT,  0x90, true);
     writeIndirect(LDS8160_BANK_C_CURRENT,  0x90, true);
@@ -129,12 +126,12 @@ int8_t LDS8160::init() {
 * These are overrides from I2CDeviceWithRegisters.                                                  *
 ****************************************************************************************************/
 
-void LDS8160::operationCompleteCallback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::operationCompleteCallback(completed);
+int8_t LDS8160::io_op_callback(I2CBusOp* completed) {
+  I2CDeviceWithRegisters::io_op_callback(completed);
 
   int i = 0;
   DeviceRegister *temp_reg = reg_defs.get(i++);
-  while (temp_reg != NULL) {
+  while (temp_reg) {
     switch (temp_reg->addr) {
       default:
         temp_reg->unread = false;
@@ -142,13 +139,14 @@ void LDS8160::operationCompleteCallback(I2CBusOp* completed) {
     }
     temp_reg = reg_defs.get(i++);
   }
+  return 0;
 }
 
 /*
 * Dump this item to the dev log.
 */
 void LDS8160::printDebug(StringBuilder* temp) {
-  if (NULL == temp) return;
+  if (nullptr == temp) return;
   EventReceiver::printDebug(temp);
   I2CDeviceWithRegisters::printDebug(temp);
   temp->concatf("\tinit_complete:      %s\n", init_complete ? "yes" :"no");
@@ -285,7 +283,7 @@ int8_t LDS8160::notify(ManuvrMsg* active_event) {
         active_event->addArg((uint8_t) class_mode);
         /* If the callback is NULL, make us the callback, as our class is the responsible party for
            this kind of message.  Follow your shadow. */
-        if (NULL == active_event->callback) active_event->callback = (EventReceiver*) this;
+        if (nullptr == active_event->callback) active_event->callback = (EventReceiver*) this;
         return_value++;
       }
       break;
@@ -349,7 +347,7 @@ int8_t LDS8160::notify(ManuvrMsg* active_event) {
           }
           /* If the callback is NULL, make us the callback, as our class is the responsible party for
              this kind of message.  Follow your shadow. */
-          if (NULL == active_event->callback) active_event->callback = (EventReceiver*) this;
+          if (nullptr == active_event->callback) active_event->callback = (EventReceiver*) this;
           return_value++;
         }
       }
@@ -360,18 +358,18 @@ int8_t LDS8160::notify(ManuvrMsg* active_event) {
           active_event->addArg((uint8_t) regValue(LDS8160_GLOBAL_PWM_DIM));
           /* If the callback is NULL, make us the callback, as our class is the responsible party for
              this kind of message.  Follow your shadow. */
-          if (NULL == active_event->callback) active_event->callback = (EventReceiver*) this;
+          if (nullptr == active_event->callback) active_event->callback = (EventReceiver*) this;
           return_value++;
           break;
         case 3:        // Three args? Setting the global dimmer value, oscillation period, and oscillation count.
-          if (NULL != scheduler) {
+          if (scheduler) {
             uint8_t  pulse_count;
             active_event->getArgAs(2, &pulse_count);
             scheduler->alterScheduleRecurrence(pid_intensity, pulse_count);
           }
           // NO BREAK
         case 2:        // Two args? Setting the global dimmer value and an oscillation period.
-          if (NULL != scheduler) {
+          if (scheduler) {
             uint32_t pulse_period;
             active_event->getArgAs(1, &pulse_period);
             scheduler->alterSchedulePeriod(pid_intensity, pulse_period);
@@ -385,7 +383,7 @@ int8_t LDS8160::notify(ManuvrMsg* active_event) {
               set_brightness(brightness);
               /* If the callback is NULL, make us the callback, as our class is the responsible party for
                  this kind of message.  Follow your shadow. */
-              if (NULL == active_event->callback) active_event->callback = (EventReceiver*) this;
+              if (nullptr == active_event->callback) active_event->callback = (EventReceiver*) this;
               return_value++;
             }
           }
@@ -408,7 +406,7 @@ int8_t LDS8160::notify(ManuvrMsg* active_event) {
           active_event->addArg((uint8_t) channel_enabled(5));
           /* If the callback is NULL, make us the callback, as our class is the responsible party for
              this kind of message.  Follow your shadow. */
-          if (NULL == active_event->callback) active_event->callback = (EventReceiver*) this;
+          if (nullptr == active_event->callback) active_event->callback = (EventReceiver*) this;
           return_value++;
           break;
         case 1:
@@ -451,7 +449,7 @@ int8_t LDS8160::notify(ManuvrMsg* active_event) {
 #if defined(MANUVR_CONSOLE_SUPPORT)
 void LDS8160::procDirectDebugInstruction(StringBuilder *input) {
   char* str = input->position(0);
-  ManuvrMsg *event = NULL;  // Pitching events is a common thing in this fxn...
+  ManuvrMsg *event = nullptr;  // Pitching events is a common thing in this fxn...
 
   uint8_t temp_byte = 0;
   if (*(str) != 0) {

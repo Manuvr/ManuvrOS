@@ -41,8 +41,7 @@ const MessageTypeDef gpio_message_defs[] = {
 
 
 
-ManuvrableGPIO::ManuvrableGPIO() : EventReceiver() {
-  setReceiverName("GPIO");
+ManuvrableGPIO::ManuvrableGPIO() : EventReceiver("GPIO") {
   _gpio_notice.incRefs();
   _gpio_notice.setOriginator((EventReceiver*) this);
   // Inform the Kernel of the codes we will be using...
@@ -86,7 +85,7 @@ int8_t ManuvrableGPIO::attached() {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void ManuvrableGPIO::printDebug(StringBuilder *output) {
-  if (output == NULL) return;
+  if (output == nullptr) return;
 
   EventReceiver::printDebug(output);
   output->concat("\n");

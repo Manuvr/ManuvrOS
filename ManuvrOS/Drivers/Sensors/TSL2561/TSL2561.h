@@ -56,14 +56,13 @@ class TSL2561 : public I2CDeviceWithRegisters, public SensorWrapper {
     ~TSL2561();
 
     /* Overrides from SensorWrapper */
-    int8_t init();
-    int8_t readSensor();
-
-    int8_t setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
-    int8_t getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
+    SensorError init();
+    SensorError readSensor();
+    SensorError setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
+    SensorError getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
 
     /* Overrides from I2CDeviceWithRegisters... */
-    void operationCompleteCallback(I2CBusOp*);
+    int8_t io_op_callback(I2CBusOp*);
     void printDebug(StringBuilder*);
 
 
@@ -73,7 +72,7 @@ class TSL2561 : public I2CDeviceWithRegisters, public SensorWrapper {
 
     bool calculate_lux();
 
-    void set_power_mode(uint8_t);
+    SensorError set_power_mode(uint8_t);
 };
 
 #endif

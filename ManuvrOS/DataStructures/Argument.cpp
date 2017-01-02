@@ -483,7 +483,7 @@ int8_t Argument::serialize(StringBuilder *out) {
 *
 */
 int8_t Argument::serialize_raw(StringBuilder *out) {
-  if (out == NULL) return -1;
+  if (out == nullptr) return -1;
 
   switch (type_code) {
     /* These are hard types that we can send as-is. */

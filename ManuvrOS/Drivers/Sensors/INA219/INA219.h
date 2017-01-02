@@ -181,18 +181,17 @@ const V_Cap_Point chem_index_5[] = {{1.000, 1.00},
 class INA219 : public I2CDeviceWithRegisters, public SensorWrapper {
   public:
     INA219(uint8_t addr = INA219_I2CADDR);
-    ~INA219(void);
+    ~INA219();
 
 
     /* Overrides from SensorWrapper */
-    int8_t init(void);
-    int8_t readSensor(void);
-
-    int8_t setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
-    int8_t getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
+    SensorError init();
+    SensorError readSensor();
+    SensorError setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
+    SensorError getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
 
     /* Overrides from I2CDevice... */
-    void operationCompleteCallback(I2CBusOp*);
+    int8_t io_op_callback(I2CBusOp*);
     void printDebug(StringBuilder*);
 
 
@@ -214,12 +213,12 @@ class INA219 : public I2CDeviceWithRegisters, public SensorWrapper {
     uint16_t reg_configuration;
     uint16_t reg_calibration;
 
-    float readBusVoltage(void);
-    float readShuntVoltage(void);
-    float readCurrent(void);
-    int8_t setBatteryMode(bool nu_mode);   // Pass true to set the battery mode on. False to turn it off.
+    float readBusVoltage();
+    float readShuntVoltage();
+    float readCurrent();
+    SensorError setBatteryMode(bool nu_mode);   // Pass true to set the battery mode on. False to turn it off.
 
-    bool process_read_data(void);   // Takes the read data, updates SensorWrapper class, zeros registers.
+    bool process_read_data();   // Takes the read data, updates SensorWrapper class, zeros registers.
 };
 
 

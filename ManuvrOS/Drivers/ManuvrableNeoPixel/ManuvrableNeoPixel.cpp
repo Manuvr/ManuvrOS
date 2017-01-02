@@ -44,8 +44,7 @@
 #include <Platform/Platform.h>
 
 
-ManuvrableNeoPixel::ManuvrableNeoPixel(uint16_t n, uint8_t p, uint8_t t) : EventReceiver() {
-  setReceiverName("NeoPixel");
+ManuvrableNeoPixel::ManuvrableNeoPixel(uint16_t n, uint8_t p, uint8_t t) : EventReceiver("NeoPixel") {
   numLEDs = n;
   numBytes = n * 3;
   pin = p;

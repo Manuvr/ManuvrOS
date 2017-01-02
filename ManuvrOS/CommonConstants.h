@@ -64,6 +64,28 @@ Apart from including the user-suppied configuration header, there
   #define YES_STR   "Yes"
   #define NO_STR    "No"
 
+  // Some constants for units...
+  #define COMMON_UNITS_DEGREES     "degrees"
+  #define COMMON_UNITS_DEG_SEC     "deg/s"
+  #define COMMON_UNITS_C           "C"
+  #define COMMON_UNITS_ONOFF       "On/Off"
+  #define COMMON_UNITS_LUX         "lux"
+  #define COMMON_UNITS_METERS      "meters"
+  #define COMMON_UNITS_GAUSS       "gauss"
+  #define COMMON_UNITS_MET_SEC     "m/s"
+  #define COMMON_UNITS_ACCEL       "m/s^2"
+  #define COMMON_UNITS_EPOCH       "timestamp"
+  #define COMMON_UNITS_PRESSURE    "kPa"
+  #define COMMON_UNITS_VOLTS       "V"
+  #define COMMON_UNITS_U_VOLTS     "uV"
+  #define COMMON_UNITS_AMPS        "A"
+  #define COMMON_UNITS_WATTS       "W"
+  #define COMMON_UNITS_PERCENT     "%"
+  #define COMMON_UNITS_U_TESLA     "uT"
+  #define COMMON_UNITS_MW_PER_SQCM "mW/cm^2"
+
+  #define SENSOR_DATUM_NOT_FOUND   "Sensor datum not found"
+
 
   #if defined(MANUVR_CONF_FILE)
     #include MANUVR_CONF_FILE
@@ -72,6 +94,7 @@ Apart from including the user-suppied configuration header, there
   #endif
 
   #include <Rationalizer.h>
+
 
 
 // TODO: Function defs do not belong here. This area under re-org.

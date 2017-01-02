@@ -22,17 +22,35 @@ limitations under the License.
 #include "LPS331.h"
 
 
+const DatumDef datum_defs[] = {
+  {
+    .desc    = "Barometric pressure",
+    .units   = COMMON_UNITS_PRESSURE,
+    .type_id = FLOAT_FM,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "Air temperature",
+    .units   = COMMON_UNITS_C,
+    .type_id = FLOAT_FM,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "Inferred altitude",
+    .units   = COMMON_UNITS_METERS,
+    .type_id = FLOAT_FM,
+    .flgs    = 0x00
+  }
+};
+
+
 /*
 * Constructor. Takes i2c address as argument.
 */
-LPS331::LPS331(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
-  _dev_addr = addr;
-  this->isHardware = true;
-  this->defineDatum("Barometric pressure", SensorWrapper::COMMON_UNITS_PRESSURE, FLOAT_FM);
-  this->defineDatum("Air temperature", SensorWrapper::COMMON_UNITS_C, FLOAT_FM);
-  this->defineDatum("Inferred altitude", SensorWrapper::COMMON_UNITS_METERS, FLOAT_FM);
-  this->s_id = "32f9b0436dc76d77de116814263409fe";
-  this->name = "LPS331";
+LPS331::LPS331(uint8_t addr) : I2CDeviceWithRegisters(addr), SensorWrapper("LPS331") {
+  define_datum(&datum_defs[0]);
+  define_datum(&datum_defs[1]);
+  define_datum(&datum_defs[2]);
   gpioSetup();
 
   // Now we should give them initial definitions. This is our chance to set default configs.
@@ -60,14 +78,14 @@ LPS331::LPS331(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
 /*
 * Destructor.
 */
-LPS331::~LPS331(void) {
+LPS331::~LPS331() {
 }
 
 
 /*
 * Setup GPIO pins and their bindings to on-chip peripherals, if required.
 */
-void LPS331::gpioSetup(void) {
+void LPS331::gpioSetup() {
 // TODO: This class was never fully ported back from Digitabulum. No GPIO change-over...
 //	GPIO_InitTypeDef GPIO_InitStruct;
 //
@@ -90,39 +108,39 @@ void LPS331::gpioSetup(void) {
 * Overrides...                                                            *
 **************************************************************************/
 
-int8_t LPS331::init() {
-  if (readRegister(LPS331_REG_WHO_AM_I) == I2C_ERR_CODE_NO_ERROR) {
-    return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+SensorError LPS331::init() {
+  if (readRegister(LPS331_REG_WHO_AM_I) == I2C_ERR_SLAVE_NO_ERROR) {
+    return SensorError::NO_ERROR;
   }
   else {
-    return SensorWrapper::SENSOR_ERROR_BUS_ERROR;
+    return SensorError::BUS_ERROR;
   }
 }
 
 
-int8_t LPS331::setParameter(uint16_t reg, int len, uint8_t *data) {
-  return SensorWrapper::SENSOR_ERROR_INVALID_PARAM_ID;
+SensorError LPS331::setParameter(uint16_t reg, int len, uint8_t *data) {
+  return SensorError::INVALID_PARAM_ID;
 }
 
 
-int8_t LPS331::getParameter(uint16_t reg, int len, uint8_t*) {
-  return SensorWrapper::SENSOR_ERROR_INVALID_PARAM_ID;
+SensorError LPS331::getParameter(uint16_t reg, int len, uint8_t*) {
+  return SensorError::INVALID_PARAM_ID;
 }
 
 
-int8_t LPS331::readSensor(void) {
-  if (readRegister(LPS331_REG_PRS_OUT_HI) == I2C_ERR_CODE_NO_ERROR) {
-    if (readRegister(LPS331_REG_PRS_OUT_LO) == I2C_ERR_CODE_NO_ERROR) {
-      if (readRegister(LPS331_REG_PRS_P_OUT_XL) == I2C_ERR_CODE_NO_ERROR) {
-        if (readRegister(LPS331_REG_TEMP_OUT_LO) == I2C_ERR_CODE_NO_ERROR) {
-          if (readRegister(LPS331_REG_TEMP_OUT_HI) == I2C_ERR_CODE_NO_ERROR) {
-            return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+SensorError LPS331::readSensor() {
+  if (readRegister(LPS331_REG_PRS_OUT_HI) == I2C_ERR_SLAVE_NO_ERROR) {
+    if (readRegister(LPS331_REG_PRS_OUT_LO) == I2C_ERR_SLAVE_NO_ERROR) {
+      if (readRegister(LPS331_REG_PRS_P_OUT_XL) == I2C_ERR_SLAVE_NO_ERROR) {
+        if (readRegister(LPS331_REG_TEMP_OUT_LO) == I2C_ERR_SLAVE_NO_ERROR) {
+          if (readRegister(LPS331_REG_TEMP_OUT_HI) == I2C_ERR_SLAVE_NO_ERROR) {
+            return SensorError::NO_ERROR;
           }
         }
       }
     }
   }
-  return SensorWrapper::SENSOR_ERROR_BUS_ERROR;
+  return SensorError::BUS_ERROR;
 }
 
 
@@ -131,22 +149,22 @@ int8_t LPS331::readSensor(void) {
 * These are overrides from I2CDevice.                                                               *
 ****************************************************************************************************/
 
-void LPS331::operationCompleteCallback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::operationCompleteCallback(completed);
+int8_t LPS331::io_op_callback(I2CBusOp* completed) {
+  I2CDeviceWithRegisters::io_op_callback(completed);
 	int i = 0;
 	DeviceRegister *temp_reg = reg_defs.get(i++);
-	while (temp_reg != NULL) {
+	while (temp_reg) {
 		switch (temp_reg->addr) {
 		  case LPS331_REG_WHO_AM_I:
 		    temp_reg->unread = false;
-		    if (!sensor_active) {
-		      sensor_active = (0xBB == *(temp_reg->val));
-		      if (sensor_active) {
+		    if (!isActive()) {
+		      isActive(0xBB == *(temp_reg->val));
+		      if (isActive()) {
 		        writeDirtyRegisters();
 		      }
 		    }
 		    else {
-		      sensor_active = (0xBB == *(temp_reg->val));
+		      isActive(0xBB == *(temp_reg->val));
 		    }
 		    break;
 
@@ -173,6 +191,7 @@ void LPS331::operationCompleteCallback(I2CBusOp* completed) {
 		}
 		temp_reg = reg_defs.get(i++);
 	}
+  return 0;
 }
 
 
@@ -180,9 +199,9 @@ void LPS331::operationCompleteCallback(I2CBusOp* completed) {
 * Dump this item to the dev log.
 */
 void LPS331::printDebug(StringBuilder* temp) {
-  if (NULL == temp) return;
+  if (nullptr == temp) return;
   //SensorWrapper::issue_json_map(temp, this);
-  temp->concatf("Baro sensor (LPS331)\t%snitialized\n---------------------------------------------------\n", (sensor_active ? "I": "Uni"));
+  temp->concatf("Baro sensor (LPS331)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
   I2CDeviceWithRegisters::printDebug(temp);
   temp->concatf("\n");
 }
@@ -224,7 +243,7 @@ bool LPS331::calculate_pressure() {
 
 
 
-void LPS331::set_power_mode(uint8_t nu_power_mode) {
+SensorError LPS331::set_power_mode(uint8_t nu_power_mode) {
   power_mode = nu_power_mode;
   switch (power_mode) {
     case 0:
@@ -248,4 +267,5 @@ void LPS331::set_power_mode(uint8_t nu_power_mode) {
   #if defined(__MANUVR_DEBUG)
     Kernel::log("LPS331 Power mode set. \n");
   #endif
+  return SensorError::NO_ERROR;
 }

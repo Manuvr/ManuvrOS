@@ -399,3 +399,76 @@ After removing the last mem-mgmt flag.
     ManuvrMsg storage size is 40 bytes.
     Digitabulum DEBUG=1
     281288    2800    9664  293752   47b78
+
+
+_---J. Ian Lindsay_
+
+------
+
+### 2016.12.23:
+
+    Linux, 32-bit: DEBUG=1
+    1856805   22964   23716 1903485  Baseline before SensorWrapper simplifications.
+    1867041   22964   23716 1913721  Phase 1: Adding flag members.
+    1867173   22900   23716 1913789  Took a moment to modernize some old code.
+    1867029   22900   23716 1913645  Imparting sanity to sensor dirty.
+    1867833   22904   23716 1914453  Major upending of SensorDatum.
+    1868317   22904   23716 1914937  Adding a debug aid.
+    1868257   22904   23716 1914877  Taking back some slack.
+    1868041   22900   23716 1914657  More slack removal and bug fixes.
+    1867501   22900   23716 1914117  Removal of crufty json fxns.
+    1867401   22900   23716 1914017  Circling potential cuts.
+    1867309   22900   23716 1913925  More member removal.
+    1867197   22900   23716 1913813  More datum simplification and scope-restriction.
+    1867189   22900   23716 1913805  Changed I2CDevice API slightly. More to come.
+    1867101   22900   23716 1913717  I2C internal re-arrangements.
+    1868645   22904   23908 1915457  I2C likely broken. Fully-adopting BusQueue.
+    1868649   22904   23908 1915461  I2C is a hot mess. Fixing it...
+    1868829   22904   23908 1915641  Adding a few driver stubs.
+    1869245   22904   23908 1916057  Prepping i2c for another round of consolidation.
+    1869497   22904   23908 1916309  Consolidating BusOp common debug output.
+    1869313   22904   23908 1916125  Starting to reap gains.
+    1869425   22904   23908 1916237  More consolidation.
+    1869733   22904   23908 1916545  Gave back some binary size gains to templates.
+
+Going to go bring Digitabulum up-to-speed.
+
+_---J. Ian Lindsay_
+
+------
+
+### 2016.12.28:
+
+    Linux, 32-bit: DEBUG=1
+    1869741   22904   23908 1916553  New baseline before the dust settles on i2c.
+
+_---J. Ian Lindsay_
+
+------
+
+### 2016.12.31:
+
+Logging these changes in Manuvr, because they are in fact, Manuvr re-orgs. Digitabulum is convenient because it uses all three classes under merger.
+
+    Digitabulum-emulator, 32-bit: DEBUG=1
+    1998805   40764   86136 2125705  Lost a whole day to Spirit airlines. Ahead of NULL removals.
+    1998805   40764   86136 2125705  No net size delta. Static analysis benefits only.
+    1944223   22768   59844 2026835  Paying down technical debt. I2C still broken.
+    1944163   22768   59844 2026775  More member consolidation into BusAdapter.
+    1944163   22768   59844 2026775  WTF is wrong with i2c?!?!
+    1943815   22768   59812 2026395  Problem turned out to be inclusion order somehow.
+    1944443   22768   59812 2027023  I2C works once again. Numerous fixes and improvements.
+    1944311   22768   59812 2026891  Mass clean-up across I/O classes.
+    1944275   22768   59812 2026855  Commentary and source file cleanup.
+
+### 2016.01.02:
+
+After the consolidation of the I/O queues, callbacks, jobs into the template, I'll now take a moment to look at the net impact to build size.
+
+  1867189   22900   23716 1913805  Prior to consolidation and features.
+  1869430   22612   23524 1915566  Following consolidation and features.
+             -288    -192   +1761
+
+_---J. Ian Lindsay_
+
+------

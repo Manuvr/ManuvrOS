@@ -35,9 +35,7 @@ const int8_t ISL23345::ISL23345_ERROR_INVALID_POT      = -5;   // The ISL23345 o
 /*
 * Constructor. Takes the i2c address of this device as sole argument.
 */
-ISL23345::ISL23345(uint8_t i2caddr) : I2CDeviceWithRegisters() {
-	_dev_addr = i2caddr;
-
+ISL23345::ISL23345(uint8_t addr) : I2CDeviceWithRegisters(addr) {
 	dev_enabled = false;
 	dev_init    = false;
 	preserve_state_on_destroy = false;
@@ -65,7 +63,7 @@ ISL23345::~ISL23345(void) {
 int8_t ISL23345::init(void) {
 	int8_t return_value = ISL23345_ERROR_NO_ERROR;
 
-	if (syncRegisters() == I2C_ERR_CODE_NO_ERROR) {
+	if (syncRegisters() == I2C_ERR_SLAVE_NO_ERROR) {
 		//return_value = ISL23345_ERROR_ABSENT;
 	}
 	return return_value;
@@ -84,7 +82,7 @@ void ISL23345::preserveOnDestroy(bool x) {
 */
 int8_t ISL23345::enable() {
 	int8_t return_value = ISL23345::ISL23345_ERROR_NO_ERROR;
-	if (I2C_ERR_CODE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, 0x40)) {
+	if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, 0x40)) {
 		return_value = ISL23345::ISL23345_ERROR_ABSENT;
 	}
 	return return_value;
@@ -98,7 +96,7 @@ int8_t ISL23345::enable() {
 int8_t ISL23345::disable() {
 	int8_t return_value = ISL23345::ISL23345_ERROR_NO_ERROR;
 
-	if (I2C_ERR_CODE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, 0x00)) {
+	if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, 0x00)) {
 		return_value = ISL23345::ISL23345_ERROR_ABSENT;
 	}
 	return return_value;
@@ -113,7 +111,7 @@ int8_t ISL23345::setValue(uint8_t pot, uint8_t val) {
 	if (!dev_init)  return ISL23345::ISL23345_ERROR_DEVICE_DISABLED;
 
 	int8_t return_value = ISL23345::ISL23345_ERROR_NO_ERROR;
-	if (I2C_ERR_CODE_NO_ERROR != writeIndirect(pot, val)) {
+	if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(pot, val)) {
 		return_value = ISL23345::ISL23345_ERROR_ABSENT;
 	}
 	return return_value;
@@ -158,11 +156,11 @@ uint16_t ISL23345::getRange(void) {    return 0x00FF;       }  // Trivial. Retur
 * These are overrides from I2CDeviceWithRegisters.                                                  *
 ****************************************************************************************************/
 
-void ISL23345::operationCompleteCallback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::operationCompleteCallback(completed);
+int8_t ISL23345::io_op_callback(I2CBusOp* completed) {
+  I2CDeviceWithRegisters::io_op_callback(completed);
 
   if (completed->hasFault()) {
-    return;
+    return -1;
   }
 
   dev_init = true;
@@ -183,6 +181,7 @@ void ISL23345::operationCompleteCallback(I2CBusOp* completed) {
     default:
       break;
   }
+	return 0;
 }
 
 

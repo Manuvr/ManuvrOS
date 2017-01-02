@@ -51,9 +51,8 @@ CBOR data begins at offset 4. The first uint32 is broken up this way:
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
 
-TeensyStorage::TeensyStorage(Argument* opts) : EventReceiver(), Storage() {
+TeensyStorage::TeensyStorage(Argument* opts) : EventReceiver("TeensyStorage"), Storage() {
   _pl_set_flag(true, STORAGE_PROPS);
-  setReceiverName("TeensyStorage");
 }
 
 

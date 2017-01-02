@@ -40,8 +40,6 @@ StringBuilder debug_log;   // TODO: Relocate this to a static member.
 *
 * Static members and initializers should be located here.
 *******************************************************************************/
-uint32_t SPIBusOp::total_transfers  = 0;  // How many total SPI transfers have we seen?
-uint32_t SPIBusOp::failed_transfers = 0;  // How many failed SPI transfers have we seen?
 uint16_t SPIBusOp::spi_wait_timeout = 20; // In microseconds. Per-byte.
 ManuvrMsg SPIBusOp::event_spi_queue_ready;
 
@@ -68,12 +66,23 @@ SPIBusOp::SPIBusOp() {
 *
 * @param  nu_op The opcode that dictates the bus operation we use
 * @param  requester  The object to be notified when the bus operation completes with success.
+*/
+SPIBusOp::SPIBusOp(BusOpcode nu_op, BusOpCallback* requester) : SPIBusOp() {
+  opcode   = nu_op;
+  callback = requester;
+}
+
+
+/**
+* Constructor that does setup by parameters.
+*
+* @param  nu_op The opcode that dictates the bus operation we use
+* @param  requester  The object to be notified when the bus operation completes with success.
 * @param  cs         The pin number for the device's chip-select signal.
 * @param  ah         True for an active-high chip-select.
 */
-SPIBusOp::SPIBusOp(BusOpcode nu_op, BusOpCallback* requester, uint8_t cs, bool ah) : SPIBusOp() {
-  this->opcode = nu_op;
-  callback     = requester;
+SPIBusOp::SPIBusOp(BusOpcode nu_op, BusOpCallback* requester, uint8_t cs, bool ah) : SPIBusOp(nu_op, requester) {
+  _cs_pin = cs;
   csActiveHigh(ah);
 }
 
@@ -102,8 +111,8 @@ SPIBusOp::~SPIBusOp() {
 * @param  len The length of the buffer.
 */
 void SPIBusOp::setBuffer(uint8_t *buf, unsigned int len) {
-  this->buf     = buf;
-  this->buf_len = len;
+  buf     = buf;
+  buf_len = len;
 }
 
 
@@ -172,29 +181,6 @@ void SPIBusOp::setParams(uint8_t p0) {
 }
 
 
-/**
-* Wipes this bus operation so it can be reused.
-* Be careful not to blow away the flags that prevent us from being reaped.
-*/
-void SPIBusOp::wipe() {
-  set_state(XferState::IDLE);
-  // We need to preserve flags that deal with memory management.
-  _flags      = _flags & (SPI_XFER_FLAG_NO_FREE | SPI_XFER_FLAG_PREALLOCATE_Q);
-  xfer_fault  = XferFault::NONE;
-  opcode      = BusOpcode::UNDEF;
-  buf_len     = 0;
-  buf         = nullptr;
-  callback    = nullptr;
-  _cs_pin     = 255;
-  _param_len  = 0;
-  xfer_params[0] = 0;
-  xfer_params[1] = 0;
-  xfer_params[2] = 0;
-  xfer_params[3] = 0;
-
-  profile(false);
-}
-
 /*
 *
 * P A D | C L*   // P: Pin asserted (not logic level!)
@@ -217,14 +203,19 @@ int8_t SPIBusOp::_assert_cs(bool asrt) {
   return -1;
 }
 
-/*******************************************************************************
-*     8                  eeeeee
-*     8  eeeee eeeee     8    e eeeee eeeee eeeee eeeee  eeeee e
-*     8e 8  88 8   8     8e     8  88 8   8   8   8   8  8  88 8
-*     88 8   8 8eee8e    88     8   8 8e  8   8e  8eee8e 8   8 8e
-* e   88 8   8 88   8    88   e 8   8 88  8   88  88   8 8   8 88
-* 8eee88 8eee8 88eee8    88eee8 8eee8 88  8   88  88   8 8eee8 88eee
-*******************************************************************************/
+
+/**
+* This will mark the bus operation complete with a given error code.
+*
+* @param  cause A failure code to mark the operation with.
+* @return 0 on success. Non-zero on failure.
+*/
+int8_t SPIBusOp::abort(XferFault cause) {
+  xfer_fault = cause;
+  debug_log.concatf("SPI job aborted at state %s. Cause: %s.\n", getStateString(), getErrorString());
+  printDebug(&debug_log);
+  return markComplete();
+}
 
 
 /**
@@ -243,25 +234,9 @@ int8_t SPIBusOp::markComplete() {
   }
 
   //time_ended = micros();
-  total_transfers++;
   xfer_state = XferState::COMPLETE;
   step_queues();
   return 0;
-}
-
-
-/**
-* This will mark the bus operation complete with a given error code.
-*
-* @param  cause A failure code to mark the operation with.
-* @return 0 on success. Non-zero on failure.
-*/
-int8_t SPIBusOp::abort(XferFault cause) {
-  SPIBusOp::failed_transfers++;
-  xfer_fault = cause;
-  debug_log.concatf("SPI job aborted at state %s. Cause: %s.\n", getStateString(), getErrorString());
-  printDebug(&debug_log);
-  return markComplete();
 }
 
 
@@ -318,8 +293,34 @@ bool SPIBusOp::devRegisterAdvance(bool _reg_advance) {
 
 
 /*******************************************************************************
-* These functions are for logging support.                                     *
+* ___     _                              These members are mandatory overrides
+*  |   / / \ o     |  _  |_              from the BusOp class.
+* _|_ /  \_/ o   \_| (_) |_)
 *******************************************************************************/
+
+/**
+* Wipes this bus operation so it can be reused.
+* Be careful not to blow away the flags that prevent us from being reaped.
+*/
+void SPIBusOp::wipe() {
+  set_state(XferState::IDLE);
+  // We need to preserve flags that deal with memory management.
+  _flags      = _flags & (SPI_XFER_FLAG_NO_FREE | SPI_XFER_FLAG_PREALLOCATE_Q);
+  xfer_fault  = XferFault::NONE;
+  opcode      = BusOpcode::UNDEF;
+  buf_len     = 0;
+  buf         = nullptr;
+  callback    = nullptr;
+  _cs_pin     = 255;
+  _param_len  = 0;
+  xfer_params[0] = 0;
+  xfer_params[1] = 0;
+  xfer_params[2] = 0;
+  xfer_params[3] = 0;
+
+  profile(false);
+}
+
 
 /**
 * Debug support method. This fxn is only present in debug builds.
@@ -327,32 +328,14 @@ bool SPIBusOp::devRegisterAdvance(bool _reg_advance) {
 * @param  StringBuilder* The buffer into which this fxn should write its output.
 */
 void SPIBusOp::printDebug(StringBuilder *output) {
-  if (NULL == output) return;
-  output->concatf("-----SPIBusOp %p (%s)------------\n", (uintptr_t) this, getOpcodeString());
+  BusOp::printBusOp("SPIBusOp", this, output);
   if (shouldReap())       output->concat("\t Will reap\n");
   if (returnToPrealloc()) output->concat("\t Returns to prealloc\n");
-  output->concatf("\t xfer_state        %s\n\t err               %s\n", getStateString(), getErrorString());
-  //if (XferState::COMPLETE == xfer_state) {
-  //  output->concatf("\t completed (uS)   %u\n",   (unsigned long) time_ended - time_began);
-  //}
   output->concatf("\t param_len         %d\n", _param_len);
   output->concat("\t params            ");
 
-  if (_param_len > 0) {
-    for (uint8_t i = 0; i < _param_len; i++) {
-      output->concatf("0x%02x ", xfer_params[i]);
-    }
+  for (uint8_t i = 0; i < _param_len; i++) {
+    output->concatf("0x%02x ", xfer_params[i]);
   }
-
-  output->concatf("\n\t buf_len           %d\n", buf_len);
-
-  if (buf_len > 0) {
-    output->concatf("\t buf *(%p) ", (uintptr_t) buf);
-    //for (uint8_t i = 0; i < buf_len; i++) {
-    for (uint8_t i = 0; i < buf_len; i++) {
-      output->concatf("0x%02x ", (uint8_t) *(buf + i));
-    }
-  }
-
   output->concat("\n\n");
 }

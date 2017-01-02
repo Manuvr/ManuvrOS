@@ -37,13 +37,13 @@ const MessageTypeDef adp8866_message_defs[] = {
   {  MANUVR_MSG_ADP8866_ASSIGN_BL,    MSG_FLAG_EXPORTABLE,  "ADP8866_ASSIGN_BL",    ManuvrMsg::MSG_ARGS_NONE }  //
 };
 
-ADP8866* ADP8866::INSTANCE = NULL;
+ADP8866* ADP8866::INSTANCE = nullptr;
 
 /*
 * This is the ISR for the interrupt pin (if provided).
 */
 void ADP8866_ISR(void) {
-  if (NULL != ADP8866::INSTANCE) {
+  if (ADP8866::INSTANCE) {
     ADP8866::INSTANCE->_isr_fxn();
   }
 }
@@ -65,16 +65,13 @@ void ADP8866::_isr_fxn(void) {
 /*
 * Constructor. Takes i2c address as argument.
 */
-ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : EventReceiver(), I2CDeviceWithRegisters() {
-  setReceiverName("ADP8866");
+ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : EventReceiver("ADP8866"), I2CDeviceWithRegisters(addr) {
   _er_clear_flag(ADP8866_FLAG_INIT_COMPLETE);
   if (ADP8866::INSTANCE) {
     ADP8866::INSTANCE = this;
     int mes_count = sizeof(adp8866_message_defs) / sizeof(MessageTypeDef);
     ManuvrMsg::registerMessages(adp8866_message_defs, mes_count);
   }
-
-  _dev_addr = addr;
 
   reset_pin = _reset_pin;
   irq_pin   = _irq_pin;
@@ -199,8 +196,8 @@ int8_t ADP8866::init() {
 * These are overrides from I2CDeviceWithRegisters.                                                  *
 ****************************************************************************************************/
 
-void ADP8866::operationCompleteCallback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::operationCompleteCallback(completed);
+int8_t ADP8866::io_op_callback(I2CBusOp* completed) {
+  I2CDeviceWithRegisters::io_op_callback(completed);
 
   DeviceRegister *temp_reg = getRegisterByBaseAddress(completed->sub_addr);
   switch (completed->sub_addr) {
@@ -326,6 +323,7 @@ void ADP8866::operationCompleteCallback(I2CBusOp* completed) {
         break;
   }
   flushLocalLog();
+  return 0;
 }
 
 
@@ -333,7 +331,7 @@ void ADP8866::operationCompleteCallback(I2CBusOp* completed) {
 * Dump this item to the dev log.
 */
 void ADP8866::printDebug(StringBuilder* temp) {
-  if (NULL == temp) return;
+  if (nullptr == temp) return;
   EventReceiver::printDebug(temp);
   I2CDeviceWithRegisters::printDebug(temp);
   temp->concatf("\tinit_complete:      %s\n", _er_flag(ADP8866_FLAG_INIT_COMPLETE) ? "yes" :"no");

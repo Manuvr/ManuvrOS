@@ -30,9 +30,8 @@ limitations under the License.
 //volatile ExampleDriver* ExampleDriver::INSTANCE = NULL;
 
 
-ExampleDriver::ExampleDriver() : EventReceiver() {
+ExampleDriver::ExampleDriver() : EventReceiver("ExampleDriver") {
   //INSTANCE = this;
-  setReceiverName("ExampleDriver");
 }
 
 
@@ -74,7 +73,7 @@ int8_t ExampleDriver::attached() {
 * @param A pointer to a StringBuffer object to receive the output.
 */
 void ExampleDriver::printDebug(StringBuilder* output) {
-  if (NULL == output) return;
+  if (nullptr == output) return;
   EventReceiver::printDebug(output);
 }
 

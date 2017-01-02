@@ -18,14 +18,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-*/
+TODO: BusOp lifecycle....
 
+*/
 
 #ifndef __MANUVR_BUS_QUEUE_H__
 #define __MANUVR_BUS_QUEUE_H__
 
-#include <inttypes.h>
+#include <CommonConstants.h>
 #include <DataStructures/PriorityQueue.h>
+#include <DataStructures/StringBuilder.h>
+#include <Platform/Platform.h>
+
 
 /*
 * These are possible transfer states.
@@ -82,6 +86,22 @@ enum class XferFault {
   QUEUE_FLUSH      // The work queue was flushed and this was a casualty.
 };
 
+/* Forward declarations. */
+class BusOp;
+
+/*
+* This is an interface class that implements a callback path for I/O operations.
+* If a class wants to put operations into the SPI queue, it must either implement this
+*   interface, or delegate its callback duties to a class that does.
+* Generally-speaking, this will be a device that transacts on the bus, but is
+*   not itself the bus adapter.
+*/
+class BusOpCallback {
+  public:
+    virtual int8_t io_op_callahead(BusOp*) =0;  // Called ahead of op.
+    virtual int8_t io_op_callback(BusOp*)  =0;  // Called behind completed op.
+    virtual int8_t queue_io_job(BusOp*)    =0;  // Queue an I/O operation.
+};
 
 
 /*
@@ -92,24 +112,35 @@ enum class XferFault {
 * Since C++ has no formal means of declaring an interface, we will use Java's
 *   conventions. That is, state-bearing members in this interface are ok, but
 *   there should be no function members that are not pure virtuals or inlines.
-*
-* Note also, that a class is not required to inherrit from this definition of
-*   a bus operation to use the enums defined above, with their associated static
-*   support functions.
 */
 class BusOp {
   public:
-    uint8_t* buf         = 0;                  // Pointer to the data buffer for the transaction.
-    uint16_t buf_len     = 0;                  // How large is the above buffer?
+    BusOpCallback* callback = nullptr;  // Which class gets pinged when we've finished?
+    uint8_t* buf            = 0;        // Pointer to the data buffer for the transaction.
+    uint16_t buf_len        = 0;        // How large is the above buffer?
+    //uint32_t time_began     = 0;        // This is the time when bus access begins.
+    //uint32_t time_ended     = 0;        // This is the time when bus access stops (or is aborted).
 
-    /* Mandatory overrides... */
-    //virtual void wipe()  =0;
-    //virtual void begin() =0;
+    /* Mandatory overrides from the BusOp interface... */
+    //virtual XferFault advance() =0;
+    virtual XferFault begin() =0;
+    virtual void wipe()  =0;
+    virtual void printDebug(StringBuilder*)  =0;
 
     /**
     * @return true if this operation is idle.
     */
-    inline bool isIdle() {       return (XferState::IDLE     == xfer_state);  };
+    inline bool isIdle() {     return (XferState::IDLE == xfer_state);  };
+
+    /**
+    * @return true if this operation is idle.
+    */
+    inline int8_t execCA() {   return ((callback) ? callback->io_op_callahead(this) : 0);  };
+
+    /**
+    * @return true if this operation is idle.
+    */
+    inline int8_t execCB() {   return ((callback) ? callback->io_op_callback(this) : 0);  };
 
     /**
     * This only works because of careful defines. Tread lightly.
@@ -166,37 +197,22 @@ class BusOp {
     inline const char* getErrorString() {   return BusOp::getErrorString(xfer_fault);  };
 
 
-    static int next_txn_id;
     static const char* getStateString(XferState);
     static const char* getOpcodeString(BusOpcode);
     static const char* getErrorString(XferFault);
-
+    static void        printBusOp(const char*, BusOp*, StringBuilder*);
 
 
   protected:
-    BusOpcode opcode     = BusOpcode::UNDEF;   // What is the particular operation being done?
-    XferState xfer_state = XferState::UNDEF;   // What state is this transfer in?
-    XferFault xfer_fault = XferFault::NONE;    // Fault code.
-    // TODO: Call-ahead, call-back
+    uint8_t   _flags     = 0;                 // Specifics are left to the extending class.
+    BusOpcode opcode     = BusOpcode::UNDEF;  // What is the particular operation being done?
+    XferState xfer_state = XferState::UNDEF;  // What state is this transfer in?
+    XferFault xfer_fault = XferFault::NONE;   // Fault code.
+
+    //static void        initBusOp(const char*, BusOp*, StringBuilder*);
+
 
   private:
-};
-
-
-/*
-* This is an interface class that implements a callback path for I/O operations.
-* If a class wants to put operations into the SPI queue, it must either implement this
-*   interface, or delegate its callback duties to a class that does.
-*/
-class BusOpCallback {
-  public:
-    // The SPI driver will call this fxn when the bus op finishes.
-    virtual int8_t io_op_callback(BusOp*) =0;
-
-    /*
-    */
-    virtual int8_t queue_io_job(BusOp*) =0;
-
 };
 
 
@@ -207,19 +223,113 @@ class BusOpCallback {
 */
 template <class T> class BusAdapter : public BusOpCallback {
   public:
-    /* Mandatory overrides... */
-    virtual int8_t advance_work_queue()          =0;
-    virtual T* new_op()                          =0;
-    virtual T* new_op(BusOpcode, BusOpCallback*) =0;
+    inline T* currentJob() {  return current_job;  };
 
 
   protected:
-    const uint16_t MAX_Q_DEPTH;
+    T*       current_job      = nullptr;
+    uint32_t _total_xfers     = 0;  // Transfer stats.
+    uint32_t _failed_xfers    = 0;  // Transfer stats.
     uint16_t _prealloc_misses = 0;  // How many times have we starved the preallocation queue?
-    PriorityQueue<T*> work_queue;
-    PriorityQueue<T*> preallocated;
+    uint16_t _heap_frees      = 0;  // How many times have we freed a BusOp?
+    uint16_t _queue_floods    = 0;  // How many times has the queue rejected work?
+    const uint16_t MAX_Q_DEPTH;     // Maximum tolerable queue depth.
+    //TODO: const uint8_t  MAX_Q_PRINT;     // Maximum tolerable queue depth.
+    //TODO: const uint8_t  PREALLOC_SIZE;   // Maximum tolerable queue depth.
+    PriorityQueue<T*> work_queue;   // A work queue to keep transactions in order.
+    PriorityQueue<T*> preallocated; // TODO: Convert to ring buffer. This is the whole reason you embarked on this madness.
 
     BusAdapter(uint16_t max) : MAX_Q_DEPTH(max) {};
+
+    /* Mandatory overrides... */
+    virtual int8_t advance_work_queue() =0;  // The nature of the bus dictates this implementation.
+    virtual int8_t bus_init()           =0;  // Hardware-specifics.
+    virtual int8_t bus_deinit()         =0;  // Hardware-specifics.
+    //virtual int8_t io_op_callback(T*)   =0;  // From BusOpCallback
+    //virtual int8_t queue_io_job(T*)     =0;  // From BusOpCallback
+
+    void return_op_to_pool(T* obj) {
+      obj->wipe();
+      preallocated.insert(obj);
+    };
+
+    /**
+    * Return a vacant BusOp to the caller, allocating if necessary.
+    *
+    * @return an BusOp to be used. Only NULL if out-of-mem.
+    */
+    T* new_op() {
+      T* return_value = preallocated.dequeue();
+      if (nullptr == return_value) {
+        _prealloc_misses++;
+        return_value = new T();
+      }
+      return return_value;
+    };
+
+    ///**
+    //* Return a vacant BusOp to the caller, allocating if necessary.
+    //*
+    //* @param  _op   The desired bus operation.
+    //* @param  _req  The device pointer that is requesting the job.
+    //* @return an BusOp to be used. Only NULL if out-of-mem.
+    //*/
+    //T* new_op(BusOpcode _op, BusOpCallback* _req) {
+    //  T* return_value = new T(_op, _req);
+    //  return return_value;
+    //};
+
+    ///*
+    //* Purges only the work_queue. Leaves the currently-executing job.
+    //*/
+    //void purge_queued_work() {
+    //  T* current = work_queue.dequeue();
+    //  while (current) {
+    //    current->abort(XferFault::QUEUE_FLUSH);
+    //    if (current->callback) {
+    //      current->callback->io_op_callback(current);
+    //    }
+    //    reclaim_queue_item(current);
+    //    current = work_queue.dequeue();
+    //  }
+    //};
+
+
+    /* Convenience function for guarding against queue floods. */
+    inline bool roomInQueue() {    return !(work_queue.size() < MAX_Q_DEPTH);  }
+
+    // TODO: I hate that I'm doing this in a template.
+    void printAdapter(StringBuilder* output) {
+      output->concatf("-- Xfers (fail/total)  %u/%u\n", _failed_xfers, _total_xfers);
+      output->concat("-- Prealloc:\n");
+      output->concatf("--    available        %d\n",  preallocated.size());
+      output->concatf("--    misses/frees     %u/%u\n", _prealloc_misses, _heap_frees);
+      output->concat("-- Work queue:\n");
+      output->concatf("--    depth/max        %u/%u\n", work_queue.size(), MAX_Q_DEPTH);
+      output->concatf("--    floods           %u\n",  _queue_floods);
+    };
+
+    // TODO: I hate that I'm doing this in a template.
+    void printWorkQueue(StringBuilder* output, int8_t max_print) {
+      if (current_job) {
+        output->concat("--\n- Current active job:\n");
+        current_job->printDebug(output);
+      }
+      else {
+        output->concat("--\n-- No active job.\n--\n");
+      }
+      int wqs = work_queue.size();
+      if (wqs > 0) {
+        int print_depth = strict_min((int8_t) wqs, max_print);
+        output->concatf("-- Queue Listing (top %d of %d total)\n", print_depth, wqs);
+        for (int i = 0; i < print_depth; i++) {
+          work_queue.get(i)->printDebug(output);
+        }
+      }
+      else {
+        output->concat("-- Empty queue.\n");
+      }
+    };
 
   private:
 };

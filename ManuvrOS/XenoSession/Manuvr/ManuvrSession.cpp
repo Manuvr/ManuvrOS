@@ -50,8 +50,7 @@ limitations under the License.
 *
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
-ManuvrSession::ManuvrSession(BufferPipe* _near_side) : XenoSession(_near_side) {
-  setReceiverName("ManuvrSession");
+ManuvrSession::ManuvrSession(BufferPipe* _near_side) : XenoSession("ManuvrSession", _near_side) {
   _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
   _seq_parse_failures = MANUVR_MAX_PARSE_FAILURES;
   _seq_ack_failures   = MANUVR_MAX_ACK_FAILURES;
@@ -318,7 +317,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
       break;
   }
 
-  if (NULL == working) {
+  if (nullptr == working) {
     working = new XenoManuvrMessage();
     working->claim((XenoSession*)this);
     //XenoManuvrMessage::fetchPreallocation(this);
@@ -343,7 +342,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
       case XENO_MSG_PROC_STATE_SYNC_PACKET:
         // T'was a sync packet. Consider our own state and react appropriately.
         XenoManuvrMessage::reclaimPreallocation(working);
-        working = NULL;
+        working = nullptr;
         if (0 == getPhase()) {
           // If we aren't dealing with sync at the moment, and the counterparty sent a sync packet...
           #ifdef __MANUVR_DEBUG
@@ -370,7 +369,7 @@ int8_t ManuvrSession::bin_stream_rx(unsigned char *buf, int len) {
         // NOTE: No break.
       case XENO_MSG_PROC_STATE_AWAITING_REAP:
         XenoManuvrMessage::reclaimPreallocation(working);
-        working = NULL;
+        working = nullptr;
         break;
     }
   }
@@ -588,7 +587,7 @@ void ManuvrSession::procDirectDebugInstruction(StringBuilder *input) {
       }
       break;
     case 'w':  // Manual session poll.
-      Kernel::raiseEvent(MANUVR_MSG_SESS_ORIGINATE_MSG, NULL);
+      Kernel::raiseEvent(MANUVR_MSG_SESS_ORIGINATE_MSG, nullptr);
       break;
 
     default:

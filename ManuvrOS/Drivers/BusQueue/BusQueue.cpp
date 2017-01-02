@@ -34,8 +34,6 @@ limitations under the License.
 * Static members and initializers should be located here.
 *******************************************************************************/
 
-int BusOp::next_txn_id = 0;
-
 /**
 * Debug and logging support.
 *
@@ -94,5 +92,22 @@ const char* BusOp::getErrorString(XferFault code) {
     case XferFault::IO_RECALL:       return "IO_RECALL";
     case XferFault::QUEUE_FLUSH:     return "QUEUE_FLUSH";
     default:                         return "<UNDEF>";
+  }
+}
+
+
+void BusOp::printBusOp(const char* print_name, BusOp* op, StringBuilder* output) {
+  output->concatf("\t---[ %s %p %s ]---\n", print_name, op, op->getOpcodeString());
+  output->concatf("\t xfer_state        %s\n", BusOp::getStateString(op->xfer_state));
+  if (XferFault::NONE != op->xfer_fault) {
+    output->concatf("\t xfer_fault        %s\n", BusOp::getErrorString(op->xfer_fault));
+  }
+  //if (XferState::COMPLETE == xfer_state) {
+  //  output->concatf("\t completed (uS)   %u\n",   (unsigned long) time_ended - time_began);
+  //}
+
+  output->concatf("\t buf *(%p): (%u bytes)\n", op->buf, op->buf_len);
+  if (op->buf_len > 0) {
+    StringBuilder::printBuffer(output, op->buf, op->buf_len, "\t ");
   }
 }

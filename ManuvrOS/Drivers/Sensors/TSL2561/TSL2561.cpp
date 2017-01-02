@@ -22,6 +22,22 @@ limitations under the License.
 #include "TSL2561.h"
 
 
+const DatumDef datum_defs[] = {
+  {
+    .desc    = "Vis-IR Intensity",
+    .units   = COMMON_UNITS_LUX,
+    .type_id = FLOAT_FM,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "IR Intensity",
+    .units   = COMMON_UNITS_MW_PER_SQCM,
+    .type_id = FLOAT_FM,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  }
+};
+
+
 TSL2561::TSL2561(uint8_t addr, uint8_t irq) : TSL2561(addr) {
   _irq_pin  = irq;
 }
@@ -29,13 +45,9 @@ TSL2561::TSL2561(uint8_t addr, uint8_t irq) : TSL2561(addr) {
 /*
 * Constructor. Takes i2c address as argument.
 */
-TSL2561::TSL2561(uint8_t addr) : I2CDeviceWithRegisters(), SensorWrapper() {
-  _dev_addr = addr;
-  this->isHardware = true;
-  this->defineDatum("Vis-IR Intensity", SensorWrapper::COMMON_UNITS_PRESSURE, FLOAT_FM);
-  this->defineDatum("IR Intensity", SensorWrapper::COMMON_UNITS_C, FLOAT_FM);
-  this->s_id = "32f9b0436dc76d77de116814263409fe";
-  this->name = "TSL2561";
+TSL2561::TSL2561(uint8_t addr) : I2CDeviceWithRegisters(addr), SensorWrapper("TSL2561") {
+  define_datum(&datum_defs[0]);
+  define_datum(&datum_defs[1]);
 
   // Now we should give them initial definitions. This is our chance to set default configs.
   defineRegister(TSL2561_REG_CONTROL,    (uint8_t)  0b00000000, false, false, true);
@@ -60,33 +72,33 @@ TSL2561::~TSL2561() {
 * Overrides...                                                            *
 **************************************************************************/
 
-int8_t TSL2561::init() {
-  if (readRegister(TSL2561_REG_ID) == I2C_ERR_CODE_NO_ERROR) {
-    return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+SensorError TSL2561::init() {
+  if (readRegister(TSL2561_REG_ID) == I2C_ERR_SLAVE_NO_ERROR) {
+    return SensorError::NO_ERROR;
   }
   else {
-    return SensorWrapper::SENSOR_ERROR_BUS_ERROR;
+    return SensorError::BUS_ERROR;
   }
 }
 
 
-int8_t TSL2561::setParameter(uint16_t reg, int len, uint8_t *data) {
-  return SensorWrapper::SENSOR_ERROR_INVALID_PARAM_ID;
+SensorError TSL2561::setParameter(uint16_t reg, int len, uint8_t *data) {
+  return SensorError::INVALID_PARAM_ID;
 }
 
 
-int8_t TSL2561::getParameter(uint16_t reg, int len, uint8_t*) {
-  return SensorWrapper::SENSOR_ERROR_INVALID_PARAM_ID;
+SensorError TSL2561::getParameter(uint16_t reg, int len, uint8_t*) {
+  return SensorError::INVALID_PARAM_ID;
 }
 
 
-int8_t TSL2561::readSensor() {
-  if (readRegister(TSL2561_REG_DATA0) == I2C_ERR_CODE_NO_ERROR) {
-    if (readRegister(TSL2561_REG_DATA1) == I2C_ERR_CODE_NO_ERROR) {
-      return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+SensorError TSL2561::readSensor() {
+  if (readRegister(TSL2561_REG_DATA0) == I2C_ERR_SLAVE_NO_ERROR) {
+    if (readRegister(TSL2561_REG_DATA1) == I2C_ERR_SLAVE_NO_ERROR) {
+      return SensorError::NO_ERROR;
     }
   }
-  return SensorWrapper::SENSOR_ERROR_BUS_ERROR;
+  return SensorError::BUS_ERROR;
 }
 
 
@@ -95,22 +107,22 @@ int8_t TSL2561::readSensor() {
 * These are overrides from I2CDevice.                                                               *
 ****************************************************************************************************/
 
-void TSL2561::operationCompleteCallback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::operationCompleteCallback(completed);
+int8_t TSL2561::io_op_callback(I2CBusOp* completed) {
+  I2CDeviceWithRegisters::io_op_callback(completed);
 	int i = 0;
 	DeviceRegister *temp_reg = reg_defs.get(i++);
-	while (temp_reg != NULL) {
+	while (temp_reg) {
 		switch (temp_reg->addr) {
 		  case TSL2561_REG_ID:
 		    temp_reg->unread = false;
-		    if (!sensor_active) {
-		      sensor_active = (0xBB == *(temp_reg->val));
-		      if (sensor_active) {
+		    if (!isActive()) {
+		      isActive(0xBB == *(temp_reg->val));
+		      if (isActive()) {
 		        writeDirtyRegisters();
 		      }
 		    }
 		    else {
-		      sensor_active = (0xBB == *(temp_reg->val));
+		      isActive(0xBB == *(temp_reg->val));
 		    }
 		    break;
 
@@ -135,6 +147,7 @@ void TSL2561::operationCompleteCallback(I2CBusOp* completed) {
 		}
 		temp_reg = reg_defs.get(i++);
 	}
+  return 0;
 }
 
 
@@ -142,9 +155,9 @@ void TSL2561::operationCompleteCallback(I2CBusOp* completed) {
 * Dump this item to the dev log.
 */
 void TSL2561::printDebug(StringBuilder* temp) {
-  if (NULL == temp) return;
+  if (nullptr == temp) return;
   //SensorWrapper::issue_json_map(temp, this);
-  temp->concatf("Lux sensor (TSL2561)\t%snitialized\n---------------------------------------------------\n", (sensor_active ? "I": "Uni"));
+  temp->concatf("Lux sensor (TSL2561)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
   I2CDeviceWithRegisters::printDebug(temp);
   temp->concatf("\n");
 }
@@ -163,7 +176,7 @@ bool TSL2561::calculate_lux() {
 
 
 
-void TSL2561::set_power_mode(uint8_t nu__pwr_mode) {
+SensorError TSL2561::set_power_mode(uint8_t nu__pwr_mode) {
   _pwr_mode = nu__pwr_mode;
   switch (_pwr_mode) {
     case 0:
@@ -178,4 +191,5 @@ void TSL2561::set_power_mode(uint8_t nu__pwr_mode) {
   #if defined(__MANUVR_DEBUG)
     Kernel::log("TSL2561 Power mode set. \n");
   #endif
+  return SensorError::NO_ERROR;
 }

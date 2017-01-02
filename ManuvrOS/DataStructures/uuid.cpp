@@ -21,6 +21,7 @@
 */
 
 #include "uuid.h"
+#include "StringBuilder.h"
 #include <Platform/Platform.h>
 
 #ifdef __cplusplus
@@ -106,6 +107,13 @@ void uuid_to_str(const UUID* uuid, char *buffer, int buflen) {
   }
 }
 
+
+void uuid_to_sb(const UUID* uuid, StringBuilder* output) {
+  char buf[38];
+  memset(&buf[0], 0, 38);
+  uuid_to_str(uuid, &buf[0], 38);
+  output->concat(&buf[0]);
+}
 
 void uuid_gen(UUID *uuid) {
   for (int i = 0; i < 4; i++) {

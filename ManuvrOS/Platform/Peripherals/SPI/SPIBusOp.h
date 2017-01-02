@@ -53,27 +53,19 @@ This is the class that is used to keep bus operations on the SPI atomic.
 */
 class SPIBusOp : public BusOp {
   public:
-    BusOpCallback* callback = NULL;  // Which class gets pinged when we've finished?
-
-    //uint32_t time_began    = 0;   // This is the time when bus access begins.
-    //uint32_t time_ended    = 0;   // This is the time when bus access stops (or is aborted).
-
     SPIBusOp();
+    SPIBusOp(BusOpcode nu_op, BusOpCallback* requester);
     SPIBusOp(BusOpcode nu_op, BusOpCallback* requester, uint8_t cs, bool ah = false);
-    ~SPIBusOp();
+    virtual ~SPIBusOp();
 
-    /* Job control functions. */
-    int8_t begin();
+    /* Mandatory overrides from the BusOp interface... */
+    //XferFault advance();
+    XferFault begin();
+    void wipe();
+    void printDebug(StringBuilder*);
+
+    int8_t advance_operation(uint32_t status_reg, uint8_t data_reg);
     int8_t markComplete();
-
-    void setBuffer(uint8_t *buf, unsigned int len);
-
-    void setParams(uint8_t p0, uint8_t p1, uint8_t p2, uint8_t p3);
-    void setParams(uint8_t p0, uint8_t p1, uint8_t p2);
-    void setParams(uint8_t p0, uint8_t p1);
-    void setParams(uint8_t p0);
-
-    inline void setCSPin(uint8_t pin) {   _cs_pin = pin;  };
 
     /**
     * This will mark the bus operation complete with a given error code.
@@ -84,9 +76,16 @@ class SPIBusOp : public BusOp {
     inline int8_t abort() {    return abort(XferFault::NO_REASON); }
     int8_t abort(XferFault);
 
-    int8_t advance_operation(uint32_t status_reg, uint8_t data_reg);
 
-    void wipe();
+    void setBuffer(uint8_t *buf, unsigned int len);
+
+    void setParams(uint8_t p0, uint8_t p1, uint8_t p2, uint8_t p3);
+    void setParams(uint8_t p0, uint8_t p1, uint8_t p2);
+    void setParams(uint8_t p0, uint8_t p1);
+    void setParams(uint8_t p0);
+    inline uint8_t getTransferParam(int x) {  return xfer_params[x]; }
+
+    inline void setCSPin(uint8_t pin) {   _cs_pin = pin;  };
 
     /* Flag management fxns... */
     bool shouldReap(bool);    // Override to set the reap behavior.
@@ -132,8 +131,6 @@ class SPIBusOp : public BusOp {
       _flags = (en) ? (_flags | SPI_XFER_FLAG_DEVICE_CS_AH) : (_flags & ~(SPI_XFER_FLAG_DEVICE_CS_AH));
     };
 
-
-
     /**
     * The bus manager calls this fxn to decide if it ought to return this object to the preallocation
     *   queue following completion.
@@ -149,11 +146,7 @@ class SPIBusOp : public BusOp {
     */
     inline bool shouldReap() {        return ((_flags & SPI_XFER_FLAG_NO_FREE) == 0);   }
 
-    void printDebug(StringBuilder*);
 
-
-    static uint32_t  total_transfers;
-    static uint32_t  failed_transfers;
     static uint16_t  spi_wait_timeout;   // In microseconds. Per-byte.
     static ManuvrMsg event_spi_queue_ready;
 
@@ -162,7 +155,6 @@ class SPIBusOp : public BusOp {
     uint8_t xfer_params[4] = {0, 0, 0, 0};
     uint8_t  _param_len    = 0;
     uint8_t  _cs_pin       = 255;  // Chip-select pin.
-    uint8_t  _flags        = 0;    // No flags set.
 
     int8_t _assert_cs(bool);
 
