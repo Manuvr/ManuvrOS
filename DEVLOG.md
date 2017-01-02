@@ -460,4 +460,15 @@ Logging these changes in Manuvr, because they are in fact, Manuvr re-orgs. Digit
     1944443   22768   59812 2027023  I2C works once again. Numerous fixes and improvements.
     1944311   22768   59812 2026891  Mass clean-up across I/O classes.
     1944275   22768   59812 2026855  Commentary and source file cleanup.
-    
+
+### 2016.01.02:
+
+After the consolidation of the I/O queues, callbacks, jobs into the template, I'll now take a moment to look at the net impact to build size.
+
+  1867189   22900   23716 1913805  Prior to consolidation and features.
+  1869430   22612   23524 1915566  Following consolidation and features.
+             -288    -192   +1761
+
+_---J. Ian Lindsay_
+
+------
