@@ -97,7 +97,7 @@ const char* BusOp::getErrorString(XferFault code) {
 
 
 void BusOp::printBusOp(const char* print_name, BusOp* op, StringBuilder* output) {
-  output->concatf("\t---[ %s %p %s ]---\n", print_name, (uintptr_t) op, op->getOpcodeString());
+  output->concatf("\t---[ %s %p %s ]---\n", print_name, op, op->getOpcodeString());
   output->concatf("\t xfer_state        %s\n", BusOp::getStateString(op->xfer_state));
   if (XferFault::NONE != op->xfer_fault) {
     output->concatf("\t xfer_fault        %s\n", BusOp::getErrorString(op->xfer_fault));
@@ -106,7 +106,7 @@ void BusOp::printBusOp(const char* print_name, BusOp* op, StringBuilder* output)
   //  output->concatf("\t completed (uS)   %u\n",   (unsigned long) time_ended - time_began);
   //}
 
-  output->concatf("\t buf *(%p): (%u bytes)\n", (uintptr_t) op->buf, op->buf_len);
+  output->concatf("\t buf *(%p): (%u bytes)\n", op->buf, op->buf_len);
   if (op->buf_len > 0) {
     StringBuilder::printBuffer(output, op->buf, op->buf_len, "\t ");
   }

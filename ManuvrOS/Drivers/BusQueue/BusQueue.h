@@ -47,6 +47,7 @@ limitations under the License.
 #include <CommonConstants.h>
 #include <DataStructures/PriorityQueue.h>
 #include <DataStructures/StringBuilder.h>
+#include <Platform/Platform.h>
 
 
 /*
@@ -128,6 +129,7 @@ class BusOp {
     virtual XferFault begin() =0;
     //virtual XferFault advance() =0;
     virtual void wipe()  =0;
+    virtual void printDebug(StringBuilder*)  =0;
 
     /**
     * @return true if this operation is idle.
@@ -201,6 +203,8 @@ class BusOp {
     XferState xfer_state = XferState::UNDEF;  // What state is this transfer in?
     XferFault xfer_fault = XferFault::NONE;   // Fault code.
     // TODO: Call-ahead, call-back
+
+    //static void        initBusOp(const char*, BusOp*, StringBuilder*);
 
   private:
 };
@@ -299,21 +303,31 @@ template <class T> class BusAdapter : public BusOpCallback {
     /* Convenience function for guarding against queue floods. */
     inline bool roomInQueue() {    return !(work_queue.size() < MAX_Q_DEPTH);  }
 
-    static void printAdapter(BusAdapter* adapter, StringBuilder* output) {
-      output->concatf("-- Xfers (fail/total)  (%u/%u)\n", adapter->_failed_xfers, adapter->_total_xfers);
+    // TODO: I hate that I'm doing this in a template.
+    void printAdapter(StringBuilder* output) {
+      output->concatf("-- Xfers (fail/total)  (%u/%u)\n", _failed_xfers, _total_xfers);
       output->concat("-- Prealloc:\n");
-      output->concatf("--    available        %d\n",  adapter->preallocated.size());
-      output->concatf("--    misses/frees     %u\n",  adapter->_prealloc_misses, adapter->_heap_frees);
-      output->concatf("-- work_queue depth    (%d/%u)\n", adapter->work_queue.size(), adapter->MAX_Q_DEPTH);
-      output->concatf("-- floods              %u\n",  adapter->_queue_floods);
+      output->concatf("--    available        %d\n",  preallocated.size());
+      output->concatf("--    misses/frees     (%u/%u)\n", _prealloc_misses, _heap_frees);
+      output->concatf("-- work_queue depth    (%d/%u)\n", work_queue.size(), MAX_Q_DEPTH);
+      output->concatf("-- floods              %u\n",  _queue_floods);
     };
 
-    static void printWorkQueue(BusAdapter* adapter, StringBuilder* output, uint8_t max_print) {
-      if (adapter->work_queue.size() > 0) {
-        unsigned int print_depth = strict_min((uint8_t) adapter->work_queue.size(), max_print);
-        output->concatf("-- Queue Listing (top %d of %d total)\n", print_depth, adapter->work_queue.size());
-        for (unsigned int i = 0; i < print_depth; i++) {
-          adapter->work_queue.get(i)->printDebug(output);
+    // TODO: I hate that I'm doing this in a template.
+    void printWorkQueue(StringBuilder* output, int8_t max_print) {
+      if (current_job) {
+        output->concat("-- Current active job:\n");
+        current_job->printDebug(output);
+      }
+      else {
+        output->concat("-- No active job.\n\n");
+      }
+      int wqs = work_queue.size();
+      if (wqs > 0) {
+        int print_depth = strict_min((int8_t) wqs, max_print);
+        output->concatf("-- Queue Listing (top %d of %d total)\n", print_depth, wqs);
+        for (int i = 0; i < print_depth; i++) {
+          work_queue.get(i)->printDebug(output);
         }
       }
       else {

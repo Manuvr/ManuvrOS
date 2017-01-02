@@ -579,21 +579,13 @@ void I2CAdapter::printDevs(StringBuilder *temp) {
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
-void I2CAdapter::printDebug(StringBuilder *output) {
+void I2CAdapter::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
   printHardwareState(output);
   output->concatf("-- sda/scl     %u/%u\n", _bus_opts.sda_pin, _bus_opts.scl_pin);
   output->concatf("-- bus_error   %s\n", (busError()  ? "yes" : "no"));
-  BusAdapter::printAdapter((BusAdapter*)this, output);
-
-  if (current_job) {
-    output->concat("-- Currently being serviced:\n");
-    current_job->printDebug(output);
-  }
-  else {
-    output->concat("-- Nothing being serviced.\n\n");
-  }
-  BusAdapter::printWorkQueue((BusAdapter*)this, output, I2CADAPTER_MAX_QUEUE_PRINT);
+  printAdapter(output);
+  printWorkQueue(output, I2CADAPTER_MAX_QUEUE_PRINT);
 }
 
 

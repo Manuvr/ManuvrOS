@@ -170,7 +170,6 @@ This file is the tortured result of growing pains since the beginning of
 
 
     private:
-      int8_t init_dma();
       inline bool subaddr_sent() {  return (_flags & I2C_BUSOP_FLAG_SUBADDR);  };
       inline void subaddr_sent(bool en) {
         _flags = (en) ? (_flags | I2C_BUSOP_FLAG_SUBADDR) : (_flags & ~(I2C_BUSOP_FLAG_SUBADDR));

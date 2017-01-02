@@ -507,15 +507,11 @@ void SPIAdapter::printDebug(StringBuilder *output) {
     output->concatf("-- Guarding queue      %s\n",       (_er_flag(SPI_FLAG_QUEUE_GUARD)?"yes":"no"));
     output->concatf("-- spi_cb_per_event    %d\n--\n",   spi_cb_per_event);
   }
-  BusAdapter::printAdapter((BusAdapter*)this, output);
+  printAdapter(output);
   output->concatf("-- callback q depth    %d\n\n", callback_queue.size());
 
   if (getVerbosity() > 3) {
-    if (current_job != NULL) {
-      output->concat("\tCurrently being serviced:\n");
-      current_job->printDebug(output);
-    }
-    BusAdapter::printWorkQueue((BusAdapter*)this, output, SPIADAPTER_MAX_QUEUE_PRINT);
+    printWorkQueue(output, SPIADAPTER_MAX_QUEUE_PRINT);
   }
 }
 

@@ -138,63 +138,6 @@ void I2CBusOp::markComplete() {
 }
 
 
-//http://tech.munts.com/MCU/Frameworks/ARM/stm32f4/libs/STM32F4xx_DSP_StdPeriph_Lib_V1.1.0/Project/STM32F4xx_StdPeriph_Examples/I2C/I2C_TwoBoards/I2C_DataExchangeDMA/main.c
-// TODO: should check length > 0 before doing DMA init.
-// TODO: should migrate this into I2CAdapter???
-int8_t I2CBusOp::init_dma() {
-  int return_value = 0;
-
-#if defined(ARDUINO)
-
-#elif defined(STM32F4XX)
-  DMA_InitTypeDef DMA_InitStructure;
-  DMA_InitStructure.DMA_Channel            = DMA_Channel_1;
-  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
-  DMA_InitStructure.DMA_MemoryDataSize     = DMA_MemoryDataSize_Byte;
-  DMA_InitStructure.DMA_Priority           = DMA_Priority_High;
-  DMA_InitStructure.DMA_FIFOMode           = DMA_FIFOMode_Enable;  // Required for differnt access-widths.
-  DMA_InitStructure.DMA_FIFOThreshold      = DMA_FIFOThreshold_Full;
-  DMA_InitStructure.DMA_MemoryBurst        = DMA_MemoryBurst_Single;
-  DMA_InitStructure.DMA_PeripheralBurst    = DMA_PeripheralBurst_Single;
-  DMA_InitStructure.DMA_PeripheralInc      = DMA_PeripheralInc_Disable;
-  DMA_InitStructure.DMA_MemoryInc          = DMA_MemoryInc_Enable;
-  DMA_InitStructure.DMA_Mode               = DMA_Mode_Normal;
-  DMA_InitStructure.DMA_BufferSize         = (uint16_t) buf_len;   // Why did clive1 have (len-1)??
-  DMA_InitStructure.DMA_Memory0BaseAddr    = (uint32_t) buf;
-  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t) &I2C1->DR;
-
-  if (opcode == BusOpcode::RX) {
-    DMA_Cmd(DMA1_Stream0, DISABLE);
-    DMA_DeInit(DMA1_Stream0);
-    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;   // Receive
-    DMA_ITConfig(DMA1_Stream0, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE | DMA_IT_DME, ENABLE);
-    DMA_Init(DMA1_Stream0, &DMA_InitStructure);
-    //if (getVerbosity() > 5) local_log.concatf("init_dma():\ttxn_id: 0x%08x\tBuffer address: 0x%08x\n", txn_id, (uint32_t) buf);
-    I2C_DMALastTransferCmd(I2C1, ENABLE);
-  }
-  else if (opcode == BusOpcode::TX) {
-    DMA_Cmd(DMA1_Stream7, DISABLE);
-    DMA_DeInit(DMA1_Stream7);
-    DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;   // Transmit
-    DMA_ITConfig(DMA1_Stream7, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE | DMA_IT_DME, ENABLE);
-    DMA_Init(DMA1_Stream7, &DMA_InitStructure);
-    //if (getVerbosity() > 5) local_log.concatf("init_dma():\ttxn_id: 0x%08x\tBuffer address: 0x%08x\n", txn_id, (uint32_t) buf);
-    I2C_DMALastTransferCmd(I2C1, DISABLE);
-  }
-  else {
-    return -1;
-  }
-
-#elif defined(STM32F7XX) | defined(STM32F746xx)
-  device->dispatchOperation(this);
-#else
-  // No support
-#endif
-
-  //if (local_log.length() > 0) Kernel::log(&local_log);
-  return return_value;
-}
-
 
 #if defined(STM32F7XX) | defined(STM32F746xx)
   /*
