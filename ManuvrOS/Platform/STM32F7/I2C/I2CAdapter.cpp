@@ -341,7 +341,7 @@ XferFault I2CBusOp::begin() {
     return XferFault::DEV_NOT_FOUND;
   }
 
-  if ((nullptr != callback) && !((I2CDevice*)callback)->operationCallahead(this)) {
+  if ((nullptr != callback) && (callback->io_op_callahead(this))) {
     abort(XferFault::IO_RECALL);
     return XferFault::IO_RECALL;
   }

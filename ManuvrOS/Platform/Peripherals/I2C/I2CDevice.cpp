@@ -42,6 +42,12 @@ I2CDevice::~I2CDevice() {
 };
 
 
+int8_t I2CDevice::io_op_callahead(BusOp* op) {
+  // Default is to allow the transfer.
+  return 0;
+}
+
+
 int8_t I2CDevice::io_op_callback(BusOp* op) {
   I2CBusOp* completed = (I2CBusOp*) op;
 	StringBuilder temp;

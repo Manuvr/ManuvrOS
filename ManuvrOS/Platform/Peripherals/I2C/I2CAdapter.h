@@ -189,6 +189,7 @@ This file is the tortured result of growing pains since the beginning of
       ~I2CAdapter();           // Destructor
 
       /* Overrides from the BusAdapter interface */
+      int8_t io_op_callahead(BusOp*);
       int8_t io_op_callback(BusOp*);
       int8_t queue_io_job(BusOp*);
       I2CBusOp* new_op(BusOpcode, BusOpCallback*);
@@ -243,6 +244,7 @@ This file is the tortured result of growing pains since the beginning of
 
       LinkedList<I2CDevice*> dev_list;    // A list of active slaves on this bus.
       ManuvrMsg _periodic_i2c_debug;
+      //ManuvrMsg _queue_ready;
 
 
       int get_slave_dev_by_addr(uint8_t search_addr);
@@ -274,6 +276,7 @@ This file is the tortured result of growing pains since the beginning of
       ~I2CDevice();
 
       // Callback for requested operation completion.
+      virtual int8_t io_op_callahead(BusOp*);
       virtual int8_t io_op_callback(BusOp*);
       virtual int8_t queue_io_job(BusOp*);
 
@@ -329,6 +332,7 @@ This file is the tortured result of growing pains since the beginning of
 
 
       // Callback for requested operation completion.
+      virtual int8_t io_op_callahead(I2CBusOp*);
       virtual int8_t io_op_callback(I2CBusOp*);
       /* If your device needs something to happen immediately prior to bus I/O... */
       virtual bool operationCallahead(I2CBusOp*);

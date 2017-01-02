@@ -341,6 +341,12 @@ int8_t I2CDeviceWithRegisters::writeDirtyRegisters(void) {
 }
 
 
+int8_t I2CDeviceWithRegisters::io_op_callahead(I2CBusOp* op) {
+  // Default is to allow the transfer.
+  return 0;
+}
+
+
 int8_t I2CDeviceWithRegisters::io_op_callback(I2CBusOp* completed) {
   #ifdef __MANUVR_DEBUG
   StringBuilder temp; //("Default callback for registers!\n");

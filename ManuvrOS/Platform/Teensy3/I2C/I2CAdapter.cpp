@@ -41,7 +41,7 @@ int8_t I2CAdapter::bus_deinit() {
 
 
 void I2CAdapter::printHardwareState(StringBuilder* output) {
-  output->concatf("-- I2C%d (%sline) --------------------\n", getAdapterId(), (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
+  output->concatf("-- I2C%d (%sline)\n", getAdapterId(), (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
 }
 
 
@@ -62,7 +62,7 @@ XferFault I2CBusOp::begin() {
     return XferFault::DEV_NOT_FOUND;
   }
 
-  if ((nullptr != callback) && !((I2CDevice*)callback)->operationCallahead(this)) {
+  if ((nullptr != callback) && (callback->io_op_callahead(this))) {
     abort(XferFault::IO_RECALL);
     return XferFault::IO_RECALL;
   }
@@ -81,7 +81,7 @@ XferFault I2CBusOp::begin() {
     Wire.beginTransmission((uint8_t) (dev_addr & 0x00FF));
     if (need_to_send_subaddr()) {
       Wire.write((uint8_t) (sub_addr & 0x00FF));
-      advance_operation(1);
+      subaddr_sent(true);
     }
 
     switch (get_opcode()) {
@@ -110,7 +110,7 @@ XferFault I2CBusOp::begin() {
     Wire1.beginTransmission((uint8_t) (dev_addr & 0x00FF));
     if (need_to_send_subaddr()) {
       Wire1.write((uint8_t) (sub_addr & 0x00FF));
-      advance_operation(1);
+      subaddr_sent(true);
     }
 
     switch (get_opcode()) {
@@ -170,11 +170,6 @@ XferFault I2CBusOp::begin() {
 *   from an I/O thread.
 */
 int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
-  switch (status_reg) {
-    case 1:
-      subaddr_sent(true);
-      break;
-  }
   return 0;
 }
 

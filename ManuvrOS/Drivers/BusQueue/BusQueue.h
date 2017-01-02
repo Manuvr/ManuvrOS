@@ -119,8 +119,9 @@ class BusOp;
 */
 class BusOpCallback {
   public:
-    virtual int8_t io_op_callback(BusOp*) =0;
-    virtual int8_t queue_io_job(BusOp*)   =0;
+    virtual int8_t io_op_callahead(BusOp*) =0;  // Called ahead of op.
+    virtual int8_t io_op_callback(BusOp*)  =0;  // Called behind completed op.
+    virtual int8_t queue_io_job(BusOp*)    =0;  // Queue an I/O operation.
 };
 
 

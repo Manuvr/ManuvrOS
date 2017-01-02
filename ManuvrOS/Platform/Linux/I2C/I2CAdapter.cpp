@@ -105,7 +105,7 @@ int8_t I2CAdapter::bus_deinit() {
 
 
 void I2CAdapter::printHardwareState(StringBuilder* output) {
-  output->concatf("-- I2C%d (%sline) --------------------\n", getAdapterId(), (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
+  output->concatf("-- I2C%d (%sline)\n", getAdapterId(), (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
 }
 
 
@@ -129,10 +129,10 @@ XferFault I2CBusOp::begin() {
     return XferFault::DEV_NOT_FOUND;
   }
 
-  //if ((nullptr != callback) && !((I2CDevice*)callback)->operationCallahead(this)) {
-  //  abort(XferFault::IO_RECALL);
-  //  return XferFault::IO_RECALL;
-  //}
+  if ((nullptr != callback) && (callback->io_op_callahead(this))) {
+    abort(XferFault::IO_RECALL);
+    return XferFault::IO_RECALL;
+  }
 
   xfer_state = XferState::ADDR;
   if (device->generateStart()) {
