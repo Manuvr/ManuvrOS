@@ -231,6 +231,7 @@ class BusOpCallback {
 */
 template <class T> class BusAdapter : public BusOpCallback {
   public:
+    inline T* currentJob() {  return current_job;  };
 
 
   protected:

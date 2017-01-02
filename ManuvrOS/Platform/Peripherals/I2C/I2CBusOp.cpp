@@ -139,65 +139,7 @@ void I2CBusOp::markComplete() {
 
 
 
-#if defined(STM32F7XX) | defined(STM32F746xx)
-  /*
-  * Called from the ISR to advance this operation on the bus.
-  * Still required for DMA because of subaddresses, START/STOP, etc...
-  */
-  int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
-    StringBuilder output;
-    #ifdef __MANUVR_DEBUG
-    if (getVerbosity() > 6) output.concatf("I2CBusOp::advance_operation(0x%08x): \t %s\t", status_reg, BusOp::getStateString(xfer_state));
-    #endif
-    switch (xfer_state) {
-      case XferState::QUEUED:     // These are states we should not be in at this point...
-        break;
-
-      case XferState::INITIATE:     // We need to send a START condition.
-        break;
-
-      case XferState::ADDR:      // We need to send the 7-bit address.
-        markComplete();  // TODO: As long as we are using the HAL driver....
-        break;
-
-      case XferState::RX_WAIT:   // Main transfer.
-      case XferState::TX_WAIT:   // Main transfer.
-        break;
-
-      case XferState::STOP:      // We need to send a STOP condition.
-        break;
-
-      case XferState::COMPLETE:  // This operation is comcluded.
-        if (getVerbosity() > 5) {
-          #ifdef __MANUVR_DEBUG
-          output.concatf("\t--- Interrupt following job (0x%08x)\n", status_reg);
-          #endif
-          printDebug(&output);
-        }
-        break;
-
-      case XferState::FAULT:     // Something asploded.
-      default:
-        #ifdef __MANUVR_DEBUG
-        if (getVerbosity() > 1) output.concatf("\t--- Something is bad wrong. Our xfer_state is %s\n", BusOp::getStateString(xfer_state));
-        #endif
-        abort();
-        break;
-    }
-
-    if (getVerbosity() > 4) {
-      if (getVerbosity() > 6) printDebug(&output);
-      #ifdef __MANUVR_DEBUG
-      output.concatf("---> %s\n", BusOp::getStateString(xfer_state));
-      #endif
-    }
-
-    if (output.length() > 0) Kernel::log(&output);
-    return 0;
-  }
-
-
-#elif defined(STM32F4XX)
+#if defined(STM32F4XX)
   /*
   * Called from the ISR to advance this operation on the bus.
   * Still required for DMA because of subaddresses, START/STOP, etc...
