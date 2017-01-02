@@ -458,3 +458,6 @@ Logging these changes in Manuvr, because they are in fact, Manuvr re-orgs. Digit
     1944163   22768   59844 2026775  WTF is wrong with i2c?!?!
     1943815   22768   59812 2026395  Problem turned out to be inclusion order somehow.
     1944443   22768   59812 2027023  I2C works once again. Numerous fixes and improvements.
+    1944311   22768   59812 2026891  Mass clean-up across I/O classes.
+    1944275   22768   59812 2026855  Commentary and source file cleanup.
+    

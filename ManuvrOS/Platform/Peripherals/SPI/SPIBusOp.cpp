@@ -181,29 +181,6 @@ void SPIBusOp::setParams(uint8_t p0) {
 }
 
 
-/**
-* Wipes this bus operation so it can be reused.
-* Be careful not to blow away the flags that prevent us from being reaped.
-*/
-void SPIBusOp::wipe() {
-  set_state(XferState::IDLE);
-  // We need to preserve flags that deal with memory management.
-  _flags      = _flags & (SPI_XFER_FLAG_NO_FREE | SPI_XFER_FLAG_PREALLOCATE_Q);
-  xfer_fault  = XferFault::NONE;
-  opcode      = BusOpcode::UNDEF;
-  buf_len     = 0;
-  buf         = nullptr;
-  callback    = nullptr;
-  _cs_pin     = 255;
-  _param_len  = 0;
-  xfer_params[0] = 0;
-  xfer_params[1] = 0;
-  xfer_params[2] = 0;
-  xfer_params[3] = 0;
-
-  profile(false);
-}
-
 /*
 *
 * P A D | C L*   // P: Pin asserted (not logic level!)
@@ -226,14 +203,19 @@ int8_t SPIBusOp::_assert_cs(bool asrt) {
   return -1;
 }
 
-/*******************************************************************************
-*     8                  eeeeee
-*     8  eeeee eeeee     8    e eeeee eeeee eeeee eeeee  eeeee e
-*     8e 8  88 8   8     8e     8  88 8   8   8   8   8  8  88 8
-*     88 8   8 8eee8e    88     8   8 8e  8   8e  8eee8e 8   8 8e
-* e   88 8   8 88   8    88   e 8   8 88  8   88  88   8 8   8 88
-* 8eee88 8eee8 88eee8    88eee8 8eee8 88  8   88  88   8 8eee8 88eee
-*******************************************************************************/
+
+/**
+* This will mark the bus operation complete with a given error code.
+*
+* @param  cause A failure code to mark the operation with.
+* @return 0 on success. Non-zero on failure.
+*/
+int8_t SPIBusOp::abort(XferFault cause) {
+  xfer_fault = cause;
+  debug_log.concatf("SPI job aborted at state %s. Cause: %s.\n", getStateString(), getErrorString());
+  printDebug(&debug_log);
+  return markComplete();
+}
 
 
 /**
@@ -255,20 +237,6 @@ int8_t SPIBusOp::markComplete() {
   xfer_state = XferState::COMPLETE;
   step_queues();
   return 0;
-}
-
-
-/**
-* This will mark the bus operation complete with a given error code.
-*
-* @param  cause A failure code to mark the operation with.
-* @return 0 on success. Non-zero on failure.
-*/
-int8_t SPIBusOp::abort(XferFault cause) {
-  xfer_fault = cause;
-  debug_log.concatf("SPI job aborted at state %s. Cause: %s.\n", getStateString(), getErrorString());
-  printDebug(&debug_log);
-  return markComplete();
 }
 
 
@@ -325,8 +293,34 @@ bool SPIBusOp::devRegisterAdvance(bool _reg_advance) {
 
 
 /*******************************************************************************
-* These functions are for logging support.                                     *
+* ___     _                              These members are mandatory overrides
+*  |   / / \ o     |  _  |_              from the BusOp class.
+* _|_ /  \_/ o   \_| (_) |_)
 *******************************************************************************/
+
+/**
+* Wipes this bus operation so it can be reused.
+* Be careful not to blow away the flags that prevent us from being reaped.
+*/
+void SPIBusOp::wipe() {
+  set_state(XferState::IDLE);
+  // We need to preserve flags that deal with memory management.
+  _flags      = _flags & (SPI_XFER_FLAG_NO_FREE | SPI_XFER_FLAG_PREALLOCATE_Q);
+  xfer_fault  = XferFault::NONE;
+  opcode      = BusOpcode::UNDEF;
+  buf_len     = 0;
+  buf         = nullptr;
+  callback    = nullptr;
+  _cs_pin     = 255;
+  _param_len  = 0;
+  xfer_params[0] = 0;
+  xfer_params[1] = 0;
+  xfer_params[2] = 0;
+  xfer_params[3] = 0;
+
+  profile(false);
+}
+
 
 /**
 * Debug support method. This fxn is only present in debug builds.
@@ -334,7 +328,6 @@ bool SPIBusOp::devRegisterAdvance(bool _reg_advance) {
 * @param  StringBuilder* The buffer into which this fxn should write its output.
 */
 void SPIBusOp::printDebug(StringBuilder *output) {
-  if (NULL == output) return;
   BusOp::printBusOp("SPIBusOp", this, output);
   if (shouldReap())       output->concat("\t Will reap\n");
   if (returnToPrealloc()) output->concat("\t Returns to prealloc\n");
@@ -344,6 +337,5 @@ void SPIBusOp::printDebug(StringBuilder *output) {
   for (uint8_t i = 0; i < _param_len; i++) {
     output->concatf("0x%02x ", xfer_params[i]);
   }
-
   output->concat("\n\n");
 }

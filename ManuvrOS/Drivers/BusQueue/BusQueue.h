@@ -22,27 +22,6 @@ TODO: BusOp lifecycle....
 
 */
 
-
-
-/*******************************************************************************
-* ___     _
-*  |   / / \ o    /\   _|  _. ._ _|_  _  ._
-* _|_ /  \_/ o   /--\ (_| (_| |_) |_ (/_ |
-******************************|************************************************/
-
-/*******************************************************************************
-* ___     _       _
-*  |   / / \ o   | \  _     o  _  _
-* _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_
-*******************************************************************************/
-
-/*******************************************************************************
-* ___     _
-*  |   / / \ o     |  _  |_
-* _|_ /  \_/ o   \_| (_) |_)
-*******************************************************************************/
-
-
 #ifndef __MANUVR_BUS_QUEUE_H__
 #define __MANUVR_BUS_QUEUE_H__
 
@@ -142,9 +121,9 @@ class BusOp {
     //uint32_t time_began     = 0;        // This is the time when bus access begins.
     //uint32_t time_ended     = 0;        // This is the time when bus access stops (or is aborted).
 
-    /* Mandatory overrides for this interface... */
-    virtual XferFault begin() =0;
+    /* Mandatory overrides from the BusOp interface... */
     //virtual XferFault advance() =0;
+    virtual XferFault begin() =0;
     virtual void wipe()  =0;
     virtual void printDebug(StringBuilder*)  =0;
 
@@ -152,6 +131,11 @@ class BusOp {
     * @return true if this operation is idle.
     */
     inline bool isIdle() {     return (XferState::IDLE == xfer_state);  };
+
+    /**
+    * @return true if this operation is idle.
+    */
+    inline int8_t execCA() {   return ((callback) ? callback->io_op_callahead(this) : 0);  };
 
     /**
     * @return true if this operation is idle.
@@ -224,9 +208,9 @@ class BusOp {
     BusOpcode opcode     = BusOpcode::UNDEF;  // What is the particular operation being done?
     XferState xfer_state = XferState::UNDEF;  // What state is this transfer in?
     XferFault xfer_fault = XferFault::NONE;   // Fault code.
-    // TODO: Call-ahead, call-back
 
     //static void        initBusOp(const char*, BusOp*, StringBuilder*);
+
 
   private:
 };

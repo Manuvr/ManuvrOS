@@ -64,6 +64,31 @@ I2CBusOp::~I2CBusOp() {
 
 
 
+/* Call to mark something completed that may not be. Also sends a stop. */
+int8_t I2CBusOp::abort(XferFault er) {
+  markComplete();
+  xfer_fault = er;
+  return 0;
+}
+
+/*
+*
+*/
+void I2CBusOp::markComplete() {
+	xfer_state = XferState::COMPLETE;
+	ManuvrMsg* q_rdy = Kernel::returnEvent(MANUVR_MSG_I2C_QUEUE_READY);
+	q_rdy->specific_target = device;
+  Kernel::isrRaiseEvent(q_rdy);   // Raise an event
+}
+
+
+
+/*******************************************************************************
+* ___     _                              These members are mandatory overrides
+*  |   / / \ o     |  _  |_              from the BusOp class.
+* _|_ /  \_/ o   \_| (_) |_)
+*******************************************************************************/
+
 /**
 * Wipes this bus operation so it can be reused.
 * Be careful not to blow away the flags that prevent us from being reaped.
@@ -83,20 +108,6 @@ void I2CBusOp::wipe() {
 }
 
 
-/****************************************************************************************************
-* These functions are for logging support.                                                          *
-****************************************************************************************************/
-
-/*
-* Dump this item to the dev log.
-*/
-void I2CBusOp::printDebug() {
-	StringBuilder temp;
-	printDebug(&temp);
-	Kernel::log(&temp);
-}
-
-
 /**
 * Debug support method. This fxn is only present in debug builds.
 *
@@ -110,29 +121,6 @@ void I2CBusOp::printDebug(StringBuilder* output) {
     output->concatf("\t subaddress      0x%02x (%ssent)\n", sub_addr, (subaddr_sent() ? "" : "un"));
   }
   output->concat("\n\n");
-}
-
-
-
-/****************************************************************************************************
-* Job control functions. Calling these will affect control-flow during processing.                  *
-****************************************************************************************************/
-
-/* Call to mark something completed that may not be. Also sends a stop. */
-int8_t I2CBusOp::abort(XferFault er) {
-  markComplete();
-  xfer_fault = er;
-  return 0;
-}
-
-/*
-*
-*/
-void I2CBusOp::markComplete() {
-	xfer_state = XferState::COMPLETE;
-	ManuvrMsg* q_rdy = Kernel::returnEvent(MANUVR_MSG_I2C_QUEUE_READY);
-	q_rdy->specific_target = device;
-  Kernel::isrRaiseEvent(q_rdy);   // Raise an event
 }
 
 

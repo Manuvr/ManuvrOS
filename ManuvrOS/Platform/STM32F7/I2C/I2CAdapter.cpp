@@ -256,7 +256,13 @@ bool _stm32f7_timing_reinit(I2C_HandleTypeDef *hi2c, uint32_t val) {
 }
 
 
-//I2CAdapter::I2CAdapter(uint8_t dev_id) : I2CAdapter(1, 22, 23) {}
+/*******************************************************************************
+* ___     _                                  This is a template class for
+*  |   / / \ o    /\   _|  _. ._ _|_  _  ._  defining arbitrary I/O adapters.
+* _|_ /  \_/ o   /--\ (_| (_| |_) |_ (/_ |   Adapters must be instanced with
+*                             |              a BusOp as the template param.
+*******************************************************************************/
+
 int8_t I2CAdapter::bus_init() {
   switch (getAdapterId()) {
     case 1:
@@ -333,6 +339,12 @@ int8_t I2CAdapter::generateStop() {
   return busOnline() ? 0 : -1;
 }
 
+
+/*******************************************************************************
+* ___     _                              These members are mandatory overrides
+*  |   / / \ o     |  _  |_              from the BusOp class.
+* _|_ /  \_/ o   \_| (_) |_)
+*******************************************************************************/
 
 XferFault I2CBusOp::begin() {
   jaerb = this;   // TODO: Hot mess. Horrid.

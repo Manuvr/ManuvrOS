@@ -128,12 +128,23 @@ This file is the tortured result of growing pains since the beginning of
       I2CBusOp(BusOpcode nu_op, uint8_t dev_addr, int16_t sub_addr, uint8_t *buf, uint8_t len);
       virtual ~I2CBusOp();
 
-      void wipe();
-
-      /*
-      * This queue item can begin executing. This is where any bus access should be initiated.
-      */
+      /* Mandatory overrides from the BusOp interface... */
+      //XferFault advance();
       XferFault begin();
+      void wipe();
+      void printDebug(StringBuilder*);
+
+      int8_t advance_operation(uint32_t status_reg);
+      void markComplete();
+
+      /**
+      * This will mark the bus operation complete with a given error code.
+      * Overriden for simplicity. Marks the operation with failure code NO_REASON.
+      *
+      * @return 0 on success. Non-zero on failure.
+      */
+      inline int8_t abort() {    return abort(XferFault::NO_REASON); }
+      int8_t abort(XferFault);
 
       /**
       * Decide if we need to send a subaddress.
@@ -146,27 +157,6 @@ This file is the tortured result of growing pains since the beginning of
       inline void setVerbosity(int8_t v) {
         _flags = (v & I2C_BUSOP_FLAG_VERBOSITY_MASK) | (_flags & ~I2C_BUSOP_FLAG_VERBOSITY_MASK);
       };
-
-      /*
-      * Called from the ISR to advance this operation on the bus.
-      */
-      int8_t advance_operation(uint32_t status_reg);
-
-      /* Call to mark something completed that may not be. */
-      void markComplete();
-
-      /**
-      * This will mark the bus operation complete with a given error code.
-      * Overriden for simplicity. Marks the operation with failure code NO_REASON.
-      *
-      * @return 0 on success. Non-zero on failure.
-      */
-      inline int8_t abort() {    return abort(XferFault::NO_REASON); }
-      int8_t abort(XferFault);
-
-      /* Debug aides */
-      void printDebug();
-      void printDebug(StringBuilder*);
 
 
     private:

@@ -148,6 +148,391 @@ void I2CAdapter::reclaim_queue_item(I2CBusOp* op) {
 }
 
 
+/*******************************************************************************
+* Slave device management functions...                                         *
+*******************************************************************************/
+
+/*
+* Adds a new device to the bus.
+*/
+int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
+	int8_t return_value = I2C_ERR_SLAVE_NO_ERROR;
+	if (slave == nullptr) {
+	  #if defined(__MANUVR_DEBUG)
+		Kernel::log("Slave is invalid.\n");
+		#endif
+		return_value = I2C_ERR_SLAVE_INVALID;
+	}
+	if (dev_list.contains(slave)) {    // Check for pointer eqivillence.
+	  #if defined(__MANUVR_DEBUG)
+		Kernel::log("Slave device exists.\n");
+		#endif
+		return_value = I2C_ERR_SLAVE_EXISTS;
+	}
+	else if (get_slave_dev_by_addr(slave->_dev_addr) == I2C_ERR_SLAVE_NOT_FOUND) {
+		if (slave->assignBusInstance((I2CAdapter*) this)) {
+			int slave_index = dev_list.insert(slave);
+			if (slave_index == -1) {
+			  #if defined(__MANUVR_DEBUG)
+				Kernel::log("Failed to insert somehow. Disassigning...\n");
+				#endif
+				slave->disassignBusInstance();
+				return_value = I2C_ERR_SLAVE_INSERTION;
+			}
+		}
+		else {
+		  #if defined(__MANUVR_DEBUG)
+			Kernel::log("Op would clobber bus instance.\n");
+			#endif
+			return_value = I2C_ERR_SLAVE_ASSIGN_CLOB;
+		}
+	}
+	else {
+	  #if defined(__MANUVR_DEBUG)
+		Kernel::log("Op would cause address collision with another slave device.\n");
+		#endif
+		return_value = I2C_ERR_SLAVE_COLLISION;
+	}
+	return return_value;
+}
+
+
+/*
+* Removes a device from the bus.
+*/
+int8_t I2CAdapter::removeSlaveDevice(I2CDevice* slave) {
+	int8_t return_value = I2C_ERR_SLAVE_NOT_FOUND;
+	if (dev_list.remove(slave)) {
+		slave->disassignBusInstance();
+		purge_queued_work_by_dev(slave);
+		return_value = I2C_ERR_SLAVE_NO_ERROR;
+	}
+	return return_value;
+}
+
+
+/*
+* Searches this busses list of bound devices for the given address.
+* Returns the posistion in the list, only because it is non-negative. This
+*   is only called to prevent address collision. Not fetch a device handle.
+*/
+int I2CAdapter::get_slave_dev_by_addr(uint8_t search_addr) {
+	for (int i = 0; i < dev_list.size(); i++) {
+		if (search_addr == dev_list.get(i)->_dev_addr) {
+			return i;
+		}
+	}
+	return I2C_ERR_SLAVE_NOT_FOUND;
+}
+
+
+/*
+* Creates a specially-crafted WorkQueue object that will use the STM32F4 i2c peripheral
+*   to discover if a device is active on the bus and addressable.
+*/
+void I2CAdapter::ping_slave_addr(uint8_t addr) {
+  I2CBusOp* nu = new_op(BusOpcode::TX_CMD, this);
+  nu->dev_addr = addr;
+  nu->sub_addr = -1;
+  nu->buf      = nullptr;
+  nu->buf_len  = 0;
+
+  queue_io_job(nu);
+  _er_set_flag(I2C_BUS_FLAG_PING_RUN);
+}
+
+
+
+/*******************************************************************************
+* ___     _       _                      These members are mandatory overrides
+*  |   / / \ o   | \  _     o  _  _      for implementing I/O callbacks. They
+* _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
+*******************************************************************************/
+
+/**
+* Called prior to the given bus operation beginning.
+* Returning 0 will allow the operation to continue.
+* Returning anything else will fail the operation with IO_RECALL.
+*   Operations failed this way will have their callbacks invoked as normal.
+*
+* @param  _op  The bus operation that was completed.
+* @return 0 to run the op, or non-zero to cancel it.
+*/
+int8_t I2CAdapter::io_op_callahead(BusOp* _op) {
+  // Bus adapters don't typically do anything here, other
+  //   than permit the transfer.
+  return 0;
+}
+
+
+/**
+* When a bus operation completes, it is passed back to its issuing class.
+*
+* @param  _op  The bus operation that was completed.
+* @return 0 on success, or appropriate error code.
+*/
+int8_t I2CAdapter::io_op_callback(BusOp* _op) {
+  I2CBusOp* op = (I2CBusOp*) _op;
+	if (op->get_opcode() == BusOpcode::TX_CMD) {
+    // The only thing the i2c adapter uses this op-code for is pinging slaves.
+		if (!op->hasFault()) {
+      // We only support 7-bit addressing for now.
+			ping_map[op->dev_addr % 128] = 1;
+		}
+		else {
+			ping_map[op->dev_addr % 128] = -1;
+		}
+
+		if (_er_flag(I2C_BUS_FLAG_PINGING)) {
+		  if ((op->dev_addr & 0x00FF) < 127) {  // TODO: yy???
+		    ping_slave_addr(op->dev_addr + 1);
+		  }
+		  else {
+		    _er_clear_flag(I2C_BUS_FLAG_PINGING);
+		    #if defined(__MANUVR_DEBUG)
+		    if (getVerbosity() > 3) local_log.concat("Concluded i2c ping sweep.");
+		    #endif
+		  }
+		}
+	}
+
+  flushLocalLog();
+  return 0;
+}
+
+
+/**
+* This is what is called when the class wants to conduct a transaction on the bus.
+*
+* @param  _op  The bus operation to execute.
+* @return Zero on success, or appropriate error code.
+*/
+int8_t I2CAdapter::queue_io_job(BusOp* op) {
+  I2CBusOp* nu = (I2CBusOp*) op;
+  nu->setVerbosity(getVerbosity());
+  nu->device = (I2CAdapter*)this;
+	if (current_job) {
+		// Something is already going on with the bus. Queue...
+		work_queue.insert(nu);
+	}
+	else {
+		// Bus is idle. Put this work item in the active slot and start the bus operations...
+		current_job = nu;
+		if ((getAdapterId() >= 0) && busOnline()) {
+		  nu->begin();
+		  if (getVerbosity() > 6) {
+		    nu->printDebug(&local_log);
+		    Kernel::log(&local_log);
+		  }
+		}
+		else {
+		  Kernel::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, nullptr);   // Raise an event
+		}
+	}
+	return 0;
+}
+
+
+
+/*******************************************************************************
+* ___     _                                  This is a template class for
+*  |   / / \ o    /\   _|  _. ._ _|_  _  ._  defining arbitrary I/O adapters.
+* _|_ /  \_/ o   /--\ (_| (_| |_) |_ (/_ |   Adapters must be instanced with
+*                             |              a BusOp as the template param.
+*******************************************************************************/
+
+/**
+* Calling this function will advance the work queue after performing cleanup
+*   operations on the present or pending operation.
+*
+* @return the number of bus operations proc'd.
+*/
+int8_t I2CAdapter::advance_work_queue() {
+  int8_t return_value = 0;
+  bool recycle = busOnline();
+  while (recycle) {
+    return_value++;
+    recycle = false;
+  	if (current_job) {
+      switch (current_job->get_state()) {
+        // NOTE: Tread lightly. Omission of break; scattered throughout.
+        /* These are start states. */
+
+        /* These states are unstable and should decay into a "finish" state. */
+        case XferState::IDLE:      // Bus op is allocated and waiting somewhere outside of the queue.
+        case XferState::QUEUED:    // Bus op is idle and waiting for its turn. No bus control.
+          if (!current_job->has_bus_control()) {
+            current_job->begin();
+          }
+          break;
+        case XferState::INITIATE:  // Waiting for initiation phase.
+        case XferState::ADDR:      // Addressing phase. Sending the address.
+        case XferState::TX_WAIT:   // I/O operation in-progress.
+        case XferState::RX_WAIT:   // I/O operation in-progress.
+        case XferState::STOP:      // I/O operation in cleanup phase.
+          //current_job->advance();
+          break;
+
+        case XferState::UNDEF:     // Freshly instanced (or wiped, if preallocated).
+        default:
+          current_job->abort(XferFault::ILLEGAL_STATE);
+        /* These are finish states. */
+        case XferState::FAULT:     // Fault condition.
+        case XferState::COMPLETE:  // I/O op complete with no problems.
+          _total_xfers++;
+    			if (current_job->hasFault()) {
+            _failed_xfers++;
+    			  #if defined(__MANUVR_DEBUG)
+    			  if (getVerbosity() > 3) {
+              local_log.concat("Destroying failed job.\n");
+              current_job->printDebug(&local_log);
+            }
+    			  #endif
+    			}
+    			// Hand this completed operation off to the class that requested it. That class will
+    			//   take what it wants from the buffer and, when we return to execution here, we will
+    			//   be at liberty to clean the operation up.
+          // Note that we forgo a separate callback queue, and are therefore unable to
+          //   pipeline I/O and processing. They must happen sequentially.
+          current_job->execCB();
+    			reclaim_queue_item(current_job);   // Delete the queued work AND its buffer.
+    			current_job = nullptr;
+          break;
+      }
+  	}
+
+    if (nullptr == current_job) {
+  		// If there is nothing presently being serviced, we should promote an operation from the
+  		//   queue into the active slot and initiate it in the block below.
+  		current_job = work_queue.dequeue();
+      if (current_job) {
+        recycle = busOnline();
+      }
+  	}
+  }
+
+	flushLocalLog();
+  return return_value;
+}
+
+
+/**
+* Pass an i2c device, and this fxn will purge all of its queued work. Presumably, this is
+*   because it is being detached from the bux, but it may also be because one of it's operations
+*   went bad.
+*
+* @param  dev  The device pointer that owns jobs we wish purged.
+*/
+void I2CAdapter::purge_queued_work_by_dev(I2CDevice *dev) {
+  I2CBusOp* current = nullptr;
+
+  if (work_queue.size() > 0) {
+    for (int i = 0; i < work_queue.size(); i++) {
+      current = work_queue.get(i);
+      if (current->dev_addr == dev->_dev_addr) {
+        work_queue.remove(current);
+        reclaim_queue_item(current);   // Delete the queued work AND its buffer.
+      }
+    }
+  }
+
+  // Check this last to head off any silliness with bus operations colliding with us.
+  purge_stalled_job();
+
+  // Lastly... initiate the next bus transfer if the bus is not sideways.
+  advance_work_queue();
+}
+
+
+/**
+* Purges only the work_queue. Leaves the currently-executing job.
+*/
+void I2CAdapter::purge_queued_work() {
+  I2CBusOp* current = work_queue.dequeue();
+  while (current) {
+    current = work_queue.get();
+    current->abort(XferFault::QUEUE_FLUSH);
+    if (current->callback) {
+      current->callback->io_op_callback(current);
+    }
+    reclaim_queue_item(current);   // Delete the queued work AND its buffer.
+    current = work_queue.dequeue();
+  }
+}
+
+
+void I2CAdapter::purge_stalled_job() {
+  if (current_job) {
+    current_job->abort(XferFault::QUEUE_FLUSH);
+    if (current_job->callback) {
+      current_job->callback->io_op_callback(current_job);
+    }
+    delete current_job;
+    current_job = nullptr;
+  }
+}
+
+
+
+/*
+* Debug fxn to print the ping map.
+*/
+void I2CAdapter::printPingMap(StringBuilder *temp) {
+  if (temp) {
+    temp->concat("\n\n\tPing Map\n\t      0 1 2 3 4 5 6 7 8 9 A B C D E F\n");
+    // TODO: This is needlessly-extravagent of memory. Do it this way instead...
+    //char str_buf[];
+    for (uint8_t i = 0; i < 128; i+=16) {
+      temp->concatf("\t0x%02x: %c %c %c %c %c %c %c %c %c %c %c %c %c %c %c %c\n",
+        i,
+        ((ping_map[i + 0x00] == 0) ? ' ' : ((ping_map[i + 0x00] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x01] == 0) ? ' ' : ((ping_map[i + 0x01] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x02] == 0) ? ' ' : ((ping_map[i + 0x02] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x03] == 0) ? ' ' : ((ping_map[i + 0x03] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x04] == 0) ? ' ' : ((ping_map[i + 0x04] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x05] == 0) ? ' ' : ((ping_map[i + 0x05] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x06] == 0) ? ' ' : ((ping_map[i + 0x06] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x07] == 0) ? ' ' : ((ping_map[i + 0x07] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x08] == 0) ? ' ' : ((ping_map[i + 0x08] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x09] == 0) ? ' ' : ((ping_map[i + 0x09] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x0A] == 0) ? ' ' : ((ping_map[i + 0x0A] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x0B] == 0) ? ' ' : ((ping_map[i + 0x0B] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x0C] == 0) ? ' ' : ((ping_map[i + 0x0C] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x0D] == 0) ? ' ' : ((ping_map[i + 0x0D] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x0E] == 0) ? ' ' : ((ping_map[i + 0x0E] < 0) ? '-' : '*')),
+        ((ping_map[i + 0x0F] == 0) ? ' ' : ((ping_map[i + 0x0F] < 0) ? '-' : '*'))
+      );
+      //temp->concat(str_buf);
+    }
+  }
+  temp->concat("\n");
+}
+
+
+void I2CAdapter::printDevs(StringBuilder *temp, uint8_t dev_num) {
+  if (temp == nullptr) return;
+
+  if (dev_list.get(dev_num) != nullptr) {
+    temp->concat("\n\n");
+    dev_list.get(dev_num)->printDebug(temp);
+  }
+  else {
+    temp->concat("\n\nNot that many devices.\n");
+  }
+}
+
+
+void I2CAdapter::printDevs(StringBuilder *temp) {
+  if (temp == nullptr) return;
+
+  EventReceiver::printDebug(temp);
+  for (int i = 0; i < dev_list.size(); i++) {
+    dev_list.get(i)->printDebug(temp);
+  }
+  temp->concat("\n");
+}
+
+
 
 /*******************************************************************************
 * ######## ##     ## ######## ##    ## ########  ######
@@ -253,372 +638,6 @@ int8_t I2CAdapter::notify(ManuvrMsg* active_event) {
 
   flushLocalLog();
   return return_value;
-}
-
-
-
-/**************************************************************************
-* Device management functions...                                          *
-**************************************************************************/
-
-/*
-* Adds a new device to the bus.
-*/
-int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
-	int8_t return_value = I2C_ERR_SLAVE_NO_ERROR;
-	if (slave == nullptr) {
-	  #if defined(__MANUVR_DEBUG)
-		Kernel::log("Slave is invalid.\n");
-		#endif
-		return_value = I2C_ERR_SLAVE_INVALID;
-	}
-	if (dev_list.contains(slave)) {    // Check for pointer eqivillence.
-	  #if defined(__MANUVR_DEBUG)
-		Kernel::log("Slave device exists.\n");
-		#endif
-		return_value = I2C_ERR_SLAVE_EXISTS;
-	}
-	else if (get_slave_dev_by_addr(slave->_dev_addr) == I2C_ERR_SLAVE_NOT_FOUND) {
-		if (slave->assignBusInstance((I2CAdapter*) this)) {
-			int slave_index = dev_list.insert(slave);
-			if (slave_index == -1) {
-			  #if defined(__MANUVR_DEBUG)
-				Kernel::log("Failed to insert somehow. Disassigning...\n");
-				#endif
-				slave->disassignBusInstance();
-				return_value = I2C_ERR_SLAVE_INSERTION;
-			}
-		}
-		else {
-		  #if defined(__MANUVR_DEBUG)
-			Kernel::log("Op would clobber bus instance.\n");
-			#endif
-			return_value = I2C_ERR_SLAVE_ASSIGN_CLOB;
-		}
-	}
-	else {
-	  #if defined(__MANUVR_DEBUG)
-		Kernel::log("Op would cause address collision with another slave device.\n");
-		#endif
-		return_value = I2C_ERR_SLAVE_COLLISION;
-	}
-	return return_value;
-}
-
-
-/*
-* Removes a device from the bus.
-*/
-int8_t I2CAdapter::removeSlaveDevice(I2CDevice* slave) {
-	int8_t return_value = I2C_ERR_SLAVE_NOT_FOUND;
-	if (dev_list.remove(slave)) {
-		slave->disassignBusInstance();
-		purge_queued_work_by_dev(slave);
-		return_value = I2C_ERR_SLAVE_NO_ERROR;
-	}
-	return return_value;
-}
-
-
-/*
-* Searches this busses list of bound devices for the given address.
-* Returns the posistion in the list, only because it is non-negative. This
-*   is only called to prevent address collision. Not fetch a device handle.
-*/
-int I2CAdapter::get_slave_dev_by_addr(uint8_t search_addr) {
-	for (int i = 0; i < dev_list.size(); i++) {
-		if (search_addr == dev_list.get(i)->_dev_addr) {
-			return i;
-		}
-	}
-	return I2C_ERR_SLAVE_NOT_FOUND;
-}
-
-
-/**************************************************************************
-* Workflow management functions...                                        *
-**************************************************************************/
-
-/**
-* Called prior to the given bus operation beginning.
-* Returning 0 will allow the operation to continue.
-* Returning anything else will fail the operation with IO_RECALL.
-*   Operations failed this way will have their callbacks invoked as normal.
-*
-* @param  _op  The bus operation that was completed.
-* @return 0 to run the op, or non-zero to cancel it.
-*/
-int8_t I2CAdapter::io_op_callahead(BusOp* _op) {
-  // Bus adapters don't typically do anything here, other
-  //   than permit the transfer.
-  return 0;
-}
-
-
-/**
-* When a bus operation completes, it is passed back to its issuing class.
-*
-* @param  _op  The bus operation that was completed.
-* @return 0 on success, or appropriate error code.
-*/
-int8_t I2CAdapter::io_op_callback(BusOp* _op) {
-  I2CBusOp* op = (I2CBusOp*) _op;
-	if (op->get_opcode() == BusOpcode::TX_CMD) {
-    // The only thing the i2c adapter uses this op-code for is pinging slaves.
-		if (!op->hasFault()) {
-      // We only support 7-bit addressing for now.
-			ping_map[op->dev_addr % 128] = 1;
-		}
-		else {
-			ping_map[op->dev_addr % 128] = -1;
-		}
-
-		if (_er_flag(I2C_BUS_FLAG_PINGING)) {
-		  if ((op->dev_addr & 0x00FF) < 127) {  // TODO: yy???
-		    ping_slave_addr(op->dev_addr + 1);
-		  }
-		  else {
-		    _er_clear_flag(I2C_BUS_FLAG_PINGING);
-		    #if defined(__MANUVR_DEBUG)
-		    if (getVerbosity() > 3) local_log.concat("Concluded i2c ping sweep.");
-		    #endif
-		  }
-		}
-	}
-
-  flushLocalLog();
-  return 0;
-}
-
-
-/*
-* This is the function that should be called to queue-up a bus operation.
-* It may or may not be started immediately.
-*/
-int8_t I2CAdapter::queue_io_job(BusOp* op) {
-  I2CBusOp* nu = (I2CBusOp*) op;
-  nu->setVerbosity(getVerbosity());
-  nu->device = (I2CAdapter*)this;
-	if (current_job) {
-		// Something is already going on with the bus. Queue...
-		work_queue.insert(nu);
-	}
-	else {
-		// Bus is idle. Put this work item in the active slot and start the bus operations...
-		current_job = nu;
-		if ((getAdapterId() >= 0) && busOnline()) {
-		  nu->begin();
-		  if (getVerbosity() > 6) {
-		    nu->printDebug(&local_log);
-		    Kernel::log(&local_log);
-		  }
-		}
-		else {
-		  Kernel::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, nullptr);   // Raise an event
-		}
-	}
-	return 0;
-}
-
-
-/*
-* This function needs to be called to move the queue forward.
-*/
-int8_t I2CAdapter::advance_work_queue() {
-  int8_t return_value = -1;
-  bool recycle = busOnline();
-  while (recycle) {
-    return_value++;
-    recycle = false;
-  	if (current_job) {
-      switch (current_job->get_state()) {
-        // NOTE: Tread lightly. Omission of break; scattered throughout.
-        /* These are start states. */
-
-        /* These states are unstable and should decay into a "finish" state. */
-        case XferState::IDLE:      // Bus op is allocated and waiting somewhere outside of the queue.
-        case XferState::QUEUED:    // Bus op is idle and waiting for its turn. No bus control.
-          if (!current_job->has_bus_control()) {
-            current_job->begin();
-          }
-          break;
-        case XferState::INITIATE:  // Waiting for initiation phase.
-        case XferState::ADDR:      // Addressing phase. Sending the address.
-        case XferState::TX_WAIT:   // I/O operation in-progress.
-        case XferState::RX_WAIT:   // I/O operation in-progress.
-        case XferState::STOP:      // I/O operation in cleanup phase.
-          //current_job->advance();
-          break;
-
-        case XferState::UNDEF:     // Freshly instanced (or wiped, if preallocated).
-        default:
-          current_job->abort(XferFault::ILLEGAL_STATE);
-        /* These are finish states. */
-        case XferState::FAULT:     // Fault condition.
-        case XferState::COMPLETE:  // I/O op complete with no problems.
-          _total_xfers++;
-    			if (current_job->hasFault()) {
-            _failed_xfers++;
-    			  #if defined(__MANUVR_DEBUG)
-    			  if (getVerbosity() > 3) {
-              local_log.concat("Destroying failed job.\n");
-              current_job->printDebug(&local_log);
-            }
-    			  #endif
-    			}
-    			// Hand this completed operation off to the class that requested it. That class will
-    			//   take what it wants from the buffer and, when we return to execution here, we will
-    			//   be at liberty to clean the operation up.
-          // Note that we forgo a separate callback queue, and are therefore unable to
-          //   pipeline I/O and processing. They must happen sequentially.
-          current_job->execCB();
-    			reclaim_queue_item(current_job);   // Delete the queued work AND its buffer.
-    			current_job = nullptr;
-          break;
-      }
-  	}
-
-    if (nullptr == current_job) {
-  		// If there is nothing presently being serviced, we should promote an operation from the
-  		//   queue into the active slot and initiate it in the block below.
-  		current_job = work_queue.dequeue();
-      if (current_job) {
-        recycle = busOnline();
-      }
-  	}
-  }
-
-	flushLocalLog();
-  return return_value;
-}
-
-
-/*
-* Pass an i2c device, and this fxn will purge all of its queued work. Presumably, this is
-*   because it is being detached from the bux, but it may also be because one of it's operations
-*   went bad.
-*/
-void I2CAdapter::purge_queued_work_by_dev(I2CDevice *dev) {
-  I2CBusOp* current = nullptr;
-
-  if (work_queue.size() > 0) {
-    for (int i = 0; i < work_queue.size(); i++) {
-      current = work_queue.get(i);
-      if (current->dev_addr == dev->_dev_addr) {
-        work_queue.remove(current);
-        reclaim_queue_item(current);   // Delete the queued work AND its buffer.
-      }
-    }
-  }
-
-  // Check this last to head off any silliness with bus operations colliding with us.
-  purge_stalled_job();
-
-  // Lastly... initiate the next bus transfer if the bus is not sideways.
-  advance_work_queue();
-}
-
-
-/*
-* Purges only the work_queue. Leaves the currently-executing job.
-*/
-void I2CAdapter::purge_queued_work() {
-  I2CBusOp* current = work_queue.dequeue();
-  while (current) {
-    current = work_queue.get();
-    current->abort(XferFault::QUEUE_FLUSH);
-    if (current->callback) {
-      current->callback->io_op_callback(current);
-    }
-    reclaim_queue_item(current);   // Delete the queued work AND its buffer.
-    current = work_queue.dequeue();
-  }
-}
-
-
-void I2CAdapter::purge_stalled_job() {
-  if (current_job) {
-    current_job->abort(XferFault::QUEUE_FLUSH);
-    if (current_job->callback) {
-      current_job->callback->io_op_callback(current_job);
-    }
-    delete current_job;
-    current_job = nullptr;
-  }
-}
-
-
-/*
-* Creates a specially-crafted WorkQueue object that will use the STM32F4 i2c peripheral
-*   to discover if a device is active on the bus and addressable.
-*/
-void I2CAdapter::ping_slave_addr(uint8_t addr) {
-  I2CBusOp* nu = new_op(BusOpcode::TX_CMD, this);
-  nu->dev_addr = addr;
-  nu->sub_addr = -1;
-  nu->buf      = nullptr;
-  nu->buf_len  = 0;
-
-  queue_io_job(nu);
-  _er_set_flag(I2C_BUS_FLAG_PING_RUN);
-}
-
-
-/*
-* Debug fxn to print the ping map.
-*/
-void I2CAdapter::printPingMap(StringBuilder *temp) {
-  if (temp) {
-    temp->concat("\n\n\tPing Map\n\t      0 1 2 3 4 5 6 7 8 9 A B C D E F\n");
-    // TODO: This is needlessly-extravagent of memory. Do it this way instead...
-    //char str_buf[];
-    for (uint8_t i = 0; i < 128; i+=16) {
-      temp->concatf("\t0x%02x: %c %c %c %c %c %c %c %c %c %c %c %c %c %c %c %c\n",
-        i,
-        ((ping_map[i + 0x00] == 0) ? ' ' : ((ping_map[i + 0x00] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x01] == 0) ? ' ' : ((ping_map[i + 0x01] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x02] == 0) ? ' ' : ((ping_map[i + 0x02] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x03] == 0) ? ' ' : ((ping_map[i + 0x03] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x04] == 0) ? ' ' : ((ping_map[i + 0x04] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x05] == 0) ? ' ' : ((ping_map[i + 0x05] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x06] == 0) ? ' ' : ((ping_map[i + 0x06] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x07] == 0) ? ' ' : ((ping_map[i + 0x07] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x08] == 0) ? ' ' : ((ping_map[i + 0x08] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x09] == 0) ? ' ' : ((ping_map[i + 0x09] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x0A] == 0) ? ' ' : ((ping_map[i + 0x0A] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x0B] == 0) ? ' ' : ((ping_map[i + 0x0B] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x0C] == 0) ? ' ' : ((ping_map[i + 0x0C] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x0D] == 0) ? ' ' : ((ping_map[i + 0x0D] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x0E] == 0) ? ' ' : ((ping_map[i + 0x0E] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x0F] == 0) ? ' ' : ((ping_map[i + 0x0F] < 0) ? '-' : '*'))
-      );
-      //temp->concat(str_buf);
-    }
-  }
-  temp->concat("\n");
-}
-
-
-void I2CAdapter::printDevs(StringBuilder *temp, uint8_t dev_num) {
-  if (temp == nullptr) return;
-
-  if (dev_list.get(dev_num) != nullptr) {
-    temp->concat("\n\n");
-    dev_list.get(dev_num)->printDebug(temp);
-  }
-  else {
-    temp->concat("\n\nNot that many devices.\n");
-  }
-}
-
-void I2CAdapter::printDevs(StringBuilder *temp) {
-  if (temp == nullptr) return;
-
-  EventReceiver::printDebug(temp);
-  for (int i = 0; i < dev_list.size(); i++) {
-    dev_list.get(i)->printDebug(temp);
-  }
-  temp->concat("\n");
 }
 
 

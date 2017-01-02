@@ -107,6 +107,12 @@ SPIAdapter::~SPIAdapter() {
 *  ▀▀▀▀▀▀▀▀▀▀▀  ▀            ▀▀▀▀▀▀▀▀▀▀▀     phases.
 *******************************************************************************/
 
+/*******************************************************************************
+* ___     _       _                      These members are mandatory overrides
+*  |   / / \ o   | \  _     o  _  _      for implementing I/O callbacks. They
+* _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
+*******************************************************************************/
+
 /**
 * Called prior to the given bus operation beginning.
 * Returning 0 will allow the operation to continue.
@@ -120,6 +126,26 @@ int8_t SPIAdapter::io_op_callahead(BusOp* _op) {
   // Bus adapters don't typically do anything here, other
   //   than permit the transfer.
   return 0;
+}
+
+
+/**
+* When a bus operation completes, it is passed back to its issuing class.
+*
+* @param  _op  The bus operation that was completed.
+* @return 0 on success, or appropriate error code.
+*/
+int8_t SPIAdapter::io_op_callback(BusOp* _op) {
+  SPIBusOp* op = (SPIBusOp*) _op;
+
+  // There is zero chance this object will be a null pointer unless it was done on purpose.
+  if (getVerbosity() > 2) {
+    local_log.concatf("Probably shouldn't be in the default callback case...\n");
+    op->printDebug(&local_log);
+  }
+
+  flushLocalLog();
+  return SPI_CALLBACK_NOMINAL;
 }
 
 
@@ -180,48 +206,19 @@ int8_t SPIAdapter::queue_io_job(BusOp* _op) {
 }
 
 
-/**
-* Execute any I/O callbacks that are pending. The function is present because
-*   this class contains the bus implementation.
-*
-* @return the number of callbacks proc'd.
-*/
-int8_t SPIAdapter::service_callback_queue() {
-  int8_t return_value = 0;
-  SPIBusOp* temp_op = callback_queue.dequeue();
+/*******************************************************************************
+* ___     _                                  This is a template class for
+*  |   / / \ o    /\   _|  _. ._ _|_  _  ._  defining arbitrary I/O adapters.
+* _|_ /  \_/ o   /--\ (_| (_| |_) |_ (/_ |   Adapters must be instanced with
+*                             |              a BusOp as the template param.
+*******************************************************************************/
 
-  while ((nullptr != temp_op) && (return_value < spi_cb_per_event)) {
-  //if (nullptr != temp_op) {
-    if (getVerbosity() > 6) temp_op->printDebug(&local_log);
-    if (temp_op->callback) {
-      int8_t cb_code = temp_op->callback->io_op_callback(temp_op);
-      switch (cb_code) {
-        case SPI_CALLBACK_RECYCLE:
-          temp_op->set_state(XferState::IDLE);
-          queue_io_job(temp_op);
-          break;
+int8_t SPIAdapter::bus_init() {
+  return 0;
+}
 
-        case SPI_CALLBACK_ERROR:
-        case SPI_CALLBACK_NOMINAL:
-          // No harm in this yet, since this fxn respects preforms and prealloc.
-          reclaim_queue_item(temp_op);
-          break;
-        default:
-          local_log.concatf("Unsure about SPI_CALLBACK_CODE %d.\n", cb_code);
-          reclaim_queue_item(temp_op);
-          break;
-      }
-    }
-    else {
-      // We are the responsible party.
-      reclaim_queue_item(temp_op);
-    }
-    return_value++;
-    temp_op = callback_queue.dequeue();
-  }
-
-  flushLocalLog();
-  return return_value;
+int8_t SPIAdapter::bus_deinit() {
+  return 0;
 }
 
 
@@ -308,26 +305,6 @@ int8_t SPIAdapter::advance_work_queue() {
 
 
 /**
-* When a bus operation completes, it is passed back to its issuing class.
-*
-* @param  _op  The bus operation that was completed.
-* @return SPI_CALLBACK_NOMINAL on success, or appropriate error code.
-*/
-int8_t SPIAdapter::io_op_callback(BusOp* _op) {
-  SPIBusOp* op = (SPIBusOp*) _op;
-
-  // There is zero chance this object will be a null pointer unless it was done on purpose.
-  if (getVerbosity() > 2) {
-    local_log.concatf("Probably shouldn't be in the default callback case...\n");
-    op->printDebug(&local_log);
-  }
-
-  flushLocalLog();
-  return SPI_CALLBACK_NOMINAL;
-}
-
-
-/**
 * Purges only the jobs belonging to the given device from the work_queue.
 * Leaves the currently-executing job.
 *
@@ -351,7 +328,6 @@ void SPIAdapter::purge_queued_work_by_dev(BusOpCallback *dev) {
       }
     }
   }
-
   // Lastly... initiate the next bus transfer if the bus is not sideways.
   advance_work_queue();
 }
@@ -370,6 +346,33 @@ void SPIAdapter::purge_queued_work() {
 
   // Check this last to head off any silliness with bus operations colliding with us.
   purge_stalled_job();
+}
+
+
+/**
+* Purges a stalled job from the active slot.
+*/
+void SPIAdapter::purge_stalled_job() {
+  if (current_job) {
+    current_job->abort(XferFault::QUEUE_FLUSH);
+    reclaim_queue_item(current_job);
+    current_job = nullptr;
+  }
+}
+
+
+/**
+* Return a vacant SPIBusOp to the caller, allocating if necessary.
+*
+* @param  _op   The desired bus operation.
+* @param  _req  The device pointer that is requesting the job.
+* @return an SPIBusOp to be used. Only NULL if out-of-mem.
+*/
+SPIBusOp* SPIAdapter::new_op(BusOpcode _op, BusOpCallback* _req) {
+  SPIBusOp* return_value = BusAdapter::new_op();
+  return_value->set_opcode(_op);
+  return_value->callback = _req;
+  return return_value;
 }
 
 
@@ -402,44 +405,52 @@ void SPIAdapter::reclaim_queue_item(SPIBusOp* op) {
     //if (getVerbosity() > 6) local_log.concatf("SPIAdapter::reclaim_queue_item(): \t Dropping....\n");
     op->set_state(XferState::IDLE);
   }
-
   flushLocalLog();
 }
 
 
-int8_t SPIAdapter::bus_init() {
-  return 0;
-}
-
-int8_t SPIAdapter::bus_deinit() {
-  return 0;
-}
-
-
 /**
-* Return a vacant SPIBusOp to the caller, allocating if necessary.
+* Execute any I/O callbacks that are pending. The function is present because
+*   this class contains the bus implementation.
 *
-* @param  _op   The desired bus operation.
-* @param  _req  The device pointer that is requesting the job.
-* @return an SPIBusOp to be used. Only NULL if out-of-mem.
+* @return the number of callbacks proc'd.
 */
-SPIBusOp* SPIAdapter::new_op(BusOpcode _op, BusOpCallback* _req) {
-  SPIBusOp* return_value = BusAdapter::new_op();
-  return_value->set_opcode(_op);
-  return_value->callback = _req;
-  return return_value;
-}
+int8_t SPIAdapter::service_callback_queue() {
+  int8_t return_value = 0;
+  SPIBusOp* temp_op = callback_queue.dequeue();
 
+  while ((nullptr != temp_op) && (return_value < spi_cb_per_event)) {
+  //if (nullptr != temp_op) {
+    if (getVerbosity() > 6) temp_op->printDebug(&local_log);
+    if (temp_op->callback) {
+      int8_t cb_code = temp_op->callback->io_op_callback(temp_op);
+      switch (cb_code) {
+        case SPI_CALLBACK_RECYCLE:
+          temp_op->set_state(XferState::IDLE);
+          queue_io_job(temp_op);
+          break;
 
-/**
-* Purges a stalled job from the active slot.
-*/
-void SPIAdapter::purge_stalled_job() {
-  if (current_job) {
-    current_job->abort(XferFault::QUEUE_FLUSH);
-    reclaim_queue_item(current_job);
-    current_job = nullptr;
+        case SPI_CALLBACK_ERROR:
+        case SPI_CALLBACK_NOMINAL:
+          // No harm in this yet, since this fxn respects preforms and prealloc.
+          reclaim_queue_item(temp_op);
+          break;
+        default:
+          local_log.concatf("Unsure about SPI_CALLBACK_CODE %d.\n", cb_code);
+          reclaim_queue_item(temp_op);
+          break;
+      }
+    }
+    else {
+      // We are the responsible party.
+      reclaim_queue_item(temp_op);
+    }
+    return_value++;
+    temp_op = callback_queue.dequeue();
   }
+
+  flushLocalLog();
+  return return_value;
 }
 
 
@@ -493,7 +504,6 @@ int8_t SPIAdapter::callback_proc(ManuvrMsg* event) {
 
 int8_t SPIAdapter::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
-
   switch (active_event->eventCode()) {
     case MANUVR_MSG_SPI_QUEUE_READY:
       advance_work_queue();

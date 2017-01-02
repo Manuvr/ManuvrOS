@@ -58,20 +58,14 @@ class SPIBusOp : public BusOp {
     SPIBusOp(BusOpcode nu_op, BusOpCallback* requester, uint8_t cs, bool ah = false);
     virtual ~SPIBusOp();
 
-    /* Job control functions. */
+    /* Mandatory overrides from the BusOp interface... */
+    //XferFault advance();
     XferFault begin();
     void wipe();
+    void printDebug(StringBuilder*);
+
+    int8_t advance_operation(uint32_t status_reg, uint8_t data_reg);
     int8_t markComplete();
-
-    void setBuffer(uint8_t *buf, unsigned int len);
-
-    void setParams(uint8_t p0, uint8_t p1, uint8_t p2, uint8_t p3);
-    void setParams(uint8_t p0, uint8_t p1, uint8_t p2);
-    void setParams(uint8_t p0, uint8_t p1);
-    void setParams(uint8_t p0);
-    inline uint8_t getTransferParam(int x) {  return xfer_params[x]; }
-
-    inline void setCSPin(uint8_t pin) {   _cs_pin = pin;  };
 
     /**
     * This will mark the bus operation complete with a given error code.
@@ -82,7 +76,16 @@ class SPIBusOp : public BusOp {
     inline int8_t abort() {    return abort(XferFault::NO_REASON); }
     int8_t abort(XferFault);
 
-    int8_t advance_operation(uint32_t status_reg, uint8_t data_reg);
+
+    void setBuffer(uint8_t *buf, unsigned int len);
+
+    void setParams(uint8_t p0, uint8_t p1, uint8_t p2, uint8_t p3);
+    void setParams(uint8_t p0, uint8_t p1, uint8_t p2);
+    void setParams(uint8_t p0, uint8_t p1);
+    void setParams(uint8_t p0);
+    inline uint8_t getTransferParam(int x) {  return xfer_params[x]; }
+
+    inline void setCSPin(uint8_t pin) {   _cs_pin = pin;  };
 
     /* Flag management fxns... */
     bool shouldReap(bool);    // Override to set the reap behavior.
@@ -142,8 +145,6 @@ class SPIBusOp : public BusOp {
     * @return true if the bus manager class should free() this object. False otherwise.
     */
     inline bool shouldReap() {        return ((_flags & SPI_XFER_FLAG_NO_FREE) == 0);   }
-
-    void printDebug(StringBuilder*);
 
 
     static uint16_t  spi_wait_timeout;   // In microseconds. Per-byte.

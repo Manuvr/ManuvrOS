@@ -51,7 +51,7 @@ I2CDevice::~I2CDevice() {
 * @param  _op  The bus operation that was completed.
 * @return 0 to run the op, or non-zero to cancel it.
 */
-int8_t I2CAdapter::io_op_callahead(BusOp* _op) {
+int8_t I2CDevice::io_op_callahead(BusOp* _op) {
   return 0;
 }
 

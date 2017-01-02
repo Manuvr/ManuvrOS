@@ -65,6 +65,12 @@ bool switch_device(I2CAdapter* adapter, uint8_t nu_addr) {
 }
 
 
+/*******************************************************************************
+* ___     _                                  This is a template class for
+*  |   / / \ o    /\   _|  _. ._ _|_  _  ._  defining arbitrary I/O adapters.
+* _|_ /  \_/ o   /--\ (_| (_| |_) |_ (/_ |   Adapters must be instanced with
+*                             |              a BusOp as the template param.
+*******************************************************************************/
 
 int8_t I2CAdapter::bus_init() {
   char *filename = (char *) alloca(24);
@@ -122,6 +128,11 @@ int8_t I2CAdapter::generateStop() {
 
 
 
+/*******************************************************************************
+* ___     _                              These members are mandatory overrides
+*  |   / / \ o     |  _  |_              from the BusOp class.
+* _|_ /  \_/ o   \_| (_) |_)
+*******************************************************************************/
 
 XferFault I2CBusOp::begin() {
   if (nullptr == device) {
