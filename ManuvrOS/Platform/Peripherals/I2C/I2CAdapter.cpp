@@ -73,6 +73,11 @@ I2CAdapter::I2CAdapter(const I2CAdapterOptions* o) : EventReceiver("I2CAdapter")
   int mes_count = sizeof(i2c_message_defs) / sizeof(MessageTypeDef);
   ManuvrMsg::registerMessages(i2c_message_defs, mes_count);
 
+  // Mark all of our preallocated SPI jobs as "No Reap" and pass them into the prealloc queue.
+  for (uint8_t i = 0; i < I2CADAPTER_PREALLOC_COUNT; i++) {
+    preallocated.insert(&__prealloc_pool[i]);
+  }
+
   for (uint16_t i = 0; i < 128; i++) ping_map[i] = 0;   // Zero the ping map.
 }
 
@@ -337,15 +342,32 @@ int I2CAdapter::get_slave_dev_by_addr(uint8_t search_addr) {
 * When a bus operation completes, it is passed back to its issuing class.
 *
 * @param  _op  The bus operation that was completed.
-* @return SPI_CALLBACK_NOMINAL on success, or appropriate error code.
+* @return 0 on success, or appropriate error code.
 */
 int8_t I2CAdapter::io_op_callback(BusOp* _op) {
   I2CBusOp* op = (I2CBusOp*) _op;
-  // There is zero chance this object will be a null pointer unless it was done on purpose.
-  if (getVerbosity() > 2) {
-    local_log.concat("Probably shouldn't be in the default callback case...\n");
-    op->printDebug(&local_log);
-  }
+	if (op->get_opcode() == BusOpcode::TX_CMD) {
+    // The only thing the i2c adapter uses this op-code for is pinging slaves.
+		if (!op->hasFault()) {
+      // We only support 7-bit addressing for now.
+			ping_map[op->dev_addr % 128] = 1;
+		}
+		else {
+			ping_map[op->dev_addr % 128] = -1;
+		}
+
+		if (_er_flag(I2C_BUS_FLAG_PINGING)) {
+		  if ((op->dev_addr & 0x00FF) < 127) {  // TODO: yy???
+		    ping_slave_addr(op->dev_addr + 1);
+		  }
+		  else {
+		    _er_clear_flag(I2C_BUS_FLAG_PINGING);
+		    #if defined(__MANUVR_DEBUG)
+		    if (getVerbosity() > 3) local_log.concat("Concluded i2c ping sweep.");
+		    #endif
+		  }
+		}
+	}
 
   flushLocalLog();
   return 0;
@@ -386,64 +408,71 @@ int8_t I2CAdapter::queue_io_job(BusOp* op) {
 * This function needs to be called to move the queue forward.
 */
 int8_t I2CAdapter::advance_work_queue() {
-  if (!busOnline()) return -1;
-	if (current_job) {
-		if (current_job->isComplete()) {
-			if (current_job->hasFault()) {
-			  #if defined(__MANUVR_DEBUG)
-			  if (getVerbosity() > 3) {
-          local_log.concatf("Destroying failed job.\n");
-          if (getVerbosity() > 4) current_job->printDebug(&local_log);
-        }
-			  #endif
-			}
+  int8_t return_value = -1;
+  bool recycle = busOnline();
+  while (recycle) {
+    return_value++;
+    recycle = false;
+  	if (current_job) {
+      switch (current_job->get_state()) {
+        // NOTE: Tread lightly. Omission of break; scattered throughout.
+        /* These are start states. */
 
-			// Hand this completed operation off to the class that requested it. That class will
-			//   take what it wants from the buffer and, when we return to execution here, we will
-			//   be at liberty to clean the operation up.
-			if (current_job->callback) {
-				// TODO: need some minor reorg to make this not so obtuse...
-				current_job->callback->io_op_callback(current_job);
-			}
-			else if (current_job->get_opcode() == BusOpcode::TX_CMD) {
-				if (!current_job->hasFault()) {
-					ping_map[current_job->dev_addr % 128] = 1;
-				}
-				else {
-					ping_map[current_job->dev_addr % 128] = -1;
-				}
+        /* These states are unstable and should decay into a "finish" state. */
+        case XferState::IDLE:      // Bus op is allocated and waiting somewhere outside of the queue.
+        case XferState::QUEUED:    // Bus op is idle and waiting for its turn. No bus control.
+          if (!current_job->has_bus_control()) {
+            current_job->begin();
+          }
+          break;
+        case XferState::INITIATE:  // Waiting for initiation phase.
+        case XferState::ADDR:      // Addressing phase. Sending the address.
+        case XferState::TX_WAIT:   // I/O operation in-progress.
+        case XferState::RX_WAIT:   // I/O operation in-progress.
+        case XferState::STOP:      // I/O operation in cleanup phase.
+          //current_job->advance();
+          break;
 
-				if (_er_flag(I2C_BUS_FLAG_PINGING)) {
-				  if ((current_job->dev_addr & 0x00FF) < 127) {
-				    ping_slave_addr(current_job->dev_addr + 1);
-				  }
-				  else {
-				    #if defined(__MANUVR_DEBUG)
-				    if (getVerbosity() > 3) local_log.concat("Concluded i2c ping sweep.");
-				    #endif
-				    _er_clear_flag(I2C_BUS_FLAG_PINGING);
-				  }
-				}
-			}
+        case XferState::UNDEF:     // Freshly instanced (or wiped, if preallocated).
+        default:
+          current_job->abort(XferFault::ILLEGAL_STATE);
+        /* These are finish states. */
+        case XferState::FAULT:     // Fault condition.
+        case XferState::COMPLETE:  // I/O op complete with no problems.
+          _total_xfers++;
+    			if (current_job->hasFault()) {
+            _failed_xfers++;
+    			  #if defined(__MANUVR_DEBUG)
+    			  if (getVerbosity() > 3) {
+              local_log.concat("Destroying failed job.\n");
+              current_job->printDebug(&local_log);
+            }
+    			  #endif
+    			}
+    			// Hand this completed operation off to the class that requested it. That class will
+    			//   take what it wants from the buffer and, when we return to execution here, we will
+    			//   be at liberty to clean the operation up.
+          // Note that we forgo a separate callback queue, and are therefore unable to
+          //   pipeline I/O and processing. They must happen sequentially.
+          current_job->execCB();
+    			reclaim_queue_item(current_job);   // Delete the queued work AND its buffer.
+    			current_job = nullptr;
+          break;
+      }
+  	}
 
-			reclaim_queue_item(current_job);   // Delete the queued work AND its buffer.
-			current_job = work_queue.dequeue();
-		}
-	}
-	else {
-		// If there is nothing presently being serviced, we should promote an operation from the
-		//   queue into the active slot and initiate it in the block below.
-		current_job = work_queue.dequeue();
-	}
-
-	if (current_job) {
-		if (!current_job->has_bus_control()) {
-			current_job->begin();
-		}
-	}
+    if (nullptr == current_job) {
+  		// If there is nothing presently being serviced, we should promote an operation from the
+  		//   queue into the active slot and initiate it in the block below.
+  		current_job = work_queue.dequeue();
+      if (current_job) {
+        recycle = busOnline();
+      }
+  	}
+  }
 
 	flushLocalLog();
-  return 0;
+  return return_value;
 }
 
 
@@ -498,9 +527,6 @@ void I2CAdapter::purge_stalled_job() {
     }
     delete current_job;
     current_job = nullptr;
-#ifdef STM32F4XX
-    I2C_GenerateSTOP(I2C1, ENABLE);   // This may not be sufficient...
-#endif
   }
 }
 
@@ -510,9 +536,14 @@ void I2CAdapter::purge_stalled_job() {
 *   to discover if a device is active on the bus and addressable.
 */
 void I2CAdapter::ping_slave_addr(uint8_t addr) {
-    I2CBusOp* nu = new I2CBusOp(BusOpcode::TX_CMD, addr, (int16_t) -1, nullptr, 0);
-    queue_io_job(nu);
-    _er_set_flag(I2C_BUS_FLAG_PING_RUN);
+  I2CBusOp* nu = new_op(BusOpcode::TX_CMD, this);
+  nu->dev_addr = addr;
+  nu->sub_addr = -1;
+  nu->buf      = nullptr;
+  nu->buf_len  = 0;
+
+  queue_io_job(nu);
+  _er_set_flag(I2C_BUS_FLAG_PING_RUN);
 }
 
 
@@ -582,8 +613,8 @@ void I2CAdapter::printDevs(StringBuilder *temp) {
 void I2CAdapter::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
   printHardwareState(output);
-  output->concatf("-- sda/scl     %u/%u\n", _bus_opts.sda_pin, _bus_opts.scl_pin);
-  output->concatf("-- bus_error   %s\n", (busError()  ? "yes" : "no"));
+  output->concatf("-- sda/scl             %u/%u\n", _bus_opts.sda_pin, _bus_opts.scl_pin);
+  output->concatf("-- bus_error           %s\n", (busError()  ? "yes" : "no"));
   printAdapter(output);
   printWorkQueue(output, I2CADAPTER_MAX_QUEUE_PRINT);
 }
@@ -633,26 +664,18 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       break;
 
     #if defined(STM32F7XX) | defined(STM32F746xx)
-    case '3':
-      {
-        //I2CBusOp* nu = new I2CBusOp(BusOpcode::RX, 0x27, (int16_t) 0, &_debug_scratch, 1);
-        ////nu->callback = this;
-        //queue_io_job(nu);
-      }
-      break;
+      case 'x':
+        _periodic_i2c_debug.fireNow();
+        break;
 
-    case 'x':
-      _periodic_i2c_debug.fireNow();
-      break;
-
-    case 'Z':
-    case 'z':
-      if (temp_int) {
-        _periodic_i2c_debug.alterSchedulePeriod(temp_int * 10);
-      }
-      _periodic_i2c_debug.enableSchedule(*(str) == 'Z');
-      local_log.concatf("%s periodic reader.\n", (*(str) == 'Z' ? "Starting" : "Stopping"));
-      break;
+      case 'Z':
+      case 'z':
+        if (temp_int) {
+          _periodic_i2c_debug.alterSchedulePeriod(temp_int * 10);
+        }
+        _periodic_i2c_debug.enableSchedule(*(str) == 'Z');
+        local_log.concatf("%s periodic reader.\n", (*(str) == 'Z' ? "Starting" : "Stopping"));
+        break;
     #endif   // defined(STM32F7XX) | defined(STM32F746xx)
 
     case 'r':

@@ -143,4 +143,120 @@ int8_t I2CAdapter::generateStop() {
   return 0;
 }
 
+
+
+  /*
+  * Called from the ISR to advance this operation on the bus.
+  * Still required for DMA because of subaddresses, START/STOP, etc...
+  */
+  int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
+    StringBuilder output;
+    #ifdef __MANUVR_DEBUG
+    if (getVerbosity() > 6) output.concatf("I2CBusOp::advance_operation(0x%08x): \t %s\t", status_reg, BusOp::getStateString(xfer_state));
+    #endif
+    switch (xfer_state) {
+      case XferState::INITIATE:     // We need to send a START condition.
+        xfer_state = XferState::ADDR; // Need to send slave ADDR following a RESTART.
+        device->generateStart();
+        break;
+
+      case XferState::ADDR:      // We need to send the 7-bit address.
+        if (0x00000001 & status_reg) {
+          // If we see a ping at this point, it means the ping succeeded. Mark it finished.
+          if (opcode == BusOpcode::TX_CMD) {
+            markComplete();
+            device->generateStop();
+            if (output.length() > 0) Kernel::log(&output);
+            return 0;
+          }
+          // We are ready to send the address...
+          // If we need to send a subaddress, we will need to be in transmit mode. Even if our end-goal is to read.
+          uint8_t temp_dir_code = ((opcode == BusOpcode::TX || need_to_send_subaddr()) ? BusOpcode::TX : BusOpcode::RX);
+          I2C_Send7bitAddress(I2C1, (dev_addr << 1), temp_dir_code);
+          if (need_to_send_subaddr()) {
+            xfer_state = I2C_XFER_STATE_SUBADDR;
+          }
+          else {
+            xfer_state = I2C_XFER_STATE_BODY;
+            I2C_DMACmd(I2C1, ENABLE);
+          }
+        }
+        else if (0x00000002 & status_reg) {
+          abort(I2C_ERR_CODE_ADDR_2TX);
+        }
+        break;
+      case I2C_XFER_STATE_SUBADDR:   // We need to send a subaddress.
+        if (0x00000002 & status_reg) {  // If the dev addr was sent...
+          I2C_SendData(I2C1, (uint8_t) (sub_addr & 0x00FF));   // ...send subaddress.
+          subaddr_sent = true;  // We've sent this already. Don't do it again.
+          //xfer_state = XferState::ADDR; // Need to send slave ADDR following a RESTART.
+          //I2C_GenerateSTART(I2C1, ENABLE);  // Start condition is proc'd after BUSY flag disasserts.
+          xfer_state = XferState::INITIATE;
+        }
+        break;
+      case I2C_XFER_STATE_BODY:      // We need to start the body of our transfer.
+        if (opcode == BusOpcode::TX) {
+          xfer_state = XferState::TX_WAIT;
+          DMA_Cmd(DMA1_Stream7, ENABLE);
+          I2C_DMACmd(I2C1, ENABLE);
+        }
+        else if (opcode == BusOpcode::RX) {
+          xfer_state = XferState::RX_WAIT;
+          DMA_Cmd(DMA1_Stream0, ENABLE);
+          I2C_DMACmd(I2C1, ENABLE);
+        }
+        else if (opcode == BusOpcode::TX_CMD) {
+          xfer_state = XferState::TX_WAIT;
+          // Pinging...
+          markComplete();
+          device->generateStop();
+        }
+        break;
+      case XferState::RX_WAIT:
+      case XferState::TX_WAIT:
+        break;
+      case XferState::STOP:      // We need to send a STOP condition.
+        if (opcode == BusOpcode::TX) {
+          if (0x00000004 & status_reg) {  // Byte transfer finished?
+            device->generateStop();
+            markComplete();
+          }
+        }
+        else if (opcode == BusOpcode::RX) {
+          device->generateStop();
+          markComplete();
+        }
+        else {
+          abort();
+        }
+        break;
+      case XferState::COMPLETE:  // This operation is comcluded.
+        if (getVerbosity() > 5) {
+          #ifdef __MANUVR_DEBUG
+          output.concatf("\t--- Interrupt following job (0x%08x)\n", status_reg);
+          #endif
+          printDebug(&output);
+        }
+        //markComplete();
+        //Kernel::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, nullptr);   // Raise an event
+        break;
+      default:
+        #ifdef __MANUVR_DEBUG
+        if (getVerbosity() > 1) output.concatf("\t--- Something is bad wrong. Our xfer_state is %s\n", BusOp::getStateString(xfer_state));
+        #endif
+        abort(I2C_ERR_CODE_DEF_CASE);
+        break;
+    }
+
+    if (getVerbosity() > 4) {
+      if (getVerbosity() > 6) printDebug(&output);
+      #ifdef __MANUVR_DEBUG
+      output.concatf("---> %s\n", BusOp::getStateString(xfer_state));
+      #endif
+    }
+
+    if (output.length() > 0) Kernel::log(&output);
+    return 0;
+  }
+
 #endif   // MANUVR_SUPPORT_I2C

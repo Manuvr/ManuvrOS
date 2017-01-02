@@ -18,6 +18,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
+TODO: BusOp lifecycle....
+
 */
 
 
@@ -106,7 +108,21 @@ enum class XferFault {
 };
 
 /* Forward declarations. */
-class BusOpCallback;
+class BusOp;
+
+/*
+* This is an interface class that implements a callback path for I/O operations.
+* If a class wants to put operations into the SPI queue, it must either implement this
+*   interface, or delegate its callback duties to a class that does.
+* Generally-speaking, this will be a device that transacts on the bus, but is
+*   not itself the bus adapter.
+*/
+class BusOpCallback {
+  public:
+    virtual int8_t io_op_callback(BusOp*) =0;
+    virtual int8_t queue_io_job(BusOp*)   =0;
+};
+
 
 /*
 * This class represents a single transaction on the bus, but is devoid of
@@ -134,7 +150,12 @@ class BusOp {
     /**
     * @return true if this operation is idle.
     */
-    inline bool isIdle() {       return (XferState::IDLE == xfer_state);  };
+    inline bool isIdle() {     return (XferState::IDLE == xfer_state);  };
+
+    /**
+    * @return true if this operation is idle.
+    */
+    inline int8_t execCB() {   return ((callback) ? callback->io_op_callback(this) : 0);  };
 
     /**
     * This only works because of careful defines. Tread lightly.
@@ -211,20 +232,6 @@ class BusOp {
 
 
 /*
-* This is an interface class that implements a callback path for I/O operations.
-* If a class wants to put operations into the SPI queue, it must either implement this
-*   interface, or delegate its callback duties to a class that does.
-* Generally-speaking, this will be a device that transacts on the bus, but is
-*   not itself the bus adapter.
-*/
-class BusOpCallback {
-  public:
-    virtual int8_t io_op_callback(BusOp*) =0;
-    virtual int8_t queue_io_job(BusOp*) =0;
-};
-
-
-/*
 * This class represents a generic bus adapter. We are not so concerned with
 *   performance and memory overhead in this class, because there is typically
 *   only a handful of such classes, and they have low turnover rates.
@@ -245,7 +252,7 @@ template <class T> class BusAdapter : public BusOpCallback {
     //TODO: const uint8_t  MAX_Q_PRINT;     // Maximum tolerable queue depth.
     //TODO: const uint8_t  PREALLOC_SIZE;   // Maximum tolerable queue depth.
     PriorityQueue<T*> work_queue;   // A work queue to keep transactions in order.
-    PriorityQueue<T*> preallocated; // TODO: Should be static (as the pool is).
+    PriorityQueue<T*> preallocated; // TODO: Convert to ring buffer. This is the whole reason you embarked on this madness.
 
     BusAdapter(uint16_t max) : MAX_Q_DEPTH(max) {};
 
@@ -253,6 +260,8 @@ template <class T> class BusAdapter : public BusOpCallback {
     virtual int8_t advance_work_queue() =0;  // The nature of the bus dictates this implementation.
     virtual int8_t bus_init()           =0;  // Hardware-specifics.
     virtual int8_t bus_deinit()         =0;  // Hardware-specifics.
+    //virtual int8_t io_op_callback(T*)   =0;  // From BusOpCallback
+    //virtual int8_t queue_io_job(T*)     =0;  // From BusOpCallback
 
     void return_op_to_pool(T* obj) {
       obj->wipe();
@@ -306,22 +315,23 @@ template <class T> class BusAdapter : public BusOpCallback {
 
     // TODO: I hate that I'm doing this in a template.
     void printAdapter(StringBuilder* output) {
-      output->concatf("-- Xfers (fail/total)  (%u/%u)\n", _failed_xfers, _total_xfers);
+      output->concatf("-- Xfers (fail/total)  %u/%u\n", _failed_xfers, _total_xfers);
       output->concat("-- Prealloc:\n");
       output->concatf("--    available        %d\n",  preallocated.size());
-      output->concatf("--    misses/frees     (%u/%u)\n", _prealloc_misses, _heap_frees);
-      output->concatf("-- work_queue depth    (%d/%u)\n", work_queue.size(), MAX_Q_DEPTH);
-      output->concatf("-- floods              %u\n",  _queue_floods);
+      output->concatf("--    misses/frees     %u/%u\n", _prealloc_misses, _heap_frees);
+      output->concat("-- Work queue:\n");
+      output->concatf("--    depth/max        %u/%u\n", work_queue.size(), MAX_Q_DEPTH);
+      output->concatf("--    floods           %u\n",  _queue_floods);
     };
 
     // TODO: I hate that I'm doing this in a template.
     void printWorkQueue(StringBuilder* output, int8_t max_print) {
       if (current_job) {
-        output->concat("-- Current active job:\n");
+        output->concat("--\n- Current active job:\n");
         current_job->printDebug(output);
       }
       else {
-        output->concat("-- No active job.\n\n");
+        output->concat("--\n-- No active job.\n--\n");
       }
       int wqs = work_queue.size();
       if (wqs > 0) {

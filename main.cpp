@@ -62,6 +62,9 @@ Kernel* kernel = nullptr;
 
 #include <Platform/Platform.h>
 
+
+
+
 /*******************************************************************************
 * BufferPipe strategies particular to this firmware.                           *
 *******************************************************************************/
@@ -180,16 +183,21 @@ int main(int argc, const char *argv[]) {
   #endif
 
   #if defined(MANUVR_SUPPORT_I2C)
+    const I2CAdapterOptions i2c_opts(
+      1,   // Device number
+      255, // sda
+      255  // scl
+    );
     // If we are running on a RasPi, let's try to fire up the i2c that is almost
     //   certainly present.
-    I2CAdapter i2c(1, 23, 26);
+    I2CAdapter i2c(&i2c_opts);
     kernel->subscribe(&i2c);
 
     // TODO: Temporary addition to test the SensorWrapper build size.
     TMP006 tmp006;
     INA219 ina219;
-    //i2c.addSlaveDevice(&tmp006);
-    //i2c.addSlaveDevice(&ina219);
+    i2c.addSlaveDevice(&tmp006);
+    i2c.addSlaveDevice(&ina219);
   #endif
 
   #if defined(RASPI) || defined(RASPI2)

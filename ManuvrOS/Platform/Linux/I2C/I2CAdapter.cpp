@@ -129,10 +129,10 @@ XferFault I2CBusOp::begin() {
     return XferFault::DEV_NOT_FOUND;
   }
 
-  if ((nullptr != callback) && !((I2CDevice*)callback)->operationCallahead(this)) {
-    abort(XferFault::IO_RECALL);
-    return XferFault::IO_RECALL;
-  }
+  //if ((nullptr != callback) && !((I2CDevice*)callback)->operationCallahead(this)) {
+  //  abort(XferFault::IO_RECALL);
+  //  return XferFault::IO_RECALL;
+  //}
 
   xfer_state = XferState::ADDR;
   if (device->generateStart()) {

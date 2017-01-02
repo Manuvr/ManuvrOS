@@ -45,5 +45,9 @@ int8_t I2CAdapter::generateStop() {
 }
 
 
+  int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
+    return 0;
+  }
+
 
 #endif  // MANUVR_SUPPORT_I2C

@@ -309,17 +309,12 @@ int8_t I2CAdapter::bus_deinit() {
 
 
 void I2CAdapter::printHardwareState(StringBuilder* output) {
-  output->concatf("-- I2C%d (%sline) --------------------\n", getAdapterId(), (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
-  output->concatf("-- State       %u\n", hi2c1.State);
-  output->concatf("-- ErrorCode   %u\n", hi2c1.ErrorCode);
-  output->concatf("-- pBuffPtr    %p\n", hi2c1.pBuffPtr);
-  output->concatf("-- XferSize    %d\n", hi2c1.XferSize);
-  output->concatf("-- XferCount   %u\n", hi2c1.XferCount);
-  output->concatf("-- CR1         0x%08x\n", I2C1->CR1);
-  output->concatf("-- CR2         0x%08x\n", I2C1->CR2);
-  output->concatf("-- TIMINGR     0x%08x\n", I2C1->TIMINGR);
-  output->concatf("-- ISR         0x%08x\n", I2C1->ISR);
-  output->concatf("-- RxDR        0x%08x\n\n", I2C1->RXDR);
+  output->concatf("-- I2C%d (%sline)\n", getAdapterId(), (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
+  output->concatf("--   State       %u   ErrorCode   %u\n", hi2c1.State, hi2c1.ErrorCode);
+  output->concatf("--   XferCount   %u   XferSize    %d\n", hi2c1.XferCount, hi2c1.XferSize);
+  output->concatf("--   pBuffPtr    %p   CR1         0x%08x\n", hi2c1.pBuffPtr, I2C1->CR1);
+  output->concatf("--   CR2         0x%08x   TIMINGR     0x%08x\n", I2C1->CR2, I2C1->TIMINGR);
+  output->concatf("--   ISR         0x%08x   RxDR        0x%08x\n--\n", I2C1->ISR, I2C1->RXDR);
 }
 
 

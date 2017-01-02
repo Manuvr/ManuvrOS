@@ -191,9 +191,6 @@ This file is the tortured result of growing pains since the beginning of
       /* Overrides from the BusAdapter interface */
       int8_t io_op_callback(BusOp*);
       int8_t queue_io_job(BusOp*);
-      int8_t advance_work_queue();
-      int8_t bus_init();      // This must be provided on a per-platform basis.
-      int8_t bus_deinit();    // This must be provided on a per-platform basis.
       I2CBusOp* new_op(BusOpcode, BusOpCallback*);
 
       /* Overrides from EventReceiver */
@@ -235,6 +232,9 @@ This file is the tortured result of growing pains since the beginning of
       int8_t attached();      // This is called from the base notify().
 
       /* Overrides from the BusAdapter interface */
+      int8_t advance_work_queue();
+      int8_t bus_init();      // This must be provided on a per-platform basis.
+      int8_t bus_deinit();    // This must be provided on a per-platform basis.
 
 
     private:
