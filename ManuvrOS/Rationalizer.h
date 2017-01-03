@@ -39,12 +39,23 @@
 #define MANUVR_SEMVER_MINOR 3
 #define MANUVR_SEMVER_PATCH 0
 
+#include <ManuvrConf.h>
 
 /* Cryptographic stuff... */
 #include <Platform/Cryptographic/CryptOptUnifier.h>
 
 #ifndef __MANUVR_OPTION_RATIONALIZER_H__
 #define __MANUVR_OPTION_RATIONALIZER_H__
+
+#ifndef IDENTITY_STRING
+  #error You need to name the firmware by providing IDENTITY_STRING.
+#endif
+
+// Debug support requires Console.
+#if defined(__MANUVR_DEBUG) && !defined(MANUVR_CONSOLE_SUPPORT)
+  #define MANUVR_CONSOLE_SUPPORT
+#endif
+
 
 /*
 * Threading models...
