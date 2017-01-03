@@ -121,18 +121,12 @@ Identity* Identity::fromBuffer(uint8_t* buf, int len) {
           case IdentFormat::PK:
             return_value = (Identity*) new IdentityPubKey(buf, (uint16_t) len);
             break;
-
-          #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
-            case IdentFormat::ONE_ID:
-              return_value = (Identity*) new IdentityOneID(buf, (uint16_t) len);
-              break;
-          #endif
-        #endif
+        #endif  // __HAS_CRYPT_WRAPPER
 
         #if defined (MANUVR_OPENINTERCONNECT)
           case IdentFormat::OIC_CRED:
             break;
-        #endif
+        #endif  // MANUVR_OPENINTERCONNECT
 
         case IdentFormat::UNDETERMINED:
         default:

@@ -156,9 +156,6 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
 * @param  StringBuilder* The buffer to output into.
 */
 void ManuvrPlatform::printDebug(StringBuilder* output) {
-  output->concatf("-- Ver/Build date:     %s   %s %s\n", VERSION_STRING, __DATE__, __TIME__);
-  output->concatf("-- Manuvr version:     %d.%d.%d\n", MANUVR_SEMVER_MAJOR, MANUVR_SEMVER_MINOR, MANUVR_SEMVER_PATCH);
-
   output->concatf("-- Identity source:    %s\n", platform._check_flags(MANUVR_PLAT_FLAG_HAS_IDENTITY) ? "Generated at runtime" : "Loaded from storage");
   output->concat("-- Hardware:\n");
   #if defined(HW_VERSION_STRING)
