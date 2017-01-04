@@ -22,10 +22,12 @@ This file is meant to contain a set of common functions that are
   typically platform-dependent. The goal is to make a class instance
   that is pre-processor-selectable to reflect the platform with an API
   that is consistent, thereby giving the kernel the ability to...
-    * Access the realtime clock (if applicatble)
-    * Get definitions for GPIO pins.
-    * Access a true RNG (if it exists)
-    * Persist and retrieve data across runtimes.
+    * Access peripherals (true RNG, I2C/SPI/UART, GPIO, RTC, etc)
+    * Provide a uniform interface around cryptographic implementations
+    * Maintain a notion of Identity
+    * Persist and retrieve data across runtimes
+    * Setup other frameworks
+    * Manage threading
 */
 
 
@@ -65,7 +67,7 @@ extern "C" {
   #include "iotivity/port/oc_network_events_mutex.h"
   #include "iotivity/port/oc_log.h"
 
-  int example_main(void);
+  int example_main();
 }
 #endif   // MANUVR_OPENINTERCONNECT
 

@@ -39,7 +39,7 @@ Specific hardware targets using Arduino's API should probably fork
 #ifndef __PLATFORM_ARDUINO_H__
 #define __PLATFORM_ARDUINO_H__
 
-class Arduino : public ManuvrPlatform {
+class ArduinoWrapper : public ManuvrPlatform {
   public:
     inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
     virtual int8_t platformPreInit(Argument*);
@@ -52,8 +52,8 @@ class Arduino : public ManuvrPlatform {
     void jumpToBootloader();
 
 
-
   protected:
+    const char* _board_name = "Generic";
     virtual int8_t platformPostInit();
     #if defined(MANUVR_STORAGE)
       // Called during boot to load configuration.

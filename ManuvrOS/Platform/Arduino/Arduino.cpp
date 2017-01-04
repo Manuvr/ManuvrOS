@@ -21,14 +21,11 @@ limitations under the License.
 Fallback to Arduino support...
 */
 
-#include "Platform.h"
-
 #include <wiring.h>
 #include <Time/Time.h>
 #include <unistd.h>
 
-#define PLATFORM_GPIO_PIN_COUNT   16
-
+#include <Platform/Platform.h>
 
 
 /****************************************************************************************************
@@ -58,7 +55,6 @@ uint32_t randomInt() {
 * Init the RNG. Short and sweet.
 */
 void init_RNG() {
-  srand(Teensy3Clock.get());          // Seed the PRNG...
 }
 
 
@@ -73,15 +69,12 @@ void init_RNG() {
 * @return   The length of the serial number on this platform, in terms of bytes.
 */
 int platformSerialNumberSize() {
-  return 16;
+  return 0;
 }
 
 
 /**
 * Writes the serial number to the indicated buffer.
-* Note that for the Teensy3.x we use the Freescale unique ID. NOT the
-*   independent serial number installed by PJRC. See this thread:
-*   https://forum.pjrc.com/threads/25522-Serial-Number-of-Teensy-3-1
 *
 * @param    A pointer to the target buffer.
 * @return   The number of bytes written.
@@ -119,7 +112,7 @@ bool setTimeAndDate(char* nu_date_time) {
 /*
 * Returns an integer representing the current datetime.
 */
-uint32_t epochTime(void) {
+uint32_t epochTime() {
   return 0;
 }
 
@@ -141,10 +134,6 @@ void currentDateTime(StringBuilder* target) {
 /****************************************************************************************************
 * GPIO and change-notice                                                                            *
 ****************************************************************************************************/
-/*
-* This structure allows us to keep track of which pins are at our discretion to read/write/set ISRs on.
-*/
-volatile PlatformGPIODef gpio_pins[PLATFORM_GPIO_PIN_COUNT];
 
 void pin_isr_pitch_event() {
 }
@@ -274,16 +263,62 @@ volatile void reboot() {
 
 
 
-/****************************************************************************************************
-* Platform initialization.                                                                          *
-****************************************************************************************************/
+/*******************************************************************************
+*  ___   _           _      ___
+* (  _`\(_ )        ( )_  /'___)
+* | |_) )| |    _ _ | ,_)| (__   _    _ __   ___ ___
+* | ,__/'| |  /'_` )| |  | ,__)/'_`\ ( '__)/' _ ` _ `\
+* | |    | | ( (_| || |_ | |  ( (_) )| |   | ( ) ( ) |
+* (_)   (___)`\__,_)`\__)(_)  `\___/'(_)   (_) (_) (_)
+* These are overrides and additions to the platform class.
+*******************************************************************************/
+ArduinoWrapper::~ArduinoWrapper() {
+  _close_open_threads();
+}
 
-/*
+void ArduinoWrapper::printDebug(StringBuilder* output) {
+  output->concatf(
+    "==< %s Arduino [%s] >=============================\n",
+    _board_name,
+    getPlatformStateStr(platformState())
+  );
+  ManuvrPlatform::printDebug(output);
+}
+
+
+/******************************************************************************
+* Platform initialization.                                                    *
+******************************************************************************/
+#define  DEFAULT_PLATFORM_FLAGS (0)
+
+/**
 * Init that needs to happen prior to kernel bootstrap().
 * This is the final function called by the kernel constructor.
 */
-void platformPreInit() {
+int8_t ArduinoWrapper::platformPreInit(Argument* root_config) {
   ManuvrPlatform::platformPreInit(root_config);
-  gpioSetup();
-  init_RNG();
+  // Used for timer and signal callbacks.
+  __kernel = (volatile Kernel*) &_kernel;
+
+  uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
+  _alter_flags(true, default_flags);
+
+  init_rng();
+
+  #if defined(MANUVR_STORAGE)
+  #endif
+
+  #if defined(__HAS_CRYPT_WRAPPER)
+  #endif
+
+  return 0;
+}
+
+
+/*
+* Called before kernel instantiation. So do the minimum required to ensure
+*   internal system sanity.
+*/
+int8_t ArduinoWrapper::platformPostInit() {
+  return 0;
 }

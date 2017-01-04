@@ -18,13 +18,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-This file is meant to contain a set of common functions that are typically platform-dependent.
-  The goal is to make a class instance that is pre-processor-selectable for instantiation by the
-  kernel, thereby giving the kernel the ability to...
-    * Access the realtime clock (if applicatble)
-    * Get definitions for GPIO pins.
-    * Access a true RNG (if it exists)
-
 This file forms the catch-all for linux platforms that have no support.
 */
 
@@ -622,9 +615,9 @@ int8_t LinuxPlatform::hash_self() {
 #endif  // __HAS_CRYPT_WRAPPER
 
 
-/*******************************************************************************
-* Platform initialization.                                                     *
-*******************************************************************************/
+/******************************************************************************
+* Platform initialization.                                                    *
+******************************************************************************/
 #define  DEFAULT_PLATFORM_FLAGS ( \
               MANUVR_PLAT_FLAG_INNATE_DATETIME | \
               MANUVR_PLAT_FLAG_HAS_IDENTITY)
