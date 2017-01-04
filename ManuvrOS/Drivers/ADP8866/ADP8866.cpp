@@ -134,7 +134,7 @@ ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : EventRece
 /*
 * Destructor.
 */
-ADP8866::~ADP8866(void) {
+ADP8866::~ADP8866() {
 }
 
 

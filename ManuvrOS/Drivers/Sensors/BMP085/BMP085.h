@@ -49,7 +49,7 @@ class BMP085 : public I2CDeviceWithRegisters, public SensorWrapper {
     SensorError setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
     SensorError getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
 
-    /* Overrides from I2CDevice... */
+    /* Overrides from I2CDeviceWithRegisters... */
     int8_t io_op_callback(I2CBusOp*);
     void printDebug(StringBuilder*);
 
@@ -59,35 +59,35 @@ class BMP085 : public I2CDeviceWithRegisters, public SensorWrapper {
     const uint16_t OSS = 3;   // Oversampling Setting
     int8_t read_step   = -1;  // Used to keep track of which stage of the read we are in.
 
-    int16_t ac1;    // Calibration values
-    int16_t ac2;
-    int16_t ac3;
+    int16_t  ac1;    // Calibration values
+    int16_t  ac2;
+    int16_t  ac3;
     uint16_t ac4;
     uint16_t ac5;
     uint16_t ac6;
-    int16_t b1;
-    int16_t b2;
-    int16_t mb;
-    int16_t mc;
-    int16_t md;
+    int16_t  b1;
+    int16_t  b2;
+    int16_t  mb;
+    int16_t  mc;
+    int16_t  md;
 
     // b5 is calculated in getTemperature(...), this variable is also used in getPressure(...)
     // so getTemperature(...) must be called before getPressure(...).
-    long b5 = 0;
+    long b5          = 0;
     long uncomp_temp = 0;  // Uncompensated temperature.
     long uncomp_pres = 0;  // Uncompensated pressure.
 
-    void calibrate();   // This must be called at least once. Also: idempotent.
+    void  calibrate();   // This must be called at least once. Also: idempotent.
 
-    char bmp085Read(unsigned char address);      // Read 1 byte from the BMP085 at 'address'
-    int bmp085ReadInt(unsigned char address);    // Read 2 bytes from the BMP085
+    char  bmp085Read(unsigned char address);      // Read 1 byte from the BMP085 at 'address'
+    int   bmp085ReadInt(unsigned char address);   // Read 2 bytes from the BMP085
 
-    void initiate_UT_read();
-    long getTemperature();   // Given uncompensated temperature, return degrees Celcius.
+    void  initiate_UT_read();
+    long  getTemperature();   // Given uncompensated temperature, return degrees Celcius.
 
-    void initiate_UP_read();
-    long read_up();
-    long getPressure();      // Given uncompensated pressure, return Pascals.
+    void  initiate_UP_read();
+    long  read_up();
+    long  getPressure();      // Given uncompensated pressure, return Pascals.
 
     float calculateAltitude();
 };

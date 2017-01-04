@@ -116,10 +116,12 @@ CPP_SRCS  += Drivers/Sensors/Si7021/Si7021.cpp
 CPP_SRCS  += Drivers/Sensors/INA219/INA219.cpp
 CPP_SRCS  += Drivers/Sensors/VEML6070/VEML6070.cpp
 CPP_SRCS  += Drivers/Sensors/TMP006/TMP006.cpp
+CPP_SRCS  += Drivers/Sensors/TMP102/TMP102.cpp
 CPP_SRCS  += Drivers/Sensors/ISL29033/ISL29033.cpp
 CPP_SRCS  += Drivers/Sensors/LPS331/LPS331.cpp
 CPP_SRCS  += Drivers/Sensors/TSL2561/TSL2561.cpp
 CPP_SRCS  += Drivers/Sensors/MGC3130/MGC3130.cpp
+CPP_SRCS  += Drivers/Sensors/BMP085/BMP085.cpp
 
 CPP_SRCS  += Drivers/TLC5947/TLC5947.cpp
 #CPP_SRCS  += Drivers/LSMD9S1/LSMD9S1.cpp

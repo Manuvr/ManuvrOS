@@ -24,6 +24,7 @@ limitations under the License.
 
 #include "BMP085.h"
 
+
 const DatumDef datum_defs[] = {
   {
     .desc    = "Barometric Pressure",
@@ -45,6 +46,15 @@ const DatumDef datum_defs[] = {
   }
 };
 
+
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
 
 BMP085::BMP085(uint8_t addr) : I2CDeviceWithRegisters(addr), SensorWrapper("BMP085") {
   define_datum(&datum_defs[0]);
@@ -248,7 +258,7 @@ float BMP085::calculateAltitude() {
 
 // Read 1 byte from the BMP085 at 'address'
 char BMP085::bmp085Read(uint8_t address) {
-  uint8_t temp_int = i2c.read8(I2C_ADDRESS, address);
+  uint8_t temp_int = read8(address);
   return temp_int;
 }
 
@@ -257,7 +267,7 @@ char BMP085::bmp085Read(uint8_t address) {
 // First byte will be from 'address'
 // Second byte will be from 'address'+1
 int BMP085::bmp085ReadInt(uint8_t address) {
-  uint16_t return_value = i2c.read16(I2C_ADDRESS, address);
+  uint16_t return_value = read16(address);
   return (int) return_value;
 }
 
@@ -265,13 +275,13 @@ int BMP085::bmp085ReadInt(uint8_t address) {
 // Read the uncompensated temperature value
 void BMP085::initiate_UT_read() {
   // This requests a temperature reading
-  i2c.write8(I2C_ADDRESS, 0xF4, 0x2E);
+  write8(0xF4, 0x2E);
 }
 
 
 void BMP085::initiate_UP_read() {
   // Request a pressure reading w/ oversampling setting
-  i2c.write8(I2C_ADDRESS, 0xF4, (0x34 + (OSS<<6)));
+  write8(0xF4, (0x34 + (OSS<<6)));
 }
 
 

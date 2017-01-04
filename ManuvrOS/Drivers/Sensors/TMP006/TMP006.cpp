@@ -82,7 +82,7 @@ SensorError TMP006::readSensor() {
       return SensorError::NO_ERROR;
     }
   }
-  return SensorError::NO_ERROR;  // TODO: Wrong code.
+  return SensorError::BUS_ERROR;
 }
 
 
