@@ -110,8 +110,8 @@ CPP_SRCS  += Drivers/ISL23345/ISL23345.cpp
 CPP_SRCS  += Drivers/Bluetooth/RN4020/RN4020.cpp
 CPP_SRCS  += Drivers/ADG2128/ADG2128.cpp
 
-CPP_SRCS  += Drivers/SensorWrapper/SensorWrapper.cpp
-CPP_SRCS  += Drivers/SensorWrapper/SensorDatum.cpp
+CPP_SRCS  += Drivers/Sensors/SensorWrapper.cpp
+CPP_SRCS  += Drivers/Sensors/SensorDatum.cpp
 CPP_SRCS  += Drivers/Sensors/Si7021/Si7021.cpp
 CPP_SRCS  += Drivers/Sensors/INA219/INA219.cpp
 CPP_SRCS  += Drivers/Sensors/VEML6070/VEML6070.cpp

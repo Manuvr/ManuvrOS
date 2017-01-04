@@ -25,7 +25,7 @@ limitations under the License.
 #ifndef __BMP085_SENSOR_H__
 #define __BMP085_SENSOR_H__
 
-#include <Drivers/SensorWrapper/SensorWrapper.h>
+#include <Drivers/Sensors/SensorWrapper.h>
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
 
 #define PRESSURE_AT_SEA_LEVEL  101325.0f  // Atmosphereic pressure at sea-level.

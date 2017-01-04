@@ -31,21 +31,25 @@ SensorDatum::SensorDatum(const DatumDef* d) {
     case INT8_FM:
     case UINT8_FM:
     case BOOLEAN_FM:
-      data_len = 1;
+      data_len = sizeof(uint8_t);
       break;
     case INT16_FM:
     case UINT16_FM:
-      data_len = 2;
+      data_len = sizeof(uint16_t);
       break;
     case INT32_FM:
     case UINT32_FM:
-    case FLOAT_FM:
-      data_len = 4;
+      data_len = sizeof(uint32_t);
       break;
     case INT64_FM:
     case UINT64_FM:
+      data_len = sizeof(uint64_t);
+      break;
+    case FLOAT_FM:
+      data_len = sizeof(float);
+      break;
     case DOUBLE_FM:
-      data_len = 8;
+      data_len = sizeof(double);
       break;
     default:
       break;

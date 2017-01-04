@@ -22,6 +22,62 @@ limitations under the License.
 #include "SensorWrapper.h"
 
 
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
+
+#if defined(__BUILD_HAS_JSON)
+  #include <jansson.h>
+
+  /*
+  * Static function that takes a SensorWrapper and returns a JSON object that constitutes its definition.
+  */
+  void SensorWrapper::issue_json_map(json_t* obj, SensorWrapper* sw) {
+    //provided_buffer->concatf("\"%s\":{\"name\":\"%s\",\"hardware\":%s,\"data\":{", sw->s_id, sw->name, ((sw->isHardware()) ? "true" : "false"));
+    //SensorDatum* current = sw->datum_list;
+    //while (current) {
+    //	provided_buffer->concatf("\"%d\":{\"desc\":\"%s\",\"unit\":\"%s\",\"autoreport\":\"%s\"%s", current->v_id, current->def->desc, current->def->units, current->autoreport() ? "yes" : "no", ((nullptr == current->next) ? "}" : "},"));
+    //	current = current->next;
+    //}
+    //provided_buffer->concat("}}");
+  }
+
+  /*
+  * Static function that takes a SensorWrapper and returns a JSON object that contains all of its values.
+  */
+  void SensorWrapper::issue_json_value(json_t* obj, SensorWrapper* sw) {
+    //provided_buffer->concatf("{\"%s\":{\"value\":{", sw->s_id);
+    //for (uint8_t i = 0; i < sw->data_count; i++) {
+    //	  provided_buffer->concatf("\"%d\":\"", i);
+    //    sw->readAsString(i, provided_buffer);
+    //    provided_buffer->concat((i == sw->data_count) ? "\"" : "\",");
+    //}
+    //provided_buffer->concatf("},\"updated_at\":%d}}", (unsigned int)sw->updated_at);
+  }
+
+  /*
+  * Static function that takes a SensorWrapper and returns a JSON object that contains
+  *   the value that is specified. If the value is out of range, returns an empty set
+  *   where we would otherwise expect to find values.
+  */
+  void SensorWrapper::issue_json_value(json_t* obj, SensorWrapper* sw, uint8_t dat) {
+    //provided_buffer->concatf("{\"%s\":{\"value\":{", sw->s_id);
+    //if (dat > sw->data_count) {
+    //	  provided_buffer->concatf("\"%d\":\"", dat);
+    //    sw->readAsString(dat, provided_buffer);
+    //    provided_buffer->concat("\"");
+    //}
+    //provided_buffer->concatf("},\"updated_at\":%d}}", (unsigned int)sw->updated_at);
+  }
+#endif   //__BUILD_HAS_JSON
+
 
 const char* SensorWrapper::errorString(SensorError err) {
   switch (err) {
@@ -52,6 +108,15 @@ const char* SensorWrapper::errorString(SensorError err) {
 }
 
 
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
+
 /* Constructor */
 SensorWrapper::SensorWrapper(const char* n, const char* uid_str) {
   name = n;
@@ -73,18 +138,18 @@ SensorWrapper::~SensorWrapper() {
 }
 
 
-/****************************************************************************************************
-* Fxns that deal with sensor representation...                                                      *
-****************************************************************************************************/
+/*******************************************************************************
+* Fxns that deal with sensor representation...                                 *
+*******************************************************************************/
 
 void SensorWrapper::setSensorId(const char *uid_str) {
 	uuid_from_str(uid_str, &uuid);
 }
 
 
-/****************************************************************************************************
-* Functions that manage the "dirty" state of sensors and their autoreporting behavior.              *
-****************************************************************************************************/
+/*******************************************************************************
+* Functions that manage the "dirty" state and autoreporting behavior of data.  *
+*******************************************************************************/
 /* Returns the timestamp of the last sensor read in milliseconds. */
 long SensorWrapper::lastUpdate() {
   return updated_at;
@@ -171,9 +236,9 @@ SensorError SensorWrapper::setAutoReporting(uint8_t dat, SensorReporting nu_ar_s
 
 
 
-/****************************************************************************************************
-* Functions that generate string outputs.                                                           *
-****************************************************************************************************/
+/*******************************************************************************
+* Functions that generate string outputs.                                      *
+*******************************************************************************/
 
 SensorError SensorWrapper::readAsString(StringBuilder* buffer) {
   return SensorError::NO_ERROR;
@@ -195,9 +260,9 @@ SensorError SensorWrapper::readAsString(uint8_t dat, StringBuilder* buffer) {
 
 
 
-/****************************************************************************************************
-* Linked-list and datum-management functions...                                                     *
-****************************************************************************************************/
+/*******************************************************************************
+* Linked-list and datum-management functions...                                *
+*******************************************************************************/
 
 SensorError SensorWrapper::readDatumRaw(uint8_t dat, void* void_buffer) {
   uint8_t* buffer = (uint8_t*) void_buffer;   // Done to avoid compiler warnings.
@@ -284,15 +349,15 @@ SensorError SensorWrapper::define_datum(const DatumDef* def) {
 * Private function that inserts the freshly-formed datum into the linked-list of data in this sensor.
 */
 void SensorWrapper::insert_datum(SensorDatum* nu) {
-  if (nullptr == datum_list) {
-    datum_list = nu;
-  }
-  else {
+  if (datum_list) {
     SensorDatum* current = datum_list;
     while (current->next) {
       current = current->next;
     }
     current->next = nu;
+  }
+  else {
+    datum_list = nu;
   }
 }
 
@@ -308,57 +373,3 @@ SensorDatum* SensorWrapper::get_datum(uint8_t idx) {
   }
   return current;
 }
-
-
-
-/****************************************************************************************************
-* Static functions live below this block...                                                         *
-****************************************************************************************************/
-
-#if defined(__BUILD_HAS_JSON)
-#include <jansson.h>
-
-/*
-* Static function that takes a SensorWrapper and returns a JSON object that constitutes its definition.
-*/
-void SensorWrapper::issue_json_map(json_t* obj, SensorWrapper* sw) {
-  //provided_buffer->concatf("\"%s\":{\"name\":\"%s\",\"hardware\":%s,\"data\":{", sw->s_id, sw->name, ((sw->isHardware()) ? "true" : "false"));
-  //SensorDatum* current = sw->datum_list;
-  //while (current) {
-  //	provided_buffer->concatf("\"%d\":{\"desc\":\"%s\",\"unit\":\"%s\",\"autoreport\":\"%s\"%s", current->v_id, current->def->desc, current->def->units, current->autoreport() ? "yes" : "no", ((nullptr == current->next) ? "}" : "},"));
-  //	current = current->next;
-  //}
-  //provided_buffer->concat("}}");
-}
-
-
-/*
-* Static function that takes a SensorWrapper and returns a JSON object that contains all of its values.
-*/
-void SensorWrapper::issue_json_value(json_t* obj, SensorWrapper* sw) {
-  //provided_buffer->concatf("{\"%s\":{\"value\":{", sw->s_id);
-  //for (uint8_t i = 0; i < sw->data_count; i++) {
-  //	  provided_buffer->concatf("\"%d\":\"", i);
-  //    sw->readAsString(i, provided_buffer);
-  //    provided_buffer->concat((i == sw->data_count) ? "\"" : "\",");
-  //}
-  //provided_buffer->concatf("},\"updated_at\":%d}}", (unsigned int)sw->updated_at);
-}
-
-
-/*
-* Static function that takes a SensorWrapper and returns a JSON object that contains
-*   the value that is specified. If the value is out of range, returns an empty set
-*   where we would otherwise expect to find values.
-*/
-void SensorWrapper::issue_json_value(json_t* obj, SensorWrapper* sw, uint8_t dat) {
-  //provided_buffer->concatf("{\"%s\":{\"value\":{", sw->s_id);
-  //if (dat > sw->data_count) {
-  //	  provided_buffer->concatf("\"%d\":\"", dat);
-  //    sw->readAsString(dat, provided_buffer);
-  //    provided_buffer->concat("\"");
-  //}
-  //provided_buffer->concatf("},\"updated_at\":%d}}", (unsigned int)sw->updated_at);
-}
-
-#endif   //__BUILD_HAS_JSON

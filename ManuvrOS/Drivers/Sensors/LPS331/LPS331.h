@@ -22,7 +22,7 @@ limitations under the License.
 #ifndef __LPS331_DRIVER_H__
 #define __LPS331_DRIVER_H__
 
-#include "Drivers/SensorWrapper/SensorWrapper.h"
+#include "Drivers/Sensors/SensorWrapper.h"
 #include "Platform/Peripherals/I2C/I2CAdapter.h"
 
 // TODO: This class was never fully ported back from Digitabulum. No GPIO change-over...
