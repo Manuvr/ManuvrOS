@@ -1,5 +1,5 @@
 /*
-File:   Linux.h
+File:   Teensy3.h
 Author: J. Ian Lindsay
 Date:   2016.08.31
 

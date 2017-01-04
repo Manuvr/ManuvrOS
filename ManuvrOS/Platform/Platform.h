@@ -129,14 +129,14 @@ class Storage;
 #elif defined(STM32F7XX) | defined(STM32F746xx)
   #include <stm32f7xx_hal.h>
 
-  #define HIGH           GPIO_PIN_SET
-  #define LOW            GPIO_PIN_RESET
+  #define HIGH               GPIO_PIN_SET
+  #define LOW                GPIO_PIN_RESET
 
-  #define INPUT          GPIO_MODE_INPUT
-  #define OUTPUT         GPIO_MODE_OUTPUT_PP
-  #define OUTPUT_OD      GPIO_MODE_OUTPUT_OD
-  #define INPUT_PULLUP   0xFE
-  #define INPUT_PULLDOWN 0xFD
+  #define INPUT              GPIO_MODE_INPUT
+  #define OUTPUT             GPIO_MODE_OUTPUT_PP
+  #define OUTPUT_OD          GPIO_MODE_OUTPUT_OD
+  #define INPUT_PULLUP       0xFE
+  #define INPUT_PULLDOWN     0xFD
 
   #define CHANGE             0xFC
   #define FALLING            0xFB
@@ -182,6 +182,20 @@ typedef struct __platform_gpio_def {
   uint8_t         flags;
   uint16_t        mode;  // Strictly more than needed. Padding structure...
 } PlatformGPIODef;
+
+/*
+* When we wrap platform-provided peripherals, they will carry
+* one of these type-codes.
+*/
+enum class PeripheralTypes {
+  PERIPH_I2C,
+  PERIPH_SPI,
+  PERIPH_UART,
+  PERIPH_BLUETOOTH,
+  PERIPH_WIFI,
+  PERIPH_RTC,
+  PERIPH_STORAGE
+};
 
 
 /**
@@ -412,26 +426,29 @@ int    readPinAnalog(uint8_t pin);
 // TODO: Until the final-step of the build system rework, this is how we
 //         selectively support specific platforms.
 #if defined(__MK20DX256__) | defined(__MK20DX128__)
-  #include <Platform/Teensy3/Teensy3.h>
+  #include <Platform/Targets/Teensy3/Teensy3.h>
   typedef Teensy3 Platform;
 #elif defined(STM32F7XX) | defined(STM32F746xx)
-  #include <Platform/STM32F7/STM32F7.h>
+  #include <Platform/Targets/STM32F7/STM32F7.h>
   typedef STM32F7Platform Platform;
 #elif defined(STM32F4XX)
   // Not yet converted
-#elif defined(ARDUINO)
-  #include <Platform/Arduino/Arduino.h>
-  typedef ArduinoPlatform Platform;
 #elif defined(__MANUVR_PHOTON)
   // Not yet converted
+#elif defined(__MANUVR_ESP32)
+  #include <Platform/Targets/ESP32/ESP32.h>
+  typedef ESP32Platform Platform;
+#elif defined(ARDUINO)
+  #include <Platform/Targets/Arduino/Arduino.h>
+  typedef ArduinoWrapper Platform;
 #elif defined(RASPI)
-  #include <Platform/Raspi/Raspi.h>
+  #include <Platform/Targets/Raspi/Raspi.h>
   typedef Raspi Platform;
 #elif defined(__MANUVR_LINUX)
-  #include <Platform/Linux/Linux.h>
+  #include <Platform/Targets/Linux/Linux.h>
   typedef LinuxPlatform Platform;
 #elif defined(__MANUVR_APPLE)
-  #include <Platform/AppleOSX/AppleOSX.h>
+  #include <Platform/Targets/AppleOSX/AppleOSX.h>
   typedef ApplePlatform Platform;
 #else
   // Unsupportage.

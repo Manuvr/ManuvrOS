@@ -43,7 +43,7 @@ This file represents the platform-specific interface to a persistent
 
 
 /**
-* This class is a gateway to I/O. It will almost certainly need to have
+* This class is a gateway to block-oriented I/O. It will almost certainly need to have
 *   some of it's operations run asynchronously or threaded. We leave those
 *   concerns for any implementing class.
 */

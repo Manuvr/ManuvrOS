@@ -27,7 +27,7 @@ This file is meant to contain a set of common functions that are typically platf
 */
 
 #include <Platform/Platform.h>
-#include <Platform/STM32F7/STM32F7.h>
+#include "STM32F7.h"
 
 #if defined(MANUVR_STORAGE)
 // No storage support yet.

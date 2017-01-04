@@ -1,7 +1,7 @@
 /*
-File:   Arduino.h
+File:   ESP32.h
 Author: J. Ian Lindsay
-Date:   2016.09.25
+Date:   2016.08.31
 
 Copyright 2016 Manuvr, Inc
 
@@ -17,29 +17,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-
-ManuvrOS has an on-again, off-again relationship WRT Arduino support.
-
-At first, ManuvrOS was a library that was loaded into the Arduino
-  environment. But this quickly became untenable because of the
-  need to include libraries within libraries.
-
-Rather than subject ourselves to the Arduino IDE and its nerfed usage
-  of autotools, we will ask the user to either clone Arduino libraries
-  into ManuvrOS' build tree, or require that the user provide a path
-  to vis locally-installed copy.
-
-Other platforms might inherrit from this API, so keep it general.
-
-Specific hardware targets using Arduino's API should probably fork
-  this platform, and use direct hardware features where practical.
 */
 
 
-#ifndef __PLATFORM_ARDUINO_H__
-#define __PLATFORM_ARDUINO_H__
+#ifndef __PLATFORM_ESP32_H__
+#define __PLATFORM_ESP32_H__
 
-class ArduinoWrapper : public ManuvrPlatform {
+class ESP32Platform : public ManuvrPlatform {
   public:
     inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
     virtual int8_t platformPreInit(Argument*);
@@ -52,8 +36,8 @@ class ArduinoWrapper : public ManuvrPlatform {
     void jumpToBootloader();
 
 
+
   protected:
-    const char* _board_name = "Generic";
     virtual int8_t platformPostInit();
     #if defined(MANUVR_STORAGE)
       // Called during boot to load configuration.
@@ -61,4 +45,4 @@ class ArduinoWrapper : public ManuvrPlatform {
     #endif
 };
 
-#endif  // __PLATFORM_ARDUINO_H__
+#endif  // __PLATFORM_ESP32_H__

@@ -28,7 +28,7 @@ This file forms the catch-all for linux platforms that have no support.
 #include <Platform/Platform.h>
 
 #if defined(MANUVR_STORAGE)
-#include <Platform/Linux/LinuxStorage.h>
+#include "LinuxStorage.h"
 #include <fcntl.h>      // Needed for integrity checks.
 #include <sys/stat.h>   // Needed for integrity checks.
 #endif

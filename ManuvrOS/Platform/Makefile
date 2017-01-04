@@ -37,39 +37,48 @@ endif
 
 # This Makefile heeds two separate exports:
 ifeq ($(MANUVR_PLATFORM),LINUX)
-CPP_SRCS   += Linux/LinuxStorage.cpp
-CPP_SRCS   += Linux/Linux.cpp
-CPP_SRCS   += Linux/I2C/I2CAdapter.cpp
+CPP_SRCS   += Targets/Linux/LinuxStorage.cpp
+CPP_SRCS   += Targets/Linux/Linux.cpp
+CPP_SRCS   += Targets/Linux/I2C/I2CAdapter.cpp
 ifeq ($(MANUVR_BOARD),RASPI)
-CPP_SRCS   += Raspi/DieThermometer/DieThermometer.cpp
-CPP_SRCS   += Raspi/Raspi.cpp
+CPP_SRCS   += Targets/Raspi/DieThermometer/DieThermometer.cpp
+CPP_SRCS   += Targets/Raspi/Raspi.cpp
 else  # raspi
-CPP_SRCS   += Linux/Unsupported.cpp
+CPP_SRCS   += Targets/Linux/Unsupported.cpp
 endif  # Board selection
 endif  # linux
 
 ifeq ($(MANUVR_PLATFORM),TEENSY3)
-CPP_SRCS   += Teensy3/Teensy3.cpp
-CPP_SRCS   += Teensy3/TeensyStorage.cpp
-CPP_SRCS   += Teensy3/I2C/I2CAdapter.cpp
-CPP_SRCS   += Teensy3/SPI/SPIAdapter.cpp
+CPP_SRCS   += Targets/Teensy3/Teensy3.cpp
+CPP_SRCS   += Targets/Teensy3/TeensyStorage.cpp
+CPP_SRCS   += Targets/Teensy3/I2C/I2CAdapter.cpp
+CPP_SRCS   += Targets/Teensy3/SPI/SPIAdapter.cpp
+endif
+
+ifeq ($(MANUVR_PLATFORM),ESP32)
+CPP_SRCS   += Targets/ESP32/ESP32.cpp
+#CPP_SRCS   += Targets/ESP32/Storage/ESP32Storage.cpp
+#CPP_SRCS   += Targets/ESP32/I2C/I2CAdapter.cpp
+#CPP_SRCS   += Targets/ESP32/SPI/SPIAdapter.cpp
+#CPP_SRCS   += Targets/ESP32/WiFi/WiFi.cpp
+#CPP_SRCS   += Targets/ESP32/Bluetooth/Bluetooth.cpp
 endif
 
 ifeq ($(MANUVR_PLATFORM),ARDUINO)
-CPP_SRCS   += Arduino/Arduino.cpp
-CPP_SRCS   += Arduino/I2C/I2CAdapter.cpp
+CPP_SRCS   += Targets/Arduino/Arduino.cpp
+CPP_SRCS   += Targets/Arduino/I2C/I2CAdapter.cpp
 endif
 
 ifeq ($(MANUVR_PLATFORM),STM32F7)
-CPP_SRCS   += STM32F7/STM32F7.cpp
-CPP_SRCS   += STM32F7/I2C/I2CAdapter.cpp
-#SRCS   += STM32F7/STM32F7Storage.cpp
+CPP_SRCS   += Targets/STM32F7/STM32F7.cpp
+CPP_SRCS   += Targets/STM32F7/I2C/I2CAdapter.cpp
+#SRCS   += Targets/STM32F7/STM32F7Storage.cpp
 endif
 
 ifeq ($(MANUVR_PLATFORM),STM32F4)
-CPP_SRCS   += STM32F4/STM32F4.cpp
-CPP_SRCS   += STM32F4/I2C/I2CAdapter.cpp
-#SRCS   += STM32F4/STM32F4Storage.cpp
+CPP_SRCS   += Targets/STM32F4/STM32F4.cpp
+CPP_SRCS   += Targets/STM32F4/I2C/I2CAdapter.cpp
+#SRCS   += Targets/STM32F4/STM32F4Storage.cpp
 endif
 
 

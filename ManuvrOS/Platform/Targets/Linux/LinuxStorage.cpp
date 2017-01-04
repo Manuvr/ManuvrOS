@@ -25,7 +25,7 @@ Implemented as a JSON object within a single file. This feature therefore
 */
 
 #if defined(__MANUVR_LINUX) & defined(MANUVR_STORAGE)
-#include <Platform/Linux/LinuxStorage.h>
+#include "LinuxStorage.h"
 #include <Platform/Platform.h>
 #include <unistd.h>
 #include <fcntl.h>
