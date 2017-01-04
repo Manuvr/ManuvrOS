@@ -22,8 +22,8 @@ limitations under the License.
 #ifndef __ISL29033_DRIVER_H__
 #define __ISL29033_DRIVER_H__
 
-#include "Drivers/SensorWrapper/SensorWrapper.h"
-#include "Platform/Peripherals/I2C/I2CAdapter.h"
+#include <Drivers/SensorWrapper/SensorWrapper.h>
+#include <Platform/Peripherals/I2C/I2CAdapter.h>
 
 /* Hardware-defined registers */
 #define ISL29033_REG_COMMAND_1        0x00
@@ -64,8 +64,6 @@ class ISL29033 : public I2CDeviceWithRegisters, public SensorWrapper {
   public:
     ISL29033(uint8_t addr = ISL29033_I2CADDR);
     ~ISL29033();
-
-    void gpioSetup();
 
     /* Overrides from SensorWrapper */
     SensorError init();

@@ -60,6 +60,8 @@ typedef void (*SensorCallBack) (SensorWrapper*);
 #define MANUVR_SENSOR_FLAG_DIRTY         0x80
 #define MANUVR_SENSOR_FLAG_ACTIVE        0x40
 #define MANUVR_SENSOR_FLAG_AUTOREPORT    0x20
+#define MANUVR_SENSOR_FLAG_CALIBRATED    0x10
+
 
 /* Sensors can automatically report their values. */
 enum class SensorReporting {
@@ -171,6 +173,8 @@ class SensorWrapper {
 
     /* Is this sensor active? */
     inline bool isActive() {        return (MANUVR_SENSOR_FLAG_ACTIVE == (_flags & MANUVR_SENSOR_FLAG_ACTIVE));  };
+    /* Is this sensor calibrated? */
+    inline bool isCalibrated() {    return (MANUVR_SENSOR_FLAG_CALIBRATED == (_flags & MANUVR_SENSOR_FLAG_CALIBRATED));  };
 
     // Virtual functions. These MUST be overridden by the extending class.
     virtual SensorError init() =0;                                        // Call this to initialize the sensor.
@@ -219,6 +223,10 @@ class SensorWrapper {
 
     inline void isActive(bool x) {
       _flags = (x) ? (_flags | MANUVR_SENSOR_FLAG_ACTIVE) : (_flags & ~MANUVR_SENSOR_FLAG_ACTIVE);
+    };
+
+    inline void isCalibrated(bool x) {
+      _flags = (x) ? (_flags | MANUVR_SENSOR_FLAG_CALIBRATED) : (_flags & ~MANUVR_SENSOR_FLAG_CALIBRATED);
     };
 
     SensorError define_datum(const DatumDef*);
