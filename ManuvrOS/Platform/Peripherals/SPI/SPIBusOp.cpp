@@ -110,9 +110,9 @@ SPIBusOp::~SPIBusOp() {
 * @param  buf The transfer buffer.
 * @param  len The length of the buffer.
 */
-void SPIBusOp::setBuffer(uint8_t *buf, unsigned int len) {
-  buf     = buf;
-  buf_len = len;
+void SPIBusOp::setBuffer(uint8_t* b, unsigned int l) {
+  buf     = b;
+  buf_len = l;
 }
 
 
@@ -214,6 +214,7 @@ int8_t SPIBusOp::abort(XferFault cause) {
   xfer_fault = cause;
   debug_log.concatf("SPI job aborted at state %s. Cause: %s.\n", getStateString(), getErrorString());
   printDebug(&debug_log);
+  Kernel::log(&debug_log);
   return markComplete();
 }
 
@@ -332,6 +333,7 @@ void SPIBusOp::printDebug(StringBuilder *output) {
   if (shouldReap())       output->concat("\t Will reap\n");
   if (returnToPrealloc()) output->concat("\t Returns to prealloc\n");
   output->concatf("\t param_len         %d\n", _param_len);
+  output->concatf("\t cs_pin            %u\n", _cs_pin);
   output->concat("\t params            ");
 
   for (uint8_t i = 0; i < _param_len; i++) {
