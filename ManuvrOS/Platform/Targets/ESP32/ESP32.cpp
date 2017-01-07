@@ -31,7 +31,7 @@ This file is meant to contain a set of common functions that are typically platf
 #include <Platform/Platform.h>
 
 #if defined(MANUVR_STORAGE)
-#include <Platform/Targets/ESP32/ESP32Storage.h>
+//#include <Platform/Targets/ESP32/ESP32Storage.h>
 #endif
 
 
@@ -170,7 +170,7 @@ uint32_t epochTime() {
 * 2004-02-12T15:19:21+00:00
 */
 void currentDateTime(StringBuilder* target) {
-  if (target != nullptr) {
+  if (target) {
     target->concatf("%04d-%02d-%02dT", year(), month(), day());
     target->concatf("%02d:%02d:%02d+00:00", hour(), minute(), second());
   }

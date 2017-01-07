@@ -31,7 +31,7 @@ This file is meant to contain a set of common functions that are typically platf
 #include <Platform/Platform.h>
 
 #if defined(MANUVR_STORAGE)
-#include <Platform/Teensy3/TeensyStorage.h>
+#include <Platform/Targets/Teensy3/TeensyStorage.h>
 #endif
 
 #include <wiring.h>
