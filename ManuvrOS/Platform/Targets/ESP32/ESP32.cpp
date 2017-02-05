@@ -48,41 +48,42 @@ This file is meant to contain a set of common functions that are typically platf
 /*******************************************************************************
 * Randomness                                                                   *
 *******************************************************************************/
-volatile uint32_t next_random_int[PLATFORM_RNG_CARRY_CAPACITY];
+volatile uint32_t     randomness_pool[PLATFORM_RNG_CARRY_CAPACITY];
+volatile unsigned int _random_pool_r_ptr = 0;
+volatile unsigned int _random_pool_w_ptr = 0;
+long unsigned int rng_thread_id = 0;
 
 /**
 * Dead-simple interface to the RNG. Despite the fact that it is interrupt-driven, we may resort
 *   to polling if random demand exceeds random supply. So this may block until a random number
-*   is actually availible (next_random_int != 0).
+*   is actually availible (randomness_pool != 0).
 *
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
 uint32_t randomInt() {
-  uint32_t return_value = rand();
-  return return_value;
+  return randomness_pool[_random_pool_r_ptr++ % PLATFORM_RNG_CARRY_CAPACITY];
 }
+
 
 /**
-* Called by the RNG ISR to provide new random numbers.
-*
-* @param    nu_rnd The supplied random number.
-* @return   True if the RNG should continue supplying us, false if it should take a break until we need more.
+* This is a thread to keep the randomness pool flush.
 */
-volatile bool provide_random_int(uint32_t nu_rnd) {
-  for (uint8_t i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) {
-    if (next_random_int[i] == 0) {
-      next_random_int[i] = nu_rnd;
-      return (i == PLATFORM_RNG_CARRY_CAPACITY-1) ? false : true;
+static void* dev_urandom_reader(void*) {
+  unsigned int rng_level    = 0;
+  unsigned int needed_count = 0;
+
+  while (platform.platformState() <= MANUVR_INIT_STATE_NOMINAL) {
+    rng_level = _random_pool_w_ptr - _random_pool_r_ptr;
+    if (rng_level == PLATFORM_RNG_CARRY_CAPACITY) {
+      // We have filled our entropy pool. Sleep.
+      // TODO: Implement wakeThread() and this can go way higher.
+      sleep_millis(10);
+    }
+    else {
+      randomness_pool[_random_pool_w_ptr++ % PLATFORM_RNG_CARRY_CAPACITY] = *(0x3FF75144);  // 32-bit RNG data register.
     }
   }
-  return false;
-}
-
-/*
-* Init the RNG. Short and sweet.
-*/
-void init_rng() {
-  for (uint8_t i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) next_random_int[i] = 0;
+  return NULL;
 }
 
 
@@ -337,10 +338,12 @@ void ESP32Platform::reboot() {
 */
 int8_t ESP32Platform::platformPreInit(Argument* root_config) {
   ManuvrPlatform::platformPreInit(root_config);
+  for (uint8_t i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) randomness_pool[i] = 0;
   _alter_flags(true, DEFAULT_PLATFORM_FLAGS);
 
-  init_rng();
-  _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
+  if (createThread(&rng_thread_id, nullptr, dev_urandom_reader, nullptr)) {
+    _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
+  }
 
   if (init_rtc()) {
     _alter_flags(true, MANUVR_PLAT_FLAG_RTC_SET);
