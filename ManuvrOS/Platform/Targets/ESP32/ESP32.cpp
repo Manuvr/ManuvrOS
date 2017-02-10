@@ -30,6 +30,8 @@ This file is meant to contain a set of common functions that are typically platf
 #include <CommonConstants.h>
 #include <Platform/Platform.h>
 
+#include "driver/gpio.h"
+
 #if defined(MANUVR_STORAGE)
 //#include <Platform/Targets/ESP32/ESP32Storage.h>
 #endif

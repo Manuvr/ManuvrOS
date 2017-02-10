@@ -51,7 +51,18 @@
   #error You need to name the firmware by providing IDENTITY_STRING.
 #endif
 
+// How many random numbers should be cached? Must be > 0.
+#ifndef PLATFORM_RNG_CARRY_CAPACITY
+  #define PLATFORM_RNG_CARRY_CAPACITY 32
+#endif
+
+// How large a preallocation buffer should we keep?
+#ifndef EVENT_MANAGER_PREALLOC_COUNT
+  #define EVENT_MANAGER_PREALLOC_COUNT 8
+#endif
+
 // Debug support requires Console.
+// NOTE: If your Makefile passes the __MANUVR_DEBUG option, this will be enabled regardless.
 #if defined(__MANUVR_DEBUG) && !defined(MANUVR_CONSOLE_SUPPORT)
   #define MANUVR_CONSOLE_SUPPORT
 #endif

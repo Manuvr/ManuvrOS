@@ -86,29 +86,12 @@ endif
 # This project has a single source file.
 CPP_SRCS  = main.cpp
 
-# Supported transports...
-MANUVR_OPTIONS += -DMANUVR_STDIO
-MANUVR_OPTIONS += -DMANUVR_SUPPORT_SERIAL
-MANUVR_OPTIONS += -DMANUVR_SUPPORT_I2C
-#MANUVR_OPTIONS += -DMANUVR_SUPPORT_UDP
-MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
-
 # Options that build for certain threading models (if any).
 #MANUVR_OPTIONS += -D__MANUVR_FREERTOS
 MANUVR_OPTIONS += -D__MANUVR_LINUX
 
 # Wire and session protocols...
 #MANUVR_OPTIONS += -DMANUVR_SUPPORT_OSC
-MANUVR_OPTIONS += -DMANUVR_OVER_THE_WIRE
-#MANUVR_OPTIONS += -DMANUVR_SUPPORT_MQTT
-MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
-MANUVR_OPTIONS += -DMANUVR_CONSOLE_SUPPORT
-MANUVR_OPTIONS += -DMANUVR_GPS_PIPE
-
-# Options for various platform features.
-MANUVR_OPTIONS += -DMANUVR_STORAGE
-MANUVR_OPTIONS += -DMANUVR_CBOR
-MANUVR_OPTIONS += -DMANUVR_JSON
 
 # Since we are building on linux, we will have threading support via
 # pthreads.

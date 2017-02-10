@@ -1,0 +1,176 @@
+menu "Manuvr Configuration"
+
+choice MANUVR_PLATFORM
+  prompt "Platform wrapper"
+  config LINUX
+    bool "Linux"
+  config TEENSY3
+    bool "Teensy3.x"
+  config ESP32
+    bool "ESP32"
+  config ARDUINO
+    bool "Arduino"
+  config STM32F7
+    bool "STM32F7"
+  config BLIND
+    bool "Blind"
+endchoice
+
+
+config MANUVR_STORAGE
+    bool "Storage API"
+  default n
+  ---help---
+    Support runtime data persistence?
+
+config EVENT_MANAGER_PREALLOC_COUNT
+    int "Manuvr message preallocation size"
+  default 8
+  ---help---
+    How large a pool should we keep to cope with bursts of messages?
+
+config SCHEDULER_MAX_SKIP_BEFORE_RESET
+    int "Scheduler skips before reset"
+  default 6
+  ---help---
+    This is only useful for hung program recovery in the absence of
+    either a supported watchdog, or threads.
+
+
+config PLATFORM_RNG_CARRY_CAPACITY
+    int "RNG pool size"
+  default 32
+  ---help---
+    How many 32-bit random numbers should we have in our RNG pool?
+
+
+config MANUVR_HAS_CRYPT_WRAPPER
+    bool "Use cryptographic wrappers"
+  default n
+  ---help---
+    Should cryptographic wrappers be supported?
+
+config WITH_MBEDTLS
+    depends on MANUVR_HAS_CRYPT_WRAPPER
+    bool "Wrapper for mbedtls"
+  default n
+
+config WITH_BLIND_CRYPTO
+    depends on MANUVR_HAS_CRYPT_WRAPPER
+    bool "Blind crypto"
+  default n
+  ---help---
+    Platform cryptography peripherals require the cryptographic wrapper
+      to accept insertion of arbitrary algorithm support and runtime.
+
+
+menu "Protocol wrappers"
+config MANUVR_OVER_THE_WIRE
+    bool "Manuvr native"
+  default y
+  ---help---
+    Support Manuvr's native types and messages over the wire.
+
+config MANUVR_SUPPORT_MQTT
+    bool "MQTT Client"
+  default n
+  ---help---
+    Support MQTT client via Paho.
+
+config MANUVR_SUPPORT_COAP
+    bool "CoAP"
+  default n
+  ---help---
+    Support CoAP via Erbium.
+
+config MANUVR_CONSOLE_SUPPORT
+    bool "Console"
+  default y
+  ---help---
+    Support direct firmware console.
+
+endmenu
+
+
+menu "Transport wrappers"
+config MANUVR_STDIO
+    bool "STDIO"
+  default y
+  ---help---
+    Treat STDIO as a general stream-oriented transport.
+
+config MANUVR_SUPPORT_SERIAL
+    bool "Serial port"
+  default n
+  ---help---
+    Generalized serial port support.
+
+config MANUVR_SUPPORT_TCPSOCKET
+    bool "TCP"
+  default n
+  ---help---
+    Support TCP.
+
+config MANUVR_SUPPORT_UDP
+    bool "UDP"
+  default n
+  ---help---
+    Support UDP.
+
+endmenu
+
+
+menu "Modules"
+config MANUVR_SUPPORT_I2C
+    bool "I2C support"
+  default n
+  ---help---
+    Enable I2C API.
+
+config MANUVR_GPS_PIPE
+    bool "GPS ties"
+  default n
+  ---help---
+    Enabling this will allow a NEMA parser to be stacked onto a transport
+      and will confer certain capabilities that a platform may not otherwise have.
+endmenu
+
+
+menu "Serialization support"
+config MANUVR_CBOR
+    bool "Support CBOR"
+  default y
+  ---help---
+    Support CBOR.
+
+config MANUVR_JSON
+    bool "Support JSON"
+  default n
+  ---help---
+    Support JSON.
+endmenu
+
+
+menu "Debugging"
+config __MANUVR_DEBUG
+    bool "Debugging functions"
+  default y
+  ---help---
+    Enable runtime debugging.
+
+config __MANUVR_PIPE_DEBUG
+    depends on __MANUVR_DEBUG
+    bool "Debug pipes"
+  default n
+  ---help---
+    Debug pipes. Very dangerous.
+
+config __MANUVR_EVENT_PROFILER
+    depends on __MANUVR_DEBUG
+    bool "Profiling support"
+  default y
+  ---help---
+    Track message execution stats.
+
+endmenu
+endmenu
