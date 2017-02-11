@@ -38,8 +38,6 @@ limitations under the License.
   #include <DataStructures/StringBuilder.h>
   #include <EventReceiver.h>
 
-  #define SCHEDULER_MAX_SKIP_BEFORE_RESET    10  // Skipping this many loops will cause us to reboot.
-
   /*
   * These state flags are hosted by the EventReceiver. This may change in the future.
   * Might be too much convention surrounding their assignment across inherritence.

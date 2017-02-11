@@ -109,7 +109,6 @@ endif
 
 # Options for various security features.
 ifeq ($(SECURE),1)
-MANUVR_OPTIONS += -DWITH_MBEDTLS
 # The remaining lines are to prod header files in libraries.
 LIBS += $(OUTPUT_PATH)/libmbedtls.a
 LIBS += $(OUTPUT_PATH)/libmbedx509.a
@@ -127,8 +126,6 @@ endif
 
 # Debugging options...
 ifeq ($(DEBUG),1)
-MANUVR_OPTIONS += -D__MANUVR_DEBUG
-MANUVR_OPTIONS += -D__MANUVR_EVENT_PROFILER
 #MANUVR_OPTIONS += -D__MANUVR_PIPE_DEBUG
 #OPTIMIZATION    = -O0 -g
 # Options configured such that you can then...
@@ -161,6 +158,9 @@ all: tests
 
 tests: libs
 	$(MAKE) -C tests/
+
+menuconfig:
+	@echo '======================================================'
 
 examples: libs
 	$(CXX) -static -o barebones examples/main_template.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE

@@ -56,7 +56,6 @@ This is an example file for building firmware on linux. Anticipated target is a 
 * Kernel options.
 */
 #define MANUVR_PLATFORM_TIMER_PERIOD_MS   10    // What is the granularity of our scheduler?
-#define MAXIMUM_SEQUENTIAL_SKIPS          20    // How many scheduler skips are we willing to tolerate?
 
 
 /****************************************************************************************************

@@ -1,5 +1,18 @@
 menu "Manuvr Configuration"
 
+config IDENTITY_STRING
+    string "Identity string"
+  default "Manuvr"
+  ---help---
+    The firmware's name.
+
+config MANUVR_CONF_FILE
+    string "ManuvrConf.h path"
+  default "ManuvrConf.h"
+  ---help---
+    Path the project's ManuvrConf.h file.
+
+
 choice MANUVR_PLATFORM
   prompt "Platform wrapper"
   config LINUX
@@ -171,6 +184,14 @@ config __MANUVR_EVENT_PROFILER
   default y
   ---help---
     Track message execution stats.
+
+config DEFAULT_CLASS_VERBOSITY
+    depends on __MANUVR_DEBUG
+    int "Default module verbosity"
+  default 0
+  ---help---
+    Modules will be initialized with whatever verbosity level is given here.
+    Valid range is [0-7], with 0 being silent, and 7 logging everything.
 
 endmenu
 endmenu

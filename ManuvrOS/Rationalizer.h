@@ -39,8 +39,6 @@
 #define MANUVR_SEMVER_MINOR 3
 #define MANUVR_SEMVER_PATCH 0
 
-#include <ManuvrConf.h>
-
 /* Cryptographic stuff... */
 #include <Platform/Cryptographic/CryptOptUnifier.h>
 
@@ -59,6 +57,10 @@
 // How large a preallocation buffer should we keep?
 #ifndef EVENT_MANAGER_PREALLOC_COUNT
   #define EVENT_MANAGER_PREALLOC_COUNT 8
+#endif
+
+#ifndef MAXIMUM_SEQUENTIAL_SKIPS
+  #define MAXIMUM_SEQUENTIAL_SKIPS 20
 #endif
 
 // Debug support requires Console.
@@ -140,9 +142,6 @@
 */
 #if defined(__BUILD_HAS_ASYMMETRIC)
   #define __HAS_IDENT_CERT        // We support X509 identity.
-  #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
-    #define __HAS_IDENT_ONEID     // We support OneID's asymmetric identities.
-  #endif
 #endif   // __HAS_CRYPT_WRAPPER
 
 
