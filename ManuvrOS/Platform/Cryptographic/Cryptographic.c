@@ -19,7 +19,7 @@ limitations under the License.
 
 */
 
-#include "Cryptographic.h"
+#include "../Cryptographic.h"
 
 #if defined(__HAS_CRYPT_WRAPPER)
 

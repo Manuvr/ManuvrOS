@@ -24,6 +24,8 @@ This is the base class for a type transcriber.
 #ifndef __MANUVR_TYPE_TRANSCRIBER_H__
 #define __MANUVR_TYPE_TRANSCRIBER_H__
 
+#include <CommonConstants.h>
+
 #if defined(MANUVR_CBOR)
   #include <Types/cbor-cpp/cbor.h>
 

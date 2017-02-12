@@ -3,6 +3,7 @@
 
 #include <string.h>
 
+#include <CommonConstants.h>
 #include <EnumeratedTypeCodes.h>
 #include <Types/TypeTranscriber.h>
 

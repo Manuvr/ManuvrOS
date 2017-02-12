@@ -38,7 +38,7 @@ limitations under the License.
 * http://c-for-dummies.com/blog/?p=1359
 */
 int strcasestr(char *a, const char *b) {
-  char c;
+  char c = 0;
   while(*a && *b) {
     c = toupper(*a) - toupper(*b);
     if( c != 0 ) return(c);
