@@ -3,7 +3,7 @@
 *.o
 *.a
 *.cbor
-
+*.map
 manuvr
 
 doc/doxygen/

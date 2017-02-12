@@ -146,14 +146,14 @@ export MANUVR_PLATFORM = LINUX
 export ANALYZER_FLAGS
 
 export CFLAGS
-export CPP_FLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
+export CXXFLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
 
 export JSON=1
 
 .PHONY: all
 
 all: tests
-	$(CXX) -Wl,--gc-sections -static -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(CXX) -Wl,--gc-sections -static -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 	$(SZ) $(FIRMWARE_NAME)
 
 tests: libs
@@ -163,8 +163,8 @@ menuconfig:
 	@echo '======================================================'
 
 examples: libs
-	$(CXX) -static -o barebones examples/main_template.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
-	$(CXX) -static -o gpstest   examples/tcp-gps.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(CXX) -static -o barebones examples/main_template.cpp $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(CXX) -static -o gpstest   examples/tcp-gps.cpp $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 
 builddir:
 	mkdir -p $(OUTPUT_PATH)

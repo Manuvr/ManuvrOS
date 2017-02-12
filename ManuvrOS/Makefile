@@ -146,7 +146,7 @@ LIBNAME = libmanuvr.a
 all: $(LIBNAME)
 
 %.o : %.cpp
-	$(CXX) $(INCLUDES) $(CPP_FLAGS) -std=$(CPP_STANDARD) -nostdlib -c $< -o $@
+	$(CXX) $(INCLUDES) $(CXXFLAGS) -std=$(CPP_STANDARD) -nostdlib -c $< -o $@
 
 $(LIBNAME): setenvars $(OBJS)
 	$(MAKE) -C Platform/

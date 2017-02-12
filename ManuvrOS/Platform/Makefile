@@ -90,7 +90,7 @@ all:
 	@echo $(C_SRCS)
 	@echo $(CPP_SRCS)
 	@echo '======================================================'
-	$(CXX) -r $(INCLUDES) $(LOCAL_FLAGS) $(CPP_FLAGS) $(LIBS) $(C_SRCS) $(CPP_SRCS) -o Platform.o
+	$(CXX) -r $(INCLUDES) $(LOCAL_FLAGS) $(CXXFLAGS) $(LIBS) $(C_SRCS) $(CPP_SRCS) -o Platform.o
 
 
 clean:
