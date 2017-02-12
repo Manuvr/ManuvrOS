@@ -332,7 +332,7 @@ ManuvrMsg::ManuvrMsg(int16_t recurrence, uint32_t sch_period, bool ac, EventRece
 *   for in each Argument, so no need to worry about that here.
 */
 ManuvrMsg::~ManuvrMsg() {
-  #if defined(__MANUVR_EVENT_PROFILER)
+  #if defined(MANUVR_EVENT_PROFILER)
   clearProfilingData();
   #endif
   clearArgs();
@@ -771,7 +771,7 @@ char* ManuvrMsg::is_valid_argument_buffer(int len) {
 }
 
 
-#if defined(__MANUVR_DEBUG)
+#if defined(MANUVR_DEBUG)
 /**
 * Debug support method. This fxn is only present in debug builds.
 *
@@ -827,13 +827,13 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
   }
   output->concat("\n");
 }
-#endif  // __MANUVR_DEBUG
+#endif  // MANUVR_DEBUG
 
 
 /*******************************************************************************
 * Functions dealing with profiling this particular Msg.                   *
 *******************************************************************************/
-#if defined(__MANUVR_EVENT_PROFILER)
+#if defined(MANUVR_EVENT_PROFILER)
 
 /**
 * Prints details about the profiler data.
@@ -894,7 +894,7 @@ void ManuvrMsg::noteExecutionTime(uint32_t profile_start_time, uint32_t profile_
     prof_data->executions++;
   }
 }
-#endif // __MANUVR_EVENT_PROFILER
+#endif // MANUVR_EVENT_PROFILER
 
 
 

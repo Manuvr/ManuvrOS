@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
   // The first thing we should do: Instance a kernel.
   Kernel* kernel = new Kernel();
 
-  #if defined(__MANUVR_DEBUG)
+  #if defined(MANUVR_DEBUG)
     // spend time and memory measuring performance.
     kernel->profiler(true);
   #endif

@@ -165,28 +165,28 @@ endmenu
 
 
 menu "Debugging"
-config __MANUVR_DEBUG
+config MANUVR_DEBUG
     bool "Debugging functions"
   default y
   ---help---
     Enable runtime debugging.
 
-config __MANUVR_PIPE_DEBUG
-    depends on __MANUVR_DEBUG
+config MANUVR_PIPE_DEBUG
+    depends on MANUVR_DEBUG
     bool "Debug pipes"
   default n
   ---help---
     Debug pipes. Very dangerous.
 
-config __MANUVR_EVENT_PROFILER
-    depends on __MANUVR_DEBUG
+config MANUVR_EVENT_PROFILER
+    depends on MANUVR_DEBUG
     bool "Profiling support"
   default y
   ---help---
     Track message execution stats.
 
 config DEFAULT_CLASS_VERBOSITY
-    depends on __MANUVR_DEBUG
+    depends on MANUVR_DEBUG
     int "Default module verbosity"
   default 0
   ---help---

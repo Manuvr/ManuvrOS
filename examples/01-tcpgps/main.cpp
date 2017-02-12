@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
   // Pipe strategy planning...
   const uint8_t pipe_plan_gps[] = {1, 0};
 
-  #if defined(__MANUVR_DEBUG)
+  #if defined(MANUVR_DEBUG)
     // spend time and memory measuring performance.
     kernel->profiler(true);
   #endif

@@ -93,7 +93,7 @@ void XenoManuvrMessage::reclaimPreallocation(XenoMessage* obj) {
 
   if ((obj_addr < pre_max) && (obj_addr >= pre_min)) {
     // If we are in this block, it means obj was preallocated. wipe and reclaim it.
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
       StringBuilder local_log;
       local_log.concatf("reclaim via prealloc. addr: %p\n", obj_addr);
       Kernel::log(&local_log);
@@ -101,7 +101,7 @@ void XenoManuvrMessage::reclaimPreallocation(XenoMessage* obj) {
     obj->wipe();
   }
   else {
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
       StringBuilder local_log;
       local_log.concatf("reclaim via delete. addr: %p\n", obj_addr);
       Kernel::log(&local_log);
@@ -339,7 +339,7 @@ int XenoManuvrMessage::accumulate(unsigned char* buf, int buf_len){
       if (0 == XenoManuvrMessage::contains_sync_pattern(buf, 4)) {
         // Get the offset of the last instance in this sync-stream relative to (buf+0) (we already know there is at least one).
         int x = XenoManuvrMessage::locate_sync_break(buf+4, buf_len-4) + 4;
-        #ifdef __MANUVR_DEBUG
+        #ifdef MANUVR_DEBUG
           output.concatf("About to cull %d bytes of sync stream from the buffer..\n", x);
         #endif
         proc_state = XENO_MSG_PROC_STATE_SYNC_PACKET;  // Mark ourselves as a sync packet.
@@ -412,7 +412,7 @@ int XenoManuvrMessage::accumulate(unsigned char* buf, int buf_len){
     if (checksum_c == checksum_i) {
       // Checksum passes. Build the event.
       if (event) {
-        #ifdef __MANUVR_DEBUG
+        #ifdef MANUVR_DEBUG
         output.concat("XenoManuvrMessage::feedBuffer(): Ooops. Clobbered a runnable pointer. Expect leaks...\n");
         #endif
       }
@@ -440,7 +440,7 @@ int XenoManuvrMessage::accumulate(unsigned char* buf, int buf_len){
            c) NACK the message with a fail condition so he quits using that idiom.
         */
         proc_state = XENO_MSG_PROC_STATE_AWAITING_REAP | XENO_MSG_PROC_STATE_ERROR;
-        #ifdef __MANUVR_DEBUG
+        #ifdef MANUVR_DEBUG
           output.concatf("XenoManuvrMessage::feedBuffer(): Couldn't find a message definition for the code 0x%04x.\n", message_code);
         #endif
       }
@@ -448,7 +448,7 @@ int XenoManuvrMessage::accumulate(unsigned char* buf, int buf_len){
     else {
       // TODO: We might send a retry request at this point...
       proc_state = XENO_MSG_PROC_STATE_AWAITING_REAP | XENO_MSG_PROC_STATE_ERROR;
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
         output.concatf("XenoManuvrMessage::feedBuffer() Message failed to checksum. Got 0x%02x. Expected 0x%02x. \n", checksum_c, checksum_i);
       #endif
     }

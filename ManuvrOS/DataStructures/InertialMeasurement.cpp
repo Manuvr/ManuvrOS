@@ -65,7 +65,7 @@ void InertialMeasurement::wipe() {
 }
 
 
-#if defined(__MANUVR_DEBUG)
+#if defined(MANUVR_DEBUG)
 void InertialMeasurement::printDebug(StringBuilder* output) {
   output->concatf("Measurement taken at %uus\n", (unsigned long)read_time);
   output->concatf("  G: (%f, %f, %f) taken at %uus\n", (double)g_data.x, (double)g_data.y, (double)g_data.z);

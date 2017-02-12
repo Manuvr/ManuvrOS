@@ -26,7 +26,7 @@ void I2CAdapter::printHardwareState(StringBuilder* output) {
 
 // TODO: Inline this.
 int8_t I2CAdapter::generateStart() {
-  #ifdef __MANUVR_DEBUG
+  #ifdef MANUVR_DEBUG
   if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
   #endif
   if (! busOnline()) return -1;
@@ -38,7 +38,7 @@ int8_t I2CAdapter::generateStart() {
 
 // TODO: Inline this.
 int8_t I2CAdapter::generateStop() {
-  #ifdef __MANUVR_DEBUG
+  #ifdef MANUVR_DEBUG
   if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
   #endif
   return busOnline() ? 0 : -1;

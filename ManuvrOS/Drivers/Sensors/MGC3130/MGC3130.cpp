@@ -458,7 +458,7 @@ void MGC3130::dispatchGestureEvents() {
   }
   if (special) {
     // TODO: Not sure how to deal with this yet...
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     if (getVerbosity() > 3) {
       local_log.concatf("MGC3130 special code 0x08\n", special);
       Kernel::log(&local_log);
@@ -468,7 +468,7 @@ void MGC3130::dispatchGestureEvents() {
   }
   if (last_event) {
     // TODO: Not sure how to deal with this yet...
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     if (getVerbosity() > 3) {
       local_log.concatf("MGC3130 last_event 0x08\n", last_event);
       Kernel::log(&local_log);
@@ -642,7 +642,7 @@ int8_t MGC3130::io_op_callback(I2CBusOp* completed) {
     }
   }
   else{
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     if (getVerbosity() > 3) {
       local_log.concat("An i2c operation requested by the MGC3130 came back failed.\n");
       completed->printDebug(&local_log);

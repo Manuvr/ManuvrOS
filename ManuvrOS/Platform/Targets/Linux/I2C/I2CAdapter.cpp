@@ -30,7 +30,7 @@ bool switch_device(I2CAdapter* adapter, uint8_t nu_addr) {
     if (open_bus_handle < 0) {
       // If the bus is either uninitiallized or not idle, decline
       // to switch the device. Return false;
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
       Kernel::log("i2c bus is not online, so won't switch device. Failing....\n");
       #endif
       return return_value;
@@ -38,7 +38,7 @@ bool switch_device(I2CAdapter* adapter, uint8_t nu_addr) {
     else {
       while (adapter->busError() && (timeout > 0)) { timeout--; }
       if (adapter->busError()) {
-        #ifdef __MANUVR_DEBUG
+        #ifdef MANUVR_DEBUG
         Kernel::log("i2c bus was held for too long. Failing....\n");
         #endif
         return return_value;
@@ -49,7 +49,7 @@ bool switch_device(I2CAdapter* adapter, uint8_t nu_addr) {
         return_value = true;
       }
       else {
-        #ifdef __MANUVR_DEBUG
+        #ifdef MANUVR_DEBUG
         StringBuilder local_log;
         local_log.concatf("Failed to acquire bus access and/or talk to slave at %d.\n", nu_addr);
         Kernel::log(&local_log);
@@ -78,7 +78,7 @@ int8_t I2CAdapter::bus_init() {
   if (sprintf(filename, "/dev/i2c-%d", getAdapterId()) > 0) {
     open_bus_handle = open(filename, O_RDWR);
     if (open_bus_handle < 0) {
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
       if (getVerbosity() > 2) {
         local_log.concatf("Failed to open the i2c bus represented by %s.\n", filename);
         Kernel::log(&local_log);
@@ -89,7 +89,7 @@ int8_t I2CAdapter::bus_init() {
       busOnline(true);
     }
   }
-  #if defined(__MANUVR_DEBUG)
+  #if defined(MANUVR_DEBUG)
   else if (getVerbosity() > 2) {
     local_log.concatf("Somehow we failed to sprintf and build a filename to open i2c bus %d.\n", getAdapterId());
     Kernel::log(&local_log);
@@ -101,7 +101,7 @@ int8_t I2CAdapter::bus_init() {
 
 int8_t I2CAdapter::bus_deinit() {
   if (open_bus_handle >= 0) {
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     Kernel::log("Closing the open i2c bus...\n");
     #endif
     close(open_bus_handle);

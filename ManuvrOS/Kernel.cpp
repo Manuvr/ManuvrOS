@@ -189,7 +189,7 @@ Kernel::Kernel() : EventReceiver("Kernel") {
     preallocated.insert(&_preallocation_pool[i]);
   }
 
-  #if defined(__MANUVR_DEBUG)
+  #if defined(MANUVR_DEBUG)
     profiler(true);          // spend time and memory measuring performance.
   #else
     profiler(false);         // Turn off the profiler.
@@ -418,7 +418,7 @@ int8_t Kernel::staticRaiseEvent(ManuvrMsg* active_runnable) {
     return return_value;
   }
 
-  #if defined(__MANUVR_DEBUG)
+  #if defined(MANUVR_DEBUG)
     if (INSTANCE->getVerbosity() > 5) {
       StringBuilder output;
       output.concatf(
@@ -691,12 +691,12 @@ int8_t Kernel::procIdleFlags() {
 
     procCallBacks(active_runnable);
 
-    #if defined(__MANUVR_EVENT_PROFILER)
+    #if defined(MANUVR_EVENT_PROFILER)
       active_runnable->noteExecutionTime(profiler_mark_0, micros());
-    #endif  //__MANUVR_EVENT_PROFILER
+    #endif  //MANUVR_EVENT_PROFILER
 
     if (0 == activity_count) {
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
       if (getVerbosity() >= 3) local_log.concatf("\tDead event: %s\n", active_runnable->getMsgTypeString());
       #endif
       total_events_dead++;
@@ -707,7 +707,7 @@ int8_t Kernel::procIdleFlags() {
 
     switch (active_runnable->callbackOriginator()) {
       case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
-        #ifdef __MANUVR_DEBUG
+        #ifdef MANUVR_DEBUG
         if (getVerbosity() > 6) local_log.concatf("Recycling %s.\n", active_runnable->getMsgTypeString());
         #endif
         switch (validate_insertion(active_runnable)) {
@@ -728,7 +728,7 @@ int8_t Kernel::procIdleFlags() {
         //if (verbosity > 1) local_log.concatf("Kernel found a possible mistake. Unexpected return case from callback_proc.\n");
         // NOTE: No break;
       case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
-        #ifdef __MANUVR_DEBUG
+        #ifdef MANUVR_DEBUG
         //if (getVerbosity() > 6) local_log.concatf("Dropping %s after running.\n", active_runnable->getMsgTypeString());
         #endif
         // NOTE: No break;
@@ -747,7 +747,7 @@ int8_t Kernel::procIdleFlags() {
 
     total_events++;
 
-    #if defined(__MANUVR_EVENT_PROFILER)
+    #if defined(MANUVR_EVENT_PROFILER)
       // This is a stat-gathering block.
       if (_profiler_enabled()) {
         profiler_mark_3 = micros();
@@ -780,10 +780,10 @@ int8_t Kernel::procIdleFlags() {
 
         profiler_mark_2 = 0;  // Reset for next iteration.
       }
-    #endif  //__MANUVR_EVENT_PROFILER
+    #endif  //MANUVR_EVENT_PROFILER
 
     if (exec_queue.size() > 30) {
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
       local_log.concatf("Depth %10d \t %s\n", exec_queue.size(), ManuvrMsg::getMsgTypeString(msg_code_local));
       #endif
     }
@@ -829,7 +829,7 @@ int8_t Kernel::procIdleFlags() {
         platform.idleHook();
         break;
       case 1:
-        #ifdef __MANUVR_DEBUG
+        #ifdef MANUVR_DEBUG
           if (getVerbosity() > 6) Kernel::log("Kernel idle.\n");
         #endif
         // TODO: This would be the place to implement a CPU freq scaler.
@@ -877,9 +877,9 @@ void Kernel::profiler(bool enabled) {
   burden_of_specific = 0;
   insertion_denials  = 0;
 
-  #if defined(__MANUVR_EVENT_PROFILER)
+  #if defined(MANUVR_EVENT_PROFILER)
     while (event_costs.hasNext()) delete event_costs.dequeue();
-  #endif   // __MANUVR_EVENT_PROFILER
+  #endif   // MANUVR_EVENT_PROFILER
 }
 
 
@@ -920,7 +920,7 @@ void Kernel::printProfiler(StringBuilder* output) {
     }
     output->concatf("   CPU use by clock: %f\n", (double)cpu_usage());
 
-    #if defined(__MANUVR_EVENT_PROFILER)
+    #if defined(MANUVR_EVENT_PROFILER)
       TaskProfilerData *profiler_item;
       int stat_mode = event_costs.getPriority(0);
       int x = event_costs.size();
@@ -932,13 +932,13 @@ void Kernel::printProfiler(StringBuilder* output) {
         output->concatf("\t (%10d)\t", stat_mode);
         profiler_item->printDebug(output);
       }
-    #endif   // __MANUVR_EVENT_PROFILER
+    #endif   // MANUVR_EVENT_PROFILER
   }
   else {
     output->concat("-- Kernel profiler disabled.\n\n");
   }
 
-  #if defined(__MANUVR_EVENT_PROFILER)
+  #if defined(MANUVR_EVENT_PROFILER)
     if (schedules.size() > 0) {
       ManuvrMsg *current;
       output->concat("\n\t PID         Execd      total us   average    worst      best       last\n\t -----------------------------------------------------------------------------\n");
@@ -951,7 +951,7 @@ void Kernel::printProfiler(StringBuilder* output) {
         }
       }
     }
-  #endif   // __MANUVR_EVENT_PROFILER
+  #endif   // MANUVR_EVENT_PROFILER
 }
 
 
@@ -969,7 +969,7 @@ void Kernel::printScheduler(StringBuilder* output) {
     output->concatf("-- %u skips before fail-to-bootloader.\n", (unsigned long) MAXIMUM_SEQUENTIAL_SKIPS);
   }
 
-  #if defined(__MANUVR_DEBUG)
+  #if defined(MANUVR_DEBUG)
   int sched_it_count = schedules.size();
   for (int i = 0; i < sched_it_count; i++) {
     schedules.recycle()->printDebug(output);
@@ -1437,7 +1437,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
         break;
     #endif // MANUVR_STORAGE
 
-    #if defined(__MANUVR_DEBUG)
+    #if defined(MANUVR_DEBUG)
     case 'f':  // FPU benchmark
       {
         float a = 1.001;
@@ -1515,7 +1515,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
           break;
       }
       break;
-    #endif //__MANUVR_DEBUG
+    #endif //MANUVR_DEBUG
     default:
       EventReceiver::procDirectDebugInstruction(input);
       break;

@@ -188,7 +188,7 @@ void ManuvrPlatform::printDebug(StringBuilder* output) {
   }
 
   output->concat("--\n-- Capabilities:\n");
-  #if defined(__MANUVR_DEBUG)
+  #if defined(MANUVR_DEBUG)
     output->concat("--\t DEBUG build\n");
   #endif
   if (platform.hasThreads()) {

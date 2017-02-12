@@ -123,7 +123,7 @@ void I2CAdapter::printHardwareState(StringBuilder* output) {
 
 
 int8_t I2CAdapter::generateStart() {
-  #ifdef __MANUVR_DEBUG
+  #ifdef MANUVR_DEBUG
   if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStart()\n");
   #endif
   if (! busOnline()) return -1;
@@ -133,7 +133,7 @@ int8_t I2CAdapter::generateStart() {
 }
 
 int8_t I2CAdapter::generateStop() {
-  #ifdef __MANUVR_DEBUG
+  #ifdef MANUVR_DEBUG
   if (getVerbosity() > 6) Kernel::log("I2CAdapter::generateStop()\n");
   #endif
   if (! busOnline()) return -1;
@@ -151,7 +151,7 @@ int8_t I2CAdapter::generateStop() {
   */
   int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
     StringBuilder output;
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     if (getVerbosity() > 6) output.concatf("I2CBusOp::advance_operation(0x%08x): \t %s\t", status_reg, BusOp::getStateString(xfer_state));
     #endif
     switch (xfer_state) {
@@ -232,7 +232,7 @@ int8_t I2CAdapter::generateStop() {
         break;
       case XferState::COMPLETE:  // This operation is comcluded.
         if (getVerbosity() > 5) {
-          #ifdef __MANUVR_DEBUG
+          #ifdef MANUVR_DEBUG
           output.concatf("\t--- Interrupt following job (0x%08x)\n", status_reg);
           #endif
           printDebug(&output);
@@ -241,7 +241,7 @@ int8_t I2CAdapter::generateStop() {
         //Kernel::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, nullptr);   // Raise an event
         break;
       default:
-        #ifdef __MANUVR_DEBUG
+        #ifdef MANUVR_DEBUG
         if (getVerbosity() > 1) output.concatf("\t--- Something is bad wrong. Our xfer_state is %s\n", BusOp::getStateString(xfer_state));
         #endif
         abort(I2C_ERR_CODE_DEF_CASE);
@@ -250,7 +250,7 @@ int8_t I2CAdapter::generateStop() {
 
     if (getVerbosity() > 4) {
       if (getVerbosity() > 6) printDebug(&output);
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
       output.concatf("---> %s\n", BusOp::getStateString(xfer_state));
       #endif
     }

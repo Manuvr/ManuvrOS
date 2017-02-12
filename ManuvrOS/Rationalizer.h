@@ -72,14 +72,14 @@
 #endif
 
 // Debug support requires Console.
-// NOTE: If your Makefile passes the __MANUVR_DEBUG option, this will be enabled regardless.
-#if defined(__MANUVR_DEBUG) && !defined(MANUVR_CONSOLE_SUPPORT)
+// NOTE: If your Makefile passes the MANUVR_DEBUG option, this will be enabled regardless.
+#if defined(MANUVR_DEBUG) && !defined(MANUVR_CONSOLE_SUPPORT)
   #define MANUVR_CONSOLE_SUPPORT
 #endif
 
 // Use the build system to set default logging levels for modules.
 #if defined(MANUVR_CONSOLE_SUPPORT)
-  #if defined(__MANUVR_DEBUG)
+  #if defined(MANUVR_DEBUG)
     #define DEFAULT_CLASS_VERBOSITY    6
   #else
     #define DEFAULT_CLASS_VERBOSITY    4

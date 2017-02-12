@@ -181,7 +181,7 @@ int8_t ManuvrSerial::toCounterparty(StringBuilder* buf, int8_t mm) {
 
 int8_t ManuvrSerial::init() {
   uint32_t xport_state_modifier = MANUVR_XPORT_FLAG_CONNECTED | MANUVR_XPORT_FLAG_LISTENING | MANUVR_XPORT_FLAG_INITIALIZED;
-  #ifdef __MANUVR_DEBUG
+  #ifdef MANUVR_DEBUG
     if (getVerbosity() > 4) local_log.concatf("Resetting port %s...\n", _addr);
   #endif
   bytes_sent         = 0;
@@ -222,14 +222,14 @@ int8_t ManuvrSerial::init() {
 
     _sock = open(_addr, _options);
     if (_sock == -1) {
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
         if (getVerbosity() > 1) local_log.concatf("Unable to open port: (%s)\n", _addr);
         flushLocalLog();
       #endif
       unset_xport_state(xport_state_modifier);
       return -1;
     }
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
       if (getVerbosity() > 4) local_log.concatf("Opened port (%s) at %d\n", _addr, _baud_rate);
     #endif
     set_xport_state(MANUVR_XPORT_FLAG_INITIALIZED);
@@ -252,14 +252,14 @@ int8_t ManuvrSerial::init() {
       initialized(true);
       connected(true);
       listening(true);
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
         if (getVerbosity() > 6) local_log.concatf("Port opened, and handler bound.\n");
-      #endif //__MANUVR_DEBUG
+      #endif //MANUVR_DEBUG
     }
     else {
       unset_xport_state(xport_state_modifier);
       initialized(false);
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
         if (getVerbosity() > 1) local_log.concatf("Failed to tcsetattr...\n");
       #endif
     }
@@ -347,7 +347,7 @@ int8_t ManuvrSerial::read_port() {
     #endif
   }
   else {
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     if (getVerbosity() > 5) local_log.concat("Somehow we are trying to read a port that is not marked as open.\n");
     flushLocalLog();
     #endif
@@ -375,7 +375,7 @@ bool ManuvrSerial::write_port(unsigned char* out, int out_len) {
 
     #elif defined (__MANUVR_LINUX) // Linux
       if (_sock == -1) {
-        #ifdef __MANUVR_DEBUG
+        #ifdef MANUVR_DEBUG
           if (getVerbosity() > 2) {
             local_log.concatf("Unable to write to transport: %s\n", _addr);
             Kernel::log(&local_log);

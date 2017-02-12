@@ -27,7 +27,7 @@ This is a container class for a single IMU measurement frame.
 #include <inttypes.h>
 #include "Vector3.h"
 
-#if defined(__MANUVR_DEBUG)
+#if defined(MANUVR_DEBUG)
 #include "StringBuilder.h"
 #endif
 
@@ -48,7 +48,7 @@ class InertialMeasurement {
 
     void set(Vector3<float>*, Vector3<float>*, Vector3<float>*, float);
     void wipe();
-    #if defined(__MANUVR_DEBUG)
+    #if defined(MANUVR_DEBUG)
       void printDebug(StringBuilder* output);
     #endif
 

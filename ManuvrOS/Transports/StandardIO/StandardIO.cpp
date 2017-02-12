@@ -147,7 +147,7 @@ int8_t StandardIO::listen() {
 
 // TODO: Perhaps reset the terminal?
 int8_t StandardIO::reset() {
-  #if defined(__MANUVR_DEBUG)
+  #if defined(MANUVR_DEBUG)
     if (getVerbosity() > 3) local_log.concatf("StandardIO initialized.\n");
   #endif
   initialized(true);

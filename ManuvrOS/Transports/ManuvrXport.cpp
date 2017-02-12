@@ -349,17 +349,17 @@ int8_t ManuvrXport::notify(ManuvrMsg* active_event) {
       if (connected()) {
         StringBuilder* temp_sb;
         if (0 == active_event->getArgAs(&temp_sb)) {
-          #ifdef __MANUVR_DEBUG
+          #ifdef MANUVR_DEBUG
           if (getVerbosity() > 3) local_log.concatf("We about to print %d bytes to the transport.\n", temp_sb->length());
           #endif
           toCounterparty(temp_sb, MEM_MGMT_RESPONSIBLE_CREATOR);
         }
-        #ifdef __MANUVR_DEBUG
+        #ifdef MANUVR_DEBUG
         else if (getVerbosity() > 6) local_log.concat("Ignoring a broadcast that wasn't a StringBuilder.\n");
         #endif
       }
       else {
-        #ifdef __MANUVR_DEBUG
+        #ifdef MANUVR_DEBUG
         if (getVerbosity() > 3) local_log.concat("Session is chatting, but we don't appear to have a connection.\n");
         #endif
       }
@@ -377,7 +377,7 @@ int8_t ManuvrXport::notify(ManuvrMsg* active_event) {
     case MANUVR_MSG_XPORT_QUEUE_RDY:
     case MANUVR_MSG_XPORT_CB_QUEUE_RDY:
     case MANUVR_MSG_XPORT_IDENTITY:
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
       if (getVerbosity() > 3) {
         local_log.concatf("Transport %s received an event that was addressed to it, but is not yet handled.\n", getReceiverName());
         active_event->printDebug(&local_log);

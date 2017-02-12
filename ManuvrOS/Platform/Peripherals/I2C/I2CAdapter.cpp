@@ -158,13 +158,13 @@ void I2CAdapter::reclaim_queue_item(I2CBusOp* op) {
 int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
 	int8_t return_value = I2C_ERR_SLAVE_NO_ERROR;
 	if (slave == nullptr) {
-	  #if defined(__MANUVR_DEBUG)
+	  #if defined(MANUVR_DEBUG)
 		Kernel::log("Slave is invalid.\n");
 		#endif
 		return_value = I2C_ERR_SLAVE_INVALID;
 	}
 	if (dev_list.contains(slave)) {    // Check for pointer eqivillence.
-	  #if defined(__MANUVR_DEBUG)
+	  #if defined(MANUVR_DEBUG)
 		Kernel::log("Slave device exists.\n");
 		#endif
 		return_value = I2C_ERR_SLAVE_EXISTS;
@@ -173,7 +173,7 @@ int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
 		if (slave->assignBusInstance((I2CAdapter*) this)) {
 			int slave_index = dev_list.insert(slave);
 			if (slave_index == -1) {
-			  #if defined(__MANUVR_DEBUG)
+			  #if defined(MANUVR_DEBUG)
 				Kernel::log("Failed to insert somehow. Disassigning...\n");
 				#endif
 				slave->disassignBusInstance();
@@ -181,14 +181,14 @@ int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
 			}
 		}
 		else {
-		  #if defined(__MANUVR_DEBUG)
+		  #if defined(MANUVR_DEBUG)
 			Kernel::log("Op would clobber bus instance.\n");
 			#endif
 			return_value = I2C_ERR_SLAVE_ASSIGN_CLOB;
 		}
 	}
 	else {
-	  #if defined(__MANUVR_DEBUG)
+	  #if defined(MANUVR_DEBUG)
 		Kernel::log("Op would cause address collision with another slave device.\n");
 		#endif
 		return_value = I2C_ERR_SLAVE_COLLISION;
@@ -289,7 +289,7 @@ int8_t I2CAdapter::io_op_callback(BusOp* _op) {
 		  }
 		  else {
 		    _er_clear_flag(I2C_BUS_FLAG_PINGING);
-		    #if defined(__MANUVR_DEBUG)
+		    #if defined(MANUVR_DEBUG)
 		    if (getVerbosity() > 3) local_log.concat("Concluded i2c ping sweep.");
 		    #endif
 		  }
@@ -382,7 +382,7 @@ int8_t I2CAdapter::advance_work_queue() {
           _total_xfers++;
     			if (current_job->hasFault()) {
             _failed_xfers++;
-    			  #if defined(__MANUVR_DEBUG)
+    			  #if defined(MANUVR_DEBUG)
     			  if (getVerbosity() > 3) {
               local_log.concat("Destroying failed job.\n");
               current_job->printDebug(&local_log);

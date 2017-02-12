@@ -325,7 +325,7 @@ void LinuxStorage::procDirectDebugInstruction(StringBuilder *input) {
       }
       break;
 
-    #if defined(__MANUVR_DEBUG)
+    #if defined(MANUVR_DEBUG)
       case 'B':   // Dump binary representation.
         local_log.concat("Dump:\n");
         _disk_buffer.printDebug(&local_log);

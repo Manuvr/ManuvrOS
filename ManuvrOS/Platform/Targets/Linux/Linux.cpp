@@ -107,7 +107,7 @@ void sig_handler(int signo) {
     case SIGUSR2:
       break;
     default:
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
       {
         StringBuilder _log;
         _log.concatf("Unhandled signal: %d", signo);

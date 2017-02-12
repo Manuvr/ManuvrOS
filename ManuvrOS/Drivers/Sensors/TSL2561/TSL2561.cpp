@@ -188,7 +188,7 @@ SensorError TSL2561::set_power_mode(uint8_t nu__pwr_mode) {
     default:
       break;
   }
-  #if defined(__MANUVR_DEBUG)
+  #if defined(MANUVR_DEBUG)
     Kernel::log("TSL2561 Power mode set. \n");
   #endif
   return SensorError::NO_ERROR;

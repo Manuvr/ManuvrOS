@@ -253,7 +253,7 @@ void TeensyStorage::procDirectDebugInstruction(StringBuilder *input) {
       }
       break;
 
-    #if defined(__MANUVR_DEBUG)
+    #if defined(MANUVR_DEBUG)
       case 'B':   // Dump binary representation.
         local_log.concat("EEPROM Dump:\n");
         for (uint16_t i = 0; i < EEPROM.length(); i+=32) {

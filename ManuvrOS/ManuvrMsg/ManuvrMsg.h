@@ -116,7 +116,7 @@ class ManuvrMsg {
     int8_t repurpose(uint16_t code, EventReceiver* cb);
     inline int8_t repurpose(uint16_t code) { return repurpose(code, nullptr); };
 
-    #if defined(__MANUVR_DEBUG)
+    #if defined(MANUVR_DEBUG)
       void printDebug(StringBuilder*);
     #endif
 
@@ -354,7 +354,7 @@ class ManuvrMsg {
     };
 
 
-    #if defined(__MANUVR_EVENT_PROFILER)
+    #if defined(MANUVR_EVENT_PROFILER)
       /**
       * Asks if this schedule is being profiled...
       *
@@ -402,7 +402,7 @@ class ManuvrMsg {
     uint32_t       _sched_period       = 0;        // How often does this schedule execute?
     uint32_t       _sched_ttw          = 0;        // How much longer until the schedule fires?
 
-    #if defined(__MANUVR_EVENT_PROFILER)
+    #if defined(MANUVR_EVENT_PROFILER)
     TaskProfilerData* prof_data = nullptr;  // If this schedule is being profiled, the ref will be here.
     #endif
 

@@ -561,7 +561,7 @@ int8_t AudioRouter::notify(ManuvrMsg* active_event) {
 
     case VIAM_SONUS_MSG_GROUP_CHANNELS:
     case VIAM_SONUS_MSG_UNGROUP_CHANNELS:
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
         local_log.concat("Was passed an event that we should be handling, but are not yet:\n");
         active_event->printDebug(&local_log);
       #endif

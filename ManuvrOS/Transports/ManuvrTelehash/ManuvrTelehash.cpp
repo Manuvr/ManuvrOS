@@ -347,7 +347,7 @@ int8_t ManuvrTelehash::read_port() {
 */
 bool ManuvrTelehash::write_port(unsigned char* out, int out_len) {
   if (_sock == -1) {
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
       if (getVerbosity() > 2) {
         local_log.concatf("Unable to write to socket at: (%s:%d)\n", _addr, _port_number);
         Kernel::log(&local_log);
@@ -362,7 +362,7 @@ bool ManuvrTelehash::write_port(unsigned char* out, int out_len) {
     if (bytes_written == out_len) {
       return true;
     }
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
       Kernel::log("Failed to send bytes to client");
     #endif
   }
@@ -376,7 +376,7 @@ bool ManuvrTelehash::write_port(unsigned char* out, int out_len) {
 */
 bool ManuvrTelehash::write_port(int sock, unsigned char* out, int out_len) {
   if (sock == -1) {
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
       if (getVerbosity() > 2) {
         local_log.concatf("Unable to write to socket at: (%s:%d)\n", _addr, _port_number);
         Kernel::log(&local_log);
@@ -391,7 +391,7 @@ bool ManuvrTelehash::write_port(int sock, unsigned char* out, int out_len) {
     if (bytes_written == out_len) {
       return true;
     }
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
       Kernel::log("Failed to send bytes to client");
     #endif
   }

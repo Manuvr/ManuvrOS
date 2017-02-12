@@ -126,7 +126,7 @@ endif
 
 # Debugging options...
 ifeq ($(DEBUG),1)
-#MANUVR_OPTIONS += -D__MANUVR_PIPE_DEBUG
+#MANUVR_OPTIONS += -DMANUVR_PIPE_DEBUG
 #OPTIMIZATION    = -O0 -g
 # Options configured such that you can then...
 # valgrind --tool=callgrind ./manuvr
