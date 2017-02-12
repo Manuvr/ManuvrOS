@@ -30,7 +30,6 @@
 *   __BUILD_HAS_DIGEST
 *
 * __HAS_IDENT_CERT
-* __HAS_IDENT_ONEID
 *
 */
 
@@ -39,14 +38,23 @@
 #define MANUVR_SEMVER_MINOR 3
 #define MANUVR_SEMVER_PATCH 0
 
+/* To override the defaults, supply this at build time. */
+#if defined(MANUVR_CONF_FILE)
+  #include MANUVR_CONF_FILE
+#else
+  #include "ManuvrConf.h"
+#endif
+
 /* Cryptographic stuff... */
 #include <Platform/Cryptographic/CryptOptUnifier.h>
 
 #ifndef __MANUVR_OPTION_RATIONALIZER_H__
 #define __MANUVR_OPTION_RATIONALIZER_H__
 
-#ifndef IDENTITY_STRING
-  #error You need to name the firmware by providing IDENTITY_STRING.
+// This is the string that identifies this Manuvrable to other Manuvrables.
+//   In MHB's case, this value will select the mEngine.
+#ifndef FIRMWARE_NAME
+  #error You need to name the firmware by providing FIRMWARE_NAME.
 #endif
 
 // How many random numbers should be cached? Must be > 0.
@@ -67,6 +75,17 @@
 // NOTE: If your Makefile passes the __MANUVR_DEBUG option, this will be enabled regardless.
 #if defined(__MANUVR_DEBUG) && !defined(MANUVR_CONSOLE_SUPPORT)
   #define MANUVR_CONSOLE_SUPPORT
+#endif
+
+// Use the build system to set default logging levels for modules.
+#if defined(MANUVR_CONSOLE_SUPPORT)
+  #if defined(__MANUVR_DEBUG)
+    #define DEFAULT_CLASS_VERBOSITY    6
+  #else
+    #define DEFAULT_CLASS_VERBOSITY    4
+  #endif
+#else
+  #define DEFAULT_CLASS_VERBOSITY      0
 #endif
 
 
@@ -90,10 +109,16 @@
   #define __BUILD_HAS_THREADS
 #elif defined(__MANUVR_CONTIKI)
   //#pragma message "Building with no threading support."
+  #define MANUVR_PLATFORM_TIMER_PERIOD_MS 1
 #else
   //#pragma message "Building with no threading support."
+  #define MANUVR_PLATFORM_TIMER_PERIOD_MS 1
 #endif
 
+// What is the granularity of our scheduler?
+#ifndef MANUVR_PLATFORM_TIMER_PERIOD_MS
+  #define MANUVR_PLATFORM_TIMER_PERIOD_MS 10
+#endif
 
 /* Encodings... */
 // CBOR
@@ -118,7 +143,6 @@
 
 
 /* BufferPipe support... */
-
 
 /* IP support... */
 // LWIP

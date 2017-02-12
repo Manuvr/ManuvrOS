@@ -348,7 +348,7 @@ int8_t ManuvrPlatform::bootstrap() {
 
   if (nullptr == _self) {
     // If we have no other conception of "self", invent one.
-    _self = new IdentityUUID(IDENTITY_STRING);
+    _self = new IdentityUUID(FIRMWARE_NAME);
     if (_self) {
       _self->isSelf(true);
     }

@@ -42,17 +42,6 @@ Apart from including the user-suppied configuration header, there
   #define LOG_DEBUG   7    /* debug-level messages */
 
 
-  #if defined(MANUVR_CONSOLE_SUPPORT)
-    #if defined(__MANUVR_DEBUG)
-      #define DEFAULT_CLASS_VERBOSITY    6
-    #else
-      #define DEFAULT_CLASS_VERBOSITY    4
-    #endif
-  #else
-    #define DEFAULT_CLASS_VERBOSITY      0
-  #endif
-
-
   /*
   * These are defines for const char* that are commonly used.
   * We are collecting them here so that future additions to the
@@ -86,12 +75,6 @@ Apart from including the user-suppied configuration header, there
 
   #define SENSOR_DATUM_NOT_FOUND   "Sensor datum not found"
 
-
-  #if defined(MANUVR_CONF_FILE)
-    #include MANUVR_CONF_FILE
-  #else
-    #include "ManuvrConf.h"
-  #endif
 
   #include <Rationalizer.h>
 

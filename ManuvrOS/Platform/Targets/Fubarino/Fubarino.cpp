@@ -269,7 +269,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
 */
 int8_t ManuvrPlatform::platformPostInit() {
   if (nullptr == _self) {
-    _self = new IdentityUUID(IDENTITY_STRING);
+    _self = new IdentityUUID(FIRMWARE_NAME);
   }
   attachCoreTimerService(timerCallbackScheduler);
   globalIRQEnable();

@@ -116,7 +116,7 @@ For debuggability, the transport has a special mode for acting as a debug
 */
 ManuvrXport::ManuvrXport(const char* nom) : EventReceiver(nom), BufferPipe() {
   // No need to burden a client class with this.
-  _xport_mtu = PROTOCOL_MTU;
+  _xport_mtu = MANUVR_PROTO_MTU;
 
   // Transports are all terminal.
   _bp_set_flag(BPIPE_FLAG_IS_TERMINUS, true);

@@ -1,7 +1,7 @@
 menu "Manuvr Configuration"
 
-config IDENTITY_STRING
-    string "Identity string"
+config FIRMWARE_NAME
+    string "Firmware name"
   default "Manuvr"
   ---help---
     The firmware's name.

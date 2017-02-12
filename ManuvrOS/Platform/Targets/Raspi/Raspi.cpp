@@ -339,7 +339,7 @@ int8_t Raspi::platformPreInit(Argument* root_config) {
 int8_t Raspi::platformPostInit() {
   LinuxPlatform::platformPostInit();
   if (nullptr == _self) {
-    _self = new IdentityUUID(IDENTITY_STRING);
+    _self = new IdentityUUID(FIRMWARE_NAME);
   }
   return 0;
 }

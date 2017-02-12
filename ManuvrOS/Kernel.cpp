@@ -1505,7 +1505,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
           break;
 
         case 8:
-          local_log.concatf("\n-- %s\n", IDENTITY_STRING);
+          local_log.concatf("\n-- %s\n", FIRMWARE_NAME);
           local_log.concatf("-- Ver/Build date:     %s   %s %s\n", VERSION_STRING, __DATE__, __TIME__);
           local_log.concatf("-- Manuvr version:     %d.%d.%d\n\n", MANUVR_SEMVER_MAJOR, MANUVR_SEMVER_MINOR, MANUVR_SEMVER_PATCH);
           break;
