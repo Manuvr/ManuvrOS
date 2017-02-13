@@ -29,12 +29,17 @@ This file is meant to contain a set of common functions that are typically platf
 
 #include <CommonConstants.h>
 #include <Platform/Platform.h>
+#include "ESP32.h"
 
 #include "driver/gpio.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #if defined(MANUVR_STORAGE)
 //#include <Platform/Targets/ESP32/ESP32Storage.h>
 #endif
+
+volatile PlatformGPIODef gpio_pins[PLATFORM_GPIO_PIN_COUNT];
 
 
 /****************************************************************************************************
@@ -70,23 +75,23 @@ uint32_t randomInt() {
 /**
 * This is a thread to keep the randomness pool flush.
 */
-static void* dev_urandom_reader(void*) {
+static void dev_urandom_reader(void* unused_param) {
   unsigned int rng_level    = 0;
   unsigned int needed_count = 0;
 
-  while (platform.platformState() <= MANUVR_INIT_STATE_NOMINAL) {
+  while (1) {
     rng_level = _random_pool_w_ptr - _random_pool_r_ptr;
     if (rng_level == PLATFORM_RNG_CARRY_CAPACITY) {
       // We have filled our entropy pool. Sleep.
-      // TODO: Implement wakeThread() and this can go way higher.
-      sleep_millis(10);
+      vTaskDelay(10 / portTICK_PERIOD_MS);
     }
     else {
-      randomness_pool[_random_pool_w_ptr++ % PLATFORM_RNG_CARRY_CAPACITY] = *(0x3FF75144);  // 32-bit RNG data register.
+      randomness_pool[_random_pool_w_ptr++ % PLATFORM_RNG_CARRY_CAPACITY] = *((uint32_t*) 0x3FF75144);  // 32-bit RNG data register.
     }
   }
-  return NULL;
 }
+
+
 
 
 /*******************************************************************************
@@ -174,8 +179,6 @@ uint32_t epochTime() {
 */
 void currentDateTime(StringBuilder* target) {
   if (target) {
-    target->concatf("%04d-%02d-%02dT", year(), month(), day());
-    target->concatf("%02d:%02d:%02d+00:00", hour(), minute(), second());
   }
 }
 
@@ -207,13 +210,12 @@ void gpioSetup() {
 
 
 int8_t gpioDefine(uint8_t pin, int mode) {
-  pinMode(pin, mode);
   return 0;
 }
 
 
 void unsetPinIRQ(uint8_t pin) {
-  detachInterrupt(pin);
+  //detachInterrupt(pin);
 }
 
 
@@ -226,29 +228,27 @@ int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrMsg* isr_event) {
 * Pass the function pointer
 */
 int8_t setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn) {
-  attachInterrupt(pin, fxn, condition);
+  //attachInterrupt(pin, fxn, condition);
   return 0;
 }
 
 
 int8_t setPin(uint8_t pin, bool val) {
-  digitalWrite(pin, val);
   return 0;
 }
 
 
 int8_t readPin(uint8_t pin) {
-  return digitalRead(pin);
+  return 0;
 }
 
 
 int8_t setPinAnalog(uint8_t pin, int val) {
-  analogWrite(pin, val);
   return 0;
 }
 
 int readPinAnalog(uint8_t pin) {
-  return analogRead(pin);
+  return 0;
 }
 
 
@@ -297,7 +297,6 @@ void ESP32Platform::seppuku() {
 * Never returns.
 */
 void ESP32Platform::jumpToBootloader() {
-  cli();
   while(true);
 }
 
@@ -311,7 +310,6 @@ void ESP32Platform::jumpToBootloader() {
 * Never returns.
 */
 void ESP32Platform::hardwareShutdown() {
-  cli();
   while(true);
 }
 
@@ -320,7 +318,6 @@ void ESP32Platform::hardwareShutdown() {
 * Never returns.
 */
 void ESP32Platform::reboot() {
-  cli();
   while(true);
 }
 
@@ -343,7 +340,8 @@ int8_t ESP32Platform::platformPreInit(Argument* root_config) {
   for (uint8_t i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) randomness_pool[i] = 0;
   _alter_flags(true, DEFAULT_PLATFORM_FLAGS);
 
-  if (createThread(&rng_thread_id, nullptr, dev_urandom_reader, nullptr)) {
+  rng_thread_id = xTaskCreate(&dev_urandom_reader, "urandom_reader", 512, nullptr, 1, nullptr);
+  if (rng_thread_id) {
     _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
   }
 

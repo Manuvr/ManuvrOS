@@ -23,6 +23,17 @@ limitations under the License.
 #ifndef __PLATFORM_ESP32_H__
 #define __PLATFORM_ESP32_H__
 
+#define PLATFORM_GPIO_PIN_COUNT  32
+
+typedef struct __platform_exti_def {
+  ManuvrMsg* event;
+  FxnPointer fxn;
+  uint8_t         pin;
+  uint8_t         condition;
+} PlatformEXTIDef;
+
+
+
 class ESP32Platform : public ManuvrPlatform {
   public:
     inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
