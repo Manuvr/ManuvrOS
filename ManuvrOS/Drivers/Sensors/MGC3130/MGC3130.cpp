@@ -484,8 +484,28 @@ void MGC3130::dispatchGestureEvents() {
 /****************************************************************************************************
 * These are overrides from I2CDevice.                                                               *
 ****************************************************************************************************/
+/**
+* Called prior to the given bus operation beginning.
+* Returning 0 will allow the operation to continue.
+* Returning anything else will fail the operation with IO_RECALL.
+*   Operations failed this way will have their callbacks invoked as normal.
+*
+* @param  _op  The bus operation that was completed.
+* @return 0 to run the op, or non-zero to cancel it.
+*/
+int8_t MGC3130::io_op_callahead(BusOp* _op) {
+  if (!readPin(_ts_pin)) {   // Only initiate a read if there is something there.
+    unsetPinIRQ(_ts_pin);
+    gpioDefine(_ts_pin, OUTPUT);
+    are_we_holding_ts(true);
+    return 0;
+  }
+  return -1;
+}
 
-int8_t MGC3130::io_op_callback(I2CBusOp* completed) {
+
+int8_t MGC3130::io_op_callback(BusOp* _op) {
+  I2CBusOp* completed = (I2CBusOp*) _op;
   gpioDefine(_ts_pin, INPUT_PULLUP);
   are_we_holding_ts(false);
   setPinFxn(_ts_pin, FALLING, mgc3130_isr_check);
@@ -651,18 +671,6 @@ int8_t MGC3130::io_op_callback(I2CBusOp* completed) {
     #endif
   }
   return 0;
-}
-
-
-/* If your device needs something to happen immediately prior to bus I/O... */
-bool MGC3130::operationCallahead(I2CBusOp* op) {
-  if (!readPin(_ts_pin)) {   // Only initiate a read if there is something there.
-    unsetPinIRQ(_ts_pin);
-    gpioDefine(_ts_pin, OUTPUT);
-    are_we_holding_ts(true);
-    return true;
-  }
-  return false;
 }
 
 

@@ -341,13 +341,14 @@ int8_t I2CDeviceWithRegisters::writeDirtyRegisters(void) {
 }
 
 
-int8_t I2CDeviceWithRegisters::io_op_callahead(I2CBusOp* op) {
+int8_t I2CDeviceWithRegisters::io_op_callahead(BusOp* op) {
   // Default is to allow the transfer.
   return 0;
 }
 
 
-int8_t I2CDeviceWithRegisters::io_op_callback(I2CBusOp* completed) {
+int8_t I2CDeviceWithRegisters::io_op_callback(BusOp* _op) {
+  I2CBusOp* completed = (I2CBusOp*) _op;
   #ifdef MANUVR_DEBUG
   StringBuilder temp; //("Default callback for registers!\n");
   #endif
@@ -391,11 +392,4 @@ int8_t I2CDeviceWithRegisters::io_op_callback(I2CBusOp* completed) {
     if (temp.length() > 0) {    Kernel::log(&temp);  }
   #endif
   return 0;
-}
-
-
-/* If your device needs something to happen immediately prior to bus I/O... */
-bool I2CDeviceWithRegisters::operationCallahead(I2CBusOp* op) {
-  // Default behavior is to return true, to tell the bus "Go Ahead".
-  return true;
 }

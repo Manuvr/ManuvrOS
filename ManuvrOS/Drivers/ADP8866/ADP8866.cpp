@@ -61,11 +61,18 @@ void ADP8866::_isr_fxn(void) {
 */
 
 
-
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
 /*
-* Constructor. Takes i2c address as argument.
+* Constructor. Takes pin numbers as arguments.
 */
-ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin, uint8_t addr) : EventReceiver("ADP8866"), I2CDeviceWithRegisters(addr) {
+ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin) : EventReceiver("ADP8866"), I2CDeviceWithRegisters(ADP8866_I2CADDR) {
   _er_clear_flag(ADP8866_FLAG_INIT_COMPLETE);
   if (ADP8866::INSTANCE) {
     ADP8866::INSTANCE = this;
@@ -192,12 +199,15 @@ int8_t ADP8866::init() {
 }
 
 
-/****************************************************************************************************
-* These are overrides from I2CDeviceWithRegisters.                                                  *
-****************************************************************************************************/
+/*******************************************************************************
+* ___     _       _                      These members are mandatory overrides
+*  |   / / \ o   | \  _     o  _  _      for implementing I/O callbacks. They
+* _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
+*******************************************************************************/
 
-int8_t ADP8866::io_op_callback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::io_op_callback(completed);
+int8_t ADP8866::io_op_callback(BusOp* _op) {
+  I2CBusOp* completed = (I2CBusOp*) _op;
+  I2CDeviceWithRegisters::io_op_callback(_op);
 
   DeviceRegister *temp_reg = getRegisterByBaseAddress(completed->sub_addr);
   switch (completed->sub_addr) {
@@ -331,7 +341,6 @@ int8_t ADP8866::io_op_callback(I2CBusOp* completed) {
 * Dump this item to the dev log.
 */
 void ADP8866::printDebug(StringBuilder* temp) {
-  if (nullptr == temp) return;
   EventReceiver::printDebug(temp);
   I2CDeviceWithRegisters::printDebug(temp);
   temp->concatf("\tinit_complete:      %s\n", _er_flag(ADP8866_FLAG_INIT_COMPLETE) ? "yes" :"no");

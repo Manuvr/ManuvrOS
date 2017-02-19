@@ -270,9 +270,6 @@ This file is the tortured result of growing pains since the beginning of
       virtual int8_t io_op_callback(BusOp*);
       virtual int8_t queue_io_job(BusOp*);
 
-      /* If your device needs something to happen immediately prior to bus I/O... */
-      virtual bool operationCallahead(I2CBusOp*);
-
       bool assignBusInstance(I2CAdapter*);   // Needs to be called by the i2c class during insertion.
       bool disassignBusInstance();           // This is to be called from the adapter's unassignment function.
 
@@ -322,10 +319,8 @@ This file is the tortured result of growing pains since the beginning of
 
 
       // Callback for requested operation completion.
-      virtual int8_t io_op_callahead(I2CBusOp*);
-      virtual int8_t io_op_callback(I2CBusOp*);
-      /* If your device needs something to happen immediately prior to bus I/O... */
-      virtual bool operationCallahead(I2CBusOp*);
+      virtual int8_t io_op_callahead(BusOp*);
+      virtual int8_t io_op_callback(BusOp*);
 
       bool defineRegister(uint16_t _addr, uint8_t  val, bool dirty, bool unread, bool writable);
       bool defineRegister(uint16_t _addr, uint16_t val, bool dirty, bool unread, bool writable);

@@ -20,6 +20,7 @@ limitations under the License.
 
 This is a peripheral wraspper around the Teensyduino SPI driver.
 */
+#ifdef MANUVR_SUPPORT_SPI
 
 #include <Platform/Peripherals/SPI/SPIAdapter.h>
 #include <SPI.h>  // Teensyduino SPI
@@ -135,3 +136,6 @@ int8_t SPIBusOp::advance_operation(uint32_t status_reg, uint8_t data_reg) {
 
   return -1;
 }
+
+
+#endif   // MANUVR_SUPPORT_SPI

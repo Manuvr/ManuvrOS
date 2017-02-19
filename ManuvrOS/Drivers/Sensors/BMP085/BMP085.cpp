@@ -55,14 +55,18 @@ const DatumDef datum_defs[] = {
 *                                          |_|
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
-
+/*
+* Constructor. Takes i2c address as argument.
+*/
 BMP085::BMP085(uint8_t addr) : I2CDeviceWithRegisters(addr), SensorWrapper("BMP085") {
   define_datum(&datum_defs[0]);
   define_datum(&datum_defs[1]);
   define_datum(&datum_defs[2]);
 }
 
-
+/*
+* Constructor. Takes i2c address and irq pin as arguments.
+*/
 BMP085::BMP085(uint8_t addr, uint8_t pin) : BMP085(addr) {
   irq_pin = pin;
 }
