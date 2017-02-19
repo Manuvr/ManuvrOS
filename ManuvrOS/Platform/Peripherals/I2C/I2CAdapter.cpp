@@ -63,9 +63,8 @@ const MessageTypeDef i2c_message_defs[] = {
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
 
-I2CAdapter::I2CAdapter(const I2CAdapterOptions* o) : EventReceiver("I2CAdapter"), BusAdapter(I2CADAPTER_MAX_QUEUE_DEPTH) {
+I2CAdapter::I2CAdapter(const I2CAdapterOptions* o) : EventReceiver("I2CAdapter"), BusAdapter(I2CADAPTER_MAX_QUEUE_DEPTH), _bus_opts(o) {
   // Some platforms (linux) will ignore pin-assignment values completely.
-  memcpy(&_bus_opts, o, sizeof(I2CAdapterOptions));
 
   _er_clear_flag(I2C_BUS_FLAG_BUS_ERROR | I2C_BUS_FLAG_BUS_ONLINE);
   _er_clear_flag(I2C_BUS_FLAG_PING_RUN  | I2C_BUS_FLAG_PINGING);
@@ -128,10 +127,6 @@ void I2CAdapter::reclaim_queue_item(I2CBusOp* op) {
   uintptr_t obj_addr = ((uintptr_t) op);
   uintptr_t pre_min  = ((uintptr_t) __prealloc_pool);
   uintptr_t pre_max  = pre_min + (sizeof(I2CBusOp) * I2CADAPTER_PREALLOC_COUNT);
-
-  if (op->hasFault() && (getVerbosity() > 1)) {    // Print failures.
-    op->printDebug(&local_log);
-  }
 
   if ((obj_addr < pre_max) && (obj_addr >= pre_min)) {
     // If we are in this block, it means obj was preallocated. wipe and reclaim it.

@@ -80,6 +80,14 @@ limitations under the License.
 
 #define ADP8866_I2CADDR            0x27
 
+
+#define MANUVR_MSG_ADP8866_IRQ          0x9034  // Some random message code. Nonexportable.
+#define MANUVR_MSG_ADP8866_CHAN_ENABLED 0x9035  // Enable the given channel, or return its status.
+#define MANUVR_MSG_ADP8866_CHAN_LEVEL   0x9036  // Set or return the LED level for the given channel.
+#define MANUVR_MSG_ADP8866_ASSIGN_BL    0x9037  // Takes up to 9 integers as arguments. Assigns those channels to the backlight.
+#define MANUVR_MSG_ADP8866_RESET        0x9038  // Reset.
+
+
 /*
 * These state flags are hosted by the EventReceiver. This may change in the future.
 * Might be too much convention surrounding their assignment across inherritence.

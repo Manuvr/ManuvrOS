@@ -349,9 +349,6 @@ int8_t I2CDeviceWithRegisters::io_op_callahead(BusOp* op) {
 
 int8_t I2CDeviceWithRegisters::io_op_callback(BusOp* _op) {
   I2CBusOp* completed = (I2CBusOp*) _op;
-  #ifdef MANUVR_DEBUG
-  StringBuilder temp; //("Default callback for registers!\n");
-  #endif
 
   if (completed) {
     if (!completed->hasFault()) {
@@ -375,21 +372,17 @@ int8_t I2CDeviceWithRegisters::io_op_callback(BusOp* _op) {
       }
       else {
         #ifdef MANUVR_DEBUG
-        temp.concatf("Failed to lookup the register for a callback operation.\n");
-        completed->printDebug(&temp);
+        Kernel::log("I2CDeviceWithRegisters::io_op_callback(): register lookup failed.\n");
         #endif
+        return -1;
       }
     }
     else {
       #ifdef MANUVR_DEBUG
-      temp.concatf("i2c operation errored.\n");
-      completed->printDebug(&temp);
+      Kernel::log("I2CDeviceWithRegisters::io_op_callback(): i2c operation errored.\n");
       #endif
+      return -1;
     }
   }
-
-  #ifdef MANUVR_DEBUG
-    if (temp.length() > 0) {    Kernel::log(&temp);  }
-  #endif
   return 0;
 }

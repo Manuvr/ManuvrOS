@@ -97,20 +97,38 @@ This file is the tortured result of growing pains since the beginning of
   class I2CAdapter;
 
 
+  #define I2C_ADAPT_OPT_FLAG_HZ0      0x0100   //
+  #define I2C_ADAPT_OPT_FLAG_HZ1      0x0200   //
+  #define I2C_ADAPT_OPT_FLAG_SCL_PU   0x0400   // SCL pullup.
+  #define I2C_ADAPT_OPT_FLAG_SDA_PU   0x0800   // SDA pullup.
+
   class I2CAdapterOptions {
     public:
-      I2CAdapterOptions() {};
-      I2CAdapterOptions(uint8_t a, uint8_t d, uint8_t c) {
-        adapter = a;
-        sda_pin = d;
-        scl_pin = c;
-        def_flags = 0;
-      };
+      I2CAdapterOptions(const I2CAdapterOptions* obj) :
+        adapter(obj->adapter),
+        sda_pin(obj->sda_pin),
+        scl_pin(obj->scl_pin),
+        def_flags(obj->def_flags)
+      {};
 
-      int8_t  adapter;
-      uint8_t sda_pin;
-      uint8_t scl_pin;
-      uint8_t def_flags;
+      I2CAdapterOptions(uint8_t a, uint8_t d, uint8_t c) :
+        adapter(a),
+        sda_pin(d),
+        scl_pin(c),
+        def_flags(I2C_ADAPT_OPT_FLAG_SDA_PU | I2C_ADAPT_OPT_FLAG_SCL_PU)
+      {};
+
+      I2CAdapterOptions(uint8_t a, uint8_t d, uint8_t c, uint16_t f) :
+        adapter(a),
+        sda_pin(d),
+        scl_pin(c),
+        def_flags(f)
+      {};
+
+      const uint8_t  adapter;
+      const uint8_t  sda_pin;
+      const uint8_t  scl_pin;
+      const uint16_t def_flags;
   };
 
 
@@ -229,8 +247,8 @@ This file is the tortured result of growing pains since the beginning of
 
 
     private:
+      const I2CAdapterOptions _bus_opts;
       int8_t  ping_map[128];
-      I2CAdapterOptions _bus_opts;
 
       LinkedList<I2CDevice*> dev_list;    // A list of active slaves on this bus.
       ManuvrMsg _periodic_i2c_debug;

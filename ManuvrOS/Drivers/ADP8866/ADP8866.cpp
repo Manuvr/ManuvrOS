@@ -23,17 +23,12 @@ limitations under the License.
 #include "ADP8866.h"
 #include <Platform/Platform.h>
 
-#define MANUVR_MSG_ADP8866_IRQ          0x9034  // Some random message code. Nonexportable.
-#define MANUVR_MSG_ADP8866_CHAN_ENABLED 0x9035  // Enable the given channel, or return its status.
-#define MANUVR_MSG_ADP8866_CHAN_LEVEL   0x9036  // Set or return the LED level for the given channel.
-#define MANUVR_MSG_ADP8866_ASSIGN_BL    0x9037  // Takes up to 9 integers as arguments. Assigns those channels to the backlight.
-
-
 
 const MessageTypeDef adp8866_message_defs[] = {
-  {  MANUVR_MSG_ADP8866_IRQ, 0x0000,  "ADP8866_IRQ",  ManuvrMsg::MSG_ARGS_NONE },  //
-  {  MANUVR_MSG_ADP8866_CHAN_ENABLED, MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_ENABLED", ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_ADP8866_CHAN_LEVEL,   MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_LEVEL",   ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_ADP8866_IRQ,     0x0000,  "ADP8866_IRQ",  ManuvrMsg::MSG_ARGS_NONE },  //
+  {  MANUVR_MSG_ADP8866_CHAN_ENABLED, MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_EN", ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_ADP8866_CHAN_LEVEL,   MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_LVL",   ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_ADP8866_RESET,   0x0000,  "ADP8866_RESET",   ManuvrMsg::MSG_ARGS_NONE }, //
   {  MANUVR_MSG_ADP8866_ASSIGN_BL,    MSG_FLAG_EXPORTABLE,  "ADP8866_ASSIGN_BL",    ManuvrMsg::MSG_ARGS_NONE }  //
 };
 
@@ -42,14 +37,14 @@ ADP8866* ADP8866::INSTANCE = nullptr;
 /*
 * This is the ISR for the interrupt pin (if provided).
 */
-void ADP8866_ISR(void) {
+void ADP8866_ISR() {
   if (ADP8866::INSTANCE) {
     ADP8866::INSTANCE->_isr_fxn();
   }
 }
 
 // TODO: Bleh... I really dislike htis indirection...
-void ADP8866::_isr_fxn(void) {
+void ADP8866::_isr_fxn() {
   if (_er_flag(ADP8866_FLAG_INIT_COMPLETE)) {
     readRegister((uint8_t) ADP8866_INT_STAT);
   }
@@ -87,7 +82,6 @@ ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin) : EventReceiver("ADP8866"
 
   setPin(_reset_pin, false);
 
-  _er_clear_flag(ADP8866_FLAG_INIT_COMPLETE);
   defineRegister(ADP8866_MANU_DEV_ID,  (uint8_t) 0x00, false,  true, false);
   defineRegister(ADP8866_MDCR,         (uint8_t) 0x00, false,  false, true);
   defineRegister(ADP8866_INT_STAT,     (uint8_t) 0x00, false,  false, true);
@@ -342,8 +336,7 @@ int8_t ADP8866::io_op_callback(BusOp* _op) {
 */
 void ADP8866::printDebug(StringBuilder* temp) {
   EventReceiver::printDebug(temp);
-  I2CDeviceWithRegisters::printDebug(temp);
-  temp->concatf("\tinit_complete:      %s\n", _er_flag(ADP8866_FLAG_INIT_COMPLETE) ? "yes" :"no");
+  temp->concatf("\tinit_complete:     %s\n", _er_flag(ADP8866_FLAG_INIT_COMPLETE) ? "yes" :"no");
   temp->concatf("\tpower_mode:        %d\n", power_mode);
 }
 
@@ -420,6 +413,11 @@ int8_t ADP8866::notify(ManuvrMsg* active_event) {
   switch (active_event->eventCode()) {
     case MANUVR_MSG_SYS_POWER_MODE:
       break;
+    case MANUVR_MSG_ADP8866_RESET:
+      // This is the reset callback
+      setPin(reset_pin, true);
+      init();
+      break;
 
     default:
       return_value += EventReceiver::notify(active_event);
@@ -443,17 +441,27 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
     // If there is a second token, we proceed on good-faith that it's an int.
     channel = input->position_as_int(1);
   }
-  else if (strlen(str) > 1) {
-    // We allow a short-hand for the sake of short commands that involve a single int.
-    channel = atoi(str + 1);
-  }
-
   if (input->count() > 2) {
     // If there is a second token, we proceed on good-faith that it's an int.
     temp_int = input->position_as_int(2);
   }
 
   switch (c) {
+    case 'i':   // Debug prints.
+      switch (channel) {
+        case 1:   // We want the channel stats.
+          break;
+
+        case 9:   // We want the i2c registers.
+          I2CDeviceWithRegisters::printDebug(&local_log);
+          break;
+
+        default:
+          printDebug(&local_log);
+          break;
+      }
+      break;
+
     case 'r':
       reset();
       break;
@@ -465,7 +473,11 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
       break;
     case 'l':
     case 'L':
-      enable_channel(channel, (*(str) == 'L'));
+      enable_channel(channel, (c == 'L'));
+      break;
+    case 'b':
+      set_brightness(channel, temp_int);
+      if (getVerbosity() > 5) local_log.concatf("ADP8866: set_brightness(%u, %u)\n", channel, temp_int);
       break;
     case '0':
     case '1':
@@ -477,8 +489,8 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
     case '7':
     case '8':
     case '9':
-      set_brightness(*(str) - 0x30, channel);
-      if (getVerbosity() > 5) local_log.concatf("ADP8866: set_brightness(%u, %u)\n", *(str) - 0x30, temp_int);
+      channel = *str - 0x30;
+      local_log.concatf("ADP8866: Channel %u is %sabled.\n", channel, channel_enabled(channel) ? "en" : "dis");
       break;
     default:
       EventReceiver::procDirectDebugInstruction(input);
@@ -578,16 +590,20 @@ void ADP8866::enable_channel(uint8_t chan, bool en) {
 * Returns the boolean answer to the question: Is the given channel enabled?
 */
 bool ADP8866::channel_enabled(uint8_t chan) {
-  //return (regValue(ADP8866_CHANNEL_ENABLE) & (1 << chan));
-  return false;
+  uint8_t reg_addr      = (chan > 7) ? ADP8866_ISCC1 : ADP8866_ISCC2;
+  uint8_t present_state = (uint8_t)regValue(reg_addr);
+  uint8_t bitmask       = (chan > 7) ? 4 : (1 << chan);
+  return (present_state & bitmask);
 }
+
 
 /*
 * Perform a software reset.
 */
 void ADP8866::reset() {
-  //setPin(reset_pin, false);
-  setPin(reset_pin, !readPin(reset_pin));
+  setPin(reset_pin, false);
+  _er_clear_flag(ADP8866_FLAG_INIT_COMPLETE);
+  raiseEvent(Kernel::returnEvent(MANUVR_MSG_ADP8866_RESET));
 }
 
 /*

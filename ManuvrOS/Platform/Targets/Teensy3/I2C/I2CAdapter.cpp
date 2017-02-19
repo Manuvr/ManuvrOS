@@ -145,9 +145,11 @@ XferFault I2CBusOp::begin() {
       markComplete();
       break;
     case I2C_ADDR_NAK:
+      Kernel::log("DEV_NOT_FOUND\n");
       abort(XferFault::DEV_NOT_FOUND);
       return XferFault::DEV_NOT_FOUND;
     case I2C_DATA_NAK:
+      Kernel::log("I2C_DATA_NAK\n");
       abort(XferFault::DEV_NOT_FOUND);
       return XferFault::DEV_NOT_FOUND;
     case I2C_ARB_LOST:
@@ -157,7 +159,7 @@ XferFault I2CBusOp::begin() {
       abort(XferFault::TIMEOUT);
       return XferFault::TIMEOUT;
     default:
-      Kernel::log("Trasnsfer failed with an unforseen error code.\n");
+      Kernel::log("Transfer failed with an unforseen error code.\n");
       abort(XferFault::NO_REASON);
       return XferFault::NO_REASON;
   }
