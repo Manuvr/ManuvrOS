@@ -49,8 +49,8 @@ This file is meant to contain a set of common functions that are
   #include <pthread.h>
 #elif defined(__MANUVR_FREERTOS)
   extern "C" {
-    #include <FreeRTOS.h>
-    #include <task.h>
+    #include "freertos/FreeRTOS.h"
+    #include "freertos/task.h"
   }
 #endif
 

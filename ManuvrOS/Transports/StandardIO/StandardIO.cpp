@@ -22,8 +22,6 @@ StandardIO is the transport driver for wrapping POSIX-style STDIN/STDOUT/STDERR.
 */
 
 
-#if defined(__MANUVR_LINUX)
-
 #include "StandardIO.h"
 #include <XenoSession/XenoSession.h>
 #include <XenoSession/Console/ManuvrConsole.h>
@@ -31,15 +29,9 @@ StandardIO is the transport driver for wrapping POSIX-style STDIN/STDOUT/STDERR.
 #include <Kernel.h>
 #include <Platform/Platform.h>
 
-#include <cstdio>
-#include <stdlib.h>
-#include <unistd.h>
-
 // Threaded platforms will need this to compensate for a loss of ISR.
 extern void* xport_read_handler(void* active_xport);
 
-
-extern char* _binary_name;  // TODO: Eliminate. One more step.
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -107,7 +99,7 @@ int8_t StandardIO::toCounterparty(StringBuilder* buf, int8_t mm) {
     }
 
     // TODO: This prompt ought to be in the console session.
-    printf("\n%c[36m%s> %c[39m", 0x1B, _binary_name, 0x1B);
+    printf("\n%c[36m%s> %c[39m", 0x1B, FIRMWARE_NAME, 0x1B);
     fflush(stdout);
     return MEM_MGMT_RESPONSIBLE_BEARER;
   }
@@ -176,11 +168,11 @@ int8_t StandardIO::read_port() {
     }
     else {
       // User insulted fgets()...
-      Kernel::log("StandardIO: fgets() failed.\n");
+      //Kernel::log("StandardIO: fgets() failed.\n");
     }
   }
   flushLocalLog();
-  return 0;
+  return read_len;
 }
 
 
@@ -273,5 +265,3 @@ int8_t StandardIO::notify(ManuvrMsg* active_event) {
   flushLocalLog();
   return return_value;
 }
-
-#endif  // __MANUVR_LINUX

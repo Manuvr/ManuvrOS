@@ -28,7 +28,6 @@ limitations under the License.
 // Conditional inclusion for different threading models...
 #if defined(__MANUVR_LINUX)
 #elif defined(__MANUVR_FREERTOS)
-  #include <FreeRTOS.h>
 #endif
 
 

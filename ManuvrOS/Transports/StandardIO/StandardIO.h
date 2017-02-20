@@ -35,10 +35,14 @@ This driver allows us to treat an STDIO set under linux as if it were
   #include <iostream>
   #include <termios.h>
 
-  #include "../ManuvrXport.h"
+  #include <cstdio>
+  #include <stdlib.h>
+  #include <unistd.h>
 #else
   // Unsupported platform.
 #endif
+
+#include "../ManuvrXport.h"
 
 
 class StandardIO : public ManuvrXport {

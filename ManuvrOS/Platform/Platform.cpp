@@ -536,6 +536,7 @@ void ManuvrPlatform::forsakeMain() {
   #if defined (__MANUVR_FREERTOS)
     // FreeRTOS requires that we explicitly yield control.
   #else
+    if (!nominalState()) {  platform.bootstrap();  }
     // Run forever.
     while (1) {  _kernel.procIdleFlags();  }
   #endif

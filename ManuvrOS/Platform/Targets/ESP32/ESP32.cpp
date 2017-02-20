@@ -31,12 +31,19 @@ This file is meant to contain a set of common functions that are typically platf
 #include <Platform/Platform.h>
 #include "ESP32.h"
 
+#include "sdkconfig.h"
+#include "esp_system.h"
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 #if defined(MANUVR_STORAGE)
 //#include <Platform/Targets/ESP32/ESP32Storage.h>
+#endif
+
+#if defined(MANUVR_CONSOLE_SUPPORT)
+#include <Transports/StandardIO/StandardIO.h>
+#include <XenoSession/Console/ManuvrConsole.h>
 #endif
 
 volatile PlatformGPIODef gpio_pins[PLATFORM_GPIO_PIN_COUNT];
@@ -105,6 +112,7 @@ static void dev_urandom_reader(void* unused_param) {
 *******************************************************************************/
 void ESP32Platform::printDebug(StringBuilder* output) {
   output->concatf("==< ESP32 [%s] >==================================\n", getPlatformStateStr(platformState()));
+  output->concatf("-- ESP-IDF version:    %s\n", esp_get_idf_version());
   ManuvrPlatform::printDebug(output);
 }
 
@@ -139,6 +147,24 @@ int getSerialNumber(uint8_t *buf) {
 /*******************************************************************************
 * Time and date                                                                *
 *******************************************************************************/
+/*
+* Taken from:
+* https://github.com/espressif/arduino-esp32
+*/
+unsigned long IRAM_ATTR millis() {
+  return xTaskGetTickCount() * portTICK_PERIOD_MS;
+}
+
+/*
+* Taken from:
+* https://github.com/espressif/arduino-esp32
+*/
+unsigned long IRAM_ATTR micros() {
+  uint32_t ccount;
+  __asm__ __volatile__ ( "rsr     %0, ccount" : "=a" (ccount) );
+  return ccount / CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ;
+}
+
 
 /*
 *
@@ -273,8 +299,8 @@ int readPinAnalog(uint8_t pin) {
 *******************************************************************************/
 
 #if defined (__MANUVR_FREERTOS)
-  void globalIRQEnable() {     taskENABLE_INTERRUPTS();    }
-  void globalIRQDisable() {    taskDISABLE_INTERRUPTS();   }
+  void globalIRQEnable() {    } // taskENABLE_INTERRUPTS();    }
+  void globalIRQDisable() {   } // taskDISABLE_INTERRUPTS();   }
 #else
 #endif
 
@@ -318,7 +344,7 @@ void ESP32Platform::hardwareShutdown() {
 * Never returns.
 */
 void ESP32Platform::reboot() {
-  while(true);
+  esp_restart();
 }
 
 
@@ -353,6 +379,12 @@ int8_t ESP32Platform::platformPreInit(Argument* root_config) {
 
   if (root_config) {
   }
+  #if defined(MANUVR_CONSOLE_SUPPORT)
+    StandardIO* _console_xport = new StandardIO();
+    ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_xport);
+    _kernel.subscribe((EventReceiver*) _console);
+    _kernel.subscribe((EventReceiver*) _console_xport);
+  #endif
 
   #if defined(MANUVR_STORAGE)
     //_storage_device = (Storage*) &_t_storage;

@@ -20,10 +20,9 @@ limitations under the License.
 
 */
 
-#if defined(MANUVR_DEBUG) || defined(MANUVR_CONSOLE_SUPPORT)
-
 #include "ManuvrConsole.h"
 
+#if defined(MANUVR_CONSOLE_SUPPORT)
 
 void printHelp() {
   // TODO: Hack. Needs to generate help based on context. But since I don't want
@@ -262,4 +261,4 @@ void ManuvrConsole::procDirectDebugInstruction(StringBuilder *input) {
   flushLocalLog();
 }
 
-#endif  // MANUVR_CONSOLE_SESSION  &  MANUVR_CONSOLE_SUPPORT
+#endif  // MANUVR_CONSOLE_SUPPORT

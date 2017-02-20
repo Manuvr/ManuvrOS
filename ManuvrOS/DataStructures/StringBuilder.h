@@ -30,8 +30,8 @@ limitations under the License.
 #if defined(__BUILD_HAS_PTHREADS)
   #include <pthread.h>
 #elif defined(__MANUVR_FREERTOS)
-  #include <FreeRTOS.h>
-  #include <semphr.h>
+  #include "freertos/FreeRTOS.h"
+  #include "freertos/semphr.h"
 #endif
 
 #if !defined(_GNU_SOURCE)
