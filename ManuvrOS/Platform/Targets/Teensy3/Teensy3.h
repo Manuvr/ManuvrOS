@@ -33,6 +33,32 @@ Many of the libraries that ultimately became ManuvrOS were developed
 #ifndef __PLATFORM_TEENSY3_H__
 #define __PLATFORM_TEENSY3_H__
 
+//#include <Arduino.h>
+//#define PLATFORM_GPIO_PIN_COUNT CORE_NUM_TOTAL_PINS
+
+enum class GPIOMode {
+  INPUT           = 0,
+  OUTPUT          = 1,
+  OUTPUT_OD       = 4,
+  BIDIR_OD,
+  BIDIR_OD_PULLUP,
+  INPUT_PULLUP    = 2,
+  INPUT_PULLDOWN  = 3,
+  ANALOG_OUT,
+  ANALOG_IN,
+  UNINIT          = 5
+};
+
+#include <Arduino.h>
+
+#undef INPUT          
+#undef OUTPUT
+#undef INPUT_PULLUP
+#undef INPUT_PULLDOWN
+
+#define PLATFORM_GPIO_PIN_COUNT CORE_NUM_TOTAL_PINS
+
+
 class Teensy3 : public ManuvrPlatform {
   public:
     inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };

@@ -107,10 +107,10 @@ MGC3130::MGC3130(int ts, int rst, uint8_t addr) : I2CDevice(addr), EventReceiver
   // TODO: Formallize this for build targets other than Arduino. Use the abstracted Manuvr
   //       GPIO class instead.
   setPin(_ts_pin, 0);
-  gpioDefine(_ts_pin, INPUT_PULLUP);     //Used by TS line on MGC3130
+  gpioDefine(_ts_pin, GPIOMode::INPUT_PULLUP);     //Used by TS line on MGC3130
 
   setPin(_reset_pin, 0);
-  gpioDefine(_reset_pin, OUTPUT);   //Used by reset line on MGC3130
+  gpioDefine(_reset_pin, GPIOMode::OUTPUT);   //Used by reset line on MGC3130
 
   _irq_pin_0 = 0;
   _irq_pin_1 = 0;
@@ -162,7 +162,7 @@ int MGC3130::get_irq_num_by_pin(int _pin) {
 
 void MGC3130::init() {
   if (_irq_pin_0) {
-  gpioDefine(_irq_pin_0, INPUT_PULLUP);
+  gpioDefine(_irq_pin_0, GPIOMode::INPUT_PULLUP);
   #if defined(BOARD_IRQS_AND_PINS_DISTINCT)
     int fubar_irq_number = get_irq_num_by_pin(_irq_pin_0);
     if (fubar_irq_number >= 0) {
@@ -174,7 +174,7 @@ void MGC3130::init() {
   }
 
   if (_irq_pin_1) {
-  gpioDefine(_irq_pin_1, INPUT_PULLUP);
+  gpioDefine(_irq_pin_1, GPIOMode::INPUT_PULLUP);
   #if defined(BOARD_IRQS_AND_PINS_DISTINCT)
     int fubar_irq_number = get_irq_num_by_pin(_irq_pin_1);
     if (fubar_irq_number >= 0) {
@@ -186,7 +186,7 @@ void MGC3130::init() {
   }
 
   if (_irq_pin_2) {
-  gpioDefine(_irq_pin_2, INPUT_PULLUP);
+  gpioDefine(_irq_pin_2, GPIOMode::INPUT_PULLUP);
   #if defined(BOARD_IRQS_AND_PINS_DISTINCT)
     int fubar_irq_number = get_irq_num_by_pin(_irq_pin_2);
     if (fubar_irq_number >= 0) {
@@ -198,7 +198,7 @@ void MGC3130::init() {
   }
 
   if (_irq_pin_3) {
-  gpioDefine(_irq_pin_3, INPUT_PULLUP);
+  gpioDefine(_irq_pin_3, GPIOMode::INPUT_PULLUP);
   #if defined(BOARD_IRQS_AND_PINS_DISTINCT)
     int fubar_irq_number = get_irq_num_by_pin(_irq_pin_3);
     if (fubar_irq_number >= 0) {
@@ -320,7 +320,6 @@ const char* MGC3130::getTouchTapString(uint8_t eventByte) {
 
 
 void MGC3130::printDebug(StringBuilder* output) {
-  if (nullptr == output) return;
   EventReceiver::printDebug(output);
   I2CDevice::printDebug(output);
   output->concatf("\t TS Pin:      %d \n\t MCLR Pin:   %d\n", _ts_pin, _reset_pin);
@@ -496,7 +495,7 @@ void MGC3130::dispatchGestureEvents() {
 int8_t MGC3130::io_op_callahead(BusOp* _op) {
   if (!readPin(_ts_pin)) {   // Only initiate a read if there is something there.
     unsetPinIRQ(_ts_pin);
-    gpioDefine(_ts_pin, OUTPUT);
+    gpioDefine(_ts_pin, GPIOMode::OUTPUT);
     are_we_holding_ts(true);
     return 0;
   }
@@ -506,7 +505,7 @@ int8_t MGC3130::io_op_callahead(BusOp* _op) {
 
 int8_t MGC3130::io_op_callback(BusOp* _op) {
   I2CBusOp* completed = (I2CBusOp*) _op;
-  gpioDefine(_ts_pin, INPUT_PULLUP);
+  gpioDefine(_ts_pin, GPIOMode::INPUT_PULLUP);
   are_we_holding_ts(false);
   setPinFxn(_ts_pin, FALLING, mgc3130_isr_check);
 

@@ -37,9 +37,6 @@ This file is meant to contain a set of common functions that are typically platf
 #include <wiring.h>
 #include <Time/Time.h>
 
-#define PLATFORM_GPIO_PIN_COUNT   33
-
-
 #if !defined (__MANUVR_FREERTOS)
   #include "IntervalTimer.h"
 
@@ -251,7 +248,7 @@ void gpioSetup() {
   for (uint8_t i = 0; i < PLATFORM_GPIO_PIN_COUNT; i++) {
     gpio_pins[i].event = 0;      // No event assigned.
     gpio_pins[i].fxn   = 0;      // No function pointer.
-    gpio_pins[i].mode  = INPUT;  // All pins begin as inputs.
+    gpio_pins[i].mode  = (int8_t) GPIOMode::INPUT;  // All pins begin as inputs.
     gpio_pins[i].pin   = i;      // The pin number.
   }
 }
