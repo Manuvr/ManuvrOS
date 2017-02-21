@@ -35,8 +35,6 @@ Try to resist re-coding structs and such that the back-ends have already
   that are strictly inlines. Some faculty like this must exist, however for
   providing wrappers around (possibly) concurrent software and hardware support.
 See CryptOptUnifier.h for more information.
-
-// TODO: I don't like using std::map. Still need to decide on a replacement.
 */
 
 #ifndef __CRYPTO_WRAPPER_H__

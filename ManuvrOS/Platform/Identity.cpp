@@ -44,9 +44,6 @@ const IdentFormat Identity::supported_notions[] = {
   #if defined(__HAS_CRYPT_WRAPPER)
     IdentFormat::CERT_FORMAT_DER,
     IdentFormat::PK,
-    #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
-      IdentFormat::ONE_ID,
-    #endif
   #endif
   #if defined(MANUVR_OPENINTERCONNECT)
     IdentFormat::OIC_CRED,
@@ -67,9 +64,6 @@ const char* Identity::identityTypeString(IdentFormat fmt) {
     case IdentFormat::CERT_FORMAT_DER:  return "CERT";
     case IdentFormat::PK:               return "ASYM";
     case IdentFormat::PSK_SYM:          return "PSK";
-    #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
-      case IdentFormat::ONE_ID:         return "oneID";
-    #endif
     #endif
     #if defined(MANUVR_OPENINTERCONNECT)
     case IdentFormat::OIC_CRED:         return "OIC_CRED";

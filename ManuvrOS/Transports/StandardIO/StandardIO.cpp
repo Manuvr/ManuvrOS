@@ -159,17 +159,18 @@ int8_t StandardIO::read_port() {
 
   if (connected()) {
     bzero(input_text, getMTU());
-    read_len = fread(input_text, 1, getMTU(), stdin);
+
+    if (nullptr == fgets(input_text, getMTU()-1, stdin)) {
+      return 0;
+    }
+    read_len = strlen(input_text);
+
+    // NOTE: This should suffice to be binary-safe.
+    //read_len = fread(input_text, 1, getMTU(), stdin);
+
     if (read_len > 0) {
-    //if (fgets(input_text, getMTU(), stdin) != nullptr) {
-      //read_len = strlen(input_text);
-      printf("Got %d bytes\n", read_len);
       bytes_received += read_len;
       BufferPipe::fromCounterparty((uint8_t*) input_text, read_len, MEM_MGMT_RESPONSIBLE_BEARER);
-    }
-    else {
-      // User insulted fgets()...
-      //Kernel::log("StandardIO: fgets() failed.\n");
     }
   }
   flushLocalLog();
@@ -202,15 +203,15 @@ int8_t StandardIO::attached() {
     read_abort_event.alterSchedulePeriod(30);
     read_abort_event.autoClear(false);
     reset();
-//    #if !defined (__BUILD_HAS_THREADS)
+    #if !defined (__BUILD_HAS_THREADS)
       read_abort_event.enableSchedule(true);
       read_abort_event.alterScheduleRecurrence(-1);
       platform.kernel()->addSchedule(&read_abort_event);
-//    #else
-//      read_abort_event.enableSchedule(false);
-//      read_abort_event.alterScheduleRecurrence(0);
-//      createThread(&_thread_id, nullptr, xport_read_handler, (void*) this);
-//    #endif
+    #else
+      read_abort_event.enableSchedule(false);
+      read_abort_event.alterScheduleRecurrence(0);
+      createThread(&_thread_id, nullptr, xport_read_handler, (void*) this);
+    #endif
     return 1;
   }
   return 0;

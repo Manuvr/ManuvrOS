@@ -280,7 +280,7 @@ int8_t Kernel::detachFromLogger(BufferPipe* _pipe) {
 int8_t Kernel::subscribe(EventReceiver *client) {
   if (nullptr == client) return -1;
 
-  client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
+  client->setVerbosity((int8_t)DEFAULT_CLASS_VERBOSITY);
   int8_t return_value = subscribers.insert(client);
   if (erAttached()) {
     // This subscriber is joining us after bootup. Call its attached() fxn to cause it to init.
@@ -304,7 +304,7 @@ int8_t Kernel::subscribe(EventReceiver *client) {
 int8_t Kernel::subscribe(EventReceiver *client, uint8_t priority) {
   if (nullptr == client) return -1;
 
-  client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
+  client->setVerbosity((int8_t)DEFAULT_CLASS_VERBOSITY);
   int8_t return_value = subscribers.insert(client, priority);
   if (erAttached()) {
     // This subscriber is joining us after bootup. Call its attached() fxn to cause it to init.

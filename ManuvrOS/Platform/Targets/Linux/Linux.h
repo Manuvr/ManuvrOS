@@ -31,6 +31,8 @@ This file forms the catch-all for linux platforms that have no support.
 #if defined(MANUVR_STORAGE)
 #include "LinuxStorage.h"
 #endif
+  #define LOW             0
+  #define HIGH            1
 
   #define CHANGE             0xFC
   #define FALLING            0xFB

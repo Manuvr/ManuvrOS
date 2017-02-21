@@ -285,9 +285,9 @@ int main(int argc, const char *argv[]) {
 
 
   #if defined(RASPI) || defined(RASPI2)
-    gpioDefine(14, OUTPUT);
-    gpioDefine(15, OUTPUT);
-    gpioDefine(18, OUTPUT);
+    gpioDefine(14, GPIOMode::OUTPUT);
+    gpioDefine(15, GPIOMode::OUTPUT);
+    gpioDefine(18, GPIOMode::OUTPUT);
     bool pin_14_state = false;
   #endif
 

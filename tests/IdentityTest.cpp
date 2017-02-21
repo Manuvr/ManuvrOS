@@ -140,54 +140,7 @@ int CRYPTO_IDENT_TESTS() {
   return return_value;
   #else
   return 0;
-  #endif //__HAS_IDENT_ONEID
-}
-
-
-int ONEID_IDENT_TESTS() {
-  #if defined(__HAS_IDENT_ONEID)
-  int return_value = -1;
-  StringBuilder log("===< ONEID_IDENT_TESTS >================================\n");
-  // Create identities from nothing...
-  IdentityOneID ident("OneID-identity");
-
-  Identity::staticToString(&ident, &log);
-
-  if (ident.isValid()) {
-    uint16_t len = ident.length();
-    uint8_t* ser_buf = (uint8_t*) alloca(len);
-    if (ser_buf) {
-      len = ident.serialize(ser_buf, len);
-      if (len) {
-        log.concatf("\t Serialized successfully. Length is %d\n\n", len);
-        IdentityOneID* ident_restored = (IdentityOneID*) Identity::fromBuffer(ser_buf, len);
-        if (ident_restored) {
-          log.concatf("\t Unserialized successfully. Length is %d\n", ident_restored->length());
-          Identity::staticToString(ident_restored, &log);
-          return_value = 0;  // PASS
-        }
-        else {
-          log.concatf("Failed to deserialize.\n");
-        }
-      }
-      else {
-        log.concatf("Failed to serialize.\n");
-      }
-    }
-    else {
-      log.concatf("Failed to allocate for serialization.\n");
-    }
-  }
-  else {
-    log.concatf("Failed to create specified identity.\n");
-  }
-
-  log.concat("\n\n");
-  printf((const char*) log.string());
-  return return_value;
-  #else
-  return 0;
-  #endif //__HAS_IDENT_ONEID
+  #endif
 }
 
 
@@ -209,13 +162,10 @@ int main(int argc, char *argv[]) {
 
   if (0 == UUID_IDENT_TESTS()) {
     if (0 == CRYPTO_IDENT_TESTS()) {
-      if (0 == ONEID_IDENT_TESTS()) {
-        printf("**********************************\n");
-        printf("*  Identity tests all pass       *\n");
-        printf("**********************************\n");
-        exit_value = 0;
-      }
-      else printTestFailure("ONEID_IDENT_TESTS");
+      printf("**********************************\n");
+      printf("*  Identity tests all pass       *\n");
+      printf("**********************************\n");
+      exit_value = 0;
     }
     else printTestFailure("CRYPTO_IDENT_TESTS");
   }

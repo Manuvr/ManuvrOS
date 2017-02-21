@@ -254,8 +254,8 @@ void gpioSetup() {
 }
 
 
-int8_t gpioDefine(uint8_t pin, int mode) {
-  pinMode(pin, mode);
+int8_t gpioDefine(uint8_t pin, GPIOMode mode) {
+  pinMode(pin, (int) mode);
   return 0;
 }
 

@@ -24,12 +24,10 @@ MbedTLS support assumes that we have a local copy of the mbedTLS source tree
   at <build-root>/lib/mbedtls. See the downloadDeps.sh script.
 */
 
-#if defined(WITH_MBEDTLS)
-
-
-#include "Cryptographic.h"
+#include "../Cryptographic.h"
 #include <Platform/Platform.h>
 
+#if defined(WITH_MBEDTLS)
 
 /*******************************************************************************
 * These things are privately-scoped, and are intended for internal use only.   *
@@ -713,8 +711,5 @@ int __attribute__((weak)) wrapped_sign_verify(Cipher c, CryptoKey k, Hashes h, u
 
   return ret;
 }
-
-
-
 
 #endif   // WITH_MBEDTLS
