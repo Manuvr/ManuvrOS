@@ -367,6 +367,7 @@ int8_t ManuvrXport::notify(ManuvrMsg* active_event) {
       break;
 
     case MANUVR_MSG_XPORT_RECEIVE:
+    case MANUVR_MSG_XPORT_QUEUE_RDY:
       break;
 
     case MANUVR_MSG_XPORT_RESERVED_0:
@@ -374,7 +375,6 @@ int8_t ManuvrXport::notify(ManuvrMsg* active_event) {
     case MANUVR_MSG_XPORT_INIT:
     case MANUVR_MSG_XPORT_RESET:
     case MANUVR_MSG_XPORT_ERROR:
-    case MANUVR_MSG_XPORT_QUEUE_RDY:
     case MANUVR_MSG_XPORT_CB_QUEUE_RDY:
     case MANUVR_MSG_XPORT_IDENTITY:
       #ifdef MANUVR_DEBUG

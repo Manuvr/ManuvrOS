@@ -106,6 +106,29 @@ limitations under the License.
 
 
 /*
+* Pin defs for this module.
+* Set pin def to 255 to mark it as unused.
+*/
+class ADP8866Pins {
+  public:
+    const uint8_t rst;  // ADP8866 reset pin
+    const uint8_t irq;  // ADP8866 irq pin
+
+    ADP8866Pins(const ADP8866Pins* p) :
+      rst(p->rst), irq(p->irq) {};
+
+    ADP8866Pins(uint8_t _rst, uint8_t _irq) :
+      rst(_rst), irq(_irq) {};
+
+    inline bool reset(bool nu) const {
+      if (255 != rst) setPin(rst, nu);
+      return true;
+    };
+
+  private:
+};
+
+/*
 * Used to aggregate channel information into a single place. Makes drive code more readable.
 */
 typedef struct adp8866_led_chan {
@@ -119,7 +142,7 @@ typedef struct adp8866_led_chan {
 
 class ADP8866 : public EventReceiver, I2CDeviceWithRegisters {
   public:
-    ADP8866(uint8_t reset_pin, uint8_t irq_pin);
+    ADP8866(const ADP8866Pins* p);
     virtual ~ADP8866();
 
     int8_t init();
@@ -161,12 +184,10 @@ class ADP8866 : public EventReceiver, I2CDeviceWithRegisters {
 
 
   private:
-    uint8_t reset_pin         = 0;
-    uint8_t irq_pin           = 0;
+    const ADP8866Pins _pins;
     uint8_t stored_dimmer_val = 0;
     uint8_t class_mode        = 0;
     uint8_t power_mode        = 0;
-
 
     // The chip only has 9 outputs, but we make a synthetic tenth
     //   channel to represent the backlight.

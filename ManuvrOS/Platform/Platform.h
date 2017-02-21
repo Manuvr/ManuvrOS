@@ -120,56 +120,7 @@ class Storage;
 #define MANUVR_INIT_STATE_HALTED          7
 
 
-/**
-* GPIO is a platform issue. Here is a hasty attempt to stack more generality
-*   into the Arduino conventions.
-*/
-#if defined (ARDUINO)
-  #include <Arduino.h>
-#elif defined(STM32F7XX) | defined(STM32F746xx)
-  #include <stm32f7xx_hal.h>
-
-  #define HIGH               GPIO_PIN_SET
-  #define LOW                GPIO_PIN_RESET
-
-  #define INPUT              GPIO_MODE_INPUT
-  #define OUTPUT             GPIO_MODE_OUTPUT_PP
-  #define OUTPUT_OD          GPIO_MODE_OUTPUT_OD
-  #define INPUT_PULLUP       0xFE
-  #define INPUT_PULLDOWN     0xFD
-
-  #define CHANGE             0xFC
-  #define FALLING            0xFB
-  #define RISING             0xFA
-  #define CHANGE_PULL_UP     0xF9
-  #define FALLING_PULL_UP    0xF8
-  #define RISING_PULL_UP     0xF7
-  #define CHANGE_PULL_DOWN   0xF6
-  #define FALLING_PULL_DOWN  0xF5
-  #define RISING_PULL_DOWN   0xF4
-  extern "C" {
-    unsigned long millis();
-    unsigned long micros();
-  }
-#else
-  // We adopt and extend Arduino GPIO access conventions.
-  #define HIGH         1
-  #define LOW          0
-
-  #define INPUT        0
-  #define OUTPUT       1
-  #define INPUT_PULLUP 2
-
-  #define CHANGE       4
-  #define FALLING      2
-  #define RISING       3
-  extern "C" {
-    unsigned long millis();
-    unsigned long micros();
-  }
-
-#endif
-
+enum class GPIOMode;
 
 /* This is how we conceptualize a GPIO pin. */
 // TODO: I'm fairly sure this sucks. It's too needlessly memory heavy to
@@ -398,7 +349,7 @@ volatile bool provide_random_int(uint32_t);  // Provides a new random to the poo
 /*
 * GPIO and change-notice.
 */
-int8_t gpioDefine(uint8_t pin, int mode);
+int8_t gpioDefine(uint8_t pin, GPIOMode mode);
 void   unsetPinIRQ(uint8_t pin);
 int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrMsg* isr_event);
 int8_t setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn);

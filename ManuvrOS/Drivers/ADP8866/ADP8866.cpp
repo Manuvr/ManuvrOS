@@ -67,7 +67,7 @@ void ADP8866::_isr_fxn() {
 /*
 * Constructor. Takes pin numbers as arguments.
 */
-ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin) : EventReceiver("ADP8866"), I2CDeviceWithRegisters(ADP8866_I2CADDR) {
+ADP8866::ADP8866(const ADP8866Pins* p) : EventReceiver("ADP8866"), I2CDeviceWithRegisters(ADP8866_I2CADDR), _pins(p) {
   _er_clear_flag(ADP8866_FLAG_INIT_COMPLETE);
   if (ADP8866::INSTANCE) {
     ADP8866::INSTANCE = this;
@@ -75,12 +75,14 @@ ADP8866::ADP8866(uint8_t _reset_pin, uint8_t _irq_pin) : EventReceiver("ADP8866"
     ManuvrMsg::registerMessages(adp8866_message_defs, mes_count);
   }
 
-  reset_pin = _reset_pin;
-  irq_pin   = _irq_pin;
-  gpioDefine(_irq_pin, INPUT_PULLUP);
-  gpioDefine(_reset_pin, OUTPUT);
+  if (255 != _pins.irq) {
+    gpioDefine(_pins.irq, GPIOMode::INPUT_PULLUP);
+  }
 
-  setPin(_reset_pin, false);
+  if (255 != _pins.rst) {
+    gpioDefine(_pins.rst, GPIOMode::OUTPUT);
+    setPin(_pins.rst, false);
+  }
 
   defineRegister(ADP8866_MANU_DEV_ID,  (uint8_t) 0x00, false,  true, false);
   defineRegister(ADP8866_MDCR,         (uint8_t) 0x00, false,  false, true);
@@ -338,6 +340,8 @@ void ADP8866::printDebug(StringBuilder* temp) {
   EventReceiver::printDebug(temp);
   temp->concatf("\tinit_complete:     %s\n", _er_flag(ADP8866_FLAG_INIT_COMPLETE) ? "yes" :"no");
   temp->concatf("\tpower_mode:        %d\n", power_mode);
+  temp->concatf("\tReset pin:         %d\n", _pins.rst);
+  temp->concatf("\tIRQ pin:           %d\n", _pins.irq);
 }
 
 
@@ -362,14 +366,14 @@ void ADP8866::printDebug(StringBuilder* temp) {
 */
 int8_t ADP8866::attached() {
   if (EventReceiver::attached()) {
-    setPin(reset_pin, true);   // Release the reset pin.
+    _pins.reset(true);   // Release the reset pin.
 
     // If this read comes back the way we think it should,
     //   we will init() the chip.
     readRegister((uint8_t) ADP8866_MANU_DEV_ID);
 
-    if (irq_pin > 0) {
-      setPinFxn(irq_pin, FALLING, ADP8866_ISR);
+    if (255 != _pins.irq) {
+      setPinFxn(_pins.irq, FALLING, ADP8866_ISR);
     }
     return 1;
   }
@@ -415,8 +419,9 @@ int8_t ADP8866::notify(ManuvrMsg* active_event) {
       break;
     case MANUVR_MSG_ADP8866_RESET:
       // This is the reset callback
-      setPin(reset_pin, true);
-      init();
+      if (_pins.reset(true)) {
+        init();
+      }
       break;
 
     default:
@@ -601,7 +606,7 @@ bool ADP8866::channel_enabled(uint8_t chan) {
 * Perform a software reset.
 */
 void ADP8866::reset() {
-  setPin(reset_pin, false);
+  _pins.reset(false);
   _er_clear_flag(ADP8866_FLAG_INIT_COMPLETE);
   raiseEvent(Kernel::returnEvent(MANUVR_MSG_ADP8866_RESET));
 }

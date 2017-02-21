@@ -33,7 +33,6 @@ This file is meant to contain a set of common functions that are typically platf
 
 #include "sdkconfig.h"
 #include "esp_system.h"
-#include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -229,13 +228,66 @@ void gpioSetup() {
   for (uint8_t i = 0; i < PLATFORM_GPIO_PIN_COUNT; i++) {
     gpio_pins[i].event = 0;      // No event assigned.
     gpio_pins[i].fxn   = 0;      // No function pointer.
-    gpio_pins[i].mode  = INPUT;  // All pins begin as inputs.
+    gpio_pins[i].mode  = (int) GPIOMode::INPUT;  // All pins begin as inputs.
     gpio_pins[i].pin   = i;      // The pin number.
   }
 }
 
 
-int8_t gpioDefine(uint8_t pin, int mode) {
+int8_t gpioDefine(uint8_t pin, GPIOMode mode) {
+  gpio_config_t io_conf;
+  if (!GPIO_IS_VALID_GPIO(pin)) {
+    return -1;
+  }
+
+  // Handle the pull-up/down stuff first.
+  switch (mode) {
+    case GPIOMode::BIDIR_OD_PULLUP:
+    case GPIOMode::INPUT_PULLUP:
+      io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+      io_conf.pull_up_en   = GPIO_PULLUP_ENABLE;
+      break;
+    case GPIOMode::INPUT_PULLDOWN:
+      io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
+      io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
+      break;
+    default:
+      break;
+  }
+
+  switch (mode) {
+    case GPIOMode::BIDIR_OD_PULLUP:
+      if (!GPIO_IS_VALID_OUTPUT_GPIO(pin)) {
+        return -1;
+      }
+      io_conf.mode = GPIO_MODE_INPUT_OUTPUT_OD;
+      break;
+    case GPIOMode::BIDIR_OD:
+    case GPIOMode::OUTPUT_OD:
+    case GPIOMode::OUTPUT:
+      if (!GPIO_IS_VALID_OUTPUT_GPIO(pin)) {
+        return -1;
+      }
+      io_conf.mode = (gpio_mode_t) mode;
+      break;
+
+    case GPIOMode::INPUT_PULLUP:
+    case GPIOMode::INPUT_PULLDOWN:
+    case GPIOMode::INPUT:
+      io_conf.mode = GPIO_MODE_INPUT;
+      break;
+
+    default:
+      Kernel::log("Unknown GPIO mode.\n");
+      return -1;
+  }
+
+  // disable interrupt
+  io_conf.intr_type = (gpio_int_type_t) GPIO_PIN_INTR_DISABLE;
+  io_conf.pin_bit_mask = (1 << pin);
+
+  //configure GPIO with the given settings
+  gpio_config(&io_conf);
   return 0;
 }
 
@@ -260,12 +312,12 @@ int8_t setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn) {
 
 
 int8_t setPin(uint8_t pin, bool val) {
-  return 0;
+  return (int8_t) gpio_set_level((gpio_num_t) pin, val?1:0);
 }
 
 
 int8_t readPin(uint8_t pin) {
-  return 0;
+  return (int8_t) gpio_get_level((gpio_num_t) pin);
 }
 
 

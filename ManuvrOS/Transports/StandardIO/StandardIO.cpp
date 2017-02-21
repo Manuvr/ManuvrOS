@@ -140,7 +140,7 @@ int8_t StandardIO::listen() {
 // TODO: Perhaps reset the terminal?
 int8_t StandardIO::reset() {
   #if defined(MANUVR_DEBUG)
-    if (getVerbosity() > 3) local_log.concatf("StandardIO initialized.\n");
+    if (getVerbosity() > 5) local_log.concatf("StandardIO initialized.\n");
   #endif
   initialized(true);
   listen();
@@ -157,14 +157,15 @@ int8_t StandardIO::read_port() {
   char *input_text	= (char*) alloca(getMTU());	// Buffer to hold user-input.
   int read_len = 0;
 
-  while (connected()) {
+  if (connected()) {
     bzero(input_text, getMTU());
-    if (fgets(input_text, getMTU(), stdin) != nullptr) {
-      read_len = strlen(input_text);
-      if (read_len) {
-        bytes_received += read_len;
-        BufferPipe::fromCounterparty((uint8_t*) input_text, read_len, MEM_MGMT_RESPONSIBLE_BEARER);
-      }
+    read_len = fread(input_text, 1, getMTU(), stdin);
+    if (read_len > 0) {
+    //if (fgets(input_text, getMTU(), stdin) != nullptr) {
+      //read_len = strlen(input_text);
+      printf("Got %d bytes\n", read_len);
+      bytes_received += read_len;
+      BufferPipe::fromCounterparty((uint8_t*) input_text, read_len, MEM_MGMT_RESPONSIBLE_BEARER);
     }
     else {
       // User insulted fgets()...
@@ -198,11 +199,18 @@ int8_t StandardIO::read_port() {
 int8_t StandardIO::attached() {
   if (EventReceiver::attached()) {
     // Tolerate 30ms of latency on the line before flushing the buffer.
-    read_abort_event.alterScheduleRecurrence(0);
     read_abort_event.alterSchedulePeriod(30);
     read_abort_event.autoClear(false);
-    read_abort_event.enableSchedule(false);
     reset();
+//    #if !defined (__BUILD_HAS_THREADS)
+      read_abort_event.enableSchedule(true);
+      read_abort_event.alterScheduleRecurrence(-1);
+      platform.kernel()->addSchedule(&read_abort_event);
+//    #else
+//      read_abort_event.enableSchedule(false);
+//      read_abort_event.alterScheduleRecurrence(0);
+//      createThread(&_thread_id, nullptr, xport_read_handler, (void*) this);
+//    #endif
     return 1;
   }
   return 0;
@@ -257,6 +265,11 @@ int8_t StandardIO::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
+    case MANUVR_MSG_XPORT_RECEIVE:
+    case MANUVR_MSG_XPORT_QUEUE_RDY:
+      read_port();
+      return_value++;
+      break;
     default:
       return_value += ManuvrXport::notify(active_event);
       break;

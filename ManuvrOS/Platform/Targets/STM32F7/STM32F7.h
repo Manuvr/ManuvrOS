@@ -32,6 +32,37 @@ limitations under the License.
 
 #define PLATFORM_GPIO_PIN_COUNT   48
 
+  #define HIGH               GPIO_PIN_SET
+  #define LOW                GPIO_PIN_RESET
+
+  #define CHANGE             0xFC
+  #define FALLING            0xFB
+  #define RISING             0xFA
+  #define CHANGE_PULL_UP     0xF9
+  #define FALLING_PULL_UP    0xF8
+  #define RISING_PULL_UP     0xF7
+  #define CHANGE_PULL_DOWN   0xF6
+  #define FALLING_PULL_DOWN  0xF5
+  #define RISING_PULL_DOWN   0xF4
+  extern "C" {
+    unsigned long millis();
+    unsigned long micros();
+  }
+
+enum class GPIOMode {
+  INPUT           = GPIO_MODE_INPUT,
+  OUTPUT          = GPIO_MODE_OUTPUT_PP,
+  OUTPUT_OD       = GPIO_MODE_OUTPUT_OD,
+  BIDIR_OD,
+  BIDIR_OD_PULLUP,
+  INPUT_PULLUP,
+  INPUT_PULLDOWN,
+  ANALOG_OUT,
+  ANALOG_IN,
+  UNINIT
+};
+
+
 #define MANUVR_RTC_STARTUP_GOOD_UNSET  0xA40C131B
 #define MANUVR_RTC_STARTUP_GOOD_SET    0x1529578F
 

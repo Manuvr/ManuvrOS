@@ -32,6 +32,33 @@ This file forms the catch-all for linux platforms that have no support.
 #include "LinuxStorage.h"
 #endif
 
+  #define CHANGE             0xFC
+  #define FALLING            0xFB
+  #define RISING             0xFA
+  #define CHANGE_PULL_UP     0xF9
+  #define FALLING_PULL_UP    0xF8
+  #define RISING_PULL_UP     0xF7
+  #define CHANGE_PULL_DOWN   0xF6
+  #define FALLING_PULL_DOWN  0xF5
+  #define RISING_PULL_DOWN   0xF4
+  extern "C" {
+    unsigned long millis();
+    unsigned long micros();
+  }
+
+enum class GPIOMode {
+  INPUT,
+  OUTPUT,
+  OUTPUT_OD,
+  BIDIR_OD,
+  BIDIR_OD_PULLUP,
+  INPUT_PULLUP,
+  INPUT_PULLDOWN,
+  ANALOG_OUT,
+  ANALOG_IN,
+  UNINIT
+};
+
 #if defined(__MACH__) && defined(__APPLE__)
 typedef unsigned long pthread_t;
 #endif
