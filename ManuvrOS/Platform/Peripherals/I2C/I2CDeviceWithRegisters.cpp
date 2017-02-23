@@ -22,7 +22,7 @@ limitations under the License.
 
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
 
-
+#if defined(MANUVR_SUPPORT_I2C)
 
 I2CDeviceWithRegisters::I2CDeviceWithRegisters(uint8_t addr) : I2CDevice(addr) {
   multi_access_support = false;
@@ -386,3 +386,5 @@ int8_t I2CDeviceWithRegisters::io_op_callback(BusOp* _op) {
   }
   return 0;
 }
+
+#endif  // MANUVR_SUPPORT_I2C

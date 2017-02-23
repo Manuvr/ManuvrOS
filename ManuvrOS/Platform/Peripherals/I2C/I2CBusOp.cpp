@@ -19,10 +19,9 @@ limitations under the License.
 
 */
 
-#if defined(MANUVR_SUPPORT_I2C)
-
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
 
+#if defined(MANUVR_SUPPORT_I2C)
 
 /*
 * It is worth re-iterating here, that this class ought to never malloc() or free() the buf member. That should be

@@ -28,10 +28,10 @@ This file is the tortured result of growing pains since the beginning of
   apart into a more-portable platform-abstraction strategy.
 */
 
-#if defined(MANUVR_SUPPORT_I2C)
 
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
 
+#if defined(MANUVR_SUPPORT_I2C)
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.

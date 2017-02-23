@@ -22,6 +22,8 @@ limitations under the License.
 
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
 
+#if defined(MANUVR_SUPPORT_I2C)
+
 /*
 * Constructor takes a pointer to the bus we are going to be using, and the slave
 *   address of the implementing class.
@@ -322,3 +324,5 @@ void I2CDevice::printDebug(StringBuilder* temp) {
     temp->concatf("\n+++ I2CDevice  0x%02x ++++ Bus %sassigned +++++++++++++++++++++++++++\n", _dev_addr, (_bus == nullptr ? "un" : ""));
   }
 }
+
+#endif  // MANUVR_SUPPORT_I2C

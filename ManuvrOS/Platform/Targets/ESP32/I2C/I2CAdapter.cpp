@@ -3,12 +3,23 @@
 #if defined(MANUVR_SUPPORT_I2C)
 #include "driver/i2c.h"
 
+#define ACK_CHECK_EN   0x1     /*!< I2C master will check ack from slave*/
+#define ACK_CHECK_DIS  0x0     /*!< I2C master will not check ack from slave */
+
+
+void i2c_worker_thread(void* arg) {
+  while (1) {
+    vTaskDelay(10000 / portTICK_RATE_MS);
+  }
+}
+
+
 
 int8_t I2CAdapter::bus_init() {
   i2c_config_t conf;
   conf.mode             = I2C_MODE_MASTER;
-  conf.sda_io_num       = _bus_opts.sda_pin;
-  conf.scl_io_num       = _bus_opts.scl_pin;
+  conf.sda_io_num       = (gpio_num_t) _bus_opts.sda_pin;
+  conf.scl_io_num       = (gpio_num_t) _bus_opts.scl_pin;
   conf.sda_pullup_en    = GPIO_PULLUP_ENABLE;
   conf.scl_pullup_en    = GPIO_PULLUP_ENABLE;
   conf.master.clk_speed = 100000;
@@ -16,13 +27,15 @@ int8_t I2CAdapter::bus_init() {
   switch (getAdapterId()) {
     case 0:
       i2c_param_config(I2C_NUM_0, &conf);
-      i2c_driver_install(I2C_NUM_0, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
+      i2c_driver_install(I2C_NUM_0, conf.mode, 0, 0, 0);
+      xTaskCreate(i2c_worker_thread, "i2c_thread", 1024 * 2, (void* ) 0, 10, NULL);
       busOnline(true);
       break;
 
     case 1:
       i2c_param_config(I2C_NUM_1, &conf);
-      i2c_driver_install(I2C_NUM_1, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
+      i2c_driver_install(I2C_NUM_1, conf.mode, 0, 0, 0);
+      xTaskCreate(i2c_worker_thread, "i2c_thread", 1024 * 2, (void* ) 0, 10, NULL);
       busOnline(true);
       break;
 
@@ -75,39 +88,53 @@ XferFault I2CBusOp::begin() {
     return XferFault::BUS_BUSY;
   }
 
+  i2c_cmd_handle_t cmd = i2c_cmd_link_create();
 
   int wire_status = -1;
   int i = 0;
-  if (0 == device->getAdapterId()) {
+  if (0 == (i2c_port_t) device->getAdapterId()) {
+    i2c_master_start(cmd);
+
+    switch (get_opcode()) {
+      case BusOpcode::RX:
+        i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
+        if (need_to_send_subaddr()) {
+          i2c_master_write_byte(cmd, (uint8_t) (sub_addr & 0x00FF), ACK_CHECK_EN);
+        }
+        i2c_master_read(cmd, buf, (size_t) buf_len, ACK_CHECK_EN);
+        break;
+      case BusOpcode::TX:
+        i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_WRITE, ACK_CHECK_EN);
+        if (need_to_send_subaddr()) {
+          i2c_master_write_byte(cmd, (uint8_t) (sub_addr & 0x00FF), ACK_CHECK_EN);
+        }
+        i2c_master_write(cmd, buf, (size_t) buf_len, ACK_CHECK_EN);
+        break;
+      case BusOpcode::TX_CMD:
+        i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
+        break;
+      default:
+        i2c_cmd_link_delete(cmd);
+        abort(XferFault::BAD_PARAM);
+        return XferFault::BAD_PARAM;
+    }
+    i2c_master_stop(cmd);
+
+    int ret = i2c_master_cmd_begin((i2c_port_t) device->getAdapterId(), cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    if (ret == ESP_FAIL) {
+      abort(XferFault::BUS_FAULT);
+      return XferFault::BUS_FAULT;
+    }
+    else {
+      markComplete();
+    }
   }
   else {
     abort(XferFault::BAD_PARAM);
     return XferFault::BAD_PARAM;
   }
 
-  switch (wire_status) {
-    case I2C_WAITING:
-      markComplete();
-      break;
-    case I2C_ADDR_NAK:
-      Kernel::log("DEV_NOT_FOUND\n");
-      abort(XferFault::DEV_NOT_FOUND);
-      return XferFault::DEV_NOT_FOUND;
-    case I2C_DATA_NAK:
-      Kernel::log("I2C_DATA_NAK\n");
-      abort(XferFault::DEV_NOT_FOUND);
-      return XferFault::DEV_NOT_FOUND;
-    case I2C_ARB_LOST:
-      abort(XferFault::BUS_BUSY);
-      return XferFault::BUS_BUSY;
-    case I2C_TIMEOUT:
-      abort(XferFault::TIMEOUT);
-      return XferFault::TIMEOUT;
-    default:
-      Kernel::log("Transfer failed with an unforseen error code.\n");
-      abort(XferFault::NO_REASON);
-      return XferFault::NO_REASON;
-  }
   return XferFault::NONE;
 }
 
