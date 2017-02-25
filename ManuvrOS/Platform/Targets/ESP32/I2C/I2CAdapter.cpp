@@ -7,9 +7,21 @@
 #define ACK_CHECK_DIS  0x0     /*!< I2C master will not check ack from slave */
 
 
+
+I2CBusOp* _threaded_op = nullptr;
+
 void i2c_worker_thread(void* arg) {
+  I2CAdapter* adapter = (I2CAdapter*) arg;
   while (1) {
-    vTaskDelay(10000 / portTICK_RATE_MS);
+    if (_threaded_op) {
+      _threaded_op->advance_operation(0);
+      Kernel::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, nullptr);   // Raise an event
+      _threaded_op = nullptr;
+      taskYIELD();
+    }
+    else {
+      vTaskDelay(700 / portTICK_RATE_MS);
+    }
   }
 }
 
@@ -17,26 +29,23 @@ void i2c_worker_thread(void* arg) {
 
 int8_t I2CAdapter::bus_init() {
   i2c_config_t conf;
-  conf.mode             = I2C_MODE_MASTER;
+  conf.mode             = I2C_MODE_MASTER;  // TODO: We only support master mode right now.
   conf.sda_io_num       = (gpio_num_t) _bus_opts.sda_pin;
   conf.scl_io_num       = (gpio_num_t) _bus_opts.scl_pin;
-  conf.sda_pullup_en    = GPIO_PULLUP_ENABLE;
-  conf.scl_pullup_en    = GPIO_PULLUP_ENABLE;
-  conf.master.clk_speed = 100000;
-
-  switch (getAdapterId()) {
+  conf.sda_pullup_en    = GPIO_PULLUP_ENABLE; // TODO: Derive from opts.
+  conf.scl_pullup_en    = GPIO_PULLUP_ENABLE; // TODO: Derive from opts.
+  conf.master.clk_speed = 100000; // TODO: Derive from opts.
+  int a_id = getAdapterId();
+  switch (a_id) {
     case 0:
-      i2c_param_config(I2C_NUM_0, &conf);
-      i2c_driver_install(I2C_NUM_0, conf.mode, 0, 0, 0);
-      xTaskCreate(i2c_worker_thread, "i2c_thread", 1024 * 2, (void* ) 0, 10, NULL);
-      busOnline(true);
-      break;
-
     case 1:
-      i2c_param_config(I2C_NUM_1, &conf);
-      i2c_driver_install(I2C_NUM_1, conf.mode, 0, 0, 0);
-      xTaskCreate(i2c_worker_thread, "i2c_thread", 1024 * 2, (void* ) 0, 10, NULL);
-      busOnline(true);
+      if (ESP_OK == i2c_param_config(((0 == a_id) ? I2C_NUM_0 : I2C_NUM_1), &conf)) {
+        if (ESP_OK == i2c_driver_install(((0 == a_id) ? I2C_NUM_0 : I2C_NUM_1), conf.mode, 0, 0, 0)) {
+          // TODO: This needs to collapse into Manuvr's abstraction of threads.
+          xTaskCreate(i2c_worker_thread, "i2c_thread", 1024 * 2, (void* ) this, 10, NULL);
+          busOnline(true);
+        }
+      }
       break;
 
     default:
@@ -71,71 +80,34 @@ int8_t I2CAdapter::generateStop() {
 
 
 XferFault I2CBusOp::begin() {
-  if (nullptr == device) {
-    abort(XferFault::DEV_NOT_FOUND);
-    return XferFault::DEV_NOT_FOUND;
-  }
-
-  if ((nullptr != callback) && (callback->io_op_callahead(this))) {
-    abort(XferFault::IO_RECALL);
-    return XferFault::IO_RECALL;
-  }
-
-  xfer_state = XferState::ADDR;
-  if (device->generateStart()) {
-    // Failure to generate START condition.
-    abort(XferFault::BUS_BUSY);
-    return XferFault::BUS_BUSY;
-  }
-
-  i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-
-  int wire_status = -1;
-  int i = 0;
-  if (0 == (i2c_port_t) device->getAdapterId()) {
-    i2c_master_start(cmd);
-
-    switch (get_opcode()) {
-      case BusOpcode::RX:
-        i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
-        if (need_to_send_subaddr()) {
-          i2c_master_write_byte(cmd, (uint8_t) (sub_addr & 0x00FF), ACK_CHECK_EN);
-        }
-        i2c_master_read(cmd, buf, (size_t) buf_len, ACK_CHECK_EN);
-        break;
-      case BusOpcode::TX:
-        i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_WRITE, ACK_CHECK_EN);
-        if (need_to_send_subaddr()) {
-          i2c_master_write_byte(cmd, (uint8_t) (sub_addr & 0x00FF), ACK_CHECK_EN);
-        }
-        i2c_master_write(cmd, buf, (size_t) buf_len, ACK_CHECK_EN);
-        break;
-      case BusOpcode::TX_CMD:
-        i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
-        break;
-      default:
-        i2c_cmd_link_delete(cmd);
-        abort(XferFault::BAD_PARAM);
-        return XferFault::BAD_PARAM;
-    }
-    i2c_master_stop(cmd);
-
-    int ret = i2c_master_cmd_begin((i2c_port_t) device->getAdapterId(), cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-    if (ret == ESP_FAIL) {
-      abort(XferFault::BUS_FAULT);
-      return XferFault::BUS_FAULT;
+  if (_threaded_op) {
+    if (device) {
+      switch (device->getAdapterId()) {
+        case 0:
+        case 1:
+          if ((nullptr == callback) || (0 == callback->io_op_callahead(this))) {
+            set_state(XferState::INITIATE);
+            _threaded_op = this;
+            return XferFault::NONE;
+          }
+          else {
+            abort(XferFault::IO_RECALL);
+          }
+          break;
+        default:
+          abort(XferFault::BAD_PARAM);
+          break;
+      }
     }
     else {
-      markComplete();
+      abort(XferFault::DEV_NOT_FOUND);
     }
   }
   else {
-    abort(XferFault::BAD_PARAM);
-    return XferFault::BAD_PARAM;
+    abort(XferFault::BUS_BUSY);
   }
 
-  return XferFault::NONE;
+  return xfer_fault;
 }
 
 
@@ -144,7 +116,58 @@ XferFault I2CBusOp::begin() {
 *   from an I/O thread.
 */
 int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
-  return 0;
+  i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+  if (ESP_OK == i2c_master_start(cmd)) {
+    switch (get_opcode()) {
+      case BusOpcode::RX:
+        i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
+        if (need_to_send_subaddr()) {
+          i2c_master_write_byte(cmd, (uint8_t) (sub_addr & 0x00FF), ACK_CHECK_EN);
+          set_state(XferState::ADDR);
+        }
+        //i2c_master_start(cmd);
+        i2c_master_read(cmd, buf, (size_t) buf_len, ACK_CHECK_EN);
+        set_state(XferState::RX_WAIT);
+        break;
+      case BusOpcode::TX:
+        i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_WRITE, ACK_CHECK_EN);
+        if (need_to_send_subaddr()) {
+          i2c_master_write_byte(cmd, (uint8_t) (sub_addr & 0x00FF), ACK_CHECK_EN);
+          set_state(XferState::ADDR);
+        }
+        i2c_master_write(cmd, buf, (size_t) buf_len, ACK_CHECK_EN);
+        set_state(XferState::TX_WAIT);
+        break;
+      case BusOpcode::TX_CMD:
+        i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
+        break;
+      default:
+        abort(XferFault::BAD_PARAM);
+        break;
+    }
+
+    if (XferFault::NONE == xfer_fault) {
+      i2c_master_stop(cmd);
+      set_state(XferState::STOP);
+      int ret = i2c_master_cmd_begin((i2c_port_t) device->getAdapterId(), cmd, 1000 / portTICK_RATE_MS);
+      if (ret == ESP_FAIL) {
+        abort(XferFault::BUS_FAULT);
+      }
+      else {
+        markComplete();
+      }
+    }
+    else {
+      abort(XferFault::BAD_PARAM);
+    }
+  }
+  else {
+    abort(XferFault::BAD_PARAM);
+  }
+
+  i2c_cmd_link_delete(cmd);  // Cleanup.
+
+  return (XferFault::NONE == xfer_fault) ? 0 : -1;
 }
 
 #endif  // MANUVR_SUPPORT_I2C

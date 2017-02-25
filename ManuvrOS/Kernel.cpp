@@ -1437,18 +1437,6 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
     #endif // MANUVR_STORAGE
 
     #if defined(MANUVR_DEBUG)
-    case 'f':  // FPU benchmark
-      {
-        float a = 1.001;
-        long time_var2 = millis();
-        for (int i = 0;i < 1000000;i++) {
-          a += 0.01 * sqrtf(a);
-        }
-        local_log.concatf("Running floating-point test...\nTime:      %ul ms\n", (unsigned long) millis() - time_var2);
-        local_log.concatf("Value:     %.5f\nFPU test concluded.\n", (double) a);
-      }
-      break;
-
     case 'r':        // Read so many random integers...
       temp_int = (temp_int <= 0) ? PLATFORM_RNG_CARRY_CAPACITY : temp_int;
       for (uint8_t i = 0; i < temp_int; i++) {

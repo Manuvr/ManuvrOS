@@ -34,6 +34,10 @@ This file is meant to contain a set of common functions that are typically platf
 #include <Frameworks/OIC/ManuvrOIC.h>
 #endif
 
+#if defined(MANUVR_TEST_DRIVER)
+#include <Drivers/TestDriver/TestDriver.h>
+#endif
+
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -345,6 +349,12 @@ int8_t ManuvrPlatform::bootstrap() {
   #endif
 
   platformPostInit();    // Hook for platform-specific post-boot operations.
+
+  #if defined(MANUVR_TEST_DRIVER)
+    // TODO: This is a leak, for sure. Ref-count EventReceivers.
+    TestDriver* _test_drv = new TestDriver();
+    _kernel.subscribe((EventReceiver*) _test_drv);
+  #endif //MANUVR_TEST_DRIVER
 
   if (nullptr == _self) {
     // If we have no other conception of "self", invent one.

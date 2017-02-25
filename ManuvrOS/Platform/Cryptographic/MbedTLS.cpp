@@ -394,10 +394,10 @@ int __attribute__((weak)) wrapped_sym_cipher(uint8_t* in, int in_len, uint8_t* o
         {
           mbedtls_aes_context ctx;
           if (opts & OP_ENCRYPT) {
-            mbedtls_aes_setkey_enc(&ctx, key, key_len);
+            mbedtls_aes_setkey_enc(&ctx, key, (unsigned int) key_len);
           }
           else {
-            mbedtls_aes_setkey_dec(&ctx, key, key_len);
+            mbedtls_aes_setkey_dec(&ctx, key, (unsigned int) key_len);
           }
           ret = mbedtls_aes_crypt_cbc(&ctx, _cipher_opcode(ci, opts), in_len, iv, in, out);
           mbedtls_aes_free(&ctx);

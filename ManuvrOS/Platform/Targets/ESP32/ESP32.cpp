@@ -48,11 +48,6 @@ This file is meant to contain a set of common functions that are typically platf
 volatile PlatformGPIODef gpio_pins[PLATFORM_GPIO_PIN_COUNT];
 
 
-/****************************************************************************************************
-* The code under this block is special on this platform, and will not be available elsewhere.       *
-****************************************************************************************************/
-
-
 /*******************************************************************************
 * Watchdog                                                                     *
 *******************************************************************************/
@@ -375,7 +370,7 @@ void ESP32Platform::seppuku() {
 * Never returns.
 */
 void ESP32Platform::jumpToBootloader() {
-  while(true);
+  esp_restart();
 }
 
 
@@ -388,7 +383,9 @@ void ESP32Platform::jumpToBootloader() {
 * Never returns.
 */
 void ESP32Platform::hardwareShutdown() {
-  while(true);
+  while(true) {
+    sleep_millis(60000);
+  }
 }
 
 /*
@@ -432,6 +429,7 @@ int8_t ESP32Platform::platformPreInit(Argument* root_config) {
   if (root_config) {
   }
   #if defined(MANUVR_CONSOLE_SUPPORT)
+    // TODO: This is a leak, for sure. Ref-count EventReceivers.
     StandardIO* _console_xport = new StandardIO();
     ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_xport);
     _kernel.subscribe((EventReceiver*) _console);
