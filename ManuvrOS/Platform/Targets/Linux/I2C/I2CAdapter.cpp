@@ -17,6 +17,28 @@
 int open_bus_handle = -1;        //TODO: This is a hack. Re-work it.
 int8_t  last_used_bus_addr = 0;  //TODO: This is a hack. Re-work it.
 
+
+I2CBusOp* _threaded_op = nullptr;
+
+void* i2c_worker_thread(void* arg) {
+  I2CAdapter* adapter = (I2CAdapter*) arg;
+  while (!platform.nominalState()) {
+    sleep_millis(20);
+  }
+  while (platform.nominalState()) {
+    if (_threaded_op) {
+      _threaded_op->advance_operation(0);
+      _threaded_op = nullptr;
+      adapter->raiseQueueReady();
+      yieldThread();
+    }
+    else {
+      sleep_millis(100);
+    }
+  }
+}
+
+
 /*
 * Private function that will switch the addressed i2c device via ioctl. This
 *   function is meaningless on anything but a linux system, in which case it
@@ -86,6 +108,7 @@ int8_t I2CAdapter::bus_init() {
       #endif
     }
     else {
+      createThread(&_thread_id, nullptr, i2c_worker_thread, (void*) this);
       busOnline(true);
     }
   }
@@ -135,26 +158,52 @@ int8_t I2CAdapter::generateStop() {
 *******************************************************************************/
 
 XferFault I2CBusOp::begin() {
-  if (nullptr == device) {
-    abort(XferFault::DEV_NOT_FOUND);
-    return XferFault::DEV_NOT_FOUND;
+  if (nullptr == _threaded_op) {
+    if (device) {
+      switch (device->getAdapterId()) {
+        case 0:
+        case 1:
+          if ((nullptr == callback) || (0 == callback->io_op_callahead(this))) {
+            set_state(XferState::INITIATE);
+            _threaded_op = this;
+            return XferFault::NONE;
+          }
+          else {
+            abort(XferFault::IO_RECALL);
+          }
+          break;
+        default:
+          abort(XferFault::BAD_PARAM);
+          break;
+      }
+    }
+    else {
+      abort(XferFault::DEV_NOT_FOUND);
+    }
+  }
+  else {
+    abort(XferFault::BUS_BUSY);
   }
 
-  if ((nullptr != callback) && (callback->io_op_callahead(this))) {
-    abort(XferFault::IO_RECALL);
-    return XferFault::IO_RECALL;
-  }
+  return xfer_fault;
+}
 
+
+/*
+* Linux doesn't have a concept of interrupt, but we might call this
+*   from an I/O thread.
+*/
+int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
   xfer_state = XferState::ADDR;
   if (device->generateStart()) {
     // Failure to generate START condition.
     abort(XferFault::BUS_BUSY);
-    return XferFault::BUS_BUSY;
+    return -1;
   }
 
   if (!switch_device(device, dev_addr)) {
     abort(XferFault::BUS_FAULT);
-    return XferFault::BUS_FAULT;
+    return -1;
   }
 
   if (opcode == BusOpcode::RX) {
@@ -166,12 +215,12 @@ XferFault I2CBusOp::begin() {
       }
       else {
         abort(XferFault::BUS_FAULT);
-        return XferFault::BUS_FAULT;
+        return -1;
       }
     }
     else {
       abort(XferFault::BUS_FAULT);
-      return XferFault::BUS_FAULT;
+      return -1;
     }
   }
   else if (opcode == BusOpcode::TX) {
@@ -185,7 +234,7 @@ XferFault I2CBusOp::begin() {
     }
     else {
       abort(XferFault::BUS_FAULT);
-      return XferFault::BUS_FAULT;
+      return -1;
     }
   }
   else if (opcode == BusOpcode::TX_CMD) {
@@ -196,23 +245,14 @@ XferFault I2CBusOp::begin() {
     }
     else {
       abort(XferFault::BUS_FAULT);
-      return XferFault::BUS_FAULT;
+      return -1;
     }
   }
   else {
     abort(XferFault::BUS_FAULT);
-    return XferFault::BUS_FAULT;
+    return -1;
   }
 
-  return XferFault::NONE;
-}
-
-
-/*
-* Linux doesn't have a concept of interrupt, but we might call this
-*   from an I/O thread.
-*/
-int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
   return 0;
 }
 

@@ -5,6 +5,8 @@
 
 #define ACK_CHECK_EN   0x01     /*!< I2C master will check ack from slave*/
 #define ACK_CHECK_DIS  0x00     /*!< I2C master will not check ack from slave */
+#define ACK_VAL        0x00     /*!< I2C ack value */
+#define NACK_VAL       0x01     /*!< I2C nack value */
 
 
 
@@ -12,15 +14,18 @@ I2CBusOp* _threaded_op = nullptr;
 
 void i2c_worker_thread(void* arg) {
   I2CAdapter* adapter = (I2CAdapter*) arg;
+  while (!platform.nominalState()) {
+    sleep_millis(20);
+  }
   while (1) {
     if (_threaded_op) {
       _threaded_op->advance_operation(0);
-      adapter->raiseQueueReady();
       _threaded_op = nullptr;
-      taskYIELD();
+      adapter->raiseQueueReady();
+      yieldThread();
     }
     else {
-      vTaskDelay(700 / portTICK_RATE_MS);
+      sleep_millis(700);
       //ulTaskNotifyTake(pdTRUE, 10000 / portTICK_RATE_MS);
     }
   }
@@ -35,7 +40,7 @@ int8_t I2CAdapter::bus_init() {
   conf.scl_io_num       = (gpio_num_t) _bus_opts.scl_pin;
   conf.sda_pullup_en    = GPIO_PULLUP_ENABLE; // TODO: Derive from opts.
   conf.scl_pullup_en    = GPIO_PULLUP_ENABLE; // TODO: Derive from opts.
-  conf.master.clk_speed = 400000; // TODO: Derive from opts.
+  conf.master.clk_speed = 100000; // TODO: Derive from opts.
   int a_id = getAdapterId();
   switch (a_id) {
     case 0:
@@ -43,7 +48,8 @@ int8_t I2CAdapter::bus_init() {
       if (ESP_OK == i2c_param_config(((0 == a_id) ? I2C_NUM_0 : I2C_NUM_1), &conf)) {
         if (ESP_OK == i2c_driver_install(((0 == a_id) ? I2C_NUM_0 : I2C_NUM_1), conf.mode, 0, 0, 0)) {
           // TODO: This needs to collapse into Manuvr's abstraction of threads.
-          xTaskCreate(i2c_worker_thread, "i2c_thread", 1024 * 2, (void* ) this, 1, nullptr);
+          //xTaskCreate(i2c_worker_thread, "i2c_thread", 1024 * 2, (void* ) this, 1, nullptr);
+          createThread(&_thread_id, nullptr, i2c_worker_thread, (void*) this);
           busOnline(true);
         }
       }
@@ -127,7 +133,7 @@ int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
           set_state(XferState::ADDR);
         }
         //i2c_master_start(cmd);
-        i2c_master_read(cmd, buf, (size_t) buf_len, ACK_CHECK_EN);
+        i2c_master_read(cmd, buf, (size_t) buf_len, ACK_VAL);
         set_state(XferState::RX_WAIT);
         break;
       case BusOpcode::TX:

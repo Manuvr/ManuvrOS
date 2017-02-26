@@ -336,6 +336,15 @@ void maskableInterrupts(bool);
 int createThread(unsigned long*, void*, ThreadFxnPtr, void*);
 int deleteThread(unsigned long*);
 int wakeThread(unsigned long*);
+
+#if defined(__MANUVR_LINUX) || defined(__MANUVR_APPLE)
+  inline int yieldThread() {   return pthread_yield();   };
+#elif defined(__MANUVR_FREERTOS)
+  inline int yieldThread() {   taskYIELD();  return 0;   };
+#else
+  inline int yieldThread() {   return 0;   };
+#endif
+
 void sleep_millis(unsigned long millis);
 
 /*
