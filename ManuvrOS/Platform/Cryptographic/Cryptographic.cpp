@@ -153,7 +153,7 @@ bool estimate_pk_size_requirements(CryptoKey k, size_t* pub, size_t* priv, uint1
 *******************************************************************************/
 /* Privately scoped. */
 #if defined(__BUILD_HAS_SYMMETRIC) || defined(__BUILD_HAS_ASYMMETRIC)
-const bool _is_cipher_symmetric(Cipher ci) {
+bool _is_cipher_symmetric(Cipher ci) {
   switch (ci) {
     #if defined(WRAPPED_SYM_NULL)
       case Cipher::SYM_NULL:             return true;
@@ -308,7 +308,7 @@ const bool _is_cipher_symmetric(Cipher ci) {
 #endif
 
 /* Privately scoped. */
-const bool _is_cipher_authenticated(Cipher ci) {
+bool _is_cipher_authenticated(Cipher ci) {
   switch (ci) {
     #if defined(WRAPPED_SYM_AES_128_GCM)
       case Cipher::SYM_AES_128_GCM:           return true;
@@ -354,7 +354,7 @@ const bool _is_cipher_authenticated(Cipher ci) {
 }
 
 /* Privately scoped. */
-const bool _is_cipher_asymmetric(Cipher ci) {
+bool _is_cipher_asymmetric(Cipher ci) {
   switch (ci) {
     #if defined(WRAPPED_ASYM_ECKEY)
       case Cipher::ASYM_ECKEY:        return true;
@@ -379,7 +379,7 @@ const bool _is_cipher_asymmetric(Cipher ci) {
 }
 
 /* Privately scoped. */
-const bool _valid_cipher_params(Cipher ci) {
+bool _valid_cipher_params(Cipher ci) {
   switch (ci) {
     #if defined(WRAPPED_ASYM_ECKEY)
       case Cipher::ASYM_ECKEY:        return true;

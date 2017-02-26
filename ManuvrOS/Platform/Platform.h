@@ -343,7 +343,6 @@ void sleep_millis(unsigned long millis);
 */
 uint32_t randomInt();                        // Fetches one of the stored randoms and blocks until one is available.
 int8_t random_fill(uint8_t* buf, size_t len);
-volatile bool provide_random_int(uint32_t);  // Provides a new random to the pool from the RNG ISR.
 
 
 /*

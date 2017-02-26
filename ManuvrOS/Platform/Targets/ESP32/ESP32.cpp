@@ -78,7 +78,6 @@ uint32_t randomInt() {
 */
 static void dev_urandom_reader(void* unused_param) {
   unsigned int rng_level    = 0;
-  unsigned int needed_count = 0;
 
   while (1) {
     rng_level = _random_pool_w_ptr - _random_pool_r_ptr;
@@ -91,7 +90,6 @@ static void dev_urandom_reader(void* unused_param) {
     }
   }
 }
-
 
 
 

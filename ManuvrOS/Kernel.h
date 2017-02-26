@@ -142,10 +142,10 @@ limitations under the License.
       static uint32_t lagged_schedules;  // How many schedules were skipped? Ideally this is zero.
 
       /* These functions deal with logging.*/
-      volatile static void log(int severity, const char *str);  // Pass-through to the logger class, whatever that happens to be.
-      volatile static void log(const char *str);                // Pass-through to the logger class, whatever that happens to be.
-      volatile static void log(char *str);                      // Pass-through to the logger class, whatever that happens to be.
-      volatile static void log(StringBuilder *str);
+      static void log(int severity, const char *str);  // Pass-through to the logger class, whatever that happens to be.
+      static void log(const char *str);                // Pass-through to the logger class, whatever that happens to be.
+      static void log(char *str);                      // Pass-through to the logger class, whatever that happens to be.
+      static void log(StringBuilder *str);
       static int8_t attachToLogger(BufferPipe*);
       static int8_t detachFromLogger(BufferPipe*);
 

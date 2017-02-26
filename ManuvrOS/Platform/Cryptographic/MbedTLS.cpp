@@ -33,7 +33,7 @@ MbedTLS support assumes that we have a local copy of the mbedTLS source tree
 * These things are privately-scoped, and are intended for internal use only.   *
 *******************************************************************************/
 
-const int _cipher_opcode(Cipher ci, uint32_t opts) {
+int _cipher_opcode(Cipher ci, uint32_t opts) {
   switch (ci) {
     case Cipher::SYM_AES_128_ECB:
     case Cipher::SYM_AES_192_ECB:
@@ -75,7 +75,7 @@ const int _cipher_opcode(Cipher ci, uint32_t opts) {
 * @param Hashes The hash algorithm in question.
 * @return The size of the buffer (in bytes) required to hold the digest output.
 */
-const int get_digest_output_length(Hashes h) {
+int get_digest_output_length(Hashes h) {
   const mbedtls_md_info_t* info = mbedtls_md_info_from_type((mbedtls_md_type_t)h);
   if (info) {
     return info->size;
@@ -89,7 +89,7 @@ const int get_digest_output_length(Hashes h) {
 * @param Cipher The cipher algorithm in question.
 * @return The size of the buffer (in bytes) required to hold the cipher key.
 */
-const int get_cipher_key_length(Cipher c) {
+int get_cipher_key_length(Cipher c) {
   if (_is_cipher_symmetric(c)) {
     const mbedtls_cipher_info_t* info = mbedtls_cipher_info_from_type((mbedtls_cipher_type_t)c);
     if (info) {
@@ -113,7 +113,7 @@ const int get_cipher_key_length(Cipher c) {
 * @param Cipher The cipher algorithm in question.
 * @return The modulus of the buffer (in bytes) required for this cipher.
 */
-const int get_cipher_block_size(Cipher c) {
+int get_cipher_block_size(Cipher c) {
   if (_is_cipher_symmetric(c)) {
     const mbedtls_cipher_info_t* info = mbedtls_cipher_info_from_type((mbedtls_cipher_type_t)c);
     if (info) {

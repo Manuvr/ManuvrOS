@@ -74,6 +74,10 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_LEGEND_SEMANTIC      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_SEMANTIC"      , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
   #endif
 
+  #if defined(MANUVR_SUPPORT_I2C)
+  { MANUVR_MSG_I2C_QUEUE_READY, 0x0000,  "I2C_Q_RDY", ManuvrMsg::MSG_ARGS_NONE },  // The i2c queue is ready for attention.
+  #endif
+
   #if defined(MANUVR_STORAGE)
   #endif
 
@@ -217,28 +221,28 @@ Kernel::~Kernel() {
 /*
 * Logger pass-through functions. Please mind the variadics...
 */
-volatile void Kernel::log(int severity, const char *str) {
+void Kernel::log(int severity, const char *str) {
   if (nullptr != _logger) {
     StringBuilder log_buffer(str);
     _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
   }
 }
 
-volatile void Kernel::log(char *str) {
+void Kernel::log(char *str) {
   if (nullptr != _logger) {
     StringBuilder log_buffer(str);
     _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
   }
 }
 
-volatile void Kernel::log(const char *str) {
+void Kernel::log(const char *str) {
   if (nullptr != _logger) {
     StringBuilder log_buffer(str);
     _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
   }
 }
 
-volatile void Kernel::log(StringBuilder *str) {
+void Kernel::log(StringBuilder *str) {
   if (nullptr != _logger) {
     _logger->toCounterparty(str, MEM_MGMT_RESPONSIBLE_BEARER);
   }
@@ -738,7 +742,6 @@ int8_t Kernel::procIdleFlags() {
         break;
     }
 
-
     // All of the logic above ultimately informs this choice.
     if (clean_up_active_runnable) {
       reclaim_event(active_runnable);
@@ -983,7 +986,6 @@ void Kernel::printScheduler(StringBuilder* output) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void Kernel::printDebug(StringBuilder* output) {
-  if (nullptr == output) return;
   EventReceiver::printDebug(output);
 
   //output->concatf("-- our_mem_addr:             %p\n", this);
@@ -1126,7 +1128,7 @@ int8_t Kernel::notify(ManuvrMsg* active_runnable) {
       break;
 
     case MANUVR_MSG_SYS_ISSUE_LOG_ITEM:
-      if (nullptr != _logger) {
+      if (_logger) {
         StringBuilder *log_item;
         if (0 == active_runnable->getArgAs(&log_item)) {
           _logger->toCounterparty(log_item, MEM_MGMT_RESPONSIBLE_BEARER);
@@ -1441,20 +1443,6 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       temp_int = (temp_int <= 0) ? PLATFORM_RNG_CARRY_CAPACITY : temp_int;
       for (uint8_t i = 0; i < temp_int; i++) {
         local_log.concatf("Random number: 0x%08x\n", randomInt());
-      }
-      break;
-
-    case 'I':
-      {
-        Identity* ident = nullptr;
-        switch (temp_int) {
-          case 1:
-            break;
-          case 0:
-            break;
-          default:
-            break;
-        }
       }
       break;
 

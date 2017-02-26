@@ -420,7 +420,7 @@ int8_t ADP8866::notify(ManuvrMsg* active_event) {
     case MANUVR_MSG_ADP8866_RESET:
       // This is the reset callback
       if (_pins.reset(true)) {
-        init();
+        readRegister((uint8_t) ADP8866_MANU_DEV_ID);
       }
       break;
 

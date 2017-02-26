@@ -100,7 +100,7 @@ typedef int (*wrapped_hash_operation)(
   Hashes h
 );
 
-const int get_digest_output_length(Hashes);
+int get_digest_output_length(Hashes);
 const char* get_digest_label(Hashes);
 int8_t wrapped_hash(uint8_t* in, size_t in_len, uint8_t* out, Hashes h);
 
@@ -293,10 +293,10 @@ enum class Cipher {
 };
 
 // If we have Cipher support at all, we need these...
-const bool _is_cipher_symmetric(Cipher);
-const bool _is_cipher_authenticated(Cipher);
-const bool _is_cipher_asymmetric(Cipher);
-const bool _valid_cipher_params(Cipher);
+bool _is_cipher_symmetric(Cipher);
+bool _is_cipher_authenticated(Cipher);
+bool _is_cipher_asymmetric(Cipher);
+bool _valid_cipher_params(Cipher);
 #endif  //__BUILD_HAS_SYMMETRIC
 
 #if defined(__BUILD_HAS_SYMMETRIC)
@@ -447,8 +447,8 @@ typedef struct _async_crypt_op {
 /*******************************************************************************
 * Cipher/decipher
 *******************************************************************************/
-const int get_cipher_block_size(Cipher);
-const int get_cipher_key_length(Cipher);
+int get_cipher_block_size(Cipher);
+int get_cipher_key_length(Cipher);
 int get_cipher_aligned_size(Cipher, int len);
 const char* get_cipher_label(Cipher);
 int wrapped_sym_cipher(uint8_t* in, int in_len, uint8_t* out, int out_len, uint8_t* key, int key_len, uint8_t* iv, Cipher, uint32_t opts);
@@ -509,10 +509,10 @@ static std::map<CryptoKey, wrapped_keygen_operation>  _keygen_overrides;
 
 #if defined(__BUILD_HAS_SYMMETRIC) || defined(__BUILD_HAS_ASYMMETRIC)
   // If we have Cipher support at all, we need these...
-  const bool _is_cipher_symmetric(Cipher);
-  const bool _is_cipher_authenticated(Cipher);
-  const bool _is_cipher_asymmetric(Cipher);
-  const bool _valid_cipher_params(Cipher);
+  bool _is_cipher_symmetric(Cipher);
+  bool _is_cipher_authenticated(Cipher);
+  bool _is_cipher_asymmetric(Cipher);
+  bool _valid_cipher_params(Cipher);
 #endif
 
 #ifdef __cplusplus

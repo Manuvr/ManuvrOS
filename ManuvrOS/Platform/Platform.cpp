@@ -178,10 +178,10 @@ void ManuvrPlatform::printDebug(StringBuilder* output) {
   uintptr_t final_sp   = 0;
   output->concatf("\n-- getStackPointer():  %p\n", &final_sp);
   output->concatf("-- stack grows %s\n--\n", (&final_sp > &initial_sp) ? "up" : "down");
-  output->concatf("-- millis()            0x%08x\n", millis());
-  output->concatf("-- micros()            0x%08x\n", micros());
-  output->concatf("-- start_micros        0x%08x\n", _start_micros);
-  output->concatf("-- boot_micros         0x%08x\n", _boot_micros);
+  output->concatf("-- millis()            %lu\n", millis());
+  output->concatf("-- micros()            %lu\n", micros());
+  output->concatf("-- start_micros        %lu\n", _start_micros);
+  output->concatf("-- boot_micros         %lu\n", _boot_micros);
   output->concatf("-- Timer resolution    %d ms\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
   output->concatf("-- Entropy pool size   %u bytes\n", PLATFORM_RNG_CARRY_CAPACITY * 4);
   if (platform.hasTimeAndDate()) {

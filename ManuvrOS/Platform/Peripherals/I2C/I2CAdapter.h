@@ -97,6 +97,14 @@ This file is the tortured result of growing pains since the beginning of
   class I2CAdapter;
 
 
+  enum class I2CPingState {
+    NONE = 0,
+    NEG  = 1,
+    POS  = 2,
+    RES  = 3
+  };
+
+
   #define I2C_ADAPT_OPT_FLAG_HZ0      0x0100   //
   #define I2C_ADAPT_OPT_FLAG_HZ1      0x0200   //
   #define I2C_ADAPT_OPT_FLAG_SCL_PU   0x0400   // SCL pullup.
@@ -236,6 +244,8 @@ This file is the tortured result of growing pains since the beginning of
 
       inline int8_t getAdapterId() {  return(_bus_opts.adapter);  };
 
+      inline void raiseQueueReady() {  Kernel::isrRaiseEvent(&_queue_ready);  };
+
 
     protected:
       int8_t attached();      // This is called from the base notify().
@@ -248,11 +258,10 @@ This file is the tortured result of growing pains since the beginning of
 
     private:
       const I2CAdapterOptions _bus_opts;
-      int8_t  ping_map[128];
+      int8_t  ping_map[32];
 
       LinkedList<I2CDevice*> dev_list;    // A list of active slaves on this bus.
-      ManuvrMsg _periodic_i2c_debug;
-      //ManuvrMsg _queue_ready;
+      ManuvrMsg _queue_ready;
 
 
       int get_slave_dev_by_addr(uint8_t search_addr);
@@ -261,8 +270,12 @@ This file is the tortured result of growing pains since the beginning of
       void purge_queued_work();
       void purge_stalled_job();
 
+      I2CPingState get_ping_state_by_addr(uint8_t addr);
+      void set_ping_state_by_addr(uint8_t addr, I2CPingState nu);
+
 
       static I2CBusOp __prealloc_pool[I2CADAPTER_PREALLOC_COUNT];
+      static char _ping_state_chr[4];
   };
 
 

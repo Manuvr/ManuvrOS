@@ -45,14 +45,8 @@ This file is the tortured result of growing pains since the beginning of
 *******************************************************************************/
 
 I2CBusOp I2CAdapter::__prealloc_pool[I2CADAPTER_PREALLOC_COUNT];
+char I2CAdapter::_ping_state_chr[4] = {' ', '.', '*', ' '};
 //template<> PriorityQueue<I2CBusOp*> BusAdapter<I2CBusOp>::preallocated;
-
-  // We need some internal events to allow communication back from the ISR.
-const MessageTypeDef i2c_message_defs[] = {
-  { MANUVR_MSG_I2C_DEBUG,       0x0000,  "I2C_DEBUG", ManuvrMsg::MSG_ARGS_NONE },  // TODO: This needs to go away.
-  { MANUVR_MSG_I2C_QUEUE_READY, 0x0000,  "I2C_Q_RDY", ManuvrMsg::MSG_ARGS_NONE }  // The i2c queue is ready for attention.
-};
-
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -69,15 +63,12 @@ I2CAdapter::I2CAdapter(const I2CAdapterOptions* o) : EventReceiver("I2CAdapter")
   _er_clear_flag(I2C_BUS_FLAG_BUS_ERROR | I2C_BUS_FLAG_BUS_ONLINE);
   _er_clear_flag(I2C_BUS_FLAG_PING_RUN  | I2C_BUS_FLAG_PINGING);
 
-  int mes_count = sizeof(i2c_message_defs) / sizeof(MessageTypeDef);
-  ManuvrMsg::registerMessages(i2c_message_defs, mes_count);
-
   // Mark all of our preallocated SPI jobs as "No Reap" and pass them into the prealloc queue.
   for (uint8_t i = 0; i < I2CADAPTER_PREALLOC_COUNT; i++) {
     preallocated.insert(&__prealloc_pool[i]);
   }
 
-  for (uint16_t i = 0; i < 128; i++) ping_map[i] = 0;   // Zero the ping map.
+  for (uint16_t i = 0; i < 32; i++) ping_map[i] = 0;   // Zero the ping map.
 }
 
 
@@ -94,9 +85,6 @@ I2CAdapter::~I2CAdapter() {
   _er_clear_flag(I2C_BUS_FLAG_BUS_ERROR | I2C_BUS_FLAG_BUS_ONLINE);
   _er_clear_flag(I2C_BUS_FLAG_PING_RUN  | I2C_BUS_FLAG_PINGING);
 
-  _periodic_i2c_debug.enableSchedule(false);
-  platform.kernel()->removeSchedule(&_periodic_i2c_debug);
-  _periodic_i2c_debug.decRefs();
   bus_deinit();
 }
 
@@ -270,13 +258,8 @@ int8_t I2CAdapter::io_op_callback(BusOp* _op) {
   I2CBusOp* op = (I2CBusOp*) _op;
 	if (op->get_opcode() == BusOpcode::TX_CMD) {
     // The only thing the i2c adapter uses this op-code for is pinging slaves.
-		if (!op->hasFault()) {
-      // We only support 7-bit addressing for now.
-			ping_map[op->dev_addr % 128] = 1;
-		}
-		else {
-			ping_map[op->dev_addr % 128] = -1;
-		}
+    // We only support 7-bit addressing for now.
+    set_ping_state_by_addr(op->dev_addr, op->hasFault() ? I2CPingState::NEG : I2CPingState::POS);
 
 		if (_er_flag(I2C_BUS_FLAG_PINGING)) {
 		  if ((op->dev_addr & 0x00FF) < 127) {  // TODO: yy???
@@ -321,7 +304,7 @@ int8_t I2CAdapter::queue_io_job(BusOp* op) {
 		  }
 		}
 		else {
-		  Kernel::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, nullptr);   // Raise an event
+		  Kernel::staticRaiseEvent(&_queue_ready);   // Raise an event
 		}
 	}
 	return 0;
@@ -468,6 +451,16 @@ void I2CAdapter::purge_stalled_job() {
 }
 
 
+I2CPingState I2CAdapter::get_ping_state_by_addr(uint8_t addr) {
+  return (I2CPingState) ((ping_map[(addr & 0x7F) >> 2] >> ((addr & 0x03) << 1)) & 0x03);
+}
+
+void I2CAdapter::set_ping_state_by_addr(uint8_t addr, I2CPingState nu) {
+  uint8_t m = (0x03 << ((addr & 0x03) << 1));
+  uint8_t a = ping_map[(addr & 0x7F) >> 2] & ~m;
+  ping_map[(addr & 0x7F) >> 2] = a | (((uint8_t) nu) << ((addr & 0x03) << 1));
+}
+
 
 /*
 * Debug fxn to print the ping map.
@@ -480,22 +473,22 @@ void I2CAdapter::printPingMap(StringBuilder *temp) {
     for (uint8_t i = 0; i < 128; i+=16) {
       temp->concatf("\t0x%02x: %c %c %c %c %c %c %c %c %c %c %c %c %c %c %c %c\n",
         i,
-        ((ping_map[i + 0x00] == 0) ? ' ' : ((ping_map[i + 0x00] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x01] == 0) ? ' ' : ((ping_map[i + 0x01] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x02] == 0) ? ' ' : ((ping_map[i + 0x02] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x03] == 0) ? ' ' : ((ping_map[i + 0x03] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x04] == 0) ? ' ' : ((ping_map[i + 0x04] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x05] == 0) ? ' ' : ((ping_map[i + 0x05] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x06] == 0) ? ' ' : ((ping_map[i + 0x06] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x07] == 0) ? ' ' : ((ping_map[i + 0x07] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x08] == 0) ? ' ' : ((ping_map[i + 0x08] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x09] == 0) ? ' ' : ((ping_map[i + 0x09] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x0A] == 0) ? ' ' : ((ping_map[i + 0x0A] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x0B] == 0) ? ' ' : ((ping_map[i + 0x0B] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x0C] == 0) ? ' ' : ((ping_map[i + 0x0C] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x0D] == 0) ? ' ' : ((ping_map[i + 0x0D] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x0E] == 0) ? ' ' : ((ping_map[i + 0x0E] < 0) ? '-' : '*')),
-        ((ping_map[i + 0x0F] == 0) ? ' ' : ((ping_map[i + 0x0F] < 0) ? '-' : '*'))
+        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x00)],
+        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x01)],
+        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x02)],
+        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x03)],
+        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x04)],
+        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x05)],
+        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x06)],
+        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x07)],
+        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x08)],
+        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x09)],
+        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0A)],
+        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0B)],
+        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0C)],
+        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0D)],
+        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0E)],
+        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0F)]
       );
       //temp->concat(str_buf);
     }
@@ -549,15 +542,10 @@ void I2CAdapter::printDevs(StringBuilder *temp) {
 */
 int8_t I2CAdapter::attached() {
   if (EventReceiver::attached()) {
-    _periodic_i2c_debug.repurpose(MANUVR_MSG_I2C_DEBUG, (EventReceiver*) this);
-    _periodic_i2c_debug.incRefs();
-    _periodic_i2c_debug.specific_target = (EventReceiver*) this;
-    _periodic_i2c_debug.priority(1);
-    _periodic_i2c_debug.alterSchedulePeriod(100);
-    _periodic_i2c_debug.alterScheduleRecurrence(-1);
-    _periodic_i2c_debug.autoClear(false);
-    _periodic_i2c_debug.enableSchedule(false);
-    platform.kernel()->addSchedule(&_periodic_i2c_debug);
+    _queue_ready.repurpose(MANUVR_MSG_I2C_QUEUE_READY, (EventReceiver*) this);
+    _queue_ready.incRefs();
+    _queue_ready.specific_target = (EventReceiver*) this;
+    _queue_ready.priority(1);
     bus_init();
     if (busOnline()) {
       advance_work_queue();
@@ -614,17 +602,6 @@ int8_t I2CAdapter::notify(ManuvrMsg* active_event) {
       advance_work_queue();
       return_value++;
       break;
-
-    #if defined(STM32F7XX) | defined(STM32F746xx)
-    // TODO: This is a debugging aid while I sort out i2c on the STM32F7.
-    case MANUVR_MSG_I2C_DEBUG:
-      {
-        //I2CBusOp* nu = new I2CBusOp(BusOpcode::RX, 0x27, (int16_t) 0, &_debug_scratch, 1);
-        ////nu->callback = this;
-        //queue_io_job(nu);
-      }
-      break;
-    #endif
 
     default:
       return_value += EventReceiver::notify(active_event);
@@ -694,21 +671,6 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       local_log.concat("i2c GPIO reset.\n");
       break;
 
-    #if defined(STM32F7XX) | defined(STM32F746xx)
-      case 'x':
-        _periodic_i2c_debug.fireNow();
-        break;
-
-      case 'Z':
-      case 'z':
-        if (temp_int) {
-          _periodic_i2c_debug.alterSchedulePeriod(temp_int * 10);
-        }
-        _periodic_i2c_debug.enableSchedule(*(str) == 'Z');
-        local_log.concatf("%s periodic reader.\n", (*(str) == 'Z' ? "Starting" : "Stopping"));
-        break;
-    #endif   // defined(STM32F7XX) | defined(STM32F746xx)
-
     case 'r':
       #ifdef STM32F4XX
         I2C_SoftwareResetCmd(I2C1, ENABLE);
@@ -750,7 +712,7 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
       break;
     case ']':
       local_log.concatf("Advanced i2c work queue.\n");
-      Kernel::raiseEvent(MANUVR_MSG_I2C_QUEUE_READY, nullptr);   // Raise an event
+      Kernel::staticRaiseEvent(&_queue_ready);   // Raise an event
       break;
 
     default:
