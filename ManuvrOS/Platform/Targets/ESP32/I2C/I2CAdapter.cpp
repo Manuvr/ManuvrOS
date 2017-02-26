@@ -12,7 +12,7 @@
 
 I2CBusOp* _threaded_op = nullptr;
 
-void i2c_worker_thread(void* arg) {
+void* i2c_worker_thread(void* arg) {
   I2CAdapter* adapter = (I2CAdapter*) arg;
   while (!platform.nominalState()) {
     sleep_millis(20);
@@ -21,11 +21,10 @@ void i2c_worker_thread(void* arg) {
     if (_threaded_op) {
       _threaded_op->advance_operation(0);
       _threaded_op = nullptr;
-      adapter->raiseQueueReady();
       yieldThread();
     }
     else {
-      sleep_millis(700);
+      suspendThread();
       //ulTaskNotifyTake(pdTRUE, 10000 / portTICK_RATE_MS);
     }
   }

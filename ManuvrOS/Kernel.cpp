@@ -410,7 +410,7 @@ int8_t Kernel::staticRaiseEvent(ManuvrMsg* active_runnable) {
   if (0 == return_value) {
     INSTANCE->update_maximum_queue_depth();   // Check the queue depth
     #if defined (__BUILD_HAS_THREADS)
-      if (INSTANCE->_thread_id) wakeThread(&INSTANCE->_thread_id);
+      if (INSTANCE->_thread_id) wakeThread(INSTANCE->_thread_id);
     #endif
     return return_value;
   }
@@ -483,7 +483,7 @@ int8_t Kernel::isrRaiseEvent(ManuvrMsg* event) {
   return_value = isr_exec_queue.insertIfAbsent(event, event->priority());
   maskableInterrupts(true);
   #if defined (__BUILD_HAS_THREADS)
-    if (INSTANCE->_thread_id) wakeThread(&INSTANCE->_thread_id);
+    if (INSTANCE->_thread_id) wakeThread(INSTANCE->_thread_id);
   #endif
   return return_value;
 }

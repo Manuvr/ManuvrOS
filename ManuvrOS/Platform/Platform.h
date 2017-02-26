@@ -231,7 +231,14 @@ class ManuvrPlatform {
     void setWakeHook(FxnPointer nu);
     void wakeHook();
 
-    void forsakeMain();
+    /**
+    * This is given as a convenience function. The programmer of an application could
+    *   call this as a last-act in the main function. This function never returns.
+    */
+    inline void forsakeMain() {
+      if (!nominalState()) {  bootstrap(); }     // Bootstrap if necessary.
+      while (1) {  _kernel.procIdleFlags();  }   // Run forever.
+    };
 
     void printCryptoOverview(StringBuilder*);
     void printConfig(StringBuilder* out);
@@ -333,19 +340,23 @@ void maskableInterrupts(bool);
 /*
 * Threading
 */
+void sleep_millis(unsigned long millis);
+
 int createThread(unsigned long*, void*, ThreadFxnPtr, void*);
 int deleteThread(unsigned long*);
-int wakeThread(unsigned long*);
+int wakeThread(unsigned long);
 
-#if defined(__MANUVR_LINUX) || defined(__MANUVR_APPLE)
-  inline int yieldThread() {   return pthread_yield();   };
+#if defined(__BUILD_HAS_PTHREADS)
+  inline int  yieldThread() {   return pthread_yield();   };
+  inline void suspendThread() {  sleep_millis(100); };   // TODO
 #elif defined(__MANUVR_FREERTOS)
-  inline int yieldThread() {   taskYIELD();  return 0;   };
+  inline int  yieldThread() {   taskYIELD();  return 0;   };
+  inline void suspendThread() {  sleep_millis(100); };   // TODO
 #else
-  inline int yieldThread() {   return 0;   };
+  inline int  yieldThread() {   return 0;   };
+  inline void suspendThread() { };
 #endif
 
-void sleep_millis(unsigned long millis);
 
 /*
 * Randomness

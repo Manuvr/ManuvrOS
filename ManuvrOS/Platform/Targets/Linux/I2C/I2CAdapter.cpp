@@ -23,17 +23,16 @@ I2CBusOp* _threaded_op = nullptr;
 void* i2c_worker_thread(void* arg) {
   I2CAdapter* adapter = (I2CAdapter*) arg;
   while (!platform.nominalState()) {
-    sleep_millis(20);
+    sleep_millis(80);
   }
   while (platform.nominalState()) {
     if (_threaded_op) {
       _threaded_op->advance_operation(0);
       _threaded_op = nullptr;
-      adapter->raiseQueueReady();
       yieldThread();
     }
     else {
-      sleep_millis(100);
+      suspendThread();
     }
   }
 }
@@ -166,6 +165,7 @@ XferFault I2CBusOp::begin() {
           if ((nullptr == callback) || (0 == callback->io_op_callahead(this))) {
             set_state(XferState::INITIATE);
             _threaded_op = this;
+            wakeThread(_thread_id);
             return XferFault::NONE;
           }
           else {

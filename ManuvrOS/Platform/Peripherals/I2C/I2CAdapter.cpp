@@ -297,7 +297,11 @@ int8_t I2CAdapter::queue_io_job(BusOp* op) {
 		// Bus is idle. Put this work item in the active slot and start the bus operations...
 		current_job = nu;
 		if ((getAdapterId() >= 0) && busOnline()) {
-		  nu->begin();
+		  if (XferFault::NONE == nu->begin()) {
+        #if defined(__BUILD_HAS_THREADS)
+        if (_thread_id) wakeThread(_thread_id);
+        #endif
+      }
 		  if (getVerbosity() > 6) {
 		    nu->printDebug(&local_log);
 		    Kernel::log(&local_log);
