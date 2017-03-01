@@ -1,7 +1,13 @@
 # Hardfork
 cbor-cpp was hard-forked into Manuvr to resolve a standard library inclusion.
 Original LICENSE file preserved, as well as original README below.
+
 _---J. Ian Lindsay 2016.09.05_
+
+
+tests.cpp was merged into Manuvr's ./tests directory to ease usage in ESP-IDF.
+
+_---J. Ian Lindsay 2017.03.01_
 
 ---------------------------
 

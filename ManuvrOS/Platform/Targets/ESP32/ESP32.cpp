@@ -37,12 +37,12 @@ This file is meant to contain a set of common functions that are typically platf
 #include "freertos/task.h"
 
 #if defined(MANUVR_STORAGE)
-//#include <Platform/Targets/ESP32/ESP32Storage.h>
+  #include <Platform/Targets/ESP32/ESP32Storage.h>
 #endif
 
 #if defined(MANUVR_CONSOLE_SUPPORT)
-#include <Transports/StandardIO/StandardIO.h>
-#include <XenoSession/Console/ManuvrConsole.h>
+  #include <Transports/StandardIO/StandardIO.h>
+  #include <XenoSession/Console/ManuvrConsole.h>
 #endif
 
 volatile PlatformGPIODef gpio_pins[PLATFORM_GPIO_PIN_COUNT];
@@ -327,6 +327,8 @@ int readPinAnalog(uint8_t pin) {
 * Persistent configuration                                                     *
 *******************************************************************************/
 #if defined(MANUVR_STORAGE)
+  ESP32Storage _esp_storage(nullptr);
+
   // Called during boot to load configuration.
   int8_t ESP32Platform::_load_config() {
     if (_storage_device) {
@@ -424,6 +426,12 @@ int8_t ESP32Platform::platformPreInit(Argument* root_config) {
   _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
   gpioSetup();
 
+  #if defined(MANUVR_STORAGE)
+    _storage_device = (Storage*) &_esp_storage;
+    _kernel.subscribe((EventReceiver*) &_esp_storage);
+    _alter_flags(true, MANUVR_PLAT_FLAG_HAS_STORAGE);
+  #endif
+
   if (root_config) {
   }
   #if defined(MANUVR_CONSOLE_SUPPORT)
@@ -432,11 +440,6 @@ int8_t ESP32Platform::platformPreInit(Argument* root_config) {
     ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_xport);
     _kernel.subscribe((EventReceiver*) _console);
     _kernel.subscribe((EventReceiver*) _console_xport);
-  #endif
-
-  #if defined(MANUVR_STORAGE)
-    //_storage_device = (Storage*) &_t_storage;
-    //_kernel.subscribe((EventReceiver*) &_t_storage);
   #endif
   return 0;
 }

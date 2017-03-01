@@ -21,8 +21,10 @@ limitations under the License.
 This is the basal implementation of the storage interface.
 */
 
-#if defined(MANUVR_STORAGE)
+#include "Platform.h"
 #include "Storage.h"
+
+#if defined(MANUVR_STORAGE)
 
 /**
 * Constructor

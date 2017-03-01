@@ -24,11 +24,10 @@ This file represents the platform-specific interface to a persistent
   extends this.
 */
 
+#include <DataStructures/StringBuilder.h>
 
 #ifndef __MANUVR_PERSIST_LAYER_H__
 #define __MANUVR_PERSIST_LAYER_H__
-
-#include <DataStructures/StringBuilder.h>
 
 #define MANUVR_PL_USES_FILESYSTEM      0x0001  // Medium is on top of a filesystem.
 #define MANUVR_PL_BLOCK_ACCESS         0x0002  // I/O operations must occur blockwise.
