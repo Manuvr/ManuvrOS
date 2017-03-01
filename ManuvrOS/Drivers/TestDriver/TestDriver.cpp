@@ -40,6 +40,10 @@ const MessageTypeDef message_defs[] = {
   #if defined (__HAS_CRYPT_WRAPPER)
     {  MANUVR_MSG_BNCHMRK_CRYPT,  0x0000,  "BNCHMRK_CRYPT",    ManuvrMsg::MSG_ARGS_NONE },
   #endif
+  #if defined (__BUILD_HAS_DIGEST)
+    {  MANUVR_MSG_BNCHMRK_HASH,   0x0000,  "BNCHMRK_HASH",    ManuvrMsg::MSG_ARGS_NONE },
+  #endif
+
   {  MANUVR_MSG_BNCHMRK_RNG,      0x0000,  "BNCHMRK_RNG",      ManuvrMsg::MSG_ARGS_NONE },
   {  MANUVR_MSG_BNCHMRK_MSG_LOAD, 0x0000,  "BNCHMRK_MSG_LOAD", ManuvrMsg::MSG_ARGS_NONE },
   {  MANUVR_MSG_BNCHMRK_FLOAT,    0x0000,  "BNCHMRK_FLOAT",    ManuvrMsg::MSG_ARGS_NONE }
@@ -74,21 +78,22 @@ int TestDriver::CRYPTO_TEST_HASHES() {
         o_len);
 
     uint8_t* hash_out0 = (uint8_t*) alloca(o_len);
-    uint8_t* hash_out1 = (uint8_t*) alloca(o_len);
+
 
     if (wrapped_hash((uint8_t*) hash_in0, strlen(hash_in0), hash_out0, algs_to_test[idx])) {
       local_log.concat("Failed to hash.\n");
       return -1;
     }
-    if (wrapped_hash((uint8_t*) hash_in1, i_len, hash_out1, algs_to_test[idx])) {
-      local_log.concat("Failed to hash.\n");
-      return -1;
+    local_log.concat("0-length:\n");
+    StringBuilder::printBuffer(&local_log, hash_out0, o_len, "\t");
+
+    unsigned long t0 = millis();
+    for (int its = 0; its < 1000; its++) {
+      wrapped_hash((uint8_t*) hash_in0, i_len, hash_out0, algs_to_test[idx]);
     }
-    local_log.concat("0-length: ");
-    for (int i = 0; i < o_len; i++) local_log.concatf("%02x", *(hash_out0 + i));
-    local_log.concat("\nhash_out: ");
-    for (int i = 0; i < o_len; i++) local_log.concatf("%02x", *(hash_out1 + i));
-    local_log.concat("\n\n");
+    unsigned long t1 = millis();
+
+    local_log.concatf("\n\t%.2f hashes/sec\n\n", 1000000/((double) (t1 - t0)));
     Kernel::log(&local_log);
     idx++;
   }
@@ -397,8 +402,15 @@ int8_t TestDriver::attached() {
 * @param A pointer to a StringBuffer object to receive the output.
 */
 void TestDriver::printDebug(StringBuilder* output) {
-  if (nullptr == output) return;
   EventReceiver::printDebug(output);
+  output->concat("\t---< Available benchmarks >--------.\n");
+  output->concat("\tb1)     RNG\n");
+  #if defined (__HAS_CRYPT_WRAPPER)
+    output->concat("\tb2)     Cryptographic\n");
+  #endif
+  output->concat("\tb3)     Floating point\n");
+  output->concat("\tb4)     Message load\n");
+  output->concat("\tb4)     Digests\n");
 }
 
 
@@ -450,7 +462,7 @@ int8_t TestDriver::notify(ManuvrMsg* active_event) {
           randomInt();   // This ought to block when the pool is drained.
         }
         unsigned long t1 = millis();
-        local_log.concatf("RNG test:   %ul ms (%.2f bits/sec)\n", t1 - t0, (24/(double)(t1 - t0)));
+        local_log.concatf("RNG test:   %d ms (%.2f Mbits/sec)\n", t1 - t0, (32000/((double)t1 - t0)));
         for (int i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) {
           local_log.concatf("Random number: 0x%08x\n", randomInt());
         }
@@ -465,7 +477,7 @@ int8_t TestDriver::notify(ManuvrMsg* active_event) {
           a += 0.01 * sqrtf(a);
         }
         unsigned long t1 = millis();
-        local_log.concatf("Floating-point test: %ul ms\n \t Value: %.5f\n \t%ul Mflops\n", t1 - t0, (double) a, (3000000000/(t1 - t0)));
+        local_log.concatf("Floating-point test: %d ms\n \t Value: %.5f\n \t%d Mflops\n", t1 - t0, (double) a, (3000000000/(t1 - t0)));
       }
       return_value++;
       break;
@@ -474,9 +486,12 @@ int8_t TestDriver::notify(ManuvrMsg* active_event) {
       break;
     #if defined (__HAS_CRYPT_WRAPPER)
       case MANUVR_MSG_BNCHMRK_CRYPT:
-        CRYPTO_TEST_HASHES();
         //CRYPTO_TEST_SYMMETRIC();
         CRYPTO_TEST_ASYMMETRIC();
+        return_value++;
+        break;
+      case MANUVR_MSG_BNCHMRK_HASH:
+        CRYPTO_TEST_HASHES();
         return_value++;
         break;
     #endif  // __HAS_CRYPT_WRAPPER
@@ -502,18 +517,6 @@ void TestDriver::procDirectDebugInstruction(StringBuilder *input) {
   }
 
   switch (c) {
-    case '?':
-      local_log.concat("\tr <x>)  Dump <x> random 32-bit ints.\n");
-      local_log.concat("\tb)      Show benchmark results.\n\n");
-      local_log.concat("\t---< Available benchmarks >--------.\n");
-      local_log.concat("\tb1)     RNG\n");
-      #if defined (__HAS_CRYPT_WRAPPER)
-        local_log.concat("\tb2)     Cryptographic\n");
-      #endif
-      local_log.concat("\tb3)     Floating point\n");
-      local_log.concat("\tb4)     Message load\n");
-      break;
-
     case 'b':
       switch (temp_int) {
         case 0:
@@ -528,6 +531,8 @@ void TestDriver::procDirectDebugInstruction(StringBuilder *input) {
         case 3:   Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_FLOAT, nullptr);
           break;
         case 4:   Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_MSG_LOAD, nullptr);
+          break;
+        case 5:   Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_HASH, nullptr);
           break;
         default:
           local_log.concat("Unsupported test.\n");

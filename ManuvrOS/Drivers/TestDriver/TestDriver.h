@@ -34,6 +34,7 @@ This module is built and loaded by Platform.cpp if the MANUVR_TEST_DRIVER flag
 #define MANUVR_MSG_BNCHMRK_RNG          0xF577   //
 #define MANUVR_MSG_BNCHMRK_MSG_LOAD     0xF578   //
 #define MANUVR_MSG_BNCHMRK_FLOAT        0xF579   //
+#define MANUVR_MSG_BNCHMRK_HASH         0xF57A   //
 
 
 class TestDriver : public EventReceiver {

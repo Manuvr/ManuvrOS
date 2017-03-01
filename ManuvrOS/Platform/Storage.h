@@ -67,6 +67,8 @@ class Storage {
 
 
   protected:
+    unsigned long _free_space  = 0L;
+
     Storage();  // Protected constructor.
 
     virtual void printDebug(StringBuilder*);
@@ -80,7 +82,6 @@ class Storage {
 
 
   private:
-    unsigned long _free_space  = 0L;
     uint16_t      _pl_flags    = 0;
 };
 

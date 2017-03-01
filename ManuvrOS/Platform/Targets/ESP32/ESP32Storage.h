@@ -61,7 +61,6 @@ class ESP32Storage : public EventReceiver, public Storage {
 
 
   private:
-    uint16_t _free_space = 32768;   // TODO: This is a lie.
     nvs_handle store_handle;
 
     int8_t close();             // Blocks until commit completes.

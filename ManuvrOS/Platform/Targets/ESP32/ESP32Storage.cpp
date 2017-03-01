@@ -53,6 +53,7 @@ CBOR data begins at offset 4. The first uint32 is broken up this way:
 *******************************************************************************/
 
 ESP32Storage::ESP32Storage(Argument* opts) : EventReceiver("ESP32Storage"), Storage() {
+  _free_space = 32768;   // TODO: This is a lie.
   _pl_set_flag(true, STORAGE_PROPS);
 }
 
