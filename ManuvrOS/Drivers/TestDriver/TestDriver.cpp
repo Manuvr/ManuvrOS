@@ -216,10 +216,10 @@ static std::map<CryptoKey, Trips*>  asym_estimate_deltas;
 * Asymmetric algorthms.
 */
 int TestDriver::CRYPTO_TEST_ASYMMETRIC_SET(Cipher c, CryptoKey* pks) {
-  const int MSG_BUFFER_LEN  = 700;
+  const int MSG_BUFFER_LEN  = 400;
   int ret = -1;
   uint8_t* test_message     = (uint8_t*) alloca(MSG_BUFFER_LEN);
-  random_fill(test_message, MSG_BUFFER_LEN);
+  random_fill(test_message, MSG_BUFFER_LEN);   // Generate some test message.
 
   while (CryptoKey::NONE != *pks) {
     size_t   public_estimate = 0;

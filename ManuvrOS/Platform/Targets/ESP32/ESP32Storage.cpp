@@ -53,7 +53,6 @@ CBOR data begins at offset 4. The first uint32 is broken up this way:
 *******************************************************************************/
 
 ESP32Storage::ESP32Storage(Argument* opts) : EventReceiver("ESP32Storage"), Storage() {
-  _free_space = 32768;   // TODO: This is a lie.
   _pl_set_flag(true, STORAGE_PROPS);
 }
 
@@ -153,6 +152,9 @@ int8_t ESP32Storage::attached() {
     if (!isMounted()) {
       // Try to wipe and set status.
       if (ESP_OK == nvs_flash_init()) {
+        //const esp_partition_t* partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS, NULL);
+        //_free_space = partition->size;
+        _free_space = 16384;  // TODO: LIES!
         if (ESP_OK == nvs_open("manuvr", NVS_READWRITE, &store_handle)) {
           _pl_set_flag(true, MANUVR_PL_MEDIUM_MOUNTED);
         }
@@ -285,6 +287,10 @@ void ESP32Storage::procDirectDebugInstruction(StringBuilder *input) {
         else {
           local_log.concat("Storage not mounted.\n");
         }
+        break;
+
+      case 'D':   // Platform-specific fxn
+        //nvs_dump();
         break;
     #endif  // MANUVR_DEBUG
 
