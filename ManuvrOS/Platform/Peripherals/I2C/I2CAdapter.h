@@ -110,6 +110,7 @@ This file is the tortured result of growing pains since the beginning of
   #define I2C_ADAPT_OPT_FLAG_SCL_PU   0x0400   // SCL pullup.
   #define I2C_ADAPT_OPT_FLAG_SDA_PU   0x0800   // SDA pullup.
 
+  // TODO: Integrate freq
   class I2CAdapterOptions {
     public:
       I2CAdapterOptions(const I2CAdapterOptions* obj) :
@@ -309,6 +310,8 @@ This file is the tortured result of growing pains since the beginning of
 
 
     protected:
+      I2CAdapter* _bus = nullptr;
+
       // Writes <byte_count> bytes from <buf> to the sub-address <sub_addr> of i2c device <dev_addr>.
       // Returns true if the job was accepted. False on error.
       bool writeX(int sub_addr, uint16_t byte_count, uint8_t *buf);
@@ -323,11 +326,7 @@ This file is the tortured result of growing pains since the beginning of
       bool read8(int sub_addr);
       bool read16(int sub_addr);
       bool read16();
-
-
-    private:
-      I2CAdapter* _bus = nullptr;
-  };
+};
 
 
   /*

@@ -473,6 +473,14 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
     case 'g':
       syncRegisters();
       break;
+    case 'x':
+      if (I2C_ERR_SLAVE_NO_ERROR == readRegister((uint8_t) ADP8866_MDCR)) {
+        local_log.concat("Reading MDCR reg...\n");
+      }
+      else {
+        local_log.concat("Can't read MDCR reg.\n");
+      }
+      break;
     case 'p':
       pulse_channel(channel, temp_int);
       break;

@@ -1,7 +1,7 @@
 /*
-File:   main_template.cpp
+File:   atecc508.cpp
 Author: J. Ian Lindsay
-Date:   2016.08.26
+Date:   2017.03.23
 
 Copyright 2016 Manuvr, Inc
 
@@ -23,12 +23,8 @@ limitations under the License.
  / /  / / /_/ / / / / /_/ /| |/ / /  / /_/ /___/ /
 /_/  /_/\__,_/_/ /_/\__,_/ |___/_/   \____//____/
 
-This is a template for a main.cpp file. This file was meant to be
-  copy-pasta for beginners to create their own applications. It is
-  also meant to serve as documentation for the boot process.
+This is a demonstration program and utility for dealing with the ATECC508.
 
-This is a demonstration program, and was meant to be compiled for a
-  linux target.
 */
 
 
@@ -49,6 +45,25 @@ This is a demonstration program, and was meant to be compiled for a
 */
 #include <Transports/StandardIO/StandardIO.h>
 #include <XenoSession/Console/ManuvrConsole.h>
+#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <Drivers/ATECC508/ATECC508.h>
+#include <Drivers/ADP8866/ADP8866.h>
+
+
+const I2CAdapterOptions i2c_opts(
+  0,   // Device number
+  255, // sda
+  255  // scl
+);
+
+const ATECC508Opts atecc_opts(
+  (uint8_t) 0
+);
+
+const ADP8866Pins adp_opts(
+  255,  // (Reset)
+  255   // (IRQ)
+);
 
 
 /*******************************************************************************
@@ -98,6 +113,21 @@ int main(int argc, char *argv[]) {
     kernel->subscribe((EventReceiver*) _console);
     kernel->subscribe((EventReceiver*) _console_xport);
   #endif
+
+  I2CAdapter i2c(&i2c_opts);
+  kernel->subscribe((EventReceiver*) &i2c);
+
+  // Pins 58 and 63 are the reset and IRQ pin, respectively.
+  // This is translated to pins 10 and 13 on PortD.
+  ATECC508 atec(&atecc_opts);
+  i2c.addSlaveDevice((I2CDeviceWithRegisters*) &atec);
+  kernel->subscribe((EventReceiver*) &atec);
+
+  // Pins 58 and 63 are the reset and IRQ pin, respectively.
+  // This is translated to pins 10 and 13 on PortD.
+  ADP8866 leds(&adp_opts);
+  i2c.addSlaveDevice((I2CDeviceWithRegisters*) &leds);
+  kernel->subscribe((EventReceiver*) &leds);
 
   // Once we've loaded up all the goodies we want, we finalize everything thusly...
   platform.bootstrap();

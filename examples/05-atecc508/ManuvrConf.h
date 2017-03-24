@@ -16,16 +16,13 @@ This is an example file for building firmware on linux. Anticipated target is a 
 #ifndef __FIRMWARE_DEFS_H
 #define __FIRMWARE_DEFS_H
 
+
 /****************************************************************************************************
 * Required fields...                                                                                *
 ****************************************************************************************************/
 
-/*
-* Particulars of this Manuvrable.
-*/
 // This would be the version of the Manuvrable's firmware (this program).
 #define VERSION_STRING               "0.0.1"
-
 
 // Hardware is versioned. Manuvrables that are strictly-software should comment this.
 //#define HW_VERSION_STRING               "rev4"

@@ -63,15 +63,6 @@ BufferPipe* _pipe_factory_1(BufferPipe* _n, BufferPipe* _f) {
 }
 
 
-
-/*******************************************************************************
-* Functions that just print things.                                            *
-*******************************************************************************/
-void printHelp() {
-  Kernel::log("Help would ordinarily be displayed here.\n");
-}
-
-
 /*******************************************************************************
 * The main function.                                                           *
 *******************************************************************************/
@@ -81,9 +72,9 @@ int main(int argc, char *argv[]) {
   __main_pid = getpid();
 
   // The first thing we should do: Instance a kernel.
-  kernel = new Kernel();
+  kernel = platform.kernel();
 
-  if (0 != BufferPipe::registerPipe("ManuvrGPS", 1, _pipe_factory_1)) {
+  if (0 != BufferPipe::registerPipe(1, _pipe_factory_1)) {
     printf("Failed to add ManuvrGPS to the pipe registry.\n");
     exit(1);
   }
@@ -132,8 +123,7 @@ int main(int argc, char *argv[]) {
   #endif
 
   // Once we've loaded up all the goodies we want, we finalize everything thusly...
-  printf("%s: Booting Manuvr Kernel....\n", program_name);
-  kernel->bootstrap();
+  platform.bootstrap();
 
   #if defined(MANUVR_SUPPORT_TCPSOCKET)
     tcp_srv.listen();

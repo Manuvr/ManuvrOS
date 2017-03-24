@@ -99,6 +99,8 @@ int8_t I2CAdapter::bus_init() {
   if (sprintf(filename, "/dev/i2c-%d", getAdapterId()) > 0) {
     open_bus_handle = open(filename, O_RDWR);
     if (open_bus_handle < 0) {
+      // TODO?
+      // http://stackoverflow.com/questions/15337799/configure-linux-i2c-speed
       #ifdef MANUVR_DEBUG
       if (getVerbosity() > 2) {
         local_log.concatf("Failed to open the i2c bus represented by %s.\n", filename);
@@ -165,7 +167,7 @@ XferFault I2CBusOp::begin() {
           if ((nullptr == callback) || (0 == callback->io_op_callahead(this))) {
             set_state(XferState::INITIATE);
             _threaded_op = this;
-            wakeThread(_thread_id);
+            device->wake();
             return XferFault::NONE;
           }
           else {

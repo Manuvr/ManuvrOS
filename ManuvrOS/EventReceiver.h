@@ -56,6 +56,9 @@ Lifecycle:
   class Kernel;
 
   extern "C" {
+
+    extern int wakeThread(unsigned long);  // From Platform.h
+
     /**
     * This is an 'interface' class that will allow other classes to receive notice of Events.
     */
@@ -134,6 +137,10 @@ Lifecycle:
         * @return  true if the class has been booted.
         */
         inline bool   dirtyConf() {    return (0 != (_class_state & MANUVR_ER_FLAG_CONF_DIRTY));    };
+
+
+        inline void   wake() {    wakeThread(_thread_id);    };
+
 
 
       protected:

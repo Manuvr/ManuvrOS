@@ -97,7 +97,7 @@ MANUVR_OPTIONS += -DMANUVR_STDIO
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_UDP
 MANUVR_OPTIONS += -DMANUVR_SUPPORT_I2C
-#MANUVR_OPTIONS += -DMANUVR_GPS_PIPE
+MANUVR_OPTIONS += -DMANUVR_GPS_PIPE
 MANUVR_OPTIONS += -DMANUVR_CBOR
 #MANUVR_OPTIONS += -DMANUVR_JSON
 
@@ -177,8 +177,8 @@ menuconfig:
 	@echo '======================================================'
 
 examples: libs
-	$(CXX) -static -o barebones examples/main_template.cpp $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
-	$(CXX) -static -o gpstest   examples/tcp-gps.cpp $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(CXX) -static -o barebones examples/00-template/main.cpp $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(CXX) -static -o atecc-tool examples/05-atecc508/main.cpp $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 
 builddir:
 	mkdir -p $(OUTPUT_PATH)

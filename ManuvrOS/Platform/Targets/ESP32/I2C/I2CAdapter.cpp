@@ -10,10 +10,10 @@
 
 
 
-I2CBusOp* _threaded_op = nullptr;
+static I2CBusOp* _threaded_op = nullptr;
 
 void* i2c_worker_thread(void* arg) {
-  I2CAdapter* adapter = (I2CAdapter*) arg;
+  //I2CAdapter* adapter = (I2CAdapter*) arg;
   while (!platform.nominalState()) {
     sleep_millis(20);
   }

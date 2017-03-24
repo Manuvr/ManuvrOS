@@ -16,6 +16,7 @@ CXXFLAGS += -D__MANUVR_ESP32
 LOCAL_ESP_COMPS  = . DataStructures
 LOCAL_ESP_COMPS += Types/cbor-cpp
 LOCAL_ESP_COMPS += Drivers/ADP8866 Drivers/BusQueue ManuvrMsg Types
+LOCAL_ESP_COMPS += Drivers/ATECC508
 LOCAL_ESP_COMPS += Drivers/DeviceWithRegisters
 LOCAL_ESP_COMPS += Drivers/TestDriver
 LOCAL_ESP_COMPS += Platform/Targets/ESP32
