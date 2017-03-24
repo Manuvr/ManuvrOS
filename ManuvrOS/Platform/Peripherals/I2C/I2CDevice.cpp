@@ -321,7 +321,7 @@ bool I2CDevice::read16() {
 */
 void I2CDevice::printDebug(StringBuilder* temp) {
   if (temp) {
-    temp->concatf("\n+++ I2CDevice  0x%02x ++++ Bus %sassigned +++++++++++++++++++++++++++\n", _dev_addr, (_bus == nullptr ? "un" : ""));
+    temp->concatf("\n+++ I2CDevice  0x%02x ++++ Bus %sassigned +++++++++++++++++++\n", _dev_addr, (_bus == nullptr ? "un" : ""));
   }
 }
 

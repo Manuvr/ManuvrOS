@@ -122,13 +122,14 @@ int8_t ATECC508::io_op_callback(BusOp* _op) {
 /*
 * Dump this item to the dev log.
 */
-void ATECC508::printDebug(StringBuilder* temp) {
-  EventReceiver::printDebug(temp);
-  temp->concatf("\t Awake:        %c\n", _er_flag(ATECC508_FLAG_AWAKE) ? 'y' :'n');
-  temp->concatf("\t Syncd:        %c\n", _er_flag(ATECC508_FLAG_SYNCD) ? 'y' :'n');
-  temp->concatf("\t OTP Locked:   %c\n", _er_flag(ATECC508_FLAG_OTP_LOCKED) ? 'y' :'n');
-  temp->concatf("\t Conf Locked:  %c\n", _er_flag(ATECC508_FLAG_CONF_LOCKED) ? 'y' :'n');
-  temp->concatf("\t Data Locked:  %c\n", _er_flag(ATECC508_FLAG_DATA_LOCKED) ? 'y' :'n');
+void ATECC508::printDebug(StringBuilder* output) {
+  EventReceiver::printDebug(output);
+  I2CDevice::printDebug(output);
+  output->concatf("\n\t Awake:        %c\n", _er_flag(ATECC508_FLAG_AWAKE) ? 'y' :'n');
+  output->concatf("\t Syncd:        %c\n", _er_flag(ATECC508_FLAG_SYNCD) ? 'y' :'n');
+  output->concatf("\t OTP Locked:   %c\n", _er_flag(ATECC508_FLAG_OTP_LOCKED) ? 'y' :'n');
+  output->concatf("\t Conf Locked:  %c\n", _er_flag(ATECC508_FLAG_CONF_LOCKED) ? 'y' :'n');
+  output->concatf("\t Data Locked:  %c\n", _er_flag(ATECC508_FLAG_DATA_LOCKED) ? 'y' :'n');
 }
 
 
@@ -193,21 +194,16 @@ int8_t ATECC508::callback_proc(ManuvrMsg* event) {
 void ATECC508::procDirectDebugInstruction(StringBuilder *input) {
   const char* str = (char *) input->position(0);
   char c    = *str;
-  int channel  = 0;
   int temp_int = 0;
 
   if (input->count() > 1) {
     // If there is a second token, we proceed on good-faith that it's an int.
-    channel = input->position_as_int(1);
-  }
-  if (input->count() > 2) {
-    // If there is a second token, we proceed on good-faith that it's an int.
-    temp_int = input->position_as_int(2);
+    temp_int = input->position_as_int(1);
   }
 
   switch (c) {
     case 'i':   // Debug prints.
-      switch (channel) {
+      switch (temp_int) {
         case 1:   // We want the channel stats.
           break;
         default:

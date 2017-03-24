@@ -69,8 +69,17 @@ const ADP8866Pins adp_opts(
 /*******************************************************************************
 * The main function.                                                           *
 *******************************************************************************/
-int main(int argc, char *argv[]) {
+int main(int argc, const char* argv[]) {
+  Argument* opts = parseFromArgCV(argc, argv);
+  Argument* temp_arg = nullptr;
   StringBuilder local_log;
+
+  /*
+  * The platform object is created on the stack, but takes no action upon
+  *   construction. The first thing that should be done is to call the preinit
+  *   function to setup the defaults of the platform.
+  */
+  platform.platformPreInit(opts);
 
   // The platform comes with a messaging kernel. Get a ref to it.
   Kernel* kernel = platform.kernel();
@@ -88,18 +97,10 @@ int main(int argc, char *argv[]) {
   * Please note that the order matters. Put all the most-general matches at the
   *   bottom of the loop.
   */
-  for (int i = 1; i < argc; i++) {
-    if ((strcasestr(argv[i], "--version")) || ((argv[i][0] == '-') && (argv[i][1] == 'v'))) {
-      // Print the version and quit.
-      printf("%s v%s\n\n", argv[0], VERSION_STRING);
-      exit(0);
-    }
-    if ((strcasestr(argv[i], "--info")) || ((argv[i][0] == '-') && (argv[i][1] == 'i'))) {
-      // Cause the kernel to write a self-report to its own log.
-      platform.printDebug(&local_log);
-      printf("%s", local_log.string());
-      local_log.clear();
-    }
+  if (opts->retrieveArgByKey("info")) {
+    platform.printDebug(&local_log);
+    printf("%s", local_log.string());
+    local_log.clear();
   }
 
   #if defined(MANUVR_CONSOLE_SUPPORT)
@@ -120,7 +121,7 @@ int main(int argc, char *argv[]) {
   // Pins 58 and 63 are the reset and IRQ pin, respectively.
   // This is translated to pins 10 and 13 on PortD.
   ATECC508 atec(&atecc_opts);
-  i2c.addSlaveDevice((I2CDeviceWithRegisters*) &atec);
+  i2c.addSlaveDevice((I2CDevice*) &atec);
   kernel->subscribe((EventReceiver*) &atec);
 
   // Pins 58 and 63 are the reset and IRQ pin, respectively.

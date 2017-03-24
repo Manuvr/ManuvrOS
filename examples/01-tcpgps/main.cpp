@@ -54,7 +54,6 @@ tcp-gps demo application.
 /*******************************************************************************
 * Globals and defines that make our life easier.                               *
 *******************************************************************************/
-char *program_name  = NULL;
 int __main_pid      = 0;
 Kernel* kernel      = NULL;
 
@@ -67,12 +66,20 @@ BufferPipe* _pipe_factory_1(BufferPipe* _n, BufferPipe* _f) {
 * The main function.                                                           *
 *******************************************************************************/
 
-int main(int argc, char *argv[]) {
-  program_name = argv[0];  // Name of running binary.
-  __main_pid = getpid();
+int main(int argc, const char* argv[]) {
+  Argument* opts = parseFromArgCV(argc, argv);
+  Argument* temp_arg = nullptr;
+  StringBuilder local_log;
 
-  // The first thing we should do: Instance a kernel.
-  kernel = platform.kernel();
+  /*
+  * The platform object is created on the stack, but takes no action upon
+  *   construction. The first thing that should be done is to call the preinit
+  *   function to setup the defaults of the platform.
+  */
+  platform.platformPreInit(opts);
+
+  // The platform comes with a messaging kernel. Get a ref to it.
+  Kernel* kernel = platform.kernel();
 
   if (0 != BufferPipe::registerPipe(1, _pipe_factory_1)) {
     printf("Failed to add ManuvrGPS to the pipe registry.\n");
@@ -91,23 +98,25 @@ int main(int argc, char *argv[]) {
   * At this point, we should instantiate whatever specific functionality we
   *   want this Manuvrable to have.
   */
-  // Parse through all the command line arguments and flags...
-  // Please note that the order matters. Put all the most-general matches at the bottom of the loop.
-  for (int i = 1; i < argc; i++) {
-    if ((strcasestr(argv[i], "--console")) || ((argv[i][0] == '-') && (argv[i][1] == 'c'))) {
-      // The user wants a local stdio "Shell".
-      #if defined(MANUVR_CONSOLE_SUPPORT)
-        // TODO: Until smarter idea is finished, manually patch the transport
-        //         into a console session.
-        StandardIO* _console_xport = new StandardIO();
-        ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_xport);
-        kernel->subscribe((EventReceiver*) _console);
-        kernel->subscribe((EventReceiver*) _console_xport);
-      #else
-        printf("%s was compiled without any console support. Ignoring directive...\n", argv[0]);
-      #endif
-    }
+  if (opts->retrieveArgByKey("info")) {
+    platform.printDebug(&local_log);
+    printf("%s", local_log.string());
+    local_log.clear();
   }
+
+  if (opts->retrieveArgByKey("console") || opts->retrieveArgByKey("c")) {
+    #if defined(MANUVR_CONSOLE_SUPPORT)
+      // TODO: Until smarter idea is finished, manually patch the transport
+      //         into a console session.
+      StandardIO* _console_xport = new StandardIO();
+      ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_xport);
+      kernel->subscribe((EventReceiver*) _console);
+      kernel->subscribe((EventReceiver*) _console_xport);
+    #else
+      printf("%s was compiled without any console support. Ignoring directive...\n", argv[0]);
+    #endif
+  }
+
 
   // We need at least ONE transport to be useful...
   #if defined(MANUVR_SUPPORT_TCPSOCKET)

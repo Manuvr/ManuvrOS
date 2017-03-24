@@ -4,8 +4,13 @@
 *.a
 *.cbor
 *.map
-manuvr
 
+# Example binaries
+manuvr
+atecc-tool
+barebones
+
+# Generated doc
 doc/doxygen/
 
 tests/TestDataStructures

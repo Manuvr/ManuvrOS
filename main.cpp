@@ -111,7 +111,7 @@ void kernelDebugDump() {
 /*******************************************************************************
 * The main function.                                                           *
 *******************************************************************************/
-int main(int argc, const char *argv[]) {
+int main(int argc, const char* argv[]) {
   Argument* opts = parseFromArgCV(argc, argv);
   Argument* temp_arg = nullptr;
 
