@@ -17,6 +17,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
+NOTE: Some members, definitions, and capabilities are cased-off in the
+  pre-processor for the sake of culling code that is useless in production and
+  the presence of which might represent needless risk and dead-weight binary.
+
+ATECC508_CAPABILITY_DEBUG
+ATECC508_CAPABILITY_OTP_RW
+ATECC508_CAPABILITY_CONFIG_UNLOCK
+
 */
 
 #ifndef __ATECC508_SEC_DRIVER_H__
@@ -24,8 +32,11 @@ limitations under the License.
 
 #include <inttypes.h>
 #include <stdint.h>
-#include <Kernel.h>
 #include "Platform/Peripherals/I2C/I2CAdapter.h"
+
+
+/* TODO: These ought to be migrated into config. */
+#define ATECC508_CAPABILITY_DEBUG          // Should we be able to write to OTP?
 
 
 #define ATECC508_FLAG_AWAKE        0x01  // The part is believed to be awake.
@@ -59,9 +70,14 @@ enum class ATECCPktCodes {
 
 
 enum class ATECCZones {
-  CONF,
-  DATA,
-  OTP
+  CONF = 0x00,  // 128 bytes across 2 slots.
+  OTP  = 0x01,  // 64 bytes across 2 slots.
+  DATA = 0x02   // 1208 bytes across 16 slots.
+};
+
+enum class ATECCDataSize {
+  L4  = 0x04,  // Data is this long.
+  L32 = 0x20   // Data is this long.
 };
 
 
@@ -112,13 +128,18 @@ typedef struct atecc_slot_conf_t {
 */
 class ATECC508Opts {
   public:
-    const uint8_t x;
+    // If valid, will use a gpio operation to pull the SDA pin low to wake device.
+    const uint8_t pull_pin;
 
     ATECC508Opts(const ATECC508Opts* o) :
-      x(o->x) {};
+      pull_pin(o->pull_pin) {};
 
-    ATECC508Opts(uint8_t _x) :
-      x(_x) {};
+    ATECC508Opts(uint8_t _pull_pin) :
+      pull_pin(_pull_pin) {};
+
+    bool useGPIOWake() const {
+      return (255 != pull_pin);
+    };
 
 
   private:
@@ -147,12 +168,15 @@ class ATECC508 : public EventReceiver, I2CDevice {
       void procDirectDebugInstruction(StringBuilder*);
     #endif  //MANUVR_CONSOLE_SUPPORT
 
-    void printSlotInfo(StringBuilder*);
+    void printSlotInfo(uint8_t slot, StringBuilder*);
 
+    #if defined(ATECC508_CAPABILITY_DEBUG)
     static const char* getPktTypeStr(ATECCPktCodes);
     static const char* getOpStr(ATECCOpcodes);
     static const char* getReturnStr(ATECCReturnCodes);
+    #endif  // ATECC508_CAPABILITY_DEBUG
     static const unsigned int getOpTime(ATECCOpcodes);
+
 
 
   protected:
@@ -175,15 +199,46 @@ class ATECC508 : public EventReceiver, I2CDevice {
     };
 
     void internal_reset();
-    int read_conf();
 
-    int lock_zone();
-    int lock_slot(uint8_t);
+    /* Packet operations. */
+    int read_op_buffer(uint8_t* buf, uint16_t len);
+    int dispatch_packet(ATECCPktCodes, uint8_t* buf, uint16_t len);
+    int command_operation(uint8_t* buf, uint16_t len);
+    inline int idle_operation() {    return dispatch_packet(ATECCPktCodes::IDLE,  nullptr, 0);  };
+    inline int sleep_operation() {   return dispatch_packet(ATECCPktCodes::SLEEP, nullptr, 0);  };
+    inline int reset_operation() {   return dispatch_packet(ATECCPktCodes::RESET, nullptr, 0);  };
 
-    int read_op_buffer();
-    int start_operation(ATECCOpcodes, uint8_t* buf, uint16_t len);
+    bool need_wakeup();  // Wakeup related.
+    int send_wakeup();   // Wakeup related.
 
-    int send_wakeup();
+    /*
+    * Members for zone access and management.
+    */
+    int zone_lock();
+    int zone_read(ATECCZones, uint8_t* buf, ATECCDataSize, uint16_t addr);
+    int zone_write(ATECCZones, uint8_t* buf, ATECCDataSize, uint16_t addr);
+
+
+    /*
+    * Slot zone convenience fxns.
+    */
+    int slot_read(uint8_t s);
+    int slot_write(uint8_t s);
+    int slot_lock(uint8_t s);
+
+    /*
+    * Config zone convenience fxns.
+    */
+    int config_read();
+    int config_write(uint8_t* buf, uint16_t len);
+
+    /*
+    * OTP zone convenience fxns.
+    */
+    int otp_read();
+    #if defined(ATECC508_CAPABILITY_OTP_RW)
+    int otp_write(uint8_t* buf, uint16_t len);
+    #endif  // ATECC508_CAPABILITY_OTP_RW
 };
 
 #endif   // __ATECC508_SEC_DRIVER_H__

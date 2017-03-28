@@ -57,7 +57,7 @@ const I2CAdapterOptions i2c_opts(
 );
 
 const ATECC508Opts atecc_opts(
-  (uint8_t) 0
+  (uint8_t) 255
 );
 
 const ADP8866Pins adp_opts(

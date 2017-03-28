@@ -45,28 +45,28 @@ const char* ATECC508::getPktTypeStr(ATECCPktCodes x) {
 
 const char* ATECC508::getOpStr(ATECCOpcodes x) {
   switch (x) {
-    case ATECCOpcodes::Pause       return "Pause";
-    case ATECCOpcodes::Read        return "Read";
-    case ATECCOpcodes::MAC         return "MAC";
-    case ATECCOpcodes::HMAC        return "HMAC";
-    case ATECCOpcodes::Write       return "Write";
-    case ATECCOpcodes::GenDig      return "GenDig";
-    case ATECCOpcodes::Nonce       return "Nonce";
-    case ATECCOpcodes::Lock        return "Lock";
-    case ATECCOpcodes::Random      return "Random";
-    case ATECCOpcodes::DeriveKey   return "DeriveKey";
-    case ATECCOpcodes::UpdateExtra return "UpdateExtra";
-    case ATECCOpcodes::Counter     return "Counter";
-    case ATECCOpcodes::CheckMac    return "CheckMac";
-    case ATECCOpcodes::Info        return "Info";
-    case ATECCOpcodes::GenKey      return "GenKey";
-    case ATECCOpcodes::Sign        return "Sign";
-    case ATECCOpcodes::ECDH        return "ECDH";
-    case ATECCOpcodes::Verify      return "Verify";
-    case ATECCOpcodes::PrivWrite   return "PrivWrite";
-    case ATECCOpcodes::SHA         return "SHA";
+    case ATECCOpcodes::Pause:       return "Pause";
+    case ATECCOpcodes::Read:        return "Read";
+    case ATECCOpcodes::MAC:         return "MAC";
+    case ATECCOpcodes::HMAC:        return "HMAC";
+    case ATECCOpcodes::Write:       return "Write";
+    case ATECCOpcodes::GenDig:      return "GenDig";
+    case ATECCOpcodes::Nonce:       return "Nonce";
+    case ATECCOpcodes::Lock:        return "Lock";
+    case ATECCOpcodes::Random:      return "Random";
+    case ATECCOpcodes::DeriveKey:   return "DeriveKey";
+    case ATECCOpcodes::UpdateExtra: return "UpdateExtra";
+    case ATECCOpcodes::Counter:     return "Counter";
+    case ATECCOpcodes::CheckMac:    return "CheckMac";
+    case ATECCOpcodes::Info:        return "Info";
+    case ATECCOpcodes::GenKey:      return "GenKey";
+    case ATECCOpcodes::Sign:        return "Sign";
+    case ATECCOpcodes::ECDH:        return "ECDH";
+    case ATECCOpcodes::Verify:      return "Verify";
+    case ATECCOpcodes::PrivWrite:   return "PrivWrite";
+    case ATECCOpcodes::SHA:         return "SHA";
     case ATECCOpcodes::UNDEF:
-    default:                       return "UNDEF";
+    default:                        return "UNDEF";
   }
 }
 
@@ -76,28 +76,28 @@ const char* ATECC508::getOpStr(ATECCOpcodes x) {
 */
 const unsigned int ATECC508::getOpTime(ATECCOpcodes x) {
   switch (x) {
-    case ATECCOpcodes::Pause       return 3;
-    case ATECCOpcodes::Read        return 1;
-    case ATECCOpcodes::MAC         return 14;
-    case ATECCOpcodes::HMAC        return 23;
-    case ATECCOpcodes::Write       return 26;
-    case ATECCOpcodes::GenDig      return 11;
-    case ATECCOpcodes::Nonce       return 7;
-    case ATECCOpcodes::Lock        return 32;
-    case ATECCOpcodes::Random      return 23;
-    case ATECCOpcodes::DeriveKey   return 50;
-    case ATECCOpcodes::UpdateExtra return 10;
-    case ATECCOpcodes::Counter     return 20;
-    case ATECCOpcodes::CheckMac    return 13;
-    case ATECCOpcodes::Info        return 1;
-    case ATECCOpcodes::GenKey      return 115;
-    case ATECCOpcodes::Sign        return 50;
-    case ATECCOpcodes::ECDH        return 58;
-    case ATECCOpcodes::Verify      return 58;
-    case ATECCOpcodes::PrivWrite   return 48;
-    case ATECCOpcodes::SHA         return 9;
+    case ATECCOpcodes::Pause:       return 3;
+    case ATECCOpcodes::Read:        return 1;
+    case ATECCOpcodes::MAC:         return 14;
+    case ATECCOpcodes::HMAC:        return 23;
+    case ATECCOpcodes::Write:       return 26;
+    case ATECCOpcodes::GenDig:      return 11;
+    case ATECCOpcodes::Nonce:       return 7;
+    case ATECCOpcodes::Lock:        return 32;
+    case ATECCOpcodes::Random:      return 23;
+    case ATECCOpcodes::DeriveKey:   return 50;
+    case ATECCOpcodes::UpdateExtra: return 10;
+    case ATECCOpcodes::Counter:     return 20;
+    case ATECCOpcodes::CheckMac:    return 13;
+    case ATECCOpcodes::Info:        return 1;
+    case ATECCOpcodes::GenKey:      return 115;
+    case ATECCOpcodes::Sign:        return 50;
+    case ATECCOpcodes::ECDH:        return 58;
+    case ATECCOpcodes::Verify:      return 58;
+    case ATECCOpcodes::PrivWrite:   return 48;
+    case ATECCOpcodes::SHA:         return 9;
     case ATECCOpcodes::UNDEF:
-    default:                       return 1;
+    default:                        return 1;
   }
 }
 
@@ -162,78 +162,80 @@ int8_t ATECC508::io_op_callback(BusOp* _op) {
     _er_set_flag(ATECC508_FLAG_AWAKE, true);
   }
 
-  I2CBusOp* completed = (I2CBusOp*) _op;
-  // We switch on the subaddress to decide what sort of packet this was.
-  switch ((ATECCPktCodes) completed->sub_addr) {
-    case ATECCPktCodes::RESET:  // Address counter reset.
-      _addr_counter     = 0;
-      break;
-    case ATECCPktCodes::SLEEP:  // Device went to sleep.
-      internal_reset();
-      break;
-    case ATECCPktCodes::IDLE:   // Device is ignoring I/O until next wake.
-      // TODO: Until this is carefully thought-out, we can't have multiple
-      //   ATECCs on a single bus. For now, we will just force a wakeup ahead
-      //   of the next trasnsaction.
-      _last_action_time = 0;
-      break;
-    case ATECCPktCodes::COMMAND:
-      break;
-    default:
-      local_log.concatf("ATECC508::io_op_callback(): Unknown packet type 0x%02x\n", completed->sub_addr);
-      break;
-  }
-
   switch (_op->get_opcode()) {
     case BusOpcode::TX:
       {
-        // This block is concerned with
-        _current_op = (ATECCOpcodes) *(completed->buf+0);
-        // Which operation was just requested?
-        switch (_current_op) {
-          // Look at the first byte to decide what operation we ran.
-          case ATECCOpcodes::CheckMac:
+        I2CBusOp* completed = (I2CBusOp*) _op;
+        // We switch on the subaddress to decide what sort of packet this was.
+        switch ((ATECCPktCodes) completed->sub_addr) {
+          case ATECCPktCodes::RESET:  // Address counter reset. Not chip reset.
+            _addr_counter     = 0;
             break;
-          case ATECCOpcodes::Counter:
+          case ATECCPktCodes::SLEEP:  // Device went to sleep.
+            internal_reset();
             break;
-          case ATECCOpcodes::DeriveKey:
+          case ATECCPktCodes::IDLE:   // Device is ignoring I/O until next wake.
+            // TODO: Until this is carefully thought-out, we can't have multiple
+            //   ATECCs on a single bus. For now, we will just force a wakeup ahead
+            //   of the next trasnsaction.
+            _last_action_time = 0;
             break;
-          case ATECCOpcodes::ECDH:
-            break;
-          case ATECCOpcodes::GenDig:
-            break;
-          case ATECCOpcodes::GenKey:
-            break;
-          case ATECCOpcodes::HMAC:
-            break;
-          case ATECCOpcodes::Info:
-            break;
-          case ATECCOpcodes::Lock:
-            break;
-          case ATECCOpcodes::MAC:
-            break;
-          case ATECCOpcodes::Nonce:
-            break;
-          case ATECCOpcodes::Pause:
-            break;
-          case ATECCOpcodes::PrivWrite:
-            break;
-          case ATECCOpcodes::Random:
-            break;
-          case ATECCOpcodes::Read:
-            break;
-          case ATECCOpcodes::Sign:
-            break;
-          case ATECCOpcodes::SHA:
-            break;
-          case ATECCOpcodes::UpdateExtra:
-            break;
-          case ATECCOpcodes::Verify:
-            break;
-          case ATECCOpcodes::Write:
+          case ATECCPktCodes::COMMAND:
+            {
+              // This block is concerned with
+              _current_op = (ATECCOpcodes) *(completed->buf+0);
+              // Which operation was just requested?
+              switch (_current_op) {
+                // Look at the first byte to decide what operation we ran.
+                case ATECCOpcodes::CheckMac:
+                  break;
+                case ATECCOpcodes::Counter:
+                  break;
+                case ATECCOpcodes::DeriveKey:
+                  break;
+                case ATECCOpcodes::ECDH:
+                  break;
+                case ATECCOpcodes::GenDig:
+                  break;
+                case ATECCOpcodes::GenKey:
+                  break;
+                case ATECCOpcodes::HMAC:
+                  break;
+                case ATECCOpcodes::Info:
+                  break;
+                case ATECCOpcodes::Lock:
+                  break;
+                case ATECCOpcodes::MAC:
+                  break;
+                case ATECCOpcodes::Nonce:
+                  break;
+                case ATECCOpcodes::Pause:
+                  break;
+                case ATECCOpcodes::PrivWrite:
+                  break;
+                case ATECCOpcodes::Random:
+                  break;
+                case ATECCOpcodes::Read:
+                  break;
+                case ATECCOpcodes::Sign:
+                  break;
+                case ATECCOpcodes::SHA:
+                  break;
+                case ATECCOpcodes::UpdateExtra:
+                  break;
+                case ATECCOpcodes::Verify:
+                  break;
+                case ATECCOpcodes::Write:
+                  break;
+                case ATECCOpcodes::UNDEF:
+                default:
+                  local_log.concatf("ATECC508::io_op_callback(): Unknown opcode 0x%02x\n", (uint8_t) _current_op);
+                  break;
+              }
+            }
             break;
           default:
-            local_log.concatf("ATECC508::io_op_callback(): Unknown opcode 0x%02x\n", (uint8_t) completed->sub_addr);
+            local_log.concatf("ATECC508::io_op_callback(): Unknown packet type 0x%02x\n", completed->sub_addr);
             break;
         }
       }
@@ -251,6 +253,9 @@ int8_t ATECC508::io_op_callback(BusOp* _op) {
     case BusOpcode::RX:
       // This is a buffer read. Adjust the counter appropriately, and cycle the
       //   operation back in to read more if necessary.
+      break;
+
+    default:
       break;
   }
 
@@ -358,8 +363,8 @@ void ATECC508::procDirectDebugInstruction(StringBuilder *input) {
           break;
       }
       break;
-    case 'p':   // Ping device
-      read_config();
+    case 'c':   // Read device config
+      config_read();
       break;
 
     case 'p':   // Ping device
@@ -381,66 +386,95 @@ void ATECC508::procDirectDebugInstruction(StringBuilder *input) {
 * Functions specific to this class....                                                              *
 ****************************************************************************************************/
 
-int ATECC508::send_wakeup() {
-  int return_value = -1;   // Fail by default.
-  if (true) {  // TODO: Currently assumes bus-driven wake-up.
-    // Form a ping packet to address 0x00, in the hopes that 8 bit times adds up
-    //   to at least 60uS. This will only work if the bus frequency is lower
-    //   than ~133KHz.
-    // We rely on slop in the software chain to enforce the 1500uS wake-up delay.
-    // TODO: Rigorously treat these problems.
-    _bus->ping_slave_addr(0);  // We don't care about this return.
-    // We care about this callback.
-    I2CBusOp* nu = _bus->new_op(BusOpcode::TX_CMD, this);
-    if (nu) {
-      nu->dev_addr = _dev_addr;
-      nu->sub_addr = (int16_t) oc;
-      nu->buf      = buf;
-      nu->buf_len  = len;
-      return_value = _bus->queue_io_job(nu);
+void ATECC508::printSlotInfo(uint8_t s, StringBuilder* output) {
+  s &= 0x0F;  // Force-limit to 0-15.
+  output->concatf("\t --- Slot %u (%sLOCKED) -------------\n", s, (slot_locked(s) ? "" : "UN"));
+  output->concatf("\t read_key:     0x%02x\n", _slot_conf[s].conf.read_key);
+  output->concatf("\t no_mac:       %u\n", _slot_conf[s].conf.no_mac);
+  output->concatf("\t limited_use:  %u\n", _slot_conf[s].conf.limited_use);
+  output->concatf("\t encrypt_read: %u\n", _slot_conf[s].conf.encrypt_read);
+  output->concatf("\t is_secret:    %u\n", _slot_conf[s].conf.is_secret);
+  output->concatf("\t write_key:    0x%02x\n", _slot_conf[s].conf.write_key);
+  output->concatf("\t write_config: 0x%02x\n", _slot_conf[s].conf.write_config);
+}
+
+
+
+/*
+* Returns true if a wakeup needs to be sent.
+* Updates the ATECC508_FLAG_AWAKE.
+*/
+bool ATECC508::need_wakeup() {
+  if (!_er_flag(ATECC508_FLAG_PENDING_WAKE)) {
+    if (millis() - _last_wake_sent >= (WD_TIMEOUT)) {
+      _er_set_flag(ATECC508_FLAG_AWAKE, false);
     }
   }
 
-  if (return_value) {
-    ATECC508_FLAG_PENDING_WAKE
-    local_log.concat("ATECC508 drive failed to send wake-up.\n");
+  return (!_er_flag(ATECC508_FLAG_AWAKE));
+}
+
+
+int ATECC508::send_wakeup() {
+  int return_value = -1;   // Fail by default.
+  if (need_wakeup()) {
+    if (!_opts.useGPIOWake()) {  // If bus-driven wake-up...
+      // Form a ping packet to address 0x00, in the hopes that 8 bit times adds up
+      //   to at least 60uS. This will only work if the bus frequency is lower
+      //   than ~133KHz.
+      // We rely on slop in the software chain to enforce the 1500uS wake-up delay.
+      // TODO: Rigorously treat these problems.
+      _bus->ping_slave_addr(0);  // We don't care about this return.
+      // We care about this callback.
+      I2CBusOp* nu = _bus->new_op(BusOpcode::TX_CMD, this);
+      if (nu) {
+        nu->dev_addr = _dev_addr;
+        nu->sub_addr = 0;
+        nu->buf      = nullptr;
+        nu->buf_len  = 0;
+        return_value = _bus->queue_io_job(nu);
+      }
+      _er_set_flag(ATECC508_FLAG_PENDING_WAKE, (0 == return_value));
+    }
+    else {
+      // TODO
+      local_log.concat("ATECC508 GPIO-driven wakeup not yet supported.\n");
+    }
+
+    if (return_value) {
+      local_log.concat("ATECC508 driver failed to send wake-up.\n");
+    }
   }
-  _er_set_flag(ATECC508_FLAG_PENDING_WAKE, (0 == return_value));
   flushLocalLog();
   return return_value;
 }
 
-
-int ATECC508::read_conf() {
-  if (true) {  // TODO: Currently assumes bus-driven wake-up.
-    _bus->ping_slave_addr(0);  // We don't care about this return.
-    // We care about this callback because we must free this buffer.
-    uint8_t* rbuf = (uint8_t*) malloc(32);
-    I2CBusOp* nu = _bus->new_op(BusOpcode::TX_CMD, this);
-    nu->dev_addr = _dev_addr;
-    nu->sub_addr = (int16_t) ATECCPktCodes::COMMAND;
-    nu->buf      = rbuf;
-    nu->buf_len  = 0;
-    if (0 == _bus->queue_io_job(nu)) {
-      return 0;   // Success.
+/*
+* Base-level packet dispatch fxn for transmissions.
+*/
+int ATECC508::dispatch_packet(ATECCPktCodes pc, uint8_t* buf, uint16_t len) {
+  I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
+  if (nu) {
+    //uint8_t* io_buf = malloc(len);
+    if (true) {
+      nu->dev_addr = _dev_addr;
+      nu->sub_addr = (uint16_t) pc;
+      nu->buf      = buf;
+      nu->buf_len  = len;
+      return _bus->queue_io_job(nu);
     }
   }
-
-  local_log.concat("ATECC508 drive failed to send wake-up.\n");
-  flushLocalLog();
   return -1;
 }
 
-
 /*
-* Given parameters, builds i/o jobs representing a high-level operation and
-*   dispatches it to the bus.
+* Base-level packet dispatch fxn for reading results.
 */
-int ATECC508::start_operation(ATECCOpcodes oc, uint8_t* buf, uint16_t len) {
-  I2CBusOp* nu = _bus->new_op(BusOpcode::TX_CMD, this);
+int ATECC508::read_op_buffer(uint8_t* buf, uint16_t len) {
+  I2CBusOp* nu = _bus->new_op(BusOpcode::RX, this);
   if (nu) {
     nu->dev_addr = _dev_addr;
-    nu->sub_addr = (int16_t) oc;
+    nu->sub_addr = -1;
     nu->buf      = buf;
     nu->buf_len  = len;
     return _bus->queue_io_job(nu);
@@ -449,6 +483,46 @@ int ATECC508::start_operation(ATECCOpcodes oc, uint8_t* buf, uint16_t len) {
 }
 
 
+/*
+* Given parameters, builds i/o jobs representing a high-level operation and
+*   dispatches it to the bus.
+*/
+int ATECC508::command_operation(uint8_t* buf, uint16_t len) {
+  send_wakeup();
+  if (true) {
+    return dispatch_packet(ATECCPktCodes::COMMAND, buf, len);
+  }
+  return -1;
+}
+
+/*
+* Given opts, this function returns a Zone encoding byte.
+*/
+uint8_t zoneBytePack(ATECCZones zone, ATECCDataSize ds, bool encrypted) {
+  uint8_t ret = (uint8_t) zone;
+  if (ATECCDataSize:L32 == ds) { ret += 0x40; }
+  if (encrypted) {               ret += 0x80; }
+  ret &= 0xC3;  // Paranoia
+  return ret;
+}
+
+
+int ATECC508::zone_read(ATECCZones z, uint8_t* buf, ATECCDataSize ds, uint16_t addr) {
+  uint8_t* io_buf = (uint8_t*) malloc(4);
+  if (io_buf) {
+    *(io_buf + 0) = (uint8_t) ATECCOpcodes::Read;
+    *(io_buf + 1) = zoneBytePack(ATECCZones zone, ds, false);  // Encrypt must be zero.
+    *(io_buf + 2) = (uint8_t) (addr & 0x00FF); // Address LSB.
+    *(io_buf + 3) = (uint8_t) ((addr >> 8) & 0x00FF); // Address MSB.
+    return command_operation(ATECCOpcodes oc, io_buf, 4);
+  }
+  return -1;
+}
+
+
+/*
+* Internal parameter reset.
+*/
 void ATECC508::internal_reset() {
   _er_set_flag(0xFF, false);  // Wipe the flags.
   _addr_counter     = 0;
@@ -459,19 +533,85 @@ void ATECC508::internal_reset() {
 }
 
 
-int ATECC508::read_op_buffer() {
+/*
+*/
+int ATECC508::otp_read() {
+  uint8_t* io_buf0 = (uint8_t*) malloc(32);
+  uint8_t* io_buf1 = (uint8_t*) malloc(32);
+  if (0 == zone_read(ATECCZones::OTP, io_buf0, ATECCDataSize::L32, 0)) {
+    return zone_read(ATECCZones::OTP, io_buf1, ATECCDataSize::L32, 16);
+  }
   return -1;
 }
 
 
-void ATECC508::printSlotInfo(uint8_t s, StringBuilder* output) {
-  s &= 0x0F;  // Force-limit to 0-15.
-  output->concatf("\t --- Slot %u (%sLOCKED) -------------\n", s, (slot_locked(s) ? "" : "UN"));
-  output->concatf("\t read_key:     0x%02x\n", _slot_conf[s].read_key);
-  output->concatf("\t no_mac:       %u\n", _slot_conf[s].no_mac);
-  output->concatf("\t limited_use:  %u\n", _slot_conf[s].limited_use);
-  output->concatf("\t encrypt_read: %u\n", _slot_conf[s].encrypt_read);
-  output->concatf("\t is_secret:    %u\n", _slot_conf[s].is_secret);
-  output->concatf("\t write_key:    0x%02x\n", _slot_conf[s].write_key);
-  output->concatf("\t write_config: 0x%02x\n", _slot_conf[s].write_config);
+/*
+*/
+int ATECC508::otp_write(uint8_t* buf, uint16_t len) {
+  #if defined(ATECC508_CAPABILITY_OTP_RW)
+  I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
+  if (nu) {
+    nu->dev_addr = _dev_addr;
+    nu->sub_addr = (int16_t) oc;
+    nu->buf      = buf;
+    nu->buf_len  = len;
+    return _bus->queue_io_job(nu);
+  }
+  #endif  // ATECC508_CAPABILITY_OTP_RW
+  return -1;
+}
+
+
+
+int ATECC508::config_read() {
+  // We care about this callback because we must free this buffer.
+  uint8_t* rbuf = (uint8_t*) malloc(36);
+
+  if (0 == command_operation(ATECCPktCodes::COMMAND, rbuf, 36)) {
+    return 0;   // Success.
+  }
+
+  local_log.concat("ATECC508 failed to read config.\n");
+  flushLocalLog();
+  return -1;
+}
+
+
+/*
+* It is assumed that this buffer will be 108 bytes long.
+*/
+int ATECC508::config_write(uint8_t* buf, uint16_t len) {
+  #if defined(ATECC508_CAPABILITY_CONFIG_UNLOCK)
+  // TODO: Presently assuming buffer to be a contiguous
+  /* Writing the entire config space writable by `Write` command will require...
+        <skip config[0-15]>
+        4 4-byte ops
+        1 32-byte op
+        5 4-bytes ops
+        <skip config[84-87]>
+        2 4-byte ops
+        1 32-byte op
+    13 i/o operations to write the config. Each of those i/o operations will
+      have a different value for <Addr>
+    The first 4 4-byte ops will have the values (in order, and given little-endian)....
+      (0x04, 0x00), (0x05, 0x00), (0x06, 0x00), (0x07, 0x00)
+    The first 32-bit write will have...
+      (0x08, 0x00)
+    The next 5 4-byte ops will be:
+      (0x00, 0x01), (0x01, 0x01), (0x02, 0x01), (0x03, 0x01), (0x04, 0x01)
+    The next 2 4-byte ops will be:
+      (0x06, 0x01), (0x07, 0x01)
+    The final 32-byte op will be:
+      (0x00, 0x02)
+  */
+  I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
+  if (nu) {
+    nu->dev_addr = _dev_addr;
+    nu->sub_addr = (int16_t) oc;
+    nu->buf      = buf;
+    nu->buf_len  = len;
+    return _bus->queue_io_job(nu);
+  }
+  #endif  // ATECC508_CAPABILITY_OTP_RW
+  return -1;
 }
