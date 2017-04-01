@@ -33,6 +33,7 @@ limitations under the License.
 * Static members and initializers should be located here.
 *******************************************************************************/
 
+#if defined(ATECC508_CAPABILITY_DEBUG)
 const char* ATECC508::getPktTypeStr(ATECCPktCodes x) {
   switch (x) {
     case ATECCPktCodes::RESET:    return "RESET";
@@ -70,6 +71,21 @@ const char* ATECC508::getOpStr(ATECCOpcodes x) {
   }
 }
 
+const char* ATECC508::getReturnStr(ATECCReturnCodes x) {
+  switch (x) {
+    case ATECCReturnCodes::SUCCESS:      return "SUCCESS";
+    case ATECCReturnCodes::MISCOMPARE:   return "MISCOMPARE";
+    case ATECCReturnCodes::PARSE_ERR:    return "PARSE_ERR";
+    case ATECCReturnCodes::ECC_FAULT:    return "ECC_FAULT";
+    case ATECCReturnCodes::EXEC_ERR:     return "EXEC_ERR";
+    case ATECCReturnCodes::FRESH_WAKE:   return "FRESH_WAKE";
+    case ATECCReturnCodes::INSUF_TIME:   return "INSUF_TIME";
+    case ATECCReturnCodes::CRC_COMM_ERR: return "CRC_COMM_ERR";
+    default:                             return "UNDEF";
+  }
+}
+#endif  // ATECC508_CAPABILITY_DEBUG
+
 /*
 * Returns the expected worst-case delay for the given operation.
 *
@@ -98,20 +114,6 @@ const unsigned int ATECC508::getOpTime(ATECCOpcodes x) {
     case ATECCOpcodes::SHA:         return 9;
     case ATECCOpcodes::UNDEF:
     default:                        return 1;
-  }
-}
-
-const char* ATECC508::getReturnStr(ATECCReturnCodes x) {
-  switch (x) {
-    case ATECCReturnCodes::SUCCESS:      return "SUCCESS";
-    case ATECCReturnCodes::MISCOMPARE:   return "MISCOMPARE";
-    case ATECCReturnCodes::PARSE_ERR:    return "PARSE_ERR";
-    case ATECCReturnCodes::ECC_FAULT:    return "ECC_FAULT";
-    case ATECCReturnCodes::EXEC_ERR:     return "EXEC_ERR";
-    case ATECCReturnCodes::FRESH_WAKE:   return "FRESH_WAKE";
-    case ATECCReturnCodes::INSUF_TIME:   return "INSUF_TIME";
-    case ATECCReturnCodes::CRC_COMM_ERR: return "CRC_COMM_ERR";
-    default:                             return "UNDEF";
   }
 }
 
@@ -253,6 +255,12 @@ int8_t ATECC508::io_op_callback(BusOp* _op) {
     case BusOpcode::RX:
       // This is a buffer read. Adjust the counter appropriately, and cycle the
       //   operation back in to read more if necessary.
+      local_log.concatf("\t ATECC508 readback:\n\t");
+      if (_op->hasFault()) {
+      }
+      for (int i = 0; i < _op->buf_len; i++) {
+        local_log.concatf("%02x ", *(_op->buf + i));
+      }
       break;
 
     default:
@@ -366,6 +374,15 @@ void ATECC508::procDirectDebugInstruction(StringBuilder *input) {
     case 'c':   // Read device config
       config_read();
       break;
+    case 'o':   // Read OTP region
+      otp_read();
+      break;
+    case 's':   // Read slot.
+      slot_read(temp_int & 0x0F);
+      break;
+    case 'r':   // Read result buffer.
+      read_op_buffer(ATECCDataSize::L32);
+      break;
 
     case 'p':   // Ping device
       send_wakeup();
@@ -452,14 +469,13 @@ int ATECC508::send_wakeup() {
 /*
 * Base-level packet dispatch fxn for transmissions.
 */
-int ATECC508::dispatch_packet(ATECCPktCodes pc, uint8_t* buf, uint16_t len) {
-  I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
-  if (nu) {
-    //uint8_t* io_buf = malloc(len);
-    if (true) {
+int ATECC508::dispatch_packet(ATECCPktCodes pc, uint8_t* io_buf, uint16_t len) {
+  if (io_buf) {
+    I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
+    if (nu) {
       nu->dev_addr = _dev_addr;
       nu->sub_addr = (uint16_t) pc;
-      nu->buf      = buf;
+      nu->buf      = io_buf;
       nu->buf_len  = len;
       return _bus->queue_io_job(nu);
     }
@@ -470,14 +486,22 @@ int ATECC508::dispatch_packet(ATECCPktCodes pc, uint8_t* buf, uint16_t len) {
 /*
 * Base-level packet dispatch fxn for reading results.
 */
-int ATECC508::read_op_buffer(uint8_t* buf, uint16_t len) {
-  I2CBusOp* nu = _bus->new_op(BusOpcode::RX, this);
-  if (nu) {
-    nu->dev_addr = _dev_addr;
-    nu->sub_addr = -1;
-    nu->buf      = buf;
-    nu->buf_len  = len;
-    return _bus->queue_io_job(nu);
+int ATECC508::read_op_buffer(ATECCDataSize ds) {
+  uint16_t len = (ATECCDataSize::L32 == ds) ? 32 : 4;
+  uint8_t* io_buf = (uint8_t*) malloc(len);
+  if (io_buf) {
+    for (int i = 0; i < len; i++) *(io_buf + i) = 0;
+    I2CBusOp* nu = _bus->new_op(BusOpcode::RX, this);
+    if (nu) {
+      nu->dev_addr = _dev_addr;
+      nu->sub_addr = -1;
+      nu->buf      = io_buf;
+      nu->buf_len  = len;
+      if (0 == _bus->queue_io_job(nu)) {
+        return 0;
+      }
+    }
+    free(io_buf);  // lol, jk
   }
   return -1;
 }
@@ -500,21 +524,26 @@ int ATECC508::command_operation(uint8_t* buf, uint16_t len) {
 */
 uint8_t zoneBytePack(ATECCZones zone, ATECCDataSize ds, bool encrypted) {
   uint8_t ret = (uint8_t) zone;
-  if (ATECCDataSize:L32 == ds) { ret += 0x40; }
-  if (encrypted) {               ret += 0x80; }
+  if (ATECCDataSize::L32 == ds) { ret += 0x40; }
+  if (encrypted) {                ret += 0x80; }
   ret &= 0xC3;  // Paranoia
   return ret;
 }
 
 
-int ATECC508::zone_read(ATECCZones z, uint8_t* buf, ATECCDataSize ds, uint16_t addr) {
+int ATECC508::zone_read(ATECCZones z, ATECCDataSize ds, uint16_t addr) {
   uint8_t* io_buf = (uint8_t*) malloc(4);
   if (io_buf) {
     *(io_buf + 0) = (uint8_t) ATECCOpcodes::Read;
-    *(io_buf + 1) = zoneBytePack(ATECCZones zone, ds, false);  // Encrypt must be zero.
-    *(io_buf + 2) = (uint8_t) (addr & 0x00FF); // Address LSB.
+    *(io_buf + 1) = zoneBytePack(z, ds, false);       // Encrypt must be zero.
+    *(io_buf + 2) = (uint8_t) (addr & 0x00FF);        // Address LSB.
     *(io_buf + 3) = (uint8_t) ((addr >> 8) & 0x00FF); // Address MSB.
-    return command_operation(ATECCOpcodes oc, io_buf, 4);
+    if (0 == command_operation(io_buf, 4)) {
+      if (0 == read_op_buffer(ds)) {  // Read the result.
+        return 0;
+      }
+    }
+    free(io_buf);  // lol, jk
   }
   return -1;
 }
@@ -536,10 +565,10 @@ void ATECC508::internal_reset() {
 /*
 */
 int ATECC508::otp_read() {
-  uint8_t* io_buf0 = (uint8_t*) malloc(32);
-  uint8_t* io_buf1 = (uint8_t*) malloc(32);
-  if (0 == zone_read(ATECCZones::OTP, io_buf0, ATECCDataSize::L32, 0)) {
-    return zone_read(ATECCZones::OTP, io_buf1, ATECCDataSize::L32, 16);
+  if (0 == zone_read(ATECCZones::OTP, ATECCDataSize::L32, 0)) {
+    if (0 == zone_read(ATECCZones::OTP, ATECCDataSize::L32, 8)) {
+      return 0;
+    }
   }
   return -1;
 }
@@ -565,10 +594,14 @@ int ATECC508::otp_write(uint8_t* buf, uint16_t len) {
 
 int ATECC508::config_read() {
   // We care about this callback because we must free this buffer.
-  uint8_t* rbuf = (uint8_t*) malloc(36);
-
-  if (0 == command_operation(ATECCPktCodes::COMMAND, rbuf, 36)) {
-    return 0;   // Success.
+  if (0 == zone_read(ATECCZones::CONF, ATECCDataSize::L32, 0)) {
+    if (0 == zone_read(ATECCZones::CONF, ATECCDataSize::L32, 0)) {
+      if (0 == zone_read(ATECCZones::CONF, ATECCDataSize::L32, 0)) {
+        if (0 == zone_read(ATECCZones::CONF, ATECCDataSize::L32, 0)) {
+          return 0;   // Success.
+        }
+      }
+    }
   }
 
   local_log.concat("ATECC508 failed to read config.\n");
@@ -613,5 +646,52 @@ int ATECC508::config_write(uint8_t* buf, uint16_t len) {
     return _bus->queue_io_job(nu);
   }
   #endif  // ATECC508_CAPABILITY_OTP_RW
+  return -1;
+}
+
+
+int ATECC508::slot_read(uint8_t s) {
+  s &= 0x0F;  // Range-bind the parameter by wrapping it.
+  uint16_t addr = (s << 3);
+  uint16_t remaining = 0;
+  if (0 == zone_read(ATECCZones::DATA, ATECCDataSize::L32, addr)) {
+    addr += 0x0100;
+    switch (s) {
+      case 0:
+      case 1:
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+        remaining = 4;
+        break;
+      case 8:  // Data slot.
+        remaining = 384;
+        break;
+      case 9:
+      case 10:
+      case 11:
+      case 12:
+      case 13:
+      case 14:
+      case 15:
+        remaining = 36;
+        break;
+      default:
+        return -1;
+    }
+
+    while (remaining > 4) {
+      if (zone_read(ATECCZones::DATA, ATECCDataSize::L32, addr)) {
+        return -1;
+      }
+      addr += 0x0100;
+      remaining -= 32;
+    }
+
+    return zone_read(ATECCZones::DATA, ATECCDataSize::L4, addr);
+  }
   return -1;
 }

@@ -122,6 +122,22 @@ typedef struct atecc_slot_conf_t {
 } SlotConf;
 
 
+typedef struct atecc_slot_capabilities_t {
+  union {
+    struct {
+      uint16_t read_key:     4;
+      uint16_t no_mac:       1;
+      uint16_t limited_use:  1;
+      uint16_t encrypt_read: 1;
+      uint16_t is_secret:    1;
+      uint16_t write_key:    4;
+      uint16_t write_config: 4;
+    };
+    uint16_t val;
+  } conf;
+} SlotCapabilities;
+
+
 /*
 * Pin defs for this module.
 * Set pin def to 255 to mark it as unused.
@@ -201,7 +217,7 @@ class ATECC508 : public EventReceiver, I2CDevice {
     void internal_reset();
 
     /* Packet operations. */
-    int read_op_buffer(uint8_t* buf, uint16_t len);
+    int read_op_buffer(ATECCDataSize);
     int dispatch_packet(ATECCPktCodes, uint8_t* buf, uint16_t len);
     int command_operation(uint8_t* buf, uint16_t len);
     inline int idle_operation() {    return dispatch_packet(ATECCPktCodes::IDLE,  nullptr, 0);  };
@@ -215,7 +231,7 @@ class ATECC508 : public EventReceiver, I2CDevice {
     * Members for zone access and management.
     */
     int zone_lock();
-    int zone_read(ATECCZones, uint8_t* buf, ATECCDataSize, uint16_t addr);
+    int zone_read(ATECCZones, ATECCDataSize, uint16_t addr);
     int zone_write(ATECCZones, uint8_t* buf, ATECCDataSize, uint16_t addr);
 
 
@@ -236,9 +252,7 @@ class ATECC508 : public EventReceiver, I2CDevice {
     * OTP zone convenience fxns.
     */
     int otp_read();
-    #if defined(ATECC508_CAPABILITY_OTP_RW)
     int otp_write(uint8_t* buf, uint16_t len);
-    #endif  // ATECC508_CAPABILITY_OTP_RW
 };
 
 #endif   // __ATECC508_SEC_DRIVER_H__
