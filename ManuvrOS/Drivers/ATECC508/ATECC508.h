@@ -192,6 +192,7 @@ class ATECC508 : public EventReceiver, I2CDevice {
     static const char* getReturnStr(ATECCReturnCodes);
     #endif  // ATECC508_CAPABILITY_DEBUG
     static const unsigned int getOpTime(ATECCOpcodes);
+    static ATECCReturnCodes   validateRC(ATECCOpcodes oc, uint8_t* buf);
 
 
 
@@ -203,6 +204,7 @@ class ATECC508 : public EventReceiver, I2CDevice {
     const unsigned long WD_TIMEOUT  = 1300;  // Chip goes to sleep after this many ms.
     unsigned long _last_action_time = 0;  // Tracks the last time the device was known to be awake.
     unsigned long _last_wake_sent   = 0;  // Tracks the last time we sent wake sequence.
+    uint32_t      _atecc_flags      = 0;  // Flags related to maintaining the state machine.
     uint16_t      _addr_counter     = 0;  // Mirror of the device's internal address counter.
     uint16_t      _slot_locks       = 0;  // One bit per slot.
     SlotConf      _slot_conf[16];         // Two bytes per slot.

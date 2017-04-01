@@ -118,6 +118,10 @@ const unsigned int ATECC508::getOpTime(ATECCOpcodes x) {
 }
 
 
+ATECCReturnCodes ATECC508::validateRC(ATECCOpcodes oc, uint8_t* buf) {
+  return (ATECCReturnCodes)  *(buf+1);
+}
+
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
 *  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
@@ -255,10 +259,30 @@ int8_t ATECC508::io_op_callback(BusOp* _op) {
     case BusOpcode::RX:
       // This is a buffer read. Adjust the counter appropriately, and cycle the
       //   operation back in to read more if necessary.
-      local_log.concatf("\t ATECC508 readback:\n\t");
       if (_op->hasFault()) {
+        // TODO: Depending on platform implementation of i2c, a failure to ACK on the
+        //   device's part might fail the transfer.
+        if (0x04 == *(_op->buf)) {   // If we read back 4 bytes...
+          // TODO: CRC validation
+          switch ((ATECCReturnCodes) *(_op->buf+1)) {
+            // TODO: Handle return codes.
+            case ATECCReturnCodes::SUCCESS:
+              break;
+            case ATECCReturnCodes::MISCOMPARE:
+            case ATECCReturnCodes::PARSE_ERR:
+            case ATECCReturnCodes::ECC_FAULT:
+            case ATECCReturnCodes::EXEC_ERR:
+            case ATECCReturnCodes::FRESH_WAKE:
+            case ATECCReturnCodes::INSUF_TIME:
+            case ATECCReturnCodes::CRC_COMM_ERR:
+              break;
+            default:
+              break;
+          }
+        }
       }
-      for (int i = 0; i < _op->buf_len; i++) {
+      local_log.concatf("\t ATECC508 readback:\n\t");
+      for (int i = 0; i < strict_min(*(_op->buf), _op->buf_len); i++) {
         local_log.concatf("%02x ", *(_op->buf + i));
       }
       break;
@@ -416,19 +440,13 @@ void ATECC508::printSlotInfo(uint8_t s, StringBuilder* output) {
 }
 
 
-
 /*
 * Returns true if a wakeup needs to be sent.
 * Updates the ATECC508_FLAG_AWAKE.
 */
 bool ATECC508::need_wakeup() {
-  if (!_er_flag(ATECC508_FLAG_PENDING_WAKE)) {
-    if (millis() - _last_wake_sent >= (WD_TIMEOUT)) {
-      _er_set_flag(ATECC508_FLAG_AWAKE, false);
-    }
-  }
-
-  return (!_er_flag(ATECC508_FLAG_AWAKE));
+  _er_set_flag(ATECC508_FLAG_AWAKE, (millis() - _last_wake_sent >= (WD_TIMEOUT)));
+  return (!_er_flag(ATECC508_FLAG_PENDING_WAKE | ATECC508_FLAG_AWAKE));
 }
 
 
@@ -553,11 +571,12 @@ int ATECC508::zone_read(ATECCZones z, ATECCDataSize ds, uint16_t addr) {
 * Internal parameter reset.
 */
 void ATECC508::internal_reset() {
-  _er_set_flag(0xFF, false);  // Wipe the flags.
+  _er_clear_flag(0xFF);  // Wipe the flags.
   _addr_counter     = 0;
   _slot_locks       = 0;
   _last_action_time = 0;
   _last_wake_sent   = 0;
+  _atecc_flags      = 0;
   for (int i = 0; i < 16; i++) _slot_conf[i].conf.val = 0;   // Zero the conf mirror.
 }
 
