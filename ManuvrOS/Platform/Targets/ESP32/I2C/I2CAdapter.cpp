@@ -126,12 +126,17 @@ int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
   if (ESP_OK == i2c_master_start(cmd)) {
     switch (get_opcode()) {
       case BusOpcode::RX:
-        i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
+
         if (need_to_send_subaddr()) {
+          i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_WRITE, ACK_CHECK_EN);
           i2c_master_write_byte(cmd, (uint8_t) (sub_addr & 0x00FF), ACK_CHECK_EN);
           set_state(XferState::ADDR);
+          i2c_master_start(cmd);
+          i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
         }
-        //i2c_master_start(cmd);
+        else {
+          i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
+        }
         i2c_master_read(cmd, buf, (size_t) buf_len, ACK_VAL);
         set_state(XferState::RX_WAIT);
         break;

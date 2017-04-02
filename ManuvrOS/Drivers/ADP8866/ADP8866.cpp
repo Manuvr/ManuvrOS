@@ -205,11 +205,6 @@ int8_t ADP8866::io_op_callback(BusOp* _op) {
   I2CBusOp* completed = (I2CBusOp*) _op;
   I2CDeviceWithRegisters::io_op_callback(_op);
 
-  /* Null the buffer so the bus adapter isn't tempted to free it.
-     TODO: This is silly. Fix this in the API. */
-  _op->buf     = nullptr;
-  _op->buf_len = 0;
-
   DeviceRegister *temp_reg = getRegisterByBaseAddress(completed->sub_addr);
   switch (completed->sub_addr) {
       case ADP8866_MANU_DEV_ID:
@@ -333,6 +328,11 @@ int8_t ADP8866::io_op_callback(BusOp* _op) {
         temp_reg->unread = false;
         break;
   }
+
+  /* Null the buffer so the bus adapter isn't tempted to free it.
+     TODO: This is silly. Fix this in the API. */
+  _op->buf     = nullptr;
+  _op->buf_len = 0;
   flushLocalLog();
   return 0;
 }
