@@ -126,7 +126,6 @@ int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
   if (ESP_OK == i2c_master_start(cmd)) {
     switch (get_opcode()) {
       case BusOpcode::RX:
-
         if (need_to_send_subaddr()) {
           i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_WRITE, ACK_CHECK_EN);
           i2c_master_write_byte(cmd, (uint8_t) (sub_addr & 0x00FF), ACK_CHECK_EN);
@@ -176,7 +175,7 @@ int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
             abort(XferFault::TIMEOUT);
             break;
           case ESP_FAIL:
-            abort(XferFault::BUS_FAULT);
+            abort(XferFault::DEV_FAULT);
             break;
           default:
             abort();

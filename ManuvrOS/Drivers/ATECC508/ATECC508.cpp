@@ -17,10 +17,75 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
+
+Parts of this driver were taken from Atmel's Cryptoauth library.
+
+\atmel_crypto_device_library_license_start
+\page License
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice,
+  this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+3. The name of Atmel may not be used to endorse or promote products derived
+  from this software without specific prior written permission.
+
+4. This software may only be redistributed and used in connection with an
+  Atmel integrated circuit.
+
+THIS SOFTWARE IS PROVIDED BY ATMEL "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT ARE
+EXPRESSLY AND SPECIFICALLY DISCLAIMED. IN NO EVENT SHALL ATMEL BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+\atmel_crypto_device_library_license_stop
 */
 
 #include "ATECC508.h"
 #include <Platform/Platform.h>
+
+
+/**
+* Taken from Atmel Cryptoauth and modified.
+* This function calculates CRC given raw data, puts the CRC to given pointer.
+*
+* \param[in] length size of data not including the CRC byte positions
+* \param[in] data pointer to the data over which to compute the CRC
+* \param[out] crc pointer to the place where the two-bytes of CRC will be placed
+*/
+void atCRC(uint8_t length, uint8_t *data, uint8_t *crc) {
+  const uint16_t POLYNOM = 0x8005;
+	uint16_t crc_register = 0;
+	uint8_t shift_register;
+	uint8_t data_bit, crc_bit;
+
+	for (uint8_t counter = 0; counter < length; counter++) {
+		for (shift_register = 0x01; shift_register > 0x00; shift_register <<= 1) {
+			data_bit = (data[counter] & shift_register) ? 1 : 0;
+			crc_bit = crc_register >> 15;
+			crc_register <<= 1;
+			if (data_bit != crc_bit) {
+				crc_register ^= POLYNOM;
+      }
+		}
+	}
+	crc[0] = (uint8_t)(crc_register & 0x00FF);
+	crc[1] = (uint8_t)(crc_register >> 8);
+}
+
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.

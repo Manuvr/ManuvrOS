@@ -69,7 +69,7 @@ void ADP8866::_isr_fxn() {
 */
 ADP8866::ADP8866(const ADP8866Pins* p) : EventReceiver("ADP8866"), I2CDeviceWithRegisters(ADP8866_I2CADDR), _pins(p) {
   _er_clear_flag(ADP8866_FLAG_INIT_COMPLETE);
-  if (ADP8866::INSTANCE) {
+  if (nullptr == ADP8866::INSTANCE) {
     ADP8866::INSTANCE = this;
     int mes_count = sizeof(adp8866_message_defs) / sizeof(MessageTypeDef);
     ManuvrMsg::registerMessages(adp8866_message_defs, mes_count);

@@ -75,8 +75,9 @@ enum class XferFault {
   TIMEOUT,         // We ran out of patience.
   BAD_PARAM,       // Invalid rtansfer parameters.
   ILLEGAL_STATE,   // The bus operation is in an illegal state.
-  BUS_BUSY,        // The bus didn't get back to us in time..
+  BUS_BUSY,        // The bus didn't get back to us in time.
   BUS_FAULT,       // The bus had a meltdown and failed this transfer.
+  DEV_FAULT,       // The device we we transacting with failed this transfer.
   HUNG_IRQ,        // One too many IRQs happened for this operation.
   DMA_FAULT,       // Something went sideways with DMA that wasn't a timeout.
   DEV_NOT_FOUND,   // When an addressed device we expected to find is not found.
