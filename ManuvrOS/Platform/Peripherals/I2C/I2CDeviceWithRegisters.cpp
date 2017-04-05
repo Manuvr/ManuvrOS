@@ -22,7 +22,7 @@ limitations under the License.
 
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
 
-
+#if defined(MANUVR_SUPPORT_I2C)
 
 I2CDeviceWithRegisters::I2CDeviceWithRegisters(uint8_t addr) : I2CDevice(addr) {
   multi_access_support = false;
@@ -193,7 +193,7 @@ int8_t I2CDeviceWithRegisters::writeRegister(uint8_t base_addr) {
   if (!nu->writable) return I2C_ERR_SLAVE_REG_IS_RO;
 
   else if (!writeX(nu->addr, nu->len, nu->val)) {
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     Kernel::log("Bus error while writing device.\n");
     #endif
     return I2C_ERR_SLAVE_BUS_FAULT;
@@ -209,7 +209,7 @@ int8_t I2CDeviceWithRegisters::writeRegister(DeviceRegister *reg) {
     return I2C_ERR_SLAVE_REG_IS_RO;
   }
   else if (!writeX(reg->addr, reg->len, reg->val)) {
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     Kernel::log("Bus error while writing device.\n");
     #endif
     return I2C_ERR_SLAVE_BUS_FAULT;
@@ -228,7 +228,7 @@ int8_t I2CDeviceWithRegisters::readRegister(uint8_t base_addr) {
     return I2C_ERR_SLAVE_UNDEFD_REG;
   }
   if (!readX(reg->addr, reg->len, reg->val)) {
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     Kernel::log("Bus error while reading device.\n");
     #endif
     return I2C_ERR_SLAVE_BUS_FAULT;
@@ -241,7 +241,7 @@ int8_t I2CDeviceWithRegisters::readRegister(DeviceRegister *reg) {
     return I2C_ERR_SLAVE_UNDEFD_REG;
   }
   if (!readX(reg->addr, reg->len, reg->val)) {
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     Kernel::log("Bus error while reading device.\n");
     #endif
     return I2C_ERR_SLAVE_BUS_FAULT;
@@ -295,7 +295,7 @@ int8_t I2CDeviceWithRegisters::syncRegisters(void) {
 
     return_value = readRegister(temp);
     if (return_value != I2C_ERR_SLAVE_NO_ERROR) {
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
       StringBuilder output;
       output.concatf("Failed to read from register %d\n", temp->addr);
       Kernel::log(&output);
@@ -319,7 +319,7 @@ int8_t I2CDeviceWithRegisters::writeDirtyRegisters(void) {
       if (temp->writable) {
         return_value = writeRegister(temp);
         if (return_value != I2C_ERR_SLAVE_NO_ERROR) {
-          #ifdef __MANUVR_DEBUG
+          #ifdef MANUVR_DEBUG
           StringBuilder output;
           output.concatf("Failed to write dirty register %d with code(%d). The dropped data was (%d). Aborting...\n", temp->addr, return_value, temp->val);
           Kernel::log(&output);
@@ -328,7 +328,7 @@ int8_t I2CDeviceWithRegisters::writeDirtyRegisters(void) {
         }
       }
       else {
-        #ifdef __MANUVR_DEBUG
+        #ifdef MANUVR_DEBUG
           StringBuilder output;
           output.concatf("Uh oh... register %d was marked dirty but it isn't writable. Marking clean with no write...\n", temp->addr);
           Kernel::log(&output);
@@ -341,16 +341,14 @@ int8_t I2CDeviceWithRegisters::writeDirtyRegisters(void) {
 }
 
 
-int8_t I2CDeviceWithRegisters::io_op_callahead(I2CBusOp* op) {
+int8_t I2CDeviceWithRegisters::io_op_callahead(BusOp* op) {
   // Default is to allow the transfer.
   return 0;
 }
 
 
-int8_t I2CDeviceWithRegisters::io_op_callback(I2CBusOp* completed) {
-  #ifdef __MANUVR_DEBUG
-  StringBuilder temp; //("Default callback for registers!\n");
-  #endif
+int8_t I2CDeviceWithRegisters::io_op_callback(BusOp* _op) {
+  I2CBusOp* completed = (I2CBusOp*) _op;
 
   if (completed) {
     if (!completed->hasFault()) {
@@ -373,29 +371,20 @@ int8_t I2CDeviceWithRegisters::io_op_callback(I2CBusOp* completed) {
         }
       }
       else {
-        #ifdef __MANUVR_DEBUG
-        temp.concatf("Failed to lookup the register for a callback operation.\n");
-        completed->printDebug(&temp);
+        #ifdef MANUVR_DEBUG
+        Kernel::log("I2CDeviceWithRegisters::io_op_callback(): register lookup failed.\n");
         #endif
+        return -1;
       }
     }
     else {
-      #ifdef __MANUVR_DEBUG
-      temp.concatf("i2c operation errored.\n");
-      completed->printDebug(&temp);
+      #ifdef MANUVR_DEBUG
+      Kernel::log("I2CDeviceWithRegisters::io_op_callback(): i2c operation errored.\n");
       #endif
+      return -1;
     }
   }
-
-  #ifdef __MANUVR_DEBUG
-    if (temp.length() > 0) {    Kernel::log(&temp);  }
-  #endif
   return 0;
 }
 
-
-/* If your device needs something to happen immediately prior to bus I/O... */
-bool I2CDeviceWithRegisters::operationCallahead(I2CBusOp* op) {
-  // Default behavior is to return true, to tell the bus "Go Ahead".
-  return true;
-}
+#endif  // MANUVR_SUPPORT_I2C

@@ -184,7 +184,6 @@ limitations under the License.
     #define MANUVR_MSG_IRDA_CONFIG          0x0211 // IRDa configuration parameters are being passed.
     // i2c
     #define MANUVR_MSG_I2C_QUEUE_READY      0x0220 // The i2c queue is ready for attention.
-    #define MANUVR_MSG_I2C_DEBUG            0x0221 // TODO: This needs to go away.
 
     // USB VCP stuff...
     #define MANUVR_MSG_SYS_USB_CONNECT      0x0250 // Something was plugged into our USB port.

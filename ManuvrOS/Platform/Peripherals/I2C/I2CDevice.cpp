@@ -22,6 +22,8 @@ limitations under the License.
 
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
 
+#if defined(MANUVR_SUPPORT_I2C)
+
 /*
 * Constructor takes a pointer to the bus we are going to be using, and the slave
 *   address of the implementing class.
@@ -56,7 +58,6 @@ int8_t I2CDevice::io_op_callahead(BusOp* _op) {
 }
 
 
-
 /**
 * When a bus operation completes, it is passed back to its issuing class.
 *
@@ -65,26 +66,20 @@ int8_t I2CDevice::io_op_callahead(BusOp* _op) {
 */
 int8_t I2CDevice::io_op_callback(BusOp* op) {
   I2CBusOp* completed = (I2CBusOp*) op;
-	StringBuilder temp;
 	if (completed) {
-	  #ifdef __MANUVR_DEBUG
+	  #ifdef MANUVR_DEBUG
+	  StringBuilder temp;
 		if (completed->get_opcode() == BusOpcode::RX) {
 			temp.concatf("Default callback (I2CDevice)\tReceived %d bytes from i2c slave.\n", completed->buf_len);
 		}
 		else {
 			temp.concatf("Default callback (I2CDevice)\tSent %d bytes to i2c slave.\n", completed->buf_len, completed->buf_len);
 		}
-		#endif
 		completed->printDebug(&temp);
+    if (temp.length() > 0) Kernel::log(&temp);
+		#endif
 	}
-	if (temp.length() > 0) Kernel::log(&temp);
   return 0;
-}
-
-/* If your device needs something to happen immediately prior to bus I/O... */
-bool I2CDevice::operationCallahead(I2CBusOp* op) {
-  // Default behavior is to return true, to tell the bus "Go Ahead".
-  return true;
 }
 
 
@@ -127,7 +122,7 @@ int8_t I2CDevice::queue_io_job(BusOp* _op) {
 */
 bool I2CDevice::write16(int sub_addr, uint16_t dat) {
   if (_bus == nullptr) {
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     StringBuilder _log;
     _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
     Kernel::log(&_log);
@@ -142,13 +137,13 @@ bool I2CDevice::write16(int sub_addr, uint16_t dat) {
   nu->sub_addr = (int16_t) sub_addr;
   nu->buf      = temp;
   nu->buf_len  = 2;
-  return _bus->queue_io_job(nu);
+  return (0 == _bus->queue_io_job(nu));
 }
 
 
 bool I2CDevice::write8(uint8_t dat) {
     if (_bus == nullptr) {
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
       StringBuilder _log;
       _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
       Kernel::log(&_log);
@@ -162,13 +157,13 @@ bool I2CDevice::write8(uint8_t dat) {
     nu->sub_addr = (int16_t) -1;
     nu->buf      = temp;
     nu->buf_len  = 1;
-    return _bus->queue_io_job(nu);
+    return (0 == _bus->queue_io_job(nu));
 }
 
 
 bool I2CDevice::write8(int sub_addr, uint8_t dat) {
     if (_bus == nullptr) {
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
       StringBuilder _log;
       _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
       Kernel::log(&_log);
@@ -182,14 +177,14 @@ bool I2CDevice::write8(int sub_addr, uint8_t dat) {
     nu->sub_addr = (int16_t) sub_addr;
     nu->buf      = temp;
     nu->buf_len  = 1;
-    return _bus->queue_io_job(nu);
+    return (0 == _bus->queue_io_job(nu));
 }
 
 
 /* This is to become the only interface because of its non-reliance on malloc(). */
 bool I2CDevice::writeX(int sub_addr, uint16_t len, uint8_t *buf) {
   if (_bus == nullptr) {
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     StringBuilder _log;
     _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
     Kernel::log(&_log);
@@ -201,14 +196,14 @@ bool I2CDevice::writeX(int sub_addr, uint16_t len, uint8_t *buf) {
   nu->sub_addr = (int16_t) sub_addr;
   nu->buf      = buf;
   nu->buf_len  = len;
-  return _bus->queue_io_job(nu);
+  return (0 == _bus->queue_io_job(nu));
 }
 
 
 
 bool I2CDevice::readX(int sub_addr, uint8_t len, uint8_t *buf) {
   if (_bus == nullptr) {
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     StringBuilder _log;
     _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
     Kernel::log(&_log);
@@ -220,14 +215,14 @@ bool I2CDevice::readX(int sub_addr, uint8_t len, uint8_t *buf) {
   nu->sub_addr = (int16_t) sub_addr;
   nu->buf      = buf;
   nu->buf_len  = len;
-  return _bus->queue_io_job(nu);
+  return (0 == _bus->queue_io_job(nu));
 }
 
 
 
 bool I2CDevice::read8(int sub_addr) {
   if (_bus == nullptr) {
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     StringBuilder _log;
     _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
     Kernel::log(&_log);
@@ -241,13 +236,13 @@ bool I2CDevice::read8(int sub_addr) {
   nu->sub_addr = (int16_t) sub_addr;
   nu->buf      = temp;
   nu->buf_len  = 1;
-  return _bus->queue_io_job(nu);
+  return (0 == _bus->queue_io_job(nu));
 }
 
 
 bool I2CDevice::read8() {
   if (_bus == nullptr) {
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     StringBuilder _log;
     _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
     Kernel::log(&_log);
@@ -261,7 +256,7 @@ bool I2CDevice::read8() {
   nu->sub_addr = (int16_t) -1;
   nu->buf      = temp;
   nu->buf_len  = 1;
-  return _bus->queue_io_job(nu);
+  return (0 == _bus->queue_io_job(nu));
 }
 
 
@@ -270,7 +265,7 @@ bool I2CDevice::read8() {
 */
 bool I2CDevice::read16(int sub_addr) {
   if (_bus == nullptr) {
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     StringBuilder _log;
     _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
     Kernel::log(&_log);
@@ -285,7 +280,7 @@ bool I2CDevice::read16(int sub_addr) {
   nu->sub_addr = (int16_t) sub_addr;
   nu->buf      = temp;
   nu->buf_len  = 2;
-  return _bus->queue_io_job(nu);
+  return (0 == _bus->queue_io_job(nu));
 }
 
 
@@ -294,7 +289,7 @@ bool I2CDevice::read16(int sub_addr) {
 */
 bool I2CDevice::read16() {
   if (_bus == nullptr) {
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     StringBuilder _log;
     _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
     Kernel::log(&_log);
@@ -309,7 +304,7 @@ bool I2CDevice::read16() {
   nu->sub_addr = (int16_t) -1;
   nu->buf      = temp;
   nu->buf_len  = 2;
-  return _bus->queue_io_job(nu);
+  return (0 == _bus->queue_io_job(nu));
 }
 
 
@@ -326,6 +321,8 @@ bool I2CDevice::read16() {
 */
 void I2CDevice::printDebug(StringBuilder* temp) {
   if (temp) {
-    temp->concatf("\n+++ I2CDevice  0x%02x ++++ Bus %sassigned +++++++++++++++++++++++++++\n", _dev_addr, (_bus == nullptr ? "un" : ""));
+    temp->concatf("\n+++ I2CDevice  0x%02x ++++ Bus %sassigned +++++++++++++++++++\n", _dev_addr, (_bus == nullptr ? "un" : ""));
   }
 }
+
+#endif  // MANUVR_SUPPORT_I2C

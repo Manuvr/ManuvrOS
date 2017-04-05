@@ -64,6 +64,24 @@ limitations under the License.
 #define MANUVR_MAX_ACK_FAILURES           3  // How many failures-to-ACK should we tolerate before SYNCing?
 
 
+
+/*
+* MANUVR_PROTO_MTU is required for constraining communication length due to memory restrictions at
+*   one-or-both sides. Since the protocol currently supports up to (2^24)-1 bytes in a single transaction,
+*   a microcontroller would want to limit its counter-party's use of precious RAM. MANUVR_PROTO_MTU, therefore,
+*   determines the effective maximum packet size for this device, and by extension, the sessions in which
+*   it participates.
+*/
+
+
+/*
+* The version of Manuvr's protocol we are using.
+* Particulars of this platform.
+*/
+#define MANUVR_PROTO_MTU     8192    // See MTU notes above....
+#define MANUVR_PROTO_VER  "0.0.1"
+
+
 /*
 * These are bitflags in the same space as the above-def'd constants. They all pertain to
 * the sync state of the session.

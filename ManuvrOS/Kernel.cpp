@@ -28,7 +28,6 @@ limitations under the License.
 // Conditional inclusion for different threading models...
 #if defined(__MANUVR_LINUX)
 #elif defined(__MANUVR_FREERTOS)
-  #include <FreeRTOS.h>
 #endif
 
 
@@ -73,6 +72,10 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_LEGEND_TYPES         , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_TYPES"         , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
   {  MANUVR_MSG_LEGEND_MESSAGES      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_MESSAGES"      , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
   {  MANUVR_MSG_LEGEND_SEMANTIC      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_SEMANTIC"      , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
+  #endif
+
+  #if defined(MANUVR_SUPPORT_I2C)
+  { MANUVR_MSG_I2C_QUEUE_READY, 0x0000,  "I2C_Q_RDY", ManuvrMsg::MSG_ARGS_NONE },  // The i2c queue is ready for attention.
   #endif
 
   #if defined(MANUVR_STORAGE)
@@ -189,7 +192,7 @@ Kernel::Kernel() : EventReceiver("Kernel") {
     preallocated.insert(&_preallocation_pool[i]);
   }
 
-  #if defined(__MANUVR_DEBUG)
+  #if defined(MANUVR_DEBUG)
     profiler(true);          // spend time and memory measuring performance.
   #else
     profiler(false);         // Turn off the profiler.
@@ -218,28 +221,28 @@ Kernel::~Kernel() {
 /*
 * Logger pass-through functions. Please mind the variadics...
 */
-volatile void Kernel::log(int severity, const char *str) {
+void Kernel::log(int severity, const char *str) {
   if (nullptr != _logger) {
     StringBuilder log_buffer(str);
     _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
   }
 }
 
-volatile void Kernel::log(char *str) {
+void Kernel::log(char *str) {
   if (nullptr != _logger) {
     StringBuilder log_buffer(str);
     _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
   }
 }
 
-volatile void Kernel::log(const char *str) {
+void Kernel::log(const char *str) {
   if (nullptr != _logger) {
     StringBuilder log_buffer(str);
     _logger->toCounterparty(&log_buffer, MEM_MGMT_RESPONSIBLE_BEARER);
   }
 }
 
-volatile void Kernel::log(StringBuilder *str) {
+void Kernel::log(StringBuilder *str) {
   if (nullptr != _logger) {
     _logger->toCounterparty(str, MEM_MGMT_RESPONSIBLE_BEARER);
   }
@@ -281,7 +284,7 @@ int8_t Kernel::detachFromLogger(BufferPipe* _pipe) {
 int8_t Kernel::subscribe(EventReceiver *client) {
   if (nullptr == client) return -1;
 
-  client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
+  client->setVerbosity((int8_t)DEFAULT_CLASS_VERBOSITY);
   int8_t return_value = subscribers.insert(client);
   if (erAttached()) {
     // This subscriber is joining us after bootup. Call its attached() fxn to cause it to init.
@@ -305,7 +308,7 @@ int8_t Kernel::subscribe(EventReceiver *client) {
 int8_t Kernel::subscribe(EventReceiver *client, uint8_t priority) {
   if (nullptr == client) return -1;
 
-  client->setVerbosity(DEFAULT_CLASS_VERBOSITY);
+  client->setVerbosity((int8_t)DEFAULT_CLASS_VERBOSITY);
   int8_t return_value = subscribers.insert(client, priority);
   if (erAttached()) {
     // This subscriber is joining us after bootup. Call its attached() fxn to cause it to init.
@@ -407,7 +410,7 @@ int8_t Kernel::staticRaiseEvent(ManuvrMsg* active_runnable) {
   if (0 == return_value) {
     INSTANCE->update_maximum_queue_depth();   // Check the queue depth
     #if defined (__BUILD_HAS_THREADS)
-      if (INSTANCE->_thread_id) wakeThread(&INSTANCE->_thread_id);
+      if (INSTANCE->_thread_id) wakeThread(INSTANCE->_thread_id);
     #endif
     return return_value;
   }
@@ -418,7 +421,7 @@ int8_t Kernel::staticRaiseEvent(ManuvrMsg* active_runnable) {
     return return_value;
   }
 
-  #if defined(__MANUVR_DEBUG)
+  #if defined(MANUVR_DEBUG)
     if (INSTANCE->getVerbosity() > 5) {
       StringBuilder output;
       output.concatf(
@@ -480,7 +483,7 @@ int8_t Kernel::isrRaiseEvent(ManuvrMsg* event) {
   return_value = isr_exec_queue.insertIfAbsent(event, event->priority());
   maskableInterrupts(true);
   #if defined (__BUILD_HAS_THREADS)
-    if (INSTANCE->_thread_id) wakeThread(&INSTANCE->_thread_id);
+    if (INSTANCE->_thread_id) wakeThread(INSTANCE->_thread_id);
   #endif
   return return_value;
 }
@@ -691,12 +694,12 @@ int8_t Kernel::procIdleFlags() {
 
     procCallBacks(active_runnable);
 
-    #if defined(__MANUVR_EVENT_PROFILER)
+    #if defined(MANUVR_EVENT_PROFILER)
       active_runnable->noteExecutionTime(profiler_mark_0, micros());
-    #endif  //__MANUVR_EVENT_PROFILER
+    #endif  //MANUVR_EVENT_PROFILER
 
     if (0 == activity_count) {
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
       if (getVerbosity() >= 3) local_log.concatf("\tDead event: %s\n", active_runnable->getMsgTypeString());
       #endif
       total_events_dead++;
@@ -707,7 +710,7 @@ int8_t Kernel::procIdleFlags() {
 
     switch (active_runnable->callbackOriginator()) {
       case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
-        #ifdef __MANUVR_DEBUG
+        #ifdef MANUVR_DEBUG
         if (getVerbosity() > 6) local_log.concatf("Recycling %s.\n", active_runnable->getMsgTypeString());
         #endif
         switch (validate_insertion(active_runnable)) {
@@ -728,7 +731,7 @@ int8_t Kernel::procIdleFlags() {
         //if (verbosity > 1) local_log.concatf("Kernel found a possible mistake. Unexpected return case from callback_proc.\n");
         // NOTE: No break;
       case EVENT_CALLBACK_RETURN_DROP:        // The originating class expects us to drop the event.
-        #ifdef __MANUVR_DEBUG
+        #ifdef MANUVR_DEBUG
         //if (getVerbosity() > 6) local_log.concatf("Dropping %s after running.\n", active_runnable->getMsgTypeString());
         #endif
         // NOTE: No break;
@@ -739,7 +742,6 @@ int8_t Kernel::procIdleFlags() {
         break;
     }
 
-
     // All of the logic above ultimately informs this choice.
     if (clean_up_active_runnable) {
       reclaim_event(active_runnable);
@@ -747,7 +749,7 @@ int8_t Kernel::procIdleFlags() {
 
     total_events++;
 
-    #if defined(__MANUVR_EVENT_PROFILER)
+    #if defined(MANUVR_EVENT_PROFILER)
       // This is a stat-gathering block.
       if (_profiler_enabled()) {
         profiler_mark_3 = micros();
@@ -780,10 +782,10 @@ int8_t Kernel::procIdleFlags() {
 
         profiler_mark_2 = 0;  // Reset for next iteration.
       }
-    #endif  //__MANUVR_EVENT_PROFILER
+    #endif  //MANUVR_EVENT_PROFILER
 
     if (exec_queue.size() > 30) {
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
       local_log.concatf("Depth %10d \t %s\n", exec_queue.size(), ManuvrMsg::getMsgTypeString(msg_code_local));
       #endif
     }
@@ -829,7 +831,7 @@ int8_t Kernel::procIdleFlags() {
         platform.idleHook();
         break;
       case 1:
-        #ifdef __MANUVR_DEBUG
+        #ifdef MANUVR_DEBUG
           if (getVerbosity() > 6) Kernel::log("Kernel idle.\n");
         #endif
         // TODO: This would be the place to implement a CPU freq scaler.
@@ -877,9 +879,9 @@ void Kernel::profiler(bool enabled) {
   burden_of_specific = 0;
   insertion_denials  = 0;
 
-  #if defined(__MANUVR_EVENT_PROFILER)
+  #if defined(MANUVR_EVENT_PROFILER)
     while (event_costs.hasNext()) delete event_costs.dequeue();
-  #endif   // __MANUVR_EVENT_PROFILER
+  #endif   // MANUVR_EVENT_PROFILER
 }
 
 
@@ -920,7 +922,7 @@ void Kernel::printProfiler(StringBuilder* output) {
     }
     output->concatf("   CPU use by clock: %f\n", (double)cpu_usage());
 
-    #if defined(__MANUVR_EVENT_PROFILER)
+    #if defined(MANUVR_EVENT_PROFILER)
       TaskProfilerData *profiler_item;
       int stat_mode = event_costs.getPriority(0);
       int x = event_costs.size();
@@ -932,13 +934,13 @@ void Kernel::printProfiler(StringBuilder* output) {
         output->concatf("\t (%10d)\t", stat_mode);
         profiler_item->printDebug(output);
       }
-    #endif   // __MANUVR_EVENT_PROFILER
+    #endif   // MANUVR_EVENT_PROFILER
   }
   else {
     output->concat("-- Kernel profiler disabled.\n\n");
   }
 
-  #if defined(__MANUVR_EVENT_PROFILER)
+  #if defined(MANUVR_EVENT_PROFILER)
     if (schedules.size() > 0) {
       ManuvrMsg *current;
       output->concat("\n\t PID         Execd      total us   average    worst      best       last\n\t -----------------------------------------------------------------------------\n");
@@ -951,7 +953,7 @@ void Kernel::printProfiler(StringBuilder* output) {
         }
       }
     }
-  #endif   // __MANUVR_EVENT_PROFILER
+  #endif   // MANUVR_EVENT_PROFILER
 }
 
 
@@ -969,7 +971,7 @@ void Kernel::printScheduler(StringBuilder* output) {
     output->concatf("-- %u skips before fail-to-bootloader.\n", (unsigned long) MAXIMUM_SEQUENTIAL_SKIPS);
   }
 
-  #if defined(__MANUVR_DEBUG)
+  #if defined(MANUVR_DEBUG)
   int sched_it_count = schedules.size();
   for (int i = 0; i < sched_it_count; i++) {
     schedules.recycle()->printDebug(output);
@@ -984,7 +986,6 @@ void Kernel::printScheduler(StringBuilder* output) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void Kernel::printDebug(StringBuilder* output) {
-  if (nullptr == output) return;
   EventReceiver::printDebug(output);
 
   //output->concatf("-- our_mem_addr:             %p\n", this);
@@ -1127,7 +1128,7 @@ int8_t Kernel::notify(ManuvrMsg* active_runnable) {
       break;
 
     case MANUVR_MSG_SYS_ISSUE_LOG_ITEM:
-      if (nullptr != _logger) {
+      if (_logger) {
         StringBuilder *log_item;
         if (0 == active_runnable->getArgAs(&log_item)) {
           _logger->toCounterparty(log_item, MEM_MGMT_RESPONSIBLE_BEARER);
@@ -1437,37 +1438,11 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
         break;
     #endif // MANUVR_STORAGE
 
-    #if defined(__MANUVR_DEBUG)
-    case 'f':  // FPU benchmark
-      {
-        float a = 1.001;
-        long time_var2 = millis();
-        for (int i = 0;i < 1000000;i++) {
-          a += 0.01 * sqrtf(a);
-        }
-        local_log.concatf("Running floating-point test...\nTime:      %ul ms\n", (unsigned long) millis() - time_var2);
-        local_log.concatf("Value:     %.5f\nFPU test concluded.\n", (double) a);
-      }
-      break;
-
+    #if defined(MANUVR_DEBUG)
     case 'r':        // Read so many random integers...
       temp_int = (temp_int <= 0) ? PLATFORM_RNG_CARRY_CAPACITY : temp_int;
       for (uint8_t i = 0; i < temp_int; i++) {
         local_log.concatf("Random number: 0x%08x\n", randomInt());
-      }
-      break;
-
-    case 'I':
-      {
-        Identity* ident = nullptr;
-        switch (temp_int) {
-          case 1:
-            break;
-          case 0:
-            break;
-          default:
-            break;
-        }
       }
       break;
 
@@ -1505,7 +1480,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
           break;
 
         case 8:
-          local_log.concatf("\n-- %s\n", IDENTITY_STRING);
+          local_log.concatf("\n-- %s\n", FIRMWARE_NAME);
           local_log.concatf("-- Ver/Build date:     %s   %s %s\n", VERSION_STRING, __DATE__, __TIME__);
           local_log.concatf("-- Manuvr version:     %d.%d.%d\n\n", MANUVR_SEMVER_MAJOR, MANUVR_SEMVER_MINOR, MANUVR_SEMVER_PATCH);
           break;
@@ -1515,7 +1490,7 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
           break;
       }
       break;
-    #endif //__MANUVR_DEBUG
+    #endif //MANUVR_DEBUG
     default:
       EventReceiver::procDirectDebugInstruction(input);
       break;

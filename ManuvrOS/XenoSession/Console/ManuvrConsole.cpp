@@ -20,10 +20,9 @@ limitations under the License.
 
 */
 
-#if defined(__MANUVR_DEBUG) || defined(MANUVR_CONSOLE_SUPPORT)
-
 #include "ManuvrConsole.h"
 
+#if defined(MANUVR_CONSOLE_SUPPORT)
 
 void printHelp() {
   // TODO: Hack. Needs to generate help based on context. But since I don't want
@@ -213,7 +212,7 @@ void ManuvrConsole::printDebug(StringBuilder *output) {
   int la_len      = _log_accumulator.length();
   output->concatf("-- Console echoes:           %s\n", _local_echo ? "yes" : "no");
   if (ses_buf_len > 0) {
-    #if defined(__MANUVR_DEBUG)
+    #if defined(MANUVR_DEBUG)
       output->concatf("-- Session Buffer (%d bytes):  ", ses_buf_len);
       session_buffer.printDebug(output);
       output->concat("\n");
@@ -262,4 +261,4 @@ void ManuvrConsole::procDirectDebugInstruction(StringBuilder *input) {
   flushLocalLog();
 }
 
-#endif  // MANUVR_CONSOLE_SESSION  &  MANUVR_CONSOLE_SUPPORT
+#endif  // MANUVR_CONSOLE_SUPPORT

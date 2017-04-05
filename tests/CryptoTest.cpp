@@ -231,7 +231,7 @@ int CRYPTO_TEST_SYMMETRIC() {
   printf("Build doesn't have symmetric support. Skipping tests...\n");
   return 0;
 }
-#endif // __BUILD_HAS_ASYMMETRIC
+#endif // __BUILD_HAS_SYMMETRIC
 
 
 #if defined(__BUILD_HAS_ASYMMETRIC)

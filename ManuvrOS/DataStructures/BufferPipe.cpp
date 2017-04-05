@@ -21,7 +21,7 @@ limitations under the License.
 */
 
 #include "BufferPipe.h"
-#if defined(__MANUVR_PIPE_DEBUG)
+#if defined(MANUVR_PIPE_DEBUG)
   #include <Kernel.h>
 #endif
 
@@ -82,7 +82,7 @@ int BufferPipe::registerPipe(int _code, bpFactory _factory) {
 BufferPipe* BufferPipe::spawnPipe(int _code, BufferPipe* _n, BufferPipe* _f) {
   for (int i = 0; i < MAXIMUM_PIPE_DIVERSITY; i++) {
     if (_supported_strategies[i].pipe_code == _code) {
-      #if defined(__MANUVR_PIPE_DEBUG)
+      #if defined(MANUVR_PIPE_DEBUG)
       StringBuilder log;
       log.concatf("spawnPipe(%d, %s, %s)\n", _code, (_n ? _n->pipeName() : "NULL"), (_f ? _f->pipeName() : "NULL"));
       Kernel::log(&log);
@@ -113,7 +113,7 @@ BufferPipe::BufferPipe() {
 * Tell the other sides of the links that we are departing.
 */
 BufferPipe::~BufferPipe() {
-  #if defined(__MANUVR_PIPE_DEBUG)
+  #if defined(MANUVR_PIPE_DEBUG)
   Kernel::log("BufferPipe(): teardown\n");
   #endif
   if (nullptr != _near) {
@@ -155,7 +155,7 @@ const char* BufferPipe::pipeName() { return "<IN TEARDOWN>"; }
 * @return  Negative on error. Zero on success.
 */
 int8_t BufferPipe::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
-  #if defined(__MANUVR_PIPE_DEBUG)
+  #if defined(MANUVR_PIPE_DEBUG)
   StringBuilder log;
   log.concatf("%s <--sig-- %s: %s\n", pipeName(), (haveFar() ? _far->pipeName() : "ORIG"), signalString(_sig));
   Kernel::log(&log);
@@ -165,7 +165,7 @@ int8_t BufferPipe::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
       _far = nullptr;
       break;
     case ManuvrPipeSignal::NEAR_SIDE_DETACH:
-      #if defined(__MANUVR_PIPE_DEBUG)
+      #if defined(MANUVR_PIPE_DEBUG)
       Kernel::log("toCounterparty(): Possible misdirected NEAR_SIDE_DETACH.\n");
       #endif
       break;
@@ -188,14 +188,14 @@ int8_t BufferPipe::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
 * @return  Negative on error. Zero on success.
 */
 int8_t BufferPipe::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
-  #if defined(__MANUVR_PIPE_DEBUG)
+  #if defined(MANUVR_PIPE_DEBUG)
   StringBuilder log;
   log.concatf("%s --sig--> %s: %s\n", (haveNear() ? _near->pipeName() : "ORIG"), pipeName(), signalString(_sig));
   Kernel::log(&log);
   #endif
   switch (_sig) {
     case ManuvrPipeSignal::FAR_SIDE_DETACH:   // The far side is detaching.
-      #if defined(__MANUVR_PIPE_DEBUG)
+      #if defined(MANUVR_PIPE_DEBUG)
       Kernel::log("fromCounterparty(): Possible misdirected FAR_SIDE_DETACH.\n");
       #endif
       break;
@@ -312,7 +312,7 @@ int8_t BufferPipe::setNear(BufferPipe* nu) {
     }
   }
   else {
-    #if defined(__MANUVR_PIPE_DEBUG)
+    #if defined(MANUVR_PIPE_DEBUG)
     Kernel::log("setNear() tried to clobber another pipe.\n");
     #endif
   }
@@ -342,7 +342,7 @@ int8_t BufferPipe::setFar(BufferPipe* nu) {
     }
   }
   else {
-    #if defined(__MANUVR_PIPE_DEBUG)
+    #if defined(MANUVR_PIPE_DEBUG)
     Kernel::log("setFar() tried to clobber another pipe.\n");
     #endif
   }
@@ -385,12 +385,12 @@ bool BufferPipe::haveFar() {
 */
 int8_t BufferPipe::joinEnds() {
   if ((nullptr == _far) || (nullptr == _near)) {
-    #if defined(__MANUVR_PIPE_DEBUG)
+    #if defined(MANUVR_PIPE_DEBUG)
     Kernel::log("joinEnds(): The pipe does not have both ends defined.\n");
     #endif
   }
   else {
-    #if defined(__MANUVR_PIPE_DEBUG)
+    #if defined(MANUVR_PIPE_DEBUG)
     StringBuilder log;
     log.concatf("joinEnds(): %s <--n- (%s) -f--> %s\n", pipeName(), _near->pipeName(), _far->pipeName());
     Kernel::log(&log);
@@ -414,7 +414,7 @@ int8_t BufferPipe::joinEnds() {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void BufferPipe::printDebug(StringBuilder* out) {
-  #if defined(__MANUVR_PIPE_DEBUG)
+  #if defined(MANUVR_PIPE_DEBUG)
     out->concatf("-- Pipe: %s [", pipeName());
     if (_bp_flag(BPIPE_FLAG_IS_BUFFERED))     out->concat(" BUFFERED");
     if (_bp_flag(BPIPE_FLAG_PIPE_PACKETIZED)) out->concat(" PACKETIZED");

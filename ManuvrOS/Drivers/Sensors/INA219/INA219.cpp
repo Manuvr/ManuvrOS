@@ -256,7 +256,7 @@ bool INA219::process_read_data() {
     markRegRead(INA219_REG_BUS_VOLTAGE);
     markRegRead(INA219_REG_SHUNT_VOLTAGE);
 
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
       StringBuilder output;
       output.concatf("%.3f\t %.3f\t %.3f\t %.3f\n", (double) local_shunt, (double) local_bus, (double) local_current, (double) local_power);
       Kernel::log(&output);

@@ -22,8 +22,6 @@ StandardIO is the transport driver for wrapping POSIX-style STDIN/STDOUT/STDERR.
 */
 
 
-#if defined(__MANUVR_LINUX)
-
 #include "StandardIO.h"
 #include <XenoSession/XenoSession.h>
 #include <XenoSession/Console/ManuvrConsole.h>
@@ -31,15 +29,9 @@ StandardIO is the transport driver for wrapping POSIX-style STDIN/STDOUT/STDERR.
 #include <Kernel.h>
 #include <Platform/Platform.h>
 
-#include <cstdio>
-#include <stdlib.h>
-#include <unistd.h>
-
 // Threaded platforms will need this to compensate for a loss of ISR.
 extern void* xport_read_handler(void* active_xport);
 
-
-extern char* _binary_name;  // TODO: Eliminate. One more step.
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -107,7 +99,7 @@ int8_t StandardIO::toCounterparty(StringBuilder* buf, int8_t mm) {
     }
 
     // TODO: This prompt ought to be in the console session.
-    printf("\n%c[36m%s> %c[39m", 0x1B, _binary_name, 0x1B);
+    printf("\n%c[36m%s> %c[39m", 0x1B, FIRMWARE_NAME, 0x1B);
     fflush(stdout);
     return MEM_MGMT_RESPONSIBLE_BEARER;
   }
@@ -147,8 +139,8 @@ int8_t StandardIO::listen() {
 
 // TODO: Perhaps reset the terminal?
 int8_t StandardIO::reset() {
-  #if defined(__MANUVR_DEBUG)
-    if (getVerbosity() > 3) local_log.concatf("StandardIO initialized.\n");
+  #if defined(MANUVR_DEBUG)
+    if (getVerbosity() > 5) local_log.concatf("StandardIO initialized.\n");
   #endif
   initialized(true);
   listen();
@@ -165,22 +157,24 @@ int8_t StandardIO::read_port() {
   char *input_text	= (char*) alloca(getMTU());	// Buffer to hold user-input.
   int read_len = 0;
 
-  while (connected()) {
+  if (connected()) {
     bzero(input_text, getMTU());
-    if (fgets(input_text, getMTU(), stdin) != nullptr) {
-      read_len = strlen(input_text);
-      if (read_len) {
-        bytes_received += read_len;
-        BufferPipe::fromCounterparty((uint8_t*) input_text, read_len, MEM_MGMT_RESPONSIBLE_BEARER);
-      }
+
+    if (nullptr == fgets(input_text, getMTU()-1, stdin)) {
+      return 0;
     }
-    else {
-      // User insulted fgets()...
-      Kernel::log("StandardIO: fgets() failed.\n");
+    read_len = strlen(input_text);
+
+    // NOTE: This should suffice to be binary-safe.
+    //read_len = fread(input_text, 1, getMTU(), stdin);
+
+    if (read_len > 0) {
+      bytes_received += read_len;
+      BufferPipe::fromCounterparty((uint8_t*) input_text, read_len, MEM_MGMT_RESPONSIBLE_BEARER);
     }
   }
   flushLocalLog();
-  return 0;
+  return read_len;
 }
 
 
@@ -206,11 +200,18 @@ int8_t StandardIO::read_port() {
 int8_t StandardIO::attached() {
   if (EventReceiver::attached()) {
     // Tolerate 30ms of latency on the line before flushing the buffer.
-    read_abort_event.alterScheduleRecurrence(0);
     read_abort_event.alterSchedulePeriod(30);
     read_abort_event.autoClear(false);
-    read_abort_event.enableSchedule(false);
     reset();
+    #if !defined (__BUILD_HAS_THREADS)
+      read_abort_event.enableSchedule(true);
+      read_abort_event.alterScheduleRecurrence(-1);
+      platform.kernel()->addSchedule(&read_abort_event);
+    #else
+      read_abort_event.enableSchedule(false);
+      read_abort_event.alterScheduleRecurrence(0);
+      createThread(&_thread_id, nullptr, xport_read_handler, (void*) this);
+    #endif
     return 1;
   }
   return 0;
@@ -265,6 +266,11 @@ int8_t StandardIO::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
+    case MANUVR_MSG_XPORT_RECEIVE:
+    case MANUVR_MSG_XPORT_QUEUE_RDY:
+      read_port();
+      return_value++;
+      break;
     default:
       return_value += ManuvrXport::notify(active_event);
       break;
@@ -273,5 +279,3 @@ int8_t StandardIO::notify(ManuvrMsg* active_event) {
   flushLocalLog();
   return return_value;
 }
-
-#endif  // __MANUVR_LINUX

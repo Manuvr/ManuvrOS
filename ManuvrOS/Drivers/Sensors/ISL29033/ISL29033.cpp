@@ -43,7 +43,6 @@ const DatumDef datum_defs[] = {
 */
 ISL29033::ISL29033(uint8_t addr) : I2CDeviceWithRegisters(addr), SensorWrapper("ISL29033") {
   define_datum(&datum_defs[0]);
-  gpioSetup();
 
   // Default state: Maximum range and maximum resolution.
   autorange    = false;
@@ -68,28 +67,6 @@ ISL29033::ISL29033(uint8_t addr) : I2CDeviceWithRegisters(addr), SensorWrapper("
 * Destructor.
 */
 ISL29033::~ISL29033() {
-}
-
-
-/*
-* Setup GPIO pins and their bindings to on-chip peripherals, if required.
-*/
-void ISL29033::gpioSetup() {
-#if defined(STM32F4XX)
-  GPIO_InitTypeDef GPIO_InitStruct;
-
-    /* These Port E pins are inputs:
-    *
-    * #   Purpose
-    * --------------------------------------
-    * 11  LUX_IRQ (Interrupt)
-    */
-    GPIO_InitStruct.GPIO_Pin   = GPIO_Pin_11;
-    GPIO_InitStruct.GPIO_Mode  = GPIO_Mode_IN;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd  = GPIO_PuPd_UP;   // Need a pull-up on the IRQ pin.
-    GPIO_Init(GPIOE, &GPIO_InitStruct);
-#endif
 }
 
 
@@ -185,9 +162,11 @@ SensorError ISL29033::readSensor() {
 
 
 
-/****************************************************************************************************
-* These are overrides from I2CDevice.                                                               *
-****************************************************************************************************/
+/*******************************************************************************
+* ___     _       _                      These members are mandatory overrides
+*  |   / / \ o   | \  _     o  _  _      for implementing I/O callbacks. They
+* _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
+*******************************************************************************/
 
 int8_t ISL29033::io_op_callback(I2CBusOp* completed) {
   I2CDeviceWithRegisters::io_op_callback(completed);

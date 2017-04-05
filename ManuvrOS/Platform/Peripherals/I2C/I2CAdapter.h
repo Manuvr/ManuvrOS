@@ -97,20 +97,47 @@ This file is the tortured result of growing pains since the beginning of
   class I2CAdapter;
 
 
+  enum class I2CPingState {
+    NONE = 0,
+    NEG  = 1,
+    POS  = 2,
+    RES  = 3
+  };
+
+
+  #define I2C_ADAPT_OPT_FLAG_HZ0      0x0100   //
+  #define I2C_ADAPT_OPT_FLAG_HZ1      0x0200   //
+  #define I2C_ADAPT_OPT_FLAG_SCL_PU   0x0400   // SCL pullup.
+  #define I2C_ADAPT_OPT_FLAG_SDA_PU   0x0800   // SDA pullup.
+
+  // TODO: Integrate freq
   class I2CAdapterOptions {
     public:
-      I2CAdapterOptions() {};
-      I2CAdapterOptions(uint8_t a, uint8_t d, uint8_t c) {
-        adapter = a;
-        sda_pin = d;
-        scl_pin = c;
-        def_flags = 0;
-      };
+      I2CAdapterOptions(const I2CAdapterOptions* obj) :
+        adapter(obj->adapter),
+        sda_pin(obj->sda_pin),
+        scl_pin(obj->scl_pin),
+        def_flags(obj->def_flags)
+      {};
 
-      int8_t  adapter;
-      uint8_t sda_pin;
-      uint8_t scl_pin;
-      uint8_t def_flags;
+      I2CAdapterOptions(uint8_t a, uint8_t d, uint8_t c) :
+        adapter(a),
+        sda_pin(d),
+        scl_pin(c),
+        def_flags(I2C_ADAPT_OPT_FLAG_SDA_PU | I2C_ADAPT_OPT_FLAG_SCL_PU)
+      {};
+
+      I2CAdapterOptions(uint8_t a, uint8_t d, uint8_t c, uint16_t f) :
+        adapter(a),
+        sda_pin(d),
+        scl_pin(c),
+        def_flags(f)
+      {};
+
+      const uint8_t  adapter;
+      const uint8_t  sda_pin;
+      const uint8_t  scl_pin;
+      const uint16_t def_flags;
   };
 
 
@@ -218,6 +245,8 @@ This file is the tortured result of growing pains since the beginning of
 
       inline int8_t getAdapterId() {  return(_bus_opts.adapter);  };
 
+      inline void raiseQueueReady() {  Kernel::isrRaiseEvent(&_queue_ready);  };
+
 
     protected:
       int8_t attached();      // This is called from the base notify().
@@ -229,12 +258,11 @@ This file is the tortured result of growing pains since the beginning of
 
 
     private:
-      int8_t  ping_map[128];
-      I2CAdapterOptions _bus_opts;
+      const I2CAdapterOptions _bus_opts;
+      int8_t  ping_map[32];
 
       LinkedList<I2CDevice*> dev_list;    // A list of active slaves on this bus.
-      ManuvrMsg _periodic_i2c_debug;
-      //ManuvrMsg _queue_ready;
+      ManuvrMsg _queue_ready;
 
 
       int get_slave_dev_by_addr(uint8_t search_addr);
@@ -243,8 +271,12 @@ This file is the tortured result of growing pains since the beginning of
       void purge_queued_work();
       void purge_stalled_job();
 
+      I2CPingState get_ping_state_by_addr(uint8_t addr);
+      void set_ping_state_by_addr(uint8_t addr, I2CPingState nu);
+
 
       static I2CBusOp __prealloc_pool[I2CADAPTER_PREALLOC_COUNT];
+      static char _ping_state_chr[4];
   };
 
 
@@ -270,9 +302,6 @@ This file is the tortured result of growing pains since the beginning of
       virtual int8_t io_op_callback(BusOp*);
       virtual int8_t queue_io_job(BusOp*);
 
-      /* If your device needs something to happen immediately prior to bus I/O... */
-      virtual bool operationCallahead(I2CBusOp*);
-
       bool assignBusInstance(I2CAdapter*);   // Needs to be called by the i2c class during insertion.
       bool disassignBusInstance();           // This is to be called from the adapter's unassignment function.
 
@@ -281,6 +310,8 @@ This file is the tortured result of growing pains since the beginning of
 
 
     protected:
+      I2CAdapter* _bus = nullptr;
+
       // Writes <byte_count> bytes from <buf> to the sub-address <sub_addr> of i2c device <dev_addr>.
       // Returns true if the job was accepted. False on error.
       bool writeX(int sub_addr, uint16_t byte_count, uint8_t *buf);
@@ -295,11 +326,7 @@ This file is the tortured result of growing pains since the beginning of
       bool read8(int sub_addr);
       bool read16(int sub_addr);
       bool read16();
-
-
-    private:
-      I2CAdapter* _bus = nullptr;
-  };
+};
 
 
   /*
@@ -322,10 +349,8 @@ This file is the tortured result of growing pains since the beginning of
 
 
       // Callback for requested operation completion.
-      virtual int8_t io_op_callahead(I2CBusOp*);
-      virtual int8_t io_op_callback(I2CBusOp*);
-      /* If your device needs something to happen immediately prior to bus I/O... */
-      virtual bool operationCallahead(I2CBusOp*);
+      virtual int8_t io_op_callahead(BusOp*);
+      virtual int8_t io_op_callback(BusOp*);
 
       bool defineRegister(uint16_t _addr, uint8_t  val, bool dirty, bool unread, bool writable);
       bool defineRegister(uint16_t _addr, uint16_t val, bool dirty, bool unread, bool writable);

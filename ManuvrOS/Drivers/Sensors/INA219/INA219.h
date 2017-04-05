@@ -23,7 +23,7 @@ limitations under the License.
 #define __INA219_DRIVER_H__
 
 #include "Platform/Peripherals/I2C/I2CAdapter.h"
-#include "Drivers/SensorWrapper/SensorWrapper.h"
+#include "Drivers/Sensors/SensorWrapper.h"
 
 
 /* Sensor registers that exist in hardware */

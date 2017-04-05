@@ -110,16 +110,20 @@ CPP_SRCS  += Drivers/ISL23345/ISL23345.cpp
 CPP_SRCS  += Drivers/Bluetooth/RN4020/RN4020.cpp
 CPP_SRCS  += Drivers/ADG2128/ADG2128.cpp
 
-CPP_SRCS  += Drivers/SensorWrapper/SensorWrapper.cpp
-CPP_SRCS  += Drivers/SensorWrapper/SensorDatum.cpp
+CPP_SRCS  += Drivers/ATECC508/ATECC508.cpp
+
+CPP_SRCS  += Drivers/Sensors/SensorWrapper.cpp
+CPP_SRCS  += Drivers/Sensors/SensorDatum.cpp
 CPP_SRCS  += Drivers/Sensors/Si7021/Si7021.cpp
 CPP_SRCS  += Drivers/Sensors/INA219/INA219.cpp
 CPP_SRCS  += Drivers/Sensors/VEML6070/VEML6070.cpp
 CPP_SRCS  += Drivers/Sensors/TMP006/TMP006.cpp
+CPP_SRCS  += Drivers/Sensors/TMP102/TMP102.cpp
 CPP_SRCS  += Drivers/Sensors/ISL29033/ISL29033.cpp
 CPP_SRCS  += Drivers/Sensors/LPS331/LPS331.cpp
 CPP_SRCS  += Drivers/Sensors/TSL2561/TSL2561.cpp
 CPP_SRCS  += Drivers/Sensors/MGC3130/MGC3130.cpp
+CPP_SRCS  += Drivers/Sensors/BMP085/BMP085.cpp
 
 CPP_SRCS  += Drivers/TLC5947/TLC5947.cpp
 #CPP_SRCS  += Drivers/LSMD9S1/LSMD9S1.cpp
@@ -144,7 +148,7 @@ LIBNAME = libmanuvr.a
 all: $(LIBNAME)
 
 %.o : %.cpp
-	$(CXX) $(INCLUDES) $(CPP_FLAGS) -std=$(CPP_STANDARD) -nostdlib -c $< -o $@
+	$(CXX) $(INCLUDES) $(CXXFLAGS) -std=$(CPP_STANDARD) -nostdlib -c $< -o $@
 
 $(LIBNAME): setenvars $(OBJS)
 	$(MAKE) -C Platform/

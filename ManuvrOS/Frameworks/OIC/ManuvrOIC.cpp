@@ -164,7 +164,7 @@ extern "C" {
 static oc_handler_t handler;
 
 void app_init_hook() {
-  oc_init_platform(IDENTITY_STRING, NULL, NULL);
+  oc_init_platform(FIRMWARE_NAME, NULL, NULL);
   ManuvrOIC::INSTANCE->frameworkReady(true);
   Kernel::raiseEvent(MANUVR_MSG_OIC_READY, (EventReceiver*) ManuvrOIC::INSTANCE);
 }

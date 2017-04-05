@@ -30,7 +30,6 @@
 *   __BUILD_HAS_DIGEST
 *
 * __HAS_IDENT_CERT
-* __HAS_IDENT_ONEID
 *
 */
 
@@ -39,7 +38,12 @@
 #define MANUVR_SEMVER_MINOR 3
 #define MANUVR_SEMVER_PATCH 0
 
-#include <ManuvrConf.h>
+/* To override the defaults, supply this at build time. */
+#if defined(MANUVR_CONF_FILE)
+  #include MANUVR_CONF_FILE
+#else
+  #include "ManuvrConf.h"
+#endif
 
 /* Cryptographic stuff... */
 #include <Platform/Cryptographic/CryptOptUnifier.h>
@@ -47,13 +51,41 @@
 #ifndef __MANUVR_OPTION_RATIONALIZER_H__
 #define __MANUVR_OPTION_RATIONALIZER_H__
 
-#ifndef IDENTITY_STRING
-  #error You need to name the firmware by providing IDENTITY_STRING.
+// This is the string that identifies this Manuvrable to other Manuvrables.
+//   In MHB's case, this value will select the mEngine.
+#ifndef FIRMWARE_NAME
+  #error You need to name the firmware by providing FIRMWARE_NAME.
+#endif
+
+// How many random numbers should be cached? Must be > 0.
+#ifndef PLATFORM_RNG_CARRY_CAPACITY
+  #define PLATFORM_RNG_CARRY_CAPACITY 32
+#endif
+
+// How large a preallocation buffer should we keep?
+#ifndef EVENT_MANAGER_PREALLOC_COUNT
+  #define EVENT_MANAGER_PREALLOC_COUNT 8
+#endif
+
+#ifndef MAXIMUM_SEQUENTIAL_SKIPS
+  #define MAXIMUM_SEQUENTIAL_SKIPS 20
 #endif
 
 // Debug support requires Console.
-#if defined(__MANUVR_DEBUG) && !defined(MANUVR_CONSOLE_SUPPORT)
+// NOTE: If your Makefile passes the MANUVR_DEBUG option, this will be enabled regardless.
+#if defined(MANUVR_DEBUG) && !defined(MANUVR_CONSOLE_SUPPORT)
   #define MANUVR_CONSOLE_SUPPORT
+#endif
+
+// Use the build system to set default logging levels for modules.
+#if defined(MANUVR_CONSOLE_SUPPORT)
+  #if defined(MANUVR_DEBUG)
+    #define DEFAULT_CLASS_VERBOSITY    6
+  #else
+    #define DEFAULT_CLASS_VERBOSITY    4
+  #endif
+#else
+  #define DEFAULT_CLASS_VERBOSITY      0
 #endif
 
 
@@ -77,10 +109,16 @@
   #define __BUILD_HAS_THREADS
 #elif defined(__MANUVR_CONTIKI)
   //#pragma message "Building with no threading support."
+  #define MANUVR_PLATFORM_TIMER_PERIOD_MS 1
 #else
   //#pragma message "Building with no threading support."
+  #define MANUVR_PLATFORM_TIMER_PERIOD_MS 1
 #endif
 
+// What is the granularity of our scheduler?
+#ifndef MANUVR_PLATFORM_TIMER_PERIOD_MS
+  #define MANUVR_PLATFORM_TIMER_PERIOD_MS 10
+#endif
 
 /* Encodings... */
 // CBOR
@@ -106,7 +144,6 @@
 
 /* BufferPipe support... */
 
-
 /* IP support... */
 // LWIP
 // Arduino
@@ -129,9 +166,6 @@
 */
 #if defined(__BUILD_HAS_ASYMMETRIC)
   #define __HAS_IDENT_CERT        // We support X509 identity.
-  #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
-    #define __HAS_IDENT_ONEID     // We support OneID's asymmetric identities.
-  #endif
 #endif   // __HAS_CRYPT_WRAPPER
 
 

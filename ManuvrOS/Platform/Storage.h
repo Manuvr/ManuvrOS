@@ -24,11 +24,10 @@ This file represents the platform-specific interface to a persistent
   extends this.
 */
 
+#include <DataStructures/StringBuilder.h>
 
 #ifndef __MANUVR_PERSIST_LAYER_H__
 #define __MANUVR_PERSIST_LAYER_H__
-
-#include <DataStructures/StringBuilder.h>
 
 #define MANUVR_PL_USES_FILESYSTEM      0x0001  // Medium is on top of a filesystem.
 #define MANUVR_PL_BLOCK_ACCESS         0x0002  // I/O operations must occur blockwise.
@@ -43,7 +42,7 @@ This file represents the platform-specific interface to a persistent
 
 
 /**
-* This class is a gateway to I/O. It will almost certainly need to have
+* This class is a gateway to block-oriented I/O. It will almost certainly need to have
 *   some of it's operations run asynchronously or threaded. We leave those
 *   concerns for any implementing class.
 */
@@ -68,6 +67,8 @@ class Storage {
 
 
   protected:
+    unsigned long _free_space  = 0L;
+
     Storage();  // Protected constructor.
 
     virtual void printDebug(StringBuilder*);
@@ -81,7 +82,6 @@ class Storage {
 
 
   private:
-    unsigned long _free_space  = 0L;
     uint16_t      _pl_flags    = 0;
 };
 

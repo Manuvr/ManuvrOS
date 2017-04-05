@@ -34,6 +34,10 @@ This file is meant to contain a set of common functions that are typically platf
 #include <Frameworks/OIC/ManuvrOIC.h>
 #endif
 
+#if defined(MANUVR_TEST_DRIVER)
+#include <Drivers/TestDriver/TestDriver.h>
+#endif
+
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -174,10 +178,10 @@ void ManuvrPlatform::printDebug(StringBuilder* output) {
   uintptr_t final_sp   = 0;
   output->concatf("\n-- getStackPointer():  %p\n", &final_sp);
   output->concatf("-- stack grows %s\n--\n", (&final_sp > &initial_sp) ? "up" : "down");
-  output->concatf("-- millis()            0x%08x\n", millis());
-  output->concatf("-- micros()            0x%08x\n", micros());
-  output->concatf("-- start_micros        0x%08x\n", _start_micros);
-  output->concatf("-- boot_micros         0x%08x\n", _boot_micros);
+  output->concatf("-- millis()            %lu\n", millis());
+  output->concatf("-- micros()            %lu\n", micros());
+  output->concatf("-- start_micros        %lu\n", _start_micros);
+  output->concatf("-- boot_micros         %lu\n", _boot_micros);
   output->concatf("-- Timer resolution    %d ms\n", MANUVR_PLATFORM_TIMER_PERIOD_MS);
   output->concatf("-- Entropy pool size   %u bytes\n", PLATFORM_RNG_CARRY_CAPACITY * 4);
   if (platform.hasTimeAndDate()) {
@@ -188,7 +192,7 @@ void ManuvrPlatform::printDebug(StringBuilder* output) {
   }
 
   output->concat("--\n-- Capabilities:\n");
-  #if defined(__MANUVR_DEBUG)
+  #if defined(MANUVR_DEBUG)
     output->concat("--\t DEBUG build\n");
   #endif
   if (platform.hasThreads()) {
@@ -346,9 +350,15 @@ int8_t ManuvrPlatform::bootstrap() {
 
   platformPostInit();    // Hook for platform-specific post-boot operations.
 
+  #if defined(MANUVR_TEST_DRIVER)
+    // TODO: This is a leak, for sure. Ref-count EventReceivers.
+    TestDriver* _test_drv = new TestDriver();
+    _kernel.subscribe((EventReceiver*) _test_drv);
+  #endif //MANUVR_TEST_DRIVER
+
   if (nullptr == _self) {
     // If we have no other conception of "self", invent one.
-    _self = new IdentityUUID(IDENTITY_STRING);
+    _self = new IdentityUUID(FIRMWARE_NAME);
     if (_self) {
       _self->isSelf(true);
     }
@@ -463,7 +473,7 @@ void maskableInterrupts(bool enable) {
 * @return The thread's return value.
 */
 int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn, void* _args) {
-  #if defined(__MANUVR_LINUX)
+  #if defined(__BUILD_HAS_PTHREADS)
     return pthread_create(_thread_id, (const pthread_attr_t*) _something, _fxn, _args);
   #elif defined(__MANUVR_FREERTOS)
     // TODO: Make the task parameters 1-to-1 with pthreads.
@@ -479,24 +489,24 @@ int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn,
 }
 
 int deleteThread(unsigned long* _thread_id) {
-  #if defined(__MANUVR_LINUX)
+  #if defined(__BUILD_HAS_PTHREADS)
   return pthread_cancel(*_thread_id);
   #elif defined(__MANUVR_FREERTOS)
   // TODO: Why didn't this work?
   //vTaskDelete(&_thread_id);
   return 0;
-  #endif
+  #else
   return -1;
+  #endif
 }
 
 
-int wakeThread(unsigned long* _thread_id) {
-  #if defined(__MANUVR_LINUX)
+int wakeThread(unsigned long _thread_id) {
+  #if defined(__BUILD_HAS_PTHREADS)
   #elif defined(__MANUVR_FREERTOS)
-  vTaskResume(_thread_id);
-  return 0;
+  vTaskResume(&_thread_id);
   #endif
-  return -1;
+  return 0;
 }
 
 
@@ -522,22 +532,6 @@ void sleep_millis(unsigned long millis) {
     }
   #elif defined(ARDUINO)
     delay(millis);  // So wasteful...
-  #endif
-}
-
-
-/**
-* This is given as a convenience function. The programmer of an application could
-*   call this as a last-act in the main function. This function never returns.
-* NOTE: Unless inlined, this convenience will one additional stack-frame's worth of
-*   memory. Probably not worth the convenience in most cases.  -Wl --gc-sections
-*/
-void ManuvrPlatform::forsakeMain() {
-  #if defined (__MANUVR_FREERTOS)
-    // FreeRTOS requires that we explicitly yield control.
-  #else
-    // Run forever.
-    while (1) {  _kernel.procIdleFlags();  }
   #endif
 }
 

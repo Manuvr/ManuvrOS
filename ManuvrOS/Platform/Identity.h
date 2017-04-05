@@ -74,9 +74,6 @@ enum class IdentFormat {
     PK              = 0x05,  // Pre-shared asymmetric key.
     PSK_SYM         = 0x06,  // Pre-shared symmetric key.
   #endif
-  #if defined(__HAS_IDENT_ONEID)
-    ONE_ID          = 0x10,  // OneID asymemetric key strategey.
-  #endif
   #if defined(MANUVR_OPENINTERCONNECT)
     OIC_CRED        = 0x07,  // OIC credential.
   #endif
@@ -162,9 +159,6 @@ class Identity {
 
 #if defined(__HAS_CRYPT_WRAPPER)
   #include <Platform/Identity/IdentityCrypto.h>
-  #if defined(WRAPPED_PK_OPT_SECP256R1) && defined(WRAPPED_ASYM_ECDSA)
-    #include <Platform/Identity/IdentityOneID.h>
-  #endif
 #endif
 
 #if defined(MANUVR_OPENINTERCONNECT)

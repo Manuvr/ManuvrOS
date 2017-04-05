@@ -82,7 +82,7 @@ SensorError TMP006::readSensor() {
       return SensorError::NO_ERROR;
     }
   }
-  return SensorError::NO_ERROR;  // TODO: Wrong code.
+  return SensorError::BUS_ERROR;
 }
 
 
@@ -97,9 +97,11 @@ SensorError TMP006::getParameter(uint16_t reg, int len, uint8_t*) {
 
 
 
-/****************************************************************************************************
-* These are overrides from I2CDeviceWithRegisters.                                                  *
-****************************************************************************************************/
+/*******************************************************************************
+* ___     _       _                      These members are mandatory overrides
+*  |   / / \ o   | \  _     o  _  _      for implementing I/O callbacks. They
+* _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
+*******************************************************************************/
 
 int8_t TMP006::io_op_callback(I2CBusOp* completed) {
   I2CDeviceWithRegisters::io_op_callback(completed);

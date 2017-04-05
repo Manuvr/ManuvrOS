@@ -18,17 +18,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-This module is built and loaded by Platform.cpp if the MANUVR_TESTS flag
+This module is built and loaded by Platform.cpp if the MANUVR_TEST_DRIVER flag
   is set by the build system. This ER ought to perform various tests that
   only make sense at runtime. Security and abuse-hardening ought to be
   done this way.
 */
 
 
+#include <Platform/Platform.h>
+
 #ifndef __MANUVR_TESTING_DRIVER_H__
 #define __MANUVR_TESTING_DRIVER_H__
 
-#include <Platform/Platform.h>
+#define MANUVR_MSG_BNCHMRK_CRYPT        0xF576   //
+#define MANUVR_MSG_BNCHMRK_RNG          0xF577   //
+#define MANUVR_MSG_BNCHMRK_MSG_LOAD     0xF578   //
+#define MANUVR_MSG_BNCHMRK_FLOAT        0xF579   //
+#define MANUVR_MSG_BNCHMRK_HASH         0xF57A   //
 
 
 class TestDriver : public EventReceiver {
@@ -44,12 +50,18 @@ class TestDriver : public EventReceiver {
       void procDirectDebugInstruction(StringBuilder*);
     #endif  //MANUVR_CONSOLE_SUPPORT
 
+    void printBenchmarkResults(StringBuilder*);
+
 
   protected:
     int8_t attached();
 
 
   private:
+    int CRYPTO_TEST_HASHES();
+    int CRYPTO_TEST_SYMMETRIC();
+    int CRYPTO_TEST_ASYMMETRIC_SET(Cipher, CryptoKey*);
+    int CRYPTO_TEST_ASYMMETRIC();
 };
 
 

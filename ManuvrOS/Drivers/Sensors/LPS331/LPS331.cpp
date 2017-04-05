@@ -264,7 +264,7 @@ SensorError LPS331::set_power_mode(uint8_t nu_power_mode) {
     default:
       break;
   }
-  #if defined(__MANUVR_DEBUG)
+  #if defined(MANUVR_DEBUG)
     Kernel::log("LPS331 Power mode set. \n");
   #endif
   return SensorError::NO_ERROR;

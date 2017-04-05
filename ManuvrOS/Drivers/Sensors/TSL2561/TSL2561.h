@@ -22,7 +22,7 @@ limitations under the License.
 #ifndef __TSL2561_DRIVER_H__
 #define __TSL2561_DRIVER_H__
 
-#include <Drivers/SensorWrapper/SensorWrapper.h>
+#include <Drivers/Sensors/SensorWrapper.h>
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
 
 /*

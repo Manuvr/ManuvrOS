@@ -22,7 +22,7 @@ limitations under the License.
 
 #include <Kernel.h>
 
-#if defined(__MANUVR_EVENT_PROFILER)
+#if defined(MANUVR_EVENT_PROFILER)
   /**
   * Constructor
   */
@@ -60,4 +60,4 @@ limitations under the License.
     output->concat("\n\t\t Execd \t\t Event \t\t total us   average     worst    best      last\n");
   }
 
-#endif  //__MANUVR_EVENT_PROFILER
+#endif  //MANUVR_EVENT_PROFILER

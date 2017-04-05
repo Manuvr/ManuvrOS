@@ -48,7 +48,7 @@ int8_t EventReceiver::setVerbosity(int8_t nu_verbosity) {
 	switch (nu_verbosity) {
     case LOG_DEBUG:   /* 7 - debug-level messages */
     case LOG_INFO:    /* 6 - informational */
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
       local_log.concatf("%s:\tVerbosity set to %d\n", getReceiverName(), nu_verbosity);
       Kernel::log(&local_log);
       #endif
@@ -61,7 +61,7 @@ int8_t EventReceiver::setVerbosity(int8_t nu_verbosity) {
       _class_state = (nu_verbosity & MANUVR_ER_FLAG_VERBOSITY_MASK) | (_class_state & ~MANUVR_ER_FLAG_VERBOSITY_MASK);
       return 1;
     default:
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
       if (getVerbosity() > 4) {
         local_log.concatf("Illegal verbosity value.\n", getReceiverName(), nu_verbosity);
         Kernel::log(&local_log);
@@ -85,7 +85,7 @@ int8_t EventReceiver::setVerbosity(ManuvrMsg* active_event) {
   if (MANUVR_MSG_SYS_LOG_VERBOSITY != active_event->eventCode()) return -1;
   switch (active_event->argCount()) {
     case 0:
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
       local_log.concatf("%s:\tVerbosity is %d\n", getReceiverName(), getVerbosity());
       Kernel::log(&local_log);
       #endif
@@ -132,7 +132,7 @@ void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
       }
       break;
     default:
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
       local_log.concatf("%s: No comprendo.\n", getReceiverName());
       #endif
       break;
@@ -172,7 +172,7 @@ void EventReceiver::printDebug() {
 */
 void EventReceiver::printDebug(StringBuilder *output) {
   #if defined(__BUILD_HAS_THREADS)
-  output->concatf("\n==< %s %s  Thread %d >=======\n", getReceiverName(), (erAttached() ? "" : "   (UNATTACHED) "), _thread_id);
+  output->concatf("\n==< %s %s  Thread %u >=======\n", getReceiverName(), (erAttached() ? "" : "   (UNATTACHED) "), _thread_id);
   #else
   output->concatf("\n==< %s %s>======================\n", getReceiverName(), (erAttached() ? "" : "   (UNATTACHED) "));
   #endif

@@ -22,10 +22,12 @@ This file is meant to contain a set of common functions that are
   typically platform-dependent. The goal is to make a class instance
   that is pre-processor-selectable to reflect the platform with an API
   that is consistent, thereby giving the kernel the ability to...
-    * Access the realtime clock (if applicatble)
-    * Get definitions for GPIO pins.
-    * Access a true RNG (if it exists)
-    * Persist and retrieve data across runtimes.
+    * Access peripherals (true RNG, I2C/SPI/UART, GPIO, RTC, etc)
+    * Provide a uniform interface around cryptographic implementations
+    * Maintain a notion of Identity
+    * Persist and retrieve data across runtimes
+    * Setup other frameworks
+    * Manage threading
 */
 
 
@@ -47,8 +49,8 @@ This file is meant to contain a set of common functions that are
   #include <pthread.h>
 #elif defined(__MANUVR_FREERTOS)
   extern "C" {
-    #include <FreeRTOS.h>
-    #include <task.h>
+    #include "freertos/FreeRTOS.h"
+    #include "freertos/task.h"
   }
 #endif
 
@@ -65,7 +67,7 @@ extern "C" {
   #include "iotivity/port/oc_network_events_mutex.h"
   #include "iotivity/port/oc_log.h"
 
-  int example_main(void);
+  int example_main();
 }
 #endif   // MANUVR_OPENINTERCONNECT
 
@@ -118,56 +120,7 @@ class Storage;
 #define MANUVR_INIT_STATE_HALTED          7
 
 
-/**
-* GPIO is a platform issue. Here is a hasty attempt to stack more generality
-*   into the Arduino conventions.
-*/
-#if defined (ARDUINO)
-  #include <Arduino.h>
-#elif defined(STM32F7XX) | defined(STM32F746xx)
-  #include <stm32f7xx_hal.h>
-
-  #define HIGH           GPIO_PIN_SET
-  #define LOW            GPIO_PIN_RESET
-
-  #define INPUT          GPIO_MODE_INPUT
-  #define OUTPUT         GPIO_MODE_OUTPUT_PP
-  #define OUTPUT_OD      GPIO_MODE_OUTPUT_OD
-  #define INPUT_PULLUP   0xFE
-  #define INPUT_PULLDOWN 0xFD
-
-  #define CHANGE             0xFC
-  #define FALLING            0xFB
-  #define RISING             0xFA
-  #define CHANGE_PULL_UP     0xF9
-  #define FALLING_PULL_UP    0xF8
-  #define RISING_PULL_UP     0xF7
-  #define CHANGE_PULL_DOWN   0xF6
-  #define FALLING_PULL_DOWN  0xF5
-  #define RISING_PULL_DOWN   0xF4
-  extern "C" {
-    unsigned long millis();
-    unsigned long micros();
-  }
-#else
-  // We adopt and extend Arduino GPIO access conventions.
-  #define HIGH         1
-  #define LOW          0
-
-  #define INPUT        0
-  #define OUTPUT       1
-  #define INPUT_PULLUP 2
-
-  #define CHANGE       4
-  #define FALLING      2
-  #define RISING       3
-  extern "C" {
-    unsigned long millis();
-    unsigned long micros();
-  }
-
-#endif
-
+enum class GPIOMode;
 
 /* This is how we conceptualize a GPIO pin. */
 // TODO: I'm fairly sure this sucks. It's too needlessly memory heavy to
@@ -180,6 +133,20 @@ typedef struct __platform_gpio_def {
   uint8_t         flags;
   uint16_t        mode;  // Strictly more than needed. Padding structure...
 } PlatformGPIODef;
+
+/*
+* When we wrap platform-provided peripherals, they will carry
+* one of these type-codes.
+*/
+enum class PeripheralTypes {
+  PERIPH_I2C,
+  PERIPH_SPI,
+  PERIPH_UART,
+  PERIPH_BLUETOOTH,
+  PERIPH_WIFI,
+  PERIPH_RTC,
+  PERIPH_STORAGE
+};
 
 
 /**
@@ -264,7 +231,14 @@ class ManuvrPlatform {
     void setWakeHook(FxnPointer nu);
     void wakeHook();
 
-    void forsakeMain();
+    /**
+    * This is given as a convenience function. The programmer of an application could
+    *   call this as a last-act in the main function. This function never returns.
+    */
+    inline void forsakeMain() {
+      if (!nominalState()) {  bootstrap(); }     // Bootstrap if necessary.
+      while (1) {  _kernel.procIdleFlags();  }   // Run forever.
+    };
 
     void printCryptoOverview(StringBuilder*);
     void printConfig(StringBuilder* out);
@@ -366,23 +340,35 @@ void maskableInterrupts(bool);
 /*
 * Threading
 */
+void sleep_millis(unsigned long millis);
+
 int createThread(unsigned long*, void*, ThreadFxnPtr, void*);
 int deleteThread(unsigned long*);
-int wakeThread(unsigned long*);
-void sleep_millis(unsigned long millis);
+int wakeThread(unsigned long);
+
+#if defined(__BUILD_HAS_PTHREADS)
+  inline int  yieldThread() {   return pthread_yield();   };
+  inline void suspendThread() {  sleep_millis(100); };   // TODO
+#elif defined(__MANUVR_FREERTOS)
+  inline int  yieldThread() {   taskYIELD();  return 0;   };
+  inline void suspendThread() {  sleep_millis(100); };   // TODO
+#else
+  inline int  yieldThread() {   return 0;   };
+  inline void suspendThread() { };
+#endif
+
 
 /*
 * Randomness
 */
 uint32_t randomInt();                        // Fetches one of the stored randoms and blocks until one is available.
 int8_t random_fill(uint8_t* buf, size_t len);
-volatile bool provide_random_int(uint32_t);  // Provides a new random to the pool from the RNG ISR.
 
 
 /*
 * GPIO and change-notice.
 */
-int8_t gpioDefine(uint8_t pin, int mode);
+int8_t gpioDefine(uint8_t pin, GPIOMode mode);
 void   unsetPinIRQ(uint8_t pin);
 int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrMsg* isr_event);
 int8_t setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn);
@@ -410,26 +396,29 @@ int    readPinAnalog(uint8_t pin);
 // TODO: Until the final-step of the build system rework, this is how we
 //         selectively support specific platforms.
 #if defined(__MK20DX256__) | defined(__MK20DX128__)
-  #include <Platform/Teensy3/Teensy3.h>
+  #include <Platform/Targets/Teensy3/Teensy3.h>
   typedef Teensy3 Platform;
 #elif defined(STM32F7XX) | defined(STM32F746xx)
-  #include <Platform/STM32F7/STM32F7.h>
+  #include <Platform/Targets/STM32F7/STM32F7.h>
   typedef STM32F7Platform Platform;
 #elif defined(STM32F4XX)
   // Not yet converted
-#elif defined(ARDUINO)
-  #include <Platform/Arduino/Arduino.h>
-  typedef ArduinoPlatform Platform;
 #elif defined(__MANUVR_PHOTON)
   // Not yet converted
+#elif defined(__MANUVR_ESP32)
+  #include <Platform/Targets/ESP32/ESP32.h>
+  typedef ESP32Platform Platform;
+#elif defined(ARDUINO)
+  #include <Platform/Targets/Arduino/Arduino.h>
+  typedef ArduinoWrapper Platform;
 #elif defined(RASPI)
-  #include <Platform/Raspi/Raspi.h>
+  #include <Platform/Targets/Raspi/Raspi.h>
   typedef Raspi Platform;
 #elif defined(__MANUVR_LINUX)
-  #include <Platform/Linux/Linux.h>
+  #include <Platform/Targets/Linux/Linux.h>
   typedef LinuxPlatform Platform;
 #elif defined(__MANUVR_APPLE)
-  #include <Platform/AppleOSX/AppleOSX.h>
+  #include <Platform/Targets/AppleOSX/AppleOSX.h>
   typedef ApplePlatform Platform;
 #else
   // Unsupportage.

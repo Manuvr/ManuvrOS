@@ -38,8 +38,6 @@ limitations under the License.
   #include <DataStructures/StringBuilder.h>
   #include <EventReceiver.h>
 
-  #define SCHEDULER_MAX_SKIP_BEFORE_RESET    10  // Skipping this many loops will cause us to reboot.
-
   /*
   * These state flags are hosted by the EventReceiver. This may change in the future.
   * Might be too much convention surrounding their assignment across inherritence.
@@ -144,10 +142,10 @@ limitations under the License.
       static uint32_t lagged_schedules;  // How many schedules were skipped? Ideally this is zero.
 
       /* These functions deal with logging.*/
-      volatile static void log(int severity, const char *str);  // Pass-through to the logger class, whatever that happens to be.
-      volatile static void log(const char *str);                // Pass-through to the logger class, whatever that happens to be.
-      volatile static void log(char *str);                      // Pass-through to the logger class, whatever that happens to be.
-      volatile static void log(StringBuilder *str);
+      static void log(int severity, const char *str);  // Pass-through to the logger class, whatever that happens to be.
+      static void log(const char *str);                // Pass-through to the logger class, whatever that happens to be.
+      static void log(char *str);                      // Pass-through to the logger class, whatever that happens to be.
+      static void log(StringBuilder *str);
       static int8_t attachToLogger(BufferPipe*);
       static int8_t detachFromLogger(BufferPipe*);
 

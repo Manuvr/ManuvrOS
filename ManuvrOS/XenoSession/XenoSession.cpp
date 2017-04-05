@@ -273,7 +273,7 @@ int8_t XenoSession::notify(ManuvrMsg* active_event) {
     case MANUVR_MSG_SESS_SERVICE:
       // If we ever see this, it means the class that extended us isn't reacting appropriately
       //   to its own requests-for-service. Pitch a warning.
-      #ifdef __MANUVR_DEBUG
+      #ifdef MANUVR_DEBUG
       if (getVerbosity() > 1) {
         local_log.concatf("%p received SESS_SERVICE.\n", this);
         printDebug(&local_log);
@@ -285,7 +285,7 @@ int8_t XenoSession::notify(ManuvrMsg* active_event) {
     case MANUVR_MSG_SESS_HANGUP:
       mark_session_state(XENOSESSION_STATE_PENDING_HANGUP);
       {
-        #ifdef __MANUVR_DEBUG
+        #ifdef MANUVR_DEBUG
         int out_purge = purgeOutbound();
         int in_purge  = purgeInbound();
         if (getVerbosity() > 5) local_log.concatf("%p Purged (%d) msgs from outbound and (%d) from inbound.\n", this, out_purge, in_purge);
@@ -347,7 +347,7 @@ int XenoSession::purgeOutbound() {
   XenoMessage* temp;
   while (_outbound_messages.hasNext()) {
     temp = _outbound_messages.get();
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     if (getVerbosity() > 6) {
       local_log.concatf("\nSession %p Destroying outbound msg:\n", this);
       temp->printDebug(&local_log);
@@ -370,7 +370,7 @@ int XenoSession::purgeInbound() {
   XenoMessage* temp;
   while (_inbound_messages.hasNext()) {
     temp = _inbound_messages.get();
-    #ifdef __MANUVR_DEBUG
+    #ifdef MANUVR_DEBUG
     if (getVerbosity() > 6) {
       local_log.concatf("\nSession %p Destroying inbound msg:\n", this);
       temp->printDebug(&local_log);
@@ -416,7 +416,7 @@ int8_t XenoSession::connection_callback(bool _con) {
   //_relay_list.clear();
   purgeInbound();
   purgeOutbound();
-  #ifdef __MANUVR_DEBUG
+  #ifdef MANUVR_DEBUG
     if (getVerbosity() > 3) local_log.concatf("%p Session is now in state %s.\n", this, sessionPhaseString(getPhase()));
   #endif
   return 0;

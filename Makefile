@@ -86,29 +86,30 @@ endif
 # This project has a single source file.
 CPP_SRCS  = main.cpp
 
-# Supported transports...
-MANUVR_OPTIONS += -DMANUVR_STDIO
-MANUVR_OPTIONS += -DMANUVR_SUPPORT_SERIAL
-MANUVR_OPTIONS += -DMANUVR_SUPPORT_I2C
-#MANUVR_OPTIONS += -DMANUVR_SUPPORT_UDP
-MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
-
 # Options that build for certain threading models (if any).
 #MANUVR_OPTIONS += -D__MANUVR_FREERTOS
 MANUVR_OPTIONS += -D__MANUVR_LINUX
 
+MANUVR_OPTIONS += -DMANUVR_STORAGE
+MANUVR_OPTIONS += -DMANUVR_CONSOLE_SUPPORT
+MANUVR_OPTIONS += -DMANUVR_STDIO
+#MANUVR_OPTIONS += -DMANUVR_SUPPORT_SERIAL
+MANUVR_OPTIONS += -DMANUVR_SUPPORT_TCPSOCKET
+MANUVR_OPTIONS += -DMANUVR_SUPPORT_UDP
+MANUVR_OPTIONS += -DMANUVR_SUPPORT_I2C
+MANUVR_OPTIONS += -DMANUVR_GPS_PIPE
+MANUVR_OPTIONS += -DMANUVR_CBOR
+#MANUVR_OPTIONS += -DMANUVR_JSON
+
+# Enables ATECC provisioning-related features...
+MANUVR_OPTIONS += -DATECC508_CAPABILITY_OTP_RW
+MANUVR_OPTIONS += -DATECC508_CAPABILITY_CONFIG_UNLOCK
+
+#define MANUVR_EVENT_PROFILER
+#define MANUVR_DEBUG
+
 # Wire and session protocols...
 #MANUVR_OPTIONS += -DMANUVR_SUPPORT_OSC
-MANUVR_OPTIONS += -DMANUVR_OVER_THE_WIRE
-#MANUVR_OPTIONS += -DMANUVR_SUPPORT_MQTT
-MANUVR_OPTIONS += -DMANUVR_SUPPORT_COAP
-MANUVR_OPTIONS += -DMANUVR_CONSOLE_SUPPORT
-MANUVR_OPTIONS += -DMANUVR_GPS_PIPE
-
-# Options for various platform features.
-MANUVR_OPTIONS += -DMANUVR_STORAGE
-MANUVR_OPTIONS += -DMANUVR_CBOR
-MANUVR_OPTIONS += -DMANUVR_JSON
 
 # Since we are building on linux, we will have threading support via
 # pthreads.
@@ -126,7 +127,6 @@ endif
 
 # Options for various security features.
 ifeq ($(SECURE),1)
-MANUVR_OPTIONS += -DWITH_MBEDTLS
 # The remaining lines are to prod header files in libraries.
 LIBS += $(OUTPUT_PATH)/libmbedtls.a
 LIBS += $(OUTPUT_PATH)/libmbedx509.a
@@ -144,9 +144,7 @@ endif
 
 # Debugging options...
 ifeq ($(DEBUG),1)
-MANUVR_OPTIONS += -D__MANUVR_DEBUG
-MANUVR_OPTIONS += -D__MANUVR_EVENT_PROFILER
-#MANUVR_OPTIONS += -D__MANUVR_PIPE_DEBUG
+#MANUVR_OPTIONS += -DMANUVR_PIPE_DEBUG
 #OPTIMIZATION    = -O0 -g
 # Options configured such that you can then...
 # valgrind --tool=callgrind ./manuvr
@@ -166,22 +164,25 @@ export MANUVR_PLATFORM = LINUX
 export ANALYZER_FLAGS
 
 export CFLAGS
-export CPP_FLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
+export CXXFLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
 
 export JSON=1
 
 .PHONY: all
 
 all: tests
-	$(CXX) -Wl,--gc-sections -static -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(CXX) -Wl,--gc-sections -static -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 	$(SZ) $(FIRMWARE_NAME)
 
 tests: libs
 	$(MAKE) -C tests/
 
+menuconfig:
+	@echo '======================================================'
+
 examples: libs
-	$(CXX) -static -o barebones examples/main_template.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
-	$(CXX) -static -o gpstest   examples/tcp-gps.cpp $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(CXX) -static -o barebones examples/00-template/main.cpp $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(CXX) -static -o atecc-tool examples/05-atecc508/main.cpp $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 
 builddir:
 	mkdir -p $(OUTPUT_PATH)

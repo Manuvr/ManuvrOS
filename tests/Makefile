@@ -10,7 +10,7 @@ SOURCES_CPP   += IdentityTest.cpp
 SOURCES_CPP   += SchedulerTest.cpp
 #SOURCES_CPP   += BufferPipeTest.cpp
 
-LOCAL_CXX_FLAGS  = $(CPP_FLAGS) -D_GNU_SOURCE
+LOCAL_CXX_FLAGS  = $(CXXFLAGS) -D_GNU_SOURCE
 
 LIBS  = -L$(OUTPUT_PATH) -L$(BUILD_ROOT)/lib -lstdc++ -lm
 LIBS += -lmanuvr -lextras -lpthread
@@ -38,7 +38,7 @@ all: $(TESTS)
 	@echo 'Built tests:  $(TESTS)'
 
 % : %.cpp
-	$(CXX) -static -o $@ $< $(CPP_FLAGS) -std=$(CPP_STANDARD) $(LIBS)
+	$(CXX) -static -o $@ $< $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS)
 
 clean:
 	rm -f $(TESTS) CryptoTest

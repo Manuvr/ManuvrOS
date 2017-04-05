@@ -31,7 +31,7 @@ I have adapted it for ManuvrOS.
 
 #include <math.h>
 #include <DataStructures/StringBuilder.h>
-#include <Drivers/SensorWrapper/SensorWrapper.h>
+#include <Drivers/Sensors/SensorWrapper.h>
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
 
 

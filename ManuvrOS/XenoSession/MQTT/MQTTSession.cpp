@@ -291,7 +291,7 @@ bool MQTTSession::sendUnsub(const char* _topicStr) {
 bool MQTTSession::sendKeepAlive() {
   if (isEstablished()) {
 		if (_ping_outstanding()) {
-			#if defined (__MANUVR_DEBUG)
+			#if defined (MANUVR_DEBUG)
 			if (getVerbosity() > 3) Kernel::log("MQTT session has an expired ping.\n");
 			#endif
 		}

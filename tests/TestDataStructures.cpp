@@ -39,7 +39,7 @@ This program runs tests on raw data-handling classes.
 #include <DataStructures/uuid.h>
 
 #include <Platform/Platform.h>
-#include <Drivers/SensorWrapper/SensorWrapper.h>
+#include <Drivers/Sensors/SensorWrapper.h>
 
 #include <XenoSession/XenoSession.h>
 #include <XenoSession/CoAP/CoAPSession.h>

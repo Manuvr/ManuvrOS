@@ -80,6 +80,14 @@ limitations under the License.
 
 #define ADP8866_I2CADDR            0x27
 
+
+#define MANUVR_MSG_ADP8866_IRQ          0x9034  // Some random message code. Nonexportable.
+#define MANUVR_MSG_ADP8866_CHAN_ENABLED 0x9035  // Enable the given channel, or return its status.
+#define MANUVR_MSG_ADP8866_CHAN_LEVEL   0x9036  // Set or return the LED level for the given channel.
+#define MANUVR_MSG_ADP8866_ASSIGN_BL    0x9037  // Takes up to 9 integers as arguments. Assigns those channels to the backlight.
+#define MANUVR_MSG_ADP8866_RESET        0x9038  // Reset.
+
+
 /*
 * These state flags are hosted by the EventReceiver. This may change in the future.
 * Might be too much convention surrounding their assignment across inherritence.
@@ -98,6 +106,29 @@ limitations under the License.
 
 
 /*
+* Pin defs for this module.
+* Set pin def to 255 to mark it as unused.
+*/
+class ADP8866Pins {
+  public:
+    const uint8_t rst;  // ADP8866 reset pin
+    const uint8_t irq;  // ADP8866 irq pin
+
+    ADP8866Pins(const ADP8866Pins* p) :
+      rst(p->rst), irq(p->irq) {};
+
+    ADP8866Pins(uint8_t _rst, uint8_t _irq) :
+      rst(_rst), irq(_irq) {};
+
+    inline bool reset(bool nu) const {
+      if (255 != rst) setPin(rst, nu);
+      return true;
+    };
+
+  private:
+};
+
+/*
 * Used to aggregate channel information into a single place. Makes drive code more readable.
 */
 typedef struct adp8866_led_chan {
@@ -111,13 +142,13 @@ typedef struct adp8866_led_chan {
 
 class ADP8866 : public EventReceiver, I2CDeviceWithRegisters {
   public:
-    ADP8866(uint8_t reset_pin, uint8_t irq_pin, uint8_t addr = ADP8866_I2CADDR);
+    ADP8866(const ADP8866Pins* p);
     virtual ~ADP8866();
 
     int8_t init();
 
     /* Overrides from I2CDeviceWithRegisters... */
-    int8_t io_op_callback(I2CBusOp*);
+    int8_t io_op_callback(BusOp*);
     void printDebug(StringBuilder*);
 
     /* Overrides from EventReceiver */
@@ -153,12 +184,10 @@ class ADP8866 : public EventReceiver, I2CDeviceWithRegisters {
 
 
   private:
-    uint8_t reset_pin         = 0;
-    uint8_t irq_pin           = 0;
+    const ADP8866Pins _pins;
     uint8_t stored_dimmer_val = 0;
     uint8_t class_mode        = 0;
     uint8_t power_mode        = 0;
-
 
     // The chip only has 9 outputs, but we make a synthetic tenth
     //   channel to represent the backlight.

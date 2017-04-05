@@ -84,6 +84,7 @@ const char* BusOp::getErrorString(XferFault code) {
     case XferFault::ILLEGAL_STATE:   return "ILLEGAL_STATE";
     case XferFault::BUS_BUSY:        return "BUS_BUSY";
     case XferFault::BUS_FAULT:       return "BUS_FAULT";
+    case XferFault::DEV_FAULT:       return "DEV_FAULT";
     case XferFault::HUNG_IRQ:        return "HUNG_IRQ";
     case XferFault::DMA_FAULT:       return "DMA_FAULT";
     case XferFault::DEV_NOT_FOUND:   return "DEV_NOT_FOUND";

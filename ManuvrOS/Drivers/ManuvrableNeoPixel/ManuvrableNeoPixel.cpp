@@ -57,11 +57,11 @@ ManuvrableNeoPixel::ManuvrableNeoPixel(uint16_t n, uint8_t p, uint8_t t) : Event
 
 ManuvrableNeoPixel::~ManuvrableNeoPixel() {
   if (pixels) free(pixels);
-  gpioDefine(pin, INPUT);
+  gpioDefine(pin, GPIOMode::INPUT);
 }
 
 void ManuvrableNeoPixel::begin(void) {
-  gpioDefine(pin, OUTPUT);
+  gpioDefine(pin, GPIOMode::OUTPUT);
   setPin(pin, LOW);
 }
 
