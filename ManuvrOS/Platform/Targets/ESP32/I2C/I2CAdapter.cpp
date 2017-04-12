@@ -28,6 +28,7 @@ void* i2c_worker_thread(void* arg) {
       //ulTaskNotifyTake(pdTRUE, 10000 / portTICK_RATE_MS);
     }
   }
+  return nullptr;
 }
 
 
