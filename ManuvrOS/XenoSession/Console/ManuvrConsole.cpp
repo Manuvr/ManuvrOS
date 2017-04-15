@@ -53,6 +53,54 @@ ManuvrConsole::~ManuvrConsole() {
 }
 
 
+/**
+* Responsible for taking any accumulated console input, doing some basic
+*   error-checking, and routing it to its intended target.
+*/
+int8_t ManuvrConsole::_route_console_input(StringBuilder* last_user_input) {
+  StringBuilder _raw_from_console;  // We do this to avoid leaks.
+  // Now we take the data from the buffer so that further input isn't lost. JIC.
+  _raw_from_console.concatHandoff(last_user_input);
+
+  _raw_from_console.split(" ");
+  if (_raw_from_console.count() > 0) {
+    const char* str = (const char *) _raw_from_console.position(0);
+    int subscriber_idx = atoi(str);
+    switch (*str) {
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      case '8':
+      case '9':
+        // If the first position is a number, we drop the first position, since
+        //   it was essentially a directive aimed at this class.
+        _raw_from_console.drop_position(0);
+        break;
+    }
+
+    if (_raw_from_console.count() > 0) {
+      // If there are still positions, lookup the subscriber and send it the input.
+      EventReceiver* subscriber = platform.kernel()->getSubscriber(subscriber_idx);
+      if (nullptr != subscriber) {
+        subscriber->procDirectDebugInstruction(&_raw_from_console);
+      }
+      else {
+        local_log.concatf("No such subscriber: %d\n", subscriber_idx);
+      }
+    }
+  }
+
+  flushLocalLog();
+  return 0;
+}
+
+
+
 /*******************************************************************************
 *  _       _   _        _
 * |_)    _|_ _|_ _  ._ |_) o ._   _
@@ -128,9 +176,12 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
       {
         // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
         // run in idle time.
+        // TODO: This copies the string from session_buffer into another string
+        //   that will be free'd. Needless. Complicates concurrency following
+        //   migration of this code from Kernel.
         StringBuilder* dispatched = new StringBuilder((uint8_t*) temp_ptr, temp_len);
         ManuvrMsg* event  = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
-        event->specific_target = (EventReceiver*) platform.kernel();
+        event->specific_target = (EventReceiver*) this;
         event->setOriginator((EventReceiver*) this);
         event->addArg(dispatched)->reapValue(true);
         raiseEvent(event);
@@ -233,13 +284,23 @@ void ManuvrConsole::printDebug(StringBuilder *output) {
 *   a list of events that it has been instructed to relay to the counterparty. If the event
 *   meets the relay criteria, we serialize it and send it to the transport that we are bound to.
 */
-int8_t ManuvrConsole::notify(ManuvrMsg* active_event) {
+int8_t ManuvrConsole::notify(ManuvrMsg* active_runnable) {
   int8_t return_value = 0;
 
-  switch (active_event->eventCode()) {
+  switch (active_runnable->eventCode()) {
     /* Things that only this class is likely to care about. */
+    case MANUVR_MSG_USER_DEBUG_INPUT:
+      if (active_runnable->argCount()) {
+        // If the event came with a StringBuilder, concat it onto the last_user_input.
+        StringBuilder* _tmp = nullptr;
+        if (0 == active_runnable->getArgAs(&_tmp)) {
+          _route_console_input(_tmp);
+        }
+      }
+      return_value++;
+      break;
     default:
-      return_value += XenoSession::notify(active_event);
+      return_value += XenoSession::notify(active_runnable);
       break;
   }
 

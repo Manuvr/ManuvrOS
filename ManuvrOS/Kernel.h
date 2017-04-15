@@ -81,6 +81,9 @@ limitations under the License.
       int8_t subscribe(EventReceiver *client);                    // A class calls this to subscribe to events.
       int8_t subscribe(EventReceiver *client, uint8_t priority);  // A class calls this to subscribe to events.
       int8_t unsubscribe(EventReceiver *client);                  // A class calls this to unsubscribe.
+      inline EventReceiver* getSubscriber(int i) {                // Fetch a subscriber by index.
+        return subscribers.get(i);
+      };
 
       /*
       * Calling this will register a message in the Kernel, along with a call-ahead,
@@ -205,9 +208,6 @@ limitations under the License.
       void reclaim_event(ManuvrMsg*);
       inline void update_maximum_queue_depth() {   max_queue_depth = (exec_queue.size() > (int) max_queue_depth) ? exec_queue.size() : max_queue_depth;   };
 
-      #if defined(MANUVR_CONSOLE_SUPPORT)
-      int8_t _route_console_input(StringBuilder*);
-      #endif
 
       /*  */
       inline bool should_run_another_event(int8_t loops, uint32_t begin) {     return (max_events_per_loop ? ((int8_t) max_events_per_loop > loops) : ((micros() - begin) < 1200));   };

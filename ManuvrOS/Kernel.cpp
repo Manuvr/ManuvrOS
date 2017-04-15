@@ -1077,19 +1077,6 @@ int8_t Kernel::notify(ManuvrMsg* active_runnable) {
       return_value++;
       break;
 
-    #if defined(MANUVR_CONSOLE_SUPPORT)
-      case MANUVR_MSG_USER_DEBUG_INPUT:
-        if (active_runnable->argCount()) {
-          // If the event came with a StringBuilder, concat it onto the last_user_input.
-          StringBuilder* _tmp = nullptr;
-          if (0 == active_runnable->getArgAs(&_tmp)) {
-            _route_console_input(_tmp);
-          }
-        }
-        return_value++;
-        break;
-    #endif  // MANUVR_CONSOLE_SUPPORT
-
     case MANUVR_MSG_SYS_ADVERTISE_SRVC:  // Some service is annoucing its arrival.
     case MANUVR_MSG_SYS_RETRACT_SRVC:    // Some service is annoucing its departure.
       if (0 < active_runnable->argCount()) {
@@ -1336,57 +1323,7 @@ int Kernel::serviceSchedules() {
 }
 
 
-/****************************************************************************************************
-* The code below is related to accepting and parsing user input. It is only relevant if console     *
-*   support is enabled.                                                                             *
-****************************************************************************************************/
 #if defined(MANUVR_CONSOLE_SUPPORT)
-
-/**
-* Responsible for taking any accumulated console input, doing some basic
-*   error-checking, and routing it to its intended target.
-*/
-int8_t Kernel::_route_console_input(StringBuilder* last_user_input) {
-  StringBuilder _raw_from_console;  // We do this to avoid leaks.
-  // Now we take the data from the buffer so that further input isn't lost. JIC.
-  _raw_from_console.concatHandoff(last_user_input);
-
-  _raw_from_console.split(" ");
-  if (_raw_from_console.count() > 0) {
-    const char* str = (const char *) _raw_from_console.position(0);
-    int subscriber_idx = atoi(str);
-    switch (*str) {
-      case '0':
-      case '1':
-      case '2':
-      case '3':
-      case '4':
-      case '5':
-      case '6':
-      case '7':
-      case '8':
-      case '9':
-        // If the first position is a number, we drop the first position.
-        _raw_from_console.drop_position(0);
-        break;
-    }
-
-    if (_raw_from_console.count() > 0) {
-      // If there are still positions, lookup the subscriber and send it the input.
-      EventReceiver* subscriber = subscribers.get(subscriber_idx);
-      if (nullptr != subscriber) {
-        subscriber->procDirectDebugInstruction(&_raw_from_console);
-      }
-      else if (getVerbosity() > 2) {
-        local_log.concatf("No such subscriber: %d\n", subscriber_idx);
-      }
-    }
-  }
-
-  flushLocalLog();
-  return 0;
-}
-
 
 /**
 * Console commands are space-delimited and arrive here already NULL-checked and
@@ -1496,7 +1433,6 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       break;
   }
 
-  input->clear();
   flushLocalLog();
 }
 #endif  //MANUVR_CONSOLE_SUPPORT

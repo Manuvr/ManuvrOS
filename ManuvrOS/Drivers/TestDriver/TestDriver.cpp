@@ -23,7 +23,7 @@ limitations under the License.
 #include "TestDriver.h"
 #include <DataStructures/StringBuilder.h>
 
-#if defined(MANUVR_TEST_DRIVER)
+#if defined(CONFIG_MANUVR_BENCHMARKS)
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -37,11 +37,14 @@ limitations under the License.
 *******************************************************************************/
 
 const MessageTypeDef message_defs[] = {
-  #if defined (__HAS_CRYPT_WRAPPER)
-    {  MANUVR_MSG_BNCHMRK_CRYPT,  0x0000,  "BNCHMRK_CRYPT",    ManuvrMsg::MSG_ARGS_NONE },
+  #if defined(__BUILD_HAS_ASYMMETRIC)
+    {  MANUVR_MSG_BNCHMRK_ACRYPT, 0x0000,  "BNCHMRK_A_CRYPT",  ManuvrMsg::MSG_ARGS_NONE },
+  #endif
+  #if defined(__BUILD_HAS_SYMMETRIC)
+    {  MANUVR_MSG_BNCHMRK_SCRYPT, 0x0000,  "BNCHMRK_S_CRYPT",  ManuvrMsg::MSG_ARGS_NONE },
   #endif
   #if defined (__BUILD_HAS_DIGEST)
-    {  MANUVR_MSG_BNCHMRK_HASH,   0x0000,  "BNCHMRK_HASH",    ManuvrMsg::MSG_ARGS_NONE },
+    {  MANUVR_MSG_BNCHMRK_HASH,   0x0000,  "BNCHMRK_HASH",     ManuvrMsg::MSG_ARGS_NONE },
   #endif
 
   {  MANUVR_MSG_BNCHMRK_RNG,      0x0000,  "BNCHMRK_RNG",      ManuvrMsg::MSG_ARGS_NONE },
@@ -114,84 +117,84 @@ int TestDriver::CRYPTO_TEST_HASHES() {
 */
 int TestDriver::CRYPTO_TEST_SYMMETRIC() {
   local_log.concat("===< CRYPTO_TEST_SYMMETRIC >=====================================\n");
-  int i_len = 30;
-
-  Cipher algs_to_test[] = {
-    Cipher::SYM_AES_128_CBC,
-    Cipher::SYM_AES_192_CBC,
-    Cipher::SYM_AES_256_CBC,
-    Cipher::SYM_BLOWFISH_CBC,
-    //Cipher::SYM_NULL,
-    Cipher::NONE
-  };
-
-  int ret = 0;
-  int idx = 0;
-  while (Cipher::NONE != algs_to_test[idx]) {
-    const int block_size = get_cipher_block_size(algs_to_test[idx]);
-    const int key_size   = get_cipher_key_length(algs_to_test[idx]);
-    int o_len = get_cipher_aligned_size(algs_to_test[idx], i_len);
-    uint8_t* plaintext_in  = (uint8_t*) alloca(o_len);
-    random_fill(plaintext_in, o_len);
-
-    local_log.concatf("Testing %-14s  %3d-byte block, %4d-bit key\n----------------------------------------------------\n",
-        get_cipher_label(algs_to_test[idx]),
-        block_size,
-        key_size);
-
-    if (0 != o_len % block_size) {
-      o_len += (block_size - (o_len % block_size));
-    }
-
-    uint8_t* ciphertext    = (uint8_t*) alloca(o_len);
-    uint8_t* plaintext_out = (uint8_t*) alloca(o_len);
-    uint8_t iv[16];
-    uint8_t key[(key_size>>3)];
-    bzero(iv, 16);
-    bzero(ciphertext, o_len);
-    bzero(plaintext_out, o_len);
-    random_fill(key, (key_size>>3));
-
-    local_log.concat("Key:           ");
-    for (int i = 0; i < (key_size>>3); i++) local_log.concatf("%02x", *(key + i));
-
-    local_log.concat("\nPlaintext in:  ");
-    for (int i = 0; i < i_len; i++) local_log.concatf("%02x", *(plaintext_in + i));
-    local_log.concatf("\t(%d bytes)\n", i_len);
-
-    ret = wrapped_sym_cipher((uint8_t*) plaintext_in, o_len, ciphertext, o_len, key, key_size, iv, algs_to_test[idx], OP_ENCRYPT);
-    if (ret) {
-      local_log.concatf("Failed to encrypt. Error %d\n", ret);
-      return -1;
-    }
-
-    local_log.concat("Ciphertext:    ");
-    for (int i = 0; i < o_len; i++) local_log.concatf("%02x", *(ciphertext + i));
-    local_log.concatf("\t(%d bytes)\n", o_len);
-
-    bzero(iv, 16);
-    ret = wrapped_sym_cipher(ciphertext, o_len, plaintext_out, o_len, key, key_size, iv, algs_to_test[idx], OP_DECRYPT);
-    if (ret) {
-      local_log.concatf("Failed to decrypt. Error %d\n", ret);
-      return -1;
-    }
-
-    local_log.concat("Plaintext out: ");
-    for (int i = 0; i < o_len; i++) local_log.concatf("%02x", *(plaintext_out + i));
-    local_log.concatf("\t(%d bytes)\n", o_len);
-
-    // Now check that the plaintext versions match...
-    for (int i = 0; i < i_len; i++) {
-      if (*(plaintext_in + i) != *(plaintext_out + i)) {
-        local_log.concat("Plaintext mismatch. Test fails.\n");
-        return -1;
-      }
-    }
-    local_log.concat("\n");
-    Kernel::log(&local_log);
-    idx++;
-  }
-
+//  int i_len = 30;
+//
+//  Cipher algs_to_test[] = {
+//    Cipher::SYM_AES_128_CBC,
+//    Cipher::SYM_AES_192_CBC,
+//    Cipher::SYM_AES_256_CBC,
+//    Cipher::SYM_BLOWFISH_CBC,
+//    //Cipher::SYM_NULL,
+//    Cipher::NONE
+//  };
+//
+//  int ret = 0;
+//  int idx = 0;
+//  while (Cipher::NONE != algs_to_test[idx]) {
+//    const int block_size = get_cipher_block_size(algs_to_test[idx]);
+//    const int key_size   = get_cipher_key_length(algs_to_test[idx]);
+//    int o_len = get_cipher_aligned_size(algs_to_test[idx], i_len);
+//    uint8_t* plaintext_in  = (uint8_t*) alloca(o_len);
+//    random_fill(plaintext_in, o_len);
+//
+//    local_log.concatf("Testing %-14s  %3d-byte block, %4d-bit key\n----------------------------------------------------\n",
+//        get_cipher_label(algs_to_test[idx]),
+//        block_size,
+//        key_size);
+//
+//    if (0 != o_len % block_size) {
+//      o_len += (block_size - (o_len % block_size));
+//    }
+//
+//    uint8_t* ciphertext    = (uint8_t*) alloca(o_len);
+//    uint8_t* plaintext_out = (uint8_t*) alloca(o_len);
+//    uint8_t iv[16];
+//    uint8_t key[(key_size>>3)];
+//    bzero(iv, 16);
+//    bzero(ciphertext, o_len);
+//    bzero(plaintext_out, o_len);
+//    random_fill(key, (key_size>>3));
+//
+//    local_log.concat("Key:           ");
+//    for (int i = 0; i < (key_size>>3); i++) local_log.concatf("%02x", *(key + i));
+//
+//    local_log.concat("\nPlaintext in:  ");
+//    for (int i = 0; i < i_len; i++) local_log.concatf("%02x", *(plaintext_in + i));
+//    local_log.concatf("\t(%d bytes)\n", i_len);
+//
+//    ret = wrapped_sym_cipher((uint8_t*) plaintext_in, o_len, ciphertext, o_len, key, key_size, iv, algs_to_test[idx], OP_ENCRYPT);
+//    if (ret) {
+//      local_log.concatf("Failed to encrypt. Error %d\n", ret);
+//      return -1;
+//    }
+//
+//    local_log.concat("Ciphertext:    ");
+//    for (int i = 0; i < o_len; i++) local_log.concatf("%02x", *(ciphertext + i));
+//    local_log.concatf("\t(%d bytes)\n", o_len);
+//
+//    bzero(iv, 16);
+//    ret = wrapped_sym_cipher(ciphertext, o_len, plaintext_out, o_len, key, key_size, iv, algs_to_test[idx], OP_DECRYPT);
+//    if (ret) {
+//      local_log.concatf("Failed to decrypt. Error %d\n", ret);
+//      return -1;
+//    }
+//
+//    local_log.concat("Plaintext out: ");
+//    for (int i = 0; i < o_len; i++) local_log.concatf("%02x", *(plaintext_out + i));
+//    local_log.concatf("\t(%d bytes)\n", o_len);
+//
+//    // Now check that the plaintext versions match...
+//    for (int i = 0; i < i_len; i++) {
+//      if (*(plaintext_in + i) != *(plaintext_out + i)) {
+//        local_log.concat("Plaintext mismatch. Test fails.\n");
+//        return -1;
+//      }
+//    }
+//    local_log.concat("\n");
+//    Kernel::log(&local_log);
+//    idx++;
+//  }
+//
   return 0;
 }
 #else
@@ -404,13 +407,18 @@ int8_t TestDriver::attached() {
 void TestDriver::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
   output->concat("\t---< Available benchmarks >--------.\n");
-  output->concat("\tb1)     RNG\n");
-  #if defined (__HAS_CRYPT_WRAPPER)
-    output->concat("\tb2)     Cryptographic\n");
+  output->concat("\tb1)     Message load\n");
+  output->concat("\tp1)     RNG\n");
+  output->concat("\tp2)     FPU\n");
+  #if defined(__BUILD_HAS_ASYMMETRIC)
+    output->concat("\tc1)     Asymmetric\n");
   #endif
-  output->concat("\tb3)     Floating point\n");
-  output->concat("\tb4)     Message load\n");
-  output->concat("\tb4)     Digests\n");
+  #if defined(__BUILD_HAS_SYMMETRIC)
+    output->concat("\tc2)     Symmetric\n");
+  #endif
+  #if defined(__BUILD_HAS_DIGEST)
+    output->concat("\tc3)     Digests\n");
+  #endif
 }
 
 
@@ -484,17 +492,24 @@ int8_t TestDriver::notify(ManuvrMsg* active_event) {
     case MANUVR_MSG_BNCHMRK_MSG_LOAD:
       return_value++;
       break;
-    #if defined (__HAS_CRYPT_WRAPPER)
-      case MANUVR_MSG_BNCHMRK_CRYPT:
-        //CRYPTO_TEST_SYMMETRIC();
+    #if defined(__BUILD_HAS_ASYMMETRIC)
+      case MANUVR_MSG_BNCHMRK_ACRYPT:
         CRYPTO_TEST_ASYMMETRIC();
         return_value++;
         break;
+    #endif
+    #if defined(__BUILD_HAS_SYMMETRIC)
+      case MANUVR_MSG_BNCHMRK_SCRYPT:
+        CRYPTO_TEST_SYMMETRIC();
+        return_value++;
+        break;
+    #endif
+    #if defined(__BUILD_HAS_DIGEST)
       case MANUVR_MSG_BNCHMRK_HASH:
         CRYPTO_TEST_HASHES();
         return_value++;
         break;
-    #endif  // __HAS_CRYPT_WRAPPER
+    #endif
     default:
       return_value += EventReceiver::notify(active_event);
       break;
@@ -517,25 +532,66 @@ void TestDriver::procDirectDebugInstruction(StringBuilder *input) {
   }
 
   switch (c) {
-    case 'b':
+    case 'b':   // Base library benchmarks
+      switch (temp_int) {
+        case 0:
+          //printBenchmarkResults(&local_log);
+          break;
+        case 1:   Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_MSG_LOAD, nullptr);
+          break;
+        default:
+          local_log.concat("Unsupported test.\n");
+          break;
+      }
+      break;
+
+    case 'p':   // Platform benchmarks
       switch (temp_int) {
         case 0:
           //printBenchmarkResults(&local_log);
           break;
         case 1:   Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_RNG, nullptr);
           break;
-        #if defined (__HAS_CRYPT_WRAPPER)
-          case 2:   Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_CRYPT, nullptr);
-            break;
-        #endif  // __HAS_CRYPT_WRAPPER
-        case 3:   Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_FLOAT, nullptr);
-          break;
-        case 4:   Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_MSG_LOAD, nullptr);
-          break;
-        case 5:   Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_HASH, nullptr);
+        case 2:   Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_FLOAT, nullptr);
           break;
         default:
-          local_log.concat("Unsupported test.\n");
+          local_log.concat("Unsupported.\n");
+          break;
+      }
+      break;
+
+    #if defined (__HAS_CRYPT_WRAPPER)
+    case 'c':   // Cryptographic benchmarks
+      switch (temp_int) {
+        case 0:
+          //printBenchmarkResults(&local_log);
+          break;
+        #if defined(__BUILD_HAS_ASYMMETRIC)
+          case 1:   Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_ACRYPT, nullptr);
+            break;
+        #endif
+        #if defined(__BUILD_HAS_SYMMETRIC)
+          case 2:   Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_SCRYPT, nullptr);
+            break;
+        #endif
+        #if defined(__BUILD_HAS_DIGEST)
+          case 3:   Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_HASH, nullptr);
+            break;
+        #endif
+        default:
+          local_log.concat("Unsupported.\n");
+          break;
+      }
+      break;
+    #endif  // __HAS_CRYPT_WRAPPER
+
+    case 'f':   // Feature introspection
+      switch (temp_int) {
+        case 0:
+          //printBenchmarkResults(&local_log);
+          break;
+        default:
+          local_log.concat("Unsupported.\n");
           break;
       }
       break;
@@ -550,4 +606,4 @@ void TestDriver::procDirectDebugInstruction(StringBuilder *input) {
 #endif // MANUVR_CONSOLE_SUPPORT
 
 
-#endif // MANUVR_TEST_DRIVER
+#endif // CONFIG_MANUVR_BENCHMARKS

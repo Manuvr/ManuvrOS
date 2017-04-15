@@ -18,7 +18,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-This module is built and loaded by Platform.cpp if the MANUVR_TEST_DRIVER flag
+This module is built and loaded by Platform.cpp if the CONFIG_MANUVR_BENCHMARKS flag
   is set by the build system. This ER ought to perform various tests that
   only make sense at runtime. Security and abuse-hardening ought to be
   done this way.
@@ -30,7 +30,8 @@ This module is built and loaded by Platform.cpp if the MANUVR_TEST_DRIVER flag
 #ifndef __MANUVR_TESTING_DRIVER_H__
 #define __MANUVR_TESTING_DRIVER_H__
 
-#define MANUVR_MSG_BNCHMRK_CRYPT        0xF576   //
+#define MANUVR_MSG_BNCHMRK_ACRYPT       0xF575   //
+#define MANUVR_MSG_BNCHMRK_SCRYPT       0xF576   //
 #define MANUVR_MSG_BNCHMRK_RNG          0xF577   //
 #define MANUVR_MSG_BNCHMRK_MSG_LOAD     0xF578   //
 #define MANUVR_MSG_BNCHMRK_FLOAT        0xF579   //
