@@ -21,16 +21,6 @@ limitations under the License.
 
 
 /*
-* These are message codes that might be raised from (potentially) anywhere in the program.
-*
-* We reserve all codes up to 0x1000 for ManuvrOS itself.
-* This might seem like a large range, (and it is), but the idea is to contain all notions of
-*   type, units, and basic functionality common with all devices running ManuvrOS (or some derivative).
-*
-*/
-
-
-/*
 * Reserved codes. These must be fully-supported, and never changed.
 * We reserve the first 32 integers for protocol-level functions.
 */
@@ -79,8 +69,6 @@ limitations under the License.
   #define MANUVR_MSG_SYS_SHUTDOWN         0x0023 // Raised when the system is pending complete shutdown.
   #define MANUVR_MSG_SYS_EXIT             0x0024 // Raised when the process is to exit without shutdown.
   #define MANUVR_MSG_SYS_PREALLOCATION    0x0025 // Any classes that do preallocation should listen for this.
-  #define MANUVR_MSG_SYS_ISSUE_LOG_ITEM   0x0026 // Classes emit this to get their log data saved/sent.
-  #define MANUVR_MSG_SYS_LOG_VERBOSITY    0x0027 // This tells client classes to adjust their log verbosity.
   #define MANUVR_MSG_SYS_ADVERTISE_SRVC   0x0028 // A system service might feel the need to advertise it's arrival.
   #define MANUVR_MSG_SYS_RETRACT_SRVC     0x0029 // A system service sends this to tell others to stop using it.
   #define MANUVR_MSG_SYS_FAULT_REPORT     0x002A // Something in the system soft-errored.
@@ -91,7 +79,6 @@ limitations under the License.
 
   // Kernel and small scattered functionality
   #define MANUVR_MSG_USER_DEBUG_INPUT     0x0031 // The user is issuing a direct debug command.
-  #define MANUVR_MSG_INTERRUPTS_MASKED    0x0032 // Anything that depends on interrupts is now broken.
 
   // Time and Date
   #define MANUVR_MSG_SYS_DATETIME_CHANGED 0x0040 // Raised when the system time changes.

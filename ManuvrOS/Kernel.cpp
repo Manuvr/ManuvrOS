@@ -81,10 +81,6 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   #if defined(MANUVR_STORAGE)
   #endif
 
-  {  MANUVR_MSG_SESS_ESTABLISHED     , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_ESTABLISHED"     , ManuvrMsg::MSG_ARGS_NONE }, // Session established.
-  {  MANUVR_MSG_SESS_HANGUP          , MSG_FLAG_EXPORTABLE,                        "SESS_HANGUP"          , ManuvrMsg::MSG_ARGS_NONE }, // Session hangup.
-  {  MANUVR_MSG_SESS_AUTH_CHALLENGE  , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_AUTH_CHALLENGE"  , ManuvrMsg::MSG_ARGS_NONE }, // A code for challenge-response authentication.
-
   {  MANUVR_MSG_MSG_FORWARD          , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "MSG_FORWARD"          , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
 
 
@@ -108,12 +104,13 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SYS_SET_DATETIME     , MSG_FLAG_EXPORTABLE,  "SYS_SET_DATETIME"     , ManuvrMsg::MSG_ARGS_NONE }, //
   {  MANUVR_MSG_SYS_REPORT_DATETIME  , MSG_FLAG_EXPORTABLE,  "SYS_REPORT_DATETIME"  , ManuvrMsg::MSG_ARGS_NONE }, //
 
-  {  MANUVR_MSG_INTERRUPTS_MASKED    , 0x0000,               "INTERRUPTS_MASKED"    , ManuvrMsg::MSG_ARGS_NONE }, // Anything that depends on interrupts is now broken.
-
   {  MANUVR_MSG_SESS_SUBCRIBE        , MSG_FLAG_EXPORTABLE,  "SESS_SUBCRIBE"        , ManuvrMsg::MSG_ARGS_NONE }, // Used to subscribe this session to other events.
   {  MANUVR_MSG_SESS_UNSUBCRIBE      , MSG_FLAG_EXPORTABLE,  "SESS_UNSUBCRIBE"      , ManuvrMsg::MSG_ARGS_NONE }, // Used to unsubscribe this session from other events.
   {  MANUVR_MSG_SESS_ORIGINATE_MSG   , 0x0000,               "SESS_ORIGINATE_MSG"   , ManuvrMsg::MSG_ARGS_NONE }, //
   {  MANUVR_MSG_SESS_SERVICE         , 0x0000,               "SESS_SERVICE"         , ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_SESS_ESTABLISHED     , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_ESTABLISHED"     , ManuvrMsg::MSG_ARGS_NONE }, // Session established.
+  {  MANUVR_MSG_SESS_HANGUP          , MSG_FLAG_EXPORTABLE,                        "SESS_HANGUP"          , ManuvrMsg::MSG_ARGS_NONE }, // Session hangup.
+  {  MANUVR_MSG_SESS_AUTH_CHALLENGE  , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_AUTH_CHALLENGE"  , ManuvrMsg::MSG_ARGS_NONE }, // A code for challenge-response authentication.
 
   {  MANUVR_MSG_XPORT_SEND,         0x0000,  "XPORT_TX"           , ManuvrMsg::MSG_ARGS_NONE }, //
   {  MANUVR_MSG_XPORT_RECEIVE,      0x0000,  "XPORT_RX"           , ManuvrMsg::MSG_ARGS_NONE }, //
@@ -134,17 +131,18 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
     {  MANUVR_MSG_CREATED_THREAD_ID,    0x0000,              "CREATED_THREAD_ID",     ManuvrMsg::MSG_ARGS_NONE },
     {  MANUVR_MSG_DESTROYED_THREAD_ID,  0x0000,              "DESTROYED_THREAD_ID",   ManuvrMsg::MSG_ARGS_NONE },
     {  MANUVR_MSG_UNBLOCK_THREAD,       0x0000,              "UNBLOCK_THREAD",        ManuvrMsg::MSG_ARGS_NONE },
-  #endif
+  #endif   // __BUILD_HAS_THREADS
 
   /*
     For messages that have arguments, we have the option of defining inline lables for each parameter.
     This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
     compile time.
   */
-  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_NONE }, // Classes emit this to get their log data saved/sent.
-  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_NONE },   // This tells client classes to adjust their log verbosity.
+  #if defined(MANUVR_CONSOLE_SUPPORT)
+    {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_NONE }, //
+  #endif   // MANUVR_CONSOLE_SUPPORT
+
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_NONE } //
 };
 
 
@@ -1112,15 +1110,6 @@ int8_t Kernel::notify(ManuvrMsg* active_runnable) {
     case MANUVR_MSG_SYS_CONF_LOAD:
       break;
     case MANUVR_MSG_SYS_CONF_SAVE:
-      break;
-
-    case MANUVR_MSG_SYS_ISSUE_LOG_ITEM:
-      if (_logger) {
-        StringBuilder *log_item;
-        if (0 == active_runnable->getArgAs(&log_item)) {
-          _logger->toCounterparty(log_item, MEM_MGMT_RESPONSIBLE_BEARER);
-        }
-      }
       break;
 
     #if defined (__BUILD_HAS_THREADS)
