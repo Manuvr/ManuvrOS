@@ -83,7 +83,8 @@ class SPIBusOp : public BusOp {
     void setParams(uint8_t p0, uint8_t p1, uint8_t p2);
     void setParams(uint8_t p0, uint8_t p1);
     void setParams(uint8_t p0);
-    inline uint8_t getTransferParam(int x) {  return xfer_params[x]; }
+    inline uint8_t getTransferParam(int x) {  return xfer_params[x]; };
+    inline uint8_t transferParamLength() {    return _param_len;     };
 
     inline void setCSPin(uint8_t pin) {   _cs_pin = pin;  };
 

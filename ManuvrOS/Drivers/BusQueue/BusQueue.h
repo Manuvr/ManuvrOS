@@ -73,7 +73,7 @@ enum class XferFault {
   NONE,            // No error on this transfer.
   NO_REASON,       // No reason provided, but still errored.
   TIMEOUT,         // We ran out of patience.
-  BAD_PARAM,       // Invalid rtansfer parameters.
+  BAD_PARAM,       // Invalid transfer parameters.
   ILLEGAL_STATE,   // The bus operation is in an illegal state.
   BUS_BUSY,        // The bus didn't get back to us in time.
   BUS_FAULT,       // The bus had a meltdown and failed this transfer.
