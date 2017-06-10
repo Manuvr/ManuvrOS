@@ -26,7 +26,7 @@ This is the basal interface for a peripheral driver. Instances of these drivers
 #include <CommonConstants.h>
 
 
-#define PDRVR_FLAG_RESERVED_00000001 0x00000001  //
+#define PDRVR_FLAG_HARDWARE_BASE     0x00000001  //
 #define PDRVR_FLAG_RESERVED_00000002 0x00000002  //
 #define PDRVR_FLAG_RESERVED_00000004 0x00000004  //
 #define PDRVR_FLAG_RESERVED_00000008 0x00000008  //
@@ -81,13 +81,25 @@ class PeripheralOpts {
 
 class PeriphDrvr {
   public:
-    inline const char*    getDriverName() {   return _driver_name;   }
-    inline const uint32_t getDriverClass() {  return _driver_flags & PDRVR_FLAG_CLASS_MASK;  }
+    inline const char*    getDriverName() {   return _driver_name;   };
+    inline const uint32_t getDriverClass() {  return _driver_flags & PDRVR_FLAG_CLASS_MASK;  };
+
+    inline bool hardwareBasis() {  return _driver_flags & PDRVR_FLAG_HARDWARE_BASE;  };
+
 
   protected:
-    PeriphDrvr(const char* nom, uint32_t flags);
+    PeriphDrvr(const char* nom, const uint32_t flags);
+
+    /* Inlines for altering and reading the flags. */
+    inline void _alter_flags(bool en, uint32_t mask) {
+      _driver_flags = (en) ? (_driver_flags | mask) : (_driver_flags & ~mask);
+    };
+    inline bool _check_flags(uint32_t mask) {
+      return (mask == (_driver_flags & mask));
+    };
+
 
   private:
     char const* const _driver_name;
-    const uint32_t    _driver_flags;
+    uint32_t    _driver_flags;
 };

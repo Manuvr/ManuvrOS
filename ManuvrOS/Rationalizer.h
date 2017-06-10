@@ -169,4 +169,13 @@
 #endif   // __HAS_CRYPT_WRAPPER
 
 
+/*
+ PMICs:
+*/
+#if defined(CONFIG_MANUVR_BQ24155) || \
+    defined(CONFIG_MANUVR_LTC294X)
+  #define __HAS_BATTERY        // Safe to assume we have a battery charger.
+#endif   // CONFIG_MANUVR_BQ24155
+
+
 #endif // __MANUVR_OPTION_RATIONALIZER_H__

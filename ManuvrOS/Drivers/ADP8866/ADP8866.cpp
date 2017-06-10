@@ -183,7 +183,7 @@ int8_t ADP8866::init() {
   writeIndirect(ADP8866_ISC2, 0x05, true);
   writeIndirect(ADP8866_ISC3, 0x05, true);
   writeIndirect(ADP8866_ISC4, 0x05, true);
-  writeIndirect(ADP8866_ISC5, 0x15, true);
+  writeIndirect(ADP8866_ISC5, 0x05, true);
   writeIndirect(ADP8866_ISC6, 0x05, true);
   writeIndirect(ADP8866_ISC7, 0x05, true);
   writeIndirect(ADP8866_ISC8, 0x05, true);

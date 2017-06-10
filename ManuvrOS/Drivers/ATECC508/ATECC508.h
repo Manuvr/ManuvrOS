@@ -25,6 +25,15 @@ ATECC508_CAPABILITY_DEBUG
 ATECC508_CAPABILITY_OTP_RW
 ATECC508_CAPABILITY_CONFIG_UNLOCK
 
+-- System constraints imposed by this class:
+--------------------------------------------------------------------------------
+  1) Only useful for i2c devices, although this limitation is fairly soft, and
+      could be extended to the one-wire parts by replacing the BusQueue.
+  2) Makes architectural assumptions that limit the system to one ATECC.
+
+-- Use-case assumptions:
+--------------------------------------------------------------------------------
+
 */
 
 #ifndef __ATECC508_SEC_DRIVER_H__
@@ -36,7 +45,7 @@ ATECC508_CAPABILITY_CONFIG_UNLOCK
 
 
 /* TODO: These ought to be migrated into config. */
-#define ATECC508_CAPABILITY_DEBUG          // Should we be able to write to OTP?
+#define ATECC508_CAPABILITY_DEBUG
 
 
 #define ATECC508_FLAG_AWAKE        0x01  // The part is believed to be awake.

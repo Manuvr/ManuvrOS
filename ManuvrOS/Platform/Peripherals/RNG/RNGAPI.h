@@ -27,4 +27,5 @@ Interface for an RNG.
 class RNGAPI : PeriphDrvr {
   RNGAPI(const char* nom, const unsigned int pool_size) :
     PeriphDrvr(nom, 0) {};
+
 };

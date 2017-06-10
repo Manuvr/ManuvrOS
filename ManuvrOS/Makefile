@@ -133,6 +133,8 @@ CPP_SRCS  += Drivers/ManuvrableGPIO/ManuvrableGPIO.cpp
 
 # Power-management ICs and modules...
 #CPP_SRCS  += Drivers/PMIC/LDS8160/LDS8160.cpp
+CPP_SRCS  += Drivers/PMIC/BQ24155/BQ24155.cpp
+CPP_SRCS  += Drivers/PMIC/LTC294x/LTC294x.cpp
 
 CPP_SRCS  += Platform/Identity.cpp
 CPP_SRCS  += Platform/Identity/IdentityUUID.cpp
