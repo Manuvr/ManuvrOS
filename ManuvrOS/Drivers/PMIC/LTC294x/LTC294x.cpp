@@ -24,8 +24,23 @@ TODO: It should be noted that this class assumes an LTC2942-1. This should be
         expanded in the future.
 */
 
-#ifdef CONFIG_MANUVR_LTC294X
+//#ifdef CONFIG_MANUVR_LTC294X
 #include "LTC294x.h"
+
+
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
+
+LTC294x* LTC294x::INSTANCE = nullptr;
+
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -136,7 +151,7 @@ int8_t LTC294x::io_op_callback(BusOp* _op) {
   }
 
   /* Null the buffer so the bus adapter isn't tempted to free it.
-     TODO: This is silly. Fix this in the API. */
+    TODO: This is silly. Fix this in the API. */
   _op->buf     = nullptr;
   _op->buf_len = 0;
   return 0;
@@ -158,4 +173,4 @@ void LTC294x::printDebug(StringBuilder* temp) {
 
 
 
-#endif  // CONFIG_MANUVR_LTC294X
+//#endif  // CONFIG_MANUVR_LTC294X

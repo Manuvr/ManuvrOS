@@ -305,6 +305,18 @@ int StringBuilder::position_as_int(int pos) {
 
 
 /**
+* Convenience fxn for breaking up strings of integers using the tokenizer.
+*/
+double StringBuilder::position_as_double(int pos) {
+  const char* temp = (const char*) position(pos);
+  if (temp != nullptr) {
+    return atof(temp);
+  }
+  return 0.0;
+}
+
+
+/**
 * Return a castable pointer for the string at position <pos>.
 * Null on failure.
 */
