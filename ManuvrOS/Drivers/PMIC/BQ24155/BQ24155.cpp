@@ -231,25 +231,27 @@ int8_t BQ24155::notify(ManuvrMsg* active_event) {
 }
 
 
-/*
+/**
 * Dump this item to the dev log.
+*
+* @param  output  The buffer to receive the output.
 */
-void BQ24155::printDebug(StringBuilder* temp) {
-  EventReceiver::printDebug(temp);
-  temp->concatf("\tInitialized:       %c\n", _er_flag(BQ24155_FLAG_INIT_COMPLETE) ? 'y' : 'n');
-  temp->concatf("\tSTAT pin:          %d\n", _opts.stat_pin);
-  temp->concatf("\tISEL pin:          %d\n", _opts.isel_pin);
-  temp->concatf("\tSense resistor:    %d mOhm\n", _opts.sense_milliohms);
-  temp->concatf("\tUSB current limit: %d mA\n", usb_current_limit());
-  temp->concatf("\tBatt reg voltage:  %.2f V\n", batt_reg_voltage());
-  temp->concatf("\tBattery weak at:   %u mV\n", batt_weak_voltage());
-  temp->concatf("\tCharger state:     %s\n", (const char*) BQ24155_STATE_STR[(uint8_t) getChargerState()]);
-  temp->concatf("\tFault:             %s\n", (const char*) BQ24155_FAULT_STR[(uint8_t) getFault()]);
-  temp->concat("\t  Bulk rates  Termination rates\n\t  ----------  -----------------\n");
+void BQ24155::printDebug(StringBuilder* output) {
+  EventReceiver::printDebug(output);
+  output->concatf("\tInitialized:       %c\n", _er_flag(BQ24155_FLAG_INIT_COMPLETE) ? 'y' : 'n');
+  output->concatf("\tSTAT pin:          %d\n", _opts.stat_pin);
+  output->concatf("\tISEL pin:          %d\n", _opts.isel_pin);
+  output->concatf("\tSense resistor:    %d mOhm\n", _opts.sense_milliohms);
+  output->concatf("\tUSB current limit: %d mA\n", usb_current_limit());
+  output->concatf("\tBatt reg voltage:  %.2f V\n", batt_reg_voltage());
+  output->concatf("\tBattery weak at:   %u mV\n", batt_weak_voltage());
+  output->concatf("\tCharger state:     %s\n", (const char*) BQ24155_STATE_STR[(uint8_t) getChargerState()]);
+  output->concatf("\tFault:             %s\n", (const char*) BQ24155_FAULT_STR[(uint8_t) getFault()]);
+  output->concat("\t  Bulk rates  Termination rates\n\t  ----------  -----------------\n");
   uint8_t c_btc_idx = (regValue(BQ24155_REG_FAST_CHRG) & 0x07);
   uint8_t c_bcc_idx = ((regValue(BQ24155_REG_FAST_CHRG) >> 4) & 0x07);
   for (int i = 0; i < 8; i++) {
-    temp->concatf("\t  [%c] %.3fA  [%c] %.3fA\n",
+    output->concatf("\t  [%c] %.3fA  [%c] %.3fA\n",
       (c_bcc_idx == i) ? '*' : ' ',
       bulkChargeCurrent(i),
       (c_btc_idx == i) ? '*' : ' ',
@@ -354,17 +356,24 @@ void BQ24155::procDirectDebugInstruction(StringBuilder *input) {
 * Functions specific to this class....                                         *
 *******************************************************************************/
 
-
+/**
+* Returns the charger's current state.
+*/
 BQ24155State BQ24155::getChargerState() {
   return (BQ24155State) (0x03 & ((uint8_t) regValue(BQ24155_REG_STATUS)) >> 4);
 }
 
+/**
+* Returns the fault condition.
+*/
 BQ24155Fault BQ24155::getFault() {
   return (BQ24155Fault) (0x07 & (uint8_t) regValue(BQ24155_REG_STATUS));
 }
 
-
-
+/**
+*
+* @return 0 on success, non-zero otherwise.
+*/
 int8_t BQ24155::punch_safety_timer() {
   int8_t return_val = -1;
   if (_er_flag(BQ24155_FLAG_INIT_COMPLETE)) {
@@ -375,9 +384,10 @@ int8_t BQ24155::punch_safety_timer() {
   return return_val;
 }
 
-
 /**
 * Reset the charger's internal state-machine.
+*
+* @return 0 on success, non-zero otherwise.
 */
 int8_t BQ24155::put_charger_in_reset_mode() {
   int8_t return_val = -1;
@@ -389,9 +399,12 @@ int8_t BQ24155::put_charger_in_reset_mode() {
   return return_val;
 }
 
-
-
-// Takes a desired voltage.
+/**
+* Set the battery voltage. It is very important to get this right.
+*
+* @param desired Valid range is [3.5 - 4.44]
+* @return 0 on success, non-zero otherwise.
+*/
 int8_t BQ24155::batt_reg_voltage(float desired) {
   int8_t return_val = -2;
   if (_er_flag(BQ24155_FLAG_INIT_COMPLETE)) {
@@ -405,24 +418,32 @@ int8_t BQ24155::batt_reg_voltage(float desired) {
   return return_val;
 }
 
-// Returns the current battery regulation voltage.
+/**
+* Get the battery voltage.
+*
+* @return The battery regulation voltage.
+*/
 float BQ24155::batt_reg_voltage() {
   uint8_t int_val = regValue(BQ24155_REG_BATT_REGU);
   return ((int_val >> 2) * 0.02f) + BQ24155_VOREGU_OFFSET;
 }
 
 /**
-* Returns the number of mV at which point the battery is considered weak.
+* Get the battery weakness threshold.
+*
+* @return The number of mV at which point the battery is considered weak.
 */
 uint16_t BQ24155::batt_weak_voltage() {
   uint8_t int_val = regValue(BQ24155_REG_LIMITS);
-  unsigned int return_value = BQ24155_VLOW_OFFSET;
   return BQ24155_VLOW_OFFSET + (100 * ((int_val >> 4) & 0x03));
 }
 
 /**
 * Sets the voltage at which the battery is considered weak.
 * Charger has 2-bits for this purpose, with 100mV increments.
+*
+* @param The number of mV at which point the battery is to be considered weak.
+* @return 0 on success, non-zero otherwise.
 */
 int8_t BQ24155::batt_weak_voltage(unsigned int mV) {
   int8_t return_val = -2;
@@ -444,6 +465,8 @@ int8_t BQ24155::batt_weak_voltage(unsigned int mV) {
 *   arithmetic, we will interpret the "unlimited" condition reported by the
 *   charger to mean some very large (but limited) number, beyond the TDP of the
 *   charger IC itself.
+*
+* @return The number of mV the USB host is able to supply. -1 if unlimited.
 */
 int16_t BQ24155::usb_current_limit() {
   uint8_t int_val = regValue(BQ24155_REG_LIMITS);
@@ -455,6 +478,12 @@ int16_t BQ24155::usb_current_limit() {
   return 100;  // This is the default condition.
 }
 
+/**
+* We can artificially limit the draw from the USB port.
+*
+* @param The number of mV to draw from the USB host.
+* @return 0 on success, non-zero otherwise.
+*/
 int8_t BQ24155::usb_current_limit(int16_t milliamps) {
   int8_t return_val = -2;
   if (_er_flag(BQ24155_FLAG_INIT_COMPLETE)) {
@@ -474,11 +503,21 @@ int8_t BQ24155::usb_current_limit(int16_t milliamps) {
   return return_val;
 }
 
-
+/**
+* Is the charger enabled?
+*
+* @return True if the charger is enabled.
+*/
 bool BQ24155::charger_enabled() {
   return (0x04 & (uint8_t) regValue(BQ24155_REG_LIMITS));
 }
 
+/**
+* Enable or disable the charger.
+*
+* @param True to enable the charger.
+* @return 0 on success, non-zero otherwise.
+*/
 int8_t BQ24155::charger_enabled(bool en) {
   int8_t return_val = -2;
   if (_er_flag(BQ24155_FLAG_INIT_COMPLETE)) {
@@ -493,11 +532,21 @@ int8_t BQ24155::charger_enabled(bool en) {
   return return_val;
 }
 
-
+/**
+* Is the charge termination phase enabled?
+*
+* @return True if the charge termination phase is enabled.
+*/
 bool BQ24155::charge_current_termination_enabled() {
   return (0x08 & (uint8_t) regValue(BQ24155_REG_LIMITS));
 }
 
+/**
+* Enable or disable the charge termination phase.
+*
+* @param True to enable the charge termination phase.
+* @return 0 on success, non-zero otherwise.
+*/
 int8_t BQ24155::charge_current_termination_enabled(bool en) {
   int8_t return_val = -2;
   if (_er_flag(BQ24155_FLAG_INIT_COMPLETE)) {
@@ -511,6 +560,5 @@ int8_t BQ24155::charge_current_termination_enabled(bool en) {
   }
   return return_val;
 }
-
 
 //#endif  // CONFIG_MANUVR_BQ24155

@@ -59,27 +59,25 @@ LTC294x::LTC294x(const LTC294xOpts* o) : I2CDeviceWithRegisters(LTC294X_I2CADDR)
     LTC294x::INSTANCE = this;
   }
 
-  if (255 != _opts.alert_pin) {
-    gpioDefine(_opts.alert_pin, GPIOMode::INPUT_PULLUP);
+  if (_opts.useAlertPin()) {
+    // This is the chip's default configuration.
+    gpioDefine(_opts.pin, GPIOMode::INPUT_PULLUP);
+  }
+  else if (_opts.useCCPin()) {
+    // TODO: This requires testing before it is safe to enable.
+    gpioDefine(_opts.pin, GPIOMode::OUTPUT_OD);
   }
 
 
   defineRegister(LTC294X_REG_STATUS,        (uint8_t) 0x00, false, true,  true);
   defineRegister(LTC294X_REG_CONTROL,       (uint8_t) 0x3C, false, false, true);
-  defineRegister(LTC294X_REG_AC_MSB,        (uint8_t) 0x7F, false, false, true);
-  defineRegister(LTC294X_REG_AC_LSB,        (uint8_t) 0xFF, false, false, false);
-  defineRegister(LTC294X_REG_CHRG_THRESH_0, (uint8_t) 0xFF, false, false, true);
-  defineRegister(LTC294X_REG_CHRG_THRESH_1, (uint8_t) 0xFF, false, false, true);
-  defineRegister(LTC294X_REG_CHRG_THRESH_2, (uint8_t) 0x00, false, false, true);
-  defineRegister(LTC294X_REG_CHRG_THRESH_3, (uint8_t) 0x00, false, false, false);
-  defineRegister(LTC294X_REG_VOLTAGE_MSB,   (uint8_t) 0x00, false, true,  true);
-  defineRegister(LTC294X_REG_VOLTAGE_LSB,   (uint8_t) 0x00, false, true,  true);
-  defineRegister(LTC294X_REG_V_THRESH_HIGH, (uint8_t) 0xFF, false, false, true);
-  defineRegister(LTC294X_REG_V_THRESH_LOW,  (uint8_t) 0x00, false, false, false);
-  defineRegister(LTC294X_REG_TEMP_MSB,      (uint8_t) 0x00, false, true,  true);
-  defineRegister(LTC294X_REG_TEMP_LSB,      (uint8_t) 0x00, false, true,  true);
-  defineRegister(LTC294X_REG_T_THRESH_HIGH, (uint8_t) 0xFF, false, false, true);
-  defineRegister(LTC294X_REG_T_THRESH_LOW,  (uint8_t) 0x00, false, false, false);
+  defineRegister(LTC294X_REG_ACC_CHARGE,    (uint16_t) 0x7FFF, false, false, true);
+  defineRegister(LTC294X_REG_CHRG_THRESH_H, (uint16_t) 0xFFFF, false, false, true);
+  defineRegister(LTC294X_REG_CHRG_THRESH_L, (uint16_t) 0x0000, false, false, true);
+  defineRegister(LTC294X_REG_VOLTAGE,       (uint16_t) 0x0000, false, true,  false);
+  defineRegister(LTC294X_REG_V_THRESH,      (uint16_t) 0xFF00, false, false, true);
+  defineRegister(LTC294X_REG_TEMP,          (uint16_t) 0x0000, false, true,  false);
+  defineRegister(LTC294X_REG_TEMP_THRESH,   (uint16_t) 0xFF00, false, false, true);
 }
 
 
@@ -116,33 +114,19 @@ int8_t LTC294x::io_op_callback(BusOp* _op) {
       break;
     case LTC294X_REG_CONTROL:
       break;
-    case LTC294X_REG_AC_MSB:
+    case LTC294X_REG_ACC_CHARGE:    // The accumulated charge register.
       break;
-    case LTC294X_REG_AC_LSB:
+    case LTC294X_REG_CHRG_THRESH_H:
       break;
-    case LTC294X_REG_CHRG_THRESH_0:
+    case LTC294X_REG_CHRG_THRESH_L:
       break;
-    case LTC294X_REG_CHRG_THRESH_1:
+    case LTC294X_REG_VOLTAGE:
       break;
-    case LTC294X_REG_CHRG_THRESH_2:
+    case LTC294X_REG_V_THRESH:
       break;
-    case LTC294X_REG_CHRG_THRESH_3:
+    case LTC294X_REG_TEMP:
       break;
-    case LTC294X_REG_VOLTAGE_MSB:
-      break;
-    case LTC294X_REG_VOLTAGE_LSB:
-      break;
-    case LTC294X_REG_V_THRESH_HIGH:
-      break;
-    case LTC294X_REG_V_THRESH_LOW:
-      break;
-    case LTC294X_REG_TEMP_MSB:
-      break;
-    case LTC294X_REG_TEMP_LSB:
-      break;
-    case LTC294X_REG_T_THRESH_HIGH:
-      break;
-    case LTC294X_REG_T_THRESH_LOW:
+    case LTC294X_REG_TEMP_THRESH:
       break;
 
     default:
@@ -162,7 +146,14 @@ int8_t LTC294x::io_op_callback(BusOp* _op) {
 * Dump this item to the dev log.
 */
 void LTC294x::printDebug(StringBuilder* temp) {
-  temp->concatf("\tALERT pin:         %d\n", _opts.alert_pin);
+  temp->concatf("LTC294x %sinitialized\n", (_init_complete ? "un" : ""));
+  temp->concatf("\tAnalog shutdown:   %c\n", _analog_shutdown ? 'y' : 'n');
+  if (_opts.useAlertPin()) {
+    temp->concatf("\tALERT pin:         %d\n", _opts.pin);
+  }
+  else if (_opts.useCCPin()) {
+    temp->concatf("\tCC pin:            %d\n", _opts.pin);
+  }
 }
 
 
@@ -170,6 +161,51 @@ void LTC294x::printDebug(StringBuilder* temp) {
 /*******************************************************************************
 * Functions specific to this class....                                         *
 *******************************************************************************/
+
+/**
+* Will return the minimum servicable prescaler value for the given battery capacity.
+* TODO: Re-phrase as integer arithmetic and bitshift, rather than branch-soup.
+*/
+uint8_t LTC294x::_derive_prescaler() {
+  float res = _opts.batt_capacity * 0.023f;
+  uint8_t ret = 7;   // The max prescaler.
+  if (res < 64.0) { ret--; }
+  if (res < 32.0) { ret--; }
+  if (res < 16.0) { ret--; }
+  if (res < 8.0)  { ret--; }
+  if (res < 4.0)  { ret--; }
+  if (res < 2.0)  { ret--; }
+  if (res < 1.0)  { ret--; }
+  return ret;
+};
+
+int8_t LTC294x::_analog_enabled(bool en) {
+  return -1;
+}
+
+float LTC294x::batteryCharge() {
+  return (0.009155f * regValue(LTC294X_REG_ACC_CHARGE));
+}
+
+float LTC294x::batteryVoltage() {
+  return (0.009155f * regValue(LTC294X_REG_VOLTAGE));
+}
+
+float LTC294x::temperature() {
+  return (0.009155f * regValue(LTC294X_REG_TEMP)) - 272.15f;
+}
+
+int8_t LTC294x::setChargeThresholds(uint16_t low, uint16_t high) {
+  return -1;
+}
+
+int8_t LTC294x::setVoltageThreshold(uint16_t low) {
+  return -1;
+}
+
+int8_t LTC294x::setTemperatureThreshold(uint16_t high) {
+  return -1;
+}
 
 
 

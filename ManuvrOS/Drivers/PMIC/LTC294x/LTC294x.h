@@ -29,46 +29,59 @@ limitations under the License.
 /* Sensor registers that exist in hardware */
 #define LTC294X_REG_STATUS        0x00
 #define LTC294X_REG_CONTROL       0x01
-#define LTC294X_REG_AC_MSB        0x02
-#define LTC294X_REG_AC_LSB        0x03
-#define LTC294X_REG_CHRG_THRESH_0 0x04
-#define LTC294X_REG_CHRG_THRESH_1 0x05
-#define LTC294X_REG_CHRG_THRESH_2 0x06
-#define LTC294X_REG_CHRG_THRESH_3 0x07
-#define LTC294X_REG_VOLTAGE_MSB   0x08
-#define LTC294X_REG_VOLTAGE_LSB   0x09
-#define LTC294X_REG_V_THRESH_HIGH 0x0A
-#define LTC294X_REG_V_THRESH_LOW  0x0B
-#define LTC294X_REG_TEMP_MSB      0x0C
-#define LTC294X_REG_TEMP_LSB      0x0D
-#define LTC294X_REG_T_THRESH_HIGH 0x0E
-#define LTC294X_REG_T_THRESH_LOW  0x0F
+#define LTC294X_REG_ACC_CHARGE    0x02  // 16-bit
+#define LTC294X_REG_CHRG_THRESH_H 0x04  // 16-bit
+#define LTC294X_REG_CHRG_THRESH_L 0x06  // 16-bit
+#define LTC294X_REG_VOLTAGE       0x08  // 16-bit
+#define LTC294X_REG_V_THRESH      0x0A  // 16-bit
+#define LTC294X_REG_TEMP          0x0C  // 16-bit
+#define LTC294X_REG_TEMP_THRESH   0x0E  // 16-bit
 
 #define LTC294X_I2CADDR        0x64
 
 
+#define LTC294X_OPT_PIN_IS_CC   0x01  // Is the I/O pin to be treated as an output?
+
 /**
 * Pin defs for this module.
 * Set pin def to 255 to mark it as unused.
+*
+* Datasheet imposes the following constraints:
+*   Maximum battery capacity is 5500 mAh.
 */
 class LTC294xOpts {
   public:
-    // If valid, will use a gpio operation to pull the SDA pin low to wake device.
-    const uint8_t alert_pin;
+    const uint16_t batt_capacity;  // The capacity of the battery in mAh.
+    const uint8_t  pin;            // Which pin is bound to ~ALERT/CC?
 
     LTC294xOpts(const LTC294xOpts* o) :
-      alert_pin(o->alert_pin) {};
+      batt_capacity(o->batt_capacity),
+      pin(o->pin),
+      _flags(o->_flags) {};
 
-    LTC294xOpts(uint8_t _alert_pin) :
-      alert_pin(_alert_pin) {};
+    LTC294xOpts(uint16_t _bc, uint8_t _pin) :
+      batt_capacity(_bc),
+      pin(_pin),
+      _flags(0) {};
+
+    LTC294xOpts(uint16_t _bc, uint8_t _pin, uint8_t _f) :
+      batt_capacity(_bc),
+      pin(_pin),
+      _flags(_f) {};
 
     inline bool useAlertPin() const {
-      return (255 != alert_pin);
+      return (255 != pin) & !(_flags & LTC294X_OPT_PIN_IS_CC);
+    };
+
+    inline bool useCCPin() const {
+      return (255 != pin) & (_flags & LTC294X_OPT_PIN_IS_CC);
     };
 
 
   private:
+    const uint8_t _flags;
 };
+
 
 
 class LTC294x : public I2CDeviceWithRegisters {
@@ -76,17 +89,31 @@ class LTC294x : public I2CDeviceWithRegisters {
     LTC294x(const LTC294xOpts*);
     ~LTC294x();
 
-
     /* Overrides from I2CDeviceWithRegisters... */
     int8_t io_op_callback(BusOp*);
     void printDebug(StringBuilder*);
+
+    float temperature();
+    float batteryVoltage();
+    float batteryCharge();
+
+    int8_t setChargeThresholds(uint16_t low, uint16_t high);
+    int8_t setVoltageThreshold(uint16_t low);
+    int8_t setTemperatureThreshold(uint16_t high);
+
 
     static LTC294x* INSTANCE;
 
 
   private:
     const LTC294xOpts _opts;
-    bool _init_complete = false;
+    bool _init_complete   = false;
+    bool _analog_shutdown = false;
+
+    uint8_t _derive_prescaler();
+    int8_t  _analog_enabled(bool);
+
+    inline bool _analog_enabled() {   return regValue(LTC294X_REG_CONTROL) & 0x01; };
 
     int8_t init();
 };

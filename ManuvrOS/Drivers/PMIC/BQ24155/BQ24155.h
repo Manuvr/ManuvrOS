@@ -83,7 +83,7 @@ enum class BQ24155USBCurrent {
 #define BQ24155_FLAG_INIT_COMPLETE 0x01    // Is the device initialized?
 
 
-
+// TODO: Remove the rest of the floating point from this class.
 /* Offsets for various register manipulations. */
 #define BQ24155_VOREGU_OFFSET  3.5f
 #define BQ24155_VLOW_OFFSET    3400
@@ -194,6 +194,9 @@ class BQ24155 : public EventReceiver, I2CDeviceWithRegisters {
     * Given an optional step, returns the corresponding terminal-phase charging
     *   current (expressed in amps).
     * Compiler should optimize away the floating point div. TODO: verify this.
+    *
+    * @param integer for the step count.
+    * @return The number of amps delivered in the termination phase.
     */
     inline float terminateChargeCurrent(uint8_t step = 0) {
       return (((step & 0x07) * (3.4f / _opts.sense_milliohms)) + BQ24155_VITERM_OFFSET);
@@ -203,10 +206,13 @@ class BQ24155 : public EventReceiver, I2CDeviceWithRegisters {
     * Conversion fxn.
     * Given an optional step, returns the corresponding bulk-phase charging
     *   current (expressed in amps).
-    * Compiler should optimize away the floating point div. TODO: verify this.
+    * Compiler should optimize away the floating point divs. TODO: verify this.
+    *
+    * @param integer for the step count.
+    * @return The number of amps delivered in the bulk phase.
     */
     inline float bulkChargeCurrent(uint8_t step = 0) {
-      return (((step & 0x07) * (6.8f / _opts.sense_milliohms)) + BQ24155_VIREGU_OFFSET);
+      return (((step & 0x07) * (6.8f / _opts.sense_milliohms)) + (BQ24155_VIREGU_OFFSET / _opts.sense_milliohms));
     };
 };
 

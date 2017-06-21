@@ -376,7 +376,7 @@ This file is the tortured result of growing pains since the beginning of
       /*   for the desired register in reg_defs[].                                      */
       int8_t writeRegister(uint8_t base_addr);
       int8_t readRegister(uint8_t base_addr);
-      int8_t readRegisters(uint8_t count, ...);
+      //int8_t readRegisters(uint8_t count, ...);
       /* This is the end of the low-level functions.                                    */
 
       /* Debug stuff... */
