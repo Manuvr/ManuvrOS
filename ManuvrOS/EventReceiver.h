@@ -98,6 +98,8 @@ Lifecycle:
         virtual void printDebug(StringBuilder*);
         #ifdef MANUVR_CONSOLE_SUPPORT
           virtual void procDirectDebugInstruction(StringBuilder *input);
+          //virtual void consoleInput(StringBuilder *input);
+          //void consoleHelp(StringBuilder *output);
         #endif
 
         /* Raises an event, marking us as the return callback. */

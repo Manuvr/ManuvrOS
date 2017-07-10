@@ -65,7 +65,7 @@ LTC294x::LTC294x(const LTC294xOpts* o) : I2CDeviceWithRegisters(LTC294X_I2CADDR)
   }
   else if (_opts.useCCPin()) {
     // TODO: This requires testing before it is safe to enable.
-    gpioDefine(_opts.pin, GPIOMode::OUTPUT_OD);
+    //gpioDefine(_opts.pin, GPIOMode::OUTPUT_OD);
   }
 
 
