@@ -29,6 +29,7 @@ These are cryptographically-backed notions of identity.
 /**
 * This is the most straight-forward notion of cryptographically-backed identity.
 */
+#if defined(__BUILD_HAS_ASYMMETRIC)
 class IdentityPubKey : public Identity {
   public:
     IdentityPubKey(const char* nom, Cipher, CryptoKey);
@@ -61,7 +62,7 @@ class IdentityPubKey : public Identity {
   private:
     static const size_t _SERIALIZED_LEN;
 };
-
+#endif  // __BUILD_HAS_ASYMMETRIC
 
 /**
 * This is the notion of identity that is common on "large" systems, and
@@ -73,6 +74,7 @@ class IdentityPubKey : public Identity {
 * You will need this if you want to participate in such PKIs directly.
 * Many (D)TLS cipher suites require this.
 */
+#if defined(__BUILD_HAS_DER_CERTS)
 class IdentityCert : public Identity {
   public:
     IdentityCert(const char* nom);
@@ -91,6 +93,7 @@ class IdentityCert : public Identity {
   protected:
     IdentityCert* _issuer  = nullptr;
 };
+#endif  // __BUILD_HAS_DER_CERTS
 
 
 /**
@@ -103,6 +106,7 @@ class IdentityCert : public Identity {
 * For systems that use this notion of identity in a TLS stack, the base-class
 *   member "name" should be used as the PSK hint if no other arrangement is made.
 */
+#if defined(__BUILD_HAS_SYMMETRIC)
 class IdentityPSK : public Identity {
   public:
     IdentityPSK(const char* nom, Cipher);
@@ -123,6 +127,38 @@ class IdentityPSK : public Identity {
     uint16_t  _psk_size    = 0;
     Cipher    _cipher      = Cipher::NONE;
 };
+#endif  // __BUILD_HAS_SYMMETRIC
+
+
+/**
+* This is a notion of identity that relies on a pre-shared symmetric key.
+* This identity is cryptographically-backed, but it it tantamount to a
+*   high-entropy password.
+* If you want to use an authenticated cipher, you should use IdentityAuthPSK,
+*   as this class will not take advantage of the authentication properties
+*   of blockmodes like CCM or GCM.
+* For systems that use this notion of identity in a TLS stack, the base-class
+*   member "name" should be used as the PSK hint if no other arrangement is made.
+*/
+#if defined(__BUILD_HAS_DIGEST)
+class IdentityHMAC : public Identity {
+  public:
+    IdentityHMAC(const char* nom, Hashes);
+    IdentityHMAC(uint8_t* buf, uint16_t len);
+    ~IdentityHMAC();
+
+    size_t sizeOutputBuffer(size_t in_len);  // Helps the caller predict buffer-length.
+
+    void toString(StringBuilder*);
+    int  serialize(uint8_t*, uint16_t);
+
+
+  protected:
+    uint8_t*  _key         = nullptr;
+    Hashes    _digest      = Hashes::NONE;
+};
+#endif  // __BUILD_HAS_SYMMETRIC
+
 
 
 #endif // __MANUVR_IDENTITY_CRYPTO_H__

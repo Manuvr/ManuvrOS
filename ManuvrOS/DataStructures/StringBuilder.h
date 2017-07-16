@@ -43,8 +43,8 @@ int strcasestr(char *a, const char *b);
 */
 typedef struct str_ll_t {
 	unsigned char    *str;   // The string.
-	int              len;    // The length of this element.
 	struct str_ll_t  *next;  // The next element.
+	int              len;    // The length of this element.
 	bool             reap;   // Should this position be reaped?
 } StrLL;
 
@@ -125,6 +125,8 @@ class StringBuilder {
 		   root string (if present) to be index zero. This detail is concealed from client classes. */
 		int split(const char*);                  // Split the string into tokens by the given string.
 		int implode(const char*);                // Given a delimiter, form a single string from all StrLLs.
+		unsigned short count();                  // Count the tokens.
+
 		char*  position(int);                    // If the string has been split, get tokens with this.
 		char*  position_trimmed(int);            // Same as position(int), but trims whitespace from the return.
 		int    position_as_int(int);             // Same as position(int), but uses atoi() to return an integer.
@@ -133,7 +135,6 @@ class StringBuilder {
 		bool drop_position(unsigned int pos);    // And use this to reap the tokens that you've used.
 		// Trim the whitespace from the end of the input string.
 
-		unsigned short count();                  // Count the tokens.
 
 		int cmpBinString(unsigned char *unknown, int len);
 

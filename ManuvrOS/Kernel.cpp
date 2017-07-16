@@ -961,6 +961,7 @@ void Kernel::printProfiler(StringBuilder* output) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void Kernel::printScheduler(StringBuilder* output) {
+  output->concat("-- SCHEDULER\n");
   output->concatf("-- _ms_elapsed         %u\n", (unsigned long) _ms_elapsed);
   output->concatf("-- Total schedules:    %d\n-- Active schedules:   %d\n\n", schedules.size(), countActiveSchedules());
   if (lagged_schedules)    output->concatf("-- Lagged schedules:   %u\n", (unsigned long) lagged_schedules);
