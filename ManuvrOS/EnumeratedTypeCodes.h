@@ -67,9 +67,9 @@ typedef void (*PipeIOCallback)(BufferPipe*, int direction);
 * This structrue conveys the type, it's size, and any special attributes of the type.
 */
 typedef struct typecode_def_t {
-    uint8_t            type_code;   // This field identifies the type.
-    uint8_t            type_flags;  // Flags that give us metadata about a type.
-    uint16_t           fixed_len;   // If this type has a fixed length, it will be set here. 0 if no fixed length.
+    uint8_t  type_code;   // This field identifies the type.
+    uint8_t  type_flags;  // Flags that give us metadata about a type.
+    uint16_t fixed_len;   // If this type has a fixed length, it will be set here. 0 if no fixed length.
 } TypeCodeDef;
 
 /**
@@ -186,6 +186,51 @@ inline uint16_t parseUint16Fromchars(unsigned char *input) {  return ((uint16_t)
 //inline uint8_t pointerTypeCode(uint16_t) {    return UINT16_FM;    };
 //inline uint8_t pointerTypeCode(uint32_t) {    return UINT32_FM;    };
 
+enum class TCode {
+  NONE      0x00,    // This is usually an indication of a failure to init.
+  INT8      0x01,    // 8-bit integer
+  INT16     0x02,    // 16-bit integer
+  INT32     0x03,    // 32-bit integer
+  UINT8     0x06,    // Unsigned 8-bit integer
+  UINT16    0x07,    // Unsigned 16-bit integer
+  UINT32    0x08,    // Unsigned 32-bit integer
+  BOOLEAN   0x0B,    // A boolean
+  FLOAT     0x0C,    // A float
+
+  DOUBLE    0x0D,    // A double
+  STR       0x0E,    // A null-terminated string
+  BINARY    0x0F,    // A collection of bytes
+  INT64     0x04,    // 64-bit integer
+  INT128    0x05,    // 128-bit integer
+  UINT64    0x09,    // Unsigned 64-bit integer
+  UINT128   0x0A,    // Unsigned 128-bit integer
+
+  JSON      0x15,    // A JSON object. Export to other systems implies string conversion.
+  CBOR      0x20,    // A CBOR object.
+  IDENTITY  0x21,    // Identity.
+  URL       0x17,    // An alias of string that carries the semantic 'URL'.
+  CHAIN     0x18,    // An event chain.
+  VECT_4_FLOAT   0x16,    // A float vector in 4-space.
+  VECT_3_FLOAT   0x12,    // A vector of floats in 3-space
+  VECT_3_INT16   0x13,    // A vector of 16-bit integers in 3-space
+  VECT_3_UINT16  0x14,    // A vector of unsigned 16-bit integers in 3-space
+  AUDIO     0x10,    // Audio stream
+  IMAGE     0x11,    // Image data
+
+  ARGUMENT    0xA7, // A pointer to an Argument.
+  CHAIN       0xAD, // A pointer to a Chain.
+  BUFFERPIPE  0xAE, // A pointer to a BufferPipe.
+  STR_BUILDER 0xAF, // A pointer to a StringBuilder.
+  SYS_EVENTRECEIVER  0xE0,  // A pointer to an EventReceiver.
+  SYS_MANUVR_XPORT   0xE1,  // A pointer to a ManuvrXport.
+  SYS_MANUVRMSG      0xE2,  // A pointer to a ManuvrMsg.
+  SYS_FXN_PTR        0xEC,  // FxnPointer
+  SYS_THREAD_FXN_PTR 0xED,  // ThreadFxnPtr
+  SYS_ARG_FXN_PTR    0xEE,  // ArgumentFxnPtr
+  SYS_PIPE_FXN_PTR   0xEF,  // PipeIOCallback
+
+  RESERVED  0xFF     // This type is reserved because it might be used for other things by other libraries.
+};
 
 int sizeOfArg(uint8_t typecode);
 int getTypemapSizeAndPointer(const unsigned char **pointer);
