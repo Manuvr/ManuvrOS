@@ -73,35 +73,6 @@ int8_t EventReceiver::setVerbosity(int8_t nu_verbosity) {
 
 
 /**
-* Call to set the log verbosity for this class. 7 is most verbose. -1 will disable logging altogether.
-* This is an override to make code briefer in the notify() methods of classes that extend EventReceiver.
-* Warning: Lots of possible return paths.
-*
-* @param   active_event  An event bearing the code for "set verbosity".
-* @return  -1 on failure, and 0 on no change, and 1 on success.
-*/
-int8_t EventReceiver::setVerbosity(ManuvrMsg* active_event) {
-  if (nullptr == active_event) return -1;
-  if (MANUVR_MSG_SYS_LOG_VERBOSITY != active_event->eventCode()) return -1;
-  switch (active_event->argCount()) {
-    case 0:
-      #ifdef MANUVR_DEBUG
-      local_log.concatf("%s:\tVerbosity is %d\n", getReceiverName(), getVerbosity());
-      Kernel::log(&local_log);
-      #endif
-      return 1;
-    case 1:
-      {
-        int8_t temp_int_8 = 0;
-        if (0 != active_event->getArgAs(&temp_int_8)) return -1;
-        return setVerbosity(temp_int_8);
-      }
-  }
-  return 0;
-}
-
-
-/**
 * If the local_log is not empty, forward the logs to the Kernel.
 * This alieviates us of the responsibility of freeing the log.
 */
@@ -262,8 +233,6 @@ int8_t EventReceiver::callback_proc(ManuvrMsg* event) {
 int8_t EventReceiver::notify(ManuvrMsg* active_event) {
   if (active_event) {
     switch (active_event->eventCode()) {
-      case MANUVR_MSG_SYS_LOG_VERBOSITY:
-        return setVerbosity(active_event);
       case MANUVR_MSG_SYS_BOOT_COMPLETED:
         return attached();
       case MANUVR_MSG_SYS_CONF_LOAD:

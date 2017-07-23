@@ -69,13 +69,20 @@ This might be better-viewed as a data structure. Notions of identity should
 *         everything will transition smoothly.
 */
 enum class IdentFormat {
-  #if defined(__HAS_IDENT_CERT)
+  #if defined(__BUILD_HAS_DER_CERTS)
     CERT_FORMAT_DER = 0x04,  // Certificate in DER format.
-    PK              = 0x05,  // Pre-shared asymmetric key.
+  #endif
+  #if defined(__BUILD_HAS_ASYMMETRIC)
+    PK              = 0x05,  // Asymmetric key.
+  #endif
+  #if defined(__BUILD_HAS_SYMMETRIC)
     PSK_SYM         = 0x06,  // Pre-shared symmetric key.
   #endif
+  #if defined(__BUILD_HAS_DIGEST)
+    PSK_HMAC        = 0x07,  // Pre-shared HMAC key.
+  #endif
   #if defined(MANUVR_OPENINTERCONNECT)
-    OIC_CRED        = 0x07,  // OIC credential.
+    OIC_CRED        = 0x08,  // OIC credential.
   #endif
   SERIAL_NUM      = 0x01,  // Nearly universal.
   UUID            = 0x02,  // Low-grade. Easy.

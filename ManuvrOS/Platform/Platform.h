@@ -145,6 +145,7 @@ enum class PeripheralTypes {
   PERIPH_BLUETOOTH,
   PERIPH_WIFI,
   PERIPH_RTC,
+  PERIPH_RNG,
   PERIPH_STORAGE
 };
 
@@ -392,6 +393,11 @@ int    readPinAnalog(uint8_t pin);
 #if defined(MANUVR_STORAGE)
   #include <Platform/Storage.h>
 #endif
+
+#if defined(CONFIG_MANUVR_PRNG)
+  #include "Peripherals/RNG/pcg_basic/pcg_basic.h"
+#endif
+
 
 // TODO: Until the final-step of the build system rework, this is how we
 //         selectively support specific platforms.

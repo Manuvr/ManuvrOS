@@ -81,10 +81,6 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   #if defined(MANUVR_STORAGE)
   #endif
 
-  {  MANUVR_MSG_SESS_ESTABLISHED     , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_ESTABLISHED"     , ManuvrMsg::MSG_ARGS_NONE }, // Session established.
-  {  MANUVR_MSG_SESS_HANGUP          , MSG_FLAG_EXPORTABLE,                        "SESS_HANGUP"          , ManuvrMsg::MSG_ARGS_NONE }, // Session hangup.
-  {  MANUVR_MSG_SESS_AUTH_CHALLENGE  , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_AUTH_CHALLENGE"  , ManuvrMsg::MSG_ARGS_NONE }, // A code for challenge-response authentication.
-
   {  MANUVR_MSG_MSG_FORWARD          , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "MSG_FORWARD"          , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
 
 
@@ -108,12 +104,13 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SYS_SET_DATETIME     , MSG_FLAG_EXPORTABLE,  "SYS_SET_DATETIME"     , ManuvrMsg::MSG_ARGS_NONE }, //
   {  MANUVR_MSG_SYS_REPORT_DATETIME  , MSG_FLAG_EXPORTABLE,  "SYS_REPORT_DATETIME"  , ManuvrMsg::MSG_ARGS_NONE }, //
 
-  {  MANUVR_MSG_INTERRUPTS_MASKED    , 0x0000,               "INTERRUPTS_MASKED"    , ManuvrMsg::MSG_ARGS_NONE }, // Anything that depends on interrupts is now broken.
-
   {  MANUVR_MSG_SESS_SUBCRIBE        , MSG_FLAG_EXPORTABLE,  "SESS_SUBCRIBE"        , ManuvrMsg::MSG_ARGS_NONE }, // Used to subscribe this session to other events.
   {  MANUVR_MSG_SESS_UNSUBCRIBE      , MSG_FLAG_EXPORTABLE,  "SESS_UNSUBCRIBE"      , ManuvrMsg::MSG_ARGS_NONE }, // Used to unsubscribe this session from other events.
   {  MANUVR_MSG_SESS_ORIGINATE_MSG   , 0x0000,               "SESS_ORIGINATE_MSG"   , ManuvrMsg::MSG_ARGS_NONE }, //
   {  MANUVR_MSG_SESS_SERVICE         , 0x0000,               "SESS_SERVICE"         , ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_SESS_ESTABLISHED     , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_ESTABLISHED"     , ManuvrMsg::MSG_ARGS_NONE }, // Session established.
+  {  MANUVR_MSG_SESS_HANGUP          , MSG_FLAG_EXPORTABLE,                        "SESS_HANGUP"          , ManuvrMsg::MSG_ARGS_NONE }, // Session hangup.
+  {  MANUVR_MSG_SESS_AUTH_CHALLENGE  , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SESS_AUTH_CHALLENGE"  , ManuvrMsg::MSG_ARGS_NONE }, // A code for challenge-response authentication.
 
   {  MANUVR_MSG_XPORT_SEND,         0x0000,  "XPORT_TX"           , ManuvrMsg::MSG_ARGS_NONE }, //
   {  MANUVR_MSG_XPORT_RECEIVE,      0x0000,  "XPORT_RX"           , ManuvrMsg::MSG_ARGS_NONE }, //
@@ -134,17 +131,18 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
     {  MANUVR_MSG_CREATED_THREAD_ID,    0x0000,              "CREATED_THREAD_ID",     ManuvrMsg::MSG_ARGS_NONE },
     {  MANUVR_MSG_DESTROYED_THREAD_ID,  0x0000,              "DESTROYED_THREAD_ID",   ManuvrMsg::MSG_ARGS_NONE },
     {  MANUVR_MSG_UNBLOCK_THREAD,       0x0000,              "UNBLOCK_THREAD",        ManuvrMsg::MSG_ARGS_NONE },
-  #endif
+  #endif   // __BUILD_HAS_THREADS
 
   /*
     For messages that have arguments, we have the option of defining inline lables for each parameter.
     This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
     compile time.
   */
-  {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_SYS_ISSUE_LOG_ITEM   , MSG_FLAG_EXPORTABLE,               "SYS_ISSUE_LOG_ITEM"   , ManuvrMsg::MSG_ARGS_NONE }, // Classes emit this to get their log data saved/sent.
-  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_SYS_LOG_VERBOSITY    , MSG_FLAG_EXPORTABLE,               "SYS_LOG_VERBOSITY"    , ManuvrMsg::MSG_ARGS_NONE },   // This tells client classes to adjust their log verbosity.
+  #if defined(MANUVR_CONSOLE_SUPPORT)
+    {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_NONE }, //
+  #endif   // MANUVR_CONSOLE_SUPPORT
+
+  {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_NONE } //
 };
 
 
@@ -963,6 +961,7 @@ void Kernel::printProfiler(StringBuilder* output) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void Kernel::printScheduler(StringBuilder* output) {
+  output->concat("-- SCHEDULER\n");
   output->concatf("-- _ms_elapsed         %u\n", (unsigned long) _ms_elapsed);
   output->concatf("-- Total schedules:    %d\n-- Active schedules:   %d\n\n", schedules.size(), countActiveSchedules());
   if (lagged_schedules)    output->concatf("-- Lagged schedules:   %u\n", (unsigned long) lagged_schedules);
@@ -1077,19 +1076,6 @@ int8_t Kernel::notify(ManuvrMsg* active_runnable) {
       return_value++;
       break;
 
-    #if defined(MANUVR_CONSOLE_SUPPORT)
-      case MANUVR_MSG_USER_DEBUG_INPUT:
-        if (active_runnable->argCount()) {
-          // If the event came with a StringBuilder, concat it onto the last_user_input.
-          StringBuilder* _tmp = nullptr;
-          if (0 == active_runnable->getArgAs(&_tmp)) {
-            _route_console_input(_tmp);
-          }
-        }
-        return_value++;
-        break;
-    #endif  // MANUVR_CONSOLE_SUPPORT
-
     case MANUVR_MSG_SYS_ADVERTISE_SRVC:  // Some service is annoucing its arrival.
     case MANUVR_MSG_SYS_RETRACT_SRVC:    // Some service is annoucing its departure.
       if (0 < active_runnable->argCount()) {
@@ -1125,15 +1111,6 @@ int8_t Kernel::notify(ManuvrMsg* active_runnable) {
     case MANUVR_MSG_SYS_CONF_LOAD:
       break;
     case MANUVR_MSG_SYS_CONF_SAVE:
-      break;
-
-    case MANUVR_MSG_SYS_ISSUE_LOG_ITEM:
-      if (_logger) {
-        StringBuilder *log_item;
-        if (0 == active_runnable->getArgAs(&log_item)) {
-          _logger->toCounterparty(log_item, MEM_MGMT_RESPONSIBLE_BEARER);
-        }
-      }
       break;
 
     #if defined (__BUILD_HAS_THREADS)
@@ -1336,57 +1313,7 @@ int Kernel::serviceSchedules() {
 }
 
 
-/****************************************************************************************************
-* The code below is related to accepting and parsing user input. It is only relevant if console     *
-*   support is enabled.                                                                             *
-****************************************************************************************************/
 #if defined(MANUVR_CONSOLE_SUPPORT)
-
-/**
-* Responsible for taking any accumulated console input, doing some basic
-*   error-checking, and routing it to its intended target.
-*/
-int8_t Kernel::_route_console_input(StringBuilder* last_user_input) {
-  StringBuilder _raw_from_console;  // We do this to avoid leaks.
-  // Now we take the data from the buffer so that further input isn't lost. JIC.
-  _raw_from_console.concatHandoff(last_user_input);
-
-  _raw_from_console.split(" ");
-  if (_raw_from_console.count() > 0) {
-    const char* str = (const char *) _raw_from_console.position(0);
-    int subscriber_idx = atoi(str);
-    switch (*str) {
-      case '0':
-      case '1':
-      case '2':
-      case '3':
-      case '4':
-      case '5':
-      case '6':
-      case '7':
-      case '8':
-      case '9':
-        // If the first position is a number, we drop the first position.
-        _raw_from_console.drop_position(0);
-        break;
-    }
-
-    if (_raw_from_console.count() > 0) {
-      // If there are still positions, lookup the subscriber and send it the input.
-      EventReceiver* subscriber = subscribers.get(subscriber_idx);
-      if (nullptr != subscriber) {
-        subscriber->procDirectDebugInstruction(&_raw_from_console);
-      }
-      else if (getVerbosity() > 2) {
-        local_log.concatf("No such subscriber: %d\n", subscriber_idx);
-      }
-    }
-  }
-
-  flushLocalLog();
-  return 0;
-}
-
 
 /**
 * Console commands are space-delimited and arrive here already NULL-checked and
@@ -1496,7 +1423,6 @@ void Kernel::procDirectDebugInstruction(StringBuilder* input) {
       break;
   }
 
-  input->clear();
   flushLocalLog();
 }
 #endif  //MANUVR_CONSOLE_SUPPORT

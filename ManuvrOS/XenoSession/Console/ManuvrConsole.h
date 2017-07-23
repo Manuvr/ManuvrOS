@@ -59,7 +59,10 @@ class ManuvrConsole : public XenoSession {
     */
     StringBuilder session_buffer;
     StringBuilder _log_accumulator;
-    bool _local_echo = false;
+    bool _local_echo = false;  // Should input be echoed back to the console?
+    bool _relay_all  = false;  // Relay log from everywhere, rather than just actions we provoke.
+
+    int8_t _route_console_input(StringBuilder*);
 };
 
 

@@ -305,6 +305,18 @@ int StringBuilder::position_as_int(int pos) {
 
 
 /**
+* Convenience fxn for breaking up strings of integers using the tokenizer.
+*/
+double StringBuilder::position_as_double(int pos) {
+  const char* temp = (const char*) position(pos);
+  if (temp != nullptr) {
+    return atof(temp);
+  }
+  return 0.0;
+}
+
+
+/**
 * Return a castable pointer for the string at position <pos>.
 * Null on failure.
 */
@@ -745,8 +757,10 @@ void StringBuilder::cull(int x) {
 
 /**
 * Trims whitespace from the ends of the string and replaces it.
+* Has heap consequences.
 */
 void StringBuilder::trim() {
+  this->collapseIntoBuffer();
   // TODO: How have I not needed this yet? Add it...
   //    ---J. Ian Lindsay   Thu Dec 17 03:22:01 MST 2015
 }
@@ -869,7 +883,6 @@ int StringBuilder::cmpBinString(uint8_t*unknown, int len) {
   }
   return 1;
 }
-
 
 
 int StringBuilder::implode(const char *delim) {

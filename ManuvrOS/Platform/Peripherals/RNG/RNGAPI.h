@@ -1,7 +1,7 @@
 /*
-File:   SensorManager.h
+File:   RNGAPI.h
 Author: J. Ian Lindsay
-Date:   2016.08.13
+Date:   2017.05.20
 
 Copyright 2016 Manuvr, Inc
 
@@ -18,7 +18,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-This is an EventReceiver that is meant to ease the implementation burden of
-  sensor I/O and management. There should only ever be one of these instanced,
-  and sensors ought to be added to it.
+Interface for an RNG.
 */
+
+#include "../Peripheral.h"
+
+
+class RNGAPI : PeriphDrvr {
+  RNGAPI(const char* nom, const unsigned int pool_size) :
+    PeriphDrvr(nom, 0) {};
+
+};

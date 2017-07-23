@@ -98,6 +98,8 @@ Lifecycle:
         virtual void printDebug(StringBuilder*);
         #ifdef MANUVR_CONSOLE_SUPPORT
           virtual void procDirectDebugInstruction(StringBuilder *input);
+          //virtual void consoleInput(StringBuilder *input);
+          //void consoleHelp(StringBuilder *output);
         #endif
 
         /* Raises an event, marking us as the return callback. */
@@ -173,8 +175,6 @@ Lifecycle:
         char const* const _receiver_name;
         uint8_t     _class_state   = (DEFAULT_CLASS_VERBOSITY & MANUVR_ER_FLAG_VERBOSITY_MASK);
         uint8_t     _extnd_state   = 0;  // This is here for use by the extending class.
-
-        int8_t setVerbosity(ManuvrMsg*);  // Private because it should be set with an Event.
 
         inline void _mark_attached() {   _class_state |= MANUVR_ER_FLAG_ATTACHED;  };
     };

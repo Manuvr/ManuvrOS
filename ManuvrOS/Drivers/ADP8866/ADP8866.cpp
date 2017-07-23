@@ -183,7 +183,7 @@ int8_t ADP8866::init() {
   writeIndirect(ADP8866_ISC2, 0x05, true);
   writeIndirect(ADP8866_ISC3, 0x05, true);
   writeIndirect(ADP8866_ISC4, 0x05, true);
-  writeIndirect(ADP8866_ISC5, 0x15, true);
+  writeIndirect(ADP8866_ISC5, 0x05, true);
   writeIndirect(ADP8866_ISC6, 0x05, true);
   writeIndirect(ADP8866_ISC7, 0x05, true);
   writeIndirect(ADP8866_ISC8, 0x05, true);
@@ -343,7 +343,7 @@ int8_t ADP8866::io_op_callback(BusOp* _op) {
 */
 void ADP8866::printDebug(StringBuilder* temp) {
   EventReceiver::printDebug(temp);
-  temp->concatf("\tinit_complete:     %s\n", _er_flag(ADP8866_FLAG_INIT_COMPLETE) ? "yes" :"no");
+  temp->concatf("\tinit_complete:     %c\n", _er_flag(ADP8866_FLAG_INIT_COMPLETE) ? 'y' :'n');
   temp->concatf("\tpower_mode:        %d\n", power_mode);
   temp->concatf("\tReset pin:         %d\n", _pins.rst);
   temp->concatf("\tIRQ pin:           %d\n", _pins.irq);
@@ -521,9 +521,9 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
 
 
 
-/****************************************************************************************************
-* Functions specific to this class....                                                              *
-****************************************************************************************************/
+/*******************************************************************************
+* Functions specific to this class....                                         *
+*******************************************************************************/
 /*
 * This is a function that holds high-level macros for LED behavior that is generic.
 * Example:

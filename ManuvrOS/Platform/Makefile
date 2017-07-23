@@ -25,8 +25,9 @@ LIBS   =
 LOCAL_FLAGS  =  -std=$(CXX_STANDARD) -nostdlib
 
 # Sources
-C_SRCS     =
-CPP_SRCS   = Platform.cpp
+C_SRCS     = Peripherals/RNG/pcg_basic/pcg_basic.c
+CPP_SRCS   = Peripherals/Peripheral.cpp
+CPP_SRCS  += Platform.cpp
 
 ifeq ($(SECURE),1)
 C_SRCS   += Cryptographic/Cryptographic.cpp

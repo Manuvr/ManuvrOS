@@ -41,9 +41,17 @@ Basic machinery of Identity objects.
 * Given in orderr of preference.
 */
 const IdentFormat Identity::supported_notions[] = {
-  #if defined(__HAS_CRYPT_WRAPPER)
-    IdentFormat::CERT_FORMAT_DER,
-    IdentFormat::PK,
+  #if defined(__BUILD_HAS_DER_CERTS)
+  IdentFormat::CERT_FORMAT_DER,
+  #endif
+  #if defined(__BUILD_HAS_ASYMMETRIC)
+  IdentFormat::PK,
+  #endif
+  #if defined(__BUILD_HAS_SYMMETRIC)
+  IdentFormat::PSK_SYM,
+  #endif
+  #if defined(__BUILD_HAS_DIGEST)
+  IdentFormat::PSK_HMAC,
   #endif
   #if defined(MANUVR_OPENINTERCONNECT)
     IdentFormat::OIC_CRED,
@@ -60,10 +68,17 @@ const IdentFormat* Identity::supportedNotions() {
 
 const char* Identity::identityTypeString(IdentFormat fmt) {
   switch (fmt) {
-    #if defined(__HAS_CRYPT_WRAPPER)
+    #if defined(__BUILD_HAS_DER_CERTS)
     case IdentFormat::CERT_FORMAT_DER:  return "CERT";
+    #endif
+    #if defined(__BUILD_HAS_ASYMMETRIC)
     case IdentFormat::PK:               return "ASYM";
+    #endif
+    #if defined(__BUILD_HAS_SYMMETRIC)
     case IdentFormat::PSK_SYM:          return "PSK";
+    #endif
+    #if defined(__BUILD_HAS_DIGEST)
+    case IdentFormat::PSK_HMAC:         return "HMAC";
     #endif
     #if defined(MANUVR_OPENINTERCONNECT)
     case IdentFormat::OIC_CRED:         return "OIC_CRED";
@@ -107,15 +122,23 @@ Identity* Identity::fromBuffer(uint8_t* buf, int len) {
         case IdentFormat::SERIAL_NUM:
           // TODO: Ill-conceived? Why persist a hardware serial number???
           break;
-        #if defined(__HAS_CRYPT_WRAPPER)
+        #if defined(__BUILD_HAS_DER_CERTS)
           case IdentFormat::CERT_FORMAT_DER:
             break;
+        #endif  // __BUILD_HAS_DER_CERTS
+        #if defined(__BUILD_HAS_SYMMETRIC)
           case IdentFormat::PSK_SYM:
             break;
+        #endif  // __BUILD_HAS_SYMMETRIC
+        #if defined(__BUILD_HAS_DIGEST)
+          case IdentFormat::PSK_HMAC:
+            break;
+        #endif  // __BUILD_HAS_DIGEST
+        #if defined(__BUILD_HAS_ASYMMETRIC)
           case IdentFormat::PK:
             return_value = (Identity*) new IdentityPubKey(buf, (uint16_t) len);
             break;
-        #endif  // __HAS_CRYPT_WRAPPER
+        #endif  // __BUILD_HAS_ASYMMETRIC
 
         #if defined (MANUVR_OPENINTERCONNECT)
           case IdentFormat::OIC_CRED:

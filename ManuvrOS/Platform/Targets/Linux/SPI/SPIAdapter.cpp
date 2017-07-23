@@ -19,6 +19,14 @@ limitations under the License.
 
 
 This is a peripheral wraspper around the Linux SPI driver.
+
+On Linux, we don't deal with chip-select in the same manner as other platforms,
+  since it is not under our direct control.
+
+For instance: On a RasPi v1 with the kernel driver loaded we have...
+    /dev/spidev0.0
+    /dev/spidev0.1
+  ...for CS0 and CS1.
 */
 
 #include <Platform/Peripherals/SPI/SPIAdapter.h>
@@ -84,6 +92,9 @@ XferFault SPIBusOp::begin() {
 
   set_state(XferState::INITIATE);  // Indicate that we now have bus control.
 
+  // NOTE: The linux SPI driver abstracts chip-select pins away from us. If the
+  //  CS pin number is set to 255, this fxn call loses its hardware implications
+  //  and degrades into a state-tracking marker.
   _assert_cs(true);
 
   if (_param_len) {
