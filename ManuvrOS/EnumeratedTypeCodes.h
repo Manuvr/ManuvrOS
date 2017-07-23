@@ -143,7 +143,6 @@ enum class TCode {
       FLOAT_PTR    =  0xA6, // A pointer to a float
   // TODO: End removal marker.
 
-
   JSON               = 0x15,  // A JSON object. Export to other systems implies string conversion.
   CBOR               = 0x20,  // A CBOR object.
   IDENTITY           = 0x21,  // Identity.
@@ -186,8 +185,8 @@ typedef struct typecode_def_t {
 
 
 // TODO: These are shims and will be culled eventually. Use the enum, rather than the int.
-inline const uint8_t TcodeToInt(TCode code) {   return (const uint8_t)code; };
-inline const TCode IntToTcode(uint8_t code) {   return (const TCode)code;   };
+inline uint8_t TcodeToInt(TCode code) {   return (uint8_t) code; };
+inline TCode IntToTcode(uint8_t code) {   return (TCode) code;   };
 
 
 int sizeOfType(TCode typecode);
@@ -198,6 +197,6 @@ int getMinimumSizeByTypeString(char *str);
 bool containsVariableLengthArgument(char* mode);
 
 
-const char* const getTypeCodeString(TCode typecode);
+const char* getTypeCodeString(TCode typecode);
 
 #endif

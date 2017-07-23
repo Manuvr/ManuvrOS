@@ -138,6 +138,18 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
           }
         }
         break;
+      case TCode::SYS_PIPE_FXN_PTR:
+      case TCode::SYS_ARG_FXN_PTR:
+      case TCode::SYS_MANUVR_XPORT:
+      case TCode::SYS_FXN_PTR:
+      case TCode::SYS_THREAD_FXN_PTR:
+      case TCode::SYS_MANUVRMSG:
+      case TCode::RESERVED:
+        // Peacefully ignore the types we can't export.
+        break;
+      default:
+        // TODO: Handle pointer types, bool, vectors.
+        break;
     }
     src = src->_next;
   }
