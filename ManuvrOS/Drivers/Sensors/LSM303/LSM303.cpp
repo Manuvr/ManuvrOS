@@ -9,7 +9,7 @@
   please support Adafruit andopen-source hardware by purchasing products
   from Adafruit!
 
-  Written by Kevin Townsend for Adafruit Industries.  
+  Written by Kevin Townsend for Adafruit Industries.
   BSD license, all text above must be included in any redistribution
  ***************************************************************************/
 //#include "Arduino.h"
@@ -26,13 +26,13 @@ extern I2CAdapter i2c;
 * Accelerometer                                                                                     *
 ****************************************************************************************************/
 LSM303_Accel::LSM303_Accel() : IMU() {
-  this->defineDatum("X", SensorWrapper::COMMON_UNITS_ACCEL, FLOAT_FM);
-  this->defineDatum("Y", SensorWrapper::COMMON_UNITS_ACCEL, FLOAT_FM);
-  this->defineDatum("Z", SensorWrapper::COMMON_UNITS_ACCEL, FLOAT_FM);
+  this->defineDatum("X", SensorWrapper::COMMON_UNITS_ACCEL, TCode::FLOAT);
+  this->defineDatum("Y", SensorWrapper::COMMON_UNITS_ACCEL, TCode::FLOAT);
+  this->defineDatum("Z", SensorWrapper::COMMON_UNITS_ACCEL, TCode::FLOAT);
   this->s_id = "53c0926ddbdad6822e925c5d45bef03c";
   this->name = "LSM303 Accelerometer";
 
-  this->_lsm303Accel_MG_LSB     = 0.001F; 
+  this->_lsm303Accel_MG_LSB     = 0.001F;
 }
 
 
@@ -61,11 +61,11 @@ int8_t LSM303_Accel::readSensor() {
   _accelData.x = ((int16_t)(xlo | (xhi << 8)) >> 4) * _lsm303Accel_MG_LSB * 9.80665F;
   _accelData.y = ((int16_t)(ylo | (yhi << 8)) >> 4) * _lsm303Accel_MG_LSB * 9.80665F;
   _accelData.z = ((int16_t)(zlo | (zhi << 8)) >> 4) * _lsm303Accel_MG_LSB * 9.80665F;
-  
+
   updateDatum(0, _accelData.x);
   updateDatum(1, _accelData.y);
   updateDatum(2, _accelData.z);
-  
+
   return SensorWrapper::SENSOR_ERROR_NO_ERROR;
 }
 
@@ -98,14 +98,14 @@ int8_t LSM303_Accel::readOutstandingData(int8_t slot, Measurement &msrmnt) {
 * Magnetometer                                                                                      *
 ****************************************************************************************************/
 LSM303_Mag::LSM303_Mag() : IMU() {
-  this->defineDatum("X", SensorWrapper::COMMON_UNITS_U_TESLA, FLOAT_FM);
-  this->defineDatum("Y", SensorWrapper::COMMON_UNITS_U_TESLA, FLOAT_FM);
-  this->defineDatum("Z", SensorWrapper::COMMON_UNITS_U_TESLA, FLOAT_FM);
+  this->defineDatum("X", SensorWrapper::COMMON_UNITS_U_TESLA, TCode::FLOAT);
+  this->defineDatum("Y", SensorWrapper::COMMON_UNITS_U_TESLA, TCode::FLOAT);
+  this->defineDatum("Z", SensorWrapper::COMMON_UNITS_U_TESLA, TCode::FLOAT);
   this->s_id = "9345a88becc973cde84f3454f09d9547";
   this->name = "LSM303 Magnetometer";
-  
+
   this->_lsm303Mag_Gauss_LSB_XY = 1100.0F;
-  this->_lsm303Mag_Gauss_LSB_Z  = 980.0F; 
+  this->_lsm303Mag_Gauss_LSB_Z  = 980.0F;
 }
 
 
@@ -125,19 +125,19 @@ int8_t LSM303_Mag::readSensor() {
   memset(buf, 0x00, 10);
   i2c.readX(_ADDRESS, LSM303_REGISTER_MAG_OUT_X_H_M | 0x80, 6, buf);
 
-  // Note high before low (different than accel)  
+  // Note high before low (different than accel)
   uint8_t xhi = *(buf + 0);
   uint8_t xlo = *(buf + 1);
   uint8_t zhi = *(buf + 2);
   uint8_t zlo = *(buf + 3);
   uint8_t yhi = *(buf + 4);
   uint8_t ylo = *(buf + 5);
-  
+
   // Shift values to create properly formed integer (low byte first)
   _magData.x = (int16_t)(xlo | ((int16_t)xhi << 8));
   _magData.y = (int16_t)(ylo | ((int16_t)yhi << 8));
   _magData.z = (int16_t)(zlo | ((int16_t)zhi << 8));
-  
+
   // ToDo: Calculate orientation
   _magData.orientation = 0.0;
 
@@ -176,13 +176,13 @@ int8_t LSM303_Mag::readSensor() {
         break;
     }
   }
-  
+
   if (readingValid) {
     updateDatum(0, _magData.x);
     updateDatum(1, _magData.y);
     updateDatum(2, _magData.z);
   }
-  
+
   return SensorWrapper::SENSOR_ERROR_NO_ERROR;
 }
 
@@ -192,9 +192,9 @@ int8_t LSM303_Mag::readSensor() {
 */
 void LSM303_Mag::setMagGain(lsm303MagGain gain) {
   i2c.write8(_ADDRESS, (uint8_t) LSM303_REGISTER_MAG_CRB_REG_M, gain);
-  
+
   _magGain = gain;
- 
+
   switch(gain) {
     case LSM303_MAGGAIN_1_3:
       _lsm303Mag_Gauss_LSB_XY = 1100;
@@ -224,7 +224,7 @@ void LSM303_Mag::setMagGain(lsm303MagGain gain) {
       _lsm303Mag_Gauss_LSB_XY = 230;
       _lsm303Mag_Gauss_LSB_Z  = 205;
       break;
-  } 
+  }
 }
 
 
@@ -249,4 +249,3 @@ int8_t LSM303_Mag::setErrorRates() {
 int8_t LSM303_Mag::readOutstandingData(int8_t slot, Measurement &msrmnt) {
 	return SensorWrapper::SENSOR_ERROR_NO_ERROR;
 }
-
