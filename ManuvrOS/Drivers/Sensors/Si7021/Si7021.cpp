@@ -25,13 +25,13 @@ const DatumDef datum_defs[] = {
   {
     .desc    = "Rel Humidity",
     .units   = COMMON_UNITS_PERCENT,
-    .type_id = FLOAT_FM,
+    .type_id = TCode::FLOAT,
     .flgs    = SENSE_DATUM_FLAG_HARDWARE
   },
   {
     .desc    = "Temperature",
     .units   = COMMON_UNITS_C,
-    .type_id = FLOAT_FM,
+    .type_id = TCode::FLOAT,
     .flgs    = SENSE_DATUM_FLAG_HARDWARE
   }
 };

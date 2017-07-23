@@ -23,42 +23,15 @@ limitations under the License.
 #include "SensorWrapper.h"
 
 
-SensorDatum::SensorDatum(const DatumDef* d) {
+SensorDatum::SensorDatum(const DatumDef* d) : Argument(d->type_id) {
   def = d;
   _flags = def->flgs & SENSE_DATUM_FLAG_PRELOAD_MASK;
-  switch (def->type_id) {
-  	// TODO: Needs to handle strings and other pointer types.
-    case INT8_FM:
-    case UINT8_FM:
-    case BOOLEAN_FM:
-      data_len = sizeof(uint8_t);
-      break;
-    case INT16_FM:
-    case UINT16_FM:
-      data_len = sizeof(uint16_t);
-      break;
-    case INT32_FM:
-    case UINT32_FM:
-      data_len = sizeof(uint32_t);
-      break;
-    case INT64_FM:
-    case UINT64_FM:
-      data_len = sizeof(uint64_t);
-      break;
-    case FLOAT_FM:
-      data_len = sizeof(float);
-      break;
-    case DOUBLE_FM:
-      data_len = sizeof(double);
-      break;
-    default:
-      break;
-  }
+  setKey(d->desc);
 
-  if (data_len) {
-    data = malloc(data_len);
-    if (data) {
-      memset(data, 0x00, data_len);
+  if (len) {
+    target_mem = malloc(len);
+    if (target_mem) {
+      memset(target_mem, 0x00, len);
       _flags |= SENSE_DATUM_FLAG_MEM_ALLOC;
     }
   }
@@ -66,13 +39,7 @@ SensorDatum::SensorDatum(const DatumDef* d) {
 
 
 SensorDatum::~SensorDatum() {
-  if (next) {
-    delete next;
-  }
-  if (data) {
-    data_len = 0;
-    free(data);
-  }
+  // Memory freeing semantics are encapsulated in Argument class.
 }
 
 
@@ -91,38 +58,12 @@ void SensorDatum::autoreport(SensorReporting ar) {
 
 
 SensorError SensorDatum::printValue(StringBuilder* output) {
-  switch (def->type_id) {
-    case INT8_FM:
-    case INT16_FM:
-    case INT32_FM:
-    case INT64_FM:
-      output->concat(*((int*) data));
-      break;
-    case UINT8_FM:
-    case UINT16_FM:
-    case UINT32_FM:
-    case UINT64_FM:
-      output->concat(*((unsigned int*) data));
-      break;
-    case BOOLEAN_FM:
-      output->concat((*((bool*) data) == 0) ? "false":"true");
-      break;
-    case FLOAT_FM:
-      output->concat(*((float*) data));
-      break;
-    case DOUBLE_FM:
-      output->concat(*((double*) data));
-      break;
-    case STR_FM:
-      output->concat((char*) data);
-      break;
-    default:
-      return SensorError::UNHANDLED_TYPE;
-  }
-  if (def->units) output->concatf(" %s", def->units);
+  Argument::valToString(output);
+  if (def->units) output->concat(def->units);
   return SensorError::NO_ERROR;
 }
 
 
 void SensorDatum::printDebug(StringBuilder* output) {
+  Argument::printDebug(output);
 }

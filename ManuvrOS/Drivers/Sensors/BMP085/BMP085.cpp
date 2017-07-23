@@ -29,19 +29,19 @@ const DatumDef datum_defs[] = {
   {
     .desc    = "Barometric Pressure",
     .units   = COMMON_UNITS_PRESSURE,
-    .type_id = DOUBLE_FM,
+    .type_id = TCode::DOUBLE,
     .flgs    = SENSE_DATUM_FLAG_HARDWARE
   },
   {
     .desc    = "Temperature",
     .units   = COMMON_UNITS_C,
-    .type_id = DOUBLE_FM,
+    .type_id = TCode::DOUBLE,
     .flgs    = SENSE_DATUM_FLAG_HARDWARE
   },
   {
     .desc    = "Altitude",
     .units   = COMMON_UNITS_METERS,
-    .type_id = FLOAT_FM,
+    .type_id = TCode::FLOAT,
     .flgs    = 0   // We use our two "real" senses to derive a third.
   }
 };

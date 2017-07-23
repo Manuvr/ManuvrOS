@@ -168,8 +168,8 @@ class ManuvrMsg {
     int serialize(StringBuilder*);  // Returns the number of bytes resulting.
     uint8_t inflateArgumentsFromBuffer(uint8_t* buffer, int len);
 
-    uint8_t getArgumentType(uint8_t);  // Given a position, return the type code for the Argument.
-    inline uint8_t getArgumentType() {   return getArgumentType(0);  };
+    TCode getArgumentType(uint8_t);  // Given a position, return the type code for the Argument.
+    inline TCode getArgumentType() {   return getArgumentType(0);  };
 
     /* Members for getting definition on the message. */
     const char* getMsgTypeString();

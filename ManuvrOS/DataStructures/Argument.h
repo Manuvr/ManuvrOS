@@ -48,57 +48,57 @@ class Argument {
     void*   target_mem = nullptr;
 //float f = 10.5f; void *vp = *(uint32_t*) &f;
     Argument();
-    Argument(uint8_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT8_FM)  {};
-    Argument(uint16_t val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT16_FM) {};
-    Argument(uint32_t val) : Argument((void*)(uintptr_t) val, sizeof(val), UINT32_FM) {};
-    Argument(int8_t   val) : Argument((void*)(uintptr_t) val, sizeof(val), INT8_FM)   {};
-    Argument(int16_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), INT16_FM)  {};
-    Argument(int32_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), INT32_FM)  {};
-    Argument(float    val) : Argument((void*)(uintptr_t) val, sizeof(val), FLOAT_FM)  {};
+    Argument(uint8_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), TCode::UINT8)  {};
+    Argument(uint16_t val) : Argument((void*)(uintptr_t) val, sizeof(val), TCode::UINT16) {};
+    Argument(uint32_t val) : Argument((void*)(uintptr_t) val, sizeof(val), TCode::UINT32) {};
+    Argument(int8_t   val) : Argument((void*)(uintptr_t) val, sizeof(val), TCode::INT8)   {};
+    Argument(int16_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), TCode::INT16)  {};
+    Argument(int32_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), TCode::INT32)  {};
+    Argument(float    val) : Argument((void*)(uintptr_t) val, sizeof(val), TCode::FLOAT)  {};
 
-    Argument(uint8_t*  val) : Argument((void*) val, sizeof(val), UINT8_PTR_FM)  {};
-    Argument(uint16_t* val) : Argument((void*) val, sizeof(val), UINT16_PTR_FM) {};
-    Argument(uint32_t* val) : Argument((void*) val, sizeof(val), UINT32_PTR_FM) {};
-    Argument(int8_t*   val) : Argument((void*) val, sizeof(val), INT8_PTR_FM)   {};
-    Argument(int16_t*  val) : Argument((void*) val, sizeof(val), INT16_PTR_FM)  {};
-    Argument(int32_t*  val) : Argument((void*) val, sizeof(val), INT32_PTR_FM)  {};
-    Argument(float*    val) : Argument((void*) val, sizeof(val), FLOAT_PTR_FM)  {};
+    Argument(uint8_t*  val) : Argument((void*) val, sizeof(val), TCode::UINT8_PTR)  {};
+    Argument(uint16_t* val) : Argument((void*) val, sizeof(val), TCode::UINT16_PTR) {};
+    Argument(uint32_t* val) : Argument((void*) val, sizeof(val), TCode::UINT32_PTR) {};
+    Argument(int8_t*   val) : Argument((void*) val, sizeof(val), TCode::INT8_PTR)   {};
+    Argument(int16_t*  val) : Argument((void*) val, sizeof(val), TCode::INT16_PTR)  {};
+    Argument(int32_t*  val) : Argument((void*) val, sizeof(val), TCode::INT32_PTR)  {};
+    Argument(float*    val) : Argument((void*) val, sizeof(val), TCode::FLOAT_PTR)  {};
 
-    Argument(Vector3ui16* val) : Argument((void*) val, 6,  VECT_3_UINT16) {};
-    Argument(Vector3i16*  val) : Argument((void*) val, 6,  VECT_3_INT16)  {};
-    Argument(Vector3f*    val) : Argument((void*) val, 12, VECT_3_FLOAT)  {};
-    Argument(Vector4f*    val) : Argument((void*) val, 16, VECT_4_FLOAT)  {};
+    Argument(Vector3ui16* val) : Argument((void*) val, 6,  TCode::VECT_3_UINT16) {};
+    Argument(Vector3i16*  val) : Argument((void*) val, 6,  TCode::VECT_3_INT16)  {};
+    Argument(Vector3f*    val) : Argument((void*) val, 12, TCode::VECT_3_FLOAT)  {};
+    Argument(Vector4f*    val) : Argument((void*) val, 16, TCode::VECT_4_FLOAT)  {};
 
     /* Character pointers. */
-    Argument(const char* val) : Argument((void*) val, (strlen(val)+1), STR_FM) {};
-    Argument(char* val)       : Argument((void*) val, (strlen(val)+1), STR_FM) {};
+    Argument(const char* val) : Argument((void*) val, (strlen(val)+1), TCode::STR) {};
+    Argument(char* val)       : Argument((void*) val, (strlen(val)+1), TCode::STR) {};
 
     /*
     * We typically want references to typeless swaths of memory be left alone at the end of
     *   the Argument's life cycle. We will specify otherwise when appropriate.
     */
-    Argument(void* val, size_t len) : Argument(val, len, BINARY_FM) {};
+    Argument(void* val, size_t len) : Argument(val, len, TCode::BINARY) {};
 
     /* These are system service pointers. Do not reap. */
-    Argument(EventReceiver* val) : Argument((void*) val, sizeof(val), SYS_EVENTRECEIVER_FM) {};
-    Argument(ManuvrXport* val)   : Argument((void*) val, sizeof(val), SYS_MANUVR_XPORT_FM)  {};
-    Argument(BufferPipe* val)    : Argument((void*) val, sizeof(val), BUFFERPIPE_PTR_FM)    {};
+    Argument(EventReceiver* val) : Argument((void*) val, sizeof(val), TCode::SYS_EVENTRECEIVER) {};
+    Argument(ManuvrXport* val)   : Argument((void*) val, sizeof(val), TCode::SYS_MANUVR_XPORT)  {};
+    Argument(BufferPipe* val)    : Argument((void*) val, sizeof(val), TCode::BUFFERPIPE)    {};
 
-    Argument(FxnPointer* val)     : Argument((void*) val, sizeof(val), SYS_FXN_PTR_FM)        {};
-    Argument(ThreadFxnPtr* val)   : Argument((void*) val, sizeof(val), SYS_THREAD_FXN_PTR_FM) {};
-    Argument(ArgumentFxnPtr* val) : Argument((void*) val, sizeof(val), SYS_ARG_FXN_PTR_FM)    {};
-    Argument(PipeIOCallback* val) : Argument((void*) val, sizeof(val), SYS_PIPE_FXN_PTR_FM)   {};
+    Argument(FxnPointer* val)     : Argument((void*) val, sizeof(val), TCode::SYS_FXN_PTR)        {};
+    Argument(ThreadFxnPtr* val)   : Argument((void*) val, sizeof(val), TCode::SYS_THREAD_FXN_PTR) {};
+    Argument(ArgumentFxnPtr* val) : Argument((void*) val, sizeof(val), TCode::SYS_ARG_FXN_PTR)    {};
+    Argument(PipeIOCallback* val) : Argument((void*) val, sizeof(val), TCode::SYS_PIPE_FXN_PTR)   {};
 
     /*
     * We typically want ManuvrMsg references to be left alone at the end of
     *   the Argument's life cycle. We will specify otherwise when appropriate.
     */
-    Argument(ManuvrMsg* val) : Argument((void*) val, sizeof(val), SYS_MANUVRMSG_FM) {};
+    Argument(ManuvrMsg* val) : Argument((void*) val, sizeof(val), TCode::SYS_MANUVRMSG) {};
 
     // TODO: This default behavior changed. Audit usage by commenting addArg(StringBuilder)
-    Argument(StringBuilder* val)  : Argument(val, sizeof(val), STR_BUILDER_FM)          {};
-    Argument(Argument* val)       : Argument((void*) val, sizeof(val), ARGUMENT_PTR_FM) {};
-    Argument(Identity* val)       : Argument((void*) val, sizeof(val), IDENTITY_FM)     {};
+    Argument(StringBuilder* val)  : Argument(val, sizeof(val), TCode::STR_BUILDER)      {};
+    Argument(Argument* val)       : Argument((void*) val, sizeof(val), TCode::ARGUMENT) {};
+    Argument(Identity* val)       : Argument((void*) val, sizeof(val), TCode::IDENTITY) {};
 
 
     ~Argument();
@@ -112,8 +112,9 @@ class Argument {
     inline bool reapValue() {         return _check_flags(MANUVR_ARG_FLAG_REAP_VALUE); };
 
     inline void*    pointer() {       return target_mem; };
-    inline uint8_t  typeCode() {      return type_code;  };
     inline uint16_t length() {        return len;        };
+    inline TCode    typeCode() {      return _t_code;    };
+    inline uint8_t  typeCodeByte() {  return (uint8_t) _t_code;    };
 
     inline const char* getKey() {         return _key;  };
     inline void setKey(const char* k) {      _key = k;  };
@@ -190,14 +191,16 @@ class Argument {
     #endif
 
 
-  private:
+  protected:
     Argument*   _next      = nullptr;
     const char* _key       = nullptr;
     uint16_t    len        = 0;
     uint8_t     _flags     = 0;
-    uint8_t     type_code  = NOTYPE_FM;
+    TCode       _t_code    = TCode::NONE;
 
-    Argument(void* ptr, int len, uint8_t code);  // Protected constructor to which we delegate.
+    Argument(TCode code);    // Protected constructor to which we delegate.
+    Argument(void* ptr, int len, TCode code);   // Protected constructor to which we delegate.
+    Argument(void* ptr, int len, uint8_t code) : Argument(ptr, len, (TCode) code){};   // TODO: Shim
 
     void wipe();
 

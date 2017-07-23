@@ -23,59 +23,60 @@ limitations under the License.
 #include "EnumeratedTypeCodes.h"
 
 /**
-* Static Initializer for our type map.
+* Static Initializer for our type map. The enum is only good for the compiler.
+* This table gives us our runtime type information. If the type isn't here, we
+*   won't be able to handle it.
 */
 const TypeCodeDef type_codes[] = {
   // Reserved codes
-  {RSRVD_FM         , 0, 0},
-  {NOTYPE_FM        , 0, 0},
+  {TCode::RESERVED      , 0, 0, "RESERVED"},
+  {TCode::NONE          , 0, 0, "NONE"},
 
   // Numerics
-  {INT8_FM          , (TYPE_CODE_FLAG_EXPORTABLE), 1},
-  {UINT8_FM         , (TYPE_CODE_FLAG_EXPORTABLE), 1},
-  {INT16_FM         , (TYPE_CODE_FLAG_EXPORTABLE), 2},
-  {UINT16_FM        , (TYPE_CODE_FLAG_EXPORTABLE), 2},
-  {INT32_FM         , (TYPE_CODE_FLAG_EXPORTABLE), 4},
-  {UINT32_FM        , (TYPE_CODE_FLAG_EXPORTABLE), 4},
-  {FLOAT_FM         , (TYPE_CODE_FLAG_EXPORTABLE), 4},
-  {BOOLEAN_FM       , (TYPE_CODE_FLAG_EXPORTABLE), 1},
-  {UINT128_FM       , (TYPE_CODE_FLAG_EXPORTABLE), 16},
-  {INT128_FM        , (TYPE_CODE_FLAG_EXPORTABLE), 16},
-  {UINT64_FM        , (TYPE_CODE_FLAG_EXPORTABLE), 8},
-  {INT64_FM         , (TYPE_CODE_FLAG_EXPORTABLE), 8},
-  {DOUBLE_FM        , (TYPE_CODE_FLAG_EXPORTABLE), 8},
+  {TCode::INT8          , (TYPE_CODE_FLAG_EXPORTABLE), 1,  "INT8"},
+  {TCode::UINT8         , (TYPE_CODE_FLAG_EXPORTABLE), 1,  "UINT8"},
+  {TCode::INT16         , (TYPE_CODE_FLAG_EXPORTABLE), 2,  "INT16"},
+  {TCode::UINT16        , (TYPE_CODE_FLAG_EXPORTABLE), 2,  "UINT16"},
+  {TCode::INT32         , (TYPE_CODE_FLAG_EXPORTABLE), 4,  "INT32"},
+  {TCode::UINT32        , (TYPE_CODE_FLAG_EXPORTABLE), 4,  "UINT32"},
+  {TCode::FLOAT         , (TYPE_CODE_FLAG_EXPORTABLE), 4,  "FLOAT"},
+  {TCode::BOOLEAN       , (TYPE_CODE_FLAG_EXPORTABLE), 1,  "BOOL"},
+  {TCode::UINT128       , (TYPE_CODE_FLAG_EXPORTABLE), 16, "UINT128"},
+  {TCode::INT128        , (TYPE_CODE_FLAG_EXPORTABLE), 16, "INT128"},
+  {TCode::UINT64        , (TYPE_CODE_FLAG_EXPORTABLE), 8,  "UINT64"},
+  {TCode::INT64         , (TYPE_CODE_FLAG_EXPORTABLE), 8,  "INT64"},
+  {TCode::DOUBLE        , (TYPE_CODE_FLAG_EXPORTABLE), 8,  "DOUBLE"},
 
   // High-level numerics
-  {VECT_3_UINT16    , (TYPE_CODE_FLAG_EXPORTABLE), 6},
-  {VECT_3_INT16     , (TYPE_CODE_FLAG_EXPORTABLE), 6},
-  {VECT_3_FLOAT     , (TYPE_CODE_FLAG_EXPORTABLE), 12},
-  {VECT_4_FLOAT     , (TYPE_CODE_FLAG_EXPORTABLE), 16},
+  {TCode::VECT_3_UINT16    , (TYPE_CODE_FLAG_EXPORTABLE), 6,  "VECT_3_UINT16"},
+  {TCode::VECT_3_INT16     , (TYPE_CODE_FLAG_EXPORTABLE), 6,  "VECT_3_INT16"},
+  {TCode::VECT_3_FLOAT     , (TYPE_CODE_FLAG_EXPORTABLE), 12, "VECT_3_FLOAT"},
+  {TCode::VECT_4_FLOAT     , (TYPE_CODE_FLAG_EXPORTABLE), 16, "VECT_4_FLOAT"},
 
   // String types. Note that if VARIABLE_LENGTH is set, the TypeCodeDef.fixed_len field
   //   will be interpreted as a minimum length.
-  {URL_FM           , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH | TYPE_CODE_FLAG_IS_NULL_DELIMITED), 1},
-  {STR_FM           , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH | TYPE_CODE_FLAG_IS_NULL_DELIMITED), 1},
+  {TCode::URL           , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH | TYPE_CODE_FLAG_IS_NULL_DELIMITED), 1, "URL"},
+  {TCode::STR           , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH | TYPE_CODE_FLAG_IS_NULL_DELIMITED), 1, "STR"},
 
   // Big types.
-  {BINARY_FM        , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH), 1},
-  {AUDIO_FM         , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH), 1},
-  {IMAGE_FM         , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH), 1},
-  {RELAYED_MSG_FM   , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH), 8},
+  {TCode::BINARY        , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH), 1, "BINARY"},
+  {TCode::AUDIO         , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH), 1, "AUDIO"},
+  {TCode::IMAGE         , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH), 1, "IMAGE"},
 
   // Pointer types.
-  {UINT32_PTR_FM    , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_IS_POINTER), 4},
-  {UINT16_PTR_FM    , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_IS_POINTER), 2},
-  {UINT8_PTR_FM     , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_IS_POINTER), 1},
-  {INT32_PTR_FM     , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_IS_POINTER), 4},
-  {INT16_PTR_FM     , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_IS_POINTER), 2},
-  {INT8_PTR_FM      , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_IS_POINTER), 1},
-  {FLOAT_PTR_FM     , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_IS_POINTER), 4},
-  {JSON_FM          , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH), 1},
+  {TCode::UINT32_PTR    , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_IS_POINTER), 4, "UINT32_PTR"},
+  {TCode::UINT16_PTR    , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_IS_POINTER), 2, "UINT16_PTR"},
+  {TCode::UINT8_PTR     , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_IS_POINTER), 1, "UINT8_PTR"},
+  {TCode::INT32_PTR     , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_IS_POINTER), 4, "INT32_PTR"},
+  {TCode::INT16_PTR     , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_IS_POINTER), 2, "INT16_PTR"},
+  {TCode::INT8_PTR      , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_IS_POINTER), 1, "INT8_PTR"},
+  {TCode::FLOAT_PTR     , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_IS_POINTER), 4, "FLOAT_PTR"},
+  {TCode::JSON          , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_VARIABLE_LENGTH), 1, "JSON"},
 
-  {STR_BUILDER_FM       , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_IS_POINTER), 1},
-  {BUFFERPIPE_PTR_FM    , TYPE_CODE_FLAG_IS_POINTER, 0},
-  {SYS_EVENTRECEIVER_FM , TYPE_CODE_FLAG_IS_POINTER, 0},
-  {SYS_MANUVR_XPORT_FM  , TYPE_CODE_FLAG_IS_POINTER, 0},
+  {TCode::STR_BUILDER       , (TYPE_CODE_FLAG_EXPORTABLE | TYPE_CODE_FLAG_IS_POINTER), 1, "STR_BLDR"},
+  {TCode::BUFFERPIPE        , TYPE_CODE_FLAG_IS_POINTER, 0, "BPIPE"},
+  {TCode::SYS_EVENTRECEIVER , TYPE_CODE_FLAG_IS_POINTER, 0, "EVENTRECEIVER"},
+  {TCode::SYS_MANUVR_XPORT  , TYPE_CODE_FLAG_IS_POINTER, 0, "XPORT"},
 };
 
 
@@ -86,7 +87,7 @@ const TypeCodeDef type_codes[] = {
 * @param  uint8_t the type code being asked about.
 * @return The size of the type, or -1 on failure.
 */
-int sizeOfArg(uint8_t typecode) {
+int sizeOfType(TCode typecode) {
   int return_value = -1;
   uint8_t idx = 0;
   while (idx < (sizeof(type_codes) / sizeof(TypeCodeDef))) {  // Search for the code...
@@ -123,7 +124,7 @@ int getMinimumSizeByTypeString(char *str) {
   int return_value = 0;
   if (str != nullptr) {
     while (*(str)) {
-      return_value += sizeOfArg(*(str++));
+      return_value += sizeOfType((TCode) *(((uint8_t*)str++)));  // TODO: Horrid...
     }
   }
   return return_value;
@@ -137,7 +138,7 @@ bool containsVariableLengthArgument(char* mode) {
   int i = 0;
   while (mode[i] != 0) {
     for (unsigned int n = 0; n < sizeof(type_codes); n++) {
-      if (type_codes[n].type_code == mode[i]) {
+      if (((uint8_t)type_codes[n].type_code) == mode[i]) {
         // Does the type code match?
         if (type_codes[n].type_flags & TYPE_CODE_FLAG_VARIABLE_LENGTH) {
           // Is it variable length?
@@ -151,43 +152,28 @@ bool containsVariableLengthArgument(char* mode) {
 
 
 /**
-* Given a type code, return the string representation for debug.
+* Given a type code, return the string representation.
 *
 * @param  uint8_t the type code being asked about.
 * @return The string representation. Never NULL.
 */
-const char* getTypeCodeString(uint8_t typecode) {
-  switch (typecode) {
-    // TODO: Fill this out.
-    case NOTYPE_FM:             return "NOTYPE";
-    case RSRVD_FM:              return "RSRVD";
-    case VECT_4_FLOAT:          return "VECT_4_FLOAT";
-    case VECT_3_FLOAT:          return "VECT_3_FLOAT";
-    case VECT_3_INT16:          return "VECT_3_INT16";
-    case VECT_3_UINT16:         return "VECT_3_UINT16";
-    case STR_BUILDER_FM:        return "STR_BLDR";
-    case ARGUMENT_PTR_FM:       return "ARGUMENT";
-    case BUFFERPIPE_PTR_FM:     return "BUFFER_PIPE";
-    case SYS_MANUVR_XPORT_FM:   return "MANUVR_XPORT";
-    case SYS_EVENTRECEIVER_FM:  return "EVENTRECEIVER";
-    case INT8_FM:               return "INT8";
-    case UINT8_FM:              return "UINT8";
-    case INT16_FM:              return "INT16";
-    case UINT16_FM:             return "UINT16";
-    case INT32_FM:              return "INT32";
-    case UINT32_FM:             return "UINT32";
-    case UINT64_FM:             return "UINT64";
-    case INT64_FM:              return "INT64";
-    case UINT128_FM:            return "UINT128";
-    case INT128_FM:             return "INT128";
-    case FLOAT_FM:              return "FLOAT";
-    case DOUBLE_FM:             return "DOUBLE";
-    case BOOLEAN_FM:            return "BOOLEAN";
-    case STR_FM:                return "STR";
-    case URL_FM:                return "URL";
-    case BINARY_FM:             return "BINARY";
-    case JSON_FM:               return "JSON";
-    case CBOR_FM:               return "CBOR";
-    default:                    return "<UNSUPPORTED>";
+const char* const getTypeCodeString(TCode typecode) {
+  const uint16_t max = sizeof(type_codes) / sizeof(TypeCodeDef);
+  for (int i = 0; i > max; i++) {
+    if (typecode == type_codes[i].type_code) {
+      return type_codes[i].t_name;
+    }
   }
+  return "<UNSUPPORTED>";
+}
+
+
+bool typeIsFixedLength(TCode typecode) {
+  const uint16_t max = sizeof(type_codes) / sizeof(TypeCodeDef);
+  for (int i = 0; i > max; i++) {
+    if (typecode == type_codes[i].type_code) {
+      return !(type_codes[i].type_flags & TYPE_CODE_FLAG_VARIABLE_LENGTH);
+    }
+  }
+  return false;
 }

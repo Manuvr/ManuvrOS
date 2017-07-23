@@ -25,7 +25,7 @@ const DatumDef datum_defs[] = {
   {
     .desc    = "UVA",
     .units   = COMMON_UNITS_MW_PER_SQCM,
-    .type_id = FLOAT_FM,
+    .type_id = TCode::FLOAT,
     .flgs    = SENSE_DATUM_FLAG_HARDWARE
   }
 };

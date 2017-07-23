@@ -51,9 +51,9 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
       encoder.write_string(src->getKey());
     }
     switch(src->typeCode()) {
-      case INT8_FM:
-      case INT16_FM:
-      case INT32_FM:
+      case TCode::INT8:
+      case TCode::INT16:
+      case TCode::INT32:
         {
           int32_t x = 0;
           if (0 == src->getValueAs(&x)) {
@@ -61,7 +61,7 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
           }
         }
         break;
-      case INT64_FM:
+      case TCode::INT64:
         {
           long long x = 0;
           if (0 == src->getValueAs(&x)) {
@@ -69,9 +69,9 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
           }
         }
         break;
-      case UINT8_FM:
-      case UINT16_FM:
-      case UINT32_FM:
+      case TCode::UINT8:
+      case TCode::UINT16:
+      case TCode::UINT32:
         {
           uint32_t x = 0;
           if (0 == src->getValueAs(&x)) {
@@ -79,7 +79,7 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
           }
         }
         break;
-      case UINT64_FM:
+      case TCode::UINT64:
         {
           unsigned long long x = 0;
           if (0 == src->getValueAs(&x)) {
@@ -88,7 +88,7 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
         }
         break;
 
-      case STR_FM:
+      case TCode::STR:
         {
           char* buf;
           if (0 == src->getValueAs(&buf)) {
@@ -96,7 +96,7 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
           }
         }
         break;
-      case STR_BUILDER_FM:
+      case TCode::STR_BUILDER:
         {
           StringBuilder* buf;
           if (0 == src->getValueAs(&buf)) {
@@ -104,7 +104,7 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
           }
         }
         break;
-      case BINARY_FM:
+      case TCode::BINARY:
         {
           uint8_t* buf;
           if (0 == src->getValueAs(&buf)) {
@@ -112,27 +112,27 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
           }
         }
         break;
-      case IDENTITY_FM:
+      case TCode::IDENTITY:
         {
           Identity* ident;
           if (0 == src->getValueAs(&ident)) {
             uint16_t i_len = ident->length();
             uint8_t buf[i_len];
             if (ident->toBuffer(buf)) {
-              encoder.write_tag(IDENTITY_FM);
+              encoder.write_tag((uint8_t) src->typeCode());
               encoder.write_bytes(buf, i_len);
             }
           }
         }
         break;
-      case ARGUMENT_PTR_FM:
+      case TCode::ARGUMENT:
         {
           StringBuilder intermediary;
           Argument *subj;
           if (0 == src->getValueAs(&subj)) {
             // NOTE: Recursion.
             if (Argument::encodeToCBOR(subj, &intermediary)) {
-              encoder.write_tag(ARGUMENT_PTR_FM);
+              encoder.write_tag((uint8_t) src->typeCode());
               encoder.write_bytes(intermediary.string(), intermediary.length());
             }
           }
@@ -182,38 +182,49 @@ Argument* Argument::decodeFromJSON(StringBuilder* src) {
 *                                          |_|
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
-/*
+/**
 * Basal constructor.
 */
-Argument::Argument() {}
+Argument::Argument() {
+}
+
+/**
+* TCode-only constructor. Does no allocation, and assigns length if knowable.
+*/
+Argument::Argument(TCode code) : Argument() {
+  _t_code  = code;
+  switch (_t_code) {
+    // TODO: This does not belong here, and I know it.
+    case TCode::INT8:
+    case TCode::UINT8:
+    case TCode::INT16:
+    case TCode::UINT16:
+    case TCode::INT32:
+    case TCode::UINT32:
+    case TCode::FLOAT:
+    case TCode::BOOLEAN:
+      _alter_flags(true, MANUVR_ARG_FLAG_DIRECT_VALUE);
+      break;
+    case TCode::UINT128:
+    case TCode::INT128:
+    case TCode::UINT64:
+    case TCode::INT64:
+    case TCode::DOUBLE:
+    default:
+      break;
+  }
+  // If we can know the length with certainty, record it.
+  if (typeIsFixedLength(_t_code)) {
+    len = sizeOfType(_t_code);
+  }
+}
 
 /*
 * Protected delegate constructor.
 */
-Argument::Argument(void* ptr, int l, uint8_t code) : Argument() {
+Argument::Argument(void* ptr, int l, TCode code) : Argument(code) {
   len        = l;
-  type_code  = code;
   target_mem = ptr;
-  switch (type_code) {
-    // TODO: This does not belong here, and I know it.
-    case INT8_FM:
-    case UINT8_FM:
-    case INT16_FM:
-    case UINT16_FM:
-    case INT32_FM:
-    case UINT32_FM:
-    case FLOAT_FM:
-    case BOOLEAN_FM:
-      _alter_flags(true, MANUVR_ARG_FLAG_DIRECT_VALUE);
-      break;
-    case UINT128_FM:
-    case INT128_FM:
-    case UINT64_FM:
-    case INT64_FM:
-    case DOUBLE_FM:
-    default:
-      break;
-  }
 }
 
 
@@ -238,7 +249,7 @@ void Argument::wipe() {
     _key = nullptr;
     if (reapKey()) free(k);
 	}
-  type_code  = NOTYPE_FM;
+  _t_code    = TCode::NONE;
   len        = 0;
   _flags     = 0;
 }
@@ -340,43 +351,43 @@ int8_t Argument::getValueAs(void* trg_buf) {
   int8_t return_value = -1;
   if (nullptr != pointer()) {
     switch (typeCode()) {
-      case INT8_FM:    // This frightens the compiler. Its fears are unfounded.
-      case UINT8_FM:   // This frightens the compiler. Its fears are unfounded.
+      case TCode::INT8:    // This frightens the compiler. Its fears are unfounded.
+      case TCode::UINT8:   // This frightens the compiler. Its fears are unfounded.
         return_value = 0;
         *((uint8_t*) trg_buf) = *((uint8_t*)&target_mem);
         break;
-      case INT16_FM:    // This frightens the compiler. Its fears are unfounded.
-      case UINT16_FM:   // This frightens the compiler. Its fears are unfounded.
+      case TCode::INT16:    // This frightens the compiler. Its fears are unfounded.
+      case TCode::UINT16:   // This frightens the compiler. Its fears are unfounded.
         return_value = 0;
         *((uint16_t*) trg_buf) = *((uint16_t*)&target_mem);
         break;
-      case INT32_FM:    // This frightens the compiler. Its fears are unfounded.
-      case UINT32_FM:   // This frightens the compiler. Its fears are unfounded.
+      case TCode::INT32:    // This frightens the compiler. Its fears are unfounded.
+      case TCode::UINT32:   // This frightens the compiler. Its fears are unfounded.
         return_value = 0;
         *((uint32_t*) trg_buf) = *((uint32_t*)&target_mem);
         break;
-      case FLOAT_FM:    // This frightens the compiler. Its fears are unfounded.
+      case TCode::FLOAT:    // This frightens the compiler. Its fears are unfounded.
         return_value = 0;
         *((float*) trg_buf) = *((float*)&target_mem);
         break;
-      case UINT32_PTR_FM:  // These are *pointers* to the indicated types. They
-      case UINT16_PTR_FM:  //   therefore take the whole 4 bytes of memory allocated
-      case UINT8_PTR_FM:   //   and can be returned as such.
-      case INT32_PTR_FM:
-      case INT16_PTR_FM:
-      case INT8_PTR_FM:
+      case TCode::UINT32_PTR:  // These are *pointers* to the indicated types. They
+      case TCode::UINT16_PTR:  //   therefore take the whole 4 bytes of memory allocated
+      case TCode::UINT8_PTR:   //   and can be returned as such.
+      case TCode::INT32_PTR:
+      case TCode::INT16_PTR:
+      case TCode::INT8_PTR:
 
-      case VECT_4_FLOAT:
-      case VECT_3_FLOAT:
-      case VECT_3_UINT16:
-      case VECT_3_INT16:
+      case TCode::VECT_4_FLOAT:
+      case TCode::VECT_3_FLOAT:
+      case TCode::VECT_3_UINT16:
+      case TCode::VECT_3_INT16:
 
-      case STR_BUILDER_FM:          // This is a pointer to some StringBuilder. Presumably this is on the heap.
-      case STR_FM:                  // This is a pointer to a string constant. Presumably this is stored in flash.
-      case BUFFERPIPE_PTR_FM:       // This is a pointer to a BufferPipe/.
-      case SYS_MANUVRMSG_FM:     // This is a pointer to ManuvrMsg.
-      case SYS_EVENTRECEIVER_FM:    // This is a pointer to an EventReceiver.
-      case SYS_MANUVR_XPORT_FM:     // This is a pointer to a transport.
+      case TCode::STR_BUILDER:          // This is a pointer to some StringBuilder. Presumably this is on the heap.
+      case TCode::STR:                  // This is a pointer to a string constant. Presumably this is stored in flash.
+      case TCode::BUFFERPIPE:       // This is a pointer to a BufferPipe/.
+      case TCode::SYS_MANUVRMSG:     // This is a pointer to ManuvrMsg.
+      case TCode::SYS_EVENTRECEIVER:    // This is a pointer to an EventReceiver.
+      case TCode::SYS_MANUVR_XPORT:     // This is a pointer to a transport.
       default:
         return_value = 0;
         *((uintptr_t*) trg_buf) = *((uintptr_t*)&target_mem);
@@ -401,39 +412,39 @@ int8_t Argument::serialize(StringBuilder *out) {
   unsigned char *sp_index   = (scratchpad + 2);
   uint16_t arg_bin_len       = len;
 
-  switch (type_code) {
+  switch (_t_code) {
     /* These are hard types that we can send as-is. */
-    case INT8_FM:
-    case UINT8_FM:   // This frightens the compiler. Its fears are unfounded.
+    case TCode::INT8:
+    case TCode::UINT8:   // This frightens the compiler. Its fears are unfounded.
       arg_bin_len = 1;
       *((uint8_t*) sp_index) = *((uint8_t*)& target_mem);
       break;
-    case INT16_FM:
-    case UINT16_FM:   // This frightens the compiler. Its fears are unfounded.
+    case TCode::INT16:
+    case TCode::UINT16:   // This frightens the compiler. Its fears are unfounded.
       arg_bin_len = 2;
       *((uint16_t*) sp_index) = *((uint16_t*)& target_mem);
       break;
-    case INT32_FM:
-    case UINT32_FM:   // This frightens the compiler. Its fears are unfounded.
-    case FLOAT_FM:   // This frightens the compiler. Its fears are unfounded.
+    case TCode::INT32:
+    case TCode::UINT32:   // This frightens the compiler. Its fears are unfounded.
+    case TCode::FLOAT:   // This frightens the compiler. Its fears are unfounded.
       arg_bin_len = 4;
       *((uint32_t*) sp_index) = *((uint32_t*)& target_mem);
       break;
 
     /* These are pointer types to data that can be sent as-is. Remember: LITTLE ENDIAN */
-    case INT8_PTR_FM:
-    case UINT8_PTR_FM:
+    case TCode::INT8_PTR:
+    case TCode::UINT8_PTR:
       arg_bin_len = 1;
       *((uint8_t*) sp_index) = *((uint8_t*) target_mem);
       break;
-    case INT16_PTR_FM:
-    case UINT16_PTR_FM:
+    case TCode::INT16_PTR:
+    case TCode::UINT16_PTR:
       arg_bin_len = 2;
       *((uint16_t*) sp_index) = *((uint16_t*) target_mem);
       break;
-    case INT32_PTR_FM:
-    case UINT32_PTR_FM:
-    case FLOAT_PTR_FM:
+    case TCode::INT32_PTR:
+    case TCode::UINT32_PTR:
+    case TCode::FLOAT_PTR:
       arg_bin_len = 4;
       //*((uint32_t*) sp_index) = *((uint32_t*) target_mem);
       for (int i = 0; i < 4; i++) {
@@ -442,31 +453,31 @@ int8_t Argument::serialize(StringBuilder *out) {
       break;
 
     /* These are pointer types that require conversion. */
-    case STR_BUILDER_FM:     // This is a pointer to some StringBuilder. Presumably this is on the heap.
-    case URL_FM:             // This is a pointer to some StringBuilder. Presumably this is on the heap.
+    case TCode::STR_BUILDER:     // This is a pointer to some StringBuilder. Presumably this is on the heap.
+    case TCode::URL:             // This is a pointer to some StringBuilder. Presumably this is on the heap.
       temp_str    = ((StringBuilder*) target_mem)->string();
       arg_bin_len = ((StringBuilder*) target_mem)->length();
-    case VECT_4_FLOAT:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
-    case VECT_3_FLOAT:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
-    case VECT_3_UINT16: // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
-    case VECT_3_INT16:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
-    case BINARY_FM:
+    case TCode::VECT_4_FLOAT:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
+    case TCode::VECT_3_FLOAT:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
+    case TCode::VECT_3_UINT16: // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
+    case TCode::VECT_3_INT16:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
+    case TCode::BINARY:
       for (int i = 0; i < arg_bin_len; i++) {
         *(sp_index + i) = *(temp_str + i);
       }
       break;
 
     /* These are pointer types that will not make sense to the host. They should be dropped. */
-    case RSRVD_FM:              // Reserved code is meaningless to us. How did this happen?
-    case NOTYPE_FM:             // No type isn't valid ANYWHERE in this system. How did this happen?
-    case BUFFERPIPE_PTR_FM:     // This would not be an actual buffer. Just it's pipe.
-    case SYS_EVENTRECEIVER_FM:  // Host can't use our internal system services.
-    case SYS_MANUVR_XPORT_FM:   // Host can't use our internal system services.
+    case TCode::RESERVED:              // Reserved code is meaningless to us. How did this happen?
+    case TCode::NONE:             // No type isn't valid ANYWHERE in this system. How did this happen?
+    case TCode::BUFFERPIPE:     // This would not be an actual buffer. Just it's pipe.
+    case TCode::SYS_EVENTRECEIVER:  // Host can't use our internal system services.
+    case TCode::SYS_MANUVR_XPORT:   // Host can't use our internal system services.
     default:
       return -2;
   }
 
-  *(scratchpad + 0) = type_code;
+  *(scratchpad + 0) = (uint8_t) _t_code;
   *(scratchpad + 1) = arg_bin_len;
   out->concat(scratchpad, (arg_bin_len+2));
   return 0;
@@ -485,57 +496,57 @@ int8_t Argument::serialize(StringBuilder *out) {
 int8_t Argument::serialize_raw(StringBuilder *out) {
   if (out == nullptr) return -1;
 
-  switch (type_code) {
+  switch (_t_code) {
     /* These are hard types that we can send as-is. */
-    case INT8_FM:
-    case UINT8_FM:
+    case TCode::INT8:
+    case TCode::UINT8:
       out->concat((unsigned char*) &target_mem, 1);
       break;
-    case INT16_FM:
-    case UINT16_FM:
+    case TCode::INT16:
+    case TCode::UINT16:
       out->concat((unsigned char*) &target_mem, 2);
       break;
-    case INT32_FM:
-    case UINT32_FM:
-    case FLOAT_FM:
+    case TCode::INT32:
+    case TCode::UINT32:
+    case TCode::FLOAT:
       out->concat((unsigned char*) &target_mem, 4);
       break;
 
     /* These are pointer types to data that can be sent as-is. Remember: LITTLE ENDIAN */
-    case INT8_PTR_FM:
-    case UINT8_PTR_FM:
+    case TCode::INT8_PTR:
+    case TCode::UINT8_PTR:
       out->concat((unsigned char*) *((unsigned char**)target_mem), 1);
       break;
-    case INT16_PTR_FM:
-    case UINT16_PTR_FM:
+    case TCode::INT16_PTR:
+    case TCode::UINT16_PTR:
       out->concat((unsigned char*) *((unsigned char**)target_mem), 2);
       break;
-    case INT32_PTR_FM:
-    case UINT32_PTR_FM:
-    case FLOAT_PTR_FM:
+    case TCode::INT32_PTR:
+    case TCode::UINT32_PTR:
+    case TCode::FLOAT_PTR:
       out->concat((unsigned char*) *((unsigned char**)target_mem), 4);
       break;
 
     /* These are pointer types that require conversion. */
-    case STR_BUILDER_FM:     // This is a pointer to some StringBuilder. Presumably this is on the heap.
-    case URL_FM:             // This is a pointer to some StringBuilder. Presumably this is on the heap.
+    case TCode::STR_BUILDER:     // This is a pointer to some StringBuilder. Presumably this is on the heap.
+    case TCode::URL:             // This is a pointer to some StringBuilder. Presumably this is on the heap.
       out->concat((StringBuilder*) target_mem);
       break;
-    case STR_FM:
-    case VECT_4_FLOAT:
-    case VECT_3_FLOAT:
-    case VECT_3_UINT16:
-    case VECT_3_INT16:
-    case BINARY_FM:     // This is a pointer to a big binary blob.
+    case TCode::STR:
+    case TCode::VECT_4_FLOAT:
+    case TCode::VECT_3_FLOAT:
+    case TCode::VECT_3_UINT16:
+    case TCode::VECT_3_INT16:
+    case TCode::BINARY:     // This is a pointer to a big binary blob.
       out->concat((unsigned char*) target_mem, len);
       break;
 
     /* These are pointer types that will not make sense to the host. They should be dropped. */
-    case RSRVD_FM:              // Reserved code is meaningless to us. How did this happen?
-    case NOTYPE_FM:             // No type isn't valid ANYWHERE in this system. How did this happen?
-    case BUFFERPIPE_PTR_FM:     // This would not be an actual buffer. Just it's pipe.
-    case SYS_EVENTRECEIVER_FM:  // Host can't use our internal system services.
-    case SYS_MANUVR_XPORT_FM:   // Host can't use our internal system services.
+    case TCode::RESERVED:           // Reserved code is meaningless to us. How did this happen?
+    case TCode::NONE:               // No type isn't valid ANYWHERE in this system. How did this happen?
+    case TCode::BUFFERPIPE:         // This would not be an actual buffer. Just it's pipe.
+    case TCode::SYS_EVENTRECEIVER:  // Host can't use our internal system services.
+    case TCode::SYS_MANUVR_XPORT:   // Host can't use our internal system services.
     default:
       return -2;
   }
@@ -611,19 +622,19 @@ Argument* Argument::retrieveArgByKey(const char* k) {
 void Argument::valToString(StringBuilder* out) {
   uint8_t* buf     = (uint8_t*) pointer();
   if (_check_flags(MANUVR_ARG_FLAG_DIRECT_VALUE)) {
-    switch (type_code) {
-      case INT8_FM:
-      case UINT8_FM:
-      case INT16_FM:
-      case UINT16_FM:
-      case INT32_FM:
-      case UINT32_FM:
+    switch (_t_code) {
+      case TCode::INT8:
+      case TCode::UINT8:
+      case TCode::INT16:
+      case TCode::UINT16:
+      case TCode::INT32:
+      case TCode::UINT32:
         out->concatf("%u", (uintptr_t) pointer());
         break;
-      case FLOAT_FM:
+      case TCode::FLOAT:
         out->concatf("%f", (double)(uintptr_t) pointer());
         break;
-      case BOOLEAN_FM:
+      case TCode::BOOLEAN:
         out->concatf("%s", ((uintptr_t) pointer() ? "true" : "false"));
         break;
       default:
@@ -646,7 +657,7 @@ void Argument::valToString(StringBuilder* out) {
 void Argument::printDebug(StringBuilder* out) {
   out->concatf("\t%s\t%s\t%s",
     (nullptr == _key ? "" : _key),
-    getTypeCodeString(typeCode()),
+    getTypeCodeString((TCode) typeCode()),
     (reapValue() ? "(reap)" : "\t")
   );
   valToString(out);
