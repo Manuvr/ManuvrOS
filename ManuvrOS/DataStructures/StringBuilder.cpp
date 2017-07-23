@@ -757,8 +757,10 @@ void StringBuilder::cull(int x) {
 
 /**
 * Trims whitespace from the ends of the string and replaces it.
+* Has heap consequences.
 */
 void StringBuilder::trim() {
+  this->collapseIntoBuffer();
   // TODO: How have I not needed this yet? Add it...
   //    ---J. Ian Lindsay   Thu Dec 17 03:22:01 MST 2015
 }
@@ -881,7 +883,6 @@ int StringBuilder::cmpBinString(uint8_t*unknown, int len) {
   }
   return 1;
 }
-
 
 
 int StringBuilder::implode(const char *delim) {

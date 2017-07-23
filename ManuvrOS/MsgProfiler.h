@@ -44,4 +44,4 @@ The common message-profiling container.
       static void printDebugHeader(StringBuilder*);
   };
 
-#endif
+#endif // __MANUVR_MSG_PROFILER_H__

@@ -21,10 +21,10 @@ limitations under the License.
 Cryptographically-backed identities.
 */
 
-#include <Platform/Cryptographic.h>
+#include "../Cryptographic.h"
 
 #if defined(__HAS_CRYPT_WRAPPER)
-#include <Platform/Identity.h>
+#include "../Identity.h"
 #include <alloca.h>
 #include <stdlib.h>   // TODO: Remove dependency.
 

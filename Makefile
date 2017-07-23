@@ -147,6 +147,7 @@ LIBS += $(OUTPUT_PATH)/libmbedx509.a
 LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
 # mbedTLS will require this in order to use our chosen options.
 MANUVR_OPTIONS += -DMBEDTLS_CONFIG_FILE='<mbedTLS_conf.h>'
+MANUVR_OPTIONS += -DWITH_MBEDTLS
 export SECURE=1
 endif
 
@@ -158,7 +159,9 @@ endif
 
 # Debugging options...
 ifeq ($(DEBUG),1)
+MANUVR_OPTIONS += -DMANUVR_DEBUG
 #MANUVR_OPTIONS += -DMANUVR_PIPE_DEBUG
+
 #OPTIMIZATION    = -O0 -g
 # Options configured such that you can then...
 # valgrind --tool=callgrind ./manuvr

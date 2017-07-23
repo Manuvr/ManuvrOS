@@ -797,12 +797,14 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
     output->concat("\t No arguments.\n");
   }
 
-  output->concatf(
-    "\t Profiling:\t%s\n\t Priority:\t%u\n\t Refs:\t%u\n",
-    (profilingEnabled() ? YES_STR : NO_STR),
-    priority(),
-    refCount()
-  );
+  #ifdef MANUVR_EVENT_PROFILER
+    output->concatf(
+      "\t Profiling:\t%s\n\t Priority:\t%u\n\t Refs:\t%u\n",
+      (profilingEnabled() ? YES_STR : NO_STR),
+      priority(),
+      refCount()
+    );
+  #endif  // MANUVR_EVENT_PROFILER
 
   output->concatf("\t Originator:           %s\n", (nullptr == _origin ? NUL_STR : _origin->getReceiverName()));
 
