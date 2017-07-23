@@ -157,7 +157,7 @@ bool containsVariableLengthArgument(char* mode) {
 * @param  uint8_t the type code being asked about.
 * @return The string representation. Never NULL.
 */
-const char* const getTypeCodeString(TCode typecode) {
+const char* getTypeCodeString(TCode typecode) {
   const uint16_t max = sizeof(type_codes) / sizeof(TypeCodeDef);
   for (int i = 0; i < max; i++) {
     if (typecode == type_codes[i].type_code) {
