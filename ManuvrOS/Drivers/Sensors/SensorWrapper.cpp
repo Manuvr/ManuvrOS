@@ -43,8 +43,8 @@ limitations under the License.
     //provided_buffer->concatf("\"%s\":{\"name\":\"%s\",\"hardware\":%s,\"data\":{", sw->s_id, sw->name, ((sw->isHardware()) ? "true" : "false"));
     //SensorDatum* current = sw->datum_list;
     //while (current) {
-    //	provided_buffer->concatf("\"%d\":{\"desc\":\"%s\",\"unit\":\"%s\",\"autoreport\":\"%s\"%s", current->v_id, current->def->desc, current->def->units, current->autoreport() ? "yes" : "no", ((nullptr == current->next) ? "}" : "},"));
-    //	current = current->next;
+    //	provided_buffer->concatf("\"%d\":{\"desc\":\"%s\",\"unit\":\"%s\",\"autoreport\":\"%s\"%s", current->v_id, current->def->desc, current->def->units, current->autoreport() ? "yes" : "no", ((nullptr == current->next()) ? "}" : "},"));
+    //	current = current->next();
     //}
     //provided_buffer->concat("}}");
   }
@@ -162,7 +162,7 @@ bool SensorWrapper::isDirty() {
     if (current->dirty()) {
       return true;
     }
-    current = current->next;
+    current = current->next();
   }
   return false;
 }
@@ -192,7 +192,7 @@ bool SensorWrapper::isHardware() {
     if (current->hardware()) {
       return true;
     }
-    current = current->next;
+    current = current->next();
   }
   return false;
 }
@@ -205,7 +205,7 @@ SensorError SensorWrapper::markClean() {
   SensorDatum* current = datum_list;
   while (current) {
     current->dirty(false);
-    current = current->next;
+    current = current->next();
   }
   return SensorError::NO_ERROR;
 }
@@ -218,7 +218,7 @@ void SensorWrapper::setAutoReporting(SensorReporting nu_ar_state) {
   SensorDatum* current = datum_list;
   while (current) {
     current->autoreport(nu_ar_state);
-    current = current->next;
+    current = current->next();
   }
 }
 
@@ -268,9 +268,9 @@ SensorError SensorWrapper::readDatumRaw(uint8_t dat, void* void_buffer) {
   uint8_t* buffer = (uint8_t*) void_buffer;   // Done to avoid compiler warnings.
   SensorDatum* current = get_datum(dat);
   if (current) {
-    if ((current->data == nullptr) || (buffer == nullptr)) {
-      for (int i = 0; i < current->data_len; i++) {
-        *(uint8_t*)(buffer + i) = *((uint8_t*)current->data + i);
+    if ((current->target_mem == nullptr) || (buffer == nullptr)) {
+      for (int i = 0; i < current->length(); i++) {
+        *(uint8_t*)(buffer + i) = *((uint8_t*)current->target_mem + i);
       }
     }
     else {
@@ -292,34 +292,13 @@ SensorError SensorWrapper::readDatumRaw(uint8_t dat, void* void_buffer) {
 SensorError SensorWrapper::updateDatum(uint8_t dat, void *reading) {
   SensorDatum* current = get_datum(dat);
   if (current) {
-    if (current->data == nullptr) {
-      current->data = malloc(current->data_len);
-      if (current->data == nullptr) {
+    if (current->target_mem == nullptr) {
+      current->target_mem = malloc(current->length());
+      if (current->target_mem == nullptr) {
         return SensorError::OUT_OF_MEMORY;
       }
     }
-    switch (current->def->type_id) {
-      case INT8_FM:
-      case UINT8_FM:
-      case BOOLEAN_FM:
-      case INT16_FM:
-      case UINT16_FM:
-      case INT32_FM:
-      case UINT32_FM:
-      case FLOAT_FM:
-      case INT64_FM:
-      case UINT64_FM:
-      case DOUBLE_FM:
-        // All of these types are primatives, and so need to be accessed as such...
-        memcpy(current->data, reading, current->data_len);
-        break;
-      case STR_FM:
-      case BINARY_FM:
-        // All of these types are pointers to something else.
-      default:
-        // Not sure what to do with this type...
-        return SensorError::UNHANDLED_TYPE;
-    }
+    memcpy(current->target_mem, reading, current->length());
   }
   else {
     return SensorError::INVALID_DATUM;
@@ -350,11 +329,7 @@ SensorError SensorWrapper::define_datum(const DatumDef* def) {
 */
 void SensorWrapper::insert_datum(SensorDatum* nu) {
   if (datum_list) {
-    SensorDatum* current = datum_list;
-    while (current->next) {
-      current = current->next;
-    }
-    current->next = nu;
+    datum_list->link(nu);
   }
   else {
     datum_list = nu;
@@ -366,10 +341,8 @@ void SensorWrapper::insert_datum(SensorDatum* nu) {
 * Returns the requested datum, or NULL if the datum is not defined.
 */
 SensorDatum* SensorWrapper::get_datum(uint8_t idx) {
-  SensorDatum* current = datum_list;
-  uint8_t i = 0;
-  while ((current) && (i++ < idx)) {
-    current = current->next;
+  if (datum_list) {
+    return (SensorDatum*) datum_list->retrieveArgByIdx(idx);
   }
-  return current;
+  return nullptr;
 }

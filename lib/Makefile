@@ -82,10 +82,13 @@ VPATH = iotivity/messaging/coap/:iotivity/util/:iotivity/api/:iotivity/deps/tiny
 # Option conditionals
 ###########################################################################
 ifeq ($(SECURE),1)
-	#FLAGS_IOTIVITY += -DOC_SECURITY ${DTLSFLAGS}
-	#VPATH += ../../security/:../../deps/tinydtls/:../../deps/tinydtls/aes/:../../deps/tinydtls/sha2/:../../deps/tinydtls/ecc/:
-	#IOTIVITY_SRC += $(DTLS_SRC) $(wildcard iotivity/security/*.c)
-	#INCLUDES   += -I./iotivity/deps/tinydtls
+	ifeq ($(CONFIG_WITH_IOTIVITY),1)
+		FLAGS_IOTIVITY += -DOC_SECURITY ${DTLSFLAGS}
+		VPATH += ../../security/:../../deps/tinydtls/:../../deps/tinydtls/aes/:../../deps/tinydtls/sha2/:../../deps/tinydtls/ecc/:
+		IOTIVITY_SRC += $(DTLS_SRC) $(wildcard iotivity/security/*.c)
+		INCLUDES   += -I./iotivity/deps/tinydtls
+		SOURCES_C  += $(IOTIVITY_SRC)
+	endif
 	LIBS_TO_BUILD += mbedtls.a
 endif
 
@@ -102,7 +105,6 @@ endif
 # Parameter unification and make targets
 ###########################################################################
 SOURCES_C  += $(SOURCES_MQTT_C)
-#SOURCES_C  += $(IOTIVITY_SRC)
 
 LOCAL_C_FLAGS   += $(INCLUDES) -nostdlib $(CFLAGS) $(FLAGS_LIBMQTT) $(FLAGS_IOTIVITY)
 LOCAL_CXX_FLAGS += $(INCLUDES) $(CXXFLAGS)

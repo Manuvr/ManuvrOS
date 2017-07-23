@@ -546,7 +546,7 @@ int8_t ManuvrUDP::callback_proc(ManuvrMsg* event) {
         //   not joined to any other pipe. Clean it up.
         BufferPipe* tmp_pipe = nullptr;
         switch (event->getArgumentType(0)) {
-          case BUFFERPIPE_PTR_FM:
+          case TCode::BUFFERPIPE:
             // The pipe was NOT taken. Clean it up.
             if (0 == event->getArgAs(&tmp_pipe)) {
               // We rely on the UDPPipe to call us back to trigger a cleanup of
@@ -554,7 +554,7 @@ int8_t ManuvrUDP::callback_proc(ManuvrMsg* event) {
               delete (UDPPipe*) tmp_pipe;  // TODO: Any safer way?
             }
             break;
-          case SYS_MANUVR_XPORT_FM:
+          case TCode::SYS_MANUVR_XPORT:
             // This is a good indication that the pipe was taken.
             break;
           default:

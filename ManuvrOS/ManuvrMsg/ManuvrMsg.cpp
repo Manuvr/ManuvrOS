@@ -419,61 +419,62 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(uint8_t* buffer, int len) {
 
   Argument *nu_arg = nullptr;
   while ((nullptr != arg_mode) & (len > 0)) {
-    switch ((unsigned char) *arg_mode) {
-      case INT8_FM:
+    // TODO: This can almost collapse into the Argument class.
+    switch (IntToTcode(*(uint8_t*)arg_mode)) {
+      case TCode::INT8:
         nu_arg = new Argument((int8_t) *(buffer));
         len--;
         buffer++;
         break;
-      case UINT8_FM:
+      case TCode::UINT8:
         nu_arg = new Argument((uint8_t) *(buffer));
         len--;
         buffer++;
         break;
-      case INT16_FM:
+      case TCode::INT16:
         nu_arg = new Argument((int16_t) parseUint16Fromchars(buffer));
         len = len - 2;
         buffer += 2;
         break;
-      case UINT16_FM:
+      case TCode::UINT16:
         nu_arg = new Argument(parseUint16Fromchars(buffer));
         len = len - 2;
         buffer += 2;
         break;
-      case INT32_FM:
+      case TCode::INT32:
         nu_arg = new Argument((int32_t) parseUint32Fromchars(buffer));
         len = len - 4;
         buffer += 4;
         break;
-      case UINT32_FM:
+      case TCode::UINT32:
         nu_arg = new Argument(parseUint32Fromchars(buffer));
         len = len - 4;
         buffer += 4;
         break;
-      case FLOAT_FM:
+      case TCode::FLOAT:
         nu_arg = new Argument((float) parseUint32Fromchars(buffer));
         len = len - 4;
         buffer += 4;
         break;
-      case VECT_4_FLOAT:
+      case TCode::VECT_4_FLOAT:
         nu_arg = new Argument(new Vector4f(parseFloatFromchars(buffer + 0), parseFloatFromchars(buffer + 4), parseFloatFromchars(buffer + 8), parseFloatFromchars(buffer + 12)));
         len = len - 16;
         buffer += 16;
         nu_arg->reapValue(true);
         break;
-      case VECT_3_FLOAT:
+      case TCode::VECT_3_FLOAT:
         nu_arg = new Argument(new Vector3f(parseFloatFromchars(buffer + 0), parseFloatFromchars(buffer + 4), parseFloatFromchars(buffer + 8)));
         len = len - 12;
         buffer += 12;
         nu_arg->reapValue(true);
         break;
-      case VECT_3_UINT16:
+      case TCode::VECT_3_UINT16:
         nu_arg = new Argument(new Vector3ui16(parseUint16Fromchars(buffer + 0), parseUint16Fromchars(buffer + 2), parseUint16Fromchars(buffer + 4)));
         len = len - 6;
         buffer += 6;
         nu_arg->reapValue(true);
         break;
-      case VECT_3_INT16:
+      case TCode::VECT_3_INT16:
         nu_arg = new Argument(new Vector3i16((int16_t) parseUint16Fromchars(buffer + 0), (int16_t) parseUint16Fromchars(buffer + 2), (int16_t) parseUint16Fromchars(buffer + 4)));
         len = len - 6;
         buffer += 6;
@@ -481,7 +482,7 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(uint8_t* buffer, int len) {
         break;
 
       // Variable-length types...
-      case STR_FM:
+      case TCode::STR:
         nu_arg = new Argument(strdup((const char*) buffer));
         buffer = buffer + nu_arg->length();
         len    = len - nu_arg->length();
@@ -552,16 +553,16 @@ int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void* trg_buf) {
   int8_t return_value = -1;
   if (_args) {
     switch (_args->typeCode()) {
-      case INT8_PTR_FM:
-      case INT16_PTR_FM:
-      case INT32_PTR_FM:
-      case UINT8_PTR_FM:
-      case UINT16_PTR_FM:
-      case UINT32_PTR_FM:
-      case FLOAT_PTR_FM:
-      case STR_BUILDER_FM:
-      case STR_FM:
-      case BINARY_FM:
+      case TCode::INT8_PTR:
+      case TCode::INT16_PTR:
+      case TCode::INT32_PTR:
+      case TCode::UINT8_PTR:
+      case TCode::UINT16_PTR:
+      case TCode::UINT32_PTR:
+      case TCode::FLOAT_PTR:
+      case TCode::STR_BUILDER:
+      case TCode::STR:
+      case TCode::BINARY:
         return_value = 0;
         *((uintptr_t*) _args->target_mem) = *((uintptr_t*) trg_buf);
         break;
@@ -607,16 +608,16 @@ Argument* ManuvrMsg::takeArgs() {
 * Given idx, find the Argument and return its type.
 *
 * @param  uint8_t The Argument position
-* @return NOTYPE_FM if the Argument isn't found, and its type code if it is.
+* @return TCode::NONE if the Argument isn't found, and its type code if it is.
 */
-uint8_t ManuvrMsg::getArgumentType(uint8_t idx) {
+TCode ManuvrMsg::getArgumentType(uint8_t idx) {
   if (_args) {
     Argument* a = _args->retrieveArgByIdx(idx);
     if (a) {
       return a->typeCode();
     }
   }
-  return NOTYPE_FM;
+  return TCode::NONE;
 }
 
 

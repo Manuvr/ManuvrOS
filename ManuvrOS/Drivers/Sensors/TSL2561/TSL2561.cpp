@@ -26,13 +26,13 @@ const DatumDef datum_defs[] = {
   {
     .desc    = "Vis-IR Intensity",
     .units   = COMMON_UNITS_LUX,
-    .type_id = FLOAT_FM,
+    .type_id = TCode::FLOAT,
     .flgs    = SENSE_DATUM_FLAG_HARDWARE
   },
   {
     .desc    = "IR Intensity",
     .units   = COMMON_UNITS_MW_PER_SQCM,
-    .type_id = FLOAT_FM,
+    .type_id = TCode::FLOAT,
     .flgs    = SENSE_DATUM_FLAG_HARDWARE
   }
 };

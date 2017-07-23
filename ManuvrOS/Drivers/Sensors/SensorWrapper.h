@@ -29,6 +29,7 @@ This class is a generic interface to a sensor. That sensor might measure many th
 #include <inttypes.h>
 #include <string.h>
 #include <DataStructures/StringBuilder.h>
+#include <DataStructures/Argument.h>
 #include <DataStructures/uuid.h>
 
 #include <Platform/Platform.h>
@@ -98,10 +99,10 @@ enum class SensorError {
 
 /* This struct allows us to not replicate const data in precious memory. */
 typedef struct sense_datum_def_t {
-  const char*    desc;     // A brief description of the datum for humans.
-  const char*    units;    // Real-world units that this datum measures.
-  const uint8_t  type_id;  // The type of the data member.
-  const uint8_t  flgs;     // Flags to preload into the datum.
+  const char* const desc;     // A brief description of the datum for humans.
+  const char* const units;    // Real-world units that this datum measures.
+  const TCode       type_id;  // The type of the data member.
+  const uint8_t     flgs;     // Flags to preload into the datum.
 } DatumDef;
 
 
@@ -116,15 +117,14 @@ typedef struct sense_datum_def_t {
 *
 *   This might seem wasteful for data types whose size is <= 4 bytes, but that is the cost of abstraction.
 */
-class SensorDatum {
+class SensorDatum : public Argument {
   public:
     const DatumDef* def;                  // A brief description of the datum for humans.
-    SensorDatum*    next      = nullptr;  // Linked-list. This is the ref to the next datum, if there is one.
-    void*           data      = nullptr;  // The actual data returned from the sensor.
-    int32_t         data_len  = 0;        // The length of the data member.
 
     SensorDatum(const DatumDef*);
     ~SensorDatum();
+
+    inline SensorDatum* next() {   return (SensorDatum*) _next;  };
 
     void autoreport(SensorReporting);
 

@@ -31,13 +31,13 @@ const DatumDef datum_defs[] = {
   {
     .desc    = "Object Temperature",
     .units   = COMMON_UNITS_C,
-    .type_id = FLOAT_FM,
+    .type_id = TCode::FLOAT,
     .flgs    = SENSE_DATUM_FLAG_HARDWARE
   },
   {
     .desc    = "Die Temperature",
     .units   = COMMON_UNITS_C,
-    .type_id = FLOAT_FM,
+    .type_id = TCode::FLOAT,
     .flgs    = SENSE_DATUM_FLAG_HARDWARE
   }
 };

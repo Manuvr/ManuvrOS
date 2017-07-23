@@ -26,19 +26,19 @@ const DatumDef datum_defs[] = {
   {
     .desc    = "Barometric pressure",
     .units   = COMMON_UNITS_PRESSURE,
-    .type_id = FLOAT_FM,
+    .type_id = TCode::FLOAT,
     .flgs    = SENSE_DATUM_FLAG_HARDWARE
   },
   {
     .desc    = "Air temperature",
     .units   = COMMON_UNITS_C,
-    .type_id = FLOAT_FM,
+    .type_id = TCode::FLOAT,
     .flgs    = SENSE_DATUM_FLAG_HARDWARE
   },
   {
     .desc    = "Inferred altitude",
     .units   = COMMON_UNITS_METERS,
-    .type_id = FLOAT_FM,
+    .type_id = TCode::FLOAT,
     .flgs    = 0x00
   }
 };

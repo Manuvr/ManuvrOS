@@ -32,9 +32,9 @@ L3GD20::L3GD20() {
   _autoRangeEnabled = false;
   this->s_id = "6b4810506da5d590f5a5bf61ee7e2273";
   this->name = "L3GD20 Gyro";
-  this->defineDatum("X", SensorWrapper::COMMON_UNITS_DEG_SEC, FLOAT_FM);
-  this->defineDatum("Y", SensorWrapper::COMMON_UNITS_DEG_SEC, FLOAT_FM);
-  this->defineDatum("Z", SensorWrapper::COMMON_UNITS_DEG_SEC, FLOAT_FM);
+  this->defineDatum("X", SensorWrapper::COMMON_UNITS_DEG_SEC, TCode::FLOAT);
+  this->defineDatum("Y", SensorWrapper::COMMON_UNITS_DEG_SEC, TCode::FLOAT);
+  this->defineDatum("Z", SensorWrapper::COMMON_UNITS_DEG_SEC, TCode::FLOAT);
 }
 
 /***************************************************************************
@@ -173,7 +173,7 @@ void L3GD20::enableAutoRange(bool enabled) {
 
 int8_t L3GD20::readSensor() {
   bool readingValid = false;
-  
+
   while (!readingValid) {
     /* Read 6 bytes from the sensor */
     uint8_t *buf = (uint8_t *) alloca(10);
@@ -185,12 +185,12 @@ int8_t L3GD20::readSensor() {
     uint8_t yhi = *(buf + 3);
     uint8_t zlo = *(buf + 4);
     uint8_t zhi = *(buf + 5);
-  
+
     /* Shift values to create properly formed integer (low byte first) */
     gyro_x = (int16_t)(xlo | (xhi << 8));
     gyro_y = (int16_t)(ylo | (yhi << 8));
     gyro_z = (int16_t)(zlo | (zhi << 8));
-    
+
     /* Make sure the sensor isn't saturating if auto-ranging is enabled */
     if (!_autoRangeEnabled) {
       readingValid = true;
@@ -232,7 +232,7 @@ int8_t L3GD20::readSensor() {
       }
     }
   }
-  
+
   /* Compensate values depending on the resolution */
   switch(_range) {
     case GYRO_RANGE_250DPS:
@@ -251,7 +251,7 @@ int8_t L3GD20::readSensor() {
       gyro_z *= GYRO_SENSITIVITY_2000DPS;
       break;
   }
-  
+
   /* Convert values to rad/s */
   //gyro_x *= SENSORS_DPS_TO_RADS;
   //gyro_y *= SENSORS_DPS_TO_RADS;
@@ -270,10 +270,10 @@ int8_t L3GD20::readSensor() {
 /**************************************************************************/
 /*void L3GD20::getSensor(sensor_t* sensor)
 {
-  // Clear the sensor_t object 
+  // Clear the sensor_t object
   memset(sensor, 0, sizeof(sensor_t));
 
-  // Insert the sensor name in the fixed length char array 
+  // Insert the sensor name in the fixed length char array
   strncpy (sensor->name, "L3GD20", sizeof(sensor->name) - 1);
   sensor->name[sizeof(sensor->name)- 1] = 0;
   sensor->version = 1;

@@ -32,7 +32,7 @@ const DatumDef datum_defs[] = {
   {
     .desc    = "Light level",
     .units   = COMMON_UNITS_LUX,
-    .type_id = FLOAT_FM,
+    .type_id = TCode::FLOAT,
     .flgs    = SENSE_DATUM_FLAG_HARDWARE
   }
 };

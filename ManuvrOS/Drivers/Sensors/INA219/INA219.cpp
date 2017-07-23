@@ -27,19 +27,19 @@ const DatumDef datum_defs[] = {
   {
     .desc    = "Instantaneous Current",
     .units   = COMMON_UNITS_AMPS,
-    .type_id = FLOAT_FM,
+    .type_id = TCode::FLOAT,
     .flgs    = SENSE_DATUM_FLAG_HARDWARE
   },
   {
     .desc    = "Instantaneous Voltage",
     .units   = COMMON_UNITS_VOLTS,
-    .type_id = FLOAT_FM,
+    .type_id = TCode::FLOAT,
     .flgs    = SENSE_DATUM_FLAG_HARDWARE
   },
   {
     .desc    = "Instantaneous Power",
     .units   = COMMON_UNITS_WATTS,
-    .type_id = FLOAT_FM,
+    .type_id = TCode::FLOAT,
     .flgs    = 0x00
   }
 };
