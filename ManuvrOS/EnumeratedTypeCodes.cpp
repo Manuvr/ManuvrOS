@@ -159,7 +159,7 @@ bool containsVariableLengthArgument(char* mode) {
 */
 const char* const getTypeCodeString(TCode typecode) {
   const uint16_t max = sizeof(type_codes) / sizeof(TypeCodeDef);
-  for (int i = 0; i > max; i++) {
+  for (int i = 0; i < max; i++) {
     if (typecode == type_codes[i].type_code) {
       return type_codes[i].t_name;
     }
@@ -170,7 +170,7 @@ const char* const getTypeCodeString(TCode typecode) {
 
 bool typeIsFixedLength(TCode typecode) {
   const uint16_t max = sizeof(type_codes) / sizeof(TypeCodeDef);
-  for (int i = 0; i > max; i++) {
+  for (int i = 0; i < max; i++) {
     if (typecode == type_codes[i].type_code) {
       return !(type_codes[i].type_flags & TYPE_CODE_FLAG_VARIABLE_LENGTH);
     }
