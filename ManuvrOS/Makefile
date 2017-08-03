@@ -136,6 +136,9 @@ CPP_SRCS  += Drivers/ManuvrableGPIO/ManuvrableGPIO.cpp
 CPP_SRCS  += Drivers/PMIC/BQ24155/BQ24155.cpp
 CPP_SRCS  += Drivers/PMIC/LTC294x/LTC294x.cpp
 
+# If requested, a benchmark and testing driver.
+CPP_SRCS  += Drivers/TestDriver/TestDriver.cpp
+
 CPP_SRCS  += Platform/Identity.cpp
 CPP_SRCS  += Platform/Identity/IdentityUUID.cpp
 CPP_SRCS  += Platform/Identity/IdentityCrypto.cpp

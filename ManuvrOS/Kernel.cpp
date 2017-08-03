@@ -1083,9 +1083,11 @@ int8_t Kernel::notify(ManuvrMsg* active_runnable) {
         if (0 == active_runnable->getArgAs(&er_ptr)) {
           if (MANUVR_MSG_SYS_ADVERTISE_SRVC == active_runnable->eventCode()) {
             subscribe((EventReceiver*) er_ptr);
+            return_value++;
           }
           else {
             unsubscribe((EventReceiver*) er_ptr);
+            return_value++;
           }
         }
       }

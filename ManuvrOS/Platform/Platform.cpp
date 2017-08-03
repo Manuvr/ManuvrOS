@@ -250,7 +250,7 @@ void ManuvrPlatform::printCryptoOverview(StringBuilder* out) {
   #if defined(__HAS_CRYPT_WRAPPER)
     out->concatf("-- Cryptographic support via %s.\n", __CRYPTO_BACKEND);
     int idx = 0;
-    #if defined(WITH_MBEDTLS) & defined(MBEDTLS_SSL_TLS_C)
+    #if defined(WITH_MBEDTLS) && defined(MBEDTLS_SSL_TLS_C)
       out->concat("-- Supported TLS ciphersuites:");
       const int* cs_list = mbedtls_ssl_list_ciphersuites();
       while (0 != *(cs_list)) {

@@ -665,7 +665,7 @@ int ATECC508::otp_write(uint8_t* buf, uint16_t len) {
   I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
   if (nu) {
     nu->dev_addr = _dev_addr;
-    nu->sub_addr = (int16_t) oc;
+    //nu->sub_addr = (int16_t) oc;
     nu->buf      = buf;
     nu->buf_len  = len;
     return _bus->queue_io_job(nu);
@@ -724,7 +724,7 @@ int ATECC508::config_write(uint8_t* buf, uint16_t len) {
   I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
   if (nu) {
     nu->dev_addr = _dev_addr;
-    nu->sub_addr = (int16_t) oc;
+    //nu->sub_addr = (int16_t) oc;
     nu->buf      = buf;
     nu->buf_len  = len;
     return _bus->queue_io_job(nu);
