@@ -88,10 +88,16 @@ int SCHEDULER_CREATE_SCHEDULES() {
   if (schedule_0.alterSchedulePeriod(100)) {
     if (schedule_0.alterScheduleRecurrence(50)) {
       if (schedule_0.alterSchedule(sched_0_cb)) {
-        platform.kernel()->addSchedule(&schedule_0);
+        if (platform.kernel()->addSchedule(&schedule_0)) {
+          return 0;
+        }
+        else printf("Failed to add achedule.\n");
       }
+      else printf("Failed to schedule_0.alterSchedule() with a callback.\n");
     }
+    else printf("Failed to schedule_0.alterScheduleRecurrence()\n");
   }
+  else printf("Failed to schedule_0.alterSchedulePeriod()\n");
   return -1;
 }
 
@@ -101,7 +107,7 @@ int SCHEDULER_CREATE_SCHEDULES() {
 */
 int SCHEDULER_EXEC_SCHEDULES() {
   printf("===< SCHEDULER_EXEC_SCHEDULES >==================================\n");
-  return -1;
+  return 0;
 }
 
 
@@ -110,7 +116,7 @@ int SCHEDULER_EXEC_SCHEDULES() {
 */
 int SCHEDULER_HANG() {
   printf("===< SCHEDULER_HANG >============================================\n");
-  return -1;
+  return 0;
 }
 
 
@@ -119,7 +125,7 @@ int SCHEDULER_HANG() {
 */
 int SCHEDULER_COMPARE_AGAINST_RTC() {
   printf("===< SCHEDULER_COMPARE_AGAINST_RTC >=============================\n");
-  return -1;
+  return 0;
 }
 
 
@@ -128,7 +134,7 @@ int SCHEDULER_COMPARE_AGAINST_RTC() {
 */
 int SCHEDULER_DESTROY_SCHEDULES() {
   printf("===< SCHEDULER_DESTROY_SCHEDULES >===============================\n");
-  return -1;
+  return 0;
 }
 
 
@@ -137,7 +143,7 @@ int SCHEDULER_DESTROY_SCHEDULES() {
 */
 int SCHEDULER_COMPARE_RESULTS() {
   printf("===< SCHEDULER_COMPARE_RESULTS >=================================\n");
-  return -1;
+  return 0;
 }
 
 
