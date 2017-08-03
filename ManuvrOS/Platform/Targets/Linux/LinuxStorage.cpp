@@ -24,8 +24,9 @@ Implemented as a JSON object within a single file. This feature therefore
   other encoding, be run through a cryptographic pipe, etc.
 */
 
-#if defined(__MANUVR_LINUX) & defined(MANUVR_STORAGE)
 #include "LinuxStorage.h"
+
+#if defined(__MANUVR_LINUX) && defined(MANUVR_STORAGE)
 #include <Platform/Platform.h>
 #include <unistd.h>
 #include <fcntl.h>

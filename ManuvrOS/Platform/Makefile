@@ -29,12 +29,10 @@ C_SRCS     = Peripherals/RNG/pcg_basic/pcg_basic.c
 CPP_SRCS   = Peripherals/Peripheral.cpp
 CPP_SRCS  += Platform.cpp
 
-ifeq ($(SECURE),1)
 C_SRCS   += Cryptographic/Cryptographic.cpp
 C_SRCS   += Cryptographic/MbedTLS.cpp
 C_SRCS   += Cryptographic/OpenSSL.cpp
 C_SRCS   += Cryptographic/Blind.cpp
-endif
 
 # This Makefile heeds two separate exports:
 ifeq ($(MANUVR_PLATFORM),LINUX)

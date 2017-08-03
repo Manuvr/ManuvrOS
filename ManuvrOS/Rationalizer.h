@@ -93,7 +93,7 @@
 * Threading models...
 * Threading choice exists independently of platform.
 */
-#if defined(__MANUVR_LINUX) | defined(__MANUVR_APPLE)
+#if defined(__MANUVR_LINUX) || defined(__MANUVR_APPLE)
   //#pragma message "Building with pthread support."
   #define __BUILD_HAS_THREADS
   #define __BUILD_HAS_PTHREADS
