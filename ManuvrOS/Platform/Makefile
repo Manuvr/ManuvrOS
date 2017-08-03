@@ -29,10 +29,10 @@ C_SRCS     = Peripherals/RNG/pcg_basic/pcg_basic.c
 CPP_SRCS   = Peripherals/Peripheral.cpp
 CPP_SRCS  += Platform.cpp
 
-C_SRCS   += Cryptographic/Cryptographic.cpp
-C_SRCS   += Cryptographic/MbedTLS.cpp
-C_SRCS   += Cryptographic/OpenSSL.cpp
-C_SRCS   += Cryptographic/Blind.cpp
+CPP_SRCS   += Cryptographic/Cryptographic.cpp
+CPP_SRCS   += Cryptographic/MbedTLS.cpp
+CPP_SRCS   += Cryptographic/OpenSSL.cpp
+CPP_SRCS   += Cryptographic/Blind.cpp
 
 # This Makefile heeds two separate exports:
 ifeq ($(MANUVR_PLATFORM),LINUX)
@@ -81,6 +81,8 @@ CPP_SRCS   += Targets/STM32F4/I2C/I2CAdapter.cpp
 endif
 
 
+COV_FILES = $(CPP_SRCS:.cpp=.gcda) $(CPP_SRCS:.cpp=.gcno) $(C_SRCS:.c=.gcno) $(C_SRCS:.c=.gcno)
+
 all:
 	@echo ''
 	@echo ''
@@ -93,4 +95,4 @@ all:
 
 
 clean:
-	rm -f Platform.o
+	rm -f Platform.o $(COV_FILES) *.gcno *.gcda

@@ -4,6 +4,9 @@
 *.a
 *.cbor
 *.map
+*.gcda
+*.gcno
+coverage.info
 
 # Example binaries
 manuvr
@@ -12,6 +15,7 @@ barebones
 
 # Generated doc
 doc/doxygen/
+doc/coverage/
 
 tests/TestDataStructures
 tests/IdentityTest

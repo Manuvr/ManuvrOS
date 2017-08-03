@@ -28,10 +28,11 @@ export CXX     = $(shell which g++)
 export AR      = $(shell which ar)
 export SZ      = $(shell which size)
 export MAKE    = $(shell which make)
+export GCOV    = $(shell which gcov)
 
 # This is where we will store compiled libs and the final output.
-export BUILD_ROOT  = $(shell pwd)
-export OUTPUT_PATH = $(BUILD_ROOT)/build/
+export BUILD_ROOT    = $(shell pwd)
+export OUTPUT_PATH   = $(BUILD_ROOT)/build/
 
 
 ###########################################################################
@@ -161,8 +162,8 @@ endif
 ifeq ($(DEBUG),1)
 MANUVR_OPTIONS += -DMANUVR_DEBUG
 #MANUVR_OPTIONS += -DMANUVR_PIPE_DEBUG
-
-#OPTIMIZATION    = -O0 -g
+CFLAGS         += -fprofile-arcs -ftest-coverage
+OPTIMIZATION    = -O0 -g
 # Options configured such that you can then...
 # valgrind --tool=callgrind ./manuvr
 # gprof2dot --format=callgrind --output=out.dot callgrind.out.16562
@@ -194,6 +195,12 @@ all: tests
 tests: libs
 	$(MAKE) -C tests/
 
+coverage: tests
+	$(MAKE) coverage -C ManuvrOS/
+	$(GCOV) --demangled-names --preserve-paths --source-prefix $(BUILD_ROOT) $(CPP_SRCS)
+	lcov --capture --directory . --output-file coverage.info
+	genhtml coverage.info --output-directory doc/coverage
+
 menuconfig:
 	@echo '======================================================'
 
@@ -211,10 +218,11 @@ libs: builddir
 clean:
 	$(MAKE) clean -C ManuvrOS/
 	$(MAKE) clean -C tests/
-	rm -f *.o *.su *~ testbench $(FIRMWARE_NAME)
+	rm -f *.o *.su *.gcno *.gcda *~ testbench $(FIRMWARE_NAME)
 
 fullclean: clean
 	rm -rf $(OUTPUT_PATH)
+	rm -rf
 	export SECURE=1
 	$(MAKE) clean -C lib/
 	$(MAKE) clean -C tests/
