@@ -37,6 +37,9 @@ COV_FILES = $(SOURCES_CPP:.cpp=.gcda) $(SOURCES_CPP:.cpp=.gcno)
 
 all: $(TESTS)
 	@echo 'Built tests:  $(TESTS)'
+	@echo 'Beginning test execution...'
+	@$(foreach test,$(TESTS),./$(test);)
+
 
 % : %.cpp
 	$(CXX) -static -o $@ $< $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS)
