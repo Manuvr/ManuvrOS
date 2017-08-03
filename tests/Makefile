@@ -27,6 +27,7 @@ ifeq ($(SECURE),1)
 endif
 
 TESTS  = $(SOURCES_CPP:.cpp=)
+COV_FILES = $(SOURCES_CPP:.cpp=.gcda) $(SOURCES_CPP:.cpp=.gcno)
 
 ###########################################################################
 # Parameter unification and make targets
@@ -41,4 +42,4 @@ all: $(TESTS)
 	$(CXX) -static -o $@ $< $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS)
 
 clean:
-	rm -f $(TESTS) CryptoTest
+	rm -f $(TESTS) CryptoTest $(COV_FILES)

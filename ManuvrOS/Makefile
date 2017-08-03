@@ -149,6 +149,8 @@ CPP_SRCS  += Platform/Storage.cpp
 OBJS  = $(CPP_SRCS:.cpp=.o)
 LIBNAME = libmanuvr.a
 
+COV_FILES = $(CPP_SRCS:.cpp=.gcda) $(CPP_SRCS:.cpp=.gcno)
+
 
 all: $(LIBNAME)
 
@@ -161,8 +163,12 @@ $(LIBNAME): setenvars $(OBJS)
 
 clean:
 	$(MAKE) clean -C Platform/
-	rm -f $(OBJS)
+	rm -f $(OBJS) $(COV_FILES)
 	rm -f $(OUTPUT_PATH)/$(LIBNAME)
+
+
+coverage:
+	$(GCOV) --demangled-names --preserve-paths --source-prefix $(BUILD_ROOT) $(CPP_SRCS)
 
 
 setenvars:

@@ -59,10 +59,18 @@ class TestDriver : public EventReceiver {
 
 
   private:
-    int CRYPTO_TEST_HASHES();
-    int CRYPTO_TEST_SYMMETRIC();
-    int CRYPTO_TEST_ASYMMETRIC_SET(Cipher, CryptoKey*);
-    int CRYPTO_TEST_ASYMMETRIC();
+    #if defined(__BUILD_HAS_DIGEST)
+      int CRYPTO_TEST_HASHES();
+    #endif
+
+    #if defined(__BUILD_HAS_SYMMETRIC)
+      int CRYPTO_TEST_SYMMETRIC();
+    #endif
+
+    #if defined(__BUILD_HAS_ASYMMETRIC)
+      int CRYPTO_TEST_ASYMMETRIC_SET(Cipher, CryptoKey*);
+      int CRYPTO_TEST_ASYMMETRIC();
+    #endif
 };
 
 
