@@ -188,7 +188,7 @@ export JSON=1
 
 .PHONY: all
 
-all: tests
+all: libs
 	$(CXX) -Wl,--gc-sections -static -o $(FIRMWARE_NAME) $(CPP_SRCS) $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 	$(SZ) $(FIRMWARE_NAME)
 
@@ -205,8 +205,8 @@ menuconfig:
 	@echo '======================================================'
 
 examples: libs
-	$(CXX) -static -o barebones examples/00-template/main.cpp $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
-	$(CXX) -static -o atecc-tool examples/05-atecc508/main.cpp $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(CXX) -Wl,--gc-sections -static -o barebones examples/00-template/main.cpp $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
+	$(CXX) -Wl,--gc-sections -static -o atecc-tool examples/05-atecc508/main.cpp $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS) -D_GNU_SOURCE
 
 builddir:
 	mkdir -p $(OUTPUT_PATH)
@@ -218,7 +218,7 @@ libs: builddir
 clean:
 	$(MAKE) clean -C ManuvrOS/
 	$(MAKE) clean -C tests/
-	rm -f *.o *.su *.gcno *.gcda *~ testbench $(FIRMWARE_NAME)
+	rm -f *.o *.su *.gcno *.gcda *~ $(FIRMWARE_NAME)
 
 fullclean: clean
 	rm -rf $(OUTPUT_PATH)
