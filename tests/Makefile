@@ -45,4 +45,4 @@ all: $(TESTS)
 	$(CXX) -static -o $@ $< $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS)
 
 clean:
-	rm -f $(TESTS) CryptoTest $(COV_FILES)
+	rm -f $(TESTS) CryptoTest $(COV_FILES) *.gcno *.gcda
