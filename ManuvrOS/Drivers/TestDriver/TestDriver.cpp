@@ -37,6 +37,7 @@ limitations under the License.
 *******************************************************************************/
 
 const MessageTypeDef message_defs[] = {
+  {  MANUVR_MSG_BNCHMRK_ALL,      0x0000,  "ALL_TESTS",        ManuvrMsg::MSG_ARGS_NONE },
   #if defined(__BUILD_HAS_ASYMMETRIC)
     {  MANUVR_MSG_BNCHMRK_ACRYPT, 0x0000,  "BNCHMRK_A_CRYPT",  ManuvrMsg::MSG_ARGS_NONE },
   #endif
@@ -55,6 +56,71 @@ const MessageTypeDef message_defs[] = {
 
 static char* err_buf[128] = {0};
 
+
+void TestDriver::RUN_ALL_TESTS() {
+  Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_RNG, nullptr);
+  Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_FLOAT, nullptr);
+  #if defined(__BUILD_HAS_ASYMMETRIC)
+  Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_ACRYPT, nullptr);
+  #endif
+  #if defined(__BUILD_HAS_SYMMETRIC)
+  Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_SCRYPT, nullptr);
+  #endif
+  #if defined (__BUILD_HAS_DIGEST)
+  Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_HASH, nullptr);
+  #endif
+  KERNEL_TEST_MSG(this);
+}
+
+
+int TestDriver::KERNEL_TEST_MSG(EventReceiver* target) {
+  _msg_t0 = millis();
+  _msg_passes = 0;
+  ManuvrMsg* msg = Kernel::returnEvent(MANUVR_MSG_BNCHMRK_MSG_LOAD, this);
+  msg->setTarget(target);
+  msg->priority(100);
+  raiseEvent(msg);
+  return 0;
+}
+
+
+int TestDriver::PF_TEST_FLOAT() {
+  float a = 1.001;
+  unsigned long t0 = millis();
+  for (int i = 0;i < 1000000;i++) {
+    a += 0.01 * sqrtf(a);
+  }
+  unsigned long t1 = millis();
+  local_log.concatf("Floating-point test: %d ms\n \t Value: %.5f\n \t%d Mflops\n", t1 - t0, (double) a, (3000000000/(t1 - t0)));
+  return 0;
+}
+
+
+int TestDriver::PF_TEST_RNG() {
+  // Empty the entropy pool.
+  local_log.concat("Draining entropy pool...  ");
+  for (int i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) {
+    local_log.concatf("%08x ", randomInt());
+  }
+  local_log.concat("\n");
+  unsigned long t0   = millis();
+  unsigned long t1   = t0;
+  unsigned int count = 0;
+  while (t0 + 1000 >= t1) {
+    // Threaded or not, this should test the maximum randomness rate
+    // available to the program.
+    randomInt();   // This ought to block when the pool is drained.
+    count++;
+    t1 = millis();
+  }
+  local_log.concatf(
+    "RNG test:   %u calls in %d ms (%.3f Mbits/sec)\n",
+    count,
+    t1 - t0,
+    ((count*32)/(double) 1000000) * (t1 / (double) t0)
+  );
+  return 0;
+}
 
 
 #if defined(__BUILD_HAS_DIGEST)
@@ -367,6 +433,12 @@ TestDriver::TestDriver() : EventReceiver("TestDriver") {
   ManuvrMsg::registerMessages(message_defs, sizeof(message_defs) / sizeof(MessageTypeDef));
 }
 
+TestDriver::TestDriver(Argument* root_config) : TestDriver() {
+  #if defined(MANUVR_DEBUG)
+  _autorun_tests(nullptr != root_config->retrieveArgByKey("run-tests"));
+  #endif
+}
+
 
 TestDriver::~TestDriver() {
 }
@@ -393,6 +465,17 @@ TestDriver::~TestDriver() {
 */
 int8_t TestDriver::attached() {
   if (EventReceiver::attached()) {
+    if (_autorun_tests()) {
+      ManuvrMsg* msg = Kernel::returnEvent(MANUVR_MSG_BNCHMRK_ALL);
+      msg->setTarget(this);
+      msg->priority(1);
+      msg->alterSchedulePeriod(1600);
+      msg->autoClear(true);
+      msg->enableSchedule(true);
+      msg->alterScheduleRecurrence(0);
+
+      platform.kernel()->addSchedule(msg);
+    }
     return 1;
   }
   return 0;
@@ -420,6 +503,7 @@ void TestDriver::printDebug(StringBuilder* output) {
   #if defined(__BUILD_HAS_DIGEST)
     output->concat("\tc3)     Digests\n");
   #endif
+  output->concat("\ta)      All tests\n");
 }
 
 
@@ -476,43 +560,16 @@ int8_t TestDriver::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
 
   switch (active_event->eventCode()) {
+    case MANUVR_MSG_BNCHMRK_ALL:
+      RUN_ALL_TESTS();
+      return_value++;
+      break;
     case MANUVR_MSG_BNCHMRK_RNG:
-      {
-        // Empty the entropy pool.
-        local_log.concat("Draining entropy pool...  ");
-        for (int i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) {
-          local_log.concatf("%08x ", randomInt());
-        }
-        local_log.concat("\n");
-        unsigned long t0   = millis();
-        unsigned long t1   = t0;
-        unsigned int count = 0;
-        while (t0 + 1000 >= t1) {
-          // Threaded or not, this should test the maximum randomness rate
-          // available to the program.
-          randomInt();   // This ought to block when the pool is drained.
-          count++;
-          t1 = millis();
-        }
-        local_log.concatf(
-          "RNG test:   %u calls in %d ms (%.3f Mbits/sec)\n",
-          count,
-          t1 - t0,
-          ((count*32)/(double) 1000000) * (t1 / (double) t0)
-        );
-      }
+      PF_TEST_RNG();
       return_value++;
       break;
     case MANUVR_MSG_BNCHMRK_FLOAT:
-      {
-        float a = 1.001;
-        unsigned long t0 = millis();
-        for (int i = 0;i < 1000000;i++) {
-          a += 0.01 * sqrtf(a);
-        }
-        unsigned long t1 = millis();
-        local_log.concatf("Floating-point test: %d ms\n \t Value: %.5f\n \t%d Mflops\n", t1 - t0, (double) a, (3000000000/(t1 - t0)));
-      }
+      PF_TEST_FLOAT();
       return_value++;
       break;
     case MANUVR_MSG_BNCHMRK_MSG_LOAD:
@@ -558,6 +615,10 @@ void TestDriver::procDirectDebugInstruction(StringBuilder *input) {
   }
 
   switch (c) {
+    case 'a':   // All tests.
+      RUN_ALL_TESTS();
+      break;
+
     case 'b':   // Base library benchmarks
       switch (temp_int) {
         case 0:
@@ -565,15 +626,7 @@ void TestDriver::procDirectDebugInstruction(StringBuilder *input) {
           break;
         case 1:
         case 2:
-          {
-            _msg_t0 = millis();
-            _msg_passes = 0;
-            ManuvrMsg* msg = Kernel::returnEvent(MANUVR_MSG_BNCHMRK_MSG_LOAD, this);
-            if (2 == temp_int) {  // Direct-case
-              msg->setTarget(this);
-            }
-            raiseEvent(msg);
-          }
+          KERNEL_TEST_MSG((2 == temp_int)?this:nullptr);
           break;
         default:
           local_log.concat("Unsupported test.\n");

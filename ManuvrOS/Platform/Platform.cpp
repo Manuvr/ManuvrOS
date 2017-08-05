@@ -150,6 +150,11 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
     ManuvrOIC* oic = new ManuvrOIC(root_config);
     _kernel.subscribe((EventReceiver*) oic);
   #endif
+
+  #if defined(CONFIG_MANUVR_BENCHMARKS)
+    TestDriver* _test_drv = new TestDriver(root_config);
+    _kernel.subscribe((EventReceiver*) _test_drv);
+  #endif //CONFIG_MANUVR_BENCHMARKS
   return 0;
 }
 
@@ -329,7 +334,7 @@ int8_t ManuvrPlatform::bootstrap() {
   boot_completed_ev->priority(EVENT_PRIORITY_HIGHEST);
   Kernel::staticRaiseEvent(boot_completed_ev);
   _set_init_state(MANUVR_INIT_STATE_KERNEL_BOOTING);
-  uint8_t boot_passes = 100;
+  uint8_t boot_passes = 40;
   while ((0 < _kernel.procIdleFlags()) && boot_passes) {
     boot_passes--;
   }
@@ -349,12 +354,6 @@ int8_t ManuvrPlatform::bootstrap() {
   #endif
 
   platformPostInit();    // Hook for platform-specific post-boot operations.
-
-  #if defined(CONFIG_MANUVR_BENCHMARKS)
-    // TODO: This is a leak, for sure. Ref-count EventReceivers.
-    TestDriver* _test_drv = new TestDriver();
-    _kernel.subscribe((EventReceiver*) _test_drv);
-  #endif //CONFIG_MANUVR_BENCHMARKS
 
   if (nullptr == _self) {
     // If we have no other conception of "self", invent one.
@@ -521,7 +520,7 @@ int wakeThread(unsigned long _thread_id) {
 *   probably use interrupts instead.
 */
 void sleep_millis(unsigned long millis) {
-  #if defined(__MANUVR_LINUX) | defined(__MANUVR_APPLE)
+  #if defined(__MANUVR_LINUX) || defined(__MANUVR_APPLE)
     struct timespec t = {(long) (millis / 1000), (long) ((millis % 1000) * 1000000UL)};
     nanosleep(&t, &t);
   #elif defined(__MANUVR_FREERTOS)

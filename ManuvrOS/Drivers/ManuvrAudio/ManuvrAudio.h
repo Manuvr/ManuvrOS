@@ -29,7 +29,7 @@
 #define __MANUVR_AUDIO_H__
 
 
-#if defined(__MK20DX256__) | defined(__MK20DX128__) | defined(STM32F4XX)
+#if defined(__MK20DX256__) || defined(__MK20DX128__) || defined(STM32F4XX)
 // computes limit((val >> rshift), 2**bits)
 static inline int32_t signed_saturate_rshift(int32_t val, int bits, int rshift) __attribute__((always_inline, unused));
 static inline int32_t signed_saturate_rshift(int32_t val, int bits, int rshift)
@@ -230,7 +230,7 @@ static inline int32_t substract_32_saturate(uint32_t a, uint32_t b)
 
 
 
-#elif defined(__PIC32MX2XX__) | defined(__PIC32MX3XX__) | defined(__PIC32MZ__)
+#elif defined(__PIC32MX2XX__) || defined(__PIC32MX3XX__) || defined(__PIC32MZ__)
 /*
 * I have ported these fxns to MIPS, and am integrating them into ManuvrOS for the
 *   sake of benchmarking.

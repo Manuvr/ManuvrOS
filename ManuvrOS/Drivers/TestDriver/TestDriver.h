@@ -30,6 +30,7 @@ This module is built and loaded by Platform.cpp if the CONFIG_MANUVR_BENCHMARKS 
 #ifndef __MANUVR_TESTING_DRIVER_H__
 #define __MANUVR_TESTING_DRIVER_H__
 
+#define MANUVR_MSG_BNCHMRK_ALL          0xF574   //
 #define MANUVR_MSG_BNCHMRK_ACRYPT       0xF575   //
 #define MANUVR_MSG_BNCHMRK_SCRYPT       0xF576   //
 #define MANUVR_MSG_BNCHMRK_RNG          0xF577   //
@@ -37,10 +38,17 @@ This module is built and loaded by Platform.cpp if the CONFIG_MANUVR_BENCHMARKS 
 #define MANUVR_MSG_BNCHMRK_FLOAT        0xF579   //
 #define MANUVR_MSG_BNCHMRK_HASH         0xF57A   //
 
+/*
+* These state flags are hosted by the EventReceiver. This may change in the future.
+* Might be too much convention surrounding their assignment across inherritence.
+*/
+#define TESTDRVR_FLAG_AUTORUN        0x01    // Autorun the tests.
+
 
 class TestDriver : public EventReceiver {
   public:
     TestDriver();
+    TestDriver(Argument*);
     ~TestDriver();
 
     /* Overrides from EventReceiver */
@@ -61,6 +69,14 @@ class TestDriver : public EventReceiver {
   private:
     unsigned long _msg_t0     = 0;
     unsigned int  _msg_passes = 0;
+
+    inline bool _autorun_tests() {         return (_er_flag(TESTDRVR_FLAG_AUTORUN));         };
+    inline void _autorun_tests(bool nu) {  return (_er_set_flag(TESTDRVR_FLAG_AUTORUN, nu)); };
+
+    void RUN_ALL_TESTS();
+    int KERNEL_TEST_MSG(EventReceiver* target);
+    int PF_TEST_FLOAT();
+    int PF_TEST_RNG();
 
     #if defined(__BUILD_HAS_DIGEST)
       int CRYPTO_TEST_HASHES();
