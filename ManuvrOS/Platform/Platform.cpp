@@ -390,6 +390,8 @@ void ManuvrPlatform::printDebug() {
 /*******************************************************************************
 * System hook-points                                                           *
 *******************************************************************************/
+
+
 void ManuvrPlatform::idleHook() {
   if (_idle_hook) _idle_hook();
 }

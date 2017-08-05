@@ -266,6 +266,7 @@ class ManuvrMsg {
     * @return true if the Kernel should call execute() in lieu of broadcast.
     */
     inline bool singleTarget() { return (schedule_callback || specific_target); };
+    inline void setTarget(EventReceiver* nu) {    specific_target = nu;     };
 
     /* If singleTarget is true, the kernel calls this to proc the event. */
     int8_t execute();

@@ -48,6 +48,11 @@ BufferPipe* Kernel::_logger          = nullptr;  // The logger slot.
 PriorityQueue<ManuvrMsg*> Kernel::isr_exec_queue;
 
 
+/* Duty-cycle calculation. */
+unsigned long Kernel::_idle_trans_point = 0;
+unsigned long Kernel::_millis_idle      = 0;
+unsigned long Kernel::_millis_working   = 1;
+
 /*
 * These are the hard-coded message types that the program knows about.
 * This is where we decide what kind of arguments each message is capable of carrying.
@@ -493,20 +498,40 @@ int8_t Kernel::isrRaiseEvent(ManuvrMsg* event) {
 * After we return the event, we lose track of it. So if the caller doesn't ever
 *   call raiseEvent(), the Event we return will become a memory leak.
 * The event we retun will have an originator field populated with a ref to Kernel.
-*   So if a caller needs their own reference in that slot, caller will need to do it.
+*   So if a caller needs their own reference in that slot, caller will need to
+*   replace it.
 *
 * @param  code  The desired identity code of the event.
 * @return A pointer to the prepared event. Will not return NULL unless we are out of memory.
 */
 ManuvrMsg* Kernel::returnEvent(uint16_t code) {
+  return Kernel::returnEvent(code, (EventReceiver*) INSTANCE);
+}
+
+
+/**
+* Factory method. Returns a preallocated Event.
+* After we return the event, we lose track of it. So if the caller doesn't ever
+*   call raiseEvent(), the Event we return will become a memory leak.
+* The event we retun will have an originator field populated with a ref to the
+*   supplied EventReceiver.
+*
+* @param  code  The desired identity code of the event.
+* @param  er    The EventReceiver responsible for callback service.
+* @return A pointer to the prepared event. Will not return NULL unless we are out of memory.
+*/
+ManuvrMsg* Kernel::returnEvent(uint16_t code, EventReceiver* er) {
   // We are creating a new Event. Try to snatch a prealloc'd one and fall back to malloc if needed.
+  if (nullptr == er) {
+    er = (EventReceiver*) INSTANCE;
+  }
   ManuvrMsg* return_value = INSTANCE->preallocated.dequeue();
   if (return_value == nullptr) {
     INSTANCE->prealloc_starved++;
-    return_value = new ManuvrMsg(code, (EventReceiver*) INSTANCE);
+    return_value = new ManuvrMsg(code, er);
   }
   else {
-    return_value->repurpose(code, (EventReceiver*) INSTANCE);
+    return_value->repurpose(code, er);
   }
   return return_value;
 }
@@ -608,6 +633,21 @@ int8_t Kernel::procCallBacks(ManuvrMsg* active_runnable) {
 }
 
 
+void Kernel::_idle(bool nu) {
+  unsigned long temp_millis = millis();
+  if (nu) {
+    _millis_working += temp_millis - _idle_trans_point;
+    platform.idleHook();
+  }
+  else {
+    _millis_idle += temp_millis - _idle_trans_point;
+    platform.wakeHook();
+  }
+  _idle_trans_point = temp_millis;
+  _er_set_flag(MKERNEL_FLAG_IDLE, nu);
+};
+
+
 
 /**
 * Process any open events.
@@ -657,6 +697,10 @@ int8_t Kernel::procIdleFlags() {
 
   /* As long as we have an open event and we aren't yet at our proc ceiling... */
   while (exec_queue.hasNext() && should_run_another_event(return_value, profiler_mark)) {
+    if (_idle()) {
+      platform.wakeHook();
+      _idle(false);
+    }
     active_runnable = exec_queue.dequeue();       // Grab the Event and remove it in the same call.
     msg_code_local = active_runnable->eventCode();  // This gets used after the life of the event.
 
@@ -705,22 +749,29 @@ int8_t Kernel::procIdleFlags() {
 
     /* Should we clean up the Event? */
     bool clean_up_active_runnable = true;  // Defaults to 'yes'.
+    int8_t vi_res = 0;
 
     switch (active_runnable->callbackOriginator()) {
       case EVENT_CALLBACK_RETURN_RECYCLE:     // The originating class wants us to re-insert the event.
         #ifdef MANUVR_DEBUG
         if (getVerbosity() > 6) local_log.concatf("Recycling %s.\n", active_runnable->getMsgTypeString());
         #endif
-        switch (validate_insertion(active_runnable)) {
-          case 0:    // Clear for insertion.
-            exec_queue.insert(active_runnable, active_runnable->priority());
-            clean_up_active_runnable = false;
-            break;
+        vi_res = validate_insertion(active_runnable);
+        switch (vi_res) {
           case -1:   // NULL runnable! How?!?!
-            break;
           case -2:   // UNDEFINED event. This shall not stand, man....
+            #ifdef MANUVR_DEBUG
+              if (getVerbosity() >= 2) local_log.concatf("%s event returned RECYCLE?\n", ((-1 == vi_res) ? "Null" : "UNDEFINED"));
+            #endif
             break;
           case -3:   // Pointer idempotency. THIS EXACT runnable is already enqueue.
+            #ifdef MANUVR_DEBUG
+              if (getVerbosity() >= 5) {
+                local_log.concat("THIS EXACT runnable is already enqueue.\n");
+              }
+            #endif
+          case 0:    // Insertion succeeded.
+            clean_up_active_runnable = false;
             break;
         }
         break;
@@ -824,9 +875,11 @@ int8_t Kernel::procIdleFlags() {
     switch (consequtive_idles) {
       case 0:
         // If we have reached our threshold for idleness, we invoke the plaform
-        //   idle hook. Note that this will be invoked on EVERY LOOP until a new
-        //   Msg causes action.
-        platform.idleHook();
+        //   idle hook.
+        if (!_idle()) {
+          platform.idleHook();
+          _idle(true);
+        }
         break;
       case 1:
         #ifdef MANUVR_DEBUG
@@ -899,6 +952,7 @@ void Kernel::printProfiler(StringBuilder* output) {
   if (nullptr == output) return;
   if (getVerbosity() > 4) {
     output->concatf("-- Queue depth        \t%d\n", exec_queue.size());
+    output->concatf("-- ISR depth          \t%d\n", isr_exec_queue.size());
     output->concatf("-- Preallocation depth\t%d\n", preallocated.size());
     output->concatf("-- Prealloc starves   \t%u\n", (unsigned long) prealloc_starved);
     output->concatf("-- events_destroyed   \t%u\n", (unsigned long) events_destroyed);
@@ -918,7 +972,8 @@ void Kernel::printProfiler(StringBuilder* output) {
     if (total_events) {
       output->concatf("   prealloc hit fraction: \t%f\%\n", (double)(1-((burden_of_specific - prealloc_starved) / total_events)) * 100);
     }
-    output->concatf("   CPU use by clock: %f\n", (double)cpu_usage());
+    output->concatf("   CPU use by clock:  %f\n", (double)cpu_usage());
+    output->concatf("   Kernel duty cycle: %f\n", dutyCycle());
 
     #if defined(MANUVR_EVENT_PROFILER)
       TaskProfilerData *profiler_item;
