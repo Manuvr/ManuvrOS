@@ -34,6 +34,7 @@ COV_FILES = $(SOURCES_CPP:.cpp=.gcda) $(SOURCES_CPP:.cpp=.gcno)
 ###########################################################################
 
 .PHONY: all
+	
 
 all: $(TESTS)
 	@echo 'Built tests:  $(TESTS)'
