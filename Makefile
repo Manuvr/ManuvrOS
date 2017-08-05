@@ -170,21 +170,27 @@ OPTIMIZATION    = -O0 -g
 # dot  -Tpng out.dot -o graph.png
 endif
 
+
 ###########################################################################
-# Rules for building the firmware follow...
+# exports, consolidation....
 ###########################################################################
+
 # Merge our choices and export them to the downstream Makefiles...
 CFLAGS += $(MANUVR_OPTIONS) $(OPTIMIZATION)
 ANALYZER_FLAGS  = $(MANUVR_OPTIONS) $(INCLUDES)
-ANALYZER_FLAGS +=  --std=c++11 --report-progress --force -j6
+ANALYZER_FLAGS += --std=c++11 --report-progress --force -j6
 
 export MANUVR_PLATFORM = LINUX
 export ANALYZER_FLAGS
-
 export CFLAGS
 export CXXFLAGS    = $(CFLAGS) -fno-rtti -fno-exceptions
 
 export JSON=1
+
+
+###########################################################################
+# Rules for building the firmware follow...
+###########################################################################
 
 .PHONY: all
 
