@@ -23,12 +23,13 @@ This is basically only for linux for now.
 
 */
 
+
+#include <CommonConstants.h>
+#include "ManuvrTCP.h"
+#include <Kernel.h>
+
 #if defined(MANUVR_SUPPORT_TCPSOCKET)
 
-#include "ManuvrTCP.h"
-#include <CommonConstants.h>
-
-#include <Kernel.h>
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
