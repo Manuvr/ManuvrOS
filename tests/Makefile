@@ -5,9 +5,9 @@
 C_STANDARD   = gnu99
 CPP_STANDARD = gnu++11
 
-SOURCES_CPP    = TestDataStructures.cpp
-SOURCES_CPP   += IdentityTest.cpp
-SOURCES_CPP   += SchedulerTest.cpp
+SOURCES_CPP  = TestDataStructures.cpp
+SOURCES_CPP += IdentityTest.cpp
+SOURCES_CPP += SchedulerTest.cpp
 #SOURCES_CPP   += BufferPipeTest.cpp
 
 LOCAL_CXX_FLAGS  = $(CXXFLAGS) -D_GNU_SOURCE
@@ -34,7 +34,7 @@ COV_FILES = $(SOURCES_CPP:.cpp=.gcda) $(SOURCES_CPP:.cpp=.gcno)
 ###########################################################################
 
 .PHONY: all
-	
+
 
 all: $(TESTS)
 	@echo 'Built tests:  $(TESTS)'

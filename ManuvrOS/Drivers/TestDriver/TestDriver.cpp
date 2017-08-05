@@ -460,20 +460,27 @@ int8_t TestDriver::notify(ManuvrMsg* active_event) {
     case MANUVR_MSG_BNCHMRK_RNG:
       {
         // Empty the entropy pool.
+        local_log.concat("Draining entropy pool...  ");
         for (int i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) {
-          randomInt();
+          local_log.concatf("%08x ", randomInt());
         }
-        unsigned long t0 = millis();
-        for (int i = 0;i < 1000000; i++) {
+        local_log.concat("\n");
+        unsigned long t0   = millis();
+        unsigned long t1   = t0;
+        unsigned int count = 0;
+        while (t0 + 1000 >= t1) {
           // Threaded or not, this should test the maximum randomness rate
           // available to the program.
           randomInt();   // This ought to block when the pool is drained.
+          count++;
+          t1 = millis();
         }
-        unsigned long t1 = millis();
-        local_log.concatf("RNG test:   %d ms (%.2f Mbits/sec)\n", t1 - t0, (32000/((double)t1 - t0)));
-        for (int i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) {
-          local_log.concatf("Random number: 0x%08x\n", randomInt());
-        }
+        local_log.concatf(
+          "RNG test:   %u calls in %d ms (%.3f Mbits/sec)\n",
+          count,
+          t1 - t0,
+          ((count*32)/(double) 1000000) * (t1 / (double) t0)
+        );
       }
       return_value++;
       break;
