@@ -21,7 +21,7 @@ int8_t  last_used_bus_addr = 0;  //TODO: This is a hack. Re-work it.
 I2CBusOp* _threaded_op = nullptr;
 
 void* i2c_worker_thread(void* arg) {
-  I2CAdapter* adapter = (I2CAdapter*) arg;
+  //I2CAdapter* adapter = (I2CAdapter*) arg;
   while (!platform.nominalState()) {
     sleep_millis(80);
   }
@@ -35,6 +35,7 @@ void* i2c_worker_thread(void* arg) {
       suspendThread();
     }
   }
+  return nullptr;
 }
 
 

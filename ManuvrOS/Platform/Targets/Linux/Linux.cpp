@@ -633,7 +633,7 @@ int8_t LinuxPlatform::platformPreInit(Argument* root_config) {
 
   uint32_t default_flags = DEFAULT_PLATFORM_FLAGS;
   _main_pid = getpid();  // Our PID.
-  Argument* temp = nullptr;
+  //Argument* temp = nullptr;
   if (root_config) {
     // If 'binary_name' is absent, nothing will be done to _binary_name.
     root_config->getValueAs("binary_name", &_binary_name);
