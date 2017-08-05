@@ -59,6 +59,9 @@ class TestDriver : public EventReceiver {
 
 
   private:
+    unsigned long _msg_t0     = 0;
+    unsigned int  _msg_passes = 0;
+
     #if defined(__BUILD_HAS_DIGEST)
       int CRYPTO_TEST_HASHES();
     #endif

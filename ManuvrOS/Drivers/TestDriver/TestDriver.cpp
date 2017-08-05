@@ -407,7 +407,8 @@ int8_t TestDriver::attached() {
 void TestDriver::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
   output->concat("\t---< Available benchmarks >--------.\n");
-  output->concat("\tb1)     Message load\n");
+  output->concat("\tb1)     Message load (broadcast)\n");
+  output->concat("\tb2)     Message load (singular)\n");
   output->concat("\tp1)     RNG\n");
   output->concat("\tp2)     FPU\n");
   #if defined(__BUILD_HAS_ASYMMETRIC)
@@ -444,6 +445,24 @@ int8_t TestDriver::callback_proc(ManuvrMsg* event) {
 
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {
+    case MANUVR_MSG_BNCHMRK_MSG_LOAD:
+      {
+        _msg_passes++;
+        unsigned long t1 = millis();
+        if ((_msg_t0 + 1000) >= t1) {
+          return_value = EVENT_CALLBACK_RETURN_RECYCLE;
+        }
+        else {
+          local_log.concatf(
+            "MSG test:   %u cycles in %d ms (%.2f Msg/sec)\n",
+            _msg_passes,
+            t1 - _msg_t0,
+            _msg_passes * (t1 / (double) _msg_t0)
+          );
+          flushLocalLog();
+        }
+      }
+      break;
     default:
       break;
   }
@@ -544,7 +563,17 @@ void TestDriver::procDirectDebugInstruction(StringBuilder *input) {
         case 0:
           //printBenchmarkResults(&local_log);
           break;
-        case 1:   Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_MSG_LOAD, nullptr);
+        case 1:
+        case 2:
+          {
+            _msg_t0 = millis();
+            _msg_passes = 0;
+            ManuvrMsg* msg = Kernel::returnEvent(MANUVR_MSG_BNCHMRK_MSG_LOAD, this);
+            if (2 == temp_int) {  // Direct-case
+              msg->setTarget(this);
+            }
+            raiseEvent(msg);
+          }
           break;
         default:
           local_log.concat("Unsupported test.\n");

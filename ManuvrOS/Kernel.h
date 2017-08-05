@@ -46,6 +46,7 @@ limitations under the License.
   #define MKERNEL_FLAG_SKIP_DETECT   0x02    // Set in advanceScheduler(), cleared in serviceSchedules().
   #define MKERNEL_FLAG_SKIP_FAILSAFE 0x04    // Too many skips will send us to the bootloader.
   #define MKERNEL_FLAG_PENDING_PIPE  0x08    // There is Pipe I/O pending.
+  #define MKERNEL_FLAG_IDLE          0x10    // The kernel is idle.
 
 
   #ifdef __cplusplus
@@ -123,6 +124,10 @@ limitations under the License.
 
       /* Profiling support.. */
       float cpu_usage();
+      inline double dutyCycle() {
+        return (_millis_working / (double)(_millis_working + _millis_idle));
+      };
+
       void profiler(bool enabled);
       void printProfiler(StringBuilder*);
 
@@ -160,6 +165,7 @@ limitations under the License.
 
       /* Returns a preallocated ManuvrMsg. */
       static ManuvrMsg* returnEvent(uint16_t event_code);
+      static ManuvrMsg* returnEvent(uint16_t event_code, EventReceiver*);
 
 
 
@@ -218,10 +224,16 @@ limitations under the License.
       inline void _skip_detected(bool nu) {     return (_er_set_flag(MKERNEL_FLAG_SKIP_DETECT, nu));  };
       inline bool _pending_pipes() {            return (_er_flag(MKERNEL_FLAG_PENDING_PIPE));         };
       inline void _pending_pipes(bool nu) {     return (_er_set_flag(MKERNEL_FLAG_PENDING_PIPE, nu)); };
+      inline bool _idle() {                     return (_er_flag(MKERNEL_FLAG_IDLE));                 };
+      void _idle(bool nu);
 
       static uintptr_t   _prealloc_max;
       static Kernel*     INSTANCE;
       static PriorityQueue<ManuvrMsg*> isr_exec_queue;   // Events that have been raised from ISRs.
+
+      static unsigned long _millis_idle;
+      static unsigned long _millis_working;
+      static unsigned long _idle_trans_point;
   };
 
 
