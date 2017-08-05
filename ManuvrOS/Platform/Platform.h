@@ -401,10 +401,10 @@ int    readPinAnalog(uint8_t pin);
 
 // TODO: Until the final-step of the build system rework, this is how we
 //         selectively support specific platforms.
-#if defined(__MK20DX256__) | defined(__MK20DX128__)
+#if defined(__MK20DX256__) || defined(__MK20DX128__)
   #include <Platform/Targets/Teensy3/Teensy3.h>
   typedef Teensy3 Platform;
-#elif defined(STM32F7XX) | defined(STM32F746xx)
+#elif defined(STM32F7XX) || defined(STM32F746xx)
   #include <Platform/Targets/STM32F7/STM32F7.h>
   typedef STM32F7Platform Platform;
 #elif defined(STM32F4XX)

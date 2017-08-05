@@ -30,7 +30,7 @@ Platforms that require it should be able to extend this driver for specific
 */
 
 
-#if defined(MANUVR_SUPPORT_TCPSOCKET) | defined(MANUVR_SUPPORT_UDP)
+#if defined(MANUVR_SUPPORT_TCPSOCKET) || defined(MANUVR_SUPPORT_UDP)
 
 #include "ManuvrSocket.h"
 #include <CommonConstants.h>

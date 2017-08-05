@@ -22,7 +22,7 @@ limitations under the License.
 #include "DieThermometer.h"
 #include <DataStructures/StringBuilder.h>
 
-#if defined(RASPI) | defined(RASPI2)
+#if defined(RASPI) || defined(RASPI2)
 
 #include <stdio.h>
 
@@ -110,4 +110,4 @@ SensorError RaspiTempSensor::getParameter(uint16_t reg, int len, uint8_t*) {
   return SensorError::INVALID_PARAM_ID;
 }
 
-#endif // defined(RASPI) | defined(RASPI2)
+#endif // defined(RASPI) || defined(RASPI2)

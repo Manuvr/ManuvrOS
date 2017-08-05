@@ -680,7 +680,7 @@ void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
         I2C_SoftwareResetCmd(I2C1, ENABLE);
         local_log.concat("i2c software reset.\n");
         I2C_SoftwareResetCmd(I2C1, DISABLE);
-      #elif defined(STM32F7XX) | defined(STM32F746xx)
+      #elif defined(STM32F7XX) || defined(STM32F746xx)
         I2C1->CR1 &= ~((uint32_t) I2C_CR1_PE);
         local_log.concat("i2c software reset.\n");
         while(I2C1->CR1 & I2C_CR1_PE) {}
