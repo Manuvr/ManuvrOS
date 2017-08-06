@@ -312,6 +312,9 @@ class ManuvrMsg {
     * @return true if the schedule will execute ahread of schedule.
     */
     inline bool shouldFire() { return (_flags & MANUVR_RUNNABLE_FLAG_PENDING_EXEC); };
+    inline void shouldFire(bool en) {
+      _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_PENDING_EXEC) : (_flags & ~(MANUVR_RUNNABLE_FLAG_PENDING_EXEC));
+    };
 
     /**
     * Is this schedule being observed? If yes, it will execute in the future
@@ -416,10 +419,6 @@ class ManuvrMsg {
     inline void scheduleEnabled(bool en) {
       _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_SCHED_ENABLED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_SCHED_ENABLED));
     };
-    inline void shouldFire(bool en) {
-      _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_PENDING_EXEC) : (_flags & ~(MANUVR_RUNNABLE_FLAG_PENDING_EXEC));
-    };
-
 
 
     // Where runtime-loaded message defs go.
