@@ -953,9 +953,14 @@ void Kernel::printProfiler(StringBuilder* output) {
   if (getVerbosity() > 4) {
     output->concatf("-- Queue depth        \t%d\n", exec_queue.size());
     output->concatf("-- ISR depth          \t%d\n", isr_exec_queue.size());
-    output->concatf("-- Preallocation depth\t%d\n", preallocated.size());
-    output->concatf("-- Prealloc starves   \t%u\n", (unsigned long) prealloc_starved);
-    output->concatf("-- events_destroyed   \t%u\n", (unsigned long) events_destroyed);
+
+    output->concat("-- Preallocd msgs\n");
+    output->concatf("\t Available:\t%d\n", preallocated.size());
+    output->concatf("\t Starves:  \t%u\n", (unsigned long) prealloc_starved);
+    if (total_events) {
+      output->concatf("\t Hits:     \t%.3f\%\n", (double)(1-((burden_of_specific - prealloc_starved) / total_events)) * 100);
+    }
+    output->concatf("-- Msgs destroyed     \t%u\n", (unsigned long) events_destroyed);
     output->concatf("-- specificity burden \t%u\n", (unsigned long) burden_of_specific);
   }
 
@@ -969,11 +974,8 @@ void Kernel::printProfiler(StringBuilder* output) {
 
   if (_profiler_enabled()) {
     output->concat("-- Profiler:\n");
-    if (total_events) {
-      output->concatf("   prealloc hit fraction: \t%f\%\n", (double)(1-((burden_of_specific - prealloc_starved) / total_events)) * 100);
-    }
-    output->concatf("   CPU use by clock:  %f\n", (double)cpu_usage());
-    output->concatf("   Kernel duty cycle: %f\n", dutyCycle());
+    output->concatf("   CPU use by clock:  %.3f\n", (double)cpu_usage());
+    output->concatf("   Kernel duty cycle: %.3f\n", dutyCycle());
 
     #if defined(MANUVR_EVENT_PROFILER)
       TaskProfilerData *profiler_item;
@@ -1359,6 +1361,11 @@ int Kernel::serviceSchedules() {
         default:  // Nonsense.
           break;
       }
+    }
+    else if (current->shouldFire()) {
+      // If the schedule was one-shot without being enabled.
+      current->shouldFire(false);    // Mark it as serviced.
+      Kernel::staticRaiseEvent(current);
     }
   }
 
