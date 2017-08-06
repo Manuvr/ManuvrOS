@@ -90,18 +90,6 @@ int main(int argc, const char* argv[]) {
     local_log.clear();
   }
 
-  #if defined(MANUVR_CONSOLE_SUPPORT)
-    /*
-    * The user wants a local stdio "Shell".
-    * StandardIO is a linux-specific thing, but the Console can be patched
-    * to a serial port or TCP/UDP listener in the same fashion.
-    */
-    StandardIO* _console_xport = new StandardIO();
-    ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_xport);
-    kernel->subscribe((EventReceiver*) _console);
-    kernel->subscribe((EventReceiver*) _console_xport);
-  #endif
-
   // Once we've loaded up all the goodies we want, we finalize everything thusly...
   platform.bootstrap();
 
