@@ -104,20 +104,6 @@ int main(int argc, const char* argv[]) {
     local_log.clear();
   }
 
-  if (opts->retrieveArgByKey("console") || opts->retrieveArgByKey("c")) {
-    #if defined(MANUVR_CONSOLE_SUPPORT)
-      // TODO: Until smarter idea is finished, manually patch the transport
-      //         into a console session.
-      StandardIO* _console_xport = new StandardIO();
-      ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_xport);
-      kernel->subscribe((EventReceiver*) _console);
-      kernel->subscribe((EventReceiver*) _console_xport);
-    #else
-      printf("%s was compiled without any console support. Ignoring directive...\n", argv[0]);
-    #endif
-  }
-
-
   // We need at least ONE transport to be useful...
   #if defined(MANUVR_SUPPORT_TCPSOCKET)
     ManuvrTCP tcp_srv((const char*) "0.0.0.0", 2319);
