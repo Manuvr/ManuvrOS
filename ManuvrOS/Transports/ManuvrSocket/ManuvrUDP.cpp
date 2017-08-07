@@ -506,7 +506,7 @@ void ManuvrUDP::printDebug(StringBuilder* output) {
   ManuvrXport::printDebug(output);
 
   output->concatf("-- _addr           %s:%d\n",  _addr, _port_number);
-  output->concatf("-- _options        0x%08x\n", _options);
+  output->concatf("-- _opts           %p\n", _opts);
   output->concatf("-- _sock           0x%08x\n", _sock);
 
   output->concatf("--\n-- _open_replies \n");
