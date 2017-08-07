@@ -48,6 +48,12 @@ This is basically only for linux until it is needed in a smaller space.
 #endif
 
 
+class SocketOpts {
+  public:
+  private:
+    uint32_t _flags = 0;
+};
+
 /*
 * This is a wrapper around sockets as they exist in a linux system.
 * TODO: This might be an appropriate place for lwip?
@@ -61,16 +67,16 @@ class ManuvrSocket : public ManuvrXport {
 
 
   protected:
-    char*    _addr        = nullptr;
-    int      _port_number = 0;
-    uint32_t _options     = 0;
-    int      _sock        = 0;
+    SocketOpts* _opts        = 0;
+    char*       _addr        = nullptr;
+    int         _port_number = 0;
+    int         _sock        = 0;
 
     #if defined(__MANUVR_LINUX)
       struct sockaddr_in _sockaddr;
     #endif
 
-    ManuvrSocket(const char* nom, const char* addr, int port, uint32_t opts);
+    ManuvrSocket(const char* nom, const char* addr, int port, SocketOpts* opts);
 
 
   private:
