@@ -113,7 +113,7 @@ This class implements a crude UDP connector.
 * @param  addr  An IPv4 address in dotted quad notation.
 * @param  port  A 16-bit port number.
 */
-ManuvrUDP::ManuvrUDP(const char* addr, int port) : ManuvrSocket("ManuvrUDP", addr, port, 0) {
+ManuvrUDP::ManuvrUDP(const char* addr, int port) : ManuvrSocket("ManuvrUDP", addr, port, nullptr) {
   set_xport_state(MANUVR_XPORT_FLAG_HAS_MULTICAST | MANUVR_XPORT_FLAG_CONNECTIONLESS);
   _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
 
@@ -129,7 +129,7 @@ ManuvrUDP::ManuvrUDP(const char* addr, int port) : ManuvrSocket("ManuvrUDP", add
 * @param  port  A 16-bit port number.
 * @param  opts  An options mask to pass to the underlying socket implentation.
 */
-ManuvrUDP::ManuvrUDP(const char* addr, int port, uint32_t opts) : ManuvrSocket("ManuvrUDP", addr, port, opts) {
+ManuvrUDP::ManuvrUDP(const char* addr, int port, SocketOpts* opts) : ManuvrSocket("ManuvrUDP", addr, port, opts) {
   set_xport_state(MANUVR_XPORT_FLAG_HAS_MULTICAST | MANUVR_XPORT_FLAG_CONNECTIONLESS);
   _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
 

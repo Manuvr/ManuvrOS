@@ -137,14 +137,14 @@ This is basically only for linux for now.
 /**
 * Constructor.
 */
-ManuvrTCP::ManuvrTCP(const char* addr, int port, uint32_t opts) : ManuvrSocket("ManuvrTCP", addr, port, opts) {
+ManuvrTCP::ManuvrTCP(const char* addr, int port, SocketOpts* opts) : ManuvrSocket("ManuvrTCP", addr, port, opts) {
   set_xport_state(MANUVR_XPORT_FLAG_STREAM_ORIENTED);
 }
 
 /**
 * Constructor.
 */
-ManuvrTCP::ManuvrTCP(const char* addr, int port) : ManuvrTCP(addr, port, 0) {
+ManuvrTCP::ManuvrTCP(const char* addr, int port) : ManuvrTCP(addr, port, nullptr) {
 }
 
 /**
@@ -152,8 +152,8 @@ ManuvrTCP::ManuvrTCP(const char* addr, int port) : ManuvrTCP(addr, port, 0) {
 */
 // TODO: This is very ugly.... Might need a better way of fractioning into new threads...
 ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in* nu_sockaddr) : ManuvrTCP(listening_instance->_addr, listening_instance->_port_number, 0) {
-  _sock          = sock;
-  _options       = listening_instance->_options;
+  _sock = sock;
+  _opts = listening_instance->_opts;
 
   listening_instance->_connections.insert(this);  // TODO: This is starting to itch...
 
@@ -412,7 +412,7 @@ int8_t ManuvrTCP::attached() {
 void ManuvrTCP::printDebug(StringBuilder *temp) {
   ManuvrXport::printDebug(temp);
   temp->concatf("-- _addr           %s:%d\n",  _addr, _port_number);
-  temp->concatf("-- _options        0x%08x\n", _options);
+  temp->concatf("-- _opts           %p\n", _opts);
   temp->concatf("-- _sock           0x%08x\n", _sock);
 }
 

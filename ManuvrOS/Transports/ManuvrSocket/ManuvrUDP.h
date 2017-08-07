@@ -122,7 +122,7 @@ class UDPPipe : public BufferPipe {
 class ManuvrUDP : public ManuvrSocket {
   public:
     ManuvrUDP(const char* addr, int port);
-    ManuvrUDP(const char* addr, int port, uint32_t opts);
+    ManuvrUDP(const char* addr, int port, SocketOpts* opts);
     virtual ~ManuvrUDP();
 
     /* Override from BufferPipe. */

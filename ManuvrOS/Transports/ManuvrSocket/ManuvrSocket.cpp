@@ -62,9 +62,9 @@ Platforms that require it should be able to extend this driver for specific
 /**
 * Constructor.
 */
-ManuvrSocket::ManuvrSocket(const char* nom, const char* addr, int port, uint32_t opts) : ManuvrXport(nom) {
+ManuvrSocket::ManuvrSocket(const char* nom, const char* addr, int port, SocketOpts* opts) : ManuvrXport(nom) {
   _port_number = port;
-  _options     = opts;     // These will vary across UDP/WS/TCP.
+  _opts        = opts;     // These will vary across UDP/WS/TCP.
 
   if (addr) {
     size_t addr_len = strlen(addr);

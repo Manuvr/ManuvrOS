@@ -54,7 +54,7 @@ This is basically only for linux until it is needed in a smaller space.
 class ManuvrTCP : public ManuvrSocket {
   public:
     ManuvrTCP(const char* addr, int port);
-    ManuvrTCP(const char* addr, int port, uint32_t opts);
+    ManuvrTCP(const char* addr, int port, SocketOpts* opts);
     ManuvrTCP(ManuvrTCP* listening_instance, int nu_sock, struct sockaddr_in* nu_sockaddr);
     ~ManuvrTCP();
 
