@@ -3,6 +3,7 @@
 ### EventReceiver
 
 ### ManuvrMsg
+MM Stratgegy: Reference counting
 
 ### BufferPipe
 
