@@ -160,7 +160,7 @@ class Argument {
     inline Argument* append(BufferPipe *val) {      return link(new Argument(val));   }
     inline Argument* append(EventReceiver *val) {   return link(new Argument(val));   }
     inline Argument* append(ManuvrXport *val) {     return link(new Argument(val));   }
-    inline Argument* append(ManuvrMsg* val) {  return link(new Argument(val));   }
+    inline Argument* append(ManuvrMsg* val) {       return link(new Argument(val));   }
 
     inline Argument* append(FxnPointer *val) {      return link(new Argument(val));   }
     inline Argument* append(ThreadFxnPtr *val) {    return link(new Argument(val));   }

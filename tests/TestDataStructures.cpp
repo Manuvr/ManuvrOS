@@ -35,6 +35,7 @@ This program runs tests on raw data-handling classes.
 #include <DataStructures/Vector3.h>
 #include <DataStructures/Quaternion.h>
 #include <DataStructures/StringBuilder.h>
+#include <DataStructures/RingBuffer.h>
 #include <DataStructures/BufferPipe.h>
 #include <DataStructures/uuid.h>
 
@@ -439,6 +440,80 @@ int test_BufferPipe() {
 }
 
 
+int test_RingBuffer() {
+  int return_value = -1;
+  StringBuilder log("===< RingBuffer >=======================================\n");
+  const int TEST_SIZE = 18;
+  RingBuffer<uint32_t> a(TEST_SIZE);
+  if (a.allocated()) {
+    log.concatf("RingBuffer under test is using %u bytes of heap to hold %u elements.\n", a.heap_use(), a.capacity());
+    if (0 == a.count()) {
+      unsigned int test_num = TEST_SIZE/3;
+      uint32_t val;
+      log.concat("\tInserting:");
+      for (unsigned int i = 0; i < test_num; i++) {
+        val = randomInt();
+        if (a.insert(val)) {
+          log.concat("\nFailed to insert.\n");
+          printf((const char*) log.string());
+          return -1;
+        }
+        log.concatf(" (%u: %08x)", a.count(), val);
+      }
+      if (test_num == a.count()) {
+        log.concat("\n\tGetting:  ");
+        for (unsigned int i = 0; i < test_num/2; i++) {
+          unsigned int count = a.count();
+          val = a.get();
+          log.concatf(" (%u: %08x)", count, val);
+        }
+        unsigned int n = TEST_SIZE - a.count();
+        log.concatf("\n\tRingBuffer should have space for %u more elements... ", n);
+        for (unsigned int i = 0; i < n; i++) {
+          if (a.insert(randomInt())) {
+            log.concatf("Falsified. Count is %u\n", a.count());
+            printf((const char*) log.string());
+            return -1;
+          }
+        }
+        if (a.count() == TEST_SIZE) {
+          log.concatf("Verified. Count is %u\n", a.count());
+          log.concat("\tOverflowing... ");
+          if (a.insert(randomInt())) {
+            log.concatf("Is handled correctly. Count is %u\n", a.count());
+            log.concat("\tDraining... ");
+            for (unsigned int i = 0; i < TEST_SIZE; i++) {
+              val = a.get();
+            }
+            if (0 == a.count()) {
+              log.concat("done.\n\tTrying to drive count negative... ");
+              if (0 == a.get()) {
+                if (0 == a.count()) {
+                  log.concat("pass.\n");
+                  return_value = 0;
+                }
+                else log.concatf("Count should still be 0 but is %u\n", a.count());
+              }
+              else log.concatf("Get on an empty buffer should return 0.\n");
+            }
+            else log.concatf("Count should have been 0 but is %u\n", a.count());
+          }
+          else log.concatf("Sadly worked. Count is %u\n", a.count());
+        }
+        else log.concatf("Count mismatch. Got %u but was expecting %u.\n", a.count(), TEST_SIZE);
+      }
+      else log.concatf("Fairly certain we inserted %u elements, but the count says %u.\n", test_num, a.count());
+    }
+    else log.concatf("Newly created RingBuffers ought to be empty. This one reports %u.\n", a.count());
+  }
+  else log.concat("\nFailed to allocate.\n");
+
+  log.concat("========================================================\n\n");
+  printf((const char*) log.string());
+  return return_value;
+}
+
+
 /**
 * UUID battery.
 * @return 0 on pass. Non-zero otherwise.
@@ -540,6 +615,7 @@ void printTypeSizes() {
   output.concatf("\tBufferPipe            %u\n", sizeof(BufferPipe));
   output.concatf("\tLinkedList<void*>     %u\n", sizeof(LinkedList<void*>));
   output.concatf("\tPriorityQueue<void*>  %u\n", sizeof(PriorityQueue<void*>));
+  output.concatf("\tRingBuffer<void*>     %u\n", sizeof(RingBuffer<void*>));
   output.concatf("\tArgument              %u\n", sizeof(Argument));
   output.concatf("\tUUID                  %u\n", sizeof(UUID));
   output.concatf("\tTaskProfilerData      %u\n", sizeof(TaskProfilerData));
@@ -601,11 +677,15 @@ int main(int argc, char *argv[]) {
         if (0 == test_BufferPipe()) {
           if (0 == test_Arguments()) {
             if (0 == test_UUID()) {
-              printf("**********************************\n");
-              printf("*  DataStructure tests all pass  *\n");
-              printf("**********************************\n");
-              exit_value = 0;
+              if (0 == test_RingBuffer()) {
+                printf("**********************************\n");
+                printf("*  DataStructure tests all pass  *\n");
+                printf("**********************************\n");
+                exit_value = 0;
+              }
+              else printTestFailure("RingBuffer");
             }
+            else printTestFailure("UUID");
           }
           else printTestFailure("Argument");
         }

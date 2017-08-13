@@ -20,64 +20,65 @@ limitations under the License.
 
 Template for a ring buffer.
 
+TODO: Rework modulus operations into bit mask, and make element count pow(2).
+TODO: Rework modulus operations into bit mask, and make the buffer size pow(2).
+
 */
 
 #include <stdlib.h>
 
 
 template <class T> class RingBuffer {
-	public:
-		unsigned int first_element;
-		unsigned int last_element;
+  public:
+    RingBuffer(unsigned int c);  // Constructor takes the number of slots as its sole argument.
+    ~RingBuffer();
 
-		RingBuffer(unsigned int capacity);  // Constructor takes the number of slots as its sole argument.
-		~RingBuffer(void);
+    void clear();     // Wipe the buffer.
 
-		void clear(void);                // Wipe the buffer.
-		bool hasNext(void);              // Returns false if this list is empty. True otherwise.
-		int pending(void);               // Returns an integer representing how many members are unread.
+    inline bool         allocated() {  return (nullptr != _pool);  };
+    inline unsigned int capacity() {   return _CAPAC;              };
+    inline unsigned int heap_use() {   return (_E_SIZE * _CAPAC);  };
 
-		int insert(T);     // Returns the ID of the data, or -1 on failure. Makes only a reference to the payload.
-		T get(void);       // Returns the data from the first element. Only appropriate for native types (and pointers).
-		int get(T*);       // Writes the data from the first element into the provided buffer.
+    /* Returns an integer representing how many items are buffered. */
+    inline unsigned int count() {     return _count;  };
+
+    int insert(T);
+    T get();
 
 
-	private:
-		unsigned int size_of_element;
-		unsigned int capacity;
-		unsigned int element_count;
-		unsigned char *root;
+  private:
+    const unsigned int _CAPAC;
+    const unsigned int _E_SIZE;
+    unsigned int _count;
+    unsigned int _w;
+    unsigned int _r;
+    uint8_t* _pool;
 };
 
 
-template <class T> RingBuffer<T>::RingBuffer(unsigned int cap) {
-	capacity        = cap;
-	size_of_element = sizeof(T);
-	root = (unsigned char*) malloc(size_of_element * capacity);
-	clear();
+template <class T> RingBuffer<T>::RingBuffer(unsigned int c) : _CAPAC(c), _E_SIZE(sizeof(T)) {
+	unsigned int s = _E_SIZE * _CAPAC;
+	if (0 < s) {
+  	_pool = (uint8_t*) malloc(s);
+	}
+  clear();
 }
 
 
 template <class T> RingBuffer<T>::~RingBuffer() {
-	first_element = 0;
-	last_element  = 0;
-	element_count = 0;
-	free(root);
-	root = nullptr;
+  _count = 0;
+  free(_pool);
+  _pool = nullptr;
 }
 
 
-template <class T> bool RingBuffer<T>::hasNext(void) {    return (element_count > 0);    }
-template <class T> int RingBuffer<T>::pending(void) {     return element_count;          }
-
-
-template <class T> void RingBuffer<T>::clear(void) {
-  for (int i = 0; i < (size_of_element * capacity)-1; i++) {
-    *((unsigned char*) root + i) = 0x00;
+template <class T> void RingBuffer<T>::clear() {
+  _w = 0;
+  _r = 0;
+  _count = 0;
+  for (int i = 0; i < (_E_SIZE * _CAPAC)-1; i++) {
+    *((uint8_t*) _pool + i) = 0x00;
   }
-  first_element = 0;
-  last_element  = 0;
-  element_count = 0;
 }
 
 
@@ -86,47 +87,26 @@ template <class T> void RingBuffer<T>::clear(void) {
 *   for the caller to maintain local copies of data (unless T is a pointer).
 */
 template <class T> int RingBuffer<T>::insert(T d) {
-  int return_value = 0;
-	T *ref = &d;
-	unsigned int offset = size_of_element * last_element;
-	for (unsigned int i = 0; i < size_of_element; i++) {
-		*((unsigned char*) root + offset + i) = *((unsigned char*)ref + i);
-	}
-	if (element_count == capacity) {
-	  // We have wrapped our pointer because things have arrived faster than
-	  //  they have been removed. We need to clobber the oldest data.
-	  return_value = -1;
-	  first_element = ((first_element + 1) % capacity);
-	}
-	else {
-	  element_count++;
-	}
-	last_element = (last_element + 1) % capacity;
-	return return_value;
+  if (_count >= _CAPAC) {
+    return -1;
+  }
+  T *ref = &d;
+  unsigned int offset = _E_SIZE * _w;
+  for (unsigned int i = 0; i < _E_SIZE; i++) {
+    *((uint8_t*) _pool + offset + i) = *((uint8_t*)ref + i);
+  }
+  _w = (_w % _CAPAC) + 1;   // TODO: Convert to pow(2) later and convert to bitmask.
+  _count++;
+  return 0;
 }
 
 
 template <class T> T RingBuffer<T>::get() {
-  if (element_count == 0) {
+  if (0 == _count) {
     return (T)0;
   }
-  T *return_value = (T*) (root + (first_element * size_of_element));
-  first_element = ((first_element + 1) % capacity);
-  element_count--;
+  T *return_value = (T*) (_pool + (_r * _E_SIZE));
+  _r = (_r % _CAPAC) + 1;   // TODO: Convert to pow(2) later and convert to bitmask.
+  _count--;
   return *return_value;
-}
-
-template <class T> int RingBuffer<T>::get(T* d) {
-  int return_value = 0;
-  if (element_count == 0) {
-    return -1;
-  }
-  unsigned int offset = size_of_element * first_element;
-  for (unsigned int i = 0; i < size_of_element; i++) {
-    *((unsigned char*)d + i) = *((unsigned char*) root + offset + i);
-    return_value++;
-  }
-  first_element = ((first_element + 1) % capacity);
-  element_count--;
-  return return_value;
 }
