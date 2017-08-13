@@ -35,7 +35,7 @@
 
 /* Major/Minor/Patch */
 #define MANUVR_SEMVER_MAJOR 1
-#define MANUVR_SEMVER_MINOR 3
+#define MANUVR_SEMVER_MINOR 4
 #define MANUVR_SEMVER_PATCH 0
 
 /* To override the defaults, supply this at build time. */
