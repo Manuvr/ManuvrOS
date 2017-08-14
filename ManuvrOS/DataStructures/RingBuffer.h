@@ -118,5 +118,4 @@ template <class T> T RingBuffer<T>::get() {
   return *return_value;
 }
 
-
 #endif // __MANUVR_DS_RING_BUFFER_H
