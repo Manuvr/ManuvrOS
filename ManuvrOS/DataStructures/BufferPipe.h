@@ -56,8 +56,8 @@ See UDPPipe for a case where this matters.
 */
 
 
-#ifndef __MANUVR_BUFFER_PIPE_H__
-#define __MANUVR_BUFFER_PIPE_H__
+#ifndef __MANUVR_DS_BUFFER_PIPE_H
+#define __MANUVR_DS_BUFFER_PIPE_H
 
 // Our notion of buffer.
 #include <DataStructures/StringBuilder.h>
@@ -272,4 +272,4 @@ class BufferPipe {
     uint8_t  _pipe_code  = 0;
 };
 
-#endif   // __MANUVR_BUFFER_PIPE_H__
+#endif   // __MANUVR_DS_BUFFER_PIPE_H

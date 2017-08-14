@@ -41,7 +41,6 @@ limitations under the License.
 *
 * Static members and initializers should be located here.
 *******************************************************************************/
-uintptr_t   Kernel::_prealloc_max    = 0;
 uint32_t    Kernel::lagged_schedules = 0;
 Kernel*     Kernel::INSTANCE         = nullptr;
 BufferPipe* Kernel::_logger          = nullptr;  // The logger slot.
@@ -178,9 +177,8 @@ void Kernel::nextTick(BufferPipe* p) {
 /**
 * Vanilla constructor.
 */
-Kernel::Kernel() : EventReceiver("Kernel") {
+Kernel::Kernel() : EventReceiver("Kernel"), _msg_prealloc(EVENT_MANAGER_PREALLOC_COUNT, _preallocation_pool) {
   INSTANCE             = this;  // For singleton reference.
-  _prealloc_max        = ((uintptr_t) _preallocation_pool) + (sizeof(ManuvrMsg) * EVENT_MANAGER_PREALLOC_COUNT);
   current_event        = nullptr;
   max_events_per_loop  = 2;
   max_idle_count       = 100;
@@ -192,7 +190,7 @@ Kernel::Kernel() : EventReceiver("Kernel") {
         meet demand, new Events will be created on the heap. But the events that we are dealing
         with here are special. They should remain circulating (or in standby) for the lifetime of
         this class. */
-    preallocated.insert(&_preallocation_pool[i]);
+    //_msg_prealloc.wipe(&_preallocation_pool[i]);
   }
 
   #if defined(MANUVR_DEBUG)
@@ -386,16 +384,10 @@ int8_t Kernel::registerCallbacks(uint16_t msgCode, listenerFxnPtr ca, listenerFx
 */
 int8_t Kernel::raiseEvent(uint16_t code, EventReceiver* ori) {
   // We are creating a new Event. Try to snatch a prealloc'd one and fall back to malloc if needed.
-  ManuvrMsg* nu = INSTANCE->preallocated.dequeue();
-  if (nu == nullptr) {
-    INSTANCE->prealloc_starved++;
-    nu = new ManuvrMsg(code, ori);
+  ManuvrMsg* nu = INSTANCE->_msg_prealloc.take();
+  if (nu) {
+    nu->repurpose(code, ori);
   }
-  else {
-    nu->repurpose(code);
-    nu->setOriginator(ori);
-  }
-
   return staticRaiseEvent(nu);
 }
 
@@ -525,12 +517,8 @@ ManuvrMsg* Kernel::returnEvent(uint16_t code, EventReceiver* er) {
   if (nullptr == er) {
     er = (EventReceiver*) INSTANCE;
   }
-  ManuvrMsg* return_value = INSTANCE->preallocated.dequeue();
-  if (return_value == nullptr) {
-    INSTANCE->prealloc_starved++;
-    return_value = new ManuvrMsg(code, er);
-  }
-  else {
+  ManuvrMsg* return_value = INSTANCE->_msg_prealloc.take();
+  if (return_value) {
     return_value->repurpose(code, er);
   }
   return return_value;
@@ -564,33 +552,22 @@ int8_t Kernel::validate_insertion(ManuvrMsg* event) {
 }
 
 
-bool Kernel::returnToPrealloc(ManuvrMsg* obj) {
-  uintptr_t obj_addr = ((uintptr_t) obj);
-  if ((obj_addr < _prealloc_max) && (obj_addr >= ((uintptr_t) _preallocation_pool))) {
-    // If we are in this block, it means obj was preallocated...
-    obj->clearArgs();         // Wipe the Msg...
-    preallocated.insert(obj); // ...and return it to the preallocate queue.
-    return true;              // Inform caller of act.
-  }
-  return false;
-}
-
-
 /**
 * This is where events go to die. This function should inspect the Event and send it
 *   to the appropriate place.
 *
 * @param active_runnable The event that has reached the end of its life-cycle.
 */
-void Kernel::reclaim_event(ManuvrMsg* active_runnable) {
-  if (active_runnable) {
-    if (0 == active_runnable->refCount()) {
+void Kernel::reclaim_event(ManuvrMsg* obj) {
+  if (obj) {
+    if (0 == obj->refCount()) {
       // No outstanding references.
-      if (!returnToPrealloc(active_runnable)) {
-        delete active_runnable;  // If we are to free() this msg...
-        events_destroyed++;      // ...and note the incident.
-        burden_of_specific++;
+      if (_msg_prealloc.inPool(obj)) {
+        obj->clearArgs();         // Wipe the Msg...
       }
+      // Return it to the preallocate pool. If this message was heap-allocated,
+      //   it will be deleted by the pool manager.
+      _msg_prealloc.give(obj);
     }
   }
 }
@@ -923,11 +900,7 @@ void Kernel::profiler(bool enabled) {
   _profiler_enabled(enabled);
   max_idle_loop_time = 0;
   max_events_p_loop  = 0;
-
   max_idle_loop_time = 0;
-  events_destroyed   = 0;
-  prealloc_starved   = 0;
-  burden_of_specific = 0;
   insertion_denials  = 0;
 
   #if defined(MANUVR_EVENT_PROFILER)
@@ -954,14 +927,14 @@ void Kernel::printProfiler(StringBuilder* output) {
     output->concatf("-- Queue depth        \t%d\n", exec_queue.size());
     output->concatf("-- ISR depth          \t%d\n", isr_exec_queue.size());
 
-    output->concat("-- Preallocd msgs\n");
-    output->concatf("\t Available:\t%d\n", preallocated.size());
-    output->concatf("\t Starves:  \t%u\n", (unsigned long) prealloc_starved);
+    #if defined(MANUVR_DEBUG)
+      output->concat("-- Preallocd ");
+      _msg_prealloc.printDebug(output);
+    #endif
+
     if (total_events) {
-      output->concatf("\t Hits:     \t%.3f\%\n", (double)(1-((burden_of_specific - prealloc_starved) / total_events)) * 100);
+      output->concatf("\t Hits:     \t%.3f\%\n", (double)(1-(_msg_prealloc.starves() / total_events)) * 100);
     }
-    output->concatf("-- Msgs destroyed     \t%u\n", (unsigned long) events_destroyed);
-    output->concatf("-- specificity burden \t%u\n", (unsigned long) burden_of_specific);
   }
 
   output->concatf("-- total_events       \t%u\n", (unsigned long) total_events);

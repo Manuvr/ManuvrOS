@@ -1,3 +1,24 @@
+/*
+File:   Quaternion.cpp
+Author: J. Ian Lindsay
+Date:   2014.03.10
+
+Copyright 2016 Manuvr, Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+*/
+
 #include "Quaternion.h"
 #include <math.h>
 
@@ -35,7 +56,7 @@ void Quaternion::setDown(float n_x, float n_y, float n_z) {
   float cp_x = n_y;
   float cp_y = 0 - n_x;
   float cp_z = 0;
-  
+
   // Normalize the cross-product...
   float len = sqrt(cp_x*cp_x + cp_y*cp_y + cp_z+cp_z);
   if (0 != len) {
@@ -62,7 +83,7 @@ void Quaternion::toString(StringBuilder *output) {
   output->concat((unsigned char*) &x, 4);
   output->concat((unsigned char*) &y, 4);
   output->concat((unsigned char*) &z, 4);
-  
+
 }
 
 
@@ -75,4 +96,3 @@ void Quaternion::printDebug(StringBuilder *output) {
   output->concatf("(%2.5f, %2.5f, %2.5f, %2.5f) (x,y,z,w)", x, y, z, w);
 }
 #pragma GCC diagnostic pop
-
