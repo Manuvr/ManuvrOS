@@ -37,14 +37,18 @@ template <class T> class ElementPool : public RingBuffer<T*>  {
     ElementPool(const unsigned int c, const T* _pool);
     ~ElementPool();
 
-    int give(T*);
-    T*  take();
+    bool inPool(T*);
+    int  give(T*);
+    T*   take();
 
     inline bool ready() {  return (RingBuffer<T*>::allocated() && (nullptr != _pool));  };
+    inline unsigned int starves() {        return _starves;        };
+    inline unsigned int heapFrees() {      return _heap_frees;     };
+    inline unsigned int lowWaterMark() {   return _low_watermark;  };
 
     #if defined(MANUVR_DEBUG)
     void printDebug(StringBuilder* output) {
-      output->concatf("-- ElementPool (%sReady)\n", ready() ? "" : "Not ");
+      output->concatf("ElementPool (%sReady)\n", ready() ? "" : "Not ");
       output->concatf("\tPool(%p): %u bytes\n", (uintptr_t) _pool, (RingBuffer<T*>::capacity() * sizeof(T)));
       output->concatf("\tCapacity:       %u/%u\n\tLow Watermark:  %u\n", RingBuffer<T*>::count(), RingBuffer<T*>::capacity(), _low_watermark);
       output->concatf("\tStarves/Frees:  %u/%u\n", _starves, _heap_frees);
@@ -108,6 +112,16 @@ template <class T> int ElementPool<T>::give(T* e) {
     delete e;
     return 0;
   }
+}
+
+template <class T> bool ElementPool<T>::inPool(T* e) {
+  const uintptr_t obj_addr = ((uintptr_t) e);
+  const uintptr_t pre_min  = ((uintptr_t) _pool);
+  const uintptr_t pre_max  = pre_min + (uintptr_t) (RingBuffer<T*>::capacity() * sizeof(T));
+
+  // If we are in this block, it means obj was preallocated. reclaim it.
+  // Note that we are not wiping.
+  return ((obj_addr < pre_max) && (obj_addr >= pre_min));
 }
 
 template <class T> T* ElementPool<T>::take() {

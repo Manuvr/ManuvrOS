@@ -35,6 +35,7 @@ limitations under the License.
   #include <CommonConstants.h>
   #include <EnumeratedTypeCodes.h>
   #include <DataStructures/PriorityQueue.h>
+  #include <DataStructures/ElementPool.h>
   #include <DataStructures/StringBuilder.h>
   #include <EventReceiver.h>
 
@@ -170,10 +171,12 @@ limitations under the License.
 
 
     private:
+      ManuvrMsg _preallocation_pool[EVENT_MANAGER_PREALLOC_COUNT];
       ManuvrMsg* current_event = nullptr;  // The presently-executing event.
+      ElementPool<ManuvrMsg>           _msg_prealloc; // This is the listing of pre-allocated Msgs.
       PriorityQueue<ManuvrMsg*>        exec_queue;    // Msgs that are pending execution.
       PriorityQueue<ManuvrMsg*>        schedules;     // These are Msgs scheduled to be run.
-      PriorityQueue<ManuvrMsg*>        preallocated;  // This is the listing of pre-allocated Msgs.
+
       PriorityQueue<BufferPipe*>       _pipe_io_pend; // Pending BufferPipe transfers that wish to be async.
       PriorityQueue<TaskProfilerData*> event_costs;   // Message code is the priority. Calculates average cost in uS.
       PriorityQueue<EventReceiver*>    subscribers;   // Our manifest of EventReceivers we service.
@@ -192,13 +195,8 @@ limitations under the License.
       uint32_t idle_loops;             // How many idle loops have we run?
       uint16_t consequtive_idles;      // How many consecutive idle loops?
       uint16_t max_idle_count;         // How many consecutive idle loops before we act?
-
-      uint32_t events_destroyed;       // How many events have we destroyed?
-      uint32_t prealloc_starved;       // How many times did we starve the prealloc queue?
-      uint32_t burden_of_specific;     // How many events have we reaped?
       uint32_t insertion_denials;      // How many times have we rejected events?
 
-      ManuvrMsg _preallocation_pool[EVENT_MANAGER_PREALLOC_COUNT];
 
       uint8_t  max_events_p_loop;     // What is the most events we've handled in a single loop?
       int8_t   max_events_per_loop;
@@ -210,7 +208,6 @@ limitations under the License.
       int serviceSchedules(void);         // Prep any schedules that have come due for exec.
 
       int8_t validate_insertion(ManuvrMsg*);
-      bool returnToPrealloc(ManuvrMsg*);
       void reclaim_event(ManuvrMsg*);
       inline void update_maximum_queue_depth() {   max_queue_depth = (exec_queue.size() > (int) max_queue_depth) ? exec_queue.size() : max_queue_depth;   };
 
@@ -227,7 +224,6 @@ limitations under the License.
       inline bool _idle() {                     return (_er_flag(MKERNEL_FLAG_IDLE));                 };
       void _idle(bool nu);
 
-      static uintptr_t   _prealloc_max;
       static Kernel*     INSTANCE;
       static PriorityQueue<ManuvrMsg*> isr_exec_queue;   // Events that have been raised from ISRs.
 

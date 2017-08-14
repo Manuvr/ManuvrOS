@@ -7,6 +7,29 @@ _---J. Ian Lindsay 2016.08.27_
 
 ------
 
+### 2017.08.14
+##### Ahead of msg prealloc conversion:
+
+    text    data     bss     dec     hex
+    2822759  234152  272996 3329907  32cf73
+
+    MSG test:   540732 cycles in 1001 ms (540734.40 Msg/sec)
+    MSG test:   855572 cycles in 1001 ms (855575.79 Msg/sec)
+
+##### Following msg prealloc conversion:
+
+    text    data     bss     dec     hex
+    2825439  234568  273316 3333323  32dccb
+
+    MSG test:   552686 cycles in 1001 ms (552688.42 Msg/sec)
+    MSG test:   863829 cycles in 1001 ms (863832.79 Msg/sec)
+
+Notes: Binary size increase makes sense in light of the template replication for ManuvrMsg. But the higher efficiency in execution flow bought about 10,000 extra msgs/sec. Eats all the memory cost for tracking preallocations up-front rather than heap-thrash as things enter and leave the preallocation pool. Probably a good all-around change.
+
+_---J. Ian Lindsay 2017.08.14_
+
+------
+
 ### 2016.08.16
 
        text    data     bss     dec     hex filename

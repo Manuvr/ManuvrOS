@@ -40,6 +40,7 @@ template <class T> class RingBuffer {
     inline bool         allocated() {  return (nullptr != _pool);  };
     inline unsigned int capacity() {   return _CAPAC;              };
     inline unsigned int heap_use() {   return (_E_SIZE * _CAPAC);  };
+    inline unsigned int vacancy() {    return (_CAPAC - _count);   };
 
     /* Returns an integer representing how many items are buffered. */
     inline unsigned int count() {     return _count;  };
