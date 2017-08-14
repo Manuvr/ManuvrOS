@@ -20,8 +20,8 @@ limitations under the License.
 */
 
 
-#ifndef STRING_BUILDER_H
-#define STRING_BUILDER_H
+#ifndef __MANUVR_DS_STRING_BUILDER_H
+#define __MANUVR_DS_STRING_BUILDER_H
 
 #include <inttypes.h>
 #include <stdarg.h>
@@ -164,4 +164,4 @@ class StringBuilder {
 		void null_term_check();
 		StrLL* promote_collapsed_into_ll();
 };
-#endif
+#endif  // __MANUVR_DS_STRING_BUILDER_H

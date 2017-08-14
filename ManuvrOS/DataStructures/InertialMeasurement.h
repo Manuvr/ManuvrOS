@@ -21,8 +21,8 @@ limitations under the License.
 This is a container class for a single IMU measurement frame.
 */
 
-#ifndef __IIU_MEASUREMENT_H__
-#define __IIU_MEASUREMENT_H__
+#ifndef __MANUVR_DS_IIU_MEASUREMENT_H
+#define __MANUVR_DS_IIU_MEASUREMENT_H
 
 #include <inttypes.h>
 #include "Vector3.h"
@@ -57,4 +57,4 @@ class InertialMeasurement {
 
 
 
-#endif  //__IIU_MEASUREMENT_H__
+#endif  // __MANUVR_DS_IIU_MEASUREMENT_H

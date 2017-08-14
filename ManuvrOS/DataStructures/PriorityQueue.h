@@ -26,16 +26,15 @@ Some functions are #pragma'd to stop the compiler from complaining about nullptr
   (doubles, floats, ints, etc) without polluting the log.
 */
 
+#include <inttypes.h>
+#include <stdlib.h>
 
 #ifndef PRIORITY_QUEUE_H
 #define PRIORITY_QUEUE_H
 
-#include <inttypes.h>
-
 //#ifdef ARDUINO
 //  #include "Arduino.h"
 //#else
-  #include <stdlib.h>
 //#endif
 
 #ifdef __MANUVR_LINUX

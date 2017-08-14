@@ -24,8 +24,8 @@ Template for a linked list.
 
 
 
-#ifndef LIGHT_LINKED_LIST_H
-#define LIGHT_LINKED_LIST_H
+#ifndef __MANUVR_DS_LINKED_LIST_H
+#define __MANUVR_DS_LINKED_LIST_H
 
 //#ifdef ARDUINO
 //  #include "Arduino.h"
@@ -320,4 +320,4 @@ template <class T> bool LinkedList<T>::contains(T test_data) {
 }
 
 
-#endif
+#endif  // __MANUVR_DS_LINKED_LIST_H

@@ -27,10 +27,12 @@ TODO: Rework modulus operations into bit mask, and make the buffer size pow(2).
 
 #include <stdlib.h>
 
+#ifndef __MANUVR_DS_RING_BUFFER_H
+#define __MANUVR_DS_RING_BUFFER_H
 
 template <class T> class RingBuffer {
   public:
-    RingBuffer(unsigned int c);  // Constructor takes the number of slots as its sole argument.
+    RingBuffer(const unsigned int c);  // Constructor takes the number of slots as its sole argument.
     ~RingBuffer();
 
     void clear();     // Wipe the buffer.
@@ -46,8 +48,10 @@ template <class T> class RingBuffer {
     T get();
 
 
-  private:
+  protected:
     const unsigned int _CAPAC;
+
+  private:
     const unsigned int _E_SIZE;
     unsigned int _count;
     unsigned int _w;
@@ -56,7 +60,7 @@ template <class T> class RingBuffer {
 };
 
 
-template <class T> RingBuffer<T>::RingBuffer(unsigned int c) : _CAPAC(c), _E_SIZE(sizeof(T)) {
+template <class T> RingBuffer<T>::RingBuffer(const unsigned int c) : _CAPAC(c), _E_SIZE(sizeof(T)) {
 	unsigned int s = _E_SIZE * _CAPAC;
 	if (0 < s) {
   	_pool = (uint8_t*) malloc(s);
@@ -76,7 +80,9 @@ template <class T> void RingBuffer<T>::clear() {
   _w = 0;
   _r = 0;
   _count = 0;
-  for (int i = 0; i < (_E_SIZE * _CAPAC)-1; i++) {
+  for (unsigned int i = 0; i < (_E_SIZE * _CAPAC)-1; i++) {
+    // TODO: We were almost certainly allocated on an alignment we
+    // can write longwords over...
     *((uint8_t*) _pool + i) = 0x00;
   }
 }
@@ -110,3 +116,6 @@ template <class T> T RingBuffer<T>::get() {
   _count--;
   return *return_value;
 }
+
+
+#endif // __MANUVR_DS_RING_BUFFER_H

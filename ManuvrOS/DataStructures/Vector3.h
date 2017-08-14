@@ -42,8 +42,8 @@ Thank you, Bill and Michael!
  *
  ****************************************/
 
-#ifndef VECTOR3_H
-#define VECTOR3_H
+#ifndef __MANUVR_DS_VECTOR3_H
+#define __MANUVR_DS_VECTOR3_H
 
 #include <math.h>
 
@@ -158,9 +158,9 @@ public:
   float normalize(){
     float stacked_len = length();
     if (stacked_len) {
-      if (stacked_len != 1.0f) {  
+      if (stacked_len != 1.0f) {
         // Only do more math if anything will change. May already be normalized.
-        // Multiplying 3 times is typically worth saving two divisions. 
+        // Multiplying 3 times is typically worth saving two divisions.
         // I picked up this trick from Sebastian Madgwick's AHRS code.
         stacked_len = 1.0f/stacked_len;
         *this *=stacked_len;
@@ -219,4 +219,4 @@ typedef Vector3<long>      Vector3l;
 typedef Vector3<unsigned long>  Vector3ul;
 typedef Vector3<float>      Vector3f;
 
-#endif // VECTOR3_H
+#endif // __MANUVR_DS_VECTOR3_H
