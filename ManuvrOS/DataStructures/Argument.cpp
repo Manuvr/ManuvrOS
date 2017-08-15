@@ -653,7 +653,6 @@ void Argument::valToString(StringBuilder* out) {
         break;
       case TCode::FLOAT:
         out->concatf("%.4f", (double)(uintptr_t) pointer());
-        out->concatf("  %p", (uintptr_t) pointer());
         break;
       case TCode::BOOLEAN:
         out->concatf("%s", ((uintptr_t) pointer() ? "true" : "false"));
