@@ -169,6 +169,7 @@ int test_CBOR_Argument() {
   uint32_t val3  = (uint32_t) randomInt();
   uint16_t val4  = (uint16_t) randomInt();
   uint8_t  val5  = (uint8_t)  randomInt();
+  float    val6  = 0.4123f;
 
   int32_t  ret0 = 0;
   int16_t  ret1 = 0;
@@ -176,6 +177,7 @@ int test_CBOR_Argument() {
   uint32_t ret3 = 0;
   uint16_t ret4 = 0;
   uint8_t  ret5 = 0;
+  float    ret6 = 0.0f;
   Argument a(val0);
 
   a.setKey("value0");
@@ -184,6 +186,7 @@ int test_CBOR_Argument() {
   a.append(val3);
   a.append(val4)->setKey("value4");
   a.append(val5)->setKey("value5");
+  a.append(val6)->setKey("value6");
 
   a.printDebug(&log);
 
@@ -204,10 +207,13 @@ int test_CBOR_Argument() {
             if ((0 == r->getValueAs((uint8_t) 3, &ret3)) && (ret3 == val3)) {
               if ((0 == r->getValueAs((uint8_t) 4, &ret4)) && (ret4 == val4)) {
                 if ((0 == r->getValueAs((uint8_t) 5, &ret5)) && (ret5 == val5)) {
-                  if (r->argCount() == a.argCount()) {
-                    return_value = 0;
+                  if ((0 == r->getValueAs((uint8_t) 6, &ret6)) && (ret6 == val6)) {
+                    if (r->argCount() == a.argCount()) {
+                      return_value = 0;
+                    }
+                    else log.concatf("Arg counts don't match: %d vs %d\n", r->argCount(), a.argCount());
                   }
-                  else log.concatf("Arg counts don't match: %d vs %d\n", r->argCount(), a.argCount());
+                  else log.concatf("Failed to vet key 'value6'... %.3f vs %.3f\n", ret6, val6);
                 }
                 else log.concatf("Failed to vet key 'value5'... %u vs %u\n", ret5, val5);
               }

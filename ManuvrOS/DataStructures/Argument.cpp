@@ -87,6 +87,14 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
           }
         }
         break;
+      case TCode::FLOAT:
+        {
+          float x = 0;
+          if (0 == src->getValueAs(&x)) {
+            encoder.write_float((unsigned int)x);
+          }
+        }
+        break;
 
       case TCode::STR:
         {
@@ -644,7 +652,8 @@ void Argument::valToString(StringBuilder* out) {
         out->concatf("%u", (uintptr_t) pointer());
         break;
       case TCode::FLOAT:
-        out->concatf("%f", (double)(uintptr_t) pointer());
+        out->concatf("%.4f", (double)(uintptr_t) pointer());
+        out->concatf("  %p", (uintptr_t) pointer());
         break;
       case TCode::BOOLEAN:
         out->concatf("%s", ((uintptr_t) pointer() ? "true" : "false"));

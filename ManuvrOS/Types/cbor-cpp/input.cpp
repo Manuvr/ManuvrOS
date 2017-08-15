@@ -16,6 +16,7 @@
 
 #include "input.h"
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -53,6 +54,17 @@ unsigned int input::get_int() {
             ((unsigned int) _data[_offset + 3]);
     _offset += 4;
     return value;
+}
+
+float input::get_float() {
+    uint8_t value[4] = {
+      _data[_offset    ],
+      _data[_offset + 1],
+      _data[_offset + 2],
+      _data[_offset + 3]
+    };
+    _offset += 4;
+    return *((float*) (&value[0]));
 }
 
 unsigned long long input::get_long() {

@@ -37,6 +37,7 @@ This module is built and loaded by Platform.cpp if the CONFIG_MANUVR_BENCHMARKS 
 #define MANUVR_MSG_BNCHMRK_MSG_LOAD     0xF578   //
 #define MANUVR_MSG_BNCHMRK_FLOAT        0xF579   //
 #define MANUVR_MSG_BNCHMRK_HASH         0xF57A   //
+#define MANUVR_MSG_BNCHMRK_P_OPS        0xF57B   //
 
 /*
 * These state flags are hosted by the EventReceiver. This may change in the future.

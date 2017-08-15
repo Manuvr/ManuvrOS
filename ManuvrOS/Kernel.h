@@ -136,6 +136,7 @@ limitations under the License.
       inline int8_t maxEventsPerLoop() {        return max_events_per_loop; }
       inline int queueSize() {                  return INSTANCE->exec_queue.size();     }
       inline bool containsPreformedEvent(ManuvrMsg* event) {   return exec_queue.contains(event);  };
+      inline bool idle() {                     return (_er_flag(MKERNEL_FLAG_IDLE));              };
 
       /* Overrides from EventReceiver
          Just gracefully fall into those when needed. */
@@ -221,7 +222,6 @@ limitations under the License.
       inline void _skip_detected(bool nu) {     return (_er_set_flag(MKERNEL_FLAG_SKIP_DETECT, nu));  };
       inline bool _pending_pipes() {            return (_er_flag(MKERNEL_FLAG_PENDING_PIPE));         };
       inline void _pending_pipes(bool nu) {     return (_er_set_flag(MKERNEL_FLAG_PENDING_PIPE, nu)); };
-      inline bool _idle() {                     return (_er_flag(MKERNEL_FLAG_IDLE));                 };
       void _idle(bool nu);
 
       static Kernel*     INSTANCE;

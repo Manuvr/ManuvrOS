@@ -21,8 +21,7 @@ limitations under the License.
 Template for a ring buffer.
 
 TODO: Rework modulus operations into bit mask, and make element count pow(2).
-TODO: Rework modulus operations into bit mask, and make the buffer size pow(2).
-
+TODO: Audit for best-practices for a lock-free design.
 */
 
 #include <stdlib.h>
@@ -81,7 +80,7 @@ template <class T> void RingBuffer<T>::clear() {
   _w = 0;
   _r = 0;
   _count = 0;
-  for (unsigned int i = 0; i < (_E_SIZE * _CAPAC)-1; i++) {
+  for (unsigned int i = 0; i < (_E_SIZE * _CAPAC); i++) {
     // TODO: We were almost certainly allocated on an alignment we
     // can write longwords over...
     *((uint8_t*) _pool + i) = 0x00;
@@ -97,7 +96,8 @@ template <class T> int RingBuffer<T>::insert(T d) {
   if (_count >= _CAPAC) {
     return -1;
   }
-  T *ref = &d;
+  T* ref = &d;
+
   unsigned int offset = _E_SIZE * _w;
   for (unsigned int i = 0; i < _E_SIZE; i++) {
     *((uint8_t*) _pool + offset + i) = *((uint8_t*)ref + i);

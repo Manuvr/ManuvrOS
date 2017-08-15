@@ -48,6 +48,7 @@ const MessageTypeDef message_defs[] = {
     {  MANUVR_MSG_BNCHMRK_HASH,   0x0000,  "BNCHMRK_HASH",     ManuvrMsg::MSG_ARGS_NONE },
   #endif
 
+  {  MANUVR_MSG_BNCHMRK_P_OPS,    0x0000,  "BNCHMRK_OCM",      ManuvrMsg::MSG_ARGS_NONE },
   {  MANUVR_MSG_BNCHMRK_RNG,      0x0000,  "BNCHMRK_RNG",      ManuvrMsg::MSG_ARGS_NONE },
   {  MANUVR_MSG_BNCHMRK_MSG_LOAD, 0x0000,  "BNCHMRK_MSG_LOAD", ManuvrMsg::MSG_ARGS_NONE },
   {  MANUVR_MSG_BNCHMRK_FLOAT,    0x0000,  "BNCHMRK_FLOAT",    ManuvrMsg::MSG_ARGS_NONE }
@@ -494,6 +495,7 @@ void TestDriver::printDebug(StringBuilder* output) {
   output->concat("\tb2)     Message load (singular)\n");
   output->concat("\tp1)     RNG\n");
   output->concat("\tp2)     FPU\n");
+  output->concat("\tp3)     OCM\n");  // Operation cost matrix.
   #if defined(__BUILD_HAS_ASYMMETRIC)
     output->concat("\tc1)     Asymmetric\n");
   #endif
@@ -642,6 +644,8 @@ void TestDriver::procDirectDebugInstruction(StringBuilder *input) {
         case 1:   Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_RNG, nullptr);
           break;
         case 2:   Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_FLOAT, nullptr);
+          break;
+        case 3:   Kernel::raiseEvent(MANUVR_MSG_BNCHMRK_P_OPS, nullptr);
           break;
         default:
           local_log.concat("Unsupported.\n");

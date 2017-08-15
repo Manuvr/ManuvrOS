@@ -674,7 +674,7 @@ int8_t Kernel::procIdleFlags() {
 
   /* As long as we have an open event and we aren't yet at our proc ceiling... */
   while (exec_queue.hasNext() && should_run_another_event(return_value, profiler_mark)) {
-    if (_idle()) {
+    if (idle()) {
       platform.wakeHook();
       _idle(false);
     }
@@ -853,7 +853,7 @@ int8_t Kernel::procIdleFlags() {
       case 0:
         // If we have reached our threshold for idleness, we invoke the plaform
         //   idle hook.
-        if (!_idle()) {
+        if (!idle()) {
           platform.idleHook();
           _idle(true);
         }
