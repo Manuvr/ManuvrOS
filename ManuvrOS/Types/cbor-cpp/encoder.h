@@ -22,43 +22,32 @@
 #include <string>
 
 namespace cbor {
-    class encoder {
+  class encoder {
     private:
-        output *_out;
+      output *_out;
+
+      void write_type_value(int major_type, unsigned int value);
+      void write_type_value(int major_type, unsigned long long value);
+
+
     public:
-        encoder(output &out);
+      encoder(output &out);
+      ~encoder();
 
-        ~encoder();
+      void write_int(int value);
+      void write_int(long long value);
+      inline void write_int(unsigned int v) {            write_type_value(0, v);     };
+      inline void write_int(unsigned long long v) {      write_type_value(0, v);     };
+      inline void write_tag(const unsigned int tag) {    write_type_value(6, tag);   };
+      inline void write_array(int size) {  write_type_value(4, (unsigned int) size); };
+      inline void write_map(int size) {    write_type_value(5, (unsigned int) size); };
+      inline void write_special(int v) {   write_type_value(7, (unsigned int) v);    };
 
-        void write_int(int value);
-
-        void write_int(long long value);
-
-        void write_int(unsigned int value);
-
-        void write_int(unsigned long long value);
-
-        void write_float(float value);
-
-        void write_bytes(const unsigned char *data, unsigned int size);
-
-        void write_string(const char* data, unsigned int size);
-
-        void write_string(const char* str);
-
-        void write_array(int size);
-
-        void write_map(int size);
-
-        void write_tag(const unsigned int tag);
-
-        void write_special(int special);
-
-    private:
-        void write_type_value(int major_type, unsigned int value);
-
-        void write_type_value(int major_type, unsigned long long value);
-    };
+      void write_float(float value);
+      void write_bytes(const unsigned char *data, unsigned int size);
+      void write_string(const char* data, unsigned int size);
+      void write_string(const char* str);
+  };
 }
 
 #endif //__CborEncoder_H_

@@ -58,10 +58,10 @@ unsigned int input::get_int() {
 
 float input::get_float() {
     uint8_t value[4] = {
-      _data[_offset    ],
-      _data[_offset + 1],
+      _data[_offset + 3],
       _data[_offset + 2],
-      _data[_offset + 3]
+      _data[_offset + 1],
+      _data[_offset + 0]
     };
     _offset += 4;
     return *((float*) (&value[0]));

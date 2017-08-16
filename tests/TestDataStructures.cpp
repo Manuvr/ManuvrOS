@@ -100,8 +100,7 @@ int test_StringBuilder(void) {
 
   log.concatf("\t Final Stack obj:          %s\n", stack_obj.string());
 
-  log.concat("========================================================\n\n");
-  printf((const char*) log.string());
+  printf("%s\n\n", (const char*) log.string());
   return 0;
 }
 
@@ -131,8 +130,7 @@ int vector3_float_test(float x, float y, float z) {
 
   test(x, y, z);
   log.concatf("\t (test) (%.4f, %.4f, %.4f)\n", (double)(test.x), (double)(test.y), (double)(test.z));
-  log.concat("========================================================\n\n");
-  printf((const char*) log.string());
+  printf("%s\n\n", (const char*) log.string());
   return 0;
 }
 
@@ -140,8 +138,7 @@ int vector3_float_test(float x, float y, float z) {
 
 int test_PriorityQueue(void) {
   StringBuilder log("===< PriorityQueue >====================================\n");
-  log.concat("========================================================\n\n");
-  printf((const char*) log.string());
+  printf("%s\n\n", (const char*) log.string());
   return 0;
 }
 
@@ -234,8 +231,7 @@ int test_CBOR_Argument() {
   if (return_value) {
     a.printDebug(&log);
   }
-  log.concat("========================================================\n\n");
-  printf((const char*) log.string());
+  printf("%s\n\n", (const char*) log.string());
   return return_value;
 }
 
@@ -247,7 +243,6 @@ int test_CBOR_Argument() {
 int test_Arguments_KVP() {
   int return_value = -1;
   StringBuilder log("===< Arguments KVP >====================================\n");
-  Argument a;
 
   uint32_t val0  = (uint32_t) randomInt();
   uint16_t val1  = (uint16_t) randomInt();
@@ -255,7 +250,8 @@ int test_Arguments_KVP() {
   int32_t  val3  = (int32_t)  randomInt();
   int16_t  val4  = (int16_t)  randomInt();
   int8_t   val5  = (int8_t)   randomInt();
-  float    val6  = 0.4123f;
+  float    val6  = 0.8374f;
+  float    val8  = -0.8374f;
   Vector3<float> val7(0.5f, -0.5f, 0.2319f);
 
   uint32_t ret0 = 0;
@@ -265,38 +261,43 @@ int test_Arguments_KVP() {
   int16_t  ret4 = 0;
   int8_t   ret5 = 0;
   float    ret6 = 0.0f;
+  float    ret8 = 0.0f;
   Vector3<float> ret7(0.0f, 0.0f, 0.0f);
 
-
-
-  log.concat("Adding arguments...\n\n");
+  log.concat("\t Adding arguments...\n\n");
+  Argument a(val3);
 
   a.append(val0)->setKey("value0");
   a.append(val1)->setKey("value1");
   a.append(val2);  // NOTE: Mixed in with non-KVP.
-  a.append(val3);
   a.append(val4)->setKey("value4");
   a.append(val5)->setKey("value5");
   a.append(val6)->setKey("value6");
+  a.append(val8)->setKey("value8");
   a.append(&val7)->setKey("value7");
 
   a.printDebug(&log);
   log.concat("\n");
 
-  StringBuilder key_set;
-  int key_count = a.collectKeys(&key_set);
-  log.concatf("Breadth-first keyset (%d total keys):   ", key_count);
+  StringBuilder temp_buffer;
+  int key_count = a.collectKeys(&temp_buffer);
+  log.concatf("\t Breadth-first keyset (%d total keys):   ", key_count);
   for (int i = 0; i < key_count; i++) {
-    log.concatf("%s ", key_set.position(i));
+    log.concatf("%s ", temp_buffer.position(i));
   }
   log.concat("\n");
+
+  temp_buffer.clear();
+  a.serialize(&temp_buffer);
+  log.concatf("\t temp_buffer is %u bytes long.\n", temp_buffer.length());
+  temp_buffer.printDebug(&log);
 
   if ((0 == a.getValueAs("value0", &ret0)) && (ret0 == val0)) {
     if ((0 == a.getValueAs("value4", &ret4)) && (ret4 == val4)) {
       if ((0 == a.getValueAs("value5", &ret5)) && (ret5 == val5)) {
         if (0 != a.getValueAs("non-key", &ret0)) {
           // We shouldn't be able to get a value for a key that doesn't exist...
-          if (0 != a.getValueAs("non-key", &ret0)) {
+          if (0 != a.getValueAs(nullptr, &ret0)) {
             // Nor for a NULL key...
             return_value = 0;
           }
@@ -308,8 +309,7 @@ int test_Arguments_KVP() {
   }
   else log.concat("Failed to vet key 'value0'...\n");
 
-  log.concat("========================================================\n\n");
-  printf((const char*) log.string());
+  printf("%s\n\n", (const char*) log.string());
   return return_value;
 }
 
@@ -336,8 +336,7 @@ int test_Arguments_InternalTypes() {
   }
   else log.concat("Failed to retrieve StringBuilder pointer.\n");
 
-  log.concat("========================================================\n\n");
-  printf((const char*) log.string());
+  printf("%s\n\n", (const char*) log.string());
   return return_value;
 }
 
@@ -420,8 +419,7 @@ int test_Arguments_PODs() {
     log.concat("\n");
   }
 
-  log.concat("========================================================\n\n");
-  printf((const char*) log.string());
+  printf("%s\n\n", (const char*) log.string());
   return return_value;
 }
 
@@ -448,8 +446,7 @@ int test_Arguments() {
 
 int test_BufferPipe() {
   StringBuilder log("===< BufferPipe >=======================================\n");
-  log.concat("========================================================\n\n");
-  printf((const char*) log.string());
+  printf("%s\n\n", (const char*) log.string());
   return 0;
 }
 
@@ -469,7 +466,7 @@ int test_RingBuffer() {
         val = randomInt();
         if (a.insert(val)) {
           log.concat("\nFailed to insert.\n");
-          printf((const char*) log.string());
+          printf("%s\n\n", (const char*) log.string());
           return -1;
         }
         log.concatf(" (%u: %08x)", a.count(), val);
@@ -486,7 +483,7 @@ int test_RingBuffer() {
         for (unsigned int i = 0; i < n; i++) {
           if (a.insert(randomInt())) {
             log.concatf("Falsified. Count is %u\n", a.count());
-            printf((const char*) log.string());
+            printf("%s\n\n", (const char*) log.string());
             return -1;
           }
         }
@@ -522,8 +519,7 @@ int test_RingBuffer() {
   }
   else log.concat("\nFailed to allocate.\n");
 
-  log.concat("========================================================\n\n");
-  printf((const char*) log.string());
+  printf("%s\n\n", (const char*) log.string());
   return return_value;
 }
 
@@ -542,7 +538,7 @@ int test_UUID() {
   for (int i = 0; i < 16; i++) {
     if (0 != *((uint8_t*) &test0.id[i])) {
       log.concat("UUID should be initialized to zeros. It was not. Failing...\n");
-      printf((const char*) log.string());
+      printf("%s\n\n", (const char*) log.string());
       return -1;
     }
   }
@@ -555,7 +551,7 @@ int test_UUID() {
     temp.clear();
     temp.concat((uint8_t*) &test1.id, sizeof(test1));
     temp.printDebug(&log);
-    printf((const char*) log.string());
+    printf("%s\n\n", (const char*) log.string());
     return -1;
   }
   uuid_gen(&test0);
@@ -567,7 +563,7 @@ int test_UUID() {
     temp.clear();
     temp.concat((uint8_t*) &test1.id, sizeof(test1));
     temp.printDebug(&log);
-    printf((const char*) log.string());
+    printf("%s\n\n", (const char*) log.string());
     return -1;
   }
 
@@ -580,7 +576,7 @@ int test_UUID() {
 
     if (0 == uuid_compare(&test0, &test1)) {
       log.concat("UUID generator gave us a repeat UUID. Fail...\n");
-      printf((const char*) log.string());
+      printf("%s\n\n", (const char*) log.string());
       return -1;
     }
     uuid_copy(&test0, &test1);
@@ -591,7 +587,7 @@ int test_UUID() {
       temp.clear();
       temp.concat((uint8_t*) &test1.id, sizeof(test1));
       temp.printDebug(&log);
-      printf((const char*) log.string());
+      printf("%s\n\n", (const char*) log.string());
       return -1;
     }
     uuid_gen(&test0);
@@ -609,8 +605,7 @@ int test_UUID() {
   // TODO: This is the end of the happy-path. Now we should abuse the program
   // by feeding it garbage and ensure that its behavior is defined.
 
-  log.concat("========================================================\n\n");
-  printf((const char*) log.string());
+  printf("%s\n\n", (const char*) log.string());
   return 0;
 }
 

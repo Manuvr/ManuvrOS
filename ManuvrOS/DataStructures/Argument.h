@@ -77,7 +77,7 @@ class Argument {
     Argument(int8_t   val) : Argument((void*)(uintptr_t) val, sizeof(val), TCode::INT8)   {};
     Argument(int16_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), TCode::INT16)  {};
     Argument(int32_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), TCode::INT32)  {};
-    Argument(float    val) : Argument((void*)(uintptr_t) val, sizeof(val), TCode::FLOAT)  {};
+    Argument(float    val) : Argument((void*)(uintptr_t) *((uintptr_t*)&val), sizeof(val), TCode::FLOAT)  {};
 
     Argument(uint8_t*  val) : Argument((void*) val, sizeof(val), TCode::UINT8_PTR)  {};
     Argument(uint16_t* val) : Argument((void*) val, sizeof(val), TCode::UINT16_PTR) {};
