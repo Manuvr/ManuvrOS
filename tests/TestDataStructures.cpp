@@ -180,13 +180,13 @@ int test_CBOR_Argument() {
   float    ret6 = 0.0f;
   Argument a(val0);
 
-  a.setKey("value0");
-  a.append(val1)->setKey("value1");
-  a.append(val2)->setKey("value");;  // NOTE: Mixed in with non-KVP.
-  a.append(val3);
-  a.append(val4)->setKey("value4");
-  a.append(val5)->setKey("value5");
-  a.append(val6)->setKey("value6");
+  a.setKey("val0");
+  a.append(val1)->setKey("val1");
+  a.append(val2)->setKey("val2");  // NOTE: Mixed in with non-KVP.
+  a.append(val3)->setKey("val3");
+  a.append(val4)->setKey("val4");
+  a.append(val5)->setKey("val5");
+  a.append(val6)->setKey("val6");
 
   a.printDebug(&log);
 
@@ -255,6 +255,8 @@ int test_Arguments_KVP() {
   int32_t  val3  = (int32_t)  randomInt();
   int16_t  val4  = (int16_t)  randomInt();
   int8_t   val5  = (int8_t)   randomInt();
+  float    val6  = 0.4123f;
+  Vector3<float> val7(0.5f, -0.5f, 0.2319f);
 
   uint32_t ret0 = 0;
   uint16_t ret1 = 0;
@@ -262,6 +264,10 @@ int test_Arguments_KVP() {
   int32_t  ret3 = 0;
   int16_t  ret4 = 0;
   int8_t   ret5 = 0;
+  float    ret6 = 0.0f;
+  Vector3<float> ret7(0.0f, 0.0f, 0.0f);
+
+
 
   log.concat("Adding arguments...\n\n");
 
@@ -271,6 +277,8 @@ int test_Arguments_KVP() {
   a.append(val3);
   a.append(val4)->setKey("value4");
   a.append(val5)->setKey("value5");
+  a.append(val6)->setKey("value6");
+  a.append(&val7)->setKey("value7");
 
   a.printDebug(&log);
   log.concat("\n");

@@ -7,11 +7,11 @@
 
        http://www.apache.org/licenses/LICENSE-2.0
 
-	   Unless required by applicable law or agreed to in writing, software
-	   distributed under the License is distributed on an "AS IS" BASIS,
-	   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	   See the License for the specific language governing permissions and
-	   limitations under the License.
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
 */
 
 #include "decoder.h"
@@ -52,7 +52,7 @@ void decoder::run() {
                 switch(majorType) {
                     case 0: // positive integer
                         if(minorType < 24) {
-                            _listener->on_integer((unsigned int)minorType);
+                            _listener->on_integer((uint8_t) minorType);
                         } else if(minorType == 24) { // 1 byte
                             _currentLength = 1;
                             _state = STATE_PINT;
@@ -72,7 +72,7 @@ void decoder::run() {
                         break;
                     case 1: // negative integer
                         if(minorType < 24) {
-                            _listener->on_integer((int)-1 -minorType);
+                            _listener->on_integer((int8_t) 0xFF - minorType);
                         } else if(minorType == 24) { // 1 byte
                             _currentLength = 1;
                             _state = STATE_NINT;
@@ -218,17 +218,17 @@ void decoder::run() {
             if(_in->has_bytes(_currentLength)) {
                 switch(_currentLength) {
                     case 1:
-                        _listener->on_integer(_in->get_byte());
+                        _listener->on_integer((uint8_t) _in->get_byte());
                         _state = STATE_TYPE;
                         break;
                     case 2:
-                        _listener->on_integer(_in->get_short());
+                        _listener->on_integer((uint16_t)_in->get_short());
                         _state = STATE_TYPE;
                         break;
                     case 4:
                         temp = _in->get_int();
                         if(temp <= INT_MAX) {
-                            _listener->on_integer(temp);
+                            _listener->on_integer((uint32_t) temp);
                         } else {
                             _listener->on_extra_integer(temp, 1);
                         }
@@ -244,17 +244,17 @@ void decoder::run() {
             if(_in->has_bytes(_currentLength)) {
                 switch(_currentLength) {
                     case 1:
-                        _listener->on_integer(-(int) _in->get_byte());
+                        _listener->on_integer(-(int8_t) _in->get_byte());
                         _state = STATE_TYPE;
                         break;
                     case 2:
-                        _listener->on_integer(-(int) _in->get_short());
+                        _listener->on_integer(-(int16_t) _in->get_short());
                         _state = STATE_TYPE;
                         break;
                     case 4:
                         temp = _in->get_int();
                         if(temp <= INT_MAX) {
-                            _listener->on_integer(-(int) temp);
+                            _listener->on_integer(-(int32_t) temp);
                         } else if(temp == 2147483648u) {
                             _listener->on_integer(INT_MIN);
                         } else {

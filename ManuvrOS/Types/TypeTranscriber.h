@@ -37,8 +37,12 @@ This is the base class for a type transcriber.
       CBORArgListener(Argument**);
       ~CBORArgListener();
 
-      void on_integer(unsigned int value);
-      void on_integer(int value);
+      void on_integer(int8_t);
+      void on_integer(int16_t);
+      void on_integer(int32_t);
+      void on_integer(uint8_t);
+      void on_integer(uint16_t);
+      void on_integer(uint32_t);
       void on_float32(float value);
       void on_bytes(unsigned char* data, int size);
       void on_string(char* str);
@@ -49,6 +53,7 @@ This is the base class for a type transcriber.
       void on_error(const char* error);
 
       void on_extra_integer(unsigned long long value, int sign);
+      void on_extra_integer(long long value, int sign);
       void on_extra_tag(unsigned long long tag);
       void on_extra_special(unsigned long long tag);
 

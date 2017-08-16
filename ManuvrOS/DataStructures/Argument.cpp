@@ -91,7 +91,7 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
         {
           float x = 0;
           if (0 == src->getValueAs(&x)) {
-            encoder.write_float((unsigned int)x);
+            encoder.write_float(x);
           }
         }
         break;
@@ -640,33 +640,48 @@ Argument* Argument::retrieveArgByKey(const char* k) {
 
 
 void Argument::valToString(StringBuilder* out) {
-  uint8_t* buf     = (uint8_t*) pointer();
-  if (_check_flags(MANUVR_ARG_FLAG_DIRECT_VALUE)) {
-    switch (_t_code) {
-      case TCode::INT8:
-      case TCode::UINT8:
-      case TCode::INT16:
-      case TCode::UINT16:
-      case TCode::INT32:
-      case TCode::UINT32:
-        out->concatf("%u", (uintptr_t) pointer());
-        break;
-      case TCode::FLOAT:
-        out->concatf("%.4f", (double)(uintptr_t) pointer());
-        break;
-      case TCode::BOOLEAN:
-        out->concatf("%s", ((uintptr_t) pointer() ? "true" : "false"));
-        break;
-      default:
-        out->concatf("%p", pointer());
-        break;
-    }
-  }
-  else {
-    int l_ender = (len < 16) ? len : 16;
-    for (int n = 0; n < l_ender; n++) {
-      out->concatf("%02x ", *((uint8_t*) buf + n));
-    }
+  uint8_t* buf = (uint8_t*) pointer();
+  switch (_t_code) {
+    case TCode::INT8:
+    case TCode::INT16:
+    case TCode::INT32:
+    case TCode::INT64:
+    case TCode::INT128:
+      out->concatf("%d", (uintptr_t) pointer());
+      break;
+    case TCode::UINT8:
+    case TCode::UINT16:
+    case TCode::UINT32:
+    case TCode::UINT64:
+    case TCode::UINT128:
+      out->concatf("%u", (uintptr_t) pointer());
+      break;
+    case TCode::FLOAT:
+      out->concatf("%.4f", (float)(uintptr_t) pointer());
+      break;
+    case TCode::BOOLEAN:
+      out->concatf("%s", ((uintptr_t) pointer() ? "true" : "false"));
+      break;
+    case TCode::VECT_3_FLOAT:
+      {
+        Vector3<float>* v = (Vector3<float>*) pointer();
+        out->concatf("(%.4f, %.4f, %.4f)", (double)(v->x), (double)(v->y), (double)(v->z));
+      }
+      break;
+    case TCode::VECT_4_FLOAT:
+      {
+        Vector4f* v = (Vector4f*) pointer();
+        out->concatf("(%.4f, %.4f, %.4f, %.4f)", (double)(v->w), (double)(v->x), (double)(v->y), (double)(v->z));
+      }
+      break;
+    default:
+      {
+        int l_ender = (len < 16) ? len : 16;
+        for (int n = 0; n < l_ender; n++) {
+          out->concatf("%02x ", *((uint8_t*) buf + n));
+        }
+      }
+      break;
   }
 }
 
