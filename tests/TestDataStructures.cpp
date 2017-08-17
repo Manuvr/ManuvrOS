@@ -167,6 +167,7 @@ int test_CBOR_Argument() {
   uint16_t val4  = (uint16_t) randomInt();
   uint8_t  val5  = (uint8_t)  randomInt();
   float    val6  = 0.4123f;
+  Vector3<float> val7(0.5f, -0.5f, 0.2319f);
 
   int32_t  ret0 = 0;
   int16_t  ret1 = 0;
@@ -175,6 +176,8 @@ int test_CBOR_Argument() {
   uint16_t ret4 = 0;
   uint8_t  ret5 = 0;
   float    ret6 = 0.0f;
+  Vector3<float> ret7(0.0f, 0.0f, 0.0f);
+
   Argument a(val0);
 
   a.setKey("val0");
@@ -184,6 +187,7 @@ int test_CBOR_Argument() {
   a.append(val4)->setKey("val4");
   a.append(val5)->setKey("val5");
   a.append(val6)->setKey("val6");
+  a.append(&val7)->setKey("val7");
 
   a.printDebug(&log);
 

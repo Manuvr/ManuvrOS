@@ -188,6 +188,7 @@ typedef struct typecode_def_t {
 inline uint8_t TcodeToInt(TCode code) {   return (uint8_t) code; };
 inline TCode IntToTcode(uint8_t code) {   return (TCode) code;   };
 
+const TypeCodeDef* const getManuvrTypeDef(TCode);
 
 int sizeOfType(TCode typecode);
 bool typeIsFixedLength(TCode typecode);

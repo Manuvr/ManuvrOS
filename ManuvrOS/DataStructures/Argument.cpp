@@ -140,14 +140,22 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
           }
         }
         break;
+
       case TCode::BINARY:
-        {
-          uint8_t* buf;
-          if (0 == src->getValueAs(&buf)) {
-            encoder.write_bytes(buf, src->length());
-          }
-        }
+      case TCode::VECT_3_FLOAT:
+      case TCode::VECT_4_FLOAT:
+        // NOTE: This ought to work for any types retaining portability isn't important.
+        encoder.write_tag(MANUVR_CBOR_VENDOR_TYPE | TcodeToInt(src->typeCode()));
+        encoder.write_bytes((uint8_t*) src->pointer(), src->length());
         break;
+        //{
+        //  uint8_t* buf;
+        //  if (0 == src->getValueAs(&buf)) {
+        //    encoder.write_bytes(buf, src->length());
+        //  }
+        //}
+        //break;
+
       case TCode::IDENTITY:
         {
           Identity* ident;
@@ -155,7 +163,7 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
             uint16_t i_len = ident->length();
             uint8_t buf[i_len];
             if (ident->toBuffer(buf)) {
-              encoder.write_tag((uint8_t) src->typeCode());
+              encoder.write_tag(MANUVR_CBOR_VENDOR_TYPE | TcodeToInt(src->typeCode()));
               encoder.write_bytes(buf, i_len);
             }
           }
@@ -168,7 +176,7 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
           if (0 == src->getValueAs(&subj)) {
             // NOTE: Recursion.
             if (Argument::encodeToCBOR(subj, &intermediary)) {
-              encoder.write_tag((uint8_t) src->typeCode());
+              encoder.write_tag(MANUVR_CBOR_VENDOR_TYPE | TcodeToInt(src->typeCode()));
               encoder.write_bytes(intermediary.string(), intermediary.length());
             }
           }

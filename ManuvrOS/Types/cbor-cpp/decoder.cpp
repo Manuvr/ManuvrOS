@@ -49,9 +49,9 @@ void decoder::run() {
         unsigned char majorType = type >> 5;
         unsigned char minorType = (unsigned char) (type & 31);
 
-        switch(majorType) {
+        switch (majorType) {
           case 0: // positive integer
-            if(minorType < 24) {
+            if (minorType < 24) {
               _listener->on_integer((uint8_t) minorType);
             } else if(minorType == 24) { // 1 byte
               _currentLength = 1;
@@ -71,7 +71,7 @@ void decoder::run() {
             }
             break;
           case 1: // negative integer
-            if(minorType < 24) {
+            if (minorType < 24) {
               _listener->on_integer((int8_t) 0xFF - minorType);
             } else if(minorType == 24) { // 1 byte
               _currentLength = 1;

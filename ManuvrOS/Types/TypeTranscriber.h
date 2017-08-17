@@ -28,6 +28,10 @@ This is the base class for a type transcriber.
 
 #if defined(MANUVR_CBOR)
   #include <Types/cbor-cpp/cbor.h>
+  // Until per-type ideosyncracies are migrated to standard CBOR representations,
+  //   we will be using a tag from the IANA 'unassigned' space to avoid confusion.
+  //   The first byte after the tag is the native Manuvr type.
+  #define MANUVR_CBOR_VENDOR_TYPE 0x00E97800
 
   class Argument;
 
@@ -58,10 +62,11 @@ This is the base class for a type transcriber.
       void on_extra_special(unsigned long long tag);
 
     private:
-      Argument** built = nullptr;
-      char*  _wait     = nullptr;
-      int _wait_map    = 0;
-      int _wait_array  = 0;
+      Argument** built                = nullptr;
+      char*      _wait                = nullptr;
+      int        _wait_map            = 0;
+      int        _wait_array          = 0;
+      uint8_t    _pending_manuvr_tag  = 0;
 
       /* Please forgive the stupid name. */
       void _caaa(Argument*);

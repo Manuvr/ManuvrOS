@@ -72,7 +72,26 @@ void CBORArgListener::on_string(char* val) {
 };
 
 void CBORArgListener::on_bytes(uint8_t* data, int size) {
-  _caaa(new Argument(data, size));
+	if (_pending_manuvr_tag) {
+		// If we've seen our vendor code in a tag, we interpret the first byte as a Manuvr
+		//   Typecode, and build an Argument the hard way.
+		const TypeCodeDef* const m_type_def = getManuvrTypeDef(IntToTcode(_pending_manuvr_tag)) ;
+		if (m_type_def) {
+			if (m_type_def->fixed_len) {
+				if (size == (m_type_def->fixed_len)) {
+					_caaa(new Argument(data, (m_type_def->fixed_len), m_type_def->type_code));
+				}
+			}
+			else {
+				// We will have to pass validation to the Argument class.
+				_caaa(new Argument((data+1), (size-1), m_type_def->type_code));
+			}
+		}
+		_pending_manuvr_tag = 0;
+	}
+	else {
+		_caaa(new Argument(data, size));
+	}
 };
 
 void CBORArgListener::on_integer(int8_t v) {           _caaa(new Argument(v));               };
@@ -82,9 +101,20 @@ void CBORArgListener::on_integer(uint8_t v) {          _caaa(new Argument(v));  
 void CBORArgListener::on_integer(uint16_t v) {         _caaa(new Argument(v));               };
 void CBORArgListener::on_integer(uint32_t v) {         _caaa(new Argument(v));               };
 void CBORArgListener::on_float32(float f) {            _caaa(new Argument(f));               };
-void CBORArgListener::on_tag(unsigned int tag) {       _caaa(new Argument((uint32_t) tag));  };
 void CBORArgListener::on_special(unsigned int code) {  _caaa(new Argument((uint32_t) code)); };
 void CBORArgListener::on_error(const char* error) {    _caaa(new Argument(error));           };
+
+// NOTE: IANA gives of _some_ guidance....
+// https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml
+void CBORArgListener::on_tag(unsigned int tag) {
+	switch (tag & 0xFFFFFF00) {
+		case MANUVR_CBOR_VENDOR_TYPE:
+			_pending_manuvr_tag = tag & 0x000000FF;
+			break;
+		default:
+			break;
+	}
+};
 
 void CBORArgListener::on_array(int size) {
   _wait_array = (int32_t) size;

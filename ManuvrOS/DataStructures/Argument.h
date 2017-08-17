@@ -69,8 +69,14 @@ class Argument {
     *        ---J. Ian Lindsay   Mon Oct 05 22:55:41 MST 2015
     */
     void*   target_mem = nullptr;
-//float f = 10.5f; void *vp = *(uint32_t*) &f;
+
     Argument();
+
+    /*
+    * We delegate to this constructor.
+    */
+    Argument(void* ptr, int len, TCode code);
+
     Argument(uint8_t  val) : Argument((void*)(uintptr_t) val, sizeof(val), TCode::UINT8)  {};
     Argument(uint16_t val) : Argument((void*)(uintptr_t) val, sizeof(val), TCode::UINT16) {};
     Argument(uint32_t val) : Argument((void*)(uintptr_t) val, sizeof(val), TCode::UINT32) {};
@@ -122,7 +128,6 @@ class Argument {
     Argument(StringBuilder* val)  : Argument(val, sizeof(val), TCode::STR_BUILDER)      {};
     Argument(Argument* val)       : Argument((void*) val, sizeof(val), TCode::ARGUMENT) {};
     Argument(Identity* val)       : Argument((void*) val, sizeof(val), TCode::IDENTITY) {};
-
 
     ~Argument();
 
@@ -222,7 +227,6 @@ class Argument {
     TCode       _t_code    = TCode::NONE;
 
     Argument(TCode code);    // Protected constructor to which we delegate.
-    Argument(void* ptr, int len, TCode code);   // Protected constructor to which we delegate.
     Argument(void* ptr, int len, uint8_t code) : Argument(ptr, len, (TCode) code){};   // TODO: Shim
 
     void wipe();

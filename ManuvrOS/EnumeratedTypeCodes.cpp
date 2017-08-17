@@ -84,7 +84,7 @@ const TypeCodeDef type_codes[] = {
 * Given type code, find size in bytes. Returns 1 for variable-length arguments,
 *   since this is their minimum size.
 *
-* @param  uint8_t the type code being asked about.
+* @param  TCode the type code being asked about.
 * @return The size of the type, or -1 on failure.
 */
 int sizeOfType(TCode typecode) {
@@ -97,6 +97,24 @@ int sizeOfType(TCode typecode) {
     idx++;
   }
   return return_value;
+}
+
+
+/**
+* Given type code, find and return the entire TypeCodeDef.
+*
+* @param  TCode the type code being asked about.
+* @return The desired TypeCodeDef, or nullptr on "not supported".
+*/
+const TypeCodeDef* const getManuvrTypeDef(TCode typecode) {
+  uint8_t idx = 0;
+  while (idx < (sizeof(type_codes) / sizeof(TypeCodeDef))) {  // Search for the code...
+    if (type_codes[idx].type_code == typecode) {
+      return &type_codes[idx];
+    }
+    idx++;
+  }
+  return nullptr;
 }
 
 
