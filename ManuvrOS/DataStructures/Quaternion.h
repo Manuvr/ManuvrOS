@@ -36,6 +36,7 @@ class Quaternion {
     Quaternion(float x, float y, float z, float w);
 
     void set(float x, float y, float z, float w);
+    float normalize();
 
     void setDown(float n_x, float n_y, float n_z);
 

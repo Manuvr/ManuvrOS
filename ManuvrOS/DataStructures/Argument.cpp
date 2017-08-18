@@ -145,16 +145,11 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
       case TCode::VECT_3_FLOAT:
       case TCode::VECT_4_FLOAT:
         // NOTE: This ought to work for any types retaining portability isn't important.
+        // TODO: Gradually convert types out of this block. As much as possible should
+        //   be portable. VECT_3_FLOAT ought to be an array of floats, for instance.
         encoder.write_tag(MANUVR_CBOR_VENDOR_TYPE | TcodeToInt(src->typeCode()));
         encoder.write_bytes((uint8_t*) src->pointer(), src->length());
         break;
-        //{
-        //  uint8_t* buf;
-        //  if (0 == src->getValueAs(&buf)) {
-        //    encoder.write_bytes(buf, src->length());
-        //  }
-        //}
-        //break;
 
       case TCode::IDENTITY:
         {

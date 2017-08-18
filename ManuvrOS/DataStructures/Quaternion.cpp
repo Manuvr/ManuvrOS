@@ -46,6 +46,16 @@ void Quaternion::set(float n_x, float n_y, float n_z, float n_w) {
 }
 
 
+float Quaternion::normalize() {
+  float norm = 1.0f / (float) sqrt(w * w + x * x + y * y + z * z);
+  w = w * norm;
+  x = x * norm;
+  y = y * norm;
+  z = z * norm;
+  return norm;
+}
+
+
 /*
 * Assumes that +z is away from Earth.
 */

@@ -25,6 +25,7 @@ TODO: Audit for best-practices for a lock-free design.
 */
 
 #include <stdlib.h>
+#include <stdint.h>
 
 #ifndef __MANUVR_DS_RING_BUFFER_H
 #define __MANUVR_DS_RING_BUFFER_H
