@@ -345,7 +345,7 @@ int readPinAnalog(uint8_t pin) {
 * Interrupt-masking                                                            *
 *******************************************************************************/
 
-#if defined (__MANUVR_FREERTOS)
+#if defined (__BUILD_HAS_FREERTOS)
   void globalIRQEnable() {    } // taskENABLE_INTERRUPTS();    }
   void globalIRQDisable() {   } // taskDISABLE_INTERRUPTS();   }
 #else
@@ -449,7 +449,7 @@ int8_t ESP32Platform::platformPreInit(Argument* root_config) {
 * Called as a result of kernels bootstrap() fxn.
 */
 int8_t ESP32Platform::platformPostInit() {
-  #if defined (__MANUVR_FREERTOS)
+  #if defined (__BUILD_HAS_FREERTOS)
   #else
   // No threads. We are responsible for pinging our own scheduler.
   // Turn on the periodic interrupts...

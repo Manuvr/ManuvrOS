@@ -436,7 +436,9 @@ TestDriver::TestDriver() : EventReceiver("TestDriver") {
 
 TestDriver::TestDriver(Argument* root_config) : TestDriver() {
   #if defined(MANUVR_DEBUG)
-  _autorun_tests(nullptr != root_config->retrieveArgByKey("run-tests"));
+  if (root_config) {
+    _autorun_tests(nullptr != root_config->retrieveArgByKey("run-tests"));
+  }
   #endif
 }
 

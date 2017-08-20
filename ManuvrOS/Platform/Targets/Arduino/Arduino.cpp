@@ -205,7 +205,7 @@ int readPinAnalog(uint8_t pin) {
 * Interrupt-masking                                                                                 *
 ****************************************************************************************************/
 
-#if defined (__MANUVR_FREERTOS)
+#if defined (__BUILD_HAS_FREERTOS)
   void globalIRQEnable() {     taskENABLE_INTERRUPTS();    }
   void globalIRQDisable() {    taskDISABLE_INTERRUPTS();   }
 #else

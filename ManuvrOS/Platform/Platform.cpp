@@ -476,7 +476,7 @@ void maskableInterrupts(bool enable) {
 int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn, void* _args) {
   #if defined(__BUILD_HAS_PTHREADS)
     return pthread_create(_thread_id, (const pthread_attr_t*) _something, _fxn, _args);
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
     // TODO: Make the task parameters 1-to-1 with pthreads.
     TaskHandle_t taskHandle;
     portBASE_TYPE ret = xTaskCreate((TaskFunction_t) _fxn, "_t", 2048, (void*)_args, 1, &taskHandle);
@@ -492,7 +492,7 @@ int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn,
 int deleteThread(unsigned long* _thread_id) {
   #if defined(__BUILD_HAS_PTHREADS)
   return pthread_cancel(*_thread_id);
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
   // TODO: Why didn't this work?
   //vTaskDelete(&_thread_id);
   return 0;
@@ -504,7 +504,7 @@ int deleteThread(unsigned long* _thread_id) {
 
 int wakeThread(unsigned long _thread_id) {
   #if defined(__BUILD_HAS_PTHREADS)
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
   vTaskResume(&_thread_id);
   #endif
   return 0;
@@ -523,7 +523,7 @@ void sleep_millis(unsigned long millis) {
   #if defined(__MANUVR_LINUX) || defined(__MANUVR_APPLE)
     struct timespec t = {(long) (millis / 1000), (long) ((millis % 1000) * 1000000UL)};
     nanosleep(&t, &t);
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
     if (platform.booted()) {
       vTaskDelay(millis / portTICK_PERIOD_MS);
     }

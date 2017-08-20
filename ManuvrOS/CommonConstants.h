@@ -25,6 +25,9 @@ Apart from including the user-suppied configuration header, there
 #include <inttypes.h>
 #include <stddef.h>  // TODO: Only needed for size_t
 
+#include "Rationalizer.h"
+
+
 #ifndef __MANUVR_COMMON_CONSTANTS_H__
   #define __MANUVR_COMMON_CONSTANTS_H__
 
@@ -75,8 +78,6 @@ Apart from including the user-suppied configuration header, there
 
   #define SENSOR_DATUM_NOT_FOUND   "Sensor datum not found"
 
-
-  #include <Rationalizer.h>
 
 
 

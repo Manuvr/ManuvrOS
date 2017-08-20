@@ -88,7 +88,6 @@ endif
 CPP_SRCS  = main.cpp
 
 # Options that build for certain threading models (if any).
-#MANUVR_OPTIONS += -D__MANUVR_FREERTOS
 MANUVR_OPTIONS += -D__MANUVR_LINUX
 
 MANUVR_OPTIONS += -DMANUVR_STORAGE

@@ -30,7 +30,7 @@ TODO: It does not do this. Need to finish addressing issues with the build
 
 #include <Platform/Platform.h>
 
-#if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
+#if defined(__BUILD_HAS_FREERTOS) || defined(__MANUVR_LINUX)
   #include <arpa/inet.h>
 
   // Threaded platforms will need this to compensate for a loss of ISR.

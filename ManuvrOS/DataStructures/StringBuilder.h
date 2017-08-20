@@ -29,7 +29,7 @@ limitations under the License.
 
 #if defined(__BUILD_HAS_PTHREADS)
   #include <pthread.h>
-#elif defined(__MANUVR_FREERTOS)
+#elif defined(__BUILD_HAS_FREERTOS)
   #include "freertos/FreeRTOS.h"
   #include "freertos/semphr.h"
 #endif
@@ -152,7 +152,7 @@ class StringBuilder {
     #if defined(__BUILD_HAS_PTHREADS)
       // If we are on linux, we control for concurrency with a mutex...
       pthread_mutex_t _mutex;
-    #elif defined(__MANUVR_FREERTOS)
+    #elif defined(__BUILD_HAS_FREERTOS)
       SemaphoreHandle_t _mutex;
     #endif
 

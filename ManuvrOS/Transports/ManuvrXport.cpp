@@ -66,7 +66,7 @@ For debuggability, the transport has a special mode for acting as a debug
 *   executes under an ISR. Keep it brief...
 *******************************************************************************/
 
-#if defined(__MANUVR_FREERTOS)
+#if defined(__BUILD_HAS_FREERTOS)
   /*
   * In a threaded environment, we use threads to read ports.
   */
@@ -281,7 +281,7 @@ void ManuvrXport::connected(bool en) {
     // that are outstanding.
     if (_autoconnect_schedule) _autoconnect_schedule->enableSchedule(true);
   }
-  #if defined (__MANUVR_FREERTOS) || defined (__MANUVR_LINUX)
+  #if defined (__BUILD_HAS_FREERTOS) || defined (__MANUVR_LINUX)
     if (0 == _thread_id) {
       // If we are in a threaded environment, we will want a thread if there isn't one already.
       if (createThread(&_thread_id, nullptr, xport_read_handler, (void*) this)) {

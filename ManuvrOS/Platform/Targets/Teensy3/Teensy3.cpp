@@ -37,7 +37,7 @@ This file is meant to contain a set of common functions that are typically platf
 #include <wiring.h>
 #include <Time/Time.h>
 
-#if !defined (__MANUVR_FREERTOS)
+#if !defined (__BUILD_HAS_FREERTOS)
   #include "IntervalTimer.h"
 
   IntervalTimer timer0;  // Scheduler
@@ -326,7 +326,7 @@ int readPinAnalog(uint8_t pin) {
 * Interrupt-masking                                                            *
 *******************************************************************************/
 
-#if defined (__MANUVR_FREERTOS)
+#if defined (__BUILD_HAS_FREERTOS)
   void globalIRQEnable() {     taskENABLE_INTERRUPTS();    }
   void globalIRQDisable() {    taskDISABLE_INTERRUPTS();   }
   //void globalIRQEnable() {         }
@@ -424,7 +424,7 @@ int8_t Teensy3::platformPreInit(Argument* root_config) {
 * Called as a result of kernels bootstrap() fxn.
 */
 int8_t Teensy3::platformPostInit() {
-  #if defined (__MANUVR_FREERTOS)
+  #if defined (__BUILD_HAS_FREERTOS)
   #else
   // No threads. We are responsible for pinging our own scheduler.
   // Turn on the periodic interrupts...

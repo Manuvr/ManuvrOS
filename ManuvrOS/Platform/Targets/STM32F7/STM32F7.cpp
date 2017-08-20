@@ -36,7 +36,7 @@ This file is meant to contain a set of common functions that are typically platf
 
 #include <unistd.h>
 
-#if defined (__MANUVR_FREERTOS)
+#if defined (__BUILD_HAS_FREERTOS)
   #include <FreeRTOS.h>
 #endif
 

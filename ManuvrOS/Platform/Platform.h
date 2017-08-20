@@ -42,12 +42,13 @@ This file is meant to contain a set of common functions that are
 #include <string.h>
 #include <stdio.h>
 
+#include <Rationalizer.h>
 #include <CommonConstants.h>
 #include <DataStructures/uuid.h>
 
 #if defined(__BUILD_HAS_PTHREADS)
   #include <pthread.h>
-#elif defined(__MANUVR_FREERTOS)
+#elif defined(__BUILD_HAS_FREERTOS)
   extern "C" {
     #include "freertos/FreeRTOS.h"
     #include "freertos/task.h"
@@ -350,7 +351,7 @@ int wakeThread(unsigned long);
 #if defined(__BUILD_HAS_PTHREADS)
   inline int  yieldThread() {   return pthread_yield();   };
   inline void suspendThread() {  sleep_millis(100); };   // TODO
-#elif defined(__MANUVR_FREERTOS)
+#elif defined(__BUILD_HAS_FREERTOS)
   inline int  yieldThread() {   taskYIELD();  return 0;   };
   inline void suspendThread() {  sleep_millis(100); };   // TODO
 #else

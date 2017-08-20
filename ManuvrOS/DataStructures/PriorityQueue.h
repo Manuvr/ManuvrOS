@@ -39,7 +39,7 @@ Some functions are #pragma'd to stop the compiler from complaining about nullptr
 
 #ifdef __MANUVR_LINUX
   #include <pthread.h>
-#elif defined(__MANUVR_FREERTOS)
+#elif defined(__BUILD_HAS_FREERTOS)
   #include "freertos/FreeRTOS.h"
 #endif
 
@@ -93,7 +93,7 @@ template <class T> class PriorityQueue {
     #if defined(__MANUVR_LINUX)
       // If we are on linux, we control for concurrency with a mutex...
       pthread_mutex_t _mutex;
-    #elif defined(__MANUVR_FREERTOS)
+    #elif defined(__BUILD_HAS_FREERTOS)
 //      SemaphoreHandle_t _mutex;
     #endif
 
@@ -128,7 +128,7 @@ template <class T> PriorityQueue<T>::PriorityQueue() {
     #else
     _mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
     #endif
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
 //    _mutex = xSemaphoreCreateRecursiveMutex();
   #endif
 }
@@ -142,7 +142,7 @@ template <class T> PriorityQueue<T>::~PriorityQueue() {
   }
   #ifdef __MANUVR_LINUX
     pthread_mutex_destroy(&_mutex);
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
 //    vSemaphoreDelete(&_mutex);
   #endif
 }
@@ -178,7 +178,7 @@ template <class T> int PriorityQueue<T>::insertIfAbsent(T d, int nu_pri) {
   }
   #ifdef __MANUVR_LINUX
     pthread_mutex_lock(&_mutex);
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
 //    if (pdTRUE != xSemaphoreTakeRecursive(&_mutex, 0)) {
 //      Serial.println("insertIfAbsent(T, int)");
 //      while(true);
@@ -192,7 +192,7 @@ template <class T> int PriorityQueue<T>::insertIfAbsent(T d, int nu_pri) {
     if (current->data == d) {
       #ifdef __MANUVR_LINUX
         pthread_mutex_unlock(&_mutex);
-      #elif defined(__MANUVR_FREERTOS)
+      #elif defined(__BUILD_HAS_FREERTOS)
 //        xSemaphoreGiveRecursive(&_mutex);
       #endif
       return -1;
@@ -226,7 +226,7 @@ template <class T> int PriorityQueue<T>::insertIfAbsent(T d, int nu_pri) {
 
   #ifdef __MANUVR_LINUX
     pthread_mutex_unlock(&_mutex);
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
 //    xSemaphoreGiveRecursive(&_mutex);
   #endif
   return return_value;
@@ -256,7 +256,7 @@ template <class T> int PriorityQueue<T>::insert(T d, int nu_pri) {
   }
   #ifdef __MANUVR_LINUX
     pthread_mutex_lock(&_mutex);
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
 //    if (pdTRUE != xSemaphoreTakeRecursive(&_mutex, 0)) {
 //      Serial.println("insert(T, int)");
 //      while(true);
@@ -269,7 +269,7 @@ template <class T> int PriorityQueue<T>::insert(T d, int nu_pri) {
   element_count++;
   #ifdef __MANUVR_LINUX
     pthread_mutex_unlock(&_mutex);
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
 //    xSemaphoreGiveRecursive(&_mutex);
   #endif
   return 1;
@@ -284,7 +284,7 @@ template <class T> int PriorityQueue<T>::insert(PriorityNode<T>* nu) {
 
   #ifdef __MANUVR_LINUX
     pthread_mutex_lock(&_mutex);
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
 //    if (pdTRUE != xSemaphoreTakeRecursive(&_mutex, 0)) {
 //      Serial.println("insert(PriorityNode<T>*)");
 //      while(true);
@@ -302,7 +302,7 @@ template <class T> int PriorityQueue<T>::insert(PriorityNode<T>* nu) {
   }
   #ifdef __MANUVR_LINUX
     pthread_mutex_unlock(&_mutex);
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
 //    xSemaphoreGiveRecursive(&_mutex);
   #endif
   return 1;
@@ -375,7 +375,7 @@ template <class T> PriorityNode<T>* PriorityQueue<T>::getLastWithPriority(int nu
 template <class T> void PriorityQueue<T>::enforce_priorities(void) {
   #ifdef __MANUVR_LINUX
     pthread_mutex_lock(&_mutex);
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
 //    if (pdTRUE != xSemaphoreTakeRecursive(&_mutex, 0)) {
 //      Serial.println("enforce_priorities()");
 //      while(true);
@@ -413,7 +413,7 @@ template <class T> void PriorityQueue<T>::enforce_priorities(void) {
   }
   #ifdef __MANUVR_LINUX
     pthread_mutex_unlock(&_mutex);
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
 //    xSemaphoreGiveRecursive(&_mutex);
   #endif
 }
@@ -448,7 +448,7 @@ template <class T> T PriorityQueue<T>::dequeue() {
   T return_value = nullptr;
   #ifdef __MANUVR_LINUX
     pthread_mutex_lock(&_mutex);
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
 //    if (pdTRUE != xSemaphoreTakeRecursive(&_mutex, 0)) {
 //      Serial.println("dequeue()");
 //      while(true);
@@ -464,7 +464,7 @@ template <class T> T PriorityQueue<T>::dequeue() {
   }
   #ifdef __MANUVR_LINUX
     pthread_mutex_unlock(&_mutex);
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
 //    xSemaphoreGiveRecursive(&_mutex);
   #endif
   return return_value;
@@ -482,7 +482,7 @@ template <class T> T PriorityQueue<T>::recycle() {
   T return_value = nullptr;
   #ifdef __MANUVR_LINUX
     pthread_mutex_lock(&_mutex);
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
 //    if (pdTRUE != xSemaphoreTakeRecursive(&_mutex, 0)) {
 //      Serial.println("recycle()");
 //      while(true);
@@ -503,7 +503,7 @@ template <class T> T PriorityQueue<T>::recycle() {
   }
   #ifdef __MANUVR_LINUX
     pthread_mutex_unlock(&_mutex);
-  #elif defined(__MANUVR_FREERTOS)
+  #elif defined(__BUILD_HAS_FREERTOS)
 //    xSemaphoreGiveRecursive(&_mutex);
   #endif
   return return_value;

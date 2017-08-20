@@ -33,11 +33,6 @@
 *
 */
 
-/* Major/Minor/Patch */
-#define MANUVR_SEMVER_MAJOR 1
-#define MANUVR_SEMVER_MINOR 4
-#define MANUVR_SEMVER_PATCH 0
-
 /* To override the defaults, supply this at build time. */
 #if defined(MANUVR_CONF_FILE)
   #include MANUVR_CONF_FILE
@@ -50,6 +45,11 @@
 
 #ifndef __MANUVR_OPTION_RATIONALIZER_H__
 #define __MANUVR_OPTION_RATIONALIZER_H__
+
+/* Major/Minor/Patch */
+#define MANUVR_SEMVER_MAJOR 1
+#define MANUVR_SEMVER_MINOR 4
+#define MANUVR_SEMVER_PATCH 1
 
 // This is the string that identifies this Manuvrable to other Manuvrables.
 //   In MHB's case, this value will select the mEngine.
@@ -97,7 +97,7 @@
   //#pragma message "Building with pthread support."
   #define __BUILD_HAS_THREADS
   #define __BUILD_HAS_PTHREADS
-#elif defined(__MANUVR_FREERTOS)
+#elif defined(MANUVR_PF_FREERTOS) || defined(__MANUVR_ESP32)
   //#pragma message "Building with freeRTOS support."
   #define __BUILD_HAS_THREADS
   #define __BUILD_HAS_FREERTOS

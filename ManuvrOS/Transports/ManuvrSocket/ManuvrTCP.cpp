@@ -52,7 +52,7 @@ This is basically only for linux for now.
 *   executes under an ISR. Keep it brief...
 *******************************************************************************/
 
-#if defined(__MANUVR_FREERTOS) || defined(__MANUVR_LINUX)
+#if defined(__BUILD_HAS_FREERTOS) || defined(__MANUVR_LINUX)
   #include <arpa/inet.h>
 
   // Threaded platforms will need this to compensate for a loss of ISR.

@@ -106,7 +106,7 @@ int sizeOfType(TCode typecode) {
 * @param  TCode the type code being asked about.
 * @return The desired TypeCodeDef, or nullptr on "not supported".
 */
-const TypeCodeDef* const getManuvrTypeDef(TCode typecode) {
+const TypeCodeDef* getManuvrTypeDef(const TCode typecode) {
   uint8_t idx = 0;
   while (idx < (sizeof(type_codes) / sizeof(TypeCodeDef))) {  // Search for the code...
     if (type_codes[idx].type_code == typecode) {

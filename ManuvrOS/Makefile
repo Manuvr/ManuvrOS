@@ -155,7 +155,7 @@ COV_FILES = $(CPP_SRCS:.cpp=.gcda) $(CPP_SRCS:.cpp=.gcno)
 all: $(LIBNAME)
 
 %.o : %.cpp
-	$(CXX) $(INCLUDES) $(CXXFLAGS) -std=$(CPP_STANDARD) -nostdlib -c $< -o $@
+	$(CXX) $(INCLUDES) $(CXXFLAGS) $(MANUVR_OPTIONS) -std=$(CPP_STANDARD) -nostdlib -c $< -o $@
 
 $(LIBNAME): setenvars $(OBJS)
 	$(MAKE) -C Platform/
