@@ -466,6 +466,8 @@ void I2CAdapter::set_ping_state_by_addr(uint8_t addr, I2CPingState nu) {
 }
 
 
+#if defined(MANUVR_DEBUG)
+
 /*
 * Debug fxn to print the ping map.
 */
@@ -523,7 +525,7 @@ void I2CAdapter::printDevs(StringBuilder *temp) {
   }
   temp->concat("\n");
 }
-
+#endif // MANUVR_DEBUG
 
 
 /*******************************************************************************
@@ -622,6 +624,7 @@ int8_t I2CAdapter::notify(ManuvrMsg* active_event) {
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
+#if defined(MANUVR_DEBUG)
 void I2CAdapter::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
   printHardwareState(output);
@@ -630,6 +633,7 @@ void I2CAdapter::printDebug(StringBuilder* output) {
   printAdapter(output);
   printWorkQueue(output, I2CADAPTER_MAX_QUEUE_PRINT);
 }
+#endif
 
 
 #if defined(MANUVR_CONSOLE_SUPPORT)

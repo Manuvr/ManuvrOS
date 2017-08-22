@@ -169,12 +169,6 @@ int TestDriver::CRYPTO_TEST_HASHES() {
   }
   return 0;
 }
-#else
-int TestDriver::CRYPTO_TEST_HASHES() {
-  // Build doesn't have asymmetric support.
-  local_log.concat("Build doesn't have digest support. Skipping tests...\n");
-  return 0;
-}
 #endif // __BUILD_HAS_DIGEST
 
 
@@ -262,12 +256,6 @@ int TestDriver::CRYPTO_TEST_SYMMETRIC() {
 //    idx++;
 //  }
 //
-  return 0;
-}
-#else
-int TestDriver::CRYPTO_TEST_SYMMETRIC() {
-  // Build doesn't have asymmetric support.
-  Kernel::log("Build doesn't have symmetric support. Skipping tests...\n");
   return 0;
 }
 #endif // __BUILD_HAS_SYMMETRIC
@@ -406,12 +394,6 @@ int TestDriver::CRYPTO_TEST_ASYMMETRIC() {
     local_log.concatf("\t Sig:     %d\n\n", it->second->deltas[2]);
   }
   Kernel::log(&local_log);
-  return 0;
-}
-#else
-int TestDriver::CRYPTO_TEST_ASYMMETRIC() {
-  // Build doesn't have asymmetric support.
-  Kernel::log("Build doesn't have asymmetric support. Skipping tests...\n");
   return 0;
 }
 #endif  // __BUILD_HAS_ASYMMETRIC

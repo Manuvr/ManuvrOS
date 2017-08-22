@@ -140,8 +140,9 @@ Lifecycle:
         */
         inline bool   dirtyConf() {    return (0 != (_class_state & MANUVR_ER_FLAG_CONF_DIRTY));    };
 
-
-        inline void   wake() {    wakeThread(_thread_id);    };
+        #if defined(__BUILD_HAS_THREADS)
+          inline void   wake() {    wakeThread(_thread_id);    };
+        #endif
 
 
 

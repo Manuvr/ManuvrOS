@@ -68,22 +68,22 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 void atCRC(uint8_t length, uint8_t *data, uint8_t *crc) {
   const uint16_t POLYNOM = 0x8005;
-	uint16_t crc_register = 0;
-	uint8_t shift_register;
-	uint8_t data_bit, crc_bit;
+  uint16_t crc_register = 0;
+  uint8_t shift_register;
+  uint8_t data_bit, crc_bit;
 
-	for (uint8_t counter = 0; counter < length; counter++) {
-		for (shift_register = 0x01; shift_register > 0x00; shift_register <<= 1) {
-			data_bit = (data[counter] & shift_register) ? 1 : 0;
-			crc_bit = crc_register >> 15;
-			crc_register <<= 1;
-			if (data_bit != crc_bit) {
-				crc_register ^= POLYNOM;
+  for (uint8_t counter = 0; counter < length; counter++) {
+    for (shift_register = 0x01; shift_register > 0x00; shift_register <<= 1) {
+      data_bit = (data[counter] & shift_register) ? 1 : 0;
+      crc_bit = crc_register >> 15;
+      crc_register <<= 1;
+      if (data_bit != crc_bit) {
+        crc_register ^= POLYNOM;
       }
-		}
-	}
-	crc[0] = (uint8_t)(crc_register & 0x00FF);
-	crc[1] = (uint8_t)(crc_register >> 8);
+    }
+  }
+  crc[0] = (uint8_t)(crc_register & 0x00FF);
+  crc[1] = (uint8_t)(crc_register >> 8);
 }
 
 
@@ -322,33 +322,36 @@ int8_t ATECC508::io_op_callback(BusOp* _op) {
       break;
 
     case BusOpcode::RX:
-      // This is a buffer read. Adjust the counter appropriately, and cycle the
-      //   operation back in to read more if necessary.
-      if (_op->hasFault()) {
-        // TODO: Depending on platform implementation of i2c, a failure to ACK on the
-        //   device's part might fail the transfer.
-        if (0x04 == *(_op->buf)) {   // If we read back 4 bytes...
-          // TODO: CRC validation
-          switch ((ATECCReturnCodes) *(_op->buf+1)) {
-            // TODO: Handle return codes.
-            case ATECCReturnCodes::SUCCESS:
-              break;
-            case ATECCReturnCodes::MISCOMPARE:
-            case ATECCReturnCodes::PARSE_ERR:
-            case ATECCReturnCodes::ECC_FAULT:
-            case ATECCReturnCodes::EXEC_ERR:
-            case ATECCReturnCodes::FRESH_WAKE:
-            case ATECCReturnCodes::INSUF_TIME:
-            case ATECCReturnCodes::CRC_COMM_ERR:
-              break;
-            default:
-              break;
+      {
+        // This is a buffer read. Adjust the counter appropriately, and cycle the
+        //   operation back in to read more if necessary.
+        if (_op->hasFault()) {
+          // TODO: Depending on platform implementation of i2c, a failure to ACK on the
+          //   device's part might fail the transfer.
+          if (0x04 == *(_op->buf)) {   // If we read back 4 bytes...
+            // TODO: CRC validation
+            switch ((ATECCReturnCodes) *(_op->buf+1)) {
+              // TODO: Handle return codes.
+              case ATECCReturnCodes::SUCCESS:
+                break;
+              case ATECCReturnCodes::MISCOMPARE:
+              case ATECCReturnCodes::PARSE_ERR:
+              case ATECCReturnCodes::ECC_FAULT:
+              case ATECCReturnCodes::EXEC_ERR:
+              case ATECCReturnCodes::FRESH_WAKE:
+              case ATECCReturnCodes::INSUF_TIME:
+              case ATECCReturnCodes::CRC_COMM_ERR:
+                break;
+              default:
+                break;
+            }
           }
         }
-      }
-      local_log.concatf("\t ATECC508 readback:\n\t");
-      for (int i = 0; i < strict_min(*(_op->buf), _op->buf_len); i++) {
-        local_log.concatf("%02x ", *(_op->buf + i));
+        uint16_t chip_ret_len = *(_op->buf) & 0xFF;
+        local_log.concatf("\t ATECC508 readback:\n\t");
+        for (int i = 0; i < strict_min(chip_ret_len, _op->buf_len); i++) {
+          local_log.concatf("%02x ", *(_op->buf + i));
+        }
       }
       break;
 

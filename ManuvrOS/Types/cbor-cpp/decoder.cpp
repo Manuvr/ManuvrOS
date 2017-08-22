@@ -72,7 +72,7 @@ void decoder::run() {
             break;
           case 1: // negative integer
             if (minorType < 24) {
-              _listener->on_integer((int8_t) 0xFF - minorType);
+              _listener->on_integer((int8_t) (0xFF - minorType));
             } else if(minorType == 24) { // 1 byte
               _currentLength = 1;
               _state = STATE_NINT;
@@ -256,7 +256,7 @@ void decoder::run() {
             if(temp <= INT_MAX) {
               _listener->on_integer(((int32_t) -(temp+1)));
             } else if(temp == 2147483648u) {
-              _listener->on_integer(INT_MIN);
+              _listener->on_integer((int32_t) INT_MIN);
             } else {
               _listener->on_extra_integer(temp, -1);
             }

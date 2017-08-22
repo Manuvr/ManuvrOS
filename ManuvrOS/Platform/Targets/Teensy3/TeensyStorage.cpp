@@ -32,9 +32,10 @@ CBOR data begins at offset 4. The first uint32 is broken up this way:
   3       | LSB of free-space (max, 2044)
 */
 
-#if defined(MANUVR_STORAGE)
-#include <Platform/Targets/Teensy3/TeensyStorage.h>
 #include <Platform/Platform.h>
+#include <Platform/Targets/Teensy3/TeensyStorage.h>
+
+#if defined(MANUVR_STORAGE)
 #include <EEPROM.h>
 
 // We want this definition isolated to the compilation unit.

@@ -55,7 +55,7 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
         {
           int8_t x = 0;
           if (0 == src->getValueAs(&x)) {
-            encoder.write_int(x);
+            encoder.write_int((int) x);
           }
         }
         break;
@@ -63,7 +63,7 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
         {
           int16_t x = 0;
           if (0 == src->getValueAs(&x)) {
-            encoder.write_int(x);
+            encoder.write_int((int) x);
           }
         }
         break;
@@ -71,7 +71,7 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
         {
           int32_t x = 0;
           if (0 == src->getValueAs(&x)) {
-            encoder.write_int(x);
+            encoder.write_int((int) x);
           }
         }
         break;
@@ -87,7 +87,7 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
         {
           uint8_t x = 0;
           if (0 == src->getValueAs(&x)) {
-            encoder.write_int(x);
+            encoder.write_int((unsigned int) x);
           }
         }
         break;
@@ -95,7 +95,7 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
         {
           uint16_t x = 0;
           if (0 == src->getValueAs(&x)) {
-            encoder.write_int(x);
+            encoder.write_int((unsigned int) x);
           }
         }
         break;
@@ -103,7 +103,7 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
         {
           uint32_t x = 0;
           if (0 == src->getValueAs(&x)) {
-            encoder.write_int(x);
+            encoder.write_int((unsigned int) x);
           }
         }
         break;

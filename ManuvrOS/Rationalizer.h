@@ -110,9 +110,6 @@
 #elif defined(__MANUVR_CONTIKI)
   //#pragma message "Building with no threading support."
   #define MANUVR_PLATFORM_TIMER_PERIOD_MS 1
-#else
-  //#pragma message "Building with no threading support."
-  #define MANUVR_PLATFORM_TIMER_PERIOD_MS 1
 #endif
 
 // What is the granularity of our scheduler?

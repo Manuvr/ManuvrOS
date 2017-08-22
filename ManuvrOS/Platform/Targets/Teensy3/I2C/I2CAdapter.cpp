@@ -39,10 +39,11 @@ int8_t I2CAdapter::bus_deinit() {
 }
 
 
-
+#if defined(MANUVR_DEBUG)
 void I2CAdapter::printHardwareState(StringBuilder* output) {
   output->concatf("-- I2C%d (%sline)\n", getAdapterId(), (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
 }
+#endif
 
 
 int8_t I2CAdapter::generateStart() {
