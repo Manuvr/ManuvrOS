@@ -150,6 +150,9 @@ class BQ24155 : public EventReceiver, I2CDeviceWithRegisters {
     /* Overrides from I2CDeviceWithRegisters... */
     int8_t io_op_callback(BusOp*);
     void printDebug(StringBuilder*);
+    inline void printRegisters(StringBuilder* output) {
+      I2CDeviceWithRegisters::printDebug(output);
+    };
 
     /* Overrides from EventReceiver */
     int8_t notify(ManuvrMsg*);
@@ -157,6 +160,9 @@ class BQ24155 : public EventReceiver, I2CDeviceWithRegisters {
     #if defined(MANUVR_CONSOLE_SUPPORT)
       void procDirectDebugInstruction(StringBuilder*);
     #endif  //MANUVR_CONSOLE_SUPPORT
+
+    int8_t init();
+    inline int8_t refresh() {  return syncRegisters();  };
 
 
     static BQ24155* INSTANCE;
@@ -169,12 +175,11 @@ class BQ24155 : public EventReceiver, I2CDeviceWithRegisters {
   private:
     const BQ24155Opts _opts;
 
-    int8_t init();
-
     bool     charger_enabled();
     int8_t   charger_enabled(bool en);
     bool     charge_current_termination_enabled();
     int8_t   charge_current_termination_enabled(bool en);
+
 
     int16_t  usb_current_limit();
     int8_t   usb_current_limit(int16_t milliamps);

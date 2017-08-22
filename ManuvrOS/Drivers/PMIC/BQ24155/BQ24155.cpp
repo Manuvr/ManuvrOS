@@ -529,8 +529,28 @@ void BQ24155::procDirectDebugInstruction(StringBuilder *input) {
       break;
 
 
+
     case 'g':
-      syncRegisters();
+      switch (temp_int) {
+        case 0:
+          readRegister((uint8_t) BQ24155_REG_STATUS);
+          break;
+        case 1:
+          readRegister((uint8_t) BQ24155_REG_LIMITS);
+          break;
+        case 2:
+          readRegister((uint8_t) BQ24155_REG_BATT_REGU);
+          break;
+        case 3:
+          readRegister((uint8_t) BQ24155_REG_PART_REV);
+          break;
+        case 4:
+          readRegister((uint8_t) BQ24155_REG_FAST_CHRG);
+          break;
+        default:
+          syncRegisters();
+          break;
+      }
       break;
 
     case 'E':

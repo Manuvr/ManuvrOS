@@ -68,15 +68,14 @@ LTC294x::LTC294x(const LTC294xOpts* o) : I2CDeviceWithRegisters(LTC294X_I2CADDR)
     //gpioDefine(_opts.pin, GPIOMode::OUTPUT_OD);
   }
 
-
-  defineRegister(LTC294X_REG_STATUS,        (uint8_t) 0x00, false, true,  true);
-  defineRegister(LTC294X_REG_CONTROL,       (uint8_t) 0x3C, false, false, true);
+  defineRegister(LTC294X_REG_STATUS,        (uint8_t)  0x00,   false, true,  false);
+  defineRegister(LTC294X_REG_CONTROL,       (uint8_t)  0x3C,   false, false, true);
   defineRegister(LTC294X_REG_ACC_CHARGE,    (uint16_t) 0x7FFF, false, false, true);
   defineRegister(LTC294X_REG_CHRG_THRESH_H, (uint16_t) 0xFFFF, false, false, true);
   defineRegister(LTC294X_REG_CHRG_THRESH_L, (uint16_t) 0x0000, false, false, true);
-  defineRegister(LTC294X_REG_VOLTAGE,       (uint16_t) 0x0000, false, true,  false);
+  defineRegister(LTC294X_REG_VOLTAGE,       (uint16_t) 0x0000, false, false, false);
   defineRegister(LTC294X_REG_V_THRESH,      (uint16_t) 0xFF00, false, false, true);
-  defineRegister(LTC294X_REG_TEMP,          (uint16_t) 0x0000, false, true,  false);
+  defineRegister(LTC294X_REG_TEMP,          (uint16_t) 0x0000, false, false, false);
   defineRegister(LTC294X_REG_TEMP_THRESH,   (uint16_t) 0xFF00, false, false, true);
 }
 
@@ -88,15 +87,18 @@ LTC294x::~LTC294x() {
 }
 
 
+/*
+* Here, we will compare options and set them as defaults.
+*/
 int8_t LTC294x::init() {
-  //writeIndirect(LTC294x_REG_STATUS,    0x00, true);
-  //writeIndirect(LTC294x_REG_LIMITS,    0x00, true);
-  //writeIndirect(LTC294x_REG_BATT_REGU, 0x00, true);
-  //writeIndirect(LTC294x_REG_FAST_CHRG, 0x00);
-  _init_complete = true;
-  return 0;
+  if (_opts.autostartReading()) {
+    return _adc_mode(LTC294xADCModes::AUTO);
+  }
+  return writeDirtyRegisters();
 }
 
+
+//_init_complete(true);
 
 /*******************************************************************************
 * ___     _       _                      These members are mandatory overrides
@@ -105,33 +107,84 @@ int8_t LTC294x::init() {
 *******************************************************************************/
 
 int8_t LTC294x::io_op_callback(BusOp* _op) {
-  I2CBusOp* completed = (I2CBusOp*) _op;
   I2CDeviceWithRegisters::io_op_callback(_op);
-
+  I2CBusOp* completed = (I2CBusOp*) _op;
   DeviceRegister *temp_reg = getRegisterByBaseAddress(completed->sub_addr);
-  switch (completed->sub_addr) {
-    case LTC294X_REG_STATUS:
-      break;
-    case LTC294X_REG_CONTROL:
-      break;
-    case LTC294X_REG_ACC_CHARGE:    // The accumulated charge register.
-      break;
-    case LTC294X_REG_CHRG_THRESH_H:
-      break;
-    case LTC294X_REG_CHRG_THRESH_L:
-      break;
-    case LTC294X_REG_VOLTAGE:
-      break;
-    case LTC294X_REG_V_THRESH:
-      break;
-    case LTC294X_REG_TEMP:
-      break;
-    case LTC294X_REG_TEMP_THRESH:
-      break;
 
-    default:
-      temp_reg->unread = false;
-      break;
+  if (temp_reg->unread) {
+    // This was a read operation.
+    switch (completed->sub_addr) {
+      case LTC294X_REG_STATUS:
+        break;
+      case LTC294X_REG_CONTROL:
+        {
+          uint8_t val = *(temp_reg->val);
+          uint8_t rewrite = val;
+          uint8_t dps = _derive_prescaler();
+
+          // Set the prescalar if it isn't already...
+          rewrite = (rewrite & 0xC7) | (dps << 3);
+
+          // Normalize hardware against pin selection...
+          if (_opts.useAlertPin()) {    rewrite = (rewrite & 0xF9) | 0x04;  }
+          else if (_opts.useCCPin()) {  rewrite = (rewrite & 0xF9) | 0x02;  }
+          else {                        rewrite = (rewrite & 0xF9);         }
+
+          temp_reg->unread = false;
+          if (val != rewrite) {
+            _write_control_reg(rewrite);
+          }
+        }
+        break;
+      case LTC294X_REG_ACC_CHARGE:    // The accumulated charge register.
+        break;
+      case LTC294X_REG_VOLTAGE:
+        break;
+      case LTC294X_REG_TEMP:
+        break;
+      case LTC294X_REG_CHRG_THRESH_H:
+        // TODO: This will need auditing after the endianness filter in the superclass.
+        _thrsh_h_chrg = (*(temp_reg->val) << 8) + *(temp_reg->val+1);
+        break;
+      case LTC294X_REG_CHRG_THRESH_L:
+        // TODO: This will need auditing after the endianness filter in the superclass.
+        _thrsh_l_chrg = (*(temp_reg->val) << 8) + *(temp_reg->val+1);
+        break;
+      case LTC294X_REG_V_THRESH:
+        // TODO: This will need auditing after the endianness filter in the superclass.
+        _thrsh_h_volt = *(temp_reg->val);
+        _thrsh_l_volt = *(temp_reg->val+1);
+        break;
+      case LTC294X_REG_TEMP_THRESH:
+        // TODO: This will need auditing after the endianness filter in the superclass.
+        _thrsh_h_temp = *(temp_reg->val);
+        _thrsh_l_temp = *(temp_reg->val+1);
+        break;
+      default:
+        break;
+    }
+    temp_reg->unread = false;
+  }
+  else {
+    // This was a write operation.
+    switch (completed->sub_addr) {
+      case LTC294X_REG_STATUS:
+        break;
+      case LTC294X_REG_CONTROL:
+        _init_complete(true);
+        break;
+      case LTC294X_REG_ACC_CHARGE:    // The accumulated charge register.
+        break;
+      case LTC294X_REG_CHRG_THRESH_H:
+        break;
+      case LTC294X_REG_CHRG_THRESH_L:
+        break;
+      case LTC294X_REG_V_THRESH:
+      case LTC294X_REG_TEMP_THRESH:
+      default:
+        break;
+    }
+    temp_reg->dirty = false;
   }
 
   /* Null the buffer so the bus adapter isn't tempted to free it.
@@ -145,15 +198,36 @@ int8_t LTC294x::io_op_callback(BusOp* _op) {
 /*
 * Dump this item to the dev log.
 */
-void LTC294x::printDebug(StringBuilder* temp) {
-  temp->concatf("LTC294x %sinitialized\n", (_init_complete ? "un" : ""));
-  temp->concatf("\tAnalog shutdown:   %c\n", _analog_shutdown ? 'y' : 'n');
+void LTC294x::printDebug(StringBuilder* output) {
+  uint8_t dsp = _derive_prescaler();
+  output->concatf("-- LTC294%c-1 %sinitialized\n", (_is_2942() ? '2' : '1'), (_init_complete() ? "un" : ""));
   if (_opts.useAlertPin()) {
-    temp->concatf("\tALERT pin:         %d\n", _opts.pin);
+    output->concatf("\tALERT pin:         %d\n", _opts.pin);
   }
   else if (_opts.useCCPin()) {
-    temp->concatf("\tCC pin:            %d\n", _opts.pin);
+    output->concatf("\tCC pin:            %d\n", _opts.pin);
   }
+  output->concatf("\tPrescaler:           %u\n", dsp);
+  output->concatf("\tDev/ADC state      %s / ", _asleep() ? "Awake":"Asleep");
+  switch (_adc_mode()) {
+    case LTC294xADCModes::SLEEP:
+      output->concat("SLEEP");
+      break;
+    case LTC294xADCModes::MANUAL_T:
+      output->concat("MANUAL_T");
+      break;
+    case LTC294xADCModes::MANUAL_V:
+      output->concat("MANUAL_V");
+      break;
+    case LTC294xADCModes::AUTO:
+      output->concat("AUTO");
+      break;
+  }
+  output->concatf("\n\tAnalog shutdown:   %c\n", _analog_shutdown() ? 'y' : 'n');
+  output->concat("\tCurrent:     \t Thresholds:\n");
+  output->concatf("\t  C:   %.2f \t %.2f / %.2f\n", batteryCharge(),  (dsp * 0.0006640625f * _thrsh_l_chrg), (dsp * 0.0006640625f * _thrsh_h_chrg));
+  output->concatf("\t  V:   %.2f \t %.2f / %.2f\n", batteryVoltage(), (0.0234368f * _thrsh_l_volt), (0.0234368f * _thrsh_h_volt));
+  output->concatf("\t  T:   %.2f \t %.2f / %.2f\n", temperature(),    convertT(_thrsh_l_temp << 8), convertT(_thrsh_h_temp << 8));
 }
 
 
@@ -162,51 +236,75 @@ void LTC294x::printDebug(StringBuilder* temp) {
 * Functions specific to this class....                                         *
 *******************************************************************************/
 
-/**
-* Will return the minimum servicable prescaler value for the given battery capacity.
-* TODO: Re-phrase as integer arithmetic and bitshift, rather than branch-soup.
-*/
-uint8_t LTC294x::_derive_prescaler() {
-  float res = _opts.batt_capacity * 0.023f;
-  uint8_t ret = 7;   // The max prescaler.
-  if (res < 64.0) { ret--; }
-  if (res < 32.0) { ret--; }
-  if (res < 16.0) { ret--; }
-  if (res < 8.0)  { ret--; }
-  if (res < 4.0)  { ret--; }
-  if (res < 2.0)  { ret--; }
-  if (res < 1.0)  { ret--; }
-  return ret;
-};
+int8_t LTC294x::_adc_mode(LTC294xADCModes m) {
+  uint8_t val = regValue(LTC294X_REG_CONTROL);
+  val = (val & ~LTC294X_OPT_MASK_ADC_MODE) | (uint8_t) m;
+  return _write_control_reg(val);
+}
 
-int8_t LTC294x::_analog_enabled(bool en) {
-  return -1;
+int8_t LTC294x::_sleep(bool x) {
+  uint8_t val = regValue(LTC294X_REG_CONTROL);
+  val = (val & 0xFE) | (x ? 1:0);
+  return _write_control_reg(val);
 }
 
 float LTC294x::batteryCharge() {
-  return (0.009155f * regValue(LTC294X_REG_ACC_CHARGE));
+  return (_derive_prescaler() * 0.0006640625f * regValue(LTC294X_REG_ACC_CHARGE));
 }
 
 float LTC294x::batteryVoltage() {
-  return (0.009155f * regValue(LTC294X_REG_VOLTAGE));
+  return (0.00009155f * regValue(LTC294X_REG_VOLTAGE));
 }
 
 float LTC294x::temperature() {
-  return (0.009155f * regValue(LTC294X_REG_TEMP)) - 272.15f;
+  return convertT(regValue(LTC294X_REG_TEMP));
 }
 
 int8_t LTC294x::setChargeThresholds(uint16_t low, uint16_t high) {
-  return -1;
+  // TODO: Fill
+  _thrsh_l_chrg = low;
+  _thrsh_h_chrg = high;
+  return _set_thresh_reg_charge(low, high);
 }
 
-int8_t LTC294x::setVoltageThreshold(uint16_t low) {
-  return -1;
+int8_t LTC294x::setVoltageThreshold(float low, float high) {
+  // NOTE: 0.0234368 == (0.00009155f >> 8)  // single byte register
+  _thrsh_l_volt = (uint8_t) (low  / 0.0234368f);
+  _thrsh_h_volt = (uint8_t) (high / 0.0234368f);
+  return _set_thresh_reg_voltage(_thrsh_l_chrg, _thrsh_h_chrg);
 }
 
-int8_t LTC294x::setTemperatureThreshold(uint16_t high) {
-  return -1;
+int8_t LTC294x::setTemperatureThreshold(float low, float high) {
+  // NOTE: 2.34368 == (0.009155f >> 8)  // single byte register
+  _thrsh_l_temp = (uint8_t) (low  / 2.34368f);
+  _thrsh_h_temp = (uint8_t) (high / 2.34368f);
+  return _set_thresh_reg_voltage(_thrsh_l_temp, _thrsh_h_temp);
 }
 
+int8_t LTC294x::_set_thresh_reg_charge(uint16_t l, uint16_t h) {
+  int8_t r0 = writeIndirect(LTC294X_REG_CHRG_THRESH_H, h);
+  if (I2C_ERR_SLAVE_NO_ERROR == r0) {
+    return writeIndirect(LTC294X_REG_CHRG_THRESH_L, l);
+  }
+  return r0;
+};
+
+
+/**
+* Will return the minimum servicable prescaler value for the given battery capacity.
+*/
+uint8_t LTC294x::_derive_prescaler() {
+  uint8_t res = _opts.batt_capacity * 0.022978f;
+  uint8_t ret = 7;   // The max prescaler.
+  if (res < 64) { ret--; }
+  if (res < 32) { ret--; }
+  if (res < 16) { ret--; }
+  if (res < 8)  { ret--; }
+  if (res < 4)  { ret--; }
+  if (res < 2)  { ret--; }
+  if (res < 1)  { ret--; }
+  return ret;
+};
 
 
 //#endif  // CONFIG_MANUVR_LTC294X

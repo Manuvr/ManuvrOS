@@ -40,7 +40,25 @@ limitations under the License.
 #define LTC294X_I2CADDR        0x64
 
 
+#define LTC294X_FLAG_INIT_COMPLETE   0x0001  // Is the I/O pin to be treated as an output?
+
+
 #define LTC294X_OPT_PIN_IS_CC   0x01  // Is the I/O pin to be treated as an output?
+#define LTC294X_OPT_INTEG_SENSE 0x02  // This is a "-1" varient, and has an integrated sense resistor.
+#define LTC294X_OPT_ACD_AUTO    0x04  // The converter should run automatically.
+
+
+enum class LTC294xADCModes {
+  SLEEP     = 0x00,
+  MANUAL_T  = 0x40,
+  MANUAL_V  = 0x80,
+  AUTO      = 0xC0
+};
+#define LTC294X_OPT_MASK_ADC_MODE   0xC0
+
+
+#define DEG_K_C_OFFSET   272.15f
+
 
 /**
 * Pin defs for this module.
@@ -69,6 +87,10 @@ class LTC294xOpts {
       pin(_pin),
       _flags(_f) {};
 
+    inline bool autostartReading() const {
+      return (_flags & LTC294X_OPT_ACD_AUTO);
+    };
+
     inline bool useAlertPin() const {
       return (255 != pin) & !(_flags & LTC294X_OPT_PIN_IS_CC);
     };
@@ -92,14 +114,20 @@ class LTC294x : public I2CDeviceWithRegisters {
     /* Overrides from I2CDeviceWithRegisters... */
     int8_t io_op_callback(BusOp*);
     void printDebug(StringBuilder*);
+    inline void printRegisters(StringBuilder* output) {
+      I2CDeviceWithRegisters::printDebug(output);
+    };
+
+    int8_t init();
+    inline int8_t refresh() {  return syncRegisters();  };
 
     float temperature();
     float batteryVoltage();
     float batteryCharge();
 
     int8_t setChargeThresholds(uint16_t low, uint16_t high);
-    int8_t setVoltageThreshold(uint16_t low);
-    int8_t setTemperatureThreshold(uint16_t high);
+    int8_t setVoltageThreshold(float low, float high);
+    int8_t setTemperatureThreshold(float low, float high);
 
 
     static LTC294x* INSTANCE;
@@ -107,15 +135,56 @@ class LTC294x : public I2CDeviceWithRegisters {
 
   private:
     const LTC294xOpts _opts;
-    bool _init_complete   = false;
-    bool _analog_shutdown = false;
+    uint16_t _flags        = 0;
+    uint16_t _thrsh_l_chrg = 0;
+    uint16_t _thrsh_h_chrg = 0;
+    uint8_t  _thrsh_l_temp = 0;
+    uint8_t  _thrsh_h_temp = 0;
+    uint8_t  _thrsh_l_volt = 0;
+    uint8_t  _thrsh_h_volt = 0;
 
+    inline int8_t  _write_control_reg(uint8_t v) {
+      return writeIndirect(LTC294X_REG_CONTROL, v);
+    };
+    inline int8_t _set_thresh_reg_voltage(uint8_t l, uint8_t h) {
+      return writeIndirect(LTC294X_REG_V_THRESH, ((uint16_t) l) + ((uint16_t) h << 8));
+    };
+    inline int8_t _set_thresh_reg_temperature(uint8_t l, uint8_t h) {
+      return writeIndirect(LTC294X_REG_TEMP_THRESH, ((uint16_t) l) + ((uint16_t) h << 8));
+    };
+    inline int8_t _set_charge_register(uint16_t x) {
+      return writeIndirect(LTC294X_REG_ACC_CHARGE, x);
+    };
+    int8_t _set_thresh_reg_charge(uint16_t l, uint16_t h);
+
+    inline bool _analog_shutdown() {
+      return regValue(LTC294X_REG_CONTROL) & 0x01;
+    };
+
+    int8_t  _adc_mode(LTC294xADCModes);
+    inline LTC294xADCModes _adc_mode() {
+      return (LTC294xADCModes) (regValue(LTC294X_REG_CONTROL) & LTC294X_OPT_MASK_ADC_MODE);
+    };
+
+    inline bool _is_2942() {   return (0 == (regValue(LTC294X_REG_STATUS) & 0x80));   };
+    inline bool _asleep() {    return (1 == (regValue(LTC294X_REG_CONTROL) & 0x01));  };
+
+    /**
+    * Is the schedule pending execution ahread of schedule (next tick)?
+    *
+    * @return true if the schedule will execute ahread of schedule.
+    */
+    inline bool _init_complete() { return (_flags & LTC294X_FLAG_INIT_COMPLETE); };
+    inline void _init_complete(bool x) {
+      _flags = (x) ? (_flags | LTC294X_FLAG_INIT_COMPLETE) : (_flags & ~(LTC294X_FLAG_INIT_COMPLETE));
+    };
+
+    int8_t  _sleep(bool);
     uint8_t _derive_prescaler();
-    int8_t  _analog_enabled(bool);
 
-    inline bool _analog_enabled() {   return regValue(LTC294X_REG_CONTROL) & 0x01; };
-
-    int8_t init();
+    float convertT(uint16_t v) {
+      return ((0.009155f * v) - DEG_K_C_OFFSET);
+    };
 };
 
 

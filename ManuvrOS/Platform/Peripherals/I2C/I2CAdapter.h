@@ -363,12 +363,12 @@ This file is the tortured result of growing pains since the beginning of
       bool regUpdated(uint8_t base_addr);
       void markRegRead(uint8_t base_addr);
 
-      int8_t writeIndirect(uint8_t base_addr, uint8_t val);
-      int8_t writeIndirect(uint8_t base_addr, uint8_t val, bool defer);
+      int8_t writeIndirect(uint8_t base_addr, unsigned int val);
+      int8_t writeIndirect(uint8_t base_addr, unsigned int val, bool defer);
 
       int8_t writeDirtyRegisters();   // Automatically writes all registers marked as dirty.
 
-      // Sync the given list of registers. And an override that syncs all registers.
+      // Sync all registers.
       int8_t syncRegisters();
 
       /* Low-level stuff. These are the ONLY fxns in this ENTIRE class that should care */

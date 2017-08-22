@@ -168,17 +168,28 @@ void I2CDeviceWithRegisters::markRegRead(uint8_t base_addr) {
 
 
 // Override to support stacking up operations.
-int8_t I2CDeviceWithRegisters::writeIndirect(uint8_t base_addr, uint8_t val) {
+int8_t I2CDeviceWithRegisters::writeIndirect(uint8_t base_addr, unsigned int val) {
   return writeIndirect(base_addr, val, false);
 }
 
 // TODO: Needs a refactor. This is an experiment.
-int8_t I2CDeviceWithRegisters::writeIndirect(uint8_t base_addr, uint8_t val, bool defer) {
+int8_t I2CDeviceWithRegisters::writeIndirect(uint8_t base_addr, unsigned int val, bool defer) {
   DeviceRegister *nu = getRegisterByBaseAddress(base_addr);
   if (nu == nullptr) return I2C_ERR_SLAVE_UNDEFD_REG;
   if (!nu->writable) return I2C_ERR_SLAVE_REG_IS_RO;
-
-  *(nu->val) = val;
+  switch (nu->len) {
+    case 4:
+      *((uint32_t*) nu->val) = val & 0xFFFFFFFF;
+      break;
+    case 2:
+      *((uint16_t*) nu->val) = val & 0xFFFF;
+      break;
+    case 1:
+      *((uint8_t*)  nu->val) = val & 0xFF;
+      break;
+    default:
+      return I2C_ERR_SLAVE_REG_IS_RO;
+  }
   nu->dirty = true;
   if (!defer) {
     writeDirtyRegisters();

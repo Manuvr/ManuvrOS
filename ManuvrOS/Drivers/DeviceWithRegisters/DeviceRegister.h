@@ -38,9 +38,9 @@ limitations under the License.
       DeviceRegister(uint16_t, uint16_t val, uint8_t* buf, bool dirty, bool unread, bool writable);
       DeviceRegister(uint16_t, uint32_t val, uint8_t* buf, bool dirty, bool unread, bool writable);
 
+      uint8_t  *val;       // A buffer that mirrors the register.
       uint16_t addr;       // The internal address of the register.
       uint8_t  len;        // How large is the register?
-      uint8_t  *val;       // A buffer that mirrors the register.
       bool     dirty;      // Marked true by the class when the value needs to be written to device.
       bool     unread;     // Marked true by automated read functions if a value changed.
       bool     writable;   // Is this register writable.
