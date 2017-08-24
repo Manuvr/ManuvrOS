@@ -40,7 +40,17 @@ limitations under the License.
 #define LTC294X_I2CADDR        0x64
 
 
-#define LTC294X_FLAG_INIT_COMPLETE   0x0001  // Is the I/O pin to be treated as an output?
+#define LTC294X_FLAG_INIT_CTRL      0x0001  // Register init flags.
+#define LTC294X_FLAG_INIT_AC        0x0002  // Register init flags.
+#define LTC294X_FLAG_INIT_THRESH_T  0x0004  // Register init flags.
+#define LTC294X_FLAG_INIT_THRESH_V  0x0008  // Register init flags.
+#define LTC294X_FLAG_INIT_THRESH_CL 0x0010  // Register init flags.
+#define LTC294X_FLAG_INIT_THRESH_CH 0x0020  // Register init flags.
+
+#define LTC294X_FLAG_MASK_INIT_CMPLT ( \
+  LTC294X_FLAG_INIT_CTRL     | LTC294X_FLAG_INIT_THRESH_V | \
+  LTC294X_FLAG_INIT_AC       | LTC294X_FLAG_INIT_THRESH_T | \
+  LTC294X_FLAG_INIT_THRESH_CL | LTC294X_FLAG_INIT_THRESH_CH)
 
 
 #define LTC294X_OPT_PIN_IS_CC   0x01  // Is the I/O pin to be treated as an output?
@@ -123,7 +133,9 @@ class LTC294x : public I2CDeviceWithRegisters {
 
     float temperature();
     float batteryVoltage();
-    float batteryCharge();
+    float batteryPercent();
+    uint16_t batteryCharge() {  return regValue(LTC294X_REG_ACC_CHARGE);  };
+    int8_t batteryCharge(uint16_t x) {  return _set_charge_register(x);   };
 
     int8_t setChargeThresholds(uint16_t low, uint16_t high);
     int8_t setVoltageThreshold(float low, float high);
@@ -146,20 +158,22 @@ class LTC294x : public I2CDeviceWithRegisters {
     inline int8_t  _write_control_reg(uint8_t v) {
       return writeIndirect(LTC294X_REG_CONTROL, v);
     };
+
+    /* Compresses two single-byte registers into a single 16-bit register. */
     inline int8_t _set_thresh_reg_voltage(uint8_t l, uint8_t h) {
-      return writeIndirect(LTC294X_REG_V_THRESH, ((uint16_t) l) + ((uint16_t) h << 8));
+      return writeIndirect(LTC294X_REG_V_THRESH, ((uint16_t) h) | ((uint16_t) l << 8));
     };
+
+    /* Compresses two single-byte registers into a single 16-bit register. */
     inline int8_t _set_thresh_reg_temperature(uint8_t l, uint8_t h) {
-      return writeIndirect(LTC294X_REG_TEMP_THRESH, ((uint16_t) l) + ((uint16_t) h << 8));
+      return writeIndirect(LTC294X_REG_TEMP_THRESH, ((uint16_t) h) | ((uint16_t) l << 8));
     };
+
     inline int8_t _set_charge_register(uint16_t x) {
       return writeIndirect(LTC294X_REG_ACC_CHARGE, x);
     };
-    int8_t _set_thresh_reg_charge(uint16_t l, uint16_t h);
 
-    inline bool _analog_shutdown() {
-      return regValue(LTC294X_REG_CONTROL) & 0x01;
-    };
+    int8_t _set_thresh_reg_charge(uint16_t l, uint16_t h);
 
     int8_t  _adc_mode(LTC294xADCModes);
     inline LTC294xADCModes _adc_mode() {
@@ -174,16 +188,15 @@ class LTC294x : public I2CDeviceWithRegisters {
     *
     * @return true if the schedule will execute ahread of schedule.
     */
-    inline bool _init_complete() { return (_flags & LTC294X_FLAG_INIT_COMPLETE); };
-    inline void _init_complete(bool x) {
-      _flags = (x) ? (_flags | LTC294X_FLAG_INIT_COMPLETE) : (_flags & ~(LTC294X_FLAG_INIT_COMPLETE));
+    inline bool _init_complete() {
+      return (LTC294X_FLAG_MASK_INIT_CMPLT == (_flags & LTC294X_FLAG_MASK_INIT_CMPLT));
     };
 
     int8_t  _sleep(bool);
     uint8_t _derive_prescaler();
 
     float convertT(uint16_t v) {
-      return ((0.009155f * v) - DEG_K_C_OFFSET);
+      return (0.009155f * v);
     };
 };
 

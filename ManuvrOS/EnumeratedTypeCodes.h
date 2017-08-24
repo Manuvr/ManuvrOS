@@ -94,6 +94,10 @@ inline float    parseFloatFromchars(unsigned char *input) {   return ((float)   
 inline uint32_t parseUint32Fromchars(unsigned char *input) {  return ((uint32_t) *((uint32_t*) input)); }
 inline uint16_t parseUint16Fromchars(unsigned char *input) {  return ((uint16_t) *((uint16_t*) input)); }
 
+inline uint16_t endianSwap16(uint16_t x) {   return ((x >> 8) | (x << 8));   };
+inline uint32_t endianSwap32(uint32_t x) {   return __builtin_bswap32(x);    };
+inline uint64_t endianSwap64(uint64_t x) {   return __builtin_bswap64(x);    };
+
 /**
 * Inlines to support erasure of native types...
 */

@@ -21,65 +21,64 @@ limitations under the License.
 
 
 #include "DeviceRegister.h"
+#include <Platform/Platform.h>
 
-
-DeviceRegister::DeviceRegister(uint16_t nu_addr, uint8_t nu_val, uint8_t* buf, bool d, bool u, bool w) {
-  len      = 1;
-  addr     = nu_addr;
-  val      = buf;
-  *(val)   = nu_val;
+/**
+* Private constructor to which we delegate.
+*/
+DeviceRegister::DeviceRegister(uint8_t* b, uint16_t a, uint8_t l, bool d, bool u, bool w) : val(b), addr(a), len(l) {
   dirty    = d;
   unread   = u;
   writable = w;
 }
 
-DeviceRegister::DeviceRegister(uint16_t nu_addr, uint16_t nu_val, uint8_t* buf, bool d, bool u, bool w) {
-  len      = 2;
-  addr     = nu_addr;
-  val      = buf;
-  *((uint16_t*)val)   = nu_val;
-  dirty    = d;
-  unread   = u;
-  writable = w;
+DeviceRegister::DeviceRegister(uint16_t nu_addr, uint8_t nu_val, uint8_t* buf, bool d, bool u, bool w) :
+  DeviceRegister(buf, nu_addr, 1, d, u, w) {
+  *((uint8_t*) val) = nu_val;
+}
+
+DeviceRegister::DeviceRegister(uint16_t nu_addr, uint16_t nu_val, uint8_t* buf, bool d, bool u, bool w) :
+  DeviceRegister(buf, nu_addr, 2, d, u, w) {
+  *((uint16_t*) val) = nu_val;
 }
 
 
-DeviceRegister::DeviceRegister(uint16_t nu_addr, uint32_t nu_val, uint8_t* buf, bool d, bool u, bool w) {
-  len      = 4;
-  addr     = nu_addr;
-  val      = buf;
-  *((uint32_t*)val)   = nu_val;
-  dirty    = d;
-  unread   = u;
-  writable = w;
+DeviceRegister::DeviceRegister(uint16_t nu_addr, uint32_t nu_val, uint8_t* buf, bool d, bool u, bool w) :
+  DeviceRegister(buf, nu_addr, 4, d, u, w) {
+  *((uint32_t*) val) = nu_val;
 }
-
-
-DeviceRegister::DeviceRegister() {
-  len      = 0;
-  addr     = 0;
-  val      = nullptr;
-  dirty    = false;
-  unread   = false;
-  writable = false;
-}
-
-
 
 
 void DeviceRegister::set(unsigned int nu_val) {
   switch (len) {
     case 1:
-      *((uint8_t*) val) = (uint8_t) nu_val & 0xFF;
+      *((uint8_t*)  val) = nu_val & 0xFF;
       break;
     case 2:
-      *((uint16_t*) val) = (uint16_t) nu_val & 0xFFFF;
+      *((uint16_t*) val) = (platform.bigEndian() ? ((uint16_t) nu_val) : endianSwap16((uint16_t) nu_val)) & 0xFFFF;
       break;
     case 4:
-      *((uint32_t*) val) = (uint32_t) nu_val & 0xFFFFFFFF;
+      *((uint32_t*) val) = (platform.bigEndian() ? ((uint32_t) nu_val) : endianSwap32((uint32_t) nu_val)) & 0xFFFFFFFF;
+      break;
+  }
+  dirty = true;
+}
+
+
+unsigned int DeviceRegister::getVal() {
+  unsigned int return_value = 0;
+  switch (len) {
+    case 1:
+      return_value = *((uint8_t*) val) & 0xFF;
+      break;
+    case 2:
+      return_value = (platform.bigEndian() ? *((uint16_t*) val) : endianSwap16(*((uint16_t*) val))) & 0xFFFF;
+      break;
+    case 4:
+      return_value = (platform.bigEndian() ? *((uint32_t*) val) : endianSwap32(*((uint32_t*) val))) & 0xFFFFFFFF;
       break;
     default:
-      return;
+      break;
   }
-  dirty    = true;
+  return return_value;
 }

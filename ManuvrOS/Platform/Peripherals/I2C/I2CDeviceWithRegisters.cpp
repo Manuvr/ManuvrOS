@@ -49,12 +49,10 @@ I2CDeviceWithRegisters::~I2CDeviceWithRegisters() {
 }
 
 
-
 bool I2CDeviceWithRegisters::sync() {
   bool return_value = (syncRegisters() == I2C_ERR_SLAVE_NO_ERROR);
   return return_value;
 }
-
 
 
 /*
@@ -62,47 +60,23 @@ bool I2CDeviceWithRegisters::sync() {
 * Definition is presently accounting for length based on the size of the default value passed in.
 */
 bool I2CDeviceWithRegisters::defineRegister(uint16_t _addr, uint8_t val, bool dirty, bool unread, bool writable) {
-  DeviceRegister *nu = new DeviceRegister();
-  nu->addr     = _addr;
-  nu->len      = 1;
-  nu->val      = (uint8_t*) malloc(1);
-  *(nu->val)   = val;
-  nu->dirty    = dirty;
-  nu->unread   = unread;
-  nu->writable = writable;
+  uint8_t* buffer = (uint8_t*) malloc(1);
+  DeviceRegister *nu = new DeviceRegister(_addr, val, buffer, dirty, unread, writable);
 
   reg_defs.insert(nu);
   return true;
 }
 
 bool I2CDeviceWithRegisters::defineRegister(uint16_t _addr, uint16_t val, bool dirty, bool unread, bool writable) {
-  DeviceRegister *nu = new DeviceRegister();
-  nu->addr     = _addr;
-  nu->val      = (uint8_t*) malloc(2);
-  nu->len      = 2;
-  *(nu->val)     = (uint8_t) ((val >> 8) & 0x00FF);
-  *(nu->val + 1) = (uint8_t) (val & 0x00FF);
-  nu->dirty    = dirty;
-  nu->unread   = unread;
-  nu->writable = writable;
-
+  uint8_t* buffer = (uint8_t*) malloc(2);
+  DeviceRegister *nu = new DeviceRegister(_addr, val, buffer, dirty, unread, writable);
   reg_defs.insert(nu);
   return true;
 }
 
 bool I2CDeviceWithRegisters::defineRegister(uint16_t _addr, uint32_t val, bool dirty, bool unread, bool writable) {
-  DeviceRegister *nu = new DeviceRegister();
-  nu->addr     = _addr;
-  nu->val      = (uint8_t*) malloc(4);
-  nu->len      = 4;
-  *(nu->val)     = (uint8_t) ((val >> 24) & 0x000000FF);
-  *(nu->val + 1) = (uint8_t) ((val >> 16) & 0x000000FF);
-  *(nu->val + 2) = (uint8_t) ((val >> 8)  & 0x000000FF);
-  *(nu->val + 3) = (uint8_t) (val & 0x000000FF);
-  nu->dirty    = dirty;
-  nu->unread   = unread;
-  nu->writable = writable;
-
+  uint8_t* buffer = (uint8_t*) malloc(4);
+  DeviceRegister *nu = new DeviceRegister(_addr, val, buffer, dirty, unread, writable);
   reg_defs.insert(nu);
   return true;
 }
@@ -122,29 +96,28 @@ DeviceRegister* I2CDeviceWithRegisters::getRegisterByBaseAddress(int b_addr) {
 }
 
 
-/*
-* Given base address, return the register's value
+/**
+* Given base address, return the register's value.
+* Multi-byte registers are construed to be big-endian.
+*
+* @param base_addr The base address of the register in the device.
+* @return The value stored by the register.
 */
 unsigned int I2CDeviceWithRegisters::regValue(uint8_t base_addr) {
+  unsigned int return_value = 0;
   DeviceRegister *reg = getRegisterByBaseAddress(base_addr);
-  if (reg == nullptr) {
-    return 0;
+  if (reg != nullptr) {
+    return_value = reg->getVal();
   }
-  else {
-    unsigned int return_value = 0;
-    for (uint8_t x = 0; x < reg->len; x++) {
-      return_value = (return_value << 8) + *(reg->val + x);
-    }
-
-    // Use the register's length to truncate the value...
-    unsigned int cull_val = (1 == reg->len) ? 0xFF : ((2 == reg->len) ? 0xFFFF : 0xFFFFFFFF);
-    return (return_value & cull_val);
-  }
+  return return_value;
 }
 
 
-/*
+/**
 * Given base address, return the register's unread state.
+*
+* @param base_addr The base address of the register in the device.
+* @return True if the register content is waiting to be acted upon.
 */
 bool I2CDeviceWithRegisters::regUpdated(uint8_t base_addr) {
   DeviceRegister *nu = getRegisterByBaseAddress(base_addr);
@@ -156,8 +129,10 @@ bool I2CDeviceWithRegisters::regUpdated(uint8_t base_addr) {
   }
 }
 
-/*
+/**
 * Given base address, mark this register as having been read.
+*
+* @param base_addr The base address of the register in the device.
 */
 void I2CDeviceWithRegisters::markRegRead(uint8_t base_addr) {
   DeviceRegister *nu = getRegisterByBaseAddress(base_addr);
@@ -167,30 +142,34 @@ void I2CDeviceWithRegisters::markRegRead(uint8_t base_addr) {
 }
 
 
-// Override to support stacking up operations.
+/**
+* Multi-byte registers are construed to be big-endian.
+* Override to support stacking up operations.
+*
+* @param base_addr The base address of the register in the device.
+* @param val The desired value of the register.
+* @return 0 on success. i2c error code on failure.
+*/
 int8_t I2CDeviceWithRegisters::writeIndirect(uint8_t base_addr, unsigned int val) {
   return writeIndirect(base_addr, val, false);
 }
 
-// TODO: Needs a refactor. This is an experiment.
+
+/**
+* Multi-byte registers are construed to be big-endian.
+* TODO: Needs a refactor. This is an experiment.
+*
+* @param base_addr The base address of the register in the device.
+* @param val The desired value of the register.
+* @param defer Pass true to defer the i/o. Used to stack operations.
+* @return 0 on success. i2c error code on failure.
+*/
 int8_t I2CDeviceWithRegisters::writeIndirect(uint8_t base_addr, unsigned int val, bool defer) {
   DeviceRegister *nu = getRegisterByBaseAddress(base_addr);
   if (nu == nullptr) return I2C_ERR_SLAVE_UNDEFD_REG;
   if (!nu->writable) return I2C_ERR_SLAVE_REG_IS_RO;
-  switch (nu->len) {
-    case 4:
-      *((uint32_t*) nu->val) = val & 0xFFFFFFFF;
-      break;
-    case 2:
-      *((uint16_t*) nu->val) = val & 0xFFFF;
-      break;
-    case 1:
-      *((uint8_t*)  nu->val) = val & 0xFF;
-      break;
-    default:
-      return I2C_ERR_SLAVE_REG_IS_RO;
-  }
-  nu->dirty = true;
+
+  nu->set(val);
   if (!defer) {
     writeDirtyRegisters();
   }
@@ -203,7 +182,7 @@ int8_t I2CDeviceWithRegisters::writeRegister(uint8_t base_addr) {
   if (nu == nullptr) return I2C_ERR_SLAVE_UNDEFD_REG;
   if (!nu->writable) return I2C_ERR_SLAVE_REG_IS_RO;
 
-  else if (!writeX(nu->addr, nu->len, nu->val)) {
+  else if (!writeX(nu->addr, nu->len, (uint8_t*) nu->val)) {
     #ifdef MANUVR_DEBUG
     Kernel::log("Bus error while writing device.\n");
     #endif
@@ -211,6 +190,7 @@ int8_t I2CDeviceWithRegisters::writeRegister(uint8_t base_addr) {
   }
   return I2C_ERR_SLAVE_NO_ERROR;
 }
+
 
 int8_t I2CDeviceWithRegisters::writeRegister(DeviceRegister *reg) {
   if (reg == nullptr) {
@@ -219,7 +199,7 @@ int8_t I2CDeviceWithRegisters::writeRegister(DeviceRegister *reg) {
   if (!reg->writable) {
     return I2C_ERR_SLAVE_REG_IS_RO;
   }
-  else if (!writeX(reg->addr, reg->len, reg->val)) {
+  else if (!writeX(reg->addr, reg->len, (uint8_t*) reg->val)) {
     #ifdef MANUVR_DEBUG
     Kernel::log("Bus error while writing device.\n");
     #endif
@@ -229,16 +209,18 @@ int8_t I2CDeviceWithRegisters::writeRegister(DeviceRegister *reg) {
 }
 
 
-
-/*
-* base_addr     Device access will begin at the specified register index.
+/**
+* Read a register at the given base address.
+*
+* @param base_addr Device access will begin at the specified register index.
+* @return 0 on success. i2c error code on failure.
 */
 int8_t I2CDeviceWithRegisters::readRegister(uint8_t base_addr) {
   DeviceRegister *reg = getRegisterByBaseAddress(base_addr);
   if (reg == nullptr) {
     return I2C_ERR_SLAVE_UNDEFD_REG;
   }
-  if (!readX(reg->addr, reg->len, reg->val)) {
+  if (!readX(reg->addr, reg->len, (uint8_t*) reg->val)) {
     #ifdef MANUVR_DEBUG
     Kernel::log("Bus error while reading device.\n");
     #endif
@@ -251,7 +233,7 @@ int8_t I2CDeviceWithRegisters::readRegister(DeviceRegister *reg) {
   if (reg == nullptr) {
     return I2C_ERR_SLAVE_UNDEFD_REG;
   }
-  if (!readX(reg->addr, reg->len, reg->val)) {
+  if (!readX(reg->addr, reg->len, (uint8_t*) reg->val)) {
     #ifdef MANUVR_DEBUG
     Kernel::log("Bus error while reading device.\n");
     #endif
@@ -271,18 +253,26 @@ void I2CDeviceWithRegisters::printDebug(StringBuilder* temp) {
     temp->concat("---<  Device registers  >---\n");
     for (int i = 0; i < reg_defs.size(); i++) {
       temp_reg = reg_defs.get(i);
+      temp->concatf("\tReg 0x%02x   contains 0x%02x", temp_reg->addr, *(temp_reg->val+0));
       switch (temp_reg->len) {
         case 1:
-          temp->concatf("\tReg 0x%02x   contains 0x%02x        %s %s %s\n", temp_reg->addr, *(temp_reg->val), (temp_reg->dirty ? "\tdirty":"\tclean"), (temp_reg->unread ? "\tunread":"\tknown"), (temp_reg->writable ? "\twritable":"\treadonly"));
+          temp->concat("      ");
           break;
         case 2:
-          temp->concatf("\tReg 0x%02x   contains 0x%04x      %s %s %s\n", temp_reg->addr, *(temp_reg->val), (temp_reg->dirty ? "\tdirty":"\tclean"), (temp_reg->unread ? "\tunread":"\tknown"), (temp_reg->writable ? "\twritable":"\treadonly"));
+          temp->concatf("%02x    ", *(temp_reg->val+1));
           break;
         case 4:
+          temp->concatf("%02x%02x%02x", *(temp_reg->val+1), *(temp_reg->val+2), *(temp_reg->val+3));
+          break;
         default:
-          temp->concatf("\tReg 0x%02x   contains 0x%08x  %s %s %s\n", temp_reg->addr, *(temp_reg->val), (temp_reg->dirty ? "\tdirty":"\tclean"), (temp_reg->unread ? "\tunread":"\tknown"), (temp_reg->writable ? "\twritable":"\treadonly"));
           break;
       }
+      temp->concatf(
+        "  %s %s %s\n",
+        (temp_reg->dirty ? "\tdirty":"\tclean"),
+        (temp_reg->unread ? "\tunread":"\tknown"),
+        (temp_reg->writable ? "\twritable":"\treadonly")
+      );
     }
   }
 }
