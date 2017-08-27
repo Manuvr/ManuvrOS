@@ -76,6 +76,17 @@ BQ24155::BQ24155(const BQ24155Opts* o) : EventReceiver("BQ24155"), I2CDeviceWith
   if (nullptr == BQ24155::INSTANCE) {
     BQ24155::INSTANCE = this;
   }
+  if (_opts.useStatPin()) {
+    // This pin on the BQ24155 is open-drain.
+    gpioDefine(_opts.stat_pin, GPIOMode::INPUT_PULLUP);
+  }
+  if (_opts.useISELPin()) {
+    // This is the default value. If we do not set the pin high ahead of setting
+    //   it as an output, we risk interrupting our own power supply if a battery
+    //   is not present.
+    setPin(_opts.isel_pin, true);
+    gpioDefine(_opts.isel_pin, GPIOMode::OUTPUT);
+  }
   _er_clear_flag(BQ24155_FLAG_INIT_COMPLETE);
 
   defineRegister(BQ24155_REG_STATUS,    (uint8_t) 0x00, false, true,  true);
@@ -325,33 +336,49 @@ int8_t BQ24155::charge_current_termination_enabled(bool en) {
 *******************************************************************************/
 
 int8_t BQ24155::io_op_callback(BusOp* _op) {
-  I2CBusOp* completed = (I2CBusOp*) _op;
   I2CDeviceWithRegisters::io_op_callback(_op);
-
+  I2CBusOp* completed = (I2CBusOp*) _op;
   DeviceRegister *temp_reg = getRegisterByBaseAddress(completed->sub_addr);
-  switch (completed->sub_addr) {
-    case BQ24155_REG_PART_REV:
-      // Must be 0b01001xxx. If so, we init...
-      if (0x48 == (0xF8 & *(temp_reg->val))) {
-        temp_reg->unread = false;
-        init();
-      }
-      break;
-    case BQ24155_REG_STATUS:
-      temp_reg->unread = false;
-      break;
-    case BQ24155_REG_LIMITS:
-      temp_reg->unread = false;
-      break;
-    case BQ24155_REG_BATT_REGU:
-      temp_reg->unread = false;
-      break;
-    case BQ24155_REG_FAST_CHRG:
+
+  if (temp_reg->unread) {
+    // This was a read operation.
+    switch (completed->sub_addr) {
+      case BQ24155_REG_PART_REV:
+        // Must be 0b01001xxx. If so, we init...
+        if (0x48 == (0xF8 & *(temp_reg->val))) {
+          temp_reg->unread = false;
+          init();
+        }
+        break;
+      case BQ24155_REG_STATUS:
+        break;
+      case BQ24155_REG_LIMITS:
+        break;
+      case BQ24155_REG_BATT_REGU:
+        break;
+      case BQ24155_REG_FAST_CHRG:
+        break;
+      default:
+        break;
+    }
     temp_reg->unread = false;
-      break;
-    default:
-      temp_reg->unread = false;
-      break;
+  }
+  else {
+    // This was a write operation.
+    switch (completed->sub_addr) {
+      case BQ24155_REG_STATUS:
+        break;
+      case BQ24155_REG_LIMITS:
+        break;
+      case BQ24155_REG_BATT_REGU:
+        break;
+      case BQ24155_REG_FAST_CHRG:
+        break;
+      case BQ24155_REG_PART_REV:
+      default:
+        // Illegal. A bad mistake was made somewhere.
+        break;
+    }
   }
 
   /* Null the buffer so the bus adapter isn't tempted to free it.
