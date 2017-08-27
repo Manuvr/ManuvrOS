@@ -418,8 +418,10 @@ int8_t Argument::getValueAs(void* trg_buf) {
       break;
     case TCode::FLOAT:    // This frightens the compiler. Its fears are unfounded.
       return_value = 0;
-      //*((float*) trg_buf) = *((float*)&target_mem);
-      *((uint32_t*) trg_buf) = *((uint32_t*)&target_mem);
+      *((uint8_t*) trg_buf + 0) = *(((uint8_t*) &target_mem) + 0);
+      *((uint8_t*) trg_buf + 1) = *(((uint8_t*) &target_mem) + 1);
+      *((uint8_t*) trg_buf + 2) = *(((uint8_t*) &target_mem) + 2);
+      *((uint8_t*) trg_buf + 3) = *(((uint8_t*) &target_mem) + 3);
       break;
     case TCode::UINT32_PTR:  // These are *pointers* to the indicated types. They
     case TCode::UINT16_PTR:  //   therefore take the whole 4 bytes of memory allocated
