@@ -77,8 +77,9 @@ class TMP006 : public I2CDeviceWithRegisters, public SensorWrapper {
     SensorError setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
     SensorError getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
 
-    /* Overrides from I2CDevice... */
-    int8_t io_op_callback(I2CBusOp*);
+    /* Overrides from I2CDeviceWithRegisters... */
+    int8_t register_write_cb(DeviceRegister*);
+    int8_t register_read_cb(DeviceRegister*);
     void printDebug(StringBuilder*);
 
 

@@ -201,138 +201,227 @@ int8_t ADP8866::init() {
 * _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
 *******************************************************************************/
 
-int8_t ADP8866::io_op_callback(BusOp* _op) {
-  I2CBusOp* completed = (I2CBusOp*) _op;
-  I2CDeviceWithRegisters::io_op_callback(_op);
+int8_t ADP8866::register_write_cb(DeviceRegister* reg) {
+  uint8_t value = reg->getVal();
+  switch (reg->addr) {
+    case ADP8866_MDCR:
+      break;
+    case ADP8866_INT_STAT:      // Interrupt status.
+      break;
+    case ADP8866_INT_EN:
+      break;
+    case ADP8866_ISCOFF_SEL_1:
+      break;
+    case ADP8866_ISCOFF_SEL_2:
+      break;
+    case ADP8866_GAIN_SEL:
+      break;
+    case ADP8866_LVL_SEL_1:
+      break;
+    case ADP8866_LVL_SEL_2:
+      break;
+    case ADP8866_PWR_SEL_1:
+      break;
+    case ADP8866_PWR_SEL_2:
+      break;
+    case ADP8866_CFGR:
+      break;
+    case ADP8866_BLSEL:
+      break;
+    case ADP8866_BLFR:
+      break;
+    case ADP8866_ISCC1:
+      break;
+    case ADP8866_ISCC2:
+      break;
+    case ADP8866_ISCT1:
+      break;
+    case ADP8866_ISCT2:
+      break;
+    case ADP8866_OFFTIMER6:
+      break;
+    case ADP8866_OFFTIMER7:
+      break;
+    case ADP8866_OFFTIMER8:
+      break;
+    case ADP8866_OFFTIMER9:
+      break;
+    case ADP8866_ISCF:
+      break;
+    case ADP8866_BLMX:
+      channels[9].present = value;
+      break;
+    case ADP8866_ISC1:
+    case ADP8866_ISC2:
+    case ADP8866_ISC3:
+    case ADP8866_ISC4:
+    case ADP8866_ISC5:
+    case ADP8866_ISC6:
+    case ADP8866_ISC7:
+    case ADP8866_ISC8:
+    case ADP8866_ISC9:
+      channels[(reg->addr & 0x00FF) - ADP8866_ISC1].present = value;
+      break;
+    case ADP8866_HB_SEL:
+      break;
+    case ADP8866_ISC6_HB:
+      break;
+    case ADP8866_ISC7_HB:
+      break;
+    case ADP8866_ISC8_HB:
+      break;
+    case ADP8866_ISC9_HB:
+      break;
+    case ADP8866_OFFTIMER6_HB:
+      break;
+    case ADP8866_OFFTIMER7_HB:
+      break;
+    case ADP8866_OFFTIMER8_HB:
+      break;
+    case ADP8866_OFFTIMER9_HB:
+      break;
+    case ADP8866_ISCT_HB:
+      break;
+    case ADP8866_DELAY6:
+      break;
+    case ADP8866_DELAY7:
+      break;
+    case ADP8866_DELAY8:
+      break;
+    case ADP8866_DELAY9:
+      break;
 
-  DeviceRegister *temp_reg = getRegisterByBaseAddress(completed->sub_addr);
-  switch (completed->sub_addr) {
-      case ADP8866_MANU_DEV_ID:
-        if (0x53 == *(temp_reg->val)) {
-          temp_reg->unread = false;
-          // Must be 0b01010011. If so, we init...
-          init();
-        }
-        break;
-      case ADP8866_MDCR:
-        break;
-      case ADP8866_INT_STAT:      // Interrupt status.
-        if (BusOpcode::RX == completed->get_opcode()) {
-          uint8_t value = *((uint8_t*) completed->buf);
-          if (value & 0x04) {
-            Kernel::log("ADP8866 experienced an over-voltage fault.\n");
-          }
-          if (value & 0x08) {
-            Kernel::log("ADP8866 experienced a thermal shutdown.\n");
-          }
-          if (value & 0x10) {
-            Kernel::log("ADP8866 experienced a short-circuit fault.\n");
-          }
-          if (value & 0x1C) {
-            // If we experienced a fault, we may as well shut off the device.
-            writeIndirect(ADP8866_MDCR, (uint8_t)regValue(ADP8866_MDCR) & 0b01011010);
-          }
-          if (value & 0x20) {
-            // Backlight off
-          }
-          if (value & 0x40) {
-            // Independent sink off
-          }
-          // Whatever the interrupt was, clear it.
-          writeIndirect((uint8_t) ADP8866_INT_STAT, value);
-        }
-        break;
-      case ADP8866_INT_EN:
-        break;
-      case ADP8866_ISCOFF_SEL_1:
-        break;
-      case ADP8866_ISCOFF_SEL_2:
-        break;
-      case ADP8866_GAIN_SEL:
-        break;
-      case ADP8866_LVL_SEL_1:
-        break;
-      case ADP8866_LVL_SEL_2:
-        break;
-      case ADP8866_PWR_SEL_1:
-        break;
-      case ADP8866_PWR_SEL_2:
-        break;
-      case ADP8866_CFGR:
-        break;
-      case ADP8866_BLSEL:
-        break;
-      case ADP8866_BLFR:
-        break;
-      case ADP8866_ISCC1:
-        break;
-      case ADP8866_ISCC2:
-        break;
-      case ADP8866_ISCT1:
-        break;
-      case ADP8866_ISCT2:
-        break;
-      case ADP8866_OFFTIMER6:
-        break;
-      case ADP8866_OFFTIMER7:
-        break;
-      case ADP8866_OFFTIMER8:
-        break;
-      case ADP8866_OFFTIMER9:
-        break;
-      case ADP8866_ISCF:
-        break;
-      case ADP8866_BLMX:
-        channels[9].present = *((uint8_t*) completed->buf);
-        break;
-      case ADP8866_ISC1:
-      case ADP8866_ISC2:
-      case ADP8866_ISC3:
-      case ADP8866_ISC4:
-      case ADP8866_ISC5:
-      case ADP8866_ISC6:
-      case ADP8866_ISC7:
-      case ADP8866_ISC8:
-      case ADP8866_ISC9:
-        channels[(completed->sub_addr & 0x00FF) - ADP8866_ISC1].present = *((uint8_t*) completed->buf);
-        break;
-      case ADP8866_HB_SEL:
-        break;
-      case ADP8866_ISC6_HB:
-        break;
-      case ADP8866_ISC7_HB:
-        break;
-      case ADP8866_ISC8_HB:
-        break;
-      case ADP8866_ISC9_HB:
-        break;
-      case ADP8866_OFFTIMER6_HB:
-        break;
-      case ADP8866_OFFTIMER7_HB:
-        break;
-      case ADP8866_OFFTIMER8_HB:
-        break;
-      case ADP8866_OFFTIMER9_HB:
-        break;
-      case ADP8866_ISCT_HB:
-        break;
-      case ADP8866_DELAY6:
-        break;
-      case ADP8866_DELAY7:
-        break;
-      case ADP8866_DELAY8:
-        break;
-      case ADP8866_DELAY9:
-        break;
-      default:
-        temp_reg->unread = false;
-        break;
+    case ADP8866_MANU_DEV_ID:
+    default:
+      // Illegal write target.
+      break;
   }
+  flushLocalLog();
+  return 0;
+}
 
-  /* Null the buffer so the bus adapter isn't tempted to free it.
-     TODO: This is silly. Fix this in the API. */
-  _op->buf     = nullptr;
-  _op->buf_len = 0;
+
+int8_t ADP8866::register_read_cb(DeviceRegister* reg) {
+  uint8_t value = reg->getVal();
+  switch (reg->addr) {
+    case ADP8866_MANU_DEV_ID:
+      if (0x53 == value) {
+        reg->unread = false;
+        // Must be 0b01010011. If so, we init...
+        init();
+      }
+      break;
+    case ADP8866_MDCR:
+      break;
+    case ADP8866_INT_STAT:      // Interrupt status.
+      if (value & 0x04) {
+        Kernel::log("ADP8866 experienced an over-voltage fault.\n");
+      }
+      if (value & 0x08) {
+        Kernel::log("ADP8866 experienced a thermal shutdown.\n");
+      }
+      if (value & 0x10) {
+        Kernel::log("ADP8866 experienced a short-circuit fault.\n");
+      }
+      if (value & 0x1C) {
+        // If we experienced a fault, we may as well shut off the device.
+        writeIndirect(ADP8866_MDCR, (uint8_t)regValue(ADP8866_MDCR) & 0b01011010);
+      }
+      if (value & 0x20) {
+        // Backlight off
+      }
+      if (value & 0x40) {
+        // Independent sink off
+      }
+      // Whatever the interrupt was, clear it.
+      writeIndirect((uint8_t) ADP8866_INT_STAT, value);
+      break;
+    case ADP8866_INT_EN:
+      break;
+    case ADP8866_ISCOFF_SEL_1:
+      break;
+    case ADP8866_ISCOFF_SEL_2:
+      break;
+    case ADP8866_GAIN_SEL:
+      break;
+    case ADP8866_LVL_SEL_1:
+      break;
+    case ADP8866_LVL_SEL_2:
+      break;
+    case ADP8866_PWR_SEL_1:
+      break;
+    case ADP8866_PWR_SEL_2:
+      break;
+    case ADP8866_CFGR:
+      break;
+    case ADP8866_BLSEL:
+      break;
+    case ADP8866_BLFR:
+      break;
+    case ADP8866_ISCC1:
+      break;
+    case ADP8866_ISCC2:
+      break;
+    case ADP8866_ISCT1:
+      break;
+    case ADP8866_ISCT2:
+      break;
+    case ADP8866_OFFTIMER6:
+      break;
+    case ADP8866_OFFTIMER7:
+      break;
+    case ADP8866_OFFTIMER8:
+      break;
+    case ADP8866_OFFTIMER9:
+      break;
+    case ADP8866_ISCF:
+      break;
+    case ADP8866_BLMX:
+      channels[9].present = value;
+      break;
+    case ADP8866_ISC1:
+    case ADP8866_ISC2:
+    case ADP8866_ISC3:
+    case ADP8866_ISC4:
+    case ADP8866_ISC5:
+    case ADP8866_ISC6:
+    case ADP8866_ISC7:
+    case ADP8866_ISC8:
+    case ADP8866_ISC9:
+      channels[(reg->addr & 0x00FF) - ADP8866_ISC1].present = value;
+      break;
+    case ADP8866_HB_SEL:
+      break;
+    case ADP8866_ISC6_HB:
+      break;
+    case ADP8866_ISC7_HB:
+      break;
+    case ADP8866_ISC8_HB:
+      break;
+    case ADP8866_ISC9_HB:
+      break;
+    case ADP8866_OFFTIMER6_HB:
+      break;
+    case ADP8866_OFFTIMER7_HB:
+      break;
+    case ADP8866_OFFTIMER8_HB:
+      break;
+    case ADP8866_OFFTIMER9_HB:
+      break;
+    case ADP8866_ISCT_HB:
+      break;
+    case ADP8866_DELAY6:
+      break;
+    case ADP8866_DELAY7:
+      break;
+    case ADP8866_DELAY8:
+      break;
+    case ADP8866_DELAY9:
+      break;
+    default:
+      break;
+  }
+  reg->unread = false;
   flushLocalLog();
   return 0;
 }

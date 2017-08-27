@@ -41,7 +41,7 @@ const DatumDef datum_defs[] = {
 /*
 * Constructor. Takes i2c address as argument.
 */
-ISL29033::ISL29033(uint8_t addr) : I2CDeviceWithRegisters(addr, 8), SensorWrapper("ISL29033") {
+ISL29033::ISL29033(uint8_t addr) : I2CDeviceWithRegisters(addr, 8, 8), SensorWrapper("ISL29033") {
   define_datum(&datum_defs[0]);
 
   // Default state: Maximum range and maximum resolution.
@@ -168,59 +168,51 @@ SensorError ISL29033::readSensor() {
 * _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
 *******************************************************************************/
 
-int8_t ISL29033::io_op_callback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::io_op_callback(completed);
-  if (completed) {
-    switch (completed->get_opcode()) {
-      case BusOpcode::RX:
-        switch (completed->sub_addr) {
-          case ISL29033_REG_COMMAND_1:
-            break;
-          case ISL29033_REG_COMMAND_2:
-            break;
-          case ISL29033_REG_DATA_LSB:
-          case ISL29033_REG_DATA_MSB:
-            if (calculateLux()) {
-              Kernel::raiseEvent(MANUVR_MSG_SENSOR_ISL29033, nullptr);   // Raise an event
-            }
-            break;
-          case ISL29033_REG_INT_LT_LSB:
-            break;
-          case ISL29033_REG_INT_LT_MSB:
-            break;
-          case ISL29033_REG_INT_HT_LSB:
-            break;
-          case ISL29033_REG_INT_HT_MSB:
-            break;
-          default:
-            break;
-        }
-        break;
-      case BusOpcode::TX:
-        switch (completed->sub_addr) {
-          case ISL29033_REG_COMMAND_1:
-            break;
-          case ISL29033_REG_COMMAND_2:
-            break;
-          case ISL29033_REG_INT_LT_LSB:
-            break;
-          case ISL29033_REG_INT_LT_MSB:
-            break;
-          case ISL29033_REG_INT_HT_LSB:
-            break;
-          case ISL29033_REG_INT_HT_MSB:
-            break;
-          default:
-            break;
-        }
-        break;
-      default:
-        break;
-    }
+int8_t ISL29033::register_write_cb(DeviceRegister* reg) {
+  switch (reg->addr) {
+    case ISL29033_REG_COMMAND_1:
+      break;
+    case ISL29033_REG_COMMAND_2:
+      break;
+    case ISL29033_REG_INT_LT_LSB:
+      break;
+    case ISL29033_REG_INT_LT_MSB:
+      break;
+    case ISL29033_REG_INT_HT_LSB:
+      break;
+    case ISL29033_REG_INT_HT_MSB:
+      break;
+    default:
+      break;
   }
-  else {
-    Kernel::log("SENSOR_ERROR_WRONG_IDENTITY");
+  return 0;
+}
+
+
+int8_t ISL29033::register_read_cb(DeviceRegister* reg) {
+  switch (reg->addr) {
+    case ISL29033_REG_COMMAND_1:
+      break;
+    case ISL29033_REG_COMMAND_2:
+      break;
+    case ISL29033_REG_DATA_LSB:
+    case ISL29033_REG_DATA_MSB:
+      if (calculateLux()) {
+        Kernel::raiseEvent(MANUVR_MSG_SENSOR_ISL29033, nullptr);   // Raise an event
+      }
+      break;
+    case ISL29033_REG_INT_LT_LSB:
+      break;
+    case ISL29033_REG_INT_LT_MSB:
+      break;
+    case ISL29033_REG_INT_HT_LSB:
+      break;
+    case ISL29033_REG_INT_HT_MSB:
+      break;
+    default:
+      break;
   }
+  reg->unread = false;
   return 0;
 }
 

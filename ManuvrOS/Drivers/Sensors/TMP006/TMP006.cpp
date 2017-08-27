@@ -43,7 +43,7 @@ const DatumDef datum_defs[] = {
 };
 
 
-TMP006::TMP006(uint8_t addr) : I2CDeviceWithRegisters(addr, 5), SensorWrapper("TMP006") {
+TMP006::TMP006(uint8_t addr) : I2CDeviceWithRegisters(addr, 5, 10), SensorWrapper("TMP006") {
   define_datum(&datum_defs[0]);
   define_datum(&datum_defs[1]);
 
@@ -103,41 +103,51 @@ SensorError TMP006::getParameter(uint16_t reg, int len, uint8_t*) {
 * _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
 *******************************************************************************/
 
-int8_t TMP006::io_op_callback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::io_op_callback(completed);
-  int i = 0;
-  DeviceRegister *temp_reg = reg_defs.get(i++);
-  while (temp_reg) {
-    switch (temp_reg->addr) {
-      case TMP006_REG_MANID:
-      case TMP006_REG_DEVID:
-		    if (!isActive()) {
-		      check_identity();
-		      if (isActive()) {
-		        writeDirtyRegisters();
-		      }
-		    }
-		    else {
-		      check_identity();
-		    }
-        break;
+int8_t TMP006::register_write_cb(DeviceRegister* reg) {
+  switch (reg->addr) {
+    case TMP006_REG_CONFIG:
+      break;
 
-      case TMP006_REG_VOBJ:
-      case TMP006_REG_TAMB:
-        if (SensorError::NO_ERROR == check_data()) {
-          Kernel::raiseEvent(MANUVR_MSG_SENSOR_TMP006, nullptr);
-        }
-        break;
-
-      case TMP006_REG_CONFIG:
-        temp_reg->unread = false;
-        break;
-      default:
-        temp_reg->unread = false;
-        break;
-    }
-    temp_reg = reg_defs.get(i++);
+    case TMP006_REG_MANID:
+    case TMP006_REG_DEVID:
+    case TMP006_REG_VOBJ:
+    case TMP006_REG_TAMB:
+    default:
+      // Illegal write target.
+      break;
   }
+  return 0;
+}
+
+
+int8_t TMP006::register_read_cb(DeviceRegister* reg) {
+  switch (reg->addr) {
+    case TMP006_REG_MANID:
+    case TMP006_REG_DEVID:
+	    if (!isActive()) {
+	      check_identity();
+	      if (isActive()) {
+	        writeDirtyRegisters();
+	      }
+	    }
+	    else {
+	      check_identity();
+	    }
+      break;
+
+    case TMP006_REG_VOBJ:
+    case TMP006_REG_TAMB:
+      if (SensorError::NO_ERROR == check_data()) {
+        Kernel::raiseEvent(MANUVR_MSG_SENSOR_TMP006, nullptr);
+      }
+      break;
+
+    case TMP006_REG_CONFIG:
+      break;
+    default:
+      break;
+  }
+  reg->unread = false;
   return 0;
 }
 

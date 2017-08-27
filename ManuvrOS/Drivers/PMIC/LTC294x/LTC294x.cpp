@@ -55,7 +55,7 @@ LTC294x* LTC294x::INSTANCE = nullptr;
 /**
 * Constructor. Takes pin numbers as arguments.
 */
-LTC294x::LTC294x(const LTC294xOpts* o) : I2CDeviceWithRegisters(LTC294X_I2CADDR, 9), _opts(o) {
+LTC294x::LTC294x(const LTC294xOpts* o) : I2CDeviceWithRegisters(LTC294X_I2CADDR, 9, 16), _opts(o) {
   if (nullptr == LTC294x::INSTANCE) {
     LTC294x::INSTANCE = this;
   }
@@ -110,7 +110,7 @@ int8_t LTC294x::init() {
   }
 
   if (val != rewrite) {
-    _write_control_reg(rewrite);
+    writeIndirect(LTC294X_REG_CONTROL, rewrite, true);
   }
   else {
     _flags |= LTC294X_FLAG_INIT_CTRL;
@@ -126,7 +126,7 @@ int8_t LTC294x::init() {
   setTemperatureThreshold(0.0f, 70.0f);
   setVoltageThreshold(3.3f, 4.4f);
 
-  return 0;
+  return writeDirtyRegisters();
 }
 
 
@@ -138,92 +138,85 @@ int8_t LTC294x::init() {
 * _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
 *******************************************************************************/
 
-int8_t LTC294x::io_op_callback(BusOp* _op) {
-  I2CDeviceWithRegisters::io_op_callback(_op);
-  I2CBusOp* completed = (I2CBusOp*) _op;
-  DeviceRegister *temp_reg = getRegisterByBaseAddress(completed->sub_addr);
-  uint16_t val = (uint16_t) temp_reg->getVal();
+int8_t LTC294x::register_write_cb(DeviceRegister* reg) {
+  uint16_t val = (uint16_t) reg->getVal();
   StringBuilder log;
-
-  if (temp_reg->unread) {
-    // This was a read operation.
-    switch (completed->sub_addr) {
-      case LTC294X_REG_STATUS:
-        log.concatf("LTC294X_REG_STATUS (R): %u\n", val);
-        break;
-      case LTC294X_REG_CONTROL:
-        log.concatf("LTC294X_REG_CONTROL (R): %u\n", val);
-        break;
-      case LTC294X_REG_ACC_CHARGE:    // The accumulated charge register.
-      case LTC294X_REG_VOLTAGE:
-      case LTC294X_REG_TEMP:
-        break;
-      case LTC294X_REG_CHRG_THRESH_H:
-        // TODO: This will need auditing after the endianness filter in the superclass.
-        _thrsh_h_chrg = val;
-        log.concatf("LTC294X_REG_CHRG_THRESH_H (R): %u\n", val);
-        break;
-      case LTC294X_REG_CHRG_THRESH_L:
-        // TODO: This will need auditing after the endianness filter in the superclass.
-        _thrsh_l_chrg = val;
-        log.concatf("LTC294X_REG_CHRG_THRESH_L (R): %u\n", val);
-        break;
-      case LTC294X_REG_V_THRESH:
-        { // TODO: This will need auditing after the endianness filter in the superclass.
-          _thrsh_h_volt = val & 0xFF;
-          _thrsh_l_volt = (val >> 8) & 0xFF;
-          log.concatf("LTC294X_REG_V_THRESH (R): %u\n", val);
-        }
-        break;
-      case LTC294X_REG_TEMP_THRESH:
-        { // TODO: This will need auditing after the endianness filter in the superclass.
-          _thrsh_h_temp = val & 0xFF;
-          _thrsh_l_temp = (val >> 8) & 0xFF;
-          log.concatf("LTC294X_REG_TEMP_THRESH (R): %u\n", val);
-        }
-        break;
-      default:
-        break;
-    }
-    temp_reg->unread = false;
+  switch (reg->addr) {
+    case LTC294X_REG_CONTROL:
+      _flags |= LTC294X_FLAG_INIT_CTRL;
+      log.concatf("LTC294X_REG_CONTROL (W): %u\n", val);
+      break;
+    case LTC294X_REG_ACC_CHARGE:    // The accumulated charge register.
+      _flags |= LTC294X_FLAG_INIT_AC;
+      log.concatf("LTC294X_REG_ACC_CHARGE (W): %u\n", val);
+      break;
+    case LTC294X_REG_CHRG_THRESH_H:
+      _flags |= LTC294X_FLAG_INIT_THRESH_CH;
+      log.concatf("LTC294X_REG_CHRG_THRESH_H (W): %u\n", val);
+      break;
+    case LTC294X_REG_CHRG_THRESH_L:
+      _flags |= LTC294X_FLAG_INIT_THRESH_CL;
+      log.concatf("LTC294X_REG_CHRG_THRESH_L (W): %u\n", val);
+      break;
+    case LTC294X_REG_V_THRESH:
+      _flags |= LTC294X_FLAG_INIT_THRESH_V;
+      log.concatf("LTC294X_REG_V_THRESH (W): %u\n", val);
+      break;
+    case LTC294X_REG_TEMP_THRESH:
+      _flags |= LTC294X_FLAG_INIT_THRESH_T;
+      log.concatf("LTC294X_REG_TEMP_THRESH (W): %u\n", val);
+      break;
+    default:
+      break;
   }
-  else {
-    // This was a write operation.
-    switch (completed->sub_addr) {
-      case LTC294X_REG_CONTROL:
-        _flags |= LTC294X_FLAG_INIT_CTRL;
-        log.concatf("LTC294X_REG_CONTROL (W): %u\n", val);
-        break;
-      case LTC294X_REG_ACC_CHARGE:    // The accumulated charge register.
-        _flags |= LTC294X_FLAG_INIT_AC;
-        log.concatf("LTC294X_REG_ACC_CHARGE (W): %u\n", val);
-        break;
-      case LTC294X_REG_CHRG_THRESH_H:
-        _flags |= LTC294X_FLAG_INIT_THRESH_CH;
-        log.concatf("LTC294X_REG_CHRG_THRESH_H (W): %u\n", val);
-        break;
-      case LTC294X_REG_CHRG_THRESH_L:
-        _flags |= LTC294X_FLAG_INIT_THRESH_CL;
-        log.concatf("LTC294X_REG_CHRG_THRESH_L (W): %u\n", val);
-        break;
-      case LTC294X_REG_V_THRESH:
-        _flags |= LTC294X_FLAG_INIT_THRESH_V;
-        log.concatf("LTC294X_REG_V_THRESH (W): %u\n", val);
-        break;
-      case LTC294X_REG_TEMP_THRESH:
-        _flags |= LTC294X_FLAG_INIT_THRESH_T;
-        log.concatf("LTC294X_REG_TEMP_THRESH (W): %u\n", val);
-        break;
-      default:
-        break;
-    }
-    temp_reg->dirty = false;
-  }
+  reg->dirty = false;
+  Kernel::log(&log);
+  return 0;
+}
 
-  /* Null the buffer so the bus adapter isn't tempted to free it.
-    TODO: This is silly. Fix this in the API. */
-  _op->buf     = nullptr;
-  _op->buf_len = 0;
+
+int8_t LTC294x::register_read_cb(DeviceRegister* reg) {
+  uint16_t val = (uint16_t) reg->getVal();
+  StringBuilder log;
+  switch (reg->addr) {
+    case LTC294X_REG_STATUS:
+      log.concatf("LTC294X_REG_STATUS (R): %u\n", val);
+      break;
+    case LTC294X_REG_CONTROL:
+      log.concatf("LTC294X_REG_CONTROL (R): %u\n", val);
+      break;
+    case LTC294X_REG_ACC_CHARGE:    // The accumulated charge register.
+    case LTC294X_REG_VOLTAGE:
+    case LTC294X_REG_TEMP:
+      break;
+    case LTC294X_REG_CHRG_THRESH_H:
+      // TODO: This will need auditing after the endianness filter in the superclass.
+      _thrsh_h_chrg = val;
+      log.concatf("LTC294X_REG_CHRG_THRESH_H (R): %u\n", val);
+      break;
+    case LTC294X_REG_CHRG_THRESH_L:
+      // TODO: This will need auditing after the endianness filter in the superclass.
+      _thrsh_l_chrg = val;
+      log.concatf("LTC294X_REG_CHRG_THRESH_L (R): %u\n", val);
+      break;
+    case LTC294X_REG_V_THRESH:
+      { // TODO: This will need auditing after the endianness filter in the superclass.
+        _thrsh_l_volt = val & 0xFF;
+        _thrsh_h_volt = (val >> 8) & 0xFF;
+        log.concatf("LTC294X_REG_V_THRESH (R): %u\n", val);
+      }
+      break;
+    case LTC294X_REG_TEMP_THRESH:
+      { // TODO: This will need auditing after the endianness filter in the superclass.
+        _thrsh_l_temp = val & 0xFF;
+        _thrsh_h_temp = (val >> 8) & 0xFF;
+        log.concatf("LTC294X_REG_TEMP_THRESH (R): %u\n", val);
+      }
+      break;
+    default:
+      break;
+  }
+  reg->unread = false;
   Kernel::log(&log);
   return 0;
 }
@@ -234,7 +227,7 @@ int8_t LTC294x::io_op_callback(BusOp* _op) {
 */
 void LTC294x::printDebug(StringBuilder* output) {
   uint8_t dsp = _derive_prescaler();
-  output->concatf("-- LTC294%c-1 %sinitialized\n", (_is_2942() ? '2' : '1'), (_init_complete() ? "un" : ""));
+  output->concatf("-- LTC294%c-1 %sinitialized\n", (_is_2942() ? '2' : '1'), (_init_complete() ? "" : "un"));
   if (_opts.useAlertPin()) {
     output->concatf("\tALERT pin:         %d\n", _opts.pin);
   }
@@ -242,7 +235,7 @@ void LTC294x::printDebug(StringBuilder* output) {
     output->concatf("\tCC pin:            %d\n", _opts.pin);
   }
   output->concatf("\tPrescaler:         %u\n", dsp);
-  output->concatf("\tDev/ADC state      %s / ", _asleep() ? "Awake":"Asleep");
+  output->concatf("\tDev/ADC state      A%s / ", asleep() ? "sleep":"wake");
   switch (_adc_mode()) {
     case LTC294xADCModes::SLEEP:
       output->concat("SLEEP");
@@ -275,7 +268,7 @@ int8_t LTC294x::_adc_mode(LTC294xADCModes m) {
   return _write_control_reg(val);
 }
 
-int8_t LTC294x::_sleep(bool x) {
+int8_t LTC294x::sleep(bool x) {
   uint8_t val = regValue(LTC294X_REG_CONTROL);
   val = (val & 0xFE) | (x ? 1:0);
   return _write_control_reg(val);
@@ -313,18 +306,18 @@ int8_t LTC294x::setVoltageThreshold(float low, float high) {
   // NOTE: 0.0234368 == (0.00009155f >> 8)  // single byte register
   _thrsh_l_volt = (uint8_t) (low  / 0.0234368f);
   _thrsh_h_volt = (uint8_t) (high / 0.0234368f);
-  return _set_thresh_reg_voltage(_thrsh_l_chrg, _thrsh_h_chrg);
+  return _set_thresh_reg_voltage(_thrsh_l_volt, _thrsh_h_volt);
 }
 
 int8_t LTC294x::setTemperatureThreshold(float low, float high) {
   // NOTE: 2.34368 == (0.009155f >> 8)  // single byte register
   _thrsh_l_temp = (uint8_t) (low  / 2.34368f);
   _thrsh_h_temp = (uint8_t) (high / 2.34368f);
-  return _set_thresh_reg_voltage(_thrsh_l_temp, _thrsh_h_temp);
+  return _set_thresh_reg_temperature(_thrsh_l_temp, _thrsh_h_temp);
 }
 
 int8_t LTC294x::_set_thresh_reg_charge(uint16_t l, uint16_t h) {
-  int8_t r0 = writeIndirect(LTC294X_REG_CHRG_THRESH_H, h);
+  int8_t r0 = writeIndirect(LTC294X_REG_CHRG_THRESH_H, h, true);
   if (I2C_ERR_SLAVE_NO_ERROR == r0) {
     return writeIndirect(LTC294X_REG_CHRG_THRESH_L, l);
   }

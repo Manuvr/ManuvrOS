@@ -33,9 +33,9 @@ limitations under the License.
   */
   class DeviceRegister {
     public:
-      DeviceRegister(uint16_t, uint8_t val,  uint8_t* buf, bool dirty, bool unread, bool writable);
-      DeviceRegister(uint16_t, uint16_t val, uint8_t* buf, bool dirty, bool unread, bool writable);
-      DeviceRegister(uint16_t, uint32_t val, uint8_t* buf, bool dirty, bool unread, bool writable);
+      DeviceRegister(uint16_t r_addr, uint8_t val,  uint8_t* buf, bool dirty, bool unread, bool writable);
+      DeviceRegister(uint16_t r_addr, uint16_t val, uint8_t* buf, bool dirty, bool unread, bool writable);
+      DeviceRegister(uint16_t r_addr, uint32_t val, uint8_t* buf, bool dirty, bool unread, bool writable);
 
       const uint8_t* val;  // A buffer that mirrors the register.
       const uint16_t addr; // The internal address of the register.
@@ -43,6 +43,7 @@ limitations under the License.
       bool     dirty;      // Marked true by the class when the value needs to be written to device.
       bool     unread;     // Marked true by automated read functions if a value changed.
       bool     writable;   // Is this register writable.
+      bool     op_pending; // Marked true if there is i/o pending for this register.
 
       void set(unsigned int nu_val);   // Causes the given value to be written to the register.
       unsigned int getVal();

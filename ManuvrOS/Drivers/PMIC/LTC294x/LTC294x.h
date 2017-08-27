@@ -116,13 +116,17 @@ class LTC294xOpts {
 
 
 
+/**
+* Driver class for LTC294x.
+*/
 class LTC294x : public I2CDeviceWithRegisters {
   public:
     LTC294x(const LTC294xOpts*);
     ~LTC294x();
 
     /* Overrides from I2CDeviceWithRegisters... */
-    int8_t io_op_callback(BusOp*);
+    int8_t register_write_cb(DeviceRegister*);
+    int8_t register_read_cb(DeviceRegister*);
     void printDebug(StringBuilder*);
     inline void printRegisters(StringBuilder* output) {
       I2CDeviceWithRegisters::printDebug(output);
@@ -141,6 +145,11 @@ class LTC294x : public I2CDeviceWithRegisters {
     int8_t setVoltageThreshold(float low, float high);
     int8_t setTemperatureThreshold(float low, float high);
 
+    inline bool asleep() {    return (1 == (regValue(LTC294X_REG_CONTROL) & 0x01));  };
+    int8_t  sleep(bool);
+
+    inline int8_t regRead(int a) {    return readRegister(a);  };
+
 
     static LTC294x* INSTANCE;
 
@@ -155,18 +164,18 @@ class LTC294x : public I2CDeviceWithRegisters {
     uint8_t  _thrsh_l_volt = 0;
     uint8_t  _thrsh_h_volt = 0;
 
-    inline int8_t  _write_control_reg(uint8_t v) {
+    inline int8_t _write_control_reg(uint8_t v) {
       return writeIndirect(LTC294X_REG_CONTROL, v);
     };
 
     /* Compresses two single-byte registers into a single 16-bit register. */
     inline int8_t _set_thresh_reg_voltage(uint8_t l, uint8_t h) {
-      return writeIndirect(LTC294X_REG_V_THRESH, ((uint16_t) h) | ((uint16_t) l << 8));
+      return writeIndirect(LTC294X_REG_V_THRESH, ((uint16_t) l) | ((uint16_t) h << 8));
     };
 
     /* Compresses two single-byte registers into a single 16-bit register. */
     inline int8_t _set_thresh_reg_temperature(uint8_t l, uint8_t h) {
-      return writeIndirect(LTC294X_REG_TEMP_THRESH, ((uint16_t) h) | ((uint16_t) l << 8));
+      return writeIndirect(LTC294X_REG_TEMP_THRESH, ((uint16_t) l) | ((uint16_t) h << 8));
     };
 
     inline int8_t _set_charge_register(uint16_t x) {
@@ -181,7 +190,6 @@ class LTC294x : public I2CDeviceWithRegisters {
     };
 
     inline bool _is_2942() {   return (0 == (regValue(LTC294X_REG_STATUS) & 0x80));   };
-    inline bool _asleep() {    return (1 == (regValue(LTC294X_REG_CONTROL) & 0x01));  };
 
     /**
     * Is the schedule pending execution ahread of schedule (next tick)?
@@ -192,7 +200,6 @@ class LTC294x : public I2CDeviceWithRegisters {
       return (LTC294X_FLAG_MASK_INIT_CMPLT == (_flags & LTC294X_FLAG_MASK_INIT_CMPLT));
     };
 
-    int8_t  _sleep(bool);
     uint8_t _derive_prescaler();
 
     float convertT(uint16_t v) {

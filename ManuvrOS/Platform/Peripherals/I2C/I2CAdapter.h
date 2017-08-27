@@ -336,21 +336,24 @@ This file is the tortured result of growing pains since the beginning of
   */
   class I2CDeviceWithRegisters : public I2CDevice {
     public:
-      I2CDeviceWithRegisters(uint8_t addr, uint8_t reg_count); // Takes device address.
+      I2CDeviceWithRegisters(uint8_t addr, uint8_t reg_count) : I2CDeviceWithRegisters(addr, reg_count, reg_count) {};
+      I2CDeviceWithRegisters(uint8_t addr, uint8_t reg_count, uint16_t mem_size);
       ~I2CDeviceWithRegisters();
 
       bool sync();
 
 
     protected:
-      RingBuffer<DeviceRegister*> reg_defs;     // Here is where registers will be enumerated.
-      //uint8_t*  pooled_registers     = NULL;    // TODO: Make this happen!
-      bool      multi_access_support;     // TODO: Make this happen! Depends on pooled_registers.
+      RingBuffer<DeviceRegister*> reg_defs;      // Here is where registers will be enumerated.
+      bool      multi_access_support = false;    // TODO: Make this happen! Depends on _pooled_reg_mem.
 
 
       // Callback for requested operation completion.
       virtual int8_t io_op_callahead(BusOp*);
-      virtual int8_t io_op_callback(BusOp*);
+      int8_t io_op_callback(BusOp*);
+
+      virtual int8_t register_write_cb(DeviceRegister*) = 0;  // Mandatory overrides.
+      virtual int8_t register_read_cb(DeviceRegister*)  = 0;  // Mandatory overrides.
 
       bool defineRegister(uint16_t _addr, uint8_t  val, bool dirty, bool unread, bool writable);
       bool defineRegister(uint16_t _addr, uint16_t val, bool dirty, bool unread, bool writable);
@@ -384,8 +387,7 @@ This file is the tortured result of growing pains since the beginning of
 
 
     private:
-      uint8_t reg_count;
-
+      uint8_t* _pooled_reg_mem  = nullptr;
       int8_t writeRegister(DeviceRegister* reg);
       int8_t readRegister(DeviceRegister* reg);
   };

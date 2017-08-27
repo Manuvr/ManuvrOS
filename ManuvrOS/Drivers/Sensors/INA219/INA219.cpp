@@ -48,7 +48,7 @@ const DatumDef datum_defs[] = {
 /*
 * Constructor. Takes i2c address as argument.
 */
-INA219::INA219(uint8_t addr) : I2CDeviceWithRegisters(addr, 6), SensorWrapper("INA219") {
+INA219::INA219(uint8_t addr) : I2CDeviceWithRegisters(addr, 6, 12), SensorWrapper("INA219") {
   define_datum(&datum_defs[0]);
   define_datum(&datum_defs[1]);
   define_datum(&datum_defs[2]);
@@ -79,7 +79,7 @@ INA219::INA219(uint8_t addr) : I2CDeviceWithRegisters(addr, 6), SensorWrapper("I
 /*
 * Destructor.
 */
-INA219::~INA219(void) {
+INA219::~INA219() {
 }
 
 
@@ -180,40 +180,54 @@ SensorError INA219::readSensor() {
 }
 
 
-/****************************************************************************************************
-* These are overrides from I2CDeviceWithRegisters.                                                  *
-****************************************************************************************************/
+/*******************************************************************************
+* ___     _       _                      These members are mandatory overrides
+*  |   / / \ o   | \  _     o  _  _      for implementing I/O callbacks. They
+* _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
+*******************************************************************************/
 
-int8_t INA219::io_op_callback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::io_op_callback(completed);
-  int i = 0;
-  DeviceRegister *temp_reg = reg_defs.get(i++);
-  while (temp_reg) {
-    switch (temp_reg->addr) {
-      case INA219_REG_SHUNT_VOLTAGE:
-      case INA219_REG_BUS_VOLTAGE:
-      case INA219_REG_CURRENT:
-      case INA219_REG_POWER:
-        if (process_read_data()) {
-          //Kernel::raiseEvent(MANUVR_MSG_SENSOR_INA219, nullptr);   // Raise an event
-        }
-        break;
-      case INA219_REG_CONFIGURATION:
-        temp_reg->unread = false;
-        break;
-      case INA219_REG_CALIBRATION:
-        temp_reg->unread = false;
-        if (!init_complete) {
-          syncRegisters();
-          init_complete = true;
-        }
-        break;
-      default:
-        temp_reg->unread = false;
-        break;
-    }
-    temp_reg = reg_defs.get(i++);
+int8_t INA219::register_write_cb(DeviceRegister* reg) {
+  switch (reg->addr) {
+    case INA219_REG_CONFIGURATION:
+      break;
+    case INA219_REG_CALIBRATION:
+      if (!init_complete) {
+        reg->unread = false;
+        syncRegisters();
+        init_complete = true;
+      }
+      break;
+
+    case INA219_REG_SHUNT_VOLTAGE:
+    case INA219_REG_BUS_VOLTAGE:
+    case INA219_REG_CURRENT:
+    case INA219_REG_POWER:
+    default:
+      // Illegal write target.
+      break;
   }
+  return 0;
+}
+
+
+int8_t INA219::register_read_cb(DeviceRegister* reg) {
+  switch (reg->addr) {
+    case INA219_REG_SHUNT_VOLTAGE:
+    case INA219_REG_BUS_VOLTAGE:
+    case INA219_REG_CURRENT:
+    case INA219_REG_POWER:
+      if (process_read_data()) {
+        //Kernel::raiseEvent(MANUVR_MSG_SENSOR_INA219, nullptr);   // Raise an event
+      }
+      break;
+    case INA219_REG_CONFIGURATION:
+      break;
+    case INA219_REG_CALIBRATION:
+      break;
+    default:
+      break;
+  }
+  reg->unread = false;
   return 0;
 }
 

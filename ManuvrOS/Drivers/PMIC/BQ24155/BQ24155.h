@@ -148,7 +148,8 @@ class BQ24155 : public EventReceiver, I2CDeviceWithRegisters {
 
 
     /* Overrides from I2CDeviceWithRegisters... */
-    int8_t io_op_callback(BusOp*);
+    int8_t register_write_cb(DeviceRegister*);
+    int8_t register_read_cb(DeviceRegister*);
     void printDebug(StringBuilder*);
     inline void printRegisters(StringBuilder* output) {
       I2CDeviceWithRegisters::printDebug(output);
@@ -163,6 +164,7 @@ class BQ24155 : public EventReceiver, I2CDeviceWithRegisters {
 
     int8_t init();
     inline int8_t refresh() {  return syncRegisters();  };
+    inline int8_t regRead(int a) {    return readRegister(a);  };
 
 
     static BQ24155* INSTANCE;

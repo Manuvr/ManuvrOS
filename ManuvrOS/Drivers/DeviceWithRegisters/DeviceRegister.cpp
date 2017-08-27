@@ -30,6 +30,7 @@ DeviceRegister::DeviceRegister(uint8_t* b, uint16_t a, uint8_t l, bool d, bool u
   dirty    = d;
   unread   = u;
   writable = w;
+  op_pending = false;
 }
 
 DeviceRegister::DeviceRegister(uint16_t nu_addr, uint8_t nu_val, uint8_t* buf, bool d, bool u, bool w) :
@@ -39,26 +40,39 @@ DeviceRegister::DeviceRegister(uint16_t nu_addr, uint8_t nu_val, uint8_t* buf, b
 
 DeviceRegister::DeviceRegister(uint16_t nu_addr, uint16_t nu_val, uint8_t* buf, bool d, bool u, bool w) :
   DeviceRegister(buf, nu_addr, 2, d, u, w) {
-  *((uint16_t*) val) = nu_val;
+  *((uint8_t*) val + 0) = (uint8_t) (nu_val >> 8);
+  *((uint8_t*) val + 1) = (uint8_t) (nu_val & 0xFF);
 }
 
 
 DeviceRegister::DeviceRegister(uint16_t nu_addr, uint32_t nu_val, uint8_t* buf, bool d, bool u, bool w) :
   DeviceRegister(buf, nu_addr, 4, d, u, w) {
-  *((uint32_t*) val) = nu_val;
+  *((uint8_t*) val + 0) = (uint8_t) (nu_val >> 24) & 0xFF;
+  *((uint8_t*) val + 1) = (uint8_t) (nu_val >> 16) & 0xFF;
+  *((uint8_t*) val + 2) = (uint8_t) (nu_val >> 8) & 0xFF;
+  *((uint8_t*) val + 3) = (uint8_t) (nu_val & 0xFF);
 }
 
 
+/**
+* All multibyte values are stored big-endian.
+*
+* @param nu_val The value to be stored in the register.
+*/
 void DeviceRegister::set(unsigned int nu_val) {
   switch (len) {
     case 1:
-      *((uint8_t*)  val) = (uint8_t) nu_val & 0xFF;
+      *((uint8_t*)  val) = (uint8_t) (nu_val & 0xFF);
       break;
     case 2:
-      *((uint16_t*) val) = (platform.bigEndian() ? ((uint16_t) nu_val) : endianSwap16((uint16_t) nu_val)) & 0xFFFF;
+      *((uint8_t*) val + 0) = (uint8_t) (nu_val >> 8);
+      *((uint8_t*) val + 1) = (uint8_t) (nu_val & 0xFF);
       break;
     case 4:
-      *((uint32_t*) val) = (platform.bigEndian() ? ((uint32_t) nu_val) : endianSwap32((uint32_t) nu_val)) & 0xFFFFFFFF;
+      *((uint8_t*) val + 0) = (uint8_t) (nu_val >> 24) & 0xFF;
+      *((uint8_t*) val + 1) = (uint8_t) (nu_val >> 16) & 0xFF;
+      *((uint8_t*) val + 2) = (uint8_t) (nu_val >> 8) & 0xFF;
+      *((uint8_t*) val + 3) = (uint8_t) (nu_val & 0xFF);
       break;
   }
   dirty = true;
@@ -72,10 +86,14 @@ unsigned int DeviceRegister::getVal() {
       return_value = *((uint8_t*) val) & 0xFF;
       break;
     case 2:
-      return_value = (platform.bigEndian() ? *((uint16_t*) val) : endianSwap16(*((uint16_t*) val))) & 0xFFFF;
+      return_value += *((uint8_t*) val + 0) << 8;
+      return_value += *((uint8_t*) val + 1);
       break;
     case 4:
-      return_value = (platform.bigEndian() ? *((uint32_t*) val) : endianSwap32(*((uint32_t*) val))) & 0xFFFFFFFF;
+      return_value += *((uint8_t*) val + 0) << 24;
+      return_value += *((uint8_t*) val + 1) << 16;
+      return_value += *((uint8_t*) val + 2) << 8;
+      return_value += *((uint8_t*) val + 3);
       break;
     default:
       break;

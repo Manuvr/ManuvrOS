@@ -152,38 +152,49 @@ uint16_t ISL23345::getRange(void) {    return 0x00FF;       }  // Trivial. Retur
 
 
 
-/****************************************************************************************************
-* These are overrides from I2CDeviceWithRegisters.                                                  *
-****************************************************************************************************/
+/*******************************************************************************
+* ___     _       _                      These members are mandatory overrides
+*  |   / / \ o   | \  _     o  _  _      for implementing I/O callbacks. They
+* _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
+*******************************************************************************/
 
-int8_t ISL23345::io_op_callback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::io_op_callback(completed);
-
-  if (completed->hasFault()) {
-    return -1;
-  }
-
-  dev_init = true;
-
-  switch (completed->sub_addr) {
+int8_t ISL23345::register_write_cb(DeviceRegister* reg) {
+	dev_init = true;
+  switch (reg->addr) {
     case ISL23345_REG_ACR:
-      if (regValue(ISL23345_REG_ACR) == 0x00) dev_enabled = false;
-      else {
-        dev_enabled = true;
-      }
+      dev_enabled = (reg->getVal() != 0x00);
       break;
     case ISL23345_REG_WR0:
     case ISL23345_REG_WR1:
     case ISL23345_REG_WR2:
     case ISL23345_REG_WR3:
-      values[completed->sub_addr] = regValue(completed->sub_addr);
+      values[reg->addr] = reg->getVal();
       break;
     default:
       break;
   }
-	return 0;
+  return 0;
 }
 
+
+int8_t ISL23345::register_read_cb(DeviceRegister* reg) {
+	dev_init = true;
+  switch (reg->addr) {
+    case ISL23345_REG_ACR:
+      dev_enabled = (reg->getVal() != 0x00);
+      break;
+    case ISL23345_REG_WR0:
+    case ISL23345_REG_WR1:
+    case ISL23345_REG_WR2:
+    case ISL23345_REG_WR3:
+      values[reg->addr] = reg->getVal();
+      break;
+    default:
+      break;
+  }
+  reg->unread = false;
+  return 0;
+}
 
 
 

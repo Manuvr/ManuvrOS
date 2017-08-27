@@ -45,7 +45,7 @@ TSL2561::TSL2561(uint8_t addr, uint8_t irq) : TSL2561(addr) {
 /*
 * Constructor. Takes i2c address as argument.
 */
-TSL2561::TSL2561(uint8_t addr) : I2CDeviceWithRegisters(addr, 8), SensorWrapper("TSL2561") {
+TSL2561::TSL2561(uint8_t addr) : I2CDeviceWithRegisters(addr, 8, 12), SensorWrapper("TSL2561") {
   define_datum(&datum_defs[0]);
   define_datum(&datum_defs[1]);
 
@@ -68,9 +68,9 @@ TSL2561::~TSL2561() {
 
 
 
-/**************************************************************************
-* Overrides...                                                            *
-**************************************************************************/
+/*******************************************************************************
+* Overrides...                                                                 *
+*******************************************************************************/
 
 SensorError TSL2561::init() {
   if (readRegister(TSL2561_REG_ID) == I2C_ERR_SLAVE_NO_ERROR) {
@@ -103,50 +103,64 @@ SensorError TSL2561::readSensor() {
 
 
 
-/****************************************************************************************************
-* These are overrides from I2CDevice.                                                               *
-****************************************************************************************************/
+/*******************************************************************************
+* ___     _       _                      These members are mandatory overrides
+*  |   / / \ o   | \  _     o  _  _      for implementing I/O callbacks. They
+* _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
+*******************************************************************************/
 
-int8_t TSL2561::io_op_callback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::io_op_callback(completed);
-	int i = 0;
-	DeviceRegister *temp_reg = reg_defs.get(i++);
-	while (temp_reg) {
-		switch (temp_reg->addr) {
-		  case TSL2561_REG_ID:
-		    temp_reg->unread = false;
-		    if (!isActive()) {
-		      isActive(0xBB == *(temp_reg->val));
-		      if (isActive()) {
-		        writeDirtyRegisters();
-		      }
-		    }
-		    else {
-		      isActive(0xBB == *(temp_reg->val));
-		    }
-		    break;
+int8_t TSL2561::register_write_cb(DeviceRegister* reg) {
+	switch (reg->addr) {
+	  case TSL2561_REG_CONTROL:
+	  case TSL2561_REG_TIMING:
+	  case TSL2561_REG_INTERRUPT:
+	  case TSL2561_REG_THRESH_LO:
+	  case TSL2561_REG_THRESH_HI:
+	    break;
 
-		  case TSL2561_REG_CONTROL:
-		  case TSL2561_REG_TIMING:
-		  case TSL2561_REG_INTERRUPT:
-		  case TSL2561_REG_THRESH_LO:
-		  case TSL2561_REG_THRESH_HI:
-		    break;
+	  case TSL2561_REG_DATA0:
+	  case TSL2561_REG_DATA1:
+	  case TSL2561_REG_ID:
+	  default:
+      // Illegal write target.
+	    break;
+  }
+  return 0;
+}
 
-		  case TSL2561_REG_DATA0:
-		  case TSL2561_REG_DATA1:
-		    if (BusOpcode::RX == completed->get_opcode()) {
-		      if (calculate_lux()) {
-		      }
-		    }
-		    break;
 
-		  default:
-		    temp_reg->unread = false;
-		    break;
-		}
-		temp_reg = reg_defs.get(i++);
-	}
+int8_t TSL2561::register_read_cb(DeviceRegister* reg) {
+	switch (reg->addr) {
+	  case TSL2561_REG_ID:
+	    reg->unread = false;
+	    if (!isActive()) {
+	      isActive(0xBB == *(reg->val));
+	      if (isActive()) {
+	        writeDirtyRegisters();
+	      }
+	    }
+	    else {
+	      isActive(0xBB == *(reg->val));
+	    }
+	    break;
+
+	  case TSL2561_REG_CONTROL:
+	  case TSL2561_REG_TIMING:
+	  case TSL2561_REG_INTERRUPT:
+	  case TSL2561_REG_THRESH_LO:
+	  case TSL2561_REG_THRESH_HI:
+	    break;
+
+	  case TSL2561_REG_DATA0:
+	  case TSL2561_REG_DATA1:
+      if (calculate_lux()) {
+	    }
+	    break;
+
+	  default:
+	    break;
+  }
+  reg->unread = false;
   return 0;
 }
 
@@ -164,16 +178,13 @@ void TSL2561::printDebug(StringBuilder* temp) {
 
 
 
-
-/**************************************************************************
-* Class-specific functions...                                             *
-**************************************************************************/
+/*******************************************************************************
+* Class-specific functions...                                                  *
+*******************************************************************************/
 
 bool TSL2561::calculate_lux() {
   return false;
 }
-
-
 
 
 SensorError TSL2561::set_power_mode(uint8_t nu__pwr_mode) {

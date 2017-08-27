@@ -61,7 +61,8 @@ class ISL23345 : public I2CDeviceWithRegisters {
     uint16_t getRange(void);                      // Discover the range of this pot.
 
     /* Overrides from I2CDeviceWithRegisters... */
-    int8_t io_op_callback(I2CBusOp*);
+    int8_t register_write_cb(DeviceRegister*);
+    int8_t register_read_cb(DeviceRegister*);
     void printDebug(StringBuilder*);
 
 

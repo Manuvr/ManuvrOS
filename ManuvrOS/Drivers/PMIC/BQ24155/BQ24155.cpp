@@ -335,57 +335,48 @@ int8_t BQ24155::charge_current_termination_enabled(bool en) {
 * _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
 *******************************************************************************/
 
-int8_t BQ24155::io_op_callback(BusOp* _op) {
-  I2CDeviceWithRegisters::io_op_callback(_op);
-  I2CBusOp* completed = (I2CBusOp*) _op;
-  DeviceRegister *temp_reg = getRegisterByBaseAddress(completed->sub_addr);
+int8_t BQ24155::register_write_cb(DeviceRegister* reg) {
+  switch (reg->addr) {
+    case BQ24155_REG_STATUS:
+      break;
+    case BQ24155_REG_LIMITS:
+      break;
+    case BQ24155_REG_BATT_REGU:
+      break;
+    case BQ24155_REG_FAST_CHRG:
+      break;
 
-  if (temp_reg->unread) {
-    // This was a read operation.
-    switch (completed->sub_addr) {
-      case BQ24155_REG_PART_REV:
-        // Must be 0b01001xxx. If so, we init...
-        if (0x48 == (0xF8 & *(temp_reg->val))) {
-          temp_reg->unread = false;
-          init();
-        }
-        break;
-      case BQ24155_REG_STATUS:
-        break;
-      case BQ24155_REG_LIMITS:
-        break;
-      case BQ24155_REG_BATT_REGU:
-        break;
-      case BQ24155_REG_FAST_CHRG:
-        break;
-      default:
-        break;
-    }
-    temp_reg->unread = false;
+    case BQ24155_REG_PART_REV:
+    default:
+      // Illegal. A bad mistake was made somewhere.
+      break;
   }
-  else {
-    // This was a write operation.
-    switch (completed->sub_addr) {
-      case BQ24155_REG_STATUS:
-        break;
-      case BQ24155_REG_LIMITS:
-        break;
-      case BQ24155_REG_BATT_REGU:
-        break;
-      case BQ24155_REG_FAST_CHRG:
-        break;
-      case BQ24155_REG_PART_REV:
-      default:
-        // Illegal. A bad mistake was made somewhere.
-        break;
-    }
+  return 0;
+}
+
+
+int8_t BQ24155::register_read_cb(DeviceRegister* reg) {
+  switch (reg->addr) {
+    case BQ24155_REG_PART_REV:
+      // Must be 0b01001xxx. If so, we init...
+      if (0x48 == (0xF8 & *(reg->val))) {
+        reg->unread = false;
+        init();
+      }
+      break;
+    case BQ24155_REG_STATUS:
+      break;
+    case BQ24155_REG_LIMITS:
+      break;
+    case BQ24155_REG_BATT_REGU:
+      break;
+    case BQ24155_REG_FAST_CHRG:
+      break;
+    default:
+      // Illegal. A bad mistake was made somewhere.
+      break;
   }
-
-  /* Null the buffer so the bus adapter isn't tempted to free it.
-    TODO: This is silly. Fix this in the API. */
-  _op->buf     = nullptr;
-  _op->buf_len = 0;
-
+  reg->unread = false;
   return 0;
 }
 
@@ -478,6 +469,7 @@ int8_t BQ24155::notify(ManuvrMsg* active_event) {
 */
 void BQ24155::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
+  output->concatf("\tRevision:          %u\n", regValue(BQ24155_REG_PART_REV) & 0x07);
   output->concatf("\tInitialized:       %c\n", _er_flag(BQ24155_FLAG_INIT_COMPLETE) ? 'y' : 'n');
   output->concatf("\tSTAT pin:          %d\n", _opts.stat_pin);
   output->concatf("\tISEL pin:          %d\n", _opts.isel_pin);

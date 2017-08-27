@@ -41,7 +41,7 @@ const DatumDef datum_defs[] = {
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
 
-TMP102::TMP102(uint8_t addr) : I2CDeviceWithRegisters(addr, 4), SensorWrapper("TMP102") {
+TMP102::TMP102(uint8_t addr) : I2CDeviceWithRegisters(addr, 4, 8), SensorWrapper("TMP102") {
   define_datum(&datum_defs[0]);
 
   // Set the config register.
@@ -112,36 +112,50 @@ SensorError TMP102::getParameter(uint16_t reg, int len, uint8_t*) {
 * _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
 *******************************************************************************/
 
-int8_t TMP102::io_op_callback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::io_op_callback(completed);
-  int i = 0;
-  DeviceRegister *temp_reg = reg_defs.get(i++);
-  while (temp_reg) {
-    switch (temp_reg->addr) {
-      case TMP102_REG_RESULT:
-        {
-          uint16_t temperature_read  = regValue(TMP102_REG_RESULT);
-          //temperature_read = ((msb * (0x01 << (4+(lsb & 0x01)))) + (lsb >> (4-(lsb & 0x01))));  // Handles EXTended mode.
-          float celcius  = ((int16_t) temperature_read) * 0.0625;  // The scale of the TMP102.
-          updateDatum(0, celcius);
-        }
-        break;
+int8_t TMP102::register_write_cb(DeviceRegister* reg) {
+  switch (reg->addr) {
+    case TMP102_REG_CONFIG:
+      break;
 
-      case TMP102_REG_CONFIG:
-        break;
+    case TMP102_REG_ALRT_LO:
+      break;
 
-      case TMP102_REG_ALRT_LO:
-        break;
+    case TMP102_REG_ALRT_HI:
+      break;
 
-      case TMP102_REG_ALRT_HI:
-        break;
-
-      default:
-        break;
-    }
-    temp_reg->unread = false;
-    temp_reg = reg_defs.get(i++);
+    case TMP102_REG_RESULT:
+    default:
+      // Illegal write target.
+      break;
   }
+  return 0;
+}
+
+
+int8_t TMP102::register_read_cb(DeviceRegister* reg) {
+  switch (reg->addr) {
+    case TMP102_REG_RESULT:
+      {
+        uint16_t temperature_read  = reg->getVal();
+        //temperature_read = ((msb * (0x01 << (4+(lsb & 0x01)))) + (lsb >> (4-(lsb & 0x01))));  // Handles EXTended mode.
+        float celcius  = ((int16_t) temperature_read) * 0.0625;  // The scale of the TMP102.
+        updateDatum(0, celcius);
+      }
+      break;
+
+    case TMP102_REG_CONFIG:
+      break;
+
+    case TMP102_REG_ALRT_LO:
+      break;
+
+    case TMP102_REG_ALRT_HI:
+      break;
+
+    default:
+      break;
+  }
+  reg->unread = false;
   return 0;
 }
 
