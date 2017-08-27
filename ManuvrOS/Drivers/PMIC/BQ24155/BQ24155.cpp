@@ -72,7 +72,7 @@ BQ24155* BQ24155::INSTANCE = nullptr;
 /*
 * Constructor. Takes pin numbers as arguments.
 */
-BQ24155::BQ24155(const BQ24155Opts* o) : EventReceiver("BQ24155"), I2CDeviceWithRegisters(BQ24155_I2CADDR), _opts(o) {
+BQ24155::BQ24155(const BQ24155Opts* o) : EventReceiver("BQ24155"), I2CDeviceWithRegisters(BQ24155_I2CADDR, 5), _opts(o) {
   if (nullptr == BQ24155::INSTANCE) {
     BQ24155::INSTANCE = this;
   }

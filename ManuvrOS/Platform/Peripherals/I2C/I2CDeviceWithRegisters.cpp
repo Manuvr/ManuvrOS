@@ -24,16 +24,15 @@ limitations under the License.
 
 #if defined(MANUVR_SUPPORT_I2C)
 
-I2CDeviceWithRegisters::I2CDeviceWithRegisters(uint8_t addr) : I2CDevice(addr) {
+I2CDeviceWithRegisters::I2CDeviceWithRegisters(uint8_t addr, uint8_t reg_count) : I2CDevice(addr), reg_defs(reg_count) {
   multi_access_support = false;
 }
 
 
 I2CDeviceWithRegisters::~I2CDeviceWithRegisters() {
   DeviceRegister *temp = nullptr;
-  while (reg_defs.hasNext()) {
+  while (reg_defs.count()) {
     temp = reg_defs.get();
-    reg_defs.remove();
     //if (nullptr == pooled_registers) {   // If we don't have pooled registers...
     //  if (temp->val != nullptr) {        // ...and our buffer slot is populated...
     //    free(temp->val);              // Free the buffer space.
@@ -250,8 +249,9 @@ void I2CDeviceWithRegisters::printDebug(StringBuilder* temp) {
   if (temp) {
     I2CDevice::printDebug(temp);
     DeviceRegister *temp_reg = nullptr;
+    uint8_t count = reg_defs.count();
     temp->concat("---<  Device registers  >---\n");
-    for (int i = 0; i < reg_defs.size(); i++) {
+    for (int i = 0; i < count; i++) {
       temp_reg = reg_defs.get(i);
       temp->concatf("\tReg 0x%02x   contains 0x%02x", temp_reg->addr, *(temp_reg->val+0));
       switch (temp_reg->len) {
@@ -285,7 +285,7 @@ void I2CDeviceWithRegisters::printDebug(StringBuilder* temp) {
 int8_t I2CDeviceWithRegisters::syncRegisters(void) {
   DeviceRegister *temp = nullptr;
   int8_t return_value = I2C_ERR_SLAVE_NO_ERROR;
-  uint8_t count = reg_defs.size();
+  uint8_t count = reg_defs.count();
   for (int i = 0; i < count; i++) {
 
     temp = reg_defs.get(i);
@@ -314,7 +314,8 @@ int8_t I2CDeviceWithRegisters::syncRegisters(void) {
 int8_t I2CDeviceWithRegisters::writeDirtyRegisters(void) {
   int8_t return_value = I2C_ERR_SLAVE_NO_ERROR;
   DeviceRegister *temp = nullptr;
-  for (int i = 0; i < reg_defs.size(); i++) {
+  uint8_t count = reg_defs.count();
+  for (int i = 0; i < count; i++) {
     temp = reg_defs.get(i);
     if (temp->dirty) {
       if (temp->writable) {

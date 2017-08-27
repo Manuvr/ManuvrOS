@@ -41,7 +41,7 @@ const DatumDef datum_defs[] = {
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
 
-TMP102::TMP102(uint8_t addr) : I2CDeviceWithRegisters(addr), SensorWrapper("TMP102") {
+TMP102::TMP102(uint8_t addr) : I2CDeviceWithRegisters(addr, 4), SensorWrapper("TMP102") {
   define_datum(&datum_defs[0]);
 
   // Set the config register.

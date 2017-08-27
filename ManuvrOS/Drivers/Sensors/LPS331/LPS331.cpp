@@ -47,7 +47,7 @@ const DatumDef datum_defs[] = {
 /*
 * Constructor. Takes i2c address as argument.
 */
-LPS331::LPS331(uint8_t addr) : I2CDeviceWithRegisters(addr), SensorWrapper("LPS331") {
+LPS331::LPS331(uint8_t addr) : I2CDeviceWithRegisters(addr, 19), SensorWrapper("LPS331") {
   define_datum(&datum_defs[0]);
   define_datum(&datum_defs[1]);
   define_datum(&datum_defs[2]);

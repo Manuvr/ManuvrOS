@@ -37,7 +37,7 @@ This file is the tortured result of growing pains since the beginning of
   #include <inttypes.h>
   #include <stdint.h>
   #include <stdarg.h>
-  #include <DataStructures/LightLinkedList.h>
+  #include <DataStructures/RingBuffer.h>
   //#include <DataStructures/StringBuilder.h>
   #include <Platform/Platform.h>
   //#include <Kernel.h>
@@ -336,14 +336,14 @@ This file is the tortured result of growing pains since the beginning of
   */
   class I2CDeviceWithRegisters : public I2CDevice {
     public:
-      I2CDeviceWithRegisters(uint8_t); // Takes device address.
+      I2CDeviceWithRegisters(uint8_t addr, uint8_t reg_count); // Takes device address.
       ~I2CDeviceWithRegisters();
 
       bool sync();
 
 
     protected:
-      LinkedList<DeviceRegister*> reg_defs;     // Here is where registers will be enumerated.
+      RingBuffer<DeviceRegister*> reg_defs;     // Here is where registers will be enumerated.
       //uint8_t*  pooled_registers     = NULL;    // TODO: Make this happen!
       bool      multi_access_support;     // TODO: Make this happen! Depends on pooled_registers.
 

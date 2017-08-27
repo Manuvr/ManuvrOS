@@ -45,7 +45,7 @@ TSL2561::TSL2561(uint8_t addr, uint8_t irq) : TSL2561(addr) {
 /*
 * Constructor. Takes i2c address as argument.
 */
-TSL2561::TSL2561(uint8_t addr) : I2CDeviceWithRegisters(addr), SensorWrapper("TSL2561") {
+TSL2561::TSL2561(uint8_t addr) : I2CDeviceWithRegisters(addr, 8), SensorWrapper("TSL2561") {
   define_datum(&datum_defs[0]);
   define_datum(&datum_defs[1]);
 

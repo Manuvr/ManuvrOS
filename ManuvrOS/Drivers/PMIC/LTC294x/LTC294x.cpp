@@ -55,7 +55,7 @@ LTC294x* LTC294x::INSTANCE = nullptr;
 /**
 * Constructor. Takes pin numbers as arguments.
 */
-LTC294x::LTC294x(const LTC294xOpts* o) : I2CDeviceWithRegisters(LTC294X_I2CADDR), _opts(o) {
+LTC294x::LTC294x(const LTC294xOpts* o) : I2CDeviceWithRegisters(LTC294X_I2CADDR, 9), _opts(o) {
   if (nullptr == LTC294x::INSTANCE) {
     LTC294x::INSTANCE = this;
   }

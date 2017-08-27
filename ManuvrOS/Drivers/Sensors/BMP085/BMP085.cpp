@@ -58,7 +58,7 @@ const DatumDef datum_defs[] = {
 /*
 * Constructor. Takes i2c address as argument.
 */
-BMP085::BMP085(uint8_t addr) : I2CDeviceWithRegisters(addr), SensorWrapper("BMP085") {
+BMP085::BMP085(uint8_t addr) : I2CDevice(addr), SensorWrapper("BMP085") {
   define_datum(&datum_defs[0]);
   define_datum(&datum_defs[1]);
   define_datum(&datum_defs[2]);
@@ -150,17 +150,7 @@ SensorError BMP085::getParameter(uint16_t reg, int len, uint8_t*) {
 
 
 int8_t BMP085::io_op_callback(I2CBusOp* completed) {
-  I2CDeviceWithRegisters::io_op_callback(completed);
-  int i = 0;
-  DeviceRegister *temp_reg = reg_defs.get(i++);
-  while (temp_reg) {
-    switch (temp_reg->addr) {
-      default:
-        temp_reg->unread = false;
-        break;
-    }
-    temp_reg = reg_defs.get(i++);
-  }
+  I2CDevice::io_op_callback(completed);
   return 0;
 }
 
@@ -170,7 +160,7 @@ int8_t BMP085::io_op_callback(I2CBusOp* completed) {
 */
 void BMP085::printDebug(StringBuilder* temp) {
   temp->concatf("Altitude sensor (BMP085)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
-  I2CDeviceWithRegisters::printDebug(temp);
+  I2CDevice::printDebug(temp);
   //SensorWrapper::issue_json_map(temp, this);
   temp->concatf("\n");
 }

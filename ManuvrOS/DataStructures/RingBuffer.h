@@ -47,6 +47,7 @@ template <class T> class RingBuffer {
 
     int insert(T);
     T get();
+    T get(unsigned int idx);
 
 
   protected:
@@ -116,6 +117,15 @@ template <class T> T RingBuffer<T>::get() {
   T *return_value = (T*) (_pool + (_r * _E_SIZE));
   _r = (_r % _CAPAC) + 1;   // TODO: Convert to pow(2) later and convert to bitmask.
   _count--;
+  return *return_value;
+}
+
+
+template <class T> T RingBuffer<T>::get(unsigned int idx) {
+  if ((0 == _count) || (idx > _CAPAC)) {
+    return (T)0;
+  }
+  T* return_value = (T*) (_pool + (idx * _E_SIZE));
   return *return_value;
 }
 

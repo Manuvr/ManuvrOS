@@ -33,7 +33,7 @@ limitations under the License.
 #define BMP085_I2CADDR              0x77
 
 
-class BMP085 : public I2CDeviceWithRegisters, public SensorWrapper {
+class BMP085 : public I2CDevice, public SensorWrapper {
   public:
     double temperature = 0;      // The present temperature reading, in degerees C.
     double pressure    = 0;      // The present pressure reading, in Pa.
@@ -49,7 +49,7 @@ class BMP085 : public I2CDeviceWithRegisters, public SensorWrapper {
     SensorError setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
     SensorError getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
 
-    /* Overrides from I2CDeviceWithRegisters... */
+    /* Overrides from I2CDevice... */
     int8_t io_op_callback(I2CBusOp*);
     void printDebug(StringBuilder*);
 

@@ -48,7 +48,7 @@ const DatumDef datum_defs[] = {
 /*
 * Constructor. Takes i2c address as argument.
 */
-INA219::INA219(uint8_t addr) : I2CDeviceWithRegisters(addr), SensorWrapper("INA219") {
+INA219::INA219(uint8_t addr) : I2CDeviceWithRegisters(addr, 6), SensorWrapper("INA219") {
   define_datum(&datum_defs[0]);
   define_datum(&datum_defs[1]);
   define_datum(&datum_defs[2]);

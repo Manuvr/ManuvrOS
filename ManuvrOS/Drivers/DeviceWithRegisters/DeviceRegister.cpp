@@ -52,7 +52,7 @@ DeviceRegister::DeviceRegister(uint16_t nu_addr, uint32_t nu_val, uint8_t* buf, 
 void DeviceRegister::set(unsigned int nu_val) {
   switch (len) {
     case 1:
-      *((uint8_t*)  val) = nu_val & 0xFF;
+      *((uint8_t*)  val) = (uint8_t) nu_val & 0xFF;
       break;
     case 2:
       *((uint16_t*) val) = (platform.bigEndian() ? ((uint16_t) nu_val) : endianSwap16((uint16_t) nu_val)) & 0xFFFF;
