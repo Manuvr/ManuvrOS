@@ -325,6 +325,12 @@ int8_t I2CDeviceWithRegisters::writeDirtyRegisters() {
 }
 
 
+/*******************************************************************************
+* ___     _       _                      These members are mandatory overrides
+*  |   / / \ o   | \  _     o  _  _      for implementing I/O callbacks. They
+* _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
+*******************************************************************************/
+
 int8_t I2CDeviceWithRegisters::io_op_callahead(BusOp* op) {
   // Default is to allow the transfer.
   return 0;

@@ -110,7 +110,7 @@ int8_t LTC294x::init() {
   }
 
   if (val != rewrite) {
-    writeIndirect(LTC294X_REG_CONTROL, rewrite, true);
+    _write_control_reg(rewrite);
   }
   else {
     _flags |= LTC294X_FLAG_INIT_CTRL;
@@ -129,8 +129,6 @@ int8_t LTC294x::init() {
   return writeDirtyRegisters();
 }
 
-
-//_init_complete(true);
 
 /*******************************************************************************
 * ___     _       _                      These members are mandatory overrides

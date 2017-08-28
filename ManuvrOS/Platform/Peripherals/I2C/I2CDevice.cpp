@@ -44,6 +44,27 @@ I2CDevice::~I2CDevice() {
 };
 
 
+/*******************************************************************************
+* ___     _       _                      These members are mandatory overrides
+*  |   / / \ o   | \  _     o  _  _      for implementing I/O callbacks. They
+* _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
+*******************************************************************************/
+
+/**
+* This is what we call when this class wants to conduct a transaction on
+*   the bus. We simply forward to the bus we are bound to.
+*
+* @param  _op  The bus operation that was completed.
+* @return 0 to run the op, or non-zero to cancel it.
+*/
+int8_t I2CDevice::queue_io_job(BusOp* _op) {
+  I2CBusOp* op = (I2CBusOp*) _op;
+  if (nullptr == op->callback) {
+    op->callback = this;
+  }
+  return _bus->queue_io_job(op);
+}
+
 /**
 * Called prior to the given bus operation beginning.
 * Returning 0 will allow the operation to continue.
@@ -56,7 +77,6 @@ I2CDevice::~I2CDevice() {
 int8_t I2CDevice::io_op_callahead(BusOp* _op) {
   return 0;
 }
-
 
 /**
 * When a bus operation completes, it is passed back to its issuing class.
@@ -83,6 +103,10 @@ int8_t I2CDevice::io_op_callback(BusOp* op) {
 }
 
 
+/*******************************************************************************
+* Functions specific to this class....                                         *
+*******************************************************************************/
+
 // Needs to be called by the i2c class during insertion.
 bool I2CDevice::assignBusInstance(I2CAdapter *adapter) {
   if (nullptr == _bus) {
@@ -98,23 +122,6 @@ bool I2CDevice::disassignBusInstance() {
   _bus = nullptr;
   return true;
 };
-
-
-
-/****************************************************************************************************
-* These functions are protected bus-access fxns that the dev will use to do its thing.              *
-****************************************************************************************************/
-/*
-* This is what we call when this class wants to conduct a transaction on the SPI bus.
-* We simply forward to the CPLD.
-*/
-int8_t I2CDevice::queue_io_job(BusOp* _op) {
-  I2CBusOp* op = (I2CBusOp*) _op;
-  if (nullptr == op->callback) {
-    op->callback = this;
-  }
-  return _bus->queue_io_job(op);
-}
 
 
 /*
@@ -307,12 +314,6 @@ bool I2CDevice::read16() {
   return (0 == _bus->queue_io_job(nu));
 }
 
-
-
-
-/****************************************************************************************************
-* These functions are for logging support.                                                          *
-****************************************************************************************************/
 
 /**
 * Debug support method. This fxn is only present in debug builds.

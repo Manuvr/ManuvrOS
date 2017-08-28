@@ -117,27 +117,46 @@ This file is the tortured result of growing pains since the beginning of
         adapter(obj->adapter),
         sda_pin(obj->sda_pin),
         scl_pin(obj->scl_pin),
-        def_flags(obj->def_flags)
+        def_flags(obj->def_flags),
+        freq(obj->freq)
       {};
 
       I2CAdapterOptions(uint8_t a, uint8_t d, uint8_t c) :
         adapter(a),
         sda_pin(d),
         scl_pin(c),
-        def_flags(I2C_ADAPT_OPT_FLAG_SDA_PU | I2C_ADAPT_OPT_FLAG_SCL_PU)
+        def_flags(I2C_ADAPT_OPT_FLAG_SDA_PU | I2C_ADAPT_OPT_FLAG_SCL_PU),
+        freq(100000)
       {};
 
       I2CAdapterOptions(uint8_t a, uint8_t d, uint8_t c, uint16_t f) :
         adapter(a),
         sda_pin(d),
         scl_pin(c),
-        def_flags(f)
+        def_flags(f),
+        freq(100000)
       {};
+
+      I2CAdapterOptions(uint8_t a, uint8_t d, uint8_t c, uint16_t f, uint32_t fqy) :
+        adapter(a),
+        sda_pin(d),
+        scl_pin(c),
+        def_flags(f),
+        freq(fqy)
+      {};
+
+      /**
+      * @return true if either of the pullups are desired.
+      */
+      inline const bool usePullups() const {
+        return (def_flags & (I2C_ADAPT_OPT_FLAG_SDA_PU | I2C_ADAPT_OPT_FLAG_SCL_PU));
+      };
 
       const uint8_t  adapter;
       const uint8_t  sda_pin;
       const uint8_t  scl_pin;
       const uint16_t def_flags;
+      const uint32_t freq;
   };
 
 
@@ -259,6 +278,8 @@ This file is the tortured result of growing pains since the beginning of
 
     private:
       const I2CAdapterOptions _bus_opts;
+      I2CBusOp __prealloc_pool[I2CADAPTER_PREALLOC_COUNT];
+      //ElementPool<I2CBusOp> _prealloc;
       int8_t  ping_map[32];
 
       LinkedList<I2CDevice*> dev_list;    // A list of active slaves on this bus.
@@ -275,8 +296,7 @@ This file is the tortured result of growing pains since the beginning of
       void set_ping_state_by_addr(uint8_t addr, I2CPingState nu);
 
 
-      static I2CBusOp __prealloc_pool[I2CADAPTER_PREALLOC_COUNT];
-      static char _ping_state_chr[4];
+      static const char _ping_state_chr[4];
   };
 
 

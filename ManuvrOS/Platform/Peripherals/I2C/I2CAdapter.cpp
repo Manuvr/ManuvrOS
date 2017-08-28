@@ -44,9 +44,8 @@ This file is the tortured result of growing pains since the beginning of
 * Static members and initializers should be located here.
 *******************************************************************************/
 
-I2CBusOp I2CAdapter::__prealloc_pool[I2CADAPTER_PREALLOC_COUNT];
-char I2CAdapter::_ping_state_chr[4] = {' ', '.', '*', ' '};
-//template<> PriorityQueue<I2CBusOp*> BusAdapter<I2CBusOp>::preallocated;
+const char I2CAdapter::_ping_state_chr[4] = {' ', '.', '*', ' '};
+
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _

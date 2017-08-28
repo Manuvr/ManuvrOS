@@ -10,7 +10,8 @@ int8_t I2CAdapter::bus_init() {
       if (((18 == _bus_opts.sda_pin) && (19 == _bus_opts.scl_pin)) || ((17 == _bus_opts.sda_pin) && (16 == _bus_opts.scl_pin))) {
         Wire.begin(I2C_MASTER, 0x00,
           (17 == _bus_opts.sda_pin) ? I2C_PINS_16_17 : I2C_PINS_18_19,
-          I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR
+          _bus_opts.usePullups() ? I2C_PULLUP_INT : I2C_PULLUP_EXT,
+          _bus_opts.freq, I2C_OP_MODE_DMA
         );
         Wire.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
         busOnline(true);
@@ -19,7 +20,12 @@ int8_t I2CAdapter::bus_init() {
     #if defined(__MK20DX256__)
     case 1:
       if ((30 == _bus_opts.sda_pin) && (29 == _bus_opts.scl_pin)) {
-        Wire1.begin(I2C_MASTER, 0x00, I2C_PINS_29_30, I2C_PULLUP_INT, I2C_RATE_400, I2C_OP_MODE_ISR);
+        Wire1.begin(
+          I2C_MASTER, 0x00,
+          I2C_PINS_29_30,
+          _bus_opts.usePullups() ? I2C_PULLUP_INT : I2C_PULLUP_EXT,
+          _bus_opts.freq, I2C_OP_MODE_DMA
+        );
         Wire1.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
         busOnline(true);
       }
@@ -58,6 +64,7 @@ int8_t I2CAdapter::generateStop() {
 
 
 XferFault I2CBusOp::begin() {
+  StringBuilder log;
   if (nullptr == device) {
     abort(XferFault::DEV_NOT_FOUND);
     return XferFault::DEV_NOT_FOUND;
@@ -89,20 +96,25 @@ XferFault I2CBusOp::begin() {
       case BusOpcode::RX:
         Wire.endTransmission(I2C_NOSTOP);
         Wire.requestFrom(dev_addr, buf_len, I2C_STOP, 10000);
+        log.concat("Reading byte ");
         while(Wire.available()) {
-          *(buf + i++) = (uint8_t) Wire.readByte();
+          uint8_t tb = Wire.readByte();
+          log.concatf("0x%02x --> 0x%02x\t", tb, *(buf + i));
+          *(buf + i++) = tb;
         }
+        log.concat("\n");
         break;
       case BusOpcode::TX:
-        for(int i = 0; i < buf_len; i++) Wire.write(*(buf+i));
-        Wire.endTransmission(I2C_STOP, 10000);   // 10ms timeout
-        break;
+        Wire.write(buf, buf_len);
+        // NOTE: No break
       case BusOpcode::TX_CMD:
         Wire.endTransmission(I2C_STOP, 10000);   // 10ms timeout
         break;
       default:
         break;
     }
+  printDebug(&log);
+  Kernel::log(&log);
 
     wire_status = Wire.status();
   }
@@ -123,9 +135,8 @@ XferFault I2CBusOp::begin() {
         }
         break;
       case BusOpcode::TX:
-        for(int i = 0; i < buf_len; i++) Wire1.write(*(buf+i));
-        Wire1.endTransmission(I2C_STOP, 10000);   // 10ms timeout
-        break;
+        Wire1.write(buf, buf_len);
+        // NOTE: No break
       case BusOpcode::TX_CMD:
         Wire1.endTransmission(I2C_STOP, 10000);   // 10ms timeout
         break;

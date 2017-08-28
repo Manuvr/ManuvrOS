@@ -35,7 +35,7 @@ DeviceRegister::DeviceRegister(uint8_t* b, uint16_t a, uint8_t l, bool d, bool u
 
 DeviceRegister::DeviceRegister(uint16_t nu_addr, uint8_t nu_val, uint8_t* buf, bool d, bool u, bool w) :
   DeviceRegister(buf, nu_addr, 1, d, u, w) {
-  *((uint8_t*) val) = nu_val;
+  *((uint8_t*)  val) = (uint8_t) (nu_val & 0xFF);
 }
 
 DeviceRegister::DeviceRegister(uint16_t nu_addr, uint16_t nu_val, uint8_t* buf, bool d, bool u, bool w) :

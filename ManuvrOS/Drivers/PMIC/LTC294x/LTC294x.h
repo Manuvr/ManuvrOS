@@ -185,7 +185,7 @@ class LTC294x : public I2CDeviceWithRegisters {
     int8_t _set_thresh_reg_charge(uint16_t l, uint16_t h);
 
     int8_t  _adc_mode(LTC294xADCModes);
-    inline LTC294xADCModes _adc_mode() {
+    LTC294xADCModes _adc_mode() {
       return (LTC294xADCModes) (regValue(LTC294X_REG_CONTROL) & LTC294X_OPT_MASK_ADC_MODE);
     };
 
