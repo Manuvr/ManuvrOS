@@ -110,6 +110,9 @@ This file is the tortured result of growing pains since the beginning of
   #define I2C_ADAPT_OPT_FLAG_SCL_PU   0x0400   // SCL pullup.
   #define I2C_ADAPT_OPT_FLAG_SDA_PU   0x0800   // SDA pullup.
 
+  #define I2C_ADAPT_OPT_FLAG_S_ADDR   0x007F   // Mask for slave address.
+
+
   // TODO: Integrate freq
   class I2CAdapterOptions {
     public:

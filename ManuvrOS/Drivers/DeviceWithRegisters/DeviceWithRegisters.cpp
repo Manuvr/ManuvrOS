@@ -21,7 +21,7 @@ limitations under the License.
 
 
 #include "DeviceWithRegisters.h"
-
+#include <Platform/Platform.h>
 
 DeviceWithRegisters::DeviceWithRegisters(uint8_t r_count) {
   reg_count = r_count;

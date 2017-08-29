@@ -32,6 +32,7 @@ http://abyz.co.uk/rpi/pigpio/
 
 
 #include <Platform/Platform.h>
+#include <Platform/Targets//Raspi/Raspi.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -252,11 +253,11 @@ int8_t gpioDefine(uint8_t pin, GPIOMode mode) {
     gpioReg[reg] = (gpioReg[reg] & ~(7<<shift));
 
     switch (mode) {
-      case INPUT:
+      case GPIOMode::INPUT:
         break;
-      case INPUT_PULLUP:
+      case GPIOMode::INPUT_PULLUP:
         break;
-      case OUTPUT:
+      case GPIOMode::OUTPUT:
         gpioReg[reg] = (gpioReg[reg] | (1<<shift));
         break;
       default:
@@ -337,9 +338,5 @@ int8_t Raspi::platformPreInit(Argument* root_config) {
 *   internal system sanity.
 */
 int8_t Raspi::platformPostInit() {
-  LinuxPlatform::platformPostInit();
-  if (nullptr == _self) {
-    _self = new IdentityUUID(FIRMWARE_NAME);
-  }
-  return 0;
+  return LinuxPlatform::platformPostInit();
 }

@@ -95,7 +95,7 @@ XferFault I2CBusOp::begin() {
     switch (get_opcode()) {
       case BusOpcode::RX:
         Wire.endTransmission(I2C_NOSTOP);
-        Wire.requestFrom(dev_addr, buf_len, I2C_STOP, 10000);
+        Wire.requestFrom((uint8_t) (dev_addr & 0x00FF), buf_len, I2C_STOP, 10000);
         log.concat("Reading byte ");
         while(Wire.available()) {
           uint8_t tb = Wire.readByte();
@@ -113,9 +113,9 @@ XferFault I2CBusOp::begin() {
       default:
         break;
     }
-  printDebug(&log);
-  Kernel::log(&log);
-
+    printDebug(&log);
+    Kernel::log(&log);
+    while (!Wire.done()) { }
     wire_status = Wire.status();
   }
   #if defined(__MK20DX256__)
@@ -129,7 +129,7 @@ XferFault I2CBusOp::begin() {
     switch (get_opcode()) {
       case BusOpcode::RX:
         Wire1.endTransmission(I2C_NOSTOP);
-        Wire1.requestFrom(dev_addr, buf_len, I2C_STOP, 10000);
+        Wire1.requestFrom((uint8_t) (dev_addr & 0x00FF), buf_len, I2C_STOP, 10000);
         while(Wire1.available()) {
           *(buf + i++) = (uint8_t) Wire1.readByte();
         }
@@ -143,7 +143,7 @@ XferFault I2CBusOp::begin() {
       default:
         break;
     }
-
+    while (!Wire1.done()) { }
     wire_status = Wire1.status();
   }
   #endif  // __MK20DX256__

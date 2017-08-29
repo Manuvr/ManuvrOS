@@ -251,10 +251,11 @@ void I2CDeviceWithRegisters::printDebug(StringBuilder* temp) {
           break;
       }
       temp->concatf(
-        "\t%s\t%s\t%s\n",
+        "\t%s\t%s\t%s\t%s\n",
         (temp_reg->dirty    ? "dirty"  : "clean"),
         (temp_reg->unread   ? "unread" : "known"),
-        (temp_reg->writable ? "r/w"    : "ro")
+        (temp_reg->writable ? "r/w"    : "ro"),
+        (temp_reg->op_pending ? "i/o pending"    : "stable")
       );
     }
   }

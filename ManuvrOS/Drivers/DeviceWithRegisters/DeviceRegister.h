@@ -24,7 +24,6 @@ limitations under the License.
   #define __OFFBOARD_REGISTER_DEFS_H__ 1
 
   #include <inttypes.h>
-  #include <stdlib.h>
 
   /*
   * Some classes (espescially those that drive hardware) may want to access registers in the device.

@@ -30,7 +30,7 @@ This file is meant to contain a set of common functions that are
 
 #ifndef __PLATFORM_RASPI_H__
 #define __PLATFORM_RASPI_H__
-#include <Platform/Linux/Linux.h>
+#include <Platform/Targets/Linux/Linux.h>
 
 
 class Raspi : public LinuxPlatform {

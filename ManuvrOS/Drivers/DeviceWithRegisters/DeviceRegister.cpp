@@ -40,10 +40,9 @@ DeviceRegister::DeviceRegister(uint16_t nu_addr, uint8_t nu_val, uint8_t* buf, b
 
 DeviceRegister::DeviceRegister(uint16_t nu_addr, uint16_t nu_val, uint8_t* buf, bool d, bool u, bool w) :
   DeviceRegister(buf, nu_addr, 2, d, u, w) {
-  *((uint8_t*) val + 0) = (uint8_t) (nu_val >> 8);
+  *((uint8_t*) val + 0) = (uint8_t) (nu_val >> 8) & 0xFF;
   *((uint8_t*) val + 1) = (uint8_t) (nu_val & 0xFF);
 }
-
 
 DeviceRegister::DeviceRegister(uint16_t nu_addr, uint32_t nu_val, uint8_t* buf, bool d, bool u, bool w) :
   DeviceRegister(buf, nu_addr, 4, d, u, w) {
@@ -65,7 +64,7 @@ void DeviceRegister::set(unsigned int nu_val) {
       *((uint8_t*)  val) = (uint8_t) (nu_val & 0xFF);
       break;
     case 2:
-      *((uint8_t*) val + 0) = (uint8_t) (nu_val >> 8);
+      *((uint8_t*) val + 0) = (uint8_t) (nu_val >> 8) & 0xFF;
       *((uint8_t*) val + 1) = (uint8_t) (nu_val & 0xFF);
       break;
     case 4:
