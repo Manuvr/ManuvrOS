@@ -31,6 +31,7 @@ This file forms the catch-all for linux platforms that have no support.
 #if defined(MANUVR_STORAGE)
 #include "LinuxStorage.h"
 #endif
+
   #define LOW             0
   #define HIGH            1
 
@@ -74,7 +75,7 @@ class LinuxPlatform : public ManuvrPlatform {
   public:
     ~LinuxPlatform();
 
-    inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
+    virtual int8_t platformPreInit() {   return platformPreInit(nullptr); };
     virtual int8_t platformPreInit(Argument*);
     virtual void   printDebug(StringBuilder* out);
 

@@ -35,9 +35,9 @@ This file is meant to contain a set of common functions that are
 
 class Raspi : public LinuxPlatform {
   public:
-    inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
-    virtual int8_t platformPreInit(Argument*);
-    virtual void printDebug(StringBuilder* out);
+    int8_t platformPreInit() {   return platformPreInit(nullptr); };
+    int8_t platformPreInit(Argument*);
+    void printDebug(StringBuilder* out);
 
 
   protected:
