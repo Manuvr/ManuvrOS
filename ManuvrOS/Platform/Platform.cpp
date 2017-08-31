@@ -334,7 +334,7 @@ int8_t ManuvrPlatform::bootstrap() {
   boot_completed_ev->priority(EVENT_PRIORITY_HIGHEST);
   Kernel::staticRaiseEvent(boot_completed_ev);
   _set_init_state(MANUVR_INIT_STATE_KERNEL_BOOTING);
-  uint8_t boot_passes = 40;
+  uint8_t boot_passes = 10;
   while ((0 < _kernel.procIdleFlags()) && boot_passes) {
     boot_passes--;
   }

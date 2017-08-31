@@ -144,6 +144,12 @@ unsigned gpioHardwareRevision() {
 * (_)   (___)`\__,_)`\__)(_)  `\___/'(_)   (_) (_) (_)
 * These are overrides and additions to the platform class.
 *******************************************************************************/
+
+Raspi::Raspi() : LinuxPlatform("Raspi") {
+  gpioSetup();   // We must do this first if we want micros() to work.
+}
+
+
 void Raspi::printDebug(StringBuilder* output) {
   LinuxPlatform::printDebug(output);
 }
@@ -320,7 +326,6 @@ int readPinAnalog(uint8_t pin) {
 * This is the final function called by the kernel constructor.
 */
 int8_t Raspi::platformPreInit(Argument* root_config) {
-  gpioSetup();   // We must do this first if we want micros() to work.
   LinuxPlatform::platformPreInit(root_config);
   _board_name = "Raspi";
   _alter_flags(true,  MANUVR_PLAT_FLAG_SERIALED);

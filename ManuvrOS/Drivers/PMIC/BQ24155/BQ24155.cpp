@@ -72,7 +72,7 @@ BQ24155* BQ24155::INSTANCE = nullptr;
 /*
 * Constructor. Takes pin numbers as arguments.
 */
-BQ24155::BQ24155(const BQ24155Opts* o) : EventReceiver("BQ24155"), I2CDeviceWithRegisters(BQ24155_I2CADDR, 5), _opts(o) {
+BQ24155::BQ24155(const BQ24155Opts* o) : I2CDeviceWithRegisters(BQ24155_I2CADDR, 5), _opts(o) {
   if (nullptr == BQ24155::INSTANCE) {
     BQ24155::INSTANCE = this;
   }
@@ -87,7 +87,7 @@ BQ24155::BQ24155(const BQ24155Opts* o) : EventReceiver("BQ24155"), I2CDeviceWith
     setPin(_opts.isel_pin, true);
     gpioDefine(_opts.isel_pin, GPIOMode::OUTPUT);
   }
-  _er_clear_flag(BQ24155_FLAG_INIT_COMPLETE);
+  _clear_flag(BQ24155_FLAG_INIT_COMPLETE);
 
   defineRegister(BQ24155_REG_STATUS,    (uint8_t) 0x00, false, true,  true);
   defineRegister(BQ24155_REG_LIMITS,    (uint8_t) 0x30, false, false, true);
@@ -113,7 +113,7 @@ int8_t BQ24155::init() {
   readRegister((uint8_t) BQ24155_REG_LIMITS);
   readRegister((uint8_t) BQ24155_REG_BATT_REGU);
   readRegister((uint8_t) BQ24155_REG_FAST_CHRG);
-  _er_set_flag(BQ24155_FLAG_INIT_COMPLETE);
+  _set_flag(BQ24155_FLAG_INIT_COMPLETE);
   return 0;
 }
 
@@ -143,7 +143,7 @@ BQ24155Fault BQ24155::getFault() {
 */
 int8_t BQ24155::punch_safety_timer() {
   int8_t return_val = -1;
-  if (_er_flag(BQ24155_FLAG_INIT_COMPLETE)) {
+  if (_flag(BQ24155_FLAG_INIT_COMPLETE)) {
     uint8_t int_val = regValue(BQ24155_REG_STATUS);
     writeIndirect(BQ24155_REG_STATUS, 0x80 | int_val);
     return_val++;
@@ -158,7 +158,7 @@ int8_t BQ24155::punch_safety_timer() {
 */
 int8_t BQ24155::put_charger_in_reset_mode() {
   int8_t return_val = -1;
-  if (_er_flag(BQ24155_FLAG_INIT_COMPLETE)) {
+  if (_flag(BQ24155_FLAG_INIT_COMPLETE)) {
     uint8_t int_val = regValue(BQ24155_REG_FAST_CHRG);
     writeIndirect(BQ24155_REG_FAST_CHRG, 0x80 | int_val);
     return_val++;
@@ -174,7 +174,7 @@ int8_t BQ24155::put_charger_in_reset_mode() {
 */
 int8_t BQ24155::batt_reg_voltage(float desired) {
   int8_t return_val = -2;
-  if (_er_flag(BQ24155_FLAG_INIT_COMPLETE)) {
+  if (_flag(BQ24155_FLAG_INIT_COMPLETE)) {
     return_val++;
     if ((desired >= BQ24155_VOREGU_OFFSET) && (desired < 4.44)) {   //
       uint8_t offset_val = (uint8_t) ((desired - BQ24155_VOREGU_OFFSET) / 0.02);
@@ -214,7 +214,7 @@ uint16_t BQ24155::batt_weak_voltage() {
 */
 int8_t BQ24155::batt_weak_voltage(unsigned int mV) {
   int8_t return_val = -2;
-  if (_er_flag(BQ24155_FLAG_INIT_COMPLETE)) {
+  if (_flag(BQ24155_FLAG_INIT_COMPLETE)) {
     return_val++;
     if ((mV >= BQ24155_VLOW_OFFSET) && (mV <= 3700)) {
       uint8_t bw_step = (mV - BQ24155_VLOW_OFFSET) / 100;
@@ -253,7 +253,7 @@ int16_t BQ24155::usb_current_limit() {
 */
 int8_t BQ24155::usb_current_limit(int16_t milliamps) {
   int8_t return_val = -2;
-  if (_er_flag(BQ24155_FLAG_INIT_COMPLETE)) {
+  if (_flag(BQ24155_FLAG_INIT_COMPLETE)) {
     return_val++;
     uint8_t c_step  = 0;
     uint8_t int_val = regValue(BQ24155_REG_LIMITS);
@@ -287,7 +287,7 @@ bool BQ24155::charger_enabled() {
 */
 int8_t BQ24155::charger_enabled(bool en) {
   int8_t return_val = -2;
-  if (_er_flag(BQ24155_FLAG_INIT_COMPLETE)) {
+  if (_flag(BQ24155_FLAG_INIT_COMPLETE)) {
     return_val++;
     uint8_t int_val = regValue(BQ24155_REG_LIMITS);
     if (en ^ (int_val & 0x04)) {
@@ -316,7 +316,7 @@ bool BQ24155::charge_current_termination_enabled() {
 */
 int8_t BQ24155::charge_current_termination_enabled(bool en) {
   int8_t return_val = -2;
-  if (_er_flag(BQ24155_FLAG_INIT_COMPLETE)) {
+  if (_flag(BQ24155_FLAG_INIT_COMPLETE)) {
     return_val++;
     uint8_t int_val = regValue(BQ24155_REG_LIMITS);
     if (en ^ (int_val & 0x08)) {
@@ -417,33 +417,6 @@ int8_t BQ24155::attached() {
   return 0;
 }
 
-/**
-* If we find ourselves in this fxn, it means an event that this class built (the argument)
-*   has been serviced and we are now getting the chance to see the results. The argument
-*   to this fxn will never be NULL.
-*
-* Depending on class implementations, we might choose to handle the completed Event differently. We
-*   might add values to event's Argument chain and return RECYCLE. We may also free() the event
-*   ourselves and return DROP. By default, we will return REAP to instruct the Kernel
-*   to either free() the event or return it to it's preallocate queue, as appropriate. If the event
-*   was crafted to not be in the heap in its own allocation, we will return DROP instead.
-*
-* @param  event  The event for which service has been completed.
-* @return A callback return code.
-*/
-int8_t BQ24155::callback_proc(ManuvrMsg* event) {
-  /* Setup the default return code. If the event was marked as mem_managed, we return a DROP code.
-     Otherwise, we will return a REAP code. Downstream of this assignment, we might choose differently. */
-  int8_t return_value = (0 == event->refCount()) ? EVENT_CALLBACK_RETURN_REAP : EVENT_CALLBACK_RETURN_DROP;
-
-  /* Some class-specific set of conditionals below this line. */
-  switch (event->eventCode()) {
-    default:
-      break;
-  }
-
-  return return_value;
-}
 
 int8_t BQ24155::notify(ManuvrMsg* active_event) {
   int8_t return_value = 0;
@@ -470,7 +443,7 @@ int8_t BQ24155::notify(ManuvrMsg* active_event) {
 void BQ24155::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
   output->concatf("\tRevision:          %u\n", regValue(BQ24155_REG_PART_REV) & 0x07);
-  output->concatf("\tInitialized:       %c\n", _er_flag(BQ24155_FLAG_INIT_COMPLETE) ? 'y' : 'n');
+  output->concatf("\tInitialized:       %c\n", _flag(BQ24155_FLAG_INIT_COMPLETE) ? 'y' : 'n');
   output->concatf("\tSTAT pin:          %d\n", _opts.stat_pin);
   output->concatf("\tISEL pin:          %d\n", _opts.isel_pin);
   output->concatf("\tSense resistor:    %d mOhm\n", _opts.sense_milliohms);

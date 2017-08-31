@@ -76,10 +76,7 @@ enum class BQ24155USBCurrent {
 #define BQ24155_OPT_FLAG_WB_3V4    0x0000
 #define BQ24155_OPT_FLAG_WB_MASK   0x0030  // Mask: weak battery threshold
 
-/*
-* These state flags are hosted by the EventReceiver. This may change in the future.
-* Might be too much convention surrounding their assignment across inherritence.
-*/
+/* Driver state flags. */
 #define BQ24155_FLAG_INIT_COMPLETE 0x01    // Is the device initialized?
 
 
@@ -89,8 +86,6 @@ enum class BQ24155USBCurrent {
 #define BQ24155_VLOW_OFFSET    3400
 #define BQ24155_VITERM_OFFSET  0.0034f
 #define BQ24155_VIREGU_OFFSET  0.0374f
-
-
 
 
 /*
@@ -136,16 +131,14 @@ class BQ24155Opts {
     };
 
 
-
   private:
 };
 
 
-class BQ24155 : public EventReceiver, I2CDeviceWithRegisters {
+class BQ24155 : public I2CDeviceWithRegisters {
   public:
     BQ24155(const BQ24155Opts*);
     ~BQ24155();
-
 
     /* Overrides from I2CDeviceWithRegisters... */
     int8_t register_write_cb(DeviceRegister*);
@@ -155,33 +148,21 @@ class BQ24155 : public EventReceiver, I2CDeviceWithRegisters {
       I2CDeviceWithRegisters::printDebug(output);
     };
 
-    /* Overrides from EventReceiver */
-    int8_t notify(ManuvrMsg*);
-    int8_t callback_proc(ManuvrMsg*);
-    #if defined(MANUVR_CONSOLE_SUPPORT)
-      void procDirectDebugInstruction(StringBuilder*);
-    #endif  //MANUVR_CONSOLE_SUPPORT
-
     int8_t init();
     inline int8_t refresh() {  return syncRegisters();  };
     inline int8_t regRead(int a) {    return readRegister(a);  };
 
-
     static BQ24155* INSTANCE;
-
-
-  protected:
-    int8_t attached();
 
 
   private:
     const BQ24155Opts _opts;
+    uint8_t _flgs = 0;
 
     bool     charger_enabled();
     int8_t   charger_enabled(bool en);
     bool     charge_current_termination_enabled();
     int8_t   charge_current_termination_enabled(bool en);
-
 
     int16_t  usb_current_limit();
     int8_t   usb_current_limit(int16_t milliamps);
@@ -195,6 +176,16 @@ class BQ24155 : public EventReceiver, I2CDeviceWithRegisters {
     int8_t   punch_safety_timer();
     BQ24155Fault getFault();
     BQ24155State getChargerState();
+
+    // Flag manipulation inlines.
+    inline bool _flag(uint8_t _flag) {        return (_flgs & _flag);  };
+    inline void _flip_flag(uint8_t _flag) {   _flgs ^= _flag;          };
+    inline void _clear_flag(uint8_t _flag) {  _flgs &= ~_flag;         };
+    inline void _set_flag(uint8_t _flag) {    _flgs |= _flag;          };
+    inline void _set_flag(uint8_t _flag, bool nu) {
+      if (nu) _flgs |= _flag;
+      else    _flgs &= ~_flag;
+    };
 
     /**
     * Conversion fxn.

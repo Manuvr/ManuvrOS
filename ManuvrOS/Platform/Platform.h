@@ -270,6 +270,7 @@ class ManuvrPlatform {
 
   protected:
     Kernel      _kernel;
+    const char* _board_name;
     Argument*   _config    = nullptr;
     Identity*   _self      = nullptr;
     Identity*   _identity  = nullptr;
@@ -277,6 +278,9 @@ class ManuvrPlatform {
       Storage* _storage_device = nullptr;
       // TODO: Ultimately, there will be a similar object for the crypto module.
     #endif
+
+    ManuvrPlatform(const char* n) : _board_name(n) {
+    };
 
 
     /* Inlines for altering and reading the flags. */

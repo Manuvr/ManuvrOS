@@ -157,7 +157,6 @@ Lifecycle:
 
         EventReceiver(const char* nom);
 
-
         void flushLocalLog();
 
         // These inlines are for convenience of extending classes.
