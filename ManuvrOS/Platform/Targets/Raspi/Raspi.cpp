@@ -135,6 +135,40 @@ unsigned gpioHardwareRevision() {
 }
 
 
+/*
+* This fxn should be called once on boot to setup the CPU pins that are not claimed
+*   by other classes. GPIO pins at the command of this-or-that class should be setup
+*   in the class that deals with them.
+* Pending peripheral-level init of pins, we should just enable everything and let
+*   individual classes work out their own requirements.
+*/
+int gpioSetup() {
+  /* sets piModel, needed for peripherals address */
+  if (0 < gpioHardwareRevision()) {
+    int fd = open("/dev/mem", O_RDWR | O_SYNC) ;
+    if (fd < 0) {
+      printf("Cannot access /dev/mem. Permissions?.\n");
+      exit(-1);
+    }
+
+    gpioReg  = initMapMem(fd, (piPeriphBase + 0x200000),  GPIO_LEN);
+    systReg  = initMapMem(fd, (piPeriphBase + 0x003000),  SYST_LEN);
+
+    close(fd);
+
+    if ((gpioReg == MAP_FAILED) || (systReg == MAP_FAILED)) {
+      printf("mmap failed. No GPIO functions available.\n");
+      exit(-1);
+    }
+  }
+  else {
+    printf("Could not determine raspi hardware revision.\n");
+    exit(-1);
+  }
+  return 0;
+}
+
+
 /*******************************************************************************
 *  ___   _           _      ___
 * (  _`\(_ )        ( )_  /'___)
@@ -217,39 +251,6 @@ int getSerialNumber(uint8_t *buf) {
 /*******************************************************************************
 * GPIO and change-notice                                                       *
 *******************************************************************************/
-/*
-* This fxn should be called once on boot to setup the CPU pins that are not claimed
-*   by other classes. GPIO pins at the command of this-or-that class should be setup
-*   in the class that deals with them.
-* Pending peripheral-level init of pins, we should just enable everything and let
-*   individual classes work out their own requirements.
-*/
-int gpioSetup() {
-  /* sets piModel, needed for peripherals address */
-  if (0 < gpioHardwareRevision()) {
-    int fd = open("/dev/mem", O_RDWR | O_SYNC) ;
-    if (fd < 0) {
-      printf("Cannot access /dev/mem. Permissions?.\n");
-      exit(-1);
-    }
-
-    gpioReg  = initMapMem(fd, (piPeriphBase + 0x200000),  GPIO_LEN);
-    systReg  = initMapMem(fd, (piPeriphBase + 0x003000),  SYST_LEN);
-
-    close(fd);
-
-    if ((gpioReg == MAP_FAILED) || (systReg == MAP_FAILED)) {
-      printf("mmap failed. No GPIO functions available.\n");
-      exit(-1);
-    }
-  }
-  else {
-    printf("Could not determine raspi hardware revision.\n");
-    exit(-1);
-  }
-  return 0;
-}
-
 
 int8_t gpioDefine(uint8_t pin, GPIOMode mode) {
   if (piModel) {
