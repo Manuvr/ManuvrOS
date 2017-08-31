@@ -45,9 +45,9 @@ This file is meant to contain a set of common functions that are typically platf
 #endif
 
 
-/****************************************************************************************************
-* The code under this block is special on this platform, and will not be available elsewhere.       *
-****************************************************************************************************/
+/*******************************************************************************
+* The code under this block is special on this platform,                       *
+*******************************************************************************/
 time_t getTeensy3Time() {   return Teensy3Clock.get();   }
 
 #if defined(MANUVR_STORAGE)

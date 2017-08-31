@@ -83,6 +83,8 @@ typedef struct __platform_exti_def {
 
 class STM32F7Platform : public ManuvrPlatform {
   public:
+    STM32F7() : ManuvrPlatform("STM32F7") {};
+
     inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
     virtual int8_t platformPreInit(Argument*);
     virtual void   printDebug(StringBuilder* out);

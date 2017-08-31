@@ -152,12 +152,8 @@ class BQ24155 : public I2CDeviceWithRegisters {
     inline int8_t refresh() {  return syncRegisters();  };
     inline int8_t regRead(int a) {    return readRegister(a);  };
 
-    static BQ24155* INSTANCE;
-
-
-  private:
-    const BQ24155Opts _opts;
-    uint8_t _flgs = 0;
+    int8_t   put_charger_in_reset_mode();
+    int8_t   punch_safety_timer();
 
     bool     charger_enabled();
     int8_t   charger_enabled(bool en);
@@ -172,10 +168,16 @@ class BQ24155 : public I2CDeviceWithRegisters {
 
     float    batt_reg_voltage();
     int8_t   batt_reg_voltage(float);
-    int8_t   put_charger_in_reset_mode();
-    int8_t   punch_safety_timer();
+
     BQ24155Fault getFault();
     BQ24155State getChargerState();
+
+    static BQ24155* INSTANCE;
+
+
+  private:
+    const BQ24155Opts _opts;
+    uint8_t _flgs = 0;
 
     // Flag manipulation inlines.
     inline bool _flag(uint8_t _flag) {        return (_flgs & _flag);  };

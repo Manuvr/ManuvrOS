@@ -279,8 +279,7 @@ class ManuvrPlatform {
       // TODO: Ultimately, there will be a similar object for the crypto module.
     #endif
 
-    ManuvrPlatform(const char* n) : _board_name(n) {
-    };
+    ManuvrPlatform(const char* n) : _board_name(n) {};
 
 
     /* Inlines for altering and reading the flags. */

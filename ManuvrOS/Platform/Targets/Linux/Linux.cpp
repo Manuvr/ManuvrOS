@@ -372,6 +372,7 @@ void LinuxPlatform::init_rng() {
 * (_)   (___)`\__,_)`\__)(_)  `\___/'(_)   (_) (_) (_)
 * These are overrides and additions to the platform class.
 *******************************************************************************/
+
 LinuxPlatform::~LinuxPlatform() {
   _close_open_threads();
 }

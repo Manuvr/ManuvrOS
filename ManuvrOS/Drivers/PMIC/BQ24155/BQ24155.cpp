@@ -105,15 +105,16 @@ BQ24155::~BQ24155() {
 
 
 int8_t BQ24155::init() {
-  //writeIndirect(BQ24155_REG_STATUS,    0x00, true);
-  //writeIndirect(BQ24155_REG_LIMITS,    0x00, true);
-  //writeIndirect(BQ24155_REG_BATT_REGU, 0x00, true);
-  //writeIndirect(BQ24155_REG_FAST_CHRG, 0x00);
-  readRegister((uint8_t) BQ24155_REG_STATUS);
-  readRegister((uint8_t) BQ24155_REG_LIMITS);
-  readRegister((uint8_t) BQ24155_REG_BATT_REGU);
-  readRegister((uint8_t) BQ24155_REG_FAST_CHRG);
-  _set_flag(BQ24155_FLAG_INIT_COMPLETE);
+  if (255 != _opts.stat_pin) {
+    gpioDefine(_opts.stat_pin, GPIOMode::INPUT_PULLUP);
+  }
+
+  if (255 != _opts.isel_pin) {
+    gpioDefine(_opts.isel_pin, GPIOMode::OUTPUT);
+    setPin(_opts.isel_pin, false);  // Defaults to 100mA charge current.
+  }
+
+  readRegister((uint8_t) BQ24155_REG_PART_REV);
   return 0;
 }
 
@@ -360,8 +361,15 @@ int8_t BQ24155::register_read_cb(DeviceRegister* reg) {
     case BQ24155_REG_PART_REV:
       // Must be 0b01001xxx. If so, we init...
       if (0x48 == (0xF8 & *(reg->val))) {
-        reg->unread = false;
-        init();
+        //writeIndirect(BQ24155_REG_STATUS,    0x00, true);
+        //writeIndirect(BQ24155_REG_LIMITS,    0x00, true);
+        //writeIndirect(BQ24155_REG_BATT_REGU, 0x00, true);
+        //writeIndirect(BQ24155_REG_FAST_CHRG, 0x00);
+        readRegister((uint8_t) BQ24155_REG_STATUS);
+        readRegister((uint8_t) BQ24155_REG_LIMITS);
+        readRegister((uint8_t) BQ24155_REG_BATT_REGU);
+        readRegister((uint8_t) BQ24155_REG_FAST_CHRG);
+        _set_flag(BQ24155_FLAG_INIT_COMPLETE);
       }
       break;
     case BQ24155_REG_STATUS:
@@ -381,67 +389,12 @@ int8_t BQ24155::register_read_cb(DeviceRegister* reg) {
 }
 
 
-
-/*******************************************************************************
-* ######## ##     ## ######## ##    ## ########  ######
-* ##       ##     ## ##       ###   ##    ##    ##    ##
-* ##       ##     ## ##       ####  ##    ##    ##
-* ######   ##     ## ######   ## ## ##    ##     ######
-* ##        ##   ##  ##       ##  ####    ##          ##
-* ##         ## ##   ##       ##   ###    ##    ##    ##
-* ########    ###    ######## ##    ##    ##     ######
-*
-* These are overrides from EventReceiver interface...
-*******************************************************************************/
-
-/**
-* This is called when the kernel attaches the module.
-* This is the first time the class can be expected to have kernel access.
-*
-* @return 0 on no action, 1 on action, -1 on failure.
-*/
-int8_t BQ24155::attached() {
-  if (EventReceiver::attached()) {
-    if (255 != _opts.stat_pin) {
-      gpioDefine(_opts.stat_pin, GPIOMode::INPUT_PULLUP);
-    }
-
-    if (255 != _opts.isel_pin) {
-      gpioDefine(_opts.isel_pin, GPIOMode::OUTPUT);
-      setPin(_opts.isel_pin, false);  // Defaults to 100mA charge current.
-    }
-
-    readRegister((uint8_t) BQ24155_REG_PART_REV);
-    return 1;
-  }
-  return 0;
-}
-
-
-int8_t BQ24155::notify(ManuvrMsg* active_event) {
-  int8_t return_value = 0;
-
-  switch (active_event->eventCode()) {
-    case MANUVR_MSG_SYS_POWER_MODE:
-      break;
-
-    default:
-      return_value += EventReceiver::notify(active_event);
-      break;
-  }
-
-  flushLocalLog();
-  return return_value;
-}
-
-
 /**
 * Dump this item to the dev log.
 *
 * @param  output  The buffer to receive the output.
 */
 void BQ24155::printDebug(StringBuilder* output) {
-  EventReceiver::printDebug(output);
   output->concatf("\tRevision:          %u\n", regValue(BQ24155_REG_PART_REV) & 0x07);
   output->concatf("\tInitialized:       %c\n", _flag(BQ24155_FLAG_INIT_COMPLETE) ? 'y' : 'n');
   output->concatf("\tSTAT pin:          %d\n", _opts.stat_pin);
@@ -464,116 +417,5 @@ void BQ24155::printDebug(StringBuilder* output) {
     );
   }
 }
-
-
-
-#if defined(MANUVR_CONSOLE_SUPPORT)
-
-void BQ24155::procDirectDebugInstruction(StringBuilder *input) {
-  const char* str = (char *) input->position(0);
-  char c    = *str;
-  int temp_int = 0;
-
-  if (input->count() > 1) {
-    // If there is a second token, we proceed on good-faith that it's an int.
-    temp_int = input->position_as_int(1);
-  }
-
-  switch (c) {
-    case 'i':   // Debug prints.
-      switch (temp_int) {
-        case 9:   // We want the i2c registers.
-          I2CDeviceWithRegisters::printDebug(&local_log);
-          break;
-
-        default:
-          printDebug(&local_log);
-          break;
-      }
-      break;
-
-    case 'u':   // USB host current limit.
-      if (temp_int) {
-        usb_current_limit((unsigned int) temp_int);
-      }
-      else {
-        local_log.concatf("USB current limit: %dmA\n", usb_current_limit());
-      }
-      break;
-
-    case 'v':   // Battery voltage
-      if (temp_int) {
-        local_log.concatf("Setting battery voltage to %.2fV\n", input->position_as_double(1));
-        batt_reg_voltage(input->position_as_double(1));
-      }
-      else {
-        local_log.concatf("Batt reg voltage:  %.2fV\n", batt_reg_voltage());
-      }
-      break;
-    case 'w':   // Battery weakness voltage
-      if (temp_int) {
-        local_log.concatf("Setting battery weakness voltage to %d mV\n", temp_int);
-        batt_weak_voltage(temp_int);
-      }
-      else {
-        local_log.concatf("Batt weakness voltage:  %d mV\n", batt_weak_voltage());
-      }
-      break;
-
-
-
-    case 'g':
-      switch (temp_int) {
-        case 0:
-          readRegister((uint8_t) BQ24155_REG_STATUS);
-          break;
-        case 1:
-          readRegister((uint8_t) BQ24155_REG_LIMITS);
-          break;
-        case 2:
-          readRegister((uint8_t) BQ24155_REG_BATT_REGU);
-          break;
-        case 3:
-          readRegister((uint8_t) BQ24155_REG_PART_REV);
-          break;
-        case 4:
-          readRegister((uint8_t) BQ24155_REG_FAST_CHRG);
-          break;
-        default:
-          syncRegisters();
-          break;
-      }
-      break;
-
-    case 'E':
-    case 'e':
-      local_log.concatf("%sabling battery charge...\n", (*(str) == 'E' ? "En" : "Dis"));
-      charger_enabled(*(str) == 'E');
-      break;
-    case 'T':
-    case 't':
-      local_log.concatf("%sabling charge current termination...\n", (*(str) == 'T' ? "En" : "Dis"));
-      charger_enabled(*(str) == 'T');
-      break;
-
-    case 'P':
-      local_log.concat("Punching safety timer...\n");
-      punch_safety_timer();
-      break;
-
-    case 'R':
-      local_log.concat("Resetting charger...\n");
-      put_charger_in_reset_mode();
-      break;
-
-    default:
-      EventReceiver::procDirectDebugInstruction(input);
-      break;
-  }
-
-  flushLocalLog();
-}
-#endif  //MANUVR_CONSOLE_SUPPORT
-
 
 #endif  // CONFIG_MANUVR_BQ24155

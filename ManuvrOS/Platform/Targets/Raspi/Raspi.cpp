@@ -52,9 +52,9 @@ http://abyz.co.uk/rpi/pigpio/
 #define GPLEV1 14
 
 
-/****************************************************************************************************
-* The code under this block is special on this platform, and will not be available elsewhere.       *
-****************************************************************************************************/
+/*******************************************************************************
+* The code under this block is special on this platform,                       *
+*******************************************************************************/
 static volatile unsigned rev = 0;
 static volatile uint32_t piModel      = 0;
 static volatile uint32_t piPeriphBase = 0;

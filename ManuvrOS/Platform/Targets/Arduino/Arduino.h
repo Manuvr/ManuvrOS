@@ -44,6 +44,8 @@ Specific hardware targets using Arduino's API should probably fork
 
 class ArduinoWrapper : public ManuvrPlatform {
   public:
+    Arduino() : ManuvrPlatform("Arduino") {};
+    
     inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
     virtual int8_t platformPreInit(Argument*);
     virtual void   printDebug(StringBuilder* out);

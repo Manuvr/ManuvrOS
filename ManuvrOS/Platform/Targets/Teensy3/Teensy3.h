@@ -57,6 +57,8 @@ enum class GPIOMode {
 
 class Teensy3 : public ManuvrPlatform {
   public:
+    Teensy3() : ManuvrPlatform("Teensy3") {};
+
     inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
     virtual int8_t platformPreInit(Argument*);
     virtual void   printDebug(StringBuilder* out);
@@ -66,7 +68,6 @@ class Teensy3 : public ManuvrPlatform {
     void reboot();
     void hardwareShutdown();
     void jumpToBootloader();
-
 
 
   protected:

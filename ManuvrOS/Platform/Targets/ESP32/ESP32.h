@@ -68,6 +68,8 @@ typedef struct __platform_exti_def {
 
 class ESP32Platform : public ManuvrPlatform {
   public:
+    ESP32() : ManuvrPlatform("ESP32") {};
+
     inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
     virtual int8_t platformPreInit(Argument*);
     virtual void   printDebug(StringBuilder* out);

@@ -73,7 +73,7 @@ Argument* parseFromArgCV(int argc, const char* argv[]);
 
 class LinuxPlatform : public ManuvrPlatform {
   public:
-    LinuxPlatform();
+    LinuxPlatform() : ManuvrPlatform("Generic") {};
     ~LinuxPlatform();
 
     virtual int8_t platformPreInit() {   return platformPreInit(nullptr); };
@@ -88,7 +88,7 @@ class LinuxPlatform : public ManuvrPlatform {
 
 
   protected:
-    LinuxPlatform(const char*);
+    LinuxPlatform(const char* n) : ManuvrPlatform(n) {};
 
     virtual int8_t platformPostInit();
 

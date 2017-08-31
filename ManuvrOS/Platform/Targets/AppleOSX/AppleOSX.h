@@ -49,6 +49,8 @@ Argument* parseFromArgCV(int argc, const char* argv[]);
 
 class ApplePlatform : public ManuvrPlatform {
   public:
+    ApplePlatform() : ManuvrPlatform("Apple") {};
+
     inline  int8_t platformPreInit() {   return platformPreInit(nullptr); };
     virtual int8_t platformPreInit(Argument*);
     virtual void   printDebug(StringBuilder* out);
