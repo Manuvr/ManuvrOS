@@ -334,9 +334,9 @@ int TestDriver::CRYPTO_TEST_ASYMMETRIC_SET(Cipher c, CryptoKey* pks) {
             (sigbuf_estimate - sigbuf_len)
           );
           if (nullptr != asym_estimate_deltas[*pks]) {
-            asym_estimate_deltas[*pks]->deltas[0] = (strict_min(asym_estimate_deltas[*pks]->deltas[0], (public_estimate - public_len)));
-            asym_estimate_deltas[*pks]->deltas[1] = (strict_min(asym_estimate_deltas[*pks]->deltas[1], (privat_estimate - privat_len)));
-            asym_estimate_deltas[*pks]->deltas[2] = (strict_min(asym_estimate_deltas[*pks]->deltas[2], (sigbuf_estimate - sigbuf_len)));
+            //asym_estimate_deltas[*pks]->deltas[0] = (strict_min(asym_estimate_deltas[*pks]->deltas[0], (public_estimate - public_len)));
+            //asym_estimate_deltas[*pks]->deltas[1] = (strict_min(asym_estimate_deltas[*pks]->deltas[1], (privat_estimate - privat_len)));
+            //asym_estimate_deltas[*pks]->deltas[2] = (strict_min(asym_estimate_deltas[*pks]->deltas[2], (sigbuf_estimate - sigbuf_len)));
           }
           else {
             asym_estimate_deltas[*pks] = new Trips;

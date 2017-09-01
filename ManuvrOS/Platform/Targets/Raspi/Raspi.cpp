@@ -107,14 +107,14 @@ unsigned gpioHardwareRevision() {
             chars = 4;
             piPeriphBase = 0x20000000;
             piBusAddr = 0x40000000;
-            Kernel::log("Found a Raspberry Pi v1.\n");
+            printf("Found a Raspberry Pi v1.\n");
           }
           else if (strstr (buf, "ARMv7") != nullptr) {
             piModel = 2;
             chars = 6;
             piPeriphBase = 0x3F000000;
             piBusAddr = 0xC0000000;
-            Kernel::log("Found a Raspberry Pi v2.\n");
+            printf("Found a Raspberry Pi v2.\n");
           }
         }
       }
@@ -129,7 +129,7 @@ unsigned gpioHardwareRevision() {
     fclose(filp);
   }
   else {
-    Kernel::log("Failed to open /proc/cpuinfo.\n");
+    printf("Failed to open /proc/cpuinfo.\n");
   }
   return rev;
 }
