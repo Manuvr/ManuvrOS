@@ -3,6 +3,14 @@
 #if defined(MANUVR_SUPPORT_I2C)
 #include <i2c_t3/i2c_t3.h>
 
+#define MANUVR_I2C_WRAP_TO 1000000
+
+/*******************************************************************************
+* ___     _                                  This is a template class for
+*  |   / / \ o    /\   _|  _. ._ _|_  _  ._  defining arbitrary I/O adapters.
+* _|_ /  \_/ o   /--\ (_| (_| |_) |_ (/_ |   Adapters must be instanced with
+*                             |              a BusOp as the template param.
+*******************************************************************************/
 
 int8_t I2CAdapter::bus_init() {
   switch (getAdapterId()) {
@@ -13,7 +21,7 @@ int8_t I2CAdapter::bus_init() {
           _bus_opts.usePullups() ? I2C_PULLUP_INT : I2C_PULLUP_EXT,
           _bus_opts.freq, I2C_OP_MODE_DMA
         );
-        Wire.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
+        Wire.setDefaultTimeout(MANUVR_I2C_WRAP_TO);   // We are willing to wait up to 10mS before failing an operation.
         busOnline(true);
       }
       break;
@@ -26,7 +34,7 @@ int8_t I2CAdapter::bus_init() {
           _bus_opts.usePullups() ? I2C_PULLUP_INT : I2C_PULLUP_EXT,
           _bus_opts.freq, I2C_OP_MODE_DMA
         );
-        Wire1.setDefaultTimeout(10000);   // We are willing to wait up to 10mS before failing an operation.
+        Wire1.setDefaultTimeout(MANUVR_I2C_WRAP_TO);   // We are willing to wait up to 10mS before failing an operation.
         busOnline(true);
       }
       break;
@@ -62,95 +70,87 @@ int8_t I2CAdapter::generateStop() {
 }
 
 
+/*******************************************************************************
+* ___     _                              These members are mandatory overrides
+*  |   / / \ o     |  _  |_              from the BusOp class.
+* _|_ /  \_/ o   \_| (_) |_)
+*******************************************************************************/
 
 XferFault I2CBusOp::begin() {
-  StringBuilder log;
-  if (nullptr == device) {
+  if (device) {
+    if ((nullptr == callback) || (0 == callback->io_op_callahead(this))) {
+      set_state(XferState::INITIATE);
+      // TODO: It would be better to actually use this in interrupt mode.
+      advance(0);
+    }
+    else {
+      abort(XferFault::IO_RECALL);
+    }
+  }
+  else {
     abort(XferFault::DEV_NOT_FOUND);
-    return XferFault::DEV_NOT_FOUND;
   }
+  return xfer_fault;
+}
 
-  if ((nullptr != callback) && (callback->io_op_callahead(this))) {
-    abort(XferFault::IO_RECALL);
-    return XferFault::IO_RECALL;
-  }
 
+/*
+*/
+XferFault I2CBusOp::advance(uint32_t status_reg) {
   xfer_state = XferState::ADDR;
   if (device->generateStart()) {
     // Failure to generate START condition.
     abort(XferFault::BUS_BUSY);
-    return XferFault::BUS_BUSY;
+    return xfer_fault;
   }
-
 
   int wire_status = -1;
   int i = 0;
-  if (0 == device->getAdapterId()) {
-    Wire.beginTransmission((uint8_t) (dev_addr & 0x00FF));
-    if (need_to_send_subaddr()) {
-      Wire.write((uint8_t) (sub_addr & 0x00FF));
-      subaddr_sent(true);
-    }
+  i2c_t3* wire_ref = nullptr;
 
-    switch (get_opcode()) {
-      case BusOpcode::RX:
-        Wire.endTransmission(I2C_NOSTOP);
-        Wire.requestFrom((uint8_t) (dev_addr & 0x00FF), buf_len, I2C_STOP, 10000);
-        log.concat("Reading byte ");
-        while(Wire.available()) {
-          uint8_t tb = Wire.readByte();
-          log.concatf("0x%02x --> 0x%02x\t", tb, *(buf + i));
-          *(buf + i++) = tb;
-        }
-        log.concat("\n");
-        break;
-      case BusOpcode::TX:
-        Wire.write(buf, buf_len);
-        // NOTE: No break
-      case BusOpcode::TX_CMD:
-        Wire.endTransmission(I2C_STOP, 10000);   // 10ms timeout
-        break;
-      default:
-        break;
-    }
-    printDebug(&log);
-    Kernel::log(&log);
-    while (!Wire.done()) { }
-    wire_status = Wire.status();
-  }
-  #if defined(__MK20DX256__)
-  else if (1 == device->getAdapterId()) {
-    Wire1.beginTransmission((uint8_t) (dev_addr & 0x00FF));
-    if (need_to_send_subaddr()) {
-      Wire1.write((uint8_t) (sub_addr & 0x00FF));
-      subaddr_sent(true);
-    }
+  switch (device->getAdapterId()) {
+    case 0:
+      wire_ref = &Wire;
+      break;
 
-    switch (get_opcode()) {
-      case BusOpcode::RX:
-        Wire1.endTransmission(I2C_NOSTOP);
-        Wire1.requestFrom((uint8_t) (dev_addr & 0x00FF), buf_len, I2C_STOP, 10000);
-        while(Wire1.available()) {
-          *(buf + i++) = (uint8_t) Wire1.readByte();
-        }
-        break;
-      case BusOpcode::TX:
-        Wire1.write(buf, buf_len);
-        // NOTE: No break
-      case BusOpcode::TX_CMD:
-        Wire1.endTransmission(I2C_STOP, 10000);   // 10ms timeout
-        break;
-      default:
-        break;
-    }
-    while (!Wire1.done()) { }
-    wire_status = Wire1.status();
+    #if defined(__MK20DX256__)
+    case 1:
+      wire_ref = &Wire1;
+      break;
+    #endif
+
+    default:
+      abort(XferFault::BAD_PARAM);
+      return xfer_fault;
   }
-  #endif  // __MK20DX256__
-  else {
-    abort(XferFault::BAD_PARAM);
-    return XferFault::BAD_PARAM;
+
+  wire_ref->beginTransmission((uint8_t) (dev_addr & 0x00FF));
+  if (need_to_send_subaddr()) {
+    wire_ref->write((uint8_t) (sub_addr & 0x00FF));
+    subaddr_sent(true);
   }
+
+  switch (get_opcode()) {
+    case BusOpcode::RX:
+      wire_ref->endTransmission(I2C_NOSTOP);
+      wire_ref->requestFrom((uint8_t) (dev_addr & 0x00FF), buf_len, I2C_STOP, MANUVR_I2C_WRAP_TO);
+      while(wire_ref->available()) {
+        *(buf + i++) = wire_ref->readByte();
+      }
+      break;
+    case BusOpcode::TX:
+      wire_ref->write(buf, buf_len);
+      // NOTE: No break
+    case BusOpcode::TX_CMD:
+      wire_ref->endTransmission(I2C_STOP, MANUVR_I2C_WRAP_TO);   // 10ms timeout
+      break;
+    default:
+      break;
+  }
+  printDebug(&log);
+  Kernel::log(&log);
+  while (!wire_ref->done()) { }
+  wire_status = wire_ref->status();
 
   switch (wire_status) {
     case I2C_WAITING:
@@ -159,32 +159,23 @@ XferFault I2CBusOp::begin() {
     case I2C_ADDR_NAK:
       Kernel::log("DEV_NOT_FOUND\n");
       abort(XferFault::DEV_NOT_FOUND);
-      return XferFault::DEV_NOT_FOUND;
+      break;
     case I2C_DATA_NAK:
       Kernel::log("I2C_DATA_NAK\n");
       abort(XferFault::DEV_NOT_FOUND);
-      return XferFault::DEV_NOT_FOUND;
+      break;
     case I2C_ARB_LOST:
       abort(XferFault::BUS_BUSY);
-      return XferFault::BUS_BUSY;
+      break;
     case I2C_TIMEOUT:
       abort(XferFault::TIMEOUT);
-      return XferFault::TIMEOUT;
+      break;
     default:
       Kernel::log("Transfer failed with an unforseen error code.\n");
       abort(XferFault::NO_REASON);
-      return XferFault::NO_REASON;
+      break;
   }
-  return XferFault::NONE;
-}
-
-
-/*
-* Linux doesn't have a concept of interrupt, but we might call this
-*   from an I/O thread.
-*/
-int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
-  return 0;
+  return xfer_fault;
 }
 
 #endif  // MANUVR_SUPPORT_I2C

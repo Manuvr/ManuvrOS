@@ -27,7 +27,7 @@ void* i2c_worker_thread(void* arg) {
   }
   while (platform.nominalState()) {
     if (_threaded_op) {
-      _threaded_op->advance_operation(0);
+      _threaded_op->advance(0);
       _threaded_op = nullptr;
       yieldThread();
     }
@@ -196,17 +196,17 @@ XferFault I2CBusOp::begin() {
 * Linux doesn't have a concept of interrupt, but we might call this
 *   from an I/O thread.
 */
-int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
+XferFault I2CBusOp::advance(uint32_t status_reg) {
   xfer_state = XferState::ADDR;
   if (device->generateStart()) {
     // Failure to generate START condition.
     abort(XferFault::BUS_BUSY);
-    return -1;
+    return xfer_fault;
   }
 
   if (!switch_device(device, dev_addr)) {
     abort(XferFault::BUS_FAULT);
-    return -1;
+    return xfer_fault;
   }
 
   if (opcode == BusOpcode::RX) {
@@ -218,12 +218,10 @@ int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
       }
       else {
         abort(XferFault::BUS_FAULT);
-        return -1;
       }
     }
     else {
       abort(XferFault::BUS_FAULT);
-      return -1;
     }
   }
   else if (opcode == BusOpcode::TX) {
@@ -237,7 +235,6 @@ int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
     }
     else {
       abort(XferFault::BUS_FAULT);
-      return -1;
     }
   }
   else if (opcode == BusOpcode::TX_CMD) {
@@ -248,15 +245,13 @@ int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
     }
     else {
       abort(XferFault::BUS_FAULT);
-      return -1;
     }
   }
   else {
     abort(XferFault::BUS_FAULT);
-    return -1;
   }
 
-  return 0;
+  return xfer_fault;
 }
 
 #endif  // MANUVR_SUPPORT_I2C

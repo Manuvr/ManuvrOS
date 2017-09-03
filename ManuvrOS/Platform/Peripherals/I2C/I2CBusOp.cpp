@@ -96,12 +96,16 @@ void I2CBusOp::wipe() {
   xfer_fault  = XferFault::NONE;
   opcode      = BusOpcode::UNDEF;
   buf_len     = 0;
+  _flags      = 0;
+  callback    = nullptr;
   if (buf) {
     // TODO: Need to eliminate the intermediary malloc behind this.
     free(buf);
     buf         = nullptr;
   }
-  callback    = nullptr;
+  device  = nullptr;
+  sub_addr = -1;
+  dev_addr =  0;
 }
 
 

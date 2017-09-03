@@ -178,12 +178,12 @@ This file is the tortured result of growing pains since the beginning of
       virtual ~I2CBusOp();
 
       /* Mandatory overrides from the BusOp interface... */
-      //XferFault advance();
       XferFault begin();
       void wipe();
       void printDebug(StringBuilder*);
 
-      int8_t advance_operation(uint32_t status_reg);
+      XferFault advance() {  return advance(0); };
+      XferFault advance(uint32_t status_reg);
       void markComplete();
 
       /**
@@ -411,6 +411,7 @@ This file is the tortured result of growing pains since the beginning of
 
     private:
       uint8_t* _pooled_reg_mem  = nullptr;
+      
       int8_t writeRegister(DeviceRegister* reg);
       int8_t readRegister(DeviceRegister* reg);
   };

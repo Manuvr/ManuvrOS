@@ -19,7 +19,7 @@ void* i2c_worker_thread(void* arg) {
   }
   while (1) {
     if (_threaded_op) {
-      _threaded_op->advance_operation(0);
+      _threaded_op->advance(0);
       _threaded_op = nullptr;
       yieldThread();
     }
@@ -32,6 +32,13 @@ void* i2c_worker_thread(void* arg) {
 }
 
 
+
+/*******************************************************************************
+* ___     _                                  This is a template class for
+*  |   / / \ o    /\   _|  _. ._ _|_  _  ._  defining arbitrary I/O adapters.
+* _|_ /  \_/ o   /--\ (_| (_| |_) |_ (/_ |   Adapters must be instanced with
+*                             |              a BusOp as the template param.
+*******************************************************************************/
 
 int8_t I2CAdapter::bus_init() {
   i2c_config_t conf;
@@ -86,6 +93,12 @@ int8_t I2CAdapter::generateStop() {
 
 
 
+/*******************************************************************************
+* ___     _                              These members are mandatory overrides
+*  |   / / \ o     |  _  |_              from the BusOp class.
+* _|_ /  \_/ o   \_| (_) |_)
+*******************************************************************************/
+
 XferFault I2CBusOp::begin() {
   if (nullptr == _threaded_op) {
     if (device) {
@@ -122,7 +135,7 @@ XferFault I2CBusOp::begin() {
 * Linux doesn't have a concept of interrupt, but we might call this
 *   from an I/O thread.
 */
-int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
+XferFault I2CBusOp::advance(uint32_t status_reg) {
   i2c_cmd_handle_t cmd = i2c_cmd_link_create();
   if (ESP_OK == i2c_master_start(cmd)) {
     switch (get_opcode()) {
@@ -196,7 +209,7 @@ int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
   }
   i2c_cmd_link_delete(cmd);  // Cleanup.
 
-  return (XferFault::NONE == xfer_fault) ? 0 : -1;
+  return xfer_fault;
 }
 
 #endif  // MANUVR_SUPPORT_I2C
