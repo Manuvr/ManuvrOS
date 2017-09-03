@@ -130,9 +130,9 @@ enum class GPIOMode;
 typedef struct __platform_gpio_def {
   ManuvrMsg* event;
   FxnPointer fxn;
-  uint8_t         pin;
-  uint8_t         flags;
-  uint16_t        mode;  // Strictly more than needed. Padding structure...
+  uint8_t    pin;
+  uint8_t    flags;
+  uint16_t   mode;  // Strictly more than needed. Padding structure...
 } PlatformGPIODef;
 
 /*
@@ -269,8 +269,8 @@ class ManuvrPlatform {
 
 
   protected:
-    Kernel      _kernel;
     const char* _board_name;
+    Kernel      _kernel;
     Argument*   _config    = nullptr;
     Identity*   _self      = nullptr;
     Identity*   _identity  = nullptr;
@@ -308,6 +308,7 @@ class ManuvrPlatform {
     uint32_t   _pflags    = 0;
     FxnPointer _idle_hook = nullptr;
     FxnPointer _wake_hook = nullptr;
+    StringBuilder _syslog;
 
     void _discoverALUParams();
 };

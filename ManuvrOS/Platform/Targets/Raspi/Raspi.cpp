@@ -186,6 +186,9 @@ Raspi::Raspi() : LinuxPlatform("Raspi") {
 
 void Raspi::printDebug(StringBuilder* output) {
   LinuxPlatform::printDebug(output);
+  output->concatf("-- Raspi v%u\n", piModel);
+  output->concatf("   piPeriphBase        %lu\n", piPeriphBase);
+  output->concatf("   piBusAddr           %lu\n", piBusAddr);
 }
 
 /*******************************************************************************

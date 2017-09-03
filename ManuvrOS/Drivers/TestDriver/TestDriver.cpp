@@ -92,7 +92,7 @@ int TestDriver::PF_TEST_FLOAT() {
     a += 0.01 * sqrtf(a);
   }
   unsigned long t1 = millis();
-  local_log.concatf("Floating-point test: %d ms\n \t Value: %.5f\n \t%d Mflops\n", t1 - t0, (double) a, (3000000000/(t1 - t0)));
+  local_log.concatf("Floating-point test: %d ms\n \t Value: %.5f\n \t%d FLOP/s\n", t1 - t0, (double) a, (3000000000/(t1 - t0)));
   return 0;
 }
 
