@@ -69,6 +69,11 @@ class Teensy3 : public ManuvrPlatform {
     void hardwareShutdown();
     void jumpToBootloader();
 
+    /* Frequency scaling. */
+    int8_t cpu_scale(uint8_t) {  return -1;  };
+    uint8_t cpu_scale() {        return 1;   };
+    uint32_t cpu_freq() {        return (double) F_CPU;  };
+
 
   protected:
     virtual int8_t platformPostInit();

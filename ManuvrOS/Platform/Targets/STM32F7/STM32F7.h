@@ -90,13 +90,22 @@ class STM32F7Platform : public ManuvrPlatform {
     virtual void   printDebug(StringBuilder* out);
 
     /* Platform state-reset functions. */
-    virtual void seppuku();           // Simple process termination. Reboots if not implemented.
-    virtual void reboot();
-    virtual void hardwareShutdown();
-    virtual void jumpToBootloader();
+    void seppuku();           // Simple process termination. Reboots if not implemented.
+    void reboot();
+    void hardwareShutdown();
+    void jumpToBootloader();
+
+    /* Frequency scaling. */
+    // TODO: This is supported here.
+    int8_t cpu_scale(uint8_t) {  return -1;  };
+    uint8_t cpu_scale() {        return 1;   };
+    uint32_t cpu_freq() {        return (double) F_CPU;  };
 
 
   protected:
+    uint32_t _cpu_clock_rate;   // Actual clock rate, in Hz.
+    uint8_t  _cpu_clock_bin;    // Selected rate bin.
+
     virtual int8_t platformPostInit();
 
 };

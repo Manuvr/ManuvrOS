@@ -263,6 +263,12 @@ class ManuvrPlatform {
     */
     const char* getRTCStateString();
 
+    /* Frequency scaling. */
+    virtual int8_t cpu_scale(uint8_t);
+    virtual uint8_t cpu_scale();
+    virtual uint32_t cpu_freq() {        return (double) F_CPU;  };
+
+
     static const char* getIRQConditionString(int);
     static const char* getPlatformStateStr(int);
 

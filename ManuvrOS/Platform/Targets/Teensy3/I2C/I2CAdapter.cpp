@@ -147,8 +147,9 @@ XferFault I2CBusOp::advance(uint32_t status_reg) {
     default:
       break;
   }
-  printDebug(&log);
-  Kernel::log(&log);
+
+  // TODO: If I can't find a way to get IRQ callbacks, I will hard-fork the
+  //   library. But I really want to avoid that.
   while (!wire_ref->done()) { }
   wire_status = wire_ref->status();
 

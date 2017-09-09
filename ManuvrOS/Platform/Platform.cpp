@@ -172,7 +172,7 @@ void ManuvrPlatform::printDebug(StringBuilder* output) {
 
   #endif
   #if defined(F_CPU)
-    output->concatf("--\t CPU frequency:  %.2f MHz\n", (double) F_CPU/1000000.0);
+    output->concatf("--\t CPU frequency:  %.2f MHz\n", (double) cpu_freq()/1000000.0);
   #endif
   output->concatf("--\t %u-bit", platform.aluWidth());
   if (8 != platform.aluWidth()) {
@@ -383,6 +383,34 @@ void ManuvrPlatform::printDebug() {
 /*******************************************************************************
 * Identity and serial number                                                   *
 *******************************************************************************/
+
+
+/*******************************************************************************
+* Clock-tree                                                                   *
+*******************************************************************************/
+
+/*
+* Platforms that support this feature should override.
+* The argument is an arbitrary byte-wide integer. Zero means stop the clock,
+*   which the platform may refuse to do. The actual frequency that a given input
+*   correlates to is at the discretion of the platform.
+* If the frequency is continuously-adjustable, then the platform needs to carve
+*   the range up into 255 discrete values. This ought to be fine-grained enough.
+*
+* TODO: This brings dissatisfaction... Might-should be a pure-virtual
+*   with preprocessor case-offs to avoid burdening platforms that don't support
+*   adjustable CPU clocks.
+*
+* @param The frequency division.
+* @return non-zero on failure.
+*/
+int8_t ManuvrPlatform::cpu_scale(uint8_t _freq_bin) {
+  return -1;
+}
+
+uint8_t ManuvrPlatform::cpu_scale() {
+  return 1;
+}
 
 
 
