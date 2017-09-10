@@ -40,8 +40,6 @@ TODO: It should be noted that this class assumes an LTC2942-1. This should be
 * Static members and initializers should be located here.
 *******************************************************************************/
 
-LTC294x* LTC294x::INSTANCE = nullptr;
-
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -55,11 +53,7 @@ LTC294x* LTC294x::INSTANCE = nullptr;
 /**
 * Constructor. Takes pin numbers as arguments.
 */
-LTC294x::LTC294x(const LTC294xOpts* o) : I2CDeviceWithRegisters(LTC294X_I2CADDR, 9, 16), _opts(o) {
-  if (nullptr == LTC294x::INSTANCE) {
-    LTC294x::INSTANCE = this;
-  }
-
+LTC294x::LTC294x(const LTC294xOpts* o, uint16_t bc) : I2CDeviceWithRegisters(LTC294X_I2CADDR, 9, 16), _opts(o), _batt_volume(bc) {
   if (_opts.useAlertPin()) {
     // This is the chip's default configuration.
     gpioDefine(_opts.pin, GPIOMode::INPUT_PULLUP);
@@ -78,6 +72,8 @@ LTC294x::LTC294x(const LTC294xOpts* o) : I2CDeviceWithRegisters(LTC294X_I2CADDR,
   defineRegister(LTC294X_REG_V_THRESH,      (uint16_t) 0xFF00, false, false, true);
   defineRegister(LTC294X_REG_TEMP,          (uint16_t) 0x0000, false, false, false);
   defineRegister(LTC294X_REG_TEMP_THRESH,   (uint16_t) 0xFF00, false, false, true);
+
+  _reset_tracking_data();
 }
 
 
@@ -124,9 +120,97 @@ int8_t LTC294x::init() {
   //   -65C to 85C.
   // NOTE: That's 'f' for float. These values are Celcius.
   setTemperatureThreshold(0.0f, 70.0f);
-  setVoltageThreshold(3.3f, 4.4f);
+
+  if (_opts.useAlertPin()) {
+    // TODO: Choose.
+    // int8_t setPinEvent(_opts.pin, uint8_t condition, ManuvrMsg* isr_event);
+    // int8_t setPinFxn(_opts.pin, uint8_t condition, FxnPointer fxn);
+  }
 
   return writeDirtyRegisters();
+}
+
+
+int8_t LTC294x::refresh() {
+  if (initComplete()) {
+    // TODO: Need to be tighter about error-checking.
+    readRegister(LTC294X_REG_ACC_CHARGE);
+    readRegister(LTC294X_REG_VOLTAGE);
+    return readRegister(LTC294X_REG_TEMP);
+  }
+  return -1;
+}
+
+
+/**
+* Resets the variables that deal with data tracking.
+*/
+void LTC294x::_reset_tracking_data() {
+  _tracking_ready(false);
+  _sample_dt      = 0;
+  _sample_time    = 0;
+  _sample_count   = 0;
+  _chrg_reading_0 = 0;
+  _volt_reading_0 = 0.0f;
+  _temp_reading_0 = 0.0f;
+  _chrg_dt        = 0.0f;
+  _volt_dt        = 0.0f;
+  _temp_dt        = 0.0f;
+  _chrg_min_dt    = 0.0f;
+  _volt_min_dt    = 0.0f;
+  _chrg_max_dt    = 0.0f;
+  _volt_max_dt    = 0.0f;
+  _temp_min       = 0.0f;
+  _temp_max       = 0.0f;
+}
+
+
+/**
+* Refresh our tracking data.
+*/
+void LTC294x::_update_tracking() {
+  uint16_t c = batteryPercent();
+  float    v = batteryVoltage();
+  float    t = temperature();
+  _sample_count++;
+  switch (_sample_count) {
+    case 1:    // The first samples to arrive. Baseline 1st-order ranges.
+      _temp_min = t;
+      _temp_max = t;
+      break;
+    case 3:    // Baseline second-order ranges.
+      _chrg_min_dt = _chrg_dt;
+      _chrg_max_dt = _chrg_dt;
+      _volt_max_dt = _volt_dt;
+      _volt_min_dt = _volt_dt;
+      _tracking_ready(true);   // Mark tracking data valid.
+      // NOTE: No break;
+    default:   // If we have two or more samples, we can take derivatives.
+      //_temp_min = strict_min(_temp_min, t);
+      //_temp_max = strict_max(_temp_max, t);
+
+      if (_sample_dt) {
+        // TODO: Not in proper units.
+      //  //_chrg_dt = (c - _chrg_reading_0) / (_sample_dt);  // We want mA.
+      //  //_volt_dt = (v - _volt_reading_0) / (_sample_dt);  // We want v/min.
+      //  //_temp_dt = (t - _temp_reading_0) / (_sample_dt);  // We want t/min.
+      //  //_volt_dt = _volt_dt + 0.1f;
+      //  //_chrg_dt = _chrg_dt + 0.11f;
+      //  //_temp_dt = _temp_dt + 0.111f;
+      }
+
+      if (2 < _sample_count) {
+        // If 3 or more samples, we can measure the range of 2nd-order data.
+      //  _chrg_min_dt = strict_min(_chrg_min_dt, _chrg_dt);
+      //  _chrg_max_dt = strict_max(_chrg_max_dt, _chrg_dt);
+      //  _volt_min_dt = strict_min(_volt_min_dt, _volt_dt);
+      //  _volt_max_dt = strict_max(_volt_max_dt, _volt_dt);
+      }
+      break;
+  }
+  _chrg_reading_0 = c;  // Shift the new values into place.
+  _volt_reading_0 = v;
+  _temp_reading_0 = t;
 }
 
 
@@ -137,85 +221,105 @@ int8_t LTC294x::init() {
 *******************************************************************************/
 
 int8_t LTC294x::register_write_cb(DeviceRegister* reg) {
-  uint16_t val = (uint16_t) reg->getVal();
-  StringBuilder log;
   switch (reg->addr) {
     case LTC294X_REG_CONTROL:
       _flags |= LTC294X_FLAG_INIT_CTRL;
-      log.concatf("LTC294X_REG_CONTROL (W): %u\n", val);
       break;
     case LTC294X_REG_ACC_CHARGE:    // The accumulated charge register.
       _flags |= LTC294X_FLAG_INIT_AC;
-      log.concatf("LTC294X_REG_ACC_CHARGE (W): %u\n", val);
       break;
     case LTC294X_REG_CHRG_THRESH_H:
       _flags |= LTC294X_FLAG_INIT_THRESH_CH;
-      log.concatf("LTC294X_REG_CHRG_THRESH_H (W): %u\n", val);
       break;
     case LTC294X_REG_CHRG_THRESH_L:
       _flags |= LTC294X_FLAG_INIT_THRESH_CL;
-      log.concatf("LTC294X_REG_CHRG_THRESH_L (W): %u\n", val);
       break;
     case LTC294X_REG_V_THRESH:
       _flags |= LTC294X_FLAG_INIT_THRESH_V;
-      log.concatf("LTC294X_REG_V_THRESH (W): %u\n", val);
       break;
     case LTC294X_REG_TEMP_THRESH:
       _flags |= LTC294X_FLAG_INIT_THRESH_T;
-      log.concatf("LTC294X_REG_TEMP_THRESH (W): %u\n", val);
       break;
     default:
       break;
   }
   reg->dirty = false;
-  Kernel::log(&log);
   return 0;
 }
 
 
 int8_t LTC294x::register_read_cb(DeviceRegister* reg) {
   uint16_t val = (uint16_t) reg->getVal();
-  StringBuilder log;
   switch (reg->addr) {
     case LTC294X_REG_STATUS:
-      log.concatf("LTC294X_REG_STATUS (R): %u\n", val);
-      break;
-    case LTC294X_REG_CONTROL:
-      log.concatf("LTC294X_REG_CONTROL (R): %u\n", val);
-      break;
-    case LTC294X_REG_ACC_CHARGE:    // The accumulated charge register.
-    case LTC294X_REG_VOLTAGE:
-    case LTC294X_REG_TEMP:
+      if (val & 0x01) {   // Undervoltage lockout.
+        Kernel::log("LTC294X: undervoltage.\n");
+        _reset_tracking_data();
+      }
+      if (val & 0x02) {   // One of the battery voltage limits was exceeded.
+        Kernel::log("LTC294X: battery voltage.\n");
+      }
+      if (val & 0x04) {   // Charge alert low
+        Kernel::log("LTC294X: Charge alert low.\n");
+      }
+      if (val & 0x08) {   // Charge alert high
+        Kernel::log("LTC294X: Charge alert high.\n");
+      }
+      if (val & 0x10) {   // Temperature alert
+        Kernel::log("LTC294X: Temperature\n");
+      }
+      if (val & 0x20) {   // AccCharge over/underflow.
+        //_reset_tracking_data();
+        Kernel::log("LTC294X: AccCharge over/underflow.\n");
+      }
       break;
     case LTC294X_REG_CHRG_THRESH_H:
       // TODO: This will need auditing after the endianness filter in the superclass.
       _thrsh_h_chrg = val;
-      log.concatf("LTC294X_REG_CHRG_THRESH_H (R): %u\n", val);
       break;
     case LTC294X_REG_CHRG_THRESH_L:
       // TODO: This will need auditing after the endianness filter in the superclass.
       _thrsh_l_chrg = val;
-      log.concatf("LTC294X_REG_CHRG_THRESH_L (R): %u\n", val);
       break;
     case LTC294X_REG_V_THRESH:
       { // TODO: This will need auditing after the endianness filter in the superclass.
         _thrsh_l_volt = val & 0xFF;
         _thrsh_h_volt = (val >> 8) & 0xFF;
-        log.concatf("LTC294X_REG_V_THRESH (R): %u\n", val);
       }
       break;
     case LTC294X_REG_TEMP_THRESH:
       { // TODO: This will need auditing after the endianness filter in the superclass.
         _thrsh_l_temp = val & 0xFF;
         _thrsh_h_temp = (val >> 8) & 0xFF;
-        log.concatf("LTC294X_REG_TEMP_THRESH (R): %u\n", val);
       }
       break;
+
+    // These registers are data from the sensor.
+    // We read in groups, but only note the time on LTC294X_REG_ACC_CHARGE,
+    //   because it is first in the order, and therefore, closer to the actual
+    //   timestamp of the measurement (neglecting bus latency).
+    case LTC294X_REG_ACC_CHARGE:   // Note the time.
+      if (_is_monitoring()) {
+        uint32_t now = millis();
+        _sample_dt = wrap_accounted_delta(now, _sample_time);
+        _sample_time = now;
+      }
+      break;
+
+    case LTC294X_REG_VOLTAGE: // Do nothing on the voltage refresh.
+      break;
+
+    case LTC294X_REG_TEMP:  // Final data register. Refresh the tracking data.
+      if (_is_monitoring()) {
+        _update_tracking();
+      }
+      break;
+
+    case LTC294X_REG_CONTROL:
     default:
       break;
   }
   reg->unread = false;
-  Kernel::log(&log);
   return 0;
 }
 
@@ -225,7 +329,7 @@ int8_t LTC294x::register_read_cb(DeviceRegister* reg) {
 */
 void LTC294x::printDebug(StringBuilder* output) {
   uint8_t dsp = _derive_prescaler();
-  output->concatf("-- LTC294%c-1 %sinitialized\n", (_is_2942() ? '2' : '1'), (_init_complete() ? "" : "un"));
+  output->concatf("-- LTC294%c-1 %sinitialized\n", (_is_2942() ? '2' : '1'), (initComplete() ? "" : "un"));
   if (_opts.useAlertPin()) {
     output->concatf("\tALERT pin:         %d\n", _opts.pin);
   }
@@ -233,6 +337,7 @@ void LTC294x::printDebug(StringBuilder* output) {
     output->concatf("\tCC pin:            %d\n", _opts.pin);
   }
   output->concatf("\tPrescaler:         %u\n", dsp);
+  output->concatf("\tDev/ADC state      A%s / ", asleep() ? "sleep":"wake");
   output->concatf("\tDev/ADC state      A%s / ", asleep() ? "sleep":"wake");
   switch (_adc_mode()) {
     case LTC294xADCModes::SLEEP:
@@ -252,6 +357,23 @@ void LTC294x::printDebug(StringBuilder* output) {
   output->concatf("\t  C:   %.2f\%%\t %.2f%% / %.2f%%\n", batteryPercent(),  (dsp * 0.06640625f * _thrsh_l_chrg), (dsp * 0.06640625f * _thrsh_h_chrg));
   output->concatf("\t  V:   %.2f \t %.2f / %.2f\n", batteryVoltage(), (0.0234368f * _thrsh_l_volt), (0.0234368f * _thrsh_h_volt));
   output->concatf("\t  T:   %.2f \t %.2f / %.2f\n", temperature(),    convertT(_thrsh_l_temp << 8), convertT(_thrsh_h_temp << 8));
+
+  output->concatf("\n\tSamples:           %u (dt: %ums)\n", _sample_count, _sample_dt);
+  output->concatf("\tLast sample:       %u\n", _sample_time);
+  if (trackingReady()) {
+    output->concat("\tRates:        \t Min/Max:\n");
+    switch (_sample_count) {
+      // NOTE: Upside-down. No breaks at all.
+      default:
+        output->concatf("\t  C:   %.3f mA\t %.3f / %.3f\n", _chrg_dt, _chrg_min_dt, _chrg_max_dt);
+        output->concatf("\t  V:   %.2f/min\t %.2f / %.2f\n", _volt_dt, _volt_min_dt, _volt_max_dt);
+      case 2:
+        output->concatf("\t  T:   %.2f/min\t %.2f / %.2f\n", _temp_dt, _temp_min, _temp_max);
+      case 1:
+      case 0:
+        output->concat("\n");
+    }
+  }
 }
 
 
@@ -314,6 +436,18 @@ int8_t LTC294x::setTemperatureThreshold(float low, float high) {
   return _set_thresh_reg_temperature(_thrsh_l_temp, _thrsh_h_temp);
 }
 
+/*
+* Set the accumulated charge register.
+*/
+int8_t LTC294x::_set_charge_register(uint16_t x) {
+  if (initComplete() && !asleep()) {
+    // We need to shut down the analog section before setting this register.
+    return -1;
+  }
+  return writeIndirect(LTC294X_REG_ACC_CHARGE, x);
+};
+
+
 int8_t LTC294x::_set_thresh_reg_charge(uint16_t l, uint16_t h) {
   int8_t r0 = writeIndirect(LTC294X_REG_CHRG_THRESH_H, h, true);
   if (I2C_ERR_SLAVE_NO_ERROR == r0) {
@@ -327,7 +461,7 @@ int8_t LTC294x::_set_thresh_reg_charge(uint16_t l, uint16_t h) {
 * @return The minimum servicable prescaler value for the given battery capacity.
 */
 uint8_t LTC294x::_derive_prescaler() {
-  uint8_t res = _opts.batt_capacity * 0.022978f;
+  uint8_t res = _batt_volume * 0.022978f;
   uint8_t ret = 7;   // The max prescaler.
   if (res < 64) { ret--; }
   if (res < 32) { ret--; }

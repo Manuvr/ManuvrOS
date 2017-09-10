@@ -84,8 +84,8 @@ BQ24155::BQ24155(const BQ24155Opts* o) : I2CDeviceWithRegisters(BQ24155_I2CADDR,
     // This is the default value. If we do not set the pin high ahead of setting
     //   it as an output, we risk interrupting our own power supply if a battery
     //   is not present.
-    setPin(_opts.isel_pin, true);
     gpioDefine(_opts.isel_pin, GPIOMode::OUTPUT);
+    setPin(_opts.isel_pin, true);
   }
   _clear_flag(BQ24155_FLAG_INIT_COMPLETE);
 
@@ -105,15 +105,12 @@ BQ24155::~BQ24155() {
 
 
 int8_t BQ24155::init() {
-  if (255 != _opts.stat_pin) {
-    gpioDefine(_opts.stat_pin, GPIOMode::INPUT_PULLUP);
+  setPin(_opts.isel_pin, false);  // Defaults to 100mA charge current.
+  if (_opts.useStatPin()) {
+    // TODO: Choose.
+    // int8_t setPinEvent(_opts._stat_pin, uint8_t condition, ManuvrMsg* isr_event);
+    // int8_t setPinFxn(_opts._stat_pin, uint8_t condition, FxnPointer fxn);
   }
-
-  if (255 != _opts.isel_pin) {
-    gpioDefine(_opts.isel_pin, GPIOMode::OUTPUT);
-    setPin(_opts.isel_pin, false);  // Defaults to 100mA charge current.
-  }
-
   readRegister((uint8_t) BQ24155_REG_PART_REV);
   return 0;
 }

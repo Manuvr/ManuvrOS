@@ -38,14 +38,17 @@ limitations under the License.
 #define LTC294X_REG_TEMP_THRESH   0x0E  // 16-bit
 
 #define LTC294X_I2CADDR        0x64
+#define DEG_K_C_OFFSET      272.15f
 
 
+/* State flags. */
 #define LTC294X_FLAG_INIT_CTRL      0x0001  // Register init flags.
 #define LTC294X_FLAG_INIT_AC        0x0002  // Register init flags.
 #define LTC294X_FLAG_INIT_THRESH_T  0x0004  // Register init flags.
 #define LTC294X_FLAG_INIT_THRESH_V  0x0008  // Register init flags.
 #define LTC294X_FLAG_INIT_THRESH_CL 0x0010  // Register init flags.
 #define LTC294X_FLAG_INIT_THRESH_CH 0x0020  // Register init flags.
+#define LTC294X_FLAG_TRACKING_READY 0x0040  // Tracking data is available.
 
 #define LTC294X_FLAG_MASK_INIT_CMPLT ( \
   LTC294X_FLAG_INIT_CTRL     | LTC294X_FLAG_INIT_THRESH_V | \
@@ -67,9 +70,6 @@ enum class LTC294xADCModes {
 #define LTC294X_OPT_MASK_ADC_MODE   0xC0
 
 
-#define DEG_K_C_OFFSET   272.15f
-
-
 /**
 * Pin defs for this module.
 * Set pin def to 255 to mark it as unused.
@@ -79,23 +79,25 @@ enum class LTC294xADCModes {
 */
 class LTC294xOpts {
   public:
-    const uint16_t batt_capacity;  // The capacity of the battery in mAh.
-    const uint8_t  pin;            // Which pin is bound to ~ALERT/CC?
+    const uint8_t pin;            // Which pin is bound to ~ALERT/CC?
 
+    /** Copy constructor. */
     LTC294xOpts(const LTC294xOpts* o) :
-      batt_capacity(o->batt_capacity),
       pin(o->pin),
       _flags(o->_flags) {};
 
-    LTC294xOpts(uint16_t _bc, uint8_t _pin) :
-      batt_capacity(_bc),
-      pin(_pin),
-      _flags(0) {};
-
-    LTC294xOpts(uint16_t _bc, uint8_t _pin, uint8_t _f) :
-      batt_capacity(_bc),
-      pin(_pin),
-      _flags(_f) {};
+    /**
+    * Constructor.
+    *
+    * @param pin
+    * @param Initial flags
+    */
+    LTC294xOpts(
+      uint16_t _p,
+      uint8_t _fi = 0
+    ) :
+      pin(_p),
+      _flags(_fi) {};
 
     inline bool autostartReading() const {
       return (_flags & LTC294X_OPT_ACD_AUTO);
@@ -121,7 +123,7 @@ class LTC294xOpts {
 */
 class LTC294x : public I2CDeviceWithRegisters {
   public:
-    LTC294x(const LTC294xOpts*);
+    LTC294x(const LTC294xOpts*, uint16_t batt_capacity);
     ~LTC294x();
 
     /* Overrides from I2CDeviceWithRegisters... */
@@ -133,8 +135,9 @@ class LTC294x : public I2CDeviceWithRegisters {
     };
 
     int8_t init();
-    inline int8_t refresh() {  return syncRegisters();  };
+    int8_t refresh();
 
+    /* Returns temperature in Celcius. */
     float temperature();
     float batteryVoltage();
     float batteryPercent();
@@ -144,6 +147,19 @@ class LTC294x : public I2CDeviceWithRegisters {
     int8_t setChargeThresholds(uint16_t low, uint16_t high);
     int8_t setVoltageThreshold(float low, float high);
     int8_t setTemperatureThreshold(float low, float high);
+
+    /**
+    * @return true if the sensor has valid power-tracking data.
+    */
+    inline bool trackingReady() {   return (_flags & LTC294X_FLAG_TRACKING_READY);   };
+
+    /**
+    * @return true if the sensor is initialized.
+    */
+    inline bool initComplete() {
+      return (LTC294X_FLAG_MASK_INIT_CMPLT == (_flags & LTC294X_FLAG_MASK_INIT_CMPLT));
+    };
+
 
     inline bool asleep() {    return (1 == (regValue(LTC294X_REG_CONTROL) & 0x01));  };
     int8_t  sleep(bool);
@@ -156,13 +172,39 @@ class LTC294x : public I2CDeviceWithRegisters {
 
   private:
     const LTC294xOpts _opts;
+    const uint16_t _batt_volume; // Our idea about how many mA the battery should hold.
     uint16_t _flags        = 0;
-    uint16_t _thrsh_l_chrg = 0;
-    uint16_t _thrsh_h_chrg = 0;
-    uint8_t  _thrsh_l_temp = 0;
-    uint8_t  _thrsh_h_temp = 0;
-    uint8_t  _thrsh_l_volt = 0;
-    uint8_t  _thrsh_h_volt = 0;
+    uint16_t _thrsh_l_chrg = 0;  // cached threshold values
+    uint16_t _thrsh_h_chrg = 0;  // cached threshold values
+    uint8_t  _thrsh_l_temp = 0;  // cached threshold values
+    uint8_t  _thrsh_h_temp = 0;  // cached threshold values
+    uint8_t  _thrsh_l_volt = 0;  // cached threshold values
+    uint8_t  _thrsh_h_volt = 0;  // cached threshold values
+
+    /* Expected bounds of charge counter for given battery size. */
+    uint16_t _charge_expected_min = 0;
+    uint16_t _charge_expected_max = 0;
+
+    /* Variables to help accurately track power usage. */
+    uint32_t _sample_dt;          // The dt term, in ms.
+    uint32_t _sample_time;        // The last sample time for charge, in ms.
+    uint16_t _sample_count;       // How many readings have we taken?
+    uint16_t _chrg_reading_0;     // Previous charge register value.
+    float    _volt_reading_0;     // Previous voltage register value.
+    float    _temp_reading_0;     // Previous temperature register value.
+    float    _chrg_dt;            // dc/dt in columbs/millisec (mA).
+    float    _volt_dt;            // dV/dt in volts/min.
+    float    _temp_dt;            // dT/dt in deg-C/min.
+    float    _chrg_min_dt;        // Minimum observed dI/dt (lowest drain).
+    float    _volt_min_dt;        // Minimum observed dV/dt (lowest drain).
+    float    _chrg_max_dt;        // Maximum observed dI/dt (peak drain).
+    float    _volt_max_dt;        // Maximum observed dV/dt (peak drain).
+    float    _temp_min;           // Minimum observed temperature.
+    float    _temp_max;           // Maximum observed temperature.
+
+
+    void _reset_tracking_data();
+    void _update_tracking();
 
     inline int8_t _write_control_reg(uint8_t v) {
       return writeIndirect(LTC294X_REG_CONTROL, v);
@@ -178,27 +220,42 @@ class LTC294x : public I2CDeviceWithRegisters {
       return writeIndirect(LTC294X_REG_TEMP_THRESH, ((uint16_t) l) | ((uint16_t) h << 8));
     };
 
-    inline int8_t _set_charge_register(uint16_t x) {
-      return writeIndirect(LTC294X_REG_ACC_CHARGE, x);
-    };
+    int8_t _set_charge_register(uint16_t x);
 
     int8_t _set_thresh_reg_charge(uint16_t l, uint16_t h);
 
+    /**
+    * @param The ADC mode.
+    */
     int8_t  _adc_mode(LTC294xADCModes);
+
+    /**
+    * @return The ADC mode.
+    */
     LTC294xADCModes _adc_mode() {
       return (LTC294xADCModes) (regValue(LTC294X_REG_CONTROL) & LTC294X_OPT_MASK_ADC_MODE);
     };
 
+    /**
+    * @return Should readings from the chip be taken seriously?
+    */
+    bool _is_monitoring() {
+      return initComplete() && (LTC294xADCModes::SLEEP != _adc_mode());
+    };
+
+    /**
+    * @return Is this device a 2942?
+    */
     inline bool _is_2942() {   return (0 == (regValue(LTC294X_REG_STATUS) & 0x80));   };
 
     /**
-    * Is the schedule pending execution ahread of schedule (next tick)?
-    *
-    * @return true if the schedule will execute ahread of schedule.
+    * @param Is power-tracking data valid?
     */
-    inline bool _init_complete() {
-      return (LTC294X_FLAG_MASK_INIT_CMPLT == (_flags & LTC294X_FLAG_MASK_INIT_CMPLT));
+    inline void _tracking_ready(bool x) {
+      _flags = x ? (_flags | LTC294X_FLAG_TRACKING_READY) : (_flags & ~LTC294X_FLAG_TRACKING_READY);
     };
+
+    void _proc_updated_status_reg(uint8_t);
 
     uint8_t _derive_prescaler();
 

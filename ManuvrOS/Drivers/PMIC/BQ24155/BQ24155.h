@@ -99,11 +99,14 @@ class BQ24155Opts {
     const uint16_t sense_milliohms;
     const uint8_t  stat_pin;
     const uint8_t  isel_pin;
+    const uint8_t _flgs_initial;
 
+    /** Copy constructor. */
     BQ24155Opts(const BQ24155Opts* o) :
       sense_milliohms(o->sense_milliohms),
       stat_pin(o->stat_pin),
-      isel_pin(o->isel_pin) {};
+      isel_pin(o->isel_pin),
+      _flgs_initial(o->_flgs_initial) {};
 
     /**
     * Constructor.
@@ -111,15 +114,18 @@ class BQ24155Opts {
     * @param sense_milliohms
     * @param stat_pin
     * @param isel_pin
+    * @param Initial flags
     */
     BQ24155Opts(
       uint16_t _smo,
       uint8_t _stat_pin = 255,
-      uint8_t _isel_pin = 255
+      uint8_t _isel_pin = 255,
+      uint8_t _fi = 0
     ) :
       sense_milliohms(_smo),
       stat_pin(_stat_pin),
-      isel_pin(_isel_pin)
+      isel_pin(_isel_pin),
+      _flgs_initial(_fi)
     {};
 
     inline bool useStatPin() const {
@@ -129,12 +135,12 @@ class BQ24155Opts {
     inline bool useISELPin() const {
       return (255 != isel_pin);
     };
-
-
-  private:
 };
 
 
+/**
+* Driver class for BQ24155.
+*/
 class BQ24155 : public I2CDeviceWithRegisters {
   public:
     BQ24155(const BQ24155Opts*);
