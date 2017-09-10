@@ -167,6 +167,7 @@ void LTC294x::_reset_tracking_data() {
 
 /**
 * Refresh our tracking data.
+* Increments _sample_count.
 */
 void LTC294x::_update_tracking() {
   uint16_t c = batteryPercent();
@@ -186,28 +187,24 @@ void LTC294x::_update_tracking() {
       _tracking_ready(true);   // Mark tracking data valid.
       // NOTE: No break;
     default:   // If we have two or more samples, we can take derivatives.
-      //_temp_min = strict_min(_temp_min, t);
-      //_temp_max = strict_max(_temp_max, t);
-
+      _temp_min = strict_min(_temp_min, t);
+      _temp_max = strict_max(_temp_max, t);
       if (_sample_dt) {
         // TODO: Not in proper units.
-      //  //_chrg_dt = (c - _chrg_reading_0) / (_sample_dt);  // We want mA.
-      //  //_volt_dt = (v - _volt_reading_0) / (_sample_dt);  // We want v/min.
-      //  //_temp_dt = (t - _temp_reading_0) / (_sample_dt);  // We want t/min.
-      //  //_volt_dt = _volt_dt + 0.1f;
-      //  //_chrg_dt = _chrg_dt + 0.11f;
-      //  //_temp_dt = _temp_dt + 0.111f;
+        _chrg_dt = (c - _chrg_reading_0) / ((float) _sample_dt);  // We want mA.
+        _volt_dt = (v - _volt_reading_0) / ((float) (_sample_dt*60000));  // We want V/min.
+        _temp_dt = (t - _temp_reading_0) / ((float) (_sample_dt*60000));  // We want T/min.
       }
-
       if (2 < _sample_count) {
         // If 3 or more samples, we can measure the range of 2nd-order data.
-      //  _chrg_min_dt = strict_min(_chrg_min_dt, _chrg_dt);
-      //  _chrg_max_dt = strict_max(_chrg_max_dt, _chrg_dt);
-      //  _volt_min_dt = strict_min(_volt_min_dt, _volt_dt);
-      //  _volt_max_dt = strict_max(_volt_max_dt, _volt_dt);
+        _chrg_min_dt = strict_min(_chrg_min_dt, _chrg_dt);
+        _chrg_max_dt = strict_max(_chrg_max_dt, _chrg_dt);
+        _volt_min_dt = strict_min(_volt_min_dt, _volt_dt);
+        _volt_max_dt = strict_max(_volt_max_dt, _volt_dt);
       }
       break;
   }
+
   _chrg_reading_0 = c;  // Shift the new values into place.
   _volt_reading_0 = v;
   _temp_reading_0 = t;
@@ -337,7 +334,6 @@ void LTC294x::printDebug(StringBuilder* output) {
     output->concatf("\tCC pin:            %d\n", _opts.pin);
   }
   output->concatf("\tPrescaler:         %u\n", dsp);
-  output->concatf("\tDev/ADC state      A%s / ", asleep() ? "sleep":"wake");
   output->concatf("\tDev/ADC state      A%s / ", asleep() ? "sleep":"wake");
   switch (_adc_mode()) {
     case LTC294xADCModes::SLEEP:

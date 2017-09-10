@@ -203,12 +203,12 @@ class LTC294x : public I2CDeviceWithRegisters {
     float    _temp_max;           // Maximum observed temperature.
 
 
-    void _reset_tracking_data();
-    void _update_tracking();
-
     inline int8_t _write_control_reg(uint8_t v) {
       return writeIndirect(LTC294X_REG_CONTROL, v);
     };
+
+    int8_t _set_charge_register(uint16_t x);
+    int8_t _set_thresh_reg_charge(uint16_t l, uint16_t h);
 
     /* Compresses two single-byte registers into a single 16-bit register. */
     inline int8_t _set_thresh_reg_voltage(uint8_t l, uint8_t h) {
@@ -219,10 +219,6 @@ class LTC294x : public I2CDeviceWithRegisters {
     inline int8_t _set_thresh_reg_temperature(uint8_t l, uint8_t h) {
       return writeIndirect(LTC294X_REG_TEMP_THRESH, ((uint16_t) l) | ((uint16_t) h << 8));
     };
-
-    int8_t _set_charge_register(uint16_t x);
-
-    int8_t _set_thresh_reg_charge(uint16_t l, uint16_t h);
 
     /**
     * @param The ADC mode.
@@ -240,7 +236,7 @@ class LTC294x : public I2CDeviceWithRegisters {
     * @return Should readings from the chip be taken seriously?
     */
     bool _is_monitoring() {
-      return initComplete() && (LTC294xADCModes::SLEEP != _adc_mode());
+      return (initComplete() && (LTC294xADCModes::SLEEP != _adc_mode()));
     };
 
     /**
@@ -255,13 +251,12 @@ class LTC294x : public I2CDeviceWithRegisters {
       _flags = x ? (_flags | LTC294X_FLAG_TRACKING_READY) : (_flags & ~LTC294X_FLAG_TRACKING_READY);
     };
 
+    inline float convertT(uint16_t v) {    return (0.009155f * v);   };
+
+    void _reset_tracking_data();
+    void _update_tracking();
     void _proc_updated_status_reg(uint8_t);
-
     uint8_t _derive_prescaler();
-
-    float convertT(uint16_t v) {
-      return (0.009155f * v);
-    };
 };
 
 
