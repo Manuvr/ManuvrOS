@@ -130,6 +130,15 @@ bool I2CDeviceWithRegisters::regUpdated(uint8_t base_addr) {
 }
 
 /**
+* @param base_addr The base address of the register in the device.
+* @return True if the register content is waiting to be written.
+*/
+bool I2CDeviceWithRegisters::regDirty(uint8_t base_addr) {
+  DeviceRegister *nu = getRegisterByBaseAddress(base_addr);
+  return (nu) ? nu->dirty : false;
+}
+
+/**
 * Given base address, mark this register as having been read.
 *
 * @param base_addr The base address of the register in the device.

@@ -32,11 +32,20 @@ limitations under the License.
 #define BQ24155_REG_PART_REV   0x03
 #define BQ24155_REG_FAST_CHRG  0x04
 
-#define BQ24155_I2CADDR        0x6B
+
+/* Driver state flags. */
+#define BQ24155_FLAG_INIT_CTRL      0x0001  // Register init flags.
+#define BQ24155_FLAG_INIT_LIMITS    0x0002  // Register init flags.
+#define BQ24155_FLAG_INIT_BATT_REG  0x0004  // Register init flags.
+#define BQ24155_FLAG_INIT_FAST_CHRG 0x0008  // Register init flags.
+#define BQ24155_FLAG_DISABLE_STAT   0x1000
+#define BQ24155_FLAG_ISEL_HIGH      0x2000
+
+#define BQ24155_FLAG_MASK_INIT_CMPLT ( \
+  BQ24155_FLAG_INIT_CTRL     | BQ24155_FLAG_INIT_LIMITS | \
+  BQ24155_FLAG_INIT_BATT_REG | BQ24155_FLAG_INIT_FAST_CHRG)
 
 
-// oxoo
-#define BQ24155_OPT_FLAG_DISABLE_STAT    0x4000
 
 enum class BQ24155Fault {
   NOMINAL      = 0x00,
@@ -64,28 +73,14 @@ enum class BQ24155USBCurrent {
   NO_LIMIT  = 0x03
 };
 
-#define BQ24155_OPT_FLAG_UHC_UNLIM 0x00C0
-#define BQ24155_OPT_FLAG_UHC_800MA 0x0080
-#define BQ24155_OPT_FLAG_UHC_500MA 0x0040
-#define BQ24155_OPT_FLAG_UHC_100MA 0x0000
-#define BQ24155_OPT_FLAG_UHC_MASK  0x00C0  // Mask: USB current limits
 
-#define BQ24155_OPT_FLAG_WB_3V7    0x0030
-#define BQ24155_OPT_FLAG_WB_3V6    0x0020
-#define BQ24155_OPT_FLAG_WB_3V5    0x0010
-#define BQ24155_OPT_FLAG_WB_3V4    0x0000
-#define BQ24155_OPT_FLAG_WB_MASK   0x0030  // Mask: weak battery threshold
-
-/* Driver state flags. */
-#define BQ24155_FLAG_INIT_COMPLETE 0x01    // Is the device initialized?
-
-
-// TODO: Remove the rest of the floating point from this class.
 /* Offsets for various register manipulations. */
 #define BQ24155_VOREGU_OFFSET  3.5f
-#define BQ24155_VLOW_OFFSET    3400
+#define BQ24155_VLOW_OFFSET    3.4f
 #define BQ24155_VITERM_OFFSET  0.0034f
 #define BQ24155_VIREGU_OFFSET  0.0374f
+
+#define BQ24155_I2CADDR        0x6B
 
 
 /*
@@ -96,16 +91,18 @@ enum class BQ24155USBCurrent {
 class BQ24155Opts {
   public:
     // If valid, will use a gpio operation to pull the SDA pin low to wake device.
-    const uint16_t sense_milliohms;
-    const uint8_t  stat_pin;
-    const uint8_t  isel_pin;
-    const uint8_t _flgs_initial;
+    const uint16_t  sense_milliohms;
+    const uint8_t   stat_pin;
+    const uint8_t   isel_pin;
+    const BQ24155USBCurrent  src_limit;
+    const uint16_t _flgs_initial;
 
     /** Copy constructor. */
     BQ24155Opts(const BQ24155Opts* o) :
       sense_milliohms(o->sense_milliohms),
       stat_pin(o->stat_pin),
       isel_pin(o->isel_pin),
+      src_limit(o->src_limit),
       _flgs_initial(o->_flgs_initial) {};
 
     /**
@@ -114,17 +111,20 @@ class BQ24155Opts {
     * @param sense_milliohms
     * @param stat_pin
     * @param isel_pin
+    * @param src_limit
     * @param Initial flags
     */
     BQ24155Opts(
       uint16_t _smo,
-      uint8_t _stat_pin = 255,
-      uint8_t _isel_pin = 255,
-      uint8_t _fi = 0
+      uint8_t  _stat_pin = 255,
+      uint8_t  _isel_pin = 255,
+      BQ24155USBCurrent _sl = BQ24155USBCurrent::LIMIT_500,
+      uint16_t _fi = 0
     ) :
       sense_milliohms(_smo),
       stat_pin(_stat_pin),
       isel_pin(_isel_pin),
+      src_limit(_sl),
       _flgs_initial(_fi)
     {};
 
@@ -155,22 +155,40 @@ class BQ24155 : public I2CDeviceWithRegisters {
     };
 
     int8_t init();
-    inline int8_t refresh() {  return syncRegisters();  };
-    inline int8_t regRead(int a) {    return readRegister(a);  };
+    int8_t refresh();
 
-    int8_t   put_charger_in_reset_mode();
+    /**
+    * @return true if the charger is initialized.
+    */
+    inline bool initComplete() {
+      return (BQ24155_FLAG_MASK_INIT_CMPLT == (_flgs & BQ24155_FLAG_MASK_INIT_CMPLT));
+    };
+
+    /**
+    * @return true if the STAT pin is disabled.
+    */
+    inline bool disableSTATPin() {
+      return (BQ24155_FLAG_DISABLE_STAT == (_flgs & BQ24155_FLAG_DISABLE_STAT));
+    };
+
+
+    int8_t   reset_charger_params();
     int8_t   punch_safety_timer();
 
     bool     charger_enabled();
     int8_t   charger_enabled(bool en);
+    bool     hi_z_mode();
+    int8_t   hi_z_mode(bool en);
     bool     charge_current_termination_enabled();
     int8_t   charge_current_termination_enabled(bool en);
 
+    int16_t  charge_current_limit();
     int16_t  usb_current_limit();
     int8_t   usb_current_limit(int16_t milliamps);
+    int8_t   usb_current_limit(BQ24155USBCurrent);
 
-    uint16_t batt_weak_voltage();
-    int8_t   batt_weak_voltage(unsigned int mV);
+    float    batt_weak_voltage();
+    int8_t   batt_weak_voltage(float);
 
     float    batt_reg_voltage();
     int8_t   batt_reg_voltage(float);
@@ -178,22 +196,29 @@ class BQ24155 : public I2CDeviceWithRegisters {
     BQ24155Fault getFault();
     BQ24155State getChargerState();
 
-    static BQ24155* INSTANCE;
-
 
   private:
     const BQ24155Opts _opts;
-    uint8_t _flgs = 0;
+    uint16_t _flgs     = 0;
+    // TODO: Reflect registers in their own vars to head-off concurrency bugs.
+    // uint8_t  _reg_lim  = 0;
 
-    // Flag manipulation inlines.
-    inline bool _flag(uint8_t _flag) {        return (_flgs & _flag);  };
-    inline void _flip_flag(uint8_t _flag) {   _flgs ^= _flag;          };
-    inline void _clear_flag(uint8_t _flag) {  _flgs &= ~_flag;         };
-    inline void _set_flag(uint8_t _flag) {    _flgs |= _flag;          };
-    inline void _set_flag(uint8_t _flag, bool nu) {
-      if (nu) _flgs |= _flag;
-      else    _flgs &= ~_flag;
+    /**
+    * @return ISEL pin state.
+    */
+    inline bool _isel_state() {     return (_flgs & BQ24155_FLAG_ISEL_HIGH);   };
+
+    /**
+    * @param ISEL pin state.
+    */
+    inline void _isel_state(bool x) {
+      _flgs = x ? (_flgs | BQ24155_FLAG_ISEL_HIGH) : (_flgs & ~BQ24155_FLAG_ISEL_HIGH);
     };
+
+    /**
+    * @return The chip's hardware revision.
+    */
+    inline uint8_t _part_revision() {   return (regValue(BQ24155_REG_PART_REV) & 0x07);   };
 
     /**
     * Conversion fxn.
@@ -220,6 +245,8 @@ class BQ24155 : public I2CDeviceWithRegisters {
     inline float bulkChargeCurrent(uint8_t step = 0) {
       return (((step & 0x07) * (6.8f / _opts.sense_milliohms)) + (BQ24155_VIREGU_OFFSET / _opts.sense_milliohms));
     };
+
+    int8_t _write_reg_internal(uint8_t r, uint8_t v);
 };
 
 #endif  // __LTC294X_DRIVER_H__

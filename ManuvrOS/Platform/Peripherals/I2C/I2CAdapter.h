@@ -387,6 +387,7 @@ This file is the tortured result of growing pains since the beginning of
       unsigned int regValue(uint8_t base_addr);
 
       bool regUpdated(uint8_t base_addr);
+      bool regDirty(uint8_t base_addr);
       void markRegRead(uint8_t base_addr);
 
       int8_t writeIndirect(uint8_t base_addr, unsigned int val);
@@ -411,7 +412,7 @@ This file is the tortured result of growing pains since the beginning of
 
     private:
       uint8_t* _pooled_reg_mem  = nullptr;
-      
+
       int8_t writeRegister(DeviceRegister* reg);
       int8_t readRegister(DeviceRegister* reg);
   };

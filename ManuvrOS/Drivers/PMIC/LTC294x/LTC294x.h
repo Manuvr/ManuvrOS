@@ -49,6 +49,7 @@ limitations under the License.
 #define LTC294X_FLAG_INIT_THRESH_CL 0x0010  // Register init flags.
 #define LTC294X_FLAG_INIT_THRESH_CH 0x0020  // Register init flags.
 #define LTC294X_FLAG_TRACKING_READY 0x0040  // Tracking data is available.
+#define LTC294X_FLAG_BATTERY_GT55AM 0x0080  // The battery is bigger than 5.5AH.
 
 #define LTC294X_FLAG_MASK_INIT_CMPLT ( \
   LTC294X_FLAG_INIT_CTRL     | LTC294X_FLAG_INIT_THRESH_V | \
@@ -141,6 +142,7 @@ class LTC294x : public I2CDeviceWithRegisters {
     float temperature();
     float batteryVoltage();
     float batteryPercent();
+    float batteryPercentVoltage();
     uint16_t batteryCharge() {  return regValue(LTC294X_REG_ACC_CHARGE);  };
     int8_t batteryCharge(uint16_t x) {  return _set_charge_register(x);   };
 
@@ -163,8 +165,6 @@ class LTC294x : public I2CDeviceWithRegisters {
 
     inline bool asleep() {    return (1 == (regValue(LTC294X_REG_CONTROL) & 0x01));  };
     int8_t  sleep(bool);
-
-    inline int8_t regRead(int a) {    return readRegister(a);  };
 
 
     static LTC294x* INSTANCE;
@@ -203,12 +203,12 @@ class LTC294x : public I2CDeviceWithRegisters {
     float    _temp_max;           // Maximum observed temperature.
 
 
+    int8_t _set_charge_register(uint16_t x);
+    int8_t _set_thresh_reg_charge(uint16_t l, uint16_t h);
+
     inline int8_t _write_control_reg(uint8_t v) {
       return writeIndirect(LTC294X_REG_CONTROL, v);
     };
-
-    int8_t _set_charge_register(uint16_t x);
-    int8_t _set_thresh_reg_charge(uint16_t l, uint16_t h);
 
     /* Compresses two single-byte registers into a single 16-bit register. */
     inline int8_t _set_thresh_reg_voltage(uint8_t l, uint8_t h) {
@@ -251,6 +251,10 @@ class LTC294x : public I2CDeviceWithRegisters {
       _flags = x ? (_flags | LTC294X_FLAG_TRACKING_READY) : (_flags & ~LTC294X_FLAG_TRACKING_READY);
     };
 
+    /**
+    * @param Temperature threshold value.
+    * @return Degrees Celcius
+    */
     inline float convertT(uint16_t v) {    return (0.009155f * v);   };
 
     void _reset_tracking_data();
