@@ -177,7 +177,7 @@ void LTC294x::_reset_tracking_data() {
 * Increments _sample_count.
 */
 void LTC294x::_update_tracking() {
-  uint16_t c = batteryPercent();
+  uint16_t c = batteryCharge();
   float    v = batteryVoltage();
   float    t = temperature();
   _sample_count++;
@@ -198,9 +198,9 @@ void LTC294x::_update_tracking() {
       _temp_max = strict_max(_temp_max, t);
       if (_sample_dt) {
         // TODO: Not in proper units.
-        _chrg_dt = (c - _chrg_reading_0) / ((float) _sample_dt);  // We want mA.
-        _volt_dt = (v - _volt_reading_0) / ((float) (_sample_dt*60000));  // We want V/min.
-        _temp_dt = (t - _temp_reading_0) / ((float) (_sample_dt*60000));  // We want T/min.
+        _chrg_dt = ((_c_to_mA(c - _chrg_reading_0) * 1000) / ((float) _sample_dt));  // We want C/millisec (mA).
+        _volt_dt = ((((uint32_t) v - _volt_reading_0) * 1000) / _sample_dt);  // We want V/sec.
+        _temp_dt = ((((uint32_t) t - _temp_reading_0) * 1000) / _sample_dt);  // We want T/sec.
       }
       if (2 < _sample_count) {
         // If 3 or more samples, we can measure the range of 2nd-order data.
@@ -245,7 +245,7 @@ int8_t LTC294x::register_write_cb(DeviceRegister* reg) {
       _flags |= LTC294X_FLAG_INIT_THRESH_T;
       break;
     default:
-      break;
+      return -1;
   }
   reg->dirty = false;
   return 0;
@@ -370,10 +370,10 @@ void LTC294x::printDebug(StringBuilder* output) {
     switch (_sample_count) {
       // NOTE: Upside-down. No breaks at all.
       default:
-        output->concatf("\t  C:   %.4f mA\t %.4f / %.4f\n", _chrg_dt, _chrg_min_dt, _chrg_max_dt);
-        output->concatf("\t  V:   %.4f/min\t %.4f / %.4f\n", _volt_dt, _volt_min_dt, _volt_max_dt);
+        output->concatf("\t  I:   %.2f mA\t %.2f / %.2f\n", batteryCurrent(), minimumCurrent(), maximumCurrent());
+        output->concatf("\t  V:   %.4f/sec\t %.4f / %.4f\n", _volt_dt, _volt_min_dt, _volt_max_dt);
       case 2:
-        output->concatf("\t  T:   %.4f/min\t %.4f / %.4f\n", _temp_dt, _temp_min, _temp_max);
+        output->concatf("\t  T:   %.4f/sec\t %.4f / %.4f\n", _temp_dt, _temp_min, _temp_max);
       case 1:
       case 0:
         output->concat("\n");
@@ -410,6 +410,15 @@ int8_t LTC294x::sleep(bool x) {
     val = val | 1;
   }
   return _write_control_reg(val);
+}
+
+/**
+* Negative values returned by this function mean the battery is being drained.
+*
+* @return Instantaneous net current flow to/from the battery (in mA).
+*/
+float LTC294x::_c_to_mA(uint16_t chrg) {
+  return (_derive_prescaler() * 0.006640625f * chrg);
 }
 
 /**

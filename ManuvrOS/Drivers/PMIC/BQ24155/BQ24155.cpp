@@ -27,8 +27,6 @@ Support for the Texas Instruments li-ion charger.
 
 #if defined(CONFIG_MANUVR_BQ24155)
 
-
-
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
@@ -241,7 +239,10 @@ float BQ24155::batt_weak_voltage() {
 */
 int8_t BQ24155::batt_weak_voltage(float desired) {
   if ((desired >= BQ24155_VLOW_OFFSET) && (desired <= 3.7f)) {
-    uint8_t bw_step = ((uint8_t) ((desired - BQ24155_VLOW_OFFSET) * 10)) & 0x03;
+    uint8_t bw_step = 0;
+    if (3.5f <= desired) {  bw_step++;  }
+    if (3.6f <= desired) {  bw_step++;  }
+    if (3.7f <= desired) {  bw_step++;  }
     uint8_t int_val = regValue(BQ24155_REG_LIMITS);
     return _write_reg_internal(BQ24155_REG_LIMITS, (int_val & 0xCF) | (bw_step << 4));
   }
@@ -419,8 +420,9 @@ int8_t BQ24155::register_write_cb(DeviceRegister* reg) {
     case BQ24155_REG_PART_REV:
     default:
       // Illegal. A bad mistake was made somewhere.
-      break;
+      return -1;
   }
+  reg->dirty = false;
   return 0;
 }
 

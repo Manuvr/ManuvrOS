@@ -143,8 +143,11 @@ class LTC294x : public I2CDeviceWithRegisters {
     float batteryVoltage();
     float batteryPercent();
     float batteryPercentVoltage();
-    uint16_t batteryCharge() {  return regValue(LTC294X_REG_ACC_CHARGE);  };
-    int8_t batteryCharge(uint16_t x) {  return _set_charge_register(x);   };
+    inline float batteryCurrent() {    return _chrg_dt;      };
+    inline float minimumCurrent() {    return _chrg_min_dt;  };
+    inline float maximumCurrent() {    return _chrg_max_dt;  };
+    inline uint16_t batteryCharge() {  return regValue(LTC294X_REG_ACC_CHARGE);  };
+    inline int8_t batteryCharge(uint16_t x) {  return _set_charge_register(x);   };
 
     int8_t setChargeThresholds(uint16_t low, uint16_t high);
     int8_t setVoltageThreshold(float low, float high);
@@ -257,6 +260,7 @@ class LTC294x : public I2CDeviceWithRegisters {
     */
     inline float convertT(uint16_t v) {    return (0.009155f * v);   };
 
+    float _c_to_mA(uint16_t chrg);
     void _reset_tracking_data();
     void _update_tracking();
     void _proc_updated_status_reg(uint8_t);
