@@ -125,7 +125,7 @@ void uuid_gen(UUID *uuid) {
       clock_seq_hi_and_reserved (8th octect) to
       zero and one, respectively.
   */
-  uuid->id[8] = (uuid->id[8] & 0x3f) | 0x40;
+  uuid->id[8] = (uuid->id[8] & 0x3f) | 0x80;
 
   /*  From RFC 4122
       Set the four most significant bits of the
