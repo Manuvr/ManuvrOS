@@ -80,6 +80,9 @@ class ESP32Platform : public ManuvrPlatform {
     void hardwareShutdown();
     void jumpToBootloader();
 
+    uint32_t cpu_freq() {
+      return (CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ * 1000000);
+    };
 
 
   protected:

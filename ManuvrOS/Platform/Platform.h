@@ -266,7 +266,7 @@ class ManuvrPlatform {
     /* Frequency scaling. */
     virtual int8_t cpu_scale(uint8_t);
     virtual uint8_t cpu_scale();
-    virtual uint32_t cpu_freq() {        return (double) F_CPU;  };
+    virtual uint32_t cpu_freq() {        return 0;  };
 
 
     static const char* getIRQConditionString(int);
