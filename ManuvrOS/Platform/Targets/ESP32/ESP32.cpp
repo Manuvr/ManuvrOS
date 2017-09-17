@@ -35,6 +35,9 @@ This file is meant to contain a set of common functions that are typically platf
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "soc/efuse_reg.h"
+#include "esp_system.h"
+
 
 #if defined(MANUVR_STORAGE)
   #include <Platform/Targets/ESP32/ESP32Storage.h>
@@ -68,7 +71,7 @@ long unsigned int rng_thread_id = 0;
 *
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
-uint32_t randomInt() {
+uint32_t IRAM_ATTR randomInt() {
   return randomness_pool[_random_pool_r_ptr++ % PLATFORM_RNG_CARRY_CAPACITY];
 }
 
@@ -76,7 +79,7 @@ uint32_t randomInt() {
 /**
 * This is a thread to keep the randomness pool flush.
 */
-static void dev_urandom_reader(void* unused_param) {
+static void IRAM_ATTR dev_urandom_reader(void* unused_param) {
   unsigned int rng_level    = 0;
 
   while (1) {
@@ -105,6 +108,7 @@ static void dev_urandom_reader(void* unused_param) {
 void ESP32Platform::printDebug(StringBuilder* output) {
   output->concatf("==< ESP32 [%s] >==================================\n", getPlatformStateStr(platformState()));
   output->concatf("-- ESP-IDF version:    %s\n", esp_get_idf_version());
+  output->concatf("-- Heap Free/Minimum:  %u/%u\n", esp_get_free_heap_size(), esp_get_minimum_free_heap_size());
   ManuvrPlatform::printDebug(output);
 }
 
@@ -120,7 +124,7 @@ void ESP32Platform::printDebug(StringBuilder* output) {
 * @return   The length of the serial number on this platform, in terms of bytes.
 */
 int platformSerialNumberSize() {
-  return 16;
+  return 6;
 }
 
 
@@ -131,7 +135,8 @@ int platformSerialNumberSize() {
 * @return   The number of bytes written.
 */
 int getSerialNumber(uint8_t *buf) {
-  return 16;
+  esp_efuse_mac_get_default(buf);
+  return 6;
 }
 
 
@@ -304,12 +309,12 @@ int8_t setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn) {
 }
 
 
-int8_t setPin(uint8_t pin, bool val) {
+int8_t IRAM_ATTR setPin(uint8_t pin, bool val) {
   return (int8_t) gpio_set_level((gpio_num_t) pin, val?1:0);
 }
 
 
-int8_t readPin(uint8_t pin) {
+int8_t IRAM_ATTR readPin(uint8_t pin) {
   return (int8_t) gpio_get_level((gpio_num_t) pin);
 }
 
@@ -453,6 +458,9 @@ int8_t ESP32Platform::platformPostInit() {
   #else
   // No threads. We are responsible for pinging our own scheduler.
   // Turn on the periodic interrupts...
+  uint64_t current = micros();
+  esp_sleep_enable_timer_wakeup(current + 10000);
+  current
   #endif
   return 0;
 }

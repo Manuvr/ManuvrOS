@@ -23,6 +23,7 @@ limitations under the License.
 #define __PLATFORM_ESP32_H__
 
 #include "driver/gpio.h"
+#include "esp_system.h"
 
 #define PLATFORM_GPIO_PIN_COUNT GPIO_PIN_COUNT
 
