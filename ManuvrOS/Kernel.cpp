@@ -1221,7 +1221,7 @@ ManuvrMsg* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool 
 *  Call this function to create a new schedule with the given period, a given number of repititions, and with a given function call.
 *
 *  Will automatically set the schedule active, provided the input conditions are met.
-*  Returns the newly-created PID on success, or 0 on failure.
+*  Returns the newly-created ManuvrMsg on success, or 0 on failure.
 */
 ManuvrMsg* Kernel::createSchedule(uint32_t sch_period, int16_t recurrence, bool ac, EventReceiver* ori) {
   ManuvrMsg* return_value = nullptr;

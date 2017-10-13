@@ -460,7 +460,6 @@ int8_t ESP32Platform::platformPostInit() {
   // Turn on the periodic interrupts...
   uint64_t current = micros();
   esp_sleep_enable_timer_wakeup(current + 10000);
-  current
   #endif
   return 0;
 }
