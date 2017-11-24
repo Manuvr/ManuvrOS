@@ -31,6 +31,7 @@ If you want this feature, you must define MANUVR_CONSOLE_SUPPORT in the
 #ifndef __MANUVR_CONSOLE_SESS_H__
 #define __MANUVR_CONSOLE_SESS_H__
 
+#include "ConsoleInterface.h"
 #include "../XenoSession.h"
 
 
