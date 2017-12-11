@@ -231,81 +231,79 @@ int8_t TeensyStorage::notify(ManuvrMsg* active_event) {
 }
 
 
-#if defined(MANUVR_CONSOLE_SUPPORT)
-void TeensyStorage::procDirectDebugInstruction(StringBuilder *input) {
-  char* str = input->position(0);
-
-  switch (*(str)) {
-    case 'w':
-      local_log.concatf("Wipe %s.\n", (0 == wipe()) ? "succeeded" : "failed");
-      break;
-
-    case 's':
-      if (isMounted()) {
-        Argument a(randomInt());
-        a.setKey("random_number");
-        a.append((int8_t) 64)->setKey("number_64");
-        StringBuilder shuttle;
-        if (0 <= Argument::encodeToCBOR(&a, &shuttle)) {
-          if (0 < persistentWrite(nullptr, shuttle.string(), shuttle.length(), 0)) {
-            local_log.concat("Save succeeded.\n");
-          }
-        }
-      }
-      break;
-
-    #if defined(MANUVR_DEBUG)
-      case 'B':   // Dump binary representation.
-        local_log.concat("EEPROM Dump:\n");
-        for (uint16_t i = 0; i < EEPROM.length(); i+=32) {
-          local_log.concatf("\t0x%04x: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
-            i,
-            EEPROM.read(i+ 0),
-            EEPROM.read(i+ 1),
-            EEPROM.read(i+ 2),
-            EEPROM.read(i+ 3),
-            EEPROM.read(i+ 4),
-            EEPROM.read(i+ 5),
-            EEPROM.read(i+ 6),
-            EEPROM.read(i+ 7),
-            EEPROM.read(i+ 8),
-            EEPROM.read(i+ 9),
-            EEPROM.read(i+10),
-            EEPROM.read(i+11),
-            EEPROM.read(i+12),
-            EEPROM.read(i+13),
-            EEPROM.read(i+14),
-            EEPROM.read(i+15)
-          );
-          local_log.concatf(" %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
-            EEPROM.read(i+16),
-            EEPROM.read(i+17),
-            EEPROM.read(i+18),
-            EEPROM.read(i+19),
-            EEPROM.read(i+20),
-            EEPROM.read(i+21),
-            EEPROM.read(i+22),
-            EEPROM.read(i+23),
-            EEPROM.read(i+24),
-            EEPROM.read(i+25),
-            EEPROM.read(i+26),
-            EEPROM.read(i+27),
-            EEPROM.read(i+28),
-            EEPROM.read(i+29),
-            EEPROM.read(i+30),
-            EEPROM.read(i+31)
-          );
-        }
-        break;
-    #endif
-
-    default:
-      EventReceiver::procDirectDebugInstruction(input);
-      break;
-  }
-
-  flushLocalLog();
-}
-#endif   // MANUVR_CONSOLE_SUPPORT
-
+//#if defined(MANUVR_CONSOLE_SUPPORT)
+//void TeensyStorage::procDirectDebugInstruction(StringBuilder *input) {
+//  char* str = input->position(0);
+//
+//  switch (*(str)) {
+//    case 'w':
+//      local_log.concatf("Wipe %s.\n", (0 == wipe()) ? "succeeded" : "failed");
+//      break;
+//
+//    case 's':
+//      if (isMounted()) {
+//        Argument a(randomInt());
+//        a.setKey("random_number");
+//        a.append((int8_t) 64)->setKey("number_64");
+//        StringBuilder shuttle;
+//        if (0 <= Argument::encodeToCBOR(&a, &shuttle)) {
+//          if (0 < persistentWrite(nullptr, shuttle.string(), shuttle.length(), 0)) {
+//            local_log.concat("Save succeeded.\n");
+//          }
+//        }
+//      }
+//      break;
+//
+//    #if defined(MANUVR_DEBUG)
+//      case 'B':   // Dump binary representation.
+//        local_log.concat("EEPROM Dump:\n");
+//        for (uint16_t i = 0; i < EEPROM.length(); i+=32) {
+//          local_log.concatf("\t0x%04x: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+//            i,
+//            EEPROM.read(i+ 0),
+//            EEPROM.read(i+ 1),
+//            EEPROM.read(i+ 2),
+//            EEPROM.read(i+ 3),
+//            EEPROM.read(i+ 4),
+//            EEPROM.read(i+ 5),
+//            EEPROM.read(i+ 6),
+//            EEPROM.read(i+ 7),
+//            EEPROM.read(i+ 8),
+//            EEPROM.read(i+ 9),
+//            EEPROM.read(i+10),
+//            EEPROM.read(i+11),
+//            EEPROM.read(i+12),
+//            EEPROM.read(i+13),
+//            EEPROM.read(i+14),
+//            EEPROM.read(i+15)
+//          );
+//          local_log.concatf(" %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+//            EEPROM.read(i+16),
+//            EEPROM.read(i+17),
+//            EEPROM.read(i+18),
+//            EEPROM.read(i+19),
+//            EEPROM.read(i+20),
+//            EEPROM.read(i+21),
+//            EEPROM.read(i+22),
+//            EEPROM.read(i+23),
+//            EEPROM.read(i+24),
+//            EEPROM.read(i+25),
+//            EEPROM.read(i+26),
+//            EEPROM.read(i+27),
+//            EEPROM.read(i+28),
+//            EEPROM.read(i+29),
+//            EEPROM.read(i+30),
+//            EEPROM.read(i+31)
+//          );
+//        }
+//        break;
+//    #endif
+//
+//    default:
+//      EventReceiver::procDirectDebugInstruction(input);
+//      break;
+//  }
+//  flushLocalLog();
+//}
+//#endif   // MANUVR_CONSOLE_SUPPORT
 #endif   // __MANUVR_LINUX & MANUVR_STORAGE

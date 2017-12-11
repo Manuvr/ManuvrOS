@@ -181,9 +181,9 @@ class ManuvrPlatform {
 
     /* Accessors for platform capability discovery. */
     #if defined(__BUILD_HAS_THREADS)
-      inline bool hasThreads() {        return true;     };
+      inline bool hasThreads() const {        return true;     };
     #else
-      inline bool hasThreads() {        return false;    };
+      inline bool hasThreads() const {        return false;    };
     #endif
     #if defined(__HAS_CRYPT_WRAPPER)
       inline bool hasCryptography() {   return true;     };

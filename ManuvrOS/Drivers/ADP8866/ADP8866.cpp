@@ -529,8 +529,23 @@ int8_t ADP8866::notify(ManuvrMsg* active_event) {
 
 
 #if defined(MANUVR_CONSOLE_SUPPORT)
+/*******************************************************************************
+* Console I/O
+*******************************************************************************/
 
-void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
+static const ConsoleCommand console_cmds[] = {
+  { "o", "Enable or disable internal oscillator." },
+  { "O", "Enable or disable external oscillator." }
+};
+
+
+uint ADP8866::consoleGetCmds(ConsoleCommand** ptr) {
+  *ptr = (ConsoleCommand*) &console_cmds[0];
+  return sizeof(console_cmds) / sizeof(ConsoleCommand);
+}
+
+
+void ADP8866::consoleCmdProc(StringBuilder *input) {
   const char* str = (char *) input->position(0);
   char c    = *str;
   int channel  = 0;
@@ -600,7 +615,7 @@ void ADP8866::procDirectDebugInstruction(StringBuilder *input) {
       local_log.concatf("ADP8866: Channel %u is %sabled.\n", channel, channel_enabled(channel) ? "en" : "dis");
       break;
     default:
-      EventReceiver::procDirectDebugInstruction(input);
+      //EventReceiver::procDirectDebugInstruction(input);
       break;
   }
 

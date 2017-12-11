@@ -30,14 +30,23 @@ limitations under the License.
 #endif
 
 
-#if !defined(_GNU_SOURCE)
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
 /*
 * We might choose to roll-our-own so that we don't bring in enormous dependencies.
 * TODO: This is buggy.
 * Taken from
 * http://c-for-dummies.com/blog/?p=1359
 */
-int strcasestr(char *a, const char *b) {
+int StringBuilder::strcasestr(const char *a, const char *b) {
   char c = 0;
   while(*a && *b) {
     c = toupper(*a) - toupper(*b);
@@ -47,7 +56,6 @@ int strcasestr(char *a, const char *b) {
   }
   return(c);
 }
-#endif
 
 
 /* Static utility function for dumping buffers for humans to read. */

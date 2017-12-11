@@ -442,8 +442,25 @@ int8_t ATECC508::callback_proc(ManuvrMsg* event) {
 
 
 #if defined(MANUVR_CONSOLE_SUPPORT)
+/*******************************************************************************
+* Console I/O
+*******************************************************************************/
 
-void ATECC508::procDirectDebugInstruction(StringBuilder *input) {
+static const ConsoleCommand console_cmds[] = {
+  { "c", "Read device config" },
+  { "o", "Read OTP" },
+  { "s", "Read slot" },
+  { "p", "Send wakeup" }
+};
+
+
+uint ATECC508::consoleGetCmds(ConsoleCommand** ptr) {
+  *ptr = (ConsoleCommand*) &console_cmds[0];
+  return sizeof(console_cmds) / sizeof(ConsoleCommand);
+}
+
+
+void ATECC508::consoleCmdProc(StringBuilder *input) {
   const char* str = (char *) input->position(0);
   char c    = *str;
   int temp_int = 0;
@@ -481,7 +498,7 @@ void ATECC508::procDirectDebugInstruction(StringBuilder *input) {
       break;
 
     default:
-      EventReceiver::procDirectDebugInstruction(input);
+      //EventReceiver::procDirectDebugInstruction(input);
       break;
   }
 

@@ -27,6 +27,9 @@ limitations under the License.
 #include <Kernel.h>
 #include "Platform/Peripherals/I2C/I2CAdapter.h"
 
+#ifdef MANUVR_CONSOLE_SUPPORT
+  #include <XenoSession/Console/ManuvrConsole.h>
+#endif
 
 // These are the register definitions.
 #define ADP8866_MANU_DEV_ID        0x00
@@ -140,7 +143,11 @@ typedef struct adp8866_led_chan {
 
 
 
-class ADP8866 : public EventReceiver, I2CDeviceWithRegisters {
+class ADP8866 : public EventReceiver,
+  #ifdef MANUVR_CONSOLE_SUPPORT
+    public ConsoleInterface,
+  #endif
+    I2CDeviceWithRegisters {
   public:
     ADP8866(const ADP8866Pins* p);
     virtual ~ADP8866();
@@ -152,13 +159,16 @@ class ADP8866 : public EventReceiver, I2CDeviceWithRegisters {
     int8_t register_read_cb(DeviceRegister*);
     void printDebug(StringBuilder*);
 
+    #ifdef MANUVR_CONSOLE_SUPPORT
+      /* Overrides from ConsoleInterface */
+      uint consoleGetCmds(ConsoleCommand**);
+      inline const char* consoleName() { return getReceiverName();  };
+      void consoleCmdProc(StringBuilder* input);
+    #endif  //MANUVR_CONSOLE_SUPPORT
+
     /* Overrides from EventReceiver */
     int8_t notify(ManuvrMsg*);
     int8_t callback_proc(ManuvrMsg*);
-    #if defined(MANUVR_CONSOLE_SUPPORT)
-      void procDirectDebugInstruction(StringBuilder*);
-    #endif  //MANUVR_CONSOLE_SUPPORT
-
 
     /* Direct channel manipulation. */
     void enable_channel(uint8_t, bool);

@@ -341,8 +341,9 @@ int8_t ManuvrPlatform::bootstrap() {
   #if defined(MANUVR_STORAGE)
     if (0 == _load_config()) {
       // If the config loaded, broadcast it.
+      // Kernel will clean up this event.
       ManuvrMsg* conf_ev = Kernel::returnEvent(MANUVR_MSG_SYS_CONF_LOAD);
-      // ???Necessary???  conf_ev->addArg(_config);
+      conf_ev->addArg(_config);
       Kernel::staticRaiseEvent(conf_ev);
     }
   #endif

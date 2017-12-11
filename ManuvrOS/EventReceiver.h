@@ -40,6 +40,7 @@ Lifecycle:
 
   #include <ManuvrMsg/ManuvrMsg.h>
 
+
   #define EVENT_CALLBACK_RETURN_ERROR       -1 // Horrible things happened in the originating class. This should never happen.
   #define EVENT_CALLBACK_RETURN_UNDEFINED   0  // Illegal return code. Kernel will reap events whose callbacks return this.
   #define EVENT_CALLBACK_RETURN_REAP        1  // The callback fxn has specifically told us to reap this event.
@@ -96,11 +97,6 @@ Lifecycle:
         *   see use.
         */
         virtual void printDebug(StringBuilder*);
-        #ifdef MANUVR_CONSOLE_SUPPORT
-          virtual void procDirectDebugInstruction(StringBuilder *input);
-          //virtual void consoleInput(StringBuilder *input);
-          //void consoleHelp(StringBuilder *output);
-        #endif
 
         /* Raises an event, marking us as the return callback. */
         int8_t raiseEvent(ManuvrMsg* event);
@@ -114,10 +110,7 @@ Lifecycle:
         */
         int8_t setVerbosity(int8_t);
 
-        // TODO: Mystery... Suspect this fails because address isn't known at
-        //   compile time. But how does CPLDDriver work? This seems to work for some reason.
         inline const char* getReceiverName() {   return _receiver_name;  }
-        //const char* getReceiverName();
 
         /**
         * What is this ER's present verbosity level?
@@ -158,6 +151,7 @@ Lifecycle:
         EventReceiver(const char* nom);
 
         void flushLocalLog();
+        virtual void procDirectDebugInstruction(StringBuilder*);
 
         // These inlines are for convenience of extending classes.
         inline uint8_t _er_flags() {                 return _extnd_state;            };

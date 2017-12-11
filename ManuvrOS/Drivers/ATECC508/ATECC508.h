@@ -42,6 +42,9 @@ ATECC508_CAPABILITY_CONFIG_UNLOCK
 #include <inttypes.h>
 #include <stdint.h>
 #include "Platform/Peripherals/I2C/I2CAdapter.h"
+#ifdef MANUVR_CONSOLE_SUPPORT
+  #include "XenoSession/Console/ManuvrConsole.h"
+#endif
 
 
 /* TODO: These ought to be migrated into config. */
@@ -173,13 +176,24 @@ class ATECC508Opts {
 
 
 // TODO: We are only extending EventReceiver while the driver is written.
-class ATECC508 : public EventReceiver, I2CDevice {
+class ATECC508 : public EventReceiver,
+  #ifdef MANUVR_CONSOLE_SUPPORT
+    public ConsoleInterface,
+  #endif
+    I2CDevice {
   public:
     ATECC508(const ATECC508Opts* o, const uint8_t addr);
     ATECC508(const ATECC508Opts* o) : ATECC508(o, ATECC508_I2CADDR) {};
     virtual ~ATECC508();
 
     int8_t init();
+
+    #ifdef MANUVR_CONSOLE_SUPPORT
+      /* Overrides from ConsoleInterface */
+      uint consoleGetCmds(ConsoleCommand**);
+      inline const char* consoleName() { return getReceiverName();  };
+      void consoleCmdProc(StringBuilder* input);
+    #endif  //MANUVR_CONSOLE_SUPPORT
 
     /* Overrides from I2CDevice... */
     int8_t io_op_callahead(BusOp*);
@@ -189,9 +203,6 @@ class ATECC508 : public EventReceiver, I2CDevice {
     /* Overrides from EventReceiver */
     //int8_t notify(ManuvrMsg*);
     int8_t callback_proc(ManuvrMsg*);
-    #if defined(MANUVR_CONSOLE_SUPPORT)
-      void procDirectDebugInstruction(StringBuilder*);
-    #endif  //MANUVR_CONSOLE_SUPPORT
 
     void printSlotInfo(uint8_t slot, StringBuilder*);
 

@@ -467,8 +467,6 @@ void I2CAdapter::set_ping_state_by_addr(uint8_t addr, I2CPingState nu) {
 }
 
 
-#if defined(MANUVR_DEBUG)
-
 /*
 * Debug fxn to print the ping map.
 */
@@ -526,7 +524,6 @@ void I2CAdapter::printDevs(StringBuilder *temp) {
   }
   temp->concat("\n");
 }
-#endif // MANUVR_DEBUG
 
 
 /*******************************************************************************
@@ -638,7 +635,22 @@ void I2CAdapter::printDebug(StringBuilder* output) {
 
 
 #if defined(MANUVR_CONSOLE_SUPPORT)
-void I2CAdapter::procDirectDebugInstruction(StringBuilder *input) {
+/*******************************************************************************
+* Console I/O
+*******************************************************************************/
+
+static const ConsoleCommand console_cmds[] = {
+  { "p", "Purge work-queue." }
+};
+
+
+uint I2CAdapter::consoleGetCmds(ConsoleCommand** ptr) {
+  *ptr = (ConsoleCommand*) &console_cmds[0];
+  return sizeof(console_cmds) / sizeof(ConsoleCommand);
+}
+
+
+void I2CAdapter::consoleCmdProc(StringBuilder *input) {
   char* str = input->position(0);
   char c = *(str);
   int temp_int = 0;

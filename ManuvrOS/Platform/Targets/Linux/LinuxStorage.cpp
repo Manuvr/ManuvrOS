@@ -289,57 +289,54 @@ int8_t LinuxStorage::notify(ManuvrMsg* active_event) {
 }
 
 
-#if defined(MANUVR_CONSOLE_SUPPORT)
-void LinuxStorage::procDirectDebugInstruction(StringBuilder *input) {
-  char* str = input->position(0);
-
-  switch (*(str)) {
-    case 'w':
-      if (_filename) {
-        local_log.concatf("Wipe of %s %s.\n", _filename, (0 == wipe()) ? "succeeded" : "failed");
-      }
-      else {
-        local_log.concat("Filename not set.\n");
-      }
-      break;
-
-    case 'l':
-      if (0 == _load_file(&_disk_buffer)) {
-        local_log.concatf("Loaded %u bytes from %s.\n", _disk_buffer.length(), _filename);
-      }
-      else {
-        local_log.concat("Load failed.\n");
-      }
-      break;
-
-    case 's':
-      if (isMounted()) {
-        Argument a(randomInt());
-        a.setKey("random_number");
-        a.append((int8_t) 64)->setKey("number_64");
-        StringBuilder shuttle;
-        if (0 <= Argument::encodeToCBOR(&a, &shuttle)) {
-          if (0 < persistentWrite(nullptr, shuttle.string(), shuttle.length(), 0)) {
-            local_log.concat("Save succeeded.\n");
-          }
-        }
-      }
-      break;
-
-    #if defined(MANUVR_DEBUG)
-      case 'B':   // Dump binary representation.
-        local_log.concat("Dump:\n");
-        _disk_buffer.printDebug(&local_log);
-        break;
-    #endif
-
-    default:
-      EventReceiver::procDirectDebugInstruction(input);
-      break;
-  }
-
-  flushLocalLog();
-}
-#endif   // MANUVR_CONSOLE_SUPPORT
-
+//void LinuxStorage::consoleCmdProc(StringBuilder *input) {
+//  char* str = input->position(0);
+//
+//  switch (*(str)) {
+//    case 'w':
+//      if (_filename) {
+//        local_log.concatf("Wipe of %s %s.\n", _filename, (0 == wipe()) ? "succeeded" : "failed");
+//      }
+//      else {
+//        local_log.concat("Filename not set.\n");
+//      }
+//      break;
+//
+//    case 'l':
+//      if (0 == _load_file(&_disk_buffer)) {
+//        local_log.concatf("Loaded %u bytes from %s.\n", _disk_buffer.length(), _filename);
+//      }
+//      else {
+//        local_log.concat("Load failed.\n");
+//      }
+//      break;
+//
+//    case 's':
+//      if (isMounted()) {
+//        Argument a(randomInt());
+//        a.setKey("random_number");
+//        a.append((int8_t) 64)->setKey("number_64");
+//        StringBuilder shuttle;
+//        if (0 <= Argument::encodeToCBOR(&a, &shuttle)) {
+//          if (0 < persistentWrite(nullptr, shuttle.string(), shuttle.length(), 0)) {
+//            local_log.concat("Save succeeded.\n");
+//          }
+//        }
+//      }
+//      break;
+//
+//    #if defined(MANUVR_DEBUG)
+//      case 'B':   // Dump binary representation.
+//        local_log.concat("Dump:\n");
+//        _disk_buffer.printDebug(&local_log);
+//        break;
+//    #endif
+//
+//    default:
+//      EventReceiver::procDirectDebugInstruction(input);
+//      break;
+//  }
+//
+//  flushLocalLog();
+//}
 #endif   // __MANUVR_LINUX & MANUVR_STORAGE

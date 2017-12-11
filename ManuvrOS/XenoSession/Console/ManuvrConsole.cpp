@@ -24,13 +24,77 @@ limitations under the License.
 
 #if defined(MANUVR_CONSOLE_SUPPORT)
 
-void printHelp() {
-  // TODO: Hack. Needs to generate help based on context. But since I don't want
-  //         to get mired in building a generalized CLI into this class (yet),
-  //         this will suffice for now.
-  Kernel::log("Help would ordinarily be displayed here.\n");
+#include "ConsoleInterface.h"
+
+/*******************************************************************************
+*      _______.___________.    ___   .___________. __    ______     _______.
+*     /       |           |   /   \  |           ||  |  /      |   /       |
+*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
+*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
+* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
+* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
+*
+* Static members and initializers should be located here.
+*******************************************************************************/
+
+/* A list of regsitered console interactables. */
+static PriorityQueue<ConsoleInterface*> _consoles;
+
+/**
+* @param  client  The class that will be listening for Events.
+* @return 0 on success and -1 on failure.
+*/
+void ConsoleInterface::consoleSchemaAdd(ConsoleInterface* obj) {
+  if (nullptr != obj) _consoles.insert(obj);
 }
 
+/**
+* A class calls this to unsubscribe.
+*
+* @param  client    The class that will no longer be listening for Events.
+* @return 0 on success and -1 on failure.
+*/
+void ConsoleInterface::consoleSchemaDrop(ConsoleInterface* obj) {
+  if (nullptr != obj) _consoles.remove(obj);
+}
+
+
+void runConsoleFunction(uint c, StringBuilder* out) {
+  ConsoleInterface* working = _consoles.get(c);
+  if (nullptr != working) {
+    ConsoleCommand* cmd;
+    uint j = working->consoleGetCmds(&cmd);
+    if (strstr(out->position(0), cmd->shortcut)) {
+      //out->concat(cmd->lambda());
+    }
+  }
+}
+
+
+void printConsoleTree(StringBuilder* out) {
+  out->concat("Console tree:\n");
+  ConsoleInterface* working;
+  for (int i = 0; i < _consoles.size(); i++) {
+    working = _consoles.get(i);
+    ConsoleCommand* cmd;
+    uint j = working->consoleGetCmds(&cmd);
+    out->concatf("%d: %s\n", i, working->consoleName());
+    while (j-- > 0) {
+      out->concatf("  %10s: %s\n", cmd->shortcut, cmd->help_text);
+      cmd++;
+    }
+  }
+}
+
+
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
 
 /**
 * When a connectable class gets a connection, we get instantiated to handle the protocol...
@@ -64,8 +128,14 @@ int8_t ManuvrConsole::_route_console_input(StringBuilder* last_user_input) {
 
   _raw_from_console.split(" ");
   if (_raw_from_console.count() > 0) {
+    if (_current_console) {
+      // If we are
+    }
+    else {
+    }
+
     const char* str = (const char *) _raw_from_console.position(0);
-    int subscriber_idx = atoi(str);
+    int cif_idx = atoi(str);
     switch (*str) {
       case '0':
       case '1':
@@ -81,16 +151,21 @@ int8_t ManuvrConsole::_route_console_input(StringBuilder* last_user_input) {
         //   it was essentially a directive aimed at this class.
         _raw_from_console.drop_position(0);
         break;
+      case '/':
+        if (2 > strlen(str)) {
+          // A lone slash resets us to root.
+          _current_console = this;
+        }
     }
 
     if (_raw_from_console.count() > 0) {
       // If there are still positions, lookup the subscriber and send it the input.
-      EventReceiver* subscriber = platform.kernel()->getSubscriber(subscriber_idx);
-      if (nullptr != subscriber) {
-        subscriber->procDirectDebugInstruction(&_raw_from_console);
+      ConsoleInterface* cif = _consoles.get(cif_idx);
+      if (nullptr != cif) {
+        cif->consoleCmdProc(&_raw_from_console);
       }
       else {
-        local_log.concatf("No such subscriber: %d\n", subscriber_idx);
+        local_log.concatf("No such console: %d\n", cif_idx);
       }
     }
   }
@@ -164,16 +239,12 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
       char* temp_ptr = session_buffer.position(0);
       int temp_len   = strlen(temp_ptr);
       // Begin the cases...
-      #if defined(_GNU_SOURCE)
-        if (strcasestr(temp_ptr, "QUIT")) {
-          ManuvrMsg* event = Kernel::returnEvent(MANUVR_MSG_SYS_REBOOT);
-          event->setOriginator((EventReceiver*) platform.kernel());
-          Kernel::staticRaiseEvent(event);
-        }
-        else if (strcasestr(temp_ptr, "HELP"))  printHelp();      // Show help.
-        else
-      #endif
-      {
+      //if (strcasestr(temp_ptr, "QUIT")) {
+      //  ManuvrMsg* event = Kernel::returnEvent(MANUVR_MSG_SYS_REBOOT);
+      //  event->setOriginator((EventReceiver*) platform.kernel());
+      //  Kernel::staticRaiseEvent(event);
+      //}
+      //else {
         // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
         // run in idle time.
         // TODO: This copies the string from session_buffer into another string
@@ -185,13 +256,64 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
         event->setOriginator((EventReceiver*) this);
         event->addArg(dispatched)->reapValue(true);
         raiseEvent(event);
-      }
+      //}
       session_buffer.drop_position(0);
     }
   }
   return MEM_MGMT_RESPONSIBLE_BEARER;
 }
 
+
+
+/*******************************************************************************
+* Console I/O
+*******************************************************************************/
+
+static const ConsoleCommand console_cmds[] = {
+  { "?", "Show help" },
+  { "i", "Show console-capable objects." },
+  { "/", "Drop back to console." }
+};
+
+uint ManuvrConsole::consoleGetCmds(ConsoleCommand** ptr) {
+  *ptr = (ConsoleCommand*) &console_cmds[0];
+  return sizeof(console_cmds) / sizeof(ConsoleCommand);
+}
+
+// We don't bother casing this off for the preprocessor. In this case, it
+//   is a given that we have MANUVR_CONSOLE_SUPPORT.
+// This may be a strange loop that we might optimize later, but this is
+//   still a valid call target that deals with allowing the console to operate
+//   on itself.
+// TODO: Change local_echo.
+// TODO: Terminal reset.
+// TODO: Terminal forsakes logger.
+void ManuvrConsole::consoleCmdProc(StringBuilder* input) {
+  char* str = input->position(0);
+  int temp_int = ((*(str) != 0) ? atoi((char*) str+1) : 0);
+
+  switch (*(str)) {
+    case 'i':
+      switch (temp_int) {
+        case 1:
+          printConsoleTree(&local_log);
+          break;
+        default:
+          printDebug(&local_log);
+          break;
+      }
+      break;
+
+    case 'c':
+      change_active_console_interface(input->position(1));
+      break;
+
+    default:
+      //XenoSession::procDirectDebugInstruction(input);
+      break;
+  }
+  flushLocalLog();
+}
 
 
 /*******************************************************************************
@@ -309,17 +431,16 @@ int8_t ManuvrConsole::notify(ManuvrMsg* active_runnable) {
 }
 
 
-// We don't bother casing this off for the preprocessor. In this case, it
-//   is a given that we have MANUVR_CONSOLE_SUPPORT.
-// This may be a strange loop that we might optimize later, but this is
-//   still a valid call target that deals with allowing the console to operate
-//   on itself.
-// TODO: Change local_echo.
-// TODO: Terminal reset.
-// TODO: Terminal forsakes logger.
-void ManuvrConsole::procDirectDebugInstruction(StringBuilder *input) {
-  XenoSession::procDirectDebugInstruction(input);
-  flushLocalLog();
+void ManuvrConsole::change_active_console_interface(const char* cif_str) {
+  if (nullptr != cif_str) {
+    ConsoleInterface* working;
+    for (int i = 0; i < _consoles.size(); i++) {
+      working = _consoles.get(i);
+      if (0 == strcasestr(cif_str, working->consoleName())) {
+        _current_console = working;
+        return;
+      }
+    }
+  }
 }
-
 #endif  // MANUVR_CONSOLE_SUPPORT

@@ -119,13 +119,11 @@ void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
 *   already an originator specified, add ourselves as the originator.
 */
 int8_t EventReceiver::raiseEvent(ManuvrMsg* event) {
-  if (event != nullptr) {
+  if (nullptr != event) {
     event->setOriginator(this);
     return Kernel::staticRaiseEvent(event);
   }
-  else {
-    return -1;
-  }
+  return -1;
 }
 
 
@@ -148,7 +146,6 @@ void EventReceiver::printDebug(StringBuilder *output) {
   output->concatf("\n==< %s %s>======================\n", getReceiverName(), (erAttached() ? "" : "   (UNATTACHED) "));
   #endif
 }
-
 
 
 /*******************************************************************************

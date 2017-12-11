@@ -117,7 +117,6 @@ class StringBuilder {
 		void cull(int length);                   // Use to discard the first X characters from the string.
 
 		void trim();                             // Trim whitespace off the ends of the string.
-    bool contains(char);                     // Does the buffer contain the given character.
 
 		void clear();                            // Clears the string and frees the memory that was used to hold it.
 
@@ -133,14 +132,18 @@ class StringBuilder {
 		double position_as_double(int);          // Same as position(int), but uses atof() to return a double.
 		uint8_t* position(int, int*);      // ...or this, if you need the length and a binary string.
 		bool drop_position(unsigned int pos);    // And use this to reap the tokens that you've used.
-		// Trim the whitespace from the end of the input string.
 
-
-		int cmpBinString(unsigned char *unknown, int len);
+    /* Comparison and search. */
+    bool contains(char);                     // Does the buffer contain the given character.
+		int cmpBinString(uint8_t*, int);         // Compare byte-wise a given length.
+		// int cmpCaseless(const char* unknown);
 
 		void printDebug(StringBuilder*);
 
+    /* Statics */
     static void printBuffer(StringBuilder* output, uint8_t* buf, unsigned int len, const char* indent);
+    // Wrapper for high-level string functions that we may or may not have.
+    static int strcasestr(const char*, const char*);
 
 
 	private:

@@ -35,7 +35,7 @@ If you want this feature, you must define MANUVR_CONSOLE_SUPPORT in the
 #include "../XenoSession.h"
 
 
-class ManuvrConsole : public XenoSession {
+class ManuvrConsole : public XenoSession, public ConsoleInterface {
   public:
     ManuvrConsole(BufferPipe*);
     ~ManuvrConsole();
@@ -46,11 +46,15 @@ class ManuvrConsole : public XenoSession {
     virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
 
     /* Overrides from EventReceiver */
-    void procDirectDebugInstruction(StringBuilder*);
     void printDebug(StringBuilder*);
     int8_t attached();
     int8_t notify(ManuvrMsg*);
     int8_t callback_proc(ManuvrMsg*);
+
+    /* Overrides from ConsoleInterface */
+    uint consoleGetCmds(ConsoleCommand**);
+    inline const char* consoleName() { return getReceiverName();  };
+    void consoleCmdProc(StringBuilder* input);
 
 
   private:
@@ -60,10 +64,12 @@ class ManuvrConsole : public XenoSession {
     */
     StringBuilder session_buffer;
     StringBuilder _log_accumulator;
+    ConsoleInterface* _current_console = this;
     bool _local_echo = false;  // Should input be echoed back to the console?
     bool _relay_all  = false;  // Relay log from everywhere, rather than just actions we provoke.
 
     int8_t _route_console_input(StringBuilder*);
+    void change_active_console_interface(const char*);
 };
 
 

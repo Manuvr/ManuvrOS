@@ -66,27 +66,12 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   /* Reserved codes */
   {  MANUVR_MSG_UNDEFINED            , 0x0000,               "<UNDEF>"          , ManuvrMsg::MSG_ARGS_NONE }, // This should be the first entry for failure cases.
 
-  /* Protocol basics. */
-  #if defined(MANUVR_OVER_THE_WIRE)
-  {  MANUVR_MSG_REPLY_FAIL           , MSG_FLAG_EXPORTABLE,               "REPLY_FAIL"           , ManuvrMsg::MSG_ARGS_NONE }, //  This reply denotes that the packet failed to parse (despite passing checksum).
-  {  MANUVR_MSG_REPLY_RETRY          , MSG_FLAG_EXPORTABLE,               "REPLY_RETRY"          , ManuvrMsg::MSG_ARGS_NONE }, //  This reply asks for a reply of the given Unique ID.
-  {  MANUVR_MSG_REPLY                , MSG_FLAG_EXPORTABLE,               "REPLY"                , ManuvrMsg::MSG_ARGS_NONE }, //  This reply is for success-case.
-  {  MANUVR_MSG_SELF_DESCRIBE        , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SELF_DESCRIBE"        , ManuvrMsg::MSG_ARGS_NONE }, // Starting an application on the receiver. Needs a string.
-  {  MANUVR_MSG_SYNC_KEEPALIVE       , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "KA"                   , ManuvrMsg::MSG_ARGS_NONE }, //  A keep-alive message to be ack'd.
-  {  MANUVR_MSG_LEGEND_TYPES         , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_TYPES"         , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
-  {  MANUVR_MSG_LEGEND_MESSAGES      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_MESSAGES"      , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
-  {  MANUVR_MSG_LEGEND_SEMANTIC      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_SEMANTIC"      , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
-  #endif
-
   #if defined(MANUVR_SUPPORT_I2C)
   { MANUVR_MSG_I2C_QUEUE_READY, 0x0000,  "I2C_Q_RDY", ManuvrMsg::MSG_ARGS_NONE },  // The i2c queue is ready for attention.
   #endif
 
   #if defined(MANUVR_STORAGE)
   #endif
-
-  {  MANUVR_MSG_MSG_FORWARD          , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "MSG_FORWARD"          , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
-
 
   {  MANUVR_MSG_SYS_BOOT_COMPLETED   , 0x0000,               "BOOT_COMPLETED"   , ManuvrMsg::MSG_ARGS_NONE }, // Raised when bootstrap is finished.
   {  MANUVR_MSG_SYS_CONF_LOAD        , 0x0000,               "CONF_LOAD"        , ManuvrMsg::MSG_ARGS_NONE }, // Recipients will comb arguments for config and apply it.
@@ -145,6 +130,19 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   #if defined(MANUVR_CONSOLE_SUPPORT)
     {  MANUVR_MSG_USER_DEBUG_INPUT     , MSG_FLAG_EXPORTABLE,               "USER_DEBUG_INPUT"     , ManuvrMsg::MSG_ARGS_NONE }, //
   #endif   // MANUVR_CONSOLE_SUPPORT
+
+  /* Protocol basics. */
+  #if defined(MANUVR_OVER_THE_WIRE)
+  {  MANUVR_MSG_REPLY_FAIL           , MSG_FLAG_EXPORTABLE,               "REPLY_FAIL"           , ManuvrMsg::MSG_ARGS_NONE }, //  This reply denotes that the packet failed to parse (despite passing checksum).
+  {  MANUVR_MSG_REPLY_RETRY          , MSG_FLAG_EXPORTABLE,               "REPLY_RETRY"          , ManuvrMsg::MSG_ARGS_NONE }, //  This reply asks for a reply of the given Unique ID.
+  {  MANUVR_MSG_REPLY                , MSG_FLAG_EXPORTABLE,               "REPLY"                , ManuvrMsg::MSG_ARGS_NONE }, //  This reply is for success-case.
+  {  MANUVR_MSG_SELF_DESCRIBE        , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "SELF_DESCRIBE"        , ManuvrMsg::MSG_ARGS_NONE }, // Starting an application on the receiver. Needs a string.
+  {  MANUVR_MSG_SYNC_KEEPALIVE       , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "KA"                   , ManuvrMsg::MSG_ARGS_NONE }, //  A keep-alive message to be ack'd.
+  {  MANUVR_MSG_LEGEND_TYPES         , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_TYPES"         , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
+  {  MANUVR_MSG_LEGEND_MESSAGES      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_MESSAGES"      , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
+  {  MANUVR_MSG_LEGEND_SEMANTIC      , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "LEGEND_SEMANTIC"      , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
+  {  MANUVR_MSG_MSG_FORWARD          , MSG_FLAG_DEMAND_ACK | MSG_FLAG_EXPORTABLE,  "MSG_FORWARD"          , ManuvrMsg::MSG_ARGS_NONE }, // No args? Asking for this legend. One arg: Legend provided.
+  #endif
 
   {  MANUVR_MSG_SYS_POWER_MODE       , MSG_FLAG_EXPORTABLE,               "SYS_POWER_MODE"       , ManuvrMsg::MSG_ARGS_NONE } //
 };
@@ -1352,11 +1350,23 @@ int Kernel::serviceSchedules() {
 
 #if defined(MANUVR_CONSOLE_SUPPORT)
 
+static const ConsoleCommand console_cmds[] = {
+  { "o", "Enable or disable internal oscillator." },
+  { "O", "Enable or disable external oscillator." }
+};
+
+
+uint Kernel::consoleGetCmds(ConsoleCommand** ptr) {
+  *ptr = (ConsoleCommand*) &console_cmds[0];
+  return sizeof(console_cmds) / sizeof(ConsoleCommand);
+}
+
+
 /**
 * Console commands are space-delimited and arrive here already NULL-checked and
 *   tokenized. We can be assured that there is at least one token.
 */
-void Kernel::procDirectDebugInstruction(StringBuilder* input) {
+void Kernel::consoleCmdProc(StringBuilder* input) {
   const char* str = (char *) input->position(0);
   char c    = *str;
   int temp_int = 0;

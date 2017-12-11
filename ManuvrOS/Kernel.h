@@ -32,12 +32,15 @@ limitations under the License.
   #define __MANUVR_KERNEL_H__
 
   #include <map>
-  #include <CommonConstants.h>
-  #include <EnumeratedTypeCodes.h>
-  #include <DataStructures/PriorityQueue.h>
-  #include <DataStructures/ElementPool.h>
-  #include <DataStructures/StringBuilder.h>
-  #include <EventReceiver.h>
+  #include "CommonConstants.h"
+  #include "EnumeratedTypeCodes.h"
+  #include "DataStructures/PriorityQueue.h"
+  #include "DataStructures/ElementPool.h"
+  #include "DataStructures/StringBuilder.h"
+  #include "EventReceiver.h"
+  #ifdef MANUVR_CONSOLE_SUPPORT
+    #include "XenoSession/Console/ConsoleInterface.h"
+  #endif
 
   /*
   * These state flags are hosted by the EventReceiver. This may change in the future.
@@ -71,10 +74,21 @@ limitations under the License.
   /*
   * This class is the machinery that handles Events. It should probably only be instantiated once.
   */
-  class Kernel : public EventReceiver {
+  class Kernel : public EventReceiver
+    #ifdef MANUVR_CONSOLE_SUPPORT
+      , public ConsoleInterface
+    #endif
+    {
     public:
       Kernel();
       ~Kernel();
+
+      #ifdef MANUVR_CONSOLE_SUPPORT
+        /* Overrides from ConsoleInterface */
+        uint consoleGetCmds(ConsoleCommand**);
+        inline const char* consoleName() { return getReceiverName();  };
+        void consoleCmdProc(StringBuilder* input);
+      #endif
 
       /*
       * Functions for adding to, removing from, and retrieving modules from the kernel.
@@ -119,7 +133,7 @@ limitations under the License.
       /*
       * These are the core functions of the kernel that must be called from outside.
       */
-      int8_t procIdleFlags(void);              // Execute pending Msgs.
+      int8_t procIdleFlags();                  // Execute pending Msgs.
       void advanceScheduler(unsigned int);     // Push all scheduled Msgs forward by one tick.
       inline void advanceScheduler() {   advanceScheduler(MANUVR_PLATFORM_TIMER_PERIOD_MS);  };
 
@@ -142,9 +156,6 @@ limitations under the License.
          Just gracefully fall into those when needed. */
       int8_t notify(ManuvrMsg*);
       int8_t callback_proc(ManuvrMsg*);
-      #if defined(MANUVR_CONSOLE_SUPPORT)
-        void procDirectDebugInstruction(StringBuilder*);
-      #endif
       void printDebug(StringBuilder*);
 
 
@@ -205,8 +216,8 @@ limitations under the License.
       int8_t procCallAheads(ManuvrMsg* active_event);
       int8_t procCallBacks(ManuvrMsg* active_event);
 
-      unsigned int countActiveSchedules(void);  // How many active schedules are present?
-      int serviceSchedules(void);         // Prep any schedules that have come due for exec.
+      unsigned int countActiveSchedules();  // How many active schedules are present?
+      int serviceSchedules();         // Prep any schedules that have come due for exec.
 
       int8_t validate_insertion(ManuvrMsg*);
       void reclaim_event(ManuvrMsg*);

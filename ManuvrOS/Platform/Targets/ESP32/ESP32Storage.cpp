@@ -251,56 +251,54 @@ int8_t ESP32Storage::notify(ManuvrMsg* active_event) {
   return return_value;
 }
 
-
-#if defined(MANUVR_CONSOLE_SUPPORT)
-void ESP32Storage::procDirectDebugInstruction(StringBuilder *input) {
-  char* str = input->position(0);
-
-  switch (*(str)) {
-    case 'w':
-      local_log.concatf("Wipe %s.\n", (0 == wipe()) ? "succeeded" : "failed");
-      break;
-
-    #if defined(MANUVR_DEBUG)
-      case 's':
-        if (isMounted()) {
-          Argument a(randomInt());
-          a.setKey("random_number");
-          a.append((int8_t) 64)->setKey("number_64");
-          StringBuilder shuttle;
-          if (0 <= Argument::encodeToCBOR(&a, &shuttle)) {
-            if (0 < persistentWrite("test_key", shuttle.string(), shuttle.length(), 0)) {
-              local_log.concat("Save succeeded.\n");
-            }
-          }
-        }
-        break;
-
-      case 'B':   // Dump binary representation.
-        if (isMounted()) {
-          local_log.concat("Key dump:\n");
-          StringBuilder shuttle;
-          if (0 < persistentRead("test_key", &shuttle)) {
-            shuttle.printDebug(&local_log);
-          }
-        }
-        else {
-          local_log.concat("Storage not mounted.\n");
-        }
-        break;
-
-      case 'D':   // Platform-specific fxn
-        //nvs_dump();
-        break;
-    #endif  // MANUVR_DEBUG
-
-    default:
-      EventReceiver::procDirectDebugInstruction(input);
-      break;
-  }
-
-  flushLocalLog();
-}
-#endif   // MANUVR_CONSOLE_SUPPORT
-
+//#if defined(MANUVR_CONSOLE_SUPPORT)
+//void ESP32Storage::consoleCmdProc(StringBuilder *input) {
+//  char* str = input->position(0);
+//
+//  switch (*(str)) {
+//    case 'w':
+//      local_log.concatf("Wipe %s.\n", (0 == wipe()) ? "succeeded" : "failed");
+//      break;
+//
+//    #if defined(MANUVR_DEBUG)
+//      case 's':
+//        if (isMounted()) {
+//          Argument a(randomInt());
+//          a.setKey("random_number");
+//          a.append((int8_t) 64)->setKey("number_64");
+//          StringBuilder shuttle;
+//          if (0 <= Argument::encodeToCBOR(&a, &shuttle)) {
+//            if (0 < persistentWrite("test_key", shuttle.string(), shuttle.length(), 0)) {
+//              local_log.concat("Save succeeded.\n");
+//            }
+//          }
+//        }
+//        break;
+//
+//      case 'B':   // Dump binary representation.
+//        if (isMounted()) {
+//          local_log.concat("Key dump:\n");
+//          StringBuilder shuttle;
+//          if (0 < persistentRead("test_key", &shuttle)) {
+//            shuttle.printDebug(&local_log);
+//          }
+//        }
+//        else {
+//          local_log.concat("Storage not mounted.\n");
+//        }
+//        break;
+//
+//      case 'D':   // Platform-specific fxn
+//        //nvs_dump();
+//        break;
+//    #endif  // MANUVR_DEBUG
+//
+//    default:
+//      EventReceiver::procDirectDebugInstruction(input);
+//      break;
+//  }
+//
+//  flushLocalLog();
+//}
+//#endif   // MANUVR_CONSOLE_SUPPORT
 #endif   // MANUVR_STORAGE

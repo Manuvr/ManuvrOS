@@ -24,7 +24,6 @@ limitations under the License.
 //   painless way to get better inter-op? Dig...
 
 // TODO: Also... this entire file is ugly-as-hell.
-// TODO: Re-work it as enum class, or struct or ANYTHING else.
 
 #ifndef __ENUMERATED_TYPE_CODES_H__
 #define __ENUMERATED_TYPE_CODES_H__

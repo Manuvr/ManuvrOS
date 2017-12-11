@@ -38,9 +38,11 @@ This file is the tortured result of growing pains since the beginning of
   #include <stdint.h>
   #include <stdarg.h>
   #include <DataStructures/RingBuffer.h>
-  //#include <DataStructures/StringBuilder.h>
+
   #include <Platform/Platform.h>
-  //#include <Kernel.h>
+  #ifdef MANUVR_CONSOLE_SUPPORT
+    #include <XenoSession/Console/ConsoleInterface.h>
+  #endif
   #include <Drivers/BusQueue/BusQueue.h>
   #include <Drivers/DeviceWithRegisters/DeviceRegister.h>
 
@@ -222,7 +224,12 @@ This file is the tortured result of growing pains since the beginning of
   /*
   * This is the class that represents the actual i2c peripheral (master).
   */
-  class I2CAdapter : public EventReceiver, public BusAdapter<I2CBusOp> {
+  class I2CAdapter : public EventReceiver,
+    #ifdef MANUVR_CONSOLE_SUPPORT
+      public ConsoleInterface,
+    #endif
+      public BusAdapter<I2CBusOp>
+    {
     public:
       I2CAdapter(const I2CAdapterOptions*);  // Constructor takes a bus ID and pins as arguments.
       ~I2CAdapter();           // Destructor
@@ -233,19 +240,23 @@ This file is the tortured result of growing pains since the beginning of
       int8_t queue_io_job(BusOp*);
       I2CBusOp* new_op(BusOpcode, BusOpCallback*);
 
-      /* Overrides from EventReceiver */
-      int8_t notify(ManuvrMsg*);
-      int8_t callback_proc(ManuvrMsg*);
-      #if defined(MANUVR_CONSOLE_SUPPORT)
-        void procDirectDebugInstruction(StringBuilder*);
-        void printDebug(StringBuilder*);
+      #ifdef MANUVR_CONSOLE_SUPPORT
+        /* Overrides from ConsoleInterface */
+        uint consoleGetCmds(ConsoleCommand**);
+        inline const char* consoleName() { return getReceiverName();  };
+        void consoleCmdProc(StringBuilder* input);
 
         /* Debug aides */
+        void printDebug(StringBuilder*);
         void printHardwareState(StringBuilder*);
         void printPingMap(StringBuilder*);
         void printDevs(StringBuilder*);
         void printDevs(StringBuilder*, uint8_t dev_num);
       #endif  //MANUVR_CONSOLE_SUPPORT
+
+      /* Overrides from EventReceiver */
+      int8_t notify(ManuvrMsg*);
+      int8_t callback_proc(ManuvrMsg*);
 
 
       // Builds a special bus transaction that does nothing but test for the presence or absence of a slave device.
