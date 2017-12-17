@@ -124,6 +124,7 @@ CPP_SRCS  += Drivers/Sensors/LPS331/LPS331.cpp
 CPP_SRCS  += Drivers/Sensors/TSL2561/TSL2561.cpp
 CPP_SRCS  += Drivers/Sensors/MGC3130/MGC3130.cpp
 CPP_SRCS  += Drivers/Sensors/BMP085/BMP085.cpp
+CPP_SRCS  += Drivers/Sensors/AMG88xx/AMG88xx.cpp
 
 CPP_SRCS  += Drivers/TLC5947/TLC5947.cpp
 #CPP_SRCS  += Drivers/LSMD9S1/LSMD9S1.cpp

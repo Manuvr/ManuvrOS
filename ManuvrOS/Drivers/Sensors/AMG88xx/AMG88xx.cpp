@@ -24,7 +24,13 @@ limitations under the License.
 
 const DatumDef datum_defs[] = {
   {
-    .desc    = "Temperature",
+    .desc    = "Sensor temperature",
+    .units   = COMMON_UNITS_C,
+    .type_id = TCode::FLOAT,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "Field temperature",
     .units   = COMMON_UNITS_C,
     .type_id = TCode::FLOAT,
     .flgs    = SENSE_DATUM_FLAG_HARDWARE
@@ -44,11 +50,12 @@ const DatumDef datum_defs[] = {
 /*
 * Constructor. Takes i2c address as argument.
 */
-AMG88xx::AMG88xx(uint8_t addr) : I2CDevice(addr, 8, 8), SensorWrapper("AMG88xx") {
+AMG88xx::AMG88xx(const AMG88xxOpts* o, const uint8_t addr) :
+    I2CDevice(addr),
+    SensorWrapper("AMG88xx"),
+    _opts(o) {
   define_datum(&datum_defs[0]);
-
-  // Default state: Maximum range and maximum resolution.
-  autorange    = false;
+  define_datum(&datum_defs[1]);
 }
 
 /*
@@ -66,21 +73,13 @@ AMG88xx::~AMG88xx() {
 *  `-'  `-' ' ' `-' `-' '   ' '   '   `-` |-' |-' `-' '
 ******************************************|***|********************************/
 SensorError AMG88xx::init() {
-  if (syncRegisters() == I2C_ERR_SLAVE_NO_ERROR) {
-    isActive(true);
-    return SensorError::NO_ERROR;
-  }
-  else {
-    return SensorError::BUS_ERROR;
-  }
+  return SensorError::NO_ERROR;
 }
 
 
 SensorError AMG88xx::setParameter(uint16_t reg, int len, uint8_t *data) {
   SensorError return_value = SensorError::INVALID_PARAM_ID;
   switch (reg) {
-    case AMG88xx_REG_POWER_STATE:
-      break;
     default:
       break;
   }
@@ -167,8 +166,8 @@ int8_t AMG88xx::io_op_callback(I2CBusOp* completed) {
 */
 void AMG88xx::printDebug(StringBuilder* temp) {
   if (temp) {
-    temp->concatf("Lux sensor (AMG88xx)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
-    I2CDeviceWithRegisters::printDebug(temp);
+    temp->concatf("AMG88xx\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
+    I2CDevice::printDebug(temp);
     //SensorWrapper::issue_json_map(temp, this);
     temp->concatf("\n");
   }

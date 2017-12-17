@@ -112,7 +112,6 @@ limitations under the License.
 class AMG88xxOpts {
   public:
     const uint8_t pin;            // Which pin is bound to ~ALERT/CC?
-    uint8_t addr = ISL29033_I2CADDR
 
     /** Copy constructor. */
     AMG88xxOpts(const AMG88xxOpts* o) :
@@ -147,7 +146,7 @@ class AMG88xxOpts {
 //   because of the nuanced treatment of a small set of registers.
 class AMG88xx : public I2CDevice, public SensorWrapper {
   public:
-    AMG88xx(const LTC294xOpts*);
+    AMG88xx(const AMG88xxOpts*, const uint8_t addr = AMG88XX_I2CADDR);
     ~AMG88xx();
 
     /* Overrides from SensorWrapper */
@@ -168,6 +167,7 @@ class AMG88xx : public I2CDevice, public SensorWrapper {
 
 
   private:
+    const AMG88xxOpts _opts;
     int16_t  _field_values[64];         // Sign-extended and endian-normalized.
     uint8_t  _field_thresholds[64][6];  // 6 bytes of threshold per-pixel.
 
