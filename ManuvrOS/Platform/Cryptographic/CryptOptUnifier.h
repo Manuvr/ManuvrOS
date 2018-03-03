@@ -229,6 +229,7 @@ Note that this represents a maximum scope-of-support regarding cryptographic
     #endif
 
     #if defined(MBEDTLS_BLOWFISH_C)
+      #define WRAPPED_SYM_BLOWFISH
       #define WRAPPED_SYM_BLOWFISH_ECB          MBEDTLS_CIPHER_BLOWFISH_ECB
       #define WRAPPED_SYM_BLOWFISH_CBC          MBEDTLS_CIPHER_BLOWFISH_CBC
       #define WRAPPED_SYM_BLOWFISH_CFB64        MBEDTLS_CIPHER_BLOWFISH_CFB64

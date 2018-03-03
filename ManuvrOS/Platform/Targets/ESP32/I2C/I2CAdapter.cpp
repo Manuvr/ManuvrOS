@@ -5,8 +5,6 @@
 
 #define ACK_CHECK_EN   0x01     /*!< I2C master will check ack from slave*/
 #define ACK_CHECK_DIS  0x00     /*!< I2C master will not check ack from slave */
-#define ACK_VAL        0x00     /*!< I2C ack value */
-#define NACK_VAL       0x01     /*!< I2C nack value */
 
 
 
@@ -150,7 +148,7 @@ XferFault I2CBusOp::advance(uint32_t status_reg) {
         else {
           i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
         }
-        i2c_master_read(cmd, buf, (size_t) buf_len, ACK_VAL);
+        i2c_master_read(cmd, buf, (size_t) buf_len, I2C_MASTER_ACK);
         set_state(XferState::RX_WAIT);
         break;
       case BusOpcode::TX:

@@ -54,11 +54,21 @@ int _cipher_opcode(Cipher ci, uint32_t opts) {
     case Cipher::SYM_AES_192_CCM:
     case Cipher::SYM_AES_256_CCM:
       return (opts & OP_ENCRYPT) ? MBEDTLS_AES_ENCRYPT : MBEDTLS_AES_DECRYPT;
-    case Cipher::SYM_BLOWFISH_ECB:
-    case Cipher::SYM_BLOWFISH_CBC:
-    case Cipher::SYM_BLOWFISH_CFB64:
-    case Cipher::SYM_BLOWFISH_CTR:
+    #if defined(WRAPPED_SYM_BLOWFISH)
+      #if defined(WRAPPED_SYM_BLOWFISH_ECB)
+        case Cipher::SYM_BLOWFISH_ECB:
+      #endif
+      #if defined(WRAPPED_SYM_BLOWFISH_CBC)
+      case Cipher::SYM_BLOWFISH_CBC:
+      #endif
+      #if defined(WRAPPED_SYM_BLOWFISH_CFB64)
+      case Cipher::SYM_BLOWFISH_CFB64:
+      #endif
+      #if defined(WRAPPED_SYM_BLOWFISH_CTR)
+      case Cipher::SYM_BLOWFISH_CTR:
+      #endif
       return (opts & OP_ENCRYPT) ? MBEDTLS_BLOWFISH_ENCRYPT : MBEDTLS_BLOWFISH_DECRYPT;
+    #endif
     default:
       return 0;  // TODO: Sketchy....
   }

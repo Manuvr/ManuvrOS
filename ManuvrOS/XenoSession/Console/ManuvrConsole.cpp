@@ -436,7 +436,7 @@ void ManuvrConsole::change_active_console_interface(const char* cif_str) {
     ConsoleInterface* working;
     for (int i = 0; i < _consoles.size(); i++) {
       working = _consoles.get(i);
-      if (0 == strcasestr(cif_str, working->consoleName())) {
+      if (0 == StringBuilder::strcasestr((char*) cif_str, working->consoleName())) {
         _current_console = working;
         return;
       }
