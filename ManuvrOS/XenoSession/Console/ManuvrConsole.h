@@ -70,6 +70,7 @@ class ManuvrConsole : public XenoSession, public ConsoleInterface {
 
     int8_t _route_console_input(StringBuilder*);
     void change_active_console_interface(const char*);
+    void change_active_console_interface(int);
 };
 
 

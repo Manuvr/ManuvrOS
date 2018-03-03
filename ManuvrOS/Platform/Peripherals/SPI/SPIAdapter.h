@@ -82,10 +82,7 @@ class SPIAdapter : public EventReceiver, public BusAdapter<SPIBusOp> {
     int8_t notify(ManuvrMsg*);
     int8_t callback_proc(ManuvrMsg*);
     int8_t attached();      // This is called from the base notify().
-    #if defined(MANUVR_CONSOLE_SUPPORT)
-      void procDirectDebugInstruction(StringBuilder*);
-      void printHardwareState(StringBuilder*);
-    #endif  //MANUVR_CONSOLE_SUPPORT
+    void printHardwareState(StringBuilder*);
 
 
   protected:

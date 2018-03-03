@@ -123,51 +123,47 @@ ManuvrConsole::~ManuvrConsole() {
 */
 int8_t ManuvrConsole::_route_console_input(StringBuilder* last_user_input) {
   StringBuilder _raw_from_console;  // We do this to avoid leaks.
+  ConsoleInterface* working = _current_console;
   // Now we take the data from the buffer so that further input isn't lost. JIC.
   _raw_from_console.concatHandoff(last_user_input);
 
   _raw_from_console.split(" ");
   if (_raw_from_console.count() > 0) {
-    if (_current_console) {
-      // If we are
+    const char* str = (const char *) _raw_from_console.position(0);
+    if ((92 == (uint8_t) *str) && (0 == (uint8_t) *(str+1))) {
+      // A lone slash resets us to root.
+      local_log.concat("Returned to console root.\n");
+      _current_console = this;
     }
     else {
-    }
-
-    const char* str = (const char *) _raw_from_console.position(0);
-    int cif_idx = atoi(str);
-    switch (*str) {
-      case '0':
-      case '1':
-      case '2':
-      case '3':
-      case '4':
-      case '5':
-      case '6':
-      case '7':
-      case '8':
-      case '9':
+      int cif_idx = atoi(str);
+      if ((0 != cif_idx) || ('0' == *str)) {
         // If the first position is a number, we drop the first position, since
         //   it was essentially a directive aimed at this class.
-        _raw_from_console.drop_position(0);
-        break;
-      case '/':
-        if (2 > strlen(str)) {
-          // A lone slash resets us to root.
-          _current_console = this;
+        working = _consoles.get(cif_idx);
+        if (nullptr == working) {
+          _raw_from_console.clear();
+          local_log.concatf("No such console: %d.\n", cif_idx);
+          working = _current_console;
         }
-    }
+        else {
+          _raw_from_console.drop_position(0);
+        }
+      }
 
-    if (_raw_from_console.count() > 0) {
-      // If there are still positions, lookup the subscriber and send it the input.
-      ConsoleInterface* cif = _consoles.get(cif_idx);
-      if (nullptr != cif) {
-        cif->consoleCmdProc(&_raw_from_console);
-      }
-      else {
-        local_log.concatf("No such console: %d\n", cif_idx);
+      if (_raw_from_console.count() > 0) {
+        // If there are still positions, lookup the subscriber and send it the input.
+        if (nullptr != working) {
+          working->consoleCmdProc(&_raw_from_console);
+        }
+        else {
+          local_log.concatf("No working console: %d\n", cif_idx);
+        }
       }
     }
+  }
+  else {
+    printConsoleTree(&local_log);
   }
 
   flushLocalLog();
@@ -238,13 +234,7 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
     for (int toks = session_buffer.split("\n"); toks > 0; toks--) {
       char* temp_ptr = session_buffer.position(0);
       int temp_len   = strlen(temp_ptr);
-      // Begin the cases...
-      //if (strcasestr(temp_ptr, "QUIT")) {
-      //  ManuvrMsg* event = Kernel::returnEvent(MANUVR_MSG_SYS_REBOOT);
-      //  event->setOriginator((EventReceiver*) platform.kernel());
-      //  Kernel::staticRaiseEvent(event);
-      //}
-      //else {
+      //if (temp_len > 0) {
         // If the ISR saw a CR or LF on the wire, we tell the parser it is ok to
         // run in idle time.
         // TODO: This copies the string from session_buffer into another string
@@ -272,6 +262,7 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
 static const ConsoleCommand console_cmds[] = {
   { "?", "Show help" },
   { "i", "Show console-capable objects." },
+  { "e", "Local echo on/off." },
   { "/", "Drop back to console." }
 };
 
@@ -292,24 +283,23 @@ void ManuvrConsole::consoleCmdProc(StringBuilder* input) {
   char* str = input->position(0);
   int temp_int = ((*(str) != 0) ? atoi((char*) str+1) : 0);
 
-  switch (*(str)) {
+  switch (*str) {
+    case 'E':    //
+    case 'e':    //
+      _local_echo = ('E' == *str);
+      local_log.concatf("Local echo is %s.\n", (_local_echo ? "en" : "dis"));
+      break;
     case 'i':
-      switch (temp_int) {
-        case 1:
-          printConsoleTree(&local_log);
-          break;
-        default:
-          printDebug(&local_log);
-          break;
-      }
+      printDebug(&local_log);
       break;
 
     case 'c':
-      change_active_console_interface(input->position(1));
+      change_active_console_interface(temp_int);
+      local_log.concatf("Current console is %s.\n", _current_console->consoleName());
       break;
 
-    default:
-      //XenoSession::procDirectDebugInstruction(input);
+    default:     // Print the console tree.
+      printConsoleTree(&local_log);
       break;
   }
   flushLocalLog();
@@ -383,7 +373,7 @@ void ManuvrConsole::printDebug(StringBuilder *output) {
 
   int ses_buf_len = session_buffer.length();
   int la_len      = _log_accumulator.length();
-  output->concatf("-- Console echoes:           %s\n", _local_echo ? "yes" : "no");
+  output->concatf("-- Console echoes:           %c\n", _local_echo ? 'y' : 'n');
   if (ses_buf_len > 0) {
     #if defined(MANUVR_DEBUG)
       output->concatf("-- Session Buffer (%d bytes):  ", ses_buf_len);
@@ -430,6 +420,13 @@ int8_t ManuvrConsole::notify(ManuvrMsg* active_runnable) {
   return return_value;
 }
 
+
+void ManuvrConsole::change_active_console_interface(int cif_id) {
+  ConsoleInterface* working = _consoles.get(cif_id);
+  if (working) {
+    _current_console = working;
+  }
+}
 
 void ManuvrConsole::change_active_console_interface(const char* cif_str) {
   if (nullptr != cif_str) {

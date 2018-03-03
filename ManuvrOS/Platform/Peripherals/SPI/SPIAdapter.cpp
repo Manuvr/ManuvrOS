@@ -543,30 +543,29 @@ void SPIAdapter::printDebug(StringBuilder *output) {
 }
 
 
-#if defined(MANUVR_CONSOLE_SUPPORT)
-void SPIAdapter::procDirectDebugInstruction(StringBuilder *input) {
-  char* str = input->position(0);
-  char c    = *(str);
-
-  switch (c) {
-    case 'g':     // SPI1 queue-guard (overflow protection).
-      _er_flip_flag(SPI_FLAG_QUEUE_GUARD);
-      local_log.concatf("SPI queue overflow guard?  %s\n", _er_flag(SPI_FLAG_QUEUE_GUARD)?"yes":"no");
-      break;
-    case 'p':     // Purge the SPI1 work queue.
-      purge_queued_work();
-      local_log.concat("SPI queue purged.\n");
-      break;
-    case '&':
-      local_log.concatf("Advanced CPLD SPI work queue.\n");
-      Kernel::raiseEvent(MANUVR_MSG_SPI_QUEUE_READY, nullptr);   // Raise an event
-      break;
-
-    default:
-      EventReceiver::procDirectDebugInstruction(input);
-      break;
-  }
-
-  flushLocalLog();
-}
-#endif  // MANUVR_CONSOLE_SUPPORT
+//#if defined(MANUVR_CONSOLE_SUPPORT)
+//void SPIAdapter::procDirectDebugInstruction(StringBuilder *input) {
+//  char* str = input->position(0);
+//  char c    = *(str);
+//
+//  switch (c) {
+//    case 'g':     // SPI1 queue-guard (overflow protection).
+//      _er_flip_flag(SPI_FLAG_QUEUE_GUARD);
+//      local_log.concatf("SPI queue overflow guard?  %s\n", _er_flag(SPI_FLAG_QUEUE_GUARD)?"yes":"no");
+//      break;
+//    case 'p':     // Purge the SPI1 work queue.
+//      purge_queued_work();
+//      local_log.concat("SPI queue purged.\n");
+//      break;
+//    case '&':
+//      local_log.concatf("Advanced CPLD SPI work queue.\n");
+//      Kernel::raiseEvent(MANUVR_MSG_SPI_QUEUE_READY, nullptr);   // Raise an event
+//      break;
+//
+//    default:
+//      break;
+//  }
+//
+//  flushLocalLog();
+//}
+//#endif  // MANUVR_CONSOLE_SUPPORT
