@@ -210,7 +210,29 @@ void currentDateTime(StringBuilder* target) {
 /*******************************************************************************
 * GPIO and change-notice                                                       *
 *******************************************************************************/
-void pin_isr_pitch_event() {
+static xQueueHandle gpio_evt_queue = NULL;
+
+static void IRAM_ATTR gpio_isr_handler(void* arg) {
+  uint32_t gpio_num = (uint32_t) arg;
+  xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+}
+
+
+static void gpio_task_handler(void* arg) {
+  uint32_t io_num;
+  for(;;) {
+    if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
+      printf("IRQ pin %u\n", io_num);
+      if (GPIO_IS_VALID_GPIO(io_num)) {
+        if (nullptr != gpio_pins[io_num].fxn) {
+          gpio_pins[io_num].fxn();
+        }
+        if (nullptr != gpio_pins[io_num].event) {
+          Kernel::isrRaiseEvent(gpio_pins[io_num].event);
+        }
+      }
+    }
+  }
 }
 
 
@@ -229,6 +251,10 @@ void gpioSetup() {
     gpio_pins[i].mode  = (int) GPIOMode::INPUT;  // All pins begin as inputs.
     gpio_pins[i].pin   = i;      // The pin number.
   }
+  gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
+  xTaskCreate(gpio_task_handler, "gpiotsk", 2048, NULL, 10, NULL);
+  gpio_install_isr_service(0);
+  printf("GPIO setup completed.\n");
 }
 
 
@@ -238,16 +264,19 @@ int8_t gpioDefine(uint8_t pin, GPIOMode mode) {
     return -1;
   }
 
+  io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+  io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
+  io_conf.intr_type    = (gpio_int_type_t) GPIO_PIN_INTR_DISABLE;
+  io_conf.pin_bit_mask = (1 << pin);
+
   // Handle the pull-up/down stuff first.
   switch (mode) {
     case GPIOMode::BIDIR_OD_PULLUP:
     case GPIOMode::INPUT_PULLUP:
-      io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
       io_conf.pull_up_en   = GPIO_PULLUP_ENABLE;
       break;
     case GPIOMode::INPUT_PULLDOWN:
       io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
-      io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
       break;
     default:
       break;
@@ -280,23 +309,27 @@ int8_t gpioDefine(uint8_t pin, GPIOMode mode) {
       return -1;
   }
 
-  // disable interrupt
-  io_conf.intr_type = (gpio_int_type_t) GPIO_PIN_INTR_DISABLE;
-  io_conf.pin_bit_mask = (1 << pin);
-
-  //configure GPIO with the given settings
   gpio_config(&io_conf);
   return 0;
 }
 
 
 void unsetPinIRQ(uint8_t pin) {
-  //detachInterrupt(pin);
+  if (GPIO_IS_VALID_GPIO(pin)) {
+    gpio_isr_handler_remove((gpio_num_t) pin);
+    gpio_pins[pin].event = 0;      // No event assigned.
+    gpio_pins[pin].fxn   = 0;      // No function pointer.
+  }
 }
 
 
+
 int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrMsg* isr_event) {
-  return 0;
+  if (0 == setPinFxn(pin, condition, gpio_pins[pin].fxn)) {
+    gpio_pins[pin].event = isr_event;
+    return 0;
+  }
+  return -1;
 }
 
 
@@ -304,7 +337,61 @@ int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrMsg* isr_event) {
 * Pass the function pointer
 */
 int8_t setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn) {
-  //attachInterrupt(pin, fxn, condition);
+  gpio_config_t io_conf;
+  if (!GPIO_IS_VALID_GPIO(pin)) {
+    printf("GPIO %u is invalid\n", pin);
+    return -1;
+  }
+
+  io_conf.pin_bit_mask = (1 << pin);
+  io_conf.mode         = GPIO_MODE_INPUT;
+  io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
+  io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+
+  switch (condition) {
+    case FALLING_PULL_UP:
+    case RISING_PULL_UP:
+    case CHANGE_PULL_UP:
+      io_conf.pull_up_en   = GPIO_PULLUP_ENABLE;
+      gpio_pins[pin].mode  = (int) GPIOMode::INPUT_PULLUP;
+      break;
+    case FALLING_PULL_DOWN:
+    case RISING_PULL_DOWN:
+    case CHANGE_PULL_DOWN:
+      io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
+      gpio_pins[pin].mode  = (int) GPIOMode::INPUT_PULLDOWN;
+      break;
+    default:
+      gpio_pins[pin].mode  = (int) GPIOMode::INPUT;
+      break;
+  }
+
+  switch (condition) {
+    case CHANGE:
+    case CHANGE_PULL_UP:
+    case CHANGE_PULL_DOWN:
+      io_conf.intr_type = (gpio_int_type_t) GPIO_INTR_ANYEDGE;
+      break;
+    case RISING:
+    case RISING_PULL_UP:
+    case RISING_PULL_DOWN:
+      io_conf.intr_type = (gpio_int_type_t) GPIO_INTR_POSEDGE;
+      break;
+    case FALLING:
+    case FALLING_PULL_UP:
+    case FALLING_PULL_DOWN:
+      io_conf.intr_type = (gpio_int_type_t) GPIO_INTR_NEGEDGE;
+      break;
+    default:
+      printf("Condition is invalid\n");
+      return -1;
+  }
+
+  printf("Setting Fxn to GPIO %u\n", pin);
+  gpio_pins[pin].fxn   = fxn;
+  gpio_config(&io_conf);
+  gpio_set_intr_type((gpio_num_t) pin, GPIO_INTR_ANYEDGE);
+  gpio_isr_handler_add((gpio_num_t) pin, gpio_isr_handler, (void*) (0L + pin));
   return 0;
 }
 

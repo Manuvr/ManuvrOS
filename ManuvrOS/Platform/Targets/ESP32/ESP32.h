@@ -58,14 +58,6 @@ extern "C" {
 }
 
 
-typedef struct __platform_exti_def {
-  ManuvrMsg* event;
-  FxnPointer fxn;
-  uint8_t         pin;
-  uint8_t         condition;
-} PlatformEXTIDef;
-
-
 
 class ESP32Platform : public ManuvrPlatform {
   public:

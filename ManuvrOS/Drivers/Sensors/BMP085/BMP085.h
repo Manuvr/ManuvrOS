@@ -28,8 +28,6 @@ limitations under the License.
 #include <Drivers/Sensors/SensorWrapper.h>
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
 
-#define PRESSURE_AT_SEA_LEVEL  101325.0f  // Atmosphereic pressure at sea-level.
-
 #define BMP085_I2CADDR              0x77
 
 

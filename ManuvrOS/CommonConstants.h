@@ -78,7 +78,8 @@ Apart from including the user-suppied configuration header, there
 
   #define SENSOR_DATUM_NOT_FOUND   "Sensor datum not found"
 
-
+  // Some common properties of the environment.
+  #define PRESSURE_AT_SEA_LEVEL  101325.0f  // Atmosphereic pressure at sea-level.
 
 
 // TODO: Function defs do not belong here. This area under re-org.
