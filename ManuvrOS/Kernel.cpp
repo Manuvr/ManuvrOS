@@ -1351,8 +1351,24 @@ int Kernel::serviceSchedules() {
 #if defined(MANUVR_CONSOLE_SUPPORT)
 
 static const ConsoleCommand console_cmds[] = {
-  { "o", "Enable or disable internal oscillator." },
-  { "O", "Enable or disable external oscillator." }
+  #if defined(MANUVR_STORAGE)
+    { "S", "Save configuration" },
+  #endif // MANUVR_STORAGE
+  #if defined(MANUVR_DEBUG)
+    { "r", "Roll" },
+  #endif //MANUVR_DEBUG
+  { "i", "ER List" },
+  { "i1", "Build" },
+  { "i2", "Profiler" },
+  { "i3", "Platform" },
+  #if defined(__HAS_CRYPT_WRAPPER)
+    { "i4", "Cryptoburrito" },
+  #endif //__HAS_CRYPT_WRAPPER
+  { "i5", "Scheduler" },
+  { "i6", "Supported notions of identity" },
+  { "i7", "Our Identity" },
+  { "b", "Reboot" },
+  { "B", "Enter bootloader" }
 };
 
 
@@ -1419,6 +1435,7 @@ void Kernel::consoleCmdProc(StringBuilder* input) {
         local_log.concatf("Random number: 0x%08x\n", randomInt());
       }
       break;
+    #endif //MANUVR_DEBUG
 
     case 'i':   // Debug prints.
       switch (temp_int) {
@@ -1453,7 +1470,7 @@ void Kernel::consoleCmdProc(StringBuilder* input) {
           Identity::staticToString(platform.selfIdentity(), &local_log);
           break;
 
-        case 8:
+        case 1:
           local_log.concatf("\n-- %s\n", FIRMWARE_NAME);
           local_log.concatf("-- Ver/Build date:     %s   %s %s\n", VERSION_STRING, __DATE__, __TIME__);
           local_log.concatf("-- Manuvr version:     %d.%d.%d\n\n", MANUVR_SEMVER_MAJOR, MANUVR_SEMVER_MINOR, MANUVR_SEMVER_PATCH);
@@ -1464,7 +1481,7 @@ void Kernel::consoleCmdProc(StringBuilder* input) {
           break;
       }
       break;
-    #endif //MANUVR_DEBUG
+
     default:
       EventReceiver::procDirectDebugInstruction(input);
       break;

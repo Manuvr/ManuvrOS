@@ -534,8 +534,10 @@ int8_t ADP8866::notify(ManuvrMsg* active_event) {
 *******************************************************************************/
 
 static const ConsoleCommand console_cmds[] = {
-  { "o", "Enable or disable internal oscillator." },
-  { "O", "Enable or disable external oscillator." }
+  { "r", "Reset" },
+  { "b", "Set channel brightness" },
+  { "L/l", "(En/Dis)able channel)" },
+  { "g", "Sync registers" }
 };
 
 

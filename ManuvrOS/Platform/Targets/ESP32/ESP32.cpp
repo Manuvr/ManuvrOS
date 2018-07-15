@@ -37,7 +37,7 @@ This file is meant to contain a set of common functions that are typically platf
 #include "freertos/task.h"
 #include "soc/efuse_reg.h"
 #include "esp_system.h"
-
+#include "esp_log.h"
 
 #if defined(MANUVR_STORAGE)
   #include <Platform/Targets/ESP32/ESP32Storage.h>
@@ -222,7 +222,6 @@ static void gpio_task_handler(void* arg) {
   uint32_t io_num;
   for(;;) {
     if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
-      printf("IRQ pin %u\n", io_num);
       if (GPIO_IS_VALID_GPIO(io_num)) {
         if (nullptr != gpio_pins[io_num].fxn) {
           gpio_pins[io_num].fxn();
@@ -254,7 +253,6 @@ void gpioSetup() {
   gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
   xTaskCreate(gpio_task_handler, "gpiotsk", 2048, NULL, 10, NULL);
   gpio_install_isr_service(0);
-  printf("GPIO setup completed.\n");
 }
 
 
@@ -339,7 +337,7 @@ int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrMsg* isr_event) {
 int8_t setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn) {
   gpio_config_t io_conf;
   if (!GPIO_IS_VALID_GPIO(pin)) {
-    printf("GPIO %u is invalid\n", pin);
+    ESP_LOGW("ESP32Platform", "GPIO %u is invalid\n", pin);
     return -1;
   }
 
@@ -383,11 +381,10 @@ int8_t setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn) {
       io_conf.intr_type = (gpio_int_type_t) GPIO_INTR_NEGEDGE;
       break;
     default:
-      printf("Condition is invalid\n");
+      ESP_LOGW("ESP32Platform", "GPIO condition is invalid for pin %u\n", pin);
       return -1;
   }
 
-  printf("Setting Fxn to GPIO %u\n", pin);
   gpio_pins[pin].fxn   = fxn;
   gpio_config(&io_conf);
   gpio_set_intr_type((gpio_num_t) pin, GPIO_INTR_ANYEDGE);
@@ -507,7 +504,7 @@ int8_t ESP32Platform::platformPreInit(Argument* root_config) {
   for (uint8_t i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) randomness_pool[i] = 0;
   _alter_flags(true, DEFAULT_PLATFORM_FLAGS);
 
-  rng_thread_id = xTaskCreate(&dev_urandom_reader, "urandom_reader", 512, nullptr, 1, nullptr);
+  rng_thread_id = xTaskCreate(&dev_urandom_reader, "rnd_rdr", 512, nullptr, 1, nullptr);
   if (rng_thread_id) {
     _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
   }

@@ -128,12 +128,6 @@ int8_t LTC294x::init() {
   // NOTE: That's 'f' for float. These values are Celcius.
   setTemperatureThreshold(0.0f, 70.0f);
 
-  if (_opts.useAlertPin()) {
-    // TODO: Choose.
-    // int8_t setPinEvent(_opts.pin, uint8_t condition, ManuvrMsg* isr_event);
-    // int8_t setPinFxn(_opts.pin, uint8_t condition, FxnPointer fxn);
-  }
-
   return writeDirtyRegisters();
 }
 
