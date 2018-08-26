@@ -43,8 +43,8 @@ int8_t I2CAdapter::bus_init() {
   conf.mode             = I2C_MODE_MASTER;  // TODO: We only support master mode right now.
   conf.sda_io_num       = (gpio_num_t) _bus_opts.sda_pin;
   conf.scl_io_num       = (gpio_num_t) _bus_opts.scl_pin;
-  conf.sda_pullup_en    = GPIO_PULLUP_ENABLE; // TODO: Derive from opts.
-  conf.scl_pullup_en    = GPIO_PULLUP_ENABLE; // TODO: Derive from opts.
+  conf.sda_pullup_en    = _bus_opts.sdaPullup() ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE;
+  conf.scl_pullup_en    = _bus_opts.sclPullup() ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE;
   conf.master.clk_speed = 100000; // TODO: Derive from opts.
   int a_id = getAdapterId();
   switch (a_id) {

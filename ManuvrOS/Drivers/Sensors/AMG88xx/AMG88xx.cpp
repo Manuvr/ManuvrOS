@@ -73,6 +73,9 @@ AMG88xx::~AMG88xx() {
 *  `-'  `-' ' ' `-' `-' '   ' '   '   `-` |-' |-' `-' '
 ******************************************|***|********************************/
 SensorError AMG88xx::init() {
+  if (_opts.pinuseIRQPin()) {
+    setPinEvent(_opts.pin, FALLING_PULL_UP, ManuvrMsg* isr_event);
+  }
   return SensorError::NO_ERROR;
 }
 
@@ -95,7 +98,7 @@ SensorError AMG88xx::getParameter(uint16_t reg, int len, uint8_t*) {
 
 SensorError AMG88xx::readSensor() {
   if (isActive()) {
-        return SensorError::NO_ERROR;
+    return SensorError::NO_ERROR;
   }
   return SensorError::BUS_ERROR;
 }

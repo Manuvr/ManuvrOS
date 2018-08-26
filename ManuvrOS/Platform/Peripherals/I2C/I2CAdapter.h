@@ -157,6 +157,20 @@ This file is the tortured result of growing pains since the beginning of
         return (def_flags & (I2C_ADAPT_OPT_FLAG_SDA_PU | I2C_ADAPT_OPT_FLAG_SCL_PU));
       };
 
+      /**
+      * @return true if SDA pullup is desired.
+      */
+      inline const bool sdaPullup() const {
+        return (def_flags & I2C_ADAPT_OPT_FLAG_SDA_PU);
+      };
+
+      /**
+      * @return true if SCL pullup is desired.
+      */
+      inline const bool sclPullup() const {
+        return (def_flags & I2C_ADAPT_OPT_FLAG_SCL_PU);
+      };
+
       const uint8_t  adapter;
       const uint8_t  sda_pin;
       const uint8_t  scl_pin;

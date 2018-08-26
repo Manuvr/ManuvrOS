@@ -125,7 +125,7 @@ class AMG88xxOpts {
     * @param Initial flags
     */
     AMG88xxOpts(
-      uint16_t _p,
+      uint16_t _p = 255,
       uint8_t _fi = 0
     ) :
       pin(_p),
