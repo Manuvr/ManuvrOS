@@ -364,17 +364,7 @@ This file is the tortured result of growing pains since the beginning of
       // Returns true if the job was accepted. False on error.
       bool writeX(int sub_addr, uint16_t byte_count, uint8_t *buf);
       bool readX(int sub_addr, uint8_t len, uint8_t *buf);
-
-      bool write8(uint8_t dat);
-      bool write8(int sub_addr, uint8_t dat);
-      bool write16(int sub_addr, uint16_t dat);
-
-      // Convenience functions for reading bytes from a given i2c address/sub-address...
-      bool read8();
-      bool read8(int sub_addr);
-      bool read16(int sub_addr);
-      bool read16();
-};
+  };
 
 
   /*

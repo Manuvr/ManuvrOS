@@ -45,7 +45,7 @@ int8_t I2CAdapter::bus_init() {
   conf.scl_io_num       = (gpio_num_t) _bus_opts.scl_pin;
   conf.sda_pullup_en    = _bus_opts.sdaPullup() ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE;
   conf.scl_pullup_en    = _bus_opts.sclPullup() ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE;
-  conf.master.clk_speed = 100000; // TODO: Derive from opts.
+  conf.master.clk_speed = _bus_opts.freq;
   int a_id = getAdapterId();
   switch (a_id) {
     case 0:

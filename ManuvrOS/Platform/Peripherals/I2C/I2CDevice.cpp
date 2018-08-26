@@ -124,70 +124,6 @@ bool I2CDevice::disassignBusInstance() {
 };
 
 
-/*
-  This function sends the MSB first.
-*/
-bool I2CDevice::write16(int sub_addr, uint16_t dat) {
-  if (_bus == nullptr) {
-    #ifdef MANUVR_DEBUG
-    StringBuilder _log;
-    _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
-    Kernel::log(&_log);
-    #endif
-    return false;
-  }
-  uint8_t* temp = (uint8_t*) malloc(2);
-  *(temp + 0) = (dat >> 8);
-  *(temp + 1) = (uint8_t) (dat & 0x00FF);
-  I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
-  nu->dev_addr = _dev_addr;
-  nu->sub_addr = (int16_t) sub_addr;
-  nu->buf      = temp;
-  nu->buf_len  = 2;
-  return (0 == _bus->queue_io_job(nu));
-}
-
-
-bool I2CDevice::write8(uint8_t dat) {
-    if (_bus == nullptr) {
-      #ifdef MANUVR_DEBUG
-      StringBuilder _log;
-      _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
-      Kernel::log(&_log);
-      #endif
-      return false;
-    }
-    uint8_t* temp = (uint8_t*) malloc(1);
-    *(temp + 0) = dat;
-    I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
-    nu->dev_addr = _dev_addr;
-    nu->sub_addr = (int16_t) -1;
-    nu->buf      = temp;
-    nu->buf_len  = 1;
-    return (0 == _bus->queue_io_job(nu));
-}
-
-
-bool I2CDevice::write8(int sub_addr, uint8_t dat) {
-    if (_bus == nullptr) {
-      #ifdef MANUVR_DEBUG
-      StringBuilder _log;
-      _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
-      Kernel::log(&_log);
-      #endif
-      return false;
-    }
-    uint8_t* temp = (uint8_t*) malloc(1);
-    *(temp + 0) = dat;
-    I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
-    nu->dev_addr = _dev_addr;
-    nu->sub_addr = (int16_t) sub_addr;
-    nu->buf      = temp;
-    nu->buf_len  = 1;
-    return (0 == _bus->queue_io_job(nu));
-}
-
-
 /* This is to become the only interface because of its non-reliance on malloc(). */
 bool I2CDevice::writeX(int sub_addr, uint16_t len, uint8_t *buf) {
   if (_bus == nullptr) {
@@ -207,7 +143,6 @@ bool I2CDevice::writeX(int sub_addr, uint16_t len, uint8_t *buf) {
 }
 
 
-
 bool I2CDevice::readX(int sub_addr, uint8_t len, uint8_t *buf) {
   if (_bus == nullptr) {
     #ifdef MANUVR_DEBUG
@@ -222,95 +157,6 @@ bool I2CDevice::readX(int sub_addr, uint8_t len, uint8_t *buf) {
   nu->sub_addr = (int16_t) sub_addr;
   nu->buf      = buf;
   nu->buf_len  = len;
-  return (0 == _bus->queue_io_job(nu));
-}
-
-
-
-bool I2CDevice::read8(int sub_addr) {
-  if (_bus == nullptr) {
-    #ifdef MANUVR_DEBUG
-    StringBuilder _log;
-    _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
-    Kernel::log(&_log);
-    #endif
-    return false;
-  }
-  uint8_t* temp = (uint8_t*) malloc(1);
-  *(temp + 0) = 0x00;
-  I2CBusOp* nu = _bus->new_op(BusOpcode::RX, this);
-  nu->dev_addr = _dev_addr;
-  nu->sub_addr = (int16_t) sub_addr;
-  nu->buf      = temp;
-  nu->buf_len  = 1;
-  return (0 == _bus->queue_io_job(nu));
-}
-
-
-bool I2CDevice::read8() {
-  if (_bus == nullptr) {
-    #ifdef MANUVR_DEBUG
-    StringBuilder _log;
-    _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
-    Kernel::log(&_log);
-    #endif
-    return false;
-  }
-  uint8_t* temp = (uint8_t*) malloc(1);
-  *(temp + 0) = 0x00;
-  I2CBusOp* nu = _bus->new_op(BusOpcode::RX, this);
-  nu->dev_addr = _dev_addr;
-  nu->sub_addr = (int16_t) -1;
-  nu->buf      = temp;
-  nu->buf_len  = 1;
-  return (0 == _bus->queue_io_job(nu));
-}
-
-
-/*
-  This function assumes the MSB is being read first.
-*/
-bool I2CDevice::read16(int sub_addr) {
-  if (_bus == nullptr) {
-    #ifdef MANUVR_DEBUG
-    StringBuilder _log;
-    _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
-    Kernel::log(&_log);
-    #endif
-    return false;
-  }
-  uint8_t* temp = (uint8_t*) malloc(2);
-  *(temp + 0) = 0x00;
-  *(temp + 1) = 0x00;
-  I2CBusOp* nu = _bus->new_op(BusOpcode::RX, this);
-  nu->dev_addr = _dev_addr;
-  nu->sub_addr = (int16_t) sub_addr;
-  nu->buf      = temp;
-  nu->buf_len  = 2;
-  return (0 == _bus->queue_io_job(nu));
-}
-
-
-/*
-  This function assumes the MSB is being read first.
-*/
-bool I2CDevice::read16() {
-  if (_bus == nullptr) {
-    #ifdef MANUVR_DEBUG
-    StringBuilder _log;
-    _log.concatf("No bus assignment (i2c addr 0x%02x).\n", _dev_addr);
-    Kernel::log(&_log);
-    #endif
-    return false;
-  }
-  uint8_t* temp = (uint8_t*) malloc(2);
-  *(temp + 0) = 0x00;
-  *(temp + 1) = 0x00;
-  I2CBusOp* nu = _bus->new_op(BusOpcode::RX, this);
-  nu->dev_addr = _dev_addr;
-  nu->sub_addr = (int16_t) -1;
-  nu->buf      = temp;
-  nu->buf_len  = 2;
   return (0 == _bus->queue_io_job(nu));
 }
 
