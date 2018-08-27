@@ -130,7 +130,7 @@ SensorError BMP280::init() {
 SensorError BMP280::readSensor() {
   // Depending on which stage of the read we are on, jump to the next stage.
   if (!isCalibrated()) {
-    //return SensorError::NOT_CALIBRATED;
+    return SensorError::NOT_CALIBRATED;
   }
   return readX(BMP280_REG_DATA, 8, _raw_data) ? SensorError::NO_ERROR : SensorError::BUS_ERROR;
 }
@@ -152,7 +152,8 @@ SensorError BMP280::getParameter(uint16_t reg, int len, uint8_t*) {
 * _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
 *******************************************************************************/
 
-int8_t BMP280::io_op_callback(I2CBusOp* completed) {
+int8_t BMP280::io_op_callback(BusOp* op) {
+  I2CBusOp* completed = (I2CBusOp*) op;
   if (completed->get_opcode() == BusOpcode::RX) {
     // We read.
     switch (completed->sub_addr) {
@@ -269,13 +270,6 @@ int8_t BMP280::io_op_callback(I2CBusOp* completed) {
 void BMP280::printDebug(StringBuilder* temp) {
   temp->concatf("Altitude sensor (BMP280)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
   I2CDevice::printDebug(temp);
-  readAsString(0, temp);
-  temp->concat("\n");
-  readAsString(1, temp);
-  temp->concat("\n");
-  readAsString(2, temp);
-  temp->concat("\n");
-  readAsString(3, temp);
   temp->concat("\n");
 }
 
@@ -320,6 +314,8 @@ bool BMP280::_set_sampling(BMP280Sampling x, BMP280Mode y) {
 * https://github.com/adafruit/Adafruit_BMP280_Library/blob/master/Adafruit_BMP280.cpp
 */
 int8_t BMP280::_proc_data() {
+  StringBuilder output;
+  printDebug(&output);
   if (_proc_temp) {
     // Calculate temperature.
     uncomp_temp >>= 4;
@@ -331,6 +327,7 @@ int8_t BMP280::_proc_data() {
     int32_t t_fine = t_var1 + t_var2;
     float T  = ((t_fine * 5 + 128) >> 8) / 100;
     updateDatum(1, T);
+    output.concatf("Temperature: %f\n", T);
 
     if (_proc_pres) {
       // Calculate pressure.
@@ -349,11 +346,13 @@ int8_t BMP280::_proc_data() {
         p = ((p + var1 + var2) >> 8) + (((int64_t)_get_cal_p7()) << 4);
         double result = (double) p/256;
         updateDatum(0, result);
+        output.concatf("Pressure: %f\n", result);
 
         if (_proc_alt) {
           // Calculate altitude.
           altitude = (float) 443.3 * (1.0 - pow((result/PRESSURE_AT_SEA_LEVEL), 0.190295));
           updateDatum(2, altitude);
+          output.concatf("Altitude: %f\n", altitude);
         }
       }
     }
@@ -371,8 +370,10 @@ int8_t BMP280::_proc_data() {
       v_x1_u32r = (v_x1_u32r > 419430400) ? 419430400 : v_x1_u32r;
       float h = (v_x1_u32r >> 12) / 1024.0;
       updateDatum(3, h);
+      output.concatf("Humidity: %f\n", h);
     }
   }
 
+  Kernel::log(&output);
   return 0;
 }

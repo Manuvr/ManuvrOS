@@ -148,7 +148,7 @@ XferFault I2CBusOp::advance(uint32_t status_reg) {
         else {
           i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
         }
-        i2c_master_read(cmd, buf, (size_t) buf_len, I2C_MASTER_ACK);
+        i2c_master_read(cmd, buf, (size_t) buf_len, I2C_MASTER_LAST_NACK);
         set_state(XferState::RX_WAIT);
         break;
       case BusOpcode::TX:
