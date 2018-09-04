@@ -159,7 +159,7 @@ int8_t BMP085::io_op_callback(I2CBusOp* completed) {
 * Dump this item to the dev log.
 */
 void BMP085::printDebug(StringBuilder* temp) {
-  temp->concatf("Altitude sensor (BMP085)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
+  temp->concatf("Altitude sensor (BMP085)\t%snitialized%s", (isActive() ? "I": "Uni"), PRINT_DIVIDER_1_STR);
   I2CDevice::printDebug(temp);
   //SensorWrapper::issue_json_map(temp, this);
   temp->concatf("\n");

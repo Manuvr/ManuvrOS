@@ -212,7 +212,8 @@ int8_t ADG2128::io_op_callback(BusOp* completed) {
 * Dump this item to the dev log.
 */
 void ADG2128::printDebug(StringBuilder* output) {
-  output->concat("ADG2128 8x12 cross-point switch\n---------------------------------------------------\n");
+  output->concat("ADG2128 8x12 cross-point switch");
+  output->concat(PRINT_DIVIDER_1_STR);
   I2CDevice::printDebug(output);
   if (dev_init) {
     for (int i = 0; i < 12; i++) {

@@ -156,7 +156,7 @@ int8_t TMP006::register_read_cb(DeviceRegister* reg) {
 * Dump this item to the dev log.
 */
 void TMP006::printDebug(StringBuilder* temp) {
-  temp->concatf("Thermopile sensor (TMP006)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
+  temp->concatf("Thermopile sensor (TMP006)\t%snitialized%s", (isActive() ? "I": "Uni"), PRINT_DIVIDER_1_STR);
   I2CDeviceWithRegisters::printDebug(temp);
   //SensorWrapper::issue_json_map(temp, this);
   temp->concatf("\n");

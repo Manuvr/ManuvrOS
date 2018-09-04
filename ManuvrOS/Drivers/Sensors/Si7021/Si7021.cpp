@@ -85,7 +85,7 @@ int8_t Si7021::io_op_callback(I2CBusOp* completed) {
 * Dump this item to the dev log.
 */
 void Si7021::printDebug(StringBuilder* temp) {
-  temp->concatf("RH sensor (Si7021)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
+  temp->concatf("RH sensor (Si7021)\t%snitialized%s", (isActive() ? "I": "Uni"), PRINT_DIVIDER_1_STR);
   I2CDevice::printDebug(temp);
   temp->concatf("\n");
 }

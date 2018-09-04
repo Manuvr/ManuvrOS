@@ -238,7 +238,7 @@ int8_t INA219::register_read_cb(DeviceRegister* reg) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void INA219::printDebug(StringBuilder* temp) {
-  temp->concatf("Current sensor (INA219)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
+  temp->concatf("Current sensor (INA219)\t%snitialized%s", (isActive() ? "I": "Uni"), PRINT_DIVIDER_1_STR);
   I2CDeviceWithRegisters::printDebug(temp);
   //SensorWrapper::issue_json_map(temp, this);
   //temp->concatf("\n");

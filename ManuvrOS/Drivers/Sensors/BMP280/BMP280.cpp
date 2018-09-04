@@ -271,7 +271,7 @@ int8_t BMP280::io_op_callback(BusOp* op) {
 * @param The buffer to receive the output.
 */
 void BMP280::printDebug(StringBuilder* temp) {
-  temp->concatf("Altitude sensor (BMP280)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
+  temp->concatf("Altitude sensor (BMP280)\t%snitialized%s", (isActive() ? "I": "Uni"), PRINT_DIVIDER_1_STR);
   I2CDevice::printDebug(temp);
   temp->concat("\n");
 }

@@ -207,7 +207,7 @@ int8_t LPS331::register_read_cb(DeviceRegister* reg) {
 void LPS331::printDebug(StringBuilder* temp) {
   if (nullptr == temp) return;
   //SensorWrapper::issue_json_map(temp, this);
-  temp->concatf("Baro sensor (LPS331)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
+  temp->concatf("Baro sensor (LPS331)\t%snitialized%s", (isActive() ? "I": "Uni"), PRINT_DIVIDER_1_STR);
   I2CDeviceWithRegisters::printDebug(temp);
   temp->concatf("\n");
 }

@@ -222,7 +222,7 @@ int8_t ISL29033::register_read_cb(DeviceRegister* reg) {
 */
 void ISL29033::printDebug(StringBuilder* temp) {
   if (temp) {
-    temp->concatf("Lux sensor (ISL29033)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
+    temp->concatf("Lux sensor (ISL29033)\t%snitialized%s", (isActive() ? "I": "Uni"), PRINT_DIVIDER_1_STR);
     I2CDeviceWithRegisters::printDebug(temp);
     //SensorWrapper::issue_json_map(temp, this);
     temp->concatf("\n");

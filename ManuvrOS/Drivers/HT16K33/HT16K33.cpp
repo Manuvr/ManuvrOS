@@ -80,7 +80,7 @@ int8_t HT16K33::io_op_callback(BusOp* op) {
 * Dump this item to the dev log.
 */
 void HT16K33::printDebug(StringBuilder* temp) {
-  temp->concatf("LED Driver (HT16K33)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
+  temp->concatf("LED Driver (HT16K33)\t%snitialized%s", (isActive() ? "I": "Uni"), PRINT_DIVIDER_1_STR);
   I2CDevice::printDebug(temp);
   temp->concatf("\n");
 }

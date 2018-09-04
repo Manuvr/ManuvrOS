@@ -171,7 +171,7 @@ int8_t TSL2561::register_read_cb(DeviceRegister* reg) {
 void TSL2561::printDebug(StringBuilder* temp) {
   if (nullptr == temp) return;
   //SensorWrapper::issue_json_map(temp, this);
-  temp->concatf("Lux sensor (TSL2561)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
+  temp->concatf("Lux sensor (TSL2561)\t%snitialized%s", (isActive() ? "I": "Uni"), PRINT_DIVIDER_1_STR);
   I2CDeviceWithRegisters::printDebug(temp);
   temp->concatf("\n");
 }

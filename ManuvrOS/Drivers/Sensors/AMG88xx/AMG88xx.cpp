@@ -169,7 +169,7 @@ int8_t AMG88xx::io_op_callback(I2CBusOp* completed) {
 */
 void AMG88xx::printDebug(StringBuilder* temp) {
   if (temp) {
-    temp->concatf("AMG88xx\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
+    temp->concatf("AMG88xx\t%snitialized%s", (isActive() ? "I": "Uni"), PRINT_DIVIDER_1_STR);
     I2CDevice::printDebug(temp);
     //SensorWrapper::issue_json_map(temp, this);
     temp->concatf("\n");

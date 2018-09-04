@@ -54,7 +54,7 @@ int8_t DS1807::io_op_callback(I2CBusOp* completed) {
 * Dump this item to the dev log.
 */
 void DS1807::printDebug(StringBuilder* temp) {
-  temp->concatf("Potentiometer (DS1807)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
+  temp->concatf("Potentiometer (DS1807)\t%snitialized%s", (isActive() ? "I": "Uni"), PRINT_DIVIDER_1_STR);
   I2CDevice::printDebug(temp);
   temp->concatf("\n");
 }

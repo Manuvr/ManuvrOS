@@ -164,7 +164,7 @@ int8_t TMP102::register_read_cb(DeviceRegister* reg) {
 * Dump this item to the dev log.
 */
 void TMP102::printDebug(StringBuilder* temp) {
-  temp->concatf("Temperature sensor (TMP102)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
+  temp->concatf("Temperature sensor (TMP102)\t%snitialized%s", (isActive() ? "I": "Uni"), PRINT_DIVIDER_1_STR);
   I2CDeviceWithRegisters::printDebug(temp);
   temp->concatf("\n");
 }

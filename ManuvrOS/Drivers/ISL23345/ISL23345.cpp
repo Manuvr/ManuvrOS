@@ -170,7 +170,8 @@ int8_t ISL23345::register_read_cb(DeviceRegister* reg) {
 * Dump this item to the dev log.
 */
 void ISL23345::printDebug(StringBuilder* output) {
-  output->concat("ISL23345 digital potentiometer\n---------------------------------------------------\n");
+  output->concat("ISL23345 digital potentiometer");
+	output->concat(PRINT_DIVIDER_1_STR);
   I2CDeviceWithRegisters::printDebug(output);
 
 	if (!dev_init) {

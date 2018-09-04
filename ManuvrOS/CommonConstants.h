@@ -56,6 +56,8 @@ Apart from including the user-suppied configuration header, there
   #define YES_STR   "Yes"
   #define NO_STR    "No"
 
+  #define PRINT_DIVIDER_1_STR "\n---------------------------------------------------\n"
+
   // Some constants for units...
   #define COMMON_UNITS_DEGREES     "degrees"
   #define COMMON_UNITS_DEG_SEC     "deg/s"
@@ -108,4 +110,4 @@ inline uint32_t wrap_accounted_delta(uint32_t a, uint32_t b) {
   return (a > b) ? (a - b) : (b - a);
 };
 
-#endif
+#endif    // __MANUVR_COMMON_CONSTANTS_H__

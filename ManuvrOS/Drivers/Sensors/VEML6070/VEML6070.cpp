@@ -84,7 +84,7 @@ int8_t VEML6070::io_op_callback(I2CBusOp* completed) {
 * Dump this item to the dev log.
 */
 void VEML6070::printDebug(StringBuilder* temp) {
-  temp->concatf("UVA sensor (VEML6070)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
+  temp->concatf("UVA sensor (VEML6070)\t%snitialized%s", (isActive() ? "I": "Uni"), PRINT_DIVIDER_1_STR);
   I2CDevice::printDebug(temp);
   temp->concatf("\n");
 }
