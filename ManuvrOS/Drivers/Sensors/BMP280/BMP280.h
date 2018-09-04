@@ -31,7 +31,7 @@ limitations under the License.
 #define BMP280_I2CADDR              0x77
 
 
-enum class BMP280StandbyDuration {
+enum class BMP280StandbyDuration : uint8_t {
   MS_5      = 0x00,
   MS_63     = 0x01,
   MS_125    = 0x02,
@@ -42,7 +42,7 @@ enum class BMP280StandbyDuration {
   MS_20     = 0x07
 };
 
-enum class BMP280Filter {
+enum class BMP280Filter : uint8_t {
   OFF = 0x00,
   X2  = 0x01,
   X4  = 0x02,
@@ -50,13 +50,13 @@ enum class BMP280Filter {
   X16 = 0x04
 };
 
-enum class BMP280Mode {
+enum class BMP280Mode : uint8_t {
   SLEEP = 0x00,
   FORCE = 0x01,
   NORM  = 0x02
 };
 
-enum class BMP280Sampling {
+enum class BMP280Sampling : uint8_t {
   OFF = 0x00,
   X1  = 0x01,
   X2  = 0x02,

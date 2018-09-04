@@ -40,7 +40,7 @@ Many of the libraries that ultimately became ManuvrOS were developed
 #undef INPUT_PULLDOWN
 #define PLATFORM_GPIO_PIN_COUNT CORE_NUM_TOTAL_PINS
 
-enum class GPIOMode {
+enum class GPIOMode : uint8_t {
   INPUT           = 0,
   OUTPUT          = 1,
   OUTPUT_OD       = 4,

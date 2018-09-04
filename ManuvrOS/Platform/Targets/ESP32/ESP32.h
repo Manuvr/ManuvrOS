@@ -27,7 +27,7 @@ limitations under the License.
 
 #define PLATFORM_GPIO_PIN_COUNT GPIO_PIN_COUNT
 
-enum class GPIOMode {
+enum class GPIOMode : uint8_t {
   INPUT           = GPIO_MODE_INPUT,
   OUTPUT          = GPIO_MODE_OUTPUT,
   OUTPUT_OD       = GPIO_MODE_OUTPUT_OD,

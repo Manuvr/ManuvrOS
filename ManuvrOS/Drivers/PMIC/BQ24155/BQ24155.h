@@ -47,7 +47,7 @@ limitations under the License.
 
 
 
-enum class BQ24155Fault {
+enum class BQ24155Fault : uint8_t {
   NOMINAL      = 0x00,
   VBUS_OVP     = 0x01,
   SLEEP        = 0x02,
@@ -58,7 +58,7 @@ enum class BQ24155Fault {
   NO_BATTERY   = 0x07
 };
 
-enum class BQ24155State {
+enum class BQ24155State : uint8_t {
   READY    = 0x00,
   CHARGING = 0x01,
   CHARGED  = 0x02,
@@ -66,7 +66,7 @@ enum class BQ24155State {
 };
 
 // oxo1
-enum class BQ24155USBCurrent {
+enum class BQ24155USBCurrent : uint8_t {
   LIMIT_100 = 0x00,
   LIMIT_500 = 0x01,
   LIMIT_800 = 0x02,

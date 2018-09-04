@@ -61,7 +61,7 @@ ATECC508_CAPABILITY_CONFIG_UNLOCK
 
 #define ATECC508_I2CADDR           0x60
 
-enum class ATECCReturnCodes {
+enum class ATECCReturnCodes : uint8_t {
   SUCCESS      = 0x00,
   MISCOMPARE   = 0x01,
   PARSE_ERR    = 0x03,
@@ -73,7 +73,7 @@ enum class ATECCReturnCodes {
 };
 
 
-enum class ATECCPktCodes {
+enum class ATECCPktCodes : uint8_t {
   RESET   = 0x00,
   SLEEP   = 0x01,
   IDLE    = 0x02,
@@ -81,19 +81,19 @@ enum class ATECCPktCodes {
 };
 
 
-enum class ATECCZones {
+enum class ATECCZones : uint8_t {
   CONF = 0x00,  // 128 bytes across 2 slots.
   OTP  = 0x01,  // 64 bytes across 2 slots.
   DATA = 0x02   // 1208 bytes across 16 slots.
 };
 
-enum class ATECCDataSize {
+enum class ATECCDataSize : uint8_t {
   L4  = 0x04,  // Data is this long.
   L32 = 0x20   // Data is this long.
 };
 
 
-enum class ATECCOpcodes {
+enum class ATECCOpcodes : uint8_t {
   UNDEF       = 0x00,
   Pause       = 0x01,
   Read        = 0x02,

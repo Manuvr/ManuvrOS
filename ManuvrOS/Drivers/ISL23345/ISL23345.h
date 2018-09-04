@@ -30,11 +30,17 @@ This is the class that represents an ISL23345 digital potentiometer.
 #include "Platform/Peripherals/I2C/I2CAdapter.h"
 
 
-#define ISL23345_REG_ACR        0x10
-#define ISL23345_REG_WR0        0x00
-#define ISL23345_REG_WR1        0x01
-#define ISL23345_REG_WR2        0x02
-#define ISL23345_REG_WR3        0x03
+enum class ISL23345_ERROR : int8_t {
+  DEVICE_DISABLED = 3;   // A caller tried to set a wiper while the device is disabled. This may work...
+  PEGGED_MAX      = 2;   // There was no error, but a call to change a wiper setting pegged the wiper at its highest position.
+  PEGGED_MIN      = 1;   // There was no error, but a call to change a wiper setting pegged the wiper at its lowest position.
+  NO_ERROR        = 0;   // There was no error.
+  ABSENT          = -1;  // The ISL23345 appears to not be connected to the bus.
+  BUS             = -2;  // Something went wrong with the i2c bus.
+  ALREADY_AT_MAX  = -3;  // A caller tried to increase the value of the wiper beyond its maximum.
+  ALREADY_AT_MIN  = -4;  // A caller tried to decrease the value of the wiper below its minimum.
+  INVALID_POT     = -5;  // The ISL23345 only has 4 potentiometers.
+};
 
 
 /*
@@ -46,35 +52,35 @@ class ISL23345 : public I2CDeviceWithRegisters {
     ISL23345(uint8_t i2c_addr);
     virtual ~ISL23345();
 
-    int8_t init(void);                            // Perform bus-related init tasks.
-    void preserveOnDestroy(bool);
-
-    int8_t setValue(uint8_t pot, uint8_t val);    // Sets the value of the given pot.
-    uint8_t getValue(uint8_t pot);
-    int8_t reset(void);                           // Sets all volumes levels to zero.
-    int8_t reset(uint8_t);                        // Sets all volumes levels to given.
-
-    int8_t disable(void);
-    int8_t enable(void);
-    bool enabled(void);
-
-    uint16_t getRange(void);                      // Discover the range of this pot.
-
     /* Overrides from I2CDeviceWithRegisters... */
     int8_t register_write_cb(DeviceRegister*);
     int8_t register_read_cb(DeviceRegister*);
     void printDebug(StringBuilder*);
 
+    int8_t init();                              // Perform bus-related init tasks.
+    int8_t setValue(uint8_t pot, uint8_t val);  // Sets the value of the given pot.
+    int8_t reset(uint8_t);                      // Sets all volumes levels to given.
+    int8_t disable();
+    int8_t enable();
 
-    static const int8_t ISL23345_ERROR_DEVICE_DISABLED;   // A caller tried to set a wiper while the device is disabled. This may work...
-    static const int8_t ISL23345_ERROR_PEGGED_MAX;        // There was no error, but a call to change a wiper setting pegged the wiper at its highest position.
-    static const int8_t ISL23345_ERROR_PEGGED_MIN;        // There was no error, but a call to change a wiper setting pegged the wiper at its lowest position.
-    static const int8_t ISL23345_ERROR_NO_ERROR;          // There was no error.
-    static const int8_t ISL23345_ERROR_ABSENT;            // The ISL23345 appears to not be connected to the bus.
-    static const int8_t ISL23345_ERROR_BUS;               // Something went wrong with the i2c bus.
-    static const int8_t ISL23345_ERROR_ALREADY_AT_MAX;    // A caller tried to increase the value of the wiper beyond its maximum.
-    static const int8_t ISL23345_ERROR_ALREADY_AT_MIN;    // A caller tried to decrease the value of the wiper below its minimum.
-    static const int8_t ISL23345_ERROR_INVALID_POT;       // The ISL23345 only has 4 potentiometers.
+    inline void preserveOnDestroy(bool x) {
+      preserve_state_on_destroy = x;
+    };
+
+    /*
+    * Will take the device out of shutdown mode and set all the wipers
+    *   to their minimum values.
+    */
+    inline int8_t reset() {	  return reset(0x00);  };
+
+    inline uint8_t getValue(uint8_t pot) {
+      return (pot > 3) ? ISL23345_ERROR_INVALID_POT : values[pot];
+    };
+
+    inline bool enabled() {   return dev_enabled; };  // Trivial accessor.
+
+    /* Returns the maximum value of any single potentiometer. */
+    inline uint16_t getRange() {  return 0x00FF;      };
 
 
   private:

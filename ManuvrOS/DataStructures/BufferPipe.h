@@ -101,7 +101,7 @@ See UDPPipe for a case where this matters.
 * For another, they are not used for IPC. The primary function is to signal
 *   setup, tear-down, and a handful of transport ideas.
 */
-enum class ManuvrPipeSignal {
+enum class ManuvrPipeSignal : uint8_t {
   UNDEF = 0,           // Undefined.
   FLUSH,               // Flush the pipe.
   FLUSHED,             // The pipe is flushed.

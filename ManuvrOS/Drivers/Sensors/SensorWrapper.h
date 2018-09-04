@@ -65,7 +65,7 @@ typedef void (*SensorCallBack) (SensorWrapper*);
 
 
 /* Sensors can automatically report their values. */
-enum class SensorReporting {
+enum class SensorReporting : uint8_t {
   OFF        = 0,
   NEW_VALUE  = 1,
   EVERY_READ = 2
@@ -73,7 +73,7 @@ enum class SensorReporting {
 
 
 /* These are possible error codes. */
-enum class SensorError {
+enum class SensorError : int8_t {
   NO_ERROR           =    0,   // There was no error.
   ABSENT             =   -1,   // We failed to talk to the sensor.
   OUT_OF_MEMORY      =   -2,   // Couldn't allocate memory for some sensor-related task.

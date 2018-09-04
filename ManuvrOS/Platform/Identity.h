@@ -68,7 +68,7 @@ This might be better-viewed as a data structure. Notions of identity should
 *         Just code against the enum, and as long as the data is not persisted
 *         everything will transition smoothly.
 */
-enum class IdentFormat {
+enum class IdentFormat : uint8_t {
   #if defined(__BUILD_HAS_DER_CERTS)
     CERT_FORMAT_DER = 0x04,  // Certificate in DER format.
   #endif

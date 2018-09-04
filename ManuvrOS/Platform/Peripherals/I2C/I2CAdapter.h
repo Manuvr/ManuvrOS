@@ -99,7 +99,7 @@ This file is the tortured result of growing pains since the beginning of
   class I2CAdapter;
 
 
-  enum class I2CPingState {
+  enum class I2CPingState : uint8_t {
     NONE = 0,
     NEG  = 1,
     POS  = 2,

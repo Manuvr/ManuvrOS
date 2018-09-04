@@ -24,6 +24,17 @@ limitations under the License.
 
 #include "BMP280.h"
 
+#define BMP280_REG_CAL00      0x88   // 26 bytes
+#define BMP280_REG_ID         0xD0
+#define BMP280_REG_VER        0xD1
+#define BMP280_REG_RESET      0xE0
+#define BMP280_REG_CAL26      0xE1   // 9 bytes
+#define BMP280_REG_HUMID_CTRL 0xF2
+#define BMP280_REG_STATUS     0xF3
+#define BMP280_REG_CONTROL    0xF4
+#define BMP280_REG_CONFIG     0xF5
+#define BMP280_REG_DATA       0xF7   // 8 bytes
+
 
 const DatumDef datum_defs[] = {
   {
@@ -52,17 +63,7 @@ const DatumDef datum_defs[] = {
   }
 };
 
-
-#define BMP280_REG_CAL00      0x88   // 26 bytes
-#define BMP280_REG_ID         0xD0
-#define BMP280_REG_VER        0xD1
-#define BMP280_REG_RESET      0xE0
-#define BMP280_REG_CAL26      0xE1
-#define BMP280_REG_HUMID_CTRL 0xF2
-#define BMP280_REG_STATUS     0xF3
-#define BMP280_REG_CONTROL    0xF4
-#define BMP280_REG_CONFIG     0xF5
-#define BMP280_REG_DATA       0xF7   // 8 bytes
+static uint8_t RESET_BYTE = 0xB6;
 
 
 /*******************************************************************************
@@ -154,7 +155,7 @@ SensorError BMP280::getParameter(uint16_t reg, int len, uint8_t*) {
 
 int8_t BMP280::io_op_callback(BusOp* op) {
   I2CBusOp* completed = (I2CBusOp*) op;
-  if (completed->get_opcode() == BusOpcode::RX) {
+  if (BusOpcode::RX == completed->get_opcode()) {
     // We read.
     switch (completed->sub_addr) {
       case BMP280_REG_CAL00:
@@ -246,7 +247,7 @@ int8_t BMP280::io_op_callback(BusOp* op) {
         break;
     }
   }
-  else if (completed->get_opcode() == BusOpcode::TX) {
+  else if (BusOpcode::TX == completed->get_opcode()) {
     // We wrote.
     switch (completed->sub_addr) {
       case BMP280_REG_CONTROL:
@@ -264,8 +265,10 @@ int8_t BMP280::io_op_callback(BusOp* op) {
 }
 
 
-/*
+/**
 * Dump this item to the dev log.
+*
+* @param The buffer to receive the output.
 */
 void BMP280::printDebug(StringBuilder* temp) {
   temp->concatf("Altitude sensor (BMP280)\t%snitialized\n---------------------------------------------------\n", (isActive() ? "I": "Uni"));
@@ -278,13 +281,24 @@ void BMP280::printDebug(StringBuilder* temp) {
 /*******************************************************************************
 * Class-specific functions...                                                  *
 *******************************************************************************/
-static uint8_t RESET_BYTE = 0xB6;
 
+/**
+* Executes a software reset.
+*
+* @return true if the reset was sent to the device.
+*/
 bool BMP280::reset() {
   _class_init();
   return writeX(BMP280_REG_RESET, 1, &RESET_BYTE);
 }
 
+
+/**
+* Internal fxn to check if all of the calibration requirements are met.
+* Updates class local variable in SensorWrapper.
+*
+* @return true if calibration is complete.
+*/
 bool BMP280::_is_cal_complete() {
   bool a = isCalibrated();
   bool b = _class_cal0 & _class_cal1;
@@ -294,11 +308,24 @@ bool BMP280::_is_cal_complete() {
   return b;
 }
 
+
+/**
+* Set the sensor's config register with the chosen values for standby duration,
+*   and filtering.
+*
+* @return true if the setting was dispatched to the device.
+*/
 bool BMP280::_set_config(BMP280StandbyDuration x, BMP280Filter y) {
   _reg_config = (_reg_config & 0x02) | ((uint8_t) x << 5) | ((uint8_t) y << 2);
   return writeX(BMP280_REG_CONFIG, 1, &_reg_config);
 }
 
+
+/**
+* Set the sensor's sampling setting.
+*
+* @return true if the setting was dispatched to the device.
+*/
 bool BMP280::_set_sampling(BMP280Sampling x, BMP280Mode y) {
   _reg_ctrl_pres = ((uint8_t) x << 5) | ((uint8_t) x << 2) | ((uint8_t) y);
   _reg_ctrl_hum = (_reg_ctrl_hum & 0xF8) | ((uint8_t) x);
@@ -309,13 +336,15 @@ bool BMP280::_set_sampling(BMP280Sampling x, BMP280Mode y) {
 }
 
 
-/*
+/**
 * Calculation code taken from Adafruit driver:
 * https://github.com/adafruit/Adafruit_BMP280_Library/blob/master/Adafruit_BMP280.cpp
+*
+* @return 0 on success. Non-zero on error.
 */
 int8_t BMP280::_proc_data() {
   StringBuilder output;
-  printDebug(&output);
+  //printDebug(&output);
   if (_proc_temp) {
     // Calculate temperature.
     uncomp_temp >>= 4;

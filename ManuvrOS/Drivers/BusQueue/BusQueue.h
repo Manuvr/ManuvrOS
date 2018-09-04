@@ -34,7 +34,7 @@ TODO: BusOp lifecycle....
 /*
 * These are possible transfer states.
 */
-enum class XferState {
+enum class XferState : uint8_t {
   /* These are start states. */
   UNDEF    = 0,  // Freshly instanced (or wiped, if preallocated).
   IDLE     = 1,  // Bus op is allocated and waiting somewhere outside of the queue.
@@ -56,7 +56,7 @@ enum class XferState {
 /*
 * These are the opcodes that we use to represent different bus operations.
 */
-enum class BusOpcode {
+enum class BusOpcode : uint8_t {
   UNDEF,          // Freshly instanced (or wiped, if preallocated).
   RX,             // We are receiving without having asked for it.
   TX,             // Simple transmit. No waiting for a reply.
@@ -69,7 +69,7 @@ enum class BusOpcode {
 /*
 * Possible fault conditions that might occur.
 */
-enum class XferFault {
+enum class XferFault : uint8_t {
   NONE,            // No error on this transfer.
   NO_REASON,       // No reason provided, but still errored.
   TIMEOUT,         // We ran out of patience.

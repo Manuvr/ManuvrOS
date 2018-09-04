@@ -62,7 +62,7 @@ limitations under the License.
 #define LTC294X_OPT_ACD_AUTO    0x04  // The converter should run automatically.
 
 
-enum class LTC294xADCModes {
+enum class LTC294xADCModes : uint8_t {
   SLEEP     = 0x00,
   MANUAL_T  = 0x40,
   MANUAL_V  = 0x80,

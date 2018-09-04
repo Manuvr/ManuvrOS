@@ -32,16 +32,19 @@ limitations under the License.
 
 class HT16K33 : public I2CDevice {
   public:
-    HT16K33();
+    HT16K33(uint8_t addr = HT16K33_I2CADDR);
     ~HT16K33();
 
     /* Overrides from I2CDevice... */
-    int8_t io_op_callback(I2CBusOp*);
+    int8_t io_op_callback(BusOp*);
     void printDebug(StringBuilder*);
+
+    int8_t setValue(uint8_t row, uint8_t col, bool val);
+    bool getValue(uint8_t row, uint8_t col);
 
 
   private:
-    SensorError check_identity();
+    uint8_t _matrix[16];
 };
 
 #endif   // __HT16K33_DRIVER_H__

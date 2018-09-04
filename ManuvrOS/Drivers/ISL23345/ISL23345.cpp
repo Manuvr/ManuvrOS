@@ -20,16 +20,12 @@ limitations under the License.
 */
 
 #include "ISL23345.h"
-const int8_t ISL23345::ISL23345_ERROR_DEVICE_DISABLED  = 3;    // A caller tried to set a wiper while the device is disabled. This may work...
-const int8_t ISL23345::ISL23345_ERROR_PEGGED_MAX       = 2;    // There was no error, but a call to change a wiper setting pegged the wiper at its highest position.
-const int8_t ISL23345::ISL23345_ERROR_PEGGED_MIN       = 1;    // There was no error, but a call to change a wiper setting pegged the wiper at its lowest position.
-const int8_t ISL23345::ISL23345_ERROR_NO_ERROR         = 0;    // There was no error.
-const int8_t ISL23345::ISL23345_ERROR_ABSENT           = -1;   // The ISL23345 appears to not be connected to the bus.
-const int8_t ISL23345::ISL23345_ERROR_BUS              = -2;   // Something went wrong with the i2c bus.
-const int8_t ISL23345::ISL23345_ERROR_ALREADY_AT_MAX   = -3;   // A caller tried to increase the value of the wiper beyond its maximum.
-const int8_t ISL23345::ISL23345_ERROR_ALREADY_AT_MIN   = -4;   // A caller tried to decrease the value of the wiper below its minimum.
-const int8_t ISL23345::ISL23345_ERROR_INVALID_POT      = -5;   // The ISL23345 only has 4 potentiometers.
 
+#define ISL23345_REG_ACR   0x10
+#define ISL23345_REG_WR0   0x00
+#define ISL23345_REG_WR1   0x01
+#define ISL23345_REG_WR2   0x02
+#define ISL23345_REG_WR3   0x03
 
 
 /*
@@ -40,17 +36,18 @@ ISL23345::ISL23345(uint8_t addr) : I2CDeviceWithRegisters(addr, 5) {
 	dev_init    = false;
 	preserve_state_on_destroy = false;
 
-  defineRegister(ISL23345_REG_ACR,  (uint8_t) 0x40, false, false, true);
-  defineRegister(ISL23345_REG_WR0,  (uint8_t) 0x80, false, false, true);
-  defineRegister(ISL23345_REG_WR1,  (uint8_t) 0x80, false, false, true);
-  defineRegister(ISL23345_REG_WR2,  (uint8_t) 0x80, false, false, true);
-  defineRegister(ISL23345_REG_WR3,  (uint8_t) 0x80, false, false, true);
+  defineRegister(ISL23345_REG_ACR, (uint8_t) 0x40, false, false, true);
+  defineRegister(ISL23345_REG_WR0, (uint8_t) 0x80, false, false, true);
+  defineRegister(ISL23345_REG_WR1, (uint8_t) 0x80, false, false, true);
+  defineRegister(ISL23345_REG_WR2, (uint8_t) 0x80, false, false, true);
+  defineRegister(ISL23345_REG_WR3, (uint8_t) 0x80, false, false, true);
 }
+
 
 /*
 * When we destroy the class instance, the hardware will be disabled.
 */
-ISL23345::~ISL23345(void) {
+ISL23345::~ISL23345() {
 	if (!preserve_state_on_destroy) {
 		disable();
 	}
@@ -60,30 +57,22 @@ ISL23345::~ISL23345(void) {
 /*
 * Call to read the device and cause this class's state to reflect that of the device.
 */
-int8_t ISL23345::init(void) {
+int8_t ISL23345::init() {
 	int8_t return_value = ISL23345_ERROR_NO_ERROR;
-
 	if (syncRegisters() == I2C_ERR_SLAVE_NO_ERROR) {
-		//return_value = ISL23345_ERROR_ABSENT;
+		return_value = ISL23345_ERROR_ABSENT;
 	}
 	return return_value;
 }
-
-
-
-void ISL23345::preserveOnDestroy(bool x) {
-	preserve_state_on_destroy = x;
-}
-
 
 
 /*
 * Enable the device. Reconnects Rh pins and restores the wiper settings.
 */
 int8_t ISL23345::enable() {
-	int8_t return_value = ISL23345::ISL23345_ERROR_NO_ERROR;
+	int8_t return_value = ISL23345_ERROR::NO_ERROR;
 	if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, 0x40)) {
-		return_value = ISL23345::ISL23345_ERROR_ABSENT;
+		return_value = ISL23345_ERROR::ABSENT;
 	}
 	return return_value;
 }
@@ -94,10 +83,10 @@ int8_t ISL23345::enable() {
 * Retains wiper settings.
 */
 int8_t ISL23345::disable() {
-	int8_t return_value = ISL23345::ISL23345_ERROR_NO_ERROR;
+	int8_t return_value = ISL23345_ERROR::NO_ERROR;
 
 	if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, 0x00)) {
-		return_value = ISL23345::ISL23345_ERROR_ABSENT;
+		return_value = ISL23345_ERROR::ABSENT;
 	}
 	return return_value;
 }
@@ -107,30 +96,14 @@ int8_t ISL23345::disable() {
 * Set the value of the given wiper to the given value.
 */
 int8_t ISL23345::setValue(uint8_t pot, uint8_t val) {
-	if (pot > 3)    return ISL23345::ISL23345_ERROR_INVALID_POT;
-	if (!dev_init)  return ISL23345::ISL23345_ERROR_DEVICE_DISABLED;
+	if (pot > 3)    return ISL23345_ERROR::INVALID_POT;
+	if (!dev_init)  return ISL23345_ERROR::DEVICE_DISABLED;
 
-	int8_t return_value = ISL23345::ISL23345_ERROR_NO_ERROR;
+	int8_t return_value = ISL23345_ERROR::NO_ERROR;
 	if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(pot, val)) {
-		return_value = ISL23345::ISL23345_ERROR_ABSENT;
+		return_value = ISL23345_ERROR::ABSENT;
 	}
 	return return_value;
-}
-
-
-
-uint8_t ISL23345::getValue(uint8_t pot) {
-	if (pot > 3) return ISL23345_ERROR_INVALID_POT;
-	return values[pot];
-}
-
-
-/*
-* Calling this function will take the device out of shutdown mode and set all the wipers
-*   to their minimum values.
-*/
-int8_t ISL23345::reset(void) {
-	return reset(0x00);
 }
 
 
@@ -144,11 +117,6 @@ int8_t ISL23345::reset(uint8_t val) {
 	}
 	return ISL23345_ERROR_NO_ERROR;
 }
-
-
-bool     ISL23345::enabled(void) {     return dev_enabled;  }  // Trivial accessor.
-uint16_t ISL23345::getRange(void) {    return 0x00FF;       }  // Trivial. Returns the maximum vaule of any single potentiometer.
-
 
 
 

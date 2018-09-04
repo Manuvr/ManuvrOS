@@ -49,7 +49,7 @@ This file forms the catch-all for linux platforms that have no support.
     unsigned long micros();
   }
 
-enum class GPIOMode {
+enum class GPIOMode : uint8_t {
   INPUT,
   OUTPUT,
   OUTPUT_OD,

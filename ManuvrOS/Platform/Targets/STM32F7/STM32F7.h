@@ -49,7 +49,7 @@ limitations under the License.
     unsigned long micros();
   }
 
-enum class GPIOMode {
+enum class GPIOMode : uint8_t {
   INPUT           = GPIO_MODE_INPUT,
   OUTPUT          = GPIO_MODE_OUTPUT_PP,
   OUTPUT_OD       = GPIO_MODE_OUTPUT_OD,

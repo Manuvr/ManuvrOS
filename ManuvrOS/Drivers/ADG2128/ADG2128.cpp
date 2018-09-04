@@ -122,7 +122,7 @@ int8_t ADG2128::reset(void) {
 
 /*
 * Readback on this part is organized by rows, with the return bits
-* being the state of the switches to the ocrresponding column.
+* being the state of the switches to the corresponding column.
 * The readback address table is hard-coded in the readback_addr array.
 *
 *
@@ -151,12 +151,14 @@ uint8_t ADG2128::getValue(uint8_t row) {
 
 
 
+/*******************************************************************************
+* ___     _       _                      These members are mandatory overrides
+*  |   / / \ o   | \  _     o  _  _      for implementing I/O callbacks. They
+* _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
+*******************************************************************************/
 
-/****************************************************************************************************
-* These are overrides from I2CDevice                                                                *
-****************************************************************************************************/
-
-int8_t ADG2128::io_op_callback(I2CBusOp* completed) {
+int8_t ADG2128::io_op_callback(BusOp* completed) {
+  I2CBusOp* completed = (I2CBusOp*) op;
   if (completed->hasFault()) {
     StringBuilder output;
     output.concat("An i2c operation requested by the ADG2128 came back failed.\n");

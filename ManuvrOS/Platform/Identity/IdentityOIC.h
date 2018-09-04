@@ -28,7 +28,7 @@ limitations under the License.
 #include <DataStructures/uuid.h>
 
 
-enum class OICCredType {
+enum class OICCredType : uint8_t {
   /*
   * These defs were pulled from the OIC1.1 draft.
   */

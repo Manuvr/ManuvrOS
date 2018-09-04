@@ -17,6 +17,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
+
+NOTE: This driver is not presently useful for the keyscan feature of this part.
+
 */
 
 #include "HT16K33.h"
@@ -31,7 +34,8 @@ limitations under the License.
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
 
-HT16K33::HT16K33() : I2CDevice(HT16K33_I2CADDR) {
+HT16K33::HT16K33(uint8_t addr) : I2CDevice(addr) {
+  memset(_matrix, 0, 16);
 }
 
 HT16K33::~HT16K33() {
@@ -44,8 +48,30 @@ HT16K33::~HT16K33() {
 * _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
 *******************************************************************************/
 
-int8_t HT16K33::io_op_callback(I2CBusOp* completed) {
-  I2CDevice::io_op_callback(completed);
+int8_t HT16K33::io_op_callback(BusOp* op) {
+  I2CBusOp* completed = (I2CBusOp*) op;
+  if (completed->get_opcode() == BusOpcode::RX) {
+    // We read.
+    switch (completed->sub_addr) {
+      case HT16K33_REG_CAL00:
+        break;
+
+      case HT16K33_REG_ID:
+        break;
+
+      default:
+        // Illegal read target.
+        break;
+    }
+  }
+  else if (completed->get_opcode() == BusOpcode::TX) {
+    // We wrote.
+    switch (completed->sub_addr) {
+      default:
+        // Illegal write target.
+        break;
+    }
+  }
   return 0;
 }
 
@@ -64,7 +90,3 @@ void HT16K33::printDebug(StringBuilder* temp) {
 /*******************************************************************************
 * Class-specific functions...                                                  *
 *******************************************************************************/
-
-int8_t HT16K33::check_identity() {
-  return 0;
-}

@@ -121,7 +121,7 @@ class Storage;
 #define MANUVR_INIT_STATE_HALTED          7
 
 
-enum class GPIOMode;
+enum class GPIOMode : uint8_t;
 
 /* This is how we conceptualize a GPIO pin. */
 // TODO: I'm fairly sure this sucks. It's too needlessly memory heavy to
@@ -139,7 +139,7 @@ typedef struct __platform_gpio_def {
 * When we wrap platform-provided peripherals, they will carry
 * one of these type-codes.
 */
-enum class PeripheralTypes {
+enum class PeripheralTypes : uint8_t {
   PERIPH_I2C,
   PERIPH_SPI,
   PERIPH_UART,

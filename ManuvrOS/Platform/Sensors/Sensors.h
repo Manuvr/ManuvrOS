@@ -41,7 +41,7 @@ This is a modernization of SensorWrapper. It will be in conflict with that API.
 class SensorDatum;
 
 /* These are possible error codes. */
-enum class SensorError {
+enum class SensorError : int8_t {
   NONE               =    0,   // There was no error.
   UNDEFINED          =   -1,   // If we try to set a sensor parameter to something invalid for an extant register.
   OUT_OF_MEMORY      =   -2,   // Couldn't allocate memory for some sensor-related task.
@@ -65,7 +65,7 @@ enum class SensorError {
 };
 
 /* Sensors can automatically report their values. */
-enum class SensorReporting {
+enum class SensorReporting : uint8_t {
   OFF        = 0,   // No automatic reporting.
   NEW_VALUE  = 1,   // Only report on value change.
   EVERY_READ = 2    // Report every read.
