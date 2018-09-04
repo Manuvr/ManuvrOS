@@ -17,17 +17,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
+
+This driver's relationship to the base I2CDevice class is that the switch
+  address is treated as the sub_addr, and switched on that basis.
 */
 
 #include "ADG2128.h"
 
-const int8_t ADG2128::ADG2128_ERROR_NO_ERROR         = 0;
-const int8_t ADG2128::ADG2128_ERROR_ABSENT           = -1;
-const int8_t ADG2128::ADG2128_ERROR_BUS              = -2;
-const int8_t ADG2128::ADG2128_ERROR_BAD_COLUMN       = -3;   // Column was out-of-bounds.
-const int8_t ADG2128::ADG2128_ERROR_BAD_ROW          = -4;   // Row was out-of-bounds.
 
-
+static const uint16_t readback_addr[12] = {
+  0x3400, 0x3b00, 0x7400, 0x7b00,
+  0x3500, 0x3D00, 0x7500, 0x7D00,
+  0x3600, 0x3E00, 0x7600, 0x7E00
+};
 
 
 /*
@@ -48,25 +50,25 @@ ADG2128::~ADG2128() {
 /*
 *
 */
-int8_t ADG2128::init() {
+ADG2128_ERROR ADG2128::init() {
   for (int i = 0; i < 12; i++) {
-    if (readback(i) != ADG2128_ERROR_NO_ERROR) {
+    if (readback(i) != ADG2128_ERROR::NO_ERROR) {
       dev_init = false;
       #ifdef MANUVR_DEBUG
         Kernel::log("Failed to init switch.\n");
       #endif
-      return ADG2128_ERROR_BUS;
+      return ADG2128_ERROR::BUS;
     }
   }
   dev_init = true;
-  return ADG2128_ERROR_NO_ERROR;
+  return ADG2128_ERROR::NO_ERROR;
 }
 
 
 
-int8_t ADG2128::setRoute(uint8_t col, uint8_t row) {
-  if (col > 7)  return ADG2128_ERROR_BAD_COLUMN;
-  if (row > 11) return ADG2128_ERROR_BAD_ROW;
+ADG2128_ERROR ADG2128::setRoute(uint8_t col, uint8_t row) {
+  if (col > 7)  return ADG2128_ERROR::BAD_COLUMN;
+  if (row > 11) return ADG2128_ERROR::BAD_ROW;
 
   uint8_t safe_row = row;
   if (safe_row >= 6) safe_row = safe_row + 2;
@@ -75,16 +77,16 @@ int8_t ADG2128::setRoute(uint8_t col, uint8_t row) {
     #ifdef MANUVR_DEBUG
       Kernel::log("Failed to write new value.\n");
     #endif
-    return ADG2128_ERROR_BUS;
+    return ADG2128_ERROR::BUS;
   }
   values[row] = values[row] | (0x01 << col);  // TODO: Should be in the callback.
-  return ADG2128_ERROR_NO_ERROR;
+  return ADG2128_ERROR::NO_ERROR;
 }
 
 
-int8_t ADG2128::unsetRoute(uint8_t col, uint8_t row) {
-  if (col > 7)  return ADG2128_ERROR_BAD_COLUMN;
-  if (row > 11) return ADG2128_ERROR_BAD_ROW;
+ADG2128_ERROR ADG2128::unsetRoute(uint8_t col, uint8_t row) {
+  if (col > 7)  return ADG2128_ERROR::BAD_COLUMN;
+  if (row > 11) return ADG2128_ERROR::BAD_ROW;
 
   uint8_t safe_row = row;
   if (safe_row >= 6) safe_row = safe_row + 2;
@@ -93,26 +95,21 @@ int8_t ADG2128::unsetRoute(uint8_t col, uint8_t row) {
     #ifdef MANUVR_DEBUG
       Kernel::log("Failed to write new value.\n");
     #endif
-    return ADG2128_ERROR_BUS;
+    return ADG2128_ERROR::BUS;
   }
   values[row] = values[row] & ~(0x01 << col);  // TODO: Should be in the callback.
-  return ADG2128_ERROR_NO_ERROR;
-}
-
-
-void ADG2128::preserveOnDestroy(bool x) {
-  preserve_state_on_destroy = x;
+  return ADG2128_ERROR::NO_ERROR;
 }
 
 
 /*
 * Opens all switches.
 */
-int8_t ADG2128::reset(void) {
+ADG2128_ERROR ADG2128::reset() {
   for (int i = 0; i < 12; i++) {
     for (int j = 0; j < 8; j++) {
-      if (unsetRoute(j, i) != ADG2128_ERROR_NO_ERROR) {
-        return ADG2128_ERROR_BUS;
+      if (ADG2128_ERROR::NO_ERROR != unsetRoute(j, i)) {
+        return ADG2128_ERROR::BUS;
       }
     }
   }
@@ -127,25 +124,29 @@ int8_t ADG2128::reset(void) {
 *
 *
 */
-int8_t ADG2128::readback(uint8_t row) {
-  if (row > 11) return ADG2128_ERROR_BAD_ROW;
+ADG2128_ERROR ADG2128::readback(uint8_t row) {
+  if (row > 11) return ADG2128_ERROR::BAD_ROW;
 
-  uint16_t readback_addr[12] = {0x3400, 0x3b00, 0x7400, 0x7b00, 0x3500, 0x3D00, 0x7500, 0x7D00, 0x3600, 0x3E00, 0x7600, 0x7E00};
   if (!read16(readback_addr[row])) {
     #ifdef MANUVR_DEBUG
       StringBuilder _log;
       _log.concatf("Bus error while reading readback address %d.\n", row);
       Kernel::log(&_log);
     #endif
-    return ADG2128_ERROR_ABSENT;
+    return ADG2128_ERROR::ABSENT;
   }
-  return ADG2128_ERROR_NO_ERROR;
+  return ADG2128_ERROR::NO_ERROR;
 }
 
 
 uint8_t ADG2128::getValue(uint8_t row) {
-  if (row > 11) return ADG2128_ERROR_BAD_ROW;
-  readback(row);
+  if (row > 11) return 0;
+
+  // TODO: This mixed-return API is awful. ISL23345 driver has the same confusion.
+  // TODO: implies synchronous bus transactions. Those don't exist anymore.
+  //if (row > 11) return ADG2128_ERROR::BAD_ROW;
+  //readback(row);
+
   return values[row];
 }
 
@@ -157,7 +158,7 @@ uint8_t ADG2128::getValue(uint8_t row) {
 * _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
 *******************************************************************************/
 
-int8_t ADG2128::io_op_callback(BusOp* completed) {
+int8_t ADG2128::io_op_callback(BusOp* op) {
   I2CBusOp* completed = (I2CBusOp*) op;
   if (completed->hasFault()) {
     StringBuilder output;

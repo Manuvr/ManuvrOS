@@ -31,15 +31,15 @@ This is the class that represents an ISL23345 digital potentiometer.
 
 
 enum class ISL23345_ERROR : int8_t {
-  DEVICE_DISABLED = 3;   // A caller tried to set a wiper while the device is disabled. This may work...
-  PEGGED_MAX      = 2;   // There was no error, but a call to change a wiper setting pegged the wiper at its highest position.
-  PEGGED_MIN      = 1;   // There was no error, but a call to change a wiper setting pegged the wiper at its lowest position.
-  NO_ERROR        = 0;   // There was no error.
-  ABSENT          = -1;  // The ISL23345 appears to not be connected to the bus.
-  BUS             = -2;  // Something went wrong with the i2c bus.
-  ALREADY_AT_MAX  = -3;  // A caller tried to increase the value of the wiper beyond its maximum.
-  ALREADY_AT_MIN  = -4;  // A caller tried to decrease the value of the wiper below its minimum.
-  INVALID_POT     = -5;  // The ISL23345 only has 4 potentiometers.
+  DEVICE_DISABLED = 3,   // A caller tried to set a wiper while the device is disabled. This may work...
+  PEGGED_MAX      = 2,   // There was no error, but a call to change a wiper setting pegged the wiper at its highest position.
+  PEGGED_MIN      = 1,   // There was no error, but a call to change a wiper setting pegged the wiper at its lowest position.
+  NO_ERROR        = 0,   // There was no error.
+  ABSENT          = -1,  // The ISL23345 appears to not be connected to the bus.
+  BUS             = -2,  // Something went wrong with the i2c bus.
+  ALREADY_AT_MAX  = -3,  // A caller tried to increase the value of the wiper beyond its maximum.
+  ALREADY_AT_MIN  = -4,  // A caller tried to decrease the value of the wiper below its minimum.
+  INVALID_POT     = -5   // The ISL23345 only has 4 potentiometers.
 };
 
 
@@ -57,11 +57,11 @@ class ISL23345 : public I2CDeviceWithRegisters {
     int8_t register_read_cb(DeviceRegister*);
     void printDebug(StringBuilder*);
 
-    int8_t init();                              // Perform bus-related init tasks.
-    int8_t setValue(uint8_t pot, uint8_t val);  // Sets the value of the given pot.
-    int8_t reset(uint8_t);                      // Sets all volumes levels to given.
-    int8_t disable();
-    int8_t enable();
+    ISL23345_ERROR init();                              // Perform bus-related init tasks.
+    ISL23345_ERROR setValue(uint8_t pot, uint8_t val);  // Sets the value of the given pot.
+    ISL23345_ERROR reset(uint8_t);                      // Sets all volumes levels to given.
+    ISL23345_ERROR disable();
+    ISL23345_ERROR enable();
 
     inline void preserveOnDestroy(bool x) {
       preserve_state_on_destroy = x;
@@ -71,10 +71,10 @@ class ISL23345 : public I2CDeviceWithRegisters {
     * Will take the device out of shutdown mode and set all the wipers
     *   to their minimum values.
     */
-    inline int8_t reset() {	  return reset(0x00);  };
+    inline ISL23345_ERROR reset() {	  return reset(0x00);  };
 
     inline uint8_t getValue(uint8_t pot) {
-      return (pot > 3) ? ISL23345_ERROR_INVALID_POT : values[pot];
+      return (pot > 3) ? 0 : values[pot];
     };
 
     inline bool enabled() {   return dev_enabled; };  // Trivial accessor.

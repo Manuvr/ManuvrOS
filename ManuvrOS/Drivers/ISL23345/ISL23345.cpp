@@ -57,10 +57,10 @@ ISL23345::~ISL23345() {
 /*
 * Call to read the device and cause this class's state to reflect that of the device.
 */
-int8_t ISL23345::init() {
-	int8_t return_value = ISL23345_ERROR_NO_ERROR;
+ISL23345_ERROR ISL23345::init() {
+	ISL23345_ERROR return_value = ISL23345_ERROR::NO_ERROR;
 	if (syncRegisters() == I2C_ERR_SLAVE_NO_ERROR) {
-		return_value = ISL23345_ERROR_ABSENT;
+		return_value = ISL23345_ERROR::ABSENT;
 	}
 	return return_value;
 }
@@ -69,8 +69,8 @@ int8_t ISL23345::init() {
 /*
 * Enable the device. Reconnects Rh pins and restores the wiper settings.
 */
-int8_t ISL23345::enable() {
-	int8_t return_value = ISL23345_ERROR::NO_ERROR;
+ISL23345_ERROR ISL23345::enable() {
+	ISL23345_ERROR return_value = ISL23345_ERROR::NO_ERROR;
 	if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, 0x40)) {
 		return_value = ISL23345_ERROR::ABSENT;
 	}
@@ -82,8 +82,8 @@ int8_t ISL23345::enable() {
 * Disable the device. Disconnects all Rh pins and sets the wiper to 2k ohm WRT Rl.
 * Retains wiper settings.
 */
-int8_t ISL23345::disable() {
-	int8_t return_value = ISL23345_ERROR::NO_ERROR;
+ISL23345_ERROR ISL23345::disable() {
+	ISL23345_ERROR return_value = ISL23345_ERROR::NO_ERROR;
 
 	if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, 0x00)) {
 		return_value = ISL23345_ERROR::ABSENT;
@@ -95,11 +95,11 @@ int8_t ISL23345::disable() {
 /*
 * Set the value of the given wiper to the given value.
 */
-int8_t ISL23345::setValue(uint8_t pot, uint8_t val) {
+ISL23345_ERROR ISL23345::setValue(uint8_t pot, uint8_t val) {
 	if (pot > 3)    return ISL23345_ERROR::INVALID_POT;
 	if (!dev_init)  return ISL23345_ERROR::DEVICE_DISABLED;
 
-	int8_t return_value = ISL23345_ERROR::NO_ERROR;
+	ISL23345_ERROR return_value = ISL23345_ERROR::NO_ERROR;
 	if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(pot, val)) {
 		return_value = ISL23345_ERROR::ABSENT;
 	}
@@ -107,15 +107,15 @@ int8_t ISL23345::setValue(uint8_t pot, uint8_t val) {
 }
 
 
-int8_t ISL23345::reset(uint8_t val) {
-	int8_t result = 0;
+ISL23345_ERROR ISL23345::reset(uint8_t val) {
+	ISL23345_ERROR result = ISL23345_ERROR::NO_ERROR;
 	for (int i = 0; i < 4; i++) {
 		result = setValue(0, val);
-		if (result != ISL23345_ERROR_NO_ERROR) {
+		if (result != ISL23345_ERROR::NO_ERROR) {
 			return result;
 		}
 	}
-	return ISL23345_ERROR_NO_ERROR;
+	return ISL23345_ERROR::NO_ERROR;
 }
 
 
