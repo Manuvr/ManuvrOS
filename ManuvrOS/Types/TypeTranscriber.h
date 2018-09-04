@@ -25,6 +25,8 @@ This is the base class for a type transcriber.
 #define __MANUVR_TYPE_TRANSCRIBER_H__
 
 #include <CommonConstants.h>
+#include <EnumeratedTypeCodes.h>
+
 
 #if defined(MANUVR_CBOR)
   #include <Types/cbor-cpp/cbor.h>
@@ -32,8 +34,6 @@ This is the base class for a type transcriber.
   //   we will be using a tag from the IANA 'unassigned' space to avoid confusion.
   //   The first byte after the tag is the native Manuvr type.
   #define MANUVR_CBOR_VENDOR_TYPE 0x00E97800
-
-  class Argument;
 
   /* If we have CBOR support, we define a helper class to assist decomposition. */
   class CBORArgListener : public cbor::listener {
@@ -66,7 +66,7 @@ This is the base class for a type transcriber.
       char*      _wait                = nullptr;
       int        _wait_map            = 0;
       int        _wait_array          = 0;
-      uint8_t    _pending_manuvr_tag  = 0;
+      TCode      _pending_manuvr_tag  = TCode::NONE;
 
       /* Please forgive the stupid name. */
       void _caaa(Argument*);

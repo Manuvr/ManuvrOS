@@ -72,10 +72,10 @@ void CBORArgListener::on_string(char* val) {
 };
 
 void CBORArgListener::on_bytes(uint8_t* data, int size) {
-	if (_pending_manuvr_tag) {
+	if (TCode::NONE != _pending_manuvr_tag) {
 		// If we've seen our vendor code in a tag, we interpret the first byte as a Manuvr
 		//   Typecode, and build an Argument the hard way.
-		const TypeCodeDef* const m_type_def = getManuvrTypeDef(IntToTcode(_pending_manuvr_tag)) ;
+		const TypeCodeDef* const m_type_def = getManuvrTypeDef(_pending_manuvr_tag) ;
 		if (m_type_def) {
 			if (m_type_def->fixed_len) {
 				if (size == (m_type_def->fixed_len)) {
@@ -87,7 +87,7 @@ void CBORArgListener::on_bytes(uint8_t* data, int size) {
 				_caaa(new Argument((data+1), (size-1), m_type_def->type_code));
 			}
 		}
-		_pending_manuvr_tag = 0;
+		_pending_manuvr_tag = TCode::NONE;
 	}
 	else {
 		_caaa(new Argument(data, size));
@@ -109,7 +109,7 @@ void CBORArgListener::on_error(const char* error) {    _caaa(new Argument(error)
 void CBORArgListener::on_tag(unsigned int tag) {
 	switch (tag & 0xFFFFFF00) {
 		case MANUVR_CBOR_VENDOR_TYPE:
-			_pending_manuvr_tag = tag & 0x000000FF;
+			_pending_manuvr_tag = IntToTcode(tag & 0x000000FF);
 			break;
 		default:
 			break;

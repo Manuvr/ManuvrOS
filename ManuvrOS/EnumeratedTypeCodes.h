@@ -113,8 +113,8 @@ enum class TCode : uint8_t {
   VECT_3_INT16  = 0x13,  // A vector of 16-bit integers in 3-space
   VECT_3_UINT16 = 0x14,  // A vector of unsigned 16-bit integers in 3-space
 
-  // TODO: This whole block is slated for removal.
-  // TODO: TODO: Why did I want this removed? There is a use case for these...
+  // TODO: This whole block is slated for removal because it is obsoleted by
+  //   flag usage.
     UINT32_PTR   =  0xA0,  // A pointer to an unsigned 32-bit integer
     UINT16_PTR   =  0xA1,  // A pointer to an unsigned 16-bit integer
     UINT8_PTR    =  0xA2,  // A pointer to an unsigned 8-bit integer
@@ -160,8 +160,38 @@ enum class TCode : uint8_t {
 };
 
 /**
+* This is the structure with which we define types. These types are used by a variety of
+*   systems in this program, and need to be consistent. Sometimes, we might be talking to
+*   another system that lacks support for some of these types.
+*
+* This structrue conveys the type, its size, and any special attributes of the type.
+*/
+typedef struct typecode_def_t {
+  const TCode    type_code;   // This field identifies the type.
+  const uint8_t  type_flags;  // Flags that give us metadata about a type.
+  const uint16_t fixed_len;   // If this type has a fixed length, it will be set here. 0 if no fixed length.
+  const char* const t_name;   // The name of the type.
+} TypeCodeDef;
+
+
+/*******************************************************************************
+* Support functions for dealing with type codes.                               *
+*******************************************************************************/
+
+/* Quick inlines to facilitate moving into and out of serialization. */
+inline uint8_t TcodeToInt(const TCode code) {   return (const uint8_t) code; };
+inline TCode IntToTcode(const uint8_t code) {   return (const TCode) code;   };
+
+// TODO: There are more gains possible here with const.
+const TypeCodeDef* getManuvrTypeDef(const TCode);
+const char* getTypeCodeString(TCode);
+int sizeOfType(TCode);
+bool typeIsFixedLength(TCode);
+
+/**
 * The host sends binary data little-endian. This will convert bytes to the indicated type.
 * It is the responsibility of the caller to check that these bytes actually exist in the buffer.
+* TODO: These are terrible and I should feel terrible for still having them.
 */
 inline double   parseDoubleFromchars(unsigned char *input) {  return ((double)   *((double*)   input)); }
 inline float    parseFloatFromchars(unsigned char *input) {   return ((float)    *((float*)    input)); }
@@ -186,35 +216,10 @@ inline uint64_t endianSwap64(uint64_t x) {   return __builtin_bswap64(x);    };
 //inline uint8_t pointerTypeCode(uint16_t) {    return UINT16_FM;    };
 //inline uint8_t pointerTypeCode(uint32_t) {    return UINT32_FM;    };
 
-/**
-* This is the structure with which we define types. These types are used by a variety of
-*   systems in this program, and need to be consistent. Sometimes, we might be talking to
-*   another system that lacks support for some of these types.
-*
-* This structrue conveys the type, its size, and any special attributes of the type.
-*/
-typedef struct typecode_def_t {
-  const TCode    type_code;   // This field identifies the type.
-  const uint8_t  type_flags;  // Flags that give us metadata about a type.
-  const uint16_t fixed_len;   // If this type has a fixed length, it will be set here. 0 if no fixed length.
-  const char* const t_name;   // The name of the type.
-} TypeCodeDef;
 
-
-// TODO: These are shims and will be culled eventually. Use the enum, rather than the int.
-inline uint8_t TcodeToInt(const TCode code) {   return (const uint8_t) code; };
-inline TCode IntToTcode(const uint8_t code) {   return (const TCode) code;   };
-
-const TypeCodeDef* getManuvrTypeDef(const TCode);
-
-int sizeOfType(TCode typecode);
-bool typeIsFixedLength(TCode typecode);
 int getTypemapSizeAndPointer(const unsigned char **pointer);
 int getMinimumSizeByTypeString(char *str);
-
 bool containsVariableLengthArgument(char* mode);
 
-
-const char* getTypeCodeString(TCode typecode);
 
 #endif
