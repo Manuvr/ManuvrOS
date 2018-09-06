@@ -35,8 +35,8 @@ This is a demonstration program, and was meant to be compiled for a
 
 /* Drivers particular to this Manuvrable... */
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
-#include <Drivers/Sensors/TMP006/TMP006.h>
 #include <Drivers/Sensors/INA219/INA219.h>
+#include <Drivers/AudioRouter/AudioRouter.h>
 
 /*
 * This is ONLY used to expose the GPIO pins to the outside world.
@@ -194,11 +194,15 @@ int main(int argc, const char* argv[]) {
     kernel->subscribe(&i2c);
 
     // TODO: Temporary addition to test the SensorWrapper build size.
-    TMP006 tmp006;
     INA219 ina219;
-    i2c.addSlaveDevice(&tmp006);
     i2c.addSlaveDevice(&ina219);
+
+    const uint8_t SWITCH_ADDR = 0x76;
+    const uint8_t POT_0_ADDR  = 0x50;
+    const uint8_t POT_1_ADDR  = 0x51;
+    AudioRouter audio_router(&i2c, SWITCH_ADDR, POT_0_ADDR, POT_1_ADDR);
   #endif
+
 
   #if defined(RASPI) || defined(RASPI2)
     ManuvrableGPIO gpio;
@@ -291,12 +295,11 @@ int main(int argc, const char* argv[]) {
     bool pin_14_state = false;
   #endif
 
+
   // The main loop. Run forever, as a microcontroller would.
   // Program exit is handled in Platform.
-  tmp006.init();
-  ina219.init();
-  tmp006.readSensor();
-  ina219.readSensor();
+  //ina219.init();
+  //ina219.readSensor();
   while (1) {
     kernel->procIdleFlags();
     #if defined(RASPI) || defined(RASPI2)

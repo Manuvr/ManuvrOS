@@ -21,9 +21,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "AudioRouter.h"
-
 #include <Kernel.h>
-
 #include <string.h>
 
 
@@ -53,14 +51,17 @@ const MessageTypeDef message_defs_viam_sonus[] = {
 * Constructor. Here is all of the setup work. Takes the i2c addresses of the hardware as arguments.
 */
 AudioRouter::AudioRouter(I2CAdapter* i2c, uint8_t cp_addr, uint8_t dp_lo_addr, uint8_t dp_hi_addr) : EventReceiver("AudioRouter") {
-  i2c_addr_cp_switch = cp_addr;
-  i2c_addr_dp_lo = dp_lo_addr;
-  i2c_addr_dp_hi = dp_hi_addr;
+  const ADG2128Opts cp_opts(
+    cp_addr,  // Device address
+    255,      // No hard reset pin.
+    true,     // Allow two sinks for a given source.
+    false     // Disallow two sources from sharing a sink.
+  );
 
   int mes_count = sizeof(message_defs_viam_sonus) / sizeof(MessageTypeDef);
   ManuvrMsg::registerMessages(message_defs_viam_sonus, mes_count);
 
-  cp_switch = new ADG2128(cp_addr);
+  cp_switch = new ADG2128(&cp_opts);
   dp_lo     = new ISL23345(dp_lo_addr);
   dp_hi     = new ISL23345(dp_hi_addr);
 
@@ -107,21 +108,21 @@ AudioRouter::~AudioRouter() {
 * Do all the bus-related init.
 */
 int8_t AudioRouter::init() {
-  int8_t result = dp_lo->init();
+  int8_t result = (int8_t) dp_lo->init();
   if (result != 0) {
-    local_log.concatf("Failed to init() dp_lo (0x%02x) with cause (%d).\n", i2c_addr_dp_lo, result);
+    local_log.concatf("Failed to init() dp_lo with cause (%d).\n", result);
     Kernel::log(&local_log);
     return AUDIO_ROUTER_ERROR_BUS;
   }
-  result = dp_hi->init();
+  result = (int8_t) dp_hi->init();
   if (result != 0) {
-    local_log.concatf("Failed to init() dp_hi (0x%02x) with cause (%d).\n", i2c_addr_dp_hi, result);
+    local_log.concatf("Failed to init() dp_hi with cause (%d).\n", result);
     Kernel::log(&local_log);
     return AUDIO_ROUTER_ERROR_BUS;
   }
-  result = cp_switch->init();
+  result = (int8_t) cp_switch->init();
   if (result != 0) {
-    local_log.concatf("Failed to init() cp_switch (0x%02x) with cause (%d).\n", i2c_addr_cp_switch, result);
+    local_log.concatf("Failed to init() cp_switch with cause (%d).\n", result);
     Kernel::log(&local_log);
     return AUDIO_ROUTER_ERROR_BUS;
   }
@@ -212,7 +213,7 @@ int8_t AudioRouter::unroute(uint8_t col, uint8_t row) {
   if (row > 11) return AUDIO_ROUTER_ERROR_BAD_ROW;
   bool remove_link = (outputs[col].cp_row == &inputs[row]) ? true : false;
   uint8_t return_value = AUDIO_ROUTER_ERROR_NO_ERROR;
-  if (cp_switch->unsetRoute(outputs[col].cp_column, row) < 0) {
+  if (0 > (int8_t) cp_switch->unsetRoute(outputs[col].cp_column, row)) {
     return AUDIO_ROUTER_ERROR_UNROUTE_FAILED;
   }
   if (remove_link) outputs[col].cp_row = nullptr;
@@ -241,7 +242,7 @@ int8_t AudioRouter::unroute(uint8_t col) {
 *   indicate that we've done so.
 */
 int8_t AudioRouter::route(uint8_t col, uint8_t row) {
-  uint8_t return_value = AUDIO_ROUTER_ERROR_NO_ERROR;
+  int8_t return_value = AUDIO_ROUTER_ERROR_NO_ERROR;
   if (col > 7)  return AUDIO_ROUTER_ERROR_BAD_COLUMN;
   if (row > 11) return AUDIO_ROUTER_ERROR_BAD_ROW;
 
@@ -257,7 +258,7 @@ int8_t AudioRouter::route(uint8_t col, uint8_t row) {
   }
 
   if (return_value >= 0) {
-    int8_t result = cp_switch->setRoute(outputs[col].cp_column, row);
+    int8_t result = (int8_t) cp_switch->setRoute(outputs[col].cp_column, row);
     if (result != AUDIO_ROUTER_ERROR_NO_ERROR) {
       return_value = result;
     }
@@ -273,7 +274,7 @@ int8_t AudioRouter::route(uint8_t col, uint8_t row) {
 int8_t AudioRouter::setVolume(uint8_t col, uint8_t vol) {
   int8_t return_value = AUDIO_ROUTER_ERROR_NO_ERROR;
   if (col > 7)  return AUDIO_ROUTER_ERROR_BAD_COLUMN;
-  return_value = outputs[col].dp_dev->setValue(outputs[col].dp_reg, vol);
+  return_value = (int8_t) outputs[col].dp_dev->setValue(outputs[col].dp_reg, vol);
   return return_value;
 }
 
@@ -281,13 +282,13 @@ int8_t AudioRouter::setVolume(uint8_t col, uint8_t vol) {
 
 // Turn on the chips responsible for routing signals.
 int8_t AudioRouter::enable(void) {
-  int8_t result = dp_lo->enable();
+  int8_t result = (int8_t) dp_lo->enable();
   if (result != 0) {
     local_log.concatf("enable() failed to enable dp_lo. Cause: (%d).\n", result);
     Kernel::log(&local_log);
     return result;
   }
-  result = dp_hi->enable();
+  result = (int8_t) dp_hi->enable();
   if (result != 0) {
     local_log.concatf("enable() failed to enable dp_hi. Cause: (%d).\n", result);
     Kernel::log(&local_log);
@@ -298,19 +299,19 @@ int8_t AudioRouter::enable(void) {
 
 // Turn off the chips responsible for routing signals.
 int8_t AudioRouter::disable(void) {
-  int8_t result = dp_lo->disable();
+  int8_t result = (int8_t) dp_lo->disable();
   if (result != 0) {
     local_log.concatf("disable() failed to disable dp_lo. Cause: (%d).\n", result);
     Kernel::log(&local_log);
     return result;
   }
-  result = dp_hi->disable();
+  result = (int8_t) dp_hi->disable();
   if (result != 0) {
     local_log.concatf("disable() failed to disable dp_hi. Cause: (%d).\n", result);
     Kernel::log(&local_log);
     return result;
   }
-  result = cp_switch->reset();
+  result = (int8_t) cp_switch->reset();
   if (result != 0) {
     local_log.concatf("disable() failed to reset cp_switch. Cause: (%d).\n", result);
     Kernel::log(&local_log);
@@ -578,9 +579,28 @@ int8_t AudioRouter::notify(ManuvrMsg* active_event) {
 
 
 #if defined(MANUVR_CONSOLE_SUPPORT)
-void AudioRouter::procDirectDebugInstruction(StringBuilder *input) {
-  char* str = (char*) input->string();
+/*******************************************************************************
+* Console I/O
+*******************************************************************************/
 
+static const ConsoleCommand console_cmds[] = {
+  { "i", "Info" },
+  { "r", "Route" },
+  { "u", "Unroute" },
+  { "V", "Volume" },
+  { "e", "Enable routing" },
+  { "d", "Disable routing" }
+};
+
+
+uint AudioRouter::consoleGetCmds(ConsoleCommand** ptr) {
+  *ptr = (ConsoleCommand*) &console_cmds[0];
+  return sizeof(console_cmds) / sizeof(ConsoleCommand);
+}
+
+
+void AudioRouter::consoleCmdProc(StringBuilder *input) {
+  char* str = input->position(0);
   char c = *(str);
   StringBuilder parse_mule;
   ManuvrMsg* event;
@@ -590,7 +610,6 @@ void AudioRouter::procDirectDebugInstruction(StringBuilder *input) {
     case 'i':
       printDebug(&local_log);
       break;
-
 
     case 'r':
     case 'u':
@@ -642,7 +661,6 @@ void AudioRouter::procDirectDebugInstruction(StringBuilder *input) {
       EventReceiver::procDirectDebugInstruction(input);
       break;
   }
-
   flushLocalLog();
 }
 #endif  //MANUVR_CONSOLE_SUPPORT

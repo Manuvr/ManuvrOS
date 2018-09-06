@@ -348,14 +348,11 @@ int8_t ManuvrPlatform::bootstrap() {
     }
   #endif
   _set_init_state(MANUVR_INIT_STATE_POST_INIT);
-
   #if defined(__HAS_CRYPT_WRAPPER)
     // If we built-in cryptographic support, init the RNG.
     cryptographic_rng_init();
   #endif
-
   platformPostInit();    // Hook for platform-specific post-boot operations.
-
   if (nullptr == _self) {
     // If we have no other conception of "self", invent one.
     _self = new IdentityUUID(FIRMWARE_NAME);

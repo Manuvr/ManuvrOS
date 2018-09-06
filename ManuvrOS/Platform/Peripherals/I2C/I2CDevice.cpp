@@ -168,7 +168,7 @@ bool I2CDevice::readX(int sub_addr, uint8_t len, uint8_t *buf) {
 */
 void I2CDevice::printDebug(StringBuilder* temp) {
   if (temp) {
-    temp->concatf("\n+++ I2CDevice  0x%02x ++++ Bus %sassigned +++++++++++++++++++\n", _dev_addr, (_bus == nullptr ? "un" : ""));
+    temp->concatf("\n\t+++ I2CDevice  0x%02x ++++ Bus %sassigned +++++\n", _dev_addr, (_bus == nullptr ? "un" : ""));
   }
 }
 

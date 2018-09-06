@@ -18,6 +18,7 @@ LOCAL_ESP_COMPS += Types/cbor-cpp
 LOCAL_ESP_COMPS += Drivers/ADP8866 Drivers/BusQueue ManuvrMsg Types
 LOCAL_ESP_COMPS += Drivers/ATECC508
 LOCAL_ESP_COMPS += Drivers/ISL23345
+LOCAL_ESP_COMPS += Drivers/AudioRouter
 LOCAL_ESP_COMPS += Drivers/ADG2128
 LOCAL_ESP_COMPS += Drivers/DeviceWithRegisters
 LOCAL_ESP_COMPS += Drivers/TestDriver

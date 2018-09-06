@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifndef AUDIO_ROUTER_PCB_H
 #define AUDIO_ROUTER_PCB_H
 
+#include <Platform/Peripherals/I2C/I2CAdapter.h>
 #include <Drivers/ISL23345/ISL23345.h>
 #include <Drivers/ADG2128/ADG2128.h>
 
@@ -89,12 +90,29 @@ typedef struct cps_output_channel_t {
 
 
 
-class AudioRouter : public EventReceiver {
+class AudioRouter : public EventReceiver
+    #if defined(MANUVR_CONSOLE_SUPPORT)
+      , public ConsoleInterface
+    #endif
+  {
   public:
     AudioRouter(I2CAdapter*, uint8_t, uint8_t, uint8_t); // Constructor needs the I2CAdapter, and addresses of the three chips on the PCB.
-    ~AudioRouter(void);
+    ~AudioRouter();
 
-    int8_t init(void);
+    #if defined(MANUVR_CONSOLE_SUPPORT)
+      /* Overrides from ConsoleInterface */
+      uint consoleGetCmds(ConsoleCommand**);
+      inline const char* const consoleName() { return getReceiverName();  };
+      void consoleCmdProc(StringBuilder* input);
+    #endif  //MANUVR_CONSOLE_SUPPORT
+
+    /* Overrides from EventReceiver */
+    void printDebug(StringBuilder*);
+    int8_t notify(ManuvrMsg*);
+    int8_t callback_proc(ManuvrMsg*);
+
+
+    int8_t init();
     void preserveOnDestroy(bool);
 
     int8_t route(uint8_t col, uint8_t row);       // Establish a route to the given output from the given input.
@@ -107,19 +125,10 @@ class AudioRouter : public EventReceiver {
 
     int8_t setVolume(uint8_t col, uint8_t vol);   // Set the volume coming out of a given output channel.
 
-    int8_t enable(void);      // Turn on the chips responsible for routing signals.
-    int8_t disable(void);     // Turn off the chips responsible for routing signals.
+    int8_t enable();      // Turn on the chips responsible for routing signals.
+    int8_t disable();     // Turn off the chips responsible for routing signals.
 
     int8_t status(StringBuilder*);     // Write some status about the routes to the provided char buffer.
-
-
-    /* Overrides from EventReceiver */
-    void printDebug(StringBuilder*);
-    int8_t notify(ManuvrMsg*);
-    int8_t callback_proc(ManuvrMsg*);
-    #if defined(MANUVR_CONSOLE_SUPPORT)
-      void procDirectDebugInstruction(StringBuilder*);
-    #endif  //MANUVR_CONSOLE_SUPPORT
 
 
     // TODO: These ought to be statics...
@@ -131,13 +140,13 @@ class AudioRouter : public EventReceiver {
     static constexpr const int8_t AUDIO_ROUTER_ERROR_INPUT_DISPLACED = 1;    // There was no error, but a channel-routing operation has displaced a previously-routed input.
     static constexpr const int8_t AUDIO_ROUTER_ERROR_NO_ERROR        = 0;    // There was no error.
     static constexpr const int8_t AUDIO_ROUTER_ERROR_UNROUTE_FAILED  = -1;   // We tried to unroute a signal from an output and failed.
-    static constexpr const int8_t AUDIO_ROUTER_ERROR_BUS             = -2;   // We tried to unroute a signal from an output and failed.
+    static constexpr const int8_t AUDIO_ROUTER_ERROR_BUS             = -2;   // Bus failure.
     static constexpr const int8_t AUDIO_ROUTER_ERROR_BAD_COLUMN      = -3;   // Column was out-of-bounds.
     static constexpr const int8_t AUDIO_ROUTER_ERROR_BAD_ROW         = -4;   // Row was out-of-bounds.
 
 
   protected:
-    int8_t attached();
+    int8_t attached();      // This is called from the base notify().
 
 
   private:
@@ -147,10 +156,6 @@ class AudioRouter : public EventReceiver {
 
     CPInputChannel  inputs[12];
     CPOutputChannel outputs[8];
-
-    uint8_t i2c_addr_dp_lo;
-    uint8_t i2c_addr_dp_hi;
-    uint8_t i2c_addr_cp_switch;
 
     CPOutputChannel* getOutputByCol(uint8_t);
 

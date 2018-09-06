@@ -155,6 +155,14 @@ SensorError BMP280::getParameter(uint16_t reg, int len, uint8_t*) {
 
 int8_t BMP280::io_op_callback(BusOp* op) {
   I2CBusOp* completed = (I2CBusOp*) op;
+  StringBuilder output;
+  if (completed->hasFault()) {
+    output.concat("An i2c operation requested by the BMP280 came back failed.\n");
+    completed->printDebug(&output);
+    Kernel::log(&output);
+    return -1;
+  }
+
   if (BusOpcode::RX == completed->get_opcode()) {
     // We read.
     switch (completed->sub_addr) {
@@ -176,6 +184,19 @@ int8_t BMP280::io_op_callback(BusOp* op) {
           *((int16_t*)  (_cal_data + 22)) = endianSwap16(_get_cal_p9());
         }
         _class_cal0 = true;
+        output.concat("BMP280_REG_CAL00\n");
+        output.concatf("\t%d\t%d\n", *((uint16_t*) (_cal_data + 0)) , _get_cal_t1());
+        output.concatf("\t%d\t%d\n", *((int16_t*)  (_cal_data + 2)) , _get_cal_t2());
+        output.concatf("\t%d\t%d\n", *((int16_t*)  (_cal_data + 4)) , _get_cal_t3());
+        output.concatf("\t%d\t%d\n", *((uint16_t*) (_cal_data + 6)) , _get_cal_p1());
+        output.concatf("\t%d\t%d\n", *((int16_t*)  (_cal_data + 8)) , _get_cal_p2());
+        output.concatf("\t%d\t%d\n", *((int16_t*)  (_cal_data + 10)), _get_cal_p3());
+        output.concatf("\t%d\t%d\n", *((int16_t*)  (_cal_data + 12)), _get_cal_p4());
+        output.concatf("\t%d\t%d\n", *((int16_t*)  (_cal_data + 14)), _get_cal_p5());
+        output.concatf("\t%d\t%d\n", *((int16_t*)  (_cal_data + 16)), _get_cal_p6());
+        output.concatf("\t%d\t%d\n", *((int16_t*)  (_cal_data + 18)), _get_cal_p7());
+        output.concatf("\t%d\t%d\n", *((int16_t*)  (_cal_data + 20)), _get_cal_p8());
+        output.concatf("\t%d\t%d\n", *((int16_t*)  (_cal_data + 22)), _get_cal_p9());
         if (_is_cal_complete()) {
           _set_config(BMP280StandbyDuration::MS_1000, BMP280Filter::X4);
           _set_sampling(BMP280Sampling::X4, BMP280Mode::NORM);
@@ -261,6 +282,7 @@ int8_t BMP280::io_op_callback(BusOp* op) {
         break;
     }
   }
+  Kernel::log(&output);
   return 0;
 }
 

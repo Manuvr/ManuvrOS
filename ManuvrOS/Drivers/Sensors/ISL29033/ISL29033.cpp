@@ -275,7 +275,8 @@ SensorError ISL29033::setCommandReg() {
 
 
 uint8_t ISL29033::getCommandReg() {
-  uint8_t return_value = read8(ISL29033_REG_COMMAND_1);
+  // TODO: Probably has API consequences.
+  uint8_t return_value = readRegister((uint8_t) ISL29033_REG_COMMAND_1);
   return return_value;
 }
 

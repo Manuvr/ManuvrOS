@@ -110,7 +110,7 @@ Lifecycle:
         */
         int8_t setVerbosity(int8_t);
 
-        inline const char* getReceiverName() {   return _receiver_name;  }
+        inline const char* const getReceiverName() {  return _receiver_name;  };
 
         /**
         * What is this ER's present verbosity level?
@@ -166,7 +166,7 @@ Lifecycle:
 
 
       private:
-        char const* const _receiver_name;
+        const char* const _receiver_name;
         uint8_t     _class_state   = (DEFAULT_CLASS_VERBOSITY & MANUVR_ER_FLAG_VERBOSITY_MASK);
         uint8_t     _extnd_state   = 0;  // This is here for use by the extending class.
 

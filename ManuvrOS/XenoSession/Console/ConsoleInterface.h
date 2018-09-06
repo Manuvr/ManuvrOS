@@ -32,7 +32,7 @@ If you want this feature, you must define MANUVR_CONSOLE_SUPPORT in the
 class StringBuilder;
 #include <EnumeratedTypeCodes.h>
 
-/* A unifying type for different threading models. */
+/* A convenient label for a common fxn ptr. */
 typedef void* (*ConsoleFxn)(StringBuilder*);
 
 TCode const tcode_array_none[] = {TCode::NONE};
@@ -108,7 +108,7 @@ class ConsoleInterface {
 
     /* Must be ovverridden to implement. */
     virtual unsigned int consoleGetCmds(ConsoleCommand**) =0;
-    virtual const char* consoleName() =0;
+    virtual const char* const consoleName() =0;
     virtual void consoleCmdProc(StringBuilder*) =0;
 
 

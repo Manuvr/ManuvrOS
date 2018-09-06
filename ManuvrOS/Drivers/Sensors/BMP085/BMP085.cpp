@@ -20,10 +20,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
+TODO: This entire class looks like vomit. Like the i2c classes, it has
+  been with ManuvrOS since the beginning, and has been refactored into mush.
+  It is being disabled until it gets a rework that makes it look more like the
+  BMP280 class.
 */
+#if 0
 
 #include "BMP085.h"
-
 
 const DatumDef datum_defs[] = {
   {
@@ -149,8 +153,29 @@ SensorError BMP085::getParameter(uint16_t reg, int len, uint8_t*) {
 *******************************************************************************/
 
 
-int8_t BMP085::io_op_callback(I2CBusOp* completed) {
-  I2CDevice::io_op_callback(completed);
+int8_t BMP085::io_op_callback(BusOp* completed) {
+  I2CBusOp* completed = (I2CBusOp*) op;
+  if (completed->hasFault()) {
+    Kernel::log("BMP085 bus op failed.");
+    return -1;
+  }
+
+  if (BusOpcode::RX == completed->get_opcode()) {
+    // We read.
+    switch (completed->sub_addr) {
+      default:
+        // Illegal read target.
+        break;
+    }
+  }
+  else if (BusOpcode::TX == completed->get_opcode()) {
+    // We wrote.
+    switch (completed->sub_addr) {
+      default:
+        // Illegal write target.
+        break;
+    }
+  }
   return 0;
 }
 
@@ -293,3 +318,5 @@ long BMP085::read_up() {
 
   return uncomp_pres;
 }
+
+#endif  // PERMA b&

@@ -257,7 +257,7 @@ This file is the tortured result of growing pains since the beginning of
       #ifdef MANUVR_CONSOLE_SUPPORT
         /* Overrides from ConsoleInterface */
         uint consoleGetCmds(ConsoleCommand**);
-        inline const char* consoleName() { return getReceiverName();  };
+        inline const char* const consoleName() { return getReceiverName();  };
         void consoleCmdProc(StringBuilder* input);
 
         /* Debug aides */

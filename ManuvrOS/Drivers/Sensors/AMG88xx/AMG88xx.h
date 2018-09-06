@@ -168,6 +168,7 @@ class AMG88xx : public I2CDevice, public SensorWrapper {
 
   private:
     const AMG88xxOpts _opts;
+    ManuvrMsg isr_event;
     int16_t  _field_values[64];         // Sign-extended and endian-normalized.
     uint8_t  _field_thresholds[64][6];  // 6 bytes of threshold per-pixel.
 

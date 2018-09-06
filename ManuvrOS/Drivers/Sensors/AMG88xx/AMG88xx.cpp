@@ -38,6 +38,7 @@ const DatumDef datum_defs[] = {
 };
 
 
+
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
 *  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
@@ -73,8 +74,8 @@ AMG88xx::~AMG88xx() {
 *  `-'  `-' ' ' `-' `-' '   ' '   '   `-` |-' |-' `-' '
 ******************************************|***|********************************/
 SensorError AMG88xx::init() {
-  if (_opts.pinuseIRQPin()) {
-    setPinEvent(_opts.pin, FALLING_PULL_UP, ManuvrMsg* isr_event);
+  if (_opts.useIRQPin()) {
+    setPinEvent(_opts.pin, FALLING_PULL_UP, &isr_event);
   }
   return SensorError::NO_ERROR;
 }
