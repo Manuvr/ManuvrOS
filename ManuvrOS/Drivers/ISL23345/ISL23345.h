@@ -60,8 +60,6 @@ class ISL23345 : public I2CDeviceWithRegisters {
     ISL23345_ERROR init();                              // Perform bus-related init tasks.
     ISL23345_ERROR setValue(uint8_t pot, uint8_t val);  // Sets the value of the given pot.
     ISL23345_ERROR reset(uint8_t);                      // Sets all volumes levels to given.
-    ISL23345_ERROR disable();
-    ISL23345_ERROR enable();
 
     inline void preserveOnDestroy(bool x) {
       preserve_state_on_destroy = x;
@@ -78,6 +76,8 @@ class ISL23345 : public I2CDeviceWithRegisters {
     };
 
     inline bool enabled() {   return dev_enabled; };  // Trivial accessor.
+    inline ISL23345_ERROR disable() {  return _enable(false);  };
+    inline ISL23345_ERROR enable() {   return _enable(true);   };
 
     /* Returns the maximum value of any single potentiometer. */
     inline uint16_t getRange() {  return 0x00FF;      };
@@ -89,5 +89,7 @@ class ISL23345 : public I2CDeviceWithRegisters {
     bool    preserve_state_on_destroy;
 
     uint8_t values[4];
+
+    ISL23345_ERROR _enable(bool);
 };
 #endif

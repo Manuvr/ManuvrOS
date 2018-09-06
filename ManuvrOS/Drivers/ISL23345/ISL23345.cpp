@@ -67,25 +67,13 @@ ISL23345_ERROR ISL23345::init() {
 
 
 /*
-* Enable the device. Reconnects Rh pins and restores the wiper settings.
-*/
-ISL23345_ERROR ISL23345::enable() {
-	ISL23345_ERROR return_value = ISL23345_ERROR::NO_ERROR;
-	if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, 0x40)) {
-		return_value = ISL23345_ERROR::ABSENT;
-	}
-	return return_value;
-}
-
-
-/*
-* Disable the device. Disconnects all Rh pins and sets the wiper to 2k ohm WRT Rl.
+* Enabling the device reconnects Rh pins and restores the wiper settings.
+* Disabling the device disconnects all Rh pins and sets the wiper to 2k ohm WRT Rl.
 * Retains wiper settings.
 */
-ISL23345_ERROR ISL23345::disable() {
+ISL23345_ERROR ISL23345::_enable(bool x) {
 	ISL23345_ERROR return_value = ISL23345_ERROR::NO_ERROR;
-
-	if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, 0x00)) {
+	if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, x ? 0x40 : 0x00)) {
 		return_value = ISL23345_ERROR::ABSENT;
 	}
 	return return_value;
@@ -175,12 +163,12 @@ void ISL23345::printDebug(StringBuilder* output) {
   I2CDeviceWithRegisters::printDebug(output);
 
 	if (!dev_init) {
-		output->concat("\t Not initialized\n");
+		output->concat("\tNot initialized\n");
 		return;
 	}
 
 	for (int i = 0; i < 4; i++) {
-		output->concatf("\t POT %d: 0x%02x\n", i, values[i]);
+		output->concatf("\tPOT %d: 0x%02x\n", i, values[i]);
 	}
 	output->concatf("\n");
 }

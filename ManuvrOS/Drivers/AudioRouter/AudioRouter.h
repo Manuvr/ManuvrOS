@@ -62,7 +62,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 *   for improved noise suppression. But since we have the digital potentiometers on the side of the crosspoint that
 *   we have designated as output, we can simply write a value to the channel's pot that achieves the same result.
 * Some changes to the natural channel order were made to facilitate PCB layout. Which is the reason for the mapping
-*   oddities between inputs on the switch and output channels (uint8_t pot_remap[8]).
+*   oddities between inputs on the switch and output channels (uint8_t col_remap[8]).
 *
 * The digital potentiometers are linear across their range. Therefore, if you are going to use this class for audio,
 *   you should adjust volume in a logrithmic manner. Additionally, the pots do not have zero-crossing detection. So
@@ -73,19 +73,18 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // This struct defines an input pin on the PCB.
 typedef struct cps_input_channel_t {
-  uint8_t   cp_row;
-  char*     name;                // A name for this input. Not required, but helpful for debug and output.
+  char*     name;             // A name for this input. Not required, but helpful for debug and output.
+  uint8_t   cp_row;           // The row in the crosspoint switch associated with this input.
 } CPInputChannel;
 
 
 // This struct defines an output pin on the PCB.
 typedef struct cps_output_channel_t {
-  uint8_t         cp_column;
-  char*           name;          // A name for this output. Not required, but helpful for debug and output.
-  ISL23345*       dp_dev;        // Instance of the ISL23345 that is attached to this pin.
-  uint8_t         dp_reg;        // The ISL23345 register that services this pin.
-  uint8_t         dp_val;        // The value of the variable resistor for this pin (0-255 linear).
-  CPInputChannel* cp_row;        // A pointer to the row that is presently bound to this column. If NULL, it is unbound.
+  char*           name;       // A name for this output. Not required, but helpful for debug and output.
+  CPInputChannel* i_chan;     // A pointer to the row that is presently bound to this column. If NULL, it is unbound.
+  uint8_t         dp_reg;     // The ISL23345 register that services this pin.
+  uint8_t         cp_column;  // The column in the crosspoint switch associated with this output.
+  bool            high_pot;   // True if this output is serviced by the high potentiometer.
 } CPOutputChannel;
 
 
@@ -124,11 +123,10 @@ class AudioRouter : public EventReceiver
     int8_t nameOutput(uint8_t col, char*);  // Name the output channel.
 
     int8_t setVolume(uint8_t col, uint8_t vol);   // Set the volume coming out of a given output channel.
+    int8_t getVolume(uint8_t col);                // Get the volume coming of a given output channel.
 
     int8_t enable();      // Turn on the chips responsible for routing signals.
     int8_t disable();     // Turn off the chips responsible for routing signals.
-
-    int8_t status(StringBuilder*);     // Write some status about the routes to the provided char buffer.
 
 
     // TODO: These ought to be statics...
@@ -150,15 +148,17 @@ class AudioRouter : public EventReceiver
 
 
   private:
-    ADG2128 *cp_switch;
-    ISL23345 *dp_lo;
-    ISL23345 *dp_hi;
+    ADG2128*  cp_switch;
+    ISL23345* dp_lo;
+    ISL23345* dp_hi;
 
     CPInputChannel  inputs[12];
     CPOutputChannel outputs[8];
 
     CPOutputChannel* getOutputByCol(uint8_t);
 
-    static const uint8_t col_remap[8];
+    inline ISL23345* _getPotRef(bool high_bank) {
+      return (high_bank ? dp_hi : dp_lo);
+    };
 };
 #endif

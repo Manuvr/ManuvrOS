@@ -52,13 +52,13 @@ ADG2128::~ADG2128() {
 */
 ADG2128_ERROR ADG2128::init() {
   for (int i = 0; i < 12; i++) {
-    //if (readback(i) != ADG2128_ERROR::NO_ERROR) {
-    //  dev_init = false;
-    //  #ifdef MANUVR_DEBUG
-    //    Kernel::log("Failed to init switch.\n");
-    //  #endif
-    //  return ADG2128_ERROR::BUS;
-    //}
+    if (readback(i) != ADG2128_ERROR::NO_ERROR) {
+      dev_init = false;
+      #ifdef MANUVR_DEBUG
+        Kernel::log("Failed to init switch.\n");
+      #endif
+      return ADG2128_ERROR::BUS;
+    }
   }
   return ADG2128_ERROR::NO_ERROR;
 }
@@ -183,20 +183,14 @@ int8_t ADG2128::io_op_callback(BusOp* op) {
   uint8_t byte0 = *(completed->buf+0);
   //uint8_t byte1 = *(completed->buf+1);
 
-  StringBuilder output;
-  if (completed->hasFault()) {
-    output.concat("An i2c operation requested by the ADG2128 came back failed.\n");
-    completed->printDebug(&output);
-    Kernel::log(&output);
-    return -1;
-  }
-
   switch (completed->get_opcode()) {
     case BusOpcode::RX:
       // We just read back data from the switch. Nothing needs to be done here.
       // Any read on one of our 16-bit subaddresses that is not a failure will
       //   be construed as evidence that the device exists.
-      dev_init = true;
+      if (!completed->hasFault()) {
+        dev_init = true;
+      }
       break;
     case BusOpcode::TX:
       {
@@ -220,12 +214,18 @@ int8_t ADG2128::io_op_callback(BusOp* op) {
             readX(-1, 2, (uint8_t*) &_values[s_row]);
             break;
           default:
-            // We just confirmed a write to the switch. Set the appropriate bit.
-            // TODO: TX ops of this class use the heap. This is terrible.
-            free(completed->buf);  // The awfulness, part 2.
-            completed->buf = nullptr;
-            s_row = ((byte0 >> 3) & 0x0F) % 12;  // Modulus is costly, but safer.
-            _values[s_row] = s_set ? (_values[s_row] | (1 << (s_col+8))) : (_values[s_row] & ~(1 << (s_col+8)));
+            if (!completed->hasFault()) {
+              // We just confirmed a write to the switch. Set the appropriate bit.
+              dev_init = true;
+              // TODO: TX ops of this class use the heap. This is terrible.
+              free(completed->buf);  // The awfulness, part 2.
+              completed->buf = nullptr;
+              s_row = ((byte0 >> 3) & 0x0F) % 12;  // Modulus is costly, but safer.
+              _values[s_row] = s_set ? (_values[s_row] | (1 << (s_col+8))) : (_values[s_row] & ~(1 << (s_col+8)));
+            }
+            else {
+              Kernel::log("An i2c operation requested by the ADG2128 came back failed.\n");
+            }
             break;
         }
       }
@@ -233,7 +233,6 @@ int8_t ADG2128::io_op_callback(BusOp* op) {
     default:
       break;
   }
-  Kernel::log(&output);
   return 0;
 }
 

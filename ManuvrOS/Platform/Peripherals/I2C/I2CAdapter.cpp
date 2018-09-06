@@ -640,7 +640,13 @@ void I2CAdapter::printDebug(StringBuilder* output) {
 *******************************************************************************/
 
 static const ConsoleCommand console_cmds[] = {
-  { "p", "Purge work-queue." }
+  { "i1", "Print hardware state" },
+  { "i2", "Print ping map" },
+  { "K", "Ping device(s)" },
+  { "p", "Purge current job" },
+  { "P", "Purge work-queue" },
+  { "]", "Advance work-queue" },
+  { "d", "Print debug for given device index." }
 };
 
 
@@ -675,9 +681,6 @@ void I2CAdapter::consoleCmdProc(StringBuilder *input) {
           printHardwareState(&local_log);
           break;
         case 2:
-          printDevs(&local_log);
-          break;
-        case 3:
           printPingMap(&local_log);
           break;
       }
@@ -707,11 +710,11 @@ void I2CAdapter::consoleCmdProc(StringBuilder *input) {
       #endif
       break;
 
-    case 'p':
+    case 'P':
       purge_queued_work();
       local_log.concat("i2c queue purged.\n");
       break;
-    case 'P':
+    case 'p':
       purge_stalled_job();
       local_log.concatf("Attempting to purge a stalled jorbe...\n");
       break;
@@ -743,7 +746,5 @@ void I2CAdapter::consoleCmdProc(StringBuilder *input) {
 
   flushLocalLog();
 }
-#endif  //MANUVR_CONSOLE_SUPPORT
-
-
+#endif  // MANUVR_CONSOLE_SUPPORT
 #endif  // MANUVR_SUPPORT_I2C

@@ -29,7 +29,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 * To facilitate cheap (2-layer) PCB layouts, the pots are not mapped in an ordered manner to the
 * switch outputs. This lookup table allows us to forget that fact.
 */
-const uint8_t AudioRouter::col_remap[8] = {0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04};
+static const uint8_t col_remap[8]  = {0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04};
+static const uint8_t row_remap[12] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B};
 
 
 const MessageTypeDef message_defs_viam_sonus[] = {
@@ -76,28 +77,27 @@ AudioRouter::AudioRouter(I2CAdapter* i2c, uint8_t cp_addr, uint8_t dp_lo_addr, u
 
   for (uint8_t i = 0; i < 8; i++) {    // Setup our output channels.
     outputs[i].cp_column = col_remap[i];
-    outputs[i].cp_row    = nullptr;
+    outputs[i].i_chan    = nullptr;
     outputs[i].name      = nullptr;
-    outputs[i].dp_dev    = (i < 4) ? dp_lo : dp_hi;
+    outputs[i].high_pot  = i < 4;
     outputs[i].dp_reg    = i % 4;
-    outputs[i].dp_val    = 128;
   }
 }
 
 AudioRouter::~AudioRouter() {
-    for (uint8_t i = 0; i < 12; i++) {
-      if (inputs[i].name) {
-        free(inputs[i].name);
-      }
+  for (uint8_t i = 0; i < 12; i++) {
+    if (inputs[i].name) {
+      free(inputs[i].name);
     }
-    for (uint8_t i = 0; i < 8; i++) {
-      if (outputs[i].name) {
-        free(outputs[i].name);
-      }
+  }
+  for (uint8_t i = 0; i < 8; i++) {
+    if (outputs[i].name) {
+      free(outputs[i].name);
     }
+  }
 
-    // Destroy the objects that represeent our hardware. Downstream operations will
-    //   put the hardware into an inert state, so that needn't be done here.
+  // Destroy the objects that represeent our hardware. Downstream operations will
+  //   put the hardware into an inert state, so that needn't be done here.
   if (dp_lo) {      delete dp_lo;      }
   if (dp_hi) {      delete dp_hi;      }
   if (cp_switch) {  delete cp_switch;  }
@@ -130,17 +130,13 @@ int8_t AudioRouter::init() {
   // If we are this far, it means we've successfully refreshed all the device classes
   //   to reflect the state of the hardware. Now to parse that data into structs that
   //   mean something to us at this level...
-  for (int i = 0; i < 8; i++) {  // Volumes...
-    outputs[i].dp_val = outputs[i].dp_dev->getValue(outputs[i].dp_reg);
-  }
-
   for (int i = 0; i < 12; i++) {  // Routes...
     uint8_t temp_byte = cp_switch->getValue(inputs[i].cp_row);
     for (int j = 0; j < 8; j++) {
       if (0x01 & temp_byte) {
         CPOutputChannel* temp_output = getOutputByCol(j);
         if (temp_output) {
-          temp_output->cp_row = &inputs[i];
+          temp_output->i_chan = &inputs[i];
         }
       }
       temp_byte = temp_byte >> 1;
@@ -211,12 +207,12 @@ int8_t AudioRouter::nameOutput(uint8_t col, char* name) {
 int8_t AudioRouter::unroute(uint8_t col, uint8_t row) {
   if (col > 7)  return AUDIO_ROUTER_ERROR_BAD_COLUMN;
   if (row > 11) return AUDIO_ROUTER_ERROR_BAD_ROW;
-  bool remove_link = (outputs[col].cp_row == &inputs[row]) ? true : false;
+  bool remove_link = (outputs[col].i_chan == &inputs[row]) ? true : false;
   uint8_t return_value = AUDIO_ROUTER_ERROR_NO_ERROR;
   if (0 > (int8_t) cp_switch->unsetRoute(outputs[col].cp_column, row)) {
     return AUDIO_ROUTER_ERROR_UNROUTE_FAILED;
   }
-  if (remove_link) outputs[col].cp_row = nullptr;
+  if (remove_link) outputs[col].i_chan = nullptr;
   return return_value;
 }
 
@@ -246,11 +242,11 @@ int8_t AudioRouter::route(uint8_t col, uint8_t row) {
   if (col > 7)  return AUDIO_ROUTER_ERROR_BAD_COLUMN;
   if (row > 11) return AUDIO_ROUTER_ERROR_BAD_ROW;
 
-  if (outputs[col].cp_row) {
+  if (outputs[col].i_chan) {
     int8_t result = unroute(col);
     if (result == AUDIO_ROUTER_ERROR_NO_ERROR) {
       return_value = AUDIO_ROUTER_ERROR_INPUT_DISPLACED;
-      outputs[col].cp_row = nullptr;
+      outputs[col].i_chan = nullptr;
     }
     else {
       return_value = AUDIO_ROUTER_ERROR_UNROUTE_FAILED;
@@ -263,7 +259,7 @@ int8_t AudioRouter::route(uint8_t col, uint8_t row) {
       return_value = result;
     }
     else {
-      outputs[col].cp_row = &inputs[row];
+      outputs[col].i_chan = &inputs[row];
     }
   }
 
@@ -274,14 +270,20 @@ int8_t AudioRouter::route(uint8_t col, uint8_t row) {
 int8_t AudioRouter::setVolume(uint8_t col, uint8_t vol) {
   int8_t return_value = AUDIO_ROUTER_ERROR_NO_ERROR;
   if (col > 7)  return AUDIO_ROUTER_ERROR_BAD_COLUMN;
-  return_value = (int8_t) outputs[col].dp_dev->setValue(outputs[col].dp_reg, vol);
+  return_value = (int8_t) _getPotRef(outputs[col].high_pot)->setValue(outputs[col].dp_reg, vol);
   return return_value;
+}
+
+
+int16_t AudioRouter::getVolume(uint8_t col) {
+  if (col > 7) return AUDIO_ROUTER_ERROR_BAD_COLUMN;
+  return (int16_t) _getPotRef(outputs[col].high_pot)->getValue(outputs[col].dp_reg);
 }
 
 
 
 // Turn on the chips responsible for routing signals.
-int8_t AudioRouter::enable(void) {
+int8_t AudioRouter::enable() {
   int8_t result = (int8_t) dp_lo->enable();
   if (result != 0) {
     local_log.concatf("enable() failed to enable dp_lo. Cause: (%d).\n", result);
@@ -298,7 +300,7 @@ int8_t AudioRouter::enable(void) {
 }
 
 // Turn off the chips responsible for routing signals.
-int8_t AudioRouter::disable(void) {
+int8_t AudioRouter::disable() {
   int8_t result = (int8_t) dp_lo->disable();
   if (result != 0) {
     local_log.concatf("disable() failed to disable dp_lo. Cause: (%d).\n", result);
@@ -332,21 +334,20 @@ void AudioRouter::dumpOutputChannel(uint8_t chan, StringBuilder* output) {
     output->concatf("%s\n", outputs[chan].name);
   }
   output->concatf("Switch column %d\n", outputs[chan].cp_column);
-  if (outputs[chan].dp_dev == nullptr) {
+  if (_getPotRef(outputs[chan].high_pot) == nullptr) {
     output->concatf("Potentiometer is NULL\n");
   }
   else {
-    uint8_t temp_int = (outputs[chan].dp_dev == dp_lo) ? 0 : 1;
-    output->concatf("Potentiometer:            %d\n", temp_int);
-    output->concatf("Potentiometer register:   %d\n", outputs[chan].dp_reg);
-    output->concatf("Potentiometer value:      %d\n", outputs[chan].dp_val);
+    output->concatf("Potentiometer:            %u\n", (outputs[chan].high_pot) ? 1 : 0);
+    output->concatf("Potentiometer register:   %u\n", outputs[chan].dp_reg);
+    output->concatf("Potentiometer value:      %u\n", _getPotRef(outputs[chan].high_pot)->getValue(outputs[chan].dp_reg));
   }
-  if (outputs[chan].cp_row == nullptr) {
+  if (outputs[chan].i_chan == nullptr) {
     output->concatf("Output channel %d is presently unbound.\n", chan);
   }
   else {
     output->concatf("Output channel %d is presently bound to the following input...\n", chan);
-    dumpInputChannel(outputs[chan].cp_row, output);
+    dumpInputChannel(outputs[chan].i_chan, output);
   }
 }
 
@@ -375,24 +376,6 @@ void AudioRouter::dumpInputChannel(uint8_t chan, StringBuilder* output) {
   }
   output->concatf("Switch row: %d\n", inputs[chan].cp_row);
 }
-
-
-// Write some status about the routes to the provided buffer.
-int8_t AudioRouter::status(StringBuilder* output) {
-  for (int i = 0; i < 8; i++) {
-    dumpOutputChannel(i, output);
-  }
-  output->concat("\n");
-
-  dp_lo->printDebug(output);
-  dp_hi->printDebug(output);
-  cp_switch->printDebug(output);
-
-  Kernel::log(output);
-
-  return AudioRouter::AUDIO_ROUTER_ERROR_NO_ERROR;
-}
-
 
 
 
@@ -430,15 +413,6 @@ int8_t AudioRouter::attached() {
 */
 void AudioRouter::printDebug(StringBuilder *output) {
   EventReceiver::printDebug(output);
-
-  if (getVerbosity() > 5) {
-    status(output);
-  }
-  else {
-    for (int i = 0; i < 8; i++) {
-      dumpOutputChannel(i, output);
-    }
-  }
   output->concat("\n");
 }
 
@@ -588,6 +562,8 @@ static const ConsoleCommand console_cmds[] = {
   { "r", "Route" },
   { "u", "Unroute" },
   { "V", "Volume" },
+  { "I", "Dump input channel(s)" },
+  { "O", "Dump output channel(s)" },
   { "e", "Enable routing" },
   { "d", "Disable routing" }
 };
@@ -602,52 +578,100 @@ uint AudioRouter::consoleGetCmds(ConsoleCommand** ptr) {
 void AudioRouter::consoleCmdProc(StringBuilder *input) {
   char* str = input->position(0);
   char c = *(str);
+  int temp_int = ((*(str) != 0) ? atoi((char*) str+1) : 0);
   StringBuilder parse_mule;
   ManuvrMsg* event;
 
   switch (c) {
-    // AudioRouter debugging cases....
     case 'i':
-      printDebug(&local_log);
+      switch (temp_int) {
+        case 1:
+          cp_switch->printDebug(&local_log);
+          break;
+        case 2:
+          dp_lo->printDebug(&local_log);
+          dp_hi->printDebug(&local_log);
+          break;
+        case 0:
+        default:
+          printDebug(&local_log);
+          break;
+      }
       break;
 
     case 'r':
     case 'u':
-      parse_mule.concat(str);
-      parse_mule.split(" ");
-      parse_mule.drop_position(0);
-
-      event = new ManuvrMsg((c == 'r') ? VIAM_SONUS_MSG_ROUTE : VIAM_SONUS_MSG_UNROUTE);
-      switch (parse_mule.count()) {
+      input->drop_position(0);
+      switch (input->count()) {
         case 2:
-          event->addArg((uint8_t) parse_mule.position_as_int(0));
-          event->addArg((uint8_t) parse_mule.position_as_int(1));
+          event = new ManuvrMsg((c == 'r') ? VIAM_SONUS_MSG_ROUTE : VIAM_SONUS_MSG_UNROUTE);
+          event->addArg((uint8_t) input->position_as_int(0));
+          event->addArg((uint8_t) input->position_as_int(1));
+          raiseEvent(event);
           break;
         default:
-          local_log.concat("Not enough arguments to (un)route:\n");
+          local_log.concat("(Un)route <output> <input>\n");
           break;
       }
-      raiseEvent(event);
+      break;
+
+    case 'I':
+    case 'O':
+      input->drop_position(0);
+      switch (input->count()) {
+        case 0:
+          if ('I' == c) {
+            for (int i = 0; i < 12; i++) {
+              dumpInputChannel(i, &local_log);
+            }
+          }
+          else {
+            for (int i = 0; i < 8; i++) {
+              dumpOutputChannel(i, &local_log);
+            }
+          }
+          break;
+        case 1:
+          if ('I' == c) {
+            dumpInputChannel(input->position_as_int(0), &local_log);
+          }
+          else {
+            dumpOutputChannel(input->position_as_int(0), &local_log);
+          }
+          break;
+        default:
+          local_log.concat("Need a channel parameter.\n");
+          break;
+      }
       break;
 
     case 'V':
-      parse_mule.concat(str);
-      parse_mule.split(" ");
-      parse_mule.drop_position(0);
+      input->drop_position(0);
       event = new ManuvrMsg(VIAM_SONUS_MSG_OUTPUT_CHAN_VOL);
-      switch (parse_mule.count()) {
-        case 2:
-          event->addArg((uint8_t) parse_mule.position_as_int(0));
-          event->addArg((uint8_t) parse_mule.position_as_int(1));
+      switch (input->count()) {
+        case 0:
+          local_log.concat("CHAN | Volume\n-------------\n");
+          for (int i = 0; i < 8; i++) {
+            local_log.concatf("%d:  %d\n", i, getVolume(i));
+          }
           break;
+        case 2:
+          event->addArg((uint8_t) input->position_as_int(0));
+          input->drop_position(0);
+          // NOTE: No break.
         case 1:
-          event->addArg((uint8_t) parse_mule.position_as_int(0));
+          event->addArg((uint8_t) input->position_as_int(0));
+          raiseEvent(event);
           break;
         default:
-          local_log.concat("Not enough arguments to set volume:\n");
+          local_log.concat("v <output> <volume>\n");
           break;
       }
-      raiseEvent(event);
+      break;
+
+    case 'a':
+      cp_switch->init();
+      local_log.concat("v <output> <volume>\n");
       break;
 
     case 'e':
