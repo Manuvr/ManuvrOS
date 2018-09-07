@@ -35,7 +35,7 @@ static const uint8_t readback_addr[24] = {
 /*
 * Constructor. Takes the i2c address of this device as sole argument.
 */
-ADG2128::ADG2128(const ADG2128Opts* _o) : I2CDevice(_opts.addr), _opts(_o) {
+ADG2128::ADG2128(const ADG2128Opts* _o) : I2CDevice(_o->addr), _opts(_o) {
   preserve_state_on_destroy = false;
   dev_init = false;
 }

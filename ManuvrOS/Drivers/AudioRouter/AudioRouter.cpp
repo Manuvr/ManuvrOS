@@ -238,10 +238,10 @@ int8_t AudioRouter::unroute(uint8_t col) {
 *   indicate that we've done so.
 */
 int8_t AudioRouter::route(uint8_t col, uint8_t row) {
-  int8_t return_value = AUDIO_ROUTER_ERROR_NO_ERROR;
   if (col > 7)  return AUDIO_ROUTER_ERROR_BAD_COLUMN;
   if (row > 11) return AUDIO_ROUTER_ERROR_BAD_ROW;
 
+  int8_t return_value = AUDIO_ROUTER_ERROR_NO_ERROR;
   if (outputs[col].i_chan) {
     int8_t result = unroute(col);
     if (result == AUDIO_ROUTER_ERROR_NO_ERROR) {

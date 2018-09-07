@@ -34,9 +34,9 @@ This is a demonstration program, and was meant to be compiled for a
 #include <Kernel.h>
 
 /* Drivers particular to this Manuvrable... */
+#include <Platform/Platform.h>
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
 #include <Drivers/Sensors/INA219/INA219.h>
-#include <Drivers/AudioRouter/AudioRouter.h>
 
 /*
 * This is ONLY used to expose the GPIO pins to the outside world.
@@ -59,10 +59,6 @@ This is a demonstration program, and was meant to be compiled for a
 
 /* This global makes this source file read better. */
 Kernel* kernel = nullptr;
-
-#include <Platform/Platform.h>
-
-
 
 
 /*******************************************************************************
@@ -196,11 +192,6 @@ int main(int argc, const char* argv[]) {
     // TODO: Temporary addition to test the SensorWrapper build size.
     INA219 ina219;
     i2c.addSlaveDevice(&ina219);
-
-    const uint8_t SWITCH_ADDR = 0x76;
-    const uint8_t POT_0_ADDR  = 0x50;
-    const uint8_t POT_1_ADDR  = 0x51;
-    AudioRouter audio_router(&i2c, SWITCH_ADDR, POT_0_ADDR, POT_1_ADDR);
   #endif
 
 

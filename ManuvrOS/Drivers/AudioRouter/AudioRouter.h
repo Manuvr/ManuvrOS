@@ -122,8 +122,8 @@ class AudioRouter : public EventReceiver
     int8_t nameInput(uint8_t row, char*);   // Name the input channel.
     int8_t nameOutput(uint8_t col, char*);  // Name the output channel.
 
-    int8_t setVolume(uint8_t col, uint8_t vol);   // Set the volume coming out of a given output channel.
-    int8_t getVolume(uint8_t col);                // Get the volume coming of a given output channel.
+    int8_t  setVolume(uint8_t col, uint8_t vol);  // Set the volume coming out of a given output channel.
+    int16_t getVolume(uint8_t col);               // Get the volume coming of a given output channel.
 
     int8_t enable();      // Turn on the chips responsible for routing signals.
     int8_t disable();     // Turn off the chips responsible for routing signals.
