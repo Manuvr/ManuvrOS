@@ -570,38 +570,52 @@ int8_t ManuvrUDP::callback_proc(ManuvrMsg* event) {
 
 
 
-int8_t ManuvrUDP::notify(ManuvrMsg* active_event) {
-  int8_t return_value = 0;
-
-  switch (active_event->eventCode()) {
-    case MANUVR_MSG_XPORT_DEBUG:
-      printDebug(&local_log);
-      return_value++;
-      break;
-
-    default:
-      return_value += ManuvrXport::notify(active_event);
-      break;
-  }
-
-  flushLocalLog();
-  return return_value;
-}
-
 
 #if defined(MANUVR_CONSOLE_SUPPORT)
-void ManuvrUDP::procDirectDebugInstruction(StringBuilder *input) {
-  char* str = input->position(0);
+/*******************************************************************************
+* Console I/O
+*******************************************************************************/
 
-  /* These are debug case-offs that are typically used to test functionality, and are then
-     struck from the build. */
-  switch (*(str)) {
+static const ConsoleCommand console_cmds[] = {
+  { "i", "Info" },
+  { "C", "Connect" },
+  { "D", "Disconnect" },
+  { "R", "Reset" }
+};
+
+
+uint ManuvrUDP::consoleGetCmds(ConsoleCommand** ptr) {
+  *ptr = (ConsoleCommand*) &console_cmds[0];
+  return sizeof(console_cmds) / sizeof(ConsoleCommand);
+}
+
+
+void ManuvrUDP::consoleCmdProc(StringBuilder* input) {
+  char* str = input->position(0);
+  char c = *(str);
+  int temp_int = ((*(str) != 0) ? atoi((char*) str+1) : 0);
+
+  switch (c) {
+    case 'i':
+      printDebug(&local_log);
+      break;
+    case 'C':
+      local_log.concatf("%s: Connect...\n", getReceiverName());
+      connect();
+      break;
+    case 'D':  // Force a state change with no underlying physical reason. Abuse test...
+      local_log.concatf("%s: Disconnect...\n", getReceiverName());
+      disconnect();
+      break;
+    case 'R':
+      local_log.concatf("%s: Resetting...\n", getReceiverName());
+      reset();
+      break;
+
     default:
       break;
   }
-
   flushLocalLog();
 }
-#endif  // MANUVR_CONSOLE_SUPPORT
-
+#endif  //MANUVR_CONSOLE_SUPPORT
 #endif  // UDP support

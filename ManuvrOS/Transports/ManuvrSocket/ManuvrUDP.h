@@ -119,23 +119,38 @@ class UDPPipe : public BufferPipe {
 
 
 
-class ManuvrUDP : public ManuvrSocket {
+class ManuvrUDP : public ManuvrSocket
+    #if defined(MANUVR_CONSOLE_SUPPORT)
+      , public ConsoleInterface
+    #endif
+{
   public:
     ManuvrUDP(const char* addr, int port);
     ManuvrUDP(const char* addr, int port, SocketOpts* opts);
-    virtual ~ManuvrUDP();
+    ~ManuvrUDP();
+
+    #if defined(MANUVR_CONSOLE_SUPPORT)
+      /* Overrides from ConsoleInterface */
+      uint consoleGetCmds(ConsoleCommand**);
+      inline const char* const consoleName() { return getReceiverName();  };
+      void consoleCmdProc(StringBuilder* input);
+    #endif  //MANUVR_CONSOLE_SUPPORT
 
     /* Override from BufferPipe. */
     virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
     virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
 
-    int8_t udpPipeDestroyCallback(UDPPipe*);
+    /* Overrides from EventReceiver */
+    void printDebug(StringBuilder*);
+    int8_t callback_proc(ManuvrMsg*);
 
     int8_t connect();
     int8_t listen();
     int8_t reset();
     int8_t read_port();
+
     bool write_port(unsigned char* out, int out_len);
+    int8_t udpPipeDestroyCallback(UDPPipe*);
 
     bool write_datagram(unsigned char* out, int out_len, uint32_t addr, int port, uint32_t opts);
     inline bool write_datagram(unsigned char* out, int out_len, uint32_t addr, int port) {
@@ -147,15 +162,6 @@ class ManuvrUDP : public ManuvrSocket {
     inline bool write_datagram(unsigned char* out, int out_len, const char* addr, int port) {
       return write_datagram(out, out_len, inet_addr(addr), port, 0);
     };
-
-    /* Overrides from EventReceiver */
-    int8_t notify(ManuvrMsg*);
-    int8_t callback_proc(ManuvrMsg*);
-    void printDebug(StringBuilder*);
-    #if defined(MANUVR_CONSOLE_SUPPORT)
-      void procDirectDebugInstruction(StringBuilder*);
-    #endif  //MANUVR_CONSOLE_SUPPORT
-
 
 
   protected:

@@ -464,4 +464,52 @@ int8_t ManuvrTCP::notify(ManuvrMsg* active_event) {
 }
 
 
+
+#if defined(MANUVR_CONSOLE_SUPPORT)
+/*******************************************************************************
+* Console I/O
+*******************************************************************************/
+
+static const ConsoleCommand console_cmds[] = {
+  { "i", "Info" },
+  { "C", "Connect" },
+  { "D", "Disconnect" },
+  { "R", "Reset" }
+};
+
+
+uint ManuvrTCP::consoleGetCmds(ConsoleCommand** ptr) {
+  *ptr = (ConsoleCommand*) &console_cmds[0];
+  return sizeof(console_cmds) / sizeof(ConsoleCommand);
+}
+
+
+void ManuvrTCP::consoleCmdProc(StringBuilder* input) {
+  char* str = input->position(0);
+  char c = *(str);
+  int temp_int = ((*(str) != 0) ? atoi((char*) str+1) : 0);
+
+  switch (c) {
+    case 'i':
+      printDebug(&local_log);
+      break;
+    case 'C':
+      local_log.concatf("%s: Connect...\n", getReceiverName());
+      connect();
+      break;
+    case 'D':  // Force a state change with no underlying physical reason. Abuse test...
+      local_log.concatf("%s: Disconnect...\n", getReceiverName());
+      disconnect();
+      break;
+    case 'R':
+      local_log.concatf("%s: Resetting...\n", getReceiverName());
+      reset();
+      break;
+
+    default:
+      break;
+  }
+  flushLocalLog();
+}
+#endif  //MANUVR_CONSOLE_SUPPORT
 #endif  //MANUVR_SUPPORT_TCPSOCKET

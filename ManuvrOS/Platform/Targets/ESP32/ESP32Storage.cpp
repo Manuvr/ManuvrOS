@@ -252,7 +252,7 @@ int8_t ESP32Storage::notify(ManuvrMsg* active_event) {
 }
 
 //#if defined(MANUVR_CONSOLE_SUPPORT)
-//void ESP32Storage::consoleCmdProc(StringBuilder *input) {
+//void ESP32Storage::consoleCmdProc(StringBuilder* input) {
 //  char* str = input->position(0);
 //
 //  switch (*(str)) {

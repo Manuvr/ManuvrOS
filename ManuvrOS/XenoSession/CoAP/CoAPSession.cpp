@@ -276,21 +276,6 @@ int8_t CoAPSession::notify(ManuvrMsg* active_event) {
 
 
 
-#if defined(MANUVR_CONSOLE_SUPPORT)
-void CoAPSession::procDirectDebugInstruction(StringBuilder *input) {
-  char* str = input->position(0);
-
-  switch (*(str)) {
-    default:
-      XenoSession::procDirectDebugInstruction(input);
-      break;
-  }
-
-  flushLocalLog();
-}
-#endif  // MANUVR_CONSOLE_SUPPORT
-
-
 /**
 * Debug support method. This fxn is only present in debug builds.
 *
@@ -306,4 +291,37 @@ void CoAPSession::printDebug(StringBuilder *output) {
 	}
 }
 
-#endif
+
+#if defined(MANUVR_CONSOLE_SUPPORT)
+/*******************************************************************************
+* Console I/O
+*******************************************************************************/
+
+static const ConsoleCommand console_cmds[] = {
+  { "i", "Info" }
+};
+
+
+uint CoAPSession::consoleGetCmds(ConsoleCommand** ptr) {
+  *ptr = (ConsoleCommand*) &console_cmds[0];
+  return sizeof(console_cmds) / sizeof(ConsoleCommand);
+}
+
+
+void CoAPSession::consoleCmdProc(StringBuilder* input) {
+  char* str = input->position(0);
+  char c = *(str);
+
+  switch (c) {
+    case 'i':
+      printDebug(&local_log);
+      break;
+
+    default:
+      XenoSession::procDirectDebugInstruction(input);
+      break;
+  }
+  flushLocalLog();
+}
+#endif  //MANUVR_CONSOLE_SUPPORT
+#endif  //MANUVR_SUPPORT_COAP

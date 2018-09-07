@@ -289,7 +289,7 @@ int8_t LinuxStorage::notify(ManuvrMsg* active_event) {
 }
 
 
-//void LinuxStorage::consoleCmdProc(StringBuilder *input) {
+//void LinuxStorage::consoleCmdProc(StringBuilder* input) {
 //  char* str = input->position(0);
 //
 //  switch (*(str)) {

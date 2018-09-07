@@ -460,7 +460,7 @@ uint ATECC508::consoleGetCmds(ConsoleCommand** ptr) {
 }
 
 
-void ATECC508::consoleCmdProc(StringBuilder *input) {
+void ATECC508::consoleCmdProc(StringBuilder* input) {
   const char* str = (char *) input->position(0);
   char c    = *str;
   int temp_int = 0;

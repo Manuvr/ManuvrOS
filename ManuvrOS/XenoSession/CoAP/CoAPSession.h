@@ -290,10 +290,21 @@ struct CoAPOpts {
 };
 
 
-class CoAPSession : public XenoSession {
+class CoAPSession : public XenoSession
+    #if defined(MANUVR_CONSOLE_SUPPORT)
+      , public ConsoleInterface
+    #endif
+  {
   public:
     CoAPSession(BufferPipe*);
     ~CoAPSession();
+
+    #if defined(MANUVR_CONSOLE_SUPPORT)
+      /* Overrides from ConsoleInterface */
+      uint consoleGetCmds(ConsoleCommand**);
+      inline const char* const consoleName() { return getReceiverName();  };
+      void consoleCmdProc(StringBuilder* input);
+    #endif  //MANUVR_CONSOLE_SUPPORT
 
     int8_t sendEvent(ManuvrMsg*);
 
@@ -309,7 +320,6 @@ class CoAPSession : public XenoSession {
     virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
 
     /* Overrides from EventReceiver */
-    void procDirectDebugInstruction(StringBuilder*);
     void printDebug(StringBuilder*);
     int8_t notify(ManuvrMsg*);
     int8_t callback_proc(ManuvrMsg*);

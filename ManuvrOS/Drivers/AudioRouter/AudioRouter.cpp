@@ -575,7 +575,7 @@ uint AudioRouter::consoleGetCmds(ConsoleCommand** ptr) {
 }
 
 
-void AudioRouter::consoleCmdProc(StringBuilder *input) {
+void AudioRouter::consoleCmdProc(StringBuilder* input) {
   char* str = input->position(0);
   char c = *(str);
   int temp_int = ((*(str) != 0) ? atoi((char*) str+1) : 0);

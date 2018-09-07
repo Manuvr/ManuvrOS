@@ -84,6 +84,7 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     virtual ~ManuvrXport();
 
     /* Override from BufferPipe. */
+    const char* pipeName();
     virtual int8_t toCounterparty(ManuvrPipeSignal, void*);
     virtual inline int8_t toCounterparty(StringBuilder* buf, int8_t mm) {
       return BufferPipe::toCounterparty(buf, mm);
@@ -91,16 +92,6 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     virtual inline int8_t fromCounterparty(StringBuilder* buf, int8_t mm) {
       return BufferPipe::fromCounterparty(buf, mm);
     };
-
-    /*
-    * State imperatives.
-    * TODO: This is fragile, and has been a PITA to maintain. Migrate some of this to Pipe
-    *         signals, and leave inlines as public-facing members.
-    */
-    virtual int8_t connect()    = 0;
-    virtual int8_t disconnect();
-    virtual int8_t listen()     = 0;
-    virtual int8_t reset()      = 0;
 
     // TODO: This is going to be cut in favor of BufferPipe's API.
     // Mandatory override.
@@ -138,9 +129,6 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     //    choice.  Calltimes? vtable size? alignment? Fragility? Dig.
     virtual void   printDebug(StringBuilder *);
     virtual int8_t notify(ManuvrMsg*);
-    #if defined(MANUVR_CONSOLE_SUPPORT)
-      virtual void   procDirectDebugInstruction(StringBuilder*);
-    #endif  //MANUVR_CONSOLE_SUPPORT
 
 
   protected:
@@ -156,15 +144,22 @@ class ManuvrXport : public EventReceiver, public BufferPipe {
     ManuvrXport(const char*);
 
     virtual int8_t attached() =0;
-    const char* pipeName();
-
-    // TODO: Should be private. provide_session() / reset() are the blockers.
-    inline void set_xport_state(uint32_t bitmask) {    _xport_flags = (bitmask  | _xport_flags);   }
-    inline void unset_xport_state(uint32_t bitmask) {  _xport_flags = (~bitmask & _xport_flags);   }
 
     void connected(bool);
     void listening(bool);
 
+    inline void set_xport_state(uint32_t bitmask) {    _xport_flags = (bitmask  | _xport_flags);   }
+    inline void unset_xport_state(uint32_t bitmask) {  _xport_flags = (~bitmask & _xport_flags);   }
+
+    /*
+    * State imperatives.
+    * TODO: This is fragile, and has been a PITA to maintain. Migrate some of this to Pipe
+    *         signals, and leave inlines as public-facing members.
+    */
+    virtual int8_t connect()    = 0;
+    virtual int8_t disconnect();
+    virtual int8_t listen()     = 0;
+    virtual int8_t reset()      = 0;
 
 
   private:

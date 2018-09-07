@@ -547,7 +547,7 @@ uint ADP8866::consoleGetCmds(ConsoleCommand** ptr) {
 }
 
 
-void ADP8866::consoleCmdProc(StringBuilder *input) {
+void ADP8866::consoleCmdProc(StringBuilder* input) {
   const char* str = (char *) input->position(0);
   char c    = *str;
   int channel  = 0;

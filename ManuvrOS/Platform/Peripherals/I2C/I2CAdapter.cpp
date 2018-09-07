@@ -654,7 +654,7 @@ uint I2CAdapter::consoleGetCmds(ConsoleCommand** ptr) {
 }
 
 
-void I2CAdapter::consoleCmdProc(StringBuilder *input) {
+void I2CAdapter::consoleCmdProc(StringBuilder* input) {
   char* str = input->position(0);
   char c = *(str);
   int temp_int = 0;

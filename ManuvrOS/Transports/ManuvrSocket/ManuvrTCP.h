@@ -51,12 +51,23 @@ This is basically only for linux until it is needed in a smaller space.
 // TODO: Might generalize UDP and websocket support into this. For now, we only deal in TCP.
 // If generalization takes place, we should probably have a pure interface class "ManuvrSocket"
 //   that handles all the common-gound.
-class ManuvrTCP : public ManuvrSocket {
+class ManuvrTCP : public ManuvrSocket
+    #if defined(MANUVR_CONSOLE_SUPPORT)
+      , public ConsoleInterface
+    #endif
+{
   public:
     ManuvrTCP(const char* addr, int port);
     ManuvrTCP(const char* addr, int port, SocketOpts* opts);
     ManuvrTCP(ManuvrTCP* listening_instance, int nu_sock, struct sockaddr_in* nu_sockaddr);
     ~ManuvrTCP();
+
+    #if defined(MANUVR_CONSOLE_SUPPORT)
+      /* Overrides from ConsoleInterface */
+      uint consoleGetCmds(ConsoleCommand**);
+      inline const char* const consoleName() { return getReceiverName();  };
+      void consoleCmdProc(StringBuilder* input);
+    #endif  //MANUVR_CONSOLE_SUPPORT
 
     /* Override from BufferPipe. */
     virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
@@ -66,13 +77,12 @@ class ManuvrTCP : public ManuvrSocket {
     int8_t notify(ManuvrMsg*);
     int8_t callback_proc(ManuvrMsg*);
 
-
     int8_t connect();
     int8_t listen();
     int8_t reset();
+    int8_t read_port();
 
     bool write_port(unsigned char* out, int out_len);
-    int8_t read_port();
 
 
   protected:

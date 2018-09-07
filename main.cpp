@@ -227,8 +227,7 @@ int main(int argc, const char* argv[]) {
 
       mqtt.subscribe("d", &debug_msg);
       kernel->subscribe(&tcp_cli);
-
-    #endif
+    #endif  // MANUVR_SUPPORT_MQTT
 
     /*
     * Transports that listen need to be given instructions for building software
@@ -240,16 +239,16 @@ int main(int argc, const char* argv[]) {
     ManuvrTCP tcp_srv((const char*) "0.0.0.0", 2319);
     tcp_srv.setPipeStrategy(pipe_plan_console);
     kernel->subscribe(&tcp_srv);
-  #endif
+  #endif  // MANUVR_SUPPORT_TCPSOCKET
 
   #if defined(MANUVR_SUPPORT_UDP)
+    ManuvrUDP udp_srv((const char*) "0.0.0.0", 5683);
+    kernel->subscribe(&udp_srv);
     #if defined(MANUVR_SUPPORT_COAP)
       /*
       * If we support CoAP, we establish a UDP server with a pipe-strategy to
       *   instantiate a CoAP session.
       */
-      ManuvrUDP udp_srv((const char*) "0.0.0.0", 5683);
-      kernel->subscribe(&udp_srv);
       udp_srv.setPipeStrategy(pipe_plan_coap);
       #if defined(__MANUVR_MBEDTLS)
         /**

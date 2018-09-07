@@ -173,6 +173,15 @@ int8_t ManuvrXport::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
       }
       return 0;
 
+    case ManuvrPipeSignal::XPORT_RESET:
+      return reset();
+
+    case ManuvrPipeSignal::XPORT_LISTEN:
+      if (!alwaysConnected() && !listening()) {
+        listen();
+      }
+      return 0;
+
     case ManuvrPipeSignal::FAR_SIDE_DETACH:   // The far side is detaching.
     case ManuvrPipeSignal::NEAR_SIDE_DETACH:
     case ManuvrPipeSignal::FAR_SIDE_ATTACH:
@@ -398,35 +407,3 @@ int8_t ManuvrXport::notify(ManuvrMsg* active_event) {
   flushLocalLog();
   return return_value;
 }
-
-
-#if defined(MANUVR_CONSOLE_SUPPORT)
-/**
-* This is a base-level debug function that takes direct input from a user.
-*
-* @param   input  A buffer containing the user's direct input.
-*/
-void ManuvrXport::procDirectDebugInstruction(StringBuilder *input) {
-  char* str = input->position(0);
-
-  switch (*(str)) {
-    case 'C':
-      local_log.concatf("%s: Connect...\n", getReceiverName());
-      connect();
-      break;
-    case 'D':  // Force a state change with no underlying physical reason. Abuse test...
-      local_log.concatf("%s: Disconnect...\n", getReceiverName());
-      disconnect();
-      break;
-    case 'R':
-      local_log.concatf("%s: Resetting...\n", getReceiverName());
-      reset();
-      break;
-    default:
-      break;
-  }
-
-  flushLocalLog();
-}
-
-#endif  // MANUVR_CONSOLE_SUPPORT

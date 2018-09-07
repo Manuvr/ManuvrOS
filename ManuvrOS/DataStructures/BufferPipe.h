@@ -97,7 +97,7 @@ See UDPPipe for a case where this matters.
 * Definition of signals passable via the pipe's control channel.
 * These should be kept as general as possible, and have no direct relationship
 *   to POSIX signals.
-* For one, POSIX signals are async, and there are ALWAYS synchronous.
+* For one, POSIX signals are async, and these are ALWAYS synchronous.
 * For another, they are not used for IPC. The primary function is to signal
 *   setup, tear-down, and a handful of transport ideas.
 */
@@ -110,10 +110,12 @@ enum class ManuvrPipeSignal : uint8_t {
   FAR_SIDE_ATTACH,     // Far-side informing the near-side of its arrival.
   NEAR_SIDE_ATTACH,    // Near-side informing the far-side of its arrival.
 
-  // These are signals for identity and authentication signals.
+  // These are signals for identity and authentication.
   STRATEGY,            // connect()/connected()
 
   // These are signals for transport-compat. They might be generalized.
+  XPORT_RESET,         // reset()
+  XPORT_LISTEN,        // listen()
   XPORT_CONNECT,       // connect()/connected()
   XPORT_DISCONNECT     // disconnect()/disconnected()
 };
