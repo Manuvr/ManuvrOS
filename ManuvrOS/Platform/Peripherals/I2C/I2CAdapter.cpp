@@ -618,11 +618,10 @@ int8_t I2CAdapter::notify(ManuvrMsg* active_event) {
 
 
 /**
-* Debug support method. This fxn is only present in debug builds.
+* Debug support method.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
-#if defined(MANUVR_DEBUG)
 void I2CAdapter::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
   printHardwareState(output);
@@ -631,7 +630,6 @@ void I2CAdapter::printDebug(StringBuilder* output) {
   printAdapter(output);
   printWorkQueue(output, I2CADAPTER_MAX_QUEUE_PRINT);
 }
-#endif
 
 
 #if defined(MANUVR_CONSOLE_SUPPORT)
@@ -740,7 +738,6 @@ void I2CAdapter::consoleCmdProc(StringBuilder *input) {
       break;
 
     default:
-      EventReceiver::procDirectDebugInstruction(input);
       break;
   }
 

@@ -243,4 +243,34 @@ class SensorWrapper {
     SensorError mark_dirty(uint8_t);   // Marks a specific datum in this sensor as dirty.
 };
 
+
+class SensorManager : public EventReceiver
+    #if defined(MANUVR_CONSOLE_SUPPORT)
+      , public ConsoleInterface
+    #endif
+  {
+  public:
+    SensorManager();
+    ~SensorManager();
+
+    #if defined(MANUVR_CONSOLE_SUPPORT)
+      /* Overrides from ConsoleInterface */
+      uint consoleGetCmds(ConsoleCommand**);
+      inline const char* const consoleName() { return getReceiverName();  };
+      void consoleCmdProc(StringBuilder* input);
+    #endif  //MANUVR_CONSOLE_SUPPORT
+
+    /* Overrides from EventReceiver */
+    void printDebug(StringBuilder*);
+    int8_t notify(ManuvrMsg*);
+    int8_t callback_proc(ManuvrMsg*);
+
+
+  protected:
+    int8_t attached();      // This is called from the base notify().
+
+
+  private:
+};
+
 #endif

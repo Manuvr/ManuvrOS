@@ -300,7 +300,6 @@ int8_t TeensyStorage::notify(ManuvrMsg* active_event) {
 //    #endif
 //
 //    default:
-//      EventReceiver::procDirectDebugInstruction(input);
 //      break;
 //  }
 //  flushLocalLog();

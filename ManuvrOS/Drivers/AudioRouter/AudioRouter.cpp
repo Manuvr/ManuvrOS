@@ -682,7 +682,6 @@ void AudioRouter::consoleCmdProc(StringBuilder *input) {
       break;
 
     default:
-      EventReceiver::procDirectDebugInstruction(input);
       break;
   }
   flushLocalLog();

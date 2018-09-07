@@ -33,7 +33,6 @@ This program runs tests on Identity elements.
 #include <iostream>
 
 #include <DataStructures/StringBuilder.h>
-
 #include <Platform/Platform.h>
 #include <Types/cbor-cpp/cbor.h>
 #include <Platform/Identity.h>

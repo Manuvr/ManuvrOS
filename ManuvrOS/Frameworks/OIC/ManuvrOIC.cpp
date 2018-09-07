@@ -517,7 +517,6 @@ void ManuvrOIC::procDirectDebugInstruction(StringBuilder *input) {
       #endif
       break;
     default:
-      EventReceiver::procDirectDebugInstruction(input);
       break;
   }
 

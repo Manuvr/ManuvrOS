@@ -560,7 +560,6 @@ void ManuvrableNeoPixel::procDirectDebugInstruction(StringBuilder *input) {
       rainbowCycle(0);  // Spectrum
       break;
     default:
-      EventReceiver::procDirectDebugInstruction(input);
       break;
   }
 

@@ -597,7 +597,6 @@ void ManuvrUDP::procDirectDebugInstruction(StringBuilder *input) {
      struck from the build. */
   switch (*(str)) {
     default:
-      EventReceiver::procDirectDebugInstruction(input);
       break;
   }
 

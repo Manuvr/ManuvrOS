@@ -470,17 +470,17 @@ void BQ24155::printDebug(StringBuilder* output) {
   output->concat("\tLimits:\n");
   output->concatf("\t  USB current:     %d mA\n", usb_current_limit());
   output->concatf("\t  Charge current:  %d mA\n", charge_current_limit());
-  output->concatf("\t  Battery weak:    %.2fV\n", batt_weak_voltage());
-  output->concatf("\t  Batt regulation: %.2fV\n", batt_reg_voltage());
+  output->concatf("\t  Battery weak:    %.2fV\n", (double) batt_weak_voltage());
+  output->concatf("\t  Batt regulation: %.2fV\n", (double) batt_reg_voltage());
   output->concat("\tFast-charge:\n\t  Bulk rates  Termination rates\n\t  ----------  -----------------\n");
   uint8_t c_btc_idx = (regValue(BQ24155_REG_FAST_CHRG) & 0x07);
   uint8_t c_bcc_idx = ((regValue(BQ24155_REG_FAST_CHRG) >> 4) & 0x07);
   for (int i = 0; i < 8; i++) {
     output->concatf("\t  [%c] %.3fA  [%c] %.3fA\n",
       (c_bcc_idx == i) ? '*' : ' ',
-      bulkChargeCurrent(i),
+      (double) bulkChargeCurrent(i),
       (c_btc_idx == i) ? '*' : ' ',
-      terminateChargeCurrent(i)
+      (double) terminateChargeCurrent(i)
     );
   }
 }

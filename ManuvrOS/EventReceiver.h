@@ -138,7 +138,6 @@ Lifecycle:
         #endif
 
 
-
       protected:
         #if defined(__BUILD_HAS_THREADS)
           // In threaded environments, we allow resources to enable their own threading
@@ -151,7 +150,6 @@ Lifecycle:
         EventReceiver(const char* nom);
 
         void flushLocalLog();
-        virtual void procDirectDebugInstruction(StringBuilder*);
 
         // These inlines are for convenience of extending classes.
         inline uint8_t _er_flags() {                 return _extnd_state;            };

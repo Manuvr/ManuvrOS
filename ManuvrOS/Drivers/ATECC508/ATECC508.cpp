@@ -498,7 +498,6 @@ void ATECC508::consoleCmdProc(StringBuilder *input) {
       break;
 
     default:
-      //EventReceiver::procDirectDebugInstruction(input);
       break;
   }
 

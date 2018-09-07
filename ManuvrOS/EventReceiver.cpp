@@ -81,39 +81,6 @@ void EventReceiver::flushLocalLog() {
 }
 
 
-#ifdef MANUVR_CONSOLE_SUPPORT
-/**
-* This is a base-level debug function that takes direct input from a user.
-*
-* @param   input  A buffer containing the user's direct input.
-*/
-void EventReceiver::procDirectDebugInstruction(StringBuilder *input) {
-  char* str = input->position(0);
-
-  switch (*(str)) {
-    case 'i':    // Print debug
-      printDebug(&local_log);
-      break;
-    case 'v':    // Set or print verbosity.
-      if (input->count() > 1) {
-        setVerbosity(input->position_as_int(1));
-      }
-      else {
-        local_log.concatf("%s: Verbosity is %d.\n", getReceiverName(), getVerbosity());
-      }
-      break;
-    default:
-      #ifdef MANUVR_DEBUG
-      local_log.concatf("%s: No comprendo.\n", getReceiverName());
-      #endif
-      break;
-  }
-
-  flushLocalLog();
-}
-#endif  // MANUVR_CONSOLE_SUPPORT
-
-
 /**
 * This is a convenience method for posting an event when we want a callback. If there is not
 *   already an originator specified, add ourselves as the originator.

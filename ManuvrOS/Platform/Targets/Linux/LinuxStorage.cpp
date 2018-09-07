@@ -333,7 +333,6 @@ int8_t LinuxStorage::notify(ManuvrMsg* active_event) {
 //    #endif
 //
 //    default:
-//      EventReceiver::procDirectDebugInstruction(input);
 //      break;
 //  }
 //

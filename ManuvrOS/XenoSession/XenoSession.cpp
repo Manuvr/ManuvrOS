@@ -511,7 +511,6 @@ void XenoSession::procDirectDebugInstruction(StringBuilder *input) {
       break;
 
     default:
-      EventReceiver::procDirectDebugInstruction(input);
       break;
   }
 

@@ -617,7 +617,6 @@ void ADP8866::consoleCmdProc(StringBuilder *input) {
       local_log.concatf("ADP8866: Channel %u is %sabled.\n", channel, channel_enabled(channel) ? "en" : "dis");
       break;
     default:
-      //EventReceiver::procDirectDebugInstruction(input);
       break;
   }
 

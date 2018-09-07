@@ -48,8 +48,8 @@
 
 /* Major/Minor/Patch */
 #define MANUVR_SEMVER_MAJOR 1
-#define MANUVR_SEMVER_MINOR 4
-#define MANUVR_SEMVER_PATCH 1
+#define MANUVR_SEMVER_MINOR 5
+#define MANUVR_SEMVER_PATCH 0
 
 // This is the string that identifies this Manuvrable to other Manuvrables.
 //   In MHB's case, this value will select the mEngine.
@@ -171,7 +171,7 @@
 */
 #if defined(CONFIG_MANUVR_BQ24155) || \
     defined(CONFIG_MANUVR_LTC294X)
-  #define __HAS_BATTERY        // Safe to assume we have a battery charger.
+  #define __HAS_BATTERY        // Safe to assume we have a battery.
 #endif   // CONFIG_MANUVR_BQ24155
 
 

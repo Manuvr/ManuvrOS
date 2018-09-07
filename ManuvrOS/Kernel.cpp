@@ -80,7 +80,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SYS_ADVERTISE_SRVC   , 0x0000,               "ADVERTISE_SRVC"       , ManuvrMsg::MSG_ARGS_NONE }, // A system service might feel the need to advertise it's arrival.
   {  MANUVR_MSG_SYS_RETRACT_SRVC     , 0x0000,               "RETRACT_SRVC"         , ManuvrMsg::MSG_ARGS_NONE }, // A system service sends this to tell others to stop using it.
 
-  {  MANUVR_MSG_SYS_BOOTLOADER       , MSG_FLAG_EXPORTABLE,  "SYS_BOOTLOADER"       , ManuvrMsg::MSG_ARGS_NONE }, // Reboots into the STM32F4 bootloader.
+  {  MANUVR_MSG_SYS_BOOTLOADER       , MSG_FLAG_EXPORTABLE,  "SYS_BOOTLOADER"       , ManuvrMsg::MSG_ARGS_NONE }, // Reboots into the bootloader, if it exists.
   {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,  "SYS_REBOOT"           , ManuvrMsg::MSG_ARGS_NONE }, // Reboots into THIS program.
   {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN"         , ManuvrMsg::MSG_ARGS_NONE }, // Raised when the system is pending complete shutdown.
   {  MANUVR_MSG_SYS_EXIT             , MSG_FLAG_EXPORTABLE,  "SYS_EXIT"             , ManuvrMsg::MSG_ARGS_NONE }, // Raised when the process is to exit without shutdown.
@@ -112,7 +112,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_OIC_DISCOVERY        , 0x0000,  "OIC_DISCOVERY"    , ManuvrMsg::MSG_ARGS_NONE },  //
   {  MANUVR_MSG_OIC_DISCOVER_OFF     , 0x0000,  "OIC_DISCOVER_OFF" , ManuvrMsg::MSG_ARGS_NONE },  //
   {  MANUVR_MSG_OIC_DISCOVER_PING    , 0x0000,  "OIC_PING"         , ManuvrMsg::MSG_ARGS_NONE },  //
-  #endif
+  #endif  // MANUVR_OPENINTERCONNECT
 
   #if defined (__BUILD_HAS_THREADS)
     // These are messages that are only present under some sort of threading model. They are meant
@@ -1349,6 +1349,9 @@ int Kernel::serviceSchedules() {
 
 
 #if defined(MANUVR_CONSOLE_SUPPORT)
+/*******************************************************************************
+* Console I/O
+*******************************************************************************/
 
 static const ConsoleCommand console_cmds[] = {
   #if defined(MANUVR_STORAGE)
@@ -1361,12 +1364,14 @@ static const ConsoleCommand console_cmds[] = {
   { "i1", "Build" },
   { "i2", "Profiler" },
   { "i3", "Platform" },
-  #if defined(__HAS_CRYPT_WRAPPER)
-    { "i4", "Cryptoburrito" },
-  #endif //__HAS_CRYPT_WRAPPER
   { "i5", "Scheduler" },
   { "i6", "Supported notions of identity" },
   { "i7", "Our Identity" },
+  #if defined(__HAS_CRYPT_WRAPPER)
+    { "c", "Cryptoburrito" },
+  #endif //__HAS_CRYPT_WRAPPER
+  { "P", "Enable profiling" },
+  { "p", "Disable profiling" },
   { "b", "Reboot" },
   { "B", "Enter bootloader" }
 };
@@ -1420,6 +1425,13 @@ void Kernel::consoleCmdProc(StringBuilder* input) {
         local_log.concatf("Power mode is now %d.\n", temp_int);
       }
       break;
+    case 'r':        // Read so many random integers...
+      temp_int = (temp_int <= 0) ? PLATFORM_RNG_CARRY_CAPACITY : temp_int;
+      for (uint8_t i = 0; i < temp_int; i++) {
+        local_log.concatf("Random number: 0x%08x\n", randomInt());
+      }
+      break;
+
 
     #if defined(MANUVR_STORAGE)
       case 'S':
@@ -1428,17 +1440,20 @@ void Kernel::consoleCmdProc(StringBuilder* input) {
         break;
     #endif // MANUVR_STORAGE
 
-    #if defined(MANUVR_DEBUG)
-    case 'r':        // Read so many random integers...
-      temp_int = (temp_int <= 0) ? PLATFORM_RNG_CARRY_CAPACITY : temp_int;
-      for (uint8_t i = 0; i < temp_int; i++) {
-        local_log.concatf("Random number: 0x%08x\n", randomInt());
-      }
-      break;
-    #endif //MANUVR_DEBUG
+    #if defined(__HAS_CRYPT_WRAPPER)
+      case 'c':
+        platform.printCryptoOverview(&local_log);
+        break;
+    #endif  // __HAS_CRYPT_WRAPPER
 
     case 'i':   // Debug prints.
       switch (temp_int) {
+        case 1:
+          local_log.concatf("\n-- %s\n", FIRMWARE_NAME);
+          local_log.concatf("-- Ver/Build date:     %s   %s %s\n", VERSION_STRING, __DATE__, __TIME__);
+          local_log.concatf("-- Manuvr version:     %u.%u.%u\n\n", MANUVR_SEMVER_MAJOR, MANUVR_SEMVER_MINOR, MANUVR_SEMVER_PATCH);
+          break;
+
         case 2:
           printProfiler(&local_log);
           break;
@@ -1446,12 +1461,6 @@ void Kernel::consoleCmdProc(StringBuilder* input) {
         case 3:
           platform.printDebug(&local_log);
           break;
-
-        #if defined(__HAS_CRYPT_WRAPPER)
-          case 4:
-            platform.printCryptoOverview(&local_log);
-            break;
-        #endif
 
         case 5:
           printScheduler(&local_log);
@@ -1470,12 +1479,6 @@ void Kernel::consoleCmdProc(StringBuilder* input) {
           Identity::staticToString(platform.selfIdentity(), &local_log);
           break;
 
-        case 1:
-          local_log.concatf("\n-- %s\n", FIRMWARE_NAME);
-          local_log.concatf("-- Ver/Build date:     %s   %s %s\n", VERSION_STRING, __DATE__, __TIME__);
-          local_log.concatf("-- Manuvr version:     %d.%d.%d\n\n", MANUVR_SEMVER_MAJOR, MANUVR_SEMVER_MINOR, MANUVR_SEMVER_PATCH);
-          break;
-
         default:
           printDebug(&local_log);
           break;
@@ -1483,7 +1486,6 @@ void Kernel::consoleCmdProc(StringBuilder* input) {
       break;
 
     default:
-      EventReceiver::procDirectDebugInstruction(input);
       break;
   }
 

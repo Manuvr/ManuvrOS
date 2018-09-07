@@ -8,7 +8,6 @@ CPP_STANDARD = gnu++11
 SOURCES_CPP  = TestDataStructures.cpp
 SOURCES_CPP += IdentityTest.cpp
 SOURCES_CPP += SchedulerTest.cpp
-#SOURCES_CPP   += BufferPipeTest.cpp
 
 LOCAL_CXX_FLAGS  = $(CXXFLAGS) -D_GNU_SOURCE
 
@@ -43,6 +42,7 @@ all: $(TESTS)
 
 
 % : %.cpp
+	@echo 'LIBS:  $(LIBS)'
 	$(CXX) -static -o $@ $< $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS)
 
 clean:

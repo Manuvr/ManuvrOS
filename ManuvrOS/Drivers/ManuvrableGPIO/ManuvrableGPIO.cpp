@@ -203,7 +203,6 @@ void ManuvrableGPIO::procDirectDebugInstruction(StringBuilder *input) {
       setPin(_pin, ((*(str) == 'M')?true:false));
       break;
     default:
-      EventReceiver::procDirectDebugInstruction(input);
       break;
   }
 

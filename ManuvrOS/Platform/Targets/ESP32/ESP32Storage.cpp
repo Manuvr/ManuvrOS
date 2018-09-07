@@ -294,7 +294,6 @@ int8_t ESP32Storage::notify(ManuvrMsg* active_event) {
 //    #endif  // MANUVR_DEBUG
 //
 //    default:
-//      EventReceiver::procDirectDebugInstruction(input);
 //      break;
 //  }
 //

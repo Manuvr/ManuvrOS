@@ -351,11 +351,26 @@ void LTC294x::printDebug(StringBuilder* output) {
       break;
   }
   output->concat("\n\tCurrent:     \t Thresholds:\n");
-  output->concatf("\t  C:   %.2f\%%\t %.2f%% / %.2f%%\n", batteryPercent(),  (dsp * 0.06640625f * _thrsh_l_chrg), (dsp * 0.06640625f * _thrsh_h_chrg));
-  output->concatf("\t  V:   %.2f \t %.2f / %.2f\n", batteryVoltage(), (0.0234368f * _thrsh_l_volt), (0.0234368f * _thrsh_h_volt));
-  output->concatf("\t  T:   %.2f \t %.2f / %.2f\n", temperature(),    convertT(_thrsh_l_temp << 8), convertT(_thrsh_h_temp << 8));
+  output->concatf("\t  C:   %.2f\%%\t %.2f%% / %.2f%%\n",
+    (double) batteryPercent(),
+    (double) (dsp * 0.06640625f * _thrsh_l_chrg),
+    (double) (dsp * 0.06640625f * _thrsh_h_chrg)
+  );
+  output->concatf("\t  V:   %.2f \t %.2f / %.2f\n",
+    (double) batteryVoltage(),
+    (double) (0.0234368f * _thrsh_l_volt),
+    (double) (0.0234368f * _thrsh_h_volt)
+  );
+  output->concatf("\t  T:   %.2f \t %.2f / %.2f\n",
+    (double) temperature(),
+    (double) convertT(_thrsh_l_temp << 8),
+    (double) convertT(_thrsh_h_temp << 8)
+  );
 
-  output->concatf("\tBattery (V/Chrg)   %.2f\%%\t %.2f%% / %.2f%%\n", batteryPercentVoltage(), batteryPercent());
+  output->concatf("\tBattery (V/Chrg)   %.2f\%%\t %.2f%% / %.2f%%\n",
+    (double) batteryPercentVoltage(),
+    (double) batteryPercent()
+  );
 
   output->concatf("\n\tSamples:           %u (dt: %ums)\n", _sample_count, _sample_dt);
   output->concatf("\tLast sample:       %u\n", _sample_time);
@@ -364,10 +379,22 @@ void LTC294x::printDebug(StringBuilder* output) {
     switch (_sample_count) {
       // NOTE: Upside-down. No breaks at all.
       default:
-        output->concatf("\t  I:   %.2f mA\t %.2f / %.2f\n", batteryCurrent(), minimumCurrent(), maximumCurrent());
-        output->concatf("\t  V:   %.4f/sec\t %.4f / %.4f\n", _volt_dt, _volt_min_dt, _volt_max_dt);
+        output->concatf("\t  I:   %.2f mA\t %.2f / %.2f\n",
+          (double) batteryCurrent(),
+          (double) minimumCurrent(),
+          (double) maximumCurrent()
+        );
+        output->concatf("\t  V:   %.4f/sec\t %.4f / %.4f\n",
+          (double) _volt_dt,
+          (double) _volt_min_dt,
+          (double) _volt_max_dt
+        );
       case 2:
-        output->concatf("\t  T:   %.4f/sec\t %.4f / %.4f\n", _temp_dt, _temp_min, _temp_max);
+        output->concatf("\t  T:   %.4f/sec\t %.4f / %.4f\n",
+          (double) _temp_dt,
+          (double) _temp_min,
+          (double) _temp_max
+        );
       case 1:
       case 0:
         output->concat("\n");
