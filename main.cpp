@@ -278,7 +278,7 @@ int main(int argc, const char* argv[]) {
   #endif
 
 
-  #if defined(RASPI) || defined(RASPI2)
+  #if defined(RASPI)
     gpioDefine(14, GPIOMode::OUTPUT);
     gpioDefine(15, GPIOMode::OUTPUT);
     gpioDefine(18, GPIOMode::OUTPUT);

@@ -92,8 +92,9 @@ static uint32_t* initMapMem(int fd, uint32_t addr, uint32_t len) {
  */
 unsigned gpioHardwareRevision() {
   if (rev) return rev;
+  const char MODEL_FILE[] = "/proc/device-tree/model";
 
-  FILE * filp = fopen("/proc/cpuinfo", "r");
+  FILE * filp = fopen(MODEL_FILE, "r");
   if (nullptr != filp) {
     char buf[512];
     char term;
@@ -101,21 +102,27 @@ unsigned gpioHardwareRevision() {
 
     while (fgets(buf, sizeof(buf), filp) != nullptr) {
       if (0 == piModel) {
-        if (!strncasecmp("model name", buf, 10)) {
-          if (strstr (buf, "ARMv6") != nullptr) {
-            piModel = 1;
-            chars = 4;
-            piPeriphBase = 0x20000000;
-            piBusAddr = 0x40000000;
-            printf("Found a Raspberry Pi v1.\n");
-          }
-          else if (strstr (buf, "ARMv7") != nullptr) {
-            piModel = 2;
-            chars = 6;
-            piPeriphBase = 0x3F000000;
-            piBusAddr = 0xC0000000;
-            printf("Found a Raspberry Pi v2.\n");
-          }
+        if (strstr (buf, "Raspberry Pi 1") != nullptr) {
+          piModel = 1;
+          chars = 4;
+          piPeriphBase = 0x20000000;
+          piBusAddr = 0x40000000;
+          printf("Found a Raspberry Pi v1.\n");
+        }
+        else if (strstr (buf, "Raspberry Pi 2 Model B") != nullptr) {
+          piModel = 2;
+          chars = 6;
+          piPeriphBase = 0x3F000000;
+          piBusAddr = 0xC0000000;
+          printf("Found a Raspberry Pi v2.\n");
+        }
+        else if (strstr (buf, "Raspberry Pi 3 Model B Plus") != nullptr) {
+          piModel = 3;
+          chars = 6;
+          // TODO: Not likely correct...
+          piPeriphBase = 0x7E000000;
+          piBusAddr = 0xC0000000;
+          printf("Found a Raspberry Pi v3 B+.\n");
         }
       }
       if (!strncasecmp("revision", buf, 8)) {
@@ -129,7 +136,7 @@ unsigned gpioHardwareRevision() {
     fclose(filp);
   }
   else {
-    printf("Failed to open /proc/cpuinfo.\n");
+    printf("Failed to open %s\n", MODEL_FILE);
   }
   return rev;
 }
@@ -231,22 +238,16 @@ int platformSerialNumberSize() {
 * @return   The number of bytes written.
 */
 int getSerialNumber(uint8_t *buf) {
-  FILE *f = fopen("/proc/cpuinfo", "r");
-  if (!f) return 0;
-
-  char line[256];
   long serial = 0;
-  while (fgets(line, 256, f)) {
-    if (strncmp(line, "Serial", 6) == 0) {
-      char serial_string[16 + 1];
-      serial = atoi(strcpy(serial_string, strchr(line, ':') + 2));
-      fclose(f);
-      return serial;
+  FILE *f = fopen("/proc/device-tree/system/linux,serial", "r");
+  if (f) {
+    char line[256];
+    if (fgets(line, sizeof(long), f)) {
+      serial = memcpy(&serial, line, sizeof(long));
     }
   }
-
   fclose(f);
-  return 0;
+  return serial;
 }
 
 
