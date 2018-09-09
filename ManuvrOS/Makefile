@@ -112,6 +112,7 @@ CPP_SRCS  += Drivers/ADG2128/ADG2128.cpp
 
 CPP_SRCS  += Drivers/ATECC508/ATECC508.cpp
 
+CPP_SRCS  += Drivers/Sensors/SensorManager.cpp
 CPP_SRCS  += Drivers/Sensors/SensorWrapper.cpp
 CPP_SRCS  += Drivers/Sensors/SensorDatum.cpp
 CPP_SRCS  += Drivers/Sensors/Si7021/Si7021.cpp

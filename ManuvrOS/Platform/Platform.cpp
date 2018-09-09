@@ -34,9 +34,14 @@ This file is meant to contain a set of common functions that are typically platf
 #include <Frameworks/OIC/ManuvrOIC.h>
 #endif
 
+#if defined(CONFIG_MANUVR_SENSOR_MGR)
+#include <Drivers/Sensors/SensorWrapper.h>
+#endif
+
 #if defined(CONFIG_MANUVR_BENCHMARKS)
 #include <Drivers/TestDriver/TestDriver.h>
 #endif
+
 
 
 /*******************************************************************************
@@ -352,6 +357,11 @@ int8_t ManuvrPlatform::bootstrap() {
     // If we built-in cryptographic support, init the RNG.
     cryptographic_rng_init();
   #endif
+  #if defined(CONFIG_MANUVR_SENSOR_MGR)
+    _sm = new SensorManager();   // TODO: Mem leak. Make static.
+    _kernel.subscribe((EventReceiver*) _sm);
+  #endif
+
   platformPostInit();    // Hook for platform-specific post-boot operations.
   if (nullptr == _self) {
     // If we have no other conception of "self", invent one.

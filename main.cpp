@@ -35,8 +35,10 @@ This is a demonstration program, and was meant to be compiled for a
 
 /* Drivers particular to this Manuvrable... */
 #include <Platform/Platform.h>
+#include <Drivers/Sensors/SensorWrapper.h>
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
 #include <Drivers/Sensors/INA219/INA219.h>
+#include <Drivers/Sensors/AMG88xx/AMG88xx.h>
 
 /*
 * This is ONLY used to expose the GPIO pins to the outside world.
@@ -104,6 +106,7 @@ void kernelDebugDump() {
 }
 
 
+
 /*******************************************************************************
 * The main function.                                                           *
 *******************************************************************************/
@@ -146,6 +149,10 @@ int main(int argc, const char* argv[]) {
       printf("Failed to add console to the pipe registry.\n");
       exit(1);
     }
+  #endif
+
+  #if defined(CONFIG_MANUVR_SENSOR_MGR)
+    SensorManager* sensors = platform.sensorManager();
   #endif
 
   // Pipe strategy planning...
@@ -192,10 +199,17 @@ int main(int argc, const char* argv[]) {
     // TODO: Temporary addition to test the SensorWrapper build size.
     INA219 ina219;
     i2c.addSlaveDevice(&ina219);
+    //sensors->addSensor(&ina219);
+
+    const AMG88xxOpts amg_opts(255, 0);
+    AMG88xx amg88xx(&amg_opts);
+    i2c.addSlaveDevice(&amg88xx);
+    //sensors->addSensor(&amg88xx);
   #endif
 
 
-  #if defined(RASPI) || defined(RASPI2)
+
+  #if defined(RASPI)
     ManuvrableGPIO gpio;
     kernel->subscribe(&gpio);
   #endif
@@ -211,7 +225,7 @@ int main(int argc, const char* argv[]) {
       MQTTSession mqtt(&tcp_cli);
       kernel->subscribe(&mqtt);
 
-      #if defined(RASPI) || defined(RASPI2)
+      #if defined(RASPI)
         ManuvrMsg gpio_write(MANUVR_MSG_DIGITAL_WRITE);
         gpio_write.incRefs();
         gpio_write.specific_target = &gpio;
@@ -292,7 +306,7 @@ int main(int argc, const char* argv[]) {
   //ina219.readSensor();
   while (1) {
     kernel->procIdleFlags();
-    #if defined(RASPI) || defined(RASPI2)
+    #if defined(RASPI)
       // Combined with the sleep below, this will give a
       // visual indication of kernel activity.
       setPin(14, pin_14_state);

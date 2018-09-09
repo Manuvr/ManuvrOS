@@ -259,6 +259,14 @@ SensorError SensorWrapper::readAsString(uint8_t dat, StringBuilder* buffer) {
 }
 
 
+void SensorWrapper::printSensorSummary(StringBuilder* output) {
+  output->concat(name);
+  output->concat(":  ");
+  uuid_to_sb(&uuid, output);
+};
+
+
+
 
 /*******************************************************************************
 * Linked-list and datum-management functions...                                *

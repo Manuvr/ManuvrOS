@@ -77,7 +77,7 @@ extern "C" {
 class Argument;
 class Identity;
 class Storage;
-
+class SensorManager;
 
 /**
 * These are _pflags definitions.
@@ -211,6 +211,9 @@ class ManuvrPlatform {
     /* This cannot possibly return NULL. */
     inline Kernel* kernel() {          return &_kernel;  };
 
+    /* SensorManager */
+    inline SensorManager* sensorManager() {      return _sm;  };
+
     /* These are storage-related members. */
     #if defined(MANUVR_STORAGE)
       Storage* fetchStorage(const char*);
@@ -283,6 +286,9 @@ class ManuvrPlatform {
     #if defined(MANUVR_STORAGE)
       Storage* _storage_device = nullptr;
       // TODO: Ultimately, there will be a similar object for the crypto module.
+    #endif
+    #if defined(CONFIG_MANUVR_SENSOR_MGR)
+      SensorManager* _sm;
     #endif
 
     ManuvrPlatform(const char* n) : _board_name(n) {};

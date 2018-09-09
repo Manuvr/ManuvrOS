@@ -23,12 +23,13 @@ This class is a generic interface to a sensor. That sensor might measure many th
 */
 
 
-#ifndef SENSOR_WRAPPER_H
-#define SENSOR_WRAPPER_H
+#ifndef __SENSOR_WRAPPER_INCLUDE_H
+#define __SENSOR_WRAPPER_INCLUDE_H
 
 #include <inttypes.h>
 #include <string.h>
 #include <DataStructures/StringBuilder.h>
+#include <DataStructures/PriorityQueue.h>
 #include <DataStructures/Argument.h>
 #include <DataStructures/uuid.h>
 
@@ -37,8 +38,14 @@ This class is a generic interface to a sensor. That sensor might measure many th
 #include <CommonConstants.h>
 #include <EnumeratedTypeCodes.h>
 
+
+#if defined(MANUVR_CONSOLE_SUPPORT)
+  #include <XenoSession/Console/ConsoleInterface.h>
+#endif
+
 class json_t;
 class SensorWrapper;
+class SensorManager;
 
 /*
 * We have the option of directing a datum to autoreport under certain conditions.
@@ -57,11 +64,17 @@ typedef void (*SensorCallBack) (SensorWrapper*);
 #define SENSE_DATUM_FLAG_REPORT_MASK   0x30
 #define SENSE_DATUM_FLAG_PRELOAD_MASK  0x40
 
-
 #define MANUVR_SENSOR_FLAG_DIRTY         0x80
 #define MANUVR_SENSOR_FLAG_ACTIVE        0x40
 #define MANUVR_SENSOR_FLAG_AUTOREPORT    0x20
 #define MANUVR_SENSOR_FLAG_CALIBRATED    0x10
+
+
+/*
+* SensorManager message codes.
+*/
+#define MANUVR_MSG_SENSOR_MGR_SVC      0x05F0
+#define MANUVR_MSG_SENSOR_MGR_REPORT   0x05F1
 
 
 /* Sensors can automatically report their values. */
@@ -169,12 +182,16 @@ class SensorWrapper {
     SensorError readAsString(uint8_t, StringBuilder*);  // Returns the given datum read as a string.
 
     /* Sets a callback function for all data in this sensor. */
-    inline void setAutoReportCallback(SensorCallBack nu) {   ar_callback = nu;  };
+    inline void setAutoReportCallback(SensorCallBack nu) {  ar_callback = nu;  };
+    inline void setSensorManager(SensorManager* x) {        _sm = x;           };
 
     /* Is this sensor active? */
     inline bool isActive() {        return (MANUVR_SENSOR_FLAG_ACTIVE == (_flags & MANUVR_SENSOR_FLAG_ACTIVE));  };
     /* Is this sensor calibrated? */
     inline bool isCalibrated() {    return (MANUVR_SENSOR_FLAG_CALIBRATED == (_flags & MANUVR_SENSOR_FLAG_CALIBRATED));  };
+
+    inline const char* sensorName() {          return name;  };
+    void printSensorSummary(StringBuilder*);
 
     // Virtual functions. These MUST be overridden by the extending class.
     virtual SensorError init() =0;                                        // Call this to initialize the sensor.
@@ -231,9 +248,11 @@ class SensorWrapper {
 
     SensorError define_datum(const DatumDef*);
 
+
   private:
-    UUID uuid;          // A cross-platform unique ID for this sensor.
-    const char* name;   // This is the name of the sensor.
+    UUID uuid;             // A cross-platform unique ID for this sensor.
+    const char*    name;   // This is the name of the sensor.
+    SensorManager* _sm         = nullptr;
     SensorDatum*   datum_list  = nullptr; // Linked list of data that this sensor might carry.
     SensorCallBack ar_callback = nullptr; // The pointer to the callback function used for autoreporting.
     long           updated_at  = 0;       // When was the last update?
@@ -244,6 +263,11 @@ class SensorWrapper {
 };
 
 
+
+/*
+* This is a class that attaches to the event system for the sake of the sensors
+*   it manages. It is not itself a sensor.
+*/
 class SensorManager : public EventReceiver
     #if defined(MANUVR_CONSOLE_SUPPORT)
       , public ConsoleInterface
@@ -253,17 +277,21 @@ class SensorManager : public EventReceiver
     SensorManager();
     ~SensorManager();
 
-    #if defined(MANUVR_CONSOLE_SUPPORT)
-      /* Overrides from ConsoleInterface */
-      uint consoleGetCmds(ConsoleCommand**);
-      inline const char* const consoleName() { return getReceiverName();  };
-      void consoleCmdProc(StringBuilder* input);
-    #endif  //MANUVR_CONSOLE_SUPPORT
-
     /* Overrides from EventReceiver */
     void printDebug(StringBuilder*);
     int8_t notify(ManuvrMsg*);
     int8_t callback_proc(ManuvrMsg*);
+
+    #if defined(MANUVR_CONSOLE_SUPPORT)
+      /* Overrides from ConsoleInterface */
+      inline const char* const consoleName() {  return getReceiverName();  };
+      uint consoleGetCmds(ConsoleCommand**);
+      void consoleCmdProc(StringBuilder* input);
+    #endif  //MANUVR_CONSOLE_SUPPORT
+
+    /* For application usage. */
+    int8_t addSensor(SensorWrapper*);
+    int8_t dropSensor(SensorWrapper*);
 
 
   protected:
@@ -271,6 +299,11 @@ class SensorManager : public EventReceiver
 
 
   private:
+    PriorityQueue<SensorWrapper*> _sensors;  // SensorWrappers we service.
+    ManuvrMsg _sensor_report;  // Schedule
+
+    int _service_sensors();
+    int _report_sensors();
 };
 
-#endif
+#endif   // __SENSOR_WRAPPER_INCLUDE_H
