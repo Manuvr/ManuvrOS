@@ -268,7 +268,7 @@ void SensorWrapper::printSensorSummary(StringBuilder* output) {
     isDirty() ? 'x':' ',
     lastUpdate()
   );
-};
+}
 
 
 void SensorWrapper::printSensorDataDefs(StringBuilder* output) {
@@ -280,7 +280,8 @@ void SensorWrapper::printSensorDataDefs(StringBuilder* output) {
     );
     current = get_datum(++idx);
   }
-};
+}
+
 
 void SensorWrapper::printSensorData(StringBuilder* output) {
   int idx = 0;
@@ -291,7 +292,76 @@ void SensorWrapper::printSensorData(StringBuilder* output) {
     output->concatf(" %s\n", current->def->units);
     current = get_datum(++idx);
   }
-};
+}
+
+
+SensorError SensorWrapper::issue_def_map(TCode tcode, StringBuilder* output) {
+  int idx = 0;
+  SensorDatum* current = get_datum(idx);
+
+  #if defined(__BUILD_HAS_CBOR)
+  cbor::output_dynamic coutput;
+  cbor::encoder encoder(coutput);
+  // We shall have an array of maps...
+  encoder.write_map(3);
+  encoder.write_string("name");
+  encoder.write_string(name);
+  encoder.write_string("uid");
+  encoder.write_bytes((uint8_t*) &uuid, sizeof(UUID));
+  encoder.write_string("data");
+  uint8_t arg_count = datum_list->argCount();
+  encoder.write_array(arg_count);
+  while (nullptr != current) {
+    encoder.write_map(4);
+    encoder.write_string("units");
+    encoder.write_string(current->def->units);
+    encoder.write_string("desc");
+    encoder.write_string(current->def->desc);
+    encoder.write_string("type");
+    encoder.write_string(getTypeCodeString(current->def->type_id));
+    encoder.write_string("flgs");
+    encoder.write_int((unsigned int) current->def->flgs);
+    current = current->next();
+  }
+  int final_size = coutput.size();
+  if (final_size) {
+    output->concat(coutput.data(), final_size);
+  }
+  #endif   //__BUILD_HAS_CBOR
+}
+
+
+SensorError SensorWrapper::issue_value_map(TCode tcode, StringBuilder* output) {
+  switch (tcode) {
+    #if defined(__BUILD_HAS_CBOR)
+    case TCode::CBOR:
+      {
+        cbor::output_dynamic coutput;
+        cbor::encoder encoder(coutput);
+        encoder.write_map(1);
+        encoder.write_string(sensorName());
+
+        int final_size = coutput.size();
+        if (final_size) {
+          output->concat(coutput.data(), final_size);
+        }
+        if (0 == Argument::encodeToCBOR((Argument*) &datum_list, output)) {
+          return SensorError::NO_ERROR;
+        }
+      }
+      break;
+    #endif   //__BUILD_HAS_CBOR
+
+    #if defined(__BUILD_HAS_JSON)
+    case TCode::JSON:
+      return SensorError::NO_ERROR;
+    #endif   //__BUILD_HAS_CBOR
+    default:
+      break;
+  }
+  return SensorError::BAD_TYPE_CONVERT;
+}
+
 
 
 

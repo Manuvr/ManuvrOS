@@ -81,8 +81,16 @@ int8_t SensorManager::dropSensor(SensorWrapper* sensor) {
 
 
 int SensorManager::_service_sensors() {
+  int return_val = 0;
   Kernel::log("_service_sensors()\n");
-  return 0;
+  for (int i = 0; i < _sensors.size(); i++) {
+    SensorWrapper* current = _sensors.get(i);
+    // TODO: This ought to be a general time-sharing fxn.
+    if (SensorError::NO_ERROR == current->readSensor()) {
+      return_val++;
+    }
+  }
+  return return_val;
 }
 
 
@@ -134,6 +142,26 @@ int SensorManager::_dump_sensor_data_defs_by_index(uint8_t idx, StringBuilder* o
 }
 
 
+int SensorManager::_report_sensor_data_defs_by_index(uint8_t idx, TCode tcode, StringBuilder* output) {
+  SensorWrapper* current = _sensors.get(idx);
+  if (current) {
+    current->issue_def_map(tcode, output);
+    return 1;
+  }
+  return 0;
+}
+
+
+int SensorManager::_report_sensor_data_by_index(uint8_t idx, TCode tcode, StringBuilder* output) {
+  SensorWrapper* current = _sensors.get(idx);
+  if (current) {
+    current->issue_value_map(tcode, output);
+    return 1;
+  }
+  return 0;
+}
+
+
 /**
 * Debug support method. This fxn is only present in debug builds.
 *
@@ -148,6 +176,47 @@ void SensorManager::printSensorList(StringBuilder* output) {
     current->printSensorSummary(output);
   }
   output->concat("\n");
+}
+
+
+int SensorManager::_report_sensor_data_defs(TCode tcode, StringBuilder* output) {
+  const int s_count = _sensors.size();
+  #if defined(__BUILD_HAS_CBOR)
+    cbor::output_dynamic coutput;
+    cbor::encoder encoder(coutput);
+    // We shall have an array of maps...
+    encoder.write_array(s_count);
+    int final_size = coutput.size();
+    if (final_size) {
+      output->concat(coutput.data(), final_size);
+    }
+    for (int i = 0; i < s_count; i++) {
+      _report_sensor_data_defs_by_index(i, tcode, output);
+    }
+  #endif   //__BUILD_HAS_CBOR
+
+  return 0;
+}
+
+
+int SensorManager::_report_sensor_data(TCode tcode, StringBuilder* output) {
+  const int s_count = _sensors.size();
+  #if defined(__BUILD_HAS_CBOR)
+    cbor::output_dynamic coutput;
+    cbor::encoder encoder(coutput);
+    // We shall have a map of maps...
+    encoder.write_array(s_count);
+
+    int final_size = coutput.size();
+    if (final_size) {
+      output->concat(coutput.data(), final_size);
+    }
+    for (int i = 0; i < s_count; i++) {
+      _report_sensor_data_by_index(i, tcode, output);
+    }
+  #endif   //__BUILD_HAS_CBOR
+
+  return 0;
 }
 
 
@@ -311,6 +380,38 @@ void SensorManager::consoleCmdProc(StringBuilder* input) {
         }
       }
       break;
+
+    #if defined(__BUILD_HAS_CBOR)
+    case 'E':
+      {
+        StringBuilder bin;
+        if (255 != temp_int) {
+          if (0 == _report_sensor_data_defs_by_index(temp_int, TCode::CBOR, &bin)) {
+            local_log.concatf("Could not find the sensor at index %d.\n", temp_int);
+          }
+        }
+        else {
+          _report_sensor_data_defs(TCode::CBOR, &bin);
+        }
+        bin.printDebug(&local_log);
+      }
+      break;
+    case 'e':
+      {
+        StringBuilder bin;
+        if (255 != temp_int) {
+          if (0 == _report_sensor_data_by_index(temp_int, TCode::CBOR, &bin)) {
+            local_log.concatf("Could not find the sensor at index %d.\n", temp_int);
+          }
+        }
+        else {
+          _report_sensor_data(TCode::CBOR, &bin);
+        }
+        bin.printDebug(&local_log);
+      }
+      break;
+    #endif  //__BUILD_HAS_CBOR
+
 
     default:
       break;

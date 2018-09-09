@@ -128,6 +128,9 @@
 
 /* Encodings... */
 // CBOR
+#if defined(MANUVR_CBOR)
+  #define __BUILD_HAS_CBOR
+#endif
 
 // JSON
 #if defined(MANUVR_JSON)

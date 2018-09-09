@@ -197,6 +197,10 @@ class SensorWrapper {
     void printSensorDataDefs(StringBuilder*);
     void printSensorData(StringBuilder*);
 
+    /* Will issue definitions and data as maps encoded by the given typecode. */
+    SensorError issue_def_map(TCode, StringBuilder*);
+    SensorError issue_value_map(TCode, StringBuilder*);
+
     // Virtual functions. These MUST be overridden by the extending class.
     virtual SensorError init() =0;                                        // Call this to initialize the sensor.
     virtual SensorError readSensor() =0;                                  // Actually read the sensor. Returns an error-code.
@@ -217,6 +221,7 @@ class SensorWrapper {
       static void issue_json_map(json_t*, SensorWrapper*);              // Returns a pointer to a buffer containing the JSON def of the given sensor.
       static void issue_json_value(json_t*, SensorWrapper*);            // Returns a pointer to a buffer containing the JSON values for the given sensor.
       static void issue_json_value(json_t*, SensorWrapper*, uint8_t);   // Returns a pointer to a buffer containing the JSON value for the given sensor's given datum.
+
     #endif   //__BUILD_HAS_JSON
 
 
@@ -305,7 +310,7 @@ class SensorManager : public EventReceiver
 
 
   private:
-    PriorityQueue<SensorWrapper*> _sensors;  // SensorWrappers we service.
+    PriorityQueue<SensorWrapper*> _sensors;    // SensorWrappers we service.
     ManuvrMsg _sensor_report;  // Schedule
 
     int _service_sensors();
@@ -313,9 +318,13 @@ class SensorManager : public EventReceiver
 
     int _init_sensor_by_index(uint8_t);
     int _read_sensor_by_index(uint8_t);
-    int _dump_sensor_data_by_index(uint8_t, StringBuilder* output);
-    int _dump_sensor_data_defs_by_index(uint8_t, StringBuilder* output);
+    int _dump_sensor_data_defs_by_index(uint8_t, StringBuilder*);
+    int _dump_sensor_data_by_index(uint8_t, StringBuilder*);
+    int _report_sensor_data_defs_by_index(uint8_t, TCode, StringBuilder*);
+    int _report_sensor_data_by_index(uint8_t, TCode, StringBuilder*);
 
+    int _report_sensor_data_defs(TCode, StringBuilder*);
+    int _report_sensor_data(TCode, StringBuilder*);
 };
 
 #endif   // __SENSOR_WRAPPER_INCLUDE_H
