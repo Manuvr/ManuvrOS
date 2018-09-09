@@ -260,9 +260,37 @@ SensorError SensorWrapper::readAsString(uint8_t dat, StringBuilder* buffer) {
 
 
 void SensorWrapper::printSensorSummary(StringBuilder* output) {
-  output->concat(name);
-  output->concat(":  ");
   uuid_to_sb(&uuid, output);
+  output->concatf(": %s\t%c %c %c   %ld",
+    name,
+    isActive() ? 'x':' ',
+    isCalibrated() ? 'x':' ',
+    isDirty() ? 'x':' ',
+    lastUpdate()
+  );
+};
+
+
+void SensorWrapper::printSensorDataDefs(StringBuilder* output) {
+  int idx = 0;
+  SensorDatum* current = get_datum(idx);
+  while (nullptr != current) {
+    output->concatf("%d: 0x%02x  %s (%s)    %s\n", idx, current->def->flgs,
+      current->def->units, getTypeCodeString(current->def->type_id), current->def->desc
+    );
+    current = get_datum(++idx);
+  }
+};
+
+void SensorWrapper::printSensorData(StringBuilder* output) {
+  int idx = 0;
+  SensorDatum* current = get_datum(idx);
+  while (nullptr != current) {
+    output->concatf("%d:  ", idx);
+    current->printValue(output);
+    output->concatf(" %s\n", current->def->units);
+    current = get_datum(++idx);
+  }
 };
 
 

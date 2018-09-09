@@ -112,6 +112,15 @@
   #define MANUVR_PLATFORM_TIMER_PERIOD_MS 1
 #endif
 
+#if defined(__BUILD_HAS_THREADS)
+  // If we have threads, set the latency of the idel state. This is a choice
+  //   between power usage and event response latency.
+  #ifndef CONFIG_MANUVR_IDLE_PERIOD_MS
+    #define CONFIG_MANUVR_IDLE_PERIOD_MS 20
+  #endif
+#endif
+
+
 // What is the granularity of our scheduler?
 #ifndef MANUVR_PLATFORM_TIMER_PERIOD_MS
   #define MANUVR_PLATFORM_TIMER_PERIOD_MS 10

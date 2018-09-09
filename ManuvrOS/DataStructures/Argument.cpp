@@ -633,12 +633,18 @@ int Argument::sumAllLengths() {
 /**
 * @return [description]
 */
-Argument* Argument::retrieveArgByIdx(int idx) {
-  if ((0 < idx) && (nullptr != _next)) {
-    return (1 == idx) ? _next : _next->retrieveArgByIdx(idx-1);
-  }
-  else {
-    return this;
+Argument* Argument::retrieveArgByIdx(unsigned int idx) {
+  switch (idx) {
+    case 0:
+      return this;   // Special case.
+    default:
+      if (nullptr != _next) {
+        return _next->retrieveArgByIdx(idx-1);
+      }
+      // NOTE: No break
+      // Fall-through if the index is greater than the list's cardinality.
+    case 1:
+      return _next;  // Terminus of recursion for all args but 0.
   }
 }
 

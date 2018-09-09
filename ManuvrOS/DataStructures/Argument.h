@@ -161,7 +161,7 @@ class Argument {
 
     int    argCount();
     int    sumAllLengths();
-    Argument* retrieveArgByIdx(int idx);
+    Argument* retrieveArgByIdx(unsigned int idx);
     Argument* retrieveArgByKey(const char*);
 
     Argument* link(Argument* arg);

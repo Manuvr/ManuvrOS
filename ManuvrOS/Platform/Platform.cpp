@@ -147,17 +147,23 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   _discoverALUParams();
 
   #if defined(__BUILD_HAS_THREADS)
-    platform.setIdleHook([]{ sleep_millis(20); });
+    platform.setIdleHook([]{ sleep_millis(CONFIG_MANUVR_IDLE_PERIOD_MS); });
   #endif
 
+  /* Optional platform-level services. */
   #if defined(MANUVR_OPENINTERCONNECT)
     // Framework? Add it...
-    ManuvrOIC* oic = new ManuvrOIC(root_config);
+    ManuvrOIC* oic = new ManuvrOIC(root_config);   // TODO: Mem leak. Make static.
     _kernel.subscribe((EventReceiver*) oic);
   #endif
 
+  #if defined(CONFIG_MANUVR_SENSOR_MGR)
+    _sm = new SensorManager();   // TODO: Mem leak. Make static.
+    _kernel.subscribe((EventReceiver*) _sm);
+  #endif
+
   #if defined(CONFIG_MANUVR_BENCHMARKS)
-    TestDriver* _test_drv = new TestDriver(root_config);
+    TestDriver* _test_drv = new TestDriver(root_config);   // TODO: Mem leak. Make static.
     _kernel.subscribe((EventReceiver*) _test_drv);
   #endif //CONFIG_MANUVR_BENCHMARKS
   return 0;
@@ -356,10 +362,6 @@ int8_t ManuvrPlatform::bootstrap() {
   #if defined(__HAS_CRYPT_WRAPPER)
     // If we built-in cryptographic support, init the RNG.
     cryptographic_rng_init();
-  #endif
-  #if defined(CONFIG_MANUVR_SENSOR_MGR)
-    _sm = new SensorManager();   // TODO: Mem leak. Make static.
-    _kernel.subscribe((EventReceiver*) _sm);
   #endif
 
   platformPostInit();    // Hook for platform-specific post-boot operations.

@@ -199,12 +199,12 @@ int main(int argc, const char* argv[]) {
     // TODO: Temporary addition to test the SensorWrapper build size.
     INA219 ina219;
     i2c.addSlaveDevice(&ina219);
-    //sensors->addSensor(&ina219);
+    sensors->addSensor(&ina219);
 
     const AMG88xxOpts amg_opts(255, 0);
     AMG88xx amg88xx(&amg_opts);
     i2c.addSlaveDevice(&amg88xx);
-    //sensors->addSensor(&amg88xx);
+    sensors->addSensor(&amg88xx);
   #endif
 
 

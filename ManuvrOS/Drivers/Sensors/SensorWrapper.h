@@ -137,6 +137,8 @@ class SensorDatum : public Argument {
     SensorDatum(const DatumDef*);
     ~SensorDatum();
 
+    // Inline to type-shift from Argument. Uses that underlying API.
+    // TODO: Is this smart? Should Argument even be involved?
     inline SensorDatum* next() {   return (SensorDatum*) _next;  };
 
     void autoreport(SensorReporting);
@@ -192,6 +194,8 @@ class SensorWrapper {
 
     inline const char* sensorName() {          return name;  };
     void printSensorSummary(StringBuilder*);
+    void printSensorDataDefs(StringBuilder*);
+    void printSensorData(StringBuilder*);
 
     // Virtual functions. These MUST be overridden by the extending class.
     virtual SensorError init() =0;                                        // Call this to initialize the sensor.
@@ -293,6 +297,8 @@ class SensorManager : public EventReceiver
     int8_t addSensor(SensorWrapper*);
     int8_t dropSensor(SensorWrapper*);
 
+    void printSensorList(StringBuilder*);
+
 
   protected:
     int8_t attached();      // This is called from the base notify().
@@ -304,6 +310,12 @@ class SensorManager : public EventReceiver
 
     int _service_sensors();
     int _report_sensors();
+
+    int _init_sensor_by_index(uint8_t);
+    int _read_sensor_by_index(uint8_t);
+    int _dump_sensor_data_by_index(uint8_t, StringBuilder* output);
+    int _dump_sensor_data_defs_by_index(uint8_t, StringBuilder* output);
+
 };
 
 #endif   // __SENSOR_WRAPPER_INCLUDE_H

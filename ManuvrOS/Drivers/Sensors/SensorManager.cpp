@@ -92,6 +92,65 @@ int SensorManager::_report_sensors() {
 }
 
 
+int SensorManager::_init_sensor_by_index(uint8_t idx) {
+  SensorWrapper* current = _sensors.get(idx);
+  if (current) {
+    current->init();
+    return 1;
+  }
+  return 0;
+}
+
+
+int SensorManager::_read_sensor_by_index(uint8_t idx) {
+  SensorWrapper* current = _sensors.get(idx);
+  if (current) {
+    current->readSensor();
+    return 1;
+  }
+  return 0;
+}
+
+
+int SensorManager::_dump_sensor_data_by_index(uint8_t idx, StringBuilder* output) {
+  SensorWrapper* current = _sensors.get(idx);
+  if (current) {
+    output->concatf("-- Data values for %s\n", current->sensorName());
+    current->printSensorData(output);
+    return 1;
+  }
+  return 0;
+}
+
+
+int SensorManager::_dump_sensor_data_defs_by_index(uint8_t idx, StringBuilder* output) {
+  SensorWrapper* current = _sensors.get(idx);
+  if (current) {
+    output->concatf("-- Data definitions for %s\n", current->sensorName());
+    current->printSensorDataDefs(output);
+    return 1;
+  }
+  return 0;
+}
+
+
+/**
+* Debug support method. This fxn is only present in debug builds.
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
+void SensorManager::printSensorList(StringBuilder* output) {
+  output->concatf("-- Managing %d sensors:", _sensors.size());
+  output->concat("\n\t-UUID---------------------------------Name--------a-c-d---lastUpdate---");
+  for (int i = 0; i < _sensors.size(); i++) {
+    SensorWrapper* current = _sensors.get(i);
+    output->concat("\n\t");
+    current->printSensorSummary(output);
+  }
+  output->concat("\n");
+}
+
+
 
 /*******************************************************************************
 * ######## ##     ## ######## ##    ## ########  ######
@@ -134,13 +193,8 @@ int8_t SensorManager::attached() {
 */
 void SensorManager::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
-  output->concatf("-- Managing %d sensors:", _sensors.size());
-  for (int i = 0; i < _sensors.size(); i++) {
-    SensorWrapper* current = _sensors.get(i);
-    output->concat("\n\t");
-    current->printSensorSummary(output);
-  }
-  output->concat("\n\n");
+  printSensorList(output);
+  output->concat("\n");
 }
 
 
@@ -203,6 +257,9 @@ int8_t SensorManager::notify(ManuvrMsg* event) {
 
 static const ConsoleCommand console_cmds[] = {
   { "i", "Info" },
+  { "*", "Force-init sensor" },
+  { "p", "Poll sensor" },
+  { "R", "Reset sensor" },
   { "l", "List of sensors" }
 };
 
@@ -221,6 +278,38 @@ void SensorManager::consoleCmdProc(StringBuilder* input) {
   switch (c) {
     case 'i':
       printDebug(&local_log);
+      break;
+
+    case '*':
+      if (255 != temp_int) {
+        if (0 == _init_sensor_by_index(temp_int)) {
+          local_log.concatf("Could not find the sensor at index %d.\n", temp_int);
+        }
+      }
+      break;
+
+    case 'p':
+      if (255 != temp_int) {
+        if (0 == _read_sensor_by_index(temp_int)) {
+          local_log.concatf("Could not find the sensor at index %d.\n", temp_int);
+        }
+      }
+      break;
+
+    case 'D':
+      if (255 != temp_int) {
+        if (0 == _dump_sensor_data_defs_by_index(temp_int, &local_log)) {
+          local_log.concatf("Could not find the sensor at index %d.\n", temp_int);
+        }
+      }
+      break;
+
+    case 'd':
+      if (255 != temp_int) {
+        if (0 == _dump_sensor_data_by_index(temp_int, &local_log)) {
+          local_log.concatf("Could not find the sensor at index %d.\n", temp_int);
+        }
+      }
       break;
 
     default:
