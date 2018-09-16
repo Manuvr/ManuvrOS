@@ -328,6 +328,7 @@ SensorError SensorWrapper::issue_def_map(TCode tcode, StringBuilder* output) {
     output->concat(coutput.data(), final_size);
   }
   #endif   //__BUILD_HAS_CBOR
+  return SensorError::NO_ERROR;
 }
 
 

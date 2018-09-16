@@ -212,13 +212,15 @@ class ManuvrPlatform {
     inline Kernel* kernel() {          return &_kernel;  };
 
     /* SensorManager */
-    inline SensorManager* sensorManager() {      return _sm;  };
+    #if defined(CONFIG_MANUVR_SENSOR_MGR)
+      inline SensorManager* sensorManager() {      return _sm;  };
+    #endif   // CONFIG_MANUVR_SENSOR_MGR
 
     /* These are storage-related members. */
     #if defined(MANUVR_STORAGE)
       Storage* fetchStorage(const char*);
       int8_t   offerStorage(const char*, Storage*);
-    #endif
+    #endif   // MANUVR_STORAGE
 
     /*
     * Systems that want support for dynamic runtime configurations
