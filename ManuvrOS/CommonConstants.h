@@ -73,6 +73,7 @@ Apart from including the user-suppied configuration header, there
   #define COMMON_UNITS_VOLTS       "V"
   #define COMMON_UNITS_U_VOLTS     "uV"
   #define COMMON_UNITS_AMPS        "A"
+  #define COMMON_UNITS_AMP_HOURS   "Ah"
   #define COMMON_UNITS_WATTS       "W"
   #define COMMON_UNITS_PERCENT     "%"
   #define COMMON_UNITS_U_TESLA     "uT"

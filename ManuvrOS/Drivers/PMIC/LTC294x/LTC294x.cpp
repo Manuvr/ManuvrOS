@@ -40,6 +40,39 @@ TODO: It should be noted that this class assumes an LTC2942-1. This should be
 * Static members and initializers should be located here.
 *******************************************************************************/
 
+const DatumDef datum_defs[] = {
+  {
+    .desc    = "Shunt temperature",
+    .units   = COMMON_UNITS_C,
+    .type_id = TCode::FLOAT,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "Battery voltage",
+    .units   = COMMON_UNITS_VOLTS,
+    .type_id = TCode::FLOAT,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "Battery charge",
+    .units   = COMMON_UNITS_AMP_HOURS,
+    .type_id = TCode::FLOAT,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "Instantaneous current",
+    .units   = COMMON_UNITS_AMPS,
+    .type_id = TCode::FLOAT,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "Battery percent",
+    .units   = COMMON_UNITS_PERCENT,
+    .type_id = TCode::FLOAT,
+    .flgs    = 0x00
+  }
+};
+
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -53,7 +86,12 @@ TODO: It should be noted that this class assumes an LTC2942-1. This should be
 /**
 * Constructor. Takes pin numbers as arguments.
 */
-LTC294x::LTC294x(const LTC294xOpts* o, uint16_t bc) : I2CDeviceWithRegisters(LTC294X_I2CADDR, 9, 16), _opts(o), _batt_volume(bc) {
+LTC294x::LTC294x(const LTC294xOpts* o, uint16_t bc) : I2CDeviceWithRegisters(LTC294X_I2CADDR, 9, 16), SensorWrapper("LTC294x"), _opts(o), _batt_volume(bc) {
+  define_datum(&datum_defs[0]);
+  define_datum(&datum_defs[1]);
+  define_datum(&datum_defs[2]);
+  define_datum(&datum_defs[3]);
+  define_datum(&datum_defs[4]);
   if (_opts.useAlertPin()) {
     // This is the chip's default configuration.
     gpioDefine(_opts.pin, GPIOMode::INPUT_PULLUP);
@@ -88,7 +126,7 @@ LTC294x::~LTC294x() {
 /*
 * Here, we will compare options and set them as defaults.
 */
-int8_t LTC294x::init() {
+SensorError LTC294x::init() {
   uint8_t val = regValue(LTC294X_REG_CONTROL);
   uint8_t rewrite = val;
   uint8_t dps = _derive_prescaler();
@@ -128,87 +166,34 @@ int8_t LTC294x::init() {
   // NOTE: That's 'f' for float. These values are Celcius.
   setTemperatureThreshold(0.0f, 70.0f);
 
-  return writeDirtyRegisters();
+  return (0 == writeDirtyRegisters()) ? SensorError::NO_ERROR : SensorError::BUS_ERROR;
 }
 
 
-int8_t LTC294x::refresh() {
-  if (initComplete()) {
-    // TODO: Need to be tighter about error-checking.
-    readRegister(LTC294X_REG_ACC_CHARGE);
-    readRegister(LTC294X_REG_VOLTAGE);
-    return readRegister(LTC294X_REG_TEMP);
+SensorError LTC294x::readSensor() {
+  if (isActive() && initComplete()) {
+    if (I2C_ERR_SLAVE_NO_ERROR == readRegister(LTC294X_REG_ACC_CHARGE)) {
+      if (I2C_ERR_SLAVE_NO_ERROR == readRegister(LTC294X_REG_VOLTAGE)) {
+        if (I2C_ERR_SLAVE_NO_ERROR == readRegister(LTC294X_REG_TEMP)) {
+          return SensorError::NO_ERROR;
+        }
+      }
+    }
   }
-  return -1;
+  return SensorError::BUS_ERROR;
 }
 
-
-/**
-* Resets the variables that deal with data tracking.
-*/
-void LTC294x::_reset_tracking_data() {
-  _tracking_ready(false);
-  _sample_dt      = 0;
-  _sample_time    = 0;
-  _sample_count   = 0;
-  _chrg_reading_0 = 0;
-  _volt_reading_0 = 0.0f;
-  _temp_reading_0 = 0.0f;
-  _chrg_dt        = 0.0f;
-  _volt_dt        = 0.0f;
-  _temp_dt        = 0.0f;
-  _chrg_min_dt    = 0.0f;
-  _volt_min_dt    = 0.0f;
-  _chrg_max_dt    = 0.0f;
-  _volt_max_dt    = 0.0f;
-  _temp_min       = 0.0f;
-  _temp_max       = 0.0f;
-}
-
-
-/**
-* Refresh our tracking data.
-* Increments _sample_count.
-*/
-void LTC294x::_update_tracking() {
-  uint16_t c = batteryCharge();
-  float    v = batteryVoltage();
-  float    t = temperature();
-  _sample_count++;
-  switch (_sample_count) {
-    case 1:    // The first samples to arrive. Baseline 1st-order ranges.
-      _temp_min = t;
-      _temp_max = t;
-      break;
-    case 3:    // Baseline second-order ranges.
-      _chrg_min_dt = _chrg_dt;
-      _chrg_max_dt = _chrg_dt;
-      _volt_max_dt = _volt_dt;
-      _volt_min_dt = _volt_dt;
-      _tracking_ready(true);   // Mark tracking data valid.
-      // NOTE: No break;
-    default:   // If we have two or more samples, we can take derivatives.
-      _temp_min = strict_min(_temp_min, t);
-      _temp_max = strict_max(_temp_max, t);
-      if (_sample_dt) {
-        // TODO: Not in proper units.
-        _chrg_dt = ((_c_to_mA(c - _chrg_reading_0) * 1000) / ((float) _sample_dt));  // We want C/millisec (mA).
-        _volt_dt = ((((uint32_t) v - _volt_reading_0) * 1000) / _sample_dt);  // We want V/sec.
-        _temp_dt = ((((uint32_t) t - _temp_reading_0) * 1000) / _sample_dt);  // We want T/sec.
-      }
-      if (2 < _sample_count) {
-        // If 3 or more samples, we can measure the range of 2nd-order data.
-        _chrg_min_dt = strict_min(_chrg_min_dt, _chrg_dt);
-        _chrg_max_dt = strict_max(_chrg_max_dt, _chrg_dt);
-        _volt_min_dt = strict_min(_volt_min_dt, _volt_dt);
-        _volt_max_dt = strict_max(_volt_max_dt, _volt_dt);
-      }
+SensorError LTC294x::setParameter(uint16_t reg, int len, uint8_t *data) {
+  switch (reg) {
+    default:
       break;
   }
+  return SensorError::INVALID_PARAM_ID;
+}
 
-  _chrg_reading_0 = c;  // Shift the new values into place.
-  _volt_reading_0 = v;
-  _temp_reading_0 = t;
+
+SensorError LTC294x::getParameter(uint16_t reg, int len, uint8_t*) {
+  return SensorError::INVALID_PARAM_ID;
 }
 
 
@@ -407,6 +392,78 @@ void LTC294x::printDebug(StringBuilder* output) {
 /*******************************************************************************
 * Functions specific to this class....                                         *
 *******************************************************************************/
+/**
+* Resets the variables that deal with data tracking.
+*/
+void LTC294x::_reset_tracking_data() {
+  _tracking_ready(false);
+  _sample_dt      = 0;
+  _sample_time    = 0;
+  _sample_count   = 0;
+  _chrg_reading_0 = 0;
+  _volt_reading_0 = 0.0f;
+  _temp_reading_0 = 0.0f;
+  _chrg_dt        = 0.0f;
+  _volt_dt        = 0.0f;
+  _temp_dt        = 0.0f;
+  _chrg_min_dt    = 0.0f;
+  _volt_min_dt    = 0.0f;
+  _chrg_max_dt    = 0.0f;
+  _volt_max_dt    = 0.0f;
+  _temp_min       = 0.0f;
+  _temp_max       = 0.0f;
+}
+
+
+/**
+* Refresh our tracking data.
+* Increments _sample_count.
+*/
+void LTC294x::_update_tracking() {
+  uint16_t c = batteryCharge();
+  float    v = batteryVoltage();
+  float    t = temperature();
+  _sample_count++;
+  switch (_sample_count) {
+    case 1:    // The first samples to arrive. Baseline 1st-order ranges.
+      _temp_min = t;
+      _temp_max = t;
+      break;
+    case 3:    // Baseline second-order ranges.
+      _chrg_min_dt = _chrg_dt;
+      _chrg_max_dt = _chrg_dt;
+      _volt_max_dt = _volt_dt;
+      _volt_min_dt = _volt_dt;
+      _tracking_ready(true);   // Mark tracking data valid.
+      // NOTE: No break;
+    default:   // If we have two or more samples, we can take derivatives.
+      _temp_min = strict_min(_temp_min, t);
+      _temp_max = strict_max(_temp_max, t);
+      if (_sample_dt) {
+        // TODO: Not in proper units.
+        _chrg_dt = ((_c_to_mA(c - _chrg_reading_0) * 1000) / ((float) _sample_dt));  // We want C/millisec (mA).
+        _volt_dt = ((((uint32_t) v - _volt_reading_0) * 1000) / _sample_dt);  // We want V/sec.
+        _temp_dt = ((((uint32_t) t - _temp_reading_0) * 1000) / _sample_dt);  // We want T/sec.
+      }
+      if (2 < _sample_count) {
+        // If 3 or more samples, we can measure the range of 2nd-order data.
+        _chrg_min_dt = strict_min(_chrg_min_dt, _chrg_dt);
+        _chrg_max_dt = strict_max(_chrg_max_dt, _chrg_dt);
+        _volt_min_dt = strict_min(_volt_min_dt, _volt_dt);
+        _volt_max_dt = strict_max(_volt_max_dt, _volt_dt);
+      }
+      break;
+  }
+
+  _chrg_reading_0 = c;  // Shift the new values into place.
+  _volt_reading_0 = v;
+  _temp_reading_0 = t;
+  updateDatum(0, _temp_reading_0);
+  updateDatum(1, _volt_reading_0);
+  updateDatum(3, _chrg_dt);
+  updateDatum(4, batteryPercent());
+}
+
 
 int8_t LTC294x::_adc_mode(LTC294xADCModes m) {
   switch (m) {

@@ -37,7 +37,7 @@ This file represents the platform-specific interface to a power managment unit.
 //#define MANUVR_PMU_    0x4000  //
 //#define MANUVR_PMU_    0x8000  //
 
-//enum class PwrMgrClass {
+//enum class PwrMgrClass : uint8_t {
 //  READY    = 0x00,
 //  CHARGING = 0x01
 //};

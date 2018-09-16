@@ -55,14 +55,32 @@ class SensorManager;
 typedef void (*SensorCallBack) (SensorWrapper*);
 
 
-#define SENSE_DATUM_FLAG_DIRTY         0x80
-#define SENSE_DATUM_FLAG_HARDWARE      0x40
-#define SENSE_DATUM_FLAG_REPORT_READ   0x20
-#define SENSE_DATUM_FLAG_REPORT_CHANGE 0x10
-#define SENSE_DATUM_FLAG_MEM_ALLOC     0x08
+#define SENSE_DATUM_FLAG_HARDWARE      0x80
+#define SENSE_DATUM_FLAG_IS_PROXIED    0x40
+#define SENSE_DATUM_FLAG_DIRTY         0x08
+#define SENSE_DATUM_FLAG_MEM_ALLOC     0x04
+#define SENSE_DATUM_FLAG_REPORT_READ   0x02
+#define SENSE_DATUM_FLAG_REPORT_CHANGE 0x01
 
-#define SENSE_DATUM_FLAG_REPORT_MASK   0x30
-#define SENSE_DATUM_FLAG_PRELOAD_MASK  0x40
+#define SENSE_DATUM_FLAG_REPORT_MASK   0x03
+#define SENSE_DATUM_FLAG_PRELOAD_MASK  0xC0
+
+/* Convenience union for Datum flags.. */
+// TODO: Move data flags to this struct.
+typedef struct sense_datum_flag_def_t {
+ union {
+   struct {
+     // This member holds descriptive and invariant flags about the datum.
+     uint32_t is_hardware:   1;  // Is this reading rooted in hardware?
+     uint32_t is_proxied:    1;  // Is this a sensor reading proxied from another device?
+     uint32_t autoreporting: 2;  // Autoreporting behavior (SensorReporting).
+     uint32_t data_valid:    1;  // Is the data valid?
+     uint32_t is_active:     1;  // Is the provider updating this value?
+   };
+   uint32_t val;
+ } flgs;
+} DatumFlags;
+
 
 #define MANUVR_SENSOR_FLAG_DIRTY         0x80
 #define MANUVR_SENSOR_FLAG_ACTIVE        0x40
@@ -146,9 +164,11 @@ class SensorDatum : public Argument {
     void printDebug(StringBuilder*);
     SensorError printValue(StringBuilder*);
 
-    /* Is this datum dirty (IE, the last operation was a write)? */
+    inline bool isProxied() {    return (SENSE_DATUM_FLAG_IS_PROXIED == (_flags & SENSE_DATUM_FLAG_IS_PROXIED));  };
     inline bool mem_ready() {    return (SENSE_DATUM_FLAG_MEM_ALLOC == (_flags & SENSE_DATUM_FLAG_MEM_ALLOC));  };
     inline bool hardware() {     return (SENSE_DATUM_FLAG_HARDWARE == (_flags & SENSE_DATUM_FLAG_HARDWARE));  };
+
+    /* Is this datum dirty (IE, the last operation was a write)? */
     inline bool dirty() {        return (SENSE_DATUM_FLAG_DIRTY == (_flags & SENSE_DATUM_FLAG_DIRTY));  };
     inline void dirty(bool x) {
       _flags = (x) ? (_flags | SENSE_DATUM_FLAG_DIRTY) : (_flags & ~SENSE_DATUM_FLAG_DIRTY);
@@ -159,6 +179,7 @@ class SensorDatum : public Argument {
     inline void reportsOff() {     _flags &= ~SENSE_DATUM_FLAG_REPORT_MASK;   };
     inline void reportAll() {      _flags |= SENSE_DATUM_FLAG_REPORT_READ;    };
     inline void reportChanges() {  _flags |= SENSE_DATUM_FLAG_REPORT_CHANGE;  };
+
 
   private:
     uint8_t        _flags      = 0;        // Dirty, autoreport, hardware basis, etc...
