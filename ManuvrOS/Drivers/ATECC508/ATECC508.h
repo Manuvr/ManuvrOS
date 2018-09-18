@@ -33,7 +33,62 @@ ATECC508_CAPABILITY_CONFIG_UNLOCK
 
 -- Use-case assumptions:
 --------------------------------------------------------------------------------
+This is not Atmel's general driver. It is a Manuvr-specific driver that imposes
+  a usage pattern specific to Manuvr and uses the following slot carveup:
 
+  0: H/W private key     // HW_PRI      Used to sign nonce for proof of original hardware.
+  1: Firmware Auth Priv  // FW_PRI      Optionally used to bind firmware to hardware.
+  2: API private key     // MVRAPI_PRI  Identifies this device to Manuvr's API.
+  3: API ECDH key        // MVRAPI_ECDH Generated for API comm.
+  4: <USER private key>  // UPRI0       Left open for the end-user.
+  5: <USER ECDH key>     // UECDH0      Left open for the end-user.
+  6: <USER private key>  // UPRI1       Left open for the end-user.
+  7: <USER ECDH key>     // UECDH1      Left open for the end-user.
+  8: Birth cert          // B_CERT      Placed at provisioning time.
+  9: Provisioning sig    // PROV_SIG    The sig over the birth cert.
+  A: Manuvr API Pub 0    // MVRAPI0     API key
+  B: Manuvr API Pub 1    // MVRAPI1     Reserve API key
+  C: Firmware Auth Pub   // FW_PUB      Used to unlock slots [1, 3].
+  D: User unlock         // U1_UNLOCK   Used to unlock slots 6, 7, E.
+  E: <USER>              // UPUB0       Left open for the end-user.
+  F: <USER>              // UPUB1       Left open for the end-user.
+
+  Monotonic counters and OTP region are unused, and are available for user code.
+
+  All keys marked <USER> are left open to application manipulation following
+    config locking. Users can use these to setup their own API hosts/services.
+
+  The B_CERT slot is filled with a data structure that contains:
+    * struct version                    1  A version of this data structure.
+    * carve-up version                  1  The carve-up version.
+    * hardware code                     1  Manufacturer-specific hardware code.
+    * hardware version                  1  PCB revision code.
+    * lot number                        4  Identifies a specific production run.
+    * manufacture date                  8  Date of the unit's production.
+    * hardware UUID                    16  The hardware's unique UUID.
+    * manufacturer and model strings   48
+    * manufacturer-specified data     116  Optional manufacturer data.
+
+    * provisioner UUID                 16  The UUID of the provisioner.
+    * provisioner public key           64  The provisioner's public key.
+    * provisioning date                 8  The date this data was written.
+    * string mappings to each slot    128  An array of strings naming the slots.
+        HW_PRI
+        FW_PRI
+        MVRAPI_PRI
+        MVRAPI_ECDH
+        UPRI0
+        UECDH0
+        UPRI1
+        UECDH1
+        B_CERT
+        PROV_SIG
+        MVRAPI0
+        MVRAPI1
+        FW_PUB
+        U1_UNLOCK
+        UPUB0
+        UPUB1
 */
 
 #ifndef __ATECC508_SEC_DRIVER_H__
@@ -118,6 +173,23 @@ enum class ATECCOpcodes : uint8_t {
 };
 
 
+typedef struct atecc_birth_cert_t {
+  uint8_t s_ver;
+  uint8_t c_ver;
+  uint8_t hw_code;
+  uint8_t hw_ver;
+  uint8_t lot_num[4];
+  uint8_t make_model[48];
+  uint8_t manu_date[8];
+  UUID    hw_id;
+  UUID    prov_id;
+  uint8_t prov_pub[64];
+  uint8_t prov_date[8];
+  uint8_t key_refs[128];
+  uint8_t manu_blob[116];
+} ATECBirthCert;
+
+
 typedef struct atecc_slot_conf_t {
   union {
     struct {
@@ -131,23 +203,22 @@ typedef struct atecc_slot_conf_t {
     };
     uint16_t val;
   } conf;
-} SlotConf;
-
-
-typedef struct atecc_slot_capabilities_t {
   union {
     struct {
-      uint16_t read_key:     4;
-      uint16_t no_mac:       1;
-      uint16_t limited_use:  1;
-      uint16_t encrypt_read: 1;
-      uint16_t is_secret:    1;
-      uint16_t write_key:    4;
-      uint16_t write_config: 4;
+      uint16_t priv:         1;
+      uint16_t pubinfo:      1;
+      uint16_t key_type:     3;
+      uint16_t lockabe:      1;
+      uint16_t req_rand:     1;
+      uint16_t req_auth:     1;
+      uint16_t auth_key:     4;
+      uint16_t RFU:          1;
+      uint16_t intrusn_prot: 1;
+      uint16_t x509_id:      2;
     };
     uint16_t val;
-  } conf;
-} SlotCapabilities;
+  } key;
+} SlotDef;
 
 
 /*
@@ -227,7 +298,8 @@ class ATECC508 : public EventReceiver,
     uint32_t      _atecc_flags      = 0;  // Flags related to maintaining the state machine.
     uint16_t      _addr_counter     = 0;  // Mirror of the device's internal address counter.
     uint16_t      _slot_locks       = 0;  // One bit per slot.
-    SlotConf      _slot_conf[16];         // Two bytes per slot.
+    SlotDef       _slot[16];              // Two bytes per slot.
+
     const ATECC508Opts _opts;
     ATECCOpcodes  _current_op = ATECCOpcodes::UNDEF;
 

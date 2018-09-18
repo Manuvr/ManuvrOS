@@ -182,6 +182,74 @@ const unsigned int ATECC508::getOpTime(ATECCOpcodes x) {
   }
 }
 
+#if defined(ATECC508_CAPABILITY_CONFIG_UNLOCK)
+/* If we have the capability of burning configs then we supply the carve-up and
+     birth certificate parameters. */
+
+#define ATECC_KEY_REF_STRING "HW_PRI,FW_PRI,MVRAPI_PRI,MVRAPI_ECDH,UPRI0,UECDH0,UPRI1,UECDH1,B_CERT,PROV_SIG,MVRAPI0,MVRAPI1,FW_PUB,U1_UNLOCK,UPUB0,UPUB1"
+
+
+static const uint8_t config_def_0[4] = {
+  // The first 16-bytes are write-never.
+  // No keys have usage limitations.
+  0xC0,        // We only support i2c, and we leave the default.
+  0x00, 0x55,  // Reserved, OTP consumption mode.
+  0x02         // Open selector, Vcc-ref'd inputs, 1.3s watchdog.
+};
+
+/* Slot Config  [7-0][15-8] */
+static const uint8_t config_def_1[32] = {
+  0b10000111, 0b00110000,  // HW_PRI         No write, open gen, open derive
+  0b10010111, 0b00110000,  // FW_PRI         No write, open gen, open derive
+  0b10001100, 0b00110000,  // MVRAPI_PRI     No write, open gen, open derive
+  0b11010011, 0b00110000,  // MVRAPI_ECDH    No write, open gen, open derive
+  0b10001100, 0b00110000,  // UPRI0          No write, open gen, open derive
+  0b11010011, 0b00110000,  // UECDH0         No write, open gen, open derive
+  0b10001100, 0b00110000,  // UPRI1          No write, open gen, open derive
+  0b11010011, 0b00110000,  // UECDH1         No write, open gen, open derive
+  0b00000000, 0b00000000,  // B_CERT         Plaintext. Used as OTP.
+  0b00001111, 0b00000000,  // PROV_SIG
+  0b00001111, 0b00000000,  // MVRAPI0
+  0b00001111, 0b00000000,  // MVRAPI1
+  0b00001111, 0b00000000,  // FW_PUB
+  0b00001111, 0b00000000,  // U1_UNLOCK
+  0b00001111, 0b00000000,  // UPUB0
+  0b00001111, 0b00000000   // UPUB1
+};
+
+static const uint8_t config_def_2[32] = {
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // Counter 0
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // Counter 1
+  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,  // LastKeyUse
+  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF   // LastKeyUse
+};
+
+static const uint8_t config_def_3[4] = {
+  0x00, 0x00, 0x00, 0x00  // No X.509 usage
+};
+
+/* Key Config  [7-0][15-8] */
+static const uint8_t config_def_4[32] = {
+  0b01010001, 0b00000000,  // HW_PRI
+  0b01110001, 0b00000000,  // FW_PRI
+  0b01010001, 0b00000000,  // MVRAPI_PRI
+  0b01000000, 0b00000000,  // MVRAPI_ECDH
+  0b01110001, 0b00000000,  // UPRI0
+  0b01100000, 0b00000000,  // UECDH0
+  0b01110001, 0b00000000,  // UPRI1
+  0b01100000, 0b00000000,  // UECDH1
+  0b00100000, 0b00000000,  // B_CERT
+  0b00000000, 0b00000000,  // PROV_SIG
+  0b00010010, 0b00000000,  // MVRAPI0
+  0b00010010, 0b00000000,  // MVRAPI1
+  0b00110010, 0b00000000,  // FW_PUB
+  0b00110010, 0b00000000,  // U1_UNLOCK
+  0b00110010, 0b00000000,  // UPUB0
+  0b00110010, 0b00000000   // UPUB1
+};
+#endif  // ATECC508_CAPABILITY_CONFIG_UNLOCK
+
+
 
 ATECCReturnCodes ATECC508::validateRC(ATECCOpcodes oc, uint8_t* buf) {
   return (ATECCReturnCodes)  *(buf+1);
@@ -375,7 +443,6 @@ int8_t ATECC508::io_op_callback(BusOp* _op) {
 */
 void ATECC508::printDebug(StringBuilder* output) {
   EventReceiver::printDebug(output);
-  I2CDevice::printDebug(output);
   output->concatf("\n\t Awake:        %c\n", _er_flag(ATECC508_FLAG_AWAKE) ? 'y' :'n');
   output->concatf("\t Syncd:        %c\n", _er_flag(ATECC508_FLAG_SYNCD) ? 'y' :'n');
   output->concatf("\t OTP Locked:   %c\n", _er_flag(ATECC508_FLAG_OTP_LOCKED) ? 'y' :'n');
@@ -447,9 +514,12 @@ int8_t ATECC508::callback_proc(ManuvrMsg* event) {
 *******************************************************************************/
 
 static const ConsoleCommand console_cmds[] = {
+  { "i", "Info" },
+  { "i1", "I2CDevice debug" },
   { "c", "Read device config" },
   { "o", "Read OTP" },
-  { "s", "Read slot" },
+  { "S", "Read slot" },
+  { "s", "Dump slot" },
   { "p", "Send wakeup" }
 };
 
@@ -473,7 +543,8 @@ void ATECC508::consoleCmdProc(StringBuilder* input) {
   switch (c) {
     case 'i':   // Debug prints.
       switch (temp_int) {
-        case 1:   // We want the channel stats.
+        case 1:   // We want the slot stats.
+          I2CDevice::printDebug(&local_log);
           break;
         default:
           printDebug(&local_log);
@@ -486,8 +557,11 @@ void ATECC508::consoleCmdProc(StringBuilder* input) {
     case 'o':   // Read OTP region
       otp_read();
       break;
-    case 's':   // Read slot.
+    case 'S':   // Read slot.
       slot_read(temp_int & 0x0F);
+      break;
+    case 's':   // Dump slot.
+      printSlotInfo(temp_int & 0x0F, &local_log);
       break;
     case 'r':   // Read result buffer.
       read_op_buffer(ATECCDataSize::L32);
@@ -495,6 +569,14 @@ void ATECC508::consoleCmdProc(StringBuilder* input) {
 
     case 'p':   // Ping device
       send_wakeup();
+      break;
+
+    case '*':   // Debug for testing config struct parse/pack
+      for (uint8_t i = 0; i < 16; i++) {
+        _slot[i].conf.val = config_def_1[i*2] + ((uint16_t) config_def_1[(i*2)+1] << 8);
+        _slot[i].key.val  = config_def_4[i*2] + ((uint16_t) config_def_4[(i*2)+1] << 8);
+      }
+      local_log.concat("Wrote test conf\n");
       break;
 
     default:
@@ -514,13 +596,22 @@ void ATECC508::consoleCmdProc(StringBuilder* input) {
 void ATECC508::printSlotInfo(uint8_t s, StringBuilder* output) {
   s &= 0x0F;  // Force-limit to 0-15.
   output->concatf("\t --- Slot %u (%sLOCKED) -------------\n", s, (slot_locked(s) ? "" : "UN"));
-  output->concatf("\t read_key:     0x%02x\n", _slot_conf[s].conf.read_key);
-  output->concatf("\t no_mac:       %u\n", _slot_conf[s].conf.no_mac);
-  output->concatf("\t limited_use:  %u\n", _slot_conf[s].conf.limited_use);
-  output->concatf("\t encrypt_read: %u\n", _slot_conf[s].conf.encrypt_read);
-  output->concatf("\t is_secret:    %u\n", _slot_conf[s].conf.is_secret);
-  output->concatf("\t write_key:    0x%02x\n", _slot_conf[s].conf.write_key);
-  output->concatf("\t write_config: 0x%02x\n", _slot_conf[s].conf.write_config);
+  output->concatf("\t read_key:     0x%02x\n", _slot[s].conf.read_key);
+  output->concatf("\t no_mac:       %c\n",     _slot[s].conf.no_mac ? 'y':'n');
+  output->concatf("\t limited_use:  %c\n",     _slot[s].conf.limited_use ? 'y':'n');
+  output->concatf("\t encrypt_read: %c\n",     _slot[s].conf.encrypt_read ? 'y':'n');
+  output->concatf("\t is_secret:    %c\n",     _slot[s].conf.is_secret ? 'y':'n');
+  output->concatf("\t write_key:    0x%02x\n", _slot[s].conf.write_key);
+  output->concatf("\t write_config: 0x%02x\n", _slot[s].conf.write_config);
+  output->concatf("\t priv:         %c\n",     _slot[s].key.priv ? 'y':'n');
+  output->concatf("\t pubinfo:      %c\n",     _slot[s].key.pubinfo ? 'y':'n');
+  output->concatf("\t key_type:     0x%02x\n", _slot[s].key.key_type);
+  output->concatf("\t lockabe:      %c\n",     _slot[s].key.lockabe ? 'y':'n');
+  output->concatf("\t req_rand:     %c\n",     _slot[s].key.req_rand ? 'y':'n');
+  output->concatf("\t req_auth:     %c\n",     _slot[s].key.req_auth ? 'y':'n');
+  output->concatf("\t auth_key:     0x%02x\n", _slot[s].key.auth_key);
+  output->concatf("\t intrusn_prot: %c\n",     _slot[s].key.intrusn_prot ? 'y':'n');
+  output->concatf("\t x509_id:      0x%02x\n", _slot[s].key.x509_id);
 }
 
 
@@ -661,7 +752,7 @@ void ATECC508::internal_reset() {
   _last_action_time = 0;
   _last_wake_sent   = 0;
   _atecc_flags      = 0;
-  for (int i = 0; i < 16; i++) _slot_conf[i].conf.val = 0;   // Zero the conf mirror.
+  for (int i = 0; i < 16; i++) _slot[i].conf.val = 0;   // Zero the conf mirror.
 }
 
 
@@ -721,13 +812,13 @@ int ATECC508::config_write(uint8_t* buf, uint16_t len) {
   // TODO: Presently assuming buffer to be a contiguous
   /* Writing the entire config space writable by `Write` command will require...
         <skip config[0-15]>
-        4 4-byte ops
-        1 32-byte op
-        5 4-bytes ops
+        1 4-byte op
+        1 32-byte op  (SlotConfig)
+        1 32-byte op  (Counter init)
         <skip config[84-87]>
         2 4-byte ops
-        1 32-byte op
-    13 i/o operations to write the config. Each of those i/o operations will
+        1 32-byte op  (KeyConfig)
+    6 i/o operations to write the config. Each of those i/o operations will
       have a different value for <Addr>
     The first 4 4-byte ops will have the values (in order, and given little-endian)....
       (0x04, 0x00), (0x05, 0x00), (0x06, 0x00), (0x07, 0x00)
@@ -748,7 +839,7 @@ int ATECC508::config_write(uint8_t* buf, uint16_t len) {
     nu->buf_len  = len;
     return _bus->queue_io_job(nu);
   }
-  #endif  // ATECC508_CAPABILITY_OTP_RW
+  #endif  // ATECC508_CAPABILITY_CONFIG_UNLOCK
   return -1;
 }
 
