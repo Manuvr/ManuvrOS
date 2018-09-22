@@ -187,8 +187,6 @@ const unsigned int ATECC508::getOpTime(ATECCOpcodes x) {
      birth certificate parameters. */
 
 #define ATECC_KEY_REF_STRING "HW_PRI,FW_PRI,MVRAPI_PRI,MVRAPI_ECDH,UPRI0,UECDH0,UPRI1,UECDH1,B_CERT,PROV_SIG,MVRAPI0,MVRAPI1,FW_PUB,U1_UNLOCK,UPUB0,UPUB1"
-
-
 static const uint8_t config_def_0[4] = {
   // The first 16-bytes are write-never.
   // No keys have usage limitations.
@@ -290,6 +288,7 @@ int8_t ATECC508::init() {
 *******************************************************************************/
 
 int8_t ATECC508::io_op_callahead(BusOp* _op) {
+  // TODO: Check that we have enough time to run the proposed operation.
   return 0;
 }
 
@@ -516,6 +515,8 @@ int8_t ATECC508::callback_proc(ManuvrMsg* event) {
 static const ConsoleCommand console_cmds[] = {
   { "i", "Info" },
   { "i1", "I2CDevice debug" },
+  { "i2", "Print birth cert" },
+  { "b", "Read birth cert" },
   { "c", "Read device config" },
   { "o", "Read OTP" },
   { "S", "Read slot" },
@@ -546,14 +547,27 @@ void ATECC508::consoleCmdProc(StringBuilder* input) {
         case 1:   // We want the slot stats.
           I2CDevice::printDebug(&local_log);
           break;
+        case 2:   // Print the birth cert.
+          printBirthCert(&local_log);
+          break;
         default:
           printDebug(&local_log);
           break;
       }
       break;
+
     case 'c':   // Read device config
       config_read();
       break;
+    case 'C':   // Write device config
+      config_write();
+      break;
+
+    case 'b':   // Read birth certificate
+      break;
+    case 'B':   // Generate birth certificate
+      break;
+
     case 'o':   // Read OTP region
       otp_read();
       break;
@@ -571,6 +585,7 @@ void ATECC508::consoleCmdProc(StringBuilder* input) {
       send_wakeup();
       break;
 
+    #if defined(ATECC508_CAPABILITY_CONFIG_UNLOCK)
     case '*':   // Debug for testing config struct parse/pack
       for (uint8_t i = 0; i < 16; i++) {
         _slot[i].conf.val = config_def_1[i*2] + ((uint16_t) config_def_1[(i*2)+1] << 8);
@@ -578,6 +593,7 @@ void ATECC508::consoleCmdProc(StringBuilder* input) {
       }
       local_log.concat("Wrote test conf\n");
       break;
+    #endif
 
     default:
       break;
@@ -612,6 +628,29 @@ void ATECC508::printSlotInfo(uint8_t s, StringBuilder* output) {
   output->concatf("\t auth_key:     0x%02x\n", _slot[s].key.auth_key);
   output->concatf("\t intrusn_prot: %c\n",     _slot[s].key.intrusn_prot ? 'y':'n');
   output->concatf("\t x509_id:      0x%02x\n", _slot[s].key.x509_id);
+}
+
+
+void ATECC508::printBirthCert(StringBuilder* output) {
+  output->concat("\t --- ATECC-resident birth cert  (");
+  uuid_to_sb(&_birth_cert.hw_id, output);
+  output->concat(")  -------------\n");
+  output->concatf("\t Make/Model:    %s %s\n", _birth_cert.make_str, _birth_cert.model_str);
+  output->concatf("\t s/c_ver:       0x%02x / 0x%02x\n", _birth_cert.s_ver, _birth_cert.c_ver);
+  output->concatf("\t hw code/ver:   0x%02x / 0x%02x\n", _birth_cert.hw_code, _birth_cert.hw_ver);
+  output->concatf("\t lot_num:       0x%02x%02x%02x%02x\n", _birth_cert.lot_num[0], _birth_cert.lot_num[1], _birth_cert.lot_num[2], _birth_cert.lot_num[3]);
+  output->concatf("\t manu_date:     %lu\n", _birth_cert.manu_date);
+
+  output->concat("\t prov_id:       ");
+  uuid_to_sb(&_birth_cert.prov_id, output);
+  output->concatf("\n\t prov_date:     %lu\n", _birth_cert.prov_date);
+
+  StringBuilder _key_ref_parser(_birth_cert.key_refs, sizeof(_birth_cert.key_refs));
+  _key_ref_parser.split(",");
+
+
+  //uint8_t prov_pub[64];
+  //uint8_t manu_blob[116];
 }
 
 
@@ -807,7 +846,7 @@ int ATECC508::config_read() {
 /*
 * It is assumed that this buffer will be 108 bytes long.
 */
-int ATECC508::config_write(uint8_t* buf, uint16_t len) {
+int ATECC508::config_write() {
   #if defined(ATECC508_CAPABILITY_CONFIG_UNLOCK)
   // TODO: Presently assuming buffer to be a contiguous
   /* Writing the entire config space writable by `Write` command will require...
@@ -818,7 +857,7 @@ int ATECC508::config_write(uint8_t* buf, uint16_t len) {
         <skip config[84-87]>
         2 4-byte ops
         1 32-byte op  (KeyConfig)
-    6 i/o operations to write the config. Each of those i/o operations will
+    5 i/o operations to write the config. Each of those i/o operations will
       have a different value for <Addr>
     The first 4 4-byte ops will have the values (in order, and given little-endian)....
       (0x04, 0x00), (0x05, 0x00), (0x06, 0x00), (0x07, 0x00)
@@ -835,9 +874,45 @@ int ATECC508::config_write(uint8_t* buf, uint16_t len) {
   if (nu) {
     nu->dev_addr = _dev_addr;
     //nu->sub_addr = (int16_t) oc;
-    nu->buf      = buf;
-    nu->buf_len  = len;
-    return _bus->queue_io_job(nu);
+    nu->buf      = (uint8_t*) config_def_0;
+    nu->buf_len  = 4;
+    if (0 == _bus->queue_io_job(nu)) {
+      nu = _bus->new_op(BusOpcode::TX, this);
+      if (nu) {
+        nu->dev_addr = _dev_addr;
+        //nu->sub_addr = (int16_t) oc;
+        nu->buf      = (uint8_t*) config_def_1;
+        nu->buf_len  = 32;
+        if (0 == _bus->queue_io_job(nu)) {
+          nu = _bus->new_op(BusOpcode::TX, this);
+          if (nu) {
+            nu->dev_addr = _dev_addr;
+            //nu->sub_addr = (int16_t) oc;
+            nu->buf      = (uint8_t*) config_def_2;
+            nu->buf_len  = 32;
+            if (0 == _bus->queue_io_job(nu)) {
+              nu = _bus->new_op(BusOpcode::TX, this);
+              if (nu) {
+                nu->dev_addr = _dev_addr;
+                //nu->sub_addr = (int16_t) oc;
+                nu->buf      = (uint8_t*) config_def_3;
+                nu->buf_len  = 4;
+                if (0 == _bus->queue_io_job(nu)) {
+                  nu = _bus->new_op(BusOpcode::TX, this);
+                  if (nu) {
+                    nu->dev_addr = _dev_addr;
+                    //nu->sub_addr = (int16_t) oc;
+                    nu->buf      = (uint8_t*) config_def_4;
+                    nu->buf_len  = 32;
+                    return _bus->queue_io_job(nu);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
   #endif  // ATECC508_CAPABILITY_CONFIG_UNLOCK
   return -1;

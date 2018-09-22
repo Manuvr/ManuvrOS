@@ -177,7 +177,6 @@ void Kernel::nextTick(BufferPipe* p) {
 */
 Kernel::Kernel() : EventReceiver("Kernel"), _msg_prealloc(EVENT_MANAGER_PREALLOC_COUNT, _preallocation_pool) {
   INSTANCE             = this;  // For singleton reference.
-  current_event        = nullptr;
   max_events_per_loop  = 2;
   max_idle_count       = 100;
   consequtive_idles    = max_idle_count;

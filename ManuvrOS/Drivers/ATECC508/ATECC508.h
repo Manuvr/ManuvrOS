@@ -174,19 +174,20 @@ enum class ATECCOpcodes : uint8_t {
 
 
 typedef struct atecc_birth_cert_t {
-  uint8_t s_ver;
-  uint8_t c_ver;
-  uint8_t hw_code;
-  uint8_t hw_ver;
-  uint8_t lot_num[4];
-  uint8_t make_model[48];
-  uint8_t manu_date[8];
-  UUID    hw_id;
-  UUID    prov_id;
-  uint8_t prov_pub[64];
-  uint8_t prov_date[8];
-  uint8_t key_refs[128];
-  uint8_t manu_blob[116];
+  uint8_t  s_ver;
+  uint8_t  c_ver;
+  uint8_t  hw_code;
+  uint8_t  hw_ver;
+  uint8_t  lot_num[4];
+  uint8_t  make_str[24];
+  uint8_t  model_str[24];
+  uint64_t manu_date;
+  UUID     hw_id;
+  UUID     prov_id;
+  uint8_t  prov_pub[64];
+  uint64_t prov_date;
+  uint8_t  key_refs[128];
+  uint8_t  manu_blob[116];
 } ATECBirthCert;
 
 
@@ -276,6 +277,7 @@ class ATECC508 : public EventReceiver,
     int8_t callback_proc(ManuvrMsg*);
 
     void printSlotInfo(uint8_t slot, StringBuilder*);
+    void printBirthCert(StringBuilder*);
 
     #if defined(ATECC508_CAPABILITY_DEBUG)
     static const char* getPktTypeStr(ATECCPktCodes);
@@ -299,6 +301,7 @@ class ATECC508 : public EventReceiver,
     uint16_t      _addr_counter     = 0;  // Mirror of the device's internal address counter.
     uint16_t      _slot_locks       = 0;  // One bit per slot.
     SlotDef       _slot[16];              // Two bytes per slot.
+    ATECBirthCert _birth_cert;            // The device's birth certificate.
 
     const ATECC508Opts _opts;
     ATECCOpcodes  _current_op = ATECCOpcodes::UNDEF;
@@ -340,7 +343,7 @@ class ATECC508 : public EventReceiver,
     * Config zone convenience fxns.
     */
     int config_read();
-    int config_write(uint8_t* buf, uint16_t len);
+    int config_write();
 
     /*
     * OTP zone convenience fxns.

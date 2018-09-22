@@ -159,6 +159,10 @@ int main(int argc, char *argv[]) {
   platform.platformPreInit();   // Our test fixture needs random numbers.
   platform.bootstrap();   // Our test fixture needs random numbers.
 
+  // TODO: This is presently needed to prevent the program from hanging. WHY??
+  StringBuilder out;
+  platform.kernel()->printScheduler(&out);
+
   if (0 == UUID_IDENT_TESTS()) {
     if (0 == CRYPTO_IDENT_TESTS()) {
       printf("**********************************\n");

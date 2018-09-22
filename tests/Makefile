@@ -21,7 +21,6 @@ ifeq ($(SECURE),1)
 	LIBS += $(OUTPUT_PATH)/libmbedtls.a
 	LIBS += $(OUTPUT_PATH)/libmbedx509.a
 	LIBS += $(OUTPUT_PATH)/libmbedcrypto.a
-
 	SOURCES_CPP   += CryptoTest.cpp
 endif
 

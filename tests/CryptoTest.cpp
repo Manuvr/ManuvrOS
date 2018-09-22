@@ -386,6 +386,10 @@ int main(int argc, char *argv[]) {
   platform.platformPreInit();   // Our test fixture needs random numbers.
   platform.bootstrap();
 
+  // TODO: This is presently needed to prevent the program from hanging. WHY??
+  StringBuilder out;
+  platform.kernel()->printScheduler(&out);
+
   StringBuilder log;
   platform.printCryptoOverview(&log);
   printf("%s\n", (const char*) log.string());

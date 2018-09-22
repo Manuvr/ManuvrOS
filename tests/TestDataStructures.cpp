@@ -31,10 +31,10 @@ This program runs tests on raw data-handling classes.
 #include <fstream>
 #include <iostream>
 
+#include <DataStructures/StringBuilder.h>
 #include <DataStructures/PriorityQueue.h>
 #include <DataStructures/Vector3.h>
 #include <DataStructures/Quaternion.h>
-#include <DataStructures/StringBuilder.h>
 #include <DataStructures/RingBuffer.h>
 #include <DataStructures/BufferPipe.h>
 #include <DataStructures/uuid.h>
@@ -58,6 +58,8 @@ This program runs tests on raw data-handling classes.
 #if defined(MANUVR_CBOR)
   #include <Types/cbor-cpp/cbor.h>
 #endif
+
+
 
 int test_StringBuilder(void) {
   StringBuilder log("===< StringBuilder >====================================\n");
@@ -636,7 +638,9 @@ void printTypeSizes() {
 
   output.concat("\n-- Core singletons:\n");
   output.concatf("\tManuvrPlatform        %u\n", sizeof(ManuvrPlatform));
-  output.concatf("\t  Storage             %u\n", sizeof(Storage));
+  #if defined(MANUVR_STORAGE)
+    output.concatf("\t  Storage             %u\n", sizeof(Storage));
+  #endif  // MANUVR_STORAGE
   output.concatf("\t  Identity            %u\n", sizeof(Identity));
   output.concatf("\t    IdentityUUID      %u\n", sizeof(IdentityUUID));
   output.concatf("\tKernel                %u\n", sizeof(Kernel));
@@ -680,9 +684,14 @@ void printTestFailure(const char* test) {
 ****************************************************************************************************/
 int main(int argc, char *argv[]) {
   int exit_value = 1;   // Failure is the default result.
-  printTypeSizes();
 
   platform.platformPreInit();   // Our test fixture needs random numbers.
+  platform.bootstrap();
+  printTypeSizes();
+
+  // TODO: This is presently needed to prevent the program from hanging. WHY??
+  StringBuilder out;
+  platform.kernel()->printScheduler(&out);
 
   if (0 == test_StringBuilder()) {
     if (0 == test_PriorityQueue()) {
