@@ -60,50 +60,97 @@ This program runs tests on raw data-handling classes.
 #endif
 
 
+#define STRBUILDER_STATICTEST_STRING "I CAN cOUNT to PoTaTo   "
+
+int test_StringBuilderStatics(StringBuilder* log) {
+  int return_value = -1;
+  if (0 == StringBuilder::strcasestr("CHARACTER CONST STRING COMPARE", "CHARACTER CONST STRING COMPARE")) {
+    if (0 == StringBuilder::strcasestr("cHArACTER CONST sTRING COMpARE", "CHARACTER CONST STRING COMPARE")) {
+      if (0 != StringBuilder::strcasestr("CHARACTER CONST STRING 1OMPARE", "CHARACTER CONST STRING !OMPARE")) {
+        if (0 == StringBuilder::strcasestr("CHARACTER CONST STRING COMPARE", "CHARACTER CONST STRING COMPARE ")) {
+          if (0 != StringBuilder::strcasestr(" CHARACTER CONST STRING COMPARE", "CHARACTER CONST STRING COMPARE")) {
+            if (0 != StringBuilder::strcasestr(nullptr, "CHARACTER CONST STRING COMPARE")) {
+              if (0 != StringBuilder::strcasestr("CHARACTER CONST STRING COMPARE", nullptr)) {
+                const unsigned int TEST_LEN = strlen(STRBUILDER_STATICTEST_STRING);
+                uint8_t out_buf[256];
+                if (0 == random_fill(out_buf, 256)) {
+                  StringBuilder stack_obj((uint8_t*) STRBUILDER_STATICTEST_STRING, TEST_LEN+1);
+                  stack_obj.trim();
+                  StringBuilder::printBuffer(&stack_obj, out_buf, TEST_LEN, "INDENTSTR\t");
+                  printf("%s\n\n", (const char*) stack_obj.string());
+                  return_value = 0;
+                }
+                else log->concat("Failed to random_fill() test buffer.\n");
+              }
+              else log->concat("strcasestr() failed test 7.\n");
+            }
+            else log->concat("strcasestr() failed test 6.\n");
+          }
+          else log->concat("strcasestr() failed test 5.\n");
+        }
+        else log->concat("strcasestr() failed test 4.\n");
+      }
+      else log->concat("strcasestr() failed test 3.\n");
+    }
+    else log->concat("strcasestr() failed test 2.\n");
+  }
+  else log->concat("strcasestr() failed test 1.\n");
+  return return_value;
+}
+
 
 int test_StringBuilder(void) {
+  int return_value = -1;
   StringBuilder log("===< StringBuilder >====================================\n");
-  StringBuilder *heap_obj = new StringBuilder("This is datas we want to transfer.");
+  StringBuilder *heap_obj = new StringBuilder((char*) "This is datas we want to transfer.");
   StringBuilder stack_obj;
   StringBuilder tok_obj;
 
-  stack_obj.concat("a test of the StringBuilder ");
-  stack_obj.concat("used in stack. ");
-  stack_obj.prepend("This is ");
-  stack_obj.string();
+  if (0 == test_StringBuilderStatics(&log)) {
+    char* empty_str = (char*) stack_obj.string();
+    if (0 == strlen(empty_str)) {
+      free(empty_str);
+      stack_obj.concat("a test of the StringBuilder ");
+      stack_obj.concat("used in stack. ");
+      stack_obj.prepend("This is ");
+      stack_obj.string();
 
-  tok_obj.concat("This");
-  log.concatf("\t tok_obj split:   %d\n", tok_obj.split(" "));
-  log.concatf("\t tok_obj count:   %d\n", tok_obj.count());
-  tok_obj.concat(" This");
-  log.concatf("\t tok_obj split:   %d\n", tok_obj.split(" "));
-  log.concatf("\t tok_obj count:   %d\n", tok_obj.count());
-  tok_obj.concat("   This");
-  log.concatf("\t tok_obj split:   %d\n", tok_obj.split(" "));
-  log.concatf("\t tok_obj count:   %d\n", tok_obj.count());
+      tok_obj.concat("This");
+      log.concatf("\t tok_obj split:   %d\n", tok_obj.split(" "));
+      log.concatf("\t tok_obj count:   %d\n", tok_obj.count());
+      tok_obj.concat(" This");
+      log.concatf("\t tok_obj split:   %d\n", tok_obj.split(" "));
+      log.concatf("\t tok_obj count:   %d\n", tok_obj.count());
+      tok_obj.concat("   This");
+      log.concatf("\t tok_obj split:   %d\n", tok_obj.split(" "));
+      log.concatf("\t tok_obj count:   %d\n", tok_obj.count());
 
-  log.concatf("\t Heap obj before culling:   %s\n", heap_obj->string());
+      log.concatf("\t Heap obj before culling:   %s\n", heap_obj->string());
 
-  while (heap_obj->length() > 10) {
-    heap_obj->cull(5);
-    log.concatf("\t Heap obj during culling:   %s\n", heap_obj->string());
+      while (heap_obj->length() > 10) {
+        heap_obj->cull(5);
+        log.concatf("\t Heap obj during culling:   %s\n", heap_obj->string());
+      }
+
+      log.concatf("\t Heap obj after culling:   %s\n", heap_obj->string());
+
+      heap_obj->prepend("Meaningless data ");
+      heap_obj->concat(" And stuff tackt onto the end.");
+
+      stack_obj.concatHandoff(heap_obj);
+
+      delete heap_obj;
+
+      stack_obj.split(" ");
+
+      log.concatf("\t Final Stack obj:          %s\n", stack_obj.string());
+      return_value = 0;
+    }
+    else log.concat("StringBuilde.string() failed to produce an empty string.\n");
   }
 
-  log.concatf("\t Heap obj after culling:   %s\n", heap_obj->string());
-
-  heap_obj->prepend("Meaningless data ");
-  heap_obj->concat(" And stuff tackt onto the end.");
-
-  stack_obj.concatHandoff(heap_obj);
-
-  delete heap_obj;
-
-  stack_obj.split(" ");
-
-  log.concatf("\t Final Stack obj:          %s\n", stack_obj.string());
-
   printf("%s\n\n", (const char*) log.string());
-  return 0;
+  return return_value;
 }
 
 
@@ -749,7 +796,10 @@ int test_UUID() {
 
   char str_buffer[40] = "";
   uuid_to_str(&test0, str_buffer, 40);
-  log.concatf("temp0 string: %s\n", str_buffer);
+  log.concatf("test0 string: %s\n", str_buffer);
+  log.concat("uuid_to_sb(test0): ");
+  uuid_to_sb(&test0, &log);
+  log.concat("\n");
 
   uuid_from_str(str_buffer, &test1);
   log.concat("temp1 bytes:  ");

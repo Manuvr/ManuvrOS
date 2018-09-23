@@ -47,14 +47,19 @@ limitations under the License.
 * http://c-for-dummies.com/blog/?p=1359
 */
 int StringBuilder::strcasestr(const char *a, const char *b) {
-  char c = 0;
-  while(*a && *b) {
-    c = toupper(*a) - toupper(*b);
-    if( c != 0 ) return(c);
-    a++;
-    b++;
+  if ((nullptr != a) && (nullptr != b)) {
+    char c = 0;
+    while (*a && *b) {
+      c = toupper(*a) - toupper(*b);
+      if (c != 0) {
+        return c;
+      }
+      a++;
+      b++;
+    }
+    return c;
   }
-  return(c);
+  return -1;
 }
 
 

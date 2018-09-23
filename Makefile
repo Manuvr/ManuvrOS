@@ -233,6 +233,7 @@ fullclean: clean
 	$(MAKE) clean -C lib/
 	$(MAKE) clean -C tests/
 	rm -rf doc/doxygen
+	rm -rf doc/coverage
 
 docs:
 	doxygen Doxyfile
