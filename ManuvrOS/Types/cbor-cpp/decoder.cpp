@@ -227,7 +227,7 @@ void decoder::run() {
             break;
           case 4:
             temp = _in->get_int();
-            if(temp <= INT_MAX) {
+            if(temp <= (INT_MAX << 1) + 1) {  // Unsigned int can take the extra bit.
               _listener->on_integer((uint32_t) temp);
             } else {
               _listener->on_extra_integer(temp, 1);
@@ -244,11 +244,27 @@ void decoder::run() {
       if(_in->has_bytes(_currentLength)) {
         switch(_currentLength) {
           case 1:
-            _listener->on_integer(((int8_t) -(_in->get_byte()+1)));
+            {
+              uint8_t diff = _in->get_byte()+1;
+              if (diff < 128u) {
+                _listener->on_integer((int8_t) -(diff));
+              }
+              else {
+                _listener->on_integer((int16_t) -(diff));
+              }
+            }
             _state = STATE_TYPE;
             break;
           case 2:
-            _listener->on_integer(((int16_t) -(_in->get_short()+1)));
+            {
+              uint16_t diff = _in->get_short()+1;
+              if (diff < 32768u) {
+                _listener->on_integer((int16_t) -(diff));
+              }
+              else {
+                _listener->on_integer((int32_t) -(diff));
+              }
+            }
             _state = STATE_TYPE;
             break;
           case 4:

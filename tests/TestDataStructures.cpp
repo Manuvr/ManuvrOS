@@ -438,6 +438,88 @@ int test_CBOR_Argument() {
 
 
 /**
+* These are values that give the CBOR implementation special flavors of grief.
+*
+* [test_CBOR_Problematic_Argument description]
+* @return [description]
+*/
+int test_CBOR_Problematic_Argument() {
+  int return_value = -1;
+  StringBuilder log("===< Arguments CBOR Minefield >=========================\n");
+  StringBuilder shuttle;  // We will transport the CBOR encoded-bytes through this.
+
+  int32_t  val0  = (int32_t)  -65500;
+  int16_t  val1  = (int16_t)  -230;
+  int8_t   val2  = (int8_t)   -23;
+  uint32_t val3  = (uint32_t) 3643900856;
+  uint16_t val4  = (uint16_t) 59041;
+  uint8_t  val5  = (uint8_t)  250;
+
+  int32_t  ret0 = 0;
+  int16_t  ret1 = 0;
+  int8_t   ret2 = 0;
+  uint32_t ret3 = 0;
+  uint16_t ret4 = 0;
+  uint8_t  ret5 = 0;
+
+  Argument a(val0);
+
+  a.setKey("val0");
+  a.append(val1)->setKey("val1");
+  a.append(val2)->setKey("val2");  // NOTE: Mixed in with non-KVP.
+  a.append(val3)->setKey("val3");
+  a.append(val4)->setKey("val4");
+  a.append(val5)->setKey("val5");
+
+  a.printDebug(&log);
+
+  if (0 <= Argument::encodeToCBOR(&a, &shuttle)) {
+    log.concatf("CBOR encoding occupies %d bytes\n\t", shuttle.length());
+    shuttle.printDebug(&log);
+    log.concat("\n");
+
+    Argument* r = Argument::decodeFromCBOR(&shuttle);
+    if (nullptr != r) {
+      log.concat("CBOR decoded:\n");
+      r->printDebug(&log);
+
+      log.concat("\n");
+      if ((0 == r->getValueAs((uint8_t) 0, &ret0)) && (ret0 == val0)) {
+        if ((0 == r->getValueAs((uint8_t) 1, &ret1)) && (ret1 == val1)) {
+          if ((0 == r->getValueAs((uint8_t) 2, &ret2)) && (ret2 == val2)) {
+            if ((0 == r->getValueAs((uint8_t) 3, &ret3)) && (ret3 == val3)) {
+              if ((0 == r->getValueAs((uint8_t) 4, &ret4)) && (ret4 == val4)) {
+                if ((0 == r->getValueAs((uint8_t) 5, &ret5)) && (ret5 == val5)) {
+                    if (r->argCount() == a.argCount()) {
+                      return_value = 0;
+                    }
+                    else log.concatf("Arg counts don't match: %d vs %d\n", r->argCount(), a.argCount());
+                }
+                else log.concatf("Failed to vet key 'value5'... %u vs %u\n", ret5, val5);
+              }
+              else log.concatf("Failed to vet key 'value4'... %u vs %u\n", ret4, val4);
+            }
+            else log.concatf("Failed to vet key 'value3'... %u vs %u\n", ret3, val3);
+          }
+          else log.concatf("Failed to vet key 'value2'... %u vs %u\n", ret2, val2);
+        }
+        else log.concatf("Failed to vet key 'value1'... %u vs %u\n", ret1, val1);
+      }
+      else log.concatf("Failed to vet key 'value0'... %u vs %u\n", ret0, val0);
+    }
+    else log.concat("Failed to decode Argument chain from CBOR...\n");
+  }
+  else log.concat("Failed to encode Argument chain into CBOR...\n");
+
+  if (return_value) {
+    a.printDebug(&log);
+  }
+  printf("%s\n\n", (const char*) log.string());
+  return return_value;
+}
+
+
+/**
 * Test the capability of Arguments to hold KVP data.
 * @return 0 on pass. Non-zero otherwise.
 */
@@ -635,7 +717,9 @@ int test_Arguments() {
       #if defined(MANUVR_CBOR)
         return_value = test_CBOR_Argument();
         if (0 == return_value) {
-
+          return_value = test_CBOR_Problematic_Argument();
+          if (0 == return_value) {
+          }
         }
       #endif
       }

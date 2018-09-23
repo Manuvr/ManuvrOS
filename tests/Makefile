@@ -35,10 +35,12 @@ COV_FILES = $(SOURCES_CPP:.cpp=.gcda) $(SOURCES_CPP:.cpp=.gcno)
 .PHONY: all
 
 
-all: $(TESTS)
-	@echo 'Built tests:  $(TESTS)'
+all: buildtests
 	@echo 'Beginning test execution...'
 	@$(foreach test,$(TESTS),./$(test);)
+
+buildtests: $(TESTS)
+	@echo 'Built tests:  $(TESTS)'
 
 % : %.cpp
 	@echo 'LIBS:  $(LIBS)'

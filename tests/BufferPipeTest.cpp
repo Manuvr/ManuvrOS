@@ -219,7 +219,7 @@ int main(int argc, char *argv[]) {
   printf("\n");
   test_BufferPipe_0();
   printf("\n\n");
-  test_BufferPipe_1();
+  //test_BufferPipe_1();
   printf("\n\n");
   exit(0);
 }
