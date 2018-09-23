@@ -107,7 +107,7 @@ template <class T> class PriorityQueue {
     * Returns the last element in the list with the given priority, or the highest priority
     *   item in the list if the argument is greater than all nodes.
     */
-    PriorityNode<T>* getLastWithPriority(int);
+    PriorityNode<T>* getLastWithPriority(int, int* idx);
 
     PriorityNode<T>* get_node_by_element(T);    // Return a priority node by the element it contains.
     int insert(PriorityNode<T>*);    // Returns the ID of the data, or -1 on failure.
@@ -188,7 +188,7 @@ template <class T> int PriorityQueue<T>::insertIfAbsent(T d, int nu_pri) {
   int return_value = -1;
   PriorityNode<T>* insert_pointer = nullptr;
   PriorityNode<T>* current = root;
-  while (current != nullptr) {
+  while (nullptr != current) {
     if (current->data == d) {
       #ifdef __MANUVR_LINUX
         pthread_mutex_unlock(&_mutex);
@@ -205,7 +205,7 @@ template <class T> int PriorityQueue<T>::insertIfAbsent(T d, int nu_pri) {
   }
 
   PriorityNode<T> *nu = (PriorityNode<T>*) malloc(sizeof(PriorityNode<T>));
-  if (nu == nullptr) {
+  if (nullptr == nu) {
     return_value = -1;      // Failed to allocate memory.
   }
   else {
@@ -272,11 +272,14 @@ template <class T> int PriorityQueue<T>::insert(T d, int nu_pri) {
   #elif defined(__BUILD_HAS_FREERTOS)
 //    xSemaphoreGiveRecursive(&_mutex);
   #endif
-  return 1;
+  return return_value;
 }
 
 
-// TODO: This doesn't return something sensible...
+/*
+* Returns the position in the list that the data was inserted, or -1 on failure.
+* Inserts at the first position that has a lower priority than the one given.
+*/
 template <class T> int PriorityQueue<T>::insert(PriorityNode<T>* nu) {
   if (nu == nullptr) {
     return -1;
@@ -290,7 +293,8 @@ template <class T> int PriorityQueue<T>::insert(PriorityNode<T>* nu) {
 //      while(true);
 //    };
   #endif
-  PriorityNode<T> *current = getLastWithPriority(nu->priority);
+  int idx = 0;
+  PriorityNode<T> *current = getLastWithPriority(nu->priority, &idx);
 
   if (current == nullptr) {
     nu->next = root;
@@ -305,7 +309,7 @@ template <class T> int PriorityQueue<T>::insert(PriorityNode<T>* nu) {
   #elif defined(__BUILD_HAS_FREERTOS)
 //    xSemaphoreGiveRecursive(&_mutex);
   #endif
-  return 1;
+  return idx;
 }
 
 
@@ -358,15 +362,13 @@ template <class T> PriorityNode<T>* PriorityQueue<T>::get_node_by_element(T test
 * Returns a pointer to the last PriorityNode in this linked list.
 * Returns nullptr if there is not a node that has a priority at-least matching what we provided.
 */
-template <class T> PriorityNode<T>* PriorityQueue<T>::getLastWithPriority(int nu_pri) {
+template <class T> PriorityNode<T>* PriorityQueue<T>::getLastWithPriority(int nu_pri, int* idx) {
   PriorityNode<T>* current      = root;
   PriorityNode<T>* last         = nullptr;
-  while (current != nullptr) {
-    if (nu_pri > current->priority) {
-      return last;
-    }
+  while ((current != nullptr) && (nu_pri <= current->priority)) {
     last    = current;
     current = current->next;
+    *idx = *idx + 1;
   }
   return last;
 }

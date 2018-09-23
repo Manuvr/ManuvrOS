@@ -39,7 +39,6 @@ all: $(TESTS)
 	@echo 'Beginning test execution...'
 	@$(foreach test,$(TESTS),./$(test);)
 
-
 % : %.cpp
 	@echo 'LIBS:  $(LIBS)'
 	$(CXX) -static -o $@ $< $(CXXFLAGS) -std=$(CPP_STANDARD) $(LIBS)
