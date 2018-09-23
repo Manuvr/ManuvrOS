@@ -8,8 +8,10 @@
 #include <fstream>
 #include <iostream>
 
-#include "DataStructures/BufferPipe.h"
+#include <Platform/Platform.h>
 
+#include "DataStructures/BufferPipe.h"
+#include "Transports/BufferPipes/XportBridge/XportBridge.h"
 
 
 class DummyTransport : public BufferPipe {
@@ -108,10 +110,10 @@ int8_t DummyTransport::fromCounterparty(uint8_t* buf, unsigned int len, int8_t m
 void DummyTransport::printDebug(StringBuilder* output) {
   output->concatf("\t-- %s ----------------------------------\n", _name);
   if (haveNear()) {
-    output->concatf("\t _near         \t[0x%08x] %s\n", (unsigned long)_near, BufferPipe::memMgmtString(_near_mm_default));
+    output->concatf("\t _near         \t[0x%08x]\n", (unsigned long)_near);
   }
   if (haveFar()) {
-    output->concatf("\t _far          \t[0x%08x] %s\n", (unsigned long)_far, BufferPipe::memMgmtString(_far_mm_default));
+    output->concatf("\t _far          \t[0x%08x]\n", (unsigned long)_far);
   }
   if (_accumulator.length() > 0) {
     output->concatf("\t _accumulator (%d bytes):  ", _accumulator.length());
@@ -190,7 +192,7 @@ int test_BufferPipe_1(void) {
   tmp_str->concat("This is a differnt bits.\n");
   log.concatf("_xport3->toCounterparty() ---> %s\n",
     BufferPipe::memMgmtString(
-      _xport3.emitBuffer(tmp_str->string(), tmp_str->length(), MEM_MGMT_RESPONSIBLE_CREATOR)
+      _xport3.toCounterparty(tmp_str->string(), tmp_str->length(), MEM_MGMT_RESPONSIBLE_CREATOR)
     )
   );
   _xport2.printDebug(&log);
@@ -207,10 +209,17 @@ int test_BufferPipe_1(void) {
 * The main function.                                                                                *
 ****************************************************************************************************/
 int main(int argc, char *argv[]) {
+  platform.platformPreInit();   // Our test fixture needs random numbers.
+  platform.bootstrap();
+
+  // TODO: This is presently needed to prevent the program from hanging. WHY??
+  StringBuilder out;
+  platform.kernel()->printScheduler(&out);
+
   printf("\n");
   test_BufferPipe_0();
   printf("\n\n");
   test_BufferPipe_1();
   printf("\n\n");
-  return 0;
+  exit(0);
 }

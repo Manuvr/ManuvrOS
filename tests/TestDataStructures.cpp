@@ -645,13 +645,6 @@ int test_Arguments() {
 }
 
 
-int test_BufferPipe() {
-  StringBuilder log("===< BufferPipe >=======================================\n");
-  printf("%s\n\n", (const char*) log.string());
-  return 0;
-}
-
-
 int test_RingBuffer() {
   int return_value = -1;
   StringBuilder log("===< RingBuffer >=======================================\n");
@@ -894,22 +887,19 @@ int main(int argc, char *argv[]) {
   if (0 == test_StringBuilder()) {
     if (0 == test_PriorityQueue()) {
       if (0 == vector3_float_test(0.7f, 0.8f, 0.01f)) {
-        if (0 == test_BufferPipe()) {
-          if (0 == test_Arguments()) {
-            if (0 == test_UUID()) {
-              if (0 == test_RingBuffer()) {
-                printf("**********************************\n");
-                printf("*  DataStructure tests all pass  *\n");
-                printf("**********************************\n");
-                exit_value = 0;
-              }
-              else printTestFailure("RingBuffer");
+        if (0 == test_Arguments()) {
+          if (0 == test_UUID()) {
+            if (0 == test_RingBuffer()) {
+              printf("**********************************\n");
+              printf("*  DataStructure tests all pass  *\n");
+              printf("**********************************\n");
+              exit_value = 0;
             }
-            else printTestFailure("UUID");
+            else printTestFailure("RingBuffer");
           }
-          else printTestFailure("Argument");
+          else printTestFailure("UUID");
         }
-        else printTestFailure("BufferPipe");
+        else printTestFailure("Argument");
       }
       else printTestFailure("Vector3");
     }
