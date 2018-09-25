@@ -27,7 +27,7 @@ At first, ManuvrOS was a library that was loaded into the Arduino
 Rather than subject ourselves to the Arduino IDE and its nerfed usage
   of autotools, we will ask the user to either clone Arduino libraries
   into ManuvrOS' build tree, or require that the user provide a path
-  to vis locally-installed copy.
+  to his locally-installed copy.
 
 Other platforms might inherrit from this API, so keep it general.
 

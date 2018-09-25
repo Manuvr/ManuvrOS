@@ -178,7 +178,7 @@ int8_t ADP8866::init() {
   writeIndirect(ADP8866_INT_EN, 0x1C, true);
 
   // TODO: When the driver inits, we shouldn't have any LEDs on until the user sets
-  //   some mandatory constraint so ve doesn't fry vis LEDs.
+  //   some mandatory constraint so he doesn't fry his LEDs.
   writeIndirect(ADP8866_ISC1, 0x05, true);
   writeIndirect(ADP8866_ISC2, 0x05, true);
   writeIndirect(ADP8866_ISC3, 0x05, true);

@@ -433,7 +433,7 @@ int XenoManuvrMessage::accumulate(unsigned char* buf, int buf_len){
       }
       else {
         /* By convention, 0x0000 is the message code for "Undefined event". In this case it means that
-             we understood what our counterparty said, but ve used a phrase or idiom that we don't
+             we understood what our counterparty said, but he used a phrase or idiom that we don't
              understand. We might at this point choose to do any of the following:
            a) Check against an independently-tracked message legend in a session somewhere.
            b) Ask the counterparty for a message legend if we don't have one yet.
