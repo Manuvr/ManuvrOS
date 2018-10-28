@@ -81,8 +81,8 @@ class PeripheralOpts {
 
 class PeriphDrvr {
   public:
-    inline const char*    getDriverName() {   return _driver_name;   };
-    inline const uint32_t getDriverClass() {  return _driver_flags & PDRVR_FLAG_CLASS_MASK;  };
+    inline const char* getDriverName() {   return _driver_name;   };
+    inline uint32_t    getDriverClass() {  return _driver_flags & PDRVR_FLAG_CLASS_MASK;  };
 
     inline bool hardwareBasis() {  return _driver_flags & PDRVR_FLAG_HARDWARE_BASE;  };
 

@@ -178,9 +178,8 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
 void ManuvrPlatform::printDebug(StringBuilder* output) {
   output->concatf("-- Identity source:    %s\n", platform._check_flags(MANUVR_PLAT_FLAG_HAS_IDENTITY) ? "Generated at runtime" : "Loaded from storage");
   output->concat("-- Hardware:\n");
-  #if defined(HW_VERSION_STRING)
-    output->concatf("--\t version:        %s\n", HW_VERSION_STRING);
-
+  #if defined(HW_VERSION_CODE)
+    output->concatf("--\t version:        %s\n", HW_VERSION_CODE);
   #endif
   #if defined(F_CPU)
     output->concatf("--\t CPU frequency:  %.2f MHz\n", (double) cpu_freq()/1000000.0);

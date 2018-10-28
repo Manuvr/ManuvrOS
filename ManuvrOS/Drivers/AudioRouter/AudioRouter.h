@@ -101,7 +101,7 @@ class AudioRouter : public EventReceiver
     #if defined(MANUVR_CONSOLE_SUPPORT)
       /* Overrides from ConsoleInterface */
       uint consoleGetCmds(ConsoleCommand**);
-      inline const char* const consoleName() { return getReceiverName();  };
+      inline const char* consoleName() { return getReceiverName();  };
       void consoleCmdProc(StringBuilder* input);
     #endif  //MANUVR_CONSOLE_SUPPORT
 

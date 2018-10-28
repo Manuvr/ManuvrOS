@@ -38,6 +38,14 @@ class IdentityUUID : public Identity {
     void toString(StringBuilder*);
     int  serialize(uint8_t*, uint16_t);
 
+    /*
+    * Convenience fxn to write the raw value of the UUID into the
+    *   provided buffer, which is assumed to be 16-bytes or larger.
+    */
+    inline void copyRaw(uint8_t* output) {
+      memcpy(output, (uint8_t*) &uuid.id, 16);
+    }
+
 
   private:
     UUID uuid;

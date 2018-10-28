@@ -18,8 +18,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-Apart from including the user-suppied configuration header, there
-  ought to be no inclusion in this file. It is the bottom.
+Apart from including the rationalizing configuration header, there
+  ought to be no Manuvr inclusion in this file. It is the bottom.
 */
 
 #include <inttypes.h>
@@ -83,32 +83,5 @@ Apart from including the user-suppied configuration header, there
 
   // Some common properties of the environment.
   #define PRESSURE_AT_SEA_LEVEL  101325.0f  // Atmosphereic pressure at sea-level.
-
-
-// TODO: Function defs do not belong here. This area under re-org.
-#if defined(__BUILD_HAS_BASE64)
-int wrapped_base64_decode(uint8_t* dst, size_t dlen, size_t* olen, const uint8_t* src, size_t slen);
-#endif
-
-// Everytime you macro a function, baby Jesus cries.
-inline float    strict_max(float    a, float    b) {  return (a > b) ? a : b; };
-inline uint32_t strict_max(uint32_t a, uint32_t b) {  return (a > b) ? a : b; };
-inline uint16_t strict_max(uint16_t a, uint16_t b) {  return (a > b) ? a : b; };
-inline uint8_t  strict_max(uint8_t  a, uint8_t  b) {  return (a > b) ? a : b; };
-inline int32_t  strict_max(int32_t  a, int32_t  b) {  return (a > b) ? a : b; };
-inline int16_t  strict_max(int16_t  a, int16_t  b) {  return (a > b) ? a : b; };
-inline int8_t   strict_max(int8_t   a, int8_t   b) {  return (a > b) ? a : b; };
-
-inline float    strict_min(float    a, float    b) {  return (a < b) ? a : b; };
-inline uint32_t strict_min(uint32_t a, uint32_t b) {  return (a < b) ? a : b; };
-inline uint16_t strict_min(uint16_t a, uint16_t b) {  return (a < b) ? a : b; };
-inline uint8_t  strict_min(uint8_t  a, uint8_t  b) {  return (a < b) ? a : b; };
-inline int32_t  strict_min(int32_t  a, int32_t  b) {  return (a < b) ? a : b; };
-inline int16_t  strict_min(int16_t  a, int16_t  b) {  return (a < b) ? a : b; };
-inline int8_t   strict_min(int8_t   a, int8_t   b) {  return (a < b) ? a : b; };
-
-inline uint32_t wrap_accounted_delta(uint32_t a, uint32_t b) {
-  return (a > b) ? (a - b) : (b - a);
-};
 
 #endif    // __MANUVR_COMMON_CONSTANTS_H__

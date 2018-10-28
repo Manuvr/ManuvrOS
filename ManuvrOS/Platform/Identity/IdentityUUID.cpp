@@ -80,6 +80,7 @@ void IdentityUUID::toString(StringBuilder* output) {
   output->concat(uuid_str);
 }
 
+
 /*
 * Only the persistable particulars of this instance. All the base class and
 *   error-checking are done upstream.

@@ -314,7 +314,7 @@ class SensorManager : public EventReceiver
 
     #if defined(MANUVR_CONSOLE_SUPPORT)
       /* Overrides from ConsoleInterface */
-      inline const char* const consoleName() {  return getReceiverName();  };
+      inline const char* consoleName() {  return getReceiverName();  };
       uint consoleGetCmds(ConsoleCommand**);
       void consoleCmdProc(StringBuilder* input);
     #endif  //MANUVR_CONSOLE_SUPPORT

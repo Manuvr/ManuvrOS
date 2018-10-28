@@ -33,6 +33,7 @@ limitations under the License.
 
   #include <map>
   #include "CommonConstants.h"
+  #include "Utilities.h"
   #include "EnumeratedTypeCodes.h"
   #include "DataStructures/PriorityQueue.h"
   #include "DataStructures/ElementPool.h"
@@ -86,7 +87,7 @@ limitations under the License.
       #ifdef MANUVR_CONSOLE_SUPPORT
         /* Overrides from ConsoleInterface */
         uint consoleGetCmds(ConsoleCommand**);
-        inline const char* const consoleName() { return getReceiverName();  };
+        inline const char* consoleName() { return getReceiverName();  };
         void consoleCmdProc(StringBuilder* input);
       #endif
 

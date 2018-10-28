@@ -153,21 +153,21 @@ This file is the tortured result of growing pains since the beginning of
       /**
       * @return true if either of the pullups are desired.
       */
-      inline const bool usePullups() const {
+      inline bool usePullups() const {
         return (def_flags & (I2C_ADAPT_OPT_FLAG_SDA_PU | I2C_ADAPT_OPT_FLAG_SCL_PU));
       };
 
       /**
       * @return true if SDA pullup is desired.
       */
-      inline const bool sdaPullup() const {
+      inline bool sdaPullup() const {
         return (def_flags & I2C_ADAPT_OPT_FLAG_SDA_PU);
       };
 
       /**
       * @return true if SCL pullup is desired.
       */
-      inline const bool sclPullup() const {
+      inline bool sclPullup() const {
         return (def_flags & I2C_ADAPT_OPT_FLAG_SCL_PU);
       };
 
@@ -257,7 +257,7 @@ This file is the tortured result of growing pains since the beginning of
       #ifdef MANUVR_CONSOLE_SUPPORT
         /* Overrides from ConsoleInterface */
         uint consoleGetCmds(ConsoleCommand**);
-        inline const char* const consoleName() { return getReceiverName();  };
+        inline const char* consoleName() { return getReceiverName();  };
         void consoleCmdProc(StringBuilder* input);
 
         /* Debug aides */

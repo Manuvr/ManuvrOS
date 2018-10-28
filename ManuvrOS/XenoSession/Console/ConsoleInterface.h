@@ -108,7 +108,7 @@ class ConsoleInterface {
 
     /* Must be ovverridden to implement. */
     virtual unsigned int consoleGetCmds(ConsoleCommand**) =0;
-    virtual const char* const consoleName() =0;
+    virtual const char* consoleName() =0;
     virtual void consoleCmdProc(StringBuilder*) =0;
 
 

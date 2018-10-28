@@ -53,7 +53,7 @@ class ManuvrConsole : public XenoSession, public ConsoleInterface {
 
     /* Overrides from ConsoleInterface */
     uint consoleGetCmds(ConsoleCommand**);
-    inline const char* const consoleName() { return getReceiverName();  };
+    inline const char* consoleName() { return getReceiverName();  };
     void consoleCmdProc(StringBuilder* input);
 
 

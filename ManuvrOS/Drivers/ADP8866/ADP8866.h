@@ -162,7 +162,7 @@ class ADP8866 : public EventReceiver,
     #ifdef MANUVR_CONSOLE_SUPPORT
       /* Overrides from ConsoleInterface */
       uint consoleGetCmds(ConsoleCommand**);
-      inline const char* const consoleName() { return getReceiverName();  };
+      inline const char* consoleName() { return getReceiverName();  };
       void consoleCmdProc(StringBuilder* input);
     #endif  //MANUVR_CONSOLE_SUPPORT
 

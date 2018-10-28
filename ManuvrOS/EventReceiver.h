@@ -110,7 +110,7 @@ Lifecycle:
         */
         int8_t setVerbosity(int8_t);
 
-        inline const char* const getReceiverName() {  return _receiver_name;  };
+        inline const char* getReceiverName() {  return _receiver_name;  };
 
         /**
         * What is this ER's present verbosity level?

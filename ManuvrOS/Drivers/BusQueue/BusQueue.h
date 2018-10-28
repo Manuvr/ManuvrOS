@@ -226,6 +226,11 @@ template <class T> class BusAdapter : public BusOpCallback {
   public:
     inline T* currentJob() {  return current_job;  };
 
+    void return_op_to_pool(T* obj) {
+      obj->wipe();
+      preallocated.insert(obj);
+    };
+    
 
   protected:
     T*       current_job      = nullptr;
@@ -248,11 +253,6 @@ template <class T> class BusAdapter : public BusOpCallback {
     virtual int8_t bus_deinit()         =0;  // Hardware-specifics.
     //virtual int8_t io_op_callback(T*)   =0;  // From BusOpCallback
     //virtual int8_t queue_io_job(T*)     =0;  // From BusOpCallback
-
-    void return_op_to_pool(T* obj) {
-      obj->wipe();
-      preallocated.insert(obj);
-    };
 
     /**
     * Return a vacant BusOp to the caller, allocating if necessary.

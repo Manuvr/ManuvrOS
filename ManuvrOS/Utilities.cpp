@@ -12,6 +12,7 @@
 
 #include <inttypes.h>
 #include <CommonConstants.h>
+#include <Utilities.h>
 #include <DataStructures/StringBuilder.h>
 
 #define XLIM 17

@@ -57,6 +57,11 @@
   #error You need to name the firmware by providing FIRMWARE_NAME.
 #endif
 
+// Who made the hardware?
+#ifndef MANUFACTURER_NAME
+  #define MANUFACTURER_NAME   "Manuvr"
+#endif
+
 // How many random numbers should be cached? Must be > 0.
 #ifndef PLATFORM_RNG_CARRY_CAPACITY
   #define PLATFORM_RNG_CARRY_CAPACITY 32

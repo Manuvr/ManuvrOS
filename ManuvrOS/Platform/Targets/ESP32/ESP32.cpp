@@ -59,10 +59,10 @@ volatile PlatformGPIODef gpio_pins[PLATFORM_GPIO_PIN_COUNT];
 /*******************************************************************************
 * Randomness                                                                   *
 *******************************************************************************/
-volatile uint32_t     randomness_pool[PLATFORM_RNG_CARRY_CAPACITY];
-volatile unsigned int _random_pool_r_ptr = 0;
-volatile unsigned int _random_pool_w_ptr = 0;
-long unsigned int rng_thread_id = 0;
+volatile static uint32_t     randomness_pool[PLATFORM_RNG_CARRY_CAPACITY];
+volatile static unsigned int _random_pool_r_ptr = 0;
+volatile static unsigned int _random_pool_w_ptr = 0;
+static long unsigned int rng_thread_id = 0;
 
 /**
 * Dead-simple interface to the RNG. Despite the fact that it is interrupt-driven, we may resort
@@ -504,7 +504,7 @@ int8_t ESP32Platform::platformPreInit(Argument* root_config) {
   for (uint8_t i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) randomness_pool[i] = 0;
   _alter_flags(true, DEFAULT_PLATFORM_FLAGS);
 
-  rng_thread_id = xTaskCreate(&dev_urandom_reader, "rnd_rdr", 512, nullptr, 1, nullptr);
+  rng_thread_id = xTaskCreate(&dev_urandom_reader, "rnd_rdr", 580, nullptr, 1, nullptr);
   if (rng_thread_id) {
     _alter_flags(true, MANUVR_PLAT_FLAG_RNG_READY);
   }

@@ -22,7 +22,7 @@ This is an example file for building firmware on linux. Anticipated target is a 
 #define VERSION_STRING               "0.0.1"
 
 // Hardware is versioned. Manuvrables that are strictly-software should comment this.
-//#define HW_VERSION_STRING               "rev4"
+//#define HW_VERSION_CODE               4
 
 
 #endif

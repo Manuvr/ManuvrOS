@@ -104,27 +104,59 @@ This is not Atmel's general driver. It is a Manuvr-specific driver that imposes
 
 /* TODO: These ought to be migrated into config. */
 #define ATECC508_CAPABILITY_DEBUG
+#define ATECC508_CAPABILITY_CONFIG_UNLOCK
+
+#define ATECC508_S_VER             0x01  // Version of the birth-cert serialization format.
+#define ATECC508_C_VER             0x01  // Version of the ATEC carveup.
 
 
-#define ATECC508_FLAG_AWAKE        0x01  // The part is believed to be awake.
-#define ATECC508_FLAG_SYNCD        0x02  // The part is present and has been read.
-#define ATECC508_FLAG_OTP_LOCKED   0x04  // The OTP zone is locked.
-#define ATECC508_FLAG_CONF_LOCKED  0x08  // The conf zone is locked.
-#define ATECC508_FLAG_DATA_LOCKED  0x10  // The data zone is locked.
-#define ATECC508_FLAG_PENDING_WAKE 0x80  // There is a wake sequence outstanding.
+#define ATECC508_FLAG_OPS_RUNNING  0x00200000  // Are there running bus operations?
+#define ATECC508_FLAG_BCERT_VALID  0x00400000  // Is the birth cert valid?
+#define ATECC508_FLAG_BCERT_LOADED 0x00800000  // Is the birth cert loaded?
+#define ATECC508_FLAG_AWAKE        0x01000000  // The part is believed to be awake.
+#define ATECC508_FLAG_SYNCD        0x02000000  // The part is present and has been read.
+#define ATECC508_FLAG_OTP_LOCKED   0x04000000  // The OTP zone is locked.
+#define ATECC508_FLAG_CONF_LOCKED  0x08000000  // The conf zone is locked.
+#define ATECC508_FLAG_DATA_LOCKED  0x10000000  // The data zone is locked.
+#define ATECC508_FLAG_PENDING_WAKE 0x80000000  // There is a wake sequence outstanding.
 
 
 #define ATECC508_I2CADDR           0x60
 
+
+
 enum class ATECCReturnCodes : uint8_t {
-  SUCCESS      = 0x00,
-  MISCOMPARE   = 0x01,
-  PARSE_ERR    = 0x03,
-  ECC_FAULT    = 0x05,
-  EXEC_ERR     = 0x0F,
-  FRESH_WAKE   = 0x11,
-  INSUF_TIME   = 0xEE,
-  CRC_COMM_ERR = 0xFF
+  SUCCESS                = 0x00, // Function succeeded.
+  CONFIG_ZONE_LOCKED     = 0x01,
+  DATA_ZONE_LOCKED       = 0x02,
+  WAKE_FAILED            = 0xD0, // response status byte indicates CheckMac failure (status byte = 0x01)
+  CHECKMAC_VERIFY_FAILED = 0xD1, // response status byte indicates CheckMac failure (status byte = 0x01)
+  PARSE_ERROR            = 0xD2, // response status byte indicates parsing error (status byte = 0x03)
+  STATUS_CRC             = 0xD4, // response status byte indicates CRC error (status byte = 0xFF)
+  STATUS_UNKNOWN         = 0xD5, // response status byte is unknown
+  STATUS_ECC             = 0xD6, // response status byte is ECC fault (status byte = 0x05)
+  FUNC_FAIL              = 0xE0, // Function could not execute due to incorrect condition / state.
+  GEN_FAIL               = 0xE1, // unspecified error
+  BAD_PARAM              = 0xE2, // bad argument (out of range, null pointer, etc.)
+  INVALID_ID             = 0xE3, // invalid device id, id not set
+  INVALID_SIZE           = 0xE4, // Count value is out of range or greater than buffer size.
+  BAD_CRC                = 0xE5, // incorrect CRC received
+  RX_FAIL                = 0xE6, // Timed out while waiting for response. Number of bytes received is > 0.
+  RX_NO_RESPONSE         = 0xE7, // Not an error while the Command layer is polling for a command response.
+  RESYNC_WITH_WAKEUP     = 0xE8, // Re-synchronization succeeded, but only after generating a Wake-up
+  PARITY_ERROR           = 0xE9, // for protocols needing parity
+  TX_TIMEOUT             = 0xEA, // for Atmel PHY protocol, timeout on transmission waiting for master
+  RX_TIMEOUT             = 0xEB, // for Atmel PHY protocol, timeout on receipt waiting for master
+  COMM_FAIL              = 0xF0, // Communication with device failed. Same as in hardware dependent modules.
+  TIMEOUT                = 0xF1, // Timed out while waiting for response. Number of bytes received is 0.
+  BAD_OPCODE             = 0xF2, // opcode is not supported by the device
+  WAKE_SUCCESS           = 0xF3, // received proper wake token
+  EXECUTION_ERROR        = 0xF4, // chip was in a state where it could not execute the command, response status byte indicates command execution error (status byte = 0x0F)
+  UNIMPLEMENTED          = 0xF5, // Function or some element of it hasn't been implemented yet
+  ASSERT_FAILURE         = 0xF6, // Code failed run-time consistency check
+  TX_FAIL                = 0xF7, // Failed to write
+  NOT_LOCKED             = 0xF8, // required zone was not locked
+  NO_DEVICES             = 0xF9, // For protocols that support device discovery (kit protocol), no devices were found
 };
 
 
@@ -143,6 +175,7 @@ enum class ATECCZones : uint8_t {
 };
 
 enum class ATECCDataSize : uint8_t {
+  L0  = 0x00,  // Data is this long.
   L4  = 0x04,  // Data is this long.
   L32 = 0x20   // Data is this long.
 };
@@ -173,21 +206,42 @@ enum class ATECCOpcodes : uint8_t {
 };
 
 
+/*
+* This enum defines the different high-level operations supported by the driver.
+* They allow us to tag the op_group with some context so that (maybe) dozens of
+*   discrete asyncronous bus operations can be delt with in a sensible way.
+*/
+enum class ATECCHLOps : uint8_t {
+  UNDEF       = 0x00,
+  WAKEUP,
+  READ_CONF,
+  WRITE_CONF,
+  READ_SLOT,
+  WRITE_SLOT,
+  READ_OTP,
+  WRITE_OTP,
+  LOCK_CONF,
+  LOCK_SLOT,
+  LOCK_OTP
+};
+
+
+/* This is stored in slot 8. It's size must be 416 bytes. */
 typedef struct atecc_birth_cert_t {
-  uint8_t  s_ver;
-  uint8_t  c_ver;
-  uint8_t  hw_code;
-  uint8_t  hw_ver;
-  uint8_t  lot_num[4];
-  uint8_t  make_str[24];
-  uint8_t  model_str[24];
-  uint64_t manu_date;
-  UUID     hw_id;
-  UUID     prov_id;
-  uint8_t  prov_pub[64];
-  uint64_t prov_date;
-  uint8_t  key_refs[128];
-  uint8_t  manu_blob[116];
+  uint8_t  s_ver;           // Serialization version of this data
+  uint8_t  c_ver;           // Carve-up version used on this ATECC
+  uint8_t  hw_fam;          // Hardware family code
+  uint8_t  hw_ver;          // Hardware version code
+  uint8_t  lot_num[4];      // Manufacturer lot number
+  uint8_t  make_str[24];    // Null-terminated string
+  uint8_t  model_str[24];   // Null-terminated string
+  uint64_t manu_date;       // Epoch time stamp of manufacture
+  uint64_t prov_date;       // Epoch time stamp of provisioning
+  UUID     hw_id;           // The UUID of the device this cert belongs to
+  UUID     prov_id;         // UUID of the provisioning system
+  uint8_t  prov_pub[64];    // The public key of the provisioner
+  uint8_t  key_refs[128];   // Key ID strings
+  uint8_t  manu_blob[116];  // Optional manufacturer blob
 } ATECBirthCert;
 
 
@@ -226,6 +280,58 @@ typedef struct atecc_slot_conf_t {
 * Pin defs for this module.
 * Set pin def to 255 to mark it as unused.
 */
+class ATECC508OpGroup {
+  public:
+    const ATECCHLOps hl_op;
+    // TODO: Enum.
+    //   -2:  mem failure
+    //   -1:  bus failure
+    //    0:  Unresolved
+    //    1:  Success
+    int8_t   op_state   = 0;
+    uint16_t op_buf_len = 0;
+    uint8_t* op_buf = nullptr;
+
+    ATECC508OpGroup(const ATECCHLOps oc) : hl_op(oc) {};
+
+    ATECC508OpGroup(const ATECCHLOps oc, const unsigned int _buf_sz) : ATECC508OpGroup(oc) {
+      if (0 < _buf_sz) {
+        op_buf_len = _buf_sz;
+        op_buf = (uint8_t*) malloc(op_buf_len);
+        op_state = (nullptr == op_buf) ? -2 : 0;
+      }
+    };
+
+    ~ATECC508OpGroup() {
+      if (nullptr != op_buf) {
+        free(op_buf);
+        op_buf = nullptr;
+      }
+    };
+
+    inline int addBusOp(I2CBusOp* o) {
+      return _op_q.insert(o);
+    };
+
+    inline I2CBusOp* nextBusOp() {
+      return _op_q.dequeue();
+    };
+
+    inline int ops_remaining() {
+      return _op_q.size();
+    };
+
+
+  private:
+    PriorityQueue<I2CBusOp*> _op_q;
+};
+
+
+
+/*
+* Pin defs for this module.
+* Set pin def to 255 to mark it as unused.
+*/
 class ATECC508Opts {
   public:
     // If valid, will use a gpio operation to pull the SDA pin low to wake device.
@@ -248,7 +354,7 @@ class ATECC508Opts {
 
 
 // TODO: We are only extending EventReceiver while the driver is written.
-class ATECC508 : public EventReceiver,
+class ATECC508 :
   #ifdef MANUVR_CONSOLE_SUPPORT
     public ConsoleInterface,
   #endif
@@ -263,7 +369,7 @@ class ATECC508 : public EventReceiver,
     #ifdef MANUVR_CONSOLE_SUPPORT
       /* Overrides from ConsoleInterface */
       uint consoleGetCmds(ConsoleCommand**);
-      inline const char* const consoleName() { return getReceiverName();  };
+      inline const char* consoleName() { return "ATECC508a";  };
       void consoleCmdProc(StringBuilder* input);
     #endif  //MANUVR_CONSOLE_SUPPORT
 
@@ -272,21 +378,21 @@ class ATECC508 : public EventReceiver,
     int8_t io_op_callback(BusOp*);
     void printDebug(StringBuilder*);
 
-    /* Overrides from EventReceiver */
-    //int8_t notify(ManuvrMsg*);
-    int8_t callback_proc(ManuvrMsg*);
-
     void printSlotInfo(uint8_t slot, StringBuilder*);
     void printBirthCert(StringBuilder*);
+
+    // TODO: Has potential to expose class contents to outside callers.
+    inline uint8_t* serialNumber() {   return &_config[0];  };
+
+    void timed_service();
 
     #if defined(ATECC508_CAPABILITY_DEBUG)
     static const char* getPktTypeStr(ATECCPktCodes);
     static const char* getOpStr(ATECCOpcodes);
+    static const char* getHLOpStr(ATECCHLOps);
     static const char* getReturnStr(ATECCReturnCodes);
     #endif  // ATECC508_CAPABILITY_DEBUG
-    static const unsigned int getOpTime(ATECCOpcodes);
-    static ATECCReturnCodes   validateRC(ATECCOpcodes oc, uint8_t* buf);
-
+    static unsigned int getOpTime(const ATECCOpcodes);
 
 
   protected:
@@ -294,12 +400,18 @@ class ATECC508 : public EventReceiver,
 
 
   private:
+    StringBuilder local_log;
+    ManuvrMsg _atec_service;
+    PriorityQueue<ATECC508OpGroup*> _op_grps;
+    ATECC508OpGroup* _current_grp   = nullptr;
     const unsigned long WD_TIMEOUT  = 1300;  // Chip goes to sleep after this many ms.
     unsigned long _last_action_time = 0;  // Tracks the last time the device was known to be awake.
     unsigned long _last_wake_sent   = 0;  // Tracks the last time we sent wake sequence.
     uint32_t      _atecc_flags      = 0;  // Flags related to maintaining the state machine.
     uint16_t      _addr_counter     = 0;  // Mirror of the device's internal address counter.
     uint16_t      _slot_locks       = 0;  // One bit per slot.
+    uint8_t       _sn[9];                 // Serial number
+    uint8_t       _config[128];           // Device configuration zone.
     SlotDef       _slot[16];              // Two bytes per slot.
     ATECBirthCert _birth_cert;            // The device's birth certificate.
 
@@ -307,30 +419,62 @@ class ATECC508 : public EventReceiver,
     ATECCOpcodes  _current_op = ATECCOpcodes::UNDEF;
 
 
+    inline uint32_t _atec_flags() {                return _atecc_flags;            };
+    inline bool _atec_flag(uint32_t _flag) {       return (_atecc_flags & _flag);  };
+    inline void _atec_flip_flag(uint32_t _flag) {  _atecc_flags ^= _flag;          };
+    inline void _atec_clear_flag(uint32_t _flag) { _atecc_flags &= ~_flag;         };
+    inline void _atec_set_flag(uint32_t _flag) {   _atecc_flags |= _flag;          };
+    inline void _atec_set_flag(uint32_t _flag, bool nu) {
+      if (nu) _atecc_flags |= _flag;
+      else    _atecc_flags &= ~_flag;
+    };
+
     inline bool slot_locked(uint8_t slot_number) {
       return (0x01 & (_slot_locks >> (slot_number & 0x0F)));
     };
 
+    void flushLocalLog();
     void internal_reset();
 
     /* Packet operations. */
-    int read_op_buffer(ATECCDataSize);
-    int dispatch_packet(ATECCPktCodes, uint8_t* buf, uint16_t len);
-    int command_operation(uint8_t* buf, uint16_t len);
-    inline int idle_operation() {    return dispatch_packet(ATECCPktCodes::IDLE,  nullptr, 0);  };
-    inline int sleep_operation() {   return dispatch_packet(ATECCPktCodes::SLEEP, nullptr, 0);  };
-    inline int reset_operation() {   return dispatch_packet(ATECCPktCodes::RESET, nullptr, 0);  };
+    I2CBusOp* _rx_packet(ATECCDataSize, uint8_t*);
+    I2CBusOp* _tx_packet(ATECCPktCodes, ATECCDataSize, uint8_t*);
+
+    inline I2CBusOp* reset_operation() {   return _tx_packet(ATECCPktCodes::RESET, ATECCDataSize::L0, nullptr);  };
+    inline I2CBusOp* sleep_operation() {   return _tx_packet(ATECCPktCodes::SLEEP, ATECCDataSize::L0, nullptr);  };
+    inline I2CBusOp* idle_operation() {    return _tx_packet(ATECCPktCodes::IDLE,  ATECCDataSize::L0, nullptr);  };
 
     bool need_wakeup();  // Wakeup related.
     int send_wakeup();   // Wakeup related.
+    I2CBusOp* _wake_packet0();  // Return a BusOp for a wake packet.
+    I2CBusOp* _wake_packet1();  // Return a BusOp for a wake packet.
+
+    /*
+    * Members for birth cert validation and management.
+    */
+    int8_t _read_birth_cert();
+    int8_t generateBirthCert();
+    int8_t getSlotByName(const char*);
+    bool  _birth_cert_valid();
+
+    /*
+    * I/O grouping functions
+    */
+    int8_t  _dispatch_op_grp(ATECC508OpGroup*);
+    int8_t  _op_group_advance();
+    int8_t  _clean_current_op_group();
+    int8_t  _op_group_callback(ATECC508OpGroup*);
+    inline bool _have_pending_ops() {
+      return ((nullptr != _current_grp) || (0 < _op_grps.size()));
+    };
 
     /*
     * Members for zone access and management.
     */
-    int zone_lock();
+    int zone_lock(const ATECCZones, uint8_t slot, uint16_t crc);
     int zone_read(ATECCZones, ATECCDataSize, uint16_t addr);
     int zone_write(ATECCZones, uint8_t* buf, ATECCDataSize, uint16_t addr);
-
+    inline void _wipe_config() {    memset(_config, 0, 128);    };
 
     /*
     * Slot zone convenience fxns.
@@ -343,7 +487,7 @@ class ATECC508 : public EventReceiver,
     * Config zone convenience fxns.
     */
     int config_read();
-    int config_write();
+    int config_write(uint8_t new_config[128]);
 
     /*
     * OTP zone convenience fxns.
