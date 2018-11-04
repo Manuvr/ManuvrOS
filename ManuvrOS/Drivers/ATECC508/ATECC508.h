@@ -106,27 +106,24 @@ This is not Atmel's general driver. It is a Manuvr-specific driver that imposes
 #define ATECC508_CAPABILITY_DEBUG
 #define ATECC508_CAPABILITY_CONFIG_UNLOCK
 
+#define ATECC508_I2CADDR           0x60  // Default i2c address.
 #define ATECC508_S_VER             0x01  // Version of the birth-cert serialization format.
 #define ATECC508_C_VER             0x01  // Version of the ATEC carveup.
 
-
-#define ATECC508_FLAG_SELECTOR_MODE 0x00000001  // How does the seslector byte work?
-#define ATECC508_FLAG_TTL_ENABLE    0x00000002  // I/O voltage thresholds.
-#define ATECC508_FLAG_10S_WATCHDOG  0x00000004  // Is the watchdog timeout set to 10 seconds?
-
-#define ATECC508_FLAG_OPS_RUNNING   0x00200000  // Are there running bus operations?
-#define ATECC508_FLAG_BCERT_VALID   0x00400000  // Is the birth cert valid?
-#define ATECC508_FLAG_BCERT_LOADED  0x00800000  // Is the birth cert loaded?
+#define ATECC508_FLAG_SELECTOR_MODE 0x00100000  // How does the seslector byte work?
+#define ATECC508_FLAG_TTL_ENABLE    0x00200000  // I/O voltage thresholds.
+#define ATECC508_FLAG_10S_WATCHDOG  0x00400000  // Is the watchdog timeout set to 10 seconds?
+#define ATECC508_FLAG_OPS_RUNNING   0x00800000  // Are there running bus operations?
 #define ATECC508_FLAG_AWAKE         0x01000000  // The part is believed to be awake.
 #define ATECC508_FLAG_PRESENT       0x02000000  // The part is present.
 #define ATECC508_FLAG_OTP_LOCKED    0x04000000  // The OTP/DATA zones are locked.
 #define ATECC508_FLAG_CONF_LOCKED   0x08000000  // The conf zone is locked.
 #define ATECC508_FLAG_CONF_READ     0x10000000  // The config member is valid.
-
+#define ATECC508_FLAG_BCERT_VALID   0x20000000  // Is the birth cert valid?
+#define ATECC508_FLAG_BCERT_LOADED  0x40000000  // Is the birth cert loaded?
 #define ATECC508_FLAG_PENDING_WAKE  0x80000000  // There is a wake sequence outstanding.
 
 
-#define ATECC508_I2CADDR           0x60
 
 
 
@@ -172,7 +169,6 @@ enum class ATECCPktCodes : uint8_t {
   COMMAND = 0x03
 };
 
-
 enum class ATECCZones : uint8_t {
   CONF = 0x00,  // 128 bytes across 2 slots.
   OTP  = 0x01,  // 64 bytes across 2 slots.
@@ -184,7 +180,6 @@ enum class ATECCDataSize : uint8_t {
   L4  = 0x04,  // Data is this long.
   L32 = 0x20   // Data is this long.
 };
-
 
 enum class ATECCOpcodes : uint8_t {
   UNDEF       = 0x00,
@@ -439,7 +434,7 @@ class ATECC508 :
     void internal_reset();
 
     /* Packet operations. */
-    I2CBusOp* _rx_packet(ATECCDataSize, uint8_t*);
+    I2CBusOp* _rx_packet(ATECCDataSize, uint8_t*, bool add_3_pad);
     I2CBusOp* _tx_packet(ATECCPktCodes, uint16_t, uint8_t*);
     inline I2CBusOp* _tx_packet(ATECCPktCodes pc, ATECCDataSize ds, uint8_t* buf) {
       return _tx_packet(pc, (uint16_t) ds, buf);
@@ -501,8 +496,7 @@ class ATECC508 :
     */
     bool need_wakeup();  // Wakeup related.
     int send_wakeup();   // Wakeup related.
-    I2CBusOp* _wake_packet0();  // Return a BusOp for a wake packet.
-    I2CBusOp* _wake_packet1();  // Return a BusOp for a wake packet.
+    I2CBusOp* _wake_packet();  // Return a BusOp for a wake packet.
 
     inline unsigned long _wd_timeout_value() {
       // Chip goes to sleep after this many ms.
