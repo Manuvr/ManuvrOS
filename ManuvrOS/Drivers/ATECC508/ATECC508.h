@@ -110,16 +110,20 @@ This is not Atmel's general driver. It is a Manuvr-specific driver that imposes
 #define ATECC508_C_VER             0x01  // Version of the ATEC carveup.
 
 
-#define ATECC508_FLAG_OPS_RUNNING  0x00200000  // Are there running bus operations?
-#define ATECC508_FLAG_BCERT_VALID  0x00400000  // Is the birth cert valid?
-#define ATECC508_FLAG_BCERT_LOADED 0x00800000  // Is the birth cert loaded?
-#define ATECC508_FLAG_AWAKE        0x01000000  // The part is believed to be awake.
-#define ATECC508_FLAG_SYNCD        0x02000000  // The part is present and has been read.
-#define ATECC508_FLAG_OTP_LOCKED   0x04000000  // The OTP zone is locked.
-#define ATECC508_FLAG_CONF_LOCKED  0x08000000  // The conf zone is locked.
-#define ATECC508_FLAG_DATA_LOCKED  0x10000000  // The data zone is locked.
-#define ATECC508_FLAG_CONF_READ    0x20000000  // The config member is valid.
-#define ATECC508_FLAG_PENDING_WAKE 0x80000000  // There is a wake sequence outstanding.
+#define ATECC508_FLAG_SELECTOR_MODE 0x00000001  // How does the seslector byte work?
+#define ATECC508_FLAG_TTL_ENABLE    0x00000002  // I/O voltage thresholds.
+#define ATECC508_FLAG_10S_WATCHDOG  0x00000004  // Is the watchdog timeout set to 10 seconds?
+
+#define ATECC508_FLAG_OPS_RUNNING   0x00200000  // Are there running bus operations?
+#define ATECC508_FLAG_BCERT_VALID   0x00400000  // Is the birth cert valid?
+#define ATECC508_FLAG_BCERT_LOADED  0x00800000  // Is the birth cert loaded?
+#define ATECC508_FLAG_AWAKE         0x01000000  // The part is believed to be awake.
+#define ATECC508_FLAG_PRESENT       0x02000000  // The part is present.
+#define ATECC508_FLAG_OTP_LOCKED    0x04000000  // The OTP/DATA zones are locked.
+#define ATECC508_FLAG_CONF_LOCKED   0x08000000  // The conf zone is locked.
+#define ATECC508_FLAG_CONF_READ     0x10000000  // The config member is valid.
+
+#define ATECC508_FLAG_PENDING_WAKE  0x80000000  // There is a wake sequence outstanding.
 
 
 #define ATECC508_I2CADDR           0x60
@@ -397,8 +401,6 @@ class ATECC508 :
     static unsigned int getOpTime(const ATECCOpcodes);
 
 
-  protected:
-
 
   private:
     const ATECC508Opts _opts;
@@ -406,18 +408,15 @@ class ATECC508 :
     ManuvrMsg _atec_service;
     PriorityQueue<ATECC508OpGroup*> _op_grps;
     ATECC508OpGroup* _current_grp   = nullptr;
-    const unsigned long WD_TIMEOUT  = 1300;  // Chip goes to sleep after this many ms.
     unsigned long _last_action_time = 0;  // Tracks the last time the device was known to be awake.
     unsigned long _last_wake_sent   = 0;  // Tracks the last time we sent wake sequence.
     uint32_t      _atecc_flags      = 0;  // Flags related to maintaining the state machine.
     uint16_t      _addr_counter     = 0;  // Mirror of the device's internal address counter.
-    uint16_t      _slot_locks       = 0;  // One bit per slot.
 
     uint8_t       _sn[9];                 // Serial number
-    uint8_t       _otp_mode;              // OTP mode byte from config.
-    uint8_t       _chip_mode;             // Chip mode byte from config.
-    uint8_t       _config[128];           // Device configuration zone.
-
+    uint8_t       _otp_mode         = 0;  // OTP mode byte from config.
+    uint8_t       _user_extra       = 0;  // User extra byte from config.
+    uint16_t      _slot_locks       = 0;  // One bit per slot.
     SlotDef       _slot[16];              // Two bytes per slot.
     ATECBirthCert _birth_cert;            // The device's birth certificate.
 
@@ -468,6 +467,7 @@ class ATECC508 :
     int8_t generateBirthCert();
     int8_t getSlotByName(const char*);
     bool  _birth_cert_valid();
+    inline void _wipe_birth_cert() {   memset((void*) &_birth_cert, 0, sizeof(ATECBirthCert));  };
 
     /*
     * Slot zone convenience fxns.
@@ -482,7 +482,6 @@ class ATECC508 :
     */
     int config_read();
     int config_write(uint8_t new_config[128]);
-    inline void _wipe_config() {    memset(_config, 0, 128);    };
 
     /*
     * OTP zone convenience fxns.
@@ -504,6 +503,11 @@ class ATECC508 :
     int send_wakeup();   // Wakeup related.
     I2CBusOp* _wake_packet0();  // Return a BusOp for a wake packet.
     I2CBusOp* _wake_packet1();  // Return a BusOp for a wake packet.
+
+    inline unsigned long _wd_timeout_value() {
+      // Chip goes to sleep after this many ms.
+      return _atec_flag(ATECC508_FLAG_10S_WATCHDOG) ? 10000 : 1300;
+    };
 };
 
 #endif   // __ATECC508_SEC_DRIVER_H__

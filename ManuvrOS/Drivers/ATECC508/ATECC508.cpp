@@ -385,7 +385,6 @@ void _atec_global_callback() {
 ATECC508::ATECC508(const ATECC508Opts* o, const uint8_t addr) : I2CDevice(addr), _opts(o) {
   INSTANCE = this;
   memset((void*) &_birth_cert, 0, sizeof(ATECBirthCert));
-  _wipe_config();
   // Setup the schedule for marching bus operations through the chip with the
   //   proper delays.
   _atec_service.incRefs();
@@ -468,17 +467,18 @@ int8_t ATECC508::io_op_callback(BusOp* _op) {
 
     case BusOpcode::RX:
       {
-        uint16_t chip_ret_len = *(completed->buf) & 0xFF;
+        uint8_t chip_ret_len = *(completed->buf) & 0xFF;
         if (chip_ret_len == (completed->buf_len + 3)) {
           ATECCReturnCodes ret = validateRC(completed->buf, completed->buf_len);
           switch (ret) {
             case ATECCReturnCodes::WAKE_FAILED:
-            _atec_set_flag(ATECC508_FLAG_AWAKE, false);
-            break;
+              _atec_set_flag(ATECC508_FLAG_AWAKE, false);
+              break;
             case ATECCReturnCodes::WAKE_SUCCESS:
-            _atec_set_flag(ATECC508_FLAG_AWAKE, true);
-            break;
+              _atec_set_flag(ATECC508_FLAG_AWAKE, true);
+              break;
             case ATECCReturnCodes::SUCCESS:
+              break;
             case ATECCReturnCodes::CONFIG_ZONE_LOCKED:
             case ATECCReturnCodes::DATA_ZONE_LOCKED:
             case ATECCReturnCodes::CHECKMAC_VERIFY_FAILED:
@@ -510,7 +510,7 @@ int8_t ATECC508::io_op_callback(BusOp* _op) {
             default:
               local_log.concatf("ATECC508::io_op_callback(): %s\n", getReturnStr(ret));
               local_log.concatf("\t ATECC508 readback: (%u)\n\t", chip_ret_len);
-              for (int i = 0; i < strict_min(chip_ret_len, completed->buf_len); i++) {
+              for (int i = 0; i < chip_ret_len; i++) {
                 local_log.concatf("%02x ", *(completed->buf + i));
               }
               break;
@@ -565,17 +565,23 @@ int8_t ATECC508::io_op_callback(BusOp* _op) {
 */
 void ATECC508::printDebug(StringBuilder* output) {
   output->concat("\n==< ATECC508a >======================\n");
-  output->concat("\t Serial:");
-  StringBuilder::printBuffer(output, serialNumber(), 9, "\t\t");
-  output->concat("\t Conf:\n");
-  StringBuilder::printBuffer(output, _config, 128, "\t\t");
-  output->concatf("\t OTP Mode:     0x%02x\n", _otp_mode);
-  output->concatf("\t Chip Mode:    0x%02x\n", _chip_mode);
+  output->concatf("\t Serial:       %02x%02x%02x%02x%02x%02x%02x%02x%02x\n", _sn[0], _sn[1], _sn[2], _sn[3], _sn[4], _sn[5], _sn[6], _sn[7], _sn[8]);
+  //output->concat("\t Conf:\n");
+  //StringBuilder::printBuffer(output, _config, 128, "\t\t");
   output->concatf("\t Awake:        %c\n", _atec_flag(ATECC508_FLAG_AWAKE) ? 'y' :'n');
-  output->concatf("\t Syncd:        %c\n", _atec_flag(ATECC508_FLAG_SYNCD) ? 'y' :'n');
-  output->concatf("\t OTP Locked:   %c\n", _atec_flag(ATECC508_FLAG_OTP_LOCKED) ? 'y' :'n');
-  output->concatf("\t Conf Locked:  %c\n", _atec_flag(ATECC508_FLAG_CONF_LOCKED) ? 'y' :'n');
-  output->concatf("\t Data Locked:  %c\n", _atec_flag(ATECC508_FLAG_DATA_LOCKED) ? 'y' :'n');
+  output->concatf("\t Present:      %c\n", _atec_flag(ATECC508_FLAG_PRESENT) ? 'y' :'n');
+
+  if (_atec_flag(ATECC508_FLAG_CONF_READ)) {
+    output->concatf("\t OTP mode:     %s\n", (0xAA == _otp_mode) ? "Readonly":"Consumption");
+    output->concatf("\t Selector:     %s\n", _atec_flag(ATECC508_FLAG_SELECTOR_MODE) ? "Writable if zero":"Always writable");
+    output->concatf("\t TTL Enable:   %c\n", _atec_flag(ATECC508_FLAG_TTL_ENABLE) ? 'y' :'n');
+    output->concatf("\t WD Timeout:   %lu ms\n", _wd_timeout_value());
+    output->concatf("\t Conf Locked:  %c\n", _atec_flag(ATECC508_FLAG_CONF_LOCKED) ? 'y' :'n');
+    output->concatf("\t Data Locked:  %c\n", _atec_flag(ATECC508_FLAG_OTP_LOCKED)  ? 'y' :'n');
+  }
+  output->concatf("\t Birth cert loaded: %c\n", _atec_flag(ATECC508_FLAG_BCERT_LOADED) ? 'y' :'n');
+  output->concatf("\t Birth cert valid:  %c\n", _atec_flag(ATECC508_FLAG_BCERT_VALID)  ? 'y' :'n');
+
   //output->concatf("\t Need WAKE:    %c\n", need_wakeup() ? 'y' :'n');
   output->concatf("\t Pending WAKE: %c\n", _atec_flag(ATECC508_FLAG_PENDING_WAKE) ? 'y' :'n');
   if (nullptr != _current_grp) {
@@ -669,15 +675,35 @@ int8_t ATECC508::_op_group_callback(ATECC508OpGroup* op_grp) {
           break;
         case ATECCHLOps::READ_CONF:
           local_log.concat("ATEC conf read.\n");
+          // NOTE: This driver discards the counters, multi-device, single-wire,
+          //   and X509 capabilities of the device. So those values are not
+          //   recorded.
+          // Skip 8, read 32, skip 9, read 32, skip 9, read 32, skip 9, read 32
+          //memcpy(&_config[0],  (op_grp->op_buf+8),   32);
+          //memcpy(&_config[32], (op_grp->op_buf+49),  32);
+          //memcpy(&_config[64], (op_grp->op_buf+92),  32);
+          //memcpy(&_config[96], (op_grp->op_buf+134), 32);
           memcpy(&_sn[0], (op_grp->op_buf+8),  4);  // Copy serial number
           memcpy(&_sn[4], (op_grp->op_buf+16), 5);
           _otp_mode  = *(op_grp->op_buf+26);  // OTP mode byte
-          _chip_mode = *(op_grp->op_buf+27);  // Chip mode byte
-          // Skip 8, read 32, skip 9, read 32, skip 9, read 32, skip 9, read 32
-          memcpy(&_config[0],  (op_grp->op_buf+8),   32);
-          memcpy(&_config[32], (op_grp->op_buf+49),  32);
-          memcpy(&_config[64], (op_grp->op_buf+92),  32);
-          memcpy(&_config[96], (op_grp->op_buf+134), 32);
+          {
+            uint8_t _chip_mode = *(op_grp->op_buf+27);  // Chip mode byte
+            _atec_set_flag(ATECC508_FLAG_SELECTOR_MODE, (_chip_mode & 0x01));
+            _atec_set_flag(ATECC508_FLAG_TTL_ENABLE,    (_chip_mode & 0x02));
+            _atec_set_flag(ATECC508_FLAG_10S_WATCHDOG,  (_chip_mode & 0x04));
+          }
+          _user_extra = *(op_grp->op_buf+112);   // UserExtra byte
+          _atec_set_flag(ATECC508_FLAG_OTP_LOCKED,  (0x00 == *(op_grp->op_buf+114)));
+          _atec_set_flag(ATECC508_FLAG_CONF_LOCKED, (0x00 == *(op_grp->op_buf+115)));
+          {
+            // TODO: Not sure if this byte order is correct.
+            uint8_t _locks_low = *(op_grp->op_buf+116);   // SlotLocked[7..0]
+            uint8_t _locks_high = *(op_grp->op_buf+117);  // SlotLocked[15..8]
+            _slot_locks = _locks_high;
+            _slot_locks = _slot_locks << 8;
+            _slot_locks += _locks_low;
+          }
+          // Copy all of the slot/key confs...
           _slot_set(0,  (op_grp->op_buf+28), (op_grp->op_buf+134));
           _slot_set(1,  (op_grp->op_buf+30), (op_grp->op_buf+136));
           _slot_set(2,  (op_grp->op_buf+32), (op_grp->op_buf+138));
@@ -694,7 +720,7 @@ int8_t ATECC508::_op_group_callback(ATECC508OpGroup* op_grp) {
           _slot_set(13, (op_grp->op_buf+61), (op_grp->op_buf+160));
           _slot_set(14, (op_grp->op_buf+63), (op_grp->op_buf+162));
           _slot_set(15, (op_grp->op_buf+65), (op_grp->op_buf+164));
-          _atec_set_flag(ATECC508_FLAG_CONF_READ);
+          _atec_set_flag(ATECC508_FLAG_CONF_READ);  // We read the CONF zone.
           break;
         case ATECCHLOps::WRITE_CONF:
         case ATECCHLOps::READ_SLOT:
@@ -801,19 +827,10 @@ void ATECC508::consoleCmdProc(StringBuilder* input) {
       break;
     case '(':   // Lock config
       {
-        zone_lock(ATECCZones::CONF, 0, atCRC(128, _config));
+        //zone_lock(ATECCZones::CONF, 0, atCRC(128, _config));
       }
       break;
     #endif   // ATECC508_CAPABILITY_CONFIG_UNLOCK
-
-    case '+':
-      {
-        I2CBusOp* nu_bus_op = _rx_packet(ATECCDataSize::L32, &_config[0]);
-        if (nu_bus_op) {
-          _bus->queue_io_job(nu_bus_op);
-        }
-      }
-      break;
 
     case 'b':   // Read birth certificate
       slot_read(8);
@@ -1013,7 +1030,7 @@ void ATECC508::printBirthCert(StringBuilder* output) {
 * Updates the ATECC508_FLAG_AWAKE.
 */
 bool ATECC508::need_wakeup() {
-  _atec_set_flag(ATECC508_FLAG_AWAKE, (wrap_accounted_delta(millis(), _last_wake_sent) < WD_TIMEOUT));
+  _atec_set_flag(ATECC508_FLAG_AWAKE, (wrap_accounted_delta(millis(), _last_wake_sent) < _wd_timeout_value()));
   return (!_atec_flag(ATECC508_FLAG_PENDING_WAKE | ATECC508_FLAG_AWAKE));
 }
 
@@ -1098,7 +1115,12 @@ void ATECC508::internal_reset() {
   _last_action_time = 0;
   _last_wake_sent   = 0;
   _atecc_flags      = 0;
-  for (int i = 0; i < 16; i++) _slot[i].conf.val = 0;   // Zero the conf mirror.
+  _otp_mode         = 0;
+  for (int i = 0; i < 16; i++) {
+    _slot[i].conf.val = 0;  // Zero the slot/key conf.
+    _slot[i].key.val  = 0;
+  }
+  for (int i = 0; i < 9; i++) _sn[i] = 0;  // Zero the serial number.
 }
 
 
@@ -1131,7 +1153,7 @@ int ATECC508::send_wakeup() {
     _op_grps.insert(nu_op_grp);
   }
   else {
-    local_log.concat("Could not allocate mem for wakeup.\n");
+    return -2;
   }
 
   flushLocalLog();
