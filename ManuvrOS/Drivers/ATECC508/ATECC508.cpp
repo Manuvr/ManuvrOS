@@ -74,6 +74,15 @@ static ATECC508* INSTANCE = nullptr;  // Singleton pattern for timer's sake.
 
 
 #if defined(ATECC508_CAPABILITY_DEBUG)
+const char* ATECC508::getZoneStr(ATECCZones x) {
+  switch (x) {
+    case ATECCZones::CONF:   return "CONF";
+    case ATECCZones::OTP:    return "OTP";
+    case ATECCZones::DATA:   return "DATA";
+    default:                 return "UNDEF";
+  }
+}
+
 const char* ATECC508::getPktTypeStr(ATECCPktCodes x) {
   switch (x) {
     case ATECCPktCodes::RESET:    return "RESET";
@@ -283,7 +292,7 @@ uint8_t zoneBytePack(ATECCZones zone, ATECCDataSize ds) {
 * @param[out] crc pointer to the place where the two-bytes of CRC will be placed
 * @return The 16-bit result.
 */
-static uint16_t atCRC(uint8_t length, uint8_t *data) {
+static uint16_t atCRC(uint8_t length, uint8_t* data) {
   const uint16_t POLYNOM = 0x8005;
   uint16_t crc_register = 0;
   uint8_t shift_register;
@@ -303,14 +312,22 @@ static uint16_t atCRC(uint8_t length, uint8_t *data) {
 }
 
 
+static void atCRCBuf(uint8_t length, uint8_t* data, uint8_t* crc_ptr) {
+  const uint16_t crc_register = atCRC(length, data);
+  *(crc_ptr + 0) = (uint8_t)(crc_register & 0x00FF);
+  *(crc_ptr + 1) = (uint8_t)(crc_register >> 8);
+}
+
+
 /**
 * Taken from Atmel Cryptoauth and modified.
 * checks for basic error frame in data
+* Performs CRC check on packet.
 *
 * @param data pointer to received data - expected to be in the form of a CA device response frame
 * @return ATCA_STATUS indicating type of error or no error
 */
-static ATECCReturnCodes validateRC(uint8_t* buf) {
+static ATECCReturnCodes validateRC(uint8_t* buf, uint16_t len) {
   const uint8_t GOOD[4] = { 0x04, 0x00, 0x03, 0x40 };
   if (memcmp(buf, GOOD, 4) == 0) {
     return ATECCReturnCodes::SUCCESS;
@@ -333,7 +350,14 @@ static ATECCReturnCodes validateRC(uint8_t* buf) {
     }
   }
   else {
-    return ATECCReturnCodes::SUCCESS;
+    // TODO: Broken CRC check.
+    //uint16_t crc = atCRC(len-2, buf);
+    //if ((crc & 0xFF) == *(buf + (len-1))) {
+    //  if (((crc>>8) & 0xFF) == *(buf + (len-2))) {
+        return ATECCReturnCodes::SUCCESS;
+    //  }
+    //}
+    //return ATECCReturnCodes::STATUS_CRC;
   }
 }
 
@@ -444,66 +468,56 @@ int8_t ATECC508::io_op_callback(BusOp* _op) {
 
     case BusOpcode::RX:
       {
-        // This is a buffer read. Adjust the counter appropriately, and cycle the
-        //   operation back in to read more if necessary.
-        if (completed->hasFault()) {
-          // TODO: Depending on platform implementation of i2c, a failure to ACK on the
-          //   device's part might fail the transfer.
-          if (0x04 == *(completed->buf)) {   // If we read back 4 bytes...
-            // TODO: CRC validation
-            switch ((ATECCReturnCodes) *(completed->buf+1)) {
-              // TODO: Handle return codes.
-              case ATECCReturnCodes::SUCCESS:
-                break;
-              default:
-                break;
-            }
-          }
-        }
         uint16_t chip_ret_len = *(completed->buf) & 0xFF;
-        local_log.concat("\t ATECC508 readback:\n\t");
-        for (int i = 0; i < strict_min(chip_ret_len, completed->buf_len); i++) {
-          local_log.concatf("%02x ", *(completed->buf + i));
-        }
-        switch (validateRC(completed->buf)) {
-          case ATECCReturnCodes::WAKE_FAILED:
+        if (chip_ret_len == (completed->buf_len + 3)) {
+          ATECCReturnCodes ret = validateRC(completed->buf, completed->buf_len);
+          switch (ret) {
+            case ATECCReturnCodes::WAKE_FAILED:
             _atec_set_flag(ATECC508_FLAG_AWAKE, false);
             break;
-          case ATECCReturnCodes::WAKE_SUCCESS:
+            case ATECCReturnCodes::WAKE_SUCCESS:
             _atec_set_flag(ATECC508_FLAG_AWAKE, true);
             break;
-          case ATECCReturnCodes::SUCCESS:
-          case ATECCReturnCodes::CONFIG_ZONE_LOCKED:
-          case ATECCReturnCodes::DATA_ZONE_LOCKED:
-          case ATECCReturnCodes::CHECKMAC_VERIFY_FAILED:
-          case ATECCReturnCodes::PARSE_ERROR:
-          case ATECCReturnCodes::STATUS_CRC:
-          case ATECCReturnCodes::STATUS_UNKNOWN:
-          case ATECCReturnCodes::STATUS_ECC:
-          case ATECCReturnCodes::FUNC_FAIL:
-          case ATECCReturnCodes::GEN_FAIL:
-          case ATECCReturnCodes::BAD_PARAM:
-          case ATECCReturnCodes::INVALID_ID:
-          case ATECCReturnCodes::INVALID_SIZE:
-          case ATECCReturnCodes::BAD_CRC:
-          case ATECCReturnCodes::RX_FAIL:
-          case ATECCReturnCodes::RX_NO_RESPONSE:
-          case ATECCReturnCodes::RESYNC_WITH_WAKEUP:
-          case ATECCReturnCodes::PARITY_ERROR:
-          case ATECCReturnCodes::TX_TIMEOUT:
-          case ATECCReturnCodes::RX_TIMEOUT:
-          case ATECCReturnCodes::COMM_FAIL:
-          case ATECCReturnCodes::TIMEOUT:
-          case ATECCReturnCodes::BAD_OPCODE:
-          case ATECCReturnCodes::EXECUTION_ERROR:
-          case ATECCReturnCodes::UNIMPLEMENTED:
-          case ATECCReturnCodes::ASSERT_FAILURE:
-          case ATECCReturnCodes::TX_FAIL:
-          case ATECCReturnCodes::NOT_LOCKED:
-          case ATECCReturnCodes::NO_DEVICES:
-            break;
-          default:
-            break;
+            case ATECCReturnCodes::SUCCESS:
+            case ATECCReturnCodes::CONFIG_ZONE_LOCKED:
+            case ATECCReturnCodes::DATA_ZONE_LOCKED:
+            case ATECCReturnCodes::CHECKMAC_VERIFY_FAILED:
+            case ATECCReturnCodes::PARSE_ERROR:
+            case ATECCReturnCodes::STATUS_CRC:
+            case ATECCReturnCodes::STATUS_UNKNOWN:
+            case ATECCReturnCodes::STATUS_ECC:
+            case ATECCReturnCodes::FUNC_FAIL:
+            case ATECCReturnCodes::GEN_FAIL:
+            case ATECCReturnCodes::BAD_PARAM:
+            case ATECCReturnCodes::INVALID_ID:
+            case ATECCReturnCodes::INVALID_SIZE:
+            case ATECCReturnCodes::BAD_CRC:
+            case ATECCReturnCodes::RX_FAIL:
+            case ATECCReturnCodes::RX_NO_RESPONSE:
+            case ATECCReturnCodes::RESYNC_WITH_WAKEUP:
+            case ATECCReturnCodes::PARITY_ERROR:
+            case ATECCReturnCodes::TX_TIMEOUT:
+            case ATECCReturnCodes::RX_TIMEOUT:
+            case ATECCReturnCodes::COMM_FAIL:
+            case ATECCReturnCodes::TIMEOUT:
+            case ATECCReturnCodes::BAD_OPCODE:
+            case ATECCReturnCodes::EXECUTION_ERROR:
+            case ATECCReturnCodes::UNIMPLEMENTED:
+            case ATECCReturnCodes::ASSERT_FAILURE:
+            case ATECCReturnCodes::TX_FAIL:
+            case ATECCReturnCodes::NOT_LOCKED:
+            case ATECCReturnCodes::NO_DEVICES:
+            default:
+              local_log.concatf("ATECC508::io_op_callback(): %s\n", getReturnStr(ret));
+              local_log.concatf("\t ATECC508 readback: (%u)\n\t", chip_ret_len);
+              for (int i = 0; i < strict_min(chip_ret_len, completed->buf_len); i++) {
+                local_log.concatf("%02x ", *(completed->buf + i));
+              }
+              break;
+          }
+        }
+        else {
+          local_log.concatf("ATECC508::io_op_callback(): Return len is != bus_op len (%u vs %u)\n", chip_ret_len, completed->buf_len);
         }
       }
       break;
@@ -551,10 +565,12 @@ int8_t ATECC508::io_op_callback(BusOp* _op) {
 */
 void ATECC508::printDebug(StringBuilder* output) {
   output->concat("\n==< ATECC508a >======================\n");
-  //output->concat("\t Serial:");
-  //StringBuilder::printBuffer(output, serialNumber(), 12, "\t\t");
+  output->concat("\t Serial:");
+  StringBuilder::printBuffer(output, serialNumber(), 9, "\t\t");
   output->concat("\t Conf:\n");
   StringBuilder::printBuffer(output, _config, 128, "\t\t");
+  output->concatf("\t OTP Mode:     0x%02x\n", _otp_mode);
+  output->concatf("\t Chip Mode:    0x%02x\n", _chip_mode);
   output->concatf("\t Awake:        %c\n", _atec_flag(ATECC508_FLAG_AWAKE) ? 'y' :'n');
   output->concatf("\t Syncd:        %c\n", _atec_flag(ATECC508_FLAG_SYNCD) ? 'y' :'n');
   output->concatf("\t OTP Locked:   %c\n", _atec_flag(ATECC508_FLAG_OTP_LOCKED) ? 'y' :'n');
@@ -646,23 +662,56 @@ int8_t ATECC508::_clean_current_op_group() {
 */
 int8_t ATECC508::_op_group_callback(ATECC508OpGroup* op_grp) {
   if (nullptr != op_grp) {
-    local_log.concatf("_op_group_callback(%s): end_state %d\n", getHLOpStr(op_grp->hl_op), op_grp->op_state);
-    StringBuilder::printBuffer(&local_log, op_grp->op_buf, op_grp->op_buf_len, "\t");
-    switch (op_grp->hl_op) {
-      case ATECCHLOps::WAKEUP:
-        break;
-      case ATECCHLOps::READ_CONF:
-      case ATECCHLOps::WRITE_CONF:
-      case ATECCHLOps::READ_SLOT:
-      case ATECCHLOps::WRITE_SLOT:
-      case ATECCHLOps::READ_OTP:
-      case ATECCHLOps::WRITE_OTP:
-      case ATECCHLOps::LOCK_CONF:
-      case ATECCHLOps::LOCK_SLOT:
-      case ATECCHLOps::LOCK_OTP:
-        break;
-      default:
-        break;
+    if (1 == op_grp->op_state) {
+      switch (op_grp->hl_op) {
+        case ATECCHLOps::WAKEUP:
+          local_log.concat("ATEC reports wakeup.\n");
+          break;
+        case ATECCHLOps::READ_CONF:
+          local_log.concat("ATEC conf read.\n");
+          memcpy(&_sn[0], (op_grp->op_buf+8),  4);  // Copy serial number
+          memcpy(&_sn[4], (op_grp->op_buf+16), 5);
+          _otp_mode  = *(op_grp->op_buf+26);  // OTP mode byte
+          _chip_mode = *(op_grp->op_buf+27);  // Chip mode byte
+          // Skip 8, read 32, skip 9, read 32, skip 9, read 32, skip 9, read 32
+          memcpy(&_config[0],  (op_grp->op_buf+8),   32);
+          memcpy(&_config[32], (op_grp->op_buf+49),  32);
+          memcpy(&_config[64], (op_grp->op_buf+92),  32);
+          memcpy(&_config[96], (op_grp->op_buf+134), 32);
+          _slot_set(0,  (op_grp->op_buf+28), (op_grp->op_buf+134));
+          _slot_set(1,  (op_grp->op_buf+30), (op_grp->op_buf+136));
+          _slot_set(2,  (op_grp->op_buf+32), (op_grp->op_buf+138));
+          _slot_set(3,  (op_grp->op_buf+34), (op_grp->op_buf+140));
+          _slot_set(4,  (op_grp->op_buf+36), (op_grp->op_buf+142));
+          _slot_set(5,  (op_grp->op_buf+38), (op_grp->op_buf+144));
+          _slot_set(6,  (op_grp->op_buf+40), (op_grp->op_buf+146));
+          _slot_set(7,  (op_grp->op_buf+49), (op_grp->op_buf+148));
+          _slot_set(8,  (op_grp->op_buf+51), (op_grp->op_buf+150));
+          _slot_set(9,  (op_grp->op_buf+53), (op_grp->op_buf+152));
+          _slot_set(10, (op_grp->op_buf+55), (op_grp->op_buf+154));
+          _slot_set(11, (op_grp->op_buf+57), (op_grp->op_buf+156));
+          _slot_set(12, (op_grp->op_buf+59), (op_grp->op_buf+158));
+          _slot_set(13, (op_grp->op_buf+61), (op_grp->op_buf+160));
+          _slot_set(14, (op_grp->op_buf+63), (op_grp->op_buf+162));
+          _slot_set(15, (op_grp->op_buf+65), (op_grp->op_buf+164));
+          _atec_set_flag(ATECC508_FLAG_CONF_READ);
+          break;
+        case ATECCHLOps::WRITE_CONF:
+        case ATECCHLOps::READ_SLOT:
+        case ATECCHLOps::WRITE_SLOT:
+        case ATECCHLOps::READ_OTP:
+        case ATECCHLOps::WRITE_OTP:
+        case ATECCHLOps::LOCK_CONF:
+        case ATECCHLOps::LOCK_SLOT:
+        case ATECCHLOps::LOCK_OTP:
+        default:
+          local_log.concatf("_op_group_callback(%s): end_state %d\n", getHLOpStr(op_grp->hl_op), op_grp->op_state);
+          StringBuilder::printBuffer(&local_log, op_grp->op_buf, op_grp->op_buf_len, "\t");
+          break;
+      }
+    }
+    else {
+      local_log.concatf("ATEC HLOp failed: %s end_state %d\n", getHLOpStr(op_grp->hl_op), op_grp->op_state);
     }
   }
   flushLocalLog();
@@ -1001,10 +1050,14 @@ I2CBusOp* ATECC508::_wake_packet1() {
 
 /*
 * Base-level packet formation fxn for transmissions.
+* Passed-in buffer is setup to allow for the length and checksum parameters,
 */
-I2CBusOp* ATECC508::_tx_packet(ATECCPktCodes pc, ATECCDataSize ds, uint8_t* io_buf) {
-  uint16_t len = (uint16_t) ds;
+I2CBusOp* ATECC508::_tx_packet(ATECCPktCodes pc, uint16_t len, uint8_t* io_buf) {
   I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
+  if (ATECCPktCodes::COMMAND == pc) {
+    *(io_buf + 0) = (uint8_t) len;
+    atCRCBuf(len-2, io_buf, (io_buf + (len-2)));
+  }
   if (nu) {
     nu->dev_addr = _dev_addr;
     nu->sub_addr = (uint16_t) pc;
@@ -1101,7 +1154,7 @@ int ATECC508::otp_read() {
     *(buf + offset++) = zoneBytePack(ATECCZones::OTP, ATECCDataSize::L32);  // Encrypt must be zero.
     *(buf + offset++) = (uint8_t) 0;   // Address LSB.
     *(buf + offset++) = (uint8_t) 0;   // Address MSB.
-    I2CBusOp* nu_bus_op = _tx_packet(ATECCPktCodes::COMMAND, ATECCDataSize::L4, (buf + (offset-4)));
+    I2CBusOp* nu_bus_op = _tx_packet(ATECCPktCodes::COMMAND, 4, (buf + (offset-4)));
     if (nu_bus_op) {
       nu_op_grp->addBusOp(nu_bus_op);
     }
@@ -1116,7 +1169,7 @@ int ATECC508::otp_read() {
     *(buf + offset++) = zoneBytePack(ATECCZones::OTP, ATECCDataSize::L32);  // Encrypt must be zero.
     *(buf + offset++) = (uint8_t) 32 >> 2;   // Address LSB.
     *(buf + offset++) = (uint8_t) 0;   // Address MSB.
-    nu_bus_op = _tx_packet(ATECCPktCodes::COMMAND, ATECCDataSize::L4, (buf + (offset-4)));
+    nu_bus_op = _tx_packet(ATECCPktCodes::COMMAND, 4, (buf + (offset-4)));
     if (nu_bus_op) {
       nu_op_grp->addBusOp(nu_bus_op);
     }
@@ -1154,75 +1207,18 @@ int ATECC508::otp_write(uint8_t* buf, uint16_t len) {
 
 
 int ATECC508::config_read() {
-  const unsigned int OP_SIZE = 4 * 8;  // Total memory required for this operation.
+  // 128 bytes to read
+  // Must be done with 4 read ops, each with...
+  //  * 7 bytes of overhead on the command side
+  //  * 3 bytes of overhead on the read side
+  const unsigned int OP_SIZE = 128 + ((7 + 3) * 4);  // Total memory required for this operation.
   ATECC508OpGroup* nu_op_grp = new ATECC508OpGroup(ATECCHLOps::READ_CONF, OP_SIZE);
-  int ret = -1;
-
-  if ((nullptr != nu_op_grp) && (nullptr != nu_op_grp->op_buf)) {
-    uint8_t* buf = nu_op_grp->op_buf;
-    unsigned int offset = 0;
-
-    *(buf + offset++) = (uint8_t) ATECCOpcodes::Read;
-    *(buf + offset++) = zoneBytePack(ATECCZones::CONF, ATECCDataSize::L32);  // Encrypt must be zero.
-    *(buf + offset++) = (uint8_t) 0;   // Address LSB.
-    *(buf + offset++) = (uint8_t) 0;   // Address MSB.
-    I2CBusOp* nu_bus_op = _tx_packet(ATECCPktCodes::COMMAND, ATECCDataSize::L4, (buf + (offset-4)));
-    if (nu_bus_op) {
-      nu_op_grp->addBusOp(nu_bus_op);
-    }
-    nu_bus_op = _rx_packet(ATECCDataSize::L4, (buf + offset));
-    if (nu_bus_op) {
-      nu_op_grp->addBusOp(nu_bus_op);
-    }
-    nu_bus_op = _rx_packet(ATECCDataSize::L32, &_config[0]);
-    if (nu_bus_op) {
-      nu_op_grp->addBusOp(nu_bus_op);
-    }
-    offset += 4;
-
-    *(buf + offset++) = (uint8_t) ATECCOpcodes::Read;
-    *(buf + offset++) = zoneBytePack(ATECCZones::CONF, ATECCDataSize::L32);  // Encrypt must be zero.
-    *(buf + offset++) = (uint8_t) 32 >> 2;   // Address LSB.
-    *(buf + offset++) = (uint8_t) 0;   // Address MSB.
-    nu_bus_op = _tx_packet(ATECCPktCodes::COMMAND, ATECCDataSize::L4, (buf + (offset-4)));
-    if (nu_bus_op) {
-      nu_op_grp->addBusOp(nu_bus_op);
-    }
-    nu_bus_op = _rx_packet(ATECCDataSize::L32, &_config[32]);
-    if (nu_bus_op) {
-      nu_op_grp->addBusOp(nu_bus_op);
-    }
-
-    *(buf + offset++) = (uint8_t) ATECCOpcodes::Read;
-    *(buf + offset++) = zoneBytePack(ATECCZones::CONF, ATECCDataSize::L32);  // Encrypt must be zero.
-    *(buf + offset++) = (uint8_t) 64 >> 2;   // Address LSB.
-    *(buf + offset++) = (uint8_t) 0;   // Address MSB.
-    nu_bus_op = _tx_packet(ATECCPktCodes::COMMAND, ATECCDataSize::L4, (buf + (offset-4)));
-    if (nu_bus_op) {
-      nu_op_grp->addBusOp(nu_bus_op);
-    }
-    nu_bus_op = _rx_packet(ATECCDataSize::L32, &_config[64]);
-    if (nu_bus_op) {
-      nu_op_grp->addBusOp(nu_bus_op);
-    }
-
-    *(buf + offset++) = (uint8_t) ATECCOpcodes::Read;
-    *(buf + offset++) = zoneBytePack(ATECCZones::CONF, ATECCDataSize::L32);  // Encrypt must be zero.
-    *(buf + offset++) = (uint8_t) 96 >> 2;   // Address LSB.
-    *(buf + offset++) = (uint8_t) 0;   // Address MSB.
-    nu_bus_op = _tx_packet(ATECCPktCodes::COMMAND, ATECCDataSize::L4, (buf + (offset-4)));
-    if (nu_bus_op) {
-      nu_op_grp->addBusOp(nu_bus_op);
-    }
-    nu_bus_op = _rx_packet(ATECCDataSize::L32, &_config[96]);
-    if (nu_bus_op) {
-      nu_op_grp->addBusOp(nu_bus_op);
-    }
-    // TODO: Make all the error-checking above more nested.
+  int ret = zone_read(nu_op_grp, ATECCZones::CONF, 128, 0);
+  if (0 == ret) {
     _dispatch_op_grp(nu_op_grp);
   }
   else {
-    local_log.concat("Could not allocate mem for conf read.\n");
+    local_log.concatf("zone_read() call failed with code %d.\n", ret);
   }
   flushLocalLog();
   return ret;
@@ -1454,6 +1450,14 @@ int ATECC508::slot_read(uint8_t s) {
 
 
 /*
+*/
+void ATECC508::_slot_set(uint8_t idx, uint8_t* slot_conf, uint8_t* key_conf) {
+  _slot[idx].conf.val = (*(slot_conf+1) << 8) + *(slot_conf);
+  _slot[idx].key.val  = (*(key_conf+1) << 8) + *(key_conf);
+}
+
+
+/*
 * WARNING: Locking the OTP zone also locks the DATA zone, and vice-versa.
 * WARNING: Locking the CONF zone is irreversible. Be sure you are sure.
 */
@@ -1507,4 +1511,77 @@ int ATECC508::zone_lock(const ATECCZones zone, uint8_t slot, uint16_t crc) {
   }
   flushLocalLog();
   return ret;
+}
+
+
+// Intermediate-level call to translate a zone read into a ATECC508OpGroup*, which is returned.
+int ATECC508::zone_read(ATECC508OpGroup* op_grp, ATECCZones zone, uint16_t len, uint16_t addr) {
+  // Is the total length decomposable into 32 and 4 byte blocks? Fail if not.
+  addr = addr >> 2;
+  uint8_t reads_32 = len >> 5;   // Efficient division by 32.
+  uint8_t reads_4  = (len - (32 * reads_32)) >> 2;
+  if (len == ((reads_4 * 4) + (reads_32 * 32))) {
+    //uint16_t overhead = (reads_4 + reads_32) * 10;
+    if ((nullptr != op_grp) && (nullptr != op_grp->op_buf)) {
+      uint8_t* buf = op_grp->op_buf;
+      unsigned int offset = 0;
+
+      for (int i = 0; i < reads_32; i++) {
+        offset += 1;    // Length byte placeholder
+        *(buf + offset++) = (uint8_t) ATECCOpcodes::Read;
+        *(buf + offset++) = zoneBytePack(zone, ATECCDataSize::L32);
+        *(buf + offset++) = (uint8_t) addr & 0xFF;       // Address LSB.
+        *(buf + offset++) = (uint8_t) (addr>>8) & 0xFF;  // Address MSB.
+        offset += 2;    // Checksum placeholder
+        I2CBusOp* nu_bus_op = _tx_packet(ATECCPktCodes::COMMAND, 7, (buf + (offset-7)));
+        if (nu_bus_op) {
+          op_grp->addBusOp(nu_bus_op);
+          nu_bus_op = _rx_packet(ATECCDataSize::L32, (buf + offset));
+          if (nu_bus_op) {
+            op_grp->addBusOp(nu_bus_op);
+          }
+          else {
+            return -3;
+          }
+        }
+        else {
+          return -2;
+        }
+        offset += 35;
+        addr += 8;  // Increment by eight 4-byte blocks.
+      }
+      for (int i = 0; i < reads_4; i++) {
+        offset += 1;    // Length byte placeholder
+        *(buf + offset++) = (uint8_t) ATECCOpcodes::Read;
+        *(buf + offset++) = zoneBytePack(zone, ATECCDataSize::L4);
+        *(buf + offset++) = (uint8_t) addr & 0xFF;       // Address LSB.
+        *(buf + offset++) = (uint8_t) (addr>>8) & 0xFF;  // Address MSB.
+        offset += 2;    // Checksum placeholder
+        I2CBusOp* nu_bus_op = _tx_packet(ATECCPktCodes::COMMAND, 7, (buf + (offset-7)));
+        if (nu_bus_op) {
+          op_grp->addBusOp(nu_bus_op);
+          nu_bus_op = _rx_packet(ATECCDataSize::L4, (buf + offset));
+          if (nu_bus_op) {
+            op_grp->addBusOp(nu_bus_op);
+          }
+          else {
+            return -3;
+          }
+        }
+        else {
+          return -2;
+        }
+        offset += 7;
+        addr += 1;  // Increment by one 4-byte block.
+      }
+      return 0;
+    }
+    else {
+      local_log.concatf("Could not allocate mem for zone_read (%s).\n", getZoneStr(zone));
+    }
+  }
+  else {
+    local_log.concatf("Illegal len to zone_read(). len=%u\n", len);
+  }
+  return -1;
 }

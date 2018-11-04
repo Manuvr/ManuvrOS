@@ -118,6 +118,7 @@ This is not Atmel's general driver. It is a Manuvr-specific driver that imposes
 #define ATECC508_FLAG_OTP_LOCKED   0x04000000  // The OTP zone is locked.
 #define ATECC508_FLAG_CONF_LOCKED  0x08000000  // The conf zone is locked.
 #define ATECC508_FLAG_DATA_LOCKED  0x10000000  // The data zone is locked.
+#define ATECC508_FLAG_CONF_READ    0x20000000  // The config member is valid.
 #define ATECC508_FLAG_PENDING_WAKE 0x80000000  // There is a wake sequence outstanding.
 
 
@@ -382,11 +383,12 @@ class ATECC508 :
     void printBirthCert(StringBuilder*);
 
     // TODO: Has potential to expose class contents to outside callers.
-    inline uint8_t* serialNumber() {   return &_config[0];  };
+    inline uint8_t* serialNumber() {   return &_sn[0];  };
 
     void timed_service();
 
     #if defined(ATECC508_CAPABILITY_DEBUG)
+    static const char* getZoneStr(ATECCZones);
     static const char* getPktTypeStr(ATECCPktCodes);
     static const char* getOpStr(ATECCOpcodes);
     static const char* getHLOpStr(ATECCHLOps);
@@ -396,10 +398,10 @@ class ATECC508 :
 
 
   protected:
-    int8_t attached();
 
 
   private:
+    const ATECC508Opts _opts;
     StringBuilder local_log;
     ManuvrMsg _atec_service;
     PriorityQueue<ATECC508OpGroup*> _op_grps;
@@ -410,13 +412,14 @@ class ATECC508 :
     uint32_t      _atecc_flags      = 0;  // Flags related to maintaining the state machine.
     uint16_t      _addr_counter     = 0;  // Mirror of the device's internal address counter.
     uint16_t      _slot_locks       = 0;  // One bit per slot.
+
     uint8_t       _sn[9];                 // Serial number
+    uint8_t       _otp_mode;              // OTP mode byte from config.
+    uint8_t       _chip_mode;             // Chip mode byte from config.
     uint8_t       _config[128];           // Device configuration zone.
+
     SlotDef       _slot[16];              // Two bytes per slot.
     ATECBirthCert _birth_cert;            // The device's birth certificate.
-
-    const ATECC508Opts _opts;
-    ATECCOpcodes  _current_op = ATECCOpcodes::UNDEF;
 
 
     inline uint32_t _atec_flags() {                return _atecc_flags;            };
@@ -438,24 +441,10 @@ class ATECC508 :
 
     /* Packet operations. */
     I2CBusOp* _rx_packet(ATECCDataSize, uint8_t*);
-    I2CBusOp* _tx_packet(ATECCPktCodes, ATECCDataSize, uint8_t*);
-
-    inline I2CBusOp* reset_operation() {   return _tx_packet(ATECCPktCodes::RESET, ATECCDataSize::L0, nullptr);  };
-    inline I2CBusOp* sleep_operation() {   return _tx_packet(ATECCPktCodes::SLEEP, ATECCDataSize::L0, nullptr);  };
-    inline I2CBusOp* idle_operation() {    return _tx_packet(ATECCPktCodes::IDLE,  ATECCDataSize::L0, nullptr);  };
-
-    bool need_wakeup();  // Wakeup related.
-    int send_wakeup();   // Wakeup related.
-    I2CBusOp* _wake_packet0();  // Return a BusOp for a wake packet.
-    I2CBusOp* _wake_packet1();  // Return a BusOp for a wake packet.
-
-    /*
-    * Members for birth cert validation and management.
-    */
-    int8_t _read_birth_cert();
-    int8_t generateBirthCert();
-    int8_t getSlotByName(const char*);
-    bool  _birth_cert_valid();
+    I2CBusOp* _tx_packet(ATECCPktCodes, uint16_t, uint8_t*);
+    inline I2CBusOp* _tx_packet(ATECCPktCodes pc, ATECCDataSize ds, uint8_t* buf) {
+      return _tx_packet(pc, (uint16_t) ds, buf);
+    };
 
     /*
     * I/O grouping functions
@@ -468,13 +457,17 @@ class ATECC508 :
       return ((nullptr != _current_grp) || (0 < _op_grps.size()));
     };
 
+    inline I2CBusOp* reset_operation() {   return _tx_packet(ATECCPktCodes::RESET, ATECCDataSize::L0, nullptr);  };
+    inline I2CBusOp* sleep_operation() {   return _tx_packet(ATECCPktCodes::SLEEP, ATECCDataSize::L0, nullptr);  };
+    inline I2CBusOp* idle_operation() {    return _tx_packet(ATECCPktCodes::IDLE,  ATECCDataSize::L0, nullptr);  };
+
     /*
-    * Members for zone access and management.
+    * Members for birth cert validation and management.
     */
-    int zone_lock(const ATECCZones, uint8_t slot, uint16_t crc);
-    int zone_read(ATECCZones, ATECCDataSize, uint16_t addr);
-    int zone_write(ATECCZones, uint8_t* buf, ATECCDataSize, uint16_t addr);
-    inline void _wipe_config() {    memset(_config, 0, 128);    };
+    int8_t _read_birth_cert();
+    int8_t generateBirthCert();
+    int8_t getSlotByName(const char*);
+    bool  _birth_cert_valid();
 
     /*
     * Slot zone convenience fxns.
@@ -482,18 +475,35 @@ class ATECC508 :
     int slot_read(uint8_t s);
     int slot_write(uint8_t s);
     int slot_lock(uint8_t s);
+    void _slot_set(uint8_t idx, uint8_t* slot_conf, uint8_t* key_conf);
 
     /*
     * Config zone convenience fxns.
     */
     int config_read();
     int config_write(uint8_t new_config[128]);
+    inline void _wipe_config() {    memset(_config, 0, 128);    };
 
     /*
     * OTP zone convenience fxns.
     */
     int otp_read();
     int otp_write(uint8_t* buf, uint16_t len);
+
+    /*
+    * Members for zone access and management.
+    */
+    int zone_lock(const ATECCZones, uint8_t slot, uint16_t crc);
+    int zone_read(ATECC508OpGroup*, ATECCZones, uint16_t len, uint16_t addr);
+    int zone_write(ATECCZones, uint8_t* buf, ATECCDataSize, uint16_t addr);
+
+    /*
+    * Low-level wakeup fxns.
+    */
+    bool need_wakeup();  // Wakeup related.
+    int send_wakeup();   // Wakeup related.
+    I2CBusOp* _wake_packet0();  // Return a BusOp for a wake packet.
+    I2CBusOp* _wake_packet1();  // Return a BusOp for a wake packet.
 };
 
 #endif   // __ATECC508_SEC_DRIVER_H__
