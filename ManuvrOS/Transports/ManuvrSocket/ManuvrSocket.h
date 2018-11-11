@@ -43,6 +43,10 @@ This is basically only for linux until it is needed in a smaller space.
   #include <sys/socket.h>
   #include <netinet/in.h>
   #include <arpa/inet.h>
+#elif defined(__MANUVR_ESP32)
+  #include "lwip/err.h"
+  #include "lwip/sockets.h"
+  #include "lwip/sys.h"
 #else
   // No supportage.
 #endif
@@ -71,10 +75,7 @@ class ManuvrSocket : public ManuvrXport {
     char*       _addr        = nullptr;
     int         _port_number = 0;
     int         _sock        = 0;
-
-    #if defined(__MANUVR_LINUX)
-      struct sockaddr_in _sockaddr;
-    #endif
+    struct sockaddr_in _sockaddr;
 
     ManuvrSocket(const char* nom, const char* addr, int port, SocketOpts* opts);
 

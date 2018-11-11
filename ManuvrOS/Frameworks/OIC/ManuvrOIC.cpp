@@ -383,7 +383,7 @@ int8_t ManuvrOIC::attached() {
       #if defined (__BUILD_HAS_THREADS)
         if (0 == _thread_id) {
           // If we are in a threaded environment, we will want a thread if there isn't one already.
-          if (createThread(&_thread_id, nullptr, main_OIC_loop, (void*) this)) {
+          if (createThread(&_thread_id, nullptr, main_OIC_loop, (void*) this), nullptr) {
             Kernel::log("Failed to create iotivity-constrained thread.\n");
           }
         }

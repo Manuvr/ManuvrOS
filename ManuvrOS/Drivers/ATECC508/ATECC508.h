@@ -36,22 +36,24 @@ ATECC508_CAPABILITY_CONFIG_UNLOCK
 This is not Atmel's general driver. It is a Manuvr-specific driver that imposes
   a usage pattern specific to Manuvr and uses the following slot carveup:
 
-  0: H/W private key     // HW_PRI      Used to sign nonce for proof of original hardware.
-  1: Firmware Auth Priv  // FW_PRI      Optionally used to bind firmware to hardware.
-  2: API private key     // MVRAPI_PRI  Identifies this device to Manuvr's API.
-  3: API ECDH key        // MVRAPI_ECDH Generated for API comm.
-  4: <USER private key>  // UPRI0       Left open for the end-user.
-  5: <USER ECDH key>     // UECDH0      Left open for the end-user.
-  6: <USER private key>  // UPRI1       Left open for the end-user.
-  7: <USER ECDH key>     // UECDH1      Left open for the end-user.
-  8: Birth cert          // B_CERT      Placed at provisioning time.
-  9: Provisioning sig    // PROV_SIG    The sig over the birth cert.
-  A: Manuvr API Pub 0    // MVRAPI0     API key
-  B: Manuvr API Pub 1    // MVRAPI1     Reserve API key
-  C: Firmware Auth Pub   // FW_PUB      Used to unlock slots [1, 3].
-  D: User unlock         // U1_UNLOCK   Used to unlock slots 6, 7, E.
-  E: <USER>              // UPUB0       Left open for the end-user.
-  F: <USER>              // UPUB1       Left open for the end-user.
+  Slot  Description         ID Str      Purpose
+  ----------------------------------------------------------------------------------------
+  0:    H/W private key     HW_PRI      Used to sign nonce for proof of original hardware.
+  1:    Firmware Auth Priv  FW_PRI      Optionally used to bind firmware to hardware.
+  2:    API private key     MVRAPI_PRI  Identifies this device to Manuvr's API.
+  3:    API ECDH key        MVRAPI_ECDH Generated for API comm.
+  4:    <USER private key>  UPRI0       Left open for the end-user.
+  5:    <USER ECDH key>     UECDH0      Left open for the end-user.
+  6:    <USER private key>  UPRI1       Left open for the end-user.
+  7:    <USER ECDH key>     UECDH1      Left open for the end-user.
+  8:    Birth cert          B_CERT      Placed at provisioning time.
+  9:    Provisioning sig    PROV_SIG    The sig over the birth cert.
+  A:    Manuvr API Pub 0    MVRAPI0     API key
+  B:    Manuvr API Pub 1    MVRAPI1     Reserve API key
+  C:    Firmware Auth Pub   FW_PUB      Used to unlock slots [1, 3].
+  D:    User unlock         U1_UNLOCK   Used to unlock slots 6, 7, E.
+  E:    <USER>              UPUB0       Left open for the end-user.
+  F:    <USER>              UPUB1       Left open for the end-user.
 
   Monotonic counters and OTP region are unused, and are available for user code.
 
@@ -68,27 +70,10 @@ This is not Atmel's general driver. It is a Manuvr-specific driver that imposes
     * hardware UUID                    16  The hardware's unique UUID.
     * manufacturer and model strings   48
     * manufacturer-specified data     116  Optional manufacturer data.
-
     * provisioner UUID                 16  The UUID of the provisioner.
     * provisioner public key           64  The provisioner's public key.
     * provisioning date                 8  The date this data was written.
     * string mappings to each slot    128  An array of strings naming the slots.
-        HW_PRI
-        FW_PRI
-        MVRAPI_PRI
-        MVRAPI_ECDH
-        UPRI0
-        UECDH0
-        UPRI1
-        UECDH1
-        B_CERT
-        PROV_SIG
-        MVRAPI0
-        MVRAPI1
-        FW_PUB
-        U1_UNLOCK
-        UPUB0
-        UPUB1
 */
 
 #ifndef __ATECC508_SEC_DRIVER_H__
@@ -125,8 +110,6 @@ This is not Atmel's general driver. It is a Manuvr-specific driver that imposes
 
 
 
-
-
 enum class ATECCReturnCodes : uint8_t {
   SUCCESS                = 0x00, // Function succeeded.
   CONFIG_ZONE_LOCKED     = 0x01,
@@ -160,7 +143,6 @@ enum class ATECCReturnCodes : uint8_t {
   NOT_LOCKED             = 0xF8, // required zone was not locked
   NO_DEVICES             = 0xF9, // For protocols that support device discovery (kit protocol), no devices were found
 };
-
 
 enum class ATECCPktCodes : uint8_t {
   RESET   = 0x00,
@@ -204,7 +186,6 @@ enum class ATECCOpcodes : uint8_t {
   PrivWrite   = 0x46,
   SHA         = 0x47
 };
-
 
 /*
 * This enum defines the different high-level operations supported by the driver.
@@ -459,6 +440,7 @@ class ATECC508 :
     * Members for birth cert validation and management.
     */
     int8_t _read_birth_cert();
+    int8_t _write_birth_cert();
     int8_t generateBirthCert();
     int8_t getSlotByName(const char*);
     bool  _birth_cert_valid();
@@ -468,7 +450,7 @@ class ATECC508 :
     * Slot zone convenience fxns.
     */
     int slot_read(uint8_t s);
-    int slot_write(uint8_t s);
+    int slot_write(uint8_t s, uint8_t* slot_buf, uint16_t len);
     int slot_lock(uint8_t s);
     void _slot_set(uint8_t idx, uint8_t* slot_conf, uint8_t* key_conf);
 

@@ -24,12 +24,14 @@ limitations under the License.
 
 #include "Rationalizer.h"
 
-
 #ifndef __MANUVR_ISOLATED_UTILITIES_H__
 #define __MANUVR_ISOLATED_UTILITIES_H__
 
+class StringBuilder;
+
 #if defined(__BUILD_HAS_BASE64)
   int wrapped_base64_decode(uint8_t* dst, size_t dlen, size_t* olen, const uint8_t* src, size_t slen);
+  int wrapped_base64_encode(uint8_t* dst, size_t dlen, size_t* olen, const uint8_t* src, size_t slen);
 #endif
 
 // Everytime you macro a function, baby Jesus cries.
@@ -49,8 +51,15 @@ inline int32_t  strict_min(int32_t  a, int32_t  b) {  return (a < b) ? a : b; };
 inline int16_t  strict_min(int16_t  a, int16_t  b) {  return (a < b) ? a : b; };
 inline int8_t   strict_min(int8_t   a, int8_t   b) {  return (a < b) ? a : b; };
 
+/*
+* Given two unsigned values, gives the difference between them after accounting
+*   for wrap.
+*/
 inline uint32_t wrap_accounted_delta(unsigned int a, unsigned int b) {
   return (a > b) ? (a - b) : (b - a);
 };
+
+
+void epochTimeToString(uint64_t, StringBuilder*);  //
 
 #endif    // __MANUVR_ISOLATED_UTILITIES_H__

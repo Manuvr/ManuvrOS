@@ -347,7 +347,7 @@ uint32_t randomInt() {
 */
 void LinuxPlatform::init_rng() {
   srand(time(nullptr));          // Seed the PRNG...
-  if (createThread(&rng_thread_id, nullptr, dev_urandom_reader, nullptr)) {
+  if (createThread(&rng_thread_id, nullptr, dev_urandom_reader, nullptr, nullptr)) {
     printf("Failed to create RNG thread.\n");
     exit(-1);
   }

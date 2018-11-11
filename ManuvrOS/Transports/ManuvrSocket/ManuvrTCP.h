@@ -43,6 +43,10 @@ This is basically only for linux until it is needed in a smaller space.
   #include <sys/socket.h>
   #include <netinet/in.h>
   #include <arpa/inet.h>
+#elif defined(__MANUVR_ESP32)
+  #include "lwip/err.h"
+  #include "lwip/sockets.h"
+  #include "lwip/sys.h"
 #else
   // No supportage.
 #endif

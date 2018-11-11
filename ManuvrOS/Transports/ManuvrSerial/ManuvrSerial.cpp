@@ -429,7 +429,7 @@ int8_t ManuvrSerial::attached() {
       platform.kernel()->addSchedule(&read_abort_event);
     #else
       read_abort_event.alterScheduleRecurrence(0);
-      createThread(&_thread_id, nullptr, xport_read_handler, (void*) this);
+      createThread(&_thread_id, nullptr, xport_read_handler, (void*) this, nullptr);
     #endif
     return 1;
   }

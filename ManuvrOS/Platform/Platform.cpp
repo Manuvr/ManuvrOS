@@ -158,7 +158,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   #endif
 
   #if defined(CONFIG_MANUVR_SENSOR_MGR)
-    _sm = new SensorManager();   // TODO: Mem leak. Make static.
+    _sm = new SensorManager();
     _kernel.subscribe((EventReceiver*) _sm);
   #endif
 
@@ -510,13 +510,15 @@ void maskableInterrupts(bool enable) {
 *
 * @return The thread's return value.
 */
-int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn, void* _args) {
+int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn, void* _args, ManuvrThreadOptions* _thread_opts) {
   #if defined(__BUILD_HAS_PTHREADS)
     return pthread_create(_thread_id, (const pthread_attr_t*) _something, _fxn, _args);
   #elif defined(__BUILD_HAS_FREERTOS)
     // TODO: Make the task parameters 1-to-1 with pthreads.
     TaskHandle_t taskHandle;
-    portBASE_TYPE ret = xTaskCreate((TaskFunction_t) _fxn, "_t", 2048, (void*)_args, 1, &taskHandle);
+    uint16_t _stack_sz = (nullptr == _thread_opts) ? 2048 : _thread_opts->stack_sz;
+    const char* _name  = (const char*) (nullptr == _thread_opts) ? "_t" : _thread_opts->thread_name;
+    portBASE_TYPE ret = xTaskCreate((TaskFunction_t) _fxn, _name, _stack_sz, (void*)_args, 1, &taskHandle);
     if (pdPASS == ret) {
       *_thread_id = (unsigned long) taskHandle;
       return 0;

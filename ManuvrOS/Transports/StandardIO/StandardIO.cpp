@@ -210,7 +210,7 @@ int8_t StandardIO::attached() {
     #else
       read_abort_event.enableSchedule(false);
       read_abort_event.alterScheduleRecurrence(0);
-      createThread(&_thread_id, nullptr, xport_read_handler, (void*) this);
+      createThread(&_thread_id, nullptr, xport_read_handler, (void*) this, nullptr);
     #endif
     return 1;
   }

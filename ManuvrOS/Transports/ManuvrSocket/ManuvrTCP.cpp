@@ -52,9 +52,8 @@ This is basically only for linux for now.
 *   executes under an ISR. Keep it brief...
 *******************************************************************************/
 
-#if defined(__BUILD_HAS_FREERTOS) || defined(__MANUVR_LINUX)
-  #include <arpa/inet.h>
-
+#if defined(__MANUVR_LINUX)
+  // TODO: Generallize into Manuvr threading abstraction.
   // Threaded platforms will need this to compensate for a loss of ISR.
   extern void* xport_read_handler(void* active_xport);
 
@@ -119,7 +118,51 @@ This is basically only for linux for now.
 
     return NULL;
   }
+#elif defined(__MANUVR_ESP32)
+  // TODO: Generallize into Manuvr threading abstraction.
+  /*
+  * Since listening for connections on this transport involves blocking, we have a
+  *   thread dedicated to the task...
+  */
+  void* socket_listener_loop(void* active_xport) {
+    if (NULL != active_xport) {
+      ManuvrTCP* listening_inst = (ManuvrTCP*) active_xport;
+      StringBuilder output;
+      int cli_sock;
+      struct sockaddr_in cli_addr;
+      while (listening_inst->listening()) {
+        unsigned int clientlen = sizeof(cli_addr);
 
+        /* Wait for client connection */
+        if ((cli_sock = accept(listening_inst->getSockID(), (struct sockaddr *) &cli_addr, &clientlen)) < 0) {
+          output.concat("Failed to accept client connection.\n");
+        }
+        else {
+          ManuvrTCP* nu_connection = new ManuvrTCP(listening_inst, cli_sock, &cli_addr);
+          nu_connection->setPipeStrategy(listening_inst->getPipeStrategy());
+
+          ManuvrMsg* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
+          event->addArg((EventReceiver*) nu_connection);
+          Kernel::staticRaiseEvent(event);
+
+          output.concatf("TCP Client connected: %s\n", (char*) inet_ntoa(cli_addr.sin_addr));
+        }
+        Kernel::log(&output);
+
+        // Zero the sockaddr structure for next use. The new transport
+        //   instance should have copied it by now.
+        memset((uint8_t *) &cli_addr, 0, sizeof(cli_addr));
+      }
+      // Close the listener...
+      // TODO: Is this all we need to do?   ---J. Ian Lindsay   Fri Jan 15 11:32:12 PST 2016
+      close(listening_inst->getSockID());
+    }
+    else {
+      Kernel::log("Tried to listen with a NULL transport.");
+    }
+
+    return NULL;
+  }
 #else
   // No special globals needed for this platform.
 #endif
@@ -289,9 +332,13 @@ int8_t ManuvrTCP::listen() {
   }
 
   initialized(true);
-  createThread(&_thread_id, NULL, socket_listener_loop, (void*) this);
+  ManuvrThreadOptions _t_opts;
+  _t_opts.thread_name = "tcp_listen";
+  _t_opts.stack_sz = 4096;
 
   listening(true);
+  createThread(&_thread_id, NULL, socket_listener_loop, (void*) this, &_t_opts);
+
   local_log.concatf("TCP Now listening at %s:%d.\n", _addr, _port_number);
 
   flushLocalLog();

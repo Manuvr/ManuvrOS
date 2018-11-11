@@ -135,6 +135,11 @@ typedef struct __platform_gpio_def {
   uint16_t   mode;  // Strictly more than needed. Padding structure...
 } PlatformGPIODef;
 
+typedef struct __platform_thread_opts {
+  char*     thread_name;
+  uint16_t  stack_sz;
+} ManuvrThreadOptions;
+
 /*
 * When we wrap platform-provided peripherals, they will carry
 * one of these type-codes.
@@ -344,7 +349,6 @@ extern "C" {
 bool setTimeAndDateStr(char*);   // Takes a string of the form given by RFC-2822: "Mon, 15 Aug 2005 15:52:01 +0000"   https://www.ietf.org/rfc/rfc2822.txt
 bool setTimeAndDate(uint8_t y, uint8_t m, uint8_t d, uint8_t wd, uint8_t h, uint8_t mi, uint8_t s);
 uint32_t epochTime();            // Returns an integer representing the current datetime.
-void epochTimeToString(uint64_t, StringBuilder*);  //
 void currentDateTime(StringBuilder*);    // Writes a human-readable datetime to the argument.
 
 /*
@@ -363,7 +367,7 @@ void maskableInterrupts(bool);
 */
 void sleep_millis(unsigned long millis);
 
-int createThread(unsigned long*, void*, ThreadFxnPtr, void*);
+int createThread(unsigned long*, void*, ThreadFxnPtr, void*, ManuvrThreadOptions*);
 int deleteThread(unsigned long*);
 int wakeThread(unsigned long);
 

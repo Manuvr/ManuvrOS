@@ -285,7 +285,7 @@ int8_t ManuvrTelehash::listen() {
   }
 
   initialized(true);
-  createThread(&_thread_id, nullptr, socket_listener_loop, (void*) this);
+  createThread(&_thread_id, nullptr, socket_listener_loop, (void*) this, nullptr);
 
   listening(true);
   local_log.concatf("TCP Now listening at %s:%d.\n", _addr, _port_number);

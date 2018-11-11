@@ -110,7 +110,7 @@ int8_t I2CAdapter::bus_init() {
       #endif
     }
     else {
-      createThread(&_thread_id, nullptr, i2c_worker_thread, (void*) this);
+      createThread(&_thread_id, nullptr, i2c_worker_thread, (void*) this, nullptr);
       busOnline(true);
     }
   }

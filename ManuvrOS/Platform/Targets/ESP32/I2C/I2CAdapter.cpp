@@ -54,7 +54,7 @@ int8_t I2CAdapter::bus_init() {
         if (ESP_OK == i2c_driver_install(((0 == a_id) ? I2C_NUM_0 : I2C_NUM_1), conf.mode, 0, 0, 0)) {
           // TODO: This needs to collapse into Manuvr's abstraction of threads.
           //xTaskCreate(i2c_worker_thread, "i2c_thread", 1024 * 2, (void* ) this, 1, nullptr);
-          createThread(&_thread_id, nullptr, i2c_worker_thread, (void*) this);
+          createThread(&_thread_id, nullptr, i2c_worker_thread, (void*) this, nullptr);
           busOnline(true);
         }
       }

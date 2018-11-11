@@ -35,6 +35,7 @@ LOCAL_ESP_COMPS += Platform
 LOCAL_ESP_COMPS += Platform/Cryptographic Platform/Identity
 LOCAL_ESP_COMPS += XenoSession XenoSession/Console
 LOCAL_ESP_COMPS += Transports Transports/StandardIO
+LOCAL_ESP_COMPS += Transports Transports/ManuvrSocket
 
 #COMPONENT_ADD_LDFLAGS := -L$(OUTPUT_PATH)/ManuvrOS
 

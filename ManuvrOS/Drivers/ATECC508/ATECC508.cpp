@@ -246,6 +246,8 @@ static const uint8_t config_def[128] = {
   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,  // LastKeyUse
 
   0x00, 0x00, 0x00, 0x00,  // UserExtra, Selector, LockValue
+  0x00, 0x00,  // SlotLocked
+  0x00, 0x00,  // RFU, must be zero
   0x00, 0x00, 0x00, 0x00,  // No X.509 usage
 
   /* Key Config  [7-0][15-8] */
@@ -1007,6 +1009,16 @@ void ATECC508::printBirthCert(StringBuilder* output) {
   }
   //uint8_t prov_pub[64];
   //uint8_t manu_blob[116];
+}
+
+
+int8_t ATECC508::_read_birth_cert() {
+  return slot_read(8);
+}
+
+
+int8_t ATECC508::_write_birth_cert() {
+  return -1;
 }
 
 
