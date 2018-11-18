@@ -36,6 +36,7 @@ This file is meant to contain a set of common functions that are typically platf
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "soc/efuse_reg.h"
+#include "tcpip_adapter.h"
 #include "esp_system.h"
 #include "esp_log.h"
 
@@ -529,6 +530,10 @@ int8_t ESP32Platform::platformPreInit(Argument* root_config) {
     ManuvrConsole* _console = new ManuvrConsole((BufferPipe*) _console_xport);
     _kernel.subscribe((EventReceiver*) _console);
     _kernel.subscribe((EventReceiver*) _console_xport);
+  #endif
+
+  #if defined(MANUVR_SUPPORT_TCPSOCKET) || defined(MANUVR_SUPPORT_UDPSOCKET)
+    tcpip_adapter_init();
   #endif
   return 0;
 }
