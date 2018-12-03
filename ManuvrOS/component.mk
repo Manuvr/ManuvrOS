@@ -26,6 +26,8 @@ LOCAL_ESP_COMPS += Drivers/PMIC/BQ24155
 LOCAL_ESP_COMPS += Drivers/PMIC/LTC294x
 LOCAL_ESP_COMPS += Drivers/Sensors
 LOCAL_ESP_COMPS += Drivers/Sensors/BMP280
+LOCAL_ESP_COMPS += Drivers/Sensors/TMP102
+
 LOCAL_ESP_COMPS += Platform/Targets/ESP32
 LOCAL_ESP_COMPS += Platform/Targets/ESP32/I2C
 LOCAL_ESP_COMPS += Platform/Peripherals/I2C
@@ -33,6 +35,7 @@ LOCAL_ESP_COMPS += Platform/Peripherals/SPI
 LOCAL_ESP_COMPS += Platform/Peripherals
 LOCAL_ESP_COMPS += Platform
 LOCAL_ESP_COMPS += Platform/Cryptographic Platform/Identity
+
 LOCAL_ESP_COMPS += XenoSession XenoSession/Console
 LOCAL_ESP_COMPS += Transports Transports/StandardIO
 LOCAL_ESP_COMPS += Transports Transports/ManuvrSocket

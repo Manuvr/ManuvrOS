@@ -236,6 +236,14 @@ class SensorWrapper {
     confusion later. See some of the provided sensor classes for examples.
     */
 
+    inline SensorError readDatumRaw(uint8_t dat, double *val) {         return readDatumRaw(dat, (void*) &val); }
+    inline SensorError readDatumRaw(uint8_t dat, float *val) {          return readDatumRaw(dat, (void*) &val); }
+    inline SensorError readDatumRaw(uint8_t dat, int *val) {            return readDatumRaw(dat, (void*) &val); }
+    inline SensorError readDatumRaw(uint8_t dat, unsigned int *val) {   return readDatumRaw(dat, (void*) &val); }
+    inline SensorError readDatumRaw(uint8_t dat, char** val) {          return readDatumRaw(dat, (void*) &val); }
+    inline SensorError readDatumRaw(uint8_t dat, unsigned char** val) { return readDatumRaw(dat, (void*) &val); }
+    SensorError readDatumRaw(uint8_t, void*);   // This is the actual implementation.
+
     // Static functions...
     static const char* errorString(SensorError);
     #if defined(__BUILD_HAS_JSON)
@@ -259,14 +267,6 @@ class SensorWrapper {
     inline SensorError updateDatum(uint8_t dat, char* val) {          return updateDatum(dat, (void*) val); }
     inline SensorError updateDatum(uint8_t dat, unsigned char* val) { return updateDatum(dat, (void*) val); }
     SensorError updateDatum(uint8_t, void*);   // This is the actual implementation.
-
-    inline SensorError readDatumRaw(uint8_t dat, double *val) {         return readDatumRaw(dat, (void*) &val); }
-    inline SensorError readDatumRaw(uint8_t dat, float *val) {          return readDatumRaw(dat, (void*) &val); }
-    inline SensorError readDatumRaw(uint8_t dat, int *val) {            return readDatumRaw(dat, (void*) &val); }
-    inline SensorError readDatumRaw(uint8_t dat, unsigned int *val) {   return readDatumRaw(dat, (void*) &val); }
-    inline SensorError readDatumRaw(uint8_t dat, char** val) {          return readDatumRaw(dat, (void*) &val); }
-    inline SensorError readDatumRaw(uint8_t dat, unsigned char** val) { return readDatumRaw(dat, (void*) &val); }
-    SensorError readDatumRaw(uint8_t, void*);   // This is the actual implementation.
 
     inline void isActive(bool x) {
       _flags = (x) ? (_flags | MANUVR_SENSOR_FLAG_ACTIVE) : (_flags & ~MANUVR_SENSOR_FLAG_ACTIVE);

@@ -48,6 +48,8 @@ SensorManager::SensorManager() : EventReceiver("SensorManager") {
 * Destructor.
 */
 SensorManager::~SensorManager() {
+  _sensor_report.enableSchedule(false);
+  platform.kernel()->removeSchedule(&_sensor_report);
 }
 
 
@@ -82,7 +84,7 @@ int8_t SensorManager::dropSensor(SensorWrapper* sensor) {
 
 int SensorManager::_service_sensors() {
   int return_val = 0;
-  Kernel::log("_service_sensors()\n");
+  //Kernel::log("_service_sensors()\n");
   for (int i = 0; i < _sensors.size(); i++) {
     SensorWrapper* current = _sensors.get(i);
     // TODO: This ought to be a general time-sharing fxn.
@@ -244,10 +246,10 @@ int8_t SensorManager::attached() {
     _sensor_report.repurpose(MANUVR_MSG_SENSOR_MGR_SVC, (EventReceiver*) this);
     _sensor_report.incRefs();
     _sensor_report.specific_target = (EventReceiver*) this;
-    _sensor_report.alterScheduleRecurrence(0);
-    _sensor_report.alterSchedulePeriod(5000);
+    _sensor_report.alterScheduleRecurrence(-1);
+    _sensor_report.alterSchedulePeriod(1001);
     _sensor_report.autoClear(false);
-    _sensor_report.enableSchedule(false);
+    _sensor_report.enableSchedule(true);
     platform.kernel()->addSchedule(&_sensor_report);
     return 1;
   }

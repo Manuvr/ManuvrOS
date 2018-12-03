@@ -41,14 +41,18 @@ const DatumDef datum_defs[] = {
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
 
+TMP102::TMP102() : TMP102(TMP102_ADDRESS) {
+}
+
+
 TMP102::TMP102(uint8_t addr) : I2CDeviceWithRegisters(addr, 4, 8), SensorWrapper("TMP102") {
   define_datum(&datum_defs[0]);
 
   // Set the config register.
+  defineRegister(TMP102_REG_RESULT,    (uint16_t) 0,      false, false, false);
   defineRegister(TMP102_REG_CONFIG,    (uint16_t) 0x60B0, true,  false, true);
   defineRegister(TMP102_REG_ALRT_LO,   (uint16_t) 720,    true,  false, true);
   defineRegister(TMP102_REG_ALRT_HI,   (uint16_t) 880,    true,  false, true);
-  defineRegister(TMP102_REG_RESULT,    (uint16_t) 0,      false, false, false);
 }
 
 
@@ -137,9 +141,14 @@ int8_t TMP102::register_read_cb(DeviceRegister* reg) {
     case TMP102_REG_RESULT:
       {
         uint16_t temperature_read  = reg->getVal();
-        //temperature_read = ((msb * (0x01 << (4+(lsb & 0x01)))) + (lsb >> (4-(lsb & 0x01))));  // Handles EXTended mode.
+        uint8_t msb = temperature_read >> 8;
+        uint8_t lsb = temperature_read & 0xFF;
+        temperature_read = ((msb * (0x01 << (4+(lsb & 0x01)))) + (lsb >> (4-(lsb & 0x01))));  // Handles EXTended mode.
         float celcius  = ((int16_t) temperature_read) * 0.0625;  // The scale of the TMP102.
-        updateDatum(0, celcius);
+        SensorError err = updateDatum(0, celcius);
+        if (SensorError::NO_ERROR != err) {
+          Kernel::log("Failed to update datum.");
+        }
       }
       break;
 

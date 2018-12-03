@@ -36,7 +36,8 @@ limitations under the License.
 class TMP102 : public I2CDeviceWithRegisters, public SensorWrapper {
   public:
     TMP102(uint8_t addr, uint8_t pin);   // What pin is the EOC IRQ?
-    TMP102(uint8_t addr = TMP102_ADDRESS);
+    TMP102(uint8_t addr);
+    TMP102();
     ~TMP102();
 
     /* Overrides from SensorWrapper */

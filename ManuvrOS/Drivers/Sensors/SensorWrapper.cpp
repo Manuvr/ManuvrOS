@@ -375,19 +375,15 @@ SensorError SensorWrapper::readDatumRaw(uint8_t dat, void* void_buffer) {
   uint8_t* buffer = (uint8_t*) void_buffer;   // Done to avoid compiler warnings.
   SensorDatum* current = get_datum(dat);
   if (current) {
-    if ((current->target_mem == nullptr) || (buffer == nullptr)) {
-      for (int i = 0; i < current->length(); i++) {
-        *(uint8_t*)(buffer + i) = *((uint8_t*)current->target_mem + i);
-      }
+    if ((current->target_mem != nullptr) && (buffer != nullptr)) {
+      memcpy(void_buffer, current->target_mem, current->length());
+      return SensorError::NO_ERROR;
     }
     else {
       return SensorError::NULL_POINTER;
     }
   }
-  else {
-    return SensorError::INVALID_DATUM;
-  }
-  return SensorError::NO_ERROR;
+  return SensorError::INVALID_DATUM;
 }
 
 /*
