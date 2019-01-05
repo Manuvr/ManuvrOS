@@ -192,7 +192,8 @@ bool setTimeAndDate(uint8_t y, uint8_t m, uint8_t d, uint8_t wd, uint8_t h, uint
 * Returns an integer representing the current datetime.
 */
 uint32_t epochTime() {
-  return 0;
+  struct timeval tv;
+  return (0 == gettimeofday(&tv, nullptr)) ? 0 : tv.tv_sec;
 }
 
 
@@ -202,7 +203,13 @@ uint32_t epochTime() {
 * 2004-02-12T15:19:21+00:00
 */
 void currentDateTime(StringBuilder* target) {
-  if (target) {
+  if (target != nullptr) {
+    time_t now;
+    struct tm tstruct;
+    time(&now);
+    localtime_r(&now, &tstruct);
+    strftime(buf, sizeof(buf), "%Y-%m-%d.%X", &tstruct);
+    target->concat(buf);
   }
 }
 
@@ -523,6 +530,11 @@ int8_t ESP32Platform::platformPreInit(Argument* root_config) {
   #endif
 
   if (root_config) {
+    char* tz_string = nullptr;
+    if (root_config->getValueAs("tz", &tz_string)) {
+      setenv("TZ", tz_string, 1);
+      tzset();
+    }
   }
   #if defined(MANUVR_CONSOLE_SUPPORT)
     // TODO: This is a leak, for sure. Ref-count EventReceivers.

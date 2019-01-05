@@ -52,11 +52,13 @@ enum class GPIOMode : uint8_t {
 #define CHANGE_PULL_DOWN   0xF6
 #define FALLING_PULL_DOWN  0xF5
 #define RISING_PULL_DOWN   0xF4
+
 extern "C" {
   unsigned long millis();
   unsigned long micros();
 }
 
+extern uint8_t temprature_sens_read();
 
 
 class ESP32Platform : public ManuvrPlatform {
