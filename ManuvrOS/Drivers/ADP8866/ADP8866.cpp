@@ -467,7 +467,7 @@ int8_t ADP8866::attached() {
     readRegister((uint8_t) ADP8866_MANU_DEV_ID);
 
     if (255 != _pins.irq) {
-      setPinFxn(_pins.irq, FALLING, ADP8866_ISR);
+      setPinFxn(_pins.irq, FALLING_PULL_UP, ADP8866_ISR);
     }
     return 1;
   }

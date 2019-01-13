@@ -19,7 +19,7 @@ limitations under the License.
 
 
 This class was an adaption to Manuvr based on Kosma Moczek's minmea.
-https://github.com/cloudyourcar/minmea
+https://github.com/kosma/minmea
 */
 
 /*

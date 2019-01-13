@@ -110,9 +110,14 @@ void StringBuilder::printBuffer(StringBuilder* output, uint8_t* buf, unsigned in
 
 
 
-/****************************************************************************************************
-* Class management....                                                                              *
-****************************************************************************************************/
+/*******************************************************************************
+*   ___ _              ___      _ _              _      _
+*  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
+* | (__| / _` (_-<_-< | _ \/ _ \ | / -_) '_| '_ \ / _` |  _/ -_)
+*  \___|_\__,_/__/__/ |___/\___/_|_\___|_| | .__/_\__,_|\__\___|
+*                                          |_|
+* Constructors/destructors, class initialization functions and so-forth...
+*******************************************************************************/
 
 /**
 * Vanilla constructor.
@@ -694,8 +699,6 @@ int StringBuilder::concatf(const char *format, ...) {
 }
 
 
-
-
 //#ifdef ARDUINO
 ///**
 //* Override to cleanly support Strings.
@@ -901,25 +904,42 @@ int StringBuilder::cmpBinString(uint8_t*unknown, int len) {
 int StringBuilder::implode(const char *delim) {
   if (delim != nullptr) {
     if (str != nullptr) {
-
     }
   }
   return 0;
 }
 
 
-
 /**
 * This function tokenizes the sum of this String according to the parameter.
+*
+* @return The number of tokens.
 */
 int StringBuilder::split(const char *delims) {
   int return_value = 0;
   this->collapseIntoBuffer();
-  if (this->col_length == 0) return 0;
-  this->null_term_check();
+  if (this->col_length == 0) {
+    return 0;
+  }
+
+  // If we are going to do something that requires a null-terminated string,
+  //   make sure that we have one. If we do, this call does nothing.
+  //   If we don't, we will add it.
+  if (nullptr != this->str) {
+    if (*(this->str + (this->col_length-1)) != '\0') {
+      uint8_t* temp = (uint8_t*) malloc(this->col_length+1);
+      if (nullptr != temp) {
+        *(temp + this->col_length) = '\0';
+        memcpy(temp, this->str, this->col_length);
+        free(this->str);
+        this->str = temp;
+      }
+    }
+  }
+
   char *temp_str  = strtok((char *)this->str, delims);
-  if (temp_str != nullptr) {
-    while (temp_str != nullptr) {
+  if (nullptr != temp_str) {
+    while (nullptr != temp_str) {
       this->concat(temp_str);
       return_value++;
       temp_str  = strtok(nullptr, delims);
@@ -934,33 +954,6 @@ int StringBuilder::split(const char *delims) {
   return return_value;
 }
 
-
-
-/****************************************************************************************************
-* These functions are awful. Don't use them if you can avoid it. They were a crime of desperation.  *
-* A future commit will see these disappear into the trash can they should have been consigned to.   *
-*    ---J. Ian Lindsay   Fri Nov 28 17:57:45 MST 2014                                               *
-****************************************************************************************************/
-
-/**
-* If we are going to do something that requires a null-terminated string, make
-*   sure that we have one. If we do, this call does nothing.
-*   If we don't, we will add it.
-* NOTE: This only operates on the collapsed buffer.
-*/
-void StringBuilder::null_term_check() {
-  if (this->str != nullptr) {
-    if (*(this->str + (this->col_length-1)) != '\0') {
-      uint8_t*temp = (uint8_t*) malloc(this->col_length+1);
-      if (temp != nullptr) {
-        *(temp + this->col_length) = '\0';
-        memcpy(temp, this->str, this->col_length);
-        free(this->str);
-        this->str = temp;
-      }
-    }
-  }
-}
 
 /**
 * This method prints ASCII representations of the bytes this instance contains.

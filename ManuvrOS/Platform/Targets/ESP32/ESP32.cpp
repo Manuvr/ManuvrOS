@@ -208,6 +208,8 @@ void currentDateTime(StringBuilder* target) {
     struct tm tstruct;
     time(&now);
     localtime_r(&now, &tstruct);
+    char buf[64];
+    memset(buf, 0, 64);
     strftime(buf, sizeof(buf), "%Y-%m-%d.%X", &tstruct);
     target->concat(buf);
   }

@@ -10,7 +10,7 @@
 
 static I2CBusOp* _threaded_op = nullptr;
 
-void* i2c_worker_thread(void* arg) {
+static void* IRAM_ATTR i2c_worker_thread(void* arg) {
   //I2CAdapter* adapter = (I2CAdapter*) arg;
   while (!platform.nominalState()) {
     sleep_millis(20);
@@ -128,7 +128,7 @@ XferFault I2CBusOp::begin() {
 
 
 /*
-* Linux doesn't have a concept of interrupt, but we might call this
+* FreeRTOS doesn't have a concept of interrupt, but we might call this
 *   from an I/O thread.
 */
 XferFault I2CBusOp::advance(uint32_t status_reg) {
@@ -141,11 +141,8 @@ XferFault I2CBusOp::advance(uint32_t status_reg) {
           i2c_master_write_byte(cmd, (uint8_t) (sub_addr & 0x00FF), ACK_CHECK_EN);
           set_state(XferState::ADDR);
           i2c_master_start(cmd);
-          i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
         }
-        else {
-          i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
-        }
+        i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
         i2c_master_read(cmd, buf, (size_t) buf_len, I2C_MASTER_LAST_NACK);
         set_state(XferState::RX_WAIT);
         break;
