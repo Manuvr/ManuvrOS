@@ -334,7 +334,6 @@ class ATECC508Opts {
 
 
 
-// TODO: We are only extending EventReceiver while the driver is written.
 class ATECC508 :
   #ifdef MANUVR_CONSOLE_SUPPORT
     public ConsoleInterface,

@@ -212,8 +212,8 @@ int8_t SPIBusOp::_assert_cs(bool asrt) {
 */
 int8_t SPIBusOp::abort(XferFault cause) {
   xfer_fault = cause;
-  debug_log.concatf("SPI job aborted at state %s. Cause: %s.\n", getStateString(), getErrorString());
-  Kernel::log(&debug_log);
+  //debug_log.concatf("SPI job aborted at state %s. Cause: %s.\n", getStateString(), getErrorString());
+  //Kernel::log(&debug_log);
   return markComplete();
 }
 

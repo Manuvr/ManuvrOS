@@ -112,6 +112,10 @@ LTC294x::LTC294x(const LTC294xOpts* o, uint16_t bc) : I2CDeviceWithRegisters(LTC
   defineRegister(LTC294X_REG_TEMP_THRESH,   (uint16_t) 0xFF00, false, false, true);
 
   _reset_tracking_data();
+
+  #if defined(CONFIG_MANUVR_SENSOR_MGR)
+    platform.sensorManager()->addSensor(this);
+  #endif
 }
 
 
@@ -207,9 +211,11 @@ int8_t LTC294x::register_write_cb(DeviceRegister* reg) {
   switch (reg->addr) {
     case LTC294X_REG_CONTROL:
       _flags |= LTC294X_FLAG_INIT_CTRL;
+      isActive(_is_monitoring());   // We might-should set this flag.
       break;
     case LTC294X_REG_ACC_CHARGE:    // The accumulated charge register.
       _flags |= LTC294X_FLAG_INIT_AC;
+      isCalibrated(true);
       break;
     case LTC294X_REG_CHRG_THRESH_H:
       _flags |= LTC294X_FLAG_INIT_THRESH_CH;

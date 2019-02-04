@@ -261,7 +261,7 @@ SensorError SensorWrapper::readAsString(uint8_t dat, StringBuilder* buffer) {
 
 void SensorWrapper::printSensorSummary(StringBuilder* output) {
   uuid_to_sb(&uuid, output);
-  output->concatf(": %s\t%c %c %c   %ld",
+  output->concatf(": %12s %c %c %c   %ld",
     name,
     isActive() ? 'x':' ',
     isCalibrated() ? 'x':' ',

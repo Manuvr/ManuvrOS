@@ -171,7 +171,7 @@ int SensorManager::_report_sensor_data_by_index(uint8_t idx, TCode tcode, String
 */
 void SensorManager::printSensorList(StringBuilder* output) {
   output->concatf("-- Managing %d sensors:", _sensors.size());
-  output->concat("\n\t-UUID---------------------------------Name--------a-c-d---lastUpdate---");
+  output->concat("\n\t-UUID---------------------------------Name---------a-c-d---lastUpdate---");
   for (int i = 0; i < _sensors.size(); i++) {
     SensorWrapper* current = _sensors.get(i);
     output->concat("\n\t");
