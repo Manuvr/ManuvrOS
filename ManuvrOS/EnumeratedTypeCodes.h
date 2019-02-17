@@ -139,6 +139,9 @@ enum class TCode : uint8_t {
   CHAIN     = 0x18,  // An event chain.
   AUDIO     = 0x10,  // Audio stream
   IMAGE     = 0x11,  // Image data
+  COLOR8    = 0x19,  // 8-bit  color data. Color is represented as RGB.
+  COLOR24   = 0x1A,  // 24-bit color data. Color is represented as RGB.
+  COLOR32   = 0x1B,  // 32-bit color data. Color is represented as RGB.
 
   /*
   * These are types for Manuvr classes and structures that are either not

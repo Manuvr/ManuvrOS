@@ -108,28 +108,40 @@ limitations under the License.
 #define ADP8866_INT_STATUS_SHORT   0x10
 
 
+/* Driver option flags */
+#define ADP8866_OPT_IRQ_PU         0x0001
+
+
 /*
 * Pin defs for this module.
 * Set pin def to 255 to mark it as unused.
 */
 class ADP8866Pins {
   public:
-    const uint8_t rst;  // ADP8866 reset pin
-    const uint8_t irq;  // ADP8866 irq pin
+    const uint8_t  rst;    // ADP8866 reset pin
+    const uint8_t  irq;    // ADP8866 irq pin
+    const uint16_t flags;  // Flags
 
     ADP8866Pins(const ADP8866Pins* p) :
-      rst(p->rst), irq(p->irq) {};
+      rst(p->rst), irq(p->irq), flags(p->flags) {};
 
-    ADP8866Pins(uint8_t _rst, uint8_t _irq) :
-      rst(_rst), irq(_irq) {};
+    ADP8866Pins(uint8_t _rst, uint8_t _irq, uint16_t _f) :
+      rst(_rst), irq(_irq), flags(_f) {};
+
 
     inline bool reset(bool nu) const {
       if (255 != rst) setPin(rst, nu);
       return true;
     };
 
+    inline bool usePullup() const {
+      return (ADP8866_OPT_IRQ_PU == (ADP8866_OPT_IRQ_PU & flags));
+    };
+
+
   private:
 };
+
 
 /*
 * Used to aggregate channel information into a single place. Makes drive code more readable.

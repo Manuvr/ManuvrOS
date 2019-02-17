@@ -76,7 +76,7 @@ ADP8866::ADP8866(const ADP8866Pins* p) : EventReceiver("ADP8866"), I2CDeviceWith
   }
 
   if (255 != _pins.irq) {
-    gpioDefine(_pins.irq, GPIOMode::INPUT_PULLUP);
+    gpioDefine(_pins.irq, _pins.usePullup() ? GPIOMode::INPUT_PULLUP : GPIOMode::INPUT);
   }
 
   if (255 != _pins.rst) {
@@ -467,7 +467,7 @@ int8_t ADP8866::attached() {
     readRegister((uint8_t) ADP8866_MANU_DEV_ID);
 
     if (255 != _pins.irq) {
-      setPinFxn(_pins.irq, FALLING_PULL_UP, ADP8866_ISR);
+      setPinFxn(_pins.irq, (_pins.usePullup() ? FALLING_PULL_UP : FALLING), ADP8866_ISR);
     }
     return 1;
   }
