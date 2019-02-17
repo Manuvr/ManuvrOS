@@ -25,11 +25,10 @@ limitations under the License.
 
 
 const MessageTypeDef adp8866_message_defs[] = {
-  {  MANUVR_MSG_ADP8866_IRQ,     0x0000,  "ADP8866_IRQ",  ManuvrMsg::MSG_ARGS_NONE },  //
-  {  MANUVR_MSG_ADP8866_CHAN_ENABLED, MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_EN", ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_ADP8866_CHAN_LEVEL,   MSG_FLAG_EXPORTABLE,  "ADP8866_CHAN_LVL",   ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_ADP8866_RESET,   0x0000,  "ADP8866_RESET",   ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_ADP8866_ASSIGN_BL,    MSG_FLAG_EXPORTABLE,  "ADP8866_ASSIGN_BL",    ManuvrMsg::MSG_ARGS_NONE }  //
+  {  MANUVR_MSG_ADP8866_IRQ,                       0x0000, "ADP8866_IRQ",      ManuvrMsg::MSG_ARGS_NONE },
+  {  MANUVR_MSG_ADP8866_CHAN_ENABLED, MSG_FLAG_EXPORTABLE, "ADP8866_CHAN_EN",  ManuvrMsg::MSG_ARGS_NONE },
+  {  MANUVR_MSG_ADP8866_CHAN_LEVEL,   MSG_FLAG_EXPORTABLE, "ADP8866_CHAN_LVL", ManuvrMsg::MSG_ARGS_NONE },
+  {  MANUVR_MSG_ADP8866_RESET,                     0x0000, "ADP8866_RESET",    ManuvrMsg::MSG_ARGS_NONE }
 };
 
 ADP8866* ADP8866::INSTANCE = nullptr;
@@ -179,15 +178,15 @@ int8_t ADP8866::init() {
 
   // TODO: When the driver inits, we shouldn't have any LEDs on until the user sets
   //   some mandatory constraint so he doesn't fry his LEDs.
-  writeIndirect(ADP8866_ISC1, 0x05, true);
-  writeIndirect(ADP8866_ISC2, 0x05, true);
-  writeIndirect(ADP8866_ISC3, 0x05, true);
-  writeIndirect(ADP8866_ISC4, 0x05, true);
-  writeIndirect(ADP8866_ISC5, 0x05, true);
-  writeIndirect(ADP8866_ISC6, 0x05, true);
-  writeIndirect(ADP8866_ISC7, 0x05, true);
-  writeIndirect(ADP8866_ISC8, 0x05, true);
-  writeIndirect(ADP8866_ISC9, 0x05, true);
+  writeIndirect(ADP8866_ISC1, 0x00, true);
+  writeIndirect(ADP8866_ISC2, 0x00, true);
+  writeIndirect(ADP8866_ISC3, 0x00, true);
+  writeIndirect(ADP8866_ISC4, 0x00, true);
+  writeIndirect(ADP8866_ISC5, 0x00, true);
+  writeIndirect(ADP8866_ISC6, 0x00, true);
+  writeIndirect(ADP8866_ISC7, 0x00, true);
+  writeIndirect(ADP8866_ISC8, 0x00, true);
+  writeIndirect(ADP8866_ISC9, 0x00, true);
 
   writeIndirect(ADP8866_ISCT_HB, 0x0A);
   _er_set_flag(ADP8866_FLAG_INIT_COMPLETE);

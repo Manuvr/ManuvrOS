@@ -87,7 +87,6 @@ limitations under the License.
 #define MANUVR_MSG_ADP8866_IRQ          0x9034  // Some random message code. Nonexportable.
 #define MANUVR_MSG_ADP8866_CHAN_ENABLED 0x9035  // Enable the given channel, or return its status.
 #define MANUVR_MSG_ADP8866_CHAN_LEVEL   0x9036  // Set or return the LED level for the given channel.
-#define MANUVR_MSG_ADP8866_ASSIGN_BL    0x9037  // Takes up to 9 integers as arguments. Assigns those channels to the backlight.
 #define MANUVR_MSG_ADP8866_RESET        0x9038  // Reset.
 
 
@@ -165,6 +164,7 @@ class ADP8866 : public EventReceiver,
     virtual ~ADP8866();
 
     int8_t init();
+    void reset();
 
     /* Overrides from I2CDeviceWithRegisters... */
     int8_t register_write_cb(DeviceRegister*);
@@ -216,7 +216,6 @@ class ADP8866 : public EventReceiver,
     //   channel to represent the backlight.
     ADPLEDChannel channels[10];
 
-    void reset();
     void set_power_mode(uint8_t);
 };
 
