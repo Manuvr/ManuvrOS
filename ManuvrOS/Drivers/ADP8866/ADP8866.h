@@ -190,6 +190,7 @@ class ADP8866 : public EventReceiver,
     void set_brightness(uint8_t, uint8_t);
     void set_brightness(uint8_t);
     void pulse_channel(uint8_t, uint8_t);
+    void pulse_channel(uint8_t, uint8_t, uint16_t ms_on, uint16_t ms_off);
 
     void toggle_brightness(void);
 

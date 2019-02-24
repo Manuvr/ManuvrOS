@@ -24,7 +24,7 @@ limitations under the License.
 #include <Platform/Platform.h>
 
 
-const MessageTypeDef adp8866_message_defs[] = {
+static const MessageTypeDef adp8866_message_defs[] = {
   {  MANUVR_MSG_ADP8866_IRQ,                       0x0000, "ADP8866_IRQ",      ManuvrMsg::MSG_ARGS_NONE },
   {  MANUVR_MSG_ADP8866_CHAN_ENABLED, MSG_FLAG_EXPORTABLE, "ADP8866_CHAN_EN",  ManuvrMsg::MSG_ARGS_NONE },
   {  MANUVR_MSG_ADP8866_CHAN_LEVEL,   MSG_FLAG_EXPORTABLE, "ADP8866_CHAN_LVL", ManuvrMsg::MSG_ARGS_NONE },
@@ -639,7 +639,30 @@ void ADP8866::set_led_mode(uint8_t num) {
 }
 
 
+/*
+* Disables all on-chip timer influence on LEDs.
+*/
 void ADP8866::quell_all_timers() {
+  uint8_t hb_sel = (uint8_t)regValue(ADP8866_HB_SEL);
+  if (hb_sel) {
+    if (hb_sel & 0x01) {
+      writeIndirect(ADP8866_OFFTIMER6,    0x00, true);
+      writeIndirect(ADP8866_OFFTIMER6_HB, 0x00, true);
+    }
+    if (hb_sel & 0x02) {
+      writeIndirect(ADP8866_OFFTIMER7,    0x00, true);
+      writeIndirect(ADP8866_OFFTIMER7_HB, 0x00, true);
+    }
+    if (hb_sel & 0x04) {
+      writeIndirect(ADP8866_OFFTIMER8,    0x00, true);
+      writeIndirect(ADP8866_OFFTIMER8_HB, 0x00, true);
+    }
+    if (hb_sel & 0x08) {
+      writeIndirect(ADP8866_OFFTIMER9,    0x00, true);
+      writeIndirect(ADP8866_OFFTIMER9_HB, 0x00, true);
+    }
+    writeIndirect(ADP8866_HB_SEL,       0x00);
+  }
 }
 
 
@@ -650,16 +673,38 @@ void ADP8866::quell_all_timers() {
 void ADP8866::set_brightness(uint8_t nu_brightness) {
 }
 
+
+/*
+* Given a channel and a brightness, pulse at the given rate.
+* Only chip channels 6-9 are capable of this.
+* Uses a default pair of timing values.
+*/
 void ADP8866::pulse_channel(uint8_t chan, uint8_t nu_brightness) {
-  if ((chan > 9) || (chan < 6)) {
+  pulse_channel(chan, nu_brightness, 300, 1000);
+}
+
+
+/*
+* Given a channel and a brightness, pulse at the given rate.
+* Only chip channels 6-9 are capable of this.
+* This function will clamp the timer input values to the maximum supported by
+*   the hardware: 750ms for on time, and 12.5s for off time.
+*/
+void ADP8866::pulse_channel(uint8_t chan, uint8_t nu_brightness, uint16_t ms_on, uint16_t ms_off) {
+  if ((chan > 8) || (chan < 5)) {
     // Channel outside of the valid range...
     return;
   }
+  uint8_t fade_out_rate = (uint8_t) regValue(ADP8866_ISCF) >> 4;
+  uint8_t adj_chan = (chan - 5);
+  uint8_t adj_t_off = (uint8_t) strict_max(strict_min((uint16_t) 12500, ms_off) / 100, 1);
+  uint8_t adj_t_on  = (uint8_t) strict_max(strict_min((uint16_t) 750,   ms_on)  / 50,  fade_out_rate);
+  uint8_t hb_sel = ((uint8_t)regValue(ADP8866_HB_SEL)) | (0x01 << adj_chan);
 
-  writeIndirect(ADP8866_HB_SEL, 0x01 << (chan - 6), true);
-  writeIndirect(ADP8866_ISC6_HB      + (chan - 6), 0x20, true);
-  writeIndirect(ADP8866_OFFTIMER6    + (chan - 6), 0x20, true);
-  writeIndirect(ADP8866_OFFTIMER6_HB + (chan - 6), 0x20);
+  writeIndirect(ADP8866_HB_SEL, hb_sel, true);
+  writeIndirect(ADP8866_ISC6_HB      + adj_chan, nu_brightness, true);
+  writeIndirect(ADP8866_OFFTIMER6    + adj_chan, adj_t_off, true);
+  writeIndirect(ADP8866_OFFTIMER6_HB + adj_chan, adj_t_on);
 }
 
 
@@ -686,6 +731,7 @@ void ADP8866::toggle_brightness(void) {
   //writeIndirect(ADP8866_GLOBAL_PWM_DIM, stored_dimmer_val);
 }
 
+
 /*
 * Enable or disable a specific LED. If something needs to be written to the
 *   chip, will do that as well.
@@ -707,6 +753,7 @@ void ADP8866::enable_channel(uint8_t chan, bool en) {
     writeIndirect(reg_addr, desired_state);
   }
 }
+
 
 /*
 * Returns the boolean answer to the question: Is the given channel enabled?
