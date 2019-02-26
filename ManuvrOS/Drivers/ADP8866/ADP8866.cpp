@@ -33,6 +33,21 @@ static const MessageTypeDef adp8866_message_defs[] = {
 
 ADP8866* ADP8866::INSTANCE = nullptr;
 
+
+/*
+* Static fxn to correct for the discontinuity in the timing deltas for the fade.
+*/
+uint8_t ADP8866::_fade_val_from_ms(uint16_t ms) {
+  uint16_t adj_ms = strict_min((uint16_t) 1750, ms);
+  if (adj_ms < 750) {
+    return (adj_ms / 50);
+  }
+  else {
+    return (0x0B + ((adj_ms - 750) / 250));
+  }
+}
+
+
 /*
 * This is the ISR for the interrupt pin (if provided).
 */
@@ -178,15 +193,15 @@ int8_t ADP8866::init() {
 
   // TODO: When the driver inits, we shouldn't have any LEDs on until the user sets
   //   some mandatory constraint so he doesn't fry his LEDs.
-  writeIndirect(ADP8866_ISC1, 0x00, true);
-  writeIndirect(ADP8866_ISC2, 0x00, true);
-  writeIndirect(ADP8866_ISC3, 0x00, true);
-  writeIndirect(ADP8866_ISC4, 0x00, true);
-  writeIndirect(ADP8866_ISC5, 0x00, true);
-  writeIndirect(ADP8866_ISC6, 0x00, true);
-  writeIndirect(ADP8866_ISC7, 0x00, true);
-  writeIndirect(ADP8866_ISC8, 0x00, true);
-  writeIndirect(ADP8866_ISC9, 0x00, true);
+  writeIndirect(ADP8866_ISC1, regValue(ADP8866_ISC1), true);
+  writeIndirect(ADP8866_ISC2, regValue(ADP8866_ISC2), true);
+  writeIndirect(ADP8866_ISC3, regValue(ADP8866_ISC3), true);
+  writeIndirect(ADP8866_ISC4, regValue(ADP8866_ISC4), true);
+  writeIndirect(ADP8866_ISC5, regValue(ADP8866_ISC5), true);
+  writeIndirect(ADP8866_ISC6, regValue(ADP8866_ISC6), true);
+  writeIndirect(ADP8866_ISC7, regValue(ADP8866_ISC7), true);
+  writeIndirect(ADP8866_ISC8, regValue(ADP8866_ISC8), true);
+  writeIndirect(ADP8866_ISC9, regValue(ADP8866_ISC9), true);
 
   writeIndirect(ADP8866_ISCT_HB, 0x0A);
   _er_set_flag(ADP8866_FLAG_INIT_COMPLETE);
@@ -708,6 +723,22 @@ void ADP8866::pulse_channel(uint8_t chan, uint8_t nu_brightness, uint16_t ms_on,
 }
 
 
+/*
+* This function will clamp the timer input values to the maximum supported by
+*   the hardware: 1750ms for both fade-in and fade-out.
+*/
+void ADP8866::set_fade(uint16_t ms_in, uint16_t ms_out) {
+  uint8_t fade_out_rate = (uint8_t) regValue(ADP8866_ISCF) >> 4;
+  uint8_t fade_in_rate  = (uint8_t) regValue(ADP8866_ISCF) & 0x0F;
+  uint8_t adj_t_out = _fade_val_from_ms(ms_out);
+  uint8_t adj_t_in  = _fade_val_from_ms(ms_in);
+
+  if ((adj_t_in != fade_in_rate) || (adj_t_out != fade_out_rate)) {
+    writeIndirect(ADP8866_ISCF, (adj_t_out << 4) + adj_t_in);
+  }
+}
+
+
 void ADP8866::set_brightness(uint8_t chan, uint8_t nu_brightness) {
   if (chan > 9) {
     // Not that many channels....
@@ -802,4 +833,8 @@ void ADP8866::set_power_mode(uint8_t nu_power_mode) {
       break;
   }
   Kernel::log("ADP8866 Power mode set. \n");
+}
+
+
+void ADP8866::setMaxCurrents(uint8_t c0, uint8_t c1, uint8_t c2, uint8_t c3, uint8_t c4, uint8_t c5, uint8_t c6, uint8_t c7, uint8_t c8) {
 }

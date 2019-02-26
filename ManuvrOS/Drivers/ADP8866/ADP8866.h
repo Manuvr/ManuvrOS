@@ -191,11 +191,13 @@ class ADP8866 : public EventReceiver,
     void set_brightness(uint8_t);
     void pulse_channel(uint8_t, uint8_t);
     void pulse_channel(uint8_t, uint8_t, uint16_t ms_on, uint16_t ms_off);
+    void set_fade(uint16_t ms_on, uint16_t ms_off);
 
     void toggle_brightness(void);
 
     void quell_all_timers();
     void set_led_mode(uint8_t num);
+    void setMaxCurrents(uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t);
 
     void _isr_fxn(void);
 
@@ -218,6 +220,8 @@ class ADP8866 : public EventReceiver,
     ADPLEDChannel channels[10];
 
     void set_power_mode(uint8_t);
+
+    static uint8_t _fade_val_from_ms(uint16_t);
 };
 
 #endif
