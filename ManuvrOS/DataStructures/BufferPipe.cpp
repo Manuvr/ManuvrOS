@@ -414,13 +414,19 @@ int8_t BufferPipe::joinEnds() {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void BufferPipe::printDebug(StringBuilder* out) {
-  #if defined(MANUVR_PIPE_DEBUG)
-    out->concatf("-- Pipe: %s [", pipeName());
-    if (_bp_flag(BPIPE_FLAG_IS_BUFFERED))     out->concat(" BUFFERED");
-    if (_bp_flag(BPIPE_FLAG_PIPE_PACKETIZED)) out->concat(" PACKETIZED");
-    if (_bp_flag(BPIPE_FLAG_IS_TERMINUS))     out->concat(" TERMINUS");
-    out->concat(" ]\n");
-    if (haveNear()) out->concatf("--\t_near:   %s\t%s\n", _near->pipeName(), (_bp_flag(BPIPE_FLAG_WE_ALLOCD_NEAR) ? "[WE_ALLOC'D]" : ""));
-    if (haveFar())  out->concatf("--\t_far:    %s\t%s\n", _far->pipeName(),  (_bp_flag(BPIPE_FLAG_WE_ALLOCD_FAR)  ? "[WE_ALLOC'D]" : ""));
-  #endif
+  out->concatf("-- Pipe: %s [", pipeName());
+  if (_bp_flag(BPIPE_FLAG_IS_BUFFERED))     out->concat(" BUFFERED");
+  if (_bp_flag(BPIPE_FLAG_PIPE_PACKETIZED)) out->concat(" PACKETIZED");
+  if (_bp_flag(BPIPE_FLAG_IS_TERMINUS))     out->concat(" TERMINUS");
+  out->concat(" ]\n");
+  if ((nullptr != _near)) out->concatf("--\t_near:   %s\t%s\n", _near->pipeName(), (_bp_flag(BPIPE_FLAG_WE_ALLOCD_NEAR) ? "[WE_ALLOC'D]" : ""));
+  if ((nullptr != _far))  out->concatf("--\t_far:    %s\t%s\n", _far->pipeName(),  (_bp_flag(BPIPE_FLAG_WE_ALLOCD_FAR)  ? "[WE_ALLOC'D]" : ""));
+  if (nullptr != _pipe_strategy) {
+    unsigned int ptr = 0;
+    out->concat("--\tStrats: ");
+    while (0 != _pipe_strategy[ptr]) {
+      out->concatf(" %u", _pipe_strategy[ptr++]);
+    }
+    out->concat("\n");
+  }
 }
