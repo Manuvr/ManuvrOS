@@ -7,18 +7,17 @@
 #define ACK_CHECK_DIS  0x00     /*!< I2C master will not check ack from slave */
 
 
-
 static I2CBusOp* _threaded_op = nullptr;
 
 static void* IRAM_ATTR i2c_worker_thread(void* arg) {
-  //I2CAdapter* adapter = (I2CAdapter*) arg;
   while (!platform.nominalState()) {
     sleep_millis(20);
   }
   while (1) {
     if (_threaded_op) {
-      _threaded_op->advance(0);
+      I2CBusOp* op = _threaded_op;
       _threaded_op = nullptr;
+      op->advance(0);
       yieldThread();
     }
     else {

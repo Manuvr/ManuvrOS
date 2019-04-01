@@ -207,13 +207,7 @@ class BQ24155 : public I2CDeviceWithRegisters {
     * @return ISEL pin state.
     */
     inline bool _isel_state() {     return (_flgs & BQ24155_FLAG_ISEL_HIGH);   };
-
-    /**
-    * @param ISEL pin state.
-    */
-    inline void _isel_state(bool x) {
-      _flgs = x ? (_flgs | BQ24155_FLAG_ISEL_HIGH) : (_flgs & ~BQ24155_FLAG_ISEL_HIGH);
-    };
+    void _isel_state(bool x);
 
     /**
     * @return The chip's hardware revision.

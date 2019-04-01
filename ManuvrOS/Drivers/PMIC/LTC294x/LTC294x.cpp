@@ -126,23 +126,18 @@ LTC294x::~LTC294x() {
 }
 
 
-
 /*
 * Here, we will compare options and set them as defaults.
 */
 SensorError LTC294x::init() {
   uint8_t val = regValue(LTC294X_REG_CONTROL);
-  uint8_t rewrite = val;
   uint8_t dps = _derive_prescaler();
+  uint8_t rewrite = (val & 0xC7) | (dps << 3);  // Set the prescalar if it isn't already...
 
   // Given the battery capacity, set the range parameters...
   //_batt_volume
   //_charge_expected_min
   //_charge_expected_max
-
-
-  // Set the prescalar if it isn't already...
-  rewrite = (rewrite & 0xC7) | (dps << 3);
 
   // Normalize hardware against pin selection...
   if (_opts.useAlertPin()) {    rewrite = (rewrite & 0xF9) | 0x04;  }
@@ -152,14 +147,11 @@ SensorError LTC294x::init() {
   if (_opts.autostartReading()) {
     // Set the ADC to sample automatically.
     rewrite = (rewrite & ~LTC294X_OPT_MASK_ADC_MODE) | (uint8_t) LTC294xADCModes::AUTO;
+    rewrite = rewrite | 1;
   }
+  _reset_tracking_data();
 
-  if (val != rewrite) {
-    _write_control_reg(rewrite);
-  }
-  else {
-    _flags |= LTC294X_FLAG_INIT_CTRL;
-  }
+  _write_control_reg(rewrite);
 
   _flags |= LTC294X_FLAG_INIT_AC;         // TODO: Convenient lie until feature done.
   _flags |= LTC294X_FLAG_INIT_THRESH_CL;  // TODO: Convenient lie until feature done.
@@ -341,8 +333,12 @@ void LTC294x::printDebug(StringBuilder* output) {
       output->concat("AUTO");
       break;
   }
+  output->concatf("\n\tSamples:           %u (dt: %ums)\n", _sample_count, _sample_dt);
+  output->concatf("\tLast sample:       %u\n", _sample_time);
+  output->concatf("\tBattery Voltage:   %.2f%%\n", (double) batteryPercentVoltage());
+
   output->concat("\n\tCurrent:     \t Thresholds:\n");
-  output->concatf("\t  C:   %.2f\%%\t %.2f%% / %.2f%%\n",
+  output->concatf("\t  C:   %.2f%%\t %.2f%% / %.2f%%\n",
     (double) batteryPercent(),
     (double) (dsp * 0.06640625f * _thrsh_l_chrg),
     (double) (dsp * 0.06640625f * _thrsh_h_chrg)
@@ -358,13 +354,6 @@ void LTC294x::printDebug(StringBuilder* output) {
     (double) convertT(_thrsh_h_temp << 8)
   );
 
-  output->concatf("\tBattery (V/Chrg)   %.2f\%%\t %.2f%% / %.2f%%\n",
-    (double) batteryPercentVoltage(),
-    (double) batteryPercent()
-  );
-
-  output->concatf("\n\tSamples:           %u (dt: %ums)\n", _sample_count, _sample_dt);
-  output->concatf("\tLast sample:       %u\n", _sample_time);
   if (trackingReady()) {
     output->concat("\tRates:        \t Min/Max:\n");
     switch (_sample_count) {
@@ -375,13 +364,13 @@ void LTC294x::printDebug(StringBuilder* output) {
           (double) minimumCurrent(),
           (double) maximumCurrent()
         );
-        output->concatf("\t  V:   %.4f/sec\t %.4f / %.4f\n",
+        output->concatf("\t  V:   %.2f/sec\t %.2f / %.2f\n",
           (double) _volt_dt,
           (double) _volt_min_dt,
           (double) _volt_max_dt
         );
       case 2:
-        output->concatf("\t  T:   %.4f/sec\t %.4f / %.4f\n",
+        output->concatf("\t  T:   %.2f/sec\t %.2f / %.2f\n",
           (double) _temp_dt,
           (double) _temp_min,
           (double) _temp_max

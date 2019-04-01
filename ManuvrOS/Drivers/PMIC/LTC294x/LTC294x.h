@@ -59,7 +59,7 @@ limitations under the License.
 
 #define LTC294X_OPT_PIN_IS_CC   0x01  // Is the I/O pin to be treated as an output?
 #define LTC294X_OPT_INTEG_SENSE 0x02  // This is a "-1" varient, and has an integrated sense resistor.
-#define LTC294X_OPT_ACD_AUTO    0x04  // The converter should run automatically.
+#define LTC294X_OPT_ADC_AUTO    0x04  // The converter should run automatically.
 
 
 enum class LTC294xADCModes : uint8_t {
@@ -101,7 +101,7 @@ class LTC294xOpts {
       _flags(_fi) {};
 
     inline bool autostartReading() const {
-      return (_flags & LTC294X_OPT_ACD_AUTO);
+      return (_flags & LTC294X_OPT_ADC_AUTO);
     };
 
     inline bool useAlertPin() const {

@@ -397,6 +397,18 @@ int8_t BQ24155::_write_reg_internal(uint8_t r, uint8_t v) {
 };
 
 
+/**
+* @param ISEL pin state.
+*/
+void BQ24155::_isel_state(bool x) {
+  _flgs = x ? (_flgs | BQ24155_FLAG_ISEL_HIGH) : (_flgs & ~BQ24155_FLAG_ISEL_HIGH);
+  if (_opts.useISELPin()) {
+    setPin(_opts.isel_pin, x);
+  }
+}
+
+
+
 /*******************************************************************************
 * ___     _       _                      These members are mandatory overrides
 *  |   / / \ o   | \  _     o  _  _      for implementing I/O callbacks. They
