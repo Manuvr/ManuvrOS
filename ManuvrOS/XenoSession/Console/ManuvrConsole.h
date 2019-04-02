@@ -35,14 +35,16 @@ If you want this feature, you must define MANUVR_CONSOLE_SUPPORT in the
 #include "../XenoSession.h"
 
 
-class ManuvrConsole : public XenoSession, public ConsoleInterface {
+class ManuvrConsole : public EventReceiver, public BufferPipe, public ConsoleInterface {
   public:
     ManuvrConsole(BufferPipe*);
     ~ManuvrConsole();
 
     /* Override from BufferPipe. */
+    const char* pipeName();
     virtual int8_t toCounterparty(ManuvrPipeSignal, void*);
     virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
+    virtual int8_t fromCounterparty(ManuvrPipeSignal, void*);
     virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
 
     /* Overrides from EventReceiver */
@@ -55,6 +57,7 @@ class ManuvrConsole : public XenoSession, public ConsoleInterface {
     uint consoleGetCmds(ConsoleCommand**);
     inline const char* consoleName() { return getReceiverName();  };
     void consoleCmdProc(StringBuilder* input);
+
 
 
   private:

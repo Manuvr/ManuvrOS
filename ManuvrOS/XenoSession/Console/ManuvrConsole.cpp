@@ -101,10 +101,17 @@ void printConsoleTree(StringBuilder* out) {
 *
 * @param   BufferPipe* All sessions must have one (and only one) transport.
 */
-ManuvrConsole::ManuvrConsole(BufferPipe* _near_side) : XenoSession("Console", _near_side) {
-  Kernel::attachToLogger((BufferPipe*) this);
-  mark_session_state(XENOSESSION_STATE_ESTABLISHED);
+ManuvrConsole::ManuvrConsole(BufferPipe* _near_side) : EventReceiver("Console"), BufferPipe() {
+  _bp_set_flag(BPIPE_FLAG_IS_TERMINUS, true);
   _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
+
+  // The link nearer to the transport should not free.
+  if (_near_side) {
+    setNear(_near_side);  // Our near-side is that passed-in transport.
+    _near->setFar((BufferPipe*) this);
+  }
+
+  Kernel::attachToLogger((BufferPipe*) this);
 }
 
 
@@ -179,6 +186,39 @@ int8_t ManuvrConsole::_route_console_input(StringBuilder* last_user_input) {
 *                            |
 * Overrides and addendums to BufferPipe.
 *******************************************************************************/
+const char* ManuvrConsole::pipeName() { return getReceiverName(); }
+
+/**
+* Pass a signal to the counterparty.
+*
+* Data referenced by _args should be assumed to be on the stack of the caller.
+*
+* @param   _sig   The signal.
+* @param   _args  Optional argument pointer.
+* @return  Negative on error. Zero on success.
+*/
+int8_t ManuvrConsole::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
+  if (getVerbosity() > 5) {
+    local_log.concatf("%s --sig--> %s: %s\n", (haveNear() ? _near->pipeName() : "ORIG"), pipeName(), signalString(_sig));
+    Kernel::log(&local_log);
+  }
+  switch (_sig) {
+    case ManuvrPipeSignal::XPORT_CONNECT:
+    case ManuvrPipeSignal::XPORT_DISCONNECT:
+      return 1;
+
+    case ManuvrPipeSignal::FAR_SIDE_DETACH:   // The far side is detaching.
+    case ManuvrPipeSignal::NEAR_SIDE_DETACH:   // The near side is detaching.
+    case ManuvrPipeSignal::FAR_SIDE_ATTACH:
+    case ManuvrPipeSignal::NEAR_SIDE_ATTACH:
+    case ManuvrPipeSignal::UNDEF:
+    default:
+      break;
+  }
+  return BufferPipe::fromCounterparty(_sig, _args);
+}
+
+
 /**
 * Pass a signal to the counterparty.
 *
@@ -214,7 +254,7 @@ int8_t ManuvrConsole::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
 */
 int8_t ManuvrConsole::toCounterparty(StringBuilder* buf, int8_t mm) {
   _log_accumulator.concatHandoff(buf);
-  if (isConnected() && erAttached()) {
+  if (erAttached()) {
     BufferPipe::toCounterparty(&_log_accumulator, MEM_MGMT_RESPONSIBLE_BEARER);
   }
   return MEM_MGMT_RESPONSIBLE_BEARER;
@@ -228,7 +268,7 @@ int8_t ManuvrConsole::toCounterparty(StringBuilder* buf, int8_t mm) {
 * @return A declaration of memory-management responsibility.
 */
 int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
-  session_buffer.concatHandoff(buf);  // buf check will fail if the precedes it.
+  session_buffer.concatHandoff(buf);
   // If the console doesn't see a CR OR LF, it will not register a command.
   if ((session_buffer.contains('\n') || session_buffer.contains('\r'))) {
     for (int toks = session_buffer.split("\n"); toks > 0; toks--) {
@@ -241,6 +281,7 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
         //   that will be free'd. Needless. Complicates concurrency following
         //   migration of this code from Kernel.
         StringBuilder* dispatched = new StringBuilder((uint8_t*) temp_ptr, temp_len);
+        dispatched->trim();
         ManuvrMsg* event  = Kernel::returnEvent(MANUVR_MSG_USER_DEBUG_INPUT);
         event->specific_target = (EventReceiver*) this;
         event->setOriginator((EventReceiver*) this);
@@ -369,7 +410,8 @@ int8_t ManuvrConsole::callback_proc(ManuvrMsg* event) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void ManuvrConsole::printDebug(StringBuilder *output) {
-  XenoSession::printDebug(output);
+  EventReceiver::printDebug(output);
+  BufferPipe::printDebug(output);
 
   int ses_buf_len = session_buffer.length();
   int la_len      = _log_accumulator.length();
@@ -411,8 +453,30 @@ int8_t ManuvrConsole::notify(ManuvrMsg* active_runnable) {
       }
       return_value++;
       break;
+
+    case MANUVR_MSG_SESS_SERVICE:
+      // If we ever see this, it means the class that extended us isn't reacting appropriately
+      //   to its own requests-for-service. Pitch a warning.
+      #ifdef MANUVR_DEBUG
+      if (getVerbosity() > 1) {
+        local_log.concatf("%p received SESS_SERVICE.\n", this);
+        printDebug(&local_log);
+      }
+      #endif
+      break;
+
+    case MANUVR_MSG_XPORT_RECEIVE:
+      {
+        StringBuilder* buf;
+        if (0 == active_runnable->getArgAs(&buf)) {
+          fromCounterparty(buf, MEM_MGMT_RESPONSIBLE_BEARER);
+        }
+      }
+      return_value++;
+      break;
+
     default:
-      return_value += XenoSession::notify(active_runnable);
+      return_value += EventReceiver::notify(active_runnable);
       break;
   }
 

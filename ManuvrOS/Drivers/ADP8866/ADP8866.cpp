@@ -712,8 +712,8 @@ void ADP8866::pulse_channel(uint8_t chan, uint8_t nu_brightness, uint16_t ms_on,
   }
   uint8_t fade_out_rate = (uint8_t) regValue(ADP8866_ISCF) >> 4;
   uint8_t adj_chan = (chan - 5);
-  uint8_t adj_t_off = (uint8_t) strict_max(strict_min((uint16_t) 12500, ms_off) / 100, 1);
-  uint8_t adj_t_on  = (uint8_t) strict_max(strict_min((uint16_t) 750,   ms_on)  / 50,  fade_out_rate);
+  uint8_t adj_t_off = (uint8_t) strict_max((uint8_t) (strict_min((uint16_t) 12500, ms_off) / 100), (uint8_t) 1);
+  uint8_t adj_t_on  = (uint8_t) strict_max((uint8_t) (strict_min((uint16_t) 750,   ms_on)  / 50),  (uint8_t) fade_out_rate);
   uint8_t hb_sel = ((uint8_t)regValue(ADP8866_HB_SEL)) | (0x01 << adj_chan);
 
   writeIndirect(ADP8866_HB_SEL, hb_sel, true);

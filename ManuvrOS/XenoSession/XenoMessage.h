@@ -134,17 +134,4 @@ class XenoMessage {
   private:
 };
 
-
-// TODO: These are the members that may yet wind up in the base-class.
-class XenoMessage_old {
-  public:
-    void claim(XenoSession*);
-
-  private:
-    XenoSession*    session;   // A reference to the session that we are associated with.
-    uint32_t  time_created;    // Optional: What time did this message come into existance?
-    uint32_t  millis_at_begin; // This is the milliseconds reading when we sent.
-    uint8_t   retries;         // How many times have we retried this packet?
-};
-
 #endif   //__XENOMESSAGE_H__

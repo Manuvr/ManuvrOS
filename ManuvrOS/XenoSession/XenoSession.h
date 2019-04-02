@@ -99,9 +99,6 @@ class XenoSession : public EventReceiver, public BufferPipe {
     virtual void printDebug(StringBuilder*);
     virtual int8_t notify(ManuvrMsg*);
     virtual int8_t callback_proc(ManuvrMsg*);
-    #if defined(MANUVR_CONSOLE_SUPPORT)
-      virtual void procDirectDebugInstruction(StringBuilder *);
-    #endif
 
 
     static const char* sessionPhaseString(uint16_t state_code);

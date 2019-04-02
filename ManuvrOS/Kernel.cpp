@@ -310,8 +310,9 @@ int8_t Kernel::subscribe(EventReceiver *client, uint8_t priority) {
   int8_t return_value = subscribers.insert(client, priority);
   if (erAttached()) {
     // This subscriber is joining us after bootup. Call its attached() fxn to cause it to init.
-    //client.attached();
+    client->attached();
   }
+  
   return ((return_value >= 0) ? 0 : -1);
 }
 

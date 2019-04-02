@@ -57,12 +57,9 @@ limitations under the License.
 
 #define CHECKSUM_PRELOAD_BYTE          0x55  // Calculation of new checksums should start with this byte,
 #define XENOSESSION_INITIAL_SYNC_COUNT   24  // How many sync packets to send before giving up.
-
-#define XENOMSG_M_PREALLOC_COUNT          8  // How many XenoMessages should be preallocated?
-
+#define XENOMSG_M_PREALLOC_COUNT          6  // How many XenoMessages should be preallocated?
 #define MANUVR_MAX_PARSE_FAILURES         3  // How many failures-to-parse should we tolerate before SYNCing?
 #define MANUVR_MAX_ACK_FAILURES           3  // How many failures-to-ACK should we tolerate before SYNCing?
-
 
 
 /*
@@ -72,14 +69,8 @@ limitations under the License.
 *   determines the effective maximum packet size for this device, and by extension, the sessions in which
 *   it participates.
 */
-
-
-/*
-* The version of Manuvr's protocol we are using.
-* Particulars of this platform.
-*/
 #define MANUVR_PROTO_MTU     8192    // See MTU notes above....
-#define MANUVR_PROTO_VER  "0.0.1"
+#define MANUVR_PROTO_VER  "0.0.1"    // The version of Manuvr's protocol we are using.
 
 
 /*
@@ -170,7 +161,11 @@ class XenoManuvrMessage : public XenoMessage {
 
 
 
-class ManuvrSession : public XenoSession {
+class ManuvrSession : public XenoSession
+  #if defined(MANUVR_CONSOLE_SUPPORT)
+    , public ConsoleInterface
+  #endif   // MANUVR_CONSOLE_SUPPORT
+  {
   public:
     ManuvrSession(BufferPipe*);
     virtual ~ManuvrSession();
@@ -182,8 +177,12 @@ class ManuvrSession : public XenoSession {
     void printDebug(StringBuilder*);
     int8_t notify(ManuvrMsg*);
     int8_t callback_proc(ManuvrMsg*);
+
     #if defined(MANUVR_CONSOLE_SUPPORT)
-      void procDirectDebugInstruction(StringBuilder*);
+      /* Overrides from ConsoleInterface */
+      uint consoleGetCmds(ConsoleCommand**);
+      inline const char* consoleName() { return getReceiverName();  };
+      void consoleCmdProc(StringBuilder* input);
     #endif  //MANUVR_CONSOLE_SUPPORT
 
 

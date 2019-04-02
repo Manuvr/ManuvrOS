@@ -423,6 +423,14 @@ bool setTimeAndDateStr(char* nu_date_time) {
   return false;
 }
 
+/*
+* Returns an integer representing the current datetime.
+*/
+uint32_t epochTime() {
+  struct timeval tv;
+  return (0 == gettimeofday(&tv, nullptr)) ? 0 : tv.tv_sec;
+}
+
 
 /*
 * Returns an integer representing the current datetime.

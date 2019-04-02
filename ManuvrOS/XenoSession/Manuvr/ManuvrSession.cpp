@@ -20,22 +20,9 @@ limitations under the License.
 
 */
 
-#if defined(MANUVR_OVER_THE_WIRE)
-
 #include "ManuvrSession.h"
 
-
-/*******************************************************************************
-*      _______.___________.    ___   .___________. __    ______     _______.
-*     /       |           |   /   \  |           ||  |  /      |   /       |
-*    |   (----`---|  |----`  /  ^  \ `---|  |----`|  | |  ,----'  |   (----`
-*     \   \       |  |      /  /_\  \    |  |     |  | |  |        \   \
-* .----)   |      |  |     /  _____  \   |  |     |  | |  `----.----)   |
-* |_______/       |__|    /__/     \__\  |__|     |__|  \______|_______/
-*
-* Static members and initializers should be located here.
-*******************************************************************************/
-
+#if defined(MANUVR_OVER_THE_WIRE)
 
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
@@ -563,7 +550,23 @@ int8_t ManuvrSession::notify(ManuvrMsg* active_event) {
 }
 
 #if defined(MANUVR_CONSOLE_SUPPORT)
-void ManuvrSession::procDirectDebugInstruction(StringBuilder *input) {
+/*******************************************************************************
+* Console I/O
+*******************************************************************************/
+
+static const ConsoleCommand console_cmds[] = {
+  { "S", "Send sync" },
+  { "w", "Session poll" }
+};
+
+
+uint ManuvrSession::consoleGetCmds(ConsoleCommand** ptr) {
+  *ptr = (ConsoleCommand*) &console_cmds[0];
+  return sizeof(console_cmds) / sizeof(ConsoleCommand);
+}
+
+
+void ManuvrSession::consoleCmdProc(StringBuilder* input) {
   uint8_t temp_byte = 0;
 
   char* str = input->position(0);
@@ -578,20 +581,13 @@ void ManuvrSession::procDirectDebugInstruction(StringBuilder *input) {
       sync_event.enableSchedule(true);
       break;
     case 'i':  // Send a mess of sync packets.
-      if (1 == temp_byte) {
-      }
-      else if (2 == temp_byte) {
-      }
-      else {
-        printDebug(&local_log);
-      }
+      printDebug(&local_log);
       break;
     case 'w':  // Manual session poll.
       Kernel::raiseEvent(MANUVR_MSG_SESS_ORIGINATE_MSG, nullptr);
       break;
 
     default:
-      XenoSession::procDirectDebugInstruction(input);
       break;
   }
 

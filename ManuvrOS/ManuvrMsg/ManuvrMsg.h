@@ -39,20 +39,10 @@ This class forms the foundation of internal events. It contains the identity of 
 /*
 * These are flag definitions that might apply to an instance of a Msg.
 */
-//#define MANUVR_RUNNABLE_FLAG_MEM_MANAGED     0x0100  // Set to true to cause the Kernel to not free().
-#define MANUVR_RUNNABLE_FLAG_AUTOCLEAR       0x0400  // If true, this schedule will be removed after its last execution.
-#define MANUVR_RUNNABLE_FLAG_SCHED_ENABLED   0x0800  // Is the schedule running?
-#define MANUVR_RUNNABLE_FLAG_SCHEDULED       0x1000  // Set to true to cause the Kernel to not free().
-#define MANUVR_RUNNABLE_FLAG_PENDING_EXEC    0x2000  // This schedule is pending execution.
-
-
-/*
-* These are flag definitions that might apply to an instance of a Msg.
-*/
-#define MANUVR_MSG_FLAG_AUTOCLEAR       0x04000000  // If true, this schedule will be removed after its last execution.
-#define MANUVR_MSG_FLAG_SCHED_ENABLED   0x08000000  // Is the schedule running?
-#define MANUVR_MSG_FLAG_SCHEDULED       0x10000000  // Set to true to cause the Kernel to not free().
-#define MANUVR_MSG_FLAG_PENDING_EXEC    0x20000000  // This schedule is pending execution.
+#define MANUVR_MSG_FLAG_AUTOCLEAR       0x10000000  // If true, this schedule will be removed after its last execution.
+#define MANUVR_MSG_FLAG_SCHED_ENABLED   0x20000000  // Is the schedule running?
+#define MANUVR_MSG_FLAG_SCHEDULED       0x40000000  // Set to true to cause the Kernel to not free().
+#define MANUVR_MSG_FLAG_PENDING_EXEC    0x80000000  // This schedule is pending execution.
 
 #define MANUVR_MSG_FLAG_PRIORITY_MASK   0x0000FF00
 #define MANUVR_MSG_FLAG_REF_COUNT_MASK  0x0000007F
@@ -310,9 +300,9 @@ class ManuvrMsg {
     *
     * @return true if the schedule will execute ahread of schedule.
     */
-    inline bool shouldFire() { return (_flags & MANUVR_RUNNABLE_FLAG_PENDING_EXEC); };
+    inline bool shouldFire() { return (_flags & MANUVR_MSG_FLAG_PENDING_EXEC); };
     inline void shouldFire(bool en) {
-      _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_PENDING_EXEC) : (_flags & ~(MANUVR_RUNNABLE_FLAG_PENDING_EXEC));
+      _flags = (en) ? (_flags | MANUVR_MSG_FLAG_PENDING_EXEC) : (_flags & ~(MANUVR_MSG_FLAG_PENDING_EXEC));
     };
 
     /**
@@ -321,7 +311,7 @@ class ManuvrMsg {
     *
     * @return true if the schedule is enabled.
     */
-    inline bool scheduleEnabled() { return (_flags & MANUVR_RUNNABLE_FLAG_SCHED_ENABLED); };
+    inline bool scheduleEnabled() { return (_flags & MANUVR_MSG_FLAG_SCHED_ENABLED); };
 
     /**
     * When this schedule completes normally, will it be dropped from the
@@ -330,9 +320,9 @@ class ManuvrMsg {
     *
     * @return true if the schedule will be dropped from the schedule queue.
     */
-    inline bool autoClear() { return (_flags & MANUVR_RUNNABLE_FLAG_AUTOCLEAR); };
+    inline bool autoClear() { return (_flags & MANUVR_MSG_FLAG_AUTOCLEAR); };
     inline void autoClear(bool en) {
-      _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_AUTOCLEAR) : (_flags & ~(MANUVR_RUNNABLE_FLAG_AUTOCLEAR));
+      _flags = (en) ? (_flags | MANUVR_MSG_FLAG_AUTOCLEAR) : (_flags & ~(MANUVR_MSG_FLAG_AUTOCLEAR));
     };
 
     /**
@@ -341,9 +331,9 @@ class ManuvrMsg {
     *
     * @return true if the kernel has us in the scheduler queue.
     */
-    inline bool isScheduled() { return (_flags & MANUVR_RUNNABLE_FLAG_SCHEDULED); };
+    inline bool isScheduled() { return (_flags & MANUVR_MSG_FLAG_SCHEDULED); };
     inline void isScheduled(bool en) {
-      _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_SCHEDULED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_SCHEDULED));
+      _flags = (en) ? (_flags | MANUVR_MSG_FLAG_SCHEDULED) : (_flags & ~(MANUVR_MSG_FLAG_SCHEDULED));
     };
 
 
@@ -416,7 +406,7 @@ class ManuvrMsg {
     int   collect_valid_grammatical_forms(int, LinkedList<char*>*);
 
     inline void scheduleEnabled(bool en) {
-      _flags = (en) ? (_flags | MANUVR_RUNNABLE_FLAG_SCHED_ENABLED) : (_flags & ~(MANUVR_RUNNABLE_FLAG_SCHED_ENABLED));
+      _flags = (en) ? (_flags | MANUVR_MSG_FLAG_SCHED_ENABLED) : (_flags & ~(MANUVR_MSG_FLAG_SCHED_ENABLED));
     };
 
 

@@ -140,9 +140,6 @@ BufferPipe::~BufferPipe() {
 *                            |
 * Basal implementations.
 *******************************************************************************/
-// TODO: Suspect that crashes being caused by this being pure-virtual are
-//         being caused by logging operations executed from the base destructor
-//         which is already destructed.
 const char* BufferPipe::pipeName() { return "<IN TEARDOWN>"; }
 
 /**
@@ -217,9 +214,6 @@ int8_t BufferPipe::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
 *   been incurred. This implementation will simply punt to the far side, if
 *   possible. If not, we fail and don't take the buffer.
 *
-* Any override of this method should probably concatHandoff into it's local
-*   StringBuilder instance.
-*
 * @param  buf    A pointer to the buffer.
 * @param  len    How long the buffer is.
 * @param  mm     A declaration of memory-management responsibility.
@@ -233,7 +227,7 @@ int8_t BufferPipe::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
   //   responsibility for the copy and free it, and the worst that will
   //   happen is that we waste time.
   // Note that this call does NOT leave this pipe instance. It is only
-  //   an override to the member of the same name that moves high-level
+  //   an overload to the member of the same name that moves high-level
   //   buffers.
   return toCounterparty(&temp, MEM_MGMT_RESPONSIBLE_BEARER);
 }
@@ -242,9 +236,6 @@ int8_t BufferPipe::toCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
 * This allows us to minimize the burden of dynamic mem alloc if it has already
 *   been incurred. This implementation will simply punt to the far side, if
 *   possible. If not, we fail and don't take the buffer.
-*
-* Any override of this method should probably concatHandoff into it's local
-*   StringBuilder instance.
 *
 * @param  buf    A pointer to the buffer.
 * @param  len    How long the buffer is.
@@ -259,7 +250,7 @@ int8_t BufferPipe::fromCounterparty(uint8_t* buf, unsigned int len, int8_t mm) {
   //   responsibility for the copy and free it, and the worst that will
   //   happen is that we waste time.
   // Note that this call does NOT leave this pipe instance. It is only
-  //   an override to the member of the same name that moves high-level
+  //   an overload to the member of the same name that moves high-level
   //   buffers.
   return fromCounterparty(&temp, MEM_MGMT_RESPONSIBLE_BEARER);
 }

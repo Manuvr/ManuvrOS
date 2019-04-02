@@ -349,7 +349,7 @@ ManuvrMsg::~ManuvrMsg() {
 */
 int8_t ManuvrMsg::repurpose(uint16_t code, EventReceiver* cb) {
   // These things have implications for memory management, which is why repurpose() doesn't touch them.
-  uint32_t _persist_mask = MANUVR_RUNNABLE_FLAG_SCHEDULED;
+  uint32_t _persist_mask = MANUVR_MSG_FLAG_SCHEDULED;
   _flags            = _flags & _persist_mask;
   _origin           = cb;
   specific_target   = nullptr;

@@ -958,16 +958,16 @@ int8_t ATECC508::generateBirthCert() {
     _birth_cert.hw_ver  = HW_VERSION_CODE & 0xFF;
   #endif
 
-  uint32_t str_sz = strict_min(sizeof(_birth_cert.make_str)-1, strlen(MANUFACTURER_NAME));
+  uint32_t str_sz = strict_min((uint32_t) sizeof(_birth_cert.make_str)-1, (uint32_t) strlen(MANUFACTURER_NAME));
   memcpy(_birth_cert.make_str, MANUFACTURER_NAME, str_sz);
-  str_sz = strict_min(sizeof(_birth_cert.model_str)-1, strlen(FIRMWARE_NAME));
+  str_sz = strict_min((uint32_t) sizeof(_birth_cert.model_str)-1, (uint32_t) strlen(FIRMWARE_NAME));
   memcpy(_birth_cert.model_str, FIRMWARE_NAME, str_sz);
 
   iuuid->copyRaw((uint8_t*) &_birth_cert.hw_id);
 
   _birth_cert.prov_date = epochTime();
 
-  str_sz = strict_min(sizeof(_birth_cert.key_refs)-1, strlen(ATECC_KEY_REF_STRING));
+  str_sz = strict_min((uint32_t) sizeof(_birth_cert.key_refs)-1, (uint32_t) strlen(ATECC_KEY_REF_STRING));
   memcpy(_birth_cert.key_refs, ATECC_KEY_REF_STRING, str_sz);
 
   // These values must come from outside.
