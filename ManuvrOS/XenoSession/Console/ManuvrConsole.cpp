@@ -303,7 +303,7 @@ int8_t ManuvrConsole::fromCounterparty(StringBuilder* buf, int8_t mm) {
 static const ConsoleCommand console_cmds[] = {
   { "?", "Show help" },
   { "i", "Show console-capable objects." },
-  { "e", "Local echo on/off." },
+  { "E/e", "Local echo on/off." },
   { "/", "Drop back to console." }
 };
 
@@ -367,7 +367,6 @@ void ManuvrConsole::consoleCmdProc(StringBuilder* input) {
 */
 int8_t ManuvrConsole::attached() {
   if (EventReceiver::attached()) {
-    //toCounterparty((uint8_t*) temp, strlen(temp), MEM_MGMT_RESPONSIBLE_BEARER);
     // This is a console. Presumable it should also render log output.
     return 1;
   }
@@ -449,27 +448,6 @@ int8_t ManuvrConsole::notify(ManuvrMsg* active_runnable) {
         StringBuilder* _tmp = nullptr;
         if (0 == active_runnable->getArgAs(&_tmp)) {
           _route_console_input(_tmp);
-        }
-      }
-      return_value++;
-      break;
-
-    case MANUVR_MSG_SESS_SERVICE:
-      // If we ever see this, it means the class that extended us isn't reacting appropriately
-      //   to its own requests-for-service. Pitch a warning.
-      #ifdef MANUVR_DEBUG
-      if (getVerbosity() > 1) {
-        local_log.concatf("%p received SESS_SERVICE.\n", this);
-        printDebug(&local_log);
-      }
-      #endif
-      break;
-
-    case MANUVR_MSG_XPORT_RECEIVE:
-      {
-        StringBuilder* buf;
-        if (0 == active_runnable->getArgAs(&buf)) {
-          fromCounterparty(buf, MEM_MGMT_RESPONSIBLE_BEARER);
         }
       }
       return_value++;

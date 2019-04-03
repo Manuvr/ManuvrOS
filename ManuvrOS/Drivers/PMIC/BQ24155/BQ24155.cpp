@@ -303,7 +303,7 @@ int8_t BQ24155::usb_current_limit(BQ24155USBCurrent milliamps) {
     case BQ24155USBCurrent::LIMIT_500: c_step++;
     case BQ24155USBCurrent::LIMIT_100:
     default:  // NOTE: The list obove is exhaustive, but some GCC builds don't know so.
-      return _write_reg_internal(BQ24155_REG_LIMITS, (int_val & 0xCF) | (c_step << 6));
+      return _write_reg_internal(BQ24155_REG_LIMITS, (int_val & 0x3F) | (c_step << 6));
   }
 }
 
