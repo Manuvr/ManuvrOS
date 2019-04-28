@@ -74,13 +74,13 @@ class MQTTMessage : public XenoMessage {
 
 
 struct MQTTOpts {
-	char* clientid;
-	int nodelimiter;
-	char* delimiter;
-	enum QoS qos;
-	char* username;
-	char* password;
-	int showtopics;
+  char* clientid;
+  int nodelimiter;
+  char* delimiter;
+  enum QoS qos;
+  char* username;
+  char* password;
+  int showtopics;
 };
 
 

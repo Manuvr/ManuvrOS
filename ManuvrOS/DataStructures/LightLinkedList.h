@@ -42,37 +42,37 @@ template <class T> class Node{
 
 
 /**
-*	This is a linked-list element with a slot for data.
+* This is a linked-list element with a slot for data.
 */
 template <class T> class LinkedList {
 
-	public:
-		LinkedList(void);
-		~LinkedList(void);
+  public:
+    LinkedList(void);
+    ~LinkedList(void);
 
-		int insert(T);                   // Returns the ID of the data, or -1 on failure. Makes only a reference to the payload.
+    int insert(T);                   // Returns the ID of the data, or -1 on failure. Makes only a reference to the payload.
 
-		int size(void);                  // Returns the number of elements in this list.
+    int size(void);                  // Returns the number of elements in this list.
 
-		T remove(void);                  // Removes the first element of the list. Return true on success.
-		bool remove(T);                  // Removes any elements with this data.
-		T remove(int position);          // Removes the element at the given position of the list. Return true on success.
+    T remove(void);                  // Removes the first element of the list. Return true on success.
+    bool remove(T);                  // Removes any elements with this data.
+    T remove(int position);          // Removes the element at the given position of the list. Return true on success.
 
-		int clear(void);                 // Returns the number of elements purged from the list.
+    int clear(void);                 // Returns the number of elements purged from the list.
 
-		//bool move(int old_position, int new_position);
+    //bool move(int old_position, int new_position);
 
-		T get(void);                     // Returns the data from the first element.
-		T get(int position);             // Returns the data from the element at the given position.
-		bool hasNext(void);              // Returns false if this list is empty. True otherwise.
-		bool contains(T);                // Returns true if this list contains the given data. False if not.
+    T get(void);                     // Returns the data from the first element.
+    T get(int position);             // Returns the data from the element at the given position.
+    bool hasNext(void);              // Returns false if this list is empty. True otherwise.
+    bool contains(T);                // Returns true if this list contains the given data. False if not.
 
 
-	private:
-		Node<T> *root;
-		Node<T>* getLast(void);          // Returns the last element in the list. Returns the WHOLE element, not just the data it holds.
-		int element_count;               // Call this member if you are pressed for time and haven't changed the list recently.
-		int count(void);                 // Counts the elements in the list without reliance on stored value. Slower...
+  private:
+    Node<T> *root;
+    Node<T>* getLast(void);          // Returns the last element in the list. Returns the WHOLE element, not just the data it holds.
+    int element_count;               // Call this member if you are pressed for time and haven't changed the list recently.
+    int count(void);                 // Counts the elements in the list without reliance on stored value. Slower...
 };
 
 
@@ -80,8 +80,8 @@ template <class T> class LinkedList {
 * Constructor.
 */
 template <class T> LinkedList<T>::LinkedList() {
-	root = nullptr;
-	element_count = 0;
+  root = nullptr;
+  element_count = 0;
 }
 
 
@@ -89,9 +89,9 @@ template <class T> LinkedList<T>::LinkedList() {
 * Destructor. Empties the list.
 */
 template <class T> LinkedList<T>::~LinkedList() {
-	while (root != nullptr) {
-		remove();
-	}
+  while (root != nullptr) {
+    remove();
+  }
 }
 
 
@@ -101,11 +101,11 @@ template <class T> LinkedList<T>::~LinkedList() {
 * @return the number of elements removed by the call.
 */
 template <class T> int LinkedList<T>::clear(void) {
-	int return_value = 0;
-	while (root != nullptr) {
-		if (remove()) return_value++;
-	}
-	return return_value;
+  int return_value = 0;
+  while (root != nullptr) {
+    if (remove()) return_value++;
+  }
+  return return_value;
 };
 
 
@@ -116,20 +116,20 @@ template <class T> int LinkedList<T>::clear(void) {
 * @return the position in the list that the data was inserted, or -1 on failure.
 */
 template <class T> int LinkedList<T>::insert(T d) {
-	Node<T> *current;
-	if (root == nullptr) {
-		root = (Node<T>*) malloc(sizeof(Node<T>));
-		current = root;
-	}
-	else {
-		current = getLast();
-		current->next = (Node<T>*) malloc(sizeof(Node<T>));
-		current = current->next;
-	}
-	current->next = nullptr;
-	current->data = d;
-	element_count++;
-	return 1;
+  Node<T> *current;
+  if (root == nullptr) {
+    root = (Node<T>*) malloc(sizeof(Node<T>));
+    current = root;
+  }
+  else {
+    current = getLast();
+    current->next = (Node<T>*) malloc(sizeof(Node<T>));
+    current = current->next;
+  }
+  current->next = nullptr;
+  current->data = d;
+  element_count++;
+  return 1;
 }
 
 
@@ -151,14 +151,14 @@ template <class T> int LinkedList<T>::size() {
 * @return the number of elements in the linked list.
 */
 template <class T> int LinkedList<T>::count() {
-	Node<T>* current = root;
-	int return_value = 0;
-	while (current != nullptr) {
-		current = current->next;
-		return_value++;
-	}
-	element_count = return_value;
-	return return_value;
+  Node<T>* current = root;
+  int return_value = 0;
+  while (current != nullptr) {
+    current = current->next;
+    return_value++;
+  }
+  element_count = return_value;
+  return return_value;
 }
 
 
@@ -168,11 +168,11 @@ template <class T> int LinkedList<T>::count() {
 * @return a pointer to the last node in this linked list.
 */
 template <class T> Node<T>* LinkedList<T>::getLast() {
-	Node<T>* return_value = root;
-	while ((return_value != nullptr) && (return_value->next != nullptr)) {
-		return_value = return_value->next;
-	}
-	return return_value;
+  Node<T>* return_value = root;
+  while ((return_value != nullptr) && (return_value->next != nullptr)) {
+    return_value = return_value->next;
+  }
+  return return_value;
 }
 
 
@@ -183,14 +183,14 @@ template <class T> Node<T>* LinkedList<T>::getLast() {
 */
 template <class T> T LinkedList<T>::remove() {
   T return_value = nullptr;
-	Node<T>* current = root;
-	if (current != nullptr) {
-	  return_value = current->data;
-		root = current->next;
-		free(current);
-		element_count--;
-	}
-	return return_value;
+  Node<T>* current = root;
+  if (current != nullptr) {
+    return_value = current->data;
+    root = current->next;
+    free(current);
+    element_count--;
+  }
+  return return_value;
 }
 
 
@@ -201,28 +201,28 @@ template <class T> T LinkedList<T>::remove() {
 * @return the thing removed, if anything. nullptr otherwise.
 */
 template <class T> T LinkedList<T>::remove(int pos) {
-	int i = 0;
+  int i = 0;
   T return_value   = nullptr;
-	Node<T>* prior   = nullptr;
-	Node<T>* current = root;
-	while (current != nullptr) {
-		if (i == pos) {
-			if (prior != nullptr) {
-				prior->next = current->next;
-			}
-			else {
-				root = current->next;
-			}
-			return_value = current->data;
-			free(current);
-			element_count--;
-			return return_value;
-		}
-		i++;
-		prior = current;
-		current = current->next;
-	}
-	return return_value;
+  Node<T>* prior   = nullptr;
+  Node<T>* current = root;
+  while (current != nullptr) {
+    if (i == pos) {
+      if (prior != nullptr) {
+        prior->next = current->next;
+      }
+      else {
+        root = current->next;
+      }
+      return_value = current->data;
+      free(current);
+      element_count--;
+      return return_value;
+    }
+    i++;
+    prior = current;
+    current = current->next;
+  }
+  return return_value;
 }
 
 
@@ -233,28 +233,28 @@ template <class T> T LinkedList<T>::remove(int pos) {
 * @return true if something was removed. False otherwise.
 */
 template <class T> bool LinkedList<T>::remove(T test_data) {
-	Node<T>* prior   = nullptr;
-	Node<T>* current = root;
-	bool return_value = false;
-	while (current != nullptr) {
-		if ((current->data != nullptr) && (current->data == test_data)) {
-			if (prior != nullptr) {
-				prior->next = current->next;
-			}
-			else {
-				root = current->next;
-			}
-			free(current);
-			element_count--;
-			return_value = true;
-			current = (nullptr == prior) ? nullptr : prior->next;
-		}
-		else {
-			prior = current;
-			current = current->next;
-		}
-	}
-	return return_value;
+  Node<T>* prior   = nullptr;
+  Node<T>* current = root;
+  bool return_value = false;
+  while (current != nullptr) {
+    if ((current->data != nullptr) && (current->data == test_data)) {
+      if (prior != nullptr) {
+        prior->next = current->next;
+      }
+      else {
+        root = current->next;
+      }
+      free(current);
+      element_count--;
+      return_value = true;
+      current = (nullptr == prior) ? nullptr : prior->next;
+    }
+    else {
+      prior = current;
+      current = current->next;
+    }
+  }
+  return return_value;
 }
 
 
@@ -264,11 +264,11 @@ template <class T> bool LinkedList<T>::remove(T test_data) {
 * @return The data from the element at the head of the list, or nullptr on empty list.
 */
 template <class T> T LinkedList<T>::get() {
-	Node<T>* current = root;
-	if (current != nullptr) {
-	  return current->data;
-	}
-	return nullptr;
+  Node<T>* current = root;
+  if (current != nullptr) {
+    return current->data;
+  }
+  return nullptr;
 }
 
 
@@ -279,16 +279,16 @@ template <class T> T LinkedList<T>::get() {
 * @return The data from the requested element, or nullptr if the list isn't that large.
 */
 template <class T> T LinkedList<T>::get(int pos) {
-	int i = 0;
-	Node<T>* current = root;
-	while (current != nullptr) {
-		if (i == pos) {
-			return current->data;
-		}
-		i++;
-		current = current->next;
-	}
-	return nullptr;
+  int i = 0;
+  Node<T>* current = root;
+  while (current != nullptr) {
+    if (i == pos) {
+      return current->data;
+    }
+    i++;
+    current = current->next;
+  }
+  return nullptr;
 }
 
 
@@ -298,7 +298,7 @@ template <class T> T LinkedList<T>::get(int pos) {
 * @return true if the list is not empty. False if it is.
 */
 template <class T> bool LinkedList<T>::hasNext() {
-	return (root != nullptr);
+  return (root != nullptr);
 }
 
 
@@ -309,14 +309,14 @@ template <class T> bool LinkedList<T>::hasNext() {
 * @return true if the list has the given data. False otherwise.
 */
 template <class T> bool LinkedList<T>::contains(T test_data) {
-	Node<T>* current = root;
-	while (current != nullptr) {
-		if ((current->data != nullptr) && (current->data == test_data)) {
-			return true;
-		}
-		current = current->next;
-	}
-	return false;
+  Node<T>* current = root;
+  while (current != nullptr) {
+    if ((current->data != nullptr) && (current->data == test_data)) {
+      return true;
+    }
+    current = current->next;
+  }
+  return false;
 }
 
 

@@ -154,12 +154,12 @@ uint8_t L3GD20::reportCapabilities(void) { return 0x31; }
 
 
 int8_t L3GD20::readOutstandingData(int8_t slot, Measurement &msrmnt) {
-	return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+  return SensorWrapper::SENSOR_ERROR_NO_ERROR;
 }
 
 
 int8_t L3GD20::setErrorRates() {
-	return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+  return SensorWrapper::SENSOR_ERROR_NO_ERROR;
 }
 
 

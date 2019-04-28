@@ -175,8 +175,8 @@ const MessageTypeDef* ManuvrMsg::lookupMsgDefByLabel(char* label) {
 
   // Didn't find it there. Search in the extended defs...
   const MessageTypeDef* temp_type_def;
-	std::map<uint16_t, const MessageTypeDef*>::iterator it;
-	for (it = message_defs_extended.begin(); it != message_defs_extended.end(); it++) {
+  std::map<uint16_t, const MessageTypeDef*>::iterator it;
+  for (it = message_defs_extended.begin(); it != message_defs_extended.end(); it++) {
     temp_type_def = it->second;
     if (strstr(label, temp_type_def->debug_label)) {
       return temp_type_def;
@@ -228,8 +228,8 @@ int8_t ManuvrMsg::getMsgLegend(StringBuilder* output) {
     }
   }
 
-	std::map<uint16_t, const MessageTypeDef*>::iterator it;
-	for (it = message_defs_extended.begin(); it != message_defs_extended.end(); it++) {
+  std::map<uint16_t, const MessageTypeDef*>::iterator it;
+  for (it = message_defs_extended.begin(); it != message_defs_extended.end(); it++) {
     temp_def = it->second;
 
     if (isExportable(temp_def)) {

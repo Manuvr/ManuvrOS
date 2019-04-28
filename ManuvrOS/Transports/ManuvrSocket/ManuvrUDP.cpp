@@ -145,10 +145,10 @@ ManuvrUDP::ManuvrUDP(const char* addr, int port, SocketOpts* opts) : ManuvrSocke
 *   as appropriate.
 */
 ManuvrUDP::~ManuvrUDP() {
-	std::map<uint16_t, UDPPipe*>::iterator it;
-	for (it = _open_replies.begin(); it != _open_replies.end(); it++) {
+  std::map<uint16_t, UDPPipe*>::iterator it;
+  for (it = _open_replies.begin(); it != _open_replies.end(); it++) {
     delete it->second;
-	}
+  }
 }
 
 
@@ -374,10 +374,10 @@ int8_t ManuvrUDP::read_port() {
 */
 int8_t ManuvrUDP::reset() {
   initialized(false);
-	std::map<uint16_t, UDPPipe*>::iterator it;
-	for (it = _open_replies.begin(); it != _open_replies.end(); it++) {
+  std::map<uint16_t, UDPPipe*>::iterator it;
+  for (it = _open_replies.begin(); it != _open_replies.end(); it++) {
     delete it->second;
-	}
+  }
 
   disconnect();
 
@@ -511,9 +511,9 @@ void ManuvrUDP::printDebug(StringBuilder* output) {
 
   output->concatf("--\n-- _open_replies \n");
   std::map<uint16_t, UDPPipe*>::iterator it;
-	for (it = _open_replies.begin(); it != _open_replies.end(); it++) {
-		it->second->printDebug(output);
-	}
+  for (it = _open_replies.begin(); it != _open_replies.end(); it++) {
+    it->second->printDebug(output);
+  }
   output->concat("\n");
 }
 

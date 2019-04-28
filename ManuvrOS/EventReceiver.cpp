@@ -45,7 +45,7 @@ EventReceiver::~EventReceiver() {
 */
 int8_t EventReceiver::setVerbosity(int8_t nu_verbosity) {
   if (getVerbosity() == nu_verbosity) return 0;
-	switch (nu_verbosity) {
+  switch (nu_verbosity) {
     case LOG_DEBUG:   /* 7 - debug-level messages */
     case LOG_INFO:    /* 6 - informational */
       #ifdef MANUVR_DEBUG

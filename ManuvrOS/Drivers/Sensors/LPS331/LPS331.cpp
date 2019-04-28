@@ -87,7 +87,7 @@ LPS331::~LPS331() {
 */
 void LPS331::gpioSetup() {
 // TODO: This class was never fully ported back from Digitabulum. No GPIO change-over...
-//	GPIO_InitTypeDef GPIO_InitStruct;
+//  GPIO_InitTypeDef GPIO_InitStruct;
 //
 //    /* These Port E pins are inputs:
 //    *
@@ -150,52 +150,52 @@ SensorError LPS331::readSensor() {
 ****************************************************************************************************/
 
 int8_t LPS331::register_write_cb(DeviceRegister* reg) {
-	switch (reg->addr) {
-	  case LPS331_REG_PRS_P_OUT_XL:
-	  case LPS331_REG_PRS_OUT_LO:
-	  case LPS331_REG_PRS_OUT_HI:
-	  case LPS331_REG_TEMP_OUT_HI:
-	  case LPS331_REG_TEMP_OUT_LO:
-	  case LPS331_REG_WHO_AM_I:
-	  default:
+  switch (reg->addr) {
+    case LPS331_REG_PRS_P_OUT_XL:
+    case LPS331_REG_PRS_OUT_LO:
+    case LPS331_REG_PRS_OUT_HI:
+    case LPS331_REG_TEMP_OUT_HI:
+    case LPS331_REG_TEMP_OUT_LO:
+    case LPS331_REG_WHO_AM_I:
+    default:
       // Illegal write target.
-	    break;
-	}
+      break;
+  }
   return 0;
 }
 
 
 int8_t LPS331::register_read_cb(DeviceRegister* reg) {
-	switch (reg->addr) {
-	  case LPS331_REG_WHO_AM_I:
-	    reg->unread = false;
-	    if (!isActive()) {
-	      isActive(0xBB == reg->getVal());
-	      if (isActive()) {
-	        writeDirtyRegisters();
-	      }
-	    }
-	    else {
-	      isActive(0xBB == reg->getVal());
-	    }
-	    break;
+  switch (reg->addr) {
+    case LPS331_REG_WHO_AM_I:
+      reg->unread = false;
+      if (!isActive()) {
+        isActive(0xBB == reg->getVal());
+        if (isActive()) {
+          writeDirtyRegisters();
+        }
+      }
+      else {
+        isActive(0xBB == reg->getVal());
+      }
+      break;
 
-	  case LPS331_REG_PRS_P_OUT_XL:
-	  case LPS331_REG_PRS_OUT_LO:
-	  case LPS331_REG_PRS_OUT_HI:
+    case LPS331_REG_PRS_P_OUT_XL:
+    case LPS331_REG_PRS_OUT_LO:
+    case LPS331_REG_PRS_OUT_HI:
       if (calculate_pressure()) {
-	    }
-	    break;
+      }
+      break;
 
-	  case LPS331_REG_TEMP_OUT_HI:
-	  case LPS331_REG_TEMP_OUT_LO:
+    case LPS331_REG_TEMP_OUT_HI:
+    case LPS331_REG_TEMP_OUT_LO:
       if (calculate_temperature()) {
-	    }
-	    break;
+      }
+      break;
 
-	  default:
-	    break;
-	}
+    default:
+      break;
+  }
   reg->unread = false;
   return 0;
 }

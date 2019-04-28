@@ -76,9 +76,9 @@ The message class was derived from cantcoap.
 
 class CoAPMessage : public XenoMessage {
   public:
-		CoAPMessage();
-		CoAPMessage(uint8_t *pdu, int pduLength);
-		CoAPMessage(uint8_t *buffer, int bufferLength, int pduLength);
+    CoAPMessage();
+    CoAPMessage(uint8_t *pdu, int pduLength);
+    CoAPMessage(uint8_t *buffer, int bufferLength, int pduLength);
     ~CoAPMessage();
 
     virtual void printDebug(StringBuilder*);
@@ -91,127 +91,127 @@ class CoAPMessage : public XenoMessage {
     int decompose_publish();
 
     // TODO: These members were digested from cantcoap...
-		/// CoAP message types. Note, values only work as enum.
-		enum Type {
-			COAP_CONFIRMABLE     = 0x00,
-			COAP_NON_CONFIRMABLE = 0x10,
-			COAP_ACKNOWLEDGEMENT = 0x20,
-			COAP_RESET           = 0x30
-		};
+    /// CoAP message types. Note, values only work as enum.
+    enum Type {
+      COAP_CONFIRMABLE     = 0x00,
+      COAP_NON_CONFIRMABLE = 0x10,
+      COAP_ACKNOWLEDGEMENT = 0x20,
+      COAP_RESET           = 0x30
+    };
 
-		// CoAP response codes.
-		enum Code {
-			COAP_EMPTY=0x00,
-			COAP_GET,
-			COAP_POST,
-			COAP_PUT,
-			COAP_DELETE,
-			COAP_CREATED=0x41,
-			COAP_DELETED,
-			COAP_VALID,
-			COAP_CHANGED,
-			COAP_CONTENT,
-			COAP_BAD_REQUEST=0x80,
-			COAP_UNAUTHORIZED,
-			COAP_BAD_OPTION,
-			COAP_FORBIDDEN,
-			COAP_NOT_FOUND,
-			COAP_METHOD_NOT_ALLOWED,
-			COAP_NOT_ACCEPTABLE,
-			COAP_PRECONDITION_FAILED=0x8C,
-			COAP_REQUEST_ENTITY_TOO_LARGE=0x8D,
-			COAP_UNSUPPORTED_CONTENT_FORMAT=0x8F,
-			COAP_INTERNAL_SERVER_ERROR=0xA0,
-			COAP_NOT_IMPLEMENTED,
-			COAP_BAD_GATEWAY,
-			COAP_SERVICE_UNAVAILABLE,
-			COAP_GATEWAY_TIMEOUT,
-			COAP_PROXYING_NOT_SUPPORTED,
-			COAP_UNDEFINED_CODE=0xFF
-		};
+    // CoAP response codes.
+    enum Code {
+      COAP_EMPTY=0x00,
+      COAP_GET,
+      COAP_POST,
+      COAP_PUT,
+      COAP_DELETE,
+      COAP_CREATED=0x41,
+      COAP_DELETED,
+      COAP_VALID,
+      COAP_CHANGED,
+      COAP_CONTENT,
+      COAP_BAD_REQUEST=0x80,
+      COAP_UNAUTHORIZED,
+      COAP_BAD_OPTION,
+      COAP_FORBIDDEN,
+      COAP_NOT_FOUND,
+      COAP_METHOD_NOT_ALLOWED,
+      COAP_NOT_ACCEPTABLE,
+      COAP_PRECONDITION_FAILED=0x8C,
+      COAP_REQUEST_ENTITY_TOO_LARGE=0x8D,
+      COAP_UNSUPPORTED_CONTENT_FORMAT=0x8F,
+      COAP_INTERNAL_SERVER_ERROR=0xA0,
+      COAP_NOT_IMPLEMENTED,
+      COAP_BAD_GATEWAY,
+      COAP_SERVICE_UNAVAILABLE,
+      COAP_GATEWAY_TIMEOUT,
+      COAP_PROXYING_NOT_SUPPORTED,
+      COAP_UNDEFINED_CODE=0xFF
+    };
 
-		/// CoAP option numbers.
-		enum Option {
-			COAP_OPTION_IF_MATCH=1,
-			COAP_OPTION_URI_HOST=3,
-			COAP_OPTION_ETAG,
-			COAP_OPTION_IF_NONE_MATCH,
-			COAP_OPTION_OBSERVE,
-			COAP_OPTION_URI_PORT,
-			COAP_OPTION_LOCATION_PATH,
-			COAP_OPTION_URI_PATH=11,
-			COAP_OPTION_CONTENT_FORMAT,
-			COAP_OPTION_MAX_AGE=14,
-			COAP_OPTION_URI_QUERY,
-			COAP_OPTION_ACCEPT=17,
-			COAP_OPTION_LOCATION_QUERY=20,
-			COAP_OPTION_BLOCK2=23,
-			COAP_OPTION_BLOCK1=27,
-			COAP_OPTION_SIZE2,
-			COAP_OPTION_PROXY_URI=35,
-			COAP_OPTION_PROXY_SCHEME=39,
-			COAP_OPTION_SIZE1=60
-		};
+    /// CoAP option numbers.
+    enum Option {
+      COAP_OPTION_IF_MATCH=1,
+      COAP_OPTION_URI_HOST=3,
+      COAP_OPTION_ETAG,
+      COAP_OPTION_IF_NONE_MATCH,
+      COAP_OPTION_OBSERVE,
+      COAP_OPTION_URI_PORT,
+      COAP_OPTION_LOCATION_PATH,
+      COAP_OPTION_URI_PATH=11,
+      COAP_OPTION_CONTENT_FORMAT,
+      COAP_OPTION_MAX_AGE=14,
+      COAP_OPTION_URI_QUERY,
+      COAP_OPTION_ACCEPT=17,
+      COAP_OPTION_LOCATION_QUERY=20,
+      COAP_OPTION_BLOCK2=23,
+      COAP_OPTION_BLOCK1=27,
+      COAP_OPTION_SIZE2,
+      COAP_OPTION_PROXY_URI=35,
+      COAP_OPTION_PROXY_SCHEME=39,
+      COAP_OPTION_SIZE1=60
+    };
 
-		/// CoAP content-formats.
-		enum ContentFormat {
-			COAP_CONTENT_FORMAT_TEXT_PLAIN =  0,
-			COAP_CONTENT_FORMAT_APP_LINK   = 40,
-			COAP_CONTENT_FORMAT_APP_XML    = 41,
-			COAP_CONTENT_FORMAT_APP_OCTET  = 42,
-			COAP_CONTENT_FORMAT_APP_EXI    = 47,
-			COAP_CONTENT_FORMAT_APP_JSON   = 50
-		};
+    /// CoAP content-formats.
+    enum ContentFormat {
+      COAP_CONTENT_FORMAT_TEXT_PLAIN =  0,
+      COAP_CONTENT_FORMAT_APP_LINK   = 40,
+      COAP_CONTENT_FORMAT_APP_XML    = 41,
+      COAP_CONTENT_FORMAT_APP_OCTET  = 42,
+      COAP_CONTENT_FORMAT_APP_EXI    = 47,
+      COAP_CONTENT_FORMAT_APP_JSON   = 50
+    };
 
-		/// Sequence of these is returned by CoAPMessage::getOptions()
-		struct CoapOption {
-			uint16_t optionDelta;
-			uint16_t optionNumber;
-			uint16_t optionValueLength;
-			int totalLength;
-			uint8_t *optionPointer;
-			uint8_t *optionValuePointer;
-		};
+    /// Sequence of these is returned by CoAPMessage::getOptions()
+    struct CoapOption {
+      uint16_t optionDelta;
+      uint16_t optionNumber;
+      uint16_t optionValueLength;
+      int totalLength;
+      uint8_t *optionPointer;
+      uint8_t *optionValuePointer;
+    };
 
-		int reset();
-		int validate();
+    int reset();
+    int validate();
 
-		// version
-		int setVersion(uint8_t version);
-		uint8_t getVersion();
+    // version
+    int setVersion(uint8_t version);
+    uint8_t getVersion();
 
-		// message type
-		void setType(CoAPMessage::Type type);
-		CoAPMessage::Type getType();
+    // message type
+    void setType(CoAPMessage::Type type);
+    CoAPMessage::Type getType();
 
-		// tokens
-		int setTokenLength(uint8_t tokenLength);
-		int getTokenLength();
-		uint8_t* getTokenPointer();
-		int setToken(uint8_t *token, uint8_t tokenLength);
+    // tokens
+    int setTokenLength(uint8_t tokenLength);
+    int getTokenLength();
+    uint8_t* getTokenPointer();
+    int setToken(uint8_t *token, uint8_t tokenLength);
 
-		// message code
-		void setCode(CoAPMessage::Code code);
-		CoAPMessage::Code getCode();
+    // message code
+    void setCode(CoAPMessage::Code code);
+    CoAPMessage::Code getCode();
 
-		// message ID
-		int setMessageID(uint16_t messageID);
-		uint16_t getMessageID();
+    // message ID
+    int setMessageID(uint16_t messageID);
+    uint16_t getMessageID();
 
-		// options
-		int addOption(uint16_t optionNumber, uint16_t optionLength, uint8_t *optionValue);
-		// gets a list of all options
-		CoapOption* getOptions();
+    // options
+    int addOption(uint16_t optionNumber, uint16_t optionLength, uint8_t *optionValue);
+    // gets a list of all options
+    CoapOption* getOptions();
 
     /* Return the number of options in the message. */
-		inline int getNumOptions() {      return _numOptions;    };
+    inline int getNumOptions() {      return _numOptions;    };
 
 
     inline int setURI(char *uri) {
       return setURI(uri, strlen(uri));
     };
-		int setURI(char *uri, int urilen);
-		int getURI(char *dst, int dstlen, int *outLen);
+    int setURI(char *uri, int urilen);
+    int getURI(char *dst, int dstlen, int *outLen);
 
     /**
     * Adds a new option to the CoAP PDU that encodes a URI_QUERY.
@@ -219,74 +219,74 @@ class CoAPMessage : public XenoMessage {
     * \param query The uri query to encode.
     * \return 0 on success, 1 on failure.
     */
-		inline int addURIQuery(char *query) {
+    inline int addURIQuery(char *query) {
       return addOption(COAP_OPTION_URI_QUERY,strlen(query),(uint8_t*)query);
     };
 
-		// content format helper
-		int setContentFormat(CoAPMessage::ContentFormat format);
+    // content format helper
+    int setContentFormat(CoAPMessage::ContentFormat format);
 
-		// payload
-		uint8_t* mallocPayload(int bytes);
-		int setPayload(uint8_t *value, int len);
+    // payload
+    uint8_t* mallocPayload(int bytes);
+    int setPayload(uint8_t *value, int len);
 
-		inline uint8_t* getPayloadPointer() {  return _payloadPointer; };
-		inline int getPayloadLength() {        return _payloadLength;  };
-		uint8_t* getPayloadCopy();
+    inline uint8_t* getPayloadPointer() {  return _payloadPointer; };
+    inline int getPayloadLength() {        return _payloadLength;  };
+    uint8_t* getPayloadCopy();
 
     /**
     * This is used when re-using a PDU container before calling CoAPMessage::validate() as it
     * is not possible to deduce the length of a PDU since the payload has no length marker.
     * \param len The length of the PDU
     */
-		inline void setPDULength(int len) { _pduLength = len;   };
-		// pdu buffer accessors.
-		inline uint16_t getPDULength() {    return _pduLength;  };
-		inline uint8_t* getPDUPointer() {   return _pdu;        };
+    inline void setPDULength(int len) { _pduLength = len;   };
+    // pdu buffer accessors.
+    inline uint16_t getPDULength() {    return _pduLength;  };
+    inline uint8_t* getPDUPointer() {   return _pdu;        };
 
-		// debugging
-		void printOptionHuman(uint8_t *option);
+    // debugging
+    void printOptionHuman(uint8_t *option);
 
     static const char* optionNumToString(uint16_t);
     static const char* codeToString(CoAPMessage::Code);
     static const char* typeToString(CoAPMessage::Type);
-		static CoAPMessage::Code httpStatusToCode(int httpStatus);
+    static CoAPMessage::Code httpStatusToCode(int httpStatus);
 
 
   private:
     StringBuilder coap_log;   // TODO: Make local variable.
 
     // TODO: These members were digested from cantcoap...
-		uint8_t* _pdu;
-		uint8_t* _payloadPointer;
-		int _pduLength;
-		int _constructedFromBuffer;
-		int _bufferLength;
-		int _payloadLength;
-		int _numOptions;
-		uint16_t _maxAddedOptionNumber;
+    uint8_t* _pdu;
+    uint8_t* _payloadPointer;
+    int _pduLength;
+    int _constructedFromBuffer;
+    int _bufferLength;
+    int _payloadLength;
+    int _numOptions;
+    uint16_t _maxAddedOptionNumber;
 
-		void shiftPDUUp(int shiftOffset, int shiftAmount);
-		void shiftPDUDown(int startLocation, int shiftOffset, int shiftAmount);
-		uint8_t codeToValue(CoAPMessage::Code c);
+    void shiftPDUUp(int shiftOffset, int shiftAmount);
+    void shiftPDUDown(int startLocation, int shiftOffset, int shiftAmount);
+    uint8_t codeToValue(CoAPMessage::Code c);
 
-		// option stuff
-		int findInsertionPosition(uint16_t optionNumber, uint16_t *prevOptionNumber);
-		int computeExtraBytes(uint16_t n);
-		int insertOption(int insertionPosition, uint16_t optionDelta, uint16_t optionValueLength, uint8_t *optionValue);
-		uint16_t getOptionDelta(uint8_t *option);
-		void setOptionDelta(int optionPosition, uint16_t optionDelta);
-		uint16_t getOptionValueLength(uint8_t *option);
+    // option stuff
+    int findInsertionPosition(uint16_t optionNumber, uint16_t *prevOptionNumber);
+    int computeExtraBytes(uint16_t n);
+    int insertOption(int insertionPosition, uint16_t optionDelta, uint16_t optionValueLength, uint8_t *optionValue);
+    uint16_t getOptionDelta(uint8_t *option);
+    void setOptionDelta(int optionPosition, uint16_t optionDelta);
+    uint16_t getOptionValueLength(uint8_t *option);
 };
 
 
 struct CoAPOpts {
-	char* clientid;
-	int nodelimiter;
-	char* delimiter;
-	char* username;
-	char* password;
-	int showtopics;
+  char* clientid;
+  int nodelimiter;
+  char* delimiter;
+  char* username;
+  char* password;
+  int showtopics;
 };
 
 

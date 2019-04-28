@@ -213,10 +213,10 @@ int8_t STM32F7USB::reset() {
 */
 int8_t STM32F7USB::read_port() {
   int read_len = 0;
-	/* Check if we are ready to use, if drivers are OK installed on computer */
-	if (TM_USBD_IsDeviceReady(TM_USB_FS) == TM_USBD_Result_Ok) {
-		/* We are ready */
-		/* Check if anything received */
+  /* Check if we are ready to use, if drivers are OK installed on computer */
+  if (TM_USBD_IsDeviceReady(TM_USB_FS) == TM_USBD_Result_Ok) {
+    /* We are ready */
+    /* Check if anything received */
     uint8_t buf[256];
     uint16_t n = TM_USBD_CDC_GetArray(TM_USB_FS, buf, 255);
     //int n = _usb_rx_buf.length();
@@ -228,10 +228,10 @@ int8_t STM32F7USB::read_port() {
       //write_port((uint8_t*) test_str, strlen(test_str));
       BufferPipe::fromCounterparty(buf, n, MEM_MGMT_RESPONSIBLE_BEARER);
     }
-	}
+  }
   else {
-		/* We are not ready */
-	}
+    /* We are not ready */
+  }
 
   return read_len;
 }
@@ -242,7 +242,7 @@ bool STM32F7USB::write_port(uint8_t* out, int out_len) {
     if (TM_USBD_IsDeviceReady(TM_USB_FS) == TM_USBD_Result_Ok) {
       TM_USBD_CDC_PutArray(TM_USB_FS, out, (uint16_t) out_len);
       //_tx_in_progress = true;
-    	TM_USBD_CDC_Process(TM_USB_FS);
+      TM_USBD_CDC_Process(TM_USB_FS);
       bytes_sent += out_len;
       return true;
     }
@@ -283,7 +283,7 @@ int8_t STM32F7USB::attached() {
     if (_accumulator.count() > 0) {
       TM_USBD_CDC_Puts(TM_USB_FS, (const char*)_accumulator.string());
       //_tx_in_progress = true;
-  	  TM_USBD_CDC_Process(TM_USB_FS);
+      TM_USBD_CDC_Process(TM_USB_FS);
     }
     return 1;
   }

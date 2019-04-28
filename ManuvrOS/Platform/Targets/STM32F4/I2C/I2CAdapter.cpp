@@ -13,7 +13,7 @@ extern "C" {
 int8_t I2CAdapter::bus_init() {
   // This init() fxn was patterned after the STM32F4x7 library example.
   if (dev == 1) {
-    //I2C_DeInit(I2C1);		//Deinit and reset the I2C to avoid it locking up
+    //I2C_DeInit(I2C1);    //Deinit and reset the I2C to avoid it locking up
 
     GPIO_InitTypeDef GPIO_InitStruct;
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);    // enable APB1 peripheral clock for I2C1

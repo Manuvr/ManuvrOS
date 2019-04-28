@@ -38,7 +38,7 @@ This is my C++ translation of the Paho Demo C library.
 *******************************************************************************/
 
 MQTTOpts opts = {
-	(char*)"manuvr_client",
+  (char*)"manuvr_client",
   0,
   (char*)"\n",
   QOS2,
@@ -63,9 +63,9 @@ MQTTOpts opts = {
 * @param   ManuvrXport* All sessions must have one (and only one) transport.
 */
 MQTTSession::MQTTSession(ManuvrXport* _xport) : XenoSession("MQTTSession", _xport) {
-	_ping_outstanding(false);
-	working   = NULL;
-	_next_packetid = 1;
+  _ping_outstanding(false);
+  working   = NULL;
+  _next_packetid = 1;
 
   _ping_timer.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG, (EventReceiver*) this);
   _ping_timer.incRefs();
@@ -84,14 +84,14 @@ MQTTSession::~MQTTSession() {
   _ping_timer.enableSchedule(false);
   platform.kernel()->removeSchedule(&_ping_timer);
 
-	if (NULL != working) {
-		delete working;
-		working = NULL;
-	}
-	unsubscribeAll();
-	while (_pending_mqtt_messages.hasNext()) {
-		delete _pending_mqtt_messages.dequeue();
-	}
+  if (NULL != working) {
+    delete working;
+    working = NULL;
+  }
+  unsubscribeAll();
+  while (_pending_mqtt_messages.hasNext()) {
+    delete _pending_mqtt_messages.dequeue();
+  }
 }
 
 
@@ -123,11 +123,11 @@ int8_t MQTTSession::subscribe(const char* topic, ManuvrMsg* runnable) {
   std::map<const char*, ManuvrMsg*>::iterator it = _subscriptions.find(topic);
   if (_subscriptions.end() == it) {
     // If the list doesn't already have the topic....
-		runnable->setOriginator((EventReceiver*)this);
+    runnable->setOriginator((EventReceiver*)this);
     _subscriptions[topic] = runnable;
-		return sendSub(topic, QOS1);   // TODO: make dynamic
+    return sendSub(topic, QOS1);   // TODO: make dynamic
   }
-	return -1;
+  return -1;
 }
 
 
@@ -135,39 +135,39 @@ int8_t MQTTSession::unsubscribe(const char* topic) {
   std::map<const char*, ManuvrMsg*>::iterator it = _subscriptions.find(topic);
   if (_subscriptions.end() != it) {
     // TODO: We need to clean up the runnable. For now, we'll assume it is handled elsewhere.
-		// delete it->second;
-		_subscriptions.erase(topic);
+    // delete it->second;
+    _subscriptions.erase(topic);
     return 0;
   }
-	return -1;
+  return -1;
 }
 
 
 int8_t MQTTSession::resubscribeAll() {
-	if (isEstablished()) {
-		std::map<const char*, ManuvrMsg*>::iterator it;
-  	for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
-			if (!sendSub(it->first, QOS1)) {   // TODO: Make QoS dynmaic.
-				return -1;
-			}
-  	}
-	}
-	return 0;
+  if (isEstablished()) {
+    std::map<const char*, ManuvrMsg*>::iterator it;
+    for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
+      if (!sendSub(it->first, QOS1)) {   // TODO: Make QoS dynmaic.
+        return -1;
+      }
+    }
+  }
+  return 0;
 }
 
 int8_t MQTTSession::unsubscribeAll() {
-	if (isEstablished()) {
-		std::map<const char*, ManuvrMsg*>::iterator it;
-  	for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
-			if (sendUnsub(it->first)) {
-				_subscriptions.erase(it->first);
-			}
-		}
+  if (isEstablished()) {
+    std::map<const char*, ManuvrMsg*>::iterator it;
+    for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
+      if (sendUnsub(it->first)) {
+        _subscriptions.erase(it->first);
+      }
+    }
   }
-	else {
-		_subscriptions.clear();
-	}
-	return 0;
+  else {
+    _subscriptions.clear();
+  }
+  return 0;
 }
 
 
@@ -185,43 +185,43 @@ int8_t MQTTSession::unsubscribeAll() {
 */
 int8_t MQTTSession::bin_stream_rx(unsigned char *buf, int len) {
   int8_t return_value = 0;
-	if (len >= 1) {
-		if (NULL == working) {
-			working = new MQTTMessage();
-		}
+  if (len >= 1) {
+    if (NULL == working) {
+      working = new MQTTMessage();
+    }
 
-		int _eaten = working->accumulate(buf, len);
-		if (-1 == _eaten) {
-			delete working;
-			working = NULL;
-			return_value = -1;
-		}
-		else {
-			// These are success cases.
-			if (working->parseComplete()) {
-				_pending_mqtt_messages.insert(working);
-				requestService();   	// Pitch an event to deal with the message.
-				working = NULL;
+    int _eaten = working->accumulate(buf, len);
+    if (-1 == _eaten) {
+      delete working;
+      working = NULL;
+      return_value = -1;
+    }
+    else {
+      // These are success cases.
+      if (working->parseComplete()) {
+        _pending_mqtt_messages.insert(working);
+        requestService();     // Pitch an event to deal with the message.
+        working = NULL;
 
-				if (len - _eaten > 0) {
-					// We not only finished a message, but we are beginning another. Recurse.
-					return bin_stream_rx(buf + _eaten, len - _eaten);
-				}
-			}
-		}
-	}
+        if (len - _eaten > 0) {
+          // We not only finished a message, but we are beginning another. Recurse.
+          return bin_stream_rx(buf + _eaten, len - _eaten);
+        }
+      }
+    }
+  }
   return return_value;
 }
 
 
 int8_t MQTTSession::connection_callback(bool _con) {
-	XenoSession::connection_callback(_con);
-	StringBuilder output;
-	output.concatf("\n\nSession%sconnected\n\n", (_con ? " " : " dis"));
-	Kernel::log(&output);
-	if (_con) {
-		sendConnectPacket();
-	}
+  XenoSession::connection_callback(_con);
+  StringBuilder output;
+  output.concatf("\n\nSession%sconnected\n\n", (_con ? " " : " dis"));
+  Kernel::log(&output);
+  if (_con) {
+    sendConnectPacket();
+  }
   return 0;
 }
 
@@ -290,24 +290,24 @@ bool MQTTSession::sendUnsub(const char* _topicStr) {
 
 bool MQTTSession::sendKeepAlive() {
   if (isEstablished()) {
-		if (_ping_outstanding()) {
-			#if defined (MANUVR_DEBUG)
-			if (getVerbosity() > 3) Kernel::log("MQTT session has an expired ping.\n");
-			#endif
-		}
+    if (_ping_outstanding()) {
+      #if defined (MANUVR_DEBUG)
+      if (getVerbosity() > 3) Kernel::log("MQTT session has an expired ping.\n");
+      #endif
+    }
 
     size_t buf_size     = 16;
     unsigned char* buf  = (unsigned char*) alloca(buf_size);
     int len = MQTTSerialize_pingreq(buf, buf_size);
 
     if (len > 0) {
-			_ping_outstanding(true);
+      _ping_outstanding(true);
       return sendPacket(buf, len);
     }
   }
-	else {
-		_ping_timer.enableSchedule(false);
-	}
+  else {
+    _ping_timer.enableSchedule(false);
+  }
   return false;
 }
 
@@ -315,7 +315,7 @@ bool MQTTSession::sendKeepAlive() {
 bool MQTTSession::sendConnectPacket() {
   //if (owner->connected()) {
     MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
-	  data.willFlag    = 0;
+    data.willFlag    = 0;
     data.MQTTVersion = 3;
     data.clientID.cstring = opts.clientid;
     data.username.cstring = opts.username;
@@ -350,116 +350,116 @@ bool MQTTSession::sendDisconnectPacket() {
 
 
 bool MQTTSession::sendPublish(ManuvrMsg* _msg) {
-	if (isEstablished()) {
-		enum QoS _qos = _msg->demandsACK() ? QOS1 : QOS0;
-		int _msg_id = 0;
+  if (isEstablished()) {
+    enum QoS _qos = _msg->demandsACK() ? QOS1 : QOS0;
+    int _msg_id = 0;
     MQTTString topic = MQTTString_initializer;
     topic.cstring = (char *)_msg->getMsgDef()->debug_label;
 
-		switch (_qos) {
-			case QOS0:
-				break;
-			case QOS1:
-			case QOS2:
-				_msg_id = getNextPacketId();
-				break;
-		}
+    switch (_qos) {
+      case QOS0:
+        break;
+      case QOS1:
+      case QOS2:
+        _msg_id = getNextPacketId();
+        break;
+    }
 
     size_t buf_size     = 64;
     unsigned char* buf  = (unsigned char*) alloca(buf_size);
 
-		int len = MQTTSerialize_publish(
-			buf, buf_size,
-			0,
-			_qos,
-			0, //message->retained,
-			_msg_id,
+    int len = MQTTSerialize_publish(
+      buf, buf_size,
+      0,
+      _qos,
+      0, //message->retained,
+      _msg_id,
       topic,
-			(unsigned char*) "TEST MESSAGE",         // message->payload,
-			strlen("TEST MESSAGE")  //message->payloadlen
-		);
+      (unsigned char*) "TEST MESSAGE",         // message->payload,
+      strlen("TEST MESSAGE")  //message->payloadlen
+    );
 
     if (len > 0) {
       return sendPacket(buf, len);
     }
-	}
-	return false;
+  }
+  return false;
 }
 
 
 /*
 */
 int MQTTSession::proc_publish(MQTTMessage* nu) {
-	int return_value = nu->decompose_publish();
+  int return_value = nu->decompose_publish();
 
-	if (return_value >= 0) {
-  	std::map<const char*, ManuvrMsg*>::iterator it = _subscriptions.find(nu->topic);
-		for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
-			if (0 == strcmp((const char*) nu->topic, it->first)) {
-				if (0 < nu->argumentBytes()) {
-					it->second->inflateArgumentsFromBuffer((uint8_t*) nu->payload, nu->argumentBytes());
-					//StringBuilder* _hack = new StringBuilder((uint8_t*) nu->payload, nu->argumentBytes());
-					//_hack->concat('\0');  // Yuck... No native null-term.
-					//_hack->string();  // Condense.
-					//it->second->markArgForReap(it->second->addArg(_hack), true);
-				}
-				//nu->printDebug(&local_log);
-				//local_log.concat("\n\n");
-				//it->second->printDebug(&local_log);
-				//Kernel::log(&local_log);
+  if (return_value >= 0) {
+    std::map<const char*, ManuvrMsg*>::iterator it = _subscriptions.find(nu->topic);
+    for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
+      if (0 == strcmp((const char*) nu->topic, it->first)) {
+        if (0 < nu->argumentBytes()) {
+          it->second->inflateArgumentsFromBuffer((uint8_t*) nu->payload, nu->argumentBytes());
+          //StringBuilder* _hack = new StringBuilder((uint8_t*) nu->payload, nu->argumentBytes());
+          //_hack->concat('\0');  // Yuck... No native null-term.
+          //_hack->string();  // Condense.
+          //it->second->markArgForReap(it->second->addArg(_hack), true);
+        }
+        //nu->printDebug(&local_log);
+        //local_log.concat("\n\n");
+        //it->second->printDebug(&local_log);
+        //Kernel::log(&local_log);
 
-				raiseEvent(it->second);
-				delete nu;  // TODO: Yuck. Nasty. No. Bad.
-				return 0;
-			}
-		}
+        raiseEvent(it->second);
+        delete nu;  // TODO: Yuck. Nasty. No. Bad.
+        return 0;
+      }
+    }
 
-		if (getVerbosity() > 2) {
-			local_log.concatf("%s got a PUBLISH on a topc (%s) it wasn't expecting.\n", getReceiverName(), nu->topic);
-			Kernel::log(&local_log);
-		}
-	}
-	return -1;
+    if (getVerbosity() > 2) {
+      local_log.concatf("%s got a PUBLISH on a topc (%s) it wasn't expecting.\n", getReceiverName(), nu->topic);
+      Kernel::log(&local_log);
+    }
+  }
+  return -1;
 }
 
 
 int MQTTSession::process_inbound() {
-	if (0 == _pending_mqtt_messages.size()) {
-		return -1;
-	}
-	MQTTMessage* nu = _pending_mqtt_messages.dequeue();
+  if (0 == _pending_mqtt_messages.size()) {
+    return -1;
+  }
+  MQTTMessage* nu = _pending_mqtt_messages.dequeue();
 
-	unsigned short packet_type = nu->packetType();
-	switch (packet_type) {
-		case CONNACK:
-			{
-				local_log.concatf("SESSION DEBUG BITS  0x%02x\n", *((uint8_t*)nu->payload + 1));
-				Kernel::log(&local_log);
-				switch (*((uint8_t*)nu->payload + 1)) {
-					case 0:
-						mark_session_state(XENOSESSION_STATE_ESTABLISHED);
-						if(0 == (*((uint8_t*)nu->payload) & 0x01)) {
-							// If we are in this block, it means we have a clean session.
-							resubscribeAll();
-						}
-						_ping_timer.enableSchedule(true);
-						break;
-					default:
-						mark_session_state(XENOSESSION_STATE_HUNGUP);
-						_ping_timer.enableSchedule(false);
-						break;
-				}
-			}
-			delete nu;
-			return 1;
+  unsigned short packet_type = nu->packetType();
+  switch (packet_type) {
+    case CONNACK:
+      {
+        local_log.concatf("SESSION DEBUG BITS  0x%02x\n", *((uint8_t*)nu->payload + 1));
+        Kernel::log(&local_log);
+        switch (*((uint8_t*)nu->payload + 1)) {
+          case 0:
+            mark_session_state(XENOSESSION_STATE_ESTABLISHED);
+            if(0 == (*((uint8_t*)nu->payload) & 0x01)) {
+              // If we are in this block, it means we have a clean session.
+              resubscribeAll();
+            }
+            _ping_timer.enableSchedule(true);
+            break;
+          default:
+            mark_session_state(XENOSESSION_STATE_HUNGUP);
+            _ping_timer.enableSchedule(false);
+            break;
+        }
+      }
+      delete nu;
+      return 1;
     case PUBACK:
-			// TODO: Mark outbound message as received.
+      // TODO: Mark outbound message as received.
       break;
     case SUBACK:
-			// TODO: Only NOW should we insert into the subscription queue.
+      // TODO: Only NOW should we insert into the subscription queue.
       break;
-		case PUBLISH:
-			proc_publish(nu);
+    case PUBLISH:
+      proc_publish(nu);
       break;
 
     case PUBCOMP:
@@ -467,12 +467,12 @@ int MQTTSession::process_inbound() {
     case PINGRESP:
       _ping_outstanding(false);
       break;
-		default:
-			break;
-	}
+    default:
+      break;
+  }
 
 
-	return 0;
+  return 0;
 }
 
 
@@ -497,11 +497,11 @@ int MQTTSession::process_inbound() {
 */
 int8_t MQTTSession::attached() {
   if (EventReceiver::attached()) {
-		platform.kernel()->addSchedule(&_ping_timer);
-  	//if (owner->connected()) {
-  	//  // Are we connected right now?
-  	//  sendConnectPacket();
-  	//}
+    platform.kernel()->addSchedule(&_ping_timer);
+    //if (owner->connected()) {
+    //  // Are we connected right now?
+    //  sendConnectPacket();
+    //}
     return 1;
   }
   return 0;
@@ -530,7 +530,7 @@ int8_t MQTTSession::callback_proc(ManuvrMsg* event) {
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {
     default:
-			event->clearArgs();
+      event->clearArgs();
       break;
   }
 
@@ -561,19 +561,19 @@ int8_t MQTTSession::notify(ManuvrMsg* active_event) {
 
     case MANUVR_MSG_SESS_SERVICE:
       if (_pending_mqtt_messages.size() > 0) {
-				process_inbound();
-      	return_value++;
-			}
+        process_inbound();
+        return_value++;
+      }
       break;
 
     case MANUVR_MSG_SESS_HANGUP:
       //if (isEstablished()) {
-				// If we have an existing session, we try to end it politely.
-				sendDisconnectPacket();
-			//}
-			//else {
-				XenoSession::notify(active_event);
-			//}
+        // If we have an existing session, we try to end it politely.
+        sendDisconnectPacket();
+      //}
+      //else {
+        XenoSession::notify(active_event);
+      //}
       return_value++;
       break;
 
@@ -602,47 +602,47 @@ void MQTTSession::procDirectDebugInstruction(StringBuilder *input) {
       Kernel::raiseEvent(MANUVR_MSG_SESS_HANGUP, NULL);
       break;
 
-		case 's':
-			//if (subscribe("sillytest", &test_sub_event) == -1) {
-				local_log.concat("Failed to subscribe to 'sillytest'.");
-			//}
-			//else {
-			//	local_log.concat("Subscribed to 'sillytest'.");
-			//}
-			break;
+    case 's':
+      //if (subscribe("sillytest", &test_sub_event) == -1) {
+        local_log.concat("Failed to subscribe to 'sillytest'.");
+      //}
+      //else {
+      //  local_log.concat("Subscribed to 'sillytest'.");
+      //}
+      break;
     case 'w':  // Manual session poll.
       Kernel::raiseEvent(MANUVR_MSG_SESS_ORIGINATE_MSG, NULL);
       break;
 
-		case 'c':
-			if (sendConnectPacket() == -1) {
-				local_log.concat("Failed to send MQTT connect packet.");
-			}
-			else {
-				local_log.concat("Sent MQTT connect packet.");
-			}
-			break;
+    case 'c':
+      if (sendConnectPacket() == -1) {
+        local_log.concat("Failed to send MQTT connect packet.");
+      }
+      else {
+        local_log.concat("Sent MQTT connect packet.");
+      }
+      break;
 
-		case 'p':
-			{
-				ManuvrMsg mr = ManuvrMsg(MANUVR_MSG_SESS_ORIGINATE_MSG);
-				if (sendPublish(&mr) == -1) {
-					local_log.concat("Failed to send MQTT publish packet.");
-				}
-				else {
-					local_log.concat("Sent MQTT publish packet.");
-				}
-			}
-			break;
+    case 'p':
+      {
+        ManuvrMsg mr = ManuvrMsg(MANUVR_MSG_SESS_ORIGINATE_MSG);
+        if (sendPublish(&mr) == -1) {
+          local_log.concat("Failed to send MQTT publish packet.");
+        }
+        else {
+          local_log.concat("Sent MQTT publish packet.");
+        }
+      }
+      break;
 
-		case 'd':
-			if (sendDisconnectPacket() == -1) {
-				local_log.concat("Failed to send MQTT disconnect packet.");
-			}
-			else {
-				local_log.concat("Sent MQTT disconnect packet.");
-			}
-			break;
+    case 'd':
+      if (sendDisconnectPacket() == -1) {
+        local_log.concat("Failed to send MQTT disconnect packet.");
+      }
+      else {
+        local_log.concat("Sent MQTT disconnect packet.");
+      }
+      break;
 
     default:
       XenoSession::procDirectDebugInstruction(input);
@@ -665,15 +665,15 @@ void MQTTSession::printDebug(StringBuilder *output) {
   if (_ping_outstanding()) output->concat("-- EXPIRED PING\n");
   output->concat("-- Subscribed topics\n");
 
-	std::map<const char*, ManuvrMsg*>::iterator it;
+  std::map<const char*, ManuvrMsg*>::iterator it;
   for (it = _subscriptions.begin(); it != _subscriptions.end(); it++) {
     output->concatf("--\t%s\t~~~~> %s\n", it->first, it->second->getMsgDef()->debug_label);
   }
 
-	if (NULL != working) {
-		output->concat("--\n-- Incomplete inbound message:\n");
-		working->printDebug(output);
-	}
+  if (NULL != working) {
+    output->concat("--\n-- Incomplete inbound message:\n");
+    working->printDebug(output);
+  }
 }
 
 

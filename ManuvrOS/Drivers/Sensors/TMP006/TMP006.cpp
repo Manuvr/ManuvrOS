@@ -124,15 +124,15 @@ int8_t TMP006::register_read_cb(DeviceRegister* reg) {
   switch (reg->addr) {
     case TMP006_REG_MANID:
     case TMP006_REG_DEVID:
-	    if (!isActive()) {
-	      check_identity();
-	      if (isActive()) {
-	        writeDirtyRegisters();
-	      }
-	    }
-	    else {
-	      check_identity();
-	    }
+      if (!isActive()) {
+        check_identity();
+        if (isActive()) {
+          writeDirtyRegisters();
+        }
+      }
+      else {
+        check_identity();
+      }
       break;
 
     case TMP006_REG_VOBJ:

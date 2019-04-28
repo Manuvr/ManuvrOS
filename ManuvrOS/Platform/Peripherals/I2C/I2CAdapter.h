@@ -215,7 +215,7 @@ This file is the tortured result of growing pains since the beginning of
       *
       * @return true if we do. False otherwise.
       */
-      inline bool need_to_send_subaddr() {	return ((sub_addr != -1) && !subaddr_sent());  }
+      inline bool need_to_send_subaddr() {  return ((sub_addr != -1) && !subaddr_sent());  }
 
       inline int8_t getVerbosity() {   return (_flags & I2C_BUSOP_FLAG_VERBOSITY_MASK);   };
       inline void setVerbosity(int8_t v) {

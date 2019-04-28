@@ -86,19 +86,19 @@ int8_t I2CDevice::io_op_callahead(BusOp* _op) {
 */
 int8_t I2CDevice::io_op_callback(BusOp* op) {
   I2CBusOp* completed = (I2CBusOp*) op;
-	if (completed) {
-	  #ifdef MANUVR_DEBUG
-	  StringBuilder temp;
-		if (completed->get_opcode() == BusOpcode::RX) {
-			temp.concatf("Default callback (I2CDevice)\tReceived %d bytes from i2c slave.\n", completed->buf_len);
-		}
-		else {
-			temp.concatf("Default callback (I2CDevice)\tSent %d bytes to i2c slave.\n", completed->buf_len, completed->buf_len);
-		}
-		completed->printDebug(&temp);
+  if (completed) {
+    #ifdef MANUVR_DEBUG
+    StringBuilder temp;
+    if (completed->get_opcode() == BusOpcode::RX) {
+      temp.concatf("Default callback (I2CDevice)\tReceived %d bytes from i2c slave.\n", completed->buf_len);
+    }
+    else {
+      temp.concatf("Default callback (I2CDevice)\tSent %d bytes to i2c slave.\n", completed->buf_len, completed->buf_len);
+    }
+    completed->printDebug(&temp);
     if (temp.length() > 0) Kernel::log(&temp);
-		#endif
-	}
+    #endif
+  }
   return 0;
 }
 

@@ -138,44 +138,44 @@ void I2CAdapter::reclaim_queue_item(I2CBusOp* op) {
 * Adds a new device to the bus.
 */
 int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
-	int8_t return_value = I2C_ERR_SLAVE_NO_ERROR;
-	if (slave == nullptr) {
-	  #if defined(MANUVR_DEBUG)
-		Kernel::log("Slave is invalid.\n");
-		#endif
-		return_value = I2C_ERR_SLAVE_INVALID;
-	}
-	if (dev_list.contains(slave)) {    // Check for pointer eqivillence.
-	  #if defined(MANUVR_DEBUG)
-		Kernel::log("Slave device exists.\n");
-		#endif
-		return_value = I2C_ERR_SLAVE_EXISTS;
-	}
-	else if (get_slave_dev_by_addr(slave->_dev_addr) == I2C_ERR_SLAVE_NOT_FOUND) {
-		if (slave->assignBusInstance((I2CAdapter*) this)) {
-			int slave_index = dev_list.insert(slave);
-			if (slave_index == -1) {
-			  #if defined(MANUVR_DEBUG)
-				Kernel::log("Failed to insert somehow. Disassigning...\n");
-				#endif
-				slave->disassignBusInstance();
-				return_value = I2C_ERR_SLAVE_INSERTION;
-			}
-		}
-		else {
-		  #if defined(MANUVR_DEBUG)
-			Kernel::log("Op would clobber bus instance.\n");
-			#endif
-			return_value = I2C_ERR_SLAVE_ASSIGN_CLOB;
-		}
-	}
-	else {
-	  #if defined(MANUVR_DEBUG)
-		Kernel::log("Op would cause address collision with another slave device.\n");
-		#endif
-		return_value = I2C_ERR_SLAVE_COLLISION;
-	}
-	return return_value;
+  int8_t return_value = I2C_ERR_SLAVE_NO_ERROR;
+  if (slave == nullptr) {
+    #if defined(MANUVR_DEBUG)
+    Kernel::log("Slave is invalid.\n");
+    #endif
+    return_value = I2C_ERR_SLAVE_INVALID;
+  }
+  if (dev_list.contains(slave)) {    // Check for pointer eqivillence.
+    #if defined(MANUVR_DEBUG)
+    Kernel::log("Slave device exists.\n");
+    #endif
+    return_value = I2C_ERR_SLAVE_EXISTS;
+  }
+  else if (get_slave_dev_by_addr(slave->_dev_addr) == I2C_ERR_SLAVE_NOT_FOUND) {
+    if (slave->assignBusInstance((I2CAdapter*) this)) {
+      int slave_index = dev_list.insert(slave);
+      if (slave_index == -1) {
+        #if defined(MANUVR_DEBUG)
+        Kernel::log("Failed to insert somehow. Disassigning...\n");
+        #endif
+        slave->disassignBusInstance();
+        return_value = I2C_ERR_SLAVE_INSERTION;
+      }
+    }
+    else {
+      #if defined(MANUVR_DEBUG)
+      Kernel::log("Op would clobber bus instance.\n");
+      #endif
+      return_value = I2C_ERR_SLAVE_ASSIGN_CLOB;
+    }
+  }
+  else {
+    #if defined(MANUVR_DEBUG)
+    Kernel::log("Op would cause address collision with another slave device.\n");
+    #endif
+    return_value = I2C_ERR_SLAVE_COLLISION;
+  }
+  return return_value;
 }
 
 
@@ -183,13 +183,13 @@ int8_t I2CAdapter::addSlaveDevice(I2CDevice* slave) {
 * Removes a device from the bus.
 */
 int8_t I2CAdapter::removeSlaveDevice(I2CDevice* slave) {
-	int8_t return_value = I2C_ERR_SLAVE_NOT_FOUND;
-	if (dev_list.remove(slave)) {
-		slave->disassignBusInstance();
-		purge_queued_work_by_dev(slave);
-		return_value = I2C_ERR_SLAVE_NO_ERROR;
-	}
-	return return_value;
+  int8_t return_value = I2C_ERR_SLAVE_NOT_FOUND;
+  if (dev_list.remove(slave)) {
+    slave->disassignBusInstance();
+    purge_queued_work_by_dev(slave);
+    return_value = I2C_ERR_SLAVE_NO_ERROR;
+  }
+  return return_value;
 }
 
 
@@ -199,12 +199,12 @@ int8_t I2CAdapter::removeSlaveDevice(I2CDevice* slave) {
 *   is only called to prevent address collision. Not fetch a device handle.
 */
 int I2CAdapter::get_slave_dev_by_addr(uint8_t search_addr) {
-	for (int i = 0; i < dev_list.size(); i++) {
-		if (search_addr == dev_list.get(i)->_dev_addr) {
-			return i;
-		}
-	}
-	return I2C_ERR_SLAVE_NOT_FOUND;
+  for (int i = 0; i < dev_list.size(); i++) {
+    if (search_addr == dev_list.get(i)->_dev_addr) {
+      return i;
+    }
+  }
+  return I2C_ERR_SLAVE_NOT_FOUND;
 }
 
 
@@ -255,25 +255,25 @@ int8_t I2CAdapter::io_op_callahead(BusOp* _op) {
 */
 int8_t I2CAdapter::io_op_callback(BusOp* _op) {
   I2CBusOp* op = (I2CBusOp*) _op;
-	if (op->get_opcode() == BusOpcode::TX_CMD) {
+  if (op->get_opcode() == BusOpcode::TX_CMD) {
     // The only thing the i2c adapter uses this op-code for is pinging slaves.
     // We only support 7-bit addressing for now.
     set_ping_state_by_addr(op->dev_addr, op->hasFault() ? I2CPingState::NEG : I2CPingState::POS);
 
-		if (_er_flag(I2C_BUS_FLAG_PINGING)) {
-		  if ((op->dev_addr & 0x00FF) < 127) {
+    if (_er_flag(I2C_BUS_FLAG_PINGING)) {
+      if ((op->dev_addr & 0x00FF) < 127) {
         // If the adapter is taking a census, and we haven't pinged all
         //   addresses, ping the next one.
-		    ping_slave_addr(op->dev_addr + 1);
-		  }
-		  else {
-		    _er_clear_flag(I2C_BUS_FLAG_PINGING);
-		    #if defined(MANUVR_DEBUG)
-		    if (getVerbosity() > 4) local_log.concat("Concluded i2c ping sweep.");
-		    #endif
-		  }
-		}
-	}
+        ping_slave_addr(op->dev_addr + 1);
+      }
+      else {
+        _er_clear_flag(I2C_BUS_FLAG_PINGING);
+        #if defined(MANUVR_DEBUG)
+        if (getVerbosity() > 4) local_log.concat("Concluded i2c ping sweep.");
+        #endif
+      }
+    }
+  }
 
   flushLocalLog();
   return 0;
@@ -290,29 +290,29 @@ int8_t I2CAdapter::queue_io_job(BusOp* op) {
   I2CBusOp* nu = (I2CBusOp*) op;
   nu->setVerbosity(getVerbosity());
   nu->device = (I2CAdapter*)this;
-	if (current_job) {
-		// Something is already going on with the bus. Queue...
-		work_queue.insert(nu);
-	}
-	else {
-		// Bus is idle. Put this work item in the active slot and start the bus operations...
-		current_job = nu;
-		if ((getAdapterId() >= 0) && busOnline()) {
-		  if (XferFault::NONE == nu->begin()) {
+  if (current_job) {
+    // Something is already going on with the bus. Queue...
+    work_queue.insert(nu);
+  }
+  else {
+    // Bus is idle. Put this work item in the active slot and start the bus operations...
+    current_job = nu;
+    if ((getAdapterId() >= 0) && busOnline()) {
+      if (XferFault::NONE == nu->begin()) {
         #if defined(__BUILD_HAS_THREADS)
         if (_thread_id) wakeThread(_thread_id);
         #endif
       }
-		  if (getVerbosity() > 6) {
-		    nu->printDebug(&local_log);
-		    Kernel::log(&local_log);
-		  }
-		}
-		else {
-		  Kernel::staticRaiseEvent(&_queue_ready);   // Raise an event
-		}
-	}
-	return 0;
+      if (getVerbosity() > 6) {
+        nu->printDebug(&local_log);
+        Kernel::log(&local_log);
+      }
+    }
+    else {
+      Kernel::staticRaiseEvent(&_queue_ready);   // Raise an event
+    }
+  }
+  return 0;
 }
 
 
@@ -336,7 +336,7 @@ int8_t I2CAdapter::advance_work_queue() {
   while (recycle) {
     return_value++;
     recycle = false;
-  	if (current_job) {
+    if (current_job) {
       switch (current_job->get_state()) {
         // NOTE: Tread lightly. Omission of break; scattered throughout.
         /* These are start states. */
@@ -365,38 +365,38 @@ int8_t I2CAdapter::advance_work_queue() {
         case XferState::FAULT:     // Fault condition.
         case XferState::COMPLETE:  // I/O op complete with no problems.
           _total_xfers++;
-    			if (current_job->hasFault()) {
+          if (current_job->hasFault()) {
             _failed_xfers++;
-    			  #if defined(MANUVR_DEBUG)
-    			  if (getVerbosity() > 3) {
+            #if defined(MANUVR_DEBUG)
+            if (getVerbosity() > 3) {
               local_log.concat("Destroying failed job.\n");
               current_job->printDebug(&local_log);
             }
-    			  #endif
-    			}
-    			// Hand this completed operation off to the class that requested it. That class will
-    			//   take what it wants from the buffer and, when we return to execution here, we will
-    			//   be at liberty to clean the operation up.
+            #endif
+          }
+          // Hand this completed operation off to the class that requested it. That class will
+          //   take what it wants from the buffer and, when we return to execution here, we will
+          //   be at liberty to clean the operation up.
           // Note that we forgo a separate callback queue, and are therefore unable to
           //   pipeline I/O and processing. They must happen sequentially.
           current_job->execCB();
-    			reclaim_queue_item(current_job);   // Delete the queued work AND its buffer.
-    			current_job = nullptr;
+          reclaim_queue_item(current_job);   // Delete the queued work AND its buffer.
+          current_job = nullptr;
           break;
       }
-  	}
+    }
 
     if (nullptr == current_job) {
-  		// If there is nothing presently being serviced, we should promote an operation from the
-  		//   queue into the active slot and initiate it in the block below.
-  		current_job = work_queue.dequeue();
+      // If there is nothing presently being serviced, we should promote an operation from the
+      //   queue into the active slot and initiate it in the block below.
+      current_job = work_queue.dequeue();
       if (current_job) {
         recycle = busOnline();
       }
-  	}
+    }
   }
 
-	flushLocalLog();
+  flushLocalLog();
   return return_value;
 }
 

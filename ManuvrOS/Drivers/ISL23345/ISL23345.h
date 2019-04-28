@@ -69,7 +69,7 @@ class ISL23345 : public I2CDeviceWithRegisters {
     * Will take the device out of shutdown mode and set all the wipers
     *   to their minimum values.
     */
-    inline ISL23345_ERROR reset() {	  return reset(0x00);  };
+    inline ISL23345_ERROR reset() {    return reset(0x00);  };
 
     inline uint8_t getValue(uint8_t pot) {
       return (pot > 3) ? 0 : values[pot];

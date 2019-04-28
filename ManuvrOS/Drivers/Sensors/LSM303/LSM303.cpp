@@ -84,11 +84,11 @@ uint8_t LSM303_Accel::reportCapabilities(void) { return 0x32; }
 
 
 int8_t LSM303_Accel::setErrorRates() {
-	return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+  return SensorWrapper::SENSOR_ERROR_NO_ERROR;
 }
 
 int8_t LSM303_Accel::readOutstandingData(int8_t slot, Measurement &msrmnt) {
-	return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+  return SensorWrapper::SENSOR_ERROR_NO_ERROR;
 }
 
 
@@ -243,9 +243,9 @@ uint8_t LSM303_Mag::reportCapabilities(void) { return 0x34; }
 
 
 int8_t LSM303_Mag::setErrorRates() {
-	return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+  return SensorWrapper::SENSOR_ERROR_NO_ERROR;
 }
 
 int8_t LSM303_Mag::readOutstandingData(int8_t slot, Measurement &msrmnt) {
-	return SensorWrapper::SENSOR_ERROR_NO_ERROR;
+  return SensorWrapper::SENSOR_ERROR_NO_ERROR;
 }

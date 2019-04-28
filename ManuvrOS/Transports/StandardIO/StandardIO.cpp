@@ -142,7 +142,7 @@ int8_t StandardIO::reset() {
 * Read input from local keyboard.
 */
 int8_t StandardIO::read_port() {
-  char *input_text	= (char*) alloca(getMTU());	// Buffer to hold user-input.
+  char *input_text = (char*) alloca(getMTU());  // Buffer to hold user-input.
   int read_len = 0;
 
   if (connected()) {

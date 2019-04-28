@@ -43,8 +43,8 @@ limitations under the License.
     //provided_buffer->concatf("\"%s\":{\"name\":\"%s\",\"hardware\":%s,\"data\":{", sw->s_id, sw->name, ((sw->isHardware()) ? "true" : "false"));
     //SensorDatum* current = sw->datum_list;
     //while (current) {
-    //	provided_buffer->concatf("\"%d\":{\"desc\":\"%s\",\"unit\":\"%s\",\"autoreport\":\"%s\"%s", current->v_id, current->def->desc, current->def->units, current->autoreport() ? "yes" : "no", ((nullptr == current->next()) ? "}" : "},"));
-    //	current = current->next();
+    //  provided_buffer->concatf("\"%d\":{\"desc\":\"%s\",\"unit\":\"%s\",\"autoreport\":\"%s\"%s", current->v_id, current->def->desc, current->def->units, current->autoreport() ? "yes" : "no", ((nullptr == current->next()) ? "}" : "},"));
+    //  current = current->next();
     //}
     //provided_buffer->concat("}}");
   }
@@ -55,7 +55,7 @@ limitations under the License.
   void SensorWrapper::issue_json_value(json_t* obj, SensorWrapper* sw) {
     //provided_buffer->concatf("{\"%s\":{\"value\":{", sw->s_id);
     //for (uint8_t i = 0; i < sw->data_count; i++) {
-    //	  provided_buffer->concatf("\"%d\":\"", i);
+    //    provided_buffer->concatf("\"%d\":\"", i);
     //    sw->readAsString(i, provided_buffer);
     //    provided_buffer->concat((i == sw->data_count) ? "\"" : "\",");
     //}
@@ -70,7 +70,7 @@ limitations under the License.
   void SensorWrapper::issue_json_value(json_t* obj, SensorWrapper* sw, uint8_t dat) {
     //provided_buffer->concatf("{\"%s\":{\"value\":{", sw->s_id);
     //if (dat > sw->data_count) {
-    //	  provided_buffer->concatf("\"%d\":\"", dat);
+    //    provided_buffer->concatf("\"%d\":\"", dat);
     //    sw->readAsString(dat, provided_buffer);
     //    provided_buffer->concat("\"");
     //}
@@ -143,7 +143,7 @@ SensorWrapper::~SensorWrapper() {
 *******************************************************************************/
 
 void SensorWrapper::setSensorId(const char *uid_str) {
-	uuid_from_str(uid_str, &uuid);
+  uuid_from_str(uid_str, &uuid);
 }
 
 

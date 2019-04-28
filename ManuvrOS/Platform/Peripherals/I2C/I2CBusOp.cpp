@@ -74,8 +74,8 @@ int8_t I2CBusOp::abort(XferFault er) {
 *
 */
 void I2CBusOp::markComplete() {
-	xfer_state = XferState::COMPLETE;
-	device->raiseQueueReady();
+  xfer_state = XferState::COMPLETE;
+  device->raiseQueueReady();
 }
 
 

@@ -49,15 +49,15 @@ limitations under the License.
 * @param   BufferPipe* All sessions must have one (and only one) transport.
 */
 CoAPSession::CoAPSession(BufferPipe* _near_side) : XenoSession("CoAPSession", _near_side) {
-	working   = nullptr;
-	_next_packetid = 1;
+  working   = nullptr;
+  _next_packetid = 1;
   _bp_set_flag(BPIPE_FLAG_IS_BUFFERED, true);
 
-	// If our base transport is packetized, we will implement CoAP as it is
-	//   defined to run over UDP. Otherwise, we will assume TCP.
-	if (_near_side->_bp_flag(BPIPE_FLAG_PIPE_PACKETIZED)) {
-		_bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
-	}
+  // If our base transport is packetized, we will implement CoAP as it is
+  //   defined to run over UDP. Otherwise, we will assume TCP.
+  if (_near_side->_bp_flag(BPIPE_FLAG_PIPE_PACKETIZED)) {
+    _bp_set_flag(BPIPE_FLAG_PIPE_PACKETIZED, true);
+  }
 
   _ping_timer.repurpose(MANUVR_MSG_SESS_ORIGINATE_MSG, (EventReceiver*) this);
   _ping_timer.incRefs();
@@ -76,14 +76,14 @@ CoAPSession::~CoAPSession() {
   _ping_timer.enableSchedule(false);
   platform.kernel()->removeSchedule(&_ping_timer);
 
-	if (nullptr != working) {
-		delete working;
-		working = nullptr;
-	}
+  if (nullptr != working) {
+    delete working;
+    working = nullptr;
+  }
 
-	while (_pending_coap_messages.hasNext()) {
-		delete _pending_coap_messages.dequeue();
-	}
+  while (_pending_coap_messages.hasNext()) {
+    delete _pending_coap_messages.dequeue();
+  }
 }
 
 
@@ -102,9 +102,9 @@ CoAPSession::~CoAPSession() {
 * @return A declaration of memory-management responsibility.
 */
 int8_t CoAPSession::fromCounterparty(StringBuilder* buf, int8_t mm) {
-	if (bin_stream_rx(buf->string(), buf->length())) {
-	}
-	buf->clear();
+  if (bin_stream_rx(buf->string(), buf->length())) {
+  }
+  buf->clear();
   return MEM_MGMT_RESPONSIBLE_BEARER;
 }
 
@@ -123,29 +123,29 @@ int8_t CoAPSession::fromCounterparty(StringBuilder* buf, int8_t mm) {
 * @return  int8_t  // TODO!!!
 */
 int8_t CoAPSession::bin_stream_rx(unsigned char *buf, int len) {
-	local_log.concatf("CoAPSession::bin_stream_rx(%p, %d): ", buf, len);
-	CoAPMessage *recvPDU = new CoAPMessage(buf, len, len);
-	if(recvPDU->validate()!=1) {
-		local_log.concat("Malformed CoAP packet\n");
-		return 0;
-	}
-	recvPDU->printDebug(&local_log);
+  local_log.concatf("CoAPSession::bin_stream_rx(%p, %d): ", buf, len);
+  CoAPMessage *recvPDU = new CoAPMessage(buf, len, len);
+  if(recvPDU->validate()!=1) {
+    local_log.concat("Malformed CoAP packet\n");
+    return 0;
+  }
+  recvPDU->printDebug(&local_log);
 
-	for (int x = 0; x < len; x++) local_log.concatf("%02x ", *(buf+x));
+  for (int x = 0; x < len; x++) local_log.concatf("%02x ", *(buf+x));
 
-	local_log.concat("\n");
-	Kernel::log(&local_log);
+  local_log.concat("\n");
+  Kernel::log(&local_log);
   return 1;
 }
 
 
 int8_t CoAPSession::connection_callback(bool _con) {
-	local_log.concatf("\n\nSession%sconnected\n\n", (_con ? " " : " dis"));
-	Kernel::log(&local_log);
-	XenoSession::connection_callback(_con);
-	if (_con) {
-		//sendConnectPacket();
-	}
+  local_log.concatf("\n\nSession%sconnected\n\n", (_con ? " " : " dis"));
+  Kernel::log(&local_log);
+  XenoSession::connection_callback(_con);
+  if (_con) {
+    //sendConnectPacket();
+  }
   return 0;
 }
 
@@ -180,11 +180,11 @@ int8_t CoAPSession::sendEvent(ManuvrMsg* active_event) {
 */
 int8_t CoAPSession::attached() {
   if (EventReceiver::attached()) {
-  	platform.kernel()->addSchedule(&_ping_timer);
-  	//if (owner->connected()) {
-    	// Are we connected right now?
-    	//sendConnectPacket();
-  	//}
+    platform.kernel()->addSchedule(&_ping_timer);
+    //if (owner->connected()) {
+      // Are we connected right now?
+      //sendConnectPacket();
+    //}
     return 1;
   }
   return 0;
@@ -213,7 +213,7 @@ int8_t CoAPSession::callback_proc(ManuvrMsg* event) {
   /* Some class-specific set of conditionals below this line. */
   switch (event->eventCode()) {
     default:
-			event->clearArgs();
+      event->clearArgs();
       break;
   }
 
@@ -244,19 +244,19 @@ int8_t CoAPSession::notify(ManuvrMsg* active_event) {
 
     case MANUVR_MSG_SESS_SERVICE:
       if (_pending_coap_messages.size() > 0) {
-				//process_inbound();
-      	return_value++;
-			}
+        //process_inbound();
+        return_value++;
+      }
       break;
 
     case MANUVR_MSG_SESS_HANGUP:
       //if (isEstablished()) {
-				// If we have an existing session, we try to end it politely.
-				//sendDisconnectPacket();
-			//}
-			//else {
-				XenoSession::notify(active_event);
-			//}
+        // If we have an existing session, we try to end it politely.
+        //sendDisconnectPacket();
+      //}
+      //else {
+        XenoSession::notify(active_event);
+      //}
       return_value++;
       break;
 
@@ -285,10 +285,10 @@ void CoAPSession::printDebug(StringBuilder *output) {
   XenoSession::printDebug(output);
   output->concatf("-- Next Packet ID       0x%08x\n", (uint32_t) _next_packetid);
 
-	if (nullptr != working) {
-		output->concat("--\n-- Incomplete inbound message:\n");
-		working->printDebug(output);
-	}
+  if (nullptr != working) {
+    output->concat("--\n-- Incomplete inbound message:\n");
+    working->printDebug(output);
+  }
 }
 
 

@@ -63,10 +63,10 @@ template <class T> class RingBuffer {
 
 
 template <class T> RingBuffer<T>::RingBuffer(const unsigned int c) : _CAPAC(c), _E_SIZE(sizeof(T)) {
-	unsigned int s = _E_SIZE * _CAPAC;
-	if (0 < s) {
-  	_pool = (uint8_t*) malloc(s);
-	}
+  unsigned int s = _E_SIZE * _CAPAC;
+  if (0 < s) {
+    _pool = (uint8_t*) malloc(s);
+  }
   clear();
 }
 

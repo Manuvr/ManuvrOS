@@ -110,55 +110,55 @@ SensorError TSL2561::readSensor() {
 *******************************************************************************/
 
 int8_t TSL2561::register_write_cb(DeviceRegister* reg) {
-	switch (reg->addr) {
-	  case TSL2561_REG_CONTROL:
-	  case TSL2561_REG_TIMING:
-	  case TSL2561_REG_INTERRUPT:
-	  case TSL2561_REG_THRESH_LO:
-	  case TSL2561_REG_THRESH_HI:
-	    break;
+  switch (reg->addr) {
+    case TSL2561_REG_CONTROL:
+    case TSL2561_REG_TIMING:
+    case TSL2561_REG_INTERRUPT:
+    case TSL2561_REG_THRESH_LO:
+    case TSL2561_REG_THRESH_HI:
+      break;
 
-	  case TSL2561_REG_DATA0:
-	  case TSL2561_REG_DATA1:
-	  case TSL2561_REG_ID:
-	  default:
+    case TSL2561_REG_DATA0:
+    case TSL2561_REG_DATA1:
+    case TSL2561_REG_ID:
+    default:
       // Illegal write target.
-	    break;
+      break;
   }
   return 0;
 }
 
 
 int8_t TSL2561::register_read_cb(DeviceRegister* reg) {
-	switch (reg->addr) {
-	  case TSL2561_REG_ID:
-	    reg->unread = false;
-	    if (!isActive()) {
-	      isActive(0xBB == *(reg->val));
-	      if (isActive()) {
-	        writeDirtyRegisters();
-	      }
-	    }
-	    else {
-	      isActive(0xBB == *(reg->val));
-	    }
-	    break;
+  switch (reg->addr) {
+    case TSL2561_REG_ID:
+      reg->unread = false;
+      if (!isActive()) {
+        isActive(0xBB == *(reg->val));
+        if (isActive()) {
+          writeDirtyRegisters();
+        }
+      }
+      else {
+        isActive(0xBB == *(reg->val));
+      }
+      break;
 
-	  case TSL2561_REG_CONTROL:
-	  case TSL2561_REG_TIMING:
-	  case TSL2561_REG_INTERRUPT:
-	  case TSL2561_REG_THRESH_LO:
-	  case TSL2561_REG_THRESH_HI:
-	    break;
+    case TSL2561_REG_CONTROL:
+    case TSL2561_REG_TIMING:
+    case TSL2561_REG_INTERRUPT:
+    case TSL2561_REG_THRESH_LO:
+    case TSL2561_REG_THRESH_HI:
+      break;
 
-	  case TSL2561_REG_DATA0:
-	  case TSL2561_REG_DATA1:
+    case TSL2561_REG_DATA0:
+    case TSL2561_REG_DATA1:
       if (calculate_lux()) {
-	    }
-	    break;
+      }
+      break;
 
-	  default:
-	    break;
+    default:
+      break;
   }
   reg->unread = false;
   return 0;

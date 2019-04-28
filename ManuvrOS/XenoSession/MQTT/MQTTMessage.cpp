@@ -26,26 +26,26 @@ This is my C++ translation of the Paho Demo C library.
 #include "MQTTSession.h"
 
 MQTTMessage::MQTTMessage() : XenoMessage() {
-	_parse_stage = 0;
-	_header.byte = 0;
-	_multiplier  = 1;
-	payload      = nullptr;
-	topic        = nullptr;
-	qos          = QOS0;
-	unique_id    = 0;
-	retained     = 0;
-	dup          = 0;
+  _parse_stage = 0;
+  _header.byte = 0;
+  _multiplier  = 1;
+  payload      = nullptr;
+  topic        = nullptr;
+  qos          = QOS0;
+  unique_id    = 0;
+  retained     = 0;
+  dup          = 0;
 }
 
 MQTTMessage::~MQTTMessage() {
-	if (payload) {
-		free(payload);
-		payload = nullptr;
-	}
-	if (topic) {
-		free(topic);
-		topic = nullptr;
-	}
+  if (payload) {
+    free(payload);
+    payload = nullptr;
+  }
+  if (topic) {
+    free(topic);
+    topic = nullptr;
+  }
 }
 
 
@@ -77,63 +77,63 @@ int MQTTMessage::serialize(StringBuilder* buffer) {
 * @return  The number of bytes consumed, or a negative value on failure.
 */
 int MQTTMessage::accumulate(unsigned char* _buf, int _len) {
-	int _r = 0;
-	uint8_t _tmp;
-	while (_r < _len) {
-		switch (_parse_stage) {
-			case 0:
-				// We haven't gotten any fields yet. Read the header byte.
-				_header.byte = *((uint8_t*)_buf + _r++);
-				_parse_stage++;
-				break;
-			case 1:
-				// Read the remaining length, which is encoded as a string of 7-bit ints.
-				_tmp = *((uint8_t*)_buf + _r++);
-				bytes_total += (_tmp & 127) * _multiplier;
-				if (0 == (_tmp & 128)) {
-					if (bytes_total > 0) {
-						payload = malloc(bytes_total);
-						if (nullptr == payload) {
-							// Not enough memory.
-							bytes_total = 0;
-							return -1;
-						}
-					}
-					else if (bytes_total == 0) {
-						_parse_stage++;   // There will be no payload.
-					}
-					_parse_stage++;   // Field completed.
-				}
-				else {
-					_multiplier *= 128;
-					if (_multiplier > 2097152) {
-						// We have exceeded the 4-byte length-field. Failure...
-						return -1;
-					}
-				}
-				break;
-			case 2:
-				// Here, we just copy bytes into the payload field until we reach our
-				//   length target.
-				if (bytesRemaining()) {
-					//printf("PAYLOAD (%d): 0x%02x\n", bytes_received, *((uint8_t*)_buf + _r));
-					*((uint8_t*) payload + bytes_received++) = *((uint8_t*)_buf + _r++);
-					if (0 == bytesRemaining()) {
-						_parse_stage++;   // Field completed.
-					}
-				}
-				else {
-					_parse_stage++;   // Field completed.
-				}
-				break;
-			case 3:
-				return _r;
-				break;
-			default:
-				break;
-		}
-	}
-	return _r;
+  int _r = 0;
+  uint8_t _tmp;
+  while (_r < _len) {
+    switch (_parse_stage) {
+      case 0:
+        // We haven't gotten any fields yet. Read the header byte.
+        _header.byte = *((uint8_t*)_buf + _r++);
+        _parse_stage++;
+        break;
+      case 1:
+        // Read the remaining length, which is encoded as a string of 7-bit ints.
+        _tmp = *((uint8_t*)_buf + _r++);
+        bytes_total += (_tmp & 127) * _multiplier;
+        if (0 == (_tmp & 128)) {
+          if (bytes_total > 0) {
+            payload = malloc(bytes_total);
+            if (nullptr == payload) {
+              // Not enough memory.
+              bytes_total = 0;
+              return -1;
+            }
+          }
+          else if (bytes_total == 0) {
+            _parse_stage++;   // There will be no payload.
+          }
+          _parse_stage++;   // Field completed.
+        }
+        else {
+          _multiplier *= 128;
+          if (_multiplier > 2097152) {
+            // We have exceeded the 4-byte length-field. Failure...
+            return -1;
+          }
+        }
+        break;
+      case 2:
+        // Here, we just copy bytes into the payload field until we reach our
+        //   length target.
+        if (bytesRemaining()) {
+          //printf("PAYLOAD (%d): 0x%02x\n", bytes_received, *((uint8_t*)_buf + _r));
+          *((uint8_t*) payload + bytes_received++) = *((uint8_t*)_buf + _r++);
+          if (0 == bytesRemaining()) {
+            _parse_stage++;   // Field completed.
+          }
+        }
+        else {
+          _parse_stage++;   // Field completed.
+        }
+        break;
+      case 3:
+        return _r;
+        break;
+      default:
+        break;
+    }
+  }
+  return _r;
 }
 
 
@@ -144,46 +144,46 @@ int MQTTMessage::accumulate(unsigned char* _buf, int _len) {
 * These are not C-style strings (not null-terminated).
 */
 int MQTTMessage::decompose_publish() {
-	uint16_t _topic_len = *((uint8_t*) payload + 1) + (*((uint8_t*) payload) * 256);
-	topic = (char*) malloc(_topic_len+1);
-	topic[_topic_len] = '\0';
+  uint16_t _topic_len = *((uint8_t*) payload + 1) + (*((uint8_t*) payload) * 256);
+  topic = (char*) malloc(_topic_len+1);
+  topic[_topic_len] = '\0';
 
-	uint16_t i = 0;
-	for (i = 0; i < _topic_len; i++) {  topic[i] = *((uint8_t*) payload + i + 2);  }
+  uint16_t i = 0;
+  for (i = 0; i < _topic_len; i++) {  topic[i] = *((uint8_t*) payload + i + 2);  }
 
-	// Now that we've read the topic string, read the unique_id from the next two bytes...
-	i += 2;  // We cheated this variable forward.
-	unique_id  = *((uint8_t*) payload + i++) * 256;
-	unique_id += *((uint8_t*) payload + i++);
+  // Now that we've read the topic string, read the unique_id from the next two bytes...
+  i += 2;  // We cheated this variable forward.
+  unique_id  = *((uint8_t*) payload + i++) * 256;
+  unique_id += *((uint8_t*) payload + i++);
 
-	// Now we should clean up as much dynamic memory as we can.
-	if (i < bytes_total) {
-		void* _tmp_args = (void*) malloc(_topic_len+1);
-		if (nullptr == _tmp_args) {
-			// Bailout if the malloc() failed...
-			return -1;
-		}
-		for (uint32_t x = 0; x < (bytes_total - i); x++) {
-			// Copy the remainder of the payload into the new allocation.
-			*((uint8_t*)_tmp_args + x) = *((uint8_t*) payload + i + x);
-		}
-		// Then free the old payload pointer and replace it with the new allocation.
-		// Don't forget to adjust the length.
-		free(payload);
-		payload = _tmp_args;
-		bytes_total = (bytes_total - i);
-		bytes_received = bytes_total;
-	}
-	else {
-		// If the payload only contained the fields we just extracted, free it without
-		//   any replacement. There is no more data for it to hold.
-		free(payload);
-		payload = nullptr;
-		bytes_total = 0;
-		bytes_received = 0;
-	}
-	// On success, return the remaining payload length, which may be zero.
-	return bytes_total;
+  // Now we should clean up as much dynamic memory as we can.
+  if (i < bytes_total) {
+    void* _tmp_args = (void*) malloc(_topic_len+1);
+    if (nullptr == _tmp_args) {
+      // Bailout if the malloc() failed...
+      return -1;
+    }
+    for (uint32_t x = 0; x < (bytes_total - i); x++) {
+      // Copy the remainder of the payload into the new allocation.
+      *((uint8_t*)_tmp_args + x) = *((uint8_t*) payload + i + x);
+    }
+    // Then free the old payload pointer and replace it with the new allocation.
+    // Don't forget to adjust the length.
+    free(payload);
+    payload = _tmp_args;
+    bytes_total = (bytes_total - i);
+    bytes_received = bytes_total;
+  }
+  else {
+    // If the payload only contained the fields we just extracted, free it without
+    //   any replacement. There is no more data for it to hold.
+    free(payload);
+    payload = nullptr;
+    bytes_total = 0;
+    bytes_received = 0;
+  }
+  // On success, return the remaining payload length, which may be zero.
+  return bytes_total;
 }
 
 
@@ -197,14 +197,14 @@ void MQTTMessage::printDebug(StringBuilder *output) {
   if (topic) output->concatf("\t topic           %s\n", topic);
   output->concatf("\t unique_id       0x%04x\n", unique_id);
   output->concatf("\t Packet type     0x%02x\n", packetType());
-	output->concatf("\t Parse complete  %s\n", parseComplete() ? "yes":"no");
-	if ((bytes_total > 0) && (nullptr != payload)) {
-		output->concat("\t Payload contents:\t");
-		for (uint32_t i = 0; i < bytes_total; i++) {
-			output->concatf("0x%02x ", *((uint8_t*)payload + i));
-		}
-		output->concat("\n");
-	}
+  output->concatf("\t Parse complete  %s\n", parseComplete() ? "yes":"no");
+  if ((bytes_total > 0) && (nullptr != payload)) {
+    output->concat("\t Payload contents:\t");
+    for (uint32_t i = 0; i < bytes_total; i++) {
+      output->concatf("0x%02x ", *((uint8_t*)payload + i));
+    }
+    output->concat("\n");
+  }
 }
 
 #endif

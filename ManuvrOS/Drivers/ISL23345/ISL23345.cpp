@@ -32,9 +32,9 @@ limitations under the License.
 * Constructor. Takes the i2c address of this device as sole argument.
 */
 ISL23345::ISL23345(uint8_t addr) : I2CDeviceWithRegisters(addr, 5) {
-	dev_enabled = false;
-	dev_init    = false;
-	preserve_state_on_destroy = false;
+  dev_enabled = false;
+  dev_init    = false;
+  preserve_state_on_destroy = false;
 
   defineRegister(ISL23345_REG_ACR, (uint8_t) 0x40, false, false, true);
   defineRegister(ISL23345_REG_WR0, (uint8_t) 0x80, false, false, true);
@@ -48,9 +48,9 @@ ISL23345::ISL23345(uint8_t addr) : I2CDeviceWithRegisters(addr, 5) {
 * When we destroy the class instance, the hardware will be disabled.
 */
 ISL23345::~ISL23345() {
-	if (!preserve_state_on_destroy) {
-		disable();
-	}
+  if (!preserve_state_on_destroy) {
+    disable();
+  }
 }
 
 
@@ -58,11 +58,11 @@ ISL23345::~ISL23345() {
 * Call to read the device and cause this class's state to reflect that of the device.
 */
 ISL23345_ERROR ISL23345::init() {
-	ISL23345_ERROR return_value = ISL23345_ERROR::NO_ERROR;
-	if (syncRegisters() == I2C_ERR_SLAVE_NO_ERROR) {
-		return_value = ISL23345_ERROR::ABSENT;
-	}
-	return return_value;
+  ISL23345_ERROR return_value = ISL23345_ERROR::NO_ERROR;
+  if (syncRegisters() == I2C_ERR_SLAVE_NO_ERROR) {
+    return_value = ISL23345_ERROR::ABSENT;
+  }
+  return return_value;
 }
 
 
@@ -72,11 +72,11 @@ ISL23345_ERROR ISL23345::init() {
 * Retains wiper settings.
 */
 ISL23345_ERROR ISL23345::_enable(bool x) {
-	ISL23345_ERROR return_value = ISL23345_ERROR::NO_ERROR;
-	if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, x ? 0x40 : 0x00)) {
-		return_value = ISL23345_ERROR::ABSENT;
-	}
-	return return_value;
+  ISL23345_ERROR return_value = ISL23345_ERROR::NO_ERROR;
+  if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, x ? 0x40 : 0x00)) {
+    return_value = ISL23345_ERROR::ABSENT;
+  }
+  return return_value;
 }
 
 
@@ -84,26 +84,26 @@ ISL23345_ERROR ISL23345::_enable(bool x) {
 * Set the value of the given wiper to the given value.
 */
 ISL23345_ERROR ISL23345::setValue(uint8_t pot, uint8_t val) {
-	if (pot > 3)    return ISL23345_ERROR::INVALID_POT;
-	if (!dev_init)  return ISL23345_ERROR::DEVICE_DISABLED;
+  if (pot > 3)    return ISL23345_ERROR::INVALID_POT;
+  if (!dev_init)  return ISL23345_ERROR::DEVICE_DISABLED;
 
-	ISL23345_ERROR return_value = ISL23345_ERROR::NO_ERROR;
-	if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(pot, val)) {
-		return_value = ISL23345_ERROR::ABSENT;
-	}
-	return return_value;
+  ISL23345_ERROR return_value = ISL23345_ERROR::NO_ERROR;
+  if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(pot, val)) {
+    return_value = ISL23345_ERROR::ABSENT;
+  }
+  return return_value;
 }
 
 
 ISL23345_ERROR ISL23345::reset(uint8_t val) {
-	ISL23345_ERROR result = ISL23345_ERROR::NO_ERROR;
-	for (int i = 0; i < 4; i++) {
-		result = setValue(0, val);
-		if (result != ISL23345_ERROR::NO_ERROR) {
-			return result;
-		}
-	}
-	return ISL23345_ERROR::NO_ERROR;
+  ISL23345_ERROR result = ISL23345_ERROR::NO_ERROR;
+  for (int i = 0; i < 4; i++) {
+    result = setValue(0, val);
+    if (result != ISL23345_ERROR::NO_ERROR) {
+      return result;
+    }
+  }
+  return ISL23345_ERROR::NO_ERROR;
 }
 
 
@@ -115,7 +115,7 @@ ISL23345_ERROR ISL23345::reset(uint8_t val) {
 *******************************************************************************/
 
 int8_t ISL23345::register_write_cb(DeviceRegister* reg) {
-	dev_init = true;
+  dev_init = true;
   switch (reg->addr) {
     case ISL23345_REG_ACR:
       dev_enabled = (reg->getVal() != 0x00);
@@ -134,7 +134,7 @@ int8_t ISL23345::register_write_cb(DeviceRegister* reg) {
 
 
 int8_t ISL23345::register_read_cb(DeviceRegister* reg) {
-	dev_init = true;
+  dev_init = true;
   switch (reg->addr) {
     case ISL23345_REG_ACR:
       dev_enabled = (reg->getVal() != 0x00);
@@ -159,16 +159,16 @@ int8_t ISL23345::register_read_cb(DeviceRegister* reg) {
 */
 void ISL23345::printDebug(StringBuilder* output) {
   output->concat("ISL23345 digital potentiometer");
-	output->concat(PRINT_DIVIDER_1_STR);
+  output->concat(PRINT_DIVIDER_1_STR);
   I2CDeviceWithRegisters::printDebug(output);
 
-	if (!dev_init) {
-		output->concat("\tNot initialized\n");
-		return;
-	}
+  if (!dev_init) {
+    output->concat("\tNot initialized\n");
+    return;
+  }
 
-	for (int i = 0; i < 4; i++) {
-		output->concatf("\tPOT %d: 0x%02x\n", i, values[i]);
-	}
-	output->concatf("\n");
+  for (int i = 0; i < 4; i++) {
+    output->concatf("\tPOT %d: 0x%02x\n", i, values[i]);
+  }
+  output->concatf("\n");
 }

@@ -385,7 +385,7 @@ int TestDriver::CRYPTO_TEST_ASYMMETRIC() {
   }
 
   // Print the estimate differentials.
-	std::map<CryptoKey, Trips*>::iterator it;
+  std::map<CryptoKey, Trips*>::iterator it;
   StringBuilder local_log;
   for (it = asym_estimate_deltas.begin(); it != asym_estimate_deltas.end(); it++) {
     local_log.concatf("\t %s\n", get_pk_label(it->first));

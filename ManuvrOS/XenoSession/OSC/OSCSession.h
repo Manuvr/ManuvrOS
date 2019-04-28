@@ -70,13 +70,13 @@ class OSCMessage : public XenoMessage {
 
 
 struct OSCOpts {
-	char* clientid;
-	int nodelimiter;
-	char* delimiter;
-	enum QoS qos;
-	char* username;
-	char* password;
-	int showtopics;
+  char* clientid;
+  int nodelimiter;
+  char* delimiter;
+  enum QoS qos;
+  char* username;
+  char* password;
+  int showtopics;
 };
 
 

@@ -129,7 +129,7 @@ const char* CoAPMessage::typeToString(CoAPMessage::Type type) {
     case COAP_NON_CONFIRMABLE:  return "NON-CONFIRMABLE";
     case COAP_ACKNOWLEDGEMENT:  return "ACK";
     case COAP_RESET:            return "RESET";
-		default:                    return "<UNDEF>";
+    default:                    return "<UNDEF>";
   }
 }
 
@@ -1645,19 +1645,19 @@ void CoAPMessage::printOptionHuman(uint8_t *option) {
     if(i%4==0) {
       coap_log.concatf("   %.2d ",i);
     }
-		coap_log.concatf("0x%02x ", option[i]);
+    coap_log.concatf("0x%02x ", option[i]);
   }
 
   // print header byte
   coap_log.concat("Header byte:  ");
-	coap_log.concatf("0x%02x ", *option++);
-	coap_log.concat("\n");
+  coap_log.concatf("0x%02x ", *option++);
+  coap_log.concat("\n");
 
   // print extended delta bytes
   if(extraDeltaBytes) {
     coap_log.concatf("Extended delta bytes (%d) in network order:  ",extraDeltaBytes);
     while(extraDeltaBytes--) {
-			coap_log.concatf("0x%02x ", *option++);
+      coap_log.concatf("0x%02x ", *option++);
     }
   }
   else {
@@ -1668,7 +1668,7 @@ void CoAPMessage::printOptionHuman(uint8_t *option) {
   if(extraValueLengthBytes) {
     coap_log.concatf("Extended value length bytes (%d) in network order: ",extraValueLengthBytes);
     while(extraValueLengthBytes--) {
-			coap_log.concatf("0x%02x ", *option++);
+      coap_log.concatf("0x%02x ", *option++);
     }
   }
   else {
@@ -1682,7 +1682,7 @@ void CoAPMessage::printOptionHuman(uint8_t *option) {
     if(i%4==0) {
       coap_log.concatf("   %.2d ",i);
     }
-		coap_log.concatf("0x%02x ", *option++);
+    coap_log.concatf("0x%02x ", *option++);
   }
   coap_log.concat("\n");
   Kernel::log(&coap_log);
@@ -1720,49 +1720,49 @@ void CoAPMessage::printDebug(StringBuilder *output) {
   if(_constructedFromBuffer) {
     output->concatf("\t PDU was constructed from buffer of %d bytes\n",_bufferLength);
   }
-	output->concatf("\t CoAP v%d code:   %s\n", getVersion(), codeToString(getCode()));
-	output->concatf("\t Message ID:     %u\n", getMessageID());
-	output->concatf("\t Message Type:   %s\n", typeToString(getType()));
-	output->concatf("\t PDU (%d bytes): ", _pduLength);
+  output->concatf("\t CoAP v%d code:   %s\n", getVersion(), codeToString(getCode()));
+  output->concatf("\t Message ID:     %u\n", getMessageID());
+  output->concatf("\t Message Type:   %s\n", typeToString(getType()));
+  output->concatf("\t PDU (%d bytes): ", _pduLength);
   for (int i = 0; i < _pduLength; i++) output->concatf("0x%02x ", _pdu[i]);
-	output->concat("\n");
+  output->concat("\n");
 
   int tokenLength = getTokenLength();
-	if (0 < tokenLength) {
-		uint8_t *tokenPointer = getPDUPointer()+COAP_HDR_SIZE;
-  	output->concatf("\n\t Token length:   %d\t", tokenLength);
-		for (int i = 0; i < tokenLength; i++) output->concatf("0x%02x ", tokenPointer[i]);
-		output->concat("\n");
-	}
+  if (0 < tokenLength) {
+    uint8_t *tokenPointer = getPDUPointer()+COAP_HDR_SIZE;
+    output->concatf("\n\t Token length:   %d\t", tokenLength);
+    for (int i = 0; i < tokenLength; i++) output->concatf("0x%02x ", tokenPointer[i]);
+    output->concat("\n");
+  }
 
   // print options
   CoAPMessage::CoapOption* options = getOptions();
   if(nullptr != options) {
-		output->concat("\t Options:\n");
-  	for(int i = 0; i < _numOptions; i++) {
-    	output->concatf("OPTION (%d/%d)\n",i + 1,_numOptions);
-    	output->concatf("   Option number (delta): %hu (%hu)\n",options[i].optionNumber,options[i].optionDelta);
-    	output->concatf("   Name: %s\n", optionNumToString(options[i].optionNumber));
-    	output->concatf("   Value length: %u\n",options[i].optionValueLength);
-    	output->concat("   Value: \"");
-    	for(int j = 0; j < options[i].optionValueLength; j++) {
-      	char c = options[i].optionValuePointer[j];
-      	if((c>='!'&&c<='~')||c==' ') {
-        	output->concatf("%c",c);
-      	}
-      	else {
-        	output->concatf("\\%.2d",c);
-      	}
-    	}
-    	output->concat("\"\n");
-  	}
-		free(options);
+    output->concat("\t Options:\n");
+    for(int i = 0; i < _numOptions; i++) {
+      output->concatf("OPTION (%d/%d)\n",i + 1,_numOptions);
+      output->concatf("   Option number (delta): %hu (%hu)\n",options[i].optionNumber,options[i].optionDelta);
+      output->concatf("   Name: %s\n", optionNumToString(options[i].optionNumber));
+      output->concatf("   Value length: %u\n",options[i].optionValueLength);
+      output->concat("   Value: \"");
+      for(int j = 0; j < options[i].optionValueLength; j++) {
+        char c = options[i].optionValuePointer[j];
+        if((c>='!'&&c<='~')||c==' ') {
+          output->concatf("%c",c);
+        }
+        else {
+          output->concatf("\\%.2d",c);
+        }
+      }
+      output->concat("\"\n");
+    }
+    free(options);
   }
 
   // print payload
   if(0 < _payloadLength) {
     output->concatf("\t Payload (%d bytes)\t\"",_payloadLength);
-		for(int i = 0; i < _payloadLength; i++) {
+    for(int i = 0; i < _payloadLength; i++) {
       char c = _payloadPointer[i];
       if((c>='!'&&c<='~')||c==' ') {
         output->concatf("%c",c);
