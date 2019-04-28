@@ -693,10 +693,11 @@ void Argument::valToString(StringBuilder* out) {
     case TCode::FLOAT:
       {
         float tmp;
-        memcpy((void*) &tmp, buf, 4);
-        out->concatf("%.4f", (double) tmp);
+        memcpy((void*) &tmp, &buf, 4);
+        out->concatf("%.4f", (float) tmp);
       }
       break;
+
     case TCode::BOOLEAN:
       out->concatf("%s", ((uintptr_t) pointer() ? "true" : "false"));
       break;

@@ -152,11 +152,11 @@ const char* BufferPipe::pipeName() { return "<IN TEARDOWN>"; }
 * @return  Negative on error. Zero on success.
 */
 int8_t BufferPipe::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
-  #if defined(MANUVR_PIPE_DEBUG)
-  StringBuilder log;
-  log.concatf("%s <--sig-- %s: %s\n", pipeName(), (haveFar() ? _far->pipeName() : "ORIG"), signalString(_sig));
-  Kernel::log(&log);
-  #endif
+  //#if defined(MANUVR_PIPE_DEBUG)
+  //StringBuilder log;
+  //log.concatf("%s <--sig-- %s: %s\n", pipeName(), (haveFar() ? _far->pipeName() : "ORIG"), signalString(_sig));
+  //Kernel::log(&log);
+  //#endif
   switch (_sig) {
     case ManuvrPipeSignal::FAR_SIDE_DETACH:   // The far side is detaching.
       _far = nullptr;

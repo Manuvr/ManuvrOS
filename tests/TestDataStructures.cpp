@@ -535,6 +535,7 @@ int test_Arguments_KVP() {
   int8_t   val5  = (int8_t)   randomInt();
   float    val6  = 0.8374f;
   float    val8  = -0.8374f;
+  double   val9  = -0.123456789d;
   Vector3<float> val7(0.5f, -0.5f, 0.2319f);
 
   uint32_t ret0 = 0;
@@ -546,6 +547,7 @@ int test_Arguments_KVP() {
   float    ret6 = 0.0f;
   float    ret8 = 0.0f;
   Vector3<float> ret7(0.0f, 0.0f, 0.0f);
+  //float    ret9 = 0.0d;
 
   log.concat("\t Adding arguments...\n\n");
   Argument a(val3);
@@ -558,6 +560,7 @@ int test_Arguments_KVP() {
   a.append(val6)->setKey("value6");
   a.append(val8)->setKey("value8");
   a.append(&val7)->setKey("value7");
+  //a.append(val9)->setKey("value9");
 
   a.printDebug(&log);
   log.concat("\n");

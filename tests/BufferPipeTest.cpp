@@ -87,7 +87,7 @@ int8_t DummyTransport::fromCounterparty(uint8_t* buf, unsigned int len, int8_t m
           b) Has a means of discovering when it is safe to free.  */
       if (haveFar()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _far->fromCounterparty(buf, len, mm);
+        return far()->fromCounterparty(buf, len, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 
@@ -96,7 +96,7 @@ int8_t DummyTransport::fromCounterparty(uint8_t* buf, unsigned int len, int8_t m
           caller will expect _us_ to manage this memory.  */
       if (haveFar()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _far->fromCounterparty(buf, len, mm);
+        return far()->fromCounterparty(buf, len, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 
@@ -110,10 +110,10 @@ int8_t DummyTransport::fromCounterparty(uint8_t* buf, unsigned int len, int8_t m
 void DummyTransport::printDebug(StringBuilder* output) {
   output->concatf("\t-- %s ----------------------------------\n", _name);
   if (haveNear()) {
-    output->concatf("\t _near         \t[0x%08x]\n", (unsigned long)_near);
+    output->concatf("\t _near         \t[%p]\n", (unsigned long)near());
   }
   if (haveFar()) {
-    output->concatf("\t _far          \t[0x%08x]\n", (unsigned long)_far);
+    output->concatf("\t _far          \t[%p]\n", (unsigned long)far());
   }
   if (_accumulator.length() > 0) {
     output->concatf("\t _accumulator (%d bytes):  ", _accumulator.length());
@@ -143,7 +143,9 @@ int test_BufferPipe_0(void) {
   DummyTransport _xport0("Xport0");
   DummyTransport _xport1("Xport1", &_xport0);
 
-  _xport0.setNear(&_xport1);
+  // NOTE: This will make the pair circular, and thus make the test crash from
+  //   a stack overflow.
+  //_xport0.setNear(&_xport1);
 
   _xport1.runTest(tmp_str);
   log.concat("\n_xport0\n");
