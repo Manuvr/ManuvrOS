@@ -134,7 +134,7 @@ const char* XenoSession::pipeName() { return getReceiverName(); }
 */
 int8_t XenoSession::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
   if (getVerbosity() > 5) {
-    local_log.concatf("%s --sig--> %s: %s\n", (haveNear() ? _near->pipeName() : "ORIG"), pipeName(), signalString(_sig));
+    local_log.concatf("%s --sig--> %s: %s\n", (haveNear() ? near()->pipeName() : "ORIG"), pipeName(), signalString(_sig));
     Kernel::log(&local_log);
   }
   switch (_sig) {

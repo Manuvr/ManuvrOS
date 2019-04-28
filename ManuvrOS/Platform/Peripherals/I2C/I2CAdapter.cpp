@@ -261,13 +261,15 @@ int8_t I2CAdapter::io_op_callback(BusOp* _op) {
     set_ping_state_by_addr(op->dev_addr, op->hasFault() ? I2CPingState::NEG : I2CPingState::POS);
 
 		if (_er_flag(I2C_BUS_FLAG_PINGING)) {
-		  if ((op->dev_addr & 0x00FF) < 127) {  // TODO: yy???
+		  if ((op->dev_addr & 0x00FF) < 127) {
+        // If the adapter is taking a census, and we haven't pinged all
+        //   addresses, ping the next one.
 		    ping_slave_addr(op->dev_addr + 1);
 		  }
 		  else {
 		    _er_clear_flag(I2C_BUS_FLAG_PINGING);
 		    #if defined(MANUVR_DEBUG)
-		    if (getVerbosity() > 3) local_log.concat("Concluded i2c ping sweep.");
+		    if (getVerbosity() > 4) local_log.concat("Concluded i2c ping sweep.");
 		    #endif
 		  }
 		}
@@ -473,29 +475,29 @@ void I2CAdapter::set_ping_state_by_addr(uint8_t addr, I2CPingState nu) {
 void I2CAdapter::printPingMap(StringBuilder *temp) {
   if (temp) {
     temp->concat("\n\n\tPing Map\n\t      0 1 2 3 4 5 6 7 8 9 A B C D E F\n");
-    // TODO: This is needlessly-extravagent of memory. Do it this way instead...
-    //char str_buf[];
+    char str_buf[33];
+    for (uint8_t i = 1; i < 30; i+=2) str_buf[i] = ' ';
+    str_buf[31] = '\n';
+    str_buf[32] = '\0';
     for (uint8_t i = 0; i < 128; i+=16) {
-      temp->concatf("\t0x%02x: %c %c %c %c %c %c %c %c %c %c %c %c %c %c %c %c\n",
-        i,
-        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x00)],
-        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x01)],
-        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x02)],
-        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x03)],
-        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x04)],
-        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x05)],
-        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x06)],
-        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x07)],
-        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x08)],
-        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x09)],
-        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0A)],
-        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0B)],
-        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0C)],
-        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0D)],
-        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0E)],
-        _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0F)]
-      );
-      //temp->concat(str_buf);
+      temp->concatf("\t0x%02x: ", i);
+      str_buf[0]  = _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x00)];
+      str_buf[2]  = _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x01)];
+      str_buf[4]  = _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x02)];
+      str_buf[6]  = _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x03)];
+      str_buf[8]  = _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x04)];
+      str_buf[10] = _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x05)];
+      str_buf[12] = _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x06)];
+      str_buf[14] = _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x07)];
+      str_buf[16] = _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x08)];
+      str_buf[18] = _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x09)];
+      str_buf[20] = _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0A)];
+      str_buf[22] = _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0B)];
+      str_buf[24] = _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0C)];
+      str_buf[26] = _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0D)];
+      str_buf[28] = _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0E)];
+      str_buf[30] = _ping_state_chr[(uint8_t) get_ping_state_by_addr(i + 0x0F)];
+      temp->concat(str_buf);
     }
   }
   temp->concat("\n");

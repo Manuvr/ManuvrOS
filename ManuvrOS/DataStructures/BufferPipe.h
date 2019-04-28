@@ -59,9 +59,9 @@ See UDPPipe for a case where this matters.
 #ifndef __MANUVR_DS_BUFFER_PIPE_H
 #define __MANUVR_DS_BUFFER_PIPE_H
 
-// Our notion of buffer.
-#include <DataStructures/StringBuilder.h>
-#include <DataStructures/Argument.h>
+#include <DataStructures/StringBuilder.h>  // Our notion of buffer.
+#include <CommonConstants.h>
+#include <EnumeratedTypeCodes.h>
 
 
 /*
@@ -70,7 +70,7 @@ See UDPPipe for a case where this matters.
 * As return codes, these are interpreted as a declaration of the beliefs of the
 *   callee instance. Therefore, a return value of zero is an error.
 * As function arguments, these are interpreted as directives given by the
-*   sending instance, and should be treated appropriately.
+*   calling instance, and should be treated appropriately.
 * At this point, we cannot unambiguously support partial buffer transfers. The
 *   receiving instance should take everything or nothing at all.
 * Remember: The issuer of the buffer has sole-authority to dictate its fate.
@@ -214,24 +214,20 @@ class BufferPipe {
     * The side closer to the counterparty.
     */
     int8_t setNear(BufferPipe*);
+    inline BufferPipe* near() {  return _near;  };
 
     /*
     * Set the identity of the far-side.
     * The side closer to the application logic.
     */
     int8_t setFar(BufferPipe*);
+    inline BufferPipe* far() {  return _far;  };
 
-    /* Join the ends of this pipe to one-another. */
+    /*
+    * Join the ends of this pipe to one-another. Typically in preparation for
+    *   our own self-removal.
+    */
     int8_t joinEnds();
-
-
-    // These inlines are for convenience of extending classes.
-    // TODO: Ought to be private.
-    inline bool _bp_flag(uint16_t flag) {        return (_flags & flag);  };
-    inline void _bp_set_flag(uint16_t flag, bool nu) {
-      if (nu) _flags |= flag;
-      else    _flags &= ~flag;
-    };
 
     /* Members pertaining to pipe-strategy. */
     inline const uint8_t* getPipeStrategy()           {  return _pipe_strategy;   };
@@ -255,8 +251,6 @@ class BufferPipe {
 
   protected:
     const uint8_t* _pipe_strategy = nullptr;  // See notes.
-    BufferPipe* _near = nullptr;  // These two members create a double-linked-list.
-    BufferPipe* _far  = nullptr;  // Need such topology for bi-directional pipe.
 
     BufferPipe();           // Protected constructor with no params for class init.
     virtual ~BufferPipe();  // Protected destructor.
@@ -265,11 +259,20 @@ class BufferPipe {
     inline bool haveNear() {  return (nullptr != _near);  };
     bool haveFar();
 
+    // These inlines are for convenience of extending classes.
+    inline bool _bp_flag(uint16_t flag) {        return (_flags & flag);  };
+    inline void _bp_set_flag(uint16_t flag, bool nu) {
+      if (nu) _flags |= flag;
+      else    _flags &= ~flag;
+    };
+
     virtual void printDebug(StringBuilder*);
 
 
 
   private:
+    BufferPipe* _near = nullptr;  // These two members create a double-linked-list.
+    BufferPipe* _far  = nullptr;  // Need such topology for bi-directional pipe.
     uint16_t _flags      = 0;
     uint8_t  _pipe_code  = 0;
 };

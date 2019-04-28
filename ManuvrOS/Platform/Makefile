@@ -5,11 +5,6 @@
 # This is where we conditionally compile platform-support code.
 #
 # Cryptographic support is also handled by this Makefile.
-#
-# TODO:
-# It was intended that this be open-ended enough to allow others to easilly
-#   implement other arbitrary platforms. It might be better to ultimately
-#   re-work this to use platformIO.
 ###########################################################################
 
 C_STANDARD         = gnu99

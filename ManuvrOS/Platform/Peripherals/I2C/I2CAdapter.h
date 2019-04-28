@@ -115,7 +115,6 @@ This file is the tortured result of growing pains since the beginning of
   #define I2C_ADAPT_OPT_FLAG_S_ADDR   0x007F   // Mask for slave address.
 
 
-  // TODO: Integrate freq
   class I2CAdapterOptions {
     public:
       I2CAdapterOptions(const I2CAdapterOptions* obj) :

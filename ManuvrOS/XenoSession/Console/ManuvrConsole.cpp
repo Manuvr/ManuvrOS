@@ -108,7 +108,7 @@ ManuvrConsole::ManuvrConsole(BufferPipe* _near_side) : EventReceiver("Console"),
   // The link nearer to the transport should not free.
   if (_near_side) {
     setNear(_near_side);  // Our near-side is that passed-in transport.
-    _near->setFar((BufferPipe*) this);
+    _near_side->setFar((BufferPipe*) this);
   }
 
   Kernel::attachToLogger((BufferPipe*) this);
@@ -199,7 +199,7 @@ const char* ManuvrConsole::pipeName() { return getReceiverName(); }
 */
 int8_t ManuvrConsole::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
   if (getVerbosity() > 5) {
-    local_log.concatf("%s --sig--> %s: %s\n", (haveNear() ? _near->pipeName() : "ORIG"), pipeName(), signalString(_sig));
+    local_log.concatf("%s --sig--> %s: %s\n", (haveNear() ? near()->pipeName() : "ORIG"), pipeName(), signalString(_sig));
     Kernel::log(&local_log);
   }
   switch (_sig) {
@@ -208,7 +208,7 @@ int8_t ManuvrConsole::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
       return 1;
 
     case ManuvrPipeSignal::FAR_SIDE_DETACH:   // The far side is detaching.
-    case ManuvrPipeSignal::NEAR_SIDE_DETACH:   // The near side is detaching.
+    case ManuvrPipeSignal::NEAR_SIDE_DETACH:  // The near side is detaching.
     case ManuvrPipeSignal::FAR_SIDE_ATTACH:
     case ManuvrPipeSignal::NEAR_SIDE_ATTACH:
     case ManuvrPipeSignal::UNDEF:
@@ -233,7 +233,7 @@ int8_t ManuvrConsole::toCounterparty(ManuvrPipeSignal _sig, void* _args) {
     case ManuvrPipeSignal::FLUSH:
       // In this context, we flush out log accumulator back to the counterparty.
       if (haveNear() && _log_accumulator.length() > 0) {
-        _near->toCounterparty(&_log_accumulator, MEM_MGMT_RESPONSIBLE_BEARER);
+        near()->toCounterparty(&_log_accumulator, MEM_MGMT_RESPONSIBLE_BEARER);
       }
       break;
     default:

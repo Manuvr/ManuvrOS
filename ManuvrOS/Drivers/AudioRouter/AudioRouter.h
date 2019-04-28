@@ -128,8 +128,6 @@ class AudioRouter : public EventReceiver
     int8_t enable();      // Turn on the chips responsible for routing signals.
     int8_t disable();     // Turn off the chips responsible for routing signals.
 
-
-    // TODO: These ought to be statics...
     void dumpInputChannel(CPInputChannel *chan, StringBuilder*);
     void dumpInputChannel(uint8_t chan, StringBuilder*);
     void dumpOutputChannel(uint8_t chan, StringBuilder*);

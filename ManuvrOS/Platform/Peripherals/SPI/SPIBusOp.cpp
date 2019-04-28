@@ -24,11 +24,6 @@ limitations under the License.
 #include "SPIBusOp.h"
 #include <Platform/Platform.h>
 
-/*******************************************************************************
-* Out-of-class                                                                 +
-*******************************************************************************/
-StringBuilder debug_log;   // TODO: Relocate this to a static member.
-
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -96,10 +91,11 @@ SPIBusOp::SPIBusOp(BusOpcode nu_op, BusOpCallback* requester, uint8_t cs, bool a
 */
 SPIBusOp::~SPIBusOp() {
   if (profile()) {
+    StringBuilder debug_log;
     debug_log.concat("Destroying an SPI job that was marked for profiling:\n");
     printDebug(&debug_log);
+    Kernel::log(&debug_log);
   }
-  if (debug_log.length() > 0) Kernel::log(&debug_log);
 }
 
 
@@ -212,6 +208,7 @@ int8_t SPIBusOp::_assert_cs(bool asrt) {
 */
 int8_t SPIBusOp::abort(XferFault cause) {
   xfer_fault = cause;
+  //StringBuilder debug_log;
   //debug_log.concatf("SPI job aborted at state %s. Cause: %s.\n", getStateString(), getErrorString());
   //Kernel::log(&debug_log);
   return markComplete();
