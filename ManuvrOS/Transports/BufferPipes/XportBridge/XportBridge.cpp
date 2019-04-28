@@ -99,7 +99,7 @@ int8_t XportBridge::toCounterparty(StringBuilder* buf, int8_t mm) {
           b) Has a means of discovering when it is safe to free.  */
       if (haveNear()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _near->toCounterparty(buf, mm);
+        return near()->toCounterparty(buf, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 
@@ -108,7 +108,7 @@ int8_t XportBridge::toCounterparty(StringBuilder* buf, int8_t mm) {
           caller will expect _us_ to manage this memory.  */
       if (haveNear()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _near->toCounterparty(buf, mm);
+        return near()->toCounterparty(buf, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 
@@ -131,7 +131,7 @@ int8_t XportBridge::fromCounterparty(StringBuilder* buf, int8_t mm) {
           b) Has a means of discovering when it is safe to free.  */
       if (haveFar()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _far->fromCounterparty(buf, mm);
+        return far()->fromCounterparty(buf, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 
@@ -140,7 +140,7 @@ int8_t XportBridge::fromCounterparty(StringBuilder* buf, int8_t mm) {
           caller will expect _us_ to manage this memory.  */
       if (haveFar()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _far->fromCounterparty(buf, mm);
+        return far()->fromCounterparty(buf, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 

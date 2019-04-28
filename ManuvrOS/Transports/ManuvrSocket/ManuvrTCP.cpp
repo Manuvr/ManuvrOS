@@ -333,7 +333,7 @@ int8_t ManuvrTCP::listen() {
 
   initialized(true);
   ManuvrThreadOptions _t_opts;
-  _t_opts.thread_name = "tcp_listen";
+  _t_opts.thread_name = (char*) "tcp_listen";
   _t_opts.stack_sz = 4096;
 
   listening(true);
@@ -534,7 +534,6 @@ uint ManuvrTCP::consoleGetCmds(ConsoleCommand** ptr) {
 void ManuvrTCP::consoleCmdProc(StringBuilder* input) {
   char* str = input->position(0);
   char c = *(str);
-  int temp_int = ((*(str) != 0) ? atoi((char*) str+1) : 0);
 
   switch (c) {
     case 'i':

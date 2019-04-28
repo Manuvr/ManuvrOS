@@ -102,7 +102,7 @@ const char* ManuvrGPS::pipeName() { return "ManuvrGPS"; }
 int8_t ManuvrGPS::fromCounterparty(ManuvrPipeSignal _sig, void* _args) {
   #if defined(MANUVR_PIPE_DEBUG)
     StringBuilder local_log;
-    local_log.concatf("%s --sig--> %s: %s\n", (haveNear() ? _near->pipeName() : "ORIG"), pipeName(), signalString(_sig));
+    local_log.concatf("%s --sig--> %s: %s\n", (haveNear() ? near()->pipeName() : "ORIG"), pipeName(), signalString(_sig));
     Kernel::log(&local_log);
   #endif
   switch (_sig) {

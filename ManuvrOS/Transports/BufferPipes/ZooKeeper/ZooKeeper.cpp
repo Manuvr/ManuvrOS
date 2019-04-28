@@ -73,7 +73,7 @@ ZooKeeper::~ZooKeeper() {
   // Wonkey tear-down order is for concurrency-hardness.
   //TODO: deleting object of abstract class type BufferPipe which has
   //         non-virtual destructor will cause undefined behaviour
-  //BufferPipe* _local_far = _far;
+  //BufferPipe* _local_far = far();
   //_far = nullptr;
   //if (_local_far) delete _local_far;
 }
@@ -104,7 +104,7 @@ int8_t ZooKeeper::toCounterparty(StringBuilder* buf, int8_t mm) {
           b) Has a means of discovering when it is safe to free.  */
       if (haveNear()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _near->toCounterparty(buf, mm);
+        return near()->toCounterparty(buf, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 
@@ -113,7 +113,7 @@ int8_t ZooKeeper::toCounterparty(StringBuilder* buf, int8_t mm) {
           caller will expect _us_ to manage this memory.  */
       if (haveNear()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _near->toCounterparty(buf, mm);
+        return near()->toCounterparty(buf, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 
@@ -141,7 +141,7 @@ int8_t ZooKeeper::fromCounterparty(StringBuilder* buf, int8_t mm) {
           b) Has a means of discovering when it is safe to free.  */
       if (haveFar()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _far->fromCounterparty(buf, mm);
+        return far()->fromCounterparty(buf, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 
@@ -150,7 +150,7 @@ int8_t ZooKeeper::fromCounterparty(StringBuilder* buf, int8_t mm) {
           caller will expect _us_ to manage this memory.  */
       if (haveFar()) {
         /* We are not the transport driver, and we do no transformation. */
-        return _far->fromCounterparty(buf, mm);
+        return far()->fromCounterparty(buf, mm);
       }
       return MEM_MGMT_RESPONSIBLE_CALLER;   // Reject the buffer.
 
