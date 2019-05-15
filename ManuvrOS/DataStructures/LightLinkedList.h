@@ -51,6 +51,7 @@ template <class T> class LinkedList {
     ~LinkedList(void);
 
     int insert(T);                   // Returns the ID of the data, or -1 on failure. Makes only a reference to the payload.
+    int insertAtHead(T);             // Returns the ID of the data, or -1 on failure. Makes only a reference to the payload.
 
     int size(void);                  // Returns the number of elements in this list.
 
@@ -130,6 +131,26 @@ template <class T> int LinkedList<T>::insert(T d) {
   current->data = d;
   element_count++;
   return 1;
+}
+
+
+/**
+* Inserts the given dataum into the linked list at the head position.
+* Useful for treating the list like a stack.
+*
+* @param  d   The data to copy and insert.
+* @return the position in the list that the data was inserted, or -1 on failure.
+*/
+template <class T> int LinkedList<T>::insertAtHead(T d) {
+  Node<T> *current = (Node<T>*) malloc(sizeof(Node<T>));
+  if (current) {
+    current->data = d;
+    current->next = root;
+    root = current;
+    element_count++;
+    return 0;
+  }
+  return -1;
 }
 
 
