@@ -35,6 +35,7 @@ SOURCES_CBOR += Types/cbor-cpp/output_static.cpp
 
 CPP_SRCS  += $(SOURCES_CBOR)
 CPP_SRCS  += Types/TypeTranscriber.cpp
+CPP_SRCS  += Types/Image.cpp
 CPP_SRCS  += Types/Avro/Avro.cpp
 
 # Manuvr core
@@ -126,6 +127,7 @@ CPP_SRCS  += Drivers/Sensors/TSL2561/TSL2561.cpp
 CPP_SRCS  += Drivers/Sensors/MGC3130/MGC3130.cpp
 CPP_SRCS  += Drivers/Sensors/BMP085/BMP085.cpp
 CPP_SRCS  += Drivers/Sensors/AMG88xx/AMG88xx.cpp
+CPP_SRCS  += Drivers/Sensors/IMU/ADXL345/ADXL345.cpp
 
 CPP_SRCS  += Drivers/TLC5947/TLC5947.cpp
 #CPP_SRCS  += Drivers/LSMD9S1/LSMD9S1.cpp
