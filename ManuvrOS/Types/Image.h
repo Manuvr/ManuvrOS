@@ -42,9 +42,7 @@ ___________________________________
 #include <stdint.h>
 #include <stdlib.h>
 
-#if defined(MANUVR_DEBUG)
-  #include <DataStructures/StringBuilder.h>
-#endif
+#include <DataStructures/StringBuilder.h>
 
 
 
@@ -66,9 +64,9 @@ enum class ImgBufferFormat : uint8_t {
 
 class Image {
   public:
-    Image(unsigned int x, unsigned int y, ImgBufferFormat, uint8_t*);
-    Image(unsigned int x, unsigned int y, ImgBufferFormat);
-    Image(unsigned int x, unsigned int y);
+    Image(uint32_t x, uint32_t y, ImgBufferFormat, uint8_t*);
+    Image(uint32_t x, uint32_t y, ImgBufferFormat);
+    Image(uint32_t x, uint32_t y);
     Image();
     ~Image();
 
@@ -77,25 +75,31 @@ class Image {
     bool setBufferByCopy(uint8_t*);
     bool setBufferByCopy(uint8_t*, ImgBufferFormat);
 
+    void wipe();
+    int8_t serialize(StringBuilder*);
+    int8_t serialize(uint8_t*, uint32_t*);
+    int8_t serializeWithoutBuffer(uint8_t*, uint32_t*);
+    int8_t deserialize(uint8_t*, uint32_t);
+
     bool isColor();
 
-    uint32_t getColor(unsigned int x, unsigned int y);
-    bool     setColor(unsigned int x, unsigned int y, uint32_t);
-    bool     setColor(unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b);
+    uint32_t getColor(uint32_t x, uint32_t y);
+    bool     setColor(uint32_t x, uint32_t y, uint32_t);
+    bool     setColor(uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b);
 
-    inline unsigned int    x() {          return _x;                     };
-    inline unsigned int    y() {          return _y;                     };
+    inline uint32_t        x() {          return _x;                     };
+    inline uint32_t        y() {          return _y;                     };
     inline uint8_t*        buffer() {     return _buffer;                };
     inline ImgBufferFormat format() {     return _buf_fmt;               };
     inline bool            allocated() {  return (nullptr != _buffer);   };
-    inline unsigned int    pixels() {     return (_x * _y);              };
-    inline unsigned int    bytesUsed() {  return (_x * _y * _bits_per_pixel() >> 8);  };
+    inline uint32_t        pixels() {     return (_x * _y);              };
+    inline uint32_t        bytesUsed() {  return (_x * _y * _bits_per_pixel() >> 8);  };
 
 
 
   private:
-    unsigned int    _x       = 0;
-    unsigned int    _y       = 0;
+    uint32_t        _x       = 0;
+    uint32_t        _y       = 0;
     uint8_t*        _buffer  = nullptr;
     ImgBufferFormat _buf_fmt = ImgBufferFormat::UNALLOCATED;
     uint8_t         _flags   = 0;
@@ -103,12 +107,12 @@ class Image {
     uint8_t _bits_per_pixel();
 
     /* Linearizes the X/y value in preparation for array indexing. */
-    inline unsigned int _pixel_number(unsigned int x, unsigned int y) {
+    inline uint32_t _pixel_number(uint32_t x, uint32_t y) {
       return ((y * _x) + x);
     };
 
     /* Linearizes the X/y value accounting for color format. */
-    inline unsigned int _calculate_offset(unsigned int x, unsigned int y) {
+    inline uint32_t _calculate_offset(uint32_t x, uint32_t y) {
       return ((((y * _x) + x) * _bits_per_pixel()) >> 8);
     };
 

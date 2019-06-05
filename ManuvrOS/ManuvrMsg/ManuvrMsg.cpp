@@ -488,6 +488,20 @@ uint8_t ManuvrMsg::inflateArgumentsFromBuffer(uint8_t* buffer, int len) {
         len    = len - nu_arg->length();
         break;
 
+      case TCode::IMAGE:
+        #if defined(CONFIG_MANUVR_IMG_SUPPORT)
+          {
+            Image* img_obj = new Image();
+            if (0 == img_obj->deserialize(buffer, len)) {
+              nu_arg = new Argument(img_obj);
+              nu_arg->reapValue(true);
+            }
+          }
+        #else
+          // TODO: Failure case. No support.
+        #endif   // CONFIG_MANUVR_IMG_SUPPORT
+        break;
+
       default:
         // Abort parse. We encountered a type we can't deal with.
         clearArgs();

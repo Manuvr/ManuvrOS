@@ -37,6 +37,11 @@ Template for a preallocated pool manager.
   #include <Types/cbor-cpp/cbor.h>
 #endif
 
+#if defined(CONFIG_MANUVR_IMG_SUPPORT)
+  #include <Types/Image.h>
+#endif   // CONFIG_MANUVR_IMG_SUPPORT
+
+
 /*
 * These are flag definitions for Argument.
 */
@@ -135,6 +140,10 @@ class Argument {
     Argument(Argument* val)       : Argument((void*) val, sizeof(val), TCode::ARGUMENT) {};
     Argument(Identity* val)       : Argument((void*) val, sizeof(val), TCode::IDENTITY) {};
 
+    #if defined(CONFIG_MANUVR_IMG_SUPPORT)
+    Argument(Image* val)          : Argument((void*) val, sizeof(val), TCode::IMAGE)    {};
+    #endif   // CONFIG_MANUVR_IMG_SUPPORT
+
     ~Argument();
 
 
@@ -200,6 +209,9 @@ class Argument {
     inline Argument* append(ThreadFxnPtr *val) {    return link(new Argument(val));   }
     inline Argument* append(ArgumentFxnPtr *val) {  return link(new Argument(val));   }
     inline Argument* append(PipeIOCallback *val) {  return link(new Argument(val));   }
+    #if defined(CONFIG_MANUVR_IMG_SUPPORT)
+    inline Argument* append(Image* val) {           return link(new Argument(val));   }
+    #endif   // CONFIG_MANUVR_IMG_SUPPORT
 
 
     // TODO: These will be re-worked to support alternate type-systems.

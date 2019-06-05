@@ -140,20 +140,21 @@ enum class TCode : uint8_t {
   AUDIO     = 0x10,  // Audio stream
   IMAGE     = 0x11,  // Image data
   COLOR8    = 0x19,  // 8-bit  color data. Color is represented as RGB.
-  COLOR24   = 0x1A,  // 24-bit color data. Color is represented as RGB.
-  COLOR32   = 0x1B,  // 32-bit color data. Color is represented as RGB.
+  COLOR16   = 0x1A,  // 24-bit color data. Color is represented as RGB.
+  COLOR24   = 0x1B,  // 24-bit color data. Color is represented as RGB.
+  COLOR32   = 0x1C,  // 32-bit color data. Color is represented as RGB.
 
   /*
   * These are types for Manuvr classes and structures that are either not
   *   exportable, or degenerate into a less-structured type when exported.
   */
-  ARGUMENT           = 0xA7,  // A pointer to an Argument.
-  BUFFERPIPE         = 0xAE,  // A pointer to a BufferPipe.
-  STR_BUILDER        = 0xAF,  // A pointer to a StringBuilder.
   SYS_EVENTRECEIVER  = 0xE0,  // A pointer to an EventReceiver.
   SYS_MANUVR_XPORT   = 0xE1,  // A pointer to a ManuvrXport.
   SYS_MANUVRMSG      = 0xE2,  // A pointer to a ManuvrMsg.
   SYS_SENSOR_WRAPPER = 0xE3,  // A pointer to a SensorWrapper.
+  ARGUMENT           = 0xE4,  // A pointer to an Argument.
+  BUFFERPIPE         = 0xE5,  // A pointer to a BufferPipe.
+  STR_BUILDER        = 0xE6,  // A pointer to a StringBuilder.
   SYS_FXN_PTR        = 0xEC,  // FxnPointer
   SYS_THREAD_FXN_PTR = 0xED,  // ThreadFxnPtr
   SYS_ARG_FXN_PTR    = 0xEE,  // ArgumentFxnPtr

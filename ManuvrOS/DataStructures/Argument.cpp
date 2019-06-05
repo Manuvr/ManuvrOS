@@ -177,6 +177,25 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
           }
         }
         break;
+      case TCode::IMAGE:
+        #if defined(CONFIG_MANUVR_IMG_SUPPORT)
+          {
+            Image* img;
+            if (0 == src->getValueAs(&img)) {
+              uint32_t sz_buf = img->bytesUsed();
+              if (sz_buf > 0) {
+                uint32_t nb_buf = 0;
+                uint8_t* intermediary = (uint8_t*) alloca(32);
+                if (0 == img->serializeWithoutBuffer(intermediary, &nb_buf)) {
+                  encoder.write_tag(MANUVR_CBOR_VENDOR_TYPE | TcodeToInt(src->typeCode()));
+                  encoder.write_bytes(intermediary, nb_buf);   // TODO: This might cause two discrete CBOR objects.
+                  encoder.write_bytes(img->buffer(), sz_buf);
+                }
+              }
+            }
+          }
+        #endif   // CONFIG_MANUVR_IMG_SUPPORT
+        break;
       case TCode::SYS_PIPE_FXN_PTR:
       case TCode::SYS_ARG_FXN_PTR:
       case TCode::SYS_MANUVR_XPORT:
@@ -187,7 +206,7 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
         // Peacefully ignore the types we can't export.
         break;
       default:
-        // TODO: Handle pointer types, bool, vectors.
+        // TODO: Handle pointer types, bool
         break;
     }
     src = src->_next;
@@ -437,8 +456,9 @@ int8_t Argument::getValueAs(void* trg_buf) {
 
     case TCode::STR_BUILDER:          // This is a pointer to some StringBuilder. Presumably this is on the heap.
     case TCode::STR:                  // This is a pointer to a string constant. Presumably this is stored in flash.
-    case TCode::BUFFERPIPE:       // This is a pointer to a BufferPipe/.
-    case TCode::SYS_MANUVRMSG:     // This is a pointer to ManuvrMsg.
+    case TCode::IMAGE:                // This is a pointer to an Image.
+    case TCode::BUFFERPIPE:           // This is a pointer to a BufferPipe/.
+    case TCode::SYS_MANUVRMSG:        // This is a pointer to ManuvrMsg.
     case TCode::SYS_EVENTRECEIVER:    // This is a pointer to an EventReceiver.
     case TCode::SYS_MANUVR_XPORT:     // This is a pointer to a transport.
     default:
@@ -589,6 +609,20 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
     case TCode::VECT_3_INT16:
     case TCode::BINARY:     // This is a pointer to a big binary blob.
       out->concat((unsigned char*) target_mem, len);
+      break;
+
+    case TCode::IMAGE:      // This is a pointer to an Image.
+      #if defined(CONFIG_MANUVR_IMG_SUPPORT)
+        {
+          Image* img = (Image*) target_mem;
+          uint32_t sz_buf = img->bytesUsed();
+          if (sz_buf > 0) {
+            if (0 != img->serialize(out)) {
+              // Failure
+            }
+          }
+        }
+      #endif   // CONFIG_MANUVR_IMG_SUPPORT
       break;
 
     /* Anything else should be dropped. */

@@ -1,8 +1,10 @@
 #include <stdlib.h>
 #include "Image.h"
 
+#if defined(CONFIG_MANUVR_IMG_SUPPORT)
 
-Image::Image(unsigned int x, unsigned int y, ImgBufferFormat fmt, uint8_t* buf) {
+
+Image::Image(uint32_t x, uint32_t y, ImgBufferFormat fmt, uint8_t* buf) {
   _x       = x;
   _y       = y;
   _buf_fmt = fmt;
@@ -11,7 +13,7 @@ Image::Image(unsigned int x, unsigned int y, ImgBufferFormat fmt, uint8_t* buf) 
 }
 
 
-Image::Image(unsigned int x, unsigned int y, ImgBufferFormat fmt) {
+Image::Image(uint32_t x, uint32_t y, ImgBufferFormat fmt) {
   _x       = x;
   _y       = y;
   _buf_fmt = fmt;
@@ -20,7 +22,7 @@ Image::Image(unsigned int x, unsigned int y, ImgBufferFormat fmt) {
 }
 
 
-Image::Image(unsigned int x, unsigned int y) {
+Image::Image(uint32_t x, uint32_t y) {
   _x = x;
   _y = y;
 }
@@ -74,10 +76,13 @@ bool Image::setBuffer(uint8_t* buf, ImgBufferFormat fmt) {
 }
 
 
+/**
+*
+*/
 bool Image::setBufferByCopy(uint8_t* buf) {
   if (ImgBufferFormat::UNALLOCATED != _buf_fmt) {
     if (allocated()) {
-      unsigned int sz = bytesUsed();
+      uint32_t sz = bytesUsed();
       memcpy(_buffer, buf, sz);
       return true;
     }
@@ -93,7 +98,7 @@ bool Image::setBufferByCopy(uint8_t* buf, ImgBufferFormat fmt) {
   if (ImgBufferFormat::UNALLOCATED != _buf_fmt) {
     if (fmt == _buf_fmt) {
       if (allocated()) {
-        unsigned int sz = bytesUsed();
+        uint32_t sz = bytesUsed();
         memcpy(_buffer, buf, sz);
         return true;
       }
@@ -102,7 +107,7 @@ bool Image::setBufferByCopy(uint8_t* buf, ImgBufferFormat fmt) {
       if (_is_ours() && allocated()) {
         free(_buffer);
         _buf_fmt = fmt;
-        unsigned int sz = bytesUsed();
+        uint32_t sz = bytesUsed();
         _buffer = (uint8_t*) malloc(sz);
         if (allocated()) {
           _ours(true);
@@ -114,7 +119,7 @@ bool Image::setBufferByCopy(uint8_t* buf, ImgBufferFormat fmt) {
   }
   else {
     _buf_fmt = fmt;
-    unsigned int sz = bytesUsed();
+    uint32_t sz = bytesUsed();
     _buffer = (uint8_t*) malloc(bytesUsed());
     if (allocated()) {
       _ours(true);
@@ -126,9 +131,126 @@ bool Image::setBufferByCopy(uint8_t* buf, ImgBufferFormat fmt) {
 }
 
 
+/**
+*
+*/
+void Image::wipe() {
+  if (_is_ours() && allocated()) {
+    free(_buffer);
+  }
+  _x       = 0;
+  _y       = 0;
+  _buffer  = nullptr;
+  _buf_fmt = ImgBufferFormat::UNALLOCATED;
+  _flags   = 0;
+}
 
 
+/**
+*
+*/
+int8_t Image::serialize(StringBuilder* out) {
+  if (ImgBufferFormat::UNALLOCATED != _buf_fmt) {
+    if (allocated()) {
+      uint32_t sz = bytesUsed();
+      uint8_t buf[10];
+      buf[0] = (uint8_t) (_x >> 24) & 0xFF;
+      buf[1] = (uint8_t) (_x >> 16) & 0xFF;
+      buf[2] = (uint8_t) (_x >> 8) & 0xFF;
+      buf[3] = (uint8_t) _x & 0xFF;
+      buf[4] = (uint8_t) (_y >> 24) & 0xFF;
+      buf[5] = (uint8_t) (_y >> 16) & 0xFF;
+      buf[6] = (uint8_t) (_y >> 8) & 0xFF;
+      buf[7] = (uint8_t) _y & 0xFF;
+      buf[8] = (uint8_t) _buf_fmt;
+      buf[9] = _flags;
+      out->concat(buf, 10);
+      out->concat(_buffer, sz);
+      return 0;
+    }
+  }
+  return -1;
+}
 
+
+/**
+*
+*/
+int8_t Image::serialize(uint8_t* buf, uint32_t* len) {
+  if (ImgBufferFormat::UNALLOCATED != _buf_fmt) {
+    if (allocated()) {
+      uint32_t sz = bytesUsed();
+      *(buf + 0) = (uint8_t) (_x >> 24) & 0xFF;
+      *(buf + 1) = (uint8_t) (_x >> 16) & 0xFF;
+      *(buf + 2) = (uint8_t) (_x >> 8) & 0xFF;
+      *(buf + 3) = (uint8_t) _x & 0xFF;
+      *(buf + 4) = (uint8_t) (_y >> 24) & 0xFF;
+      *(buf + 5) = (uint8_t) (_y >> 16) & 0xFF;
+      *(buf + 6) = (uint8_t) (_y >> 8) & 0xFF;
+      *(buf + 7) = (uint8_t) _y & 0xFF;
+      *(buf + 8) = (uint8_t) _buf_fmt;
+      *(buf + 9) = _flags;
+      memcpy((buf + 10), _buffer, sz);
+      *len = sz;
+      return 0;
+    }
+  }
+  return -1;
+}
+
+
+/**
+* Serializes the object without the bulk of the data (the image itself). This is
+*   for the sake of avoiding memory overhead on an intermediate copy.
+* The len parameter will be updated to reflect the actual written bytes. Not
+*   including the langth of the full buffer.
+*/
+int8_t Image::serializeWithoutBuffer(uint8_t* buf, uint32_t* len) {
+  if (ImgBufferFormat::UNALLOCATED != _buf_fmt) {
+    if (allocated()) {
+      *(buf + 0) = (uint8_t) (_x >> 24) & 0xFF;
+      *(buf + 1) = (uint8_t) (_x >> 16) & 0xFF;
+      *(buf + 2) = (uint8_t) (_x >> 8) & 0xFF;
+      *(buf + 3) = (uint8_t) _x & 0xFF;
+      *(buf + 4) = (uint8_t) (_y >> 24) & 0xFF;
+      *(buf + 5) = (uint8_t) (_y >> 16) & 0xFF;
+      *(buf + 6) = (uint8_t) (_y >> 8) & 0xFF;
+      *(buf + 7) = (uint8_t) _y & 0xFF;
+      *(buf + 8) = (uint8_t) _buf_fmt;
+      *(buf + 9) = _flags;
+      *len = 10;
+      return 0;
+    }
+  }
+  return -1;
+}
+
+
+/**
+* This function can only be run if there is not a buffer already allocated.
+*/
+int8_t Image::deserialize(uint8_t* buf, uint32_t len) {
+  if (ImgBufferFormat::UNALLOCATED == _buf_fmt) {
+    if (!allocated()) {
+      _x = ((uint32_t) *(buf + 0) << 24) | ((uint32_t) *(buf + 1) << 16) | ((uint32_t) *(buf + 2) << 8) | ((uint32_t) *(buf + 3));
+      _y = ((uint32_t) *(buf + 4) << 24) | ((uint32_t) *(buf + 5) << 16) | ((uint32_t) *(buf + 6) << 8) | ((uint32_t) *(buf + 7));
+      _buf_fmt = (ImgBufferFormat) *(buf + 8);
+      _flags   = *(buf + 9);
+      uint32_t sz = bytesUsed();
+      _buffer = (uint8_t*) malloc(sz);
+      if (allocated()) {
+        memcpy(_buffer, (buf + 10), sz);
+        return 0;
+      }
+    }
+  }
+  return -1;
+}
+
+
+/**
+*
+*/
 bool Image::isColor() {
   switch (_buf_fmt) {
     case ImgBufferFormat::R8_G8_B8:          // 24-bit color
@@ -142,7 +264,10 @@ bool Image::isColor() {
 }
 
 
-uint32_t Image::getColor(unsigned int x, unsigned int y) {
+/**
+*
+*/
+uint32_t Image::getColor(uint32_t x, uint32_t y) {
   switch (_buf_fmt) {
     case ImgBufferFormat::MONOCHROME:        // Monochrome
     case ImgBufferFormat::GREY_24:           // 24-bit greyscale
@@ -163,7 +288,7 @@ uint32_t Image::getColor(unsigned int x, unsigned int y) {
 /**
 * Takes a color in 32-bit. Squeezes it into the buffer's format, discarding low bits as appropriate.
 */
-bool Image::setColor(unsigned int x, unsigned int y, uint32_t c) {
+bool Image::setColor(uint32_t x, uint32_t y, uint32_t c) {
   uint8_t r = (uint8_t) (c >> 16) & 0xFF;
   uint8_t g = (uint8_t) (c >> 8) & 0xFF;
   uint8_t b = (uint8_t) (c & 0xFF);
@@ -194,9 +319,9 @@ bool Image::setColor(unsigned int x, unsigned int y, uint32_t c) {
 /**
 * Takes a color in discrete RGB values. Squeezes it into the buffer's format, discarding low bits as appropriate.
 */
-bool Image::setColor(unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b) {
-  unsigned int sz = bytesUsed();
-  unsigned int offset = _calculate_offset(x, y);
+bool Image::setColor(uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b) {
+  uint32_t sz = bytesUsed();
+  uint32_t offset = _calculate_offset(x, y);
   if (offset < sz) {
     switch (_buf_fmt) {
       case ImgBufferFormat::GREY_24:           // 24-bit greyscale   TODO: Wrong. Has to be.
@@ -228,6 +353,9 @@ bool Image::setColor(unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8
 }
 
 
+/**
+*
+*/
 uint8_t Image::_bits_per_pixel() {
   switch (_buf_fmt) {
     case ImgBufferFormat::GREY_24:           // 24-bit greyscale
@@ -246,3 +374,5 @@ uint8_t Image::_bits_per_pixel() {
       return 0;
   }
 }
+
+#endif   // CONFIG_MANUVR_IMG_SUPPORT

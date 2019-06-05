@@ -35,6 +35,10 @@ This class forms the foundation of internal events. It contains the identity of 
 #include <EnumeratedTypeCodes.h>
 #include <MsgProfiler.h>
 
+#if defined(CONFIG_MANUVR_IMG_SUPPORT)
+  #include <Types/Image.h>
+#endif   // CONFIG_MANUVR_IMG_SUPPORT
+
 
 /*
 * These are flag definitions that might apply to an instance of a Msg.
