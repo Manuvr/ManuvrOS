@@ -38,7 +38,7 @@ Template for a preallocated pool manager.
 #endif
 
 #if defined(CONFIG_MANUVR_IMG_SUPPORT)
-  #include <Types/Image.h>
+  class Image;
 #endif   // CONFIG_MANUVR_IMG_SUPPORT
 
 

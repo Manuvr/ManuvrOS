@@ -418,4 +418,4 @@ class ManuvrMsg {
     static std::map<uint16_t, const MessageTypeDef*> message_defs_extended;
 };
 
-#endif
+#endif   // __MANUVR_MESSAGE_H__

@@ -51,6 +51,14 @@ inline int32_t  strict_min(int32_t  a, int32_t  b) {  return (a < b) ? a : b; };
 inline int16_t  strict_min(int16_t  a, int16_t  b) {  return (a < b) ? a : b; };
 inline int8_t   strict_min(int8_t   a, int8_t   b) {  return (a < b) ? a : b; };
 
+inline void strict_swap(float    a, float    b) {  float    t = a; a = b; b = t; };
+inline void strict_swap(uint32_t a, uint32_t b) {  uint32_t t = a; a = b; b = t; };
+inline void strict_swap(uint16_t a, uint16_t b) {  uint16_t t = a; a = b; b = t; };
+inline void strict_swap(uint8_t  a, uint8_t  b) {  uint8_t  t = a; a = b; b = t; };
+inline void strict_swap(int32_t  a, int32_t  b) {  int32_t  t = a; a = b; b = t; };
+inline void strict_swap(int16_t  a, int16_t  b) {  int16_t  t = a; a = b; b = t; };
+inline void strict_swap(int8_t   a, int8_t   b) {  int8_t   t = a; a = b; b = t; };
+
 /*
 * Given two unsigned values, gives the difference between them after accounting
 *   for wrap.
