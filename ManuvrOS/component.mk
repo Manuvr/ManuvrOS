@@ -25,6 +25,7 @@ LOCAL_ESP_COMPS += Drivers/DeviceWithRegisters
 LOCAL_ESP_COMPS += Drivers/TestDriver
 LOCAL_ESP_COMPS += Drivers/PMIC/BQ24155
 LOCAL_ESP_COMPS += Drivers/PMIC/LTC294x
+LOCAL_ESP_COMPS += Drivers/SSD1331
 LOCAL_ESP_COMPS += Drivers/Sensors
 LOCAL_ESP_COMPS += Drivers/Sensors/BMP280
 LOCAL_ESP_COMPS += Drivers/Sensors/TMP102

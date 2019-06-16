@@ -181,6 +181,11 @@ class Image {
 
 
   protected:
+    uint32_t        _x        = 0;
+    uint32_t        _y        = 0;
+    uint8_t*        _buffer   = nullptr;
+    ImgBufferFormat _buf_fmt  = ImgBufferFormat::UNALLOCATED;
+
     inline bool  _is_dirty() {        return _img_flag(MANUVR_IMG_FLAG_IS_FB_DIRTY);   };
     inline void  _is_dirty(bool l) {  _img_set_flag(MANUVR_IMG_FLAG_IS_FB_DIRTY, l);   };
     inline bool  _locked() {          return _img_flag(MANUVR_IMG_FLAG_BUFFER_LOCKED); };
@@ -188,10 +193,6 @@ class Image {
 
 
   private:
-    uint32_t        _x        = 0;
-    uint32_t        _y        = 0;
-    uint8_t*        _buffer   = nullptr;
-    ImgBufferFormat _buf_fmt  = ImgBufferFormat::UNALLOCATED;
     uint8_t         _imgflags = 0;
 
     /* BEGIN ADAFRUIT GFX SPLICE */

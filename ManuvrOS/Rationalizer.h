@@ -192,4 +192,12 @@
 #endif   // CONFIG_MANUVR_BQ24155
 
 
+/* Framebuffer and display driver support... */
+#if defined(CONFIG_MANUVR_SSD1331)
+  #ifndef CONFIG_MANUVR_IMG_SUPPORT
+    #define CONFIG_MANUVR_IMG_SUPPORT  // Framebuffers need this class.
+  #endif    // CONFIG_MANUVR_IMG_SUPPORT
+#endif   // CONFIG_MANUVR_SSD1331
+
+
 #endif // __MANUVR_OPTION_RATIONALIZER_H__
