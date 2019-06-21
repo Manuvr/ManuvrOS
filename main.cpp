@@ -178,7 +178,7 @@ int main(int argc, const char* argv[]) {
       if ((0 == temp_arg->getValueAs(&val)) && (0 != val)) {
         ManuvrSerial* ser = new ManuvrSerial((const char*) val, 9600);
         kernel->subscribe(ser);
-        #if defined(MANUVR_GPS_PIPE)
+        #if defined(CONFIG_MANUVR_GPS_PIPE)
           ManuvrGPS* gps = new ManuvrGPS(ser);
         #endif
       }

@@ -140,7 +140,7 @@ config MANUVR_SUPPORT_I2C
   ---help---
     Enable I2C API.
 
-config MANUVR_GPS_PIPE
+config CONFIG_MANUVR_GPS_PIPE
     bool "GPS ties"
   default n
   ---help---

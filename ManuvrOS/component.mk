@@ -33,15 +33,18 @@ LOCAL_ESP_COMPS += Drivers/Sensors/IMU/ADXL345
 
 LOCAL_ESP_COMPS += Platform/Targets/ESP32
 LOCAL_ESP_COMPS += Platform/Targets/ESP32/I2C
+LOCAL_ESP_COMPS += Platform/Targets/ESP32/UART
 LOCAL_ESP_COMPS += Platform/Peripherals/I2C
 LOCAL_ESP_COMPS += Platform/Peripherals/SPI
+LOCAL_ESP_COMPS += Platform/Peripherals/UART
 LOCAL_ESP_COMPS += Platform/Peripherals
 LOCAL_ESP_COMPS += Platform
 LOCAL_ESP_COMPS += Platform/Cryptographic Platform/Identity
 
 LOCAL_ESP_COMPS += XenoSession XenoSession/Console
 LOCAL_ESP_COMPS += Transports Transports/StandardIO
-LOCAL_ESP_COMPS += Transports Transports/ManuvrSocket
+LOCAL_ESP_COMPS += Transports/ManuvrSocket
+LOCAL_ESP_COMPS += Transports/BufferPipes/ManuvrGPS
 
 #COMPONENT_ADD_LDFLAGS := -L$(OUTPUT_PATH)/ManuvrOS
 

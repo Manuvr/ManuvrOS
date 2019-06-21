@@ -135,7 +135,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   _start_micros = micros();
   uint32_t default_flags = 0;
 
-  #if defined(MANUVR_GPS_PIPE)
+  #if defined(CONFIG_MANUVR_GPS_PIPE)
     default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
   #endif
 

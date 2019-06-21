@@ -30,7 +30,13 @@ https://github.com/kosma/minmea
 * published by Sam Hocevar. See the COPYING file for more details.
 */
 
-#if defined(MANUVR_GPS_PIPE)
+#include "ManuvrGPS.h"
+
+#if defined(CONFIG_MANUVR_GPS_PIPE)
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <stdlib.h>
 #include <string.h>
@@ -38,7 +44,9 @@ https://github.com/kosma/minmea
 #include <stdarg.h>
 #include <time.h>
 
-#include "ManuvrGPS.h"
+#ifdef __cplusplus
+}
+#endif
 
 #define MANUVR_MSG_GPS_LOCATION 0x2039
 
@@ -846,7 +854,8 @@ int ManuvrGPS::_gettime(struct timespec *ts, const struct minmea_date *date, con
     tm.tm_min = time_->minutes;
     tm.tm_sec = time_->seconds;
 
-    time_t timestamp = timegm(&tm); /* See README.md if your system lacks timegm(). */
+    //time_t timestamp = timegm(&tm); /* See README.md if your system lacks timegm(). */
+    time_t timestamp = mktime(&tm); /* See README.md if your system lacks timegm(). */
     if (timestamp != -1) {
         ts->tv_sec = timestamp;
         ts->tv_nsec = time_->microseconds * 1000;
@@ -856,4 +865,4 @@ int ManuvrGPS::_gettime(struct timespec *ts, const struct minmea_date *date, con
     }
 }
 
-#endif  //MANUVR_GPS_PIPE
+#endif  //CONFIG_MANUVR_GPS_PIPE

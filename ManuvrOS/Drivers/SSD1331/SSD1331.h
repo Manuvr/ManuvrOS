@@ -78,6 +78,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SSD1331_CMD_PRECHARGELEVEL 0xBB
 #define SSD1331_CMD_VCOMH          0xBE
 
+#define SSD1331_MAX_Q_DEPTH   4
 
 /*
 * Pin defs for this module.
@@ -86,8 +87,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class SSD1331Opts {
   public:
     SSD1331Opts(const SSD1331Opts* p) :
-      width(p->width),
-      height(p->height),
       orientation(p->orientation),
       reset(p->reset),
       dc(p->dc),
@@ -98,8 +97,6 @@ class SSD1331Opts {
     {};
 
     SSD1331Opts(
-      uint32_t _width,
-      uint32_t _height,
       ImgOrientation _or,
       uint8_t _reset,
       uint8_t _dc,
@@ -108,8 +105,6 @@ class SSD1331Opts {
       uint8_t _spi_mosi,
       uint8_t _spi_miso
     ) :
-      width(_width),
-      height(_height),
       orientation(_or),
       reset(_reset),
       dc(_dc),
@@ -119,8 +114,6 @@ class SSD1331Opts {
       spi_miso(_spi_miso)
     {};
 
-    const uint32_t       width;        //
-    const uint32_t       height;       //
     const ImgOrientation orientation;  //
     const uint8_t        reset;        //
     const uint8_t        dc;           //
@@ -158,6 +151,17 @@ class SSD1331 : public Image, public BusAdapter<SPIBusOp> {
     SPIBusOp* new_op(BusOpcode, BusOpCallback*);
 
 
- private:
-   const SSD1331Opts _opts;
+  private:
+    const SSD1331Opts _opts;
+
+    void initSPI(uint8_t cpol, uint8_t cpha);
+
+    int8_t _send_command(uint8_t commandByte, uint8_t *dataBytes, uint8_t numDataBytes);
+    inline int8_t _send_command(uint8_t commandByte) {
+      return _send_command(commandByte, nullptr, 0);
+    };
+
+    void purge_queued_work();
+    void purge_stalled_job();
+    void reclaim_queue_item(SPIBusOp*);
 };
