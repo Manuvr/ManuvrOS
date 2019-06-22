@@ -42,7 +42,7 @@ https://github.com/cloudyourcar/minmea
 #ifndef __MANUVR_BASIC_GPS_H__
 #define __MANUVR_BASIC_GPS_H__
 
-#define MINMEA_MAX_LENGTH 80
+#define MINMEA_MAX_LENGTH 100
 
 
 #include <DataStructures/BufferPipe.h>
@@ -257,6 +257,7 @@ class ManuvrGPS : public BufferPipe {
 
   private:
     uint32_t       _sentences_parsed;
+    uint32_t       _sentences_rejected;
     StringBuilder  _accumulator;
     ManuvrMsg _gps_frame;
 
@@ -305,6 +306,8 @@ class ManuvrGPS : public BufferPipe {
     * Returns true on success. See library source code for details.
     */
     bool _scan(const char *sentence, const char *format, ...);
+
+    const char* _get_string_by_sentence_id(enum minmea_sentence_id);
 
     /**
     * Convert GPS UTC date/time representation to a UNIX timestamp.

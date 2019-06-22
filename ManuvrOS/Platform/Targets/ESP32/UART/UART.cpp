@@ -172,7 +172,7 @@ int8_t ManuvrUART::_pf_conf() {
             uart_instances[_opts.port] = this;
             if (ESP_OK == uart_driver_install((uart_port_t) _opts.port, 256, 256, 10, &uart_queues[_opts.port], 0)) {
               if (spawn_thread) {
-                xTaskCreate(uart_event_task, "uart_task", 2048, NULL, 12, NULL);
+                xTaskCreate(uart_event_task, "uart_task", 3000, NULL, 12, NULL);
               }
               return 0;
             }

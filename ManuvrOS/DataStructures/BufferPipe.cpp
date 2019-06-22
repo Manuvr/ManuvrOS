@@ -299,6 +299,7 @@ int8_t BufferPipe::setNear(BufferPipe* nu) {
     if (nullptr != nu) {
       // ...and nu is itself non-null, and the _mm is valid...
       _near = nu;
+      nu->_far = this;
       return 0;
     }
   }
@@ -329,6 +330,7 @@ int8_t BufferPipe::setFar(BufferPipe* nu) {
     if (nullptr != nu) {
       // ...and nu is itself non-null, and the _mm is valid...
       _far = nu;
+      nu->_near = this;
       return 0;
     }
   }

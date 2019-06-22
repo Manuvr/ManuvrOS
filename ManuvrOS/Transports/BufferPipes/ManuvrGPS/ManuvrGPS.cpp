@@ -155,7 +155,9 @@ int8_t ManuvrGPS::toCounterparty(StringBuilder* buf, int8_t mm) {
 */
 int8_t ManuvrGPS::fromCounterparty(StringBuilder* buf, int8_t mm) {
   _accumulator.concatHandoff(buf);
-  _attempt_parse();
+  if (MINMEA_MAX_LENGTH < _accumulator.length()) {
+    _attempt_parse();
+  }
   return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
 }
 
@@ -164,102 +166,147 @@ int8_t ManuvrGPS::fromCounterparty(StringBuilder* buf, int8_t mm) {
 * GPS-specific functions                                                       *
 *******************************************************************************/
 
+const char* ManuvrGPS::_get_string_by_sentence_id(enum minmea_sentence_id id) {
+  switch (id) {
+    case MINMEA_UNKNOWN:      return "UNKNOWN";
+    case MINMEA_SENTENCE_RMC: return "RMC";
+    case MINMEA_SENTENCE_GGA: return "GGA";
+    case MINMEA_SENTENCE_GSA: return "GSA";
+    case MINMEA_SENTENCE_GLL: return "GLL";
+    case MINMEA_SENTENCE_GST: return "GST";
+    case MINMEA_SENTENCE_GSV: return "GSV";
+    case MINMEA_SENTENCE_VTG: return "VTG";
+    default:
+      break;
+  }
+  return "xxx";
+}
+
+
 bool ManuvrGPS::_attempt_parse() {
   if (_accumulator.split("\n") == 0) return false;
   char* line = nullptr;
-  StringBuilder  _log;
+  bool local_success = false;
+  StringBuilder _log;
 
   while (_accumulator.count() > 1) {
     line = _accumulator.position(0);
-    switch (_sentence_id(line, false)) {
-          case MINMEA_SENTENCE_RMC: {
-              struct minmea_sentence_rmc frame;
-              if (_parse_rmc(&frame, line)) {
-                  _log.concatf("$xxRMC: raw coordinates and speed: (%d/%d,%d/%d) %d/%d\n",
-                          frame.latitude.value, frame.latitude.scale,
-                          frame.longitude.value, frame.longitude.scale,
-                          frame.speed.value, frame.speed.scale);
-                  _log.concatf("$xxRMC fixed-point coordinates and speed scaled to three decimal places: (%d,%d) %d\n",
-                          minmea_rescale(&frame.latitude, 1000),
-                          minmea_rescale(&frame.longitude, 1000),
-                          minmea_rescale(&frame.speed, 1000));
-                  _log.concatf("$xxRMC floating point degree coordinates and speed: (%f,%f) %f\n",
-                          (double) minmea_tocoord(&frame.latitude),
-                          (double) minmea_tocoord(&frame.longitude),
-                          (double) minmea_tofloat(&frame.speed));
-              }
-              else {
-                  _log.concatf("$xxRMC sentence is not parsed\n");
-              }
-          } break;
-          case MINMEA_SENTENCE_GGA: {
-              struct minmea_sentence_gga frame;
-              if (_parse_gga(&frame, line)) {
-                  _log.concatf("$xxGGA: fix quality: %d\n", frame.fix_quality);
-              }
-              else {
-                  _log.concatf("$xxGGA sentence is not parsed\n");
-              }
-          } break;
-          case MINMEA_SENTENCE_GST: {
-              struct minmea_sentence_gst frame;
-              if (_parse_gst(&frame, line)) {
-                  _log.concatf("$xxGST: raw latitude,longitude and altitude error deviation: (%d/%d,%d/%d,%d/%d)\n",
-                          frame.latitude_error_deviation.value, frame.latitude_error_deviation.scale,
-                          frame.longitude_error_deviation.value, frame.longitude_error_deviation.scale,
-                          frame.altitude_error_deviation.value, frame.altitude_error_deviation.scale);
-                  _log.concatf("$xxGST fixed point latitude,longitude and altitude error deviation"
-                         " scaled to one decimal place: (%d,%d,%d)\n",
-                          minmea_rescale(&frame.latitude_error_deviation, 10),
-                          minmea_rescale(&frame.longitude_error_deviation, 10),
-                          minmea_rescale(&frame.altitude_error_deviation, 10));
-                  _log.concatf("$xxGST floating point degree latitude, longitude and altitude error deviation: (%f,%f,%f)",
-                          (double) minmea_tofloat(&frame.latitude_error_deviation),
-                          (double) minmea_tofloat(&frame.longitude_error_deviation),
-                          (double) minmea_tofloat(&frame.altitude_error_deviation));
-              }
-              else {
-                  _log.concatf("$xxGST sentence is not parsed\n");
-              }
-          } break;
-          case MINMEA_SENTENCE_GSV: {
-              struct minmea_sentence_gsv frame;
-              if (_parse_gsv(&frame, line)) {
-                  _log.concatf("$xxGSV: message %d of %d\n", frame.msg_nr, frame.total_msgs);
-                  _log.concatf("$xxGSV: sattelites in view: %d\n", frame.total_sats);
-                  for (int i = 0; i < 4; i++)
-                      _log.concatf("$xxGSV: sat nr %d, elevation: %d, azimuth: %d, snr: %d dbm\n",
-                          frame.sats[i].nr,
-                          frame.sats[i].elevation,
-                          frame.sats[i].azimuth,
-                          frame.sats[i].snr);
-              }
-              else {
-                  _log.concatf("$xxGSV sentence is not parsed\n");
-              }
-          } break;
-          case MINMEA_SENTENCE_VTG: {
-             struct minmea_sentence_vtg frame;
-             if (_parse_vtg(&frame, line)) {
-                  _log.concatf("$xxVTG: true track degrees = %f\n",
-                         (double) minmea_tofloat(&frame.true_track_degrees));
-                  _log.concatf("        magnetic track degrees = %f\n",
-                         (double) minmea_tofloat(&frame.magnetic_track_degrees));
-                  _log.concatf("        speed knots = %f\n",
-                          (double) minmea_tofloat(&frame.speed_knots));
-                  _log.concatf("        speed kph = %f\n",
-                          (double) minmea_tofloat(&frame.speed_kph));
-             }
-             else {
-                  _log.concatf("$xxVTG sentence is not parsed\n");
-             }
-          } break;
-          case MINMEA_INVALID: {
-              _log.concatf("$xxxxx sentence is not valid\n");
-          } break;
-          default: {
-              _log.concatf("$xxxxx sentence is not parsed\n");
-          } break;
+    enum minmea_sentence_id id = _sentence_id(line, false);
+    switch (id) {
+      case MINMEA_SENTENCE_GSA:
+        {
+          struct minmea_sentence_gsa frame;
+          if (_parse_gsa(&frame, line)) {
+            local_success = true;
+          }
+        }
+        break;
+      case MINMEA_SENTENCE_GLL:
+        {
+          struct minmea_sentence_gll frame;
+          if (_parse_gll(&frame, line)) {
+            local_success = true;
+          }
+        }
+        break;
+
+      case MINMEA_SENTENCE_RMC:
+        {
+          struct minmea_sentence_rmc frame;
+          if (_parse_rmc(&frame, line)) {
+            local_success = true;
+              // _log.concatf("$xxRMC: raw coordinates and speed: (%d/%d,%d/%d) %d/%d\n",
+              //         frame.latitude.value, frame.latitude.scale,
+              //         frame.longitude.value, frame.longitude.scale,
+              //         frame.speed.value, frame.speed.scale);
+              // _log.concatf("$xxRMC fixed-point coordinates and speed scaled to three decimal places: (%d,%d) %d\n",
+              //         minmea_rescale(&frame.latitude, 1000),
+              //         minmea_rescale(&frame.longitude, 1000),
+              //         minmea_rescale(&frame.speed, 1000));
+              // _log.concatf("$xxRMC floating point degree coordinates and speed: (%f,%f) %f\n",
+              //         (double) minmea_tocoord(&frame.latitude),
+              //         (double) minmea_tocoord(&frame.longitude),
+              //         (double) minmea_tofloat(&frame.speed));
+          }
+        }
+        break;
+
+      case MINMEA_SENTENCE_GGA:
+        {
+          struct minmea_sentence_gga frame;
+          if (_parse_gga(&frame, line)) {
+            local_success = true;
+            //_log.concatf("$xxGGA: fix quality: %d\n", frame.fix_quality);
+          }
+        }
+        break;
+
+      case MINMEA_SENTENCE_GST:
+        {
+          struct minmea_sentence_gst frame;
+          if (_parse_gst(&frame, line)) {
+            local_success = true;
+              // _log.concatf("$xxGST: raw latitude,longitude and altitude error deviation: (%d/%d,%d/%d,%d/%d)\n",
+              //         frame.latitude_error_deviation.value, frame.latitude_error_deviation.scale,
+              //         frame.longitude_error_deviation.value, frame.longitude_error_deviation.scale,
+              //         frame.altitude_error_deviation.value, frame.altitude_error_deviation.scale);
+              // _log.concatf("$xxGST fixed point latitude,longitude and altitude error deviation"
+              //        " scaled to one decimal place: (%d,%d,%d)\n",
+              //         minmea_rescale(&frame.latitude_error_deviation, 10),
+              //         minmea_rescale(&frame.longitude_error_deviation, 10),
+              //         minmea_rescale(&frame.altitude_error_deviation, 10));
+              // _log.concatf("$xxGST floating point degree latitude, longitude and altitude error deviation: (%f,%f,%f)",
+              //         (double) minmea_tofloat(&frame.latitude_error_deviation),
+              //         (double) minmea_tofloat(&frame.longitude_error_deviation),
+              //         (double) minmea_tofloat(&frame.altitude_error_deviation));
+          }
+        }
+        break;
+
+      case MINMEA_SENTENCE_GSV:
+        {
+          struct minmea_sentence_gsv frame;
+          if (_parse_gsv(&frame, line)) {
+            local_success = true;
+              // _log.concatf("$xxGSV: message %d of %d\n", frame.msg_nr, frame.total_msgs);
+              // _log.concatf("$xxGSV: sattelites in view: %d\n", frame.total_sats);
+              // for (int i = 0; i < 4; i++)
+              //     _log.concatf("$xxGSV: sat nr %d, elevation: %d, azimuth: %d, snr: %d dbm\n",
+              //         frame.sats[i].nr,
+              //         frame.sats[i].elevation,
+              //         frame.sats[i].azimuth,
+              //         frame.sats[i].snr);
+          }
+        }
+        break;
+
+      case MINMEA_SENTENCE_VTG:
+        {
+          struct minmea_sentence_vtg frame;
+          if (_parse_vtg(&frame, line)) {
+            local_success = true;
+              // _log.concatf("$xxVTG: true track degrees = %f\n",
+              //        (double) minmea_tofloat(&frame.true_track_degrees));
+              // _log.concatf("        magnetic track degrees = %f\n",
+              //        (double) minmea_tofloat(&frame.magnetic_track_degrees));
+              // _log.concatf("        speed knots = %f\n",
+              //         (double) minmea_tofloat(&frame.speed_knots));
+              // _log.concatf("        speed kph = %f\n",
+              //         (double) minmea_tofloat(&frame.speed_kph));
+          }
+        }
+        break;
+
+      case MINMEA_INVALID:
+      default:
+        break;
+    }
+    if (local_success) {
+      _sentences_parsed++;
+    }
+    else {
+      _sentences_rejected++;
+      _log.concatf("$xx%s sentence is not parsed: %s\n", _get_string_by_sentence_id(id), (const char*) line);
     }
     _accumulator.drop_position(0);
   }
@@ -268,12 +315,14 @@ bool ManuvrGPS::_attempt_parse() {
 }
 
 
+
+
 void ManuvrGPS::printDebug(StringBuilder* output) {
   BufferPipe::printDebug(output);
-  output->concatf("--\tSentences     \t%u\n", _sentences_parsed);
+  output->concatf("\tSentences\n\t-------------\n\tParsed %u\n\tReject %u\n", _sentences_parsed, _sentences_rejected);
 
   if (_accumulator.length() > 0) {
-    output->concatf("--\t_accumulator (%d bytes):  ", _accumulator.length());
+    output->concatf("\n\taccumulator (%d bytes):  ", _accumulator.length());
     _accumulator.printDebug(output);
   }
 }
@@ -303,66 +352,52 @@ static int hex2int(char c) {
   return -1;
 }
 
+
 bool ManuvrGPS::_check(const char *sentence, bool strict) {
-  uint8_t checksum = 0x00;
-
   // Sequence length is limited.
-  if (strlen(sentence) > MINMEA_MAX_LENGTH + 3) {
-    return false;
-  }
-
-  // A valid sentence starts with "$".
-  if (*sentence++ != '$') {
-    return false;
-  }
-
-  // The optional checksum is an XOR of all bytes between "$" and "*".
-  while (*sentence && *sentence != '*' && isprint((unsigned char) *sentence)) {
-    checksum ^= *sentence++;
-  }
-
-  // If checksum is present...
-  if (*sentence == '*') {
-    // Extract checksum.
-    sentence++;
-    int upper = hex2int(*sentence++);
-    if (upper == -1) {
-      return false;
-    }
-    int lower = hex2int(*sentence++);
-    if (lower == -1) {
-      return false;
-    }
-    int expected = upper << 4 | lower;
-
-    // Check for checksum mismatch.
-    if (checksum != expected) {
-      return false;
+  if (strlen(sentence) <= MINMEA_MAX_LENGTH + 3) {
+    // A valid sentence starts with "$".
+    if (*sentence++ == '$') {
+      // The optional checksum is an XOR of all bytes between "$" and "*".
+      uint8_t checksum = 0x00;
+      while (*sentence && *sentence != '*' && isprint((unsigned char) *sentence)) {
+        checksum ^= *sentence++;
+      }
+      if (*sentence == '*') {
+        // If checksum is present, extract and compare it.
+        sentence++;
+        int upper = hex2int(*sentence++);
+        if (upper != -1) {
+          int lower = hex2int(*sentence++);
+          if (lower != -1) {
+            int expected = upper << 4 | lower;
+            // Check for checksum mismatch.
+            return (checksum == expected);
+          }
+        }
+      }
+      else if (*sentence && (!strict) && ((*sentence == '\n') || (*sentence == '\r'))) {
+        // The only stuff allowed at this point is a newline.
+        return true;
+      }
     }
   }
-  else if (strict) {
-    // Discard non-checksummed frames in strict mode.
-    return false;
-  }
-
-  // The only stuff allowed at this point is a newline.
-  if (*sentence && strcmp(sentence, "\n") && strcmp(sentence, "\r\n")) {
-    return false;
-  }
-  return true;
+  return false;
 }
+
 
 static inline bool minmea_isfield(char c) {
   return isprint((unsigned char) c) && c != ',' && c != '*';
 }
 
-bool ManuvrGPS::_scan(const char *sentence, const char *format, ...) {
-    bool result = false;
-    bool optional = false;
-    va_list ap;
-    va_start(ap, format);
 
-    const char *field = sentence;
+bool ManuvrGPS::_scan(const char *sentence, const char *format, ...) {
+  bool result = false;
+  bool optional = false;
+  va_list ap;
+  va_start(ap, format);
+
+  const char *field = sentence;
 #define next_field() \
     do { \
         /* Progress to the next field. */ \
@@ -602,6 +637,7 @@ parse_error:
     return result;
 }
 
+
 bool ManuvrGPS::_talker_id(char talker[3], const char *sentence) {
   char type[6];
   if (!_scan(sentence, "t", type)) {
@@ -613,31 +649,26 @@ bool ManuvrGPS::_talker_id(char talker[3], const char *sentence) {
   return true;
 }
 
+
 enum minmea_sentence_id ManuvrGPS::_sentence_id(const char *sentence, bool strict) {
-    if (!_check(sentence, strict)) return MINMEA_INVALID;
+  if (_check(sentence, strict)) {
     char type[6];
-    if (!_scan(sentence, "t", type)) {
-      return MINMEA_INVALID;
+    if (_scan(sentence, "t", type)) {
+      // TODO: Re-code as nested if-else or switch for speed.
+      if (!strcmp(type+2, "RMC"))  return MINMEA_SENTENCE_RMC;
+      if (!strcmp(type+2, "GGA"))  return MINMEA_SENTENCE_GGA;
+      if (!strcmp(type+2, "GSA"))  return MINMEA_SENTENCE_GSA;
+      if (!strcmp(type+2, "GLL"))  return MINMEA_SENTENCE_GLL;
+      if (!strcmp(type+2, "GST"))  return MINMEA_SENTENCE_GST;
+      if (!strcmp(type+2, "GSV"))  return MINMEA_SENTENCE_GSV;
+      if (!strcmp(type+2, "VTG"))  return MINMEA_SENTENCE_VTG;
+
+      return MINMEA_UNKNOWN;
     }
-
-    // TODO: Re-code as nested if-else or switch for speed.
-    if (!strcmp(type+2, "RMC"))
-        return MINMEA_SENTENCE_RMC;
-    if (!strcmp(type+2, "GGA"))
-        return MINMEA_SENTENCE_GGA;
-    if (!strcmp(type+2, "GSA"))
-        return MINMEA_SENTENCE_GSA;
-    if (!strcmp(type+2, "GLL"))
-        return MINMEA_SENTENCE_GLL;
-    if (!strcmp(type+2, "GST"))
-        return MINMEA_SENTENCE_GST;
-    if (!strcmp(type+2, "GSV"))
-        return MINMEA_SENTENCE_GSV;
-    if (!strcmp(type+2, "VTG"))
-        return MINMEA_SENTENCE_VTG;
-
-    return MINMEA_UNKNOWN;
+  }
+  return MINMEA_INVALID;
 }
+
 
 bool ManuvrGPS::_parse_rmc(struct minmea_sentence_rmc *frame, const char *sentence) {
   // $GPRMC,081836,A,3751.65,S,14507.36,E,000.0,360.0,130998,011.3,E*62
