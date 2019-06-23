@@ -42,12 +42,9 @@ https://github.com/cloudyourcar/minmea
 #ifndef __MANUVR_BASIC_GPS_H__
 #define __MANUVR_BASIC_GPS_H__
 
-#define MINMEA_MAX_LENGTH 100
-
-
 #include <DataStructures/BufferPipe.h>
+#include <Drivers/Sensors/SensorWrapper.h>
 #include <Kernel.h>
-
 
 #include <stdio.h>
 #include <stdint.h>
@@ -55,6 +52,19 @@ https://github.com/cloudyourcar/minmea
 #include <errno.h>
 #include <time.h>
 #include <math.h>
+
+
+#define MINMEA_MAX_LENGTH          100
+#define MANUVR_MSG_GPS_LOCATION    0x2039
+
+/* These are integer representations of the three-letter sentence IDs. */
+#define MINMEA_INT_SENTENCE_CODE_RMC   0x00524d43
+#define MINMEA_INT_SENTENCE_CODE_GGA   0x00474741
+#define MINMEA_INT_SENTENCE_CODE_GSA   0x00475341
+#define MINMEA_INT_SENTENCE_CODE_GLL   0x00474c4c
+#define MINMEA_INT_SENTENCE_CODE_GST   0x00475354
+#define MINMEA_INT_SENTENCE_CODE_GSV   0x00475356
+#define MINMEA_INT_SENTENCE_CODE_VTG   0x00565447
 
 
 
@@ -72,6 +82,33 @@ enum minmea_sentence_id {
     MINMEA_SENTENCE_GST,
     MINMEA_SENTENCE_GSV,
     MINMEA_SENTENCE_VTG,
+};
+
+enum minmea_gll_status {
+    MINMEA_GLL_STATUS_DATA_VALID     = 'A',
+    MINMEA_GLL_STATUS_DATA_NOT_VALID = 'V',
+};
+
+// FAA mode added to some fields in NMEA 2.3.
+enum minmea_faa_mode {
+    MINMEA_FAA_MODE_AUTONOMOUS   = 'A',
+    MINMEA_FAA_MODE_DIFFERENTIAL = 'D',
+    MINMEA_FAA_MODE_ESTIMATED    = 'E',
+    MINMEA_FAA_MODE_MANUAL       = 'M',
+    MINMEA_FAA_MODE_SIMULATED    = 'S',
+    MINMEA_FAA_MODE_NOT_VALID    = 'N',
+    MINMEA_FAA_MODE_PRECISE      = 'P',
+};
+
+enum minmea_gsa_mode {
+    MINMEA_GPGSA_MODE_AUTO   = 'A',
+    MINMEA_GPGSA_MODE_FORCED = 'M',
+};
+
+enum minmea_gsa_fix_type {
+    MINMEA_GPGSA_FIX_NONE = 1,
+    MINMEA_GPGSA_FIX_2D = 2,
+    MINMEA_GPGSA_FIX_3D = 3,
 };
 
 struct minmea_float {
@@ -115,22 +152,6 @@ struct minmea_sentence_gga {
     int dgps_age;
 };
 
-enum minmea_gll_status {
-    MINMEA_GLL_STATUS_DATA_VALID = 'A',
-    MINMEA_GLL_STATUS_DATA_NOT_VALID = 'V',
-};
-
-// FAA mode added to some fields in NMEA 2.3.
-enum minmea_faa_mode {
-    MINMEA_FAA_MODE_AUTONOMOUS = 'A',
-    MINMEA_FAA_MODE_DIFFERENTIAL = 'D',
-    MINMEA_FAA_MODE_ESTIMATED = 'E',
-    MINMEA_FAA_MODE_MANUAL = 'M',
-    MINMEA_FAA_MODE_SIMULATED = 'S',
-    MINMEA_FAA_MODE_NOT_VALID = 'N',
-    MINMEA_FAA_MODE_PRECISE = 'P',
-};
-
 struct minmea_sentence_gll {
     struct minmea_float latitude;
     struct minmea_float longitude;
@@ -148,17 +169,6 @@ struct minmea_sentence_gst {
     struct minmea_float latitude_error_deviation;
     struct minmea_float longitude_error_deviation;
     struct minmea_float altitude_error_deviation;
-};
-
-enum minmea_gsa_mode {
-    MINMEA_GPGSA_MODE_AUTO = 'A',
-    MINMEA_GPGSA_MODE_FORCED = 'M',
-};
-
-enum minmea_gsa_fix_type {
-    MINMEA_GPGSA_FIX_NONE = 1,
-    MINMEA_GPGSA_FIX_2D = 2,
-    MINMEA_GPGSA_FIX_3D = 3,
 };
 
 struct minmea_sentence_gsa {
@@ -237,7 +247,7 @@ static inline float minmea_tocoord(struct minmea_float *f)
 * After enough successful parsing, this class will emit messages into the
 *   Kernel's general message queue containing framed high-level GPS data.
 */
-class ManuvrGPS : public BufferPipe {
+class ManuvrGPS : public BufferPipe, public SensorWrapper {
   public:
     ManuvrGPS();
     ManuvrGPS(BufferPipe*);
@@ -248,6 +258,12 @@ class ManuvrGPS : public BufferPipe {
     virtual int8_t toCounterparty(StringBuilder* buf, int8_t mm);
     virtual int8_t fromCounterparty(StringBuilder* buf, int8_t mm);
 
+    /* Overrides from SensorWrapper */
+    SensorError init();
+    SensorError readSensor();
+    SensorError setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
+    SensorError getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
+
     void printDebug(StringBuilder*);
 
 
@@ -256,11 +272,15 @@ class ManuvrGPS : public BufferPipe {
 
 
   private:
-    uint32_t       _sentences_parsed;
-    uint32_t       _sentences_rejected;
+    uint32_t       _sentences_parsed   = 0;
+    uint32_t       _sentences_rejected = 0;
     StringBuilder  _accumulator;
-    ManuvrMsg _gps_frame;
 
+    void _class_init();
+
+    /**
+    * Tries to empty the accumulator, parsing sentences iteratively.
+    */
     bool _attempt_parse();
 
     /**

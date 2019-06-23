@@ -67,6 +67,7 @@ Apart from including the rationalizing configuration header, there
   #define COMMON_UNITS_METERS      "meters"
   #define COMMON_UNITS_GAUSS       "gauss"
   #define COMMON_UNITS_MET_SEC     "m/s"
+  #define COMMON_UNITS_KM_PER_HOUR "km/hr"
   #define COMMON_UNITS_ACCEL       "m/s^2"
   #define COMMON_UNITS_EPOCH       "timestamp"
   #define COMMON_UNITS_PRESSURE    "kPa"

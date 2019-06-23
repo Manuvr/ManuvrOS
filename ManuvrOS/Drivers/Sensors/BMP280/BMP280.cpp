@@ -83,6 +83,9 @@ BMP280::BMP280(uint8_t addr) : I2CDevice(addr), SensorWrapper("BMP280") {
   define_datum(&datum_defs[2]);
   define_datum(&datum_defs[3]);
   _class_init();
+  #if defined(CONFIG_MANUVR_SENSOR_MGR)
+    platform.sensorManager()->addSensor(this);
+  #endif
 }
 
 

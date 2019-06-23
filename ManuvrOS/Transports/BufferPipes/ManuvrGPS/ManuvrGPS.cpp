@@ -48,7 +48,35 @@ extern "C" {
 }
 #endif
 
-#define MANUVR_MSG_GPS_LOCATION 0x2039
+
+const DatumDef datum_defs[] = {
+  {
+    .desc    = "Speed",
+    .units   = COMMON_UNITS_KM_PER_HOUR,
+    .type_id = TCode::DOUBLE,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "Latitude",
+    .units   = COMMON_UNITS_DEGREES,
+    .type_id = TCode::FLOAT,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "Longitude",
+    .units   = COMMON_UNITS_DEGREES,
+    .type_id = TCode::FLOAT,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  },
+  {
+    .desc    = "Altitude",
+    .units   = COMMON_UNITS_METERS,
+    .type_id = TCode::FLOAT,
+    .flgs    = SENSE_DATUM_FLAG_HARDWARE
+  }
+};
+
+
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -61,6 +89,18 @@ extern "C" {
 * Static members and initializers should be located here.
 *******************************************************************************/
 
+static inline bool minmea_isfield(char c) {
+  return isprint((unsigned char) c) && c != ',' && c != '*';
+}
+
+static int hex2int(char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+  return -1;
+}
+
+
 /*******************************************************************************
 *   ___ _              ___      _ _              _      _
 *  / __| |__ _ ______ | _ ) ___(_) |___ _ _ _ __| |__ _| |_ ___
@@ -70,16 +110,18 @@ extern "C" {
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
 
-ManuvrGPS::ManuvrGPS() : BufferPipe() {
+ManuvrGPS::ManuvrGPS() : BufferPipe(), SensorWrapper("GPS") {
   _bp_set_flag(BPIPE_FLAG_IS_TERMINUS | BPIPE_FLAG_IS_BUFFERED, true);
-  _gps_frame.repurpose(MANUVR_MSG_GPS_LOCATION);
-  _gps_frame.incRefs();
+  define_datum(&datum_defs[0]);
+  define_datum(&datum_defs[1]);
+  define_datum(&datum_defs[2]);
+  define_datum(&datum_defs[3]);
+  isActive(true);
+  isCalibrated(true);
 }
 
+
 ManuvrGPS::ManuvrGPS(BufferPipe* src) : ManuvrGPS() {
-  _bp_set_flag(BPIPE_FLAG_IS_TERMINUS | BPIPE_FLAG_IS_BUFFERED, true);
-  // The near-side will always be feeding us from buffers on the stack. Since
-  //   the buffer will vanish after return, we must copy it.
   setNear(src);
 }
 
@@ -146,6 +188,7 @@ int8_t ManuvrGPS::toCounterparty(StringBuilder* buf, int8_t mm) {
   return MEM_MGMT_RESPONSIBLE_ERROR;
 }
 
+
 /**
 * Outward toward the application (or into the accumulator).
 *
@@ -160,6 +203,35 @@ int8_t ManuvrGPS::fromCounterparty(StringBuilder* buf, int8_t mm) {
   }
   return MEM_MGMT_RESPONSIBLE_BEARER;   // We take responsibility.
 }
+
+
+/*******************************************************************************
+*  ,-.                      ,   .
+* (   `                     | . |
+*  `-.  ,-. ;-. ,-. ,-. ;-. | ) ) ;-. ,-: ;-. ;-. ,-. ;-.
+* .   ) |-' | | `-. | | |   |/|/  |   | | | | | | |-' |
+*  `-'  `-' ' ' `-' `-' '   ' '   '   `-` |-' |-' `-' '
+******************************************|***|********************************/
+
+SensorError ManuvrGPS::init() {
+  return haveNear() ? SensorError::NO_ERROR : SensorError::BUS_ERROR;
+}
+
+
+SensorError ManuvrGPS::readSensor() {
+  return haveNear() ? SensorError::NO_ERROR : SensorError::BUS_ERROR;
+}
+
+
+SensorError ManuvrGPS::setParameter(uint16_t reg, int len, uint8_t*) {
+  return SensorError::INVALID_PARAM_ID;
+}
+
+
+SensorError ManuvrGPS::getParameter(uint16_t reg, int len, uint8_t*) {
+  return SensorError::INVALID_PARAM_ID;
+}
+
 
 
 /*******************************************************************************
@@ -180,6 +252,27 @@ const char* ManuvrGPS::_get_string_by_sentence_id(enum minmea_sentence_id id) {
       break;
   }
   return "xxx";
+}
+
+
+enum minmea_sentence_id ManuvrGPS::_sentence_id(const char *sentence, bool strict) {
+  if (_check(sentence, strict)) {
+    char type[6];
+    if (_scan(sentence, "t", type)) {
+      uint32_t int_sent_code = (type[2] << 16) + (type[3] << 8) + (type[4]);
+      switch (int_sent_code) {
+        case MINMEA_INT_SENTENCE_CODE_RMC:  return MINMEA_SENTENCE_RMC;
+        case MINMEA_INT_SENTENCE_CODE_GGA:  return MINMEA_SENTENCE_GGA;
+        case MINMEA_INT_SENTENCE_CODE_GSA:  return MINMEA_SENTENCE_GSA;
+        case MINMEA_INT_SENTENCE_CODE_GLL:  return MINMEA_SENTENCE_GLL;
+        case MINMEA_INT_SENTENCE_CODE_GST:  return MINMEA_SENTENCE_GST;
+        case MINMEA_INT_SENTENCE_CODE_GSV:  return MINMEA_SENTENCE_GSV;
+        case MINMEA_INT_SENTENCE_CODE_VTG:  return MINMEA_SENTENCE_VTG;
+        default:                            return MINMEA_UNKNOWN;
+      }
+    }
+  }
+  return MINMEA_INVALID;
 }
 
 
@@ -209,12 +302,13 @@ bool ManuvrGPS::_attempt_parse() {
           }
         }
         break;
-
       case MINMEA_SENTENCE_RMC:
         {
           struct minmea_sentence_rmc frame;
           if (_parse_rmc(&frame, line)) {
             local_success = true;
+            updateDatum(1, minmea_tocoord(&frame.latitude));
+            updateDatum(2, minmea_tocoord(&frame.longitude));
               // _log.concatf("$xxRMC: raw coordinates and speed: (%d/%d,%d/%d) %d/%d\n",
               //         frame.latitude.value, frame.latitude.scale,
               //         frame.longitude.value, frame.longitude.scale,
@@ -230,7 +324,6 @@ bool ManuvrGPS::_attempt_parse() {
           }
         }
         break;
-
       case MINMEA_SENTENCE_GGA:
         {
           struct minmea_sentence_gga frame;
@@ -240,7 +333,6 @@ bool ManuvrGPS::_attempt_parse() {
           }
         }
         break;
-
       case MINMEA_SENTENCE_GST:
         {
           struct minmea_sentence_gst frame;
@@ -262,7 +354,6 @@ bool ManuvrGPS::_attempt_parse() {
           }
         }
         break;
-
       case MINMEA_SENTENCE_GSV:
         {
           struct minmea_sentence_gsv frame;
@@ -279,12 +370,13 @@ bool ManuvrGPS::_attempt_parse() {
           }
         }
         break;
-
       case MINMEA_SENTENCE_VTG:
         {
           struct minmea_sentence_vtg frame;
           if (_parse_vtg(&frame, line)) {
             local_success = true;
+            updateDatum(0, minmea_tofloat(&frame.speed_kph));
+
               // _log.concatf("$xxVTG: true track degrees = %f\n",
               //        (double) minmea_tofloat(&frame.true_track_degrees));
               // _log.concatf("        magnetic track degrees = %f\n",
@@ -296,7 +388,6 @@ bool ManuvrGPS::_attempt_parse() {
           }
         }
         break;
-
       case MINMEA_INVALID:
       default:
         break;
@@ -313,8 +404,6 @@ bool ManuvrGPS::_attempt_parse() {
   Kernel::log(&_log);
   return true;
 }
-
-
 
 
 void ManuvrGPS::printDebug(StringBuilder* output) {
@@ -336,20 +425,6 @@ uint8_t ManuvrGPS::_checksum(const char *sentence) {
   // The optional checksum is an XOR of all bytes between "$" and "*".
   while (*sentence && *sentence != '*') checksum ^= *sentence++;
   return checksum;
-}
-
-
-
-/*******************************************************************************
-* Undigested GPS functions                                                     *
-*******************************************************************************/
-#define boolstr(s) ((s) ? "true" : "false")
-
-static int hex2int(char c) {
-  if (c >= '0' && c <= '9') return c - '0';
-  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-  return -1;
 }
 
 
@@ -377,7 +452,8 @@ bool ManuvrGPS::_check(const char *sentence, bool strict) {
         }
       }
       else if (*sentence && (!strict) && ((*sentence == '\n') || (*sentence == '\r'))) {
-        // The only stuff allowed at this point is a newline.
+        // The only stuff allowed at this point is a newline, and then only if
+        //   strict mode is false.
         return true;
       }
     }
@@ -386,10 +462,11 @@ bool ManuvrGPS::_check(const char *sentence, bool strict) {
 }
 
 
-static inline bool minmea_isfield(char c) {
-  return isprint((unsigned char) c) && c != ',' && c != '*';
-}
 
+
+/*******************************************************************************
+* Undigested GPS functions                                                     *
+*******************************************************************************/
 
 bool ManuvrGPS::_scan(const char *sentence, const char *format, ...) {
   bool result = false;
@@ -650,25 +727,6 @@ bool ManuvrGPS::_talker_id(char talker[3], const char *sentence) {
 }
 
 
-enum minmea_sentence_id ManuvrGPS::_sentence_id(const char *sentence, bool strict) {
-  if (_check(sentence, strict)) {
-    char type[6];
-    if (_scan(sentence, "t", type)) {
-      // TODO: Re-code as nested if-else or switch for speed.
-      if (!strcmp(type+2, "RMC"))  return MINMEA_SENTENCE_RMC;
-      if (!strcmp(type+2, "GGA"))  return MINMEA_SENTENCE_GGA;
-      if (!strcmp(type+2, "GSA"))  return MINMEA_SENTENCE_GSA;
-      if (!strcmp(type+2, "GLL"))  return MINMEA_SENTENCE_GLL;
-      if (!strcmp(type+2, "GST"))  return MINMEA_SENTENCE_GST;
-      if (!strcmp(type+2, "GSV"))  return MINMEA_SENTENCE_GSV;
-      if (!strcmp(type+2, "VTG"))  return MINMEA_SENTENCE_VTG;
-
-      return MINMEA_UNKNOWN;
-    }
-  }
-  return MINMEA_INVALID;
-}
-
 
 bool ManuvrGPS::_parse_rmc(struct minmea_sentence_rmc *frame, const char *sentence) {
   // $GPRMC,081836,A,3751.65,S,14507.36,E,000.0,360.0,130998,011.3,E*62
@@ -726,8 +784,7 @@ bool ManuvrGPS::_parse_gga(struct minmea_sentence_gga *frame, const char *senten
   return true;
 }
 
-bool ManuvrGPS::_parse_gsa(struct minmea_sentence_gsa *frame, const char *sentence)
-{
+bool ManuvrGPS::_parse_gsa(struct minmea_sentence_gsa *frame, const char *sentence) {
     // $GPGSA,A,3,04,05,,09,12,,,24,,,,,2.5,1.3,2.1*39
     char type[6];
 
