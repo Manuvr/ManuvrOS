@@ -64,35 +64,17 @@ class ManuvrUART : public BufferPipe {
     void reset();
     void printDebug(StringBuilder*);
 
-    // Data transaction fxns.
-    uint32_t write(uint8_t* buf, unsigned int len);
-    uint32_t read(uint8_t* buf, unsigned int len);
-    uint32_t readUntil(uint8_t* buf, unsigned int len, uint8_t stop);
-    bool     rxContains(uint8_t stop);
-    inline uint32_t txBytesWaiting() {  return _tx_bytes;  };
-    inline uint32_t rxBytesWaiting() {  return _rx_bytes;  };
-    inline uint32_t txBufferAvailable() {  return (_opts.tx_buf_len - txBytesWaiting());  };
-    inline uint32_t rxBufferAvailable() {  return (_opts.rx_buf_len - rxBytesWaiting());  };
-
     // On-the-fly conf accessors...
     int8_t bitrate(uint32_t);
     inline uint32_t bitrate() {   return _opts.bitrate;  };
 
     inline bool ready() {    return _port_ready;    };
-    inline bool flushed() {  return _port_flushed && (txBytesWaiting() == 0); };
+    inline bool flushed() {  return _port_flushed;  };
 
 
 
-  private:
+  protected:
     ManuvrUARTOpts _opts;
-    uint8_t* _rx_buf   = nullptr;  // Bytes from the hardware.
-    uint8_t* _tx_buf   = nullptr;  // Bytes to the hardware.
-    uint16_t _rx_bytes = 0;  // Number of bytes in rx buffer.
-    uint16_t _rx_w_pos = 0;  // Advanced by _give_rx_buffer()
-    uint16_t _rx_r_pos = 0;  // Advanced by read()
-    uint16_t _tx_bytes = 0;  // Number of bytes in tx buffer.
-    uint16_t _tx_w_pos = 0;  // Advanced by write()
-    uint16_t _tx_r_pos = 0;  // Advanced by _take_tx_buffer()
 
     // These values manipulated by driver.
     bool     _port_ready          = false;
@@ -100,15 +82,7 @@ class ManuvrUART : public BufferPipe {
     bool     _pending_reset       = false;  // ManuvrUART sets true. Driver sets false.
     bool     _port_flushed        = true;
 
-    // Called by the driver class to move data into and out of the client class.
-    uint32_t _take_tx_buffer(uint8_t*, unsigned int);
-    uint32_t _give_rx_buffer(uint8_t*, unsigned int);
-    void _wipe_buffers();
-
     int8_t _pf_conf();
     int8_t _pf_write();
     int8_t _pf_read();
-
-    bool _rx_enabled() {  return (nullptr != _rx_buf);  };
-    bool _tx_enabled() {  return (nullptr != _tx_buf);  };
 };

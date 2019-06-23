@@ -230,7 +230,7 @@ template <class T> class BusAdapter : public BusOpCallback {
       obj->wipe();
       preallocated.insert(obj);
     };
-    
+
 
   protected:
     T*       current_job      = nullptr;
