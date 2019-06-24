@@ -83,9 +83,6 @@ BMP280::BMP280(uint8_t addr) : I2CDevice(addr), SensorWrapper("BMP280") {
   define_datum(&datum_defs[2]);
   define_datum(&datum_defs[3]);
   _class_init();
-  #if defined(CONFIG_MANUVR_SENSOR_MGR)
-    platform.sensorManager()->addSensor(this);
-  #endif
 }
 
 
@@ -213,6 +210,7 @@ int8_t BMP280::io_op_callback(BusOp* op) {
           case 0x60:
             _bme280 = true;
             _dev_present = true;
+            isActive(true);
             readX(BMP280_REG_CAL00, 24, _cal_data);
             readX(BMP280_REG_CAL26, 9, _cal_h_data);
             readX(BMP280_REG_CONTROL, 1, &_reg_config);
@@ -285,7 +283,7 @@ int8_t BMP280::io_op_callback(BusOp* op) {
         break;
     }
   }
-  Kernel::log(&output);
+  if (output.length() > 0) {  Kernel::log(&output);  }
   return 0;
 }
 
@@ -428,6 +426,6 @@ int8_t BMP280::_proc_data() {
     }
   }
 
-  Kernel::log(&output);
+  if (output.length() > 0) {  Kernel::log(&output);  }
   return 0;
 }

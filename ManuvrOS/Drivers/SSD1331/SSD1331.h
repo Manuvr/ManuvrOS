@@ -134,9 +134,10 @@ class SSD1331 : public Image, public BusAdapter<SPIBusOp> {
     ~SSD1331();
 
     // commands
-    void begin(uint32_t begin=8000000);
+    void begin();
 
     void setAddrWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+    void commitFrameBuffer();
 
     void enableDisplay(bool enable);
 

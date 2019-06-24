@@ -193,7 +193,7 @@ class Image {
 
 
   private:
-    uint8_t         _imgflags = 0;
+    uint8_t  _imgflags = 0;
 
     /* BEGIN ADAFRUIT GFX SPLICE */
     GFXfont* _gfxFont;        ///< Pointer to font

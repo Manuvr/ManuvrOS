@@ -30,8 +30,8 @@ static void uart_event_task(void *pvParameters) {
                   size_t dlen = 0;
                   if (ESP_OK == uart_get_buffered_data_len((uart_port_t) port_idx, &dlen)) {
                     if (dlen > 0) {
-                      uint8_t dtmp[dlen + 16];
-                      bzero(dtmp, dlen + 16);
+                      uint8_t dtmp[dlen + 4];
+                      bzero(dtmp, dlen + 4);
                       int rlen = uart_read_bytes((uart_port_t) port_idx, dtmp, dlen, portMAX_DELAY);
                       if (rlen > 0) {
                         uart_instances[port_idx]->fromCounterparty(dtmp, dlen, MEM_MGMT_RESPONSIBLE_BEARER);

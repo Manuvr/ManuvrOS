@@ -51,11 +51,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 extern "C" {
 #endif
 
-#include "soc/gpio_sig_map.h"
-#include "soc/spi_reg.h"
-#include "soc/dport_reg.h"
-#include "soc/dport_access.h"
-#include "soc/spi_struct.h"
+#include <driver/spi_master.h>
 
 #include "rom/ets_sys.h"
 #include "esp_types.h"
@@ -74,6 +70,7 @@ extern "C" {
 #include "driver/periph_ctrl.h"
 #include "esp_heap_caps.h"
 
+static const char* LOG_TAG = "ssd1331";
 
 
 /*******************************************************************************
@@ -88,127 +85,7 @@ extern "C" {
 
 static lldesc_t _ll_tx;
 static SPIBusOp* _threaded_op = nullptr;
-static uint16_t spi2_op_counter_0 = 0;
-static uint16_t spi2_op_counter_1 = 0;
-
-
-
-void IRAM_ATTR reset_spi2_dma() {
-  periph_module_reset(PERIPH_SPI_DMA_MODULE);
-  // Blindly clear all interrupts.
-  SPI2.dma_int_clr.val = (
-    SPI_OUT_TOTAL_EOF_INT_CLR |
-    SPI_OUT_EOF_INT_CLR |
-    SPI_OUT_DONE_INT_CLR |
-    SPI_IN_SUC_EOF_INT_CLR |
-    SPI_IN_ERR_EOF_INT_CLR |
-    SPI_IN_DONE_INT_CLR |
-    SPI_INLINK_DSCR_ERROR_INT_CLR |
-    SPI_OUTLINK_DSCR_ERROR_INT_CLR |
-    SPI_INLINK_DSCR_EMPTY_INT_CLR);
-  SPI2.dma_int_clr.val = 0;
-  SPI2.dma_conf.val |= (SPI_OUT_RST | SPI_IN_RST | SPI_AHBM_RST | SPI_AHBM_FIFO_RST);
-  SPI2.dma_out_link.val  = 0x00000000;
-  SPI2.dma_in_link.val   = 0x00000000;
-  SPI2.dma_conf.val &= ~(SPI_OUT_RST | SPI_IN_RST | SPI_AHBM_RST | SPI_AHBM_FIFO_RST);
-}
-
-
-
-static void IRAM_ATTR dma_isr(void *arg) {
-  uint32_t isr_val = SPI2.dma_int_st.val;  // Current interrupt bits.
-  spi2_op_counter_1++;
-  if (SPI2.dma_int_st.inlink_dscr_empty) {   /* lack of enough inlink descriptors.*/
-    spi2_op_counter_1+=0x00000010;
-    SPI2.dma_in_link.val  = 0x10000000;  // Clear everything but the stop bit.
-  }
-  if (SPI2.dma_int_st.outlink_dscr_error) {  /* outlink descriptor error.*/
-    spi2_op_counter_1+=0x00000040;
-  }
-  if (SPI2.dma_int_st.inlink_dscr_error) {   /* inlink descriptor error.*/
-    spi2_op_counter_1+=0x00000100;
-  }
-  if (SPI2.dma_int_st.in_done) {             /* completing usage of a inlink descriptor.*/
-    spi2_op_counter_1+=0x00000400;
-  }
-  if (SPI2.dma_int_st.in_err_eof) {          /* receiving error.*/
-    spi2_op_counter_1+=0x00001000;
-  }
-  if (SPI2.dma_int_st.in_suc_eof) {          /* completing receiving all the packets from host.*/
-    spi2_op_counter_1+=0x01000000;
-    SPI2.dma_in_link.val   = 0x10000000;  // Clear everything but the stop bit.
-  }
-  if (SPI2.dma_int_st.out_done) {            /* completing usage of a outlink descriptor .*/
-    spi2_op_counter_1+=0x00010000;
-  }
-  if (SPI2.dma_int_st.out_eof) {             /* sending a packet to host done.*/
-    spi2_op_counter_1+=0x00040000;
-  }
-  if (SPI2.dma_int_st.out_total_eof) {       /* sending all the packets to host done.*/
-    spi2_op_counter_1+=0x10000000;
-    SPI2.dma_out_link.val  = 0x10000000;  // Clear everything but the stop bit.
-  }
-  SPI2.dma_int_clr.val = isr_val;  // Blindly clear all interrupts.
-  SPI2.dma_int_clr.val = 0x00000000;  // Blindly clear all interrupts.
-}
-
-
-static void IRAM_ATTR spi2_isr(void *arg) {
-  if (SPI2.slave.trans_done) {
-    SPIBusOp* tmp = _threaded_op;  // Concurrency "safety".
-    if (tmp) {
-      spi2_op_counter_0++;
-
-      if (2 == tmp->transferParamLength()) {
-        if (SPI2.slv_rd_bit.slv_rdata_bit >= SPI2.slv_rdbuf_dlen.bit_len) {
-          // Internal CPLD register access doesn't use DMA, and expects us to
-          // shuffle bytes around to avoid heaped buffers and DMA overhead.
-          // buf+0/1 should be xfer_param[2/3].
-          uint32_t word = SPI2.data_buf[0];
-          *(tmp->buf+0) = (uint8_t) word & 0xFF;
-          *(tmp->buf+1) = (uint8_t) (word >> 8) & 0xFF;
-          tmp->markComplete();
-        }
-        else {
-          // If the CPLD terminates the transaction before it finishes...
-          tmp->abort(XferFault::DEV_FAULT);
-        }
-      }
-      else {
-        // This was a DMA transaction.
-        bool enough_bits = false;
-        if (BusOpcode::RX == tmp->get_opcode()) {
-          enough_bits = (0x01000000 == (spi2_op_counter_1 & 0x01000000));
-        }
-        else {
-          enough_bits = (0x10000000 == (spi2_op_counter_1 & 0x10000000));
-        }
-
-        if (enough_bits) {
-          tmp->markComplete();
-        }
-        else {
-          tmp->abort(XferFault::DEV_FAULT);
-        }
-      }
-      _threaded_op = nullptr;
-    }
-    SPI2.slave.trans_done  = 0;  // Clear interrupt.
-  }
-
-  if (SPI2.slave.rd_sta_inten) {
-    SPI2.slave.rd_sta_inten  = 0;  // Clear interrupt.
-  }
-  if (SPI2.slave.wr_sta_inten) {
-    SPI2.slave.wr_sta_inten  = 0;  // Clear interrupt.
-  }
-  if (SPI2.slave.rd_buf_inten) {
-    SPI2.slave.rd_buf_inten  = 0;  // Clear interrupt.
-  }
-  if (SPI2.slave.wr_buf_inten) {
-    SPI2.slave.wr_buf_inten  = 0;  // Clear interrupt.
-  }
-}
+static spi_device_handle_t spi2_handle;
 
 #ifdef __cplusplus
 }
@@ -216,98 +93,85 @@ static void IRAM_ATTR spi2_isr(void *arg) {
 
 
 
+void spiWrite(uint8_t* data, size_t dataLen) {
+	spi_transaction_t trans_desc;
+	trans_desc.flags     = 0;
+	trans_desc.length    = dataLen * 8;
+	trans_desc.rxlength  = 0;
+	trans_desc.tx_buffer = data;
+	trans_desc.rx_buffer = data;
+
+	//ESP_LOGI(tag, "... Transferring");
+	esp_err_t rc = ::spi_device_transmit(spi2_handle, &trans_desc);
+	if (rc != ESP_OK) {
+		ESP_LOGE(LOG_TAG, "transfer:spi_device_transmit: %d", rc);
+	}
+}
+
 
 /**
 * Init of SPI2.
 */
 void SSD1331::initSPI(uint8_t cpol, uint8_t cpha) {
-  gpio_num_t p_cs    = (gpio_num_t) _opts.spi_cs;
-  gpio_num_t p_clk   = (gpio_num_t) _opts.spi_clk;
-  gpio_num_t p_mosi  = (gpio_num_t) _opts.spi_mosi;
-
-  if (GPIO_IS_VALID_GPIO(p_cs) && GPIO_IS_VALID_GPIO(p_clk) && GPIO_IS_VALID_OUTPUT_GPIO(p_mosi)) {
-    periph_module_enable(PERIPH_HSPI_MODULE);
-    periph_module_enable(PERIPH_SPI_DMA_MODULE);
-
-    SPI2.slave.slave_mode   = 1;  // CPLD drives the clock.
-    SPI2.slave.wr_rd_buf_en = 1;  // We don't want any but buffer commands.
-    SPI2.slave.cs_i_mode    = 2;  // Double-buffered CS signal.
-    SPI2.slave.sync_reset   = 1;  // Reset the pins.
-    //SPI2.slave.cmd_define   = 1;  // Use the custom slave command mode.
-
-    SPI2.user.doutdin       = 1;  // Full-duplex. Needed to avoid command/status interpretation.
-    SPI2.user.usr_mosi_highpart = 0;  // The RX buffer should use W0-7.
-    SPI2.user.usr_miso_highpart = 1;  // The TX buffer should use W8-15.
-    SPI2.user.usr_mosi      = 1;  // Enable RX shift register.
-    SPI2.user.usr_miso      = 1;  // Enable TX shift register.
-    // TODO: For some reason, these settings are required, or no clocks are recognized.
-    SPI2.user.usr_command   = 1;
-    SPI2.user1.val          = 0;  // No address phase.
-    SPI2.cmd.usr = 1;
-    SPI2.user2.usr_command_bitlen = 0;  // By doing this, we skip write to writing the buffer.
-    SPI2.clock.clkcnt_l           = 0;  // Must be 0 in slave mode.
-    SPI2.clock.clkcnt_h           = 0;  // Must be 0 in slave mode.
-    SPI2.ctrl.fastrd_mode         = 0;  // No need of multi-lane SPI.
-    SPI2.pin.ck_dis               = 1;  // We have no need of a clock output.
-    SPI2.pin.ck_idle_edge         = cpol ? 1 : 0;  // CPOL
-
-    /* NOTE: Apparently, there is a hardware bug that causes mode2 DMA
-         transactions to fail.
-    SPI2.user.ck_i_edge           = (cpol ^ cpha) ? 1 : 0;
-    SPI2.ctrl2.mosi_delay_mode    = (cpol ^ cpha) ? 1 : 2;
-    SPI2.ctrl2.miso_delay_mode    = 0;
-    SPI2.ctrl2.miso_delay_num     = 0;
-    SPI2.ctrl2.mosi_delay_num     = 0;
-    */
-
-    SPI2.user.ck_i_edge           = 0;
-    SPI2.ctrl2.mosi_delay_mode    = 0;
-    SPI2.ctrl2.miso_delay_mode    = 0;
-    SPI2.ctrl2.miso_delay_num     = 2;
-    SPI2.ctrl2.mosi_delay_num     = 3;
-
-
-    SPI2.slave.trans_done         = 0;  // Clear txfr-done bit.
-    SPI2.slave.trans_inten        = 1;  // Enable txfr-done interrupt.
-
-    SPI2.dma_conf.out_eof_mode     = 1;  //
-    SPI2.dma_conf.out_auto_wrback  = 1;  //
-    //SPI2.dma_conf.outdscr_burst_en = 1;  // TX operations are bursted out of memory.
-    SPI2.dma_conf.out_data_burst_en = 1;
-    SPI2.dma_conf.indscr_burst_en   = 1;
-    SPI2.dma_conf.outdscr_burst_en  = 1;
-
-    reset_spi2_dma();
-    for (int i = 0; i < 16; i++) SPI2.data_buf[i] = 0;
-
-    SPI2.dma_int_ena.val  = (
-      SPI_OUT_TOTAL_EOF_INT_ENA |
-      //SPI_OUT_EOF_INT_ENA |
-      //SPI_OUT_DONE_INT_ENA |
-      //SPI_IN_DONE_INT_ENA |
-      SPI_IN_SUC_EOF_INT_ENA |
-      SPI_IN_ERR_EOF_INT_ENA |
-      SPI_INLINK_DSCR_ERROR_INT_ENA |
-      SPI_OUTLINK_DSCR_ERROR_INT_ENA |
-      SPI_INLINK_DSCR_EMPTY_INT_ENA);
-
-    DPORT_SET_PERI_REG_BITS(DPORT_SPI_DMA_CHAN_SEL_REG, 3, 1, 2);   // Point DMA channel to HSPI.
-
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[p_cs],   PIN_FUNC_GPIO);
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[p_clk],  PIN_FUNC_GPIO);
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[p_mosi], PIN_FUNC_GPIO);
-
-    gpio_set_direction(p_cs,   GPIO_MODE_OUTPUT);
-    gpio_set_direction(p_clk,  GPIO_MODE_OUTPUT);
-    gpio_set_direction(p_mosi, GPIO_MODE_OUTPUT);
-
-    gpio_matrix_out( p_cs,   HSPIQ_OUT_IDX,  false, false);
-    gpio_matrix_out( p_clk,  HSPIQ_OUT_IDX,  false, false);
-    gpio_matrix_out( p_mosi, HSPIQ_OUT_IDX,  false, false);
-
-    esp_intr_alloc(ETS_SPI2_INTR_SOURCE, ESP_INTR_FLAG_IRAM, spi2_isr, nullptr, nullptr);
-    esp_intr_alloc(ETS_SPI2_DMA_INTR_SOURCE, ESP_INTR_FLAG_IRAM, dma_isr, nullptr, nullptr);
+	spi_bus_config_t bus_config;
+  uint32_t b_flags = 0;
+  if (255 != _opts.spi_clk) {
+    b_flags |= SPICOMMON_BUSFLAG_SCLK;
+    bus_config.sclk_io_num = (gpio_num_t) _opts.spi_clk;
   }
+  else {
+    bus_config.sclk_io_num = (gpio_num_t) -1;
+  }
+  if (255 != _opts.spi_mosi) {
+    b_flags |= SPICOMMON_BUSFLAG_MOSI;
+    bus_config.mosi_io_num = (gpio_num_t) _opts.spi_mosi;
+  }
+  else {
+    bus_config.mosi_io_num = (gpio_num_t) -1;
+  }
+  if (255 != _opts.spi_miso) {
+    b_flags |= SPICOMMON_BUSFLAG_MISO;
+    bus_config.miso_io_num = (gpio_num_t) _opts.spi_miso;
+  }
+  else {
+    bus_config.miso_io_num = (gpio_num_t) -1;
+  }
+	bus_config.quadwp_io_num   = -1;      // Not used
+	bus_config.quadhd_io_num   = -1;      // Not used
+	bus_config.max_transfer_sz = 0;       // 0 means use default.
+  bus_config.flags           = b_flags;
+
+	esp_err_t errRc = spi_bus_initialize(
+			(spi_host_device_t) 1,   // SPI2
+			&bus_config,
+			1 // DMA Channel
+	);
+
+  if (errRc != ESP_OK) {
+		ESP_LOGE(LOG_TAG, "spi_bus_initialize(): rc=%d", errRc);
+		abort();
+	}
+
+	spi_device_interface_config_t dev_config;
+	dev_config.address_bits     = 0;
+	dev_config.command_bits     = 0;
+	dev_config.dummy_bits       = 0;
+	dev_config.mode             = 0;
+	dev_config.duty_cycle_pos   = 0;
+	dev_config.cs_ena_posttrans = 0;
+	dev_config.cs_ena_pretrans  = 0;
+	dev_config.clock_speed_hz   = 10000000;
+	dev_config.spics_io_num     = (gpio_num_t) _opts.spi_cs;
+	dev_config.flags            = SPI_DEVICE_NO_DUMMY;
+	dev_config.queue_size       = 1;
+	dev_config.pre_cb           = NULL;
+	dev_config.post_cb          = NULL;
+	ESP_LOGI(LOG_TAG, "... Adding device bus.");
+	errRc = spi_bus_add_device((spi_host_device_t) 1, &dev_config, &spi2_handle);
+	if (errRc != ESP_OK) {
+		ESP_LOGE(LOG_TAG, "spi_bus_add_device(): rc=%d", errRc);
+		abort();
+	}
 }
 
 
@@ -328,6 +192,14 @@ void SSD1331::initSPI(uint8_t cpol, uint8_t cpha) {
 * Constructor.
 */
 SSD1331::SSD1331(const SSD1331Opts* o) : Image(96, 64, ImgBufferFormat::R5_G6_B5), BusAdapter(SSD1331_MAX_Q_DEPTH), _opts(o) {
+  if (255 != _opts.reset) {
+    gpioDefine(_opts.reset, GPIOMode::OUTPUT);
+    setPin(_opts.reset, false);  // Hold the display in reset.
+  }
+  if (255 != _opts.dc) {
+    gpioDefine(_opts.dc, GPIOMode::OUTPUT);
+    setPin(_opts.dc, false);
+  }
 }
 
 
@@ -660,8 +532,16 @@ void SSD1331::setAddrWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
   _send_command(0x75); // Column addr set
   _send_command(y1);
   _send_command(y2);
+}
 
-  //startWrite();
+
+void SSD1331::commitFrameBuffer() {
+  setPin(_opts.spi_cs, false);
+  setPin(_opts.dc, true);
+
+  spiWrite(_buffer, bytesUsed());
+
+  setPin(_opts.spi_cs, true);
 }
 
 
@@ -672,7 +552,7 @@ void SSD1331::setAddrWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
     @param    freq  Desired SPI clock frequency
 */
 /**************************************************************************/
-void SSD1331::begin(uint32_t freq) {
+void SSD1331::begin() {
     initSPI(0, 0);
 
     // Initialization Sequence
@@ -737,11 +617,11 @@ int8_t SSD1331::_send_command(uint8_t commandByte, uint8_t *dataBytes, uint8_t n
   setPin(_opts.spi_cs, false);
 
   setPin(_opts.dc, false);
-  //spiWrite(commandByte); // Send the command byte
+  spiWrite(&commandByte, 1); // Send the command byte
   setPin(_opts.dc, true);
 
   for (int i=0; i<numDataBytes; i++) {
-    //spiWrite(*dataBytes); // Send the data bytes
+    spiWrite(dataBytes, numDataBytes); // Send the data bytes
     dataBytes++;
   }
 
@@ -791,8 +671,6 @@ XferFault SPIBusOp::begin() {
 
   set_state(XferState::INITIATE);  // Indicate that we now have bus control.
   _threaded_op = this;
-  reset_spi2_dma();
-  spi2_op_counter_1 = 0;
   SPI2.data_buf[0] = 0;
   SPI2.data_buf[8] = 0;
   SPI2.slv_rd_bit.slv_rdata_bit = 0;

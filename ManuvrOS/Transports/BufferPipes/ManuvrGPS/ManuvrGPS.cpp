@@ -214,6 +214,7 @@ int8_t ManuvrGPS::fromCounterparty(StringBuilder* buf, int8_t mm) {
 ******************************************|***|********************************/
 
 SensorError ManuvrGPS::init() {
+  _accumulator.clear();
   return haveNear() ? SensorError::NO_ERROR : SensorError::BUS_ERROR;
 }
 
@@ -397,7 +398,7 @@ bool ManuvrGPS::_attempt_parse() {
     }
     else {
       _sentences_rejected++;
-      _log.concatf("$xx%s sentence is not parsed: %s\n", _get_string_by_sentence_id(id), (const char*) line);
+      _log.concatf("$xx%s sentence is not parsed: \n%s\n", _get_string_by_sentence_id(id), (const char*) line);
     }
     _accumulator.drop_position(0);
   }
@@ -763,18 +764,19 @@ bool ManuvrGPS::_parse_gga(struct minmea_sentence_gga *frame, const char *senten
   int latitude_direction;
   int longitude_direction;
 
-    if (!_scan(sentence, "tTfdfdiiffcfci_",
-            type,
-            &frame->time,
-            &frame->latitude, &latitude_direction,
-            &frame->longitude, &longitude_direction,
-            &frame->fix_quality,
-            &frame->satellites_tracked,
-            &frame->hdop,
-            &frame->altitude, &frame->altitude_units,
-            &frame->height, &frame->height_units,
-            &frame->dgps_age))
-        return false;
+  if (!_scan(sentence, "tTfdfdiiffcfci_",
+      type,
+      &frame->time,
+      &frame->latitude, &latitude_direction,
+      &frame->longitude, &longitude_direction,
+      &frame->fix_quality,
+      &frame->satellites_tracked,
+      &frame->hdop,
+      &frame->altitude, &frame->altitude_units,
+      &frame->height, &frame->height_units,
+      &frame->dgps_age)) {
+    return false;
+  }
   if (strcmp(type+2, "GGA")) {
     return false;
   }

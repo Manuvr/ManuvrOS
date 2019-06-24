@@ -54,7 +54,7 @@ https://github.com/cloudyourcar/minmea
 #include <math.h>
 
 
-#define MINMEA_MAX_LENGTH          100
+#define MINMEA_MAX_LENGTH          140
 #define MANUVR_MSG_GPS_LOCATION    0x2039
 
 /* These are integer representations of the three-letter sentence IDs. */
