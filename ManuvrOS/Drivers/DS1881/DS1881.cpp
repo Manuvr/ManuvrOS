@@ -37,7 +37,6 @@ limitations under the License.
 *******************************************************************************/
 
 DS1881::DS1881(uint8_t addr) : I2CDevice(addr) {
-  dev_enabled = false;
   dev_init    = false;
   preserve_state_on_destroy = false;
 }
@@ -106,7 +105,7 @@ void DS1881::printDebug(StringBuilder* output) {
   }
 
   for (int i = 0; i < 1; i++) {
-    output->concatf("\tPOT %d: 0x%02x\n", i, values[i]);
+    output->concatf("\tPOT %d: 0x%02x\n", i, 0x3F & registers[i]);
   }
   output->concatf("\n");
 }
@@ -121,10 +120,8 @@ void DS1881::printDebug(StringBuilder* output) {
 */
 DIGITALPOT_ERROR DS1881::init() {
   DIGITALPOT_ERROR return_value = DIGITALPOT_ERROR::BUS;
-  if (readX(-1, 2, values)) {
-    if (readX(-1, 1, &conf_reg)) {
-      return_value = DIGITALPOT_ERROR::NO_ERROR;
-    }
+  if (readX(-1, 3, registers)) {
+    return_value = DIGITALPOT_ERROR::NO_ERROR;
   }
   return return_value;
 }
@@ -150,9 +147,9 @@ DIGITALPOT_ERROR DS1881::setValue(uint8_t pot, uint8_t val) {
       break;
   }
   if (0 <= return_value) {
-    alt_values[pot] = values[pot];
-    values[pot] = (1 == pot ? DS1881_REG_WR1 : DS1881_REG_WR0) & tmp_val;
-    if (!writeX(-1, 1, &values[pot])) {
+    alt_values[pot] = registers[pot];
+    registers[pot] = (1 == pot ? DS1881_REG_WR1 : DS1881_REG_WR0) & tmp_val;
+    if (!writeX(-1, 1, &registers[pot])) {
       return_value = DIGITALPOT_ERROR::BUS;
     }
   }
@@ -178,11 +175,11 @@ DIGITALPOT_ERROR DS1881::setValue(uint8_t val) {
       break;
   }
   if (0 <= return_value) {
-    alt_values[0] = values[0];
-    alt_values[1] = values[1];
-    values[0] = DS1881_REG_WR0 & tmp_val;
-    values[1] = DS1881_REG_WR1 & tmp_val;
-    if (!writeX(-1, 2, values)) {
+    alt_values[0] = registers[0];
+    alt_values[1] = registers[1];
+    registers[0] = DS1881_REG_WR0 & tmp_val;
+    registers[1] = DS1881_REG_WR1 & tmp_val;
+    if (!writeX(-1, 2, registers)) {
       return_value = DIGITALPOT_ERROR::BUS;
     }
   }
