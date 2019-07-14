@@ -1,7 +1,7 @@
 /*
-File:   ISL23345.h
+File:   DS1881.h
 Author: J. Ian Lindsay
-Date:   2014.03.10
+Date:   2019.07.13
 
 Copyright 2016 Manuvr, Inc
 
@@ -17,35 +17,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-
-This is the class that represents an ISL23345 digital potentiometer.
 */
 
+#ifndef __DS1881_DRIVER_H__
+#define __DS1881_DRIVER_H__
 
-#ifndef ISL23345_DIGIPOT_H
-#define ISL23345_DIGIPOT_H 1
+#include <Platform/Peripherals/I2C/I2CAdapter.h>
 
-#include <inttypes.h>
-#include "DataStructures/StringBuilder.h"
-#include "Platform/Peripherals/I2C/I2CAdapter.h"
-#include "Drivers/DigitalPots/DigitalPots.h"
+/* Hardware-defined registers */
+#define DS1881_BASE_I2C_ADDR   0x28
 
 
-/*
-*
-*
-*/
-class ISL23345 : public I2CDeviceWithRegisters {
+class DS1881 : public I2CDevice {
   public:
-    ISL23345(uint8_t i2c_addr);
-    virtual ~ISL23345();
+    DS1881(uint8_t address);
+    ~DS1881();
 
-    /* Overrides from I2CDeviceWithRegisters... */
-    int8_t register_write_cb(DeviceRegister*);
-    int8_t register_read_cb(DeviceRegister*);
+    /* Overrides from I2CDevice... */
+    int8_t io_op_callback(BusOp*);
     void printDebug(StringBuilder*);
 
     DIGITALPOT_ERROR init();                              // Perform bus-related init tasks.
+    DIGITALPOT_ERROR setValue(uint8_t val);               // Sets the value of both pots.
     DIGITALPOT_ERROR setValue(uint8_t pot, uint8_t val);  // Sets the value of the given pot.
     DIGITALPOT_ERROR reset(uint8_t);                      // Sets all volumes levels to given.
 
@@ -60,7 +53,7 @@ class ISL23345 : public I2CDeviceWithRegisters {
     inline DIGITALPOT_ERROR reset() {    return reset(0x00);  };
 
     inline uint8_t getValue(uint8_t pot) {
-      return (pot > 3) ? 0 : values[pot];
+      return (pot > 1) ? 0 : values[pot];
     };
 
     inline bool enabled() {   return dev_enabled; };  // Trivial accessor.
@@ -71,13 +64,17 @@ class ISL23345 : public I2CDeviceWithRegisters {
     inline uint16_t getRange() {  return 0x00FF;      };
 
 
+
   private:
     bool    dev_init;
     bool    dev_enabled;
     bool    preserve_state_on_destroy;
+    uint8_t conf_reg;
 
-    uint8_t values[4];
+    uint8_t values[2];
+    uint8_t alt_values[2];
 
     DIGITALPOT_ERROR _enable(bool);
 };
-#endif
+
+#endif   // __DS1881_DRIVER_H__

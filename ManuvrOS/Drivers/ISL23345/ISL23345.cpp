@@ -57,10 +57,10 @@ ISL23345::~ISL23345() {
 /*
 * Call to read the device and cause this class's state to reflect that of the device.
 */
-ISL23345_ERROR ISL23345::init() {
-  ISL23345_ERROR return_value = ISL23345_ERROR::NO_ERROR;
+DIGITALPOT_ERROR ISL23345::init() {
+  DIGITALPOT_ERROR return_value = DIGITALPOT_ERROR::NO_ERROR;
   if (syncRegisters() == I2C_ERR_SLAVE_NO_ERROR) {
-    return_value = ISL23345_ERROR::ABSENT;
+    return_value = DIGITALPOT_ERROR::ABSENT;
   }
   return return_value;
 }
@@ -71,10 +71,10 @@ ISL23345_ERROR ISL23345::init() {
 * Disabling the device disconnects all Rh pins and sets the wiper to 2k ohm WRT Rl.
 * Retains wiper settings.
 */
-ISL23345_ERROR ISL23345::_enable(bool x) {
-  ISL23345_ERROR return_value = ISL23345_ERROR::NO_ERROR;
+DIGITALPOT_ERROR ISL23345::_enable(bool x) {
+  DIGITALPOT_ERROR return_value = DIGITALPOT_ERROR::NO_ERROR;
   if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(ISL23345_REG_ACR, x ? 0x40 : 0x00)) {
-    return_value = ISL23345_ERROR::ABSENT;
+    return_value = DIGITALPOT_ERROR::ABSENT;
   }
   return return_value;
 }
@@ -83,27 +83,27 @@ ISL23345_ERROR ISL23345::_enable(bool x) {
 /*
 * Set the value of the given wiper to the given value.
 */
-ISL23345_ERROR ISL23345::setValue(uint8_t pot, uint8_t val) {
-  if (pot > 3)    return ISL23345_ERROR::INVALID_POT;
-  if (!dev_init)  return ISL23345_ERROR::DEVICE_DISABLED;
+DIGITALPOT_ERROR ISL23345::setValue(uint8_t pot, uint8_t val) {
+  if (pot > 3)    return DIGITALPOT_ERROR::INVALID_POT;
+  if (!dev_init)  return DIGITALPOT_ERROR::DEVICE_DISABLED;
 
-  ISL23345_ERROR return_value = ISL23345_ERROR::NO_ERROR;
+  DIGITALPOT_ERROR return_value = DIGITALPOT_ERROR::NO_ERROR;
   if (I2C_ERR_SLAVE_NO_ERROR != writeIndirect(pot, val)) {
-    return_value = ISL23345_ERROR::ABSENT;
+    return_value = DIGITALPOT_ERROR::ABSENT;
   }
   return return_value;
 }
 
 
-ISL23345_ERROR ISL23345::reset(uint8_t val) {
-  ISL23345_ERROR result = ISL23345_ERROR::NO_ERROR;
+DIGITALPOT_ERROR ISL23345::reset(uint8_t val) {
+  DIGITALPOT_ERROR result = DIGITALPOT_ERROR::NO_ERROR;
   for (int i = 0; i < 4; i++) {
     result = setValue(0, val);
-    if (result != ISL23345_ERROR::NO_ERROR) {
+    if (result != DIGITALPOT_ERROR::NO_ERROR) {
       return result;
     }
   }
-  return ISL23345_ERROR::NO_ERROR;
+  return DIGITALPOT_ERROR::NO_ERROR;
 }
 
 
