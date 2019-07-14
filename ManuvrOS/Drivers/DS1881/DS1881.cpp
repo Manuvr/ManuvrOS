@@ -51,7 +51,7 @@ DS1881::~DS1881() {
 *  |   / / \ o   | \  _     o  _  _      for implementing I/O callbacks. They
 * _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
 *******************************************************************************/
-int8_t DS1881::io_op_callback(BusOp* completed) {
+int8_t DS1881::io_op_callback(BusOp* op) {
   I2CBusOp* completed = (I2CBusOp*) op;
   uint8_t byte0 = *(completed->buf+0);
 
@@ -68,7 +68,8 @@ int8_t DS1881::io_op_callback(BusOp* completed) {
           preserve_state_on_destroy = !(byte0 & 0x04);
           if (0x02 != (byte0 & 0x03)) {
             // Enforces zero-cross and high-resolution.
-            writeX(-1, 1, preserve_state_on_destroy ? 0x86 : 0x82);
+            registers[2] = preserve_state_on_destroy ? 0x86 : 0x82;
+            writeX(-1, 1, &registers[2]);
           }
           break;
         default:
@@ -135,7 +136,7 @@ DIGITALPOT_ERROR DS1881::setValue(uint8_t pot, uint8_t val) {
   if (!dev_init)  return DIGITALPOT_ERROR::DEVICE_DISABLED;
 
   DIGITALPOT_ERROR return_value = DIGITALPOT_ERROR::NO_ERROR;
-  uint8_t tmp_val = strict_min(val, 63);
+  uint8_t tmp_val = strict_min(val, (uint8_t) 63);
   switch (tmp_val) {
     case 0:
       return_value = DIGITALPOT_ERROR::PEGGED_MIN;
@@ -146,7 +147,7 @@ DIGITALPOT_ERROR DS1881::setValue(uint8_t pot, uint8_t val) {
     default:
       break;
   }
-  if (0 <= return_value) {
+  if (0 <= (int8_t) return_value) {
     alt_values[pot] = registers[pot];
     registers[pot] = (1 == pot ? DS1881_REG_WR1 : DS1881_REG_WR0) & tmp_val;
     if (!writeX(-1, 1, &registers[pot])) {
@@ -163,7 +164,7 @@ DIGITALPOT_ERROR DS1881::setValue(uint8_t pot, uint8_t val) {
 DIGITALPOT_ERROR DS1881::setValue(uint8_t val) {
   if (!dev_init)  return DIGITALPOT_ERROR::DEVICE_DISABLED;
   DIGITALPOT_ERROR return_value = DIGITALPOT_ERROR::NO_ERROR;
-  uint8_t tmp_val = strict_min(val, 63);
+  uint8_t tmp_val = strict_min(val, (uint8_t) 63);
   switch (tmp_val) {
     case 0:
       return_value = DIGITALPOT_ERROR::PEGGED_MIN;
@@ -174,7 +175,7 @@ DIGITALPOT_ERROR DS1881::setValue(uint8_t val) {
     default:
       break;
   }
-  if (0 <= return_value) {
+  if (0 <= (int8_t) return_value) {
     alt_values[0] = registers[0];
     alt_values[1] = registers[1];
     registers[0] = DS1881_REG_WR0 & tmp_val;

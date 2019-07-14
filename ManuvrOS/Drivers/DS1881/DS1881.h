@@ -23,6 +23,7 @@ limitations under the License.
 #define __DS1881_DRIVER_H__
 
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include "Drivers/DigitalPots/DigitalPots.h"
 
 /* Hardware-defined registers */
 #define DS1881_BASE_I2C_ADDR   0x28
@@ -56,7 +57,7 @@ class DS1881 : public I2CDevice {
       return (pot > 1) ? 0 : 0x3F & registers[pot];
     };
 
-    inline bool enabled() {   return dev_enabled; };  // Trivial accessor.
+    inline bool enabled() {   return true; };  // This device can't be disabled.
     inline DIGITALPOT_ERROR disable() {  return _enable(false);  };
     inline DIGITALPOT_ERROR enable() {   return _enable(true);   };
 

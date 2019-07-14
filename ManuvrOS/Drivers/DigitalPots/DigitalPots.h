@@ -1,3 +1,4 @@
+#include <inttypes.h>
 
 enum class DIGITALPOT_ERROR : int8_t {
   DEVICE_DISABLED = 3,   // A caller tried to set a wiper while the device is disabled. This may work...

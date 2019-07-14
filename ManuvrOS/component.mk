@@ -31,6 +31,7 @@ LOCAL_ESP_COMPS += Drivers/Sensors
 LOCAL_ESP_COMPS += Drivers/Sensors/BMP280
 LOCAL_ESP_COMPS += Drivers/Sensors/TMP102
 LOCAL_ESP_COMPS += Drivers/Sensors/IMU/ADXL345
+LOCAL_ESP_COMPS += Drivers/KridaDimmer
 
 LOCAL_ESP_COMPS += Platform/Targets/ESP32
 LOCAL_ESP_COMPS += Platform/Targets/ESP32/I2C
