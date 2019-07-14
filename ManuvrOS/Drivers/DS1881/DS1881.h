@@ -53,7 +53,7 @@ class DS1881 : public I2CDevice {
     inline DIGITALPOT_ERROR reset() {    return reset(0x00);  };
 
     inline uint8_t getValue(uint8_t pot) {
-      return (pot > 1) ? 0 : values[pot];
+      return (pot > 1) ? 0 : 0x3F & values[pot];
     };
 
     inline bool enabled() {   return dev_enabled; };  // Trivial accessor.

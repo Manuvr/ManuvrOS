@@ -62,10 +62,10 @@ int8_t DS1881::io_op_callback(BusOp* completed) {
         dev_init = true;
       }
       switch (byte0 & 0xC0) {
-        case 0x00:
-        case 0x40:
+        case DS1881_REG_WR0:
+        case DS1881_REG_WR1:
           break;
-        case 0x80:
+        case DS1881_REG_CONF:
           preserve_state_on_destroy = !(byte0 & 0x04);
           if (0x02 != (byte0 & 0x03)) {
             // Enforces zero-cross and high-resolution.
@@ -78,9 +78,9 @@ int8_t DS1881::io_op_callback(BusOp* completed) {
       break;
     case BusOpcode::TX:
       switch (byte0 & 0xC0) {
-        case 0x00:
-        case 0x40:
-        case 0x80:
+        case DS1881_REG_WR0:
+        case DS1881_REG_WR1:
+        case DS1881_REG_CONF:
         default:
           break;
       }
@@ -151,7 +151,7 @@ DIGITALPOT_ERROR DS1881::setValue(uint8_t pot, uint8_t val) {
   }
   if (0 <= return_value) {
     alt_values[pot] = values[pot];
-    values[pot] = tmp_val;
+    values[pot] = (1 == pot ? DS1881_REG_WR1 : DS1881_REG_WR0) & tmp_val;
     if (!writeX(-1, 1, &values[pot])) {
       return_value = DIGITALPOT_ERROR::BUS;
     }
@@ -180,8 +180,8 @@ DIGITALPOT_ERROR DS1881::setValue(uint8_t val) {
   if (0 <= return_value) {
     alt_values[0] = values[0];
     alt_values[1] = values[1];
-    values[0] = tmp_val;
-    values[1] = tmp_val;
+    values[0] = DS1881_REG_WR0 & tmp_val;
+    values[1] = DS1881_REG_WR1 & tmp_val;
     if (!writeX(-1, 2, values)) {
       return_value = DIGITALPOT_ERROR::BUS;
     }
