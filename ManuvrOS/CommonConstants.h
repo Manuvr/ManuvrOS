@@ -85,4 +85,9 @@ Apart from including the rationalizing configuration header, there
   // Some common properties of the environment.
   #define PRESSURE_AT_SEA_LEVEL  101325.0f  // Atmosphereic pressure at sea-level.
 
+  // Some common mathematical constants.
+  #if !defined(PI)
+    #define PI 3.14159265358979323846264338327950288419716939937510
+  #endif
+
 #endif    // __MANUVR_COMMON_CONSTANTS_H__

@@ -39,6 +39,7 @@ This file is meant to contain a set of common functions that are typically platf
 #include "tcpip_adapter.h"
 #include "esp_system.h"
 #include "esp_log.h"
+#include "driver/adc.h"
 
 #if defined(MANUVR_STORAGE)
   #include <Platform/Targets/ESP32/ESP32Storage.h>
@@ -64,6 +65,9 @@ volatile static uint32_t     randomness_pool[PLATFORM_RNG_CARRY_CAPACITY];
 volatile static unsigned int _random_pool_r_ptr = 0;
 volatile static unsigned int _random_pool_w_ptr = 0;
 static long unsigned int rng_thread_id = 0;
+static bool using_wifi_peripheral = false;
+static bool using_adc1            = false;
+static bool using_adc2            = false;
 
 /**
 * Dead-simple interface to the RNG. Despite the fact that it is interrupt-driven, we may resort
@@ -266,6 +270,87 @@ void gpioSetup() {
 }
 
 
+
+
+adc1_channel_t _gpio_analog_get_chan1_from_pin(uint8_t pin) {
+  switch (pin) {
+    case 32:    return ADC1_CHANNEL_4;
+    case 33:    return ADC1_CHANNEL_5;
+    case 34:    return ADC1_CHANNEL_6;
+    case 35:    return ADC1_CHANNEL_7;
+    case 36:    return ADC1_CHANNEL_0;
+    case 37:    return ADC1_CHANNEL_1;
+    case 38:    return ADC1_CHANNEL_2;
+    case 39:    return ADC1_CHANNEL_3;
+    default:    return ADC1_CHANNEL_MAX;   // Invalid analog input pin.
+  }
+}
+
+adc2_channel_t _gpio_analog_get_chan2_from_pin(uint8_t pin) {
+  switch (pin) {
+    case 0:     return ADC2_CHANNEL_1;
+    case 2:     return ADC2_CHANNEL_2;
+    case 4:     return ADC2_CHANNEL_0;
+    case 12:    return ADC2_CHANNEL_5;
+    case 13:    return ADC2_CHANNEL_4;
+    case 14:    return ADC2_CHANNEL_6;
+    case 15:    return ADC2_CHANNEL_3;
+    case 25:    return ADC2_CHANNEL_8;
+    case 26:    return ADC2_CHANNEL_9;
+    case 27:    return ADC2_CHANNEL_7;
+    default:    return ADC2_CHANNEL_MAX;   // Invalid analog input pin.
+  }
+}
+
+
+
+int8_t _gpio_analog_in_pin_setup(uint8_t pin) {
+  switch (pin) {
+    case 32:
+    case 33:
+    case 34:
+    case 35:
+    case 36:
+    case 37:
+    case 38:
+    case 39:
+      {
+        adc1_channel_t chan = _gpio_analog_get_chan1_from_pin(pin);
+        if (!using_adc1) {
+          using_adc1 = (ESP_OK == adc1_config_width(ADC_WIDTH_BIT_12));
+        }
+        adc1_config_channel_atten(chan, ADC_ATTEN_DB_11);
+        gpio_pins[pin].mode  = (int) GPIOMode::ANALOG_IN;
+      }
+      return 0;
+
+    case 0:
+    case 2:
+    case 4:
+    case 12:
+    case 13:
+    case 14:
+    case 15:
+    case 25:
+    case 26:
+    case 27:
+      if (!using_wifi_peripheral) {
+        adc2_channel_t chan = _gpio_analog_get_chan2_from_pin(pin);
+        if (!using_adc2) {
+          using_adc2 = true;
+        }
+        adc2_config_channel_atten(chan, ADC_ATTEN_DB_11);
+        gpio_pins[pin].mode  = (int) GPIOMode::ANALOG_IN;
+        return 0;
+      }
+      return -1;   // Can't use ADC while wifi peripheral is using it.
+
+    default:    return -1;   // Invalid analog input pin.
+  }
+}
+
+
+
 int8_t gpioDefine(uint8_t pin, GPIOMode mode) {
   gpio_config_t io_conf;
   if (!GPIO_IS_VALID_GPIO(pin)) {
@@ -291,6 +376,9 @@ int8_t gpioDefine(uint8_t pin, GPIOMode mode) {
   }
 
   switch (mode) {
+    case GPIOMode::ANALOG_IN:
+      return _gpio_analog_in_pin_setup(pin);
+
     case GPIOMode::BIDIR_OD_PULLUP:
       if (!GPIO_IS_VALID_OUTPUT_GPIO(pin)) {
         return -1;
@@ -417,9 +505,46 @@ int8_t setPinAnalog(uint8_t pin, int val) {
   return 0;
 }
 
+
 int readPinAnalog(uint8_t pin) {
-  return 0;
+  int val = 0;
+  switch (pin) {
+    case 32:
+    case 33:
+    case 34:
+    case 35:
+    case 36:
+    case 37:
+    case 38:
+    case 39:
+      if (using_adc1) {
+        adc1_channel_t chan = _gpio_analog_get_chan1_from_pin(pin);
+        val = adc1_get_raw(chan);
+      }
+      break;
+
+    case 0:
+    case 2:
+    case 4:
+    case 12:
+    case 13:
+    case 14:
+    case 15:
+    case 25:
+    case 26:
+    case 27:
+      if (using_adc2) {
+        adc2_channel_t chan = _gpio_analog_get_chan2_from_pin(pin);
+        adc2_get_raw(chan, ADC_WIDTH_BIT_12, &val);
+      }
+      break;
+
+    default:
+      break;
+  }
+  return val;
 }
+
 
 
 /*******************************************************************************

@@ -37,10 +37,9 @@ const MessageTypeDef message_defs_light_sensor[] = {
 
 
 
-LightSensor::LightSensor(int analog_pin) : EventReceiver("LightSensor") {
-  _analog_pin = analog_pin;
-  int mes_count = sizeof(message_defs_light_sensor) / sizeof(MessageTypeDef);
-  ManuvrMsg::registerMessages(message_defs_light_sensor, mes_count);
+LightSensor::LightSensor(const LightSensorOpts* o) : EventReceiver("LightSensor"), _opts(o) {
+  if (0 == gpioDefine(_opts.pin, GPIOMode::ANALOG_IN)) {
+  }
 }
 
 
@@ -51,7 +50,7 @@ LightSensor::~LightSensor() {
 
 
 void LightSensor::light_check() {
-  uint16_t current_lux_read = readPinAnalog(_analog_pin);
+  uint16_t current_lux_read = readPinAnalog(_opts.pin);
   uint8_t current_lux_bin = current_lux_read >> 2;
 
   uint8_t lux_delta = (last_lux_bin > current_lux_bin) ? (last_lux_bin - current_lux_bin) : (current_lux_bin - last_lux_bin);
