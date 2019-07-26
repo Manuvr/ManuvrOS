@@ -20,16 +20,14 @@ limitations under the License.
 */
 
 
-/*
+/*******************************************************************************
 * Reserved codes. These must be fully-supported, and never changed.
 * We reserve the first 32 integers for protocol-level functions.
-*/
+*******************************************************************************/
   #define MANUVR_MSG_UNDEFINED            0x0000 // This is the invalid-in-use default code.
 
-/*
-* Protocol-support codes. In order to have a device that can negotiate with other devices,
-*   these codes must be supported.
-*/
+  /* Protocol-support codes. In order to have a device that can negotiate with
+       other devices, these codes must be supported. */
   #define MANUVR_MSG_REPLY                0x0001 // This reply is for success-case.
   #define MANUVR_MSG_REPLY_RETRY          0x0002 // This reply asks for a reply of the given Unique ID.
   #define MANUVR_MSG_REPLY_FAIL           0x0003 // This reply denotes that the packet failed to proc (despite passing parse).
@@ -54,29 +52,25 @@ limitations under the License.
   #define MANUVR_MSG_LEGEND_MESSAGES      0x000B // No args? Asking for this legend. One arg: Legend provided.
   #define MANUVR_MSG_LEGEND_SEMANTIC      0x000C // Provides a listing of argument positions for messages.
   #define MANUVR_MSG_MSG_FORWARD          0x000D // Used to relay nested messages across Manuvrables.
+  #define MANUVR_MSG_DEFERRED_FXN         0x000E // Message to allow for deferred fxn calls without an EventReceiver.
 
+  /* Life-cycle related messages and system states. */
+  #define MANUVR_MSG_SYS_BOOT_COMPLETED   0x0010 // Raised when bootstrap is finished. This ought to be the first event to proc.
+  #define MANUVR_MSG_SYS_BOOTLOADER       0x0011 // Reboots into the bootloader.
+  #define MANUVR_MSG_SYS_REBOOT           0x0012 // Reboots into THIS program. IE, software reset.
+  #define MANUVR_MSG_SYS_SHUTDOWN         0x0013 // Raised when the system is pending complete shutdown.
+  #define MANUVR_MSG_SYS_EXIT             0x0014 // Raised when the process is to exit without shutdown.
+  #define MANUVR_MSG_SYS_PREALLOCATION    0x0015 // Any classes that do preallocation should listen for this.
+  #define MANUVR_MSG_SYS_ADVERTISE_SRVC   0x0018 // A system service might feel the need to advertise it's arrival.
+  #define MANUVR_MSG_SYS_RETRACT_SRVC     0x0019 // A system service sends this to tell others to stop using it.
+  #define MANUVR_MSG_SYS_FAULT_REPORT     0x001A // Something in the system soft-errored.
+  #define MANUVR_MSG_SYS_CONF_LOAD        0x001B // Recipients will comb arguments for config and apply it.
+  #define MANUVR_MSG_SYS_CONF_SAVE        0x001C // Recipients will attached their persistable data.
+  #define MANUVR_MSG_SYS_RELEASE_CRUFT    0x001D // The system is asking EventReceivers to GC if we can.
 
-
-/*
-* These codes are nice-to-haves that, while not required, should see a good deal of
-*   use across drivers and projects.
-*
-*
-*/
-  #define MANUVR_MSG_SYS_BOOT_COMPLETED   0x0020 // Raised when bootstrap is finished. This ought to be the first event to proc.
-  #define MANUVR_MSG_SYS_BOOTLOADER       0x0021 // Reboots into the bootloader.
-  #define MANUVR_MSG_SYS_REBOOT           0x0022 // Reboots into THIS program. IE, software reset.
-  #define MANUVR_MSG_SYS_SHUTDOWN         0x0023 // Raised when the system is pending complete shutdown.
-  #define MANUVR_MSG_SYS_EXIT             0x0024 // Raised when the process is to exit without shutdown.
-  #define MANUVR_MSG_SYS_PREALLOCATION    0x0025 // Any classes that do preallocation should listen for this.
-  #define MANUVR_MSG_SYS_ADVERTISE_SRVC   0x0028 // A system service might feel the need to advertise it's arrival.
-  #define MANUVR_MSG_SYS_RETRACT_SRVC     0x0029 // A system service sends this to tell others to stop using it.
-  #define MANUVR_MSG_SYS_FAULT_REPORT     0x002A // Something in the system soft-errored.
-  #define MANUVR_MSG_SYS_CONF_LOAD        0x002B // Recipients will comb arguments for config and apply it.
-  #define MANUVR_MSG_SYS_CONF_SAVE        0x002C // Recipients will attached their persistable data.
-
-  #define MANUVR_MSG_SYS_RELEASE_CRUFT    0x002F // The system is asking EventReceivers to GC if we can.
-
+/*******************************************************************************
+* Optional, but common features in this block.
+*******************************************************************************/
   // Kernel and small scattered functionality
   #define MANUVR_MSG_USER_DEBUG_INPUT     0x0031 // The user is issuing a direct debug command.
 
@@ -92,7 +86,6 @@ limitations under the License.
   // Codes specific to session-management and control
   #define MANUVR_MSG_SESS_SUBCRIBE        0x0060 // Used to subscribe this session to other events.
   #define MANUVR_MSG_SESS_UNSUBCRIBE      0x0061 // Used to unsubscribe this session from other events.
-  //#define MANUVR_MSG_SESS_DUMP_DEBUG      0x0062 // Cause the XenoSession to dump its debug data.
   #define MANUVR_MSG_SESS_ORIGINATE_MSG   0x0063 // The session has something to say, and the transport ought to service it.
   #define MANUVR_MSG_SESS_SERVICE         0x0064 // A session is requesting service.
 
@@ -106,7 +99,6 @@ limitations under the License.
 
   // Codes that are only meaningful with firmware running FreeRTOS.
 
-
   // Codes that are only meaningful with firmware using OIC framework.
   #define MANUVR_MSG_OIC_READY            0x00F0 // Framework came online.
   #define MANUVR_MSG_OIC_REG_RESOURCES    0x00F1 // Framework is calling for resource registration.
@@ -116,7 +108,6 @@ limitations under the License.
 
 
   // Scheduler
-  #define MANUVR_MSG_DEFERRED_FXN         0x0100 // Message to allow for deferred fxn calls without an EventReceiver.
 //  #define MANUVR_MSG_SCHED_DISABLE_BY_PID 0x0101 // The given PID is being disabled.
 //  #define MANUVR_MSG_SCHED_PROFILER_START 0x0102 // We want to profile the given PID.
 //  #define MANUVR_MSG_SCHED_PROFILER_STOP  0x0103 // We want to stop profiling the given PID.
@@ -181,46 +172,46 @@ limitations under the License.
     #define MANUVR_MSG_SYS_USB_RESET        0x0255 // USB system reset.
 
 
+/*******************************************************************************
+* The 0x0400 block is stable and general.
+*******************************************************************************/
+
+  /* GPIO codes. These are for the sake of outside systems asking about and setting raw GPIO values. */
+  #define MANUVR_MSG_GPIO_LEGEND          0x0400 // If our GPIO is sopisticated enough to describe...
+  #define MANUVR_MSG_DIGITAL_READ         0x0401 // Read the given GPIO pin, however that is referenced on a given platform.
+  #define MANUVR_MSG_DIGITAL_WRITE        0x0402 // Write the given GPIO pin, however that is referenced on a given platform.
+  #define MANUVR_MSG_ANALOG_READ          0x0403 // Read the given GPIO pin, however that is referenced on a given platform.
+  #define MANUVR_MSG_ANALOG_WRITE         0x0404 // Write the given GPIO pin, however that is referenced on a given platform.
+  #define MANUVR_MSG_EVENT_ON_INTERRUPT   0x040F // Fire the given event on the given interrupt condition.
+
+  /* UI event codes. These are for the sake of outside systems asking about and setting raw GPIO values. */
+  #define MANUVR_MSG_USER_BUTTON_PRESS    0x04E0 // The user pushed a button with the given integer code.
+  #define MANUVR_MSG_USER_BUTTON_RELEASE  0x04E1 // The user released a button with the given integer code.
+  #define MANUVR_MSG_USER_BUTTON_DWELL_0  0x04E2 // The user held a button past its short dwell time.
+  #define MANUVR_MSG_USER_BUTTON_DWELL_1  0x04E3 // The user held a button past its extended dwell time.
+  #define MANUVR_MSG_USER_SLIDER_VALUE    0x04E8 // The user changed a slider value.
+  #define MANUVR_MSG_USER_DETECTED        0x04EF // A user was determined to be near the device.
+
+  /* Event codes that pertain to frame buffers. */
+  #define MANUVR_MSG_LEGEND_FRAME_BUF     0x04C0 // No args? Asking for this legend. One arg: Legend provided.
+  #define MANUVR_MSG_DIRTY_FRAME_BUF      0x04C1 // Something changed the framebuffer and we need to redraw.
+  #define MANUVR_MSG_FRAME_BUF_CONTENT    0x04C2 // Request (no args), or set (>0 args) the contents of a framebuffer.
 
 
-  // Codes related to the task of abstracting real-world units.
-  #define MANUVR_MSG_LEGEND_UNITS         0x0300 // No args? Asking for this legend. One arg: Legend provided.
-
-  // Event codes that pertain to frame buffers
-  #define MANUVR_MSG_LEGEND_FRAME_BUF     0x0310 // No args? Asking for this legend. One arg: Legend provided.
-  #define MANUVR_MSG_DIRTY_FRAME_BUF      0x0311 // Something changed the framebuffer and we need to redraw.
-  #define MANUVR_MSG_FRAME_BUF_CONTENT    0x0312 // Request (no args), or set (>0 args) the contents of a framebuffer.
-
-  // Event codes for neopixels
-  #define MANUVR_MSG_NEOPIXEL_REFRESH     0x0330 // Cause any neopixel classes to refresh their strands.
-
-  /* GPIO codes. This is an example of a hardware driver that is platform-dependent. Each supported platform needs
-       its own driver that supports this event if this event is to be honored on that platform. */
-  #define MANUVR_MSG_DIGITAL_READ         0x0400 // Read the given GPIO pin, however that is referenced on a given platform.
-  #define MANUVR_MSG_DIGITAL_WRITE        0x0401 // Write the given GPIO pin, however that is referenced on a given platform.
-  #define MANUVR_MSG_ANALOG_READ          0x0402 // Read the given GPIO pin, however that is referenced on a given platform.
-  #define MANUVR_MSG_ANALOG_WRITE         0x0403 // Write the given GPIO pin, however that is referenced on a given platform.
-  #define MANUVR_MSG_GPIO_LEGEND          0x040F // If our GPIO is sopisticated enough to describe...
-  #define MANUVR_MSG_EVENT_ON_INTERRUPT   0x0410 // Fire the given event on the given interrupt condition.
-
-
-  /*
-  * The block comprised of [0x0500 - 0x1000) is being tentetively used for low-level hardware support drivers that
-  *   are invarient across platforms. For example: Drivers for a certain kind of sensor.
-  * These will be deprecated soon... Do not code against them.
-  */
-
-  #define MANUVR_MSG_USER_BUTTON_PRESS    0x0500 // The user pushed a button with the given integer code.
-  #define MANUVR_MSG_USER_BUTTON_RELEASE  0x0501 // The user released a button with the given integer code.
-  #define MANUVR_MSG_SENSOR_ISL29033      0x0510 // The light sensor has something to say.
-  #define MANUVR_MSG_SENSOR_ISL29033_IRQ  0x0511 // The light sensor IRQ_PIN.
-  #define MANUVR_MSG_AMBIENT_LIGHT_LEVEL  0x0512 // Unitless light level.
-  #define MANUVR_MSG_SENSOR_LPS331        0x0520 // The baro sensor has something to say.
-  #define MANUVR_MSG_SENSOR_LPS331_IRQ_0  0x0521 // The baro sensor IRQ_0 pin.
-  #define MANUVR_MSG_SENSOR_LPS331_IRQ_1  0x0522 // The baro sensor IRQ_1 pin.
-  #define MANUVR_MSG_SENSOR_SI7021        0x0530 // The humidity sensor has something to say.
-  #define MANUVR_MSG_SENSOR_TMP006        0x0540 // The thermopile has something to say.
-  #define MANUVR_MSG_SENSOR_TMP006_IRQ    0x0541 // The thermopile IRQ pin changed state.
-  #define MANUVR_MSG_SENSOR_INA219        0x0550 // The current sensor has something to say.
-  #define MANUVR_MSG_SENSOR_MGC3130       0x0556 // MGC3130 is declaring it has new data.
-  #define MANUVR_MSG_SENSOR_MGC3130_INIT  0x0557 // MGC3130 is (re)initializing itself.
+/*******************************************************************************
+* The block comprised of [0x0600 - 0x1000) is being tentetively used for low-level hardware support drivers that
+*   are invarient across platforms. For example: Drivers for a certain kind of sensor.
+* These will be deprecated soon... Do not code against them.
+*******************************************************************************/
+  #define MANUVR_MSG_NEOPIXEL_REFRESH     0x0600 // Cause any neopixel classes to refresh their strands.
+  #define MANUVR_MSG_SENSOR_ISL29033      0x0610 // The light sensor has something to say.
+  #define MANUVR_MSG_SENSOR_ISL29033_IRQ  0x0611 // The light sensor IRQ_PIN.
+  #define MANUVR_MSG_AMBIENT_LIGHT_LEVEL  0x0612 // Unitless light level.
+  #define MANUVR_MSG_SENSOR_LPS331        0x0620 // The baro sensor has something to say.
+  #define MANUVR_MSG_SENSOR_LPS331_IRQ_0  0x0621 // The baro sensor IRQ_0 pin.
+  #define MANUVR_MSG_SENSOR_LPS331_IRQ_1  0x0622 // The baro sensor IRQ_1 pin.
+  #define MANUVR_MSG_SENSOR_SI7021        0x0630 // The humidity sensor has something to say.
+  #define MANUVR_MSG_SENSOR_TMP006        0x0640 // The thermopile has something to say.
+  #define MANUVR_MSG_SENSOR_TMP006_IRQ    0x0641 // The thermopile IRQ pin changed state.
+  #define MANUVR_MSG_SENSOR_MGC3130       0x0656 // MGC3130 is declaring it has new data.
+  #define MANUVR_MSG_SENSOR_MGC3130_INIT  0x0657 // MGC3130 is (re)initializing itself.

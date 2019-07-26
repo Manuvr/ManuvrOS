@@ -38,7 +38,7 @@ This is the platform-invariant implementation of a peripheral wraspper
 /* Used to minimize software burden incurred by timeout support. */
 volatile static bool timeout_punch = false;
 
-SPIBusOp  SPIAdapter::preallocated_bus_jobs[SPIADAPTER_PREALLOC_COUNT];
+SPIBusOp  SPIAdapter::preallocated_bus_jobs[CONFIG_SPIADAPTER_PREALLOC_COUNT];
 //template<> PriorityQueue<SPIBusOp*> BusAdapter<SPIBusOp>::preallocated;
 
 const MessageTypeDef spi_message_defs[] = {
@@ -59,7 +59,7 @@ const MessageTypeDef spi_message_defs[] = {
 /**
 * Constructor. Also populates the global pointer reference.
 */
-SPIAdapter::SPIAdapter(uint8_t idx, uint8_t d_in, uint8_t d_out, uint8_t clk) : EventReceiver("SPIAdapter"), BusAdapter(SPIADAPTER_PREALLOC_COUNT) {
+SPIAdapter::SPIAdapter(uint8_t idx, uint8_t d_in, uint8_t d_out, uint8_t clk) : EventReceiver("SPIAdapter"), BusAdapter(CONFIG_SPIADAPTER_PREALLOC_COUNT) {
   ManuvrMsg::registerMessages(spi_message_defs, sizeof(spi_message_defs) / sizeof(MessageTypeDef));
 
   // Build some pre-formed Events.
@@ -74,7 +74,7 @@ SPIAdapter::SPIAdapter(uint8_t idx, uint8_t d_in, uint8_t d_out, uint8_t clk) : 
   SPIBusOp::event_spi_queue_ready.priority(5);
 
   // Mark all of our preallocated SPI jobs as "No Reap" and pass them into the prealloc queue.
-  for (uint8_t i = 0; i < SPIADAPTER_PREALLOC_COUNT; i++) {
+  for (uint8_t i = 0; i < CONFIG_SPIADAPTER_PREALLOC_COUNT; i++) {
     preallocated_bus_jobs[i].returnToPrealloc(true);     // Implies SHOuLD_REAP = false.
     preallocated.insert(&preallocated_bus_jobs[i]);
   }
@@ -183,7 +183,7 @@ int8_t SPIAdapter::queue_io_job(BusOp* _op) {
       //if (bus_timeout_millis) event_spi_timeout.delaySchedule(bus_timeout_millis);  // Punch the timeout schedule.
     }
     else {    // If there is something already in progress, queue up.
-      if (_er_flag(SPI_FLAG_QUEUE_GUARD) && (SPIADAPTER_MAX_QUEUE_DEPTH <= work_queue.size())) {
+      if (_er_flag(SPI_FLAG_QUEUE_GUARD) && (CONFIG_SPIADAPTER_MAX_QUEUE_DEPTH <= work_queue.size())) {
         if (getVerbosity() > 3) Kernel::log("SPIAdapter::queue_io_job(): \t Bus queue at max size. Dropping transaction.\n");
         op->abort(XferFault::QUEUE_FLUSH);
         callback_queue.insertIfAbsent(op);
@@ -538,7 +538,7 @@ void SPIAdapter::printDebug(StringBuilder *output) {
   output->concatf("-- callback q depth    %d\n\n", callback_queue.size());
 
   if (getVerbosity() > 3) {
-    printWorkQueue(output, SPIADAPTER_MAX_QUEUE_PRINT);
+    printWorkQueue(output, CONFIG_SPIADAPTER_MAX_QUEUE_PRINT);
   }
 }
 

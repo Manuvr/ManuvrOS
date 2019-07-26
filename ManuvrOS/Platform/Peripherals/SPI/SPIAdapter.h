@@ -29,17 +29,17 @@ limitations under the License.
 
 
 /* Compile-time bounds on memory usage. */
-#ifndef SPIADAPTER_MAX_QUEUE_PRINT
+#ifndef CONFIG_SPIADAPTER_MAX_QUEUE_PRINT
   // How many queue items should we print for debug?
-  #define SPIADAPTER_MAX_QUEUE_PRINT 3
+  #define CONFIG_SPIADAPTER_MAX_QUEUE_PRINT 3
 #endif
-#ifndef SPIADAPTER_MAX_QUEUE_DEPTH
+#ifndef CONFIG_SPIADAPTER_MAX_QUEUE_DEPTH
   // How deep should the queue be allowed to become before rejecting work?
-  #define SPIADAPTER_MAX_QUEUE_DEPTH 12
+  #define CONFIG_SPIADAPTER_MAX_QUEUE_DEPTH 12
 #endif
-#ifndef SPIADAPTER_PREALLOC_COUNT
+#ifndef CONFIG_SPIADAPTER_PREALLOC_COUNT
   // How many queue items should we have on-tap?
-  #define SPIADAPTER_PREALLOC_COUNT  10
+  #define CONFIG_SPIADAPTER_PREALLOC_COUNT  4
 #endif
 
 
@@ -110,7 +110,7 @@ class SPIAdapter : public EventReceiver, public BusAdapter<SPIBusOp> {
     void init_spi(uint8_t cpol, uint8_t cpha);
 
 
-    static SPIBusOp preallocated_bus_jobs[SPIADAPTER_PREALLOC_COUNT];// __attribute__ ((section(".ccm")));
+    static SPIBusOp preallocated_bus_jobs[CONFIG_SPIADAPTER_PREALLOC_COUNT];// __attribute__ ((section(".ccm")));
 };
 
 #endif  // __SPI_DRIVER_TEMPLATE_H__
