@@ -137,14 +137,17 @@
 #define SX8634_REG_SPM_CRC                  0x7F
 
 
-#define SX8634_FLAG_SM_MASK          0x07
-#define SX8634_FLAG_SM_NO_INIT       0x01
-#define SX8634_FLAG_SM_SPM_READ      0x02
-#define SX8634_FLAG_SM_CONF_WRITE    0x03
-#define SX8634_FLAG_SM_READY         0x04
-#define SX8634_FLAG_SM_NVM_BURN0     0x05
-#define SX8634_FLAG_SM_NVM_BURN1     0x06
-#define SX8634_FLAG_SM_NVM_BURN2     0x07
+#define SX8634_FLAG_SM_NO_INIT       0x0000
+#define SX8634_FLAG_SM_SPM_READ      0x0001
+#define SX8634_FLAG_SM_CONF_WRITE    0x0002
+#define SX8634_FLAG_SM_READY         0x0003
+#define SX8634_FLAG_SM_NVM_BURN0     0x0004
+#define SX8634_FLAG_SM_NVM_BURN1     0x0005
+#define SX8634_FLAG_SM_NVM_BURN2     0x0006
+#define SX8634_FLAG_SM_NVM_VERIFY    0x0007
+#define SX8634_FLAG_SM_MASK          0x0007
+#define SX8634_FLAG_DEV_FOUND        0x0008
+#define SX8634_FLAG_REGS_SHADOWED    0x0010
 
 
 #define SX8634_DEFAULT_I2C_ADDR      0x2B
@@ -165,8 +168,10 @@ enum class SX8634GPIOMode : uint8_t {
 
 class SX8634GPIOConf {
   public:
+    SX8634GPIOConf(SX8634GPIOMode mode, uint8_t boot_val);
 
   private:
+    uint8_t _gpio_flags;
 };
 
 
@@ -207,6 +212,8 @@ class SX8634Opts {
       irq_pin(irq),
       _flags(0) {};
 
+    bool haveResetPin() const {   return (255 != reset_pin);   };
+    bool haveIRQPin() const {     return (255 != irq_pin);     };
 
   private:
     const uint8_t _flags;
@@ -227,6 +234,14 @@ class SX8634 : public I2CDevice {
     int8_t  reset();
     int8_t  init();
 
+    /* Overrides from I2CDevice... */
+    int8_t io_op_callahead(BusOp*);
+    int8_t io_op_callback(BusOp*);
+    void printDebug(StringBuilder*);
+
+    inline SX8634OpMode operationalMode() {  return ((SX8634OpMode)  0); };  // TODO
+    inline bool deviceFound() {  return _sx8634_flag(SX8634_FLAG_DEV_FOUND);  };
+
     bool buttonPressed(uint8_t);
     bool buttonReleased(uint8_t);
 
@@ -234,17 +249,37 @@ class SX8634 : public I2CDevice {
     int8_t  setGPIOState(uint8_t pin, uint8_t value);
     uint8_t getGPIOState(uint8_t pin);
 
+    #if defined(CONFIG_SX8634_PROVISIONING)
+      int8_t  burn_nvm();
+
+    #endif  // CONFIG_SX8634_PROVISIONING
 
 
   private:
     const SX8634Opts _opts;
+    uint16_t _flags = 0;
 
     uint8_t  _registers[128];    // Register shadows
     uint8_t  _io_buffer[128];    // I/O operation buffer
 
-    int8_t  _clear_registers();
+    inline uint32_t _sx8634_flags() {                return _flags;            };
+    inline bool _sx8634_flag(uint16_t _flag) {       return (_flags & _flag);  };
+    inline void _sx8634_flip_flag(uint16_t _flag) {  _flags ^= _flag;          };
+    inline void _sx8634_clear_flag(uint16_t _flag) { _flags &= ~_flag;         };
+    inline void _sx8634_set_flag(uint16_t _flag) {   _flags |= _flag;          };
+    inline void _sx8634_set_flag(uint16_t _flag, bool nu) {
+      if (nu) _flags |= _flag;
+      else    _flags &= ~_flag;
+    };
+
+
+    int8_t  _clear_registers();  // Wipe our shadows.
     int8_t  _read_full_spm();    // Mirror the SPM into our shadow.
     int8_t  _ll_pin_init();
+    int8_t  _read_block8(uint8_t idx);
+    int8_t  _ping_device();
+
+    const char* getModeStr(SX8634OpMode);
 };
 
 #endif  // __SX8634_DRIVER_H__

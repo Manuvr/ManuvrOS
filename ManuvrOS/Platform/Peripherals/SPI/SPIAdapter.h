@@ -61,11 +61,62 @@ limitations under the License.
 
 
 /*
+* Set pin def to 255 to mark it as unused.
+*/
+class SPIAdapterOpts {
+  public:
+    const uint8_t idx;
+    const uint8_t spi_clk;
+    const uint8_t spi_mosi;
+    const uint8_t spi_miso;
+
+    SPIAdapterOpts(const SPIAdapterOpts* p) :
+      idx(p->idx),
+      spi_clk(p->spi_clk),
+      spi_mosi(p->spi_mosi),
+      spi_miso(p->spi_miso),
+      _flags(p->_flags)
+    {};
+
+    SPIAdapterOpts(
+      uint8_t _i,
+      uint8_t _spi_clk,
+      uint8_t _spi_mosi,
+      uint8_t _spi_miso
+    ) :
+      idx(_i),
+      spi_clk(_spi_clk),
+      spi_mosi(_spi_mosi),
+      spi_miso(_spi_miso),
+      _flags(SPI_FLAG_MASTER | SPI_FLAG_CPOL | SPI_FLAG_CPHA)
+    {};
+
+    SPIAdapterOpts(
+      uint8_t _i,
+      uint8_t _spi_clk,
+      uint8_t _spi_mosi,
+      uint8_t _spi_miso,
+      uint8_t _f
+    ) :
+      idx(_i),
+      spi_clk(_spi_clk),
+      spi_mosi(_spi_mosi),
+      spi_miso(_spi_miso),
+      _flags(_f)
+    {};
+
+
+  private:
+    const uint8_t _flags;
+};
+
+
+/*
 * The SPI driver class.
 */
 class SPIAdapter : public EventReceiver, public BusAdapter<SPIBusOp> {
   public:
-    SPIAdapter(uint8_t idx, uint8_t d_in, uint8_t d_out, uint8_t clk);
+    SPIAdapter(const SPIAdapterOpts*);
     ~SPIAdapter();
 
     /* Overrides from the BusAdapter interface */
@@ -81,17 +132,13 @@ class SPIAdapter : public EventReceiver, public BusAdapter<SPIBusOp> {
     void printDebug(StringBuilder*);
     int8_t notify(ManuvrMsg*);
     int8_t callback_proc(ManuvrMsg*);
-    int8_t attached();      // This is called from the base notify().
     void printHardwareState(StringBuilder*);
 
-
   protected:
-    /* Overrides from the BusAdapter interface */
-    int8_t bus_init();
-    int8_t bus_deinit();
-
+    int8_t attached();      // This is called from the base notify().
 
   private:
+    const SPIAdapterOpts _opts;
     ManuvrMsg event_spi_callback_ready;
     ManuvrMsg event_spi_timeout;
 
@@ -101,14 +148,13 @@ class SPIAdapter : public EventReceiver, public BusAdapter<SPIBusOp> {
     uint8_t   spi_cb_per_event   = 3;  // Limit the number of callbacks processed per event.
 
     void purge_queued_work();     // Flush the work queue.
-    void purge_stalled_job();     // TODO: Misnomer. Really purges the active job.
+    void purge_current_job();     // Purges the active job.
     int8_t service_callback_queue();
     void reclaim_queue_item(SPIBusOp*);
 
-    /* Setup and init fxns. */
-    void gpioSetup();
-    void init_spi(uint8_t cpol, uint8_t cpha);
-
+    /* Overrides from the BusAdapter interface */
+    int8_t bus_init();
+    int8_t bus_deinit();
 
     static SPIBusOp preallocated_bus_jobs[CONFIG_SPIADAPTER_PREALLOC_COUNT];// __attribute__ ((section(".ccm")));
 };

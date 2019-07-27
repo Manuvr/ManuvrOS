@@ -22,6 +22,126 @@ limitations under the License.
 
 #if defined(CONFIG_MANUVR_SUPPORT_SPI)
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <driver/spi_master.h>
+#include "rom/ets_sys.h"
+#include "esp_types.h"
+#include "esp_attr.h"
+#include "esp_intr.h"
+#include "esp_intr_alloc.h"
+#include "esp_log.h"
+#include "esp_err.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "freertos/xtensa_api.h"
+#include "freertos/task.h"
+#include "freertos/ringbuf.h"
+#include "rom/lldesc.h"
+#include "driver/gpio.h"
+#include "driver/periph_ctrl.h"
+#include "esp_heap_caps.h"
+
+static const char* LOG_TAG = "SPIAdapter";
+
+
+/*******************************************************************************
+* .-. .----..----.    .-.     .--.  .-. .-..----.
+* | |{ {__  | {}  }   | |    / {} \ |  `| || {}  \
+* | |.-._} }| .-. \   | `--./  /\  \| |\  ||     /
+* `-'`----' `-' `-'   `----'`-'  `-'`-' `-'`----'
+*
+* Interrupt service routine support functions. Everything in this block
+*   executes under an ISR. Keep it brief...
+*******************************************************************************/
+
+static lldesc_t _ll_tx;
+static SPIBusOp* _threaded_op = nullptr;
+static spi_device_handle_t spi2_handle;
+
+#ifdef __cplusplus
+}
+#endif
+
+
+
+/*******************************************************************************
+* ___     _                                  This is a template class for
+*  |   / / \ o    /\   _|  _. ._ _|_  _  ._  defining arbitrary I/O adapters.
+* _|_ /  \_/ o   /--\ (_| (_| |_) |_ (/_ |   Adapters must be instanced with
+*                             |              a BusOp as the template param.
+*******************************************************************************/
+
+int8_t SPIAdapter::bus_init() {
+	spi_bus_config_t bus_config;
+  uint32_t b_flags = 0;
+  if (255 != _opts.spi_clk) {
+    b_flags |= SPICOMMON_BUSFLAG_SCLK;
+    bus_config.sclk_io_num = (gpio_num_t) _opts.spi_clk;
+  }
+  else {
+    bus_config.sclk_io_num = (gpio_num_t) -1;
+  }
+  if (255 != _opts.spi_mosi) {
+    b_flags |= SPICOMMON_BUSFLAG_MOSI;
+    bus_config.mosi_io_num = (gpio_num_t) _opts.spi_mosi;
+  }
+  else {
+    bus_config.mosi_io_num = (gpio_num_t) -1;
+  }
+  if (255 != _opts.spi_miso) {
+    b_flags |= SPICOMMON_BUSFLAG_MISO;
+    bus_config.miso_io_num = (gpio_num_t) _opts.spi_miso;
+  }
+  else {
+    bus_config.miso_io_num = (gpio_num_t) -1;
+  }
+	bus_config.quadwp_io_num   = -1;      // Not used
+	bus_config.quadhd_io_num   = -1;      // Not used
+	bus_config.max_transfer_sz = 0;       // 0 means use default.
+  bus_config.flags           = b_flags;
+
+	esp_err_t errRc = spi_bus_initialize(
+		(spi_host_device_t) _opts.idx,
+		&bus_config,
+		1 // DMA Channel
+	);
+
+  if (errRc != ESP_OK) {
+		ESP_LOGE(LOG_TAG, "spi_bus_initialize(): rc=%d", errRc);
+    return -1;
+	}
+
+	// spi_device_interface_config_t dev_config;
+	// dev_config.address_bits     = 0;
+	// dev_config.command_bits     = 0;
+	// dev_config.dummy_bits       = 0;
+	// dev_config.mode             = 0;
+	// dev_config.duty_cycle_pos   = 0;
+	// dev_config.cs_ena_posttrans = 0;
+	// dev_config.cs_ena_pretrans  = 0;
+	// dev_config.clock_speed_hz   = 10000000;
+	// dev_config.spics_io_num     = (gpio_num_t) _opts.spi_cs;
+	// dev_config.flags            = SPI_DEVICE_NO_DUMMY;
+	// dev_config.queue_size       = 1;
+	// dev_config.pre_cb           = NULL;
+	// dev_config.post_cb          = NULL;
+	// ESP_LOGI(LOG_TAG, "... Adding device bus.");
+	// errRc = spi_bus_add_device((spi_host_device_t) 1, &dev_config, &spi2_handle);
+	// if (errRc != ESP_OK) {
+	// 	ESP_LOGE(LOG_TAG, "spi_bus_add_device(): rc=%d", errRc);
+  //   return -2;
+	// }
+  return 0;
+}
+
+int8_t SPIAdapter::bus_deinit() {
+  return 0;
+}
+
+
 
 /*******************************************************************************
 * ######## ##     ## ######## ##    ## ########  ######
@@ -44,9 +164,7 @@ limitations under the License.
 int8_t SPIAdapter::attached() {
   if (EventReceiver::attached()) {
     // We should init the SPI library...
-    //SPI.begin();
-    //SPI.setDataMode(SPI_MODE0);
-    //SPI.setClockDivider(SPI_CLOCK_DIV32);
+    bus_init();
     return 1;
   }
   return 0;

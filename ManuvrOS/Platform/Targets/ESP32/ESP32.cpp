@@ -360,7 +360,7 @@ int8_t gpioDefine(uint8_t pin, GPIOMode mode) {
   io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
   io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
   io_conf.intr_type    = (gpio_int_type_t) GPIO_PIN_INTR_DISABLE;
-  io_conf.pin_bit_mask = (1 << pin);
+  io_conf.pin_bit_mask = (uint64_t) ((uint64_t)1 << pin);
 
   // Handle the pull-up/down stuff first.
   switch (mode) {

@@ -24,6 +24,9 @@ This is the platform-invariant implementation of a peripheral wraspper
 
 #include <Platform/Peripherals/SPI/SPIAdapter.h>
 
+#if defined(CONFIG_MANUVR_SSD1331)
+
+
 
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
@@ -38,8 +41,7 @@ This is the platform-invariant implementation of a peripheral wraspper
 /* Used to minimize software burden incurred by timeout support. */
 volatile static bool timeout_punch = false;
 
-SPIBusOp  SPIAdapter::preallocated_bus_jobs[CONFIG_SPIADAPTER_PREALLOC_COUNT];
-//template<> PriorityQueue<SPIBusOp*> BusAdapter<SPIBusOp>::preallocated;
+SPIBusOp SPIAdapter::preallocated_bus_jobs[CONFIG_SPIADAPTER_PREALLOC_COUNT];
 
 const MessageTypeDef spi_message_defs[] = {
   {  MANUVR_MSG_SPI_QUEUE_READY,    0x0000,  "SPI_Q_RDY",  ManuvrMsg::MSG_ARGS_NONE }, //
@@ -59,7 +61,7 @@ const MessageTypeDef spi_message_defs[] = {
 /**
 * Constructor. Also populates the global pointer reference.
 */
-SPIAdapter::SPIAdapter(uint8_t idx, uint8_t d_in, uint8_t d_out, uint8_t clk) : EventReceiver("SPIAdapter"), BusAdapter(CONFIG_SPIADAPTER_PREALLOC_COUNT) {
+SPIAdapter::SPIAdapter(const SPIAdapterOpts* o) : EventReceiver("SPIAdapter"), BusAdapter(CONFIG_SPIADAPTER_PREALLOC_COUNT), _opts(o) {
   ManuvrMsg::registerMessages(spi_message_defs, sizeof(spi_message_defs) / sizeof(MessageTypeDef));
 
   // Build some pre-formed Events.
@@ -131,6 +133,9 @@ int8_t SPIAdapter::io_op_callahead(BusOp* _op) {
 
 /**
 * When a bus operation completes, it is passed back to its issuing class.
+* This is typically not called except as the fallback case for transfers that
+*   are either misconfigured, or that explicitly *don't want* a callback event
+*   for some reason.
 *
 * @param  _op  The bus operation that was completed.
 * @return 0 on success, or appropriate error code.
@@ -213,13 +218,14 @@ int8_t SPIAdapter::queue_io_job(BusOp* _op) {
 *                             |              a BusOp as the template param.
 *******************************************************************************/
 
-int8_t SPIAdapter::bus_init() {
-  return 0;
-}
-
-int8_t SPIAdapter::bus_deinit() {
-  return 0;
-}
+// These are platform-specific. They should be supplied in another file.
+// int8_t SPIAdapter::bus_init() {
+//   return 0;
+// }
+//
+// int8_t SPIAdapter::bus_deinit() {
+//   return 0;
+// }
 
 
 /**
@@ -310,7 +316,7 @@ int8_t SPIAdapter::advance_work_queue() {
 *
 * @param  dev  The device pointer that owns jobs we wish purged.
 */
-void SPIAdapter::purge_queued_work_by_dev(BusOpCallback *dev) {
+void SPIAdapter::purge_queued_work_by_dev(BusOpCallback* dev) {
   if (NULL == dev) return;
 
   if (work_queue.size() > 0) {
@@ -345,14 +351,14 @@ void SPIAdapter::purge_queued_work() {
   }
 
   // Check this last to head off any silliness with bus operations colliding with us.
-  purge_stalled_job();
+  purge_current_job();
 }
 
 
 /**
 * Purges a stalled job from the active slot.
 */
-void SPIAdapter::purge_stalled_job() {
+void SPIAdapter::purge_current_job() {
   if (current_job) {
     current_job->abort(XferFault::QUEUE_FLUSH);
     reclaim_queue_item(current_job);
@@ -467,7 +473,6 @@ int8_t SPIAdapter::service_callback_queue() {
 * These are overrides from EventReceiver interface...
 *******************************************************************************/
 
-
 /**
 * If we find ourselves in this fxn, it means an event that this class built (the argument)
 *   has been serviced and we are now getting the chance to see the results. The argument
@@ -569,3 +574,6 @@ void SPIAdapter::printDebug(StringBuilder *output) {
 //  flushLocalLog();
 //}
 //#endif  // MANUVR_CONSOLE_SUPPORT
+
+
+#endif  // CONFIG_MANUVR_SSD1331
