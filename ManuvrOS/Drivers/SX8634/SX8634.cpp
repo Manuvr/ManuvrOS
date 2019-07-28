@@ -41,12 +41,30 @@ const char* SX8634::getModeStr(SX8634OpMode x) {
 *   executes under an ISR. Keep it brief...
 *******************************************************************************/
 
+
+
 /*
 * This is an ISR.
 */
 void sx8634_isr() {
-  //((SX8634*) INSTANCE)->isr_fired = true;
+  ((SX8634*)INSTANCE)->read_irq_registers();
 }
+
+
+int8_t SX8634::read_irq_registers() {
+  // Read all the IRQ-related registers in one shot.
+  I2CBusOp* nu = _bus->new_op(BusOpcode::RX, this);
+  if (nullptr != nu) {
+    nu->dev_addr = _opts.i2c_addr;
+    nu->sub_addr = 0x00;
+    nu->buf      = _irq_buffer;
+    nu->buf_len  = 10;
+    _bus->queue_io_job(nu);
+    return 0;
+  }
+  return -1;
+}
+
 
 
 /*******************************************************************************
@@ -64,7 +82,8 @@ void sx8634_isr() {
 SX8634::SX8634(const SX8634Opts* o) : I2CDevice(o->i2c_addr),  _opts{o} {
   INSTANCE = this;
   _clear_registers();
-  memset(_io_buffer, 0, 128);
+  memset(_io_buffer,  0, 128);
+  memset(_irq_buffer, 0, 10);
   _ll_pin_init();
 }
 
@@ -89,12 +108,13 @@ int8_t SX8634::io_op_callahead(BusOp* _op) {
 
 int8_t SX8634::io_op_callback(BusOp* _op) {
   I2CBusOp* completed = (I2CBusOp*) _op;
+  StringBuilder output;
+
   switch (completed->get_opcode()) {
     case BusOpcode::TX_CMD:
       _sx8634_set_flag(SX8634_FLAG_DEV_FOUND, (!completed->hasFault()));
       if (!completed->hasFault()) {
         Kernel::log("SX8634 found\n");
-        _read_full_spm();
       }
       else {
         Kernel::log("SX8634 not found\n");
@@ -102,16 +122,75 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
       break;
 
     case BusOpcode::TX:
+      switch (completed->sub_addr) {
+        case SX8634_REG_COMP_OP_MODE:
+          _sx8634_set_flag(SX8634_FLAG_COMPENSATING, (*(completed->buf) & 0x04));
+          break;
+        default:
+          break;
+      }
       break;
 
     case BusOpcode::RX:
-      //switch () {
-      {
-        StringBuilder output;
-        output.concat("-- io_buf:\n----------\n");
-        StringBuilder::printBuffer(&output, completed->buf, completed->buf_len, "\t");
-        //printDebug(&output);
-        Kernel::log(&output);
+      if (completed->buf == _irq_buffer) {
+        // We're going to process an IRQ.
+        /*  0x00:  IRQ_SRC
+            0x01:  CapStatMSB
+            0x02:  CapStatLSB
+            0x03:  SliderPosMSB
+            0x04:  SliderPosLSB
+            0x05:  <reserved>
+            0x06:  <reserved>
+            0x07:  GPIStat
+            0x08:  SPMStat
+            0x09:  CompOpMode      */
+        if (0x01 & _irq_buffer[0]) {  // Operating mode interrupt
+          SX8634OpMode current = (SX8634OpMode) (_irq_buffer[9] & 0x04);
+          _sx8634_set_flag(SX8634_FLAG_COMPENSATING, (_irq_buffer[9] & 0x04));
+          if (current != _mode) {
+            output.concatf("-- SX8634 is now in mode %s\n", getModeStr(current));
+            _mode = current;
+          }
+        }
+        if (0x02 & _irq_buffer[0]) {  // Compensation completed
+          _compensations++;
+        }
+        if (0x04 & _irq_buffer[0]) {  // Button interrupt
+          uint16_t current = (((uint16_t) (_irq_buffer[1] & 0x0F)) << 8) | ((uint16_t) _irq_buffer[2]);
+          if (current != _buttons) {
+            // TODO: Bitshift the button values into discrete messages.
+            output.concatf("-- Buttons: %u\n", current);
+            _buttons = current;
+          }
+        }
+        if (0x08 & _irq_buffer[0]) {  // Slider interrupt
+          _sx8634_set_flag(SX8634_FLAG_SLIDER_TOUCHED,   (_irq_buffer[1] & 0x10));
+          _sx8634_set_flag(SX8634_FLAG_SLIDER_MOVE_DOWN, (_irq_buffer[1] & 0x20));
+          _sx8634_set_flag(SX8634_FLAG_SLIDER_MOVE_UP,   (_irq_buffer[1] & 0x40));
+          uint16_t current = (((uint16_t) _irq_buffer[3]) << 8) | ((uint16_t) _irq_buffer[4]);
+          if (current != _slider_val) {
+            // TODO: Send slider value.
+            output.concatf("-- Slider: %u\n", current);
+            _slider_val = current;
+          }
+        }
+        if (0x10 & _irq_buffer[0]) {  // GPI interrupt
+          uint8_t current = _irq_buffer[7];
+          if (current != _gpi_levels) {
+            // TODO: Bitshift the GPI values into discrete messages.
+            _gpi_levels = current;
+          }
+        }
+        if (0x20 & _irq_buffer[0]) {  // SPM stat interrupt
+          _sx8634_set_flag(SX8634_FLAG_CONF_IS_NVM, (_irq_buffer[8] & 0x08));
+          _nvm_burns = (_irq_buffer[8] & 0x07);
+        }
+        if (0x40 & _irq_buffer[0]) {  // NVM burn interrupt
+          // Burn appears to have completed. Enter the verify phase.
+          _sx8634_clear_flag(SX8634_FLAG_SM_MASK);
+          _sx8634_set_flag(SX8634_FLAG_SM_NVM_VERIFY);
+          output.concat("-- SX8634 NVM burn completed.\n");
+        }
       }
       break;
 
@@ -119,6 +198,7 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
       break;
   }
 
+  if (output.length() > 0) Kernel::log(&output);
   return 0;
 }
 
@@ -132,36 +212,76 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
 void SX8634::printDebug(StringBuilder* output) {
   output->concatf("Touch sensor (SX8634)\t%s%s-- Found:   %c\n-- Shadow:\n----------\n", getModeStr(operationalMode()), PRINT_DIVIDER_1_STR, (deviceFound() ? 'y':'n'));
   StringBuilder::printBuffer(output, _registers, 128, "\t");
-  output->concat("-- io_buf:\n----------\n");
-  StringBuilder::printBuffer(output, _io_buffer, 128, "\t");
+
+  output->concatf("\tConf source:    %s\n", (_sx8634_flag(SX8634_FLAG_CONF_IS_NVM) ? "NVM" : "QSM"));
+  output->concatf("\tCompensations:  %u\n", _compensations);
+  output->concatf("\tNVM burns:      %u\n", _nvm_burns);
+
   I2CDevice::printDebug(output);
 }
 
 
 
 /*******************************************************************************
-* ___     _       _                      These members are mandatory overrides
-*  |   / / \ o   | \  _     o  _  _      for implementing I/O callbacks. They
-* _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
+* Class-specific functions
 *******************************************************************************/
 
 /*
 * Reset the chip. By hardware pin (if possible) or by software command.
+* TODO: Gernealize delay.
 */
 int8_t SX8634::reset() {
+  int8_t ret = -1;
+
+  if (_opts.haveIRQPin()) {
+    unsetPinIRQ(_opts.irq_pin);
+  }
+
   if (_opts.haveResetPin()) {
-    // TODO: Gernealize delay.
     setPin(_opts.reset_pin, false);
     vTaskDelay(10 / portTICK_PERIOD_MS);
     setPin(_opts.reset_pin, true);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    return 0;
   }
   else {
-    // TODO: Software reset
+    *(_io_buffer + 0) = 0xDE;
+    *(_io_buffer + 1) = 0x00;
+    I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
+    if (nullptr != nu) {
+      nu->dev_addr = _opts.i2c_addr;
+      nu->sub_addr = SX8634_REG_SOFT_RESET;
+      nu->buf      = (_io_buffer + 0);
+      nu->buf_len  = 1;
+      _bus->queue_io_job(nu);
+
+      nu = _bus->new_op(BusOpcode::TX, this);
+      if (nullptr != nu) {
+        nu->dev_addr = _opts.i2c_addr;
+        nu->sub_addr = SX8634_REG_SOFT_RESET;
+        nu->buf      = (_io_buffer + 1);
+        nu->buf_len  = 1;
+        _bus->queue_io_job(nu);
+        return 0;
+      }
+    }
   }
-  return -1;
+
+  if (_opts.haveIRQPin()) {
+    uint8_t tries = 3;
+    while ((--tries >= 0) && (0 == readPin(_opts.irq_pin))) {
+      Kernel::log("Waiting for SX8634...\n");
+      vTaskDelay(200 / portTICK_PERIOD_MS);
+    }
+    setPinFxn(_opts.irq_pin, FALLING, sx8634_isr);
+    ret = (0 >= tries) ? 0 : -2;
+  }
+  else {
+    vTaskDelay(300 / portTICK_PERIOD_MS);
+    ret = 0;
+  }
+
+  return ret;
 }
+
 
 
 int8_t SX8634::init() {
@@ -172,14 +292,20 @@ int8_t SX8634::init() {
 }
 
 
-bool SX8634::buttonPressed(uint8_t) {
-  return false;
+int8_t SX8634::setMode(SX8634OpMode m) {
+  I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
+  if (nu) {
+    *(_io_buffer + SX8634_REG_COMP_OP_MODE) = (uint8_t) m;
+    nu->dev_addr = _dev_addr;
+    nu->sub_addr = SX8634_REG_COMP_OP_MODE;
+    nu->buf      = (_io_buffer + SX8634_REG_COMP_OP_MODE);
+    nu->buf_len  = 1;
+    _bus->queue_io_job(nu);
+    return 0;
+  }
+  return -1;
 }
 
-
-bool SX8634::buttonReleased(uint8_t) {
-  return false;
-}
 
 
 
@@ -211,13 +337,45 @@ int8_t SX8634::_read_full_spm() {
   return ret;
 }
 
+int8_t SX8634::_write_full_spm() {
+  int8_t ret = -1;
+  return ret;
+}
+
+
+int8_t SX8634::_start_compensation() {
+  I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
+  if (nu) {
+    *(_io_buffer + SX8634_REG_COMP_OP_MODE) = 0x04;
+    nu->dev_addr = _dev_addr;
+    nu->sub_addr = SX8634_REG_COMP_OP_MODE;
+    nu->buf      = (_io_buffer + SX8634_REG_COMP_OP_MODE);
+    nu->buf_len  = 1;
+    _bus->queue_io_job(nu);
+    return 0;
+  }
+  return -1;
+}
+
+
+int8_t SX8634::_open_spm_access() {
+  int8_t ret = -1;
+  return ret;
+}
+
+
+int8_t SX8634::_close_spm_access() {
+  int8_t ret = -1;
+  return ret;
+}
+
 
 int8_t SX8634::_ll_pin_init() {
   if (_opts.haveResetPin()) {
     gpioDefine(_opts.reset_pin, GPIOMode::OUTPUT);
   }
   if (_opts.haveIRQPin()) {
-    gpioDefine(_opts.irq_pin, GPIOMode::INPUT);   // TODO: Might use pullup?
+    gpioDefine(_opts.irq_pin, GPIOMode::INPUT_PULLUP);
   }
   return 0;  // Both pins are technically optional.
 }
@@ -239,6 +397,7 @@ int8_t SX8634::_read_block8(uint8_t idx) {
 
 /*
 * Pings the device.
+* TODO: Promote this into I2CDevice driver.
 */
 int8_t SX8634::_ping_device() {
   I2CBusOp* nu = _bus->new_op(BusOpcode::TX_CMD, this);

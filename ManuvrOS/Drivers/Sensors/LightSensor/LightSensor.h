@@ -23,12 +23,13 @@ This is a quick-and-dirty class to support reading a CdS cell from an analog
   modules in the system.
 */
 
-#include <Drivers/Sensors/SensorWrapper.h>
-#include <EventReceiver.h>
 
 
 #ifndef __ANALOG_LIGHT_SENSOR_H
 #define __ANALOG_LIGHT_SENSOR_H
+
+#include <Drivers/Sensors/SensorWrapper.h>
+#include <EventReceiver.h>
 
 
 #define ALS_FLAG_RANGE_INVERTED      1
@@ -80,15 +81,17 @@ class LightSensorOpts {
 
 
 
-class LightSensor : public EventReceiver {
+class LightSensor : public SensorWrapper {
   public:
     LightSensor(const LightSensorOpts*);
     virtual ~LightSensor();
 
-    /* Overrides from EventReceiver */
+    /* Overrides from SensorWrapper */
+    SensorError init();
+    SensorError readSensor();
+    SensorError setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
+    SensorError getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
     void printDebug(StringBuilder*);
-    int8_t notify(ManuvrMsg*);
-    int8_t callback_proc(ManuvrMsg*);
 
 
   protected:
