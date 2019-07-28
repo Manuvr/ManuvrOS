@@ -22,7 +22,7 @@
 #define SX8634_REG_GPP_INTENSITY            0x0C  //
 #define SX8634_REG_SPM_CONFIG               0x0D  //
 #define SX8634_REG_SPM_BASE_ADDR            0x0E  //
-#define SX8634_REG_RESERVED                 0x0F  //
+#define SX8634_REG_RESERVED_2               0x0F  //
 #define SX8634_REG_SPM_KEY_MSB              0xAC  //
 #define SX8634_REG_SPM_KEY_LSB              0xAD  //
 #define SX8634_REG_SOFT_RESET               0xB1  //
@@ -175,7 +175,8 @@
 #define SX8634_FLAG_SLIDER_TOUCHED   0x0080
 #define SX8634_FLAG_SLIDER_MOVE_DOWN 0x0100
 #define SX8634_FLAG_SLIDER_MOVE_UP   0x0200
-#define SX8634_FLAG_SPM_OPEN         0x0400
+#define SX8634_FLAG_SPM_WRITABLE     0x0400
+#define SX8634_FLAG_SPM_OPEN         0x0800
 
 
 #define SX8634_DEFAULT_I2C_ADDR      0x2B
@@ -197,10 +198,12 @@ enum class SX8634GPIOMode : uint8_t {
 
 class SX8634GPIOConf {
   public:
-    SX8634GPIOConf(SX8634GPIOMode mode, uint8_t boot_val);
+    // GPIOMode::ANALOG_OUT will be construed as the PWM mode.
+    SX8634GPIOConf(GPIOMode mode, uint8_t boot_val);
 
   private:
-    uint8_t _gpio_flags;
+    GPIOMode _mode;
+    uint8_t  _default_val;
 };
 
 
@@ -277,25 +280,30 @@ class SX8634 : public I2CDevice {
     //
     int8_t  setGPIOState(uint8_t pin, uint8_t value);
     uint8_t getGPIOState(uint8_t pin);
+    int8_t  setPWMValue(uint8_t pin, uint8_t value);
+    uint8_t getPWMValue(uint8_t pin);
 
     int8_t read_irq_registers();
     int8_t setMode(SX8634OpMode);  //
 
     #if defined(CONFIG_SX8634_PROVISIONING)
       int8_t  burn_nvm();
-
+      int8_t  _write_nvm_keys();
     #endif  // CONFIG_SX8634_PROVISIONING
 
 
   private:
     const SX8634Opts _opts;
-    SX8634OpMode     _mode;
-    uint16_t _flags = 0;
-    uint8_t  _compensations = 0;
-    uint8_t  _nvm_burns     = 0;
-    uint8_t  _gpi_levels    = 0;
+    uint16_t _flags         = 0;
     uint16_t _slider_val    = 0;
     uint16_t _buttons       = 0;
+    SX8634OpMode     _mode  = SX8634OpMode::RESERVED;
+    uint8_t  _compensations = 0;
+    uint8_t  _nvm_burns     = 0;
+    uint8_t  _gpio_assign   = 0;
+    uint8_t  _gpi_levels    = 0;
+    uint8_t  _gpo_levels    = 0;
+    uint8_t  _pwm_levels[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     uint8_t  _registers[128];    // Register shadows
     uint8_t  _io_buffer[128];    // I/O operation buffer
@@ -312,6 +320,7 @@ class SX8634 : public I2CDevice {
     };
 
 
+    int8_t  _wait_for_reset();      // Will block until reset disasserts or times out.
     int8_t  _clear_registers();     // Wipe our shadows.
     int8_t  _start_compensation();  //
     int8_t  _open_spm_access();     //
