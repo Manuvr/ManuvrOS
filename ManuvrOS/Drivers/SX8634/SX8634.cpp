@@ -20,6 +20,12 @@ Author: J. Ian Lindsay
 
 volatile static SX8634* INSTANCE = nullptr;
 
+static const uint8_t _reserved_spm_offsets[31] = {
+  0x00, 0x01, 0x02, 0x03, 0x08, 0x20, 0x2A, 0x31, 0x32, 0x55, 0x6A, 0x6B, 0x6C,
+  0x6D, 0x6E, 0x6F, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A,
+  0x7B, 0x7C, 0x7D, 0x7E, 0x7F
+};
+
 
 const char* SX8634::getModeStr(SX8634OpMode x) {
   switch (x) {
@@ -120,11 +126,6 @@ int8_t SX8634::io_op_callahead(BusOp* _op) {
 }
 
 
-int8_t SX8634::_proc_irq_values() {
-  return 0;
-}
-
-
 int8_t SX8634::io_op_callback(BusOp* _op) {
   I2CBusOp* completed = (I2CBusOp*) _op;
   StringBuilder output;
@@ -182,7 +183,8 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
         case SX8634_REG_SOFT_RESET:
           switch (*(completed->buf)) {
             case 0x00:
-              if (0 == _wait_for_reset()) {
+              if (0 == _wait_for_reset(300)) {
+                _sx8634_clear_flag(SX8634_FLAG_IRQ_INHIBIT);
                 _ping_device();
               }
               break;
@@ -199,9 +201,11 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
             int spm_base_addr = _get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR);
             if (spm_base_addr <= 0x78) {
               // We're writing our shadow of the SPM. Write the next base address.
+              _wait_for_reset(30);
               _write_register(SX8634_REG_SPM_BASE_ADDR, spm_base_addr + 8);
             }
             else {
+              _sx8634_clear_flag(SX8634_FLAG_SPM_DIRTY);
               _close_spm_access();
               _set_fsm_position(SX8634_FSM::READY);
             }
@@ -225,14 +229,24 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
         case SX8634_REG_IRQ_SRC:
           if (_sx8634_flag(SX8634_FLAG_SPM_OPEN)) {
             int spm_base_addr = _get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR);
+            _sx8634_set_flag(SX8634_FLAG_SPM_SHADOWED);
             if (spm_base_addr <= 0x78) {
               // We're shadowing the SPM. Write the next base address.
+              _wait_for_reset(30);
               _write_register(SX8634_REG_SPM_BASE_ADDR, spm_base_addr + 8);
             }
             else {
-              _close_spm_access();
-              _sx8634_set_flag(SX8634_FLAG_SPM_SHADOWED);
-              _set_fsm_position(SX8634_FSM::READY);
+              if (1 == _compare_config()) {
+                // Since we apparently want to make changes to the SPM, we enter
+                //   that state and start the write operation.
+                _wait_for_reset(30);
+                _write_full_spm();
+              }
+              else {
+                // If we won't be writing SPM config
+                _close_spm_access();
+                _set_fsm_position(SX8634_FSM::READY);
+              }
             }
           }
           else {
@@ -349,9 +363,11 @@ void SX8634::printDebug(StringBuilder* output) {
 
   output->concatf("\tFSM Position:   %s\n", getFSMStr(_fsm));
   output->concatf("\tConf source:    %s\n", (_sx8634_flag(SX8634_FLAG_CONF_IS_NVM) ? "NVM" : "QSM"));
+  output->concatf("\tIRQ Inhibit:    %c\n", (_sx8634_flag(SX8634_FLAG_IRQ_INHIBIT) ? 'y': 'n'));
   output->concatf("\tSPM shadowed:   %c\n", (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED) ? 'y': 'n'));
   if (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED)) {
     StringBuilder::printBuffer(output, _spm_shadow, sizeof(_spm_shadow), "\t  ");
+    output->concatf("\tSPM Dirty:      %c\n", (_sx8634_flag(SX8634_FLAG_SPM_DIRTY) ? 'y': 'n'));
   }
   output->concatf("\tSPM open:       %c\n", (_sx8634_flag(SX8634_FLAG_SPM_OPEN) ? 'y': 'n'));
   if (_sx8634_flag(SX8634_FLAG_SPM_OPEN)) {
@@ -459,8 +475,9 @@ int8_t SX8634::reset() {
     setPin(_opts.reset_pin, false);
     vTaskDelay(10 / portTICK_PERIOD_MS);
     setPin(_opts.reset_pin, true);
-    ret = _wait_for_reset();
+    ret = _wait_for_reset(300);
     if (0 == ret) {
+      _sx8634_clear_flag(SX8634_FLAG_IRQ_INHIBIT);
       ret = _ping_device();
     }
     return ret;
@@ -554,13 +571,17 @@ int8_t SX8634::_write_full_spm() {
 */
 int8_t SX8634::_open_spm_access_r() {
   _sx8634_set_flag(SX8634_FLAG_IRQ_INHIBIT);
-  setMode(SX8634OpMode::SLEEP);
+  if (SX8634OpMode::SLEEP != _mode) {
+    setMode(SX8634OpMode::SLEEP);
+  }
   return _write_register(SX8634_REG_SPM_CONFIG, 0x18);
 }
 
 int8_t SX8634::_open_spm_access_w() {
   _sx8634_set_flag(SX8634_FLAG_IRQ_INHIBIT);
-  setMode(SX8634OpMode::SLEEP);
+  if (SX8634OpMode::SLEEP != _mode) {
+    setMode(SX8634OpMode::SLEEP);
+  }
   return _write_register(SX8634_REG_SPM_CONFIG, 0x10);
 }
 
@@ -610,13 +631,50 @@ int8_t SX8634::_write_block8(uint8_t idx) {
   return -1;
 }
 
+/*
+* Compares the existing SPM shadow against the desired config. Then copies the
+*   differences into the SPM shadow in preparation for write.
+* Returns...
+*   1 on Valid and different. Pushes state machine into SPM_WRITE.
+*   0 on equality
+*   -1 on invalid provided
+*   -2 SPM not shadowed
+*   -3 no desired config to compare against
+*/
+int8_t SX8634::_compare_config() {
+  int8_t ret = -3;
+  if (nullptr != _opts.conf) {
+    ret++;
+    if (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED)) {
+      ret++;
+      uint8_t rsvd_idx  = 0;
+      uint8_t given_idx = 0;
+      for (uint8_t i = 0; i < sizeof(_spm_shadow); i++) {
+        if (i == _reserved_spm_offsets[rsvd_idx]) {
+          // Skip the comparison. Increment the reserved pointer.
+          rsvd_idx++;
+        }
+        else {
+          // This is a comparable config byte.
+          if (_spm_shadow[i] != *(_opts.conf + given_idx)) {
+            _sx8634_set_flag(SX8634_FLAG_SPM_DIRTY);
+            _spm_shadow[i] = *(_opts.conf + given_idx);
+          }
+          given_idx++;
+        }
+      }
+      ret = (_sx8634_flag(SX8634_FLAG_SPM_DIRTY)) ? 1 : 0;
+    }
+  }
+  return ret;
+}
 
 
 /*******************************************************************************
 * Low-level stuff
 *******************************************************************************/
 
-int8_t SX8634::_wait_for_reset() {
+int8_t SX8634::_wait_for_reset(uint timeout_ms) {
   int8_t ret = -1;
   //Kernel::log("Waiting for SX8634...\n");
   if (_opts.haveIRQPin()) {
@@ -625,12 +683,11 @@ int8_t SX8634::_wait_for_reset() {
       vTaskDelay(10 / portTICK_PERIOD_MS);
     }
     if (0 < tries) {
-      _sx8634_clear_flag(SX8634_FLAG_IRQ_INHIBIT);
       ret = 0;
     }
   }
   else {
-    vTaskDelay(300 / portTICK_PERIOD_MS);
+    vTaskDelay(timeout_ms / portTICK_PERIOD_MS);
     ret = 0;
   }
   return ret;

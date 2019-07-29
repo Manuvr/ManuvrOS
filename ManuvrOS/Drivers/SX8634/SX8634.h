@@ -161,6 +161,7 @@
 #define SX8634_FLAG_PING_IN_FLIGHT        0x0001
 #define SX8634_FLAG_DEV_FOUND             0x0002
 #define SX8634_FLAG_IRQ_INHIBIT           0x0004
+#define SX8634_FLAG_SPM_DIRTY             0x0008
 #define SX8634_FLAG_SPM_SHADOWED          0x0010
 #define SX8634_FLAG_COMPENSATING          0x0020
 #define SX8634_FLAG_CONF_IS_NVM           0x0040
@@ -218,23 +219,43 @@ class SX8634GPIOConf {
 */
 class SX8634Opts {
   public:
-    const uint8_t i2c_addr;
-    const uint8_t reset_pin;
-    const uint8_t irq_pin;
+    const uint8_t  i2c_addr;
+    const uint8_t  reset_pin;
+    const uint8_t  irq_pin;
+    const uint8_t* conf;
 
     /** Copy constructor. */
     SX8634Opts(const SX8634Opts* o) :
       i2c_addr(o->i2c_addr),
       reset_pin(o->reset_pin),
       irq_pin(o->irq_pin),
-      _flags(o->_flags) {};
+      conf(o->conf) {};
 
     /**
     * Constructor.
     *
+    * @param address
     * @param reset pin
     * @param irq pin
     * @param Initial flags
+    */
+    SX8634Opts(
+      uint8_t addr,
+      uint8_t reset,
+      uint8_t irq,
+      const uint8_t* cdata
+    ) :
+      i2c_addr(addr),
+      reset_pin(reset),
+      irq_pin(irq),
+      conf(cdata) {};
+
+    /**
+    * Constructor that accepts existing chip configuration.
+    *
+    * @param address
+    * @param reset pin
+    * @param irq pin
     */
     SX8634Opts(
       uint8_t addr,
@@ -244,13 +265,13 @@ class SX8634Opts {
       i2c_addr(addr),
       reset_pin(reset),
       irq_pin(irq),
-      _flags(0) {};
+      conf(nullptr) {};
 
     bool haveResetPin() const {   return (255 != reset_pin);   };
     bool haveIRQPin() const {     return (255 != irq_pin);     };
 
+
   private:
-    const uint8_t _flags;
 };
 
 
@@ -324,7 +345,6 @@ class SX8634 : public I2CDevice {
       else    _flags &= ~_flag;
     };
 
-    int8_t   _proc_irq_values();
     int8_t   _get_shadow_reg_mem_addr(uint8_t addr);
     uint8_t  _get_shadow_reg_val(uint8_t addr);
     void     _set_shadow_reg_val(uint8_t addr, uint8_t val);
@@ -339,12 +359,13 @@ class SX8634 : public I2CDevice {
     int8_t  _close_spm_access();        //
     int8_t  _read_block8(uint8_t idx);  // Read 8 bytes from the SPM.
     int8_t  _write_block8(uint8_t idx); // Write 8 bytes to the SPM.
+    int8_t  _compare_config();
 
-    int8_t  _wait_for_reset();      // Will block until reset disasserts or times out.
-    int8_t  _clear_registers();     // Wipe our shadows.
-    int8_t  _start_compensation();  // Tell the sensor to run a compensation cycle.
-    int8_t  _ll_pin_init();         // Platform GPIO config
-    int8_t  _ping_device();         // Pings the device.
+    int8_t  _wait_for_reset(uint);    // Will block until reset disasserts or times out.
+    int8_t  _clear_registers();       // Wipe our shadows.
+    int8_t  _start_compensation();    // Tell the sensor to run a compensation cycle.
+    int8_t  _ll_pin_init();           // Platform GPIO config
+    int8_t  _ping_device();           // Pings the device.
 
     inline void       _set_fsm_position(SX8634_FSM x) {  _fsm = x;        };
     inline SX8634_FSM _get_fsm_position() {              return _fsm;     };
