@@ -30,6 +30,19 @@ const char* SX8634::getModeStr(SX8634OpMode x) {
   }
 }
 
+const char* SX8634::getFSMStr(SX8634_FSM x) {
+  switch (x) {
+    case SX8634_FSM::NO_INIT:    return "NO_INIT";
+    case SX8634_FSM::RESETTING:  return "RESETTING";
+    case SX8634_FSM::SPM_READ:   return "SPM_READ";
+    case SX8634_FSM::SPM_WRITE:  return "SPM_WRITE";
+    case SX8634_FSM::READY:      return "READY";
+    case SX8634_FSM::NVM_BURN:   return "NVM_BURN";
+    case SX8634_FSM::NVM_VERIFY: return "NVM_VERIFY";
+    default:                     return "UNDEF";
+  }
+}
+
 
 /*******************************************************************************
 * .-. .----..----.    .-.     .--.  .-. .-..----.
@@ -52,15 +65,18 @@ void sx8634_isr() {
 
 
 int8_t SX8634::read_irq_registers() {
-  // Read all the IRQ-related registers in one shot.
-  I2CBusOp* nu = _bus->new_op(BusOpcode::RX, this);
-  if (nullptr != nu) {
-    nu->dev_addr = _opts.i2c_addr;
-    nu->sub_addr = 0x00;
-    nu->buf      = _irq_buffer;
-    nu->buf_len  = 10;
-    _bus->queue_io_job(nu);
-    return 0;
+  if (!_sx8634_flag(SX8634_FLAG_IRQ_INHIBIT)) {
+    // If IRQ service is not inhibited, read all the IRQ-related
+    //   registers in one shot.
+    I2CBusOp* nu = _bus->new_op(BusOpcode::RX, this);
+    if (nullptr != nu) {
+      nu->dev_addr = _opts.i2c_addr;
+      nu->sub_addr = 0x00;
+      nu->buf      = _registers;
+      nu->buf_len  = 10;
+      _bus->queue_io_job(nu);
+      return 0;
+    }
   }
   return -1;
 }
@@ -82,8 +98,6 @@ int8_t SX8634::read_irq_registers() {
 SX8634::SX8634(const SX8634Opts* o) : I2CDevice(o->i2c_addr), _opts{o} {
   INSTANCE = this;
   _clear_registers();
-  memset(_io_buffer,  0, 128);
-  memset(_irq_buffer, 0, 10);
   _ll_pin_init();
 }
 
@@ -106,15 +120,22 @@ int8_t SX8634::io_op_callahead(BusOp* _op) {
 }
 
 
+int8_t SX8634::_proc_irq_values() {
+  return 0;
+}
+
+
 int8_t SX8634::io_op_callback(BusOp* _op) {
   I2CBusOp* completed = (I2CBusOp*) _op;
   StringBuilder output;
 
   switch (completed->get_opcode()) {
     case BusOpcode::TX_CMD:
+      _sx8634_clear_flag(SX8634_FLAG_PING_IN_FLIGHT);
       _sx8634_set_flag(SX8634_FLAG_DEV_FOUND, (!completed->hasFault()));
       if (!completed->hasFault()) {
         Kernel::log("SX8634 found\n");
+        _read_full_spm();
       }
       else {
         Kernel::log("SX8634 not found\n");
@@ -123,24 +144,11 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
 
     case BusOpcode::TX:
       switch (completed->sub_addr) {
-        case SX8634_REG_IRQ_SRC:
-        case SX8634_REG_CAP_STAT_MSB:
-        case SX8634_REG_CAP_STAT_LSB:
-        case SX8634_REG_SLIDER_POS_MSB:
-        case SX8634_REG_SLIDER_POS_LSB:
-        case SX8634_REG_RESERVED_0:
-        case SX8634_REG_RESERVED_1:
-        case SX8634_REG_GPI_STAT:
-        case SX8634_REG_SPM_STAT:
-          // TODO: remove irq_buffer check and migrate.
-          break;
-
         case SX8634_REG_COMP_OP_MODE:
           _sx8634_set_flag(SX8634_FLAG_COMPENSATING, (*(completed->buf) & 0x04));
           break;
         case SX8634_REG_GPO_CTRL:
           break;
-
         case SX8634_REG_GPP_PIN_ID:
         case SX8634_REG_GPP_INTENSITY:
           // TODO: Update our local shadow to reflect the new GPP state.
@@ -149,6 +157,10 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
         case SX8634_REG_SPM_CONFIG:
           _sx8634_set_flag(SX8634_FLAG_SPM_WRITABLE, (0x00 == (*(completed->buf) & 0x08)));
           _sx8634_set_flag(SX8634_FLAG_SPM_OPEN, (0x10 == (*(completed->buf) & 0x30)));
+          _set_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR, 0);
+          if (_sx8634_flag(SX8634_FLAG_SPM_OPEN)) {
+            _write_register(SX8634_REG_SPM_BASE_ADDR, 0x00);
+          }
           break;
         case SX8634_REG_SPM_BASE_ADDR:
           if (_sx8634_flag(SX8634_FLAG_SPM_OPEN)) {
@@ -156,9 +168,11 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
             //   the next step and read or write 8 bytes at the address.
             if (_sx8634_flag(SX8634_FLAG_SPM_WRITABLE)) {
               // Write the next 8 bytes if needed.
+              _write_block8(_get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR));
             }
             else {
               // Read the next 8 bytes if needed.
+              _read_block8(_get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR));
             }
           }
           break;
@@ -166,7 +180,40 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
         case SX8634_REG_SPM_KEY_LSB:
           break;
         case SX8634_REG_SOFT_RESET:
+          switch (*(completed->buf)) {
+            case 0x00:
+              if (0 == _wait_for_reset()) {
+                _ping_device();
+              }
+              break;
+            case 0xDE:
+              _write_register(SX8634_REG_SOFT_RESET, 0x00);
+              break;
+            default:
+              break;
+          }
           break;
+
+        case SX8634_REG_IRQ_SRC:     // These registers are all read-only.
+          if (_sx8634_flag(SX8634_FLAG_SPM_OPEN)) {
+            int spm_base_addr = _get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR);
+            if (spm_base_addr <= 0x78) {
+              // We're writing our shadow of the SPM. Write the next base address.
+              _write_register(SX8634_REG_SPM_BASE_ADDR, spm_base_addr + 8);
+            }
+            else {
+              _close_spm_access();
+              _set_fsm_position(SX8634_FSM::READY);
+            }
+          }
+        case SX8634_REG_CAP_STAT_MSB:
+        case SX8634_REG_CAP_STAT_LSB:
+        case SX8634_REG_SLIDER_POS_MSB:
+        case SX8634_REG_SLIDER_POS_LSB:
+        case SX8634_REG_RESERVED_0:
+        case SX8634_REG_RESERVED_1:
+        case SX8634_REG_GPI_STAT:
+        case SX8634_REG_SPM_STAT:
         case SX8634_REG_RESERVED_2:
         default:
           break;
@@ -174,99 +221,110 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
       break;
 
     case BusOpcode::RX:
-      if (completed->buf == _irq_buffer) {
-        // We're going to process an IRQ.
-        /*  0x00:  IRQ_SRC
-            0x01:  CapStatMSB
-            0x02:  CapStatLSB
-            0x03:  SliderPosMSB
-            0x04:  SliderPosLSB
-            0x05:  <reserved>
-            0x06:  <reserved>
-            0x07:  GPIStat
-            0x08:  SPMStat
-            0x09:  CompOpMode      */
-        if (0x01 & _irq_buffer[0]) {  // Operating mode interrupt
-          SX8634OpMode current = (SX8634OpMode) (_irq_buffer[9] & 0x04);
-          _sx8634_set_flag(SX8634_FLAG_COMPENSATING, (_irq_buffer[9] & 0x04));
-          if (current != _mode) {
-            output.concatf("-- SX8634 is now in mode %s\n", getModeStr(current));
-            _mode = current;
+      switch (completed->sub_addr) {
+        case SX8634_REG_IRQ_SRC:
+          if (_sx8634_flag(SX8634_FLAG_SPM_OPEN)) {
+            int spm_base_addr = _get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR);
+            if (spm_base_addr <= 0x78) {
+              // We're shadowing the SPM. Write the next base address.
+              _write_register(SX8634_REG_SPM_BASE_ADDR, spm_base_addr + 8);
+            }
+            else {
+              _close_spm_access();
+              _sx8634_set_flag(SX8634_FLAG_SPM_SHADOWED);
+              _set_fsm_position(SX8634_FSM::READY);
+            }
           }
-        }
-        if (0x02 & _irq_buffer[0]) {  // Compensation completed
-          _compensations++;
-        }
-        if (0x04 & _irq_buffer[0]) {  // Button interrupt
-          uint16_t current = (((uint16_t) (_irq_buffer[1] & 0x0F)) << 8) | ((uint16_t) _irq_buffer[2]);
-          if (current != _buttons) {
-            // TODO: Bitshift the button values into discrete messages.
-            output.concatf("-- Buttons: %u\n", current);
-            _buttons = current;
+          else {
+            // We're going to process an IRQ.
+            /*  0x00:  IRQ_SRC
+                0x01:  CapStatMSB
+                0x02:  CapStatLSB
+                0x03:  SliderPosMSB
+                0x04:  SliderPosLSB
+                0x05:  <reserved>
+                0x06:  <reserved>
+                0x07:  GPIStat
+                0x08:  SPMStat
+                0x09:  CompOpMode      */
+            if (0x01 & _registers[0]) {  // Operating mode interrupt
+              SX8634OpMode current = (SX8634OpMode) (_registers[9] & 0x04);
+              _sx8634_set_flag(SX8634_FLAG_COMPENSATING, (_registers[9] & 0x04));
+              if (current != _mode) {
+                output.concatf("-- SX8634 is now in mode %s\n", getModeStr(current));
+                _mode = current;
+              }
+            }
+            if (0x02 & _registers[0]) {  // Compensation completed
+              _compensations++;
+            }
+            if (0x04 & _registers[0]) {  // Button interrupt
+              uint16_t current = (((uint16_t) (_registers[1] & 0x0F)) << 8) | ((uint16_t) _registers[2]);
+              if (current != _buttons) {
+                // TODO: Bitshift the button values into discrete messages.
+                output.concatf("-- Buttons: %u\n", current);
+                _buttons = current;
+              }
+            }
+            if (0x08 & _registers[0]) {  // Slider interrupt
+              _sx8634_set_flag(SX8634_FLAG_SLIDER_TOUCHED,   (_registers[1] & 0x10));
+              _sx8634_set_flag(SX8634_FLAG_SLIDER_MOVE_DOWN, (_registers[1] & 0x20));
+              _sx8634_set_flag(SX8634_FLAG_SLIDER_MOVE_UP,   (_registers[1] & 0x40));
+              uint16_t current = (((uint16_t) _registers[3]) << 8) | ((uint16_t) _registers[4]);
+              if (current != _slider_val) {
+                // TODO: Send slider value.
+                output.concatf("-- Slider: %u\n", current);
+                _slider_val = current;
+              }
+            }
+            if (0x10 & _registers[0]) {  // GPI interrupt
+              uint8_t current = _registers[7];
+              if (current != _gpi_levels) {
+                // TODO: Bitshift the GPI values into discrete messages.
+                _gpi_levels = current;
+              }
+            }
+            if (0x20 & _registers[0]) {  // SPM stat interrupt
+              _sx8634_set_flag(SX8634_FLAG_CONF_IS_NVM, (_registers[8] & 0x08));
+              _nvm_burns = (_registers[8] & 0x07);
+            }
+            if (0x40 & _registers[0]) {  // NVM burn interrupt
+              // Burn appears to have completed. Enter the verify phase.
+              _set_fsm_position(SX8634_FSM::NVM_VERIFY);
+              output.concat("-- SX8634 NVM burn completed.\n");
+            }
           }
-        }
-        if (0x08 & _irq_buffer[0]) {  // Slider interrupt
-          _sx8634_set_flag(SX8634_FLAG_SLIDER_TOUCHED,   (_irq_buffer[1] & 0x10));
-          _sx8634_set_flag(SX8634_FLAG_SLIDER_MOVE_DOWN, (_irq_buffer[1] & 0x20));
-          _sx8634_set_flag(SX8634_FLAG_SLIDER_MOVE_UP,   (_irq_buffer[1] & 0x40));
-          uint16_t current = (((uint16_t) _irq_buffer[3]) << 8) | ((uint16_t) _irq_buffer[4]);
-          if (current != _slider_val) {
-            // TODO: Send slider value.
-            output.concatf("-- Slider: %u\n", current);
-            _slider_val = current;
-          }
-        }
-        if (0x10 & _irq_buffer[0]) {  // GPI interrupt
-          uint8_t current = _irq_buffer[7];
-          if (current != _gpi_levels) {
-            // TODO: Bitshift the GPI values into discrete messages.
-            _gpi_levels = current;
-          }
-        }
-        if (0x20 & _irq_buffer[0]) {  // SPM stat interrupt
-          _sx8634_set_flag(SX8634_FLAG_CONF_IS_NVM, (_irq_buffer[8] & 0x08));
-          _nvm_burns = (_irq_buffer[8] & 0x07);
-        }
-        if (0x40 & _irq_buffer[0]) {  // NVM burn interrupt
-          // Burn appears to have completed. Enter the verify phase.
-          _sx8634_clear_flag(SX8634_FLAG_SM_MASK);
-          _sx8634_set_flag(SX8634_FLAG_SM_NVM_VERIFY);
-          output.concat("-- SX8634 NVM burn completed.\n");
-        }
-      }
-      else {
-        switch (completed->sub_addr) {
-          case SX8634_REG_IRQ_SRC:
-          case SX8634_REG_CAP_STAT_MSB:
-          case SX8634_REG_CAP_STAT_LSB:
-          case SX8634_REG_SLIDER_POS_MSB:
-          case SX8634_REG_SLIDER_POS_LSB:
-          case SX8634_REG_RESERVED_0:
-          case SX8634_REG_RESERVED_1:
-          case SX8634_REG_GPI_STAT:
-          case SX8634_REG_SPM_STAT:
-            // TODO: remove irq_buffer check and migrate.
-            break;
+          break;
 
-          case SX8634_REG_COMP_OP_MODE:
-          case SX8634_REG_GPO_CTRL:
-            break;
+        case SX8634_REG_CAP_STAT_MSB:
+        case SX8634_REG_CAP_STAT_LSB:
+        case SX8634_REG_SLIDER_POS_MSB:
+        case SX8634_REG_SLIDER_POS_LSB:
+        case SX8634_REG_RESERVED_0:
+        case SX8634_REG_RESERVED_1:
+        case SX8634_REG_GPI_STAT:
+        case SX8634_REG_SPM_STAT:
+          // Right now, for simplicity's sake, the driver reads all 10 IRQ-related
+          //   registers in one shot and updates everything.
+          break;
 
-          case SX8634_REG_GPP_PIN_ID:
-          case SX8634_REG_GPP_INTENSITY:
-            // TODO: Update our local shadow to reflect the new GPP state.
-            // SX8634_REG_GPP_INTENSITY always follows.
-            break;
-          case SX8634_REG_SPM_BASE_ADDR:
-          case SX8634_REG_SPM_KEY_MSB:
-          case SX8634_REG_SPM_KEY_LSB:
-            break;
-          case SX8634_REG_RESERVED_2:
-          case SX8634_REG_SOFT_RESET:
-          default:
-            break;
-        }
-        memcpy(_registers, completed->buf, completed->buf_len);
+        case SX8634_REG_COMP_OP_MODE:
+        case SX8634_REG_GPO_CTRL:
+          break;
+
+        case SX8634_REG_GPP_PIN_ID:
+        case SX8634_REG_GPP_INTENSITY:
+          // TODO: Update our local shadow to reflect the new GPP state.
+          // SX8634_REG_GPP_INTENSITY always follows.
+          break;
+        case SX8634_REG_SPM_BASE_ADDR:
+        case SX8634_REG_SPM_KEY_MSB:
+        case SX8634_REG_SPM_KEY_LSB:
+          break;
+        case SX8634_REG_RESERVED_2:
+        case SX8634_REG_SOFT_RESET:
+        default:
+          break;
       }
       break;
 
@@ -287,9 +345,14 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
 */
 void SX8634::printDebug(StringBuilder* output) {
   output->concatf("Touch sensor (SX8634)\t%s%s-- Found:   %c\n-- Shadow:\n----------\n", getModeStr(operationalMode()), PRINT_DIVIDER_1_STR, (deviceFound() ? 'y':'n'));
-  StringBuilder::printBuffer(output, _registers, 128, "\t");
+  StringBuilder::printBuffer(output, _registers, sizeof(_registers), "\t");
 
+  output->concatf("\tFSM Position:   %s\n", getFSMStr(_fsm));
   output->concatf("\tConf source:    %s\n", (_sx8634_flag(SX8634_FLAG_CONF_IS_NVM) ? "NVM" : "QSM"));
+  output->concatf("\tSPM shadowed:   %c\n", (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED) ? 'y': 'n'));
+  if (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED)) {
+    StringBuilder::printBuffer(output, _spm_shadow, sizeof(_spm_shadow), "\t  ");
+  }
   output->concatf("\tSPM open:       %c\n", (_sx8634_flag(SX8634_FLAG_SPM_OPEN) ? 'y': 'n'));
   if (_sx8634_flag(SX8634_FLAG_SPM_OPEN)) {
     output->concatf("\tSPM writable:   %c\n", (_sx8634_flag(SX8634_FLAG_SPM_WRITABLE) ? 'y': 'n'));
@@ -303,6 +366,79 @@ void SX8634::printDebug(StringBuilder* output) {
 
 
 /*******************************************************************************
+* Shadow register access functions
+*******************************************************************************/
+
+int8_t SX8634::_get_shadow_reg_mem_addr(uint8_t addr) {
+  uint8_t maximum_idx = 15;
+  switch (addr) {
+    case SX8634_REG_IRQ_SRC:         maximum_idx--;
+    case SX8634_REG_CAP_STAT_MSB:    maximum_idx--;
+    case SX8634_REG_CAP_STAT_LSB:    maximum_idx--;
+    case SX8634_REG_SLIDER_POS_MSB:  maximum_idx--;
+    case SX8634_REG_SLIDER_POS_LSB:  maximum_idx--;
+    case SX8634_REG_GPI_STAT:        maximum_idx--;
+    case SX8634_REG_SPM_STAT:        maximum_idx--;
+    case SX8634_REG_COMP_OP_MODE:    maximum_idx--;
+    case SX8634_REG_GPO_CTRL:        maximum_idx--;
+    case SX8634_REG_GPP_PIN_ID:      maximum_idx--;
+    case SX8634_REG_GPP_INTENSITY:   maximum_idx--;
+    case SX8634_REG_SPM_CONFIG:      maximum_idx--;
+    case SX8634_REG_SPM_BASE_ADDR:   maximum_idx--;
+    case SX8634_REG_SPM_KEY_MSB:     maximum_idx--;
+    case SX8634_REG_SPM_KEY_LSB:     maximum_idx--;
+    case SX8634_REG_SOFT_RESET:
+      return (maximum_idx & 0x0F);
+    case SX8634_REG_RESERVED_0:
+    case SX8634_REG_RESERVED_1:
+    case SX8634_REG_RESERVED_2:
+    default:
+      break;
+  }
+  return -1;
+}
+
+
+uint8_t SX8634::_get_shadow_reg_val(uint8_t addr) {
+  int idx = _get_shadow_reg_mem_addr(addr);
+  return (idx >= 0) ? _registers[idx] : 0;
+}
+
+
+void SX8634::_set_shadow_reg_val(uint8_t addr, uint8_t val) {
+  int idx = _get_shadow_reg_mem_addr(addr);
+  if (idx >= 0) {
+    _registers[idx] = val;
+  }
+}
+
+
+void SX8634::_set_shadow_reg_val(uint8_t addr, uint8_t* buf, uint8_t len) {
+  int idx = _get_shadow_reg_mem_addr(addr);
+  if ((idx + len) <= sizeof(_registers)) {
+    memcpy(&_registers[idx], buf, len);
+  }
+}
+
+
+int8_t SX8634::_write_register(uint8_t addr, uint8_t val) {
+  int idx = _get_shadow_reg_mem_addr(addr);
+  if (idx >= 0) {
+    _registers[idx] = val;
+    I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
+    if (nullptr != nu) {
+      nu->dev_addr = _opts.i2c_addr;
+      nu->sub_addr = addr;
+      nu->buf      = &_registers[idx];
+      nu->buf_len  = 1;
+      return _bus->queue_io_job(nu);
+    }
+  }
+  return -1;
+}
+
+
+/*******************************************************************************
 * Class-specific functions
 *******************************************************************************/
 
@@ -312,67 +448,37 @@ void SX8634::printDebug(StringBuilder* output) {
 */
 int8_t SX8634::reset() {
   int8_t ret = -1;
-
   if (_opts.haveIRQPin()) {
-    unsetPinIRQ(_opts.irq_pin);
+    _sx8634_set_flag(SX8634_FLAG_IRQ_INHIBIT);
   }
+  _flags = 0;
+  _clear_registers();
+  _set_fsm_position(SX8634_FSM::RESETTING);
 
   if (_opts.haveResetPin()) {
     setPin(_opts.reset_pin, false);
     vTaskDelay(10 / portTICK_PERIOD_MS);
     setPin(_opts.reset_pin, true);
+    ret = _wait_for_reset();
+    if (0 == ret) {
+      ret = _ping_device();
+    }
+    return ret;
   }
   else {
-    *(_io_buffer + 0) = 0xDE;
-    *(_io_buffer + 1) = 0x00;
-    I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
-    if (nullptr != nu) {
-      nu->dev_addr = _opts.i2c_addr;
-      nu->sub_addr = SX8634_REG_SOFT_RESET;
-      nu->buf      = (_io_buffer + 0);
-      nu->buf_len  = 1;
-      _bus->queue_io_job(nu);
-
-      nu = _bus->new_op(BusOpcode::TX, this);
-      if (nullptr != nu) {
-        nu->dev_addr = _opts.i2c_addr;
-        nu->sub_addr = SX8634_REG_SOFT_RESET;
-        nu->buf      = (_io_buffer + 1);
-        nu->buf_len  = 1;
-        _bus->queue_io_job(nu);
-        return 0;
-      }
-    }
+    return _write_register(SX8634_REG_SOFT_RESET, 0xDE);
   }
-
-  return _wait_for_reset();
 }
 
 
-
 int8_t SX8634::init() {
-  if (0 == reset()) {
-    return deviceFound() ? _read_full_spm() : _ping_device();
-  }
-  return -17;
+  return reset();
 }
 
 
 int8_t SX8634::setMode(SX8634OpMode m) {
-  I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
-  if (nu) {
-    *(_io_buffer + SX8634_REG_COMP_OP_MODE) = (uint8_t) m;
-    nu->dev_addr = _dev_addr;
-    nu->sub_addr = SX8634_REG_COMP_OP_MODE;
-    nu->buf      = (_io_buffer + SX8634_REG_COMP_OP_MODE);
-    nu->buf_len  = 1;
-    _bus->queue_io_job(nu);
-    return 0;
-  }
-  return -1;
+  return _write_register(SX8634_REG_COMP_OP_MODE, (uint8_t) m);
 }
-
-
 
 
 int8_t SX8634::setGPIOState(uint8_t pin, uint8_t value) {
@@ -388,18 +494,21 @@ uint8_t SX8634::getGPIOState(uint8_t pin) {
 
 
 int8_t SX8634::setPWMValue(uint8_t pin, uint8_t value) {
-  I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
-  if (nu) {
-    *(_io_buffer + SX8634_REG_GPP_PIN_ID + 0) = pin;
-    *(_io_buffer + SX8634_REG_GPP_PIN_ID + 1) = value;
-    nu->dev_addr = _dev_addr;
-    nu->sub_addr = SX8634_REG_COMP_OP_MODE;
-    nu->buf      = (_io_buffer + SX8634_REG_COMP_OP_MODE);
-    nu->buf_len  = 1;
-    _bus->queue_io_job(nu);
-    return 0;
+  int8_t ret = -1;
+  int idx = _get_shadow_reg_mem_addr(SX8634_REG_GPP_PIN_ID);
+  if (idx >= 0) {
+    _registers[idx + 0] = pin;
+    _registers[idx + 1] = value;
+    I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
+    if (nullptr != nu) {
+      nu->dev_addr = _opts.i2c_addr;
+      nu->sub_addr = SX8634_REG_GPP_PIN_ID;
+      nu->buf      = &_registers[idx];
+      nu->buf_len  = 2;
+      ret = _bus->queue_io_job(nu);
+    }
   }
-  return -1;
+  return ret;
 }
 
 
@@ -409,17 +518,116 @@ uint8_t SX8634::getPWMValue(uint8_t pin) {
 
 
 
+/*******************************************************************************
+* SPM related functions.
+*******************************************************************************/
+
+/*
+* Calling this function sets off a long chain of async bus operations that
+*   ought to end up with the SPM fully read, and the state machine back to
+*   READY.
+*/
+int8_t SX8634::_read_full_spm() {
+  _set_fsm_position(SX8634_FSM::SPM_READ);
+  if (!(_sx8634_flag(SX8634_FLAG_SPM_OPEN) & !_sx8634_flag(SX8634_FLAG_SPM_WRITABLE))) {
+    return _open_spm_access_r();
+  }
+  return -1;
+}
+
+/*
+* Calling this function sets off a long chain of async bus operations that
+*   ought to end up with the SPM fully written, and the state machine back to
+*   READY.
+*/
+int8_t SX8634::_write_full_spm() {
+  _set_fsm_position(SX8634_FSM::SPM_WRITE);
+  if (!(_sx8634_flag(SX8634_FLAG_SPM_OPEN) & _sx8634_flag(SX8634_FLAG_SPM_WRITABLE))) {
+    return _open_spm_access_w();
+  }
+  return -1;
+}
+
+/*
+* Inhibits interrupt service.
+* Opens the SPM for reading.
+*/
+int8_t SX8634::_open_spm_access_r() {
+  _sx8634_set_flag(SX8634_FLAG_IRQ_INHIBIT);
+  setMode(SX8634OpMode::SLEEP);
+  return _write_register(SX8634_REG_SPM_CONFIG, 0x18);
+}
+
+int8_t SX8634::_open_spm_access_w() {
+  _sx8634_set_flag(SX8634_FLAG_IRQ_INHIBIT);
+  setMode(SX8634OpMode::SLEEP);
+  return _write_register(SX8634_REG_SPM_CONFIG, 0x10);
+}
+
+int8_t SX8634::_close_spm_access() {
+  _sx8634_clear_flag(SX8634_FLAG_IRQ_INHIBIT);
+  setMode(SX8634OpMode::ACTIVE);
+  return _write_register(SX8634_REG_SPM_CONFIG, 0x08);
+}
+
+/*
+* Read 8-bytes of SPM into shadow from the device.
+* This should only be called when the SPM if open. Otherwise, it will read ISR
+*   registers and there is no way to discover the mistake.
+*/
+int8_t SX8634::_read_block8(uint8_t idx) {
+  StringBuilder output;
+  output.concatf("_read_block8(%u)\n", idx);
+  Kernel::log(&output);
+  I2CBusOp* nu = _bus->new_op(BusOpcode::RX, this);
+  if (nu) {
+    nu->dev_addr = _dev_addr;
+    nu->sub_addr = 0;
+    nu->buf      = (_spm_shadow + idx);
+    nu->buf_len  = 8;
+    return _bus->queue_io_job(nu);
+  }
+  return -1;
+}
+
+/*
+* Write 8-bytes of SPM shadow back to the device.
+* This should only be called when the SPM if open. Otherwise, it will read ISR
+*   registers and there is no way to discover the mistake.
+*/
+int8_t SX8634::_write_block8(uint8_t idx) {
+  StringBuilder output;
+  output.concatf("_write_block8(%u)\n", idx);
+  Kernel::log(&output);
+  I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
+  if (nu) {
+    nu->dev_addr = _dev_addr;
+    nu->sub_addr = 0;
+    nu->buf      = (_spm_shadow + idx);
+    nu->buf_len  = 8;
+    return _bus->queue_io_job(nu);
+  }
+  return -1;
+}
+
+
+
+/*******************************************************************************
+* Low-level stuff
+*******************************************************************************/
 
 int8_t SX8634::_wait_for_reset() {
   int8_t ret = -1;
+  //Kernel::log("Waiting for SX8634...\n");
   if (_opts.haveIRQPin()) {
-    uint8_t tries = 3;
-    while ((--tries >= 0) && (0 == readPin(_opts.irq_pin))) {
-      Kernel::log("Waiting for SX8634...\n");
-      vTaskDelay(200 / portTICK_PERIOD_MS);
+    uint8_t tries = 40;
+    while ((--tries > 0) && (0 == readPin(_opts.irq_pin))) {
+      vTaskDelay(10 / portTICK_PERIOD_MS);
     }
-    setPinFxn(_opts.irq_pin, FALLING, sx8634_isr);
-    ret = (0 >= tries) ? 0 : -2;
+    if (0 < tries) {
+      _sx8634_clear_flag(SX8634_FLAG_IRQ_INHIBIT);
+      ret = 0;
+    }
   }
   else {
     vTaskDelay(300 / portTICK_PERIOD_MS);
@@ -430,73 +638,15 @@ int8_t SX8634::_wait_for_reset() {
 
 
 int8_t SX8634::_clear_registers() {
-  memset(_registers, 0, sizeof(_registers));
-  _sx8634_clear_flag(SX8634_FLAG_REGS_SHADOWED);
+  _sx8634_clear_flag(SX8634_FLAG_SPM_SHADOWED);
+  memset(_registers,  0, sizeof(_registers));
+  memset(_spm_shadow, 0, sizeof(_spm_shadow));
   return 0;
 }
 
 
-int8_t SX8634::_read_full_spm() {
-  _sx8634_clear_flag(SX8634_FLAG_SM_MASK);
-  _sx8634_set_flag(SX8634_FLAG_SM_SPM_READ);
-  int8_t ret = 0;
-  for (uint8_t idx = 0; idx < 16; idx++) {
-    ret -= _read_block8(idx);
-  }
-  return ret;
-}
-
-
-int8_t SX8634::_write_full_spm() {
-  int8_t ret = -1;
-  return ret;
-}
-
-
 int8_t SX8634::_start_compensation() {
-  I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
-  if (nu) {
-    *(_io_buffer + SX8634_REG_COMP_OP_MODE) = 0x04;
-    nu->dev_addr = _dev_addr;
-    nu->sub_addr = SX8634_REG_COMP_OP_MODE;
-    nu->buf      = (_io_buffer + SX8634_REG_COMP_OP_MODE);
-    nu->buf_len  = 1;
-    _bus->queue_io_job(nu);
-    return 0;
-  }
-  return -1;
-}
-
-
-int8_t SX8634::_open_spm_access() {
-  int8_t ret = -1;
-  I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
-  if (nu) {
-    *(_io_buffer + SX8634_REG_SPM_CONFIG) = 0x18;
-    nu->dev_addr = _dev_addr;
-    nu->sub_addr = SX8634_REG_SPM_CONFIG;
-    nu->buf      = (_io_buffer + SX8634_REG_SPM_CONFIG);
-    nu->buf_len  = 1;
-    _bus->queue_io_job(nu);
-    ret = 0;
-  }
-  return ret;
-}
-
-
-int8_t SX8634::_close_spm_access() {
-  int8_t ret = -1;
-  I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
-  if (nu) {
-    *(_io_buffer + SX8634_REG_SPM_CONFIG) = 0x08;
-    nu->dev_addr = _dev_addr;
-    nu->sub_addr = SX8634_REG_SPM_CONFIG;
-    nu->buf      = (_io_buffer + SX8634_REG_SPM_CONFIG);
-    nu->buf_len  = 1;
-    _bus->queue_io_job(nu);
-    ret = 0;
-  }
-  return ret;
+  return _write_register(SX8634_REG_COMP_OP_MODE, 0x04);
 }
 
 
@@ -505,23 +655,11 @@ int8_t SX8634::_ll_pin_init() {
     gpioDefine(_opts.reset_pin, GPIOMode::OUTPUT);
   }
   if (_opts.haveIRQPin()) {
+    _sx8634_set_flag(SX8634_FLAG_IRQ_INHIBIT);
     gpioDefine(_opts.irq_pin, GPIOMode::INPUT_PULLUP);
+    setPinFxn(_opts.irq_pin, FALLING, sx8634_isr);
   }
   return 0;  // Both pins are technically optional.
-}
-
-
-int8_t SX8634::_read_block8(uint8_t idx) {
-  I2CBusOp* nu = _bus->new_op(BusOpcode::RX, this);
-  if (nu) {
-    nu->dev_addr = _dev_addr;
-    nu->sub_addr = (8 * idx);
-    nu->buf      = (_io_buffer + (8 * idx));
-    nu->buf_len  = 8;
-    _bus->queue_io_job(nu);
-    return 0;
-  }
-  return -1;
 }
 
 
@@ -530,14 +668,17 @@ int8_t SX8634::_read_block8(uint8_t idx) {
 * TODO: Promote this into I2CDevice driver.
 */
 int8_t SX8634::_ping_device() {
-  I2CBusOp* nu = _bus->new_op(BusOpcode::TX_CMD, this);
-  if (nullptr != nu) {
-    nu->dev_addr = _opts.i2c_addr;
-    nu->sub_addr = -1;
-    nu->buf      = nullptr;
-    nu->buf_len  = 0;
-    _bus->queue_io_job(nu);
-    return 0;
+  if (!_sx8634_flag(SX8634_FLAG_PING_IN_FLIGHT)) {
+    _sx8634_set_flag(SX8634_FLAG_PING_IN_FLIGHT);
+    I2CBusOp* nu = _bus->new_op(BusOpcode::TX_CMD, this);
+    if (nullptr != nu) {
+      nu->dev_addr = _opts.i2c_addr;
+      nu->sub_addr = -1;
+      nu->buf      = nullptr;
+      nu->buf_len  = 0;
+      _bus->queue_io_job(nu);
+      return 0;
+    }
   }
   return -1;
 }
@@ -557,22 +698,29 @@ int8_t SX8634::_ping_device() {
 #if defined(CONFIG_SX8634_PROVISIONING)
 
 int8_t SX8634::burn_nvm() {
+  if (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED)) {
+    // SPM is shadowed. Whatever changes we made to it will be propagated into
+    //   the NVM so that they become the defaults after resst.
+    _set_fsm_position(SX8634_FSM::NVM_BURN);
+  }
   return -1;
 }
 
 
 int8_t SX8634::_write_nvm_keys() {
   int8_t ret = -1;
-  I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
-  if (nu) {
-    *(_io_buffer + SX8634_REG_SPM_KEY_MSB + 0) = 0x62;
-    *(_io_buffer + SX8634_REG_SPM_KEY_LSB + 1) = 0x9D;
-    nu->dev_addr = _dev_addr;
-    nu->sub_addr = SX8634_REG_SPM_KEY_MSB;
-    nu->buf      = (_io_buffer + SX8634_REG_SPM_KEY_MSB);
-    nu->buf_len  = 2;
-    _bus->queue_io_job(nu);
-    ret = 0;
+  int idx = _get_shadow_reg_mem_addr(SX8634_REG_SPM_KEY_MSB);
+  if (idx >= 0) {
+    _registers[idx + 0] = 0x62;
+    _registers[idx + 1] = 0x9D;
+    I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
+    if (nullptr != nu) {
+      nu->dev_addr = _opts.i2c_addr;
+      nu->sub_addr = SX8634_REG_SPM_KEY_MSB;
+      nu->buf      = &_registers[idx];
+      nu->buf_len  = 2;
+      ret = _bus->queue_io_job(nu);
+    }
   }
   return ret;
 }

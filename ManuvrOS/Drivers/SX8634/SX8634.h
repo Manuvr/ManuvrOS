@@ -158,25 +158,17 @@
 #define SX8634_SPM_SPM_CRC                  0x7F
 
 
-#define SX8634_FLAG_SM_NO_INIT       0x0000
-#define SX8634_FLAG_SM_SPM_READ      0x0001
-#define SX8634_FLAG_SM_CONF_WRITE    0x0002
-#define SX8634_FLAG_SM_READY         0x0003
-#define SX8634_FLAG_SM_NVM_BURN0     0x0004
-#define SX8634_FLAG_SM_NVM_BURN1     0x0005
-#define SX8634_FLAG_SM_NVM_BURN2     0x0006
-#define SX8634_FLAG_SM_NVM_VERIFY    0x0007
-#define SX8634_FLAG_SM_MASK          0x0007
-
-#define SX8634_FLAG_DEV_FOUND        0x0008
-#define SX8634_FLAG_REGS_SHADOWED    0x0010
-#define SX8634_FLAG_COMPENSATING     0x0020
-#define SX8634_FLAG_CONF_IS_NVM      0x0040
-#define SX8634_FLAG_SLIDER_TOUCHED   0x0080
-#define SX8634_FLAG_SLIDER_MOVE_DOWN 0x0100
-#define SX8634_FLAG_SLIDER_MOVE_UP   0x0200
-#define SX8634_FLAG_SPM_WRITABLE     0x0400
-#define SX8634_FLAG_SPM_OPEN         0x0800
+#define SX8634_FLAG_PING_IN_FLIGHT        0x0001
+#define SX8634_FLAG_DEV_FOUND             0x0002
+#define SX8634_FLAG_IRQ_INHIBIT           0x0004
+#define SX8634_FLAG_SPM_SHADOWED          0x0010
+#define SX8634_FLAG_COMPENSATING          0x0020
+#define SX8634_FLAG_CONF_IS_NVM           0x0040
+#define SX8634_FLAG_SLIDER_TOUCHED        0x0080
+#define SX8634_FLAG_SLIDER_MOVE_DOWN      0x0100
+#define SX8634_FLAG_SLIDER_MOVE_UP        0x0200
+#define SX8634_FLAG_SPM_WRITABLE          0x0400
+#define SX8634_FLAG_SPM_OPEN              0x0800
 
 
 #define SX8634_DEFAULT_I2C_ADDR      0x2B
@@ -187,6 +179,16 @@ enum class SX8634OpMode : uint8_t {
   DOZE        = 1,
   SLEEP       = 2,
   RESERVED    = 3
+};
+
+enum class SX8634_FSM : uint8_t {
+  NO_INIT = 0,
+  RESETTING,
+  SPM_READ,
+  SPM_WRITE,
+  READY,
+  NVM_BURN,
+  NVM_VERIFY
 };
 
 enum class SX8634GPIOMode : uint8_t {
@@ -271,9 +273,10 @@ class SX8634 : public I2CDevice {
     int8_t io_op_callback(BusOp*);
     void printDebug(StringBuilder*);
 
+    int8_t setMode(SX8634OpMode);
     inline SX8634OpMode operationalMode() {  return _mode; };
-    inline bool deviceFound() {  return _sx8634_flag(SX8634_FLAG_DEV_FOUND);  };
 
+    inline bool deviceFound() {  return _sx8634_flag(SX8634_FLAG_DEV_FOUND);  };
     inline bool buttonPressed(uint8_t i) {  return ((_buttons >> i) & 0x01);  };
     inline bool buttonReleased(uint8_t i) { return !((_buttons >> i) & 0x01); };
 
@@ -284,12 +287,13 @@ class SX8634 : public I2CDevice {
     uint8_t getPWMValue(uint8_t pin);
 
     int8_t read_irq_registers();
-    int8_t setMode(SX8634OpMode);  //
 
     #if defined(CONFIG_SX8634_PROVISIONING)
       int8_t  burn_nvm();
       int8_t  _write_nvm_keys();
     #endif  // CONFIG_SX8634_PROVISIONING
+
+    inline void ping() { _ping_device(); };
 
 
   private:
@@ -297,7 +301,8 @@ class SX8634 : public I2CDevice {
     uint16_t _flags         = 0;
     uint16_t _slider_val    = 0;
     uint16_t _buttons       = 0;
-    SX8634OpMode     _mode  = SX8634OpMode::RESERVED;
+    SX8634OpMode _mode  = SX8634OpMode::RESERVED;
+    SX8634_FSM   _fsm   = SX8634_FSM::NO_INIT;
     uint8_t  _compensations = 0;
     uint8_t  _nvm_burns     = 0;
     uint8_t  _gpio_assign   = 0;
@@ -305,11 +310,11 @@ class SX8634 : public I2CDevice {
     uint8_t  _gpo_levels    = 0;
     uint8_t  _pwm_levels[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
-    uint8_t  _registers[128];    // Register shadows
-    uint8_t  _io_buffer[128];    // I/O operation buffer
-    uint8_t  _irq_buffer[10];
+    uint8_t  _registers[16];     // Register shadows
+    uint8_t  _spm_shadow[128];   // SPM shadow
 
-    inline uint32_t _sx8634_flags() {                return _flags;            };
+    /* Flag manipulation inlines */
+    inline uint16_t _sx8634_flags() {                return _flags;            };
     inline bool _sx8634_flag(uint16_t _flag) {       return (_flags & _flag);  };
     inline void _sx8634_flip_flag(uint16_t _flag) {  _flags ^= _flag;          };
     inline void _sx8634_clear_flag(uint16_t _flag) { _flags &= ~_flag;         };
@@ -319,19 +324,33 @@ class SX8634 : public I2CDevice {
       else    _flags &= ~_flag;
     };
 
+    int8_t   _proc_irq_values();
+    int8_t   _get_shadow_reg_mem_addr(uint8_t addr);
+    uint8_t  _get_shadow_reg_val(uint8_t addr);
+    void     _set_shadow_reg_val(uint8_t addr, uint8_t val);
+    void     _set_shadow_reg_val(uint8_t addr, uint8_t* buf, uint8_t len);
+    int8_t   _write_register(uint8_t addr, uint8_t val);
+
+    /* SPM region functions */
+    int8_t  _read_full_spm();           // Mirror the SPM into our shadow.
+    int8_t  _write_full_spm();          // Mirror our shadow into the SPM.
+    int8_t  _open_spm_access_r();       //
+    int8_t  _open_spm_access_w();       //
+    int8_t  _close_spm_access();        //
+    int8_t  _read_block8(uint8_t idx);  // Read 8 bytes from the SPM.
+    int8_t  _write_block8(uint8_t idx); // Write 8 bytes to the SPM.
 
     int8_t  _wait_for_reset();      // Will block until reset disasserts or times out.
     int8_t  _clear_registers();     // Wipe our shadows.
-    int8_t  _start_compensation();  //
-    int8_t  _open_spm_access();     //
-    int8_t  _close_spm_access();    //
-    int8_t  _read_full_spm();       // Mirror the SPM into our shadow.
-    int8_t  _write_full_spm();      // Mirror our shadow into the SPM.
-    int8_t  _ll_pin_init();
-    int8_t  _read_block8(uint8_t idx);
-    int8_t  _ping_device();
+    int8_t  _start_compensation();  // Tell the sensor to run a compensation cycle.
+    int8_t  _ll_pin_init();         // Platform GPIO config
+    int8_t  _ping_device();         // Pings the device.
+
+    inline void       _set_fsm_position(SX8634_FSM x) {  _fsm = x;        };
+    inline SX8634_FSM _get_fsm_position() {              return _fsm;     };
 
     static const char* getModeStr(SX8634OpMode);
+    static const char* getFSMStr(SX8634_FSM);
     static const char* getSMStr();
 };
 
