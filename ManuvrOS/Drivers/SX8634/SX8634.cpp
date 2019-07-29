@@ -499,7 +499,16 @@ int8_t SX8634::setMode(SX8634OpMode m) {
 
 
 int8_t SX8634::setGPIOState(uint8_t pin, uint8_t value) {
-  return -1;
+  uint8_t pin_mask  = 1 << pin;
+  uint8_t gpo_value = pin_mask & _registers[SX8634_REG_GPO_CTRL];
+  uint8_t w_val = (0 != value) ? (_registers[SX8634_REG_GPO_CTRL] | pin_mask) : (_registers[SX8634_REG_GPO_CTRL] & ~pin_mask);
+  //StringBuilder output;
+  //output.concatf("setGPIOState(%u, %u):  ", pin, value);
+  //Kernel::log(&output);
+  if (w_val != _registers[SX8634_REG_GPO_CTRL]) {
+    return _write_register(SX8634_REG_GPO_CTRL, w_val);
+  }
+  return 0;
 }
 
 
