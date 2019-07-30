@@ -165,7 +165,19 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
           break;
         case SX8634_REG_SPM_BASE_ADDR:
           if (SX8634_FSM::NVM_BURN == _fsm) {
-            // We are about to burn the NVM.
+            #if defined(CONFIG_SX8634_PROVISIONING)
+              // We are about to burn the NVM.
+              _set_fsm_position(SX8634_FSM::READY);
+              switch (*(completed->buf)) {
+                case 0xA5:
+                  //Kernel::log("0xA5 --> SPM_BASE_ADDR\n");
+                  _write_register(SX8634_REG_SPM_BASE_ADDR, 0x5A);
+                  break;
+                case 0x5A:
+                  //Kernel::log("0x5A --> SPM_BASE_ADDR\n");
+                  break;
+              }
+            #endif // CONFIG_SX8634_PROVISIONING
           }
           else {
             if (_sx8634_flag(SX8634_FLAG_SPM_OPEN)) {
@@ -182,9 +194,18 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
             }
           }
           break;
-        case SX8634_REG_SPM_KEY_MSB:
-        case SX8634_REG_SPM_KEY_LSB:
-          break;
+
+        #if defined(CONFIG_SX8634_PROVISIONING)
+          case SX8634_REG_SPM_KEY_MSB:
+            //Kernel::log("0x62 --> SPM_KEY_MSB\n");
+            _write_register(SX8634_REG_SPM_KEY_LSB, 0x9D);
+            break;
+          case SX8634_REG_SPM_KEY_LSB:
+            //Kernel::log("0x9D --> SPM_KEY_LSB\n");
+            _write_register(SX8634_REG_SPM_BASE_ADDR, 0xA5);
+            break;
+        #endif // CONFIG_SX8634_PROVISIONING
+
         case SX8634_REG_SOFT_RESET:
           switch (*(completed->buf)) {
             case 0x00:
@@ -212,7 +233,6 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
             else {
               _sx8634_clear_flag(SX8634_FLAG_SPM_DIRTY);
               _close_spm_access();
-              _set_fsm_position(SX8634_FSM::READY);
             }
           }
         case SX8634_REG_CAP_STAT_MSB:
@@ -304,12 +324,12 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
               }
             }
             if (0x20 & _registers[0]) {  // SPM stat interrupt
-              _sx8634_set_flag(SX8634_FLAG_CONF_IS_NVM, (_registers[8] & 0x08));
-              _nvm_burns = (_registers[8] & 0x07);
             }
+            _sx8634_set_flag(SX8634_FLAG_CONF_IS_NVM, (_registers[8] & 0x08));
+            _nvm_burns = (_registers[8] & 0x07);
             if (0x40 & _registers[0]) {  // NVM burn interrupt
               // Burn appears to have completed. Enter the verify phase.
-              _set_fsm_position(SX8634_FSM::NVM_VERIFY);
+              _set_fsm_position(SX8634_FSM::READY);
               output.concat("-- SX8634 NVM burn completed.\n");
             }
           }
@@ -776,20 +796,10 @@ int8_t SX8634::burn_nvm() {
     ret++;
     _set_fsm_position(SX8634_FSM::NVM_BURN);
     if (SX8634OpMode::DOZE != _mode) {
+      Kernel::log("Moving to doze mode.\n");
       setMode(SX8634OpMode::DOZE);
     }
-    if (0 == _write_register(SX8634_REG_SPM_KEY_MSB, 0x62)) {
-      ret++;
-      if (0 == _write_register(SX8634_REG_SPM_KEY_LSB, 0x9D)) {
-        ret++;
-        if (0 == _write_register(SX8634_REG_SPM_BASE_ADDR, 0xA5)) {
-          ret++;
-          if (0 == _write_register(SX8634_REG_SPM_BASE_ADDR, 0x5A)) {
-            ret = 0;
-          }
-        }
-      }
-    }
+    ret = _write_register(SX8634_REG_SPM_KEY_MSB, 0x62);
   }
   return ret;
 }
