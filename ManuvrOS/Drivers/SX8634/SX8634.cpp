@@ -164,16 +164,21 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
           }
           break;
         case SX8634_REG_SPM_BASE_ADDR:
-          if (_sx8634_flag(SX8634_FLAG_SPM_OPEN)) {
-            // If the SPM is open, and this register was just written, we take
-            //   the next step and read or write 8 bytes at the address.
-            if (_sx8634_flag(SX8634_FLAG_SPM_WRITABLE)) {
-              // Write the next 8 bytes if needed.
-              _write_block8(_get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR));
-            }
-            else {
-              // Read the next 8 bytes if needed.
-              _read_block8(_get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR));
+          if (SX8634_FSM::NVM_BURN == _fsm) {
+            // We are about to burn the NVM.
+          }
+          else {
+            if (_sx8634_flag(SX8634_FLAG_SPM_OPEN)) {
+              // If the SPM is open, and this register was just written, we take
+              //   the next step and read or write 8 bytes at the address.
+              if (_sx8634_flag(SX8634_FLAG_SPM_WRITABLE)) {
+                // Write the next 8 bytes if needed.
+                _write_block8(_get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR));
+              }
+              else {
+                // Read the next 8 bytes if needed.
+                _read_block8(_get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR));
+              }
             }
           }
           break;
@@ -764,33 +769,30 @@ int8_t SX8634::_ping_device() {
 #if defined(CONFIG_SX8634_PROVISIONING)
 
 int8_t SX8634::burn_nvm() {
+  int8_t ret = -4;
   if (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED)) {
     // SPM is shadowed. Whatever changes we made to it will be propagated into
     //   the NVM so that they become the defaults after resst.
+    ret++;
     _set_fsm_position(SX8634_FSM::NVM_BURN);
-  }
-  return -1;
-}
-
-
-int8_t SX8634::_write_nvm_keys() {
-  int8_t ret = -1;
-  int idx = _get_shadow_reg_mem_addr(SX8634_REG_SPM_KEY_MSB);
-  if (idx >= 0) {
-    _registers[idx + 0] = 0x62;
-    _registers[idx + 1] = 0x9D;
-    I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
-    if (nullptr != nu) {
-      nu->dev_addr = _opts.i2c_addr;
-      nu->sub_addr = SX8634_REG_SPM_KEY_MSB;
-      nu->buf      = &_registers[idx];
-      nu->buf_len  = 2;
-      ret = _bus->queue_io_job(nu);
+    if (SX8634OpMode::DOZE != _mode) {
+      setMode(SX8634OpMode::DOZE);
+    }
+    if (0 == _write_register(SX8634_REG_SPM_KEY_MSB, 0x62)) {
+      ret++;
+      if (0 == _write_register(SX8634_REG_SPM_KEY_LSB, 0x9D)) {
+        ret++;
+        if (0 == _write_register(SX8634_REG_SPM_BASE_ADDR, 0xA5)) {
+          ret++;
+          if (0 == _write_register(SX8634_REG_SPM_BASE_ADDR, 0x5A)) {
+            ret = 0;
+          }
+        }
+      }
     }
   }
   return ret;
 }
-
 
 #endif  // CONFIG_SX8634_PROVISIONING
 #endif  // CONFIG_MANUVR_SX8634

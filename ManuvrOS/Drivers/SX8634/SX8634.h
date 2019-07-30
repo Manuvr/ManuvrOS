@@ -311,7 +311,6 @@ class SX8634 : public I2CDevice {
 
     #if defined(CONFIG_SX8634_PROVISIONING)
       int8_t  burn_nvm();
-      int8_t  _write_nvm_keys();
     #endif  // CONFIG_SX8634_PROVISIONING
 
     inline void ping() { _ping_device(); };
