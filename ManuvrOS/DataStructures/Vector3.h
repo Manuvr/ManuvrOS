@@ -45,178 +45,165 @@ Thank you, Bill and Michael!
 #ifndef __MANUVR_DS_VECTOR3_H
 #define __MANUVR_DS_VECTOR3_H
 
+#include <inttypes.h>
+#include <stdint.h>
 #include <math.h>
 
 template <typename T>
-class Vector3
-{
-public:
-  T x, y, z;
+  class Vector3 {
+  public:
+    T x, y, z;
 
-  // trivial ctor
-  Vector3<T>(): x(0),y(0),z(0) {}
+    // trivial ctor
+    Vector3<T>(): x(0),y(0),z(0) {}
 
-  // setting ctor
-  Vector3<T>(const T x0, const T y0, const T z0): x(x0), y(y0), z(z0) {}
+    // setting ctor
+    Vector3<T>(const T x0, const T y0, const T z0): x(x0), y(y0), z(z0) {}
 
-  // setting ctor
-  Vector3<T>(const Vector3<T>* existing): x(existing->x), y(existing->y), z(existing->z) {}
+    // setting ctor
+    Vector3<T>(const Vector3<T>* existing): x(existing->x), y(existing->y), z(existing->z) {}
 
-  // function call operator
-  void operator ()(const T x0, const T y0, const T z0)
-  {  x= x0; y= y0; z= z0;  }
+    // function call operator
+    void operator ()(const T x0, const T y0, const T z0)
+    {  x= x0; y= y0; z= z0;  }
 
-  // setting fxn
-  void set(Vector3<T>* existing) {
-    x = (existing->x);
-    y = (existing->y);
-    z = (existing->z);
-  }
-
-  // test for equality
-  bool operator==(const Vector3<T> &v)
-  {  return (x==v.x && y==v.y && z==v.z);  }
-
-  // test for inequality
-  bool operator!=(const Vector3<T> &v)
-  {  return (x!=v.x || y!=v.y || z!=v.z);  }
-
-  // negation
-  Vector3<T> operator -(void) const
-  {  return Vector3<T>(-x,-y,-z);  }
-
-  // addition
-  Vector3<T> operator +(const Vector3<T> &v) const
-  {   return Vector3<T>(x+v.x, y+v.y, z+v.z);   }
-
-  // subtraction
-  Vector3<T> operator -(const Vector3<T> &v) const
-  {   return Vector3<T>(x-v.x, y-v.y, z-v.z);   }
-
-  // uniform scaling
-  Vector3<T> operator *(const T num) const
-  {
-    Vector3<T> temp(*this);
-    return temp*=num;
-  }
-
-  // uniform scaling
-  Vector3<T> operator /(const T num) const
-  {
-    Vector3<T> temp(*this);
-    return temp/=num;
-  }
-
-  // addition
-  Vector3<T> &operator +=(const Vector3<T> &v)
-  {
-    x+=v.x;  y+=v.y;  z+=v.z;
-    return *this;
-  }
-
-  // subtraction
-  Vector3<T> &operator -=(const Vector3<T> &v)
-  {
-    x-=v.x;  y-=v.y;  z-=v.z;
-    return *this;
-  }
-
-  // uniform scaling
-  Vector3<T> &operator *=(const T num)
-  {
-    x*=num; y*=num; z*=num;
-    return *this;
-  }
-
-  // uniform scaling
-  Vector3<T> &operator /=(const T num)
-  {
-    x/=num; y/=num; z/=num;
-    return *this;
-  }
-
-  // dot product
-  T operator *(const Vector3<T> &v) const
-  {  return x*v.x + y*v.y + z*v.z;  }
-
-  // cross product
-  Vector3<T> operator %(const Vector3<T> &v) const
-  {
-    Vector3<T> temp(y*v.z - z*v.y, z*v.x - x*v.z, x*v.y - y*v.x);
-    return temp;
-  }
-
-  // gets the length of this vector squared
-  T length_squared() const
-  {  return (T)(*this * *this);   }
-
-  // gets the length of this vector
-  float length() const
-  {  return (T)sqrt(*this * *this);   }
-
-  // normalizes this vector
-  float normalize(){
-    float stacked_len = length();
-    if (stacked_len) {
-      if (stacked_len != 1.0f) {
-        // Only do more math if anything will change. May already be normalized.
-        // Multiplying 3 times is typically worth saving two divisions.
-        // I picked up this trick from Sebastian Madgwick's AHRS code.
-        stacked_len = 1.0f/stacked_len;
-        *this *=stacked_len;
-      }
+    // setting fxn
+    void set(Vector3<T>* existing) {
+      x = (existing->x);
+      y = (existing->y);
+      z = (existing->z);
     }
-      return stacked_len;
-  }
 
-  // Normalize against the supllied length, for code that caches this information.
-  void set(T _x, T _y, T _z) {
+    // test for equality
+    bool operator==(const Vector3<T> &v)
+    {  return (x==v.x && y==v.y && z==v.z);  }
+
+    // test for inequality
+    bool operator!=(const Vector3<T> &v)
+    {  return (x!=v.x || y!=v.y || z!=v.z);  }
+
+    // negation
+    Vector3<T> operator -(void) const
+    {  return Vector3<T>(-x,-y,-z);  }
+
+    // addition
+    Vector3<T> operator +(const Vector3<T> &v) const
+    {   return Vector3<T>(x+v.x, y+v.y, z+v.z);   }
+
+    // subtraction
+    Vector3<T> operator -(const Vector3<T> &v) const
+    {   return Vector3<T>(x-v.x, y-v.y, z-v.z);   }
+
+    // uniform scaling
+    Vector3<T> operator *(const T num) const {
+      Vector3<T> temp(*this);
+      return temp*=num;
+    }
+
+    // uniform scaling
+    Vector3<T> operator /(const T num) const {
+      Vector3<T> temp(*this);
+      return temp/=num;
+    }
+
+    // addition
+    Vector3<T> &operator +=(const Vector3<T> &v) {
+      x+=v.x;  y+=v.y;  z+=v.z;
+      return *this;
+    }
+
+    // subtraction
+    Vector3<T> &operator -=(const Vector3<T> &v) {
+      x-=v.x;  y-=v.y;  z-=v.z;
+      return *this;
+    }
+
+    // uniform scaling
+    Vector3<T> &operator *=(const T num) {
+      x*=num; y*=num; z*=num;
+      return *this;
+    }
+
+    // uniform scaling
+    Vector3<T> &operator /=(const T num) {
+      x/=num; y/=num; z/=num;
+      return *this;
+    }
+
+    // dot product
+    T operator *(const Vector3<T> &v) const {  return x*v.x + y*v.y + z*v.z;  }
+
+    // cross product
+    Vector3<T> operator %(const Vector3<T> &v) const {
+      Vector3<T> temp(y*v.z - z*v.y, z*v.x - x*v.z, x*v.y - y*v.x);
+      return temp;
+    }
+
+    // gets the length of this vector squared
+    T length_squared() const {  return (T)(*this * *this);       }
+
+    // gets the length of this vector
+    float length() const {      return (T)sqrt(*this * *this);   }
+
+    // normalizes this vector
+    float normalize(){
+      float stacked_len = length();
+      if (stacked_len) {
+        if (stacked_len != 1.0f) {
+          // Only do more math if anything will change. May already be normalized.
+          // Multiplying 3 times is typically worth saving two divisions.
+          // I picked up this trick from Sebastian Madgwick's AHRS code.
+          stacked_len = 1.0f/stacked_len;
+          *this *=stacked_len;
+        }
+      }
+        return stacked_len;
+    }
+
+    // Normalize against the supllied length, for code that caches this information.
+    void set(T _x, T _y, T _z) {
       x = _x;
       y = _y;
       z = _z;
-  }
+    }
 
-  // Normalize against the supllied length, for code that caches this information.
-  void normalize(float len){
-      if (len) *this/=len;
-  }
+    // Normalize against the supllied length, for code that caches this information.
+    void normalize(float len) {
+        if (len) *this/=len;
+    }
 
-  // returns the normalized version of this vector
-  Vector3<T> normalized() const
-  {   return  *this/length();  }
+    // returns the normalized version of this vector
+    Vector3<T> normalized() const {   return  *this/length();  }
 
-  // reflects this vector about n
-  void reflect(const Vector3<T> &n)
-  {
-    Vector3<T> orig(*this);
-    project(n);
-    *this= *this*2 - orig;
-  }
+    // reflects this vector about n
+    void reflect(const Vector3<T> &n) {
+      Vector3<T> orig(*this);
+      project(n);
+      *this= *this*2 - orig;
+    }
 
-  // projects this vector onto v
-  void project(const Vector3<T> &v)
-  {  *this= v * (*this * v)/(v*v);  }
+    // projects this vector onto v
+    void project(const Vector3<T> &v) {  *this= v * (*this * v)/(v*v);  }
 
-  // returns this vector projected onto v
-  Vector3<T> projected(const Vector3<T> &v)
-  {   return v * (*this * v)/(v*v);  }
+    // returns this vector projected onto v
+    Vector3<T> projected(const Vector3<T> &v) {  return v * (*this * v)/(v*v); }
 
-  // computes the angle between 2 arbitrary vectors
-  static inline T angle(const Vector3<T> &v1, const Vector3<T> &v2)
-  {   return (T)acosf((v1*v2) / (v1.length()*v2.length()));  }
+    // computes the angle between 2 arbitrary vectors
+    static inline T angle(const Vector3<T> &v1, const Vector3<T> &v2)
+    {   return (T)acosf((v1*v2) / (v1.length()*v2.length()));  }
 
-  // computes the angle between 2 arbitrary normalized vectors
-  static inline T angle_normalized(const Vector3<T> &v1, const Vector3<T> &v2)
-  {   return (T)acosf(v1*v2);  }
+    // computes the angle between 2 arbitrary normalized vectors
+    static inline T angle_normalized(const Vector3<T> &v1, const Vector3<T> &v2)
+    {   return (T)acosf(v1*v2);  }
 
 };
 
-typedef Vector3<int16_t>  Vector3i16;
-typedef Vector3<uint16_t>  Vector3ui16;
-typedef Vector3<int>      Vector3i;
+typedef Vector3<int16_t>       Vector3i16;
+typedef Vector3<uint16_t>      Vector3ui16;
+typedef Vector3<int>           Vector3i;
 typedef Vector3<unsigned int>  Vector3ui;
-typedef Vector3<long>      Vector3l;
-typedef Vector3<unsigned long>  Vector3ul;
-typedef Vector3<float>      Vector3f;
+typedef Vector3<long>          Vector3l;
+typedef Vector3<unsigned long> Vector3ul;
+typedef Vector3<float>         Vector3f;
 
 #endif // __MANUVR_DS_VECTOR3_H

@@ -24,7 +24,7 @@ This is the platform-invariant implementation of a peripheral wraspper
 
 #include <Platform/Peripherals/SPI/SPIAdapter.h>
 
-#if defined(CONFIG_MANUVR_SSD1331)
+#if defined(CONFIG_MANUVR_SUPPORT_SPI)
 
 
 
@@ -576,4 +576,4 @@ void SPIAdapter::printDebug(StringBuilder *output) {
 //#endif  // MANUVR_CONSOLE_SUPPORT
 
 
-#endif  // CONFIG_MANUVR_SSD1331
+#endif  // CONFIG_MANUVR_SUPPORT_SPI

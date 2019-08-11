@@ -344,6 +344,8 @@ class SX8634 : public I2CDevice {
       else    _flags &= ~_flag;
     };
 
+    void     _send_button_event(uint8_t button, bool pushed);
+
     int8_t   _get_shadow_reg_mem_addr(uint8_t addr);
     uint8_t  _get_shadow_reg_val(uint8_t addr);
     void     _set_shadow_reg_val(uint8_t addr, uint8_t val);

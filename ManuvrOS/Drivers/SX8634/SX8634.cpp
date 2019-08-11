@@ -302,6 +302,13 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
               if (current != _buttons) {
                 // TODO: Bitshift the button values into discrete messages.
                 output.concatf("-- Buttons: %u\n", current);
+                uint16_t diff = current ^ _buttons;
+                for (uint8_t i = 0; i < 12; i++) {
+                  if (diff & 0x01) {
+                    _send_button_event(i, (0x01 & (current >> i)));
+                  }
+                  diff = diff >> 1;
+                }
                 _buttons = current;
               }
             }
@@ -567,6 +574,17 @@ uint8_t SX8634::getPWMValue(uint8_t pin) {
   return _pwm_levels[pin & 0x07];
 }
 
+
+
+/*******************************************************************************
+* Event pitching functions
+*******************************************************************************/
+
+void SX8634::_send_button_event(uint8_t button, bool pushed) {
+  ManuvrMsg* msg = Kernel::returnEvent(pushed ? MANUVR_MSG_USER_BUTTON_PRESS : MANUVR_MSG_USER_BUTTON_RELEASE);
+  msg->addArg((uint8_t) button);
+  Kernel::staticRaiseEvent(msg);
+}
 
 
 /*******************************************************************************
