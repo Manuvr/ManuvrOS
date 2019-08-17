@@ -6,7 +6,7 @@
 #ifndef __SX8634_DRIVER_H__
 #define __SX8634_DRIVER_H__
 
-// These are the i2c register definitions.
+/* These are the i2c register definitions. */
 #define SX8634_REG_IRQ_SRC                  0x00  // Read-only
 #define SX8634_REG_CAP_STAT_MSB             0x01  // Read-only
 #define SX8634_REG_CAP_STAT_LSB             0x02  // Read-only
@@ -27,7 +27,11 @@
 #define SX8634_REG_SPM_KEY_LSB              0xAD  //
 #define SX8634_REG_SOFT_RESET               0xB1  //
 
-// These are the SPM register definitions.
+/*
+* These are the SPM register definitions.
+* NOTE: In order to gain access to this data, the SPM needs to be opened. While
+*   the SPM is open, the chip does not respond to touch.
+*/
 #define SX8634_SPM_RESERVED_00              0x00
 #define SX8634_SPM_RESERVED_01              0x01
 #define SX8634_SPM_RESERVED_02              0x02
@@ -157,7 +161,7 @@
 #define SX8634_SPM_RESERVED_1D              0x7E
 #define SX8634_SPM_SPM_CRC                  0x7F
 
-
+/* Flags that help us track states */
 #define SX8634_FLAG_PING_IN_FLIGHT        0x0001
 #define SX8634_FLAG_DEV_FOUND             0x0002
 #define SX8634_FLAG_IRQ_INHIBIT           0x0004
@@ -190,12 +194,6 @@ enum class SX8634_FSM : uint8_t {
   READY,
   NVM_BURN,
   NVM_VERIFY
-};
-
-enum class SX8634GPIOMode : uint8_t {
-  OUTPUT      = 0,
-  PWM         = 1,
-  INPUT       = 2
 };
 
 
@@ -231,8 +229,13 @@ class SX8634Opts {
       irq_pin(o->irq_pin),
       conf(o->conf) {};
 
+
+
     /**
-    * Constructor.
+    * Constructor that accepts existing chip configuration. If the build
+    *   includes the ability to burn the NVM, or wants the configuration
+    *   for an already configured chip to be taken on faith, then this is
+    *   the only valid constructor.
     *
     * @param address
     * @param reset pin
@@ -250,8 +253,12 @@ class SX8634Opts {
       irq_pin(irq),
       conf(cdata) {};
 
+
+    #if !defined(CONFIG_SX8634_PROVISIONING) & !defined(CONFIG_SX8634_CONFIG_ON_FAITH)
     /**
-    * Constructor that accepts existing chip configuration.
+    * Constructor that causes the driver to configure itself according to the
+    *   contents of the SX8634 SPM. This will cause a period of delay on boot
+    *   which might be obnoxious for some applications.
     *
     * @param address
     * @param reset pin
@@ -266,6 +273,7 @@ class SX8634Opts {
       reset_pin(reset),
       irq_pin(irq),
       conf(nullptr) {};
+    #endif   // !CONFIG_SX8634_PROVISIONING & !CONFIG_SX8634_CONFIG_ON_FAITH
 
     bool haveResetPin() const {   return (255 != reset_pin);   };
     bool haveIRQPin() const {     return (255 != irq_pin);     };

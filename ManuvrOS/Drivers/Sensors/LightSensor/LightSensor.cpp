@@ -72,12 +72,13 @@ LightSensor::~LightSensor() {
 
 
 void LightSensor::light_check() {
-  uint16_t current_lux_read = readPinAnalog(_opts.pin);
-  uint8_t current_lux_bin = current_lux_read >> 2;
+  _current_value = readPinAnalog(_opts.pin);
+  uint8_t current_lux_bin = _current_value >> 2;
 
   uint8_t lux_delta = (last_lux_bin > current_lux_bin) ? (last_lux_bin - current_lux_bin) : (current_lux_bin - last_lux_bin);
   if (lux_delta > 3) {
   }
+
   SensorError err = updateDatum(0, last_lux_bin);
 }
 
@@ -127,5 +128,5 @@ SensorError LightSensor::getParameter(uint16_t reg, int len, uint8_t*) {
 void LightSensor::printDebug(StringBuilder *output) {
   if (output == nullptr) return;
   output->concatf("LightSensor\t%snitialized%s", (isActive() ? "I": "Uni"), PRINT_DIVIDER_1_STR);
-  output->concatf("-- Pin:    %u\n\n", _opts.pin);
+  output->concatf("-- Pin:    %u\n-- Value:  %u\n\n", _opts.pin, _current_value);
 }

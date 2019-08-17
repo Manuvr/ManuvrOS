@@ -101,6 +101,7 @@ class LightSensor : public SensorWrapper {
   private:
     const LightSensorOpts _opts;
     ManuvrMsg _periodic_check;
+    uint16_t _current_value;
 
     void light_check();
 };
