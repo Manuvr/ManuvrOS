@@ -6,6 +6,10 @@
 #ifndef __SX8634_DRIVER_H__
 #define __SX8634_DRIVER_H__
 
+#if defined(CONFIG_SX8634_PROVISIONING) & defined(CONFIG_SX8634_CONFIG_ON_FAITH)
+  #error CONFIG_SX8634_PROVISIONING and CONFIG_SX8634_CONFIG_ON_FAITH cannot be defined simultaneously.
+#endif
+
 /* These are the i2c register definitions. */
 #define SX8634_REG_IRQ_SRC                  0x00  // Read-only
 #define SX8634_REG_CAP_STAT_MSB             0x01  // Read-only
@@ -344,6 +348,7 @@ class SX8634 : public I2CDevice {
 
     uint8_t  _registers[16];     // Register shadows
     uint8_t  _spm_shadow[128];   // SPM shadow
+    ManuvrMsg _slider_msg;
 
     /* Flag manipulation inlines */
     inline uint16_t _sx8634_flags() {                return _flags;            };
@@ -357,6 +362,8 @@ class SX8634 : public I2CDevice {
     };
 
     void     _send_button_event(uint8_t button, bool pushed);
+    void     _send_slider_event();
+    int8_t   _process_gpi_change(uint8_t new_val);
 
     int8_t   _get_shadow_reg_mem_addr(uint8_t addr);
     uint8_t  _get_shadow_reg_val(uint8_t addr);
@@ -384,7 +391,6 @@ class SX8634 : public I2CDevice {
     int8_t _write_gpo_register(uint8_t pin, bool val);
     int8_t _write_pwm_value(uint8_t pin, uint8_t val);
     int8_t _proc_waiting_pwm_changes();
-    int8_t _process_gpi_change(uint8_t new_val);
     inline bool _is_valid_pin(uint8_t pin) {  return (pin < 8);  };
 
     /* Accessors to the finite state-machine position. */

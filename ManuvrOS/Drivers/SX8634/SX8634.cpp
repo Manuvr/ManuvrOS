@@ -104,6 +104,8 @@ int8_t SX8634::read_irq_registers() {
 SX8634::SX8634(const SX8634Opts* o) : I2CDevice(o->i2c_addr), _opts{o} {
   INSTANCE = this;
   _clear_registers();
+  _slider_msg.repurpose(MANUVR_MSG_USER_SLIDER_VALUE);
+  _slider_msg.incRefs();
   _ll_pin_init();
 }
 
@@ -128,7 +130,9 @@ int8_t SX8634::io_op_callahead(BusOp* _op) {
 
 int8_t SX8634::io_op_callback(BusOp* _op) {
   I2CBusOp* completed = (I2CBusOp*) _op;
-  StringBuilder output;
+  #if defined(CONFIG_SX8634_DEBUG)
+    StringBuilder output;
+  #endif
 
   switch (completed->get_opcode()) {
     case BusOpcode::TX_CMD:
@@ -200,11 +204,15 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
               _set_fsm_position(SX8634_FSM::READY);
               switch (*(completed->buf)) {
                 case 0xA5:
-                  //Kernel::log("0xA5 --> SPM_BASE_ADDR\n");
+                  #if defined(CONFIG_SX8634_DEBUG)
+                    Kernel::log("0xA5 --> SPM_BASE_ADDR\n");
+                  #endif
                   _write_register(SX8634_REG_SPM_BASE_ADDR, 0x5A);
                   break;
                 case 0x5A:
-                  //Kernel::log("0x5A --> SPM_BASE_ADDR\n");
+                  #if defined(CONFIG_SX8634_DEBUG)
+                    Kernel::log("0x5A --> SPM_BASE_ADDR\n");
+                  #endif
                   break;
               }
             #endif // CONFIG_SX8634_PROVISIONING
@@ -227,11 +235,15 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
 
         #if defined(CONFIG_SX8634_PROVISIONING)
           case SX8634_REG_SPM_KEY_MSB:
-            //Kernel::log("0x62 --> SPM_KEY_MSB\n");
+            #if defined(CONFIG_SX8634_DEBUG)
+              Kernel::log("0x62 --> SPM_KEY_MSB\n");
+            #endif
             _write_register(SX8634_REG_SPM_KEY_LSB, 0x9D);
             break;
           case SX8634_REG_SPM_KEY_LSB:
-            //Kernel::log("0x9D --> SPM_KEY_LSB\n");
+            #if defined(CONFIG_SX8634_DEBUG)
+              Kernel::log("0x9D --> SPM_KEY_LSB\n");
+            #endif
             _write_register(SX8634_REG_SPM_BASE_ADDR, 0xA5);
             break;
         #endif // CONFIG_SX8634_PROVISIONING
@@ -318,7 +330,9 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
               SX8634OpMode current = (SX8634OpMode) (_registers[9] & 0x04);
               _sx8634_set_flag(SX8634_FLAG_COMPENSATING, (_registers[9] & 0x04));
               if (current != _mode) {
-                output.concatf("-- SX8634 is now in mode %s\n", getModeStr(current));
+                #if defined(CONFIG_SX8634_DEBUG)
+                  output.concatf("-- SX8634 is now in mode %s\n", getModeStr(current));
+                #endif   // CONFIG_SX8634_DEBUG
                 _mode = current;
               }
             }
@@ -328,8 +342,10 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
             if (0x04 & _registers[0]) {  // Button interrupt
               uint16_t current = (((uint16_t) (_registers[1] & 0x0F)) << 8) | ((uint16_t) _registers[2]);
               if (current != _buttons) {
-                // TODO: Bitshift the button values into discrete messages.
-                output.concatf("-- Buttons: %u\n", current);
+                #if defined(CONFIG_SX8634_DEBUG)
+                  output.concatf("-- Buttons: %u\n", current);
+                #endif
+                // Bitshift the button values into discrete messages.
                 uint16_t diff = current ^ _buttons;
                 for (uint8_t i = 0; i < 12; i++) {
                   if (diff & 0x01) {
@@ -346,9 +362,11 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
               _sx8634_set_flag(SX8634_FLAG_SLIDER_MOVE_UP,   (_registers[1] & 0x40));
               uint16_t current = (((uint16_t) _registers[3]) << 8) | ((uint16_t) _registers[4]);
               if (current != _slider_val) {
-                // TODO: Send slider value.
-                output.concatf("-- Slider: %u\n", current);
+                #if defined(CONFIG_SX8634_DEBUG)
+                  output.concatf("-- Slider: %u\n", current);
+                #endif
                 _slider_val = current;
+                _send_slider_event();  // Send slider value.
               }
             }
             if (0x10 & _registers[0]) {  // GPI interrupt
@@ -361,7 +379,7 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
             if (0x40 & _registers[0]) {  // NVM burn interrupt
               // Burn appears to have completed. Enter the verify phase.
               _set_fsm_position(SX8634_FSM::READY);
-              output.concat("-- SX8634 NVM burn completed.\n");
+              Kernel::log("-- SX8634 NVM burn completed.\n");
             }
           }
           break;
@@ -405,7 +423,9 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
       break;
   }
 
-  if (output.length() > 0) Kernel::log(&output);
+  #if defined(CONFIG_SX8634_DEBUG)
+    if (output.length() > 0) Kernel::log(&output);
+  #endif
   return 0;
 }
 
@@ -731,6 +751,40 @@ int8_t SX8634::_proc_waiting_pwm_changes() {
 }
 
 
+
+/*******************************************************************************
+* Event pitching functions
+*******************************************************************************/
+
+/*
+* Send an event for the given button and state.
+*/
+void SX8634::_send_button_event(uint8_t button, bool pushed) {
+  ManuvrMsg* msg = Kernel::returnEvent(pushed ? MANUVR_MSG_USER_BUTTON_PRESS : MANUVR_MSG_USER_BUTTON_RELEASE);
+  msg->addArg((uint8_t) button);
+  Kernel::staticRaiseEvent(msg);
+}
+
+/*
+* Send an event for notice of slider update.
+*/
+void SX8634::_send_slider_event() {
+  bool queued = platform.kernel()->containsPreformedEvent(&_slider_msg);
+  if (!queued) {
+    if (_slider_msg.argCount() > 0) {
+      // TODO: Avoiding needless heap-thrash requires hackery. The Argument class
+      //   should be abstracting this ugliness away from client classes.
+      //   Requires deeper changes to fix.
+      _slider_msg.getArgs()->target_mem = (uintptr_t*) (uint32_t) _slider_val;
+    }
+    else {
+      // Should only allocate once.
+      _slider_msg.addArg((uint16_t) _slider_val);
+    }
+    Kernel::staticRaiseEvent(&_slider_msg);
+  }
+}
+
 /*
 * This is the handler function for changes in GPI values.
 */
@@ -751,17 +805,6 @@ int8_t SX8634::_process_gpi_change(uint8_t new_val) {
     _gpi_levels = new_val;  // Store the new value;
   }
   return ret;
-}
-
-
-/*******************************************************************************
-* Event pitching functions
-*******************************************************************************/
-
-void SX8634::_send_button_event(uint8_t button, bool pushed) {
-  ManuvrMsg* msg = Kernel::returnEvent(pushed ? MANUVR_MSG_USER_BUTTON_PRESS : MANUVR_MSG_USER_BUTTON_RELEASE);
-  msg->addArg((uint8_t) button);
-  Kernel::staticRaiseEvent(msg);
 }
 
 
@@ -827,9 +870,11 @@ int8_t SX8634::_close_spm_access() {
 *   registers and there is no way to discover the mistake.
 */
 int8_t SX8634::_read_block8(uint8_t idx) {
-  StringBuilder output;
-  output.concatf("_read_block8(%u)\n", idx);
-  Kernel::log(&output);
+  #if defined(CONFIG_SX8634_DEBUG)
+    StringBuilder output;
+    output.concatf("_read_block8(%u)\n", idx);
+    Kernel::log(&output);
+  #endif
   I2CBusOp* nu = _bus->new_op(BusOpcode::RX, this);
   if (nu) {
     nu->dev_addr = _dev_addr;
@@ -847,9 +892,11 @@ int8_t SX8634::_read_block8(uint8_t idx) {
 *   registers and there is no way to discover the mistake.
 */
 int8_t SX8634::_write_block8(uint8_t idx) {
-  StringBuilder output;
-  output.concatf("_write_block8(%u)\n", idx);
-  Kernel::log(&output);
+  #if defined(CONFIG_SX8634_DEBUG)
+    StringBuilder output;
+    output.concatf("_write_block8(%u)\n", idx);
+    Kernel::log(&output);
+  #endif
   I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
   if (nu) {
     nu->dev_addr = _dev_addr;
@@ -925,7 +972,9 @@ int8_t SX8634::_class_state_from_spm() {
 
 int8_t SX8634::_wait_for_reset(uint timeout_ms) {
   int8_t ret = -1;
-  //Kernel::log("Waiting for SX8634...\n");
+  #if defined(CONFIG_SX8634_DEBUG)
+    Kernel::log("Waiting for SX8634...\n");
+  #endif
   if (_opts.haveIRQPin()) {
     uint8_t tries = 40;
     while ((--tries > 0) && (0 == readPin(_opts.irq_pin))) {
@@ -990,7 +1039,6 @@ int8_t SX8634::_ll_pin_init() {
 
 /*
 * Pings the device.
-* TODO: Promote this into I2CDevice driver.
 */
 int8_t SX8634::ping() {
   if (!_sx8634_flag(SX8634_FLAG_PING_IN_FLIGHT)) {
@@ -1022,7 +1070,9 @@ int8_t SX8634::burn_nvm() {
     ret++;
     _set_fsm_position(SX8634_FSM::NVM_BURN);
     if (SX8634OpMode::DOZE != _mode) {
-      Kernel::log("Moving to doze mode.\n");
+      #if defined(CONFIG_SX8634_DEBUG)
+        Kernel::log("SX8634 moving to doze mode.\n");
+      #endif
       setMode(SX8634OpMode::DOZE);
     }
     ret = _write_register(SX8634_REG_SPM_KEY_MSB, 0x62);
