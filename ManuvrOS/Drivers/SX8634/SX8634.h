@@ -296,7 +296,7 @@ class SX8634 : public I2CDevice {
     ~SX8634();
 
     int8_t  reset();
-    int8_t  init();
+    inline int8_t init() {     return reset();     };
 
     /* Overrides from I2CDevice... */
     int8_t io_op_callahead(BusOp*);
@@ -307,6 +307,7 @@ class SX8634 : public I2CDevice {
     inline SX8634OpMode operationalMode() {  return _mode; };
 
     inline bool deviceFound() {  return _sx8634_flag(SX8634_FLAG_DEV_FOUND);  };
+    inline uint16_t sliderValue() {         return _slider_val;               };
     inline bool buttonPressed(uint8_t i) {  return ((_buttons >> i) & 0x01);  };
     inline bool buttonReleased(uint8_t i) { return !((_buttons >> i) & 0x01); };
 
@@ -316,14 +317,16 @@ class SX8634 : public I2CDevice {
     int8_t  setGPOValue(uint8_t pin, uint8_t value);
     uint8_t getGPIOValue(uint8_t pin);
 
-
-    int8_t read_irq_registers();
+    /* Class service functions */
+    int8_t read_irq_registers();              // Service an IRQ.
+    inline void ping() { _ping_device(); };   // TODO: move this to I2CDevice.
 
     #if defined(CONFIG_SX8634_PROVISIONING)
       int8_t  burn_nvm();
     #endif  // CONFIG_SX8634_PROVISIONING
 
-    inline void ping() { _ping_device(); };
+
+    static const char* getModeStr(SX8634OpMode);
 
 
   private:
@@ -364,15 +367,16 @@ class SX8634 : public I2CDevice {
     /* SPM region functions */
     int8_t  _read_full_spm();           // Mirror the SPM into our shadow.
     int8_t  _write_full_spm();          // Mirror our shadow into the SPM.
-    int8_t  _open_spm_access_r();       //
-    int8_t  _open_spm_access_w();       //
-    int8_t  _close_spm_access();        //
+    int8_t  _open_spm_access_r();       // Opens the SPM for reading.
+    int8_t  _open_spm_access_w();       // Opens the SPM for writing.
+    int8_t  _close_spm_access();        // Close SPM and resume operation.
     int8_t  _read_block8(uint8_t idx);  // Read 8 bytes from the SPM.
     int8_t  _write_block8(uint8_t idx); // Write 8 bytes to the SPM.
-    int8_t  _compare_config();
-    int8_t  _copy_boot_gpo_values();
+    int8_t  _compare_config();          // Compare provided config against SPM.
+    int8_t  _class_state_from_spm();    // Init this class from SPM shadow.
 
     int8_t  _wait_for_reset(uint);    // Will block until reset disasserts or times out.
+    int8_t  _reset_callback();        // Deals with the back-side of reset.
     int8_t  _clear_registers();       // Wipe our shadows.
     int8_t  _start_compensation();    // Tell the sensor to run a compensation cycle.
     int8_t  _ll_pin_init();           // Platform GPIO config
@@ -384,10 +388,10 @@ class SX8634 : public I2CDevice {
     int8_t _process_gpi_change(uint8_t new_val);
     inline bool _is_valid_pin(uint8_t pin) {  return (pin < 8);  };
 
+    /* Accessors to the finite state-machine position. */
     inline void       _set_fsm_position(SX8634_FSM x) {  _fsm = x;        };
     inline SX8634_FSM _get_fsm_position() {              return _fsm;     };
 
-    static const char* getModeStr(SX8634OpMode);
     static const char* getFSMStr(SX8634_FSM);
     static const char* getSMStr();
 };

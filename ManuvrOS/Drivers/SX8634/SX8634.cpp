@@ -157,7 +157,7 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
                 given_idx++;
               }
             }
-            _copy_boot_gpo_values();
+            _class_state_from_spm();
           }
         #else
           _read_full_spm();
@@ -239,10 +239,7 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
         case SX8634_REG_SOFT_RESET:
           switch (*(completed->buf)) {
             case 0x00:
-              if (0 == _wait_for_reset(300)) {
-                _sx8634_clear_flag(SX8634_FLAG_IRQ_INHIBIT);
-                _ping_device();
-              }
+              _reset_callback();
               break;
             case 0xDE:
               _write_register(SX8634_REG_SOFT_RESET, 0x00);
@@ -291,7 +288,7 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
             }
             else {
               _sx8634_set_flag(SX8634_FLAG_SPM_SHADOWED);
-              _copy_boot_gpo_values();
+              _class_state_from_spm();
               if (1 == _compare_config()) {
                 // Since we apparently want to make changes to the SPM, we enter
                 //   that state and start the write operation.
@@ -420,15 +417,16 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void SX8634::printDebug(StringBuilder* output) {
-  output->concatf("Touch sensor (SX8634)\t%s%s-- Found:   %c\n", getModeStr(operationalMode()), PRINT_DIVIDER_1_STR, (deviceFound() ? 'y':'n'));
+  output->concatf("Touch sensor (SX8634)\t%s%s\n", getModeStr(operationalMode()), PRINT_DIVIDER_1_STR);
+  output->concatf("-- Found:          %c\n", (deviceFound() ? 'y':'n'));
   output->concatf("-- IRQ Inhibit:    %c\n", (_sx8634_flag(SX8634_FLAG_IRQ_INHIBIT) ? 'y': 'n'));
   output->concatf("-- PWM sync'd:     %c\n", (_sx8634_flag(SX8634_FLAG_PWM_CHANGE_IN_FLIGHT) ? 'n': 'y'));
   output->concatf("-- Compensations:  %u\n", _compensations);
   output->concatf("-- FSM Position:   %s\n", getFSMStr(_fsm));
 
-  output->concat("--\n-- Registers:");
+  output->concat("--\n-- Registers:\n--\t  ");
   StringBuilder::printBuffer(output, _registers, sizeof(_registers), "--\t  ");
-  output->concat("--\n-- SPM/NVM:");
+  output->concat("--\n-- SPM/NVM:\n");
 
   output->concatf("--\tConf source:    %s\n", (_sx8634_flag(SX8634_FLAG_CONF_IS_NVM) ? "NVM" : "QSM"));
   output->concatf("--\tSPM shadowed:   %c\n", (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED) ? 'y': 'n'));
@@ -447,8 +445,6 @@ void SX8634::printDebug(StringBuilder* output) {
   for (uint8_t i = 0; i < 8; i++) {
     output->concatf("--\t%u:\t%u\t%s\n", i, getGPIOValue(i), Platform::getPinModeStr(getGPIOMode(i)));
   }
-
-  I2CDevice::printDebug(output);
 }
 
 
@@ -547,21 +543,26 @@ int8_t SX8634::reset() {
     setPin(_opts.reset_pin, false);
     vTaskDelay(10 / portTICK_PERIOD_MS);
     setPin(_opts.reset_pin, true);
-    ret = _wait_for_reset(300);
-    if (0 == ret) {
-      _sx8634_clear_flag(SX8634_FLAG_IRQ_INHIBIT);
-      ret = _ping_device();
-    }
-    return ret;
+    ret = _reset_callback();
   }
   else {
-    return _write_register(SX8634_REG_SOFT_RESET, 0xDE);
+    ret = _write_register(SX8634_REG_SOFT_RESET, 0xDE);
   }
+  return ret;
 }
 
 
-int8_t SX8634::init() {
-  return reset();
+/*
+* We split this apart from the reset function so that it could be called from
+*   either the pin-case or the software-case.
+*/
+int8_t SX8634::_reset_callback() {
+  int8_t ret = _wait_for_reset(300);
+  if (0 == ret) {
+    _sx8634_clear_flag(SX8634_FLAG_IRQ_INHIBIT);
+    ret = _ping_device();
+  }
+  return ret;
 }
 
 
@@ -899,9 +900,12 @@ int8_t SX8634::_compare_config() {
 }
 
 /*
+* If the SPM is shadowed, set the state of the class to reflect it.
 * Copies the default GPO values to the local shadow.
+*
+* Returns 0 on success, -1 on no SPM shadow, -2 on bogus config.
 */
-int8_t SX8634::_copy_boot_gpo_values() {
+int8_t SX8634::_class_state_from_spm() {
   if (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED)) {
     uint8_t dev_levels = _spm_shadow[66];
     for (uint8_t i = 0; i < 8; i++) {
@@ -939,12 +943,31 @@ int8_t SX8634::_wait_for_reset(uint timeout_ms) {
 }
 
 
+/*
+* Clears all stateful data in the class.
+*/
 int8_t SX8634::_clear_registers() {
-  _sx8634_clear_flag(SX8634_FLAG_SPM_SHADOWED);
+  _sx8634_clear_flag(
+    SX8634_FLAG_PING_IN_FLIGHT | SX8634_FLAG_DEV_FOUND |
+    SX8634_FLAG_SPM_DIRTY | SX8634_FLAG_COMPENSATING |
+    SX8634_FLAG_CONF_IS_NVM | SX8634_FLAG_SLIDER_TOUCHED |
+    SX8634_FLAG_SLIDER_MOVE_DOWN | SX8634_FLAG_SLIDER_MOVE_UP |
+    SX8634_FLAG_SPM_WRITABLE | SX8634_FLAG_SPM_OPEN |
+    SX8634_FLAG_SPM_SHADOWED | SX8634_FLAG_PWM_CHANGE_IN_FLIGHT
+  );
+  _mode = SX8634OpMode::RESERVED;
+  _slider_val = 0;
+  _buttons    = 0;
+  _compensations = 0;
+  _nvm_burns     = 0;
+  _gpi_levels    = 0;
   memset(_registers,  0, sizeof(_registers));
   memset(_spm_shadow, 0, sizeof(_spm_shadow));
+  memset(_gpo_levels, 0, sizeof(_gpo_levels));
+  memset(_pwm_buffer, 0, sizeof(_pwm_buffer));
   return 0;
 }
+
 
 
 int8_t SX8634::_start_compensation() {
