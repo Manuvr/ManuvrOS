@@ -157,6 +157,7 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
                 given_idx++;
               }
             }
+            _copy_boot_gpo_values();
           }
         #else
           _read_full_spm();
@@ -288,6 +289,7 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
             }
             else {
               _sx8634_set_flag(SX8634_FLAG_SPM_SHADOWED);
+              _copy_boot_gpo_values();
               if (1 == _compare_config()) {
                 // Since we apparently want to make changes to the SPM, we enter
                 //   that state and start the write operation.
@@ -625,7 +627,6 @@ GPIOMode SX8634::getGPIOMode(uint8_t pin) {
 }
 
 
-
 /*
 * If the pin is an input, returns the last-know state of the pin.
 * If the pin is an output, returns the last-confirmed write to the pin.
@@ -858,6 +859,22 @@ int8_t SX8634::_compare_config() {
     }
   }
   return ret;
+}
+
+/*
+* Copies the default GPO values to the local shadow.
+*/
+int8_t SX8634::_copy_boot_gpo_values() {
+  if (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED)) {
+    uint8_t dev_levels = _spm_shadow[66];
+    for (uint8_t i = 0; i < 8; i++) {
+      if (GPIOMode::OUTPUT == getGPIOMode(i)) {
+        _gpo_levels[i] = ((dev_levels >> i) & 0x01) ? 255 : 0;
+      }
+    }
+    return 0;
+  }
+  return -1;
 }
 
 

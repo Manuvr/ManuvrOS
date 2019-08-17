@@ -368,6 +368,7 @@ class SX8634 : public I2CDevice {
     int8_t  _read_block8(uint8_t idx);  // Read 8 bytes from the SPM.
     int8_t  _write_block8(uint8_t idx); // Write 8 bytes to the SPM.
     int8_t  _compare_config();
+    int8_t  _copy_boot_gpo_values();
 
     int8_t  _wait_for_reset(uint);    // Will block until reset disasserts or times out.
     int8_t  _clear_registers();       // Wipe our shadows.
