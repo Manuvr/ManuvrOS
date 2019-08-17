@@ -20,6 +20,7 @@ Author: J. Ian Lindsay
 
 volatile static SX8634* INSTANCE = nullptr;
 
+/* Offsets of off-limits values in the SPM */
 static const uint8_t _reserved_spm_offsets[31] = {
   0x00, 0x01, 0x02, 0x03, 0x08, 0x20, 0x2A, 0x31, 0x32, 0x55, 0x6A, 0x6B, 0x6C,
   0x6D, 0x6E, 0x6F, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A,
@@ -47,6 +48,32 @@ const char* SX8634::getFSMStr(SX8634_FSM x) {
     case SX8634_FSM::NVM_VERIFY: return "NVM_VERIFY";
     default:                     return "UNDEF";
   }
+}
+
+/*
+* Given the 128-byte input buffer, strip all the values that are either
+*   reserved or readonly. The new buffer is written back into the input buffer.
+* Length of valid data in the buffer after function runs is always 97-bytes.
+*/
+int8_t SX8634::render_stripped_spm(uint8_t* buf) {
+  if (nullptr == buf) {
+    uint8_t rsvd_idx  = 0;
+    uint8_t given_idx = 0;
+    for (uint8_t i = 0; i < 128; i++) {
+      if (i == _reserved_spm_offsets[rsvd_idx]) {
+        // Skip the copy. Increment the reserved pointer.
+        rsvd_idx++;
+      }
+      else {
+        // This is a desired config byte.
+        if (buf[i] != buf[given_idx]) {
+          buf[i] = buf[given_idx];
+        }
+        given_idx++;
+      }
+    }
+  }
+  return 0;
 }
 
 
@@ -1079,6 +1106,33 @@ int8_t SX8634::burn_nvm() {
   }
   return ret;
 }
+
+
+/*
+* Buffer is assumed to be 128-bytes long. Copy the SPM verbatim.
+*/
+int8_t SX8634::copy_spm_to_buffer(uint8_t* buf) {
+  int8_t ret = -2;
+  if (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED)) {
+    ret++;
+    if (!_sx8634_flag(SX8634_FLAG_SPM_DIRTY)) {
+      memcpy(buf, _spm_shadow, 128);
+      ret++;
+    }
+  }
+  return ret;
+}
+
+
+/*
+* Buffer is assumed to be 128-bytes long. Copy the SPM verbatim.
+*/
+int8_t SX8634::load_spm_from_buffer(uint8_t* buf) {
+  _sx8634_set_flag(SX8634_FLAG_SPM_DIRTY | SX8634_FLAG_SPM_SHADOWED);
+  memcpy(_spm_shadow, buf, 128);
+  return 0;
+}
+
 
 #endif  // CONFIG_SX8634_PROVISIONING
 #endif  // CONFIG_MANUVR_SX8634

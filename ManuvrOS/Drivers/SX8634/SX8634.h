@@ -327,7 +327,12 @@ class SX8634 : public I2CDevice {
 
     #if defined(CONFIG_SX8634_PROVISIONING)
       int8_t  burn_nvm();
+      int8_t  copy_spm_to_buffer(uint8_t*);
+      int8_t  load_spm_from_buffer(uint8_t*);
+
+      static int8_t render_stripped_spm(uint8_t*);
     #endif  // CONFIG_SX8634_PROVISIONING
+
 
 
     static const char* getModeStr(SX8634OpMode);

@@ -223,7 +223,7 @@ class ManuvrPlatform {
 
     /* These are storage-related members. */
     #if defined(MANUVR_STORAGE)
-      Storage* fetchStorage(const char*);
+      inline Storage* fetchStorage(const char*) {   return _storage_device;   };
       int8_t   offerStorage(const char*, Storage*);
     #endif   // MANUVR_STORAGE
 
