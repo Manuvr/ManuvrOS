@@ -182,6 +182,8 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
           if (_is_valid_pin(*(completed->buf))) {
             _gpo_levels[*(completed->buf)] = *(completed->buf + 1);
           }
+          _sx8634_clear_flag(SX8634_FLAG_PWM_CHANGE_IN_FLIGHT);
+          _proc_waiting_pwm_changes();
           break;
         case SX8634_REG_SPM_CONFIG:
           _sx8634_set_flag(SX8634_FLAG_SPM_WRITABLE, (0x00 == (*(completed->buf) & 0x08)));
@@ -418,11 +420,14 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void SX8634::printDebug(StringBuilder* output) {
-  output->concatf("Touch sensor (SX8634)\t%s%s-- Found:   %c\n-- Registers:\n%s\n", getModeStr(operationalMode()), PRINT_DIVIDER_1_STR, (deviceFound() ? 'y':'n'), PRINT_DIVIDER_1_STR);
+  output->concatf("Touch sensor (SX8634)\t%s%s-- Found:   %c\n", getModeStr(operationalMode()), PRINT_DIVIDER_1_STR, (deviceFound() ? 'y':'n'));
+  output->concatf("-- IRQ Inhibit:    %c\n", (_sx8634_flag(SX8634_FLAG_IRQ_INHIBIT) ? 'y': 'n'));
+  output->concatf("-- PWM sync'd:     %c\n", (_sx8634_flag(SX8634_FLAG_PWM_CHANGE_IN_FLIGHT) ? 'n': 'y'));
+  output->concatf("-- Compensations:  %u\n", _compensations);
+  output->concatf("-- FSM Position:   %s\n", getFSMStr(_fsm));
+
+  output->concat("--\n-- Registers:");
   StringBuilder::printBuffer(output, _registers, sizeof(_registers), "--\t  ");
-  output->concatf("--\n--\tFSM Position:   %s\n", getFSMStr(_fsm));
-  output->concatf("--\tIRQ Inhibit:    %c\n", (_sx8634_flag(SX8634_FLAG_IRQ_INHIBIT) ? 'y': 'n'));
-  output->concatf("--\tCompensations:  %u\n", _compensations);
   output->concat("--\n-- SPM/NVM:");
 
   output->concatf("--\tConf source:    %s\n", (_sx8634_flag(SX8634_FLAG_CONF_IS_NVM) ? "NVM" : "QSM"));
@@ -634,7 +639,7 @@ GPIOMode SX8634::getGPIOMode(uint8_t pin) {
 uint8_t SX8634::getGPIOValue(uint8_t pin) {
   pin = pin & 0x07;
   switch (getGPIOMode(pin)) {
-    case GPIOMode::ANALOG_OUT:
+    case GPIOMode::ANALOG_OUT:      return _pwm_buffer[pin];
     case GPIOMode::OUTPUT:          return _gpo_levels[pin];
     case GPIOMode::INPUT:
     case GPIOMode::INPUT_PULLUP:
@@ -647,7 +652,9 @@ uint8_t SX8634::getGPIOValue(uint8_t pin) {
 int8_t SX8634::setGPOValue(uint8_t pin, uint8_t value) {
   if (pin < 8) {
     switch (getGPIOMode(pin)) {
-      case GPIOMode::ANALOG_OUT:      return _write_pwm_value(pin, value);
+      case GPIOMode::ANALOG_OUT:
+        _pwm_buffer[pin] = value;
+        return _proc_waiting_pwm_changes();
       case GPIOMode::OUTPUT:          return _write_gpo_register(pin, (value != 0));
       default:                        return -2;
     }
@@ -673,11 +680,12 @@ int8_t SX8634::_write_gpo_register(uint8_t pin, bool value) {
 
 /*
 *
+* Returns zero on success, -2 on busy, -1 on bus error.
 */
 int8_t SX8634::_write_pwm_value(uint8_t pin, uint8_t value) {
-  int8_t ret = -1;
-  int idx = _get_shadow_reg_mem_addr(SX8634_REG_GPP_PIN_ID);
-  if (idx >= 0) {
+  int8_t ret = -2;
+  if (false == _sx8634_flag(SX8634_FLAG_PWM_CHANGE_IN_FLIGHT)) {
+    int idx = _get_shadow_reg_mem_addr(SX8634_REG_GPP_PIN_ID);
     _registers[idx + 0] = pin;
     _registers[idx + 1] = value;
     I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
@@ -686,7 +694,36 @@ int8_t SX8634::_write_pwm_value(uint8_t pin, uint8_t value) {
       nu->sub_addr = SX8634_REG_GPP_PIN_ID;
       nu->buf      = &_registers[idx];
       nu->buf_len  = 2;
-      ret = _bus->queue_io_job(nu);
+      if (0 == _bus->queue_io_job(nu)) {
+        _sx8634_set_flag(SX8634_FLAG_PWM_CHANGE_IN_FLIGHT);
+        ret = 0;
+      }
+      else {
+        ret = -1;
+      }
+    }
+  }
+  return ret;
+}
+
+
+/*
+* Since the SX8634 doesn't provide us discrete registers for each PWM pin, we
+*   need to access them via a two-register window. This function makes sure that
+*   asynchronous writes to PWM by the application all end up making it to the
+*   hardware.
+* Dispatches a bus operation for the first difference it finds (if any).
+* Sets class flags to indicate state of PWM change operation.
+*
+* Returns zero on success, -2 on PWM busy, -1 on bus error.
+*/
+int8_t SX8634::_proc_waiting_pwm_changes() {
+  int8_t ret = 0;
+  for (uint8_t i = 0; i < 8; i++) {
+    if (GPIOMode::ANALOG_OUT == getGPIOMode(i)) {
+      if (_pwm_buffer[i] != _gpo_levels[i]) {
+        ret = _write_pwm_value(i, _pwm_buffer[i]);
+      }
     }
   }
   return ret;

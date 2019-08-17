@@ -174,6 +174,7 @@
 #define SX8634_FLAG_SLIDER_MOVE_UP        0x0200
 #define SX8634_FLAG_SPM_WRITABLE          0x0400
 #define SX8634_FLAG_SPM_OPEN              0x0800
+#define SX8634_FLAG_PWM_CHANGE_IN_FLIGHT  0x1000
 
 
 #define SX8634_DEFAULT_I2C_ADDR      0x2B
@@ -336,6 +337,7 @@ class SX8634 : public I2CDevice {
     uint8_t  _nvm_burns     = 0;
     uint8_t  _gpi_levels    = 0;
     uint8_t  _gpo_levels[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t  _pwm_buffer[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     uint8_t  _registers[16];     // Register shadows
     uint8_t  _spm_shadow[128];   // SPM shadow
@@ -378,6 +380,7 @@ class SX8634 : public I2CDevice {
 
     int8_t _write_gpo_register(uint8_t pin, bool val);
     int8_t _write_pwm_value(uint8_t pin, uint8_t val);
+    int8_t _proc_waiting_pwm_changes();
     int8_t _process_gpi_change(uint8_t new_val);
     inline bool _is_valid_pin(uint8_t pin) {  return (pin < 8);  };
 
