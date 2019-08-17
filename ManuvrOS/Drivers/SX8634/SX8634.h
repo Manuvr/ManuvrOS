@@ -309,11 +309,12 @@ class SX8634 : public I2CDevice {
     inline bool buttonPressed(uint8_t i) {  return ((_buttons >> i) & 0x01);  };
     inline bool buttonReleased(uint8_t i) { return !((_buttons >> i) & 0x01); };
 
-    //
-    int8_t  setGPIOState(uint8_t pin, uint8_t value);
-    uint8_t getGPIOState(uint8_t pin);
-    int8_t  setPWMValue(uint8_t pin, uint8_t value);
-    uint8_t getPWMValue(uint8_t pin);
+    /* GPIO functions */
+    int8_t  setGPIOMode(uint8_t pin, GPIOMode);
+    GPIOMode getGPIOMode(uint8_t pin);
+    int8_t  setGPOValue(uint8_t pin, uint8_t value);
+    uint8_t getGPIOValue(uint8_t pin);
+
 
     int8_t read_irq_registers();
 
@@ -333,10 +334,8 @@ class SX8634 : public I2CDevice {
     SX8634_FSM   _fsm   = SX8634_FSM::NO_INIT;
     uint8_t  _compensations = 0;
     uint8_t  _nvm_burns     = 0;
-    uint8_t  _gpio_assign   = 0;
     uint8_t  _gpi_levels    = 0;
-    uint8_t  _gpo_levels    = 0;
-    uint8_t  _pwm_levels[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t  _gpo_levels[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     uint8_t  _registers[16];     // Register shadows
     uint8_t  _spm_shadow[128];   // SPM shadow
@@ -375,6 +374,11 @@ class SX8634 : public I2CDevice {
     int8_t  _start_compensation();    // Tell the sensor to run a compensation cycle.
     int8_t  _ll_pin_init();           // Platform GPIO config
     int8_t  _ping_device();           // Pings the device.
+
+    int8_t _write_gpo_register(uint8_t pin, bool val);
+    int8_t _write_pwm_value(uint8_t pin, uint8_t val);
+    int8_t _process_gpi_change(uint8_t new_val);
+    inline bool _is_valid_pin(uint8_t pin) {  return (pin < 8);  };
 
     inline void       _set_fsm_position(SX8634_FSM x) {  _fsm = x;        };
     inline SX8634_FSM _get_fsm_position() {              return _fsm;     };

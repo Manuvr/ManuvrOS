@@ -182,6 +182,7 @@ limitations under the License.
   #define MANUVR_MSG_DIGITAL_WRITE        0x0402 // Write the given GPIO pin, however that is referenced on a given platform.
   #define MANUVR_MSG_ANALOG_READ          0x0403 // Read the given GPIO pin, however that is referenced on a given platform.
   #define MANUVR_MSG_ANALOG_WRITE         0x0404 // Write the given GPIO pin, however that is referenced on a given platform.
+  #define MANUVR_MSG_GPI_CHANGE           0x0405 // An input pin changed state. Arguments attached carry pin and current state.
   #define MANUVR_MSG_EVENT_ON_INTERRUPT   0x040F // Fire the given event on the given interrupt condition.
 
   /* UI event codes. These are for the sake of outside systems asking about and setting raw GPIO values. */

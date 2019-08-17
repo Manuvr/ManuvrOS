@@ -136,7 +136,31 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
       _sx8634_set_flag(SX8634_FLAG_DEV_FOUND, (!completed->hasFault()));
       if (!completed->hasFault()) {
         Kernel::log("SX8634 found\n");
-        _read_full_spm();
+        #if defined(CONFIG_SX8634_CONFIG_ON_FAITH)
+          // Depending on build parameters, we might not read the SPM.
+          if (nullptr != _opts.conf) {
+            // Copy over the conf and cheat the state machine.
+            _sx8634_set_flag(SX8634_FLAG_SPM_SHADOWED);
+            _set_fsm_position(SX8634_FSM::READY);
+            uint8_t rsvd_idx  = 0;
+            uint8_t given_idx = 0;
+            for (uint8_t i = 0; i < sizeof(_spm_shadow); i++) {
+              if (i == _reserved_spm_offsets[rsvd_idx]) {
+                // Skip the comparison. Increment the reserved pointer.
+                rsvd_idx++;
+              }
+              else {
+                // This is a comparable config byte.
+                if (_spm_shadow[i] != *(_opts.conf + given_idx)) {
+                  _spm_shadow[i] = *(_opts.conf + given_idx);
+                }
+                given_idx++;
+              }
+            }
+          }
+        #else
+          _read_full_spm();
+        #endif   // CONFIG_SX8634_CONFIG_ON_FAITH
       }
       else {
         Kernel::log("SX8634 not found\n");
@@ -152,8 +176,11 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
           break;
         case SX8634_REG_GPP_PIN_ID:
         case SX8634_REG_GPP_INTENSITY:
-          // TODO: Update our local shadow to reflect the new GPP state.
+          // Update our local shadow to reflect the new GPP state.
           // SX8634_REG_GPP_INTENSITY always follows.
+          if (_is_valid_pin(*(completed->buf))) {
+            _gpo_levels[*(completed->buf)] = *(completed->buf + 1);
+          }
           break;
         case SX8634_REG_SPM_CONFIG:
           _sx8634_set_flag(SX8634_FLAG_SPM_WRITABLE, (0x00 == (*(completed->buf) & 0x08)));
@@ -254,13 +281,13 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
         case SX8634_REG_IRQ_SRC:
           if (_sx8634_flag(SX8634_FLAG_SPM_OPEN)) {
             int spm_base_addr = _get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR);
-            _sx8634_set_flag(SX8634_FLAG_SPM_SHADOWED);
             if (spm_base_addr <= 0x78) {
               // We're shadowing the SPM. Write the next base address.
               _wait_for_reset(30);
               _write_register(SX8634_REG_SPM_BASE_ADDR, spm_base_addr + 8);
             }
             else {
+              _sx8634_set_flag(SX8634_FLAG_SPM_SHADOWED);
               if (1 == _compare_config()) {
                 // Since we apparently want to make changes to the SPM, we enter
                 //   that state and start the write operation.
@@ -324,11 +351,7 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
               }
             }
             if (0x10 & _registers[0]) {  // GPI interrupt
-              uint8_t current = _registers[7];
-              if (current != _gpi_levels) {
-                // TODO: Bitshift the GPI values into discrete messages.
-                _gpi_levels = current;
-              }
+              _process_gpi_change(_registers[7]);
             }
             if (0x20 & _registers[0]) {  // SPM stat interrupt
             }
@@ -348,7 +371,10 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
         case SX8634_REG_SLIDER_POS_LSB:
         case SX8634_REG_RESERVED_0:
         case SX8634_REG_RESERVED_1:
+          break;
         case SX8634_REG_GPI_STAT:
+          _process_gpi_change(*(completed->buf));
+          break;
         case SX8634_REG_SPM_STAT:
           // Right now, for simplicity's sake, the driver reads all 10 IRQ-related
           //   registers in one shot and updates everything.
@@ -390,23 +416,30 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
 void SX8634::printDebug(StringBuilder* output) {
-  output->concatf("Touch sensor (SX8634)\t%s%s-- Found:   %c\n-- Shadow:\n----------\n", getModeStr(operationalMode()), PRINT_DIVIDER_1_STR, (deviceFound() ? 'y':'n'));
-  StringBuilder::printBuffer(output, _registers, sizeof(_registers), "\t");
+  output->concatf("Touch sensor (SX8634)\t%s%s-- Found:   %c\n-- Registers:\n%s\n", getModeStr(operationalMode()), PRINT_DIVIDER_1_STR, (deviceFound() ? 'y':'n'), PRINT_DIVIDER_1_STR);
+  StringBuilder::printBuffer(output, _registers, sizeof(_registers), "--\t  ");
+  output->concatf("--\n--\tFSM Position:   %s\n", getFSMStr(_fsm));
+  output->concatf("--\tIRQ Inhibit:    %c\n", (_sx8634_flag(SX8634_FLAG_IRQ_INHIBIT) ? 'y': 'n'));
+  output->concatf("--\tCompensations:  %u\n", _compensations);
+  output->concat("--\n-- SPM/NVM:");
 
-  output->concatf("\tFSM Position:   %s\n", getFSMStr(_fsm));
-  output->concatf("\tConf source:    %s\n", (_sx8634_flag(SX8634_FLAG_CONF_IS_NVM) ? "NVM" : "QSM"));
-  output->concatf("\tIRQ Inhibit:    %c\n", (_sx8634_flag(SX8634_FLAG_IRQ_INHIBIT) ? 'y': 'n'));
-  output->concatf("\tSPM shadowed:   %c\n", (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED) ? 'y': 'n'));
+  output->concatf("--\tConf source:    %s\n", (_sx8634_flag(SX8634_FLAG_CONF_IS_NVM) ? "NVM" : "QSM"));
+  output->concatf("--\tSPM shadowed:   %c\n", (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED) ? 'y': 'n'));
   if (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED)) {
-    StringBuilder::printBuffer(output, _spm_shadow, sizeof(_spm_shadow), "\t  ");
-    output->concatf("\tSPM Dirty:      %c\n", (_sx8634_flag(SX8634_FLAG_SPM_DIRTY) ? 'y': 'n'));
+    StringBuilder::printBuffer(output, _spm_shadow, sizeof(_spm_shadow), "--\t  ");
+    output->concatf("--\tSPM Dirty:      %c\n", (_sx8634_flag(SX8634_FLAG_SPM_DIRTY) ? 'y': 'n'));
   }
-  output->concatf("\tSPM open:       %c\n", (_sx8634_flag(SX8634_FLAG_SPM_OPEN) ? 'y': 'n'));
+  output->concatf("--\tSPM open:       %c\n", (_sx8634_flag(SX8634_FLAG_SPM_OPEN) ? 'y': 'n'));
   if (_sx8634_flag(SX8634_FLAG_SPM_OPEN)) {
-    output->concatf("\tSPM writable:   %c\n", (_sx8634_flag(SX8634_FLAG_SPM_WRITABLE) ? 'y': 'n'));
+    output->concatf("--\tSPM writable:   %c\n", (_sx8634_flag(SX8634_FLAG_SPM_WRITABLE) ? 'y': 'n'));
   }
-  output->concatf("\tCompensations:  %u\n", _compensations);
-  output->concatf("\tNVM burns:      %u\n", _nvm_burns);
+  output->concatf("--\tNVM burns:      %u\n", _nvm_burns);
+
+  output->concat("--\n-- GPIO:");
+  output->concat(PRINT_DIVIDER_1_STR);
+  for (uint8_t i = 0; i < 8; i++) {
+    output->concatf("--\t%u:\t%u\t%s\n", i, getGPIOValue(i), Platform::getPinModeStr(getGPIOMode(i)));
+  }
 
   I2CDevice::printDebug(output);
 }
@@ -530,13 +563,106 @@ int8_t SX8634::setMode(SX8634OpMode m) {
 }
 
 
-int8_t SX8634::setGPIOState(uint8_t pin, uint8_t value) {
+/*******************************************************************************
+* GPIO functions
+*******************************************************************************/
+
+/*
+* TODO: Finish this.
+* Changing the mode of a GPIO pin requires that we have the SPM shadowed, and
+*   that we take the chip out of operation for a moment to re-write a dirty
+*   SPM. This is not nearly as fast as changing the pin mode on a platform pin,
+*   since it involves a few hundred bytes of i2c traffic spread over at least
+*   12 operations. Make sure your circuit can tolerate all modes, or write the
+*   desired config into the NVM permanently.
+*/
+int8_t SX8634::setGPIOMode(uint8_t pin, GPIOMode m) {
+  if (pin < 8) {
+    if (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED)) {
+      switch (m) {
+        case GPIOMode::ANALOG_OUT:
+        case GPIOMode::OUTPUT:
+        case GPIOMode::INPUT:
+        case GPIOMode::INPUT_PULLUP:
+        case GPIOMode::INPUT_PULLDOWN:
+        default:
+          return -3;
+      }
+    }
+    return -2;
+  }
+  return -1;
+}
+
+
+/*
+* Returns the GPIO pin mode.
+*/
+GPIOMode SX8634::getGPIOMode(uint8_t pin) {
+  if (pin < 8) {
+    if (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED)) {
+      uint8_t mode_val = _spm_shadow[(pin > 3) ? 64 : 65];
+      uint8_t pull_val = _spm_shadow[(pin > 3) ? 101 : 102];
+      switch (0x03 & (mode_val >> (2 * ((pin > 3) ? (pin-4) : pin)))) {
+        case 0:
+          return GPIOMode::OUTPUT;
+        case 1:
+          return GPIOMode::ANALOG_OUT;
+        case 2:
+          switch (0x03 & (pull_val >> (2 * ((pin > 3) ? (pin-4) : pin)))) {
+            case 0:    return GPIOMode::INPUT;
+            case 1:    return GPIOMode::INPUT_PULLUP;
+            case 2:    return GPIOMode::INPUT_PULLDOWN;
+            case 3:    return GPIOMode::INPUT;   // This is a reserved case...
+          }
+        case 3:
+          return GPIOMode::UNINIT;
+      }
+    }
+  }
+  // Without the SPM, or with an out-of-range pin, who can say?
+  return GPIOMode::UNINIT;
+}
+
+
+
+/*
+* If the pin is an input, returns the last-know state of the pin.
+* If the pin is an output, returns the last-confirmed write to the pin.
+*/
+uint8_t SX8634::getGPIOValue(uint8_t pin) {
+  pin = pin & 0x07;
+  switch (getGPIOMode(pin)) {
+    case GPIOMode::ANALOG_OUT:
+    case GPIOMode::OUTPUT:          return _gpo_levels[pin];
+    case GPIOMode::INPUT:
+    case GPIOMode::INPUT_PULLUP:
+    case GPIOMode::INPUT_PULLDOWN:  return (0 != (_gpi_levels >> pin)) ? 255 : 0;
+    default:                        return 0;
+  }
+}
+
+
+int8_t SX8634::setGPOValue(uint8_t pin, uint8_t value) {
+  if (pin < 8) {
+    switch (getGPIOMode(pin)) {
+      case GPIOMode::ANALOG_OUT:      return _write_pwm_value(pin, value);
+      case GPIOMode::OUTPUT:          return _write_gpo_register(pin, (value != 0));
+      default:                        return -2;
+    }
+  }
+  return -1;
+}
+
+
+/*
+*
+*/
+int8_t SX8634::_write_gpo_register(uint8_t pin, bool value) {
   uint8_t pin_mask  = 1 << pin;
-  uint8_t gpo_value = pin_mask & _registers[SX8634_REG_GPO_CTRL];
-  uint8_t w_val = (0 != value) ? (_registers[SX8634_REG_GPO_CTRL] | pin_mask) : (_registers[SX8634_REG_GPO_CTRL] & ~pin_mask);
-  //StringBuilder output;
-  //output.concatf("setGPIOState(%u, %u):  ", pin, value);
-  //Kernel::log(&output);
+  // TODO: We should be setting our shadow when the bus-op completes. Not here.
+  _gpo_levels[pin] = value ? 255 : 0;
+  uint8_t w_val = value ? (_registers[SX8634_REG_GPO_CTRL] | pin_mask) : (_registers[SX8634_REG_GPO_CTRL] & ~pin_mask);
   if (w_val != _registers[SX8634_REG_GPO_CTRL]) {
     return _write_register(SX8634_REG_GPO_CTRL, w_val);
   }
@@ -544,14 +670,10 @@ int8_t SX8634::setGPIOState(uint8_t pin, uint8_t value) {
 }
 
 
-uint8_t SX8634::getGPIOState(uint8_t pin) {
-  pin = pin & 0x07;
-  uint8_t pin_mask = (1 << pin);
-  return _gpo_levels & pin_mask;
-}
-
-
-int8_t SX8634::setPWMValue(uint8_t pin, uint8_t value) {
+/*
+*
+*/
+int8_t SX8634::_write_pwm_value(uint8_t pin, uint8_t value) {
   int8_t ret = -1;
   int idx = _get_shadow_reg_mem_addr(SX8634_REG_GPP_PIN_ID);
   if (idx >= 0) {
@@ -570,10 +692,27 @@ int8_t SX8634::setPWMValue(uint8_t pin, uint8_t value) {
 }
 
 
-uint8_t SX8634::getPWMValue(uint8_t pin) {
-  return _pwm_levels[pin & 0x07];
+/*
+* This is the handler function for changes in GPI values.
+*/
+int8_t SX8634::_process_gpi_change(uint8_t new_val) {
+  int8_t ret = 0;
+  if (new_val != _gpi_levels) {
+    // Bitshift the GPI values into discrete messages.
+    for (uint8_t i = 0; i < 8; i++) {
+      uint8_t mask = 0x01 << i;
+      if ((new_val & mask) ^ (_gpi_levels & mask)) {
+        ManuvrMsg* msg = Kernel::returnEvent(MANUVR_MSG_GPI_CHANGE);
+        msg->addArg((uint8_t) i);
+        msg->addArg((bool) (0 != (new_val & mask)));
+        Kernel::staticRaiseEvent(msg);
+        ret++;
+      }
+    }
+    _gpi_levels = new_val;  // Store the new value;
+  }
+  return ret;
 }
-
 
 
 /*******************************************************************************

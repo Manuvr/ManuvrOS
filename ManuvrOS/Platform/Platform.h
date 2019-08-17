@@ -281,6 +281,7 @@ class ManuvrPlatform {
 
     static const char* getIRQConditionString(int);
     static const char* getPlatformStateStr(int);
+    static const char* getPinModeStr(GPIOMode);
 
 
 
