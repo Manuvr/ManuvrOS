@@ -560,7 +560,7 @@ int8_t SX8634::_reset_callback() {
   int8_t ret = _wait_for_reset(300);
   if (0 == ret) {
     _sx8634_clear_flag(SX8634_FLAG_IRQ_INHIBIT);
-    ret = _ping_device();
+    ret = ping_device() ? 0 : -2;
   }
   return ret;
 }
@@ -992,18 +992,10 @@ int8_t SX8634::_ll_pin_init() {
 * Pings the device.
 * TODO: Promote this into I2CDevice driver.
 */
-int8_t SX8634::_ping_device() {
+int8_t SX8634::ping() {
   if (!_sx8634_flag(SX8634_FLAG_PING_IN_FLIGHT)) {
     _sx8634_set_flag(SX8634_FLAG_PING_IN_FLIGHT);
-    I2CBusOp* nu = _bus->new_op(BusOpcode::TX_CMD, this);
-    if (nullptr != nu) {
-      nu->dev_addr = _opts.i2c_addr;
-      nu->sub_addr = -1;
-      nu->buf      = nullptr;
-      nu->buf_len  = 0;
-      _bus->queue_io_job(nu);
-      return 0;
-    }
+    return ping_device();
   }
   return -1;
 }

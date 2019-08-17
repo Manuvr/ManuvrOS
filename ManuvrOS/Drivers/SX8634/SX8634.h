@@ -319,7 +319,7 @@ class SX8634 : public I2CDevice {
 
     /* Class service functions */
     int8_t read_irq_registers();              // Service an IRQ.
-    inline void ping() { _ping_device(); };   // TODO: move this to I2CDevice.
+    int8_t ping();                            // Pings the device.
 
     #if defined(CONFIG_SX8634_PROVISIONING)
       int8_t  burn_nvm();
@@ -380,7 +380,6 @@ class SX8634 : public I2CDevice {
     int8_t  _clear_registers();       // Wipe our shadows.
     int8_t  _start_compensation();    // Tell the sensor to run a compensation cycle.
     int8_t  _ll_pin_init();           // Platform GPIO config
-    int8_t  _ping_device();           // Pings the device.
 
     int8_t _write_gpo_register(uint8_t pin, bool val);
     int8_t _write_pwm_value(uint8_t pin, uint8_t val);

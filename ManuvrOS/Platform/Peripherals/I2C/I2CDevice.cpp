@@ -161,6 +161,23 @@ bool I2CDevice::readX(int sub_addr, uint8_t len, uint8_t *buf) {
 }
 
 
+/*
+* Pings the device.
+*/
+bool I2CDevice::ping_device() {
+  I2CBusOp* nu = _bus->new_op(BusOpcode::TX_CMD, this);
+  if (nullptr != nu) {
+    nu->dev_addr = _dev_addr;
+    nu->sub_addr = -1;
+    nu->buf      = nullptr;
+    nu->buf_len  = 0;
+    return (0 == _bus->queue_io_job(nu));
+  }
+  return false;
+}
+
+
+
 /**
 * Debug support method. This fxn is only present in debug builds.
 *

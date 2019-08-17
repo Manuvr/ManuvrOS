@@ -363,6 +363,7 @@ This file is the tortured result of growing pains since the beginning of
       // Returns true if the job was accepted. False on error.
       bool writeX(int sub_addr, uint16_t byte_count, uint8_t *buf);
       bool readX(int sub_addr, uint8_t len, uint8_t *buf);
+      bool ping_device();   // Pings the device.
   };
 
 
