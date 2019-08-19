@@ -108,8 +108,6 @@ int8_t SX8634::render_stripped_spm(uint8_t* buf) {
 *   executes under an ISR. Keep it brief...
 *******************************************************************************/
 
-
-
 /*
 * This is an ISR.
 */

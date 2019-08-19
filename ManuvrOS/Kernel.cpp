@@ -106,6 +106,25 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_XPORT_QUEUE_RDY,    0x0000,  "XPORT_Q"            , ManuvrMsg::MSG_ARGS_NONE }, //
   {  MANUVR_MSG_XPORT_CB_QUEUE_RDY, 0x0000,  "XPORT_CB_Q"         , ManuvrMsg::MSG_ARGS_NONE }, //
 
+  #if defined (__HAS_GPIO_MESSAGES)
+  {  MANUVR_MSG_GPIO_LEGEND       , MSG_FLAG_EXPORTABLE,  "GPIO_LEGEND",         ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_DIGITAL_READ      , MSG_FLAG_EXPORTABLE,  "DIGITAL_READ",        ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_DIGITAL_WRITE     , MSG_FLAG_EXPORTABLE,  "DIGITAL_WRITE",       ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_ANALOG_READ       , MSG_FLAG_EXPORTABLE,  "ANALOG_READ",         ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_ANALOG_WRITE      , MSG_FLAG_EXPORTABLE,  "ANALOG_WRITE",        ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_GPI_CHANGE        , MSG_FLAG_EXPORTABLE,  "GPI_CHANGE",          ManuvrMsg::MSG_ARGS_NONE }, //
+  {  MANUVR_MSG_EVENT_ON_INTERRUPT, MSG_FLAG_EXPORTABLE,  "EVENT_ON_INTERRUPT",  ManuvrMsg::MSG_ARGS_NONE }, //
+  #endif  // __HAS_GPIO_MESSAGES
+
+  #if defined (__HAS_USER_INPUT_MESSAGES)
+  {  MANUVR_MSG_USER_BUTTON_PRESS  , MSG_FLAG_EXPORTABLE,  "BTN_PRESS",      ManuvrMsg::MSG_ARGS_NONE }, // The user pushed a button with the given integer code.
+  {  MANUVR_MSG_USER_BUTTON_RELEASE, MSG_FLAG_EXPORTABLE,  "BTN_RELEASE",    ManuvrMsg::MSG_ARGS_NONE }, // The user released a button with the given integer code.
+  {  MANUVR_MSG_USER_BUTTON_DWELL_0, MSG_FLAG_EXPORTABLE,  "BTN_DWELL_0",    ManuvrMsg::MSG_ARGS_NONE }, // The user held a button past its short dwell time.
+  {  MANUVR_MSG_USER_BUTTON_DWELL_1, MSG_FLAG_EXPORTABLE,  "BTN_DWELL_1",    ManuvrMsg::MSG_ARGS_NONE }, // The user held a button past its extended dwell time.
+  {  MANUVR_MSG_USER_SLIDER_VALUE  , MSG_FLAG_EXPORTABLE,  "SLIDER_VALUE",   ManuvrMsg::MSG_ARGS_NONE }, // The user changed a slider value.
+  {  MANUVR_MSG_USER_DETECTED      , MSG_FLAG_EXPORTABLE,  "USER_DETECTED",  ManuvrMsg::MSG_ARGS_NONE }, // A user was determined to be near the device.
+  #endif  // __HAS_USER_INPUT_MESSAGES
+
   #if defined (MANUVR_OPENINTERCONNECT)
   {  MANUVR_MSG_OIC_READY            , 0x0000,  "OIC_READY"        , ManuvrMsg::MSG_ARGS_NONE },  //
   {  MANUVR_MSG_OIC_REG_RESOURCES    , 0x0000,  "OIC_REG_RESRCS"   , ManuvrMsg::MSG_ARGS_NONE },  //
@@ -312,7 +331,7 @@ int8_t Kernel::subscribe(EventReceiver *client, uint8_t priority) {
     // This subscriber is joining us after bootup. Call its attached() fxn to cause it to init.
     client->attached();
   }
-  
+
   return ((return_value >= 0) ? 0 : -1);
 }
 

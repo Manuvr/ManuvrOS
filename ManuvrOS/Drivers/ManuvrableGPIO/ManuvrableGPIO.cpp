@@ -23,29 +23,14 @@ The idea here is not to provide any manner of abstraction for GPIO. Our
 */
 
 #include "ManuvrableGPIO.h"
-
-
-const MessageTypeDef gpio_message_defs[] = {
-  /*
-    For messages that have arguments, we have the option of defining inline lables for each parameter.
-    This is advantageous for debugging and writing front-ends. We case-off here to make this choice at
-    compile time.
-  */
-  {  MANUVR_MSG_GPIO_LEGEND       , MSG_FLAG_EXPORTABLE,  "GPIO_LEGEND",         ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_DIGITAL_READ      , MSG_FLAG_EXPORTABLE,  "DIGITAL_READ",        ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_DIGITAL_WRITE     , MSG_FLAG_EXPORTABLE,  "DIGITAL_WRITE",       ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_ANALOG_READ       , MSG_FLAG_EXPORTABLE,  "ANALOG_READ",         ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_ANALOG_WRITE      , MSG_FLAG_EXPORTABLE,  "ANALOG_WRITE",        ManuvrMsg::MSG_ARGS_NONE }, //
-  {  MANUVR_MSG_EVENT_ON_INTERRUPT, MSG_FLAG_EXPORTABLE,  "EVENT_ON_INTERRUPT",  ManuvrMsg::MSG_ARGS_NONE }, //
-};
-
+#if defined(CONFIG_MANUVR_GPIO_ER)
 
 
 ManuvrableGPIO::ManuvrableGPIO() : EventReceiver("GPIO") {
   _gpio_notice.incRefs();
   _gpio_notice.setOriginator((EventReceiver*) this);
-  // Inform the Kernel of the codes we will be using...
-  ManuvrMsg::registerMessages(gpio_message_defs, sizeof(gpio_message_defs) / sizeof(MessageTypeDef));
+  // There should be no need to inform the Kernel of the codes we will be using
+  //   since they are general, and should be added by the Kernel itself.
 }
 
 ManuvrableGPIO::~ManuvrableGPIO() {
@@ -209,3 +194,5 @@ void ManuvrableGPIO::procDirectDebugInstruction(StringBuilder *input) {
   flushLocalLog();
 }
 #endif  // MANUVR_CONSOLE_SUPPORT
+
+#endif  // CONFIG_MANUVR_GPIO_ER

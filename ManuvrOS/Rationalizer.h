@@ -189,7 +189,27 @@
 #if defined(CONFIG_MANUVR_BQ24155) || \
     defined(CONFIG_MANUVR_LTC294X)
   #define __HAS_BATTERY        // Safe to assume we have a battery.
-#endif   // CONFIG_MANUVR_BQ24155
+#endif
+
+/*
+ Drivers that pull in GPIO message codes...
+*/
+#if defined(CONFIG_MANUVR_SX8634) || \
+    defined(CONFIG_MANUVR_GPIO_ER)
+  #ifndef __HAS_GPIO_MESSAGES
+    #define __HAS_GPIO_MESSAGES
+  #endif    // __HAS_GPIO_MESSAGES
+#endif
+
+
+/*
+ Drivers that pull in button message codes...
+*/
+#if defined(CONFIG_MANUVR_SX8634)
+  #ifndef __HAS_USER_INPUT_MESSAGES
+    #define __HAS_USER_INPUT_MESSAGES
+  #endif    // __HAS_USER_INPUT_MESSAGES
+#endif
 
 
 /* Framebuffer and display driver support... */
