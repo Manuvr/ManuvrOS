@@ -233,11 +233,12 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
           }
           break;
         case SX8634_REG_GPP_PIN_ID:
+          // Do nothing. SX8634_REG_GPP_INTENSITY almost always follows.
+          break;
         case SX8634_REG_GPP_INTENSITY:
           // Update our local shadow to reflect the new GPP state.
-          // SX8634_REG_GPP_INTENSITY always follows.
-          if (_is_valid_pin(*(completed->buf))) {
-            _gpo_levels[*(completed->buf)] = *(completed->buf + 1);
+          if (_is_valid_pin(_get_shadow_reg_val(SX8634_REG_GPP_PIN_ID))) {
+            _gpo_levels[_get_shadow_reg_val(SX8634_REG_GPP_PIN_ID)] = *(completed->buf);
           }
           _sx8634_clear_flag(SX8634_FLAG_PWM_CHANGE_IN_FLIGHT);
           _proc_waiting_pwm_changes();
@@ -270,18 +271,16 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
               }
             #endif // CONFIG_SX8634_PROVISIONING
           }
-          else {
-            if (_sx8634_flag(SX8634_FLAG_SPM_OPEN)) {
-              // If the SPM is open, and this register was just written, we take
-              //   the next step and read or write 8 bytes at the address.
-              if (_sx8634_flag(SX8634_FLAG_SPM_WRITABLE)) {
-                // Write the next 8 bytes if needed.
-                _write_block8(_get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR));
-              }
-              else {
-                // Read the next 8 bytes if needed.
-                _read_block8(_get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR));
-              }
+          else if (_sx8634_flag(SX8634_FLAG_SPM_OPEN)) {
+            // If the SPM is open, and this register was just written, we take
+            //   the next step and read or write 8 bytes at the address.
+            if (_sx8634_flag(SX8634_FLAG_SPM_WRITABLE)) {
+              // Write the next 8 bytes if needed.
+              _write_block8(_get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR));
+            }
+            else {
+              // Read the next 8 bytes if needed.
+              _read_block8(_get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR));
             }
           }
           break;
@@ -460,13 +459,21 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
           break;
 
         case SX8634_REG_COMP_OP_MODE:
-        case SX8634_REG_GPO_CTRL:
           break;
-
+        case SX8634_REG_GPO_CTRL:
+          for (uint8_t i = 0; i < 8; i++) {
+            if (GPIOMode::OUTPUT == getGPIOMode(i)) {
+              _gpo_levels[i] = ((*(completed->buf) >> i) & 0x01) ? 255 : 0;
+            }
+          }
+          break;
         case SX8634_REG_GPP_PIN_ID:
+          break;
         case SX8634_REG_GPP_INTENSITY:
-          // TODO: Update our local shadow to reflect the new GPP state.
-          // SX8634_REG_GPP_INTENSITY always follows.
+          // Update our local shadow to reflect the new GPP state.
+          if (_is_valid_pin(_get_shadow_reg_val(SX8634_REG_GPP_PIN_ID))) {
+            _gpo_levels[_get_shadow_reg_val(SX8634_REG_GPP_PIN_ID)] = *(completed->buf);
+          }
           break;
         case SX8634_REG_SPM_BASE_ADDR:
         case SX8634_REG_SPM_KEY_MSB:
@@ -786,6 +793,8 @@ int8_t SX8634::_write_gpo_register(uint8_t pin, bool value) {
 
 
 /*
+* Note that we can't write the two bytes at the same time. They must be separate
+*   bus operations.
 *
 * Returns zero on success, -2 on busy, -1 on bus error.
 */
@@ -800,10 +809,17 @@ int8_t SX8634::_write_pwm_value(uint8_t pin, uint8_t value) {
       nu->dev_addr = _opts.i2c_addr;
       nu->sub_addr = SX8634_REG_GPP_PIN_ID;
       nu->buf      = &_registers[idx];
-      nu->buf_len  = 2;
+      nu->buf_len  = 1;
       if (0 == _bus->queue_io_job(nu)) {
-        _sx8634_set_flag(SX8634_FLAG_PWM_CHANGE_IN_FLIGHT);
-        ret = 0;
+        nu = _bus->new_op(BusOpcode::TX, this);
+        if (nullptr != nu) {
+          _sx8634_set_flag(SX8634_FLAG_PWM_CHANGE_IN_FLIGHT);
+          nu->dev_addr = _opts.i2c_addr;
+          nu->sub_addr = SX8634_REG_GPP_INTENSITY;
+          nu->buf      = &_registers[idx+1];
+          nu->buf_len  = 1;
+          ret = _bus->queue_io_job(nu);
+        }
       }
       else {
         ret = -1;
@@ -829,7 +845,7 @@ int8_t SX8634::_proc_waiting_pwm_changes() {
   for (uint8_t i = 0; i < 8; i++) {
     if (GPIOMode::ANALOG_OUT == getGPIOMode(i)) {
       if (_pwm_buffer[i] != _gpo_levels[i]) {
-        ret = _write_pwm_value(i, _pwm_buffer[i]);
+        return _write_pwm_value(i, _pwm_buffer[i]);
       }
     }
   }
