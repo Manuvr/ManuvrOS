@@ -1,4 +1,25 @@
-/* Test driver for MCP3918 */
+/*
+File:   SX8634.h
+Author: J. Ian Lindsay
+Date:   2019.08.10
+
+Copyright 2019 Manuvr, Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+*/
+
+
 #include <inttypes.h>
 #include <stdint.h>
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
@@ -179,6 +200,7 @@
 #define SX8634_FLAG_SPM_WRITABLE          0x0400
 #define SX8634_FLAG_SPM_OPEN              0x0800
 #define SX8634_FLAG_PWM_CHANGE_IN_FLIGHT  0x1000
+#define SX8634_FLAG_INITIAL_IRQ_READ      0x2000
 
 
 #define SX8634_DEFAULT_I2C_ADDR      0x2B
@@ -307,6 +329,11 @@ class SX8634 : public I2CDevice {
     int8_t io_op_callback(BusOp*);
     void printDebug(StringBuilder*);
 
+    /* Debug functions */
+    void printOverview(StringBuilder*);
+    void printSPMShadow(StringBuilder*);
+    void printGPIO(StringBuilder*);
+
     int8_t setMode(SX8634OpMode);
     inline SX8634OpMode operationalMode() {  return _mode; };
 
@@ -343,15 +370,14 @@ class SX8634 : public I2CDevice {
     uint16_t _flags         = 0;
     uint16_t _slider_val    = 0;
     uint16_t _buttons       = 0;
-    SX8634OpMode _mode  = SX8634OpMode::RESERVED;
-    SX8634_FSM   _fsm   = SX8634_FSM::NO_INIT;
+    uint8_t  _pwm_buffer[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t  _gpo_levels[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t  _gpi_levels    = 0;
     uint8_t  _compensations = 0;
     uint8_t  _nvm_burns     = 0;
-    uint8_t  _gpi_levels    = 0;
-    uint8_t  _gpo_levels[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t  _pwm_buffer[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-
-    uint8_t  _registers[16];     // Register shadows
+    SX8634OpMode _mode      = SX8634OpMode::RESERVED;
+    SX8634_FSM   _fsm       = SX8634_FSM::NO_INIT;
+    uint8_t  _registers[19];     // Register shadows
     uint8_t  _spm_shadow[128];   // SPM shadow
     ManuvrMsg _slider_msg;
 

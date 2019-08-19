@@ -1,6 +1,22 @@
 /*
-File:   MCP3918.cpp
+File:   SX8634.h
 Author: J. Ian Lindsay
+Date:   2019.08.10
+
+Copyright 2019 Manuvr, Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
 */
 
 #include "SX8634.h"
@@ -37,6 +53,7 @@ const char* SX8634::getModeStr(SX8634OpMode x) {
   }
 }
 
+
 const char* SX8634::getFSMStr(SX8634_FSM x) {
   switch (x) {
     case SX8634_FSM::NO_INIT:    return "NO_INIT";
@@ -50,6 +67,8 @@ const char* SX8634::getFSMStr(SX8634_FSM x) {
   }
 }
 
+
+#if defined(CONFIG_SX8634_PROVISIONING)
 /*
 * Given the 128-byte input buffer, strip all the values that are either
 *   reserved or readonly. The new buffer is written back into the input buffer.
@@ -75,6 +94,8 @@ int8_t SX8634::render_stripped_spm(uint8_t* buf) {
   }
   return 0;
 }
+#endif  // CONFIG_SX8634_PROVISIONING
+
 
 
 /*******************************************************************************
@@ -205,6 +226,11 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
           _sx8634_set_flag(SX8634_FLAG_COMPENSATING, (*(completed->buf) & 0x04));
           break;
         case SX8634_REG_GPO_CTRL:
+          for (uint8_t i = 0; i < 8; i++) {
+            if (GPIOMode::OUTPUT == getGPIOMode(i)) {
+              _gpo_levels[i] = ((*(completed->buf) >> i) & 0x01) ? 255 : 0;
+            }
+          }
           break;
         case SX8634_REG_GPP_PIN_ID:
         case SX8634_REG_GPP_INTENSITY:
@@ -288,7 +314,8 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
           }
           break;
 
-        case SX8634_REG_IRQ_SRC:     // These registers are all read-only.
+        case SX8634_REG_IRQ_SRC:
+          // This register is read-only, but the SPM window starts at offset 0.
           if (_sx8634_flag(SX8634_FLAG_SPM_OPEN)) {
             int spm_base_addr = _get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR);
             if (spm_base_addr <= 0x78) {
@@ -301,7 +328,9 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
               _close_spm_access();
             }
           }
-        case SX8634_REG_CAP_STAT_MSB:
+          break;
+
+        case SX8634_REG_CAP_STAT_MSB:  // These registers are all read-only.
         case SX8634_REG_CAP_STAT_LSB:
         case SX8634_REG_SLIDER_POS_MSB:
         case SX8634_REG_SLIDER_POS_LSB:
@@ -353,7 +382,8 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
                 0x07:  GPIStat
                 0x08:  SPMStat
                 0x09:  CompOpMode      */
-            if (0x01 & _registers[0]) {  // Operating mode interrupt
+            bool first_irq = _sx8634_flag(SX8634_FLAG_INITIAL_IRQ_READ);
+            if (first_irq || (0x01 & _registers[0])) {  // Operating mode interrupt
               SX8634OpMode current = (SX8634OpMode) (_registers[9] & 0x04);
               _sx8634_set_flag(SX8634_FLAG_COMPENSATING, (_registers[9] & 0x04));
               if (current != _mode) {
@@ -396,7 +426,7 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
                 _send_slider_event();  // Send slider value.
               }
             }
-            if (0x10 & _registers[0]) {  // GPI interrupt
+            if (first_irq || (0x10 & _registers[0])) {  // GPI interrupt
               _process_gpi_change(_registers[7]);
             }
             if (0x20 & _registers[0]) {  // SPM stat interrupt
@@ -407,6 +437,9 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
               // Burn appears to have completed. Enter the verify phase.
               _set_fsm_position(SX8634_FSM::READY);
               Kernel::log("-- SX8634 NVM burn completed.\n");
+            }
+            if (first_irq) {
+              _sx8634_clear_flag(SX8634_FLAG_INITIAL_IRQ_READ);
             }
           }
           break;
@@ -459,22 +492,30 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
 
 
 /**
-* Debug support method. This fxn is only present in debug builds.
+* Debug support method.
 *
 * @param   StringBuilder* The buffer into which this fxn should write its output.
 */
-void SX8634::printDebug(StringBuilder* output) {
-  output->concatf("Touch sensor (SX8634)\t%s%s\n", getModeStr(operationalMode()), PRINT_DIVIDER_1_STR);
+void SX8634::printOverview(StringBuilder* output) {
+  output->concatf("Touch sensor (SX8634)%s", PRINT_DIVIDER_1_STR);
+  output->concatf("-- Mode:           %s\n", getModeStr(operationalMode()));
   output->concatf("-- Found:          %c\n", (deviceFound() ? 'y':'n'));
   output->concatf("-- IRQ Inhibit:    %c\n", (_sx8634_flag(SX8634_FLAG_IRQ_INHIBIT) ? 'y': 'n'));
   output->concatf("-- PWM sync'd:     %c\n", (_sx8634_flag(SX8634_FLAG_PWM_CHANGE_IN_FLIGHT) ? 'n': 'y'));
   output->concatf("-- Compensations:  %u\n", _compensations);
   output->concatf("-- FSM Position:   %s\n", getFSMStr(_fsm));
 
-  output->concat("--\n-- Registers:\n--\t  ");
+  output->concat("--\n-- Registers:\n");
   StringBuilder::printBuffer(output, _registers, sizeof(_registers), "--\t  ");
-  output->concat("--\n-- SPM/NVM:\n");
+}
 
+/**
+* Debug support method.
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
+void SX8634::printSPMShadow(StringBuilder* output) {
+  output->concat("-- SPM/NVM:\n");
   output->concatf("--\tConf source:    %s\n", (_sx8634_flag(SX8634_FLAG_CONF_IS_NVM) ? "NVM" : "QSM"));
   output->concatf("--\tSPM shadowed:   %c\n", (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED) ? 'y': 'n'));
   if (_sx8634_flag(SX8634_FLAG_SPM_SHADOWED)) {
@@ -486,12 +527,31 @@ void SX8634::printDebug(StringBuilder* output) {
     output->concatf("--\tSPM writable:   %c\n", (_sx8634_flag(SX8634_FLAG_SPM_WRITABLE) ? 'y': 'n'));
   }
   output->concatf("--\tNVM burns:      %u\n", _nvm_burns);
+}
 
-  output->concat("--\n-- GPIO:");
-  output->concat(PRINT_DIVIDER_1_STR);
+/**
+* Debug support method.
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
+void SX8634::printGPIO(StringBuilder* output) {
+  output->concat("-- GPIO:\n");
   for (uint8_t i = 0; i < 8; i++) {
-    output->concatf("--\t%u:\t%u\t%s\n", i, getGPIOValue(i), Platform::getPinModeStr(getGPIOMode(i)));
+    output->concatf("--\t%u:\t%10s\t%u\n", i, Platform::getPinModeStr(getGPIOMode(i)), getGPIOValue(i));
   }
+}
+
+/**
+* Debug support method.
+*
+* @param   StringBuilder* The buffer into which this fxn should write its output.
+*/
+void SX8634::printDebug(StringBuilder* output) {
+  printOverview(output);
+  output->concat("--\n");
+  printSPMShadow(output);
+  output->concat("--\n");
+  printGPIO(output);
 }
 
 
@@ -501,13 +561,15 @@ void SX8634::printDebug(StringBuilder* output) {
 *******************************************************************************/
 
 int8_t SX8634::_get_shadow_reg_mem_addr(uint8_t addr) {
-  uint8_t maximum_idx = 15;
+  uint8_t maximum_idx = 18;
   switch (addr) {
     case SX8634_REG_IRQ_SRC:         maximum_idx--;
     case SX8634_REG_CAP_STAT_MSB:    maximum_idx--;
     case SX8634_REG_CAP_STAT_LSB:    maximum_idx--;
     case SX8634_REG_SLIDER_POS_MSB:  maximum_idx--;
     case SX8634_REG_SLIDER_POS_LSB:  maximum_idx--;
+    case SX8634_REG_RESERVED_0:      maximum_idx--;
+    case SX8634_REG_RESERVED_1:      maximum_idx--;
     case SX8634_REG_GPI_STAT:        maximum_idx--;
     case SX8634_REG_SPM_STAT:        maximum_idx--;
     case SX8634_REG_COMP_OP_MODE:    maximum_idx--;
@@ -516,13 +578,11 @@ int8_t SX8634::_get_shadow_reg_mem_addr(uint8_t addr) {
     case SX8634_REG_GPP_INTENSITY:   maximum_idx--;
     case SX8634_REG_SPM_CONFIG:      maximum_idx--;
     case SX8634_REG_SPM_BASE_ADDR:   maximum_idx--;
+    case SX8634_REG_RESERVED_2:      maximum_idx--;
     case SX8634_REG_SPM_KEY_MSB:     maximum_idx--;
     case SX8634_REG_SPM_KEY_LSB:     maximum_idx--;
     case SX8634_REG_SOFT_RESET:
       return (maximum_idx & 0x0F);
-    case SX8634_REG_RESERVED_0:
-    case SX8634_REG_RESERVED_1:
-    case SX8634_REG_RESERVED_2:
     default:
       break;
   }
@@ -607,6 +667,7 @@ int8_t SX8634::_reset_callback() {
   int8_t ret = _wait_for_reset(300);
   if (0 == ret) {
     _sx8634_clear_flag(SX8634_FLAG_IRQ_INHIBIT);
+    _sx8634_set_flag(SX8634_FLAG_INITIAL_IRQ_READ);
     ret = ping_device() ? 0 : -2;
   }
   return ret;
@@ -716,10 +777,8 @@ int8_t SX8634::setGPOValue(uint8_t pin, uint8_t value) {
 */
 int8_t SX8634::_write_gpo_register(uint8_t pin, bool value) {
   uint8_t pin_mask  = 1 << pin;
-  // TODO: We should be setting our shadow when the bus-op completes. Not here.
-  _gpo_levels[pin] = value ? 255 : 0;
-  uint8_t w_val = value ? (_registers[SX8634_REG_GPO_CTRL] | pin_mask) : (_registers[SX8634_REG_GPO_CTRL] & ~pin_mask);
-  if (w_val != _registers[SX8634_REG_GPO_CTRL]) {
+  uint8_t w_val = value ? (_get_shadow_reg_val(SX8634_REG_GPO_CTRL) | pin_mask) : (_get_shadow_reg_val(SX8634_REG_GPO_CTRL) & ~pin_mask);
+  if (w_val != _get_shadow_reg_val(SX8634_REG_GPO_CTRL)) {
     return _write_register(SX8634_REG_GPO_CTRL, w_val);
   }
   return 0;
@@ -734,8 +793,8 @@ int8_t SX8634::_write_pwm_value(uint8_t pin, uint8_t value) {
   int8_t ret = -2;
   if (false == _sx8634_flag(SX8634_FLAG_PWM_CHANGE_IN_FLIGHT)) {
     int idx = _get_shadow_reg_mem_addr(SX8634_REG_GPP_PIN_ID);
-    _registers[idx + 0] = pin;
-    _registers[idx + 1] = value;
+    _set_shadow_reg_val(SX8634_REG_GPP_PIN_ID, pin);
+    _set_shadow_reg_val(SX8634_REG_GPP_INTENSITY, value);
     I2CBusOp* nu = _bus->new_op(BusOpcode::TX, this);
     if (nullptr != nu) {
       nu->dev_addr = _opts.i2c_addr;
