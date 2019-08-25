@@ -849,6 +849,7 @@ int8_t Argument::setValue(void* trg_buf, int len, TCode tc) {
     case TCode::VECT_3_FLOAT:
     case TCode::VECT_3_UINT16:
     case TCode::VECT_3_INT16:
+      return_value = 0;
       for (int i = 0; i < len; i++) {
         *((uint8_t*) target_mem + i) = *((uint8_t*) trg_buf + i);
       }
