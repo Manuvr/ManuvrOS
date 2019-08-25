@@ -221,13 +221,14 @@ int8_t INA219::register_read_cb(DeviceRegister* reg) {
       }
       break;
     case INA219_REG_CONFIGURATION:
+      reg->unread = false;
       break;
     case INA219_REG_CALIBRATION:
+      reg->unread = false;
       break;
     default:
       break;
   }
-  reg->unread = false;
   return 0;
 }
 
@@ -271,9 +272,9 @@ bool INA219::process_read_data() {
     markRegRead(INA219_REG_SHUNT_VOLTAGE);
 
     #ifdef MANUVR_DEBUG
-      StringBuilder output;
-      output.concatf("%.3f\t %.3f\t %.3f\t %.3f\n", (double) local_shunt, (double) local_bus, (double) local_current, (double) local_power);
-      Kernel::log(&output);
+      //StringBuilder output;
+      //output.concatf("%.3f\t %.3f\t %.3f\t %.3f\n", (double) local_shunt, (double) local_bus, (double) local_current, (double) local_power);
+      //Kernel::log(&output);
     #endif
     return true;
   }
