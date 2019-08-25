@@ -215,14 +215,14 @@ class Argument {
     inline Argument* append(Image* val) {           return link(new Argument(val));   }
     #endif   // CONFIG_MANUVR_IMG_SUPPORT
 
-    inline int8_t setValue(uint8_t val) {          return setValue((void*)(uintptr_t) val, sizeOfType(TCode::UINT8),         TCode::UINT8);   }
-    inline int8_t setValue(uint16_t val) {         return setValue((void*)(uintptr_t) val, sizeOfType(TCode::UINT16),        TCode::UINT16);  }
-    inline int8_t setValue(uint32_t val) {         return setValue((void*)(uintptr_t) val, sizeOfType(TCode::UINT32),        TCode::UINT32);  }
-    inline int8_t setValue(int8_t val) {           return setValue((void*)(uintptr_t) val, sizeOfType(TCode::INT8),          TCode::INT8);    }
-    inline int8_t setValue(int16_t val) {          return setValue((void*)(uintptr_t) val, sizeOfType(TCode::INT16),         TCode::INT16);   }
-    inline int8_t setValue(int32_t val) {          return setValue((void*)(uintptr_t) val, sizeOfType(TCode::INT32),         TCode::INT32);   }
-    inline int8_t setValue(float val) {            return setValue((void*)(uintptr_t) val, sizeOfType(TCode::FLOAT),         TCode::FLOAT);   }
-    inline int8_t setValue(double val) {           return setValue((void*)(uintptr_t) val, sizeOfType(TCode::DOUBLE),        TCode::DOUBLE);  }
+    inline int8_t setValue(uint8_t val) {          return setValue((void*)(uintptr_t) &val, sizeOfType(TCode::UINT8),         TCode::UINT8);   }
+    inline int8_t setValue(uint16_t val) {         return setValue((void*)(uintptr_t) &val, sizeOfType(TCode::UINT16),        TCode::UINT16);  }
+    inline int8_t setValue(uint32_t val) {         return setValue((void*)(uintptr_t) &val, sizeOfType(TCode::UINT32),        TCode::UINT32);  }
+    inline int8_t setValue(int8_t val) {           return setValue((void*)(uintptr_t) &val, sizeOfType(TCode::INT8),          TCode::INT8);    }
+    inline int8_t setValue(int16_t val) {          return setValue((void*)(uintptr_t) &val, sizeOfType(TCode::INT16),         TCode::INT16);   }
+    inline int8_t setValue(int32_t val) {          return setValue((void*)(uintptr_t) &val, sizeOfType(TCode::INT32),         TCode::INT32);   }
+    inline int8_t setValue(float val) {            return setValue((void*)(uintptr_t) &val, sizeOfType(TCode::FLOAT),         TCode::FLOAT);   }
+    inline int8_t setValue(double val) {           return setValue((void*)(uintptr_t) &val, sizeOfType(TCode::DOUBLE),        TCode::DOUBLE);  }
     inline int8_t setValue(uint8_t *val) {         return setValue((void*) val, sizeOfType(TCode::UINT8),         TCode::UINT8_PTR);   }
     inline int8_t setValue(uint16_t *val) {        return setValue((void*) val, sizeOfType(TCode::UINT16),        TCode::UINT16_PTR);  }
     inline int8_t setValue(uint32_t *val) {        return setValue((void*) val, sizeOfType(TCode::UINT32),        TCode::UINT32_PTR);  }

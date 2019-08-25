@@ -460,17 +460,7 @@ int test_Argument_Value_Placement() {
   uint8_t  val5  = (uint8_t)  randomInt();
   float    val6  = ((uint32_t) randomInt()) / ((float) randomInt());
   Vector3<float> val7(0.5f, -0.5f, 0.2319f);
-  double   val8  = 2.3957206f;
-
-  int32_t  ret0 = 0;
-  int16_t  ret1 = 0;
-  int8_t   ret2 = 0;
-  uint32_t ret3 = 0;
-  uint16_t ret4 = 0;
-  uint8_t  ret5 = 0;
-  float    ret6 = 0.0f;
-  Vector3<float> ret7(0.0f, 0.0f, 0.0f);
-  double   ret8 = 0.0f;
+  double   val8  = ((uint32_t) randomInt()) / ((double) randomInt());
 
   Argument arg0(val0);
   Argument arg1(val1);
@@ -481,6 +471,16 @@ int test_Argument_Value_Placement() {
   Argument arg6(val6);
   Argument arg7(&val7);
   Argument arg8(val8);
+
+  int32_t  ret0 = 0;
+  int16_t  ret1 = 0;
+  int8_t   ret2 = 0;
+  uint32_t ret3 = 0;
+  uint16_t ret4 = 0;
+  uint8_t  ret5 = 0;
+  float    ret6 = 0.0f;
+  Vector3<float> ret7(0.0f, 0.0f, 0.0f);
+  double   ret8 = 0.0f;
 
   val0  = (int32_t)  randomInt();
   val1  = (int16_t)  randomInt();
@@ -494,7 +494,7 @@ int test_Argument_Value_Placement() {
     ((uint32_t) randomInt()) / ((float) randomInt()),
     ((uint32_t) randomInt()) / ((float) randomInt())
   );
-  val8  = ((uint32_t) randomInt()) / ((float) randomInt());
+  val8  = ((uint32_t) randomInt()) / ((double) randomInt());
 
   arg0.setValue(val0);
   arg1.setValue(val1);
@@ -506,17 +506,18 @@ int test_Argument_Value_Placement() {
   arg7.setValue(&val7);
   arg8.setValue(val8);
 
-  if ((0 == arg0.getValueAs((uint8_t) 0, &ret0)) && (ret0 == val0)) {
-    if ((0 == arg1.getValueAs((uint8_t) 1, &ret1)) && (ret1 == val1)) {
-      if ((0 == arg2.getValueAs((uint8_t) 2, &ret2)) && (ret2 == val2)) {
-        if ((0 == arg3.getValueAs((uint8_t) 3, &ret3)) && (ret3 == val3)) {
-          if ((0 == arg4.getValueAs((uint8_t) 4, &ret4)) && (ret4 == val4)) {
-            if ((0 == arg5.getValueAs((uint8_t) 5, &ret5)) && (ret5 == val5)) {
-              if ((0 == arg6.getValueAs((uint8_t) 6, &ret6)) && (ret6 == val6)) {
-                if ((0 == arg8.getValueAs((uint8_t) 8, &ret8)) && (ret8 == val8)) {
+  if ((0 == arg0.getValueAs(&ret0)) && (ret0 == val0)) {
+    if ((0 == arg1.getValueAs(&ret1)) && (ret1 == val1)) {
+      if ((0 == arg2.getValueAs(&ret2)) && (ret2 == val2)) {
+        if ((0 == arg3.getValueAs(&ret3)) && (ret3 == val3)) {
+          if ((0 == arg4.getValueAs(&ret4)) && (ret4 == val4)) {
+            if ((0 == arg5.getValueAs(&ret5)) && (ret5 == val5)) {
+              if ((0 == arg6.getValueAs(&ret6)) && (ret6 == val6)) {
+                if ((0 == arg8.getValueAs(&ret8)) && (ret8 == val8)) {
+                  log.concatf("Value placement tests good for all types.\n");
                   return_value = 0;
                 }
-                else log.concatf("Failed to vet key 'value8'... %.6f vs %.6f\n", ret8, val8);
+                else log.concatf("Failed to vet key 'value8'... %.20f vs %.20f\n", ret8, val8);
               }
               else log.concatf("Failed to vet key 'value6'... %.3f vs %.3f\n", ret6, val6);
             }
@@ -820,7 +821,7 @@ int test_Arguments() {
     if (0 == return_value) {
       return_value = test_Arguments_PODs();
       if (0 == return_value) {
-        //return_value = test_Argument_Value_Placement();
+        return_value = test_Argument_Value_Placement();
         if (0 == return_value) {
         #if defined(MANUVR_CBOR)
           return_value = test_CBOR_Argument();
