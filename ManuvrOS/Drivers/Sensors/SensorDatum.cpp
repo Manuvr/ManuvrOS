@@ -27,13 +27,17 @@ SensorDatum::SensorDatum(const DatumDef* d) : Argument(d->type_id) {
   def = d;
   _flags = def->flgs & SENSE_DATUM_FLAG_PRELOAD_MASK;
   setKey(d->desc);
-
-  if (len) {
-    target_mem = malloc(len);
-    if (target_mem) {
-      memset(target_mem, 0x00, len);
-      _flags |= SENSE_DATUM_FLAG_MEM_ALLOC;
+  if (!isValueDirect()) {
+    if (len) {
+      target_mem = malloc(len);
+      if (target_mem) {
+        memset(target_mem, 0x00, len);
+        _flags |= SENSE_DATUM_FLAG_MEM_ALLOC;
+      }
     }
+  }
+  else {
+    _flags |= SENSE_DATUM_FLAG_MEM_ALLOC;
   }
 }
 

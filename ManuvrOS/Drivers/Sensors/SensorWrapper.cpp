@@ -395,12 +395,10 @@ SensorError SensorWrapper::updateDatum(uint8_t dat, void *reading) {
   SensorDatum* current = get_datum(dat);
   if (current) {
     if (0 != current->setValue(reading, current->length(), current->typeCode())) {
-      Kernel::log("Bad type conversion\n");
       return SensorError::BAD_TYPE_CONVERT;
     }
   }
   else {
-    Kernel::log("INVALID_DATUM\n");
     return SensorError::INVALID_DATUM;
   }
   return mark_dirty(dat);   // If we've come this far, mark this datum as dirty.

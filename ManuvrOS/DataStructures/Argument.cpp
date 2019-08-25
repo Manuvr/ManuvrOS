@@ -292,6 +292,7 @@ Argument::Argument(TCode code) : Argument() {
     case TCode::UINT64:
     case TCode::INT64:
     case TCode::DOUBLE:
+      break;
     default:
       break;
   }
@@ -312,6 +313,7 @@ Argument::Argument(void* ptr, int l, TCode code) : Argument(code) {
 Argument::Argument(double val) : Argument(malloc(sizeof(double)), sizeof(double), TCode::DOUBLE) {
   if (nullptr != target_mem) {
     *((double*) target_mem) = val;
+    _alter_flags(true, MANUVR_ARG_FLAG_REAP_VALUE);
   }
 }
 
@@ -842,6 +844,7 @@ int8_t Argument::setValue(void* trg_buf, int len, TCode tc) {
     case TCode::INT16_PTR:
     case TCode::INT8_PTR:
     case TCode::FLOAT_PTR:
+    case TCode::DOUBLE:
     case TCode::VECT_4_FLOAT:
     case TCode::VECT_3_FLOAT:
     case TCode::VECT_3_UINT16:

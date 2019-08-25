@@ -159,6 +159,7 @@ class Argument {
     inline uint16_t length() {        return len;        };
     inline TCode    typeCode() {      return _t_code;    };
     inline uint8_t  typeCodeByte() {  return (uint8_t) _t_code;    };
+    inline bool     isValueDirect() { return _check_flags(MANUVR_ARG_FLAG_DIRECT_VALUE);   };
 
     inline const char* getKey() {         return _key;  };
     inline void setKey(const char* k) {      _key = k;  };
@@ -277,13 +278,19 @@ class Argument {
     Argument*   _next      = nullptr;
     const char* _key       = nullptr;
     uint16_t    len        = 0;
-    uint8_t     _flags     = 0;
     TCode       _t_code    = TCode::NONE;
 
     Argument(TCode code);    // Protected constructor to which we delegate.
     Argument(void* ptr, int len, uint8_t code) : Argument(ptr, len, (TCode) code){};   // TODO: Shim
 
     void wipe();
+
+    // TODO: Might-should move this to someplace more accessable?
+    static uintptr_t get_const_from_char_ptr(char*);
+
+
+  private:
+    uint8_t     _flags     = 0;
 
     /* Inlines for altering and reading the flags. */
     inline void _alter_flags(bool en, uint8_t mask) {
@@ -292,9 +299,6 @@ class Argument {
     inline bool _check_flags(uint8_t mask) {
       return (mask == (_flags & mask));
     };
-
-    // TODO: Might-should move this to someplace more accessable?
-    static uintptr_t get_const_from_char_ptr(char*);
 };
 
 #endif  // __MANUVR_DS_ARGUMENT_H
