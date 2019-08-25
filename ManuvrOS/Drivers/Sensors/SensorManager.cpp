@@ -329,6 +329,8 @@ int8_t SensorManager::notify(ManuvrMsg* event) {
 static const ConsoleCommand console_cmds[] = {
   { "i", "Info" },
   { "*", "Force-init sensor" },
+  { "E", "Dump data defs for sensor" },
+  { "e", "Dump sensor data" },
   { "p", "Poll sensor" },
   { "R", "Reset sensor" },
   { "l", "List of sensors" }

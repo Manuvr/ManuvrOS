@@ -203,7 +203,7 @@ int test_PriorityQueue0(StringBuilder* log) {
   if (0 == q_size) {
     if (!queue0.contains(&vals[5])) {  // Futile search for non-existant value.
       // Populate the queue...
-      for (int i = 0; i < sizeof(vals); i++) {
+      for (int i = 0; i < (int) sizeof(vals); i++) {
         int q_pos = queue0.insert(&vals[i]);
         if (i != q_pos) {
           log->concatf("Returned index from queue insertion didn't match the natural order. %d verus %d.\n", i, q_pos);
@@ -261,7 +261,7 @@ int test_PriorityQueue1(StringBuilder* log) {
   int vals_accepted = 0;
   int vals_rejected = 0;
   for (int n = 0; n < 2; n++) {
-    for (int i = 0; i < sizeof(vals); i++) {
+    for (unsigned int i = 0; i < sizeof(vals); i++) {
       if (-1 != queue0.insertIfAbsent(&vals[i])) {
         vals_accepted++;
       }
@@ -363,8 +363,9 @@ int test_CBOR_Argument() {
   uint32_t val3  = (uint32_t) randomInt();
   uint16_t val4  = (uint16_t) randomInt();
   uint8_t  val5  = (uint8_t)  randomInt();
-  float    val6  = 0.4123f;
+  float    val6  = ((uint32_t) randomInt()) / ((float) randomInt());
   Vector3<float> val7(0.5f, -0.5f, 0.2319f);
+  double   val8  = ((uint32_t) randomInt()) / ((double) randomInt());
 
   int32_t  ret0 = 0;
   int16_t  ret1 = 0;
@@ -374,6 +375,7 @@ int test_CBOR_Argument() {
   uint8_t  ret5 = 0;
   float    ret6 = 0.0f;
   Vector3<float> ret7(0.0f, 0.0f, 0.0f);
+  double   ret8 = 0.0f;
 
   Argument a(val0);
 
@@ -385,6 +387,7 @@ int test_CBOR_Argument() {
   a.append(val5)->setKey("val5");
   a.append(val6)->setKey("val6");
   a.append(&val7)->setKey("val7");
+  a.append(val8)->setKey("val8");
 
   a.printDebug(&log);
 
@@ -406,12 +409,15 @@ int test_CBOR_Argument() {
               if ((0 == r->getValueAs((uint8_t) 4, &ret4)) && (ret4 == val4)) {
                 if ((0 == r->getValueAs((uint8_t) 5, &ret5)) && (ret5 == val5)) {
                   if ((0 == r->getValueAs((uint8_t) 6, &ret6)) && (ret6 == val6)) {
-                    if (r->argCount() == a.argCount()) {
-                      return_value = 0;
+                    if ((0 == r->getValueAs((uint8_t) 8, &ret8)) && (ret8 == val8)) {
+                      if (r->argCount() == a.argCount()) {
+                        return_value = 0;
+                      }
+                      else log.concatf("Arg counts don't match: %d vs %d\n", r->argCount(), a.argCount());
                     }
-                    else log.concatf("Arg counts don't match: %d vs %d\n", r->argCount(), a.argCount());
+                    else log.concatf("Failed to vet key 'value8'... %.6f vs %.6f\n", ret8, val8);
                   }
-                  else log.concatf("Failed to vet key 'value6'... %.3f vs %.3f\n", ret6, val6);
+                  else log.concatf("Failed to vet key 'value6'... %.3f vs %.3f\n", (double) ret6, (double) val6);
                 }
                 else log.concatf("Failed to vet key 'value5'... %u vs %u\n", ret5, val5);
               }
@@ -431,6 +437,103 @@ int test_CBOR_Argument() {
 
   if (return_value) {
     a.printDebug(&log);
+  }
+  printf("%s\n\n", (const char*) log.string());
+  return return_value;
+}
+
+
+/**
+* [test_Argument_Value_Placement description]
+* @return [description]
+*/
+int test_Argument_Value_Placement() {
+  int return_value = -1;
+  StringBuilder log("===< Argument Value Placement >=========================\n");
+  StringBuilder shuttle;  // We will transport the CBOR encoded-bytes through this.
+
+  int32_t  val0  = (int32_t)  randomInt();
+  int16_t  val1  = (int16_t)  randomInt();
+  int8_t   val2  = (int8_t)   randomInt();
+  uint32_t val3  = (uint32_t) randomInt();
+  uint16_t val4  = (uint16_t) randomInt();
+  uint8_t  val5  = (uint8_t)  randomInt();
+  float    val6  = ((uint32_t) randomInt()) / ((float) randomInt());
+  Vector3<float> val7(0.5f, -0.5f, 0.2319f);
+  double   val8  = 2.3957206f;
+
+  int32_t  ret0 = 0;
+  int16_t  ret1 = 0;
+  int8_t   ret2 = 0;
+  uint32_t ret3 = 0;
+  uint16_t ret4 = 0;
+  uint8_t  ret5 = 0;
+  float    ret6 = 0.0f;
+  Vector3<float> ret7(0.0f, 0.0f, 0.0f);
+  double   ret8 = 0.0f;
+
+  Argument arg0(val0);
+  Argument arg1(val1);
+  Argument arg2(val2);
+  Argument arg3(val3);
+  Argument arg4(val4);
+  Argument arg5(val5);
+  Argument arg6(val6);
+  Argument arg7(&val7);
+  Argument arg8(val8);
+
+  val0  = (int32_t)  randomInt();
+  val1  = (int16_t)  randomInt();
+  val2  = (int8_t)   randomInt();
+  val3  = (uint32_t) randomInt();
+  val4  = (uint16_t) randomInt();
+  val5  = (uint8_t)  randomInt();
+  val6  = ((uint32_t) randomInt()) / ((float) randomInt());
+  val7(
+    ((uint32_t) randomInt()) / ((float) randomInt()),
+    ((uint32_t) randomInt()) / ((float) randomInt()),
+    ((uint32_t) randomInt()) / ((float) randomInt())
+  );
+  val8  = ((uint32_t) randomInt()) / ((float) randomInt());
+
+  arg0.setValue(val0);
+  arg1.setValue(val1);
+  arg2.setValue(val2);
+  arg3.setValue(val3);
+  arg4.setValue(val4);
+  arg5.setValue(val5);
+  arg6.setValue(val6);
+  arg7.setValue(&val7);
+  arg8.setValue(val8);
+
+  if ((0 == arg0.getValueAs((uint8_t) 0, &ret0)) && (ret0 == val0)) {
+    if ((0 == arg1.getValueAs((uint8_t) 1, &ret1)) && (ret1 == val1)) {
+      if ((0 == arg2.getValueAs((uint8_t) 2, &ret2)) && (ret2 == val2)) {
+        if ((0 == arg3.getValueAs((uint8_t) 3, &ret3)) && (ret3 == val3)) {
+          if ((0 == arg4.getValueAs((uint8_t) 4, &ret4)) && (ret4 == val4)) {
+            if ((0 == arg5.getValueAs((uint8_t) 5, &ret5)) && (ret5 == val5)) {
+              if ((0 == arg6.getValueAs((uint8_t) 6, &ret6)) && (ret6 == val6)) {
+                if ((0 == arg8.getValueAs((uint8_t) 8, &ret8)) && (ret8 == val8)) {
+                  return_value = 0;
+                }
+                else log.concatf("Failed to vet key 'value8'... %.6f vs %.6f\n", ret8, val8);
+              }
+              else log.concatf("Failed to vet key 'value6'... %.3f vs %.3f\n", ret6, val6);
+            }
+            else log.concatf("Failed to vet key 'value5'... %u vs %u\n", ret5, val5);
+          }
+          else log.concatf("Failed to vet key 'value4'... %u vs %u\n", ret4, val4);
+        }
+        else log.concatf("Failed to vet key 'value3'... %u vs %u\n", ret3, val3);
+      }
+      else log.concatf("Failed to vet key 'value2'... %u vs %u\n", ret2, val2);
+    }
+    else log.concatf("Failed to vet key 'value1'... %u vs %u\n", ret1, val1);
+  }
+  else log.concatf("Failed to vet key 'value0'... %u vs %u\n", ret0, val0);
+
+  if (return_value) {
+    //a.printDebug(&log);
   }
   printf("%s\n\n", (const char*) log.string());
   return return_value;
@@ -717,14 +820,17 @@ int test_Arguments() {
     if (0 == return_value) {
       return_value = test_Arguments_PODs();
       if (0 == return_value) {
-      #if defined(MANUVR_CBOR)
-        return_value = test_CBOR_Argument();
+        //return_value = test_Argument_Value_Placement();
         if (0 == return_value) {
-          return_value = test_CBOR_Problematic_Argument();
+        #if defined(MANUVR_CBOR)
+          return_value = test_CBOR_Argument();
           if (0 == return_value) {
+            return_value = test_CBOR_Problematic_Argument();
+            if (0 == return_value) {
+            }
           }
+        #endif
         }
-      #endif
       }
     }
   }

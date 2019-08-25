@@ -419,7 +419,8 @@ void decoder::run() {
             _state = STATE_TYPE;
             break;
           case 8:
-            _listener->on_extra_special(_in->get_long());
+            //_listener->on_extra_special(_in->get_long());
+            _listener->on_double(_in->get_double());
             _state = STATE_TYPE;
             break;
         }

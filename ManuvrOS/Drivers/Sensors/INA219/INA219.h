@@ -175,7 +175,7 @@ const V_Cap_Point chem_index_5[] = {{1.000, 1.00},
                                     {0.775, 0.00}};
 
 
-#define INA219_I2CADDR        0x4A
+#define INA219_I2CADDR        0x40
 
 
 class INA219 : public I2CDeviceWithRegisters, public SensorWrapper {

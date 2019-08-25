@@ -95,6 +95,7 @@ class Argument {
       *(((uint8_t*) &target_mem) + 2) = *(src + 2);
       *(((uint8_t*) &target_mem) + 3) = *(src + 3);
     };
+    Argument(double val);
 
     Argument(uint8_t*  val) : Argument((void*) val, sizeof(val), TCode::UINT8_PTR)  {};
     Argument(uint16_t* val) : Argument((void*) val, sizeof(val), TCode::UINT16_PTR) {};
@@ -180,7 +181,8 @@ class Argument {
     inline Argument* append(int8_t val) {           return link(new Argument(val));   }
     inline Argument* append(int16_t val) {          return link(new Argument(val));   }
     inline Argument* append(int32_t val) {          return link(new Argument(val));   }
-    inline Argument* append(float val) {            return link(new Argument(val));   }
+    inline Argument* append(float val) {            return link(new Argument((float) val));   }
+    inline Argument* append(double val) {           return link(new Argument((double) val));   }
 
     inline Argument* append(uint8_t *val) {         return link(new Argument(val));   }
     inline Argument* append(uint16_t *val) {        return link(new Argument(val));   }
@@ -212,6 +214,40 @@ class Argument {
     #if defined(CONFIG_MANUVR_IMG_SUPPORT)
     inline Argument* append(Image* val) {           return link(new Argument(val));   }
     #endif   // CONFIG_MANUVR_IMG_SUPPORT
+
+    inline int8_t setValue(uint8_t val) {          return setValue((void*)(uintptr_t) val, sizeOfType(TCode::UINT8),         TCode::UINT8);   }
+    inline int8_t setValue(uint16_t val) {         return setValue((void*)(uintptr_t) val, sizeOfType(TCode::UINT16),        TCode::UINT16);  }
+    inline int8_t setValue(uint32_t val) {         return setValue((void*)(uintptr_t) val, sizeOfType(TCode::UINT32),        TCode::UINT32);  }
+    inline int8_t setValue(int8_t val) {           return setValue((void*)(uintptr_t) val, sizeOfType(TCode::INT8),          TCode::INT8);    }
+    inline int8_t setValue(int16_t val) {          return setValue((void*)(uintptr_t) val, sizeOfType(TCode::INT16),         TCode::INT16);   }
+    inline int8_t setValue(int32_t val) {          return setValue((void*)(uintptr_t) val, sizeOfType(TCode::INT32),         TCode::INT32);   }
+    inline int8_t setValue(float val) {            return setValue((void*)(uintptr_t) val, sizeOfType(TCode::FLOAT),         TCode::FLOAT);   }
+    inline int8_t setValue(double val) {           return setValue((void*)(uintptr_t) val, sizeOfType(TCode::DOUBLE),        TCode::DOUBLE);  }
+    inline int8_t setValue(uint8_t *val) {         return setValue((void*) val, sizeOfType(TCode::UINT8),         TCode::UINT8_PTR);   }
+    inline int8_t setValue(uint16_t *val) {        return setValue((void*) val, sizeOfType(TCode::UINT16),        TCode::UINT16_PTR);  }
+    inline int8_t setValue(uint32_t *val) {        return setValue((void*) val, sizeOfType(TCode::UINT32),        TCode::UINT32_PTR);  }
+    inline int8_t setValue(int8_t *val) {          return setValue((void*) val, sizeOfType(TCode::INT8),          TCode::INT8_PTR);    }
+    inline int8_t setValue(int16_t *val) {         return setValue((void*) val, sizeOfType(TCode::INT16),         TCode::INT16_PTR);   }
+    inline int8_t setValue(int32_t *val) {         return setValue((void*) val, sizeOfType(TCode::INT32),         TCode::INT32_PTR);   }
+    inline int8_t setValue(float *val) {           return setValue((void*) val, sizeOfType(TCode::FLOAT),         TCode::FLOAT_PTR);   }
+    inline int8_t setValue(Vector3ui16 *val) {     return setValue((void*) val, sizeOfType(TCode::VECT_3_UINT16), TCode::VECT_3_UINT16);  }
+    inline int8_t setValue(Vector3i16 *val) {      return setValue((void*) val, sizeOfType(TCode::VECT_3_INT16),  TCode::VECT_3_INT16);   }
+    inline int8_t setValue(Vector3f *val) {        return setValue((void*) val, sizeOfType(TCode::VECT_3_FLOAT),  TCode::VECT_3_FLOAT);   }
+    inline int8_t setValue(Vector4f *val) {        return setValue((void*) val, sizeOfType(TCode::VECT_4_FLOAT),  TCode::VECT_4_FLOAT);   }
+    inline int8_t setValue(void *val, int len) {   return setValue((void*) val, len, TCode::BINARY);     }
+    inline int8_t setValue(const char *val) {      return setValue((void*) val, strlen(val),   TCode::STR);         }
+    inline int8_t setValue(StringBuilder *val) {   return setValue((void*) val, val->length(), TCode::STR_BUILDER);        }
+    inline int8_t setValue(Argument *val) {        return setValue((void*) val, 0, TCode::ARGUMENT);            }
+    inline int8_t setValue(Identity *val) {        return setValue((void*) val, 0, TCode::IDENTITY);            }
+    inline int8_t setValue(BufferPipe *val) {      return setValue((void*) val, 0, TCode::BUFFERPIPE);          }
+    inline int8_t setValue(EventReceiver *val) {   return setValue((void*) val, 0, TCode::SYS_EVENTRECEIVER);   }
+    inline int8_t setValue(ManuvrXport *val) {     return setValue((void*) val, 0, TCode::SYS_MANUVR_XPORT);    }
+    inline int8_t setValue(ManuvrMsg* val) {       return setValue((void*) val, 0, TCode::SYS_MANUVRMSG);       }
+    inline int8_t setValue(FxnPointer *val) {      return setValue((void*) val, 0, TCode::SYS_FXN_PTR);         }
+    inline int8_t setValue(ThreadFxnPtr *val) {    return setValue((void*) val, 0, TCode::SYS_THREAD_FXN_PTR);  }
+    inline int8_t setValue(ArgumentFxnPtr *val) {  return setValue((void*) val, 0, TCode::SYS_ARG_FXN_PTR);     }
+    inline int8_t setValue(PipeIOCallback *val) {  return setValue((void*) val, 0, TCode::SYS_PIPE_FXN_PTR);    }
+    int8_t setValue(void* trg_buf, int len, TCode);
 
 
     // TODO: These will be re-worked to support alternate type-systems.

@@ -101,6 +101,7 @@ void CBORArgListener::on_integer(uint8_t v) {          _caaa(new Argument(v));  
 void CBORArgListener::on_integer(uint16_t v) {         _caaa(new Argument(v));               };
 void CBORArgListener::on_integer(uint32_t v) {         _caaa(new Argument(v));               };
 void CBORArgListener::on_float32(float f) {            _caaa(new Argument(f));               };
+void CBORArgListener::on_double(double f) {            _caaa(new Argument(f));               };
 void CBORArgListener::on_special(unsigned int code) {  _caaa(new Argument((uint32_t) code)); };
 void CBORArgListener::on_error(const char* error) {    _caaa(new Argument(error));           };
 

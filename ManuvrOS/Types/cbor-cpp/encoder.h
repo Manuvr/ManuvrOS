@@ -44,6 +44,7 @@ namespace cbor {
       inline void write_special(int v) {   write_type_value(7, (unsigned int) v);    };
 
       void write_float(float value);
+      void write_double(double value);
       void write_bytes(const unsigned char *data, unsigned int size);
       void write_string(const char* data, unsigned int size);
       void write_string(const char* str);

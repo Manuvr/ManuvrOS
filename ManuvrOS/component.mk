@@ -29,6 +29,7 @@ LOCAL_ESP_COMPS += Drivers/PMIC/LTC294x
 #LOCAL_ESP_COMPS += Drivers/SSD1331
 LOCAL_ESP_COMPS += Drivers/Sensors
 LOCAL_ESP_COMPS += Drivers/Sensors/BMP280
+LOCAL_ESP_COMPS += Drivers/Sensors/INA219
 LOCAL_ESP_COMPS += Drivers/Sensors/TMP102
 LOCAL_ESP_COMPS += Drivers/Sensors/LightSensor
 LOCAL_ESP_COMPS += Drivers/Sensors/HMC5883

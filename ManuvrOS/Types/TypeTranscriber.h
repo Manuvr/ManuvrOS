@@ -48,6 +48,7 @@ This is the base class for a type transcriber.
       void on_integer(uint16_t);
       void on_integer(uint32_t);
       void on_float32(float value);
+      void on_double(double value);
       void on_bytes(unsigned char* data, int size);
       void on_string(char* str);
       void on_array(int size);

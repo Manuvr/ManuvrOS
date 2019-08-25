@@ -31,6 +31,7 @@ namespace cbor {
         virtual void on_integer(uint32_t value) = 0;
 
         virtual void on_float32(float value) = 0;
+        virtual void on_double(double value) = 0;
 
         virtual void on_bytes(unsigned char *data, int size) = 0;
 

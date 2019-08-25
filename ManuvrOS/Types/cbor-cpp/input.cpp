@@ -67,6 +67,21 @@ float input::get_float() {
     return *((float*) (&value[0]));
 }
 
+double input::get_double() {
+  double ret;
+  uint8_t* ptr = (uint8_t*)(void*) &ret;
+  *(ptr + 0) = _data[_offset + 7];
+  *(ptr + 1) = _data[_offset + 6];
+  *(ptr + 2) = _data[_offset + 5];
+  *(ptr + 3) = _data[_offset + 4];
+  *(ptr + 4) = _data[_offset + 3];
+  *(ptr + 5) = _data[_offset + 2];
+  *(ptr + 6) = _data[_offset + 1];
+  *(ptr + 7) = _data[_offset + 0];
+  _offset += 8;
+  return ret;
+}
+
 unsigned long long input::get_long() {
     unsigned long long value = ((unsigned long long) _data[_offset] << 56) |
             ((unsigned long long) _data[_offset +1] << 48) | ((unsigned long long) _data[_offset +2] << 40) |

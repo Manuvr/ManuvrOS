@@ -127,6 +127,15 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
         }
         break;
 
+      case TCode::DOUBLE:
+        {
+          double x = 0;
+          if (0 == src->getValueAs(&x)) {
+            encoder.write_double(x);
+          }
+        }
+        break;
+
       case TCode::STR:
         {
           char* buf;
@@ -300,6 +309,12 @@ Argument::Argument(void* ptr, int l, TCode code) : Argument(code) {
   target_mem = ptr;
 }
 
+Argument::Argument(double val) : Argument(malloc(sizeof(double)), sizeof(double), TCode::DOUBLE) {
+  if (nullptr != target_mem) {
+    *((double*) target_mem) = val;
+  }
+}
+
 
 Argument::~Argument() {
   wipe();
@@ -445,17 +460,22 @@ int8_t Argument::getValueAs(void* trg_buf) {
       *((uint8_t*) trg_buf + 2) = *(((uint8_t*) &target_mem) + 2);
       *((uint8_t*) trg_buf + 3) = *(((uint8_t*) &target_mem) + 3);
       break;
+
+    case TCode::DOUBLE:         // These are fixed-length allocated data.
+    case TCode::VECT_4_FLOAT:   //
+    case TCode::VECT_3_FLOAT:   //
+    case TCode::VECT_3_UINT16:
+    case TCode::VECT_3_INT16:
+      return_value = 0;
+      memcpy(trg_buf, target_mem, len);
+      break;
+
     case TCode::UINT32_PTR:  // These are *pointers* to the indicated types. They
     case TCode::UINT16_PTR:  //   therefore take the whole 4 bytes of memory allocated
     case TCode::UINT8_PTR:   //   and can be returned as such.
     case TCode::INT32_PTR:
     case TCode::INT16_PTR:
     case TCode::INT8_PTR:
-
-    case TCode::VECT_4_FLOAT:
-    case TCode::VECT_3_FLOAT:
-    case TCode::VECT_3_UINT16:
-    case TCode::VECT_3_INT16:
 
     case TCode::STR_BUILDER:          // This is a pointer to some StringBuilder. Presumably this is on the heap.
     case TCode::STR:                  // This is a pointer to a string constant. Presumably this is stored in flash.
@@ -532,6 +552,7 @@ int8_t Argument::serialize(StringBuilder *out) {
     case TCode::URL:             // This is a pointer to some StringBuilder. Presumably this is on the heap.
       temp_str    = ((StringBuilder*) target_mem)->string();
       arg_bin_len = ((StringBuilder*) target_mem)->length();
+    case TCode::DOUBLE:
     case TCode::VECT_4_FLOAT:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
     case TCode::VECT_3_FLOAT:  // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
     case TCode::VECT_3_UINT16: // NOTE!!! This only works for Vectors because of the template layout. FRAGILE!!!
@@ -606,6 +627,7 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
       out->concat((StringBuilder*) target_mem);
       break;
     case TCode::STR:
+    case TCode::DOUBLE:
     case TCode::VECT_4_FLOAT:
     case TCode::VECT_3_FLOAT:
     case TCode::VECT_3_UINT16:
@@ -734,6 +756,13 @@ void Argument::valToString(StringBuilder* out) {
         out->concatf("%.4f", (float) tmp);
       }
       break;
+    case TCode::DOUBLE:
+      {
+        double tmp;
+        getValueAs((void*) &tmp);
+        out->concatf("%.6f", tmp);
+      }
+      break;
 
     case TCode::BOOLEAN:
       out->concatf("%s", ((uintptr_t) pointer() ? "true" : "false"));
@@ -775,4 +804,64 @@ void Argument::printDebug(StringBuilder* out) {
   out->concat("\n");
 
   if (nullptr != _next) _next->printDebug(out);
+}
+
+
+int8_t Argument::setValue(void* trg_buf, int len, TCode tc) {
+  int8_t return_value = -1;
+  if (typeCode() != tc) {
+    return -2;
+  }
+  switch (tc) {
+    case TCode::INT8:    // This frightens the compiler. Its fears are unfounded.
+    case TCode::UINT8:   // This frightens the compiler. Its fears are unfounded.
+      return_value = 0;
+      *((uint8_t*)&target_mem) = *((uint8_t*) trg_buf);
+      break;
+    case TCode::INT16:    // This frightens the compiler. Its fears are unfounded.
+    case TCode::UINT16:   // This frightens the compiler. Its fears are unfounded.
+      return_value = 0;
+      *((uint16_t*)&target_mem) = *((uint16_t*) trg_buf);
+      break;
+    case TCode::INT32:    // This frightens the compiler. Its fears are unfounded.
+    case TCode::UINT32:   // This frightens the compiler. Its fears are unfounded.
+      return_value = 0;
+      *((uint32_t*)&target_mem) = *((uint32_t*) trg_buf);
+      break;
+    case TCode::FLOAT:    // This frightens the compiler. Its fears are unfounded.
+      return_value = 0;
+      *(((uint8_t*) &target_mem) + 0) = *((uint8_t*) trg_buf + 0);
+      *(((uint8_t*) &target_mem) + 1) = *((uint8_t*) trg_buf + 1);
+      *(((uint8_t*) &target_mem) + 2) = *((uint8_t*) trg_buf + 2);
+      *(((uint8_t*) &target_mem) + 3) = *((uint8_t*) trg_buf + 3);
+      break;
+    case TCode::UINT32_PTR:  // These are *pointers* to the indicated types. They
+    case TCode::UINT16_PTR:  //   therefore take the whole 4 bytes of memory allocated
+    case TCode::UINT8_PTR:   //   and can be returned as such.
+    case TCode::INT32_PTR:
+    case TCode::INT16_PTR:
+    case TCode::INT8_PTR:
+    case TCode::FLOAT_PTR:
+    case TCode::VECT_4_FLOAT:
+    case TCode::VECT_3_FLOAT:
+    case TCode::VECT_3_UINT16:
+    case TCode::VECT_3_INT16:
+      for (int i = 0; i < len; i++) {
+        *((uint8_t*) target_mem + i) = *((uint8_t*) trg_buf + i);
+      }
+      break;
+
+    case TCode::STR_BUILDER:          // This is a pointer to some StringBuilder. Presumably this is on the heap.
+    case TCode::STR:                  // This is a pointer to a string constant. Presumably this is stored in flash.
+    case TCode::IMAGE:                // This is a pointer to an Image.
+    case TCode::BUFFERPIPE:           // This is a pointer to a BufferPipe/.
+    case TCode::SYS_MANUVRMSG:        // This is a pointer to ManuvrMsg.
+    case TCode::SYS_EVENTRECEIVER:    // This is a pointer to an EventReceiver.
+    case TCode::SYS_MANUVR_XPORT:     // This is a pointer to a transport.
+    default:
+      return_value = 0;
+      target_mem = trg_buf;  // TODO: Need to do an allocation check and possible cleanup.
+      break;
+  }
+  return return_value;
 }

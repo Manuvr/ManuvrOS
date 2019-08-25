@@ -375,8 +375,7 @@ SensorError SensorWrapper::readDatumRaw(uint8_t dat, void* void_buffer) {
   uint8_t* buffer = (uint8_t*) void_buffer;   // Done to avoid compiler warnings.
   SensorDatum* current = get_datum(dat);
   if (current) {
-    if ((current->target_mem != nullptr) && (buffer != nullptr)) {
-      memcpy(void_buffer, current->target_mem, current->length());
+    if (0 == current->getValueAs(void_buffer)) {
       return SensorError::NO_ERROR;
     }
     else {
@@ -395,15 +394,13 @@ SensorError SensorWrapper::readDatumRaw(uint8_t dat, void* void_buffer) {
 SensorError SensorWrapper::updateDatum(uint8_t dat, void *reading) {
   SensorDatum* current = get_datum(dat);
   if (current) {
-    if (current->target_mem == nullptr) {
-      current->target_mem = malloc(current->length());
-      if (current->target_mem == nullptr) {
-        return SensorError::OUT_OF_MEMORY;
-      }
+    if (0 != current->setValue(reading, current->length(), current->typeCode())) {
+      Kernel::log("Bad type conversion\n");
+      return SensorError::BAD_TYPE_CONVERT;
     }
-    memcpy(current->target_mem, reading, current->length());
   }
   else {
+    Kernel::log("INVALID_DATUM\n");
     return SensorError::INVALID_DATUM;
   }
   return mark_dirty(dat);   // If we've come this far, mark this datum as dirty.

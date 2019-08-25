@@ -93,7 +93,7 @@ CPP_SRCS  += Platform/Peripherals/SPI/SPIAdapter.cpp
 CPP_SRCS  += Platform/Peripherals/SPI/SPIBusOp.cpp
 
 
-CPP_SRCS  += Drivers/LightSensor/LightSensor.cpp
+CPP_SRCS  += Drivers/Sensors/LightSensor/LightSensor.cpp
 CPP_SRCS  += Drivers/AudioRouter/AudioRouter.cpp
 
 CPP_SRCS  += Drivers/MCP73833/MCP73833.cpp
