@@ -89,90 +89,7 @@ limitations under the License.
 * Sensor modes
 * These are bit-masked fields.
 */
-#define INA219_MODE_BATTERY         0x01     // If set, we have a battery on one side of us.
-#define INA219_MODE_INTEGRATION     0x02     // If set, we will integrate our current usage and provide a datum for it.
-
-
-/*
-* Battery chemistries...
-* Different battery chemistries have different discharge curves. This struct is a point on a discharge curve.
-* We should build a series of constants of this type for each chemistry we want to support. Since these curves
-*   amount to physical constants, they shouldn't ever consume prescious RAM. Keep them isolated to flash.
-*/
-typedef struct v_cap_point {
-  float percent_of_max_voltage;     // The percentage of the battery's stated maximum voltage.
-  float capacity_derate;            // The percentage by which to multiply the battery's stated capacity (if you want AH remaining).
-} V_Cap_Point;
-
-
-#define INA219_BATTERY_CHEM_UNDEF   0x00     // No chemistry information provided. We will use a nieve metric of 80% voltage is dead, and linear to that point.
-#define INA219_BATTERY_CHEM_LIPOLY  0x01
-#define INA219_BATTERY_CHEM_LIPO4   0x02
-#define INA219_BATTERY_CHEM_NICAD   0x03
-#define INA219_BATTERY_CHEM_NIMH    0x04
-#define INA219_BATTERY_CHEM_ALKALI  0x05
-
-// TODO: Fill these in with some empirical data...
-const V_Cap_Point chem_index_0[] = {{1.000, 1.00},
-                                    {0.975, 0.90},
-                                    {0.950, 0.80},
-                                    {0.925, 0.70},
-                                    {0.900, 0.50},
-                                    {0.875, 0.35},
-                                    {0.850, 0.20},
-                                    {0.825, 0.10},
-                                    {0.800, 0.05},
-                                    {0.775, 0.00}};
-const V_Cap_Point chem_index_1[] = {{1.000, 1.00},
-                                    {0.975, 0.90},
-                                    {0.950, 0.80},
-                                    {0.925, 0.70},
-                                    {0.900, 0.50},
-                                    {0.875, 0.35},
-                                    {0.850, 0.20},
-                                    {0.825, 0.10},
-                                    {0.800, 0.05},
-                                    {0.775, 0.00}};
-const V_Cap_Point chem_index_2[] = {{1.000, 1.00},
-                                    {0.975, 0.90},
-                                    {0.950, 0.80},
-                                    {0.925, 0.70},
-                                    {0.900, 0.50},
-                                    {0.875, 0.35},
-                                    {0.850, 0.20},
-                                    {0.825, 0.10},
-                                    {0.800, 0.05},
-                                    {0.775, 0.00}};
-const V_Cap_Point chem_index_3[] = {{1.000, 1.00},
-                                    {0.975, 0.90},
-                                    {0.950, 0.80},
-                                    {0.925, 0.70},
-                                    {0.900, 0.50},
-                                    {0.875, 0.35},
-                                    {0.850, 0.20},
-                                    {0.825, 0.10},
-                                    {0.800, 0.05},
-                                    {0.775, 0.00}};
-const V_Cap_Point chem_index_4[] = {{1.000, 1.00},
-                                    {0.975, 0.90},
-                                    {0.950, 0.80},
-                                    {0.925, 0.70},
-                                    {0.900, 0.50},
-                                    {0.875, 0.35},
-                                    {0.850, 0.20},
-                                    {0.825, 0.10},
-                                    {0.800, 0.05},
-                                    {0.775, 0.00}};
-const V_Cap_Point chem_index_5[] = {{1.000, 1.00},
-                                    {0.975, 0.90},
-                                    {0.950, 0.80},
-                                    {0.925, 0.70},
-                                    {0.900, 0.50},
-                                    {0.875, 0.35},
-                                    {0.850, 0.20},
-                                    {0.825, 0.10},
-                                    {0.800, 0.05},
-                                    {0.775, 0.00}};
+#define INA219_MODE_INTEGRATION     0x01     // If set, we will integrate our current usage and provide a datum for it.
 
 
 #define INA219_I2CADDR        0x40
@@ -198,17 +115,13 @@ class INA219 : public I2CDeviceWithRegisters, public SensorWrapper {
 
 
   private:
-    bool init_complete;
-
     /* Properties of a battery that have nothing to do with the INA219. */
     float    batt_min_v;        // At what voltage is the battery considered dead?
     float    batt_max_v;        // What is the battery voltage at full-charge?
-    uint16_t batt_capacity;     // How many mAh can this battery hold?
-    uint8_t  batt_chemistry;    // What sort of capacity/voltage curve should we have?
-    bool     battery_monitor;   // Is battery monitoring enabled?
+    float    shunt_value;       // How big is the shunt resistor (in ohms)?
+    uint8_t  max_voltage_delta; // How much voltage might drop across the shunt? Assume short-circuit is possible. Must be either 16 or 32.
+    bool     init_complete;
 
-    float shunt_value;          // How big is the shunt resistor (in ohms)?
-    uint8_t max_voltage_delta;  // How much voltage might drop across the shunt? Assume short-circuit is possible. Must be either 16 or 32.
 
     /* Contents of registers that really exist in the hardware. */
     uint16_t reg_configuration;
@@ -217,7 +130,6 @@ class INA219 : public I2CDeviceWithRegisters, public SensorWrapper {
     float readBusVoltage();
     float readShuntVoltage();
     float readCurrent();
-    SensorError setBatteryMode(bool nu_mode);   // Pass true to set the battery mode on. False to turn it off.
 
     bool process_read_data();   // Takes the read data, updates SensorWrapper class, zeros registers.
 };

@@ -21,8 +21,6 @@ limitations under the License.
 
 #include "INA219.h"
 
-const V_Cap_Point* batt_capacity_curves[6] = {chem_index_0, chem_index_1, chem_index_2, chem_index_3, chem_index_4, chem_index_5};  // Ten points on the curve ought to be enough for reliable interpolation.
-
 const DatumDef datum_defs[] = {
   {
     .desc    = "Instantaneous Current",
@@ -54,16 +52,13 @@ INA219::INA219(uint8_t addr) : I2CDeviceWithRegisters(addr, 6, 12), SensorWrappe
   define_datum(&datum_defs[2]);
   //batt_min_v         = 0;  // We will be unable to init() with these values.
   //batt_max_v         = 0;  // We will be unable to init() with these values.
-  //batt_capacity      = 0;  // We will be unable to init() with these values.
   //shunt_value        = 0;  // We will be unable to init() with these values.
   //max_voltage_delta  = 0;  // We will be unable to init() with these values.
 
   batt_min_v         = 3.7f;  // We will be unable to init() with these values.
   batt_max_v         = 4.3f;  // We will be unable to init() with these values.
-  batt_capacity      = 2000.0f;  // We will be unable to init() with these values.
   shunt_value        = 0.01f;  // We will be unable to init() with these values.
   max_voltage_delta  = batt_max_v;  // We will be unable to init() with these values.
-  batt_chemistry     = INA219_BATTERY_CHEM_UNDEF;
 
   init_complete = false;
 
@@ -94,13 +89,12 @@ SensorError INA219::init() {
     max_voltage_delta = 0;
   }
 
-  if ((batt_min_v > 0) && (batt_max_v > 0) && (batt_capacity > 0) && (shunt_value > 0) && (max_voltage_delta > 0)) {
+  if ((batt_min_v > 0) && (batt_max_v > 0) && (shunt_value > 0) && (max_voltage_delta > 0)) {
       // If we have all this, we should be safe to init(). If the user lied to us, we will not go to space today.
   }
 
   //batt_min_v;
   //batt_max_v;
-  //batt_capacity;
   //shunt_value;
   uint16_t cal_value = 0;
   uint16_t cfg_value = INA219_CONFIG_BVOLTAGERANGE_16V |
@@ -126,8 +120,6 @@ SensorError INA219::setParameter(uint16_t reg, int len, uint8_t *data) {
   switch (reg) {
     case INA219_REG_CLASS_MODE:
       { uint8_t nu = *(data);
-        if (nu & INA219_MODE_BATTERY) {
-        }
         if (nu & INA219_MODE_INTEGRATION) {
           // Add datum for integrated current flow.
         }
@@ -144,7 +136,6 @@ SensorError INA219::setParameter(uint16_t reg, int len, uint8_t *data) {
       {
           uint8_t nu = *(data);
           if (nu <= 5) {
-              batt_chemistry = nu;
               return SensorError::NO_ERROR;
           }
           else {
@@ -317,24 +308,3 @@ bool INA219::process_read_data() {
 //  int16_t valueDec = (int16_t) reg_shunt_voltage;
 //  return valueDec * 0.01;
 //}
-
-
-/*
-* Pass true to set the battery mode on. False to turn it off.
-* The only benefit to leaving battery mode off is CPU.
-*/
-SensorError INA219::setBatteryMode(bool nu_mode) {
-  if (batt_min_v != 0) {
-    if (batt_max_v != 0) {
-      if (batt_capacity != 0) {
-        if (battery_monitor) {
-        }
-        else {
-          battery_monitor = true;
-        }
-        return SensorError::NO_ERROR;
-      }
-    }
-  }
-  return SensorError::MISSING_CONF;
-}
