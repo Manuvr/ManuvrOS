@@ -275,7 +275,7 @@ class ManuvrMsg {
     int8_t callbackOriginator();
 
     /**
-    * Accessors for the originoator member.
+    * Accessors for the originator member.
     */
     inline void setOriginator(EventReceiver* er) { _origin = er; };
     inline bool isOriginator(EventReceiver* er) { return (er == _origin); };

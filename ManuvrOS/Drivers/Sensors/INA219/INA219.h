@@ -115,7 +115,6 @@ class INA219 : public I2CDeviceWithRegisters, public SensorWrapper {
 
 
   private:
-    /* Properties of a battery that have nothing to do with the INA219. */
     float    batt_min_v;        // At what voltage is the battery considered dead?
     float    batt_max_v;        // What is the battery voltage at full-charge?
     float    shunt_value;       // How big is the shunt resistor (in ohms)?

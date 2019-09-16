@@ -871,6 +871,7 @@ void SX8634::_send_button_event(uint8_t button, bool pushed) {
 void SX8634::_send_slider_event() {
   bool queued = platform.kernel()->containsPreformedEvent(&_slider_msg);
   if (!queued) {
+    _slider_msg.setTarget(nullptr);
     if (_slider_msg.argCount() > 0) {
       // TODO: Avoiding needless heap-thrash requires hackery. The Argument class
       //   should be abstracting this ugliness away from client classes.
