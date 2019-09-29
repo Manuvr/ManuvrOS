@@ -396,9 +396,9 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
             if (0x04 & _registers[0]) {  // Button interrupt
               uint16_t current = (((uint16_t) (_registers[1] & 0x0F)) << 8) | ((uint16_t) _registers[2]);
               if (current != _buttons) {
-                #if defined(CONFIG_SX8634_DEBUG)
-                  output.concatf("-- Buttons: %u\n", current);
-                #endif
+                // #if defined(CONFIG_SX8634_DEBUG)
+                //   output.concatf("-- Buttons: %u\n", current);
+                // #endif
                 // Bitshift the button values into discrete messages.
                 uint16_t diff = current ^ _buttons;
                 for (uint8_t i = 0; i < 12; i++) {
@@ -416,9 +416,9 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
               _sx8634_set_flag(SX8634_FLAG_SLIDER_MOVE_UP,   (_registers[1] & 0x40));
               uint16_t current = (((uint16_t) _registers[3]) << 8) | ((uint16_t) _registers[4]);
               if (current != _slider_val) {
-                #if defined(CONFIG_SX8634_DEBUG)
-                  output.concatf("-- Slider: %u\n", current);
-                #endif
+                // #if defined(CONFIG_SX8634_DEBUG)
+                //   output.concatf("-- Slider: %u\n", current);
+                // #endif
                 _slider_val = current;
                 _send_slider_event();  // Send slider value.
               }
@@ -1172,7 +1172,7 @@ int8_t SX8634::burn_nvm() {
     _set_fsm_position(SX8634_FSM::NVM_BURN);
     if (SX8634OpMode::DOZE != _mode) {
       #if defined(CONFIG_SX8634_DEBUG)
-        Kernel::log("SX8634 moving to doze mode.\n");
+        Kernel::log("SX8634 moving to doze mode for burn.\n");
       #endif
       setMode(SX8634OpMode::DOZE);
     }
