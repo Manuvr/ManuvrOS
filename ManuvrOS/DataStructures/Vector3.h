@@ -49,6 +49,27 @@ Thank you, Bill and Michael!
 #include <stdint.h>
 #include <math.h>
 
+/*
+* If used in the context of gravity, means: "Which axis is down?"
+* If used in the context of magnetism, means: "Which axis is North?"
+*/
+enum class GnomonType : uint8_t {
+  UNDEFINED      = 0b00000000,   //
+  RH_POS_X       = 0b00000001,   //
+  RH_POS_Y       = 0b00000010,   //
+  RH_POS_Z       = 0b00000011,   //
+  RH_NEG_X       = 0b00000101,   //
+  RH_NEG_Y       = 0b00000110,   //
+  RH_NEG_Z       = 0b00000111,   //
+  LH_POS_X       = 0b00001001,   //
+  LH_POS_Y       = 0b00001010,   //
+  LH_POS_Z       = 0b00001011,   //
+  LH_NEG_X       = 0b00001101,   //
+  LH_NEG_Y       = 0b00001110,   //
+  LH_NEG_Z       = 0b00001111    //
+};
+
+
 template <typename T>
   class Vector3 {
   public:
@@ -205,5 +226,6 @@ typedef Vector3<unsigned int>  Vector3ui;
 typedef Vector3<long>          Vector3l;
 typedef Vector3<unsigned long> Vector3ul;
 typedef Vector3<float>         Vector3f;
+typedef Vector3<double>        Vector3f64;
 
 #endif // __MANUVR_DS_VECTOR3_H
