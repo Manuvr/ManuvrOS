@@ -300,6 +300,26 @@ int8_t I2CDeviceWithRegisters::syncRegisters() {
 
 
 /**
+* This function zeros all the registers.
+*
+* @return I2C_ERR_SLAVE_NO_ERROR on success.
+*/
+int8_t I2CDeviceWithRegisters::zeroRegisters() {
+  DeviceRegister *temp = nullptr;
+  int8_t return_value = I2C_ERR_SLAVE_NO_ERROR;
+  unsigned int count = reg_defs.count();
+  for (unsigned int i = 0; i < count; i++) {
+    temp = reg_defs.get(i);
+    if (temp) {   // Safety-check that an out-of-bounds reg wasn't in the list...
+      temp->set(0);
+    }
+    return_value = I2C_ERR_SLAVE_UNDEFD_REG;
+  }
+  return return_value;
+}
+
+
+/**
 * Any registers marked dirty will be written to the device if the register is also marked wriatable.
 *
 * @return I2C_ERR_SLAVE_NO_ERROR on success.

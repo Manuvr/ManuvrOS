@@ -412,6 +412,7 @@ This file is the tortured result of growing pains since the beginning of
 
       // Sync all registers.
       int8_t syncRegisters();
+      int8_t zeroRegisters();
 
       /* Low-level stuff. These are the ONLY fxns in this ENTIRE class that should care */
       /*   about ACTUAL register addresses. Everything else ought to be using the index */

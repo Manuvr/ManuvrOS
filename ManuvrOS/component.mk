@@ -38,6 +38,8 @@ LOCAL_ESP_COMPS += Drivers/Sensors/IMU/ADXL345
 LOCAL_ESP_COMPS += Drivers/KridaDimmer
 LOCAL_ESP_COMPS += Drivers/Modems/LORA/SX1276
 LOCAL_ESP_COMPS += Drivers/SX8634
+LOCAL_ESP_COMPS += Drivers/SX1503
+
 
 LOCAL_ESP_COMPS += Platform/Targets/ESP32
 LOCAL_ESP_COMPS += Platform/Targets/ESP32/I2C
