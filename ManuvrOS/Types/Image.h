@@ -131,6 +131,7 @@ class Image {
     bool setBuffer(uint8_t*, ImgBufferFormat);
     bool setBufferByCopy(uint8_t*);
     bool setBufferByCopy(uint8_t*, ImgBufferFormat);
+    bool reallocate();
 
     void wipe();
     int8_t serialize(StringBuilder*);
@@ -161,6 +162,7 @@ class Image {
     void writeFastVLine(uint32_t x, uint32_t y, uint32_t h, uint32_t color);
     void writeLine(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32_t color);
     void fillRect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color);
+    void fillScreen(uint32_t color);
 
     //void drawElipse(uint32_t x0, uint32_t y0, uint32_t major_axis, uint32_t minor_axis, float rotation, uint32_t color);
     //void drawCircle(uint32_t x0, uint32_t y0, uint32_t r, uint32_t color);
@@ -211,7 +213,7 @@ class Image {
     uint8_t*        _buffer   = nullptr;
     ImgBufferFormat _buf_fmt  = ImgBufferFormat::UNALLOCATED;
 
-    uint8_t _bits_per_pixel();
+    inline uint8_t _bits_per_pixel() {   return _bits_per_pixel(_buf_fmt);    };
 
     inline bool  _is_dirty() {        return _img_flag(MANUVR_IMG_FLAG_IS_FB_DIRTY);   };
     inline void  _is_dirty(bool l) {  _img_set_flag(MANUVR_IMG_FLAG_IS_FB_DIRTY, l);   };
@@ -236,6 +238,8 @@ class Image {
     void charBounds(char c, uint32_t* x, uint32_t* y, uint32_t* minx, uint32_t* miny, uint32_t* maxx, uint32_t* maxy);
     /* END ADAFRUIT GFX SPLICE */
 
+    int8_t _buffer_allocator();
+
 
     /* Linearizes the X/y value in preparation for array indexing. */
     inline uint32_t _pixel_number(uint32_t x, uint32_t y) {
@@ -259,6 +263,8 @@ class Image {
       if (nu) _imgflags |= _flag;
       else    _imgflags &= ~_flag;
     };
+
+    static uint8_t _bits_per_pixel(ImgBufferFormat);
 };
 
 #endif   // __MANUVR_TYPE_IMG_H

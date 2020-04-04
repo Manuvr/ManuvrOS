@@ -380,6 +380,27 @@ static const unsigned char font[] = {
 
 #include <Platform/Platform.h>
 
+uint8_t Image::_bits_per_pixel(ImgBufferFormat x) {
+  switch (x) {
+    case ImgBufferFormat::MONOCHROME:
+      return 1;
+    case ImgBufferFormat::GREY_8:
+    case ImgBufferFormat::R3_G3_B2:
+      return 8;    // 8-bit color
+    case ImgBufferFormat::GREY_16:
+    case ImgBufferFormat::R5_G6_B5:
+      return 16;   // 16-bit color
+    case ImgBufferFormat::GREY_24:
+    case ImgBufferFormat::R8_G8_B8:
+      return 24;   // 24-bit color
+    case ImgBufferFormat::UNALLOCATED:
+    default:
+      break;
+  }
+  return 0;
+}
+
+
 Image::Image(uint32_t x, uint32_t y, ImgBufferFormat fmt, uint8_t* buf) : Image(x, y) {
   _buf_fmt  = fmt;
   _imgflags = 0;
@@ -389,15 +410,10 @@ Image::Image(uint32_t x, uint32_t y, ImgBufferFormat fmt, uint8_t* buf) : Image(
 
 Image::Image(uint32_t x, uint32_t y, ImgBufferFormat fmt) : Image(x, y) {
   _buf_fmt  = fmt;
-  _imgflags = MANUVR_IMG_FLAG_BUFFER_OURS;
-  _buffer   = (uint8_t*) malloc(bytesUsed());
 }
 
 
-Image::Image(uint32_t x, uint32_t y) {
-  _x = x;
-  _y = y;
-}
+Image::Image(uint32_t x, uint32_t y) : _x(x), _y(y) {}
 
 
 Image::~Image() {
@@ -430,7 +446,7 @@ bool Image::setBuffer(uint8_t* buf) {
 
 
 /**
-* Takes the given buffer and  format and assume it as our own.
+* Takes the given buffer and format and assume it as our own.
 * Frees any existing buffer. It is the caller's responsibility to ensure that
 *   the buffer is adequately sized.
 *
@@ -452,14 +468,7 @@ bool Image::setBuffer(uint8_t* buf, ImgBufferFormat fmt) {
 *
 */
 bool Image::setBufferByCopy(uint8_t* buf) {
-  if (ImgBufferFormat::UNALLOCATED != _buf_fmt) {
-    if (allocated()) {
-      uint32_t sz = bytesUsed();
-      memcpy(_buffer, buf, sz);
-      return true;
-    }
-  }
-  return false;
+  return setBufferByCopy(buf, _buf_fmt);
 }
 
 
@@ -470,37 +479,45 @@ bool Image::setBufferByCopy(uint8_t* buf, ImgBufferFormat fmt) {
   if (ImgBufferFormat::UNALLOCATED != _buf_fmt) {
     if (fmt == _buf_fmt) {
       if (allocated()) {
-        uint32_t sz = bytesUsed();
-        memcpy(_buffer, buf, sz);
+        memcpy(_buffer, buf, bytesUsed());
+        return true;
+      }
+      else if (0 == _buffer_allocator()) {
+        memcpy(_buffer, buf, bytesUsed());
         return true;
       }
     }
     else {
-      if (_is_ours() && allocated()) {
-        free(_buffer);
-        _buf_fmt = fmt;
-        uint32_t sz = bytesUsed();
-        _buffer = (uint8_t*) malloc(sz);
-        if (allocated()) {
-          _ours(true);
-          memcpy(_buffer, buf, sz);
-          return true;
-        }
+      ImgBufferFormat old_fmt = _buf_fmt;
+      _buf_fmt = fmt;
+      if (allocated() && (_bits_per_pixel(old_fmt) == _bits_per_pixel(_buf_fmt))) {
+        memcpy(_buffer, buf, bytesUsed());
+        return true;
+      }
+      else if (0 == _buffer_allocator()) {
+        memcpy(_buffer, buf, bytesUsed());
+        return true;
       }
     }
   }
   else {
     _buf_fmt = fmt;
-    uint32_t sz = bytesUsed();
-    _buffer = (uint8_t*) malloc(bytesUsed());
-    if (allocated()) {
-      _ours(true);
-      memcpy(_buffer, buf, sz);
+    if (0 == _buffer_allocator()) {
+      memcpy(_buffer, buf, bytesUsed());
       return true;
     }
   }
   return false;
 }
+
+
+/**
+*
+*/
+bool Image::reallocate() {
+  return (0 == _buffer_allocator());
+}
+
 
 
 /**
@@ -599,24 +616,50 @@ int8_t Image::serializeWithoutBuffer(uint8_t* buf, uint32_t* len) {
 
 
 /**
-* This function can only be run if there is not a buffer already allocated.
 */
 int8_t Image::deserialize(uint8_t* buf, uint32_t len) {
   if (ImgBufferFormat::UNALLOCATED == _buf_fmt) {
-    if (!allocated()) {
-      _x = ((uint32_t) *(buf + 0) << 24) | ((uint32_t) *(buf + 1) << 16) | ((uint32_t) *(buf + 2) << 8) | ((uint32_t) *(buf + 3));
-      _y = ((uint32_t) *(buf + 4) << 24) | ((uint32_t) *(buf + 5) << 16) | ((uint32_t) *(buf + 6) << 8) | ((uint32_t) *(buf + 7));
-      _buf_fmt = (ImgBufferFormat) *(buf + 8);
-      _imgflags   = *(buf + 9);
-      uint32_t sz = bytesUsed();
-      _buffer = (uint8_t*) malloc(sz);
-      if (allocated()) {
-        memcpy(_buffer, (buf + 10), sz);
-        return 0;
+    if (len > 9) {
+      uint32_t temp_x = ((uint32_t) *(buf + 0) << 24) | ((uint32_t) *(buf + 1) << 16) | ((uint32_t) *(buf + 2) << 8) | ((uint32_t) *(buf + 3));
+      uint32_t temp_y = ((uint32_t) *(buf + 4) << 24) | ((uint32_t) *(buf + 5) << 16) | ((uint32_t) *(buf + 6) << 8) | ((uint32_t) *(buf + 7));
+      ImgBufferFormat temp_fmt = (ImgBufferFormat) *(buf + 8);
+      uint32_t temp_f = *(buf + 9);
+      uint32_t proposed_size = (_bits_per_pixel(temp_fmt) * temp_x * temp_y) >> 3;
+      if (proposed_size == (len - 10)) {
+        // The derived and declared sizes match.
+        _x = temp_x;
+        _y = temp_y;
+        _buf_fmt  = temp_fmt;
+        _imgflags = temp_f;
+        return setBufferByCopy(buf + 10) ? 0 : -2;
       }
     }
   }
   return -1;
+}
+
+/*
+* Returns 0 on success, -1 on bad class state, -2 on free failure, -3 on malloc fail
+*/
+int8_t Image::_buffer_allocator() {
+  int8_t ret = -1;
+  if (ImgBufferFormat::UNALLOCATED != _buf_fmt) {
+    ret--;
+    if (allocated()) {
+      if (!_is_ours()) {
+        return ret;
+      }
+      free(_buffer);
+    }
+    ret--;
+    _buffer = (uint8_t*) malloc(bytesUsed());
+    if (allocated()) {
+      _ours(true);
+      memset(_buffer, 0, bytesUsed());
+      ret = 0;
+    }
+  }
+  return ret;
 }
 
 
@@ -735,30 +778,6 @@ bool Image::setColor(uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b) {
   }
   return false;
 }
-
-
-/**
-*
-*/
-uint8_t Image::_bits_per_pixel() {
-  switch (_buf_fmt) {
-    case ImgBufferFormat::GREY_24:           // 24-bit greyscale
-    case ImgBufferFormat::R8_G8_B8:          // 24-bit color
-      return 24;
-    case ImgBufferFormat::GREY_16:           // 16-bit greyscale
-    case ImgBufferFormat::R5_G6_B5:          // 16-bit color
-      return 16;
-    case ImgBufferFormat::GREY_8:            // 8-bit greyscale
-    case ImgBufferFormat::R3_G3_B2:          // 8-bit color
-      return 8;
-    case ImgBufferFormat::MONOCHROME:        // Monochrome
-      return 1;
-    case ImgBufferFormat::UNALLOCATED:       // Buffer unallocated
-    default:
-      return 0;
-  }
-}
-
 
 
 
@@ -1181,6 +1200,24 @@ void Image::fillRect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t co
   _lock(true);
   for (uint32_t i=x; i<x+w; i++) {
 		writeLine(i, y, i, y+h-1, color);
+  }
+  _lock(false);
+}
+
+
+
+/*!
+  @brief    Fill a rectangle completely with one color. Update in subclasses if desired!
+  @param    x   Top left corner x coordinate
+  @param    y   Top left corner y coordinate
+  @param    w   Width in pixels
+  @param    h   Height in pixels
+  @param    color 16-bit 5-6-5 Color to fill with
+*/
+void Image::fillScreen(uint32_t color) {
+  _lock(true);
+  for (uint32_t i=0; i < _x; i++) {
+		writeLine(i, 0, i, _y, color);
   }
   _lock(false);
 }
