@@ -251,7 +251,6 @@ This file is the tortured result of growing pains since the beginning of
       int8_t io_op_callahead(BusOp*);
       int8_t io_op_callback(BusOp*);
       int8_t queue_io_job(BusOp*);
-      I2CBusOp* new_op(BusOpcode, BusOpCallback*);
 
       #ifdef MANUVR_CONSOLE_SUPPORT
         /* Overrides from ConsoleInterface */
@@ -288,8 +287,6 @@ This file is the tortured result of growing pains since the beginning of
       inline bool busOnline() {         return (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)); };
       inline void busError(bool nu) {   _er_set_flag(I2C_BUS_FLAG_BUS_ERROR, nu);   };
       inline void busOnline(bool nu) {  _er_set_flag(I2C_BUS_FLAG_BUS_ONLINE, nu);  };
-
-      inline int8_t getAdapterId() {  return(_bus_opts.adapter);  };
 
       inline void raiseQueueReady() {  Kernel::isrRaiseEvent(&_queue_ready);  };
 

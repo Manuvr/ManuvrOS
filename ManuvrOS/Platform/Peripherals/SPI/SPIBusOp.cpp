@@ -20,7 +20,6 @@ limitations under the License.
 
 */
 
-
 #include "SPIBusOp.h"
 #include <Platform/Platform.h>
 
@@ -90,25 +89,6 @@ SPIBusOp::SPIBusOp(BusOpcode nu_op, BusOpCallback* requester, uint8_t cs, bool a
 * Moreover, sometimes instances of this class will be preallocated, and never torn down.
 */
 SPIBusOp::~SPIBusOp() {
-  if (profile()) {
-    StringBuilder debug_log;
-    debug_log.concat("Destroying an SPI job that was marked for profiling:\n");
-    printDebug(&debug_log);
-    Kernel::log(&debug_log);
-  }
-}
-
-
-/**
-* Set the buffer parameters. Note the there is only ONE buffer, despite this
-*   bus being full-duplex.
-*
-* @param  buf The transfer buffer.
-* @param  len The length of the buffer.
-*/
-void SPIBusOp::setBuffer(uint8_t* b, unsigned int l) {
-  buf     = b;
-  buf_len = l;
 }
 
 
@@ -273,21 +253,6 @@ bool SPIBusOp::returnToPrealloc(bool nu_prealloc_state) {
   return (_flags & SPI_XFER_FLAG_PREALLOCATE_Q);
 }
 
-/**
-* This is a means for a client class to remind itself if the write operation advanced the
-*   device's registers or not.
-*
-* This flag is cleared if the operation is wipe()'d.
-*
-* @param  nu_reap_state Pass false to cause the bus manager to leave this object alone.
-* @return true if the bus manager class should free() this object. False otherwise.
-*/
-bool SPIBusOp::devRegisterAdvance(bool _reg_advance) {
-  _flags = (_reg_advance) ? (_flags | SPI_XFER_FLAG_DEVICE_REG_INC) : (_flags & (uint8_t) ~SPI_XFER_FLAG_DEVICE_REG_INC);
-  return ((_flags & SPI_XFER_FLAG_DEVICE_REG_INC) == 0);
-}
-
-
 
 /*******************************************************************************
 * ___     _                              These members are mandatory overrides
@@ -326,14 +291,16 @@ void SPIBusOp::wipe() {
 */
 void SPIBusOp::printDebug(StringBuilder *output) {
   BusOp::printBusOp("SPIBusOp", this, output);
-  if (shouldReap())       output->concat("\t Will reap\n");
-  if (returnToPrealloc()) output->concat("\t Returns to prealloc\n");
   output->concatf("\t param_len         %d\n", _param_len);
   output->concatf("\t cs_pin            %u\n", _cs_pin);
-  output->concat("\t params            ");
+  if (shouldReap())       output->concat("\t Will reap\n");
+  if (returnToPrealloc()) output->concat("\t Returns to prealloc\n");
 
-  for (uint8_t i = 0; i < _param_len; i++) {
-    output->concatf("0x%02x ", xfer_params[i]);
+  if (_param_len > 0) {
+    output->concat("\t params            ");
+    for (uint8_t i = 0; i < _param_len; i++) {
+      output->concatf("0x%02x ", xfer_params[i]);
+    }
   }
   output->concat("\n\n");
 }

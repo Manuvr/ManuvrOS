@@ -201,7 +201,6 @@
   #endif    // __HAS_GPIO_MESSAGES
 #endif
 
-
 /*
  Drivers that pull in button message codes...
 */

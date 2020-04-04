@@ -58,12 +58,35 @@ static const char* LOG_TAG = "SPIAdapter";
 *******************************************************************************/
 
 static lldesc_t _ll_tx;
-static SPIBusOp* _threaded_op = nullptr;
-static spi_device_handle_t spi2_handle;
+static SPIBusOp* _threaded_op[2]  = {nullptr, nullptr};
+spi_device_handle_t spi_handle[2];
+
+static void* IRAM_ATTR spi_worker_thread(void* arg) {
+  while (!platform.nominalState()) {
+    sleep_millis(20);
+  }
+  SPIAdapter* BUSPTR = (SPIAdapter*) arg;
+  uint8_t anum = BUSPTR->adapterNumber();
+  while (1) {
+
+    if (nullptr != _threaded_op[anum]) {
+      SPIBusOp* op = _threaded_op[anum];
+      op->advance_operation(0, 0);
+			_threaded_op[anum] = nullptr;
+      yieldThread();
+    }
+    else {
+      suspendThread();
+      //ulTaskNotifyTake(pdTRUE, 10000 / portTICK_RATE_MS);
+    }
+  }
+  return nullptr;
+}
 
 #ifdef __cplusplus
 }
 #endif
+
 
 
 
@@ -76,7 +99,23 @@ static spi_device_handle_t spi2_handle;
 
 int8_t SPIAdapter::bus_init() {
 	spi_bus_config_t bus_config;
-  uint32_t b_flags = 0;
+	uint32_t b_flags = 0;
+	spi_host_device_t host_id;
+	uint8_t dma_chan;
+	uint8_t anum = adapterNumber();
+	switch (anum) {
+		case 0:
+			host_id = HSPI_HOST;
+			dma_chan = 2;
+			break;
+		case 1:
+			host_id = VSPI_HOST;
+			dma_chan = 1;
+			break;
+		default:
+			return -2;
+	}
+
   if (255 != _opts.spi_clk) {
     b_flags |= SPICOMMON_BUSFLAG_SCLK;
     bus_config.sclk_io_num = (gpio_num_t) _opts.spi_clk;
@@ -100,42 +139,44 @@ int8_t SPIAdapter::bus_init() {
   }
 	bus_config.quadwp_io_num   = -1;      // Not used
 	bus_config.quadhd_io_num   = -1;      // Not used
-	bus_config.max_transfer_sz = 0;       // 0 means use default.
+	bus_config.max_transfer_sz = 65535;   // 0 means use default.
   bus_config.flags           = b_flags;
 
 	esp_err_t errRc = spi_bus_initialize(
-		(spi_host_device_t) _opts.idx,
+		host_id,
 		&bus_config,
-		1 // DMA Channel
+		dma_chan
 	);
 
-  if (errRc != ESP_OK) {
+	if (errRc != ESP_OK) {
 		ESP_LOGE(LOG_TAG, "spi_bus_initialize(): rc=%d", errRc);
     return -1;
 	}
 
-	// spi_device_interface_config_t dev_config;
-	// dev_config.address_bits     = 0;
-	// dev_config.command_bits     = 0;
-	// dev_config.dummy_bits       = 0;
-	// dev_config.mode             = 0;
-	// dev_config.duty_cycle_pos   = 0;
-	// dev_config.cs_ena_posttrans = 0;
-	// dev_config.cs_ena_pretrans  = 0;
-	// dev_config.clock_speed_hz   = 10000000;
-	// dev_config.spics_io_num     = (gpio_num_t) _opts.spi_cs;
-	// dev_config.flags            = SPI_DEVICE_NO_DUMMY;
-	// dev_config.queue_size       = 1;
-	// dev_config.pre_cb           = NULL;
-	// dev_config.post_cb          = NULL;
-	// ESP_LOGI(LOG_TAG, "... Adding device bus.");
-	// errRc = spi_bus_add_device((spi_host_device_t) 1, &dev_config, &spi2_handle);
-	// if (errRc != ESP_OK) {
-	// 	ESP_LOGE(LOG_TAG, "spi_bus_add_device(): rc=%d", errRc);
-  //   return -2;
-	// }
+	spi_device_interface_config_t dev_config;
+	dev_config.address_bits     = 0;
+	dev_config.command_bits     = 0;
+	dev_config.dummy_bits       = 0;
+	dev_config.mode             = 0;
+	dev_config.duty_cycle_pos   = 0;
+	dev_config.cs_ena_posttrans = 0;
+	dev_config.cs_ena_pretrans  = 0;
+	dev_config.clock_speed_hz   = 10000000;
+	dev_config.spics_io_num     = (gpio_num_t) -1;
+	dev_config.flags            = SPI_DEVICE_NO_DUMMY;
+	dev_config.queue_size       = 1;
+	dev_config.pre_cb           = nullptr;
+	dev_config.post_cb          = nullptr;
+	ESP_LOGI(LOG_TAG, "... Adding device bus.");
+	errRc = spi_bus_add_device(host_id, &dev_config, &spi_handle[anum]);
+	if (errRc != ESP_OK) {
+		ESP_LOGE(LOG_TAG, "spi_bus_add_device(): rc=%d", errRc);
+  	return -2;
+	}
+	createThread(&_thread_id, nullptr, spi_worker_thread, (void*) this, nullptr);
   return 0;
 }
+
 
 int8_t SPIAdapter::bus_deinit() {
   return 0;
@@ -183,39 +224,27 @@ int8_t SPIAdapter::attached() {
 * @return 0 on success, or non-zero on failure.
 */
 XferFault SPIBusOp::begin() {
+	XferFault ret = XferFault::NO_REASON;
+	uint8_t anum = _bus->adapterNumber();
   //time_began    = micros();
-  //if (0 == _param_len) {
-  //  // Obvious invalidity. We must have at least one transfer parameter.
-  //  abort(XferFault::BAD_PARAM);
-  //  return XferFault::BAD_PARAM;
-  //}
 
-  //if (SPI1->SR & SPI_FLAG_BSY) {
-  //  Kernel::log("SPI op aborted before taking bus control.\n");
-  //  abort(XferFault::BUS_BUSY);
-  //  return XferFault::BUS_BUSY;
-  //}
-
-  set_state(XferState::INITIATE);  // Indicate that we now have bus control.
-
-  _assert_cs(true);
-
-  if (_param_len) {
-    set_state(XferState::ADDR);
-    for (int i = 0; i < _param_len; i++) {
-      //SPI.transfer(xfer_params[i]);
-    }
+  switch (anum) {
+    case 0:
+    case 1:
+			if (nullptr == _threaded_op[anum]) {
+				_threaded_op[anum] = this;
+				ret = XferFault::NONE;
+			}
+			else {
+				ret = XferFault::BUS_BUSY;
+			}
+      break;
+    case 2:   // SPI workflow
+    default:
+      ret = XferFault::BUS_FAULT;
+      break;
   }
-
-  if (buf_len) {
-    set_state((opcode == BusOpcode::TX) ? XferState::TX_WAIT : XferState::RX_WAIT);
-    for (int i = 0; i < buf_len; i++) {
-      //SPI.transfer(*(buf + i));
-    }
-  }
-
-  markComplete();
-  return XferFault::NONE;
+  return ret;
 }
 
 
@@ -226,36 +255,56 @@ XferFault SPIBusOp::begin() {
 * @return 0 on success. Non-zero on failure.
 */
 int8_t SPIBusOp::advance_operation(uint32_t status_reg, uint8_t data_reg) {
-  //debug_log.concatf("advance_op(0x%08x, 0x%02x)\n\t %s\n\t status: 0x%08x\n", status_reg, data_reg, getStateString(), (unsigned long) hspi1.State);
-  //Kernel::log(&debug_log);
+	static spi_transaction_t txns[2];
+	XferFault ret = XferFault::BUS_FAULT;
+  bool run_xfer = false;
+	set_state(XferState::INITIATE);  // Indicate that we now have bus control.
+	uint8_t anum = _bus->adapterNumber();
+	memset(&txns[anum], 0, sizeof(spi_transaction_t));
+  txns[anum].flags |= SPI_DEVICE_HALFDUPLEX;
 
-  /* These are our transfer-size-invariant cases. */
-  switch (xfer_state) {
-    case XferState::COMPLETE:
-      abort(XferFault::HUNG_IRQ);
-      return 0;
-
-    case XferState::TX_WAIT:
-    case XferState::RX_WAIT:
-      markComplete();
-      return 0;
-
-    case XferState::FAULT:
-      return 0;
-
-    case XferState::QUEUED:
-    case XferState::ADDR:
-    case XferState::STOP:
-    case XferState::UNDEF:
-
-    /* Below are the states that we shouldn't be in at this point... */
-    case XferState::INITIATE:
-    case XferState::IDLE:
-      abort(XferFault::ILLEGAL_STATE);
-      return 0;
+  if (_param_len) {
+    set_state(XferState::ADDR);
+    memcpy(&(txns[anum].tx_data), xfer_params, transferParamLength());
+		txns[anum].flags |= SPI_TRANS_USE_TXDATA;
+    txns[anum].length = _param_len * 8;
+    run_xfer = true;
   }
 
-  return -1;
+  if (buf_len) {
+    switch (opcode) {
+      case BusOpcode::TX:
+        set_state(XferState::TX_WAIT);
+				txns[anum].tx_buffer = buf;
+				txns[anum].length = buf_len * 8;
+        run_xfer = true;
+        break;
+      case BusOpcode::RX:
+        set_state(XferState::RX_WAIT);
+				txns[anum].rx_buffer = buf;
+				txns[anum].rxlength = buf_len * 8;
+        run_xfer = true;
+        break;
+      default:
+        ret = XferFault::BAD_PARAM;
+        break;
+    }
+  }
+
+  if (run_xfer) {
+    _assert_cs(true);
+    if (ESP_OK == spi_device_queue_trans(spi_handle[anum], &txns[anum], portMAX_DELAY)) {
+      spi_transaction_t* pending_txn;
+      if (ESP_OK == spi_device_get_trans_result(spi_handle[anum], &pending_txn, portMAX_DELAY)) {
+        ret = XferFault::NONE;
+      }
+    }
+    if (XferFault::NONE != ret) {
+      abort(ret);
+    }
+    markComplete();
+  }
+  return 0;
 }
 
 

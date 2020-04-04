@@ -30,6 +30,8 @@ This is the class that is used to keep bus operations on the SPI atomic.
   #include <Drivers/DeviceWithRegisters/DeviceRegister.h>
   #include <Kernel.h>
 
+  class SPIAdapter;
+
   /*
   * These flags are hosted by the member in the BusOp class.
   * Be careful when scrubing the field between re-use.
@@ -76,9 +78,6 @@ class SPIBusOp : public BusOp {
     inline int8_t abort() {    return abort(XferFault::NO_REASON); }
     int8_t abort(XferFault);
 
-
-    void setBuffer(uint8_t *buf, unsigned int len);
-
     void setParams(uint8_t p0, uint8_t p1, uint8_t p2, uint8_t p3);
     void setParams(uint8_t p0, uint8_t p1, uint8_t p2);
     void setParams(uint8_t p0, uint8_t p1);
@@ -87,11 +86,11 @@ class SPIBusOp : public BusOp {
     inline uint8_t transferParamLength() {    return _param_len;     };
 
     inline void setCSPin(uint8_t pin) {   _cs_pin = pin;  };
+    inline void setAdapter(SPIAdapter* b) {  _bus = b;       };
 
     /* Flag management fxns... */
     bool shouldReap(bool);    // Override to set the reap behavior.
     bool returnToPrealloc(bool);
-    bool devRegisterAdvance(bool);
 
     /**
     * The bus manager calls this fxn to decide if it ought to return this object to the preallocation
@@ -133,14 +132,6 @@ class SPIBusOp : public BusOp {
     };
 
     /**
-    * The bus manager calls this fxn to decide if it ought to return this object to the preallocation
-    *   queue following completion.
-    *
-    * @return true if the bus manager class should return this object to its preallocation queue.
-    */
-    inline bool devRegisterAdvance() {  return (_flags & SPI_XFER_FLAG_DEVICE_REG_INC);  }
-
-    /**
     * The bus manager calls this fxn to decide if it ought to free this object after completion.
     *
     * @return true if the bus manager class should free() this object. False otherwise.
@@ -153,6 +144,7 @@ class SPIBusOp : public BusOp {
 
 
   private:
+    SPIAdapter* _bus       = nullptr;
     uint8_t xfer_params[4] = {0, 0, 0, 0};
     uint8_t  _param_len    = 0;
     uint8_t  _cs_pin       = 255;  // Chip-select pin.

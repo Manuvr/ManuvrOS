@@ -1030,7 +1030,7 @@ int8_t ATECC508::_write_birth_cert() {
 * Updates the ATECC508_FLAG_AWAKE.
 */
 bool ATECC508::need_wakeup() {
-  _atec_set_flag(ATECC508_FLAG_AWAKE, (wrap_accounted_delta(millis(), _last_wake_sent) < _wd_timeout_value()));
+  _atec_set_flag(ATECC508_FLAG_AWAKE, (wrap_accounted_delta((uint32_t) millis(), (uint32_t) _last_wake_sent) < _wd_timeout_value()));
   return (!_atec_flag(ATECC508_FLAG_PENDING_WAKE | ATECC508_FLAG_AWAKE));
 }
 

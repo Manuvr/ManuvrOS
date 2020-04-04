@@ -105,6 +105,10 @@ void CBORArgListener::on_double(double f) {            _caaa(new Argument(f));  
 void CBORArgListener::on_special(unsigned int code) {  _caaa(new Argument((uint32_t) code)); };
 void CBORArgListener::on_error(const char* error) {    _caaa(new Argument(error));           };
 
+void CBORArgListener::on_undefined() {   _caaa(new Argument("<UNDEF>"));   };
+void CBORArgListener::on_null() {        _caaa(new Argument("<NULL>"));    };
+void CBORArgListener::on_bool(bool x) {  _caaa(new Argument(x));           };
+
 // NOTE: IANA gives of _some_ guidance....
 // https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml
 void CBORArgListener::on_tag(unsigned int tag) {

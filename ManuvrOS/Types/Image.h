@@ -108,7 +108,7 @@ enum class ImgBufferFormat : uint8_t {
   GREY_8      = 0x04,  // 8-bit greyscale
   R8_G8_B8    = 0x05,  // 24-bit color
   R5_G6_B5    = 0x06,  // 16-bit color
-  R2_G3_B3    = 0x07   // 8-bit color
+  R3_G3_B2    = 0x07   // 8-bit color
 };
 
 enum class ImgOrientation : uint8_t {
@@ -150,8 +150,8 @@ class Image {
     inline ImgBufferFormat format() {       return _buf_fmt;               };
     inline bool            allocated() {    return (nullptr != _buffer);   };
     inline uint32_t        pixels() {       return (_x * _y);              };
-    inline uint32_t        bytesUsed() {    return (_x * _y * _bits_per_pixel() >> 8);  };
-    inline ImgOrientation  orientation() {  return ((ImgOrientation) (_imgflags & MANUVR_IMG_FLAG_ROTATION_MASK));  };
+    inline uint32_t        bytesUsed() {    return (_x * _y * (_bits_per_pixel() >> 3));  };
+    inline ImgOrientation  orientation() {  return ((ImgOrientation) ((_imgflags & MANUVR_IMG_FLAG_ROTATION_MASK) >> 6));  };
 
     inline bool  isFrameBuffer() {        return _img_flag(MANUVR_IMG_FLAG_IS_FRAMEBUFFER);   };
 
@@ -161,6 +161,31 @@ class Image {
     void writeFastVLine(uint32_t x, uint32_t y, uint32_t h, uint32_t color);
     void writeLine(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32_t color);
     void fillRect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color);
+
+    //void drawElipse(uint32_t x0, uint32_t y0, uint32_t major_axis, uint32_t minor_axis, float rotation, uint32_t color);
+    //void drawCircle(uint32_t x0, uint32_t y0, uint32_t r, uint32_t color);
+    //void drawCircleHelper(uint32_t x0, uint32_t y0, uint32_t r, uint8_t cornername, uint32_t color);
+    //void fillCircle(uint32_t x0, uint32_t y0, uint32_t r, uint32_t color);
+    //void fillCircleHelper(uint32_t x0, uint32_t y0, uint32_t r, uint32_t cornername, uint32_t delta, uint32_t color);
+    //void drawTriangle(uint32_t x0,  uint32_t y0, uint32_tt x1, uint32_t y1, uint32_t x2,     uint32_t y2, uint32_t color);
+    //void fillTriangle(uint32_t x0,  uint32_t y0, uint32_tt x1, uint32_t y1, uint32_t x2,     uint32_t y2, uint32_t color);
+    //void drawRoundRect(uint32_t x0, uint32_t y0, uint32_tt w,  uint32_t h,  uint32_t radius, uint32_t color);
+    //void fillRoundRect(uint32_t x0, uint32_t y0, uint32_tt w,  uint32_t h,  uint32_t radius, uint32_t color);
+
+    //drawBitmap(int16_t x, int16_t y, const uint8_t bitmap[], int16_t w, int16_t h, uint16_t color),
+    //drawBitmap(int16_t x, int16_t y, const uint8_t bitmap[], int16_t w, int16_t h, uint16_t color, uint16_t bg),
+    //drawBitmap(int16_t x, int16_t y, uint8_t *bitmap, int16_t w, int16_t h, uint16_t color),
+    //drawBitmap(int16_t x, int16_t y, uint8_t *bitmap, int16_t w, int16_t h, uint16_t color, uint16_t bg),
+    //drawXBitmap(int16_t x, int16_t y, const uint8_t bitmap[], int16_t w, int16_t h, uint16_t color),
+    //drawGrayscaleBitmap(int16_t x, int16_t y, const uint8_t bitmap[], int16_t w, int16_t h),
+    //drawGrayscaleBitmap(int16_t x, int16_t y, uint8_t *bitmap, int16_t w, int16_t h),
+    //drawGrayscaleBitmap(int16_t x, int16_t y, const uint8_t bitmap[], const uint8_t mask[], int16_t w, int16_t h),
+    //drawGrayscaleBitmap(int16_t x, int16_t y, uint8_t *bitmap, uint8_t *mask, int16_t w, int16_t h),
+    //drawRGBBitmap(int16_t x, int16_t y, const uint16_t bitmap[], int16_t w, int16_t h),
+    //drawRGBBitmap(int16_t x, int16_t y, uint16_t *bitmap, int16_t w, int16_t h),
+    //drawRGBBitmap(int16_t x, int16_t y, const uint16_t bitmap[], const uint8_t mask[], int16_t w, int16_t h),
+    //drawRGBBitmap(int16_t x, int16_t y, uint16_t *bitmap, uint8_t *mask, int16_t w, int16_t h),
+    //drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color, uint16_t bg, uint8_t size_x, uint8_t size_y),
 
     void drawChar(uint32_t x, uint32_t y, unsigned char c, uint32_t color, uint32_t bg, uint8_t size);
     void writeChar(uint8_t c);
@@ -186,8 +211,11 @@ class Image {
     uint8_t*        _buffer   = nullptr;
     ImgBufferFormat _buf_fmt  = ImgBufferFormat::UNALLOCATED;
 
+    uint8_t _bits_per_pixel();
+
     inline bool  _is_dirty() {        return _img_flag(MANUVR_IMG_FLAG_IS_FB_DIRTY);   };
     inline void  _is_dirty(bool l) {  _img_set_flag(MANUVR_IMG_FLAG_IS_FB_DIRTY, l);   };
+    inline void  _is_framebuffer(bool l) {  _img_set_flag(MANUVR_IMG_FLAG_IS_FRAMEBUFFER, l);   };
     inline bool  _locked() {          return _img_flag(MANUVR_IMG_FLAG_BUFFER_LOCKED); };
     inline void  _lock(bool l) {      _img_set_flag(MANUVR_IMG_FLAG_BUFFER_LOCKED, l); };
 
@@ -208,8 +236,6 @@ class Image {
     void charBounds(char c, uint32_t* x, uint32_t* y, uint32_t* minx, uint32_t* miny, uint32_t* maxx, uint32_t* maxy);
     /* END ADAFRUIT GFX SPLICE */
 
-
-    uint8_t _bits_per_pixel();
 
     /* Linearizes the X/y value in preparation for array indexing. */
     inline uint32_t _pixel_number(uint32_t x, uint32_t y) {

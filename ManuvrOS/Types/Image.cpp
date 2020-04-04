@@ -378,20 +378,16 @@ static const unsigned char font[] = {
   0x00, 0x00, 0x00, 0x00, 0x00  // #255 NBSP
 };
 
+#include <Platform/Platform.h>
 
-
-Image::Image(uint32_t x, uint32_t y, ImgBufferFormat fmt, uint8_t* buf) {
-  _x        = x;
-  _y        = y;
+Image::Image(uint32_t x, uint32_t y, ImgBufferFormat fmt, uint8_t* buf) : Image(x, y) {
   _buf_fmt  = fmt;
   _imgflags = 0;
   _buffer   = buf;
 }
 
 
-Image::Image(uint32_t x, uint32_t y, ImgBufferFormat fmt) {
-  _x        = x;
-  _y        = y;
+Image::Image(uint32_t x, uint32_t y, ImgBufferFormat fmt) : Image(x, y) {
   _buf_fmt  = fmt;
   _imgflags = MANUVR_IMG_FLAG_BUFFER_OURS;
   _buffer   = (uint8_t*) malloc(bytesUsed());
@@ -631,7 +627,7 @@ bool Image::isColor() {
   switch (_buf_fmt) {
     case ImgBufferFormat::R8_G8_B8:          // 24-bit color
     case ImgBufferFormat::R5_G6_B5:          // 16-bit color
-    case ImgBufferFormat::R2_G3_B3:          // 8-bit color
+    case ImgBufferFormat::R3_G3_B2:          // 8-bit color
       return true;
     default:
       break;
@@ -644,20 +640,33 @@ bool Image::isColor() {
 *
 */
 uint32_t Image::getColor(uint32_t x, uint32_t y) {
-  switch (_buf_fmt) {
-    case ImgBufferFormat::MONOCHROME:        // Monochrome
-    case ImgBufferFormat::GREY_24:           // 24-bit greyscale
-    case ImgBufferFormat::GREY_16:           // 16-bit greyscale
-    case ImgBufferFormat::GREY_8:            // 8-bit greyscale
-    case ImgBufferFormat::R8_G8_B8:          // 24-bit color
-    case ImgBufferFormat::R5_G6_B5:          // 16-bit color
-    case ImgBufferFormat::R2_G3_B3:          // 8-bit color
-      break;
-    case ImgBufferFormat::UNALLOCATED:       // Buffer unallocated
-    default:
-      return 0;
+  uint32_t ret = 0;
+  uint32_t sz = bytesUsed();
+  uint32_t offset = _calculate_offset(x, y);
+  if (offset < sz) {
+    switch (_buf_fmt) {
+      case ImgBufferFormat::GREY_24:           // 24-bit greyscale   TODO: Wrong. Has to be.
+      case ImgBufferFormat::R8_G8_B8:          // 24-bit color
+        ret = ((uint32_t)*(_buffer + offset + 0) << 16) | ((uint32_t)*(_buffer + offset + 1) << 8) | (uint32_t)*(_buffer + offset + 2);
+        break;
+      case ImgBufferFormat::GREY_16:           // 16-bit greyscale   TODO: Wrong. Has to be.
+      case ImgBufferFormat::R5_G6_B5:          // 16-bit color
+        ret = ((uint32_t) *(_buffer + offset + 0) << 8) | (uint32_t) *(_buffer + offset + 1);
+        break;
+      case ImgBufferFormat::GREY_8:            // 8-bit greyscale    TODO: Wrong. Has to be.
+      case ImgBufferFormat::R3_G3_B2:          // 8-bit color
+        ret = (uint32_t) *(_buffer + offset);
+        break;
+      case ImgBufferFormat::MONOCHROME:        // Monochrome   TODO: Unsupported.
+      case ImgBufferFormat::UNALLOCATED:       // Buffer unallocated
+      default:
+        break;
+    }
   }
-  return 0;
+  else {
+    // Addressed pixel is out-of-bounds
+  }
+  return ret;
 }
 
 
@@ -669,19 +678,18 @@ bool Image::setColor(uint32_t x, uint32_t y, uint32_t c) {
   uint8_t g = (uint8_t) (c >> 8) & 0xFF;
   uint8_t b = (uint8_t) (c & 0xFF);
   switch (_buf_fmt) {
-    case ImgBufferFormat::R2_G3_B3:          // 8-bit color
-      r = r >> 3;
-      g = g >> 3;
-      b = b >> 2;
+    case ImgBufferFormat::R3_G3_B2:          // 8-bit color
+    case ImgBufferFormat::GREY_8:            // 8-bit greyscale
+      r = r >> 2;  // NOTE:
+      g = g >> 3;  // NOTE: constants assume no breaks below.
+      b = b >> 3;  // NOTE:
     case ImgBufferFormat::R5_G6_B5:          // 16-bit color
+    case ImgBufferFormat::GREY_16:           // 16-bit greyscale
       r = r >> 3;
       g = g >> 2;
       b = b >> 3;
     case ImgBufferFormat::R8_G8_B8:          // 24-bit color
-      return setColor(x, y, r, g, b);
-    case ImgBufferFormat::GREY_24:           // 24-bit greyscale   TODO: Wrong. Has to be.
-    case ImgBufferFormat::GREY_16:           // 16-bit greyscale   TODO: Wrong. Has to be.
-    case ImgBufferFormat::GREY_8:            // 8-bit greyscale    TODO: Wrong. Has to be.
+    case ImgBufferFormat::GREY_24:           // 24-bit greyscale
       return setColor(x, y, r, g, b);
     case ImgBufferFormat::MONOCHROME:        // Monochrome   TODO: Unsupported.
     case ImgBufferFormat::UNALLOCATED:       // Buffer unallocated
@@ -708,12 +716,12 @@ bool Image::setColor(uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b) {
         break;
       case ImgBufferFormat::GREY_16:           // 16-bit greyscale   TODO: Wrong. Has to be.
       case ImgBufferFormat::R5_G6_B5:          // 16-bit color
-        *(_buffer + offset + 0) = ((uint16_t) ((r >> 3) & 0xF1) << 8) | ((g >> 5) & 0x07);
-        *(_buffer + offset + 1) = ((uint16_t) ((g >> 2) & 0xE0) << 8) | ((b >> 3) & 0x1F);
+        *(_buffer + offset + 0) = ((uint16_t) ((r << 3) & 0xF1) << 8) | ((g >> 3) & 0x07);
+        *(_buffer + offset + 1) = ((uint16_t) ((g << 5) & 0xE0) << 8) | ((b >> 3) & 0x1F);
         break;
       case ImgBufferFormat::GREY_8:            // 8-bit greyscale    TODO: Wrong. Has to be.
-      case ImgBufferFormat::R2_G3_B3:          // 8-bit color
-        *(_buffer + offset) = ((uint8_t) (r >> 6) & 0x03) | ((uint8_t) (g >> 5) & 0x07) | ((uint8_t) (b >> 5) & 0x07);
+      case ImgBufferFormat::R3_G3_B2:          // 8-bit color
+        *(_buffer + offset) = ((uint8_t) (r << 6) & 0xE0) | ((uint8_t) (g << 2) & 0x1C) | (b & 0x07);
         break;
       case ImgBufferFormat::MONOCHROME:        // Monochrome   TODO: Unsupported.
       case ImgBufferFormat::UNALLOCATED:       // Buffer unallocated
@@ -741,7 +749,7 @@ uint8_t Image::_bits_per_pixel() {
     case ImgBufferFormat::R5_G6_B5:          // 16-bit color
       return 16;
     case ImgBufferFormat::GREY_8:            // 8-bit greyscale
-    case ImgBufferFormat::R2_G3_B3:          // 8-bit color
+    case ImgBufferFormat::R3_G3_B2:          // 8-bit color
       return 8;
     case ImgBufferFormat::MONOCHROME:        // Monochrome
       return 1;
@@ -1189,12 +1197,12 @@ void Image::fillRect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t co
 void Image::writeLine(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32_t color) {
   const bool steep = wrap_accounted_delta(y1, y0) > wrap_accounted_delta(x1, x0);
   if (steep) {
-    strict_swap(x0, y0);
-    strict_swap(x1, y1);
+    strict_swap(&x0, &y0);
+    strict_swap(&x1, &y1);
   }
   if (x0 > x1) {
-    strict_swap(x0, x1);
-    strict_swap(y0, y1);
+    strict_swap(&x0, &x1);
+    strict_swap(&y0, &y1);
   }
 
   const uint32_t dx = x1 - x0;

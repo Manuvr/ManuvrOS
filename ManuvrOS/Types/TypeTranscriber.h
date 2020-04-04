@@ -57,6 +57,10 @@ This is the base class for a type transcriber.
       void on_special(unsigned int code);
       void on_error(const char* error);
 
+      void on_bool(bool);
+      void on_null();
+      void on_undefined();
+
       void on_extra_integer(unsigned long long value, int sign);
       void on_extra_integer(long long value, int sign);
       void on_extra_tag(unsigned long long tag);

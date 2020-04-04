@@ -24,7 +24,7 @@
 namespace cbor {
   class encoder {
     private:
-      output *_out;
+      output* _out;
 
       void write_type_value(int major_type, unsigned int value);
       void write_type_value(int major_type, unsigned long long value);
@@ -43,8 +43,11 @@ namespace cbor {
       inline void write_map(int size) {    write_type_value(5, (unsigned int) size); };
       inline void write_special(int v) {   write_type_value(7, (unsigned int) v);    };
 
+      void write_bool(bool value);
       void write_float(float value);
       void write_double(double value);
+      void write_null();
+      void write_undefined();
       void write_bytes(const unsigned char *data, unsigned int size);
       void write_string(const char* data, unsigned int size);
       void write_string(const char* str);

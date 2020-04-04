@@ -27,7 +27,6 @@ This is the platform-invariant implementation of a peripheral wraspper
 #if defined(CONFIG_MANUVR_SUPPORT_SPI)
 
 
-
 /*******************************************************************************
 *      _______.___________.    ___   .___________. __    ______     _______.
 *     /       |           |   /   \  |           ||  |  /      |   /       |
@@ -61,7 +60,7 @@ const MessageTypeDef spi_message_defs[] = {
 /**
 * Constructor. Also populates the global pointer reference.
 */
-SPIAdapter::SPIAdapter(const SPIAdapterOpts* o) : EventReceiver("SPIAdapter"), BusAdapter(CONFIG_SPIADAPTER_PREALLOC_COUNT), _opts(o) {
+SPIAdapter::SPIAdapter(const SPIAdapterOpts* o) : EventReceiver("SPIAdapter"), BusAdapter(o->idx, CONFIG_SPIADAPTER_PREALLOC_COUNT), _opts(o) {
   ManuvrMsg::registerMessages(spi_message_defs, sizeof(spi_message_defs) / sizeof(MessageTypeDef));
 
   // Build some pre-formed Events.
@@ -74,15 +73,6 @@ SPIAdapter::SPIAdapter(const SPIAdapterOpts* o) : EventReceiver("SPIAdapter"), B
   SPIBusOp::event_spi_queue_ready.incRefs();
   SPIBusOp::event_spi_queue_ready.specific_target = (EventReceiver*) this;
   SPIBusOp::event_spi_queue_ready.priority(5);
-
-  // Mark all of our preallocated SPI jobs as "No Reap" and pass them into the prealloc queue.
-  for (uint8_t i = 0; i < CONFIG_SPIADAPTER_PREALLOC_COUNT; i++) {
-    preallocated_bus_jobs[i].returnToPrealloc(true);     // Implies SHOuLD_REAP = false.
-    preallocated.insert(&preallocated_bus_jobs[i]);
-  }
-
-  current_job = nullptr;
-  _er_set_flag(SPI_FLAG_QUEUE_IDLE);
 }
 
 
@@ -93,6 +83,20 @@ SPIAdapter::~SPIAdapter() {
   bus_deinit();
   purge_queued_work();
 }
+
+
+int8_t SPIAdapter::init() {
+  int8_t ret = -1;
+  // Mark all of our preallocated SPI jobs as "No Reap" and pass them into the prealloc queue.
+  for (uint8_t i = 0; i < CONFIG_SPIADAPTER_PREALLOC_COUNT; i++) {
+    preallocated_bus_jobs[i].wipe();
+    preallocated_bus_jobs[i].returnToPrealloc(true);
+    preallocated.insert(&preallocated_bus_jobs[i]);
+  }
+  _er_set_flag(SPI_FLAG_QUEUE_IDLE);
+  return bus_init();
+}
+
 
 
 /*******************************************************************************
@@ -165,49 +169,54 @@ int8_t SPIAdapter::io_op_callback(BusOp* _op) {
 */
 int8_t SPIAdapter::queue_io_job(BusOp* _op) {
   SPIBusOp* op = (SPIBusOp*) _op;
+  int8_t ret = -5;
 
   if (op) {
+    ret = -4;
+    op->setAdapter(this);
     if (nullptr == op->callback) {
-      // We assign the bus adapter itself to be notified on job completion.
       op->callback = (BusOpCallback*) this;
     }
 
-    if (getVerbosity() > 6) {
-      op->profile(true);
-    }
-
-    if (op->get_state() != XferState::IDLE) {
-      if (getVerbosity() > 3) Kernel::log("Tried to fire a bus op that is not in IDLE state.\n");
-      return -4;
-    }
-
-    if ((nullptr == current_job) && (work_queue.size() == 0)){
-      // If the queue is empty, fire the operation now.
-      current_job = op;
-      advance_work_queue();
-      //if (bus_timeout_millis) event_spi_timeout.delaySchedule(bus_timeout_millis);  // Punch the timeout schedule.
-    }
-    else {    // If there is something already in progress, queue up.
-      if (_er_flag(SPI_FLAG_QUEUE_GUARD) && (CONFIG_SPIADAPTER_MAX_QUEUE_DEPTH <= work_queue.size())) {
-        if (getVerbosity() > 3) Kernel::log("SPIAdapter::queue_io_job(): \t Bus queue at max size. Dropping transaction.\n");
-        op->abort(XferFault::QUEUE_FLUSH);
-        callback_queue.insertIfAbsent(op);
-        if (callback_queue.size() == 1) Kernel::staticRaiseEvent(&event_spi_callback_ready);
-        return -1;
+    if (op->get_state() == XferState::IDLE) {
+      ret = 0;
+      if ((nullptr == current_job) && (work_queue.size() == 0)){
+        // If the queue is empty, fire the operation now.
+        current_job = op;
+        advance_work_queue();
       }
-
-      if (0 > work_queue.insertIfAbsent(op)) {
-        if (getVerbosity() > 2) {
-          local_log.concat("SPIAdapter::queue_io_job(): \t Double-insertion. Dropping transaction with no status change.\n");
-          op->printDebug(&local_log);
-          Kernel::log(&local_log);
+      else {    // If there is something already in progress, queue up.
+        if (_adapter_flag(SPI_FLAG_QUEUE_GUARD) && !roomInQueue()) {
+          ret = -1;
+          StringBuilder log;
+          log.concatf("SPI:\t Bus queue at max size. Dropping transaction.\n", ADAPTER_NUM);
+          Kernel::log(&log);
+          op->abort(XferFault::QUEUE_FLUSH);
+          callback_queue.insertIfAbsent(op);
         }
-        return -3;
+        else if (0 > work_queue.insertIfAbsent(op)) {
+          ret = -3;
+          if (getVerbosity() > 2) {
+            StringBuilder log;
+            log.concatf("SPI%u:\t Double-insertion. Dropping transaction with no status change.\n", ADAPTER_NUM);
+            op->printDebug(&log);
+            Kernel::log(&log);
+          }
+        }
+        else {
+          op->set_state(XferState::QUEUED);
+        }
       }
     }
-    return 0;
+    else {
+      if (getVerbosity() > 3) {
+        StringBuilder log;
+        log.concatf("SPI%u:\t Tried to fire a bus op that is not in IDLE state.\n", ADAPTER_NUM);
+        Kernel::log(&log);
+      }
+    }
   }
-  return -5;
+  return ret;
 }
 
 
@@ -278,7 +287,7 @@ int8_t SPIAdapter::advance_work_queue() {
 
        /* Cases below ought to be handled by ISR flow... */
        case XferState::ADDR:
-         current_job->advance_operation(0, 0);
+         //current_job->advance_operation(0, 0);
        case XferState::STOP:
          if (getVerbosity() > 5) local_log.concatf("State might be corrupted if we tried to advance_queue(). \n");
          break;
@@ -340,82 +349,6 @@ void SPIAdapter::purge_queued_work_by_dev(BusOpCallback* dev) {
 
 
 /**
-* Purges only the work_queue. Leaves the currently-executing job.
-*/
-void SPIAdapter::purge_queued_work() {
-  SPIBusOp* current = nullptr;
-  while (work_queue.hasNext()) {
-    current = work_queue.dequeue();
-    current->abort(XferFault::QUEUE_FLUSH);
-    reclaim_queue_item(current);
-  }
-
-  // Check this last to head off any silliness with bus operations colliding with us.
-  purge_current_job();
-}
-
-
-/**
-* Purges a stalled job from the active slot.
-*/
-void SPIAdapter::purge_current_job() {
-  if (current_job) {
-    current_job->abort(XferFault::QUEUE_FLUSH);
-    reclaim_queue_item(current_job);
-    current_job = nullptr;
-  }
-}
-
-
-/**
-* Return a vacant SPIBusOp to the caller, allocating if necessary.
-*
-* @param  _op   The desired bus operation.
-* @param  _req  The device pointer that is requesting the job.
-* @return an SPIBusOp to be used. Only NULL if out-of-mem.
-*/
-SPIBusOp* SPIAdapter::new_op(BusOpcode _op, BusOpCallback* _req) {
-  SPIBusOp* return_value = BusAdapter::new_op();
-  return_value->set_opcode(_op);
-  return_value->callback = _req;
-  return return_value;
-}
-
-
-/**
-* This fxn will either free() the memory associated with the SPIBusOp object, or it
-*   will return it to the preallocation queue.
-*
-* @param item The SPIBusOp to be reclaimed.
-*/
-void SPIAdapter::reclaim_queue_item(SPIBusOp* op) {
-  if (op->hasFault() && (getVerbosity() > 1)) {    // Print failures.
-    StringBuilder log;
-    op->printDebug(&log);
-    Kernel::log(&log);
-  }
-
-  if (op->returnToPrealloc()) {
-    //if (getVerbosity() > 6) local_log.concatf("SPIAdapter::reclaim_queue_item(): \t About to wipe.\n");
-    BusAdapter::return_op_to_pool(op);
-  }
-  else if (op->shouldReap()) {
-    //if (getVerbosity() > 6) local_log.concatf("SPIAdapter::reclaim_queue_item(): \t About to reap.\n");
-    delete op;
-    _heap_frees++;
-  }
-  else {
-    /* If we are here, it must mean that some other class fed us a const SPIBusOp,
-       and wants us to ignore the memory cleanup. But we should at least set it
-       back to IDLE.*/
-    //if (getVerbosity() > 6) local_log.concatf("SPIAdapter::reclaim_queue_item(): \t Dropping....\n");
-    op->set_state(XferState::IDLE);
-  }
-  flushLocalLog();
-}
-
-
-/**
 * Execute any I/O callbacks that are pending. The function is present because
 *   this class contains the bus implementation.
 *
@@ -426,7 +359,6 @@ int8_t SPIAdapter::service_callback_queue() {
   SPIBusOp* temp_op = callback_queue.dequeue();
 
   while ((nullptr != temp_op) && (return_value < spi_cb_per_event)) {
-  //if (nullptr != temp_op) {
     if (getVerbosity() > 6) temp_op->printDebug(&local_log);
     if (temp_op->callback) {
       int8_t cb_code = temp_op->callback->io_op_callback(temp_op);

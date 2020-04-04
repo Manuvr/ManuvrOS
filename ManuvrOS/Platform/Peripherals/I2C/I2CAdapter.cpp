@@ -56,7 +56,7 @@ const char I2CAdapter::_ping_state_chr[4] = {' ', '.', '*', ' '};
 * Constructors/destructors, class initialization functions and so-forth...
 *******************************************************************************/
 
-I2CAdapter::I2CAdapter(const I2CAdapterOptions* o) : EventReceiver("I2CAdapter"), BusAdapter(I2CADAPTER_MAX_QUEUE_DEPTH), _bus_opts(o) {
+I2CAdapter::I2CAdapter(const I2CAdapterOptions* o) : EventReceiver("I2CAdapter"), BusAdapter(o->adapter, I2CADAPTER_MAX_QUEUE_DEPTH), _bus_opts(o) {
   // Some platforms (linux) will ignore pin-assignment values completely.
 
   _er_clear_flag(I2C_BUS_FLAG_BUS_ERROR | I2C_BUS_FLAG_BUS_ONLINE);
@@ -85,22 +85,6 @@ I2CAdapter::~I2CAdapter() {
   _er_clear_flag(I2C_BUS_FLAG_PING_RUN  | I2C_BUS_FLAG_PINGING);
 
   bus_deinit();
-}
-
-
-
-/**
-* Return a vacant I2CBusOp to the caller, allocating if necessary.
-*
-* @param  _op   The desired bus operation.
-* @param  _req  The device pointer that is requesting the job.
-* @return an I2CBusOp to be used. Only NULL if out-of-mem.
-*/
-I2CBusOp* I2CAdapter::new_op(BusOpcode _op, BusOpCallback* _req) {
-  I2CBusOp* return_value = BusAdapter::new_op();
-  return_value->set_opcode(_op);
-  return_value->callback = (I2CDevice*) _req;
-  return return_value;
 }
 
 
@@ -297,7 +281,7 @@ int8_t I2CAdapter::queue_io_job(BusOp* op) {
   else {
     // Bus is idle. Put this work item in the active slot and start the bus operations...
     current_job = nu;
-    if ((getAdapterId() >= 0) && busOnline()) {
+    if ((adapterNumber() >= 0) && busOnline()) {
       if (XferFault::NONE == nu->begin()) {
         #if defined(__BUILD_HAS_THREADS)
         if (_thread_id) wakeThread(_thread_id);
@@ -364,9 +348,7 @@ int8_t I2CAdapter::advance_work_queue() {
         /* These are finish states. */
         case XferState::FAULT:     // Fault condition.
         case XferState::COMPLETE:  // I/O op complete with no problems.
-          _total_xfers++;
           if (current_job->hasFault()) {
-            _failed_xfers++;
             #if defined(MANUVR_DEBUG)
             if (getVerbosity() > 3) {
               local_log.concat("Destroying failed job.\n");

@@ -119,12 +119,13 @@ class SPIAdapter : public EventReceiver, public BusAdapter<SPIBusOp> {
     SPIAdapter(const SPIAdapterOpts*);
     ~SPIAdapter();
 
+    int8_t init();
+
     /* Overrides from the BusAdapter interface */
     int8_t io_op_callahead(BusOp*);
     int8_t io_op_callback(BusOp*);
     int8_t queue_io_job(BusOp*);
     int8_t advance_work_queue();
-    SPIBusOp* new_op(BusOpcode, BusOpCallback*);
 
     void purge_queued_work_by_dev(BusOpCallback *dev);   // Flush the work queue by callback match
 
@@ -147,10 +148,7 @@ class SPIAdapter : public EventReceiver, public BusAdapter<SPIBusOp> {
     uint32_t  bus_timeout_millis = 5;  // How long to spend in IO_WAIT?
     uint8_t   spi_cb_per_event   = 3;  // Limit the number of callbacks processed per event.
 
-    void purge_queued_work();     // Flush the work queue.
-    void purge_current_job();     // Purges the active job.
     int8_t service_callback_queue();
-    void reclaim_queue_item(SPIBusOp*);
 
     /* Overrides from the BusAdapter interface */
     int8_t bus_init();

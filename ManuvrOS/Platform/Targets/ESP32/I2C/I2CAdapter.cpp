@@ -6,18 +6,19 @@
 #define ACK_CHECK_EN   0x01     /*!< I2C master will check ack from slave*/
 #define ACK_CHECK_DIS  0x00     /*!< I2C master will not check ack from slave */
 
-
-static I2CBusOp* _threaded_op = nullptr;
+static volatile I2CBusOp* _threaded_op[2] = {nullptr, nullptr};
 
 static void* IRAM_ATTR i2c_worker_thread(void* arg) {
   while (!platform.nominalState()) {
     sleep_millis(20);
   }
+  I2CAdapter* BUSPTR = (I2CAdapter*) arg;
+  uint8_t anum = BUSPTR->adapterNumber();
   while (1) {
-    if (_threaded_op) {
-      I2CBusOp* op = _threaded_op;
-      _threaded_op = nullptr;
+    if (nullptr != _threaded_op[anum]) {
+      I2CBusOp* op = (I2CBusOp*) _threaded_op[anum];
       op->advance(0);
+      _threaded_op[anum] = nullptr;
       yieldThread();
     }
     else {
@@ -27,6 +28,7 @@ static void* IRAM_ATTR i2c_worker_thread(void* arg) {
   }
   return nullptr;
 }
+
 
 
 
@@ -45,7 +47,7 @@ int8_t I2CAdapter::bus_init() {
   conf.sda_pullup_en    = _bus_opts.sdaPullup() ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE;
   conf.scl_pullup_en    = _bus_opts.sclPullup() ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE;
   conf.master.clk_speed = _bus_opts.freq;
-  int a_id = getAdapterId();
+  int a_id = adapterNumber();
   switch (a_id) {
     case 0:
     case 1:
@@ -73,7 +75,7 @@ int8_t I2CAdapter::bus_deinit() {
 
 
 void I2CAdapter::printHardwareState(StringBuilder* output) {
-  output->concatf("-- I2C%d (%sline)\n", getAdapterId(), (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
+  output->concatf("-- I2C%d (%sline)\n", adapterNumber(), (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
 }
 
 
@@ -95,14 +97,14 @@ int8_t I2CAdapter::generateStop() {
 *******************************************************************************/
 
 XferFault I2CBusOp::begin() {
-  if (nullptr == _threaded_op) {
+  if (nullptr == _threaded_op[device->adapterNumber()]) {
     if (device) {
-      switch (device->getAdapterId()) {
+      switch (device->adapterNumber()) {
         case 0:
         case 1:
           if ((nullptr == callback) || (0 == callback->io_op_callahead(this))) {
             set_state(XferState::INITIATE);
-            _threaded_op = this;
+            _threaded_op[device->adapterNumber()] = this;
             return XferFault::NONE;
           }
           else {
@@ -166,7 +168,7 @@ XferFault I2CBusOp::advance(uint32_t status_reg) {
     if (XferFault::NONE == xfer_fault) {
       if (ESP_OK == i2c_master_stop(cmd)) {
         set_state(XferState::STOP);
-        int ret = i2c_master_cmd_begin((i2c_port_t) device->getAdapterId(), cmd, 1000 / portTICK_RATE_MS);
+        int ret = i2c_master_cmd_begin((i2c_port_t) device->adapterNumber(), cmd, 1000 / portTICK_RATE_MS);
         switch (ret) {
           case ESP_OK:
             markComplete();

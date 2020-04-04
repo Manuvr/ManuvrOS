@@ -134,14 +134,29 @@ class BusOp {
     inline bool isIdle() {     return (XferState::IDLE == xfer_state);  };
 
     /**
-    * @return true if this operation is idle.
+    * @return The initiator's return from the callahead, or zero if no callback object is defined.
     */
     inline int8_t execCA() {   return ((callback) ? callback->io_op_callahead(this) : 0);  };
 
     /**
-    * @return true if this operation is idle.
+    * @return The initiator's return from the callback, or zero if no callback object is defined.
     */
     inline int8_t execCB() {   return ((callback) ? callback->io_op_callback(this) : 0);  };
+
+    /*
+    * Accessors for private members.
+    */
+    inline uint16_t bufferLen() {   return buf_len;  };
+    inline uint8_t* buffer() {      return buf;      };
+
+    /**
+    * Set the buffer.
+    * NOTE: There is only ONE buffer, despite the fact that a bus may be full-duplex.
+    *
+    * @param  buf The transfer buffer.
+    * @param  len The length of the buffer.
+    */
+    inline void setBuffer(uint8_t* b, unsigned int bl) {   buf = b; buf_len = bl;   };
 
     /**
     * This only works because of careful defines. Tread lightly.
@@ -209,11 +224,6 @@ class BusOp {
     BusOpcode opcode     = BusOpcode::UNDEF;  // What is the particular operation being done?
     XferState xfer_state = XferState::UNDEF;  // What state is this transfer in?
     XferFault xfer_fault = XferFault::NONE;   // Fault code.
-
-    //static void        initBusOp(const char*, BusOp*, StringBuilder*);
-
-
-  private:
 };
 
 
@@ -232,82 +242,36 @@ template <class T> class BusAdapter : public BusOpCallback {
     };
 
 
-  protected:
-    T*       current_job      = nullptr;
-    uint32_t _total_xfers     = 0;  // Transfer stats.
-    uint32_t _failed_xfers    = 0;  // Transfer stats.
-    uint16_t _prealloc_misses = 0;  // How many times have we starved the preallocation queue?
-    uint16_t _heap_frees      = 0;  // How many times have we freed a BusOp?
-    uint16_t _queue_floods    = 0;  // How many times has the queue rejected work?
-    const uint16_t MAX_Q_DEPTH;     // Maximum tolerable queue depth.
-    //TODO: const uint8_t  MAX_Q_PRINT;     // Maximum tolerable queue depth.
-    //TODO: const uint8_t  PREALLOC_SIZE;   // Maximum tolerable queue depth.
-    PriorityQueue<T*> work_queue;   // A work queue to keep transactions in order.
-    PriorityQueue<T*> preallocated; // TODO: Convert to ring buffer. This is the whole reason you embarked on this madness.
-
-    BusAdapter(uint16_t max) : MAX_Q_DEPTH(max) {};
-
-    /* Mandatory overrides... */
-    virtual int8_t advance_work_queue() =0;  // The nature of the bus dictates this implementation.
-    virtual int8_t bus_init()           =0;  // Hardware-specifics.
-    virtual int8_t bus_deinit()         =0;  // Hardware-specifics.
-    //virtual int8_t io_op_callback(T*)   =0;  // From BusOpCallback
-    //virtual int8_t queue_io_job(T*)     =0;  // From BusOpCallback
-
     /**
     * Return a vacant BusOp to the caller, allocating if necessary.
     *
+    * @param  _op   The desired bus operation.
+    * @param  _req  The device pointer that is requesting the job.
     * @return an BusOp to be used. Only NULL if out-of-mem.
     */
-    T* new_op() {
-      T* return_value = preallocated.dequeue();
-      if (nullptr == return_value) {
-        _prealloc_misses++;
-        return_value = new T();
+    T* new_op(BusOpcode _op, BusOpCallback* _req) {
+      T* ret = new_op();
+      if (nullptr != ret) {
+        ret->set_opcode(_op);
+        ret->callback = _req;
       }
-      return return_value;
+      return ret;
     };
 
-    ///**
-    //* Return a vacant BusOp to the caller, allocating if necessary.
-    //*
-    //* @param  _op   The desired bus operation.
-    //* @param  _req  The device pointer that is requesting the job.
-    //* @return an BusOp to be used. Only NULL if out-of-mem.
-    //*/
-    //T* new_op(BusOpcode _op, BusOpCallback* _req) {
-    //  T* return_value = new T(_op, _req);
-    //  return return_value;
-    //};
 
-    ///*
-    //* Purges only the work_queue. Leaves the currently-executing job.
-    //*/
-    //void purge_queued_work() {
-    //  T* current = work_queue.dequeue();
-    //  while (current) {
-    //    current->abort(XferFault::QUEUE_FLUSH);
-    //    if (current->callback) {
-    //      current->callback->io_op_callback(current);
-    //    }
-    //    reclaim_queue_item(current);
-    //    current = work_queue.dequeue();
-    //  }
-    //};
+    inline const uint8_t adapterNumber() {    return ADAPTER_NUM;  };
 
-
-    /* Convenience function for guarding against queue floods. */
-    inline bool roomInQueue() {    return !(work_queue.size() < MAX_Q_DEPTH);  }
 
     // TODO: I hate that I'm doing this in a template.
     void printAdapter(StringBuilder* output) {
+      output->concatf("-- Adapter #%u\n", ADAPTER_NUM);
       output->concatf("-- Xfers (fail/total)  %u/%u\n", _failed_xfers, _total_xfers);
       output->concat("-- Prealloc:\n");
-      output->concatf("--    available        %d\n",  preallocated.size());
-      output->concatf("--    misses/frees     %u/%u\n", _prealloc_misses, _heap_frees);
+      output->concatf("--\tavailable        %d\n",  preallocated.size());
+      output->concatf("--\tmisses/frees     %u/%u\n", _prealloc_misses, _heap_frees);
       output->concat("-- Work queue:\n");
-      output->concatf("--    depth/max        %u/%u\n", work_queue.size(), MAX_Q_DEPTH);
-      output->concatf("--    floods           %u\n",  _queue_floods);
+      output->concatf("--\tdepth/max        %u/%u\n", work_queue.size(), MAX_Q_DEPTH);
+      output->concatf("--\tfloods           %u\n",  _queue_floods);
     };
 
     // TODO: I hate that I'm doing this in a template.
@@ -332,7 +296,124 @@ template <class T> class BusAdapter : public BusOpCallback {
       }
     };
 
+
+  protected:
+    const uint8_t  ADAPTER_NUM;     // The platform-relatable index of the adapter.
+    const uint8_t  MAX_Q_DEPTH;     // Maximum tolerable queue depth.
+    uint16_t _queue_floods    = 0;  // How many times has the queue rejected work?
+    uint16_t _prealloc_misses = 0;  // How many times have we starved the preallocation queue?
+    uint16_t _heap_frees      = 0;  // How many times have we freed a BusOp?
+    T*       current_job      = nullptr;
+    PriorityQueue<T*> work_queue;   // A work queue to keep transactions in order.
+    PriorityQueue<T*> preallocated; // TODO: Convert to ring buffer. This is the whole reason you embarked on this madness.
+
+
+    BusAdapter(uint8_t anum, uint16_t max) : ADAPTER_NUM(anum), MAX_Q_DEPTH(max) {};
+
+    /* Mandatory overrides... */
+    virtual int8_t advance_work_queue() =0;  // The nature of the bus dictates this implementation.
+    virtual int8_t bus_init()           =0;  // Hardware-specifics.
+    virtual int8_t bus_deinit()         =0;  // Hardware-specifics.
+    //virtual int8_t io_op_callback(T*)   =0;  // From BusOpCallback
+    //virtual int8_t queue_io_job(T*)     =0;  // From BusOpCallback
+
+    /**
+    * Purges a stalled job from the active slot.
+    */
+    void purge_current_job() {
+      if (current_job) {
+        current_job->abort(XferFault::QUEUE_FLUSH);
+        reclaim_queue_item(current_job);
+        current_job = nullptr;
+      }
+    };
+
+    /*
+    * Purges only the work_queue. Leaves the currently-executing job.
+    */
+    void purge_queued_work() {
+      T* current = work_queue.dequeue();
+      while (current) {
+        current->abort(XferFault::QUEUE_FLUSH);
+        if (current->callback) {
+          current->callback->io_op_callback(current);
+        }
+        reclaim_queue_item(current);
+        current = work_queue.dequeue();
+      }
+      purge_current_job();
+    };
+
+
+    /**
+    * This fxn will either free() the memory associated with the BusOp object, or it
+    *   will return it to the preallocation queue.
+    *
+    * @param item The BusOp to be reclaimed.
+    */
+    void reclaim_queue_item(T* op) {
+      _total_xfers++;
+      if (op->hasFault()) {
+        _failed_xfers++;
+        //if (getVerbosity() > 1) {    // Print failures.
+        //  op->printDebug(&_local_log);
+        //}
+      }
+
+      if (op->returnToPrealloc()) {
+        //if (getVerbosity() > 6) Kernel::log("BusAdapter::reclaim_queue_item(): \t About to wipe.\n");
+        return_op_to_pool(op);
+      }
+      else if (op->shouldReap()) {
+        //if (getVerbosity() > 6) Kernel::log("BusAdapter::reclaim_queue_item(): \t About to reap.\n");
+        delete op;
+        _heap_frees++;
+      }
+      else {
+        /* If we are here, it must mean that some other class fed us a const BusOp
+        and wants us to ignore the memory cleanup. But we should at least set it
+        back to IDLE.*/
+        //if (getVerbosity() > 6) Kernel::log("BusAdapter::reclaim_queue_item(): \t Dropping....\n");
+        op->set_state(XferState::IDLE);
+      }
+    }
+
+
+    /* Convenience function for guarding against queue floods. */
+    inline bool roomInQueue() {    return (work_queue.size() < MAX_Q_DEPTH);  };
+
+
+    // These inlines are for convenience of extending classes.
+    inline uint16_t _adapter_flags() {                 return _extnd_state;            };
+    inline bool _adapter_flag(uint16_t _flag) {        return (_extnd_state & _flag);  };
+    inline void _adapter_flip_flag(uint16_t _flag) {   _extnd_state ^= _flag;          };
+    inline void _adapter_clear_flag(uint16_t _flag) {  _extnd_state &= ~_flag;         };
+    inline void _adapter_set_flag(uint16_t _flag) {    _extnd_state |= _flag;          };
+    inline void _adapter_set_flag(uint16_t _flag, bool nu) {
+      if (nu) _extnd_state |= _flag;
+      else    _extnd_state &= ~_flag;
+    };
+
+
   private:
+    uint32_t _total_xfers   = 0;  // Transfer stats.
+    uint32_t _failed_xfers  = 0;  // Transfer stats.
+    uint16_t _extnd_state   = 0;  // Flags for the concrete class to use.
+
+
+    /**
+    * Return a vacant BusOp to the caller, allocating if necessary.
+    *
+    * @return an BusOp to be used. Only NULL if out-of-mem.
+    */
+    T* new_op() {
+      T* return_value = preallocated.dequeue();
+      if (nullptr == return_value) {
+        _prealloc_misses++;
+        return_value = new T();
+      }
+      return return_value;
+    };
 };
 
 #endif  // __MANUVR_BUS_QUEUE_H__

@@ -51,21 +51,25 @@ inline int32_t  strict_min(int32_t  a, int32_t  b) {  return (a < b) ? a : b; };
 inline int16_t  strict_min(int16_t  a, int16_t  b) {  return (a < b) ? a : b; };
 inline int8_t   strict_min(int8_t   a, int8_t   b) {  return (a < b) ? a : b; };
 
-inline void strict_swap(float    a, float    b) {  float    t = a; a = b; b = t; };
-inline void strict_swap(uint32_t a, uint32_t b) {  uint32_t t = a; a = b; b = t; };
-inline void strict_swap(uint16_t a, uint16_t b) {  uint16_t t = a; a = b; b = t; };
-inline void strict_swap(uint8_t  a, uint8_t  b) {  uint8_t  t = a; a = b; b = t; };
-inline void strict_swap(int32_t  a, int32_t  b) {  int32_t  t = a; a = b; b = t; };
-inline void strict_swap(int16_t  a, int16_t  b) {  int16_t  t = a; a = b; b = t; };
-inline void strict_swap(int8_t   a, int8_t   b) {  int8_t   t = a; a = b; b = t; };
+inline void strict_swap(float*    a, float*    b) {  float    t = *a; *a = *b; *b = t; };
+inline void strict_swap(uint32_t* a, uint32_t* b) {  uint32_t t = *a; *a = *b; *b = t; };
+inline void strict_swap(uint16_t* a, uint16_t* b) {  uint16_t t = *a; *a = *b; *b = t; };
+inline void strict_swap(uint8_t*  a, uint8_t*  b) {  uint8_t  t = *a; *a = *b; *b = t; };
+inline void strict_swap(int32_t*  a, int32_t*  b) {  int32_t  t = *a; *a = *b; *b = t; };
+inline void strict_swap(int16_t*  a, int16_t*  b) {  int16_t  t = *a; *a = *b; *b = t; };
+inline void strict_swap(int8_t*   a, int8_t*   b) {  int8_t   t = *a; *a = *b; *b = t; };
 
 /*
-* Given two unsigned values, gives the difference between them after accounting
-*   for wrap.
+* Given two values, gives the difference between them after accounting for wrap.
 */
-inline uint32_t wrap_accounted_delta(unsigned int a, unsigned int b) {
-  return (a > b) ? (a - b) : (b - a);
-};
+inline double   wrap_accounted_delta(double   a, double   b) {   return (a > b) ? (a - b) : (b - a);   };
+inline float    wrap_accounted_delta(float    a, float    b) {   return (a > b) ? (a - b) : (b - a);   };
+inline uint32_t wrap_accounted_delta(uint32_t a, uint32_t b) {   return (a > b) ? (a - b) : (b - a);   };
+inline uint16_t wrap_accounted_delta(uint16_t a, uint16_t b) {   return (a > b) ? (a - b) : (b - a);   };
+inline uint8_t  wrap_accounted_delta(uint8_t  a, uint8_t  b) {   return (a > b) ? (a - b) : (b - a);   };
+inline int32_t  wrap_accounted_delta(int32_t  a, int32_t  b) {   return (a > b) ? (a - b) : (b - a);   };
+inline int16_t  wrap_accounted_delta(int16_t  a, int16_t  b) {   return (a > b) ? (a - b) : (b - a);   };
+inline int8_t   wrap_accounted_delta(int8_t   a, int8_t   b) {   return (a > b) ? (a - b) : (b - a);   };
 
 
 void epochTimeToString(uint64_t, StringBuilder*);  //
