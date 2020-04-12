@@ -198,7 +198,12 @@ class BusOp {
     /**
     * @return true if this operation experienced any abnormal condition.
     */
-    inline bool hasFault() {     return (XferFault::NONE != xfer_fault);     };
+    inline bool hasFault() {       return (XferFault::NONE != xfer_fault);  };
+
+    /**
+    * @return The current transfer fault.
+    */
+    inline XferFault getFault() {  return xfer_fault;                       };
 
 
     /* Inlines for protected access... TODO: These should be eliminated over time. */
@@ -235,12 +240,7 @@ class BusOp {
 template <class T> class BusAdapter : public BusOpCallback {
   public:
     inline T* currentJob() {  return current_job;  };
-
-    void return_op_to_pool(T* obj) {
-      obj->wipe();
-      preallocated.insert(obj);
-    };
-
+    inline const uint8_t adapterNumber() {    return ADAPTER_NUM;  };
 
     /**
     * Return a vacant BusOp to the caller, allocating if necessary.
@@ -257,9 +257,6 @@ template <class T> class BusAdapter : public BusOpCallback {
       }
       return ret;
     };
-
-
-    inline const uint8_t adapterNumber() {    return ADAPTER_NUM;  };
 
 
     // TODO: I hate that I'm doing this in a template.
@@ -323,6 +320,9 @@ template <class T> class BusAdapter : public BusOpCallback {
     void purge_current_job() {
       if (current_job) {
         current_job->abort(XferFault::QUEUE_FLUSH);
+        if (current_job->callback) {
+          current_job->callback->io_op_callback(current_job);
+        }
         reclaim_queue_item(current_job);
         current_job = nullptr;
       }
@@ -345,6 +345,12 @@ template <class T> class BusAdapter : public BusOpCallback {
     };
 
 
+    void return_op_to_pool(T* obj) {
+      obj->wipe();
+      preallocated.insert(obj);
+    };
+
+
     /**
     * This fxn will either free() the memory associated with the BusOp object, or it
     *   will return it to the preallocation queue.
@@ -360,11 +366,8 @@ template <class T> class BusAdapter : public BusOpCallback {
         //}
       }
 
-      if (op->returnToPrealloc()) {
-        //if (getVerbosity() > 6) Kernel::log("BusAdapter::reclaim_queue_item(): \t About to wipe.\n");
-        return_op_to_pool(op);
-      }
-      else if (op->shouldReap()) {
+      if (op->shouldReap()) {
+        // We were created because our prealloc was starved. we are therefore a transient heap object.
         //if (getVerbosity() > 6) Kernel::log("BusAdapter::reclaim_queue_item(): \t About to reap.\n");
         delete op;
         _heap_frees++;

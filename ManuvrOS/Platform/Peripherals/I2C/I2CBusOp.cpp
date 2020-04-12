@@ -79,6 +79,22 @@ void I2CBusOp::markComplete() {
 }
 
 
+/*******************************************************************************
+* Memory-management and cleanup support.                                       *
+*******************************************************************************/
+
+/**
+* The client class calls this fxn to set this object's post-completion behavior.
+* If this fxn is never called, the default behavior of the class is to allow itself to be free()'d.
+*
+* This flag is preserved by wipe().
+*
+* @param  nu_reap_state Pass false to cause the bus manager to leave this object alone.
+*/
+void I2CBusOp::shouldReap(bool nu_reap_state) {
+  _flags = (nu_reap_state) ? (_flags & (uint8_t) ~I2C_BUSOP_FLAG_NO_FREE) : (_flags | I2C_BUSOP_FLAG_NO_FREE);
+}
+
 
 /*******************************************************************************
 * ___     _                              These members are mandatory overrides
@@ -93,10 +109,10 @@ void I2CBusOp::markComplete() {
 void I2CBusOp::wipe() {
   set_state(XferState::IDLE);
   // We need to preserve flags that deal with memory management.
+  _flags      = _flags & (I2C_BUSOP_FLAG_NO_FREE);
   xfer_fault  = XferFault::NONE;
   opcode      = BusOpcode::UNDEF;
   buf_len     = 0;
-  _flags      = 0;
   callback    = nullptr;
   buf         = nullptr;
   device  = nullptr;

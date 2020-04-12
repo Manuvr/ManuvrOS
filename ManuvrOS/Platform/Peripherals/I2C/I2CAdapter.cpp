@@ -64,6 +64,7 @@ I2CAdapter::I2CAdapter(const I2CAdapterOptions* o) : EventReceiver("I2CAdapter")
 
   // Mark all of our preallocated SPI jobs as "No Reap" and pass them into the prealloc queue.
   for (uint8_t i = 0; i < I2CADAPTER_PREALLOC_COUNT; i++) {
+    __prealloc_pool[i].wipe();
     preallocated.insert(&__prealloc_pool[i]);
   }
 
@@ -104,10 +105,7 @@ void I2CAdapter::reclaim_queue_item(I2CBusOp* op) {
     BusAdapter::return_op_to_pool(op);
   }
   else {
-    // We were created because our prealloc was starved. we are therefore a transient heap object.
-    //if (getVerbosity() > 6) local_log.concatf("I2CAdapter::reclaim_queue_item(): \t About to reap.\n");
-    _heap_frees++;
-    delete op;
+    BusAdapter::reclaim_queue_item(op);
   }
 
   flushLocalLog();
@@ -404,39 +402,10 @@ void I2CAdapter::purge_queued_work_by_dev(I2CDevice *dev) {
   }
 
   // Check this last to head off any silliness with bus operations colliding with us.
-  purge_stalled_job();
+  purge_current_job();
 
   // Lastly... initiate the next bus transfer if the bus is not sideways.
   advance_work_queue();
-}
-
-
-/**
-* Purges only the work_queue. Leaves the currently-executing job.
-*/
-void I2CAdapter::purge_queued_work() {
-  I2CBusOp* current = work_queue.dequeue();
-  while (current) {
-    current = work_queue.get();
-    current->abort(XferFault::QUEUE_FLUSH);
-    if (current->callback) {
-      current->callback->io_op_callback(current);
-    }
-    reclaim_queue_item(current);   // Delete the queued work AND its buffer.
-    current = work_queue.dequeue();
-  }
-}
-
-
-void I2CAdapter::purge_stalled_job() {
-  if (current_job) {
-    current_job->abort(XferFault::QUEUE_FLUSH);
-    if (current_job->callback) {
-      current_job->callback->io_op_callback(current_job);
-    }
-    delete current_job;
-    current_job = nullptr;
-  }
 }
 
 
@@ -697,7 +666,7 @@ void I2CAdapter::consoleCmdProc(StringBuilder* input) {
       local_log.concat("i2c queue purged.\n");
       break;
     case 'p':
-      purge_stalled_job();
+      purge_current_job();
       local_log.concatf("Attempting to purge a stalled jorbe...\n");
       break;
     #ifdef STM32F4XX

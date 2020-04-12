@@ -135,6 +135,9 @@ class SPIAdapter : public EventReceiver, public BusAdapter<SPIBusOp> {
     int8_t callback_proc(ManuvrMsg*);
     void printHardwareState(StringBuilder*);
 
+    void reclaim_queue_item(SPIBusOp*);
+
+
   protected:
     int8_t attached();      // This is called from the base notify().
 

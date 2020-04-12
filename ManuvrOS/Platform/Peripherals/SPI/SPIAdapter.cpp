@@ -85,12 +85,34 @@ SPIAdapter::~SPIAdapter() {
 }
 
 
+/**
+* This fxn will either free() the memory associated with the SPIBusOp object, or it
+*   will return it to the preallocation queue.
+*
+* @param item The SPIBusOp to be reclaimed.
+*/
+void SPIAdapter::reclaim_queue_item(SPIBusOp* op) {
+  uintptr_t obj_addr = ((uintptr_t) op);
+  uintptr_t pre_min  = ((uintptr_t) preallocated_bus_jobs);
+  uintptr_t pre_max  = pre_min + (sizeof(SPIBusOp) * CONFIG_SPIADAPTER_PREALLOC_COUNT);
+
+  if ((obj_addr < pre_max) && (obj_addr >= pre_min)) {
+    // If we are in this block, it means obj was preallocated. wipe and reclaim it.
+    BusAdapter::return_op_to_pool(op);
+  }
+  else {
+    BusAdapter::reclaim_queue_item(op);
+  }
+
+  flushLocalLog();
+}
+
+
 int8_t SPIAdapter::init() {
   int8_t ret = -1;
   // Mark all of our preallocated SPI jobs as "No Reap" and pass them into the prealloc queue.
   for (uint8_t i = 0; i < CONFIG_SPIADAPTER_PREALLOC_COUNT; i++) {
     preallocated_bus_jobs[i].wipe();
-    preallocated_bus_jobs[i].returnToPrealloc(true);
     preallocated.insert(&preallocated_bus_jobs[i]);
   }
   _er_set_flag(SPI_FLAG_QUEUE_IDLE);
@@ -249,51 +271,52 @@ int8_t SPIAdapter::advance_work_queue() {
   timeout_punch = false;
   if (current_job) {
     switch (current_job->get_state()) {
-       case XferState::TX_WAIT:
-       case XferState::RX_WAIT:
-         if (current_job->hasFault()) {
-           if (getVerbosity() > 3) local_log.concat("SPIAdapter::advance_work_queue():\t Failed at IO_WAIT.\n");
-         }
-         else {
-           current_job->markComplete();
-         }
-         // NOTE: No break on purpose.
-       case XferState::COMPLETE:
-         callback_queue.insert(current_job);
-         current_job = nullptr;
-         if (callback_queue.size() == 1) {
-           Kernel::staticRaiseEvent(&event_spi_callback_ready);
-         }
-         break;
+      case XferState::TX_WAIT:
+      case XferState::RX_WAIT:
+        if (current_job->hasFault()) {
+          if (getVerbosity() > 3) local_log.concat("SPIAdapter::advance_work_queue():\t Failed at IO_WAIT.\n");
+        }
+        else {
+          current_job->markComplete();
+        }
+        // NOTE: No break on purpose.
+      case XferState::COMPLETE:
+        callback_queue.insert(current_job);
+        current_job = nullptr;
+        if (callback_queue.size() == 1) {
+          Kernel::staticRaiseEvent(&event_spi_callback_ready);
+        }
+        break;
 
-       case XferState::IDLE:
-       case XferState::INITIATE:
-         switch (current_job->begin()) {
-           case XferFault::NONE:     // Nominal outcome. Transfer started with no problens...
-             break;
-           case XferFault::BUS_BUSY:    // Bus appears to be in-use. State did not change.
-             // Re-throw queue_ready event and try again later.
-             if (getVerbosity() > 2) local_log.concat("  advance_work_queue() tried to clobber an existing transfer on chain.\n");
-             //Kernel::staticRaiseEvent(&event_spi_queue_ready);  // Bypass our method. Jump right to the target.
-             break;
-           default:    // Began the transfer, and it barffed... was aborted.
-             if (getVerbosity() > 3) local_log.concat("SPIAdapter::advance_work_queue():\t Failed to begin transfer after starting.\n");
-             callback_queue.insert(current_job);
-             current_job = nullptr;
-             if (callback_queue.size() == 1) Kernel::staticRaiseEvent(&event_spi_callback_ready);
-             break;
-         }
-         break;
+      case XferState::IDLE:
+      case XferState::INITIATE:
+        switch (current_job->begin()) {
+          case XferFault::NONE:     // Nominal outcome. Transfer started with no problens...
+            break;
+          case XferFault::BUS_BUSY:    // Bus appears to be in-use. State did not change.
+            // Re-throw queue_ready event and try again later.
+            if (getVerbosity() > 2) local_log.concat("  advance_work_queue() tried to clobber an existing transfer on chain.\n");
+            current_job->set_state(XferState::INITIATE);
+            //Kernel::staticRaiseEvent(&SPIBusOp::event_spi_queue_ready);  // Bypass our method. Jump right to the target.
+            break;
+          default:    // Began the transfer, and it barffed... was aborted.
+            if (getVerbosity() > 3) local_log.concat("SPIAdapter::advance_work_queue():\t Failed to begin transfer after starting.\n");
+            callback_queue.insert(current_job);
+            current_job = nullptr;
+            if (callback_queue.size() == 1) Kernel::staticRaiseEvent(&event_spi_callback_ready);
+            break;
+        }
+        break;
 
-       /* Cases below ought to be handled by ISR flow... */
-       case XferState::ADDR:
-         //current_job->advance_operation(0, 0);
-       case XferState::STOP:
-         if (getVerbosity() > 5) local_log.concatf("State might be corrupted if we tried to advance_queue(). \n");
-         break;
-       default:
-         if (getVerbosity() > 3) local_log.concatf("advance_work_queue() default state \n");
-         break;
+      /* Cases below ought to be handled by ISR flow... */
+      case XferState::ADDR:
+        //current_job->advance_operation(0, 0);
+      case XferState::STOP:
+        if (getVerbosity() > 5) local_log.concatf("State might be corrupted if we tried to advance_queue(). \n");
+        break;
+      default:
+        if (getVerbosity() > 3) local_log.concatf("advance_work_queue() default state \n");
+        break;
     }
   }
 
@@ -326,7 +349,7 @@ int8_t SPIAdapter::advance_work_queue() {
 * @param  dev  The device pointer that owns jobs we wish purged.
 */
 void SPIAdapter::purge_queued_work_by_dev(BusOpCallback* dev) {
-  if (NULL == dev) return;
+  if (nullptr == dev) return;
 
   if (work_queue.size() > 0) {
     SPIBusOp* current = nullptr;
@@ -360,7 +383,7 @@ int8_t SPIAdapter::service_callback_queue() {
 
   while ((nullptr != temp_op) && (return_value < spi_cb_per_event)) {
     if (getVerbosity() > 6) temp_op->printDebug(&local_log);
-    if (temp_op->callback) {
+    if (nullptr != temp_op->callback) {
       int8_t cb_code = temp_op->callback->io_op_callback(temp_op);
       switch (cb_code) {
         case SPI_CALLBACK_RECYCLE:

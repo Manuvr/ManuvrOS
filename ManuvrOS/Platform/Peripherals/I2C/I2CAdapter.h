@@ -91,8 +91,9 @@ This file is the tortured result of growing pains since the beginning of
 
 
   /* These are transfer flags specific to I2C. */
-  #define I2C_BUSOP_FLAG_SUBADDR         0x80    // Send a sub-address?
   #define I2C_BUSOP_FLAG_VERBOSITY_MASK  0x07    // Low three bits store verbosity.
+  #define I2C_BUSOP_FLAG_NO_FREE         0x40    // If set in a transaction's flags field, it will not be free()'d.
+  #define I2C_BUSOP_FLAG_SUBADDR         0x80    // Send a sub-address?
 
   // Forward declaration. Definition order in this file is very important.
   class I2CDevice;
@@ -210,6 +211,16 @@ This file is the tortured result of growing pains since the beginning of
       inline int8_t abort() {    return abort(XferFault::NO_REASON); }
       int8_t abort(XferFault);
 
+      /* Flag management fxns... */
+      void shouldReap(bool);    // Override to set the reap behavior.
+
+      /**
+      * The bus manager calls this fxn to decide if it ought to free this object after completion.
+      *
+      * @return true if the bus manager class should free() this object. False otherwise.
+      */
+      inline bool shouldReap() {        return ((_flags & I2C_BUSOP_FLAG_NO_FREE) == 0);   }
+
       /**
       * Decide if we need to send a subaddress.
       *
@@ -271,6 +282,8 @@ This file is the tortured result of growing pains since the beginning of
       int8_t callback_proc(ManuvrMsg*);
 
 
+      void reclaim_queue_item(I2CBusOp*);
+
       // Builds a special bus transaction that does nothing but test for the presence or absence of a slave device.
       void ping_slave_addr(uint8_t);
 
@@ -311,10 +324,7 @@ This file is the tortured result of growing pains since the beginning of
 
 
       int get_slave_dev_by_addr(uint8_t search_addr);
-      void reclaim_queue_item(I2CBusOp*);
       void purge_queued_work_by_dev(I2CDevice *dev);
-      void purge_queued_work();
-      void purge_stalled_job();
 
       I2CPingState get_ping_state_by_addr(uint8_t addr);
       void set_ping_state_by_addr(uint8_t addr, I2CPingState nu);

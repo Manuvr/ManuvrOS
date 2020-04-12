@@ -161,7 +161,7 @@ int8_t SPIAdapter::bus_init() {
 	dev_config.duty_cycle_pos   = 0;
 	dev_config.cs_ena_posttrans = 0;
 	dev_config.cs_ena_pretrans  = 0;
-	dev_config.clock_speed_hz   = 10000000;
+	dev_config.clock_speed_hz   = 9000000;
 	dev_config.spics_io_num     = (gpio_num_t) -1;
 	dev_config.flags            = SPI_DEVICE_NO_DUMMY;
 	dev_config.queue_size       = 1;
@@ -204,6 +204,13 @@ int8_t SPIAdapter::bus_deinit() {
 */
 int8_t SPIAdapter::attached() {
   if (EventReceiver::attached()) {
+    // Mark all of our preallocated SPI jobs as "No Reap" and pass them into the prealloc queue.
+    for (uint8_t i = 0; i < CONFIG_SPIADAPTER_PREALLOC_COUNT; i++) {
+      preallocated_bus_jobs[i].wipe();
+      preallocated_bus_jobs[i].returnToPrealloc(true);
+      preallocated.insert(&preallocated_bus_jobs[i]);
+    }
+    _er_set_flag(SPI_FLAG_QUEUE_IDLE);
     // We should init the SPI library...
     bus_init();
     return 1;
@@ -232,16 +239,21 @@ XferFault SPIBusOp::begin() {
     case 0:
     case 1:
 			if (nullptr == _threaded_op[anum]) {
-				_threaded_op[anum] = this;
-				ret = XferFault::NONE;
+        if ((nullptr == callback) || (0 == callback->io_op_callahead(this))) {
+          _threaded_op[anum] = this;
+          ret = XferFault::NONE;
+        }
+        else {
+          abort(XferFault::IO_RECALL);
+        }
 			}
 			else {
-				ret = XferFault::BUS_BUSY;
+        abort(XferFault::BUS_BUSY);
 			}
       break;
     case 2:   // SPI workflow
     default:
-      ret = XferFault::BUS_FAULT;
+      abort(XferFault::BUS_FAULT);
       break;
   }
   return ret;

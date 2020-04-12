@@ -279,7 +279,6 @@ void SPIBusOp::wipe() {
   xfer_params[1] = 0;
   xfer_params[2] = 0;
   xfer_params[3] = 0;
-
   profile(false);
 }
 

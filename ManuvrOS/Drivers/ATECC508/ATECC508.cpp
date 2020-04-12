@@ -687,7 +687,7 @@ int8_t ATECC508::_clean_current_op_group() {
   if (nullptr != _current_grp) {
     I2CBusOp* nxt = _current_grp->nextBusOp();
     while (nullptr != nxt) {
-      _bus->return_op_to_pool(nxt);
+      _bus->reclaim_queue_item(nxt);
       nxt = _current_grp->nextBusOp();
     }
     _op_group_callback(_current_grp);
