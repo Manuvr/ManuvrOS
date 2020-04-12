@@ -132,7 +132,8 @@ class SSD13xx : public Image, public BusOpCallback {
     ~SSD13xx();
 
     // commands
-    void init(SPIAdapter*);
+    int8_t init(SPIAdapter*);
+    inline bool enabled() {   return _enabled;  };
 
     void setAddrWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
     int8_t commitFrameBuffer();
@@ -148,7 +149,9 @@ class SSD13xx : public Image, public BusOpCallback {
 
   private:
     const SSD13xxOpts _opts;
+    bool  _enabled  = false;
     SPIAdapter* _BUS = nullptr;
+    SPIBusOp    _fb_data_op;
 
     int8_t _send_data(uint8_t* buf, uint16_t len);
     int8_t _ll_pin_init();

@@ -45,33 +45,33 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SSD13xx.h"
 
 ImgBufferFormat _get_img_fmt_for_ssd(SSDModel m) {
-	switch (m) {
-		case SSDModel::SSD1306:   return ImgBufferFormat::GREY_8;
-		case SSDModel::SSD1309:   return ImgBufferFormat::GREY_8;
-		case SSDModel::SSD1331:   return ImgBufferFormat::R5_G6_B5;
-		case SSDModel::SSD1351:   return ImgBufferFormat::R5_G6_B5;
-	}
-	return ImgBufferFormat::MONOCHROME;
+  switch (m) {
+    case SSDModel::SSD1306:   return ImgBufferFormat::GREY_8;
+    case SSDModel::SSD1309:   return ImgBufferFormat::GREY_8;
+    case SSDModel::SSD1331:   return ImgBufferFormat::R5_G6_B5;
+    case SSDModel::SSD1351:   return ImgBufferFormat::R5_G6_B5;
+  }
+  return ImgBufferFormat::MONOCHROME;
 }
 
 uint32_t _get_img_x_for_ssd(SSDModel m) {
-	switch (m) {
-		case SSDModel::SSD1306:   return 128;
-		case SSDModel::SSD1309:   return 96;
-		case SSDModel::SSD1331:   return 96;
-		case SSDModel::SSD1351:   return 128;
-	}
-	return 0;
+  switch (m) {
+    case SSDModel::SSD1306:   return 128;
+    case SSDModel::SSD1309:   return 96;
+    case SSDModel::SSD1331:   return 96;
+    case SSDModel::SSD1351:   return 128;
+  }
+  return 0;
 }
 
 uint32_t _get_img_y_for_ssd(SSDModel m) {
-	switch (m) {
-		case SSDModel::SSD1306:   return 64;
-		case SSDModel::SSD1309:   return 64;
-		case SSDModel::SSD1331:   return 64;
-		case SSDModel::SSD1351:   return 128;
-	}
-	return 0;
+  switch (m) {
+    case SSDModel::SSD1306:   return 64;
+    case SSDModel::SSD1309:   return 64;
+    case SSDModel::SSD1331:   return 64;
+    case SSDModel::SSD1351:   return 128;
+  }
+  return 0;
 }
 
 
@@ -88,9 +88,9 @@ uint32_t _get_img_y_for_ssd(SSDModel m) {
 * Constructor.
 */
 SSD13xx::SSD13xx(const SSD13xxOpts* o)
-	: Image(_get_img_x_for_ssd(o->model), _get_img_y_for_ssd(o->model), _get_img_fmt_for_ssd(o->model)), _opts(o)
+  : Image(_get_img_x_for_ssd(o->model), _get_img_y_for_ssd(o->model), _get_img_fmt_for_ssd(o->model)), _opts(o)
 {
-	_is_framebuffer(true);
+  _is_framebuffer(true);
 }
 
 
@@ -116,13 +116,20 @@ SSD13xx::~SSD13xx() {}
 * @return 0 to run the op, or non-zero to cancel it.
 */
 int8_t SSD13xx::io_op_callahead(BusOp* _op) {
-	SPIBusOp* op = (SPIBusOp*) _op;
-  setPin(_opts.dc, op->transferParamLength() == 0);
+  SPIBusOp* op = (SPIBusOp*) _op;
+  bool data_xfer = (op->transferParamLength() == 0);
+  if (data_xfer) {  // Was this a frame refresh?
+    _lock(true);
+  }
+  setPin(_opts.dc, data_xfer);
   return 0;
 }
 
 /**
 * When a bus operation completes, it is passed back to its issuing class.
+* This driver never reads back from the device. Assume all ops are WRITEs.
+* The initialization chain is carried forward in this function, so that we don't
+*   swamp the bus queue. Display will enable at the end of the init chain.
 *
 * @param  _op  The bus operation that was completed.
 * @return SPI_CALLBACK_NOMINAL on success, or appropriate error code.
@@ -134,6 +141,88 @@ int8_t SSD13xx::io_op_callback(BusOp* _op) {
   if (op->hasFault()) {
     Kernel::log("SSD13xx::io_op_callback() bus op failed.\n");
     return SPI_CALLBACK_ERROR;
+  }
+  if (op->transferParamLength() == 0) {  // Was this a frame refresh?
+    _lock(false);
+  }
+  else {
+    uint8_t arg_buf[4];
+    switch (op->getTransferParam(0)) {
+      case SSD13XX_CMD_DISPLAYON:    _enabled = true;       break;
+      case SSD13XX_CMD_DISPLAYOFF:   _enabled = false;      break;
+      case SSD13XX_CMD_SETREMAP:
+        arg_buf[0] = 0x00;
+        _send_command(SSD13XX_CMD_STARTLINE, arg_buf, 1);   // 0xA1
+        break;
+      case SSD13XX_CMD_STARTLINE:
+        arg_buf[0] = 0x00;
+        _send_command(SSD13XX_CMD_DISPLAYOFFSET, arg_buf, 1);   // 0xA2
+        break;
+      case SSD13XX_CMD_DISPLAYOFFSET:
+        _send_command(SSD13XX_CMD_NORMALDISPLAY);    // 0xA4
+        break;
+      case SSD13XX_CMD_NORMALDISPLAY:
+        arg_buf[0] = 0x3F;  // 0x3F 1/64 duty
+        _send_command(SSD13XX_CMD_SETMULTIPLEX, arg_buf, 1);   // 0xA8
+        break;
+      case SSD13XX_CMD_SETMULTIPLEX:
+        arg_buf[0] = 0x8E;
+        _send_command(SSD13XX_CMD_SETMASTER, arg_buf, 1);    // 0xAD
+        break;
+      case SSD13XX_CMD_SETMASTER:
+        arg_buf[0] = 0x0B;
+        _send_command(SSD13XX_CMD_POWERMODE, arg_buf, 1);    // 0xB0
+        break;
+      case SSD13XX_CMD_POWERMODE:
+        arg_buf[0] = 0x31;
+        _send_command(SSD13XX_CMD_PRECHARGE, arg_buf, 1);    // 0xB1
+        break;
+      case SSD13XX_CMD_PRECHARGE:
+        arg_buf[0] = 0xF0;  // 7:4 = Oscillator Frequency, 3:0 = CLK Div Ratio (A[3:0]+1 = 1..16)
+        _send_command(SSD13XX_CMD_CLOCKDIV, arg_buf, 1);    // 0xB3
+        break;
+      case SSD13XX_CMD_CLOCKDIV:
+        arg_buf[0] = 0x64;
+        _send_command(SSD13XX_CMD_PRECHARGEA, arg_buf, 1);    // 0x8A
+        break;
+      case SSD13XX_CMD_PRECHARGEA:
+        arg_buf[0] = 0x78;
+        _send_command(SSD13XX_CMD_PRECHARGEB, arg_buf, 1);    // 0x8B
+        break;
+      case SSD13XX_CMD_PRECHARGEB:
+        arg_buf[0] = 0x64;
+        _send_command(SSD13XX_CMD_PRECHARGEC, arg_buf, 1);    // 0x8C
+        break;
+      case SSD13XX_CMD_PRECHARGEC:
+        arg_buf[0] = 0x3A;
+        _send_command(SSD13XX_CMD_PRECHARGELEVEL, arg_buf, 1);    // 0xBB
+        break;
+      case SSD13XX_CMD_PRECHARGELEVEL:
+        arg_buf[0] = 0x3E;
+        _send_command(SSD13XX_CMD_VCOMH, arg_buf, 1);      // 0xBE
+        break;
+      case SSD13XX_CMD_VCOMH:
+        arg_buf[0] = 0x06;
+        _send_command(SSD13XX_CMD_MASTERCURRENT, arg_buf, 1);    // 0x87
+        break;
+      case SSD13XX_CMD_MASTERCURRENT:
+        arg_buf[0] = 0x91;
+        _send_command(SSD13XX_CMD_CONTRASTA, arg_buf, 1);    // 0x81
+        break;
+      case SSD13XX_CMD_CONTRASTA:
+        arg_buf[0] = 0x50;
+        _send_command(SSD13XX_CMD_CONTRASTB, arg_buf, 1);    // 0x82
+        break;
+      case SSD13XX_CMD_CONTRASTB:
+        arg_buf[0] = 0x7D;
+        _send_command(SSD13XX_CMD_CONTRASTC, arg_buf, 1);    // 0x83
+        break;
+      case SSD13XX_CMD_CONTRASTC:
+        _send_command(SSD13XX_CMD_DISPLAYON);  //--turn on oled panel
+        break;
+      default:
+        break;
+    }
   }
 
   return SPI_CALLBACK_NOMINAL;
@@ -178,24 +267,25 @@ void SSD13xx::setAddrWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
   if (y2 > 63) y2 = 63;
 
   if (x1 > x2) {
-    uint8_t t = x2;
-    x2 = x1;
-    x1 = t;
+    strict_swap(&x1, &x2);
   }
   if (y1 > y2) {
-    uint8_t t = y2;
-    y2 = y1;
-    y1 = t;
+    strict_swap(&y1, &y2);
   }
 
-	uint8_t arg_buf[4] = {x1, x2, y1, y2};
+  uint8_t arg_buf[4] = {x1, x2, y1, y2};
   _send_command(0x15, &arg_buf[0], 2); // Column addr set
   _send_command(0x75, &arg_buf[2], 2); // Column addr set
 }
 
 
 int8_t SSD13xx::commitFrameBuffer() {
-  return _send_data(_buffer, bytesUsed());  // Buffer is in Image superclass.
+  int8_t ret = -3;
+  if (_fb_data_op.isIdle()) {
+    //ret = _send_data(_buffer, bytesUsed());  // Buffer is in Image superclass.
+    ret = _BUS->queue_io_job(&_fb_data_op);
+  }
+  return ret;
 }
 
 
@@ -206,49 +296,26 @@ int8_t SSD13xx::commitFrameBuffer() {
     @param    freq  Desired SPI clock frequency
 */
 /**************************************************************************/
-void SSD13xx::init(SPIAdapter* b) {
-	_BUS = b;
-	if (0 == _ll_pin_init()) {
-		uint8_t arg_buf[4];
-		// Initialization Sequence
-		_send_command(SSD13XX_CMD_DISPLAYOFF);    // 0xAE
-		arg_buf[0] = 0x72; // RGB Color
-		_send_command(SSD13XX_CMD_SETREMAP, arg_buf, 1);  // 0xA0
-		arg_buf[0] = 0x00;
-		_send_command(SSD13XX_CMD_STARTLINE, arg_buf, 1);   // 0xA1
-		arg_buf[0] = 0x00;
-		_send_command(SSD13XX_CMD_DISPLAYOFFSET, arg_buf, 1);   // 0xA2
-		_send_command(SSD13XX_CMD_NORMALDISPLAY);    // 0xA4
-		arg_buf[0] = 0x3F;  // 0x3F 1/64 duty
-		_send_command(SSD13XX_CMD_SETMULTIPLEX, arg_buf, 1);   // 0xA8
-		arg_buf[0] = 0x8E;
-		_send_command(SSD13XX_CMD_SETMASTER, arg_buf, 1);    // 0xAD
-		arg_buf[0] = 0x0B;
-		_send_command(SSD13XX_CMD_POWERMODE, arg_buf, 1);    // 0xB0
-		arg_buf[0] = 0x31;
-		_send_command(SSD13XX_CMD_PRECHARGE, arg_buf, 1);    // 0xB1
-		arg_buf[0] = 0xF0;  // 7:4 = Oscillator Frequency, 3:0 = CLK Div Ratio (A[3:0]+1 = 1..16)
-		_send_command(SSD13XX_CMD_CLOCKDIV, arg_buf, 1);    // 0xB3
-		arg_buf[0] = 0x64;
-		_send_command(SSD13XX_CMD_PRECHARGEA, arg_buf, 1);    // 0x8A
-		arg_buf[0] = 0x78;
-		_send_command(SSD13XX_CMD_PRECHARGEB, arg_buf, 1);    // 0x8B
-		arg_buf[0] = 0x64;
-		_send_command(SSD13XX_CMD_PRECHARGEC, arg_buf, 1);    // 0x8C
-		arg_buf[0] = 0x3A;
-		_send_command(SSD13XX_CMD_PRECHARGELEVEL, arg_buf, 1);    // 0xBB
-		arg_buf[0] = 0x3E;
-		_send_command(SSD13XX_CMD_VCOMH, arg_buf, 1);      // 0xBE
-		arg_buf[0] = 0x06;
-		_send_command(SSD13XX_CMD_MASTERCURRENT, arg_buf, 1);    // 0x87
-		arg_buf[0] = 0x91;
-		_send_command(SSD13XX_CMD_CONTRASTA, arg_buf, 1);    // 0x81
-		arg_buf[0] = 0x50;
-		_send_command(SSD13XX_CMD_CONTRASTB, arg_buf, 1);    // 0x82
-		arg_buf[0] = 0x7D;
-		_send_command(SSD13XX_CMD_CONTRASTC, arg_buf, 1);    // 0x83
-		_send_command(SSD13XX_CMD_DISPLAYON);  //--turn on oled panel
-	}
+int8_t SSD13xx::init(SPIAdapter* b) {
+  int8_t ret = -1;
+  _BUS = b;
+  _fb_data_op.set_opcode(BusOpcode::TX);
+  _fb_data_op.shouldReap(false);
+  _fb_data_op.setCSPin(_opts.cs);
+  _fb_data_op.setAdapter(_BUS);
+  _fb_data_op.csActiveHigh(false);
+  _fb_data_op.callback = this;
+
+  if (0 == _ll_pin_init()) {
+    reallocate();
+    _fb_data_op.setBuffer(_buffer, bytesUsed());
+    uint8_t arg_buf[4];
+    // Initialization Sequence
+    _send_command(SSD13XX_CMD_DISPLAYOFF);    // 0xAE
+    arg_buf[0] = 0x72; // RGB Color
+    ret = _send_command(SSD13XX_CMD_SETREMAP, arg_buf, 1);  // 0xA0
+  }
+  return ret;
 }
 
 
@@ -258,6 +325,9 @@ void SSD13xx::init(SPIAdapter* b) {
 */
 void SSD13xx::enableDisplay(bool enable) {
   _send_command(enable ? SSD13XX_CMD_DISPLAYON : SSD13XX_CMD_DISPLAYOFF);
+  if (enable) {
+    commitFrameBuffer();
+  }
 }
 
 
@@ -271,16 +341,16 @@ int8_t SSD13xx::_send_command(uint8_t commandByte, uint8_t* buf, uint8_t buf_len
   int8_t ret = -2;
   if (nullptr != _BUS) {
     SPIBusOp* op = (SPIBusOp*) _BUS->new_op(BusOpcode::TX, (BusOpCallback*) this);
-		switch (buf_len) {
-			case 0:   op->setParams(commandByte);                                       break;
-			case 1:   op->setParams(commandByte, *(buf + 0));                           break;
-			case 2:   op->setParams(commandByte, *(buf + 0), *(buf + 1));               break;
-			case 3:   op->setParams(commandByte, *(buf + 0), *(buf + 1), *(buf + 2));   break;
-			default:
-				op->setParams(commandByte);
-				op->setBuffer(buf, buf_len);
-				break;
-		}
+    switch (buf_len) {
+      case 0:   op->setParams(commandByte);                                       break;
+      case 1:   op->setParams(commandByte, *(buf + 0));                           break;
+      case 2:   op->setParams(commandByte, *(buf + 0), *(buf + 1));               break;
+      case 3:   op->setParams(commandByte, *(buf + 0), *(buf + 1), *(buf + 2));   break;
+      default:
+        op->setParams(commandByte);
+        op->setBuffer(buf, buf_len);
+        break;
+    }
     ret = queue_io_job(op);
   }
   return ret;
@@ -293,9 +363,7 @@ int8_t SSD13xx::_send_command(uint8_t commandByte, uint8_t* buf, uint8_t buf_len
 int8_t SSD13xx::_send_data(uint8_t* buf, uint16_t len) {
   int8_t ret = -2;
   if (nullptr != _BUS) {
-    SPIBusOp* op = (SPIBusOp*) _BUS->new_op(BusOpcode::TX, (BusOpCallback*) this);
-		op->setBuffer(buf, len);
-    ret = queue_io_job(op);
+    ret = queue_io_job(&_fb_data_op);
   }
   return ret;
 }
@@ -307,7 +375,7 @@ int8_t SSD13xx::_send_data(uint8_t* buf, uint16_t len) {
 * @return 0 on success. -1 otherwise.
 */
 int8_t SSD13xx::_ll_pin_init() {
-	int8_t ret = -1;
+  int8_t ret = -1;
   if (255 != _opts.reset) {
     gpioDefine(_opts.reset, GPIOMode::OUTPUT);
     setPin(_opts.reset, false);  // Hold the display in reset.
@@ -315,13 +383,13 @@ int8_t SSD13xx::_ll_pin_init() {
   if (255 != _opts.cs) {
     gpioDefine(_opts.cs, GPIOMode::OUTPUT);
     setPin(_opts.cs, true);
-		if (255 != _opts.dc) {
-			gpioDefine(_opts.dc, GPIOMode::OUTPUT);
-			setPin(_opts.dc, true);
-			ret = 0;
-		}
+    if (255 != _opts.dc) {
+      gpioDefine(_opts.dc, GPIOMode::OUTPUT);
+      setPin(_opts.dc, true);
+      ret = 0;
+    }
   }
-	return ret;
+  return ret;
 }
 
 
@@ -332,10 +400,10 @@ int8_t SSD13xx::_ll_pin_init() {
 */
 void SSD13xx::printDebug(StringBuilder* output) {
   output->concatf("SSD13xx (%u x %u) %s", x(), y(), PRINT_DIVIDER_1_STR);
-  output->concatf("\tLocked:    %c\n", (_locked() ? 'y': 'n'));
+  output->concatf("\tLocked:    %c\n", (locked() ? 'y': 'n'));
   output->concatf("\tDirty:     %c\n", (_is_dirty() ? 'y': 'n'));
   output->concatf("\tAllocated: %c\n", (allocated() ? 'y': 'n'));
   output->concatf("\tPixels:    %u\n", pixels());
-	output->concatf("\tBits/pix:  %u\n", _bits_per_pixel());
+  output->concatf("\tBits/pix:  %u\n", _bits_per_pixel());
   output->concatf("\tBytes:     %u\n", bytesUsed());
 }

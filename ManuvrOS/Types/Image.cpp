@@ -685,7 +685,7 @@ bool Image::isColor() {
 uint32_t Image::getColor(uint32_t x, uint32_t y) {
   uint32_t ret = 0;
   uint32_t sz = bytesUsed();
-  uint32_t offset = _calculate_offset(x, y);
+  uint32_t offset = _pixel_offset(x, y);
   if (offset < sz) {
     switch (_buf_fmt) {
       case ImgBufferFormat::GREY_24:           // 24-bit greyscale   TODO: Wrong. Has to be.
@@ -748,7 +748,7 @@ bool Image::setColor(uint32_t x, uint32_t y, uint32_t c) {
 */
 bool Image::setColor(uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b) {
   uint32_t sz = bytesUsed();
-  uint32_t offset = _calculate_offset(x, y);
+  uint32_t offset = _pixel_offset(x, y);
   if (offset < sz) {
     switch (_buf_fmt) {
       case ImgBufferFormat::GREY_24:           // 24-bit greyscale   TODO: Wrong. Has to be.
@@ -759,7 +759,7 @@ bool Image::setColor(uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b) {
         break;
       case ImgBufferFormat::GREY_16:           // 16-bit greyscale   TODO: Wrong. Has to be.
       case ImgBufferFormat::R5_G6_B5:          // 16-bit color
-        *(_buffer + offset + 0) = ((uint16_t) ((r << 3) & 0xF1) << 8) | ((g >> 3) & 0x07);
+        *(_buffer + offset + 0) = ((uint16_t) ((r << 3) & 0xF8) << 8) | ((g >> 3) & 0x07);
         *(_buffer + offset + 1) = ((uint16_t) ((g << 5) & 0xE0) << 8) | ((b >> 3) & 0x1F);
         break;
       case ImgBufferFormat::GREY_8:            // 8-bit greyscale    TODO: Wrong. Has to be.
@@ -832,8 +832,8 @@ void Image::drawChar(uint32_t x, uint32_t y, unsigned char c, uint32_t color, ui
         }
         _lock(false);
 
-    } else { // Custom font
-
+    }
+    else { // Custom font
         // Character is assumed previously filtered by write() to eliminate
         // newlines, returns, non-printable characters, etc.  Calling
         // drawChar() directly with 'bad' characters of font may cause mayhem!
@@ -1215,9 +1215,36 @@ void Image::fillRect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t co
   @param    color 16-bit 5-6-5 Color to fill with
 */
 void Image::fillScreen(uint32_t color) {
+  uint8_t bpp = _bits_per_pixel();
   _lock(true);
-  for (uint32_t i=0; i < _x; i++) {
-		writeLine(i, 0, i, _y, color);
+  switch (_bits_per_pixel()) {
+    case 32:
+      for (uint32_t i=0; i < (_x * _y); i++) {
+        *((uint32_t*) (_buffer + (i << 2))) = (uint32_t) color;
+      }
+      break;
+    case 24:
+      for (uint32_t i=0; i < (_x * _y); i++) {
+        *(_buffer + (i << 2) + 0) = (uint8_t) (color >> 16) & 0xFF;
+        *(_buffer + (i << 2) + 1) = (uint8_t) (color >> 8) & 0xFF;
+        *(_buffer + (i << 2) + 2) = (uint8_t) (color & 0xFF);
+      }
+      break;
+    case 16:
+      for (uint32_t i=0; i < (_x * _y); i++) {
+        *((uint16_t*) (_buffer + (i << 1))) = (uint16_t) color;
+      }
+      break;
+    case 8:
+      for (uint32_t i=0; i < (_x * _y); i++) {
+        *(_buffer + i) = (uint8_t) color;
+      }
+      break;
+    case 1:   // NOTE: Assumes a pixel count of mod(8).
+      for (uint32_t i=0; i < ((_x * _y) >> 3); i++) {
+        *(_buffer + i) = (0 != color) ? 0xFF : 0x00;
+      }
+      break;
   }
   _lock(false);
 }
@@ -1246,7 +1273,7 @@ void Image::writeLine(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32
   const uint32_t dy = wrap_accounted_delta(y1, y0);
 	const uint32_t ystep = (y0 < y1) ? 1 : -1;
 
-  int32_t  err = (int32_t) dx >> 1;  // NOTE: Imposes width limit of 2,147,483,648 pixels.
+  int32_t err = (int32_t) (dx >> 1);  // NOTE: Imposes width limit of 2,147,483,648 pixels.
 
   while (x0++ <= x1) {
     if (steep) {

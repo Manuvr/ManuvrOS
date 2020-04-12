@@ -154,7 +154,8 @@ class Image {
     inline uint32_t        bytesUsed() {    return (_x * _y * (_bits_per_pixel() >> 3));  };
     inline ImgOrientation  orientation() {  return ((ImgOrientation) ((_imgflags & MANUVR_IMG_FLAG_ROTATION_MASK) >> 6));  };
 
-    inline bool  isFrameBuffer() {        return _img_flag(MANUVR_IMG_FLAG_IS_FRAMEBUFFER);   };
+    inline bool  isFrameBuffer() {   return _img_flag(MANUVR_IMG_FLAG_IS_FRAMEBUFFER);   };
+    inline bool  locked() {          return _img_flag(MANUVR_IMG_FLAG_BUFFER_LOCKED);    };
 
     /* BEGIN ADAFRUIT GFX SPLICE */
     void writeFillRect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color);
@@ -218,7 +219,6 @@ class Image {
     inline bool  _is_dirty() {        return _img_flag(MANUVR_IMG_FLAG_IS_FB_DIRTY);   };
     inline void  _is_dirty(bool l) {  _img_set_flag(MANUVR_IMG_FLAG_IS_FB_DIRTY, l);   };
     inline void  _is_framebuffer(bool l) {  _img_set_flag(MANUVR_IMG_FLAG_IS_FRAMEBUFFER, l);   };
-    inline bool  _locked() {          return _img_flag(MANUVR_IMG_FLAG_BUFFER_LOCKED); };
     inline void  _lock(bool l) {      _img_set_flag(MANUVR_IMG_FLAG_BUFFER_LOCKED, l); };
 
 
@@ -226,20 +226,29 @@ class Image {
     uint8_t  _imgflags = 0;
 
     /* BEGIN ADAFRUIT GFX SPLICE */
-    GFXfont* _gfxFont;        ///< Pointer to font
-    uint32_t _cursor_x;       ///< x location to start print()ing text
-    uint32_t _cursor_y;       ///< y location to start print()ing text
-    uint32_t _textcolor;      ///< 16-bit background color for print()
-    uint32_t _textbgcolor;    ///< 16-bit text color for print()
-    uint8_t  _textsize;       ///< Desired magnification of text to print()
-    bool     _wrap;           ///< TODO: MERGE INTO FLAGS.  If set, 'wrap' text at right edge of display
-    bool     _cp437;          ///< TODO: MERGE INTO FLAGS.  If set, use correct CP437 charset (default is off)
+    GFXfont* _gfxFont      = nullptr;        ///< Pointer to font
+    uint32_t _cursor_x     = 0;       ///< x location to start print()ing text
+    uint32_t _cursor_y     = 0;       ///< y location to start print()ing text
+    uint32_t _textcolor    = 0;       ///< 16-bit background color for print()
+    uint32_t _textbgcolor  = 0;       ///< 16-bit text color for print()
+    uint8_t  _textsize     = 0;       ///< Desired magnification of text to print()
+    bool     _wrap         = false;   ///< TODO: MERGE INTO FLAGS.  If set, 'wrap' text at right edge of display
+    bool     _cp437        = false;   ///< TODO: MERGE INTO FLAGS.  If set, use correct CP437 charset (default is off)
 
     void charBounds(char c, uint32_t* x, uint32_t* y, uint32_t* minx, uint32_t* miny, uint32_t* maxx, uint32_t* maxy);
     /* END ADAFRUIT GFX SPLICE */
 
     int8_t _buffer_allocator();
 
+    inline void _set_pixel_32(uint32_t x, uint32_t y, uint32_t c) {
+      *((uint32_t*) (_buffer + (_pixel_number(x, y) << 2))) = c;
+    };
+    inline void _set_pixel_16(uint32_t x, uint32_t y, uint32_t c) {
+      *((uint16_t*) (_buffer + (_pixel_number(x, y) << 1))) = (uint16_t) c;
+    };
+    inline void _set_pixel_8(uint32_t x, uint32_t y, uint32_t c) {
+      *(_buffer + _pixel_number(x, y)) = (uint8_t) c;
+    };
 
     /* Linearizes the X/y value in preparation for array indexing. */
     inline uint32_t _pixel_number(uint32_t x, uint32_t y) {
@@ -247,8 +256,8 @@ class Image {
     };
 
     /* Linearizes the X/y value accounting for color format. */
-    inline uint32_t _calculate_offset(uint32_t x, uint32_t y) {
-      return ((((y * _x) + x) * _bits_per_pixel()) >> 8);
+    inline uint32_t _pixel_offset(uint32_t x, uint32_t y) {
+      return ((((y * _x) + x) * _bits_per_pixel()) >> 3);
     };
 
     inline bool  _is_ours() {     return _img_flag(MANUVR_IMG_FLAG_BUFFER_OURS);     };
