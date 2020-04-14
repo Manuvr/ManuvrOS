@@ -377,6 +377,7 @@ class SX8634 : public I2CDevice {
     uint8_t  _registers[19];     // Register shadows
     uint8_t  _spm_shadow[128];   // SPM shadow
     ManuvrMsg _slider_msg;
+    I2CBusOp  _irq_register_read;
 
     /* Flag manipulation inlines */
     inline uint16_t _sx8634_flags() {                return _flags;            };

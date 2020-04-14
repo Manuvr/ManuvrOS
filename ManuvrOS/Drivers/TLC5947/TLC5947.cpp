@@ -154,7 +154,7 @@ int8_t TLC5947::io_op_callahead(BusOp* _op) {
 */
 int8_t TLC5947::io_op_callback(BusOp* _op) {
   SPIBusOp* op = (SPIBusOp*) _op;
-  int8_t return_value = SPI_CALLBACK_NOMINAL;
+  int8_t return_value = BUSOP_CALLBACK_NOMINAL;
 
   // There is zero chance this object will be a null pointer unless it was done on purpose.
   if (op->hasFault()) {
@@ -163,8 +163,8 @@ int8_t TLC5947::io_op_callback(BusOp* _op) {
     op->printDebug(&local_log);
     Kernel::log(&local_log);
 
-    // TODO: Should think carefully, and...   return_value = SPI_CALLBACK_RECYCLE;   // Re-run the job.
-    return SPI_CALLBACK_ERROR;
+    // TODO: Should think carefully, and...   return_value = BUSOP_CALLBACK_RECYCLE;   // Re-run the job.
+    return BUSOP_CALLBACK_ERROR;
   }
 
   /* Our first choice is: Did we just finish a WRITE or a READ? */

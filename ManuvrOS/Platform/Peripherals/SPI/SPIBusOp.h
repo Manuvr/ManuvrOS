@@ -45,10 +45,6 @@ This is the class that is used to keep bus operations on the SPI atomic.
   #define SPI_XFER_FLAG_PROFILE         0x80   // If set, this bus operation shall be profiled.
 
 
-  #define SPI_CALLBACK_ERROR    -1
-  #define SPI_CALLBACK_NOMINAL   0
-  #define SPI_CALLBACK_RECYCLE   1
-
 
 /*
 * This class represents a single transaction on the SPI bus.

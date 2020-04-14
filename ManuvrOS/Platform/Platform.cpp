@@ -542,7 +542,7 @@ int createThread(unsigned long* _thread_id, void* _something, ThreadFxnPtr _fxn,
     TaskHandle_t taskHandle;
     uint16_t _stack_sz = (nullptr == _thread_opts) ? 2048 : _thread_opts->stack_sz;
     const char* _name  = (const char*) (nullptr == _thread_opts) ? "_t" : _thread_opts->thread_name;
-    portBASE_TYPE ret = xTaskCreate((TaskFunction_t) _fxn, _name, _stack_sz, (void*)_args, 1, &taskHandle);
+    portBASE_TYPE ret = xTaskCreate((TaskFunction_t) _fxn, _name, _stack_sz, (void*)_args, (tskIDLE_PRIORITY + 1), &taskHandle);
     if (pdPASS == ret) {
       *_thread_id = (unsigned long) taskHandle;
       return 0;

@@ -34,6 +34,7 @@ extern "C" {
 #include "esp_intr_alloc.h"
 #include "esp_log.h"
 #include "esp_err.h"
+#include "esp_task_wdt.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/xtensa_api.h"
@@ -60,6 +61,7 @@ static const char* LOG_TAG = "SPIAdapter";
 static lldesc_t _ll_tx;
 static SPIBusOp* _threaded_op[2]  = {nullptr, nullptr};
 spi_device_handle_t spi_handle[2];
+TaskHandle_t static_spi_thread_id = 0;
 
 static void* IRAM_ATTR spi_worker_thread(void* arg) {
   while (!platform.nominalState()) {
@@ -68,7 +70,6 @@ static void* IRAM_ATTR spi_worker_thread(void* arg) {
   SPIAdapter* BUSPTR = (SPIAdapter*) arg;
   uint8_t anum = BUSPTR->adapterNumber();
   while (1) {
-
     if (nullptr != _threaded_op[anum]) {
       SPIBusOp* op = _threaded_op[anum];
       op->advance_operation(0, 0);
@@ -173,7 +174,11 @@ int8_t SPIAdapter::bus_init() {
 		ESP_LOGE(LOG_TAG, "spi_bus_add_device(): rc=%d", errRc);
   	return -2;
 	}
-	createThread(&_thread_id, nullptr, spi_worker_thread, (void*) this, nullptr);
+  ManuvrThreadOptions topts;
+  topts.thread_name = "SPI";
+  topts.stack_sz    = 2048;
+	createThread(&_thread_id, nullptr, spi_worker_thread, (void*) this, &topts);
+  static_spi_thread_id = (TaskHandle_t) _thread_id;
   return 0;
 }
 
@@ -234,13 +239,13 @@ XferFault SPIBusOp::begin() {
 	XferFault ret = XferFault::NO_REASON;
 	uint8_t anum = _bus->adapterNumber();
   //time_began    = micros();
-
   switch (anum) {
     case 0:
     case 1:
 			if (nullptr == _threaded_op[anum]) {
         if ((nullptr == callback) || (0 == callback->io_op_callahead(this))) {
           _threaded_op[anum] = this;
+          vTaskResume(static_spi_thread_id);
           ret = XferFault::NONE;
         }
         else {

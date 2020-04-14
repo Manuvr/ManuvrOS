@@ -373,11 +373,11 @@ int deleteThread(unsigned long*);
 int wakeThread(unsigned long);
 
 #if defined(__BUILD_HAS_PTHREADS)
-  inline int  yieldThread() {   return pthread_yield();   };
-  inline void suspendThread() {  sleep_millis(100); };   // TODO
+  inline int  yieldThread() {    return pthread_yield();   };
+  inline void suspendThread() {  sleep_millis(100);        };   // TODO
 #elif defined(__BUILD_HAS_FREERTOS)
-  inline int  yieldThread() {   taskYIELD();  return 0;   };
-  inline void suspendThread() {  sleep_millis(100); };   // TODO
+  inline int  yieldThread() {    taskYIELD();  return 0;   };
+  inline void suspendThread() {  vTaskSuspend(xTaskGetCurrentTaskHandle()); };
 #else
   inline int  yieldThread() {   return 0;   };
   inline void suspendThread() { };

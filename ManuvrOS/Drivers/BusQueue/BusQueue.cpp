@@ -107,8 +107,8 @@ void BusOp::printBusOp(const char* print_name, BusOp* op, StringBuilder* output)
   //  output->concatf("\t completed (uS)   %u\n",   (unsigned long) time_ended - time_began);
   //}
 
-  output->concatf("\t buf *(%p): (%u bytes)\n", op->buf, op->buf_len);
   if (op->buf_len > 0) {
+    output->concatf("\t buf *(%p): (%u bytes)\n", op->buf, op->buf_len);
     StringBuilder::printBuffer(output, op->buf, op->buf_len, "\t ");
   }
 }

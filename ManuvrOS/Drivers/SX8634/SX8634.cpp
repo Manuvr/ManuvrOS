@@ -120,13 +120,9 @@ int8_t SX8634::read_irq_registers() {
   if (!_sx8634_flag(SX8634_FLAG_IRQ_INHIBIT)) {
     // If IRQ service is not inhibited, read all the IRQ-related
     //   registers in one shot.
-    I2CBusOp* nu = _bus->new_op(BusOpcode::RX, this);
-    if (nullptr != nu) {
-      nu->dev_addr = _opts.i2c_addr;
-      nu->sub_addr = 0x00;
-      nu->buf      = _registers;
-      nu->buf_len  = 10;
-      _bus->queue_io_job(nu);
+    _irq_register_read.device   = _bus;
+    if (_irq_register_read.isIdle()) {
+      _bus->queue_io_job(&_irq_register_read);
       return 0;
     }
   }
@@ -152,6 +148,13 @@ SX8634::SX8634(const SX8634Opts* o) : I2CDevice(o->i2c_addr), _opts{o} {
   _clear_registers();
   _slider_msg.repurpose(MANUVR_MSG_USER_SLIDER_VALUE);
   _slider_msg.incRefs();
+  _irq_register_read.set_opcode(BusOpcode::RX);
+  _irq_register_read.shouldReap(false);
+  _irq_register_read.callback = this;
+  _irq_register_read.dev_addr = _opts.i2c_addr;
+  _irq_register_read.sub_addr = 0x00;
+  _irq_register_read.buf      = _registers;
+  _irq_register_read.buf_len  = 10;
   _ll_pin_init();
 }
 
@@ -176,6 +179,7 @@ int8_t SX8634::io_op_callahead(BusOp* _op) {
 
 int8_t SX8634::io_op_callback(BusOp* _op) {
   I2CBusOp* completed = (I2CBusOp*) _op;
+  int8_t ret = BUSOP_CALLBACK_NOMINAL;
   #if defined(CONFIG_SX8634_DEBUG)
     StringBuilder output;
   #endif
@@ -439,6 +443,12 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
               _sx8634_clear_flag(SX8634_FLAG_INITIAL_IRQ_READ);
             }
           }
+          // If the IRQ pin is still low, recycle this bus op.
+          if (_opts.haveIRQPin() && !_sx8634_flag(SX8634_FLAG_IRQ_INHIBIT)) {
+            if (!readPin(_opts.irq_pin)) {
+              ret = BUSOP_CALLBACK_RECYCLE;
+            }
+          }
           break;
 
         case SX8634_REG_CAP_STAT_MSB:
@@ -491,7 +501,7 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
   #if defined(CONFIG_SX8634_DEBUG)
     if (output.length() > 0) Kernel::log(&output);
   #endif
-  return 0;
+  return ret;
 }
 
 

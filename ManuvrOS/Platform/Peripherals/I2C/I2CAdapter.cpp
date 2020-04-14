@@ -58,11 +58,9 @@ const char I2CAdapter::_ping_state_chr[4] = {' ', '.', '*', ' '};
 
 I2CAdapter::I2CAdapter(const I2CAdapterOptions* o) : EventReceiver("I2CAdapter"), BusAdapter(o->adapter, I2CADAPTER_MAX_QUEUE_DEPTH), _bus_opts(o) {
   // Some platforms (linux) will ignore pin-assignment values completely.
-
   _er_clear_flag(I2C_BUS_FLAG_BUS_ERROR | I2C_BUS_FLAG_BUS_ONLINE);
   _er_clear_flag(I2C_BUS_FLAG_PING_RUN  | I2C_BUS_FLAG_PINGING);
 
-  // Mark all of our preallocated SPI jobs as "No Reap" and pass them into the prealloc queue.
   for (uint8_t i = 0; i < I2CADAPTER_PREALLOC_COUNT; i++) {
     __prealloc_pool[i].wipe();
     preallocated.insert(&__prealloc_pool[i]);
@@ -279,7 +277,7 @@ int8_t I2CAdapter::queue_io_job(BusOp* op) {
   else {
     // Bus is idle. Put this work item in the active slot and start the bus operations...
     current_job = nu;
-    if ((adapterNumber() >= 0) && busOnline()) {
+    if (busOnline()) {
       if (XferFault::NONE == nu->begin()) {
         #if defined(__BUILD_HAS_THREADS)
         if (_thread_id) wakeThread(_thread_id);
@@ -359,8 +357,27 @@ int8_t I2CAdapter::advance_work_queue() {
           //   be at liberty to clean the operation up.
           // Note that we forgo a separate callback queue, and are therefore unable to
           //   pipeline I/O and processing. They must happen sequentially.
-          current_job->execCB();
-          reclaim_queue_item(current_job);   // Delete the queued work AND its buffer.
+
+
+          if (nullptr != current_job->callback) {
+            int8_t cb_code = current_job->execCB();
+            switch (cb_code) {
+              case BUSOP_CALLBACK_RECYCLE:
+                current_job->set_state(XferState::IDLE);
+                queue_io_job(current_job);
+                break;
+              case BUSOP_CALLBACK_ERROR:
+              case BUSOP_CALLBACK_NOMINAL:
+              default:
+                // No harm in this yet, since this fxn respects preforms and prealloc.
+                reclaim_queue_item(current_job);
+              break;
+            }
+          }
+          else {
+            // We are the responsible party.
+            reclaim_queue_item(current_job);
+          }
           current_job = nullptr;
           break;
       }

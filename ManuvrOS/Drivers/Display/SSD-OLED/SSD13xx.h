@@ -40,10 +40,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ****************************************************/
 
-
 #include <Types/Image.h>
 #include <Platform/Peripherals/SPI/SPIAdapter.h>
 #include <Platform/Peripherals/SPI/SPIBusOp.h>
+
+#ifndef __SSD13XX_DRIVER_H_
+#define __SSD13XX_DRIVER_H_
 
 // Timing Delays
 #define SSD13XX_DELAYS_HWFILL     (3)
@@ -161,3 +163,5 @@ class SSD13xx : public Image, public BusOpCallback {
       return _send_command(commandByte, nullptr, 0);
     };
 };
+
+#endif   // __SSD13XX_DRIVER_H_

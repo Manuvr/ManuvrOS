@@ -74,6 +74,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #define MANUVR_IMG_FLAG_BUFFER_LOCKED   0x02  // Buffer should not be modified when set.
 #define MANUVR_IMG_FLAG_IS_FRAMEBUFFER  0x04  // This class holds the framebuffer for some piece of hardware.
 #define MANUVR_IMG_FLAG_IS_FB_DIRTY     0x08  // This image is dirty for the purposes of rendering.
+#define MANUVR_IMG_FLAG_IS_TEXT_WRAP    0x10  // If set, 'wrap' text at right edge of display
+#define MANUVR_IMG_FLAG_IS_STRICT_CP437 0x20  // If set, use correct CP437 charset (default is off)
+
 
 #define MANUVR_IMG_FLAG_ROTATION_MASK   0xC0  // The bits that hold our orientation value.
 
@@ -140,10 +143,11 @@ class Image {
     int8_t deserialize(uint8_t*, uint32_t);
 
     bool isColor();
+    uint32_t convertColor(uint32_t color, ImgBufferFormat);
 
-    uint32_t getColor(uint32_t x, uint32_t y);
-    bool     setColor(uint32_t x, uint32_t y, uint32_t);
-    bool     setColor(uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b);
+    uint32_t getPixel(uint32_t x, uint32_t y);
+    bool     setPixel(uint32_t x, uint32_t y, uint32_t);
+    bool     setPixel(uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b);
 
     inline uint32_t        x() {            return _x;                     };
     inline uint32_t        y() {            return _y;                     };
@@ -158,40 +162,27 @@ class Image {
     inline bool  locked() {          return _img_flag(MANUVR_IMG_FLAG_BUFFER_LOCKED);    };
 
     /* BEGIN ADAFRUIT GFX SPLICE */
-    void writeFillRect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color);
-    void writeFastHLine(uint32_t x, uint32_t y, uint32_t w, uint32_t color);
-    void writeFastVLine(uint32_t x, uint32_t y, uint32_t h, uint32_t color);
-    void writeLine(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32_t color);
+    void drawFastHLine(uint32_t x, uint32_t y, uint32_t w, uint32_t color);
+    void drawFastVLine(uint32_t x, uint32_t y, uint32_t h, uint32_t color);
+    void drawLine(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32_t color);
     void fillRect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color);
-    void fillScreen(uint32_t color);
-
+    void drawRect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color);
+    void drawRoundRect(uint32_t x0, uint32_t y0, uint32_t w,  uint32_t h, uint32_t radius, uint32_t color);
+    void fillRoundRect(uint32_t x0, uint32_t y0, uint32_t w,  uint32_t h,  uint32_t radius, uint32_t color);
+    void drawTriangle(uint32_t x0,  uint32_t y0, uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2, uint32_t color);
+    void fillTriangle(uint32_t x0,  uint32_t y0, uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2, uint32_t color);
+    void drawCircle(uint32_t x0, uint32_t y0, uint32_t r, uint32_t color);
+    void drawCircleHelper(uint32_t x0, uint32_t y0, uint32_t r, uint8_t quadrants, uint32_t color);
+    void fillCircle(uint32_t x0, uint32_t y0, uint32_t r, uint32_t color);
+    void fillCircleHelper(uint32_t x0, uint32_t y0, uint32_t r, uint8_t quadrants, uint32_t delta, uint32_t color);
     //void drawElipse(uint32_t x0, uint32_t y0, uint32_t major_axis, uint32_t minor_axis, float rotation, uint32_t color);
-    //void drawCircle(uint32_t x0, uint32_t y0, uint32_t r, uint32_t color);
-    //void drawCircleHelper(uint32_t x0, uint32_t y0, uint32_t r, uint8_t cornername, uint32_t color);
-    //void fillCircle(uint32_t x0, uint32_t y0, uint32_t r, uint32_t color);
-    //void fillCircleHelper(uint32_t x0, uint32_t y0, uint32_t r, uint32_t cornername, uint32_t delta, uint32_t color);
-    //void drawTriangle(uint32_t x0,  uint32_t y0, uint32_tt x1, uint32_t y1, uint32_t x2,     uint32_t y2, uint32_t color);
-    //void fillTriangle(uint32_t x0,  uint32_t y0, uint32_tt x1, uint32_t y1, uint32_t x2,     uint32_t y2, uint32_t color);
-    //void drawRoundRect(uint32_t x0, uint32_t y0, uint32_tt w,  uint32_t h,  uint32_t radius, uint32_t color);
-    //void fillRoundRect(uint32_t x0, uint32_t y0, uint32_tt w,  uint32_t h,  uint32_t radius, uint32_t color);
-
-    //drawBitmap(int16_t x, int16_t y, const uint8_t bitmap[], int16_t w, int16_t h, uint16_t color),
-    //drawBitmap(int16_t x, int16_t y, const uint8_t bitmap[], int16_t w, int16_t h, uint16_t color, uint16_t bg),
-    //drawBitmap(int16_t x, int16_t y, uint8_t *bitmap, int16_t w, int16_t h, uint16_t color),
-    //drawBitmap(int16_t x, int16_t y, uint8_t *bitmap, int16_t w, int16_t h, uint16_t color, uint16_t bg),
-    //drawXBitmap(int16_t x, int16_t y, const uint8_t bitmap[], int16_t w, int16_t h, uint16_t color),
-    //drawGrayscaleBitmap(int16_t x, int16_t y, const uint8_t bitmap[], int16_t w, int16_t h),
-    //drawGrayscaleBitmap(int16_t x, int16_t y, uint8_t *bitmap, int16_t w, int16_t h),
-    //drawGrayscaleBitmap(int16_t x, int16_t y, const uint8_t bitmap[], const uint8_t mask[], int16_t w, int16_t h),
-    //drawGrayscaleBitmap(int16_t x, int16_t y, uint8_t *bitmap, uint8_t *mask, int16_t w, int16_t h),
-    //drawRGBBitmap(int16_t x, int16_t y, const uint16_t bitmap[], int16_t w, int16_t h),
-    //drawRGBBitmap(int16_t x, int16_t y, uint16_t *bitmap, int16_t w, int16_t h),
-    //drawRGBBitmap(int16_t x, int16_t y, const uint16_t bitmap[], const uint8_t mask[], int16_t w, int16_t h),
-    //drawRGBBitmap(int16_t x, int16_t y, uint16_t *bitmap, uint8_t *mask, int16_t w, int16_t h),
-    //drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color, uint16_t bg, uint8_t size_x, uint8_t size_y),
+    void fill(uint32_t color);
+    void drawBitmap(uint32_t x, uint32_t y, const uint8_t* bitmap, uint32_t w, uint32_t h);
 
     void drawChar(uint32_t x, uint32_t y, unsigned char c, uint32_t color, uint32_t bg, uint8_t size);
     void writeChar(uint8_t c);
+    void writeString(StringBuilder*);
+    void writeString(const char*);
     void setCursor(uint32_t x, uint32_t y);
     void getTextBounds(const char *string, uint32_t x, uint32_t y, uint32_t* x1, uint32_t* y1, uint32_t* w, uint32_t* h);
     void getTextBounds(const uint8_t* s, uint32_t x, uint32_t y, uint32_t* x1, uint32_t* y1, uint32_t* w, uint32_t* h);
@@ -201,8 +192,12 @@ class Image {
     void setTextColor(uint32_t c);
 
     inline void     setFont(const GFXfont* f) {   _gfxFont = (GFXfont*) f;    };
-    inline void     setTextWrap(bool w) {         _wrap = w;                  };
-    inline void     cp437(bool x) {               _cp437 = x;                 };
+
+    inline void  textWrap(bool x) {  _img_set_flag(MANUVR_IMG_FLAG_IS_TEXT_WRAP, x);      };
+    inline bool  textWrap() {        return _img_flag(MANUVR_IMG_FLAG_IS_TEXT_WRAP);      };
+    inline void  cp437(bool x) {     _img_set_flag(MANUVR_IMG_FLAG_IS_STRICT_CP437, x);   };
+    inline bool  cp437() {           return _img_flag(MANUVR_IMG_FLAG_IS_STRICT_CP437);   };
+
     inline uint32_t getCursorX() const {          return _cursor_x;           };
     inline uint32_t getCursorY() const {          return _cursor_y;           };
     /* END ADAFRUIT GFX SPLICE */
@@ -217,23 +212,21 @@ class Image {
     inline uint8_t _bits_per_pixel() {   return _bits_per_pixel(_buf_fmt);    };
 
     inline bool  _is_dirty() {        return _img_flag(MANUVR_IMG_FLAG_IS_FB_DIRTY);   };
-    inline void  _is_dirty(bool l) {  _img_set_flag(MANUVR_IMG_FLAG_IS_FB_DIRTY, l);   };
-    inline void  _is_framebuffer(bool l) {  _img_set_flag(MANUVR_IMG_FLAG_IS_FRAMEBUFFER, l);   };
-    inline void  _lock(bool l) {      _img_set_flag(MANUVR_IMG_FLAG_BUFFER_LOCKED, l); };
+    inline void  _is_dirty(bool x) {  _img_set_flag(MANUVR_IMG_FLAG_IS_FB_DIRTY, x);   };
+    inline void  _is_framebuffer(bool x) {  _img_set_flag(MANUVR_IMG_FLAG_IS_FRAMEBUFFER, x);   };
+    inline void  _lock(bool x) {      _img_set_flag(MANUVR_IMG_FLAG_BUFFER_LOCKED, x); };
 
 
   private:
     uint8_t  _imgflags = 0;
 
     /* BEGIN ADAFRUIT GFX SPLICE */
-    GFXfont* _gfxFont      = nullptr;        ///< Pointer to font
-    uint32_t _cursor_x     = 0;       ///< x location to start print()ing text
-    uint32_t _cursor_y     = 0;       ///< y location to start print()ing text
-    uint32_t _textcolor    = 0;       ///< 16-bit background color for print()
-    uint32_t _textbgcolor  = 0;       ///< 16-bit text color for print()
-    uint8_t  _textsize     = 0;       ///< Desired magnification of text to print()
-    bool     _wrap         = false;   ///< TODO: MERGE INTO FLAGS.  If set, 'wrap' text at right edge of display
-    bool     _cp437        = false;   ///< TODO: MERGE INTO FLAGS.  If set, use correct CP437 charset (default is off)
+    uint8_t  _textsize     = 0;       // Desired magnification of text to print()
+    GFXfont* _gfxFont      = nullptr; // Pointer to font
+    uint32_t _cursor_x     = 0;       // x location to start print()ing text
+    uint32_t _cursor_y     = 0;       // y location to start print()ing text
+    uint32_t _textcolor    = 0;       // 16-bit background color for print()
+    uint32_t _textbgcolor  = 0;       // 16-bit text color for print()
 
     void charBounds(char c, uint32_t* x, uint32_t* y, uint32_t* minx, uint32_t* miny, uint32_t* maxx, uint32_t* maxy);
     /* END ADAFRUIT GFX SPLICE */

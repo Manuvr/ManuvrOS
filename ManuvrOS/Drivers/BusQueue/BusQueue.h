@@ -31,6 +31,11 @@ TODO: BusOp lifecycle....
 #include <Platform/Platform.h>
 
 
+#define BUSOP_CALLBACK_ERROR    -1
+#define BUSOP_CALLBACK_NOMINAL   0
+#define BUSOP_CALLBACK_RECYCLE   1
+
+
 /*
 * These are possible transfer states.
 */
@@ -240,7 +245,7 @@ class BusOp {
 template <class T> class BusAdapter : public BusOpCallback {
   public:
     inline T* currentJob() {  return current_job;  };
-    inline const uint8_t adapterNumber() {    return ADAPTER_NUM;  };
+    inline uint8_t adapterNumber() {    return ADAPTER_NUM;  };
 
     /**
     * Return a vacant BusOp to the caller, allocating if necessary.
@@ -305,7 +310,7 @@ template <class T> class BusAdapter : public BusOpCallback {
     PriorityQueue<T*> preallocated; // TODO: Convert to ring buffer. This is the whole reason you embarked on this madness.
 
 
-    BusAdapter(uint8_t anum, uint16_t max) : ADAPTER_NUM(anum), MAX_Q_DEPTH(max) {};
+    BusAdapter(uint8_t anum, uint8_t maxq) : ADAPTER_NUM(anum), MAX_Q_DEPTH(maxq) {};
 
     /* Mandatory overrides... */
     virtual int8_t advance_work_queue() =0;  // The nature of the bus dictates this implementation.
@@ -410,12 +415,12 @@ template <class T> class BusAdapter : public BusOpCallback {
     * @return an BusOp to be used. Only NULL if out-of-mem.
     */
     T* new_op() {
-      T* return_value = preallocated.dequeue();
-      if (nullptr == return_value) {
+      T* ret = preallocated.dequeue();
+      if (nullptr == ret) {
         _prealloc_misses++;
-        return_value = new T();
+        ret = new T();
       }
-      return return_value;
+      return ret;
     };
 };
 

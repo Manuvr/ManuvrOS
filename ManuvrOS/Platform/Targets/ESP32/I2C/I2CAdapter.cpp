@@ -2,11 +2,14 @@
 
 #if defined(MANUVR_SUPPORT_I2C)
 #include "driver/i2c.h"
+#include "esp_task_wdt.h"
 
 #define ACK_CHECK_EN   0x01     /*!< I2C master will check ack from slave*/
 #define ACK_CHECK_DIS  0x00     /*!< I2C master will not check ack from slave */
 
 static volatile I2CBusOp* _threaded_op[2] = {nullptr, nullptr};
+
+TaskHandle_t static_i2c_thread_id = 0;
 
 static void* IRAM_ATTR i2c_worker_thread(void* arg) {
   while (!platform.nominalState()) {
@@ -53,7 +56,11 @@ int8_t I2CAdapter::bus_init() {
     case 1:
       if (ESP_OK == i2c_param_config(((0 == a_id) ? I2C_NUM_0 : I2C_NUM_1), &conf)) {
         if (ESP_OK == i2c_driver_install(((0 == a_id) ? I2C_NUM_0 : I2C_NUM_1), conf.mode, 0, 0, 0)) {
-          createThread(&_thread_id, nullptr, i2c_worker_thread, (void*) this, nullptr);
+          ManuvrThreadOptions topts;
+          topts.thread_name = "I2C";
+          topts.stack_sz    = 2048;
+          createThread(&_thread_id, nullptr, i2c_worker_thread, (void*) this, &topts);
+          static_i2c_thread_id = (TaskHandle_t) _thread_id;
           busOnline(true);
         }
       }
@@ -105,6 +112,7 @@ XferFault I2CBusOp::begin() {
           if ((nullptr == callback) || (0 == callback->io_op_callahead(this))) {
             set_state(XferState::INITIATE);
             _threaded_op[device->adapterNumber()] = this;
+            vTaskResume(static_i2c_thread_id);
             return XferFault::NONE;
           }
           else {

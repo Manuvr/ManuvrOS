@@ -132,7 +132,7 @@ int8_t SSD13xx::io_op_callahead(BusOp* _op) {
 *   swamp the bus queue. Display will enable at the end of the init chain.
 *
 * @param  _op  The bus operation that was completed.
-* @return SPI_CALLBACK_NOMINAL on success, or appropriate error code.
+* @return BUSOP_CALLBACK_NOMINAL on success, or appropriate error code.
 */
 int8_t SSD13xx::io_op_callback(BusOp* _op) {
   SPIBusOp* op = (SPIBusOp*) _op;
@@ -140,7 +140,7 @@ int8_t SSD13xx::io_op_callback(BusOp* _op) {
   // There is zero chance this object will be a null pointer unless it was done on purpose.
   if (op->hasFault()) {
     Kernel::log("SSD13xx::io_op_callback() bus op failed.\n");
-    return SPI_CALLBACK_ERROR;
+    return BUSOP_CALLBACK_ERROR;
   }
   if (op->transferParamLength() == 0) {  // Was this a frame refresh?
     _lock(false);
@@ -225,7 +225,7 @@ int8_t SSD13xx::io_op_callback(BusOp* _op) {
     }
   }
 
-  return SPI_CALLBACK_NOMINAL;
+  return BUSOP_CALLBACK_NOMINAL;
 }
 
 

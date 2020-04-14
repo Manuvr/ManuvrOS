@@ -38,10 +38,12 @@ limitations under the License.
   #include "DataStructures/PriorityQueue.h"
   #include "DataStructures/ElementPool.h"
   #include "DataStructures/StringBuilder.h"
+
   #include "EventReceiver.h"
   #ifdef MANUVR_CONSOLE_SUPPORT
     #include "XenoSession/Console/ConsoleInterface.h"
   #endif
+  class StopWatch;
 
   /*
   * These state flags are hosted by the EventReceiver. This may change in the future.
@@ -191,7 +193,7 @@ limitations under the License.
       PriorityQueue<ManuvrMsg*>        schedules;     // These are Msgs scheduled to be run.
 
       PriorityQueue<BufferPipe*>       _pipe_io_pend; // Pending BufferPipe transfers that wish to be async.
-      PriorityQueue<TaskProfilerData*> event_costs;   // Message code is the priority. Calculates average cost in uS.
+      PriorityQueue<StopWatch*> event_costs;   // Message code is the priority. Calculates average cost in uS.
       PriorityQueue<EventReceiver*>    subscribers;   // Our manifest of EventReceivers we service.
       std::map<uint16_t, PriorityQueue<listenerFxnPtr>*> ca_listeners;  // Call-ahead listeners.
       std::map<uint16_t, PriorityQueue<listenerFxnPtr>*> cb_listeners;  // Call-back listeners.

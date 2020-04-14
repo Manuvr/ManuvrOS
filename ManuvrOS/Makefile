@@ -25,6 +25,7 @@ CPP_SRCS  += DataStructures/Quaternion.cpp
 CPP_SRCS  += DataStructures/InertialMeasurement.cpp
 CPP_SRCS  += DataStructures/uuid.cpp
 CPP_SRCS  += DataStructures/Argument.cpp
+CPP_SRCS  += DataStructures/StopWatch.cpp
 
 # Types and encodings
 SOURCES_CBOR  = Types/cbor-cpp/encoder.cpp
@@ -42,7 +43,6 @@ CPP_SRCS  += Types/Avro/Avro.cpp
 CPP_SRCS  += EnumeratedTypeCodes.cpp
 CPP_SRCS  += Kernel.cpp
 CPP_SRCS  += EventReceiver.cpp
-CPP_SRCS  += TaskProfilerData.cpp
 CPP_SRCS  += Utilities.cpp
 CPP_SRCS  += ManuvrMsg/ManuvrMsg.cpp
 

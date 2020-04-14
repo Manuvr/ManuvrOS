@@ -288,7 +288,7 @@ void SPIBusOp::wipe() {
 *
 * @param  StringBuilder* The buffer into which this fxn should write its output.
 */
-void SPIBusOp::printDebug(StringBuilder *output) {
+void SPIBusOp::printDebug(StringBuilder* output) {
   BusOp::printBusOp("SPIBusOp", this, output);
   output->concatf("\t param_len         %d\n", _param_len);
   output->concatf("\t cs_pin            %u\n", _cs_pin);

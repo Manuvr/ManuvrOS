@@ -39,6 +39,7 @@ This class forms the foundation of internal events. It contains the identity of 
   #include <Types/Image.h>
 #endif   // CONFIG_MANUVR_IMG_SUPPORT
 
+class StopWatch;
 
 /*
 * These are flag definitions that might apply to an instance of a Msg.
@@ -400,7 +401,7 @@ class ManuvrMsg {
     uint32_t       _sched_ttw          = 0;        // How much longer until the schedule fires?
 
     #if defined(MANUVR_EVENT_PROFILER)
-    TaskProfilerData* prof_data = nullptr;  // If this schedule is being profiled, the ref will be here.
+    StopWatch* prof_data = nullptr;  // If this schedule is being profiled, the ref will be here.
     #endif
 
     int8_t getArgAs(uint8_t idx, void *dat);

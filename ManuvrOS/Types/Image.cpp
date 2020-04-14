@@ -7,6 +7,8 @@ Certain drawing features of this class were lifted from Adafruit's GFX library.
   Rather than call out which specific functions, or isolate translation units
   for legal reasons, this class simply inherrits their license and attribution
   unless I rework it. License reproduced in the comment block below this one.
+I've converted the entire API to 32-bit coordinates and extended the color
+  capabilities.
        ---J. Ian Lindsay 2019.06.14
 
                   Top
@@ -19,7 +21,6 @@ f  | y
 t  | |
    | V
    |
-
 
 */
 
@@ -519,7 +520,6 @@ bool Image::reallocate() {
 }
 
 
-
 /**
 *
 */
@@ -680,9 +680,70 @@ bool Image::isColor() {
 
 
 /**
+* Converts the color specified in the argument to the best-representation in
+*   the buffer's native format.
+* Color to grey conversion uses 30/59/11 scalar set with results averaged together.
+*/
+uint32_t Image::convertColor(uint32_t c, ImgBufferFormat src_fmt) {
+  uint32_t ret = 0;
+  uint8_t r = 0, g = 0, b = 0;
+  uint8_t bits_per_src_channel;
+  bool    src_is_color = true;
+  if (src_fmt == _buf_fmt) {
+    return c;
+  }
+  switch (src_fmt) {
+    case ImgBufferFormat::GREY_24:           // 24-bit greyscale   TODO: Wrong. Has to be.
+      src_is_color = false;
+    case ImgBufferFormat::R8_G8_B8:          // 24-bit color
+      bits_per_src_channel = 8;
+      r = (uint8_t) (c >> 16) & 0xFF;
+      g = (uint8_t) (c >> 8) & 0xFF;
+      b = (uint8_t) (c & 0xFF);
+      break;
+    case ImgBufferFormat::GREY_16:           // 16-bit greyscale   TODO: Wrong. Has to be.
+      src_is_color = false;
+    case ImgBufferFormat::R5_G6_B5:          // 16-bit color
+      bits_per_src_channel = 6;
+      r = (uint8_t) (c >> 11) & 0x1F;
+      g = (uint8_t) (c >> 5) & 0x3F;
+      b = (uint8_t) (c & 0x1F);
+      break;
+    case ImgBufferFormat::GREY_8:            // 8-bit greyscale    TODO: Wrong. Has to be.
+      src_is_color = false;
+    case ImgBufferFormat::R3_G3_B2:          // 8-bit color
+      bits_per_src_channel = 3;
+      r = (uint8_t) (c >> 5) & 0x07;
+      g = (uint8_t) (c >> 2) & 0x07;
+      b = (uint8_t) (c & 0x03);
+      break;
+    case ImgBufferFormat::MONOCHROME:        // Monochrome   TODO: Unsupported.
+      src_is_color = false;
+      bits_per_src_channel = 1;
+      // TODO:
+      break;
+    case ImgBufferFormat::UNALLOCATED:       // Buffer unallocated
+    default:
+      return ret;
+  }
+
+  if (src_is_color && !isColor()) {
+    // Conversion from color to grey or monochrome.
+    uint8_t bpp = _bits_per_pixel();
+    float avg = ((r * 0.3) + (g * 0.59) + (b * 0.11)) / 3.0;
+    float lum = avg / ((1 << bits_per_src_channel) - 1);
+    ret = ((1 << bpp) - 1) * lum;
+  }
+  else {
+  }
+  return ret;
+}
+
+
+/**
 *
 */
-uint32_t Image::getColor(uint32_t x, uint32_t y) {
+uint32_t Image::getPixel(uint32_t x, uint32_t y) {
   uint32_t ret = 0;
   uint32_t sz = bytesUsed();
   uint32_t offset = _pixel_offset(x, y);
@@ -716,24 +777,20 @@ uint32_t Image::getColor(uint32_t x, uint32_t y) {
 /**
 * Takes a color in 32-bit. Squeezes it into the buffer's format, discarding low bits as appropriate.
 */
-bool Image::setColor(uint32_t x, uint32_t y, uint32_t c) {
-  uint8_t r = (uint8_t) (c >> 16) & 0xFF;
-  uint8_t g = (uint8_t) (c >> 8) & 0xFF;
-  uint8_t b = (uint8_t) (c & 0xFF);
+bool Image::setPixel(uint32_t x, uint32_t y, uint32_t c) {
   switch (_buf_fmt) {
     case ImgBufferFormat::R3_G3_B2:          // 8-bit color
     case ImgBufferFormat::GREY_8:            // 8-bit greyscale
-      r = r >> 2;  // NOTE:
-      g = g >> 3;  // NOTE: constants assume no breaks below.
-      b = b >> 3;  // NOTE:
+      _set_pixel_8(x, y, c);
+      break;
     case ImgBufferFormat::R5_G6_B5:          // 16-bit color
     case ImgBufferFormat::GREY_16:           // 16-bit greyscale
-      r = r >> 3;
-      g = g >> 2;
-      b = b >> 3;
+      _set_pixel_16(x, y, c);
+      break;
     case ImgBufferFormat::R8_G8_B8:          // 24-bit color
     case ImgBufferFormat::GREY_24:           // 24-bit greyscale
-      return setColor(x, y, r, g, b);
+      _set_pixel_32(x, y, c);
+      break;
     case ImgBufferFormat::MONOCHROME:        // Monochrome   TODO: Unsupported.
     case ImgBufferFormat::UNALLOCATED:       // Buffer unallocated
     default:
@@ -746,7 +803,7 @@ bool Image::setColor(uint32_t x, uint32_t y, uint32_t c) {
 /**
 * Takes a color in discrete RGB values. Squeezes it into the buffer's format, discarding low bits as appropriate.
 */
-bool Image::setColor(uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b) {
+bool Image::setPixel(uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b) {
   uint32_t sz = bytesUsed();
   uint32_t offset = _pixel_offset(x, y);
   if (offset < sz) {
@@ -802,7 +859,7 @@ void Image::drawChar(uint32_t x, uint32_t y, unsigned char c, uint32_t color, ui
            ((int32_t)(y + 8 * size - 1) < 0))   // Clip top
             return;
 
-        if(!_cp437 && (c >= 176)) c++; // Handle 'classic' charset behavior
+        if(!cp437() && (c >= 176)) c++; // Handle 'classic' charset behavior
 
         _lock(true);
         for (int8_t i=0; i<5; i++ ) { // Char bitmap = 5 columns
@@ -810,51 +867,47 @@ void Image::drawChar(uint32_t x, uint32_t y, unsigned char c, uint32_t color, ui
           for (int8_t j=0; j<8; j++, line >>= 1) {
             if(line & 1) {
               if(size == 1) {
-                setColor(x+i, y+j, color);
+                setPixel(x+i, y+j, color);
               }
               else {
-                writeFillRect(x+i*size, y+j*size, size, size, color);
+                fillRect(x+i*size, y+j*size, size, size, color);
               }
             }
             else if(bg != color) {
               if (size == 1) {
-                setColor(x+i, y+j, bg);
+                setPixel(x+i, y+j, bg);
               }
               else {
-                writeFillRect(x+i*size, y+j*size, size, size, bg);
+                fillRect(x+i*size, y+j*size, size, size, bg);
               }
             }
           }
         }
         if (bg != color) { // If opaque, draw vertical line for last column
-            if(size == 1) writeFastVLine(x+5, y, 8, bg);
-            else          writeFillRect(x+5*size, y, size, 8*size, bg);
+            if(size == 1) drawFastVLine(x+5, y, 8, bg);
+            else          fillRect(x+5*size, y, size, 8*size, bg);
         }
         _lock(false);
-
     }
     else { // Custom font
         // Character is assumed previously filtered by write() to eliminate
         // newlines, returns, non-printable characters, etc.  Calling
         // drawChar() directly with 'bad' characters of font may cause mayhem!
-
         c -= (uint8_t) _gfxFont->first;
         GFXglyph* glyph  = &(((GFXglyph*) _gfxFont->glyph))[c];
         uint8_t*  bitmap = (uint8_t*) _gfxFont->bitmap;
-
         uint16_t bo = glyph->bitmapOffset;
-        uint8_t  w  = glyph->width,
-                 h  = glyph->height;
-        int8_t   xo = glyph->xOffset,
-                 yo = glyph->yOffset;
+        uint8_t  w  = glyph->width;
+        uint8_t  h  = glyph->height;
+        int8_t   xo = glyph->xOffset;
+        int8_t   yo = glyph->yOffset;
         uint8_t  xx, yy, bits = 0, bit = 0;
         int16_t  xo16 = 0, yo16 = 0;
 
-        if(size > 1) {
-            xo16 = xo;
-            yo16 = yo;
+        if (size > 1) {
+          xo16 = xo;
+          yo16 = yo;
         }
-
         // Todo: Add character clipping here
 
         // NOTE: THERE IS NO 'BACKGROUND' COLOR OPTION ON CUSTOM FONTS.
@@ -881,10 +934,10 @@ void Image::drawChar(uint32_t x, uint32_t y, unsigned char c, uint32_t color, ui
         }
         if (bits & 0x80) {
           if (size == 1) {
-            setColor(x+xo+xx, y+yo+yy, color);
+            setPixel(x+xo+xx, y+yo+yy, color);
           }
           else {
-            writeFillRect(x+(xo16+xx)*size, y+(yo16+yy)*size, size, size, color);
+            fillRect(x+(xo16+xx)*size, y+(yo16+yy)*size, size, size, color);
           }
         }
         bits <<= 1;
@@ -906,14 +959,13 @@ void Image::writeChar(uint8_t c) {
       _cursor_y += _textsize * 8;          // advance y one line
     }
     else if (c != '\r') {                   // Ignore carriage returns
-      if (_wrap && ((_cursor_x + _textsize * 6) > _x)) { // Off right?
+      if (textWrap() && ((_cursor_x + _textsize * 6) > _x)) { // Off right?
         _cursor_x  = 0;                 // Reset x to zero,
         _cursor_y += _textsize * 8;      // advance y one line
       }
       drawChar(_cursor_x, _cursor_y, c, _textcolor, _textbgcolor, _textsize);
       _cursor_x += _textsize * 6;          // Advance x one char
     }
-
   }
   else { // Custom font
     if (c == '\n') {
@@ -928,7 +980,7 @@ void Image::writeChar(uint8_t c) {
         uint8_t  h      = glyph->height;
         if ((w > 0) && (h > 0)) { // Is there an associated bitmap?
           int16_t xo = (int8_t) glyph->xOffset; // sic
-          if (_wrap && ((_cursor_x + _textsize * (xo + w)) > _x)) {
+          if (textWrap() && ((_cursor_x + _textsize * (xo + w)) > _x)) {
             _cursor_x  = 0;
             _cursor_y += (int16_t) _textsize * (uint8_t)_gfxFont->yAdvance;
           }
@@ -941,6 +993,17 @@ void Image::writeChar(uint8_t c) {
 }
 
 
+void Image::writeString(StringBuilder* str) {
+  writeString((const char*) str->string());
+}
+
+
+void Image::writeString(const char* str) {
+  int len = strlen(str);
+  for (int i = 0; i < len; i++) {
+    writeChar((uint8_t) *(str + i));
+  }
+}
 
 
 /*!
@@ -1009,7 +1072,7 @@ void Image::charBounds(char c, uint32_t* x, uint32_t* y, uint32_t* minx, uint32_
         uint8_t xa = glyph->xAdvance;
         int8_t  xo = glyph->xOffset;
         int8_t  yo = glyph->yOffset;
-        if(_wrap && ((*x+(((int16_t)xo+gw) * _textsize)) > _x)) {
+        if(textWrap() && ((*x+(((int16_t)xo+gw) * _textsize)) > _x)) {
           *x  = 0; // Reset x to zero, advance y by one line
           *y += _textsize * (uint8_t) _gfxFont->yAdvance;
         }
@@ -1033,7 +1096,7 @@ void Image::charBounds(char c, uint32_t* x, uint32_t* y, uint32_t* minx, uint32_
       // min/max x/y unchaged -- that waits for next 'normal' character
     }
     else if (c != '\r') {  // Normal char; ignore carriage returns
-      if (_wrap && ((*x + _textsize * 6) > _x)) { // Off right?
+      if (textWrap() && ((*x + _textsize * 6) > _x)) { // Off right?
         *x  = 0;                    // Reset x to zero,
         *y += _textsize * 8;         // advance y one line
       }
@@ -1061,7 +1124,6 @@ void Image::charBounds(char c, uint32_t* x, uint32_t* y, uint32_t* minx, uint32_
 */
 void Image::getTextBounds(const char* str, uint32_t x, uint32_t y, uint32_t* x1, uint32_t* y1, uint32_t* w, uint32_t* h) {
   uint8_t c; // Current character
-
   *x1 = x;
   *y1 = y;
   *w  = *h = 0;
@@ -1148,12 +1210,12 @@ void Image::getTextBounds(const uint8_t* str, uint32_t x, uint32_t y, uint32_t* 
   @param    h   Height in pixels
   @param    color 16-bit 5-6-5 Color to fill with
 */
-void Image::writeFastVLine(uint32_t x, uint32_t y, uint32_t h, uint32_t color) {
+void Image::drawFastVLine(uint32_t x, uint32_t y, uint32_t h, uint32_t color) {
   // Overwrite in subclasses if startWrite is defined!
-  // Can be just writeLine(x, y, x, y+h-1, color);
-  // or writeFillRect(x, y, 1, h, color);
+  // Can be just drawLine(x, y, x, y+h-1, color);
+  // or fillRect(x, y, 1, h, color);
   _lock(true);
-  writeLine(x, y, x, y+h-1, color);
+  drawLine(x, y, x, y+h-1, color);
   _lock(false);
 }
 
@@ -1165,27 +1227,14 @@ void Image::writeFastVLine(uint32_t x, uint32_t y, uint32_t h, uint32_t color) {
   @param    w   Width in pixels
   @param    color 16-bit 5-6-5 Color to fill with
 */
-void Image::writeFastHLine(uint32_t x, uint32_t y, uint32_t w, uint32_t color) {
+void Image::drawFastHLine(uint32_t x, uint32_t y, uint32_t w, uint32_t color) {
   // Overwrite in subclasses if startWrite is defined!
-  // Example: writeLine(x, y, x+w-1, y, color);
-  // or writeFillRect(x, y, w, 1, color);
+  // Example: drawLine(x, y, x+w-1, y, color);
+  // or fillRect(x, y, w, 1, color);
   _lock(true);
-  writeLine(x, y, x+w-1, y, color);
+  drawLine(x, y, x+w-1, y, color);
   _lock(false);
 }
-
-/*!
-  @brief    Write a rectangle completely with one color, overwrite in subclasses if startWrite is defined!
-  @param    x   Top left corner x coordinate
-  @param    y   Top left corner y coordinate
-  @param    w   Width in pixels
-  @param    h   Height in pixels
-  @param    color 16-bit 5-6-5 Color to fill with
-*/
-void Image::writeFillRect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
-  fillRect(x,y,w,h,color);
-}
-
 
 
 /*!
@@ -1199,23 +1248,340 @@ void Image::writeFillRect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32
 void Image::fillRect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
   _lock(true);
   for (uint32_t i=x; i<x+w; i++) {
-		writeLine(i, y, i, y+h-1, color);
+    drawLine(i, y, i, y+h-1, color);
   }
   _lock(false);
 }
 
 
+/**
+* @brief   Draw a rectangle with no fill color
+*  @param    x   Top left corner x coordinate
+*  @param    y   Top left corner y coordinate
+*  @param    w   Width in pixels
+*  @param    h   Height in pixels
+*  @param    color 16-bit 5-6-5 Color to draw with
+*/
+void Image::drawRect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
+  drawFastHLine(x, y, w, color);
+  drawFastHLine(x, y + h - 1, w, color);
+  drawFastVLine(x, y, h, color);
+  drawFastVLine(x + w - 1, y, h, color);
+}
+
+/**
+   @brief   Draw a rounded rectangle with no fill color
+    @param    x   Top left corner x coordinate
+    @param    y   Top left corner y coordinate
+    @param    w   Width in pixels
+    @param    h   Height in pixels
+    @param    r   Radius of corner rounding
+    @param    color 16-bit 5-6-5 Color to draw with
+*/
+void Image::drawRoundRect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t r, uint32_t color) {
+  uint32_t max_radius = ((w < h) ? w : h) >> 1; // 1/2 minor axis
+  if (r > max_radius) r = max_radius;
+  // smarter version
+  drawFastHLine(x + r, y, w - 2 * r, color);         // Top
+  drawFastHLine(x + r, y + h - 1, w - 2 * r, color); // Bottom
+  drawFastVLine(x, y + r, h - 2 * r, color);         // Left
+  drawFastVLine(x + w - 1, y + r, h - 2 * r, color); // Right
+  // draw four corners
+  drawCircleHelper(x + r, y + r, r, 1, color);
+  drawCircleHelper(x + w - r - 1, y + r, r, 2, color);
+  drawCircleHelper(x + w - r - 1, y + h - r - 1, r, 4, color);
+  drawCircleHelper(x + r, y + h - r - 1, r, 8, color);
+}
+
 
 /*!
-  @brief    Fill a rectangle completely with one color. Update in subclasses if desired!
-  @param    x   Top left corner x coordinate
-  @param    y   Top left corner y coordinate
-  @param    w   Width in pixels
-  @param    h   Height in pixels
-  @param    color 16-bit 5-6-5 Color to fill with
+   @brief   Draw a rounded rectangle with fill color
+    @param    x   Top left corner x coordinate
+    @param    y   Top left corner y coordinate
+    @param    w   Width in pixels
+    @param    h   Height in pixels
+    @param    r   Radius of corner rounding
+    @param    color 16-bit 5-6-5 Color to draw/fill with
 */
-void Image::fillScreen(uint32_t color) {
-  uint8_t bpp = _bits_per_pixel();
+void Image::fillRoundRect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t r, uint32_t color) {
+  uint32_t max_radius = ((w < h) ? w : h) >> 1; // 1/2 minor axis
+  if (r > max_radius) r = max_radius;
+  // smarter version
+  fillRect(x + r, y, w - 2 * r, h, color);
+  // draw four corners
+  fillCircleHelper(x + w - r - 1, y + r, r, 1, h - 2 * r - 1, color);
+  fillCircleHelper(x + r, y + r, r, 2, h - 2 * r - 1, color);
+}
+
+
+/*!
+   @brief   Draw a triangle with no fill color
+    @param    x0  Vertex #0 x coordinate
+    @param    y0  Vertex #0 y coordinate
+    @param    x1  Vertex #1 x coordinate
+    @param    y1  Vertex #1 y coordinate
+    @param    x2  Vertex #2 x coordinate
+    @param    y2  Vertex #2 y coordinate
+    @param    color 16-bit 5-6-5 Color to draw with
+*/
+void Image::drawTriangle(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2, uint32_t color) {
+  drawLine(x0, y0, x1, y1, color);
+  drawLine(x1, y1, x2, y2, color);
+  drawLine(x2, y2, x0, y0, color);
+}
+
+
+/*!
+   @brief     Draw a triangle with color-fill
+    @param    x0  Vertex #0 x coordinate
+    @param    y0  Vertex #0 y coordinate
+    @param    x1  Vertex #1 x coordinate
+    @param    y1  Vertex #1 y coordinate
+    @param    x2  Vertex #2 x coordinate
+    @param    y2  Vertex #2 y coordinate
+    @param    color 16-bit 5-6-5 Color to fill/draw with
+*/
+void Image::fillTriangle(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2, uint32_t color) {
+  uint32_t a, b, y, last;
+  // Sort coordinates by Y order (y2 >= y1 >= y0)
+  if (y0 > y1) {
+    strict_swap(&y0, &y1);
+    strict_swap(&x0, &x1);
+  }
+  if (y1 > y2) {
+    strict_swap(&y2, &y1);
+    strict_swap(&x2, &x1);
+  }
+  if (y0 > y1) {
+    strict_swap(&y0, &y1);
+    strict_swap(&x0, &x1);
+  }
+
+  if (y0 == y2) { // Handle awkward all-on-same-line case as its own thing
+    a = b = x0;
+    if (x1 < a) {       a = x1;   }
+    else if (x1 > b) {  b = x1;   }
+    if (x2 < a) {       a = x2;   }
+    else if (x2 > b) {  b = x2;   }
+    drawFastHLine(a, y0, b - a + 1, color);
+    return;
+  }
+
+  uint32_t dx01 = x1 - x0, dy01 = y1 - y0, dx02 = x2 - x0, dy02 = y2 - y0,
+           dx12 = x2 - x1, dy12 = y2 - y1;
+  uint32_t sa = 0, sb = 0;
+
+  // For upper part of triangle, find scanline crossings for segments
+  // 0-1 and 0-2.  If y1=y2 (flat-bottomed triangle), the scanline y1
+  // is included here (and second loop will be skipped, avoiding a /0
+  // error there), otherwise scanline y1 is skipped here and handled
+  // in the second loop...which also avoids a /0 error here if y0=y1
+  // (flat-topped triangle).
+  if (y1 == y2) {    last = y1;       }  // Include y1 scanline
+  else {             last = y1 - 1;   }  // Skip it
+
+  for (y = y0; y <= last; y++) {
+    a = x0 + sa / dy01;
+    b = x0 + sb / dy02;
+    sa += dx01;
+    sb += dx02;
+    /* longhand:
+    a = x0 + (x1 - x0) * (y - y0) / (y1 - y0);
+    b = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
+    */
+    if (a > b) {  strict_swap(&a, &b);   }
+    drawFastHLine(a, y, b - a + 1, color);
+  }
+
+  // For lower part of triangle, find scanline crossings for segments
+  // 0-2 and 1-2.  This loop is skipped if y1=y2.
+  sa = (int32_t)dx12 * (y - y1);
+  sb = (int32_t)dx02 * (y - y0);
+  for (; y <= y2; y++) {
+    a = x1 + sa / dy12;
+    b = x0 + sb / dy02;
+    sa += dx12;
+    sb += dx02;
+    /* longhand:
+    a = x1 + (x2 - x1) * (y - y1) / (y2 - y1);
+    b = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
+    */
+    if (a > b) {  strict_swap(&a, &b);   }
+    drawFastHLine(a, y, b - a + 1, color);
+  }
+}
+
+
+/*!
+   @brief    Draw a circle outline
+    @param    x0   Center-point x coordinate
+    @param    y0   Center-point y coordinate
+    @param    r   Radius of circle
+    @param    color 16-bit 5-6-5 Color to draw with
+*/
+void Image::drawCircle(uint32_t x0, uint32_t y0, uint32_t r, uint32_t color) {
+  int32_t f = 1 - r;
+  int32_t ddF_x = 1;
+  int32_t ddF_y = -2 * r;
+  int32_t x = 0;
+  int32_t y = r;
+
+  setPixel(x0, y0 + r, color);
+  setPixel(x0, y0 - r, color);
+  setPixel(x0 + r, y0, color);
+  setPixel(x0 - r, y0, color);
+
+  while (x < y) {
+    if (f >= 0) {
+      y--;
+      ddF_y += 2;
+      f += ddF_y;
+    }
+    x++;
+    ddF_x += 2;
+    f += ddF_x;
+
+    setPixel(x0 + x, y0 + y, color);
+    setPixel(x0 - x, y0 + y, color);
+    setPixel(x0 + x, y0 - y, color);
+    setPixel(x0 - x, y0 - y, color);
+    setPixel(x0 + y, y0 + x, color);
+    setPixel(x0 - y, y0 + x, color);
+    setPixel(x0 + y, y0 - x, color);
+    setPixel(x0 - y, y0 - x, color);
+  }
+}
+
+
+/*!
+    @brief    Quarter-circle drawer, used to do circles and roundrects
+    @param    x0   Center-point x coordinate
+    @param    y0   Center-point y coordinate
+    @param    r   Radius of circle
+    @param    quadrant  Mask bit #1 or bit #2 to indicate which quarters of
+   the circle we're doing
+    @param    color 16-bit 5-6-5 Color to draw with
+*/
+void Image::drawCircleHelper(uint32_t x0, uint32_t y0, uint32_t r, uint8_t quadrant, uint32_t color) {
+  int32_t f = 1 - r;
+  int32_t ddF_x = 1;
+  int32_t ddF_y = -2 * r;
+  int32_t x = 0;
+  int32_t y = r;
+
+  while (x < y) {
+    if (f >= 0) {
+      y--;
+      ddF_y += 2;
+      f += ddF_y;
+    }
+    x++;
+    ddF_x += 2;
+    f += ddF_x;
+    if (quadrant & 0x4) {
+      setPixel(x0 + x, y0 + y, color);
+      setPixel(x0 + y, y0 + x, color);
+    }
+    if (quadrant & 0x2) {
+      setPixel(x0 + x, y0 - y, color);
+      setPixel(x0 + y, y0 - x, color);
+    }
+    if (quadrant & 0x8) {
+      setPixel(x0 - y, y0 + x, color);
+      setPixel(x0 - x, y0 + y, color);
+    }
+    if (quadrant & 0x1) {
+      setPixel(x0 - y, y0 - x, color);
+      setPixel(x0 - x, y0 - y, color);
+    }
+  }
+}
+
+
+/*!
+   @brief    Draw a circle with filled color
+    @param    x0   Center-point x coordinate
+    @param    y0   Center-point y coordinate
+    @param    r   Radius of circle
+    @param    color 16-bit 5-6-5 Color to fill with
+*/
+void Image::fillCircle(uint32_t x0, uint32_t y0, uint32_t r, uint32_t color) {
+  drawFastVLine(x0, y0 - r, 2 * r + 1, color);
+  fillCircleHelper(x0, y0, r, 3, 0, color);
+}
+
+/*!
+    @brief  Quarter-circle drawer with fill, used for circles and roundrects
+    @param  x0       Center-point x coordinate
+    @param  y0       Center-point y coordinate
+    @param  r        Radius of circle
+    @param  corners  Mask bits indicating which quarters we're doing
+    @param  delta    Offset from center-point, used for round-rects
+    @param  color    16-bit 5-6-5 Color to fill with
+*/
+void Image::fillCircleHelper(uint32_t x0, uint32_t y0, uint32_t r, uint8_t corners, uint32_t delta, uint32_t color) {
+  int32_t f = 1 - r;
+  int32_t ddF_x = 1;
+  int32_t ddF_y = -2 * r;
+  int32_t x = 0;
+  int32_t y = r;
+  int32_t px = x;
+  int32_t py = y;
+
+  delta++; // Avoid some +1's in the loop
+
+  while (x < y) {
+    if (f >= 0) {
+      y--;
+      ddF_y += 2;
+      f += ddF_y;
+    }
+    x++;
+    ddF_x += 2;
+    f += ddF_x;
+    // These checks avoid double-drawing certain lines, important
+    // for the SSD1306 library which has an INVERT drawing mode.
+    if (x < (y + 1)) {
+      if (corners & 1)
+        drawFastVLine(x0 + x, y0 - y, 2 * y + delta, color);
+      if (corners & 2)
+        drawFastVLine(x0 - x, y0 - y, 2 * y + delta, color);
+    }
+    if (y != py) {
+      if (corners & 1)
+        drawFastVLine(x0 + py, y0 - px, 2 * px + delta, color);
+      if (corners & 2)
+        drawFastVLine(x0 - py, y0 - px, 2 * px + delta, color);
+      py = y;
+    }
+    px = x;
+  }
+}
+
+
+/*!
+   @brief   Draw a RAM-resident 16-bit image (RGB 5/6/5) at the specified (x,y)
+   position. For 16-bit display devices; no color reduction performed.
+    @param    x   Top left corner x coordinate
+    @param    y   Top left corner y coordinate
+    @param    bitmap  byte array with 16-bit color bitmap
+    @param    w   Width of bitmap in pixels
+    @param    h   Height of bitmap in pixels
+*/
+void Image::drawBitmap(uint32_t x, uint32_t y, const uint8_t* bitmap, uint32_t w, uint32_t h) {
+  for (uint32_t j = 0; j < h; j++, y++) {
+    for (uint32_t i = 0; i < w; i++) {
+      setPixel(x + i, y, *(bitmap + (j * w + i)));
+    }
+  }
+}
+
+
+/**
+*
+*/
+void Image::fill(uint32_t color) {
+  //uint8_t bpp = _bits_per_pixel();
   _lock(true);
   switch (_bits_per_pixel()) {
     case 32:
@@ -1258,7 +1624,7 @@ void Image::fillScreen(uint32_t color) {
   @param    y1  End point y coordinate
   @param    color 16-bit 5-6-5 Color to draw with
 */
-void Image::writeLine(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32_t color) {
+void Image::drawLine(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32_t color) {
   const bool steep = wrap_accounted_delta(y1, y0) > wrap_accounted_delta(x1, x0);
   if (steep) {
     strict_swap(&x0, &y0);
@@ -1269,18 +1635,17 @@ void Image::writeLine(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32
     strict_swap(&y0, &y1);
   }
 
-  const uint32_t dx = x1 - x0;
-  const uint32_t dy = wrap_accounted_delta(y1, y0);
-	const uint32_t ystep = (y0 < y1) ? 1 : -1;
-
+  const uint32_t dx    = x1 - x0;
+  const uint32_t dy    = wrap_accounted_delta(y1, y0);
+  const int8_t   ystep = (y0 < y1) ? 1 : -1;
   int32_t err = (int32_t) (dx >> 1);  // NOTE: Imposes width limit of 2,147,483,648 pixels.
 
   while (x0++ <= x1) {
     if (steep) {
-      setColor(y0, x0, color);
+      setPixel(y0, x0, color);
     }
     else {
-      setColor(x0, y0, color);
+      setPixel(x0, y0, color);
     }
     err -= dy;
     if (err < 0) {
@@ -1289,6 +1654,5 @@ void Image::writeLine(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32
     }
   }
 }
-
 
 #endif   // CONFIG_MANUVR_IMG_SUPPORT

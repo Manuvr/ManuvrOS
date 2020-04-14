@@ -22,6 +22,7 @@ limitations under the License.
 
 #include <CommonConstants.h>
 #include <DataStructures/Argument.h>
+#include <DataStructures/StopWatch.h>
 #include "ManuvrMsg.h"
 #include <string.h>
 #include <Kernel.h>
@@ -858,11 +859,11 @@ void ManuvrMsg::printDebug(StringBuilder *output) {
 * @param  StringBuilder* The buffer to output into.
 */
 void ManuvrMsg::printProfilerData(StringBuilder* output) {
-  if (prof_data) output->concatf("\t %p  %9u  %9u  %9u  %9u  %9u  %9u %s\n", this, prof_data->executions, prof_data->run_time_total, prof_data->run_time_average, prof_data->run_time_worst, prof_data->run_time_best, prof_data->run_time_last, (isScheduled() ? " " : "(INACTIVE)"));
+  if (prof_data) prof_data->printDebug(" ", output);
 }
 
 /**
-* Any schedule that has a TaskProfilerData object in the appropriate slot will be profiled.
+* Any schedule that has a StopWatch object in the appropriate slot will be profiled.
 *  So to begin profiling a schedule, simply instance the appropriate struct into place.
 *
 * @param  bool  Enables or disables Msg profiling.
@@ -871,13 +872,13 @@ void ManuvrMsg::profilingEnabled(bool enabled) {
   if (nullptr == prof_data) {
     // Profiler data does not exist. If enabled == false, do nothing.
     if (enabled) {
-      prof_data = new TaskProfilerData();
-      prof_data->profiling_active  = true;
+      prof_data = new StopWatch();
+      prof_data->tag = _code;
     }
   }
-  else {
-    // Profiler data exists.
-    prof_data->profiling_active  = enabled;
+  else if (!enabled) {
+    delete prof_data;
+    prof_data = nullptr;
   }
 }
 
@@ -887,7 +888,7 @@ void ManuvrMsg::profilingEnabled(bool enabled) {
 */
 void ManuvrMsg::clearProfilingData() {
   if (prof_data) {
-    prof_data->profiling_active = false;
+    prof_data->reset();
     delete prof_data;
     prof_data = nullptr;
   }
@@ -902,13 +903,7 @@ void ManuvrMsg::clearProfilingData() {
 */
 void ManuvrMsg::noteExecutionTime(uint32_t profile_start_time, uint32_t profile_stop_time) {
   if (prof_data) {
-    profile_stop_time = micros();
-    prof_data->run_time_last    = wrap_accounted_delta(profile_start_time, profile_stop_time);  // Rollover invarient.
-    prof_data->run_time_best    = strict_min(prof_data->run_time_best,  prof_data->run_time_last);
-    prof_data->run_time_worst   = strict_max(prof_data->run_time_worst, prof_data->run_time_last);
-    prof_data->run_time_total  += prof_data->run_time_last;
-    prof_data->run_time_average = prof_data->run_time_total / ((prof_data->executions) ? prof_data->executions : 1);
-    prof_data->executions++;
+    prof_data->markStop();
   }
 }
 #endif // MANUVR_EVENT_PROFILER

@@ -176,7 +176,7 @@ int8_t SPIAdapter::io_op_callback(BusOp* _op) {
   }
 
   flushLocalLog();
-  return SPI_CALLBACK_NOMINAL;
+  return BUSOP_CALLBACK_NOMINAL;
 }
 
 
@@ -386,18 +386,18 @@ int8_t SPIAdapter::service_callback_queue() {
     if (nullptr != temp_op->callback) {
       int8_t cb_code = temp_op->callback->io_op_callback(temp_op);
       switch (cb_code) {
-        case SPI_CALLBACK_RECYCLE:
+        case BUSOP_CALLBACK_RECYCLE:
           temp_op->set_state(XferState::IDLE);
           queue_io_job(temp_op);
           break;
 
-        case SPI_CALLBACK_ERROR:
-        case SPI_CALLBACK_NOMINAL:
+        case BUSOP_CALLBACK_ERROR:
+        case BUSOP_CALLBACK_NOMINAL:
           // No harm in this yet, since this fxn respects preforms and prealloc.
           reclaim_queue_item(temp_op);
           break;
         default:
-          local_log.concatf("Unsure about SPI_CALLBACK_CODE %d.\n", cb_code);
+          local_log.concatf("Unsure about BUSOP_CALLBACK_CODE %d.\n", cb_code);
           reclaim_queue_item(temp_op);
           break;
       }

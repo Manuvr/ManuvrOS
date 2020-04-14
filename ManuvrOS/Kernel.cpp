@@ -22,6 +22,7 @@ limitations under the License.
 #include <CommonConstants.h>
 #include <Kernel.h>
 #include <Platform/Platform.h>
+#include "DataStructures/StopWatch.h"
 
 #include <MsgProfiler.h>
 
@@ -597,13 +598,16 @@ void Kernel::reclaim_event(ManuvrMsg* obj) {
 // This is the splice into v2's style of event handling (callaheads).
 int8_t Kernel::procCallAheads(ManuvrMsg* active_runnable) {
   int8_t return_value = 0;
-  PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[active_runnable->eventCode()];
-  if (nullptr != ca_queue) {
-    listenerFxnPtr current_fxn;
-    for (int i = 0; i < ca_queue->size(); i++) {
-      current_fxn = ca_queue->recycle();  // TODO: This is ugly for many reasons.
-      if (current_fxn(active_runnable)) {
-        return_value++;
+  std::map<uint16_t, PriorityQueue<listenerFxnPtr>*>::iterator it = ca_listeners.find(active_runnable->eventCode());
+  if (it != ca_listeners.end()) {
+    PriorityQueue<listenerFxnPtr> *ca_queue = ca_listeners[active_runnable->eventCode()];
+    if (nullptr != ca_queue) {
+      listenerFxnPtr current_fxn;
+      for (int i = 0; i < ca_queue->size(); i++) {
+        current_fxn = ca_queue->recycle();  // TODO: This is ugly for many reasons.
+        if (current_fxn(active_runnable)) {
+          return_value++;
+        }
       }
     }
   }
@@ -613,13 +617,16 @@ int8_t Kernel::procCallAheads(ManuvrMsg* active_runnable) {
 // This is the splice into v2's style of event handling (callbacks).
 int8_t Kernel::procCallBacks(ManuvrMsg* active_runnable) {
   int8_t return_value = 0;
-  PriorityQueue<listenerFxnPtr> *cb_queue = cb_listeners[active_runnable->eventCode()];
-  if (cb_queue) {
-    listenerFxnPtr current_fxn;
-    for (int i = 0; i < cb_queue->size(); i++) {
-      current_fxn = cb_queue->recycle();  // TODO: This is ugly for many reasons.
-      if (current_fxn(active_runnable)) {
-        return_value++;
+  std::map<uint16_t, PriorityQueue<listenerFxnPtr>*>::iterator it = cb_listeners.find(active_runnable->eventCode());
+  if (it != cb_listeners.end()) {
+    PriorityQueue<listenerFxnPtr>* cb_queue = cb_listeners[active_runnable->eventCode()];
+    if (cb_queue) {
+      listenerFxnPtr current_fxn;
+      for (int i = 0; i < cb_queue->size(); i++) {
+        current_fxn = cb_queue->recycle();  // TODO: This is ugly for many reasons.
+        if (current_fxn(active_runnable)) {
+          return_value++;
+        }
       }
     }
   }
@@ -655,18 +662,14 @@ void Kernel::_idle(bool nu) {
 * @return the number of events processed, or a negative value on some failure.
 */
 int8_t Kernel::procIdleFlags() {
-  uint32_t profiler_mark   = micros();
-  uint32_t profiler_mark_0 = 0;   // Profiling requests...
-  uint32_t profiler_mark_1 = 0;   // Profiling requests...
-  uint32_t profiler_mark_2 = 0;   // Profiling requests...
-  uint32_t profiler_mark_3 = 0;   // Profiling requests...
+  uint32_t call_start_us   = micros();
+  uint32_t profiler_mark   = 0;   // Profiling requests...
   int8_t   return_value    = 0;   // Number of Events we've processed this call.
   uint16_t msg_code_local  = 0;
-
-  serviceSchedules();
-
-  ManuvrMsg *active_runnable = nullptr;  // Our short-term focus.
+  ManuvrMsg* active_runnable = nullptr;  // Our short-term focus.
   uint8_t activity_count    = 0;     // Incremented whenever a subscriber reacts to an event.
+
+  serviceSchedules();   // Look for scheduled events and proc them.
 
   globalIRQDisable();
   while (isr_exec_queue.size() > 0) {
@@ -690,7 +693,7 @@ int8_t Kernel::procIdleFlags() {
   active_runnable = nullptr;   // Pedantic...
 
   /* As long as we have an open event and we aren't yet at our proc ceiling... */
-  while (exec_queue.hasNext() && should_run_another_event(return_value, profiler_mark)) {
+  while (exec_queue.hasNext() && should_run_another_event(return_value, call_start_us)) {
     if (idle()) {
       platform.wakeHook();
       _idle(false);
@@ -700,22 +703,40 @@ int8_t Kernel::procIdleFlags() {
 
     current_event = active_runnable;
 
-    // Chat and measure.
-    profiler_mark_0 = micros();
-
-    procCallAheads(active_runnable);
+    #if defined(MANUVR_EVENT_PROFILER)
+      StopWatch* profiler_item = nullptr;
+      if (_profiler_enabled()) {
+        int cost_size = event_costs.size();
+        int i = 0;
+        while ((nullptr == profiler_item) && (i < cost_size)) {
+          StopWatch* tmp_stopwatch = event_costs.get(i++);
+          if (tmp_stopwatch->tag == msg_code_local) {
+            profiler_item = tmp_stopwatch;
+            break;
+          }
+        }
+        if (nullptr == profiler_item) {
+          // If we don't yet have a stopwatch for this message type...
+          profiler_item = new StopWatch();    // ...create one...
+          profiler_item->tag = msg_code_local;   // ...assign the code...
+          event_costs.insert(profiler_item, 1);     // ...and insert it for the future.
+        }
+        else {
+          // If we already have a profiler item for this code...
+          event_costs.incrementPriority(profiler_item);
+        }
+        profiler_item->markStart();
+      }
+    #endif  //MANUVR_EVENT_PROFILER
 
     // Now we start notify()'ing subscribers.
-    EventReceiver *subscriber;   // No need to assign.
-    if (_profiler_enabled()) profiler_mark_1 = micros();
-
+    procCallAheads(active_runnable);
     if (active_runnable->singleTarget()) {
       activity_count += active_runnable->execute();
     }
     else {
       for (int i = 0; i < subscribers.size(); i++) {
-        subscriber = subscribers.get(i);
-
+        EventReceiver* subscriber = subscribers.get(i);
         switch (subscriber->notify(active_runnable)) {
           case -1:  // The subscriber choked. Figure out why. Technically, this is action. Case fall-through...
             subscriber->printDebug(&local_log);
@@ -726,12 +747,12 @@ int8_t Kernel::procIdleFlags() {
         }
       }
     }
-    if (_profiler_enabled()) profiler_mark_2 = micros();
-
     procCallBacks(active_runnable);
 
     #if defined(MANUVR_EVENT_PROFILER)
-      active_runnable->noteExecutionTime(profiler_mark_0, micros());
+      if (nullptr != profiler_item) {
+        profiler_item->markStop();
+      }
     #endif  //MANUVR_EVENT_PROFILER
 
     if (0 == activity_count) {
@@ -789,50 +810,12 @@ int8_t Kernel::procIdleFlags() {
     if (clean_up_active_runnable) {
       reclaim_event(active_runnable);
     }
-
-    total_events++;
-
-    #if defined(MANUVR_EVENT_PROFILER)
-      // This is a stat-gathering block.
-      if (_profiler_enabled()) {
-        profiler_mark_3 = micros();
-
-        TaskProfilerData* profiler_item = nullptr;
-        int cost_size = event_costs.size();
-        int i = 0;
-        while ((nullptr == profiler_item) && (i < cost_size)) {
-          if (event_costs.get(i)->msg_code == msg_code_local) {
-            profiler_item = event_costs.get(i);
-          }
-          i++;
-        }
-        if (nullptr == profiler_item) {
-          // If we don't yet have a profiler item for this message type...
-          profiler_item = new TaskProfilerData();    // ...create one...
-          profiler_item->msg_code = msg_code_local;   // ...assign the code...
-          event_costs.insert(profiler_item, 1);       // ...and insert it for the future.
-        }
-        else {
-          // If we already have a profiler item for this code...
-          event_costs.incrementPriority(profiler_item);
-        }
-        profiler_item->executions++;
-        profiler_item->run_time_last    = wrap_accounted_delta(profiler_mark_2, profiler_mark_1);
-        profiler_item->run_time_best    = strict_min(profiler_item->run_time_last, profiler_item->run_time_best);
-        profiler_item->run_time_worst   = strict_max(profiler_item->run_time_last, profiler_item->run_time_worst);
-        profiler_item->run_time_total  += profiler_item->run_time_last;
-        profiler_item->run_time_average = profiler_item->run_time_total / ((profiler_item->executions) ? profiler_item->executions : 1);
-
-        profiler_mark_2 = 0;  // Reset for next iteration.
-      }
-    #endif  //MANUVR_EVENT_PROFILER
-
     if (exec_queue.size() > 30) {
       #ifdef MANUVR_DEBUG
       local_log.concatf("Depth %10d \t %s\n", exec_queue.size(), ManuvrMsg::getMsgTypeString(msg_code_local));
       #endif
     }
-
+    total_events++;
     return_value++;   // We just serviced an Event.
   }
 
@@ -847,10 +830,10 @@ int8_t Kernel::procIdleFlags() {
 
   total_loops++;
   current_event = nullptr;
-  profiler_mark_3 = micros();
+  profiler_mark = micros();
   flushLocalLog();
 
-  uint32_t runtime_this_loop = wrap_accounted_delta(profiler_mark, profiler_mark_3);
+  uint32_t runtime_this_loop = wrap_accounted_delta(call_start_us, profiler_mark);
   if (return_value > 0) {
     // We ran at-least one Msg.
     micros_occupied += runtime_this_loop;
@@ -861,9 +844,8 @@ int8_t Kernel::procIdleFlags() {
   }
   else if (0 == return_value) {
     // We did nothing this time.
-    uint32_t this_idle_time = wrap_accounted_delta(profiler_mark, profiler_mark_3);
-    if (this_idle_time > max_idle_loop_time) {
-      max_idle_loop_time = this_idle_time;
+    if (runtime_this_loop > max_idle_loop_time) {
+      max_idle_loop_time = runtime_this_loop;
     }
 
     switch (consequtive_idles) {
@@ -886,9 +868,7 @@ int8_t Kernel::procIdleFlags() {
         break;
     }
   }
-  else {
-    // there was a problem. Do nothing.
-  }
+  else {}  // there was a problem. Do nothing.
   return return_value;
 }
 
@@ -968,16 +948,13 @@ void Kernel::printProfiler(StringBuilder* output) {
     output->concatf("   Kernel duty cycle: %.3f\n", dutyCycle());
 
     #if defined(MANUVR_EVENT_PROFILER)
-      TaskProfilerData *profiler_item;
-      int stat_mode = event_costs.getPriority(0);
+      StopWatch* profiler_item;
       int x = event_costs.size();
 
-      TaskProfilerData::printDebugHeader(output);
+      StopWatch::printDebugHeader(output);
       for (int i = 0; i < x; i++) {
         profiler_item = event_costs.get(i);
-        stat_mode     = event_costs.getPriority(i);
-        output->concatf("\t (%10d)\t", stat_mode);
-        profiler_item->printDebug(output);
+        profiler_item->printDebug(ManuvrMsg::getMsgTypeString(profiler_item->tag), output);
       }
     #endif   // MANUVR_EVENT_PROFILER
   }
@@ -987,9 +964,8 @@ void Kernel::printProfiler(StringBuilder* output) {
 
   #if defined(MANUVR_EVENT_PROFILER)
     if (schedules.size() > 0) {
+      StopWatch::printDebugHeader(output);
       ManuvrMsg *current;
-      output->concat("\n\t PID         Execd      total us   average    worst      best       last\n\t -----------------------------------------------------------------------------\n");
-
       int sched_it_count = schedules.size();
       for (int i = 0; i < sched_it_count; i++) {
         current = schedules.recycle();   // TODO: Still awful.
@@ -1332,10 +1308,8 @@ int Kernel::serviceSchedules() {
   _ms_elapsed = 0;
 
   int x = schedules.size();
-  ManuvrMsg *current;
-
   for (int i = 0; i < x; i++) {
-    current = schedules.recycle();
+    ManuvrMsg* current = schedules.recycle();
     if (current->scheduleEnabled()) {
       switch (current->applyTime(mse)) {
         case 1:   // Schedule should be exec'd and retained.
