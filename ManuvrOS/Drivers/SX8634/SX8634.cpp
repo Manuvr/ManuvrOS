@@ -120,7 +120,6 @@ int8_t SX8634::read_irq_registers() {
   if (!_sx8634_flag(SX8634_FLAG_IRQ_INHIBIT)) {
     // If IRQ service is not inhibited, read all the IRQ-related
     //   registers in one shot.
-    _irq_register_read.device   = _bus;
     if (_irq_register_read.isIdle()) {
       _bus->queue_io_job(&_irq_register_read);
       return 0;
@@ -250,7 +249,14 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
           _sx8634_set_flag(SX8634_FLAG_SPM_OPEN, (0x10 == (*(completed->buf) & 0x30)));
           _set_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR, 0);
           if (_sx8634_flag(SX8634_FLAG_SPM_OPEN)) {
+            // We just opened the SPM for either R or W. Kick it off by writing
+            //   the initial base address.
             _write_register(SX8634_REG_SPM_BASE_ADDR, 0x00);
+          }
+          else {  // We just closed SPM access.
+            _sx8634_clear_flag(SX8634_FLAG_IRQ_INHIBIT);
+            _set_fsm_position(SX8634_FSM::READY);
+            setMode(SX8634OpMode::ACTIVE);
           }
           break;
         case SX8634_REG_SPM_BASE_ADDR:
@@ -278,7 +284,10 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
             //   the next step and read or write 8 bytes at the address.
             if (_sx8634_flag(SX8634_FLAG_SPM_WRITABLE)) {
               // Write the next 8 bytes if needed.
-              _write_block8(_get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR));
+              uint8_t spm_base_addr = _get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR);
+              if (spm_base_addr <= 0x78) {
+                _write_block8(spm_base_addr);
+              }
             }
             else {
               // Read the next 8 bytes if needed.
@@ -319,13 +328,14 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
           // This register is read-only, but the SPM window starts at offset 0.
           if (_sx8634_flag(SX8634_FLAG_SPM_OPEN)) {
             int spm_base_addr = _get_shadow_reg_val(SX8634_REG_SPM_BASE_ADDR);
-            if (spm_base_addr <= 0x78) {
+            if (spm_base_addr < 0x78) {
               // We're writing our shadow of the SPM. Write the next base address.
               _wait_for_reset(30);
               _write_register(SX8634_REG_SPM_BASE_ADDR, spm_base_addr + 8);
             }
             else {
               _sx8634_clear_flag(SX8634_FLAG_SPM_DIRTY);
+              _wait_for_reset(30);
               _close_spm_access();
             }
           }
@@ -367,7 +377,6 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
               else {
                 // If we won't be writing SPM config
                 _close_spm_access();
-                _set_fsm_position(SX8634_FSM::READY);
               }
             }
           }
@@ -442,11 +451,13 @@ int8_t SX8634::io_op_callback(BusOp* _op) {
             if (first_irq) {
               _sx8634_clear_flag(SX8634_FLAG_INITIAL_IRQ_READ);
             }
-          }
-          // If the IRQ pin is still low, recycle this bus op.
-          if (_opts.haveIRQPin() && !_sx8634_flag(SX8634_FLAG_IRQ_INHIBIT)) {
-            if (!readPin(_opts.irq_pin)) {
-              ret = BUSOP_CALLBACK_RECYCLE;
+            // If the IRQ pin is still low, recycle this bus op.
+            if (_opts.haveIRQPin() && !_sx8634_flag(SX8634_FLAG_IRQ_INHIBIT)) {
+              if (SX8634_FSM::READY == _get_fsm_position()) {
+                if (!readPin(_opts.irq_pin)) {
+                  ret = BUSOP_CALLBACK_RECYCLE;
+                }
+              }
             }
           }
           break;
@@ -970,8 +981,6 @@ int8_t SX8634::_open_spm_access_w() {
 }
 
 int8_t SX8634::_close_spm_access() {
-  _sx8634_clear_flag(SX8634_FLAG_IRQ_INHIBIT);
-  setMode(SX8634OpMode::ACTIVE);
   return _write_register(SX8634_REG_SPM_CONFIG, 0x08);
 }
 

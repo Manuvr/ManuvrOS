@@ -357,13 +357,11 @@ int8_t I2CAdapter::advance_work_queue() {
           //   be at liberty to clean the operation up.
           // Note that we forgo a separate callback queue, and are therefore unable to
           //   pipeline I/O and processing. They must happen sequentially.
-
-
           if (nullptr != current_job->callback) {
             int8_t cb_code = current_job->execCB();
             switch (cb_code) {
               case BUSOP_CALLBACK_RECYCLE:
-                current_job->set_state(XferState::IDLE);
+                current_job->markForRequeue();
                 queue_io_job(current_job);
                 break;
               case BUSOP_CALLBACK_ERROR:

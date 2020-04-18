@@ -210,10 +210,13 @@ class BusOp {
     */
     inline XferFault getFault() {  return xfer_fault;                       };
 
+    inline void markForRequeue() {
+      xfer_fault = XferFault::NONE;
+      xfer_state = XferState::IDLE;
+    };
 
     /* Inlines for protected access... TODO: These should be eliminated over time. */
     inline XferState get_state() {                 return xfer_state;       };
-    inline void      set_state(XferState nu) {     xfer_state = nu;         };
     inline BusOpcode get_opcode() {                return opcode;           };
     inline void      set_opcode(BusOpcode nu) {    opcode = nu;             };
 
@@ -234,6 +237,8 @@ class BusOp {
     BusOpcode opcode     = BusOpcode::UNDEF;  // What is the particular operation being done?
     XferState xfer_state = XferState::UNDEF;  // What state is this transfer in?
     XferFault xfer_fault = XferFault::NONE;   // Fault code.
+
+    inline void      set_state(XferState nu) {     xfer_state = nu;         };
 };
 
 
@@ -382,7 +387,7 @@ template <class T> class BusAdapter : public BusOpCallback {
         and wants us to ignore the memory cleanup. But we should at least set it
         back to IDLE.*/
         //if (getVerbosity() > 6) Kernel::log("BusAdapter::reclaim_queue_item(): \t Dropping....\n");
-        op->set_state(XferState::IDLE);
+        op->markForRequeue();
       }
     }
 

@@ -104,11 +104,11 @@ int8_t I2CAdapter::generateStop() {
 *******************************************************************************/
 
 XferFault I2CBusOp::begin() {
-  if (nullptr == _threaded_op[device->adapterNumber()]) {
-    if (device) {
-      switch (device->adapterNumber()) {
-        case 0:
-        case 1:
+  if (device) {
+    switch (device->adapterNumber()) {
+      case 0:
+      case 1:
+        if (nullptr == _threaded_op[device->adapterNumber()]) {
           if ((nullptr == callback) || (0 == callback->io_op_callahead(this))) {
             set_state(XferState::INITIATE);
             _threaded_op[device->adapterNumber()] = this;
@@ -118,20 +118,19 @@ XferFault I2CBusOp::begin() {
           else {
             abort(XferFault::IO_RECALL);
           }
-          break;
-        default:
-          abort(XferFault::BAD_PARAM);
-          break;
-      }
-    }
-    else {
-      abort(XferFault::DEV_NOT_FOUND);
+        }
+        else {
+          abort(XferFault::DEV_NOT_FOUND);
+        }
+        break;
+      default:
+        abort(XferFault::BAD_PARAM);
+        break;
     }
   }
   else {
     abort(XferFault::BUS_BUSY);
   }
-
   return xfer_fault;
 }
 
@@ -202,12 +201,9 @@ XferFault I2CBusOp::advance(uint32_t status_reg) {
         abort();
       }
     }
-    else {
-      abort(XferFault::BAD_PARAM);
-    }
   }
   else {
-    abort(XferFault::BAD_PARAM);
+    abort(XferFault::BUS_FAULT);
   }
   i2c_cmd_link_delete(cmd);  // Cleanup.
 
