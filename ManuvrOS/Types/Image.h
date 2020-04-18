@@ -175,9 +175,11 @@ class Image {
     void drawCircleHelper(uint32_t x0, uint32_t y0, uint32_t r, uint8_t quadrants, uint32_t color);
     void fillCircle(uint32_t x0, uint32_t y0, uint32_t r, uint32_t color);
     void fillCircleHelper(uint32_t x0, uint32_t y0, uint32_t r, uint8_t quadrants, uint32_t delta, uint32_t color);
-    //void drawElipse(uint32_t x0, uint32_t y0, uint32_t major_axis, uint32_t minor_axis, float rotation, uint32_t color);
     void fill(uint32_t color);
     void drawBitmap(uint32_t x, uint32_t y, const uint8_t* bitmap, uint32_t w, uint32_t h);
+
+    void drawEllipse(uint32_t x0, uint32_t y0, uint32_t v_axis, uint32_t h_axis, float rotation, uint32_t color);
+    //void drawArc(uint32_t x0, uint32_t y0, uint32_t v_axis, uint32_t h_axis, float rotation, float radians_start, float radians_stop, uint32_t color);
 
     void drawChar(uint32_t x, uint32_t y, unsigned char c, uint32_t color, uint32_t bg, uint8_t size);
     void writeChar(uint8_t c);

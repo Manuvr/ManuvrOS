@@ -153,7 +153,7 @@ class SSD13xx : public Image, public BusOpCallback {
     const SSD13xxOpts _opts;
     bool  _enabled  = false;
     SPIAdapter* _BUS = nullptr;
-    SPIBusOp    _fb_data_op;
+    SPIBusOp    _fb_data_op;  // We do this frequently enough.
 
     int8_t _send_data(uint8_t* buf, uint16_t len);
     int8_t _ll_pin_init();

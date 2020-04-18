@@ -1454,6 +1454,42 @@ void Image::drawCircle(uint32_t x0, uint32_t y0, uint32_t r, uint32_t color) {
 
 
 /*!
+   @brief    Draw an elipse outline
+    @param    x0       Center-point x coordinate
+    @param    y0       Center-point y coordinate
+    @param    v_axis   Radius on y coordinate.
+    @param    h_axis   Radius on x coordinate.
+    @param    rotation Rotation (in degrees) clockwise about the center.
+    @param    color    Color to draw with
+*/
+void Image::drawEllipse(uint32_t x0, uint32_t y0, uint32_t v_axis, uint32_t h_axis, float rotation, uint32_t color) {
+  if (v_axis == h_axis) {  // Is this an over-specified circle?
+    drawCircle(x0, y0, h_axis, color);
+  }
+  else {
+    float radians = (PI/180.0) * rotation;
+    int32_t vertical_extent   = abs(sin(radians)) * v_axis;
+    int32_t horizontal_extent = abs(cos(radians)) * h_axis;
+    int32_t starting_x = strict_max(0,   (int32_t) (x0 - horizontal_extent));
+    int32_t ending_x   = strict_min(x(), x0 + horizontal_extent);
+    for (int32_t i = starting_x; i < ending_x; i++) {
+      uint32_t a = h_axis;
+      uint32_t b = v_axis;
+      float    y_diff   = (b / a) * sqrt((a*a) - (i*i));
+      int32_t  y_top    = y0 - y_diff;
+      int32_t  y_bottom = y0 + y_diff;
+      if (y_top >= 0) {
+        setPixel(i, y_top, color);
+      }
+      if (y_bottom < y()) {
+        setPixel(i, y_bottom, color);
+      }
+    }
+  }
+}
+
+
+/*!
     @brief    Quarter-circle drawer, used to do circles and roundrects
     @param    x0   Center-point x coordinate
     @param    y0   Center-point y coordinate
