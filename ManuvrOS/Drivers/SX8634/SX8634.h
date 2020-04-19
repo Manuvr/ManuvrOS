@@ -337,10 +337,14 @@ class SX8634 : public I2CDevice {
     int8_t setMode(SX8634OpMode);
     inline SX8634OpMode operationalMode() {  return _mode; };
 
+    inline bool deviceReady() {  return (SX8634_FSM::READY == _fsm);          };
     inline bool deviceFound() {  return _sx8634_flag(SX8634_FLAG_DEV_FOUND);  };
     inline uint16_t sliderValue() {         return _slider_val;               };
+    inline uint16_t buttonValues() {        return _buttons;                  };
     inline bool buttonPressed(uint8_t i) {  return ((_buttons >> i) & 0x01);  };
     inline bool buttonReleased(uint8_t i) { return !((_buttons >> i) & 0x01); };
+
+
 
     /* GPIO functions */
     int8_t  setGPIOMode(uint8_t pin, GPIOMode);

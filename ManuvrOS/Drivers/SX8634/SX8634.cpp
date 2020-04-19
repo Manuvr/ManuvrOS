@@ -768,7 +768,7 @@ GPIOMode SX8634::getGPIOMode(uint8_t pin) {
 
 
 /*
-* If the pin is an input, returns the last-know state of the pin.
+* If the pin is an input, returns the last-known state of the pin.
 * If the pin is an output, returns the last-confirmed write to the pin.
 */
 uint8_t SX8634::getGPIOValue(uint8_t pin) {
@@ -784,6 +784,9 @@ uint8_t SX8634::getGPIOValue(uint8_t pin) {
 }
 
 
+/*
+* Returns 0 on success.
+*/
 int8_t SX8634::setGPOValue(uint8_t pin, uint8_t value) {
   if (pin < 8) {
     switch (getGPIOMode(pin)) {

@@ -116,9 +116,9 @@ enum class ImgBufferFormat : uint8_t {
 
 enum class ImgOrientation : uint8_t {
   ROTATION_0   = 0x00,  // 0-degrees
-  ROTATION_90  = 0x40,  // 90-degrees
-  ROTATION_180 = 0x80,  // 180-degrees
-  ROTATION_270 = 0xC0   // 270-degrees
+  ROTATION_90  = 0x01,  // 90-degrees
+  ROTATION_180 = 0x02,  // 180-degrees
+  ROTATION_270 = 0x03   // 270-degrees
 };
 
 
@@ -157,6 +157,7 @@ class Image {
     inline uint32_t        pixels() {       return (_x * _y);              };
     inline uint32_t        bytesUsed() {    return (_x * _y * (_bits_per_pixel() >> 3));  };
     inline ImgOrientation  orientation() {  return ((ImgOrientation) ((_imgflags & MANUVR_IMG_FLAG_ROTATION_MASK) >> 6));  };
+    void orientation(ImgOrientation);
 
     inline bool  isFrameBuffer() {   return _img_flag(MANUVR_IMG_FLAG_IS_FRAMEBUFFER);   };
     inline bool  locked() {          return _img_flag(MANUVR_IMG_FLAG_BUFFER_LOCKED);    };
@@ -244,6 +245,8 @@ class Image {
     inline void _set_pixel_8(uint32_t x, uint32_t y, uint32_t c) {
       *(_buffer + _pixel_number(x, y)) = (uint8_t) c;
     };
+
+    void _remap_for_orientation(uint32_t* x, uint32_t* y);
 
     /* Linearizes the X/y value in preparation for array indexing. */
     inline uint32_t _pixel_number(uint32_t x, uint32_t y) {

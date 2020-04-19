@@ -119,6 +119,7 @@ int8_t SSD13xx::io_op_callahead(BusOp* _op) {
   SPIBusOp* op = (SPIBusOp*) _op;
   bool data_xfer = (op->transferParamLength() == 0);
   if (data_xfer) {  // Was this a frame refresh?
+    _stopwatch.markStart();
     _lock(true);
   }
   setPin(_opts.dc, data_xfer);
@@ -136,6 +137,7 @@ int8_t SSD13xx::io_op_callahead(BusOp* _op) {
 */
 int8_t SSD13xx::io_op_callback(BusOp* _op) {
   SPIBusOp* op = (SPIBusOp*) _op;
+  int8_t ret = BUSOP_CALLBACK_NOMINAL;
 
   // There is zero chance this object will be a null pointer unless it was done on purpose.
   if (op->hasFault()) {
@@ -144,6 +146,10 @@ int8_t SSD13xx::io_op_callback(BusOp* _op) {
   }
   if (op->transferParamLength() == 0) {  // Was this a frame refresh?
     _lock(false);
+    _stopwatch.markStop();
+    if (_enabled && _initd) {
+      ret = BUSOP_CALLBACK_RECYCLE;
+    }
   }
   else {
     uint8_t arg_buf[4];
@@ -218,14 +224,14 @@ int8_t SSD13xx::io_op_callback(BusOp* _op) {
         _send_command(SSD13XX_CMD_CONTRASTC, arg_buf, 1);    // 0x83
         break;
       case SSD13XX_CMD_CONTRASTC:
+        _initd = true;  // This is the last register written in the init sequence.
         _send_command(SSD13XX_CMD_DISPLAYON);  //--turn on oled panel
         break;
       default:
         break;
     }
   }
-
-  return BUSOP_CALLBACK_NOMINAL;
+  return ret;
 }
 
 
@@ -289,31 +295,37 @@ int8_t SSD13xx::commitFrameBuffer() {
 }
 
 
-/**************************************************************************/
+int8_t SSD13xx::invertDisplay(bool flipped) {
+  return _send_command(SSD13XX_CMD_INVERTDISPLAY);
+}
+
+
 /*!
-    @brief   Initialize SSD13xx chip
+    @brief   Initialize SSD13xx chip.
     Connects to the SSD13xx over SPI and sends initialization procedure commands
     @param    freq  Desired SPI clock frequency
 */
-/**************************************************************************/
 int8_t SSD13xx::init(SPIAdapter* b) {
   int8_t ret = -1;
   _BUS = b;
-  _fb_data_op.set_opcode(BusOpcode::TX);
-  _fb_data_op.shouldReap(false);
-  _fb_data_op.setCSPin(_opts.cs);
-  _fb_data_op.setAdapter(_BUS);
-  _fb_data_op.csActiveHigh(false);
-  _fb_data_op.callback = this;
-
-  if (0 == _ll_pin_init()) {
-    reallocate();
-    _fb_data_op.setBuffer(_buffer, bytesUsed());
-    uint8_t arg_buf[4];
-    // Initialization Sequence
-    _send_command(SSD13XX_CMD_DISPLAYOFF);    // 0xAE
-    arg_buf[0] = 0x72; // RGB Color
-    ret = _send_command(SSD13XX_CMD_SETREMAP, arg_buf, 1);  // 0xA0
+  if (nullptr != _BUS) {
+    _initd    = false;
+    _fb_data_op.set_opcode(BusOpcode::TX);
+    _fb_data_op.shouldReap(false);
+    _fb_data_op.setCSPin(_opts.cs);
+    _fb_data_op.setAdapter(_BUS);
+    _fb_data_op.csActiveHigh(false);
+    _fb_data_op.callback = this;
+    if (0 == _ll_pin_init()) {
+      reallocate();
+      _fb_data_op.setBuffer(_buffer, bytesUsed());
+      uint8_t arg_buf[4];
+      // Initialization Sequence begins here and is carried forward by the
+      //   io_callback.
+      _send_command(SSD13XX_CMD_DISPLAYOFF);    // 0xAE
+      arg_buf[0] = 0x72; // RGB Color
+      ret = _send_command(SSD13XX_CMD_SETREMAP, arg_buf, 1);  // 0xA0
+    }
   }
   return ret;
 }
@@ -323,11 +335,26 @@ int8_t SSD13xx::init(SPIAdapter* b) {
   @brief  Change whether display is on or off
   @param   enable True if you want the display ON, false OFF
 */
-void SSD13xx::enableDisplay(bool enable) {
-  _send_command(enable ? SSD13XX_CMD_DISPLAYON : SSD13XX_CMD_DISPLAYOFF);
-  if (enable) {
-    commitFrameBuffer();
+int8_t SSD13xx::enableDisplay(bool enable) {
+  int8_t ret = -1;
+  if (_initd) {
+    ret--;
+    if (enable ^ _enabled) {
+      ret--;
+      if (0 == _send_command(enable ? SSD13XX_CMD_DISPLAYON : SSD13XX_CMD_DISPLAYOFF)) {
+        if (enable) {
+          commitFrameBuffer();  // TODO: Might be too aggressive on the timing. Do it in callback?
+        }
+      }
+    }
+    else {
+      ret = 0;
+    }
   }
+  else {
+    ret = init();
+  }
+  return ret;
 }
 
 
@@ -401,9 +428,13 @@ int8_t SSD13xx::_ll_pin_init() {
 void SSD13xx::printDebug(StringBuilder* output) {
   output->concatf("SSD13xx (%u x %u) %s", x(), y(), PRINT_DIVIDER_1_STR);
   output->concatf("\tLocked:    %c\n", (locked() ? 'y': 'n'));
+  output->concatf("\tInitd:     %c\n", (_initd ? 'y': 'n'));
+  output->concatf("\tEnabled:   %c\n", (_enabled ? 'y': 'n'));
   output->concatf("\tDirty:     %c\n", (_is_dirty() ? 'y': 'n'));
   output->concatf("\tAllocated: %c\n", (allocated() ? 'y': 'n'));
   output->concatf("\tPixels:    %u\n", pixels());
   output->concatf("\tBits/pix:  %u\n", _bits_per_pixel());
-  output->concatf("\tBytes:     %u\n", bytesUsed());
+  output->concatf("\tBytes:     %u\n\n", bytesUsed());
+  StopWatch::printDebugHeader(output);
+  _stopwatch.printDebug("Redraw", output);
 }

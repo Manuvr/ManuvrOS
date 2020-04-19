@@ -216,6 +216,7 @@ class BusOp {
     };
 
     /* Inlines for protected access... TODO: These should be eliminated over time. */
+    inline void      set_state(XferState nu) {     xfer_state = nu;         };
     inline XferState get_state() {                 return xfer_state;       };
     inline BusOpcode get_opcode() {                return opcode;           };
     inline void      set_opcode(BusOpcode nu) {    opcode = nu;             };
@@ -238,7 +239,6 @@ class BusOp {
     XferState xfer_state = XferState::UNDEF;  // What state is this transfer in?
     XferFault xfer_fault = XferFault::NONE;   // Fault code.
 
-    inline void      set_state(XferState nu) {     xfer_state = nu;         };
 };
 
 

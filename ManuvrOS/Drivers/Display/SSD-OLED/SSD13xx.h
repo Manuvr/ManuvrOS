@@ -43,6 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Types/Image.h>
 #include <Platform/Peripherals/SPI/SPIAdapter.h>
 #include <Platform/Peripherals/SPI/SPIBusOp.h>
+#include <DataStructures/StopWatch.h>
 
 #ifndef __SSD13XX_DRIVER_H_
 #define __SSD13XX_DRIVER_H_
@@ -133,14 +134,17 @@ class SSD13xx : public Image, public BusOpCallback {
     SSD13xx(const SSD13xxOpts* opts);
     ~SSD13xx();
 
-    // commands
+    inline void setBus(SPIAdapter* b) {  _BUS = b;  };
     int8_t init(SPIAdapter*);
-    inline bool enabled() {   return _enabled;  };
+    inline int8_t init() {        return init(_BUS);   };
+    inline bool enabled() {       return _enabled;     };
+    inline bool initialized() {   return _initd;       };
 
     void setAddrWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+    int8_t invertDisplay(bool);
     int8_t commitFrameBuffer();
 
-    void enableDisplay(bool enable);
+    int8_t enableDisplay(bool enable);
     void printDebug(StringBuilder*);
 
     /* Overrides from the BusAdapter interface */
@@ -152,7 +156,9 @@ class SSD13xx : public Image, public BusOpCallback {
   private:
     const SSD13xxOpts _opts;
     bool  _enabled  = false;
+    bool  _initd    = false;
     SPIAdapter* _BUS = nullptr;
+    StopWatch     _stopwatch;
     SPIBusOp    _fb_data_op;  // We do this frequently enough.
 
     int8_t _send_data(uint8_t* buf, uint16_t len);

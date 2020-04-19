@@ -64,6 +64,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #if defined(CONFIG_MANUVR_IMG_SUPPORT)
 
+#include <Platform/Platform.h>
+
 /* If character support is enabled, we'll import fonts. */
 #include "Fonts/FreeMono12pt7b.h"
 #include "Fonts/FreeMono18pt7b.h"
@@ -379,7 +381,6 @@ static const unsigned char font[] = {
   0x00, 0x00, 0x00, 0x00, 0x00  // #255 NBSP
 };
 
-#include <Platform/Platform.h>
 
 uint8_t Image::_bits_per_pixel(ImgBufferFormat x) {
   switch (x) {
@@ -536,7 +537,7 @@ void Image::wipe() {
 
 
 /**
-*
+* NOTE: The serializer does not account for orientation.
 */
 int8_t Image::serialize(StringBuilder* out) {
   if (ImgBufferFormat::UNALLOCATED != _buf_fmt) {
@@ -563,7 +564,7 @@ int8_t Image::serialize(StringBuilder* out) {
 
 
 /**
-*
+* NOTE: The serializer does not account for orientation.
 */
 int8_t Image::serialize(uint8_t* buf, uint32_t* len) {
   if (ImgBufferFormat::UNALLOCATED != _buf_fmt) {
@@ -616,6 +617,7 @@ int8_t Image::serializeWithoutBuffer(uint8_t* buf, uint32_t* len) {
 
 
 /**
+* NOTE: The deserializer does not account for orientation.
 */
 int8_t Image::deserialize(uint8_t* buf, uint32_t len) {
   if (ImgBufferFormat::UNALLOCATED == _buf_fmt) {
@@ -662,6 +664,10 @@ int8_t Image::_buffer_allocator() {
   return ret;
 }
 
+
+/*******************************************************************************
+* Color functions
+*******************************************************************************/
 
 /**
 *
@@ -740,12 +746,50 @@ uint32_t Image::convertColor(uint32_t c, ImgBufferFormat src_fmt) {
 }
 
 
+/*******************************************************************************
+* Pixel-level operations, and the linkage with the buffer.
+*******************************************************************************/
+
+
+void Image::orientation(ImgOrientation nu) {
+  ImgOrientation original = orientation();
+  if (original != nu) {
+    _img_clear_flag(MANUVR_IMG_FLAG_ROTATION_MASK);
+    _img_set_flag(((uint8_t) nu) << 6);
+    if (nullptr != _buffer) {
+      // TODO:
+      // If we already have a buffer allocated, apply the transform to the
+      //   existing buffer.
+    }
+  }
+}
+
+
+void Image::_remap_for_orientation(uint32_t* xn, uint32_t* yn) {
+  switch (orientation()) {
+    case ImgOrientation::ROTATION_270:
+      // TODO
+      break;
+    case ImgOrientation::ROTATION_180:
+      *xn = (x()-1) - *xn;
+      *yn = (y()-1) - *yn;
+      break;
+    case ImgOrientation::ROTATION_90:
+      // TODO
+      break;
+    case ImgOrientation::ROTATION_0:   // Native format.
+      break;
+  }
+}
+
+
 /**
 *
 */
 uint32_t Image::getPixel(uint32_t x, uint32_t y) {
   uint32_t ret = 0;
   uint32_t sz = bytesUsed();
+  _remap_for_orientation(&x, &y);
   uint32_t offset = _pixel_offset(x, y);
   if (offset < sz) {
     switch (_buf_fmt) {
@@ -778,6 +822,7 @@ uint32_t Image::getPixel(uint32_t x, uint32_t y) {
 * Takes a color in 32-bit. Squeezes it into the buffer's format, discarding low bits as appropriate.
 */
 bool Image::setPixel(uint32_t x, uint32_t y, uint32_t c) {
+  _remap_for_orientation(&x, &y);
   switch (_buf_fmt) {
     case ImgBufferFormat::R3_G3_B2:          // 8-bit color
     case ImgBufferFormat::GREY_8:            // 8-bit greyscale
@@ -804,6 +849,7 @@ bool Image::setPixel(uint32_t x, uint32_t y, uint32_t c) {
 * Takes a color in discrete RGB values. Squeezes it into the buffer's format, discarding low bits as appropriate.
 */
 bool Image::setPixel(uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b) {
+  _remap_for_orientation(&x, &y);
   uint32_t sz = bytesUsed();
   uint32_t offset = _pixel_offset(x, y);
   if (offset < sz) {
