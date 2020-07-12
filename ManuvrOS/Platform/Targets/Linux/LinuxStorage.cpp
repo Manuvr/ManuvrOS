@@ -26,7 +26,7 @@ Implemented as a JSON object within a single file. This feature therefore
 
 #include "LinuxStorage.h"
 
-#if defined(__MANUVR_LINUX) && defined(MANUVR_STORAGE)
+#if defined(__MANUVR_LINUX) && defined(CONFIG_MANUVR_STORAGE)
 #include <Platform/Platform.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -338,4 +338,4 @@ int8_t LinuxStorage::notify(ManuvrMsg* active_event) {
 //
 //  flushLocalLog();
 //}
-#endif   // __MANUVR_LINUX & MANUVR_STORAGE
+#endif   // __MANUVR_LINUX & CONFIG_MANUVR_STORAGE

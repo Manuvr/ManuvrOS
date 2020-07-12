@@ -27,7 +27,7 @@ This file forms the catch-all for linux platforms that have no support.
 
 #include <Platform/Platform.h>
 
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
 #include "LinuxStorage.h"
 #include <fcntl.h>      // Needed for integrity checks.
 #include <sys/stat.h>   // Needed for integrity checks.
@@ -471,7 +471,7 @@ unsigned long millis() {
 /*******************************************************************************
 * Persistent configuration                                                     *
 *******************************************************************************/
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
   // Called during boot to load configuration.
   int8_t LinuxPlatform::_load_config() {
     if (_storage_device) {
@@ -526,7 +526,7 @@ void LinuxPlatform::_close_open_threads() {
 * Terminate this running process, along with any children it may have forked() off.
 */
 void LinuxPlatform::seppuku() {
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
     if (_self && _self->isDirty()) {
       // Save the dirty identity.
       // TODO: int8_t persistentWrite(const char*, uint8_t*, int, uint16_t);
@@ -652,7 +652,7 @@ int8_t LinuxPlatform::platformPreInit(Argument* root_config) {
   init_rng();
   _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
 
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
     LinuxStorage* sd = new LinuxStorage(root_config);
     _storage_device = (Storage*) sd;
     _kernel.subscribe((EventReceiver*) sd);

@@ -45,7 +45,8 @@ template <class T> class RingBuffer {
     /* Returns an integer representing how many items are buffered. */
     inline unsigned int count() {     return _count;  };
 
-    int insert(T);
+    int  insert(T);
+    bool contains(T);
     T get();
     T get(unsigned int idx);
 
@@ -107,6 +108,32 @@ template <class T> int RingBuffer<T>::insert(T d) {
   _w = (_w % _CAPAC) + 1;   // TODO: Convert to pow(2) later and convert to bitmask.
   _count++;
   return 0;
+}
+
+
+/*
+* This template makes copies of whatever is passed into it. There is no reason
+*   for the caller to maintain local copies of data (unless T is a pointer).
+*/
+template <class T> bool RingBuffer<T>::contains(T d) {
+  unsigned int idx = _r;
+  T* ref = &d;
+
+  for (unsigned int e = 0; e < _count; e++) {
+    unsigned int offset = _E_SIZE * idx;
+    bool found = true;
+    for (unsigned int i = 0; i < _E_SIZE; i++) {
+      if (*((uint8_t*) _pool + offset + i) != *((uint8_t*)ref + i)) {
+        found = false;
+        break;
+      }
+    }
+    if (found) {
+      return true;
+    }
+    idx = (idx % _CAPAC) + 1;   // TODO: Convert to pow(2) later and convert to bitmask.
+  }
+  return false;
 }
 
 

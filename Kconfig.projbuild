@@ -30,7 +30,7 @@ choice MANUVR_PLATFORM
 endchoice
 
 
-config MANUVR_STORAGE
+config CONFIG_MANUVR_STORAGE
     bool "Storage API"
   default n
   ---help---

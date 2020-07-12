@@ -142,6 +142,7 @@ int8_t SPIAdapter::bus_init() {
 	bus_config.quadhd_io_num   = -1;      // Not used
 	bus_config.max_transfer_sz = 65535;   // 0 means use default.
   bus_config.flags           = b_flags;
+  bus_config.intr_flags      = ESP_INTR_FLAG_IRAM;
 
 	esp_err_t errRc = spi_bus_initialize(
 		host_id,
@@ -179,11 +180,13 @@ int8_t SPIAdapter::bus_init() {
   topts.stack_sz    = 2048;
 	createThread(&_thread_id, nullptr, spi_worker_thread, (void*) this, &topts);
   static_spi_thread_id = (TaskHandle_t) _thread_id;
+  _er_set_flag(SPI_FLAG_SPI_READY);
   return 0;
 }
 
 
 int8_t SPIAdapter::bus_deinit() {
+  _er_clear_flag(SPI_FLAG_SPI_READY);
   return 0;
 }
 
@@ -245,7 +248,9 @@ XferFault SPIBusOp::begin() {
 			if (nullptr == _threaded_op[anum]) {
         if ((nullptr == callback) || (0 == callback->io_op_callahead(this))) {
           _threaded_op[anum] = this;
-          vTaskResume(static_spi_thread_id);
+          if (0 != static_spi_thread_id) {
+            vTaskResume(static_spi_thread_id);
+          }
           ret = XferFault::NONE;
         }
         else {

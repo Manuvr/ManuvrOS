@@ -35,7 +35,7 @@ CBOR data begins at offset 4. The first uint32 is broken up this way:
 #include <Platform/Platform.h>
 #include <Platform/Targets/Teensy3/TeensyStorage.h>
 
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
 #include <EEPROM.h>
 
 // We want this definition isolated to the compilation unit.
@@ -305,4 +305,4 @@ int8_t TeensyStorage::notify(ManuvrMsg* active_event) {
 //  flushLocalLog();
 //}
 //#endif   // MANUVR_CONSOLE_SUPPORT
-#endif   // __MANUVR_LINUX & MANUVR_STORAGE
+#endif   // __MANUVR_LINUX & CONFIG_MANUVR_STORAGE

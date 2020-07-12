@@ -41,7 +41,7 @@ This file is meant to contain a set of common functions that are typically platf
 #include "esp_log.h"
 #include "driver/adc.h"
 
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
   #include <Platform/Targets/ESP32/ESP32Storage.h>
 #endif
 
@@ -550,7 +550,7 @@ int readPinAnalog(uint8_t pin) {
 /*******************************************************************************
 * Persistent configuration                                                     *
 *******************************************************************************/
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
   ESP32Storage _esp_storage(nullptr);
 
   // Called during boot to load configuration.
@@ -650,7 +650,7 @@ int8_t ESP32Platform::platformPreInit(Argument* root_config) {
   _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
   gpioSetup();
 
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
     _storage_device = (Storage*) &_esp_storage;
     _kernel.subscribe((EventReceiver*) &_esp_storage);
     _alter_flags(true, MANUVR_PLAT_FLAG_HAS_STORAGE);

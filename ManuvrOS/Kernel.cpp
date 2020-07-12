@@ -71,7 +71,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   { MANUVR_MSG_I2C_QUEUE_READY, 0x0000,  "I2C_Q_RDY", ManuvrMsg::MSG_ARGS_NONE },  // The i2c queue is ready for attention.
   #endif
 
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
   #endif
 
   {  MANUVR_MSG_SYS_BOOT_COMPLETED   , 0x0000,               "BOOT_COMPLETED"   , ManuvrMsg::MSG_ARGS_NONE }, // Raised when bootstrap is finished.
@@ -1347,9 +1347,9 @@ int Kernel::serviceSchedules() {
 *******************************************************************************/
 
 static const ConsoleCommand console_cmds[] = {
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
     { "S", "Save configuration" },
-  #endif // MANUVR_STORAGE
+  #endif // CONFIG_MANUVR_STORAGE
   #if defined(MANUVR_DEBUG)
     { "r", "Roll" },
   #endif //MANUVR_DEBUG
@@ -1426,12 +1426,12 @@ void Kernel::consoleCmdProc(StringBuilder* input) {
       break;
 
 
-    #if defined(MANUVR_STORAGE)
+    #if defined(CONFIG_MANUVR_STORAGE)
       case 'S':
         local_log.concat("Attempting configuration save...\n");
         Kernel::raiseEvent(MANUVR_MSG_SYS_CONF_SAVE, this);
         break;
-    #endif // MANUVR_STORAGE
+    #endif // CONFIG_MANUVR_STORAGE
 
     #if defined(__HAS_CRYPT_WRAPPER)
       case 'c':

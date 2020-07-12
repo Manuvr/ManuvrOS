@@ -60,7 +60,7 @@ class ArduinoWrapper : public ManuvrPlatform {
   protected:
     const char* _board_name = "Generic";
     virtual int8_t platformPostInit();
-    #if defined(MANUVR_STORAGE)
+    #if defined(CONFIG_MANUVR_STORAGE)
       // Called during boot to load configuration.
       int8_t _load_config();
     #endif

@@ -1023,9 +1023,9 @@ void printTypeSizes() {
 
   output.concat("\n-- Core singletons:\n");
   output.concatf("\tManuvrPlatform        %u\n", sizeof(ManuvrPlatform));
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
     output.concatf("\t  Storage             %u\n", sizeof(Storage));
-  #endif  // MANUVR_STORAGE
+  #endif  // CONFIG_MANUVR_STORAGE
   output.concatf("\t  Identity            %u\n", sizeof(Identity));
   output.concatf("\t    IdentityUUID      %u\n", sizeof(IdentityUUID));
   output.concatf("\tKernel                %u\n", sizeof(Kernel));

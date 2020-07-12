@@ -268,6 +268,10 @@ int8_t SPIAdapter::queue_io_job(BusOp* _op) {
 int8_t SPIAdapter::advance_work_queue() {
   int8_t return_value = 0;
 
+  if (!_er_flag(SPI_FLAG_SPI_READY)) {
+    return return_value;
+  }
+
   timeout_punch = false;
   if (current_job) {
     switch (current_job->get_state()) {

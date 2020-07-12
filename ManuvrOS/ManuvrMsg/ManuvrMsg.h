@@ -266,8 +266,8 @@ class ManuvrMsg {
     /* If singleTarget is true, the kernel calls this to proc the event. */
     int8_t execute();
 
-    /* If this ManuvrMsg is scheduled, aborts it. Returns true if aborted. */
-    bool abort();
+    ///* If this ManuvrMsg is scheduled, aborts it. Returns true if aborted. */
+    //bool abort();
 
     /* Applies time to the schedule, bringing it closer to execution. */
     int8_t applyTime(uint32_t ms);

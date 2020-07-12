@@ -49,7 +49,7 @@ bool StopWatch::markStop() {
     _run_time_best    = strict_min(_run_time_last, _run_time_best);
     _run_time_worst   = strict_max(_run_time_last, _run_time_worst);
     _run_time_total  += _run_time_last;
-    _run_time_average = _run_time_total / _executions;
+    _run_time_average = (1 < _executions) ? (_run_time_total / _executions) : _run_time_last;
     _start_micros    = 0;
     ret = true;
   }

@@ -163,7 +163,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
     default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
   #endif
 
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
     default_flags |= MANUVR_PLAT_FLAG_HAS_STORAGE;
   #endif
 
@@ -372,7 +372,7 @@ int8_t ManuvrPlatform::bootstrap() {
   while ((0 < _kernel.procIdleFlags()) && boot_passes) {
     boot_passes--;
   }
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
     if (0 == _load_config()) {
       // If the config loaded, broadcast it.
       // Kernel will clean up this event.
@@ -485,7 +485,7 @@ Argument* ManuvrPlatform::getConfKey(const char* key) {
  * @return    0 on success. Non-zero otherwise.
  */
 int8_t ManuvrPlatform::storeConf(Argument* nu) {
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
   // Persist any open configuration...
   if ((nu) && (_storage_device)) {
     if (_storage_device->isMounted()) {
@@ -493,7 +493,7 @@ int8_t ManuvrPlatform::storeConf(Argument* nu) {
       StringBuilder shuttle;
       if (0 <= Argument::encodeToCBOR(nu, &shuttle)) {
         // TODO: Now would be a good time to persist any dirty identities.
-        if (0 < _storage_device->persistentWrite(nullptr, shuttle.string(), shuttle.length(), 0)) {
+        if (0 < (int8_t) _storage_device->persistentWrite(nullptr, shuttle.string(), shuttle.length(), 0)) {
           return 0;
         }
       }

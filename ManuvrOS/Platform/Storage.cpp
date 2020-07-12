@@ -24,16 +24,30 @@ This is the basal implementation of the storage interface.
 #include "Platform.h"
 #include "Storage.h"
 
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
 
-/**
-* Constructor
-*/
-Storage::Storage() {
+
+const char* const Storage::errStr(StorageErr e) {
+  switch (e) {
+    case StorageErr::KEY_CLOBBERED:    return "KEY_CLOBBERED";
+    case StorageErr::NONE:             return "NONE";
+    case StorageErr::UNSPECIFIED:      return "UNSPECIFIED";
+    case StorageErr::BAD_PARAM:        return "BAD_PARAM";
+    case StorageErr::BUSY:             return "BUSY";
+    case StorageErr::MEM_ALLOC:        return "MEM_ALLOC";
+    case StorageErr::NOT_MOUNTED:      return "NOT_MOUNTED";
+    case StorageErr::NOT_READABLE:     return "NOT_READABLE";
+    case StorageErr::NOT_WRITABLE:     return "NOT_WRITABLE";
+    case StorageErr::NO_FREE_SPACE:    return "NO_FREE_SPACE";
+    case StorageErr::HW_FAULT:         return "HW_FAULT";
+    case StorageErr::KEY_NOT_FOUND:    return "KEY_NOT_FOUND";
+    case StorageErr::KEY_COLLISION:    return "KEY_COLLISION";
+  }
+  return "UNKNOWN";
 }
 
 
-void Storage::printDebug(StringBuilder* output) {
+void Storage::printStorage(StringBuilder* output) {
   output->concatf("-- Storage              [%sencrypted, %sremovable]\n",
     _pl_flag(MANUVR_PL_ENCRYPTED) ? "" : "un",
     _pl_flag(MANUVR_PL_REMOVABLE) ? "" : "non-"
@@ -57,4 +71,4 @@ void Storage::printDebug(StringBuilder* output) {
   }
 }
 
-#endif   // MANUVR_STORAGE
+#endif   // CONFIG_MANUVR_STORAGE

@@ -29,7 +29,7 @@ Data-persistence layer for Teensy.
 #include "nvs_flash.h"
 #include "nvs.h"
 
-#ifndef MANUVR_CBOR
+#if defined(CONFIG_MANUVR_STORAGE) && !defined(MANUVR_CBOR)
   #error The ESP32Storage class requires MANUVR_CBOR be enabled.
 #endif
 
@@ -40,12 +40,12 @@ class ESP32Storage : public EventReceiver, public Storage {
 
     /* Overrides from Storage. */
     unsigned long freeSpace();  // How many bytes are availible for use?
-    int8_t wipe();              // Call to wipe the data store.
-    int8_t flush();             // Blocks until commit completes.
-
-    int persistentWrite(const char*, uint8_t*, unsigned int, uint16_t);
-    int persistentRead(const char*, uint8_t*, unsigned int, uint16_t);
-    int persistentRead(const char*, StringBuilder*);
+    StorageErr wipe();          // Call to wipe the data store.
+    StorageErr flush();         // Blocks until commit completes.
+    StorageErr persistentWrite(const char*, uint8_t*, unsigned int, uint16_t);
+    StorageErr persistentRead(const char*, uint8_t*, unsigned int*, uint16_t);
+    StorageErr persistentWrite(const char*, StringBuilder*, uint16_t);
+    StorageErr persistentRead(const char*, StringBuilder*, uint16_t);
 
     /* Overrides from EventReceiver */
     void printDebug(StringBuilder*);

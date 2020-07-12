@@ -238,7 +238,6 @@ class BusOp {
     BusOpcode opcode     = BusOpcode::UNDEF;  // What is the particular operation being done?
     XferState xfer_state = XferState::UNDEF;  // What state is this transfer in?
     XferFault xfer_fault = XferFault::NONE;   // Fault code.
-
 };
 
 

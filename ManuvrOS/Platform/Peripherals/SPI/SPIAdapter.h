@@ -50,7 +50,7 @@ limitations under the License.
 * These state flags are hosted by the EventReceiver. This may change in the future.
 * Might be too much convention surrounding their assignment across inherritence.
 */
-#define SPI_FLAG_SPI_READY    0x01    // Is SPI1 initialized?
+#define SPI_FLAG_SPI_READY    0x01    // Is SPI initialized?
 #define SPI_FLAG_QUEUE_IDLE   0x02    // Is the SPI queue idle?
 #define SPI_FLAG_QUEUE_GUARD  0x04    // Prevent bus queue floods?
 #define SPI_FLAG_RESERVED_0   0x08    // Reserved

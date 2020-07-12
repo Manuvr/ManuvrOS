@@ -305,7 +305,7 @@ int8_t ArduinoWrapper::platformPreInit(Argument* root_config) {
 
   init_rng();
 
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
   #endif
 
   #if defined(__HAS_CRYPT_WRAPPER)

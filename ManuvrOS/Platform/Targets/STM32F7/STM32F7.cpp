@@ -29,7 +29,7 @@ This file is meant to contain a set of common functions that are typically platf
 #include <Platform/Platform.h>
 #include "STM32F7.h"
 
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
 // No storage support yet.
 // RTC backup ram?
 #endif

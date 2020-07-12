@@ -222,10 +222,10 @@ class ManuvrPlatform {
     #endif   // CONFIG_MANUVR_SENSOR_MGR
 
     /* These are storage-related members. */
-    #if defined(MANUVR_STORAGE)
+    #if defined(CONFIG_MANUVR_STORAGE)
       inline Storage* fetchStorage(const char*) {   return _storage_device;   };
       int8_t   offerStorage(const char*, Storage*);
-    #endif   // MANUVR_STORAGE
+    #endif   // CONFIG_MANUVR_STORAGE
 
     /*
     * Systems that want support for dynamic runtime configurations
@@ -291,7 +291,7 @@ class ManuvrPlatform {
     Argument*   _config    = nullptr;
     Identity*   _self      = nullptr;
     Identity*   _identity  = nullptr;
-    #if defined(MANUVR_STORAGE)
+    #if defined(CONFIG_MANUVR_STORAGE)
       Storage* _storage_device = nullptr;
       // TODO: Ultimately, there will be a similar object for the crypto module.
     #endif
@@ -315,7 +315,7 @@ class ManuvrPlatform {
 
     virtual int8_t platformPostInit() =0;
 
-    #if defined(MANUVR_STORAGE)
+    #if defined(CONFIG_MANUVR_STORAGE)
       // Called during boot to load configuration.
       virtual int8_t _load_config() =0;
     #endif
@@ -415,7 +415,7 @@ int    readPinAnalog(uint8_t pin);
 #include <Platform/Cryptographic.h>
 #include <Platform/Identity.h>
 
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
   #include <Platform/Storage.h>
 #endif
 

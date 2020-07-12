@@ -913,14 +913,14 @@ void ManuvrMsg::noteExecutionTime(uint32_t profile_start_time, uint32_t profile_
 /*******************************************************************************
 * Pertaining to deferred execution and scheduling....                          *
 *******************************************************************************/
-/**
-* Safely aborts a schedule that is queued to execute.
-*
-* @return  true if the schedule was aborted.
-*/
-bool ManuvrMsg::abort() {
-  return Kernel::abortEvent(this);
-}
+// /**
+// * Safely aborts a schedule that is queued to execute.
+// *
+// * @return  true if the schedule was aborted.
+// */
+// bool ManuvrMsg::abort() {
+//   return Kernel::abortEvent(this);
+// }
 
 
 /**

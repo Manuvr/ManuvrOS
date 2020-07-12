@@ -44,6 +44,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "SSD13xx.h"
 
+
 ImgBufferFormat _get_img_fmt_for_ssd(SSDModel m) {
   switch (m) {
     case SSDModel::SSD1306:   return ImgBufferFormat::GREY_8;
@@ -88,7 +89,11 @@ uint32_t _get_img_y_for_ssd(SSDModel m) {
 * Constructor.
 */
 SSD13xx::SSD13xx(const SSD13xxOpts* o)
-  : Image(_get_img_x_for_ssd(o->model), _get_img_y_for_ssd(o->model), _get_img_fmt_for_ssd(o->model)), _opts(o)
+  : Image(_get_img_x_for_ssd(o->model),
+    _get_img_y_for_ssd(o->model),
+    _get_img_fmt_for_ssd(o->model)),
+    _opts(o),
+    _fb_data_op(BusOpcode::TX, this, o->cs, false)
 {
   _is_framebuffer(true);
 }
@@ -148,13 +153,16 @@ int8_t SSD13xx::io_op_callback(BusOp* _op) {
     _lock(false);
     _stopwatch.markStop();
     if (_enabled && _initd) {
-      ret = BUSOP_CALLBACK_RECYCLE;
+      //ret = BUSOP_CALLBACK_RECYCLE;
     }
   }
   else {
     uint8_t arg_buf[4];
     switch (op->getTransferParam(0)) {
-      case SSD13XX_CMD_DISPLAYON:    _enabled = true;       break;
+      case SSD13XX_CMD_DISPLAYON:
+        _enabled = true;
+        //commitFrameBuffer();
+        break;
       case SSD13XX_CMD_DISPLAYOFF:   _enabled = false;      break;
       case SSD13XX_CMD_SETREMAP:
         arg_buf[0] = 0x00;
@@ -309,22 +317,24 @@ int8_t SSD13xx::init(SPIAdapter* b) {
   int8_t ret = -1;
   _BUS = b;
   if (nullptr != _BUS) {
+    ret--;
     _initd    = false;
-    _fb_data_op.set_opcode(BusOpcode::TX);
-    _fb_data_op.shouldReap(false);
-    _fb_data_op.setCSPin(_opts.cs);
     _fb_data_op.setAdapter(_BUS);
-    _fb_data_op.csActiveHigh(false);
-    _fb_data_op.callback = this;
+    _fb_data_op.shouldReap(false);
     if (0 == _ll_pin_init()) {
-      reallocate();
-      _fb_data_op.setBuffer(_buffer, bytesUsed());
-      uint8_t arg_buf[4];
-      // Initialization Sequence begins here and is carried forward by the
-      //   io_callback.
-      _send_command(SSD13XX_CMD_DISPLAYOFF);    // 0xAE
-      arg_buf[0] = 0x72; // RGB Color
-      ret = _send_command(SSD13XX_CMD_SETREMAP, arg_buf, 1);  // 0xA0
+      ret--;
+      if (reallocate()) {
+        ret--;
+        _fb_data_op.setBuffer(_buffer, bytesUsed());  // Buffer is in Image superclass.
+        uint8_t arg_buf[4];
+        // Initialization Sequence begins here and is carried forward by the
+        //   io_callback.
+        _send_command(SSD13XX_CMD_DISPLAYOFF);    // 0xAE
+        arg_buf[0] = 0x72; // RGB Color
+        if (0 == _send_command(SSD13XX_CMD_SETREMAP, arg_buf, 1)) {
+          ret = 0;
+        }
+      }
     }
   }
   return ret;
@@ -340,12 +350,7 @@ int8_t SSD13xx::enableDisplay(bool enable) {
   if (_initd) {
     ret--;
     if (enable ^ _enabled) {
-      ret--;
-      if (0 == _send_command(enable ? SSD13XX_CMD_DISPLAYON : SSD13XX_CMD_DISPLAYOFF)) {
-        if (enable) {
-          commitFrameBuffer();  // TODO: Might be too aggressive on the timing. Do it in callback?
-        }
-      }
+      ret = _send_command(enable ? SSD13XX_CMD_DISPLAYON : SSD13XX_CMD_DISPLAYOFF);
     }
     else {
       ret = 0;
@@ -367,30 +372,39 @@ int8_t SSD13xx::enableDisplay(bool enable) {
 int8_t SSD13xx::_send_command(uint8_t commandByte, uint8_t* buf, uint8_t buf_len) {
   int8_t ret = -2;
   if (nullptr != _BUS) {
+    ret--;
     SPIBusOp* op = (SPIBusOp*) _BUS->new_op(BusOpcode::TX, (BusOpCallback*) this);
-    switch (buf_len) {
-      case 0:   op->setParams(commandByte);                                       break;
-      case 1:   op->setParams(commandByte, *(buf + 0));                           break;
-      case 2:   op->setParams(commandByte, *(buf + 0), *(buf + 1));               break;
-      case 3:   op->setParams(commandByte, *(buf + 0), *(buf + 1), *(buf + 2));   break;
-      default:
-        op->setParams(commandByte);
-        op->setBuffer(buf, buf_len);
-        break;
+    if (nullptr != op) {
+      switch (buf_len) {
+        case 0:   op->setParams(commandByte);                                       break;
+        case 1:   op->setParams(commandByte, *(buf + 0));                           break;
+        case 2:   op->setParams(commandByte, *(buf + 0), *(buf + 1));               break;
+        case 3:   op->setParams(commandByte, *(buf + 0), *(buf + 1), *(buf + 2));   break;
+        default:
+          op->setParams(commandByte);
+          op->setBuffer(buf, buf_len);
+          break;
+      }
+      ret = queue_io_job(op);
     }
-    ret = queue_io_job(op);
   }
   return ret;
 }
 
 
 /*
+* Reset is technically optional. CS and DC are obligatory.
 *
+* @return 0 on success. -1 otherwise.
 */
-int8_t SSD13xx::_send_data(uint8_t* buf, uint16_t len) {
-  int8_t ret = -2;
-  if (nullptr != _BUS) {
-    ret = queue_io_job(&_fb_data_op);
+int8_t SSD13xx::reset() {
+  int8_t ret = -1;
+  if (255 != _opts.reset) {
+    setPin(_opts.reset, false);  // Hold the display in reset.
+    sleep_millis(1);
+    setPin(_opts.reset, true);
+    sleep_millis(1);
+    ret = 0;
   }
   return ret;
 }
@@ -405,7 +419,7 @@ int8_t SSD13xx::_ll_pin_init() {
   int8_t ret = -1;
   if (255 != _opts.reset) {
     gpioDefine(_opts.reset, GPIOMode::OUTPUT);
-    setPin(_opts.reset, false);  // Hold the display in reset.
+    reset();
   }
   if (255 != _opts.cs) {
     gpioDefine(_opts.cs, GPIOMode::OUTPUT);
