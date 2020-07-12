@@ -26,7 +26,7 @@ This is the class that is used to keep bus operations on the SPI atomic.
 #define __SPI_BUS_OP_H__
 
   #include <Drivers/BusQueue/BusQueue.h>
-  #include <DataStructures/StringBuilder.h>
+  #include <StringBuilder.h>
   #include <Drivers/DeviceWithRegisters/DeviceRegister.h>
   #include <Kernel.h>
 

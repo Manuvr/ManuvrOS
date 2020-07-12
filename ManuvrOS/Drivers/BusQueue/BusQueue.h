@@ -26,8 +26,8 @@ TODO: BusOp lifecycle....
 #define __MANUVR_BUS_QUEUE_H__
 
 #include <CommonConstants.h>
-#include <DataStructures/PriorityQueue.h>
-#include <DataStructures/StringBuilder.h>
+#include <PriorityQueue.h>
+#include <StringBuilder.h>
 #include <Platform/Platform.h>
 
 

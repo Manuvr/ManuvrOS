@@ -35,9 +35,9 @@ limitations under the License.
   #include "CommonConstants.h"
   #include "Utilities.h"
   #include "EnumeratedTypeCodes.h"
-  #include "DataStructures/PriorityQueue.h"
-  #include "DataStructures/ElementPool.h"
-  #include "DataStructures/StringBuilder.h"
+  #include <PriorityQueue.h>
+  #include <ElementPool.h>
+  #include <StringBuilder.h>
 
   #include "EventReceiver.h"
   #ifdef MANUVR_CONSOLE_SUPPORT

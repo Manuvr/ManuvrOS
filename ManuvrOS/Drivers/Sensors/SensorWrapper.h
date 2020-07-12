@@ -28,10 +28,10 @@ This class is a generic interface to a sensor. That sensor might measure many th
 
 #include <inttypes.h>
 #include <string.h>
-#include <DataStructures/StringBuilder.h>
-#include <DataStructures/PriorityQueue.h>
+#include <StringBuilder.h>
+#include <PriorityQueue.h>
 #include <DataStructures/Argument.h>
-#include <DataStructures/uuid.h>
+#include <uuid.h>
 
 #include <Platform/Platform.h>
 

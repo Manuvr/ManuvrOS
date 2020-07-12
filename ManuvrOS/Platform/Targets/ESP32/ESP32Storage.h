@@ -25,7 +25,7 @@ Data-persistence layer for Teensy.
 #define __MANUVR_ESP32_STORAGE_H__
 
 #include <EventReceiver.h>
-#include <Platform/Storage.h>
+#include <Storage.h>
 #include "nvs_flash.h"
 #include "nvs.h"
 

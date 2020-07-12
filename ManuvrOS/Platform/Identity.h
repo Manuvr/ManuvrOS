@@ -26,7 +26,7 @@ This might be better-viewed as a data structure. Notions of identity should
 #define __MANUVR_IDENTITY_H__
 
 #include <Rationalizer.h>
-#include <DataStructures/StringBuilder.h>
+#include <StringBuilder.h>
 #include <DataStructures/Argument.h>
 
 

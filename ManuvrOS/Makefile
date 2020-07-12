@@ -19,24 +19,13 @@ INCLUDES    = -I. -iquote.
 LIBS =  -lm
 
 # Datastructures
-CPP_SRCS   = DataStructures/StringBuilder.cpp
-CPP_SRCS  += DataStructures/BufferPipe.cpp
-CPP_SRCS  += DataStructures/Quaternion.cpp
+CPP_SRCS   = DataStructures/BufferPipe.cpp
 CPP_SRCS  += DataStructures/InertialMeasurement.cpp
-CPP_SRCS  += DataStructures/uuid.cpp
 CPP_SRCS  += DataStructures/Argument.cpp
-CPP_SRCS  += DataStructures/StopWatch.cpp
+
 
 # Types and encodings
-SOURCES_CBOR  = Types/cbor-cpp/encoder.cpp
-SOURCES_CBOR += Types/cbor-cpp/decoder.cpp
-SOURCES_CBOR += Types/cbor-cpp/input.cpp
-SOURCES_CBOR += Types/cbor-cpp/output_dynamic.cpp
-SOURCES_CBOR += Types/cbor-cpp/output_static.cpp
-
-CPP_SRCS  += $(SOURCES_CBOR)
 CPP_SRCS  += Types/TypeTranscriber.cpp
-CPP_SRCS  += Types/Image.cpp
 CPP_SRCS  += Types/Avro/Avro.cpp
 
 # Manuvr core
@@ -81,21 +70,9 @@ CPP_SRCS  += Transports/ManuvrSocket/UDPPipe.cpp
 # "Layer-7" Frameworks
 CPP_SRCS  += Frameworks/OIC/ManuvrOIC.cpp
 
-# i2c apparatus...
-CPP_SRCS  += Drivers/BusQueue/BusQueue.cpp
-CPP_SRCS  += Platform/Peripherals/I2C/I2CDevice.cpp
-CPP_SRCS  += Platform/Peripherals/I2C/I2CAdapter.cpp
-CPP_SRCS  += Platform/Peripherals/I2C/I2CDeviceWithRegisters.cpp
-CPP_SRCS  += Platform/Peripherals/I2C/I2CBusOp.cpp
-
-# SPI apparatus...
-CPP_SRCS  += Platform/Peripherals/SPI/SPIAdapter.cpp
-CPP_SRCS  += Platform/Peripherals/SPI/SPIBusOp.cpp
-
 
 CPP_SRCS  += Drivers/Sensors/LightSensor/LightSensor.cpp
 CPP_SRCS  += Drivers/AudioRouter/AudioRouter.cpp
-
 CPP_SRCS  += Drivers/MCP73833/MCP73833.cpp
 CPP_SRCS  += Drivers/ADP8866/ADP8866.cpp
 
@@ -147,7 +124,9 @@ CPP_SRCS  += Platform/Identity.cpp
 CPP_SRCS  += Platform/Identity/IdentityUUID.cpp
 CPP_SRCS  += Platform/Identity/IdentityCrypto.cpp
 CPP_SRCS  += Platform/Identity/IdentityOIC.cpp
-CPP_SRCS  += Platform/Storage.cpp
+
+# TODO: Phase this out.
+CPP_SRCS  += Platform/Peripherals/I2C/I2CDeviceWithRegisters.cpp
 
 
 OBJS  = $(CPP_SRCS:.cpp=.o)

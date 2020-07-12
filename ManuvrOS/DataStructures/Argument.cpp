@@ -25,7 +25,7 @@ This class represents our type-abstraction layer. It is the means by which
 
 #include "Argument.h"
 
-#include <DataStructures/PriorityQueue.h>
+#include <PriorityQueue.h>
 #if defined(CONFIG_MANUVR_IMG_SUPPORT)
   #include <Types/Image.h>
 #endif   // CONFIG_MANUVR_IMG_SUPPORT

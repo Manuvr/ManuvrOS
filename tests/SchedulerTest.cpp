@@ -34,7 +34,7 @@ We assume that the scheduler is being driven from a valid time source. Since we
 #include <fstream>
 #include <iostream>
 
-#include <DataStructures/StringBuilder.h>
+#include <StringBuilder.h>
 #include <Platform/Platform.h>
 
 

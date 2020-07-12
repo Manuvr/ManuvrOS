@@ -35,8 +35,8 @@ Lifecycle:
   #include <CommonConstants.h>
   #include <EnumeratedTypeCodes.h>
 
-  #include <DataStructures/PriorityQueue.h>
-  #include <DataStructures/StringBuilder.h>
+  #include <PriorityQueue.h>
+  #include <StringBuilder.h>
 
   #include <ManuvrMsg/ManuvrMsg.h>
 

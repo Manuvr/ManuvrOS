@@ -24,7 +24,7 @@ OIC credentials.
 
 #if defined (MANUVR_OPENINTERCONNECT)
 
-#include <DataStructures/uuid.h>
+#include <uuid.h>
 #include <Platform/Identity.h>
 #include <alloca.h>
 

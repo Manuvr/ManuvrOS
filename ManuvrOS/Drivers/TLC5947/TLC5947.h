@@ -28,7 +28,7 @@ Driver supports daisy-chaining by passing constructor parameter.
 #define __TLC5947_H__
 
 #include <Drivers/BusQueue/BusQueue.h>
-#include <DataStructures/StringBuilder.h>
+#include <StringBuilder.h>
 #include <Drivers/DeviceWithRegisters/DeviceRegister.h>
 #include <Platform/Platform.h>
 #include <Platform/Peripherals/SPI/SPIAdapter.h>

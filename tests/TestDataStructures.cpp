@@ -31,13 +31,13 @@ This program runs tests on raw data-handling classes.
 #include <fstream>
 #include <iostream>
 
-#include <DataStructures/StringBuilder.h>
-#include <DataStructures/PriorityQueue.h>
-#include <DataStructures/Vector3.h>
-#include <DataStructures/Quaternion.h>
+#include <StringBuilder.h>
+#include <PriorityQueue.h>
+#include <Vector3.h>
+#include <Quaternion.h>
 #include <DataStructures/RingBuffer.h>
 #include <DataStructures/BufferPipe.h>
-#include <DataStructures/uuid.h>
+#include <uuid.h>
 
 #include <Platform/Platform.h>
 #include <Drivers/Sensors/SensorWrapper.h>

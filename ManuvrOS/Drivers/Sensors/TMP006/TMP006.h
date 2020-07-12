@@ -30,7 +30,7 @@ I have adapted it for ManuvrOS.
 #define TMP006_H
 
 #include <math.h>
-#include <DataStructures/StringBuilder.h>
+#include <StringBuilder.h>
 #include <Drivers/Sensors/SensorWrapper.h>
 #include <Platform/Peripherals/I2C/I2CAdapter.h>
 

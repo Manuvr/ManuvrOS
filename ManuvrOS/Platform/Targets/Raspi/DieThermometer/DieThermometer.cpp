@@ -20,7 +20,7 @@ limitations under the License.
 */
 
 #include "DieThermometer.h"
-#include <DataStructures/StringBuilder.h>
+#include <StringBuilder.h>
 
 #if defined(RASPI)
 

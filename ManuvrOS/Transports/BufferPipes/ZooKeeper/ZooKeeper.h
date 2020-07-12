@@ -40,7 +40,7 @@ This class would be a prime place to integrate Avro or protobuf so that packers
 #define __MANUVR_PROTOCOL_ZOOKEEPER_H__
 
 #include <DataStructures/BufferPipe.h>
-#include <DataStructures/PriorityQueue.h>
+#include <PriorityQueue.h>
 
 class ZooInmate {
   public:

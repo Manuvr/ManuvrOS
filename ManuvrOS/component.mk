@@ -7,7 +7,7 @@
 
 #CFLAGS +=
 
-COMPONENT_ADD_INCLUDEDIRS := $(PROJECT_PATH)/lib . ../..
+COMPONENT_ADD_INCLUDEDIRS := $(PROJECT_PATH)/lib $(PROJECT_PATH)/lib/CppPotpourri/src . ../..
 
 CFLAGS += -D__MANUVR_ESP32
 CXXFLAGS += -D__MANUVR_ESP32
@@ -15,7 +15,6 @@ CXXFLAGS += -D__MANUVR_ESP32
 # These are components that are known to work on ESP32.
 LOCAL_ESP_COMPS  = . DataStructures
 LOCAL_ESP_COMPS += Types
-LOCAL_ESP_COMPS += Types/cbor-cpp
 LOCAL_ESP_COMPS += Drivers/ADP8866 Drivers/BusQueue ManuvrMsg Types
 LOCAL_ESP_COMPS += Drivers/ATECC508
 LOCAL_ESP_COMPS += Drivers/ISL23345
@@ -40,6 +39,7 @@ LOCAL_ESP_COMPS += Drivers/Modems/LORA/SX1276
 LOCAL_ESP_COMPS += Drivers/SX8634
 LOCAL_ESP_COMPS += Drivers/SX1503
 
+LOCAL_ESP_COMPS += ../lib/CppPotpourri/src
 
 LOCAL_ESP_COMPS += Platform/Targets/ESP32
 LOCAL_ESP_COMPS += Platform/Targets/ESP32/I2C

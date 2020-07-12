@@ -28,7 +28,7 @@ This class was coded with the assumption that there would only be one such
 */
 
 #include "MCP73833.h"
-#include <DataStructures/StringBuilder.h>
+#include <StringBuilder.h>
 #include <Platform/Platform.h>
 
 

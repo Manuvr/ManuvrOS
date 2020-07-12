@@ -52,6 +52,32 @@ SOURCES_JSON += jansson/src/hashtable_seed.c
 
 
 ###########################################################################
+# CppPotpourri source and configuration.
+SOURCES_CPPP  = CppPotpourri/src/BusQueue.cpp
+SOURCES_CPPP += CppPotpourri/src/I2CAdapter.cpp
+SOURCES_CPPP += CppPotpourri/src/I2CDevice.cpp
+SOURCES_CPPP += CppPotpourri/src/Quaternion.cpp
+SOURCES_CPPP += CppPotpourri/src/SensorFilter.cpp
+SOURCES_CPPP += CppPotpourri/src/SensorWrapper.cpp
+SOURCES_CPPP += CppPotpourri/src/SPIBusOp.cpp
+SOURCES_CPPP += CppPotpourri/src/Storage.cpp
+SOURCES_CPPP += CppPotpourri/src/TripleAxisCompass.cpp
+SOURCES_CPPP += CppPotpourri/src/UARTAdapter.cpp
+SOURCES_CPPP += CppPotpourri/src/WakeLock.cpp
+SOURCES_CPPP += CppPotpourri/src/GPSWrapper.cpp
+SOURCES_CPPP += CppPotpourri/src/I2CBusOp.cpp
+SOURCES_CPPP += CppPotpourri/src/ParsingConsole.cpp
+SOURCES_CPPP += CppPotpourri/src/SensorDatum.cpp
+SOURCES_CPPP += CppPotpourri/src/SensorManager.cpp
+SOURCES_CPPP += CppPotpourri/src/SPIAdapter.cpp
+SOURCES_CPPP += CppPotpourri/src/StopWatch.cpp
+SOURCES_CPPP += CppPotpourri/src/StringBuilder.cpp
+SOURCES_CPPP += CppPotpourri/src/TripleAxisPipe.cpp
+SOURCES_CPPP += CppPotpourri/src/uuid.cpp
+SOURCES_CPPP += CppPotpourri/src/cbor-cpp/cbor.cpp
+SOURCES_CPPP += CppPotpourri/src/Image/Image.cpp
+
+###########################################################################
 # iotivity-constrained.
 # TODO: Much redundant. Refactor to use our native CBOR and MBED.
 DTLS_SRC      = iotivity/deps/tinydtls/ccm.c
@@ -100,11 +126,10 @@ ifeq ($(JSON),1)
 endif
 
 
-
 ###########################################################################
 # Parameter unification and make targets
 ###########################################################################
-SOURCES_C  += $(SOURCES_MQTT_C)
+SOURCES_C  += $(SOURCES_MQTT_C) $(SOURCES_CPPP)
 
 LOCAL_C_FLAGS   += $(INCLUDES) -nostdlib $(CFLAGS) $(FLAGS_LIBMQTT) $(FLAGS_IOTIVITY)
 LOCAL_CXX_FLAGS += $(INCLUDES) $(CXXFLAGS)

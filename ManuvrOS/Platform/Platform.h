@@ -44,7 +44,7 @@ This file is meant to contain a set of common functions that are
 
 #include <Rationalizer.h>
 #include <CommonConstants.h>
-#include <DataStructures/uuid.h>
+#include "uuid.h"
 
 #if defined(__BUILD_HAS_PTHREADS)
   #include <pthread.h>
@@ -416,7 +416,7 @@ int    readPinAnalog(uint8_t pin);
 #include <Platform/Identity.h>
 
 #if defined(CONFIG_MANUVR_STORAGE)
-  #include <Platform/Storage.h>
+  #include <Storage.h>
 #endif
 
 #if defined(CONFIG_MANUVR_PRNG)

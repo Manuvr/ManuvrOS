@@ -22,7 +22,7 @@ limitations under the License.
 
 #include <CommonConstants.h>
 #include <DataStructures/Argument.h>
-#include <DataStructures/StopWatch.h>
+#include <StopWatch.h>
 #include "ManuvrMsg.h"
 #include <string.h>
 #include <Kernel.h>

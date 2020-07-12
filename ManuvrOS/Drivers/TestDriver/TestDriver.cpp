@@ -21,7 +21,7 @@ limitations under the License.
 
 
 #include "TestDriver.h"
-#include <DataStructures/StringBuilder.h>
+#include <StringBuilder.h>
 
 #if defined(CONFIG_MANUVR_BENCHMARKS)
 

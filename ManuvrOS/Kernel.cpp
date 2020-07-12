@@ -22,7 +22,7 @@ limitations under the License.
 #include <CommonConstants.h>
 #include <Kernel.h>
 #include <Platform/Platform.h>
-#include "DataStructures/StopWatch.h"
+#include <StopWatch.h>
 
 #include <MsgProfiler.h>
 

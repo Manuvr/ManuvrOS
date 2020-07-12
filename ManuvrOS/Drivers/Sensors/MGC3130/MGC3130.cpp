@@ -28,7 +28,7 @@ This class is a driver for Microchip's MGC3130 e-field gesture sensor. It is mea
 
 #include <Kernel.h>
 #include "MGC3130.h"
-#include <DataStructures/StringBuilder.h>
+#include <StringBuilder.h>
 #include <Platform/Platform.h>
 
 

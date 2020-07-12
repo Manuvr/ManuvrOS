@@ -28,7 +28,7 @@ Implemented as a CBOR object within a single file. This feature therefore
 #define __MANUVR_LINUX_STORAGE_H__
 
 #include <EventReceiver.h>
-#include <Platform/Storage.h>
+#include <Storage.h>
 
 #ifndef MANUVR_CBOR
   #error The LinuxStorage class requires MANUVR_CBOR be enabled.

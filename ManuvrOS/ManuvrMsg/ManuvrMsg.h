@@ -30,7 +30,7 @@ This class forms the foundation of internal events. It contains the identity of 
 
 #include "MessageDefs.h"    // This include file contains all of the message codes.
 #include <DataStructures/Argument.h>
-#include <DataStructures/LightLinkedList.h>
+#include <LightLinkedList.h>
 
 #include <EnumeratedTypeCodes.h>
 #include <MsgProfiler.h>

@@ -23,7 +23,7 @@ limitations under the License.
 #define ADG2128_CROSSPOINT_H
 
 #include <inttypes.h>
-#include "DataStructures/StringBuilder.h"
+#include <StringBuilder.h>
 #include "Platform/Peripherals/I2C/I2CAdapter.h"
 
 

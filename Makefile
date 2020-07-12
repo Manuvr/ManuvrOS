@@ -42,6 +42,7 @@ INCLUDES    = -I$(BUILD_ROOT)/.
 INCLUDES   += -I$(BUILD_ROOT)/ManuvrOS
 INCLUDES   += -I$(BUILD_ROOT)/lib
 
+INCLUDES   += -I$(BUILD_ROOT)/lib/CppPotpourri/src
 INCLUDES   += -I$(BUILD_ROOT)/lib/paho.mqtt.embedded-c/
 INCLUDES   += -I$(BUILD_ROOT)/lib/mbedtls/include/
 INCLUDES   += -I$(BUILD_ROOT)/lib/iotivity

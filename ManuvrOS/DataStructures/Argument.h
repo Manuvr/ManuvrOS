@@ -30,11 +30,12 @@ Template for a preallocated pool manager.
 #include <EnumeratedTypeCodes.h>
 #include <Types/TypeTranscriber.h>
 
-#include <DataStructures/Vector3.h>
-#include <DataStructures/Quaternion.h>
+#include <Vector3.h>
+#include <Quaternion.h>
+#include <StringBuilder.h>
 
 #if defined(MANUVR_CBOR)
-  #include <Types/cbor-cpp/cbor.h>
+  #include <cbor-cpp/cbor.h>
 #endif
 
 #if defined(CONFIG_MANUVR_IMG_SUPPORT)
