@@ -418,14 +418,14 @@ int8_t SSD13xx::reset() {
 int8_t SSD13xx::_ll_pin_init() {
   int8_t ret = -1;
   if (255 != _opts.reset) {
-    gpioDefine(_opts.reset, GPIOMode::OUTPUT);
+    pinMode(_opts.reset, GPIOMode::OUTPUT);
     reset();
   }
   if (255 != _opts.cs) {
-    gpioDefine(_opts.cs, GPIOMode::OUTPUT);
+    pinMode(_opts.cs, GPIOMode::OUTPUT);
     setPin(_opts.cs, true);
     if (255 != _opts.dc) {
-      gpioDefine(_opts.dc, GPIOMode::OUTPUT);
+      pinMode(_opts.dc, GPIOMode::OUTPUT);
       setPin(_opts.dc, true);
       ret = 0;
     }

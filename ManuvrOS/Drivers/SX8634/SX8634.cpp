@@ -1149,11 +1149,11 @@ int8_t SX8634::_start_compensation() {
 
 int8_t SX8634::_ll_pin_init() {
   if (_opts.haveResetPin()) {
-    gpioDefine(_opts.reset_pin, GPIOMode::OUTPUT);
+    pinMode(_opts.reset_pin, GPIOMode::OUTPUT);
   }
   if (_opts.haveIRQPin()) {
     _sx8634_set_flag(SX8634_FLAG_IRQ_INHIBIT);
-    gpioDefine(_opts.irq_pin, GPIOMode::INPUT_PULLUP);
+    pinMode(_opts.irq_pin, GPIOMode::INPUT_PULLUP);
     setPinFxn(_opts.irq_pin, FALLING, sx8634_isr);
   }
   return 0;  // Both pins are technically optional.

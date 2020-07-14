@@ -44,23 +44,6 @@ This file forms the catch-all for linux platforms that have no support.
   #define CHANGE_PULL_DOWN   0xF6
   #define FALLING_PULL_DOWN  0xF5
   #define RISING_PULL_DOWN   0xF4
-  extern "C" {
-    unsigned long millis();
-    unsigned long micros();
-  }
-
-enum class GPIOMode : uint8_t {
-  INPUT,
-  OUTPUT,
-  OUTPUT_OD,
-  BIDIR_OD,
-  BIDIR_OD_PULLUP,
-  INPUT_PULLUP,
-  INPUT_PULLDOWN,
-  ANALOG_OUT,
-  ANALOG_IN,
-  UNINIT
-};
 
 #if defined(__MACH__) && defined(__APPLE__)
 typedef unsigned long pthread_t;

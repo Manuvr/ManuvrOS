@@ -66,10 +66,7 @@ TODO: It does not do this. Need to finish addressing issues with the build
         }
         else {
           ManuvrTelehash* nu_connection = new ManuvrTelehash(listening_inst, cli_sock, &cli_addr);
-
-          ManuvrMsg* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
-          event->addArg((EventReceiver*) nu_connection);
-          Kernel::staticRaiseEvent(event);
+          platform.kernel()->subscribe((EventReceiver*) nu_connection);
 
           output.concatf("Telehash Client connected: %s\n", (char*) inet_ntoa(cli_addr.sin_addr));
         }
@@ -155,6 +152,7 @@ ManuvrTelehash::ManuvrTelehash(ManuvrTelehash* listening_instance, int sock, str
 * Destructor
 */
 ManuvrTelehash::~ManuvrTelehash() {
+  platform.kernel()->unsubscribe((EventReceiver*) this);
 }
 
 

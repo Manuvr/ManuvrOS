@@ -90,11 +90,11 @@ ADP8866::ADP8866(const ADP8866Pins* p) : EventReceiver("ADP8866"), I2CDeviceWith
   }
 
   if (255 != _pins.irq) {
-    gpioDefine(_pins.irq, _pins.usePullup() ? GPIOMode::INPUT_PULLUP : GPIOMode::INPUT);
+    pinMode(_pins.irq, _pins.usePullup() ? GPIOMode::INPUT_PULLUP : GPIOMode::INPUT);
   }
 
   if (255 != _pins.rst) {
-    gpioDefine(_pins.rst, GPIOMode::OUTPUT);
+    pinMode(_pins.rst, GPIOMode::OUTPUT);
     setPin(_pins.rst, false);
   }
 

@@ -40,13 +40,18 @@ class LinuxStorage : public EventReceiver, public Storage {
     ~LinuxStorage();
 
     /* Overrides from Storage. */
-    unsigned long freeSpace();  // How many bytes are availible for use?
-    int8_t wipe();              // Call to wipe the data store.
-    int8_t flush();             // Blocks until commit completes.
+    uint64_t   freeSpace();     // How many bytes are availible for use?
+    StorageErr wipe();          // Call to wipe the data store.
+    //StorageErr flush();             // Blocks until commit completes.
 
-    int persistentWrite(const char*, uint8_t*, unsigned int, uint16_t);
-    int persistentRead(const char*, uint8_t*, unsigned int, uint16_t);
-    int persistentRead(const char*, StringBuilder*);
+    /* Raw buffer API. Might have more overhead on some platforms. */
+    StorageErr persistentWrite(const char*, uint8_t*, unsigned int, uint16_t);
+    StorageErr persistentRead(const char*, uint8_t*, unsigned int*, uint16_t);
+
+    /* StringBuilder API to avoid pedantic copying. */
+    StorageErr persistentWrite(const char*, StringBuilder*, uint16_t);
+    StorageErr persistentRead(const char*, StringBuilder*, uint16_t);
+
 
     /* Overrides from EventReceiver */
     void printDebug(StringBuilder*);
@@ -56,8 +61,6 @@ class LinuxStorage : public EventReceiver, public Storage {
 
   protected:
     int8_t attached();
-    //inline bool _pl_flag(uint16_t _flag)
-    //inline void _pl_set_flag(uint16_t _flag, bool nu)
 
 
   private:

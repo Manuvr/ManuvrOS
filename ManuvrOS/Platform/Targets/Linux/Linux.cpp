@@ -46,7 +46,7 @@ volatile Kernel* __kernel = nullptr;
 struct itimerval _interval              = {0};
 struct sigaction _signal_action_SIGALRM = {0};
 
-static unsigned long _last_millis = 0;
+static uint32_t _last_millis = 0;
 
 char* _binary_name = nullptr;
 static int   _main_pid    = 0;
@@ -461,7 +461,7 @@ void currentDateTime(StringBuilder* target) {
 /*
 * Not provided elsewhere on a linux platform.
 */
-unsigned long millis() {
+uint32_t millis() {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000L);

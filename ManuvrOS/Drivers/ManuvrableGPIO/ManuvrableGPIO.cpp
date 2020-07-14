@@ -180,7 +180,7 @@ void ManuvrableGPIO::procDirectDebugInstruction(StringBuilder *input) {
     case 'r':   // Set a pin mode.
     case 'w':   // Set a pin mode.
       local_log.concatf("Setting pin %d as %s.\n", _pin, ((*(str) == 'r')?"INPUT":"OUTPUT"));
-      gpioDefine(_pin, (*(str) == 'r') ? GPIOMode::INPUT : GPIOMode::OUTPUT);
+      pinMode(_pin, (*(str) == 'r') ? GPIOMode::INPUT : GPIOMode::OUTPUT);
       break;
     case 'M':   // Set a pin mode.
     case 'm':   // Set a pin mode.

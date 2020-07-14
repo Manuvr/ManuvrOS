@@ -73,8 +73,8 @@ MCP73833::MCP73833(int stat1_pin, int stat2_pin) {
 
   // TODO: Formallize this for build targets other than Arduino. Use the abstracted Manuvr
   //       GPIO class instead.
-  gpioDefine(_stat1_pin, GPIOMode::INPUT_PULLUP);
-  gpioDefine(_stat2_pin, GPIOMode::INPUT_PULLUP);
+  pinMode(_stat1_pin, GPIOMode::INPUT_PULLUP);
+  pinMode(_stat2_pin, GPIOMode::INPUT_PULLUP);
 
   setPinFxn(_stat1_pin, CHANGE, mcp73833_stat1_isr);
   setPinFxn(_stat2_pin, CHANGE, mcp73833_stat2_isr);

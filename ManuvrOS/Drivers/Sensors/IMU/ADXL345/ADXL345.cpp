@@ -64,10 +64,10 @@ static const float scale_multipliers[4] = {
 
 ADXL345::ADXL345(const ADXL345Opts* o) : I2CDeviceWithRegisters(o->addr, 27, 30), SensorWrapper("ADXL345"), _opts(o) {
 	if (255 != _opts.irq1) {
-    gpioDefine(_opts.irq1, _opts.usePullup1() ? GPIOMode::INPUT_PULLUP : GPIOMode::INPUT);
+    pinMode(_opts.irq1, _opts.usePullup1() ? GPIOMode::INPUT_PULLUP : GPIOMode::INPUT);
 	}
 	if (255 != _opts.irq2) {
-    gpioDefine(_opts.irq2, _opts.usePullup2() ? GPIOMode::INPUT_PULLUP : GPIOMode::INPUT);
+    pinMode(_opts.irq2, _opts.usePullup2() ? GPIOMode::INPUT_PULLUP : GPIOMode::INPUT);
 	}
 
   define_datum(&datum_defs[0]);

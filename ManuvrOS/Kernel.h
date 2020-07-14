@@ -38,6 +38,7 @@ limitations under the License.
   #include <PriorityQueue.h>
   #include <ElementPool.h>
   #include <StringBuilder.h>
+  #include <AbstractPlatform.h>
 
   #include "EventReceiver.h"
   #ifdef MANUVR_CONSOLE_SUPPORT
@@ -60,7 +61,7 @@ limitations under the License.
   extern "C" {
   #endif
 
-  extern unsigned long micros();  // Prevents circular-inclusion with Platform.h
+
 
 
   /****************************************************************************************************

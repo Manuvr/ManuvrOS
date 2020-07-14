@@ -32,6 +32,7 @@ This class forms the foundation of internal events. It contains the identity of 
 #include <DataStructures/Argument.h>
 #include <LightLinkedList.h>
 
+#include <CppPotpourri.h>
 #include <EnumeratedTypeCodes.h>
 #include <MsgProfiler.h>
 
@@ -185,13 +186,13 @@ class ManuvrMsg {
     inline Argument* addArg(int32_t val) {         return addArg(new Argument(val));  }
     inline Argument* addArg(float val) {           return addArg(new Argument(val));  }
 
-    inline Argument* addArg(uint8_t *val) {        return addArg(new Argument(val));  }
-    inline Argument* addArg(uint16_t *val) {       return addArg(new Argument(val));  }
-    inline Argument* addArg(uint32_t *val) {       return addArg(new Argument(val));  }
-    inline Argument* addArg(int8_t *val) {         return addArg(new Argument(val));  }
-    inline Argument* addArg(int16_t *val) {        return addArg(new Argument(val));  }
-    inline Argument* addArg(int32_t *val) {        return addArg(new Argument(val));  }
-    inline Argument* addArg(float *val) {          return addArg(new Argument(val));  }
+    //inline Argument* addArg(uint8_t *val) {        return addArg(new Argument(val));  }
+    //inline Argument* addArg(uint16_t *val) {       return addArg(new Argument(val));  }
+    //inline Argument* addArg(uint32_t *val) {       return addArg(new Argument(val));  }
+    //inline Argument* addArg(int8_t *val) {         return addArg(new Argument(val));  }
+    //inline Argument* addArg(int16_t *val) {        return addArg(new Argument(val));  }
+    //inline Argument* addArg(int32_t *val) {        return addArg(new Argument(val));  }
+    //inline Argument* addArg(float *val) {          return addArg(new Argument(val));  }
 
     inline Argument* addArg(Vector3ui16 *val) {    return addArg(new Argument(val));  }
     inline Argument* addArg(Vector3i16 *val) {     return addArg(new Argument(val));  }
@@ -201,9 +202,9 @@ class ManuvrMsg {
     inline Argument* addArg(void *val, int len) {  return addArg(new Argument(val, len));  }
     inline Argument* addArg(const char *val) {     return addArg(new Argument(val));  }
     inline Argument* addArg(StringBuilder *val) {  return addArg(new Argument(val));  }
-    inline Argument* addArg(BufferPipe *val) {     return addArg(new Argument(val));  }
-    inline Argument* addArg(EventReceiver *val) {  return addArg(new Argument(val));  }
-    inline Argument* addArg(ManuvrXport *val) {    return addArg(new Argument(val));  }
+    //inline Argument* addArg(BufferPipe *val) {     return addArg(new Argument(val));  }
+    //inline Argument* addArg(EventReceiver *val) {  return addArg(new Argument(val));  }
+    //inline Argument* addArg(ManuvrXport *val) {    return addArg(new Argument(val));  }
 
     Argument* addArg(Argument*);  // The only "real" implementation.
     int8_t    clearArgs();        // Clear all arguments attached to us, reaping if necessary.
@@ -216,21 +217,21 @@ class ManuvrMsg {
     * Returns an error code if the types don't match.
     */
     // These accessors treat the (void*) as 4 bytes of data storage.
-    inline int8_t getArgAs(int8_t *trg_buf) {     return getArgAs(0, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t *trg_buf) {    return getArgAs(0, (void*) trg_buf);  }
-    inline int8_t getArgAs(int16_t *trg_buf) {    return getArgAs(0, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint16_t *trg_buf) {   return getArgAs(0, (void*) trg_buf);  }
-    inline int8_t getArgAs(int32_t *trg_buf) {    return getArgAs(0, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint32_t *trg_buf) {   return getArgAs(0, (void*) trg_buf);  }
-    inline int8_t getArgAs(float *trg_buf) {      return getArgAs(0, (void*) trg_buf);  }
+    //inline int8_t getArgAs(int8_t *trg_buf) {     return getArgAs(0, (void*) trg_buf);  }
+    //inline int8_t getArgAs(uint8_t *trg_buf) {    return getArgAs(0, (void*) trg_buf);  }
+    //inline int8_t getArgAs(int16_t *trg_buf) {    return getArgAs(0, (void*) trg_buf);  }
+    //inline int8_t getArgAs(uint16_t *trg_buf) {   return getArgAs(0, (void*) trg_buf);  }
+    //inline int8_t getArgAs(int32_t *trg_buf) {    return getArgAs(0, (void*) trg_buf);  }
+    //inline int8_t getArgAs(uint32_t *trg_buf) {   return getArgAs(0, (void*) trg_buf);  }
+    //inline int8_t getArgAs(float *trg_buf) {      return getArgAs(0, (void*) trg_buf);  }
 
-    inline int8_t getArgAs(uint8_t idx, uint8_t  *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, uint16_t *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, uint32_t *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, int8_t   *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, int16_t  *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, int32_t  *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
-    inline int8_t getArgAs(uint8_t idx, float    *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
+    //inline int8_t getArgAs(uint8_t idx, uint8_t  *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
+    //inline int8_t getArgAs(uint8_t idx, uint16_t *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
+    //inline int8_t getArgAs(uint8_t idx, uint32_t *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
+    //inline int8_t getArgAs(uint8_t idx, int8_t   *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
+    //inline int8_t getArgAs(uint8_t idx, int16_t  *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
+    //inline int8_t getArgAs(uint8_t idx, int32_t  *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
+    //inline int8_t getArgAs(uint8_t idx, float    *trg_buf) {        return getArgAs(idx, (void*) trg_buf);  }
 
     // These accessors treat the (void*) as a pointer. These functions are essentially type-casts.
     inline int8_t getArgAs(Vector3f **trg_buf) {                    return getArgAs(0, (void*) trg_buf);  }

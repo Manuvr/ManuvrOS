@@ -351,7 +351,7 @@ int8_t _gpio_analog_in_pin_setup(uint8_t pin) {
 
 
 
-int8_t gpioDefine(uint8_t pin, GPIOMode mode) {
+int8_t pinMode(uint8_t pin, GPIOMode mode) {
   gpio_config_t io_conf;
   if (!GPIO_IS_VALID_GPIO(pin)) {
     return -1;

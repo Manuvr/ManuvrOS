@@ -44,6 +44,7 @@ This file is meant to contain a set of common functions that are
 
 #include <Rationalizer.h>
 #include <CommonConstants.h>
+#include <AbstractPlatform.h>
 #include "uuid.h"
 
 #if defined(__BUILD_HAS_PTHREADS)
@@ -344,17 +345,6 @@ extern "C" {
 // TODO: Everything below this line is being considered for migration into the
 //         Platform class, or eliminated in favor of independent break-outs.
 
-/*
-* Time and date
-*/
-bool setTimeAndDateStr(char*);   // Takes a string of the form given by RFC-2822: "Mon, 15 Aug 2005 15:52:01 +0000"   https://www.ietf.org/rfc/rfc2822.txt
-bool setTimeAndDate(uint8_t y, uint8_t m, uint8_t d, uint8_t wd, uint8_t h, uint8_t mi, uint8_t s);
-uint32_t epochTime();            // Returns an integer representing the current datetime.
-void currentDateTime(StringBuilder*);    // Writes a human-readable datetime to the argument.
-
-/*
-* Watchdog timer.
-*/
 
 /*
 * Interrupt-masking
@@ -394,12 +384,8 @@ int8_t random_fill(uint8_t* buf, size_t len);
 /*
 * GPIO and change-notice.
 */
-int8_t gpioDefine(uint8_t pin, GPIOMode mode);
 void   unsetPinIRQ(uint8_t pin);
 int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrMsg* isr_event);
-int8_t setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn);
-int8_t setPin(uint8_t pin, bool high);
-int8_t readPin(uint8_t pin);
 int8_t setPinAnalog(uint8_t pin, int);
 int    readPinAnalog(uint8_t pin);
 

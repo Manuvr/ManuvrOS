@@ -1178,19 +1178,19 @@ int8_t LSM9DS1::_ll_pin_init() {
   else {
     ret = 0; //_setup_bus_pin();
     if (255 != _IRQ_0_PIN) {
-      gpioDefine(_IRQ_0_PIN, GPIOMode::INPUT);
+      pinMode(_IRQ_0_PIN, GPIOMode::INPUT);
       //detachInterrupt(_PINS.IRQ, imu_isr_0, FALLING);
     }
     if (255 != _IRQ_1_PIN) {
-      gpioDefine(_IRQ_1_PIN, GPIOMode::INPUT);
+      pinMode(_IRQ_1_PIN, GPIOMode::INPUT);
       //detachInterrupt(_PINS.IRQ, imu_isr_1, FALLING);
     }
     if (255 != _IRQ_2_PIN) {
-      gpioDefine(_IRQ_2_PIN, GPIOMode::INPUT);
+      pinMode(_IRQ_2_PIN, GPIOMode::INPUT);
       //detachInterrupt(_PINS.IRQ, imu_isr_2, FALLING);
     }
     if (255 != _IRQ_3_PIN) {
-      gpioDefine(_IRQ_3_PIN, GPIOMode::INPUT);
+      pinMode(_IRQ_3_PIN, GPIOMode::INPUT);
       //detachInterrupt(_PINS.IRQ, imu_isr_3, FALLING);
     }
 

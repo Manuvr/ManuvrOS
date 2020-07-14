@@ -78,9 +78,6 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   {  MANUVR_MSG_SYS_CONF_LOAD        , 0x0000,               "CONF_LOAD"        , ManuvrMsg::MSG_ARGS_NONE }, // Recipients will comb arguments for config and apply it.
   {  MANUVR_MSG_SYS_CONF_SAVE        , 0x0000,               "CONF_SAVE"        , ManuvrMsg::MSG_ARGS_NONE }, // Recipients will attach their persistable data.
 
-  {  MANUVR_MSG_SYS_ADVERTISE_SRVC   , 0x0000,               "ADVERTISE_SRVC"       , ManuvrMsg::MSG_ARGS_NONE }, // A system service might feel the need to advertise it's arrival.
-  {  MANUVR_MSG_SYS_RETRACT_SRVC     , 0x0000,               "RETRACT_SRVC"         , ManuvrMsg::MSG_ARGS_NONE }, // A system service sends this to tell others to stop using it.
-
   {  MANUVR_MSG_SYS_BOOTLOADER       , MSG_FLAG_EXPORTABLE,  "SYS_BOOTLOADER"       , ManuvrMsg::MSG_ARGS_NONE }, // Reboots into the bootloader, if it exists.
   {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,  "SYS_REBOOT"           , ManuvrMsg::MSG_ARGS_NONE }, // Reboots into THIS program.
   {  MANUVR_MSG_SYS_SHUTDOWN         , MSG_FLAG_EXPORTABLE,  "SYS_SHUTDOWN"         , ManuvrMsg::MSG_ARGS_NONE }, // Raised when the system is pending complete shutdown.
@@ -1097,23 +1094,6 @@ int8_t Kernel::notify(ManuvrMsg* active_runnable) {
       // These messages codes, we will capture the callback.
       active_runnable->setOriginator(this);
       return_value++;
-      break;
-
-    case MANUVR_MSG_SYS_ADVERTISE_SRVC:  // Some service is annoucing its arrival.
-    case MANUVR_MSG_SYS_RETRACT_SRVC:    // Some service is annoucing its departure.
-      if (0 < active_runnable->argCount()) {
-        EventReceiver* er_ptr;
-        if (0 == active_runnable->getArgAs(&er_ptr)) {
-          if (MANUVR_MSG_SYS_ADVERTISE_SRVC == active_runnable->eventCode()) {
-            subscribe((EventReceiver*) er_ptr);
-            return_value++;
-          }
-          else {
-            unsubscribe((EventReceiver*) er_ptr);
-            return_value++;
-          }
-        }
-      }
       break;
 
     case MANUVR_MSG_LEGEND_MESSAGES:     // Dump the message definitions.

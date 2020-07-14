@@ -26,7 +26,6 @@ This is the base class for a type transcriber.
 
 #include <CommonConstants.h>
 #include <EnumeratedTypeCodes.h>
-//#include <DataStructures/Argument.h>
 
 class Argument;
 

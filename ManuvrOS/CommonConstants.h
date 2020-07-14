@@ -26,6 +26,7 @@ Apart from including the rationalizing configuration header, there
 #include <stddef.h>  // TODO: Only needed for size_t
 
 #include "Rationalizer.h"
+#include <EnumeratedTypeCodes.h>
 
 
 #ifndef __MANUVR_COMMON_CONSTANTS_H__
@@ -129,49 +130,6 @@ typedef void (*PipeIOCallback)(BufferPipe*, int direction);
 * It is important that these values remain stable for now.
 */
 //enum class TCode : uint8_t {
-//  //NONE     = 0x00,    // Reserved: Data is invalid without a type.
-//
-//  /*
-//  * These are small enough to be cast into a pointer's space. They are therefore
-//  *   "pass-by-value" for classes that interchange them.
-//  * Cheap because: no malloc()/free() cycle.
-//  */
-//  INT8     = 0x01,    // 8-bit integer
-//  INT16    = 0x02,    // 16-bit integer
-//  INT32    = 0x03,    // 32-bit integer
-//  UINT8    = 0x06,    // Unsigned 8-bit integer
-//  UINT16   = 0x07,    // Unsigned 16-bit integer
-//  UINT32   = 0x08,    // Unsigned 32-bit integer
-//  //BOOLEAN  = 0x0B,    // A boolean
-//  //FLOAT    = 0x0C,    // A float
-//
-//  /*
-//  * These are types that might be treatable as those above, but this would be
-//  *   contingent on the target and the compiler flags.
-//  */
-//  DOUBLE        = 0x0D,  // A double
-//  //STR           = 0x0E,  // A null-terminated string
-//  //BINARY        = 0x0F,  // A collection of bytes
-//  INT64         = 0x04,  // 64-bit integer
-//  INT128        = 0x05,  // 128-bit integer
-//  UINT64        = 0x09,  // Unsigned 64-bit integer
-//  UINT128       = 0x0A,  // Unsigned 128-bit integer
-//  //VECT_4_FLOAT  = 0x16,  // A float vector in 4-space.
-//  //VECT_3_FLOAT  = 0x12,  // A vector of floats in 3-space
-//  VECT_3_INT16  = 0x13,  // A vector of 16-bit integers in 3-space
-//  VECT_3_UINT16 = 0x14,  // A vector of unsigned 16-bit integers in 3-space
-//
-//  // TODO: This whole block is slated for removal because it is obsoleted by
-//  //   flag usage.
-//    UINT32_PTR   =  0xA0,  // A pointer to an unsigned 32-bit integer
-//    UINT16_PTR   =  0xA1,  // A pointer to an unsigned 16-bit integer
-//    UINT8_PTR    =  0xA2,  // A pointer to an unsigned 8-bit integer
-//    INT32_PTR    =  0xA3,  // A pointer to a signed 32-bit integer
-//    INT16_PTR    =  0xA4,  // A pointer to a signed 16-bit integer
-//    INT8_PTR     =  0xA5,  // A pointer to a signed 8-bit integer
-//    FLOAT_PTR    =  0xA6,  // A pointer to a float
-//  // TODO: End removal marker.
-//
 //  /*
 //  * These are aliases for buffers that contain data structured according to
 //  *   some published standard. Although vague, each type will be structured in
@@ -180,17 +138,7 @@ typedef void (*PipeIOCallback)(BufferPipe*, int direction);
 //  *   imply that a binary has the machinary to handle that type. So these should
 //  *   not be conditionally-defined.
 //  */
-//  //JSON      = 0x15,  // A JSON object. Export to other systems implies string conversion.
-//  //CBOR      = 0x20,  // A CBOR object.
-//  //IDENTITY  = 0x21,  // Identity.
-//  //URL       = 0x17,  // An alias of string that carries the semantic 'URL'.
 //  //CHAIN     = 0x18,  // An event chain.
-//  //AUDIO     = 0x10,  // Audio stream
-//  //IMAGE     = 0x11,  // Image data
-//  COLOR8    = 0x19,  // 8-bit  color data. Color is represented as RGB.
-//  //COLOR16   = 0x1A,  // 24-bit color data. Color is represented as RGB.
-//  //COLOR24   = 0x1B,  // 24-bit color data. Color is represented as RGB.
-//  COLOR32   = 0x1C,  // 32-bit color data. Color is represented as RGB.
 //
 //  /*
 //  * These are types for Manuvr classes and structures that are either not
@@ -207,8 +155,6 @@ typedef void (*PipeIOCallback)(BufferPipe*, int direction);
 //  SYS_THREAD_FXN_PTR = 0xED,  // ThreadFxnPtr
 //  SYS_ARG_FXN_PTR    = 0xEE,  // ArgumentFxnPtr
 //  SYS_PIPE_FXN_PTR   = 0xEF,  // PipeIOCallback
-//
-//  //RESERVED           = 0xFF   // Reserved for custom extension.
 //};
 
 /**
@@ -244,25 +190,6 @@ inline double   parseDoubleFromchars(unsigned char *input) {  return ((double)  
 inline float    parseFloatFromchars(unsigned char *input) {   return ((float)    *((float*)    input)); }
 inline uint32_t parseUint32Fromchars(unsigned char *input) {  return ((uint32_t) *((uint32_t*) input)); }
 inline uint16_t parseUint16Fromchars(unsigned char *input) {  return ((uint16_t) *((uint16_t*) input)); }
-
-/**
-* Endian conversion fxns
-*/
-inline uint16_t endianSwap16(uint16_t x) {   return __builtin_bswap16(x);    };
-inline uint32_t endianSwap32(uint32_t x) {   return __builtin_bswap32(x);    };
-inline uint64_t endianSwap64(uint64_t x) {   return __builtin_bswap64(x);    };
-
-/**
-* Inlines to support erasure of native types...
-*/
-//inline uint8_t pointerTypeCode(float) {       return FLOAT_FM;     };
-//inline uint8_t pointerTypeCode(int8_t) {      return INT8_FM;      };
-//inline uint8_t pointerTypeCode(int16_t) {     return INT16_FM;     };
-//inline uint8_t pointerTypeCode(int32_t) {     return INT32_FM;     };
-//inline uint8_t pointerTypeCode(uint8_t) {     return UINT8_FM;     };
-//inline uint8_t pointerTypeCode(uint16_t) {    return UINT16_FM;    };
-//inline uint8_t pointerTypeCode(uint32_t) {    return UINT32_FM;    };
-
 
 int getTypemapSizeAndPointer(const unsigned char **pointer);
 int getMinimumSizeByTypeString(char *str);

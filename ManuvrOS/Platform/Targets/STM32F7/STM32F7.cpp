@@ -441,7 +441,7 @@ void gpioSetup() {
 * On STM32 parts, we construe an 8-bit pin number to be a linear reference to
 *   successive 16-bit ports. See STM32F7.h for clarification.
 */
-int8_t gpioDefine(uint8_t pin, int mode) {
+int8_t pinMode(uint8_t pin, int mode) {
   //if (pin < PLATFORM_GPIO_PIN_COUNT) {
     GPIO_InitTypeDef GPIO_InitStruct;
     GPIO_InitStruct.Pin    = _associated_pin(pin);

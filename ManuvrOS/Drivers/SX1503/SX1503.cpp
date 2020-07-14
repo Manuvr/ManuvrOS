@@ -344,11 +344,11 @@ int8_t SX1503::_invoke_pin_callback(uint8_t pin, bool value) {
 */
 int8_t SX1503::_ll_pin_init() {
   if (255 != _IRQ_PIN) {
-    gpioDefine(_IRQ_PIN, GPIOMode::INPUT_PULLUP);
+    pinMode(_IRQ_PIN, GPIOMode::INPUT_PULLUP);
     setPinFxn(_IRQ_PIN, FALLING_PULL_UP, sx1503_isr);
   }
   if (255 != _RESET_PIN) {
-    gpioDefine(_RESET_PIN, GPIOMode::OUTPUT);
+    pinMode(_RESET_PIN, GPIOMode::OUTPUT);
   }
   _sx_set_flag(SX1503_FLAG_PINS_CONFD);
   return 0;

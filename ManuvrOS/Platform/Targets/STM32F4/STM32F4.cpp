@@ -180,7 +180,7 @@ void gpioSetup() {
 }
 
 
-int8_t gpioDefine(uint8_t pin, GPIOMode mode) {
+int8_t pinMode(uint8_t pin, GPIOMode mode) {
   pinMode(pin, mode);
   return 0;
 }

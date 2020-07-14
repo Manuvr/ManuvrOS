@@ -568,13 +568,13 @@ int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void* trg_buf) {
   int8_t return_value = -1;
   if (_args) {
     switch (_args->typeCode()) {
-      case TCode::INT8_PTR:
-      case TCode::INT16_PTR:
-      case TCode::INT32_PTR:
-      case TCode::UINT8_PTR:
-      case TCode::UINT16_PTR:
-      case TCode::UINT32_PTR:
-      case TCode::FLOAT_PTR:
+      //case TCode::INT8_PTR:
+      //case TCode::INT16_PTR:
+      //case TCode::INT32_PTR:
+      //case TCode::UINT8_PTR:
+      //case TCode::UINT16_PTR:
+      //case TCode::UINT32_PTR:
+      //case TCode::FLOAT_PTR:
       case TCode::STR_BUILDER:
       case TCode::STR:
       case TCode::BINARY:

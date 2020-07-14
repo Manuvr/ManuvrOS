@@ -87,31 +87,31 @@ LinuxStorage::~LinuxStorage() {
 * \_))   ||    \\_//  || \\ || ||  \\_|| ||___
 * Storage interface.
 ********************************************************************************/
-unsigned long LinuxStorage::freeSpace() {
+uint64_t LinuxStorage::freeSpace() {
   // TODO: Need a sophisticated apparatus to find this accurately.
-  // What partition is )_filename on?
+  // What partition is _filename on?
   // How much space free on it?
   // Cap to arbitrary maximum value for now.
   return ((2 << 16) - _disk_buffer.length());
 }
 
-int8_t LinuxStorage::wipe() {
+StorageErr LinuxStorage::wipe() {
   _disk_buffer.clear();
   _disk_buffer.concat('\0');
   return _save_file(&_disk_buffer);
 }
 
-int8_t LinuxStorage::flush() {
-  if (_filename) {
-    if (0 < _disk_buffer.length()) {
-      return _save_file(&_disk_buffer);
-    }
-  }
-  return 0;
-}
+//StorageErr LinuxStorage::flush() {
+//  if (_filename) {
+//    if (0 < _disk_buffer.length()) {
+//      return _save_file(&_disk_buffer);
+//    }
+//  }
+//  return 0;
+//}
 
 
-int LinuxStorage::persistentWrite(const char* key, uint8_t* buf, unsigned int len, uint16_t ) {
+StorageErr LinuxStorage::persistentWrite(const char* key, uint8_t* buf, unsigned int len, uint16_t ) {
   if (isMounted()) {
     _disk_buffer.clear();
     _disk_buffer.concat(buf, len);
@@ -266,8 +266,8 @@ int8_t LinuxStorage::callback_proc(ManuvrMsg* event) {
 */
 void LinuxStorage::printDebug(StringBuilder *output) {
   EventReceiver::printDebug(output);
+  Storage::printStorage(output);
   output->concatf("-- _filename:           %s\n", (nullptr == _filename ? "<unset>" : _filename));
-  Storage::printDebug(output);
 }
 
 

@@ -93,11 +93,7 @@ This is basically only for linux for now.
         else {
           ManuvrTCP* nu_connection = new ManuvrTCP(listening_inst, cli_sock, &cli_addr);
           nu_connection->setPipeStrategy(listening_inst->getPipeStrategy());
-
-          ManuvrMsg* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
-          event->addArg((EventReceiver*) nu_connection);
-          Kernel::staticRaiseEvent(event);
-
+          platform.kernel()->subscribe((EventReceiver*) nu_connection);
           output.concatf("TCP Client connected: %s\n", (char*) inet_ntoa(cli_addr.sin_addr));
         }
         Kernel::log(&output);
@@ -141,10 +137,7 @@ This is basically only for linux for now.
           ManuvrTCP* nu_connection = new ManuvrTCP(listening_inst, cli_sock, &cli_addr);
           nu_connection->setPipeStrategy(listening_inst->getPipeStrategy());
 
-          ManuvrMsg* event = Kernel::returnEvent(MANUVR_MSG_SYS_ADVERTISE_SRVC);
-          event->addArg((EventReceiver*) nu_connection);
-          Kernel::staticRaiseEvent(event);
-
+          platform.kernel()->subscribe((EventReceiver*) nu_connection);
           output.concatf("TCP Client connected: %s\n", (char*) inet_ntoa(cli_addr.sin_addr));
         }
         Kernel::log(&output);
@@ -213,6 +206,7 @@ ManuvrTCP::ManuvrTCP(ManuvrTCP* listening_instance, int sock, struct sockaddr_in
 * Destructor
 */
 ManuvrTCP::~ManuvrTCP() {
+  platform.kernel()->unsubscribe((EventReceiver*) this);
 }
 
 

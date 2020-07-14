@@ -166,23 +166,23 @@ int8_t SX1276::_ll_pin_init() {
     ret = 0;
   }
   else if (255 != _opts.cs_pin) {   // This pin is required.
-    ret = gpioDefine(_opts.cs_pin, GPIOMode::OUTPUT);
+    ret = pinMode(_opts.cs_pin, GPIOMode::OUTPUT);
     if (0 == ret) {
       setPin(_opts.cs_pin, true);
       if (255 != _opts.reset_pin) {
-        ret = gpioDefine(_opts.reset_pin, GPIOMode::OUTPUT);
+        ret = pinMode(_opts.reset_pin, GPIOMode::OUTPUT);
         if (0 == ret) {
           setPin(_opts.reset_pin, false);
         }
       }
       if (255 != _opts.d0_pin) {
-        gpioDefine(_opts.d0_pin, GPIOMode::INPUT);
+        pinMode(_opts.d0_pin, GPIOMode::INPUT);
       }
       if (255 != _opts.d1_pin) {
-        gpioDefine(_opts.d1_pin, GPIOMode::INPUT);
+        pinMode(_opts.d1_pin, GPIOMode::INPUT);
       }
       if (255 != _opts.d2_pin) {
-        gpioDefine(_opts.d2_pin, GPIOMode::INPUT);
+        pinMode(_opts.d2_pin, GPIOMode::INPUT);
       }
     }
   }
