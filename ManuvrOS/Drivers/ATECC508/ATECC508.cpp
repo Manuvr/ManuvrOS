@@ -482,7 +482,7 @@ int8_t ATECC508::io_op_callback(BusOp* _op) {
           _last_action_time = 0;
           break;
         case ATECCPktCodes::COMMAND:
-          next_timer_period = getOpTime((ATECCOpcodes) *(completed->buf));
+          next_timer_period = getOpTime((ATECCOpcodes) *(completed->buffer()));
           break;
         default:
           local_log.concatf("ATECC508::io_op_callback(): Unknown packet type 0x%02x\n", completed->sub_addr);
@@ -498,9 +498,9 @@ int8_t ATECC508::io_op_callback(BusOp* _op) {
 
     case BusOpcode::RX:
       {
-        uint8_t chip_ret_len = *(completed->buf) & 0xFF;
-        if (chip_ret_len == completed->buf_len) {
-          ATECCReturnCodes ret = validateRC(completed->buf, completed->buf_len);
+        uint8_t chip_ret_len = *(completed->buffer()) & 0xFF;
+        if (chip_ret_len == completed->bufferLen()) {
+          ATECCReturnCodes ret = validateRC(completed->buffer(), completed->bufferLen());
           switch (ret) {
             case ATECCReturnCodes::WAKE_FAILED:
               _atec_set_flag(ATECC508_FLAG_AWAKE, false);
@@ -542,13 +542,13 @@ int8_t ATECC508::io_op_callback(BusOp* _op) {
               local_log.concatf("ATECC508::io_op_callback(): %s\n", getReturnStr(ret));
               local_log.concatf("\t ATECC508 readback: (%u)\n\t", chip_ret_len);
               for (int i = 0; i < chip_ret_len; i++) {
-                local_log.concatf("%02x ", *(completed->buf + i));
+                local_log.concatf("%02x ", *(completed->buffer() + i));
               }
               break;
           }
         }
         else {
-          local_log.concatf("ATECC508::io_op_callback(): Return len is != bus_op len (%u vs %u)\n", chip_ret_len, completed->buf_len);
+          local_log.concatf("ATECC508::io_op_callback(): Return len is != bus_op len (%u vs %u)\n", chip_ret_len, completed->bufferLen());
         }
       }
       break;
@@ -1046,8 +1046,7 @@ I2CBusOp* ATECC508::_wake_packet() {
   if (nullptr != nu) {
     nu->dev_addr = 0;
     nu->sub_addr = -1;
-    nu->buf      = nullptr;
-    nu->buf_len  = 0;
+    nu->setBuffer(nullptr, 0);
   }
   return nu;
 }
@@ -1110,8 +1109,7 @@ I2CBusOp* ATECC508::_tx_packet(ATECCPktCodes pc, uint16_t len, uint8_t* io_buf) 
   if (nu) {
     nu->dev_addr = _dev_addr;
     nu->sub_addr = (uint16_t) pc;
-    nu->buf      = io_buf;
-    nu->buf_len  = len;
+    nu->setBuffer(io_buf, len);
     return nu;
   }
   return nullptr;
@@ -1129,8 +1127,7 @@ I2CBusOp* ATECC508::_rx_packet(ATECCDataSize ds, uint8_t* io_buf, bool add_3_pad
     if (nu) {
       nu->dev_addr = _dev_addr;
       nu->sub_addr = -1;
-      nu->buf      = io_buf;
-      nu->buf_len  = add_3_pad ? (len+3) : len;
+      nu->setBuffer(io_buf, add_3_pad ? (len+3) : len);
       return nu;
     }
   }

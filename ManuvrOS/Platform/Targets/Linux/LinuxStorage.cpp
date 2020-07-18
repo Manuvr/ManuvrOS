@@ -32,7 +32,7 @@ Implemented as a JSON object within a single file. This feature therefore
 #include <fcntl.h>
 
 // We want this definition isolated to the compilation unit.
-#define STORAGE_PROPS (MANUVR_PL_USES_FILESYSTEM | MANUVR_PL_BLOCK_ACCESS)
+#define STORAGE_PROPS (PL_FLAG_USES_FILESYSTEM | PL_FLAG_BLOCK_ACCESS)
 
 
 /*******************************************************************************
@@ -111,59 +111,62 @@ StorageErr LinuxStorage::wipe() {
 //}
 
 
-StorageErr LinuxStorage::persistentWrite(const char* key, uint8_t* buf, unsigned int len, uint16_t ) {
+StorageErr LinuxStorage::persistentWrite(const char* key, uint8_t* buf, unsigned int len, uint16_t flags) {
   if (isMounted()) {
     _disk_buffer.clear();
     _disk_buffer.concat(buf, len);
     return _save_file(&_disk_buffer);
   }
-  return -1;
+  return StorageErr::NOT_MOUNTED;
 }
 
 
-int LinuxStorage::persistentRead(const char* key, uint8_t* buf, unsigned int len, uint16_t) {
+StorageErr LinuxStorage::persistentRead(const char* key, uint8_t* buf, uint* len, uint16_t flags) {
   if (isMounted()) {
-    unsigned int max_l = _disk_buffer.length();
-    unsigned int r_len = (max_l > len) ? len : max_l;
+    uint max_l = _disk_buffer.length();
+    uint r_len = (max_l > *len) ? *len : max_l;
     uint8_t* d_buf = _disk_buffer.string();
-    for (unsigned int i = 0; i < r_len; i++) {
+    for (uint i = 0; i < r_len; i++) {
       *(buf+i) = *(d_buf+i);
     }
-    for (unsigned int i = r_len; i < len; i++) {
+    for (uint i = r_len; i < *len; i++) {
       *(buf+i) = 0;  // Zero the  unused buffer, for safety.
     }
-    return r_len;
+    *len = r_len;
+    return StorageErr::NONE;
   }
-  return -1;
+  return StorageErr::NOT_MOUNTED;
 }
 
 
-int LinuxStorage::persistentRead(const char*, StringBuilder* out) {
+StorageErr LinuxStorage::persistentRead(const char* key, StringBuilder* out, uint16_t flags) {
   if (isMounted()) {
     out->concat(&_disk_buffer);
-    return _disk_buffer.length();
+    //return _disk_buffer.length();
+    return StorageErr::NONE;
   }
-  return -1;
+  return StorageErr::NOT_MOUNTED;
 }
 
 
 /**
 * Open the file write-only and save the buffer. Clobbering the file's contents.
 */
-int LinuxStorage::_save_file(StringBuilder* b) {
-  int return_value = -1;  // Fail by default.
+StorageErr LinuxStorage::_save_file(StringBuilder* b) {
+  StorageErr return_value = StorageErr::BAD_PARAM;  // Fail by default.
   if (_filename) {
+    return_value = StorageErr::NOT_READABLE;
     int fd = open(_filename, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
     if (fd >= 0) {
-      _pl_set_flag(true, MANUVR_PL_BUSY_WRITE);
+      _pl_set_flag(true, PL_FLAG_BUSY_WRITE);
       int len = b->length();
       StringBuilder buf(b->string(), len);  // Buffer is now locally-scoped.
       int q = write(fd, buf.string(), len);
       if (len == q) {
-        return_value = len;
+        return_value = StorageErr::NONE;
       }
       close(fd);
-      _pl_set_flag(false, MANUVR_PL_BUSY_WRITE);
+      _pl_set_flag(false, PL_FLAG_BUSY_WRITE);
     }
   }
   return return_value;
@@ -173,12 +176,12 @@ int LinuxStorage::_save_file(StringBuilder* b) {
 /**
 * Open the file read-only and fill the buffer.
 */
-int LinuxStorage::_load_file(StringBuilder* buf) {
+StorageErr LinuxStorage::_load_file(StringBuilder* buf) {
   if (_filename) {
     int fd = open(_filename, O_RDONLY);
     if (fd >= 0) {
       int total_read = 0;
-      _pl_set_flag(true, MANUVR_PL_BUSY_READ);
+      _pl_set_flag(true, PL_FLAG_BUSY_READ);
       uint8_t* buffer = (uint8_t*) alloca(2048);
       int r_len = read(fd, buffer, 2048);
       while (0 < r_len) {
@@ -187,12 +190,12 @@ int LinuxStorage::_load_file(StringBuilder* buf) {
         r_len = read(fd, buffer, 2048);
       }
       close(fd);
-      _pl_set_flag(false, MANUVR_PL_BUSY_READ);
-      _pl_set_flag(true, MANUVR_PL_MEDIUM_MOUNTED | MANUVR_PL_MEDIUM_READABLE | MANUVR_PL_MEDIUM_WRITABLE);
-      return total_read;
+      _pl_set_flag(false, PL_FLAG_BUSY_READ);
+      _pl_set_flag(true, PL_FLAG_MEDIUM_MOUNTED | PL_FLAG_MEDIUM_READABLE | PL_FLAG_MEDIUM_WRITABLE);
+      return StorageErr::NONE;
     }
   }
-  return -1;
+  return StorageErr::BAD_PARAM;
 }
 
 
@@ -217,12 +220,12 @@ int LinuxStorage::_load_file(StringBuilder* buf) {
 */
 int8_t LinuxStorage::attached() {
   if (EventReceiver::attached()) {
-    if (0 <= _load_file(&_disk_buffer)) {
+    if (0 <= (int8_t) _load_file(&_disk_buffer)) {
     }
     else {
       // Attempt to create the file.
       wipe();
-      if (0 == wipe()) _load_file(&_disk_buffer);
+      if (StorageErr::NONE == wipe()) _load_file(&_disk_buffer);
     }
     return 1;
   }

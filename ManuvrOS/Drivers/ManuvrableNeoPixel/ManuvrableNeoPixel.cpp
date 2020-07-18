@@ -125,7 +125,7 @@ ManuvrableNeoPixel::~ManuvrableNeoPixel() {
 
 void ManuvrableNeoPixel::begin(void) {
   pinMode(pin, GPIOMode::OUTPUT);
-  setPin(pin, LOW);
+  setPin(pin, 0);
 }
 
 void ManuvrableNeoPixel::show(void) {

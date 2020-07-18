@@ -46,8 +46,8 @@ Noteworth snippit from the ESP-IDF doc:
 #if defined(CONFIG_MANUVR_STORAGE)
 
 // We want this definition isolated to the compilation unit.
-#define STORAGE_PROPS (MANUVR_PL_BLOCK_ACCESS | MANUVR_PL_MEDIUM_READABLE | \
-                        MANUVR_PL_MEDIUM_WRITABLE)
+#define STORAGE_PROPS (PL_FLAG_BLOCK_ACCESS | PL_FLAG_MEDIUM_READABLE | \
+                        PL_FLAG_MEDIUM_WRITABLE)
 
 
 /*******************************************************************************
@@ -227,10 +227,10 @@ int8_t ESP32Storage::attached() {
         //_free_space = partition->size;
         _free_space = 16384;  // TODO: LIES!
         if (ESP_OK == nvs_open("manuvr", NVS_READWRITE, &store_handle)) {
-          _pl_set_flag(true, MANUVR_PL_MEDIUM_MOUNTED);
+          _pl_set_flag(true, PL_FLAG_MEDIUM_MOUNTED);
         }
         else {
-          _pl_set_flag((StorageErr::NONE == wipe()), MANUVR_PL_MEDIUM_MOUNTED);
+          _pl_set_flag((StorageErr::NONE == wipe()), PL_FLAG_MEDIUM_MOUNTED);
         }
       }
     }
@@ -289,7 +289,7 @@ int8_t ESP32Storage::close() {
   if (isMounted()) {
     if (StorageErr::NONE == flush()) {
       nvs_close(store_handle);
-      _pl_set_flag(false, MANUVR_PL_MEDIUM_MOUNTED);
+      _pl_set_flag(false, PL_FLAG_MEDIUM_MOUNTED);
       return 0;
     }
   }

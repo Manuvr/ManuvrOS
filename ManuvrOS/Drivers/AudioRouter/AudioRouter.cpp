@@ -66,9 +66,9 @@ AudioRouter::AudioRouter(I2CAdapter* i2c, uint8_t cp_addr, uint8_t dp_lo_addr, u
   dp_lo     = new ISL23345(dp_lo_addr);
   dp_hi     = new ISL23345(dp_hi_addr);
 
-  i2c->addSlaveDevice(cp_switch);
-  i2c->addSlaveDevice(dp_lo);
-  i2c->addSlaveDevice(dp_hi);
+  cp_switch->assignBusInstance(i2c);
+  dp_lo->assignBusInstance(i2c);
+  dp_hi->assignBusInstance(i2c);
 
   for (uint8_t i = 0; i < 12; i++) {   // Setup our input channels.
     inputs[i].cp_row   = i;

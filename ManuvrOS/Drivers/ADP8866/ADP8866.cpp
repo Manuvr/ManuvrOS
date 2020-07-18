@@ -481,7 +481,8 @@ int8_t ADP8866::attached() {
     readRegister((uint8_t) ADP8866_MANU_DEV_ID);
 
     if (255 != _pins.irq) {
-      setPinFxn(_pins.irq, (_pins.usePullup() ? FALLING_PULL_UP : FALLING), ADP8866_ISR);
+      pinMode(_pins.irq, _pins.usePullup() ? GPIOMode::INPUT_PULLUP : GPIOMode::INPUT);
+      setPinFxn(_pins.irq, IRQCondition::FALLING, ADP8866_ISR);
     }
     return 1;
   }

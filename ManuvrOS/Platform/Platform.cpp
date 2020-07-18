@@ -69,12 +69,12 @@ unsigned long ManuvrPlatform::_boot_micros  = 0;
 * @param  An IRQ condition code.
 * @return A string constant.
 */
-const char* ManuvrPlatform::getIRQConditionString(int con_code) {
+const char* ManuvrPlatform::getIRQConditionString(IRQCondition con_code) {
   switch (con_code) {
-    case RISING:   return "RISING";
-    case FALLING:  return "FALLING";
-    case CHANGE:   return "CHANGE";
-    default:       return "<UNDEF>";
+    case IRQCondition::RISING:   return "RISING";
+    case IRQCondition::FALLING:  return "FALLING";
+    case IRQCondition::CHANGE:   return "CHANGE";
+    default:                     return "<UNDEF>";
   }
 }
 

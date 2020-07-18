@@ -29,18 +29,18 @@ This file forms the catch-all for linux platforms that have no support.
 #include <sys/time.h>
 
 #if defined(CONFIG_MANUVR_STORAGE)
-#include "LinuxStorage.h"
+  #include "LinuxStorage.h"
 #endif
 
-  #define CHANGE_PULL_UP     0xF9
-  #define FALLING_PULL_UP    0xF8
-  #define RISING_PULL_UP     0xF7
-  #define CHANGE_PULL_DOWN   0xF6
-  #define FALLING_PULL_DOWN  0xF5
-  #define RISING_PULL_DOWN   0xF4
+#define CHANGE_PULL_UP     0xF9
+#define FALLING_PULL_UP    0xF8
+#define RISING_PULL_UP     0xF7
+#define CHANGE_PULL_DOWN   0xF6
+#define FALLING_PULL_DOWN  0xF5
+#define RISING_PULL_DOWN   0xF4
 
 #if defined(__MACH__) && defined(__APPLE__)
-typedef unsigned long pthread_t;
+  typedef unsigned long pthread_t;
 #endif
 
 

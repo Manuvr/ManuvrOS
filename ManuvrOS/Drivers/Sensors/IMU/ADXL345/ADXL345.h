@@ -1,5 +1,5 @@
 #include <Drivers/Sensors/SensorWrapper.h>
-#include <I2CAdapter.h>
+#include <Platform/Peripherals/I2C/I2CDeviceWithRegisters.h>
 
 #ifndef __ADXL345_H__
 #define __ADXL345_H__

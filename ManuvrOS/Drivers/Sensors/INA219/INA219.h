@@ -24,7 +24,7 @@ limitations under the License.
 
 #include "I2CAdapter.h"
 #include "Drivers/Sensors/SensorWrapper.h"
-
+#include <Platform/Peripherals/I2C/I2CDeviceWithRegisters.h>
 
 /* Sensor registers that exist in hardware */
 #define INA219_REG_CONFIGURATION    0x00

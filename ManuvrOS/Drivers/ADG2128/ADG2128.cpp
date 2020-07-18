@@ -23,7 +23,7 @@ This driver's relationship to the base I2CDevice class is that the switch
 */
 
 #include "ADG2128.h"
-
+#include <Kernel.h>
 
 static const uint8_t readback_addr[24] = {
   0x34, 0, 0x3c, 0, 0x74, 0, 0x7c, 0,
@@ -180,8 +180,8 @@ uint8_t ADG2128::getValue(uint8_t row) {
 
 int8_t ADG2128::io_op_callback(BusOp* op) {
   I2CBusOp* completed = (I2CBusOp*) op;
-  uint8_t byte0 = *(completed->buf+0);
-  //uint8_t byte1 = *(completed->buf+1);
+  uint8_t byte0 = *(completed->buffer()+0);
+  //uint8_t byte1 = *(completed->buffer()+1);
 
   switch (completed->get_opcode()) {
     case BusOpcode::RX:
@@ -218,8 +218,8 @@ int8_t ADG2128::io_op_callback(BusOp* op) {
               // We just confirmed a write to the switch. Set the appropriate bit.
               dev_init = true;
               // TODO: TX ops of this class use the heap. This is terrible.
-              free(completed->buf);  // The awfulness, part 2.
-              completed->buf = nullptr;
+              free(completed->buffer());  // The awfulness, part 2.
+              completed->setBuffer(nullptr, 0);
               s_row = ((byte0 >> 3) & 0x0F) % 12;  // Modulus is costly, but safer.
               _values[s_row] = s_set ? (_values[s_row] | (1 << (s_col+8))) : (_values[s_row] & ~(1 << (s_col+8)));
             }

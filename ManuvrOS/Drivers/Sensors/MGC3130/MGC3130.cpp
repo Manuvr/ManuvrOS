@@ -166,10 +166,10 @@ void MGC3130::init() {
   #if defined(BOARD_IRQS_AND_PINS_DISTINCT)
     int fubar_irq_number = get_irq_num_by_pin(_irq_pin_0);
     if (fubar_irq_number >= 0) {
-    setPinFxn(fubar_irq_number, FALLING, gest_0);
+    setPinFxn(fubar_irq_number, IRQCondition::FALLING, gest_0);
     }
   #else
-    setPinFxn(_irq_pin_0, FALLING, gest_0);
+    setPinFxn(_irq_pin_0, IRQCondition::FALLING, gest_0);
   #endif
   }
 
@@ -178,10 +178,10 @@ void MGC3130::init() {
   #if defined(BOARD_IRQS_AND_PINS_DISTINCT)
     int fubar_irq_number = get_irq_num_by_pin(_irq_pin_1);
     if (fubar_irq_number >= 0) {
-    setPinFxn(fubar_irq_number, FALLING, gest_1);
+    setPinFxn(fubar_irq_number, IRQCondition::FALLING, gest_1);
     }
   #else
-    setPinFxn(_irq_pin_1, FALLING, gest_1);
+    setPinFxn(_irq_pin_1, IRQCondition::FALLING, gest_1);
   #endif
   }
 
@@ -190,10 +190,10 @@ void MGC3130::init() {
   #if defined(BOARD_IRQS_AND_PINS_DISTINCT)
     int fubar_irq_number = get_irq_num_by_pin(_irq_pin_2);
     if (fubar_irq_number >= 0) {
-    setPinFxn(fubar_irq_number, FALLING, gest_2);
+    setPinFxn(fubar_irq_number, IRQCondition::FALLING, gest_2);
     }
   #else
-    setPinFxn(_irq_pin_2, FALLING, gest_2);
+    setPinFxn(_irq_pin_2, IRQCondition::FALLING, gest_2);
   #endif
   }
 
@@ -202,10 +202,10 @@ void MGC3130::init() {
   #if defined(BOARD_IRQS_AND_PINS_DISTINCT)
     int fubar_irq_number = get_irq_num_by_pin(_irq_pin_3);
     if (fubar_irq_number >= 0) {
-    setPinFxn(fubar_irq_number, FALLING, gest_3);
+    setPinFxn(fubar_irq_number, IRQCondition::FALLING, gest_3);
     }
   #else
-    setPinFxn(_irq_pin_3, FALLING, gest_3);
+    setPinFxn(_irq_pin_3, IRQCondition::FALLING, gest_3);
   #endif
   }
 
@@ -507,7 +507,7 @@ int8_t MGC3130::io_op_callback(BusOp* _op) {
   I2CBusOp* completed = (I2CBusOp*) _op;
   pinMode(_ts_pin, GPIOMode::INPUT_PULLUP);
   are_we_holding_ts(false);
-  setPinFxn(_ts_pin, FALLING, mgc3130_isr_check);
+  setPinFxn(_ts_pin, IRQCondition::FALLING, mgc3130_isr_check);
 
   if (!completed->hasFault()) {
     if (completed->get_opcode() == BusOpcode::RX) {
@@ -521,7 +521,7 @@ int8_t MGC3130::io_op_callback(BusOp* _op) {
       bool wheel_valid = false;
       uint8_t byte_index = 0;
 
-      int bytes_expected = completed->buf_len;
+      int bytes_expected = completed->bufferLen();
 
       while(0 < bytes_expected) {
         data = *(read_buffer + byte_index++);
@@ -762,7 +762,7 @@ int8_t MGC3130::notify(ManuvrMsg* active_event) {
       is_class_ready(true);
       setPin(_reset_pin, 1);
       enableAirwheel(false);
-      setPinFxn(_ts_pin, FALLING, mgc3130_isr_check);
+      setPinFxn(_ts_pin, IRQCondition::FALLING, mgc3130_isr_check);
       return_value++;
       break;
 

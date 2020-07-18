@@ -280,7 +280,7 @@ class ManuvrPlatform {
     virtual uint32_t cpu_freq() {        return 0;  };
 
 
-    static const char* getIRQConditionString(int);
+    static const char* getIRQConditionString(IRQCondition);
     static const char* getPlatformStateStr(int);
     static const char* getPinModeStr(GPIOMode);
 

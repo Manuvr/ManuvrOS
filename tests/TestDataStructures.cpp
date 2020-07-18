@@ -35,9 +35,9 @@ This program runs tests on raw data-handling classes.
 #include <PriorityQueue.h>
 #include <Vector3.h>
 #include <Quaternion.h>
-#include <DataStructures/RingBuffer.h>
-#include <DataStructures/BufferPipe.h>
+#include <RingBuffer.h>
 #include <uuid.h>
+#include <DataStructures/BufferPipe.h>
 
 #include <Platform/Platform.h>
 #include <Drivers/Sensors/SensorWrapper.h>
@@ -56,7 +56,7 @@ This program runs tests on raw data-handling classes.
 #include <Transports/ManuvrXport.h>
 
 #if defined(MANUVR_CBOR)
-  #include <Types/cbor-cpp/cbor.h>
+  #include "cbor-cpp/cbor.h"
 #endif
 
 

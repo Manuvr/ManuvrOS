@@ -25,7 +25,7 @@ limitations under the License.
 #include <inttypes.h>
 #include <stdint.h>
 #include <Kernel.h>
-#include "I2CAdapter.h"
+#include <Platform/Peripherals/I2C/I2CDeviceWithRegisters.h>
 
 #ifdef MANUVR_CONSOLE_SUPPORT
   #include <XenoSession/Console/ManuvrConsole.h>
