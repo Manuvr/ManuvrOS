@@ -25,7 +25,7 @@ limitations under the License.
 #include <inttypes.h>
 #include <stdint.h>
 #include <Kernel.h>
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 
 
 

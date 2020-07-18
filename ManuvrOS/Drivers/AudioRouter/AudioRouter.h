@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifndef AUDIO_ROUTER_PCB_H
 #define AUDIO_ROUTER_PCB_H
 
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 #include <Drivers/ISL23345/ISL23345.h>
 #include <Drivers/ADG2128/ADG2128.h>
 

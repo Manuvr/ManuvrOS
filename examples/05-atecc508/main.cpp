@@ -45,7 +45,7 @@ This is a demonstration program and utility for dealing with the ATECC508.
 */
 #include <Transports/StandardIO/StandardIO.h>
 #include <XenoSession/Console/ManuvrConsole.h>
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 #include <Drivers/ATECC508/ATECC508.h>
 #include <Drivers/ADP8866/ADP8866.h>
 

@@ -36,7 +36,7 @@ This is a demonstration program, and was meant to be compiled for a
 /* Drivers particular to this Manuvrable... */
 #include <Platform/Platform.h>
 #include <Drivers/Sensors/SensorWrapper.h>
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 #include <Drivers/Sensors/INA219/INA219.h>
 #include <Drivers/Sensors/AMG88xx/AMG88xx.h>
 

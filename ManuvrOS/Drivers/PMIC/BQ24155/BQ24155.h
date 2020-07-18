@@ -22,7 +22,7 @@ limitations under the License.
 #ifndef __BQ24155_DRIVER_H__
 #define __BQ24155_DRIVER_H__
 
-#include "Platform/Peripherals/I2C/I2CAdapter.h"
+#include "I2CAdapter.h"
 #include "Drivers/Sensors/SensorWrapper.h"
 
 /* Sensor registers that exist in hardware */

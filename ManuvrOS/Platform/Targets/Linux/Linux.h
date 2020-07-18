@@ -32,12 +32,6 @@ This file forms the catch-all for linux platforms that have no support.
 #include "LinuxStorage.h"
 #endif
 
-  #define LOW             0
-  #define HIGH            1
-
-  #define CHANGE             0xFC
-  #define FALLING            0xFB
-  #define RISING             0xFA
   #define CHANGE_PULL_UP     0xF9
   #define FALLING_PULL_UP    0xF8
   #define RISING_PULL_UP     0xF7

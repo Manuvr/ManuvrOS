@@ -24,7 +24,7 @@ limitations under the License.
 
 #include <Vector3.h>
 #include <Drivers/Sensors/SensorWrapper.h>
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 
 #define HMC5883_REG_CONFA      0x00  // R/W
 #define HMC5883_REG_CONFB      0x01  // R/W

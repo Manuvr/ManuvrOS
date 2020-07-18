@@ -23,7 +23,7 @@ limitations under the License.
 #define __VEML6070_DRIVER_H__
 
 #include <Drivers/Sensors/SensorWrapper.h>
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 
 /* Hardware-defined registers */
 #define VEML6070_REG_CONFIG           0x01

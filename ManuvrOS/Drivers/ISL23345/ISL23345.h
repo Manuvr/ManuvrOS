@@ -27,7 +27,7 @@ This is the class that represents an ISL23345 digital potentiometer.
 
 #include <inttypes.h>
 #include <StringBuilder.h>
-#include "Platform/Peripherals/I2C/I2CAdapter.h"
+#include "I2CAdapter.h"
 #include "Drivers/DigitalPots/DigitalPots.h"
 
 

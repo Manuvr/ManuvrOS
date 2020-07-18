@@ -1,4 +1,4 @@
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 
 #if defined(MANUVR_SUPPORT_I2C)
 #include "driver/i2c.h"

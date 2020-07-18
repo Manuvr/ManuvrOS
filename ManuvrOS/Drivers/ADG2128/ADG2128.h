@@ -24,7 +24,7 @@ limitations under the License.
 
 #include <inttypes.h>
 #include <StringBuilder.h>
-#include "Platform/Peripherals/I2C/I2CAdapter.h"
+#include "I2CAdapter.h"
 
 
 enum class ADG2128_ERROR : int8_t {

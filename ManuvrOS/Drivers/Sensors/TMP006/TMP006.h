@@ -32,7 +32,7 @@ I have adapted it for ManuvrOS.
 #include <math.h>
 #include <StringBuilder.h>
 #include <Drivers/Sensors/SensorWrapper.h>
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 
 
 #define TMP006_B0 -0.0000294

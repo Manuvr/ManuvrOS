@@ -81,7 +81,7 @@ This is not Atmel's general driver. It is a Manuvr-specific driver that imposes
 
 #include <inttypes.h>
 #include <stdint.h>
-#include "Platform/Peripherals/I2C/I2CAdapter.h"
+#include "I2CAdapter.h"
 #ifdef MANUVR_CONSOLE_SUPPORT
   #include "XenoSession/Console/ManuvrConsole.h"
 #endif

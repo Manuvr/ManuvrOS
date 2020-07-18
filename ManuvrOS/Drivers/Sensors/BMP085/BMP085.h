@@ -26,7 +26,7 @@ limitations under the License.
 #define __BMP085_SENSOR_H__
 
 #include <Drivers/Sensors/SensorWrapper.h>
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 
 #define BMP085_I2CADDR              0x77
 

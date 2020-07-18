@@ -24,7 +24,7 @@ Driver for the Krida four-channel I2C dimmer.
 #include <inttypes.h>
 #include <stdint.h>
 #include <Platform/Platform.h>
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 
 #ifndef __KRIDA_4CH_DIMMER_DRIVER_H__
 #define __KRIDA_4CH_DIMMER_DRIVER_H__

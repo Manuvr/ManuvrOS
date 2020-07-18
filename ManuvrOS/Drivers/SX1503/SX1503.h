@@ -22,7 +22,7 @@ limitations under the License.
 #ifndef __SX1503_DRIVER_H__
 #define __SX1503_DRIVER_H__
 
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 
 
 #define SX1503_I2C_ADDR           0x20  // Not configurable.

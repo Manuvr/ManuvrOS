@@ -23,7 +23,7 @@ limitations under the License.
 #define __AMG88XX_DRIVER_H__
 
 #include <Drivers/Sensors/SensorWrapper.h>
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 
 // Assumes AD_SELECT is tied low. If tied high, address is 0x69.
 #define AMG88XX_I2CADDR               0x68
