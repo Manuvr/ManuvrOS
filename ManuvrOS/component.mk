@@ -7,6 +7,7 @@
 
 #CFLAGS +=
 
+#COMPONENT_ADD_INCLUDEDIRS := $(PROJECT_PATH)/lib $(PROJECT_PATH)/lib/CppPotpourri/src . ../..
 COMPONENT_ADD_INCLUDEDIRS := $(PROJECT_PATH)/lib $(PROJECT_PATH)/lib/CppPotpourri/src . ../..
 
 CFLAGS += -D__MANUVR_ESP32

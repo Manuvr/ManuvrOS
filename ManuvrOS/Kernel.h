@@ -35,14 +35,15 @@ limitations under the License.
   #include "CommonConstants.h"
   #include "Utilities.h"
   #include "EnumeratedTypeCodes.h"
-  #include <PriorityQueue.h>
-  #include <ElementPool.h>
-  #include <StringBuilder.h>
-  #include <AbstractPlatform.h>
+  #include "PriorityQueue.h"
+  #include "ElementPool.h"
+  #include "StringBuilder.h"
+  #include "AbstractPlatform.h"
+  #include "StopWatch.h"
 
-  #include "EventReceiver.h"
+  #include <EventReceiver.h>
   #ifdef MANUVR_CONSOLE_SUPPORT
-    #include "XenoSession/Console/ConsoleInterface.h"
+    #include <XenoSession/Console/ConsoleInterface.h>
   #endif
   class StopWatch;
 
@@ -194,7 +195,7 @@ limitations under the License.
       PriorityQueue<ManuvrMsg*>        schedules;     // These are Msgs scheduled to be run.
 
       PriorityQueue<BufferPipe*>       _pipe_io_pend; // Pending BufferPipe transfers that wish to be async.
-      PriorityQueue<StopWatch*> event_costs;   // Message code is the priority. Calculates average cost in uS.
+      PriorityQueue<StopWatch*>        event_costs;   // Message code is the priority. Calculates average cost in uS.
       PriorityQueue<EventReceiver*>    subscribers;   // Our manifest of EventReceivers we service.
       std::map<uint16_t, PriorityQueue<listenerFxnPtr>*> ca_listeners;  // Call-ahead listeners.
       std::map<uint16_t, PriorityQueue<listenerFxnPtr>*> cb_listeners;  // Call-back listeners.

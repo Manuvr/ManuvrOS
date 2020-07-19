@@ -872,8 +872,7 @@ void ManuvrMsg::profilingEnabled(bool enabled) {
   if (nullptr == prof_data) {
     // Profiler data does not exist. If enabled == false, do nothing.
     if (enabled) {
-      prof_data = new StopWatch();
-      prof_data->tag = _code;
+      prof_data = new StopWatch(_code);
     }
   }
   else if (!enabled) {

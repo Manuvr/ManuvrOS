@@ -22,9 +22,7 @@ limitations under the License.
 #include <CommonConstants.h>
 #include <Kernel.h>
 #include <Platform/Platform.h>
-#include <StopWatch.h>
 
-#include <MsgProfiler.h>
 
 // Conditional inclusion for different threading models...
 #if defined(__MANUVR_LINUX)
@@ -707,15 +705,14 @@ int8_t Kernel::procIdleFlags() {
         int i = 0;
         while ((nullptr == profiler_item) && (i < cost_size)) {
           StopWatch* tmp_stopwatch = event_costs.get(i++);
-          if (tmp_stopwatch->tag == msg_code_local) {
+          if (tmp_stopwatch->tag() == msg_code_local) {
             profiler_item = tmp_stopwatch;
             break;
           }
         }
         if (nullptr == profiler_item) {
           // If we don't yet have a stopwatch for this message type...
-          profiler_item = new StopWatch();    // ...create one...
-          profiler_item->tag = msg_code_local;   // ...assign the code...
+          profiler_item = new StopWatch(msg_code_local);    // ...create one with the MSG code...
           event_costs.insert(profiler_item, 1);     // ...and insert it for the future.
         }
         else {
@@ -951,7 +948,7 @@ void Kernel::printProfiler(StringBuilder* output) {
       StopWatch::printDebugHeader(output);
       for (int i = 0; i < x; i++) {
         profiler_item = event_costs.get(i);
-        profiler_item->printDebug(ManuvrMsg::getMsgTypeString(profiler_item->tag), output);
+        profiler_item->printDebug(ManuvrMsg::getMsgTypeString(profiler_item->tag()), output);
       }
     #endif   // MANUVR_EVENT_PROFILER
   }

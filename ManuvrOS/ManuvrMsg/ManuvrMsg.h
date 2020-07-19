@@ -28,16 +28,16 @@ This class forms the foundation of internal events. It contains the identity of 
 
 #include <map>
 
-#include "MessageDefs.h"    // This include file contains all of the message codes.
 #include <DataStructures/Argument.h>
-#include <LightLinkedList.h>
 
-#include <CppPotpourri.h>
-#include <EnumeratedTypeCodes.h>
-#include <MsgProfiler.h>
+#include "MessageDefs.h"    // This include file contains all of the message codes.
+#include "LightLinkedList.h"
+#include "CppPotpourri.h"
+#include "EnumeratedTypeCodes.h"
+#include "StopWatch.h"
 
 #if defined(CONFIG_MANUVR_IMG_SUPPORT)
-  #include <Types/Image.h>
+  #include "Image/Image.h"
 #endif   // CONFIG_MANUVR_IMG_SUPPORT
 
 class StopWatch;
