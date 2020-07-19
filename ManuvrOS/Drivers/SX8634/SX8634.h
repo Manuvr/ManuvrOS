@@ -22,7 +22,8 @@ limitations under the License.
 
 #include <inttypes.h>
 #include <stdint.h>
-#include <I2CAdapter.h>
+#include "I2CAdapter.h"
+#include "ManuvrMsg/ManuvrMsg.h"
 
 #ifndef __SX8634_DRIVER_H__
 #define __SX8634_DRIVER_H__

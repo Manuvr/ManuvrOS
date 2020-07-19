@@ -454,8 +454,7 @@ LSM9DS1_I2C::LSM9DS1_I2C(uint8_t a_imu, uint8_t a_mag, uint8_t irq0, uint8_t irq
   _fifo_read.callback = this;
   _fifo_read.dev_addr = _ADDR_IMU;
   _fifo_read.sub_addr = _reg_addr(LSM9DS1RegID::A_DATA_X) | 0x80;
-  _fifo_read.buf      = &shadows[_get_shadow_offset(LSM9DS1RegID::A_DATA_X)];
-  _fifo_read.buf_len  = 10;
+  _fifo_read.setBuffer(&shadows[_get_shadow_offset(LSM9DS1RegID::A_DATA_X)], 10);
 }
 
 

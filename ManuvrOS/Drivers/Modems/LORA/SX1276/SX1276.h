@@ -1,8 +1,8 @@
 #include <Platform/Platform.h>
-#include <CommonConstants.h>
-#include <EnumeratedTypeCodes.h>
-#include <Platform/Peripherals/SPI/SPIAdapter.h>
-#include <Platform/Peripherals/SPI/SPIBusOp.h>
+#include "CommonConstants.h"
+#include "EnumeratedTypeCodes.h"
+#include "SPIAdapter.h"
+
 
 
 #if defined(MANUVR_CONSOLE_SUPPORT)

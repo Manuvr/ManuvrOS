@@ -132,6 +132,8 @@ int8_t HMC5883::io_op_callback(BusOp* op) {
     Kernel::log(&output);
     return -1;
   }
+  uint8_t* buf     = completed->buffer();
+  uint16_t buf_len = completed->bufferLen();
 
   if (BusOpcode::RX == completed->get_opcode()) {
     // We read.
@@ -147,11 +149,11 @@ int8_t HMC5883::io_op_callback(BusOp* op) {
         _proc_data();
         break;
       case HMC5883_REG_STATUS:
-        if (4 != completed->buf_len) break;   // NOTE: Conditional break.
+        if (4 != buf_len) break;   // NOTE: Conditional break.
       case HMC5883_REG_ID:
-        if (0x48 == *(completed->buf + 1)) {
-          if (0x34 == *(completed->buf + 2)) {
-            if (0x33 == *(completed->buf + 3)) {
+        if (0x48 == *(buf + 1)) {
+          if (0x34 == *(buf + 2)) {
+            if (0x33 == *(buf + 3)) {
               if (0 == _set_range(1.3)) {
                 if (0 == _set_mode(HMC5883Mode::CONTINUOUS)) {
                   isActive(true);

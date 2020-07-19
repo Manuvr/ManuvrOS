@@ -43,6 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ****************************************************/
 
 #include "SSD13xx.h"
+#include "Kernel.h"
 
 
 ImgBufferFormat _get_img_fmt_for_ssd(SSDModel m) {
@@ -401,9 +402,9 @@ int8_t SSD13xx::reset() {
   int8_t ret = -1;
   if (255 != _opts.reset) {
     setPin(_opts.reset, false);  // Hold the display in reset.
-    sleep_millis(1);
+    sleep_ms(1);
     setPin(_opts.reset, true);
-    sleep_millis(1);
+    sleep_ms(1);
     ret = 0;
   }
   return ret;

@@ -66,7 +66,9 @@ int8_t KridaDimmer::io_op_callahead(BusOp* _op) {
 
 int8_t KridaDimmer::io_op_callback(BusOp* _op) {
   I2CBusOp* completed = (I2CBusOp*) _op;
-  uint8_t addr = (completed->sub_addr & 0x0F);
+  uint8_t addr     = (completed->sub_addr & 0x0F);
+  uint8_t* buf     = completed->buffer();
+  uint16_t buf_len = completed->bufferLen();
 
   switch (completed->get_opcode()) {
     case BusOpcode::RX:
@@ -76,9 +78,9 @@ int8_t KridaDimmer::io_op_callback(BusOp* _op) {
         case 2:
         case 3:
           if (!completed->hasFault()) {
-            for (uint8_t i = 0; i < completed->buf_len; i++) {
-              _channel_hw[addr]     = completed->buf[i];
-              _channel_values[addr] = 100 - completed->buf[i];
+            for (uint8_t i = 0; i < buf_len; i++) {
+              _channel_hw[addr]     = buf[i];
+              _channel_values[addr] = 100 - buf[i];
             }
           }
           break;
@@ -94,10 +96,10 @@ int8_t KridaDimmer::io_op_callback(BusOp* _op) {
         case 2:
         case 3:
           if (completed->hasFault()) {
-            _channel_values[addr] = 100 - completed->buf[0];
+            _channel_values[addr] = 100 - buf[0];
           }
           else {
-            _channel_hw[addr]     = completed->buf[0];
+            _channel_hw[addr] = buf[0];
           }
           break;
         default:
@@ -161,8 +163,7 @@ void KridaDimmer::set_brightness(uint8_t chan, uint8_t nu_brightness) {
             _channel_buffer[chan] = 100 - safe_brightness;
             nu->dev_addr = _dev_addr;
             nu->sub_addr = (uint16_t) (0x80 | chan);
-            nu->buf      = &_channel_buffer[chan];
-            nu->buf_len  = 1;
+            nu->setBuffer(&_channel_buffer[chan], 1);
             _bus->queue_io_job(nu);
           }
         }

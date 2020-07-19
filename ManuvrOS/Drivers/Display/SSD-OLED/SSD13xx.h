@@ -40,10 +40,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ****************************************************/
 
-#include <Types/Image.h>
-#include <Platform/Peripherals/SPI/SPIAdapter.h>
-#include <Platform/Peripherals/SPI/SPIBusOp.h>
-#include <StopWatch.h>
+#include "Image/Image.h"
+#include "SPIAdapter.h"
+#include "StopWatch.h"
 
 #ifndef __SSD13XX_DRIVER_H_
 #define __SSD13XX_DRIVER_H_
