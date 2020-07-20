@@ -132,8 +132,9 @@ typedef struct __platform_gpio_def {
   ManuvrMsg* event;
   FxnPointer fxn;
   uint8_t    pin;
+  GPIOMode   mode;
   uint8_t    flags;
-  uint16_t   mode;  // Strictly more than needed. Padding structure...
+  uint8_t    PADDING;
 } PlatformGPIODef;
 
 typedef struct __platform_thread_opts {
@@ -385,7 +386,7 @@ int8_t random_fill(uint8_t* buf, size_t len);
 * GPIO and change-notice.
 */
 void   unsetPinIRQ(uint8_t pin);
-int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrMsg* isr_event);
+int8_t setPinEvent(uint8_t pin, IRQCondition, ManuvrMsg*);
 int8_t setPinAnalog(uint8_t pin, int);
 int    readPinAnalog(uint8_t pin);
 

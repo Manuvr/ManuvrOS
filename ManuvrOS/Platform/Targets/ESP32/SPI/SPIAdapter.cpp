@@ -18,7 +18,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 */
-#include <Platform/Peripherals/SPI/SPIAdapter.h>
+#include <SPIAdapter.h>
 
 #if defined(CONFIG_MANUVR_SUPPORT_SPI)
 

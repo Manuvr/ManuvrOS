@@ -76,7 +76,7 @@ ESP32Storage::~ESP32Storage() {
 * \_))   ||    \\_//  || \\ || ||  \\_|| ||___
 * Storage interface.
 ********************************************************************************/
-unsigned long ESP32Storage::freeSpace() {
+uint64_t ESP32Storage::freeSpace() {
   return _free_space;
 }
 

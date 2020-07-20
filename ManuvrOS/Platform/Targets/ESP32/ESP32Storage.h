@@ -39,7 +39,7 @@ class ESP32Storage : public EventReceiver, public Storage {
     ~ESP32Storage();
 
     /* Overrides from Storage. */
-    unsigned long freeSpace();  // How many bytes are availible for use?
+    uint64_t freeSpace();  // How many bytes are availible for use?
     StorageErr wipe();          // Call to wipe the data store.
     StorageErr flush();         // Blocks until commit completes.
     StorageErr persistentWrite(const char*, uint8_t*, unsigned int, uint16_t);

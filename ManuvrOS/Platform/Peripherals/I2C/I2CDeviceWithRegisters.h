@@ -34,6 +34,9 @@ This file is the tortured result of growing pains since the beginning of
 #include <RingBuffer.h>
 #include <Drivers/DeviceWithRegisters/DeviceRegister.h>
 
+#ifndef __PLATFORM_I2C_EXTENSION_H__
+#define __PLATFORM_I2C_EXTENSION_H__
+
 /*
 * This class is an extension of I2CDevice for the special (most common) case where the
 *   device being represented has an internal register set. This extended class just takes
@@ -99,3 +102,5 @@ class I2CDeviceWithRegisters : public I2CDevice {
     int8_t writeRegister(DeviceRegister* reg);
     int8_t readRegister(DeviceRegister* reg);
 };
+
+#endif  // __PLATFORM_I2C_EXTENSION_H__
