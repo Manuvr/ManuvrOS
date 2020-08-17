@@ -357,7 +357,6 @@ void maskableInterrupts(bool);
 /*
 * Threading
 */
-void sleep_millis(unsigned long millis);
 
 int createThread(unsigned long*, void*, ThreadFxnPtr, void*, ManuvrThreadOptions*);
 int deleteThread(unsigned long*);
@@ -378,7 +377,7 @@ int wakeThread(unsigned long);
 /*
 * Randomness
 */
-uint32_t randomInt();                        // Fetches one of the stored randoms and blocks until one is available.
+uint32_t randomUInt32();    // Fetches one of the stored randoms and blocks until one is available.
 int8_t random_fill(uint8_t* buf, size_t len);
 
 

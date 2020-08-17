@@ -185,7 +185,7 @@ int main(int argc, const char* argv[]) {
     }
   #endif
 
-  #if defined(MANUVR_SUPPORT_I2C)
+  #if defined(CONFIG_MANUVR_I2C)
     const I2CAdapterOptions i2c_opts(
       1,   // Device number
       255, // sda

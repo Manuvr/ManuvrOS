@@ -334,7 +334,7 @@ static void* dev_urandom_reader(void*) {
 *
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
-uint32_t randomInt() {
+uint32_t randomUInt32() {
   // Preferably, we'd shunt to a PRNG at this point. For now we block.
   while (_random_pool_w_ptr <= _random_pool_r_ptr) {
   }

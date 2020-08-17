@@ -45,7 +45,7 @@ volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
 *
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
-uint32_t randomInt() {
+uint32_t randomUInt32() {
   uint32_t return_value = rand();
   return return_value;
 }

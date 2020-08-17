@@ -334,7 +334,7 @@ int8_t ESP32Storage::notify(ManuvrMsg* active_event) {
 //    #if defined(MANUVR_DEBUG)
 //      case 's':
 //        if (isMounted()) {
-//          Argument a(randomInt());
+//          Argument a(randomUInt32());
 //          a.setKey("random_number");
 //          a.append((int8_t) 64)->setKey("number_64");
 //          StringBuilder shuttle;

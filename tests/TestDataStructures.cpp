@@ -195,10 +195,10 @@ int vector3_float_test(float x, float y, float z) {
 int test_PriorityQueue0(StringBuilder* log) {
   int return_value = -1;
   PriorityQueue<uint32_t*> queue0;
-  uint32_t vals[16] = { randomInt(), randomInt(), randomInt(), randomInt(),
-                        randomInt(), randomInt(), randomInt(), randomInt(),
-                        randomInt(), randomInt(), randomInt(), randomInt(),
-                        randomInt(), randomInt(), randomInt(), randomInt() };
+  uint32_t vals[16] = { randomUInt32(), randomUInt32(), randomUInt32(), randomUInt32(),
+                        randomUInt32(), randomUInt32(), randomUInt32(), randomUInt32(),
+                        randomUInt32(), randomUInt32(), randomUInt32(), randomUInt32(),
+                        randomUInt32(), randomUInt32(), randomUInt32(), randomUInt32() };
   int q_size = queue0.size();
   if (0 == q_size) {
     if (!queue0.contains(&vals[5])) {  // Futile search for non-existant value.
@@ -357,15 +357,15 @@ int test_CBOR_Argument() {
   StringBuilder log("===< Arguments CBOR >===================================\n");
   StringBuilder shuttle;  // We will transport the CBOR encoded-bytes through this.
 
-  int32_t  val0  = (int32_t)  randomInt();
-  int16_t  val1  = (int16_t)  randomInt();
-  int8_t   val2  = (int8_t)   randomInt();
-  uint32_t val3  = (uint32_t) randomInt();
-  uint16_t val4  = (uint16_t) randomInt();
-  uint8_t  val5  = (uint8_t)  randomInt();
-  float    val6  = ((uint32_t) randomInt()) / ((float) randomInt());
+  int32_t  val0  = (int32_t)  randomUInt32();
+  int16_t  val1  = (int16_t)  randomUInt32();
+  int8_t   val2  = (int8_t)   randomUInt32();
+  uint32_t val3  = (uint32_t) randomUInt32();
+  uint16_t val4  = (uint16_t) randomUInt32();
+  uint8_t  val5  = (uint8_t)  randomUInt32();
+  float    val6  = ((uint32_t) randomUInt32()) / ((float) randomUInt32());
   Vector3<float> val7(0.5f, -0.5f, 0.2319f);
-  double   val8  = ((uint32_t) randomInt()) / ((double) randomInt());
+  double   val8  = ((uint32_t) randomUInt32()) / ((double) randomUInt32());
 
   int32_t  ret0 = 0;
   int16_t  ret1 = 0;
@@ -452,15 +452,15 @@ int test_Argument_Value_Placement() {
   StringBuilder log("===< Argument Value Placement >=========================\n");
   StringBuilder shuttle;  // We will transport the CBOR encoded-bytes through this.
 
-  int32_t  val0  = (int32_t)  randomInt();
-  int16_t  val1  = (int16_t)  randomInt();
-  int8_t   val2  = (int8_t)   randomInt();
-  uint32_t val3  = (uint32_t) randomInt();
-  uint16_t val4  = (uint16_t) randomInt();
-  uint8_t  val5  = (uint8_t)  randomInt();
-  float    val6  = ((uint32_t) randomInt()) / ((float) randomInt());
+  int32_t  val0  = (int32_t)  randomUInt32();
+  int16_t  val1  = (int16_t)  randomUInt32();
+  int8_t   val2  = (int8_t)   randomUInt32();
+  uint32_t val3  = (uint32_t) randomUInt32();
+  uint16_t val4  = (uint16_t) randomUInt32();
+  uint8_t  val5  = (uint8_t)  randomUInt32();
+  float    val6  = ((uint32_t) randomUInt32()) / ((float) randomUInt32());
   Vector3<float> val7(0.5f, -0.5f, 0.2319f);
-  double   val8  = ((uint32_t) randomInt()) / ((double) randomInt());
+  double   val8  = ((uint32_t) randomUInt32()) / ((double) randomUInt32());
 
   Argument arg0(val0);
   Argument arg1(val1);
@@ -482,19 +482,19 @@ int test_Argument_Value_Placement() {
   Vector3<float> ret7(0.0f, 0.0f, 0.0f);
   double   ret8 = 0.0f;
 
-  val0  = (int32_t)  randomInt();
-  val1  = (int16_t)  randomInt();
-  val2  = (int8_t)   randomInt();
-  val3  = (uint32_t) randomInt();
-  val4  = (uint16_t) randomInt();
-  val5  = (uint8_t)  randomInt();
-  val6  = ((uint32_t) randomInt()) / ((float) randomInt());
+  val0  = (int32_t)  randomUInt32();
+  val1  = (int16_t)  randomUInt32();
+  val2  = (int8_t)   randomUInt32();
+  val3  = (uint32_t) randomUInt32();
+  val4  = (uint16_t) randomUInt32();
+  val5  = (uint8_t)  randomUInt32();
+  val6  = ((uint32_t) randomUInt32()) / ((float) randomUInt32());
   val7(
-    ((uint32_t) randomInt()) / ((float) randomInt()),
-    ((uint32_t) randomInt()) / ((float) randomInt()),
-    ((uint32_t) randomInt()) / ((float) randomInt())
+    ((uint32_t) randomUInt32()) / ((float) randomUInt32()),
+    ((uint32_t) randomUInt32()) / ((float) randomUInt32()),
+    ((uint32_t) randomUInt32()) / ((float) randomUInt32())
   );
-  val8  = ((uint32_t) randomInt()) / ((double) randomInt());
+  val8  = ((uint32_t) randomUInt32()) / ((double) randomUInt32());
 
   arg0.setValue(val0);
   arg1.setValue(val1);
@@ -631,12 +631,12 @@ int test_Arguments_KVP() {
   int return_value = -1;
   StringBuilder log("===< Arguments KVP >====================================\n");
 
-  uint32_t val0  = (uint32_t) randomInt();
-  uint16_t val1  = (uint16_t) randomInt();
-  uint8_t  val2  = (uint8_t)  randomInt();
-  int32_t  val3  = (int32_t)  randomInt();
-  int16_t  val4  = (int16_t)  randomInt();
-  int8_t   val5  = (int8_t)   randomInt();
+  uint32_t val0  = (uint32_t) randomUInt32();
+  uint16_t val1  = (uint16_t) randomUInt32();
+  uint8_t  val2  = (uint8_t)  randomUInt32();
+  int32_t  val3  = (int32_t)  randomUInt32();
+  int16_t  val4  = (int16_t)  randomUInt32();
+  int8_t   val5  = (int8_t)   randomUInt32();
   float    val6  = 0.8374f;
   float    val8  = -0.8374f;
   double   val9  = -0.123456789d;
@@ -741,13 +741,13 @@ int test_Arguments_PODs() {
   int return_value = 1;
   StringBuilder log("===< Arguments POD >====================================\n");
   const char* val_base = "This is the base argument";
-  uint32_t val0  = (uint32_t) randomInt();
-  uint16_t val1  = (uint16_t) randomInt();
-  uint8_t  val2  = (uint8_t)  randomInt();
-  int32_t  val3  = (int32_t)  randomInt();
-  int16_t  val4  = (int16_t)  randomInt();
-  int8_t   val5  = (int8_t)   randomInt();
-  float    val6  = (float)    randomInt()/1000000.0f;
+  uint32_t val0  = (uint32_t) randomUInt32();
+  uint16_t val1  = (uint16_t) randomUInt32();
+  uint8_t  val2  = (uint8_t)  randomUInt32();
+  int32_t  val3  = (int32_t)  randomUInt32();
+  int16_t  val4  = (int16_t)  randomUInt32();
+  int8_t   val5  = (int8_t)   randomUInt32();
+  float    val6  = (float)    randomUInt32()/1000000.0f;
 
   Argument a(val_base);
 
@@ -851,7 +851,7 @@ int test_RingBuffer() {
       uint32_t val;
       log.concat("\tInserting:");
       for (unsigned int i = 0; i < test_num; i++) {
-        val = randomInt();
+        val = randomUInt32();
         if (a.insert(val)) {
           log.concat("\nFailed to insert.\n");
           printf("%s\n\n", (const char*) log.string());
@@ -869,7 +869,7 @@ int test_RingBuffer() {
         unsigned int n = TEST_SIZE - a.count();
         log.concatf("\n\tRingBuffer should have space for %u more elements... ", n);
         for (unsigned int i = 0; i < n; i++) {
-          if (a.insert(randomInt())) {
+          if (a.insert(randomUInt32())) {
             log.concatf("Falsified. Count is %u\n", a.count());
             printf("%s\n\n", (const char*) log.string());
             return -1;
@@ -878,7 +878,7 @@ int test_RingBuffer() {
         if (a.count() == TEST_SIZE) {
           log.concatf("Verified. Count is %u\n", a.count());
           log.concat("\tOverflowing... ");
-          if (a.insert(randomInt())) {
+          if (a.insert(randomUInt32())) {
             log.concatf("Is handled correctly. Count is %u\n", a.count());
             log.concat("\tDraining... ");
             for (unsigned int i = 0; i < TEST_SIZE; i++) {

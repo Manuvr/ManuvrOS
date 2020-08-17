@@ -5,7 +5,7 @@
 #include <Platform/Platform.h>
 #include <Kernel.h>
 
-#if defined(MANUVR_SUPPORT_I2C)
+#if defined(CONFIG_MANUVR_I2C)
 #include <linux/i2c-dev.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -258,4 +258,4 @@ XferFault I2CBusOp::advance(uint32_t status_reg) {
   return getFault();
 }
 
-#endif  // MANUVR_SUPPORT_I2C
+#endif  // CONFIG_MANUVR_I2C

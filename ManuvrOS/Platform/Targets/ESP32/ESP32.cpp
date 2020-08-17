@@ -76,7 +76,7 @@ static bool using_adc2            = false;
 *
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
-uint32_t IRAM_ATTR randomInt() {
+uint32_t IRAM_ATTR randomUInt32() {
   return randomness_pool[_random_pool_r_ptr++ % PLATFORM_RNG_CARRY_CAPACITY];
 }
 
@@ -598,7 +598,7 @@ void ESP32Platform::jumpToBootloader() {
 */
 void ESP32Platform::hardwareShutdown() {
   while(true) {
-    sleep_millis(60000);
+    sleep_ms(60000);
   }
 }
 

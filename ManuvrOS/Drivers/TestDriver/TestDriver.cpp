@@ -101,7 +101,7 @@ int TestDriver::PF_TEST_RNG() {
   // Empty the entropy pool.
   local_log.concat("Draining entropy pool...  ");
   for (int i = 0; i < PLATFORM_RNG_CARRY_CAPACITY; i++) {
-    local_log.concatf("%08x ", randomInt());
+    local_log.concatf("%08x ", randomUInt32());
   }
   local_log.concat("\n");
   unsigned long t0   = millis();
@@ -110,7 +110,7 @@ int TestDriver::PF_TEST_RNG() {
   while (t0 + 1000 >= t1) {
     // Threaded or not, this should test the maximum randomness rate
     // available to the program.
-    randomInt();   // This ought to block when the pool is drained.
+    randomUInt32();   // This ought to block when the pool is drained.
     count++;
     t1 = millis();
   }

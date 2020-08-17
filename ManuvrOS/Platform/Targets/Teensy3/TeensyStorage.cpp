@@ -242,7 +242,7 @@ int8_t TeensyStorage::notify(ManuvrMsg* active_event) {
 //
 //    case 's':
 //      if (isMounted()) {
-//        Argument a(randomInt());
+//        Argument a(randomUInt32());
 //        a.setKey("random_number");
 //        a.append((int8_t) 64)->setKey("number_64");
 //        StringBuilder shuttle;

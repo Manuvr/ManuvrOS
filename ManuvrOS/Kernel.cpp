@@ -65,7 +65,7 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   /* Reserved codes */
   {  MANUVR_MSG_UNDEFINED            , 0x0000,               "<UNDEF>"          , ManuvrMsg::MSG_ARGS_NONE }, // This should be the first entry for failure cases.
 
-  #if defined(MANUVR_SUPPORT_I2C)
+  #if defined(CONFIG_MANUVR_I2C)
   { MANUVR_MSG_I2C_QUEUE_READY, 0x0000,  "I2C_Q_RDY", ManuvrMsg::MSG_ARGS_NONE },  // The i2c queue is ready for attention.
   #endif
 
@@ -1398,7 +1398,7 @@ void Kernel::consoleCmdProc(StringBuilder* input) {
     case 'r':        // Read so many random integers...
       temp_int = (temp_int <= 0) ? PLATFORM_RNG_CARRY_CAPACITY : temp_int;
       for (uint8_t i = 0; i < temp_int; i++) {
-        local_log.concatf("Random number: 0x%08x\n", randomInt());
+        local_log.concatf("Random number: 0x%08x\n", randomUInt32());
       }
       break;
 

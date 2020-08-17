@@ -726,6 +726,6 @@ void SX1503::printDebug(StringBuilder* output) {
 */
 void SX1503::printRegs(StringBuilder* output) {
   for (uint8_t i = 0; i < sizeof(registers); i++) {
-    output->concatf("\t0x%02x:\t0x%02x", SX1503_REG_ADDR[i], registers[i]);
+    output->concatf("\t0x%02x:\t0x%02x\n", SX1503_REG_ADDR[i], registers[i]);
   }
 }

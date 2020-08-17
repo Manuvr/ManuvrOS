@@ -27,16 +27,6 @@ limitations under the License.
 
 #define PLATFORM_GPIO_PIN_COUNT GPIO_PIN_COUNT
 
-//#define CHANGE             GPIO_INTR_ANYEDGE
-//#define FALLING            GPIO_INTR_NEGEDGE
-//#define RISING             GPIO_INTR_POSEDGE
-//#define CHANGE_PULL_UP     0xF9
-//#define FALLING_PULL_UP    0xF8
-//#define RISING_PULL_UP     0xF7
-//#define CHANGE_PULL_DOWN   0xF6
-//#define FALLING_PULL_DOWN  0xF5
-//#define RISING_PULL_DOWN   0xF4
-
 extern uint8_t temprature_sens_read();
 
 

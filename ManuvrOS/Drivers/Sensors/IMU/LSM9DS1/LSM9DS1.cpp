@@ -611,8 +611,8 @@ int8_t LSM9DS1::refresh() {
 *   were written.
 */
 void LSM9DS1::write_test_bytes() {
-  io_test_val_0 = (uint8_t) randomInt();
-  io_test_val_1 = (uint8_t) randomInt();
+  io_test_val_0 = (uint8_t) randomUInt32();
+  io_test_val_1 = (uint8_t) randomUInt32();
   _set_shadow_value(LSM9DS1RegID::G_INT_GEN_THS_Y, io_test_val_0);
   _set_shadow_value(LSM9DS1RegID::M_OFFSET_Z, io_test_val_1);
   _write_registers(LSM9DS1RegID::G_INT_GEN_THS_Y, 1);

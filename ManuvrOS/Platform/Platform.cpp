@@ -171,7 +171,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   _discoverALUParams();
 
   #if defined(__BUILD_HAS_THREADS)
-    platform.setIdleHook([]{ sleep_millis(CONFIG_MANUVR_IDLE_PERIOD_MS); });
+    platform.setIdleHook([]{ sleep_ms(CONFIG_MANUVR_IDLE_PERIOD_MS); });
   #endif
 
   /* Optional platform-level services. */
@@ -582,7 +582,7 @@ int wakeThread(unsigned long _thread_id) {
 * If you are interested in delaying without suspending the entire thread, you should
 *   probably use interrupts instead.
 */
-void sleep_millis(unsigned long millis) {
+void sleep_ms(uint32_t millis) {
   #if defined(__MANUVR_LINUX) || defined(__MANUVR_APPLE)
     struct timespec t = {(long) (millis / 1000), (long) ((millis % 1000) * 1000000UL)};
     nanosleep(&t, &t);
@@ -612,10 +612,10 @@ int8_t random_fill(uint8_t* buf, size_t len) {
   int written_len = 0;
   while (4 <= (len - written_len)) {
     // If we have slots for them, just up-cast and write 4-at-a-time.
-    *((uint32_t*) (buf + written_len)) = randomInt();
+    *((uint32_t*) (buf + written_len)) = randomUInt32();
     written_len += 4;
   }
-  uint32_t slack = randomInt();
+  uint32_t slack = randomUInt32();
   while (0 < (len - written_len)) {
     *(buf + written_len) = (uint8_t) 0xFF & slack;
     slack = slack >> 8;

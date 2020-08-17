@@ -1,6 +1,6 @@
 #include <I2CAdapter.h>
 
-#if defined(MANUVR_SUPPORT_I2C)
+#if defined(CONFIG_MANUVR_I2C)
 
 extern "C" {
   #include <stm32f7xx_hal.h>
@@ -447,4 +447,4 @@ int8_t I2CBusOp::advance_operation(uint32_t status_reg) {
 }
 
 
-#endif   // MANUVR_SUPPORT_I2C
+#endif   // CONFIG_MANUVR_I2C

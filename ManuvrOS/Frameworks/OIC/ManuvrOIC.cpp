@@ -60,7 +60,7 @@ extern "C" {
   void oc_random_init() {}
 
   unsigned int oc_random_value() {
-    return randomInt();
+    return randomUInt32();
   }
 
   void oc_clock_init() {}
