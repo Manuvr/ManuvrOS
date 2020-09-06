@@ -20,9 +20,10 @@ limitations under the License.
 */
 
 
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
+#include "I2CDeviceWithRegisters.h"
 
-#if defined(MANUVR_SUPPORT_I2C)
+#if defined(CONFIG_MANUVR_I2C)
 
 I2CDeviceWithRegisters::I2CDeviceWithRegisters(uint8_t addr, uint8_t reg_count, uint16_t mem_size) : I2CDevice(addr), reg_defs(reg_count) {
   _pooled_reg_mem = (uint8_t*) malloc(mem_size);
@@ -403,11 +404,12 @@ int8_t I2CDeviceWithRegisters::io_op_callback(BusOp* _op) {
       #endif
     }
     /* Null the buffer so the bus adapter isn't tempted to free it.
-      TODO: This is silly. Fix this in the API. */
-    _op->buf     = nullptr;
-    _op->buf_len = 0;
+      TODO: This is silly. Fix this in the API.
+      TODONE? This is probably fixed. Verify and remove.
+    */
+    _op->setBuffer(nullptr, 0);
   }
   return return_value;
 }
 
-#endif  // MANUVR_SUPPORT_I2C
+#endif  // CONFIG_MANUVR_I2C

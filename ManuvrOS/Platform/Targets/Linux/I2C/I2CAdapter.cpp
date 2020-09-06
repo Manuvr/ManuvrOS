@@ -1,8 +1,11 @@
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
-
-#if defined(MANUVR_SUPPORT_I2C)
 #include <stdlib.h>
 #include <unistd.h>
+
+#include "I2CAdapter.h"
+#include <Platform/Platform.h>
+#include <Kernel.h>
+
+#if defined(CONFIG_MANUVR_I2C)
 #include <linux/i2c-dev.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -16,6 +19,7 @@
 
 int open_bus_handle = -1;        //TODO: This is a hack. Re-work it.
 int8_t  last_used_bus_addr = 0;  //TODO: This is a hack. Re-work it.
+pthread_t _thread_id = 0;
 
 
 I2CBusOp* _threaded_op = nullptr;
@@ -97,7 +101,7 @@ bool switch_device(I2CAdapter* adapter, uint8_t nu_addr) {
 int8_t I2CAdapter::bus_init() {
   char *filename = (char *) alloca(24);
   *filename = 0;
-  if (sprintf(filename, "/dev/i2c-%d", getAdapterId()) > 0) {
+  if (sprintf(filename, "/dev/i2c-%d", adapterNumber()) > 0) {
     open_bus_handle = open(filename, O_RDWR);
     if (open_bus_handle < 0) {
       // TODO?
@@ -116,7 +120,7 @@ int8_t I2CAdapter::bus_init() {
   }
   #if defined(MANUVR_DEBUG)
   else if (getVerbosity() > 2) {
-    local_log.concatf("Somehow we failed to sprintf and build a filename to open i2c bus %d.\n", getAdapterId());
+    local_log.concatf("Somehow we failed to sprintf and build a filename to open i2c bus %d.\n", adapterNumber());
     Kernel::log(&local_log);
   }
   #endif
@@ -136,7 +140,7 @@ int8_t I2CAdapter::bus_deinit() {
 
 
 void I2CAdapter::printHardwareState(StringBuilder* output) {
-  output->concatf("-- I2C%d (%sline)\n", getAdapterId(), (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
+  output->concatf("-- I2C%d (%sline)\n", adapterNumber(), (_adapter_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
 }
 
 
@@ -162,13 +166,13 @@ int8_t I2CAdapter::generateStop() {
 XferFault I2CBusOp::begin() {
   if (nullptr == _threaded_op) {
     if (device) {
-      switch (device->getAdapterId()) {
+      switch (device->adapterNumber()) {
         case 0:
         case 1:
           if ((nullptr == callback) || (0 == callback->io_op_callahead(this))) {
             set_state(XferState::INITIATE);
             _threaded_op = this;
-            device->wake();
+            //device->wake();  // TODO: Forgot what this was responsible for.
             return XferFault::NONE;
           }
           else {
@@ -188,7 +192,7 @@ XferFault I2CBusOp::begin() {
     abort(XferFault::BUS_BUSY);
   }
 
-  return xfer_fault;
+  return getFault();
 }
 
 
@@ -197,23 +201,23 @@ XferFault I2CBusOp::begin() {
 *   from an I/O thread.
 */
 XferFault I2CBusOp::advance(uint32_t status_reg) {
-  xfer_state = XferState::ADDR;
+  set_state(XferState::ADDR);
   if (device->generateStart()) {
     // Failure to generate START condition.
     abort(XferFault::BUS_BUSY);
-    return xfer_fault;
+    return getFault();
   }
 
   if (!switch_device(device, dev_addr)) {
     abort(XferFault::BUS_FAULT);
-    return xfer_fault;
+    return getFault();
   }
 
-  if (opcode == BusOpcode::RX) {
+  if (get_opcode() == BusOpcode::RX) {
     uint8_t sa = (uint8_t) (sub_addr & 0x00FF);
 
     if (write(open_bus_handle, &sa, 1) == 1) {
-      if (read(open_bus_handle, buf, buf_len) == buf_len) {
+      if (read(open_bus_handle, _buf, _buf_len) == _buf_len) {
         markComplete();
       }
       else {
@@ -224,21 +228,21 @@ XferFault I2CBusOp::advance(uint32_t status_reg) {
       abort(XferFault::BUS_FAULT);
     }
   }
-  else if (opcode == BusOpcode::TX) {
-    uint8_t buffer[buf_len + 1];
+  else if (get_opcode() == BusOpcode::TX) {
+    uint8_t buffer[_buf_len + 1];
     buffer[0] = (uint8_t) (sub_addr & 0x00FF);
 
-    for (int i = 0; i < buf_len; i++) buffer[i + 1] = *(buf + i);
+    for (int i = 0; i < _buf_len; i++) buffer[i + 1] = *(_buf + i);
 
-    if (write(open_bus_handle, &buffer, buf_len+1) == buf_len+1) {
+    if (write(open_bus_handle, &buffer, _buf_len+1) == _buf_len+1) {
       markComplete();
     }
     else {
       abort(XferFault::BUS_FAULT);
     }
   }
-  else if (opcode == BusOpcode::TX_CMD) {
-    uint8_t buffer[buf_len + 1];
+  else if (get_opcode() == BusOpcode::TX_CMD) {
+    uint8_t buffer[_buf_len + 1];
     buffer[0] = (uint8_t) (sub_addr & 0x00FF);
     if (write(open_bus_handle, &buffer, 1) == 1) {
       markComplete();
@@ -251,7 +255,7 @@ XferFault I2CBusOp::advance(uint32_t status_reg) {
     abort(XferFault::BUS_FAULT);
   }
 
-  return xfer_fault;
+  return getFault();
 }
 
-#endif  // MANUVR_SUPPORT_I2C
+#endif  // CONFIG_MANUVR_I2C

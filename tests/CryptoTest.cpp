@@ -32,7 +32,7 @@ This tests the cryptographic system under whatever build options
 #include <fstream>
 #include <iostream>
 
-#include <DataStructures/StringBuilder.h>
+#include <StringBuilder.h>
 #include <Platform/Platform.h>
 
 

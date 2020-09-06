@@ -64,7 +64,7 @@ volatile uint32_t next_random_int[PLATFORM_RNG_CARRY_CAPACITY];
 *
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
-uint32_t randomInt() {
+uint32_t randomUInt32() {
   uint32_t return_value = rand();
   return return_value;
 }
@@ -180,7 +180,7 @@ void gpioSetup() {
 }
 
 
-int8_t gpioDefine(uint8_t pin, GPIOMode mode) {
+int8_t pinMode(uint8_t pin, GPIOMode mode) {
   pinMode(pin, mode);
   return 0;
 }

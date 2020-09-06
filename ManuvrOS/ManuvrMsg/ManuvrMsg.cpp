@@ -22,7 +22,7 @@ limitations under the License.
 
 #include <CommonConstants.h>
 #include <DataStructures/Argument.h>
-#include <DataStructures/StopWatch.h>
+#include <StopWatch.h>
 #include "ManuvrMsg.h"
 #include <string.h>
 #include <Kernel.h>
@@ -568,13 +568,13 @@ int8_t ManuvrMsg::writePointerArgAs(uint8_t idx, void* trg_buf) {
   int8_t return_value = -1;
   if (_args) {
     switch (_args->typeCode()) {
-      case TCode::INT8_PTR:
-      case TCode::INT16_PTR:
-      case TCode::INT32_PTR:
-      case TCode::UINT8_PTR:
-      case TCode::UINT16_PTR:
-      case TCode::UINT32_PTR:
-      case TCode::FLOAT_PTR:
+      //case TCode::INT8_PTR:
+      //case TCode::INT16_PTR:
+      //case TCode::INT32_PTR:
+      //case TCode::UINT8_PTR:
+      //case TCode::UINT16_PTR:
+      //case TCode::UINT32_PTR:
+      //case TCode::FLOAT_PTR:
       case TCode::STR_BUILDER:
       case TCode::STR:
       case TCode::BINARY:
@@ -872,8 +872,7 @@ void ManuvrMsg::profilingEnabled(bool enabled) {
   if (nullptr == prof_data) {
     // Profiler data does not exist. If enabled == false, do nothing.
     if (enabled) {
-      prof_data = new StopWatch();
-      prof_data->tag = _code;
+      prof_data = new StopWatch(_code);
     }
   }
   else if (!enabled) {
@@ -913,14 +912,14 @@ void ManuvrMsg::noteExecutionTime(uint32_t profile_start_time, uint32_t profile_
 /*******************************************************************************
 * Pertaining to deferred execution and scheduling....                          *
 *******************************************************************************/
-/**
-* Safely aborts a schedule that is queued to execute.
-*
-* @return  true if the schedule was aborted.
-*/
-bool ManuvrMsg::abort() {
-  return Kernel::abortEvent(this);
-}
+// /**
+// * Safely aborts a schedule that is queued to execute.
+// *
+// * @return  true if the schedule was aborted.
+// */
+// bool ManuvrMsg::abort() {
+//   return Kernel::abortEvent(this);
+// }
 
 
 /**

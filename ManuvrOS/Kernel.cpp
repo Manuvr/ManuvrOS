@@ -22,9 +22,7 @@ limitations under the License.
 #include <CommonConstants.h>
 #include <Kernel.h>
 #include <Platform/Platform.h>
-#include "DataStructures/StopWatch.h"
 
-#include <MsgProfiler.h>
 
 // Conditional inclusion for different threading models...
 #if defined(__MANUVR_LINUX)
@@ -67,19 +65,16 @@ const MessageTypeDef ManuvrMsg::message_defs[] = {
   /* Reserved codes */
   {  MANUVR_MSG_UNDEFINED            , 0x0000,               "<UNDEF>"          , ManuvrMsg::MSG_ARGS_NONE }, // This should be the first entry for failure cases.
 
-  #if defined(MANUVR_SUPPORT_I2C)
+  #if defined(CONFIG_MANUVR_I2C)
   { MANUVR_MSG_I2C_QUEUE_READY, 0x0000,  "I2C_Q_RDY", ManuvrMsg::MSG_ARGS_NONE },  // The i2c queue is ready for attention.
   #endif
 
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
   #endif
 
   {  MANUVR_MSG_SYS_BOOT_COMPLETED   , 0x0000,               "BOOT_COMPLETED"   , ManuvrMsg::MSG_ARGS_NONE }, // Raised when bootstrap is finished.
   {  MANUVR_MSG_SYS_CONF_LOAD        , 0x0000,               "CONF_LOAD"        , ManuvrMsg::MSG_ARGS_NONE }, // Recipients will comb arguments for config and apply it.
   {  MANUVR_MSG_SYS_CONF_SAVE        , 0x0000,               "CONF_SAVE"        , ManuvrMsg::MSG_ARGS_NONE }, // Recipients will attach their persistable data.
-
-  {  MANUVR_MSG_SYS_ADVERTISE_SRVC   , 0x0000,               "ADVERTISE_SRVC"       , ManuvrMsg::MSG_ARGS_NONE }, // A system service might feel the need to advertise it's arrival.
-  {  MANUVR_MSG_SYS_RETRACT_SRVC     , 0x0000,               "RETRACT_SRVC"         , ManuvrMsg::MSG_ARGS_NONE }, // A system service sends this to tell others to stop using it.
 
   {  MANUVR_MSG_SYS_BOOTLOADER       , MSG_FLAG_EXPORTABLE,  "SYS_BOOTLOADER"       , ManuvrMsg::MSG_ARGS_NONE }, // Reboots into the bootloader, if it exists.
   {  MANUVR_MSG_SYS_REBOOT           , MSG_FLAG_EXPORTABLE,  "SYS_REBOOT"           , ManuvrMsg::MSG_ARGS_NONE }, // Reboots into THIS program.
@@ -710,15 +705,14 @@ int8_t Kernel::procIdleFlags() {
         int i = 0;
         while ((nullptr == profiler_item) && (i < cost_size)) {
           StopWatch* tmp_stopwatch = event_costs.get(i++);
-          if (tmp_stopwatch->tag == msg_code_local) {
+          if (tmp_stopwatch->tag() == msg_code_local) {
             profiler_item = tmp_stopwatch;
             break;
           }
         }
         if (nullptr == profiler_item) {
           // If we don't yet have a stopwatch for this message type...
-          profiler_item = new StopWatch();    // ...create one...
-          profiler_item->tag = msg_code_local;   // ...assign the code...
+          profiler_item = new StopWatch(msg_code_local);    // ...create one with the MSG code...
           event_costs.insert(profiler_item, 1);     // ...and insert it for the future.
         }
         else {
@@ -954,7 +948,7 @@ void Kernel::printProfiler(StringBuilder* output) {
       StopWatch::printDebugHeader(output);
       for (int i = 0; i < x; i++) {
         profiler_item = event_costs.get(i);
-        profiler_item->printDebug(ManuvrMsg::getMsgTypeString(profiler_item->tag), output);
+        profiler_item->printDebug(ManuvrMsg::getMsgTypeString(profiler_item->tag()), output);
       }
     #endif   // MANUVR_EVENT_PROFILER
   }
@@ -1097,23 +1091,6 @@ int8_t Kernel::notify(ManuvrMsg* active_runnable) {
       // These messages codes, we will capture the callback.
       active_runnable->setOriginator(this);
       return_value++;
-      break;
-
-    case MANUVR_MSG_SYS_ADVERTISE_SRVC:  // Some service is annoucing its arrival.
-    case MANUVR_MSG_SYS_RETRACT_SRVC:    // Some service is annoucing its departure.
-      if (0 < active_runnable->argCount()) {
-        EventReceiver* er_ptr;
-        if (0 == active_runnable->getArgAs(&er_ptr)) {
-          if (MANUVR_MSG_SYS_ADVERTISE_SRVC == active_runnable->eventCode()) {
-            subscribe((EventReceiver*) er_ptr);
-            return_value++;
-          }
-          else {
-            unsubscribe((EventReceiver*) er_ptr);
-            return_value++;
-          }
-        }
-      }
       break;
 
     case MANUVR_MSG_LEGEND_MESSAGES:     // Dump the message definitions.
@@ -1347,9 +1324,9 @@ int Kernel::serviceSchedules() {
 *******************************************************************************/
 
 static const ConsoleCommand console_cmds[] = {
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
     { "S", "Save configuration" },
-  #endif // MANUVR_STORAGE
+  #endif // CONFIG_MANUVR_STORAGE
   #if defined(MANUVR_DEBUG)
     { "r", "Roll" },
   #endif //MANUVR_DEBUG
@@ -1421,17 +1398,17 @@ void Kernel::consoleCmdProc(StringBuilder* input) {
     case 'r':        // Read so many random integers...
       temp_int = (temp_int <= 0) ? PLATFORM_RNG_CARRY_CAPACITY : temp_int;
       for (uint8_t i = 0; i < temp_int; i++) {
-        local_log.concatf("Random number: 0x%08x\n", randomInt());
+        local_log.concatf("Random number: 0x%08x\n", randomUInt32());
       }
       break;
 
 
-    #if defined(MANUVR_STORAGE)
+    #if defined(CONFIG_MANUVR_STORAGE)
       case 'S':
         local_log.concat("Attempting configuration save...\n");
         Kernel::raiseEvent(MANUVR_MSG_SYS_CONF_SAVE, this);
         break;
-    #endif // MANUVR_STORAGE
+    #endif // CONFIG_MANUVR_STORAGE
 
     #if defined(__HAS_CRYPT_WRAPPER)
       case 'c':

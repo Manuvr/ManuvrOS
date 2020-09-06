@@ -23,7 +23,7 @@ limitations under the License.
 #define __TMP102_SENSOR_H__
 
 #include <Drivers/Sensors/SensorWrapper.h>
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <Platform/Peripherals/I2C/I2CDeviceWithRegisters.h>
 
 #define TMP102_REG_RESULT           0x00
 #define TMP102_REG_CONFIG           0x01

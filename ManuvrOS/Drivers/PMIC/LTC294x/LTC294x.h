@@ -22,7 +22,7 @@ limitations under the License.
 #ifndef __LTC294X_DRIVER_H__
 #define __LTC294X_DRIVER_H__
 
-#include "Platform/Peripherals/I2C/I2CAdapter.h"
+#include <Platform/Peripherals/I2C/I2CDeviceWithRegisters.h>
 #include "Drivers/Sensors/SensorWrapper.h"
 
 

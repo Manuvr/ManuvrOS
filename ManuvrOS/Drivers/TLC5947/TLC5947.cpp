@@ -35,8 +35,8 @@ TLC5947::TLC5947(uint8_t count, SPIAdapter* b, uint8_t cs, uint8_t oe) {
     _buffer = (uint8_t*) malloc(bufLen());
     bzero(_buffer, bufLen());
   }
-  gpioDefine(_cs_pin, GPIOMode::OUTPUT);
-  gpioDefine(_oe_pin, GPIOMode::OUTPUT);
+  pinMode(_cs_pin, GPIOMode::OUTPUT);
+  pinMode(_oe_pin, GPIOMode::OUTPUT);
   setPin(_cs_pin, false);
   blank(false);
 }

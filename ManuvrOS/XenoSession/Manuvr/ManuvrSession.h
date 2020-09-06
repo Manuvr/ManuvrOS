@@ -110,7 +110,7 @@ class XenoManuvrMessage : public XenoMessage {
 
     void provideEvent(ManuvrMsg*, uint16_t);  // Call to make this XenoMessage outbound.
     inline void provideEvent(ManuvrMsg* runnable) {    // Override to support laziness.
-      provideEvent(runnable, (uint16_t) randomInt());
+      provideEvent(runnable, (uint16_t) randomUInt32());
     };
 
     bool isReply();      // Returns true if this message is a reply to another message.

@@ -1,6 +1,6 @@
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 
-#if defined(MANUVR_SUPPORT_I2C)
+#if defined(CONFIG_MANUVR_I2C)
 extern "C" {
   #include <stm32f4xx.h>
   #include <stm32f4xx_i2c.h>
@@ -259,4 +259,4 @@ int8_t I2CAdapter::generateStop() {
     return 0;
   }
 
-#endif   // MANUVR_SUPPORT_I2C
+#endif   // CONFIG_MANUVR_I2C

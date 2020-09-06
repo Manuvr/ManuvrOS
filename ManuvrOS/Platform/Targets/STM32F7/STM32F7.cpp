@@ -29,7 +29,7 @@ This file is meant to contain a set of common functions that are typically platf
 #include <Platform/Platform.h>
 #include "STM32F7.h"
 
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
 // No storage support yet.
 // RTC backup ram?
 #endif
@@ -152,7 +152,7 @@ unsigned long micros(void) {
 *
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
-uint32_t randomInt() {
+uint32_t randomUInt32() {
   uint32_t enablement_mask = (RNG_CR_RNGEN | RNG_CR_IE);
   // Preferably, we'd shunt to a PRNG at this point. For now we block.
   while (_random_pool_w_ptr <= _random_pool_r_ptr) {
@@ -441,7 +441,7 @@ void gpioSetup() {
 * On STM32 parts, we construe an 8-bit pin number to be a linear reference to
 *   successive 16-bit ports. See STM32F7.h for clarification.
 */
-int8_t gpioDefine(uint8_t pin, int mode) {
+int8_t pinMode(uint8_t pin, int mode) {
   //if (pin < PLATFORM_GPIO_PIN_COUNT) {
     GPIO_InitTypeDef GPIO_InitStruct;
     GPIO_InitStruct.Pin    = _associated_pin(pin);

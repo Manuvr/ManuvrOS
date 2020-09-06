@@ -27,9 +27,10 @@ This is the base class for a type transcriber.
 #include <CommonConstants.h>
 #include <EnumeratedTypeCodes.h>
 
+class Argument;
 
 #if defined(MANUVR_CBOR)
-  #include <Types/cbor-cpp/cbor.h>
+  #include <cbor-cpp/cbor.h>
   // Until per-type ideosyncracies are migrated to standard CBOR representations,
   //   we will be using a tag from the IANA 'unassigned' space to avoid confusion.
   //   The first byte after the tag is the native Manuvr type.

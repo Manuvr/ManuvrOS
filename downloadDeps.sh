@@ -10,6 +10,9 @@ rm -rf lib/jansson
 git clone --depth=1 https://github.com/akheron/jansson.git lib/jansson
 ln -s `pwd`/lib/jansson/src/ lib/jansson/include
 
+# CppPotpourri for basic data structures and features...
+git clone https://github.com/jspark311/CppPotpourri.git lib/CppPotpourri
+
 # FreeRTOS...
 rm -rf lib/FreeRTOS_Arduino
 git clone --depth=1 https://github.com/greiman/FreeRTOS-Arduino lib/FreeRTOS_Arduino

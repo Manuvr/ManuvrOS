@@ -30,7 +30,7 @@ choice MANUVR_PLATFORM
 endchoice
 
 
-config MANUVR_STORAGE
+config CONFIG_MANUVR_STORAGE
     bool "Storage API"
   default n
   ---help---
@@ -134,7 +134,7 @@ endmenu
 
 
 menu "Modules"
-config MANUVR_SUPPORT_I2C
+config CONFIG_MANUVR_I2C
     bool "I2C support"
   default n
   ---help---

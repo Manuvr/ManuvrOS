@@ -28,15 +28,16 @@ This class forms the foundation of internal events. It contains the identity of 
 
 #include <map>
 
-#include "MessageDefs.h"    // This include file contains all of the message codes.
 #include <DataStructures/Argument.h>
-#include <DataStructures/LightLinkedList.h>
 
-#include <EnumeratedTypeCodes.h>
-#include <MsgProfiler.h>
+#include "MessageDefs.h"    // This include file contains all of the message codes.
+#include "LightLinkedList.h"
+#include "CppPotpourri.h"
+#include "EnumeratedTypeCodes.h"
+#include "StopWatch.h"
 
 #if defined(CONFIG_MANUVR_IMG_SUPPORT)
-  #include <Types/Image.h>
+  #include "Image/Image.h"
 #endif   // CONFIG_MANUVR_IMG_SUPPORT
 
 class StopWatch;
@@ -185,13 +186,13 @@ class ManuvrMsg {
     inline Argument* addArg(int32_t val) {         return addArg(new Argument(val));  }
     inline Argument* addArg(float val) {           return addArg(new Argument(val));  }
 
-    inline Argument* addArg(uint8_t *val) {        return addArg(new Argument(val));  }
-    inline Argument* addArg(uint16_t *val) {       return addArg(new Argument(val));  }
-    inline Argument* addArg(uint32_t *val) {       return addArg(new Argument(val));  }
-    inline Argument* addArg(int8_t *val) {         return addArg(new Argument(val));  }
-    inline Argument* addArg(int16_t *val) {        return addArg(new Argument(val));  }
-    inline Argument* addArg(int32_t *val) {        return addArg(new Argument(val));  }
-    inline Argument* addArg(float *val) {          return addArg(new Argument(val));  }
+    //inline Argument* addArg(uint8_t *val) {        return addArg(new Argument(val));  }
+    //inline Argument* addArg(uint16_t *val) {       return addArg(new Argument(val));  }
+    //inline Argument* addArg(uint32_t *val) {       return addArg(new Argument(val));  }
+    //inline Argument* addArg(int8_t *val) {         return addArg(new Argument(val));  }
+    //inline Argument* addArg(int16_t *val) {        return addArg(new Argument(val));  }
+    //inline Argument* addArg(int32_t *val) {        return addArg(new Argument(val));  }
+    //inline Argument* addArg(float *val) {          return addArg(new Argument(val));  }
 
     inline Argument* addArg(Vector3ui16 *val) {    return addArg(new Argument(val));  }
     inline Argument* addArg(Vector3i16 *val) {     return addArg(new Argument(val));  }
@@ -201,9 +202,9 @@ class ManuvrMsg {
     inline Argument* addArg(void *val, int len) {  return addArg(new Argument(val, len));  }
     inline Argument* addArg(const char *val) {     return addArg(new Argument(val));  }
     inline Argument* addArg(StringBuilder *val) {  return addArg(new Argument(val));  }
-    inline Argument* addArg(BufferPipe *val) {     return addArg(new Argument(val));  }
-    inline Argument* addArg(EventReceiver *val) {  return addArg(new Argument(val));  }
-    inline Argument* addArg(ManuvrXport *val) {    return addArg(new Argument(val));  }
+    //inline Argument* addArg(BufferPipe *val) {     return addArg(new Argument(val));  }
+    //inline Argument* addArg(EventReceiver *val) {  return addArg(new Argument(val));  }
+    //inline Argument* addArg(ManuvrXport *val) {    return addArg(new Argument(val));  }
 
     Argument* addArg(Argument*);  // The only "real" implementation.
     int8_t    clearArgs();        // Clear all arguments attached to us, reaping if necessary.
@@ -266,8 +267,8 @@ class ManuvrMsg {
     /* If singleTarget is true, the kernel calls this to proc the event. */
     int8_t execute();
 
-    /* If this ManuvrMsg is scheduled, aborts it. Returns true if aborted. */
-    bool abort();
+    ///* If this ManuvrMsg is scheduled, aborts it. Returns true if aborted. */
+    //bool abort();
 
     /* Applies time to the schedule, bringing it closer to execution. */
     int8_t applyTime(uint32_t ms);

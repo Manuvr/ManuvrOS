@@ -40,10 +40,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ****************************************************/
 
-#include <Types/Image.h>
-#include <Platform/Peripherals/SPI/SPIAdapter.h>
-#include <Platform/Peripherals/SPI/SPIBusOp.h>
-#include <DataStructures/StopWatch.h>
+#include "Image/Image.h"
+#include "SPIAdapter.h"
+#include "StopWatch.h"
 
 #ifndef __SSD13XX_DRIVER_H_
 #define __SSD13XX_DRIVER_H_
@@ -139,6 +138,7 @@ class SSD13xx : public Image, public BusOpCallback {
     inline int8_t init() {        return init(_BUS);   };
     inline bool enabled() {       return _enabled;     };
     inline bool initialized() {   return _initd;       };
+    int8_t reset();
 
     void setAddrWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
     int8_t invertDisplay(bool);

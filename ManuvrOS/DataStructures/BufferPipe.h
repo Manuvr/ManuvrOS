@@ -59,7 +59,7 @@ See UDPPipe for a case where this matters.
 #ifndef __MANUVR_DS_BUFFER_PIPE_H
 #define __MANUVR_DS_BUFFER_PIPE_H
 
-#include <DataStructures/StringBuilder.h>  // Our notion of buffer.
+#include "StringBuilder.h"  // Our notion of buffer.
 #include <CommonConstants.h>
 #include <EnumeratedTypeCodes.h>
 

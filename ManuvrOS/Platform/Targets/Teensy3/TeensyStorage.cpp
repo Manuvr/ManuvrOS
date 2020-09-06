@@ -35,12 +35,12 @@ CBOR data begins at offset 4. The first uint32 is broken up this way:
 #include <Platform/Platform.h>
 #include <Platform/Targets/Teensy3/TeensyStorage.h>
 
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
 #include <EEPROM.h>
 
 // We want this definition isolated to the compilation unit.
-#define STORAGE_PROPS (MANUVR_PL_BLOCK_ACCESS | MANUVR_PL_MEDIUM_READABLE | \
-                        MANUVR_PL_MEDIUM_WRITABLE)
+#define STORAGE_PROPS (PL_FLAG_BLOCK_ACCESS | PL_FLAG_MEDIUM_READABLE | \
+                        PL_FLAG_MEDIUM_WRITABLE)
 
 
 /*******************************************************************************
@@ -79,7 +79,7 @@ int8_t TeensyStorage::wipe() {
     EEPROM.update(i, 0);
   }
   _free_space = 2044;
-  _pl_set_flag(true, MANUVR_PL_MEDIUM_MOUNTED);
+  _pl_set_flag(true, PL_FLAG_MEDIUM_MOUNTED);
   return 0;
 }
 
@@ -159,13 +159,13 @@ int8_t TeensyStorage::attached() {
         uint8_t len_lsb = EEPROM.read(3);
         if (0x0F >= len_msb) {
           _free_space = 2044 - (len_lsb + (len_msb * 256));
-          _pl_set_flag(true, MANUVR_PL_MEDIUM_MOUNTED);
+          _pl_set_flag(true, PL_FLAG_MEDIUM_MOUNTED);
         }
       }
     }
-    if (!_pl_flag(MANUVR_PL_MEDIUM_MOUNTED)) {
+    if (!_pl_flag(PL_FLAG_MEDIUM_MOUNTED)) {
       // Try to wipe and set status.
-      _pl_set_flag((0 == wipe()), MANUVR_PL_MEDIUM_MOUNTED);
+      _pl_set_flag((0 == wipe()), PL_FLAG_MEDIUM_MOUNTED);
     }
     return 1;
   }
@@ -242,7 +242,7 @@ int8_t TeensyStorage::notify(ManuvrMsg* active_event) {
 //
 //    case 's':
 //      if (isMounted()) {
-//        Argument a(randomInt());
+//        Argument a(randomUInt32());
 //        a.setKey("random_number");
 //        a.append((int8_t) 64)->setKey("number_64");
 //        StringBuilder shuttle;
@@ -305,4 +305,4 @@ int8_t TeensyStorage::notify(ManuvrMsg* active_event) {
 //  flushLocalLog();
 //}
 //#endif   // MANUVR_CONSOLE_SUPPORT
-#endif   // __MANUVR_LINUX & MANUVR_STORAGE
+#endif   // __MANUVR_LINUX & CONFIG_MANUVR_STORAGE

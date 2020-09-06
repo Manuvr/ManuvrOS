@@ -69,12 +69,12 @@ unsigned long ManuvrPlatform::_boot_micros  = 0;
 * @param  An IRQ condition code.
 * @return A string constant.
 */
-const char* ManuvrPlatform::getIRQConditionString(int con_code) {
+const char* ManuvrPlatform::getIRQConditionString(IRQCondition con_code) {
   switch (con_code) {
-    case RISING:   return "RISING";
-    case FALLING:  return "FALLING";
-    case CHANGE:   return "CHANGE";
-    default:       return "<UNDEF>";
+    case IRQCondition::RISING:   return "RISING";
+    case IRQCondition::FALLING:  return "FALLING";
+    case IRQCondition::CHANGE:   return "CHANGE";
+    default:                     return "<UNDEF>";
   }
 }
 
@@ -163,7 +163,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
     default_flags |= MANUVR_PLAT_FLAG_HAS_LOCATION;
   #endif
 
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
     default_flags |= MANUVR_PLAT_FLAG_HAS_STORAGE;
   #endif
 
@@ -171,7 +171,7 @@ int8_t ManuvrPlatform::platformPreInit(Argument* root_config) {
   _discoverALUParams();
 
   #if defined(__BUILD_HAS_THREADS)
-    platform.setIdleHook([]{ sleep_millis(CONFIG_MANUVR_IDLE_PERIOD_MS); });
+    platform.setIdleHook([]{ sleep_ms(CONFIG_MANUVR_IDLE_PERIOD_MS); });
   #endif
 
   /* Optional platform-level services. */
@@ -372,7 +372,7 @@ int8_t ManuvrPlatform::bootstrap() {
   while ((0 < _kernel.procIdleFlags()) && boot_passes) {
     boot_passes--;
   }
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
     if (0 == _load_config()) {
       // If the config loaded, broadcast it.
       // Kernel will clean up this event.
@@ -485,7 +485,7 @@ Argument* ManuvrPlatform::getConfKey(const char* key) {
  * @return    0 on success. Non-zero otherwise.
  */
 int8_t ManuvrPlatform::storeConf(Argument* nu) {
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
   // Persist any open configuration...
   if ((nu) && (_storage_device)) {
     if (_storage_device->isMounted()) {
@@ -493,7 +493,7 @@ int8_t ManuvrPlatform::storeConf(Argument* nu) {
       StringBuilder shuttle;
       if (0 <= Argument::encodeToCBOR(nu, &shuttle)) {
         // TODO: Now would be a good time to persist any dirty identities.
-        if (0 < _storage_device->persistentWrite(nullptr, shuttle.string(), shuttle.length(), 0)) {
+        if (0 < (int8_t) _storage_device->persistentWrite(nullptr, shuttle.string(), shuttle.length(), 0)) {
           return 0;
         }
       }
@@ -582,7 +582,7 @@ int wakeThread(unsigned long _thread_id) {
 * If you are interested in delaying without suspending the entire thread, you should
 *   probably use interrupts instead.
 */
-void sleep_millis(unsigned long millis) {
+void sleep_ms(uint32_t millis) {
   #if defined(__MANUVR_LINUX) || defined(__MANUVR_APPLE)
     struct timespec t = {(long) (millis / 1000), (long) ((millis % 1000) * 1000000UL)};
     nanosleep(&t, &t);
@@ -612,10 +612,10 @@ int8_t random_fill(uint8_t* buf, size_t len) {
   int written_len = 0;
   while (4 <= (len - written_len)) {
     // If we have slots for them, just up-cast and write 4-at-a-time.
-    *((uint32_t*) (buf + written_len)) = randomInt();
+    *((uint32_t*) (buf + written_len)) = randomUInt32();
     written_len += 4;
   }
-  uint32_t slack = randomInt();
+  uint32_t slack = randomUInt32();
   while (0 < (len - written_len)) {
     *(buf + written_len) = (uint8_t) 0xFF & slack;
     slack = slack >> 8;

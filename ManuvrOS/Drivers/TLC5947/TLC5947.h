@@ -27,11 +27,10 @@ Driver supports daisy-chaining by passing constructor parameter.
 #ifndef __TLC5947_H__
 #define __TLC5947_H__
 
-#include <Drivers/BusQueue/BusQueue.h>
-#include <DataStructures/StringBuilder.h>
+#include <StringBuilder.h>
 #include <Drivers/DeviceWithRegisters/DeviceRegister.h>
 #include <Platform/Platform.h>
-#include <Platform/Peripherals/SPI/SPIAdapter.h>
+#include "SPIAdapter.h"
 
 /*
 * This class represents one or more TLC5947 chips daisy-chained on the given

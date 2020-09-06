@@ -21,7 +21,7 @@ limitations under the License.
 This file represents the platform-specific interface to a power managment unit.
 */
 
-#include <DataStructures/StringBuilder.h>
+#include <StringBuilder.h>
 
 #ifndef __MANUVR_PMU_ABSTRACTION_H__
 #define __MANUVR_PMU_ABSTRACTION_H__

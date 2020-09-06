@@ -36,13 +36,13 @@ This file is meant to contain a set of common functions that are typically platf
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "soc/efuse_reg.h"
-#include "tcpip_adapter.h"
+#include "esp_netif.h"
 #include "esp_system.h"
 #include "esp_log.h"
 #include "driver/adc.h"
 
-#if defined(MANUVR_STORAGE)
-  #include <Platform/Targets/ESP32/ESP32Storage.h>
+#if defined(CONFIG_MANUVR_STORAGE)
+  #include "ESP32Storage.h"
 #endif
 
 #if defined(MANUVR_CONSOLE_SUPPORT)
@@ -76,7 +76,7 @@ static bool using_adc2            = false;
 *
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
-uint32_t IRAM_ATTR randomInt() {
+uint32_t IRAM_ATTR randomUInt32() {
   return randomness_pool[_random_pool_r_ptr++ % PLATFORM_RNG_CARRY_CAPACITY];
 }
 
@@ -153,7 +153,7 @@ int getSerialNumber(uint8_t *buf) {
 * Taken from:
 * https://github.com/espressif/arduino-esp32
 */
-unsigned long IRAM_ATTR millis() {
+long unsigned IRAM_ATTR millis() {
   return xTaskGetTickCount() * portTICK_PERIOD_MS;
 }
 
@@ -161,7 +161,7 @@ unsigned long IRAM_ATTR millis() {
 * Taken from:
 * https://github.com/espressif/arduino-esp32
 */
-unsigned long IRAM_ATTR micros() {
+long unsigned IRAM_ATTR micros() {
   uint32_t ccount;
   __asm__ __volatile__ ( "rsr     %0, ccount" : "=a" (ccount) );
   return ccount / CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ;
@@ -261,7 +261,7 @@ void gpioSetup() {
   for (uint8_t i = 0; i < PLATFORM_GPIO_PIN_COUNT; i++) {
     gpio_pins[i].event = 0;      // No event assigned.
     gpio_pins[i].fxn   = 0;      // No function pointer.
-    gpio_pins[i].mode  = (int) GPIOMode::INPUT;  // All pins begin as inputs.
+    gpio_pins[i].mode  = GPIOMode::INPUT;  // All pins begin as inputs.
     gpio_pins[i].pin   = i;      // The pin number.
   }
   gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
@@ -320,7 +320,7 @@ int8_t _gpio_analog_in_pin_setup(uint8_t pin) {
           using_adc1 = (ESP_OK == adc1_config_width(ADC_WIDTH_BIT_12));
         }
         adc1_config_channel_atten(chan, ADC_ATTEN_DB_11);
-        gpio_pins[pin].mode  = (int) GPIOMode::ANALOG_IN;
+        gpio_pins[pin].mode  = GPIOMode::ANALOG_IN;
       }
       return 0;
 
@@ -340,7 +340,7 @@ int8_t _gpio_analog_in_pin_setup(uint8_t pin) {
           using_adc2 = true;
         }
         adc2_config_channel_atten(chan, ADC_ATTEN_DB_11);
-        gpio_pins[pin].mode  = (int) GPIOMode::ANALOG_IN;
+        gpio_pins[pin].mode  = GPIOMode::ANALOG_IN;
         return 0;
       }
       return -1;   // Can't use ADC while wifi peripheral is using it.
@@ -351,7 +351,7 @@ int8_t _gpio_analog_in_pin_setup(uint8_t pin) {
 
 
 
-int8_t gpioDefine(uint8_t pin, GPIOMode mode) {
+int8_t pinMode(uint8_t pin, GPIOMode mode) {
   gpio_config_t io_conf;
   if (!GPIO_IS_VALID_GPIO(pin)) {
     return -1;
@@ -406,6 +406,7 @@ int8_t gpioDefine(uint8_t pin, GPIOMode mode) {
   }
 
   gpio_config(&io_conf);
+  gpio_pins[pin].mode = mode;
   return 0;
 }
 
@@ -420,7 +421,7 @@ void unsetPinIRQ(uint8_t pin) {
 
 
 
-int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrMsg* isr_event) {
+int8_t setPinEvent(uint8_t pin, IRQCondition condition, ManuvrMsg* isr_event) {
   if (0 == setPinFxn(pin, condition, gpio_pins[pin].fxn)) {
     gpio_pins[pin].event = isr_event;
     return 0;
@@ -432,58 +433,47 @@ int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrMsg* isr_event) {
 /*
 * Pass the function pointer
 */
-int8_t setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn) {
-  gpio_config_t io_conf;
+int8_t setPinFxn(uint8_t pin, IRQCondition condition, FxnPointer fxn) {
   if (!GPIO_IS_VALID_GPIO(pin)) {
     ESP_LOGW("ESP32Platform", "GPIO %u is invalid\n", pin);
     return -1;
   }
-
+  gpio_config_t io_conf;
   io_conf.pin_bit_mask = (1 << pin);
   io_conf.mode         = GPIO_MODE_INPUT;
   io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
   io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
 
-  switch (condition) {
-    case FALLING_PULL_UP:
-    case RISING_PULL_UP:
-    case CHANGE_PULL_UP:
+  switch (gpio_pins[pin].mode) {
+    case GPIOMode::INPUT_PULLUP:
       io_conf.pull_up_en   = GPIO_PULLUP_ENABLE;
-      gpio_pins[pin].mode  = (int) GPIOMode::INPUT_PULLUP;
       break;
-    case FALLING_PULL_DOWN:
-    case RISING_PULL_DOWN:
-    case CHANGE_PULL_DOWN:
+    case GPIOMode::INPUT_PULLDOWN:
       io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
-      gpio_pins[pin].mode  = (int) GPIOMode::INPUT_PULLDOWN;
+      break;
+    case GPIOMode::INPUT:
       break;
     default:
-      gpio_pins[pin].mode  = (int) GPIOMode::INPUT;
-      break;
-  }
-
-  switch (condition) {
-    case CHANGE:
-    case CHANGE_PULL_UP:
-    case CHANGE_PULL_DOWN:
-      io_conf.intr_type = (gpio_int_type_t) GPIO_INTR_ANYEDGE;
-      break;
-    case RISING:
-    case RISING_PULL_UP:
-    case RISING_PULL_DOWN:
-      io_conf.intr_type = (gpio_int_type_t) GPIO_INTR_POSEDGE;
-      break;
-    case FALLING:
-    case FALLING_PULL_UP:
-    case FALLING_PULL_DOWN:
-      io_conf.intr_type = (gpio_int_type_t) GPIO_INTR_NEGEDGE;
-      break;
-    default:
-      ESP_LOGW("ESP32Platform", "GPIO condition is invalid for pin %u\n", pin);
+      ESP_LOGE("ESP32Platform", "GPIO %u is not an input.\n", pin);
       return -1;
   }
 
-  gpio_pins[pin].fxn   = fxn;
+  switch (condition) {
+    case IRQCondition::CHANGE:
+      io_conf.intr_type = (gpio_int_type_t) GPIO_INTR_ANYEDGE;
+      break;
+    case IRQCondition::RISING:
+      io_conf.intr_type = (gpio_int_type_t) GPIO_INTR_POSEDGE;
+      break;
+    case IRQCondition::FALLING:
+      io_conf.intr_type = (gpio_int_type_t) GPIO_INTR_NEGEDGE;
+      break;
+    default:
+      ESP_LOGE("ESP32Platform", "IRQCondition is invalid for pin %u\n", pin);
+      return -1;
+  }
+
+  gpio_pins[pin].fxn = fxn;
   gpio_config(&io_conf);
   gpio_set_intr_type((gpio_num_t) pin, GPIO_INTR_ANYEDGE);
   gpio_isr_handler_add((gpio_num_t) pin, gpio_isr_handler, (void*) (0L + pin));
@@ -550,7 +540,7 @@ int readPinAnalog(uint8_t pin) {
 /*******************************************************************************
 * Persistent configuration                                                     *
 *******************************************************************************/
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
   ESP32Storage _esp_storage(nullptr);
 
   // Called during boot to load configuration.
@@ -608,7 +598,7 @@ void ESP32Platform::jumpToBootloader() {
 */
 void ESP32Platform::hardwareShutdown() {
   while(true) {
-    sleep_millis(60000);
+    sleep_ms(60000);
   }
 }
 
@@ -650,7 +640,7 @@ int8_t ESP32Platform::platformPreInit(Argument* root_config) {
   _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
   gpioSetup();
 
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
     _storage_device = (Storage*) &_esp_storage;
     _kernel.subscribe((EventReceiver*) &_esp_storage);
     _alter_flags(true, MANUVR_PLAT_FLAG_HAS_STORAGE);

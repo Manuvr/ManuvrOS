@@ -2,7 +2,7 @@
 #define __COMPASS_TEMPLATE_H__
 
 #include <Platform/Platform.h>
-#include <DataStructures/Vector3.h>
+#include <Vector3.h>
 
 
 enum class HeadingType : uint8_t {

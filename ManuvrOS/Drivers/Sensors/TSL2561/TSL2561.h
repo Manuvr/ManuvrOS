@@ -23,7 +23,7 @@ limitations under the License.
 #define __TSL2561_DRIVER_H__
 
 #include <Drivers/Sensors/SensorWrapper.h>
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <Platform/Peripherals/I2C/I2CDeviceWithRegisters.h>
 
 /*
 Quirk of this part: Internal register addresses are the lower 4-bits

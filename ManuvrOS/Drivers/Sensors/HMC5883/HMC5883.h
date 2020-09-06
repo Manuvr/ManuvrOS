@@ -22,9 +22,9 @@ limitations under the License.
 #ifndef __HMC5883_SENSOR_H__
 #define __HMC5883_SENSOR_H__
 
-#include <DataStructures/Vector3.h>
+#include <Vector3.h>
 #include <Drivers/Sensors/SensorWrapper.h>
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 
 #define HMC5883_REG_CONFA      0x00  // R/W
 #define HMC5883_REG_CONFB      0x01  // R/W

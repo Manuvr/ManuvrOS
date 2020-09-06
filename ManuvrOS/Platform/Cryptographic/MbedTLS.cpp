@@ -473,7 +473,7 @@ int __attribute__((weak)) wrapped_asym_keygen(Cipher c, CryptoKey key_type, uint
   mbedtls_pk_context key;
   mbedtls_pk_init(&key);
 
-  uint32_t pers = randomInt();
+  uint32_t pers = randomUInt32();
   mbedtls_ctr_drbg_context ctr_drbg;
   mbedtls_ctr_drbg_init(&ctr_drbg);
   ret = mbedtls_ctr_drbg_seed(
@@ -619,7 +619,7 @@ int __attribute__((weak)) wrapped_sign_verify(Cipher c, CryptoKey k, Hashes h, u
     // If we are here, the hashing operation worked. Now we case-off on key/algo.
     mbedtls_pk_context k_ctx;
     mbedtls_pk_init(&k_ctx);
-    uint32_t pers = randomInt();
+    uint32_t pers = randomUInt32();
     mbedtls_ctr_drbg_context ctr_drbg;
     mbedtls_ctr_drbg_init(&ctr_drbg);
     ret = mbedtls_ctr_drbg_seed(

@@ -256,7 +256,7 @@ int getSerialNumber(uint8_t *buf) {
 * GPIO and change-notice                                                       *
 *******************************************************************************/
 
-int8_t gpioDefine(uint8_t pin, GPIOMode mode) {
+int8_t pinMode(uint8_t pin, GPIOMode mode) {
   if (piModel) {
     int reg   = pin / 10;
     int shift = (pin % 10) * 3;

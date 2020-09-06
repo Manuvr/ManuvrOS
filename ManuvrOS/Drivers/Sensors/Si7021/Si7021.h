@@ -23,7 +23,7 @@ limitations under the License.
 #define __Si7021_DRIVER_H__
 
 #include <Drivers/Sensors/SensorWrapper.h>
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 
 /* Hardware-defined registers */
 #define SI7021_REG_CONFIG           0x01

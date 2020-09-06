@@ -26,7 +26,7 @@ This driver is designed to give Manuvr platform-abstracted transports.
 #define __MANUVR_XPORT_H__
 
 #include <Kernel.h>
-#include <DataStructures/StringBuilder.h>
+#include <StringBuilder.h>
 #include <DataStructures/BufferPipe.h>
 
 #include <Platform/Platform.h>

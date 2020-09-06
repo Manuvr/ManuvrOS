@@ -36,7 +36,7 @@ This is a demonstration program, and was meant to be compiled for a
 /* Drivers particular to this Manuvrable... */
 #include <Platform/Platform.h>
 #include <Drivers/Sensors/SensorWrapper.h>
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 #include <Drivers/Sensors/INA219/INA219.h>
 #include <Drivers/Sensors/AMG88xx/AMG88xx.h>
 
@@ -185,7 +185,7 @@ int main(int argc, const char* argv[]) {
     }
   #endif
 
-  #if defined(MANUVR_SUPPORT_I2C)
+  #if defined(CONFIG_MANUVR_I2C)
     const I2CAdapterOptions i2c_opts(
       1,   // Device number
       255, // sda
@@ -293,9 +293,9 @@ int main(int argc, const char* argv[]) {
 
 
   #if defined(RASPI)
-    gpioDefine(14, GPIOMode::OUTPUT);
-    gpioDefine(15, GPIOMode::OUTPUT);
-    gpioDefine(18, GPIOMode::OUTPUT);
+    pinMode(14, GPIOMode::OUTPUT);
+    pinMode(15, GPIOMode::OUTPUT);
+    pinMode(18, GPIOMode::OUTPUT);
     bool pin_14_state = false;
   #endif
 

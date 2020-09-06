@@ -94,11 +94,11 @@ LTC294x::LTC294x(const LTC294xOpts* o, uint16_t bc) : I2CDeviceWithRegisters(LTC
   define_datum(&datum_defs[4]);
   if (_opts.useAlertPin()) {
     // This is the chip's default configuration.
-    gpioDefine(_opts.pin, GPIOMode::INPUT_PULLUP);
+    pinMode(_opts.pin, GPIOMode::INPUT_PULLUP);
   }
   else if (_opts.useCCPin()) {
     // TODO: This requires testing before it is safe to enable.
-    //gpioDefine(_opts.pin, GPIOMode::OUTPUT_OD);
+    //pinMode(_opts.pin, GPIOMode::OUTPUT_OD);
   }
 
   defineRegister(LTC294X_REG_STATUS,        (uint8_t)  0x00,   false, true,  false);

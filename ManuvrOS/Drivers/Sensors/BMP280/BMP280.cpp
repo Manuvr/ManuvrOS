@@ -155,6 +155,7 @@ SensorError BMP280::getParameter(uint16_t reg, int len, uint8_t*) {
 
 int8_t BMP280::io_op_callback(BusOp* op) {
   I2CBusOp* completed = (I2CBusOp*) op;
+  uint8_t* buf     = completed->buffer();
   StringBuilder output;
   if (completed->hasFault()) {
     output.concat("An i2c operation requested by the BMP280 came back failed.\n");
@@ -248,9 +249,9 @@ int8_t BMP280::io_op_callback(BusOp* op) {
       case BMP280_REG_DATA:
         if (isCalibrated()) {
           // Data values are big-endian.
-          uncomp_pres = (completed->buf[0] * 65536) + (completed->buf[1] * 256) + completed->buf[2];
-          uncomp_temp = (completed->buf[3] * 65536) + (completed->buf[4] * 256) + completed->buf[5];
-          uncomp_hum  = (int32_t) (completed->buf[6] * 256) + completed->buf[7];
+          uncomp_pres = (buf[0] * 65536) + (buf[1] * 256) + buf[2];
+          uncomp_temp = (buf[3] * 65536) + (buf[4] * 256) + buf[5];
+          uncomp_hum  = (int32_t) (buf[6] * 256) + buf[7];
           _proc_temp = (0x800000 != uncomp_temp);
           _proc_pres = (0x800000 != uncomp_pres);
           _proc_alt = _proc_temp;

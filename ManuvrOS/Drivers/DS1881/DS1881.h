@@ -22,7 +22,7 @@ limitations under the License.
 #ifndef __DS1881_DRIVER_H__
 #define __DS1881_DRIVER_H__
 
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include "I2CAdapter.h"
 #include "Drivers/DigitalPots/DigitalPots.h"
 
 /* Hardware-defined registers */

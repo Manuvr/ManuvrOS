@@ -22,7 +22,7 @@ limitations under the License.
 #ifndef __DS1807_DRIVER_H__
 #define __DS1807_DRIVER_H__
 
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 
 /* Hardware-defined registers */
 #define DS1807_REG_CONFIG           0x01

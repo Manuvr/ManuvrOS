@@ -73,12 +73,12 @@ BQ24155::BQ24155(const BQ24155Opts* o) : I2CDeviceWithRegisters(BQ24155_I2CADDR,
   _flgs = _opts._flgs_initial;
   if (_opts.useStatPin()) {
     // This pin on the BQ24155 is open-drain.
-    gpioDefine(_opts.stat_pin, GPIOMode::INPUT_PULLUP);
+    pinMode(_opts.stat_pin, GPIOMode::INPUT_PULLUP);
   }
   if (_opts.useISELPin()) {
     // This is the default value. If we do not set the pin high, we risk interrupting
     //   our own power supply if a battery is not present.
-    gpioDefine(_opts.isel_pin, GPIOMode::OUTPUT);
+    pinMode(_opts.isel_pin, GPIOMode::OUTPUT);
     setPin(_opts.isel_pin, _isel_state());
   }
 

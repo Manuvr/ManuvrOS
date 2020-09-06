@@ -21,9 +21,9 @@ limitations under the License.
 
 
 #ifndef __OFFBOARD_REGISTER_DEV_H__
-  #define __OFFBOARD_REGISTER_DEV_H__ 1
+  #define __OFFBOARD_REGISTER_DEV_H__
 
-  #include "DataStructures/StringBuilder.h"
+  #include <StringBuilder.h>
   #include "DeviceRegister.h"
 
   /*

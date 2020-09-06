@@ -53,7 +53,7 @@ DS1881::~DS1881() {
 *******************************************************************************/
 int8_t DS1881::io_op_callback(BusOp* op) {
   I2CBusOp* completed = (I2CBusOp*) op;
-  uint8_t byte0 = *(completed->buf+0);
+  uint8_t byte0 = *(completed->buffer()+0);
 
   switch (completed->get_opcode()) {
     case BusOpcode::RX:

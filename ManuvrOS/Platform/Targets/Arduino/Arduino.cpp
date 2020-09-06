@@ -45,7 +45,7 @@ volatile uint32_t millis_since_reset = 1;   // Start at one because WWDG.
 *
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
-uint32_t randomInt() {
+uint32_t randomUInt32() {
   uint32_t return_value = rand();
   return return_value;
 }
@@ -150,7 +150,7 @@ void gpioSetup() {
 }
 
 
-int8_t gpioDefine(uint8_t pin, GPIOMode mode) {
+int8_t pinMode(uint8_t pin, GPIOMode mode) {
   //pinMode(pin, mode);
   return 0;
 }
@@ -305,7 +305,7 @@ int8_t ArduinoWrapper::platformPreInit(Argument* root_config) {
 
   init_rng();
 
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
   #endif
 
   #if defined(__HAS_CRYPT_WRAPPER)

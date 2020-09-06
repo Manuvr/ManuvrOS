@@ -28,42 +28,19 @@ This file forms the catch-all for linux platforms that have no support.
 #include <signal.h>
 #include <sys/time.h>
 
-#if defined(MANUVR_STORAGE)
-#include "LinuxStorage.h"
+#if defined(CONFIG_MANUVR_STORAGE)
+  #include "LinuxStorage.h"
 #endif
 
-  #define LOW             0
-  #define HIGH            1
-
-  #define CHANGE             0xFC
-  #define FALLING            0xFB
-  #define RISING             0xFA
-  #define CHANGE_PULL_UP     0xF9
-  #define FALLING_PULL_UP    0xF8
-  #define RISING_PULL_UP     0xF7
-  #define CHANGE_PULL_DOWN   0xF6
-  #define FALLING_PULL_DOWN  0xF5
-  #define RISING_PULL_DOWN   0xF4
-  extern "C" {
-    unsigned long millis();
-    unsigned long micros();
-  }
-
-enum class GPIOMode : uint8_t {
-  INPUT,
-  OUTPUT,
-  OUTPUT_OD,
-  BIDIR_OD,
-  BIDIR_OD_PULLUP,
-  INPUT_PULLUP,
-  INPUT_PULLDOWN,
-  ANALOG_OUT,
-  ANALOG_IN,
-  UNINIT
-};
+#define CHANGE_PULL_UP     0xF9
+#define FALLING_PULL_UP    0xF8
+#define RISING_PULL_UP     0xF7
+#define CHANGE_PULL_DOWN   0xF6
+#define FALLING_PULL_DOWN  0xF5
+#define RISING_PULL_DOWN   0xF4
 
 #if defined(__MACH__) && defined(__APPLE__)
-typedef unsigned long pthread_t;
+  typedef unsigned long pthread_t;
 #endif
 
 
@@ -92,7 +69,7 @@ class LinuxPlatform : public ManuvrPlatform {
 
     virtual int8_t platformPostInit();
 
-    #if defined(MANUVR_STORAGE)
+    #if defined(CONFIG_MANUVR_STORAGE)
       // Called during boot to load configuration.
       int8_t _load_config();
     #endif

@@ -23,6 +23,7 @@ This is where we collect adapters and converters between type-representations.
 
 #include "TypeTranscriber.h"
 #include <DataStructures/Argument.h>
+#include <CommonConstants.h>
 #include <stdlib.h>  // TODO: Cut free() and malloc().
 
 #if defined(MANUVR_CBOR)

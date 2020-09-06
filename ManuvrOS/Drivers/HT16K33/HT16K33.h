@@ -22,7 +22,7 @@ limitations under the License.
 #ifndef __HT16K33_DRIVER_H__
 #define __HT16K33_DRIVER_H__
 
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 
 /* Hardware-defined registers */
 #define HT16K33_REG_CONFIG          0x01

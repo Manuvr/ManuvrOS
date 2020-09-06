@@ -30,7 +30,7 @@ This file is meant to contain a set of common functions that are typically platf
 #include <CommonConstants.h>
 #include <Platform/Platform.h>
 
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
 #include <Platform/Targets/Teensy3/TeensyStorage.h>
 #endif
 
@@ -50,7 +50,7 @@ This file is meant to contain a set of common functions that are typically platf
 *******************************************************************************/
 time_t getTeensy3Time() {   return Teensy3Clock.get();   }
 
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
 TeensyStorage _t_storage(nullptr);
 #endif
 
@@ -76,7 +76,7 @@ volatile uint32_t next_random_int[PLATFORM_RNG_CARRY_CAPACITY];
 *
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
-uint32_t randomInt() {
+uint32_t randomUInt32() {
   uint32_t return_value = rand();
   return return_value;
 }
@@ -254,7 +254,7 @@ void gpioSetup() {
 }
 
 
-int8_t gpioDefine(uint8_t pin, GPIOMode mode) {
+int8_t pinMode(uint8_t pin, GPIOMode mode) {
   pinMode(pin, (int) mode);
   return 0;
 }
@@ -303,7 +303,7 @@ int readPinAnalog(uint8_t pin) {
 /*******************************************************************************
 * Persistent configuration                                                     *
 *******************************************************************************/
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
   // Called during boot to load configuration.
   int8_t Teensy3::_load_config() {
     if (_storage_device) {
@@ -412,7 +412,7 @@ int8_t Teensy3::platformPreInit(Argument* root_config) {
   if (root_config) {
   }
 
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
     _storage_device = (Storage*) &_t_storage;
     _kernel.subscribe((EventReceiver*) &_t_storage);
   #endif

@@ -24,8 +24,8 @@ limitations under the License.
 #ifndef __MANUVR_IDENTITY_OIC_H__
 #define __MANUVR_IDENTITY_OIC_H__
 
-#include <DataStructures/StringBuilder.h>
-#include <DataStructures/uuid.h>
+#include <StringBuilder.h>
+#include <uuid.h>
 
 
 enum class OICCredType : uint8_t {

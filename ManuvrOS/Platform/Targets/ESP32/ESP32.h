@@ -27,37 +27,6 @@ limitations under the License.
 
 #define PLATFORM_GPIO_PIN_COUNT GPIO_PIN_COUNT
 
-enum class GPIOMode : uint8_t {
-  INPUT           = GPIO_MODE_INPUT,
-  OUTPUT          = GPIO_MODE_OUTPUT,
-  OUTPUT_OD       = GPIO_MODE_OUTPUT_OD,
-  BIDIR_OD        = GPIO_MODE_INPUT_OUTPUT_OD,
-  BIDIR_OD_PULLUP,
-  INPUT_PULLUP,
-  INPUT_PULLDOWN,
-  ANALOG_OUT,
-  ANALOG_IN,
-  UNINIT
-};
-
-#define HIGH               1
-#define LOW                0
-
-#define CHANGE             GPIO_INTR_ANYEDGE
-#define FALLING            GPIO_INTR_NEGEDGE
-#define RISING             GPIO_INTR_POSEDGE
-#define CHANGE_PULL_UP     0xF9
-#define FALLING_PULL_UP    0xF8
-#define RISING_PULL_UP     0xF7
-#define CHANGE_PULL_DOWN   0xF6
-#define FALLING_PULL_DOWN  0xF5
-#define RISING_PULL_DOWN   0xF4
-
-extern "C" {
-  unsigned long millis();
-  unsigned long micros();
-}
-
 extern uint8_t temprature_sens_read();
 
 
@@ -82,7 +51,7 @@ class ESP32Platform : public ManuvrPlatform {
 
   protected:
     virtual int8_t platformPostInit();
-    #if defined(MANUVR_STORAGE)
+    #if defined(CONFIG_MANUVR_STORAGE)
       // Called during boot to load configuration.
       int8_t _load_config();
     #endif

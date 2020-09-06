@@ -1,6 +1,6 @@
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 
-#if defined(MANUVR_SUPPORT_I2C)
+#if defined(CONFIG_MANUVR_I2C)
 #include <Wire/Wire.h>
 
 int8_t I2CAdapter::bus_init() {
@@ -50,4 +50,4 @@ int8_t I2CAdapter::generateStop() {
   }
 
 
-#endif  // MANUVR_SUPPORT_I2C
+#endif  // CONFIG_MANUVR_I2C

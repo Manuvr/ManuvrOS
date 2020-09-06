@@ -1,6 +1,6 @@
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
 
-#if defined(MANUVR_SUPPORT_I2C)
+#if defined(CONFIG_MANUVR_I2C)
 #include <i2c_t3/i2c_t3.h>
 
 #define MANUVR_I2C_WRAP_TO 1000000
@@ -179,4 +179,4 @@ XferFault I2CBusOp::advance(uint32_t status_reg) {
   return xfer_fault;
 }
 
-#endif  // MANUVR_SUPPORT_I2C
+#endif  // CONFIG_MANUVR_I2C

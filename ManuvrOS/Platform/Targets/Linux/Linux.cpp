@@ -27,7 +27,7 @@ This file forms the catch-all for linux platforms that have no support.
 
 #include <Platform/Platform.h>
 
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
 #include "LinuxStorage.h"
 #include <fcntl.h>      // Needed for integrity checks.
 #include <sys/stat.h>   // Needed for integrity checks.
@@ -46,7 +46,7 @@ volatile Kernel* __kernel = nullptr;
 struct itimerval _interval              = {0};
 struct sigaction _signal_action_SIGALRM = {0};
 
-static unsigned long _last_millis = 0;
+static uint32_t _last_millis = 0;
 
 char* _binary_name = nullptr;
 static int   _main_pid    = 0;
@@ -334,7 +334,7 @@ static void* dev_urandom_reader(void*) {
 *
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
-uint32_t randomInt() {
+uint32_t randomUInt32() {
   // Preferably, we'd shunt to a PRNG at this point. For now we block.
   while (_random_pool_w_ptr <= _random_pool_r_ptr) {
   }
@@ -461,7 +461,7 @@ void currentDateTime(StringBuilder* target) {
 /*
 * Not provided elsewhere on a linux platform.
 */
-unsigned long millis() {
+uint32_t millis() {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000L);
@@ -471,16 +471,19 @@ unsigned long millis() {
 /*******************************************************************************
 * Persistent configuration                                                     *
 *******************************************************************************/
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
   // Called during boot to load configuration.
   int8_t LinuxPlatform::_load_config() {
     if (_storage_device) {
       if (_storage_device->isMounted()) {
-        uint8_t raw[2048];
-        int len = _storage_device->persistentRead(NULL, raw, 2048, 0);
-        _config = Argument::decodeFromCBOR(raw, len);
-        if (_config) {
-          return 0;
+        uint len = 2048;
+        uint8_t raw[len];
+        StorageErr err = _storage_device->persistentRead(NULL, raw, &len, 0);
+        if (err == StorageErr::NONE) {
+          _config = Argument::decodeFromCBOR(raw, len);
+          if (_config) {
+            return 0;
+          }
         }
       }
     }
@@ -526,7 +529,7 @@ void LinuxPlatform::_close_open_threads() {
 * Terminate this running process, along with any children it may have forked() off.
 */
 void LinuxPlatform::seppuku() {
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
     if (_self && _self->isDirty()) {
       // Save the dirty identity.
       // TODO: int8_t persistentWrite(const char*, uint8_t*, int, uint16_t);
@@ -652,7 +655,7 @@ int8_t LinuxPlatform::platformPreInit(Argument* root_config) {
   init_rng();
   _alter_flags(true, MANUVR_PLAT_FLAG_RTC_READY);
 
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
     LinuxStorage* sd = new LinuxStorage(root_config);
     _storage_device = (Storage*) sd;
     _kernel.subscribe((EventReceiver*) sd);

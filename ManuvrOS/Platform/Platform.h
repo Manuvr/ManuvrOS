@@ -44,7 +44,8 @@ This file is meant to contain a set of common functions that are
 
 #include <Rationalizer.h>
 #include <CommonConstants.h>
-#include <DataStructures/uuid.h>
+#include <AbstractPlatform.h>
+#include "uuid.h"
 
 #if defined(__BUILD_HAS_PTHREADS)
   #include <pthread.h>
@@ -131,8 +132,9 @@ typedef struct __platform_gpio_def {
   ManuvrMsg* event;
   FxnPointer fxn;
   uint8_t    pin;
+  GPIOMode   mode;
   uint8_t    flags;
-  uint16_t   mode;  // Strictly more than needed. Padding structure...
+  uint8_t    PADDING;
 } PlatformGPIODef;
 
 typedef struct __platform_thread_opts {
@@ -222,10 +224,10 @@ class ManuvrPlatform {
     #endif   // CONFIG_MANUVR_SENSOR_MGR
 
     /* These are storage-related members. */
-    #if defined(MANUVR_STORAGE)
+    #if defined(CONFIG_MANUVR_STORAGE)
       inline Storage* fetchStorage(const char*) {   return _storage_device;   };
       int8_t   offerStorage(const char*, Storage*);
-    #endif   // MANUVR_STORAGE
+    #endif   // CONFIG_MANUVR_STORAGE
 
     /*
     * Systems that want support for dynamic runtime configurations
@@ -279,7 +281,7 @@ class ManuvrPlatform {
     virtual uint32_t cpu_freq() {        return 0;  };
 
 
-    static const char* getIRQConditionString(int);
+    static const char* getIRQConditionString(IRQCondition);
     static const char* getPlatformStateStr(int);
     static const char* getPinModeStr(GPIOMode);
 
@@ -291,7 +293,7 @@ class ManuvrPlatform {
     Argument*   _config    = nullptr;
     Identity*   _self      = nullptr;
     Identity*   _identity  = nullptr;
-    #if defined(MANUVR_STORAGE)
+    #if defined(CONFIG_MANUVR_STORAGE)
       Storage* _storage_device = nullptr;
       // TODO: Ultimately, there will be a similar object for the crypto module.
     #endif
@@ -315,7 +317,7 @@ class ManuvrPlatform {
 
     virtual int8_t platformPostInit() =0;
 
-    #if defined(MANUVR_STORAGE)
+    #if defined(CONFIG_MANUVR_STORAGE)
       // Called during boot to load configuration.
       virtual int8_t _load_config() =0;
     #endif
@@ -344,17 +346,6 @@ extern "C" {
 // TODO: Everything below this line is being considered for migration into the
 //         Platform class, or eliminated in favor of independent break-outs.
 
-/*
-* Time and date
-*/
-bool setTimeAndDateStr(char*);   // Takes a string of the form given by RFC-2822: "Mon, 15 Aug 2005 15:52:01 +0000"   https://www.ietf.org/rfc/rfc2822.txt
-bool setTimeAndDate(uint8_t y, uint8_t m, uint8_t d, uint8_t wd, uint8_t h, uint8_t mi, uint8_t s);
-uint32_t epochTime();            // Returns an integer representing the current datetime.
-void currentDateTime(StringBuilder*);    // Writes a human-readable datetime to the argument.
-
-/*
-* Watchdog timer.
-*/
 
 /*
 * Interrupt-masking
@@ -366,8 +357,6 @@ void maskableInterrupts(bool);
 /*
 * Threading
 */
-void sleep_millis(unsigned long millis);
-
 int createThread(unsigned long*, void*, ThreadFxnPtr, void*, ManuvrThreadOptions*);
 int deleteThread(unsigned long*);
 int wakeThread(unsigned long);
@@ -385,21 +374,10 @@ int wakeThread(unsigned long);
 
 
 /*
-* Randomness
-*/
-uint32_t randomInt();                        // Fetches one of the stored randoms and blocks until one is available.
-int8_t random_fill(uint8_t* buf, size_t len);
-
-
-/*
 * GPIO and change-notice.
 */
-int8_t gpioDefine(uint8_t pin, GPIOMode mode);
 void   unsetPinIRQ(uint8_t pin);
-int8_t setPinEvent(uint8_t pin, uint8_t condition, ManuvrMsg* isr_event);
-int8_t setPinFxn(uint8_t pin, uint8_t condition, FxnPointer fxn);
-int8_t setPin(uint8_t pin, bool high);
-int8_t readPin(uint8_t pin);
+int8_t setPinEvent(uint8_t pin, IRQCondition, ManuvrMsg*);
 int8_t setPinAnalog(uint8_t pin, int);
 int    readPinAnalog(uint8_t pin);
 
@@ -415,8 +393,8 @@ int    readPinAnalog(uint8_t pin);
 #include <Platform/Cryptographic.h>
 #include <Platform/Identity.h>
 
-#if defined(MANUVR_STORAGE)
-  #include <Platform/Storage.h>
+#if defined(CONFIG_MANUVR_STORAGE)
+  #include <Storage.h>
 #endif
 
 #if defined(CONFIG_MANUVR_PRNG)

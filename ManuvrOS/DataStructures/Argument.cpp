@@ -25,9 +25,9 @@ This class represents our type-abstraction layer. It is the means by which
 
 #include "Argument.h"
 
-#include <DataStructures/PriorityQueue.h>
+#include <PriorityQueue.h>
 #if defined(CONFIG_MANUVR_IMG_SUPPORT)
-  #include <Types/Image.h>
+  #include "Image/Image.h"
 #endif   // CONFIG_MANUVR_IMG_SUPPORT
 
 #include <Platform/Identity.h>
@@ -176,19 +176,19 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
           }
         }
         break;
-      case TCode::ARGUMENT:
-        {
-          StringBuilder intermediary;
-          Argument *subj;
-          if (0 == src->getValueAs(&subj)) {
-            // NOTE: Recursion.
-            if (Argument::encodeToCBOR(subj, &intermediary)) {
-              encoder.write_tag(MANUVR_CBOR_VENDOR_TYPE | TcodeToInt(src->typeCode()));
-              encoder.write_bytes(intermediary.string(), intermediary.length());
-            }
-          }
-        }
-        break;
+      //case TCode::ARGUMENT:
+      //  {
+      //    StringBuilder intermediary;
+      //    Argument *subj;
+      //    if (0 == src->getValueAs(&subj)) {
+      //      // NOTE: Recursion.
+      //      if (Argument::encodeToCBOR(subj, &intermediary)) {
+      //        encoder.write_tag(MANUVR_CBOR_VENDOR_TYPE | TcodeToInt(src->typeCode()));
+      //        encoder.write_bytes(intermediary.string(), intermediary.length());
+      //      }
+      //    }
+      //  }
+      //  break;
       case TCode::IMAGE:
         #if defined(CONFIG_MANUVR_IMG_SUPPORT)
           {
@@ -208,12 +208,12 @@ int8_t Argument::encodeToCBOR(Argument* src, StringBuilder* out) {
           }
         #endif   // CONFIG_MANUVR_IMG_SUPPORT
         break;
-      case TCode::SYS_PIPE_FXN_PTR:
-      case TCode::SYS_ARG_FXN_PTR:
-      case TCode::SYS_MANUVR_XPORT:
-      case TCode::SYS_FXN_PTR:
-      case TCode::SYS_THREAD_FXN_PTR:
-      case TCode::SYS_MANUVRMSG:
+      //case TCode::SYS_PIPE_FXN_PTR:
+      //case TCode::SYS_ARG_FXN_PTR:
+      //case TCode::SYS_MANUVR_XPORT:
+      //case TCode::SYS_FXN_PTR:
+      //case TCode::SYS_THREAD_FXN_PTR:
+      //case TCode::SYS_MANUVRMSG:
       case TCode::RESERVED:
         // Peacefully ignore the types we can't export.
         break;
@@ -286,12 +286,6 @@ Argument::Argument(TCode code) : Argument() {
     case TCode::FLOAT:
     case TCode::BOOLEAN:
       _alter_flags(true, MANUVR_ARG_FLAG_DIRECT_VALUE);
-      break;
-    case TCode::UINT128:
-    case TCode::INT128:
-    case TCode::UINT64:
-    case TCode::INT64:
-    case TCode::DOUBLE:
       break;
     default:
       break;
@@ -472,20 +466,20 @@ int8_t Argument::getValueAs(void* trg_buf) {
       memcpy(trg_buf, target_mem, len);
       break;
 
-    case TCode::UINT32_PTR:  // These are *pointers* to the indicated types. They
-    case TCode::UINT16_PTR:  //   therefore take the whole 4 bytes of memory allocated
-    case TCode::UINT8_PTR:   //   and can be returned as such.
-    case TCode::INT32_PTR:
-    case TCode::INT16_PTR:
-    case TCode::INT8_PTR:
+    //case TCode::UINT32_PTR:  // These are *pointers* to the indicated types. They
+    //case TCode::UINT16_PTR:  //   therefore take the whole 4 bytes of memory allocated
+    //case TCode::UINT8_PTR:   //   and can be returned as such.
+    //case TCode::INT32_PTR:
+    //case TCode::INT16_PTR:
+    //case TCode::INT8_PTR:
 
     case TCode::STR_BUILDER:          // This is a pointer to some StringBuilder. Presumably this is on the heap.
     case TCode::STR:                  // This is a pointer to a string constant. Presumably this is stored in flash.
     case TCode::IMAGE:                // This is a pointer to an Image.
-    case TCode::BUFFERPIPE:           // This is a pointer to a BufferPipe/.
-    case TCode::SYS_MANUVRMSG:        // This is a pointer to ManuvrMsg.
-    case TCode::SYS_EVENTRECEIVER:    // This is a pointer to an EventReceiver.
-    case TCode::SYS_MANUVR_XPORT:     // This is a pointer to a transport.
+    //case TCode::BUFFERPIPE:           // This is a pointer to a BufferPipe/.
+    //case TCode::SYS_MANUVRMSG:        // This is a pointer to ManuvrMsg.
+    //case TCode::SYS_EVENTRECEIVER:    // This is a pointer to an EventReceiver.
+    //case TCode::SYS_MANUVR_XPORT:     // This is a pointer to a transport.
     default:
       return_value = 0;
       *((uintptr_t*) trg_buf) = *((uintptr_t*)&target_mem);
@@ -529,25 +523,25 @@ int8_t Argument::serialize(StringBuilder *out) {
       break;
 
     /* These are pointer types to data that can be sent as-is. Remember: LITTLE ENDIAN */
-    case TCode::INT8_PTR:
-    case TCode::UINT8_PTR:
-      arg_bin_len = 1;
-      *((uint8_t*) sp_index) = *((uint8_t*) target_mem);
-      break;
-    case TCode::INT16_PTR:
-    case TCode::UINT16_PTR:
-      arg_bin_len = 2;
-      *((uint16_t*) sp_index) = *((uint16_t*) target_mem);
-      break;
-    case TCode::INT32_PTR:
-    case TCode::UINT32_PTR:
-    case TCode::FLOAT_PTR:
-      arg_bin_len = 4;
-      //*((uint32_t*) sp_index) = *((uint32_t*) target_mem);
-      for (int i = 0; i < 4; i++) {
-        *((uint8_t*) sp_index + i) = *((uint8_t*) target_mem + i);
-      }
-      break;
+    //case TCode::INT8_PTR:
+    //case TCode::UINT8_PTR:
+    //  arg_bin_len = 1;
+    //  *((uint8_t*) sp_index) = *((uint8_t*) target_mem);
+    //  break;
+    //case TCode::INT16_PTR:
+    //case TCode::UINT16_PTR:
+    //  arg_bin_len = 2;
+    //  *((uint16_t*) sp_index) = *((uint16_t*) target_mem);
+    //  break;
+    //case TCode::INT32_PTR:
+    //case TCode::UINT32_PTR:
+    //case TCode::FLOAT_PTR:
+    //  arg_bin_len = 4;
+    //  //*((uint32_t*) sp_index) = *((uint32_t*) target_mem);
+    //  for (int i = 0; i < 4; i++) {
+    //    *((uint8_t*) sp_index + i) = *((uint8_t*) target_mem + i);
+    //  }
+    //  break;
 
     /* These are pointer types that require conversion. */
     case TCode::STR_BUILDER:     // This is a pointer to some StringBuilder. Presumably this is on the heap.
@@ -609,19 +603,19 @@ int8_t Argument::serialize_raw(StringBuilder *out) {
       break;
 
     /* These are pointer types to data that can be sent as-is. Remember: LITTLE ENDIAN */
-    case TCode::INT8_PTR:
-    case TCode::UINT8_PTR:
-      out->concat((unsigned char*) *((unsigned char**)target_mem), 1);
-      break;
-    case TCode::INT16_PTR:
-    case TCode::UINT16_PTR:
-      out->concat((unsigned char*) *((unsigned char**)target_mem), 2);
-      break;
-    case TCode::INT32_PTR:
-    case TCode::UINT32_PTR:
-    case TCode::FLOAT_PTR:
-      out->concat((unsigned char*) *((unsigned char**)target_mem), 4);
-      break;
+    //case TCode::INT8_PTR:
+    //case TCode::UINT8_PTR:
+    //  out->concat((unsigned char*) *((unsigned char**)target_mem), 1);
+    //  break;
+    //case TCode::INT16_PTR:
+    //case TCode::UINT16_PTR:
+    //  out->concat((unsigned char*) *((unsigned char**)target_mem), 2);
+    //  break;
+    //case TCode::INT32_PTR:
+    //case TCode::UINT32_PTR:
+    //case TCode::FLOAT_PTR:
+    //  out->concat((unsigned char*) *((unsigned char**)target_mem), 4);
+    //  break;
 
     /* These are pointer types that require conversion. */
     case TCode::STR_BUILDER:     // This is a pointer to some StringBuilder. Presumably this is on the heap.
@@ -755,7 +749,7 @@ void Argument::valToString(StringBuilder* out) {
       {
         float tmp;
         memcpy((void*) &tmp, &buf, 4);
-        out->concatf("%.4f", (float) tmp);
+        out->concatf("%.4f", (double) tmp);
       }
       break;
     case TCode::DOUBLE:
@@ -837,13 +831,13 @@ int8_t Argument::setValue(void* trg_buf, int len, TCode tc) {
       *(((uint8_t*) &target_mem) + 2) = *((uint8_t*) trg_buf + 2);
       *(((uint8_t*) &target_mem) + 3) = *((uint8_t*) trg_buf + 3);
       break;
-    case TCode::UINT32_PTR:  // These are *pointers* to the indicated types. They
-    case TCode::UINT16_PTR:  //   therefore take the whole 4 bytes of memory allocated
-    case TCode::UINT8_PTR:   //   and can be returned as such.
-    case TCode::INT32_PTR:
-    case TCode::INT16_PTR:
-    case TCode::INT8_PTR:
-    case TCode::FLOAT_PTR:
+    //case TCode::UINT32_PTR:  // These are *pointers* to the indicated types. They
+    //case TCode::UINT16_PTR:  //   therefore take the whole 4 bytes of memory allocated
+    //case TCode::UINT8_PTR:   //   and can be returned as such.
+    //case TCode::INT32_PTR:
+    //case TCode::INT16_PTR:
+    //case TCode::INT8_PTR:
+    //case TCode::FLOAT_PTR:
     case TCode::DOUBLE:
     case TCode::VECT_4_FLOAT:
     case TCode::VECT_3_FLOAT:
@@ -858,10 +852,10 @@ int8_t Argument::setValue(void* trg_buf, int len, TCode tc) {
     case TCode::STR_BUILDER:          // This is a pointer to some StringBuilder. Presumably this is on the heap.
     case TCode::STR:                  // This is a pointer to a string constant. Presumably this is stored in flash.
     case TCode::IMAGE:                // This is a pointer to an Image.
-    case TCode::BUFFERPIPE:           // This is a pointer to a BufferPipe/.
-    case TCode::SYS_MANUVRMSG:        // This is a pointer to ManuvrMsg.
-    case TCode::SYS_EVENTRECEIVER:    // This is a pointer to an EventReceiver.
-    case TCode::SYS_MANUVR_XPORT:     // This is a pointer to a transport.
+    //case TCode::BUFFERPIPE:           // This is a pointer to a BufferPipe/.
+    //case TCode::SYS_MANUVRMSG:        // This is a pointer to ManuvrMsg.
+    //case TCode::SYS_EVENTRECEIVER:    // This is a pointer to an EventReceiver.
+    //case TCode::SYS_MANUVR_XPORT:     // This is a pointer to a transport.
     default:
       return_value = 0;
       target_mem = trg_buf;  // TODO: Need to do an allocation check and possible cleanup.

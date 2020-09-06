@@ -202,6 +202,11 @@ struct minmea_sentence_vtg {
     enum minmea_faa_mode faa_mode;
 };
 
+
+static inline bool minmea_isfield(char c) {
+  return isprint((unsigned char) c) && c != ',' && c != '*';
+}
+
 /**
  * Rescale a fixed-point value to a different scale. Rounds towards zero.
  */

@@ -34,7 +34,7 @@ This file is for Apple support.
 
 #include <Platform/Platform.h>
 
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
 #include <Platform/Linux/LinuxStorage.h>
 #include <fcntl.h>      // Needed for integrity checks.
 #include <sys/stat.h>   // Needed for integrity checks.
@@ -290,7 +290,7 @@ volatile uint32_t next_random_int[PLATFORM_RNG_CARRY_CAPACITY];
 *
 * @return   A 32-bit unsigned random number. This can be cast as needed.
 */
-uint32_t randomInt() {
+uint32_t randomUInt32() {
   uint32_t return_value = rand();
   return return_value;
 }
@@ -407,7 +407,7 @@ unsigned long millis() {
 /*******************************************************************************
 * Persistent configuration                                                     *
 *******************************************************************************/
-#if defined(MANUVR_STORAGE)
+#if defined(CONFIG_MANUVR_STORAGE)
   // Called during boot to load configuration.
   int8_t ApplePlatform::_load_config() {
     if (_storage_device) {
@@ -453,7 +453,7 @@ void globalIRQDisable() {
 * Terminate this running process, along with any children it may have forked() off.
 */
 void ApplePlatform::seppuku() {
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
     if (_self && _self->isDirty()) {
       // Save the dirty identity.
       // TODO: int8_t persistentWrite(const char*, uint8_t*, int, uint16_t);
@@ -579,7 +579,7 @@ int8_t ApplePlatform::platformPreInit(Argument* root_config) {
   // Used for timer and signal callbacks.
   __kernel = (volatile Kernel*) &_kernel;
 
-  #if defined(MANUVR_STORAGE)
+  #if defined(CONFIG_MANUVR_STORAGE)
     LinuxStorage* sd = new LinuxStorage(root_config);
     _storage_device = (Storage*) sd;
     _kernel.subscribe((EventReceiver*) sd);

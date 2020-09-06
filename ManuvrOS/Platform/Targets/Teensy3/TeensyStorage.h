@@ -25,9 +25,9 @@ Data-persistence layer for Teensy.
 #define __MANUVR_TEENSY_STORAGE_H__
 
 #include <EventReceiver.h>
-#include <Platform/Storage.h>
+#include <Storage.h>
 
-#if defined(MANUVR_STORAGE) && !defined(MANUVR_CBOR)
+#if defined(CONFIG_MANUVR_STORAGE) && !defined(MANUVR_CBOR)
   #error The TeensyStorage class requires MANUVR_CBOR be enabled.
 #endif
 

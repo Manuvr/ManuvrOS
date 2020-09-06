@@ -1,6 +1,7 @@
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <I2CAdapter.h>
+#include <Platform/Platform.h>
 
-#if defined(MANUVR_SUPPORT_I2C)
+#if defined(CONFIG_MANUVR_I2C)
 #include "driver/i2c.h"
 #include "esp_task_wdt.h"
 
@@ -13,7 +14,7 @@ TaskHandle_t static_i2c_thread_id = 0;
 
 static void* IRAM_ATTR i2c_worker_thread(void* arg) {
   while (!platform.nominalState()) {
-    sleep_millis(20);
+    sleep_ms(20);
   }
   I2CAdapter* BUSPTR = (I2CAdapter*) arg;
   uint8_t anum = BUSPTR->adapterNumber();
@@ -59,6 +60,7 @@ int8_t I2CAdapter::bus_init() {
           ManuvrThreadOptions topts;
           topts.thread_name = "I2C";
           topts.stack_sz    = 2048;
+          unsigned long _thread_id = 0;
           createThread(&_thread_id, nullptr, i2c_worker_thread, (void*) this, &topts);
           static_i2c_thread_id = (TaskHandle_t) _thread_id;
           busOnline(true);
@@ -82,7 +84,7 @@ int8_t I2CAdapter::bus_deinit() {
 
 
 void I2CAdapter::printHardwareState(StringBuilder* output) {
-  output->concatf("-- I2C%d (%sline)\n", adapterNumber(), (_er_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
+  output->concatf("-- I2C%d (%sline)\n", adapterNumber(), (_adapter_flag(I2C_BUS_FLAG_BUS_ONLINE)?"on":"OFF"));
 }
 
 
@@ -131,7 +133,7 @@ XferFault I2CBusOp::begin() {
   else {
     abort(XferFault::BUS_BUSY);
   }
-  return xfer_fault;
+  return getFault();
 }
 
 
@@ -151,7 +153,7 @@ XferFault I2CBusOp::advance(uint32_t status_reg) {
           i2c_master_start(cmd);
         }
         i2c_master_write_byte(cmd, ((uint8_t) (dev_addr & 0x00FF) << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
-        i2c_master_read(cmd, buf, (size_t) buf_len, I2C_MASTER_LAST_NACK);
+        i2c_master_read(cmd, _buf, (size_t) _buf_len, I2C_MASTER_LAST_NACK);
         set_state(XferState::RX_WAIT);
         break;
       case BusOpcode::TX:
@@ -160,7 +162,7 @@ XferFault I2CBusOp::advance(uint32_t status_reg) {
           i2c_master_write_byte(cmd, (uint8_t) (sub_addr & 0x00FF), ACK_CHECK_EN);
           set_state(XferState::ADDR);
         }
-        i2c_master_write(cmd, buf, (size_t) buf_len, ACK_CHECK_EN);
+        i2c_master_write(cmd, _buf, (size_t) _buf_len, ACK_CHECK_EN);
         set_state(XferState::TX_WAIT);
         break;
       case BusOpcode::TX_CMD:
@@ -172,7 +174,7 @@ XferFault I2CBusOp::advance(uint32_t status_reg) {
         break;
     }
 
-    if (XferFault::NONE == xfer_fault) {
+    if (XferFault::NONE == getFault()) {
       if (ESP_OK == i2c_master_stop(cmd)) {
         set_state(XferState::STOP);
         int ret = i2c_master_cmd_begin((i2c_port_t) device->adapterNumber(), cmd, 1000 / portTICK_RATE_MS);
@@ -207,7 +209,7 @@ XferFault I2CBusOp::advance(uint32_t status_reg) {
   }
   i2c_cmd_link_delete(cmd);  // Cleanup.
 
-  return xfer_fault;
+  return getFault();
 }
 
-#endif  // MANUVR_SUPPORT_I2C
+#endif  // CONFIG_MANUVR_I2C

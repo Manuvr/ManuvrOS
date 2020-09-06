@@ -89,10 +89,6 @@ const DatumDef datum_defs[] = {
 * Static members and initializers should be located here.
 *******************************************************************************/
 
-static inline bool minmea_isfield(char c) {
-  return isprint((unsigned char) c) && c != ',' && c != '*';
-}
-
 static int hex2int(char c) {
   if (c >= '0' && c <= '9') return c - '0';
   if (c >= 'A' && c <= 'F') return c - 'A' + 10;

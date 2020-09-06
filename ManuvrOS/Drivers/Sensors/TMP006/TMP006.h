@@ -30,9 +30,9 @@ I have adapted it for ManuvrOS.
 #define TMP006_H
 
 #include <math.h>
-#include <DataStructures/StringBuilder.h>
+#include <StringBuilder.h>
 #include <Drivers/Sensors/SensorWrapper.h>
-#include <Platform/Peripherals/I2C/I2CAdapter.h>
+#include <Platform/Peripherals/I2C/I2CDeviceWithRegisters.h>
 
 
 #define TMP006_B0 -0.0000294

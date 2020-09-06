@@ -24,8 +24,8 @@ limitations under the License.
 #ifndef __MANUVR_IDENTITY_UUID_H__
 #define __MANUVR_IDENTITY_UUID_H__
 
-#include <DataStructures/StringBuilder.h>
-#include <DataStructures/uuid.h>
+#include <StringBuilder.h>
+#include <uuid.h>
 
 
 class IdentityUUID : public Identity {

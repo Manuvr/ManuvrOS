@@ -23,8 +23,8 @@ limitations under the License.
 #define ADG2128_CROSSPOINT_H
 
 #include <inttypes.h>
-#include "DataStructures/StringBuilder.h"
-#include "Platform/Peripherals/I2C/I2CAdapter.h"
+#include <StringBuilder.h>
+#include "I2CAdapter.h"
 
 
 enum class ADG2128_ERROR : int8_t {

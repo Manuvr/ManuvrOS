@@ -58,7 +58,7 @@ const DatumDef datum_defs[] = {
 
 LightSensor::LightSensor(const LightSensorOpts* o) : SensorWrapper("LightSensor"), _opts(o) {
   define_datum(&datum_defs[0]);
-  if (0 == gpioDefine(_opts.pin, GPIOMode::ANALOG_IN)) {
+  if (0 == pinMode(_opts.pin, GPIOMode::ANALOG_IN)) {
     isActive(true);
   }
 }
