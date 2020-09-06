@@ -36,7 +36,7 @@ This file is meant to contain a set of common functions that are typically platf
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "soc/efuse_reg.h"
-#include "tcpip_adapter.h"
+#include "esp_netif.h"
 #include "esp_system.h"
 #include "esp_log.h"
 #include "driver/adc.h"
@@ -153,7 +153,7 @@ int getSerialNumber(uint8_t *buf) {
 * Taken from:
 * https://github.com/espressif/arduino-esp32
 */
-uint32_t IRAM_ATTR millis() {
+long unsigned IRAM_ATTR millis() {
   return xTaskGetTickCount() * portTICK_PERIOD_MS;
 }
 
@@ -161,7 +161,7 @@ uint32_t IRAM_ATTR millis() {
 * Taken from:
 * https://github.com/espressif/arduino-esp32
 */
-uint32_t IRAM_ATTR micros() {
+long unsigned IRAM_ATTR micros() {
   uint32_t ccount;
   __asm__ __volatile__ ( "rsr     %0, ccount" : "=a" (ccount) );
   return ccount / CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ;

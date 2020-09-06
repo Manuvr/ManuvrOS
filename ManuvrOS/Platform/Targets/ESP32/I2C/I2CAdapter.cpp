@@ -1,5 +1,4 @@
 #include <I2CAdapter.h>
-
 #include <Platform/Platform.h>
 
 #if defined(CONFIG_MANUVR_I2C)

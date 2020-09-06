@@ -19,6 +19,7 @@ limitations under the License.
 
 */
 #include <SPIAdapter.h>
+#include <Platform/Platform.h>
 
 #if defined(CONFIG_MANUVR_SUPPORT_SPI)
 
@@ -27,10 +28,10 @@ extern "C" {
 #endif
 
 #include <driver/spi_master.h>
-#include "rom/ets_sys.h"
+#include "esp32/rom/ets_sys.h"
+#include "esp32/rom/lldesc.h"
 #include "esp_types.h"
 #include "esp_attr.h"
-#include "esp_intr.h"
 #include "esp_intr_alloc.h"
 #include "esp_log.h"
 #include "esp_err.h"
@@ -40,7 +41,6 @@ extern "C" {
 #include "freertos/xtensa_api.h"
 #include "freertos/task.h"
 #include "freertos/ringbuf.h"
-#include "rom/lldesc.h"
 #include "driver/gpio.h"
 #include "driver/periph_ctrl.h"
 #include "esp_heap_caps.h"
@@ -65,7 +65,7 @@ TaskHandle_t static_spi_thread_id = 0;
 
 static void* IRAM_ATTR spi_worker_thread(void* arg) {
   while (!platform.nominalState()) {
-    sleep_millis(20);
+    sleep_ms(20);
   }
   SPIAdapter* BUSPTR = (SPIAdapter*) arg;
   uint8_t anum = BUSPTR->adapterNumber();
@@ -117,23 +117,23 @@ int8_t SPIAdapter::bus_init() {
 			return -2;
 	}
 
-  if (255 != _opts.spi_clk) {
+  if (255 != _CLK_PIN) {
     b_flags |= SPICOMMON_BUSFLAG_SCLK;
-    bus_config.sclk_io_num = (gpio_num_t) _opts.spi_clk;
+    bus_config.sclk_io_num = (gpio_num_t) _CLK_PIN;
   }
   else {
     bus_config.sclk_io_num = (gpio_num_t) -1;
   }
-  if (255 != _opts.spi_mosi) {
+  if (255 != _MOSI_PIN) {
     b_flags |= SPICOMMON_BUSFLAG_MOSI;
-    bus_config.mosi_io_num = (gpio_num_t) _opts.spi_mosi;
+    bus_config.mosi_io_num = (gpio_num_t) _MOSI_PIN;
   }
   else {
     bus_config.mosi_io_num = (gpio_num_t) -1;
   }
-  if (255 != _opts.spi_miso) {
+  if (255 != _MISO_PIN) {
     b_flags |= SPICOMMON_BUSFLAG_MISO;
-    bus_config.miso_io_num = (gpio_num_t) _opts.spi_miso;
+    bus_config.miso_io_num = (gpio_num_t) _MISO_PIN;
   }
   else {
     bus_config.miso_io_num = (gpio_num_t) -1;
@@ -178,54 +178,18 @@ int8_t SPIAdapter::bus_init() {
   ManuvrThreadOptions topts;
   topts.thread_name = "SPI";
   topts.stack_sz    = 2048;
+  unsigned long _thread_id = 0;
 	createThread(&_thread_id, nullptr, spi_worker_thread, (void*) this, &topts);
   static_spi_thread_id = (TaskHandle_t) _thread_id;
-  _er_set_flag(SPI_FLAG_SPI_READY);
+  _adapter_set_flag(SPI_FLAG_SPI_READY);
   return 0;
 }
 
 
 int8_t SPIAdapter::bus_deinit() {
-  _er_clear_flag(SPI_FLAG_SPI_READY);
+  _adapter_clear_flag(SPI_FLAG_SPI_READY);
   return 0;
 }
-
-
-
-/*******************************************************************************
-* ######## ##     ## ######## ##    ## ########  ######
-* ##       ##     ## ##       ###   ##    ##    ##    ##
-* ##       ##     ## ##       ####  ##    ##    ##
-* ######   ##     ## ######   ## ## ##    ##     ######
-* ##        ##   ##  ##       ##  ####    ##          ##
-* ##         ## ##   ##       ##   ###    ##    ##    ##
-* ########    ###    ######## ##    ##    ##     ######
-*
-* These are overrides from EventReceiver interface...
-*******************************************************************************/
-
-/**
-* This is called when the kernel attaches the module.
-* This is the first time the class can be expected to have kernel access.
-*
-* @return 0 on no action, 1 on action, -1 on failure.
-*/
-int8_t SPIAdapter::attached() {
-  if (EventReceiver::attached()) {
-    // Mark all of our preallocated SPI jobs as "No Reap" and pass them into the prealloc queue.
-    for (uint8_t i = 0; i < CONFIG_SPIADAPTER_PREALLOC_COUNT; i++) {
-      preallocated_bus_jobs[i].wipe();
-      preallocated_bus_jobs[i].returnToPrealloc(true);
-      preallocated.insert(&preallocated_bus_jobs[i]);
-    }
-    _er_set_flag(SPI_FLAG_QUEUE_IDLE);
-    // We should init the SPI library...
-    bus_init();
-    return 1;
-  }
-  return 0;
-}
-
 
 
 
@@ -293,18 +257,18 @@ int8_t SPIBusOp::advance_operation(uint32_t status_reg, uint8_t data_reg) {
     run_xfer = true;
   }
 
-  if (buf_len) {
-    switch (opcode) {
+  if (_buf_len) {
+    switch (get_opcode()) {
       case BusOpcode::TX:
         set_state(XferState::TX_WAIT);
-				txns[anum].tx_buffer = buf;
-				txns[anum].length = buf_len * 8;
+				txns[anum].tx_buffer = _buf;
+				txns[anum].length = _buf_len * 8;
         run_xfer = true;
         break;
       case BusOpcode::RX:
         set_state(XferState::RX_WAIT);
-				txns[anum].rx_buffer = buf;
-				txns[anum].rxlength = buf_len * 8;
+				txns[anum].rx_buffer = _buf;
+				txns[anum].rxlength = _buf_len * 8;
         run_xfer = true;
         break;
       default:
@@ -327,6 +291,36 @@ int8_t SPIBusOp::advance_operation(uint32_t status_reg, uint8_t data_reg) {
     markComplete();
   }
   return 0;
+}
+
+/*******************************************************************************
+* ___     _       _                      These members are mandatory overrides
+*  |   / / \ o   | \  _     o  _  _      for implementing I/O callbacks. They
+* _|_ /  \_/ o   |_/ (/_ \/ | (_ (/_     are also implemented by Adapters.
+*******************************************************************************/
+/**
+* Called prior to the given bus operation beginning.
+* Returning 0 will allow the operation to continue.
+* Returning anything else will fail the operation with IO_RECALL.
+*   Operations failed this way will have their callbacks invoked as normal.
+*
+* @param  _op  The bus operation that was completed.
+* @return 0 to run the op, or non-zero to cancel it.
+*/
+int8_t SPIAdapter::io_op_callahead(BusOp* _op) {
+  // Bus adapters don't typically do anything here, other
+  //   than permit the transfer.
+  return 0;
+}
+
+/**
+* When a bus operation completes, it is passed back to its issuing class.
+*
+* @param  _op  The bus operation that was completed.
+* @return BUSOP_CALLBACK_NOMINAL on success, or appropriate error code.
+*/
+int8_t SPIAdapter::io_op_callback(BusOp* _op) {
+  return BUSOP_CALLBACK_NOMINAL;
 }
 
 
