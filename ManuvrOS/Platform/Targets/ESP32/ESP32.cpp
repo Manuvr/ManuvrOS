@@ -40,6 +40,8 @@ This file is meant to contain a set of common functions that are typically platf
 #include "esp_system.h"
 #include "esp_log.h"
 #include "driver/adc.h"
+#include "esp32/rom/ets_sys.h"
+
 
 #if defined(CONFIG_MANUVR_STORAGE)
   #include "ESP32Storage.h"
@@ -217,6 +219,14 @@ void currentDateTime(StringBuilder* target) {
     strftime(buf, sizeof(buf), "%Y-%m-%d.%X", &tstruct);
     target->concat(buf);
   }
+}
+
+
+/**
+* Delay execution for such and so many microseconds.
+*/
+void sleep_us(uint32_t udelay) {
+  ets_delay_us(udelay);
 }
 
 
