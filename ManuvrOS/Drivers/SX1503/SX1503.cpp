@@ -155,24 +155,13 @@ int8_t SX1503::init(I2CAdapter* b) {
     }
     ret = 0;
   }
-  else if (!preserveOnDestroy()) {
-    ret = reset();
-    // Set all event sensitivities to both edges. We use our sole IRQ line to
-    //   read on ALL input changes. Even if the user hasn't asked for a callback
-    //   function as our API understands it. All user calls to digitalRead() will
-    //   be immediate and incur no I/O.
-    if (0 == ret) {
-      _set_shadow_value(SX1503RegId::SENSE_H_B, 0xFF);
-      _set_shadow_value(SX1503RegId::SENSE_H_A, 0xFF);
-      _set_shadow_value(SX1503RegId::SENSE_L_B, 0xFF);
-      _set_shadow_value(SX1503RegId::SENSE_L_A, 0xFF);
-      ret = _write_registers(SX1503RegId::SENSE_H_B, 4);
-      // IRQ clears on data read. No boost.
-      if (0 == ret) {  ret = _write_register(SX1503RegId::ADVANCED, 0x04);   }
-    }
-  }
-  else {  // We take no action against the present hardware state. Just read it.
+  else if (preserveOnDestroy()) {
+    // We take no action against the present hardware state. Just read it.
     ret = refresh();
+  }
+  else {
+    // Reset ahead of baseline class configuration.
+    ret = reset();
   }
   return ret;
 }
@@ -183,6 +172,7 @@ int8_t SX1503::reset() {
   _a_dat = 0;
   _b_dat = 0;
   _sx_clear_flag(SX1503_FLAG_INITIALIZED);
+  sx1503_isr_fired = false;
   uint8_t vals[31] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00,
     0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -196,6 +186,7 @@ int8_t SX1503::reset() {
     setPin(_RESET_PIN, 0);
     sleep_us(1);   // Datasheet says 300ns.
     setPin(_RESET_PIN, 1);
+    sleep_us(10);
     if (255 != _IRQ_PIN) {
       // Wait on the IRQ pin to go high.
       uint32_t millis_abort = millis() + 15;
@@ -207,6 +198,7 @@ int8_t SX1503::reset() {
     else {
       sleep_ms(15);   // Datasheet says chip comes back in 7ms.
     }
+    ret = _write_register(SX1503RegId::ADVANCED, 0x04);
   }
   else {
     // Steamroll the registers with the default values.
@@ -228,7 +220,7 @@ int8_t SX1503::reset() {
 *   -3 if not initialized.
 *   -1 if the hardware needed to be read, but doing so failed.
 *   0  if nothing needs doing.
-*   >0 for the number of pin states that changed and had no callbacks.
+*   1  if a read was initiated.
 */
 int8_t SX1503::poll() {
   int8_t ret = -3;
@@ -239,8 +231,16 @@ int8_t SX1503::poll() {
       sx1503_isr_fired = true;
     }
     if (sx1503_isr_fired) {
+      ret--;
+      _sx_set_flag(SX1503_FLAG_READ_IN_FLIGHT);
       if (0 == _read_registers(SX1503RegId::DATA_B, 2)) {
-        ret = 0;
+        // This will only be set again once the IRQ condition clears in the
+        //   hardware, and is subsequently re-asserted. So if the read fails for
+        //   some reason, or the IRQ autoclear bit isn't set in the ADVANCED
+        //   register, the class will hang.
+        // TODO: More care is warranted to ensure that this doesn't happen.
+        sx1503_isr_fired = false;
+        ret = 1;
       }
     }
   }
@@ -256,7 +256,7 @@ int8_t SX1503::refresh() {
 }
 
 
-int8_t SX1503::attachInterrupt(uint8_t pin, PinCallback cb, uint8_t condition) {
+int8_t SX1503::attachInterrupt(uint8_t pin, PinCallback cb, IRQCondition condition) {
   pin &= 0x0F;
   int8_t ret = -1;
   if (16 > pin) {
@@ -296,16 +296,19 @@ int8_t SX1503::detachInterrupt(PinCallback cb) {
 /*
 * TODO: Implement open-drain.
 */
-int8_t SX1503::digitalWrite(uint8_t pin, uint8_t value) {
+int8_t SX1503::digitalWrite(uint8_t pin, bool value) {
   int8_t ret = -2;
   if (pin < 16) {
     ret = 0;
     SX1503RegId reg0 = (pin < 8) ? SX1503RegId::DATA_A : SX1503RegId::DATA_B;
     uint8_t val0 = _get_shadow_value(reg0);
-    pin = pin & 0x07; // Restrict to 8-bits.
+    uint8_t val1 = val0;
+    pin = pin & 0x07; // Restrict to [0, 7].
     uint8_t f = 1 << pin;
-    val0 = (0 != value) ? (val0 | f) : (val0 & ~f);
-    if ((0 == ret) & (_get_shadow_value(reg0) != val0)) {  ret = _write_register(reg0, val0);   }
+    val0 = value ? (val0 | f) : (val0 & ~f);
+    if (val1 != val0) {
+      ret = _write_register(reg0, val0);
+    }
   }
   return ret;
 }
@@ -334,9 +337,7 @@ uint8_t SX1503::digitalRead(uint8_t pin) {
 * @return The current verified state of the GPIO pins.
 */
 uint16_t SX1503::getPinValues() {
-  uint16_t ret0 = (uint16_t) _b_dat;
-  uint16_t ret1 = (uint16_t) _a_dat;
-  return (ret0 | (ret1 << 8));
+  return (_a_dat | ((uint16_t) _b_dat << 8));
 }
 
 
@@ -376,23 +377,41 @@ int8_t SX1503::gpioMode(uint8_t pin, GPIOMode mode) {
     SX1503RegId reg1 = (pin < 8) ? SX1503RegId::PULLUP_A : SX1503RegId::PULLUP_B;
     SX1503RegId reg2 = (pin < 8) ? SX1503RegId::PULLDOWN_A : SX1503RegId::PULLDOWN_B;
     SX1503RegId reg3 = (pin < 8) ? SX1503RegId::IRQ_MASK_A : SX1503RegId::IRQ_MASK_B;
+    SX1503RegId reg4 = (pin < 8) ? SX1503RegId::SENSE_H_A : SX1503RegId::SENSE_H_B;
+    SX1503RegId reg5 = (pin < 8) ? SX1503RegId::SENSE_L_A : SX1503RegId::SENSE_L_B;
+
     uint8_t val0 = _get_shadow_value(reg0);
     uint8_t val1 = _get_shadow_value(reg1);
     uint8_t val2 = _get_shadow_value(reg2);
     uint8_t val3 = _get_shadow_value(reg3);
+    uint8_t val4 = _get_shadow_value(reg4);
+    uint8_t val5 = _get_shadow_value(reg5);
     pin = pin & 0x07; // Restrict to 8-bits.
     uint8_t f = 1 << pin;
 
-    // Pin being set as an input means we need to unmask the interrupt.
+    // Set direction, and pull resistors.
     val0 = (in) ? (val0 | f)  : (val0 & ~f);
     val1 = (pu) ? (val1 | f)  : (val1 & ~f);
     val2 = (pd) ? (val2 | f)  : (val2 & ~f);
+
+    // Pin being set as an input means we need to unmask the interrupt.
     val3 = (in) ? (val3 & ~f) : (val3 | f);
+
+    // Disable pin events for output pins, and enable them on both edges for inputs.
+    uint8_t restricted_mask = 0x03 << ((pin & 0x03) << 1);
+    if (pin > 3) {
+      val4 = (in) ? (val4 | restricted_mask) : (val4 & ~restricted_mask);
+    }
+    else {
+      val5 = (in) ? (val5 | restricted_mask) : (val5 & ~restricted_mask);
+    }
 
     if ((0 == ret) & (_get_shadow_value(reg0) != val0)) {  ret = _write_register(reg0, val0);   }
     if ((0 == ret) & (_get_shadow_value(reg1) != val1)) {  ret = _write_register(reg1, val1);   }
     if ((0 == ret) & (_get_shadow_value(reg2) != val2)) {  ret = _write_register(reg2, val2);   }
     if ((0 == ret) & (_get_shadow_value(reg3) != val3)) {  ret = _write_register(reg3, val3);   }
+    if ((0 == ret) & (_get_shadow_value(reg4) != val4)) {  ret = _write_register(reg4, val4);   }
+    if ((0 == ret) & (_get_shadow_value(reg5) != val5)) {  ret = _write_register(reg5, val5);   }
   }
   return ret;
 }
@@ -421,6 +440,7 @@ int8_t SX1503::_invoke_pin_callback(uint8_t pin, bool value) {
 int8_t SX1503::_ll_pin_init() {
   if (255 != _IRQ_PIN) {
     pinMode(_IRQ_PIN, GPIOMode::INPUT_PULLUP);
+    sx1503_isr_fired = !readPin(_IRQ_PIN);
     setPinFxn(_IRQ_PIN, IRQCondition::FALLING, sx1503_isr);
   }
   if (255 != _RESET_PIN) {
@@ -589,9 +609,10 @@ int8_t SX1503::io_op_callback(BusOp* _op) {
             case SX1503RegId::DATA_B:
             case SX1503RegId::DATA_A:
               {
-                uint8_t dir_val = _get_shadow_value((reg == SX1503RegId::DATA_B) ? SX1503RegId::DIR_B : SX1503RegId::DATA_A);
+                uint8_t dir_val = _get_shadow_value((reg == SX1503RegId::DATA_B) ? SX1503RegId::DIR_B : SX1503RegId::DIR_A);
                 uint8_t* dat_val = (reg == SX1503RegId::DATA_B) ? &_b_dat : &_a_dat;
-                *dat_val = (value & dir_val) | (value | ~dir_val);
+                //*dat_val = (value & dir_val) | (value | ~dir_val);
+                *dat_val = value;
               }
               break;
 
@@ -625,7 +646,9 @@ int8_t SX1503::io_op_callback(BusOp* _op) {
             case SX1503RegId::PLD_TABLE_4A:
               break;
             case SX1503RegId::ADVANCED:
-              _sx_set_flag(SX1503_FLAG_INITIALIZED);
+              if (0x04 == (value & 0x04)) {
+                _sx_set_flag(SX1503_FLAG_INITIALIZED);
+              }
               break;
             default:  // Anything else is invalid.
               break;
@@ -641,7 +664,7 @@ int8_t SX1503::io_op_callback(BusOp* _op) {
             case SX1503RegId::DATA_B:
             case SX1503RegId::DATA_A:
               {
-                uint8_t dir_val = _get_shadow_value((reg == SX1503RegId::DATA_B) ? SX1503RegId::DIR_B : SX1503RegId::DATA_A);
+                uint8_t dir_val = _get_shadow_value((reg == SX1503RegId::DATA_B) ? SX1503RegId::DIR_B : SX1503RegId::DIR_A);
                 uint8_t* dat_val = (reg == SX1503RegId::DATA_B) ? &_b_dat : &_a_dat;
                 uint8_t d = (*dat_val ^ value) & dir_val;  // Filter for changes in input values.
                 uint8_t cb_base = (reg == SX1503RegId::DATA_B) ? 8 : 0;
@@ -652,7 +675,8 @@ int8_t SX1503::io_op_callback(BusOp* _op) {
                       _invoke_pin_callback((i+cb_base), ((value >> i) & 1));
                     }
                   }
-                  *dat_val = (value & ~dir_val) | (value | dir_val);
+                  //*dat_val = (value & ~dir_val) | (value | dir_val);
+                  *dat_val = value;
                 }
               }
               sx1503_isr_fired = (255 != _IRQ_PIN) ? !readPin(_IRQ_PIN) : true;
@@ -688,7 +712,9 @@ int8_t SX1503::io_op_callback(BusOp* _op) {
             case SX1503RegId::PLD_TABLE_4A:
               break;
             case SX1503RegId::ADVANCED:
-              _sx_set_flag(SX1503_FLAG_INITIALIZED);
+              if (0x04 != (value & 0x04)) {
+                _write_register(SX1503RegId::ADVANCED, value & 0x04);
+              }
               break;
             default:  // Anything else is invalid.
               break;
@@ -718,6 +744,7 @@ void SX1503::printDebug(StringBuilder* output) {
   output->concatf("\tISR fired:   %c\n", sx1503_isr_fired ? 'y' : 'n');
   output->concatf("\tInitialized: %c\n", initialized() ? 'y' : 'n');
   output->concatf("\tPreserve:    %c\n", preserveOnDestroy() ? 'y' : 'n');
+  output->concatf("\t_x_dat:      0x%04x\n", _a_dat | ((uint16_t) _b_dat << 8));
 }
 
 

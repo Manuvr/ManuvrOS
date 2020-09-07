@@ -43,13 +43,44 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ****************************************************/
 
 #include "SSD13xx.h"
-#include "Kernel.h"
+#include "AbstractPlatform.h"
+
+// Timing Delays
+#define SSD13XX_DELAYS_HWFILL     (3)
+#define SSD13XX_DELAYS_HWLINE     (1)
+
+// SSD13XX Commands
+#define SSD13XX_CMD_DRAWLINE       0x21
+#define SSD13XX_CMD_DRAWRECT       0x22
+#define SSD13XX_CMD_FILL           0x26
+#define SSD13XX_CMD_SETCOLUMN      0x15
+#define SSD13XX_CMD_SETROW         0x75
+#define SSD13XX_CMD_CONTRASTA      0x81
+#define SSD13XX_CMD_CONTRASTB      0x82
+#define SSD13XX_CMD_CONTRASTC      0x83
+#define SSD13XX_CMD_MASTERCURRENT  0x87
+#define SSD13XX_CMD_STARTLINE      0xA1
+#define SSD13XX_CMD_DISPLAYOFFSET  0xA2
+#define SSD13XX_CMD_NORMALDISPLAY  0xA4
+#define SSD13XX_CMD_DISPLAYALLON   0xA5
+#define SSD13XX_CMD_DISPLAYALLOFF  0xA6
+#define SSD13XX_CMD_SETMASTER      0xAD
+#define SSD13XX_CMD_DISPLAYOFF     0xAE
+#define SSD13XX_CMD_DISPLAYON      0xAF
+#define SSD13XX_CMD_POWERMODE      0xB0
+#define SSD13XX_CMD_PRECHARGE      0xB1
+#define SSD13XX_CMD_CLOCKDIV       0xB3
+#define SSD13XX_CMD_PRECHARGEA     0x8A
+#define SSD13XX_CMD_PRECHARGEB     0x8B
+#define SSD13XX_CMD_PRECHARGEC     0x8C
+#define SSD13XX_CMD_PRECHARGELEVEL 0xBB
+#define SSD13XX_CMD_VCOMH          0xBE
 
 
 ImgBufferFormat _get_img_fmt_for_ssd(SSDModel m) {
   switch (m) {
-    case SSDModel::SSD1306:   return ImgBufferFormat::GREY_8;
-    case SSDModel::SSD1309:   return ImgBufferFormat::GREY_8;
+    case SSDModel::SSD1306:   return ImgBufferFormat::MONOCHROME;
+    case SSDModel::SSD1309:   return ImgBufferFormat::MONOCHROME;
     case SSDModel::SSD1331:   return ImgBufferFormat::R5_G6_B5;
     case SSDModel::SSD1351:   return ImgBufferFormat::R5_G6_B5;
   }
@@ -59,7 +90,7 @@ ImgBufferFormat _get_img_fmt_for_ssd(SSDModel m) {
 uint32_t _get_img_x_for_ssd(SSDModel m) {
   switch (m) {
     case SSDModel::SSD1306:   return 128;
-    case SSDModel::SSD1309:   return 96;
+    case SSDModel::SSD1309:   return 128;
     case SSDModel::SSD1331:   return 96;
     case SSDModel::SSD1351:   return 128;
   }
@@ -147,9 +178,9 @@ int8_t SSD13xx::io_op_callback(BusOp* _op) {
 
   // There is zero chance this object will be a null pointer unless it was done on purpose.
   if (op->hasFault()) {
-    Kernel::log("SSD13xx::io_op_callback() bus op failed.\n");
     return BUSOP_CALLBACK_ERROR;
   }
+
   if (op->transferParamLength() == 0) {  // Was this a frame refresh?
     _lock(false);
     _stopwatch.markStop();
@@ -297,7 +328,7 @@ void SSD13xx::setAddrWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
 int8_t SSD13xx::commitFrameBuffer() {
   int8_t ret = -3;
   if (_fb_data_op.isIdle()) {
-    //ret = _send_data(_buffer, bytesUsed());  // Buffer is in Image superclass.
+    //_fb_data_op.setBuffer(_buffer, bytesUsed());  // Buffer is in Image superclass.
     ret = _BUS->queue_io_job(&_fb_data_op);
   }
   return ret;
@@ -402,9 +433,9 @@ int8_t SSD13xx::reset() {
   int8_t ret = -1;
   if (255 != _opts.reset) {
     setPin(_opts.reset, false);  // Hold the display in reset.
-    sleep_ms(1);
+    sleep_us(500);
     setPin(_opts.reset, true);
-    sleep_ms(1);
+    sleep_us(500);
     ret = 0;
   }
   return ret;

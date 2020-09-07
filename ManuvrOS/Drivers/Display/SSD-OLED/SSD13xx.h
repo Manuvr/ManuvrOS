@@ -40,6 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ****************************************************/
 
+
 #include "Image/Image.h"
 #include "SPIAdapter.h"
 #include "StopWatch.h"
@@ -47,39 +48,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __SSD13XX_DRIVER_H_
 #define __SSD13XX_DRIVER_H_
 
-// Timing Delays
-#define SSD13XX_DELAYS_HWFILL     (3)
-#define SSD13XX_DELAYS_HWLINE     (1)
-
-// SSD13XX Commands
-#define SSD13XX_CMD_DRAWLINE       0x21
-#define SSD13XX_CMD_DRAWRECT       0x22
-#define SSD13XX_CMD_FILL           0x26
-#define SSD13XX_CMD_SETCOLUMN      0x15
-#define SSD13XX_CMD_SETROW         0x75
-#define SSD13XX_CMD_CONTRASTA      0x81
-#define SSD13XX_CMD_CONTRASTB      0x82
-#define SSD13XX_CMD_CONTRASTC      0x83
-#define SSD13XX_CMD_MASTERCURRENT  0x87
-#define SSD13XX_CMD_SETREMAP       0xA0
-#define SSD13XX_CMD_STARTLINE      0xA1
-#define SSD13XX_CMD_DISPLAYOFFSET  0xA2
-#define SSD13XX_CMD_NORMALDISPLAY  0xA4
-#define SSD13XX_CMD_DISPLAYALLON   0xA5
-#define SSD13XX_CMD_DISPLAYALLOFF  0xA6
+/* Commands that all supported models have in common. */
+#define SSD13XX_CMD_SETREMAP       0xA0  // Argument is embedded in the lowest bit.
 #define SSD13XX_CMD_INVERTDISPLAY  0xA7
 #define SSD13XX_CMD_SETMULTIPLEX   0xA8
-#define SSD13XX_CMD_SETMASTER      0xAD
-#define SSD13XX_CMD_DISPLAYOFF     0xAE
-#define SSD13XX_CMD_DISPLAYON      0xAF
-#define SSD13XX_CMD_POWERMODE      0xB0
-#define SSD13XX_CMD_PRECHARGE      0xB1
-#define SSD13XX_CMD_CLOCKDIV       0xB3
-#define SSD13XX_CMD_PRECHARGEA     0x8A
-#define SSD13XX_CMD_PRECHARGEB     0x8B
-#define SSD13XX_CMD_PRECHARGEC     0x8C
-#define SSD13XX_CMD_PRECHARGELEVEL 0xBB
-#define SSD13XX_CMD_VCOMH          0xBE
+
 
 /* Supported SSD chipsets */
 enum class SSDModel : uint8_t {
@@ -161,10 +134,144 @@ class SSD13xx : public Image, public BusOpCallback {
     StopWatch     _stopwatch;
     SPIBusOp    _fb_data_op;  // We do this frequently enough.
 
-    int8_t _send_data(uint8_t* buf, uint16_t len);
     int8_t _ll_pin_init();
 
     int8_t _send_command(uint8_t commandByte, uint8_t* dataBytes, uint8_t numDataBytes);
+    inline int8_t _send_command(uint8_t commandByte) {
+      return _send_command(commandByte, nullptr, 0);
+    };
+};
+
+
+
+// Class to manage hardware interface with SSD13xx chipset
+class SSD1306 : public Image, public BusOpCallback {
+  public:
+    SSD1306(const SSD13xxOpts* opts);
+    ~SSD1306();
+
+    inline void setBus(SPIAdapter* b) {  _BUS = b;  };
+    int8_t init(SPIAdapter*);
+    inline int8_t init() {        return init(_BUS);           };
+    inline bool enabled() {       return _enabled;             };
+    inline bool initialized() {   return (20 == _init_state);  };
+    int8_t reset();
+
+    void setAddrWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+    int8_t invertDisplay(bool);
+    int8_t testDisplay(bool);
+    int8_t commitFrameBuffer();
+
+    inline void externalVCC(bool x) {         _external_vcc = x;   };
+    inline void comScanDecrements(bool x) {   _com_scan_dec = x;   };
+    inline void enableRemap(bool x) {         _remap_enable = x;   };
+    inline void comPinConf(uint8_t x) {       _com_pin_conf = x;   };
+    inline void verticalScan(uint8_t x) {     _vert_scan    = x;   };
+    inline void startLine(uint8_t x) {        _start_line   = x;   };
+    inline void displayOffset(uint8_t x) {    _disp_offset  = x;   };
+
+
+    int8_t enableDisplay(bool enable);
+    void printDebug(StringBuilder*);
+
+    /* Overrides from the BusAdapter interface */
+    int8_t io_op_callahead(BusOp*);
+    int8_t io_op_callback(BusOp*);
+    int8_t queue_io_job(BusOp*);
+
+
+  private:
+    const SSD13xxOpts _opts;
+    bool     _enabled      = false;
+    bool     _external_vcc = false;
+    bool     _com_scan_dec = false;
+    bool     _remap_enable = false;
+    bool     _vert_scan    = false;
+    uint8_t  _com_pin_conf = 0x02;
+    uint8_t  _disp_offset  = 0x00;
+
+    uint8_t  _init_state   = 0;
+    uint8_t  _start_line   = 0;
+
+    SPIAdapter* _BUS = nullptr;
+    StopWatch   _stopwatch;
+    SPIBusOp    _fb_data_op;  // We do this frequently enough.
+
+    int8_t _ll_pin_init();
+
+    int8_t _send_command(uint8_t commandByte, uint8_t* dataBytes, uint8_t numDataBytes);
+    int8_t _internal_init_fsm();
+    inline int8_t _send_command(uint8_t commandByte) {
+      return _send_command(commandByte, nullptr, 0);
+    };
+};
+
+
+// Class to manage hardware interface with SSD13xx chipset
+class SSD1309 : public Image, public BusOpCallback {
+  public:
+    SSD1309(const SSD13xxOpts* opts);
+    ~SSD1309();
+
+    inline void setBus(SPIAdapter* b) {  _BUS = b;  };
+    int8_t init(SPIAdapter*);
+    inline int8_t init() {        return init(_BUS);           };
+    inline bool enabled() {       return _enabled;             };
+    inline bool initialized() {   return (19 == _init_state);  };
+    int8_t reset();
+
+    void setAddrWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+    int8_t invertDisplay(bool);
+    int8_t testDisplay(bool);
+    int8_t commitFrameBuffer();
+
+    inline void externalVCC(bool x) {         _external_vcc = x;   };
+    inline void comScanDecrements(bool x) {   _com_scan_dec = x;   };
+    inline void enableRemap(bool x) {         _remap_enable = x;   };
+    inline void comPinConf(uint8_t x) {       _com_pin_conf = x;   };
+    inline void verticalScan(uint8_t x) {     _vert_scan    = x;   };
+    inline void startLine(uint8_t x) {        _start_line   = x;   };
+    inline void displayOffset(uint8_t x) {    _disp_offset  = x;   };
+
+    inline bool    externalVCC() {          return _external_vcc;  };
+    inline bool    comScanDecrements() {    return _com_scan_dec;  };
+    inline bool    enableRemap() {          return _remap_enable;  };
+    inline uint8_t comPinConf() {           return _com_pin_conf;  };
+    inline uint8_t verticalScan() {         return _vert_scan;     };
+    inline uint8_t startLine() {            return _start_line;    };
+    inline uint8_t displayOffset() {        return _disp_offset;   };
+
+
+    int8_t enableDisplay(bool enable);
+    void printDebug(StringBuilder*);
+
+    /* Overrides from the BusAdapter interface */
+    int8_t io_op_callahead(BusOp*);
+    int8_t io_op_callback(BusOp*);
+    int8_t queue_io_job(BusOp*);
+
+
+  private:
+    const SSD13xxOpts _opts;
+    bool     _enabled      = false;
+    bool     _external_vcc = false;
+    bool     _com_scan_dec = false;
+    bool     _remap_enable = false;
+    bool     _vert_scan    = false;
+    uint8_t  _com_pin_conf = 0x02;
+    uint8_t  _disp_offset  = 0x00;
+
+    uint8_t  _init_state   = 0;
+    uint8_t  _start_line   = 0;
+
+    SPIAdapter* _BUS = nullptr;
+    StopWatch   _stopwatch;
+    SPIBusOp    _fb_data_op;  // We do this frequently enough.
+
+    int8_t _ll_pin_init();
+
+    int8_t _send_command(uint8_t commandByte, uint8_t* dataBytes, uint8_t numDataBytes);
+    int8_t _internal_init_fsm();
     inline int8_t _send_command(uint8_t commandByte) {
       return _send_command(commandByte, nullptr, 0);
     };

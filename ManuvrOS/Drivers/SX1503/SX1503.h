@@ -35,6 +35,8 @@ class StringBuilder;
 
 /* Class flags. */
 #define SX1503_FLAG_PRESERVE_STATE   0x0001
+#define SX1503_FLAG_READ_IN_FLIGHT   0x0002  // Waiting on the return of a data read.
+#define SX1503_FLAG_WRITE_IN_FLIGHT  0x0004  // Waiting on the return of a data write.
 #define SX1503_FLAG_DEVICE_PRESENT   0x1000
 #define SX1503_FLAG_PINS_CONFD       0x2000
 #define SX1503_FLAG_INITIALIZED      0x4000
@@ -102,12 +104,12 @@ class SX1503 : public I2CDevice {
 
     // Basic usage as pins...
     int8_t  gpioMode(uint8_t pin, GPIOMode mode);
-    int8_t  digitalWrite(uint8_t pin, uint8_t value);
+    int8_t  digitalWrite(uint8_t pin, bool value);
     uint8_t digitalRead(uint8_t pin);
     uint16_t getPinValues();
 
     // Interrupt and callback management...
-    int8_t  attachInterrupt(uint8_t pin, PinCallback, uint8_t condition);
+    int8_t  attachInterrupt(uint8_t pin, PinCallback, IRQCondition condition);
     int8_t  detachInterrupt(uint8_t pin);
     int8_t  detachInterrupt(PinCallback);
 
