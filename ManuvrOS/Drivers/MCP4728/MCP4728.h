@@ -5,8 +5,6 @@
 *
 * TODO: The platform pins are configured properly if provided. But they are
 *   presently not used. LDAC will be held low.
-*
-* TODO: Wall-off the NVM storage functions by a compiler flag for the ENG/CAL builds.
 */
 
 #include "AbstractPlatform.h"

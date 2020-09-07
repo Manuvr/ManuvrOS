@@ -24,6 +24,9 @@ idf_component_register(
   "Drivers/Sensors/IMU/ADXL345" "Drivers/Sensors/IMU/LSM9DS1"
   "Drivers/KridaDimmer" "Drivers/Modems/LORA/SX1276" "Drivers/SX8634"
   "Drivers/MCP356x" "Drivers/MCP4728"
+  "Drivers/Sensors/TSL2561" "Drivers/Sensors/TMP102" 
+
+
 
   "Platform/Targets/ESP32" "Platform/Targets/ESP32/I2C"
   "Platform/Targets/ESP32/SPI" "Platform/Targets/ESP32/UART"

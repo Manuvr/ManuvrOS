@@ -1445,7 +1445,6 @@ int8_t MCP356x::_proc_reg_read(MCP356xRegister r) {
 
 
 
-
 /*******************************************************************************
 * ___     _       _                      These members are mandatory overrides
 *  |   / / \ o   | \  _     o  _  _      for implementing I/O callbacks. They
@@ -1533,7 +1532,6 @@ int8_t MCP356x::io_op_callback(BusOp* _op) {
   }
   return ret;
 }
-
 
 
 /**

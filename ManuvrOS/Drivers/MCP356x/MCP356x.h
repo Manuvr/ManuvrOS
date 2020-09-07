@@ -1,4 +1,3 @@
-/* Test driver for MCP356x */
 #ifndef __MCP356x_H__
 #define __MCP356x_H__
 
@@ -182,7 +181,7 @@ class MCP356x : public BusOpCallback {
     inline uint8_t getIRQPin() {      return _IRQ_PIN;  };
     inline bool    adcFound() {       return _mcp356x_flag(MCP356X_FLAG_DEVICE_PRESENT);  };
     inline bool    adcConfigured() {  return _mcp356x_flag(MCP356X_FLAG_INITIALIZED);     };
-    inline bool    adcCalibrating() { return _mcp356x_flag(MCP356X_FLAG_CALIBRATING);     };    
+    inline bool    adcCalibrating() { return _mcp356x_flag(MCP356X_FLAG_CALIBRATING);     };
     inline bool    adcCalibrated() {  return _mcp356x_flag(MCP356X_FLAG_CALIBRATED);      };
 
     bool isrFired() {    return isr_fired;   };
