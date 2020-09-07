@@ -1,198 +1,232 @@
 /*
-File:   AMG88xx.h
-Author: J. Ian Lindsay
-Date:   2017.12.09
-
-Copyright 2016 Manuvr, Inc
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
+* This file started out as a SparkFun driver. I have mutated it.
+*
+* Refactor log:
+* Before:   914 lines
+*           Frame read took 43ms.
+*           Sketch uses 152304 bytes of program storage space
+*           Global variables use 171616 bytes of dynamic memory
+*
+* After:    596 lines
+*           Frame read took 15ms.
+*           Sketch uses 152960 bytes of program storage space
+*           Global variables use 172256 bytes of dynamic memory
+*
+* Culled much useless whitespace and replicated code.
+* Unit conversion is now done with a flag, and determines units for ALL
+*   interchange with the class.
+* Added flag member to track various boolean conditions in the class and the
+*   hardware, rather than waste time in I/O for requests we ought to be able to
+*   answer immediately.
+* Error returns from functions were added, as well as a function for supplying
+*   a TwoWire pointer. Data operations are now guarded by hardware error checks.
+* Implemented handling of the IRQ pin.
+* Added a function to read an entire frame in a more efficient manner. This
+*   demanded the addition of a local shadow for the frame. But if we can't spare
+*   128 bytes, we have deeper problems.
+* Encapsulated data is now condensed and aligned.
+* Added a temporal read marker so that polling-generated I/O can be minimized
+*   if the IRQ pin isn't available.
+* Unified member name convention. Encapsulated members now start with an
+*   underscore.
+*                                                  ---J. Ian Lindsay  2020.02.03
+* Refactoring for I2CAdapter and async. This removes the local concern over
+*   buffer sizes. Added register shadows. Storage requirement increased a bit.
+* Added software reset.
+* Register I/O is no longer implied for state accessors.
+* Register I/O is no longer replicated across functions that do the same thing.
+* Scattered commentary improvement.
+* Finished refresh().
+* Improved the support for pixel interrupts. Not finished yet.
+*                                                  ---J. Ian Lindsay  2020.06.27
 */
 
-#ifndef __AMG88XX_DRIVER_H__
-#define __AMG88XX_DRIVER_H__
+/*
+  This is a library written for the Panasonic Grid-EYE AMG88
+  SparkFun sells these at its website: www.sparkfun.com
+  Do you like this library? Help support SparkFun. Buy a board!
+  https://www.sparkfun.com/products/14568
 
-#include <Drivers/Sensors/SensorWrapper.h>
+  Written by Nick Poole @ SparkFun Electronics, January 11th, 2018
+
+  The GridEYE from Panasonic is an 8 by 8 thermopile array capable
+  of detecting temperature remotely at 64 discrete points.
+
+  This library handles communication with the GridEYE and provides
+  methods for manipulating temperature registers in Celsius,
+  Fahrenheit and raw values.
+
+  https://github.com/sparkfun/SparkFun_GridEYE_Arduino_Library
+
+  Development environment specifics:
+  Arduino IDE 1.8.3
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#include <AbstractPlatform.h>
 #include <I2CAdapter.h>
 
-// Assumes AD_SELECT is tied low. If tied high, address is 0x69.
-#define AMG88XX_I2CADDR               0x68
+#ifndef __AMG88XX_DRIVER_H_
+#define __AMG88XX_DRIVER_H_
 
+/* Class flags */
+#define GRIDEYE_FLAG_DEVICE_PRESENT   0x0001  // Part was found.
+#define GRIDEYE_FLAG_PINS_CONFIGURED  0x0002  // Low-level pin setup is complete.
+#define GRIDEYE_FLAG_INITIALIZED      0x0004  // Registers are initialized.
+#define GRIDEYE_FLAG_ENABLED          0x0008  // Device is measuring.
+#define GRIDEYE_FLAG_10FPS            0x0010  // 10Hz update rate if true. 1Hz if not.
+#define GRIDEYE_FLAG_FREEDOM_UNITS    0x0020  // Units in Fahrenheit if true. Celcius if not.
+#define GRIDEYE_FLAG_HW_AVERAGING     0x0040  // Use the sensor's hardware averaging?
+#define GRIDEYE_FLAG_FRAME_UPDATED    0x0080  // The frame has been refreshed.
 
-/*******************************************************************************
-* Hardware-defined registers
-*******************************************************************************/
-/*
-* A 128-byte read from base address 0x80 will return an array[64] of 12-bit,
-*   little-endian signed integers representing the temperature of each pixel.
-* These will need to be sign-extended and endian-normalized before being
-*   interpreted as 0.25C per bit.
-*/
-#define AMG88XX_REG_PIX_VALUE_BASE 0x80
-
-/*
-* Control over power state machine.
-* Values are mut-ex. 2-bits of real information.
-*/
-#define AMG88XX_REG_PWR_CTRL           0x00  // RW
-  #define AMG88XX_PWR_MODE_NORMAL      0x00
-  #define AMG88XX_PWR_MODE_SLEEP       0x10
-  #define AMG88XX_PWR_MODE_STNDBY_60   0x20
-  #define AMG88XX_PWR_MODE_STNDBY_10   0x21
+#define GRIDEYE_FLAG_RESET_MASK       (GRIDEYE_FLAG_DEVICE_PRESENT | GRIDEYE_FLAG_PINS_CONFIGURED)
 
 /*
-* Write-only register to do two levels of reset.
+* Registers
+* NOTE: These are indicies. Not real register addresses. Only order is reflected.
 */
-#define AMG88XX_REG_RESET              0x01  // WO
-  #define AMG88XX_RESET_SOFT           0x30
-  #define AMG88XX_RESET_HARD           0x3F
-
-/*
-* Frame-rate control.
-* 1-bit
-*/
-#define AMG88XX_REG_FRAME_RATE         0x02  // RW
-  #define AMG88XX_FPS_1                0x01
-  #define AMG88XX_FPS_10               0x00
-
-/*
-* Control of the interrupt pin.
-* 2-bit
-*/
-#define AMG88XX_REG_IRQ_CTRL           0x03  // RW
-  #define AMG88XX_IRQ_PIN_PUSH_PULL    0x01
-  #define AMG88XX_IRQ_ABSOLUTE_MODE    0x02
-
-/*
-* Split-access status register, Bits all line up, and masks
-*   apply to both AMG88XX_REG_STATUS and AMG88XX_REG_STATUS_CLEAR
-*/
-#define AMG88XX_REG_STATUS             0x04  // RO
-#define AMG88XX_REG_STATUS_CLEAR       0x05  // WO
-  #define AMG88XX_STATUS_TABLE         0x02
-  #define AMG88XX_STATUS_OVF_TEMP_OUT  0x04
-  #define AMG88XX_STATUS_OVF_THERMSTR  0x08
-
-// NOTE: Register 0x06 is skipped.
-
-/*
-* Enables @X moving average on the frames.
-* There is a ceremony for changing this to preserve data integrity:
-*     0x50   --> ADDR 0x1F
-*     0x45   --> ADDR 0x1F
-*     0x57   --> ADDR 0x1F
-*     <val>  --> ADDR 0x07 (AMG88XX_REG_AVERAGING)
-*     0x00   --> ADDR 0x1F
-*/
-#define AMG88XX_REG_AVERAGING        0x07  // RW
-  #define AMG88XX_MOV_AVG_MODE_2X    0x20
-
-
-#define AMG88XX_REG_IRQ_LEVEL        0x08
-
-
-
-/*******************************************************************************
-* Options object
-*******************************************************************************/
-
-/**
-* Set pin def to 255 to mark it as unused.
-*/
-class AMG88xxOpts {
-  public:
-    const uint8_t pin;            // Which pin is bound to ~ALERT/CC?
-
-    /** Copy constructor. */
-    AMG88xxOpts(const AMG88xxOpts* o) :
-      pin(o->pin),
-      _flags(o->_flags) {};
-
-    /**
-    * Constructor.
-    *
-    * @param pin
-    * @param Initial flags
-    */
-    AMG88xxOpts(
-      uint16_t _p = 255,
-      uint8_t _fi = 0
-    ) :
-      pin(_p),
-      _flags(_fi) {};
-
-    inline bool useIRQPin() const {
-      return (255 != pin);
-    };
-
-
-  private:
-    const uint8_t _flags;
+enum class AMG88XXRegID : uint8_t {
+  POWER_CONTROL       = 0x00,
+  RESET               = 0x01,
+  FRAMERATE           = 0x02,
+  INT_CONTROL         = 0x03,
+  STATUS              = 0x04,
+  STATUS_CLEAR        = 0x05,
+  AVERAGE             = 0x06,
+  INT_LEVEL_UPPER_LSB = 0x07,
+  INT_LEVEL_UPPER_MSB = 0x08,
+  INT_LEVEL_LOWER_LSB = 0x09,
+  INT_LEVEL_LOWER_MSB = 0x0A,
+  INT_LEVEL_HYST_LSB  = 0x0B,
+  INT_LEVEL_HYST_MSB  = 0x0C,
+  THERMISTOR_LSB      = 0x0D,
+  THERMISTOR_MSB      = 0x0E,
+  RESERVED_AVERAGE    = 0x0F,
+  INVALID             = 0xFF
 };
 
 
+#define INT_TABLE_REGISTER_INT0_START 0x10
+#define TEMPERATURE_REGISTER_START    0x80
 
-// NOTE: Although we could extend I2CDeviceWithRegisters, we choose I2CDevice
-//   because of the nuanced treatment of a small set of registers.
-class AMG88xx : public I2CDevice, public SensorWrapper {
+
+/*******************************************************************************
+* Class definition
+* Class defaults on construction:
+*   - All temperatures in Celcius
+*******************************************************************************/
+class GridEYE : public I2CDevice {
   public:
-    AMG88xx(const AMG88xxOpts*, const uint8_t addr = AMG88XX_I2CADDR);
-    ~AMG88xx();
-
-    /* Overrides from SensorWrapper */
-    SensorError init();
-    SensorError readSensor();
-    SensorError setParameter(uint16_t reg, int len, uint8_t*);  // Used to set operational parameters for the sensor.
-    SensorError getParameter(uint16_t reg, int len, uint8_t*);  // Used to read operational parameters from the sensor.
+    GridEYE(uint8_t addr = 0x69, uint8_t irq_pin = 255);
+    ~GridEYE();
 
     /* Overrides from I2CDevice... */
-    int8_t io_op_callback(I2CBusOp*);
-    void printDebug(StringBuilder*);
+    int8_t io_op_callahead(BusOp*);
+    int8_t io_op_callback(BusOp*);
 
-    /**
-    *  Given the pixel coordinates, return the temperature.
-    *  convert it to a 12-bit signed int, and return it.
-    */
-    float pixelTemperature(uint8_t x, uint8_t y);
+    int8_t init(I2CAdapter* bus);
+    int8_t poll();
+    int8_t reset();
+    int8_t refresh();
+
+    inline bool devFound() {         return _amg_flag(GRIDEYE_FLAG_DEVICE_PRESENT);  };
+    inline bool enabled() {          return _amg_flag(GRIDEYE_FLAG_ENABLED);         };
+    inline bool initialized() {      return _amg_flag(GRIDEYE_FLAG_INITIALIZED);     };
+    inline bool frameReady() {       return _amg_flag(GRIDEYE_FLAG_FRAME_UPDATED);   };
+    inline bool unitsFahrenheit() {  return _amg_flag(GRIDEYE_FLAG_FREEDOM_UNITS);   };
+    inline void unitsFahrenheit(bool x) {  _amg_set_flag(GRIDEYE_FLAG_FREEDOM_UNITS, x); };
+
+    float   getPixelTemperature(uint8_t pixel);
+    inline int16_t getPixelRaw(uint8_t pixel) {   return (pixel < 64) ? _frame[pixel] : 0;  };
+
+    float   getDeviceTemperature();
+    int16_t getDeviceTemperatureRaw();
+
+    int8_t setFramerate1FPS();
+    int8_t setFramerate10FPS();
+    inline bool isFramerate10FPS() {   return _amg_flag(GRIDEYE_FLAG_10FPS);  };
+
+    int8_t enabled(bool);
+    int8_t standby60seconds();
+    int8_t standby10seconds();
+
+    int8_t interruptPinEnable();
+    int8_t interruptPinDisable();
+    int8_t setInterruptModeAbsolute();
+    int8_t setInterruptModeDifference();
+    bool   interruptPinEnabled();
+
+    bool   interruptFlagSet();
+    bool   pixelTemperatureOutputOK();
+    bool   deviceTemperatureOutputOK();
+    int8_t clearPixelTemperatureOverflow();
+    int8_t clearDeviceTemperatureOverflow();
+    int8_t clearAllOverflow();
+    int8_t clearAllStatusFlags();
+    bool   pixelInterruptSet(uint8_t pixel);
+
+    int8_t movingAverage(bool);
+    inline bool movingAverage() {  return _amg_flag(GRIDEYE_FLAG_HW_AVERAGING);   };
+
+    int8_t setUpperInterruptValue(float degrees);
+    int8_t setUpperInterruptValueRaw(int16_t regValue);
+    int8_t setLowerInterruptValue(float degrees);
+    int8_t setLowerInterruptValueRaw(int16_t regValue);
+    int8_t setInterruptHysteresis(float degrees);
+    int8_t setInterruptHysteresisRaw(int16_t regValue);
+
+    float   getUpperInterruptValue();
+    int16_t getUpperInterruptValueRaw();
+    float   getLowerInterruptValue();
+    int16_t getLowerInterruptValueRaw();
+    float   getInterruptHysteresis();
+    int16_t getInterruptHysteresisRaw();
 
 
   private:
-    const AMG88xxOpts _opts;
-    ManuvrMsg isr_event;
-    int16_t  _field_values[64];         // Sign-extended and endian-normalized.
-    uint8_t  _field_thresholds[64][6];  // 6 bytes of threshold per-pixel.
+    const uint8_t _IRQ_PIN;
+    uint16_t      _flags     = 0;
+    uint32_t      _last_read = 0;
+    int16_t       _frame[64];
+    uint8_t       _shadows[16];
+    uint8_t       _pixel_interrupts[8];
+    I2CBusOp      _frame_read;
 
-    /**
-    * Give this function a 12-bit signed int (expressed as unsigned) to extend
-    *   extend the sign to 16-bit.
-    */
-    inline int16_t _sign_extend_int12(uint16_t temp_c) {
-      temp_c &= 0x0FFF;  // Reduce to 12-bit.
-      if (temp_c & 0x0800) {
-        // TODO: There is a smart way to eliminate this conditional.
-        // Represents a negative number.
-        temp_c |= 0xF000;  // Fill in the high four.
-      }
-      return ((int16_t) temp_c);
+    int8_t  _ll_pin_init();
+
+    /* Basal register access and utility fxn's */
+    int8_t  _set_shadow_value(AMG88XXRegID, uint8_t val);
+    uint8_t _get_shadow_value(AMG88XXRegID);
+    int8_t  _write_register(AMG88XXRegID, uint8_t val);
+    int8_t  _write_registers(AMG88XXRegID, uint16_t val);
+    int8_t  _read_registers(AMG88XXRegID, uint8_t len);
+    int8_t  _read_full_frame();
+    int8_t _read_pixel_int_states();
+
+    /* Conversion of units and data */
+    float   _normalize_units_accepted(float deg);
+    float   _normalize_units_returned(float deg);
+    int16_t _dev_int16_to_float(int16_t temperature);
+    int16_t _native_float_to_dev_int16(float temperature);
+
+    /* Flag manipulation inlines */
+    inline uint16_t _amg_flags() {                return _flags;           };
+    inline bool _amg_flag(uint16_t _flag) {       return (_flags & _flag); };
+    inline void _amg_clear_flag(uint16_t _flag) { _flags &= ~_flag;        };
+    inline void _amg_set_flag(uint16_t _flag) {   _flags |= _flag;         };
+    inline void _amg_set_flag(uint16_t _flag, bool nu) {
+      if (nu) _flags |= _flag;
+      else    _flags &= ~_flag;
     };
 
-    /**
-    * Give this function a temperature in Celcius, and it will
-    *   convert it to a 12-bit signed int, and return it.
-    */
-    inline int16_t _celcius_to_int12(float temp_c) {
-      return ((short)(temp_c / 0.25));
-    };
+    static AMG88XXRegID _reg_id_from_addr(const uint8_t reg_addr);
 };
 
-#endif  // __AMG88XX_DRIVER_H__
+#endif   // __AMG88XX_DRIVER_H_
