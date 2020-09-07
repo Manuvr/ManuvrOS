@@ -50,7 +50,6 @@ CPP_SRCS  += XenoSession/OSC/OSCMessage.cpp
 
 # Specialized BufferPipes
 CPP_SRCS  += Transports/BufferPipes/ZooKeeper/ZooKeeper.cpp
-CPP_SRCS  += Transports/BufferPipes/ManuvrGPS/ManuvrGPS.cpp
 CPP_SRCS  += Transports/BufferPipes/ManuvrTLS/ManuvrTLS.cpp
 CPP_SRCS  += Transports/BufferPipes/ManuvrTLS/ManuvrTLSServer.cpp
 CPP_SRCS  += Transports/BufferPipes/ManuvrTLS/ManuvrTLSClient.cpp
