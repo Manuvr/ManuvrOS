@@ -197,7 +197,7 @@ bool setTimeAndDate(uint8_t y, uint8_t m, uint8_t d, uint8_t wd, uint8_t h, uint
 /*
 * Returns an integer representing the current datetime.
 */
-uint32_t epochTime() {
+uint64_t epochTime() {
   struct timeval tv;
   return (0 == gettimeofday(&tv, nullptr)) ? 0 : tv.tv_sec;
 }
